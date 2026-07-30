@@ -6,6 +6,9 @@ import { dirname, resolve } from 'node:path';
 
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
+const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
+const EVIDENCE_ITEM = 'legal-rules-validation';
+const REDACTION_CONFIRMATION = 'Redaction confirmed for runtime evidence.';
 
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable);
@@ -38,17 +41,29 @@ function normalizeDeploymentUrl(value) {
 
 function assertArtifact(body, expectedSha, deploymentUrl) {
   if (!body || typeof body !== 'object') throw new Error('runtime response must be a JSON object');
+  if (body.evidenceItem !== EVIDENCE_ITEM) throw new Error('unexpected runtime evidence item');
   if (body.schema !== 'risck-comply.legal-rules-runtime-evidence.v1') throw new Error('unexpected runtime evidence schema');
+  if (body.repository !== REPOSITORY) throw new Error('unexpected runtime evidence repository binding');
   if (body.status !== 'PASS') throw new Error(`runtime evidence is not PASS: ${body.status || 'missing'}`);
+  if (body.countsForRuntimeCoverage !== true) throw new Error('PASS runtime evidence must count for runtime coverage');
   if (body.deploymentSha !== expectedSha) throw new Error(`deployment SHA mismatch: expected ${expectedSha}, got ${body.deploymentSha}`);
   if (body.deploymentUrl !== deploymentUrl) throw new Error(`deployment URL mismatch: expected ${deploymentUrl}, got ${body.deploymentUrl}`);
+  if (body.environment === 'unknown' || typeof body.environment !== 'string' || !body.environment) throw new Error('runtime evidence environment is missing or unknown');
+  if (body.redactionConfirmation !== REDACTION_CONFIRMATION) throw new Error('runtime evidence redaction confirmation is missing');
+  if (!Array.isArray(body.sourceRegulations) || !body.sourceRegulations.includes('Regulation (EU) 2026/1744')) {
+    throw new Error('runtime evidence is missing the amended source regulation');
+  }
   if (!SHA256.test(String(body.rulesDigest || ''))) throw new Error('rulesDigest must be a SHA-256 digest');
   if (!SHA256.test(String(body.artifactSha256 || ''))) throw new Error('artifactSha256 must be a SHA-256 digest');
   if (!Array.isArray(body.testCases) || body.testCases.length < 8) throw new Error('runtime evidence testCases are incomplete');
   if (body.testCases.some((testCase) => testCase?.status !== 'PASS')) throw new Error('one or more runtime test cases failed');
-  if (!Array.isArray(body.requestIds) || body.requestIds.some((value) => !/^[A-Za-z0-9._:-]{8,128}$/.test(String(value)))) {
+  if (!Array.isArray(body.requestIds) || body.requestIds.length === 0 || body.requestIds.some((value) => !/^[A-Za-z0-9._:-]{8,128}$/.test(String(value)))) {
     throw new Error('request IDs are missing or unsanitised');
   }
+  if (body.evidenceIntegrity?.placeholderOnly !== false) throw new Error('PASS runtime evidence cannot be a placeholder');
+  if (body.evidenceIntegrity?.runtimeProofInvented !== false) throw new Error('runtime evidence must confirm proof was not invented');
+  if (body.evidenceIntegrity?.customerFacingProof !== false) throw new Error('runtime evidence must not claim customer-facing proof');
+  if (body.evidenceIntegrity?.containsSensitiveValues !== false) throw new Error('runtime evidence must confirm no sensitive values are stored');
 
   const { artifactSha256, ...withoutArtifactDigest } = body;
   const expectedDigest = digest(withoutArtifactDigest);
@@ -92,6 +107,7 @@ async function main() {
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, `${JSON.stringify(body, null, 2)}\n`, { mode: 0o600 });
   console.log(JSON.stringify({
+    evidenceItem: body.evidenceItem,
     status: body.status,
     deploymentUrl,
     deploymentSha: body.deploymentSha,
