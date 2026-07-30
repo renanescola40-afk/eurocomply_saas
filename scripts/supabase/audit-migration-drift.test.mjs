@@ -81,6 +81,7 @@ describe('Supabase migration deployability gate', () => {
     expect(inventory.localInventory[0]).toMatchObject({
       version,
       remoteState: 'ALIGNED_WITH_REMOTE_HISTORY',
+      classificationReasons: [],
     });
   });
 
@@ -97,6 +98,7 @@ describe('Supabase migration deployability gate', () => {
     expect(report.status).toBe('PENDING_LOCAL_MIGRATIONS');
     expect(report.deploymentAuthorization).toBe('BLOCKED');
     expect(report.deployabilityBlockers).toContain('pending_local_versions');
+    expect(report.summary.filesRequiringClassification).toBe(1);
     expect(report.summary.localOnlyFilesRequiringClassification).toBe(1);
     expect(inventory.schema).toBe(
       'risck-comply.supabase-migration-reconciliation-inventory.v1',
@@ -106,6 +108,7 @@ describe('Supabase migration deployability gate', () => {
     expect(inventory.items[0]).toMatchObject({
       filename,
       sha256: expectedDigest,
+      classificationReasons: ['LOCAL_ONLY_VERSION'],
       classification: 'UNCLASSIFIED',
       rationale: null,
       reviewer: null,
@@ -115,13 +118,14 @@ describe('Supabase migration deployability gate', () => {
     );
   });
 
-  it('blocks invalid timestamps and duplicate versions with exit code 3', () => {
+  it('requires classification for invalid timestamps and every duplicate file', () => {
     const version = '20260730120200';
+    const invalidFilename = '20261301120000_invalid_month.sql';
     const { result, report, inventory } = runAudit({
       localFiles: [
         `${version}_first.sql`,
         `${version}_duplicate.sql`,
-        '20261301120000_invalid_month.sql',
+        invalidFilename,
       ],
       remoteVersions: [version],
     });
@@ -131,8 +135,24 @@ describe('Supabase migration deployability gate', () => {
     expect(report.deployabilityBlockers).toContain('duplicate_local_versions');
     expect(report.summary.invalidLocal).toBe(1);
     expect(report.summary.duplicateVersions).toBe(1);
+    expect(report.summary.filesRequiringClassification).toBe(3);
+    expect(report.summary.invalidFilesRequiringClassification).toBe(1);
+    expect(report.summary.duplicateFilesRequiringClassification).toBe(2);
     expect(report.duplicateVersions[0].digests).toHaveLength(2);
-    expect(inventory.localInventory.filter((entry) => entry.duplicateVersion)).toHaveLength(2);
+    expect(inventory.items).toHaveLength(3);
+    expect(
+      inventory.items.filter((entry) => (
+        entry.classificationReasons.includes('DUPLICATE_VERSION')
+      )),
+    ).toHaveLength(2);
+    expect(
+      inventory.items.find((entry) => entry.filename === invalidFilename),
+    ).toMatchObject({
+      version: '20261301120000',
+      classificationReasons: ['INVALID_LOCAL_FILENAME_OR_TIMESTAMP'],
+      classification: 'UNCLASSIFIED',
+    });
+    expect(inventory.items.every((entry) => entry.reviewer === null)).toBe(true);
   });
 
   it('treats an unknown remote-only version as critical drift with exit code 2', () => {
@@ -163,5 +183,6 @@ describe('Supabase migration deployability gate', () => {
       version,
       remoteState: 'RECONCILES_REMOTE_VERSION',
     });
+    expect(inventory.items).toHaveLength(0);
   });
 });
