@@ -81,6 +81,7 @@ jobs:
           tests/fria-operational-api-contract.test.ts
           tests/fria-operational-migration-contract.test.ts
           tests/security/incident-operations-evidence.test.ts
+          tests/security/platform-controls-runtime-proof.test.mjs
           tests/enterprise/public-ux-evidence.test.ts
 
       - name: Generate safe exact-SHA evidence
@@ -113,38 +114,7 @@ jobs:
       - name: Inspect protected main branch controls
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p artifacts/eu-ai-act-final-runtime
-          node --input-type=module <<'NODE'
-          import { writeFileSync } from 'node:fs';
-          const url = `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/branches/main/protection`;
-          let proof = { status: 'BLOCKED', targetSha: process.env.TARGET_SHA, source: url, checks: {}, limitations: [] };
-          try {
-            const response = await fetch(url, { headers: {
-              authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-              accept: 'application/vnd.github+json',
-              'x-github-api-version': '2022-11-28',
-            }});
-            const body = await response.json();
-            const checks = {
-              apiReadable: response.ok,
-              requiredStatusChecks: Array.isArray(body?.required_status_checks?.contexts) || Array.isArray(body?.required_status_checks?.checks),
-              approvingReview: Number(body?.required_pull_request_reviews?.required_approving_review_count ?? 0) >= 1,
-              forcePushBlocked: body?.allow_force_pushes?.enabled !== true,
-              deletionBlocked: body?.allow_deletions?.enabled !== true,
-            };
-            proof = {
-              status: Object.values(checks).every(Boolean) ? 'VERIFIED' : 'BLOCKED',
-              targetSha: process.env.TARGET_SHA,
-              source: url,
-              checks,
-              limitations: response.ok ? [] : [`GitHub API returned ${response.status}`],
-            };
-          } catch (error) {
-            proof.limitations = [String(error?.message ?? error)];
-          }
-          writeFileSync('artifacts/eu-ai-act-final-runtime/platform-proof.json', JSON.stringify(proof, null, 2));
-          NODE
+        run: node scripts/compliance/build-platform-controls-runtime-proof.mjs
 
       - name: Build final runtime evidence overlay
         run: node scripts/compliance/generate-eu-ai-act-final-runtime-bundle.mjs
