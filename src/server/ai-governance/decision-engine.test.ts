@@ -35,7 +35,7 @@ describe('canonical EU AI Act decision engine', () => {
     expect(decision.evidenceBoundary).toContain('not a legal determination');
   });
 
-  it('blocks and escalates prohibited-practice signals with active and pending rule provenance', () => {
+  it('blocks and escalates prohibited-practice signals with active and future rule provenance', () => {
     const decision = evaluateAiActSystem({
       ...baseInput,
       manipulativeOrExploitative: true,
@@ -45,7 +45,8 @@ describe('canonical EU AI Act decision engine', () => {
     expect(decision.decision).toBe('block_and_escalate');
     expect(decision.legalReviewRequired).toBe(true);
     expect(decision.appliedRuleIds).toContain('eu-ai-act-art5-prohibited-practices');
-    expect(decision.pendingRuleIds).toContain('eu-ai-act-art5-intimate-content-amendment');
+    expect(decision.futureRuleIds).toContain('eu-ai-act-art5-intimate-content-amendment');
+    expect(decision.pendingRuleIds).not.toContain('eu-ai-act-art5-intimate-content-amendment');
     expect(decision.reasons).toContain('manipulative_or_exploitative_signal');
   });
 

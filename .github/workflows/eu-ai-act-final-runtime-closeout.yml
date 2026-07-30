@@ -83,6 +83,7 @@ jobs:
           tests/security/incident-operations-evidence.test.ts
           tests/security/platform-controls-runtime-proof.test.mjs
           tests/enterprise/public-ux-evidence.test.ts
+          tests/compliance/eu-ai-act-final-runtime-closeout.test.mjs
 
       - name: Generate safe exact-SHA evidence
         env:
@@ -132,7 +133,11 @@ jobs:
           const report = JSON.parse(readFileSync(process.env.EU_AI_ACT_COVERAGE_JSON, 'utf8'));
           if (report.targetSha !== process.env.TARGET_SHA) throw new Error('coverage SHA mismatch');
           if (report.scores.implementationCoverage !== 100 || report.scores.ciVerifiedCoverage !== 100) throw new Error('static coverage regressed');
-          if (report.scores.runtimeEvidenceCoverage < 96) throw new Error('final overlay must promote readiness and provider evidence');
+          // Pull-request closeout may promote readiness (8) and provider assurance (4)
+          // above the 80-point synthetic baseline. LEGAL-RULES (4) remains reserved
+          // for deployed exact-SHA proof, and PLATFORM-CONTROLS (4) remains blocked
+          // when approving-review policy cannot be verified. The report-mode floor is 92.
+          if (report.scores.runtimeEvidenceCoverage < 92) throw new Error('final overlay must promote readiness and provider evidence');
           if (process.env.STRICT_CLOSEOUT === '1' && report.scores.runtimeEvidenceCoverage !== 100) throw new Error('strict runtime closeout requires 100%');
           if (report.releaseDecision !== 'EU_AI_ACT_PRODUCT_COVERAGE_NO_GO') throw new Error('human review boundary must remain NO_GO');
           NODE

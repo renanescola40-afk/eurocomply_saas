@@ -85,8 +85,10 @@ jobs:
           if (report.targetSha !== process.env.TARGET_SHA) throw new Error('promoted report SHA mismatch');
           if (report.scores.implementationCoverage !== 100) throw new Error('implementation coverage regressed');
           if (report.scores.ciVerifiedCoverage !== 100) throw new Error('CI coverage regressed');
-          if (report.scores.runtimeEvidenceCoverage !== 84) {
-            throw new Error(`safe runtime coverage is ${report.scores.runtimeEvidenceCoverage}, expected 84`);
+          // The LEGAL-RULES workstream is deliberately excluded from synthetic promotion.
+          // Its 4 points require a deployed exact-SHA legal-rules artifact, so the safe ceiling is 80.
+          if (report.scores.runtimeEvidenceCoverage !== 80) {
+            throw new Error(`safe runtime coverage is ${report.scores.runtimeEvidenceCoverage}, expected 80`);
           }
           if (report.scores.completedCoverage !== 33) {
             throw new Error(`safe completed coverage is ${report.scores.completedCoverage}, expected 33`);

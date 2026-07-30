@@ -1,13 +1,33 @@
+import { createHash } from 'node:crypto';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { buildSafeRuntimeEvidence } from '../../scripts/compliance/generate-eu-ai-act-safe-runtime-bundle.mjs';
-import { generateCoverage, validateRuntimeEvidenceDocument } from '../../scripts/compliance/generate-eu-ai-act-product-coverage.mjs';
+import {
+  generateCoverage,
+  validateLegalRulesRuntimeEvidenceDocument,
+  validateRuntimeEvidenceDocument,
+} from '../../scripts/compliance/generate-eu-ai-act-product-coverage.mjs';
 
 const SHA = 'a'.repeat(40);
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
+
+function stable(value) {
+  if (Array.isArray(value)) return value.map(stable);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, stable(value[key])]));
+  }
+  return value;
+}
+
+function withDigest(document) {
+  return {
+    ...document,
+    artifactSha256: createHash('sha256').update(JSON.stringify(stable(document))).digest('hex'),
+  };
+}
 
 function minimalRegistry(runtimePath) {
   return {
@@ -46,6 +66,58 @@ describe('EU AI Act safe runtime promotion', () => {
     writeFileSync(output, JSON.stringify(document));
     const report = generateCoverage({ registry: minimalRegistry(path), targetSha: SHA, evidenceRoots: [root] });
     expect(report.scores.runtimeEvidenceCoverage).toBe(100);
+  });
+
+  it('accepts deployed legal-rules proof only after full integrity validation', () => {
+    const base = {
+      evidenceItem: 'legal-rules-validation',
+      schema: 'risck-comply.legal-rules-runtime-evidence.v1',
+      repository: REPOSITORY,
+      environment: 'preview',
+      deploymentUrl: 'https://example.vercel.app',
+      deploymentSha: SHA,
+      legalRulesVersion: '2026-07-30.1',
+      sourceRegulations: ['Regulation (EU) 2024/1689', 'Regulation (EU) 2026/1744'],
+      effectiveDate: '2026-07-27',
+      effectiveDateMeaning: 'entry into force',
+      rulesDigest: 'b'.repeat(64),
+      testCases: Array.from({ length: 8 }, (_, index) => ({
+        id: `case-${index}`,
+        description: 'runtime case',
+        expected: true,
+        actual: true,
+        status: 'PASS',
+      })),
+      status: 'PASS',
+      timestamp: '2026-07-30T12:00:00.000Z',
+      reviewer: 'RISCK COMPLY runtime validation automation',
+      reviewedAt: '2026-07-30T12:00:00.000Z',
+      summary: 'Exact-SHA deployed legal-rules validation completed with every deterministic runtime case passing.',
+      evidenceLocations: ['docs/security/evidence/runtime/legal-rules-validation.json'],
+      requestIds: ['runtime-request-12345678'],
+      redactionConfirmation: 'Redaction confirmed for runtime evidence.',
+      countsForRuntimeCoverage: true,
+      evidenceIntegrity: {
+        placeholderOnly: false,
+        runtimeProofInvented: false,
+        customerFacingProof: false,
+        containsSensitiveValues: false,
+      },
+      evidenceBoundary: 'deployed exact-SHA behaviour only',
+    };
+    const valid = withDigest(base);
+
+    expect(validateLegalRulesRuntimeEvidenceDocument(valid, SHA)).toBe(true);
+    expect(validateRuntimeEvidenceDocument(valid, SHA)).toBe(true);
+    expect(validateLegalRulesRuntimeEvidenceDocument({ ...valid, evidenceItem: 'other' }, SHA)).toBe(false);
+    expect(validateLegalRulesRuntimeEvidenceDocument({ ...valid, deploymentSha: 'c'.repeat(40) }, SHA)).toBe(false);
+    expect(validateLegalRulesRuntimeEvidenceDocument({ ...valid, status: 'NOT_EXECUTED' }, SHA)).toBe(false);
+    expect(validateLegalRulesRuntimeEvidenceDocument({ ...valid, countsForRuntimeCoverage: false }, SHA)).toBe(false);
+    expect(validateLegalRulesRuntimeEvidenceDocument({
+      ...valid,
+      evidenceIntegrity: { ...valid.evidenceIntegrity, placeholderOnly: true },
+    }, SHA)).toBe(false);
+    expect(validateLegalRulesRuntimeEvidenceDocument({ ...valid, artifactSha256: '0'.repeat(64) }, SHA)).toBe(false);
   });
 
   it('rejects stale, cross-repository, malformed and unqualified runtime evidence', () => {

@@ -31,6 +31,7 @@ export type AiActRuleStatus =
   | 'draft_guidance';
 export type AiActApplicationDateStatus = 'confirmed' | 'pending_official_publication';
 export type AiActSourceAuthority = 'eur_lex' | 'european_commission' | 'council_of_eu';
+export type AiActSourceRegulation = 'Regulation (EU) 2024/1689' | 'Regulation (EU) 2026/1744';
 
 export type AiActOfficialSource = {
   authority: AiActSourceAuthority;
@@ -43,6 +44,7 @@ export type AiActOfficialSource = {
 export type AiActLegalRule = {
   id: string;
   regulation: 'Regulation (EU) 2024/1689';
+  sourceRegulation: AiActSourceRegulation;
   article: string;
   paragraph?: string;
   annex?: string;
@@ -63,15 +65,21 @@ export type AiActLegalRule = {
   legalReviewRequired: boolean;
 };
 
+export const AI_ACT_LEGAL_RULES_VERSION = '2026-07-30.1';
+export const AI_ACT_LEGAL_SOURCE_REGULATIONS: AiActSourceRegulation[] = [
+  'Regulation (EU) 2024/1689',
+  'Regulation (EU) 2026/1744',
+];
+
 const EUR_LEX_AI_ACT_URL = 'https://eur-lex.europa.eu/eli/reg/2024/1689/oj?locale=en';
+const EUR_LEX_AI_OMNIBUS_URL = 'https://eur-lex.europa.eu/eli/reg/2026/1744/oj?locale=en';
 const COMMISSION_AI_ACT_URL = 'https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai';
-const COMMISSION_TRANSPARENCY_CODE_URL = 'https://digital-strategy.ec.europa.eu/en/faqs/code-practice-transparency-ai-generated-content';
-const COUNCIL_AI_ACT_TIMELINE_URL = 'https://www.consilium.europa.eu/en/policies/artificial-intelligence-act/timeline-artificial-intelligence/';
 
 export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
   {
     id: 'eu-ai-act-art4-ai-literacy',
     regulation: 'Regulation (EU) 2024/1689',
+    sourceRegulation: 'Regulation (EU) 2024/1689',
     article: 'Article 4',
     category: 'ai_literacy',
     title: 'AI literacy measures',
@@ -86,16 +94,17 @@ export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
       title: 'Regulation (EU) 2024/1689 — Article 4',
       url: EUR_LEX_AI_ACT_URL,
       publishedAt: '2024-07-12',
-      verifiedAt: '2026-07-17',
+      verifiedAt: '2026-07-30',
     },
-    version: '2026-07-17.1',
+    version: AI_ACT_LEGAL_RULES_VERSION,
     status: 'active',
-    reviewBy: '2026-10-17',
+    reviewBy: '2026-10-30',
     legalReviewRequired: false,
   },
   {
     id: 'eu-ai-act-art5-prohibited-practices',
     regulation: 'Regulation (EU) 2024/1689',
+    sourceRegulation: 'Regulation (EU) 2024/1689',
     article: 'Article 5',
     category: 'prohibited_practice',
     title: 'Prohibited AI practices',
@@ -110,40 +119,42 @@ export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
       title: 'Regulation (EU) 2024/1689 — Article 5',
       url: EUR_LEX_AI_ACT_URL,
       publishedAt: '2024-07-12',
-      verifiedAt: '2026-07-17',
+      verifiedAt: '2026-07-30',
     },
-    version: '2026-07-17.1',
+    version: AI_ACT_LEGAL_RULES_VERSION,
     status: 'active',
-    reviewBy: '2026-08-17',
+    reviewBy: '2026-08-30',
     legalReviewRequired: true,
   },
   {
     id: 'eu-ai-act-art5-intimate-content-amendment',
     regulation: 'Regulation (EU) 2024/1689',
-    article: 'Article 5 amendment',
+    sourceRegulation: 'Regulation (EU) 2026/1744',
+    article: 'Article 5(1), first subparagraph, points (ba) and (bb), and Article 5(1a) and (1b)',
     category: 'prohibited_practice',
-    title: 'Adopted prohibition covering non-consensual intimate content and child sexual abuse material',
-    obligation: 'Prepare to block AI practices involving generation of non-consensual sexual or intimate content or child sexual abuse material under the adopted 2026 Digital Omnibus amendment.',
+    title: 'Prohibitions covering non-consensual intimate material and child sexual abuse material',
+    obligation: 'Block the placing on the market, putting into service or prohibited use of AI systems that generate or manipulate non-consensual intimate material or child sexual abuse material when the statutory conditions are met.',
     applicableRoles: ['provider', 'deployer', 'importer', 'distributor', 'product_manufacturer'],
-    appliesFrom: null,
-    applicationDateStatus: 'pending_official_publication',
-    exceptions: ['Do not treat this rule as legally effective until the final amending regulation and its entry-into-force provisions are verified in the Official Journal.'],
+    appliesFrom: '2026-12-02',
+    applicationDateStatus: 'confirmed',
+    exceptions: ['Apply the intended-purpose, reasonably-foreseeable-outcome, safeguard, deployer-purpose, consent, manipulation and “without right” conditions in Article 5(1a) and (1b); preserve qualified legal review for borderline facts.'],
     jurisdiction: 'EU',
     source: {
-      authority: 'council_of_eu',
-      title: 'Council gives final green light to simplify and streamline AI rules',
-      url: COUNCIL_AI_ACT_TIMELINE_URL,
-      publishedAt: '2026-06-29',
-      verifiedAt: '2026-07-17',
+      authority: 'eur_lex',
+      title: 'Regulation (EU) 2026/1744 — amendment of Article 5',
+      url: EUR_LEX_AI_OMNIBUS_URL,
+      publishedAt: '2026-07-24',
+      verifiedAt: '2026-07-30',
     },
-    version: '2026-07-17.1',
-    status: 'adopted_pending_effect',
-    reviewBy: '2026-08-17',
+    version: AI_ACT_LEGAL_RULES_VERSION,
+    status: 'active',
+    reviewBy: '2026-08-30',
     legalReviewRequired: true,
   },
   {
     id: 'eu-ai-act-gpai-obligations',
     regulation: 'Regulation (EU) 2024/1689',
+    sourceRegulation: 'Regulation (EU) 2024/1689',
     article: 'Articles 53–55',
     category: 'gpai',
     title: 'General-purpose AI model obligations',
@@ -158,16 +169,17 @@ export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
       title: 'AI Act application timeline and GPAI obligations',
       url: COMMISSION_AI_ACT_URL,
       publishedAt: '2024-08-01',
-      verifiedAt: '2026-07-17',
+      verifiedAt: '2026-07-30',
     },
-    version: '2026-07-17.1',
+    version: AI_ACT_LEGAL_RULES_VERSION,
     status: 'active',
-    reviewBy: '2026-10-17',
+    reviewBy: '2026-10-30',
     legalReviewRequired: true,
   },
   {
     id: 'eu-ai-act-art50-general-transparency',
     regulation: 'Regulation (EU) 2024/1689',
+    sourceRegulation: 'Regulation (EU) 2024/1689',
     article: 'Article 50',
     category: 'transparency',
     title: 'General transparency obligations',
@@ -178,47 +190,49 @@ export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
     exceptions: ['Article 50 contains role-specific scope and exceptions that must be evaluated for each system and content type.'],
     jurisdiction: 'EU',
     source: {
-      authority: 'european_commission',
-      title: 'AI Act transparency obligations',
-      url: COMMISSION_AI_ACT_URL,
-      publishedAt: '2024-08-01',
-      verifiedAt: '2026-07-17',
+      authority: 'eur_lex',
+      title: 'Regulation (EU) 2024/1689 — Article 50',
+      url: EUR_LEX_AI_ACT_URL,
+      publishedAt: '2024-07-12',
+      verifiedAt: '2026-07-30',
     },
-    version: '2026-07-17.1',
+    version: AI_ACT_LEGAL_RULES_VERSION,
     status: 'active',
-    reviewBy: '2026-08-17',
+    reviewBy: '2026-08-30',
     legalReviewRequired: true,
   },
   {
     id: 'eu-ai-act-art50-preexisting-synthetic-transition',
     regulation: 'Regulation (EU) 2024/1689',
-    article: 'Article 50(2) and 50(4)',
+    sourceRegulation: 'Regulation (EU) 2026/1744',
+    article: 'Article 111(4) and Article 50(2)',
     category: 'transparency',
     title: 'Transition for pre-existing synthetic-content systems',
-    obligation: 'For qualifying systems placed on the market before 2 August 2026, track the transitional deadline for Article 50 synthetic-content transparency controls.',
-    applicableRoles: ['provider', 'deployer'],
+    obligation: 'For qualifying provider systems placed on the market before 2 August 2026, track the amended deadline to comply with Article 50(2).',
+    applicableRoles: ['provider'],
     appliesFrom: '2026-08-02',
     applicationDateStatus: 'confirmed',
     transitionEndsAt: '2026-12-02',
-    exceptions: ['Only systems that meet the official pre-existing-system transition conditions qualify.'],
+    exceptions: ['This transition is limited to providers and Article 50(2); it must not be applied to deployer duties under Article 50(4).'],
     jurisdiction: 'EU',
     source: {
-      authority: 'european_commission',
-      title: 'Code of Practice on Transparency of AI-Generated Content — transition period',
-      url: COMMISSION_TRANSPARENCY_CODE_URL,
-      publishedAt: '2026-06-10',
-      verifiedAt: '2026-07-17',
+      authority: 'eur_lex',
+      title: 'Regulation (EU) 2026/1744 — Article 111(4) transition amendment',
+      url: EUR_LEX_AI_OMNIBUS_URL,
+      publishedAt: '2026-07-24',
+      verifiedAt: '2026-07-30',
     },
-    version: '2026-07-17.1',
+    version: AI_ACT_LEGAL_RULES_VERSION,
     status: 'transitional',
-    reviewBy: '2026-08-17',
+    reviewBy: '2026-08-30',
     legalReviewRequired: true,
   },
   {
     id: 'eu-ai-act-high-risk-standalone-2027',
     regulation: 'Regulation (EU) 2024/1689',
-    article: 'High-risk system provisions',
-    annex: 'Annex III and related provisions',
+    sourceRegulation: 'Regulation (EU) 2026/1744',
+    article: 'Article 113, third paragraph, point (c)(i)',
+    annex: 'Annex III and Article 6(2)',
     category: 'high_risk_standalone',
     title: 'Standalone high-risk AI system rules',
     obligation: 'Prepare the applicable high-risk provider and deployer controls for standalone systems in listed high-risk areas.',
@@ -228,22 +242,23 @@ export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
     exceptions: ['High-risk classification exceptions and role-specific duties must be evaluated per system.'],
     jurisdiction: 'EU',
     source: {
-      authority: 'council_of_eu',
-      title: 'Digital Omnibus on AI — fixed high-risk implementation timeline',
-      url: COUNCIL_AI_ACT_TIMELINE_URL,
-      publishedAt: '2026-06-29',
-      verifiedAt: '2026-07-17',
+      authority: 'eur_lex',
+      title: 'Regulation (EU) 2026/1744 — fixed Annex III implementation timeline',
+      url: EUR_LEX_AI_OMNIBUS_URL,
+      publishedAt: '2026-07-24',
+      verifiedAt: '2026-07-30',
     },
-    version: '2026-07-17.1',
+    version: AI_ACT_LEGAL_RULES_VERSION,
     status: 'active',
-    reviewBy: '2026-10-17',
+    reviewBy: '2026-10-30',
     legalReviewRequired: true,
   },
   {
     id: 'eu-ai-act-high-risk-product-2028',
     regulation: 'Regulation (EU) 2024/1689',
-    article: 'High-risk system provisions',
-    annex: 'Annex I / regulated products',
+    sourceRegulation: 'Regulation (EU) 2026/1744',
+    article: 'Article 113, third paragraph, point (c)(ii)',
+    annex: 'Annex I and Article 6(1)',
     category: 'high_risk_product',
     title: 'High-risk AI systems embedded in regulated products',
     obligation: 'Prepare the applicable high-risk controls and product-law coordination for AI systems embedded in regulated products.',
@@ -253,15 +268,15 @@ export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
     exceptions: ['Product-sector legislation and conformity-assessment routes must be evaluated together with the AI Act.'],
     jurisdiction: 'EU',
     source: {
-      authority: 'council_of_eu',
-      title: 'Digital Omnibus on AI — fixed high-risk implementation timeline',
-      url: COUNCIL_AI_ACT_TIMELINE_URL,
-      publishedAt: '2026-06-29',
-      verifiedAt: '2026-07-17',
+      authority: 'eur_lex',
+      title: 'Regulation (EU) 2026/1744 — fixed Annex I implementation timeline',
+      url: EUR_LEX_AI_OMNIBUS_URL,
+      publishedAt: '2026-07-24',
+      verifiedAt: '2026-07-30',
     },
-    version: '2026-07-17.1',
+    version: AI_ACT_LEGAL_RULES_VERSION,
     status: 'active',
-    reviewBy: '2026-10-17',
+    reviewBy: '2026-10-30',
     legalReviewRequired: true,
   },
 ];
@@ -332,8 +347,15 @@ export function validateAiActLegalRules(rules: AiActLegalRule[] = AI_ACT_LEGAL_R
       if (!OFFICIAL_SOURCE_HOSTS.has(host)) {
         issues.push({ ruleId: rule.id, field: 'source.url', message: 'Source must use an approved official EU host.' });
       }
+      if (rule.sourceRegulation === 'Regulation (EU) 2026/1744' && !rule.source.url.includes('/2026/1744/')) {
+        issues.push({ ruleId: rule.id, field: 'source.url', message: '2026/1744-derived rules must point to the Official Journal act.' });
+      }
     } catch {
       issues.push({ ruleId: rule.id, field: 'source.url', message: 'Source URL is invalid.' });
+    }
+
+    if (rule.sourceRegulation === 'Regulation (EU) 2026/1744' && rule.source.publishedAt !== '2026-07-24') {
+      issues.push({ ruleId: rule.id, field: 'source.publishedAt', message: 'Regulation (EU) 2026/1744 was published on 2026-07-24.' });
     }
 
     if (rule.applicableRoles.length === 0) {

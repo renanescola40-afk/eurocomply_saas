@@ -1,0 +1,189 @@
+{
+  "evidenceItem": "technical-closeout-consolidated",
+  "schema": "risck-comply.technical-closeout-consolidated.v1",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "status": "Open",
+  "outcome": "no_go",
+  "reviewer": "RISCK COMPLY release automation",
+  "reviewedAt": "2026-07-30T12:00:00.000Z",
+  "generatedAt": "2026-07-30T12:00:00.000Z",
+  "assessedSha": null,
+  "environment": null,
+  "deploymentUrl": null,
+  "releaseDecision": "NO_GO",
+  "technicalComplete": false,
+  "runtimeVerified": false,
+  "operationallyValidated": false,
+  "humanReviewComplete": false,
+  "customerSpecificCompliance": false,
+  "summary": "Consolidated technical closeout control inventory. Exact-SHA production execution is intentionally pending; registered repository controls and prior evidence paths do not count as proof for a new deployment SHA.",
+  "evidenceLocations": [
+    "docs/security/evidence/runtime/technical-closeout-consolidated.json",
+    "docs/security/evidence/runtime/deployment-smoke-validation.json",
+    "docs/security/evidence/runtime/legal-rules-validation.json",
+    ".github/workflows/eu-ai-act-final-runtime-closeout.yml",
+    ".github/workflows/legal-rules-runtime-validation.yml"
+  ],
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "productionGate": "Blocked until every required control passes for one frozen full deployment SHA and the final closeout evidence is regenerated.",
+  "acceptanceRule": "Every required control must be PASS for the same full deployment SHA, environment and timestamp window. Placeholders, stale evidence, repository-only tests and synthetic evidence do not satisfy production runtime validation.",
+  "controls": [
+    {
+      "id": "migrations",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["supabase/migrations"],
+      "verification": ["migration contracts", "applied migration inventory", "schema drift check"]
+    },
+    {
+      "id": "rls",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["scripts/security/check-rls.mjs", "scripts/security/run-supabase-live-tenant-isolation.mjs"],
+      "verification": ["npm run security:rls:live"]
+    },
+    {
+      "id": "rpcs",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["supabase/migrations", "tests/prohibited-practices-operational-migration-contract.test.ts", "tests/fria-operational-migration-contract.test.ts"],
+      "verification": ["atomic RPC contract and live database execution"]
+    },
+    {
+      "id": "cron",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["scripts/security/check-internal-maintenance-jobs.mjs"],
+      "verification": ["npm run security:internal-maintenance", "live authorised cron invocation"]
+    },
+    {
+      "id": "email",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["src/app/api/internal/email/test/route.ts"],
+      "verification": ["authorised provider delivery", "failure classification", "redacted logs"]
+    },
+    {
+      "id": "reviewer-invites",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["qualified review workflows"],
+      "verification": ["tenant-bound invite", "expiry", "single-use acceptance", "independent reviewer boundary"]
+    },
+    {
+      "id": "sessions",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["Supabase Auth session controls"],
+      "verification": ["session creation", "refresh", "revocation", "tenant switch boundary"]
+    },
+    {
+      "id": "attestations",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["qualified review and evidence workflows"],
+      "verification": ["immutable actor", "timestamp", "digest", "independence rule"]
+    },
+    {
+      "id": "submissions",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["evidence submission workflows"],
+      "verification": ["tenant isolation", "bounded payload", "malware/content policy where applicable"]
+    },
+    {
+      "id": "decisions",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["src/server/ai-governance/decision-engine.ts", "ai_prohibited_practice_decisions", "ai_fria_decisions"],
+      "verification": ["version binding", "actor attribution", "evidence digest", "audit event"]
+    },
+    {
+      "id": "evidence-package-export",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["evidence package export workflows"],
+      "verification": ["tenant-scoped export", "manifest", "hashes", "safe filenames", "no-store"]
+    },
+    {
+      "id": "final-closeout",
+      "status": "BLOCKED",
+      "implementation": [".github/workflows/eu-ai-act-final-runtime-closeout.yml"],
+      "verification": ["exact frozen SHA", "all required workflow artifacts", "human owner approval"]
+    },
+    {
+      "id": "rate-limit",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["src/lib/security/rate-limit.ts", "scripts/security/check-enterprise-api-security.mjs"],
+      "verification": ["distributed enforcement", "429 response", "provider failure mode"]
+    },
+    {
+      "id": "no-store",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["scripts/security/check-no-store.mjs"],
+      "verification": ["npm run security:no-store", "runtime response headers"]
+    },
+    {
+      "id": "trusted-origin",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["scripts/security/check-origin-guards.mjs"],
+      "verification": ["npm run security:origin-guards", "cross-origin negative runtime case"]
+    },
+    {
+      "id": "sanitised-logs",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["src/server/observability/logger.ts", "scripts/security/check-log-sanitization.mjs"],
+      "verification": ["npm run security:logs", "runtime error and security-event samples"]
+    },
+    {
+      "id": "sentry",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["sentry.server.config.ts", "sentry.edge.config.ts", "instrumentation-client.ts"],
+      "verification": ["exact release SHA", "sanitised captured exception", "source map linkage"]
+    },
+    {
+      "id": "backups",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["backup runbooks and provider configuration"],
+      "verification": ["fresh backup identifier", "retention", "encryption", "owner"]
+    },
+    {
+      "id": "restore",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["restore runbooks"],
+      "verification": ["isolated restore drill", "RTO/RPO measurements", "data integrity checks"]
+    },
+    {
+      "id": "health",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["src/app/api/health/route.ts"],
+      "verification": ["public minimal response", "security headers", "no sensitive dependencies"]
+    },
+    {
+      "id": "ready",
+      "status": "REVALIDATION_REQUIRED",
+      "implementation": ["src/app/api/ready/route.ts", "src/app/api/ready/release/route.ts"],
+      "verification": ["protected readiness", "critical dependency checks", "no-store"]
+    },
+    {
+      "id": "deployment-sha",
+      "status": "BLOCKED",
+      "implementation": ["src/server/release/runtime-release-metadata.ts"],
+      "verification": ["full 40-character SHA returned by deployed runtime and matched to assessed commit"]
+    },
+    {
+      "id": "legal-rules-runtime",
+      "status": "BLOCKED",
+      "implementation": ["src/app/api/public/legal-rules-validation/route.ts", "scripts/compliance/capture-legal-rules-runtime-evidence.mjs"],
+      "verification": ["docs/security/evidence/runtime/legal-rules-validation.json must be PASS for the exact deployed SHA"]
+    },
+    {
+      "id": "deployment-smoke",
+      "status": "BLOCKED",
+      "implementation": ["scripts/release/run-deployment-smoke.mjs", "scripts/release/run-deployment-smoke-v2.mjs"],
+      "verification": ["docs/security/evidence/runtime/deployment-smoke-validation.json is currently an Open/failed placeholder"]
+    }
+  ],
+  "counts": {
+    "totalControls": 24,
+    "exactShaRuntimePass": 0,
+    "blocked": 4,
+    "revalidationRequired": 20
+  },
+  "evidenceIntegrity": {
+    "placeholderOnly": true,
+    "runtimeProofInvented": false,
+    "customerFacingProof": false,
+    "containsSensitiveValues": false
+  },
+  "nextAcceptableTransition": "After CI is green, deploy the exact PR or main SHA, execute deployment smoke and legal-rules runtime capture, then regenerate this artifact with immutable evidence references."
+}

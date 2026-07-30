@@ -1,0 +1,44 @@
+{
+  "evidenceItem": "legal-rules-validation",
+  "schema": "risck-comply.legal-rules-runtime-evidence.v1",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "environment": "unknown",
+  "deploymentUrl": null,
+  "deploymentSha": null,
+  "legalRulesVersion": "2026-07-30.1",
+  "sourceRegulations": [
+    "Regulation (EU) 2024/1689",
+    "Regulation (EU) 2026/1744"
+  ],
+  "effectiveDate": "2026-07-27",
+  "effectiveDateMeaning": "Entry into force of Regulation (EU) 2026/1744; individual amended provisions retain their statutory application dates.",
+  "rulesDigest": null,
+  "testCases": [],
+  "status": "NOT_EXECUTED",
+  "outcome": "not_run",
+  "timestamp": null,
+  "reviewer": "RISCK COMPLY release automation",
+  "reviewedAt": "2026-07-30T12:00:00.000Z",
+  "summary": "Exact-SHA deployed legal-rules runtime validation has not executed; this placeholder intentionally keeps runtime coverage and release promotion blocked.",
+  "evidenceLocations": [
+    "src/server/ai-governance/legal-rules.ts",
+    "src/server/ai-governance/decision-engine.ts",
+    "src/server/ai-governance/legal-rules-runtime.ts",
+    "src/app/api/ops/legal-rules-validation/route.ts",
+    "scripts/compliance/capture-legal-rules-runtime-evidence.mjs",
+    "docs/security/evidence/runtime/legal-rules-validation.json"
+  ],
+  "requestIds": [],
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "artifactSha256": null,
+  "countsForRuntimeCoverage": false,
+  "productionGate": "Blocked until a PASS artifact is captured from the protected ops endpoint for the exact deployed 40-character SHA and passes integrity verification.",
+  "blocker": "A PASS document may replace this placeholder only after the authenticated ops runtime endpoint is executed against a deployed exact 40-character SHA and the capture script verifies its integrity.",
+  "evidenceIntegrity": {
+    "placeholderOnly": true,
+    "runtimeProofInvented": false,
+    "customerFacingProof": false,
+    "containsSensitiveValues": false
+  },
+  "evidenceBoundary": "This placeholder proves that the evidence slot is versioned. It is deliberately rejected by the coverage scorer and is not runtime proof."
+}

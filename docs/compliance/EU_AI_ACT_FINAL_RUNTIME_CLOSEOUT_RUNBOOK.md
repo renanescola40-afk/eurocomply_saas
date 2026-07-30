@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This workflow closes the final 16 runtime-evidence points after product implementation and CI verification have reached 100%.
+This workflow closes the final report-mode runtime-evidence points after product implementation and CI verification have reached 100%, while reserving deployed-only controls for strict closeout.
 
 It covers:
 
@@ -10,17 +10,21 @@ It covers:
 - vendor/provider failure classification — 4 points;
 - protected repository and branch controls — 4 points.
 
+The versioned legal-rules registry is a separate 4-point workstream. It cannot be promoted by the synthetic safe bundle or this repository-only overlay; it requires the deployed exact-SHA legal-rules artifact.
+
 ## Modes
 
 ### Pull-request report mode
 
-Pull requests regenerate the 84-point safe runtime bundle, validate readiness coherence and provider-failure behavior, then inspect GitHub branch protection.
+Pull requests regenerate the **80-point** safe runtime bundle. The 4 legal-rules points are deliberately excluded because only deployed proof is accepted.
 
-If branch-protection metadata cannot be read or does not meet the policy, the workflow retains a blocked report instead of fabricating evidence. Readiness and provider evidence may still be promoted, producing at least 96% runtime coverage.
+The workflow then validates readiness coherence and provider-failure behavior and inspects GitHub branch protection. Readiness and provider evidence can promote the report to **92%** runtime coverage. Platform controls can raise it to **96%** only when required reviews and the other branch-policy checks are verifiably enabled.
+
+If branch-protection metadata cannot be read or does not meet policy, the workflow retains a blocked report instead of fabricating evidence. The release decision remains `EU_AI_ACT_PRODUCT_COVERAGE_NO_GO`.
 
 ### Strict main closeout
 
-Pushes to `main` and protected manual runs require all three controls. Any missing, stale, cross-SHA or blocked proof fails the workflow.
+Pushes to `main` and protected manual runs require all three final-overlay controls plus every independently required runtime artifact, including deployed exact-SHA legal-rules validation. Any missing, stale, cross-SHA or blocked proof fails the workflow.
 
 A successful strict run must produce:
 
@@ -33,7 +37,7 @@ A successful strict run must produce:
 
 The workflow verifies:
 
-- the GitHub branch-protection API is readable;
+- the GitHub branch-protection or effective-rules API is readable;
 - required status checks are configured;
 - at least one approving review is required;
 - force pushes are blocked;
