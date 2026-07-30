@@ -1,0 +1,135 @@
+name: Legal Rules Runtime Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/server/ai-governance/legal-rules.ts'
+      - 'src/server/ai-governance/legal-rules-runtime.ts'
+      - 'src/server/ai-governance/decision-engine.ts'
+      - 'src/app/api/public/legal-rules-validation/**'
+      - 'src/server/release/runtime-release-metadata.ts'
+      - 'tests/legal-rules-runtime-*.test.ts'
+      - 'scripts/compliance/capture-legal-rules-runtime-evidence.mjs'
+      - 'docs/compliance/**'
+      - 'docs/security/evidence/runtime/legal-rules-validation.json'
+      - '.github/workflows/legal-rules-runtime-validation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/server/ai-governance/legal-rules.ts'
+      - 'src/server/ai-governance/legal-rules-runtime.ts'
+      - 'src/app/api/public/legal-rules-validation/**'
+      - 'scripts/compliance/capture-legal-rules-runtime-evidence.mjs'
+      - '.github/workflows/legal-rules-runtime-validation.yml'
+  workflow_dispatch:
+    inputs:
+      deployment_url:
+        description: 'Exact HTTPS deployment origin to validate'
+        required: true
+        type: string
+      expected_sha:
+        description: 'Full 40-character deployment SHA'
+        required: true
+        type: string
+      environment:
+        description: 'Evidence environment label'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - preview
+          - production
+
+permissions:
+  contents: read
+
+env:
+  TARGET_SHA: ${{ github.event.pull_request.head.sha || inputs.expected_sha || github.sha }}
+
+concurrency:
+  group: legal-rules-runtime-validation-${{ github.event.pull_request.head.sha || inputs.expected_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Legal rules contract gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact assessed SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact assessed checkout
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Run focused legal rules contracts
+        run: >-
+          npx vitest run
+          src/server/ai-governance/legal-rules.test.ts
+          src/server/ai-governance/legal-rules-runtime.test.ts
+          src/server/ai-governance/decision-engine.test.ts
+          tests/ai-act-decision-engine-contract.test.ts
+          tests/legal-rules-runtime-api-contract.test.ts
+          tests/legal-rules-runtime-capture-contract.test.ts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Run focused security gates
+        run: |
+          npm run security:no-store
+          npm run security:headers
+          npm run security:logs
+          npm run security:public-errors
+
+  runtime:
+    name: Capture deployed exact-SHA evidence
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      DEPLOYMENT_URL: ${{ inputs.deployment_url }}
+      EXPECTED_DEPLOYMENT_SHA: ${{ inputs.expected_sha }}
+      OUTPUT_PATH: artifacts/legal-rules-runtime/docs/security/evidence/runtime/legal-rules-validation.json
+    steps:
+      - name: Checkout exact deployed SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.expected_sha }}
+          persist-credentials: false
+
+      - name: Verify exact deployed checkout
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_DEPLOYMENT_SHA"
+          test '${{ inputs.environment }}' = 'preview' -o '${{ inputs.environment }}' = 'production'
+
+      - name: Capture and verify runtime evidence
+        run: node scripts/compliance/capture-legal-rules-runtime-evidence.mjs
+
+      - name: Upload immutable runtime evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: legal-rules-runtime-${{ inputs.expected_sha }}
+          path: artifacts/legal-rules-runtime
+          retention-days: 365
+          if-no-files-found: error
