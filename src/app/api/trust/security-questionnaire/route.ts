@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { checkDistributedRateLimit, getClientIpFromRequest } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { getSecurityQuestionnairePack, resolveEvidenceUrls } from '@/lib/trust/security-questionnaire';
 
@@ -9,17 +9,12 @@ export const dynamic = 'force-dynamic';
 const SECURITY_QUESTIONNAIRE_RATE_LIMIT = 60;
 const SECURITY_QUESTIONNAIRE_RATE_LIMIT_WINDOW_MS = 60_000;
 
-function resolveClientIp(request: NextRequest) {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip')?.trim() ||
-    'unknown'
-  );
-}
-
 export async function GET(request: NextRequest) {
   const rateLimit = await checkDistributedRateLimit({
-    key: `public-security-questionnaire:${resolveClientIp(request)}`,
+    policy: 'general-api',
+    ip: getClientIpFromRequest(request),
+    route: request.nextUrl.pathname,
+    action: 'read-public-security-questionnaire',
     limit: SECURITY_QUESTIONNAIRE_RATE_LIMIT,
     windowMs: SECURITY_QUESTIONNAIRE_RATE_LIMIT_WINDOW_MS,
   });
