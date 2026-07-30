@@ -30,6 +30,7 @@ on:
       - 'scripts/compliance/generate-eu-ai-act-product-coverage.mjs'
       - 'scripts/security/check-p0-runtime-evidence-files.mjs'
       - '.github/workflows/legal-rules-runtime-validation.yml'
+  deployment_status:
   workflow_dispatch:
     inputs:
       deployment_url:
@@ -53,15 +54,22 @@ permissions:
   contents: read
 
 env:
-  TARGET_SHA: ${{ github.event.pull_request.head.sha || inputs.expected_sha || github.sha }}
+  TARGET_SHA: ${{ github.event.pull_request.head.sha || inputs.expected_sha || github.event.deployment.sha || github.sha }}
 
 concurrency:
-  group: legal-rules-runtime-validation-${{ github.event.pull_request.head.sha || inputs.expected_sha || github.sha }}
+  group: legal-rules-runtime-validation-${{ github.event.pull_request.head.sha || inputs.expected_sha || github.event.deployment.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
   contract:
     name: Legal rules contract gates
+    if: >-
+      github.event_name != 'deployment_status' ||
+      (
+        github.event.deployment_status.state == 'success' &&
+        github.event.deployment.ref == github.event.repository.default_branch &&
+        github.event.sender.login == 'vercel[bot]'
+      )
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -117,27 +125,63 @@ jobs:
 
   runtime:
     name: Capture deployed exact-SHA evidence
-    if: github.event_name == 'workflow_dispatch'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'deployment_status' &&
+        github.event.deployment_status.state == 'success' &&
+        github.event.deployment.ref == github.event.repository.default_branch &&
+        github.event.sender.login == 'vercel[bot]'
+      )
     needs: contract
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      DEPLOYMENT_URL: ${{ inputs.deployment_url }}
-      EXPECTED_DEPLOYMENT_SHA: ${{ inputs.expected_sha }}
+      DEPLOYMENT_URL: ${{ inputs.deployment_url || github.event.deployment_status.environment_url }}
+      EXPECTED_DEPLOYMENT_SHA: ${{ inputs.expected_sha || github.event.deployment.sha }}
+      DEPLOYMENT_EVENT_STATE: ${{ github.event.deployment_status.state }}
+      DEPLOYMENT_EVENT_REF: ${{ github.event.deployment.ref }}
+      DEPLOYMENT_EVENT_SHA: ${{ github.event.deployment.sha }}
+      DEPLOYMENT_EVENT_SENDER: ${{ github.event.sender.login }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       INTERNAL_CRON_SECRET: ${{ secrets.INTERNAL_CRON_SECRET || secrets.CRON_SECRET }}
       OUTPUT_PATH: artifacts/legal-rules-runtime/docs/security/evidence/runtime/legal-rules-validation.json
     steps:
       - name: Checkout exact deployed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: ${{ inputs.expected_sha }}
+          ref: ${{ env.EXPECTED_DEPLOYMENT_SHA }}
           persist-credentials: false
+          fetch-depth: 0
 
-      - name: Verify exact deployed checkout and secret
+      - name: Verify deployment event trust boundary
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_DEPLOYMENT_SHA"
-          test '${{ inputs.environment }}' = 'preview' -o '${{ inputs.environment }}' = 'production'
           test -n "$INTERNAL_CRON_SECRET"
+          node <<'NODE'
+          const fullSha = /^[a-f0-9]{40}$/;
+          const rawUrl = String(process.env.DEPLOYMENT_URL || '').trim();
+          const expectedSha = String(process.env.EXPECTED_DEPLOYMENT_SHA || '').trim().toLowerCase();
+          if (!fullSha.test(expectedSha)) throw new Error('deployment SHA must be a full lowercase SHA');
+          const url = new URL(rawUrl);
+          const host = url.hostname.toLowerCase();
+          const allowedHost = host === 'risckcomply.com'
+            || host === 'www.risckcomply.com'
+            || host.endsWith('.vercel.app');
+          if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || !allowedHost) {
+            throw new Error('deployment URL is outside the approved HTTPS host boundary');
+          }
+          if (process.env.GITHUB_EVENT_NAME === 'deployment_status') {
+            if (process.env.DEPLOYMENT_EVENT_STATE !== 'success') throw new Error('deployment status must be success');
+            if (process.env.DEPLOYMENT_EVENT_SENDER !== 'vercel[bot]') throw new Error('deployment sender is not the trusted Vercel app');
+            if (process.env.DEPLOYMENT_EVENT_REF !== process.env.DEFAULT_BRANCH) throw new Error('deployment ref is not the default branch');
+            if (String(process.env.DEPLOYMENT_EVENT_SHA || '').toLowerCase() !== expectedSha) throw new Error('deployment event SHA mismatch');
+          }
+          NODE
+          if [ "$GITHUB_EVENT_NAME" = 'deployment_status' ]; then
+            git fetch --no-tags origin "+refs/heads/${DEFAULT_BRANCH}:refs/remotes/origin/${DEFAULT_BRANCH}"
+            test "$(git rev-parse "refs/remotes/origin/${DEFAULT_BRANCH}")" = "$EXPECTED_DEPLOYMENT_SHA"
+          fi
 
       - name: Capture and verify runtime evidence
         run: |
@@ -149,7 +193,7 @@ jobs:
       - name: Upload immutable runtime evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: legal-rules-runtime-${{ inputs.expected_sha }}
+          name: legal-rules-runtime-${{ inputs.expected_sha || github.event.deployment.sha }}
           path: artifacts/legal-rules-runtime
           retention-days: 365
           if-no-files-found: error
