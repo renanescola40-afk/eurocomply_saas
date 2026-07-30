@@ -69,6 +69,10 @@ jobs:
             *) echo 'SUPABASE_DB_POOLER_URL must use the Supabase pooler endpoint' >&2; exit 1 ;;
           esac
 
+      - name: Test proof verifier
+        shell: bash
+        run: node --test scripts/supabase/verify-rls-reconciliation-proof.test.mjs
+
       - name: Install PostgreSQL client
         shell: bash
         run: |
@@ -84,11 +88,14 @@ jobs:
             --set ON_ERROR_STOP=1 \
             --file supabase/reconciliation/20260726070000_permissions_catalog_rls_hotfix.sql
 
-      - name: Verify RLS, grants, policies and migration evidence
+      - name: Collect RLS, grants, policies and migration evidence
         shell: bash
         run: |
           set -euo pipefail
-          psql "$SUPABASE_DB_POOLER_URL" --set ON_ERROR_STOP=1 --tuples-only --no-align <<'SQL' | tee reconciliation-proof.txt
+          mkdir -p artifacts/supabase-rls-reconciliation
+          psql "$SUPABASE_DB_POOLER_URL" --set ON_ERROR_STOP=1 --tuples-only --no-align <<'SQL' \
+            | sed '/^[[:space:]]*$/d' \
+            | tee artifacts/supabase-rls-reconciliation/reconciliation-proof.txt
           select 'rls|' || c.relname || '|' || c.relrowsecurity || '|' || c.relforcerowsecurity
           from pg_class c
           join pg_namespace n on n.oid = c.relnamespace
@@ -107,16 +114,15 @@ jobs:
           where version = '20260726070000';
           SQL
 
-          grep -Fx 'rls|permissions|t|t' reconciliation-proof.txt
-          grep -Fx 'rls|role_permissions|t|t' reconciliation-proof.txt
-          grep -Fx 'rls|stripe_webhook_events|t|t' reconciliation-proof.txt
-          grep -F 'policy|permissions|permissions_authenticated_read|SELECT|authenticated' reconciliation-proof.txt
-          grep -F 'policy|role_permissions|role_permissions_authenticated_read|SELECT|authenticated' reconciliation-proof.txt
-          if grep -F 'policy|stripe_webhook_events|' reconciliation-proof.txt; then
-            echo 'stripe_webhook_events must remain policy-free and backend-only' >&2
-            exit 1
-          fi
-          grep -F 'history|20260726070000|permissions_catalog_rls_hotfix' reconciliation-proof.txt
+      - name: Verify reconciliation proof deterministically
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/supabase/verify-rls-reconciliation-proof.mjs \
+            artifacts/supabase-rls-reconciliation/reconciliation-proof.txt \
+            artifacts/supabase-rls-reconciliation/verification.json
+          sha256sum artifacts/supabase-rls-reconciliation/* \
+            > artifacts/supabase-rls-reconciliation/SHA256SUMS
 
       - name: Publish verification summary
         if: always()
@@ -130,12 +136,24 @@ jobs:
             echo "- Release SHA: \`$RELEASE_SHA\`"
             echo "- Project ref suffix: \`${SUPABASE_PROJECT_ID: -6}\`"
             echo '- Connection path: Supabase Session Pooler (secret-backed)'
-            if [ -f reconciliation-proof.txt ]; then
+            if [ -f artifacts/supabase-rls-reconciliation/verification.json ]; then
+              echo "- Verification status: \`$(node -p "require('./artifacts/supabase-rls-reconciliation/verification.json').status")\`"
+            else
+              echo '- Verification status: `NOT_PRODUCED`'
+            fi
+            if [ -f artifacts/supabase-rls-reconciliation/reconciliation-proof.txt ]; then
               echo '- Verification evidence:'
               echo '```text'
-              cat reconciliation-proof.txt
+              cat artifacts/supabase-rls-reconciliation/reconciliation-proof.txt
               echo '```'
-            else
-              echo '- Verification evidence was not produced.'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload immutable reconciliation evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: supabase-rls-reconciliation-${{ inputs.release_sha }}
+          path: artifacts/supabase-rls-reconciliation
+          if-no-files-found: error
+          retention-days: 90
