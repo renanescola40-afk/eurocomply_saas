@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -48,8 +49,11 @@ function runAudit({ localFiles = [], remoteVersions = [], reconciliationFiles = 
   const report = JSON.parse(
     readFileSync(path.join(outputDir, 'migration-drift.json'), 'utf8'),
   );
+  const inventory = JSON.parse(
+    readFileSync(path.join(outputDir, 'migration-reconciliation-inventory.json'), 'utf8'),
+  );
 
-  return { result, report };
+  return { result, report, inventory };
 }
 
 afterEach(() => {
@@ -61,7 +65,7 @@ afterEach(() => {
 describe('Supabase migration deployability gate', () => {
   it('authorizes only a dry-run when local and remote history are aligned', () => {
     const version = '20260730120000';
-    const { result, report } = runAudit({
+    const { result, report, inventory } = runAudit({
       localFiles: [`${version}_aligned.sql`],
       remoteVersions: [version],
     });
@@ -73,11 +77,19 @@ describe('Supabase migration deployability gate', () => {
     expect(report.deployabilityBlockers).toEqual([]);
     expect(report.safety.recommendation).toContain('dry-run');
     expect(report.safety.recommendation).toContain('does not authorize a production write');
+    expect(inventory.counts.unclassified).toBe(0);
+    expect(inventory.localInventory[0]).toMatchObject({
+      version,
+      remoteState: 'ALIGNED_WITH_REMOTE_HISTORY',
+    });
   });
 
-  it('blocks pending local migrations with exit code 3', () => {
-    const { result, report } = runAudit({
-      localFiles: ['20260730120100_pending.sql'],
+  it('blocks pending local migrations and emits an immutable unclassified inventory', () => {
+    const filename = '20260730120100_pending.sql';
+    const sql = 'select 1;\n';
+    const expectedDigest = createHash('sha256').update(sql).digest('hex');
+    const { result, report, inventory } = runAudit({
+      localFiles: [filename],
       remoteVersions: [],
     });
 
@@ -85,11 +97,27 @@ describe('Supabase migration deployability gate', () => {
     expect(report.status).toBe('PENDING_LOCAL_MIGRATIONS');
     expect(report.deploymentAuthorization).toBe('BLOCKED');
     expect(report.deployabilityBlockers).toContain('pending_local_versions');
+    expect(report.summary.localOnlyFilesRequiringClassification).toBe(1);
+    expect(inventory.schema).toBe(
+      'risck-comply.supabase-migration-reconciliation-inventory.v1',
+    );
+    expect(inventory.classificationPolicy.automaticClassificationAllowed).toBe(false);
+    expect(inventory.items).toHaveLength(1);
+    expect(inventory.items[0]).toMatchObject({
+      filename,
+      sha256: expectedDigest,
+      classification: 'UNCLASSIFIED',
+      rationale: null,
+      reviewer: null,
+    });
+    expect(inventory.items[0].allowedClassifications).toContain(
+      'ALREADY_PRESENT_IN_SCHEMA',
+    );
   });
 
   it('blocks invalid timestamps and duplicate versions with exit code 3', () => {
     const version = '20260730120200';
-    const { result, report } = runAudit({
+    const { result, report, inventory } = runAudit({
       localFiles: [
         `${version}_first.sql`,
         `${version}_duplicate.sql`,
@@ -103,6 +131,8 @@ describe('Supabase migration deployability gate', () => {
     expect(report.deployabilityBlockers).toContain('duplicate_local_versions');
     expect(report.summary.invalidLocal).toBe(1);
     expect(report.summary.duplicateVersions).toBe(1);
+    expect(report.duplicateVersions[0].digests).toHaveLength(2);
+    expect(inventory.localInventory.filter((entry) => entry.duplicateVersion)).toHaveLength(2);
   });
 
   it('treats an unknown remote-only version as critical drift with exit code 2', () => {
@@ -119,7 +149,7 @@ describe('Supabase migration deployability gate', () => {
 
   it('accepts a remote version represented by a controlled reconciliation file', () => {
     const version = '20260730120400';
-    const { result, report } = runAudit({
+    const { result, report, inventory } = runAudit({
       localFiles: [],
       reconciliationFiles: [`${version}_controlled_hotfix.sql`],
       remoteVersions: [version],
@@ -129,5 +159,9 @@ describe('Supabase migration deployability gate', () => {
     expect(report.status).toBe('ALIGNED');
     expect(report.summary.reconciledRemote).toBe(1);
     expect(report.deploymentAuthorization).toBe('AUTHORIZED_FOR_DRY_RUN');
+    expect(inventory.reconciliationInventory[0]).toMatchObject({
+      version,
+      remoteState: 'RECONCILES_REMOTE_VERSION',
+    });
   });
 });
