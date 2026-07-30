@@ -11,6 +11,7 @@ const migrationsDir = positional[0] ?? 'supabase/migrations';
 const remoteListPath = positional[1] ?? 'migration-state-remote.txt';
 const outputDir = positional[2] ?? 'artifacts/supabase-migration-drift';
 const reconciliationDir = path.join(path.dirname(migrationsDir), 'reconciliation');
+const generatedAt = new Date().toISOString();
 const allowedClassifications = Object.freeze([
   'ALREADY_PRESENT_IN_SCHEMA',
   'PENDING_DEPLOYMENT',
@@ -124,6 +125,20 @@ const localOnly = [...localValidVersions].filter((version) => !remoteVersions.ha
 const remoteOnly = [...remoteVersions].filter((version) => !repositoryKnownVersions.has(version)).sort();
 const localOnlySet = new Set(localOnly);
 
+function classificationReasonsFor(entry) {
+  const reasons = [];
+  if (!entry.validShape || !entry.validTimestamp) {
+    reasons.push('INVALID_LOCAL_FILENAME_OR_TIMESTAMP');
+  }
+  if (entry.version && duplicateVersionSet.has(entry.version)) {
+    reasons.push('DUPLICATE_VERSION');
+  }
+  if (entry.version && localOnlySet.has(entry.version)) {
+    reasons.push('LOCAL_ONLY_VERSION');
+  }
+  return reasons;
+}
+
 const localInventory = local.map((entry) => ({
   ...entry,
   remoteState: !entry.validShape || !entry.validTimestamp
@@ -132,6 +147,7 @@ const localInventory = local.map((entry) => ({
       ? 'ALIGNED_WITH_REMOTE_HISTORY'
       : 'LOCAL_ONLY',
   duplicateVersion: entry.version ? duplicateVersionSet.has(entry.version) : false,
+  classificationReasons: classificationReasonsFor(entry),
 }));
 const reconciliationInventory = reconciliations.map((entry) => ({
   ...entry,
@@ -140,13 +156,14 @@ const reconciliationInventory = reconciliations.map((entry) => ({
     : 'UNUSED_RECONCILIATION_FILE',
 }));
 const reconciliationItems = localInventory
-  .filter((entry) => entry.version && localOnlySet.has(entry.version))
+  .filter((entry) => entry.classificationReasons.length > 0)
   .map((entry) => ({
     version: entry.version,
     filename: entry.filename,
     sha256: entry.sha256,
     byteLength: entry.byteLength,
     duplicateVersion: entry.duplicateVersion,
+    classificationReasons: entry.classificationReasons,
     classification: 'UNCLASSIFIED',
     allowedClassifications,
     rationale: null,
@@ -156,9 +173,18 @@ const reconciliationItems = localInventory
     deployOrderDecision: null,
     rollbackReference: null,
   }));
+const localOnlyClassificationCount = reconciliationItems.filter((entry) => (
+  entry.classificationReasons.includes('LOCAL_ONLY_VERSION')
+)).length;
+const invalidClassificationCount = reconciliationItems.filter((entry) => (
+  entry.classificationReasons.includes('INVALID_LOCAL_FILENAME_OR_TIMESTAMP')
+)).length;
+const duplicateClassificationCount = reconciliationItems.filter((entry) => (
+  entry.classificationReasons.includes('DUPLICATE_VERSION')
+)).length;
 const reconciliationManifest = {
   schema: 'risck-comply.supabase-migration-reconciliation-inventory.v1',
-  generatedAt: new Date().toISOString(),
+  generatedAt,
   sourceDirectories: {
     migrations: migrationsDir,
     reconciliations: reconciliationDir,
@@ -171,11 +197,15 @@ const reconciliationManifest = {
     alreadyPresentRequiresSchemaEvidence: true,
     pendingDeploymentRequiresStagedExecutionEvidence: true,
     supersededRequiresReplacementDigest: true,
+    invalidOrDuplicateRequiresExplicitResolution: true,
   },
   counts: {
     localFiles: localInventory.length,
     reconciliationFiles: reconciliationInventory.length,
-    localOnlyFilesRequiringClassification: reconciliationItems.length,
+    filesRequiringClassification: reconciliationItems.length,
+    localOnlyFilesRequiringClassification: localOnlyClassificationCount,
+    invalidFilesRequiringClassification: invalidClassificationCount,
+    duplicateFilesRequiringClassification: duplicateClassificationCount,
     unclassified: reconciliationItems.length,
   },
   localInventory,
@@ -201,7 +231,7 @@ if (duplicateVersions.length > 0) deployabilityBlockers.push('duplicate_local_ve
 const generalDbPushAuthorized = deployabilityBlockers.length === 0;
 
 const report = {
-  generatedAt: new Date().toISOString(),
+  generatedAt,
   status,
   deploymentAuthorization: generalDbPushAuthorized ? 'AUTHORIZED_FOR_DRY_RUN' : 'BLOCKED',
   requireDeployable,
@@ -217,7 +247,10 @@ const report = {
     remoteOnly: remoteOnly.length,
     invalidLocal: invalidLocal.length,
     duplicateVersions: duplicateVersions.length,
-    localOnlyFilesRequiringClassification: reconciliationItems.length,
+    filesRequiringClassification: reconciliationItems.length,
+    localOnlyFilesRequiringClassification: localOnlyClassificationCount,
+    invalidFilesRequiringClassification: invalidClassificationCount,
+    duplicateFilesRequiringClassification: duplicateClassificationCount,
   },
   aligned,
   reconciledRemote,
@@ -259,14 +292,14 @@ markdown += `- Remote versions: ${report.summary.remoteVersions}\n`;
 markdown += `- Aligned normal migrations: ${report.summary.aligned}\n`;
 markdown += `- Aligned versioned reconciliations: ${report.summary.reconciledRemote}\n`;
 markdown += `- Local-only versions: ${report.summary.localOnly}\n`;
-markdown += `- Local-only files requiring human classification: ${report.summary.localOnlyFilesRequiringClassification}\n`;
+markdown += `- SQL files requiring human classification: ${report.summary.filesRequiringClassification}\n`;
 markdown += `- Unknown remote-only versions: ${report.summary.remoteOnly}\n`;
 markdown += `- Invalid local filenames/timestamps (legacy advisory): ${report.summary.invalidLocal}\n`;
 markdown += `- Duplicate local versions (legacy advisory): ${report.summary.duplicateVersions}\n\n`;
 markdown += '## Production deployability blockers\n\n';
 markdown += markdownList(deployabilityBlockers, (blocker) => `\`${blocker}\``);
 markdown += '\n## Reconciliation inventory\n\n';
-markdown += '- `migration-reconciliation-inventory.json` contains every SQL file digest and an `UNCLASSIFIED` decision record for each local-only file.\n';
+markdown += '- `migration-reconciliation-inventory.json` contains every SQL file digest and an `UNCLASSIFIED` decision record for every file involved in a local-only, invalid-timestamp, or duplicate-version blocker.\n';
 markdown += '- The audit never infers that a migration is already applied, safe to deploy, superseded, or archival.\n';
 markdown += '- Classification requires schema evidence and explicit reviewer attribution.\n';
 markdown += '\n## Invalid local migrations (legacy advisory)\n\n';
