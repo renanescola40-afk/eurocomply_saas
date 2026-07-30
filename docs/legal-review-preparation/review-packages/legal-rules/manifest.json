@@ -1,0 +1,79 @@
+{
+  "schema": "risck-comply.qualified-review-package.v1",
+  "id": "legal-rules",
+  "weight": 4,
+  "status": "HUMAN_REVIEW_REQUIRED",
+  "acceptedDecisionPath": "docs/compliance/evidence/accepted/legal-rules-qualified-review.json",
+  "reviewQuestions": [
+    "Are legal sources current and correctly mapped?",
+    "Are rule precedence and effective dates defensible?",
+    "Are legal limitations and escalation points explicit?"
+  ],
+  "scope": [
+    "Regulation (EU) 2024/1689 and Regulation (EU) 2026/1744 source mapping",
+    "application dates, transition periods, role applicability and exceptions",
+    "official-source allow-list and runtime legal-rule digest",
+    "decision-engine treatment of active, transitional and future rules"
+  ],
+  "officialSources": [
+    "docs/legal-review-preparation/07_LEGAL_SOURCE_REGISTER.json",
+    "Regulation (EU) 2024/1689",
+    "Regulation (EU) 2026/1744"
+  ],
+  "implementationEvidence": [
+    "src/server/ai-governance/legal-rules.ts",
+    "src/server/ai-governance/legal-rules-runtime.ts",
+    "src/server/ai-governance/decision-engine.ts",
+    "src/app/api/ops/legal-rules-validation/route.ts"
+  ],
+  "testEvidence": [
+    "src/server/ai-governance/legal-rules.test.ts",
+    "src/server/ai-governance/legal-rules-runtime.test.ts",
+    "src/server/ai-governance/decision-engine.test.ts",
+    "tests/legal-rules-runtime-api-contract.test.ts",
+    "tests/compliance/eu-ai-act-safe-runtime-promotion.test.mjs"
+  ],
+  "runtimeEvidence": [
+    "docs/security/evidence/runtime/legal-rules-validation.json"
+  ],
+  "preReviewFindings": [
+    {
+      "id": "LR-01",
+      "severity": "HIGH",
+      "status": "READY_FOR_COUNSEL",
+      "finding": "The 2026 amendment and revised dates are implemented, but legal interpretation of amended Article 5 conditions and transitional scope remains unapproved.",
+      "requiredDecision": "Confirm source mapping, legal effect, dates and exception wording."
+    },
+    {
+      "id": "LR-02",
+      "severity": "MEDIUM",
+      "status": "READY_FOR_COUNSEL",
+      "finding": "The registry intentionally uses simplified operational obligations rather than full statutory text.",
+      "requiredDecision": "Confirm that each simplification preserves the legally material conditions and escalation boundary."
+    },
+    {
+      "id": "LR-03",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "finding": "Runtime evidence must be recaptured for the exact reviewed deployment SHA before acceptance can be credited.",
+      "requiredDecision": "Require exact-SHA PASS evidence as a condition of any accepted opinion."
+    }
+  ],
+  "acceptanceCriteria": [
+    "Every rule cites an authoritative source and correct provision.",
+    "Application and transition dates are correct for the reviewed version.",
+    "Exceptions and uncertain interpretations fail closed or escalate.",
+    "The signed decision is bound to the exact product SHA and package digest."
+  ],
+  "humanInputsRequired": [
+    "EU AI Act counsel identity and registration",
+    "jurisdiction and qualification scope",
+    "independence and conflict declarations",
+    "article-level decision and conditions"
+  ],
+  "limitations": [
+    "The registry is operational decision support, not an official consolidation of EU law.",
+    "National-law dependencies and customer facts remain outside this package.",
+    "No template or generated analysis is legal acceptance."
+  ]
+}
