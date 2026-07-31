@@ -37,22 +37,28 @@ jobs:
           TARGET_SHA: ${{ inputs.target_sha }}
         run: |
           set -euo pipefail
-          test "$TARGET_SHA" = "$(gh api repos/${{ github.repository }}/commits/main --jq .sha)"
+          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          current_main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
+          test "${TARGET_SHA,,}" = "${current_main_sha,,}"
 
       - name: Download migration inventory
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ inputs.inventory_run_id }}
+          TARGET_SHA: ${{ inputs.target_sha }}
         run: |
           set -euo pipefail
-          conclusion="$(gh api repos/${{ github.repository }}/actions/runs/$RUN_ID --jq .conclusion)"
-          head_sha="$(gh api repos/${{ github.repository }}/actions/runs/$RUN_ID --jq .head_sha)"
-          test "$conclusion" = success
-          test "$head_sha" = "${{ inputs.target_sha }}"
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          run_path="repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}"
+          conclusion="$(gh api "$run_path" --jq '.conclusion')"
+          head_sha="$(gh api "$run_path" --jq '.head_sha')"
+          test "$conclusion" = "success"
+          test "${head_sha,,}" = "${TARGET_SHA,,}"
+
           mkdir -p artifacts/source
-          artifact_id="$(gh api repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts --jq '.artifacts[] | select(.name == "supabase-migration-drift") | .id' | head -n1)"
-          test -n "$artifact_id"
-          gh api repos/${{ github.repository }}/actions/artifacts/$artifact_id/zip > artifacts/source/inventory.zip
+          artifact_id="$(gh api "${run_path}/artifacts" --jq '.artifacts[] | select(.name == "supabase-migration-drift") | .id' | head -n1)"
+          [[ "$artifact_id" =~ ^[0-9]+$ ]]
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > artifacts/source/inventory.zip
           unzip -q artifacts/source/inventory.zip -d artifacts/supabase-migration-drift
 
       - name: Compile reviewed reconciliation
