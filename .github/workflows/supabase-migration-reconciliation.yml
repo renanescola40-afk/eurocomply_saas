@@ -1,0 +1,77 @@
+name: Supabase Migration Reconciliation
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact current main SHA
+        required: true
+        type: string
+      inventory_run_id:
+        description: Workflow run containing migration drift inventory artifact
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: supabase-migration-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    environment: production-migration-reconciliation
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha }}
+          persist-credentials: false
+
+      - name: Verify exact current main SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          current_main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
+          test "${TARGET_SHA,,}" = "${current_main_sha,,}"
+
+      - name: Download migration inventory
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.inventory_run_id }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          run_path="repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}"
+          conclusion="$(gh api "$run_path" --jq '.conclusion')"
+          head_sha="$(gh api "$run_path" --jq '.head_sha')"
+          test "$conclusion" = "success"
+          test "${head_sha,,}" = "${TARGET_SHA,,}"
+
+          mkdir -p artifacts/source
+          artifact_id="$(gh api "${run_path}/artifacts" --jq '.artifacts[] | select(.name == "supabase-migration-drift") | .id' | head -n1)"
+          [[ "$artifact_id" =~ ^[0-9]+$ ]]
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > artifacts/source/inventory.zip
+          unzip -q artifacts/source/inventory.zip -d artifacts/supabase-migration-drift
+
+      - name: Compile reviewed reconciliation
+        run: node scripts/supabase/compile-migration-reconciliation.mjs
+
+      - name: Assert no production mutation
+        run: |
+          node -e "const r=require('./artifacts/supabase-migration-reconciliation/migration-reconciliation-result.json'); if(r.safety.databaseModified||r.safety.migrationHistoryModified||r.safety.productionPushAuthorized||r.safety.unrestrictedDbPushAllowed) process.exit(1)"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: supabase-migration-reconciliation-${{ inputs.target_sha }}
+          path: artifacts/supabase-migration-reconciliation
+          retention-days: 90
+          if-no-files-found: error

@@ -1,0 +1,34 @@
+{
+  "schema": "risck-comply.supabase-migration-reconciliation-decisions.v1",
+  "targetSha": "REPLACE_WITH_EXACT_MAIN_SHA",
+  "reviewedBy": "REPLACE_WITH_DATABASE_REVIEWER",
+  "reviewedAt": "REPLACE_WITH_ISO_TIMESTAMP",
+  "approvedBy": "REPLACE_WITH_INDEPENDENT_APPROVER",
+  "approvedAt": "REPLACE_WITH_ISO_TIMESTAMP",
+  "productionProjectRef": "REPLACE_WITH_PROJECT_REFERENCE",
+  "productionSchemaDumpDigest": "REPLACE_WITH_SHA256",
+  "remoteMigrationListDigest": "REPLACE_WITH_SHA256",
+  "items": [
+    {
+      "version": "REPLACE_WITH_VERSION_OR_NULL",
+      "filename": "REPLACE_WITH_FILENAME.sql",
+      "sha256": "REPLACE_WITH_FILE_SHA256",
+      "classification": "REQUIRES_SPLIT_REVIEW",
+      "rationale": "Replace with a reviewed explanation of at least twenty characters.",
+      "schemaEvidenceReference": "REPLACE_WITH_IMMUTABLE_EVIDENCE_REFERENCE",
+      "objectProofDigest": null,
+      "replacementDigest": null,
+      "stagingRunReference": null,
+      "rollbackReference": null,
+      "deployOrder": null,
+      "reviewer": "REPLACE_WITH_ITEM_REVIEWER",
+      "reviewedAt": "REPLACE_WITH_ISO_TIMESTAMP"
+    }
+  ],
+  "truthBoundary": {
+    "templateIsEvidence": false,
+    "databaseModified": false,
+    "migrationHistoryModified": false,
+    "productionPushAuthorized": false
+  }
+}
