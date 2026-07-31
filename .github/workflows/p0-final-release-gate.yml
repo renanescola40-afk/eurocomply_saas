@@ -9,6 +9,7 @@ on:
       - 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md'
       - 'docs/security/evidence/runtime/**'
       - 'scripts/security/**'
+      - 'tests/security/p0-runtime-gap-strict-contract.test.ts'
       - '.github/workflows/p0-final-release-gate.yml'
 
 permissions:
@@ -30,6 +31,16 @@ jobs:
         run: |
           node --version
           npm --version
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Test canonical P0 evidence contracts
+        run: >-
+          npx vitest run
+          scripts/security/p0-runtime-evidence-catalog.test.mjs
+          scripts/security/report-p0-runtime-evidence-gap.test.mjs
+          tests/security/p0-runtime-gap-strict-contract.test.ts
 
       - name: Detect runtime evidence changes
         id: runtime_changes
@@ -60,6 +71,9 @@ jobs:
 
       - name: Validate optional runtime evidence files
         run: node scripts/security/check-p0-runtime-evidence-optionals.mjs
+
+      - name: Report current runtime evidence gaps with canonical validators
+        run: node scripts/security/report-p0-runtime-evidence-gap.mjs
 
       - name: Enforce remaining runtime evidence gap is closed
         if: steps.runtime_changes.outputs.strict == 'true'

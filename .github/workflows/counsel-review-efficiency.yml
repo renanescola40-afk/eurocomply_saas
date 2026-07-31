@@ -1,0 +1,98 @@
+name: Counsel Review Efficiency
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'supabase/**'
+      - 'docs/legal-review-preparation/**'
+      - 'docs/compliance/**'
+      - 'docs/privacy/**'
+      - 'docs/trust/**'
+      - 'docs/sales/**'
+      - 'scripts/compliance/**'
+      - 'tests/compliance/counsel-review-efficiency.test.ts'
+      - '.github/workflows/counsel-review-efficiency.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'supabase/**'
+      - 'docs/legal-review-preparation/**'
+      - 'docs/compliance/**'
+      - 'docs/privacy/**'
+      - 'docs/trust/**'
+      - 'docs/sales/**'
+      - 'scripts/compliance/**'
+      - 'tests/compliance/counsel-review-efficiency.test.ts'
+      - '.github/workflows/counsel-review-efficiency.yml'
+  workflow_dispatch:
+    inputs:
+      reviewed_base_sha:
+        description: Previously reviewed exact SHA; blank forces a full review scope
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: counsel-review-efficiency-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  counsel-delta:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      COUNSEL_REVIEW_BASE_SHA: ${{ inputs.reviewed_base_sha || github.event.pull_request.base.sha || github.event.before }}
+      COUNSEL_REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      LEGAL_PUBLICATION_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      LEGAL_AUDIT_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Checkout repository with review history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate delta generator syntax
+        run: node --check scripts/compliance/build-counsel-review-delta.mjs
+
+      - name: Test counsel routing and non-crediting boundaries
+        run: npx vitest run tests/compliance/counsel-review-efficiency.test.ts tests/compliance/legal-truth-audit.test.ts tests/compliance/run-legal-truth-audit.test.ts
+
+      - name: Generate exact-SHA counsel review delta
+        run: node scripts/compliance/build-counsel-review-delta.mjs --strict --write
+
+      - name: Validate existing legal truth and preparation gates
+        run: |
+          node scripts/compliance/run-legal-truth-audit.mjs --strict
+          node scripts/compliance/validate-qualified-review-packages.mjs --strict
+          node scripts/compliance/validate-contract-counsel-pack.mjs --strict
+          node scripts/compliance/check-final-legal-publication-gate.mjs --strict --write
+
+      - name: Generate expanded counsel handoff bundle
+        run: node scripts/compliance/generate-legal-counsel-handoff-bundle.mjs --strict --write
+
+      - name: Upload counsel efficiency artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: counsel-review-efficiency-${{ env.COUNSEL_REVIEW_HEAD_SHA }}
+          path: |
+            artifacts/legal-review/counsel-review-delta.json
+            artifacts/legal-review/counsel-review-delta.md
+            artifacts/legal-review/counsel-handoff-bundle.json
+            artifacts/legal-review/counsel-handoff-bundle.md
+            artifacts/legal-review/final-legal-publication-gate.json
+          if-no-files-found: error
+          retention-days: 90
