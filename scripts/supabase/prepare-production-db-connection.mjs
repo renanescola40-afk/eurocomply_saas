@@ -34,6 +34,39 @@ function normalizeSecretText(rawValue) {
   };
 }
 
+function normalizePasswordOverride(rawValue) {
+  if (typeof rawValue !== 'string' || rawValue.length === 0) {
+    return {
+      value: undefined,
+      present: false,
+      removedLineBreakCount: 0,
+    };
+  }
+
+  const removedLineBreakCount = (rawValue.match(LINE_BREAK_PATTERN) ?? []).length;
+  const value = rawValue.replace(EMBEDDED_LINE_BREAK_PATTERN, '');
+
+  if (!value) {
+    return {
+      value: undefined,
+      present: false,
+      removedLineBreakCount,
+    };
+  }
+  if (DISALLOWED_CONTROL_PATTERN.test(value)) {
+    throw new Error('SUPABASE_DB_PASSWORD contains a disallowed control character');
+  }
+  if (HORIZONTAL_WHITESPACE_PATTERN.test(value)) {
+    throw new Error('SUPABASE_DB_PASSWORD contains literal whitespace');
+  }
+
+  return {
+    value,
+    present: true,
+    removedLineBreakCount,
+  };
+}
+
 function encodePasswordCharacter(character) {
   if (UNRESERVED_USERINFO_CHARACTER_PATTERN.test(character)) {
     return character;
@@ -66,31 +99,45 @@ function canonicalizePasswordEncoding(rawPassword) {
   return encoded;
 }
 
-function canonicalizeSupabaseConnectionUrl(value) {
+function canonicalizeSupabaseConnectionUrl(value, passwordOverride) {
   const match = value.match(RAW_SUPABASE_CONNECTION_PATTERN);
   if (!match?.groups) {
     return {
       url: value,
       canonicalizedPasswordEncoding: false,
       matchedSupabaseConnectionShape: false,
+      usedPasswordOverride: false,
     };
   }
 
-  const encodedPassword = canonicalizePasswordEncoding(match.groups.password);
+  const selectedPassword = passwordOverride ?? match.groups.password;
+  const encodedPassword = canonicalizePasswordEncoding(selectedPassword);
   const url = `${match.groups.scheme.toLowerCase()}://${match.groups.username}:${encodedPassword}@${match.groups.host.toLowerCase()}:${match.groups.port}${match.groups.path}${match.groups.query ?? ''}`;
 
   return {
     url,
-    canonicalizedPasswordEncoding: encodedPassword !== match.groups.password,
+    canonicalizedPasswordEncoding: encodedPassword !== selectedPassword,
     matchedSupabaseConnectionShape: true,
+    usedPasswordOverride: passwordOverride !== undefined,
   };
 }
 
-export function inspectProductionDbUrlInput(rawValue) {
+export function inspectProductionDbUrlInput(rawValue, rawPasswordOverride) {
   const present = typeof rawValue === 'string' && rawValue.length > 0;
   const value = present ? rawValue : '';
   const { normalized, lineBreakCount, trimmedOuterWhitespace } = normalizeSecretText(value);
-  const canonicalized = canonicalizeSupabaseConnectionUrl(normalized);
+  const passwordOverridePresent =
+    typeof rawPasswordOverride === 'string' && rawPasswordOverride.length > 0;
+  const passwordOverrideLineBreakCount = passwordOverridePresent
+    ? (rawPasswordOverride.match(LINE_BREAK_PATTERN) ?? []).length
+    : 0;
+  const safePasswordOverride = passwordOverridePresent
+    ? rawPasswordOverride.replace(EMBEDDED_LINE_BREAK_PATTERN, '')
+    : undefined;
+  const canonicalized = canonicalizeSupabaseConnectionUrl(
+    normalized,
+    safePasswordOverride || undefined,
+  );
 
   return {
     present,
@@ -102,10 +149,16 @@ export function inspectProductionDbUrlInput(rawValue) {
     containsDisallowedControlCharacter: DISALLOWED_CONTROL_PATTERN.test(normalized),
     matchedSupabaseConnectionShape: canonicalized.matchedSupabaseConnectionShape,
     canonicalizedPasswordEncoding: canonicalized.canonicalizedPasswordEncoding,
+    passwordOverridePresent,
+    passwordOverrideLineBreakCount,
+    passwordOverrideContainsHorizontalWhitespace:
+      passwordOverridePresent && HORIZONTAL_WHITESPACE_PATTERN.test(safePasswordOverride ?? ''),
+    passwordOverrideContainsDisallowedControlCharacter:
+      passwordOverridePresent && DISALLOWED_CONTROL_PATTERN.test(safePasswordOverride ?? ''),
   };
 }
 
-export function normalizeProductionDbUrl(rawValue, projectRef) {
+export function normalizeProductionDbUrl(rawValue, projectRef, rawPasswordOverride) {
   if (!PROJECT_REF_PATTERN.test(projectRef ?? '')) {
     throw new Error('SUPABASE_PROJECT_ID must be a 20-character lowercase project reference');
   }
@@ -125,7 +178,11 @@ export function normalizeProductionDbUrl(rawValue, projectRef) {
     throw new Error('SUPABASE_DB_URL contains literal whitespace; remove it from the connection string');
   }
 
-  const canonicalized = canonicalizeSupabaseConnectionUrl(normalized);
+  const passwordOverride = normalizePasswordOverride(rawPasswordOverride);
+  const canonicalized = canonicalizeSupabaseConnectionUrl(
+    normalized,
+    passwordOverride.value,
+  );
 
   let parsed;
   try {
@@ -197,16 +254,28 @@ export function normalizeProductionDbUrl(rawValue, projectRef) {
       trimmedOuterWhitespace,
       removedLineBreakCount: lineBreakCount,
       canonicalizedPasswordEncoding: canonicalized.canonicalizedPasswordEncoding,
+      usedPasswordOverride: canonicalized.usedPasswordOverride,
+      passwordOverrideRemovedLineBreakCount:
+        passwordOverride.removedLineBreakCount,
     },
   };
 }
 
-export function writeProtectedConnectionFile({ rawValue, projectRef, outputPath }) {
+export function writeProtectedConnectionFile({
+  rawValue,
+  projectRef,
+  rawPasswordOverride,
+  outputPath,
+}) {
   if (!outputPath) {
     throw new Error('--write-file requires a destination path');
   }
 
-  const resolved = normalizeProductionDbUrl(rawValue, projectRef);
+  const resolved = normalizeProductionDbUrl(
+    rawValue,
+    projectRef,
+    rawPasswordOverride,
+  );
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, resolved.url, { encoding: 'utf8', mode: 0o600 });
   chmodSync(outputPath, 0o600);
@@ -219,6 +288,7 @@ export function runCli(argv = process.argv.slice(2), env = process.env) {
   const diagnostics = writeProtectedConnectionFile({
     rawValue: env.SUPABASE_DB_URL,
     projectRef: env.SUPABASE_PROJECT_ID,
+    rawPasswordOverride: env.SUPABASE_DB_PASSWORD,
     outputPath,
   });
 
@@ -230,7 +300,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     runCli();
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown database connection validation error';
-    const input = inspectProductionDbUrlInput(process.env.SUPABASE_DB_URL);
+    const input = inspectProductionDbUrlInput(
+      process.env.SUPABASE_DB_URL,
+      process.env.SUPABASE_DB_PASSWORD,
+    );
     process.stdout.write(`${JSON.stringify({ status: 'invalid', reason: message, input })}\n`);
     process.stderr.write(`${message}\n`);
     process.exitCode = 1;
