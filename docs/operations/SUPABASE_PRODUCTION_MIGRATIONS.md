@@ -16,7 +16,7 @@ Configure these under both protected GitHub Environments:
 Required secrets:
 
 - `SUPABASE_PROJECT_ID`: the 20-character production project reference shown in the Supabase dashboard URL.
-- `SUPABASE_DB_URL`: the complete, percent-encoded PostgreSQL connection string copied from **Supabase → Connect** for the same project.
+- `SUPABASE_DB_URL`: the complete PostgreSQL connection string copied from **Supabase → Connect** for the same project.
 
 `SUPABASE_DB_PASSWORD` is no longer consumed by these workflows. Keeping a standalone password and asking the CLI to rediscover a pooler caused ambiguous authentication failures and could connect through a different transport than the operator reviewed.
 
@@ -30,12 +30,13 @@ Required secrets:
    - **Transaction pooler** on port `6543` only when explicitly reviewed for the intended CLI operation.
 4. Copy the complete URI connection string.
 5. Replace the password placeholder with the current database password.
-6. Percent-encode password characters when the copied URI requires it.
-7. Store the resulting URI directly as the GitHub Environment secret `SUPABASE_DB_URL`.
+6. Store the resulting URI directly as the GitHub Environment secret `SUPABASE_DB_URL`.
+
+The resolver accepts either a correctly percent-encoded password or the raw password inside the official Supabase connection shape. It canonicalizes reserved password characters such as `#`, `@`, `/`, `?`, `:`, `%` and `!` before the URL is used. Existing valid `%HH` escapes are preserved and are not double-encoded.
 
 Do not put quotes around the value. Do not paste it into repository files, comments, screenshots, workflow inputs, Vercel public variables, or issue bodies.
 
-GitHub and browser secret editors can accidentally preserve line breaks while a long URI is pasted. The repository removes CR/LF characters and adjacent indentation before parsing the URI. This normalization does not weaken endpoint validation: literal spaces or tabs, control characters, foreign hosts, wrong projects, unsupported ports, missing passwords and URL fragments still fail closed.
+GitHub and browser secret editors can accidentally preserve line breaks while a long URI is pasted. The repository removes CR/LF characters and adjacent indentation before parsing the URI. It then canonicalizes only the password portion of a connection string that already matches an approved Supabase endpoint shape. This normalization does not weaken endpoint validation: literal spaces or tabs, control characters, foreign hosts, wrong projects, unsupported ports, missing passwords and unsafe URL fragments still fail closed.
 
 The repository validates that the normalized URL:
 
@@ -45,10 +46,10 @@ The repository validates that the normalized URL:
 - targets the `postgres` database;
 - contains a password;
 - identifies the same project as `SUPABASE_PROJECT_ID`;
-- contains no remaining literal whitespace, disallowed control characters or unencoded URL fragment;
+- contains no remaining literal whitespace, disallowed control characters or unsafe URL fragment;
 - is written only to an owner-readable temporary runner file.
 
-Only non-secret diagnostics are retained: transport, hostname, port, database, project-reference suffix, whether outer whitespace was removed and the number of removed line breaks. The URI, username and password are never retained.
+Only non-secret diagnostics are retained: transport, hostname, port, database, project-reference suffix, whether outer whitespace was removed, the number of removed line breaks and whether password encoding was canonicalized. The URI, username and password are never retained.
 
 ## Production controls
 
@@ -100,6 +101,12 @@ Provide:
 - `confirmation`: `DRY_RUN_ONLY`.
 
 A blocked deployability result is expected while unresolved history exists. The run must still produce connection diagnostics, remote migration history and reconciliation packages.
+
+## Authentication failure boundary
+
+Successful normalization proves only that the URL is structurally valid, points to the expected Supabase project and can be passed safely to the CLI. It does not prove that the embedded password is current.
+
+If the CLI returns `SQLSTATE 28P01`, the database itself rejected the credential. Do not weaken the workflow or mark the migration evidence complete. Reset or retrieve the current database password in the exact same Supabase project, replace the password portion of `SUPABASE_DB_URL`, and rerun the read-only workflow.
 
 ## Manual production execution
 
