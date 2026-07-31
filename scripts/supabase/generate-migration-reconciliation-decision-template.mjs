@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import {
@@ -68,6 +69,7 @@ async function runCli() {
     const inventoryBytes = await readFile(inventoryPath);
     const inventory = JSON.parse(inventoryBytes.toString('utf8'));
     const template = buildDecisionTemplate({ inventory, inventoryBytes, releaseSha });
+    await mkdir(path.dirname(outputPath), { recursive: true });
     await writeFile(outputPath, `${JSON.stringify(template, null, 2)}\n`);
     console.log(JSON.stringify({
       outputPath,
