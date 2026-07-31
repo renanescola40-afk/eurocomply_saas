@@ -48,10 +48,26 @@ describe('Supabase production migration dry-run workflow', () => {
     expect(workflow).toContain(
       'SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}',
     );
-    expect(workflow).not.toContain(
+    expect(workflow).toContain(
       'SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}',
     );
+    expect(
+      workflow.match(/SUPABASE_DB_PASSWORD: \$\{\{ secrets\.SUPABASE_DB_PASSWORD \}\}/g),
+    ).toHaveLength(1);
     expect(workflow).not.toContain('supabase link');
+  });
+
+  it('uses the password only to override credentials on the validated endpoint', () => {
+    expect(normalized).toContain('prepare explicit production database connection');
+    expect(workflow).toContain(
+      'node scripts/supabase/prepare-production-db-connection.mjs',
+    );
+    expect(normalized).toContain('database endpoint: explicit protected supabase_db_url');
+    expect(normalized).toContain(
+      'database credential: protected password override when configured',
+    );
+    expect(normalized).not.toContain('migration list --linked');
+    expect(normalized).not.toContain('db push --linked');
   });
 
   it('prepares an owner-only connection file without exposing the URL', () => {

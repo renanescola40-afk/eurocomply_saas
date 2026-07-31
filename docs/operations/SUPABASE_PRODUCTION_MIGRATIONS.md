@@ -16,9 +16,13 @@ Configure these under both protected GitHub Environments:
 Required secrets:
 
 - `SUPABASE_PROJECT_ID`: the 20-character production project reference shown in the Supabase dashboard URL.
-- `SUPABASE_DB_URL`: the complete, percent-encoded PostgreSQL connection string copied from **Supabase → Connect** for the same project.
+- `SUPABASE_DB_URL`: the complete PostgreSQL connection string copied from **Supabase → Connect** for the same project.
 
-`SUPABASE_DB_PASSWORD` is no longer consumed by these workflows. Keeping a standalone password and asking the CLI to rediscover a pooler caused ambiguous authentication failures and could connect through a different transport than the operator reviewed.
+Optional compatibility secret for the read-only dry-run environment:
+
+- `SUPABASE_DB_PASSWORD`: the current raw database password. When present, the resolver replaces only the password component of the already validated `SUPABASE_DB_URL`. It does not rediscover or change the endpoint, project, username, port or database.
+
+The standalone password override exists to recover from a stale password embedded in an otherwise correct protected URL. It is scoped only to the connection-preparation step and is never printed, uploaded or made available job-wide.
 
 ### Creating `SUPABASE_DB_URL`
 
@@ -29,13 +33,16 @@ Required secrets:
    - **Direct connection** on port `5432` when the runner has compatible network access;
    - **Transaction pooler** on port `6543` only when explicitly reviewed for the intended CLI operation.
 4. Copy the complete URI connection string.
-5. Replace the password placeholder with the current database password.
-6. Percent-encode password characters when the copied URI requires it.
-7. Store the resulting URI directly as the GitHub Environment secret `SUPABASE_DB_URL`.
+5. Replace the password placeholder with the current database password, or configure the optional protected password override in the read-only environment.
+6. Store the resulting URI directly as the GitHub Environment secret `SUPABASE_DB_URL`.
 
-Do not put quotes around the value. Do not paste it into repository files, comments, screenshots, workflow inputs, Vercel public variables, or issue bodies.
+The resolver accepts either a correctly percent-encoded password or the raw password inside the official Supabase connection shape. It canonicalizes reserved password characters such as `#`, `@`, `/`, `?`, `:`, `%` and `!` before the URL is used. Existing valid `%HH` escapes are preserved and are not double-encoded. The same canonicalization applies to the optional protected password override.
 
-The repository validates that the URL:
+Do not put quotes around secret values. Do not paste them into repository files, comments, screenshots, workflow inputs, Vercel public variables or issue bodies.
+
+GitHub and browser secret editors can accidentally preserve line breaks while a long URI or password is pasted. The repository removes CR/LF characters and adjacent indentation before parsing. It then canonicalizes only the password portion of a connection string that already matches an approved Supabase endpoint shape. This normalization does not weaken endpoint validation: literal spaces or tabs, control characters, foreign hosts, wrong projects, unsupported ports, missing passwords and unsafe URL fragments still fail closed.
+
+The repository validates that the normalized connection:
 
 - uses `postgres://` or `postgresql://`;
 - points only to an approved Supabase database or pooler hostname;
@@ -43,10 +50,10 @@ The repository validates that the URL:
 - targets the `postgres` database;
 - contains a password;
 - identifies the same project as `SUPABASE_PROJECT_ID`;
-- contains no embedded line breaks or unencoded URL fragment;
+- contains no remaining literal whitespace, disallowed control characters or unsafe URL fragment;
 - is written only to an owner-readable temporary runner file.
 
-Only non-secret diagnostics are retained: transport, hostname, port, database, project-reference suffix and whether outer whitespace was removed.
+Only non-secret diagnostics are retained: transport, hostname, port, database, project-reference suffix, whether outer whitespace was removed, the number of removed line breaks, whether password encoding was canonicalized and whether the protected password override was used. The URI, username and password are never retained.
 
 ## Production controls
 
@@ -54,7 +61,7 @@ The production workflow:
 
 1. requires `APPLY_SUPABASE_MIGRATIONS` and the exact current `main` SHA;
 2. checks out that SHA directly and verifies remote `main` still matches;
-3. validates `SUPABASE_DB_URL` against `SUPABASE_PROJECT_ID`;
+3. normalizes and validates `SUPABASE_DB_URL` against `SUPABASE_PROJECT_ID`;
 4. stores the normalized URL in a temporary file with mode `0600`;
 5. validates local migration filenames and versions;
 6. uses a pinned and verified Supabase CLI version;
@@ -67,13 +74,15 @@ The production workflow:
 13. removes temporary connection material even on failure;
 14. uploads bounded evidence without credentials.
 
+The optional standalone password override is initially enabled only in the read-only dry-run workflow. It must not be promoted to the write workflow until live authentication and dry-run evidence pass.
+
 Production seeding, migration repair, `--include-all`, remote database reset and automatic confirmation are deliberately excluded.
 
 ## First deployment and existing remote drift
 
 The first run may fail when the production database was created or modified manually and its migration history does not match the repository.
 
-Do not bypass this by automatically using `--include-all`, resetting production, deleting migration files, or marking every local migration as applied.
+Do not bypass this by automatically using `--include-all`, resetting production, deleting migration files or marking every local migration as applied.
 
 Instead:
 
@@ -98,6 +107,12 @@ Provide:
 - `confirmation`: `DRY_RUN_ONLY`.
 
 A blocked deployability result is expected while unresolved history exists. The run must still produce connection diagnostics, remote migration history and reconciliation packages.
+
+## Authentication failure boundary
+
+Successful normalization proves only that the endpoint is structurally valid, points to the expected Supabase project and can be passed safely to the CLI. It does not prove that either credential source is current.
+
+The read-only workflow first uses `SUPABASE_DB_PASSWORD` when that protected override exists; otherwise it uses the password embedded in `SUPABASE_DB_URL`. If the CLI still returns `SQLSTATE 28P01`, the database itself rejected the selected credential. Do not weaken the workflow or mark migration evidence complete. The current database password must then be reset or retrieved in the exact same Supabase project and placed in the protected environment.
 
 ## Manual production execution
 

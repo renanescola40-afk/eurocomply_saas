@@ -99,6 +99,7 @@ jobs:
         shell: bash
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
@@ -198,7 +199,8 @@ jobs:
             echo
             echo "- Assessed SHA: \`$TARGET_SHA\`"
             echo "- Supabase CLI: \`$SUPABASE_CLI_VERSION\`"
-            echo '- Database connection: explicit protected SUPABASE_DB_URL'
+            echo '- Database endpoint: explicit protected SUPABASE_DB_URL'
+            echo '- Database credential: protected password override when configured'
             echo '- Operation: dry-run only'
             echo '- Reconciliation review packages: generated when the audit produced an inventory'
             echo '- Package status: HUMAN_REVIEW_REQUIRED; accepted decisions remain zero'
