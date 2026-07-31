@@ -1,0 +1,131 @@
+name: Enterprise Final Closeout
+
+on:
+  workflow_dispatch:
+    inputs:
+      evidence_intake_run_id:
+        description: Accepted Enterprise Evidence Intake workflow run ID
+        required: true
+        type: string
+      final_decision_run_id:
+        description: Authoritative Enterprise Final Decision workflow run ID
+        required: true
+        type: string
+      closeout_queue_run_id:
+        description: Enterprise Closeout Queue workflow run ID
+        required: true
+        type: string
+      expected_sha:
+        description: Exact full main SHA to close
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: enterprise-final-closeout-${{ inputs.expected_sha }}
+  cancel-in-progress: false
+
+jobs:
+  closeout:
+    name: Compile exact-SHA enterprise closeout
+    runs-on: ubuntu-latest
+    environment: enterprise-final-closeout
+    timeout-minutes: 20
+    steps:
+      - name: Validate requested SHA against current main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          test "${#EXPECTED_SHA}" -eq 40
+          CURRENT_MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
+          test "$CURRENT_MAIN_SHA" = "$EXPECTED_SHA" || {
+            echo "Requested SHA is stale: expected=$EXPECTED_SHA current=$CURRENT_MAIN_SHA" >&2
+            exit 1
+          }
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected_sha }}
+          persist-credentials: false
+
+      - name: Download source artifacts
+        uses: actions/github-script@v7
+        env:
+          INTAKE_RUN_ID: ${{ inputs.evidence_intake_run_id }}
+          DECISION_RUN_ID: ${{ inputs.final_decision_run_id }}
+          QUEUE_RUN_ID: ${{ inputs.closeout_queue_run_id }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const runs = [
+              [process.env.INTAKE_RUN_ID, 'enterprise-evidence-intake'],
+              [process.env.DECISION_RUN_ID, 'enterprise-final-decision'],
+              [process.env.QUEUE_RUN_ID, 'enterprise-closeout-queue'],
+            ];
+            fs.mkdirSync('enterprise-closeout-input', { recursive: true });
+            for (const [runId, artifactName] of runs) {
+              const run = await github.rest.actions.getWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: Number(runId),
+              });
+              if (run.data.head_sha !== process.env.EXPECTED_SHA || run.data.conclusion !== 'success') {
+                core.setFailed(`${artifactName}: source run is not successful for the exact requested SHA`);
+                return;
+              }
+              const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: Number(runId),
+                per_page: 100,
+              });
+              const artifact = artifacts.find((item) => item.name === artifactName && !item.expired);
+              if (!artifact) {
+                core.setFailed(`${artifactName}: required unexpired artifact not found`);
+                return;
+              }
+              const download = await github.rest.actions.downloadArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id,
+                archive_format: 'zip',
+              });
+              fs.writeFileSync(path.join('enterprise-closeout-input', `${artifactName}.zip`), Buffer.from(download.data));
+            }
+
+      - name: Extract source artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p enterprise-closeout-input/extracted
+          for archive in enterprise-closeout-input/*.zip; do
+            unzip -oq "$archive" -d enterprise-closeout-input/extracted
+          done
+          find enterprise-closeout-input/extracted -type f -maxdepth 4 -print
+
+      - name: Normalize expected source filenames
+        run: |
+          set -euo pipefail
+          find enterprise-closeout-input/extracted -name 'enterprise-evidence-intake.json' -exec cp '{}' enterprise-closeout-input/enterprise-evidence-intake.json \;
+          find enterprise-closeout-input/extracted -name 'enterprise-final-decision.json' -exec cp '{}' enterprise-closeout-input/enterprise-final-decision.json \;
+          find enterprise-closeout-input/extracted -name 'enterprise-closeout-queue.json' -exec cp '{}' enterprise-closeout-input/enterprise-closeout-queue.json \;
+          test -s enterprise-closeout-input/enterprise-evidence-intake.json
+          test -s enterprise-closeout-input/enterprise-final-decision.json
+          test -s enterprise-closeout-input/enterprise-closeout-queue.json
+
+      - name: Compile final closeout
+        run: node scripts/release/compile-enterprise-final-closeout.mjs --input enterprise-closeout-input --output enterprise-final-closeout --sha '${{ inputs.expected_sha }}'
+
+      - name: Upload immutable final closeout packet
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-final-closeout-${{ inputs.expected_sha }}
+          path: enterprise-final-closeout/
+          if-no-files-found: error
+          retention-days: 90
