@@ -51,7 +51,7 @@ jobs:
           TARGET_SHA: ${{ inputs.target_sha }}
         run: |
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-          test "$(gh api repos/${GITHUB_REPOSITORY}/commits/main --jq .sha)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
       - name: Download exact source decision artifact
         uses: actions/download-artifact@v4
         with:
