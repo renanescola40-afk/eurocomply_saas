@@ -1,0 +1,54 @@
+{
+  "schema": "risck-comply.counsel-decision-catalog.v1",
+  "status": "HUMAN_REVIEW_REQUIRED",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "allowedDecisions": [
+    "HUMAN_REVIEW_REQUIRED",
+    "ACCEPTED",
+    "ACCEPTED_WITH_CHANGES",
+    "CHANGES_REQUIRED",
+    "REJECTED",
+    "OUTSIDE_SCOPE"
+  ],
+  "globalDecisions": [
+    {"id":"G-01","topic":"intended-purpose","question":"Is the product correctly limited to AI governance readiness and evidence support rather than final legal decision-making?","defaultDecision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"G-02","topic":"product-role","question":"Which AI Act role or roles apply to each production feature?","defaultDecision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"G-03","topic":"risk-classification","question":"Does any production feature create, modify or adopt a high-risk intended purpose?","defaultDecision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"G-04","topic":"launch-position","question":"What launch scope is defensible before customer-specific legal assessment?","defaultDecision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"G-05","topic":"claims","question":"Which public and in-product claims are permitted, conditional or prohibited?","defaultDecision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"G-06","topic":"contracts","question":"Are the contractual drafts suitable for the intended B2B launch and jurisdictions?","defaultDecision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"G-07","topic":"privacy-dpa","question":"Are privacy roles, transfers, retention, subprocessors and incident commitments correctly represented?","defaultDecision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"G-08","topic":"partner-counsel","question":"Is the partner model compatible with independence, conflicts, confidentiality and fee rules?","defaultDecision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"G-09","topic":"reliance","question":"Who may rely on the review, for what purpose, scope and period?","defaultDecision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"G-10","topic":"change-triggers","question":"Which later changes require full or limited re-review?","defaultDecision":"HUMAN_REVIEW_REQUIRED"}
+  ],
+  "workstreams": [
+    {"id":"legal-rules","weight":4,"package":"docs/legal-review-preparation/review-packages/legal-rules/PACKAGE.md","decision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"prohibited-practices","weight":7,"package":"docs/legal-review-preparation/review-packages/prohibited-practices/PACKAGE.md","decision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"article-50-copy","weight":8,"package":"docs/legal-review-preparation/review-packages/article-50-copy/PACKAGE.md","decision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"fria-methodology","weight":6,"package":"docs/legal-review-preparation/review-packages/fria-methodology/PACKAGE.md","decision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"deployer-obligations","weight":7,"package":"docs/legal-review-preparation/review-packages/deployer-obligations/PACKAGE.md","decision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"high-risk-provider","weight":9,"package":"docs/legal-review-preparation/review-packages/high-risk-provider/PACKAGE.md","decision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"conformity","weight":5,"package":"docs/legal-review-preparation/review-packages/conformity/PACKAGE.md","decision":"HUMAN_REVIEW_REQUIRED"},
+    {"id":"gpai","weight":5,"package":"docs/legal-review-preparation/review-packages/gpai/PACKAGE.md","decision":"HUMAN_REVIEW_REQUIRED"}
+  ],
+  "impactLevels": [
+    "NO_COUNSEL_REREVIEW_REQUIRED",
+    "LIMITED_COUNSEL_REREVIEW_REQUIRED",
+    "FULL_COUNSEL_REREVIEW_REQUIRED"
+  ],
+  "pathRules": [
+    {"id":"legal-sources","level":"FULL_COUNSEL_REREVIEW_REQUIRED","match":["src/server/ai-governance/legal-rules","docs/legal-review-preparation/07_LEGAL_SOURCE_REGISTER","docs/compliance/article-function-evidence-registry","docs/compliance/eu-ai-act-product-coverage-registry"],"decisions":["G-01","G-02","G-03","G-10"],"workstreams":["legal-rules","prohibited-practices","article-50-copy","fria-methodology","deployer-obligations","high-risk-provider","conformity","gpai"]},
+    {"id":"intended-purpose","level":"FULL_COUNSEL_REREVIEW_REQUIRED","match":["docs/legal-review-preparation/02_INTENDED_PURPOSE","docs/legal-review-preparation/06_RISCK_COMPLY_AI_ACT_CLASSIFICATION_MEMO","src/server/ai-governance/decision-engine"],"decisions":["G-01","G-02","G-03","G-04","G-09","G-10"],"workstreams":["legal-rules","prohibited-practices","article-50-copy","fria-methodology","deployer-obligations","high-risk-provider","conformity","gpai"]},
+    {"id":"public-claims","level":"LIMITED_COUNSEL_REREVIEW_REQUIRED","match":["src/components/marketing","src/lib/trust-center","src/app/[locale]/page","src/app/[locale]/pricing","docs/legal-review-preparation/legal-pack/CLAIMS_REGISTER","docs/sales","docs/brand"],"decisions":["G-04","G-05","G-09"],"workstreams":["article-50-copy"]},
+    {"id":"contracts-privacy","level":"LIMITED_COUNSEL_REREVIEW_REQUIRED","match":["docs/legal-review-preparation/legal-pack","src/app/[locale]/terms","src/app/[locale]/privacy","docs/privacy","docs/trust/DPA","docs/trust/SUBPROCESSORS","docs/trust/SLA"],"decisions":["G-06","G-07","G-08","G-09"],"workstreams":[]},
+    {"id":"data-flow-provider","level":"LIMITED_COUNSEL_REREVIEW_REQUIRED","match":["src/lib/supabase","src/server/privacy","src/lib/stripe","src/app/api/billing","src/app/api/stripe","src/lib/email","src/lib/analytics","src/lib/observability","docs/privacy/DATA_INVENTORY","docs/privacy/DATA_RETENTION_POLICY"],"decisions":["G-02","G-07","G-09","G-10"],"workstreams":["high-risk-provider","gpai"]},
+    {"id":"qualified-review-runtime","level":"LIMITED_COUNSEL_REREVIEW_REQUIRED","match":["src/server/ai-governance/qualified-review","src/app/api/ai-governance/qualified-reviews","supabase/migrations","docs/legal-review-preparation/review-packages","docs/compliance/evidence/qualified-review-execution-registry"],"decisions":["G-09","G-10"],"workstreams":["legal-rules","prohibited-practices","article-50-copy","fria-methodology","deployer-obligations","high-risk-provider","conformity","gpai"]},
+    {"id":"workstream-article-50","level":"LIMITED_COUNSEL_REREVIEW_REQUIRED","match":["dashboard/transparencia","article-50","transparency"],"decisions":["G-05"],"workstreams":["article-50-copy"]},
+    {"id":"workstream-fria","level":"LIMITED_COUNSEL_REREVIEW_REQUIRED","match":["/fria","fria-"],"decisions":["G-02","G-03"],"workstreams":["fria-methodology"]},
+    {"id":"workstream-conformity","level":"LIMITED_COUNSEL_REREVIEW_REQUIRED","match":["conformity","annex-iv","quality-management-system","qms"],"decisions":["G-02","G-03"],"workstreams":["high-risk-provider","conformity"]},
+    {"id":"workstream-gpai","level":"LIMITED_COUNSEL_REREVIEW_REQUIRED","match":["gpai"],"decisions":["G-02","G-03"],"workstreams":["gpai"]},
+    {"id":"formatting-only","level":"NO_COUNSEL_REREVIEW_REQUIRED","match":[".prettier",".editorconfig","docs/architecture/decisions"],"decisions":[],"workstreams":[]}
+  ],
+  "truthBoundary": "This catalogue routes review work. It cannot approve legal content, validate professional standing or create legal acceptance."
+}

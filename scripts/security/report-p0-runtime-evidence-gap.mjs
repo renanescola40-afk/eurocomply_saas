@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
-import { validateSupabaseRlsRuntimeEvidence } from '../release/validate-supabase-rls-runtime-evidence.mjs';
+import { activeP0RuntimeEvidenceItems } from './p0-runtime-evidence-catalog.mjs';
 
 const requestedStrict = process.argv.includes('--strict');
 const finalValidationInProgress = process.env.FINAL_VALIDATION_IN_PROGRESS === 'true';
@@ -13,67 +13,18 @@ const strict = requestedStrict;
 const registerPath = path.join('docs', 'security', 'P0_RUNTIME_EVIDENCE_REGISTER.md');
 const runtimeDir = path.join('docs', 'security', 'evidence', 'runtime');
 const satisfiedStatuses = new Set(['Complete']);
+const expectedRepository = 'renanescola40-afk/eurocomply_saas';
+const expectedBranch = 'main';
+const expectedCommitSha = [
+  process.env.RELEASE_COMMIT_SHA,
+  process.env.GITHUB_SHA,
+].map((value) => String(value ?? '').trim().toLowerCase())
+  .find((value) => /^[a-f0-9]{40}$/.test(value));
+const validationClock = new Date();
 
-const requiredRuntimeItems = [
-  {
-    item: 'Branch protection applied on `main`',
-    aliases: ['Branch protection applied on main'],
-    file: 'branch-protection-required-checks.json',
-  },
-  {
-    item: 'Required status checks configured',
-    file: 'branch-protection-required-checks.json',
-  },
-  {
-    item: 'Production provider configuration evidence',
-    aliases: ['Production secrets configured in provider secret stores'],
-    file: 'production-secrets-provider-stores.json',
-  },
-  {
-    item: 'Supabase live RLS validation completed',
-    file: 'supabase-live-rls-validation.json',
-    validator: validateSupabaseRlsRuntimeEvidence,
-  },
-  {
-    item: 'External review',
-    aliases: ['External security review or pentest completed'],
-    file: 'external-security-review-or-pentest.json',
-  },
-  {
-    item: 'Deployment URL functional verification',
-    file: 'deployment-smoke-validation.json',
-  },
-  {
-    item: 'Final validation runner',
-    file: 'final-validation-runner.json',
-    skipWhenFinalValidationInProgress: true,
-  },
-  {
-    item: 'Audit-chain live validation',
-    file: 'audit-chain-live-validation.json',
-  },
-  {
-    item: 'Upload malware/content scanning validation',
-    file: 'upload-malware-scan-validation.json',
-  },
-  {
-    item: 'Step-up MFA / IdP validation',
-    file: 'step-up-mfa-validation.json',
-  },
-  {
-    item: 'Stripe billing runtime validation',
-    file: 'stripe-billing-validation.json',
-  },
-  {
-    item: 'Observability readiness',
-    file: 'observability-smoke-validation.json',
-    aliases: ['Observability smoke validation'],
-  },
-  {
-    item: 'Rollback owner and rollback target',
-    file: 'rollback-dry-run-validation.json',
-  },
-].filter((entry) => !(finalValidationInProgress && entry.skipWhenFinalValidationInProgress));
+const requiredRuntimeItems = activeP0RuntimeEvidenceItems({
+  finalValidationInProgress,
+});
 
 function fail(message) {
   console.error(`P0 runtime evidence gap report failed: ${message}`);
@@ -84,20 +35,48 @@ function normalizeItem(item) {
   return String(item ?? '').replace(/`/g, '').trim();
 }
 
+function validatorFailuresFor(validator, evidence) {
+  if (typeof validator !== 'function') {
+    return ['canonical validator is missing'];
+  }
+
+  try {
+    const result = validator(evidence, {
+      now: validationClock,
+      expectedBranch,
+      expectedRepository,
+      expectedCommitSha,
+    });
+    return Array.isArray(result) ? result : ['canonical validator returned a non-array result'];
+  } catch (error) {
+    return [
+      `canonical validator threw: ${error instanceof Error ? error.message : String(error)}`,
+    ];
+  }
+}
+
 function readEvidence(file, validator) {
   const evidencePath = path.join(runtimeDir, file);
   if (!fs.existsSync(evidencePath)) {
-    return { evidencePath, evidenceFileExists: false, evidenceStatus: 'missing', evidenceOutcome: 'missing', evidenceSatisfied: false, validatorFailures: [] };
+    return {
+      evidencePath,
+      evidenceFileExists: false,
+      evidenceStatus: 'missing',
+      evidenceOutcome: 'missing',
+      evidenceSatisfied: false,
+      validatorFailures: ['evidence file is missing'],
+    };
   }
 
   try {
     const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
     const evidenceStatus = String(evidence.status ?? 'missing');
-    const evidenceOutcome = evidence.outcome === undefined ? 'not_recorded' : String(evidence.outcome);
-    const placeholderOnly = evidence.placeholderOnly === true || evidence.evidenceIntegrity?.placeholderOnly === true;
-    const validatorFailures = typeof validator === 'function'
-      ? validator(evidence, { now: new Date(), expectedBranch: 'main' })
-      : [];
+    const evidenceOutcome = evidence.outcome === undefined
+      ? 'not_recorded'
+      : String(evidence.outcome);
+    const placeholderOnly = evidence.placeholderOnly === true
+      || evidence.evidenceIntegrity?.placeholderOnly === true;
+    const validatorFailures = validatorFailuresFor(validator, evidence);
     const evidenceSatisfied = evidenceStatus === 'Complete'
       && (evidence.outcome === undefined || evidenceOutcome === 'passed')
       && !placeholderOnly
@@ -119,8 +98,8 @@ function readEvidence(file, validator) {
       evidenceStatus: 'invalid_json',
       evidenceOutcome: 'invalid_json',
       evidenceSatisfied: false,
-      validatorFailures: [],
-      parseError: error.message,
+      validatorFailures: ['evidence JSON could not be parsed'],
+      parseError: error instanceof Error ? error.message : String(error),
     };
   }
 }
@@ -131,7 +110,11 @@ const rows = fs.readFileSync(registerPath, 'utf8')
   .split('\n')
   .filter((line) => line.startsWith('|') && !line.includes('---'))
   .map((line) => line.split('|').map((cell) => cell.trim()).filter(Boolean));
-const statusByItem = new Map(rows.filter(([item]) => item && item !== 'Evidence item').map(([item, status]) => [normalizeItem(item), status.replace(/`/g, '')]));
+const statusByItem = new Map(
+  rows
+    .filter(([item]) => item && item !== 'Evidence item')
+    .map(([item, status]) => [normalizeItem(item), status.replace(/`/g, '')]),
+);
 
 function statusFor(entry) {
   const names = [entry.item, ...(entry.aliases ?? [])].map(normalizeItem);
@@ -173,6 +156,10 @@ const report = {
     ciFinalRun,
     finalReleaseGateRun,
     releaseReadyRef,
+    expectedRepository,
+    expectedBranch,
+    expectedCommitSha: expectedCommitSha ?? null,
+    catalogSource: 'scripts/security/p0-runtime-evidence-catalog.mjs',
   },
   missing,
   results,
