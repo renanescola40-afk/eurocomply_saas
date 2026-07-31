@@ -1,0 +1,29 @@
+{
+  "schema": "risck-comply.supabase-staging-rehearsal-result.v1",
+  "targetSha": "REPLACE_WITH_EXACT_MAIN_SHA",
+  "stagingProjectRef": "REPLACE_WITH_STAGING_PROJECT_REF",
+  "productionProjectRef": "REPLACE_WITH_PRODUCTION_PROJECT_REF",
+  "operator": "REPLACE_WITH_OPERATOR",
+  "approver": "REPLACE_WITH_INDEPENDENT_APPROVER",
+  "status": "Pending",
+  "outcome": "not-run",
+  "startedAt": null,
+  "completedAt": null,
+  "batches": [
+    {
+      "batch": 1,
+      "outcome": "not-run",
+      "migrationHistoryEvidence": null,
+      "schemaDiffEvidence": null,
+      "rlsEvidence": null,
+      "smokeEvidence": null,
+      "rollbackEvidence": null,
+      "notes": null
+    }
+  ],
+  "truthBoundary": {
+    "templateIsEvidence": false,
+    "productionWritePerformed": false,
+    "productionExecutionAuthorized": false
+  }
+}

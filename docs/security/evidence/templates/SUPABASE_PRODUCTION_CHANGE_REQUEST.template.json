@@ -1,0 +1,23 @@
+{
+  "schema": "risck-comply.supabase-production-change-request.v1",
+  "targetSha": "REPLACE_WITH_EXACT_MAIN_SHA",
+  "stagingRehearsalAttestationDigest": "REPLACE_WITH_SHA256",
+  "backupOrPitrReference": null,
+  "maintenanceWindow": null,
+  "operator": null,
+  "approver": null,
+  "incidentCommander": null,
+  "rollbackOwner": null,
+  "historyRepairPlanReference": null,
+  "deploymentPlanReference": null,
+  "postBatchChecks": [
+    "migration-history",
+    "schema-diff",
+    "rls-isolation",
+    "authenticated-smoke",
+    "observability"
+  ],
+  "status": "DRAFT",
+  "productionWriteAuthorizedByThisTemplate": false,
+  "automaticExecutionAllowed": false
+}
