@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "sha": "REPLACE_WITH_FULL_40_CHARACTER_SHA",
+  "deploymentUrl": "REPLACE_WITH_PRODUCTION_DEPLOYMENT_URL",
+  "finalCloseoutWorkflowUrl": "REPLACE_WITH_GITHUB_ACTIONS_RUN_URL",
+  "finalCloseoutArtifactUrl": "REPLACE_WITH_ARTIFACT_URL",
+  "status": "BLOCKED",
+  "enterpriseGo": false,
+  "approvals": {
+    "release": {
+      "reviewer": "REQUIRED",
+      "approvedAt": null
+    },
+    "security": {
+      "reviewer": "REQUIRED",
+      "approvedAt": null
+    },
+    "operations": {
+      "reviewer": "REQUIRED",
+      "approvedAt": null
+    }
+  },
+  "evidenceExpiry": {
+    "runtime": null,
+    "backupRestore": null,
+    "externalSecurityReview": null,
+    "qualifiedLegalReview": null
+  },
+  "issues": {
+    "closeWhenSatisfied": [198, 778, 1032],
+    "keepOpenForExternalOrRecurringObligations": [1395]
+  },
+  "truthBoundary": {
+    "repositoryChecksAreRuntimeProof": false,
+    "customerSpecificLegalComplianceProven": false,
+    "productionWritePerformed": false,
+    "templateIsEvidence": false
+  }
+}
