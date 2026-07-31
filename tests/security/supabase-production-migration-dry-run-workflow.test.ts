@@ -51,12 +51,31 @@ describe('Supabase production migration dry-run workflow', () => {
     );
   });
 
-  it('requires a strict deployability audit before any dry-run', () => {
+  it('retains the strict audit exit code and generates review packages before enforcing it', () => {
     expect(normalized).toContain('--require-deployable');
     expect(normalized).toContain('audit-migration-drift.test.mjs');
-    expect(normalized.indexOf('require deployable migration history before dry-run')).toBeLessThan(
+    expect(normalized).toContain(
+      'generate-migration-reconciliation-review-packages.test.mjs',
+    );
+    expect(workflow).toContain('AUDIT_EXIT="${PIPESTATUS[0]}"');
+    expect(workflow).toContain('echo "exit_code=$AUDIT_EXIT" >> "$GITHUB_OUTPUT"');
+    expect(normalized.indexOf('evaluate migration deployability and retain blocker status')).toBeLessThan(
+      normalized.indexOf('generate non-crediting reconciliation review packages'),
+    );
+    expect(normalized.indexOf('generate non-crediting reconciliation review packages')).toBeLessThan(
+      normalized.indexOf('enforce migration deployability before dry-run'),
+    );
+    expect(normalized.indexOf('enforce migration deployability before dry-run')).toBeLessThan(
       normalized.indexOf('execute supabase migration dry-run only'),
     );
+  });
+
+  it('keeps generated package status non-crediting', () => {
+    expect(normalized).toContain('--batch-size=25');
+    expect(normalized).toContain('reconciliation-review-summary.json');
+    expect(normalized).toContain('package status: human_review_required');
+    expect(normalized).toContain('accepted decisions remain zero');
+    expect(normalized).toContain('review packages were retained');
   });
 
   it('contains only dry-run database push commands', () => {
@@ -75,10 +94,11 @@ describe('Supabase production migration dry-run workflow', () => {
     expect(normalized).not.toContain('contents: write');
   });
 
-  it('retains diagnostics even when deployability is blocked', () => {
+  it('retains diagnostics and review packages even when deployability is blocked', () => {
     expect(normalized).toContain('if: always()');
     expect(normalized).toContain('migration-state-remote.txt');
     expect(normalized).toContain('deployability-summary.md');
+    expect(normalized).toContain('reconciliation-review');
     expect(normalized).toContain('db-push-dry-run.txt');
     expect(normalized).toContain('production writes: not authorised');
   });
