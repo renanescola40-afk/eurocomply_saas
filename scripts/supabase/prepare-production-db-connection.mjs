@@ -6,6 +6,10 @@ import { fileURLToPath } from 'node:url';
 
 const PROJECT_REF_PATTERN = /^[a-z0-9]{20}$/;
 const ALLOWED_PORTS = new Set(['', '5432', '6543']);
+const LINE_BREAK_PATTERN = /\r\n|\r|\n/g;
+const EMBEDDED_LINE_BREAK_PATTERN = /[ \t]*(?:\r\n|\r|\n)+[ \t]*/g;
+const HORIZONTAL_WHITESPACE_PATTERN = /[ \t\f\v]/;
+const DISALLOWED_CONTROL_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 
 function decodeComponent(value, label) {
   try {
@@ -13,6 +17,34 @@ function decodeComponent(value, label) {
   } catch {
     throw new Error(`${label} is not valid percent-encoding`);
   }
+}
+
+function normalizeSecretText(rawValue) {
+  const trimmed = rawValue.trim();
+  const lineBreakCount = (rawValue.match(LINE_BREAK_PATTERN) ?? []).length;
+  const normalized = trimmed.replace(EMBEDDED_LINE_BREAK_PATTERN, '');
+
+  return {
+    normalized,
+    lineBreakCount,
+    trimmedOuterWhitespace: trimmed !== rawValue,
+  };
+}
+
+export function inspectProductionDbUrlInput(rawValue) {
+  const present = typeof rawValue === 'string' && rawValue.length > 0;
+  const value = present ? rawValue : '';
+  const { normalized, lineBreakCount, trimmedOuterWhitespace } = normalizeSecretText(value);
+
+  return {
+    present,
+    startsWithPostgresScheme:
+      normalized.startsWith('postgres://') || normalized.startsWith('postgresql://'),
+    lineBreakCount,
+    trimmedOuterWhitespace,
+    containsHorizontalWhitespace: HORIZONTAL_WHITESPACE_PATTERN.test(normalized),
+    containsDisallowedControlCharacter: DISALLOWED_CONTROL_PATTERN.test(normalized),
+  };
 }
 
 export function normalizeProductionDbUrl(rawValue, projectRef) {
@@ -24,12 +56,15 @@ export function normalizeProductionDbUrl(rawValue, projectRef) {
     throw new Error('SUPABASE_DB_URL is required');
   }
 
-  const normalized = rawValue.trim();
+  const { normalized, lineBreakCount, trimmedOuterWhitespace } = normalizeSecretText(rawValue);
   if (!normalized) {
-    throw new Error('SUPABASE_DB_URL is empty after trimming outer whitespace');
+    throw new Error('SUPABASE_DB_URL is empty after normalization');
   }
-  if (/[\r\n]/.test(normalized)) {
-    throw new Error('SUPABASE_DB_URL must be a single line');
+  if (DISALLOWED_CONTROL_PATTERN.test(normalized)) {
+    throw new Error('SUPABASE_DB_URL contains a disallowed control character');
+  }
+  if (HORIZONTAL_WHITESPACE_PATTERN.test(normalized)) {
+    throw new Error('SUPABASE_DB_URL contains literal whitespace; percent-encode it');
   }
 
   let parsed;
@@ -99,7 +134,8 @@ export function normalizeProductionDbUrl(rawValue, projectRef) {
       port: parsed.port || '5432',
       database: 'postgres',
       projectRefSuffix: projectRef.slice(-6),
-      trimmedOuterWhitespace: normalized !== rawValue,
+      trimmedOuterWhitespace,
+      removedLineBreakCount: lineBreakCount,
     },
   };
 }
@@ -133,6 +169,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     runCli();
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown database connection validation error';
+    const input = inspectProductionDbUrlInput(process.env.SUPABASE_DB_URL);
+    process.stdout.write(`${JSON.stringify({ status: 'invalid', reason: message, input })}\n`);
     process.stderr.write(`${message}\n`);
     process.exitCode = 1;
   }
