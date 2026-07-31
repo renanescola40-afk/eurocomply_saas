@@ -1,0 +1,72 @@
+name: Enterprise Closeout Orchestrator
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/release/build-enterprise-closeout-queue.mjs'
+      - 'scripts/release/build-enterprise-closeout-queue.test.mjs'
+      - '.github/workflows/enterprise-closeout-orchestrator.yml'
+      - 'docs/security/runbooks/ENTERPRISE_CLOSEOUT_ORCHESTRATOR.md'
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact current main SHA
+        required: true
+        type: string
+      final_decision_run_id:
+        description: Source Enterprise Final Decision workflow run ID
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Validate syntax
+        run: node --check scripts/release/build-enterprise-closeout-queue.mjs
+      - name: Run fail-closed tests
+        run: node --test scripts/release/build-enterprise-closeout-queue.test.mjs
+
+  compile-closeout-queue:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: enterprise-production
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.target_sha }}
+      - name: Verify exact current main SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+      - name: Download exact source decision artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.final_decision_run_id }}
+          name: enterprise-final-decision-${{ inputs.target_sha }}
+          path: artifacts/enterprise-final-decision
+      - name: Compile prioritized closeout queue
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: node scripts/release/build-enterprise-closeout-queue.mjs artifacts/enterprise-final-decision/enterprise-final-decision.json artifacts/enterprise-closeout-queue --expected-sha="$TARGET_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-closeout-queue-${{ inputs.target_sha }}
+          path: artifacts/enterprise-closeout-queue
+          retention-days: 90
+          if-no-files-found: error
