@@ -35,7 +35,9 @@ Required secrets:
 
 Do not put quotes around the value. Do not paste it into repository files, comments, screenshots, workflow inputs, Vercel public variables, or issue bodies.
 
-The repository validates that the URL:
+GitHub and browser secret editors can accidentally preserve line breaks while a long URI is pasted. The repository removes CR/LF characters and adjacent indentation before parsing the URI. This normalization does not weaken endpoint validation: literal spaces or tabs, control characters, foreign hosts, wrong projects, unsupported ports, missing passwords and URL fragments still fail closed.
+
+The repository validates that the normalized URL:
 
 - uses `postgres://` or `postgresql://`;
 - points only to an approved Supabase database or pooler hostname;
@@ -43,10 +45,10 @@ The repository validates that the URL:
 - targets the `postgres` database;
 - contains a password;
 - identifies the same project as `SUPABASE_PROJECT_ID`;
-- contains no embedded line breaks or unencoded URL fragment;
+- contains no remaining literal whitespace, disallowed control characters or unencoded URL fragment;
 - is written only to an owner-readable temporary runner file.
 
-Only non-secret diagnostics are retained: transport, hostname, port, database, project-reference suffix and whether outer whitespace was removed.
+Only non-secret diagnostics are retained: transport, hostname, port, database, project-reference suffix, whether outer whitespace was removed and the number of removed line breaks. The URI, username and password are never retained.
 
 ## Production controls
 
@@ -54,7 +56,7 @@ The production workflow:
 
 1. requires `APPLY_SUPABASE_MIGRATIONS` and the exact current `main` SHA;
 2. checks out that SHA directly and verifies remote `main` still matches;
-3. validates `SUPABASE_DB_URL` against `SUPABASE_PROJECT_ID`;
+3. normalizes and validates `SUPABASE_DB_URL` against `SUPABASE_PROJECT_ID`;
 4. stores the normalized URL in a temporary file with mode `0600`;
 5. validates local migration filenames and versions;
 6. uses a pinned and verified Supabase CLI version;
