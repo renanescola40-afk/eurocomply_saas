@@ -1,0 +1,88 @@
+name: Supabase Staging Rehearsal
+
+on:
+  workflow_dispatch:
+    inputs:
+      reconciliation_run_id:
+        description: Successful Supabase Migration Reconciliation workflow run ID
+        required: true
+        type: string
+      rehearsal_result_path:
+        description: Repository-relative reviewed rehearsal result JSON
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: supabase-staging-rehearsal-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: node --check scripts/supabase/compile-staging-rehearsal-plan.mjs
+      - run: node --check scripts/supabase/validate-staging-rehearsal-result.mjs
+      - run: node scripts/supabase/test-staging-rehearsal-contract.mjs
+
+  compile-and-attest:
+    needs: validate-contract
+    runs-on: ubuntu-latest
+    environment: supabase-staging-rehearsal
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve exact current main SHA
+        id: sha
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          current_main="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          test "$current_main" = "$GITHUB_SHA"
+          echo "value=$current_main" >> "$GITHUB_OUTPUT"
+      - name: Verify source run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.reconciliation_run_id }}
+        run: |
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq .conclusion)" = success
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq .head_sha)" = "$GITHUB_SHA"
+      - uses: actions/download-artifact@v4
+        with:
+          name: supabase-migration-reconciliation-${{ github.sha }}
+          run-id: ${{ inputs.reconciliation_run_id }}
+          github-token: ${{ github.token }}
+          path: artifacts/source-reconciliation
+      - name: Compile bounded rehearsal plan
+        env:
+          EXPECTED_SHA: ${{ steps.sha.outputs.value }}
+          REHEARSAL_BATCH_SIZE: '10'
+        run: |
+          source_file="$(find artifacts/source-reconciliation -name '*.json' | head -n 1)"
+          test -n "$source_file"
+          node scripts/supabase/compile-staging-rehearsal-plan.mjs "$source_file" artifacts/supabase-staging-rehearsal
+      - name: Validate reviewed rehearsal result
+        env:
+          EXPECTED_SHA: ${{ steps.sha.outputs.value }}
+        run: |
+          test -f "${{ inputs.rehearsal_result_path }}"
+          node scripts/supabase/validate-staging-rehearsal-result.mjs \
+            artifacts/supabase-staging-rehearsal/staging-rehearsal-plan.json \
+            "${{ inputs.rehearsal_result_path }}" \
+            artifacts/supabase-staging-rehearsal-result
+      - uses: actions/upload-artifact@v4
+        with:
+          name: supabase-staging-rehearsal-${{ github.sha }}
+          path: |
+            artifacts/supabase-staging-rehearsal
+            artifacts/supabase-staging-rehearsal-result
+          retention-days: 90
+          if-no-files-found: error
