@@ -1,0 +1,77 @@
+name: Enterprise Owner Execution Packets
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Workflow run ID containing the enterprise-closeout-queue artifact
+        required: true
+        type: string
+      expected_sha:
+        description: Exact current main SHA represented by the source queue
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: enterprise-owner-execution-packets-${{ inputs.expected_sha }}
+  cancel-in-progress: false
+
+jobs:
+  compile:
+    name: Compile owner execution packets
+    runs-on: ubuntu-latest
+    environment: enterprise-closeout
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected_sha }}
+          persist-credentials: false
+
+      - name: Verify exact current main SHA
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          CURRENT_MAIN="$(git ls-remote origin refs/heads/main | cut -f1)"
+          test "$CURRENT_MAIN" = "$EXPECTED_SHA"
+
+      - name: Download source closeout queue artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.source_run_id }}
+          name: enterprise-closeout-queue
+          path: source-queue
+
+      - name: Locate source queue
+        id: locate
+        run: |
+          set -euo pipefail
+          QUEUE="$(find source-queue -type f -name 'enterprise-closeout-queue.json' -o -name 'closeout-queue.json' | head -n 1)"
+          test -n "$QUEUE"
+          echo "queue=$QUEUE" >> "$GITHUB_OUTPUT"
+
+      - name: Compile packets
+        run: |
+          node scripts/release/build-enterprise-owner-execution-packets.mjs \
+            --input='${{ steps.locate.outputs.queue }}' \
+            --output=artifacts/enterprise-owner-execution-packets \
+            --sha='${{ inputs.expected_sha }}'
+
+      - name: Run fail-closed contract tests
+        run: node --test tests/release/build-enterprise-owner-execution-packets.test.mjs
+
+      - name: Upload immutable execution packets
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-owner-execution-packets-${{ inputs.expected_sha }}
+          path: artifacts/enterprise-owner-execution-packets
+          if-no-files-found: error
+          retention-days: 90
