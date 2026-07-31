@@ -1,0 +1,20 @@
+{
+  "schema": "risck-comply.supabase-migration-post-execution-attestation.v1",
+  "status": "HUMAN_VALIDATION_REQUIRED",
+  "releaseSha": null,
+  "controlPlaneSha256": null,
+  "productionWorkflowRunReference": null,
+  "backupOrPitrReference": null,
+  "migrationHistoryBeforeReference": null,
+  "migrationHistoryAfterReference": null,
+  "schemaVerificationReference": null,
+  "rlsTenantIsolationReference": null,
+  "authenticatedSmokeReference": null,
+  "observabilityReviewReference": null,
+  "operator": null,
+  "independentApprover": null,
+  "completedAt": null,
+  "automaticExecutionUsed": false,
+  "batches": [],
+  "nonCreditingNotice": "This template grants no release credit until every exact-SHA batch and post-execution control is completed and independently validated."
+}
