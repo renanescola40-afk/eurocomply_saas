@@ -40,30 +40,35 @@ function normalizePasswordOverride(rawValue) {
       value: undefined,
       present: false,
       removedLineBreakCount: 0,
+      trimmedOuterWhitespace: false,
     };
   }
 
   const removedLineBreakCount = (rawValue.match(LINE_BREAK_PATTERN) ?? []).length;
-  const value = rawValue.replace(EMBEDDED_LINE_BREAK_PATTERN, '');
+  const withoutLineBreaks = rawValue.replace(EMBEDDED_LINE_BREAK_PATTERN, '');
+  const value = withoutLineBreaks.trim();
+  const trimmedOuterWhitespace = value !== withoutLineBreaks;
 
   if (!value) {
     return {
       value: undefined,
       present: false,
       removedLineBreakCount,
+      trimmedOuterWhitespace,
     };
   }
   if (DISALLOWED_CONTROL_PATTERN.test(value)) {
     throw new Error('SUPABASE_DB_PASSWORD contains a disallowed control character');
   }
   if (HORIZONTAL_WHITESPACE_PATTERN.test(value)) {
-    throw new Error('SUPABASE_DB_PASSWORD contains literal whitespace');
+    throw new Error('SUPABASE_DB_PASSWORD contains internal literal whitespace');
   }
 
   return {
     value,
     present: true,
     removedLineBreakCount,
+    trimmedOuterWhitespace,
   };
 }
 
@@ -131,9 +136,13 @@ export function inspectProductionDbUrlInput(rawValue, rawPasswordOverride) {
   const passwordOverrideLineBreakCount = passwordOverridePresent
     ? (rawPasswordOverride.match(LINE_BREAK_PATTERN) ?? []).length
     : 0;
-  const safePasswordOverride = passwordOverridePresent
+  const passwordOverrideWithoutLineBreaks = passwordOverridePresent
     ? rawPasswordOverride.replace(EMBEDDED_LINE_BREAK_PATTERN, '')
     : undefined;
+  const safePasswordOverride = passwordOverrideWithoutLineBreaks?.trim();
+  const passwordOverrideTrimmedOuterWhitespace =
+    passwordOverridePresent &&
+    safePasswordOverride !== passwordOverrideWithoutLineBreaks;
   const canonicalized = canonicalizeSupabaseConnectionUrl(
     normalized,
     safePasswordOverride || undefined,
@@ -151,6 +160,7 @@ export function inspectProductionDbUrlInput(rawValue, rawPasswordOverride) {
     canonicalizedPasswordEncoding: canonicalized.canonicalizedPasswordEncoding,
     passwordOverridePresent,
     passwordOverrideLineBreakCount,
+    passwordOverrideTrimmedOuterWhitespace,
     passwordOverrideContainsHorizontalWhitespace:
       passwordOverridePresent && HORIZONTAL_WHITESPACE_PATTERN.test(safePasswordOverride ?? ''),
     passwordOverrideContainsDisallowedControlCharacter:
@@ -257,6 +267,8 @@ export function normalizeProductionDbUrl(rawValue, projectRef, rawPasswordOverri
       usedPasswordOverride: canonicalized.usedPasswordOverride,
       passwordOverrideRemovedLineBreakCount:
         passwordOverride.removedLineBreakCount,
+      passwordOverrideTrimmedOuterWhitespace:
+        passwordOverride.trimmedOuterWhitespace,
     },
   };
 }
