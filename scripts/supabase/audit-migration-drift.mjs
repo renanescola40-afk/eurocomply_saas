@@ -1,12 +1,24 @@
 #!/usr/bin/env node
 
+import { createHash } from 'node:crypto';
 import { readdir, readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const migrationsDir = process.argv[2] ?? 'supabase/migrations';
-const remoteListPath = process.argv[3] ?? 'migration-state-remote.txt';
-const outputDir = process.argv[4] ?? 'artifacts/supabase-migration-drift';
+const args = process.argv.slice(2);
+const requireDeployable = args.includes('--require-deployable');
+const positional = args.filter((argument) => !argument.startsWith('--'));
+const migrationsDir = positional[0] ?? 'supabase/migrations';
+const remoteListPath = positional[1] ?? 'migration-state-remote.txt';
+const outputDir = positional[2] ?? 'artifacts/supabase-migration-drift';
 const reconciliationDir = path.join(path.dirname(migrationsDir), 'reconciliation');
+const generatedAt = new Date().toISOString();
+const allowedClassifications = Object.freeze([
+  'ALREADY_PRESENT_IN_SCHEMA',
+  'PENDING_DEPLOYMENT',
+  'SUPERSEDED',
+  'ARCHIVE_LEGACY',
+  'REQUIRES_SPLIT_REVIEW',
+]);
 
 function parseLocalFilename(filename) {
   if (!filename.endsWith('.sql')) return null;
@@ -56,7 +68,15 @@ function parseRemoteList(text) {
 
 async function readSqlDirectory(directory) {
   try {
-    return (await readdir(directory)).sort().map(parseLocalFilename).filter(Boolean);
+    const parsed = (await readdir(directory)).sort().map(parseLocalFilename).filter(Boolean);
+    return await Promise.all(parsed.map(async (entry) => {
+      const contents = await readFile(path.join(directory, entry.filename));
+      return {
+        ...entry,
+        sha256: createHash('sha256').update(contents).digest('hex'),
+        byteLength: contents.byteLength,
+      };
+    }));
   } catch (error) {
     if (error?.code === 'ENOENT') return [];
     throw error;
@@ -83,7 +103,12 @@ for (const migration of local) {
 
 const duplicateVersions = [...byVersion.entries()]
   .filter(([version, entries]) => !version.startsWith('invalid:') && entries.length > 1)
-  .map(([version, entries]) => ({ version, files: entries.map((entry) => entry.filename) }));
+  .map(([version, entries]) => ({
+    version,
+    files: entries.map((entry) => entry.filename),
+    digests: entries.map((entry) => ({ filename: entry.filename, sha256: entry.sha256 })),
+  }));
+const duplicateVersionSet = new Set(duplicateVersions.map((entry) => entry.version));
 
 const invalidLocal = local.filter((migration) => !migration.validShape || !migration.validTimestamp);
 const localValidVersions = new Set(
@@ -98,6 +123,95 @@ const aligned = [...localValidVersions].filter((version) => remoteVersions.has(v
 const reconciledRemote = [...reconciliationVersions].filter((version) => remoteVersions.has(version)).sort();
 const localOnly = [...localValidVersions].filter((version) => !remoteVersions.has(version)).sort();
 const remoteOnly = [...remoteVersions].filter((version) => !repositoryKnownVersions.has(version)).sort();
+const localOnlySet = new Set(localOnly);
+
+function classificationReasonsFor(entry) {
+  const reasons = [];
+  if (!entry.validShape || !entry.validTimestamp) {
+    reasons.push('INVALID_LOCAL_FILENAME_OR_TIMESTAMP');
+  }
+  if (entry.version && duplicateVersionSet.has(entry.version)) {
+    reasons.push('DUPLICATE_VERSION');
+  }
+  if (entry.version && localOnlySet.has(entry.version)) {
+    reasons.push('LOCAL_ONLY_VERSION');
+  }
+  return reasons;
+}
+
+const localInventory = local.map((entry) => ({
+  ...entry,
+  remoteState: !entry.validShape || !entry.validTimestamp
+    ? 'INVALID_LOCAL_FILENAME_OR_TIMESTAMP'
+    : remoteVersions.has(entry.version)
+      ? 'ALIGNED_WITH_REMOTE_HISTORY'
+      : 'LOCAL_ONLY',
+  duplicateVersion: entry.version ? duplicateVersionSet.has(entry.version) : false,
+  classificationReasons: classificationReasonsFor(entry),
+}));
+const reconciliationInventory = reconciliations.map((entry) => ({
+  ...entry,
+  remoteState: entry.validShape && entry.validTimestamp && remoteVersions.has(entry.version)
+    ? 'RECONCILES_REMOTE_VERSION'
+    : 'UNUSED_RECONCILIATION_FILE',
+}));
+const reconciliationItems = localInventory
+  .filter((entry) => entry.classificationReasons.length > 0)
+  .map((entry) => ({
+    version: entry.version,
+    filename: entry.filename,
+    sha256: entry.sha256,
+    byteLength: entry.byteLength,
+    duplicateVersion: entry.duplicateVersion,
+    classificationReasons: entry.classificationReasons,
+    classification: 'UNCLASSIFIED',
+    allowedClassifications,
+    rationale: null,
+    schemaEvidenceReference: null,
+    reviewer: null,
+    reviewedAt: null,
+    deployOrderDecision: null,
+    rollbackReference: null,
+  }));
+const localOnlyClassificationCount = reconciliationItems.filter((entry) => (
+  entry.classificationReasons.includes('LOCAL_ONLY_VERSION')
+)).length;
+const invalidClassificationCount = reconciliationItems.filter((entry) => (
+  entry.classificationReasons.includes('INVALID_LOCAL_FILENAME_OR_TIMESTAMP')
+)).length;
+const duplicateClassificationCount = reconciliationItems.filter((entry) => (
+  entry.classificationReasons.includes('DUPLICATE_VERSION')
+)).length;
+const reconciliationManifest = {
+  schema: 'risck-comply.supabase-migration-reconciliation-inventory.v1',
+  generatedAt,
+  sourceDirectories: {
+    migrations: migrationsDir,
+    reconciliations: reconciliationDir,
+  },
+  remoteVersions: [...remoteVersions].sort(),
+  allowedClassifications,
+  classificationPolicy: {
+    default: 'UNCLASSIFIED',
+    automaticClassificationAllowed: false,
+    alreadyPresentRequiresSchemaEvidence: true,
+    pendingDeploymentRequiresStagedExecutionEvidence: true,
+    supersededRequiresReplacementDigest: true,
+    invalidOrDuplicateRequiresExplicitResolution: true,
+  },
+  counts: {
+    localFiles: localInventory.length,
+    reconciliationFiles: reconciliationInventory.length,
+    filesRequiringClassification: reconciliationItems.length,
+    localOnlyFilesRequiringClassification: localOnlyClassificationCount,
+    invalidFilesRequiringClassification: invalidClassificationCount,
+    duplicateFilesRequiringClassification: duplicateClassificationCount,
+    unclassified: reconciliationItems.length,
+  },
+  localInventory,
+  reconciliationInventory,
+  items: reconciliationItems,
+};
 
 // Historical filename and duplicate debt predates this audit. Keep it visible,
 // but do not let legacy debt make every unrelated PR permanently unmergeable.
@@ -109,9 +223,18 @@ const status = remoteOnly.length > 0
     ? 'PENDING_LOCAL_MIGRATIONS'
     : 'ALIGNED';
 
+const deployabilityBlockers = [];
+if (remoteOnly.length > 0) deployabilityBlockers.push('unknown_remote_versions');
+if (localOnly.length > 0) deployabilityBlockers.push('pending_local_versions');
+if (invalidLocal.length > 0) deployabilityBlockers.push('invalid_local_filenames_or_timestamps');
+if (duplicateVersions.length > 0) deployabilityBlockers.push('duplicate_local_versions');
+const generalDbPushAuthorized = deployabilityBlockers.length === 0;
+
 const report = {
-  generatedAt: new Date().toISOString(),
+  generatedAt,
   status,
+  deploymentAuthorization: generalDbPushAuthorized ? 'AUTHORIZED_FOR_DRY_RUN' : 'BLOCKED',
+  requireDeployable,
   summary: {
     localFiles: local.length,
     localValidVersions: localValidVersions.size,
@@ -124,6 +247,10 @@ const report = {
     remoteOnly: remoteOnly.length,
     invalidLocal: invalidLocal.length,
     duplicateVersions: duplicateVersions.length,
+    filesRequiringClassification: reconciliationItems.length,
+    localOnlyFilesRequiringClassification: localOnlyClassificationCount,
+    invalidFilesRequiringClassification: invalidClassificationCount,
+    duplicateFilesRequiringClassification: duplicateClassificationCount,
   },
   aligned,
   reconciledRemote,
@@ -131,21 +258,31 @@ const report = {
   remoteOnly,
   invalidLocal,
   duplicateVersions,
+  deployabilityBlockers,
+  reconciliationInventoryArtifact: 'migration-reconciliation-inventory.json',
   legacyDebtAdvisory: invalidLocal.length > 0 || duplicateVersions.length > 0,
   safety: {
     databaseModified: false,
     migrationHistoryModified: false,
     includeAllUsed: false,
-    recommendation: 'Review evidence before any migration repair or deployment.',
+    generalDbPushAuthorized,
+    recommendation: generalDbPushAuthorized
+      ? 'Proceed only to an independently reviewed dry-run. This audit does not authorize a production write.'
+      : 'Do not run a general production db push. Reconcile object state and migration history first.',
   },
 };
 
 await mkdir(outputDir, { recursive: true });
 await writeFile(path.join(outputDir, 'migration-drift.json'), JSON.stringify(report, null, 2) + '\n');
+await writeFile(
+  path.join(outputDir, 'migration-reconciliation-inventory.json'),
+  JSON.stringify(reconciliationManifest, null, 2) + '\n',
+);
 
 let markdown = '# Supabase migration drift audit\n\n';
 markdown += `Generated: ${report.generatedAt}\n\n`;
 markdown += `Status: **${status}**\n\n`;
+markdown += `General db push authorization: **${report.deploymentAuthorization}**\n\n`;
 markdown += '## Summary\n\n';
 markdown += `- Local migration files: ${report.summary.localFiles}\n`;
 markdown += `- Valid unique local versions: ${report.summary.localValidVersions}\n`;
@@ -155,11 +292,18 @@ markdown += `- Remote versions: ${report.summary.remoteVersions}\n`;
 markdown += `- Aligned normal migrations: ${report.summary.aligned}\n`;
 markdown += `- Aligned versioned reconciliations: ${report.summary.reconciledRemote}\n`;
 markdown += `- Local-only versions: ${report.summary.localOnly}\n`;
+markdown += `- SQL files requiring human classification: ${report.summary.filesRequiringClassification}\n`;
 markdown += `- Unknown remote-only versions: ${report.summary.remoteOnly}\n`;
 markdown += `- Invalid local filenames/timestamps (legacy advisory): ${report.summary.invalidLocal}\n`;
 markdown += `- Duplicate local versions (legacy advisory): ${report.summary.duplicateVersions}\n\n`;
-markdown += '## Invalid local migrations (legacy advisory)\n\n';
-markdown += markdownList(invalidLocal, (item) => `\`${item.filename}\``);
+markdown += '## Production deployability blockers\n\n';
+markdown += markdownList(deployabilityBlockers, (blocker) => `\`${blocker}\``);
+markdown += '\n## Reconciliation inventory\n\n';
+markdown += '- `migration-reconciliation-inventory.json` contains every SQL file digest and an `UNCLASSIFIED` decision record for every file involved in a local-only, invalid-timestamp, or duplicate-version blocker.\n';
+markdown += '- The audit never infers that a migration is already applied, safe to deploy, superseded, or archival.\n';
+markdown += '- Classification requires schema evidence and explicit reviewer attribution.\n';
+markdown += '\n## Invalid local migrations (legacy advisory)\n\n';
+markdown += markdownList(invalidLocal, (item) => `\`${item.filename}\` — SHA-256 \`${item.sha256}\``);
 markdown += '\n## Duplicate versions (legacy advisory)\n\n';
 markdown += markdownList(duplicateVersions, (item) => `\`${item.version}\`: ${item.files.map((file) => `\`${file}\``).join(', ')}`);
 markdown += '\n## Remote versions represented by controlled reconciliation\n\n';
@@ -173,10 +317,16 @@ markdown += '- Read-only audit; no database objects or migration history were ch
 markdown += '- Unknown remote-only migrations remain a hard failure.\n';
 markdown += '- Controlled remote hotfixes must have a matching versioned file in `supabase/reconciliation`.\n';
 markdown += '- Local-only migrations are expected for a PR and remain pending until controlled deployment.\n';
+markdown += '- `--require-deployable` also blocks invalid timestamps and duplicate versions.\n';
 markdown += '- Do not use `supabase db push --include-all` to bypass this report.\n';
+markdown += '- Even an authorized dry-run does not authorize a production write.\n';
 markdown += '- Reconciliation requires object-level evidence and explicit review.\n';
 
 await writeFile(path.join(outputDir, 'migration-drift.md'), markdown);
 process.stdout.write(markdown);
 
-if (status === 'CRITICAL_DRIFT') process.exitCode = 2;
+if (status === 'CRITICAL_DRIFT') {
+  process.exitCode = 2;
+} else if (requireDeployable && !generalDbPushAuthorized) {
+  process.exitCode = 3;
+}
