@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   p0-runtime-evidence:
-    name: Validate and derive P0 runtime evidence register
+    name: Validate P0 runtime evidence register
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
