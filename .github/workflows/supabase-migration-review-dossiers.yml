@@ -1,0 +1,134 @@
+name: Supabase Migration Review Dossiers
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/supabase/build-migration-review-dossiers.mjs'
+      - 'scripts/supabase/build-migration-review-dossiers.test.mjs'
+      - '.github/workflows/supabase-migration-review-dossiers.yml'
+      - 'docs/security/runbooks/SUPABASE_MIGRATION_REVIEW_DOSSIERS.md'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA reviewed
+        required: true
+        type: string
+      inventory_run_id:
+        description: Supabase Production Migration Dry Run workflow run ID
+        required: true
+        type: string
+      schema_evidence_run_id:
+        description: Supabase Live Schema Evidence workflow run ID
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  contract:
+    name: Validate migration review dossier contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --check scripts/supabase/build-migration-review-dossiers.mjs
+      - run: node --test scripts/supabase/build-migration-review-dossiers.test.mjs
+
+  generate:
+    name: Generate exact-SHA human review dossiers
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: supabase-production-migration-review
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      INVENTORY_RUN_ID: ${{ inputs.inventory_run_id }}
+      SCHEMA_RUN_ID: ${{ inputs.schema_evidence_run_id }}
+      OUTPUT_DIR: artifacts/supabase-migration-review-dossiers
+    steps:
+      - name: Validate inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$INVENTORY_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$SCHEMA_RUN_ID" =~ ^[0-9]+$ ]]
+          echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
+
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify current main and source provenance
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+          INVENTORY_RUN="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${INVENTORY_RUN_ID}")"
+          SCHEMA_RUN="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SCHEMA_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$INVENTORY_RUN")" = "$TARGET_SHA"
+          test "$(jq -r '.path' <<<"$INVENTORY_RUN")" = '.github/workflows/supabase-production-migration-dry-run.yml'
+          test "$(jq -r '.head_sha' <<<"$SCHEMA_RUN")" = "$TARGET_SHA"
+          test "$(jq -r '.path' <<<"$SCHEMA_RUN")" = '.github/workflows/supabase-live-schema-evidence.yml'
+
+      - name: Download exact migration inventory
+        uses: actions/download-artifact@v4
+        with:
+          name: supabase-production-migration-dry-run-${{ inputs.release_sha }}
+          path: inventory-artifact
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.inventory_run_id }}
+
+      - name: Download exact live schema evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: supabase-live-schema-evidence-${{ inputs.release_sha }}
+          path: schema-artifact
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.schema_evidence_run_id }}
+
+      - name: Resolve sources and generate dossiers
+        shell: bash
+        run: |
+          set -euo pipefail
+          INVENTORY="$(find inventory-artifact -type f -path '*/drift/migration-reconciliation-inventory.json' -print -quit)"
+          EVIDENCE="$(find schema-artifact -type f -name 'migration-object-evidence.json' -print -quit)"
+          test -n "$INVENTORY"
+          test -n "$EVIDENCE"
+          node scripts/supabase/build-migration-review-dossiers.mjs "$INVENTORY" "$EVIDENCE" "$OUTPUT_DIR"
+
+      - name: Publish non-crediting summary
+        shell: bash
+        run: |
+          {
+            echo '## Supabase migration review dossiers'
+            echo
+            echo "- Release SHA: \`$TARGET_SHA\`"
+            echo '- Automatic classifications: 0'
+            echo '- Migration history modified: no'
+            echo '- SQL executed: no'
+            echo '- Production write authorized: no'
+            echo '- Human review remains required for every dossier'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload immutable review dossiers
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: supabase-migration-review-dossiers-${{ env.TARGET_SHA }}
+          path: artifacts/supabase-migration-review-dossiers
+          if-no-files-found: error
+          retention-days: 90
