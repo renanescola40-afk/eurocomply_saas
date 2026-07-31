@@ -1,0 +1,82 @@
+name: Enterprise Evidence Intake Gateway
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA being evaluated
+        required: true
+        type: string
+      packets_artifact_run_id:
+        description: Workflow run ID containing enterprise-owner-execution-packets
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: enterprise-evidence-intake-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate completed Enterprise evidence packets
+    runs-on: ubuntu-latest
+    environment: enterprise-release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha }}
+
+      - name: Verify exact current main SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          CURRENT_MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          test "$CURRENT_MAIN_SHA" = "$EXPECTED_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Download owner execution packets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.packets_artifact_run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p intake-source
+          gh run download "$RUN_ID" --name enterprise-owner-execution-packets --dir intake-source
+          test -f intake-source/enterprise-owner-execution-packets.json
+
+      - name: Validate source run provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.packets_artifact_run_id }}
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          RUN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq .head_sha)"
+          RUN_CONCLUSION="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq .conclusion)"
+          test "$RUN_SHA" = "$EXPECTED_SHA"
+          test "$RUN_CONCLUSION" = "success"
+
+      - name: Validate evidence intake fail closed
+        env:
+          EXPECTED_RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          node scripts/release/validate-enterprise-evidence-intake.mjs \
+            intake-source/enterprise-owner-execution-packets.json \
+            enterprise-evidence-intake-result.json
+
+      - name: Run contract tests
+        run: node --test tests/release/enterprise-evidence-intake.test.mjs
+
+      - name: Upload immutable intake result
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-evidence-intake-result
+          path: enterprise-evidence-intake-result.json
+          retention-days: 90
+          if-no-files-found: error
