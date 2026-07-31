@@ -1,0 +1,51 @@
+name: Conversation Final Enterprise Closeout
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact current main SHA
+        required: true
+        type: string
+
+env:
+  NODE_VERSION: '20'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  closeout:
+    name: Compile exact-SHA final closeout
+    runs-on: ubuntu-latest
+    environment: enterprise-production-evidence
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Verify exact current main SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          CURRENT_MAIN="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          test "$CURRENT_MAIN" = "$TARGET_SHA"
+      - name: Validate closeout compiler contract
+        run: node --check scripts/release/compile-conversation-final-closeout.mjs
+      - name: Compile final closeout
+        run: node scripts/release/compile-conversation-final-closeout.mjs "${{ inputs.target_sha }}"
+      - name: Upload immutable closeout packet
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conversation-final-closeout-${{ inputs.target_sha }}
+          path: artifacts/conversation-final-closeout
+          retention-days: 90
+          if-no-files-found: error
