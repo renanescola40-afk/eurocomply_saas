@@ -1,0 +1,142 @@
+name: Legal Rules Runtime Capture
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_url:
+        description: HTTPS origin of the deployed RISCK COMPLY environment
+        required: true
+        type: string
+      deployment_sha:
+        description: Exact lowercase 40-character Git SHA deployed at deployment_url
+        required: true
+        type: string
+      environment_name:
+        description: Audit label such as production or staging
+        required: true
+        default: production
+        type: string
+      confirm_runtime_capture:
+        description: Type CAPTURE_EXACT_SHA to execute the protected runtime proof
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: legal-rules-runtime-capture-${{ inputs.environment_name }}-${{ inputs.deployment_sha }}
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    name: Capture protected legal-rules proof
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      DEPLOYMENT_URL: ${{ inputs.deployment_url }}
+      EXPECTED_DEPLOYMENT_SHA: ${{ inputs.deployment_sha }}
+      CAPTURE_ENVIRONMENT: ${{ inputs.environment_name }}
+      INTERNAL_CRON_SECRET: ${{ secrets.INTERNAL_CRON_SECRET }}
+      OUTPUT_DIR: artifacts/legal-rules-runtime
+      OUTPUT_JSON: artifacts/legal-rules-runtime/legal-rules-validation.json
+    steps:
+      - name: Validate operator confirmation and inputs
+        run: |
+          test '${{ inputs.confirm_runtime_capture }}' = 'CAPTURE_EXACT_SHA'
+          [[ "$EXPECTED_DEPLOYMENT_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$CAPTURE_ENVIRONMENT" =~ ^[A-Za-z][A-Za-z0-9_-]{1,31}$ ]]
+          node --input-type=module <<'NODE'
+          const url = new URL(process.env.DEPLOYMENT_URL);
+          if (url.protocol !== 'https:') throw new Error('deployment_url must use HTTPS');
+          if (url.username || url.password || url.search || url.hash || url.pathname !== '/') {
+            throw new Error('deployment_url must be a clean HTTPS origin');
+          }
+          NODE
+          test -n "$INTERNAL_CRON_SECRET"
+
+      - name: Checkout exact deployed SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.deployment_sha }}
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_DEPLOYMENT_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Validate capture contracts
+        run: >-
+          npx vitest run
+          src/server/ai-governance/legal-rules-runtime.test.ts
+          tests/legal-rules-runtime-api-contract.test.ts
+          tests/legal-rules-runtime-capture-contract.test.ts
+          tests/compliance/legal-rules-runtime-capture-workflow.test.mjs
+
+      - name: Capture protected runtime evidence
+        run: |
+          mkdir -p "$OUTPUT_DIR"
+          node scripts/compliance/capture-legal-rules-runtime-evidence.mjs > "$OUTPUT_JSON"
+
+      - name: Verify captured artifact binding
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const artifact = JSON.parse(readFileSync(process.env.OUTPUT_JSON, 'utf8'));
+          if (artifact.status !== 'PASS') throw new Error('captured artifact is not PASS');
+          if (artifact.deploymentSha !== process.env.EXPECTED_DEPLOYMENT_SHA) throw new Error('artifact SHA mismatch');
+          if (artifact.environment !== process.env.CAPTURE_ENVIRONMENT) throw new Error('artifact environment mismatch');
+          const archiveDigest = createHash('sha256').update(readFileSync(process.env.OUTPUT_JSON)).digest('hex');
+          const receipt = {
+            schema: 'risck-comply.legal-rules-runtime-capture-receipt.v1',
+            repository: process.env.GITHUB_REPOSITORY,
+            workflowRunId: process.env.GITHUB_RUN_ID,
+            workflowRunAttempt: process.env.GITHUB_RUN_ATTEMPT,
+            deploymentUrl: artifact.deploymentUrl,
+            deploymentSha: artifact.deploymentSha,
+            environment: artifact.environment,
+            legalRulesVersion: artifact.legalRulesVersion,
+            testCaseCount: artifact.testCases.length,
+            artifactSha256: artifact.artifactSha256,
+            archiveFileSha256: archiveDigest,
+            countsForRuntimeCoverage: true,
+            legalAcceptanceGranted: false,
+          };
+          writeFileSync(`${process.env.OUTPUT_DIR}/capture-receipt.json`, `${JSON.stringify(receipt, null, 2)}\n`);
+          NODE
+
+      - name: Publish audit summary
+        run: |
+          node --input-type=module <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          import { readFileSync } from 'node:fs';
+          const proof = JSON.parse(readFileSync(process.env.OUTPUT_JSON, 'utf8'));
+          console.log('# Legal rules runtime capture');
+          console.log(`- Status: **${proof.status}**`);
+          console.log(`- Environment: \`${proof.environment}\``);
+          console.log(`- Deployment SHA: \`${proof.deploymentSha}\``);
+          console.log(`- Legal rules version: \`${proof.legalRulesVersion}\``);
+          console.log(`- Runtime cases: **${proof.testCases.length} PASS**`);
+          console.log(`- Artifact digest: \`${proof.artifactSha256}\``);
+          console.log('- Legal acceptance granted: **No**');
+          NODE
+
+      - name: Upload exact-SHA runtime proof
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: legal-rules-runtime-${{ inputs.environment_name }}-${{ inputs.deployment_sha }}
+          path: artifacts/legal-rules-runtime
+          retention-days: 90
+          if-no-files-found: error
