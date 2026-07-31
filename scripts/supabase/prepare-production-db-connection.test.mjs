@@ -35,6 +35,8 @@ describe('prepare production Supabase database connection', () => {
       trimmedOuterWhitespace: false,
       removedLineBreakCount: 0,
       canonicalizedPasswordEncoding: false,
+      usedPasswordOverride: false,
+      passwordOverrideRemovedLineBreakCount: 0,
     });
     expect(JSON.stringify(result.diagnostics)).not.toContain(password);
     expect(JSON.stringify(result.diagnostics)).not.toContain(projectRef);
@@ -109,6 +111,56 @@ describe('prepare production Supabase database connection', () => {
     expect(result.diagnostics.canonicalizedPasswordEncoding).toBe(true);
   });
 
+  it('replaces only the password while preserving the validated endpoint', () => {
+    const staleUrl = sessionPoolerUrl({ password: 'StalePassword123' });
+    const currentPassword = 'Current#Password@2026';
+    const result = normalizeProductionDbUrl(
+      staleUrl,
+      projectRef,
+      currentPassword,
+    );
+    const parsed = new URL(result.url);
+
+    expect(decodeURIComponent(parsed.password)).toBe(currentPassword);
+    expect(parsed.hostname).toBe('aws-0-eu-west-1.pooler.supabase.com');
+    expect(parsed.username).toBe(`postgres.${projectRef}`);
+    expect(result.url).not.toContain('StalePassword123');
+    expect(result.diagnostics.usedPasswordOverride).toBe(true);
+    expect(result.diagnostics.canonicalizedPasswordEncoding).toBe(true);
+  });
+
+  it('normalizes line breaks in the protected password override', () => {
+    const result = normalizeProductionDbUrl(
+      sessionPoolerUrl({ password: 'StalePassword123' }),
+      projectRef,
+      '\nCurrentPassword2026\r\n',
+    );
+
+    expect(decodeURIComponent(new URL(result.url).password)).toBe(
+      'CurrentPassword2026',
+    );
+    expect(result.diagnostics.usedPasswordOverride).toBe(true);
+    expect(result.diagnostics.passwordOverrideRemovedLineBreakCount).toBe(2);
+  });
+
+  it('rejects unsafe password override whitespace and control characters', () => {
+    expect(() =>
+      normalizeProductionDbUrl(
+        sessionPoolerUrl(),
+        projectRef,
+        'Current Password',
+      ),
+    ).toThrow('SUPABASE_DB_PASSWORD contains literal whitespace');
+
+    expect(() =>
+      normalizeProductionDbUrl(
+        sessionPoolerUrl(),
+        projectRef,
+        'CurrentPassword\u0007',
+      ),
+    ).toThrow('SUPABASE_DB_PASSWORD contains a disallowed control character');
+  });
+
   it('keeps strict URL validation after secret normalization', () => {
     const malicious = sessionPoolerUrl({ host: 'attacker.example.com' }).replace(
       '@',
@@ -123,12 +175,33 @@ describe('prepare production Supabase database connection', () => {
     ).toThrow('contains literal whitespace');
   });
 
+  it('does not allow a password override to bypass endpoint identity checks', () => {
+    expect(() =>
+      normalizeProductionDbUrl(
+        sessionPoolerUrl({ ref: 'zyxwvutsrqponmlkjihg' }),
+        projectRef,
+        'CurrentPassword2026',
+      ),
+    ).toThrow('does not belong to SUPABASE_PROJECT_ID');
+
+    expect(() =>
+      normalizeProductionDbUrl(
+        sessionPoolerUrl({ host: 'attacker.example.com' }),
+        projectRef,
+        'CurrentPassword2026',
+      ),
+    ).toThrow('not an approved Supabase database endpoint');
+  });
+
   it('reports safe input diagnostics without exposing credentials', () => {
     const multiline = sessionPoolerUrl({ password: 'Strong#Password' }).replace(
       '@aws-',
       '\n@aws-',
     );
-    const diagnostics = inspectProductionDbUrlInput(multiline);
+    const diagnostics = inspectProductionDbUrlInput(
+      multiline,
+      '\nCurrent#Password@2026\n',
+    );
     const serialized = JSON.stringify(diagnostics);
 
     expect(diagnostics).toEqual({
@@ -140,8 +213,13 @@ describe('prepare production Supabase database connection', () => {
       containsDisallowedControlCharacter: false,
       matchedSupabaseConnectionShape: true,
       canonicalizedPasswordEncoding: true,
+      passwordOverridePresent: true,
+      passwordOverrideLineBreakCount: 2,
+      passwordOverrideContainsHorizontalWhitespace: false,
+      passwordOverrideContainsDisallowedControlCharacter: false,
     });
     expect(serialized).not.toContain('Strong#Password');
+    expect(serialized).not.toContain('Current#Password@2026');
     expect(serialized).not.toContain(projectRef);
   });
 
@@ -175,20 +253,23 @@ describe('prepare production Supabase database connection', () => {
     const root = mkdtempSync(join(tmpdir(), 'supabase-db-url-'));
     const outputPath = join(root, 'connection', 'db-url');
     const rawPassword = 'Strong#Password@2026';
-    const source = sessionPoolerUrl({ password: rawPassword });
+    const source = sessionPoolerUrl({ password: 'StalePassword123' });
     const diagnostics = writeProtectedConnectionFile({
       rawValue: ` ${source.replace('@aws-', '\n@aws-')} `,
       projectRef,
+      rawPasswordOverride: rawPassword,
       outputPath,
     });
     const stored = readFileSync(outputPath, 'utf8');
 
     expect(decodeURIComponent(new URL(stored).password)).toBe(rawPassword);
     expect(stored).not.toContain('#');
+    expect(stored).not.toContain('StalePassword123');
     expect(statSync(outputPath).mode & 0o777).toBe(0o600);
     expect(diagnostics.trimmedOuterWhitespace).toBe(true);
     expect(diagnostics.removedLineBreakCount).toBe(1);
     expect(diagnostics.canonicalizedPasswordEncoding).toBe(true);
+    expect(diagnostics.usedPasswordOverride).toBe(true);
   });
 
   it('requires a valid project reference and a password-bearing URL', () => {
