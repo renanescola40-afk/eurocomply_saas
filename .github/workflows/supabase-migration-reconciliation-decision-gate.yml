@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'scripts/supabase/generate-migration-reconciliation-decision-template.mjs'
+      - 'scripts/supabase/seal-migration-reconciliation-decisions.mjs'
       - 'scripts/supabase/validate-migration-reconciliation-decisions.mjs'
       - 'scripts/supabase/validate-migration-reconciliation-decisions.test.mjs'
       - 'docs/security/evidence/runtime/supabase-migration-reconciliation-decisions.json'
@@ -13,6 +14,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/supabase/generate-migration-reconciliation-decision-template.mjs'
+      - 'scripts/supabase/seal-migration-reconciliation-decisions.mjs'
       - 'scripts/supabase/validate-migration-reconciliation-decisions.mjs'
       - 'scripts/supabase/validate-migration-reconciliation-decisions.test.mjs'
       - 'docs/security/evidence/runtime/supabase-migration-reconciliation-decisions.json'
@@ -58,6 +60,7 @@ jobs:
       - name: Validate script syntax
         run: |
           node --check scripts/supabase/generate-migration-reconciliation-decision-template.mjs
+          node --check scripts/supabase/seal-migration-reconciliation-decisions.mjs
           node --check scripts/supabase/validate-migration-reconciliation-decisions.mjs
 
       - name: Test fail-closed decision contracts
