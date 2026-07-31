@@ -16,7 +16,8 @@ function sessionPoolerUrl(overrides = {}) {
   const ref = overrides.ref ?? projectRef;
   const host = overrides.host ?? 'aws-0-eu-west-1.pooler.supabase.com';
   const port = overrides.port ?? '5432';
-  return `postgresql://postgres.${ref}:${password}@${host}:${port}/postgres?sslmode=require`;
+  const passwordValue = overrides.password ?? password;
+  return `postgresql://postgres.${ref}:${passwordValue}@${host}:${port}/postgres?sslmode=require`;
 }
 
 describe('prepare production Supabase database connection', () => {
@@ -33,6 +34,7 @@ describe('prepare production Supabase database connection', () => {
       projectRefSuffix: 'opqrst',
       trimmedOuterWhitespace: false,
       removedLineBreakCount: 0,
+      canonicalizedPasswordEncoding: false,
     });
     expect(JSON.stringify(result.diagnostics)).not.toContain(password);
     expect(JSON.stringify(result.diagnostics)).not.toContain(projectRef);
@@ -60,9 +62,54 @@ describe('prepare production Supabase database connection', () => {
     expect(result.url).toBe(source);
     expect(result.diagnostics.trimmedOuterWhitespace).toBe(true);
     expect(result.diagnostics.removedLineBreakCount).toBe(2);
+    expect(result.diagnostics.canonicalizedPasswordEncoding).toBe(false);
   });
 
-  it('keeps strict URL validation after multiline normalization', () => {
+  it('canonicalizes raw reserved password characters without changing the password', () => {
+    const rawPassword = 'M7!vQ9#Lx2@pR4/Zk8?:%';
+    const result = normalizeProductionDbUrl(
+      sessionPoolerUrl({ password: rawPassword }),
+      projectRef,
+    );
+    const parsed = new URL(result.url);
+
+    expect(decodeURIComponent(parsed.password)).toBe(rawPassword);
+    expect(result.url).toContain('%23');
+    expect(result.url).toContain('%40');
+    expect(result.url).toContain('%2F');
+    expect(result.url).toContain('%3F');
+    expect(result.url).toContain('%3A');
+    expect(result.url).toContain('%25');
+    expect(result.diagnostics.canonicalizedPasswordEncoding).toBe(true);
+  });
+
+  it('preserves valid percent escapes instead of double-encoding them', () => {
+    const encodedPassword = 'M7%21vQ9%23Lx2%40pR4%2FZk8';
+    const result = normalizeProductionDbUrl(
+      sessionPoolerUrl({ password: encodedPassword }),
+      projectRef,
+    );
+
+    expect(result.url).toContain(encodedPassword);
+    expect(result.url).not.toContain('%2521');
+    expect(result.url).not.toContain('%2523');
+    expect(result.diagnostics.canonicalizedPasswordEncoding).toBe(false);
+  });
+
+  it('normalizes a multiline URL and raw reserved password in one pass', () => {
+    const rawPassword = 'Strong#Password@2026';
+    const source = sessionPoolerUrl({ password: rawPassword });
+    const result = normalizeProductionDbUrl(
+      `\n${source.replace('@aws-', '\r\n@aws-')}\n`,
+      projectRef,
+    );
+
+    expect(decodeURIComponent(new URL(result.url).password)).toBe(rawPassword);
+    expect(result.diagnostics.removedLineBreakCount).toBe(3);
+    expect(result.diagnostics.canonicalizedPasswordEncoding).toBe(true);
+  });
+
+  it('keeps strict URL validation after secret normalization', () => {
     const malicious = sessionPoolerUrl({ host: 'attacker.example.com' }).replace(
       '@',
       '\n@',
@@ -77,7 +124,10 @@ describe('prepare production Supabase database connection', () => {
   });
 
   it('reports safe input diagnostics without exposing credentials', () => {
-    const multiline = sessionPoolerUrl().replace('@', '\n@');
+    const multiline = sessionPoolerUrl({ password: 'Strong#Password' }).replace(
+      '@aws-',
+      '\n@aws-',
+    );
     const diagnostics = inspectProductionDbUrlInput(multiline);
     const serialized = JSON.stringify(diagnostics);
 
@@ -88,8 +138,10 @@ describe('prepare production Supabase database connection', () => {
       trimmedOuterWhitespace: false,
       containsHorizontalWhitespace: false,
       containsDisallowedControlCharacter: false,
+      matchedSupabaseConnectionShape: true,
+      canonicalizedPasswordEncoding: true,
     });
-    expect(serialized).not.toContain(password);
+    expect(serialized).not.toContain('Strong#Password');
     expect(serialized).not.toContain(projectRef);
   });
 
@@ -115,24 +167,28 @@ describe('prepare production Supabase database connection', () => {
     ).toThrow('must use port 5432 or 6543');
 
     expect(() =>
-      normalizeProductionDbUrl(`${sessionPoolerUrl()}#secret`, projectRef),
+      normalizeProductionDbUrl(`${sessionPoolerUrl()}#fragment`, projectRef),
     ).toThrow('contains a URL fragment');
   });
 
-  it('writes the normalized URL to an owner-only temporary file', () => {
+  it('writes the canonical normalized URL to an owner-only temporary file', () => {
     const root = mkdtempSync(join(tmpdir(), 'supabase-db-url-'));
     const outputPath = join(root, 'connection', 'db-url');
-    const source = sessionPoolerUrl();
+    const rawPassword = 'Strong#Password@2026';
+    const source = sessionPoolerUrl({ password: rawPassword });
     const diagnostics = writeProtectedConnectionFile({
-      rawValue: ` ${source.replace('@', '\n@')} `,
+      rawValue: ` ${source.replace('@aws-', '\n@aws-')} `,
       projectRef,
       outputPath,
     });
+    const stored = readFileSync(outputPath, 'utf8');
 
-    expect(readFileSync(outputPath, 'utf8')).toBe(source);
+    expect(decodeURIComponent(new URL(stored).password)).toBe(rawPassword);
+    expect(stored).not.toContain('#');
     expect(statSync(outputPath).mode & 0o777).toBe(0o600);
     expect(diagnostics.trimmedOuterWhitespace).toBe(true);
     expect(diagnostics.removedLineBreakCount).toBe(1);
+    expect(diagnostics.canonicalizedPasswordEncoding).toBe(true);
   });
 
   it('requires a valid project reference and a password-bearing URL', () => {
