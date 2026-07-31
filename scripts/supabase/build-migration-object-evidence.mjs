@@ -5,7 +5,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const IDENT = String.raw`(?:"[^"]+"|[a-zA-Z_][\w$]*)`;
-const QUALIFIED = new RegExp(`(${IDENT})(?:\.(${IDENT}))?`, 'g');
+const QUALIFIED = new RegExp(`(${IDENT})(?:\\.(${IDENT}))?`, 'g');
 const OBJECT_PATTERNS = [
   ['TABLE', /\b(?:create|alter|drop)\s+table(?:\s+if\s+(?:not\s+)?exists)?\s+([^\s(;]+)/ig],
   ['INDEX', /\b(?:create(?:\s+unique)?|drop)\s+index(?:\s+if\s+(?:not\s+)?exists)?\s+([^\s(;]+)/ig],
