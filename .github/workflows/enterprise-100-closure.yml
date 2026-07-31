@@ -1,0 +1,61 @@
+name: Enterprise 100 Closure
+
+on:
+  pull_request:
+    paths:
+      - 'config/enterprise-100-closure.json'
+      - 'scripts/release/check-enterprise-100-closure.mjs'
+      - 'tests/enterprise-100-closure.test.ts'
+      - '.github/workflows/enterprise-100-closure.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: enterprise-100-closure-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Enterprise closure contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      ENTERPRISE_CLOSURE_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test closure verifier
+        run: npx vitest run tests/enterprise-100-closure.test.ts
+
+      - name: Validate repository contract
+        if: github.event_name == 'pull_request'
+        run: |
+          node --check scripts/release/check-enterprise-100-closure.mjs
+          node -e "const c=require('./config/enterprise-100-closure.json'); if(!Array.isArray(c.controls)||c.controls.length<10) process.exit(1)"
+
+      - name: Enforce final exact-SHA closure
+        if: github.event_name != 'pull_request'
+        run: node scripts/release/check-enterprise-100-closure.mjs
+
+      - name: Upload closure result
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-100-closure-${{ env.ENTERPRISE_CLOSURE_EXPECTED_SHA }}
+          path: release-validation/enterprise-100-closure.json
+          if-no-files-found: error
+          retention-days: 90

@@ -31,6 +31,8 @@ const CORE_PATHS = Object.freeze([
   'docs/legal-review-preparation/09_QUALIFIED_REVIEW_PACKAGES_STATUS.md',
   'docs/legal-review-preparation/10_FOUNDER_FACTS_QUESTIONNAIRE.md',
   'docs/legal-review-preparation/11_CONTRACT_AND_COUNSEL_PACK_STATUS.md',
+  'docs/legal-review-preparation/12_FINAL_LEGAL_PUBLICATION_GATE.md',
+  'docs/legal-review-preparation/13_COUNSEL_REVIEW_EFFICIENCY_CLOSEOUT.md',
   'docs/legal-review-preparation/FOUNDER_FACTS_TEMPLATE.json',
   'docs/legal-review-preparation/QUALIFIED_REVIEW_DECISION_TEMPLATE.json',
   'docs/legal-review-preparation/review-package-schema.v1.json',
@@ -43,6 +45,7 @@ const CORE_PATHS = Object.freeze([
 const PACKAGE_DIRECTORIES = Object.freeze([
   'docs/legal-review-preparation/review-packages',
   'docs/legal-review-preparation/legal-pack',
+  'docs/legal-review-preparation/counsel-efficiency',
 ]);
 
 const REQUIRED_EXTERNAL_DECISIONS = Object.freeze([
@@ -91,6 +94,7 @@ function sha256(root, repositoryPath) {
 function contentClass(path) {
   if (path.includes('/review-packages/')) return 'QUALIFIED_REVIEW_PACKAGE';
   if (path.includes('/legal-pack/')) return 'CONTRACT_AND_COUNSEL_DRAFT';
+  if (path.includes('/counsel-efficiency/')) return 'COUNSEL_REVIEW_EFFICIENCY';
   if (path.includes('/evidence/')) return 'EVIDENCE_REGISTRY';
   if (path.endsWith('.json')) return 'STRUCTURED_LEGAL_PREPARATION';
   return 'COUNSEL_BRIEFING';
@@ -144,6 +148,10 @@ export function generateLegalCounselHandoffBundle({
       missingPreparationPaths.length === 0
         ? 'READY_FOR_COUNSEL_HANDOFF'
         : 'HANDOFF_PREPARATION_INCOMPLETE',
+    reviewEfficiencyStatus:
+      files.some((file) => file.class === 'COUNSEL_REVIEW_EFFICIENCY')
+        ? 'DELTA_REVIEW_SUPPORTED'
+        : 'FULL_DISCOVERY_REVIEW_REQUIRED',
     legalAcceptanceStatus: 'HUMAN_REVIEW_REQUIRED',
     fileCount: files.length,
     totalBytes: files.reduce((total, file) => total + file.bytes, 0),
@@ -151,6 +159,7 @@ export function generateLegalCounselHandoffBundle({
     files,
     externalDecisionStatus,
     instructions: [
+      'Start with the counsel review cockpit and generated exact-SHA delta.',
       'Counsel must review source materials rather than rely only on generated summaries.',
       'Bind every decision to sourceSha and packageDigest.',
       'Store signed confidential artifacts outside the public repository and reference immutable digests.',
@@ -164,13 +173,14 @@ export function renderHandoffMarkdown(bundle) {
     `- Source SHA: \`${bundle.sourceSha}\`\n` +
     `- Package digest: \`${bundle.packageDigest}\`\n` +
     `- Preparation status: \`${bundle.preparationStatus}\`\n` +
+    `- Review efficiency: \`${bundle.reviewEfficiencyStatus}\`\n` +
     `- Legal acceptance: \`${bundle.legalAcceptanceStatus}\`\n` +
     `- Files: ${bundle.fileCount}\n\n` +
     `## Included preparation files\n\n` +
     bundle.files.map((file) => `- \`${file.path}\` — ${file.sha256}`).join('\n') +
     `\n\n## External decisions not bundled\n\n` +
     bundle.externalDecisionStatus.map((item) => `- \`${item.path}\` — ${item.present ? 'present but excluded' : 'required and absent'}`).join('\n') +
-    `\n\nPackage completeness is not legal acceptance.\n`;
+    `\n\nPackage completeness and delta routing are not legal acceptance.\n`;
 }
 
 export function writeLegalCounselHandoffBundle(bundle, root = process.cwd()) {

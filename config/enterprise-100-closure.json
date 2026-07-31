@@ -1,0 +1,72 @@
+{
+  "schema": "risck-comply.enterprise-100-closure.v1",
+  "requiredDecision": "GO",
+  "controls": [
+    {
+      "id": "repository-quality",
+      "owner": "engineering",
+      "evidence": "release-validation/repository-quality.json",
+      "acceptedStatuses": ["PASS", "SUCCESS"]
+    },
+    {
+      "id": "production-deployment",
+      "owner": "platform",
+      "evidence": "release-validation/production-deployment.json",
+      "acceptedStatuses": ["PASS", "SUCCESS"]
+    },
+    {
+      "id": "production-smoke",
+      "owner": "sre",
+      "evidence": "release-validation/production-smoke.json",
+      "acceptedStatuses": ["PASS", "SUCCESS"]
+    },
+    {
+      "id": "supabase-rls-reconciliation",
+      "owner": "security",
+      "evidence": "release-validation/supabase-rls-reconciliation.json",
+      "acceptedStatuses": ["PASS", "SUCCESS"]
+    },
+    {
+      "id": "tenant-isolation-live",
+      "owner": "security",
+      "evidence": "release-validation/tenant-isolation-live.json",
+      "acceptedStatuses": ["PASS", "SUCCESS"]
+    },
+    {
+      "id": "backup-restore",
+      "owner": "sre",
+      "evidence": "release-validation/backup-restore.json",
+      "acceptedStatuses": ["PASS", "SUCCESS"]
+    },
+    {
+      "id": "rollback-rehearsal",
+      "owner": "release",
+      "evidence": "release-validation/rollback-rehearsal.json",
+      "acceptedStatuses": ["PASS", "SUCCESS"]
+    },
+    {
+      "id": "observability-runtime",
+      "owner": "sre",
+      "evidence": "release-validation/observability-runtime.json",
+      "acceptedStatuses": ["PASS", "SUCCESS"]
+    },
+    {
+      "id": "billing-runtime",
+      "owner": "product",
+      "evidence": "release-validation/billing-runtime.json",
+      "acceptedStatuses": ["PASS", "SUCCESS"]
+    },
+    {
+      "id": "legal-publication",
+      "owner": "legal",
+      "evidence": "artifacts/legal-review/final-legal-publication-gate.json",
+      "acceptedStatuses": ["COUNSEL_ACCEPTED"]
+    },
+    {
+      "id": "final-go-no-go",
+      "owner": "release",
+      "evidence": "release-validation/final-go-no-go.json",
+      "acceptedStatuses": ["GO", "APPROVED"]
+    }
+  ]
+}
