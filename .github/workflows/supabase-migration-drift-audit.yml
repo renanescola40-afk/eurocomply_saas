@@ -28,7 +28,6 @@ jobs:
     environment: production
     env:
       SUPABASE_CLI_VERSION: '2.101.0'
-      SUPABASE_DB_URL_FILE: ${{ runner.temp }}/supabase-production-db-url
       EVIDENCE_DIR: artifacts/supabase-migration-drift
 
     steps:
@@ -55,6 +54,7 @@ jobs:
             echo "SUPABASE_PROJECT_ID does not look like a Supabase project reference" >&2
             exit 1
           fi
+          echo "SUPABASE_DB_URL_FILE=$RUNNER_TEMP/supabase-production-db-url" >> "$GITHUB_ENV"
 
       - name: Prepare explicit production database connection
         shell: bash
