@@ -15,9 +15,9 @@ The workflow requires these secrets in the protected `production` environment:
 - `SUPABASE_PROJECT_ID`: the exact 20-character production project reference;
 - `SUPABASE_DB_URL`: a complete percent-encoded URI copied from **Supabase → Connect** for the same project.
 
-The workflow does not rely on `SUPABASE_DB_PASSWORD`, `supabase link`, or automatic pooler discovery. It validates the URL/project relationship, writes the URL to a temporary `0600` file, invokes `supabase migration list --db-url`, and removes the temporary file even when the audit fails.
+The workflow does not rely on `SUPABASE_DB_PASSWORD`, `supabase link`, or automatic pooler discovery. It normalizes line breaks accidentally introduced by secret editors, validates the URL/project relationship, writes the normalized URL to a temporary `0600` file, invokes `supabase migration list --db-url`, and removes the temporary file even when the audit fails.
 
-Only non-secret connection diagnostics are retained in the artefact.
+Only non-secret connection diagnostics are retained in the artefact. Diagnostics may report the count of removed line breaks, but never include the URL, username, password or full project reference.
 
 ## Statuses
 
@@ -50,7 +50,9 @@ The auditor:
 - does not reset, seed, pull, or diff the production database;
 - does not use `supabase db push` or `--include-all`;
 - does not claim that a local-only migration is already materialized;
-- does not print or retain the database URL, username, or password.
+- does not print or retain the database URL, username, or password;
+- removes only CR/LF characters and adjacent indentation before strict parsing;
+- still rejects literal spaces or tabs, control characters, wrong projects, foreign hosts, unsupported ports and unsafe fragments.
 
 ## Required reconciliation evidence
 
@@ -77,17 +79,19 @@ A migration may be marked applied only after its expected effects are proven to 
 7. Apply genuinely pending idempotent migrations separately.
 8. Rerun this audit and the production RLS assurance checks.
 
-## Authentication failures
+## Authentication and URL failures
 
-If the URL is rejected before connecting, fix the secret rather than weakening validation. Common causes are:
+If the URL is rejected before connecting, inspect the safe diagnostic instead of weakening validation. Common causes are:
 
 - URL copied from a different Supabase project;
 - pooler username missing `postgres.<project-ref>`;
 - direct hostname not matching `db.<project-ref>.supabase.co`;
 - password placeholder not replaced;
 - special password characters not percent-encoded;
-- embedded line break or URL fragment;
+- literal spaces, tabs, control characters or an unencoded URL fragment;
 - unsupported port or non-Supabase hostname.
+
+CR/LF characters accidentally inserted while pasting are removed automatically before parsing. A URL that still fails after normalization is structurally invalid or contains credentials that do not authenticate.
 
 Never paste the URL into a workflow input or job log for debugging.
 
