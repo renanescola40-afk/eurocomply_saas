@@ -20,6 +20,8 @@ A normal pull-request audit must remain useful and merge-friendly while local mi
 
 Repeated production dry-run attempts also demonstrated a reliability boundary in automatic connection discovery: `supabase link` could complete while the subsequent `migration list --linked` command failed authentication against an automatically selected pooler. A standalone password plus project reference did not prove that the exact reviewed database endpoint, transport and project were the ones used by every remote command.
 
+A second operational boundary appeared after moving to an explicit URL: browser and GitHub secret editors can preserve line breaks in long connection strings. Rejecting the secret forced repeated manual recreation even though the intended URI could be recovered without weakening host, project, port or database validation.
+
 ## Decision
 
 Add a strict deployability mode to `scripts/supabase/audit-migration-drift.mjs`, a manual read-only production dry-run workflow, and an explicit protected database connection contract.
@@ -55,7 +57,7 @@ Production migration workflows use:
 - `SUPABASE_PROJECT_ID`: the exact 20-character production project reference;
 - `SUPABASE_DB_URL`: the complete percent-encoded PostgreSQL URI copied from Supabase Connect for the same project.
 
-`scripts/supabase/prepare-production-db-connection.mjs` validates that the URI:
+`scripts/supabase/prepare-production-db-connection.mjs` first removes CR/LF characters and adjacent indentation introduced by secret editors, then validates that the resulting URI:
 
 - uses a PostgreSQL scheme;
 - targets an approved Supabase direct or pooler hostname;
@@ -63,11 +65,13 @@ Production migration workflows use:
 - targets the `postgres` database;
 - contains a password;
 - identifies the same project as `SUPABASE_PROJECT_ID`;
-- contains no embedded line breaks or unencoded fragment.
+- contains no remaining literal whitespace, disallowed control character or unencoded fragment.
+
+Line-break normalization is intentionally narrow. It does not remove arbitrary characters, alter percent-encoding, change credentials, relax the Supabase hostname allowlist or permit a different project. URLs that remain invalid after normalization fail closed.
 
 The normalized URI is written to a temporary owner-readable file with mode `0600`. Remote CLI commands receive the URI through `--db-url`. The file is removed with `if: always()` and is never uploaded.
 
-The retained connection diagnostic contains only transport, hostname, port, database, project-reference suffix and whether outer whitespace was removed. It never contains the URL, username or password.
+The retained connection diagnostic contains only transport, hostname, port, database, project-reference suffix, whether outer whitespace was removed and the number of removed line breaks. It never contains the URL, username or password. Invalid inputs also emit a bounded structural diagnostic without credential material.
 
 `SUPABASE_DB_PASSWORD`, `supabase link` and automatic pooler discovery are not part of this workflow contract.
 
@@ -79,7 +83,7 @@ The retained connection diagnostic contains only transport, hostname, port, data
 2. requires the exact 40-character current `main` SHA;
 3. requires the literal confirmation `DRY_RUN_ONLY`;
 4. verifies checkout and remote `main` are the same SHA;
-5. validates the explicit production database URL against the project reference;
+5. normalizes and validates the explicit production database URL against the project reference;
 6. stores connection material only in a temporary `0600` runner file;
 7. captures remote migration history with `supabase migration list --db-url`;
 8. runs focused connection and deployability tests;
@@ -113,7 +117,8 @@ The targeted live-RLS proof migration path documented separately remains a narro
 - Every remote command uses the same explicitly reviewed database endpoint.
 - The URL/project relationship is checked before the CLI contacts production.
 - Pooler and direct transports are distinguishable in non-secret evidence.
-- Outer whitespace is normalized without printing connection material.
+- Outer whitespace and accidental CR/LF characters are normalized without printing connection material.
+- Structural validation remains fail-closed after normalization.
 - The current backlog blocks before any dry-run command.
 - Operators receive a machine-readable blocker list and retained diagnostics.
 - General PR drift audits remain informative without becoming permanently red.
@@ -123,6 +128,7 @@ The targeted live-RLS proof migration path documented separately remains a narro
 
 - Operators must configure `SUPABASE_DB_URL` in the relevant protected GitHub environments.
 - Special password characters must be percent-encoded inside the URI.
+- A malformed URI may be normalized enough to reach stricter validation, but it will not bypass host, project, credential or transport checks.
 - No production migration dry-run can proceed until issue #1415 reconciles all deployability blockers.
 - Human review remains necessary after a successful dry-run and before any production write.
 
