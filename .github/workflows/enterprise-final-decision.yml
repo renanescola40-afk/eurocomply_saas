@@ -1,0 +1,100 @@
+name: Enterprise Final Decision
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/release/compile-enterprise-final-decision.mjs'
+      - 'tests/release/compile-enterprise-final-decision.test.mjs'
+      - '.github/workflows/enterprise-final-decision.yml'
+      - 'docs/security/evidence/templates/enterprise-final-decision-input.json'
+      - 'docs/security/runbooks/ENTERPRISE_FINAL_DECISION.md'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA
+        required: true
+        type: string
+      input_artifact_run_id:
+        description: Workflow run containing the completed final-decision input
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  contract:
+    name: Validate Enterprise final decision contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --check scripts/release/compile-enterprise-final-decision.mjs
+      - run: node --test tests/release/compile-enterprise-final-decision.test.mjs
+
+  decide:
+    name: Compile exact-SHA Enterprise decision
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: enterprise-final-decision
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      SOURCE_RUN_ID: ${{ inputs.input_artifact_run_id }}
+    steps:
+      - name: Validate inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact current main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+      - name: Download completed input packet
+        uses: actions/download-artifact@v4
+        with:
+          name: enterprise-final-decision-input-${{ env.TARGET_SHA }}
+          path: source-artifact
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.input_artifact_run_id }}
+      - name: Verify source provenance
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$RUN_JSON")" = "$TARGET_SHA"
+          test "$(jq -r '.conclusion' <<<"$RUN_JSON")" = 'success'
+      - name: Compile decision
+        shell: bash
+        run: |
+          set -euo pipefail
+          INPUT="$(find source-artifact -type f -name 'enterprise-final-decision-input.json' -print -quit)"
+          test -n "$INPUT"
+          node scripts/release/compile-enterprise-final-decision.mjs "$INPUT" artifacts/enterprise-final-decision --expected-sha="$TARGET_SHA"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: enterprise-final-decision-${{ env.TARGET_SHA }}
+          path: artifacts/enterprise-final-decision
+          if-no-files-found: error
+          retention-days: 90
