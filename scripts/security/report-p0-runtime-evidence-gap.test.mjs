@@ -5,23 +5,30 @@ import {
   p0EvidenceCatalog,
 } from './p0-runtime-evidence-catalog.mjs';
 
-const source = fs.readFileSync(
+const reportSource = fs.readFileSync(
   new URL('./report-p0-runtime-evidence-gap.mjs', import.meta.url),
+  'utf8',
+);
+const evaluatorSource = fs.readFileSync(
+  new URL('./evaluate-p0-runtime-evidence.mjs', import.meta.url),
   'utf8',
 );
 
 describe('P0 runtime evidence gap report', () => {
-  it('uses the canonical P0 runtime evidence catalog', () => {
-    expect(source).toContain(
+  it('uses the shared canonical P0 runtime evaluator', () => {
+    expect(reportSource).toContain(
+      "import { evaluateP0RuntimeEvidence } from './evaluate-p0-runtime-evidence.mjs';",
+    );
+    expect(reportSource).toContain('evaluation = evaluateP0RuntimeEvidence({ finalValidationInProgress });');
+    expect(evaluatorSource).toContain(
       "import { activeP0RuntimeEvidenceItems } from './p0-runtime-evidence-catalog.mjs';",
     );
-    expect(source).toContain('activeP0RuntimeEvidenceItems({');
   });
 
   it('requires validator success before counting evidence as satisfied', () => {
-    expect(source).toContain('validatorFailures.length === 0');
-    expect(source).toContain('validatorFailures: evidence.validatorFailures');
-    expect(source).toContain("return ['canonical validator is missing'];");
+    expect(evaluatorSource).toContain('validatorFailures.length === 0');
+    expect(evaluatorSource).toContain('validatorFailures: evidence.validatorFailures');
+    expect(evaluatorSource).toContain("return ['canonical validator is missing'];");
   });
 
   it('includes Auth/RBAC as a required runtime control', () => {

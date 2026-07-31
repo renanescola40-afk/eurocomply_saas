@@ -11,6 +11,7 @@ on:
       - 'scripts/security/**'
       - 'tests/security/p0-runtime-gap-strict-contract.test.ts'
       - '.github/workflows/p0-final-release-gate.yml'
+      - '.github/workflows/p0-runtime-evidence.yml'
 
 permissions:
   contents: read
@@ -40,6 +41,7 @@ jobs:
           npx vitest run
           scripts/security/p0-runtime-evidence-catalog.test.mjs
           scripts/security/report-p0-runtime-evidence-gap.test.mjs
+          scripts/security/p0-runtime-evidence-derived-register.test.mjs
           tests/security/p0-runtime-gap-strict-contract.test.ts
 
       - name: Detect runtime evidence changes
@@ -72,6 +74,9 @@ jobs:
       - name: Validate optional runtime evidence files
         run: node scripts/security/check-p0-runtime-evidence-optionals.mjs
 
+      - name: Block committed register overclaims
+        run: node scripts/security/derive-p0-runtime-evidence-register.mjs --check-overclaim
+
       - name: Report current runtime evidence gaps with canonical validators
         run: node scripts/security/report-p0-runtime-evidence-gap.mjs
 
@@ -82,3 +87,20 @@ jobs:
       - name: Skip strict runtime evidence gap for non-final evidence changes
         if: steps.runtime_changes.outputs.strict != 'true'
         run: echo "Skipping strict runtime evidence gap for this non-final evidence PR. Use workflow_dispatch or a release-ready/final-evidence branch for final release enforcement."
+
+  required-p0-runtime-evidence-register-context:
+    name: Validate P0 runtime evidence register
+    needs: p0-final-release-gate
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enforce authoritative gate result
+        env:
+          AUTHORITATIVE_RESULT: ${{ needs.p0-final-release-gate.result }}
+        run: |
+          if [ "$AUTHORITATIVE_RESULT" != "success" ]; then
+            echo "Authoritative P0 final release gate did not pass: $AUTHORITATIVE_RESULT" >&2
+            exit 1
+          fi
+          echo "Required P0 runtime evidence register context is backed by the authoritative gate."

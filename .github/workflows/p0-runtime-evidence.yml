@@ -12,21 +12,39 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: p0-runtime-evidence-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   p0-runtime-evidence:
     name: Validate P0 runtime evidence register
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    env:
+      RELEASE_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - name: Show runner Node.js and npm versions
-        run: |
-          node --version
-          npm --version
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Test derived register contracts
+        run: >-
+          npx vitest run
+          scripts/security/p0-runtime-evidence-catalog.test.mjs
+          scripts/security/report-p0-runtime-evidence-gap.test.mjs
+          scripts/security/p0-runtime-evidence-derived-register.test.mjs
+          tests/security/p0-runtime-gap-strict-contract.test.ts
 
       - name: Validate runtime evidence register
         run: node scripts/security/check-p0-runtime-evidence-register.mjs
@@ -36,3 +54,22 @@ jobs:
 
       - name: Validate optional runtime evidence files
         run: node scripts/security/check-p0-runtime-evidence-optionals.mjs
+
+      - name: Derive canonical register and block overclaims
+        run: >-
+          node scripts/security/derive-p0-runtime-evidence-register.mjs
+          --write-artifacts
+          --check-overclaim
+
+      - name: Report current runtime evidence gaps
+        run: node scripts/security/report-p0-runtime-evidence-gap.mjs
+
+      - name: Upload derived register artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-runtime-evidence-derived-${{ env.RELEASE_COMMIT_SHA }}
+          path: |
+            artifacts/security/p0-runtime-evidence-register-derived.json
+            artifacts/security/p0-runtime-evidence-register-derived.md
+          if-no-files-found: error
+          retention-days: 90
