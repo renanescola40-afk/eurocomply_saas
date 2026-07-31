@@ -1,0 +1,113 @@
+name: Enterprise Runtime Evidence Closeout
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/release/validate-enterprise-runtime-closeout.mjs'
+      - 'scripts/release/validate-enterprise-runtime-closeout.test.mjs'
+      - '.github/workflows/enterprise-runtime-evidence-closeout.yml'
+      - 'docs/security/runbooks/ENTERPRISE_RUNTIME_EVIDENCE_CLOSEOUT.md'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA deployed to production
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  contract:
+    name: Validate runtime closeout contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --check scripts/release/validate-enterprise-runtime-closeout.mjs
+      - run: node --test scripts/release/validate-enterprise-runtime-closeout.test.mjs
+
+  closeout:
+    name: Collect and validate exact-SHA runtime evidence
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: enterprise-production-closeout
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+      READINESS_TOKEN: ${{ secrets.READINESS_TOKEN }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      TEST_USER_A_EMAIL: ${{ secrets.TEST_USER_A_EMAIL }}
+      TEST_USER_A_PASSWORD: ${{ secrets.TEST_USER_A_PASSWORD }}
+      TEST_USER_B_EMAIL: ${{ secrets.TEST_USER_B_EMAIL }}
+      TEST_USER_B_PASSWORD: ${{ secrets.TEST_USER_B_PASSWORD }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+    steps:
+      - name: Validate exact current main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "${TARGET_SHA,,}"
+          test -n "$PRODUCTION_URL"
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Run public production final validation
+        run: npm run release:production-final
+
+      - name: Run live Supabase tenant isolation
+        run: node scripts/security/run-supabase-live-rls-validation.mjs
+
+      - name: Run authenticated production smoke
+        run: npm run smoke:authenticated
+
+      - name: Validate production observability
+        run: npm run observability:production:validate
+
+      - name: Stamp workflow provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/release/stamp-runtime-closeout-provenance.mjs \
+            docs/security/evidence/runtime \
+            "$TARGET_SHA" \
+            "$GITHUB_RUN_ID" \
+            "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+      - name: Validate consolidated closeout
+        run: node scripts/release/validate-enterprise-runtime-closeout.mjs docs/security/evidence/runtime artifacts/enterprise-runtime-closeout
+
+      - name: Upload immutable closeout bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: enterprise-runtime-closeout-${{ env.TARGET_SHA }}
+          path: |
+            docs/security/evidence/runtime
+            artifacts/enterprise-runtime-closeout
+          if-no-files-found: error
+          retention-days: 90
