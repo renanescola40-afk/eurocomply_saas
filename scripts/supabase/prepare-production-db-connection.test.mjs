@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  inspectProductionDbUrlInput,
   normalizeProductionDbUrl,
   writeProtectedConnectionFile,
 } from './prepare-production-db-connection.mjs';
@@ -31,6 +32,7 @@ describe('prepare production Supabase database connection', () => {
       database: 'postgres',
       projectRefSuffix: 'opqrst',
       trimmedOuterWhitespace: false,
+      removedLineBreakCount: 0,
     });
     expect(JSON.stringify(result.diagnostics)).not.toContain(password);
     expect(JSON.stringify(result.diagnostics)).not.toContain(projectRef);
@@ -50,19 +52,45 @@ describe('prepare production Supabase database connection', () => {
     expect(direct.diagnostics.transport).toBe('direct');
   });
 
-  it('trims only outer whitespace and rejects embedded line breaks', () => {
-    const padded = `  ${sessionPoolerUrl()}\r\n`;
-    const result = normalizeProductionDbUrl(padded, projectRef);
+  it('normalizes outer whitespace and line breaks introduced by secret editors', () => {
+    const source = sessionPoolerUrl();
+    const multiline = `  ${source.replace('@', ' \r\n @')}\r\n`;
+    const result = normalizeProductionDbUrl(multiline, projectRef);
 
-    expect(result.url).toBe(sessionPoolerUrl());
+    expect(result.url).toBe(source);
     expect(result.diagnostics.trimmedOuterWhitespace).toBe(true);
+    expect(result.diagnostics.removedLineBreakCount).toBe(2);
+  });
 
+  it('keeps strict URL validation after multiline normalization', () => {
+    const malicious = sessionPoolerUrl({ host: 'attacker.example.com' }).replace(
+      '@',
+      '\n@',
+    );
+
+    expect(() => normalizeProductionDbUrl(malicious, projectRef)).toThrow(
+      'not an approved Supabase database endpoint',
+    );
     expect(() =>
-      normalizeProductionDbUrl(
-        sessionPoolerUrl().replace('@', '\n@'),
-        projectRef,
-      ),
-    ).toThrow('must be a single line');
+      normalizeProductionDbUrl(sessionPoolerUrl().replace(':5432', ' :5432'), projectRef),
+    ).toThrow('contains literal whitespace');
+  });
+
+  it('reports safe input diagnostics without exposing credentials', () => {
+    const multiline = sessionPoolerUrl().replace('@', '\n@');
+    const diagnostics = inspectProductionDbUrlInput(multiline);
+    const serialized = JSON.stringify(diagnostics);
+
+    expect(diagnostics).toEqual({
+      present: true,
+      startsWithPostgresScheme: true,
+      lineBreakCount: 1,
+      trimmedOuterWhitespace: false,
+      containsHorizontalWhitespace: false,
+      containsDisallowedControlCharacter: false,
+    });
+    expect(serialized).not.toContain(password);
+    expect(serialized).not.toContain(projectRef);
   });
 
   it('rejects a pooler URL for a different Supabase project', () => {
@@ -94,15 +122,17 @@ describe('prepare production Supabase database connection', () => {
   it('writes the normalized URL to an owner-only temporary file', () => {
     const root = mkdtempSync(join(tmpdir(), 'supabase-db-url-'));
     const outputPath = join(root, 'connection', 'db-url');
+    const source = sessionPoolerUrl();
     const diagnostics = writeProtectedConnectionFile({
-      rawValue: ` ${sessionPoolerUrl()} `,
+      rawValue: ` ${source.replace('@', '\n@')} `,
       projectRef,
       outputPath,
     });
 
-    expect(readFileSync(outputPath, 'utf8')).toBe(sessionPoolerUrl());
+    expect(readFileSync(outputPath, 'utf8')).toBe(source);
     expect(statSync(outputPath).mode & 0o777).toBe(0o600);
     expect(diagnostics.trimmedOuterWhitespace).toBe(true);
+    expect(diagnostics.removedLineBreakCount).toBe(1);
   });
 
   it('requires a valid project reference and a password-bearing URL', () => {
