@@ -44,6 +44,7 @@ jobs:
             exit 1
           fi
           echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
+          echo "SUPABASE_DB_URL_FILE=$RUNNER_TEMP/supabase-production-db-url" >> "$GITHUB_ENV"
 
       - name: Check out exact release SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -51,6 +52,15 @@ jobs:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
 
       - name: Verify exact current main checkout
         shell: bash
@@ -70,17 +80,34 @@ jobs:
       - name: Validate production Supabase configuration
         shell: bash
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
-          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_ID; do
+          for name in SUPABASE_DB_URL SUPABASE_PROJECT_ID; do
             if [ -z "${!name:-}" ]; then
               echo "$name is required for the migration dry-run." >&2
               exit 1
             fi
           done
+          if [[ ! "$SUPABASE_PROJECT_ID" =~ ^[a-z0-9]{20}$ ]]; then
+            echo "SUPABASE_PROJECT_ID does not look like a Supabase project reference" >&2
+            exit 1
+          fi
+
+      - name: Prepare explicit production database connection
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/supabase-production-migration-dry-run
+          node scripts/supabase/prepare-production-db-connection.mjs \
+            --write-file "$SUPABASE_DB_URL_FILE" \
+            | tee artifacts/supabase-production-migration-dry-run/connection-diagnostics.json
+          test -s "$SUPABASE_DB_URL_FILE"
+          test "$(stat -c '%a' "$SUPABASE_DB_URL_FILE")" = '600'
 
       - name: Install pinned Supabase CLI
         uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
@@ -93,28 +120,12 @@ jobs:
           set -euo pipefail
           test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
 
-      - name: Link exact production project
-        shell: bash
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-        run: |
-          set -euo pipefail
-          supabase link \
-            --project-ref "$SUPABASE_PROJECT_ID" \
-            --password "$SUPABASE_DB_PASSWORD"
-
       - name: Capture remote migration history
         shell: bash
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
-          mkdir -p artifacts/supabase-production-migration-dry-run
-          supabase migration list --linked \
+          DB_URL="$(cat "$SUPABASE_DB_URL_FILE")"
+          supabase migration list --db-url "$DB_URL" \
             | tee migration-state-remote.txt \
             | tee artifacts/supabase-production-migration-dry-run/migration-state-remote.txt
 
@@ -123,6 +134,8 @@ jobs:
           npx vitest run
           scripts/supabase/audit-migration-drift.test.mjs
           scripts/supabase/generate-migration-reconciliation-review-packages.test.mjs
+          scripts/supabase/prepare-production-db-connection.test.mjs
+          tests/security/supabase-production-migration-dry-run-workflow.test.ts
 
       - name: Evaluate migration deployability and retain blocker status
         id: deployability
@@ -170,13 +183,10 @@ jobs:
 
       - name: Execute Supabase migration dry-run only
         shell: bash
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
-          supabase db push --linked --dry-run \
+          DB_URL="$(cat "$SUPABASE_DB_URL_FILE")"
+          supabase db push --db-url "$DB_URL" --dry-run \
             | tee artifacts/supabase-production-migration-dry-run/db-push-dry-run.txt
 
       - name: Publish dry-run summary
@@ -188,12 +198,19 @@ jobs:
             echo
             echo "- Assessed SHA: \`$TARGET_SHA\`"
             echo "- Supabase CLI: \`$SUPABASE_CLI_VERSION\`"
+            echo '- Database connection: explicit protected SUPABASE_DB_URL'
             echo '- Operation: dry-run only'
             echo '- Reconciliation review packages: generated when the audit produced an inventory'
             echo '- Package status: HUMAN_REVIEW_REQUIRED; accepted decisions remain zero'
             echo '- Production writes: not authorised and not executed by this workflow'
             echo '- General migration deployment remains subject to independent approval'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove temporary database connection material
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$SUPABASE_DB_URL_FILE"
 
       - name: Upload migration authorization, review and dry-run artifacts
         if: always()

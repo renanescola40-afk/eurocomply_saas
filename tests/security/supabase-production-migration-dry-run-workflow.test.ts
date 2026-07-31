@@ -31,24 +31,50 @@ describe('Supabase production migration dry-run workflow', () => {
   it('uses a concrete Supabase CLI version and verifies the installed binary', () => {
     expect(workflow).toContain("SUPABASE_CLI_VERSION: '2.101.0'");
     expect(workflow).toContain('version: ${{ env.SUPABASE_CLI_VERSION }}');
-    expect(workflow).toContain('test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"');
+    expect(workflow).toContain(
+      'test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"',
+    );
     expect(normalized).not.toContain('version: latest');
   });
 
-  it('uses a dedicated environment and does not expose production secrets job-wide', () => {
+  it('uses a dedicated environment and keeps secrets scoped to preparation steps', () => {
     expect(jobHeader).toContain(
       'environment: supabase-production-migration-dry-run',
     );
     expect(jobHeader).not.toContain('${{ secrets.');
     expect(workflow).toContain(
-      'SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}',
-    );
-    expect(workflow).toContain(
-      'SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}',
+      'SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}',
     );
     expect(workflow).toContain(
       'SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}',
     );
+    expect(workflow).not.toContain(
+      'SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}',
+    );
+    expect(workflow).not.toContain('supabase link');
+  });
+
+  it('prepares an owner-only connection file without exposing the URL', () => {
+    expect(normalized).toContain('prepare explicit production database connection');
+    expect(workflow).toContain(
+      'node scripts/supabase/prepare-production-db-connection.mjs',
+    );
+    expect(workflow).toContain('--write-file "$SUPABASE_DB_URL_FILE"');
+    expect(workflow).toContain(
+      'test "$(stat -c \'%a\' "$SUPABASE_DB_URL_FILE")" = \'600\'',
+    );
+    expect(workflow).toContain('rm -f "$SUPABASE_DB_URL_FILE"');
+  });
+
+  it('uses the explicit protected URL for remote history and dry-run only', () => {
+    expect(workflow).toContain(
+      'supabase migration list --db-url "$DB_URL"',
+    );
+    expect(workflow).toContain(
+      'supabase db push --db-url "$DB_URL" --dry-run',
+    );
+    expect(normalized).not.toContain('migration list --linked');
+    expect(normalized).not.toContain('db push --linked');
   });
 
   it('retains the strict audit exit code and generates review packages before enforcing it', () => {
@@ -57,15 +83,26 @@ describe('Supabase production migration dry-run workflow', () => {
     expect(normalized).toContain(
       'generate-migration-reconciliation-review-packages.test.mjs',
     );
+    expect(normalized).toContain('prepare-production-db-connection.test.mjs');
     expect(workflow).toContain('AUDIT_EXIT="${PIPESTATUS[0]}"');
-    expect(workflow).toContain('echo "exit_code=$AUDIT_EXIT" >> "$GITHUB_OUTPUT"');
-    expect(normalized.indexOf('evaluate migration deployability and retain blocker status')).toBeLessThan(
+    expect(workflow).toContain(
+      'echo "exit_code=$AUDIT_EXIT" >> "$GITHUB_OUTPUT"',
+    );
+    expect(
+      normalized.indexOf(
+        'evaluate migration deployability and retain blocker status',
+      ),
+    ).toBeLessThan(
       normalized.indexOf('generate non-crediting reconciliation review packages'),
     );
-    expect(normalized.indexOf('generate non-crediting reconciliation review packages')).toBeLessThan(
+    expect(
+      normalized.indexOf('generate non-crediting reconciliation review packages'),
+    ).toBeLessThan(
       normalized.indexOf('enforce migration deployability before dry-run'),
     );
-    expect(normalized.indexOf('enforce migration deployability before dry-run')).toBeLessThan(
+    expect(
+      normalized.indexOf('enforce migration deployability before dry-run'),
+    ).toBeLessThan(
       normalized.indexOf('execute supabase migration dry-run only'),
     );
   });
@@ -96,6 +133,7 @@ describe('Supabase production migration dry-run workflow', () => {
 
   it('retains diagnostics and review packages even when deployability is blocked', () => {
     expect(normalized).toContain('if: always()');
+    expect(normalized).toContain('connection-diagnostics.json');
     expect(normalized).toContain('migration-state-remote.txt');
     expect(normalized).toContain('deployability-summary.md');
     expect(normalized).toContain('reconciliation-review');

@@ -10,6 +10,7 @@ on:
     paths:
       - 'supabase/migrations/**'
       - 'scripts/supabase/audit-migration-drift.mjs'
+      - 'scripts/supabase/prepare-production-db-connection.mjs'
       - '.github/workflows/supabase-migration-drift-audit.yml'
 
 permissions:
@@ -22,61 +23,87 @@ concurrency:
 jobs:
   audit:
     name: Audit local and production migration history
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: production
     env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_CLI_VERSION: '2.101.0'
+      EVIDENCE_DIR: artifacts/supabase-migration-drift
 
     steps:
       - name: Check out trusted source
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
+
       - name: Validate production configuration
         shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
-          missing=0
-          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_ID; do
+          for name in SUPABASE_DB_URL SUPABASE_PROJECT_ID; do
             if [ -z "${!name:-}" ]; then
               echo "Missing required production secret: $name" >&2
-              missing=1
+              exit 1
             fi
           done
-          test "$missing" -eq 0
-          [[ "$SUPABASE_PROJECT_ID" =~ ^[a-z0-9]{20}$ ]]
-
-      - name: Install Supabase CLI
-        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
-        with:
-          version: latest
-
-      - name: Initialize temporary CLI configuration when absent
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ ! -f supabase/config.toml ]; then
-            supabase init
+          if [[ ! "$SUPABASE_PROJECT_ID" =~ ^[a-z0-9]{20}$ ]]; then
+            echo "SUPABASE_PROJECT_ID does not look like a Supabase project reference" >&2
+            exit 1
           fi
+          echo "SUPABASE_DB_URL_FILE=$RUNNER_TEMP/supabase-production-db-url" >> "$GITHUB_ENV"
 
-      - name: Link production project
+      - name: Prepare explicit production database connection
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR"
+          node scripts/supabase/prepare-production-db-connection.mjs \
+            --write-file "$SUPABASE_DB_URL_FILE" \
+            | tee "$EVIDENCE_DIR/connection-diagnostics.json"
+          test -s "$SUPABASE_DB_URL_FILE"
+          test "$(stat -c '%a' "$SUPABASE_DB_URL_FILE")" = '600'
+
+      - name: Test connection resolver and workflow contracts
+        run: >-
+          npx vitest run
+          scripts/supabase/prepare-production-db-connection.test.mjs
+          tests/security/supabase-migration-drift-audit-workflow.test.ts
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Verify pinned Supabase CLI version
         shell: bash
         run: |
           set -euo pipefail
-          supabase link \
-            --project-ref "$SUPABASE_PROJECT_ID" \
-            --password "$SUPABASE_DB_PASSWORD"
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
 
       - name: Capture remote migration state
         shell: bash
         run: |
           set -euo pipefail
-          supabase migration list --linked | tee migration-state-remote.txt
+          DB_URL="$(cat "$SUPABASE_DB_URL_FILE")"
+          supabase migration list --db-url "$DB_URL" \
+            | tee migration-state-remote.txt \
+            | tee "$EVIDENCE_DIR/migration-state-remote.txt"
 
       - name: Generate drift evidence
         id: drift
@@ -86,8 +113,9 @@ jobs:
           node scripts/supabase/audit-migration-drift.mjs \
             supabase/migrations \
             migration-state-remote.txt \
-            artifacts/supabase-migration-drift \
-            | tee migration-drift-summary.md
+            "$EVIDENCE_DIR" \
+            | tee migration-drift-summary.md \
+            | tee "$EVIDENCE_DIR/migration-drift-summary.md"
           result=${PIPESTATUS[0]}
           echo "result=$result" >> "$GITHUB_OUTPUT"
           exit 0
@@ -96,21 +124,24 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [ -f artifacts/supabase-migration-drift/migration-drift.md ]; then
-            cat artifacts/supabase-migration-drift/migration-drift.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -f "$EVIDENCE_DIR/migration-drift.md" ]; then
+            cat "$EVIDENCE_DIR/migration-drift.md" >> "$GITHUB_STEP_SUMMARY"
           else
             echo 'Migration drift evidence was not generated.' >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Remove temporary database connection material
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$SUPABASE_DB_URL_FILE"
+
       - name: Upload migration drift evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: supabase-migration-drift-${{ github.sha }}
-          path: |
-            migration-state-remote.txt
-            migration-drift-summary.md
-            artifacts/supabase-migration-drift/
+          path: ${{ env.EVIDENCE_DIR }}
           if-no-files-found: error
           retention-days: 14
 
