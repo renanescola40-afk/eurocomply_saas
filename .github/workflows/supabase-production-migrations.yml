@@ -30,7 +30,6 @@ jobs:
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
       SUPABASE_CLI_VERSION: '2.101.0'
-      SUPABASE_DB_URL_FILE: ${{ runner.temp }}/supabase-production-db-url
       EVIDENCE_DIR: artifacts/supabase-production-migrations
 
     steps:
@@ -49,6 +48,7 @@ jobs:
             exit 1
           fi
           echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
+          echo "SUPABASE_DB_URL_FILE=$RUNNER_TEMP/supabase-production-db-url" >> "$GITHUB_ENV"
 
       - name: Check out exact release SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
