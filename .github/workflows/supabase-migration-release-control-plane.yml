@@ -1,0 +1,161 @@
+name: Supabase Migration Release Control Plane
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/supabase/build-migration-release-control-plane.mjs'
+      - 'scripts/supabase/build-migration-release-control-plane.test.mjs'
+      - 'scripts/supabase/validate-migration-post-execution-attestation.mjs'
+      - '.github/workflows/supabase-migration-release-control-plane.yml'
+      - 'docs/security/runbooks/SUPABASE_MIGRATION_RELEASE_CONTROL_PLANE.md'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/supabase/build-migration-release-control-plane.mjs'
+      - 'scripts/supabase/build-migration-release-control-plane.test.mjs'
+      - 'scripts/supabase/validate-migration-post-execution-attestation.mjs'
+      - '.github/workflows/supabase-migration-release-control-plane.yml'
+      - 'docs/security/runbooks/SUPABASE_MIGRATION_RELEASE_CONTROL_PLANE.md'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA
+        required: true
+        type: string
+      execution_plan_run_id:
+        description: Run ID containing the bounded execution plan artifact
+        required: true
+        type: string
+      rehearsal_artifact_run_id:
+        description: Run ID containing staging rehearsal evidence
+        required: true
+        type: string
+      authorization_path:
+        description: Repository path to the reviewed production authorization JSON
+        required: true
+        default: docs/security/evidence/runtime/supabase-migration-production-authorization.json
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: supabase-migration-release-control-plane-${{ inputs.release_sha || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    name: Validate release control plane contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Validate syntax
+        run: |
+          node --check scripts/supabase/build-migration-release-control-plane.mjs
+          node --check scripts/supabase/validate-migration-post-execution-attestation.mjs
+      - name: Run fail-closed contracts
+        run: node --test scripts/supabase/build-migration-release-control-plane.test.mjs
+
+  control-plane:
+    name: Validate exact-SHA release prerequisites
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: supabase-production-release-approval
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      PLAN_RUN_ID: ${{ inputs.execution_plan_run_id }}
+      REHEARSAL_RUN_ID: ${{ inputs.rehearsal_artifact_run_id }}
+      AUTHORIZATION_PATH: ${{ inputs.authorization_path }}
+      OUTPUT_DIR: artifacts/supabase-migration-release-control-plane
+    steps:
+      - name: Validate inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$PLAN_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$REHEARSAL_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$AUTHORIZATION_PATH" == docs/security/evidence/runtime/* ]]
+          echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
+
+      - name: Checkout exact current main
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify main and source runs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+          PLAN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PLAN_RUN_ID}")"
+          REHEARSAL_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${REHEARSAL_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$PLAN_JSON")" = "$TARGET_SHA"
+          test "$(jq -r '.head_sha' <<<"$REHEARSAL_JSON")" = "$TARGET_SHA"
+
+      - name: Download exact execution plan
+        uses: actions/download-artifact@v4
+        with:
+          name: supabase-migration-execution-plan-${{ inputs.release_sha }}
+          path: source-plan
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.execution_plan_run_id }}
+
+      - name: Download exact staging rehearsal
+        uses: actions/download-artifact@v4
+        with:
+          name: supabase-migration-staging-rehearsal-${{ inputs.release_sha }}
+          path: source-rehearsal
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.rehearsal_artifact_run_id }}
+
+      - name: Resolve inputs and validate control plane
+        shell: bash
+        run: |
+          set -euo pipefail
+          PLAN="$(find source-plan -type f -name 'migration-execution-plan.json' -print -quit)"
+          REHEARSAL="$(find source-rehearsal -type f -name 'staging-rehearsal.json' -print -quit)"
+          test -n "$PLAN"
+          test -n "$REHEARSAL"
+          test -f "$AUTHORIZATION_PATH"
+          node scripts/supabase/build-migration-release-control-plane.mjs \
+            "$PLAN" "$REHEARSAL" "$AUTHORIZATION_PATH" "$OUTPUT_DIR" \
+            --expected-sha="$TARGET_SHA"
+
+      - name: Publish non-execution summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Supabase migration release control plane'
+            echo
+            echo "- Release SHA: \`$TARGET_SHA\`"
+            echo '- SQL executed: no'
+            echo '- Migration history modified: no'
+            echo '- Production write authorized by this workflow: no'
+            echo '- Automatic execution: prohibited'
+            echo '- A distinct protected manual workflow remains required'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload retained control-plane artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: supabase-migration-release-control-plane-${{ env.TARGET_SHA }}
+          path: artifacts/supabase-migration-release-control-plane
+          if-no-files-found: error
+          retention-days: 90

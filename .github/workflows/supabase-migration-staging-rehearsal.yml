@@ -1,0 +1,141 @@
+name: Supabase Migration Staging Rehearsal
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA
+        required: true
+        type: string
+      execution_plan_run_id:
+        description: Run ID containing the bounded execution plan
+        required: true
+        type: string
+      staging_change_reference:
+        description: Approved staging change or ticket reference
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: supabase-migration-staging-rehearsal-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  rehearsal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: supabase-staging-migration-rehearsal
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      PLAN_RUN_ID: ${{ inputs.execution_plan_run_id }}
+      CHANGE_REFERENCE: ${{ inputs.staging_change_reference }}
+      OUTPUT_DIR: artifacts/supabase-migration-staging-rehearsal
+    steps:
+      - name: Validate inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$PLAN_RUN_ID" =~ ^[0-9]+$ ]]
+          test -n "$CHANGE_REFERENCE"
+          echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact current main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+          RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PLAN_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$RUN_JSON")" = "$TARGET_SHA"
+
+      - name: Download exact execution plan
+        uses: actions/download-artifact@v4
+        with:
+          name: supabase-migration-execution-plan-${{ inputs.release_sha }}
+          path: source-plan
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.execution_plan_run_id }}
+
+      - name: Validate staging-only configuration
+        shell: bash
+        env:
+          STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+          STAGING_PROJECT_REF: ${{ secrets.STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ secrets.PRODUCTION_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          test -n "$STAGING_DB_URL"
+          test -n "$STAGING_PROJECT_REF"
+          test -n "$PRODUCTION_PROJECT_REF"
+          test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          case "$STAGING_DB_URL" in
+            *"$PRODUCTION_PROJECT_REF"*) echo 'staging URL references production project' >&2; exit 1 ;;
+          esac
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Capture pre-rehearsal migration history
+        shell: bash
+        env:
+          STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          psql "$STAGING_DB_URL" -X -v ON_ERROR_STOP=1 -Atc "select version from supabase_migrations.schema_migrations order by version" > "$OUTPUT_DIR/history-before.txt"
+
+      - name: Execute staging dry-run only
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.STAGING_DB_URL }}
+        run: |
+          set -euo pipefail
+          supabase db push --db-url "$SUPABASE_DB_URL" --dry-run 2>&1 | tee "$OUTPUT_DIR/dry-run.log"
+
+      - name: Emit fail-closed rehearsal template
+        shell: bash
+        run: |
+          set -euo pipefail
+          PLAN="$(find source-plan -type f -name 'migration-execution-plan.json' -print -quit)"
+          test -n "$PLAN"
+          PLAN_SHA="$(sha256sum "$PLAN" | awk '{print $1}')"
+          cat > "$OUTPUT_DIR/staging-rehearsal.json" <<JSON
+          {
+            "schema": "risck-comply.supabase-migration-staging-rehearsal.v1",
+            "releaseSha": "$TARGET_SHA",
+            "executionPlanSha256": "$PLAN_SHA",
+            "status": "HUMAN_VALIDATION_REQUIRED",
+            "productionDatabaseUsed": false,
+            "allBatchesPassed": false,
+            "stagingCloneReference": "$CHANGE_REFERENCE",
+            "dryRunOutputReference": "artifact://supabase-migration-staging-rehearsal-$TARGET_SHA/dry-run.log",
+            "rlsValidationReference": null,
+            "applicationSmokeReference": null,
+            "rollbackRehearsalReference": null,
+            "nonCreditingNotice": "Dry-run completion alone does not prove batch execution, rollback, RLS or application behavior."
+          }
+          JSON
+
+      - name: Upload rehearsal evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: supabase-migration-staging-rehearsal-${{ env.TARGET_SHA }}
+          path: artifacts/supabase-migration-staging-rehearsal
+          if-no-files-found: error
+          retention-days: 90
