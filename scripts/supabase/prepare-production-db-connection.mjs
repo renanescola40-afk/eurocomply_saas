@@ -10,6 +10,9 @@ const LINE_BREAK_PATTERN = /\r\n|\r|\n/g;
 const EMBEDDED_LINE_BREAK_PATTERN = /[ \t]*(?:\r\n|\r|\n)+[ \t]*/g;
 const HORIZONTAL_WHITESPACE_PATTERN = /[ \t\f\v]/;
 const DISALLOWED_CONTROL_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
+const VALID_PERCENT_ESCAPE_PATTERN = /^[0-9A-Fa-f]{2}$/;
+const UNRESERVED_USERINFO_CHARACTER_PATTERN = /^[A-Za-z0-9._~-]$/;
+const RAW_SUPABASE_CONNECTION_PATTERN = /^(?<scheme>postgres(?:ql)?):\/\/(?<username>[^:\s/?#]+):(?<password>.+)@(?<host>(?:db\.[a-z0-9]{20}\.supabase\.co|[a-z0-9.-]+\.pooler\.supabase\.com)):(?<port>5432|6543)(?<path>\/postgres)(?<query>\?[^#\s]*)?$/i;
 
 function decodeComponent(value, label) {
   try {
@@ -31,10 +34,63 @@ function normalizeSecretText(rawValue) {
   };
 }
 
+function encodePasswordCharacter(character) {
+  if (UNRESERVED_USERINFO_CHARACTER_PATTERN.test(character)) {
+    return character;
+  }
+
+  return encodeURIComponent(character).replace(/[!'()*]/g, (value) =>
+    `%${value.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+}
+
+function canonicalizePasswordEncoding(rawPassword) {
+  let encoded = '';
+
+  for (let index = 0; index < rawPassword.length; ) {
+    if (
+      rawPassword[index] === '%' &&
+      VALID_PERCENT_ESCAPE_PATTERN.test(rawPassword.slice(index + 1, index + 3))
+    ) {
+      encoded += `%${rawPassword.slice(index + 1, index + 3).toUpperCase()}`;
+      index += 3;
+      continue;
+    }
+
+    const codePoint = rawPassword.codePointAt(index);
+    const character = String.fromCodePoint(codePoint);
+    encoded += encodePasswordCharacter(character);
+    index += character.length;
+  }
+
+  return encoded;
+}
+
+function canonicalizeSupabaseConnectionUrl(value) {
+  const match = value.match(RAW_SUPABASE_CONNECTION_PATTERN);
+  if (!match?.groups) {
+    return {
+      url: value,
+      canonicalizedPasswordEncoding: false,
+      matchedSupabaseConnectionShape: false,
+    };
+  }
+
+  const encodedPassword = canonicalizePasswordEncoding(match.groups.password);
+  const url = `${match.groups.scheme.toLowerCase()}://${match.groups.username}:${encodedPassword}@${match.groups.host.toLowerCase()}:${match.groups.port}${match.groups.path}${match.groups.query ?? ''}`;
+
+  return {
+    url,
+    canonicalizedPasswordEncoding: encodedPassword !== match.groups.password,
+    matchedSupabaseConnectionShape: true,
+  };
+}
+
 export function inspectProductionDbUrlInput(rawValue) {
   const present = typeof rawValue === 'string' && rawValue.length > 0;
   const value = present ? rawValue : '';
   const { normalized, lineBreakCount, trimmedOuterWhitespace } = normalizeSecretText(value);
+  const canonicalized = canonicalizeSupabaseConnectionUrl(normalized);
 
   return {
     present,
@@ -44,6 +100,8 @@ export function inspectProductionDbUrlInput(rawValue) {
     trimmedOuterWhitespace,
     containsHorizontalWhitespace: HORIZONTAL_WHITESPACE_PATTERN.test(normalized),
     containsDisallowedControlCharacter: DISALLOWED_CONTROL_PATTERN.test(normalized),
+    matchedSupabaseConnectionShape: canonicalized.matchedSupabaseConnectionShape,
+    canonicalizedPasswordEncoding: canonicalized.canonicalizedPasswordEncoding,
   };
 }
 
@@ -64,12 +122,14 @@ export function normalizeProductionDbUrl(rawValue, projectRef) {
     throw new Error('SUPABASE_DB_URL contains a disallowed control character');
   }
   if (HORIZONTAL_WHITESPACE_PATTERN.test(normalized)) {
-    throw new Error('SUPABASE_DB_URL contains literal whitespace; percent-encode it');
+    throw new Error('SUPABASE_DB_URL contains literal whitespace; remove it from the connection string');
   }
+
+  const canonicalized = canonicalizeSupabaseConnectionUrl(normalized);
 
   let parsed;
   try {
-    parsed = new URL(normalized);
+    parsed = new URL(canonicalized.url);
   } catch {
     throw new Error('SUPABASE_DB_URL is not a valid PostgreSQL connection URL');
   }
@@ -78,7 +138,7 @@ export function normalizeProductionDbUrl(rawValue, projectRef) {
     throw new Error('SUPABASE_DB_URL must use postgres:// or postgresql://');
   }
   if (parsed.hash) {
-    throw new Error('SUPABASE_DB_URL contains a URL fragment; percent-encode special password characters');
+    throw new Error('SUPABASE_DB_URL contains a URL fragment; encode special password characters');
   }
   if (!parsed.hostname) {
     throw new Error('SUPABASE_DB_URL must include a hostname');
@@ -126,7 +186,7 @@ export function normalizeProductionDbUrl(rawValue, projectRef) {
   }
 
   return {
-    url: normalized,
+    url: canonicalized.url,
     diagnostics: {
       status: 'ready',
       transport,
@@ -136,6 +196,7 @@ export function normalizeProductionDbUrl(rawValue, projectRef) {
       projectRefSuffix: projectRef.slice(-6),
       trimmedOuterWhitespace,
       removedLineBreakCount: lineBreakCount,
+      canonicalizedPasswordEncoding: canonicalized.canonicalizedPasswordEncoding,
     },
   };
 }
