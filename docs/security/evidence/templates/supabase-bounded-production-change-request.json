@@ -1,0 +1,69 @@
+{
+  "schema": "risck-comply.supabase-bounded-production-change-request.v1",
+  "releaseSha": "REPLACE_WITH_EXACT_MAIN_SHA",
+  "rehearsalDigest": "REPLACE_WITH_SHA256_OF_ACCEPTED_REHEARSAL_JSON",
+  "changeType": "BOUNDED_SUPABASE_MIGRATION_CHANGE",
+  "productionProjectRef": "REPLACE_WITH_CONFIDENTIAL_REFERENCE",
+  "stagingProjectRef": "REPLACE_WITH_CONFIDENTIAL_REFERENCE",
+  "maxBatchSize": 10,
+  "backup": {
+    "status": "pending",
+    "restoreTestOutcome": "pending",
+    "evidenceReference": null,
+    "rpoMinutes": null,
+    "rtoMinutes": null
+  },
+  "maintenanceWindow": {
+    "startsAt": null,
+    "endsAt": null,
+    "customerCommunicationReference": null
+  },
+  "roles": {
+    "operator": null,
+    "approver": null,
+    "incidentCommander": null,
+    "rollbackOwner": null
+  },
+  "approval": {
+    "status": "pending",
+    "approver": null,
+    "approvedAt": null,
+    "expiresAt": null,
+    "evidenceReference": null
+  },
+  "rollback": {
+    "commandReference": null,
+    "decisionThreshold": null,
+    "maximumDecisionMinutes": 10
+  },
+  "postChange": {
+    "requiredChecks": [
+      "migration_history",
+      "schema",
+      "rls_cross_tenant",
+      "authenticated_smoke",
+      "observability"
+    ],
+    "evidenceDestination": "docs/security/evidence/runtime/supabase-production-migration-attestation.json"
+  },
+  "historyRepairCandidates": [],
+  "batches": [
+    {
+      "id": "batch-001",
+      "executionAuthorized": false,
+      "rollbackReference": null,
+      "validationChecks": [
+        "migration_history",
+        "schema",
+        "rls_cross_tenant",
+        "authenticated_smoke"
+      ],
+      "migrations": []
+    }
+  ],
+  "truthBoundary": {
+    "templateIsEvidence": false,
+    "productionWriteAuthorizedByTemplate": false,
+    "unrestrictedDbPushAllowed": false
+  }
+}

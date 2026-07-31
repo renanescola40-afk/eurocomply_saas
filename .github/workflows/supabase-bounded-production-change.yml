@@ -1,0 +1,101 @@
+name: Supabase Bounded Production Change
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA
+        required: true
+        type: string
+      rehearsal_run_id:
+        description: Successful Supabase Staging Rehearsal workflow run ID
+        required: true
+        type: string
+      request_path:
+        description: Repository path to reviewed production change request JSON
+        required: true
+        default: docs/security/evidence/templates/supabase-bounded-production-change-request.json
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: supabase-bounded-production-change
+  cancel-in-progress: false
+
+jobs:
+  compile:
+    name: Compile bounded production change
+    runs-on: ubuntu-latest
+    environment: production-change-approval
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact release SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha }}
+
+      - name: Verify exact current main SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          CURRENT_MAIN="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          test "$CURRENT_MAIN" = "$EXPECTED_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Verify source rehearsal run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.rehearsal_run_id }}
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          CONCLUSION="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq .conclusion)"
+          HEAD_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq .head_sha)"
+          test "$CONCLUSION" = success
+          test "$HEAD_SHA" = "$EXPECTED_SHA"
+
+      - name: Download staging rehearsal artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.rehearsal_run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/source-rehearsal
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "supabase-staging-rehearsal-${{ inputs.release_sha }}" --dir artifacts/source-rehearsal
+          test -f artifacts/source-rehearsal/staging-rehearsal-attestation.json
+
+      - name: Validate request path
+        env:
+          REQUEST_PATH: ${{ inputs.request_path }}
+        run: |
+          set -euo pipefail
+          case "$REQUEST_PATH" in
+            docs/security/evidence/accepted/*.json) ;;
+            *) echo "Request must come from docs/security/evidence/accepted" >&2; exit 1 ;;
+          esac
+          test -f "$REQUEST_PATH"
+
+      - name: Compile fail-closed authorization packet
+        env:
+          REQUEST_PATH: ${{ inputs.request_path }}
+        run: |
+          node scripts/supabase/compile-bounded-production-change.mjs \
+            artifacts/source-rehearsal/staging-rehearsal-attestation.json \
+            "$REQUEST_PATH" \
+            artifacts/supabase-production-change
+
+      - name: Run contract tests
+        run: node scripts/supabase/test-compile-bounded-production-change.mjs
+
+      - name: Upload immutable authorization packet
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-bounded-production-change-${{ inputs.release_sha }}
+          path: artifacts/supabase-production-change
+          retention-days: 90
+          if-no-files-found: error

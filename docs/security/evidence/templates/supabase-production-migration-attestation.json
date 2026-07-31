@@ -1,0 +1,42 @@
+{
+  "schema": "risck-comply.supabase-production-migration-attestation.v1",
+  "status": "PENDING",
+  "outcome": "not-run",
+  "releaseSha": null,
+  "authorizationPacketDigest": null,
+  "workflow": {
+    "runId": null,
+    "runUrl": null,
+    "actor": null,
+    "environment": "production-change-approval"
+  },
+  "execution": {
+    "startedAt": null,
+    "completedAt": null,
+    "operator": null,
+    "incidentCommander": null,
+    "rollbackOwner": null,
+    "batches": []
+  },
+  "postChange": {
+    "migrationHistory": "pending",
+    "schema": "pending",
+    "rlsCrossTenant": "pending",
+    "authenticatedSmoke": "pending",
+    "observability": "pending",
+    "rollbackInvoked": false,
+    "rollbackOutcome": "not-required"
+  },
+  "approval": {
+    "reviewer": null,
+    "reviewedAt": null,
+    "decision": "pending",
+    "reviewerIndependentFromOperator": false
+  },
+  "truthBoundary": {
+    "templateIsEvidence": false,
+    "repositoryChecksAreRuntimeProof": false,
+    "productionChangeCompleted": false,
+    "enterpriseGoGrantedByThisArtifact": false
+  }
+}
