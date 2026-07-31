@@ -1,0 +1,20 @@
+{
+  "schema": "risck-comply.enterprise-final-decision-input.v1",
+  "status": "BLOCKED",
+  "releaseSha": "REPLACE_WITH_EXACT_MAIN_SHA",
+  "validUntil": "REPLACE_WITH_EXPIRY_TIMESTAMP",
+  "riskAcceptance": { "accepted": false },
+  "controls": {
+    "repositoryGates": {},
+    "runtimeCloseout": {},
+    "migrationPostExecution": {},
+    "branchProtection": {},
+    "backupRestore": {},
+    "externalSecurityReview": {},
+    "qualifiedLegalReviews": {},
+    "releaseApproval": {},
+    "securityApproval": {},
+    "operationsApproval": {}
+  },
+  "instructions": "Populate only with accepted, exact-SHA, non-synthetic evidence. Change status to READY_FOR_FINAL_DECISION only after every control is complete."
+}
