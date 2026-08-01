@@ -1,7 +1,6 @@
 import { unstable_noStore as noStore } from 'next/cache';
 
-import { tryCreateAdminClient } from '@/lib/supabase/admin';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { AiActRiskLevel, OnboardingActivationInitialState, OnboardingRecommendation, OnboardingTaskSuggestion } from '@/lib/onboarding/activation';
 import { getCurrentOrganizationForUser, isOrganizationOnboardingCompleted, normalizeOnboardingStatus } from '@/server/queries/current-organization';
 
@@ -49,10 +48,7 @@ export async function getOnboardingActivationState(userId: string): Promise<Onbo
     };
   }
 
-  // The authenticated client can safely read the current tenant through RLS.
-  // Keep the admin client as the preferred path, but do not crash onboarding
-  // when a deployment is temporarily missing the service-role secret.
-  const supabase = tryCreateAdminClient() ?? await createServerSupabaseClient();
+  const supabase = createAdminClient();
 
   const { data: organization, error: organizationError } = await supabase
     .from('organizations')
