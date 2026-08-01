@@ -4,7 +4,8 @@ import { locales, type Locale } from '@/lib/i18n/routing';
 import { getFeatureLanguageAlternates, getFeaturePages, getFeaturePath } from '@/lib/seo/feature-pages';
 import { getLocaleAlternates, getSiteUrl, localeLanguageTags } from '@/lib/seo/public-metadata';
 
-const publicPaths = ['', '/pricing', '/trust', '/security', '/compliance', '/data-processing', '/sla', '/privacy', '/terms', '/dpa', '/subprocessors'] as const;
+const acquisitionPaths = ['', '/pricing'] as const;
+const englishAssurancePaths = ['/trust', '/security', '/compliance', '/data-processing', '/sla', '/privacy', '/terms', '/dpa', '/subprocessors'] as const;
 const stableLastModified = new Date('2026-08-01T00:00:00.000Z');
 
 function priorityFor(path: string) {
@@ -19,23 +20,34 @@ function localizedUrl(appUrl: string, locale: Locale, path: string) {
   return `${appUrl}/${locale}${path}`;
 }
 
+function coreAlternates(appUrl: string, locale: Locale, path: string) {
+  if (acquisitionPaths.includes(path as (typeof acquisitionPaths)[number])) {
+    return {
+      ...getLocaleAlternates(path),
+      [localeLanguageTags[locale]]: localizedUrl(appUrl, locale, path),
+    };
+  }
+
+  const englishUrl = localizedUrl(appUrl, 'en', path);
+  return { en: englishUrl, 'x-default': englishUrl };
+}
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const appUrl = getSiteUrl();
 
-  const coreEntries: MetadataRoute.Sitemap = locales.flatMap((locale) =>
-    publicPaths.map((path) => ({
+  const coreEntries: MetadataRoute.Sitemap = locales.flatMap((locale) => {
+    const paths = locale === 'en' ? [...acquisitionPaths, ...englishAssurancePaths] : [...acquisitionPaths];
+
+    return paths.map((path) => ({
       url: localizedUrl(appUrl, locale, path),
       lastModified: stableLastModified,
       changeFrequency: path === '' || path === '/pricing' ? 'weekly' : 'monthly',
       priority: priorityFor(path),
       alternates: {
-        languages: {
-          ...getLocaleAlternates(path),
-          [localeLanguageTags[locale]]: localizedUrl(appUrl, locale, path),
-        },
+        languages: coreAlternates(appUrl, locale, path),
       },
-    })),
-  );
+    }));
+  });
 
   const featureEntries: MetadataRoute.Sitemap = locales.flatMap((locale) =>
     getFeaturePages(locale).map((page) => ({
