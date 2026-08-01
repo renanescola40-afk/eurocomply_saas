@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { EnterpriseHome } from '@/components/marketing/enterprise-home';
+import { InternationalHome } from '@/components/marketing/international-home';
 import { PublicLandingBusinessCheckoutNormalizer } from '@/components/marketing/public-landing-business-checkout-normalizer';
 import { PublicLandingLinkNormalizer } from '@/components/marketing/public-landing-link-normalizer';
 import { PublicLandingMobileHeaderGuard } from '@/components/marketing/public-landing-mobile-header-guard';
@@ -54,6 +55,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function HomePage({ params }: PageProps) {
   const { locale: requestedLocale } = await params;
   const locale = (locales.includes(requestedLocale as Locale) ? requestedLocale : defaultLocale) as Locale;
+  const internationalLocale = locale === 'en' || locale === 'pt' ? null : locale;
   const meta = landingMetadata[locale];
 
   return (
@@ -62,8 +64,14 @@ export default async function HomePage({ params }: PageProps) {
       <PublicLandingBusinessCheckoutNormalizer locale={locale} />
       <PublicLandingLinkNormalizer locale={locale} />
       <SignupPlanNormalizer locale={locale} />
-      <PublicLandingMobileHeaderGuard />
-      <EnterpriseHome locale={locale} />
+      {internationalLocale ? (
+        <InternationalHome locale={internationalLocale} />
+      ) : (
+        <>
+          <PublicLandingMobileHeaderGuard />
+          <EnterpriseHome locale={locale} />
+        </>
+      )}
     </>
   );
 }
