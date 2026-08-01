@@ -54,6 +54,8 @@ const PUBLIC_ROUTES = [
   '/termos-servico',
 ];
 
+const PUBLIC_ROUTE_PREFIXES = ['/features/'] as const;
+
 const LEGACY_UNDEFINED_ROUTES: Record<string, string> = {
   '/dashboard/organizations/vendors': '/vendor-assurance',
   '/dashboard/organizations/risks': '/dashboard/organizations/risks',
@@ -92,8 +94,9 @@ function stripLocale(pathname: string, locale: string): string {
 function isPublicRoute(pathname: string, locale: string): boolean {
   const path = stripLocale(pathname, locale);
 
-  return PUBLIC_ROUTES.some(route =>
-    path === route ||
+  return (
+    PUBLIC_ROUTES.includes(path) ||
+    PUBLIC_ROUTE_PREFIXES.some((prefix) => path.startsWith(prefix)) ||
     path.startsWith('/auth/') ||
     path.startsWith('/api/auth/')
   );

@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 
 import { EnterpriseHome } from '@/components/marketing/enterprise-home';
+import { InternationalHome } from '@/components/marketing/international-home';
 import { PublicLandingBusinessCheckoutNormalizer } from '@/components/marketing/public-landing-business-checkout-normalizer';
 import { PublicLandingLinkNormalizer } from '@/components/marketing/public-landing-link-normalizer';
 import { PublicLandingMobileHeaderGuard } from '@/components/marketing/public-landing-mobile-header-guard';
 import { PublicLandingSignupPlanNormalizer as SignupPlanNormalizer } from '@/components/marketing/public-landing-signup-plan-normalizer';
+import { SiteStructuredData } from '@/components/seo/site-structured-data';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 import { getSafeLocale, makePublicMetadata } from '@/lib/seo/public-metadata';
 
@@ -17,28 +19,28 @@ type PageProps = {
 
 const landingMetadata: Record<Locale, { title: string; description: string }> = {
   en: {
-    title: 'RISCK COMPLY - AI Act Readiness Platform for European B2B Teams',
-    description: 'Join the RISCK COMPLY waitlist for AI inventory, risk visibility, governance workflows, audit trails and AI Act readiness evidence preparation.',
+    title: 'AI Governance & EU AI Act Readiness | RISCK COMPLY',
+    description: 'Organize AI systems, risk assessments, owners, governance evidence, documents and audit activity in one workspace for European B2B teams.',
   },
   pt: {
-    title: 'RISCK COMPLY - Plataforma de AI Act Readiness para equipas B2B europeias',
-    description: 'Entre na lista de espera da RISCK COMPLY para inventario de IA, visibilidade de risco, workflows de governanca, audit trail e preparacao de evidencias.',
+    title: 'Governança de IA e preparação para o AI Act | RISCK COMPLY',
+    description: 'Organize sistemas de IA, avaliações de risco, responsáveis, evidências, documentos e atividade de auditoria num workspace para equipas B2B europeias.',
   },
   es: {
-    title: 'RISCK COMPLY - Plataforma de AI Act readiness para equipos B2B europeos',
-    description: 'Unete a la lista de espera para inventario de IA, visibilidad de riesgo, workflows de gobernanza, audit trail y preparacion de evidencias.',
+    title: 'Gobernanza de IA y preparación para el AI Act | RISCK COMPLY',
+    description: 'Organiza sistemas de IA, evaluaciones de riesgo, responsables, evidencias, documentos e historial de auditoría en un workspace para equipos B2B europeos.',
   },
   fr: {
-    title: 'RISCK COMPLY - Plateforme AI Act readiness pour equipes B2B europeennes',
-    description: 'Rejoignez la liste d attente pour inventaire IA, visibilite des risques, workflows gouvernance, audit trail et preparation des preuves.',
+    title: 'Gouvernance IA et préparation au AI Act | RISCK COMPLY',
+    description: 'Organisez systèmes d’IA, évaluations des risques, responsables, preuves, documents et activité d’audit dans un workspace pour équipes B2B européennes.',
   },
   it: {
-    title: 'RISCK COMPLY - Piattaforma AI Act readiness per team B2B europei',
-    description: 'Entra nella waitlist per inventario IA, visibilita del rischio, workflow governance, audit trail e preparazione delle evidenze.',
+    title: 'Governance IA e preparazione all’AI Act | RISCK COMPLY',
+    description: 'Organizza sistemi IA, valutazioni del rischio, responsabili, evidenze, documenti e attività di audit in un workspace per team B2B europei.',
   },
   de: {
-    title: 'RISCK COMPLY - AI Act Readiness Plattform fuer europaeische B2B-Teams',
-    description: 'Warteliste fuer KI-Inventar, Risikosichtbarkeit, Governance-Workflows, Audit Trail und Nachweisvorbereitung.',
+    title: 'KI-Governance und Vorbereitung auf den AI Act | RISCK COMPLY',
+    description: 'Organisieren Sie KI-Systeme, Risikobewertungen, Verantwortliche, Nachweise, Dokumente und Audit-Aktivitäten in einem Workspace für europäische B2B-Teams.',
   },
 };
 
@@ -53,14 +55,23 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function HomePage({ params }: PageProps) {
   const { locale: requestedLocale } = await params;
   const locale = (locales.includes(requestedLocale as Locale) ? requestedLocale : defaultLocale) as Locale;
+  const internationalLocale = locale === 'en' || locale === 'pt' ? null : locale;
+  const meta = landingMetadata[locale];
 
   return (
     <>
+      <SiteStructuredData locale={locale} title={meta.title} description={meta.description} />
       <PublicLandingBusinessCheckoutNormalizer locale={locale} />
       <PublicLandingLinkNormalizer locale={locale} />
       <SignupPlanNormalizer locale={locale} />
-      <PublicLandingMobileHeaderGuard />
-      <EnterpriseHome locale={locale} />
+      {internationalLocale ? (
+        <InternationalHome locale={internationalLocale} />
+      ) : (
+        <>
+          <PublicLandingMobileHeaderGuard />
+          <EnterpriseHome locale={locale} />
+        </>
+      )}
     </>
   );
 }

@@ -37,6 +37,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     path: `/${page.slug}`,
     title: `${page.title} - RISCK COMPLY`,
     description: page.subtitle,
+    noIndex: trustPage === 'status',
   });
 }
 

@@ -23,12 +23,14 @@ describe('Phase 1 brand credibility guard', () => {
     expect(localeLayout).not.toContain('Sistema Operacional de Compliance Europeu');
   });
 
-  it('keeps public footer copy specific to AI Act readiness and evidence workflows', () => {
+  it('keeps public footer copy specific to AI governance and localized feature discovery', () => {
     const footer = read('src/components/marketing/public-footer.tsx');
 
-    expect(footer).toContain('AI Act readiness, governance evidence and risk workflows');
-    expect(footer).toContain('Risck Comply wordmark');
-    expect(footer).not.toContain('Risck comply');
+    expect(footer).toContain('AI governance, risk workflows and evidence preparation');
+    expect(footer).toContain('alt="RISCK COMPLY"');
+    expect(footer).toContain('getFeaturePages');
+    expect(footer).toContain('/features/');
+    expect(footer).not.toContain('EuroComply');
     expect(footer).not.toContain('fornecedores para equipas europeias');
   });
 

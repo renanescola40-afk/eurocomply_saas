@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const publicRoutes = ['/en', '/en/pricing', '/en/trust', '/en/security'] as const;
+const publicRoutes = ['/en', '/en/pricing', '/en/trust', '/en/security', '/en/features/ai-inventory'] as const;
 const SEO_DESCRIPTION_PATTERN =
-  /RISCK|AI|Security|Trust|readiness|governance|controls|buyer-ready|enterprise|protect customer workspaces|Application and infrastructure controls/i;
+  /RISCK|AI|Security|Trust|readiness|governance|inventory|risk|evidence|controls|buyer-ready|enterprise|protect customer workspaces|Application and infrastructure controls/i;
 
 function normalizePathname(pathname: string) {
   if (pathname === '/') return pathname;
@@ -41,6 +41,17 @@ test.describe('public SEO and accessibility smoke', () => {
     await expect(structuredData).toHaveCount(1);
     await expect(page.locator('th[scope="row"]')).toHaveCount(6);
     await expect(page.locator('th[scope="col"]')).toHaveCount(5);
+  });
+
+  test('localized feature page exposes FAQ, software and breadcrumb structured data', async ({ page }) => {
+    await page.goto('/en/features/ai-inventory');
+
+    const structuredData = page.locator('script[type="application/ld+json"]');
+    await expect(structuredData).toHaveCount(1);
+    const payload = await structuredData.textContent();
+    expect(payload).toContain('FAQPage');
+    expect(payload).toContain('SoftwareApplication');
+    expect(payload).toContain('BreadcrumbList');
   });
 
   test('mobile landing keeps content within viewport and keyboard focus visible', async ({ page }) => {
