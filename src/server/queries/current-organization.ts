@@ -20,6 +20,7 @@ type OrganizationSummary = {
   slug: string | null;
   onboarding_status: NormalizedOnboardingStatus;
   onboarding_completed_at: string | null;
+  selected_plan: string | null;
 };
 
 type RawOrganizationMembership = {
@@ -32,6 +33,7 @@ type RawOrganizationMembership = {
         slug: string | null;
         onboarding_status?: string | null;
         onboarding_completed_at?: string | null;
+        selected_plan?: string | null;
       }
     | Array<{
         id: string;
@@ -39,6 +41,7 @@ type RawOrganizationMembership = {
         slug: string | null;
         onboarding_status?: string | null;
         onboarding_completed_at?: string | null;
+        selected_plan?: string | null;
       }>
     | null;
 };
@@ -53,6 +56,7 @@ export type CurrentOrganizationMembership = {
   slug: string | null;
   onboarding_status: NormalizedOnboardingStatus;
   onboarding_completed_at: string | null;
+  selected_plan: string | null;
   is_onboarding_completed: boolean;
   organization: OrganizationSummary;
   organizations: OrganizationSummary;
@@ -77,12 +81,14 @@ function normalizeMembership(membership: RawOrganizationMembership): CurrentOrga
 
   const onboardingStatus = normalizeOnboardingStatus(organization.onboarding_status);
   const onboardingCompletedAt = organization.onboarding_completed_at ?? null;
+  const selectedPlan = organization.selected_plan ?? null;
   const normalizedOrganization: OrganizationSummary = {
     id: organization.id,
     name: organization.name,
     slug: organization.slug,
     onboarding_status: onboardingStatus,
     onboarding_completed_at: onboardingCompletedAt,
+    selected_plan: selectedPlan,
   };
 
   return {
@@ -93,6 +99,7 @@ function normalizeMembership(membership: RawOrganizationMembership): CurrentOrga
     slug: organization.slug,
     onboarding_status: onboardingStatus,
     onboarding_completed_at: onboardingCompletedAt,
+    selected_plan: selectedPlan,
     is_onboarding_completed: isOrganizationOnboardingCompleted({ onboarding_status: onboardingStatus, onboarding_completed_at: onboardingCompletedAt }),
     organization: normalizedOrganization,
     organizations: normalizedOrganization,
@@ -111,7 +118,7 @@ export async function getUserOrganizationMemberships(userId: string, options: { 
 
   const { data, error } = await supabase
     .from('organization_members')
-    .select('organization_id, role, organizations(id, name, slug, onboarding_status, onboarding_completed_at)')
+    .select('organization_id, role, organizations(id, name, slug, onboarding_status, onboarding_completed_at, selected_plan)')
     .eq('user_id', userId)
     .order('created_at', { ascending: true })
     .range(0, safeLimit - 1);
