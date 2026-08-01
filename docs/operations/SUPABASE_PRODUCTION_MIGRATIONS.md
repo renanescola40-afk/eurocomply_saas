@@ -40,7 +40,7 @@ The resolver accepts either a correctly percent-encoded password or the raw pass
 
 Do not put quotes around secret values. Do not paste them into repository files, comments, screenshots, workflow inputs, Vercel public variables or issue bodies.
 
-GitHub and browser secret editors can accidentally preserve line breaks while a long URI or password is pasted. The repository removes CR/LF characters and adjacent indentation before parsing. It then canonicalizes only the password portion of a connection string that already matches an approved Supabase endpoint shape. This normalization does not weaken endpoint validation: literal spaces or tabs, control characters, foreign hosts, wrong projects, unsupported ports, missing passwords and unsafe URL fragments still fail closed.
+GitHub and browser secret editors can accidentally preserve line breaks or boundary spaces while a long URI or password is pasted. The repository removes CR/LF characters and adjacent indentation. For `SUPABASE_DB_PASSWORD`, it also removes only leading and trailing spaces or tabs introduced by the editor; whitespace remaining inside the password still fails closed. It then canonicalizes only the password portion of a connection string that already matches an approved Supabase endpoint shape. This normalization does not weaken endpoint validation: internal literal spaces or tabs, control characters, foreign hosts, wrong projects, unsupported ports, missing passwords and unsafe URL fragments still fail closed.
 
 The repository validates that the normalized connection:
 
@@ -50,10 +50,10 @@ The repository validates that the normalized connection:
 - targets the `postgres` database;
 - contains a password;
 - identifies the same project as `SUPABASE_PROJECT_ID`;
-- contains no remaining literal whitespace, disallowed control characters or unsafe URL fragment;
+- contains no remaining internal literal whitespace, disallowed control characters or unsafe URL fragment;
 - is written only to an owner-readable temporary runner file.
 
-Only non-secret diagnostics are retained: transport, hostname, port, database, project-reference suffix, whether outer whitespace was removed, the number of removed line breaks, whether password encoding was canonicalized and whether the protected password override was used. The URI, username and password are never retained.
+Only non-secret diagnostics are retained: transport, hostname, port, database, project-reference suffix, whether URL or password boundary whitespace was removed, the number of removed line breaks, whether password encoding was canonicalized and whether the protected password override was used. The URI, username and password are never retained.
 
 ## Production controls
 

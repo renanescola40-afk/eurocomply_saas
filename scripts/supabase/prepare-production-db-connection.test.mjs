@@ -37,6 +37,7 @@ describe('prepare production Supabase database connection', () => {
       canonicalizedPasswordEncoding: false,
       usedPasswordOverride: false,
       passwordOverrideRemovedLineBreakCount: 0,
+      passwordOverrideTrimmedOuterWhitespace: false,
     });
     expect(JSON.stringify(result.diagnostics)).not.toContain(password);
     expect(JSON.stringify(result.diagnostics)).not.toContain(projectRef);
@@ -129,11 +130,11 @@ describe('prepare production Supabase database connection', () => {
     expect(result.diagnostics.canonicalizedPasswordEncoding).toBe(true);
   });
 
-  it('normalizes line breaks in the protected password override', () => {
+  it('normalizes line breaks and accidental boundary whitespace in the password override', () => {
     const result = normalizeProductionDbUrl(
       sessionPoolerUrl({ password: 'StalePassword123' }),
       projectRef,
-      '\nCurrentPassword2026\r\n',
+      ' \nCurrentPassword2026\r\n\t',
     );
 
     expect(decodeURIComponent(new URL(result.url).password)).toBe(
@@ -141,16 +142,17 @@ describe('prepare production Supabase database connection', () => {
     );
     expect(result.diagnostics.usedPasswordOverride).toBe(true);
     expect(result.diagnostics.passwordOverrideRemovedLineBreakCount).toBe(2);
+    expect(result.diagnostics.passwordOverrideTrimmedOuterWhitespace).toBe(true);
   });
 
-  it('rejects unsafe password override whitespace and control characters', () => {
+  it('rejects internal password whitespace and control characters', () => {
     expect(() =>
       normalizeProductionDbUrl(
         sessionPoolerUrl(),
         projectRef,
         'Current Password',
       ),
-    ).toThrow('SUPABASE_DB_PASSWORD contains literal whitespace');
+    ).toThrow('SUPABASE_DB_PASSWORD contains internal literal whitespace');
 
     expect(() =>
       normalizeProductionDbUrl(
@@ -200,7 +202,7 @@ describe('prepare production Supabase database connection', () => {
     );
     const diagnostics = inspectProductionDbUrlInput(
       multiline,
-      '\nCurrent#Password@2026\n',
+      '  Current#Password@2026\t',
     );
     const serialized = JSON.stringify(diagnostics);
 
@@ -214,7 +216,8 @@ describe('prepare production Supabase database connection', () => {
       matchedSupabaseConnectionShape: true,
       canonicalizedPasswordEncoding: true,
       passwordOverridePresent: true,
-      passwordOverrideLineBreakCount: 2,
+      passwordOverrideLineBreakCount: 0,
+      passwordOverrideTrimmedOuterWhitespace: true,
       passwordOverrideContainsHorizontalWhitespace: false,
       passwordOverrideContainsDisallowedControlCharacter: false,
     });
@@ -257,7 +260,7 @@ describe('prepare production Supabase database connection', () => {
     const diagnostics = writeProtectedConnectionFile({
       rawValue: ` ${source.replace('@aws-', '\n@aws-')} `,
       projectRef,
-      rawPasswordOverride: rawPassword,
+      rawPasswordOverride: `  ${rawPassword}\t`,
       outputPath,
     });
     const stored = readFileSync(outputPath, 'utf8');
@@ -270,6 +273,7 @@ describe('prepare production Supabase database connection', () => {
     expect(diagnostics.removedLineBreakCount).toBe(1);
     expect(diagnostics.canonicalizedPasswordEncoding).toBe(true);
     expect(diagnostics.usedPasswordOverride).toBe(true);
+    expect(diagnostics.passwordOverrideTrimmedOuterWhitespace).toBe(true);
   });
 
   it('requires a valid project reference and a password-bearing URL', () => {

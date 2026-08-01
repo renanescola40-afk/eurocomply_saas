@@ -22,9 +22,47 @@ describe('Supabase migration drift audit workflow', () => {
       'SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}',
     );
     expect(workflow).toContain(
+      'SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}',
+    );
+    expect(workflow).toContain(
       'SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}',
     );
-    expect(workflow).not.toContain('SUPABASE_DB_PASSWORD');
+    expect(workflow).toContain(
+      'for name in SUPABASE_DB_URL SUPABASE_DB_PASSWORD SUPABASE_PROJECT_ID; do',
+    );
+  });
+
+  it('passes the protected password only through step environment and a mode-600 file', () => {
+    const passwordBindings = workflow.match(
+      /SUPABASE_DB_PASSWORD: \$\{\{ secrets\.SUPABASE_DB_PASSWORD \}\}/g,
+    );
+    expect(passwordBindings).toHaveLength(2);
+    expect(workflow).not.toMatch(/--password\s/);
+    expect(workflow).not.toMatch(/echo\s+.*SUPABASE_DB_PASSWORD/i);
+    expect(workflow).toContain(
+      'test "$(stat -c \'%a\' "$SUPABASE_DB_URL_FILE")" = \'600\'',
+    );
+  });
+
+  it('keeps live production connectivity out of pull request validation', () => {
+    for (const stepName of [
+      'Validate production configuration',
+      'Prepare explicit production database connection',
+      'Install pinned Supabase CLI',
+      'Verify pinned Supabase CLI version',
+      'Capture remote migration state',
+      'Generate drift evidence',
+    ]) {
+      expect(workflow).toContain(
+        `- name: ${stepName}\n        if: github.event_name != 'pull_request'`,
+      );
+    }
+    expect(workflow).toContain(
+      "- name: Record pull request validation boundary\n        if: github.event_name == 'pull_request'",
+    );
+    expect(workflow).toContain(
+      "if: ${{ github.event_name != 'pull_request' && always() }}",
+    );
   });
 
   it('pins the Supabase CLI and avoids linked-project pooler discovery', () => {
@@ -47,14 +85,14 @@ describe('Supabase migration drift audit workflow', () => {
     expect(workflow).toContain('rm -f "$SUPABASE_DB_URL_FILE"');
   });
 
-  it('retains evidence before enforcing drift failure', () => {
+  it('retains live evidence before enforcing drift failure', () => {
     expect(normalized.indexOf('generate drift evidence')).toBeLessThan(
       normalized.indexOf('upload migration drift evidence'),
     );
     expect(normalized.indexOf('upload migration drift evidence')).toBeLessThan(
       normalized.indexOf('enforce critical drift gate'),
     );
-    expect(normalized).toContain('if: always()');
+    expect(normalized).toContain('always()');
     expect(normalized).toContain('migration-state-remote.txt');
     expect(normalized).toContain('migration-drift-summary.md');
   });
