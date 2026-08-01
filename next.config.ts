@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs';
 import createNextIntlPlugin from 'next-intl/plugin';
 
@@ -89,9 +89,38 @@ const noIndexHeaders = [
   { key: 'Cache-Control', value: 'no-store, max-age=0' },
 ] as const;
 
+const publicCacheHeaders = [
+  {
+    key: 'Cache-Control',
+    value: 'public, s-maxage=300, stale-while-revalidate=3600',
+  },
+] as const;
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'risckcomply.com' }],
+        destination: 'https://www.risckcomply.com/:path*',
+        permanent: true,
+      },
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'risckcomply.app' }],
+        destination: 'https://www.risckcomply.com/:path*',
+        permanent: true,
+      },
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.risckcomply.app' }],
+        destination: 'https://www.risckcomply.com/:path*',
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
       {
@@ -112,12 +141,11 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/:locale(en|pt|es|fr|it|de)/(pricing|resources|faq|about|contact|trust|security|compliance|privacy|terms|data-processing|sla|dpa|subprocessors|status)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, s-maxage=300, stale-while-revalidate=3600',
-          },
-        ],
+        headers: [...publicCacheHeaders],
+      },
+      {
+        source: '/:locale(en|pt|es|fr|it|de)/features/:path*',
+        headers: [...publicCacheHeaders],
       },
     ];
   },
