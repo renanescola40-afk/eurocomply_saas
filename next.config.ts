@@ -96,6 +96,11 @@ const publicCacheHeaders = [
   },
 ] as const;
 
+const provisionalLocaleNoIndexHeaders = [
+  { key: 'X-Robots-Tag', value: 'noindex, follow, noarchive' },
+  ...publicCacheHeaders,
+] as const;
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
@@ -142,6 +147,10 @@ const nextConfig: NextConfig = {
       {
         source: '/:locale(en|pt|es|fr|it|de)/(pricing|resources|faq|about|contact|trust|security|compliance|privacy|terms|data-processing|sla|dpa|subprocessors|status)',
         headers: [...publicCacheHeaders],
+      },
+      {
+        source: '/:locale(pt|es|fr|it|de)/(trust|security|compliance|privacy|terms|data-processing|sla|dpa|subprocessors|status|vulnerability-disclosure)',
+        headers: [...provisionalLocaleNoIndexHeaders],
       },
       {
         source: '/:locale(en|pt|es|fr|it|de)/features/:path*',
