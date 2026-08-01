@@ -3,7 +3,14 @@ import type { Metadata } from 'next';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 
 export const SITE_NAME = 'RISCK COMPLY';
-export const SITE_DEFAULT_URL = 'https://risckcomply.app';
+export const SITE_DEFAULT_URL = 'https://www.risckcomply.com';
+
+const CANONICALIZED_HOSTS = new Set([
+  'risckcomply.com',
+  'www.risckcomply.com',
+  'risckcomply.app',
+  'www.risckcomply.app',
+]);
 
 export const localeLanguageTags: Record<Locale, string> = {
   en: 'en',
@@ -23,6 +30,11 @@ export function getSiteUrl() {
 
   try {
     const url = new URL(rawUrl);
+
+    if (CANONICALIZED_HOSTS.has(url.hostname.toLowerCase())) {
+      return SITE_DEFAULT_URL;
+    }
+
     url.pathname = url.pathname.replace(/\/$/, '');
     url.search = '';
     url.hash = '';
