@@ -18,16 +18,17 @@ describe('public launch auth and billing access flow', () => {
     expect(login).not.toContain('setNoticeOpen(true)');
   });
 
-  it('falls back to the authenticated Supabase client and legacy membership columns during rollout', () => {
+  it('keeps tenant-context onboarding reads privileged and fail closed while preserving the selected plan', () => {
     const currentOrganization = readRepoFile('src/server/queries/current-organization.ts');
     const onboardingState = readRepoFile('src/server/queries/onboarding.ts');
 
-    expect(currentOrganization).toContain('tryCreateAdminClient');
-    expect(currentOrganization).toContain('createServerSupabaseClient');
-    expect(currentOrganization).toContain('isExpectedSchemaFallback(error)');
-    expect(currentOrganization).toContain("organizations(id, name, slug)");
+    expect(currentOrganization).toContain("import { createAdminClient } from '@/lib/supabase/admin'");
+    expect(currentOrganization).toContain('const supabase = createAdminClient();');
+    expect(currentOrganization).not.toContain('tryCreateAdminClient');
     expect(currentOrganization).toContain('selected_plan');
-    expect(onboardingState).toContain('tryCreateAdminClient() ?? await createServerSupabaseClient()');
+    expect(onboardingState).toContain("import { createAdminClient } from '@/lib/supabase/admin'");
+    expect(onboardingState).toContain('const supabase = createAdminClient();');
+    expect(onboardingState).not.toContain('tryCreateAdminClient');
     expect(onboardingState).toContain('selectedPlan: membership.selected_plan');
   });
 
