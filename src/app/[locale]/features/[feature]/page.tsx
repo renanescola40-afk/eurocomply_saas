@@ -1,0 +1,240 @@
+import type { Metadata } from 'next';
+import Image from 'next/image';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { ArrowRight, CheckCircle2, ChevronRight } from 'lucide-react';
+
+import { PublicFooter } from '@/components/marketing/public-footer';
+import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
+import {
+  getFeatureLanguageAlternates,
+  getFeaturePageBySlug,
+  getFeaturePath,
+  getFeatureStaticParams,
+} from '@/lib/seo/feature-pages';
+import { getSafeLocale, getSiteUrl, makePublicMetadata } from '@/lib/seo/public-metadata';
+
+export const dynamic = 'force-static';
+export const revalidate = 3600;
+
+type PageProps = {
+  params: Promise<{ locale: string; feature: string }>;
+};
+
+const pageUi: Record<Locale, {
+  home: string;
+  features: string;
+  pricing: string;
+  signIn: string;
+  createAccount: string;
+  disclaimer: string;
+  languageLabel: string;
+}> = {
+  en: { home: 'Home', features: 'Features', pricing: 'Pricing', signIn: 'Sign in', createAccount: 'Create account', disclaimer: 'RISCK COMPLY supports governance operations and evidence preparation. It does not provide legal advice or guarantee compliance outcomes.', languageLabel: 'Language versions' },
+  pt: { home: 'Início', features: 'Funcionalidades', pricing: 'Preços', signIn: 'Entrar', createAccount: 'Criar conta', disclaimer: 'A RISCK COMPLY apoia operações de governança e preparação de evidências. Não presta aconselhamento jurídico nem garante resultados de conformidade.', languageLabel: 'Versões linguísticas' },
+  es: { home: 'Inicio', features: 'Funcionalidades', pricing: 'Precios', signIn: 'Entrar', createAccount: 'Crear cuenta', disclaimer: 'RISCK COMPLY apoya operaciones de gobernanza y preparación de evidencias. No ofrece asesoramiento jurídico ni garantiza resultados de cumplimiento.', languageLabel: 'Versiones de idioma' },
+  fr: { home: 'Accueil', features: 'Fonctionnalités', pricing: 'Tarifs', signIn: 'Connexion', createAccount: 'Créer un compte', disclaimer: 'RISCK COMPLY soutient les opérations de gouvernance et la préparation des preuves. La plateforme ne fournit pas de conseil juridique et ne garantit pas la conformité.', languageLabel: 'Versions linguistiques' },
+  it: { home: 'Home', features: 'Funzionalità', pricing: 'Prezzi', signIn: 'Accedi', createAccount: 'Crea account', disclaimer: 'RISCK COMPLY supporta le operazioni di governance e la preparazione delle evidenze. Non fornisce consulenza legale né garantisce risultati di conformità.', languageLabel: 'Versioni linguistiche' },
+  de: { home: 'Startseite', features: 'Funktionen', pricing: 'Preise', signIn: 'Anmelden', createAccount: 'Konto erstellen', disclaimer: 'RISCK COMPLY unterstützt Governance-Prozesse und Nachweisvorbereitung. Die Plattform bietet keine Rechtsberatung und garantiert keine Compliance-Ergebnisse.', languageLabel: 'Sprachversionen' },
+};
+
+export function generateStaticParams() {
+  return getFeatureStaticParams();
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale: requestedLocale, feature } = await params;
+  const locale = getSafeLocale(requestedLocale);
+  const page = getFeaturePageBySlug(locale, feature);
+
+  if (!page) {
+    return { robots: { index: false, follow: false } };
+  }
+
+  const path = `/features/${page.slug}`;
+  const metadata = makePublicMetadata({
+    locale,
+    path,
+    title: `${page.title} | RISCK COMPLY`,
+    description: page.description,
+  });
+
+  return {
+    ...metadata,
+    alternates: {
+      canonical: `/${locale}${path}`,
+      languages: getFeatureLanguageAlternates(page.key),
+    },
+  };
+}
+
+export default async function FeaturePage({ params }: PageProps) {
+  const { locale: requestedLocale, feature } = await params;
+  const locale = getSafeLocale(requestedLocale);
+  const page = getFeaturePageBySlug(locale, feature);
+
+  if (!page || requestedLocale !== locale) notFound();
+
+  const ui = pageUi[locale];
+  const siteUrl = getSiteUrl();
+  const canonicalUrl = `${siteUrl}${getFeaturePath(locale, page.key)}`;
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'SoftwareApplication',
+        '@id': `${siteUrl}/#software`,
+        name: 'RISCK COMPLY',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web',
+        url: siteUrl,
+        description: page.description,
+      },
+      {
+        '@type': 'WebPage',
+        '@id': `${canonicalUrl}#webpage`,
+        url: canonicalUrl,
+        name: page.title,
+        description: page.description,
+        inLanguage: locale,
+        isPartOf: { '@id': `${siteUrl}/#website` },
+        about: { '@id': `${siteUrl}/#software` },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: ui.home, item: `${siteUrl}/${locale}` },
+          { '@type': 'ListItem', position: 2, name: ui.features, item: `${siteUrl}/${locale}/#platform` },
+          { '@type': 'ListItem', position: 3, name: page.navLabel, item: canonicalUrl },
+        ],
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: page.faq.map((item) => ({
+          '@type': 'Question',
+          name: item.question,
+          acceptedAnswer: { '@type': 'Answer', text: item.answer },
+        })),
+      },
+    ],
+  };
+
+  return (
+    <main className="min-h-screen bg-[#040707] text-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }}
+      />
+
+      <header className="border-b border-white/10 bg-[#040707]/95">
+        <nav className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-5 py-4 lg:px-8" aria-label="Primary navigation">
+          <Link href={`/${locale}`} aria-label="RISCK COMPLY home">
+            <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={180} height={44} className="h-10 w-auto" priority />
+          </Link>
+          <div className="hidden items-center gap-6 text-sm text-white/65 md:flex">
+            <Link href={`/${locale}/#platform`} className="transition hover:text-white">{ui.features}</Link>
+            <Link href={`/${locale}/pricing`} className="transition hover:text-white">{ui.pricing}</Link>
+            <Link href={`/${locale}/login`} className="transition hover:text-white">{ui.signIn}</Link>
+            <Link href={`/${locale}/signup`} className="rounded-full bg-white px-5 py-2.5 font-semibold text-black transition hover:bg-white/85">{ui.createAccount}</Link>
+          </div>
+        </nav>
+      </header>
+
+      <section className="relative overflow-hidden border-b border-white/10 px-5 py-20 lg:px-8 lg:py-28">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(34,211,238,.12),transparent_34%),radial-gradient(circle_at_80%_20%,rgba(52,211,153,.10),transparent_30%)]" aria-hidden="true" />
+        <div className="relative mx-auto max-w-5xl">
+          <nav aria-label="Breadcrumb" className="mb-8 flex flex-wrap items-center gap-2 text-sm text-white/45">
+            <Link href={`/${locale}`} className="hover:text-white">{ui.home}</Link>
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            <span>{ui.features}</span>
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            <span className="text-white/75">{page.navLabel}</span>
+          </nav>
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-100/65">{page.eyebrow}</p>
+          <h1 className="mt-6 max-w-4xl text-4xl font-semibold tracking-[-0.04em] text-white sm:text-6xl lg:text-7xl">{page.title}</h1>
+          <p className="mt-7 max-w-3xl text-lg leading-8 text-white/62 sm:text-xl">{page.intro}</p>
+          <div className="mt-10 flex flex-wrap gap-3">
+            <Link href={`/${locale}/signup`} className="group inline-flex items-center gap-2 rounded-full bg-[linear-gradient(180deg,#eafff5,#b9f6d5)] px-6 py-3.5 font-bold text-[#07110c] transition hover:-translate-y-0.5">
+              {ui.createAccount}<ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden="true" />
+            </Link>
+            <Link href={`/${locale}/pricing`} className="rounded-full border border-white/15 bg-white/[0.04] px-6 py-3.5 font-semibold text-white/80 transition hover:bg-white/[0.08] hover:text-white">{ui.pricing}</Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-5 py-18 lg:px-8 lg:py-24">
+        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-7 sm:p-9">
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{page.problemTitle}</h2>
+            <p className="mt-5 leading-7 text-white/58">{page.problem}</p>
+          </div>
+          <div className="rounded-[2rem] border border-cyan-100/15 bg-cyan-300/[0.04] p-7 sm:p-9">
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{page.capabilitiesTitle}</h2>
+            <ul className="mt-7 grid gap-4 sm:grid-cols-2">
+              {page.capabilities.map((capability) => (
+                <li key={capability} className="flex gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-white/68">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-200/80" aria-hidden="true" />
+                  <span>{capability}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-white/10 bg-white/[0.02] px-5 py-18 lg:px-8 lg:py-24">
+        <div className="mx-auto max-w-6xl">
+          <h2 className="max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl">{page.workflowTitle}</h2>
+          <ol className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {page.workflow.map((step, index) => (
+              <li key={step} className="rounded-[1.5rem] border border-white/10 bg-[#071017] p-6">
+                <span className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100/55">{String(index + 1).padStart(2, '0')}</span>
+                <p className="mt-4 leading-7 text-white/75">{step}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className="px-5 py-18 lg:px-8 lg:py-24">
+        <div className="mx-auto max-w-4xl">
+          <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">{page.faqTitle}</h2>
+          <div className="mt-9 space-y-4">
+            {page.faq.map((item) => (
+              <article key={item.question} className="rounded-[1.5rem] border border-white/10 bg-white/[0.025] p-6 sm:p-7">
+                <h3 className="text-lg font-semibold text-white">{item.question}</h3>
+                <p className="mt-3 leading-7 text-white/58">{item.answer}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-5 pb-10 lg:px-8 lg:pb-16">
+        <div className="mx-auto max-w-6xl rounded-[2.2rem] border border-emerald-100/15 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.13),transparent_35%),#07100d] p-8 sm:p-12">
+          <h2 className="max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">{page.ctaTitle}</h2>
+          <p className="mt-5 max-w-2xl leading-7 text-white/60">{page.ctaText}</p>
+          <Link href={`/${locale}/signup`} className="group mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 font-bold text-black transition hover:-translate-y-0.5">
+            {ui.createAccount}<ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden="true" />
+          </Link>
+          <p className="mt-7 max-w-3xl text-xs leading-5 text-white/38">{ui.disclaimer}</p>
+        </div>
+      </section>
+
+      <nav aria-label={ui.languageLabel} className="mx-auto flex max-w-6xl flex-wrap gap-2 px-5 pb-14 lg:px-8">
+        {locales.map((language) => (
+          <Link
+            key={language}
+            href={getFeaturePath(language, page.key)}
+            hrefLang={language}
+            className={`rounded-full border px-4 py-2 text-xs transition ${language === locale ? 'border-cyan-100/35 bg-cyan-200/10 text-white' : 'border-white/10 text-white/48 hover:border-white/25 hover:text-white'}`}
+          >
+            {LOCALE_META[language].nativeName}
+          </Link>
+        ))}
+      </nav>
+
+      <PublicFooter locale={locale} />
+    </main>
+  );
+}
