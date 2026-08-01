@@ -20,12 +20,15 @@ describe('public launch auth and billing access flow', () => {
 
   it('falls back to the authenticated Supabase client and legacy membership columns during rollout', () => {
     const currentOrganization = readRepoFile('src/server/queries/current-organization.ts');
+    const onboardingState = readRepoFile('src/server/queries/onboarding.ts');
 
     expect(currentOrganization).toContain('tryCreateAdminClient');
     expect(currentOrganization).toContain('createServerSupabaseClient');
     expect(currentOrganization).toContain('isExpectedSchemaFallback(error)');
     expect(currentOrganization).toContain("organizations(id, name, slug)");
     expect(currentOrganization).toContain('selected_plan');
+    expect(onboardingState).toContain('tryCreateAdminClient() ?? await createServerSupabaseClient()');
+    expect(onboardingState).toContain('selectedPlan: membership.selected_plan');
   });
 
   it('requires an active or trialing subscription before organization dashboard access', () => {
