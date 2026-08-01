@@ -28,11 +28,9 @@ vi.mock('@/lib/supabase/admin', () => ({
     from: () => ({
       select: () => ({
         eq: () => ({
-          not: () => ({
-            order: () => ({
-              limit: () => ({
-                maybeSingle: mocks.supabaseMaybeSingle,
-              }),
+          order: () => ({
+            limit: () => ({
+              maybeSingle: mocks.supabaseMaybeSingle,
             }),
           }),
         }),
@@ -184,13 +182,23 @@ describe('billing checkout API security gates', () => {
     expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
   });
 
-  it('creates a customer-mapped checkout session only after RBAC, trusted mutation, and step-up', async () => {
+  it('creates a customer-mapped checkout session only after RBAC, trusted mutation, and step-up for an existing billing relationship', async () => {
+    mocks.supabaseMaybeSingle.mockResolvedValue({
+      data: { stripe_customer_id: null, stripe_subscription_id: 'sub_existing_org_a', status: 'incomplete' },
+      error: null,
+    });
+
     const response = await POST(buildRequest({ plan: 'business', locale: 'pt' }));
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ url: 'https://checkout.stripe.com/session-fixture', stepUp: { verified: true } });
     expect(mocks.requirePermission).toHaveBeenCalledWith({ userId: 'user_admin', organizationId: 'org_a', permission: 'manage_billing' });
+    expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'manage_billing',
+      userId: 'user_admin',
+      organizationId: 'org_a',
+    }));
     expect(mocks.stripeCustomerCreate).toHaveBeenCalledWith(expect.objectContaining({
       email: 'admin@example.test',
       name: 'Org A',
@@ -200,6 +208,7 @@ describe('billing checkout API security gates', () => {
         user_id: 'user_admin',
         userId: 'user_admin',
         plan: 'growth',
+        billing_flow: 'existing_billing_change',
       }),
     }));
     const customerParams = mocks.stripeCustomerCreate.mock.calls[0][0];
@@ -226,6 +235,7 @@ describe('billing checkout API security gates', () => {
         userId: 'user_admin',
         plan: 'growth',
         actor_role: 'admin',
+        billing_flow: 'existing_billing_change',
         step_up_action: 'manage_billing',
         step_up_verified_at: '2026-06-22T09:00:00.000Z',
       }),
@@ -237,6 +247,7 @@ describe('billing checkout API security gates', () => {
           userId: 'user_admin',
           plan: 'growth',
           actor_role: 'admin',
+          billing_flow: 'existing_billing_change',
           step_up_action: 'manage_billing',
         }),
       }),
@@ -251,7 +262,11 @@ describe('billing checkout API security gates', () => {
       action: 'checkout_created',
       organizationId: 'org_a',
       userId: 'user_admin',
-      metadata: expect.objectContaining({ stripeCustomerId: 'cus_org_a' }),
+      metadata: expect.objectContaining({
+        stripeCustomerId: 'cus_org_a',
+        billingFlow: 'existing_billing_change',
+        stepUpRequired: true,
+      }),
     }));
     const auditPayload = mocks.writeAuditLog.mock.calls[0][0];
     expect(auditPayload.metadata).not.toHaveProperty('clerkOrgId');
@@ -259,7 +274,10 @@ describe('billing checkout API security gates', () => {
   });
 
   it('reuses and refreshes an existing organization Stripe customer before checkout', async () => {
-    mocks.supabaseMaybeSingle.mockResolvedValue({ data: { stripe_customer_id: 'cus_existing_org_a' }, error: null });
+    mocks.supabaseMaybeSingle.mockResolvedValue({
+      data: { stripe_customer_id: 'cus_existing_org_a', stripe_subscription_id: 'sub_existing_org_a', status: 'active' },
+      error: null,
+    });
 
     const response = await POST(buildRequest({ plan: 'growth', locale: 'en' }));
 

@@ -9,8 +9,6 @@ import { getBillingPlan } from '@/lib/billing/plans';
 import { normalizePublicAuthErrorCode, type PublicAuthErrorCode } from '@/lib/auth/public-errors';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
-const PRELAUNCH_OWNER_EMAIL = 'renansilva2002@gmail.com';
-
 const publicErrors = {
   missing_oauth_code: 'Could not complete sign-in. Please try again.',
   auth_configuration_unavailable: 'Sign-in is temporarily unavailable. Please try again later.',
@@ -49,7 +47,7 @@ function copy(locale: Locale) {
   return locale === 'pt'
     ? {
         title: 'Entrar na RISCK COMPLY',
-        subtitle: 'Acesso privado de validação antes do lançamento público.',
+        subtitle: 'Entre com Google, email profissional ou SSO Enterprise.',
         google: 'Continuar com Google',
         divider: 'ou entre com email',
         email: 'Email profissional',
@@ -61,13 +59,12 @@ function copy(locale: Locale) {
         create: 'Criar conta',
         authLoading: 'A autenticação ainda está a carregar. Tente novamente dentro de alguns segundos.',
         failed: 'Não foi possível entrar. Verifique os dados e tente novamente.',
-        privateOnly: 'O acesso privado está reservado à conta de validação autorizada. O acesso público será liberado em 1 de agosto.',
-        prelaunchTitle: 'Acesso antecipado reservado',
-        prelaunchMessage: 'A criação de contas e o login com Google serão liberados em 1 de agosto. Neste momento, apenas o acesso privado de validação e o SSO Enterprise configurado estão disponíveis.',
+        googleFailed: 'Não foi possível iniciar o login com Google. Tente novamente.',
+        accessNote: 'Contas novas concluem o onboarding e o pagamento seguro no Stripe antes de aceder ao SaaS.',
       }
     : {
         title: 'Sign in to RISCK COMPLY',
-        subtitle: 'Private validation access before the public launch.',
+        subtitle: 'Continue with Google, work email or Enterprise SSO.',
         google: 'Continue with Google',
         divider: 'or sign in with email',
         email: 'Work email',
@@ -79,9 +76,8 @@ function copy(locale: Locale) {
         create: 'Create account',
         authLoading: 'Authentication is still loading. Please try again in a moment.',
         failed: 'Could not sign in. Check your details and try again.',
-        privateOnly: 'Private access is reserved for the authorized validation account. Public access opens on August 1.',
-        prelaunchTitle: 'Early access reserved',
-        prelaunchMessage: 'Account creation and Google sign-in will open on August 1. For now, only private validation access and configured Enterprise SSO are available.',
+        googleFailed: 'Could not start Google sign-in. Please try again.',
+        accessNote: 'New accounts complete onboarding and secure Stripe payment before accessing the SaaS.',
       };
 }
 
@@ -96,28 +92,31 @@ function LoginContent() {
   const createAccountUrl = signUpHref(locale, planId, afterSignInUrl);
   const publicErrorCode = searchParams.get('error') ? normalizePublicAuthErrorCode(searchParams.get('error')) : null;
   const text = copy(locale);
-  const { loading, signInWithEmail } = useAuth();
+  const { loading, signInWithEmail, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [secret, setSecret] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(publicErrorCode ? publicErrors[publicErrorCode] : null);
-  const [noticeOpen, setNoticeOpen] = useState(false);
 
-  function handleProvider() {
+  async function handleProvider() {
+    if (loading || busy) {
+      if (loading) setError(text.authLoading);
+      return;
+    }
+
+    setBusy(true);
     setError(null);
-    setNoticeOpen(true);
+    const result = await signInWithGoogle({ next: afterSignInUrl });
+    if (result.error) {
+      setError(text.googleFailed);
+      setBusy(false);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (loading) {
       setError(text.authLoading);
-      return;
-    }
-
-    if (email.trim().toLowerCase() !== PRELAUNCH_OWNER_EMAIL) {
-      setError(null);
-      setNoticeOpen(true);
       return;
     }
 
@@ -140,27 +139,16 @@ function LoginContent() {
           <div className="flex flex-col justify-between rounded-[1.5rem] border border-white/10 bg-black/35 p-6">
             <div>
               <Link href={`/${locale}`} className="text-sm font-semibold uppercase tracking-[0.28em] text-cyan-200/70">RISCK COMPLY</Link>
-              <div className="mt-10 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">Private preview</div>
+              <div className="mt-10 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">Secure workspace access</div>
               <h1 className="mt-5 text-4xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">{text.title}</h1>
               <p className="mt-4 max-w-md text-base leading-7 text-white/65">{text.subtitle}</p>
             </div>
-            <div className="mt-10 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.07] p-4 text-sm leading-6 text-cyan-50/75">Public account access opens on August 1. Private validation and configured Enterprise SSO remain available.</div>
+            <div className="mt-10 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.07] p-4 text-sm leading-6 text-cyan-50/75">{text.accessNote}</div>
           </div>
 
           <div className="rounded-[1.5rem] border border-white/10 bg-[#080b12] p-6">
-            {error ? <div className="mb-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">{error}</div> : null}
-            {noticeOpen ? (
-              <div className="mb-5 rounded-2xl border border-cyan-300/25 bg-cyan-400/10 p-5" role="status">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-cyan-100">{text.prelaunchTitle}</p>
-                    <p className="mt-2 text-sm leading-6 text-cyan-50/70">{email && email.trim().toLowerCase() !== PRELAUNCH_OWNER_EMAIL ? text.privateOnly : text.prelaunchMessage}</p>
-                  </div>
-                  <button type="button" onClick={() => setNoticeOpen(false)} className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/60 hover:text-white">×</button>
-                </div>
-              </div>
-            ) : null}
-            <button type="button" onClick={handleProvider} className="w-full rounded-full border border-white/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90">{text.google}</button>
+            {error ? <div className="mb-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100" role="alert">{error}</div> : null}
+            <button type="button" onClick={handleProvider} disabled={busy || loading} className="w-full rounded-full border border-white/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.google}</button>
             <EnterpriseSsoLogin locale={locale} next={afterSignInUrl} />
             <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-white/35"><span className="h-px flex-1 bg-white/10" /> {text.divider} <span className="h-px flex-1 bg-white/10" /></div>
             <form className="space-y-4" onSubmit={handleSubmit}>

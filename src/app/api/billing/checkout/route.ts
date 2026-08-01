@@ -28,6 +28,12 @@ const STRIPE_CHECKOUT_URL_HOST = 'checkout.stripe.com';
 
 type CheckoutLocale = (typeof CHECKOUT_LOCALES)[number];
 
+type BillingBinding = {
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  status: string | null;
+};
+
 const checkoutBodySchema = z.object({
   plan: z.string().trim().min(1).max(64),
   locale: z.string().trim().max(16).optional().default('en'),
@@ -49,22 +55,25 @@ function isSafeStripeCheckoutUrl(url: string | null): url is string {
   }
 }
 
-async function getOrganizationStripeCustomerId(organizationId: string) {
+async function getOrganizationBillingBinding(organizationId: string): Promise<BillingBinding | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('subscriptions')
-    .select('stripe_customer_id')
+    .select('stripe_customer_id,stripe_subscription_id,status')
     .eq('organization_id', organizationId)
-    .not('stripe_customer_id', 'is', null)
     .order('updated_at', { ascending: false })
     .limit(1)
-    .maybeSingle<{ stripe_customer_id: string | null }>();
+    .maybeSingle<BillingBinding>();
 
   if (error) {
     throw error;
   }
 
-  return data?.stripe_customer_id ?? null;
+  return data ?? null;
+}
+
+function hasExistingBillingRelationship(binding: BillingBinding | null) {
+  return Boolean(binding?.stripe_customer_id || binding?.stripe_subscription_id || binding?.status);
 }
 
 async function ensureOrganizationStripeCustomer({
@@ -73,15 +82,15 @@ async function ensureOrganizationStripeCustomer({
   organizationName,
   userEmail,
   metadata,
+  existingCustomerId,
 }: {
   stripe: Stripe;
   organizationId: string;
   organizationName?: string | null;
   userEmail?: string | null;
   metadata: Record<string, string>;
+  existingCustomerId?: string | null;
 }) {
-  const existingCustomerId = await getOrganizationStripeCustomerId(organizationId);
-
   if (existingCustomerId) {
     try {
       await stripe.customers.update(existingCustomerId, { metadata });
@@ -144,14 +153,18 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
     }
 
-    const stepUp = await requireStepUpForRequest({
-      request,
-      action: 'manage_billing',
-      userId: user.id,
-      organizationId: organization.id,
-    });
+    const billingBinding = await getOrganizationBillingBinding(organization.id);
+    const isInitialCheckout = !hasExistingBillingRelationship(billingBinding);
+    const stepUp = isInitialCheckout
+      ? null
+      : await requireStepUpForRequest({
+          request,
+          action: 'manage_billing',
+          userId: user.id,
+          organizationId: organization.id,
+        });
 
-    if (!stepUp.ok) {
+    if (stepUp && !stepUp.ok) {
       return stepUp.response;
     }
 
@@ -173,8 +186,9 @@ export async function POST(request: Request) {
       userId: user.id,
       plan,
       actor_role: permission.role ?? 'unknown',
-      step_up_action: stepUp.assessment.action,
-      step_up_verified_at: stepUp.assessment.verifiedAt ?? '',
+      billing_flow: isInitialCheckout ? 'initial_subscription' : 'existing_billing_change',
+      step_up_action: stepUp?.assessment.action ?? 'not_required_initial_checkout',
+      step_up_verified_at: stepUp?.assessment.verifiedAt ?? '',
     };
     const stripeCustomerId = await ensureOrganizationStripeCustomer({
       stripe,
@@ -182,6 +196,7 @@ export async function POST(request: Request) {
       organizationName,
       userEmail: user.email,
       metadata,
+      existingCustomerId: billingBinding?.stripe_customer_id,
     });
 
     let session: Stripe.Checkout.Session;
@@ -228,8 +243,10 @@ export async function POST(request: Request) {
         priceId,
         stripeCustomerId,
         actorRole: permission.role ?? 'unknown',
-        stepUpAction: stepUp.assessment.action,
-        stepUpVerifiedAt: stepUp.assessment.verifiedAt ?? null,
+        billingFlow: isInitialCheckout ? 'initial_subscription' : 'existing_billing_change',
+        stepUpRequired: !isInitialCheckout,
+        stepUpAction: stepUp?.assessment.action ?? null,
+        stepUpVerifiedAt: stepUp?.assessment.verifiedAt ?? null,
         trustedOriginRequired: true,
         rbacPermission: 'manage_billing',
         stripeCheckoutHost: STRIPE_CHECKOUT_URL_HOST,
@@ -259,7 +276,7 @@ export async function POST(request: Request) {
 
     return noStoreJson({
       url: session.url,
-      stepUp: publicStepUpSummary(stepUp.assessment),
+      ...(stepUp?.ok ? { stepUp: publicStepUpSummary(stepUp.assessment) } : { stepUpRequired: false }),
     });
   } catch (error) {
     return secureApiError(error, request);

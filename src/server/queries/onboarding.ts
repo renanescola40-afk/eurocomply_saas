@@ -70,7 +70,7 @@ export async function getOnboardingActivationState(userId: string): Promise<Onbo
         isOnboardingCompleted: membership.is_onboarding_completed,
         onboardingStep: null,
         readinessScore: null,
-        selectedPlan: null,
+        selectedPlan: membership.selected_plan,
       }
     : organization
       ? {
@@ -89,7 +89,7 @@ export async function getOnboardingActivationState(userId: string): Promise<Onbo
           }),
           onboardingStep: (organization.onboarding_step as string | null) ?? null,
           readinessScore: typeof organization.readiness_score === 'number' ? organization.readiness_score : null,
-          selectedPlan: (organization.selected_plan as string | null) ?? null,
+          selectedPlan: (organization.selected_plan as string | null) ?? membership.selected_plan,
         }
       : {
           id: membership.organization_id,
@@ -104,7 +104,7 @@ export async function getOnboardingActivationState(userId: string): Promise<Onbo
           isOnboardingCompleted: membership.is_onboarding_completed,
           onboardingStep: null,
           readinessScore: null,
-          selectedPlan: null,
+          selectedPlan: membership.selected_plan,
         };
 
   if (organizationError && !isExpectedSchemaFallback(organizationError)) {
