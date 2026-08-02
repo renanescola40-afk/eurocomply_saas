@@ -24,31 +24,51 @@ describe('current organization membership read failure contract', () => {
     );
 
     expect(membershipRead).toContain("console.warn('[organization] memberships_lookup_failed'");
+    expect(membershipRead).toContain("console.warn('[organization] memberships_fallback_lookup_failed'");
     expect(membershipRead).toContain("throw new Error('organization_memberships_unavailable');");
     expect(membershipRead).not.toContain('if (!supabase) return [];');
-    expect(membershipRead).not.toMatch(/if \(error\)[\s\S]*?return \[\];/);
   });
 
-  it('preserves user scoping, deterministic ordering, and bounded reads', async () => {
+  it('uses a narrowly-scoped legacy schema fallback without weakening tenant isolation', async () => {
     const source = await readFile(QUERY_FILE, 'utf8');
     const membershipRead = source.slice(
       source.indexOf('export async function getUserOrganizationMemberships'),
       source.indexOf('export async function getCurrentOrganizationForUser'),
     );
 
-    expect(membershipRead).toContain(".eq('user_id', userId)");
-    expect(membershipRead).toContain(".order('created_at', { ascending: true })");
-    expect(membershipRead).toContain('.range(0, safeLimit - 1)');
+    expect(source).toContain('function isExpectedSchemaFallback');
+    expect(source).toContain("error?.code === '42703'");
+    expect(source).toContain("error?.code === 'PGRST204'");
+    expect(membershipRead).toContain('if (isExpectedSchemaFallback(error))');
+    expect(membershipRead).toContain(".select('organization_id, role, organizations(id, name, slug)')");
+    expect(membershipRead).toContain("console.warn('[organization] membership_onboarding_columns_unavailable'");
+    expect(membershipRead).not.toContain('createServerSupabaseClient');
+  });
+
+  it('preserves user scoping, deterministic ordering, and bounded reads on both queries', async () => {
+    const source = await readFile(QUERY_FILE, 'utf8');
+    const membershipRead = source.slice(
+      source.indexOf('export async function getUserOrganizationMemberships'),
+      source.indexOf('export async function getCurrentOrganizationForUser'),
+    );
+
+    expect(membershipRead.match(/\.eq\('user_id', userId\)/g)).toHaveLength(2);
+    expect(membershipRead.match(/\.order\('created_at', \{ ascending: true \}\)/g)).toHaveLength(2);
+    expect(membershipRead.match(/\.range\(0, safeLimit - 1\)/g)).toHaveLength(2);
     expect(membershipRead).toContain('Math.max(1, Math.min(options.limit ?? 25, 100))');
   });
 
-  it('still returns an empty list only after a successful zero-row query', async () => {
+  it('returns an empty list only after a successful primary or fallback zero-row query', async () => {
     const source = await readFile(QUERY_FILE, 'utf8');
     const membershipRead = source.slice(
       source.indexOf('export async function getUserOrganizationMemberships'),
       source.indexOf('export async function getCurrentOrganizationForUser'),
     );
 
-    expect(membershipRead).toContain('return ((data ?? []) as RawOrganizationMembership[])');
+    expect(source).toContain('function normalizeMemberships(data: unknown)');
+    expect(membershipRead).toContain('if (!error)');
+    expect(membershipRead).toContain('return normalizeMemberships(data);');
+    expect(membershipRead).toContain('if (!fallback.error)');
+    expect(membershipRead).toContain('return normalizeMemberships(fallback.data);');
   });
 });

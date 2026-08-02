@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { evaluateAiGovernanceRole } from '@/lib/ai-governance/role-wizard';
 import { classifyAiSystem } from './classifier';
@@ -127,27 +127,34 @@ describe('canonical EU AI Act decision engine', () => {
   });
 
   it('returns safe versioned decision metadata from the shared inventory payload path', () => {
-    const result = classifyParsedAiSystemBody({
-      name: 'Support assistant',
-      useCase: 'Customer-facing support assistant for European users',
-      role: 'other',
-      lifecycleStatus: 'pilot',
-      riskDomain: 'customer_support',
-      usesPersonalData: true,
-      interactsWithPeople: true,
-      generatesContent: true,
-      biometricIdentification: false,
-      manipulativeOrExploitative: false,
-      vendorName: 'Example vendor',
-    });
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-01T12:00:00.000Z'));
 
-    expect(result.classification.riskLevel).toBe('limited_transparency');
-    expect(result.roleAssessment.recommendedRole).toBe('deployer');
-    expect(result.decisionMetadata.engineVersion).toBe(AI_ACT_DECISION_ENGINE_VERSION);
-    expect(result.decisionMetadata.rulesetVersion).toBe(AI_ACT_RULESET_VERSION);
-    expect(result.decisionMetadata.appliedRuleIds).toContain('eu-ai-act-art4-ai-literacy');
-    expect(result.decisionMetadata.futureRuleIds).toContain('eu-ai-act-art50-general-transparency');
-    expect(result.decisionMetadata.evidenceBoundary).toContain('not a legal determination');
-    expect(result.decisionMetadata.evidenceBoundary).not.toMatch(/fully compliant|certified compliance/i);
+    try {
+      const result = classifyParsedAiSystemBody({
+        name: 'Support assistant',
+        useCase: 'Customer-facing support assistant for European users',
+        role: 'other',
+        lifecycleStatus: 'pilot',
+        riskDomain: 'customer_support',
+        usesPersonalData: true,
+        interactsWithPeople: true,
+        generatesContent: true,
+        biometricIdentification: false,
+        manipulativeOrExploitative: false,
+        vendorName: 'Example vendor',
+      });
+
+      expect(result.classification.riskLevel).toBe('limited_transparency');
+      expect(result.roleAssessment.recommendedRole).toBe('deployer');
+      expect(result.decisionMetadata.engineVersion).toBe(AI_ACT_DECISION_ENGINE_VERSION);
+      expect(result.decisionMetadata.rulesetVersion).toBe(AI_ACT_RULESET_VERSION);
+      expect(result.decisionMetadata.appliedRuleIds).toContain('eu-ai-act-art4-ai-literacy');
+      expect(result.decisionMetadata.futureRuleIds).toContain('eu-ai-act-art50-general-transparency');
+      expect(result.decisionMetadata.evidenceBoundary).toContain('not a legal determination');
+      expect(result.decisionMetadata.evidenceBoundary).not.toMatch(/fully compliant|certified compliance/i);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
