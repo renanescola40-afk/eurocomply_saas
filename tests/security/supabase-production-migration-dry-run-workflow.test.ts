@@ -37,34 +37,35 @@ describe('Supabase production migration dry-run workflow', () => {
     expect(normalized).not.toContain('version: latest');
   });
 
-  it('uses a dedicated environment and keeps secrets scoped to preparation steps', () => {
+  it('uses a dedicated environment and the canonical pooler secret', () => {
     expect(jobHeader).toContain(
       'environment: supabase-production-migration-dry-run',
     );
     expect(jobHeader).not.toContain('${{ secrets.');
     expect(workflow).toContain(
-      'SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}',
+      'SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}',
+    );
+    expect(workflow).toContain(
+      'SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}',
     );
     expect(workflow).toContain(
       'SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}',
     );
-    expect(workflow).toContain(
-      'SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}',
-    );
     expect(
-      workflow.match(/SUPABASE_DB_PASSWORD: \$\{\{ secrets\.SUPABASE_DB_PASSWORD \}\}/g),
-    ).toHaveLength(1);
+      workflow.match(/secrets\.SUPABASE_DB_POOLER_URL/g),
+    ).toHaveLength(2);
+    expect(workflow).not.toContain('secrets.SUPABASE_DB_URL');
+    expect(workflow).not.toContain('SUPABASE_DB_PASSWORD');
     expect(workflow).not.toContain('supabase link');
   });
 
-  it('uses the password only to override credentials on the validated endpoint', () => {
+  it('uses one validated endpoint and credential source', () => {
     expect(normalized).toContain('prepare explicit production database connection');
     expect(workflow).toContain(
       'node scripts/supabase/prepare-production-db-connection.mjs',
     );
-    expect(normalized).toContain('database endpoint: explicit protected supabase_db_url');
     expect(normalized).toContain(
-      'database credential: protected password override when configured',
+      'database endpoint and credential: canonical protected supabase_db_pooler_url',
     );
     expect(normalized).not.toContain('migration list --linked');
     expect(normalized).not.toContain('db push --linked');
