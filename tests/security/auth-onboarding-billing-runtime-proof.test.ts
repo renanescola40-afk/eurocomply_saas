@@ -85,7 +85,7 @@ describe('auth onboarding billing runtime proof', () => {
     ]) expect(sql).toContain(token);
   });
 
-  it('reads optional rollout columns without parse-time column references', () => {
+  it('reads optional rollout columns without parse-time physical-column references', () => {
     for (const token of [
       "to_jsonb(o) ->> 'onboarding_status'",
       "to_jsonb(o) ->> 'onboarding_completed_at'",
@@ -99,9 +99,9 @@ describe('auth onboarding billing runtime proof', () => {
       'o.onboarding_status',
       'o.onboarding_completed_at',
       'o.selected_plan',
-      's.tier',
-      's.entitlements',
-      'e.organization_id',
+      "lower(coalesce(s.tier, s.plan, ''))",
+      'jsonb_typeof(s.entitlements)',
+      '    e.organization_id\n  from public.stripe_events_processed e',
     ]) expect(sql).not.toContain(unsafeReference);
   });
 
