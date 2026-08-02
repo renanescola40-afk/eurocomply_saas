@@ -2,6 +2,8 @@
 
 -- Read-only production proof for the authentication -> onboarding -> Stripe -> dashboard gate.
 -- Inputs are supplied through psql variables and the output is a single JSON object.
+-- Optional rollout columns are read through row JSON so missing columns make schemaReady false
+-- instead of aborting the proof during SQL parsing.
 with proof_input as (
   select
     :'organization_id'::uuid as organization_id,
@@ -49,9 +51,9 @@ schema_checks as (
 organization_state as (
   select
     o.id,
-    o.onboarding_status,
-    o.onboarding_completed_at,
-    lower(coalesce(o.selected_plan, '')) as selected_plan
+    lower(coalesce(to_jsonb(o) ->> 'onboarding_status', '')) as onboarding_status,
+    nullif(to_jsonb(o) ->> 'onboarding_completed_at', '') as onboarding_completed_at,
+    lower(coalesce(to_jsonb(o) ->> 'selected_plan', '')) as selected_plan
   from public.organizations o
   join proof_input i on i.organization_id = o.id
 ),
@@ -70,11 +72,12 @@ subscription_state as (
   select
     s.organization_id,
     lower(coalesce(s.plan, '')) as plan,
-    lower(coalesce(s.tier, s.plan, '')) as tier,
+    lower(coalesce(to_jsonb(s) ->> 'tier', s.plan, '')) as tier,
     lower(coalesce(s.status, '')) as status,
     nullif(trim(coalesce(s.stripe_customer_id, '')), '') is not null as has_customer,
     nullif(trim(coalesce(s.stripe_subscription_id, '')), '') is not null as has_subscription,
-    jsonb_typeof(s.entitlements) = 'object' and s.entitlements <> '{}'::jsonb as has_entitlements,
+    jsonb_typeof(to_jsonb(s) -> 'entitlements') = 'object'
+      and coalesce(to_jsonb(s) -> 'entitlements', '{}'::jsonb) <> '{}'::jsonb as has_entitlements,
     s.stripe_subscription_id
   from public.subscriptions s
   join proof_input i on i.organization_id = s.organization_id
@@ -85,7 +88,7 @@ stripe_event_state as (
     e.status,
     e.error,
     e.processed_at,
-    e.organization_id
+    lower(coalesce(to_jsonb(e) ->> 'organization_id', '')) as organization_id
   from public.stripe_events_processed e
   join proof_input i on i.stripe_event_id = e.id
 ),
@@ -106,14 +109,17 @@ audit_summary as (
     count(*) filter (where action = 'webhook_received') as webhook_received_count,
     count(*) filter (where action = 'billing.subscription_updated') as subscription_updated_count,
     count(*) filter (where action = 'subscription_synced') as subscription_synced_count,
-    bool_and(event_hash is not null and hash_algorithm = 'sha256') as hashes_present,
     bool_and(
-      previous_hash is null
+      nullif(to_jsonb(target_audit_events) ->> 'event_hash', '') is not null
+      and lower(coalesce(to_jsonb(target_audit_events) ->> 'hash_algorithm', '')) = 'sha256'
+    ) as hashes_present,
+    bool_and(
+      nullif(to_jsonb(target_audit_events) ->> 'previous_hash', '') is null
       or exists (
         select 1
         from public.audit_events predecessor
         where predecessor.organization_id = target_audit_events.organization_id
-          and predecessor.event_hash = target_audit_events.previous_hash
+          and to_jsonb(predecessor) ->> 'event_hash' = to_jsonb(target_audit_events) ->> 'previous_hash'
           and predecessor.created_at <= target_audit_events.created_at
       )
     ) as predecessor_links_resolve
@@ -169,7 +175,7 @@ select jsonb_build_object(
       e.status = 'processed'
       and e.error is null
       and e.processed_at is not null
-      and e.organization_id = i.organization_id
+      and e.organization_id = i.organization_id::text
     from stripe_event_state e cross join proof_input i limit 1
   ), false),
   'webhookAuditObserved', coalesce((select webhook_received_count > 0 from audit_summary), false),

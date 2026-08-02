@@ -43,6 +43,26 @@ The workflow verifies:
 11. `webhook_received`, `billing.subscription_updated` and `subscription_synced` audit events exist;
 12. the audit events use SHA-256 hashes and their predecessor links resolve.
 
+## Schema-drift reconciliation
+
+The runtime proof reads rollout-sensitive columns through `to_jsonb(row)` so an absent optional column produces a truthful failed control instead of a PostgreSQL parse error. Missing schema is never treated as passed.
+
+When `schemaReady` fails because `organizations.onboarding_status`, `organizations.onboarding_completed_at` or `organizations.selected_plan` is absent, apply the approved migration:
+
+```text
+supabase/migrations/20260802153000_reconcile_onboarding_runtime_schema.sql
+```
+
+The migration:
+
+- adds the three columns idempotently;
+- normalizes onboarding status values;
+- backfills only from the latest completed `onboarding_activation_runs` row for the same organization;
+- restores the canonical status constraint and index;
+- does not delete, truncate or drop tenant data.
+
+After applying it, confirm that the production schema contains the columns and execute a **new** proof against the exact current `main` SHA. Do not reuse evidence from an earlier SHA.
+
 ## Artifact handling
 
 The raw SQL observation is temporary and deleted before artifact upload. Retained files contain only:
@@ -63,7 +83,8 @@ The proof remains `Open/failed` when any control is absent. Use the generated su
 Common failures:
 
 - `schemaReady`: apply the approved migrations and refresh the PostgREST schema cache;
-- `organizationOnboardingCompleted`: complete the real onboarding flow;
+- `organizationOnboardingCompleted`: complete the real onboarding flow or reconcile the organization from a completed activation run;
+- `organizationPlanMatches`: reconcile `organizations.selected_plan` from the latest completed activation run;
 - `activationRunObserved`: verify the atomic activation RPC was used successfully;
 - `subscriptionActive`: correct or renew the Stripe subscription;
 - `subscriptionPlanMatches`: reconcile Stripe metadata and the canonical subscription row;
@@ -74,7 +95,9 @@ Do not edit the evidence artifact to turn a failed control green. Correct the ru
 
 ## Rollback
 
-This workflow is read-only. Rollback consists of disabling or removing the workflow and associated scripts. No database rollback is required. Revoking the environment secret immediately prevents future executions.
+The proof workflow is read-only. Rollback consists of disabling or removing the workflow and associated scripts. Revoking the environment secret immediately prevents future executions.
+
+The reconciliation migration is additive. Do not drop the onboarding columns while application code or runtime proofs depend on them. To reverse only its data backfill, restore the affected organization rows from the pre-migration backup while retaining the schema columns and constraints.
 
 ## Truth boundary
 
