@@ -65,5 +65,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -Eq 'contents: write|actions: write|pull-requests: write' .github/workflows/auth-onboarding-billing-runtime-proof.yml
-          ! grep -Eq 'continue-on-error:[[:space:]]*true' .github/workflows/auth-onboarding-billing-runtime-proof.yml
+          if grep -Eq 'contents: write|actions: write|pull-requests: write' .github/workflows/auth-onboarding-billing-runtime-proof.yml; then
+            echo "Write permission detected in runtime proof workflow" >&2
+            exit 1
+          fi
+          if grep -Eq 'continue-on-error:[[:space:]]*true' .github/workflows/auth-onboarding-billing-runtime-proof.yml; then
+            echo "Hidden failure path detected in runtime proof workflow" >&2
+            exit 1
+          fi
