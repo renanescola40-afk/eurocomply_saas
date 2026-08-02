@@ -1,0 +1,75 @@
+name: Auth Onboarding Billing Runtime Proof Contract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/auth-onboarding-billing-runtime-proof.yml'
+      - '.github/workflows/auth-onboarding-billing-runtime-proof-contract.yml'
+      - 'scripts/identity/auth-onboarding-billing-runtime-proof.sql'
+      - 'scripts/identity/build-auth-onboarding-billing-evidence.mjs'
+      - 'scripts/identity/check-auth-onboarding-billing-evidence.mjs'
+      - 'tests/security/auth-onboarding-billing-runtime-proof.test.ts'
+      - 'docs/runbooks/auth-onboarding-billing-runtime-proof.md'
+      - 'docs/security/AUTH_ONBOARDING_BILLING_RUNTIME_THREAT_MODEL.md'
+      - 'docs/security/AUTH_ONBOARDING_BILLING_RUNTIME_CONTROL_MAP.json'
+      - 'docs/architecture/decisions/2026-08-02-auth-onboarding-billing-runtime-proof.md'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auth-onboarding-billing-runtime-proof-contract-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out assessed SHA
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+
+      - name: Verify assessed SHA
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Validate runtime proof contract
+        run: npx vitest run tests/security/auth-onboarding-billing-runtime-proof.test.ts
+
+      - name: Validate script syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/identity/build-auth-onboarding-billing-evidence.mjs
+          node --check scripts/identity/check-auth-onboarding-billing-evidence.mjs
+
+      - name: Enforce read-only workflow permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Eq 'contents: write|actions: write|pull-requests: write' .github/workflows/auth-onboarding-billing-runtime-proof.yml; then
+            echo "Write permission detected in runtime proof workflow" >&2
+            exit 1
+          fi
+          if grep -Eq 'continue-on-error:[[:space:]]*true' .github/workflows/auth-onboarding-billing-runtime-proof.yml; then
+            echo "Hidden failure path detected in runtime proof workflow" >&2
+            exit 1
+          fi

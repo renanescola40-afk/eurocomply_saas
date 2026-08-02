@@ -1,0 +1,121 @@
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { describe, expect, it } from 'vitest';
+
+const workflow = readFileSync('.github/workflows/auth-onboarding-billing-runtime-proof.yml', 'utf8');
+const sql = readFileSync('scripts/identity/auth-onboarding-billing-runtime-proof.sql', 'utf8');
+const builder = 'scripts/identity/build-auth-onboarding-billing-evidence.mjs';
+const validator = 'scripts/identity/check-auth-onboarding-billing-evidence.mjs';
+const builderSource = readFileSync(builder, 'utf8');
+const validatorSource = readFileSync(validator, 'utf8');
+
+const passingObservation = {
+  schemaReady: true,
+  organizationObserved: true,
+  organizationOnboardingCompleted: true,
+  organizationPlanMatches: true,
+  activationRunObserved: true,
+  activationPlanMatches: true,
+  subscriptionObserved: true,
+  subscriptionActive: true,
+  subscriptionPlanMatches: true,
+  stripeBindingPresent: true,
+  entitlementsPresent: true,
+  stripeEventProcessed: true,
+  webhookAuditObserved: true,
+  subscriptionUpdatedAuditObserved: true,
+  subscriptionSyncedAuditObserved: true,
+  auditHashesPresent: true,
+  auditPredecessorLinksResolve: true,
+};
+
+function generateEvidence(observation: Record<string, boolean>) {
+  const directory = mkdtempSync(join(tmpdir(), 'auth-onboarding-proof-'));
+  const raw = join(directory, 'raw.json');
+  const evidence = join(directory, 'evidence.json');
+  const summary = join(directory, 'summary.md');
+  writeFileSync(raw, JSON.stringify(observation));
+  const result = spawnSync(process.execPath, [builder, raw, evidence, summary], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      RELEASE_SHA: 'a'.repeat(40),
+      REPOSITORY: 'renanescola40-afk/eurocomply_saas',
+      TARGET_ENVIRONMENT: 'staging',
+      ORGANIZATION_ID: '13ff8175-04f8-45c9-80d4-46d76bfd1895',
+      STRIPE_EVENT_ID: 'evt_1TyzFjCJ9hVhCOFDwVcc3S4h',
+      EXPECTED_PLAN: 'professional',
+      GITHUB_RUN_ID: '123456789',
+    },
+  });
+  return { directory, raw, evidence, summary, result };
+}
+
+describe('auth onboarding billing runtime proof', () => {
+  it('uses protected exact-main read-only execution', () => {
+    expect(workflow).toContain('workflow_dispatch:');
+    expect(workflow).toContain('permissions:\n  contents: read');
+    expect(workflow).toContain('PROVE_AUTH_ONBOARDING_BILLING_RUNTIME');
+    expect(workflow).toContain('persist-credentials: false');
+    expect(workflow).toContain('--tuples-only');
+    expect(workflow).toContain('--no-align');
+    expect(workflow).toContain('Remove raw database observation');
+    expect(workflow).not.toContain('continue-on-error');
+    expect(workflow).not.toContain('contents: write');
+    expect(workflow).not.toContain('pull_request_target');
+  });
+
+  it('observes onboarding, billing, Stripe idempotency and chained audit controls', () => {
+    for (const token of [
+      'complete_onboarding_activation_atomic',
+      'organizationOnboardingCompleted',
+      'activationRunObserved',
+      'subscriptionActive',
+      'stripeEventProcessed',
+      'billing.subscription_updated',
+      'subscription_synced',
+      'auditPredecessorLinksResolve',
+    ]) expect(sql).toContain(token);
+  });
+
+  it('builds and validates passing sanitized evidence', () => {
+    const generated = generateEvidence(passingObservation);
+    expect(generated.result.status).toBe(0);
+    const parsed = JSON.parse(readFileSync(generated.evidence, 'utf8'));
+    expect(parsed.status).toBe('Complete');
+    expect(parsed.outcome).toBe('passed');
+    expect(parsed.correlation.rawIdentifiersStored).toBe(false);
+    expect(JSON.stringify(parsed)).not.toContain('13ff8175-04f8-45c9-80d4-46d76bfd1895');
+    expect(JSON.stringify(parsed)).not.toContain('evt_1TyzFjCJ9hVhCOFDwVcc3S4h');
+    const validation = spawnSync(process.execPath, [validator, generated.evidence], { encoding: 'utf8' });
+    expect(validation.status).toBe(0);
+  });
+
+  it('preserves diagnostic evidence but fails closed on a missing runtime control', () => {
+    const generated = generateEvidence({ ...passingObservation, activationRunObserved: false });
+    expect(generated.result.status).toBe(0);
+    const parsed = JSON.parse(readFileSync(generated.evidence, 'utf8'));
+    expect(parsed.status).toBe('Open');
+    expect(parsed.failures).toContain('check_failed:activationRunObserved');
+    const validation = spawnSync(process.execPath, [validator, generated.evidence], { encoding: 'utf8' });
+    expect(validation.status).not.toBe(0);
+  });
+
+  it('locks truth and redaction boundaries in both implementation layers', () => {
+    for (const token of [
+      'rawIdentifiersStored: false',
+      'connectionStringsStored: false',
+      'rawDatabaseRowsStored: false',
+      'sourceSha256',
+    ]) expect(builderSource).toContain(token);
+    for (const token of [
+      'status_not_complete',
+      'auditPredecessorLinksResolve',
+      'forbidden_pattern',
+      'source_digest_invalid',
+    ]) expect(validatorSource).toContain(token);
+  });
+});
