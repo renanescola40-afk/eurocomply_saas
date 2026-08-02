@@ -6,6 +6,10 @@ import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/auth-onboarding-billing-runtime-proof.yml', 'utf8');
 const sql = readFileSync('scripts/identity/auth-onboarding-billing-runtime-proof.sql', 'utf8');
+const reconciliationMigration = readFileSync(
+  'supabase/migrations/20260802153000_reconcile_onboarding_runtime_schema.sql',
+  'utf8',
+);
 const builder = 'scripts/identity/build-auth-onboarding-billing-evidence.mjs';
 const validator = 'scripts/identity/check-auth-onboarding-billing-evidence.mjs';
 const builderSource = readFileSync(builder, 'utf8');
@@ -79,6 +83,43 @@ describe('auth onboarding billing runtime proof', () => {
       'subscription_synced',
       'auditPredecessorLinksResolve',
     ]) expect(sql).toContain(token);
+  });
+
+  it('reads optional rollout columns without parse-time column references', () => {
+    for (const token of [
+      "to_jsonb(o) ->> 'onboarding_status'",
+      "to_jsonb(o) ->> 'onboarding_completed_at'",
+      "to_jsonb(o) ->> 'selected_plan'",
+      "to_jsonb(s) ->> 'tier'",
+      "to_jsonb(s) -> 'entitlements'",
+      "to_jsonb(e) ->> 'organization_id'",
+    ]) expect(sql).toContain(token);
+
+    for (const unsafeReference of [
+      'o.onboarding_status',
+      'o.onboarding_completed_at',
+      'o.selected_plan',
+      's.tier',
+      's.entitlements',
+      'e.organization_id',
+    ]) expect(sql).not.toContain(unsafeReference);
+  });
+
+  it('ships an additive idempotent reconciliation migration with bounded backfill', () => {
+    for (const token of [
+      'add column if not exists onboarding_status text',
+      'add column if not exists onboarding_completed_at timestamptz',
+      'add column if not exists selected_plan text',
+      "where lower(coalesce(status, '')) = 'completed'",
+      "onboarding_status = 'completed'",
+      'organizations_onboarding_status_check',
+      'Rollback guidance:',
+    ]) expect(reconciliationMigration).toContain(token);
+
+    expect(reconciliationMigration).toContain("to_regclass('public.onboarding_activation_runs') is not null");
+    expect(reconciliationMigration).not.toContain('drop column');
+    expect(reconciliationMigration).not.toContain('truncate');
+    expect(reconciliationMigration).not.toContain('delete from');
   });
 
   it('builds and validates passing sanitized evidence', () => {
