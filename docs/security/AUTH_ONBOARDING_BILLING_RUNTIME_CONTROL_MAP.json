@@ -1,0 +1,138 @@
+{
+  "schema": "risck-comply.auth-onboarding-billing-runtime-control-map.v1",
+  "title": "Auth, onboarding and billing runtime proof control map",
+  "controls": [
+    {
+      "id": "AOB-01",
+      "name": "Exact current main SHA",
+      "objective": "Prevent stale or substituted release evidence.",
+      "implementation": [
+        ".github/workflows/auth-onboarding-billing-runtime-proof.yml"
+      ],
+      "evidenceChecks": [
+        "releaseSha",
+        "repository",
+        "workflowRunId"
+      ]
+    },
+    {
+      "id": "AOB-02",
+      "name": "Protected read-only execution",
+      "objective": "Limit execution authority and prevent production mutation.",
+      "implementation": [
+        ".github/workflows/auth-onboarding-billing-runtime-proof.yml",
+        "scripts/identity/auth-onboarding-billing-runtime-proof.sql"
+      ],
+      "evidenceChecks": [
+        "schemaReady"
+      ]
+    },
+    {
+      "id": "AOB-03",
+      "name": "Onboarding schema and atomic activation",
+      "objective": "Prove the target database supports the canonical onboarding contract.",
+      "implementation": [
+        "supabase/migrations/20260629100000_b2b_onboarding_activation_flow.sql",
+        "supabase/migrations/20260716183000_atomic_onboarding_activation.sql"
+      ],
+      "evidenceChecks": [
+        "schemaReady",
+        "activationRunObserved"
+      ]
+    },
+    {
+      "id": "AOB-04",
+      "name": "Completed onboarding",
+      "objective": "Observe real completed organization onboarding rather than an operator assertion.",
+      "implementation": [
+        "scripts/identity/auth-onboarding-billing-runtime-proof.sql"
+      ],
+      "evidenceChecks": [
+        "organizationObserved",
+        "organizationOnboardingCompleted",
+        "organizationPlanMatches",
+        "activationRunObserved",
+        "activationPlanMatches"
+      ]
+    },
+    {
+      "id": "AOB-05",
+      "name": "Active canonical subscription",
+      "objective": "Prove the organization has an active or trialing subscription with consistent plan data.",
+      "implementation": [
+        "src/server/billing/stripe-webhooks.ts",
+        "scripts/identity/auth-onboarding-billing-runtime-proof.sql"
+      ],
+      "evidenceChecks": [
+        "subscriptionObserved",
+        "subscriptionActive",
+        "subscriptionPlanMatches",
+        "stripeBindingPresent",
+        "entitlementsPresent"
+      ]
+    },
+    {
+      "id": "AOB-06",
+      "name": "Processed Stripe correlation",
+      "objective": "Reject failed, stale or cross-tenant webhook evidence.",
+      "implementation": [
+        "src/server/billing/stripe-webhooks.ts",
+        "scripts/identity/auth-onboarding-billing-runtime-proof.sql"
+      ],
+      "evidenceChecks": [
+        "stripeEventProcessed"
+      ]
+    },
+    {
+      "id": "AOB-07",
+      "name": "Chained audit persistence",
+      "objective": "Prove the accepted webhook and subscription synchronization are present in the canonical SHA-256 audit chain.",
+      "implementation": [
+        "src/lib/security/audit-log.ts",
+        "src/server/queries/audit-events.ts",
+        "scripts/identity/auth-onboarding-billing-runtime-proof.sql"
+      ],
+      "evidenceChecks": [
+        "webhookAuditObserved",
+        "subscriptionUpdatedAuditObserved",
+        "subscriptionSyncedAuditObserved",
+        "auditHashesPresent",
+        "auditPredecessorLinksResolve"
+      ]
+    },
+    {
+      "id": "AOB-08",
+      "name": "Artifact minimization and integrity",
+      "objective": "Retain useful evidence without credentials, connection strings, raw rows or full identifiers.",
+      "implementation": [
+        "scripts/identity/build-auth-onboarding-billing-evidence.mjs",
+        "scripts/identity/check-auth-onboarding-billing-evidence.mjs",
+        ".github/workflows/auth-onboarding-billing-runtime-proof.yml"
+      ],
+      "evidenceChecks": [
+        "sourceSha256",
+        "sourceByteLength",
+        "rawIdentifiersStored",
+        "secretsStored",
+        "credentialsStored",
+        "connectionStringsStored",
+        "rawDatabaseRowsStored"
+      ]
+    },
+    {
+      "id": "AOB-09",
+      "name": "Fail-closed decision",
+      "objective": "Prevent partial runtime observations from being promoted as complete evidence.",
+      "implementation": [
+        "scripts/identity/check-auth-onboarding-billing-evidence.mjs",
+        "tests/security/auth-onboarding-billing-runtime-proof.test.ts"
+      ],
+      "evidenceChecks": [
+        "status",
+        "outcome",
+        "failures"
+      ]
+    }
+  ],
+  "truthBoundary": "This control map covers the selected organization, target environment, workflow execution time and exact release SHA only. It does not establish universal tenant correctness, payment settlement, legal compliance or certification."
+}
