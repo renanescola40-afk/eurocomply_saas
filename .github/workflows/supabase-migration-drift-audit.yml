@@ -51,12 +51,11 @@ jobs:
         if: github.event_name != 'pull_request'
         shell: bash
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
-          for name in SUPABASE_DB_URL SUPABASE_DB_PASSWORD SUPABASE_PROJECT_ID; do
+          for name in SUPABASE_DB_POOLER_URL SUPABASE_PROJECT_ID; do
             if [ -z "${!name:-}" ]; then
               echo "Missing required production secret: $name" >&2
               exit 1
@@ -72,8 +71,7 @@ jobs:
         if: github.event_name != 'pull_request'
         shell: bash
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
