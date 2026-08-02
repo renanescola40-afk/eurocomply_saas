@@ -80,11 +80,11 @@ jobs:
       - name: Validate production Supabase configuration
         shell: bash
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
-          for name in SUPABASE_DB_URL SUPABASE_PROJECT_ID; do
+          for name in SUPABASE_DB_POOLER_URL SUPABASE_PROJECT_ID; do
             if [ -z "${!name:-}" ]; then
               echo "$name is required for the migration dry-run." >&2
               exit 1
@@ -98,8 +98,7 @@ jobs:
       - name: Prepare explicit production database connection
         shell: bash
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
@@ -199,8 +198,7 @@ jobs:
             echo
             echo "- Assessed SHA: \`$TARGET_SHA\`"
             echo "- Supabase CLI: \`$SUPABASE_CLI_VERSION\`"
-            echo '- Database endpoint: explicit protected SUPABASE_DB_URL'
-            echo '- Database credential: protected password override when configured'
+            echo '- Database endpoint and credential: canonical protected SUPABASE_DB_POOLER_URL'
             echo '- Operation: dry-run only'
             echo '- Reconciliation review packages: generated when the audit produced an inventory'
             echo '- Package status: HUMAN_REVIEW_REQUIRED; accepted decisions remain zero'
