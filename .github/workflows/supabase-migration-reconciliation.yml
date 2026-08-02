@@ -41,7 +41,7 @@ jobs:
           current_main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
           test "${TARGET_SHA,,}" = "${current_main_sha,,}"
 
-      - name: Download migration inventory
+      - name: Download and validate migration inventory
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ inputs.inventory_run_id }}
@@ -50,16 +50,59 @@ jobs:
           set -euo pipefail
           [[ "$RUN_ID" =~ ^[0-9]+$ ]]
           run_path="repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}"
+          status="$(gh api "$run_path" --jq '.status')"
           conclusion="$(gh api "$run_path" --jq '.conclusion')"
           head_sha="$(gh api "$run_path" --jq '.head_sha')"
-          test "$conclusion" = "success"
+          workflow_path="$(gh api "$run_path" --jq '.path')"
+
+          test "$status" = "completed"
+          case "$conclusion" in
+            success|failure) ;;
+            *)
+              echo "Source drift audit must be completed with success or fail-closed failure" >&2
+              exit 1
+              ;;
+          esac
           test "${head_sha,,}" = "${TARGET_SHA,,}"
+          test "$workflow_path" = ".github/workflows/supabase-migration-drift-audit.yml"
 
           mkdir -p artifacts/source
-          artifact_id="$(gh api "${run_path}/artifacts" --jq '.artifacts[] | select(.name == "supabase-migration-drift") | .id' | head -n1)"
+          artifact_name="supabase-migration-drift-${TARGET_SHA,,}"
+          artifact_id="$(
+            gh api "${run_path}/artifacts?per_page=100" \
+              --jq "[.artifacts[] | select(.expired == false and .name == \"${artifact_name}\")] | sort_by(.created_at) | reverse | .[0].id // empty"
+          )"
           [[ "$artifact_id" =~ ^[0-9]+$ ]]
           gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > artifacts/source/inventory.zip
           unzip -q artifacts/source/inventory.zip -d artifacts/supabase-migration-drift
+
+          test -s artifacts/supabase-migration-drift/migration-state-remote.txt
+          test -s artifacts/supabase-migration-drift/migration-drift.json
+          test -s artifacts/supabase-migration-drift/migration-reconciliation-inventory.json
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const drift = JSON.parse(fs.readFileSync(
+            'artifacts/supabase-migration-drift/migration-drift.json',
+            'utf8',
+          ));
+          const inventory = JSON.parse(fs.readFileSync(
+            'artifacts/supabase-migration-drift/migration-reconciliation-inventory.json',
+            'utf8',
+          ));
+          if (inventory.schema !== 'risck-comply.supabase-migration-reconciliation-inventory.v1') {
+            throw new Error('Unexpected migration reconciliation inventory schema');
+          }
+          if (!Array.isArray(inventory.items) || !Array.isArray(inventory.remoteVersions)) {
+            throw new Error('Incomplete migration reconciliation inventory');
+          }
+          if (!drift.generatedAt || !drift.summary || !drift.safety) {
+            throw new Error('Incomplete migration drift evidence');
+          }
+          if (drift.safety.databaseModified || drift.safety.migrationHistoryModified) {
+            throw new Error('Source drift audit claims a database mutation');
+          }
+          NODE
 
       - name: Compile reviewed reconciliation
         run: node scripts/supabase/compile-migration-reconciliation.mjs

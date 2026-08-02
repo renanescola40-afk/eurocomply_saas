@@ -2,158 +2,121 @@
 
 ## Purpose
 
-Keep the production Supabase schema synchronized with the versioned SQL files in `supabase/migrations` without relying on automatic pooler discovery.
+Keep the production Supabase schema synchronized with reviewed SQL files without relying on linked-project discovery, duplicated passwords or unrestricted historical execution.
 
-The workflow `.github/workflows/supabase-production-migrations.yml` is manual-only and operates against the exact current `main` SHA. The read-only workflow `.github/workflows/supabase-production-migration-dry-run.yml` must be used first to capture migration history and reconciliation evidence.
+The read-only drift audit and dry-run must complete before the manual production deployment workflow is considered.
 
-## Required GitHub environment secrets
+## Canonical GitHub environment secrets
 
-Configure these under both protected GitHub Environments:
+Configure the following in every protected environment that performs production database reads or writes, including `production` and `supabase-production-migration-dry-run`:
 
-- `supabase-production-migration-dry-run` for read-only reconciliation;
-- `production` for drift auditing and explicitly approved production deployment.
+- `SUPABASE_PROJECT_ID`: the exact 20-character production project reference;
+- `SUPABASE_DB_POOLER_URL`: the complete Session Pooler URI copied from **Supabase → Connect** for that project, including the current database password.
 
-Required secrets:
+`SUPABASE_DB_POOLER_URL` is the single canonical database endpoint and credential. The migration workflows must not depend on separate `SUPABASE_DB_URL` and `SUPABASE_DB_PASSWORD` values because independent rotation creates credential drift.
 
-- `SUPABASE_PROJECT_ID`: the 20-character production project reference shown in the Supabase dashboard URL.
-- `SUPABASE_DB_URL`: the complete PostgreSQL connection string copied from **Supabase → Connect** for the same project.
-
-Optional compatibility secret for the read-only dry-run environment:
-
-- `SUPABASE_DB_PASSWORD`: the current raw database password. When present, the resolver replaces only the password component of the already validated `SUPABASE_DB_URL`. It does not rediscover or change the endpoint, project, username, port or database.
-
-The standalone password override exists to recover from a stale password embedded in an otherwise correct protected URL. It is scoped only to the connection-preparation step and is never printed, uploaded or made available job-wide.
-
-### Creating `SUPABASE_DB_URL`
+### Creating the canonical URI
 
 1. Open the exact production project in Supabase.
-2. Select **Connect**.
-3. Choose either:
-   - **Session pooler** on port `5432` for the broadest GitHub-hosted runner compatibility;
-   - **Direct connection** on port `5432` when the runner has compatible network access;
-   - **Transaction pooler** on port `6543` only when explicitly reviewed for the intended CLI operation.
-4. Copy the complete URI connection string.
-5. Replace the password placeholder with the current database password, or configure the optional protected password override in the read-only environment.
-6. Store the resulting URI directly as the GitHub Environment secret `SUPABASE_DB_URL`.
+2. Select **Connect → Session Pooler**.
+3. Copy the URI using port `5432` and username `postgres.<project-ref>`.
+4. Replace the password placeholder with the current database password when the dashboard has not already done so.
+5. Save the complete URI as `SUPABASE_DB_POOLER_URL` in the protected GitHub environments.
+6. Never put quotes around it or paste it into workflow inputs, issues, logs, screenshots or public Vercel variables.
 
-The resolver accepts either a correctly percent-encoded password or the raw password inside the official Supabase connection shape. It canonicalizes reserved password characters such as `#`, `@`, `/`, `?`, `:`, `%` and `!` before the URL is used. Existing valid `%HH` escapes are preserved and are not double-encoded. The same canonicalization applies to the optional protected password override.
+The resolver removes accidental CR/LF characters and boundary whitespace, canonicalizes reserved password characters, validates the project reference and approved Supabase endpoint, and writes the resulting connection to an owner-readable temporary file. It does not discover a different endpoint or print credentials.
 
-Do not put quotes around secret values. Do not paste them into repository files, comments, screenshots, workflow inputs, Vercel public variables or issue bodies.
+## Credential rotation
 
-GitHub and browser secret editors can accidentally preserve line breaks or boundary spaces while a long URI or password is pasted. The repository removes CR/LF characters and adjacent indentation. For `SUPABASE_DB_PASSWORD`, it also removes only leading and trailing spaces or tabs introduced by the editor; whitespace remaining inside the password still fails closed. It then canonicalizes only the password portion of a connection string that already matches an approved Supabase endpoint shape. This normalization does not weaken endpoint validation: internal literal spaces or tabs, control characters, foreign hosts, wrong projects, unsupported ports, missing passwords and unsafe URL fragments still fail closed.
+When the Supabase database password changes:
 
-The repository validates that the normalized connection:
+1. copy a fresh Session Pooler URI from the same project;
+2. replace `SUPABASE_DB_POOLER_URL` in every protected GitHub environment that uses production database workflows;
+3. rerun the read-only drift audit;
+4. do not start a production write until the exact-SHA audit and dry-run can authenticate.
 
-- uses `postgres://` or `postgresql://`;
-- points only to an approved Supabase database or pooler hostname;
-- uses port `5432` or `6543`;
-- targets the `postgres` database;
-- contains a password;
-- identifies the same project as `SUPABASE_PROJECT_ID`;
-- contains no remaining internal literal whitespace, disallowed control characters or unsafe URL fragment;
-- is written only to an owner-readable temporary runner file.
-
-Only non-secret diagnostics are retained: transport, hostname, port, database, project-reference suffix, whether URL or password boundary whitespace was removed, the number of removed line breaks, whether password encoding was canonicalized and whether the protected password override was used. The URI, username and password are never retained.
+A structurally valid connection that returns `SQLSTATE 28P01` contains a password rejected by the database. Waiting does not convert an incorrect secret into evidence.
 
 ## Production controls
 
 The production workflow:
 
 1. requires `APPLY_SUPABASE_MIGRATIONS` and the exact current `main` SHA;
-2. checks out that SHA directly and verifies remote `main` still matches;
-3. normalizes and validates `SUPABASE_DB_URL` against `SUPABASE_PROJECT_ID`;
-4. stores the normalized URL in a temporary file with mode `0600`;
-5. validates local migration filenames and versions;
-6. uses a pinned and verified Supabase CLI version;
-7. captures remote migration state with `supabase migration list --db-url`;
-8. blocks on any unresolved local/remote migration-history drift;
-9. executes `supabase db push --db-url ... --dry-run` before any write;
-10. applies only pending migrations after the dry-run and protected-environment approval;
-11. captures migration history again and fails if drift remains;
-12. verifies that `main` did not move during the deployment window;
-13. removes temporary connection material even on failure;
-14. uploads bounded evidence without credentials.
+2. verifies the checked-out SHA and remote `main` before work begins;
+3. validates `SUPABASE_DB_POOLER_URL` against `SUPABASE_PROJECT_ID`;
+4. stores connection material only in a temporary mode-`0600` file;
+5. blocks malformed migration names, invalid timestamps and duplicate versions;
+6. pins and verifies the Supabase CLI version;
+7. captures remote migration state;
+8. blocks unresolved local/remote migration-history drift;
+9. executes `supabase db push --dry-run` before any write;
+10. applies only the reviewed pending migrations;
+11. verifies migration history again;
+12. verifies that `main` did not move during deployment;
+13. removes temporary credentials and uploads only bounded evidence.
 
-The optional standalone password override is initially enabled only in the read-only dry-run workflow. It must not be promoted to the write workflow until live authentication and dry-run evidence pass.
+Production seeding, migration repair, `--include-all`, database reset and automatic confirmation are prohibited.
 
-Production seeding, migration repair, `--include-all`, remote database reset and automatic confirmation are deliberately excluded.
+## Migration history reconciliation
 
-## First deployment and existing remote drift
+The repository contains historical filename and duplicate-version debt. Never bypass it by renaming or deleting files blindly, running `--include-all`, or marking every local migration as applied.
 
-The first run may fail when the production database was created or modified manually and its migration history does not match the repository.
+Use this sequence:
 
-Do not bypass this by automatically using `--include-all`, resetting production, deleting migration files or marking every local migration as applied.
+1. Run **Supabase Migration Drift Audit** on the exact current `main` SHA.
+2. Preserve its artifact even when the run concludes failure after producing a complete fail-closed inventory.
+3. Run **Supabase Migration Reconciliation** with the same SHA and source run ID.
+4. Classify every inventory item using object-level production schema evidence and independent review.
+5. Require `READY_FOR_STAGING_REHEARSAL` before a staging clone execution.
+6. Rehearse genuinely pending SQL in deterministic order with rollback evidence.
+7. Create a separate bounded production execution plan.
+8. Apply only the approved batch.
+9. Rerun drift, RLS, runtime and application smoke evidence on the deployed SHA.
 
-Instead:
+The reconciliation workflow accepts a red audit only when the source workflow, SHA, artifact name, required files, schemas and non-mutation safety markers all validate. Authentication-only artifacts are rejected.
 
-1. preserve a database backup or verified logical dump;
-2. run **Supabase Production Migration Dry Run** against the exact current `main` SHA;
-3. download the retained remote-history and reconciliation-review artefacts;
-4. identify schema changes already present remotely;
-5. reconcile only independently confirmed historical entries;
-6. rerun the dry-run;
-7. rehearse the bounded batch in staging;
-8. deploy only after the preview contains the intended pending migrations.
-
-Migration-history repair is a production change and requires a separate reviewed operation. The automated deployment workflow does not execute it.
-
-## Manual dry-run
+## Manual read-only dry-run
 
 Open **Actions → Supabase Production Migration Dry Run → Run workflow** from `main`.
 
 Provide:
 
-- `release_sha`: the full 40-character SHA currently at the tip of `main`;
+- `release_sha`: the full SHA at the tip of `main`;
 - `confirmation`: `DRY_RUN_ONLY`.
 
-A blocked deployability result is expected while unresolved history exists. The run must still produce connection diagnostics, remote migration history and reconciliation packages.
-
-## Authentication failure boundary
-
-Successful normalization proves only that the endpoint is structurally valid, points to the expected Supabase project and can be passed safely to the CLI. It does not prove that either credential source is current.
-
-The read-only workflow first uses `SUPABASE_DB_PASSWORD` when that protected override exists; otherwise it uses the password embedded in `SUPABASE_DB_URL`. If the CLI still returns `SQLSTATE 28P01`, the database itself rejected the selected credential. Do not weaken the workflow or mark migration evidence complete. The current database password must then be reset or retrieved in the exact same Supabase project and placed in the protected environment.
+A blocked deployability result is expected while historical debt remains. The run must still retain connection diagnostics, remote migration history and reconciliation review packages.
 
 ## Manual production execution
 
-Open **Actions → Supabase Production Migrations → Run workflow** from `main` only after the dry-run and independent review are complete.
+Open **Actions → Supabase Production Migrations → Run workflow** only after reviewed reconciliation and staging rehearsal.
 
 Provide:
 
-- `release_sha`: the same reviewed full SHA still at the tip of `main`;
+- `release_sha`: the same reviewed SHA still at the tip of `main`;
 - `confirmation`: `APPLY_SUPABASE_MIGRATIONS`.
 
-The `production` environment must require an independent approval before secrets are released.
+The protected `production` environment must require independent approval before secrets are released.
 
 ## Validation after deployment
 
-Confirm in Supabase:
+Confirm:
 
-- **Database → Migrations** shows the intended migration versions;
-- **Database → Policies** reflects the intended RLS changes;
-- application health and readiness endpoints remain healthy;
-- an authenticated smoke test succeeds;
-- tenant-isolation and Stripe webhook server-side operations still pass when touched by the migration;
-- the retained artefact references the exact deployed SHA and contains no credentials.
-
-For migration `20260725214500_harden_permissions_catalog_rls.sql`, specifically verify:
-
-- RLS enabled on `permissions`;
-- RLS enabled on `role_permissions`;
-- authenticated read-only catalog access;
-- no frontend writes to either RBAC catalog;
-- no `anon` or `authenticated` Data API access to `stripe_webhook_events`;
-- service-role Stripe webhook idempotency writes continue working.
+- the intended versions appear in Supabase migration history;
+- expected columns, constraints, functions, grants and policies exist;
+- RLS and tenant isolation proofs pass;
+- health, readiness and authenticated smoke tests pass;
+- Stripe webhook and entitlement operations remain healthy when touched;
+- artifacts reference the exact deployed SHA and contain no credentials.
 
 ## Rollback
 
-SQL migrations are forward-only by default. Never run `supabase db reset --db-url` or `supabase db reset --linked` against production.
+SQL migrations are forward-only by default. Never run a production database reset.
 
 For a failed rollout:
 
-1. stop application traffic or disable the affected feature when necessary;
-2. preserve current database evidence;
+1. stop or isolate the affected feature when necessary;
+2. preserve current database and runtime evidence;
 3. create and independently review a compensating migration;
-4. apply the compensating migration through the same protected workflow;
-5. validate data integrity, RLS behavior and application runtime;
+4. apply it through the same protected workflow;
+5. validate data integrity, RLS and application runtime;
 6. record the incident, exact SHAs, migration versions, operators, approvals and evidence digests.

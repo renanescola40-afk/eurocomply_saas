@@ -84,11 +84,11 @@ jobs:
       - name: Validate required production secrets
         shell: bash
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
-          for name in SUPABASE_DB_URL SUPABASE_PROJECT_ID; do
+          for name in SUPABASE_DB_POOLER_URL SUPABASE_PROJECT_ID; do
             if [ -z "${!name:-}" ]; then
               echo "Missing required production secret: $name" >&2
               exit 1
@@ -102,7 +102,7 @@ jobs:
       - name: Prepare explicit production database connection
         shell: bash
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
@@ -245,7 +245,7 @@ jobs:
             echo "## Supabase production migration deployment"
             echo
             echo "- Release SHA: \`$TARGET_SHA\`"
-            echo "- Connection: explicit protected SUPABASE_DB_URL"
+            echo "- Connection: canonical protected SUPABASE_DB_POOLER_URL"
             echo "- Result: migration history aligned before and after deployment"
             echo
             echo '```text'
