@@ -26,15 +26,20 @@ describe('Supabase production migrations workflow', () => {
     expect(normalized).toContain('reverify main did not move during deployment');
   });
 
-  it('uses a protected environment and no job-wide secrets', () => {
+  it('uses a protected environment and the canonical pooler secret', () => {
     expect(jobHeader).toContain('environment: production');
     expect(jobHeader).not.toContain('${{ secrets.');
     expect(workflow).toContain(
-      'SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}',
+      'SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}',
+    );
+    expect(workflow).toContain(
+      'SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}',
     );
     expect(workflow).toContain(
       'SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}',
     );
+    expect(workflow.match(/secrets\.SUPABASE_DB_POOLER_URL/g)).toHaveLength(2);
+    expect(workflow).not.toContain('secrets.SUPABASE_DB_URL');
     expect(workflow).not.toContain('SUPABASE_DB_PASSWORD');
     expect(workflow).not.toContain('supabase link');
   });
