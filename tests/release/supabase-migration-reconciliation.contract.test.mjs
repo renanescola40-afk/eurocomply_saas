@@ -21,11 +21,31 @@ test('compiler never authorizes production writes', () => {
   assert.match(script, /migrationHistoryModified: false/);
 });
 
-test('workflow binds source artifact to exact current main SHA', () => {
+test('workflow binds the source artifact to exact current main and drift workflow', () => {
   assert.match(workflow, /Verify exact current main SHA/);
-  assert.match(workflow, /test "\$head_sha" = "\$\{\{ inputs\.target_sha \}\}"/);
+  assert.match(workflow, /test "\$\{head_sha,,\}" = "\$\{TARGET_SHA,,\}"/);
+  assert.match(workflow, /test "\$workflow_path" = "\.github\/workflows\/supabase-migration-drift-audit\.yml"/);
   assert.match(workflow, /environment: production-migration-reconciliation/);
   assert.match(workflow, /retention-days: 90/);
+});
+
+test('workflow accepts fail-closed audit conclusions only with complete evidence', () => {
+  assert.match(workflow, /success\|failure/);
+  assert.match(workflow, /test "\$status" = "completed"/);
+  assert.match(workflow, /supabase-migration-drift-\$\{TARGET_SHA,,\}/);
+  assert.match(workflow, /migration-state-remote\.txt/);
+  assert.match(workflow, /migration-drift\.json/);
+  assert.match(workflow, /migration-reconciliation-inventory\.json/);
+  assert.match(workflow, /Unexpected migration reconciliation inventory schema/);
+  assert.match(workflow, /Source drift audit must be completed with success or fail-closed failure/);
+});
+
+test('workflow rejects authentication-only or incomplete artifacts', () => {
+  assert.match(workflow, /test -s artifacts\/supabase-migration-drift\/migration-state-remote\.txt/);
+  assert.match(workflow, /test -s artifacts\/supabase-migration-drift\/migration-drift\.json/);
+  assert.match(workflow, /test -s artifacts\/supabase-migration-drift\/migration-reconciliation-inventory\.json/);
+  assert.match(workflow, /Incomplete migration drift evidence/);
+  assert.match(workflow, /Source drift audit claims a database mutation/);
 });
 
 test('template is explicitly non-evidence', () => {
