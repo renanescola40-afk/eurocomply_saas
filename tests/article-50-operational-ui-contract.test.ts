@@ -9,6 +9,10 @@ const workspace = readFileSync(
   'src/components/ai-governance/article-50-workspace.tsx',
   'utf8',
 );
+const route = readFileSync(
+  'src/app/api/ai-governance/article-50/route.ts',
+  'utf8',
+);
 
 describe('Article 50 operational UI contract', () => {
   it('uses the hardened workspace instead of browser-local persistence', () => {
@@ -40,7 +44,8 @@ describe('Article 50 operational UI contract', () => {
 
   it('exposes blocked, review and ready states without certification claims', () => {
     expect(workspace).toContain("'BLOCKED' | 'NEEDS_REVIEW' | 'READY'");
-    expect(workspace).toContain('Workflow readiness is not legal certification');
+    expect(workspace).toContain('workspace.truthBoundary');
+    expect(route).toContain('Workflow readiness is not legal certification');
     expect(workspace.toLowerCase()).not.toContain('fully compliant');
     expect(workspace.toLowerCase()).not.toContain('guaranteed compliance');
   });
