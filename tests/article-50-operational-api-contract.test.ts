@@ -52,8 +52,9 @@ describe('Article 50 operational API contract', () => {
 
   it('compensates when the external audit trail cannot be persisted', () => {
     expect(route).toContain('if (!event.persisted)');
-    expect(route).toContain('rollbackArticle50Assessment');
-    expect(route).toContain('rollbackArticle50Evidence');
-    expect(route).toContain("{ error: 'article50_audit_unavailable' }");
+    expect(route).toContain('const rolledBack = await rollbackArticle50Assessment');
+    expect(route).toContain('const rolledBack = await rollbackArticle50Evidence');
+    expect(route).toContain("? 'article50_audit_unavailable'");
+    expect(route).toContain(": 'article50_audit_compensation_failed'");
   });
 });
