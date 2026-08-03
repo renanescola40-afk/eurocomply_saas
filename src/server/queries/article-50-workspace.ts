@@ -147,6 +147,14 @@ function storageFailure(area: string, error?: { code?: string } | null): never {
   throw new Error('article50_storage_unavailable');
 }
 
+function singleRecord<T>(value: unknown, area: string): T {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+    storageFailure(`${area}_invalid_response`);
+  }
+  return candidate as T;
+}
+
 export async function listArticle50Workspace(organizationId: string) {
   const db = createAdminClient();
   const [systemsResult, assessmentsResult, evidenceResult, eventsResult] = await Promise.all([
@@ -250,7 +258,7 @@ export async function createArticle50AssessmentVersion(input: {
   });
 
   if (error) storageFailure('assessment_create', error);
-  return data as unknown as Article50AssessmentRecord;
+  return singleRecord<Article50AssessmentRecord>(data, 'assessment_create');
 }
 
 export async function getArticle50Assessment(
@@ -345,6 +353,11 @@ export async function rollbackArticle50Evidence(
   evidenceId: string,
 ) {
   const db = createAdminClient();
+  await db
+    .from('ai_article50_events')
+    .delete()
+    .eq('organization_id', organizationId)
+    .contains('payload', { evidenceId });
   const result = await db
     .from('ai_article50_evidence')
     .delete()
