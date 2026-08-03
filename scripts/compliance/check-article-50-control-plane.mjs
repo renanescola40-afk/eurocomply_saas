@@ -12,6 +12,7 @@ const requiredFiles = [
   'src/app/[locale]/dashboard/transparencia/page.tsx',
   'src/lib/article-50-deadlines.ts',
   'supabase/migrations/20260803133000_article_50_product_integration.sql',
+  'supabase/migrations/20260803133100_article_50_claim_evidence_constraints.sql',
   'tests/article-50-operational-api-contract.test.ts',
   'tests/article-50-operational-migration-contract.test.ts',
   'tests/article-50-operational-ui-contract.test.ts',
@@ -31,7 +32,10 @@ const route = fs.readFileSync('src/app/api/ai-governance/article-50/route.ts', '
 const queries = fs.readFileSync('src/server/queries/article-50-workspace.ts', 'utf8');
 const workspace = fs.readFileSync('src/components/ai-governance/article-50-workspace.tsx', 'utf8');
 const page = fs.readFileSync('src/app/[locale]/dashboard/transparencia/page.tsx', 'utf8');
-const migration = fs.readFileSync('supabase/migrations/20260803133000_article_50_product_integration.sql', 'utf8');
+const migration = [
+  'supabase/migrations/20260803133000_article_50_product_integration.sql',
+  'supabase/migrations/20260803133100_article_50_claim_evidence_constraints.sql',
+].map((file) => fs.readFileSync(file, 'utf8')).join('\n');
 
 const forbiddenClaims = [
   /fully compliant/i,
@@ -115,16 +119,27 @@ for (const table of [
   }
 }
 
-if (!migration.includes('pg_advisory_xact_lock')) {
-  console.error('Article 50 gate failed: version creation is not concurrency-safe.');
-  process.exit(1);
+const migrationInvariants = [
+  'pg_advisory_xact_lock',
+  'to service_role',
+  'ai_article50_marking_claim_requires_evidence',
+  'ai_article50_disclosure_claim_requires_evidence',
+  'foreign key (assessment_id, organization_id)',
+  'references public.ai_article50_assessments(id, organization_id)',
+];
+for (const invariant of migrationInvariants) {
+  if (!migration.includes(invariant)) {
+    console.error(`Article 50 gate failed: missing migration invariant: ${invariant}`);
+    process.exit(1);
+  }
 }
-if (!migration.includes('to service_role')) {
-  console.error('Article 50 gate failed: atomic write function is not service-role restricted.');
-  process.exit(1);
-}
+
 if (!queries.includes(".eq('organization_id', organizationId)")) {
   console.error('Article 50 gate failed: query layer lost explicit organization scoping.');
+  process.exit(1);
+}
+if (!queries.includes(".contains('payload', { evidenceId })")) {
+  console.error('Article 50 gate failed: evidence rollback leaves an internal event orphaned.');
   process.exit(1);
 }
 
