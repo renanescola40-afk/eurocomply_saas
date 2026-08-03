@@ -93,7 +93,6 @@ function stripBalancedOuterParentheses(value) {
 function normalizeConstraint(value) {
   let normalized = normalizeSql(value)
     .replace(/^constraint\s+[^\s]+\s+/, '')
-    .replace(/\bnot valid\b/g, '')
     .trim();
   if (normalized.startsWith('check(') && normalized.endsWith(')')) {
     const expression = normalized.slice(6, -1);
@@ -134,13 +133,23 @@ function normalizeDefault(value) {
   return stripBalancedOuterParentheses(normalizeSql(value));
 }
 
+function stripCompleteTrailingCastChain(value) {
+  let current = stripBalancedOuterParentheses(value.trim());
+  const castPattern = /::(?:[a-z_][a-z0-9_$]*\.)?(?:"[^"]+"|[a-z_][a-z0-9_$]*)(?:\s+(?:with(?:out)?\s+time\s+zone|precision|varying))?(?:\[\])?(?:\(\d+(?:,\d+)?\))?$/i;
+  while (castPattern.test(current)) {
+    current = stripBalancedOuterParentheses(current.replace(castPattern, '').trim());
+  }
+  return current;
+}
+
 function defaultsEquivalent(expected, observed) {
   const left = normalizeDefault(expected);
   const right = normalizeDefault(observed);
   if (left === right) return true;
-  if (right.startsWith(`${left}::`)) return true;
-  if (left === 'current_timestamp' && right === 'now()') return true;
-  if (left === 'now()' && right === 'current_timestamp') return true;
+  const observedWithoutCasts = stripCompleteTrailingCastChain(right);
+  if (left === observedWithoutCasts) return true;
+  if (left === 'current_timestamp' && observedWithoutCasts === 'now()') return true;
+  if (left === 'now()' && observedWithoutCasts === 'current_timestamp') return true;
   return false;
 }
 
@@ -362,9 +371,18 @@ function semanticForAlterTable(statement, catalog) {
       const key = `${tableKey}.${column}`;
       const catalogColumn = catalog.columns.get(key);
       const expectNotNull = actionMatch[2].toUpperCase() === 'SET';
-      const observedNotNull = catalogColumn ? !catalogColumn.nullable : false;
+      const observedState = catalogColumn
+        ? (!catalogColumn.nullable ? 'PRESENT' : 'ABSENT')
+        : 'COLUMN_MISSING';
       result = {
-        operations: [operation('COLUMN_NULLABILITY', expectNotNull ? 'SET_NOT_NULL' : 'DROP_NOT_NULL', `${key}.not_null`, expectNotNull ? 'PRESENT' : 'ABSENT', observedNotNull ? 'PRESENT' : 'ABSENT', action)],
+        operations: [operation(
+          'COLUMN_NULLABILITY',
+          expectNotNull ? 'SET_NOT_NULL' : 'DROP_NOT_NULL',
+          `${key}.not_null`,
+          expectNotNull ? 'PRESENT' : 'ABSENT',
+          observedState,
+          action,
+        )],
         fullyResolved: true,
       };
     }
