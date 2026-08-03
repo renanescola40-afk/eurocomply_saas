@@ -1,10 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const migration = readFileSync(
+const migration = [
   'supabase/migrations/20260803133000_article_50_product_integration.sql',
-  'utf8',
-).toLowerCase();
+  'supabase/migrations/20260803133100_article_50_claim_evidence_constraints.sql',
+]
+  .map((file) => readFileSync(file, 'utf8'))
+  .join('\n')
+  .toLowerCase();
 
 describe('Article 50 operational migration contract', () => {
   it('creates versioned assessment, evidence and event domains', () => {
@@ -52,5 +55,21 @@ describe('Article 50 operational migration contract', () => {
     expect(migration).toContain('not final_amending_act_verified');
     expect(migration).toContain('official_journal_evidence_id');
     expect(migration).toContain("sha256_digest ~ '^[a-f0-9]{64}$'");
+  });
+
+  it('requires evidence for positive marking and disclosure claims', () => {
+    expect(migration).toContain('ai_article50_marking_claim_requires_evidence');
+    expect(migration).toContain('marking_evidence_reference');
+    expect(migration).toContain('ai_article50_disclosure_claim_requires_evidence');
+    expect(migration).toContain('display_evidence_reference');
+    expect(migration).toContain('disclosure_copy');
+    expect(migration).toContain('disclosure_language');
+    expect(migration).toContain('disclosure_channel');
+  });
+
+  it('prevents evidence and events from referencing another tenant assessment', () => {
+    expect(migration).toContain('unique (id, organization_id)');
+    expect(migration).toContain('foreign key (assessment_id, organization_id)');
+    expect(migration).toContain('references public.ai_article50_assessments(id, organization_id)');
   });
 });
