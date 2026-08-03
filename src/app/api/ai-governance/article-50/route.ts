@@ -230,9 +230,9 @@ export async function POST(request: Request) {
       const assessment = await createArticle50AssessmentVersion({
         organizationId: organization.id,
         actorUserId: user.id,
+        ...body,
         systemId: system.id,
         systemName: system.name,
-        ...body,
       });
 
       const event = await audit(request, {
@@ -250,8 +250,15 @@ export async function POST(request: Request) {
         },
       });
       if (!event.persisted) {
-        await rollbackArticle50Assessment(organization.id, assessment.id);
-        return noStoreJson({ error: 'article50_audit_unavailable' }, { status: 503 });
+        const rolledBack = await rollbackArticle50Assessment(organization.id, assessment.id);
+        return noStoreJson(
+          {
+            error: rolledBack
+              ? 'article50_audit_unavailable'
+              : 'article50_audit_compensation_failed',
+          },
+          { status: 503 },
+        );
       }
 
       return noStoreJson({ assessment }, { status: 201 });
@@ -291,8 +298,15 @@ export async function POST(request: Request) {
       },
     });
     if (!event.persisted) {
-      await rollbackArticle50Evidence(organization.id, evidence.id);
-      return noStoreJson({ error: 'article50_audit_unavailable' }, { status: 503 });
+      const rolledBack = await rollbackArticle50Evidence(organization.id, evidence.id);
+      return noStoreJson(
+        {
+          error: rolledBack
+            ? 'article50_audit_unavailable'
+            : 'article50_audit_compensation_failed',
+        },
+        { status: 503 },
+      );
     }
 
     return noStoreJson({ evidence }, { status: 201 });
