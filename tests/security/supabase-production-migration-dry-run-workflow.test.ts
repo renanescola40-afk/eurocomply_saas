@@ -15,17 +15,47 @@ describe('Supabase production migration dry-run workflow', () => {
     expect(normalized).toContain('release_sha:');
     expect(normalized).toContain('confirmation:');
     expect(workflow).toContain('CONFIRMATION: ${{ inputs.confirmation }}');
-    expect(workflow).toContain('test "$CONFIRMATION" = \'DRY_RUN_ONLY\'');
+    expect(workflow).toContain(
+      'if [ "$CONFIRMATION" != \'DRY_RUN_ONLY\' ]; then',
+    );
     expect(workflow).not.toContain("test '${{ inputs.confirmation }}'");
     expect(normalized).toContain('release_sha must be a full 40-character git sha');
+    expect(normalized).toContain('request-validation.json');
   });
 
-  it('binds execution to the exact current main SHA', () => {
+  it('binds execution to the exact current main SHA and retains mismatch diagnostics', () => {
     expect(normalized).toContain('check out exact release sha');
+    expect(normalized).toContain('initialize exact-sha diagnostic artifact');
     expect(normalized).toContain('verify exact current main checkout');
-    expect(workflow).toContain('test "$OBSERVED_SHA" = "$TARGET_SHA"');
-    expect(workflow).toContain('test "$MAIN_SHA" = "$TARGET_SHA"');
+    expect(workflow).toContain('if [ "$OBSERVED_SHA" != "$TARGET_SHA" ]; then');
+    expect(workflow).toContain('elif [ "$MAIN_SHA" != "$TARGET_SHA" ]; then');
     expect(normalized).toContain('/commits/main');
+    expect(normalized).toContain('exact-main-sha-validation.json');
+    expect(normalized).toContain(
+      'requested release sha is stale because main has advanced',
+    );
+    expect(workflow).toContain(
+      'echo "Re-run the workflow with release_sha=$MAIN_SHA" >&2',
+    );
+    expect(normalized).toContain('requestedsha: $requestedsha');
+    expect(normalized).toContain('observedcheckoutsha: $observedsha');
+    expect(normalized).toContain('currentmainsha:');
+  });
+
+  it('fails stale SHA requests before dependency installation', () => {
+    const checkoutIndex = normalized.indexOf('check out exact release sha');
+    const initializeIndex = normalized.indexOf(
+      'initialize exact-sha diagnostic artifact',
+    );
+    const verifyIndex = normalized.indexOf('verify exact current main checkout');
+    const setupNodeIndex = normalized.indexOf('setup node.js');
+    const npmCiIndex = normalized.indexOf('npm ci --ignore-scripts');
+
+    expect(checkoutIndex).toBeGreaterThan(-1);
+    expect(checkoutIndex).toBeLessThan(initializeIndex);
+    expect(initializeIndex).toBeLessThan(verifyIndex);
+    expect(verifyIndex).toBeLessThan(setupNodeIndex);
+    expect(setupNodeIndex).toBeLessThan(npmCiIndex);
   });
 
   it('uses a concrete Supabase CLI version and verifies the installed binary', () => {
@@ -80,7 +110,7 @@ describe('Supabase production migration dry-run workflow', () => {
     expect(workflow).toContain(
       'test "$(stat -c \'%a\' "$SUPABASE_DB_URL_FILE")" = \'600\'',
     );
-    expect(workflow).toContain('rm -f "$SUPABASE_DB_URL_FILE"');
+    expect(workflow).toContain('rm -f "${SUPABASE_DB_URL_FILE:-}"');
   });
 
   it('uses the explicit protected URL for remote history and dry-run only', () => {
@@ -173,13 +203,19 @@ describe('Supabase production migration dry-run workflow', () => {
     expect(normalized).not.toContain('contents: write');
   });
 
-  it('retains diagnostics and review packages even when deployability is blocked', () => {
+  it('retains diagnostics and review packages even when execution blocks early', () => {
     expect(normalized).toContain('if: always()');
+    expect(normalized).toContain(
+      'migration_dry_run_artifact_dir: artifacts/supabase-production-migration-dry-run',
+    );
+    expect(normalized).toContain('request-validation.json');
+    expect(normalized).toContain('exact-main-sha-validation.json');
     expect(normalized).toContain('connection-diagnostics.json');
     expect(normalized).toContain('migration-state-remote.txt');
     expect(normalized).toContain('deployability-summary.md');
     expect(normalized).toContain('reconciliation-review');
     expect(normalized).toContain('db-push-dry-run.txt');
     expect(normalized).toContain('production writes: not authorised');
+    expect(normalized).toContain('if-no-files-found: error');
   });
 });
