@@ -1,0 +1,216 @@
+name: Supabase Migration Semantic Evidence
+
+run-name: Supabase migration semantic evidence for ${{ inputs.target_sha }} from ${{ inputs.source_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact full 40-character current main SHA running the refined analyzer
+        required: true
+        type: string
+      source_sha:
+        description: Exact SHA that produced the source object and schema evidence
+        required: true
+        type: string
+      object_evidence_run_id:
+        description: Successful Supabase Migration Object Evidence run ID for source_sha
+        required: true
+        type: string
+      schema_evidence_run_id:
+        description: Successful Supabase Production Schema Evidence run ID for source_sha
+        required: true
+        type: string
+      confirmation:
+        description: Type REFINE_MIGRATION_SEMANTIC_EVIDENCE
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: supabase-migration-semantic-evidence-${{ inputs.target_sha }}-${{ inputs.source_sha }}
+  cancel-in-progress: false
+
+jobs:
+  refine:
+    name: Refine non-crediting migration semantic evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production-migration-reconciliation
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+      SOURCE_SHA: ${{ inputs.source_sha }}
+      OBJECT_EVIDENCE_RUN_ID: ${{ inputs.object_evidence_run_id }}
+      SCHEMA_EVIDENCE_RUN_ID: ${{ inputs.schema_evidence_run_id }}
+      OUTPUT_DIR: artifacts/supabase-migration-semantic-evidence
+
+    steps:
+      - name: Validate exact inputs and confirmation
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$SOURCE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$OBJECT_EVIDENCE_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$SCHEMA_EVIDENCE_RUN_ID" =~ ^[0-9]+$ ]]
+          test "$CONFIRMATION" = 'REFINE_MIGRATION_SEMANTIC_EVIDENCE'
+          echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
+          echo "SOURCE_SHA=${SOURCE_SHA,,}" >> "$GITHUB_ENV"
+
+      - name: Check out exact current main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.target_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact current main and immutable migrations tree
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          observed_sha="$(git rev-parse HEAD)"
+          main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          test "$observed_sha" = "$TARGET_SHA"
+          test "$main_sha" = "$TARGET_SHA"
+          git cat-file -e "${SOURCE_SHA}^{commit}"
+          source_tree="$(git rev-parse "${SOURCE_SHA}:supabase/migrations")"
+          target_tree="$(git rev-parse "${TARGET_SHA}:supabase/migrations")"
+          test "$source_tree" = "$target_tree"
+          mkdir -p "$OUTPUT_DIR"
+          jq -n \
+            --arg targetSha "$TARGET_SHA" \
+            --arg sourceSha "$SOURCE_SHA" \
+            --arg migrationsTree "$target_tree" \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{
+              schema: "risck-comply.supabase-migration-tree-equivalence.v1",
+              status: "PASSED",
+              targetSha: $targetSha,
+              sourceSha: $sourceSha,
+              sourceMigrationsTree: $migrationsTree,
+              targetMigrationsTree: $migrationsTree,
+              migrationsTreeEquivalent: true,
+              generatedAt: $generatedAt,
+              productionWriteAuthorized: false,
+              productionWritePerformed: false
+            }' > "$OUTPUT_DIR/migrations-tree-equivalence.json"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Download exact source object and schema evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/source/object artifacts/source/schema
+
+          object_conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${OBJECT_EVIDENCE_RUN_ID}" --jq .conclusion)"
+          object_sha="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${OBJECT_EVIDENCE_RUN_ID}" --jq .head_sha)"
+          object_event="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${OBJECT_EVIDENCE_RUN_ID}" --jq .event)"
+          test "$object_conclusion" = 'success'
+          test "$object_sha" = "$SOURCE_SHA"
+          test "$object_event" = 'workflow_dispatch'
+          object_name="supabase-migration-object-evidence-${SOURCE_SHA}"
+          object_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${OBJECT_EVIDENCE_RUN_ID}/artifacts" --jq ".artifacts[] | select(.name == \"${object_name}\" and .expired == false) | .id" | head -n1)"
+          test -n "$object_id"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${object_id}/zip" > artifacts/source/object.zip
+          unzip -q artifacts/source/object.zip -d artifacts/source/object
+
+          schema_conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SCHEMA_EVIDENCE_RUN_ID}" --jq .conclusion)"
+          schema_sha="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SCHEMA_EVIDENCE_RUN_ID}" --jq .head_sha)"
+          schema_event="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SCHEMA_EVIDENCE_RUN_ID}" --jq .event)"
+          test "$schema_conclusion" = 'success'
+          test "$schema_sha" = "$SOURCE_SHA"
+          test "$schema_event" = 'workflow_dispatch'
+          schema_name="supabase-production-schema-evidence-${SOURCE_SHA}"
+          schema_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SCHEMA_EVIDENCE_RUN_ID}/artifacts" --jq ".artifacts[] | select(.name == \"${schema_name}\" and .expired == false) | .id" | head -n1)"
+          test -n "$schema_id"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${schema_id}/zip" > artifacts/source/schema.zip
+          unzip -q artifacts/source/schema.zip -d artifacts/source/schema
+
+          test -s artifacts/source/object/migration-object-evidence.json
+          test -s artifacts/source/schema/catalog.txt
+          test -s artifacts/source/schema/SHA256SUMS
+          expected_catalog_sha="$(cut -d' ' -f1 artifacts/source/schema/SHA256SUMS)"
+          actual_catalog_sha="$(sha256sum artifacts/source/schema/catalog.txt | cut -d' ' -f1)"
+          test "$actual_catalog_sha" = "$expected_catalog_sha"
+
+          EXPECTED_CATALOG_SHA="$expected_catalog_sha" node - <<'NODE'
+          const report = require('./artifacts/source/object/migration-object-evidence.json');
+          if (report.status !== 'HUMAN_REVIEW_REQUIRED') process.exit(1);
+          if (report.acceptedDecisions !== 0) process.exit(1);
+          if (report.source.targetSha !== process.env.SOURCE_SHA) process.exit(1);
+          if (String(report.source.schemaEvidenceRunId) !== process.env.SCHEMA_EVIDENCE_RUN_ID) process.exit(1);
+          if (report.source.catalogSha256 !== process.env.EXPECTED_CATALOG_SHA) process.exit(1);
+          NODE
+
+      - name: Test semantic refinement contracts
+        run: >-
+          node --test scripts/supabase/refine-migration-semantic-evidence.test.mjs
+          && npx vitest run tests/security/supabase-migration-semantic-evidence-workflow.test.ts
+
+      - name: Refine semantic evidence without database access
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -R artifacts/source/object/. "$OUTPUT_DIR/"
+          node scripts/supabase/refine-migration-semantic-evidence.mjs \
+            artifacts/source/object/migration-object-evidence.json \
+            artifacts/source/schema/catalog.txt \
+            supabase/migrations \
+            "$OUTPUT_DIR" \
+            | tee "$OUTPUT_DIR/summary-output.md"
+
+      - name: Enforce non-crediting safety boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const report = require('./artifacts/supabase-migration-semantic-evidence/migration-object-evidence.json');
+          if (report.status !== 'HUMAN_REVIEW_REQUIRED') process.exit(1);
+          if (report.acceptedDecisions !== 0) process.exit(1);
+          if (report.semanticRefinement.status !== 'HUMAN_REVIEW_REQUIRED') process.exit(1);
+          if (report.semanticRefinement.acceptedDecisions !== 0) process.exit(1);
+          if (report.semanticRefinement.automaticClassificationAllowed) process.exit(1);
+          if (report.safety.databaseModified) process.exit(1);
+          if (report.safety.migrationHistoryModified) process.exit(1);
+          if (report.safety.productionPushAuthorized) process.exit(1);
+          if (report.items.some((item) => item.candidate.humanDecisionRequired !== true)) process.exit(1);
+          NODE
+
+      - name: Publish bounded summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat "$OUTPUT_DIR/semantic-refinement.md" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo
+            echo "- Target analyzer SHA: \`$TARGET_SHA\`"
+            echo "- Source evidence SHA: \`$SOURCE_SHA\`"
+            echo '- Migrations tree equivalence: verified'
+            echo '- Database connection: none'
+            echo '- Accepted decisions: 0'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload semantic migration evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: supabase-migration-semantic-evidence-${{ env.TARGET_SHA }}-from-${{ env.SOURCE_SHA }}
+          path: artifacts/supabase-migration-semantic-evidence
+          if-no-files-found: error
+          retention-days: 90
