@@ -7,6 +7,10 @@ import test from 'node:test';
 import { sha256 } from './migration-object-evidence-core.mjs';
 import { refineMigrationColumnMetadataEvidence } from './refine-migration-column-metadata-evidence.mjs';
 
+function hexRecord(type, record) {
+  return `${type}|${Buffer.from(JSON.stringify(record), 'utf8').toString('hex')}`;
+}
+
 function columnLine({
   table = 'demo',
   ordinal,
@@ -29,12 +33,53 @@ function columnLine({
   domainSchema = '',
   domainName = '',
 }) {
-  return [
-    'column', 'public', table, ordinal, name, dataType, udtName, nullable,
-    defaultValue, formattedType, charLength, numericPrecision, numericScale,
-    datetimePrecision, isIdentity, identityGeneration, isGenerated,
-    generationExpression, collationSchema, collationName, domainSchema, domainName,
-  ].join('|');
+  return hexRecord('column_meta_hex', {
+    schema: 'public',
+    table,
+    ordinalPosition: ordinal,
+    column: name,
+    dataType,
+    udtName,
+    nullable,
+    defaultValue,
+    formattedType,
+    characterMaximumLength: charLength,
+    numericPrecision,
+    numericScale,
+    datetimePrecision,
+    isIdentity,
+    identityGeneration,
+    isGenerated,
+    generationExpression,
+    collationSchema,
+    collationName,
+    domainSchema,
+    domainName,
+  });
+}
+
+function constraintLine({
+  table = 'demo',
+  name,
+  type,
+  definition,
+  validated = true,
+  deferrable = false,
+  deferred = false,
+}) {
+  return hexRecord('constraint_meta_hex', {
+    schema: 'public',
+    table,
+    name,
+    type,
+    definition,
+    validated,
+    deferrable,
+    deferred,
+    matchType: ' ',
+    updateType: ' ',
+    deleteType: ' ',
+  });
 }
 
 function baseReport(filename, sql, definitions) {
@@ -162,10 +207,14 @@ function matchingCatalog({ invalidCheck = false, wrongGenerated = false, wrongCo
     columnLine({ ordinal: 2, name: 'code', dataType: 'character varying', udtName: 'varchar', formattedType: wrongCodeType ? 'character varying(32)' : 'character varying(64)', charLength: wrongCodeType ? '32' : '64', collationSchema: 'pg_catalog', collationName: 'C' }),
     columnLine({ ordinal: 3, name: 'amount', dataType: 'numeric', udtName: 'numeric', formattedType: 'numeric(12,2)', numericPrecision: '12', numericScale: '2' }),
     columnLine({ ordinal: 4, name: 'slug', dataType: 'text', udtName: 'text', formattedType: 'text', isGenerated: 'ALWAYS', generationExpression: wrongGenerated ? 'upper(code)' : 'lower(code)' }),
-    'constraint|public|demo|demo_pkey|p|PRIMARY KEY (id)',
-    'constraint|public|demo|demo_code_key|u|UNIQUE (code)',
-    `constraint|public|demo|demo_amount_check|c|CHECK (amount >= 0)${invalidCheck ? ' NOT VALID' : ''}`,
-    `constraint_state|public|demo|demo_amount_check|${invalidCheck ? 'f' : 't'}|f|f| | | `,
+    constraintLine({ name: 'demo_pkey', type: 'p', definition: 'PRIMARY KEY (id)' }),
+    constraintLine({ name: 'demo_code_key', type: 'u', definition: 'UNIQUE (code)' }),
+    constraintLine({
+      name: 'demo_amount_check',
+      type: 'c',
+      definition: `CHECK (amount >= 0)${invalidCheck ? ' NOT VALID' : ''}`,
+      validated: !invalidCheck,
+    }),
   ];
 }
 
@@ -206,6 +255,45 @@ test('does not treat an unvalidated production constraint as a validated migrati
   assert.ok(result.items[0].candidate.unmatchedOperations >= 1);
 });
 
+test('proves implicit nullable target state instead of ignoring a production NOT NULL drift', async () => {
+  const definition = 'note text CHECK (char_length(note) > 0)';
+  const fixtureSql = `CREATE TABLE public.demo (${definition});\n`;
+  const { result } = await runFixture({
+    sql: fixtureSql,
+    definitions: [definition],
+    catalogLines: [
+      columnLine({ ordinal: 1, name: 'note', dataType: 'text', udtName: 'text', formattedType: 'text', nullable: 'NO' }),
+      constraintLine({ name: 'demo_note_check', type: 'c', definition: 'CHECK (char_length(note) > 0)' }),
+    ],
+  });
+  assert.notEqual(result.items[0].candidate.candidateClassification, 'ALREADY_PRESENT_IN_SCHEMA');
+  assert.ok(result.items[0].candidate.unmatchedOperations >= 1);
+});
+
+test('parses defaults containing pipe operators without shifting metadata fields', async () => {
+  const definition = "label text DEFAULT ('a' || '|' || 'b')";
+  const fixtureSql = `CREATE TABLE public.demo (${definition});\n`;
+  const { result } = await runFixture({
+    sql: fixtureSql,
+    definitions: [definition],
+    catalogLines: [
+      columnLine({
+        ordinal: 1,
+        name: 'label',
+        dataType: 'text',
+        udtName: 'text',
+        formattedType: 'text',
+        nullable: 'YES',
+        defaultValue: "('a'::text || '|'::text) || 'b'::text",
+      }),
+      constraintLine({ name: 'catalog_sentinel', type: 'c', definition: 'CHECK (true)' }),
+    ],
+  });
+  assert.equal(result.items[0].unresolved.length, 0);
+  assert.equal(result.items[0].candidate.humanDecisionRequired, true);
+  assert.equal(result.acceptedDecisions, 0);
+});
+
 test('keeps identity options fail-closed instead of claiming exact metadata equivalence', async () => {
   const identityWithOptions = 'id bigint GENERATED ALWAYS AS IDENTITY (START WITH 100) PRIMARY KEY';
   const fixtureSql = `CREATE TABLE public.demo (${identityWithOptions});\n`;
@@ -214,21 +302,21 @@ test('keeps identity options fail-closed instead of claiming exact metadata equi
     definitions: [identityWithOptions],
     catalogLines: [
       columnLine({ ordinal: 1, name: 'id', dataType: 'bigint', udtName: 'int8', formattedType: 'bigint', isIdentity: 'YES', identityGeneration: 'ALWAYS' }),
-      'constraint|public|demo|demo_pkey|p|PRIMARY KEY (id)',
+      constraintLine({ name: 'demo_pkey', type: 'p', definition: 'PRIMARY KEY (id)' }),
     ],
   });
   assert.equal(result.items[0].candidate.candidateClassification, 'REQUIRES_SPLIT_REVIEW');
   assert.equal(result.items[0].unresolved.length, 1);
 });
 
-test('rejects a legacy catalog that does not expose formatted_type metadata', async () => {
+test('rejects a legacy or delimiter-ambiguous catalog without safe enriched records', async () => {
   await assert.rejects(
     runFixture({
       sql,
       definitions,
       catalogLines: ['column|public|demo|1|id|bigint|int8|NO|'],
     }),
-    /missing formatted column type metadata/,
+    /missing safely encoded formatted column type metadata/,
   );
 });
 
