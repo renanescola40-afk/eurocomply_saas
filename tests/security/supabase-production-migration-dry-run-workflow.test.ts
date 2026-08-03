@@ -101,9 +101,23 @@ describe('Supabase production migration dry-run workflow', () => {
       'generate-migration-reconciliation-review-packages.test.mjs',
     );
     expect(normalized).toContain('prepare-production-db-connection.test.mjs');
+    expect(workflow).toContain('set +e');
     expect(workflow).toContain('AUDIT_EXIT="${PIPESTATUS[0]}"');
+    expect(workflow).toContain('set -e');
     expect(workflow).toContain(
       'echo "exit_code=$AUDIT_EXIT" >> "$GITHUB_OUTPUT"',
+    );
+    const auditStep = normalized.slice(
+      normalized.indexOf(
+        'evaluate migration deployability and retain blocker status',
+      ),
+      normalized.indexOf('generate non-crediting reconciliation review packages'),
+    );
+    expect(auditStep.indexOf('set +e')).toBeLessThan(
+      auditStep.indexOf('node scripts/supabase/audit-migration-drift.mjs'),
+    );
+    expect(auditStep.indexOf('audit_exit="${pipestatus[0]}"')).toBeLessThan(
+      auditStep.lastIndexOf('set -e'),
     );
     expect(
       normalized.indexOf(
