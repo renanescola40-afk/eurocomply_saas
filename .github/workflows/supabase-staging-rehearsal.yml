@@ -78,7 +78,7 @@ jobs:
             artifacts/supabase-staging-rehearsal/staging-rehearsal-plan.json \
             "${{ inputs.rehearsal_result_path }}" \
             artifacts/supabase-staging-rehearsal-result
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: supabase-staging-rehearsal-${{ github.sha }}
           path: |

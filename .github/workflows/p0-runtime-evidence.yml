@@ -65,7 +65,7 @@ jobs:
         run: node scripts/security/report-p0-runtime-evidence-gap.mjs
 
       - name: Upload derived register artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: p0-runtime-evidence-derived-${{ env.RELEASE_COMMIT_SHA }}
           path: |

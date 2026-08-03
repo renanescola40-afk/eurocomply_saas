@@ -111,7 +111,7 @@ jobs:
         run: |
           node -e "const r=require('./artifacts/supabase-migration-reconciliation/migration-reconciliation-result.json'); if(r.safety.databaseModified||r.safety.migrationHistoryModified||r.safety.productionPushAuthorized||r.safety.unrestrictedDbPushAllowed) process.exit(1)"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: supabase-migration-reconciliation-${{ inputs.target_sha }}
