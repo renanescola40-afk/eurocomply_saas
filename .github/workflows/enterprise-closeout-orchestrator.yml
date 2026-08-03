@@ -64,7 +64,7 @@ jobs:
         env:
           TARGET_SHA: ${{ inputs.target_sha }}
         run: node scripts/release/build-enterprise-closeout-queue.mjs artifacts/enterprise-final-decision/enterprise-final-decision.json artifacts/enterprise-closeout-queue --expected-sha="$TARGET_SHA"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: enterprise-closeout-queue-${{ inputs.target_sha }}
           path: artifacts/enterprise-closeout-queue

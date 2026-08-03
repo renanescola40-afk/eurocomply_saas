@@ -58,7 +58,7 @@ jobs:
           echo "open_controls=$([ "$exit_code" -eq 2 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
       - name: Upload closeout evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: enterprise-closeout-plan-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
