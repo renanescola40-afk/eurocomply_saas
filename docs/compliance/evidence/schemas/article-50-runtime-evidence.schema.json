@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://risckcomply.com/schemas/article-50-runtime-evidence.v1.json",
+  "title": "RISCK COMPLY Article 50 Runtime Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "evidenceItem",
+    "repository",
+    "targetSha",
+    "generatedAt",
+    "environment",
+    "status",
+    "syntheticData",
+    "countsForRuntimeCoverage",
+    "testCases",
+    "controls",
+    "limitations",
+    "integrity"
+  ],
+  "properties": {
+    "schema": { "const": "risck-comply.eu-ai-act-runtime-evidence.v1" },
+    "evidenceItem": { "const": "article-50-operational-validation" },
+    "repository": { "const": "renanescola40-afk/eurocomply_saas" },
+    "targetSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "environment": { "const": "ci" },
+    "status": { "const": "PASS" },
+    "syntheticData": { "const": true },
+    "countsForRuntimeCoverage": { "const": true },
+    "testCases": {
+      "type": "array",
+      "minItems": 8,
+      "items": {
+        "type": "object",
+        "required": ["id", "status"],
+        "properties": {
+          "id": { "type": "string", "minLength": 3 },
+          "status": { "const": "PASS" }
+        }
+      }
+    },
+    "controls": { "type": "object" },
+    "limitations": { "type": "array", "minItems": 3, "items": { "type": "string" } },
+    "integrity": {
+      "type": "object",
+      "required": ["sha256"],
+      "properties": { "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+    }
+  }
+}
