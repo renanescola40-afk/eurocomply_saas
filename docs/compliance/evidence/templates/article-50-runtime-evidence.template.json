@@ -1,35 +1,86 @@
 {
-  "schema": "risck-comply.article-50-runtime-evidence.v1",
+  "schema": "risck-comply.article-50-operational-runtime-evidence.v2",
   "status": "TEMPLATE_ONLY",
+  "countsForRuntimeCoverage": false,
   "repository": "renanescola40-afk/eurocomply_saas",
-  "gitSha": null,
+  "targetSha": null,
+  "deploymentUrl": null,
   "environment": null,
-  "organizationId": null,
-  "systemId": null,
-  "obligation": null,
-  "role": null,
-  "ruleVersion": null,
-  "sourceUrl": null,
-  "sourceDigest": null,
-  "placementDateEvidenceId": null,
-  "officialJournalEvidenceId": null,
-  "disclosure": {
-    "copy": null,
-    "language": null,
-    "channel": null,
-    "displayedAt": null,
-    "proofArtifactId": null
+  "capturedAt": null,
+  "organizationIdHash": null,
+  "systemIdHash": null,
+  "assessmentIdHash": null,
+  "assessmentVersion": null,
+  "legalSourceVersion": "commission-guidelines-2026-07-20",
+  "requestIds": [],
+  "testCases": [
+    {
+      "id": "authenticated-workspace-read",
+      "status": "NOT_RUN",
+      "requestId": null,
+      "notes": null
+    },
+    {
+      "id": "cross-tenant-system-rejected",
+      "status": "NOT_RUN",
+      "requestId": null,
+      "notes": null
+    },
+    {
+      "id": "assessment-version-created",
+      "status": "NOT_RUN",
+      "requestId": null,
+      "notes": null
+    },
+    {
+      "id": "positive-marking-without-evidence-rejected",
+      "status": "NOT_RUN",
+      "requestId": null,
+      "notes": null
+    },
+    {
+      "id": "positive-disclosure-without-display-proof-rejected",
+      "status": "NOT_RUN",
+      "requestId": null,
+      "notes": null
+    },
+    {
+      "id": "unverified-transition-fails-closed",
+      "status": "NOT_RUN",
+      "requestId": null,
+      "notes": null
+    },
+    {
+      "id": "evidence-submission-audited",
+      "status": "NOT_RUN",
+      "requestId": null,
+      "notes": null
+    },
+    {
+      "id": "browser-local-persistence-absent",
+      "status": "NOT_RUN",
+      "requestId": null,
+      "notes": null
+    }
+  ],
+  "database": {
+    "migrationApplied": false,
+    "rlsEnabledAndForced": false,
+    "browserWritesDenied": false,
+    "atomicVersionConcurrencyValidated": false
   },
-  "machineReadableMarking": {
-    "format": null,
-    "validationArtifactId": null,
-    "validatedAt": null
+  "evidenceIntegrity": {
+    "syntheticData": true,
+    "containsSensitiveValues": false,
+    "redactionConfirmed": false,
+    "templateOnly": true,
+    "runtimeProofInvented": false
   },
-  "decision": null,
-  "limitations": [],
-  "collectedAt": null,
-  "validUntil": null,
-  "digest": null,
-  "customerEvidence": false,
-  "notes": "Do not count this empty template as runtime or production evidence."
+  "limitations": [
+    "This file is an empty template and cannot count as CI, staging, production or customer evidence.",
+    "Organization, system and assessment identifiers must be hashed or redacted before retention.",
+    "A PASS result requires execution against the exact deployed SHA and retained request identifiers.",
+    "Qualified legal review remains independent from runtime validation."
+  ],
+  "artifactSha256": null
 }
