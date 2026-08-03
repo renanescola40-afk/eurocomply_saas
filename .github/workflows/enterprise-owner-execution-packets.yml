@@ -69,7 +69,7 @@ jobs:
         run: node --test tests/release/build-enterprise-owner-execution-packets.test.mjs
 
       - name: Upload immutable execution packets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: enterprise-owner-execution-packets-${{ inputs.expected_sha }}
           path: artifacts/enterprise-owner-execution-packets

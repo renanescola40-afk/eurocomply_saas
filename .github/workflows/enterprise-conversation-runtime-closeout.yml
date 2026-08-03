@@ -86,7 +86,7 @@ jobs:
         run: node scripts/enterprise/assemble-conversation-runtime-closeout.mjs --sha=${{ inputs.release_sha }} --root=runtime-proofs
       - name: Generate integrity digest
         run: sha256sum runtime-proofs/artifacts/enterprise-conversation-closeout.json > runtime-proofs/artifacts/SHA256SUMS
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: enterprise-conversation-complete-${{ inputs.release_sha }}
           path: runtime-proofs/artifacts/

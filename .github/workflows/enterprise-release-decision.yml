@@ -74,7 +74,7 @@ jobs:
 
       - name: Upload canonical decision evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: enterprise-release-decision-${{ inputs.release_sha }}
           path: |

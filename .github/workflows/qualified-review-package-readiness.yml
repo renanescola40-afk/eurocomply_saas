@@ -51,7 +51,7 @@ jobs:
         run: node scripts/compliance/validate-qualified-review-packages.mjs --strict --write
 
       - name: Upload readiness artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: qualified-review-package-readiness-${{ github.sha }}
           path: artifacts/legal-review/qualified-review-package-readiness.json

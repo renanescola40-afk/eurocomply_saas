@@ -72,7 +72,7 @@ jobs:
 
       - name: Upload sanitized promotion report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: enterprise-scorecard-promotion-${{ inputs.target_sha }}
           path: artifacts/enterprise-readiness/scorecard-promotion-report.json

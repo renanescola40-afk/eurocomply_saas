@@ -43,7 +43,7 @@ jobs:
         run: node scripts/release/compile-conversation-final-closeout.mjs "${{ inputs.target_sha }}"
       - name: Upload immutable closeout packet
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: conversation-final-closeout-${{ inputs.target_sha }}
           path: artifacts/conversation-final-closeout

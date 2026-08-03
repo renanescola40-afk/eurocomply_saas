@@ -123,7 +123,7 @@ jobs:
         run: node scripts/release/compile-enterprise-final-closeout.mjs --input enterprise-closeout-input --output enterprise-final-closeout --sha '${{ inputs.expected_sha }}'
 
       - name: Upload immutable final closeout packet
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: enterprise-final-closeout-${{ inputs.expected_sha }}
           path: enterprise-final-closeout/
