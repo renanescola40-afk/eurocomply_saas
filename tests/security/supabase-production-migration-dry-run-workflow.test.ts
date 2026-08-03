@@ -94,7 +94,7 @@ describe('Supabase production migration dry-run workflow', () => {
     expect(normalized).not.toContain('db push --linked');
   });
 
-  it('retains the strict audit exit code and generates review packages before enforcing it', () => {
+  it('retains audit and evidence-write exit codes before generating review packages', () => {
     expect(normalized).toContain('--require-deployable');
     expect(normalized).toContain('audit-migration-drift.test.mjs');
     expect(normalized).toContain(
@@ -102,11 +102,19 @@ describe('Supabase production migration dry-run workflow', () => {
     );
     expect(normalized).toContain('prepare-production-db-connection.test.mjs');
     expect(workflow).toContain('set +e');
-    expect(workflow).toContain('AUDIT_EXIT="${PIPESTATUS[0]}"');
+    expect(workflow).toContain('PIPELINE_STATUS=("${PIPESTATUS[@]}")');
+    expect(workflow).toContain('AUDIT_EXIT="${PIPELINE_STATUS[0]}"');
+    expect(workflow).toContain('TEE_EXIT="${PIPELINE_STATUS[1]}"');
     expect(workflow).toContain('set -e');
     expect(workflow).toContain(
       'echo "exit_code=$AUDIT_EXIT" >> "$GITHUB_OUTPUT"',
     );
+    expect(workflow).toContain(
+      'echo "tee_exit_code=$TEE_EXIT" >> "$GITHUB_OUTPUT"',
+    );
+    expect(workflow).toContain('if [ "$TEE_EXIT" -ne 0 ]; then');
+    expect(workflow).toContain('exit "$TEE_EXIT"');
+
     const auditStep = normalized.slice(
       normalized.indexOf(
         'evaluate migration deployability and retain blocker status',
@@ -116,8 +124,11 @@ describe('Supabase production migration dry-run workflow', () => {
     expect(auditStep.indexOf('set +e')).toBeLessThan(
       auditStep.indexOf('node scripts/supabase/audit-migration-drift.mjs'),
     );
-    expect(auditStep.indexOf('audit_exit="${pipestatus[0]}"')).toBeLessThan(
+    expect(auditStep.indexOf('pipeline_status=("${pipestatus[@]}")')).toBeLessThan(
       auditStep.lastIndexOf('set -e'),
+    );
+    expect(auditStep.indexOf('tee_exit="${pipeline_status[1]}"')).toBeLessThan(
+      auditStep.indexOf('if [ "$tee_exit" -ne 0 ]; then'),
     );
     expect(
       normalized.indexOf(
