@@ -30,6 +30,7 @@ jobs:
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
       SUPABASE_CLI_VERSION: '2.101.0'
+      MIGRATION_DRY_RUN_ARTIFACT_DIR: artifacts/supabase-production-migration-dry-run
 
     steps:
       - name: Validate exact confirmation and release SHA
@@ -38,11 +39,42 @@ jobs:
           CONFIRMATION: ${{ inputs.confirmation }}
         run: |
           set -euo pipefail
-          test "$CONFIRMATION" = 'DRY_RUN_ONLY'
-          if [[ ! "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
-            echo "release_sha must be a full 40-character Git SHA" >&2
+          mkdir -p "$MIGRATION_DRY_RUN_ARTIFACT_DIR"
+
+          STATUS='accepted'
+          REASON='Input confirmation and release SHA format are valid.'
+          if [ "$CONFIRMATION" != 'DRY_RUN_ONLY' ]; then
+            STATUS='blocked'
+            REASON='confirmation must equal DRY_RUN_ONLY'
+          elif [[ ! "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            STATUS='blocked'
+            REASON='release_sha must be a full 40-character Git SHA'
+          fi
+
+          jq -n \
+            --arg status "$STATUS" \
+            --arg reason "$REASON" \
+            --arg requestedSha "${TARGET_SHA,,}" \
+            --arg runId "$GITHUB_RUN_ID" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{
+              evidenceItem: "supabase-production-migration-dry-run-request",
+              status: $status,
+              reason: $reason,
+              requestedSha: $requestedSha,
+              runId: $runId,
+              repository: $repository,
+              generatedAt: $generatedAt,
+              productionWriteAuthorized: false,
+              productionWritePerformed: false
+            }' > "$MIGRATION_DRY_RUN_ARTIFACT_DIR/request-validation.json"
+
+          if [ "$STATUS" != 'accepted' ]; then
+            echo "$REASON" >&2
             exit 1
           fi
+
           echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
           echo "SUPABASE_DB_URL_FILE=$RUNNER_TEMP/supabase-production-db-url" >> "$GITHUB_ENV"
 
@@ -53,6 +85,115 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Initialize exact-SHA diagnostic artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$MIGRATION_DRY_RUN_ARTIFACT_DIR"
+          OBSERVED_SHA="$(git rev-parse HEAD)"
+          jq -n \
+            --arg status 'pending' \
+            --arg reason 'Awaiting exact current main SHA validation.' \
+            --arg requestedSha "$TARGET_SHA" \
+            --arg observedSha "$OBSERVED_SHA" \
+            --arg runId "$GITHUB_RUN_ID" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{
+              evidenceItem: "supabase-production-migration-dry-run-exact-sha",
+              status: $status,
+              reason: $reason,
+              requestedSha: $requestedSha,
+              observedCheckoutSha: $observedSha,
+              currentMainSha: null,
+              runId: $runId,
+              repository: $repository,
+              generatedAt: $generatedAt,
+              productionWriteAuthorized: false,
+              productionWritePerformed: false
+            }' > "$MIGRATION_DRY_RUN_ARTIFACT_DIR/exact-main-sha-validation.json"
+
+      - name: Verify exact current main checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ARTIFACT_PATH="$MIGRATION_DRY_RUN_ARTIFACT_DIR/exact-main-sha-validation.json"
+          OBSERVED_SHA="$(git rev-parse HEAD)"
+          MAIN_RESPONSE_FILE="$(mktemp)"
+          CURL_EXIT=0
+
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" \
+            --output "$MAIN_RESPONSE_FILE" || CURL_EXIT=$?
+
+          MAIN_SHA=''
+          if [ "$CURL_EXIT" -eq 0 ]; then
+            MAIN_SHA="$(jq -r '.sha // empty' "$MAIN_RESPONSE_FILE")"
+          fi
+          rm -f "$MAIN_RESPONSE_FILE"
+
+          STATUS='passed'
+          REASON='Requested SHA is the exact current main SHA.'
+          if [ "$OBSERVED_SHA" != "$TARGET_SHA" ]; then
+            STATUS='blocked'
+            REASON='checked-out SHA does not match the requested release SHA'
+          elif [ "$CURL_EXIT" -ne 0 ]; then
+            STATUS='blocked'
+            REASON="could not query the current main SHA from GitHub (curl exit $CURL_EXIT)"
+          elif [[ ! "$MAIN_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            STATUS='blocked'
+            REASON='GitHub returned an invalid current main SHA'
+          elif [ "$MAIN_SHA" != "$TARGET_SHA" ]; then
+            STATUS='blocked'
+            REASON='requested release SHA is stale because main has advanced'
+          fi
+
+          jq -n \
+            --arg status "$STATUS" \
+            --arg reason "$REASON" \
+            --arg requestedSha "$TARGET_SHA" \
+            --arg observedSha "$OBSERVED_SHA" \
+            --arg currentMainSha "$MAIN_SHA" \
+            --arg runId "$GITHUB_RUN_ID" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{
+              evidenceItem: "supabase-production-migration-dry-run-exact-sha",
+              status: $status,
+              reason: $reason,
+              requestedSha: $requestedSha,
+              observedCheckoutSha: $observedSha,
+              currentMainSha: (if $currentMainSha == "" then null else $currentMainSha end),
+              runId: $runId,
+              repository: $repository,
+              generatedAt: $generatedAt,
+              productionWriteAuthorized: false,
+              productionWritePerformed: false
+            }' > "$ARTIFACT_PATH"
+
+          {
+            echo '## Exact current main SHA validation'
+            echo
+            echo "- Status: \`$STATUS\`"
+            echo "- Requested SHA: \`$TARGET_SHA\`"
+            echo "- Checked-out SHA: \`$OBSERVED_SHA\`"
+            echo "- Current main SHA: \`${MAIN_SHA:-unavailable}\`"
+            echo "- Reason: $REASON"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$STATUS" != 'passed' ]; then
+            echo "$REASON" >&2
+            if [ -n "$MAIN_SHA" ] && [ "$MAIN_SHA" != "$TARGET_SHA" ]; then
+              echo "Re-run the workflow with release_sha=$MAIN_SHA" >&2
+            fi
+            exit 1
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
@@ -61,21 +202,6 @@ jobs:
 
       - name: Install dependencies deterministically without lifecycle scripts
         run: npm ci --ignore-scripts
-
-      - name: Verify exact current main checkout
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          OBSERVED_SHA="$(git rev-parse HEAD)"
-          test "$OBSERVED_SHA" = "$TARGET_SHA"
-          MAIN_SHA="$(curl --fail --silent --show-error \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
-          test "$MAIN_SHA" = "$TARGET_SHA"
 
       - name: Validate production Supabase configuration
         shell: bash
@@ -102,10 +228,10 @@ jobs:
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
-          mkdir -p artifacts/supabase-production-migration-dry-run
+          mkdir -p "$MIGRATION_DRY_RUN_ARTIFACT_DIR"
           node scripts/supabase/prepare-production-db-connection.mjs \
             --write-file "$SUPABASE_DB_URL_FILE" \
-            | tee artifacts/supabase-production-migration-dry-run/connection-diagnostics.json
+            | tee "$MIGRATION_DRY_RUN_ARTIFACT_DIR/connection-diagnostics.json"
           test -s "$SUPABASE_DB_URL_FILE"
           test "$(stat -c '%a' "$SUPABASE_DB_URL_FILE")" = '600'
 
@@ -127,7 +253,7 @@ jobs:
           DB_URL="$(cat "$SUPABASE_DB_URL_FILE")"
           supabase migration list --db-url "$DB_URL" \
             | tee migration-state-remote.txt \
-            | tee artifacts/supabase-production-migration-dry-run/migration-state-remote.txt
+            | tee "$MIGRATION_DRY_RUN_ARTIFACT_DIR/migration-state-remote.txt"
 
       - name: Test migration deployability and review-package contracts
         run: >-
@@ -146,9 +272,9 @@ jobs:
           node scripts/supabase/audit-migration-drift.mjs \
             supabase/migrations \
             migration-state-remote.txt \
-            artifacts/supabase-production-migration-dry-run/drift \
+            "$MIGRATION_DRY_RUN_ARTIFACT_DIR/drift" \
             --require-deployable \
-            | tee artifacts/supabase-production-migration-dry-run/deployability-summary.md
+            | tee "$MIGRATION_DRY_RUN_ARTIFACT_DIR/deployability-summary.md"
           PIPELINE_STATUS=("${PIPESTATUS[@]}")
           AUDIT_EXIT="${PIPELINE_STATUS[0]}"
           TEE_EXIT="${PIPELINE_STATUS[1]}"
@@ -159,7 +285,7 @@ jobs:
             echo "Could not retain the migration deployability evidence (tee exit $TEE_EXIT)." >&2
             exit "$TEE_EXIT"
           fi
-          test -f artifacts/supabase-production-migration-dry-run/drift/migration-reconciliation-inventory.json
+          test -f "$MIGRATION_DRY_RUN_ARTIFACT_DIR/drift/migration-reconciliation-inventory.json"
           exit 0
 
       - name: Generate non-crediting reconciliation review packages
@@ -167,10 +293,10 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/supabase/generate-migration-reconciliation-review-packages.mjs \
-            artifacts/supabase-production-migration-dry-run/drift/migration-reconciliation-inventory.json \
-            artifacts/supabase-production-migration-dry-run/reconciliation-review \
+            "$MIGRATION_DRY_RUN_ARTIFACT_DIR/drift/migration-reconciliation-inventory.json" \
+            "$MIGRATION_DRY_RUN_ARTIFACT_DIR/reconciliation-review" \
             --batch-size=25 \
-            | tee artifacts/supabase-production-migration-dry-run/reconciliation-review-summary.json
+            | tee "$MIGRATION_DRY_RUN_ARTIFACT_DIR/reconciliation-review-summary.json"
 
       - name: Enforce migration deployability before dry-run
         shell: bash
@@ -196,7 +322,7 @@ jobs:
           set -euo pipefail
           DB_URL="$(cat "$SUPABASE_DB_URL_FILE")"
           supabase db push --db-url "$DB_URL" --dry-run \
-            | tee artifacts/supabase-production-migration-dry-run/db-push-dry-run.txt
+            | tee "$MIGRATION_DRY_RUN_ARTIFACT_DIR/db-push-dry-run.txt"
 
       - name: Publish dry-run summary
         if: always()
@@ -219,7 +345,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          rm -f "$SUPABASE_DB_URL_FILE"
+          rm -f "${SUPABASE_DB_URL_FILE:-}"
 
       - name: Upload migration authorization, review and dry-run artifacts
         if: always()
