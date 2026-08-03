@@ -6,7 +6,7 @@
     {"id":"SCOPE-CLASSIFICATION","weight":10,"path":"docs/security/evidence/runtime/authorization-bola-validation.json"},
     {"id":"PROHIBITED-PRACTICES","weight":7,"path":"docs/security/evidence/runtime/prohibited-practices-validation.json"},
     {"id":"AI-LITERACY","weight":6,"path":"docs/security/evidence/runtime/ai-literacy-validation.json"},
-    {"id":"ARTICLE-50","weight":8,"path":"docs/security/evidence/runtime/localization-validation.json"},
+    {"id":"ARTICLE-50","weight":8,"path":"docs/security/evidence/runtime/article-50-operational-validation.json"},
     {"id":"READINESS-SCORING","weight":8,"path":"artifacts/enterprise-readiness/enterprise-readiness-scorecard.json"},
     {"id":"FRIA","weight":6,"path":"docs/security/evidence/runtime/fria-operational-validation.json"},
     {"id":"DEPLOYER","weight":7,"path":"docs/security/evidence/runtime/deployer-obligations-validation.json"},
