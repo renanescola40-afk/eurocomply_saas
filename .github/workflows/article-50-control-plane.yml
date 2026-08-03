@@ -4,6 +4,13 @@ on:
   pull_request:
     paths:
       - 'src/server/ai-governance/article-50-**'
+      - 'src/server/queries/article-50-workspace.ts'
+      - 'src/app/api/ai-governance/article-50/route.ts'
+      - 'src/components/ai-governance/article-50-workspace.tsx'
+      - 'src/app/[locale]/dashboard/transparencia/page.tsx'
+      - 'src/lib/article-50-deadlines**'
+      - 'supabase/migrations/*article_50*'
+      - 'tests/article-50-**'
       - 'scripts/compliance/check-article-50-control-plane.mjs'
       - 'docs/compliance/ARTICLE_50_**'
       - 'docs/compliance/evidence/review-packets/article-50-**'
@@ -12,6 +19,13 @@ on:
     branches: [main]
     paths:
       - 'src/server/ai-governance/article-50-**'
+      - 'src/server/queries/article-50-workspace.ts'
+      - 'src/app/api/ai-governance/article-50/route.ts'
+      - 'src/components/ai-governance/article-50-workspace.tsx'
+      - 'src/app/[locale]/dashboard/transparencia/page.tsx'
+      - 'src/lib/article-50-deadlines**'
+      - 'supabase/migrations/*article_50*'
+      - 'tests/article-50-**'
       - 'scripts/compliance/check-article-50-control-plane.mjs'
       - 'docs/compliance/ARTICLE_50_**'
       - 'docs/compliance/evidence/review-packets/article-50-**'
@@ -26,7 +40,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,6 +48,16 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node scripts/compliance/check-article-50-control-plane.mjs
-      - run: npx vitest run src/server/ai-governance/article-50-effective-dates.test.ts src/server/ai-governance/article-50-control-plane.test.ts
-      - run: npm run typecheck
+      - name: Validate Article 50 static invariants
+        run: node scripts/compliance/check-article-50-control-plane.mjs
+      - name: Run Article 50 focused tests
+        run: >-
+          npx vitest run
+          src/server/ai-governance/article-50-effective-dates.test.ts
+          src/server/ai-governance/article-50-control-plane.test.ts
+          src/lib/article-50-deadlines.test.ts
+          tests/article-50-operational-api-contract.test.ts
+          tests/article-50-operational-migration-contract.test.ts
+          tests/article-50-operational-ui-contract.test.ts
+      - name: Typecheck repository
+        run: npm run typecheck

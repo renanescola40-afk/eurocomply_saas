@@ -1,7 +1,7 @@
 {
   "schema": "risck-comply.eu-ai-act-product-coverage-registry.v1",
-  "version": "2026-07-30.1",
-  "lastVerifiedDate": "2026-07-30",
+  "version": "2026-08-03.1",
+  "lastVerifiedDate": "2026-08-03",
   "totalWeight": 100,
   "workstreams": [
     {
@@ -68,8 +68,23 @@
       "id": "ARTICLE-50",
       "name": "Article 50 transparency",
       "weight": 8,
-      "implementationEvidence": ["src/app/[locale]/dashboard/transparencia/page.tsx"],
-      "testEvidence": ["tests/enterprise/public-ux-evidence.test.ts"],
+      "implementationEvidence": [
+        "src/server/ai-governance/article-50-effective-dates.ts",
+        "src/server/ai-governance/article-50-control-plane.ts",
+        "src/server/queries/article-50-workspace.ts",
+        "src/app/api/ai-governance/article-50/route.ts",
+        "src/components/ai-governance/article-50-workspace.tsx",
+        "src/app/[locale]/dashboard/transparencia/page.tsx",
+        "supabase/migrations/20260803133000_article_50_product_integration.sql"
+      ],
+      "testEvidence": [
+        "src/server/ai-governance/article-50-effective-dates.test.ts",
+        "src/server/ai-governance/article-50-control-plane.test.ts",
+        "src/lib/article-50-deadlines.test.ts",
+        "tests/article-50-operational-api-contract.test.ts",
+        "tests/article-50-operational-migration-contract.test.ts",
+        "tests/article-50-operational-ui-contract.test.ts"
+      ],
       "runtimeEvidence": ["docs/security/evidence/runtime/localization-validation.json"],
       "humanReviewEvidence": ["docs/compliance/evidence/accepted/article-50-copy-review.json"]
     },
