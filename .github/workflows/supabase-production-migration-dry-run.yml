@@ -142,14 +142,23 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
+          set +e
           node scripts/supabase/audit-migration-drift.mjs \
             supabase/migrations \
             migration-state-remote.txt \
             artifacts/supabase-production-migration-dry-run/drift \
             --require-deployable \
             | tee artifacts/supabase-production-migration-dry-run/deployability-summary.md
-          AUDIT_EXIT="${PIPESTATUS[0]}"
+          PIPELINE_STATUS=("${PIPESTATUS[@]}")
+          AUDIT_EXIT="${PIPELINE_STATUS[0]}"
+          TEE_EXIT="${PIPELINE_STATUS[1]}"
+          set -e
           echo "exit_code=$AUDIT_EXIT" >> "$GITHUB_OUTPUT"
+          echo "tee_exit_code=$TEE_EXIT" >> "$GITHUB_OUTPUT"
+          if [ "$TEE_EXIT" -ne 0 ]; then
+            echo "Could not retain the migration deployability evidence (tee exit $TEE_EXIT)." >&2
+            exit "$TEE_EXIT"
+          fi
           test -f artifacts/supabase-production-migration-dry-run/drift/migration-reconciliation-inventory.json
           exit 0
 
