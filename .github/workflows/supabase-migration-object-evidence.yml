@@ -1,0 +1,185 @@
+name: Supabase Migration Object Evidence
+
+run-name: Supabase migration object evidence for ${{ inputs.target_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact full 40-character current main SHA
+        required: true
+        type: string
+      dry_run_id:
+        description: Supabase Production Migration Dry Run workflow run ID for the same SHA
+        required: true
+        type: string
+      schema_evidence_run_id:
+        description: Supabase Production Schema Evidence workflow run ID for the same SHA
+        required: true
+        type: string
+      confirmation:
+        description: Type BUILD_MIGRATION_OBJECT_EVIDENCE
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: supabase-migration-object-evidence-${{ inputs.target_sha }}
+  cancel-in-progress: false
+
+jobs:
+  build-object-evidence:
+    name: Build non-crediting migration object evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production-migration-reconciliation
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+      DRY_RUN_ID: ${{ inputs.dry_run_id }}
+      SCHEMA_EVIDENCE_RUN_ID: ${{ inputs.schema_evidence_run_id }}
+
+    steps:
+      - name: Validate exact inputs and confirmation
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$DRY_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$SCHEMA_EVIDENCE_RUN_ID" =~ ^[0-9]+$ ]]
+          test "$CONFIRMATION" = 'BUILD_MIGRATION_OBJECT_EVIDENCE'
+          echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
+
+      - name: Check out exact current main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.target_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact current main checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          observed_sha="$(git rev-parse HEAD)"
+          main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          test "$observed_sha" = "$TARGET_SHA"
+          test "$main_sha" = "$TARGET_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Download exact dry-run and schema evidence artifacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/source/dry-run artifacts/source/schema
+
+          dry_conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${DRY_RUN_ID}" --jq .conclusion)"
+          dry_sha="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${DRY_RUN_ID}" --jq .head_sha)"
+          dry_event="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${DRY_RUN_ID}" --jq .event)"
+          case "$dry_conclusion" in failure|success) ;; *) echo "Dry-run conclusion is not consumable: $dry_conclusion" >&2; exit 1 ;; esac
+          test "$dry_sha" = "$TARGET_SHA"
+          test "$dry_event" = 'workflow_dispatch'
+          dry_artifact_name="supabase-production-migration-dry-run-${TARGET_SHA}"
+          dry_artifact_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${DRY_RUN_ID}/artifacts" --jq ".artifacts[] | select(.name == \"${dry_artifact_name}\" and .expired == false) | .id" | head -n1)"
+          test -n "$dry_artifact_id"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${dry_artifact_id}/zip" > artifacts/source/dry-run.zip
+          unzip -q artifacts/source/dry-run.zip -d artifacts/source/dry-run
+
+          schema_conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SCHEMA_EVIDENCE_RUN_ID}" --jq .conclusion)"
+          schema_sha="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SCHEMA_EVIDENCE_RUN_ID}" --jq .head_sha)"
+          schema_event="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SCHEMA_EVIDENCE_RUN_ID}" --jq .event)"
+          test "$schema_conclusion" = 'success'
+          test "$schema_sha" = "$TARGET_SHA"
+          test "$schema_event" = 'workflow_dispatch'
+          schema_artifact_name="supabase-production-schema-evidence-${TARGET_SHA}"
+          schema_artifact_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SCHEMA_EVIDENCE_RUN_ID}/artifacts" --jq ".artifacts[] | select(.name == \"${schema_artifact_name}\" and .expired == false) | .id" | head -n1)"
+          test -n "$schema_artifact_id"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${schema_artifact_id}/zip" > artifacts/source/schema.zip
+          unzip -q artifacts/source/schema.zip -d artifacts/source/schema
+
+          test -s artifacts/source/dry-run/drift/migration-reconciliation-inventory.json
+          test -s artifacts/source/schema/catalog.txt
+          test -s artifacts/source/schema/SHA256SUMS
+          expected_catalog_sha="$(cut -d' ' -f1 artifacts/source/schema/SHA256SUMS)"
+          actual_catalog_sha="$(sha256sum artifacts/source/schema/catalog.txt | cut -d' ' -f1)"
+          test "$actual_catalog_sha" = "$expected_catalog_sha"
+
+      - name: Test object evidence contracts
+        run: >-
+          node --test scripts/supabase/build-migration-object-evidence.test.mjs
+          && npx vitest run tests/security/supabase-migration-object-evidence-workflow.test.ts
+
+      - name: Build non-crediting object evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/supabase-migration-object-evidence
+          node scripts/supabase/build-migration-object-evidence.mjs \
+            artifacts/source/dry-run/drift/migration-reconciliation-inventory.json \
+            artifacts/source/schema/catalog.txt \
+            supabase/migrations \
+            artifacts/supabase-migration-object-evidence \
+            --target-sha="$TARGET_SHA" \
+            --dry-run-id="$DRY_RUN_ID" \
+            --schema-evidence-run-id="$SCHEMA_EVIDENCE_RUN_ID" \
+            | tee artifacts/supabase-migration-object-evidence/summary-output.md
+
+      - name: Enforce non-crediting safety boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const report = require('./artifacts/supabase-migration-object-evidence/migration-object-evidence.json');
+          if (report.status !== 'HUMAN_REVIEW_REQUIRED') process.exit(1);
+          if (report.acceptedDecisions !== 0) process.exit(1);
+          if (report.safety.databaseModified) process.exit(1);
+          if (report.safety.migrationHistoryModified) process.exit(1);
+          if (report.safety.productionPushAuthorized) process.exit(1);
+          if (report.safety.automaticClassificationAllowed) process.exit(1);
+          if (report.items.some((item) => item.candidate.humanDecisionRequired !== true)) process.exit(1);
+          NODE
+
+      - name: Publish bounded summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const report = require('./artifacts/supabase-migration-object-evidence/migration-object-evidence.json');
+          console.log('## Supabase migration object evidence');
+          console.log('');
+          console.log(`- Target SHA: \`${report.source.targetSha}\``);
+          console.log(`- Inventory items: ${report.counts.inventoryItems}`);
+          console.log(`- Target state present: ${report.counts.targetStatePresent}`);
+          console.log(`- Target state absent: ${report.counts.targetStateAbsent}`);
+          console.log(`- Mixed or partial: ${report.counts.mixedOrPartial}`);
+          console.log(`- Unprovable: ${report.counts.unprovable}`);
+          console.log(`- Candidate already present: ${report.counts.candidateAlreadyPresent}`);
+          console.log(`- Candidate pending deployment: ${report.counts.candidatePendingDeployment}`);
+          console.log(`- Candidate split review: ${report.counts.candidateSplitReview}`);
+          console.log('- Accepted decisions: 0');
+          console.log('- Production writes: not authorised and not executed');
+          NODE
+
+      - name: Upload migration object evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: supabase-migration-object-evidence-${{ env.TARGET_SHA }}
+          path: artifacts/supabase-migration-object-evidence
+          if-no-files-found: error
+          retention-days: 90
