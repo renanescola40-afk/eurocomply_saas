@@ -102,29 +102,69 @@ function stripBalancedOuterParentheses(value) {
 }
 
 function normalizeType(value) {
-  return normalizeSql(value)
+  let normalized = normalizeSql(value);
+  let arraySuffix = '';
+  while (normalized.endsWith('[]')) {
+    arraySuffix += '[]';
+    normalized = normalized.slice(0, -2);
+  }
+
+  const timestampWithZone = normalized.match(/^timestamp(?:\((\d+)\))? with time zone$/);
+  if (timestampWithZone) {
+    normalized = timestampWithZone[1]
+      ? `timestamptz(${timestampWithZone[1]})`
+      : 'timestamptz';
+  }
+  const timestampWithoutZone = normalized.match(/^timestamp(?:\((\d+)\))? without time zone$/);
+  if (timestampWithoutZone) {
+    normalized = timestampWithoutZone[1]
+      ? `timestamp(${timestampWithoutZone[1]})`
+      : 'timestamp';
+  }
+  const timeWithZone = normalized.match(/^time(?:\((\d+)\))? with time zone$/);
+  if (timeWithZone) {
+    normalized = timeWithZone[1] ? `timetz(${timeWithZone[1]})` : 'timetz';
+  }
+  const timeWithoutZone = normalized.match(/^time(?:\((\d+)\))? without time zone$/);
+  if (timeWithoutZone) {
+    normalized = timeWithoutZone[1] ? `time(${timeWithoutZone[1]})` : 'time';
+  }
+
+  normalized = normalized
     .replace(/^character varying(?=\(|$)/, 'varchar')
-    .replace(/^timestamp with time zone(?=\(|$)/, 'timestamptz')
-    .replace(/^timestamp without time zone(?=\(|$)/, 'timestamp')
-    .replace(/^time with time zone(?=\(|$)/, 'timetz')
-    .replace(/^time without time zone(?=\(|$)/, 'time')
-    .replace(/^double precision(?=\[|$)/, 'float8')
-    .replace(/^integer(?=\[|$)/, 'int4')
-    .replace(/^bigint(?=\[|$)/, 'int8')
-    .replace(/^smallint(?=\[|$)/, 'int2')
-    .replace(/^boolean(?=\[|$)/, 'bool')
-    .replace(/^real(?=\[|$)/, 'float4')
+    .replace(/^double precision$/, 'float8')
+    .replace(/^integer$/, 'int4')
+    .replace(/^bigint$/, 'int8')
+    .replace(/^smallint$/, 'int2')
+    .replace(/^boolean$/, 'bool')
+    .replace(/^real$/, 'float4')
     .replace(/^decimal(?=\(|$)/, 'numeric')
     .replace(/^bit varying(?=\(|$)/, 'varbit');
+  return `${normalized}${arraySuffix}`;
 }
 
 function normalizeExpression(value) {
   return stripBalancedOuterParentheses(normalizeSql(value));
 }
 
-function normalizeConstraint(value) {
+function normalizeDefault(value) {
+  return stripBalancedOuterParentheses(normalizeSql(value));
+}
+
+function defaultsEquivalent(expected, observed) {
+  const left = normalizeDefault(expected);
+  const right = normalizeDefault(observed);
+  if (left === right) return true;
+  if (left === 'current_timestamp' && right === 'now()') return true;
+  if (left === 'now()' && right === 'current_timestamp') return true;
+  const escaped = left.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${escaped}(?:::[a-z_][a-z0-9_.]*(?:\\[\\])?)+$`, 'i').test(right);
+}
+
+function normalizeConstraintBase(value) {
   let normalized = normalizeSql(value)
     .replace(/^constraint\s+[^\s]+\s+/, '')
+    .replace(/\bnot valid\b/g, '')
     .trim();
   if (normalized.startsWith('check(') && normalized.endsWith(')')) {
     normalized = `check(${stripBalancedOuterParentheses(normalized.slice(6, -1))})`;
@@ -132,49 +172,66 @@ function normalizeConstraint(value) {
   return normalized;
 }
 
+function decodeHexJson(payload, recordType) {
+  if (!/^(?:[0-9a-fA-F]{2})+$/.test(payload)) {
+    throw new Error(`${recordType} catalog payload is not valid hexadecimal JSON`);
+  }
+  try {
+    return JSON.parse(Buffer.from(payload, 'hex').toString('utf8'));
+  } catch (error) {
+    throw new Error(`${recordType} catalog payload is not valid JSON: ${error.message}`);
+  }
+}
+
 function parseCatalog(text) {
   const catalog = {
     columns: new Map(),
     constraints: new Map(),
-    constraintStates: new Map(),
   };
+
   for (const line of text.split(/\r?\n/)) {
-    const cells = line.split('|');
-    if (cells[0] === 'column') {
-      const key = `${cells[1]}.${cells[2]}.${cells[4]}`.toLowerCase();
+    if (!line) continue;
+    const separator = line.indexOf('|');
+    if (separator < 0) continue;
+    const recordType = line.slice(0, separator);
+    const payload = line.slice(separator + 1);
+
+    if (recordType === 'column_meta_hex') {
+      const record = decodeHexJson(payload, recordType);
+      const key = `${record.schema}.${record.table}.${record.column}`.toLowerCase();
       catalog.columns.set(key, {
-        dataType: String(cells[5] ?? ''),
-        udtName: String(cells[6] ?? ''),
-        nullable: String(cells[7] ?? '').toUpperCase() === 'YES',
-        defaultValue: String(cells[8] ?? ''),
-        formattedType: String(cells[9] ?? ''),
-        characterMaximumLength: String(cells[10] ?? ''),
-        numericPrecision: String(cells[11] ?? ''),
-        numericScale: String(cells[12] ?? ''),
-        datetimePrecision: String(cells[13] ?? ''),
-        isIdentity: String(cells[14] ?? '').toUpperCase(),
-        identityGeneration: String(cells[15] ?? '').toUpperCase(),
-        isGenerated: String(cells[16] ?? '').toUpperCase(),
-        generationExpression: String(cells[17] ?? ''),
-        collationSchema: String(cells[18] ?? '').toLowerCase(),
-        collationName: String(cells[19] ?? '').toLowerCase(),
-        domainSchema: String(cells[20] ?? '').toLowerCase(),
-        domainName: String(cells[21] ?? '').toLowerCase(),
+        dataType: String(record.dataType ?? ''),
+        udtName: String(record.udtName ?? ''),
+        nullable: String(record.nullable ?? '').toUpperCase() === 'YES',
+        defaultValue: String(record.defaultValue ?? ''),
+        formattedType: String(record.formattedType ?? ''),
+        characterMaximumLength: String(record.characterMaximumLength ?? ''),
+        numericPrecision: String(record.numericPrecision ?? ''),
+        numericScale: String(record.numericScale ?? ''),
+        datetimePrecision: String(record.datetimePrecision ?? ''),
+        isIdentity: String(record.isIdentity ?? '').toUpperCase(),
+        identityGeneration: String(record.identityGeneration ?? '').toUpperCase(),
+        isGenerated: String(record.isGenerated ?? '').toUpperCase(),
+        generationExpression: String(record.generationExpression ?? ''),
+        collationSchema: String(record.collationSchema ?? '').toLowerCase(),
+        collationName: String(record.collationName ?? '').toLowerCase(),
+        domainSchema: String(record.domainSchema ?? '').toLowerCase(),
+        domainName: String(record.domainName ?? '').toLowerCase(),
       });
     }
-    if (cells[0] === 'constraint') {
-      const tableKey = `${cells[1]}.${cells[2]}`.toLowerCase();
-      const definitions = catalog.constraints.get(tableKey) ?? new Set();
-      definitions.add(normalizeConstraint(cells.slice(5).join('|')));
-      catalog.constraints.set(tableKey, definitions);
-    }
-    if (cells[0] === 'constraint_state') {
-      const key = `${cells[1]}.${cells[2]}.${cells[3]}`.toLowerCase();
-      catalog.constraintStates.set(key, {
-        validated: cells[4] === 't',
-        deferrable: cells[5] === 't',
-        deferred: cells[6] === 't',
+
+    if (recordType === 'constraint_meta_hex') {
+      const record = decodeHexJson(payload, recordType);
+      const tableKey = `${record.schema}.${record.table}`.toLowerCase();
+      const records = catalog.constraints.get(tableKey) ?? [];
+      records.push({
+        name: String(record.name ?? '').toLowerCase(),
+        baseDefinition: normalizeConstraintBase(record.definition ?? ''),
+        validated: record.validated === true,
+        deferrable: record.deferrable === true,
+        deferred: record.deferred === true,
       });
+      catalog.constraints.set(tableKey, records);
     }
   }
   return catalog;
@@ -194,12 +251,16 @@ function operation(kind, action, key, expectedState, observedState, source) {
 }
 
 function constraintOperation(tableKey, definition, catalog, source) {
-  const normalized = normalizeConstraint(definition);
-  const observed = catalog.constraints.get(tableKey)?.has(normalized) === true;
+  const baseDefinition = normalizeConstraintBase(definition);
+  const requiresValidation = !/\bNOT\s+VALID\b/i.test(definition);
+  const observed = (catalog.constraints.get(tableKey) ?? []).some((record) => (
+    record.baseDefinition === baseDefinition
+    && (!requiresValidation || record.validated)
+  ));
   return operation(
     'CONSTRAINT_DEFINITION',
     'CREATE',
-    `${tableKey}.${sha256(normalized).slice(0, 16)}`,
+    `${tableKey}.${sha256(`${baseDefinition}|validated=${requiresValidation}`).slice(0, 16)}`,
     'PRESENT',
     observed ? 'PRESENT' : 'ABSENT',
     source,
@@ -239,7 +300,6 @@ function findBalancedClause(text, keywordPattern, openSearchFrom = 0) {
           start: match.index,
           end: index + 1,
           body: text.slice(openIndex + 1, index),
-          text: text.slice(match.index, index + 1),
         };
       }
     }
@@ -260,11 +320,15 @@ function extractAllChecks(tail) {
 }
 
 function removeRanges(value, ranges) {
-  if (ranges.length === 0) return value;
   const ordered = [...ranges].sort((left, right) => right.start - left.start);
   let result = value;
   for (const range of ordered) result = `${result.slice(0, range.start)} ${result.slice(range.end)}`;
   return result;
+}
+
+function extractDefault(tail) {
+  const match = tail.match(/\bDEFAULT\s+([\s\S]+?)(?=\s+(?:COLLATE|GENERATED|IDENTITY\b|NOT\s+NULL|NULL\b|UNIQUE\b|PRIMARY\s+KEY|CHECK\s*\(|REFERENCES\b)|$)/i);
+  return match?.[1]?.trim() ?? null;
 }
 
 function extractReferences(tail, column) {
@@ -289,7 +353,7 @@ function analyzeColumnDefinition(tableKey, definition, catalog) {
   let fullyResolved = true;
 
   const expectedType = normalizeType(typeText);
-  const observedType = catalogColumn ? normalizeType(catalogColumn.formattedType || catalogColumn.dataType) : '';
+  const observedType = catalogColumn ? normalizeType(catalogColumn.formattedType) : '';
   operations.push(operation(
     'COLUMN_FORMATTED_TYPE',
     'MATCH',
@@ -299,25 +363,37 @@ function analyzeColumnDefinition(tableKey, definition, catalog) {
     definition,
   ));
 
-  if (/\bNOT\s+NULL\b/i.test(tail)) {
-    operations.push(operation(
-      'COLUMN_NULLABILITY',
-      'SET_NOT_NULL',
-      `${key}.not_null`,
-      'PRESENT',
-      catalogColumn && !catalogColumn.nullable ? 'PRESENT' : 'ABSENT',
-      definition,
-    ));
-  } else if (/(?:^|\s)NULL(?:\s|$)/i.test(tail)) {
-    operations.push(operation(
-      'COLUMN_NULLABILITY',
-      'ALLOW_NULL',
-      `${key}.nullable`,
-      'PRESENT',
-      catalogColumn?.nullable ? 'PRESENT' : 'ABSENT',
-      definition,
-    ));
-  }
+  const identity = tail.match(/\bGENERATED\s+(ALWAYS|BY\s+DEFAULT)\s+AS\s+IDENTITY(?:\s*\([^)]*\))?/i);
+  const targetNotNull = /\bNOT\s+NULL\b/i.test(tail)
+    || /\bPRIMARY\s+KEY\b/i.test(tail)
+    || identity !== null;
+  operations.push(operation(
+    'COLUMN_NULLABILITY',
+    targetNotNull ? 'EXPECT_NOT_NULL' : 'EXPECT_NULLABLE',
+    targetNotNull ? `${key}.not_null` : `${key}.nullable`,
+    'PRESENT',
+    catalogColumn && (targetNotNull ? !catalogColumn.nullable : catalogColumn.nullable)
+      ? 'PRESENT'
+      : 'ABSENT',
+    definition,
+  ));
+
+  const defaultValue = extractDefault(tail);
+  const defaultMatched = defaultValue === null
+    ? catalogColumn?.defaultValue === ''
+    : Boolean(catalogColumn && defaultsEquivalent(defaultValue, catalogColumn.defaultValue));
+  operations.push(operation(
+    'COLUMN_DEFAULT',
+    defaultValue === null ? 'EXPECT_ABSENT' : 'MATCH',
+    defaultValue === null
+      ? `${key}.default.absent`
+      : `${key}.default.${sha256(normalizeDefault(defaultValue)).slice(0, 16)}`,
+    defaultValue === null ? 'ABSENT' : 'PRESENT',
+    defaultValue === null
+      ? (defaultMatched ? 'ABSENT' : 'PRESENT')
+      : (defaultMatched ? 'PRESENT' : 'ABSENT'),
+    definition,
+  ));
 
   const collation = tail.match(/\bCOLLATE\s+([^\s]+)/i);
   if (collation) {
@@ -333,15 +409,17 @@ function analyzeColumnDefinition(tableKey, definition, catalog) {
       observed === `${expected.schema}.${expected.name}` ? 'PRESENT' : 'ABSENT',
       definition,
     ));
+  } else if (catalogColumn?.collationName) {
+    fullyResolved = false;
   }
 
-  const identity = tail.match(/\bGENERATED\s+(ALWAYS|BY\s+DEFAULT)\s+AS\s+IDENTITY(?:\s*\([^)]*\))?/i);
   if (identity) {
     const expectedGeneration = identity[1].replace(/\s+/g, ' ').toUpperCase();
+    const hasOptions = /\bAS\s+IDENTITY\s*\(/i.test(identity[0]);
     const matched = catalogColumn
       && catalogColumn.isIdentity === 'YES'
       && catalogColumn.identityGeneration === expectedGeneration
-      && !/\bAS\s+IDENTITY\s*\(/i.test(identity[0]);
+      && !hasOptions;
     operations.push(operation(
       'COLUMN_IDENTITY',
       'MATCH',
@@ -350,7 +428,16 @@ function analyzeColumnDefinition(tableKey, definition, catalog) {
       matched ? 'PRESENT' : 'ABSENT',
       definition,
     ));
-    if (/\bAS\s+IDENTITY\s*\(/i.test(identity[0])) fullyResolved = false;
+    if (hasOptions) fullyResolved = false;
+  } else {
+    operations.push(operation(
+      'COLUMN_IDENTITY',
+      'EXPECT_ABSENT',
+      `${key}.identity.absent`,
+      'ABSENT',
+      catalogColumn?.isIdentity === 'YES' ? 'PRESENT' : 'ABSENT',
+      definition,
+    ));
   }
 
   const generated = findBalancedClause(tail, '\\bGENERATED\\s+ALWAYS\\s+AS\\s*\\(');
@@ -370,13 +457,21 @@ function analyzeColumnDefinition(tableKey, definition, catalog) {
       definition,
     ));
     if (!stored) fullyResolved = false;
+  } else {
+    operations.push(operation(
+      'COLUMN_GENERATED_EXPRESSION',
+      'EXPECT_ABSENT',
+      `${key}.generated.absent`,
+      'ABSENT',
+      catalogColumn?.isGenerated === 'ALWAYS' ? 'PRESENT' : 'ABSENT',
+      definition,
+    ));
   }
 
   const checks = extractAllChecks(tail);
   for (const check of checks) {
     operations.push(constraintOperation(tableKey, `CHECK (${check.body})`, catalog, definition));
   }
-
   if (/\bPRIMARY\s+KEY\b/i.test(tail)) {
     operations.push(constraintOperation(tableKey, `PRIMARY KEY (${column})`, catalog, definition));
   }
@@ -386,9 +481,8 @@ function analyzeColumnDefinition(tableKey, definition, catalog) {
   const references = extractReferences(tail, column);
   if (references) operations.push(constraintOperation(tableKey, references, catalog, definition));
 
-  let remaining = removeRanges(tail, checks);
-  if (generated) remaining = removeRanges(remaining, [generated]);
-  remaining = remaining
+  const removableRanges = [...checks, ...(generated ? [generated] : [])];
+  let remaining = removeRanges(tail, removableRanges)
     .replace(/\bNOT\s+NULL\b/ig, '')
     .replace(/(?:^|\s)NULL(?=\s|$)/ig, ' ')
     .replace(/\bPRIMARY\s+KEY\b/ig, '')
@@ -401,7 +495,7 @@ function analyzeColumnDefinition(tableKey, definition, catalog) {
     .replace(/\s+/g, ' ')
     .trim();
   if (remaining) fullyResolved = false;
-  if (!catalogColumn && operations.length === 0) fullyResolved = false;
+  if (!catalogColumn) fullyResolved = false;
 
   return { operations, fullyResolved };
 }
@@ -530,8 +624,11 @@ export async function refineMigrationColumnMetadataEvidence(argv = process.argv.
   const catalogBytes = await readFile(catalogPath);
   const catalogDigest = sha256(catalogBytes);
   const catalog = parseCatalog(catalogBytes.toString('utf8'));
-  if ([...catalog.columns.values()].some((column) => !column.formattedType)) {
-    throw new Error('enriched catalog is missing formatted column type metadata');
+  if (catalog.columns.size === 0 || [...catalog.columns.values()].some((column) => !column.formattedType)) {
+    throw new Error('enriched catalog is missing safely encoded formatted column type metadata');
+  }
+  if (catalog.constraints.size === 0) {
+    throw new Error('enriched catalog is missing safely encoded constraint metadata');
   }
 
   const before = report.counts;
