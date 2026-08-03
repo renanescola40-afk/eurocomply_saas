@@ -142,6 +142,7 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
+          set +e
           node scripts/supabase/audit-migration-drift.mjs \
             supabase/migrations \
             migration-state-remote.txt \
@@ -149,6 +150,7 @@ jobs:
             --require-deployable \
             | tee artifacts/supabase-production-migration-dry-run/deployability-summary.md
           AUDIT_EXIT="${PIPESTATUS[0]}"
+          set -e
           echo "exit_code=$AUDIT_EXIT" >> "$GITHUB_OUTPUT"
           test -f artifacts/supabase-production-migration-dry-run/drift/migration-reconciliation-inventory.json
           exit 0
