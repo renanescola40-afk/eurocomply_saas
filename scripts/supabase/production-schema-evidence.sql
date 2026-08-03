@@ -19,14 +19,47 @@ where n.nspname in ('public', 'storage')
   and c.relkind in ('r','p','v','m')
 order by n.nspname, c.relname;
 
-select 'column', table_schema, table_name, ordinal_position, column_name,
-       data_type, udt_name, is_nullable, coalesce(column_default, '')
-from information_schema.columns
-where table_schema in ('public', 'storage')
-order by table_schema, table_name, ordinal_position;
+select 'column', cols.table_schema, cols.table_name, cols.ordinal_position,
+       cols.column_name, cols.data_type, cols.udt_name, cols.is_nullable,
+       coalesce(cols.column_default, ''),
+       pg_catalog.format_type(attr.atttypid, attr.atttypmod),
+       coalesce(cols.character_maximum_length::text, ''),
+       coalesce(cols.numeric_precision::text, ''),
+       coalesce(cols.numeric_scale::text, ''),
+       coalesce(cols.datetime_precision::text, ''),
+       coalesce(cols.is_identity, ''),
+       coalesce(cols.identity_generation, ''),
+       coalesce(cols.is_generated, ''),
+       coalesce(cols.generation_expression, ''),
+       coalesce(cols.collation_schema, ''),
+       coalesce(cols.collation_name, ''),
+       coalesce(cols.domain_schema, ''),
+       coalesce(cols.domain_name, '')
+from information_schema.columns cols
+join pg_namespace n
+  on n.nspname = cols.table_schema
+join pg_class cls
+  on cls.relnamespace = n.oid
+ and cls.relname = cols.table_name
+join pg_attribute attr
+  on attr.attrelid = cls.oid
+ and attr.attname = cols.column_name
+ and attr.attnum = cols.ordinal_position
+ and not attr.attisdropped
+where cols.table_schema in ('public', 'storage')
+order by cols.table_schema, cols.table_name, cols.ordinal_position;
 
 select 'constraint', n.nspname, c.relname, con.conname, con.contype,
        pg_get_constraintdef(con.oid, true)
+from pg_constraint con
+join pg_class c on c.oid = con.conrelid
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname in ('public', 'storage')
+order by n.nspname, c.relname, con.conname;
+
+select 'constraint_state', n.nspname, c.relname, con.conname,
+       con.convalidated, con.condeferrable, con.condeferred,
+       con.confmatchtype, con.confupdtype, con.confdeltype
 from pg_constraint con
 join pg_class c on c.oid = con.conrelid
 join pg_namespace n on n.oid = c.relnamespace
