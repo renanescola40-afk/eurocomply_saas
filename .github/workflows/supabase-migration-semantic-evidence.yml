@@ -150,7 +150,7 @@ jobs:
           actual_catalog_sha="$(sha256sum artifacts/source/schema/catalog.txt | cut -d' ' -f1)"
           test "$actual_catalog_sha" = "$expected_catalog_sha"
 
-          node - <<'NODE'
+          EXPECTED_CATALOG_SHA="$expected_catalog_sha" node - <<'NODE'
           const report = require('./artifacts/source/object/migration-object-evidence.json');
           if (report.status !== 'HUMAN_REVIEW_REQUIRED') process.exit(1);
           if (report.acceptedDecisions !== 0) process.exit(1);
@@ -158,9 +158,6 @@ jobs:
           if (String(report.source.schemaEvidenceRunId) !== process.env.SCHEMA_EVIDENCE_RUN_ID) process.exit(1);
           if (report.source.catalogSha256 !== process.env.EXPECTED_CATALOG_SHA) process.exit(1);
           NODE
-        env:
-          GH_TOKEN: ${{ github.token }}
-          EXPECTED_CATALOG_SHA: ${{ env.EXPECTED_CATALOG_SHA }}
 
       - name: Test semantic refinement contracts
         run: >-
