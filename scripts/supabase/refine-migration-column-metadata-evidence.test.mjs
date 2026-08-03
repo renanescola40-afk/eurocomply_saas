@@ -164,7 +164,7 @@ function matchingCatalog({ invalidCheck = false, wrongGenerated = false, wrongCo
     columnLine({ ordinal: 4, name: 'slug', dataType: 'text', udtName: 'text', formattedType: 'text', isGenerated: 'ALWAYS', generationExpression: wrongGenerated ? 'upper(code)' : 'lower(code)' }),
     'constraint|public|demo|demo_pkey|p|PRIMARY KEY (id)',
     'constraint|public|demo|demo_code_key|u|UNIQUE (code)',
-    `constraint|public|demo|demo_amount_check|c|CHECK ((amount >= (0)::numeric))${invalidCheck ? ' NOT VALID' : ''}`,
+    `constraint|public|demo|demo_amount_check|c|CHECK (amount >= 0)${invalidCheck ? ' NOT VALID' : ''}`,
     `constraint_state|public|demo|demo_amount_check|${invalidCheck ? 'f' : 't'}|f|f| | | `,
   ];
 }
