@@ -60,8 +60,22 @@ async function fixture() {
   return { migrationsDir, outputDir, inventoryPath, catalogPath };
 }
 
-test('produces non-crediting object-state candidates and stays fail-closed', async () => {
-  const paths = await fixture();
+async function addMigration(paths, filename, contents, overrides = {}) {
+  await writeFile(path.join(paths.migrationsDir, filename), contents);
+  const inventory = JSON.parse(await readFile(paths.inventoryPath, 'utf8'));
+  inventory.items.push({
+    version: filename.match(/^\d{14}/)?.[0] ?? null,
+    filename,
+    sha256: sha256(contents),
+    byteLength: Buffer.byteLength(contents),
+    duplicateVersion: false,
+    classificationReasons: ['LOCAL_ONLY_VERSION'],
+    ...overrides,
+  });
+  await writeFile(paths.inventoryPath, JSON.stringify(inventory));
+}
+
+async function run(paths) {
   await execFileAsync('node', [
     scriptPath,
     paths.inventoryPath,
@@ -72,8 +86,15 @@ test('produces non-crediting object-state candidates and stays fail-closed', asy
     '--dry-run-id=123',
     '--schema-evidence-run-id=456',
   ]);
+  return JSON.parse(
+    await readFile(path.join(paths.outputDir, 'migration-object-evidence.json'), 'utf8'),
+  );
+}
 
-  const result = JSON.parse(await readFile(path.join(paths.outputDir, 'migration-object-evidence.json'), 'utf8'));
+test('produces non-crediting object-state candidates and stays fail-closed', async () => {
+  const paths = await fixture();
+  const result = await run(paths);
+
   assert.equal(result.status, 'HUMAN_REVIEW_REQUIRED');
   assert.equal(result.acceptedDecisions, 0);
   assert.deepEqual(result.safety, {
@@ -112,6 +133,63 @@ test('produces non-crediting object-state candidates and stays fail-closed', asy
   assert.ok(result.items.every((item) => item.candidate.humanDecisionRequired === true));
 });
 
+test('unsupported ALTER TABLE actions remain split-review evidence', async () => {
+  const paths = await fixture();
+  const filename = '20260101000400_alter_column_type.sql';
+  await addMigration(
+    paths,
+    filename,
+    'alter table public.alpha alter column label type varchar(100);',
+  );
+  const result = await run(paths);
+  const item = result.items.find((entry) => entry.filename === filename);
+
+  assert.equal(item.candidate.objectState, 'MIXED_OR_PARTIAL');
+  assert.equal(item.candidate.candidateClassification, 'REQUIRES_SPLIT_REVIEW');
+  assert.ok(item.unresolved.some((entry) => (
+    entry.reason === 'ALTER_TABLE_ACTION_NOT_PROVABLE_FROM_CATALOG'
+  )));
+});
+
+test('REVOKE ALL expands to concrete table privileges and detects residual grants', async () => {
+  const paths = await fixture();
+  const filename = '20260101000500_revoke_all.sql';
+  await addMigration(
+    paths,
+    filename,
+    'revoke all on table public.alpha from authenticated;',
+  );
+  const catalog = await readFile(paths.catalogPath, 'utf8');
+  await writeFile(
+    paths.catalogPath,
+    `${catalog}grant|public|alpha|authenticated|select|NO\n`,
+  );
+  const result = await run(paths);
+  const item = result.items.find((entry) => entry.filename === filename);
+
+  assert.equal(item.operations.length, 7);
+  assert.ok(item.operations.some((entry) => (
+    entry.key === 'public.alpha.authenticated.select'
+    && entry.targetStateMatched === false
+  )));
+  assert.equal(item.candidate.objectState, 'MIXED_OR_PARTIAL');
+  assert.equal(item.candidate.candidateClassification, 'REQUIRES_SPLIT_REVIEW');
+});
+
+test('invalid migration filenames remain split-review candidates', async () => {
+  const paths = await fixture();
+  const inventory = JSON.parse(await readFile(paths.inventoryPath, 'utf8'));
+  inventory.items[0].version = '20260101';
+  inventory.items[0].classificationReasons.push('INVALID_LOCAL_FILENAME_OR_TIMESTAMP');
+  await writeFile(paths.inventoryPath, JSON.stringify(inventory));
+
+  const result = await run(paths);
+  const item = result.items.find((entry) => entry.filename === '20260101000000_present.sql');
+  assert.equal(item.candidate.objectState, 'TARGET_STATE_PRESENT');
+  assert.equal(item.candidate.candidateClassification, 'REQUIRES_SPLIT_REVIEW');
+  assert.equal(item.candidate.humanDecisionRequired, true);
+});
+
 test('duplicate versions remain split-review candidates even when object state matches', async () => {
   const paths = await fixture();
   const inventory = JSON.parse(await readFile(paths.inventoryPath, 'utf8'));
@@ -119,14 +197,7 @@ test('duplicate versions remain split-review candidates even when object state m
   inventory.items[0].classificationReasons.push('DUPLICATE_VERSION');
   await writeFile(paths.inventoryPath, JSON.stringify(inventory));
 
-  await execFileAsync('node', [
-    scriptPath,
-    paths.inventoryPath,
-    paths.catalogPath,
-    paths.migrationsDir,
-    paths.outputDir,
-  ]);
-  const result = JSON.parse(await readFile(path.join(paths.outputDir, 'migration-object-evidence.json'), 'utf8'));
+  const result = await run(paths);
   const item = result.items.find((entry) => entry.filename === '20260101000000_present.sql');
   assert.equal(item.candidate.objectState, 'TARGET_STATE_PRESENT');
   assert.equal(item.candidate.candidateClassification, 'REQUIRES_SPLIT_REVIEW');
