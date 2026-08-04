@@ -9,6 +9,7 @@ on:
   workflow_run:
     workflows:
       - RISCK COMPLY Upload Security CI
+      - Branch Protection Runtime Proof
     types: [completed]
 
 permissions:
@@ -34,16 +35,17 @@ jobs:
       ASSESSED_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
       RELEASE_COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
       UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'RISCK COMPLY Upload Security CI' && github.event.workflow_run.id || '' }}
+      BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Branch Protection Runtime Proof' && github.event.workflow_run.id || '' }}
     steps:
       - name: Checkout exact assessed SHA
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ env.ASSESSED_SHA }}
           fetch-depth: 1
           persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: 22
           cache: npm
@@ -62,8 +64,11 @@ jobs:
           npx vitest run \
             scripts/security/p0-runtime-evidence-catalog.test.mjs \
             scripts/security/report-p0-runtime-evidence-gap.test.mjs \
+            scripts/security/validate-branch-protection-freshness.test.mjs \
             scripts/release/validate-upload-scanner-runtime-evidence.test.mjs \
+            tests/enterprise/branch-protection-runtime-evidence-fetch.test.ts \
             tests/enterprise/upload-scanner-runtime-evidence-fetch.test.ts \
+            tests/enterprise/upload-scanner-p0-aggregation.test.ts \
             tests/security/p0-runtime-gap-strict-contract.test.ts \
             tests/security/p0-register-source-of-truth-contract.test.ts
           node --test \
@@ -79,8 +84,17 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID: ${{ env.UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID }}
-          UPLOAD_SCANNER_RUNTIME_EVIDENCE_REQUIRED: 'true'
-        run: node scripts/enterprise/fetch-upload-scanner-runtime-evidence.mjs
+          UPLOAD_SCANNER_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.name == 'RISCK COMPLY Upload Security CI' && 'true' || 'false' }}
+        run: node scripts/enterprise/aggregate-upload-scanner-runtime-evidence.mjs
+
+      - name: Retrieve exact-SHA branch protection runtime evidence
+        if: github.event_name == 'workflow_run'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+          BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID: ${{ env.BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID }}
+          BRANCH_PROTECTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.name == 'Branch Protection Runtime Proof' && 'true' || 'false' }}
+        run: node scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs
 
       - name: Validate runtime evidence files
         run: node scripts/security/check-p0-runtime-evidence-files.mjs
@@ -118,7 +132,7 @@ jobs:
         run: cat artifacts/p0-runtime-evidence-register/p0-runtime-evidence-register.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload authoritative register artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: p0-runtime-evidence-register-${{ env.ASSESSED_SHA }}
           path: artifacts/p0-runtime-evidence-register

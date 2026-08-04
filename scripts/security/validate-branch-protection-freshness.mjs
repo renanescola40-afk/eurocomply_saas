@@ -1,4 +1,5 @@
 const DEFAULT_MAX_AGE_DAYS = 7;
+const FULL_SHA = /^[a-f0-9]{40}$/;
 
 export const requiredBranchProtectionFlags = [
   'protect_branch',
@@ -50,6 +51,10 @@ function parseTimestamp(value) {
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 
+function normalizeSha(value) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
 export function validateBranchProtectionFreshness(
   evidence,
   {
@@ -57,11 +62,13 @@ export function validateBranchProtectionFreshness(
     maxAgeDays = DEFAULT_MAX_AGE_DAYS,
     expectedRepository = 'renanescola40-afk/eurocomply_saas',
     expectedBranch = 'main',
+    expectedCommitSha = '',
   } = {},
 ) {
   const failures = [];
   const nowMs = now instanceof Date ? now.getTime() : Date.parse(String(now));
-  const capturedAt = parseTimestamp(evidence?.captured_at);
+  const capturedAt = parseTimestamp(evidence?.captured_at ?? evidence?.generatedAt);
+  const expectedSha = normalizeSha(expectedCommitSha);
 
   if (!Number.isFinite(nowMs)) return ['validation clock must be a valid timestamp'];
 
@@ -90,13 +97,48 @@ export function validateBranchProtectionFreshness(
 
   if (evidence?.status !== 'Complete') return failures;
 
-  const provenance = evidence?.verification_provenance;
-  if (!provenance || typeof provenance !== 'object') failures.push('Complete evidence requires verification_provenance');
-  else {
-    if (!['github_api', 'screenshot'].includes(provenance.method)) failures.push('verification_provenance.method must be github_api or screenshot');
-    if (!String(provenance.reference ?? '').trim()) failures.push('verification_provenance.reference is required');
-    if (!parseTimestamp(provenance.verifiedAt)) failures.push('verification_provenance.verifiedAt must be an ISO-8601 timestamp');
+  if (evidence?.outcome !== 'passed') failures.push('Complete evidence outcome must be passed');
+  if (!FULL_SHA.test(String(evidence?.targetSha ?? ''))) failures.push('targetSha must be a full SHA');
+  if (evidence?.targetSha !== evidence?.checkedOutSha) failures.push('targetSha and checkedOutSha must match');
+  if (evidence?.targetSha !== evidence?.currentMainSha) failures.push('targetSha and currentMainSha must match');
+
+  if (expectedSha) {
+    if (!FULL_SHA.test(expectedSha)) failures.push('expectedCommitSha must be a full SHA');
+    else if (evidence?.targetSha !== expectedSha) failures.push('targetSha must match the exact assessed SHA');
   }
+
+  const verification = evidence?.verification_provenance;
+  if (!verification || typeof verification !== 'object') {
+    failures.push('Complete evidence requires verification_provenance');
+  } else {
+    if (verification.method !== 'github_api') failures.push('verification_provenance.method must be github_api');
+    if (!String(verification.reference ?? '').startsWith('github-actions-run:')) {
+      failures.push('verification_provenance.reference must identify the GitHub Actions run');
+    }
+    if (!parseTimestamp(verification.verifiedAt)) {
+      failures.push('verification_provenance.verifiedAt must be an ISO-8601 timestamp');
+    }
+  }
+
+  if (evidence?.sourceWorkflow?.name !== 'Branch Protection Runtime Proof') {
+    failures.push('sourceWorkflow.name must be Branch Protection Runtime Proof');
+  }
+  if (evidence?.sourceWorkflow?.file !== '.github/workflows/branch-protection-runtime-proof.yml') {
+    failures.push('sourceWorkflow.file is invalid');
+  }
+  if (!/^\d+$/.test(String(evidence?.sourceWorkflow?.runId ?? ''))) {
+    failures.push('sourceWorkflow.runId must be numeric');
+  }
+  if (evidence?.sourceWorkflow?.artifact !== `branch-protection-runtime-proof-${evidence?.targetSha}`) {
+    failures.push('sourceWorkflow.artifact is invalid');
+  }
+  if (evidence?.sourceWorkflow?.exactShaBound !== true) {
+    failures.push('sourceWorkflow.exactShaBound must be true');
+  }
+
+  if (evidence?.provenance?.githubActions !== true) failures.push('GitHub Actions provenance is required');
+  if (evidence?.provenance?.exactShaBound !== true) failures.push('provenance.exactShaBound must be true');
+  if (evidence?.provenance?.mainHeadMatched !== true) failures.push('provenance.mainHeadMatched must be true');
 
   for (const flag of requiredBranchProtectionFlags) {
     if (evidence?.branch_protection?.[flag] !== true) failures.push(`branch_protection.${flag} must be true`);
@@ -112,12 +154,44 @@ export function validateBranchProtectionFreshness(
     if (evidence?.release_blockers?.[blocker] !== true) failures.push(`release_blockers.${blocker} must be true`);
   }
 
-  if (evidence?.workflow_secret_log_policy?.secrets_in_logs_prohibited !== true) failures.push('workflow_secret_log_policy.secrets_in_logs_prohibited must be true');
-  if (evidence?.workflow_secret_log_policy?.checkout_persist_credentials_disabled !== true) failures.push('workflow_secret_log_policy.checkout_persist_credentials_disabled must be true');
-  if (evidence?.workflow_secret_log_policy?.strict_public_secret_scan_required !== true) failures.push('workflow_secret_log_policy.strict_public_secret_scan_required must be true');
+  if (evidence?.workflow_secret_log_policy?.secrets_in_logs_prohibited !== true) {
+    failures.push('workflow_secret_log_policy.secrets_in_logs_prohibited must be true');
+  }
+  if (evidence?.workflow_secret_log_policy?.checkout_persist_credentials_disabled !== true) {
+    failures.push('workflow_secret_log_policy.checkout_persist_credentials_disabled must be true');
+  }
+  if (evidence?.workflow_secret_log_policy?.strict_public_secret_scan_required !== true) {
+    failures.push('workflow_secret_log_policy.strict_public_secret_scan_required must be true');
+  }
   if (evidence?.sbom?.generated_by_ci !== true) failures.push('sbom.generated_by_ci must be true');
-  if (evidence?.sbom?.artifact_name !== 'risck-comply-sbom') failures.push('sbom.artifact_name must be risck-comply-sbom');
-  if (evidence?.sbom?.runtime_path !== 'docs/security/evidence/runtime/sbom.cyclonedx.json') failures.push('sbom.runtime_path must be docs/security/evidence/runtime/sbom.cyclonedx.json');
+  if (evidence?.sbom?.artifact_name !== 'risck-comply-sbom') {
+    failures.push('sbom.artifact_name must be risck-comply-sbom');
+  }
+  if (evidence?.sbom?.runtime_path !== 'docs/security/evidence/runtime/sbom.cyclonedx.json') {
+    failures.push('sbom.runtime_path must be docs/security/evidence/runtime/sbom.cyclonedx.json');
+  }
+
+  if (!Array.isArray(evidence?.controlsVerified) || evidence.controlsVerified.length < 8) {
+    failures.push('Complete evidence requires the verified branch protection controls');
+  }
+  if (!Array.isArray(evidence?.failures) || evidence.failures.length !== 0) {
+    failures.push('Complete evidence cannot contain failures');
+  }
+  if (evidence?.evidenceIntegrity?.containsSensitiveValues !== false) {
+    failures.push('evidenceIntegrity.containsSensitiveValues must be false');
+  }
+  if (evidence?.evidenceIntegrity?.rawApiPayloadStored !== false) {
+    failures.push('evidenceIntegrity.rawApiPayloadStored must be false');
+  }
+  if (evidence?.evidenceIntegrity?.accessTokensStored !== false) {
+    failures.push('evidenceIntegrity.accessTokensStored must be false');
+  }
+  if (evidence?.evidenceIntegrity?.exactShaBound !== true) {
+    failures.push('evidenceIntegrity.exactShaBound must be true');
+  }
+  if (evidence?.evidenceIntegrity?.sourceRunBound !== true) {
+    failures.push('evidenceIntegrity.sourceRunBound must be true');
+  }
 
   return failures;
 }
