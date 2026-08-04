@@ -71,9 +71,15 @@ export function summarizeRemediationCandidate({
   evidence,
 } = {}) {
   const policyWouldPass = evidence?.audit?.policyPassed === true;
+  const sourceShaValid = FULL_SHA.test(String(sourceSha ?? ''));
+  const candidateReady =
+    policyWouldPass
+    && manifestUnchanged === true
+    && lockfileChanged === true
+    && sourceShaValid;
   return {
     schema: 'risck-comply.dependency-remediation-candidate.v1',
-    status: policyWouldPass && manifestUnchanged ? 'CandidateReady' : 'CandidatePartial',
+    status: candidateReady ? 'CandidateReady' : 'CandidatePartial',
     sourceSha,
     generatedAt,
     strategy: 'npm audit fix --package-lock-only --ignore-scripts',
@@ -95,7 +101,7 @@ export function summarizeRemediationCandidate({
       containsSensitiveValues: false,
       rawAuditPayloadStored: false,
       registryCredentialsStored: false,
-      sourceShaValid: FULL_SHA.test(String(sourceSha ?? '')),
+      sourceShaValid,
     },
   };
 }
