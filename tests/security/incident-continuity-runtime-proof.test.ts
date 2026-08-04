@@ -47,16 +47,21 @@ describe('incident response and continuity megapack', () => {
   });
 
   it('pins fixed brace-expansion releases and rejects vulnerable versions', () => {
-    expect(packageLock.packages?.['node_modules/brace-expansion']?.version).toBe('1.1.18');
-    expect(
-      packageLock.packages?.['node_modules/minimatch/node_modules/brace-expansion']?.version,
-    ).toBe('5.0.9');
-
-    const vulnerableBraceExpansion = Object.entries(packageLock.packages ?? {})
+    const installedBraceExpansion = Object.entries(packageLock.packages ?? {})
       .filter(([path]) => path.endsWith('node_modules/brace-expansion'))
-      .filter(([, entry]) => ['1.1.17', '5.0.8'].includes(entry.version ?? ''));
+      .map(([path, entry]) => ({ path, version: entry.version ?? '' }));
+    const installedVersions = new Set(
+      installedBraceExpansion.map(({ version }) => version),
+    );
 
-    expect(vulnerableBraceExpansion).toEqual([]);
+    expect(installedBraceExpansion.length).toBeGreaterThan(0);
+    expect(installedVersions.has('1.1.18')).toBe(true);
+    expect(installedVersions.has('5.0.9')).toBe(true);
+    expect(
+      installedBraceExpansion.filter(({ version }) =>
+        ['1.1.17', '5.0.8'].includes(version),
+      ),
+    ).toEqual([]);
   });
 
   it('produces redacted fail-closed evidence', () => {
