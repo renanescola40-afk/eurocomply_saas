@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest';
 
 const assessor = readFileSync('scripts/enterprise/assess-conversation-final-closeout.mjs', 'utf8');
 const fetcher = readFileSync('scripts/enterprise/fetch-conversation-final-closeout-evidence.mjs', 'utf8');
+const summaryRenderer = readFileSync('scripts/enterprise/render-conversation-final-closeout-summary.mjs', 'utf8');
 const workflow = readFileSync('.github/workflows/enterprise-conversation-final-closeout.yml', 'utf8');
+const retrievalSchema = JSON.parse(readFileSync(
+  'docs/security/evidence/schemas/enterprise-conversation-closeout-retrieval.schema.json',
+  'utf8',
+));
 
 describe('enterprise conversation final closeout contract', () => {
   it('uses canonical evidence paths instead of nonexistent aliases', () => {
@@ -48,6 +53,9 @@ describe('enterprise conversation final closeout contract', () => {
     expect(assessor).toContain('validateRetrievalManifest');
     expect(assessor).toContain('retrieval_sources_incomplete');
     expect(assessor).toContain('artifact_id_invalid');
+    expect(retrievalSchema.properties.schema.const)
+      .toBe('risck-comply.enterprise-conversation-closeout-retrieval.v1');
+    expect(retrievalSchema.properties.noSecretsStored.const).toBe(true);
   });
 
   it('publishes diagnostic artifacts even when final completion remains blocked', () => {
@@ -58,6 +66,14 @@ describe('enterprise conversation final closeout contract', () => {
     expect(workflow).toContain('Enforce final completion decision');
     expect(workflow.indexOf('Upload immutable closeout evidence'))
       .toBeLessThan(workflow.indexOf('Enforce final completion decision'));
+  });
+
+  it('persists provider-derived provenance only at a fixed private shell boundary', () => {
+    expect(workflow).toContain('umask 077');
+    expect(workflow).toContain('> "$output/retrieval-manifest.json"');
+    expect(fetcher).not.toContain("writeFileSync(manifestPath");
+    expect(summaryRenderer).toContain('.replace(/[\\r\\n`]/g,');
+    expect(workflow).toContain('render-conversation-final-closeout-summary.mjs');
   });
 
   it('keeps workflow permissions read-only and uses a pinned runner image', () => {
