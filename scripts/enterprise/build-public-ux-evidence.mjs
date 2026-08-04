@@ -39,6 +39,26 @@ export function evaluatePublicUxCoverage(
   } = {},
 ) {
   const localeCoverage = REQUIRED_LOCALES.every((locale) => specSource.includes(`'${locale}'`));
+  const onboardingObjectStepContract = containsEvery(onboardingComponent, [
+    'const stepDefinitions = [',
+    "id: 'create-organization'",
+    "id: 'first-ai-system'",
+    "id: 'readiness-score'",
+    "id: 'documents'",
+    "id: 'tasks'",
+    "id: 'team'",
+    "id: 'plan'",
+  ]);
+  const onboardingTupleStepContract = containsEvery(onboardingComponent, [
+    'const steps = [',
+    "['create-organization'",
+    "['first-ai-system'",
+    "['readiness-score'",
+    "['documents'",
+    "['tasks'",
+    "['team'",
+    "['plan'",
+  ]);
   const checks = {
     dedicatedSuite: specSource.includes("test.describe('enterprise public UX acceptance'"),
     landing: specSource.includes('landing is localized, healthy and conversion-ready')
@@ -67,25 +87,19 @@ export function evaluatePublicUxCoverage(
       '<B2BOnboardingFlow',
       "expect(navigation.push).toHaveBeenCalledWith('/en/dashboard/organizations?onboarding=completed')",
     ]),
-    onboardingSourceContract: containsEvery(onboardingComponent, [
-      'const stepDefinitions = [',
-      "id: 'create-organization'",
-      "id: 'first-ai-system'",
-      "id: 'readiness-score'",
-      "id: 'documents'",
-      "id: 'tasks'",
-      "id: 'team'",
-      "id: 'plan'",
-      'role="alert"',
-      'onSaveDraft',
-      'onComplete',
-      'router.push',
-    ]) && containsEvery(onboardingPage, [
-      "export const dynamic = 'force-dynamic'",
-      "export const fetchCache = 'force-no-store'",
-      'getOnboardingActivationState(user.id)',
-      '<B2BOnboardingFlow',
-    ]),
+    onboardingSourceContract: (onboardingObjectStepContract || onboardingTupleStepContract)
+      && containsEvery(onboardingComponent, [
+        'role="alert"',
+        'onSaveDraft',
+        'onComplete',
+        'router.push',
+      ])
+      && containsEvery(onboardingPage, [
+        "export const dynamic = 'force-dynamic'",
+        "export const fetchCache = 'force-no-store'",
+        'getOnboardingActivationState(user.id)',
+        '<B2BOnboardingFlow',
+      ]),
     onboardingRouteBoundary: criticalFlowSpec.includes("{ area: 'onboarding', path: '/onboarding' }")
       && criticalFlowSpec.includes('redirects anonymous visitors to localized login')
       && productJourneySpec.includes("'/pt/onboarding?plan=professional'")

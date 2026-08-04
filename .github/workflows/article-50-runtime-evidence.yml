@@ -1,0 +1,66 @@
+name: Article 50 Runtime Evidence
+
+on:
+  pull_request:
+    paths:
+      - 'src/server/ai-governance/article-50-**'
+      - 'src/server/queries/article-50-workspace.ts'
+      - 'src/app/api/ai-governance/article-50/**'
+      - 'src/components/ai-governance/article-50-workspace.tsx'
+      - 'src/lib/article-50-deadlines**'
+      - 'tests/article-50-**'
+      - 'scripts/compliance/*article-50-runtime-evidence*'
+      - '.github/workflows/article-50-runtime-evidence.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: article-50-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Focused Article 50 tests
+        run: >-
+          npx vitest run
+          src/server/ai-governance/article-50-effective-dates.test.ts
+          src/server/ai-governance/article-50-control-plane.test.ts
+          src/lib/article-50-deadlines.test.ts
+          tests/article-50-operational-api-contract.test.ts
+          tests/article-50-operational-migration-contract.test.ts
+          tests/article-50-operational-ui-contract.test.ts
+      - name: Generate exact-SHA evidence
+        env:
+          TARGET_SHA: ${{ github.sha }}
+        run: node scripts/compliance/generate-article-50-runtime-evidence.mjs
+      - name: Validate exact-SHA evidence
+        env:
+          TARGET_SHA: ${{ github.sha }}
+        run: node scripts/compliance/validate-article-50-runtime-evidence.mjs
+      - name: Recalculate product coverage with evidence overlay
+        env:
+          TARGET_SHA: ${{ github.sha }}
+          TARGET_BRANCH: ${{ github.ref_name }}
+          EU_AI_ACT_RUNTIME_EVIDENCE_ROOTS: artifacts/article-50-runtime
+        run: node scripts/compliance/generate-eu-ai-act-product-coverage.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: article-50-runtime-evidence-${{ github.sha }}
+          path: |
+            artifacts/article-50-runtime
+            artifacts/eu-ai-act-product-coverage
+          retention-days: 90
+          if-no-files-found: error

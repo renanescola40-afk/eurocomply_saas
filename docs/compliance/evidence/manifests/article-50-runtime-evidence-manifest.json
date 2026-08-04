@@ -1,0 +1,29 @@
+{
+  "schema": "risck-comply.article-50-runtime-evidence-manifest.v1",
+  "workstream": "ARTICLE-50",
+  "weight": 8,
+  "artifactPath": "docs/security/evidence/runtime/article-50-operational-validation.json",
+  "generator": "scripts/compliance/generate-article-50-runtime-evidence.mjs",
+  "validator": "scripts/compliance/validate-article-50-runtime-evidence.mjs",
+  "workflow": ".github/workflows/article-50-runtime-evidence.yml",
+  "schemaPath": "docs/compliance/evidence/schemas/article-50-runtime-evidence.schema.json",
+  "acceptance": {
+    "exactSha": true,
+    "status": "PASS",
+    "environment": "ci",
+    "syntheticData": true,
+    "minimumPassingTestCases": 8,
+    "digestRequired": true,
+    "limitationsRequired": true,
+    "productionProof": false,
+    "customerEvidence": false,
+    "qualifiedReview": false
+  },
+  "invalidatesOn": [
+    "article-50 effective-date logic change",
+    "article-50 control-plane change",
+    "article-50 API contract change",
+    "article-50 persistence migration change",
+    "article-50 dashboard deadline rendering change"
+  ]
+}
