@@ -11,14 +11,21 @@ import {
 const CLOSABLE_REASON = 'INLINE_COLUMN_CONSTRAINT_REQUIRES_MANUAL_REVIEW';
 const EVIDENCE_LAYER = 'ABSENT_COLUMN_CLOSURE_REFINEMENT';
 
-function matchingAbsentColumnOperations(item, statementSha256) {
-  return item.operations.filter((operation) => (
+function unambiguouslyAbsentColumnOperations(item, statementSha256) {
+  const matchingColumns = item.operations.filter((operation) => (
     operation.statementSha256 === statementSha256
     && operation.kind === 'COLUMN'
-    && operation.expectedState === 'PRESENT'
+  ));
+  if (matchingColumns.length === 0) return [];
+
+  const everyMatchingParentIsAbsent = matchingColumns.every((operation) => (
+    operation.expectedState === 'PRESENT'
     && operation.observedState === 'ABSENT'
     && operation.targetStateMatched === false
   ));
+  if (!everyMatchingParentIsAbsent) return [];
+
+  return matchingColumns;
 }
 
 function closureOperation(columnOperation, statementSha256) {
@@ -159,7 +166,10 @@ export async function refineMigrationAbsenceClosureEvidence(argv = process.argv.
         continue;
       }
 
-      const absentColumnOperations = matchingAbsentColumnOperations(item, entry.statementSha256);
+      const absentColumnOperations = unambiguouslyAbsentColumnOperations(
+        item,
+        entry.statementSha256,
+      );
       if (absentColumnOperations.length === 0) {
         retainedUnresolved.push(entry);
         continue;
