@@ -37,7 +37,8 @@ describe('upload scanner runtime proof orchestration', () => {
     expect(workflow).toContain("github.event.workflow_run.event == 'workflow_dispatch'");
     expect(workflow).toContain('UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID');
     expect(workflow).toContain('fetch-upload-scanner-runtime-evidence.mjs');
-    expect(workflow).toContain("github.event_name == 'workflow_run' && 'true' || 'false'");
+    expect(workflow).toContain("if: github.event_name == 'workflow_run'");
+    expect(workflow).toContain("UPLOAD_SCANNER_RUNTIME_EVIDENCE_REQUIRED: 'true'");
     expect(workflow).toContain('ref: ${{ env.ASSESSED_SHA }}');
     expect(workflow).not.toContain('contents: write');
   });
