@@ -1,0 +1,18 @@
+{
+  "schema": "risck-comply.implementation-manifest.v1",
+  "id": "p0-runtime-register-source-of-truth",
+  "status": "implemented_pending_merge",
+  "scope": [
+    "canonical evidence-derived status",
+    "exact-SHA JSON and Markdown register generation",
+    "independent semantic validation",
+    "repository dependency control verification",
+    "fail-closed policy metadata",
+    "P0 workflow consolidation",
+    "legacy renderer removal",
+    "integrity checksums",
+    "ADR, threat model, runbook and tests"
+  ],
+  "truthBoundary": "This manifest records repository implementation only. It does not claim that provider runtime evidence, external review or Enterprise GO has passed.",
+  "noSecretsStored": true
+}

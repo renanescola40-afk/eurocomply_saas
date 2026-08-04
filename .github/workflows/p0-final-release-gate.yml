@@ -8,10 +8,14 @@ on:
     paths:
       - 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md'
       - 'docs/security/evidence/runtime/**'
+      - 'docs/security/evidence/schemas/p0-runtime-evidence-register.schema.json'
       - 'scripts/security/**'
-      - 'tests/security/p0-runtime-gap-strict-contract.test.ts'
+      - 'tests/security/*p0-runtime*'
+      - 'tests/security/p0-register-source-of-truth-contract.test.ts'
       - '.github/workflows/p0-final-release-gate.yml'
       - '.github/workflows/p0-runtime-evidence.yml'
+      - 'package.json'
+      - 'package-lock.json'
 
 permissions:
   contents: read
@@ -19,32 +23,46 @@ permissions:
 jobs:
   p0-final-release-gate:
     name: Validate final P0 release evidence
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      ASSESSED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      RELEASE_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
-      - name: Checkout repository
+      - name: Checkout exact assessed SHA
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: Show runner Node.js and npm versions
-        run: |
-          node --version
-          npm --version
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies deterministically
         run: npm ci --ignore-scripts
 
-      - name: Test canonical P0 evidence contracts
-        run: >-
-          npx vitest run
-          scripts/security/p0-runtime-evidence-catalog.test.mjs
-          scripts/security/report-p0-runtime-evidence-gap.test.mjs
-          scripts/security/p0-runtime-evidence-derived-register.test.mjs
-          tests/security/p0-runtime-gap-strict-contract.test.ts
+      - name: Verify exact assessed checkout
+        run: |
+          set -euo pipefail
+          [[ "$ASSESSED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$ASSESSED_SHA"
 
-      - name: Detect runtime evidence changes
+      - name: Test canonical P0 evidence contracts
+        run: |
+          npx vitest run \
+            scripts/security/p0-runtime-evidence-catalog.test.mjs \
+            scripts/security/report-p0-runtime-evidence-gap.test.mjs \
+            tests/security/p0-runtime-gap-strict-contract.test.ts \
+            tests/security/p0-register-source-of-truth-contract.test.ts
+          node --test \
+            tests/security/generate-p0-runtime-evidence-register.test.mjs \
+            tests/security/validate-generated-p0-runtime-evidence-register.test.mjs
+
+      - name: Detect strict release enforcement
         id: runtime_changes
         shell: bash
         env:
@@ -57,15 +75,11 @@ jobs:
           fi
 
           case "$HEAD_REF" in
-            *final-evidence*|*release-ready*)
-              echo "strict=true" >> "$GITHUB_OUTPUT"
-              ;;
-            *)
-              echo "strict=false" >> "$GITHUB_OUTPUT"
-              ;;
+            *final-evidence*|*release-ready*) echo "strict=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "strict=false" >> "$GITHUB_OUTPUT" ;;
           esac
 
-      - name: Validate runtime evidence register
+      - name: Validate P0 policy register
         run: node scripts/security/check-p0-runtime-evidence-register.mjs
 
       - name: Validate runtime evidence file hygiene
@@ -74,25 +88,56 @@ jobs:
       - name: Validate optional runtime evidence files
         run: node scripts/security/check-p0-runtime-evidence-optionals.mjs
 
-      - name: Block committed register overclaims
-        run: node scripts/security/derive-p0-runtime-evidence-register.mjs --check-overclaim
-
-      - name: Report current runtime evidence gaps with canonical validators
-        run: node scripts/security/report-p0-runtime-evidence-gap.mjs
+      - name: Generate and validate exact-SHA P0 register
+        run: |
+          set -euo pipefail
+          output=artifacts/p0-runtime-evidence-register
+          mkdir -p "$output"
+          node scripts/security/report-p0-runtime-evidence-gap.mjs > "$output/p0-runtime-gap-report.json"
+          node scripts/security/generate-p0-runtime-evidence-register.mjs \
+            --sha="$ASSESSED_SHA" \
+            --output-dir="$output" \
+            > "$output/generator-output.json"
+          node scripts/security/validate-generated-p0-runtime-evidence-register.mjs \
+            --sha="$ASSESSED_SHA"
 
       - name: Enforce remaining runtime evidence gap is closed
         if: steps.runtime_changes.outputs.strict == 'true'
-        run: node scripts/security/report-p0-runtime-evidence-gap.mjs --strict
+        run: |
+          node scripts/security/report-p0-runtime-evidence-gap.mjs --strict
+          node scripts/security/generate-p0-runtime-evidence-register.mjs \
+            --sha="$ASSESSED_SHA" \
+            --output-dir=artifacts/p0-runtime-evidence-register \
+            --strict
 
-      - name: Skip strict runtime evidence gap for non-final evidence changes
+      - name: Skip strict runtime evidence gap for non-final changes
         if: steps.runtime_changes.outputs.strict != 'true'
-        run: echo "Skipping strict runtime evidence gap for this non-final evidence PR. Use workflow_dispatch or a release-ready/final-evidence branch for final release enforcement."
+        run: echo "Report mode only. Use workflow_dispatch or a release-ready/final-evidence branch for strict final enforcement."
+
+      - name: Generate immutable checksums
+        if: always()
+        run: |
+          set -euo pipefail
+          output=artifacts/p0-runtime-evidence-register
+          mkdir -p "$output"
+          find "$output" -maxdepth 1 -type f \( -name '*.json' -o -name '*.md' \) -print0 \
+            | sort -z \
+            | xargs -0 -r sha256sum > "$output/SHA256SUMS"
+
+      - name: Upload P0 final-gate evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: p0-final-release-gate-${{ env.ASSESSED_SHA }}
+          path: artifacts/p0-runtime-evidence-register
+          if-no-files-found: error
+          retention-days: 365
 
   required-p0-runtime-evidence-register-context:
     name: Validate P0 runtime evidence register
     needs: p0-final-release-gate
     if: ${{ always() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Enforce authoritative gate result
@@ -103,4 +148,4 @@ jobs:
             echo "Authoritative P0 final release gate did not pass: $AUTHORITATIVE_RESULT" >&2
             exit 1
           fi
-          echo "Required P0 runtime evidence register context is backed by the authoritative gate."
+          echo "Required P0 runtime evidence register context is backed by the exact-SHA authoritative gate."

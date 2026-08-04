@@ -13,13 +13,17 @@ const evaluatorSource = fs.readFileSync(
   new URL('./evaluate-p0-runtime-evidence.mjs', import.meta.url),
   'utf8',
 );
+const generatorSource = fs.readFileSync(
+  new URL('./generate-p0-runtime-evidence-register.mjs', import.meta.url),
+  'utf8',
+);
 
 describe('P0 runtime evidence gap report', () => {
   it('uses the shared canonical P0 runtime evaluator', () => {
     expect(reportSource).toContain(
       "import { evaluateP0RuntimeEvidence } from './evaluate-p0-runtime-evidence.mjs';",
     );
-    expect(reportSource).toContain('evaluation = evaluateP0RuntimeEvidence({ finalValidationInProgress });');
+    expect(reportSource).toContain('requireRegisterStatus: false');
     expect(evaluatorSource).toContain(
       "import { activeP0RuntimeEvidenceItems } from './p0-runtime-evidence-catalog.mjs';",
     );
@@ -29,6 +33,21 @@ describe('P0 runtime evidence gap report', () => {
     expect(evaluatorSource).toContain('validatorFailures.length === 0');
     expect(evaluatorSource).toContain('validatorFailures: evidence.validatorFailures');
     expect(evaluatorSource).toContain("return ['canonical validator is missing'];");
+  });
+
+  it('treats versioned Markdown status as advisory rather than proof', () => {
+    expect(evaluatorSource).toContain('requireRegisterStatus = false');
+    expect(evaluatorSource).toContain('derivedStatus = evidence.evidenceSatisfied');
+    expect(evaluatorSource).toContain('registerDrift = registerStatus !== derivedStatus');
+    expect(reportSource).toContain('registerAdvisoryOnly: true');
+    expect(reportSource).toContain('legacy Markdown status, exceptions and placeholders do not pass');
+  });
+
+  it('generates an exact-SHA register from canonical evidence', () => {
+    expect(generatorSource).toContain('risck-comply.p0-runtime-evidence-register.v1');
+    expect(generatorSource).toContain('evaluateP0RuntimeEvidence({');
+    expect(generatorSource).toContain('requireRegisterStatus: false');
+    expect(generatorSource).toContain("decision = blocked === 0 ? 'GO' : 'NO_GO'");
   });
 
   it('includes Auth/RBAC as a required runtime control', () => {
