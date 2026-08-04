@@ -2,31 +2,28 @@ name: RISCK COMPLY Upload Security CI
 
 on:
   workflow_dispatch:
-    inputs:
-      promote_p0_register:
-        description: 'Promote passing live ClamAV proof into the P0 runtime evidence register. Use only for final release validation on main.'
-        required: false
-        type: boolean
-        default: false
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
-  group: upload-security-ci-${{ github.ref }}
+  group: upload-security-ci-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
   upload-security-ci:
     name: Upload scanner, tenant storage and fail-closed gates
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      TARGET_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
+      UPLOAD_SCANNER_RUNTIME_EVIDENCE_PATH: docs/security/evidence/runtime/upload-malware-scan-validation.json
+      UPLOAD_SCANNER_BLOCKING_PROOF_PATH: artifacts/upload-security/clamav-blocking-runtime-proof.json
 
     services:
       clamav:
@@ -35,10 +32,19 @@ jobs:
           - 3310:3310
 
     steps:
-      - name: Checkout repository
+      - name: Checkout exact assessed SHA
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
           persist-credentials: false
+
+      - name: Verify exact assessed checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -48,6 +54,14 @@ jobs:
 
       - name: Install dependencies deterministically without lifecycle scripts
         run: npm ci --ignore-scripts
+
+      - name: Validate upload scanner evidence contracts
+        run: >-
+          npx vitest run
+          scripts/release/validate-upload-scanner-runtime-evidence.test.mjs
+          tests/enterprise/upload-scanner-runtime-evidence-fetch.test.ts
+          tests/security/upload-scanner-runtime-proof-workflow.test.ts
+          tests/security/upload-clamav-response.test.ts
 
       - name: Wait for live ClamAV scanner
         shell: bash
@@ -89,7 +103,7 @@ jobs:
               socket.on('end', () => {
                 clearTimeout(timeout);
                 if (response.includes('PONG')) resolve();
-                else reject(new Error(`clamd ping ended without PONG: ${response.trim() || '<empty>'}`));
+                else reject(new Error('clamd ping ended without PONG'));
               });
             });
           }
@@ -113,22 +127,22 @@ jobs:
       - name: Upload validation and tenant isolation static gate
         shell: bash
         run: |
+          set -o pipefail
           npm run security:upload 2>&1 | tee upload-security.log
-          test "${PIPESTATUS[0]}" -eq 0
 
       - name: Upload content scanning fail-closed gate
         shell: bash
         run: |
+          set -o pipefail
           npm run security:upload-content-scan 2>&1 | tee upload-content-scan.log
-          test "${PIPESTATUS[0]}" -eq 0
 
       - name: Enterprise scanner bypass gate
         shell: bash
         run: |
+          set -o pipefail
           npm run security:upload-scanner:ci 2>&1 | tee upload-scanner-runtime-ci.log
-          test "${PIPESTATUS[0]}" -eq 0
 
-      - name: Live ClamAV scanner proof and gated P0 evidence generation
+      - name: Generate clean live ClamAV exact-SHA evidence
         shell: bash
         env:
           REQUIRE_MALWARE_SCAN_FOR_UPLOADS: 'true'
@@ -136,81 +150,112 @@ jobs:
           MALWARE_SCANNER_CLAMAV_HOST: 127.0.0.1
           MALWARE_SCANNER_CLAMAV_PORT: '3310'
           MALWARE_SCANNER_TIMEOUT_MS: '30000'
-          PROMOTE_P0_REGISTER_REQUESTED: ${{ github.event_name == 'workflow_dispatch' && inputs.promote_p0_register == true }}
-          PROMOTE_P0_REGISTER: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.promote_p0_register == true }}
         run: |
-          if [[ "${PROMOTE_P0_REGISTER_REQUESTED}" == "true" && "${PROMOTE_P0_REGISTER}" != "true" ]]; then
-            echo "::error::P0 register promotion is only allowed from a manual workflow_dispatch run on refs/heads/main."
-            exit 1
-          fi
+          set -o pipefail
+          npm run security:upload-scanner:runtime 2>&1 | tee upload-clamav-clean-proof.log
 
-          if [[ "${PROMOTE_P0_REGISTER}" == "true" ]]; then
-            echo "P0 register promotion enabled for manual final validation on main."
-            npm run security:upload-scanner:runtime -- --update-register 2>&1 | tee upload-clamav-live-proof.log
-            test "${PIPESTATUS[0]}" -eq 0
-          else
-            echo "P0 register promotion disabled; generating live proof artifact only."
-            npm run security:upload-scanner:runtime 2>&1 | tee upload-clamav-live-proof.log
-            test "${PIPESTATUS[0]}" -eq 0
-          fi
-
-      - name: Validate live ClamAV evidence artifact
-        shell: bash
+      - name: Normalize and validate clean scanner provenance
         env:
-          PROMOTE_P0_REGISTER: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.promote_p0_register == true }}
+          REQUIRE_MALWARE_SCAN_FOR_UPLOADS: 'true'
+          MALWARE_SCANNER_PROVIDER: clamav
         run: |
-          node <<'NODE'
+          set -euo pipefail
+          node scripts/security/normalize-upload-scanner-runtime-evidence.mjs
+          node --input-type=module <<'NODE'
           import { readFileSync } from 'node:fs';
+          import { validateUploadScannerRuntimeEvidence } from './scripts/release/validate-upload-scanner-runtime-evidence.mjs';
 
-          const evidencePath = 'docs/security/evidence/runtime/upload-malware-scan-validation.json';
-          const evidence = JSON.parse(readFileSync(evidencePath, 'utf8'));
-          const failures = [];
-
-          if (evidence.status !== 'Complete') failures.push('evidence.status must be Complete');
-          if (evidence.outcome !== 'passed') failures.push('evidence.outcome must be passed');
-          if (evidence.liveProviderProof?.status !== 'passed') failures.push('liveProviderProof.status must be passed');
-          if (evidence.liveProviderProof?.provider !== 'clamav') failures.push('liveProviderProof.provider must be clamav');
-          if (evidence.liveProviderProof?.providerIsReal !== true) failures.push('liveProviderProof.providerIsReal must be true');
-          if (evidence.liveProviderProof?.scanStatus !== 'clean') failures.push('liveProviderProof.scanStatus must be clean');
-          if (evidence.liveProviderProof?.blockedIfNotClean !== false) failures.push('clean live verdict should not be blocked');
-          if (evidence.acceptanceCriteria?.enterpriseUploadRequiresCleanScan !== true) failures.push('enterpriseUploadRequiresCleanScan must be true');
-          if (evidence.acceptanceCriteria?.scannerUnavailableBlocksUpload !== true) failures.push('scannerUnavailableBlocksUpload must be true');
-          if (evidence.acceptanceCriteria?.scannerTimeoutBlocksUpload !== true) failures.push('scannerTimeoutBlocksUpload must be true');
-          if (evidence.acceptanceCriteria?.scannerMalwareOrSuspiciousBlocksUpload !== true) failures.push('scannerMalwareOrSuspiciousBlocksUpload must be true');
-          if (evidence.acceptanceCriteria?.liveProviderProofExists !== true) failures.push('liveProviderProofExists must be true');
-          if (evidence.acceptanceCriteria?.p0RegisterMayBeUpdated !== true) failures.push('p0RegisterMayBeUpdated must be true');
-          if (evidence.liveProviderProof?.providerResponseBodyPersisted !== false) failures.push('provider response body must not be persisted');
-          if (evidence.liveProviderProof?.providerResponseMessagePersisted !== false) failures.push('provider response message must not be persisted');
-          if (!evidence.runtimeContext?.workflowRunUrl) failures.push('runtimeContext.workflowRunUrl must be present in GitHub Actions');
-
+          const evidence = JSON.parse(
+            readFileSync(process.env.UPLOAD_SCANNER_RUNTIME_EVIDENCE_PATH, 'utf8'),
+          );
+          const failures = validateUploadScannerRuntimeEvidence(evidence, {
+            expectedRepository: process.env.GITHUB_REPOSITORY,
+            expectedBranch: process.env.TARGET_BRANCH,
+            expectedCommitSha: process.env.TARGET_SHA,
+          });
           if (failures.length > 0) {
-            console.error('Upload live ClamAV evidence validation failed:');
+            console.error('Canonical upload scanner evidence validation failed:');
             for (const failure of failures) console.error(`- ${failure}`);
             process.exit(1);
           }
-
-          console.log('Upload live ClamAV evidence validation: ok');
+          console.log('Canonical upload scanner evidence validation: ok');
           NODE
-          if [[ "${PROMOTE_P0_REGISTER}" != "true" ]] && ! git diff --quiet -- docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md; then
-            echo "::error::P0 register changed outside an explicit manual final-validation promotion."
-            exit 1
-          fi
-          node scripts/security/check-p0-runtime-evidence-register.mjs
-          node scripts/security/check-p0-runtime-evidence-files.mjs
-          git diff -- docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md docs/security/evidence/runtime/upload-malware-scan-validation.json > upload-clamav-live-proof.diff
 
-      - name: Upload diagnostics
+      - name: Prove live ClamAV blocks a malicious test fixture
+        env:
+          MALWARE_SCANNER_CLAMAV_HOST: 127.0.0.1
+          MALWARE_SCANNER_CLAMAV_PORT: '3310'
+          MALWARE_SCANNER_TIMEOUT_MS: '30000'
+        run: node scripts/security/run-upload-scanner-blocking-runtime-validation.mjs
+
+      - name: Validate sanitized blocking proof
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const evidence = JSON.parse(
+            readFileSync(process.env.UPLOAD_SCANNER_BLOCKING_PROOF_PATH, 'utf8'),
+          );
+          const failures = [];
+          if (evidence.status !== 'Complete' || evidence.outcome !== 'passed') {
+            failures.push('blocking proof must be Complete/passed');
+          }
+          if (evidence.targetSha !== process.env.TARGET_SHA) failures.push('target SHA mismatch');
+          if (evidence.repository !== process.env.GITHUB_REPOSITORY) failures.push('repository mismatch');
+          if (evidence.branch !== process.env.TARGET_BRANCH) failures.push('branch mismatch');
+          if (evidence.scanner?.classification !== 'blocked') failures.push('fixture was not blocked');
+          if (evidence.fixture?.generatedInMemory !== true) failures.push('fixture must be generated in memory');
+          if (evidence.fixture?.bytesPersisted !== false) failures.push('fixture bytes must not be persisted');
+          if (evidence.scanner?.responseBodyStored !== false) failures.push('scanner response body must not be stored');
+          if (evidence.scanner?.signatureNameStored !== false) failures.push('scanner signature must not be stored');
+          if (!Array.isArray(evidence.failures) || evidence.failures.length !== 0) failures.push('failures must be empty');
+          if (failures.length > 0) {
+            for (const failure of failures) console.error(`- ${failure}`);
+            process.exit(1);
+          }
+          console.log('Sanitized ClamAV blocking proof validation: ok');
+          NODE
+
+      - name: Prove workflow never mutates the versioned P0 policy register
+        run: git diff --exit-code -- docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md
+
+      - name: Generate proof checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/upload-security
+          sha256sum \
+            "$UPLOAD_SCANNER_RUNTIME_EVIDENCE_PATH" \
+            "$UPLOAD_SCANNER_BLOCKING_PROOF_PATH" \
+            > artifacts/upload-security/SHA256SUMS
+
+      - name: Publish upload scanner proof summary
+        shell: bash
+        run: |
+          {
+            echo '## Upload malware scanner runtime proof'
+            echo ''
+            echo "- Exact SHA: \`$TARGET_SHA\`"
+            echo "- Branch: \`$TARGET_BRANCH\`"
+            echo '- Clean PDF verdict: **allowed**'
+            echo '- Antivirus test fixture verdict: **blocked**'
+            echo '- Provider: **live ClamAV service**'
+            echo '- Raw provider responses stored: **no**'
+            echo '- Fixture bytes stored: **no**'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload immutable exact-SHA scanner proof
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: upload-security-ci-diagnostics
+          name: upload-security-runtime-proof-${{ env.TARGET_SHA }}
           path: |
+            docs/security/evidence/runtime/upload-malware-scan-validation.json
+            artifacts/upload-security/clamav-blocking-runtime-proof.json
+            artifacts/upload-security/SHA256SUMS
             upload-security.log
             upload-content-scan.log
             upload-scanner-runtime-ci.log
-            upload-clamav-live-proof.log
-            upload-clamav-live-proof.diff
-            docs/security/evidence/runtime/upload-malware-scan-validation.json
-            docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md
-          retention-days: 14
-          if-no-files-found: warn
+            upload-clamav-clean-proof.log
+          retention-days: 90
+          if-no-files-found: error
