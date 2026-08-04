@@ -129,10 +129,11 @@ export function evaluateP0RuntimeEvidence({
   expectedCommitSha = resolveP0ExpectedCommitSha(),
   now = new Date(),
   catalogItems = activeP0RuntimeEvidenceItems({ finalValidationInProgress }),
+  requireRegisterStatus = false,
 } = {}) {
   const absoluteRegisterPath = path.join(root, registerPath);
   if (!fs.existsSync(absoluteRegisterPath)) {
-    throw new Error(`missing register: ${registerPath}`);
+    throw new Error(`missing register policy: ${registerPath}`);
   }
 
   const registerRows = parseP0RegisterRows(
@@ -151,11 +152,17 @@ export function evaluateP0RuntimeEvidence({
   const results = catalogItems.map((entry) => {
     const registerStatus = registerStatusFor(entry, statusByItem);
     const evidence = readRuntimeEvidence({ root, runtimeDir, entry, context });
-    const satisfiedStatus = registerStatus === 'Complete';
+    const registerStatusSatisfied = registerStatus === 'Complete';
+    const derivedStatus = evidence.evidenceSatisfied ? 'Complete' : 'Open';
+    const registerDrift = registerStatus !== derivedStatus;
+    const satisfied = evidence.evidenceSatisfied
+      && (!requireRegisterStatus || registerStatusSatisfied);
 
     return {
       item: entry.item,
       registerStatus,
+      derivedStatus,
+      registerDrift,
       evidenceFile: evidence.evidencePath,
       evidenceFileExists: evidence.evidenceFileExists,
       evidenceStatus: evidence.evidenceStatus,
@@ -163,9 +170,9 @@ export function evaluateP0RuntimeEvidence({
       placeholderOnly: evidence.placeholderOnly,
       validatorFailures: evidence.validatorFailures,
       parseError: evidence.parseError,
-      satisfiedStatus,
+      registerStatusSatisfied,
       evidenceSatisfied: evidence.evidenceSatisfied,
-      satisfied: satisfiedStatus && evidence.evidenceSatisfied,
+      satisfied,
     };
   });
 
@@ -176,8 +183,10 @@ export function evaluateP0RuntimeEvidence({
     validationClock: now.toISOString(),
     registerPath,
     runtimeDir,
+    registerStatusRequired: requireRegisterStatus,
     registerRows,
     results,
+    registerDrift: results.filter((entry) => entry.registerDrift),
     missing: results.filter((entry) => !entry.satisfied),
   };
 }
