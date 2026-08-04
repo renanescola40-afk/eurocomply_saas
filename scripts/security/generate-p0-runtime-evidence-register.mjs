@@ -44,6 +44,22 @@ function readJson(root, relativePath) {
   }
 }
 
+function repositoryResult(entry, evidenceFile, failures) {
+  const satisfied = failures.length === 0;
+  return {
+    item: entry.item,
+    kind: 'repository',
+    status: satisfied ? 'Complete' : 'Open',
+    satisfied,
+    evidenceFile,
+    evidenceStatus: satisfied ? 'verified' : 'invalid',
+    evidenceOutcome: satisfied ? 'passed' : 'blocked',
+    validatorFailures: failures,
+    registerStatus: null,
+    registerDrift: null,
+  };
+}
+
 function repositoryControlResult(entry, root) {
   if (entry.item === 'Deterministic npm lockfile committed') {
     const manifest = readJson(root, 'package.json');
@@ -62,19 +78,7 @@ function repositoryControlResult(entry, root) {
       && lockfile.value?.packages?.['']?.name
       && manifest.value?.name !== lockfile.value.packages[''].name
     ) failures.push('manifest_lockfile_name_mismatch');
-
-    return {
-      item: entry.item,
-      kind: 'repository',
-      status: failures.length === 0 ? 'Complete' : 'Open',
-      satisfied: failures.length === 0,
-      evidenceFile: 'package-lock.json',
-      evidenceStatus: failures.length === 0 ? 'verified' : 'invalid',
-      evidenceOutcome: failures.length === 0 ? 'passed' : 'blocked',
-      validatorFailures: failures,
-      registerStatus: null,
-      registerDrift: false,
-    };
+    return repositoryResult(entry, 'package-lock.json', failures);
   }
 
   if (entry.item === 'Floating dependency specs removed') {
@@ -83,40 +87,19 @@ function repositoryControlResult(entry, root) {
     const forbidden = [];
     if (!manifest.exists || !manifest.parseable) failures.push('package_json_missing_or_invalid');
     if (manifest.parseable) {
-      for (const section of ['dependencies', 'devDependencies', 'optionalDependencies']) {
+      for (const section of ['dependencies', 'devDependencies', 'optionalDependencies', 'overrides', 'resolutions']) {
         for (const [name, spec] of Object.entries(manifest.value?.[section] || {})) {
-          if (FORBIDDEN_DEPENDENCY_SPEC.test(String(spec).trim())) forbidden.push(`${section}:${name}`);
+          if (typeof spec === 'string' && FORBIDDEN_DEPENDENCY_SPEC.test(spec.trim())) {
+            forbidden.push(`${section}:${name}`);
+          }
         }
       }
     }
     if (forbidden.length > 0) failures.push(`forbidden_dependency_specs:${forbidden.sort().join(',')}`);
-
-    return {
-      item: entry.item,
-      kind: 'repository',
-      status: failures.length === 0 ? 'Complete' : 'Open',
-      satisfied: failures.length === 0,
-      evidenceFile: 'package.json',
-      evidenceStatus: failures.length === 0 ? 'verified' : 'invalid',
-      evidenceOutcome: failures.length === 0 ? 'passed' : 'blocked',
-      validatorFailures: failures,
-      registerStatus: null,
-      registerDrift: false,
-    };
+    return repositoryResult(entry, 'package.json', failures);
   }
 
-  return {
-    item: entry.item,
-    kind: 'repository',
-    status: 'Open',
-    satisfied: false,
-    evidenceFile: null,
-    evidenceStatus: 'unsupported',
-    evidenceOutcome: 'blocked',
-    validatorFailures: ['repository_control_verifier_missing'],
-    registerStatus: null,
-    registerDrift: false,
-  };
+  return repositoryResult(entry, null, ['repository_control_verifier_missing']);
 }
 
 function metadataByItem(root, registerPath) {
@@ -179,6 +162,7 @@ export function buildP0EvidenceRegister({
       const policy = metadataFor(entry, metadata);
       if (!result) throw new Error(`runtime_result_missing:${entry.item}`);
       const status = result.satisfied ? 'Complete' : 'Open';
+      const legacyRegisterStatus = result.registerStatus ?? policy.legacyStatus;
       return {
         item: entry.item,
         kind: entry.kind,
@@ -190,9 +174,11 @@ export function buildP0EvidenceRegister({
         validatorFailures: result.validatorFailures || [],
         owner: policy.owner,
         requiredEvidence: policy.requiredEvidence,
-        nextAction: status === 'Complete' ? 'Retain exact-SHA evidence and revalidate on the next release SHA' : policy.nextAction,
-        legacyRegisterStatus: result.registerStatus ?? policy.legacyStatus,
-        legacyRegisterDrift: result.registerDrift ?? (policy.legacyStatus !== status),
+        nextAction: status === 'Complete'
+          ? 'Retain exact-SHA evidence and revalidate on the next release SHA'
+          : policy.nextAction,
+        legacyRegisterStatus,
+        legacyRegisterDrift: result.registerDrift ?? (legacyRegisterStatus !== status),
       };
     });
 
