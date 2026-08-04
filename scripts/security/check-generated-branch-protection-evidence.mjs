@@ -6,6 +6,9 @@ import { fileURLToPath } from 'node:url';
 const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const DEFAULT_EVIDENCE_PATH = 'p0-evidence/branch-protection-main.generated.json';
 const FULL_SHA = /^[0-9a-f]{40}$/;
+const RULESET_SOURCE_TYPES = new Set(['Repository', 'Organization', 'Enterprise', 'unknown']);
+const BYPASS_ACTOR_TYPES = new Set(['RepositoryRole', 'Team', 'Integration', 'OrganizationAdmin', 'unknown']);
+const BYPASS_MODES = new Set(['always', 'pull_request', 'unknown']);
 
 export const ALLOWED_EVIDENCE_SOURCES = Object.freeze([
   'github-api-branch-protection-workflow',
@@ -34,6 +37,22 @@ const REQUIRED_PROTECTION_FLAGS = [
 
 function requireCondition(failures, condition, message) {
   if (!condition) failures.push(message);
+}
+
+function isSafePositiveInteger(value) {
+  return Number.isSafeInteger(value) && value > 0;
+}
+
+function boundedRulesetProvenanceIsValid(sourceDetails) {
+  if (!Array.isArray(sourceDetails?.rulesetIds) || sourceDetails.rulesetIds.length < 1) return false;
+  if (!sourceDetails.rulesetIds.every(isSafePositiveInteger)) return false;
+  if (!Array.isArray(sourceDetails?.rulesetSources) || sourceDetails.rulesetSources.length < 1) return false;
+  if (!sourceDetails.rulesetSources.every((value) => RULESET_SOURCE_TYPES.has(value))) return false;
+  if (!Array.isArray(sourceDetails?.bypassActors)) return false;
+  return sourceDetails.bypassActors.every((actor) =>
+    (actor?.rulesetId === null || isSafePositiveInteger(actor?.rulesetId))
+    && BYPASS_ACTOR_TYPES.has(actor?.actorType)
+    && BYPASS_MODES.has(actor?.bypassMode));
 }
 
 export function validateGeneratedBranchProtectionEvidence(
@@ -98,9 +117,9 @@ export function validateGeneratedBranchProtectionEvidence(
     );
     requireCondition(failures, evidence?.sourceDetails?.bypassActorCount === 0, 'ruleset bypass actors are not allowed');
     requireCondition(failures, Array.isArray(evidence?.sourceDetails?.bypassActors) && evidence.sourceDetails.bypassActors.length === 0, 'ruleset bypass actor projection must be empty');
-    requireCondition(failures, Array.isArray(evidence?.sourceDetails?.rulesetIds) && evidence.sourceDetails.rulesetIds.length >= 1, 'ruleset provenance IDs are missing');
-    requireCondition(failures, Array.isArray(evidence?.sourceDetails?.rulesetNames) && evidence.sourceDetails.rulesetNames.length >= 1, 'ruleset provenance names are missing');
+    requireCondition(failures, boundedRulesetProvenanceIsValid(evidence?.sourceDetails), 'bounded ruleset provenance is invalid');
     requireCondition(failures, typeof evidence?.sourceDetails?.classicProtectionApiFailure === 'string' && evidence.sourceDetails.classicProtectionApiFailure.length >= 3, 'classic protection boundary is missing');
+    requireCondition(failures, !Object.hasOwn(evidence?.sourceDetails ?? {}, 'rulesetNames'), 'free-form ruleset names must not be retained');
   }
 
   requireCondition(failures, evidence?.evidenceIntegrity?.containsSensitiveValues === false, 'sensitive-value integrity flag is invalid');
