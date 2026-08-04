@@ -6,15 +6,17 @@ import { dirname, resolve } from 'node:path';
 
 const FULL_SHA = /^[a-f0-9]{40}$/;
 
-// Safe promotion is intentionally limited to the twelve workstreams that can
-// be demonstrated by isolated application and contract execution. The final
-// three controls remain reserved for the protected closeout campaign:
+// Safe promotion is split deliberately:
+// - these eleven workstreams use the shared isolated contract-evidence shape;
+// - ARTICLE-50 uses generate-article-50-runtime-evidence.mjs because its
+//   registry acceptance contract requires a dedicated evidenceItem, PASS
+//   status, exact integrity digest and Article 50 control projection.
+// The final three controls remain reserved for the protected closeout campaign:
 // READINESS-SCORING, VENDOR-ASSURANCE and PLATFORM-CONTROLS.
 const SAFE_PROOFS = [
   ['SCOPE-CLASSIFICATION', 'docs/security/evidence/runtime/authorization-bola-validation.json', 'decision-engine contract suite'],
   ['PROHIBITED-PRACTICES', 'docs/security/evidence/runtime/prohibited-practices-validation.json', 'Article 5 operational API and migration contracts'],
   ['AI-LITERACY', 'docs/security/evidence/runtime/ai-literacy-validation.json', 'AI literacy API, UI and write-boundary contracts'],
-  ['ARTICLE-50', 'docs/security/evidence/runtime/localization-validation.json', 'public UX and localization evidence contracts'],
   ['FRIA', 'docs/security/evidence/runtime/fria-operational-validation.json', 'FRIA operational API and migration contracts'],
   ['DEPLOYER', 'docs/security/evidence/runtime/deployer-obligations-validation.json', 'deployer obligations decision contracts'],
   ['HIGH-RISK-PROVIDER', 'docs/security/evidence/runtime/high-risk-provider-validation.json', 'high-risk provider data-governance contracts'],
@@ -81,7 +83,12 @@ function main() {
     writeFileSync(output, `${JSON.stringify(item.document, null, 2)}\n`, { mode: 0o600 });
   }
 
-  console.log(JSON.stringify({ generated: evidence.length, targetSha, outputRoot }));
+  console.log(JSON.stringify({
+    generated: evidence.length,
+    delegated: ['ARTICLE-50'],
+    targetSha,
+    outputRoot,
+  }));
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname)) main();
