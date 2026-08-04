@@ -151,6 +151,44 @@ test('unsupported ALTER TABLE actions remain split-review evidence', async () =>
   )));
 });
 
+test('does not confuse static EXECUTE grammar with dynamic SQL', async () => {
+  const paths = await fixture();
+  await addMigration(
+    paths,
+    '20260101000410_trigger.sql',
+    'create trigger alpha_touch before update on public.alpha for each row execute function public.touch_alpha();',
+  );
+  await addMigration(
+    paths,
+    '20260101000420_grant_execute.sql',
+    'grant execute on function public.touch_alpha() to authenticated;',
+  );
+  await addMigration(
+    paths,
+    '20260101000430_dynamic.sql',
+    "do $$ begin execute format('alter table %I enable row level security', 'alpha'); end $$;",
+  );
+
+  const result = await run(paths);
+  const byFile = new Map(result.items.map((item) => [item.filename, item]));
+  const trigger = byFile.get('20260101000410_trigger.sql');
+  const grant = byFile.get('20260101000420_grant_execute.sql');
+  const dynamic = byFile.get('20260101000430_dynamic.sql');
+
+  assert.equal(trigger.candidate.candidateClassification, 'PENDING_DEPLOYMENT');
+  assert.equal(trigger.unresolved.length, 0);
+  assert.ok(trigger.operations.some((entry) => entry.kind === 'TRIGGER'));
+  assert.ok(grant.unresolved.some((entry) => (
+    entry.reason === 'STATEMENT_NOT_DETERMINISTICALLY_PARSED'
+  )));
+  assert.equal(grant.unresolved.some((entry) => (
+    entry.reason === 'DYNAMIC_SQL_REQUIRES_MANUAL_REVIEW'
+  )), false);
+  assert.ok(dynamic.unresolved.some((entry) => (
+    entry.reason === 'DYNAMIC_SQL_REQUIRES_MANUAL_REVIEW'
+  )));
+});
+
 test('REVOKE ALL expands to concrete table privileges and detects residual grants', async () => {
   const paths = await fixture();
   const filename = '20260101000500_revoke_all.sql';
