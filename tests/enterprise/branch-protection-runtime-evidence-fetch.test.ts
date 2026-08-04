@@ -7,13 +7,17 @@ import {
 } from '../../scripts/enterprise/build-branch-protection-runtime-evidence.mjs';
 import {
   buildCanonicalEvidence,
+  buildP0CanonicalEvidence,
   isOptionalWorkflowUnavailable,
+  selectBranchProtectionEvidenceEntry,
   selectExactShaRun,
   validateDownloadedEvidence,
 } from '../../scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs';
+import { validateBranchProtectionFreshness } from '../../scripts/security/validate-branch-protection-freshness.mjs';
 
 const SHA = 'a'.repeat(40);
 const RUN_ID = '123456789';
+const GENERATED_AT = '2026-08-04T14:00:00.000Z';
 
 function completeProtection() {
   return {
@@ -41,12 +45,12 @@ function sourceEvidence() {
     checkedOutSha: SHA,
     currentMainSha: SHA,
     runId: RUN_ID,
-    generatedAt: '2026-07-19T00:00:00.000Z',
+    generatedAt: GENERATED_AT,
   });
 }
 
 describe('branch protection exact-SHA runtime evidence', () => {
-  it('accepts complete current-main protection and writes canonical scorecard evidence', () => {
+  it('accepts complete current-main protection and builds scorecard evidence', () => {
     const source = sourceEvidence();
     expect(source.status).toBe('Complete');
     expect(source.outcome).toBe('passed');
@@ -70,7 +74,28 @@ describe('branch protection exact-SHA runtime evidence', () => {
     }));
   });
 
-  it('fails closed for stale SHA, missing review protections or missing required checks', () => {
+  it('promotes the same source into both canonical P0 controls', () => {
+    const p0 = buildP0CanonicalEvidence(sourceEvidence(), {
+      targetSha: SHA,
+      runId: RUN_ID,
+    });
+
+    expect(p0.status).toBe('Complete');
+    expect(p0.outcome).toBe('passed');
+    expect(p0.targetSha).toBe(SHA);
+    expect(p0.sourceWorkflow).toEqual(expect.objectContaining({
+      name: 'Branch Protection Runtime Proof',
+      runId: RUN_ID,
+      artifact: `branch-protection-runtime-proof-${SHA}`,
+      exactShaBound: true,
+    }));
+    expect(validateBranchProtectionFreshness(p0, {
+      now: new Date(GENERATED_AT),
+      expectedCommitSha: SHA,
+    })).toEqual([]);
+  });
+
+  it('fails closed for stale SHA, missing review protections or missing checks', () => {
     const stale = evaluateBranchProtection({
       protection: completeProtection(),
       targetSha: SHA,
@@ -106,7 +131,7 @@ describe('branch protection exact-SHA runtime evidence', () => {
     expect(incompleteChecks.sourceDetails.missingRequiredChecks).toContain(REQUIRED_CHECKS[0]);
   });
 
-  it('rejects stale source provenance, a different run or sensitive evidence', () => {
+  it('rejects stale provenance, another run or sensitive evidence', () => {
     const valid = sourceEvidence();
     expect(validateDownloadedEvidence({ ...valid, targetSha: 'b'.repeat(40) }, {
       targetSha: SHA,
@@ -128,19 +153,21 @@ describe('branch protection exact-SHA runtime evidence', () => {
     }).passed).toBe(false);
   });
 
-  it('selects only a successful exact-main-SHA proof and treats only optional 404 as absent', () => {
+  it('selects only a trusted successful exact-main-SHA producer run', () => {
     const run = {
       id: Number(RUN_ID),
       name: 'Branch Protection Runtime Proof',
       head_sha: SHA,
       head_branch: 'main',
+      event: 'push',
       status: 'completed',
       conclusion: 'success',
-      updated_at: '2026-07-19T00:00:00Z',
+      updated_at: '2026-08-04T14:00:00Z',
     };
     expect(selectExactShaRun([
       { ...run, id: 1, conclusion: 'failure' },
       { ...run, id: 2, head_branch: 'feature' },
+      { ...run, id: 3, event: 'pull_request' },
       run,
     ], SHA)).toEqual(run);
     expect(selectExactShaRun([run], SHA, '999')).toBeNull();
@@ -153,12 +180,35 @@ describe('branch protection exact-SHA runtime evidence', () => {
     expect(isOptionalWorkflowUnavailable(unauthorized)).toBe(false);
   });
 
-  it('uses a protected read-only producer and exact-SHA scorecard consumption', () => {
+  it('rejects duplicate, traversal, absolute and backslash ZIP entries', () => {
+    expect(selectBranchProtectionEvidenceEntry([
+      'p0-evidence/branch-protection-main.generated.json',
+    ])).toBe('p0-evidence/branch-protection-main.generated.json');
+
+    expect(() => selectBranchProtectionEvidenceEntry([
+      'branch-protection-main.generated.json',
+      'nested/branch-protection-main.generated.json',
+    ])).toThrow('branch_protection_source_not_unique');
+    expect(() => selectBranchProtectionEvidenceEntry([
+      '../branch-protection-main.generated.json',
+    ])).toThrow('artifact_zip_unsafe_entry');
+    expect(() => selectBranchProtectionEvidenceEntry([
+      '/tmp/branch-protection-main.generated.json',
+    ])).toThrow('artifact_zip_unsafe_entry');
+    expect(() => selectBranchProtectionEvidenceEntry([
+      'nested\\branch-protection-main.generated.json',
+    ])).toThrow('artifact_zip_unsafe_entry');
+  });
+
+  it('uses stable read-only producers and exact-SHA multi-producer P0 aggregation', () => {
     const producer = readFileSync('.github/workflows/branch-protection-runtime-proof.yml', 'utf8');
-    const scorecard = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
+    const p0 = readFileSync('.github/workflows/p0-runtime-evidence.yml', 'utf8');
     const builder = readFileSync('scripts/enterprise/build-branch-protection-runtime-evidence.mjs', 'utf8');
     const fetcher = readFileSync('scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs', 'utf8');
+    const scannerAggregator = readFileSync('scripts/enterprise/aggregate-upload-scanner-runtime-evidence.mjs', 'utf8');
 
+    expect(producer).toContain('name: Branch Protection Runtime Proof');
+    expect(producer).not.toMatch(/^run-name:/m);
     expect(producer).toContain('push:\n    branches: [main]');
     expect(producer).toContain('environment: Production');
     expect(producer).toContain('contents: read');
@@ -167,18 +217,30 @@ describe('branch protection exact-SHA runtime evidence', () => {
     expect(producer).toContain('BRANCH_PROTECTION_READ_TOKEN');
     expect(producer).toContain('check-generated-branch-protection-evidence.mjs');
 
-    expect(scorecard).toContain('Branch Protection Runtime Proof');
-    expect(scorecard).toContain('BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID');
-    expect(scorecard).toContain('fetch-branch-protection-runtime-evidence.mjs');
-    expect(scorecard).toContain('branch-protection-validation.json');
+    expect(p0).toContain('- RISCK COMPLY Upload Security CI');
+    expect(p0).toContain('- Branch Protection Runtime Proof');
+    expect(p0).toContain('UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID');
+    expect(p0).toContain('BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID');
+    expect(p0).toContain('aggregate-upload-scanner-runtime-evidence.mjs');
+    expect(p0).toContain('fetch-branch-protection-runtime-evidence.mjs');
+    expect(p0).not.toContain('contents: write');
 
     expect(builder).toContain("const absolutePath = join(root, 'p0-evidence', 'branch-protection-main.generated.json')");
     expect(builder).toContain('configuredOutputPath !== DEFAULT_OUTPUT_PATH');
     expect(builder).not.toContain('join(root, outputPath)');
 
     expect(fetcher).toContain("const WORKFLOW_NAME = 'Branch Protection Runtime Proof'");
-    expect(fetcher).toContain("run?.head_branch === 'main'");
-    expect(fetcher).toContain('validateGeneratedBranchProtectionEvidence');
-    expect(fetcher).toContain('workflow run provenance mismatch');
+    expect(fetcher).toContain("const MAX_API_RESPONSE_BYTES = 1024 * 1024");
+    expect(fetcher).toContain("const MAX_ARTIFACT_BYTES = 5 * 1024 * 1024");
+    expect(fetcher).toContain('head_sha=${encodeURIComponent(targetSha)}');
+    expect(fetcher).toContain('branch-protection-required-checks.json');
+    expect(fetcher).toContain('artifact_zip_unsafe_entry');
+    expect(fetcher).not.toContain('response.json()');
+
+    expect(scannerAggregator).toContain('head_sha=${encodeURIComponent(targetSha)}');
+    expect(scannerAggregator).toContain('per_page=20');
+    expect(scannerAggregator).toContain('MAX_API_RESPONSE_BYTES = 1024 * 1024');
+    expect(scannerAggregator).not.toContain('per_page=100');
+    expect(scannerAggregator).not.toContain('response.json()');
   });
 });
