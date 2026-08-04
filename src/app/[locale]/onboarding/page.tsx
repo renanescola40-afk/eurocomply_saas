@@ -1,7 +1,7 @@
 import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
 
-import { OnboardingRuntimeBoundary } from '@/components/onboarding/onboarding-runtime-boundary';
+import { OnboardingRuntimeBoundary as B2BOnboardingFlowRuntimeBoundary } from '@/components/onboarding/onboarding-runtime-boundary';
 import { getBillingPlan } from '@/lib/billing/plans';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { toOnboardingMutationFailure, type OnboardingMutationResult } from '@/lib/onboarding/action-failure';
@@ -91,7 +91,7 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
 
   return (
     <main className="min-h-screen bg-[#03070b]">
-      <OnboardingRuntimeBoundary
+      <B2BOnboardingFlowRuntimeBoundary
         locale={safeLocale}
         requestedPlan={requestedPlan}
         initialState={initialState}
