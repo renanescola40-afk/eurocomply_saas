@@ -152,7 +152,8 @@ jobs:
           expected_catalog_sha="$(cut -d' ' -f1 artifacts/source/schema/SHA256SUMS)"
           actual_catalog_sha="$(sha256sum artifacts/source/schema/catalog.txt | cut -d' ' -f1)"
           test "$actual_catalog_sha" = "$expected_catalog_sha"
-          grep -q '^column|.*|.*|.*|.*|.*|.*|.*|.*|[^|][^|]*|' artifacts/source/schema/catalog.txt
+          grep -Eq '^column_meta_hex\|[0-9a-fA-F]+$' artifacts/source/schema/catalog.txt
+          grep -Eq '^constraint_meta_hex\|[0-9a-fA-F]+$' artifacts/source/schema/catalog.txt
 
           EXPECTED_CATALOG_SHA="$expected_catalog_sha" node - <<'NODE'
           const report = require('./artifacts/source/semantic/migration-object-evidence.json');
