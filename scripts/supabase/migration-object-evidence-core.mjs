@@ -197,6 +197,16 @@ function splitTopLevelComma(value) {
   return parts;
 }
 
+function containsDynamicSql(normalized) {
+  // EXECUTE is also part of static privilege and trigger syntax. Treating those
+  // forms as PL/pgSQL dynamic SQL creates false manual-review evidence.
+  if (/^GRANT\s+EXECUTE\s+ON\b/i.test(normalized)) return false;
+  if (/^REVOKE\s+EXECUTE\s+ON\b/i.test(normalized)) return false;
+  if (/^CREATE\s+(?:OR\s+REPLACE\s+)?TRIGGER\b/i.test(normalized)) return false;
+
+  return /\bEXECUTE\s+(?:FORMAT\s*\(|[^\s])|^DO\s+\$/i.test(normalized);
+}
+
 export function parseCatalog(text) {
   const catalog = {
     tables: new Map(),
@@ -510,7 +520,7 @@ export function extractStatementEvidence(statement, catalog) {
   handled = analyzeGrant(normalized, catalog, results) || handled;
 
   const dataOnly = /^(INSERT\s+INTO|UPDATE\s+|DELETE\s+FROM|TRUNCATE\s+)/i.test(normalized);
-  const dynamicSql = /\bEXECUTE\s+(?:FORMAT\s*\(|[^\s])|^DO\s+\$/i.test(normalized);
+  const dynamicSql = containsDynamicSql(normalized);
   const unsupportedDdl = /^(CREATE|ALTER|DROP)\s+(TYPE|EXTENSION|SCHEMA|VIEW|MATERIALIZED\s+VIEW|SEQUENCE|DOMAIN)\b/i.test(normalized);
   const configurationStatement = /^(SET|RESET|COMMENT\s+ON)\b/i.test(normalized);
 

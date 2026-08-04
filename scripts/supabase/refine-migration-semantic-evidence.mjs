@@ -166,7 +166,10 @@ function parseCatalog(text) {
         dataType: String(cells[5] ?? ''),
         udtName: String(cells[6] ?? ''),
         nullable: String(cells[7] ?? '').toUpperCase() === 'YES',
-        defaultValue: String(cells[8] ?? ''),
+        // The default expression is the final catalog field and may itself
+        // contain PostgreSQL operators such as ||. Rejoin the tail so a
+        // materially different expression cannot be truncated into a match.
+        defaultValue: cells.slice(8).join('|'),
       });
     }
     if (cells[0] === 'constraint') {
