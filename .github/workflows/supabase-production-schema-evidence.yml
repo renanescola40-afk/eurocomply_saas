@@ -90,6 +90,7 @@ jobs:
           test -s artifacts/supabase-production-schema-evidence/catalog.txt
           grep -q '^table|public|' artifacts/supabase-production-schema-evidence/catalog.txt
           grep -q '^migration|' artifacts/supabase-production-schema-evidence/catalog.txt
+          grep -q '^catalog_capability|persistent_object_grants_v1$' artifacts/supabase-production-schema-evidence/catalog.txt
 
       - name: Publish bounded summary
         shell: bash
@@ -109,9 +110,13 @@ jobs:
             echo "- Constraints: $(grep -c '^constraint|' "$catalog" || true)"
             echo "- Indexes: $(grep -c '^index|' "$catalog" || true)"
             echo "- Functions: $(grep -c '^function|' "$catalog" || true)"
+            echo "- Function grants: $(grep -c '^function_grant|' "$catalog" || true)"
             echo "- Triggers: $(grep -c '^trigger|' "$catalog" || true)"
             echo "- Policies: $(grep -c '^policy|' "$catalog" || true)"
             echo "- Grants: $(grep -c '^grant|' "$catalog" || true)"
+            echo "- Sequences: $(grep -c '^sequence|' "$catalog" || true)"
+            echo "- Extensions: $(grep -c '^extension|' "$catalog" || true)"
+            echo "- Types: $(grep -c '^type|' "$catalog" || true)"
             echo "- Recorded migrations: $(grep -c '^migration|' "$catalog" || true)"
             echo "- SHA-256: \`$(cut -d' ' -f1 artifacts/supabase-production-schema-evidence/SHA256SUMS)\`"
             echo

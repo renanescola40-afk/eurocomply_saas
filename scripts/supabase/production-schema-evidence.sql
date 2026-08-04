@@ -9,6 +9,7 @@ set local statement_timeout = '60s';
 set local lock_timeout = '5s';
 
 select 'metadata', current_database(), current_user, version();
+select 'catalog_capability', 'persistent_object_grants_v1';
 
 select 'table', n.nspname, c.relname, c.relkind,
        c.relrowsecurity, c.relforcerowsecurity,
@@ -134,6 +135,23 @@ join pg_namespace n on n.oid = p.pronamespace
 where n.nspname in ('public', 'storage')
 order by n.nspname, p.proname, pg_get_function_identity_arguments(p.oid);
 
+-- Routine ACLs include the function identity arguments so overloaded
+-- functions never share evidence accidentally.
+select 'function_grant', n.nspname, p.proname,
+       pg_get_function_identity_arguments(p.oid),
+       coalesce(grantee.rolname, 'PUBLIC'), acl.privilege_type,
+       acl.is_grantable
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+cross join lateral aclexplode(
+  coalesce(p.proacl, acldefault('f', p.proowner))
+) acl
+left join pg_roles grantee on grantee.oid = acl.grantee
+where n.nspname in ('public', 'storage')
+order by n.nspname, p.proname,
+         pg_get_function_identity_arguments(p.oid),
+         coalesce(grantee.rolname, 'PUBLIC'), acl.privilege_type;
+
 select 'trigger', event_object_schema, event_object_table, trigger_name,
        event_manipulation, action_timing, action_orientation,
        action_statement
@@ -159,6 +177,18 @@ select 'sequence', sequence_schema, sequence_name, data_type,
 from information_schema.sequences
 where sequence_schema in ('public', 'storage')
 order by sequence_schema, sequence_name;
+
+select 'extension', extname, extversion
+from pg_extension
+order by extname;
+
+select 'type', n.nspname, t.typname, t.typtype
+from pg_type t
+join pg_namespace n on n.oid = t.typnamespace
+where n.nspname in ('public', 'storage')
+  and t.typtype in ('e', 'd', 'r', 'c')
+  and t.typelem = 0
+order by n.nspname, t.typname;
 
 select 'migration', version, coalesce(name, '')
 from supabase_migrations.schema_migrations

@@ -73,6 +73,7 @@ async function createFixture() {
   await writeFile(inventoryPath, `${JSON.stringify(inventory)}\n`);
 
   const catalog = [
+    'catalog_capability|persistent_object_grants_v1',
     'table|public|workspaces|r|t|f|postgres',
     'column|public|workspaces|1|id|uuid|uuid|NO|',
     'table|public|alpha|r|t|f|postgres',

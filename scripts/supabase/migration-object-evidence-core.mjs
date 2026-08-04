@@ -214,9 +214,14 @@ export function parseCatalog(text) {
     constraints: new Set(),
     indexes: new Set(),
     functions: new Set(),
+    functionGrants: new Set(),
     triggers: new Set(),
     policies: new Set(),
     grants: new Set(),
+    sequences: new Set(),
+    extensions: new Map(),
+    types: new Set(),
+    capabilities: new Set(),
     migrations: new Set(),
   };
 
@@ -226,6 +231,7 @@ export function parseCatalog(text) {
       case 'table': {
         const key = `${cells[1]}.${cells[2]}`.toLowerCase();
         catalog.tables.set(key, {
+          relationKind: cells[3],
           rlsEnabled: cells[4] === 't',
           forceRls: cells[5] === 't',
         });
@@ -243,6 +249,13 @@ export function parseCatalog(text) {
       case 'function':
         catalog.functions.add(`${cells[1]}.${cells[2]}`.toLowerCase());
         break;
+      case 'function_grant':
+        catalog.functionGrants.add([
+          `${cells[1]}.${cells[2]}(${normalizeRoutineArguments(cells[3])})`,
+          cells[4],
+          cells[5],
+        ].join('.').toLowerCase());
+        break;
       case 'trigger':
         catalog.triggers.add(`${cells[1]}.${cells[2]}.${cells[3]}`.toLowerCase());
         break;
@@ -252,14 +265,39 @@ export function parseCatalog(text) {
       case 'grant':
         catalog.grants.add(`${cells[1]}.${cells[2]}.${cells[3]}.${cells[4]}`.toLowerCase());
         break;
+      case 'sequence':
+        catalog.sequences.add(`${cells[1]}.${cells[2]}`.toLowerCase());
+        break;
+      case 'extension':
+        catalog.extensions.set(
+          String(cells[1] ?? '').toLowerCase(),
+          String(cells[2] ?? '').toLowerCase(),
+        );
+        break;
+      case 'type':
+        catalog.types.add(`${cells[1]}.${cells[2]}`.toLowerCase());
+        break;
       case 'migration':
         catalog.migrations.add(String(cells[1] ?? '').trim());
+        break;
+      case 'catalog_capability':
+        catalog.capabilities.add(String(cells[1] ?? '').trim());
         break;
       default:
         break;
     }
   }
   return catalog;
+}
+
+function normalizeRoutineArguments(value) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replaceAll('"', '')
+    .replace(/\s*,\s*/g, ',')
+    .replace(/\s+/g, ' ')
+    .replace(/\bpublic\./g, '');
 }
 
 function evidence(kind, action, key, expectedPresent, observedPresent, statement) {
@@ -427,6 +465,40 @@ function analyzeGrant(normalized, catalog, results) {
   return true;
 }
 
+function analyzeFunctionGrant(normalized, catalog, results, unresolvedItems) {
+  const match = normalized.match(
+    /^(GRANT|REVOKE)\s+(EXECUTE|ALL(?:\s+PRIVILEGES)?)\s+ON\s+FUNCTION\s+([\s\S]+?)\s+(?:TO|FROM)\s+([^\s,;]+)/i,
+  );
+  if (!match) return false;
+
+  const action = match[1].toUpperCase();
+  const grantee = normalizeIdentifier(match[4]).name;
+  const routines = splitTopLevelComma(match[3]);
+  let parsed = 0;
+
+  for (const routine of routines) {
+    const routineMatch = routine.match(/^([^\s(]+)\s*\(([\s\S]*)\)$/);
+    if (!routineMatch) {
+      unresolvedItems.push(unresolved('FUNCTION_GRANT_SIGNATURE_REQUIRED', normalized));
+      continue;
+    }
+    const identifier = normalizeIdentifier(routineMatch[1]);
+    const signature = `${identifier.schema}.${identifier.name}(${normalizeRoutineArguments(routineMatch[2])})`;
+    const key = `${signature}.${grantee}.execute`;
+    results.push(evidence(
+      'FUNCTION_GRANT',
+      action,
+      key,
+      action === 'GRANT',
+      catalog.functionGrants.has(key),
+      normalized,
+    ));
+    parsed += 1;
+  }
+
+  return parsed > 0 || routines.length > 0;
+}
+
 export function extractStatementEvidence(statement, catalog) {
   const normalized = statement.replace(/\s+/g, ' ').trim();
   const upper = normalized.toUpperCase();
@@ -445,6 +517,108 @@ export function extractStatementEvidence(statement, catalog) {
   }
 
   handled = analyzeAlterTable(normalized, catalog, results, unresolvedItems) || handled;
+
+  match = normalized.match(/^CREATE\s+EXTENSION\s+(?:IF\s+NOT\s+EXISTS\s+)?([^\s;]+)/i);
+  if (match) {
+    const name = normalizeIdentifier(match[1]).name;
+    const observedVersion = catalog.extensions.get(name);
+    results.push(evidence('EXTENSION', 'CREATE', name, true, observedVersion !== undefined, normalized));
+    const requestedVersion = normalized.match(/\bVERSION\s+['"]?([^\s;'";]+)['"]?/i)?.[1]?.toLowerCase();
+    if (requestedVersion) {
+      results.push(evidence(
+        'EXTENSION_VERSION',
+        'MATCH',
+        `${name}.${requestedVersion}`,
+        true,
+        observedVersion === requestedVersion,
+        normalized,
+      ));
+    }
+    handled = true;
+  }
+
+  match = normalized.match(/^DROP\s+EXTENSION\s+(?:IF\s+EXISTS\s+)?([^\s,;]+)/i);
+  if (match) {
+    const name = normalizeIdentifier(match[1]).name;
+    results.push(evidence('EXTENSION', 'DROP', name, false, catalog.extensions.has(name), normalized));
+    handled = true;
+  }
+
+  match = normalized.match(/^CREATE\s+TYPE\s+([^\s(]+)\s+AS\s+(?:ENUM|RANGE)\b/i);
+  if (match) {
+    const identifier = normalizeIdentifier(match[1]);
+    const key = `${identifier.schema}.${identifier.name}`;
+    const present = catalog.types.has(key);
+    results.push(evidence('TYPE', 'CREATE', key, true, present, normalized));
+    if (present) unresolvedItems.push(unresolved('TYPE_DEFINITION_REQUIRES_MANUAL_REVIEW', normalized));
+    handled = true;
+  }
+
+  match = normalized.match(/^DROP\s+TYPE\s+(?:IF\s+EXISTS\s+)?([^\s,;]+)/i);
+  if (match) {
+    const identifier = normalizeIdentifier(match[1]);
+    const key = `${identifier.schema}.${identifier.name}`;
+    results.push(evidence('TYPE', 'DROP', key, false, catalog.types.has(key), normalized));
+    handled = true;
+  }
+
+  match = normalized.match(/^CREATE\s+DOMAIN\s+([^\s]+)\s+AS\s+/i);
+  if (match) {
+    const identifier = normalizeIdentifier(match[1]);
+    const key = `${identifier.schema}.${identifier.name}`;
+    const present = catalog.types.has(key);
+    results.push(evidence('DOMAIN', 'CREATE', key, true, present, normalized));
+    if (present) unresolvedItems.push(unresolved('DOMAIN_DEFINITION_REQUIRES_MANUAL_REVIEW', normalized));
+    handled = true;
+  }
+
+  match = normalized.match(/^DROP\s+DOMAIN\s+(?:IF\s+EXISTS\s+)?([^\s,;]+)/i);
+  if (match) {
+    const identifier = normalizeIdentifier(match[1]);
+    const key = `${identifier.schema}.${identifier.name}`;
+    results.push(evidence('DOMAIN', 'DROP', key, false, catalog.types.has(key), normalized));
+    handled = true;
+  }
+
+  match = normalized.match(/^CREATE\s+SEQUENCE\s+(?:IF\s+NOT\s+EXISTS\s+)?([^\s;]+)/i);
+  if (match) {
+    const identifier = normalizeIdentifier(match[1]);
+    const key = `${identifier.schema}.${identifier.name}`;
+    const present = catalog.sequences.has(key);
+    results.push(evidence('SEQUENCE', 'CREATE', key, true, present, normalized));
+    if (present) unresolvedItems.push(unresolved('SEQUENCE_DEFINITION_REQUIRES_MANUAL_REVIEW', normalized));
+    handled = true;
+  }
+
+  match = normalized.match(/^DROP\s+SEQUENCE\s+(?:IF\s+EXISTS\s+)?([^\s,;]+)/i);
+  if (match) {
+    const identifier = normalizeIdentifier(match[1]);
+    const key = `${identifier.schema}.${identifier.name}`;
+    results.push(evidence('SEQUENCE', 'DROP', key, false, catalog.sequences.has(key), normalized));
+    handled = true;
+  }
+
+  match = normalized.match(/^CREATE\s+(?:OR\s+REPLACE\s+)?(MATERIALIZED\s+)?VIEW\s+([^\s(;]+)/i);
+  if (match) {
+    const identifier = normalizeIdentifier(match[2]);
+    const key = `${identifier.schema}.${identifier.name}`;
+    const expectedKind = match[1] ? 'm' : 'v';
+    const observed = catalog.tables.get(key);
+    const present = observed?.relationKind === expectedKind;
+    results.push(evidence('VIEW', 'CREATE_OR_REPLACE', key, true, present, normalized));
+    if (present) unresolvedItems.push(unresolved('VIEW_DEFINITION_REQUIRES_MANUAL_REVIEW', normalized));
+    handled = true;
+  }
+
+  match = normalized.match(/^DROP\s+(MATERIALIZED\s+)?VIEW\s+(?:IF\s+EXISTS\s+)?([^\s,;]+)/i);
+  if (match) {
+    const identifier = normalizeIdentifier(match[2]);
+    const key = `${identifier.schema}.${identifier.name}`;
+    const expectedKind = match[1] ? 'm' : 'v';
+    const present = catalog.tables.get(key)?.relationKind === expectedKind;
+    results.push(evidence('VIEW', 'DROP', key, false, present, normalized));
+    handled = true;
+  }
 
   match = normalized.match(
     /^CREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:CONCURRENTLY\s+)?(?:IF\s+NOT\s+EXISTS\s+)?([^\s]+)\s+ON\s+(?:ONLY\s+)?([^\s(]+)/i,
@@ -517,11 +691,12 @@ export function extractStatementEvidence(statement, catalog) {
     handled = true;
   }
 
+  handled = analyzeFunctionGrant(normalized, catalog, results, unresolvedItems) || handled;
   handled = analyzeGrant(normalized, catalog, results) || handled;
 
   const dataOnly = /^(INSERT\s+INTO|UPDATE\s+|DELETE\s+FROM|TRUNCATE\s+)/i.test(normalized);
   const dynamicSql = containsDynamicSql(normalized);
-  const unsupportedDdl = /^(CREATE|ALTER|DROP)\s+(TYPE|EXTENSION|SCHEMA|VIEW|MATERIALIZED\s+VIEW|SEQUENCE|DOMAIN)\b/i.test(normalized);
+  const unsupportedDdl = /^(CREATE|ALTER|DROP)\s+SCHEMA\b/i.test(normalized);
   const configurationStatement = /^(SET|RESET|COMMENT\s+ON)\b/i.test(normalized);
 
   if (dataOnly) unresolvedItems.push(unresolved('DATA_STATE_NOT_PROVABLE_FROM_SCHEMA_CATALOG', normalized));
@@ -594,6 +769,9 @@ function validateInputs(inventory, catalogText, targetSha, dryRunId, schemaEvide
   }
   if (!/^table\|/m.test(catalogText) || !/^migration\|/m.test(catalogText)) {
     throw new Error('catalog does not contain the required table and migration evidence sections');
+  }
+  if (!/^catalog_capability\|persistent_object_grants_v1$/m.test(catalogText)) {
+    throw new Error('catalog does not contain persistent object and function grant capabilities');
   }
   if (targetSha && !/^[a-f0-9]{40}$/.test(targetSha)) {
     throw new Error('--target-sha must be a lowercase 40-character SHA');

@@ -15,10 +15,13 @@ The artifact records metadata for the `public` and `storage` schemas:
 - constraints;
 - indexes;
 - functions, ownership, volatility and `SECURITY DEFINER` state;
+- overload-safe function `EXECUTE` grants, including PostgreSQL default ACLs;
 - triggers;
 - RLS policies;
 - table grants;
 - sequences;
+- installed extensions and versions;
+- user-defined enum, domain, range and composite type presence;
 - Supabase migration history.
 
 The workflow also creates a SHA-256 checksum for the catalog file.
@@ -69,6 +72,17 @@ For each local-only migration:
 4. classify the migration as already materialized, genuinely pending, superseded or unsafe;
 5. record the decision in a bounded reconciliation PR;
 6. never mark a migration as applied without object-level evidence.
+
+Function privilege evidence is keyed by schema, function name, normalized
+identity arguments, grantee and privilege. A grant statement without an exact
+signature remains manual review because overloaded functions cannot be safely
+collapsed by name.
+
+Presence is sufficient evidence only where the migration target is existence
+itself (for example, `CREATE EXTENSION` without a requested version). Existing
+types, views and sequences retain a definition-review blocker; absence can
+support a pending-deployment candidate, but matching names alone never prove
+definition equivalence.
 
 ## Data handling
 
