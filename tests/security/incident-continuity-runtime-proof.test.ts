@@ -46,8 +46,17 @@ describe('incident response and continuity megapack', () => {
     for (const policy of expectedPolicies) expect(migration).toContain(policy);
   });
 
-  it('pins the remediated brace-expansion release in the lockfile', () => {
-    expect(packageLock.packages?.['node_modules/brace-expansion']?.version).toBe('1.1.17');
+  it('pins fixed brace-expansion releases and rejects vulnerable versions', () => {
+    expect(packageLock.packages?.['node_modules/brace-expansion']?.version).toBe('1.1.18');
+    expect(
+      packageLock.packages?.['node_modules/minimatch/node_modules/brace-expansion']?.version,
+    ).toBe('5.0.9');
+
+    const vulnerableBraceExpansion = Object.entries(packageLock.packages ?? {})
+      .filter(([path]) => path.endsWith('node_modules/brace-expansion'))
+      .filter(([, entry]) => ['1.1.17', '5.0.8'].includes(entry.version ?? ''));
+
+    expect(vulnerableBraceExpansion).toEqual([]);
   });
 
   it('produces redacted fail-closed evidence', () => {
