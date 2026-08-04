@@ -96,7 +96,12 @@ jobs:
           node-version: 22
 
       - name: Generate exact-SHA platform controls evidence
-        run: node scripts/enterprise/build-platform-controls-runtime-evidence.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$BRANCH_PROTECTION_EVIDENCE_PATH")"
+          umask 077
+          node scripts/enterprise/build-platform-controls-runtime-evidence.mjs > "$BRANCH_PROTECTION_EVIDENCE_PATH"
 
       - name: Validate generated evidence contract
         if: always()
