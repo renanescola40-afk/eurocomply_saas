@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,6 +16,9 @@ const MAIN_REF = `refs/heads/${CANONICAL_BRANCH}`;
 const SOURCE_CLASSIC = 'github-api-classic-branch-protection';
 const SOURCE_RULESETS = 'github-api-repository-rulesets-fallback';
 const SOURCE_COMBINED = 'github-api-classic-plus-repository-rulesets';
+const RULESET_SOURCE_TYPES = new Set(['Repository', 'Organization', 'Enterprise']);
+const BYPASS_ACTOR_TYPES = new Set(['RepositoryRole', 'Team', 'Integration', 'OrganizationAdmin']);
+const BYPASS_MODES = new Set(['always', 'pull_request']);
 
 function normalizeSha(value) {
   return String(value || '').trim().toLowerCase();
@@ -34,6 +36,16 @@ function enabled(value) {
 
 function uniqueStrings(values) {
   return [...new Set(values.filter((value) => typeof value === 'string' && value.trim()).map((value) => value.trim()))];
+}
+
+function safeEnum(value, allowed) {
+  const normalized = String(value || '').trim();
+  return allowed.has(normalized) ? normalized : 'unknown';
+}
+
+function safeNumericId(value) {
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
 function errorCode(error) {
@@ -97,12 +109,12 @@ export function synthesizeClassicProtectionFromRulesets(rulesets) {
   let blocksDeletion = false;
 
   for (const ruleset of applicable) {
+    const rulesetId = safeNumericId(ruleset?.id);
     for (const actor of Array.isArray(ruleset?.bypass_actors) ? ruleset.bypass_actors : []) {
       bypassActors.push({
-        rulesetId: Number(ruleset?.id) || null,
-        rulesetName: String(ruleset?.name || 'unnamed'),
-        actorType: String(actor?.actor_type || 'unknown'),
-        bypassMode: String(actor?.bypass_mode || 'unknown'),
+        rulesetId,
+        actorType: safeEnum(actor?.actor_type, BYPASS_ACTOR_TYPES),
+        bypassMode: safeEnum(actor?.bypass_mode, BYPASS_MODES),
       });
     }
 
@@ -146,11 +158,9 @@ export function synthesizeClassicProtectionFromRulesets(rulesets) {
     },
     metadata: {
       applicableRulesetCount: applicable.length,
-      rulesetIds: applicable.map((ruleset) => Number(ruleset?.id)).filter(Number.isFinite),
-      rulesetNames: uniqueStrings(applicable.map((ruleset) => String(ruleset?.name || ''))),
-      rulesetSources: uniqueStrings(applicable.map((ruleset) => String(ruleset?.source_type || ''))),
+      rulesetIds: applicable.map((ruleset) => safeNumericId(ruleset?.id)).filter(Boolean),
+      rulesetSources: uniqueStrings(applicable.map((ruleset) => safeEnum(ruleset?.source_type, RULESET_SOURCE_TYPES))),
       bypassActors,
-      configuredRequiredChecks: configuredChecks,
     },
   };
 }
@@ -209,14 +219,13 @@ export function applyRulesetsEvidenceBoundary(evidence, metadata, classicBoundar
     classicProtectionApiFailure: String(classicBoundary || 'unavailable'),
     applicableRulesetCount: metadata.applicableRulesetCount,
     rulesetIds: metadata.rulesetIds,
-    rulesetNames: metadata.rulesetNames,
     rulesetSources: metadata.rulesetSources,
     bypassActorCount: metadata.bypassActors.length,
     bypassActors: metadata.bypassActors,
   };
   evidence.evidenceLocations = uniqueStrings([
     ...(Array.isArray(evidence.evidenceLocations) ? evidence.evidenceLocations : []),
-    'GitHub Repository Rulesets API sanitized projection',
+    'GitHub Repository Rulesets API bounded projection',
     'scripts/enterprise/build-platform-controls-runtime-evidence.mjs',
   ]);
   evidence.evidenceBoundary = `${evidence.evidenceBoundary || ''} Classic branch protection and active rulesets may be evaluated cumulatively. Ruleset controls are accepted only when they target main and contain no bypass actor.`.trim();
@@ -248,11 +257,7 @@ async function githubJson(url, token) {
     cache: 'no-store',
     signal: AbortSignal.timeout(15_000),
   });
-  if (!response.ok) {
-    const error = new Error(`github_api_${response.status}`);
-    error.status = response.status;
-    throw error;
-  }
+  if (!response.ok) throw new Error(`github_api_${response.status}`);
   return response.json();
 }
 
@@ -272,24 +277,18 @@ async function fetchRepositoryRulesets(repository, token) {
     token,
   );
   if (!Array.isArray(summaries)) throw new Error('github_rulesets_listing_invalid');
+
   const details = [];
   for (const summary of summaries) {
     if (summary?.target !== 'branch' || summary?.enforcement !== 'active') continue;
-    const id = Number(summary?.id);
-    if (!Number.isFinite(id)) continue;
-    const selfUrl = String(summary?._links?.self?.href || '');
-    const url = selfUrl.startsWith('https://api.github.com/')
-      ? selfUrl
-      : `https://api.github.com/repos/${repository}/rulesets/${id}?includes_parents=true`;
-    details.push(await githubJson(url, token));
+    const id = safeNumericId(summary?.id);
+    if (!id) continue;
+    details.push(await githubJson(
+      `https://api.github.com/repos/${repository}/rulesets/${id}?includes_parents=true`,
+      token,
+    ));
   }
   return details;
-}
-
-function writeEvidence(root, evidence) {
-  const absolutePath = join(root, DEFAULT_OUTPUT_PATH);
-  mkdirSync(dirname(absolutePath), { recursive: true });
-  writeFileSync(absolutePath, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
 }
 
 function buildApiFailureEvidence({ targetSha, checkedOutSha, currentMainSha, runId, generatedAt, failures }) {
@@ -304,13 +303,14 @@ function buildApiFailureEvidence({ targetSha, checkedOutSha, currentMainSha, run
   evidence.source = 'github-api-platform-controls-unavailable';
   evidence.status = 'Open';
   evidence.outcome = 'blocked';
-  evidence.summary = 'Neither classic branch protection nor repository rulesets could provide complete sanitized platform-control evidence.';
+  evidence.summary = 'Neither classic branch protection nor repository rulesets could provide complete bounded platform-control evidence.';
   evidence.failures = uniqueStrings(failures);
-  evidence.sourceDetails = {
-    ...evidence.sourceDetails,
-    sourceMode: 'unavailable',
-  };
+  evidence.sourceDetails = { ...evidence.sourceDetails, sourceMode: 'unavailable' };
   return evidence;
+}
+
+function emitEvidence(evidence) {
+  process.stdout.write(`${JSON.stringify(evidence, null, 2)}\n`);
 }
 
 async function main() {
@@ -332,16 +332,16 @@ async function main() {
   try {
     currentMainSha = await fetchMainSha(repository, token);
   } catch (error) {
-    const evidence = buildApiFailureEvidence({
+    emitEvidence(buildApiFailureEvidence({
       targetSha,
       checkedOutSha,
       currentMainSha: '',
       runId: safeRunId(runId),
       generatedAt,
       failures: [errorCode(error)],
-    });
-    writeEvidence(root, evidence);
-    throw error;
+    }));
+    process.exitCode = 1;
+    return;
   }
 
   let classicProtection = null;
@@ -405,18 +405,17 @@ async function main() {
     }
   }
 
-  writeEvidence(root, evidence);
-  console.log(`Wrote ${DEFAULT_OUTPUT_PATH} from ${evidence.source}.`);
+  emitEvidence(evidence);
+  console.error(`Generated ${DEFAULT_OUTPUT_PATH} payload from ${evidence.source}.`);
   if (evidence.outcome !== 'passed') {
     console.error(evidence.summary);
-    process.exit(1);
+    process.exitCode = 1;
   }
-  console.log('Exact-SHA platform controls proof passed.');
 }
 
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
   main().catch((error) => {
     console.error(errorCode(error));
-    process.exit(1);
+    process.exitCode = 1;
   });
 }
