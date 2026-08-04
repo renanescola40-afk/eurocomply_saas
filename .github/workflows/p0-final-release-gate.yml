@@ -11,6 +11,7 @@ on:
       - 'docs/security/evidence/schemas/p0-runtime-evidence-register.schema.json'
       - 'scripts/security/**'
       - 'tests/security/*p0-runtime*'
+      - 'tests/security/p0-register-source-of-truth-contract.test.ts'
       - '.github/workflows/p0-final-release-gate.yml'
       - '.github/workflows/p0-runtime-evidence.yml'
       - 'package.json'
@@ -55,7 +56,8 @@ jobs:
           npx vitest run \
             scripts/security/p0-runtime-evidence-catalog.test.mjs \
             scripts/security/report-p0-runtime-evidence-gap.test.mjs \
-            tests/security/p0-runtime-gap-strict-contract.test.ts
+            tests/security/p0-runtime-gap-strict-contract.test.ts \
+            tests/security/p0-register-source-of-truth-contract.test.ts
           node --test \
             tests/security/generate-p0-runtime-evidence-register.test.mjs \
             tests/security/validate-generated-p0-runtime-evidence-register.test.mjs
