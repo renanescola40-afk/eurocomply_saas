@@ -5,22 +5,31 @@ on:
     paths:
       - 'scripts/enterprise/assess-conversation-final-closeout.mjs'
       - 'scripts/enterprise/fetch-conversation-final-closeout-evidence.mjs'
+      - 'scripts/enterprise/render-conversation-final-closeout-summary.mjs'
       - 'tests/enterprise/conversation-final-closeout-contract.test.ts'
       - 'tests/enterprise/assess-conversation-final-closeout.test.mjs'
       - 'tests/enterprise/conversation-final-closeout-evidence-fetch.test.mjs'
+      - 'tests/enterprise/render-conversation-final-closeout-summary.test.mjs'
       - '.github/workflows/enterprise-conversation-final-closeout*.yml'
-      - 'docs/enterprise/ENTERPRISE_CONVERSATION_FINAL_CLOSEOUT.md'
+      - 'docs/architecture/decisions/2026-08-04-enterprise-closeout-retrieval-provenance.md'
       - 'docs/runbooks/ENTERPRISE_CONVERSATION_FINAL_CLOSEOUT.md'
-      - 'docs/security/ENTERPRISE_CONVERSATION_FINAL_CLOSEOUT_THREAT_MODEL.md'
+      - 'docs/security/evidence/schemas/enterprise-conversation-closeout-retrieval.schema.json'
+      - 'docs/security/threat-models/ENTERPRISE_CLOSEOUT_ARTIFACT_RETRIEVAL.md'
   push:
     branches: [main]
     paths:
       - 'scripts/enterprise/assess-conversation-final-closeout.mjs'
       - 'scripts/enterprise/fetch-conversation-final-closeout-evidence.mjs'
+      - 'scripts/enterprise/render-conversation-final-closeout-summary.mjs'
       - 'tests/enterprise/conversation-final-closeout-contract.test.ts'
       - 'tests/enterprise/assess-conversation-final-closeout.test.mjs'
       - 'tests/enterprise/conversation-final-closeout-evidence-fetch.test.mjs'
+      - 'tests/enterprise/render-conversation-final-closeout-summary.test.mjs'
       - '.github/workflows/enterprise-conversation-final-closeout*.yml'
+      - 'docs/architecture/decisions/2026-08-04-enterprise-closeout-retrieval-provenance.md'
+      - 'docs/runbooks/ENTERPRISE_CONVERSATION_FINAL_CLOSEOUT.md'
+      - 'docs/security/evidence/schemas/enterprise-conversation-closeout-retrieval.schema.json'
+      - 'docs/security/threat-models/ENTERPRISE_CLOSEOUT_ARTIFACT_RETRIEVAL.md'
 
 permissions:
   contents: read
@@ -31,7 +40,7 @@ concurrency:
 
 jobs:
   contract:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -44,6 +53,12 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npx vitest run tests/enterprise/conversation-final-closeout-contract.test.ts
-      - run: node --test tests/enterprise/assess-conversation-final-closeout.test.mjs tests/enterprise/conversation-final-closeout-evidence-fetch.test.mjs
+      - run: >-
+          node --test
+          tests/enterprise/assess-conversation-final-closeout.test.mjs
+          tests/enterprise/conversation-final-closeout-evidence-fetch.test.mjs
+          tests/enterprise/render-conversation-final-closeout-summary.test.mjs
+      - name: Validate retrieval schema JSON
+        run: node -e "JSON.parse(require('node:fs').readFileSync('docs/security/evidence/schemas/enterprise-conversation-closeout-retrieval.schema.json','utf8'))"
       - name: Validate exact assessed SHA
         run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"

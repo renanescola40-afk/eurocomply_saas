@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://risckcomply.com/schemas/enterprise-conversation-closeout-retrieval.schema.json",
+  "title": "RISCK COMPLY Enterprise Conversation Closeout Retrieval Provenance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "repository",
+    "targetSha",
+    "generatedAt",
+    "status",
+    "outcome",
+    "sources",
+    "blockers",
+    "noSecretsStored",
+    "truthBoundary"
+  ],
+  "properties": {
+    "schema": {
+      "const": "risck-comply.enterprise-conversation-closeout-retrieval.v1"
+    },
+    "repository": {
+      "const": "renanescola40-afk/eurocomply_saas"
+    },
+    "targetSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "enum": ["Complete", "Open"]
+    },
+    "outcome": {
+      "enum": ["passed", "blocked"]
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/blocker"
+      }
+    },
+    "noSecretsStored": {
+      "const": true
+    },
+    "truthBoundary": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 500
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "workflow",
+        "artifactName",
+        "expectedPaths",
+        "extractedPaths",
+        "status",
+        "runId",
+        "artifactId",
+        "runEvent",
+        "runUpdatedAt",
+        "artifactUpdatedAt",
+        "failure"
+      ],
+      "properties": {
+        "key": {
+          "enum": [
+            "enterpriseProductionFinal",
+            "enterpriseReadinessScorecard"
+          ]
+        },
+        "workflow": {
+          "enum": [
+            "enterprise-production-gate.yml",
+            "enterprise-readiness-scorecard.yml"
+          ]
+        },
+        "artifactName": {
+          "type": "string",
+          "pattern": "^(enterprise-production-final-evidence|enterprise-readiness-scorecard)-[0-9a-f]{40}$"
+        },
+        "expectedPaths": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          }
+        },
+        "extractedPaths": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          }
+        },
+        "status": {
+          "enum": ["Complete", "Open"]
+        },
+        "runId": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9]+$"
+        },
+        "artifactId": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9]+$"
+        },
+        "runEvent": {
+          "type": ["string", "null"],
+          "enum": ["push", "workflow_dispatch", null]
+        },
+        "runUpdatedAt": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "artifactUpdatedAt": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "failure": {
+          "type": ["string", "null"],
+          "pattern": "^[a-z0-9_]+$"
+        }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "workflow", "failure"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9]+$"
+        },
+        "workflow": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+\\.yml$"
+        },
+        "failure": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$"
+        }
+      }
+    }
+  }
+}

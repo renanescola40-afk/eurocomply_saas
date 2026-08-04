@@ -17,21 +17,21 @@ permissions:
   contents: read
 
 concurrency:
-  group: enterprise-conversation-final-closeout
+  group: enterprise-conversation-final-closeout-${{ inputs.release_sha }}
   cancel-in-progress: false
 
 jobs:
   closeout:
     name: Assess exact-SHA conversation completion
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     environment: production
     steps:
-      - name: Check out trusted main
+      - name: Check out exact assessed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: main
-          fetch-depth: 0
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
           persist-credentials: false
 
       - name: Authorize exact current main SHA
@@ -40,48 +40,69 @@ jobs:
           CONFIRMATION: ${{ inputs.confirmation }}
         run: |
           set -euo pipefail
-          git fetch --no-tags origin main
+          git fetch --no-tags --depth=1 origin main
           main_sha="$(git rev-parse origin/main)"
           [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
           test "${RELEASE_SHA,,}" = "$main_sha"
           test "$(git rev-parse HEAD)" = "$main_sha"
           test "$CONFIRMATION" = "CLOSE_ENTERPRISE_CONVERSATION"
 
-      - name: Run final closeout assessor
+      - name: Retrieve mandatory exact-SHA evidence
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          node scripts/enterprise/fetch-conversation-final-closeout-evidence.mjs
-          node scripts/enterprise/assess-conversation-final-closeout.mjs
-
-      - name: Verify completion decision
-        run: |
           set -euo pipefail
-          result=artifacts/enterprise-conversation-closeout/result.json
-          test -s "$result"
-          node -e "const r=require('./' + process.argv[1]); if(r.status!=='Complete'||r.decision!=='CONVERSATION_COMPLETE'||r.completionPercentage!==100) process.exit(1)" "$result"
-          sha256sum "$result" > artifacts/enterprise-conversation-closeout/SHA256SUMS
+          output=artifacts/enterprise-conversation-closeout
+          mkdir -p "$output"
+          umask 077
+          node scripts/enterprise/fetch-conversation-final-closeout-evidence.mjs > "$output/retrieval-manifest.json"
+          node -e "const r=require('./' + process.argv[1]); if(!r.schema||!Array.isArray(r.sources)) process.exit(1)" "$output/retrieval-manifest.json"
 
-      - name: Publish completion summary
+      - name: Assess final closeout without losing diagnostics
+        id: assessor
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
-          {
-            echo "## Enterprise conversation final closeout"
-            echo
-            echo "- Decision: \`CONVERSATION_COMPLETE\`"
-            echo "- Canonical Enterprise scorecard: \`100/100 PASS\`"
-            echo "- Release SHA: \`$RELEASE_SHA\`"
-            echo "- Evidence: exact-SHA runtime, production-final and Go/No-Go proofs passed."
-            echo
-            echo "**This conversation can now be closed.**"
-          } >> "$GITHUB_STEP_SUMMARY"
+          set +e
+          node scripts/enterprise/assess-conversation-final-closeout.mjs
+          exit_code="$?"
+          set -e
+          test "$exit_code" = "0" -o "$exit_code" = "2"
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+
+      - name: Generate immutable evidence checksums
+        if: always()
+        run: |
+          set -euo pipefail
+          output=artifacts/enterprise-conversation-closeout
+          mkdir -p "$output"
+          find "$output" -maxdepth 1 -type f -name '*.json' -print0 \
+            | sort -z \
+            | xargs -0 -r sha256sum > "$output/SHA256SUMS"
+
+      - name: Publish completion or blocker summary
+        if: always()
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: node scripts/enterprise/render-conversation-final-closeout-summary.mjs | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload immutable closeout evidence
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: enterprise-conversation-final-closeout-${{ inputs.release_sha }}
           path: artifacts/enterprise-conversation-closeout
           if-no-files-found: error
           retention-days: 365
+
+      - name: Enforce final completion decision
+        if: always()
+        env:
+          ASSESSOR_EXIT_CODE: ${{ steps.assessor.outputs.exit_code }}
+        run: |
+          set -euo pipefail
+          test "$ASSESSOR_EXIT_CODE" = "0"
+          result=artifacts/enterprise-conversation-closeout/result.json
+          test -s "$result"
+          node -e "const r=require('./' + process.argv[1]); if(r.status!=='Complete'||r.decision!=='CONVERSATION_COMPLETE'||r.completionPercentage!==100) process.exit(1)" "$result"

@@ -10,6 +10,16 @@ import { derivePersistentExecutionState } from '../../scripts/enterprise/write-p
 
 const SHA = 'a'.repeat(40);
 const NOW = new Date('2026-07-29T20:00:00.000Z');
+const PRODUCTION_PATHS = [
+  'docs/security/evidence/runtime/stripe-billing-validation.json',
+  'docs/security/evidence/runtime/enterprise-runtime-evidence.json',
+  'docs/security/evidence/runtime/production-final-validation.json',
+  'docs/security/evidence/runtime/release-go-no-go.json',
+];
+const SCORECARD_PATHS = [
+  'artifacts/enterprise-readiness/enterprise-readiness-scorecard.json',
+  'artifacts/enterprise-readiness/persistent-execution-state.json',
+];
 const GO_KEYS = [
   'enterpriseEnvReadiness',
   'deploymentSmoke',
@@ -30,6 +40,23 @@ function write(root, path, value) {
   const output = join(root, path);
   mkdirSync(dirname(output), { recursive: true });
   writeFileSync(output, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function retrievalSource(key, workflow, artifactName, paths, runId, artifactId) {
+  return {
+    key,
+    workflow,
+    artifactName,
+    expectedPaths: paths,
+    extractedPaths: paths,
+    status: 'Complete',
+    runId,
+    artifactId,
+    runEvent: 'workflow_dispatch',
+    runUpdatedAt: NOW.toISOString(),
+    artifactUpdatedAt: NOW.toISOString(),
+    failure: null,
+  };
 }
 
 function fixture() {
@@ -68,6 +95,35 @@ function fixture() {
     shaMatches: commitBound ? true : null,
   });
 
+  write(root, 'artifacts/enterprise-conversation-closeout/retrieval-manifest.json', {
+    schema: 'risck-comply.enterprise-conversation-closeout-retrieval.v1',
+    repository: 'renanescola40-afk/eurocomply_saas',
+    targetSha: SHA,
+    generatedAt: NOW.toISOString(),
+    status: 'Complete',
+    outcome: 'passed',
+    sources: [
+      retrievalSource(
+        'enterpriseProductionFinal',
+        'enterprise-production-gate.yml',
+        `enterprise-production-final-evidence-${SHA}`,
+        PRODUCTION_PATHS,
+        '101',
+        '201',
+      ),
+      retrievalSource(
+        'enterpriseReadinessScorecard',
+        'enterprise-readiness-scorecard.yml',
+        `enterprise-readiness-scorecard-${SHA}`,
+        SCORECARD_PATHS,
+        '102',
+        '202',
+      ),
+    ],
+    blockers: [],
+    noSecretsStored: true,
+    truthBoundary: 'All mandatory exact-main-SHA workflow artifacts were retrieved.',
+  });
   write(root, 'artifacts/enterprise-readiness/enterprise-readiness-scorecard.json', scorecard);
   write(root, 'artifacts/enterprise-readiness/persistent-execution-state.json', state);
   write(root, 'docs/security/evidence/runtime/stripe-billing-validation.json', {
@@ -139,7 +195,7 @@ function fixture() {
   return root;
 }
 
-test('completes only with strict runtime evidence and canonical exact-SHA 100/100 state', () => {
+test('completes only with strict runtime evidence, retrieval provenance and exact-SHA 100/100 state', () => {
   const root = fixture();
   try {
     const result = assessConversationFinalCloseout({ root, expectedSha: SHA, generatedAt: NOW.toISOString(), now: NOW });
@@ -147,6 +203,7 @@ test('completes only with strict runtime evidence and canonical exact-SHA 100/10
     assert.equal(result.decision, 'CONVERSATION_COMPLETE');
     assert.equal(result.completionPercentage, 100);
     assert.deepEqual(result.blockers, []);
+    assert.equal(result.retrievalSources.length, 2);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -164,6 +221,33 @@ test('remains open when the release evidence belongs to another SHA', () => {
     assert.equal(result.status, 'Open');
     assert.equal(result.decision, 'CONVERSATION_REMAINS_OPEN');
     assert.ok(result.blockers.some((blocker) => blocker.control === 'releaseGoNoGo'));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('remains open when artifact retrieval provenance is incomplete', () => {
+  const root = fixture();
+  try {
+    const path = 'artifacts/enterprise-conversation-closeout/retrieval-manifest.json';
+    const manifest = JSON.parse(readFileSync(join(root, path), 'utf8'));
+    manifest.status = 'Open';
+    manifest.outcome = 'blocked';
+    manifest.sources[0].status = 'Open';
+    manifest.sources[0].failure = 'exact_sha_artifact_missing';
+    manifest.sources[0].runId = null;
+    manifest.sources[0].artifactId = null;
+    manifest.sources[0].extractedPaths = [];
+    manifest.blockers = [{
+      key: 'enterpriseProductionFinal',
+      workflow: 'enterprise-production-gate.yml',
+      failure: 'exact_sha_artifact_missing',
+    }];
+    write(root, path, manifest);
+
+    const result = assessConversationFinalCloseout({ root, expectedSha: SHA, generatedAt: NOW.toISOString(), now: NOW });
+    assert.equal(result.status, 'Open');
+    assert.ok(result.blockers.some((blocker) => blocker.control === 'retrievalManifest'));
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
