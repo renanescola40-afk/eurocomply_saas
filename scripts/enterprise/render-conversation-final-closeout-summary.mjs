@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const FULL_SHA = /^[0-9a-f]{40}$/;
 const DEFAULT_ROOT = 'artifacts/enterprise-conversation-closeout';
@@ -54,6 +54,6 @@ function runCli() {
   process.stdout.write(renderConversationFinalCloseoutSummary({ releaseSha }));
 }
 
-if (process.argv[1] && pathToFileURL(fileURLToPath(pathToFileURL(process.argv[1]))).href === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   runCli();
 }
