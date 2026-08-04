@@ -36,6 +36,7 @@ describe('Supabase migration object evidence workflow', () => {
     expect(workflow).toContain('expected_catalog_sha="$(cut -d\' \' -f1 artifacts/source/schema/SHA256SUMS)"');
     expect(workflow).toContain('actual_catalog_sha="$(sha256sum artifacts/source/schema/catalog.txt | cut -d\' \' -f1)"');
     expect(workflow).toContain('test "$actual_catalog_sha" = "$expected_catalog_sha"');
+    expect(workflow).toContain("grep -q '^catalog_capability|persistent_object_grants_v1$'");
     expect(workflow).toContain('migration-reconciliation-inventory.json');
     expect(workflow).toContain('catalog.txt');
   });

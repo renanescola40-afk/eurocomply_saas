@@ -49,6 +49,7 @@ async function fixture() {
 
   const catalogPath = path.join(root, 'catalog.txt');
   await writeFile(catalogPath, [
+    'catalog_capability|persistent_object_grants_v1',
     'table|public|alpha|r|t|f|postgres',
     'column|public|alpha|1|id|uuid|uuid|NO|',
     'column|public|alpha|2|label|text|text|YES|',
@@ -178,8 +179,10 @@ test('does not confuse static EXECUTE grammar with dynamic SQL', async () => {
   assert.equal(trigger.candidate.candidateClassification, 'PENDING_DEPLOYMENT');
   assert.equal(trigger.unresolved.length, 0);
   assert.ok(trigger.operations.some((entry) => entry.kind === 'TRIGGER'));
-  assert.ok(grant.unresolved.some((entry) => (
-    entry.reason === 'STATEMENT_NOT_DETERMINISTICALLY_PARSED'
+  assert.equal(grant.unresolved.length, 0);
+  assert.ok(grant.operations.some((entry) => (
+    entry.kind === 'FUNCTION_GRANT'
+    && entry.key === 'public.touch_alpha().authenticated.execute'
   )));
   assert.equal(grant.unresolved.some((entry) => (
     entry.reason === 'DYNAMIC_SQL_REQUIRES_MANUAL_REVIEW'
@@ -187,6 +190,84 @@ test('does not confuse static EXECUTE grammar with dynamic SQL', async () => {
   assert.ok(dynamic.unresolved.some((entry) => (
     entry.reason === 'DYNAMIC_SQL_REQUIRES_MANUAL_REVIEW'
   )));
+});
+
+test('proves exact overloaded function grants without weakening dynamic SQL review', async () => {
+  const paths = await fixture();
+  const catalog = await readFile(paths.catalogPath, 'utf8');
+  await writeFile(paths.catalogPath, [
+    catalog.trimEnd(),
+    'function_grant|public|touch_alpha|uuid, text|authenticated|EXECUTE|NO',
+    '',
+  ].join('\n'));
+  await addMigration(
+    paths,
+    '20260101000440_function_grants.sql',
+    [
+      'grant execute on function public.touch_alpha(uuid, text) to authenticated;',
+      'revoke all on function public.touch_alpha(uuid) from authenticated;',
+    ].join('\n'),
+  );
+  await addMigration(
+    paths,
+    '20260101000450_ambiguous_function_grant.sql',
+    'grant execute on function public.touch_alpha to authenticated;',
+  );
+
+  const result = await run(paths);
+  const exact = result.items.find((entry) => entry.filename === '20260101000440_function_grants.sql');
+  const ambiguous = result.items.find((entry) => entry.filename === '20260101000450_ambiguous_function_grant.sql');
+
+  assert.equal(exact.unresolved.length, 0);
+  assert.equal(exact.candidate.candidateClassification, 'ALREADY_PRESENT_IN_SCHEMA');
+  assert.deepEqual(
+    exact.operations.map((entry) => [entry.key, entry.targetStateMatched]),
+    [
+      ['public.touch_alpha(uuid,text).authenticated.execute', true],
+      ['public.touch_alpha(uuid).authenticated.execute', true],
+    ],
+  );
+  assert.ok(ambiguous.unresolved.some((entry) => (
+    entry.reason === 'FUNCTION_GRANT_SIGNATURE_REQUIRED'
+  )));
+  assert.equal(ambiguous.candidate.candidateClassification, 'REQUIRES_SPLIT_REVIEW');
+});
+
+test('captures durable extension, type, sequence and view target states fail-closed', async () => {
+  const paths = await fixture();
+  const catalog = await readFile(paths.catalogPath, 'utf8');
+  await writeFile(paths.catalogPath, [
+    catalog.trimEnd(),
+    'extension|pgcrypto|1.3',
+    'type|public|workflow_status|e',
+    'sequence|public|legacy_seq|bigint|1|1|9223372036854775807|1',
+    'table|public|active_workflows|v|f|f|postgres',
+    '',
+  ].join('\n'));
+  await addMigration(paths, '20260101000460_extension.sql', 'create extension if not exists pgcrypto;');
+  await addMigration(paths, '20260101000465_extension_version.sql', "create extension pgcrypto version '9.9';");
+  await addMigration(paths, '20260101000470_type.sql', "create type public.workflow_status as enum ('active');");
+  await addMigration(paths, '20260101000480_sequence.sql', 'drop sequence if exists public.legacy_seq;');
+  await addMigration(paths, '20260101000490_view.sql', 'create or replace view public.active_workflows as select 1 as id;');
+  await addMigration(paths, '20260101000510_absent_type.sql', "create type public.new_status as enum ('new');");
+  await addMigration(paths, '20260101000520_absent_domain.sql', 'create domain public.email_address as text;');
+
+  const result = await run(paths);
+  const byFile = new Map(result.items.map((item) => [item.filename, item]));
+
+  assert.equal(byFile.get('20260101000460_extension.sql').candidate.candidateClassification, 'ALREADY_PRESENT_IN_SCHEMA');
+  assert.equal(byFile.get('20260101000465_extension_version.sql').candidate.candidateClassification, 'REQUIRES_SPLIT_REVIEW');
+  assert.equal(byFile.get('20260101000470_type.sql').candidate.candidateClassification, 'REQUIRES_SPLIT_REVIEW');
+  assert.ok(byFile.get('20260101000470_type.sql').unresolved.some((entry) => (
+    entry.reason === 'TYPE_DEFINITION_REQUIRES_MANUAL_REVIEW'
+  )));
+  assert.equal(byFile.get('20260101000480_sequence.sql').candidate.candidateClassification, 'PENDING_DEPLOYMENT');
+  assert.equal(byFile.get('20260101000490_view.sql').candidate.candidateClassification, 'REQUIRES_SPLIT_REVIEW');
+  assert.ok(byFile.get('20260101000490_view.sql').unresolved.some((entry) => (
+    entry.reason === 'VIEW_DEFINITION_REQUIRES_MANUAL_REVIEW'
+  )));
+  assert.equal(byFile.get('20260101000510_absent_type.sql').candidate.candidateClassification, 'PENDING_DEPLOYMENT');
+  assert.equal(byFile.get('20260101000520_absent_domain.sql').candidate.candidateClassification, 'PENDING_DEPLOYMENT');
 });
 
 test('REVOKE ALL expands to concrete table privileges and detects residual grants', async () => {
@@ -255,4 +336,15 @@ test('rejects stale inventory digests', async () => {
     paths.migrationsDir,
     paths.outputDir,
   ]));
+});
+
+test('rejects legacy catalogs that cannot prove persistent objects or function grants', async () => {
+  const paths = await fixture();
+  const catalog = await readFile(paths.catalogPath, 'utf8');
+  await writeFile(
+    paths.catalogPath,
+    catalog.replace('catalog_capability|persistent_object_grants_v1\n', ''),
+  );
+
+  await assert.rejects(run(paths), /persistent object and function grant capabilities/);
 });

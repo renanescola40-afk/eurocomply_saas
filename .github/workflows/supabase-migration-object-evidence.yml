@@ -116,6 +116,7 @@ jobs:
           test -s artifacts/source/dry-run/drift/migration-reconciliation-inventory.json
           test -s artifacts/source/schema/catalog.txt
           test -s artifacts/source/schema/SHA256SUMS
+          grep -q '^catalog_capability|persistent_object_grants_v1$' artifacts/source/schema/catalog.txt
           expected_catalog_sha="$(cut -d' ' -f1 artifacts/source/schema/SHA256SUMS)"
           actual_catalog_sha="$(sha256sum artifacts/source/schema/catalog.txt | cut -d' ' -f1)"
           test "$actual_catalog_sha" = "$expected_catalog_sha"
