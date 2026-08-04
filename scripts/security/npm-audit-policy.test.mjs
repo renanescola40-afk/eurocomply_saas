@@ -2,74 +2,113 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { NPM_AUDIT_EXCEPTIONS, evaluateNpmAudit } from './npm-audit-policy.mjs';
 
-const exception = NPM_AUDIT_EXCEPTIONS[0];
-const affectedNode = 'node_modules/brace-expansion';
-
-function evidence({ advisorySource = exception.source, version = exception.version } = {}) {
+function advisoryEvidence({
+  packageName = 'unsafe-package',
+  severity = 'high',
+  source = 9999999,
+  via,
+} = {}) {
+  const rootAdvisory = {
+    source,
+    name: packageName,
+    severity,
+    url: `https://github.com/advisories/GHSA-AAAA-BBBB-CCCC`,
+  };
   return {
     audit: {
       vulnerabilities: {
-        'brace-expansion': {
-          severity: 'high',
-          via: [
-            {
-              source: advisorySource,
-              name: 'brace-expansion',
-              url: `https://github.com/advisories/${exception.id}`,
-            },
-          ],
-          nodes: [affectedNode],
-        },
-        minimatch: {
-          severity: 'high',
-          via: ['brace-expansion'],
-          nodes: ['node_modules/minimatch'],
+        [packageName]: {
+          severity,
+          via: via ?? [rootAdvisory],
+          nodes: [`node_modules/${packageName}`],
         },
       },
     },
     lockfile: {
       packages: {
-        [affectedNode]: {
-          version,
-          integrity: exception.integrity,
+        [`node_modules/${packageName}`]: {
+          version: '1.0.0',
+          integrity: `sha512-${'a'.repeat(86)}`,
         },
       },
     },
   };
 }
 
-test('accepts only the reviewed brace-expansion backport before expiry', () => {
+test('has no active npm vulnerability exceptions', () => {
+  assert.deepEqual(NPM_AUDIT_EXCEPTIONS, []);
+});
+
+test('accepts a clean npm audit without exceptions', () => {
   const result = evaluateNpmAudit({
-    ...evidence(),
-    now: new Date('2026-07-29T12:00:00.000Z'),
+    audit: { vulnerabilities: {} },
+    lockfile: { packages: {} },
+    now: new Date('2026-08-04T12:00:00.000Z'),
   });
 
   assert.equal(result.ok, true);
-  assert.deepEqual(result.appliedExceptions.map(({ id }) => id), [exception.id]);
+  assert.deepEqual(result.failures, []);
+  assert.deepEqual(result.appliedExceptions, []);
 });
 
-test('rejects any unapproved advisory', () => {
-  const result = evaluateNpmAudit({
-    ...evidence({ advisorySource: 9999999 }),
-    now: new Date('2026-07-29T12:00:00.000Z'),
-  });
+test('rejects every moderate-or-higher advisory when no exception exists', () => {
+  for (const severity of ['moderate', 'high', 'critical']) {
+    const result = evaluateNpmAudit({
+      ...advisoryEvidence({ severity }),
+      now: new Date('2026-08-04T12:00:00.000Z'),
+    });
 
-  assert.equal(result.ok, false);
-  assert.match(result.failures.join('\n'), /unapproved advisory/);
+    assert.equal(result.ok, false);
+    assert.match(result.failures.join('\n'), /unapproved advisory/);
+    assert.deepEqual(result.appliedExceptions, []);
+  }
 });
 
-test('rejects artifact drift and expiration', () => {
-  const drift = evaluateNpmAudit({
-    ...evidence({ version: '1.1.16' }),
-    now: new Date('2026-07-29T12:00:00.000Z'),
+test('ignores info and low findings according to the moderate release threshold', () => {
+  for (const severity of ['info', 'low']) {
+    const result = evaluateNpmAudit({
+      ...advisoryEvidence({ severity }),
+      now: new Date('2026-08-04T12:00:00.000Z'),
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.failures, []);
+  }
+});
+
+test('rejects missing transitive advisory references and dependency cycles', () => {
+  const missing = evaluateNpmAudit({
+    audit: {
+      vulnerabilities: {
+        parent: {
+          severity: 'high',
+          via: ['missing-child'],
+          nodes: ['node_modules/parent'],
+        },
+      },
+    },
+    lockfile: { packages: {} },
   });
-  const expired = evaluateNpmAudit({
-    ...evidence(),
-    now: new Date('2026-08-06T00:00:00.000Z'),
+  const cycle = evaluateNpmAudit({
+    audit: {
+      vulnerabilities: {
+        parent: {
+          severity: 'high',
+          via: ['child'],
+          nodes: ['node_modules/parent'],
+        },
+        child: {
+          severity: 'high',
+          via: ['parent'],
+          nodes: ['node_modules/child'],
+        },
+      },
+    },
+    lockfile: { packages: {} },
   });
 
-  assert.equal(drift.ok, false);
-  assert.match(drift.failures.join('\n'), /allows only 1\.1\.17/);
-  assert.equal(expired.ok, false);
-  assert.match(expired.failures.join('\n'), /expired/);
+  assert.equal(missing.ok, false);
+  assert.match(missing.failures.join('\n'), /references missing vulnerability/);
+  assert.equal(cycle.ok, false);
+  assert.match(cycle.failures.join('\n'), /dependency cycle/);
 });
