@@ -10,8 +10,29 @@ import { validateReleaseGoNoGoEvidence } from '../release/validate-release-go-no
 import { validateStripeRuntimeEvidence } from '../release/validate-stripe-runtime-evidence.mjs';
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const canonicalRepository = 'renanescola40-afk/eurocomply_saas';
 const fullSha = /^[0-9a-f]{40}$/;
+const numericId = /^\d+$/;
+const expectedRetrievalSources = new Map([
+  ['enterpriseProductionFinal', {
+    workflow: 'enterprise-production-gate.yml',
+    paths: [
+      'docs/security/evidence/runtime/stripe-billing-validation.json',
+      'docs/security/evidence/runtime/enterprise-runtime-evidence.json',
+      'docs/security/evidence/runtime/production-final-validation.json',
+      'docs/security/evidence/runtime/release-go-no-go.json',
+    ],
+  }],
+  ['enterpriseReadinessScorecard', {
+    workflow: 'enterprise-readiness-scorecard.yml',
+    paths: [
+      'artifacts/enterprise-readiness/enterprise-readiness-scorecard.json',
+      'artifacts/enterprise-readiness/persistent-execution-state.json',
+    ],
+  }],
+]);
 const evidenceDefinitions = [
+  ['retrievalManifest', 'artifacts/enterprise-conversation-closeout/retrieval-manifest.json'],
   ['stripeRuntime', 'docs/security/evidence/runtime/stripe-billing-validation.json'],
   ['enterpriseRuntime', 'docs/security/evidence/runtime/enterprise-runtime-evidence.json'],
   ['productionFinal', 'docs/security/evidence/runtime/production-final-validation.json'],
@@ -40,6 +61,46 @@ function exactSha(value, expectedSha) {
     value?.runtimeProof?.headSha,
   ];
   return candidates.some((candidate) => String(candidate || '').toLowerCase() === expectedSha);
+}
+
+function sameStringSet(actual, expected) {
+  if (!Array.isArray(actual) || actual.some((value) => typeof value !== 'string')) return false;
+  const actualSet = new Set(actual);
+  return actualSet.size === expected.length && expected.every((value) => actualSet.has(value));
+}
+
+export function validateRetrievalManifest(value, expectedSha) {
+  const failures = [];
+  if (value?.schema !== 'risck-comply.enterprise-conversation-closeout-retrieval.v1') failures.push('schema_invalid');
+  if (value?.repository !== canonicalRepository) failures.push('repository_invalid');
+  if (String(value?.targetSha || '').toLowerCase() !== expectedSha) failures.push('target_sha_mismatch');
+  if (value?.status !== 'Complete' || value?.outcome !== 'passed') failures.push('retrieval_not_complete');
+  if (value?.noSecretsStored !== true) failures.push('no_secrets_stored_required');
+  if (!Array.isArray(value?.blockers) || value.blockers.length !== 0) failures.push('retrieval_blockers_present');
+  if (!Array.isArray(value?.sources) || value.sources.length !== expectedRetrievalSources.size) {
+    failures.push('retrieval_sources_incomplete');
+    return failures;
+  }
+
+  for (const [key, expected] of expectedRetrievalSources) {
+    const matches = value.sources.filter((source) => source?.key === key);
+    if (matches.length !== 1) {
+      failures.push(`source_${key}_missing_or_duplicate`);
+      continue;
+    }
+    const source = matches[0];
+    if (source?.workflow !== expected.workflow) failures.push(`source_${key}_workflow_invalid`);
+    if (source?.status !== 'Complete' || source?.failure !== null) failures.push(`source_${key}_not_complete`);
+    if (!numericId.test(String(source?.runId || ''))) failures.push(`source_${key}_run_id_invalid`);
+    if (!numericId.test(String(source?.artifactId || ''))) failures.push(`source_${key}_artifact_id_invalid`);
+    if (!['push', 'workflow_dispatch'].includes(source?.runEvent)) failures.push(`source_${key}_event_invalid`);
+    if (!sameStringSet(source?.expectedPaths, expected.paths)) failures.push(`source_${key}_expected_paths_invalid`);
+    if (!sameStringSet(source?.extractedPaths, expected.paths)) failures.push(`source_${key}_extracted_paths_invalid`);
+    if (typeof source?.artifactName !== 'string' || !source.artifactName.endsWith(expectedSha)) {
+      failures.push(`source_${key}_artifact_name_invalid`);
+    }
+  }
+  return failures;
 }
 
 function validateEnterpriseRuntime(value, expectedSha) {
@@ -103,6 +164,9 @@ export function assessConversationFinalCloseout({
   const evidence = Object.fromEntries(evidenceDefinitions.map(([key, path]) => [key, readJson(root, path)]));
   const validations = {};
 
+  validations.retrievalManifest = evidence.retrievalManifest.parseable
+    ? validateRetrievalManifest(evidence.retrievalManifest.value, normalizedSha)
+    : ['evidence_missing_or_invalid'];
   validations.stripeRuntime = evidence.stripeRuntime.parseable
     ? validateStripeRuntimeEvidence(evidence.stripeRuntime.value, { now })
     : ['evidence_missing_or_invalid'];
@@ -153,8 +217,19 @@ export function assessConversationFinalCloseout({
     exactSha: evidence[key].parseable ? exactSha(evidence[key].value, normalizedSha) : false,
     validationFailures: validations[key] || [],
   }));
+  const retrievalSources = evidence.retrievalManifest.parseable && Array.isArray(evidence.retrievalManifest.value?.sources)
+    ? evidence.retrievalManifest.value.sources.map((source) => ({
+      key: source?.key || 'unknown',
+      workflow: source?.workflow || 'unknown',
+      artifactName: source?.artifactName || 'unknown',
+      runId: source?.runId || null,
+      artifactId: source?.artifactId || null,
+      status: source?.status || 'Open',
+      failure: source?.failure || null,
+    }))
+    : [];
   const result = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     id: 'enterprise-conversation-final-closeout',
     releaseSha: normalizedSha,
     generatedAt,
@@ -164,10 +239,11 @@ export function assessConversationFinalCloseout({
     scoreFreshness: evidence.persistentExecutionState.value?.evidence_freshness?.status || 'UNKNOWN',
     required,
     blockers,
+    retrievalSources,
     evidence: evidenceSummary,
     truthBoundary: complete
-      ? 'All canonical runtime, release, and exact-SHA 100-control scorecard evidence passed.'
-      : 'Conversation closeout remains open. Repository implementation or partial runtime proof cannot substitute for a canonical exact-SHA 100-control Enterprise GO.',
+      ? 'All canonical runtime, release, retrieval-provenance, and exact-SHA 100-control scorecard evidence passed.'
+      : 'Conversation closeout remains open. Repository implementation, missing artifacts, or partial runtime proof cannot substitute for a canonical exact-SHA 100-control Enterprise GO.',
   };
   return {
     ...result,
@@ -181,7 +257,7 @@ function runCli() {
   const result = assessConversationFinalCloseout({ expectedSha });
   const absoluteOutput = join(repositoryRoot, outputPath);
   mkdirSync(dirname(absoluteOutput), { recursive: true });
-  writeFileSync(absoluteOutput, `${JSON.stringify(result, null, 2)}\n`);
+  writeFileSync(absoluteOutput, `${JSON.stringify(result, null, 2)}\n`, { mode: 0o600 });
   console.log(JSON.stringify(result, null, 2));
   if (result.status !== 'Complete') process.exitCode = 2;
 }
