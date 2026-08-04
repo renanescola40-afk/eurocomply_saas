@@ -16,6 +16,7 @@ const FULL_SHA = /^[0-9a-f]{40}$/;
 const MAIN_REF = `refs/heads/${CANONICAL_BRANCH}`;
 const SOURCE_CLASSIC = 'github-api-classic-branch-protection';
 const SOURCE_RULESETS = 'github-api-repository-rulesets-fallback';
+const SOURCE_COMBINED = 'github-api-classic-plus-repository-rulesets';
 
 function normalizeSha(value) {
   return String(value || '').trim().toLowerCase();
@@ -24,6 +25,11 @@ function normalizeSha(value) {
 function safeRunId(value) {
   const runId = String(value || '').trim();
   return /^\d+$/.test(runId) ? runId : null;
+}
+
+function enabled(value) {
+  if (typeof value === 'boolean') return value;
+  return value?.enabled === true;
 }
 
 function uniqueStrings(values) {
@@ -42,6 +48,16 @@ function globToRegExp(pattern) {
     .replace(/\?/g, '[^/]')
     .replace(/__DOUBLE_STAR__/g, '.*');
   return new RegExp(`^${escaped}$`);
+}
+
+function requiredCheckContexts(protection) {
+  const contexts = Array.isArray(protection?.required_status_checks?.contexts)
+    ? protection.required_status_checks.contexts
+    : [];
+  const checks = Array.isArray(protection?.required_status_checks?.checks)
+    ? protection.required_status_checks.checks.map((check) => check?.context)
+    : [];
+  return uniqueStrings([...contexts, ...checks]);
 }
 
 export function rulesetPatternMatchesMain(pattern) {
@@ -139,12 +155,58 @@ export function synthesizeClassicProtectionFromRulesets(rulesets) {
   };
 }
 
-export function applyRulesetsEvidenceBoundary(evidence, metadata, classicApiFailure) {
-  evidence.source = SOURCE_RULESETS;
+export function mergeClassicAndRulesetProtection(classicProtection, rulesetProtection) {
+  const classicReviews = classicProtection?.required_pull_request_reviews;
+  const rulesetReviews = rulesetProtection?.required_pull_request_reviews;
+  const hasReviews = Boolean(classicReviews || rulesetReviews);
+  const checks = uniqueStrings([
+    ...requiredCheckContexts(classicProtection),
+    ...requiredCheckContexts(rulesetProtection),
+  ]);
+
+  return {
+    required_status_checks: checks.length > 0
+      ? {
+          strict: classicProtection?.required_status_checks?.strict === true
+            || rulesetProtection?.required_status_checks?.strict === true,
+          contexts: checks,
+          checks: [],
+        }
+      : null,
+    required_pull_request_reviews: hasReviews
+      ? {
+          required_approving_review_count: Math.max(
+            Number(classicReviews?.required_approving_review_count) || 0,
+            Number(rulesetReviews?.required_approving_review_count) || 0,
+          ),
+          require_code_owner_reviews: classicReviews?.require_code_owner_reviews === true
+            || rulesetReviews?.require_code_owner_reviews === true,
+          dismiss_stale_reviews: classicReviews?.dismiss_stale_reviews === true
+            || rulesetReviews?.dismiss_stale_reviews === true,
+        }
+      : null,
+    required_conversation_resolution: {
+      enabled: enabled(classicProtection?.required_conversation_resolution)
+        || enabled(rulesetProtection?.required_conversation_resolution),
+    },
+    allow_force_pushes: {
+      enabled: enabled(classicProtection?.allow_force_pushes)
+        && enabled(rulesetProtection?.allow_force_pushes),
+    },
+    allow_deletions: {
+      enabled: enabled(classicProtection?.allow_deletions)
+        && enabled(rulesetProtection?.allow_deletions),
+    },
+    restrictions: classicProtection?.restrictions || rulesetProtection?.restrictions || null,
+  };
+}
+
+export function applyRulesetsEvidenceBoundary(evidence, metadata, classicBoundary, sourceMode = 'repository-rulesets') {
+  evidence.source = sourceMode === 'classic-plus-rulesets' ? SOURCE_COMBINED : SOURCE_RULESETS;
   evidence.sourceDetails = {
     ...evidence.sourceDetails,
-    sourceMode: 'repository-rulesets',
-    classicProtectionApiFailure: String(classicApiFailure || 'unavailable'),
+    sourceMode,
+    classicProtectionApiFailure: String(classicBoundary || 'unavailable'),
     applicableRulesetCount: metadata.applicableRulesetCount,
     rulesetIds: metadata.rulesetIds,
     rulesetNames: metadata.rulesetNames,
@@ -157,7 +219,7 @@ export function applyRulesetsEvidenceBoundary(evidence, metadata, classicApiFail
     'GitHub Repository Rulesets API sanitized projection',
     'scripts/enterprise/build-platform-controls-runtime-evidence.mjs',
   ]);
-  evidence.evidenceBoundary = `${evidence.evidenceBoundary || ''} Classic branch-protection API access may be unavailable; equivalent controls are accepted only from active rulesets that target main and contain no bypass actor.`.trim();
+  evidence.evidenceBoundary = `${evidence.evidenceBoundary || ''} Classic branch protection and active rulesets may be evaluated cumulatively. Ruleset controls are accepted only when they target main and contain no bypass actor.`.trim();
 
   const additionalFailures = [];
   if (metadata.applicableRulesetCount === 0) additionalFailures.push('active_main_ruleset_missing');
@@ -169,7 +231,7 @@ export function applyRulesetsEvidenceBoundary(evidence, metadata, classicApiFail
     evidence.failures = uniqueStrings([...(Array.isArray(evidence.failures) ? evidence.failures : []), ...additionalFailures]);
     evidence.summary = metadata.applicableRulesetCount === 0
       ? 'No active repository ruleset was proven to target the current main branch.'
-      : 'Repository rulesets contain one or more bypass actors, so direct enforcement cannot be treated as complete.';
+      : 'Repository rulesets contain one or more bypass actors, so their contributed controls cannot be treated as complete.';
     evidence.sourceDetails.missingProtectionFlags = Number(evidence.sourceDetails.missingProtectionFlags || 0) + additionalFailures.length;
   }
   return evidence;
@@ -282,30 +344,64 @@ async function main() {
     throw error;
   }
 
-  let evidence;
+  let classicProtection = null;
+  let classicEvidence = null;
+  let classicBoundary = null;
+
   try {
-    const protection = await githubJson(
+    classicProtection = await githubJson(
       `https://api.github.com/repos/${repository}/branches/${CANONICAL_BRANCH}/protection`,
       token,
     );
-    evidence = evaluateBranchProtection({ protection, targetSha, checkedOutSha, currentMainSha, runId, generatedAt });
-    evidence.source = SOURCE_CLASSIC;
-    evidence.sourceDetails = { ...evidence.sourceDetails, sourceMode: 'classic-branch-protection' };
+    classicEvidence = evaluateBranchProtection({
+      protection: classicProtection,
+      targetSha,
+      checkedOutSha,
+      currentMainSha,
+      runId,
+      generatedAt,
+    });
+    classicEvidence.source = SOURCE_CLASSIC;
+    classicEvidence.sourceDetails = { ...classicEvidence.sourceDetails, sourceMode: 'classic-branch-protection' };
+    if (classicEvidence.outcome !== 'passed') classicBoundary = 'classic_policy_incomplete';
   } catch (classicError) {
+    classicBoundary = errorCode(classicError);
+  }
+
+  let evidence = classicEvidence?.outcome === 'passed' ? classicEvidence : null;
+
+  if (!evidence) {
     try {
       const rulesets = await fetchRepositoryRulesets(repository, token);
-      const { protection, metadata } = synthesizeClassicProtectionFromRulesets(rulesets);
+      const { protection: rulesetProtection, metadata } = synthesizeClassicProtectionFromRulesets(rulesets);
+      const protection = classicProtection
+        ? mergeClassicAndRulesetProtection(classicProtection, rulesetProtection)
+        : rulesetProtection;
       evidence = evaluateBranchProtection({ protection, targetSha, checkedOutSha, currentMainSha, runId, generatedAt });
-      evidence = applyRulesetsEvidenceBoundary(evidence, metadata, errorCode(classicError));
+      evidence = applyRulesetsEvidenceBoundary(
+        evidence,
+        metadata,
+        classicBoundary,
+        classicProtection ? 'classic-plus-rulesets' : 'repository-rulesets',
+      );
     } catch (rulesetsError) {
-      evidence = buildApiFailureEvidence({
-        targetSha,
-        checkedOutSha,
-        currentMainSha,
-        runId: safeRunId(runId),
-        generatedAt,
-        failures: [errorCode(classicError), errorCode(rulesetsError)],
-      });
+      if (classicEvidence) {
+        evidence = classicEvidence;
+        evidence.failures = uniqueStrings([
+          ...(Array.isArray(evidence.failures) ? evidence.failures : []),
+          `rulesets_fallback_${errorCode(rulesetsError)}`,
+        ]);
+        evidence.summary = `${evidence.summary} Repository rulesets fallback was unavailable.`;
+      } else {
+        evidence = buildApiFailureEvidence({
+          targetSha,
+          checkedOutSha,
+          currentMainSha,
+          runId: safeRunId(runId),
+          generatedAt,
+          failures: [classicBoundary, errorCode(rulesetsError)],
+        });
+      }
     }
   }
 
