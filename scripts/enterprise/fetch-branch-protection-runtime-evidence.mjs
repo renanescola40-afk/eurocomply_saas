@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,6 +20,8 @@ const MAX_ARTIFACT_BYTES = 5 * 1024 * 1024;
 const MAX_ZIP_ENTRIES = 20;
 const MAX_EVIDENCE_BYTES = 1024 * 1024;
 const ALLOWED_EVENTS = new Set(['push', 'workflow_dispatch']);
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+const ARTIFACT_HOST_SUFFIXES = ['.blob.core.windows.net', '.githubusercontent.com'];
 
 const RELEASE_BLOCKERS = Object.freeze({
   full_security_suite_required: true,
@@ -38,7 +40,7 @@ const RELEASE_BLOCKERS = Object.freeze({
   workflow_secret_log_exposure_blocks: true,
 });
 
-function headers(token) {
+function apiHeaders(token) {
   return {
     Authorization: `Bearer ${token}`,
     Accept: 'application/vnd.github+json',
@@ -47,26 +49,25 @@ function headers(token) {
   };
 }
 
-async function readBoundedJson(response) {
+async function readBoundedBytes(response, maximumBytes, tooLargeCode) {
   const declaredLength = Number(response.headers.get('content-length') || 0);
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_API_RESPONSE_BYTES) {
-    throw new Error('github_api_response_too_large');
+  if (Number.isFinite(declaredLength) && declaredLength > maximumBytes) {
+    throw new Error(tooLargeCode);
   }
-  if (!response.body) throw new Error('github_api_response_body_missing');
+  if (!response.body) throw new Error('response_body_missing');
 
   const reader = response.body.getReader();
   const chunks = [];
   let totalBytes = 0;
-
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       if (!value) continue;
       totalBytes += value.byteLength;
-      if (totalBytes > MAX_API_RESPONSE_BYTES) {
-        await reader.cancel('github_api_response_too_large');
-        throw new Error('github_api_response_too_large');
+      if (totalBytes > maximumBytes) {
+        await reader.cancel(tooLargeCode);
+        throw new Error(tooLargeCode);
       }
       chunks.push(value);
     }
@@ -80,12 +81,21 @@ async function readBoundedJson(response) {
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
+  return bytes;
+}
+
+async function readBoundedJson(response) {
+  const bytes = await readBoundedBytes(
+    response,
+    MAX_API_RESPONSE_BYTES,
+    'github_api_response_too_large',
+  );
   return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
 }
 
 async function githubJson(url, token) {
   const response = await fetch(url, {
-    headers: headers(token),
+    headers: apiHeaders(token),
     cache: 'no-store',
     redirect: 'error',
     signal: AbortSignal.timeout(15_000),
@@ -158,25 +168,23 @@ export function buildCanonicalEvidence(source, { targetSha, runId }) {
     summary: passed
       ? 'The exact current main SHA is protected by the required pull-request, review, conversation, status-check, update, force-push and deletion controls.'
       : 'Branch protection evidence is missing, incomplete, stale, SHA-mismatched or has invalid provenance.',
-    checks: [
-      {
-        name: 'branchProtection',
-        critical: true,
-        passed,
-        details: {
-          requiredApprovingReviews: flags.required_approving_reviews ?? 0,
-          requiredStatusCheckCount: Array.isArray(source?.required_status_checks)
-            ? source.required_status_checks.length
-            : 0,
-          missingRequiredCheckCount: Array.isArray(source?.sourceDetails?.missingRequiredChecks)
-            ? source.sourceDetails.missingRequiredChecks.length
-            : null,
-          missingProtectionFlags: source?.sourceDetails?.missingProtectionFlags ?? null,
-          exactShaBound: source?.provenance?.exactShaBound === true,
-          mainHeadMatched: source?.provenance?.mainHeadMatched === true,
-        },
+    checks: [{
+      name: 'branchProtection',
+      critical: true,
+      passed,
+      details: {
+        requiredApprovingReviews: flags.required_approving_reviews ?? 0,
+        requiredStatusCheckCount: Array.isArray(source?.required_status_checks)
+          ? source.required_status_checks.length
+          : 0,
+        missingRequiredCheckCount: Array.isArray(source?.sourceDetails?.missingRequiredChecks)
+          ? source.sourceDetails.missingRequiredChecks.length
+          : null,
+        missingProtectionFlags: source?.sourceDetails?.missingProtectionFlags ?? null,
+        exactShaBound: source?.provenance?.exactShaBound === true,
+        mainHeadMatched: source?.provenance?.mainHeadMatched === true,
       },
-    ],
+    }],
     failures: validation.failures,
     redactionConfirmation: 'No token, raw GitHub API payload, repository secret, user data or customer data is stored in this canonical evidence.',
     evidenceLocations: [
@@ -276,40 +284,48 @@ export function buildP0CanonicalEvidence(source, { targetSha, runId }) {
   };
 }
 
-function escapeCurlConfigValue(value) {
-  return String(value)
-    .replace(/[\r\n]/g, '')
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"');
+function isAllowedArtifactRedirect(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:'
+      && ARTIFACT_HOST_SUFFIXES.some((suffix) => parsed.hostname.endsWith(suffix));
+  } catch {
+    return false;
+  }
 }
 
-function download(repository, token, artifactId, path) {
+async function downloadArtifact(repository, token, artifactId, path) {
   const normalizedArtifactId = String(artifactId || '').trim();
   if (repository !== REPOSITORY) throw new Error('repository_not_canonical');
   if (!NUMERIC.test(normalizedArtifactId)) throw new Error('artifact_id_invalid');
 
-  const url = `https://api.github.com/repos/${repository}/actions/artifacts/${normalizedArtifactId}/zip`;
-  const curlConfig = [
-    'fail',
-    'location',
-    'silent',
-    'show-error',
-    'connect-timeout = 10',
-    'max-time = 30',
-    `header = "Authorization: Bearer ${escapeCurlConfigValue(token)}"`,
-    'header = "Accept: application/vnd.github+json"',
-    'header = "X-GitHub-Api-Version: 2022-11-28"',
-    'header = "User-Agent: risck-comply-branch-protection-fetcher"',
-    `output = "${escapeCurlConfigValue(path)}"`,
-    `url = "${escapeCurlConfigValue(url)}"`,
-  ].join('\n');
-
-  const result = spawnSync('curl', ['--config', '-'], {
-    input: `${curlConfig}\n`,
-    encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'pipe'],
+  const apiUrl = `https://api.github.com/repos/${repository}/actions/artifacts/${normalizedArtifactId}/zip`;
+  const initial = await fetch(apiUrl, {
+    headers: apiHeaders(token),
+    cache: 'no-store',
+    redirect: 'manual',
+    signal: AbortSignal.timeout(15_000),
   });
-  if (result.error || result.status !== 0) throw new Error('artifact_download_failed');
+
+  let artifactResponse = initial;
+  if (REDIRECT_STATUSES.has(initial.status)) {
+    const location = initial.headers.get('location') || '';
+    if (!isAllowedArtifactRedirect(location)) throw new Error('artifact_redirect_not_allowed');
+    artifactResponse = await fetch(location, {
+      cache: 'no-store',
+      redirect: 'error',
+      signal: AbortSignal.timeout(30_000),
+    });
+  }
+
+  if (!artifactResponse.ok) throw new Error(`artifact_download_${artifactResponse.status}`);
+  const bytes = await readBoundedBytes(
+    artifactResponse,
+    MAX_ARTIFACT_BYTES,
+    'artifact_download_too_large',
+  );
+  if (bytes.byteLength === 0) throw new Error('artifact_download_empty');
+  writeFileSync(path, bytes, { mode: 0o600 });
 }
 
 function isSafeZipEntry(entry) {
@@ -320,15 +336,20 @@ function isSafeZipEntry(entry) {
 }
 
 export function selectBranchProtectionEvidenceEntry(entries) {
-  const normalized = (Array.isArray(entries) ? entries : [])
+  const allEntries = (Array.isArray(entries) ? entries : [])
     .map((entry) => String(entry || '').trim())
-    .filter((entry) => entry && !entry.endsWith('/'));
-  if (normalized.length === 0) throw new Error('artifact_zip_empty');
-  if (normalized.length > MAX_ZIP_ENTRIES) throw new Error('artifact_zip_entry_limit_exceeded');
-  if (normalized.some((entry) => !isSafeZipEntry(entry))) {
+    .filter(Boolean);
+  if (allEntries.length === 0) throw new Error('artifact_zip_empty');
+  if (allEntries.length > MAX_ZIP_ENTRIES) throw new Error('artifact_zip_entry_limit_exceeded');
+  if (allEntries.some((entry) => {
+    const candidate = entry.endsWith('/') ? entry.slice(0, -1) : entry;
+    return !isSafeZipEntry(candidate);
+  })) {
     throw new Error('artifact_zip_unsafe_entry');
   }
-  const matches = normalized.filter((entry) =>
+
+  const files = allEntries.filter((entry) => !entry.endsWith('/'));
+  const matches = files.filter((entry) =>
     entry === SOURCE_PATH
     || entry.endsWith(`/${SOURCE_PATH}`)
     || entry === 'branch-protection-main.generated.json'
@@ -347,6 +368,9 @@ function extractSource(zipPath) {
     encoding: 'utf8',
     maxBuffer: MAX_EVIDENCE_BYTES,
   });
+  if (Buffer.byteLength(content, 'utf8') > MAX_EVIDENCE_BYTES) {
+    throw new Error('branch_protection_evidence_too_large');
+  }
   return JSON.parse(content);
 }
 
@@ -420,7 +444,7 @@ export async function fetchBranchProtectionRuntimeEvidence({
   const zipPath = join(root, 'artifacts', 'enterprise-readiness', `branch-protection-${runId}.zip`);
   mkdirSync(dirname(zipPath), { recursive: true });
   try {
-    download(repository, token, artifactId, zipPath);
+    await downloadArtifact(repository, token, artifactId, zipPath);
     const downloadedSize = statSync(zipPath).size;
     if (downloadedSize <= 0 || downloadedSize > MAX_ARTIFACT_BYTES) {
       throw new Error('downloaded_artifact_size_invalid');
