@@ -6,7 +6,7 @@ import {
   readFileSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
@@ -115,70 +115,72 @@ export function buildDependencyRemediationCandidate({
   const originalLockfile = readFileSync('package-lock.json');
   const originalLockfileSha256 = sha256(originalLockfile);
 
-  const fix = run('npm', [
-    'audit',
-    'fix',
-    '--package-lock-only',
-    '--ignore-scripts',
-  ]);
-
-  const candidateManifest = readFileSync('package.json');
-  const candidateLockfile = readFileSync('package-lock.json');
-  const candidateLockfileSha256 = sha256(candidateLockfile);
-  const manifestUnchanged = originalManifest.equals(candidateManifest);
-  const lockfileChanged = originalLockfileSha256 !== candidateLockfileSha256;
-
-  const audit = auditResult(
-    run('npm', ['audit', '--audit-level=moderate', '--json']),
-  );
-  let lockfile = null;
   try {
-    lockfile = JSON.parse(candidateLockfile.toString('utf8'));
-  } catch {
-    lockfile = null;
+    const fix = run('npm', [
+      'audit',
+      'fix',
+      '--package-lock-only',
+      '--ignore-scripts',
+    ]);
+
+    const candidateManifest = readFileSync('package.json');
+    const candidateLockfile = readFileSync('package-lock.json');
+    const candidateLockfileSha256 = sha256(candidateLockfile);
+    const manifestUnchanged = originalManifest.equals(candidateManifest);
+    const lockfileChanged = originalLockfileSha256 !== candidateLockfileSha256;
+
+    const audit = auditResult(
+      run('npm', ['audit', '--audit-level=moderate', '--json']),
+    );
+    let lockfile = null;
+    try {
+      lockfile = JSON.parse(candidateLockfile.toString('utf8'));
+    } catch {
+      lockfile = null;
+    }
+    const evidence = buildDependencyVulnerabilityEvidence({
+      audit: audit.audit,
+      lockfile,
+      targetSha: sourceSha,
+      repository,
+      branch,
+      generatedAt,
+      commandCompleted: audit.commandCompleted,
+      commandExitCode: audit.commandExitCode,
+      commandFailure: audit.commandFailure,
+    });
+    const summary = summarizeRemediationCandidate({
+      sourceSha,
+      generatedAt,
+      manifestUnchanged,
+      lockfileChanged,
+      originalLockfileSha256,
+      candidateLockfileSha256,
+      fixCommandExitCode: Number.isInteger(fix.status) ? fix.status : null,
+      evidence,
+    });
+
+    mkdirSync(outputDir, { recursive: true });
+    writeFileSync(join(outputDir, 'package-lock.candidate.json'), candidateLockfile, {
+      mode: 0o600,
+    });
+    writeFileSync(
+      join(outputDir, 'dependency-remediation-candidate.json'),
+      `${JSON.stringify(summary, null, 2)}\n`,
+      { mode: 0o600 },
+    );
+
+    console.log(
+      `Dependency remediation candidate: ${summary.status}; remaining vulnerabilities: ${
+        summary.remainingSeverityCounts?.total ?? 'unknown'
+      }`,
+    );
+    console.log(`Candidate artifacts: ${outputDir}`);
+    return summary;
+  } finally {
+    writeFileSync('package.json', originalManifest);
+    writeFileSync('package-lock.json', originalLockfile);
   }
-  const evidence = buildDependencyVulnerabilityEvidence({
-    audit: audit.audit,
-    lockfile,
-    targetSha: sourceSha,
-    repository,
-    branch,
-    generatedAt,
-    commandCompleted: audit.commandCompleted,
-    commandExitCode: audit.commandExitCode,
-    commandFailure: audit.commandFailure,
-  });
-  const summary = summarizeRemediationCandidate({
-    sourceSha,
-    generatedAt,
-    manifestUnchanged,
-    lockfileChanged,
-    originalLockfileSha256,
-    candidateLockfileSha256,
-    fixCommandExitCode: Number.isInteger(fix.status) ? fix.status : null,
-    evidence,
-  });
-
-  mkdirSync(outputDir, { recursive: true });
-  writeFileSync(join(outputDir, 'package-lock.candidate.json'), candidateLockfile, {
-    mode: 0o600,
-  });
-  writeFileSync(
-    join(outputDir, 'dependency-remediation-candidate.json'),
-    `${JSON.stringify(summary, null, 2)}\n`,
-    { mode: 0o600 },
-  );
-
-  writeFileSync('package.json', originalManifest);
-  writeFileSync('package-lock.json', originalLockfile);
-
-  console.log(
-    `Dependency remediation candidate: ${summary.status}; remaining vulnerabilities: ${
-      summary.remainingSeverityCounts?.total ?? 'unknown'
-    }`,
-  );
-  console.log(`Candidate artifacts: ${outputDir}`);
-  return summary;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
