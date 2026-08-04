@@ -6,16 +6,9 @@ const SEVERITY_RANK = {
   critical: 4,
 };
 
-export const NPM_AUDIT_EXCEPTIONS = [
-  {
-    id: 'GHSA-mh99-v99m-4gvg',
-    source: 1124334,
-    packageName: 'brace-expansion',
-    version: '1.1.17',
-    integrity: 'sha512-w+aeW/mkgM4PyRMOJCgi3fOrTm5Q8QY1OSfn2TO2iuDj3ezIHqejmuxbjfPrqUkgqRew1iqkyAn0tr0ZwHD9+w==',
-    expiresAt: '2026-08-05T23:59:59.000Z',
-  },
-];
+// No active vulnerability exceptions. Any future exception must be narrow,
+// exact-artifact-bound, owner-reviewed and short-lived.
+export const NPM_AUDIT_EXCEPTIONS = [];
 
 function collectAdvisories(packageName, vulnerabilities, visited = new Set()) {
   if (visited.has(packageName)) {
