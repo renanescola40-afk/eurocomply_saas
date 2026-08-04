@@ -6,11 +6,13 @@ on:
       - 'scripts/enterprise/build-platform-controls-runtime-evidence.mjs'
       - 'scripts/enterprise/build-branch-protection-runtime-evidence.mjs'
       - 'scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs'
+      - 'scripts/enterprise/aggregate-upload-scanner-runtime-evidence.mjs'
       - 'scripts/security/check-generated-branch-protection-evidence.mjs'
       - 'scripts/security/validate-branch-protection-freshness.mjs'
       - 'scripts/security/p0-runtime-evidence-catalog.mjs'
       - 'tests/enterprise/platform-controls-rulesets-evidence.test.ts'
       - 'tests/enterprise/branch-protection-runtime-evidence-fetch.test.ts'
+      - 'tests/enterprise/upload-scanner-p0-aggregation.test.ts'
       - '.github/workflows/branch-protection-runtime-proof.yml'
       - '.github/workflows/p0-runtime-evidence.yml'
       - 'docs/enterprise/PLATFORM_RULESETS_EVIDENCE_FALLBACK.md'
@@ -58,6 +60,7 @@ jobs:
           node --check scripts/enterprise/build-platform-controls-runtime-evidence.mjs
           node --check scripts/enterprise/build-branch-protection-runtime-evidence.mjs
           node --check scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs
+          node --check scripts/enterprise/aggregate-upload-scanner-runtime-evidence.mjs
           node --check scripts/security/check-generated-branch-protection-evidence.mjs
           node --check scripts/security/validate-branch-protection-freshness.mjs
 
@@ -66,6 +69,7 @@ jobs:
           npx vitest run
           tests/enterprise/platform-controls-rulesets-evidence.test.ts
           tests/enterprise/branch-protection-runtime-evidence-fetch.test.ts
+          tests/enterprise/upload-scanner-p0-aggregation.test.ts
 
   branch-protection-proof:
     name: Validate exact-SHA main protection
