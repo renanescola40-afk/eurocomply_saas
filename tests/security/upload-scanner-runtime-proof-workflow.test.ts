@@ -25,13 +25,16 @@ describe('upload scanner runtime proof orchestration', () => {
     expect(workflow).not.toContain('pull_request_target');
   });
 
-  it('re-runs the P0 source of truth after a successful scanner workflow', () => {
+  it('re-runs the P0 source of truth only for trusted successful main runs', () => {
     const workflow = read('.github/workflows/p0-runtime-evidence.yml');
 
     expect(workflow).toContain('workflow_run:');
     expect(workflow).toContain('- RISCK COMPLY Upload Security CI');
     expect(workflow).toContain('actions: read');
     expect(workflow).toContain('github.event.workflow_run.head_sha');
+    expect(workflow).toContain("github.event.workflow_run.head_branch == 'main'");
+    expect(workflow).toContain("github.event.workflow_run.event == 'push'");
+    expect(workflow).toContain("github.event.workflow_run.event == 'workflow_dispatch'");
     expect(workflow).toContain('UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID');
     expect(workflow).toContain('fetch-upload-scanner-runtime-evidence.mjs');
     expect(workflow).toContain("github.event_name == 'workflow_run' && 'true' || 'false'");
