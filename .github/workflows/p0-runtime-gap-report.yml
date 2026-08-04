@@ -29,7 +29,7 @@ jobs:
   p0-runtime-gap-report:
     name: Report P0 runtime evidence gap
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       ASSESSED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       RELEASE_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -40,6 +40,15 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
           persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
 
       - name: Verify exact assessed checkout
         run: |
