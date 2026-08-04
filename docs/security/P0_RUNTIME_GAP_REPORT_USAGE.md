@@ -1,42 +1,72 @@
 # P0 Runtime Gap Report Usage
 
-Use the gap report to track the remaining runtime evidence items before release readiness.
+Use the P0 gap report and generated register to track release-blocking evidence for one exact repository SHA.
 
-## Command
+## Report command
 
 ```bash
+RELEASE_COMMIT_SHA=<40-character-sha> \
 node scripts/security/report-p0-runtime-evidence-gap.mjs
 ```
 
-This prints a JSON summary of the three remaining runtime evidence items:
+The report evaluates every active runtime control in `scripts/security/p0-runtime-evidence-catalog.mjs` through its canonical validator.
 
-- `production-secrets-provider-stores.json`
-- `supabase-live-rls-validation.json`
-- `external-security-review-or-pentest.json`
+It records:
+
+- exact repository, branch and SHA expectations;
+- satisfied and missing controls;
+- validator failures;
+- placeholder and parse state;
+- drift between the legacy policy row and derived evidence status.
+
+## Generate the canonical register artifact
+
+```bash
+node scripts/security/generate-p0-runtime-evidence-register.mjs \
+  --sha=<40-character-sha>
+```
+
+Outputs:
+
+- `artifacts/p0-runtime-evidence-register/p0-runtime-evidence-register.json`;
+- `artifacts/p0-runtime-evidence-register/p0-runtime-evidence-register.md`.
+
+Validate the semantic result:
+
+```bash
+node scripts/security/validate-generated-p0-runtime-evidence-register.mjs \
+  --sha=<40-character-sha>
+```
 
 ## Strict mode
 
 ```bash
 node scripts/security/report-p0-runtime-evidence-gap.mjs --strict
+node scripts/security/generate-p0-runtime-evidence-register.mjs \
+  --sha=<40-character-sha> \
+  --strict
 ```
 
-Strict mode exits with a non-zero status while any required runtime evidence remains incomplete.
+Strict mode exits non-zero while any required control remains incomplete. Use it only on final-evidence or release-ready branches and protected release workflows.
 
-Use strict mode on final evidence or release-ready branches.
+## Source-of-truth rule
 
-## Score interpretation
+`docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md` is policy metadata only. Its versioned rows intentionally remain `Open` and cannot prove or promote a runtime control.
 
-The script reports only the remaining runtime evidence group. It does not replace the full P0 register or the runtime evidence validators.
+A runtime control is satisfied only when:
 
-A remaining runtime evidence item is considered satisfied by this gap report when:
+- the canonical evidence file exists and parses;
+- status is `Complete`;
+- outcome passes when required;
+- content is not placeholder-only;
+- the specialist validator returns zero failures;
+- repository, branch, SHA, freshness and provenance requirements pass.
 
-- the referenced runtime evidence file exists; and
-- `docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md` marks that item as `Complete`.
+Repository controls are recalculated from `package.json` and `package-lock.json` on the exact checkout.
 
-`Exception` items remain pending in this gap report until the item-specific runtime evidence checker validates the approved-exception fields. This prevents a placeholder or unapproved exception file from being counted as release-ready.
+## Decision interpretation
 
-Current target for release-ready state:
+- `GO`: every active P0 control is derived as `Complete`.
+- `NO_GO`: one or more controls are missing, invalid, stale, wrong-SHA, placeholder-only or fail a specialist validator.
 
-- 3 of 3 remaining runtime evidence items satisfied
-- all referenced runtime evidence files exist
-- each remaining item is marked as `Complete` in the runtime register
+The generated P0 decision does not replace the complete Enterprise scorecard, protected environment approval, independent security review, legal review or customer-specific procurement requirements.
