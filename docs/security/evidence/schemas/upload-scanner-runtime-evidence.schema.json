@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://risckcomply.com/schemas/upload-scanner-runtime-evidence.schema.json",
+  "title": "RISCK COMPLY Upload Scanner Runtime Evidence",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "evidenceItem",
+    "status",
+    "outcome",
+    "generatedAt",
+    "runtimeContext",
+    "sourceWorkflow",
+    "liveProviderProof",
+    "acceptanceCriteria",
+    "evidenceIntegrity"
+  ],
+  "properties": {
+    "evidenceItem": {
+      "const": "upload-malware-scan-validation"
+    },
+    "status": {
+      "const": "Complete"
+    },
+    "outcome": {
+      "const": "passed"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "runtimeContext": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "generatedByGithubActions",
+        "githubWorkflow",
+        "githubWorkflowFile",
+        "githubRunId",
+        "githubRunAttempt",
+        "githubEventName",
+        "repository",
+        "branch",
+        "commitSha"
+      ],
+      "properties": {
+        "generatedByGithubActions": {
+          "const": true
+        },
+        "githubWorkflow": {
+          "const": "RISCK COMPLY Upload Security CI"
+        },
+        "githubWorkflowFile": {
+          "const": "upload-security-ci.yml"
+        },
+        "githubRunId": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "githubRunAttempt": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "githubEventName": {
+          "enum": ["push", "pull_request", "workflow_dispatch"]
+        },
+        "repository": {
+          "const": "renanescola40-afk/eurocomply_saas"
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "commitSha": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        }
+      }
+    },
+    "sourceWorkflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "file",
+        "runId",
+        "runAttempt",
+        "event",
+        "artifact",
+        "exactShaBound"
+      ],
+      "properties": {
+        "name": {
+          "const": "RISCK COMPLY Upload Security CI"
+        },
+        "file": {
+          "const": ".github/workflows/upload-security-ci.yml"
+        },
+        "runId": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "runAttempt": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "event": {
+          "enum": ["push", "pull_request", "workflow_dispatch"]
+        },
+        "artifact": {
+          "type": "string",
+          "pattern": "^upload-security-runtime-proof-[a-f0-9]{40}$"
+        },
+        "exactShaBound": {
+          "const": true
+        }
+      }
+    },
+    "liveProviderProof": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "status",
+        "provider",
+        "providerIsReal",
+        "scanStatus",
+        "scanRequired",
+        "blockedIfNotClean",
+        "providerResponseBodyPersisted",
+        "providerResponseMessagePersisted",
+        "fixtureBytesCommitted",
+        "fileHash"
+      ],
+      "properties": {
+        "status": {
+          "const": "passed"
+        },
+        "provider": {
+          "enum": ["clamav", "clamd", "http", "generic-http", "webhook"]
+        },
+        "providerIsReal": {
+          "const": true
+        },
+        "scanStatus": {
+          "const": "clean"
+        },
+        "scanRequired": {
+          "const": true
+        },
+        "blockedIfNotClean": {
+          "const": false
+        },
+        "providerResponseBodyPersisted": {
+          "const": false
+        },
+        "providerResponseMessagePersisted": {
+          "const": false
+        },
+        "fixtureBytesCommitted": {
+          "const": false
+        },
+        "fileHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "acceptanceCriteria": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "enterpriseUploadRequiresCleanScan",
+        "scannerUnavailableBlocksUpload",
+        "scannerTimeoutBlocksUpload",
+        "scannerMalwareOrSuspiciousBlocksUpload",
+        "cleanScanAllowsUpload"
+      ],
+      "properties": {
+        "enterpriseUploadRequiresCleanScan": {
+          "const": true
+        },
+        "scannerUnavailableBlocksUpload": {
+          "const": true
+        },
+        "scannerTimeoutBlocksUpload": {
+          "const": true
+        },
+        "scannerMalwareOrSuspiciousBlocksUpload": {
+          "const": true
+        },
+        "cleanScanAllowsUpload": {
+          "const": true
+        }
+      }
+    },
+    "evidenceIntegrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "containsSensitiveValues",
+        "credentialsStored",
+        "rawProviderResponseStored",
+        "providerResponseBodyStored",
+        "providerResponseMessageStored",
+        "fixtureBytesCommitted",
+        "exactShaBound",
+        "sourceRunBound"
+      ],
+      "properties": {
+        "containsSensitiveValues": {
+          "const": false
+        },
+        "credentialsStored": {
+          "const": false
+        },
+        "rawProviderResponseStored": {
+          "const": false
+        },
+        "providerResponseBodyStored": {
+          "const": false
+        },
+        "providerResponseMessageStored": {
+          "const": false
+        },
+        "fixtureBytesCommitted": {
+          "const": false
+        },
+        "exactShaBound": {
+          "const": true
+        },
+        "sourceRunBound": {
+          "const": true
+        }
+      }
+    }
+  }
+}
