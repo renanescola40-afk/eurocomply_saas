@@ -10,7 +10,6 @@ const FULL_SHA = /^[0-9a-f]{40}$/;
 const NUMERIC_ID = /^\d+$/;
 const SAFE_FAILURE_CODE = /^[a-z0-9_]+$/;
 const MAX_ARCHIVE_BYTES = 16 * 1024 * 1024;
-const RETRIEVAL_MANIFEST_PATH = 'artifacts/enterprise-conversation-closeout/retrieval-manifest.json';
 const ALLOWED_RUN_EVENTS = new Set(['push', 'workflow_dispatch']);
 const ZIP_CONTENT_TYPES = new Set([
   'application/zip',
@@ -264,18 +263,13 @@ export async function fetchConversationFinalCloseoutEvidence({
   for (const definition of bundles) {
     for (const path of definition.paths) rmSync(join(root, path), { force: true });
   }
-  rmSync(join(root, RETRIEVAL_MANIFEST_PATH), { force: true });
 
   const sources = [];
   for (const definition of bundles) {
     sources.push(await fetchBundle({ root, repository, token, targetSha: normalizedSha, definition }));
   }
 
-  const manifest = buildRetrievalManifest({ targetSha: normalizedSha, sources, generatedAt });
-  const manifestPath = join(root, RETRIEVAL_MANIFEST_PATH);
-  mkdirSync(dirname(manifestPath), { recursive: true });
-  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 });
-  return manifest;
+  return buildRetrievalManifest({ targetSha: normalizedSha, sources, generatedAt });
 }
 
 async function runCli() {
