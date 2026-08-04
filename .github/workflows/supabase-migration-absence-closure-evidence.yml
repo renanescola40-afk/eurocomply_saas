@@ -113,17 +113,25 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts/source/column-metadata
 
-          source_conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${COLUMN_METADATA_EVIDENCE_RUN_ID}" --jq .conclusion)"
-          source_sha="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${COLUMN_METADATA_EVIDENCE_RUN_ID}" --jq .head_sha)"
-          source_event="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${COLUMN_METADATA_EVIDENCE_RUN_ID}" --jq .event)"
+          run_api="repos/${GITHUB_REPOSITORY}/actions/runs/${COLUMN_METADATA_EVIDENCE_RUN_ID}"
+          expected_workflow_api="repos/${GITHUB_REPOSITORY}/actions/workflows/supabase-migration-column-metadata-evidence.yml"
+          source_conclusion="$(gh api "$run_api" --jq .conclusion)"
+          source_sha="$(gh api "$run_api" --jq .head_sha)"
+          source_event="$(gh api "$run_api" --jq .event)"
+          source_workflow_id="$(gh api "$run_api" --jq .workflow_id)"
+          source_workflow_path="$(gh api "$run_api" --jq .path)"
+          expected_workflow_id="$(gh api "$expected_workflow_api" --jq .id)"
+          expected_workflow_path='.github/workflows/supabase-migration-column-metadata-evidence.yml'
           test "$source_conclusion" = 'success'
           test "$source_sha" = "$SOURCE_SHA"
           test "$source_event" = 'workflow_dispatch'
+          test "$source_workflow_id" = "$expected_workflow_id"
+          test "$source_workflow_path" = "$expected_workflow_path"
 
           artifact_prefix="supabase-migration-column-metadata-evidence-${SOURCE_SHA}-from-"
-          artifact_count="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${COLUMN_METADATA_EVIDENCE_RUN_ID}/artifacts" --jq "[.artifacts[] | select((.name | startswith(\"${artifact_prefix}\")) and .expired == false)] | length")"
+          artifact_count="$(gh api "${run_api}/artifacts" --jq "[.artifacts[] | select((.name | startswith(\"${artifact_prefix}\")) and .expired == false)] | length")"
           test "$artifact_count" = '1'
-          artifact_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${COLUMN_METADATA_EVIDENCE_RUN_ID}/artifacts" --jq ".artifacts[] | select((.name | startswith(\"${artifact_prefix}\")) and .expired == false) | .id")"
+          artifact_id="$(gh api "${run_api}/artifacts" --jq ".artifacts[] | select((.name | startswith(\"${artifact_prefix}\")) and .expired == false) | .id")"
           gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > artifacts/source/column-metadata.zip
           unzip -q artifacts/source/column-metadata.zip -d artifacts/source/column-metadata
 
@@ -224,6 +232,7 @@ jobs:
             echo "- Target analyzer SHA: \`$TARGET_SHA\`"
             echo "- Source column metadata SHA: \`$SOURCE_SHA\`"
             echo '- Migrations tree equivalence: verified'
+            echo '- Source producer workflow: verified'
             echo '- Database connection in this workflow: none'
             echo '- Accepted decisions: 0'
           } >> "$GITHUB_STEP_SUMMARY"
