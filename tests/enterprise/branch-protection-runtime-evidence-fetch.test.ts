@@ -180,8 +180,9 @@ describe('branch protection exact-SHA runtime evidence', () => {
     expect(isOptionalWorkflowUnavailable(unauthorized)).toBe(false);
   });
 
-  it('rejects duplicate, traversal, absolute and backslash ZIP entries', () => {
+  it('rejects duplicate, traversal, unsafe directory, absolute and backslash ZIP entries', () => {
     expect(selectBranchProtectionEvidenceEntry([
+      'p0-evidence/',
       'p0-evidence/branch-protection-main.generated.json',
     ])).toBe('p0-evidence/branch-protection-main.generated.json');
 
@@ -191,6 +192,10 @@ describe('branch protection exact-SHA runtime evidence', () => {
     ])).toThrow('branch_protection_source_not_unique');
     expect(() => selectBranchProtectionEvidenceEntry([
       '../branch-protection-main.generated.json',
+    ])).toThrow('artifact_zip_unsafe_entry');
+    expect(() => selectBranchProtectionEvidenceEntry([
+      '../',
+      'branch-protection-main.generated.json',
     ])).toThrow('artifact_zip_unsafe_entry');
     expect(() => selectBranchProtectionEvidenceEntry([
       '/tmp/branch-protection-main.generated.json',
@@ -230,11 +235,16 @@ describe('branch protection exact-SHA runtime evidence', () => {
     expect(builder).not.toContain('join(root, outputPath)');
 
     expect(fetcher).toContain("const WORKFLOW_NAME = 'Branch Protection Runtime Proof'");
-    expect(fetcher).toContain("const MAX_API_RESPONSE_BYTES = 1024 * 1024");
-    expect(fetcher).toContain("const MAX_ARTIFACT_BYTES = 5 * 1024 * 1024");
+    expect(fetcher).toContain('const MAX_API_RESPONSE_BYTES = 1024 * 1024');
+    expect(fetcher).toContain('const MAX_ARTIFACT_BYTES = 5 * 1024 * 1024');
     expect(fetcher).toContain('head_sha=${encodeURIComponent(targetSha)}');
     expect(fetcher).toContain('branch-protection-required-checks.json');
+    expect(fetcher).toContain("redirect: 'manual'");
+    expect(fetcher).toContain('artifact_redirect_not_allowed');
+    expect(fetcher).toContain("'.blob.core.windows.net'");
+    expect(fetcher).toContain("'.githubusercontent.com'");
     expect(fetcher).toContain('artifact_zip_unsafe_entry');
+    expect(fetcher).not.toContain('spawnSync');
     expect(fetcher).not.toContain('response.json()');
 
     expect(scannerAggregator).toContain('head_sha=${encodeURIComponent(targetSha)}');
