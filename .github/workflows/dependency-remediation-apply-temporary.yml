@@ -1,0 +1,94 @@
+name: Dependency Remediation Apply Temporary
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dependency-remediation-apply-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  apply-remediation:
+    name: Apply validated dependency lockfile remediation
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'agent/dependency-vulnerability-proof-megapr' &&
+      github.actor == 'renanescola40-afk'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+      EXPECTED_BRANCH: agent/dependency-vulnerability-proof-megapr
+
+    steps:
+      - name: Checkout writable PR branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Verify exact starting SHA and branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git branch --show-current)" = "$EXPECTED_BRANCH"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install exact starting graph
+        run: npm ci --ignore-scripts
+
+      - name: Test remediation transformation
+        run: node --test tests/enterprise/apply-dependency-vulnerability-remediation.test.mjs
+
+      - name: Apply PostCSS patch and non-breaking audit fixes
+        run: node scripts/dev/apply-dependency-vulnerability-remediation.mjs
+
+      - name: Restrict generated diff to dependency manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t changed < <(git status --porcelain | sed -E 's/^.. //')
+          test "${#changed[@]}" -gt 0
+          for path in "${changed[@]}"; do
+            case "$path" in
+              package.json|package-lock.json) ;;
+              *)
+                echo "Unexpected remediation change: $path" >&2
+                exit 1
+                ;;
+            esac
+          done
+
+      - name: Validate remediated dependency graph
+        run: |
+          npm run security:package-lock
+          npm ci --ignore-scripts
+          npm run security:npm-audit:all
+          node --test \
+            scripts/security/npm-audit-policy.test.mjs \
+            tests/enterprise/apply-dependency-vulnerability-remediation.test.mjs \
+            tests/enterprise/dependency-vulnerability-evidence.test.mjs \
+            tests/enterprise/dependency-vulnerability-remediation-candidate.test.mjs \
+            tests/enterprise/dependency-vulnerability-scorecard-contract.test.mjs
+
+      - name: Commit validated remediation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "fix(security): remediate npm audit vulnerabilities"
+          git push origin "HEAD:$EXPECTED_BRANCH"
