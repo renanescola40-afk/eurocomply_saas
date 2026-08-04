@@ -13,20 +13,23 @@ permissions:
   contents: read
 
 concurrency:
-  group: p0-runtime-evidence-${{ github.event.pull_request.number || github.ref }}
+  group: p0-runtime-evidence-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
   p0-runtime-evidence:
     name: Validate P0 runtime evidence register
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     env:
+      ASSESSED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       RELEASE_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
-      - name: Checkout repository
+      - name: Checkout exact assessed SHA
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
           persist-credentials: false
 
       - name: Setup Node.js
@@ -38,15 +41,23 @@ jobs:
       - name: Install dependencies deterministically
         run: npm ci --ignore-scripts
 
-      - name: Test derived register contracts
-        run: >-
-          npx vitest run
-          scripts/security/p0-runtime-evidence-catalog.test.mjs
-          scripts/security/report-p0-runtime-evidence-gap.test.mjs
-          scripts/security/p0-runtime-evidence-derived-register.test.mjs
-          tests/security/p0-runtime-gap-strict-contract.test.ts
+      - name: Verify exact assessed checkout
+        run: |
+          set -euo pipefail
+          [[ "$ASSESSED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$ASSESSED_SHA"
 
-      - name: Validate runtime evidence register
+      - name: Test canonical P0 source-of-truth contracts
+        run: |
+          npx vitest run \
+            scripts/security/p0-runtime-evidence-catalog.test.mjs \
+            scripts/security/report-p0-runtime-evidence-gap.test.mjs \
+            tests/security/p0-runtime-gap-strict-contract.test.ts
+          node --test \
+            tests/security/generate-p0-runtime-evidence-register.test.mjs \
+            tests/security/validate-generated-p0-runtime-evidence-register.test.mjs
+
+      - name: Validate P0 policy register
         run: node scripts/security/check-p0-runtime-evidence-register.mjs
 
       - name: Validate runtime evidence files
@@ -55,21 +66,35 @@ jobs:
       - name: Validate optional runtime evidence files
         run: node scripts/security/check-p0-runtime-evidence-optionals.mjs
 
-      - name: Derive canonical register and block overclaims
-        run: >-
-          node scripts/security/derive-p0-runtime-evidence-register.mjs
-          --write-artifacts
-          --check-overclaim
+      - name: Generate authoritative exact-SHA register
+        run: |
+          set -euo pipefail
+          output=artifacts/p0-runtime-evidence-register
+          mkdir -p "$output"
+          node scripts/security/generate-p0-runtime-evidence-register.mjs \
+            --sha="$ASSESSED_SHA" \
+            --output-dir="$output" \
+            > "$output/generator-output.json"
+          node scripts/security/validate-generated-p0-runtime-evidence-register.mjs \
+            --sha="$ASSESSED_SHA"
 
       - name: Report current runtime evidence gaps
-        run: node scripts/security/report-p0-runtime-evidence-gap.mjs
+        run: >-
+          node scripts/security/report-p0-runtime-evidence-gap.mjs
+          > artifacts/p0-runtime-evidence-register/p0-runtime-gap-report.json
 
-      - name: Upload derived register artifacts
+      - name: Generate artifact checksums
+        run: |
+          set -euo pipefail
+          output=artifacts/p0-runtime-evidence-register
+          find "$output" -maxdepth 1 -type f \( -name '*.json' -o -name '*.md' \) -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > "$output/SHA256SUMS"
+
+      - name: Upload authoritative register artifact
         uses: actions/upload-artifact@v7
         with:
-          name: p0-runtime-evidence-derived-${{ env.RELEASE_COMMIT_SHA }}
-          path: |
-            artifacts/security/p0-runtime-evidence-register-derived.json
-            artifacts/security/p0-runtime-evidence-register-derived.md
+          name: p0-runtime-evidence-register-${{ env.ASSESSED_SHA }}
+          path: artifacts/p0-runtime-evidence-register
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 365
