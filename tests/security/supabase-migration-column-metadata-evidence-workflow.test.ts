@@ -48,10 +48,12 @@ describe('Supabase Migration Column Metadata Evidence workflow', () => {
     expect(step).toContain('test "$actual_catalog_sha" = "$expected_catalog_sha"');
   });
 
-  it('requires enriched formatted-type metadata and preserves non-crediting semantics', () => {
+  it('requires safely encoded enriched column and constraint metadata', () => {
     const download = stepBody('Download exact semantic and enriched schema evidence');
     const enforce = stepBody('Enforce non-crediting safety boundary');
-    expect(download).toMatch(/grep -q '\^column\|/);
+    expect(download).toContain("grep -Eq '^column_meta_hex\\|[0-9a-fA-F]+$'");
+    expect(download).toContain("grep -Eq '^constraint_meta_hex\\|[0-9a-fA-F]+$'");
+    expect(download).not.toMatch(/grep -q '\^column\|/);
     expect(download).toContain("report.status !== 'HUMAN_REVIEW_REQUIRED'");
     expect(download).toContain('report.acceptedDecisions !== 0');
     expect(download).toContain("report.semanticRefinement?.status !== 'HUMAN_REVIEW_REQUIRED'");
