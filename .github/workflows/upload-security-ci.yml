@@ -60,6 +60,7 @@ jobs:
           npx vitest run
           scripts/release/validate-upload-scanner-runtime-evidence.test.mjs
           tests/enterprise/upload-scanner-runtime-evidence-fetch.test.ts
+          tests/security/upload-scanner-runtime-proof-workflow.test.ts
           tests/security/upload-clamav-response.test.ts
 
       - name: Wait for live ClamAV scanner
@@ -160,7 +161,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/security/normalize-upload-scanner-runtime-evidence.mjs
-          TARGET_SHA="$TARGET_SHA" node --input-type=module <<'NODE'
+          node --input-type=module <<'NODE'
           import { readFileSync } from 'node:fs';
           import { validateUploadScannerRuntimeEvidence } from './scripts/release/validate-upload-scanner-runtime-evidence.mjs';
 
