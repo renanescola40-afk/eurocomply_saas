@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://risckcomply.com/schemas/p0-runtime-evidence-register.schema.json",
+  "title": "RISCK COMPLY P0 Runtime Evidence Register",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "repository",
+    "branch",
+    "commitSha",
+    "generatedAt",
+    "decision",
+    "status",
+    "completed",
+    "blocked",
+    "total",
+    "completionPercent",
+    "controls",
+    "sourceOfTruth",
+    "noSecretsStored",
+    "truthBoundary",
+    "sha256"
+  ],
+  "properties": {
+    "schema": { "const": "risck-comply.p0-runtime-evidence-register.v1" },
+    "repository": { "const": "renanescola40-afk/eurocomply_saas" },
+    "branch": { "const": "main" },
+    "commitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "decision": { "enum": ["GO", "NO_GO"] },
+    "status": { "enum": ["Complete", "Open"] },
+    "completed": { "type": "integer", "minimum": 0, "maximum": 16 },
+    "blocked": { "type": "integer", "minimum": 0, "maximum": 16 },
+    "total": { "type": "integer", "minimum": 1, "maximum": 16 },
+    "completionPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "controls": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "item",
+          "kind",
+          "status",
+          "satisfied",
+          "evidenceFile",
+          "evidenceStatus",
+          "evidenceOutcome",
+          "validatorFailures",
+          "owner",
+          "requiredEvidence",
+          "nextAction",
+          "legacyRegisterStatus",
+          "legacyRegisterDrift"
+        ],
+        "properties": {
+          "item": { "type": "string", "minLength": 3, "maxLength": 120 },
+          "kind": { "enum": ["runtime", "repository"] },
+          "status": { "enum": ["Complete", "Open"] },
+          "satisfied": { "type": "boolean" },
+          "evidenceFile": { "type": ["string", "null"], "maxLength": 240 },
+          "evidenceStatus": { "type": "string", "minLength": 3, "maxLength": 80 },
+          "evidenceOutcome": { "type": "string", "minLength": 3, "maxLength": 80 },
+          "validatorFailures": {
+            "type": "array",
+            "maxItems": 100,
+            "items": { "type": "string", "minLength": 1, "maxLength": 500 }
+          },
+          "owner": { "type": "string", "minLength": 3, "maxLength": 120 },
+          "requiredEvidence": { "type": "string", "minLength": 3, "maxLength": 1000 },
+          "nextAction": { "type": "string", "minLength": 3, "maxLength": 1000 },
+          "legacyRegisterStatus": { "type": ["string", "null"], "maxLength": 80 },
+          "legacyRegisterDrift": { "type": "boolean" }
+        }
+      }
+    },
+    "sourceOfTruth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["catalog", "evaluator", "policyMetadata", "statusRule"],
+      "properties": {
+        "catalog": { "const": "scripts/security/p0-runtime-evidence-catalog.mjs" },
+        "evaluator": { "const": "scripts/security/evaluate-p0-runtime-evidence.mjs" },
+        "policyMetadata": { "const": "docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md" },
+        "statusRule": { "type": "string", "minLength": 20, "maxLength": 500 }
+      }
+    },
+    "noSecretsStored": { "const": true },
+    "truthBoundary": { "type": "string", "minLength": 20, "maxLength": 1000 },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "decision": { "const": "GO" } } },
+      "then": {
+        "properties": {
+          "status": { "const": "Complete" },
+          "blocked": { "const": 0 },
+          "completionPercent": { "const": 100 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "Complete" } } },
+      "then": { "properties": { "decision": { "const": "GO" } } }
+    }
+  ]
+}
