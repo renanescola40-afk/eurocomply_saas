@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -41,15 +41,28 @@ function minimalRegistry(runtimePath) {
 }
 
 describe('EU AI Act safe runtime promotion', () => {
-  it('generates twelve isolated exact-SHA evidence documents', () => {
+  it('generates eleven shared exact-SHA documents and delegates Article 50', () => {
     const evidence = buildSafeRuntimeEvidence({ targetSha: SHA, runId: '12345', repository: REPOSITORY });
-    expect(evidence).toHaveLength(12);
-    expect(new Set(evidence.map((item) => item.document.workstreamId)).size).toBe(12);
+    expect(evidence).toHaveLength(11);
+    expect(new Set(evidence.map((item) => item.document.workstreamId)).size).toBe(11);
+    expect(evidence.some((item) => item.document.workstreamId === 'ARTICLE-50')).toBe(false);
+    expect(evidence.some((item) => item.path.includes('localization-validation'))).toBe(false);
     for (const item of evidence) {
       expect(item.document.targetSha).toBe(SHA);
       expect(item.document.status).toBe('VERIFIED');
       expect(item.document.syntheticData).toBe(true);
       expect(item.document.limitations.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('keeps dedicated Article 50 generation in both promotion workflows', () => {
+    const safeWorkflow = readFileSync('.github/workflows/eu-ai-act-safe-runtime-promotion.yml', 'utf8');
+    const finalWorkflow = readFileSync('.github/workflows/eu-ai-act-final-runtime-closeout.yml', 'utf8');
+
+    for (const workflow of [safeWorkflow, finalWorkflow]) {
+      expect(workflow).toContain('generate-article-50-runtime-evidence.mjs');
+      expect(workflow).toContain('article-50-operational-validation.json');
+      expect(workflow).toContain('tests/article-50-runtime-evidence-contract.test.ts');
     }
   });
 

@@ -61,6 +61,13 @@ jobs:
           src/server/ai-governance/quality-management-system.test.ts
           src/server/ai-governance/conformity-assessment.test.ts
           src/server/ai-governance/gpai-compliance.test.ts
+          src/server/ai-governance/article-50-effective-dates.test.ts
+          src/server/ai-governance/article-50-control-plane.test.ts
+          src/lib/article-50-deadlines.test.ts
+          tests/article-50-operational-api-contract.test.ts
+          tests/article-50-operational-migration-contract.test.ts
+          tests/article-50-operational-ui-contract.test.ts
+          tests/article-50-runtime-evidence-contract.test.ts
           tests/prohibited-practices-operational-api-contract.test.ts
           tests/prohibited-practices-operational-migration-contract.test.ts
           tests/ai-literacy-api-contract.test.ts
@@ -71,8 +78,13 @@ jobs:
           tests/enterprise/public-ux-evidence.test.ts
           tests/compliance/eu-ai-act-safe-runtime-promotion.test.mjs
 
-      - name: Generate exact-SHA evidence bundle
+      - name: Generate shared exact-SHA evidence bundle
         run: node scripts/compliance/generate-eu-ai-act-safe-runtime-bundle.mjs
+
+      - name: Generate dedicated Article 50 exact-SHA evidence
+        env:
+          ARTICLE_50_RUNTIME_OUTPUT: ${{ env.RUNTIME_EVIDENCE_ROOT }}/docs/security/evidence/runtime/article-50-operational-validation.json
+        run: node scripts/compliance/generate-article-50-runtime-evidence.mjs
 
       - name: Generate promoted product coverage
         run: node scripts/compliance/generate-eu-ai-act-product-coverage.mjs
@@ -85,8 +97,8 @@ jobs:
           if (report.targetSha !== process.env.TARGET_SHA) throw new Error('promoted report SHA mismatch');
           if (report.scores.implementationCoverage !== 100) throw new Error('implementation coverage regressed');
           if (report.scores.ciVerifiedCoverage !== 100) throw new Error('CI coverage regressed');
-          // The LEGAL-RULES workstream is deliberately excluded from synthetic promotion.
-          // Its 4 points require a deployed exact-SHA legal-rules artifact, so the safe ceiling is 80.
+          // LEGAL-RULES remains excluded from synthetic promotion. Its four
+          // points require a deployed exact-SHA legal-rules artifact.
           if (report.scores.runtimeEvidenceCoverage !== 80) {
             throw new Error(`safe runtime coverage is ${report.scores.runtimeEvidenceCoverage}, expected 80`);
           }
