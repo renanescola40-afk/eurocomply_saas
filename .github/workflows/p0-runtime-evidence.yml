@@ -3,32 +3,42 @@ name: P0 Runtime Evidence
 on:
   workflow_dispatch:
   pull_request:
-    branches:
-      - main
+    branches: [main]
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_run:
+    workflows:
+      - RISCK COMPLY Upload Security CI
+    types: [completed]
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
-  group: p0-runtime-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+  group: p0-runtime-evidence-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
   p0-runtime-evidence:
     name: Validate P0 runtime evidence register
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       (github.event.workflow_run.event == 'push' ||
+        github.event.workflow_run.event == 'workflow_dispatch'))
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      ASSESSED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      RELEASE_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      ASSESSED_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+      RELEASE_COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+      UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'RISCK COMPLY Upload Security CI' && github.event.workflow_run.id || '' }}
     steps:
       - name: Checkout exact assessed SHA
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ env.ASSESSED_SHA }}
           fetch-depth: 1
           persist-credentials: false
 
@@ -52,6 +62,8 @@ jobs:
           npx vitest run \
             scripts/security/p0-runtime-evidence-catalog.test.mjs \
             scripts/security/report-p0-runtime-evidence-gap.test.mjs \
+            scripts/release/validate-upload-scanner-runtime-evidence.test.mjs \
+            tests/enterprise/upload-scanner-runtime-evidence-fetch.test.ts \
             tests/security/p0-runtime-gap-strict-contract.test.ts \
             tests/security/p0-register-source-of-truth-contract.test.ts
           node --test \
@@ -60,6 +72,15 @@ jobs:
 
       - name: Validate P0 policy register
         run: node scripts/security/check-p0-runtime-evidence-register.mjs
+
+      - name: Retrieve exact-SHA upload scanner runtime evidence
+        if: github.event_name == 'workflow_run'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+          UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID: ${{ env.UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID }}
+          UPLOAD_SCANNER_RUNTIME_EVIDENCE_REQUIRED: 'true'
+        run: node scripts/enterprise/fetch-upload-scanner-runtime-evidence.mjs
 
       - name: Validate runtime evidence files
         run: node scripts/security/check-p0-runtime-evidence-files.mjs
@@ -91,6 +112,10 @@ jobs:
           find "$output" -maxdepth 1 -type f \( -name '*.json' -o -name '*.md' \) -print0 \
             | sort -z \
             | xargs -0 sha256sum > "$output/SHA256SUMS"
+
+      - name: Publish P0 runtime evidence summary
+        shell: bash
+        run: cat artifacts/p0-runtime-evidence-register/p0-runtime-evidence-register.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload authoritative register artifact
         uses: actions/upload-artifact@v7
