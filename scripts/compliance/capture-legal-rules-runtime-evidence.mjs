@@ -171,6 +171,7 @@ async function main() {
     headers: {
       accept: 'application/json',
       authorization: `Bearer ${internalCronSecret}`,
+      'x-internal-cron-secret': internalCronSecret,
       'x-request-id': requestId,
       'user-agent': 'risck-comply-legal-rules-runtime-proof/1.0',
     },
