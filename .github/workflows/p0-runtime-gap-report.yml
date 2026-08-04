@@ -11,6 +11,7 @@ on:
     paths:
       - 'scripts/security/*p0-runtime*'
       - 'tests/security/*p0-runtime*'
+      - 'tests/security/p0-register-source-of-truth-contract.test.ts'
       - 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md'
       - 'docs/security/evidence/runtime/**'
       - 'docs/security/evidence/schemas/p0-runtime-evidence-register.schema.json'
@@ -64,7 +65,9 @@ jobs:
           node --test \
             tests/security/generate-p0-runtime-evidence-register.test.mjs \
             tests/security/validate-generated-p0-runtime-evidence-register.test.mjs
-          npx vitest run scripts/security/report-p0-runtime-evidence-gap.test.mjs
+          npx vitest run \
+            scripts/security/report-p0-runtime-evidence-gap.test.mjs \
+            tests/security/p0-register-source-of-truth-contract.test.ts
 
       - name: Generate exact-SHA gap report and register
         run: |
