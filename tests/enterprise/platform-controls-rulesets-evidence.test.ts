@@ -104,10 +104,14 @@ describe('repository rulesets platform-control evidence fallback', () => {
       sourceMode: 'repository-rulesets',
       classicProtectionApiFailure: 'github_api_403',
       applicableRulesetCount: 1,
+      rulesetIds: [7001],
+      rulesetSources: ['Repository'],
       bypassActorCount: 0,
+      bypassActors: [],
       missingRequiredChecks: [],
       missingProtectionFlags: 0,
     }));
+    expect(evidence.sourceDetails).not.toHaveProperty('rulesetNames');
     expect(evidence.branch_protection).toEqual(expect.objectContaining({
       require_pull_request: true,
       required_approving_reviews: 2,
@@ -222,7 +226,7 @@ describe('repository rulesets platform-control evidence fallback', () => {
     ]));
   });
 
-  it('keeps the workflow read-only and runs contract checks before protected proof', () => {
+  it('keeps network collection separate from bounded file persistence', () => {
     const workflow = readFileSync('.github/workflows/branch-protection-runtime-proof.yml', 'utf8');
     const builder = readFileSync('scripts/enterprise/build-platform-controls-runtime-evidence.mjs', 'utf8');
     const validator = readFileSync('scripts/security/check-generated-branch-protection-evidence.mjs', 'utf8');
@@ -233,6 +237,8 @@ describe('repository rulesets platform-control evidence fallback', () => {
     expect(workflow).toContain('build-platform-controls-runtime-evidence.mjs');
     expect(workflow).toContain('platform-controls-rulesets-evidence.test.ts');
     expect(workflow).toContain('contents: read');
+    expect(workflow).toContain('umask 077');
+    expect(workflow).toContain('> "$BRANCH_PROTECTION_EVIDENCE_PATH"');
     expect(workflow).not.toContain('contents: write');
     expect(workflow).not.toContain('pull_request_target');
 
@@ -240,11 +246,15 @@ describe('repository rulesets platform-control evidence fallback', () => {
     expect(builder).toContain('classicProtectionApiFailure');
     expect(builder).toContain('classic-plus-rulesets');
     expect(builder).toContain('ruleset_bypass_actor_present');
+    expect(builder).toContain('process.stdout.write');
+    expect(builder).not.toContain('writeFileSync');
+    expect(builder).not.toContain('rulesetNames');
     expect(builder).not.toContain('rawApiPayload');
     expect(builder).not.toContain('contents: write');
 
     expect(validator).toContain('ALLOWED_EVIDENCE_SOURCES');
     expect(validator).toContain('RULESET_EVIDENCE_SOURCES');
-    expect(validator).toContain('ruleset bypass actors are not allowed');
+    expect(validator).toContain('boundedRulesetProvenanceIsValid');
+    expect(validator).toContain('free-form ruleset names must not be retained');
   });
 });
