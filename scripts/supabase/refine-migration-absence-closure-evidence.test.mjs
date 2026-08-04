@@ -156,6 +156,33 @@ test('keeps inline ambiguity when the parent column is present', async () => {
   assert.equal(result.absenceClosureRefinement.addedClosureOperations, 0);
 });
 
+test('fails closed when one repeated definition digest has mixed parent states', async () => {
+  const { result } = await runFixture({
+    mutateReport(report) {
+      const absentParent = report.items[0].operations.find((operation) => (
+        operation.kind === 'COLUMN'
+      ));
+      report.items[0].operations.push({
+        ...absentParent,
+        key: 'public.other.status',
+        observedState: 'PRESENT',
+        targetStateMatched: true,
+      });
+    },
+  });
+
+  assert.equal(result.items[0].unresolved.length, 1);
+  assert.equal(result.items[0].candidate.candidateClassification, 'REQUIRES_SPLIT_REVIEW');
+  assert.equal(result.absenceClosureRefinement.resolvedUnresolvedEntries, 0);
+  assert.equal(result.absenceClosureRefinement.addedClosureOperations, 0);
+  assert.equal(
+    result.items[0].operations.some((operation) => (
+      operation.evidenceLayer === 'ABSENT_COLUMN_CLOSURE_REFINEMENT'
+    )),
+    false,
+  );
+});
+
 test('does not close dynamic SQL or other unresolved reasons', async () => {
   const { result } = await runFixture({ unresolvedReason: 'DYNAMIC_SQL_REQUIRES_MANUAL_REVIEW' });
   assert.equal(result.items[0].unresolved.length, 1);
