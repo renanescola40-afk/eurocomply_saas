@@ -68,6 +68,7 @@ jobs:
             scripts/release/validate-upload-scanner-runtime-evidence.test.mjs \
             tests/enterprise/branch-protection-runtime-evidence-fetch.test.ts \
             tests/enterprise/upload-scanner-runtime-evidence-fetch.test.ts \
+            tests/enterprise/upload-scanner-p0-aggregation.test.ts \
             tests/security/p0-runtime-gap-strict-contract.test.ts \
             tests/security/p0-register-source-of-truth-contract.test.ts
           node --test \
@@ -83,8 +84,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID: ${{ env.UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID }}
-          UPLOAD_SCANNER_RUNTIME_EVIDENCE_REQUIRED: ${{ env.UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID != '' && 'true' || 'false' }}
-        run: node scripts/enterprise/fetch-upload-scanner-runtime-evidence.mjs
+          UPLOAD_SCANNER_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.name == 'RISCK COMPLY Upload Security CI' && 'true' || 'false' }}
+        run: node scripts/enterprise/aggregate-upload-scanner-runtime-evidence.mjs
 
       - name: Retrieve exact-SHA branch protection runtime evidence
         if: github.event_name == 'workflow_run'
@@ -92,7 +93,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID: ${{ env.BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID }}
-          BRANCH_PROTECTION_RUNTIME_EVIDENCE_REQUIRED: ${{ env.BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID != '' && 'true' || 'false' }}
+          BRANCH_PROTECTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.name == 'Branch Protection Runtime Proof' && 'true' || 'false' }}
         run: node scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs
 
       - name: Validate runtime evidence files
