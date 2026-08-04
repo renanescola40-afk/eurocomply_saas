@@ -1,0 +1,246 @@
+name: Supabase Migration Absence Closure Evidence
+
+run-name: Supabase migration absence closure evidence for ${{ inputs.target_sha }} from ${{ inputs.source_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact full 40-character current main SHA running the absence-closure refiner
+        required: true
+        type: string
+      source_sha:
+        description: Exact SHA that produced the successful column metadata evidence artifact
+        required: true
+        type: string
+      column_metadata_evidence_run_id:
+        description: Successful Supabase Migration Column Metadata Evidence run ID for source_sha
+        required: true
+        type: string
+      confirmation:
+        description: Type REFINE_MIGRATION_ABSENCE_CLOSURE_EVIDENCE
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: supabase-migration-absence-closure-evidence-${{ inputs.target_sha }}-${{ inputs.source_sha }}
+  cancel-in-progress: false
+
+jobs:
+  refine:
+    name: Refine non-crediting absent-column closure evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production-migration-reconciliation
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+      SOURCE_SHA: ${{ inputs.source_sha }}
+      COLUMN_METADATA_EVIDENCE_RUN_ID: ${{ inputs.column_metadata_evidence_run_id }}
+      OUTPUT_DIR: artifacts/supabase-migration-absence-closure-evidence
+
+    steps:
+      - name: Validate exact inputs and confirmation
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$SOURCE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$COLUMN_METADATA_EVIDENCE_RUN_ID" =~ ^[0-9]+$ ]]
+          test "$CONFIRMATION" = 'REFINE_MIGRATION_ABSENCE_CLOSURE_EVIDENCE'
+          echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
+          echo "SOURCE_SHA=${SOURCE_SHA,,}" >> "$GITHUB_ENV"
+
+      - name: Check out exact current main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.target_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact current main and immutable migrations tree
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          observed_sha="$(git rev-parse HEAD)"
+          main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          test "$observed_sha" = "$TARGET_SHA"
+          test "$main_sha" = "$TARGET_SHA"
+          git cat-file -e "${SOURCE_SHA}^{commit}"
+          source_tree="$(git rev-parse "${SOURCE_SHA}:supabase/migrations")"
+          target_tree="$(git rev-parse "${TARGET_SHA}:supabase/migrations")"
+          test "$source_tree" = "$target_tree"
+          mkdir -p "$OUTPUT_DIR"
+          jq -n \
+            --arg targetSha "$TARGET_SHA" \
+            --arg sourceSha "$SOURCE_SHA" \
+            --arg migrationsTree "$target_tree" \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{
+              schema: "risck-comply.supabase-migration-tree-equivalence.v1",
+              status: "PASSED",
+              targetSha: $targetSha,
+              sourceSha: $sourceSha,
+              sourceMigrationsTree: $migrationsTree,
+              targetMigrationsTree: $migrationsTree,
+              migrationsTreeEquivalent: true,
+              generatedAt: $generatedAt,
+              productionWriteAuthorized: false,
+              productionWritePerformed: false
+            }' > "$OUTPUT_DIR/migrations-tree-equivalence.json"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Download exact column metadata evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/source/column-metadata
+
+          run_api="repos/${GITHUB_REPOSITORY}/actions/runs/${COLUMN_METADATA_EVIDENCE_RUN_ID}"
+          expected_workflow_api="repos/${GITHUB_REPOSITORY}/actions/workflows/supabase-migration-column-metadata-evidence.yml"
+          source_conclusion="$(gh api "$run_api" --jq .conclusion)"
+          source_sha="$(gh api "$run_api" --jq .head_sha)"
+          source_event="$(gh api "$run_api" --jq .event)"
+          source_workflow_id="$(gh api "$run_api" --jq .workflow_id)"
+          source_workflow_path="$(gh api "$run_api" --jq .path)"
+          expected_workflow_id="$(gh api "$expected_workflow_api" --jq .id)"
+          expected_workflow_path='.github/workflows/supabase-migration-column-metadata-evidence.yml'
+          test "$source_conclusion" = 'success'
+          test "$source_sha" = "$SOURCE_SHA"
+          test "$source_event" = 'workflow_dispatch'
+          test "$source_workflow_id" = "$expected_workflow_id"
+          test "$source_workflow_path" = "$expected_workflow_path"
+
+          artifact_prefix="supabase-migration-column-metadata-evidence-${SOURCE_SHA}-from-"
+          artifact_count="$(gh api "${run_api}/artifacts" --jq "[.artifacts[] | select((.name | startswith(\"${artifact_prefix}\")) and .expired == false)] | length")"
+          test "$artifact_count" = '1'
+          artifact_id="$(gh api "${run_api}/artifacts" --jq ".artifacts[] | select((.name | startswith(\"${artifact_prefix}\")) and .expired == false) | .id")"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > artifacts/source/column-metadata.zip
+          unzip -q artifacts/source/column-metadata.zip -d artifacts/source/column-metadata
+
+          test -s artifacts/source/column-metadata/migration-object-evidence.json
+          test -s artifacts/source/column-metadata/migrations-tree-equivalence.json
+          test -s artifacts/source/column-metadata/column-metadata-refinement-summary.json
+
+          node - <<'NODE'
+          const report = require('./artifacts/source/column-metadata/migration-object-evidence.json');
+          const tree = require('./artifacts/source/column-metadata/migrations-tree-equivalence.json');
+          const summary = require('./artifacts/source/column-metadata/column-metadata-refinement-summary.json');
+          if (report.status !== 'HUMAN_REVIEW_REQUIRED') process.exit(1);
+          if (report.acceptedDecisions !== 0) process.exit(1);
+          if (report.semanticRefinement?.status !== 'HUMAN_REVIEW_REQUIRED') process.exit(1);
+          if (report.semanticRefinement?.acceptedDecisions !== 0) process.exit(1);
+          if (report.columnMetadataRefinement?.status !== 'HUMAN_REVIEW_REQUIRED') process.exit(1);
+          if (report.columnMetadataRefinement?.acceptedDecisions !== 0) process.exit(1);
+          if (summary.status !== 'HUMAN_REVIEW_REQUIRED') process.exit(1);
+          if (summary.acceptedDecisions !== 0) process.exit(1);
+          if (tree.status !== 'PASSED') process.exit(1);
+          if (tree.targetSha !== process.env.SOURCE_SHA) process.exit(1);
+          if (tree.migrationsTreeEquivalent !== true) process.exit(1);
+          if (report.safety?.productionPushAuthorized === true) process.exit(1);
+          NODE
+
+      - name: Test absent-column closure contracts
+        run: >-
+          node --test scripts/supabase/refine-migration-absence-closure-evidence.test.mjs
+          && npx vitest run tests/security/supabase-migration-absence-closure-evidence-workflow.test.ts
+
+      - name: Refine absent-column closure evidence without database access
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -R artifacts/source/column-metadata/. "$OUTPUT_DIR/"
+          cp "$OUTPUT_DIR/migrations-tree-equivalence.json" "$OUTPUT_DIR/source-migrations-tree-equivalence.json"
+          jq -n \
+            --arg targetSha "$TARGET_SHA" \
+            --arg sourceSha "$SOURCE_SHA" \
+            --arg migrationsTree "$(git rev-parse "${TARGET_SHA}:supabase/migrations")" \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{
+              schema: "risck-comply.supabase-migration-tree-equivalence.v1",
+              status: "PASSED",
+              targetSha: $targetSha,
+              sourceSha: $sourceSha,
+              sourceMigrationsTree: $migrationsTree,
+              targetMigrationsTree: $migrationsTree,
+              migrationsTreeEquivalent: true,
+              generatedAt: $generatedAt,
+              productionWriteAuthorized: false,
+              productionWritePerformed: false
+            }' > "$OUTPUT_DIR/migrations-tree-equivalence.json"
+          node scripts/supabase/refine-migration-absence-closure-evidence.mjs \
+            artifacts/source/column-metadata/migration-object-evidence.json \
+            supabase/migrations \
+            "$OUTPUT_DIR" \
+            | tee "$OUTPUT_DIR/summary-output.md"
+
+      - name: Enforce non-crediting safety boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const report = require('./artifacts/supabase-migration-absence-closure-evidence/migration-object-evidence.json');
+          if (report.status !== 'HUMAN_REVIEW_REQUIRED') process.exit(1);
+          if (report.acceptedDecisions !== 0) process.exit(1);
+          if (report.absenceClosureRefinement?.status !== 'HUMAN_REVIEW_REQUIRED') process.exit(1);
+          if (report.absenceClosureRefinement?.acceptedDecisions !== 0) process.exit(1);
+          if (report.absenceClosureRefinement?.automaticClassificationAllowed) process.exit(1);
+          if (report.absenceClosureRefinement?.productionWriteAuthorized) process.exit(1);
+          if (report.absenceClosureRefinement?.productionWritePerformed) process.exit(1);
+          if (report.safety.databaseModified) process.exit(1);
+          if (report.safety.migrationHistoryModified) process.exit(1);
+          if (report.safety.productionPushAuthorized) process.exit(1);
+          if (report.items.some((item) => item.candidate.humanDecisionRequired !== true)) process.exit(1);
+          const invalidClosure = report.items.flatMap((item) => item.operations).some((operation) => (
+            operation.evidenceLayer === 'ABSENT_COLUMN_CLOSURE_REFINEMENT'
+            && (
+              operation.kind !== 'INLINE_COLUMN_TARGET_STATE'
+              || operation.expectedState !== 'PRESENT'
+              || operation.observedState !== 'ABSENT'
+              || operation.targetStateMatched !== false
+              || operation.closureBasis?.parentKind !== 'COLUMN'
+              || operation.closureBasis?.parentObservedState !== 'ABSENT'
+            )
+          ));
+          if (invalidClosure) process.exit(1);
+          NODE
+
+      - name: Publish bounded summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat "$OUTPUT_DIR/absence-closure-refinement.md" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo
+            echo "- Target analyzer SHA: \`$TARGET_SHA\`"
+            echo "- Source column metadata SHA: \`$SOURCE_SHA\`"
+            echo '- Migrations tree equivalence: verified'
+            echo '- Source producer workflow: verified'
+            echo '- Database connection in this workflow: none'
+            echo '- Accepted decisions: 0'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload migration absence closure evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: supabase-migration-absence-closure-evidence-${{ env.TARGET_SHA }}-from-${{ env.SOURCE_SHA }}
+          path: artifacts/supabase-migration-absence-closure-evidence
+          if-no-files-found: error
+          retention-days: 90
