@@ -1,0 +1,57 @@
+{
+  "schema": "risck-comply.platform-controls-rulesets-evidence-manifest.v1",
+  "evidenceItem": "branch-protection-validation",
+  "workstream": "PLATFORM-CONTROLS",
+  "weight": 4,
+  "producerWorkflow": ".github/workflows/branch-protection-runtime-proof.yml",
+  "producer": "scripts/enterprise/build-platform-controls-runtime-evidence.mjs",
+  "validator": "scripts/security/check-generated-branch-protection-evidence.mjs",
+  "artifactPath": "p0-evidence/branch-protection-main.generated.json",
+  "sourcePriority": [
+    "github-api-classic-branch-protection",
+    "github-api-repository-rulesets-fallback"
+  ],
+  "acceptance": {
+    "repository": "renanescola40-afk/eurocomply_saas",
+    "branch": "main",
+    "exactCurrentMainShaRequired": true,
+    "status": "Complete",
+    "outcome": "passed",
+    "minimumApprovingReviews": 1,
+    "codeOwnerReviewRequired": true,
+    "dismissStaleReviewsRequired": true,
+    "reviewThreadResolutionRequired": true,
+    "strictStatusChecksRequired": true,
+    "forcePushBlocked": true,
+    "deletionBlocked": true,
+    "bypassActorCount": 0,
+    "sensitiveValuesAllowed": false,
+    "rawApiPayloadAllowed": false
+  },
+  "rulesetProjection": {
+    "pull_request": [
+      "require_pull_request",
+      "required_approving_reviews",
+      "require_code_owner_review",
+      "dismiss_stale_reviews",
+      "require_conversation_resolution"
+    ],
+    "required_status_checks": [
+      "require_status_checks",
+      "require_up_to_date_branch",
+      "required_status_check_inventory"
+    ],
+    "non_fast_forward": ["block_force_pushes"],
+    "deletion": ["block_deletions"]
+  },
+  "invalidatesOn": [
+    "main branch SHA change",
+    "required check inventory change",
+    "ruleset enforcement change",
+    "ruleset target condition change",
+    "ruleset bypass actor change",
+    "review policy change",
+    "force-push or deletion policy change"
+  ],
+  "truthBoundary": "This evidence proves configured GitHub platform controls for one exact main SHA. It does not prove reviewer independence, production deployment approval, external security review, customer acceptance or legal compliance."
+}
