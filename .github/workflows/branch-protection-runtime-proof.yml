@@ -3,6 +3,16 @@ name: Branch Protection Runtime Proof
 run-name: Branch protection proof for ${{ inputs.release_sha || github.sha }}
 
 on:
+  pull_request:
+    paths:
+      - 'scripts/enterprise/build-platform-controls-runtime-evidence.mjs'
+      - 'scripts/enterprise/build-branch-protection-runtime-evidence.mjs'
+      - 'scripts/security/check-generated-branch-protection-evidence.mjs'
+      - 'tests/enterprise/platform-controls-rulesets-evidence.test.ts'
+      - '.github/workflows/branch-protection-runtime-proof.yml'
+      - 'docs/enterprise/PLATFORM_RULESETS_EVIDENCE_FALLBACK.md'
+      - 'docs/security/runbooks/PLATFORM_CONTROLS_RULESETS_PROOF.md'
+      - 'docs/security/threat-models/GITHUB_RULESETS_EVIDENCE.md'
   push:
     branches: [main]
   workflow_dispatch:
@@ -20,8 +30,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  contract:
+    name: Validate platform evidence contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout trusted source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Validate evidence scripts
+        run: |
+          node --check scripts/enterprise/build-platform-controls-runtime-evidence.mjs
+          node --check scripts/enterprise/build-branch-protection-runtime-evidence.mjs
+          node --check scripts/security/check-generated-branch-protection-evidence.mjs
+
+      - name: Run rulesets fallback contract tests
+        run: npx vitest run tests/enterprise/platform-controls-rulesets-evidence.test.ts tests/enterprise/branch-protection-runtime-evidence-fetch.test.ts
+
   branch-protection-proof:
     name: Validate exact-SHA main protection
+    if: github.event_name != 'pull_request'
+    needs: contract
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: Production
@@ -54,13 +95,8 @@ jobs:
         with:
           node-version: 22
 
-      - name: Validate proof scripts
-        run: |
-          node --check scripts/enterprise/build-branch-protection-runtime-evidence.mjs
-          node --check scripts/security/check-generated-branch-protection-evidence.mjs
-
-      - name: Generate exact-SHA branch protection evidence
-        run: node scripts/enterprise/build-branch-protection-runtime-evidence.mjs
+      - name: Generate exact-SHA platform controls evidence
+        run: node scripts/enterprise/build-platform-controls-runtime-evidence.mjs
 
       - name: Validate generated evidence contract
         if: always()
