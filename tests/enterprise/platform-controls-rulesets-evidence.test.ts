@@ -12,6 +12,7 @@ import {
   rulesetTargetsMain,
   synthesizeClassicProtectionFromRulesets,
 } from '../../scripts/enterprise/build-platform-controls-runtime-evidence.mjs';
+import { validateGeneratedBranchProtectionEvidence } from '../../scripts/security/check-generated-branch-protection-evidence.mjs';
 
 const SHA = 'c'.repeat(40);
 const RUN_ID = '30860000001';
@@ -118,6 +119,10 @@ describe('repository rulesets platform-control evidence fallback', () => {
       block_force_pushes: true,
       block_deletions: true,
     }));
+    expect(validateGeneratedBranchProtectionEvidence(evidence, {
+      expectedSha: SHA,
+      expectedRepository: 'renanescola40-afk/eurocomply_saas',
+    })).toEqual([]);
   });
 
   it('matches default, exact and glob main references while respecting exclusions', () => {
@@ -191,6 +196,10 @@ describe('repository rulesets platform-control evidence fallback', () => {
     expect(evidence.source).toBe('github-api-classic-plus-repository-rulesets');
     expect(evidence.branch_protection.block_deletions).toBe(true);
     expect(evidence.sourceDetails.sourceMode).toBe('classic-plus-rulesets');
+    expect(validateGeneratedBranchProtectionEvidence(evidence, {
+      expectedSha: SHA,
+      expectedRepository: 'renanescola40-afk/eurocomply_saas',
+    })).toEqual([]);
   });
 
   it('rejects bypass actors instead of treating ruleset visibility as enforcement', () => {
@@ -204,11 +213,19 @@ describe('repository rulesets platform-control evidence fallback', () => {
     expect(evidence.failures).toContain('ruleset_bypass_actor_present');
     expect(evidence.sourceDetails.bypassActorCount).toBe(1);
     expect(evidence.summary).toContain('bypass actors');
+    expect(validateGeneratedBranchProtectionEvidence(evidence, {
+      expectedSha: SHA,
+    })).toEqual(expect.arrayContaining([
+      'status must be Complete',
+      'outcome must be passed',
+      'ruleset bypass actors are not allowed',
+    ]));
   });
 
   it('keeps the workflow read-only and runs contract checks before protected proof', () => {
     const workflow = readFileSync('.github/workflows/branch-protection-runtime-proof.yml', 'utf8');
     const builder = readFileSync('scripts/enterprise/build-platform-controls-runtime-evidence.mjs', 'utf8');
+    const validator = readFileSync('scripts/security/check-generated-branch-protection-evidence.mjs', 'utf8');
 
     expect(workflow).toContain('pull_request:');
     expect(workflow).toContain('Validate platform evidence contracts');
@@ -225,5 +242,9 @@ describe('repository rulesets platform-control evidence fallback', () => {
     expect(builder).toContain('ruleset_bypass_actor_present');
     expect(builder).not.toContain('rawApiPayload');
     expect(builder).not.toContain('contents: write');
+
+    expect(validator).toContain('ALLOWED_EVIDENCE_SOURCES');
+    expect(validator).toContain('RULESET_EVIDENCE_SOURCES');
+    expect(validator).toContain('ruleset bypass actors are not allowed');
   });
 });
