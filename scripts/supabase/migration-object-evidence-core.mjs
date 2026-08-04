@@ -523,7 +523,7 @@ export function extractStatementEvidence(statement, catalog) {
     const name = normalizeIdentifier(match[1]).name;
     const observedVersion = catalog.extensions.get(name);
     results.push(evidence('EXTENSION', 'CREATE', name, true, observedVersion !== undefined, normalized));
-    const requestedVersion = normalized.match(/\bVERSION\s+['"]?([^\s;'";]+)['"]?/i)?.[1]?.toLowerCase();
+    const requestedVersion = normalized.match(/\bVERSION\s+['"]?([^\s;'"]+)['"]?/i)?.[1]?.toLowerCase();
     if (requestedVersion) {
       results.push(evidence(
         'EXTENSION_VERSION',
