@@ -5,26 +5,114 @@ on:
   pull_request:
     branches:
       - main
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/security/*p0-runtime*'
+      - 'tests/security/*p0-runtime*'
+      - 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md'
+      - 'docs/security/evidence/runtime/**'
+      - 'docs/security/evidence/schemas/p0-runtime-evidence-register.schema.json'
+      - '.github/workflows/p0-runtime-gap-report.yml'
+      - 'package.json'
+      - 'package-lock.json'
 
 permissions:
   contents: read
 
+concurrency:
+  group: p0-runtime-gap-report-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   p0-runtime-gap-report:
     name: Report P0 runtime evidence gap
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      ASSESSED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      RELEASE_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
-      - name: Checkout repository
+      - name: Checkout exact assessed SHA
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
           persist-credentials: false
 
-      - name: Generate gap report
-        run: node scripts/security/report-p0-runtime-evidence-gap.mjs
+      - name: Verify exact assessed checkout
+        run: |
+          set -euo pipefail
+          [[ "$ASSESSED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$ASSESSED_SHA"
+
+      - name: Validate P0 policy register
+        run: node scripts/security/check-p0-runtime-evidence-register.mjs
+
+      - name: Run focused P0 source-of-truth contracts
+        run: |
+          node --test \
+            tests/security/generate-p0-runtime-evidence-register.test.mjs \
+            tests/security/validate-generated-p0-runtime-evidence-register.test.mjs
+          npx vitest run scripts/security/report-p0-runtime-evidence-gap.test.mjs
+
+      - name: Generate exact-SHA gap report and register
+        run: |
+          set -euo pipefail
+          output=artifacts/p0-runtime-evidence-register
+          mkdir -p "$output"
+          node scripts/security/report-p0-runtime-evidence-gap.mjs > "$output/p0-runtime-gap-report.json"
+          node scripts/security/generate-p0-runtime-evidence-register.mjs \
+            --sha="$ASSESSED_SHA" \
+            --output-dir="$output" \
+            > "$output/generator-output.json"
+
+      - name: Validate generated register and schema syntax
+        run: |
+          set -euo pipefail
+          node scripts/security/validate-generated-p0-runtime-evidence-register.mjs \
+            --sha="$ASSESSED_SHA"
+          node -e "JSON.parse(require('node:fs').readFileSync('docs/security/evidence/schemas/p0-runtime-evidence-register.schema.json','utf8'))"
+
+      - name: Generate integrity checksums
+        run: |
+          set -euo pipefail
+          output=artifacts/p0-runtime-evidence-register
+          find "$output" -maxdepth 1 -type f \( -name '*.json' -o -name '*.md' \) -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > "$output/SHA256SUMS"
+
+      - name: Publish decision summary
+        run: |
+          node --input-type=module <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          import { readFileSync } from 'node:fs';
+          const register = JSON.parse(readFileSync('artifacts/p0-runtime-evidence-register/p0-runtime-evidence-register.json', 'utf8'));
+          console.log('## P0 runtime evidence source of truth');
+          console.log('');
+          console.log(`- Exact SHA: \`${register.commitSha}\``);
+          console.log(`- Decision: **${register.decision}**`);
+          console.log(`- Completion: **${register.completed}/${register.total} (${register.completionPercent}%)**`);
+          console.log(`- Blocking controls: **${register.blocked}**`);
+          console.log('');
+          console.log('Versioned Markdown statuses are advisory only; canonical validators determine the result.');
+          NODE
+
+      - name: Upload immutable P0 register artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: p0-runtime-evidence-register-${{ env.ASSESSED_SHA }}
+          path: artifacts/p0-runtime-evidence-register
+          if-no-files-found: error
+          retention-days: 365
 
       - name: Strict report for release-ready branches
         if: >-
           contains(github.head_ref || github.ref_name, 'final-evidence') ||
           contains(github.head_ref || github.ref_name, 'release-ready')
-        run: node scripts/security/report-p0-runtime-evidence-gap.mjs --strict
+        run: |
+          node scripts/security/report-p0-runtime-evidence-gap.mjs --strict
+          node scripts/security/generate-p0-runtime-evidence-register.mjs \
+            --sha="$ASSESSED_SHA" \
+            --output-dir=artifacts/p0-runtime-evidence-register \
+            --strict
