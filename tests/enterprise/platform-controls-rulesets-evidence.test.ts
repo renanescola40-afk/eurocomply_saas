@@ -16,7 +16,32 @@ import {
 const SHA = 'c'.repeat(40);
 const RUN_ID = '30860000001';
 
-function completeRuleset(overrides: Record<string, any> = {}) {
+type RulesetRule = {
+  type: string;
+  parameters?: Record<string, unknown>;
+};
+
+type RulesetFixture = {
+  id: number;
+  name: string;
+  target: string;
+  enforcement: string;
+  source_type: string;
+  conditions: {
+    ref_name: {
+      include: string[];
+      exclude: string[];
+    };
+  };
+  bypass_actors: Array<{
+    actor_type: string;
+    actor_id?: number;
+    bypass_mode: string;
+  }>;
+  rules: RulesetRule[];
+};
+
+function completeRuleset(overrides: Partial<RulesetFixture> = {}): RulesetFixture {
   return {
     id: 7001,
     name: 'Enterprise main protection',
@@ -54,7 +79,7 @@ function completeRuleset(overrides: Record<string, any> = {}) {
   };
 }
 
-function evaluateRulesets(rulesets: unknown[]) {
+function evaluateRulesets(rulesets: RulesetFixture[]) {
   const { protection, metadata } = synthesizeClassicProtectionFromRulesets(rulesets);
   const evidence = evaluateBranchProtection({
     protection,
@@ -113,17 +138,17 @@ describe('repository rulesets platform-control evidence fallback', () => {
     const reviewRuleset = completeRuleset({
       id: 7002,
       name: 'Reviews only',
-      rules: completeRuleset().rules.filter((rule: { type: string }) => rule.type === 'pull_request'),
+      rules: completeRuleset().rules.filter((rule) => rule.type === 'pull_request'),
     });
     const technicalRuleset = completeRuleset({
       id: 7003,
       name: 'Checks and immutable main',
-      rules: completeRuleset().rules.filter((rule: { type: string }) => rule.type !== 'pull_request'),
+      rules: completeRuleset().rules.filter((rule) => rule.type !== 'pull_request'),
     });
     expect(evaluateRulesets([reviewRuleset, technicalRuleset]).outcome).toBe('passed');
 
     const weak = completeRuleset();
-    weak.rules = weak.rules.filter((rule: { type: string }) => rule.type !== 'non_fast_forward');
+    weak.rules = weak.rules.filter((rule) => rule.type !== 'non_fast_forward');
     const evidence = evaluateRulesets([weak]);
     expect(evidence.outcome).toBe('failed');
     expect(evidence.branch_protection.block_force_pushes).toBe(false);
