@@ -33,11 +33,17 @@ describe('Supabase Migration Absence Closure Evidence workflow', () => {
     expect(step).toContain('productionWritePerformed: false');
   });
 
-  it('accepts one successful manual unexpired exact-SHA source artifact', () => {
+  it('accepts one successful manual unexpired exact-SHA artifact from the canonical producer', () => {
     const step = stepBody('Download exact column metadata evidence');
     expect(step).toContain("test \"$source_conclusion\" = 'success'");
     expect(step).toContain('test "$source_sha" = "$SOURCE_SHA"');
     expect(step).toContain("test \"$source_event\" = 'workflow_dispatch'");
+    expect(step).toContain('source_workflow_id="$(gh api "$run_api" --jq .workflow_id)"');
+    expect(step).toContain('source_workflow_path="$(gh api "$run_api" --jq .path)"');
+    expect(step).toContain('actions/workflows/supabase-migration-column-metadata-evidence.yml');
+    expect(step).toContain('expected_workflow_path=\'.github/workflows/supabase-migration-column-metadata-evidence.yml\'');
+    expect(step).toContain('test "$source_workflow_id" = "$expected_workflow_id"');
+    expect(step).toContain('test "$source_workflow_path" = "$expected_workflow_path"');
     expect(step).toContain('expired == false');
     expect(step).toContain('test "$artifact_count" = \'1\'');
     expect(step).toContain("report.status !== 'HUMAN_REVIEW_REQUIRED'");
