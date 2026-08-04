@@ -68,4 +68,28 @@ describe('upload scanner runtime proof orchestration', () => {
     expect(proof).toContain('responseBodyStored: false');
     expect(proof).toContain('signatureNameStored: false');
   });
+
+  it('keeps the evidence schema strict for provenance and redaction fields', () => {
+    const schema = JSON.parse(
+      read('docs/security/evidence/schemas/upload-scanner-runtime-evidence.schema.json'),
+    );
+
+    expect(schema.$schema).toBe('https://json-schema.org/draft/2020-12/schema');
+    expect(schema.required).toEqual(
+      expect.arrayContaining([
+        'runtimeContext',
+        'sourceWorkflow',
+        'liveProviderProof',
+        'acceptanceCriteria',
+        'evidenceIntegrity',
+      ]),
+    );
+    expect(schema.properties.runtimeContext.properties.commitSha.pattern).toBe(
+      '^[a-f0-9]{40}$',
+    );
+    expect(schema.properties.sourceWorkflow.properties.exactShaBound.const).toBe(true);
+    expect(schema.properties.evidenceIntegrity.properties.containsSensitiveValues.const).toBe(false);
+    expect(schema.properties.evidenceIntegrity.properties.credentialsStored.const).toBe(false);
+    expect(schema.properties.evidenceIntegrity.properties.rawProviderResponseStored.const).toBe(false);
+  });
 });
