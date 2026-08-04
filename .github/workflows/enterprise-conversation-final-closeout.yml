@@ -51,7 +51,13 @@ jobs:
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/enterprise/fetch-conversation-final-closeout-evidence.mjs
+        run: |
+          set -euo pipefail
+          output=artifacts/enterprise-conversation-closeout
+          mkdir -p "$output"
+          umask 077
+          node scripts/enterprise/fetch-conversation-final-closeout-evidence.mjs > "$output/retrieval-manifest.json"
+          node -e "const r=require('./' + process.argv[1]); if(!r.schema||!Array.isArray(r.sources)) process.exit(1)" "$output/retrieval-manifest.json"
 
       - name: Assess final closeout without losing diagnostics
         id: assessor
@@ -79,55 +85,7 @@ jobs:
         if: always()
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
-        run: |
-          node --input-type=module <<'NODE'
-          import { existsSync, readFileSync } from 'node:fs';
-          const resultPath = 'artifacts/enterprise-conversation-closeout/result.json';
-          const manifestPath = 'artifacts/enterprise-conversation-closeout/retrieval-manifest.json';
-          const result = existsSync(resultPath) ? JSON.parse(readFileSync(resultPath, 'utf8')) : null;
-          const manifest = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : null;
-          const lines = ['## Enterprise conversation final closeout', ''];
-          lines.push(`- Release SHA: \`${process.env.RELEASE_SHA}\``);
-          lines.push(`- Retrieval: \`${manifest?.status || 'Unavailable'}\``);
-          lines.push(`- Decision: \`${result?.decision || 'ASSESSMENT_UNAVAILABLE'}\``);
-          lines.push(`- Completion: \`${result?.completionPercentage ?? 'unknown'}%\``);
-          lines.push('');
-          const blockers = Array.isArray(result?.blockers) ? result.blockers : [];
-          if (blockers.length === 0 && result?.status === 'Complete') {
-            lines.push('All canonical exact-SHA evidence passed. The conversation can be closed.');
-          } else {
-            lines.push('### Blocking evidence');
-            if (blockers.length === 0) lines.push('- Assessor result was not produced.');
-            for (const blocker of blockers) {
-              lines.push(`- \`${blocker.control}\`: ${(blocker.failures || []).map((failure) => `\`${failure}\``).join(', ')}`);
-            }
-          }
-          console.log(lines.join('\n'));
-          NODE
-          node --input-type=module <<'NODE' >> "$GITHUB_STEP_SUMMARY"
-          import { existsSync, readFileSync } from 'node:fs';
-          const resultPath = 'artifacts/enterprise-conversation-closeout/result.json';
-          const manifestPath = 'artifacts/enterprise-conversation-closeout/retrieval-manifest.json';
-          const result = existsSync(resultPath) ? JSON.parse(readFileSync(resultPath, 'utf8')) : null;
-          const manifest = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : null;
-          const lines = ['## Enterprise conversation final closeout', ''];
-          lines.push(`- Release SHA: \`${process.env.RELEASE_SHA}\``);
-          lines.push(`- Retrieval: \`${manifest?.status || 'Unavailable'}\``);
-          lines.push(`- Decision: \`${result?.decision || 'ASSESSMENT_UNAVAILABLE'}\``);
-          lines.push(`- Completion: \`${result?.completionPercentage ?? 'unknown'}%\``);
-          lines.push('');
-          const blockers = Array.isArray(result?.blockers) ? result.blockers : [];
-          if (blockers.length === 0 && result?.status === 'Complete') {
-            lines.push('All canonical exact-SHA evidence passed. The conversation can be closed.');
-          } else {
-            lines.push('### Blocking evidence');
-            if (blockers.length === 0) lines.push('- Assessor result was not produced.');
-            for (const blocker of blockers) {
-              lines.push(`- \`${blocker.control}\`: ${(blocker.failures || []).map((failure) => `\`${failure}\``).join(', ')}`);
-            }
-          }
-          console.log(lines.join('\n'));
-          NODE
+        run: node scripts/enterprise/render-conversation-final-closeout-summary.mjs | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload immutable closeout evidence
         if: always()
