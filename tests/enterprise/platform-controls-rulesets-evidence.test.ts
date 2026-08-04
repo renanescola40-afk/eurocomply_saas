@@ -7,6 +7,7 @@ import {
 } from '../../scripts/enterprise/build-branch-protection-runtime-evidence.mjs';
 import {
   applyRulesetsEvidenceBoundary,
+  mergeClassicAndRulesetProtection,
   rulesetPatternMatchesMain,
   rulesetTargetsMain,
   synthesizeClassicProtectionFromRulesets,
@@ -15,7 +16,7 @@ import {
 const SHA = 'c'.repeat(40);
 const RUN_ID = '30860000001';
 
-function completeRuleset(overrides: Record<string, unknown> = {}) {
+function completeRuleset(overrides: Record<string, any> = {}) {
   return {
     id: 7001,
     name: 'Enterprise main protection',
@@ -129,6 +130,44 @@ describe('repository rulesets platform-control evidence fallback', () => {
     expect(evidence.sourceDetails.missingProtectionFlags).toBeGreaterThan(0);
   });
 
+  it('combines classic and rulesets controls only when the cumulative policy is complete', () => {
+    const classic = {
+      required_status_checks: {
+        strict: true,
+        contexts: REQUIRED_CHECKS,
+        checks: [],
+      },
+      required_pull_request_reviews: {
+        required_approving_review_count: 1,
+        require_code_owner_reviews: true,
+        dismiss_stale_reviews: true,
+      },
+      required_conversation_resolution: { enabled: true },
+      allow_force_pushes: { enabled: false },
+      allow_deletions: { enabled: true },
+      restrictions: null,
+    };
+    const deletionRuleset = completeRuleset({
+      id: 7004,
+      name: 'Deletion protection only',
+      rules: [{ type: 'deletion' }],
+    });
+    const { protection: projected, metadata } = synthesizeClassicProtectionFromRulesets([deletionRuleset]);
+    const combined = mergeClassicAndRulesetProtection(classic, projected);
+    const evidence = applyRulesetsEvidenceBoundary(evaluateBranchProtection({
+      protection: combined,
+      targetSha: SHA,
+      checkedOutSha: SHA,
+      currentMainSha: SHA,
+      runId: RUN_ID,
+    }), metadata, 'classic_policy_incomplete', 'classic-plus-rulesets');
+
+    expect(evidence.outcome).toBe('passed');
+    expect(evidence.source).toBe('github-api-classic-plus-repository-rulesets');
+    expect(evidence.branch_protection.block_deletions).toBe(true);
+    expect(evidence.sourceDetails.sourceMode).toBe('classic-plus-rulesets');
+  });
+
   it('rejects bypass actors instead of treating ruleset visibility as enforcement', () => {
     const ruleset = completeRuleset({
       bypass_actors: [{ actor_type: 'RepositoryRole', actor_id: 5, bypass_mode: 'always' }],
@@ -157,6 +196,7 @@ describe('repository rulesets platform-control evidence fallback', () => {
 
     expect(builder).toContain('/rulesets?includes_parents=true&per_page=100');
     expect(builder).toContain('classicProtectionApiFailure');
+    expect(builder).toContain('classic-plus-rulesets');
     expect(builder).toContain('ruleset_bypass_actor_present');
     expect(builder).not.toContain('rawApiPayload');
     expect(builder).not.toContain('contents: write');
