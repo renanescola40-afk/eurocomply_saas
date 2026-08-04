@@ -19,6 +19,7 @@ describe('legal rules runtime capture contract', () => {
     expect(scriptSource).toContain("required('INTERNAL_CRON_SECRET')");
     expect(scriptSource).toContain('/api/ops/legal-rules-validation');
     expect(scriptSource).toContain('authorization: `Bearer ${internalCronSecret}`');
+    expect(scriptSource).toContain("'x-internal-cron-secret': internalCronSecret");
     expect(scriptSource).not.toContain('/api/public/legal-rules-validation');
     expect(workflowSource).toContain('INTERNAL_CRON_SECRET: ${{ secrets.INTERNAL_CRON_SECRET || secrets.CRON_SECRET }}');
     expect(workflowSource).toContain('test -n "$INTERNAL_CRON_SECRET"');
