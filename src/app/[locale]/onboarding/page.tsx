@@ -1,10 +1,12 @@
 import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
 
-import { B2BOnboardingFlow } from '@/components/onboarding/b2b-onboarding-flow';
+import { OnboardingRuntimeBoundary as B2BOnboardingFlowRuntimeBoundary } from '@/components/onboarding/onboarding-runtime-boundary';
 import { getBillingPlan } from '@/lib/billing/plans';
 import { locales, type Locale } from '@/lib/i18n/routing';
+import { toOnboardingMutationFailure, type OnboardingMutationResult } from '@/lib/onboarding/action-failure';
 import type { OnboardingActivationInput, OnboardingDraftInput } from '@/lib/onboarding/activation';
+import { getOnboardingPlanIntent } from '@/lib/onboarding/plan-intent';
 import { completeOnboardingActivation, saveOnboardingDraft } from '@/server/actions/onboarding';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOnboardingActivationState } from '@/server/queries/onboarding';
@@ -40,7 +42,7 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
   ]);
   const safeLocale = getSafeLocale(locale);
   const planQuery = getPlanQuery(resolvedSearchParams.plan);
-  const requestedPlan = getBillingPlan(resolvedSearchParams.plan)?.id ?? resolvedSearchParams.plan ?? null;
+  const requestedPlan = getOnboardingPlanIntent(resolvedSearchParams.plan);
   const user = await getCurrentUser();
 
   if (!user) {
@@ -53,7 +55,7 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
     redirect(`/${safeLocale}/dashboard/organizations${planQuery}`);
   }
 
-  async function saveDraftFromOnboarding(input: OnboardingDraftInput) {
+  async function saveDraftFromOnboarding(input: OnboardingDraftInput): Promise<OnboardingMutationResult> {
     'use server';
 
     const currentUser = await getCurrentUser();
@@ -62,10 +64,15 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
       redirect(`/${safeLocale}/login?next=${encodeURIComponent(`/${safeLocale}/onboarding${planQuery}`)}`);
     }
 
-    return saveOnboardingDraft(input);
+    try {
+      const result = await saveOnboardingDraft(input);
+      return { ok: true, ...result };
+    } catch (error) {
+      return toOnboardingMutationFailure(error, safeLocale, 'save');
+    }
   }
 
-  async function completeActivationFromOnboarding(input: OnboardingActivationInput) {
+  async function completeActivationFromOnboarding(input: OnboardingActivationInput): Promise<OnboardingMutationResult> {
     'use server';
 
     const currentUser = await getCurrentUser();
@@ -74,12 +81,17 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
       redirect(`/${safeLocale}/login?next=${encodeURIComponent(`/${safeLocale}/onboarding${planQuery}`)}`);
     }
 
-    return completeOnboardingActivation(input, safeLocale);
+    try {
+      const result = await completeOnboardingActivation(input, safeLocale);
+      return { ok: true, ...result };
+    } catch (error) {
+      return toOnboardingMutationFailure(error, safeLocale, 'complete');
+    }
   }
 
   return (
     <main className="min-h-screen bg-[#03070b]">
-      <B2BOnboardingFlow
+      <B2BOnboardingFlowRuntimeBoundary
         locale={safeLocale}
         requestedPlan={requestedPlan}
         initialState={initialState}
