@@ -25,22 +25,35 @@ describe('upload scanner runtime proof orchestration', () => {
     expect(workflow).not.toContain('pull_request_target');
   });
 
-  it('re-runs the P0 source of truth only for trusted successful main runs', () => {
+  it('aggregates exact-SHA scanner evidence only after trusted successful main runs', () => {
     const workflow = read('.github/workflows/p0-runtime-evidence.yml');
+    const aggregator = read('scripts/enterprise/aggregate-upload-scanner-runtime-evidence.mjs');
 
     expect(workflow).toContain('workflow_run:');
     expect(workflow).toContain('- RISCK COMPLY Upload Security CI');
+    expect(workflow).toContain('- Branch Protection Runtime Proof');
     expect(workflow).toContain('actions: read');
     expect(workflow).toContain('github.event.workflow_run.head_sha');
     expect(workflow).toContain("github.event.workflow_run.head_branch == 'main'");
     expect(workflow).toContain("github.event.workflow_run.event == 'push'");
     expect(workflow).toContain("github.event.workflow_run.event == 'workflow_dispatch'");
     expect(workflow).toContain('UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID');
-    expect(workflow).toContain('fetch-upload-scanner-runtime-evidence.mjs');
+    expect(workflow).toContain('aggregate-upload-scanner-runtime-evidence.mjs');
     expect(workflow).toContain("if: github.event_name == 'workflow_run'");
-    expect(workflow).toContain("UPLOAD_SCANNER_RUNTIME_EVIDENCE_REQUIRED: 'true'");
+    expect(workflow).toContain(
+      "github.event.workflow_run.name == 'RISCK COMPLY Upload Security CI' && 'true' || 'false'",
+    );
     expect(workflow).toContain('ref: ${{ env.ASSESSED_SHA }}');
     expect(workflow).not.toContain('contents: write');
+    expect(workflow).not.toContain('pull_request_target');
+
+    expect(aggregator).toContain("const WORKFLOW_FILE = 'upload-security-ci.yml'");
+    expect(aggregator).toContain('head_sha=${encodeURIComponent(targetSha)}');
+    expect(aggregator).toContain('status=success&branch=main&per_page=20');
+    expect(aggregator).toContain('selectExactShaUploadScannerRun');
+    expect(aggregator).toContain('sourceRunId: resolvedRunId');
+    expect(aggregator).not.toContain('per_page=100');
+    expect(aggregator).not.toContain('response.json()');
   });
 
   it('bounds API, artifact and ZIP inputs before accepting evidence', () => {
