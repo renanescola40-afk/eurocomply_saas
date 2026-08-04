@@ -37,6 +37,7 @@ const requiredWorkflows = [
   'Enterprise Production Gate',
   'RISCK COMPLY Security CI',
   'Enterprise DAST',
+  'Dependency Vulnerability Proof',
 ];
 
 const directWorkflowChecks = {
@@ -51,6 +52,7 @@ const directWorkflowChecks = {
   enterpriseProductionGate: 'Enterprise Production Gate',
   securityCi: 'RISCK COMPLY Security CI',
   dast: 'Enterprise DAST',
+  npmAudit: 'Dependency Vulnerability Proof',
 };
 
 const ciStepChecks = {
@@ -67,7 +69,6 @@ const ciStepChecks = {
     'E2E tests when runtime is configured',
     'Required production-like Playwright E2E gate',
   ],
-  npmAudit: ['npm audit moderate gate', 'npm audit'],
   routeQuality: ['Route quality gate', 'Route quality'],
 };
 
@@ -247,6 +248,7 @@ const evidence = {
   workflowRuns: runMetadata,
   limitations: [
     'This artifact proves repository and CI checks for one exact SHA.',
+    'The npmAudit result comes from the dedicated exact-SHA dependency vulnerability workflow.',
     'It does not prove production deployment, provider health, customer login, tenant isolation, rollback or restore.',
   ],
 };
