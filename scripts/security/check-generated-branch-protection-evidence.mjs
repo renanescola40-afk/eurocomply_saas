@@ -7,6 +7,18 @@ const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const DEFAULT_EVIDENCE_PATH = 'p0-evidence/branch-protection-main.generated.json';
 const FULL_SHA = /^[0-9a-f]{40}$/;
 
+export const ALLOWED_EVIDENCE_SOURCES = Object.freeze([
+  'github-api-branch-protection-workflow',
+  'github-api-classic-branch-protection',
+  'github-api-repository-rulesets-fallback',
+  'github-api-classic-plus-repository-rulesets',
+]);
+
+const RULESET_EVIDENCE_SOURCES = new Set([
+  'github-api-repository-rulesets-fallback',
+  'github-api-classic-plus-repository-rulesets',
+]);
+
 const REQUIRED_PROTECTION_FLAGS = [
   'protect_branch',
   'require_pull_request',
@@ -50,7 +62,7 @@ export function validateGeneratedBranchProtectionEvidence(
     requireCondition(failures, evidence?.targetSha === normalizedExpectedSha, 'evidence targetSha does not match expected SHA');
   }
 
-  requireCondition(failures, evidence?.source === 'github-api-branch-protection-workflow', 'source is invalid');
+  requireCondition(failures, ALLOWED_EVIDENCE_SOURCES.includes(evidence?.source), 'source is invalid');
   requireCondition(failures, evidence?.provenance?.githubActions === true, 'GitHub Actions provenance is required');
   requireCondition(failures, /^\d+$/.test(String(evidence?.provenance?.runId ?? '')), 'numeric workflow run ID is required');
   requireCondition(failures, evidence?.provenance?.exactShaBound === true, 'exact SHA binding is required');
@@ -72,6 +84,24 @@ export function validateGeneratedBranchProtectionEvidence(
   requireCondition(failures, evidence?.sourceDetails?.missingProtectionFlags === 0, 'required branch protection flags are missing');
   requireCondition(failures, Array.isArray(evidence?.controlsVerified) && evidence.controlsVerified.length >= 8, 'verified branch protection controls are incomplete');
   requireCondition(failures, Array.isArray(evidence?.failures) && evidence.failures.length === 0, 'Complete evidence cannot contain failures');
+
+  if (RULESET_EVIDENCE_SOURCES.has(evidence?.source)) {
+    const expectedMode = evidence.source === 'github-api-classic-plus-repository-rulesets'
+      ? 'classic-plus-rulesets'
+      : 'repository-rulesets';
+    requireCondition(failures, evidence?.sourceDetails?.sourceMode === expectedMode, 'rulesets source mode is invalid');
+    requireCondition(
+      failures,
+      Number.isInteger(evidence?.sourceDetails?.applicableRulesetCount)
+        && evidence.sourceDetails.applicableRulesetCount >= 1,
+      'at least one active main ruleset is required',
+    );
+    requireCondition(failures, evidence?.sourceDetails?.bypassActorCount === 0, 'ruleset bypass actors are not allowed');
+    requireCondition(failures, Array.isArray(evidence?.sourceDetails?.bypassActors) && evidence.sourceDetails.bypassActors.length === 0, 'ruleset bypass actor projection must be empty');
+    requireCondition(failures, Array.isArray(evidence?.sourceDetails?.rulesetIds) && evidence.sourceDetails.rulesetIds.length >= 1, 'ruleset provenance IDs are missing');
+    requireCondition(failures, Array.isArray(evidence?.sourceDetails?.rulesetNames) && evidence.sourceDetails.rulesetNames.length >= 1, 'ruleset provenance names are missing');
+    requireCondition(failures, typeof evidence?.sourceDetails?.classicProtectionApiFailure === 'string' && evidence.sourceDetails.classicProtectionApiFailure.length >= 3, 'classic protection boundary is missing');
+  }
 
   requireCondition(failures, evidence?.evidenceIntegrity?.containsSensitiveValues === false, 'sensitive-value integrity flag is invalid');
   requireCondition(failures, evidence?.evidenceIntegrity?.rawApiPayloadStored === false, 'raw GitHub API payloads must not be stored');
