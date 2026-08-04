@@ -74,11 +74,12 @@ jobs:
         run: node scripts/security/check-p0-runtime-evidence-register.mjs
 
       - name: Retrieve exact-SHA upload scanner runtime evidence
+        if: github.event_name == 'workflow_run'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID: ${{ env.UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID }}
-          UPLOAD_SCANNER_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event_name == 'workflow_run' && 'true' || 'false' }}
+          UPLOAD_SCANNER_RUNTIME_EVIDENCE_REQUIRED: 'true'
         run: node scripts/enterprise/fetch-upload-scanner-runtime-evidence.mjs
 
       - name: Validate runtime evidence files
