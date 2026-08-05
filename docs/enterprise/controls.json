@@ -129,7 +129,7 @@
       "controls": [
         {"title":"Structured logs validated","critical":false,"evidence":{"path":"docs/security/evidence/runtime/centralized-logging-validation.json","check":"structuredLogs"}},
         {"title":"Request IDs validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/request-id-validation.json"}},
-        {"title":"Security events validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/audit-chain-validation.json","check":"securityEvents"}},
+        {"title":"Security events validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/security-events-validation.json","check":"securityEvents"}},
         {"title":"Centralized logging validated","critical":true,"evidence":{"path":"docs/security/evidence/p1/centralized-logging-alerts.json","check":"centralizedLogging"}},
         {"title":"Alert routing validated","critical":true,"evidence":{"path":"docs/security/evidence/p1/centralized-logging-alerts.json","check":"alertRouting"}},
         {"title":"Observability smoke validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/sentry-observability-validation.json","check":"observabilitySmoke"}},

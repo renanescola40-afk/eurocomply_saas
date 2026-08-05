@@ -23,6 +23,7 @@ const requiredCompletionTriggers = Object.freeze([
   'Supabase Live RLS Validation',
   'Production Runtime Proof',
   'Branch Protection Runtime Proof',
+  'Final Technical Controls Proof',
 ]);
 
 function workflowRunNames(source) {
