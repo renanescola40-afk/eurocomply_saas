@@ -16,6 +16,7 @@ const BUNDLE_PATHS = [
 ];
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const NUMERIC = /^\d+$/;
+const CANONICAL_PRODUCTION_HOST = 'www.risckcomply.com';
 
 function headers(token) {
   return {
@@ -66,7 +67,7 @@ export function validateDownloadedEvidence(evidence, { targetSha }) {
   if (evidence?.status !== 'Complete' || evidence?.outcome !== 'passed') failures.push('evidence_not_complete');
   if (evidence?.repository !== REPOSITORY || evidence?.branch !== 'main') failures.push('provenance_invalid');
   if (evidence?.targetSha !== targetSha) failures.push('sha_mismatch');
-  if (evidence?.targetHost !== 'risckcomply.com') failures.push('host_invalid');
+  if (evidence?.targetHost !== CANONICAL_PRODUCTION_HOST) failures.push('host_invalid');
   if (!Array.isArray(evidence?.checks) || evidence.checks.length !== 5 || evidence.checks.some((check) => check?.passed !== true)) failures.push('checks_incomplete');
   if (!Array.isArray(evidence?.failures) || evidence.failures.length !== 0) failures.push('failures_present');
   if (evidence?.evidenceIntegrity?.containsSensitiveValues !== false || evidence?.evidenceIntegrity?.exactShaBound !== true) failures.push('integrity_invalid');
