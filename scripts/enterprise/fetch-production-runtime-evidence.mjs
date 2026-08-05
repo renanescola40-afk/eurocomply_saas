@@ -99,8 +99,11 @@ function extractBundle(zipPath) {
   }));
 }
 
-function removeStale(root) {
-  for (const path of BUNDLE_PATHS) rmSync(join(root, path), { force: true });
+export function removeStaleProductionRuntimeEvidence(root) {
+  // The header and no-store paths are shared with exact-SHA repository evidence.
+  // Remove only the production-owned aggregate before discovery; a successful
+  // runtime bundle will replace all three paths with stronger live evidence.
+  rmSync(join(root, SOURCE_PATH), { force: true });
 }
 
 export async function fetchProductionRuntimeEvidence({
@@ -111,7 +114,7 @@ export async function fetchProductionRuntimeEvidence({
   sourceRunId = '',
   required = false,
 }) {
-  removeStale(root);
+  removeStaleProductionRuntimeEvidence(root);
   if (repository !== REPOSITORY) throw new Error('repository_not_canonical');
   if (!token) throw new Error('github_token_missing');
   if (!FULL_SHA.test(targetSha)) throw new Error('target_sha_invalid');

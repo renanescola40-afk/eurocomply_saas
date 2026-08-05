@@ -1,9 +1,12 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { buildProductionRuntimeScorecardEvidence } from '../../scripts/security/write-production-runtime-scorecard-evidence.mjs';
 import {
   isOptionalWorkflowUnavailable,
+  removeStaleProductionRuntimeEvidence,
   selectExactShaRun,
   validateDownloadedEvidence,
 } from '../../scripts/enterprise/fetch-production-runtime-evidence.mjs';
@@ -104,6 +107,28 @@ describe('production runtime scorecard evidence', () => {
     expect(isOptionalWorkflowUnavailable(missing, { required: true })).toBe(false);
     expect(isOptionalWorkflowUnavailable(missing, { sourceRunId: '123' })).toBe(false);
     expect(isOptionalWorkflowUnavailable(unauthorized)).toBe(false);
+  });
+
+  it('clears only production-owned evidence before runtime discovery', () => {
+    const root = mkdtempSync(join(tmpdir(), 'production-runtime-evidence-'));
+    try {
+      const directory = join(root, 'docs/security/evidence/runtime');
+      mkdirSync(directory, { recursive: true });
+      const production = join(directory, 'production-runtime-validation.json');
+      const headers = join(directory, 'security-headers-validation.json');
+      const noStore = join(directory, 'no-store-validation.json');
+      writeFileSync(production, '{}\n');
+      writeFileSync(headers, '{"source":"repository"}\n');
+      writeFileSync(noStore, '{"source":"repository"}\n');
+
+      removeStaleProductionRuntimeEvidence(root);
+
+      expect(existsSync(production)).toBe(false);
+      expect(readFileSync(headers, 'utf8')).toContain('repository');
+      expect(readFileSync(noStore, 'utf8')).toContain('repository');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('uses a protected read-only runtime workflow and maps only the intended controls', () => {

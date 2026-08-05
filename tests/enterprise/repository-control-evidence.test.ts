@@ -170,5 +170,7 @@ describe('repository enterprise control evidence', () => {
     expect(workflow).toContain('docs/security/evidence/runtime/no-store-validation.json');
     expect(workflow).not.toContain('rm -f docs/security/evidence/runtime/security-headers-validation.json');
     expect(workflow).not.toContain('rm -f docs/security/evidence/runtime/no-store-validation.json');
+    expect(workflow.indexOf('Retain repository control evidence diagnostics'))
+      .toBeLessThan(workflow.indexOf('Retrieve exact-SHA production runtime evidence'));
   });
 });
