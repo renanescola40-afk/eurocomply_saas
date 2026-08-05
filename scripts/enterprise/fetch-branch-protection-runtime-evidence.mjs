@@ -149,7 +149,7 @@ export function buildCanonicalEvidence(source, { targetSha, runId }) {
   const flags = source?.branch_protection || {};
   return {
     schema: 'risck-comply.branch-protection-scorecard-evidence.v1',
-    evidenceItem: 'branch-protection-validation',
+    evidenceItem: 'branch-protection-main',
     status: passed ? 'Complete' : 'Open',
     outcome: passed ? 'passed' : 'not_verified',
     generatedAt: source?.generatedAt || null,
