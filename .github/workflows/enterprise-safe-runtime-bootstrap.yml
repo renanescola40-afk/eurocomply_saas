@@ -146,8 +146,10 @@ jobs:
           set -euo pipefail
           test "${{ steps.campaign.outcome }}" = "success"
           test "${{ steps.promotion.outcome }}" = "success"
-          node - <<'NODE'
-          const fs = require('fs');
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          import { SAFE_RUNTIME_LANES } from './scripts/enterprise/runtime-campaign-profiles.mjs';
+
           const report = JSON.parse(fs.readFileSync('artifacts/enterprise-readiness/safe-promotion-closeout.json', 'utf8'));
           console.log(`Baseline completion: ${report.baseline?.completedPercent ?? 'unknown'}%`);
           console.log(`Safe promoted completion: ${report.promoted?.completePercent ?? 'unknown'}%`);
@@ -155,8 +157,12 @@ jobs:
           console.log(`Promoted lanes: ${report.promotedLaneCount ?? 'unknown'}/${report.profileLaneCount ?? 'unknown'}`);
           console.log(`Blocked lanes: ${(report.blockedLanes || []).join(', ') || 'none'}`);
           console.log(`Remaining controls: ${report.promoted?.remainingPercent ?? 'unknown'}%`);
+
           const campaignDecisions = new Set(['READY_FOR_SAFE_PROMOTION', 'READY_FOR_PARTIAL_SAFE_PROMOTION']);
           const closeoutDecisions = new Set(['SAFE_EVIDENCE_PROMOTED', 'PARTIAL_SAFE_EVIDENCE_PROMOTED']);
+          const expectedLanes = new Set(SAFE_RUNTIME_LANES);
+          const observedLanes = [...(report.promotedLanes || []), ...(report.blockedLanes || [])];
+
           if (report.profile !== 'safe') process.exit(1);
           if (!campaignDecisions.has(report.runtimeCampaignDecision)) process.exit(1);
           if (report.evidenceManifestDecision !== 'READY_FOR_PROMOTION') process.exit(1);
@@ -164,9 +170,14 @@ jobs:
           if (report.coherencePromoted !== false) process.exit(1);
           if (report.rejectedEvidence !== 0) process.exit(1);
           if (!Number.isInteger(report.promotedLaneCount) || report.promotedLaneCount <= 0) process.exit(1);
-          if (!Number.isInteger(report.profileLaneCount) || report.profileLaneCount !== 11) process.exit(1);
+          if (!Number.isInteger(report.blockedLaneCount) || report.blockedLaneCount < 0) process.exit(1);
+          if (!Number.isInteger(report.profileLaneCount) || report.profileLaneCount !== SAFE_RUNTIME_LANES.length) process.exit(1);
           if (!Array.isArray(report.promotedLanes) || report.promotedLanes.length !== report.promotedLaneCount) process.exit(1);
           if (!Array.isArray(report.blockedLanes) || report.blockedLanes.length !== report.blockedLaneCount) process.exit(1);
+          if (report.promotedLaneCount + report.blockedLaneCount !== report.profileLaneCount) process.exit(1);
+          if (observedLanes.length !== SAFE_RUNTIME_LANES.length) process.exit(1);
+          if (new Set(observedLanes).size !== observedLanes.length) process.exit(1);
+          if (observedLanes.some((lane) => !expectedLanes.has(lane))) process.exit(1);
           if (report.promotedLanes.includes('RECOVERY') || report.promotedLanes.includes('ASSURANCE')) process.exit(1);
           if (report.blockedLanes.includes('RECOVERY') || report.blockedLanes.includes('ASSURANCE')) process.exit(1);
           if (report.runtimeCampaignDecision === 'READY_FOR_SAFE_PROMOTION' && report.blockedLaneCount !== 0) process.exit(1);
