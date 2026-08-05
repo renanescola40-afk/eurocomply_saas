@@ -30,4 +30,17 @@ describe('GitHub checks evidence API boundary', () => {
     expect(collector).toContain("status: allRequiredPassed ? 'Complete' : 'Open'");
     expect(collector).toContain("outcome: allRequiredPassed ? 'passed' : 'not_verified'");
   });
+
+  it('paginates compact workflow-run responses without weakening the byte limit', () => {
+    const collector = read('scripts/enterprise/capture-github-checks-evidence.mjs');
+
+    expect(collector).toContain('const GITHUB_RUNS_PAGE_SIZE = 20');
+    expect(collector).toContain('const MAX_GITHUB_RUNS_PAGES = 10');
+    expect(collector).toContain('exclude_pull_requests=true');
+    expect(collector).toContain('page=${page}');
+    expect(collector).toContain('collectedRuns.push(...pageRuns)');
+    expect(collector).toContain('requiredWorkflows.every((name) => selected.has(name))');
+    expect(collector).toContain('collectedRuns.length >= totalCount');
+    expect(collector).not.toContain('actions/runs?head_sha=${encodedSha}&per_page=100');
+  });
 });
