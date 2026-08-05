@@ -63,9 +63,11 @@ function parseTimestamp(value) {
   return Number.isFinite(time) ? time : null;
 }
 
-function laterIso(...values) {
-  const valid = values.map(parseTimestamp).filter((value) => value !== null);
-  return new Date(Math.max(...valid)).toISOString();
+function exactTimestampBoundary(value, fallback) {
+  if (value === null || value === undefined || value === '') return fallback;
+  const raw = String(value).trim();
+  requireCondition(raw.length <= 64 && parseTimestamp(raw) !== null, 'baseline_timestamp_invalid');
+  return raw;
 }
 
 function boundedTimeout() {
@@ -239,7 +241,7 @@ try {
     connectionId,
     after: null,
   });
-  const after = laterIso(proofStartedAt.toISOString(), baseline?.created_at);
+  const after = exactTimestampBoundary(baseline?.created_at, proofStartedAt.toISOString());
   checks.baselineCaptured = true;
 
   console.log('Waiting for a new SAML SSO login on the dedicated proof connection.');
