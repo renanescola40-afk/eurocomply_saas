@@ -116,7 +116,7 @@ jobs:
           from pg_proc p join pg_namespace n on n.oid=p.pronamespace
           where n.nspname not in ('pg_catalog','information_schema');
           select 'TYPE', quote_ident(n.nspname)||'.'||quote_ident(t.typname)
-          from pg_type t join pg_namespace n on n.oid=t.pronamespace
+          from pg_type t join pg_namespace n on n.oid=t.typnamespace
           where n.nspname not in ('pg_catalog','information_schema') and t.typtype in ('e','c','d');
           select 'INDEX', quote_ident(schemaname)||'.'||quote_ident(indexname) from pg_indexes where schemaname not in ('pg_catalog','information_schema');
           select 'POLICY', quote_ident(schemaname)||'.'||quote_ident(tablename) from pg_policies;
