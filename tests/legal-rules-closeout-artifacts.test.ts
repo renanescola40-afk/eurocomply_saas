@@ -7,24 +7,51 @@ function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(resolve(path), 'utf8')) as T;
 }
 
+type LegalRulesEvidence = {
+  schema: string;
+  status: 'NOT_EXECUTED' | 'PASS';
+  deploymentSha: string | null;
+  deploymentUrl?: string | null;
+  environment?: string;
+  countsForRuntimeCoverage: boolean;
+  blocker?: string;
+  artifactSha256: string | null;
+  testCases: Array<{ status: string }>;
+  evidenceIntegrity: { placeholderOnly: boolean; runtimeProofInvented: boolean };
+  evidenceBoundary: string;
+};
+
 describe('legal rules technical closeout artifacts', () => {
-  it('keeps the canonical runtime evidence placeholder non-creditable', () => {
-    const artifact = readJson<{
-      schema: string;
-      status: string;
-      deploymentSha: string | null;
-      countsForRuntimeCoverage: boolean;
-      blocker: string;
-    }>('docs/security/evidence/runtime/legal-rules-validation.json');
+  it('accepts only a truthful non-creditable placeholder or validated exact-SHA PASS evidence', () => {
+    const artifact = readJson<LegalRulesEvidence>('docs/security/evidence/runtime/legal-rules-validation.json');
 
     expect(artifact.schema).toBe('risck-comply.legal-rules-runtime-evidence.v1');
-    expect(artifact.status).toBe('NOT_EXECUTED');
-    expect(artifact.deploymentSha).toBeNull();
-    expect(artifact.countsForRuntimeCoverage).toBe(false);
-    expect(artifact.blocker).toContain('exact 40-character SHA');
+    expect(artifact.evidenceIntegrity.runtimeProofInvented).toBe(false);
+
+    if (artifact.status === 'NOT_EXECUTED') {
+      expect(artifact.deploymentSha).toBeNull();
+      expect(artifact.countsForRuntimeCoverage).toBe(false);
+      expect(artifact.artifactSha256).toBeNull();
+      expect(artifact.testCases).toHaveLength(0);
+      expect(artifact.evidenceIntegrity.placeholderOnly).toBe(true);
+      expect(artifact.blocker).toContain('exact 40-character SHA');
+      return;
+    }
+
+    expect(artifact.status).toBe('PASS');
+    expect(artifact.deploymentSha).toMatch(/^[a-f0-9]{40}$/);
+    expect(artifact.deploymentUrl).toMatch(/^https:\/\//);
+    expect(artifact.environment).not.toBe('unknown');
+    expect(artifact.countsForRuntimeCoverage).toBe(true);
+    expect(artifact.artifactSha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(artifact.testCases.length).toBeGreaterThanOrEqual(8);
+    expect(artifact.testCases.every((testCase) => testCase.status === 'PASS')).toBe(true);
+    expect(artifact.evidenceIntegrity.placeholderOnly).toBe(false);
+    expect(artifact.evidenceBoundary.toLowerCase()).toContain('does not replace qualified legal review');
   });
 
-  it('separates all scorecard dimensions and remains NO_GO without accepted proof', () => {
+  it('keeps scorecard dimensions separate and never infers human or customer compliance', () => {
+    const artifact = readJson<LegalRulesEvidence>('docs/security/evidence/runtime/legal-rules-validation.json');
     const scorecard = readJson<{
       dimensions: Record<string, { acceptedPercent: number; status: string }>;
       overallMaturity: { percent: number; status: string };
@@ -39,14 +66,26 @@ describe('legal rules technical closeout artifacts', () => {
       'operationalValidation',
     ]));
     expect(scorecard.dimensions.implementationCoverage.acceptedPercent).toBe(100);
-    expect(scorecard.dimensions.runtimeCoverage.acceptedPercent).toBe(0);
     expect(scorecard.dimensions.humanReviewCoverage.acceptedPercent).toBe(0);
-    expect(scorecard.overallMaturity).toMatchObject({ percent: 30, status: 'NO_GO' });
-    expect(scorecard.scoreBoundary.technicalComplete).toBe(false);
     expect(scorecard.scoreBoundary.customerSpecificCompliance).toBe(false);
+    expect(scorecard.scoreBoundary.legalComplianceGuarantee).toBe(false);
+
+    if (artifact.status === 'NOT_EXECUTED') {
+      expect(scorecard.dimensions.runtimeCoverage.acceptedPercent).toBe(0);
+      expect(scorecard.overallMaturity).toMatchObject({ percent: 30, status: 'NO_GO' });
+      expect(scorecard.scoreBoundary.technicalComplete).toBe(false);
+      return;
+    }
+
+    // Evidence promotion is intentionally single-file. A derived scorecard may
+    // remain conservative until its separate regeneration workflow completes.
+    expect([0, 100]).toContain(scorecard.dimensions.runtimeCoverage.acceptedPercent);
+    if (scorecard.dimensions.runtimeCoverage.acceptedPercent === 0) {
+      expect(scorecard.scoreBoundary.technicalComplete).toBe(false);
+    }
   });
 
-  it('keeps consolidated production closeout blocked until one exact SHA passes', () => {
+  it('keeps consolidated production closeout blocked until all broader controls pass', () => {
     const closeout = readJson<{
       releaseDecision: string;
       technicalComplete: boolean;
@@ -57,7 +96,6 @@ describe('legal rules technical closeout artifacts', () => {
     expect(closeout.releaseDecision).toBe('NO_GO');
     expect(closeout.technicalComplete).toBe(false);
     expect(closeout.controls).toHaveLength(closeout.counts.totalControls);
-    expect(closeout.counts.exactShaRuntimePass).toBe(0);
     expect(closeout.controls.filter((control) => control.status === 'BLOCKED')).toHaveLength(closeout.counts.blocked);
     expect(closeout.controls.filter((control) => control.status === 'REVALIDATION_REQUIRED')).toHaveLength(closeout.counts.revalidationRequired);
     expect(closeout.controls.map((control) => control.id)).toEqual(expect.arrayContaining([
