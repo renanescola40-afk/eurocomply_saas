@@ -45,8 +45,10 @@ test('dispatcher supports concurrent safe exact-SHA campaigns with bounded trust
     /stat\.S_ISLNK/,
     /open\(target, 'xb'\)/,
     /Promise\.all\(prepared\.map/,
+    /headers: githubHeaders\(\)/,
   ]) assert.match(script, pattern);
   assert.doesNotMatch(script, /artifact\.archive_download_url/);
+  assert.doesNotMatch(script, /githubHeaders\(['"]application\/octet-stream['"]\)/);
   assert.equal(PARTIAL_SAFE_PROMOTION_DECISION, 'READY_FOR_PARTIAL_SAFE_PROMOTION');
   assert.match(promoter, /\bPARTIAL_SAFE_PROMOTION_DECISION\b/);
   assert.match(promoter, /PARTIAL_SAFE_EVIDENCE_PROMOTED/);
