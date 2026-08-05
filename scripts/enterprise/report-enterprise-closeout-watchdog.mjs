@@ -12,6 +12,7 @@ import {
   selectLatestExactShaRun,
 } from './closeout-watchdog-core.mjs';
 import { expectedLanesForProfile } from './runtime-campaign-profiles.mjs';
+import { RUNTIME_LANE_CONTRACTS } from './runtime-lane-contracts.mjs';
 
 const token = String(process.env.GITHUB_TOKEN || '');
 const repository = String(process.env.GITHUB_REPOSITORY || '');
@@ -22,21 +23,9 @@ const outputPath = String(process.env.CLOSEOUT_WATCHDOG_OUTPUT || 'artifacts/ent
 const strict = String(process.env.CLOSEOUT_WATCHDOG_STRICT || 'false').toLowerCase() === 'true';
 const githubApiOrigin = 'https://api.github.com';
 
-const CANONICAL_LANE_WORKFLOWS = Object.freeze({
-  'IAM-RBAC': 'auth-rbac-runtime-proof.yml',
-  'IAM-LIFECYCLE': 'identity-access-lifecycle-proof.yml',
-  'TEN-RLS': 'supabase-live-rls-validation.yml',
-  'FINAL-TECHNICAL': 'final-technical-controls-proof.yml',
-  PLATFORM: 'platform-providers-runtime-proof.yml',
-  DATA: 'data-governance-runtime-proof.yml',
-  INCIDENT: 'incident-continuity-runtime-proof.yml',
-  TRUST: 'procurement-trust-runtime-proof.yml',
-  RECOVERY: 'recovery-resilience-proof.yml',
-  PRODUCTION: 'production-runtime-proof.yml',
-  REPOSITORY: 'branch-protection-runtime-proof.yml',
-  'STEP-UP': 'step-up-runtime-proof.yml',
-  ASSURANCE: 'enterprise-final-assurance-proof.yml',
-});
+const CANONICAL_LANE_WORKFLOWS = Object.freeze(Object.fromEntries(
+  Object.entries(RUNTIME_LANE_CONTRACTS).map(([id, contract]) => [id, contract.workflow]),
+));
 
 const ORCHESTRATOR_WORKFLOWS = Object.freeze({
   'SAFE-BOOTSTRAP': 'enterprise-safe-runtime-bootstrap.yml',
@@ -100,8 +89,9 @@ async function readWorkflowEvidence({ id, workflow, artifactPrefix, required, al
 
 await verifyExactMain();
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-if (manifest?.schema_version !== 2 || !Array.isArray(manifest?.workflows) || manifest.workflows.length !== 13) {
-  throw new Error('Runtime campaign manifest must contain the canonical 13 lanes');
+const canonicalLaneCount = Object.keys(CANONICAL_LANE_WORKFLOWS).length;
+if (manifest?.schema_version !== 2 || !Array.isArray(manifest?.workflows) || manifest.workflows.length !== canonicalLaneCount) {
+  throw new Error(`Runtime campaign manifest must contain the canonical ${canonicalLaneCount} lanes`);
 }
 
 const manifestById = new Map(manifest.workflows.map((lane) => [lane?.id, lane]));

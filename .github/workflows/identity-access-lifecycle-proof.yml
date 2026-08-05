@@ -1,7 +1,5 @@
 name: Identity Access Lifecycle Proof
 
-run-name: Identity lifecycle proof for ${{ inputs.release_sha }}
-
 on:
   workflow_dispatch:
     inputs:
@@ -50,13 +48,14 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
           persist-credentials: false
 
       - name: Verify protected exact-main execution
         shell: bash
         run: |
           set -euo pipefail
-          git fetch --no-tags origin main
+          git fetch --no-tags --depth=1 origin main
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           test "$(git rev-parse origin/main)" = "$TARGET_SHA"
           test "$GITHUB_SHA" = "$TARGET_SHA"

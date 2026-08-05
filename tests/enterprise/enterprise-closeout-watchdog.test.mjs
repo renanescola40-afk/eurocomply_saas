@@ -9,6 +9,12 @@ import {
   SAFE_ORCHESTRATOR_EVENTS,
   selectLatestExactShaRun,
 } from '../../scripts/enterprise/closeout-watchdog-core.mjs';
+import {
+  EXPECTED_RUNTIME_LANES,
+} from '../../scripts/enterprise/runtime-lane-contracts.mjs';
+import {
+  SAFE_RUNTIME_LANES,
+} from '../../scripts/enterprise/runtime-campaign-profiles.mjs';
 
 const sha = 'a'.repeat(40);
 const now = '2026-07-21T20:00:00.000Z';
@@ -48,8 +54,8 @@ function evidence(id, state = 'complete') {
   };
 }
 
-const safeIds = ['IAM-RBAC', 'IAM-LIFECYCLE', 'TEN-RLS', 'FINAL-TECHNICAL', 'PLATFORM', 'DATA', 'INCIDENT', 'TRUST', 'PRODUCTION', 'REPOSITORY', 'STEP-UP'];
-const allIds = [...safeIds.slice(0, 8), 'RECOVERY', ...safeIds.slice(8), 'ASSURANCE'];
+const safeIds = [...SAFE_RUNTIME_LANES];
+const allIds = [...EXPECTED_RUNTIME_LANES];
 
 test('selects only the newest exact-SHA main run from allowlisted events', () => {
   const selected = selectLatestExactShaRun([
@@ -119,7 +125,9 @@ test('reports retained safe evidence without claiming a score or GO', () => {
   assert.deepEqual(report.protected_boundaries.map((entry) => entry.id), ['RECOVERY', 'ASSURANCE']);
 });
 
-test('requires every lane and the protected full closeout before reporting retained GO evidence', () => {
+test('requires every canonical lane, including SCIM, and the protected full closeout before reporting retained GO evidence', () => {
+  assert.ok(allIds.includes('IAM-SCIM'));
+  assert.ok(safeIds.includes('IAM-SCIM'));
   const report = buildCloseoutWatchdogReport({
     releaseSha: sha,
     lanes: allIds.map((id) => evidence(id)),
