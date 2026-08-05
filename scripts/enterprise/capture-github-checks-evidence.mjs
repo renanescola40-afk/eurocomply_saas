@@ -13,6 +13,8 @@ const timeoutMs = Number(process.env.GITHUB_CHECKS_WAIT_MS || 18 * 60 * 1000);
 const pollMs = Number(process.env.GITHUB_CHECKS_POLL_MS || 15_000);
 const githubRequestTimeoutMs = Number(process.env.GITHUB_CHECKS_REQUEST_TIMEOUT_MS || 15_000);
 const MAX_GITHUB_API_RESPONSE_BYTES = 1024 * 1024;
+const GITHUB_RUNS_PAGE_SIZE = 20;
+const MAX_GITHUB_RUNS_PAGES = 10;
 
 if (!token || !repository || !/^[0-9a-f]{40}$/i.test(targetSha || '')) {
   console.error('GITHUB_TOKEN, GITHUB_REPOSITORY and a full 40-character TARGET_SHA are required.');
@@ -169,8 +171,24 @@ function findStep(jobs, acceptedNames) {
 
 async function collectRuns() {
   const encodedSha = encodeURIComponent(targetSha);
-  const payload = await github(`/repos/${repository}/actions/runs?head_sha=${encodedSha}&per_page=100`);
-  return latestRunsByName(payload.workflow_runs || []);
+  const collectedRuns = [];
+
+  for (let page = 1; page <= MAX_GITHUB_RUNS_PAGES; page += 1) {
+    const payload = await github(
+      `/repos/${repository}/actions/runs?head_sha=${encodedSha}&exclude_pull_requests=true&per_page=${GITHUB_RUNS_PAGE_SIZE}&page=${page}`,
+    );
+    const pageRuns = Array.isArray(payload.workflow_runs) ? payload.workflow_runs : [];
+    collectedRuns.push(...pageRuns);
+
+    const selected = latestRunsByName(collectedRuns);
+    if (requiredWorkflows.every((name) => selected.has(name))) return selected;
+
+    const totalCount = Number(payload.total_count);
+    if (pageRuns.length < GITHUB_RUNS_PAGE_SIZE) break;
+    if (Number.isFinite(totalCount) && collectedRuns.length >= totalCount) break;
+  }
+
+  return latestRunsByName(collectedRuns);
 }
 
 const deadline = Date.now() + timeoutMs;
