@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -10,12 +12,18 @@ const SHA = 'a'.repeat(40);
 
 const sources = {
   'package.json': JSON.stringify({ scripts: {
+    'security:headers': 'node scripts/security/check-security-headers.mjs',
+    'security:no-store': 'node scripts/security/check-no-store.mjs',
     'security:origin-guards': 'node scripts/security/check-origin-guards.mjs',
     'security:authorization-bola': 'node scripts/security/check-authorization-bola.mjs',
     'security:csv-exports': 'node scripts/security/check-csv-export-security.mjs',
     'security:logs': 'node scripts/security/check-log-sanitization.mjs',
   } }),
   '.github/workflows/full-security-suite.yml': 'run: npm run security:ci',
+  'next.config.ts': 'securityHeaders headers()',
+  'proxy.ts': 'src/middleware config',
+  'scripts/security/check-security-headers.mjs': 'requiredHeaderTokens process.exitCode = 1',
+  'scripts/security/check-no-store.mjs': 'sensitiveApiPatterns acceptableNoStoreTokens process.exitCode = 1',
   'scripts/security/check-origin-guards.mjs': 'origin guard',
   'scripts/security/check-authorization-bola.mjs': 'bola',
   'scripts/security/check-supabase-service-role-boundary.mjs': 'NEXT_PUBLIC_ service role boundary process.exitCode = 1',
@@ -48,7 +56,7 @@ function exactChecks(overrides = {}) {
 
 function focused(passed = true) {
   return Object.fromEntries(
-    ['originGuards', 'authorizationBola', 'adminBoundary', 'exportIsolation', 'structuredLogs', 'requestIds', 'internalJobs']
+    ['securityHeaders', 'noStore', 'originGuards', 'authorizationBola', 'adminBoundary', 'exportIsolation', 'structuredLogs', 'requestIds', 'internalJobs']
       .map((name) => [name, { passed, exitCode: passed ? 0 : 1 }]),
   );
 }
@@ -74,6 +82,8 @@ function build(overrides = {}) {
 describe('repository enterprise control evidence', () => {
   it('requires the expected executable and public-source contracts', () => {
     expect(evaluateSourceContracts(sources)).toEqual({
+      securityHeaders: true,
+      noStore: true,
       originGuards: true,
       authorizationBola: true,
       adminBoundary: true,
@@ -101,7 +111,7 @@ describe('repository enterprise control evidence', () => {
   it('builds complete exact-SHA evidence without storing command output or sensitive values', () => {
     const documents = build();
 
-    expect(Object.keys(documents)).toHaveLength(8);
+    expect(Object.keys(documents)).toHaveLength(10);
     expect(Object.values(documents).every((document) => document.status === 'Complete')).toBe(true);
     expect(documents.internalJobs.checks).toEqual([
       { name: 'failClosed', passed: true },
@@ -120,10 +130,24 @@ describe('repository enterprise control evidence', () => {
   it('fails closed on a focused validation failure', () => {
     const documents = build({ focusedValidation: focused(false) });
 
+    expect(documents.securityHeaders.status).toBe('Open');
+    expect(documents.noStore.status).toBe('Open');
     expect(documents.originGuards.status).toBe('Open');
     expect(documents.authorizationBola.status).toBe('Open');
     expect(documents.requestIds.status).toBe('Open');
     expect(documents.internalJobs.status).toBe('Open');
+  });
+
+  it('does not promote headers or no-store when their source contract is missing', () => {
+    const sourceContracts = evaluateSourceContracts({
+      ...sources,
+      'scripts/security/check-security-headers.mjs': '',
+      'scripts/security/check-no-store.mjs': '',
+    });
+    const documents = build({ sourceContracts });
+
+    expect(documents.securityHeaders.status).toBe('Open');
+    expect(documents.noStore.status).toBe('Open');
   });
 
   it('fails closed on missing exact-SHA aggregate evidence', () => {
@@ -136,5 +160,15 @@ describe('repository enterprise control evidence', () => {
     const documents = build({ exactChecks: exactChecks({ e2e: false }) });
 
     expect(documents.vulnerabilityDisclosure.status).toBe('Open');
+  });
+
+  it('retains exact-SHA header and no-store evidence when production runtime proof is absent', () => {
+    const workflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
+
+    expect(workflow).toContain('node scripts/enterprise/build-repository-control-evidence.mjs');
+    expect(workflow).toContain('docs/security/evidence/runtime/security-headers-validation.json');
+    expect(workflow).toContain('docs/security/evidence/runtime/no-store-validation.json');
+    expect(workflow).not.toContain('rm -f docs/security/evidence/runtime/security-headers-validation.json');
+    expect(workflow).not.toContain('rm -f docs/security/evidence/runtime/no-store-validation.json');
   });
 });

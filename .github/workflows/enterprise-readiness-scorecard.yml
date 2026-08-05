@@ -279,13 +279,11 @@ jobs:
           PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ env.PRODUCTION_RUNTIME_SOURCE_RUN_ID }}
         run: node scripts/enterprise/fetch-production-runtime-evidence.mjs
 
-      - name: Remove stale production runtime evidence when unavailable
+      - name: Report unavailable production runtime evidence
         shell: bash
         run: |
           set -euo pipefail
           if ! test -f docs/security/evidence/runtime/production-runtime-validation.json; then
-            rm -f docs/security/evidence/runtime/security-headers-validation.json
-            rm -f docs/security/evidence/runtime/no-store-validation.json
             echo "Production runtime evidence remains NOT_VERIFIED for $ASSESSED_SHA."
           fi
 

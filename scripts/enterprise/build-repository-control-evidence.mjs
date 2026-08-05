@@ -11,6 +11,8 @@ const FULL_SHA = /^[a-f0-9]{40}$/;
 const DEFAULT_GITHUB_CHECKS = 'artifacts/enterprise-readiness/github-checks-evidence.json';
 
 const OUTPUTS = {
+  securityHeaders: 'docs/security/evidence/runtime/security-headers-validation.json',
+  noStore: 'docs/security/evidence/runtime/no-store-validation.json',
   originGuards: 'docs/security/evidence/runtime/origin-guard-validation.json',
   authorizationBola: 'docs/security/evidence/runtime/authorization-bola-validation.json',
   adminBoundary: 'docs/security/evidence/runtime/supabase-admin-boundary-validation.json',
@@ -24,6 +26,10 @@ const OUTPUTS = {
 const SOURCE_PATHS = [
   'package.json',
   '.github/workflows/full-security-suite.yml',
+  'next.config.ts',
+  'proxy.ts',
+  'scripts/security/check-security-headers.mjs',
+  'scripts/security/check-no-store.mjs',
   'scripts/security/check-origin-guards.mjs',
   'scripts/security/check-authorization-bola.mjs',
   'scripts/security/check-supabase-service-role-boundary.mjs',
@@ -56,11 +62,23 @@ function includesAll(value, tokens) {
 export function evaluateSourceContracts(sources) {
   const packageJson = sources['package.json'] ?? '';
   const fullSuite = sources['.github/workflows/full-security-suite.yml'] ?? '';
+  const nextConfig = sources['next.config.ts'] ?? '';
+  const proxy = sources['proxy.ts'] ?? '';
+  const securityHeaders = sources['scripts/security/check-security-headers.mjs'] ?? '';
+  const noStore = sources['scripts/security/check-no-store.mjs'] ?? '';
   const disclosure = sources['src/lib/trust-center/content.ts'] ?? '';
   const disclosureRoutes = sources['src/lib/trust-center/routes.ts'] ?? '';
   const routeHealth = sources['tests/e2e/route-health.spec.ts'] ?? '';
 
   return {
+    securityHeaders: includesAll(packageJson, ['"security:headers"', 'check-security-headers.mjs'])
+      && fullSuite.includes('npm run security:ci')
+      && includesAll(securityHeaders, ['requiredHeaderTokens', 'process.exitCode = 1'])
+      && includesAll(nextConfig, ['securityHeaders', 'headers()'])
+      && includesAll(proxy, ['src/middleware', 'config']),
+    noStore: includesAll(packageJson, ['"security:no-store"', 'check-no-store.mjs'])
+      && fullSuite.includes('npm run security:ci')
+      && includesAll(noStore, ['sensitiveApiPatterns', 'acceptableNoStoreTokens', 'process.exitCode = 1']),
     originGuards: includesAll(packageJson, ['"security:origin-guards"', 'check-origin-guards.mjs'])
       && fullSuite.includes('npm run security:ci'),
     authorizationBola: includesAll(packageJson, ['"security:authorization-bola"', 'check-authorization-bola.mjs'])
@@ -135,6 +153,8 @@ export function runFocusedValidation(root) {
   const vitest = join(root, 'node_modules', '.bin', 'vitest');
 
   return {
+    securityHeaders: command(root, node, ['scripts/security/check-security-headers.mjs']),
+    noStore: command(root, node, ['scripts/security/check-no-store.mjs']),
     originGuards: command(root, node, ['scripts/security/check-origin-guards.mjs']),
     authorizationBola: command(root, node, ['scripts/security/check-authorization-bola.mjs']),
     adminBoundary: {
@@ -265,6 +285,24 @@ export function buildEvidenceDocuments({
   const pass = (key) => sourceContracts[key] === true && focusedValidation[key]?.passed === true;
 
   return {
+    securityHeaders: document({
+      schema: 'risck-comply.security-headers-validation.v1',
+      evidenceItem: 'security-headers-validation',
+      controlsVerified: ['Security headers validated'],
+      checks: [{ name: 'securityHeaders', passed: pass('securityHeaders') }],
+      common,
+      boundary: 'Validates the exact-SHA security-header configuration and executable regression gate. It does not claim that a specific production response was observed; deployment smoke remains a separate release control.',
+      sourcePaths: ['package.json', '.github/workflows/full-security-suite.yml', 'next.config.ts', 'proxy.ts', 'scripts/security/check-security-headers.mjs'],
+    }),
+    noStore: document({
+      schema: 'risck-comply.no-store-validation.v1',
+      evidenceItem: 'no-store-validation',
+      controlsVerified: ['Sensitive responses use no-store'],
+      checks: [{ name: 'noStore', passed: pass('noStore') }],
+      common,
+      boundary: 'Validates the exact-SHA sensitive-route inventory and executable no-store regression gate. It does not claim live CDN cache behavior; production deployment validation remains separate.',
+      sourcePaths: ['package.json', '.github/workflows/full-security-suite.yml', 'scripts/security/check-no-store.mjs'],
+    }),
     originGuards: document({
       schema: 'risck-comply.origin-guard-validation.v1',
       evidenceItem: 'origin-guard-validation',
