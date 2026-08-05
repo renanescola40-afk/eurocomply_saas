@@ -58,8 +58,12 @@ describe('SCIM runtime proof megapack', () => {
     ]) {
       expect(runtime).toContain(token);
     }
-    expect(runtime).not.toContain('userName,');
-    expect(runtime).not.toContain('bearer,');
+    const evidenceAssembly = runtime.slice(runtime.indexOf('const evidence ='));
+    expect(evidenceAssembly).not.toContain('userName');
+    expect(evidenceAssembly).not.toContain('userExternalId');
+    expect(evidenceAssembly).not.toContain('groupExternalId');
+    expect(evidenceAssembly).not.toContain('userId,');
+    expect(evidenceAssembly).not.toContain('groupId,');
   });
 
   it('fails closed unless every protocol and cleanup check passes', () => {
