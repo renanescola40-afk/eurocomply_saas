@@ -70,6 +70,16 @@ describe('legal rules technical closeout artifacts', () => {
     expect(scorecard.scoreBoundary.customerSpecificCompliance).toBe(false);
     expect(scorecard.scoreBoundary.legalComplianceGuarantee).toBe(false);
 
+    // Runtime proof cannot turn the overall scorecard into GO while human or
+    // operational evidence remains incomplete.
+    if (
+      scorecard.dimensions.humanReviewCoverage.acceptedPercent < 100
+      || scorecard.dimensions.operationalValidation.acceptedPercent < 100
+    ) {
+      expect(scorecard.overallMaturity.percent).toBeLessThan(100);
+      expect(scorecard.overallMaturity.status).not.toMatch(/^(GO|PASS|COMPLETE)$/i);
+    }
+
     if (artifact.status === 'NOT_EXECUTED') {
       expect(scorecard.dimensions.runtimeCoverage.acceptedPercent).toBe(0);
       expect(scorecard.overallMaturity).toMatchObject({ percent: 30, status: 'NO_GO' });
