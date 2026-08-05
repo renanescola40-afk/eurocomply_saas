@@ -47,7 +47,8 @@ test('dispatcher supports concurrent safe exact-SHA campaigns with bounded trust
     /Promise\.all\(prepared\.map/,
   ]) assert.match(script, pattern);
   assert.doesNotMatch(script, /artifact\.archive_download_url/);
-  assert.match(promoter, new RegExp(PARTIAL_SAFE_PROMOTION_DECISION));
+  assert.equal(PARTIAL_SAFE_PROMOTION_DECISION, 'READY_FOR_PARTIAL_SAFE_PROMOTION');
+  assert.match(promoter, /\bPARTIAL_SAFE_PROMOTION_DECISION\b/);
   assert.match(promoter, /PARTIAL_SAFE_EVIDENCE_PROMOTED/);
   assert.match(promoter, /promotableLanes/);
   assert.match(promoter, /blockedLanes/);
@@ -73,8 +74,10 @@ test('safe bootstrap excludes destructive lanes and accepts only truthful comple
   assert.match(safeWorkflow, /RUNTIME_CAMPAIGN_PROFILE: safe/);
   assert.match(safeWorkflow, /READY_FOR_PARTIAL_SAFE_PROMOTION/);
   assert.match(safeWorkflow, /PARTIAL_SAFE_EVIDENCE_PROMOTED/);
+  assert.match(safeWorkflow, /SAFE_RUNTIME_LANES/);
   assert.match(safeWorkflow, /promotedLaneCount/);
   assert.match(safeWorkflow, /blockedLaneCount/);
+  assert.doesNotMatch(safeWorkflow, /profileLaneCount\s*!==\s*\d+/);
   assert.doesNotMatch(safeWorkflow, /EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK/);
   assert.doesNotMatch(safeWorkflow, /VALIDATE_FINAL_ASSURANCE/);
   assert.doesNotMatch(safeWorkflow, /continue-on-error:\s*true/);
