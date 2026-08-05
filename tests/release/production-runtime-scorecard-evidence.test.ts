@@ -12,6 +12,8 @@ import {
 } from '../../scripts/enterprise/fetch-production-runtime-evidence.mjs';
 
 const SHA = 'a'.repeat(40);
+const CANONICAL_PRODUCTION_URL = 'https://www.risckcomply.com';
+const CANONICAL_PRODUCTION_HOST = 'www.risckcomply.com';
 
 function source() {
   return {
@@ -25,7 +27,7 @@ function source() {
         { name: 'buildShaRegistered', passed: true, details: { sha: SHA } },
       ],
       targets: [{
-        baseUrl: 'https://risckcomply.com',
+        baseUrl: CANONICAL_PRODUCTION_URL,
         detailedChecks: [
           { name: 'securityHeadersPresent', passed: true },
           { name: 'sensitiveApisHaveNoStore', passed: true },
@@ -49,7 +51,7 @@ function source() {
       evidenceItem: 'runtime-release-sha-validation',
       status: 'Complete',
       outcome: 'passed',
-      targetHost: 'risckcomply.com',
+      targetHost: CANONICAL_PRODUCTION_HOST,
       expectedCommitSha: SHA,
       expectedBuildSha: SHA,
       observedCommitSha: SHA,
@@ -133,6 +135,7 @@ describe('production runtime scorecard evidence', () => {
 
   it('uses a protected read-only runtime workflow and maps only the intended controls', () => {
     const workflow = readFileSync('.github/workflows/production-runtime-proof.yml', 'utf8');
+    const smokeProof = readFileSync('scripts/release/run-production-runtime-response-proof.mjs', 'utf8');
     const overrides = JSON.parse(readFileSync('docs/enterprise/evidence-overrides.json', 'utf8'));
     const mapped = Object.fromEntries(overrides.overrides.map((entry: { controlId: string; evidence: unknown }) => [entry.controlId, entry.evidence]));
 
@@ -140,7 +143,10 @@ describe('production runtime scorecard evidence', () => {
     expect(workflow).toContain('contents: read');
     expect(workflow).not.toContain('contents: write');
     expect(workflow).toContain('test "$MAIN_SHA" = "$TARGET_SHA"');
-    expect(workflow).toContain('https://risckcomply.com');
+    expect(workflow).toContain(CANONICAL_PRODUCTION_URL);
+    expect(smokeProof).toContain("const CANONICAL_HOST = 'www.risckcomply.com'");
+    expect(smokeProof).toContain("parsedBaseUrl.protocol !== 'https:'");
+    expect(smokeProof).toContain("parsedBaseUrl.hostname.toLowerCase() !== CANONICAL_HOST");
     expect(workflow).not.toContain('pull_request_target');
     expect(Object.keys(mapped).filter((id) => id.startsWith('SEC-') || id.startsWith('REL-'))).toEqual([
       'SEC-05', 'SEC-06', 'REL-02', 'REL-03', 'REL-04', 'REL-05', 'REL-06',
