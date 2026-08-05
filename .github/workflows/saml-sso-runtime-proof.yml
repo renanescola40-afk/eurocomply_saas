@@ -1,0 +1,85 @@
+name: SAML SSO Runtime Proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full 40-character current main SHA
+        required: true
+        type: string
+      confirmation:
+        description: Type EXECUTE_SAML_SSO_RUNTIME_PROOF
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: saml-sso-runtime-proof-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  saml-sso-runtime-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production-identity-proof
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      SAML_PROOF_CONFIRMATION: ${{ inputs.confirmation }}
+      PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+      HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SAML_PROOF_CONNECTION_ID: ${{ secrets.SAML_PROOF_CONNECTION_ID }}
+      SAML_PROOF_TIMEOUT_MS: ${{ vars.SAML_PROOF_TIMEOUT_MS }}
+      SAML_RUNTIME_OUTPUT: artifacts/saml-sso-runtime-proof/saml-sso-runtime-validation.json
+
+    steps:
+      - name: Validate request
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$SAML_PROOF_CONFIRMATION" = "EXECUTE_SAML_SSO_RUNTIME_PROOF"
+
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify protected exact-main execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(git rev-parse origin/main)" = "$TARGET_SHA"
+          test "$GITHUB_SHA" = "$TARGET_SHA"
+          test "$GITHUB_REF_NAME" = "main"
+
+      - name: Await a new production SAML SSO login
+        run: node scripts/identity/run-saml-sso-runtime-proof.mjs
+
+      - name: Validate redacted exact-SHA evidence
+        if: always()
+        run: node scripts/identity/check-saml-sso-runtime-evidence.mjs
+
+      - name: Generate evidence checksum
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$SAML_RUNTIME_OUTPUT"
+          sha256sum "$SAML_RUNTIME_OUTPUT" > artifacts/saml-sso-runtime-proof/SHA256SUMS
+
+      - name: Upload immutable SAML SSO evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: saml-sso-runtime-proof-${{ inputs.release_sha }}
+          path: artifacts/saml-sso-runtime-proof
+          if-no-files-found: error
+          retention-days: 365
