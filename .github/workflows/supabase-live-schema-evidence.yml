@@ -5,6 +5,8 @@ on:
     paths:
       - 'scripts/supabase/build-migration-object-evidence.mjs'
       - 'scripts/supabase/build-migration-object-evidence.test.mjs'
+      - 'scripts/supabase/normalize-live-schema-catalog.mjs'
+      - 'scripts/supabase/normalize-live-schema-catalog.test.mjs'
       - '.github/workflows/supabase-live-schema-evidence.yml'
       - 'docs/security/runbooks/SUPABASE_LIVE_SCHEMA_EVIDENCE.md'
   workflow_dispatch:
@@ -34,8 +36,13 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --check scripts/supabase/build-migration-object-evidence.mjs
-      - run: node --test scripts/supabase/build-migration-object-evidence.test.mjs
+      - run: |
+          node --check scripts/supabase/build-migration-object-evidence.mjs
+          node --check scripts/supabase/normalize-live-schema-catalog.mjs
+      - run: |
+          node --test \
+            scripts/supabase/build-migration-object-evidence.test.mjs \
+            scripts/supabase/normalize-live-schema-catalog.test.mjs
 
   capture:
     name: Capture exact-SHA production schema evidence
@@ -97,7 +104,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$OUTPUT_DIR"
-          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -F $'\t' <<'SQL' > "$OUTPUT_DIR/live-catalog.tsv"
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -F $'\t' <<'SQL' > "$OUTPUT_DIR/live-catalog.tsv"
           begin read only;
           select 'TABLE', quote_ident(n.nspname)||'.'||quote_ident(c.relname)
           from pg_class c join pg_namespace n on n.oid=c.relnamespace
@@ -115,12 +122,10 @@ jobs:
           select 'POLICY', quote_ident(schemaname)||'.'||quote_ident(tablename) from pg_policies;
           commit;
           SQL
-          node - <<'NODE'
-          const fs=require('fs');
-          const rows=fs.readFileSync(process.env.OUTPUT_DIR+'/live-catalog.tsv','utf8').trim().split(/\r?\n/).filter(Boolean).map(line=>{const [kind,name]=line.split('\t');return {kind,name:name.replaceAll('"','').toLowerCase()}});
-          rows.sort((a,b)=>`${a.kind}:${a.name}`.localeCompare(`${b.kind}:${b.name}`));
-          fs.writeFileSync(process.env.OUTPUT_DIR+'/live-schema-catalog.json',JSON.stringify({schema:'risck-comply.supabase-live-schema-catalog.v1',releaseSha:process.env.TARGET_SHA,capturedAt:new Date().toISOString(),transactionMode:'READ ONLY',objects:rows},null,2)+'\n');
-          NODE
+          node scripts/supabase/normalize-live-schema-catalog.mjs \
+            "$OUTPUT_DIR/live-catalog.tsv" \
+            "$OUTPUT_DIR/live-schema-catalog.json" \
+            "$TARGET_SHA"
 
       - name: Build migration object evidence
         shell: bash
