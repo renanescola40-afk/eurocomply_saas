@@ -180,6 +180,8 @@ jobs:
           path: |
             docs/security/evidence/runtime/origin-guard-validation.json
             docs/security/evidence/runtime/authorization-bola-validation.json
+            docs/security/evidence/runtime/security-headers-validation.json
+            docs/security/evidence/runtime/no-store-validation.json
             docs/security/evidence/runtime/supabase-admin-boundary-validation.json
             docs/security/evidence/runtime/export-tenant-isolation-validation.json
             docs/security/evidence/runtime/centralized-logging-validation.json

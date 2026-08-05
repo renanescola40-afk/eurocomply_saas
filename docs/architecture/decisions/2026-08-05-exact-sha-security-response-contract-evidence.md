@@ -42,3 +42,17 @@ separate and `NOT_VERIFIED` until provider-backed evidence is accepted.
 Remove the two outputs from the repository-control builder and restore their
 production-runtime-only cleanup behavior. No database, provider or customer data
 is changed by this decision.
+
+## Post-merge verification correction
+
+The first accepted implementation still allowed the production-runtime fetcher
+to delete both shared outputs before it discovered whether an exact-SHA runtime
+bundle existed. That cleanup made the canonical scorecard remain at 46% even
+though the repository evidence builder had completed successfully.
+
+The fetcher now removes only its production-owned aggregate during discovery.
+When an exact-SHA runtime bundle exists, it still replaces the shared outputs
+with stronger live evidence. When no bundle exists, the bounded repository
+evidence remains available and is retained in the pre-fetch diagnostics
+artifact. This preserves the evidence boundary and prevents an optional runtime
+lookup from silently erasing valid exact-SHA repository proof.
