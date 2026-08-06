@@ -110,7 +110,7 @@ async function githubArtifactRequest(artifactId) {
   const url = githubApiUrl(`/repos/${repository}/actions/artifacts/${artifactId}/zip`);
   const response = await fetch(url, {
     redirect: 'follow',
-    headers: githubHeaders('application/octet-stream'),
+    headers: githubHeaders(),
   });
   assertTrustedArtifactResponse(response);
   if (!response.ok) throw new Error(`Artifact download failed with ${response.status}`);
