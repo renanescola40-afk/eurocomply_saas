@@ -2,8 +2,13 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
+const earlySyncPath = 'supabase/migrations/20260610_billing_stripe_sync.sql';
+const firstTierConsumerPath =
+  'supabase/migrations/20260626120000_org_billing_entitlements.sql';
 const migrationPath =
   'supabase/migrations/20260806103000_repair_legacy_subscriptions_schema.sql';
+
+const earlySync = readFileSync(earlySyncPath, 'utf8').toLowerCase();
 const migration = readFileSync(migrationPath, 'utf8');
 const normalized = migration.toLowerCase();
 
@@ -22,6 +27,16 @@ const requiredColumns = [
 const canonicalPlans = ['starter', 'professional', 'business', 'enterprise'] as const;
 
 describe('legacy subscriptions schema repair migration', () => {
+  it('adds tier before the first historical migration that references it', () => {
+    expect(earlySyncPath.localeCompare(firstTierConsumerPath)).toBeLessThan(0);
+    expect(earlySync).toContain('add column if not exists tier text');
+
+    const additiveAlter = earlySync.indexOf('alter table public.subscriptions');
+    const tierAddition = earlySync.indexOf('add column if not exists tier text');
+    expect(additiveAlter).toBeGreaterThan(-1);
+    expect(tierAddition).toBeGreaterThan(additiveAlter);
+  });
+
   it('is transactional and fails closed when the expected table is absent', () => {
     expect(normalized).toMatch(/\nbegin;\n/);
     expect(normalized).toContain("to_regclass('public.subscriptions') is null");
@@ -45,7 +60,7 @@ describe('legacy subscriptions schema repair migration', () => {
     }
   });
 
-  it('preserves the highest recognized legacy tier instead of letting free hide professional', () => {
+  it('preserves the highest recognized legacy tier and trims surrounding whitespace', () => {
     const enterprise = normalized.indexOf("= 'enterprise'");
     const business = normalized.indexOf("= 'business'");
     const professional = normalized.indexOf("in ('growth', 'professional', 'pro')");
@@ -53,13 +68,23 @@ describe('legacy subscriptions schema repair migration', () => {
     expect(enterprise).toBeGreaterThan(-1);
     expect(business).toBeGreaterThan(enterprise);
     expect(professional).toBeGreaterThan(business);
-    expect(normalized).toContain("or lower(coalesce(nullif(tier, ''), '')) = 'enterprise'");
-    expect(normalized).toContain("or lower(coalesce(nullif(tier, ''), '')) = 'business'");
     expect(normalized).toContain(
-      "or lower(coalesce(nullif(tier, ''), '')) in ('growth', 'professional', 'pro')",
+      "lower(btrim(coalesce(nullif(plan, ''), ''))) = 'enterprise'",
+    );
+    expect(normalized).toContain(
+      "or lower(btrim(coalesce(nullif(tier, ''), ''))) = 'enterprise'",
+    );
+    expect(normalized).toContain(
+      "or lower(btrim(coalesce(nullif(tier, ''), ''))) = 'business'",
+    );
+    expect(normalized).toContain(
+      "or lower(btrim(coalesce(nullif(tier, ''), ''))) in ('growth', 'professional', 'pro')",
     );
     expect(normalized).toContain('set plan = normalized.canonical_plan');
     expect(normalized).toContain('tier = normalized.canonical_plan');
+    expect(normalized).toContain(
+      "status = coalesce(nullif(btrim(subscriptions.status), ''), 'inactive')",
+    );
   });
 
   it('backfills only missing entitlements and preserves custom contract payloads', () => {
