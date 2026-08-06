@@ -4,7 +4,25 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 const OUTPUT = 'docs/security/evidence/runtime/deployment-smoke-validation.json';
-const BASE_URL = 'https://risckcomply.com';
+const CANONICAL_HOST = 'www.risckcomply.com';
+const configuredBaseUrl = String(
+  process.env.RELEASE_PRODUCTION_URL
+  || process.env.RELEASE_DEPLOYMENT_URL
+  || `https://${CANONICAL_HOST}`,
+).trim();
+const parsedBaseUrl = new URL(configuredBaseUrl);
+if (
+  parsedBaseUrl.protocol !== 'https:'
+  || parsedBaseUrl.hostname.toLowerCase() !== CANONICAL_HOST
+  || parsedBaseUrl.username
+  || parsedBaseUrl.password
+  || parsedBaseUrl.search
+  || parsedBaseUrl.hash
+  || (parsedBaseUrl.pathname !== '/' && parsedBaseUrl.pathname !== '')
+) {
+  throw new Error('Production runtime proof requires the canonical HTTPS hostname');
+}
+const BASE_URL = parsedBaseUrl.origin;
 const TIMEOUT_MS = Number(process.env.RELEASE_SMOKE_TIMEOUT_MS || 10_000);
 const token = String(process.env.HEALTHCHECK_TOKEN || '').trim();
 const expectedSha = String(process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || '').trim().toLowerCase();

@@ -7,6 +7,7 @@ const DEFAULT_SMOKE = 'docs/security/evidence/runtime/deployment-smoke-validatio
 const DEFAULT_SHA = 'docs/security/evidence/runtime/runtime-release-sha-validation.json';
 const DEFAULT_OUTPUT = 'docs/security/evidence/runtime/production-runtime-validation.json';
 const FULL_SHA = /^[a-f0-9]{40}$/;
+const CANONICAL_PRODUCTION_HOST = 'www.risckcomply.com';
 
 function named(list, name) {
   return Array.isArray(list) ? list.find((item) => item?.name === name) : null;
@@ -41,7 +42,7 @@ export function buildProductionRuntimeScorecardEvidence(smoke, shaEvidence, expe
     && Array.isArray(shaEvidence?.failures)
     && shaEvidence.failures.length === 0;
   const host = (() => { try { return new URL(target?.baseUrl).host.toLowerCase(); } catch { return null; } })();
-  const hostTrusted = host === 'risckcomply.com' && shaEvidence?.targetHost === host;
+  const hostTrusted = host === CANONICAL_PRODUCTION_HOST && shaEvidence?.targetHost === host;
   const trusted = smokeTrusted && shaTrusted && hostTrusted;
   const canonicalChecks = [
     pass('deploymentShaMatch', trusted, 'Exact production SHA binding proof unavailable.'),

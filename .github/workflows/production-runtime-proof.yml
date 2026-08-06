@@ -29,8 +29,8 @@ jobs:
       TARGET_SHA: ${{ inputs.release_sha || github.sha }}
       RELEASE_COMMIT_SHA: ${{ inputs.release_sha || github.sha }}
       RELEASE_BUILD_SHA: ${{ inputs.release_sha || github.sha }}
-      RELEASE_DEPLOYMENT_URL: https://risckcomply.com
-      RELEASE_PRODUCTION_URL: https://risckcomply.com
+      RELEASE_DEPLOYMENT_URL: https://www.risckcomply.com
+      RELEASE_PRODUCTION_URL: https://www.risckcomply.com
       RELEASE_TARGET: production-runtime-proof
       HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
 
