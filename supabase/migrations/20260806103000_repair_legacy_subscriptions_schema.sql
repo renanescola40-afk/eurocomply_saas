@@ -40,18 +40,19 @@ alter table public.subscriptions
 -- Choose the highest recognized value across both legacy columns. This prevents
 -- an obsolete value such as plan='free' from hiding a valid tier='professional'
 -- and avoids accidentally downgrading an enterprise or business subscription.
+-- Trim before comparison so legacy values such as ' enterprise ' retain access.
 with normalized as (
   select
     id,
     case
-      when lower(coalesce(nullif(plan, ''), '')) = 'enterprise'
-        or lower(coalesce(nullif(tier, ''), '')) = 'enterprise'
+      when lower(btrim(coalesce(nullif(plan, ''), ''))) = 'enterprise'
+        or lower(btrim(coalesce(nullif(tier, ''), ''))) = 'enterprise'
         then 'enterprise'
-      when lower(coalesce(nullif(plan, ''), '')) = 'business'
-        or lower(coalesce(nullif(tier, ''), '')) = 'business'
+      when lower(btrim(coalesce(nullif(plan, ''), ''))) = 'business'
+        or lower(btrim(coalesce(nullif(tier, ''), ''))) = 'business'
         then 'business'
-      when lower(coalesce(nullif(plan, ''), '')) in ('growth', 'professional', 'pro')
-        or lower(coalesce(nullif(tier, ''), '')) in ('growth', 'professional', 'pro')
+      when lower(btrim(coalesce(nullif(plan, ''), ''))) in ('growth', 'professional', 'pro')
+        or lower(btrim(coalesce(nullif(tier, ''), ''))) in ('growth', 'professional', 'pro')
         then 'professional'
       else 'starter'
     end as canonical_plan
@@ -60,7 +61,7 @@ with normalized as (
 update public.subscriptions subscriptions
 set plan = normalized.canonical_plan,
     tier = normalized.canonical_plan,
-    status = coalesce(nullif(subscriptions.status, ''), 'inactive'),
+    status = coalesce(nullif(btrim(subscriptions.status), ''), 'inactive'),
     created_at = coalesce(subscriptions.created_at, now()),
     updated_at = coalesce(subscriptions.updated_at, now())
 from normalized
