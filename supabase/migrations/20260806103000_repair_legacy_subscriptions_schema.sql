@@ -37,23 +37,37 @@ alter table public.subscriptions
   drop constraint if exists subscriptions_plan_check,
   drop constraint if exists subscriptions_tier_check;
 
-update public.subscriptions
-set plan = case
-      when lower(coalesce(nullif(plan, ''), nullif(tier, ''), 'starter')) = 'enterprise' then 'enterprise'
-      when lower(coalesce(nullif(plan, ''), nullif(tier, ''), 'starter')) = 'business' then 'business'
-      when lower(coalesce(nullif(plan, ''), nullif(tier, ''), 'starter')) in ('growth', 'professional', 'pro') then 'professional'
+-- Choose the highest recognized value across both legacy columns. This prevents
+-- an obsolete value such as plan='free' from hiding a valid tier='professional'
+-- and avoids accidentally downgrading an enterprise or business subscription.
+with normalized as (
+  select
+    id,
+    case
+      when lower(coalesce(nullif(plan, ''), '')) = 'enterprise'
+        or lower(coalesce(nullif(tier, ''), '')) = 'enterprise'
+        then 'enterprise'
+      when lower(coalesce(nullif(plan, ''), '')) = 'business'
+        or lower(coalesce(nullif(tier, ''), '')) = 'business'
+        then 'business'
+      when lower(coalesce(nullif(plan, ''), '')) in ('growth', 'professional', 'pro')
+        or lower(coalesce(nullif(tier, ''), '')) in ('growth', 'professional', 'pro')
+        then 'professional'
       else 'starter'
-    end,
-    tier = case
-      when lower(coalesce(nullif(plan, ''), nullif(tier, ''), 'starter')) = 'enterprise' then 'enterprise'
-      when lower(coalesce(nullif(plan, ''), nullif(tier, ''), 'starter')) = 'business' then 'business'
-      when lower(coalesce(nullif(plan, ''), nullif(tier, ''), 'starter')) in ('growth', 'professional', 'pro') then 'professional'
-      else 'starter'
-    end,
-    status = coalesce(nullif(status, ''), 'inactive'),
-    created_at = coalesce(created_at, now()),
-    updated_at = coalesce(updated_at, now());
+    end as canonical_plan
+  from public.subscriptions
+)
+update public.subscriptions subscriptions
+set plan = normalized.canonical_plan,
+    tier = normalized.canonical_plan,
+    status = coalesce(nullif(subscriptions.status, ''), 'inactive'),
+    created_at = coalesce(subscriptions.created_at, now()),
+    updated_at = coalesce(subscriptions.updated_at, now())
+from normalized
+where subscriptions.id = normalized.id;
 
+-- Preserve non-empty custom or contract entitlements. Only absent legacy values
+-- receive the canonical plan defaults.
 update public.subscriptions
 set entitlements = case plan
   when 'enterprise' then '{
