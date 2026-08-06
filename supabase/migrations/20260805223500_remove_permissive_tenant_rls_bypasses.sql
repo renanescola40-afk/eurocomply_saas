@@ -7,9 +7,16 @@
 
 begin;
 
--- Arbitrary self-enrolment allowed an authenticated user to add themselves to
--- any organization by choosing its organization_id.
+-- Membership writes are backend-only in the canonical policy model. These
+-- legacy permissive policies otherwise remain OR-combined with the explicit
+-- backend-only policies and allow direct authenticated mutations.
 drop policy if exists "Users can insert their own memberships"
+  on public.organization_members;
+drop policy if exists "Admins can add members"
+  on public.organization_members;
+drop policy if exists "Admins can update members"
+  on public.organization_members;
+drop policy if exists "Admins can remove members"
   on public.organization_members;
 
 -- Global authenticated read/write policies left over from the original schema.
@@ -53,8 +60,10 @@ begin
   for required_policy in
     select *
     from (values
-      ('organization_members', 'Admins can add members'),
-      ('organization_members', 'Members can view memberships'),
+      ('organization_members', 'rls_organization_members_select_member'),
+      ('organization_members', 'rls_organization_members_insert_backend_only'),
+      ('organization_members', 'rls_organization_members_update_backend_only'),
+      ('organization_members', 'rls_organization_members_delete_backend_only'),
       ('audit_logs', 'rls_audit_logs_select_member'),
       ('audit_logs', 'rls_audit_logs_insert_backend_only'),
       ('compliance_tasks', 'rls_compliance_tasks_select_member'),
@@ -98,7 +107,12 @@ begin
     where policy.schemaname = 'public'
       and (
         (policy.tablename = 'organization_members'
-          and policy.policyname = 'Users can insert their own memberships')
+          and policy.policyname in (
+            'Users can insert their own memberships',
+            'Admins can add members',
+            'Admins can update members',
+            'Admins can remove members'
+          ))
         or policy.policyname in (
           'Authenticated can insert audit logs',
           'Authenticated can read audit logs',
