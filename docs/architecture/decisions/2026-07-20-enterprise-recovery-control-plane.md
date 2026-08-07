@@ -1,6 +1,6 @@
 # Enterprise Recovery Control Plane
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-20
 
 ## Context
@@ -9,7 +9,9 @@ Recovery evidence is fragmented across rollback, backup, restore, RLS, RPO and R
 
 ## Decision
 
-Introduce one protected Recovery Drill workflow that validates rollback targets, executes an isolated PostgreSQL backup/restore drill, validates restored integrity and RLS metadata, measures RPO/RTO, and emits redacted exact-SHA evidence artifacts. A scorecard fetcher may promote only checks proven by a successful canonical workflow run.
+Use `Recovery Resilience Proof` as the canonical protected recovery exercise. It requires explicit human confirmation before a live rollback, executes backup/restore only against the configured isolated recovery database, validates restored integrity and RLS metadata, measures RPO/RTO, and emits redacted exact-SHA evidence artifacts.
+
+The Enterprise Readiness Scorecard consumes only a successful `workflow_dispatch` run on the exact current `main` SHA. The fetcher verifies repository, branch, SHA, workflow run, artifact uniqueness, schemas, all source checks and redaction assertions before it converts the source objects into the scorecard's named-check format. Missing, stale, ambiguous or malformed evidence leaves `REC-01` through `REC-10` as `NOT_VERIFIED`.
 
 ## Risks and trade-offs
 
@@ -17,4 +19,4 @@ The drill depends on protected credentials and an isolated restore database. It 
 
 ## Rollback
 
-Revert the workflow, builders, fetcher, tests and scorecard integration together. Remove imported recovery evidence and return REC-01 through REC-10 to NOT_VERIFIED.
+Revert the fetcher, canonical validator, tests and scorecard integration together. Remove imported recovery evidence and return REC-01 through REC-10 to NOT_VERIFIED. The protected recovery workflow remains available for operational drills even if scorecard promotion is reverted.
