@@ -11,7 +11,11 @@ create table if not exists public.subscriptions (
   updated_at timestamptz not null default now()
 );
 
+-- CREATE TABLE IF NOT EXISTS does not add columns to a subscriptions table
+-- created by an earlier migration. Add every field introduced by this migration
+-- explicitly so later migrations can safely reference `tier` on clean rebuilds.
 alter table public.subscriptions
+  add column if not exists tier text,
   add column if not exists stripe_customer_id text,
   add column if not exists stripe_subscription_id text,
   add column if not exists current_period_end timestamptz;
