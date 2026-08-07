@@ -1,0 +1,137 @@
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
+
+import {
+  buildCanonicalRecoveryEvidence,
+  removeStaleRecoveryEvidence,
+  selectExactShaRecoveryRun,
+  selectRecoveryEvidenceEntries,
+  validateRecoverySources,
+} from '../../scripts/enterprise/fetch-recovery-resilience-evidence.mjs';
+import { evaluateEvidenceDocument } from '../../scripts/enterprise/generate-readiness-scorecard.mjs';
+
+const targetSha = 'a'.repeat(40);
+const runId = '123456';
+const roots: string[] = [];
+const workflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
+
+function rollbackSource() {
+  return {
+    schema: 'risck-comply.rollback-validation.v4', evidenceItem: 'rollback-validation',
+    status: 'Complete', outcome: 'passed', generatedAt: '2026-08-07T10:00:00.000Z',
+    repository: 'renanescola40-afk/eurocomply_saas', branch: 'main', targetSha, observedSha: targetSha, runId,
+    controlsVerified: ['REC-01', 'REC-02', 'REC-03', 'REC-04'], failures: [],
+    checks: {
+      explicitConfirmation: true, rollbackTargetConfigured: true, rollbackTargetDistinct: true,
+      rollbackShaDistinct: true, rollbackExecuted: true, rollbackStatusChecked: true,
+      postRollbackHealth: true, postRollbackNoStore: true, protectedEnvironment: true, exactShaBound: true,
+    },
+    metrics: { recoveryTimeSeconds: 31 },
+    evidenceIntegrity: { containsSensitiveValues: false, credentialsStored: false, exactShaBound: true, deploymentUrlsStored: false },
+  };
+}
+
+function restoreSource() {
+  return {
+    schema: 'risck-comply.backup-restore-evidence.v2', evidenceItem: 'backup-restore-tested',
+    status: 'Complete', outcome: 'passed', generatedAt: '2026-08-07T10:01:00.000Z',
+    repository: 'renanescola40-afk/eurocomply_saas', branch: 'main', targetSha, observedSha: targetSha, runId,
+    controlsVerified: ['REC-05', 'REC-06', 'REC-07', 'REC-08', 'REC-09', 'REC-10'], failures: [],
+    checks: {
+      backupExists: true, restoreExecuted: true, dataIntegrity: true, rlsAfterRestore: true,
+      rlsPoliciesPresent: true, rpoMeasured: true, rtoMeasured: true, distinctDatabases: true,
+      protectedMainExecution: true, exactShaBound: true,
+    },
+    metrics: { rpoSeconds: 4, rtoSeconds: 27, totalExerciseSeconds: 42 },
+    evidenceIntegrity: {
+      containsSensitiveValues: false, credentialsStored: false, exactShaBound: true,
+      databaseUrlsStored: false, dumpStored: false, rowDataStored: false,
+    },
+  };
+}
+
+afterEach(() => {
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+});
+
+describe('recovery resilience scorecard promotion', () => {
+  it('connects the protected recovery workflow before scorecard generation', () => {
+    expect(workflow).toContain('- Recovery Resilience Proof');
+    expect(workflow).toContain("github.event.workflow_run.name == 'Recovery Resilience Proof' && github.event.workflow_run.id || ''");
+    const fetchIndex = workflow.indexOf('Retrieve exact-SHA recovery resilience evidence');
+    const scorecardIndex = workflow.indexOf('Generate scorecard');
+    expect(fetchIndex).toBeGreaterThan(0);
+    expect(scorecardIndex).toBeGreaterThan(fetchIndex);
+    expect(workflow).toContain('docs/security/evidence/runtime/rollback-validation.json');
+    expect(workflow).toContain('docs/security/evidence/p1/backup-restore-tested.json');
+  });
+
+  it('selects only a successful workflow-dispatch run on exact main SHA', () => {
+    const accepted = {
+      id: Number(runId), name: 'Recovery Resilience Proof', head_sha: targetSha, head_branch: 'main',
+      event: 'workflow_dispatch', status: 'completed', conclusion: 'success', updated_at: '2026-08-07T10:02:00.000Z',
+    };
+    expect(selectExactShaRecoveryRun([{ ...accepted, id: 7, event: 'push' }, accepted], targetSha, runId)?.id)
+      .toBe(Number(runId));
+    expect(selectExactShaRecoveryRun([{ ...accepted, head_branch: 'agent/unsafe' }], targetSha)).toBeNull();
+  });
+
+  it('fails closed on mismatched SHA, run, controls, checks and sensitive evidence', () => {
+    const rollback = rollbackSource();
+    const restore = restoreSource();
+    rollback.observedSha = 'b'.repeat(40);
+    rollback.checks.rollbackExecuted = false;
+    restore.runId = '999';
+    restore.evidenceIntegrity.dumpStored = true;
+    const failures = validateRecoverySources(rollback, restore, { targetSha, runId });
+    expect(failures).toEqual(expect.arrayContaining([
+      'rollback_sha_mismatch', 'rollback_check_failed:rollbackExecuted',
+      'restore_run_mismatch', 'restore_dump_integrity_invalid',
+    ]));
+    expect(() => buildCanonicalRecoveryEvidence(rollback, restore, { targetSha, runId }))
+      .toThrow('recovery_evidence_invalid');
+  });
+
+  it('promotes exactly REC-01 through REC-10 using scorecard-compatible checks', () => {
+    const evidence = buildCanonicalRecoveryEvidence(rollbackSource(), restoreSource(), { targetSha, runId });
+    for (const check of ['rollbackTargetConfigured', 'distinctDeployment', 'rollbackExecuted', 'postRollbackHealth']) {
+      expect(evaluateEvidenceDocument(evidence.rollback, check)).toBe('PASS');
+    }
+    for (const check of ['backupExists', 'restoreExecuted', 'dataIntegrity', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured']) {
+      expect(evaluateEvidenceDocument(evidence.restore, check)).toBe('PASS');
+    }
+    expect([...evidence.rollback.controlsVerified, ...evidence.restore.controlsVerified])
+      .toEqual(Array.from({ length: 10 }, (_, index) => `REC-${String(index + 1).padStart(2, '0')}`));
+    expect(JSON.stringify(evidence)).not.toContain('databaseUrl');
+  });
+
+  it('requires one bounded safe entry for each source document', () => {
+    expect(selectRecoveryEvidenceEntries([
+      'runtime/rollback-validation.json', 'p1/backup-restore-tested.json',
+    ])).toEqual({ rollback: 'runtime/rollback-validation.json', restore: 'p1/backup-restore-tested.json' });
+    expect(() => selectRecoveryEvidenceEntries([
+      '../rollback-validation.json', 'backup-restore-tested.json',
+    ])).toThrow('artifact_zip_unsafe_entry');
+    expect(() => selectRecoveryEvidenceEntries([
+      'rollback-validation.json', 'copy/rollback-validation.json', 'backup-restore-tested.json',
+    ])).toThrow('rollback_validation_source_not_unique');
+  });
+
+  it('removes both stale recovery documents before every lookup', () => {
+    const root = mkdtempSync(join(tmpdir(), 'recovery-fetch-'));
+    roots.push(root);
+    for (const relativePath of [
+      'docs/security/evidence/runtime/rollback-validation.json',
+      'docs/security/evidence/p1/backup-restore-tested.json',
+    ]) {
+      const path = join(root, relativePath);
+      mkdirSync(join(path, '..'), { recursive: true });
+      writeFileSync(path, '{}');
+    }
+    removeStaleRecoveryEvidence(root);
+    expect(() => readFileSync(join(root, 'docs/security/evidence/runtime/rollback-validation.json'))).toThrow();
+    expect(() => readFileSync(join(root, 'docs/security/evidence/p1/backup-restore-tested.json'))).toThrow();
+  });
+});
