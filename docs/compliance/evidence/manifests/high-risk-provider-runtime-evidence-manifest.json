@@ -1,0 +1,25 @@
+{
+  "schema": "risck-comply.runtime-evidence-manifest.v1",
+  "workstream": "HIGH-RISK-PROVIDER",
+  "weight": 9,
+  "canonicalEvidencePath": "docs/security/evidence/runtime/high-risk-provider-validation.json",
+  "producerWorkflow": ".github/workflows/high-risk-provider-runtime-evidence.yml",
+  "generator": "scripts/compliance/generate-high-risk-provider-runtime-evidence.mjs",
+  "validator": "scripts/compliance/validate-high-risk-provider-runtime-evidence.mjs",
+  "schemaPath": "docs/compliance/evidence/schemas/high-risk-provider-runtime-evidence.schema.json",
+  "requiredProperties": {
+    "exactSha": true,
+    "integrityDigest": true,
+    "syntheticDataExplicit": true,
+    "limitations": true,
+    "customerProofClaimed": false,
+    "qualifiedReviewReplaced": false
+  },
+  "promotionRules": [
+    "All focused unit and operational contract tests must pass before generation.",
+    "The evidence targetSha must equal the assessed SHA.",
+    "The independent validator must recompute and accept the integrity digest.",
+    "The product scorecard must consume the evidence through an artifact overlay rather than a committed fake runtime proof.",
+    "Qualified methodology review remains a separate human gate."
+  ]
+}

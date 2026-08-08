@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.risckcomply.com/schemas/high-risk-provider-runtime-evidence.schema.json",
+  "title": "RISCK COMPLY High-Risk Provider Runtime Evidence",
+  "type": "object",
+  "required": [
+    "schema",
+    "evidenceItem",
+    "workstream",
+    "repository",
+    "targetSha",
+    "environment",
+    "status",
+    "syntheticData",
+    "countsForRuntimeCoverage",
+    "sourceDigest",
+    "controlsVerified",
+    "testCases",
+    "evidenceIntegrity",
+    "limitations",
+    "integritySha256"
+  ],
+  "properties": {
+    "schema": { "const": "risck-comply.eu-ai-act-runtime-evidence.v1" },
+    "evidenceItem": { "const": "high-risk-provider-validation" },
+    "workstream": { "const": "HIGH-RISK-PROVIDER" },
+    "repository": { "const": "renanescola40-afk/eurocomply_saas" },
+    "targetSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "environment": { "const": "ci" },
+    "status": { "const": "PASS" },
+    "syntheticData": { "const": true },
+    "countsForRuntimeCoverage": { "const": true },
+    "sourceDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "controlsVerified": { "type": "array", "minItems": 10, "uniqueItems": true, "items": { "type": "string", "minLength": 3 } },
+    "testCases": {
+      "type": "array",
+      "minItems": 10,
+      "items": {
+        "type": "object",
+        "required": ["name", "status"],
+        "properties": { "name": { "type": "string" }, "status": { "const": "PASS" } },
+        "additionalProperties": false
+      }
+    },
+    "limitations": { "type": "array", "minItems": 3, "items": { "type": "string", "minLength": 20 } },
+    "integritySha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  },
+  "additionalProperties": true
+}
