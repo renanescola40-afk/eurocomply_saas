@@ -11,13 +11,14 @@ const directOrganizationFilters = queries.match(/\.eq\('organization_id'/g)?.len
 const tenantBoundRpcArguments = queries.match(/p_organization_id: input\.organizationId/g)?.length ?? 0;
 
 describe('high-risk provider data operational workflow', () => {
-  it('enforces authentication, tenant context, RBAC, origin, Zod and fail-closed rate limiting', () => {
+  it('enforces authentication, tenant context, RBAC, origin, bounded Zod parsing and fail-closed rate limiting', () => {
     expect(route).toContain('requireApiUser()');
     expect(route).toContain('getCurrentOrganizationForUser(user.id)');
     expect(route).toContain("permission: 'read_ai_governance'");
     expect(route).toContain("permission: 'manage_ai_governance'");
     expect(route).toContain('assertTrustedOrigin(request)');
     expect(route).toContain('parseJsonBodyWithZod(request');
+    expect(route).toContain('const MAX_BYTES = 96 * 1024');
     expect(route).toContain('checkDistributedRateLimit({');
     expect(route).toContain('security_control_unavailable');
   });
@@ -44,11 +45,25 @@ describe('high-risk provider data operational workflow', () => {
     expect(migration).toContain('approved_dataset_count <> v_current.dataset_count');
     expect(migration).toContain("'program_approved', 'approved'");
     expect(migration).toContain('uses_special_category_data');
+    expect(route).toContain('provider_data_state_changed');
+    expect(route).toContain('provider_data_approver_required');
+    expect(route).toContain('provider_data_approval_requirements_not_met');
   });
 
-  it('exposes the workspace through the control tower', () => {
+  it('fails closed when audit persistence is unavailable and compensates newly-created records', () => {
+    expect(route).toContain("action: 'provider_data_program_created'");
+    expect(route).toContain("rollbackProviderDataCreate('ai_provider_data_programs'");
+    expect(route).toContain("action: 'provider_dataset_created'");
+    expect(route).toContain("rollbackProviderDataCreate('ai_provider_datasets'");
+    expect(route).toContain("action: 'provider_data_program_approved'");
+    expect(route).toContain("error: 'provider_data_audit_unavailable'");
+  });
+
+  it('exposes the workspace through the control tower without converting readiness into legal certification', () => {
     expect(page).toContain("fetch('/api/ai-governance/provider-data'");
     expect(page).toContain('High-Risk Provider Data Governance');
     expect(tower).toContain("route: '/dashboard/provider-data'");
+    expect(page.toLowerCase()).not.toContain('guaranteed compliance');
+    expect(page.toLowerCase()).not.toContain('fully compliant');
   });
 });
