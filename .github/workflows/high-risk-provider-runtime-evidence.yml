@@ -1,0 +1,65 @@
+name: High-Risk Provider Runtime Evidence
+
+on:
+  pull_request:
+    paths:
+      - 'src/server/ai-governance/high-risk-provider-data-governance**'
+      - 'src/server/queries/provider-data-governance.ts'
+      - 'src/app/api/ai-governance/provider-data/**'
+      - 'src/app/[locale]/dashboard/provider-data/**'
+      - 'supabase/migrations/*provider_data*'
+      - 'tests/provider-data-operational-contract.test.ts'
+      - 'tests/high-risk-provider-runtime-evidence-contract.test.ts'
+      - 'scripts/compliance/*high-risk-provider-runtime-evidence*'
+      - 'docs/compliance/eu-ai-act-product-coverage-registry.json'
+      - '.github/workflows/high-risk-provider-runtime-evidence.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: high-risk-provider-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Focused high-risk provider tests
+        run: >-
+          npx vitest run
+          src/server/ai-governance/high-risk-provider-data-governance.test.ts
+          tests/provider-data-operational-contract.test.ts
+          tests/high-risk-provider-runtime-evidence-contract.test.ts
+      - name: Generate exact-SHA evidence
+        env:
+          TARGET_SHA: ${{ github.sha }}
+        run: node scripts/compliance/generate-high-risk-provider-runtime-evidence.mjs
+      - name: Validate exact-SHA evidence
+        env:
+          TARGET_SHA: ${{ github.sha }}
+        run: node scripts/compliance/validate-high-risk-provider-runtime-evidence.mjs
+      - name: Recalculate product coverage with evidence overlay
+        env:
+          TARGET_SHA: ${{ github.sha }}
+          TARGET_BRANCH: ${{ github.ref_name }}
+          EU_AI_ACT_RUNTIME_EVIDENCE_ROOTS: artifacts/high-risk-provider-runtime
+        run: node scripts/compliance/generate-eu-ai-act-product-coverage.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: high-risk-provider-runtime-evidence-${{ github.sha }}
+          path: |
+            artifacts/high-risk-provider-runtime
+            artifacts/eu-ai-act-product-coverage
+          retention-days: 90
+          if-no-files-found: error
