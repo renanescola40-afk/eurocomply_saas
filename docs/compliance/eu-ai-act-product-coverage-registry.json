@@ -1,7 +1,7 @@
 {
   "schema": "risck-comply.eu-ai-act-product-coverage-registry.v1",
-  "version": "2026-08-03.2",
-  "lastVerifiedDate": "2026-08-03",
+  "version": "2026-08-08.1",
+  "lastVerifiedDate": "2026-08-08",
   "totalWeight": 100,
   "workstreams": [
     {
@@ -22,9 +22,7 @@
         "tests/legal-rules-runtime-capture-contract.test.ts",
         "tests/compliance/eu-ai-act-safe-runtime-promotion.test.mjs"
       ],
-      "runtimeEvidence": [
-        "docs/security/evidence/runtime/legal-rules-validation.json"
-      ],
+      "runtimeEvidence": ["docs/security/evidence/runtime/legal-rules-validation.json"],
       "runtimeEvidenceAcceptance": {
         "schema": "risck-comply.legal-rules-runtime-evidence.v1",
         "requiredStatus": "PASS",
@@ -33,9 +31,7 @@
         "allTestCasesPassRequired": true,
         "placeholderAccepted": false
       },
-      "humanReviewEvidence": [
-        "docs/compliance/evidence/accepted/legal-rules-qualified-review.json"
-      ]
+      "humanReviewEvidence": ["docs/compliance/evidence/accepted/legal-rules-qualified-review.json"]
     },
     {
       "id": "SCOPE-CLASSIFICATION",
@@ -86,9 +82,7 @@
         "tests/article-50-operational-ui-contract.test.ts",
         "tests/article-50-runtime-evidence-contract.test.ts"
       ],
-      "runtimeEvidence": [
-        "docs/security/evidence/runtime/article-50-operational-validation.json"
-      ],
+      "runtimeEvidence": ["docs/security/evidence/runtime/article-50-operational-validation.json"],
       "runtimeEvidenceAcceptance": {
         "schema": "risck-comply.eu-ai-act-runtime-evidence.v1",
         "evidenceItem": "article-50-operational-validation",
@@ -132,9 +126,31 @@
       "id": "HIGH-RISK-PROVIDER",
       "name": "High-risk provider controls",
       "weight": 9,
-      "implementationEvidence": ["src/server/ai-governance/high-risk-provider-data-governance.ts", "docs/compliance/HIGH_RISK_PROVIDER_DATA_GOVERNANCE.md"],
-      "testEvidence": ["src/server/ai-governance/high-risk-provider-data-governance.test.ts"],
+      "implementationEvidence": [
+        "src/server/ai-governance/high-risk-provider-data-governance.ts",
+        "docs/compliance/HIGH_RISK_PROVIDER_DATA_GOVERNANCE.md",
+        "src/app/api/ai-governance/provider-data/route.ts",
+        "src/server/queries/provider-data-governance.ts",
+        "src/app/[locale]/dashboard/provider-data/page.tsx",
+        "supabase/migrations/20260722170000_provider_data_operational_workflow.sql"
+      ],
+      "testEvidence": [
+        "src/server/ai-governance/high-risk-provider-data-governance.test.ts",
+        "tests/provider-data-operational-contract.test.ts",
+        "tests/high-risk-provider-runtime-evidence-contract.test.ts"
+      ],
       "runtimeEvidence": ["docs/security/evidence/runtime/high-risk-provider-validation.json"],
+      "runtimeEvidenceAcceptance": {
+        "schema": "risck-comply.eu-ai-act-runtime-evidence.v1",
+        "evidenceItem": "high-risk-provider-validation",
+        "requiredStatus": "PASS",
+        "exactDeploymentShaRequired": true,
+        "integritySha256Required": true,
+        "allTestCasesPassRequired": true,
+        "syntheticDataMustBeExplicit": true,
+        "limitationsRequired": true,
+        "customerProofClaimed": false
+      },
       "humanReviewEvidence": ["docs/compliance/evidence/accepted/high-risk-provider-methodology-review.json"]
     },
     {
