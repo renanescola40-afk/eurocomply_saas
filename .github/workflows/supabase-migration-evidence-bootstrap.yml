@@ -19,10 +19,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: supabase-migration-evidence-bootstrap
-  cancel-in-progress: false
-
 jobs:
   contract:
     name: Validate evidence bootstrap contract
@@ -47,6 +43,9 @@ jobs:
     needs: contract
     runs-on: ubuntu-24.04
     timeout-minutes: 180
+    concurrency:
+      group: supabase-migration-evidence-bootstrap-main
+      cancel-in-progress: false
     permissions:
       contents: read
       actions: write
