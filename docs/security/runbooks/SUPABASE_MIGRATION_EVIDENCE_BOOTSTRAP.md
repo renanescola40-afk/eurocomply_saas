@@ -18,6 +18,8 @@ The three canonical evidence-only paths are ignored by the push trigger:
 
 This preserves the immutable subject SHA while reviewed evidence advances in later commits.
 
+Pull-request contract validation is intentionally outside the operational concurrency lock. Only the `bootstrap` job is serialized under `supabase-migration-evidence-bootstrap-main`, so an in-flight or stuck operational run cannot prevent a corrective PR from running its contract checks. Push and manual operational bootstraps remain serialized.
+
 ## Orchestrated stages
 
 The workflow dispatches, waits for, records and verifies these existing workflows in order:
@@ -35,6 +37,16 @@ The bootstrap accepts a fail-closed drift/dry-run conclusion only when the expec
 Live schema evidence and review dossier generation must complete successfully.
 
 The decision gate may remain blocked when the canonical reviewed decision file is absent or stale; the bootstrap requires the exact-SHA `decision-template.json` artifact, not a synthetic approval.
+
+## Child-run resolution contract
+
+Every workflow dispatch is resolved back to exactly one numeric GitHub Actions run ID for the immutable subject SHA.
+
+The dispatch helper treats stdout as a machine-readable return channel: output from `gh workflow run` is discarded and only the resolved numeric run ID is emitted. Callers validate the run ID again before polling, artifact lookup or download.
+
+GitHub API errors, malformed run IDs and unexpected workflow states fail immediately instead of being treated as transient polling states. This prevents a malformed dispatch result from entering a long polling loop while appearing to be a running evidence chain.
+
+Artifact lookup allows a short bounded retry window because the Actions artifact index can become visible shortly after a child run reaches `completed`. The retry does not weaken evidence requirements: the exact expected artifact name and numeric artifact ID are still mandatory, otherwise the bootstrap fails closed.
 
 ## Provenance bundle
 
@@ -79,7 +91,10 @@ The process is fail-closed. The bootstrap stops when:
 
 - the assessed SHA is no longer exact current `main`;
 - a child workflow cannot be resolved to the same SHA;
-- an expected immutable artifact is missing;
+- a dispatch or Actions API request fails;
+- a child run ID is missing or non-numeric;
+- a child run reports an unexpected state;
+- an expected immutable artifact is still missing after the bounded propagation window;
 - the dry-run artifact does not contain the reconciliation inventory;
 - live schema evidence fails;
 - the object-evidence artifact is missing;

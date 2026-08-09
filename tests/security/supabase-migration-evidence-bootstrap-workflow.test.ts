@@ -11,6 +11,13 @@ describe('Supabase migration evidence bootstrap workflow', () => {
     expect(workflow).toContain('branches: [main]');
   });
 
+  it('keeps PR contract validation outside the operational concurrency lock', () => {
+    expect(workflow).not.toContain('\nconcurrency:\n  group: supabase-migration-evidence-bootstrap');
+    expect(workflow).toContain(
+      'timeout-minutes: 180\n    concurrency:\n      group: supabase-migration-evidence-bootstrap-main\n      cancel-in-progress: false',
+    );
+  });
+
   it('ignores canonical evidence-only commits so the subject SHA is preserved', () => {
     expect(workflow).toContain('paths-ignore:');
     expect(workflow).toContain('docs/security/evidence/runtime/supabase-migration-reconciliation-decisions.json');
@@ -43,6 +50,28 @@ describe('Supabase migration evidence bootstrap workflow', () => {
     expect(workflow).not.toContain('psql ');
     expect(workflow).not.toContain('secrets.SUPABASE');
     expect(workflow).toContain('confirmation=DRY_RUN_ONLY');
+  });
+
+  it('returns only a machine-readable child run id from dispatch helpers', () => {
+    expect(workflow).toContain('gh workflow run "$workflow" --repo "$GITHUB_REPOSITORY" --ref main "$@" >/dev/null');
+    expect(workflow).toContain('[[ "$DRIFT_RUN_ID" =~ ^[0-9]+$ ]]');
+    expect(workflow).toContain('[[ "$DRY_RUN_ID" =~ ^[0-9]+$ ]]');
+    expect(workflow).toContain('[[ "$SCHEMA_RUN_ID" =~ ^[0-9]+$ ]]');
+    expect(workflow).toContain('[[ "$DOSSIER_RUN_ID" =~ ^[0-9]+$ ]]');
+    expect(workflow).toContain('[[ "$DECISION_RUN_ID" =~ ^[0-9]+$ ]]');
+  });
+
+  it('fails fast on malformed run ids and GitHub API failures', () => {
+    expect(workflow).toContain('Invalid workflow run id: ${run_id}');
+    expect(workflow).toContain('Failed to read workflow run ${run_id}');
+    expect(workflow).toContain('Failed to resolve workflow run for ${workflow}');
+    expect(workflow).toContain('Unexpected workflow status for ${run_id}: ${status}');
+  });
+
+  it('tolerates short artifact-index propagation without weakening evidence checks', () => {
+    expect(workflow).toContain('for _ in $(seq 1 30); do');
+    expect(workflow).toContain('Missing expected artifact ${artifact_name} for workflow run ${run_id}');
+    expect(workflow).toContain('[[ "$artifact_id" =~ ^[0-9]+$ ]]');
   });
 
   it('requires the real generated evidence files before declaring human review ready', () => {
