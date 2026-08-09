@@ -5,18 +5,27 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { validateDeploymentRuntimeEvidence } from '../release/validate-deployment-runtime-evidence.mjs';
+
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const WORKFLOW_FILE = 'production-runtime-proof.yml';
-const WORKFLOW_NAME = 'Production Runtime Proof';
+const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`;
 const SOURCE_PATH = 'docs/security/evidence/runtime/production-runtime-validation.json';
+const DEPLOYMENT_SMOKE_PATH = 'docs/security/evidence/runtime/deployment-smoke-validation.json';
+const RELEASE_SHA_PATH = 'docs/security/evidence/runtime/runtime-release-sha-validation.json';
+const SECURITY_HEADERS_PATH = 'docs/security/evidence/runtime/security-headers-validation.json';
+const NO_STORE_PATH = 'docs/security/evidence/runtime/no-store-validation.json';
 const BUNDLE_PATHS = [
   SOURCE_PATH,
-  'docs/security/evidence/runtime/security-headers-validation.json',
-  'docs/security/evidence/runtime/no-store-validation.json',
+  DEPLOYMENT_SMOKE_PATH,
+  RELEASE_SHA_PATH,
+  SECURITY_HEADERS_PATH,
+  NO_STORE_PATH,
 ];
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const NUMERIC = /^\d+$/;
 const CANONICAL_PRODUCTION_HOST = 'www.risckcomply.com';
+const CANONICAL_PRODUCTION_URL = `https://${CANONICAL_PRODUCTION_HOST}`;
 
 function headers(token) {
   return {
@@ -52,7 +61,7 @@ export function isOptionalWorkflowUnavailable(error, { required = false, sourceR
 export function selectExactShaRun(runs, targetSha, sourceRunId = '') {
   const requested = String(sourceRunId || '').trim();
   return (Array.isArray(runs) ? runs : [])
-    .filter((run) => run?.name === WORKFLOW_NAME)
+    .filter((run) => run?.path === WORKFLOW_PATH)
     .filter((run) => String(run?.head_sha || '').toLowerCase() === targetSha)
     .filter((run) => run?.head_branch === 'main')
     .filter((run) => run?.status === 'completed' && run?.conclusion === 'success')
@@ -72,6 +81,109 @@ export function validateDownloadedEvidence(evidence, { targetSha }) {
   if (!Array.isArray(evidence?.failures) || evidence.failures.length !== 0) failures.push('failures_present');
   if (evidence?.evidenceIntegrity?.containsSensitiveValues !== false || evidence?.evidenceIntegrity?.exactShaBound !== true) failures.push('integrity_invalid');
   return { passed: failures.length === 0, failures };
+}
+
+function detailedCheckMap(target) {
+  return new Map(
+    (Array.isArray(target?.detailedChecks) ? target.detailedChecks : [])
+      .map((entry) => [String(entry?.name || ''), entry?.passed === true]),
+  );
+}
+
+export function normalizeDeploymentSmokeEvidence(source, { targetSha, repository = REPOSITORY, runId }) {
+  if (!FULL_SHA.test(String(targetSha || '').toLowerCase())) throw new Error('target_sha_invalid');
+  if (repository !== REPOSITORY) throw new Error('repository_not_canonical');
+  if (!NUMERIC.test(String(runId || ''))) throw new Error('run_id_invalid');
+  if (source?.evidenceItem !== 'deployment-smoke-validation' || source?.status !== 'Complete' || source?.outcome !== 'passed') {
+    throw new Error('deployment_smoke_source_not_complete');
+  }
+  if (!Array.isArray(source?.failures) || source.failures.length !== 0) throw new Error('deployment_smoke_source_failures_present');
+  if (source?.evidenceIntegrity?.valuesRedacted !== true || source?.evidenceIntegrity?.authorizationHeaderStored !== false || source?.evidenceIntegrity?.cookiesStored !== false) {
+    throw new Error('deployment_smoke_source_integrity_invalid');
+  }
+
+  const targets = (Array.isArray(source?.targets) ? source.targets : []).map((target) => {
+    if (target?.baseUrl !== CANONICAL_PRODUCTION_URL) throw new Error('deployment_smoke_target_invalid');
+    const checks = detailedCheckMap(target);
+    const normalizedChecks = {
+      healthOk: checks.get('healthEndpointOk') === true,
+      readyProtected: checks.get('readyEndpointRejectsAnonymous') === true,
+      readyOk: checks.get('readyEndpointOkWithToken') === true,
+      securityHeadersOk: checks.get('securityHeadersPresent') === true,
+      sensitiveNoStoreOk: checks.get('privateRoutesHaveNoStore') === true && checks.get('sensitiveApisHaveNoStore') === true,
+    };
+    const passed = target?.passed === true && Object.values(normalizedChecks).every(Boolean);
+    return {
+      targetHost: CANONICAL_PRODUCTION_HOST,
+      passed,
+      checks: normalizedChecks,
+    };
+  });
+
+  if (targets.length === 0 || targets.some((target) => target.passed !== true)) {
+    throw new Error('deployment_smoke_normalization_failed');
+  }
+
+  const generatedAt = source?.generatedAt ?? source?.reviewedAt;
+  const evidence = {
+    schema: 'risck-comply.p0-deployment-runtime-evidence.v1',
+    evidenceItem: 'deployment-smoke-validation',
+    status: 'Complete',
+    outcome: 'passed',
+    generatedAt,
+    reviewedAt: source?.reviewedAt ?? generatedAt,
+    reviewer: 'RISCK COMPLY protected runtime evidence aggregator',
+    repository,
+    branch: 'main',
+    summary: 'Exact-SHA production response proof was normalized into the canonical P0 deployment runtime contract after health, protected readiness, security-header and no-store checks passed on the production hostname.',
+    redactionConfirmation: 'Redaction confirmed for runtime evidence.',
+    evidenceLocations: [
+      '.github/workflows/production-runtime-proof.yml',
+      'scripts/release/run-production-runtime-response-proof.mjs',
+      'scripts/enterprise/fetch-production-runtime-evidence.mjs',
+      DEPLOYMENT_SMOKE_PATH,
+    ],
+    controlsVerified: [
+      'Production health endpoint passed on the canonical host.',
+      'Protected readiness rejected anonymous access and passed with the runtime token.',
+      'Required security headers passed on the canonical host.',
+      'Private and sensitive API responses enforced no-store.',
+      'The runtime proof was bound to the exact protected main SHA.',
+    ],
+    runtimeContext: {
+      generatedByGithubActions: true,
+      repository,
+      branch: 'main',
+      commitSha: String(targetSha).toLowerCase(),
+      githubRunId: String(runId),
+    },
+    targets,
+    smokeTargets: {
+      passed: [CANONICAL_PRODUCTION_HOST],
+      failed: [],
+    },
+    failures: [],
+    evidenceIntegrity: {
+      placeholderOnly: false,
+      containsSensitiveValues: false,
+      customerFacingProof: true,
+      runtimeProofInvented: false,
+      authorizationHeaderStored: false,
+      cookiesStored: false,
+      rawResponseBodiesStored: false,
+      rawUrlsStored: false,
+      exactShaBound: true,
+    },
+  };
+
+  const validationFailures = validateDeploymentRuntimeEvidence(evidence, {
+    expectedRepository: repository,
+    expectedBranch: 'main',
+  });
+  if (validationFailures.length > 0) {
+    throw new Error(`normalized_deployment_evidence_invalid:${validationFailures.join(',')}`);
+  }
+  return evidence;
 }
 
 function download(repository, token, artifactId, path) {
@@ -101,10 +213,12 @@ function extractBundle(zipPath) {
 }
 
 export function removeStaleProductionRuntimeEvidence(root) {
-  // The header and no-store paths are shared with exact-SHA repository evidence.
-  // Remove only the production-owned aggregate before discovery; a successful
-  // runtime bundle will replace all three paths with stronger live evidence.
+  // Only the normalized P0 deployment evidence is promoted into runtime evidence.
+  // Source aggregate/release lineage are verified in-memory and removed so the
+  // global P0 file checker never sees producer-specific contracts it does not own.
   rmSync(join(root, SOURCE_PATH), { force: true });
+  rmSync(join(root, DEPLOYMENT_SMOKE_PATH), { force: true });
+  rmSync(join(root, RELEASE_SHA_PATH), { force: true });
 }
 
 export async function fetchProductionRuntimeEvidence({
@@ -139,6 +253,7 @@ export async function fetchProductionRuntimeEvidence({
     console.log(`Production runtime evidence remains NOT_VERIFIED for ${targetSha}.`);
     return { found: false, targetSha };
   }
+  if (run.path !== WORKFLOW_PATH) throw new Error('runtime_workflow_path_invalid');
 
   const runId = String(run.id || '');
   if (!NUMERIC.test(runId)) throw new Error('run_id_invalid');
@@ -156,12 +271,17 @@ export async function fetchProductionRuntimeEvidence({
     const bundle = extractBundle(zipPath);
     const validation = validateDownloadedEvidence(bundle[SOURCE_PATH], { targetSha });
     if (!validation.passed) throw new Error(`runtime_evidence_invalid:${validation.failures.join(',')}`);
-    for (const [path, evidence] of Object.entries(bundle)) {
-      const output = join(root, path);
-      mkdirSync(dirname(output), { recursive: true });
-      writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
-    }
-    console.log(`Retrieved exact-SHA production runtime evidence bundle from workflow run ${runId}.`);
+
+    const normalizedDeploymentEvidence = normalizeDeploymentSmokeEvidence(bundle[DEPLOYMENT_SMOKE_PATH], {
+      targetSha,
+      repository,
+      runId,
+    });
+    const output = join(root, DEPLOYMENT_SMOKE_PATH);
+    mkdirSync(dirname(output), { recursive: true });
+    writeFileSync(output, `${JSON.stringify(normalizedDeploymentEvidence, null, 2)}\n`, { mode: 0o600 });
+
+    console.log(`Retrieved and normalized exact-SHA production runtime evidence from workflow run ${runId}.`);
     return { found: true, runId, targetSha };
   } finally {
     rmSync(zipPath, { force: true });

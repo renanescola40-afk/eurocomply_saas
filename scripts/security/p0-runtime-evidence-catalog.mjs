@@ -7,10 +7,10 @@ import { validateProductionSecretsRuntimeEvidence } from '../release/validate-pr
 import { validateRollbackRuntimeEvidence } from '../release/validate-rollback-runtime-evidence.mjs';
 import { validateStepUpMfaRuntimeEvidence } from '../release/validate-step-up-mfa-runtime-evidence.mjs';
 import { validateStripeRuntimeEvidence } from '../release/validate-stripe-runtime-evidence.mjs';
-import { validateSupabaseRlsRuntimeEvidence } from '../release/validate-supabase-rls-runtime-evidence.mjs';
 import { validateUploadScannerRuntimeEvidence } from '../release/validate-upload-scanner-runtime-evidence.mjs';
 import { validateAuditChainLiveEvidence } from './validate-audit-chain-live-evidence.mjs';
 import { validateBranchProtectionFreshness } from './validate-branch-protection-freshness.mjs';
+import { validateSupabaseRlsRuntimeEvidence as validateSupabaseProducerEvidence } from './check-supabase-rls-runtime-evidence.mjs';
 
 const runtimeValidator = (validator) => (evidence, context = {}) => validator(evidence, {
   now: context.now,
@@ -18,6 +18,14 @@ const runtimeValidator = (validator) => (evidence, context = {}) => validator(ev
   expectedRepository: context.expectedRepository,
   expectedCommitSha: context.expectedCommitSha,
 });
+
+const supabaseProducerValidator = (evidence, context = {}) => {
+  const result = validateSupabaseProducerEvidence(evidence, {
+    expectedSha: context.expectedCommitSha,
+    repository: context.expectedRepository,
+  });
+  return result.failures;
+};
 
 export const p0EvidenceCatalog = Object.freeze([
   {
@@ -50,7 +58,7 @@ export const p0EvidenceCatalog = Object.freeze([
     item: 'Supabase live RLS validation completed',
     kind: 'runtime',
     file: 'supabase-live-rls-validation.json',
-    validator: runtimeValidator(validateSupabaseRlsRuntimeEvidence),
+    validator: supabaseProducerValidator,
   },
   {
     item: 'External review',

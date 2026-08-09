@@ -15,6 +15,7 @@ const allowedItems = new Set([
   'rollback-dry-run-validation',
   'final-validation-runner',
   'production-secrets-provider-stores',
+  'auth-rbac-final-validation',
   'supabase-live-rls-validation',
   'external-security-review-or-pentest',
   'step-up-mfa-validation',

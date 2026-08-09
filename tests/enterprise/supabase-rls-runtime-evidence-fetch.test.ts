@@ -17,9 +17,12 @@ import {
   selectExactShaRun,
   validateDownloadedEvidence,
 } from '../../scripts/enterprise/fetch-supabase-rls-evidence.mjs';
+import { p0EvidenceCatalog } from '../../scripts/security/p0-runtime-evidence-catalog.mjs';
 
 const SHA = 'a'.repeat(40);
 const RUN_ID = 12345;
+const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
+const WORKFLOW_PATH = '.github/workflows/supabase-live-rls-validation.yml';
 
 type EvidenceCase = {
   table: string;
@@ -128,23 +131,24 @@ function validSourceEvidence(): RuntimeEvidence {
       workflow: 'Supabase Live RLS Validation',
       runId: String(RUN_ID),
       runAttempt: '1',
-      runUrl: `https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/${RUN_ID}`,
-      repository: 'renanescola40-afk/eurocomply_saas',
+      runUrl: `https://github.com/${REPOSITORY}/actions/runs/${RUN_ID}`,
+      repository: REPOSITORY,
       commitSha: SHA,
       refName: 'main',
       actor: 'github-actions[bot]',
       eventName: 'push',
-      stampedAt: '2026-07-18T00:00:00.000Z',
+      stampedAt: '2026-08-09T13:00:00.000Z',
     },
   };
 }
 
 describe('Supabase RLS exact-SHA runtime evidence', () => {
-  it('selects only a successful exact-main-SHA run', () => {
+  it('selects only a successful exact-main-SHA run from the canonical workflow path', () => {
     const selected = selectExactShaRun([
-      { id: 1, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'failure', updated_at: '2026-07-18T00:00:00Z' },
-      { id: 2, head_sha: SHA, head_branch: 'feature', status: 'completed', conclusion: 'success', updated_at: '2026-07-18T01:00:00Z' },
-      { id: RUN_ID, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-07-18T02:00:00Z' },
+      { id: 1, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'failure', updated_at: '2026-08-09T12:00:00Z' },
+      { id: 2, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'feature', status: 'completed', conclusion: 'success', updated_at: '2026-08-09T12:10:00Z' },
+      { id: 3, path: '.github/workflows/other.yml', head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-08-09T12:20:00Z' },
+      { id: RUN_ID, name: `Supabase live RLS proof for ${SHA}`, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-08-09T13:00:00Z' },
     ], SHA);
 
     expect(selected?.id).toBe(RUN_ID);
@@ -154,16 +158,28 @@ describe('Supabase RLS exact-SHA runtime evidence', () => {
   it('accepts complete redacted exact-SHA source evidence', () => {
     expect(validateDownloadedEvidence(validSourceEvidence(), {
       targetSha: SHA,
-      repository: 'renanescola40-afk/eurocomply_saas',
+      repository: REPOSITORY,
       runId: RUN_ID,
     })).toEqual({ passed: true, failures: [] });
+  });
+
+  it('closes the authoritative P0 Supabase entry with the producer provenance shape', () => {
+    const entry = p0EvidenceCatalog.find((candidate) => candidate.item === 'Supabase live RLS validation completed');
+    const validator = entry?.validator;
+    expect(validator).toBeDefined();
+    if (!validator) throw new Error('Supabase P0 validator missing');
+    expect(validator(validSourceEvidence(), {
+      expectedRepository: REPOSITORY,
+      expectedBranch: 'main',
+      expectedCommitSha: SHA,
+    })).toEqual([]);
   });
 
   it('rejects stale, branch-mismatched, partial, or unredacted evidence', () => {
     const source = validSourceEvidence();
     expect(validateDownloadedEvidence({ ...source, commitSha: 'b'.repeat(40) }, {
       targetSha: SHA,
-      repository: 'renanescola40-afk/eurocomply_saas',
+      repository: REPOSITORY,
       runId: RUN_ID,
     }).passed).toBe(false);
 
@@ -172,14 +188,14 @@ describe('Supabase RLS exact-SHA runtime evidence', () => {
       githubActions: { ...source.githubActions, refName: 'feature' },
     }, {
       targetSha: SHA,
-      repository: 'renanescola40-afk/eurocomply_saas',
+      repository: REPOSITORY,
       runId: RUN_ID,
     }).passed).toBe(false);
 
     const failedTests = source.testCases.map((test, index) => index === 0 ? { ...test, passed: false } : test);
     expect(validateDownloadedEvidence({ ...source, testCases: failedTests }, {
       targetSha: SHA,
-      repository: 'renanescola40-afk/eurocomply_saas',
+      repository: REPOSITORY,
       runId: RUN_ID,
     }).passed).toBe(false);
 
@@ -189,13 +205,15 @@ describe('Supabase RLS exact-SHA runtime evidence', () => {
       supabaseProjectReferenceRedacted: false,
     }, {
       targetSha: SHA,
-      repository: 'renanescola40-afk/eurocomply_saas',
+      repository: REPOSITORY,
       runId: RUN_ID,
     }).passed).toBe(false);
   });
 
   it('uses a read-only protected workflow and never commits runtime evidence', () => {
     const workflow = readFileSync('.github/workflows/supabase-live-rls-validation.yml', 'utf8');
+    const fetcher = readFileSync('scripts/enterprise/fetch-supabase-rls-evidence.mjs', 'utf8');
+    const catalog = readFileSync('scripts/security/p0-runtime-evidence-catalog.mjs', 'utf8');
 
     expect(workflow).toContain('push:\n    branches: [main]');
     expect(workflow).toContain('environment: supabase-live-rls-validation');
@@ -207,5 +225,9 @@ describe('Supabase RLS exact-SHA runtime evidence', () => {
     expect(workflow).not.toContain('git push');
     expect(workflow).not.toContain('gh pr create');
     expect(workflow).not.toContain('pull_request_target');
+    expect(fetcher).toContain("const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`");
+    expect(fetcher).toContain('run?.path === WORKFLOW_PATH');
+    expect(catalog).toContain('validateSupabaseProducerEvidence');
+    expect(catalog).not.toContain("validateSupabaseRlsRuntimeEvidence } from '../release/validate-supabase-rls-runtime-evidence.mjs'");
   });
 });
