@@ -11,7 +11,8 @@ const RUN_ID = '123456789';
 
 const run = {
   id: Number(RUN_ID),
-  name: 'Auth RBAC Tenant Proof',
+  name: `Auth/RBAC tenant proof for ${SHA}`,
+  path: '.github/workflows/auth-rbac-runtime-proof.yml',
   head_sha: SHA,
   head_branch: 'main',
   status: 'completed',
@@ -61,11 +62,12 @@ const evidence = {
 };
 
 describe('Auth RBAC exact-SHA evidence retrieval', () => {
-  it('selects only a successful current-main run for the exact assessed SHA', () => {
+  it('selects only a successful current-main run from the canonical workflow path', () => {
     expect(selectExactShaRun([
       { ...run, id: 1, head_sha: 'b'.repeat(40) },
       { ...run, id: 2, head_branch: 'feature' },
       { ...run, id: 3, conclusion: 'failure' },
+      { ...run, id: 4, path: '.github/workflows/other.yml' },
       run,
     ], SHA)).toEqual(run);
 
@@ -122,7 +124,8 @@ describe('Auth RBAC exact-SHA evidence retrieval', () => {
     expect(scorecardWorkflow).toContain('node scripts/security/write-auth-rbac-scorecard-evidence.mjs');
     expect(scorecardWorkflow).toContain('node scripts/security/check-auth-rbac-scorecard-evidence.mjs');
 
-    expect(fetcher).toContain("const WORKFLOW_NAME = 'Auth RBAC Tenant Proof'");
+    expect(fetcher).toContain("const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`");
+    expect(fetcher).toContain('run?.path === WORKFLOW_PATH');
     expect(fetcher).toContain('auth-rbac-runtime-proof-${targetSha}');
     expect(fetcher).toContain("run?.head_branch === 'main'");
     expect(fetcher).toContain('removeStaleEvidence(root)');
