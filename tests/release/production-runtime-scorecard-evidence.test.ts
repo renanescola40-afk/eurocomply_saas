@@ -14,6 +14,7 @@ import {
 const SHA = 'a'.repeat(40);
 const CANONICAL_PRODUCTION_URL = 'https://www.risckcomply.com';
 const CANONICAL_PRODUCTION_HOST = 'www.risckcomply.com';
+const WORKFLOW_PATH = '.github/workflows/production-runtime-proof.yml';
 
 function source() {
   return {
@@ -95,9 +96,14 @@ describe('production runtime scorecard evidence', () => {
     expect(buildProductionRuntimeScorecardEvidence({ ...smoke, evidenceIntegrity: { ...smoke.evidenceIntegrity, containsSensitiveValues: true } }, sha, SHA).outcome).toBe('not_verified');
   });
 
-  it('selects only successful exact-main-SHA workflow runs', () => {
-    const run = { id: 123, name: 'Production Runtime Proof', head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-07-18T22:00:00Z' };
-    expect(selectExactShaRun([{ ...run, id: 1, conclusion: 'failure' }, { ...run, id: 2, head_branch: 'feature' }, run], SHA)).toEqual(run);
+  it('selects only successful exact-main-SHA runs from the production workflow path', () => {
+    const run = { id: 123, name: `Production runtime proof for ${SHA}`, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-07-18T22:00:00Z' };
+    expect(selectExactShaRun([
+      { ...run, id: 1, conclusion: 'failure' },
+      { ...run, id: 2, head_branch: 'feature' },
+      { ...run, id: 3, path: '.github/workflows/other.yml' },
+      run,
+    ], SHA)).toEqual(run);
     expect(selectExactShaRun([run], SHA, '999')).toBeNull();
   });
 
@@ -111,21 +117,25 @@ describe('production runtime scorecard evidence', () => {
     expect(isOptionalWorkflowUnavailable(unauthorized)).toBe(false);
   });
 
-  it('clears only production-owned evidence before runtime discovery', () => {
+  it('clears production-owned aggregate, smoke and release lineage before runtime discovery', () => {
     const root = mkdtempSync(join(tmpdir(), 'production-runtime-evidence-'));
     try {
       const directory = join(root, 'docs/security/evidence/runtime');
       mkdirSync(directory, { recursive: true });
       const production = join(directory, 'production-runtime-validation.json');
+      const smoke = join(directory, 'deployment-smoke-validation.json');
+      const releaseSha = join(directory, 'runtime-release-sha-validation.json');
       const headers = join(directory, 'security-headers-validation.json');
       const noStore = join(directory, 'no-store-validation.json');
-      writeFileSync(production, '{}\n');
+      for (const path of [production, smoke, releaseSha]) writeFileSync(path, '{}\n');
       writeFileSync(headers, '{"source":"repository"}\n');
       writeFileSync(noStore, '{"source":"repository"}\n');
 
       removeStaleProductionRuntimeEvidence(root);
 
       expect(existsSync(production)).toBe(false);
+      expect(existsSync(smoke)).toBe(false);
+      expect(existsSync(releaseSha)).toBe(false);
       expect(readFileSync(headers, 'utf8')).toContain('repository');
       expect(readFileSync(noStore, 'utf8')).toContain('repository');
     } finally {
@@ -136,6 +146,7 @@ describe('production runtime scorecard evidence', () => {
   it('uses a protected read-only runtime workflow and maps only the intended controls', () => {
     const workflow = readFileSync('.github/workflows/production-runtime-proof.yml', 'utf8');
     const smokeProof = readFileSync('scripts/release/run-production-runtime-response-proof.mjs', 'utf8');
+    const fetcher = readFileSync('scripts/enterprise/fetch-production-runtime-evidence.mjs', 'utf8');
     const overrides = JSON.parse(readFileSync('docs/enterprise/evidence-overrides.json', 'utf8'));
     const mapped = Object.fromEntries(overrides.overrides.map((entry: { controlId: string; evidence: unknown }) => [entry.controlId, entry.evidence]));
 
@@ -147,6 +158,8 @@ describe('production runtime scorecard evidence', () => {
     expect(smokeProof).toContain("const CANONICAL_HOST = 'www.risckcomply.com'");
     expect(smokeProof).toContain("parsedBaseUrl.protocol !== 'https:'");
     expect(smokeProof).toContain("parsedBaseUrl.hostname.toLowerCase() !== CANONICAL_HOST");
+    expect(fetcher).toContain("const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`");
+    expect(fetcher).toContain('run?.path === WORKFLOW_PATH');
     expect(workflow).not.toContain('pull_request_target');
     expect(Object.keys(mapped).filter((id) => id.startsWith('SEC-') || id.startsWith('REL-'))).toEqual([
       'SEC-05', 'SEC-06', 'REL-02', 'REL-03', 'REL-04', 'REL-05', 'REL-06',
