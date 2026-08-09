@@ -75,7 +75,8 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
     expect(smokeProof).toContain('sourceMapsUploadRequiresAuthToken');
     expect(smokeProof).toContain('scannerTransportConfigured');
     expect(smokeProof).toContain('readinessValuesStored: false');
-    expect(smokeProof).not.toContain('Authorization: `Bearer ${token}` } })\n  : { response: null, body: null };\n\nconst dashboard');
+    expect(smokeProof).toContain('responseBodiesStored: false');
+    expect(smokeProof).not.toContain('body: readyAuthenticated.body');
   });
 
   it('does not weaken read-only workflow permissions or persist evidence back to git', () => {
