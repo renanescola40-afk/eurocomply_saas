@@ -105,7 +105,7 @@ describe('Step-Up exact-SHA runtime evidence handoff', () => {
 
     const entry = p0EvidenceCatalog.find((candidate) => candidate.item === 'Step-up MFA / IdP validation');
     expect(entry).toBeDefined();
-    if (!entry) throw new Error('Step-up P0 catalog entry missing');
+    if (!entry?.validator) throw new Error('Step-up P0 catalog validator missing');
     expect(entry.validator(proof, {
       now: new Date('2026-08-09T14:05:00.000Z'),
       expectedRepository: REPOSITORY,
