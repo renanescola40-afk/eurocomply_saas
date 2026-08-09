@@ -69,6 +69,7 @@ jobs:
       - name: Validate disposable Step-Up proof contracts
         run: >-
           npx vitest run
+          tests/security/ephemeral-mfa-fixture.test.ts
           tests/security/step-up-runtime-proof-integrity.test.ts
           tests/enterprise/step-up-runtime-evidence-fetch.test.ts
 
