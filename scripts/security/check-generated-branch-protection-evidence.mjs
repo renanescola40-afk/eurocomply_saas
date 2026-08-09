@@ -7,7 +7,13 @@ const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const DEFAULT_EVIDENCE_PATH = 'p0-evidence/branch-protection-main.generated.json';
 const FULL_SHA = /^[0-9a-f]{40}$/;
 const RULESET_SOURCE_TYPES = new Set(['Repository', 'Organization', 'Enterprise', 'unknown']);
-const BYPASS_ACTOR_TYPES = new Set(['RepositoryRole', 'Team', 'Integration', 'OrganizationAdmin', 'unknown']);
+const BYPASS_ACTOR_TYPES = new Set([
+  'RepositoryRole',
+  'Team',
+  'Integration',
+  'OrganizationAdmin',
+  'unknown',
+]);
 const BYPASS_MODES = new Set(['always', 'pull_request', 'unknown']);
 
 export const ALLOWED_EVIDENCE_SOURCES = Object.freeze([
@@ -46,9 +52,17 @@ function isSafePositiveInteger(value) {
 function boundedRulesetProvenanceIsValid(sourceDetails) {
   if (!Array.isArray(sourceDetails?.rulesetIds) || sourceDetails.rulesetIds.length < 1) return false;
   if (!sourceDetails.rulesetIds.every(isSafePositiveInteger)) return false;
-  if (!Array.isArray(sourceDetails?.rulesetSources) || sourceDetails.rulesetSources.length < 1) return false;
-  if (!sourceDetails.rulesetSources.every((value) => RULESET_SOURCE_TYPES.has(value))) return false;
+  if (!Array.isArray(sourceDetails?.rulesetSources) || sourceDetails.rulesetSources.length < 1) {
+    return false;
+  }
+  if (!sourceDetails.rulesetSources.every((value) => RULESET_SOURCE_TYPES.has(value))) {
+    return false;
+  }
   if (!Array.isArray(sourceDetails?.bypassActors)) return false;
+  if (sourceDetails?.bypassVisibilityComplete !== true) return false;
+  if (!Array.isArray(sourceDetails?.bypassVisibilityMissingRulesetIds)) return false;
+  if (sourceDetails.bypassVisibilityMissingRulesetIds.length !== 0) return false;
+
   return sourceDetails.bypassActors.every((actor) =>
     (actor?.rulesetId === null || isSafePositiveInteger(actor?.rulesetId))
     && BYPASS_ACTOR_TYPES.has(actor?.actorType)
@@ -65,31 +79,96 @@ export function validateGeneratedBranchProtectionEvidence(
   const failures = [];
   const normalizedExpectedSha = String(expectedSha ?? '').trim().toLowerCase();
 
-  requireCondition(failures, evidence?.schema === 'risck-comply.branch-protection-runtime-evidence.v1', 'unexpected schema');
-  requireCondition(failures, evidence?.evidenceItem === 'required-status-checks', 'unexpected evidenceItem');
-  requireCondition(failures, evidence?.evidence_type === 'branch-protection-required-checks', 'unexpected evidence_type');
+  requireCondition(
+    failures,
+    evidence?.schema === 'risck-comply.branch-protection-runtime-evidence.v1',
+    'unexpected schema',
+  );
+  requireCondition(
+    failures,
+    evidence?.evidenceItem === 'required-status-checks',
+    'unexpected evidenceItem',
+  );
+  requireCondition(
+    failures,
+    evidence?.evidence_type === 'branch-protection-required-checks',
+    'unexpected evidence_type',
+  );
   requireCondition(failures, evidence?.status === 'Complete', 'status must be Complete');
   requireCondition(failures, evidence?.outcome === 'passed', 'outcome must be passed');
-  requireCondition(failures, evidence?.repository === expectedRepository, 'repository provenance is invalid');
+  requireCondition(
+    failures,
+    evidence?.repository === expectedRepository,
+    'repository provenance is invalid',
+  );
   requireCondition(failures, evidence?.branch === 'main', 'branch must be main');
-  requireCondition(failures, FULL_SHA.test(String(evidence?.targetSha ?? '')), 'targetSha must be a full SHA');
-  requireCondition(failures, evidence?.targetSha === evidence?.checkedOutSha, 'targetSha and checkedOutSha must match');
-  requireCondition(failures, evidence?.targetSha === evidence?.currentMainSha, 'targetSha must equal the current main head');
+  requireCondition(
+    failures,
+    FULL_SHA.test(String(evidence?.targetSha ?? '')),
+    'targetSha must be a full SHA',
+  );
+  requireCondition(
+    failures,
+    evidence?.targetSha === evidence?.checkedOutSha,
+    'targetSha and checkedOutSha must match',
+  );
+  requireCondition(
+    failures,
+    evidence?.targetSha === evidence?.currentMainSha,
+    'targetSha must equal the current main head',
+  );
 
   if (normalizedExpectedSha) {
-    requireCondition(failures, FULL_SHA.test(normalizedExpectedSha), 'expected SHA must be a full SHA');
-    requireCondition(failures, evidence?.targetSha === normalizedExpectedSha, 'evidence targetSha does not match expected SHA');
+    requireCondition(
+      failures,
+      FULL_SHA.test(normalizedExpectedSha),
+      'expected SHA must be a full SHA',
+    );
+    requireCondition(
+      failures,
+      evidence?.targetSha === normalizedExpectedSha,
+      'evidence targetSha does not match expected SHA',
+    );
   }
 
-  requireCondition(failures, ALLOWED_EVIDENCE_SOURCES.includes(evidence?.source), 'source is invalid');
-  requireCondition(failures, evidence?.provenance?.githubActions === true, 'GitHub Actions provenance is required');
-  requireCondition(failures, /^\d+$/.test(String(evidence?.provenance?.runId ?? '')), 'numeric workflow run ID is required');
-  requireCondition(failures, evidence?.provenance?.exactShaBound === true, 'exact SHA binding is required');
-  requireCondition(failures, evidence?.provenance?.mainHeadMatched === true, 'current main head binding is required');
-  requireCondition(failures, evidence?.redactionConfirmation === 'Redaction confirmed for branch protection runtime evidence.', 'redaction confirmation is invalid');
+  requireCondition(
+    failures,
+    ALLOWED_EVIDENCE_SOURCES.includes(evidence?.source),
+    'source is invalid',
+  );
+  requireCondition(
+    failures,
+    evidence?.provenance?.githubActions === true,
+    'GitHub Actions provenance is required',
+  );
+  requireCondition(
+    failures,
+    /^\d+$/.test(String(evidence?.provenance?.runId ?? '')),
+    'numeric workflow run ID is required',
+  );
+  requireCondition(
+    failures,
+    evidence?.provenance?.exactShaBound === true,
+    'exact SHA binding is required',
+  );
+  requireCondition(
+    failures,
+    evidence?.provenance?.mainHeadMatched === true,
+    'current main head binding is required',
+  );
+  requireCondition(
+    failures,
+    evidence?.redactionConfirmation
+      === 'Redaction confirmed for branch protection runtime evidence.',
+    'redaction confirmation is invalid',
+  );
 
   for (const flag of REQUIRED_PROTECTION_FLAGS) {
-    requireCondition(failures, evidence?.branch_protection?.[flag] === true, `branch_protection.${flag} must be true`);
+    requireCondition(
+      failures,
+      evidence?.branch_protection?.[flag] === true,
+      `branch_protection.${flag} must be true`,
+    );
   }
 
   requireCondition(
@@ -98,34 +177,109 @@ export function validateGeneratedBranchProtectionEvidence(
       && evidence.branch_protection.required_approving_reviews >= 1,
     'at least one approving review must be required',
   );
-  requireCondition(failures, Array.isArray(evidence?.required_status_checks) && evidence.required_status_checks.length >= 1, 'required status checks are missing');
-  requireCondition(failures, Array.isArray(evidence?.sourceDetails?.missingRequiredChecks) && evidence.sourceDetails.missingRequiredChecks.length === 0, 'required status checks are missing from main protection');
-  requireCondition(failures, evidence?.sourceDetails?.missingProtectionFlags === 0, 'required branch protection flags are missing');
-  requireCondition(failures, Array.isArray(evidence?.controlsVerified) && evidence.controlsVerified.length >= 8, 'verified branch protection controls are incomplete');
-  requireCondition(failures, Array.isArray(evidence?.failures) && evidence.failures.length === 0, 'Complete evidence cannot contain failures');
+  requireCondition(
+    failures,
+    Array.isArray(evidence?.required_status_checks)
+      && evidence.required_status_checks.length >= 1,
+    'required status checks are missing',
+  );
+  requireCondition(
+    failures,
+    Array.isArray(evidence?.sourceDetails?.missingRequiredChecks)
+      && evidence.sourceDetails.missingRequiredChecks.length === 0,
+    'required status checks are missing from main protection',
+  );
+  requireCondition(
+    failures,
+    evidence?.sourceDetails?.missingProtectionFlags === 0,
+    'required branch protection flags are missing',
+  );
+  requireCondition(
+    failures,
+    Array.isArray(evidence?.controlsVerified) && evidence.controlsVerified.length >= 8,
+    'verified branch protection controls are incomplete',
+  );
+  requireCondition(
+    failures,
+    Array.isArray(evidence?.failures) && evidence.failures.length === 0,
+    'Complete evidence cannot contain failures',
+  );
 
   if (RULESET_EVIDENCE_SOURCES.has(evidence?.source)) {
     const expectedMode = evidence.source === 'github-api-classic-plus-repository-rulesets'
       ? 'classic-plus-rulesets'
       : 'repository-rulesets';
-    requireCondition(failures, evidence?.sourceDetails?.sourceMode === expectedMode, 'rulesets source mode is invalid');
+    requireCondition(
+      failures,
+      evidence?.sourceDetails?.sourceMode === expectedMode,
+      'rulesets source mode is invalid',
+    );
     requireCondition(
       failures,
       Number.isInteger(evidence?.sourceDetails?.applicableRulesetCount)
         && evidence.sourceDetails.applicableRulesetCount >= 1,
       'at least one active main ruleset is required',
     );
-    requireCondition(failures, evidence?.sourceDetails?.bypassActorCount === 0, 'ruleset bypass actors are not allowed');
-    requireCondition(failures, Array.isArray(evidence?.sourceDetails?.bypassActors) && evidence.sourceDetails.bypassActors.length === 0, 'ruleset bypass actor projection must be empty');
-    requireCondition(failures, boundedRulesetProvenanceIsValid(evidence?.sourceDetails), 'bounded ruleset provenance is invalid');
-    requireCondition(failures, typeof evidence?.sourceDetails?.classicProtectionApiFailure === 'string' && evidence.sourceDetails.classicProtectionApiFailure.length >= 3, 'classic protection boundary is missing');
-    requireCondition(failures, !Object.hasOwn(evidence?.sourceDetails ?? {}, 'rulesetNames'), 'free-form ruleset names must not be retained');
+    requireCondition(
+      failures,
+      evidence?.sourceDetails?.bypassVisibilityComplete === true,
+      'ruleset bypass-actor visibility must be proven',
+    );
+    requireCondition(
+      failures,
+      Array.isArray(evidence?.sourceDetails?.bypassVisibilityMissingRulesetIds)
+        && evidence.sourceDetails.bypassVisibilityMissingRulesetIds.length === 0,
+      'ruleset bypass-actor visibility gaps are not allowed',
+    );
+    requireCondition(
+      failures,
+      evidence?.sourceDetails?.bypassActorCount === 0,
+      'ruleset bypass actors are not allowed',
+    );
+    requireCondition(
+      failures,
+      Array.isArray(evidence?.sourceDetails?.bypassActors)
+        && evidence.sourceDetails.bypassActors.length === 0,
+      'ruleset bypass actor projection must be empty',
+    );
+    requireCondition(
+      failures,
+      boundedRulesetProvenanceIsValid(evidence?.sourceDetails),
+      'bounded ruleset provenance is invalid',
+    );
+    requireCondition(
+      failures,
+      typeof evidence?.sourceDetails?.classicProtectionApiFailure === 'string'
+        && evidence.sourceDetails.classicProtectionApiFailure.length >= 3,
+      'classic protection boundary is missing',
+    );
+    requireCondition(
+      failures,
+      !Object.hasOwn(evidence?.sourceDetails ?? {}, 'rulesetNames'),
+      'free-form ruleset names must not be retained',
+    );
   }
 
-  requireCondition(failures, evidence?.evidenceIntegrity?.containsSensitiveValues === false, 'sensitive-value integrity flag is invalid');
-  requireCondition(failures, evidence?.evidenceIntegrity?.rawApiPayloadStored === false, 'raw GitHub API payloads must not be stored');
-  requireCondition(failures, evidence?.evidenceIntegrity?.accessTokensStored === false, 'access tokens must not be stored');
-  requireCondition(failures, evidence?.evidenceIntegrity?.exactShaBound === true, 'evidence integrity exact-SHA flag is invalid');
+  requireCondition(
+    failures,
+    evidence?.evidenceIntegrity?.containsSensitiveValues === false,
+    'sensitive-value integrity flag is invalid',
+  );
+  requireCondition(
+    failures,
+    evidence?.evidenceIntegrity?.rawApiPayloadStored === false,
+    'raw GitHub API payloads must not be stored',
+  );
+  requireCondition(
+    failures,
+    evidence?.evidenceIntegrity?.accessTokensStored === false,
+    'access tokens must not be stored',
+  );
+  requireCondition(
+    failures,
+    evidence?.evidenceIntegrity?.exactShaBound === true,
+    'evidence integrity exact-SHA flag is invalid',
+  );
 
   return failures;
 }
@@ -146,7 +300,10 @@ export function validateGeneratedBranchProtectionEvidenceFile({
     return [`${evidencePath} is not valid JSON`];
   }
 
-  return validateGeneratedBranchProtectionEvidence(evidence, { expectedSha, expectedRepository });
+  return validateGeneratedBranchProtectionEvidence(evidence, {
+    expectedSha,
+    expectedRepository,
+  });
 }
 
 function run() {
@@ -165,6 +322,9 @@ function run() {
   console.log('Generated branch protection evidence: Complete/passed');
 }
 
-if (process.argv[1] && fileURLToPath(new URL(`file://${process.argv[1]}`)) === fileURLToPath(import.meta.url)) {
+if (
+  process.argv[1]
+  && fileURLToPath(new URL(`file://${process.argv[1]}`)) === fileURLToPath(import.meta.url)
+) {
   run();
 }
