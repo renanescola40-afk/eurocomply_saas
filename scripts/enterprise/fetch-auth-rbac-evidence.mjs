@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const WORKFLOW_FILE = 'auth-rbac-runtime-proof.yml';
 const WORKFLOW_NAME = 'Auth RBAC Tenant Proof';
+const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`;
 const SOURCE_EVIDENCE_PATH = 'docs/security/evidence/runtime/auth-rbac-final-validation.json';
 const SCORECARD_EVIDENCE_PATH = 'docs/security/evidence/runtime/auth-rbac-validation.json';
 const FULL_SHA = /^[a-f0-9]{40}$/;
@@ -35,6 +36,7 @@ async function githubJson(url, token) {
 export function selectExactShaRun(runs, targetSha, sourceRunId = '') {
   const normalizedRunId = String(sourceRunId || '').trim();
   return (Array.isArray(runs) ? runs : [])
+    .filter((run) => run?.path === WORKFLOW_PATH)
     .filter((run) => String(run?.head_sha || '').toLowerCase() === targetSha)
     .filter((run) => run?.head_branch === 'main')
     .filter((run) => run?.status === 'completed' && run?.conclusion === 'success')
@@ -153,7 +155,7 @@ export async function fetchAuthRbacEvidence({
     console.log(`Auth/RBAC evidence remains open: no successful exact-SHA runtime run for ${targetSha}.`);
     return { found: false, targetSha };
   }
-  if (run.name !== WORKFLOW_NAME) throw new Error('runtime_workflow_name_invalid');
+  if (run.path !== WORKFLOW_PATH) throw new Error('runtime_workflow_path_invalid');
 
   const normalizedRunId = String(run.id || '').trim();
   if (!NUMERIC_ID.test(normalizedRunId)) throw new Error('runtime_workflow_run_id_invalid');
