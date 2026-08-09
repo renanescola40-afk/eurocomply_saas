@@ -16,6 +16,7 @@ export function compileStagingRehearsalPlan({ executionPlan, executionPlanBytes,
   if (executionPlan?.releaseSha !== releaseSha) failures.push('execution_plan_release_sha_mismatch');
   if (executionPlan?.safety?.productionWriteAuthorized !== false) failures.push('execution_plan_write_boundary_invalid');
   if (!Array.isArray(executionPlan?.batches)) failures.push('execution_plan_batches_missing');
+  if (!executionPlan?.generatedAt) failures.push('execution_plan_generated_at_missing');
   if (failures.length) return { accepted: false, failures };
 
   const seenFiles = new Set();
@@ -57,7 +58,7 @@ export function compileStagingRehearsalPlan({ executionPlan, executionPlanBytes,
   if (failures.length) return { accepted: false, failures };
   return {
     schema: 'risck-comply.supabase-staging-rehearsal-plan.v2',
-    generatedAt: new Date().toISOString(),
+    generatedAt: executionPlan.generatedAt,
     releaseSha,
     targetSha: releaseSha,
     sourceExecutionPlanDigest: digest(executionPlanBytes),
