@@ -20,13 +20,16 @@ const provider = {
 const liveValidation = {
   status: 'Complete',
   attempted: true,
+  ephemeralFixtureCreated: true,
   signedIn: true,
+  factorEnrolled: true,
   verifiedFactorAvailable: true,
   challengeCreated: true,
   verificationSucceeded: true,
   aal2Observed: true,
   sessionUserMatched: true,
   signedOut: true,
+  fixtureCleanupVerified: true,
 };
 
 describe('step-up runtime proof integrity', () => {
@@ -43,7 +46,7 @@ describe('step-up runtime proof integrity', () => {
     expect(normalizeProviderHost('javascript:alert(1)')).toBeNull();
   });
 
-  it('marks evidence Complete only for protected exact-SHA main-branch workflow proof', () => {
+  it('marks evidence Complete only for protected exact-SHA main-branch workflow proof and verified cleanup', () => {
     expect(evaluateStepUpRuntimeEvidence({
       sourceFailures: [],
       provider,
@@ -67,7 +70,7 @@ describe('step-up runtime proof integrity', () => {
     });
   });
 
-  it('fails closed for stale SHA, local execution, missing proof or failed fixture sign-out', () => {
+  it('fails closed for stale SHA, local execution, missing proof, failed sign-out or failed fixture cleanup', () => {
     const stale = evaluateStepUpRuntimeEvidence({
       sourceFailures: [],
       provider,
@@ -111,23 +114,30 @@ describe('step-up runtime proof integrity', () => {
     expect(notRun.complete).toBe(false);
     expect(notRun.outcome).toBe('blocked');
 
-    const sessionNotRevoked = evaluateStepUpRuntimeEvidence({
-      sourceFailures: [],
-      provider,
-      liveValidation: { ...liveValidation, signedOut: false },
-      expectedSha: SHA_A,
-      checkedOutSha: SHA_A,
-      expectedBranch: 'main',
-      githubActions: true,
-      githubRunId: '123456789',
-      githubRepository: 'renanescola40-afk/eurocomply_saas',
-    });
-    expect(sessionNotRevoked.complete).toBe(false);
-    expect(sessionNotRevoked.checks.liveProviderVerificationPassed).toBe(false);
+    for (const patch of [
+      { signedOut: false },
+      { fixtureCleanupVerified: false },
+      { verificationSucceeded: false, status: 'Failed' },
+    ]) {
+      const result = evaluateStepUpRuntimeEvidence({
+        sourceFailures: [],
+        provider,
+        liveValidation: { ...liveValidation, ...patch },
+        expectedSha: SHA_A,
+        checkedOutSha: SHA_A,
+        expectedBranch: 'main',
+        githubActions: true,
+        githubRunId: '123456789',
+        githubRepository: 'renanescola40-afk/eurocomply_saas',
+      });
+      expect(result.complete).toBe(false);
+      expect(result.checks.liveProviderVerificationPassed).toBe(false);
+    }
   });
 
-  it('removes manual proof and requires a private live Supabase MFA transaction', () => {
+  it('requires a disposable live Supabase MFA enrollment/challenge/verify transaction', () => {
     const script = readFileSync('scripts/security/run-step-up-mfa-runtime-validation.mjs', 'utf8');
+    const fixtures = readFileSync('scripts/security/lib/ephemeral-mfa-fixture.mjs', 'utf8');
     const gate = readFileSync('scripts/security/check-step-up.mjs', 'utf8');
     const workflow = readFileSync('.github/workflows/step-up-runtime-proof.yml', 'utf8');
     const envExample = readFileSync('.env.example', 'utf8');
@@ -136,12 +146,16 @@ describe('step-up runtime proof integrity', () => {
     expect(gate).not.toContain('STEP_UP_RUNTIME_PROVIDER_PROOF');
     expect(envExample).not.toContain('STEP_UP_RUNTIME_PROVIDER_PROOF');
     expect(script).toContain('signInWithPassword');
+    expect(script).toContain('supabase.auth.mfa.enroll');
     expect(script).toContain('supabase.auth.mfa.listFactors');
     expect(script).toContain('supabase.auth.mfa.challenge');
     expect(script).toContain('supabase.auth.mfa.verify');
     expect(script).toContain('getAuthenticatorAssuranceLevel');
     expect(script).toContain("currentLevel !== 'aal2'");
     expect(script).toContain('supabase.auth.signOut');
+    expect(script).toContain('createEphemeralMfaUser');
+    expect(script).toContain('cleanupEphemeralMfaUser');
+    expect(script).toContain('fixtureCleanupVerified');
     expect(script).toContain('manualBooleanProofAccepted: false');
     expect(script).toContain('rawSecretsStored: false');
     expect(script).toContain('rawUserIdentifiersStored: false');
@@ -150,6 +164,10 @@ describe('step-up runtime proof integrity', () => {
     expect(script).not.toContain('createHash');
     expect(script).not.toContain('pseudonymize');
     expect(script).not.toContain('syntheticUserPseudonym');
+
+    expect(fixtures).toContain('auth.admin.createUser');
+    expect(fixtures).toContain('auth.admin.deleteUser');
+    expect(fixtures).toContain('auth.admin.getUserById');
 
     expect(gate).toContain("['Complete', 'Open', 'Exception', 'Failed']");
     expect(gate).toContain('isEnterpriseReleaseEnabled');
@@ -161,7 +179,14 @@ describe('step-up runtime proof integrity', () => {
     expect(workflow).toContain('environment: production');
     expect(workflow).toContain('permissions:\n  contents: read');
     expect(workflow).toContain('ref: ${{ inputs.release_sha }}');
+    expect(workflow).toContain('STEP_UP_PROVIDER_MODE: supabase_mfa');
+    expect(workflow).toContain('SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}');
     expect(workflow).toContain('npm run security:step-up:runtime');
+    for (const removedSecret of [
+      'STEP_UP_LIVE_USER_EMAIL',
+      'STEP_UP_LIVE_USER_PASSWORD',
+      'STEP_UP_LIVE_TOTP_SECRET',
+    ]) expect(workflow).not.toContain(removedSecret);
     expect(workflow).not.toContain('pull_request_target');
     expect(workflow).not.toContain('contents: write');
     expect(workflow).not.toContain('STEP_UP_RUNTIME_PROVIDER_PROOF');
