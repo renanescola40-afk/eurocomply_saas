@@ -11,6 +11,13 @@ describe('Supabase migration evidence bootstrap workflow', () => {
     expect(workflow).toContain('branches: [main]');
   });
 
+  it('keeps PR contract validation outside the operational concurrency lock', () => {
+    expect(workflow).not.toContain('\nconcurrency:\n  group: supabase-migration-evidence-bootstrap');
+    expect(workflow).toContain(
+      'timeout-minutes: 180\n    concurrency:\n      group: supabase-migration-evidence-bootstrap-main\n      cancel-in-progress: false',
+    );
+  });
+
   it('ignores canonical evidence-only commits so the subject SHA is preserved', () => {
     expect(workflow).toContain('paths-ignore:');
     expect(workflow).toContain('docs/security/evidence/runtime/supabase-migration-reconciliation-decisions.json');
