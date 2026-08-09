@@ -5,8 +5,7 @@ import { evaluate } from '../../scripts/security/run-auth-rbac-live-validation.m
 const SHA = 'a'.repeat(40);
 const passingChecks = {
   fixtureConfigurationPresent: true,
-  disposableSignup: true,
-  disposableSignupCleanup: true,
+  ephemeralFixturesCreated: true,
   ownerRoleObserved: true,
   memberRoleObserved: true,
   ownerCanReadOwnTenant: true,
@@ -22,6 +21,7 @@ const passingChecks = {
   crossTenantOrganizationDeleteDenied: true,
   sessionRefresh: true,
   sessionsRevoked: true,
+  ephemeralFixturesCleanup: true,
 };
 
 const provenance = {
@@ -42,9 +42,10 @@ describe('Auth RBAC protected runtime proof', () => {
     });
   });
 
-  it('fails closed for signup cleanup, tenant mutation, refresh, stale SHA or local execution', () => {
+  it('fails closed for fixture lifecycle, tenant mutation, refresh, stale SHA or local execution', () => {
     for (const failedCheck of [
-      'disposableSignupCleanup',
+      'ephemeralFixturesCreated',
+      'ephemeralFixturesCleanup',
       'outsiderCannotReadTenantA',
       'crossTenantMembershipInsertDenied',
       'crossTenantMembershipUpdateDenied',
@@ -70,21 +71,18 @@ describe('Auth RBAC protected runtime proof', () => {
     }).complete).toBe(false);
   });
 
-  it('uses isolated fixtures, ephemeral credentials and a cleanup-only admin boundary', () => {
+  it('creates and verifies disposable fixtures without persistent fixture secrets', () => {
     const script = readFileSync('scripts/security/run-auth-rbac-live-validation.mjs', 'utf8');
+    const fixtures = readFileSync('scripts/security/lib/ephemeral-auth-fixtures.mjs', 'utf8');
     const workflow = readFileSync('.github/workflows/auth-rbac-runtime-proof.yml', 'utf8');
 
     for (const token of [
-      'AUTH_RBAC_OWNER_EMAIL',
-      'AUTH_RBAC_MEMBER_EMAIL',
-      'AUTH_RBAC_OUTSIDER_EMAIL',
-      'AUTH_RBAC_ORGANIZATION_A_ID',
-      'AUTH_RBAC_ORGANIZATION_B_ID',
-      'AUTH_RBAC_DISPOSABLE_EMAIL_DOMAIN',
+      'createEphemeralAuthFixtures',
+      'cleanupEphemeralAuthFixtures',
+      'ephemeralFixturesCreated',
+      'ephemeralFixturesCleanup',
       "from('organizations')",
       "from('organization_members')",
-      'auth.signUp',
-      'auth.admin.deleteUser',
       'crossTenantMembershipInsertDenied',
       'crossTenantMembershipUpdateDenied',
       'crossTenantMembershipDeleteDenied',
@@ -95,6 +93,28 @@ describe('Auth RBAC protected runtime proof', () => {
       'serviceRoleKeyStored: false',
       'cleanupRequired: true',
     ]) expect(script).toContain(token);
+
+    for (const token of [
+      'auth.admin.createUser',
+      "from('organizations')",
+      "from('organization_members')",
+      'auth.admin.deleteUser',
+      'auth.admin.getUserById',
+      'organization_cleanup_not_verified',
+      'user_cleanup_not_verified',
+    ]) expect(fixtures).toContain(token);
+
+    for (const removedSecret of [
+      'AUTH_RBAC_OWNER_EMAIL',
+      'AUTH_RBAC_OWNER_PASSWORD',
+      'AUTH_RBAC_MEMBER_EMAIL',
+      'AUTH_RBAC_MEMBER_PASSWORD',
+      'AUTH_RBAC_OUTSIDER_EMAIL',
+      'AUTH_RBAC_OUTSIDER_PASSWORD',
+      'AUTH_RBAC_ORGANIZATION_A_ID',
+      'AUTH_RBAC_ORGANIZATION_B_ID',
+      'AUTH_RBAC_DISPOSABLE_EMAIL_DOMAIN',
+    ]) expect(workflow).not.toContain(removedSecret);
 
     expect(workflow).toContain('SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}');
     expect(workflow).toContain('environment: production');
