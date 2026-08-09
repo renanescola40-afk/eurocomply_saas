@@ -88,3 +88,11 @@ Rejected. Technical candidate classifications are review aids only. Human item r
 ### Automatically execute staging or production migrations from the compiler
 
 Rejected. Planning, attestation and authorization remain separate from execution.
+
+## Rollback
+
+If this lineage model causes an unexpected control-plane regression, revert the workflow, script, template and runbook changes from this ADR as one reviewed change before any migration execution is attempted. Do not revert or rewrite database history as part of the code rollback.
+
+Any subject SHA whose evidence was produced with the reverted model must be treated as invalid for promotion. Regenerate the migration inventory, live schema evidence, review dossiers and decision template under the restored control-plane version before continuing.
+
+If staging or production authorization artifacts were already generated under this model, mark those artifacts superseded and do not reuse them after rollback. Production writes remain disabled by default, so reverting this ADR must never itself execute SQL, repair migration history or authorize an unrestricted database push.
