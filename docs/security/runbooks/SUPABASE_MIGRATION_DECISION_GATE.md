@@ -2,189 +2,127 @@
 
 ## Purpose
 
-This gate converts the immutable migration inventory and its bounded review packages into an evidence-bound reconciliation decision set. It does not inspect the production database by itself, infer classifications, execute SQL, repair migration history, authorize a dry-run, or authorize a production write.
+Convert the immutable migration inventory and exact-SHA runtime evidence into a human-reviewed classification set without creating a self-referential Git SHA requirement.
 
-The current backlog contains hundreds of SQL files requiring review. Package generation is preparation only. A migration receives credit only after a named reviewer records a supported classification for the exact file digest and an independent release authority approves the complete set.
+This gate does not execute SQL, repair migration history, run staging, authorize a dry-run, or authorize a production write.
+
+## Provenance model
+
+Two SHAs have different meanings:
+
+- **subject release SHA** — immutable commit whose migration files, inventory and production schema evidence were reviewed;
+- **evidence commit SHA** — current `main` commit that may contain the reviewed evidence document.
+
+The subject SHA must be an ancestor of the evidence commit. Between them, this gate permits only:
+
+`docs/security/evidence/runtime/supabase-migration-reconciliation-decisions.json`
+
+Any application, migration, workflow or unrelated documentation change fails closed. This prevents the impossible fixed-point where committing the evidence changes the SHA the evidence is supposed to describe.
 
 ## Required inputs
 
-1. An exact current `main` SHA.
-2. A `Supabase Production Migration Dry Run` workflow run for that SHA.
-3. The workflow artifact containing `drift/migration-reconciliation-inventory.json`.
-4. The nine bounded review packages generated from that same inventory.
-5. Production schema evidence, staged execution evidence, replacement digests, archive mappings and rollback references as applicable.
-6. A completed decisions document at:
-
-   `docs/security/evidence/runtime/supabase-migration-reconciliation-decisions.json`
+1. Exact subject release SHA.
+2. `Supabase Production Migration Dry Run` run ID for that subject SHA.
+3. Its immutable reconciliation inventory.
+4. Exact-SHA live schema/review dossier evidence used by the human reviewer.
+5. The canonical reviewed and sealed decision document.
+6. Named item reviewer(s) and a distinct independent approver.
 
 ## Decision classes
 
 ### `ALREADY_PRESENT_IN_SCHEMA`
 
-Required:
-
-- exact production schema/object evidence;
-- mapping between the migration SQL digest and the existing object state;
-- reviewer identity, role, rationale and review timestamp.
-
-This classification only creates a migration-history repair candidate. It does not authorize `supabase migration repair`.
+Requires exact schema/object evidence, reviewer identity, role, rationale and timestamp. It creates only a history-repair candidate; it does not authorize migration repair.
 
 ### `PENDING_DEPLOYMENT`
 
-Required:
+At the **classification** gate this means the reviewer concluded that the intended state is not safely creditable as already present and must go through protected staging. It requires:
 
-- successful staged execution evidence;
-- a unique positive deployment order;
+- exact schema evidence reference;
+- unique positive deployment order;
 - rollback reference;
-- reviewer identity, role, rationale and review timestamp.
+- reviewer identity, role, rationale and timestamp.
 
-This classification only creates a pending-deployment plan item. It does not authorize a production push.
+Successful staging evidence is deliberately **not** required here because staging occurs after classification and execution-plan compilation. Pending items remain non-production-ready until `Supabase Staging Rehearsal` produces a passing attestation.
 
 ### `SUPERSEDED`
 
-Required:
-
-- SHA-256 digest of the replacement migration;
-- schema evidence showing that the replacement fully covers the intended state;
-- reviewer identity, role, rationale and review timestamp.
+Requires replacement migration SHA-256, schema evidence showing coverage, reviewer identity, role, rationale and timestamp.
 
 ### `ARCHIVE_LEGACY`
 
-Required:
-
-- controlled archive mapping;
-- schema evidence confirming that the legacy file must not execute;
-- reviewer identity, role, rationale and review timestamp.
+Requires controlled archival mapping, schema evidence confirming the legacy file must not execute, reviewer identity, role, rationale and timestamp.
 
 ### `REQUIRES_SPLIT_REVIEW`
 
-Required:
-
-- a follow-up reference identifying the statements or objects that require separate review.
-
-Any item in this class keeps the reconciliation decision `HUMAN_REVIEW_REQUIRED`.
+Requires a follow-up reference. Any remaining item in this class keeps the decision gate blocked.
 
 ## Execution sequence
 
-### 1. Capture the exact inventory
+### 1. Capture the subject inventory
 
-Run **Supabase Production Migration Dry Run** using the exact current `main` SHA and confirmation `DRY_RUN_ONLY`.
+Run `Supabase Production Migration Dry Run` for the subject SHA with `DRY_RUN_ONLY`. A fail-closed `HUMAN_REVIEW_REQUIRED` result is acceptable when the immutable inventory artifact is retained.
 
-The run may fail before `supabase db push --dry-run` while the backlog is unresolved. That is expected. The `always()` artifact must still contain the exact remote migration list, drift report, reconciliation inventory and review packages.
+### 2. Generate the decision template
 
-### 2. Generate the decisions template
+Run `Supabase Migration Reconciliation Decision Gate` with:
 
-Run **Supabase Migration Reconciliation Decision Gate** with:
+- `release_sha`: subject SHA;
+- `source_run_id`: dry-run run ID.
 
-- `release_sha`: the same current `main` SHA;
-- `source_run_id`: the workflow run ID from step 1.
-
-When no committed decisions file exists, the workflow intentionally fails after uploading `decision-template.json`. Download that template. It contains no classifications or approvals.
-
-Local equivalent:
-
-```bash
-node scripts/supabase/generate-migration-reconciliation-decision-template.mjs \
-  path/to/migration-reconciliation-inventory.json \
-  reviewed-draft.json \
-  --release-sha=<FULL_MAIN_SHA>
-```
+When the canonical decisions file does not exist, the workflow intentionally fails after uploading `decision-template.json`.
 
 ### 3. Complete human review
 
-Review every item against its exact filename and SQL SHA-256 digest. Do not copy conclusions from a different inventory or release SHA. Complete all evidence, reviewer, rationale and ordering fields required by the selected classification.
+Review every filename and exact SQL SHA-256 against the production evidence and migration SQL. Do not copy decisions from another inventory or release.
 
-Set document `status` to `REVIEWED` only after every item has a supported final decision and no `REQUIRES_SPLIT_REVIEW` item remains.
+Set document `status` to `REVIEWED` only after every item has a supported classification and no `REQUIRES_SPLIT_REVIEW` remains.
 
 ### 4. Obtain independent approval
 
-Complete `independentApprover` with:
+Complete `independentApprover` with name, role, approval timestamp and immutable approval reference. The independent approver must not be an item reviewer in the same document.
 
-- name;
-- role;
-- approval timestamp;
-- immutable approval reference.
-
-The independent approver must not also be an item reviewer in the same document.
-
-### 5. Seal the decisions
-
-Sealing calculates deterministic digests. It does not review or approve content.
+### 5. Seal decisions
 
 ```bash
 node scripts/supabase/seal-migration-reconciliation-decisions.mjs \
   path/to/migration-reconciliation-inventory.json \
   reviewed-draft.json \
   sealed-decisions.json \
-  --expected-sha=<FULL_MAIN_SHA>
+  --expected-sha=<SUBJECT_SHA>
 ```
 
-Any modification after sealing invalidates the affected decision digest and the master approval digest.
+Sealing calculates deterministic decision and approval digests. It does not create human review or approval.
 
-### 6. Validate and compile plans
+### 6. Submit the evidence-only PR
 
-```bash
-node scripts/supabase/validate-migration-reconciliation-decisions.mjs \
-  path/to/migration-reconciliation-inventory.json \
-  sealed-decisions.json \
-  artifacts/supabase-migration-reconciliation-decisions \
-  --expected-sha=<FULL_MAIN_SHA>
-```
+Commit only the sealed document to:
 
-A successful run emits:
+`docs/security/evidence/runtime/supabase-migration-reconciliation-decisions.json`
 
-- `decision-result.json`;
-- `migration-history-repair-candidates.json`;
-- `pending-deployment-plan.json`;
-- `superseded-plan.json`;
-- `archive-legacy-plan.json`;
-- `split-review-plan.json`;
-- `summary.md`.
+Do not modify migrations, application code, workflows or unrelated files in that evidence PR.
 
-Every output fixes production-write authorization to `false`.
+### 7. Rerun the gate
 
-### 7. Submit an evidence PR
+Use the original subject SHA and original dry-run run ID. The workflow checks:
 
-Commit only the reviewed and sealed decisions document to the canonical evidence path. Do not commit production credentials, schema data containing customer information, database dumps, access tokens or confidential signed material. Evidence references may point to protected artifact storage.
-
-Rerun the manual decision gate. It must verify:
-
-- source workflow provenance;
-- exact current `main` SHA;
+- subject SHA ancestry;
+- current `main` identity;
+- evidence-only diff from subject to current;
+- source run provenance;
 - exact inventory digest;
-- one decision for every inventory item;
+- one sealed decision for every inventory item;
 - classification-specific evidence;
 - unique pending deployment order;
-- deterministic decision digests;
-- independent approval digest;
-- zero unresolved split-review items.
+- independent approval and deterministic approval digest;
+- zero split-review items.
 
-## What happens after acceptance
+A successful result is `RECONCILIATION_ACCEPTED_FOR_STAGING`. It is not deployment authorization.
 
-`RECONCILIATION_ACCEPTED` is an input to controlled remediation. It is not deployability.
+## Next step
 
-Use separate reviewed PRs to:
-
-1. create controlled migration-history repair mappings only for proven already-present changes;
-2. archive or rename invalid and duplicate legacy files without losing immutable evidence;
-3. split unresolved migrations;
-4. stage genuinely pending migrations in approved order;
-5. prepare backup, rollback and maintenance controls;
-6. rerun the production drift audit;
-7. require `AUTHORIZED_FOR_DRY_RUN` before executing `supabase db push --dry-run`;
-8. require a separate protected approval before any production write.
+Run `Supabase Migration Execution Plan`, still using the immutable subject SHA and the successful Decision Gate run ID. Pending migrations must then pass protected staging before any production-change request can be compiled.
 
 ## Invalidation rules
 
-Repeat inventory capture and review when any of the following changes:
-
-- the release SHA;
-- any migration file bytes or filename;
-- the remote migration history;
-- the target production project;
-- schema evidence used by a decision;
-- replacement migration digest;
-- staging or rollback evidence;
-- reviewer or approver decision.
-
-Never reuse accepted decisions across a different inventory digest or release SHA.
+Repeat the inventory/evidence review if any migration file bytes or filename changes, the remote migration history changes, the production target changes, or the production schema evidence changes. Evidence-only descendant commits do not change the subject SHA, but any non-canonical change in that lineage is rejected.
