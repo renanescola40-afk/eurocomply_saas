@@ -70,19 +70,20 @@ describe('enterprise core production schema reconciliation', () => {
 });
 
 describe('Sentry instrumentation hardening', () => {
-  it('initializes Sentry from the active src instrumentation entrypoint', () => {
+  it('initializes Sentry from the active edge-safe src instrumentation entrypoint', () => {
     expect(instrumentation).toContain("import * as Sentry from '@sentry/nextjs'");
-    expect(instrumentation).toContain("await import('./instrumentation-node')");
     expect(instrumentation).toContain('sendDefaultPii: false');
     expect(instrumentation).toContain('event.request = undefined');
     expect(instrumentation).toContain('event.user = undefined');
     expect(instrumentation).toContain('export const onRequestError = Sentry.captureRequestError');
+    expect(instrumentation).not.toContain("import('./instrumentation-node')");
   });
 
-  it('removes deprecated duplicate Sentry entrypoints', () => {
+  it('removes deprecated or runtime-ambiguous instrumentation entrypoints', () => {
     expect(existsSync('instrumentation.ts')).toBe(false);
     expect(existsSync('sentry.server.config.ts')).toBe(false);
     expect(existsSync('sentry.edge.config.ts')).toBe(false);
+    expect(existsSync('src/instrumentation-node.ts')).toBe(false);
   });
 });
 
