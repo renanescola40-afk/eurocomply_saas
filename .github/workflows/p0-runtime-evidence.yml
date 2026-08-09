@@ -76,6 +76,9 @@ jobs:
             tests/enterprise/upload-scanner-runtime-evidence-fetch.test.ts \
             tests/enterprise/upload-scanner-p0-aggregation.test.ts \
             tests/enterprise/p0-runtime-multi-producer-aggregation.test.ts \
+            tests/enterprise/auth-rbac-runtime-evidence-fetch.test.ts \
+            tests/enterprise/supabase-rls-runtime-evidence-fetch.test.ts \
+            tests/release/production-runtime-scorecard-evidence.test.ts \
             tests/security/p0-runtime-gap-strict-contract.test.ts \
             tests/security/p0-register-source-of-truth-contract.test.ts
           node --test \
