@@ -72,6 +72,7 @@ jobs:
       - name: Validate Auth RBAC proof contracts
         run: >-
           npx vitest run
+          tests/security/ephemeral-auth-fixtures.test.ts
           tests/security/auth-rbac-runtime-proof.test.ts
           tests/security/auth-rbac-scorecard-evidence.test.ts
 
