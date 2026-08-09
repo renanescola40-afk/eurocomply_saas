@@ -29,14 +29,26 @@ export function validateStagingRehearsalResult({ plan, planRaw, result, resultRa
   }
   if (!Array.isArray(result.batches) || result.batches.length !== plan.batches.length) throw new Error('Batch result count mismatch');
 
-  const expectedBatchIds = new Set(plan.batches.map((batch) => batch.batch));
+  const planByBatch = new Map(plan.batches.map((batch) => [batch.batch, batch]));
   for (const batch of result.batches) {
-    if (!expectedBatchIds.has(batch.batch)) throw new Error(`Unexpected batch ${batch.batch}`);
+    const planned = planByBatch.get(batch.batch);
+    if (!planned) throw new Error(`Unexpected batch ${batch.batch}`);
     if (batch.outcome !== 'passed') throw new Error(`Batch ${batch.batch} failed`);
     for (const key of ['migrationHistoryEvidence', 'schemaDiffEvidence', 'rlsEvidence', 'smokeEvidence', 'rollbackEvidence']) {
       if (!batch[key]) throw new Error(`Batch ${batch.batch} missing ${key}`);
     }
   }
+
+  const stagedBatches = plan.batches.map((batch) => ({
+    batch: batch.batch,
+    batchId: batch.batchId ?? `batch-${String(batch.batch).padStart(3, '0')}`,
+    migrations: (batch.migrations ?? []).map((migration) => ({
+      filename: migration.filename,
+      sha256: migration.sha256,
+      version: migration.version,
+      deployOrder: migration.deployOrder,
+    })),
+  }));
 
   return {
     schema: 'risck-comply.supabase-staging-rehearsal-attestation.v2',
@@ -46,7 +58,10 @@ export function validateStagingRehearsalResult({ plan, planRaw, result, resultRa
     status: 'STAGING_REHEARSAL_PASSED',
     planDigest: digest(planRaw),
     resultDigest: digest(resultRaw),
+    stagedMigrationSetDigest: digest(JSON.stringify(stagedBatches)),
     batchesPassed: result.batches.length,
+    stagedBatches,
+    historyRepairCandidates: plan.historyRepairCandidates ?? [],
     operator: result.operator,
     approver: result.approver,
     startedAt: result.startedAt,
