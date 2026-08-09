@@ -131,8 +131,8 @@ function validateClassificationEvidence(decision, prefix, failures, blockers) {
       }
       break;
     case 'PENDING_DEPLOYMENT':
-      if (!nonEmptyString(decision.stagedExecutionEvidenceReference)) {
-        failures.push(`${prefix}.staged_execution_evidence_required`);
+      if (!nonEmptyString(decision.schemaEvidenceReference)) {
+        failures.push(`${prefix}.pending_schema_evidence_required`);
       }
       if (!Number.isInteger(decision.deployOrderDecision) || decision.deployOrderDecision < 1) {
         failures.push(`${prefix}.positive_deploy_order_required`);
@@ -276,13 +276,18 @@ export function evaluateMigrationReconciliationDecisions({
   const sortedPending = decisions
     .filter((decision) => decision.classification === 'PENDING_DEPLOYMENT')
     .sort((left, right) => left.deployOrderDecision - right.deployOrderDecision);
+  const decisionStatus = accepted
+    ? sortedPending.length > 0
+      ? 'RECONCILIATION_ACCEPTED_FOR_STAGING'
+      : 'RECONCILIATION_ACCEPTED'
+    : 'HUMAN_REVIEW_REQUIRED';
 
   return {
     schema: RESULT_SCHEMA,
     generatedAt: now.toISOString(),
     releaseSha,
     inventorySha256: expectedInventorySha256,
-    decisionStatus: accepted ? 'RECONCILIATION_ACCEPTED' : 'HUMAN_REVIEW_REQUIRED',
+    decisionStatus,
     deploymentAuthorization: 'NOT_AUTHORIZED',
     dryRunAuthorization: 'NOT_AUTHORIZED_BY_THIS_GATE',
     accepted,
@@ -308,7 +313,7 @@ export function evaluateMigrationReconciliationDecisions({
       migrationHistoryModified: false,
       sqlExecuted: false,
       productionWriteAuthorized: false,
-      note: 'Accepted decisions are inputs to repository reconciliation and staged planning. They do not authorize migration repair, dry-run, or production execution.',
+      note: 'Accepted decisions authorize repository planning and, when pending migrations exist, progression to protected staging rehearsal only. Staging evidence remains mandatory before any production execution.',
     },
   };
 }
