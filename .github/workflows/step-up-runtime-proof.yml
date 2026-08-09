@@ -66,6 +66,12 @@ jobs:
       - name: Install deterministic dependencies
         run: npm ci --ignore-scripts
 
+      - name: Validate disposable Step-Up proof contracts
+        run: >-
+          npx vitest run
+          tests/security/step-up-runtime-proof-integrity.test.ts
+          tests/enterprise/step-up-runtime-evidence-fetch.test.ts
+
       - name: Execute protected live step-up validation
         env:
           RISCK_COMPLY_ENTERPRISE_RELEASE: 'true'
@@ -73,11 +79,9 @@ jobs:
           ENTERPRISE_EXPECTED_BRANCH: main
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          STEP_UP_PROVIDER_MODE: ${{ secrets.STEP_UP_PROVIDER_MODE }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STEP_UP_PROVIDER_MODE: supabase_mfa
           STEP_UP_SIGNING_SECRET: ${{ secrets.STEP_UP_ASSERTION_SIGNING_SECRET || secrets.STEP_UP_SIGNING_SECRET }}
-          STEP_UP_LIVE_USER_EMAIL: ${{ secrets.STEP_UP_LIVE_USER_EMAIL }}
-          STEP_UP_LIVE_USER_PASSWORD: ${{ secrets.STEP_UP_LIVE_USER_PASSWORD }}
-          STEP_UP_LIVE_TOTP_SECRET: ${{ secrets.STEP_UP_LIVE_TOTP_SECRET }}
         run: npm run security:step-up:runtime
 
       - name: Upload redacted runtime evidence
