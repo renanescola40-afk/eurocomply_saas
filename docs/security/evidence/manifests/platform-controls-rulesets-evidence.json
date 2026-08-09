@@ -24,9 +24,19 @@
     "strictStatusChecksRequired": true,
     "forcePushBlocked": true,
     "deletionBlocked": true,
+    "bypassActorVisibilityRequired": true,
     "bypassActorCount": 0,
     "sensitiveValuesAllowed": false,
     "rawApiPayloadAllowed": false
+  },
+  "credentialFallback": {
+    "order": [
+      "BRANCH_PROTECTION_READ_TOKEN",
+      "GITHUB_TOKEN"
+    ],
+    "retryableAuthorizationStatuses": [401, 403, 404],
+    "tokenValuesRetainedInEvidence": false,
+    "missingBypassActorVisibilityFailsClosed": true
   },
   "rulesetProjection": {
     "pull_request": [
@@ -50,8 +60,9 @@
     "ruleset enforcement change",
     "ruleset target condition change",
     "ruleset bypass actor change",
+    "ruleset bypass actor visibility loss",
     "review policy change",
     "force-push or deletion policy change"
   ],
-  "truthBoundary": "This evidence proves configured GitHub platform controls for one exact main SHA. It does not prove reviewer independence, production deployment approval, external security review, customer acceptance or legal compliance."
+  "truthBoundary": "This evidence proves configured GitHub platform controls for one exact main SHA only when the relevant API fields, including bypass-actor visibility for ruleset-backed controls, are observable. It does not prove reviewer independence, production deployment approval, external security review, customer acceptance or legal compliance."
 }
