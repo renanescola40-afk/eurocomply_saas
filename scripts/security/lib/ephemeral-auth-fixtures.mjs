@@ -18,6 +18,13 @@ async function insertOne(admin, table, row) {
   return data;
 }
 
+function userAbsenceWasProven(data, error) {
+  if (!error) return !data?.user;
+  const status = Number(error?.status || 0);
+  const message = String(error?.message || '');
+  return status === 404 || /not found/i.test(message);
+}
+
 export async function cleanupEphemeralAuthFixtures(admin, created) {
   if (!created) return { verified: false, failures: ['fixture_tracker_missing'] };
   const failures = [];
@@ -40,18 +47,22 @@ export async function cleanupEphemeralAuthFixtures(admin, created) {
       .from('organization_members')
       .select('id')
       .in('id', created.memberships);
-    if (error || (Array.isArray(data) && data.length > 0)) failures.push('membership_cleanup_not_verified');
+    if (error || (Array.isArray(data) && data.length > 0)) {
+      failures.push('membership_cleanup_not_verified');
+    }
   }
   if (created.organizations.length > 0) {
     const { data, error } = await admin
       .from('organizations')
       .select('id')
       .in('id', created.organizations);
-    if (error || (Array.isArray(data) && data.length > 0)) failures.push('organization_cleanup_not_verified');
+    if (error || (Array.isArray(data) && data.length > 0)) {
+      failures.push('organization_cleanup_not_verified');
+    }
   }
   for (const id of created.users) {
     const { data, error } = await admin.auth.admin.getUserById(id);
-    if (!error && data?.user) failures.push('user_cleanup_not_verified');
+    if (!userAbsenceWasProven(data, error)) failures.push('user_cleanup_not_verified');
   }
 
   return { verified: failures.length === 0, failures: [...new Set(failures)] };
@@ -90,29 +101,35 @@ export async function createEphemeralAuthFixtures(
       slug: `${normalizedPurpose}-a-${suffix}`,
       created_by: owner.id,
     });
+    created.organizations.push(organizationA.id);
+
     const organizationB = await insertOne(admin, 'organizations', {
       name: `Enterprise Runtime B ${suffix}`,
       slug: `${normalizedPurpose}-b-${suffix}`,
       created_by: outsider.id,
     });
-    created.organizations.push(organizationA.id, organizationB.id);
+    created.organizations.push(organizationB.id);
 
     const ownerMembership = await insertOne(admin, 'organization_members', {
       organization_id: organizationA.id,
       user_id: owner.id,
       role: 'owner',
     });
+    created.memberships.push(ownerMembership.id);
+
     const memberMembership = await insertOne(admin, 'organization_members', {
       organization_id: organizationA.id,
       user_id: member.id,
       role: 'member',
     });
+    created.memberships.push(memberMembership.id);
+
     const outsiderMembership = await insertOne(admin, 'organization_members', {
       organization_id: organizationB.id,
       user_id: outsider.id,
       role: 'owner',
     });
-    created.memberships.push(ownerMembership.id, memberMembership.id, outsiderMembership.id);
+    created.memberships.push(outsiderMembership.id);
 
     return {
       created,
