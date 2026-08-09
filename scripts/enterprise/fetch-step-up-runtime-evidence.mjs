@@ -26,7 +26,6 @@ async function githubJson(url, token) {
   const response = await fetch(url, {
     headers: headers(token),
     cache: 'no-store',
-    redirect: 'error',
     signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok) throw new Error(`github_api_${response.status}`);
@@ -44,14 +43,18 @@ export function selectExactShaRun(runs, targetSha, sourceRunId = '') {
     .sort((a, b) => Date.parse(b?.updated_at || b?.created_at || 0) - Date.parse(a?.updated_at || a?.created_at || 0))[0] ?? null;
 }
 
-export function validateDownloadedEvidence(evidence, { targetSha, runId }) {
-  const failures = validateStepUpMfaRuntimeEvidence(evidence, { now: new Date() });
-  const provenance = evidence?.verification_provenance;
+export function validateDownloadedEvidence(evidence, { targetSha, repository, runId, now = new Date() }) {
+  const failures = validateStepUpMfaRuntimeEvidence(evidence, {
+    now,
+    expectedRepository: repository,
+    expectedBranch: 'main',
+    expectedCommitSha: targetSha,
+  });
+  if (repository !== CANONICAL_REPOSITORY) failures.push('repository_not_canonical');
   if (evidence?.status !== 'Complete' || evidence?.outcome !== 'passed') failures.push('evidence_not_complete');
-  if (String(provenance?.commitSha || '').toLowerCase() !== targetSha) failures.push('evidence_sha_mismatch');
-  if (provenance?.method !== 'github_actions') failures.push('github_actions_provenance_required');
-  if (!String(provenance?.reference || '').includes(String(runId))) failures.push('source_run_provenance_mismatch');
-  if (evidence?.evidenceIntegrity?.containsSensitiveValues === true) failures.push('sensitive_values_present');
+  if (String(evidence?.provenance?.runId || '') !== String(runId)) failures.push('source_run_provenance_mismatch');
+  if (evidence?.provenance?.source !== 'github_actions') failures.push('github_actions_provenance_required');
+  if (evidence?.provenance?.workflowProvenance !== true) failures.push('workflow_provenance_invalid');
   return { passed: failures.length === 0, failures };
 }
 
@@ -70,7 +73,7 @@ function downloadArtifact(repository, token, artifactId, output) {
     `output = "${escapeCurl(output)}"`,
     `url = "https://api.github.com/repos/${repository}/actions/artifacts/${artifactId}/zip"`,
   ].join('\n');
-  const result = spawnSync('curl', ['--config', '-'], { input: `${config}\n`, encoding: 'utf8' });
+  const result = spawnSync('curl', ['--config', '-'], { input: `${config}\n`, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
   if (result.error || result.status !== 0) throw new Error('artifact_download_failed');
 }
 
@@ -115,7 +118,7 @@ export async function fetchStepUpRuntimeEvidence({ root, repository, token, targ
   try {
     downloadArtifact(repository, token, String(artifact.id), zipPath);
     const evidence = extractEvidence(zipPath);
-    const validation = validateDownloadedEvidence(evidence, { targetSha, runId });
+    const validation = validateDownloadedEvidence(evidence, { targetSha, repository, runId });
     if (!validation.passed) throw new Error(`step_up_evidence_invalid:${validation.failures.join(',')}`);
     const output = join(root, EVIDENCE_PATH);
     mkdirSync(dirname(output), { recursive: true });
