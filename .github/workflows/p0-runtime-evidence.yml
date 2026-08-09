@@ -37,11 +37,11 @@ jobs:
     env:
       ASSESSED_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
       RELEASE_COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
-      UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/upload-security-ci.yml' && github.event.workflow_run.id || '' }}
-      BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/branch-protection-runtime-proof.yml' && github.event.workflow_run.id || '' }}
-      AUTH_RBAC_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/auth-rbac-runtime-proof.yml' && github.event.workflow_run.id || '' }}
-      SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/supabase-live-rls-validation.yml' && github.event.workflow_run.id || '' }}
-      PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/production-runtime-proof.yml' && github.event.workflow_run.id || '' }}
+      UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/upload-security-ci.yml' && github.event.workflow_run.id || '' }}
+      BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/branch-protection-runtime-proof.yml' && github.event.workflow_run.id || '' }}
+      AUTH_RBAC_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/auth-rbac-runtime-proof.yml' && github.event.workflow_run.id || '' }}
+      SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/supabase-live-rls-validation.yml' && github.event.workflow_run.id || '' }}
+      PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/production-runtime-proof.yml' && github.event.workflow_run.id || '' }}
     steps:
       - name: Checkout exact assessed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -94,7 +94,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID: ${{ env.UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID }}
-          UPLOAD_SCANNER_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/upload-security-ci.yml' && 'true' || 'false' }}
+          UPLOAD_SCANNER_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/upload-security-ci.yml' && 'true' || 'false' }}
         run: node scripts/enterprise/aggregate-upload-scanner-runtime-evidence.mjs
 
       - name: Retrieve exact-SHA branch protection runtime evidence
@@ -103,7 +103,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID: ${{ env.BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID }}
-          BRANCH_PROTECTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/branch-protection-runtime-proof.yml' && 'true' || 'false' }}
+          BRANCH_PROTECTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/branch-protection-runtime-proof.yml' && 'true' || 'false' }}
         run: node scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs
 
       - name: Retrieve exact-SHA Auth RBAC runtime evidence
@@ -112,7 +112,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           AUTH_RBAC_RUNTIME_SOURCE_RUN_ID: ${{ env.AUTH_RBAC_RUNTIME_SOURCE_RUN_ID }}
-          AUTH_RBAC_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/auth-rbac-runtime-proof.yml' && 'true' || 'false' }}
+          AUTH_RBAC_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/auth-rbac-runtime-proof.yml' && 'true' || 'false' }}
         run: node scripts/enterprise/fetch-auth-rbac-evidence.mjs
 
       - name: Retrieve exact-SHA Supabase RLS runtime evidence
@@ -121,7 +121,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ env.SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID }}
-          SUPABASE_RLS_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/supabase-live-rls-validation.yml' && 'true' || 'false' }}
+          SUPABASE_RLS_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/supabase-live-rls-validation.yml' && 'true' || 'false' }}
         run: node scripts/enterprise/fetch-supabase-rls-evidence.mjs
 
       - name: Retrieve exact-SHA production runtime evidence
@@ -130,7 +130,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ env.PRODUCTION_RUNTIME_SOURCE_RUN_ID }}
-          PRODUCTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/production-runtime-proof.yml' && 'true' || 'false' }}
+          PRODUCTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/production-runtime-proof.yml' && 'true' || 'false' }}
         run: node scripts/enterprise/fetch-production-runtime-evidence.mjs
 
       - name: Validate runtime evidence files
