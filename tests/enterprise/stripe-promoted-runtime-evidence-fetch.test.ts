@@ -90,7 +90,7 @@ describe('promoted Stripe exact-SHA runtime evidence handoff', () => {
 
     const entry = p0EvidenceCatalog.find((candidate) => candidate.item === 'Stripe billing runtime validation');
     expect(entry).toBeDefined();
-    if (!entry) throw new Error('Stripe P0 catalog entry missing');
+    if (!entry?.validator) throw new Error('Stripe P0 catalog validator missing');
     expect(entry.validator(canonical, {
       now: new Date('2026-08-09T14:05:00.000Z'),
       expectedRepository: REPOSITORY,
