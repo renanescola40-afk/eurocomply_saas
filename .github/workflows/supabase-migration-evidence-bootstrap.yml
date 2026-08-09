@@ -19,10 +19,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: supabase-migration-evidence-bootstrap
-  cancel-in-progress: false
-
 jobs:
   contract:
     name: Validate evidence bootstrap contract
@@ -47,6 +43,9 @@ jobs:
     needs: contract
     runs-on: ubuntu-24.04
     timeout-minutes: 180
+    concurrency:
+      group: supabase-migration-evidence-bootstrap-main
+      cancel-in-progress: false
     permissions:
       contents: read
       actions: write
@@ -133,22 +132,39 @@ jobs:
             local workflow="$1"
             shift
             local baseline
-            baseline="$(
+            if ! baseline="$(
               gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?event=workflow_dispatch&branch=main&per_page=100" \
                 --jq '[.workflow_runs[].id] | max // 0'
-            )"
+            )"; then
+              echo "Failed to read workflow dispatch baseline for ${workflow}" >&2
+              return 1
+            fi
+            if [[ ! "$baseline" =~ ^[0-9]+$ ]]; then
+              echo "Invalid workflow dispatch baseline for ${workflow}: ${baseline}" >&2
+              return 1
+            fi
 
-            gh workflow run "$workflow" --repo "$GITHUB_REPOSITORY" --ref main "$@"
+            if ! gh workflow run "$workflow" --repo "$GITHUB_REPOSITORY" --ref main "$@" >/dev/null; then
+              echo "Failed to dispatch ${workflow}" >&2
+              return 1
+            fi
 
             local run_id=''
             for _ in $(seq 1 60); do
-              run_id="$(
+              if ! run_id="$(
                 gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?event=workflow_dispatch&branch=main&per_page=100" \
                   --jq ".workflow_runs | map(select(.id > ${baseline} and .head_sha == \"${TARGET_SHA}\" and .event == \"workflow_dispatch\")) | sort_by(.id) | .[0].id // empty"
-              )"
+              )"; then
+                echo "Failed to resolve workflow run for ${workflow}" >&2
+                return 1
+              fi
               if [[ "$run_id" =~ ^[0-9]+$ ]]; then
                 printf '%s\n' "$run_id"
                 return 0
+              fi
+              if [ -n "$run_id" ]; then
+                echo "Invalid workflow run id for ${workflow}: ${run_id}" >&2
+                return 1
               fi
               sleep 2
             done
@@ -159,13 +175,34 @@ jobs:
 
           wait_for_run() {
             local run_id="$1"
+            if [[ ! "$run_id" =~ ^[0-9]+$ ]]; then
+              echo "Invalid workflow run id: ${run_id}" >&2
+              return 1
+            fi
+
             for _ in $(seq 1 1080); do
               local status
-              status="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '.status')"
-              if [ "$status" = 'completed' ]; then
-                gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '.conclusion // "unknown"'
-                return 0
+              if ! status="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '.status')"; then
+                echo "Failed to read workflow run ${run_id}" >&2
+                return 1
               fi
+              case "$status" in
+                completed)
+                  local conclusion
+                  if ! conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '.conclusion // "unknown"')"; then
+                    echo "Failed to read workflow conclusion for ${run_id}" >&2
+                    return 1
+                  fi
+                  printf '%s\n' "$conclusion"
+                  return 0
+                  ;;
+                queued|in_progress|pending|waiting|requested)
+                  ;;
+                *)
+                  echo "Unexpected workflow status for ${run_id}: ${status}" >&2
+                  return 1
+                  ;;
+              esac
               sleep 5
             done
             echo "Timed out waiting for workflow run ${run_id}" >&2
@@ -175,18 +212,42 @@ jobs:
           require_artifact() {
             local run_id="$1"
             local artifact_name="$2"
-            local artifact_id
-            artifact_id="$(
-              gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
-                --jq "[.artifacts[] | select(.expired == false and .name == \"${artifact_name}\")] | sort_by(.created_at) | reverse | .[0].id // empty"
-            )"
-            [[ "$artifact_id" =~ ^[0-9]+$ ]]
+            if [[ ! "$run_id" =~ ^[0-9]+$ ]]; then
+              echo "Invalid workflow run id while resolving artifact ${artifact_name}: ${run_id}" >&2
+              return 1
+            fi
+
+            local artifact_id=''
+            for _ in $(seq 1 30); do
+              if ! artifact_id="$(
+                gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
+                  --jq "[.artifacts[] | select(.expired == false and .name == \"${artifact_name}\")] | sort_by(.created_at) | reverse | .[0].id // empty"
+              )"; then
+                echo "Failed to inspect artifacts for workflow run ${run_id}" >&2
+                return 1
+              fi
+              if [[ "$artifact_id" =~ ^[0-9]+$ ]]; then
+                return 0
+              fi
+              if [ -n "$artifact_id" ]; then
+                echo "Invalid artifact id for ${artifact_name}: ${artifact_id}" >&2
+                return 1
+              fi
+              sleep 2
+            done
+
+            echo "Missing expected artifact ${artifact_name} for workflow run ${run_id}" >&2
+            return 1
           }
 
           download_artifact() {
             local run_id="$1"
             local artifact_name="$2"
             local destination="$3"
+            if [[ ! "$run_id" =~ ^[0-9]+$ ]]; then
+              echo "Invalid workflow run id while downloading artifact ${artifact_name}: ${run_id}" >&2
+              return 1
+            fi
             rm -rf "$destination"
             mkdir -p "$destination"
             gh run download "$run_id" \
@@ -198,6 +259,7 @@ jobs:
           DRIFT_WORKFLOW='supabase-migration-drift-audit.yml'
           DRIFT_ARTIFACT="supabase-migration-drift-${TARGET_SHA}"
           DRIFT_RUN_ID="$(dispatch_workflow "$DRIFT_WORKFLOW")"
+          [[ "$DRIFT_RUN_ID" =~ ^[0-9]+$ ]]
           DRIFT_CONCLUSION="$(wait_for_run "$DRIFT_RUN_ID")"
           require_artifact "$DRIFT_RUN_ID" "$DRIFT_ARTIFACT"
           update_stage 'driftAudit' "$DRIFT_WORKFLOW" "$DRIFT_RUN_ID" "$DRIFT_CONCLUSION" "$DRIFT_ARTIFACT"
@@ -205,6 +267,7 @@ jobs:
           DRY_WORKFLOW='supabase-production-migration-dry-run.yml'
           DRY_ARTIFACT="supabase-production-migration-dry-run-${TARGET_SHA}"
           DRY_RUN_ID="$(dispatch_workflow "$DRY_WORKFLOW" -f "release_sha=${TARGET_SHA}" -f 'confirmation=DRY_RUN_ONLY')"
+          [[ "$DRY_RUN_ID" =~ ^[0-9]+$ ]]
           DRY_CONCLUSION="$(wait_for_run "$DRY_RUN_ID")"
           require_artifact "$DRY_RUN_ID" "$DRY_ARTIFACT"
           download_artifact "$DRY_RUN_ID" "$DRY_ARTIFACT" "$TMP_ROOT/dry-run"
@@ -216,6 +279,7 @@ jobs:
           SCHEMA_WORKFLOW='supabase-live-schema-evidence.yml'
           SCHEMA_ARTIFACT="supabase-live-schema-evidence-${TARGET_SHA}"
           SCHEMA_RUN_ID="$(dispatch_workflow "$SCHEMA_WORKFLOW" -f "release_sha=${TARGET_SHA}" -f "source_run_id=${DRY_RUN_ID}")"
+          [[ "$SCHEMA_RUN_ID" =~ ^[0-9]+$ ]]
           SCHEMA_CONCLUSION="$(wait_for_run "$SCHEMA_RUN_ID")"
           test "$SCHEMA_CONCLUSION" = 'success'
           require_artifact "$SCHEMA_RUN_ID" "$SCHEMA_ARTIFACT"
@@ -228,6 +292,7 @@ jobs:
           DOSSIER_WORKFLOW='supabase-migration-review-dossiers.yml'
           DOSSIER_ARTIFACT="supabase-migration-review-dossiers-${TARGET_SHA}"
           DOSSIER_RUN_ID="$(dispatch_workflow "$DOSSIER_WORKFLOW" -f "release_sha=${TARGET_SHA}" -f "inventory_run_id=${DRY_RUN_ID}" -f "schema_evidence_run_id=${SCHEMA_RUN_ID}")"
+          [[ "$DOSSIER_RUN_ID" =~ ^[0-9]+$ ]]
           DOSSIER_CONCLUSION="$(wait_for_run "$DOSSIER_RUN_ID")"
           test "$DOSSIER_CONCLUSION" = 'success'
           require_artifact "$DOSSIER_RUN_ID" "$DOSSIER_ARTIFACT"
@@ -240,6 +305,7 @@ jobs:
           DECISION_WORKFLOW='supabase-migration-reconciliation-decision-gate.yml'
           DECISION_ARTIFACT="supabase-migration-reconciliation-decisions-${TARGET_SHA}"
           DECISION_RUN_ID="$(dispatch_workflow "$DECISION_WORKFLOW" -f "release_sha=${TARGET_SHA}" -f "source_run_id=${DRY_RUN_ID}")"
+          [[ "$DECISION_RUN_ID" =~ ^[0-9]+$ ]]
           DECISION_CONCLUSION="$(wait_for_run "$DECISION_RUN_ID")"
           require_artifact "$DECISION_RUN_ID" "$DECISION_ARTIFACT"
           download_artifact "$DECISION_RUN_ID" "$DECISION_ARTIFACT" "$TMP_ROOT/decisions"
