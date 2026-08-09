@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/p0-runtime-evidence.yml', 'utf8');
 const productionFetcher = readFileSync('scripts/enterprise/fetch-production-runtime-evidence.mjs', 'utf8');
+const authFetcher = readFileSync('scripts/enterprise/fetch-auth-rbac-evidence.mjs', 'utf8');
+const supabaseFetcher = readFileSync('scripts/enterprise/fetch-supabase-rls-evidence.mjs', 'utf8');
+const smokeProof = readFileSync('scripts/release/run-production-runtime-response-proof.mjs', 'utf8');
 
 describe('P0 exact-SHA multi-producer runtime aggregation', () => {
   it('listens to protected P0 runtime producers', () => {
@@ -33,19 +36,46 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
     expect(workflow).toContain("github.event.workflow_run.conclusion == 'success'");
   });
 
-  it('requires the triggering producer but keeps other discovery fail-closed and optional', () => {
-    expect(workflow).toContain("AUTH_RBAC_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.name == 'Auth RBAC Tenant Proof' && 'true' || 'false' }}");
-    expect(workflow).toContain("SUPABASE_RLS_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.name == 'Supabase Live RLS Validation' && 'true' || 'false' }}");
-    expect(workflow).toContain("PRODUCTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.name == 'Production Runtime Proof' && 'true' || 'false' }}");
+  it('uses stable workflow paths instead of dynamic run-name text', () => {
+    for (const path of [
+      '.github/workflows/upload-security-ci.yml',
+      '.github/workflows/branch-protection-runtime-proof.yml',
+      '.github/workflows/auth-rbac-runtime-proof.yml',
+      '.github/workflows/supabase-live-rls-validation.yml',
+      '.github/workflows/production-runtime-proof.yml',
+    ]) {
+      expect(workflow).toContain(`github.event.workflow_run.path == '${path}'`);
+    }
+
+    expect(authFetcher).toContain("const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`");
+    expect(supabaseFetcher).toContain("const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`");
+    expect(productionFetcher).toContain("const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`");
+    expect(authFetcher).toContain('run?.path === WORKFLOW_PATH');
+    expect(supabaseFetcher).toContain('run?.path === WORKFLOW_PATH');
+    expect(productionFetcher).toContain('run?.path === WORKFLOW_PATH');
   });
 
-  it('promotes deployment smoke and release-SHA lineage from the validated production bundle', () => {
+  it('requires the triggering producer but keeps other discovery fail-closed and optional', () => {
+    expect(workflow).toContain("AUTH_RBAC_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/auth-rbac-runtime-proof.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("SUPABASE_RLS_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/supabase-live-rls-validation.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("PRODUCTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/production-runtime-proof.yml' && 'true' || 'false' }}");
+  });
+
+  it('promotes deployment smoke and release-SHA lineage from a successful production bundle', () => {
     expect(productionFetcher).toContain("const DEPLOYMENT_SMOKE_PATH = 'docs/security/evidence/runtime/deployment-smoke-validation.json'");
     expect(productionFetcher).toContain("const RELEASE_SHA_PATH = 'docs/security/evidence/runtime/runtime-release-sha-validation.json'");
     expect(productionFetcher).toContain('DEPLOYMENT_SMOKE_PATH,');
     expect(productionFetcher).toContain('RELEASE_SHA_PATH,');
     expect(productionFetcher).toContain('rmSync(join(root, DEPLOYMENT_SMOKE_PATH), { force: true })');
     expect(productionFetcher).toContain('rmSync(join(root, RELEASE_SHA_PATH), { force: true })');
+  });
+
+  it('retains only redacted readiness categories for failed production probes', () => {
+    expect(smokeProof).toContain('function readinessDiagnostics(body)');
+    expect(smokeProof).toContain('sourceMapsUploadRequiresAuthToken');
+    expect(smokeProof).toContain('scannerTransportConfigured');
+    expect(smokeProof).toContain('readinessValuesStored: false');
+    expect(smokeProof).not.toContain('Authorization: `Bearer ${token}` } })\n  : { response: null, body: null };\n\nconst dashboard');
   });
 
   it('does not weaken read-only workflow permissions or persist evidence back to git', () => {
