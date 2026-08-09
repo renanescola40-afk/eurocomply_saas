@@ -20,6 +20,7 @@ import {
 
 const SHA = 'a'.repeat(40);
 const RUN_ID = 12345;
+const WORKFLOW_PATH = '.github/workflows/supabase-live-rls-validation.yml';
 
 type EvidenceCase = {
   table: string;
@@ -140,11 +141,12 @@ function validSourceEvidence(): RuntimeEvidence {
 }
 
 describe('Supabase RLS exact-SHA runtime evidence', () => {
-  it('selects only a successful exact-main-SHA run', () => {
+  it('selects only a successful exact-main-SHA run from the canonical workflow path', () => {
     const selected = selectExactShaRun([
-      { id: 1, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'failure', updated_at: '2026-07-18T00:00:00Z' },
-      { id: 2, head_sha: SHA, head_branch: 'feature', status: 'completed', conclusion: 'success', updated_at: '2026-07-18T01:00:00Z' },
-      { id: RUN_ID, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-07-18T02:00:00Z' },
+      { id: 1, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'failure', updated_at: '2026-07-18T00:00:00Z' },
+      { id: 2, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'feature', status: 'completed', conclusion: 'success', updated_at: '2026-07-18T01:00:00Z' },
+      { id: 3, path: '.github/workflows/other.yml', head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-07-18T01:30:00Z' },
+      { id: RUN_ID, name: `Supabase live RLS proof for ${SHA}`, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-07-18T02:00:00Z' },
     ], SHA);
 
     expect(selected?.id).toBe(RUN_ID);
@@ -196,6 +198,7 @@ describe('Supabase RLS exact-SHA runtime evidence', () => {
 
   it('uses a read-only protected workflow and never commits runtime evidence', () => {
     const workflow = readFileSync('.github/workflows/supabase-live-rls-validation.yml', 'utf8');
+    const fetcher = readFileSync('scripts/enterprise/fetch-supabase-rls-evidence.mjs', 'utf8');
 
     expect(workflow).toContain('push:\n    branches: [main]');
     expect(workflow).toContain('environment: supabase-live-rls-validation');
@@ -207,5 +210,7 @@ describe('Supabase RLS exact-SHA runtime evidence', () => {
     expect(workflow).not.toContain('git push');
     expect(workflow).not.toContain('gh pr create');
     expect(workflow).not.toContain('pull_request_target');
+    expect(fetcher).toContain("const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`");
+    expect(fetcher).toContain('run?.path === WORKFLOW_PATH');
   });
 });
