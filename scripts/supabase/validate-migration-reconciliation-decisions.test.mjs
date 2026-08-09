@@ -73,8 +73,9 @@ function acceptedDocument() {
   });
   Object.assign(document.decisions[1], {
     classification: 'PENDING_DEPLOYMENT',
-    rationale: 'The migration is absent from the target and passed ordered staging execution.',
-    stagedExecutionEvidenceReference: 'evidence/staging-run#pending',
+    rationale: 'The target schema evidence proves the migration state is absent and requires an ordered protected staging rehearsal before production.',
+    schemaEvidenceReference: 'evidence/schema-dump#pending-absent',
+    stagedExecutionEvidenceReference: null,
     deployOrderDecision: 1,
     rollbackReference: 'runbooks/rollback#pending',
     reviewer: 'Database Reviewer Two',
@@ -153,7 +154,7 @@ test('generates a non-crediting template bound to the inventory and release SHA'
   assert.equal(template.independentApprover, null);
 });
 
-test('accepts complete evidence-bound decisions without authorizing a production write', () => {
+test('accepts evidence-bound pending decisions for protected staging without authorizing production', () => {
   const { inventory, inventoryBytes, document } = acceptedDocument();
   const result = evaluateMigrationReconciliationDecisions({
     inventory,
@@ -164,11 +165,29 @@ test('accepts complete evidence-bound decisions without authorizing a production
   });
 
   assert.equal(result.accepted, true);
-  assert.equal(result.decisionStatus, 'RECONCILIATION_ACCEPTED');
+  assert.equal(result.decisionStatus, 'RECONCILIATION_ACCEPTED_FOR_STAGING');
   assert.equal(result.counts.acceptedDecisions, 4);
   assert.equal(result.plans.pendingDeployment[0].deployOrderDecision, 1);
+  assert.equal(result.plans.pendingDeployment[0].stagedExecutionEvidenceReference, null);
   assert.equal(result.safety.productionWriteAuthorized, false);
   assert.equal(result.deploymentAuthorization, 'NOT_AUTHORIZED');
+});
+
+test('requires schema evidence before a pending migration can enter staging planning', () => {
+  const { inventory, inventoryBytes, document } = acceptedDocument();
+  document.decisions[1].schemaEvidenceReference = null;
+  reseal(document);
+
+  const result = evaluateMigrationReconciliationDecisions({
+    inventory,
+    inventoryBytes,
+    decisionsDocument: document,
+    expectedReleaseSha: releaseSha,
+    now,
+  });
+
+  assert.equal(result.accepted, false);
+  assert.ok(result.failures.includes('decisions[1].pending_schema_evidence_required'));
 });
 
 test('fails closed when a sealed decision is changed', () => {
@@ -210,9 +229,9 @@ test('rejects duplicate pending deployment order numbers', () => {
   Object.assign(document.decisions[3], {
     classification: 'PENDING_DEPLOYMENT',
     rationale: 'A second pending item with a conflicting order.',
-    schemaEvidenceReference: null,
+    schemaEvidenceReference: 'evidence/schema-dump#second-absent',
     archivalMappingReference: null,
-    stagedExecutionEvidenceReference: 'evidence/staging-run#second',
+    stagedExecutionEvidenceReference: null,
     deployOrderDecision: 1,
     rollbackReference: 'runbooks/rollback#second',
   });
