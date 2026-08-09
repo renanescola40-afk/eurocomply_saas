@@ -280,10 +280,10 @@ jobs:
               echo '### Child workflow runs'
               jq -r '.stages | to_entries[] | [.key, .value.runId, .value.conclusion] | @tsv' "$OUTPUT_DIR/bootstrap-state.json" |
                 while IFS=$'\t' read -r stage run_id conclusion; do
-                  printf -- '- %s: run `%s` — `%s`\n' "$stage" "$run_id" "$conclusion"
+                  printf -- "- %s: run \`%s\` — \`%s\`\n" "$stage" "$run_id" "$conclusion"
                 done
             else
-              echo '- Status: `bootstrap_state_missing`'
+              echo "- Status: \`bootstrap_state_missing\`"
             fi
             echo
             echo '- Production write authorized: no'
