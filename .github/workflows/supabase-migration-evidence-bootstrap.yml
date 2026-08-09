@@ -278,8 +278,10 @@ jobs:
               echo "- Status: \`$(jq -r '.status' "$OUTPUT_DIR/bootstrap-state.json")\`"
               echo
               echo '### Child workflow runs'
-              # shellcheck disable=SC2016 -- jq interpolation is intentionally single-quoted.
-              jq -r '.stages | to_entries[] | "- \(.key): run `\(.value.runId)` — `\(.value.conclusion)`"' "$OUTPUT_DIR/bootstrap-state.json" || true
+              jq -r '.stages | to_entries[] | [.key, .value.runId, .value.conclusion] | @tsv' "$OUTPUT_DIR/bootstrap-state.json" |
+                while IFS=$'\t' read -r stage run_id conclusion; do
+                  printf -- '- %s: run `%s` — `%s`\n' "$stage" "$run_id" "$conclusion"
+                done
             else
               echo '- Status: `bootstrap_state_missing`'
             fi
