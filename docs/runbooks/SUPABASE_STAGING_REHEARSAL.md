@@ -2,51 +2,85 @@
 
 ## Purpose
 
-Validate the accepted migration reconciliation against an isolated production-like Supabase project before any production change request. This process is fail-closed and never authorizes an unrestricted `supabase db push`.
+Validate the exact pending migration plan on an isolated production-like Supabase project before any production change request. This process is fail-closed and never authorizes unrestricted `supabase db push`.
+
+## Provenance model
+
+The **subject release SHA** remains the immutable commit whose migrations were reviewed. Current `main` may advance only through canonical migration-evidence commits.
+
+For staging, the only permitted evidence files between the subject SHA and current `main` are:
+
+- `docs/security/evidence/runtime/supabase-migration-reconciliation-decisions.json`;
+- `docs/security/evidence/accepted/supabase-staging-rehearsal-result.json`.
+
+Any code, workflow, migration or unrelated file change invalidates the lineage.
 
 ## Preconditions
 
-- The exact current `main` SHA has a successful `Supabase Migration Reconciliation` artifact.
-- Every migration is reviewed and classified.
-- `REQUIRES_SPLIT_REVIEW` count is zero.
-- The staging project ref and database URL are different from production.
+- Successful `Supabase Migration Execution Plan` for the subject SHA.
+- Zero unresolved split-review items upstream.
+- Staging project and database are different from production.
 - A staging backup or disposable clone exists.
 - Operator and approver are different people.
 
-## Execution model
+## Phase 1 — generate immutable staging plan
 
-1. Dispatch `Supabase Staging Rehearsal` with the successful reconciliation run ID.
-2. Compile migrations into deterministic batches of at most 10.
-3. Keep history-repair candidates separate from migrations whose SQL is genuinely pending.
-4. Execute each batch manually in the approved staging window.
-5. After every batch retain:
-   - migration history before and after;
-   - schema diff;
-   - tenant-isolation/RLS result;
-   - authenticated application smoke result;
-   - rollback rehearsal evidence.
-6. Complete the reviewed result JSON with the operator and independent approver.
-7. Rerun the workflow to validate and seal the attestation.
+Run **Supabase Staging Rehearsal** with:
+
+- `release_sha`: immutable subject SHA;
+- `execution_plan_run_id`: successful Execution Plan run.
+
+When the canonical reviewed result does not yet exist, the workflow intentionally exits fail-closed after uploading `staging-rehearsal-plan.json`.
+
+The plan is compiled directly from the modern execution-plan artifact and contains the exact filename, SHA-256, order and rollback reference of each pending migration. Every batch remains `executionAuthorized: false`.
+
+## Phase 2 — execute staging manually
+
+Execute the generated batches manually in the approved staging window. After every batch retain:
+
+- migration history before and after;
+- schema diff;
+- tenant-isolation/RLS evidence;
+- authenticated application smoke evidence;
+- rollback rehearsal evidence.
+
+Do not run these batches against production.
+
+## Phase 3 — submit reviewed staging result
+
+Copy the staging-result template to the canonical path:
+
+`docs/security/evidence/accepted/supabase-staging-rehearsal-result.json`
+
+Populate:
+
+- immutable subject SHA;
+- SHA-256 digest of the exact `staging-rehearsal-plan.json`;
+- staging and production project references;
+- distinct operator and approver;
+- real start/completion timestamps;
+- one passing evidence set for every planned batch.
+
+Commit only canonical evidence files. Rerun **Supabase Staging Rehearsal** with the same subject SHA and Execution Plan run ID.
+
+## Passing attestation
+
+A successful run emits `STAGING_REHEARSAL_PASSED` and seals:
+
+- subject SHA;
+- exact plan digest;
+- reviewed result digest;
+- staged migration set digest;
+- exact staged filename/SHA-256 set;
+- operator and approver;
+- batch count and timestamps.
+
+The attestation still sets production authorization to false.
 
 ## Stop conditions
 
-Stop immediately when:
+Stop immediately when staging resolves to production, a SQL digest differs, migration order changes, a batch fails any required check, operator equals approver, or evidence lineage contains non-canonical changes.
 
-- staging resolves to the production project;
-- a SQL digest differs from the reconciliation;
-- migration order is duplicated or changes;
-- a batch fails schema, RLS, smoke or rollback validation;
-- operator and approver are the same person;
-- the source SHA is no longer current `main`.
+## Next step
 
-## Output
-
-A passing run produces `STAGING_REHEARSAL_PASSED` for the exact SHA and immutable source/result digests. It does not authorize production execution. The next step is a separately approved bounded production change request with backup/PITR, maintenance window, incident commander and rollback owner.
-
-## Prohibited shortcuts
-
-- Do not use `supabase db push --include-all`.
-- Do not point the rehearsal at production.
-- Do not repair migration history without object-level proof.
-- Do not treat repository checks as runtime evidence.
-- Do not merge a hand-written `passed` JSON without workflow provenance.
+Create the canonical bounded production change request and run `Supabase Bounded Production Change`. That compiler permits only the exact migration set proven by this staging attestation.
