@@ -36,7 +36,7 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
     expect(workflow).toContain("github.event.workflow_run.conclusion == 'success'");
   });
 
-  it('uses stable workflow paths instead of dynamic run-name text', () => {
+  it('uses the workflow definition path instead of dynamic run-name text', () => {
     for (const path of [
       '.github/workflows/upload-security-ci.yml',
       '.github/workflows/branch-protection-runtime-proof.yml',
@@ -44,7 +44,7 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
       '.github/workflows/supabase-live-rls-validation.yml',
       '.github/workflows/production-runtime-proof.yml',
     ]) {
-      expect(workflow).toContain(`github.event.workflow_run.path == '${path}'`);
+      expect(workflow).toContain(`github.event.workflow.path == '${path}'`);
     }
 
     expect(authFetcher).toContain("const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`");
@@ -56,18 +56,18 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
   });
 
   it('requires the triggering producer but keeps other discovery fail-closed and optional', () => {
-    expect(workflow).toContain("AUTH_RBAC_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/auth-rbac-runtime-proof.yml' && 'true' || 'false' }}");
-    expect(workflow).toContain("SUPABASE_RLS_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/supabase-live-rls-validation.yml' && 'true' || 'false' }}");
-    expect(workflow).toContain("PRODUCTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/production-runtime-proof.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("AUTH_RBAC_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/auth-rbac-runtime-proof.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("SUPABASE_RLS_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/supabase-live-rls-validation.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("PRODUCTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/production-runtime-proof.yml' && 'true' || 'false' }}");
   });
 
-  it('promotes deployment smoke and release-SHA lineage from a successful production bundle', () => {
+  it('promotes only normalized deployment smoke from a successful production bundle', () => {
     expect(productionFetcher).toContain("const DEPLOYMENT_SMOKE_PATH = 'docs/security/evidence/runtime/deployment-smoke-validation.json'");
     expect(productionFetcher).toContain("const RELEASE_SHA_PATH = 'docs/security/evidence/runtime/runtime-release-sha-validation.json'");
-    expect(productionFetcher).toContain('DEPLOYMENT_SMOKE_PATH,');
-    expect(productionFetcher).toContain('RELEASE_SHA_PATH,');
+    expect(productionFetcher).toContain('normalizeDeploymentSmokeEvidence');
     expect(productionFetcher).toContain('rmSync(join(root, DEPLOYMENT_SMOKE_PATH), { force: true })');
     expect(productionFetcher).toContain('rmSync(join(root, RELEASE_SHA_PATH), { force: true })');
+    expect(productionFetcher).not.toContain('for (const [path, evidence] of Object.entries(bundle))');
   });
 
   it('retains only redacted readiness categories for failed production probes', () => {
