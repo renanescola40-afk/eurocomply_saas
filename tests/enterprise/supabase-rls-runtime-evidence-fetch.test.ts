@@ -165,8 +165,10 @@ describe('Supabase RLS exact-SHA runtime evidence', () => {
 
   it('closes the authoritative P0 Supabase entry with the producer provenance shape', () => {
     const entry = p0EvidenceCatalog.find((candidate) => candidate.item === 'Supabase live RLS validation completed');
-    expect(entry).toBeDefined();
-    expect(entry?.validator(validSourceEvidence(), {
+    const validator = entry?.validator;
+    expect(validator).toBeDefined();
+    if (!validator) throw new Error('Supabase P0 validator missing');
+    expect(validator(validSourceEvidence(), {
       expectedRepository: REPOSITORY,
       expectedBranch: 'main',
       expectedCommitSha: SHA,
