@@ -19,13 +19,6 @@ function sanitizeErrorEvent(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
 
 export async function register() {
   const runtime = process.env.NEXT_RUNTIME;
-
-  if (runtime === 'nodejs') {
-    // Preserve the existing server-only environment normalization before Sentry
-    // reads runtime configuration.
-    await import('./instrumentation-node');
-  }
-
   const isEdge = runtime === 'edge';
   const dsn = isEdge
     ? process.env.NEXT_PUBLIC_SENTRY_DSN
