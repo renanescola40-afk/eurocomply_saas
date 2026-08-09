@@ -1,7 +1,7 @@
 {
   "schema": "risck-comply.supabase-bounded-production-change-request.v1",
-  "releaseSha": "REPLACE_WITH_EXACT_MAIN_SHA",
-  "rehearsalDigest": "REPLACE_WITH_SHA256_OF_ACCEPTED_REHEARSAL_JSON",
+  "releaseSha": "REPLACE_WITH_IMMUTABLE_SUBJECT_SHA",
+  "rehearsalDigest": "REPLACE_WITH_SHA256_OF_STAGING_REHEARSAL_ATTESTATION_JSON",
   "changeType": "BOUNDED_SUPABASE_MIGRATION_CHANGE",
   "productionProjectRef": "REPLACE_WITH_CONFIDENTIAL_REFERENCE",
   "stagingProjectRef": "REPLACE_WITH_CONFIDENTIAL_REFERENCE",
@@ -58,12 +58,18 @@
         "rls_cross_tenant",
         "authenticated_smoke"
       ],
-      "migrations": []
+      "migrations": [
+        {
+          "filename": "REPLACE_WITH_EXACT_STAGED_FILENAME",
+          "sha256": "REPLACE_WITH_EXACT_STAGED_SHA256"
+        }
+      ]
     }
   ],
   "truthBoundary": {
     "templateIsEvidence": false,
     "productionWriteAuthorizedByTemplate": false,
+    "onlyExactStagedMigrationSetMayBeRequested": true,
     "unrestrictedDbPushAllowed": false
   }
 }

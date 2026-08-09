@@ -9,7 +9,7 @@ const base = {
   decisionResult: {
     schema: 'risck-comply.supabase-migration-reconciliation-decision-result.v1',
     accepted: true,
-    decisionStatus: 'RECONCILIATION_ACCEPTED',
+    decisionStatus: 'RECONCILIATION_ACCEPTED_FOR_STAGING',
     releaseSha: sha,
     inventorySha256: digest,
   },
@@ -21,19 +21,23 @@ const base = {
       sha256: digest,
       version: '20260101000000',
       deployOrderDecision: 1,
-      stagedExecutionEvidenceReference: 'artifact://staging/1',
+      schemaEvidenceReference: 'artifact://live-schema/absent',
+      stagedExecutionEvidenceReference: null,
       rollbackReference: 'runbook://rollback/1',
     }],
   },
   repairPlan: { releaseSha: sha, inventorySha256: digest, items: [] },
 };
 
-test('produces bounded non-authorizing batches', () => {
+test('produces bounded non-authorizing batches before staging occurs', () => {
   const result = buildExecutionPlan(base);
   assert.equal(result.accepted, true);
+  assert.equal(result.status, 'PLANNING_COMPLETE_AWAITING_STAGING_REHEARSAL');
   assert.equal(result.batches.length, 1);
   assert.equal(result.batches[0].executionAuthorized, false);
+  assert.equal(result.batches[0].preconditions.stagingRehearsalRequired, true);
   assert.equal(result.safety.productionWriteAuthorized, false);
+  assert.equal(result.safety.stagingEvidenceRequiredBeforeProduction, true);
 });
 
 test('rejects unaccepted reconciliation decisions', () => {
@@ -42,7 +46,7 @@ test('rejects unaccepted reconciliation decisions', () => {
     decisionResult: { ...base.decisionResult, accepted: false },
   });
   assert.equal(result.accepted, false);
-  assert.ok(result.failures.includes('reconciliation_not_accepted'));
+  assert.ok(result.failures.includes('reconciliation_not_accepted_for_staging'));
 });
 
 test('rejects duplicate deployment order', () => {
@@ -55,10 +59,11 @@ test('rejects duplicate deployment order', () => {
   assert.ok(result.failures.includes('duplicate_order:1'));
 });
 
-test('requires staging and rollback evidence', () => {
-  const item = { ...base.pendingPlan.items[0], stagedExecutionEvidenceReference: null, rollbackReference: null };
+test('requires schema evidence and rollback plan but not completed staging evidence', () => {
+  const item = { ...base.pendingPlan.items[0], schemaEvidenceReference: null, rollbackReference: null };
   const result = buildExecutionPlan({ ...base, pendingPlan: { ...base.pendingPlan, items: [item] } });
   assert.equal(result.accepted, false);
-  assert.ok(result.failures.some((failure) => failure.startsWith('missing_staging_evidence:')));
+  assert.ok(result.failures.some((failure) => failure.startsWith('missing_schema_evidence:')));
   assert.ok(result.failures.some((failure) => failure.startsWith('missing_rollback_reference:')));
+  assert.equal(result.failures.some((failure) => failure.startsWith('missing_staging_evidence:')), false);
 });

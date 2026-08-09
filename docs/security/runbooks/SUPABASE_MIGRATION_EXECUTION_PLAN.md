@@ -2,51 +2,64 @@
 
 ## Purpose
 
-Compile an accepted, sealed migration reconciliation decision set into bounded execution batches without executing SQL or changing migration history.
+Compile an accepted human classification set into deterministic staging/deployment batches without executing SQL or changing migration history.
+
+The plan is intentionally **pre-staging**. Requiring completed staging evidence here would create a circular dependency because staging needs the plan first.
+
+## Provenance
+
+The workflow receives:
+
+- immutable **subject release SHA**;
+- successful `Supabase Migration Reconciliation Decision Gate` run ID.
+
+It checks that the subject SHA is an ancestor of current `main` and that the lineage contains only the canonical migration decisions evidence file. The successful Decision Gate run must belong to the current evidence commit.
 
 ## Inputs
 
-The workflow consumes the successful exact-SHA artifact from **Supabase Migration Reconciliation Decision Gate**:
+The decision artifact must contain:
 
-- `decision-result.json`;
+- `decision-result.json` with `accepted: true` and `RECONCILIATION_ACCEPTED_FOR_STAGING`;
 - `pending-deployment-plan.json`;
 - `migration-history-repair-candidates.json`.
 
-The decision result must be `RECONCILIATION_ACCEPTED`. Missing staging or rollback evidence, duplicate deployment order, digest mismatch, wrong SHA, or an unaccepted decision set fails closed.
+For each `PENDING_DEPLOYMENT` item the plan requires:
+
+- exact schema evidence reference;
+- unique positive deployment order;
+- rollback reference.
+
+It does **not** pretend staging already occurred. `stagedExecutionEvidenceReference` may remain null until the protected staging rehearsal is completed.
 
 ## Output
 
 `execution-plan.json` contains:
 
 - ordered batches of at most 1–25 migrations;
-- exact migration filename, digest, version and reviewed order;
-- staging and rollback references per migration;
-- history-repair candidates kept separate from deployment batches;
-- mandatory batch preconditions and postconditions;
-- global backup/PITR, staging clone, maintenance window, operator, approver and dry-run placeholders.
+- exact filename, SHA-256, version and reviewed order;
+- schema evidence and rollback reference for every pending migration;
+- history-repair candidates kept separate from SQL batches;
+- mandatory staging preconditions and postconditions;
+- `executionAuthorized: false` for every batch;
+- `productionWriteAuthorized: false` globally.
 
-Every batch is emitted with `executionAuthorized: false`. The global safety boundary fixes dry-run and production-write authorization to `false`.
+Expected status:
 
-## Required evidence before a later execution workflow may exist
+`PLANNING_COMPLETE_AWAITING_STAGING_REHEARSAL`
 
-For the exact release SHA:
+## Next step
 
-1. Fresh backup or PITR evidence.
-2. Production-like staging clone validation.
-3. Successful exact-plan dry-run.
-4. Approved maintenance window.
-5. Named database operator.
-6. Independent approver who did not perform the migration classifications.
-7. Tested rollback reference for every pending migration.
-8. Post-batch schema, migration-history, RLS and application-smoke checks.
+Run `Supabase Staging Rehearsal` with the same immutable subject SHA and this workflow's successful run ID.
+
+The staging workflow first generates an immutable plan. Operators then execute those exact batches manually on an isolated production-like staging project and retain migration-history, schema, RLS, authenticated-smoke and rollback evidence. Only a separately reviewed result can produce `STAGING_REHEARSAL_PASSED`.
 
 ## Separation of duties
 
-- `ALREADY_PRESENT_IN_SCHEMA` items are only history-repair candidates and must never be mixed into SQL deployment batches.
-- `PENDING_DEPLOYMENT` items are ordered and batched but remain non-authorized.
-- `SUPERSEDED` and `ARCHIVE_LEGACY` items are excluded from execution.
-- No unrestricted `supabase db push` is allowed while issue #1415 remains open.
+- `ALREADY_PRESENT_IN_SCHEMA` remains a history-repair candidate only.
+- `PENDING_DEPLOYMENT` is planned for staging, not authorized for production.
+- `SUPERSEDED` and `ARCHIVE_LEGACY` never enter SQL batches.
+- Any remaining `REQUIRES_SPLIT_REVIEW` prevents classification acceptance upstream.
 
 ## Safety boundary
 
-This workflow does not connect to Supabase, execute SQL, run migration repair, authorize a dry-run, authorize production, or close issue #1415. It produces a reviewable plan only.
+This workflow does not connect to Supabase, execute SQL, repair history, perform staging, authorize production, or allow unrestricted `supabase db push`.

@@ -1,14 +1,25 @@
 name: Supabase Staging Rehearsal
 
 on:
+  pull_request:
+    paths:
+      - 'scripts/supabase/compile-staging-rehearsal-from-execution-plan.mjs'
+      - 'scripts/supabase/compile-staging-rehearsal-from-execution-plan.test.mjs'
+      - 'scripts/supabase/validate-staging-rehearsal-result.mjs'
+      - 'scripts/supabase/validate-staging-rehearsal-result.test.mjs'
+      - 'scripts/supabase/validate-migration-evidence-lineage.mjs'
+      - 'docs/security/evidence/accepted/supabase-staging-rehearsal-result.json'
+      - 'docs/security/evidence/templates/SUPABASE_STAGING_REHEARSAL_RESULT.template.json'
+      - 'docs/runbooks/SUPABASE_STAGING_REHEARSAL.md'
+      - '.github/workflows/supabase-staging-rehearsal.yml'
   workflow_dispatch:
     inputs:
-      reconciliation_run_id:
-        description: Successful Supabase Migration Reconciliation workflow run ID
+      release_sha:
+        description: Immutable subject SHA under migration review
         required: true
         type: string
-      rehearsal_result_path:
-        description: Repository-relative reviewed rehearsal result JSON
+      execution_plan_run_id:
+        description: Successful Supabase Migration Execution Plan workflow run ID
         required: true
         type: string
 
@@ -17,70 +28,150 @@ permissions:
   actions: read
 
 concurrency:
-  group: supabase-staging-rehearsal-${{ github.ref }}
+  group: supabase-staging-rehearsal-${{ inputs.release_sha || github.ref }}
   cancel-in-progress: false
 
 jobs:
   validate-contract:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --check scripts/supabase/compile-staging-rehearsal-plan.mjs
-      - run: node --check scripts/supabase/validate-staging-rehearsal-result.mjs
-      - run: node scripts/supabase/test-staging-rehearsal-contract.mjs
+      - run: |
+          node --check scripts/supabase/compile-staging-rehearsal-from-execution-plan.mjs
+          node --check scripts/supabase/validate-staging-rehearsal-result.mjs
+          node --check scripts/supabase/validate-migration-evidence-lineage.mjs
+      - run: |
+          node --test scripts/supabase/compile-staging-rehearsal-from-execution-plan.test.mjs
+          node --test scripts/supabase/validate-staging-rehearsal-result.test.mjs
+          node --test scripts/supabase/validate-migration-evidence-lineage.test.mjs
 
   compile-and-attest:
+    if: github.event_name == 'workflow_dispatch'
     needs: validate-contract
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: supabase-staging-rehearsal
+    timeout-minutes: 20
+    env:
+      SUBJECT_SHA: ${{ inputs.release_sha }}
+      SOURCE_RUN_ID: ${{ inputs.execution_plan_run_id }}
+      RESULT_PATH: docs/security/evidence/accepted/supabase-staging-rehearsal-result.json
+      PLAN_DIR: artifacts/supabase-staging-rehearsal
+      RESULT_DIR: artifacts/supabase-staging-rehearsal-result
     steps:
-      - uses: actions/checkout@v4
-      - name: Resolve exact current main SHA
-        id: sha
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Validate inputs
+        shell: bash
         run: |
-          current_main="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
-          test "$current_main" = "$GITHUB_SHA"
-          echo "value=$current_main" >> "$GITHUB_OUTPUT"
-      - name: Verify source run
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RUN_ID: ${{ inputs.reconciliation_run_id }}
-        run: |
-          test "$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq .conclusion)" = success
-          test "$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq .head_sha)" = "$GITHUB_SHA"
-      - uses: actions/download-artifact@v4
+          set -euo pipefail
+          [[ "$SUBJECT_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          echo "SUBJECT_SHA=${SUBJECT_SHA,,}" >> "$GITHUB_ENV"
+
+      - name: Checkout current main evidence commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          name: supabase-migration-reconciliation-${{ github.sha }}
-          run-id: ${{ inputs.reconciliation_run_id }}
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify subject and evidence lineage
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          CURRENT_SHA="$(git rev-parse HEAD)"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$CURRENT_SHA"
+          git cat-file -e "$SUBJECT_SHA^{commit}"
+          git merge-base --is-ancestor "$SUBJECT_SHA" "$CURRENT_SHA"
+          mapfile -t CHANGED < <(git diff --name-only "$SUBJECT_SHA".."$CURRENT_SHA")
+          node scripts/supabase/validate-migration-evidence-lineage.mjs "$SUBJECT_SHA" "$CURRENT_SHA" staging "${CHANGED[@]}"
+          echo "CURRENT_SHA=$CURRENT_SHA" >> "$GITHUB_ENV"
+
+      - name: Verify source execution plan run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}")"
+          PLAN_HEAD="$(jq -r '.head_sha' <<<"$RUN_JSON")"
+          test "$(jq -r '.conclusion' <<<"$RUN_JSON")" = success
+          test "$(jq -r '.path' <<<"$RUN_JSON")" = '.github/workflows/supabase-migration-execution-plan.yml'
+          git cat-file -e "$PLAN_HEAD^{commit}"
+          git merge-base --is-ancestor "$SUBJECT_SHA" "$PLAN_HEAD"
+          git merge-base --is-ancestor "$PLAN_HEAD" "$CURRENT_SHA"
+
+      - name: Download immutable execution plan
+        uses: actions/download-artifact@v4
+        with:
+          name: supabase-migration-execution-plan-${{ inputs.release_sha }}
+          run-id: ${{ inputs.execution_plan_run_id }}
           github-token: ${{ github.token }}
-          path: artifacts/source-reconciliation
-      - name: Compile bounded rehearsal plan
-        env:
-          EXPECTED_SHA: ${{ steps.sha.outputs.value }}
-          REHEARSAL_BATCH_SIZE: '10'
+          path: artifacts/source-execution-plan
+
+      - name: Compile bounded staging rehearsal plan
+        shell: bash
         run: |
-          source_file="$(find artifacts/source-reconciliation -name '*.json' | head -n 1)"
-          test -n "$source_file"
-          node scripts/supabase/compile-staging-rehearsal-plan.mjs "$source_file" artifacts/supabase-staging-rehearsal
-      - name: Validate reviewed rehearsal result
-        env:
-          EXPECTED_SHA: ${{ steps.sha.outputs.value }}
+          set -euo pipefail
+          EXECUTION_PLAN="$(find artifacts/source-execution-plan -name execution-plan.json -print -quit)"
+          test -n "$EXECUTION_PLAN"
+          EXPECTED_SHA="$SUBJECT_SHA" node scripts/supabase/compile-staging-rehearsal-from-execution-plan.mjs \
+            "$EXECUTION_PLAN" \
+            "$PLAN_DIR"
+
+      - name: Detect reviewed staging result
+        id: result
+        shell: bash
         run: |
-          test -f "${{ inputs.rehearsal_result_path }}"
-          node scripts/supabase/validate-staging-rehearsal-result.mjs \
-            artifacts/supabase-staging-rehearsal/staging-rehearsal-plan.json \
-            "${{ inputs.rehearsal_result_path }}" \
-            artifacts/supabase-staging-rehearsal-result
-      - uses: actions/upload-artifact@v7
+          set -euo pipefail
+          if [ -f "$RESULT_PATH" ]; then
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate reviewed staging result and seal attestation
+        if: steps.result.outputs.exists == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_SHA="$SUBJECT_SHA" node scripts/supabase/validate-staging-rehearsal-result.mjs \
+            "$PLAN_DIR/staging-rehearsal-plan.json" \
+            "$RESULT_PATH" \
+            "$RESULT_DIR"
+
+      - name: Enforce real staging execution evidence
+        if: steps.result.outputs.exists != 'true'
+        shell: bash
+        run: |
+          echo "No reviewed staging result exists at $RESULT_PATH." >&2
+          echo 'Download the generated plan, execute its batches manually on isolated staging, retain runtime evidence, then commit only the canonical result JSON.' >&2
+          exit 2
+
+      - name: Publish safety summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Supabase staging rehearsal'
+            echo
+            echo "- Subject release SHA: \`$SUBJECT_SHA\`"
+            echo "- Evidence commit SHA: \`${CURRENT_SHA:-unresolved}\`"
+            echo '- Automatic SQL execution: no'
+            echo '- Production database write: no'
+            echo '- Passing attestation requires migration history, schema, RLS, authenticated smoke and rollback evidence for every batch'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload immutable staging plan and attestation
+        if: always()
+        uses: actions/upload-artifact@v7
         with:
-          name: supabase-staging-rehearsal-${{ github.sha }}
+          name: supabase-staging-rehearsal-${{ env.SUBJECT_SHA }}
           path: |
             artifacts/supabase-staging-rehearsal
             artifacts/supabase-staging-rehearsal-result

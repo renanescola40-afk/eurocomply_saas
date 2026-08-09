@@ -6,7 +6,10 @@ on:
       - 'scripts/supabase/generate-migration-reconciliation-decision-template.mjs'
       - 'scripts/supabase/seal-migration-reconciliation-decisions.mjs'
       - 'scripts/supabase/validate-migration-reconciliation-decisions.mjs'
-      - 'scripts/supabase/validate-migration-reconciliation-decisions.test.mjs'
+      - 'scripts/supabase/validate-migration-classification-decisions.mjs'
+      - 'scripts/supabase/validate-migration-classification-decisions.test.mjs'
+      - 'scripts/supabase/validate-migration-evidence-lineage.mjs'
+      - 'scripts/supabase/validate-migration-evidence-lineage.test.mjs'
       - 'docs/security/evidence/runtime/supabase-migration-reconciliation-decisions.json'
       - 'docs/security/runbooks/SUPABASE_MIGRATION_DECISION_GATE.md'
       - '.github/workflows/supabase-migration-reconciliation-decision-gate.yml'
@@ -16,18 +19,19 @@ on:
       - 'scripts/supabase/generate-migration-reconciliation-decision-template.mjs'
       - 'scripts/supabase/seal-migration-reconciliation-decisions.mjs'
       - 'scripts/supabase/validate-migration-reconciliation-decisions.mjs'
-      - 'scripts/supabase/validate-migration-reconciliation-decisions.test.mjs'
+      - 'scripts/supabase/validate-migration-classification-decisions.mjs'
+      - 'scripts/supabase/validate-migration-evidence-lineage.mjs'
       - 'docs/security/evidence/runtime/supabase-migration-reconciliation-decisions.json'
       - 'docs/security/runbooks/SUPABASE_MIGRATION_DECISION_GATE.md'
       - '.github/workflows/supabase-migration-reconciliation-decision-gate.yml'
   workflow_dispatch:
     inputs:
       release_sha:
-        description: Exact full 40-character current main SHA reviewed by the migration inventory
+        description: Immutable subject SHA whose migration inventory is under review
         required: true
         type: string
       source_run_id:
-        description: Workflow run ID of Supabase Production Migration Dry Run containing the inventory artifact
+        description: Workflow run ID of Supabase Production Migration Dry Run for the subject SHA
         required: true
         type: string
 
@@ -47,69 +51,67 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
+      - run: npm ci
       - name: Validate script syntax
         run: |
           node --check scripts/supabase/generate-migration-reconciliation-decision-template.mjs
           node --check scripts/supabase/seal-migration-reconciliation-decisions.mjs
           node --check scripts/supabase/validate-migration-reconciliation-decisions.mjs
-
+          node --check scripts/supabase/validate-migration-classification-decisions.mjs
+          node --check scripts/supabase/validate-migration-evidence-lineage.mjs
       - name: Test fail-closed decision contracts
-        run: node --test scripts/supabase/validate-migration-reconciliation-decisions.test.mjs
+        run: |
+          node --test scripts/supabase/validate-migration-reconciliation-decisions.test.mjs
+          node --test scripts/supabase/validate-migration-classification-decisions.test.mjs
+          node --test scripts/supabase/validate-migration-evidence-lineage.test.mjs
 
   decision-gate:
-    name: Validate exact-SHA human migration decisions
+    name: Validate subject-SHA human migration decisions
     if: github.event_name == 'workflow_dispatch'
     needs: contract
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: supabase-production-migration-review
     env:
-      TARGET_SHA: ${{ inputs.release_sha }}
+      SUBJECT_SHA: ${{ inputs.release_sha }}
       SOURCE_RUN_ID: ${{ inputs.source_run_id }}
       DECISIONS_PATH: docs/security/evidence/runtime/supabase-migration-reconciliation-decisions.json
       OUTPUT_DIR: artifacts/supabase-migration-reconciliation-decisions
-
     steps:
-      - name: Validate exact release SHA and source run ID
+      - name: Validate inputs
         shell: bash
         run: |
           set -euo pipefail
-          if [[ ! "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
-            echo 'release_sha must be a full 40-character Git SHA' >&2
-            exit 1
-          fi
-          if [[ ! "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]; then
-            echo 'source_run_id must be numeric' >&2
-            exit 1
-          fi
-          echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
+          [[ "$SUBJECT_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          echo "SUBJECT_SHA=${SUBJECT_SHA,,}" >> "$GITHUB_ENV"
 
-      - name: Checkout exact release SHA
+      - name: Checkout current main evidence commit
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: ${{ inputs.release_sha }}
+          ref: main
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify exact current main checkout
+      - name: Verify subject ancestry and current main
+        id: lineage
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          CURRENT_SHA="$(git rev-parse HEAD)"
           MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
-          test "$MAIN_SHA" = "$TARGET_SHA"
+          test "$CURRENT_SHA" = "$MAIN_SHA"
+          git cat-file -e "$SUBJECT_SHA^{commit}"
+          git merge-base --is-ancestor "$SUBJECT_SHA" "$CURRENT_SHA"
+          echo "CURRENT_SHA=$CURRENT_SHA" >> "$GITHUB_ENV"
+          echo "current_sha=$CURRENT_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Verify source workflow run provenance
         shell: bash
@@ -118,7 +120,7 @@ jobs:
         run: |
           set -euo pipefail
           RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}")"
-          test "$(jq -r '.head_sha' <<<"$RUN_JSON")" = "$TARGET_SHA"
+          test "$(jq -r '.head_sha' <<<"$RUN_JSON")" = "$SUBJECT_SHA"
           test "$(jq -r '.path' <<<"$RUN_JSON")" = '.github/workflows/supabase-production-migration-dry-run.yml'
           test "$(jq -r '.event' <<<"$RUN_JSON")" = 'workflow_dispatch'
 
@@ -141,7 +143,7 @@ jobs:
           cp "$INVENTORY_PATH" "$OUTPUT_DIR/source-migration-reconciliation-inventory.json"
           echo "path=$INVENTORY_PATH" >> "$GITHUB_OUTPUT"
 
-      - name: Generate exact-SHA non-crediting decision template
+      - name: Generate subject-SHA non-crediting decision template
         shell: bash
         env:
           INVENTORY_PATH: ${{ steps.inventory.outputs.path }}
@@ -150,7 +152,7 @@ jobs:
           node scripts/supabase/generate-migration-reconciliation-decision-template.mjs \
             "$INVENTORY_PATH" \
             "$OUTPUT_DIR/decision-template.json" \
-            --release-sha="$TARGET_SHA"
+            --release-sha="$SUBJECT_SHA"
 
       - name: Detect submitted decisions
         id: decisions
@@ -164,25 +166,38 @@ jobs:
             cp "$OUTPUT_DIR/decision-template.json" "$OUTPUT_DIR/missing-decisions-template.json"
           fi
 
-      - name: Validate and compile submitted decisions
+      - name: Enforce immutable subject/evidence lineage
+        shell: bash
+        env:
+          DECISIONS_EXIST: ${{ steps.decisions.outputs.exists }}
+        run: |
+          set -euo pipefail
+          mapfile -t CHANGED < <(git diff --name-only "$SUBJECT_SHA".."$CURRENT_SHA")
+          if [ "$DECISIONS_EXIST" = 'true' ]; then
+            node scripts/supabase/validate-migration-evidence-lineage.mjs "$SUBJECT_SHA" "$CURRENT_SHA" decision "${CHANGED[@]}"
+          else
+            node scripts/supabase/validate-migration-evidence-lineage.mjs "$SUBJECT_SHA" "$CURRENT_SHA" template "${CHANGED[@]}"
+          fi
+
+      - name: Validate and compile submitted classifications
         if: steps.decisions.outputs.exists == 'true'
         shell: bash
         env:
           INVENTORY_PATH: ${{ steps.inventory.outputs.path }}
         run: |
           set -euo pipefail
-          node scripts/supabase/validate-migration-reconciliation-decisions.mjs \
+          node scripts/supabase/validate-migration-classification-decisions.mjs \
             "$INVENTORY_PATH" \
             "$DECISIONS_PATH" \
             "$OUTPUT_DIR" \
-            --expected-sha="$TARGET_SHA"
+            --expected-sha="$SUBJECT_SHA"
 
       - name: Enforce presence of reviewed decisions
         if: steps.decisions.outputs.exists != 'true'
         shell: bash
         run: |
           echo "No reviewed decision document exists at $DECISIONS_PATH." >&2
-          echo 'Use the generated exact-SHA template; do not infer or auto-fill classifications.' >&2
+          echo 'Use the generated subject-SHA template; do not infer or auto-fill human approvals.' >&2
           exit 2
 
       - name: Publish safety summary
@@ -192,20 +207,21 @@ jobs:
           {
             echo '## Supabase migration reconciliation decision gate'
             echo
-            echo "- Release SHA: \`$TARGET_SHA\`"
+            echo "- Subject release SHA: \`$SUBJECT_SHA\`"
+            echo "- Evidence commit SHA: \`${CURRENT_SHA:-unresolved}\`"
             echo "- Source workflow run: \`$SOURCE_RUN_ID\`"
             echo '- SQL executed: no'
             echo '- Migration history modified: no'
-            echo '- Dry-run authorized by this gate: no'
+            echo '- Staging execution performed: no'
             echo '- Production write authorized: no'
-            echo '- Human evidence and independent approval remain mandatory'
+            echo '- Pending classifications require protected staging rehearsal before production'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload decision and plan artifacts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: supabase-migration-reconciliation-decisions-${{ env.TARGET_SHA }}
+          name: supabase-migration-reconciliation-decisions-${{ env.SUBJECT_SHA }}
           path: artifacts/supabase-migration-reconciliation-decisions
           if-no-files-found: error
           retention-days: 90

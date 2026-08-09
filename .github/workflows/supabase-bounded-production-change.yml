@@ -1,20 +1,24 @@
 name: Supabase Bounded Production Change
 
 on:
+  pull_request:
+    paths:
+      - 'scripts/supabase/compile-bounded-production-change.mjs'
+      - 'scripts/supabase/test-compile-bounded-production-change.mjs'
+      - 'scripts/supabase/validate-migration-evidence-lineage.mjs'
+      - 'docs/security/evidence/accepted/supabase-bounded-production-change-request.json'
+      - 'docs/security/evidence/templates/supabase-bounded-production-change-request.json'
+      - 'docs/runbooks/SUPABASE_BOUNDED_PRODUCTION_CHANGE.md'
+      - '.github/workflows/supabase-bounded-production-change.yml'
   workflow_dispatch:
     inputs:
       release_sha:
-        description: Exact current main SHA
+        description: Immutable subject SHA whose exact migrations passed staging
         required: true
         type: string
       rehearsal_run_id:
         description: Successful Supabase Staging Rehearsal workflow run ID
         required: true
-        type: string
-      request_path:
-        description: Repository path to reviewed production change request JSON
-        required: true
-        default: docs/security/evidence/templates/supabase-bounded-production-change-request.json
         type: string
 
 permissions:
@@ -22,80 +26,129 @@ permissions:
   actions: read
 
 concurrency:
-  group: supabase-bounded-production-change
+  group: supabase-bounded-production-change-${{ inputs.release_sha || github.ref }}
   cancel-in-progress: false
 
 jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: |
+          node --check scripts/supabase/compile-bounded-production-change.mjs
+          node --check scripts/supabase/validate-migration-evidence-lineage.mjs
+      - run: |
+          node scripts/supabase/test-compile-bounded-production-change.mjs
+          node --test scripts/supabase/validate-migration-evidence-lineage.test.mjs
+
   compile:
     name: Compile bounded production change
-    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    runs-on: ubuntu-24.04
     environment: production-change-approval
     timeout-minutes: 20
+    env:
+      SUBJECT_SHA: ${{ inputs.release_sha }}
+      SOURCE_RUN_ID: ${{ inputs.rehearsal_run_id }}
+      REQUEST_PATH: docs/security/evidence/accepted/supabase-bounded-production-change-request.json
     steps:
-      - name: Checkout exact release SHA
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.release_sha }}
-
-      - name: Verify exact current main SHA
-        env:
-          GH_TOKEN: ${{ github.token }}
-          EXPECTED_SHA: ${{ inputs.release_sha }}
+      - name: Validate inputs
+        shell: bash
         run: |
           set -euo pipefail
-          CURRENT_MAIN="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
-          test "$CURRENT_MAIN" = "$EXPECTED_SHA"
-          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          [[ "$SUBJECT_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          echo "SUBJECT_SHA=${SUBJECT_SHA,,}" >> "$GITHUB_ENV"
+
+      - name: Checkout current main evidence commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify subject and production-evidence lineage
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          CURRENT_SHA="$(git rev-parse HEAD)"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$CURRENT_SHA"
+          git cat-file -e "$SUBJECT_SHA^{commit}"
+          git merge-base --is-ancestor "$SUBJECT_SHA" "$CURRENT_SHA"
+          mapfile -t CHANGED < <(git diff --name-only "$SUBJECT_SHA".."$CURRENT_SHA")
+          node scripts/supabase/validate-migration-evidence-lineage.mjs "$SUBJECT_SHA" "$CURRENT_SHA" production "${CHANGED[@]}"
+          test -f "$REQUEST_PATH"
+          echo "CURRENT_SHA=$CURRENT_SHA" >> "$GITHUB_ENV"
 
       - name: Verify source rehearsal run
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RUN_ID: ${{ inputs.rehearsal_run_id }}
-          EXPECTED_SHA: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
-          CONCLUSION="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq .conclusion)"
-          HEAD_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq .head_sha)"
-          test "$CONCLUSION" = success
-          test "$HEAD_SHA" = "$EXPECTED_SHA"
+          RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}")"
+          REHEARSAL_HEAD="$(jq -r '.head_sha' <<<"$RUN_JSON")"
+          test "$(jq -r '.conclusion' <<<"$RUN_JSON")" = success
+          test "$(jq -r '.path' <<<"$RUN_JSON")" = '.github/workflows/supabase-staging-rehearsal.yml'
+          git cat-file -e "$REHEARSAL_HEAD^{commit}"
+          git merge-base --is-ancestor "$SUBJECT_SHA" "$REHEARSAL_HEAD"
+          git merge-base --is-ancestor "$REHEARSAL_HEAD" "$CURRENT_SHA"
 
-      - name: Download staging rehearsal artifact
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RUN_ID: ${{ inputs.rehearsal_run_id }}
-        run: |
-          set -euo pipefail
-          mkdir -p artifacts/source-rehearsal
-          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "supabase-staging-rehearsal-${{ inputs.release_sha }}" --dir artifacts/source-rehearsal
-          test -f artifacts/source-rehearsal/staging-rehearsal-attestation.json
+      - name: Download exact staging rehearsal artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: supabase-staging-rehearsal-${{ inputs.release_sha }}
+          run-id: ${{ inputs.rehearsal_run_id }}
+          github-token: ${{ github.token }}
+          path: artifacts/source-rehearsal
 
-      - name: Validate request path
-        env:
-          REQUEST_PATH: ${{ inputs.request_path }}
+      - name: Resolve passed staging attestation
+        id: rehearsal
+        shell: bash
         run: |
           set -euo pipefail
-          case "$REQUEST_PATH" in
-            docs/security/evidence/accepted/*.json) ;;
-            *) echo "Request must come from docs/security/evidence/accepted" >&2; exit 1 ;;
-          esac
-          test -f "$REQUEST_PATH"
+          REHEARSAL="$(find artifacts/source-rehearsal -name staging-rehearsal-attestation.json -print -quit)"
+          test -n "$REHEARSAL"
+          echo "path=$REHEARSAL" >> "$GITHUB_OUTPUT"
 
       - name: Compile fail-closed authorization packet
+        shell: bash
         env:
-          REQUEST_PATH: ${{ inputs.request_path }}
+          REHEARSAL_PATH: ${{ steps.rehearsal.outputs.path }}
         run: |
+          set -euo pipefail
           node scripts/supabase/compile-bounded-production-change.mjs \
-            artifacts/source-rehearsal/staging-rehearsal-attestation.json \
+            "$REHEARSAL_PATH" \
             "$REQUEST_PATH" \
             artifacts/supabase-production-change
 
-      - name: Run contract tests
-        run: node scripts/supabase/test-compile-bounded-production-change.mjs
+      - name: Publish safety summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Supabase bounded production change'
+            echo
+            echo "- Subject release SHA: \`$SUBJECT_SHA\`"
+            echo "- Evidence commit SHA: \`${CURRENT_SHA:-unresolved}\`"
+            echo '- Request path is canonical and evidence-only'
+            echo '- Every requested migration must match the exact staged filename and SHA-256 digest'
+            echo '- Backup/restore and independent approval evidence are mandatory'
+            echo '- Automatic production execution remains disabled'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload immutable authorization packet
         uses: actions/upload-artifact@v7
         with:
-          name: supabase-bounded-production-change-${{ inputs.release_sha }}
+          name: supabase-bounded-production-change-${{ env.SUBJECT_SHA }}
           path: artifacts/supabase-production-change
           retention-days: 90
           if-no-files-found: error

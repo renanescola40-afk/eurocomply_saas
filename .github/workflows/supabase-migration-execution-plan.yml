@@ -5,16 +5,18 @@ on:
     paths:
       - 'scripts/supabase/build-migration-execution-plan.mjs'
       - 'scripts/supabase/build-migration-execution-plan.test.mjs'
+      - 'scripts/supabase/validate-migration-evidence-lineage.mjs'
+      - 'scripts/supabase/validate-migration-evidence-lineage.test.mjs'
       - '.github/workflows/supabase-migration-execution-plan.yml'
       - 'docs/security/runbooks/SUPABASE_MIGRATION_EXECUTION_PLAN.md'
   workflow_dispatch:
     inputs:
       release_sha:
-        description: Exact current main SHA
+        description: Immutable subject SHA whose reviewed classifications are being planned
         required: true
         type: string
       decision_run_id:
-        description: Run ID of the accepted migration decision gate artifact
+        description: Successful migration classification decision gate run ID
         required: true
         type: string
       batch_size:
@@ -40,7 +42,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node --check scripts/supabase/build-migration-execution-plan.mjs
-      - run: node --test scripts/supabase/build-migration-execution-plan.test.mjs
+      - run: node --check scripts/supabase/validate-migration-evidence-lineage.mjs
+      - run: |
+          node --test scripts/supabase/build-migration-execution-plan.test.mjs
+          node --test scripts/supabase/validate-migration-evidence-lineage.test.mjs
 
   compile:
     name: Compile non-authorizing migration execution plan
@@ -50,43 +55,49 @@ jobs:
     timeout-minutes: 15
     environment: supabase-production-migration-review
     env:
-      TARGET_SHA: ${{ inputs.release_sha }}
+      SUBJECT_SHA: ${{ inputs.release_sha }}
       SOURCE_RUN_ID: ${{ inputs.decision_run_id }}
       MIGRATION_BATCH_SIZE: ${{ inputs.batch_size }}
       OUTPUT_DIR: artifacts/supabase-migration-execution-plan
     steps:
-      - name: Validate exact inputs
+      - name: Validate inputs
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$SUBJECT_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
           [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
           [[ "$MIGRATION_BATCH_SIZE" =~ ^[0-9]+$ ]]
           test "$MIGRATION_BATCH_SIZE" -ge 1
           test "$MIGRATION_BATCH_SIZE" -le 25
-          echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
+          echo "SUBJECT_SHA=${SUBJECT_SHA,,}" >> "$GITHUB_ENV"
 
-      - name: Checkout exact current main
+      - name: Checkout current main evidence commit
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: ${{ inputs.release_sha }}
+          ref: main
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify exact SHA and decision run provenance
+      - name: Verify subject lineage and decision run provenance
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+          CURRENT_SHA="$(git rev-parse HEAD)"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$CURRENT_SHA"
+          git cat-file -e "$SUBJECT_SHA^{commit}"
+          git merge-base --is-ancestor "$SUBJECT_SHA" "$CURRENT_SHA"
+          mapfile -t CHANGED < <(git diff --name-only "$SUBJECT_SHA".."$CURRENT_SHA")
+          node scripts/supabase/validate-migration-evidence-lineage.mjs "$SUBJECT_SHA" "$CURRENT_SHA" execution "${CHANGED[@]}"
+
           RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}")"
-          test "$(jq -r '.head_sha' <<<"$RUN_JSON")" = "$TARGET_SHA"
+          test "$(jq -r '.head_sha' <<<"$RUN_JSON")" = "$CURRENT_SHA"
           test "$(jq -r '.path' <<<"$RUN_JSON")" = '.github/workflows/supabase-migration-reconciliation-decision-gate.yml'
           test "$(jq -r '.conclusion' <<<"$RUN_JSON")" = 'success'
+          echo "CURRENT_SHA=$CURRENT_SHA" >> "$GITHUB_ENV"
 
-      - name: Download accepted decision artifacts
+      - name: Download accepted classification artifacts
         uses: actions/download-artifact@v4
         with:
           name: supabase-migration-reconciliation-decisions-${{ inputs.release_sha }}
@@ -94,7 +105,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.decision_run_id }}
 
-      - name: Compile bounded plan only
+      - name: Compile bounded pre-staging plan
         shell: bash
         run: |
           set -euo pipefail
@@ -113,18 +124,19 @@ jobs:
           {
             echo '## Supabase migration execution plan'
             echo
-            echo "- Release SHA: \`$TARGET_SHA\`"
+            echo "- Subject release SHA: \`$SUBJECT_SHA\`"
+            echo "- Evidence commit SHA: \`${CURRENT_SHA:-unresolved}\`"
             echo "- Batch size: \`$MIGRATION_BATCH_SIZE\`"
             echo '- SQL executed: no'
             echo '- Migration history modified: no'
-            echo '- Dry-run authorized: no'
+            echo '- Staging rehearsal required before production: yes for pending migrations'
             echo '- Production write authorized: no'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload immutable planning artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: supabase-migration-execution-plan-${{ env.TARGET_SHA }}
+          name: supabase-migration-execution-plan-${{ env.SUBJECT_SHA }}
           path: artifacts/supabase-migration-execution-plan
           if-no-files-found: error
           retention-days: 90

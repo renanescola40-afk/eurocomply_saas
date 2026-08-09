@@ -1,6 +1,7 @@
 {
-  "schema": "risck-comply.supabase-staging-rehearsal-result.v1",
-  "targetSha": "REPLACE_WITH_EXACT_MAIN_SHA",
+  "schema": "risck-comply.supabase-staging-rehearsal-result.v2",
+  "releaseSha": "REPLACE_WITH_IMMUTABLE_SUBJECT_SHA",
+  "planDigest": "REPLACE_WITH_SHA256_OF_STAGING_REHEARSAL_PLAN_JSON",
   "stagingProjectRef": "REPLACE_WITH_STAGING_PROJECT_REF",
   "productionProjectRef": "REPLACE_WITH_PRODUCTION_PROJECT_REF",
   "operator": "REPLACE_WITH_OPERATOR",

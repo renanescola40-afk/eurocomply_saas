@@ -6,11 +6,15 @@ import path from 'node:path';
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 const fullSha = /^[a-f0-9]{40}$/i;
+const acceptedDecisionStatuses = new Set([
+  'RECONCILIATION_ACCEPTED_FOR_STAGING',
+  'RECONCILIATION_ACCEPTED',
+]);
 
 export function buildExecutionPlan({ decisionResult, pendingPlan, repairPlan, batchSize = 10 }) {
   const failures = [];
   if (decisionResult?.schema !== 'risck-comply.supabase-migration-reconciliation-decision-result.v1') failures.push('unsupported_decision_result');
-  if (decisionResult?.accepted !== true || decisionResult?.decisionStatus !== 'RECONCILIATION_ACCEPTED') failures.push('reconciliation_not_accepted');
+  if (decisionResult?.accepted !== true || !acceptedDecisionStatuses.has(decisionResult?.decisionStatus)) failures.push('reconciliation_not_accepted_for_staging');
   if (!fullSha.test(String(decisionResult?.releaseSha ?? ''))) failures.push('invalid_release_sha');
   if (decisionResult?.productionWriteAuthorized !== undefined && decisionResult.productionWriteAuthorized !== false) failures.push('unexpected_write_authorization');
   if (pendingPlan?.releaseSha !== decisionResult?.releaseSha || repairPlan?.releaseSha !== decisionResult?.releaseSha) failures.push('release_sha_mismatch');
@@ -24,7 +28,7 @@ export function buildExecutionPlan({ decisionResult, pendingPlan, repairPlan, ba
     if (!Number.isInteger(item.deployOrderDecision) || item.deployOrderDecision < 1) failures.push(`invalid_order:${item.filename}`);
     if (seenOrders.has(item.deployOrderDecision)) failures.push(`duplicate_order:${item.deployOrderDecision}`);
     seenOrders.add(item.deployOrderDecision);
-    if (!item.stagedExecutionEvidenceReference) failures.push(`missing_staging_evidence:${item.filename}`);
+    if (!item.schemaEvidenceReference) failures.push(`missing_schema_evidence:${item.filename}`);
     if (!item.rollbackReference) failures.push(`missing_rollback_reference:${item.filename}`);
   }
   if (failures.length) return { accepted: false, failures };
@@ -41,11 +45,14 @@ export function buildExecutionPlan({ decisionResult, pendingPlan, repairPlan, ba
         sha256: item.sha256,
         version: item.version,
         deployOrderDecision: item.deployOrderDecision,
-        stagedExecutionEvidenceReference: item.stagedExecutionEvidenceReference,
+        schemaEvidenceReference: item.schemaEvidenceReference,
+        stagedExecutionEvidenceReference: item.stagedExecutionEvidenceReference ?? null,
         rollbackReference: item.rollbackReference,
       })),
       preconditions: {
         exactReleaseSha: decisionResult.releaseSha,
+        stagingRehearsalRequired: true,
+        stagingProjectMustDifferFromProduction: true,
         backupOrPitrEvidenceReference: null,
         maintenanceWindowReference: null,
         operator: null,
@@ -70,10 +77,11 @@ export function buildExecutionPlan({ decisionResult, pendingPlan, repairPlan, ba
     inventorySha256: decisionResult.inventorySha256,
     sourceDecisionDigest: sha256(JSON.stringify(decisionResult)),
     accepted: true,
-    status: 'PLANNING_COMPLETE_EXECUTION_NOT_AUTHORIZED',
+    status: 'PLANNING_COMPLETE_AWAITING_STAGING_REHEARSAL',
     batchSize,
     pendingMigrationCount: pending.length,
     historyRepairCandidateCount: (repairPlan.items ?? []).length,
+    stagingRequired: pending.length > 0,
     batches,
     historyRepairCandidates: (repairPlan.items ?? []).map((item) => ({
       filename: item.filename,
@@ -97,6 +105,7 @@ export function buildExecutionPlan({ decisionResult, pendingPlan, repairPlan, ba
       migrationHistoryModified: false,
       dryRunAuthorized: false,
       productionWriteAuthorized: false,
+      stagingEvidenceRequiredBeforeProduction: pending.length > 0,
     },
   };
 }
