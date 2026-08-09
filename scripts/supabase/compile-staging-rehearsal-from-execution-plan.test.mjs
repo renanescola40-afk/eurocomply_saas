@@ -7,6 +7,7 @@ const releaseSha = 'a'.repeat(40);
 const migrationDigest = 'b'.repeat(64);
 const executionPlan = {
   schema: 'risck-comply.supabase-migration-execution-plan.v1',
+  generatedAt: '2026-08-09T09:00:00.000Z',
   accepted: true,
   releaseSha,
   status: 'PLANNING_COMPLETE_AWAITING_STAGING_REHEARSAL',
@@ -27,15 +28,17 @@ const executionPlan = {
 };
 const bytes = Buffer.from(JSON.stringify(executionPlan));
 
-test('compiles an explicitly non-authorizing staging plan', () => {
-  const plan = compileStagingRehearsalPlan({ executionPlan, executionPlanBytes: bytes, expectedSha: releaseSha });
-  assert.equal(plan.failures, undefined);
-  assert.equal(plan.releaseSha, releaseSha);
-  assert.equal(plan.targetSha, releaseSha);
-  assert.equal(plan.status, 'AWAITING_STAGING_EXECUTION');
-  assert.equal(plan.batches.length, 1);
-  assert.equal(plan.batches[0].executionAuthorized, false);
-  assert.equal(plan.safety.productionWritePerformed, false);
+test('compiles an explicitly non-authorizing deterministic staging plan', () => {
+  const first = compileStagingRehearsalPlan({ executionPlan, executionPlanBytes: bytes, expectedSha: releaseSha });
+  const second = compileStagingRehearsalPlan({ executionPlan, executionPlanBytes: bytes, expectedSha: releaseSha });
+  assert.deepEqual(first, second);
+  assert.equal(first.generatedAt, executionPlan.generatedAt);
+  assert.equal(first.releaseSha, releaseSha);
+  assert.equal(first.targetSha, releaseSha);
+  assert.equal(first.status, 'AWAITING_STAGING_EXECUTION');
+  assert.equal(first.batches.length, 1);
+  assert.equal(first.batches[0].executionAuthorized, false);
+  assert.equal(first.safety.productionWritePerformed, false);
 });
 
 test('rejects an execution plan bound to another release', () => {
