@@ -20,7 +20,7 @@ concurrency:
 jobs:
   validate-step-up-provider:
     name: Validate live Supabase MFA provider
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: production
 
@@ -37,27 +37,34 @@ jobs:
           fi
 
       - name: Check out exact release SHA
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ inputs.release_sha }}
           persist-credentials: false
 
-      - name: Verify exact checkout
+      - name: Verify exact checkout and current main binding
         shell: bash
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "${RELEASE_SHA,,}"
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: 22
           cache: npm
 
       - name: Install deterministic dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Execute protected live step-up validation
         env:
@@ -67,7 +74,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           STEP_UP_PROVIDER_MODE: ${{ secrets.STEP_UP_PROVIDER_MODE }}
-          STEP_UP_SIGNING_SECRET: ${{ secrets.STEP_UP_SIGNING_SECRET }}
+          STEP_UP_SIGNING_SECRET: ${{ secrets.STEP_UP_ASSERTION_SIGNING_SECRET || secrets.STEP_UP_SIGNING_SECRET }}
           STEP_UP_LIVE_USER_EMAIL: ${{ secrets.STEP_UP_LIVE_USER_EMAIL }}
           STEP_UP_LIVE_USER_PASSWORD: ${{ secrets.STEP_UP_LIVE_USER_PASSWORD }}
           STEP_UP_LIVE_TOTP_SECRET: ${{ secrets.STEP_UP_LIVE_TOTP_SECRET }}
@@ -75,7 +82,7 @@ jobs:
 
       - name: Upload redacted runtime evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: step-up-runtime-proof-${{ inputs.release_sha }}
           path: docs/security/evidence/runtime/step-up-mfa-validation.json
