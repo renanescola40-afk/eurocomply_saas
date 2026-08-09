@@ -232,12 +232,9 @@ jobs:
           test "$DOSSIER_CONCLUSION" = 'success'
           require_artifact "$DOSSIER_RUN_ID" "$DOSSIER_ARTIFACT"
           download_artifact "$DOSSIER_RUN_ID" "$DOSSIER_ARTIFACT" "$TMP_ROOT/dossiers"
-          DOSSIER_INDEX="$(find "$TMP_ROOT/dossiers" -type f -name 'index.json' -print -quit)"
-          if [ -z "$DOSSIER_INDEX" ]; then
-            DOSSIER_INDEX="$(find "$TMP_ROOT/dossiers" -type f -name 'summary.json' -print -quit)"
-          fi
-          test -n "$DOSSIER_INDEX"
-          test -s "$DOSSIER_INDEX"
+          DOSSIER_REPORT="$(find "$TMP_ROOT/dossiers" -type f -name 'migration-review-dossiers.json' -print -quit)"
+          test -n "$DOSSIER_REPORT"
+          test -s "$DOSSIER_REPORT"
           update_stage 'reviewDossiers' "$DOSSIER_WORKFLOW" "$DOSSIER_RUN_ID" "$DOSSIER_CONCLUSION" "$DOSSIER_ARTIFACT"
 
           DECISION_WORKFLOW='supabase-migration-reconciliation-decision-gate.yml'
@@ -253,12 +250,12 @@ jobs:
 
           cp "$INVENTORY" "$OUTPUT_DIR/migration-reconciliation-inventory.json"
           cp "$OBJECT_EVIDENCE" "$OUTPUT_DIR/migration-object-evidence.json"
-          cp "$DOSSIER_INDEX" "$OUTPUT_DIR/review-dossier-index.json"
+          cp "$DOSSIER_REPORT" "$OUTPUT_DIR/migration-review-dossiers.json"
           cp "$DECISION_TEMPLATE" "$OUTPUT_DIR/decision-template.json"
           sha256sum \
             "$OUTPUT_DIR/migration-reconciliation-inventory.json" \
             "$OUTPUT_DIR/migration-object-evidence.json" \
-            "$OUTPUT_DIR/review-dossier-index.json" \
+            "$OUTPUT_DIR/migration-review-dossiers.json" \
             "$OUTPUT_DIR/decision-template.json" \
             > "$OUTPUT_DIR/SHA256SUMS"
 
