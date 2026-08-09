@@ -1,8 +1,12 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { randomBytes } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
+
+import {
+  cleanupEphemeralAuthFixtures,
+  createEphemeralAuthFixtures,
+} from './lib/ephemeral-auth-fixtures.mjs';
 
 const OUTPUT = 'docs/security/evidence/runtime/auth-rbac-final-validation.json';
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
@@ -83,31 +87,6 @@ async function deniedMutation(query, label) {
   return data.length === 0;
 }
 
-async function disposableSignup({ url, anonKey, serviceRoleKey, emailDomain }) {
-  const suffix = randomBytes(12).toString('hex');
-  const email = `enterprise-proof-${suffix}@${emailDomain}`;
-  const password = `Rc!${randomBytes(24).toString('base64url')}9a`;
-  const anon = client(url, anonKey);
-  const admin = client(url, serviceRoleKey);
-  let userId = null;
-  let created = false;
-  let cleanup = false;
-
-  try {
-    const { data, error } = await anon.auth.signUp({ email, password });
-    if (error || !data.user?.id) throw new Error('disposable_signup_failed');
-    userId = data.user.id;
-    created = true;
-    return { created, cleanup: false, userId };
-  } finally {
-    if (userId) {
-      const { error } = await admin.auth.admin.deleteUser(userId, true);
-      cleanup = !error;
-    }
-    if (!cleanup && created) throw new Error('disposable_signup_cleanup_failed');
-  }
-}
-
 async function signOut(session) {
   const { error } = await session.supabase.auth.signOut();
   return !error;
@@ -129,9 +108,6 @@ async function main() {
   const url = env('NEXT_PUBLIC_SUPABASE_URL');
   const anonKey = env('NEXT_PUBLIC_SUPABASE_ANON_KEY');
   const serviceRoleKey = env('SUPABASE_SERVICE_ROLE_KEY');
-  const disposableEmailDomain = env('AUTH_RBAC_DISPOSABLE_EMAIL_DOMAIN');
-  const organizationA = env('AUTH_RBAC_ORGANIZATION_A_ID');
-  const organizationB = env('AUTH_RBAC_ORGANIZATION_B_ID');
   const expectedSha = fullSha(env('ENTERPRISE_EXPECTED_SHA'));
   const checkedOutSha = gitHead();
   const provenance = {
@@ -147,21 +123,11 @@ async function main() {
     url: Boolean(safeHost(url)),
     anonKey: Boolean(anonKey),
     serviceRoleKey: Boolean(serviceRoleKey),
-    disposableEmailDomain: /^[a-z0-9.-]+$/i.test(disposableEmailDomain),
-    organizationA: Boolean(organizationA),
-    organizationB: Boolean(organizationB),
-    ownerEmail: Boolean(env('AUTH_RBAC_OWNER_EMAIL')),
-    ownerPassword: Boolean(env('AUTH_RBAC_OWNER_PASSWORD')),
-    memberEmail: Boolean(env('AUTH_RBAC_MEMBER_EMAIL')),
-    memberPassword: Boolean(env('AUTH_RBAC_MEMBER_PASSWORD')),
-    outsiderEmail: Boolean(env('AUTH_RBAC_OUTSIDER_EMAIL')),
-    outsiderPassword: Boolean(env('AUTH_RBAC_OUTSIDER_PASSWORD')),
   };
 
   const checks = {
     fixtureConfigurationPresent: Object.values(required).every(Boolean),
-    disposableSignup: false,
-    disposableSignupCleanup: false,
+    ephemeralFixturesCreated: false,
     ownerRoleObserved: false,
     memberRoleObserved: false,
     ownerCanReadOwnTenant: false,
@@ -177,27 +143,46 @@ async function main() {
     crossTenantOrganizationDeleteDenied: false,
     sessionRefresh: false,
     sessionsRevoked: false,
+    ephemeralFixturesCleanup: false,
   };
   const failures = [];
+  const admin = serviceRoleKey && url ? client(url, serviceRoleKey) : null;
+  let fixtures = null;
   let sessions = [];
 
   try {
-    if (!checks.fixtureConfigurationPresent) throw new Error('fixture_configuration_missing');
+    if (!checks.fixtureConfigurationPresent || !admin) throw new Error('provider_configuration_missing');
 
-    const signup = await disposableSignup({ url, anonKey, serviceRoleKey, emailDomain: disposableEmailDomain });
-    checks.disposableSignup = signup.created;
-    checks.disposableSignupCleanup = true;
+    fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'auth-rbac-live-proof' });
+    checks.ephemeralFixturesCreated = true;
 
-    const owner = await signIn('owner', { email: env('AUTH_RBAC_OWNER_EMAIL'), password: env('AUTH_RBAC_OWNER_PASSWORD') }, url, anonKey);
-    const member = await signIn('member', { email: env('AUTH_RBAC_MEMBER_EMAIL'), password: env('AUTH_RBAC_MEMBER_PASSWORD') }, url, anonKey);
-    const outsider = await signIn('outsider', { email: env('AUTH_RBAC_OUTSIDER_EMAIL'), password: env('AUTH_RBAC_OUTSIDER_PASSWORD') }, url, anonKey);
+    const owner = await signIn(
+      'owner',
+      { email: fixtures.owner.email, password: fixtures.owner.password },
+      url,
+      anonKey,
+    );
+    const member = await signIn(
+      'member',
+      { email: fixtures.member.email, password: fixtures.member.password },
+      url,
+      anonKey,
+    );
+    const outsider = await signIn(
+      'outsider',
+      { email: fixtures.outsider.email, password: fixtures.outsider.password },
+      url,
+      anonKey,
+    );
     sessions = [owner, member, outsider];
 
     checks.sessionRefresh = await refreshSession(owner);
+    const organizationA = fixtures.organizationA.id;
+    const organizationB = fixtures.organizationB.id;
     const ownerMembership = await visibleMembership(owner.supabase, organizationA, owner.userId);
     const memberMembership = await visibleMembership(member.supabase, organizationA, member.userId);
     checks.ownerRoleObserved = ownerMembership?.role === 'owner';
-    checks.memberRoleObserved = ['admin', 'member'].includes(String(memberMembership?.role ?? ''));
+    checks.memberRoleObserved = memberMembership?.role === 'member';
     checks.ownerCanReadOwnTenant = await visibleOrganization(owner.supabase, organizationA);
     checks.memberCanReadOwnTenant = await visibleOrganization(member.supabase, organizationA);
     checks.outsiderCannotReadTenantA = !(await visibleOrganization(outsider.supabase, organizationA));
@@ -206,19 +191,34 @@ async function main() {
     checks.crossTenantMembershipHidden = !(await visibleMembership(outsider.supabase, organizationA, owner.userId));
 
     checks.crossTenantMembershipInsertDenied = await deniedMutation(
-      outsider.supabase.from('organization_members').insert({ organization_id: organizationA, user_id: outsider.userId, role: 'owner' }),
+      outsider.supabase.from('organization_members').insert({
+        organization_id: organizationA,
+        user_id: outsider.userId,
+        role: 'owner',
+      }),
       'cross_tenant_membership_insert',
     );
     checks.crossTenantMembershipUpdateDenied = await deniedMutation(
-      outsider.supabase.from('organization_members').update({ role: 'owner' }).eq('organization_id', organizationA).eq('user_id', owner.userId),
+      outsider.supabase
+        .from('organization_members')
+        .update({ role: 'owner' })
+        .eq('organization_id', organizationA)
+        .eq('user_id', owner.userId),
       'cross_tenant_membership_update',
     );
     checks.crossTenantMembershipDeleteDenied = await deniedMutation(
-      outsider.supabase.from('organization_members').delete().eq('organization_id', organizationA).eq('user_id', owner.userId),
+      outsider.supabase
+        .from('organization_members')
+        .delete()
+        .eq('organization_id', organizationA)
+        .eq('user_id', owner.userId),
       'cross_tenant_membership_delete',
     );
     checks.crossTenantOrganizationUpdateDenied = await deniedMutation(
-      outsider.supabase.from('organizations').update({ updated_at: generatedAt }).eq('id', organizationA),
+      outsider.supabase
+        .from('organizations')
+        .update({ updated_at: generatedAt })
+        .eq('id', organizationA),
       'cross_tenant_organization_update',
     );
     checks.crossTenantOrganizationDeleteDenied = await deniedMutation(
@@ -228,7 +228,14 @@ async function main() {
   } catch (error) {
     failures.push(error instanceof Error ? error.message : 'unknown_validation_failure');
   } finally {
-    if (sessions.length > 0) checks.sessionsRevoked = (await Promise.all(sessions.map(signOut))).every(Boolean);
+    if (sessions.length > 0) {
+      checks.sessionsRevoked = (await Promise.all(sessions.map(signOut))).every(Boolean);
+    }
+    if (admin && fixtures?.created) {
+      const cleanup = await cleanupEphemeralAuthFixtures(admin, fixtures.created);
+      checks.ephemeralFixturesCleanup = cleanup.verified;
+      failures.push(...cleanup.failures);
+    }
   }
 
   const decision = evaluate({ checks, provenance });
@@ -247,27 +254,29 @@ async function main() {
     environment: 'production-auth-rbac-validation',
     providerHost: safeHost(url),
     summary: decision.complete
-      ? 'Protected live validation proved disposable signup and cleanup, authentication lifecycle, expected RBAC roles, same-tenant access, cross-tenant read and mutation denial, and session revocation for synthetic fixtures.'
-      : 'Protected Auth/RBAC and tenant-mutation runtime proof is incomplete or failed; enterprise release remains blocked until every live check passes for the exact deployed main SHA.',
+      ? 'Protected live validation created disposable Supabase identities and tenants, proved password authentication, expected RBAC roles, same-tenant access, cross-tenant read and mutation denial, session refresh and revocation, then verified same-run fixture cleanup.'
+      : 'Protected Auth/RBAC and tenant-mutation runtime proof is incomplete or failed; enterprise release remains blocked until every live check and disposable-fixture cleanup check passes for the exact main SHA.',
     productionGate: decision.complete ? 'eligible for downstream enterprise gates' : 'blocked',
-    completionRule: 'Run the protected Auth RBAC Tenant Proof workflow for the exact deployed main SHA with disposable signup cleanup, three dedicated synthetic users and two isolated organizations.',
+    completionRule: 'Run the protected Auth RBAC Tenant Proof workflow for the exact current main SHA. The workflow creates, uses and removes all synthetic identities, organizations and memberships in the same protected run.',
     checks,
     provenance: { ...provenance, exactShaBound: expectedSha !== null && expectedSha === checkedOutSha },
-    failures,
+    failures: [...new Set(failures)],
     evidenceLocations: [
+      'scripts/security/lib/ephemeral-auth-fixtures.mjs',
       'scripts/security/run-auth-rbac-live-validation.mjs',
       '.github/workflows/auth-rbac-runtime-proof.yml',
       'docs/security/evidence/runtime/auth-rbac-final-validation.json',
     ],
     controlsVerified: decision.complete ? [
-      'Disposable password signup succeeds and the synthetic identity is deleted in the same protected run.',
-      'Supabase password authentication works for dedicated synthetic fixtures.',
+      'Disposable Supabase users, organizations and memberships are created by the protected proof and removed in the same run.',
+      'Supabase password authentication works for disposable owner, member and outsider identities.',
       'A synthetic authenticated session refresh succeeds without persisting token values.',
       'Owner and member roles are observed through tenant-scoped organization_members reads.',
-      'Authorized users can read their own organization.',
+      'Authorized synthetic users can read their own organization.',
       'Cross-tenant organization and membership reads are denied by runtime policy.',
       'Cross-tenant organization and membership inserts, updates and deletes are denied.',
       'Synthetic validation sessions are revoked after execution.',
+      'Synthetic identity and tenant cleanup is verified after execution.',
       'Evidence is bound to the exact protected main-branch release SHA.',
     ] : [],
     redactionConfirmation: REDACTION,
@@ -283,7 +292,7 @@ async function main() {
       organizationIdentifiersStored: false,
       rawProviderResponsesStored: false,
       cleanupRequired: true,
-      cleanupVerified: checks.disposableSignupCleanup,
+      cleanupVerified: checks.ephemeralFixturesCleanup,
     },
   };
 

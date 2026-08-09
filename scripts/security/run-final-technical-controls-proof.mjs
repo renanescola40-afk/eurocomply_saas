@@ -6,6 +6,11 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 
+import {
+  cleanupEphemeralAuthFixtures,
+  createEphemeralAuthFixtures,
+} from './lib/ephemeral-auth-fixtures.mjs';
+
 const OUTPUT = 'docs/security/evidence/runtime/final-technical-controls-validation.json';
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const BUCKET = 'compliance-documents';
@@ -49,7 +54,16 @@ function sql(connection, statement) {
   }).trim();
 }
 
-async function proveStorageIsolation({ url, anonKey, serviceRoleKey, organizationId, ownerEmail, ownerPassword, outsiderEmail, outsiderPassword }) {
+async function proveStorageIsolation({
+  url,
+  anonKey,
+  serviceRoleKey,
+  organizationId,
+  ownerEmail,
+  ownerPassword,
+  outsiderEmail,
+  outsiderPassword,
+}) {
   if (!UUID.test(organizationId)) throw new Error('organization_fixture_invalid');
   const owner = client(url, anonKey);
   const outsider = client(url, anonKey);
@@ -124,7 +138,9 @@ function proveSecurityEvents(connection) {
   const [incidentCount, timelineCount] = result.split('|').map(Number);
   checks.securityEventInserted = incidentCount === 1;
   checks.timelineEventInserted = timelineCount === 1;
-  if (!checks.securityEventInserted || !checks.timelineEventInserted) throw new Error('security_event_transaction_failed');
+  if (!checks.securityEventInserted || !checks.timelineEventInserted) {
+    throw new Error('security_event_transaction_failed');
+  }
 
   const afterRollback = Number(sql(connection, `
     select
@@ -140,11 +156,6 @@ async function main() {
   const url = required('NEXT_PUBLIC_SUPABASE_URL');
   const anonKey = required('NEXT_PUBLIC_SUPABASE_ANON_KEY');
   const serviceRoleKey = required('SUPABASE_SERVICE_ROLE_KEY');
-  const organizationId = required('AUTH_RBAC_ORGANIZATION_A_ID');
-  const ownerEmail = required('AUTH_RBAC_OWNER_EMAIL');
-  const ownerPassword = required('AUTH_RBAC_OWNER_PASSWORD');
-  const outsiderEmail = required('AUTH_RBAC_OUTSIDER_EMAIL');
-  const outsiderPassword = required('AUTH_RBAC_OUTSIDER_PASSWORD');
   const recoveryDatabase = required('RECOVERY_ISOLATED_DATABASE_URL');
   const targetSha = env('ENTERPRISE_EXPECTED_SHA').toLowerCase();
   const observedSha = env('GITHUB_SHA').toLowerCase();
@@ -153,36 +164,54 @@ async function main() {
     && env('GITHUB_REF_NAME') === 'main'
     && env('FINAL_TECHNICAL_CONFIRMATION') === 'EXECUTE_FINAL_TECHNICAL_PROOF';
   checks.exactShaBound = FULL_SHA.test(targetSha) && observedSha === targetSha;
+  checks.authFixturesCreated = false;
+  checks.authFixturesRemoved = false;
+
+  const admin = url && serviceRoleKey ? client(url, serviceRoleKey) : null;
+  let fixtures = null;
 
   try {
-    if (failures.length || !checks.protectedMainExecution || !checks.exactShaBound) {
+    if (failures.length || !checks.protectedMainExecution || !checks.exactShaBound || !admin) {
       throw new Error('final_technical_preconditions_failed');
     }
+
+    fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'final-technical-proof' });
+    checks.authFixturesCreated = true;
     await proveStorageIsolation({
       url,
       anonKey,
       serviceRoleKey,
-      organizationId,
-      ownerEmail,
-      ownerPassword,
-      outsiderEmail,
-      outsiderPassword,
+      organizationId: fixtures.organizationA.id,
+      ownerEmail: fixtures.owner.email,
+      ownerPassword: fixtures.owner.password,
+      outsiderEmail: fixtures.outsider.email,
+      outsiderPassword: fixtures.outsider.password,
     });
-    if (!checks.syntheticObjectsRemoved || !checks.sessionsRevoked) throw new Error('storage_cleanup_failed');
+    if (!checks.syntheticObjectsRemoved || !checks.sessionsRevoked) {
+      throw new Error('storage_cleanup_failed');
+    }
     proveSecurityEvents(recoveryDatabase);
   } catch (error) {
     failures.push(error instanceof Error ? error.message : 'unknown_final_technical_failure');
+  } finally {
+    if (admin && fixtures?.created) {
+      const cleanup = await cleanupEphemeralAuthFixtures(admin, fixtures.created);
+      checks.authFixturesRemoved = cleanup.verified;
+      failures.push(...cleanup.failures);
+    }
   }
 
   const canonicalChecks = {
     protectedMainExecution: checks.protectedMainExecution === true,
     exactShaBound: checks.exactShaBound === true,
+    authFixturesCreated: checks.authFixturesCreated === true,
     ownerUploadAllowed: checks.ownerUploadAllowed === true,
     ownerReadAllowed: checks.ownerReadAllowed === true,
     outsiderReadDenied: checks.outsiderReadDenied === true,
     outsiderUploadDenied: checks.outsiderUploadDenied === true,
     syntheticObjectsRemoved: checks.syntheticObjectsRemoved === true,
     sessionsRevoked: checks.sessionsRevoked === true,
+    authFixturesRemoved: checks.authFixturesRemoved === true,
     securityEventInserted: checks.securityEventInserted === true,
     timelineEventInserted: checks.timelineEventInserted === true,
     transactionRolledBack: checks.transactionRolledBack === true,
@@ -211,10 +240,11 @@ async function main() {
       databaseUrlStored: false,
       securityEventContentStored: false,
       syntheticStorageRemoved: canonicalChecks.syntheticObjectsRemoved,
+      syntheticAuthFixturesRemoved: canonicalChecks.authFixturesRemoved,
       syntheticDatabaseRowsRolledBack: canonicalChecks.transactionRolledBack,
       exactShaBound: canonicalChecks.exactShaBound,
     },
-    evidenceBoundary: 'Protected synthetic proof of storage tenant isolation and security-event persistence. The object is deleted, database writes are rolled back, and no paths, identities, credentials, payloads, database URLs or event content are retained.',
+    evidenceBoundary: 'Protected synthetic proof of storage tenant isolation and security-event persistence. Auth identities and tenants are created only for this run and removed afterwards; storage objects are deleted; recovery-database writes are rolled back; no paths, identities, credentials, payloads, database URLs or event content are retained.',
   };
   mkdirSync(dirname(OUTPUT), { recursive: true });
   writeFileSync(OUTPUT, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
