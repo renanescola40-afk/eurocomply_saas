@@ -9,8 +9,12 @@ const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const WORKFLOW_FILE = 'production-runtime-proof.yml';
 const WORKFLOW_NAME = 'Production Runtime Proof';
 const SOURCE_PATH = 'docs/security/evidence/runtime/production-runtime-validation.json';
+const DEPLOYMENT_SMOKE_PATH = 'docs/security/evidence/runtime/deployment-smoke-validation.json';
+const RELEASE_SHA_PATH = 'docs/security/evidence/runtime/runtime-release-sha-validation.json';
 const BUNDLE_PATHS = [
   SOURCE_PATH,
+  DEPLOYMENT_SMOKE_PATH,
+  RELEASE_SHA_PATH,
   'docs/security/evidence/runtime/security-headers-validation.json',
   'docs/security/evidence/runtime/no-store-validation.json',
 ];
@@ -101,10 +105,12 @@ function extractBundle(zipPath) {
 }
 
 export function removeStaleProductionRuntimeEvidence(root) {
-  // The header and no-store paths are shared with exact-SHA repository evidence.
-  // Remove only the production-owned aggregate before discovery; a successful
-  // runtime bundle will replace all three paths with stronger live evidence.
+  // Remove production-owned aggregate/smoke lineage before exact-SHA discovery.
+  // Header and no-store paths are shared with repository evidence and are only
+  // replaced after a validated runtime bundle has been retrieved.
   rmSync(join(root, SOURCE_PATH), { force: true });
+  rmSync(join(root, DEPLOYMENT_SMOKE_PATH), { force: true });
+  rmSync(join(root, RELEASE_SHA_PATH), { force: true });
 }
 
 export async function fetchProductionRuntimeEvidence({
