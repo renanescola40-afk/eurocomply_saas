@@ -18,6 +18,8 @@ The three canonical evidence-only paths are ignored by the push trigger:
 
 This preserves the immutable subject SHA while reviewed evidence advances in later commits.
 
+Pull-request contract validation is intentionally outside the operational concurrency lock. Only the `bootstrap` job is serialized under `supabase-migration-evidence-bootstrap-main`, so an in-flight or stuck operational run cannot prevent a corrective PR from running its contract checks. Push and manual operational bootstraps remain serialized.
+
 ## Orchestrated stages
 
 The workflow dispatches, waits for, records and verifies these existing workflows in order:
