@@ -122,7 +122,10 @@ describe('production runtime scorecard evidence', () => {
     expect(normalized.smokeTargets).toEqual({ passed: [CANONICAL_PRODUCTION_HOST], failed: [] });
 
     const entry = p0EvidenceCatalog.find((candidate) => candidate.item === 'Deployment URL functional verification');
-    expect(entry?.validator(normalized, {
+    const validator = entry?.validator;
+    expect(validator).toBeDefined();
+    if (!validator) throw new Error('Deployment P0 validator missing');
+    expect(validator(normalized, {
       now: new Date('2026-08-09T13:05:00.000Z'),
       expectedRepository: REPOSITORY,
       expectedBranch: 'main',
