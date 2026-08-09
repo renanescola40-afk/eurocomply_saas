@@ -142,8 +142,10 @@ describe('Auth RBAC exact-SHA evidence retrieval', () => {
 
   it('passes the authoritative P0 catalog after retrieval without legacy translation', () => {
     const entry = p0EvidenceCatalog.find((candidate) => candidate.item === 'Auth/RBAC final runtime validation');
-    expect(entry).toBeDefined();
-    expect(entry?.validator(evidence, {
+    const validator = entry?.validator;
+    expect(validator).toBeDefined();
+    if (!validator) throw new Error('Auth/RBAC P0 validator missing');
+    expect(validator(evidence, {
       now: new Date('2026-08-09T13:05:00.000Z'),
       expectedRepository: REPOSITORY,
       expectedBranch: 'main',
