@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const WORKFLOW_FILE = 'production-runtime-proof.yml';
-const WORKFLOW_NAME = 'Production Runtime Proof';
+const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`;
 const SOURCE_PATH = 'docs/security/evidence/runtime/production-runtime-validation.json';
 const DEPLOYMENT_SMOKE_PATH = 'docs/security/evidence/runtime/deployment-smoke-validation.json';
 const RELEASE_SHA_PATH = 'docs/security/evidence/runtime/runtime-release-sha-validation.json';
@@ -56,7 +56,7 @@ export function isOptionalWorkflowUnavailable(error, { required = false, sourceR
 export function selectExactShaRun(runs, targetSha, sourceRunId = '') {
   const requested = String(sourceRunId || '').trim();
   return (Array.isArray(runs) ? runs : [])
-    .filter((run) => run?.name === WORKFLOW_NAME)
+    .filter((run) => run?.path === WORKFLOW_PATH)
     .filter((run) => String(run?.head_sha || '').toLowerCase() === targetSha)
     .filter((run) => run?.head_branch === 'main')
     .filter((run) => run?.status === 'completed' && run?.conclusion === 'success')
@@ -145,6 +145,7 @@ export async function fetchProductionRuntimeEvidence({
     console.log(`Production runtime evidence remains NOT_VERIFIED for ${targetSha}.`);
     return { found: false, targetSha };
   }
+  if (run.path !== WORKFLOW_PATH) throw new Error('runtime_workflow_path_invalid');
 
   const runId = String(run.id || '');
   if (!NUMERIC.test(runId)) throw new Error('run_id_invalid');
