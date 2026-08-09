@@ -20,7 +20,7 @@ export async function createEphemeralMfaUser(admin, { purpose = 'step-up-mfa-pro
 
 export async function cleanupEphemeralMfaUser(admin, userId) {
   if (!userId) return { verified: false, failure: 'ephemeral_mfa_user_id_missing' };
-  const deletion = await admin.auth.admin.deleteUser(userId, true);
+  const deletion = await admin.auth.admin.deleteUser(userId);
   if (deletion.error) return { verified: false, failure: 'ephemeral_mfa_user_delete_failed' };
 
   const lookup = await admin.auth.admin.getUserById(userId);
