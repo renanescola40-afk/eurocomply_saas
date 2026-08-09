@@ -5,6 +5,8 @@ const workflow = readFileSync('.github/workflows/p0-runtime-evidence.yml', 'utf8
 const productionFetcher = readFileSync('scripts/enterprise/fetch-production-runtime-evidence.mjs', 'utf8');
 const authFetcher = readFileSync('scripts/enterprise/fetch-auth-rbac-evidence.mjs', 'utf8');
 const supabaseFetcher = readFileSync('scripts/enterprise/fetch-supabase-rls-evidence.mjs', 'utf8');
+const stepUpFetcher = readFileSync('scripts/enterprise/fetch-step-up-runtime-evidence.mjs', 'utf8');
+const stripeFetcher = readFileSync('scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs', 'utf8');
 const smokeProof = readFileSync('scripts/release/run-production-runtime-response-proof.mjs', 'utf8');
 
 describe('P0 exact-SHA multi-producer runtime aggregation', () => {
@@ -15,6 +17,8 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
       'Auth RBAC Tenant Proof',
       'Supabase Live RLS Validation',
       'Production Runtime Proof',
+      'Step-Up Runtime Proof',
+      'Stripe Runtime Evidence Promotion',
     ]) {
       expect(workflow).toContain(`- ${producer}`);
     }
@@ -27,6 +31,8 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
       'fetch-auth-rbac-evidence.mjs',
       'fetch-supabase-rls-evidence.mjs',
       'fetch-production-runtime-evidence.mjs',
+      'fetch-step-up-runtime-evidence.mjs',
+      'fetch-stripe-promoted-runtime-evidence.mjs',
     ]) {
       expect(workflow).toContain(fetcher);
     }
@@ -43,22 +49,24 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
       '.github/workflows/auth-rbac-runtime-proof.yml',
       '.github/workflows/supabase-live-rls-validation.yml',
       '.github/workflows/production-runtime-proof.yml',
+      '.github/workflows/step-up-runtime-proof.yml',
+      '.github/workflows/stripe-runtime-evidence-promotion.yml',
     ]) {
       expect(workflow).toContain(`github.event.workflow.path == '${path}'`);
     }
 
-    expect(authFetcher).toContain("const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`");
-    expect(supabaseFetcher).toContain("const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`");
-    expect(productionFetcher).toContain("const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`");
-    expect(authFetcher).toContain('run?.path === WORKFLOW_PATH');
-    expect(supabaseFetcher).toContain('run?.path === WORKFLOW_PATH');
-    expect(productionFetcher).toContain('run?.path === WORKFLOW_PATH');
+    for (const fetcher of [authFetcher, supabaseFetcher, productionFetcher, stepUpFetcher, stripeFetcher]) {
+      expect(fetcher).toContain("const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`");
+      expect(fetcher).toContain('run?.path === WORKFLOW_PATH');
+    }
   });
 
   it('requires the triggering producer but keeps other discovery fail-closed and optional', () => {
     expect(workflow).toContain("AUTH_RBAC_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/auth-rbac-runtime-proof.yml' && 'true' || 'false' }}");
     expect(workflow).toContain("SUPABASE_RLS_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/supabase-live-rls-validation.yml' && 'true' || 'false' }}");
     expect(workflow).toContain("PRODUCTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/production-runtime-proof.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("STEP_UP_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/step-up-runtime-proof.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("STRIPE_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/stripe-runtime-evidence-promotion.yml' && 'true' || 'false' }}");
   });
 
   it('promotes only normalized deployment smoke from a successful production bundle', () => {
@@ -68,6 +76,13 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
     expect(productionFetcher).toContain('rmSync(join(root, DEPLOYMENT_SMOKE_PATH), { force: true })');
     expect(productionFetcher).toContain('rmSync(join(root, RELEASE_SHA_PATH), { force: true })');
     expect(productionFetcher).not.toContain('for (const [path, evidence] of Object.entries(bundle))');
+  });
+
+  it('normalizes only already-passing Step-Up and Stripe proofs for the global P0 checker', () => {
+    expect(stepUpFetcher).toContain('normalizeStepUpEvidenceForP0');
+    expect(stepUpFetcher).toContain('validateDownloadedEvidence(evidence');
+    expect(stripeFetcher).toContain('normalizeStripeEvidenceForP0');
+    expect(stripeFetcher).toContain('validateDownloadedEvidence(evidence');
   });
 
   it('retains only redacted readiness categories for failed production probes', () => {

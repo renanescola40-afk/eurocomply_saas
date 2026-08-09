@@ -13,6 +13,8 @@ on:
       - Auth RBAC Tenant Proof
       - Supabase Live RLS Validation
       - Production Runtime Proof
+      - Step-Up Runtime Proof
+      - Stripe Runtime Evidence Promotion
     types: [completed]
 
 permissions:
@@ -42,6 +44,8 @@ jobs:
       AUTH_RBAC_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/auth-rbac-runtime-proof.yml' && github.event.workflow_run.id || '' }}
       SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/supabase-live-rls-validation.yml' && github.event.workflow_run.id || '' }}
       PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/production-runtime-proof.yml' && github.event.workflow_run.id || '' }}
+      STEP_UP_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/step-up-runtime-proof.yml' && github.event.workflow_run.id || '' }}
+      STRIPE_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/stripe-runtime-evidence-promotion.yml' && github.event.workflow_run.id || '' }}
     steps:
       - name: Checkout exact assessed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -78,6 +82,8 @@ jobs:
             tests/enterprise/p0-runtime-multi-producer-aggregation.test.ts \
             tests/enterprise/auth-rbac-runtime-evidence-fetch.test.ts \
             tests/enterprise/supabase-rls-runtime-evidence-fetch.test.ts \
+            tests/enterprise/step-up-runtime-evidence-fetch.test.ts \
+            tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts \
             tests/release/production-runtime-scorecard-evidence.test.ts \
             tests/security/p0-runtime-gap-strict-contract.test.ts \
             tests/security/p0-register-source-of-truth-contract.test.ts
@@ -132,6 +138,24 @@ jobs:
           PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ env.PRODUCTION_RUNTIME_SOURCE_RUN_ID }}
           PRODUCTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/production-runtime-proof.yml' && 'true' || 'false' }}
         run: node scripts/enterprise/fetch-production-runtime-evidence.mjs
+
+      - name: Retrieve exact-SHA Step-Up runtime evidence
+        if: github.event_name == 'workflow_run'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+          STEP_UP_RUNTIME_SOURCE_RUN_ID: ${{ env.STEP_UP_RUNTIME_SOURCE_RUN_ID }}
+          STEP_UP_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/step-up-runtime-proof.yml' && 'true' || 'false' }}
+        run: node scripts/enterprise/fetch-step-up-runtime-evidence.mjs
+
+      - name: Retrieve promoted exact-SHA Stripe runtime evidence
+        if: github.event_name == 'workflow_run'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+          STRIPE_RUNTIME_SOURCE_RUN_ID: ${{ env.STRIPE_RUNTIME_SOURCE_RUN_ID }}
+          STRIPE_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/stripe-runtime-evidence-promotion.yml' && 'true' || 'false' }}
+        run: node scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs
 
       - name: Validate runtime evidence files
         run: node scripts/security/check-p0-runtime-evidence-files.mjs

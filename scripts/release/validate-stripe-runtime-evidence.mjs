@@ -5,7 +5,13 @@ function parseTimestamp(value) {
 
 export function validateStripeRuntimeEvidence(
   evidence,
-  { now = new Date(), maxAgeDays = 7, expectedRepository = 'renanescola40-afk/eurocomply_saas', expectedBranch = 'main' } = {},
+  {
+    now = new Date(),
+    maxAgeDays = 7,
+    expectedRepository = 'renanescola40-afk/eurocomply_saas',
+    expectedBranch = 'main',
+    expectedCommitSha,
+  } = {},
 ) {
   const failures = [];
   const nowMs = now instanceof Date ? now.getTime() : Date.parse(String(now));
@@ -31,6 +37,29 @@ export function validateStripeRuntimeEvidence(
   if (evidence?.repository !== expectedRepository) failures.push(`repository must be ${expectedRepository}`);
   if (evidence?.branch !== expectedBranch) failures.push(`branch must be ${expectedBranch}`);
   if (!/^[a-f0-9]{40}$/i.test(String(evidence?.commitSha ?? ''))) failures.push('commitSha must be a full commit SHA');
+  if (expectedCommitSha && String(evidence?.commitSha).toLowerCase() !== String(expectedCommitSha).toLowerCase()) {
+    failures.push('commitSha must match expected commit SHA');
+  }
+
+  if (evidence?.id === 'stripe-entitlement-runtime-proof') {
+    for (const [path, value] of [
+      ['runtimeProof.executed', evidence?.runtimeProof?.executed],
+      ['runtimeProof.stripeTestModeConfirmed', evidence?.runtimeProof?.stripeTestModeConfirmed],
+      ['runtimeProof.signedWebhookDelivered', evidence?.runtimeProof?.signedWebhookDelivered],
+      ['runtimeProof.entitlementSnapshotObserved', evidence?.runtimeProof?.entitlementSnapshotObserved],
+      ['runtimeProof.canonicalSeatPolicyObserved', evidence?.runtimeProof?.canonicalSeatPolicyObserved],
+      ['runtimeProof.reconciliationLedgerObserved', evidence?.runtimeProof?.reconciliationLedgerObserved],
+    ]) {
+      if (value !== true) failures.push(`${path} must be true`);
+    }
+    if (!/^[a-f0-9]{64}$/i.test(String(evidence?.sourceEvidenceDigest ?? ''))) failures.push('sourceEvidenceDigest must be SHA-256');
+    if (!/^[a-f0-9]{64}$/i.test(String(evidence?.artifactDigest ?? ''))) failures.push('artifactDigest must be SHA-256');
+    if (evidence?.evidenceIntegrity?.placeholderOnly !== false) failures.push('evidenceIntegrity.placeholderOnly must be false');
+    if (evidence?.evidenceIntegrity?.runtimeProofInvented !== false) failures.push('evidenceIntegrity.runtimeProofInvented must be false');
+    if (evidence?.evidenceIntegrity?.containsSensitiveValues !== false) failures.push('evidenceIntegrity.containsSensitiveValues must be false');
+    return failures;
+  }
+
   if (evidence?.runtimeProof?.headSha !== evidence?.commitSha) failures.push('runtimeProof.headSha must match commitSha');
   if (!String(evidence?.runtimeProof?.runId ?? '').trim()) failures.push('runtimeProof.runId is required');
   if (!String(evidence?.runtimeProof?.artifactDigest ?? '').startsWith('sha256:')) failures.push('runtimeProof.artifactDigest must be a sha256 digest');
