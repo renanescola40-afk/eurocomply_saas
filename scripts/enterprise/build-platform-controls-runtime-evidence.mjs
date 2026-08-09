@@ -19,6 +19,7 @@ const SOURCE_COMBINED = 'github-api-classic-plus-repository-rulesets';
 const RULESET_SOURCE_TYPES = new Set(['Repository', 'Organization', 'Enterprise']);
 const BYPASS_ACTOR_TYPES = new Set(['RepositoryRole', 'Team', 'Integration', 'OrganizationAdmin']);
 const BYPASS_MODES = new Set(['always', 'pull_request']);
+const RETRYABLE_AUTH_STATUSES = new Set([401, 403, 404]);
 
 function normalizeSha(value) {
   return String(value || '').trim().toLowerCase();
@@ -35,7 +36,11 @@ function enabled(value) {
 }
 
 function uniqueStrings(values) {
-  return [...new Set(values.filter((value) => typeof value === 'string' && value.trim()).map((value) => value.trim()))];
+  return [...new Set(
+    values
+      .filter((value) => typeof value === 'string' && value.trim())
+      .map((value) => value.trim()),
+  )];
 }
 
 function safeEnum(value, allowed) {
@@ -72,6 +77,21 @@ function requiredCheckContexts(protection) {
   return uniqueStrings([...contexts, ...checks]);
 }
 
+export function buildCredentialCandidates(dedicatedToken, githubToken) {
+  const seen = new Set();
+  const candidates = [];
+  for (const [label, rawToken] of [
+    ['dedicated-read-token', dedicatedToken],
+    ['github-token', githubToken],
+  ]) {
+    const token = String(rawToken || '').trim();
+    if (!token || seen.has(token)) continue;
+    seen.add(token);
+    candidates.push({ label, token });
+  }
+  return candidates;
+}
+
 export function rulesetPatternMatchesMain(pattern) {
   const normalized = String(pattern || '').trim();
   if (!normalized) return false;
@@ -99,6 +119,7 @@ export function synthesizeClassicProtectionFromRulesets(rulesets) {
   const applicable = (Array.isArray(rulesets) ? rulesets : []).filter(rulesetTargetsMain);
   const requiredChecks = [];
   const bypassActors = [];
+  const bypassVisibilityMissingRulesetIds = [];
   let approvingReviews = 0;
   let requireCodeOwnerReview = false;
   let dismissStaleReviews = false;
@@ -110,26 +131,35 @@ export function synthesizeClassicProtectionFromRulesets(rulesets) {
 
   for (const ruleset of applicable) {
     const rulesetId = safeNumericId(ruleset?.id);
-    for (const actor of Array.isArray(ruleset?.bypass_actors) ? ruleset.bypass_actors : []) {
-      bypassActors.push({
-        rulesetId,
-        actorType: safeEnum(actor?.actor_type, BYPASS_ACTOR_TYPES),
-        bypassMode: safeEnum(actor?.bypass_mode, BYPASS_MODES),
-      });
+    if (!Array.isArray(ruleset?.bypass_actors)) {
+      if (rulesetId) bypassVisibilityMissingRulesetIds.push(rulesetId);
+    } else {
+      for (const actor of ruleset.bypass_actors) {
+        bypassActors.push({
+          rulesetId,
+          actorType: safeEnum(actor?.actor_type, BYPASS_ACTOR_TYPES),
+          bypassMode: safeEnum(actor?.bypass_mode, BYPASS_MODES),
+        });
+      }
     }
 
     for (const rule of Array.isArray(ruleset?.rules) ? ruleset.rules : []) {
       const parameters = rule?.parameters || {};
       if (rule?.type === 'pull_request') {
         hasPullRequestRule = true;
-        approvingReviews = Math.max(approvingReviews, Number(parameters.required_approving_review_count) || 0);
+        approvingReviews = Math.max(
+          approvingReviews,
+          Number(parameters.required_approving_review_count) || 0,
+        );
         requireCodeOwnerReview ||= parameters.require_code_owner_review === true;
         dismissStaleReviews ||= parameters.dismiss_stale_reviews_on_push === true;
         requireReviewThreadResolution ||= parameters.required_review_thread_resolution === true;
       }
       if (rule?.type === 'required_status_checks') {
         strictStatusChecks ||= parameters.strict_required_status_checks_policy === true;
-        for (const check of Array.isArray(parameters.required_status_checks) ? parameters.required_status_checks : []) {
+        for (const check of Array.isArray(parameters.required_status_checks)
+          ? parameters.required_status_checks
+          : []) {
           if (typeof check?.context === 'string') requiredChecks.push(check.context);
         }
       }
@@ -159,8 +189,13 @@ export function synthesizeClassicProtectionFromRulesets(rulesets) {
     metadata: {
       applicableRulesetCount: applicable.length,
       rulesetIds: applicable.map((ruleset) => safeNumericId(ruleset?.id)).filter(Boolean),
-      rulesetSources: uniqueStrings(applicable.map((ruleset) => safeEnum(ruleset?.source_type, RULESET_SOURCE_TYPES))),
+      rulesetSources: uniqueStrings(
+        applicable.map((ruleset) => safeEnum(ruleset?.source_type, RULESET_SOURCE_TYPES)),
+      ),
       bypassActors,
+      bypassVisibilityComplete:
+        applicable.length > 0 && bypassVisibilityMissingRulesetIds.length === 0,
+      bypassVisibilityMissingRulesetIds,
     },
   };
 }
@@ -177,7 +212,8 @@ export function mergeClassicAndRulesetProtection(classicProtection, rulesetProte
   return {
     required_status_checks: checks.length > 0
       ? {
-          strict: classicProtection?.required_status_checks?.strict === true
+          strict:
+            classicProtection?.required_status_checks?.strict === true
             || rulesetProtection?.required_status_checks?.strict === true,
           contexts: checks,
           checks: [],
@@ -189,29 +225,39 @@ export function mergeClassicAndRulesetProtection(classicProtection, rulesetProte
             Number(classicReviews?.required_approving_review_count) || 0,
             Number(rulesetReviews?.required_approving_review_count) || 0,
           ),
-          require_code_owner_reviews: classicReviews?.require_code_owner_reviews === true
+          require_code_owner_reviews:
+            classicReviews?.require_code_owner_reviews === true
             || rulesetReviews?.require_code_owner_reviews === true,
-          dismiss_stale_reviews: classicReviews?.dismiss_stale_reviews === true
+          dismiss_stale_reviews:
+            classicReviews?.dismiss_stale_reviews === true
             || rulesetReviews?.dismiss_stale_reviews === true,
         }
       : null,
     required_conversation_resolution: {
-      enabled: enabled(classicProtection?.required_conversation_resolution)
+      enabled:
+        enabled(classicProtection?.required_conversation_resolution)
         || enabled(rulesetProtection?.required_conversation_resolution),
     },
     allow_force_pushes: {
-      enabled: enabled(classicProtection?.allow_force_pushes)
+      enabled:
+        enabled(classicProtection?.allow_force_pushes)
         && enabled(rulesetProtection?.allow_force_pushes),
     },
     allow_deletions: {
-      enabled: enabled(classicProtection?.allow_deletions)
+      enabled:
+        enabled(classicProtection?.allow_deletions)
         && enabled(rulesetProtection?.allow_deletions),
     },
     restrictions: classicProtection?.restrictions || rulesetProtection?.restrictions || null,
   };
 }
 
-export function applyRulesetsEvidenceBoundary(evidence, metadata, classicBoundary, sourceMode = 'repository-rulesets') {
+export function applyRulesetsEvidenceBoundary(
+  evidence,
+  metadata,
+  classicBoundary,
+  sourceMode = 'repository-rulesets',
+) {
   evidence.source = sourceMode === 'classic-plus-rulesets' ? SOURCE_COMBINED : SOURCE_RULESETS;
   evidence.sourceDetails = {
     ...evidence.sourceDetails,
@@ -222,38 +268,55 @@ export function applyRulesetsEvidenceBoundary(evidence, metadata, classicBoundar
     rulesetSources: metadata.rulesetSources,
     bypassActorCount: metadata.bypassActors.length,
     bypassActors: metadata.bypassActors,
+    bypassVisibilityComplete: metadata.bypassVisibilityComplete === true,
+    bypassVisibilityMissingRulesetIds: metadata.bypassVisibilityMissingRulesetIds || [],
+    rulesetsAuthModes: uniqueStrings(metadata.rulesetsAuthModes || []),
   };
   evidence.evidenceLocations = uniqueStrings([
     ...(Array.isArray(evidence.evidenceLocations) ? evidence.evidenceLocations : []),
     'GitHub Repository Rulesets API bounded projection',
     'scripts/enterprise/build-platform-controls-runtime-evidence.mjs',
   ]);
-  evidence.evidenceBoundary = `${evidence.evidenceBoundary || ''} Classic branch protection and active rulesets may be evaluated cumulatively. Ruleset controls are accepted only when they target main and contain no bypass actor.`.trim();
+  evidence.evidenceBoundary = `${evidence.evidenceBoundary || ''} Classic branch protection and active rulesets may be evaluated cumulatively. Ruleset controls are accepted only when they target main, bypass-actor visibility is proven, and no bypass actor exists.`.trim();
 
   const additionalFailures = [];
   if (metadata.applicableRulesetCount === 0) additionalFailures.push('active_main_ruleset_missing');
+  if (metadata.bypassVisibilityComplete !== true) {
+    additionalFailures.push('ruleset_bypass_visibility_unproven');
+  }
   if (metadata.bypassActors.length > 0) additionalFailures.push('ruleset_bypass_actor_present');
 
   if (additionalFailures.length > 0) {
     evidence.status = 'Open';
     evidence.outcome = 'failed';
-    evidence.failures = uniqueStrings([...(Array.isArray(evidence.failures) ? evidence.failures : []), ...additionalFailures]);
-    evidence.summary = metadata.applicableRulesetCount === 0
-      ? 'No active repository ruleset was proven to target the current main branch.'
-      : 'Repository rulesets contain one or more bypass actors, so their contributed controls cannot be treated as complete.';
-    evidence.sourceDetails.missingProtectionFlags = Number(evidence.sourceDetails.missingProtectionFlags || 0) + additionalFailures.length;
+    evidence.failures = uniqueStrings([
+      ...(Array.isArray(evidence.failures) ? evidence.failures : []),
+      ...additionalFailures,
+    ]);
+
+    if (metadata.applicableRulesetCount === 0) {
+      evidence.summary = 'No active repository ruleset was proven to target the current main branch.';
+    } else if (metadata.bypassVisibilityComplete !== true) {
+      evidence.summary = 'Repository ruleset controls were visible, but bypass-actor visibility was not proven; the policy remains fail-closed.';
+    } else {
+      evidence.summary = 'Repository rulesets contain one or more bypass actors, so their contributed controls cannot be treated as complete.';
+    }
+    evidence.sourceDetails.missingProtectionFlags =
+      Number(evidence.sourceDetails.missingProtectionFlags || 0) + additionalFailures.length;
   }
   return evidence;
 }
 
-async function githubJson(url, token) {
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'risck-comply-platform-controls-proof',
-    },
+async function githubJson(url, token, fetchImpl = fetch) {
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'risck-comply-platform-controls-proof',
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const response = await fetchImpl(url, {
+    headers,
     cache: 'no-store',
     signal: AbortSignal.timeout(15_000),
   });
@@ -261,37 +324,76 @@ async function githubJson(url, token) {
   return response.json();
 }
 
-async function fetchMainSha(repository, token) {
+export async function githubJsonWithCredentialFallback(
+  url,
+  candidates,
+  { fetchImpl = fetch } = {},
+) {
+  const attempts = Array.isArray(candidates) ? candidates : [];
+  let lastError = new Error('github_api_no_credential');
+
+  for (const candidate of attempts) {
+    try {
+      const data = await githubJson(url, candidate?.token, fetchImpl);
+      return { data, authMode: candidate?.label || 'unknown-token' };
+    } catch (error) {
+      lastError = error;
+      const code = errorCode(error);
+      const status = Number(code.replace('github_api_', ''));
+      if (!RETRYABLE_AUTH_STATUSES.has(status)) throw error;
+    }
+  }
+
+  throw lastError;
+}
+
+async function fetchMainSha(repository, credentials) {
   try {
-    const branch = await githubJson(`https://api.github.com/repos/${repository}/branches/${CANONICAL_BRANCH}`, token);
-    return normalizeSha(branch?.commit?.sha);
+    const { data, authMode } = await githubJsonWithCredentialFallback(
+      `https://api.github.com/repos/${repository}/branches/${CANONICAL_BRANCH}`,
+      credentials,
+    );
+    return { sha: normalizeSha(data?.commit?.sha), authMode };
   } catch {
-    const ref = await githubJson(`https://api.github.com/repos/${repository}/git/ref/heads/${CANONICAL_BRANCH}`, token);
-    return normalizeSha(ref?.object?.sha);
+    const { data, authMode } = await githubJsonWithCredentialFallback(
+      `https://api.github.com/repos/${repository}/git/ref/heads/${CANONICAL_BRANCH}`,
+      credentials,
+    );
+    return { sha: normalizeSha(data?.object?.sha), authMode };
   }
 }
 
-async function fetchRepositoryRulesets(repository, token) {
-  const summaries = await githubJson(
+async function fetchRepositoryRulesets(repository, credentials) {
+  const listing = await githubJsonWithCredentialFallback(
     `https://api.github.com/repos/${repository}/rulesets?includes_parents=true&per_page=100`,
-    token,
+    credentials,
   );
-  if (!Array.isArray(summaries)) throw new Error('github_rulesets_listing_invalid');
+  if (!Array.isArray(listing.data)) throw new Error('github_rulesets_listing_invalid');
 
   const details = [];
-  for (const summary of summaries) {
+  const authModes = [listing.authMode];
+  for (const summary of listing.data) {
     if (summary?.target !== 'branch' || summary?.enforcement !== 'active') continue;
     const id = safeNumericId(summary?.id);
     if (!id) continue;
-    details.push(await githubJson(
+    const detail = await githubJsonWithCredentialFallback(
       `https://api.github.com/repos/${repository}/rulesets/${id}?includes_parents=true`,
-      token,
-    ));
+      credentials,
+    );
+    details.push(detail.data);
+    authModes.push(detail.authMode);
   }
-  return details;
+  return { rulesets: details, authModes: uniqueStrings(authModes) };
 }
 
-function buildApiFailureEvidence({ targetSha, checkedOutSha, currentMainSha, runId, generatedAt, failures }) {
+function buildApiFailureEvidence({
+  targetSha,
+  checkedOutSha,
+  currentMainSha,
+  runId,
+  generatedAt,
+  failures,
+}) {
   const evidence = evaluateBranchProtection({
     protection: {},
     targetSha,
@@ -303,7 +405,8 @@ function buildApiFailureEvidence({ targetSha, checkedOutSha, currentMainSha, run
   evidence.source = 'github-api-platform-controls-unavailable';
   evidence.status = 'Open';
   evidence.outcome = 'blocked';
-  evidence.summary = 'Neither classic branch protection nor repository rulesets could provide complete bounded platform-control evidence.';
+  evidence.summary =
+    'Neither classic branch protection nor repository rulesets could provide complete bounded platform-control evidence.';
   evidence.failures = uniqueStrings(failures);
   evidence.sourceDetails = { ...evidence.sourceDetails, sourceMode: 'unavailable' };
   return evidence;
@@ -316,21 +419,34 @@ function emitEvidence(evidence) {
 async function main() {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
   const repository = process.env.GITHUB_REPOSITORY || '';
-  const token = process.env.BRANCH_PROTECTION_READ_TOKEN || process.env.GITHUB_TOKEN || '';
+  const credentials = buildCredentialCandidates(
+    process.env.BRANCH_PROTECTION_READ_TOKEN,
+    process.env.GITHUB_TOKEN,
+  );
   const targetSha = normalizeSha(process.env.TARGET_SHA || process.env.GITHUB_SHA);
-  const checkedOutSha = normalizeSha(execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }));
+  const checkedOutSha = normalizeSha(
+    execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }),
+  );
   const runId = process.env.GITHUB_RUN_ID || '';
   const generatedAt = new Date().toISOString();
-  const configuredOutputPath = process.env.BRANCH_PROTECTION_EVIDENCE_PATH || DEFAULT_OUTPUT_PATH;
+  const configuredOutputPath =
+    process.env.BRANCH_PROTECTION_EVIDENCE_PATH || DEFAULT_OUTPUT_PATH;
 
   if (repository !== CANONICAL_REPOSITORY) throw new Error('repository_not_canonical');
-  if (!token) throw new Error('platform_controls_read_token_missing');
-  if (configuredOutputPath !== DEFAULT_OUTPUT_PATH) throw new Error('branch_protection_evidence_path_not_canonical');
-  if (!FULL_SHA.test(targetSha) || !FULL_SHA.test(checkedOutSha)) throw new Error('target_or_checkout_sha_invalid');
+  if (credentials.length === 0) throw new Error('platform_controls_read_token_missing');
+  if (configuredOutputPath !== DEFAULT_OUTPUT_PATH) {
+    throw new Error('branch_protection_evidence_path_not_canonical');
+  }
+  if (!FULL_SHA.test(targetSha) || !FULL_SHA.test(checkedOutSha)) {
+    throw new Error('target_or_checkout_sha_invalid');
+  }
 
   let currentMainSha = '';
+  let mainShaAuthMode = '';
   try {
-    currentMainSha = await fetchMainSha(repository, token);
+    const mainHead = await fetchMainSha(repository, credentials);
+    currentMainSha = mainHead.sha;
+    mainShaAuthMode = mainHead.authMode;
   } catch (error) {
     emitEvidence(buildApiFailureEvidence({
       targetSha,
@@ -349,10 +465,11 @@ async function main() {
   let classicBoundary = null;
 
   try {
-    classicProtection = await githubJson(
+    const classic = await githubJsonWithCredentialFallback(
       `https://api.github.com/repos/${repository}/branches/${CANONICAL_BRANCH}/protection`,
-      token,
+      credentials,
     );
+    classicProtection = classic.data;
     classicEvidence = evaluateBranchProtection({
       protection: classicProtection,
       targetSha,
@@ -362,7 +479,12 @@ async function main() {
       generatedAt,
     });
     classicEvidence.source = SOURCE_CLASSIC;
-    classicEvidence.sourceDetails = { ...classicEvidence.sourceDetails, sourceMode: 'classic-branch-protection' };
+    classicEvidence.sourceDetails = {
+      ...classicEvidence.sourceDetails,
+      sourceMode: 'classic-branch-protection',
+      mainShaAuthMode,
+      classicAuthMode: classic.authMode,
+    };
     if (classicEvidence.outcome !== 'passed') classicBoundary = 'classic_policy_incomplete';
   } catch (classicError) {
     classicBoundary = errorCode(classicError);
@@ -372,12 +494,25 @@ async function main() {
 
   if (!evidence) {
     try {
-      const rulesets = await fetchRepositoryRulesets(repository, token);
-      const { protection: rulesetProtection, metadata } = synthesizeClassicProtectionFromRulesets(rulesets);
+      const collectedRulesets = await fetchRepositoryRulesets(repository, credentials);
+      const { protection: rulesetProtection, metadata } =
+        synthesizeClassicProtectionFromRulesets(collectedRulesets.rulesets);
+      metadata.rulesetsAuthModes = collectedRulesets.authModes;
       const protection = classicProtection
         ? mergeClassicAndRulesetProtection(classicProtection, rulesetProtection)
         : rulesetProtection;
-      evidence = evaluateBranchProtection({ protection, targetSha, checkedOutSha, currentMainSha, runId, generatedAt });
+      evidence = evaluateBranchProtection({
+        protection,
+        targetSha,
+        checkedOutSha,
+        currentMainSha,
+        runId,
+        generatedAt,
+      });
+      evidence.sourceDetails = {
+        ...evidence.sourceDetails,
+        mainShaAuthMode,
+      };
       evidence = applyRulesetsEvidenceBoundary(
         evidence,
         metadata,
@@ -401,6 +536,10 @@ async function main() {
           generatedAt,
           failures: [classicBoundary, errorCode(rulesetsError)],
         });
+        evidence.sourceDetails = {
+          ...evidence.sourceDetails,
+          mainShaAuthMode,
+        };
       }
     }
   }
