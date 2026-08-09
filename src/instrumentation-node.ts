@@ -1,47 +1,26 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-
-const parseEnvLine = (line: string) => {
-  const trimmed = line.trim();
-  if (!trimmed || trimmed.startsWith("#")) return null;
-
-  const eqIndex = trimmed.indexOf("=");
-  if (eqIndex <= 0) return null;
-
-  const key = trimmed.slice(0, eqIndex).trim();
-  const value = trimmed.slice(eqIndex + 1).trim().replace(/^["']|["']$/g, "");
-
-  if (!key) return null;
-  return { key, value };
-};
-
-const envUserPath = join(process.cwd(), ".env.user");
-if (existsSync(envUserPath)) {
-  const content = readFileSync(envUserPath, "utf-8");
-  for (const line of content.split("\n")) {
-    const parsed = parseEnvLine(line);
-    if (!parsed) continue;
-    if (!(parsed.key in process.env)) {
-      process.env[parsed.key] = parsed.value;
-    }
-  }
-}
-
-// Map common provider-specific env names to the canonical names used by the app.
-// Public browser values must use explicit Supabase/public/publishable names;
-// never expose database connection URLs through NEXT_PUBLIC_* aliases.
+// This module is imported from the shared Next.js instrumentation entrypoint,
+// which is compiled for both Node.js and Edge. Keep it free of Node-only
+// built-ins so the Edge instrumentation bundle remains buildable.
+//
+// Provider-specific environment aliases are normalized here before Sentry reads
+// runtime configuration. Local `.env.user` loading must happen outside this
+// shared instrumentation path because filesystem imports would be bundled into
+// the Edge instrumentation build.
 const mapFallbacks: Record<string, string[]> = {
-  // server-side DB URL
+  // Server-side database URL.
   DATABASE_URL: [
     process.env.SUPABASE_URL ?? '',
     process.env.POSTGRES_URL ?? '',
-    process.env.POSTGRES_PRISMA_URL ?? ''
+    process.env.POSTGRES_PRISMA_URL ?? '',
   ],
-  // supabase service role
+  // Supabase service-role credential.
   DATABASE_SERVICE_ROLE_KEY: [process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''],
-  // public client URL for client-side supabase
-  NEXT_PUBLIC_SUPABASE_URL: [process.env.NEXT_PUBLIC_SUPABASE_URL ?? '', process.env.SUPABASE_URL ?? ''],
-  // public publishable key
+  // Public client URL for browser-side Supabase clients.
+  NEXT_PUBLIC_SUPABASE_URL: [
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+    process.env.SUPABASE_URL ?? '',
+  ],
+  // Public publishable/anon key aliases only; never map database credentials.
   NEXT_PUBLIC_SUPABASE_ANON_KEY: [
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
     process.env.NEXT_PUBLIC_SUPABASE_KEY ?? '',
@@ -49,19 +28,20 @@ const mapFallbacks: Record<string, string[]> = {
     process.env.SUPABASE_KEY ?? '',
     process.env.SUPABASE_ANON_KEY ?? '',
   ],
-  // postgrest compatibility
-  POSTGREST_API_KEY: [process.env.POSTGREST_API_KEY ?? '', process.env.SUPABASE_JWT_SECRET ?? ''],
-  // stripe placeholders left to the user — do not auto-map sensitive keys
+  // PostgREST compatibility alias.
+  POSTGREST_API_KEY: [
+    process.env.POSTGREST_API_KEY ?? '',
+    process.env.SUPABASE_JWT_SECRET ?? '',
+  ],
 };
 
 for (const [target, fallbacks] of Object.entries(mapFallbacks)) {
-  if (!process.env[target]) {
-    for (const val of fallbacks) {
-      if (val) {
-        process.env[target] = val;
-        break;
-      }
-    }
+  if (process.env[target]) continue;
+
+  for (const value of fallbacks) {
+    if (!value) continue;
+    process.env[target] = value;
+    break;
   }
 }
 
