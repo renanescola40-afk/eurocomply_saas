@@ -7,12 +7,15 @@ import { fileURLToPath } from 'node:url';
 
 const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const WORKFLOW_FILE = 'auth-rbac-runtime-proof.yml';
-const WORKFLOW_NAME = 'Auth RBAC Tenant Proof';
 const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`;
 const SOURCE_EVIDENCE_PATH = 'docs/security/evidence/runtime/auth-rbac-final-validation.json';
 const SCORECARD_EVIDENCE_PATH = 'docs/security/evidence/runtime/auth-rbac-validation.json';
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const NUMERIC_ID = /^\d+$/;
+const SUPPORTED_SCHEMAS = new Set([
+  'risck-comply.auth-rbac-runtime-evidence.v1',
+  'risck-comply.auth-rbac-runtime-evidence.v2',
+]);
 
 function apiHeaders(token) {
   return {
@@ -48,7 +51,7 @@ export function validateDownloadedEvidence(evidence, { targetSha, repository, ru
   const failures = [];
   if (repository !== CANONICAL_REPOSITORY) failures.push('repository_not_canonical');
   if (!FULL_SHA.test(targetSha)) failures.push('target_sha_invalid');
-  if (evidence?.schema !== 'risck-comply.auth-rbac-runtime-evidence.v1') failures.push('schema_invalid');
+  if (!SUPPORTED_SCHEMAS.has(evidence?.schema)) failures.push('schema_invalid');
   if (evidence?.evidenceItem !== 'auth-rbac-final-validation') failures.push('evidence_item_invalid');
   if (evidence?.status !== 'Complete' || evidence?.outcome !== 'passed') failures.push('evidence_not_complete');
   if (evidence?.repository !== repository || evidence?.branch !== 'main') failures.push('evidence_provenance_invalid');
@@ -67,6 +70,12 @@ export function validateDownloadedEvidence(evidence, { targetSha, repository, ru
   if (evidence?.evidenceIntegrity?.userIdentifiersStored !== false) failures.push('user_identifier_integrity_invalid');
   if (evidence?.evidenceIntegrity?.organizationIdentifiersStored !== false) failures.push('organization_identifier_integrity_invalid');
   if (evidence?.evidenceIntegrity?.rawProviderResponsesStored !== false) failures.push('provider_response_integrity_invalid');
+  if (evidence?.schema === 'risck-comply.auth-rbac-runtime-evidence.v2') {
+    if (evidence?.evidenceIntegrity?.serviceRoleKeyStored !== false) failures.push('service_role_integrity_invalid');
+    if (evidence?.evidenceIntegrity?.disposablePasswordStored !== false) failures.push('disposable_password_integrity_invalid');
+    if (evidence?.evidenceIntegrity?.cleanupRequired !== true) failures.push('cleanup_requirement_invalid');
+    if (evidence?.evidenceIntegrity?.cleanupVerified !== true) failures.push('cleanup_verification_invalid');
+  }
   return { passed: failures.length === 0, failures };
 }
 
