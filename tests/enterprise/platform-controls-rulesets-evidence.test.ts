@@ -7,6 +7,8 @@ import {
 } from '../../scripts/enterprise/build-branch-protection-runtime-evidence.mjs';
 import {
   applyRulesetsEvidenceBoundary,
+  buildCredentialCandidates,
+  githubJsonWithCredentialFallback,
   mergeClassicAndRulesetProtection,
   rulesetPatternMatchesMain,
   rulesetTargetsMain,
@@ -34,7 +36,7 @@ type RulesetFixture = {
       exclude: string[];
     };
   };
-  bypass_actors: Array<{
+  bypass_actors?: Array<{
     actor_type: string;
     actor_id?: number;
     bypass_mode: string;
@@ -108,6 +110,8 @@ describe('repository rulesets platform-control evidence fallback', () => {
       rulesetSources: ['Repository'],
       bypassActorCount: 0,
       bypassActors: [],
+      bypassVisibilityComplete: true,
+      bypassVisibilityMissingRulesetIds: [],
       missingRequiredChecks: [],
       missingProtectionFlags: 0,
     }));
@@ -127,6 +131,73 @@ describe('repository rulesets platform-control evidence fallback', () => {
       expectedSha: SHA,
       expectedRepository: 'renanescola40-afk/eurocomply_saas',
     })).toEqual([]);
+  });
+
+  it('retries a stale dedicated token with the scoped GitHub Actions token', async () => {
+    const candidates = buildCredentialCandidates('stale-dedicated-token', 'github-actions-token');
+    const authorizations: string[] = [];
+
+    const response = await githubJsonWithCredentialFallback(
+      'https://api.github.com/repos/renanescola40-afk/eurocomply_saas/branches/main',
+      candidates,
+      {
+        fetchImpl: async (_url: string | URL | Request, init?: RequestInit) => {
+          const authorization = String(
+            (init?.headers as Record<string, string> | undefined)?.Authorization || '',
+          );
+          authorizations.push(authorization);
+          if (authorization.endsWith('stale-dedicated-token')) {
+            return new Response(JSON.stringify({ message: 'Bad credentials' }), {
+              status: 401,
+              headers: { 'content-type': 'application/json' },
+            });
+          }
+          return new Response(JSON.stringify({ commit: { sha: SHA } }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        },
+      },
+    );
+
+    expect(response.authMode).toBe('github-token');
+    expect(response.data).toEqual({ commit: { sha: SHA } });
+    expect(authorizations).toEqual([
+      'Bearer stale-dedicated-token',
+      'Bearer github-actions-token',
+    ]);
+  });
+
+  it('deduplicates credential candidates without persisting token values in evidence metadata', () => {
+    expect(buildCredentialCandidates('same-token', 'same-token')).toEqual([
+      { label: 'dedicated-read-token', token: 'same-token' },
+    ]);
+    expect(buildCredentialCandidates('', 'github-actions-token')).toEqual([
+      { label: 'github-token', token: 'github-actions-token' },
+    ]);
+  });
+
+  it('fails closed when GitHub omits bypass actors because ruleset write visibility is absent', () => {
+    const ruleset = completeRuleset();
+    delete ruleset.bypass_actors;
+    const evidence = evaluateRulesets([ruleset]);
+
+    expect(evidence.status).toBe('Open');
+    expect(evidence.outcome).toBe('failed');
+    expect(evidence.failures).toContain('ruleset_bypass_visibility_unproven');
+    expect(evidence.sourceDetails).toEqual(expect.objectContaining({
+      bypassVisibilityComplete: false,
+      bypassVisibilityMissingRulesetIds: [7001],
+    }));
+    expect(validateGeneratedBranchProtectionEvidence(evidence, {
+      expectedSha: SHA,
+    })).toEqual(expect.arrayContaining([
+      'status must be Complete',
+      'outcome must be passed',
+      'ruleset bypass-actor visibility must be proven',
+      'ruleset bypass-actor visibility gaps are not allowed',
+      'bounded ruleset provenance is invalid',
+    ]));
   });
 
   it('matches default, exact and glob main references while respecting exclusions', () => {
@@ -186,7 +257,9 @@ describe('repository rulesets platform-control evidence fallback', () => {
       name: 'Deletion protection only',
       rules: [{ type: 'deletion' }],
     });
-    const { protection: projected, metadata } = synthesizeClassicProtectionFromRulesets([deletionRuleset]);
+    const { protection: projected, metadata } = synthesizeClassicProtectionFromRulesets([
+      deletionRuleset,
+    ]);
     const combined = mergeClassicAndRulesetProtection(classic, projected);
     const evidence = applyRulesetsEvidenceBoundary(evaluateBranchProtection({
       protection: combined,
@@ -228,8 +301,14 @@ describe('repository rulesets platform-control evidence fallback', () => {
 
   it('keeps network collection separate from bounded file persistence', () => {
     const workflow = readFileSync('.github/workflows/branch-protection-runtime-proof.yml', 'utf8');
-    const builder = readFileSync('scripts/enterprise/build-platform-controls-runtime-evidence.mjs', 'utf8');
-    const validator = readFileSync('scripts/security/check-generated-branch-protection-evidence.mjs', 'utf8');
+    const builder = readFileSync(
+      'scripts/enterprise/build-platform-controls-runtime-evidence.mjs',
+      'utf8',
+    );
+    const validator = readFileSync(
+      'scripts/security/check-generated-branch-protection-evidence.mjs',
+      'utf8',
+    );
 
     expect(workflow).toContain('pull_request:');
     expect(workflow).toContain('Validate platform evidence contracts');
@@ -246,6 +325,10 @@ describe('repository rulesets platform-control evidence fallback', () => {
     expect(builder).toContain('classicProtectionApiFailure');
     expect(builder).toContain('classic-plus-rulesets');
     expect(builder).toContain('ruleset_bypass_actor_present');
+    expect(builder).toContain('ruleset_bypass_visibility_unproven');
+    expect(builder).toContain('BRANCH_PROTECTION_READ_TOKEN');
+    expect(builder).toContain('GITHUB_TOKEN');
+    expect(builder).toContain('githubJsonWithCredentialFallback');
     expect(builder).toContain('process.stdout.write');
     expect(builder).not.toContain('writeFileSync');
     expect(builder).not.toContain('rulesetNames');
@@ -255,6 +338,7 @@ describe('repository rulesets platform-control evidence fallback', () => {
     expect(validator).toContain('ALLOWED_EVIDENCE_SOURCES');
     expect(validator).toContain('RULESET_EVIDENCE_SOURCES');
     expect(validator).toContain('boundedRulesetProvenanceIsValid');
+    expect(validator).toContain('ruleset bypass-actor visibility must be proven');
     expect(validator).toContain('free-form ruleset names must not be retained');
   });
 });
