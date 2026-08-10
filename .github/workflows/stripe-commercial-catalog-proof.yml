@@ -11,10 +11,12 @@ on:
       - 'src/app/api/ops/smoke/route.ts'
       - 'src/app/api/ready/route.ts'
       - 'src/app/api/ready/route.test.ts'
+      - 'src/app/[locale]/checkout/page.tsx'
       - '.env.example'
       - 'src/lib/billing/__tests__/enterprise-pricing.test.ts'
       - 'src/server/billing/billing-lifecycle.test.ts'
       - 'tests/security/stripe-runtime-env-alignment.test.ts'
+      - 'tests/billing/checkout-sales-led-contract.test.mjs'
       - 'scripts/security/run-stripe-commercial-catalog-proof.mjs'
       - 'tests/enterprise/stripe-commercial-catalog-proof.test.mjs'
       - '.github/workflows/stripe-commercial-catalog-proof.yml'
@@ -29,6 +31,7 @@ on:
       - 'src/lib/security/env.ts'
       - 'src/app/api/ops/smoke/route.ts'
       - 'src/app/api/ready/route.ts'
+      - 'src/app/[locale]/checkout/page.tsx'
       - 'scripts/security/run-stripe-commercial-catalog-proof.mjs'
       - '.github/workflows/stripe-commercial-catalog-proof.yml'
   workflow_dispatch:
@@ -68,7 +71,9 @@ jobs:
             src/server/billing/billing-lifecycle.test.ts \
             src/app/api/ready/route.test.ts \
             tests/security/stripe-runtime-env-alignment.test.ts
-          node --test tests/enterprise/stripe-commercial-catalog-proof.test.mjs
+          node --test \
+            tests/enterprise/stripe-commercial-catalog-proof.test.mjs \
+            tests/billing/checkout-sales-led-contract.test.mjs
 
   production-proof:
     name: Validate production Stripe catalog metadata
