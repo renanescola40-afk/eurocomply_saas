@@ -9,6 +9,35 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const CLOSURE_CONFIG = path.join(ROOT, 'config/enterprise-100-closure.json');
 const FULL_SHA = /^[a-f0-9]{40}$/;
 
+// Explicit semantic aliases only. Each source already has its own evidence contract
+// elsewhere in the repository. Do not add aliases merely because filenames look similar.
+const EXPLICIT_SOURCE_ALIASES = Object.freeze({
+  'release-validation/production-deployment.json': [
+    'docs/security/evidence/runtime/deployment-smoke-validation.json',
+  ],
+  'release-validation/production-smoke.json': [
+    'docs/security/evidence/runtime/authenticated-production-smoke.json',
+  ],
+  'release-validation/tenant-isolation-live.json': [
+    'docs/security/evidence/runtime/supabase-live-rls-validation.json',
+  ],
+  'release-validation/backup-restore.json': [
+    'recovery-source.json',
+  ],
+  'release-validation/rollback-rehearsal.json': [
+    'rollback-source.json',
+  ],
+  'release-validation/observability-runtime.json': [
+    'docs/security/evidence/runtime/observability-production-validation.json',
+  ],
+  'release-validation/billing-runtime.json': [
+    'docs/security/evidence/runtime/stripe-billing-validation.json',
+  ],
+  'release-validation/final-go-no-go.json': [
+    'docs/security/evidence/runtime/release-go-no-go.json',
+  ],
+});
+
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
 }
@@ -20,6 +49,7 @@ function normalisePath(value) {
 function evidenceSha(document) {
   const candidates = [
     document?.targetSha,
+    document?.expectedSha,
     document?.observedSha,
     document?.commitSha,
     document?.commit_sha,
@@ -70,6 +100,34 @@ async function walkJsonFiles(root) {
   return files.sort();
 }
 
+function candidatesForPath(candidates, requestedPath) {
+  const requested = normalisePath(requestedPath);
+  const basename = path.posix.basename(requested);
+  const exactPathMatches = candidates.filter((candidate) =>
+    candidate.relative === requested || candidate.relative.endsWith(`/${requested}`),
+  );
+  if (exactPathMatches.length > 0) return exactPathMatches;
+  return candidates.filter((candidate) => candidate.basename === basename);
+}
+
+function candidatePoolForExpectedPath(candidates, expectedPath) {
+  const direct = candidatesForPath(candidates, expectedPath);
+  if (direct.length > 0) {
+    return { pool: direct, matchedBy: 'declared_path', sourceAliases: [] };
+  }
+
+  const aliases = EXPLICIT_SOURCE_ALIASES[normalisePath(expectedPath)] ?? [];
+  if (aliases.length === 0) return { pool: [], matchedBy: 'none', sourceAliases: [] };
+
+  const aliasCandidates = [];
+  for (const alias of aliases) {
+    for (const candidate of candidatesForPath(candidates, alias)) {
+      if (!aliasCandidates.some((item) => item.absolute === candidate.absolute)) aliasCandidates.push(candidate);
+    }
+  }
+  return { pool: aliasCandidates, matchedBy: 'explicit_alias', sourceAliases: aliases };
+}
+
 export async function hydrateEnterpriseClosureEvidence({
   sourceRoot,
   outputRoot,
@@ -117,15 +175,7 @@ export async function hydrateEnterpriseClosureEvidence({
   const results = [];
 
   for (const expectedPath of expectedPaths) {
-    const expectedNormalised = normalisePath(expectedPath);
-    const expectedBasename = path.posix.basename(expectedNormalised);
-    const pathMatches = candidates.filter((candidate) =>
-      candidate.relative === expectedNormalised
-      || candidate.relative.endsWith(`/${expectedNormalised}`),
-    );
-    const pool = pathMatches.length > 0
-      ? pathMatches
-      : candidates.filter((candidate) => candidate.basename === expectedBasename);
+    const { pool, matchedBy, sourceAliases } = candidatePoolForExpectedPath(candidates, expectedPath);
     const exact = pool.filter((candidate) => candidate.sha === targetSha && !candidate.sensitive);
     const sensitive = pool.filter((candidate) => candidate.sha === targetSha && candidate.sensitive);
     const stale = pool.filter((candidate) => candidate.sha && candidate.sha !== targetSha);
@@ -134,6 +184,8 @@ export async function hydrateEnterpriseClosureEvidence({
       results.push({
         path: expectedPath,
         status: sensitive.length > 0 ? 'REJECTED_SENSITIVE' : stale.length > 0 ? 'STALE' : 'MISSING',
+        matchedBy,
+        sourceAliases,
         candidateCount: pool.length,
         staleShaCount: stale.length,
         sensitiveCandidateCount: sensitive.length,
@@ -146,6 +198,8 @@ export async function hydrateEnterpriseClosureEvidence({
       results.push({
         path: expectedPath,
         status: 'AMBIGUOUS',
+        matchedBy,
+        sourceAliases,
         candidateCount: exact.length,
         digests: [...digests].sort(),
       });
@@ -159,6 +213,8 @@ export async function hydrateEnterpriseClosureEvidence({
     results.push({
       path: expectedPath,
       status: 'HYDRATED',
+      matchedBy,
+      sourceAliases,
       source: selected.relative,
       digest: `sha256:${selected.digest}`,
       targetSha,
@@ -172,13 +228,14 @@ export async function hydrateEnterpriseClosureEvidence({
     targetSha,
     expectedEvidence: expectedPaths.length,
     hydratedEvidence: results.filter((item) => item.status === 'HYDRATED').length,
+    aliasedEvidence: results.filter((item) => item.status === 'HYDRATED' && item.matchedBy === 'explicit_alias').length,
     ambiguousEvidence: results.filter((item) => item.status === 'AMBIGUOUS').length,
     rejectedSensitiveEvidence: results.filter((item) => item.status === 'REJECTED_SENSITIVE').length,
     staleEvidence: results.filter((item) => item.status === 'STALE').length,
     missingEvidence: results.filter((item) => item.status === 'MISSING').length,
     invalidJsonFiles,
     results,
-    truthBoundary: 'Hydration only restores retained JSON evidence that is explicitly bound to the exact target SHA. It does not award PASS, approve human review, or convert missing, stale, ambiguous or sensitive evidence into closure credit.',
+    truthBoundary: 'Hydration restores only exact-SHA evidence by declared path or a small explicit semantic alias allowlist. It does not award PASS, approve human review, infer equivalence by filename similarity, or convert missing, stale, ambiguous or sensitive evidence into closure credit.',
   };
 
   await writeFile(
@@ -206,6 +263,7 @@ async function main() {
     targetSha: manifest.targetSha,
     expectedEvidence: manifest.expectedEvidence,
     hydratedEvidence: manifest.hydratedEvidence,
+    aliasedEvidence: manifest.aliasedEvidence,
     ambiguousEvidence: manifest.ambiguousEvidence,
     staleEvidence: manifest.staleEvidence,
     missingEvidence: manifest.missingEvidence,
