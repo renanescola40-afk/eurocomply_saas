@@ -18,35 +18,60 @@ type BillingPlanDefinition = {
   name: string;
   monthlyPriceCents: number;
   annualPriceCents: number | null;
+  startingMonthlyPriceCents?: number | null;
   monthlyEnvPriceKey?: string;
   annualEnvPriceKey?: string;
   legacyEnvPriceKeys: string[];
   selfServe: boolean;
+  salesLed: boolean;
   entitlements: BillingEntitlements;
 };
 
 export const BILLING_PLANS: Record<BillingPlan, BillingPlanDefinition> = {
   starter: {
-    name: 'Starter', monthlyPriceCents: 4900, annualPriceCents: 49000,
-    monthlyEnvPriceKey: 'STRIPE_PRICE_STARTER_MONTHLY', annualEnvPriceKey: 'STRIPE_PRICE_STARTER_ANNUAL',
-    legacyEnvPriceKeys: ['STRIPE_PRICE_ESSENTIAL_MONTHLY'], selfServe: true,
+    name: 'Essential',
+    monthlyPriceCents: 4900,
+    annualPriceCents: 49000,
+    startingMonthlyPriceCents: 4900,
+    monthlyEnvPriceKey: 'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+    annualEnvPriceKey: 'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+    legacyEnvPriceKeys: ['STRIPE_PRICE_STARTER_MONTHLY'],
+    selfServe: true,
+    salesLed: false,
     entitlements: { users: 3, documents: 100, exports: 25, auditLogsDays: 30, aiComplianceFeatures: 'core', vendorRisk: false, customPolicies: false, prioritySupport: false },
   },
   professional: {
-    name: 'Professional', monthlyPriceCents: 19900, annualPriceCents: 199000,
-    monthlyEnvPriceKey: 'STRIPE_PRICE_PROFESSIONAL_MONTHLY', annualEnvPriceKey: 'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
-    legacyEnvPriceKeys: ['STRIPE_PRICE_GROWTH_MONTHLY'], selfServe: true,
+    name: 'Professional',
+    monthlyPriceCents: 14900,
+    annualPriceCents: 149000,
+    startingMonthlyPriceCents: 14900,
+    monthlyEnvPriceKey: 'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+    annualEnvPriceKey: 'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
+    legacyEnvPriceKeys: ['STRIPE_PRICE_GROWTH_MONTHLY'],
+    selfServe: true,
+    salesLed: false,
     entitlements: { users: 15, documents: 1000, exports: 500, auditLogsDays: 180, aiComplianceFeatures: 'advanced', vendorRisk: true, customPolicies: true, prioritySupport: false },
   },
   business: {
-    name: 'Business', monthlyPriceCents: 69900, annualPriceCents: 699000,
-    monthlyEnvPriceKey: 'STRIPE_PRICE_BUSINESS_MONTHLY', annualEnvPriceKey: 'STRIPE_PRICE_BUSINESS_ANNUAL',
-    legacyEnvPriceKeys: [], selfServe: false,
+    name: 'Business',
+    monthlyPriceCents: 39900,
+    annualPriceCents: 399000,
+    startingMonthlyPriceCents: 39900,
+    monthlyEnvPriceKey: 'STRIPE_PRICE_BUSINESS_MONTHLY',
+    annualEnvPriceKey: 'STRIPE_PRICE_BUSINESS_ANNUAL',
+    legacyEnvPriceKeys: [],
+    selfServe: false,
+    salesLed: true,
     entitlements: { users: 75, documents: 10000, exports: 5000, auditLogsDays: 730, aiComplianceFeatures: 'advanced', vendorRisk: true, customPolicies: true, prioritySupport: true },
   },
   enterprise: {
-    name: 'Enterprise', monthlyPriceCents: 0, annualPriceCents: null,
-    legacyEnvPriceKeys: ['STRIPE_PRICE_ENTERPRISE_MONTHLY', 'STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY'], selfServe: false,
+    name: 'Enterprise',
+    monthlyPriceCents: 0,
+    annualPriceCents: null,
+    startingMonthlyPriceCents: 99000,
+    legacyEnvPriceKeys: ['STRIPE_PRICE_ENTERPRISE_MONTHLY', 'STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY'],
+    selfServe: false,
+    salesLed: true,
     entitlements: { users: Number.MAX_SAFE_INTEGER, documents: Number.MAX_SAFE_INTEGER, exports: 'unlimited', auditLogsDays: 3650, aiComplianceFeatures: 'enterprise', vendorRisk: true, customPolicies: true, prioritySupport: true },
   },
 };
@@ -87,7 +112,11 @@ export function getBillingEntitlements(plan: string | null | undefined): Billing
 export function getStripePriceId(plan: BillingPlan, interval: BillingInterval = 'month') {
   const definition = BILLING_PLANS[plan];
   const primaryKey = interval === 'year' ? definition.annualEnvPriceKey : definition.monthlyEnvPriceKey;
-  const priceId = (primaryKey ? process.env[primaryKey] : undefined) ?? (interval === 'month' ? definition.legacyEnvPriceKeys.map((key) => process.env[key]).find(Boolean) : undefined);
+  const primaryPriceId = primaryKey ? process.env[primaryKey]?.trim() : undefined;
+  const legacyPriceId = interval === 'month'
+    ? definition.legacyEnvPriceKeys.map((key) => process.env[key]?.trim()).find(Boolean)
+    : undefined;
+  const priceId = primaryPriceId || legacyPriceId;
   if (!priceId) throw new Error(`missing_stripe_price_${plan}_${interval}`);
   return priceId;
 }
