@@ -24,6 +24,9 @@ jobs:
     env:
       SUBJECT_SHA: def59573bf2dbd2ad447f8f493048b0296be21ff
       INVENTORY_RUN_ID: '31361564127'
+      INVENTORY_WORKFLOW_ID: '324308063'
+      INVENTORY_ARTIFACT_ID: '9052542299'
+      INVENTORY_ARTIFACT_DIGEST: sha256:71671c1e48bda901f5e488994bd30be0fcc1d5783c0bcda953515dba4b44e895
       INVENTORY_SHA256: cd453965b7e93b5ca5853838db1ba2ce561650fd30e865655f60891439158122
     steps:
       - name: Checkout exact PR head
@@ -46,15 +49,35 @@ jobs:
             scripts/supabase/build-migration-owner-review-ledger.test.mjs \
             scripts/supabase/normalize-migration-owner-review-evidence.test.mjs
 
-      - name: Verify retained inventory provenance
+      - name: Verify fail-closed retained inventory provenance
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           RUN="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${INVENTORY_RUN_ID}")"
+          JOBS="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${INVENTORY_RUN_ID}/jobs")"
+          ARTIFACT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${INVENTORY_ARTIFACT_ID}")"
+
           test "$(jq -r '.head_sha' <<<"$RUN")" = "$SUBJECT_SHA"
           test "$(jq -r '.path' <<<"$RUN")" = '.github/workflows/supabase-production-migration-dry-run.yml'
-          test "$(jq -r '.conclusion' <<<"$RUN")" = 'success'
+          test "$(jq -r '.workflow_id' <<<"$RUN")" = "$INVENTORY_WORKFLOW_ID"
+          test "$(jq -r '.event' <<<"$RUN")" = 'workflow_dispatch'
+          test "$(jq -r '.status' <<<"$RUN")" = 'completed'
+          test "$(jq -r '.conclusion' <<<"$RUN")" = 'failure'
+
+          test "$(jq -r '.total_count' <<<"$JOBS")" = '1'
+          test "$(jq -r '.jobs[0].head_sha' <<<"$JOBS")" = "$SUBJECT_SHA"
+          test "$(jq -r '.jobs[0].conclusion' <<<"$JOBS")" = 'failure'
+          test "$(jq -r '.jobs[0].steps[] | select(.name == "Enforce migration deployability before dry-run") | .conclusion' <<<"$JOBS")" = 'failure'
+          test "$(jq -r '.jobs[0].steps[] | select(.name == "Execute Supabase migration dry-run only") | .conclusion' <<<"$JOBS")" = 'skipped'
+          test "$(jq -r '.jobs[0].steps[] | select(.name == "Upload migration authorization, review and dry-run artifacts") | .conclusion' <<<"$JOBS")" = 'success'
+
+          test "$(jq -r '.id' <<<"$ARTIFACT")" = "$INVENTORY_ARTIFACT_ID"
+          test "$(jq -r '.name' <<<"$ARTIFACT")" = "supabase-production-migration-dry-run-${SUBJECT_SHA}"
+          test "$(jq -r '.expired' <<<"$ARTIFACT")" = 'false'
+          test "$(jq -r '.digest' <<<"$ARTIFACT")" = "$INVENTORY_ARTIFACT_DIGEST"
+          test "$(jq -r '.workflow_run.id' <<<"$ARTIFACT")" = "$INVENTORY_RUN_ID"
+          test "$(jq -r '.workflow_run.head_sha' <<<"$ARTIFACT")" = "$SUBJECT_SHA"
 
       - name: Download immutable reconciliation inventory
         uses: actions/download-artifact@v8
