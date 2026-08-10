@@ -43,3 +43,8 @@ test('retained evidence is filtered by exact workflow SHA and hydrated in isolat
   assert.match(hydrator, /candidate\.sha === targetSha/);
   assert.match(hydrator, /never converted into PASS/);
 });
+
+test('same-SHA producer completions queue instead of cancelling earlier closeout runs', () => {
+  assert.match(workflow, /group: enterprise-final-closeout-dashboard-/);
+  assert.match(workflow, /cancel-in-progress: false/);
+});
