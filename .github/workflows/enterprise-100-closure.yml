@@ -8,6 +8,7 @@ on:
       - 'scripts/release/hydrate-enterprise-100-evidence.mjs'
       - 'tests/enterprise-100-closure.test.ts'
       - 'tests/enterprise/enterprise-100-evidence-hydration.test.mjs'
+      - 'tests/security/enterprise-100-closure-workflow.test.mjs'
       - '.github/workflows/enterprise-100-closure.yml'
   push:
     branches: [main]
@@ -63,7 +64,9 @@ jobs:
           node --check scripts/release/check-enterprise-100-closure.mjs
           node --check scripts/release/hydrate-enterprise-100-evidence.mjs
           npx vitest run tests/enterprise-100-closure.test.ts
-          node --test tests/enterprise/enterprise-100-evidence-hydration.test.mjs
+          node --test \
+            tests/enterprise/enterprise-100-evidence-hydration.test.mjs \
+            tests/security/enterprise-100-closure-workflow.test.mjs
 
       - name: Validate repository contract
         if: github.event_name == 'pull_request'
