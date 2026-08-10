@@ -122,7 +122,8 @@ describe('promoted Stripe exact-SHA runtime evidence handoff', () => {
   it('wires the promotion workflow into the P0 exact-SHA aggregator', () => {
     const p0 = readFileSync('.github/workflows/p0-runtime-evidence.yml', 'utf8');
     expect(p0).toContain('- Stripe Runtime Evidence Promotion');
-    expect(p0).toContain("github.event.workflow.path == '.github/workflows/stripe-runtime-evidence-promotion.yml'");
+    expect(p0).toContain("github.event.workflow_run.path == '.github/workflows/stripe-runtime-evidence-promotion.yml'");
+    expect(p0).not.toContain("github.event.workflow.path == '.github/workflows/stripe-runtime-evidence-promotion.yml'");
     expect(p0).toContain('node scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs');
     expect(p0).toContain('STRIPE_RUNTIME_EVIDENCE_REQUIRED');
   });

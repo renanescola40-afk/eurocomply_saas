@@ -1,0 +1,93 @@
+name: Audit Chain Runtime Proof
+
+run-name: Audit-chain runtime proof for ${{ inputs.release_sha || github.sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Optional full current main SHA; defaults to selected main SHA
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-chain-runtime-proof-${{ inputs.release_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  validate-audit-chain-runtime:
+    name: Validate exact-SHA live audit chain
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      TARGET_SHA: ${{ inputs.release_sha || github.sha }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      AUDIT_CHAIN_SIGNING_SECRET: ${{ secrets.AUDIT_CHAIN_SIGNING_SECRET }}
+      EVIDENCE_PACK_SIGNING_SECRET: ${{ secrets.EVIDENCE_PACK_SIGNING_SECRET }}
+      AUDIT_CHAIN_LIVE_ORGANIZATION_ID: ${{ secrets.AUDIT_CHAIN_LIVE_ORGANIZATION_ID || secrets.AUTH_RBAC_ORGANIZATION_A_ID }}
+      AUDIT_CHAIN_LIVE_ACTOR_USER_ID: ${{ secrets.AUDIT_CHAIN_LIVE_ACTOR_USER_ID }}
+      AUDIT_CHAIN_LIVE_PROOF: 'true'
+      RISCK_COMPLY_ENTERPRISE_RELEASE: 'true'
+
+    steps:
+      - name: Validate exact current main SHA
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "release_sha must be a full Git SHA" >&2
+            exit 1
+          fi
+          TARGET_SHA="${TARGET_SHA,,}"
+          echo "TARGET_SHA=$TARGET_SHA" >> "$GITHUB_ENV"
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$TARGET_SHA"
+
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Validate audit-chain proof contracts
+        run: |
+          node --check scripts/security/run-audit-chain-live-validation.mjs
+          node --check scripts/security/validate-audit-chain-live-evidence.mjs
+          node --check scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs
+          npx vitest run tests/enterprise/audit-chain-runtime-evidence-fetch.test.ts
+
+      - name: Execute protected live audit-chain proof
+        run: node scripts/security/run-audit-chain-live-validation.mjs
+
+      - name: Upload redacted exact-SHA audit-chain evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: audit-chain-runtime-proof-${{ env.TARGET_SHA }}
+          path: docs/security/evidence/runtime/audit-chain-live-validation.json
+          if-no-files-found: error
+          retention-days: 90

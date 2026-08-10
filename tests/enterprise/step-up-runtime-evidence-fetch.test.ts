@@ -161,7 +161,8 @@ describe('Step-Up exact-SHA runtime evidence handoff', () => {
     const workflow = readFileSync('.github/workflows/step-up-runtime-proof.yml', 'utf8');
 
     expect(p0).toContain('- Step-Up Runtime Proof');
-    expect(p0).toContain("github.event.workflow.path == '.github/workflows/step-up-runtime-proof.yml'");
+    expect(p0).toContain("github.event.workflow_run.path == '.github/workflows/step-up-runtime-proof.yml'");
+    expect(p0).not.toContain("github.event.workflow.path == '.github/workflows/step-up-runtime-proof.yml'");
     expect(p0).toContain('node scripts/enterprise/fetch-step-up-runtime-evidence.mjs');
     expect(p0).toContain('STEP_UP_RUNTIME_EVIDENCE_REQUIRED');
     expect(workflow).toContain('secrets.STEP_UP_ASSERTION_SIGNING_SECRET || secrets.STEP_UP_SIGNING_SECRET');
