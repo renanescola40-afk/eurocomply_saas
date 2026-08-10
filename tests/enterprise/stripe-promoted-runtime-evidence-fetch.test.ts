@@ -34,6 +34,7 @@ function promotedEvidence() {
       'limitsMatch',
       'reconciliationObserved',
       'rawEvidenceDeleted',
+      'replaySafe',
     ],
     runtimeProof: {
       executed: true,
@@ -48,6 +49,7 @@ function promotedEvidence() {
       sourceArtifactName: `stripe-entitlement-runtime-proof-${SHA}`,
     },
     sourceEvidenceDigest: 'b'.repeat(64),
+    sourceReplayDigest: 'd'.repeat(64),
     artifactDigest: 'c'.repeat(64),
     redactionConfirmation: 'Redaction confirmed for runtime evidence.',
     evidenceIntegrity: {
@@ -131,6 +133,12 @@ describe('promoted Stripe exact-SHA runtime evidence handoff', () => {
     }).passed).toBe(false);
 
     expect(validateDownloadedEvidence({ ...promotedEvidence(), runtimeProof: { ...promotedEvidence().runtimeProof, sourceArtifactName: `stripe-entitlement-runtime-proof-${'b'.repeat(40)}` } }, {
+      targetSha: SHA,
+      repository: REPOSITORY,
+      now: new Date('2026-08-09T14:05:00.000Z'),
+    }).passed).toBe(false);
+
+    expect(validateDownloadedEvidence({ ...promotedEvidence(), sourceReplayDigest: '' }, {
       targetSha: SHA,
       repository: REPOSITORY,
       now: new Date('2026-08-09T14:05:00.000Z'),
