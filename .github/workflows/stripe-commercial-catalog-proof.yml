@@ -6,18 +6,29 @@ on:
       - 'config/billing-commercial-catalog.json'
       - 'src/lib/billing/plans.ts'
       - 'src/server/billing/plans.ts'
+      - 'src/app/api/billing/catalog/route.ts'
+      - 'src/lib/security/env.ts'
+      - 'src/app/api/ops/smoke/route.ts'
+      - 'src/app/api/ready/route.ts'
+      - 'src/app/api/ready/route.test.ts'
+      - '.env.example'
       - 'src/lib/billing/__tests__/enterprise-pricing.test.ts'
       - 'src/server/billing/billing-lifecycle.test.ts'
+      - 'tests/security/stripe-runtime-env-alignment.test.ts'
       - 'scripts/security/run-stripe-commercial-catalog-proof.mjs'
       - 'tests/enterprise/stripe-commercial-catalog-proof.test.mjs'
       - '.github/workflows/stripe-commercial-catalog-proof.yml'
       - 'docs/enterprise/ENTERPRISE_PRICING_AND_BILLING_ARCHITECTURE.md'
+      - 'docs/stripe-checkout-connection.md'
   push:
     branches: [main]
     paths:
       - 'config/billing-commercial-catalog.json'
       - 'src/lib/billing/plans.ts'
       - 'src/server/billing/plans.ts'
+      - 'src/lib/security/env.ts'
+      - 'src/app/api/ops/smoke/route.ts'
+      - 'src/app/api/ready/route.ts'
       - 'scripts/security/run-stripe-commercial-catalog-proof.mjs'
       - '.github/workflows/stripe-commercial-catalog-proof.yml'
   workflow_dispatch:
@@ -52,7 +63,11 @@ jobs:
       - name: Validate pricing and proof contracts
         run: |
           node --check scripts/security/run-stripe-commercial-catalog-proof.mjs
-          npx vitest run src/lib/billing/__tests__/enterprise-pricing.test.ts src/server/billing/billing-lifecycle.test.ts
+          npx vitest run \
+            src/lib/billing/__tests__/enterprise-pricing.test.ts \
+            src/server/billing/billing-lifecycle.test.ts \
+            src/app/api/ready/route.test.ts \
+            tests/security/stripe-runtime-env-alignment.test.ts
           node --test tests/enterprise/stripe-commercial-catalog-proof.test.mjs
 
   production-proof:
