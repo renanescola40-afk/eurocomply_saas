@@ -3,8 +3,16 @@ function parseTimestamp(value) {
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 
-const requiredProviders = ['github', 'vercel', 'supabase'];
+const requiredProviders = ['github', 'vercel', 'supabase', 'stripe', 'sentry'];
 const requiredEnvironments = ['production'];
+
+const providerRequiredChecks = Object.freeze({
+  github: ['repositoryReachable', 'repositoryBound', 'currentMainShaBound', 'protectedProductionEnvironment', 'githubActionsRunBound', 'exactContext'],
+  vercel: ['credentialsConfigured', 'projectReachable', 'productionEnvironmentEnumerated', 'requiredEnvironmentKeysPresent'],
+  supabase: ['urlConfigured', 'serviceRoleConfigured', 'projectReachable', 'serviceRoleAuthorized'],
+  stripe: ['secretConfigured', 'apiReachable', 'threePriceIdsConfigured', 'priceLookup'],
+  sentry: ['dsnConfigured', 'organizationConfigured', 'projectConfigured', 'buildAuthTokenConfigured', 'projectReachable'],
+});
 
 export function validateProductionSecretsRuntimeEvidence(
   evidence,
@@ -12,6 +20,8 @@ export function validateProductionSecretsRuntimeEvidence(
     now = new Date(),
     maxAgeDays = 7,
     expectedCommitSha,
+    expectedRepository = 'renanescola40-afk/eurocomply_saas',
+    expectedBranch = 'main',
   } = {},
 ) {
   const failures = [];
@@ -40,6 +50,7 @@ export function validateProductionSecretsRuntimeEvidence(
 
   if (evidence?.status !== 'Complete') return failures;
 
+  if (evidence?.outcome !== 'passed') failures.push('outcome must be passed for Complete evidence');
   if (evidence?.valuesRedacted !== true) failures.push('valuesRedacted must be true');
   if (evidence?.evidenceIntegrity?.containsSensitiveValues !== false) {
     failures.push('evidenceIntegrity.containsSensitiveValues must be false');
@@ -50,17 +61,35 @@ export function validateProductionSecretsRuntimeEvidence(
   if (evidence?.evidenceIntegrity?.credentialsStored !== false) {
     failures.push('evidenceIntegrity.credentialsStored must be false');
   }
+  if (evidence?.evidenceIntegrity?.providerResponseBodiesStored !== false) {
+    failures.push('evidenceIntegrity.providerResponseBodiesStored must be false');
+  }
+  if (evidence?.evidenceIntegrity?.decryptedProviderEnvironmentValuesStored !== false) {
+    failures.push('evidenceIntegrity.decryptedProviderEnvironmentValuesStored must be false');
+  }
+  if (evidence?.evidenceIntegrity?.exactShaBound !== true) {
+    failures.push('evidenceIntegrity.exactShaBound must be true');
+  }
 
   const commitSha = String(evidence?.runtimeContext?.commitSha ?? evidence?.commitSha ?? '');
   if (!/^[a-f0-9]{40}$/i.test(commitSha)) failures.push('runtime commit SHA must be a full commit SHA');
   if (expectedCommitSha && commitSha !== expectedCommitSha) {
     failures.push(`runtime commit SHA must match ${expectedCommitSha}`);
   }
+  if (evidence?.runtimeContext?.repository !== expectedRepository) {
+    failures.push(`runtime repository must match ${expectedRepository}`);
+  }
+  if (evidence?.runtimeContext?.branch !== expectedBranch) {
+    failures.push(`runtime branch must match ${expectedBranch}`);
+  }
+  if (String(evidence?.runtimeContext?.environment ?? '').toLowerCase() !== 'production') {
+    failures.push('runtime environment must be production');
+  }
   if (evidence?.runtimeContext?.generatedByGithubActions !== true) {
     failures.push('runtimeContext.generatedByGithubActions must be true');
   }
-  if (!String(evidence?.runtimeContext?.githubRunId ?? '').trim()) {
-    failures.push('runtimeContext.githubRunId is required');
+  if (!/^\d+$/.test(String(evidence?.runtimeContext?.githubRunId ?? ''))) {
+    failures.push('runtimeContext.githubRunId must be a numeric GitHub Actions run ID');
   }
 
   const providers = Array.isArray(evidence?.providersReviewed) ? evidence.providersReviewed : [];
@@ -76,12 +105,30 @@ export function validateProductionSecretsRuntimeEvidence(
       failures.push(`${provider} provider environment must be production`);
     }
     if (!String(entry.evidenceLocation ?? '').trim()) failures.push(`${provider} evidenceLocation is required`);
+
+    const checks = entry?.checks && typeof entry.checks === 'object' ? entry.checks : {};
+    for (const check of providerRequiredChecks[provider]) {
+      if (checks[check] !== true) failures.push(`${provider}.${check} must be true`);
+    }
   }
 
+  if (providers.length !== requiredProviders.length) {
+    failures.push(`providersReviewed must contain exactly ${requiredProviders.length} provider entries`);
+  }
   if (!String(evidence?.rotationOwner ?? '').trim()) failures.push('rotationOwner is required');
   const nextReviewDue = parseTimestamp(evidence?.nextReviewDue);
   if (nextReviewDue === null) failures.push('nextReviewDue must be an ISO-8601 timestamp');
   else if (nextReviewDue < nowMs) failures.push('nextReviewDue must not be expired');
+
+  if (!Array.isArray(evidence?.controlsVerified) || evidence.controlsVerified.length < requiredProviders.length) {
+    failures.push(`controlsVerified must include at least ${requiredProviders.length} verified provider controls`);
+  }
+  if (!Array.isArray(evidence?.evidenceLocations) || evidence.evidenceLocations.length < 3) {
+    failures.push('evidenceLocations must include the protected workflow, producer and validator');
+  }
+  if (!String(evidence?.reviewer ?? '').trim()) failures.push('reviewer is required');
+  if (!String(evidence?.summary ?? '').trim()) failures.push('summary is required');
+  if (!String(evidence?.redactionConfirmation ?? '').trim()) failures.push('redactionConfirmation is required');
 
   return failures;
 }
