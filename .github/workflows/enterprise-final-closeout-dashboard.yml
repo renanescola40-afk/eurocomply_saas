@@ -8,6 +8,7 @@ on:
       - 'docs/security/evidence/**'
       - 'scripts/enterprise/**'
       - 'tests/enterprise/**'
+      - 'tests/security/enterprise-final-closeout-workflow.test.mjs'
       - '.github/workflows/enterprise-final-closeout-dashboard.yml'
   push:
     branches: [main]
@@ -38,7 +39,7 @@ permissions:
 
 concurrency:
   group: enterprise-final-closeout-dashboard-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || inputs.target_sha || github.sha }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   dashboard:
@@ -67,7 +68,8 @@ jobs:
           node --check scripts/enterprise/hydrate-exact-sha-evidence.mjs
           node --test \
             tests/enterprise/final-closeout-dashboard.test.mjs \
-            tests/enterprise/exact-sha-evidence-hydration.test.mjs
+            tests/enterprise/exact-sha-evidence-hydration.test.mjs \
+            tests/security/enterprise-final-closeout-workflow.test.mjs
 
       - name: Validate target SHA is immutable main lineage
         if: github.event_name != 'pull_request'
