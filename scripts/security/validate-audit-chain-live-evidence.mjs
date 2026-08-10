@@ -4,6 +4,7 @@ export const requiredAuditChainChecks = [
   'appendNormal',
   'appendConcurrent',
   'missingPreviousHashDetected',
+  'ephemeralFixtureCleanup',
   'liveProofAttached',
 ];
 
@@ -67,6 +68,21 @@ export function validateAuditChainLiveEvidence(
   if (evidence?.targetLiveValidation?.status !== 'Complete') {
     failures.push('targetLiveValidation.status must be Complete');
   }
+  if (evidence?.targetLiveValidation?.fixtureMode !== 'ephemeral') {
+    failures.push('targetLiveValidation.fixtureMode must be ephemeral');
+  }
+  if (evidence?.targetLiveValidation?.ephemeralFixturesCreated !== true) {
+    failures.push('targetLiveValidation.ephemeralFixturesCreated must be true');
+  }
+  if (evidence?.targetLiveValidation?.cleanup?.status !== 'Complete') {
+    failures.push('targetLiveValidation.cleanup.status must be Complete');
+  }
+  if (evidence?.targetLiveValidation?.cleanup?.auditEventsRemoved !== true) {
+    failures.push('targetLiveValidation.cleanup.auditEventsRemoved must be true');
+  }
+  if (evidence?.targetLiveValidation?.cleanup?.authFixturesRemoved !== true) {
+    failures.push('targetLiveValidation.cleanup.authFixturesRemoved must be true');
+  }
 
   const proof = evidence?.verification_provenance;
   if (!proof || typeof proof !== 'object') {
@@ -107,6 +123,18 @@ export function validateAuditChainLiveEvidence(
   }
   if (evidence?.evidenceIntegrity?.rawAuditPayloadsStored !== false) {
     failures.push('evidenceIntegrity.rawAuditPayloadsStored must be false');
+  }
+  if (evidence?.evidenceIntegrity?.rawIdentifiersStored !== false) {
+    failures.push('evidenceIntegrity.rawIdentifiersStored must be false');
+  }
+  if (evidence?.evidenceIntegrity?.persistentFixtureCredentialsStored !== false) {
+    failures.push('evidenceIntegrity.persistentFixtureCredentialsStored must be false');
+  }
+  if (evidence?.evidenceIntegrity?.syntheticAuditEventsRetained !== false) {
+    failures.push('evidenceIntegrity.syntheticAuditEventsRetained must be false');
+  }
+  if (evidence?.evidenceIntegrity?.ephemeralFixtureCleanupVerified !== true) {
+    failures.push('evidenceIntegrity.ephemeralFixtureCleanupVerified must be true');
   }
 
   return failures;
