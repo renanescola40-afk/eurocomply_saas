@@ -15,6 +15,8 @@ on:
       - Production Runtime Proof
       - Step-Up Runtime Proof
       - Stripe Runtime Evidence Promotion
+      - Public Production Final
+      - Audit Chain Runtime Proof
     types: [completed]
 
 permissions:
@@ -22,7 +24,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: p0-runtime-evidence-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+  # A producer run is an independent evidence transaction. Using its run ID prevents
+  # a later producer (including a failed/skipped one) from cancelling another exact-SHA
+  # aggregation that is already importing a valid artifact.
+  group: p0-runtime-evidence-${{ github.event.workflow_run.id || github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -39,13 +44,15 @@ jobs:
     env:
       ASSESSED_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
       RELEASE_COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
-      UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/upload-security-ci.yml' && github.event.workflow_run.id || '' }}
-      BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/branch-protection-runtime-proof.yml' && github.event.workflow_run.id || '' }}
-      AUTH_RBAC_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/auth-rbac-runtime-proof.yml' && github.event.workflow_run.id || '' }}
-      SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/supabase-live-rls-validation.yml' && github.event.workflow_run.id || '' }}
-      PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/production-runtime-proof.yml' && github.event.workflow_run.id || '' }}
-      STEP_UP_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/step-up-runtime-proof.yml' && github.event.workflow_run.id || '' }}
-      STRIPE_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow.path == '.github/workflows/stripe-runtime-evidence-promotion.yml' && github.event.workflow_run.id || '' }}
+      UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/upload-security-ci.yml' && github.event.workflow_run.id || '' }}
+      BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/branch-protection-runtime-proof.yml' && github.event.workflow_run.id || '' }}
+      AUTH_RBAC_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/auth-rbac-runtime-proof.yml' && github.event.workflow_run.id || '' }}
+      SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/supabase-live-rls-validation.yml' && github.event.workflow_run.id || '' }}
+      PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/production-runtime-proof.yml' && github.event.workflow_run.id || '' }}
+      STEP_UP_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/step-up-runtime-proof.yml' && github.event.workflow_run.id || '' }}
+      STRIPE_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/stripe-runtime-evidence-promotion.yml' && github.event.workflow_run.id || '' }}
+      PUBLIC_FINAL_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/public-production-final.yml' && github.event.workflow_run.id || '' }}
+      AUDIT_CHAIN_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/audit-chain-runtime-proof.yml' && github.event.workflow_run.id || '' }}
     steps:
       - name: Checkout exact assessed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -84,6 +91,8 @@ jobs:
             tests/enterprise/supabase-rls-runtime-evidence-fetch.test.ts \
             tests/enterprise/step-up-runtime-evidence-fetch.test.ts \
             tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts \
+            tests/enterprise/public-production-final-evidence-fetch.test.ts \
+            tests/enterprise/audit-chain-runtime-evidence-fetch.test.ts \
             tests/release/production-runtime-scorecard-evidence.test.ts \
             tests/security/p0-runtime-gap-strict-contract.test.ts \
             tests/security/p0-register-source-of-truth-contract.test.ts
@@ -100,7 +109,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID: ${{ env.UPLOAD_SCANNER_RUNTIME_SOURCE_RUN_ID }}
-          UPLOAD_SCANNER_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/upload-security-ci.yml' && 'true' || 'false' }}
+          UPLOAD_SCANNER_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/upload-security-ci.yml' && 'true' || 'false' }}
         run: node scripts/enterprise/aggregate-upload-scanner-runtime-evidence.mjs
 
       - name: Retrieve exact-SHA branch protection runtime evidence
@@ -109,7 +118,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID: ${{ env.BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID }}
-          BRANCH_PROTECTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/branch-protection-runtime-proof.yml' && 'true' || 'false' }}
+          BRANCH_PROTECTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/branch-protection-runtime-proof.yml' && 'true' || 'false' }}
         run: node scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs
 
       - name: Retrieve exact-SHA Auth RBAC runtime evidence
@@ -118,7 +127,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           AUTH_RBAC_RUNTIME_SOURCE_RUN_ID: ${{ env.AUTH_RBAC_RUNTIME_SOURCE_RUN_ID }}
-          AUTH_RBAC_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/auth-rbac-runtime-proof.yml' && 'true' || 'false' }}
+          AUTH_RBAC_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/auth-rbac-runtime-proof.yml' && 'true' || 'false' }}
         run: node scripts/enterprise/fetch-auth-rbac-evidence.mjs
 
       - name: Retrieve exact-SHA Supabase RLS runtime evidence
@@ -127,7 +136,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ env.SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID }}
-          SUPABASE_RLS_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/supabase-live-rls-validation.yml' && 'true' || 'false' }}
+          SUPABASE_RLS_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/supabase-live-rls-validation.yml' && 'true' || 'false' }}
         run: node scripts/enterprise/fetch-supabase-rls-evidence.mjs
 
       - name: Retrieve exact-SHA production runtime evidence
@@ -136,7 +145,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ env.PRODUCTION_RUNTIME_SOURCE_RUN_ID }}
-          PRODUCTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/production-runtime-proof.yml' && 'true' || 'false' }}
+          PRODUCTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/production-runtime-proof.yml' && 'true' || 'false' }}
         run: node scripts/enterprise/fetch-production-runtime-evidence.mjs
 
       - name: Retrieve exact-SHA Step-Up runtime evidence
@@ -145,7 +154,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           STEP_UP_RUNTIME_SOURCE_RUN_ID: ${{ env.STEP_UP_RUNTIME_SOURCE_RUN_ID }}
-          STEP_UP_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/step-up-runtime-proof.yml' && 'true' || 'false' }}
+          STEP_UP_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/step-up-runtime-proof.yml' && 'true' || 'false' }}
         run: node scripts/enterprise/fetch-step-up-runtime-evidence.mjs
 
       - name: Retrieve promoted exact-SHA Stripe runtime evidence
@@ -154,8 +163,26 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           STRIPE_RUNTIME_SOURCE_RUN_ID: ${{ env.STRIPE_RUNTIME_SOURCE_RUN_ID }}
-          STRIPE_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/stripe-runtime-evidence-promotion.yml' && 'true' || 'false' }}
+          STRIPE_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/stripe-runtime-evidence-promotion.yml' && 'true' || 'false' }}
         run: node scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs
+
+      - name: Retrieve exact-SHA public production final evidence
+        if: github.event_name == 'workflow_run'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+          PUBLIC_FINAL_RUNTIME_SOURCE_RUN_ID: ${{ env.PUBLIC_FINAL_RUNTIME_SOURCE_RUN_ID }}
+          PUBLIC_FINAL_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/public-production-final.yml' && 'true' || 'false' }}
+        run: node scripts/enterprise/fetch-public-production-final-evidence.mjs
+
+      - name: Retrieve exact-SHA audit-chain runtime evidence
+        if: github.event_name == 'workflow_run'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+          AUDIT_CHAIN_RUNTIME_SOURCE_RUN_ID: ${{ env.AUDIT_CHAIN_RUNTIME_SOURCE_RUN_ID }}
+          AUDIT_CHAIN_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/audit-chain-runtime-proof.yml' && 'true' || 'false' }}
+        run: node scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs
 
       - name: Validate runtime evidence files
         run: node scripts/security/check-p0-runtime-evidence-files.mjs
