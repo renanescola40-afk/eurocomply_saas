@@ -17,6 +17,8 @@ const REQUIRED_VERCEL_KEYS = [
   'UPSTASH_REDIS_REST_TOKEN',
   'HEALTHCHECK_TOKEN',
   'NEXT_PUBLIC_SENTRY_DSN',
+  'SENTRY_ORG',
+  'SENTRY_PROJECT',
   'STEP_UP_SIGNING_SECRET',
   'STEP_UP_PROVIDER_MODE',
   'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
@@ -25,10 +27,6 @@ const REQUIRED_VERCEL_KEYS = [
 
 function env(name) {
   return String(process.env[name] ?? '').trim();
-}
-
-function configured(name) {
-  return Boolean(env(name));
 }
 
 function cleanUrl(value) {
@@ -42,13 +40,12 @@ function cleanUrl(value) {
 
 async function request(url, init = {}) {
   try {
-    const response = await fetch(url, {
+    return await fetch(url, {
       ...init,
       cache: 'no-store',
       redirect: 'error',
       signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });
-    return response;
   } catch {
     return null;
   }
@@ -74,12 +71,14 @@ async function jsonBounded(response, maxBytes = 2 * 1024 * 1024) {
   } finally {
     reader.releaseLock();
   }
+
   const bytes = new Uint8Array(total);
   let offset = 0;
   for (const chunk of chunks) {
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
+
   try {
     return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
   } catch {
