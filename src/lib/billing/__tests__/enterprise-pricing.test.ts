@@ -4,13 +4,14 @@ import { describe, expect, it } from 'vitest';
 import { BILLING_ADD_ONS, getBillingAddOn, isAddOnAvailableForPlan } from '@/lib/billing/add-ons';
 import { canAccessFeature, getPlanLimit, isWithinLimit } from '@/lib/billing/feature-gates';
 import { BILLING_PLANS, getBillingPlan, normalizeBillingCatalogPlanId } from '@/lib/billing/plans';
+import { BILLING_PLANS as SERVER_BILLING_PLANS } from '@/server/billing/plans';
 import { isPlanAtLeast, normalizePlan } from '@/server/queries/subscription';
 
 const commercialCatalog = JSON.parse(readFileSync('config/billing-commercial-catalog.json', 'utf8')) as {
   currency: string;
   annualBillingMonths: number;
   plans: Record<string, {
-    internalId: string;
+    internalId: 'starter' | 'professional' | 'business' | 'enterprise';
     name: string;
     monthlyPriceCents: number | null;
     annualPriceCents: number | null;
@@ -20,6 +21,7 @@ const commercialCatalog = JSON.parse(readFileSync('config/billing-commercial-cat
     monthlyPriceEnvKey?: string;
     annualPriceEnvKey?: string;
     legacyMonthlyPriceEnvKeys: string[];
+    legacyAnnualPriceEnvKeys: string[];
   }>;
 };
 
@@ -34,17 +36,29 @@ describe('enterprise pricing catalog', () => {
     expect(getBillingPlan('enterprise')?.startingPriceMonthly).toBe(990);
   });
 
-  it('keeps repository catalog values aligned with the versioned commercial contract', () => {
+  it('keeps client and server catalogs aligned with the versioned commercial contract', () => {
     expect(commercialCatalog.currency).toBe('EUR');
     expect(commercialCatalog.annualBillingMonths).toBe(10);
 
     for (const [publicId, commercial] of Object.entries(commercialCatalog.plans)) {
       const plan = getBillingPlan(publicId);
+      const serverPlan = SERVER_BILLING_PLANS[commercial.internalId];
+
       expect(plan?.id).toBe(commercial.internalId);
       expect(plan?.name).toBe(commercial.name);
       expect(plan?.priceMonthly == null ? null : plan.priceMonthly * 100).toBe(commercial.monthlyPriceCents);
       expect(plan?.priceAnnual == null ? null : plan.priceAnnual * 100).toBe(commercial.annualPriceCents);
+      expect(plan?.startingPriceMonthly == null ? undefined : plan.startingPriceMonthly * 100)
+        .toBe(commercial.startingMonthlyPriceCents ?? commercial.monthlyPriceCents ?? undefined);
       expect(plan?.salesLed).toBe(commercial.salesLed);
+
+      expect(serverPlan.name).toBe(commercial.name);
+      expect(serverPlan.monthlyPriceCents || null).toBe(commercial.monthlyPriceCents);
+      expect(serverPlan.annualPriceCents).toBe(commercial.annualPriceCents);
+      expect(serverPlan.startingMonthlyPriceCents ?? (serverPlan.monthlyPriceCents || null))
+        .toBe(commercial.startingMonthlyPriceCents ?? commercial.monthlyPriceCents);
+      expect(serverPlan.selfServe).toBe(commercial.selfServe);
+      expect(serverPlan.salesLed).toBe(commercial.salesLed);
     }
   });
 
