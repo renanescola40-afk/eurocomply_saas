@@ -12,6 +12,7 @@ const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`;
 const EVIDENCE_PATH = 'docs/security/evidence/runtime/stripe-billing-validation.json';
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const NUMERIC_ID = /^\d+$/;
+const ALLOWED_PROMOTION_EVENTS = new Set(['workflow_run', 'workflow_dispatch']);
 
 function headers(token) {
   return {
@@ -38,7 +39,7 @@ export function selectExactShaRun(runs, targetSha, sourceRunId = '') {
     .filter((run) => run?.path === WORKFLOW_PATH)
     .filter((run) => String(run?.head_sha || '').toLowerCase() === targetSha)
     .filter((run) => run?.head_branch === 'main')
-    .filter((run) => run?.event === 'workflow_dispatch')
+    .filter((run) => ALLOWED_PROMOTION_EVENTS.has(run?.event))
     .filter((run) => run?.status === 'completed' && run?.conclusion === 'success')
     .filter((run) => !requested || String(run?.id) === requested)
     .sort((a, b) => Date.parse(b?.updated_at || b?.created_at || 0) - Date.parse(a?.updated_at || a?.created_at || 0))[0] ?? null;
@@ -62,11 +63,12 @@ export function normalizeStripeEvidenceForP0(evidence) {
     ...evidence,
     generatedAt: evidence.generatedAt ?? evidence.reviewedAt,
     reviewer: evidence.reviewer ?? 'RISCK COMPLY protected Stripe evidence promotion',
-    summary: evidence.summary ?? 'A sanitized Stripe test-mode runtime proof verified signed webhook processing, entitlement snapshot state, canonical seat policy and reconciliation evidence on the exact release SHA.',
+    summary: evidence.summary ?? 'A sanitized Stripe test-mode runtime proof verified signed webhook processing, entitlement snapshot state, canonical seat policy, reconciliation evidence and replay safety on the exact release SHA.',
     evidenceLocations: evidence.evidenceLocations ?? [
       'artifacts/stripe-runtime-evidence-promotion/promoted-evidence.json',
       '.github/workflows/stripe-entitlement-runtime-proof.yml',
       '.github/workflows/stripe-runtime-evidence-promotion.yml',
+      'scripts/enterprise/fetch-stripe-entitlement-runtime-proof.mjs',
     ],
     redactionConfirmation: 'Redaction confirmed for runtime evidence.',
   };
@@ -94,8 +96,10 @@ function downloadArtifact(repository, token, artifactId, output) {
 function extractEvidence(zipPath) {
   const entries = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8' })
     .split('\n').map((entry) => entry.trim()).filter(Boolean);
-  const entry = entries.find((candidate) => candidate.endsWith('promoted-evidence.json'));
-  if (!entry) throw new Error('promoted_stripe_evidence_missing');
+  const matches = entries.filter((candidate) => candidate === 'promoted-evidence.json' || candidate.endsWith('/promoted-evidence.json'));
+  if (matches.length !== 1) throw new Error('promoted_stripe_evidence_missing_or_ambiguous');
+  const entry = matches[0];
+  if (entry.includes('..') || entry.startsWith('/')) throw new Error('promoted_stripe_evidence_path_unsafe');
   return JSON.parse(execFileSync('unzip', ['-p', zipPath, entry], { encoding: 'utf8', maxBuffer: 2 * 1024 * 1024 }));
 }
 
@@ -124,8 +128,9 @@ export async function fetchStripePromotedRuntimeEvidence({ root, repository, tok
   if (!NUMERIC_ID.test(runId)) throw new Error('runtime_workflow_run_id_invalid');
   const artifacts = await githubJson(`https://api.github.com/repos/${repository}/actions/runs/${runId}/artifacts`, token);
   const expectedName = `stripe-runtime-evidence-promoted-${targetSha}`;
-  const artifact = (artifacts.artifacts ?? []).find((candidate) => candidate?.name === expectedName && candidate?.expired !== true);
-  if (!artifact || !NUMERIC_ID.test(String(artifact.id || ''))) throw new Error('exact_sha_stripe_promotion_artifact_missing');
+  const matching = (artifacts.artifacts ?? []).filter((candidate) => candidate?.name === expectedName && candidate?.expired !== true && NUMERIC_ID.test(String(candidate?.id ?? '')));
+  if (matching.length !== 1) throw new Error('exact_sha_stripe_promotion_artifact_missing_or_ambiguous');
+  const artifact = matching[0];
 
   const zipPath = join(root, 'artifacts', 'enterprise-readiness', `stripe-promoted-${runId}.zip`);
   mkdirSync(dirname(zipPath), { recursive: true });
