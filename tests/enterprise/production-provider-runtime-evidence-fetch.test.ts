@@ -11,10 +11,10 @@ const workflowPath = '.github/workflows/production-provider-runtime-proof.yml';
 function evidence() {
   const providerChecks = {
     github: { repositoryReachable: true, repositoryBound: true, currentMainShaBound: true, protectedProductionEnvironment: true, githubActionsRunBound: true, exactContext: true },
-    vercel: { credentialsConfigured: true, projectReachable: true, productionEnvironmentEnumerated: true, requiredEnvironmentKeysPresent: true },
+    vercel: { apiTokenConfigured: true, targetConfigurationBound: true, projectReachable: true, projectIdentityMatched: true, productionEnvironmentEnumerated: true, requiredEnvironmentKeysPresent: true },
     supabase: { urlConfigured: true, serviceRoleConfigured: true, projectReachable: true, serviceRoleAuthorized: true },
     stripe: { secretConfigured: true, apiReachable: true, threePriceIdsConfigured: true, priceLookup: true },
-    sentry: { dsnConfigured: true, organizationConfigured: true, projectConfigured: true, buildAuthTokenConfigured: true, projectReachable: true },
+    sentry: { organizationConfigured: true, projectConfigured: true, buildAuthTokenConfigured: true, projectReachable: true, clientKeyInventoryReachable: true, activeClientKeyPresent: true },
   };
   const providers = ['github', 'vercel', 'supabase', 'stripe', 'sentry'] as const;
   return {
@@ -32,7 +32,7 @@ function evidence() {
     rotationOwner: 'platform security',
     nextReviewDue: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
     controlsVerified: providers.map((provider) => `${provider} verified`),
-    evidenceLocations: [workflowPath, 'scripts/security/run-production-provider-runtime-proof.mjs', 'scripts/release/validate-production-secrets-runtime-evidence.mjs'],
+    evidenceLocations: [workflowPath, 'config/production-provider-targets.json', 'scripts/security/run-production-provider-runtime-proof.mjs', 'scripts/release/validate-production-secrets-runtime-evidence.mjs'],
     redactionConfirmation: 'No values stored.',
     evidenceIntegrity: { containsSensitiveValues: false, rawValuesStored: false, credentialsStored: false, providerResponseBodiesStored: false, decryptedProviderEnvironmentValuesStored: false, exactShaBound: true },
   };
@@ -50,14 +50,19 @@ describe('production provider exact-SHA evidence handoff', () => {
     ], sha)).toEqual(good);
   });
 
-  it('accepts the five-provider exact-SHA contract', () => {
+  it('accepts the hardened five-provider exact-SHA contract', () => {
     expect(validateDownloadedEvidence(evidence(), { targetSha: sha, repository }).failures).toEqual([]);
   });
 
-  it('rejects stale or provider-incomplete proof', () => {
+  it('rejects stale, wrong-target or provider-incomplete proof', () => {
     const wrongSha = evidence();
     wrongSha.runtimeContext.commitSha = 'b'.repeat(40);
     expect(validateDownloadedEvidence(wrongSha, { targetSha: sha, repository }).passed).toBe(false);
+
+    const wrongVercel = evidence();
+    const vercel = wrongVercel.providersReviewed.find((entry) => entry.provider === 'vercel');
+    if (vercel) vercel.checks.projectIdentityMatched = false;
+    expect(validateDownloadedEvidence(wrongVercel, { targetSha: sha, repository }).passed).toBe(false);
 
     const missing = evidence();
     missing.providersReviewed = missing.providersReviewed.filter((entry) => entry.provider !== 'stripe');
