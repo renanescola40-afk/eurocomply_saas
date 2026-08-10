@@ -13,6 +13,7 @@ on:
       - Auth RBAC Tenant Proof
       - Supabase Live RLS Validation
       - Production Runtime Proof
+      - Production Provider Runtime Proof
       - Step-Up Runtime Proof
       - Stripe Runtime Evidence Promotion
       - Public Production Final
@@ -49,6 +50,7 @@ jobs:
       AUTH_RBAC_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/auth-rbac-runtime-proof.yml' && github.event.workflow_run.id || '' }}
       SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/supabase-live-rls-validation.yml' && github.event.workflow_run.id || '' }}
       PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/production-runtime-proof.yml' && github.event.workflow_run.id || '' }}
+      PRODUCTION_PROVIDER_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/production-provider-runtime-proof.yml' && github.event.workflow_run.id || '' }}
       STEP_UP_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/step-up-runtime-proof.yml' && github.event.workflow_run.id || '' }}
       STRIPE_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/stripe-runtime-evidence-promotion.yml' && github.event.workflow_run.id || '' }}
       PUBLIC_FINAL_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.path == '.github/workflows/public-production-final.yml' && github.event.workflow_run.id || '' }}
@@ -83,12 +85,15 @@ jobs:
             scripts/security/report-p0-runtime-evidence-gap.test.mjs \
             scripts/security/validate-branch-protection-freshness.test.mjs \
             scripts/release/validate-upload-scanner-runtime-evidence.test.mjs \
+            scripts/release/validate-production-secrets-runtime-evidence.test.mjs \
             tests/enterprise/branch-protection-runtime-evidence-fetch.test.ts \
             tests/enterprise/upload-scanner-runtime-evidence-fetch.test.ts \
             tests/enterprise/upload-scanner-p0-aggregation.test.ts \
             tests/enterprise/p0-runtime-multi-producer-aggregation.test.ts \
             tests/enterprise/auth-rbac-runtime-evidence-fetch.test.ts \
             tests/enterprise/supabase-rls-runtime-evidence-fetch.test.ts \
+            tests/enterprise/production-provider-runtime-proof.test.ts \
+            tests/enterprise/production-provider-runtime-evidence-fetch.test.ts \
             tests/enterprise/step-up-runtime-evidence-fetch.test.ts \
             tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts \
             tests/enterprise/public-production-final-evidence-fetch.test.ts \
@@ -147,6 +152,15 @@ jobs:
           PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ env.PRODUCTION_RUNTIME_SOURCE_RUN_ID }}
           PRODUCTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/production-runtime-proof.yml' && 'true' || 'false' }}
         run: node scripts/enterprise/fetch-production-runtime-evidence.mjs
+
+      - name: Retrieve exact-SHA production provider evidence
+        if: github.event_name == 'workflow_run'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+          PRODUCTION_PROVIDER_RUNTIME_SOURCE_RUN_ID: ${{ env.PRODUCTION_PROVIDER_RUNTIME_SOURCE_RUN_ID }}
+          PRODUCTION_PROVIDER_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/production-provider-runtime-proof.yml' && 'true' || 'false' }}
+        run: node scripts/enterprise/fetch-production-provider-runtime-evidence.mjs
 
       - name: Retrieve exact-SHA Step-Up runtime evidence
         if: github.event_name == 'workflow_run'

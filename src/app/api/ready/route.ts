@@ -39,7 +39,10 @@ const REQUIRED_ENV_GROUPS = {
 const READINESS_DEPENDENCY_TIMEOUT_MS = 1_500;
 const STRIPE_READINESS_TIMEOUT_MS = READINESS_DEPENDENCY_TIMEOUT_MS;
 const TEST_PLACEHOLDER_VALUE = 'configured';
-const SENTRY_RELEASE_UPLOAD_ENV = ['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN'] as const;
+// SENTRY_AUTH_TOKEN is intentionally a build/CI credential. Runtime readiness
+// requires only non-secret release-upload metadata; the protected provider proof
+// verifies the CI auth token against Sentry without placing it in the app runtime.
+const SENTRY_RELEASE_RUNTIME_ENV = ['SENTRY_ORG', 'SENTRY_PROJECT'] as const;
 const REAL_MALWARE_SCANNER_PROVIDERS = new Set(['clamav', 'clamd', 'http', 'generic-http', 'webhook']);
 const HTTP_MALWARE_SCANNER_PROVIDERS = new Set(['http', 'generic-http', 'webhook']);
 const CONTROLLED_DOCUMENT_BUCKET = 'controlled-documents';
@@ -181,11 +184,11 @@ export function readyEnvironmentCheck(): ReadyEnvironmentGroup[] {
 }
 
 export function sentryReleaseUploadCheck() {
-  const missingCount = SENTRY_RELEASE_UPLOAD_ENV.filter((variable) => !hasConfiguredEnvValue(variable)).length;
+  const missingCount = SENTRY_RELEASE_RUNTIME_ENV.filter((variable) => !hasConfiguredEnvValue(variable)).length;
   return {
     configured: missingCount === 0,
     missingCount,
-    sourceMapsUploadRequiresAuthToken: Boolean(process.env.SENTRY_AUTH_TOKEN?.trim()),
+    sourceMapsUploadRequiresAuthToken: true,
   };
 }
 
