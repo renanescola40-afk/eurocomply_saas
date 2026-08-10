@@ -16,8 +16,10 @@ const checks = {
     exactContext: true,
   },
   vercel: {
-    credentialsConfigured: true,
+    apiTokenConfigured: true,
+    targetConfigurationBound: true,
     projectReachable: true,
+    projectIdentityMatched: true,
     productionEnvironmentEnumerated: true,
     requiredEnvironmentKeysPresent: true,
   },
@@ -34,11 +36,12 @@ const checks = {
     priceLookup: true,
   },
   sentry: {
-    dsnConfigured: true,
     organizationConfigured: true,
     projectConfigured: true,
     buildAuthTokenConfigured: true,
     projectReachable: true,
+    clientKeyInventoryReachable: true,
+    activeClientKeyPresent: true,
   },
 };
 
@@ -72,7 +75,12 @@ function completeEvidence(overrides = {}) {
     rotationOwner: 'Platform and Security release owners',
     nextReviewDue: '2026-08-17T19:50:00Z',
     controlsVerified: providers.map((provider) => `${provider} verified`),
-    evidenceLocations: ['.github/workflows/production-provider-runtime-proof.yml', 'scripts/security/run-production-provider-runtime-proof.mjs', 'scripts/release/validate-production-secrets-runtime-evidence.mjs'],
+    evidenceLocations: [
+      '.github/workflows/production-provider-runtime-proof.yml',
+      'config/production-provider-targets.json',
+      'scripts/security/run-production-provider-runtime-proof.mjs',
+      'scripts/release/validate-production-secrets-runtime-evidence.mjs',
+    ],
     redactionConfirmation: 'No secret values are stored.',
     evidenceIntegrity: {
       containsSensitiveValues: false,
@@ -114,12 +122,30 @@ describe('validateProductionSecretsRuntimeEvidence', () => {
     );
   });
 
-  it('rejects a provider entry whose required live check did not pass', () => {
+  it('rejects a Vercel proof that does not bind the expected project identity', () => {
+    const evidence = completeEvidence();
+    const vercel = evidence.providersReviewed.find((entry) => entry.provider === 'vercel');
+    vercel.checks.projectIdentityMatched = false;
+    expect(validateProductionSecretsRuntimeEvidence(evidence, { now })).toContain(
+      'vercel.projectIdentityMatched must be true',
+    );
+  });
+
+  it('rejects a Vercel proof missing a required production environment key', () => {
     const evidence = completeEvidence();
     const vercel = evidence.providersReviewed.find((entry) => entry.provider === 'vercel');
     vercel.checks.requiredEnvironmentKeysPresent = false;
     expect(validateProductionSecretsRuntimeEvidence(evidence, { now })).toContain(
       'vercel.requiredEnvironmentKeysPresent must be true',
+    );
+  });
+
+  it('rejects Sentry when the active client-key inventory cannot prove a DSN', () => {
+    const evidence = completeEvidence();
+    const sentry = evidence.providersReviewed.find((entry) => entry.provider === 'sentry');
+    sentry.checks.activeClientKeyPresent = false;
+    expect(validateProductionSecretsRuntimeEvidence(evidence, { now })).toContain(
+      'sentry.activeClientKeyPresent must be true',
     );
   });
 
