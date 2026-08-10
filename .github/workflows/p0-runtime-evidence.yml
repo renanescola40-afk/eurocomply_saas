@@ -24,10 +24,10 @@ permissions:
   contents: read
 
 concurrency:
-  # A producer run is an independent evidence transaction. Using its run ID prevents
-  # a later producer (including a failed/skipped one) from cancelling another exact-SHA
-  # aggregation that is already importing a valid artifact.
-  group: p0-runtime-evidence-${{ github.event.workflow_run.id || github.event.pull_request.head.sha || github.sha }}
+  # Producer handoffs are independent transactions keyed by their unique workflow run.
+  # Direct push/PR validation is isolated by event type plus SHA, so a duplicate SHA
+  # cannot cancel the other event while still de-duplicating repeated runs of one event.
+  group: p0-runtime-evidence-${{ github.event.workflow_run.id || github.event_name }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
