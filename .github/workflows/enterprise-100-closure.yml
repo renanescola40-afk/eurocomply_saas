@@ -22,6 +22,7 @@ on:
       - 'Stripe Runtime Proof'
       - 'Supabase Production Migration Dry Run'
       - 'Final Legal Publication Gate'
+      - 'Enterprise Conversation Runtime Closeout'
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -76,6 +77,7 @@ jobs:
           grep -Fq 'ENTERPRISE_CLOSURE_EVIDENCE_ROOTS' scripts/release/check-enterprise-100-closure.mjs
           grep -Fq 'enterprise-100-evidence-hydration.v1' scripts/release/hydrate-enterprise-100-evidence.mjs
           grep -Fq 'Final Legal Publication Gate' .github/workflows/enterprise-100-closure.yml
+          grep -Fq 'Enterprise Conversation Runtime Closeout' .github/workflows/enterprise-100-closure.yml
 
       - name: Validate target SHA is immutable main lineage
         if: github.event_name != 'pull_request'
@@ -92,7 +94,7 @@ jobs:
             *) echo "Closure target SHA is not current main lineage: ${comparison}" >&2; exit 1 ;;
           esac
 
-      - name: Collect authorized retained artifacts bound to exact closure SHA
+      - name: Collect authorized retained artifacts bound to exact closure SHA and producer
         if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -102,22 +104,39 @@ jobs:
           rm -rf "$RETAINED_ARTIFACT_ROOT" "$HYDRATED_CLOSURE_ROOT"
           mkdir -p "$RETAINED_ARTIFACT_ROOT" "$HYDRATED_CLOSURE_ROOT"
           collected=0
+          rejected_producer=0
 
-          while IFS=$'\t' read -r artifact_id artifact_name expired artifact_sha; do
+          while IFS=$'\t' read -r artifact_id artifact_name expired artifact_sha source_run_id; do
             test "$expired" = 'false' || continue
             test "$artifact_sha" = "$ENTERPRISE_CLOSURE_EXPECTED_SHA" || continue
 
+            expected_workflow_path=''
             case "$artifact_name" in
-              enterprise-production-final-evidence-*|\
-              enterprise-recovery-*|\
-              enterprise-runtime-closeout-*|\
-              enterprise-readiness-scorecard-*|\
-              stripe-billing-validation|\
-              supabase-production-migration-dry-run-*|\
-              final-legal-publication-gate-*|\
-              enterprise-conversation-runtime-closeout-*) ;;
+              enterprise-production-final-evidence-*)
+                expected_workflow_path='.github/workflows/enterprise-production-gate.yml' ;;
+              enterprise-recovery-*)
+                expected_workflow_path='.github/workflows/enterprise-recovery-drill.yml' ;;
+              enterprise-runtime-closeout-*)
+                expected_workflow_path='.github/workflows/enterprise-runtime-evidence-closeout.yml' ;;
+              enterprise-readiness-scorecard-*)
+                expected_workflow_path='.github/workflows/enterprise-readiness-scorecard.yml' ;;
+              stripe-billing-validation)
+                expected_workflow_path='.github/workflows/stripe-runtime-proof.yml' ;;
+              supabase-production-migration-dry-run-*)
+                expected_workflow_path='.github/workflows/supabase-production-migration-dry-run.yml' ;;
+              final-legal-publication-gate-*)
+                expected_workflow_path='.github/workflows/final-legal-publication-gate.yml' ;;
+              enterprise-conversation-runtime-closeout-*)
+                expected_workflow_path='.github/workflows/enterprise-conversation-runtime-closeout.yml' ;;
               *) continue ;;
             esac
+
+            actual_workflow_path="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${source_run_id}" --jq '.path')"
+            if [ "$actual_workflow_path" != "$expected_workflow_path" ]; then
+              echo "Rejecting artifact ${artifact_id} (${artifact_name}): producer ${actual_workflow_path} != ${expected_workflow_path}." >&2
+              rejected_producer=$((rejected_producer + 1))
+              continue
+            fi
 
             safe_name="$(printf '%s' "$artifact_name" | tr -cs 'A-Za-z0-9._-' '_')"
             destination="$RETAINED_ARTIFACT_ROOT/${artifact_id}-${safe_name}"
@@ -129,10 +148,11 @@ jobs:
             collected=$((collected + 1))
           done < <(
             gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
-              --jq '.artifacts[] | [.id, .name, .expired, .workflow_run.head_sha] | @tsv'
+              --jq '.artifacts[] | [.id, .name, .expired, .workflow_run.head_sha, .workflow_run.id] | @tsv'
           )
 
           echo "Collected ${collected} authorized retained artifact(s) for closure SHA ${ENTERPRISE_CLOSURE_EXPECTED_SHA}."
+          echo "Rejected ${rejected_producer} artifact(s) with an unexpected producer workflow."
 
       - name: Hydrate declared Enterprise 100 evidence
         if: github.event_name != 'pull_request'
