@@ -21,6 +21,7 @@ on:
       - 'Enterprise Readiness Scorecard'
       - 'Stripe Runtime Proof'
       - 'Supabase Production Migration Dry Run'
+      - 'Final Legal Publication Gate'
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -74,6 +75,7 @@ jobs:
           node -e "const c=require('./config/enterprise-100-closure.json'); if(!Array.isArray(c.controls)||c.controls.length<10) process.exit(1)"
           grep -Fq 'ENTERPRISE_CLOSURE_EVIDENCE_ROOTS' scripts/release/check-enterprise-100-closure.mjs
           grep -Fq 'enterprise-100-evidence-hydration.v1' scripts/release/hydrate-enterprise-100-evidence.mjs
+          grep -Fq 'Final Legal Publication Gate' .github/workflows/enterprise-100-closure.yml
 
       - name: Validate target SHA is immutable main lineage
         if: github.event_name != 'pull_request'
@@ -90,7 +92,7 @@ jobs:
             *) echo "Closure target SHA is not current main lineage: ${comparison}" >&2; exit 1 ;;
           esac
 
-      - name: Collect retained artifacts bound to exact closure SHA
+      - name: Collect authorized retained artifacts bound to exact closure SHA
         if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -104,8 +106,17 @@ jobs:
           while IFS=$'\t' read -r artifact_id artifact_name expired artifact_sha; do
             test "$expired" = 'false' || continue
             test "$artifact_sha" = "$ENTERPRISE_CLOSURE_EXPECTED_SHA" || continue
+
             case "$artifact_name" in
-              enterprise-100-closure-*) continue ;;
+              enterprise-production-final-evidence-*|\
+              enterprise-recovery-*|\
+              enterprise-runtime-closeout-*|\
+              enterprise-readiness-scorecard-*|\
+              stripe-billing-validation|\
+              supabase-production-migration-dry-run-*|\
+              final-legal-publication-gate-*|\
+              enterprise-conversation-runtime-closeout-*) ;;
+              *) continue ;;
             esac
 
             safe_name="$(printf '%s' "$artifact_name" | tr -cs 'A-Za-z0-9._-' '_')"
@@ -121,7 +132,7 @@ jobs:
               --jq '.artifacts[] | [.id, .name, .expired, .workflow_run.head_sha] | @tsv'
           )
 
-          echo "Collected ${collected} retained artifact(s) for closure SHA ${ENTERPRISE_CLOSURE_EXPECTED_SHA}."
+          echo "Collected ${collected} authorized retained artifact(s) for closure SHA ${ENTERPRISE_CLOSURE_EXPECTED_SHA}."
 
       - name: Hydrate declared Enterprise 100 evidence
         if: github.event_name != 'pull_request'
@@ -150,7 +161,7 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
           if [ -f "$HYDRATED_CLOSURE_ROOT/enterprise-100-evidence-hydration.json" ]; then
-            jq -r '"- Hydrated retained evidence: \(.hydratedEvidence)/\(.expectedEvidence)\n- Ambiguous: \(.ambiguousEvidence)\n- Stale: \(.staleEvidence)\n- Missing: \(.missingEvidence)\n- Sensitive rejected: \(.rejectedSensitiveEvidence)"' \
+            jq -r '"- Hydrated retained evidence: \(.hydratedEvidence)/\(.expectedEvidence)\n- Explicit aliases used: \(.aliasedEvidence)\n- Ambiguous: \(.ambiguousEvidence)\n- Stale: \(.staleEvidence)\n- Missing: \(.missingEvidence)\n- Sensitive rejected: \(.rejectedSensitiveEvidence)"' \
               "$HYDRATED_CLOSURE_ROOT/enterprise-100-evidence-hydration.json" >> "$GITHUB_STEP_SUMMARY"
           fi
 
