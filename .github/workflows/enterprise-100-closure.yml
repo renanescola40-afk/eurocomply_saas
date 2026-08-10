@@ -131,7 +131,18 @@ jobs:
               *) continue ;;
             esac
 
-            actual_workflow_path="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${source_run_id}" --jq '.path')"
+            if ! [[ "$source_run_id" =~ ^[0-9]+$ ]]; then
+              echo "Rejecting artifact ${artifact_id} (${artifact_name}): source workflow run id unavailable." >&2
+              rejected_producer=$((rejected_producer + 1))
+              continue
+            fi
+
+            actual_workflow_path=''
+            if ! actual_workflow_path="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${source_run_id}" --jq '.path' 2>/dev/null)"; then
+              echo "Rejecting artifact ${artifact_id} (${artifact_name}): source workflow identity could not be verified." >&2
+              rejected_producer=$((rejected_producer + 1))
+              continue
+            fi
             if [ "$actual_workflow_path" != "$expected_workflow_path" ]; then
               echo "Rejecting artifact ${artifact_id} (${artifact_name}): producer ${actual_workflow_path} != ${expected_workflow_path}." >&2
               rejected_producer=$((rejected_producer + 1))
@@ -152,7 +163,7 @@ jobs:
           )
 
           echo "Collected ${collected} authorized retained artifact(s) for closure SHA ${ENTERPRISE_CLOSURE_EXPECTED_SHA}."
-          echo "Rejected ${rejected_producer} artifact(s) with an unexpected producer workflow."
+          echo "Rejected ${rejected_producer} artifact(s) with an unverifiable or unexpected producer workflow."
 
       - name: Hydrate declared Enterprise 100 evidence
         if: github.event_name != 'pull_request'
