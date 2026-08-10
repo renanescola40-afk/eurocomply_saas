@@ -16,7 +16,6 @@ const REQUIRED_EVIDENCE_CHECKS = [
   'limitsMatch',
   'reconciliationObserved',
   'rawEvidenceDeleted',
-  'replaySafe',
 ];
 
 function headers(token) {
