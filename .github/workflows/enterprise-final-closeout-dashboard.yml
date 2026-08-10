@@ -77,10 +77,12 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
-          git cat-file -e "${TARGET_SHA}^{commit}"
           main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
-          git fetch --no-tags --depth=200 origin main
-          git merge-base --is-ancestor "$TARGET_SHA" "$main_sha"
+          comparison="$(gh api "repos/${GITHUB_REPOSITORY}/compare/${TARGET_SHA}...${main_sha}" --jq '.status')"
+          case "$comparison" in
+            identical|ahead) ;;
+            *) echo "Target SHA is not an ancestor of current main: ${comparison}" >&2; exit 1 ;;
+          esac
 
       - name: Collect retained artifacts bound to exact target SHA
         if: github.event_name != 'pull_request'
@@ -128,7 +130,7 @@ jobs:
         if: github.event_name != 'workflow_dispatch' || !inputs.strict
         env:
           ENTERPRISE_TARGET_SHA: ${{ env.TARGET_SHA }}
-          ENTERPRISE_EVIDENCE_ROOTS: ${{ github.event_name == 'pull_request' && '' || env.HYDRATED_EVIDENCE_ROOT }}
+          ENTERPRISE_EVIDENCE_ROOTS: ${{ env.HYDRATED_EVIDENCE_ROOT }}
         run: node scripts/enterprise/generate-final-closeout-dashboard.mjs
 
       - name: Generate strict closeout decision
