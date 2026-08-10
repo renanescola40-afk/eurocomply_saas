@@ -18,10 +18,30 @@ test('Enterprise 100 fan-in remains read-only and immutable-action pinned', () =
 test('fan-in accepts only retained artifacts bound to the exact closure SHA', () => {
   assert.match(workflow, /\.workflow_run\.head_sha/);
   assert.match(workflow, /test "\$artifact_sha" = "\$ENTERPRISE_CLOSURE_EXPECTED_SHA"/);
-  assert.match(workflow, /enterprise-100-closure-\*\) continue/);
   assert.match(workflow, /HYDRATED_CLOSURE_ROOT: artifacts\/enterprise-100-evidence-root/);
   assert.match(workflow, /hydrate-enterprise-100-evidence\.mjs/);
   assert.match(workflow, /ENTERPRISE_CLOSURE_EVIDENCE_ROOTS/);
+});
+
+test('artifact downloads are restricted to authorized evidence producers', () => {
+  for (const artifactPattern of [
+    'enterprise-production-final-evidence-',
+    'enterprise-recovery-',
+    'enterprise-runtime-closeout-',
+    'enterprise-readiness-scorecard-',
+    'stripe-billing-validation',
+    'supabase-production-migration-dry-run-',
+    'final-legal-publication-gate-',
+    'enterprise-conversation-runtime-closeout-',
+  ]) {
+    assert.ok(workflow.includes(artifactPattern), `missing artifact allowlist pattern ${artifactPattern}`);
+  }
+  assert.match(workflow, /\*\) continue ;;/);
+  assert.doesNotMatch(workflow, /enterprise-final-closeout-dashboard-\*\|enterprise-100-closure-\*\) continue/);
+});
+
+test('human legal evidence producer triggers exact-SHA reevaluation', () => {
+  assert.match(workflow, /- 'Final Legal Publication Gate'/);
 });
 
 test('producer completions queue instead of cancelling same-SHA closure runs', () => {
@@ -34,7 +54,12 @@ test('closure remains fail closed after artifact hydration', () => {
   assert.match(checker, /sensitive_evidence_rejected/);
   assert.match(checker, /exact_sha_not_proven/);
   assert.match(checker, /accepted: statusAccepted/);
+  assert.match(checker, /document\?\.expectedSha/);
+  assert.match(checker, /document\?\.finalDecision/);
+  assert.match(checker, /document\?\.publicationStatus/);
   assert.match(hydrator, /REJECTED_SENSITIVE/);
   assert.match(hydrator, /AMBIGUOUS/);
+  assert.match(hydrator, /EXPLICIT_SOURCE_ALIASES/);
+  assert.match(hydrator, /matchedBy: 'explicit_alias'/);
   assert.match(hydrator, /does not award PASS/);
 });
