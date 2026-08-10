@@ -7,6 +7,10 @@ import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
+import {
+  cleanupEphemeralAuthFixtures,
+  createEphemeralAuthFixtures,
+} from './lib/ephemeral-auth-fixtures.mjs';
 
 const evidencePath = 'docs/security/evidence/runtime/audit-chain-live-validation.json';
 const env = (...parts) => parts.join('_');
@@ -14,12 +18,11 @@ const supabaseUrlEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'URL');
 const serviceRoleEnv = env('SUPABASE', 'SERVICE', 'ROLE', 'KEY');
 const auditSigningEnv = env('AUDIT', 'CHAIN', 'SIGNING', 'SECRET');
 const evidenceSigningEnv = env('EVIDENCE', 'PACK', 'SIGNING', 'SECRET');
-const organizationEnv = env('AUDIT', 'CHAIN', 'LIVE', 'ORGANIZATION', 'ID');
-const actorEnv = env('AUDIT', 'CHAIN', 'LIVE', 'ACTOR', 'USER', 'ID');
 const proofEnv = env('AUDIT', 'CHAIN', 'LIVE', 'PROOF');
 const enterpriseReleaseEnv = env('RISCK', 'COMPLY', 'ENTERPRISE', 'RELEASE');
 const legacyEnterpriseReleaseEnv = env('EUROCOMPLY', 'ENTERPRISE', 'RELEASE');
 const rpcName = 'append_audit_event_chained';
+const syntheticAction = 'security.audit_chain_live_validation';
 
 const requiredFiles = [
   'src/server/security/audit-chain.ts',
@@ -34,6 +37,7 @@ const requiredFiles = [
   'scripts/security/check-audit-chain.mjs',
   'scripts/security/check-audit-critical-coverage.mjs',
   'scripts/security/verify-audit-chain.mjs',
+  'scripts/security/lib/ephemeral-auth-fixtures.mjs',
   'supabase/migrations/20260612_audit_event_hash_chain.sql',
   'supabase/migrations/20260613_audit_event_chained_rpc.sql',
   'supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql',
@@ -121,6 +125,12 @@ function redactedPresence(name) {
   return Boolean(readRuntimeSetting(name));
 }
 
+function safeFailureCode(error) {
+  const raw = error instanceof Error ? error.message : String(error || 'unknown_error');
+  const prefix = raw.split(':', 1)[0] || 'unknown_error';
+  return prefix.replace(/[^a-zA-Z0-9_.-]+/g, '_').slice(0, 96);
+}
+
 function validateSources() {
   const failures = [];
 
@@ -187,7 +197,7 @@ function buildChainPayload({ organizationId, actorUserId, previousHash, suffix }
     id,
     organizationId,
     actorUserId: actorUserId || null,
-    action: 'security.audit_chain_live_validation',
+    action: syntheticAction,
     entityType: 'audit_chain',
     entityId: organizationId,
     metadata: {
@@ -232,7 +242,7 @@ async function getPreviousHash(supabase, organizationId) {
     .limit(1)
     .maybeSingle();
 
-  if (error) throw new Error(`failed to read previous audit hash: ${error.code ?? error.message}`);
+  if (error) throw new Error(`failed_to_read_previous_audit_hash:${error.code ?? 'unknown'}`);
   return typeof data?.event_hash === 'string' ? data.event_hash : null;
 }
 
@@ -293,114 +303,181 @@ async function validateSchema(supabase) {
 
   return {
     auditEventsTableReadable: !columnProbe.error,
-    auditEventsColumnProbeError: columnProbe.error ? { code: columnProbe.error.code ?? 'unknown', message: columnProbe.error.message } : null,
     requiredColumnsReadable: !columnProbe.error,
+    columnProbeErrorCode: columnProbe.error?.code ?? null,
   };
+}
+
+async function cleanupSyntheticAuditEvents(supabase, ids) {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { verified: true, failureCodes: [] };
+  }
+
+  const failureCodes = [];
+  const { error: deleteError } = await supabase.from('audit_events').delete().in('id', ids);
+  if (deleteError) failureCodes.push('audit_event_cleanup_failed');
+
+  const { data, error: verifyError } = await supabase.from('audit_events').select('id').in('id', ids);
+  if (verifyError || (Array.isArray(data) && data.length > 0)) {
+    failureCodes.push('audit_event_cleanup_not_verified');
+  }
+
+  return { verified: failureCodes.length === 0, failureCodes: [...new Set(failureCodes)] };
 }
 
 async function runLiveValidation() {
   const supabaseUrl = readRuntimeSetting(supabaseUrlEnv);
   const serviceRoleKey = readRuntimeSetting(serviceRoleEnv);
-  const organizationId = readRuntimeSetting(organizationEnv);
-  const actorUserId = readRuntimeSetting(actorEnv) || null;
 
-  if (!supabaseUrl || !serviceRoleKey || !organizationId) {
+  if (!supabaseUrl || !serviceRoleKey) {
     return {
       status: 'Skipped',
       reason: 'missing_target_supabase_configuration',
-      requiredEnv: [supabaseUrlEnv, serviceRoleEnv, organizationEnv],
+      requiredEnv: [supabaseUrlEnv, serviceRoleEnv],
+      fixtureMode: 'ephemeral',
+      ephemeralFixturesCreated: false,
+      cleanup: { status: 'NotRun', auditEventsRemoved: false, authFixturesRemoved: false, failureCodes: [] },
     };
   }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
-  const schema = await validateSchema(supabase);
+  let fixtures = null;
+  const createdAuditEventIds = [];
+  let validation = {
+    status: 'Failed',
+    failureCode: 'validation_not_started',
+  };
+  let auditCleanup = { verified: false, failureCodes: ['audit_cleanup_not_run'] };
+  let authCleanup = { verified: false, failures: ['auth_fixture_cleanup_not_run'] };
 
-  const initialPreviousHash = await getPreviousHash(supabase, organizationId);
-  const normalPayload = buildChainPayload({ organizationId, actorUserId, previousHash: initialPreviousHash, suffix: 'append-normal' });
-  const normalAppend = await appendViaRpc(supabase, normalPayload);
-  if (normalAppend.error) throw new Error(`normal append failed: ${normalAppend.error.code ?? normalAppend.error.message}`);
+  try {
+    fixtures = await createEphemeralAuthFixtures(supabase, { purpose: 'audit-chain-live-proof' });
+    const organizationId = fixtures.organizationA.id;
+    const actorUserId = fixtures.owner.id;
+    const schema = await validateSchema(supabase);
+    if (!schema.auditEventsTableReadable || !schema.requiredColumnsReadable) {
+      throw new Error('audit_chain_schema_not_ready');
+    }
 
-  const concurrentBasePreviousHash = await getPreviousHash(supabase, organizationId);
-  const concurrentA = buildChainPayload({ organizationId, actorUserId, previousHash: concurrentBasePreviousHash, suffix: 'append-concurrent-a' });
-  const concurrentB = buildChainPayload({ organizationId, actorUserId, previousHash: concurrentBasePreviousHash, suffix: 'append-concurrent-b' });
-  const concurrentResults = await Promise.all([appendViaRpc(supabase, concurrentA), appendViaRpc(supabase, concurrentB)]);
-  const concurrentSuccesses = concurrentResults.filter((result) => !result.error).length;
-  const concurrentMismatches = concurrentResults.filter((result) => /previous hash mismatch/i.test(result.error?.message ?? '') || result.error?.code === '40001').length;
-  const concurrentErrors = concurrentResults
-    .filter((result) => result.error)
-    .map((result) => ({ code: result.error.code ?? 'unknown', message: result.error.message ?? 'unknown_error' }));
+    const initialPreviousHash = await getPreviousHash(supabase, organizationId);
+    const normalPayload = buildChainPayload({ organizationId, actorUserId, previousHash: initialPreviousHash, suffix: 'append-normal' });
+    createdAuditEventIds.push(normalPayload.input.id);
+    const normalAppend = await appendViaRpc(supabase, normalPayload);
+    if (normalAppend.error) throw new Error(`normal_append_failed:${normalAppend.error.code ?? 'unknown'}`);
 
-  const retryPreviousHash = await getPreviousHash(supabase, organizationId);
-  const retryPayload = buildChainPayload({ organizationId, actorUserId, previousHash: retryPreviousHash, suffix: 'append-concurrent-retry' });
-  const retryAppend = await appendViaRpc(supabase, retryPayload);
-  if (retryAppend.error) throw new Error(`retry append failed: ${retryAppend.error.code ?? retryAppend.error.message}`);
+    const concurrentBasePreviousHash = await getPreviousHash(supabase, organizationId);
+    const concurrentA = buildChainPayload({ organizationId, actorUserId, previousHash: concurrentBasePreviousHash, suffix: 'append-concurrent-a' });
+    const concurrentB = buildChainPayload({ organizationId, actorUserId, previousHash: concurrentBasePreviousHash, suffix: 'append-concurrent-b' });
+    createdAuditEventIds.push(concurrentA.input.id, concurrentB.input.id);
+    const concurrentResults = await Promise.all([appendViaRpc(supabase, concurrentA), appendViaRpc(supabase, concurrentB)]);
+    const concurrentSuccesses = concurrentResults.filter((result) => !result.error).length;
+    const concurrentMismatches = concurrentResults.filter((result) => /previous hash mismatch/i.test(result.error?.message ?? '') || result.error?.code === '40001').length;
+    const concurrentErrorCount = concurrentResults.filter((result) => result.error).length;
 
-  const concurrencySafe = concurrentSuccesses === 1 && !retryAppend.error;
+    const retryPreviousHash = await getPreviousHash(supabase, organizationId);
+    const retryPayload = buildChainPayload({ organizationId, actorUserId, previousHash: retryPreviousHash, suffix: 'append-concurrent-retry' });
+    createdAuditEventIds.push(retryPayload.input.id);
+    const retryAppend = await appendViaRpc(supabase, retryPayload);
+    if (retryAppend.error) throw new Error(`retry_append_failed:${retryAppend.error.code ?? 'unknown'}`);
 
-  const { data: rows, error: readbackError } = await supabase
-    .from('audit_events')
-    .select('id,organization_id,actor_user_id,action,entity_type,entity_id,metadata,created_at,previous_hash,event_hash,hash_signature')
-    .eq('organization_id', organizationId)
-    .not('event_hash', 'is', null)
-    .order('created_at', { ascending: false })
-    .order('id', { ascending: false })
-    .limit(8);
+    const concurrencySafe = concurrentSuccesses === 1 && !retryAppend.error;
 
-  if (readbackError) throw new Error(`readback failed: ${readbackError.code ?? readbackError.message}`);
+    const { data: rows, error: readbackError } = await supabase
+      .from('audit_events')
+      .select('id,organization_id,actor_user_id,action,entity_type,entity_id,metadata,created_at,previous_hash,event_hash,hash_signature')
+      .eq('organization_id', organizationId)
+      .eq('action', syntheticAction)
+      .not('event_hash', 'is', null)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(8);
 
-  const chronologicalRows = [...(rows ?? [])].reverse();
-  const records = chronologicalRows.map(mapRowToRecord);
-  const anchorPreviousHash = records[0]?.previousHash ?? null;
-  const verify = verifyAuditChain(records, anchorPreviousHash);
-  const tampered = records.length > 0
-    ? verifyAuditChain([{ ...records[0], metadata: { ...(records[0].metadata ?? {}), tampered: true } }, ...records.slice(1)], anchorPreviousHash)
-    : { ok: true, failures: [] };
-  const missingPrevious = records.length > 0
-    ? verifyAuditChain(withBrokenPreviousHash(records), anchorPreviousHash)
-    : { ok: true, failures: [] };
+    if (readbackError) throw new Error(`readback_failed:${readbackError.code ?? 'unknown'}`);
 
-  const tamperDetected = !tampered.ok && tampered.failures.some((failure) => failure.reason === 'event_hash_mismatch');
-  const missingPreviousDetected = !missingPrevious.ok && missingPrevious.failures.some((failure) => failure.reason === 'previous_hash_mismatch');
-  const livePassed = Boolean(
-    schema.auditEventsTableReadable
-      && schema.requiredColumnsReadable
-      && concurrencySafe
-      && verify.ok
-      && tamperDetected
-      && missingPreviousDetected
-  );
+    const chronologicalRows = [...(rows ?? [])].reverse();
+    const records = chronologicalRows.map(mapRowToRecord);
+    const anchorPreviousHash = records[0]?.previousHash ?? null;
+    const verify = verifyAuditChain(records, anchorPreviousHash);
+    const tampered = records.length > 0
+      ? verifyAuditChain([{ ...records[0], metadata: { ...(records[0].metadata ?? {}), tampered: true } }, ...records.slice(1)], anchorPreviousHash)
+      : { ok: true, failures: [] };
+    const missingPrevious = records.length > 0
+      ? verifyAuditChain(withBrokenPreviousHash(records), anchorPreviousHash)
+      : { ok: true, failures: [] };
+
+    const tamperDetected = !tampered.ok && tampered.failures.some((failure) => failure.reason === 'event_hash_mismatch');
+    const missingPreviousDetected = !missingPrevious.ok && missingPrevious.failures.some((failure) => failure.reason === 'previous_hash_mismatch');
+    const livePassed = Boolean(
+      schema.auditEventsTableReadable
+        && schema.requiredColumnsReadable
+        && concurrencySafe
+        && verify.ok
+        && tamperDetected
+        && missingPreviousDetected
+    );
+
+    validation = {
+      status: livePassed ? 'Complete' : 'Failed',
+      fixtureMode: 'ephemeral',
+      ephemeralFixturesCreated: true,
+      ephemeralActorConfigured: true,
+      schema,
+      appendNormal: { status: normalAppend.error ? 'Failed' : 'Complete', eventHashPrefix: normalPayload.eventHash.slice(0, 12) },
+      appendConcurrent: {
+        status: concurrencySafe ? 'Complete' : 'Failed',
+        successes: concurrentSuccesses,
+        previousHashMismatches: concurrentMismatches,
+        errorCount: concurrentErrorCount,
+        retryStatus: retryAppend.error ? 'Failed' : 'Complete',
+        note: 'Concurrency is accepted when exactly one concurrent append wins and a retry using the fresh hash succeeds.',
+      },
+      tamperDetection: {
+        status: tamperDetected ? 'Complete' : 'Failed',
+        failureReasons: [...new Set(tampered.failures.map((failure) => failure.reason))],
+      },
+      missingPreviousHash: {
+        status: missingPreviousDetected ? 'Complete' : 'Failed',
+        failureReasons: [...new Set(missingPrevious.failures.map((failure) => failure.reason))],
+      },
+      readbackVerification: {
+        status: verify.ok ? 'Complete' : 'Failed',
+        checked: verify.checked,
+        failureCount: verify.failures.length,
+        lastHashPrefix: verify.lastHash?.slice(0, 12) ?? null,
+      },
+    };
+  } catch (error) {
+    validation = {
+      status: 'Failed',
+      fixtureMode: 'ephemeral',
+      ephemeralFixturesCreated: Boolean(fixtures),
+      failureCode: safeFailureCode(error),
+    };
+  } finally {
+    auditCleanup = await cleanupSyntheticAuditEvents(supabase, createdAuditEventIds);
+    if (fixtures?.created) {
+      authCleanup = await cleanupEphemeralAuthFixtures(supabase, fixtures.created);
+    }
+  }
+
+  const cleanupFailureCodes = [
+    ...auditCleanup.failureCodes,
+    ...(authCleanup.failures ?? []),
+  ];
+  const cleanupVerified = auditCleanup.verified && authCleanup.verified;
+  const cleanup = {
+    status: cleanupVerified ? 'Complete' : 'Failed',
+    auditEventsRemoved: auditCleanup.verified,
+    authFixturesRemoved: authCleanup.verified,
+    failureCodes: [...new Set(cleanupFailureCodes)],
+  };
 
   return {
-    status: livePassed ? 'Complete' : 'Failed',
-    organizationIdRedacted: `${organizationId.slice(0, 8)}…`,
-    actorConfigured: Boolean(actorUserId),
-    schema,
-    appendNormal: { status: normalAppend.error ? 'Failed' : 'Complete', eventHashPrefix: normalPayload.eventHash.slice(0, 12) },
-    appendConcurrent: {
-      status: concurrencySafe ? 'Complete' : 'Failed',
-      successes: concurrentSuccesses,
-      previousHashMismatches: concurrentMismatches,
-      otherErrorCount: concurrentErrors.length - concurrentMismatches,
-      errors: concurrentErrors,
-      retryStatus: retryAppend.error ? 'Failed' : 'Complete',
-      note: 'Concurrency is accepted when exactly one concurrent append wins and a retry using the fresh hash succeeds. Some Supabase/Postgres deployments serialize the loser without surfacing a previous_hash_mismatch error.',
-    },
-    tamperDetection: {
-      status: tamperDetected ? 'Complete' : 'Failed',
-      failureReasons: [...new Set(tampered.failures.map((failure) => failure.reason))],
-    },
-    missingPreviousHash: {
-      status: missingPreviousDetected ? 'Complete' : 'Failed',
-      failureReasons: [...new Set(missingPrevious.failures.map((failure) => failure.reason))],
-    },
-    readbackVerification: {
-      status: verify.ok ? 'Complete' : 'Failed',
-      checked: verify.checked,
-      failureCount: verify.failures.length,
-      lastHashPrefix: verify.lastHash?.slice(0, 12) ?? null,
-    },
+    ...validation,
+    status: validation.status === 'Complete' && cleanupVerified ? 'Complete' : 'Failed',
+    cleanup,
   };
 }
 
@@ -414,11 +491,15 @@ try {
 } catch (error) {
   liveValidation = {
     status: 'Failed',
-    error: error instanceof Error ? error.message : 'unknown_error',
+    fixtureMode: 'ephemeral',
+    failureCode: safeFailureCode(error),
+    cleanup: { status: 'Failed', auditEventsRemoved: false, authFixturesRemoved: false, failureCodes: ['unhandled_validation_failure'] },
   };
 }
 
-const liveProofPresent = liveValidation.status === 'Complete' && readRuntimeSetting(proofEnv) === 'true';
+const liveProofPresent = liveValidation.status === 'Complete'
+  && liveValidation.cleanup?.status === 'Complete'
+  && readRuntimeSetting(proofEnv) === 'true';
 const status = sourceFailures.length > 0
   ? 'Failed'
   : liveProofPresent
@@ -432,9 +513,9 @@ const evidence = {
   id: 'audit-chain-live-validation',
   status,
   generatedAt,
-  reviewer: 'EuroComply security automation',
+  reviewer: 'RISCK COMPLY protected security automation',
   control: 'Enterprise audit logging and tamper-evident audit chain live validation',
-  redactionConfirmation: 'Supabase URLs, service-role keys, signing secrets, cookies, bearer tokens, step-up assertions and full organization identifiers are never written to this evidence.',
+  redactionConfirmation: 'Redaction confirmed for runtime evidence.',
   sourceValidation: {
     status: sourceFailures.length === 0,
     failures: sourceFailures,
@@ -445,11 +526,13 @@ const evidence = {
     hasServiceRoleKey: redactedPresence(serviceRoleEnv),
     hasAuditSigningSecret: redactedPresence(auditSigningEnv),
     hasEvidencePackSigningSecret: redactedPresence(evidenceSigningEnv),
-    hasTargetOrganization: redactedPresence(organizationEnv),
+    hasTargetOrganization: liveValidation.ephemeralFixturesCreated === true,
+    ephemeralFixtureMode: true,
+    persistentFixtureSecretsRequired: false,
     liveProof: {
       present: liveProofPresent,
       requiredEnv: `${proofEnv}=true`,
-      note: 'Set only after executing this script against the target Supabase project and reviewing the generated evidence.',
+      note: 'The protected exact-main workflow owns the live-proof flag after successful same-run validation and cleanup.',
     },
   },
   liveValidation,
@@ -465,6 +548,7 @@ const evidence = {
     verificationRequiresRbacAndStepUp: sourceFailures.length === 0,
     exportRequiresRbacAndStepUp: sourceFailures.length === 0,
     exportIsSigned: redactedPresence(evidenceSigningEnv),
+    ephemeralFixtureCleanup: liveValidation.cleanup?.status === 'Complete',
     liveProofAttached: liveProofPresent,
   },
   releaseGate: {
@@ -472,23 +556,31 @@ const evidence = {
     blocked: enterpriseRelease && status !== 'Complete',
     reason: enterpriseRelease && status !== 'Complete' ? 'audit_chain_target_live_validation_incomplete' : null,
   },
+  evidenceIntegrity: {
+    containsSensitiveValues: false,
+    credentialsStored: false,
+    rawAuditPayloadsStored: false,
+    rawIdentifiersStored: false,
+    persistentFixtureCredentialsStored: false,
+    syntheticAuditEventsRetained: liveValidation.cleanup?.auditEventsRemoved !== true,
+    ephemeralFixtureCleanupVerified: liveValidation.cleanup?.status === 'Complete',
+  },
 };
 
 mkdirSync(dirname(evidencePath), { recursive: true });
-writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
 console.log(`Wrote ${evidencePath}`);
 
 if (sourceFailures.length > 0) {
-  console.error('Audit-chain source validation failed:');
-  for (const failure of sourceFailures) console.error(`- ${failure}`);
+  console.error('Audit-chain source validation failed.');
   process.exitCode = 1;
 } else if (enterpriseRelease && status !== 'Complete') {
-  console.error(`Enterprise release blocked: run target Supabase audit-chain validation and set ${proofEnv}=true after review.`);
+  console.error('Enterprise release blocked: protected audit-chain runtime validation is incomplete.');
   process.exitCode = 1;
 } else if (liveValidation.status !== 'Complete') {
-  console.warn(`Audit-chain live validation not complete: ${liveValidation.reason ?? liveValidation.error ?? liveValidation.status}`);
+  console.warn(`Audit-chain live validation not complete: ${liveValidation.reason ?? liveValidation.failureCode ?? liveValidation.status}`);
 } else if (!liveProofPresent) {
-  console.warn(`Audit-chain live validation passed, but reviewer proof is pending. Set ${proofEnv}=true after review to mark Complete.`);
+  console.warn('Audit-chain live validation passed, but protected live-proof attestation is pending.');
 } else {
-  console.log('Audit-chain live validation evidence generated.');
+  console.log('Audit-chain live validation evidence generated with verified ephemeral cleanup.');
 }
