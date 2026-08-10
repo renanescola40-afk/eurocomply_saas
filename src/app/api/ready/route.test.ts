@@ -39,9 +39,12 @@ function stubReadyEnvironment() {
   vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'service-role');
   vi.stubEnv('STRIPE_SECRET_KEY', 'configured');
   vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'configured');
-  vi.stubEnv('STRIPE_PRICE_STARTER_MONTHLY', 'configured');
-  vi.stubEnv('STRIPE_PRICE_GROWTH_MONTHLY', 'configured');
-  vi.stubEnv('STRIPE_PRICE_ENTERPRISE_MONTHLY', 'configured');
+  vi.stubEnv('STRIPE_PRICE_ESSENTIAL_MONTHLY', 'configured');
+  vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_MONTHLY', 'configured');
+  vi.stubEnv('STRIPE_PRICE_STARTER_MONTHLY', '');
+  vi.stubEnv('STRIPE_PRICE_GROWTH_MONTHLY', '');
+  vi.stubEnv('STRIPE_PRICE_ENTERPRISE_MONTHLY', '');
+  vi.stubEnv('STRIPE_PRICE_BUSINESS_MONTHLY', '');
   vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://redis.example');
   vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'configured');
   vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', 'https://public@example.ingest.sentry.io/1');
@@ -153,12 +156,28 @@ describe('ready endpoint hardening', () => {
     ]));
   });
 
-  it('accepts legacy Stripe price envs only as backwards-compatible readiness fallbacks', () => {
+  it('accepts Starter and Growth only as backwards-compatible self-serve fallbacks', () => {
     vi.stubEnv('STRIPE_SECRET_KEY', 'configured');
     vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'configured');
-    vi.stubEnv('STRIPE_PRICE_ESSENTIAL_MONTHLY', 'configured');
-    vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_MONTHLY', 'configured');
-    vi.stubEnv('STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY', 'configured');
+    vi.stubEnv('STRIPE_PRICE_ESSENTIAL_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_STARTER_MONTHLY', 'configured');
+    vi.stubEnv('STRIPE_PRICE_GROWTH_MONTHLY', 'configured');
+
+    expect(readyEnvironmentCheck()).toEqual(expect.arrayContaining([
+      {
+        name: 'stripe',
+        configured: true,
+        missingCount: 0,
+      },
+    ]));
+  });
+
+  it('does not require Business or Enterprise fixed prices for application readiness', () => {
+    stubReadyEnvironment();
+    vi.stubEnv('STRIPE_PRICE_BUSINESS_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_ENTERPRISE_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY', '');
 
     expect(readyEnvironmentCheck()).toEqual(expect.arrayContaining([
       {
@@ -220,7 +239,7 @@ describe('ready endpoint hardening', () => {
       configured: true,
       apiReachable: true,
       priceLookup: true,
-      pricesChecked: 3,
+      pricesChecked: 2,
       detail: 'ok',
     });
     expect(body.enterpriseStepUp).toEqual({
@@ -240,9 +259,9 @@ describe('ready endpoint hardening', () => {
     expect(body.sentryReleaseUploads.sourceMapsUploadRequiresAuthToken).toBe(true);
   });
 
-  it('requires all configured Stripe prices to be present', async () => {
+  it('requires both self-serve Stripe prices to be present', async () => {
     stubReadyEnvironment();
-    vi.stubEnv('STRIPE_PRICE_GROWTH_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_MONTHLY', '');
 
     const response = await GET(makeRequest('expected-token'));
     const body = await response.json();
@@ -253,7 +272,7 @@ describe('ready endpoint hardening', () => {
       configured: false,
       apiReachable: false,
       priceLookup: false,
-      pricesChecked: 2,
+      pricesChecked: 1,
       detail: 'not_configured',
     });
     expect(body.checks.stripeApiReachable).toBe(false);
@@ -418,6 +437,8 @@ describe('ready endpoint hardening', () => {
     vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', '');
     vi.stubEnv('STRIPE_SECRET_KEY', '');
     vi.stubEnv('STRIPE_WEBHOOK_SECRET', '');
+    vi.stubEnv('STRIPE_PRICE_ESSENTIAL_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_MONTHLY', '');
     vi.stubEnv('STRIPE_PRICE_STARTER_MONTHLY', '');
     vi.stubEnv('STRIPE_PRICE_GROWTH_MONTHLY', '');
     vi.stubEnv('STRIPE_PRICE_ENTERPRISE_MONTHLY', '');
@@ -439,7 +460,7 @@ describe('ready endpoint hardening', () => {
       {
         name: 'stripe',
         configured: false,
-        missingCount: 5,
+        missingCount: 4,
       },
       {
         name: 'redis',
