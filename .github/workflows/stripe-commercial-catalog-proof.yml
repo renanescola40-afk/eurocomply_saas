@@ -12,6 +12,8 @@ on:
       - 'src/app/api/ready/route.ts'
       - 'src/app/api/ready/route.test.ts'
       - 'src/app/[locale]/checkout/page.tsx'
+      - 'src/app/[locale]/signup/page.tsx'
+      - 'src/app/[locale]/dashboard/organizations/billing/billing-page-view.tsx'
       - '.env.example'
       - 'src/lib/billing/__tests__/enterprise-pricing.test.ts'
       - 'src/server/billing/billing-lifecycle.test.ts'
@@ -32,6 +34,8 @@ on:
       - 'src/app/api/ops/smoke/route.ts'
       - 'src/app/api/ready/route.ts'
       - 'src/app/[locale]/checkout/page.tsx'
+      - 'src/app/[locale]/signup/page.tsx'
+      - 'src/app/[locale]/dashboard/organizations/billing/billing-page-view.tsx'
       - 'scripts/security/run-stripe-commercial-catalog-proof.mjs'
       - '.github/workflows/stripe-commercial-catalog-proof.yml'
   workflow_dispatch:
