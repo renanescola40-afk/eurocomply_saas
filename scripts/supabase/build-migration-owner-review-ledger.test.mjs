@@ -51,6 +51,7 @@ function reviews(overrides = {}) {
     inventorySha256,
     records: [],
     unresolvedCredits: [],
+    quarantinedHistoricalCredits: [],
     ...overrides,
   };
 }
@@ -119,16 +120,16 @@ describe('Supabase migration owner-review ledger', () => {
     ));
   });
 
-  it('withholds the next batch while opaque historical credits remain', () => {
+  it('withholds the next batch while unresolved credit still claims numerator value', () => {
     const result = buildOwnerReviewLedger({
       inventory,
       inventorySha256,
       reviews: reviews({
         records: [record(0)],
         unresolvedCredits: [{
-          sourceLabel: 'Mega Batch E',
+          sourceLabel: 'Legacy unresolved batch',
           count: 2,
-          reason: 'Historical credit exists but exact immutable filenames were not reconstructed.',
+          reason: 'Historical credit is still claimed but immutable fingerprints are not reconstructed.',
         }],
         expectedDocumentedReviewedTotal: 3,
       }),
@@ -142,17 +143,69 @@ describe('Supabase migration owner-review ledger', () => {
     assert.equal(result.counts.exactUnmatchedItems, 3);
     assert.deepEqual(result.nextHumanReviewBatch, []);
     assert.equal(result.safety.nextBatchSelectionAuthorized, false);
+  });
+
+  it('quarantines opaque historical claims without crediting or blocking exact selection', () => {
+    const result = buildOwnerReviewLedger({
+      inventory,
+      inventorySha256,
+      reviews: reviews({
+        records: [record(0)],
+        quarantinedHistoricalCredits: [{
+          sourceLabel: 'Mega Batch E',
+          count: 2,
+          creditPolicy: 'QUARANTINED_NON_CREDITING',
+          reason: 'Exact immutable fingerprints were not reconstructed.',
+        }],
+        expectedDocumentedReviewedTotal: 1,
+        expectedHistoricalClaimsTotal: 3,
+      }),
+      batchSize: 2,
+    });
+
+    assert.equal(result.status, 'READY_FOR_NEXT_HUMAN_REVIEW_BATCH');
+    assert.equal(result.counts.uniqueExactReviewed, 1);
+    assert.equal(result.counts.quarantinedHistoricalCredits, 2);
+    assert.equal(result.counts.documentedReviewedTotal, 1);
+    assert.equal(result.counts.historicalClaimsTotal, 3);
+    assert.equal(result.counts.exactUnmatchedItems, 3);
+    assert.equal(result.nextHumanReviewBatch.length, 2);
+    assert.equal(result.safety.quarantinedHistoricalCreditsAreCredited, false);
+    assert.equal(result.safety.nextBatchSelectionAuthorized, true);
     assert.equal(result.safety.stagingExecutionAuthorized, false);
     assert.equal(result.safety.productionWriteAuthorized, false);
   });
 
-  it('emits a bounded non-crediting next batch only after provenance is exact', () => {
+  it('fails closed when a quarantined claim is not explicitly non-crediting', () => {
+    const result = buildOwnerReviewLedger({
+      inventory,
+      inventorySha256,
+      reviews: reviews({
+        records: [record(0)],
+        quarantinedHistoricalCredits: [{
+          sourceLabel: 'Mega Batch E',
+          count: 2,
+          creditPolicy: 'COUNT_AS_REVIEWED',
+          reason: 'Unsafe credit policy.',
+        }],
+      }),
+    });
+
+    assert.equal(result.status, 'BLOCKED');
+    assert.ok(result.blockers.includes(
+      'reviews.quarantinedHistoricalCredits[0].creditPolicy must be QUARANTINED_NON_CREDITING',
+    ));
+    assert.equal(result.safety.nextBatchSelectionAuthorized, false);
+  });
+
+  it('emits a bounded non-crediting next batch only after exact ledger conditions pass', () => {
     const result = buildOwnerReviewLedger({
       inventory,
       inventorySha256,
       reviews: reviews({
         records: [record(0), record(1)],
         expectedDocumentedReviewedTotal: 2,
+        expectedHistoricalClaimsTotal: 2,
       }),
       batchSize: 1,
     });

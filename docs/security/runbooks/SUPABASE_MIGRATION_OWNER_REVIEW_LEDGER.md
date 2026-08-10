@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Prevent human-review progress from being inflated by duplicate batch rows, stale filenames, digest drift, or unresolved historical provenance.
+Prevent human-review progress from being inflated by duplicate batch rows, stale filenames, digest drift, conflicting classifications, or opaque historical credits.
 
 This control sits **before** generation of any next human-review batch. It does not replace the canonical migration reconciliation Decision Gate.
 
@@ -10,20 +10,49 @@ This control sits **before** generation of any next human-review batch. It does 
 
 - Immutable reconciliation subject SHA: `def59573bf2dbd2ad447f8f493048b0296be21ff`
 - Inventory SHA-256: `cd453965b7e93b5ca5853838db1ba2ce561650fd30e865655f60891439158122`
+- Source workflow run: `31361564127`
+- Source artifact ID: `9052542299`
 - Inventory size: `211`
-- Documented unique owner-reviewed progress after Mega Batch N: `145/211`
-- Documented remaining unique inventory: `66/211`
+- Historical documented owner-review claim after Mega Batch N: `145/211`
+- Strict exact-fingerprint owner-review baseline: `143/211`
+- Exact-fingerprint remaining inventory: `68/211`
+- Batch-E opaque historical claims: `2`, quarantined and non-crediting
 - Canonical Decision Gate: `NOT ACCEPTED FOR STAGING`
 - Independent approver: pending
 
-The repository has already needed one manual ledger correction after Mega Batch L because nine reviewed rows reaffirmed filenames that had been credited earlier. The guard exists so reaffirmations cannot increase the numerator again.
+The repository already required a manual correction after Mega Batch L because nine reviewed rows reaffirmed filenames credited earlier. The guard therefore calculates progress from immutable filename + SQL SHA-256 fingerprints, never raw batch-row arithmetic.
 
-## Input contract
+## Evidence normalization
+
+`scripts/supabase/normalize-migration-owner-review-evidence.mjs` reconstructs the exact F-through-N human-review lineage from repository evidence and the immutable reconciliation inventory.
+
+Expected contract:
+
+- review rows parsed from F-N: `152`;
+- exact unique filenames: `143`;
+- exact reaffirmations: `9`;
+- Batch-E opaque historical claims: `2`, represented as `QUARANTINED_NON_CREDITING`;
+- automatic classifications: `0`.
+
+The normalizer fails closed if:
+
+- an expected evidence file is missing;
+- an expected batch row disappears;
+- an evidence filename is absent from the immutable inventory;
+- an inventory SQL digest is malformed;
+- duplicate evidence assigns conflicting classifications;
+- the expected `152 → 143 + 9` reconciliation no longer holds.
+
+The generated owner-review record set uses schema:
+
+`risck-comply.supabase-migration-owner-review-records.v1`
+
+## Exact-review ledger input contract
 
 `scripts/supabase/build-migration-owner-review-ledger.mjs` consumes:
 
 1. the exact retained `migration-reconciliation-inventory.json`;
-2. a normalized owner-review record set with schema `risck-comply.supabase-migration-owner-review-records.v1`.
+2. the normalized owner-review record set.
 
 Every exact owner-review record must include:
 
@@ -32,44 +61,67 @@ Every exact owner-review record must include:
 - one supported reconciliation classification;
 - source evidence path;
 - human reviewer identity;
-- human review timestamp.
+- human review date/timestamp.
 
-Historical credit whose exact immutable fingerprint cannot yet be reconstructed belongs in `unresolvedCredits`; it must never be guessed.
+### Two different historical-provenance states
 
-## Fail-closed rules
+`unresolvedCredits` means an opaque historical item still claims numerator credit. Any such record blocks next-batch generation with:
+
+`PROVENANCE_RECONSTRUCTION_REQUIRED`
+
+`quarantinedHistoricalCredits` means an opaque historical statement is preserved but explicitly contributes **zero** exact-fingerprint numerator credit. Every quarantined item must use:
+
+`creditPolicy = QUARANTINED_NON_CREDITING`
+
+A quarantined claim does not block exact-set selection because it no longer consumes an unidentified inventory filename.
+
+## Batch-E treatment
+
+Mega Batch H preserves two current-inventory classification claims from Mega Batch E, but the standalone Batch-E record with the two exact immutable filenames and SQL SHA-256 values was not recovered from trustworthy retained evidence.
+
+The repository therefore does **not** guess those filenames.
+
+Instead:
+
+- historical claim arithmetic remains visible as `145/211`;
+- the strict exact-fingerprint numerator is `143/211`;
+- Batch E contributes `0` exact-fingerprint credit while quarantined;
+- exact unmatched inventory is `68/211`;
+- machine selection may proceed from the exact set;
+- if an old Batch-E migration is encountered again, explicit exact human review may credit that fingerprint once;
+- reconstructing trustworthy Batch-E fingerprints later may replace quarantine with exact records, but deduplication still prevents double credit.
+
+This policy is stricter than assuming the historical `145/211` numerator is fingerprint-complete and safer than blocking all future review indefinitely.
+
+## Fail-closed ledger rules
 
 The ledger blocks when:
 
-- the inventory schema is wrong;
-- the review-record schema is wrong;
+- inventory schema is wrong;
+- review-record schema is wrong;
 - inventory SHA-256 does not match;
 - a reviewed filename does not exist in the immutable inventory;
 - SQL SHA-256 differs from the immutable inventory;
 - a classification is unsupported;
 - the same immutable file has conflicting classifications;
 - reviewer/source/timestamp attribution is missing;
-- unresolved credit exceeds the unmatched inventory;
-- the documented reviewed total does not reconcile.
+- a quarantined item lacks `QUARANTINED_NON_CREDITING`;
+- claimed totals exceed the inventory;
+- expected exact or historical totals do not reconcile.
 
-An exact reaffirmation with the same filename, SQL digest and classification is retained as provenance but contributes **zero additional numerator credit**.
-
-## Unresolved historical provenance
-
-The current review history contains a known provenance gap: Mega Batch H consolidates two valid current-inventory credits from Mega Batch E, but the standalone Batch-E record with the two exact immutable filenames/digests has not been reconstructed from the protected repository history available to this control.
-
-Until those two exact fingerprints are recovered and normalized, the ledger status must remain:
-
-`PROVENANCE_RECONSTRUCTION_REQUIRED`
-
-and:
-
-`nextBatchSelectionAuthorized = false`
-
-This is intentionally stricter than selecting 15 apparently unreviewed filenames and risking another duplicate-credit error.
-
-The human-review classifications recorded in later batches remain evidence; this guard does not revoke them. It only prevents a machine-generated next batch from claiming collision-free selection until provenance is exact.
+An exact reaffirmation with the same filename, SQL digest and classification remains provenance but contributes **zero additional numerator credit**.
 
 ## Usage
+
+Generate normalized records:
+
+```bash
+node scripts/supabase/normalize-migration-owner-review-evidence.mjs \
+  artifacts/supabase-migration-drift/migration-reconciliation-inventory.json \
+  artifacts/supabase-migration-owner-review/owner-review-records.json
+```
+
+Build the exact ledger and bounded next batch:
 
 ```bash
 node scripts/supabase/build-migration-owner-review-ledger.mjs \
@@ -83,26 +135,46 @@ Exit behavior:
 
 - `READY_FOR_NEXT_HUMAN_REVIEW_BATCH`: exit `0`, bounded next batch emitted with blank decision/reviewer fields;
 - `OWNER_REVIEW_CLASSIFICATION_COMPLETE`: exit `0`, no next batch required;
-- `PROVENANCE_RECONSTRUCTION_REQUIRED`: exit `2`, next batch withheld;
-- `BLOCKED`: exit `2`, blockers must be resolved.
+- `PROVENANCE_RECONSTRUCTION_REQUIRED`: exit `2`, unresolved credited claims still exist;
+- `BLOCKED`: exit `2`, an integrity contract failed.
 
-## Required workflow before Batch O
+## GitHub Actions verification
 
-1. Download the exact retained inventory for subject SHA `def59573...`.
-2. Normalize the owner-reviewed records from the protected F-through-N evidence lineage into exact filename + SQL SHA-256 records.
-3. Recover the two Batch-E immutable fingerprints from trustworthy evidence. Do not infer them from the remaining set.
-4. Run the ledger guard.
-5. Require `unresolvedCredits = 0`.
-6. Require `status = READY_FOR_NEXT_HUMAN_REVIEW_BATCH`.
-7. Only then use `nextHumanReviewBatch` as non-crediting preparation material for the next human review.
+`Supabase Owner Review Ledger Guard` re-downloads the retained exact-subject artifact from run `31361564127`, verifies:
+
+- workflow identity;
+- exact subject SHA;
+- successful source run;
+- inventory SHA-256;
+- F-N parsing counts;
+- `152` review rows;
+- `143` exact unique filenames;
+- `9` reaffirmations;
+- `2` quarantined historical Batch-E claims;
+- `68` exact unmatched filenames;
+- `15` non-crediting next-batch items;
+- blank decision/reviewer fields on every selected item.
+
+The workflow also asserts that staging, migration execution, history mutation and production remain unauthorized.
+
+## Mega Batch O
+
+The current non-crediting preparation is:
+
+`docs/security/evidence/human-review/supabase-migration-mega-batch-o-review-preparation.md`
+
+It contains technical recommendations only.
+
+Merging that preparation does **not** constitute owner classification. The owner decision must be explicit and preserved separately before any O-item can increase the exact-fingerprint numerator.
 
 ## Truth and safety boundary
 
-This ledger does **not**:
+This ledger and its normalizer do **not**:
 
 - classify a migration automatically;
-- accept a candidate classification;
-- create reviewer or approver identity;
+- convert technical recommendations into human decisions;
+- infer owner approval from PR merge;
+- create an independent approver;
 - resolve `REQUIRES_SPLIT_REVIEW`;
 - authorize `supabase migration repair`;
 - authorize staging;
@@ -113,4 +185,4 @@ This ledger does **not**:
 - mutate schema or customer data;
 - authorize production.
 
-Even when all owner-review provenance is exact, the canonical Decision Gate still requires its own classification-specific evidence, complete sealed decisions, zero unresolved split-review items, and a distinct independent approver.
+Even after all owner classifications are fingerprint-complete, the canonical Decision Gate still requires classification-specific evidence, resolved split-review items, staging evidence where required, and a distinct independent approver.
