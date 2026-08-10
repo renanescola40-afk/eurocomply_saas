@@ -12,7 +12,8 @@
       "salesLed": false,
       "monthlyPriceEnvKey": "STRIPE_PRICE_ESSENTIAL_MONTHLY",
       "annualPriceEnvKey": "STRIPE_PRICE_ESSENTIAL_ANNUAL",
-      "legacyMonthlyPriceEnvKeys": ["STRIPE_PRICE_STARTER_MONTHLY"]
+      "legacyMonthlyPriceEnvKeys": ["STRIPE_PRICE_STARTER_MONTHLY"],
+      "legacyAnnualPriceEnvKeys": ["STRIPE_PRICE_STARTER_ANNUAL"]
     },
     "professional": {
       "internalId": "professional",
@@ -23,7 +24,8 @@
       "salesLed": false,
       "monthlyPriceEnvKey": "STRIPE_PRICE_PROFESSIONAL_MONTHLY",
       "annualPriceEnvKey": "STRIPE_PRICE_PROFESSIONAL_ANNUAL",
-      "legacyMonthlyPriceEnvKeys": ["STRIPE_PRICE_GROWTH_MONTHLY"]
+      "legacyMonthlyPriceEnvKeys": ["STRIPE_PRICE_GROWTH_MONTHLY"],
+      "legacyAnnualPriceEnvKeys": ["STRIPE_PRICE_GROWTH_ANNUAL"]
     },
     "business": {
       "internalId": "business",
@@ -34,7 +36,8 @@
       "salesLed": true,
       "monthlyPriceEnvKey": "STRIPE_PRICE_BUSINESS_MONTHLY",
       "annualPriceEnvKey": "STRIPE_PRICE_BUSINESS_ANNUAL",
-      "legacyMonthlyPriceEnvKeys": []
+      "legacyMonthlyPriceEnvKeys": [],
+      "legacyAnnualPriceEnvKeys": []
     },
     "enterprise": {
       "internalId": "enterprise",
@@ -48,7 +51,8 @@
       "legacyMonthlyPriceEnvKeys": [
         "STRIPE_PRICE_ENTERPRISE_MONTHLY",
         "STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY"
-      ]
+      ],
+      "legacyAnnualPriceEnvKeys": ["STRIPE_PRICE_ENTERPRISE_ANNUAL"]
     }
   },
   "transitionPolicy": {
