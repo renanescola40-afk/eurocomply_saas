@@ -26,6 +26,7 @@ export type BillingPlan = {
   name: string;
   priceMonthly: number | null;
   priceAnnual: number | null;
+  startingPriceMonthly?: number | null;
   annualDiscountPercent: number | null;
   salesLed: boolean;
   stripePriceEnvKeyMonthly?: string;
@@ -57,22 +58,24 @@ const CATALOG_PLAN_BY_ID: Record<BillingPlanId, CatalogBillingPlanId> = {
 export const BILLING_PLANS: BillingPlanCatalog = [
   {
     id: 'starter',
-    name: 'Starter',
+    name: 'Essential',
     priceMonthly: 49,
     priceAnnual: 490,
+    startingPriceMonthly: 49,
     annualDiscountPercent: 17,
     salesLed: false,
-    stripePriceEnvKeyMonthly: 'STRIPE_PRICE_STARTER_MONTHLY',
-    stripePriceEnvKeyAnnual: 'STRIPE_PRICE_STARTER_ANNUAL',
-    legacyStripePriceEnvKeys: ['STRIPE_PRICE_ESSENTIAL_MONTHLY'],
+    stripePriceEnvKeyMonthly: 'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+    stripePriceEnvKeyAnnual: 'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+    legacyStripePriceEnvKeys: ['STRIPE_PRICE_STARTER_MONTHLY'],
     limits: { users: 3, documents: 100, vendors: 5, risks: 25, organizations: 1, aiSystems: 25, storageGb: 10, apiRequestsMonthly: 0, webhooks: 0, exportsMonthly: 25, auditLogsDays: 30 },
     features: ['AI Inventory', 'Risk Classification', 'Dashboard', 'PDF Export', 'Basic audit', 'Email support'],
   },
   {
     id: 'professional',
     name: 'Professional',
-    priceMonthly: 199,
-    priceAnnual: 1990,
+    priceMonthly: 149,
+    priceAnnual: 1490,
+    startingPriceMonthly: 149,
     annualDiscountPercent: 17,
     salesLed: false,
     stripePriceEnvKeyMonthly: 'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
@@ -84,8 +87,9 @@ export const BILLING_PLANS: BillingPlanCatalog = [
   {
     id: 'business',
     name: 'Business',
-    priceMonthly: 699,
-    priceAnnual: 6990,
+    priceMonthly: 399,
+    priceAnnual: 3990,
+    startingPriceMonthly: 399,
     annualDiscountPercent: 17,
     salesLed: true,
     stripePriceEnvKeyMonthly: 'STRIPE_PRICE_BUSINESS_MONTHLY',
@@ -99,6 +103,7 @@ export const BILLING_PLANS: BillingPlanCatalog = [
     name: 'Enterprise',
     priceMonthly: null,
     priceAnnual: null,
+    startingPriceMonthly: 990,
     annualDiscountPercent: null,
     salesLed: true,
     legacyStripePriceEnvKeys: ['STRIPE_PRICE_ENTERPRISE_MONTHLY', 'STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY'],
@@ -130,7 +135,11 @@ export function getBillingEntitlements(planId: string | null | undefined): Billi
 
 export function getStripePriceId(plan: BillingPlan, interval: 'month' | 'year' = 'month') {
   const primaryKey = interval === 'year' ? plan.stripePriceEnvKeyAnnual : plan.stripePriceEnvKeyMonthly;
-  return (primaryKey ? process.env[primaryKey] : undefined) ?? plan.legacyStripePriceEnvKeys.map((key) => process.env[key]).find(Boolean);
+  const primaryPriceId = primaryKey ? process.env[primaryKey]?.trim() : undefined;
+  const legacyPriceId = interval === 'month'
+    ? plan.legacyStripePriceEnvKeys.map((key) => process.env[key]?.trim()).find(Boolean)
+    : undefined;
+  return primaryPriceId || legacyPriceId;
 }
 
 export function getBillingPlanIdForStripePriceId(priceId: string | null | undefined): CatalogBillingPlanId | undefined {
