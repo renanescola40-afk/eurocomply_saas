@@ -3,6 +3,8 @@ function parseTimestamp(value) {
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 
+const PROMOTED_SOURCE_WORKFLOW = '.github/workflows/stripe-entitlement-runtime-proof.yml';
+
 export function validateStripeRuntimeEvidence(
   evidence,
   {
@@ -49,9 +51,21 @@ export function validateStripeRuntimeEvidence(
       ['runtimeProof.entitlementSnapshotObserved', evidence?.runtimeProof?.entitlementSnapshotObserved],
       ['runtimeProof.canonicalSeatPolicyObserved', evidence?.runtimeProof?.canonicalSeatPolicyObserved],
       ['runtimeProof.reconciliationLedgerObserved', evidence?.runtimeProof?.reconciliationLedgerObserved],
+      ['runtimeProof.replaySafetyObserved', evidence?.runtimeProof?.replaySafetyObserved],
     ]) {
       if (value !== true) failures.push(`${path} must be true`);
     }
+
+    const sourceRunId = String(evidence?.runtimeProof?.sourceRunId ?? '');
+    if (!/^\d+$/.test(sourceRunId)) failures.push('runtimeProof.sourceRunId must be numeric');
+    if (evidence?.runtimeProof?.sourceWorkflow !== PROMOTED_SOURCE_WORKFLOW) {
+      failures.push(`runtimeProof.sourceWorkflow must be ${PROMOTED_SOURCE_WORKFLOW}`);
+    }
+    const expectedArtifactName = `stripe-entitlement-runtime-proof-${String(evidence?.commitSha ?? '')}`;
+    if (evidence?.runtimeProof?.sourceArtifactName !== expectedArtifactName) {
+      failures.push('runtimeProof.sourceArtifactName must match the exact commit SHA');
+    }
+
     if (!/^[a-f0-9]{64}$/i.test(String(evidence?.sourceEvidenceDigest ?? ''))) failures.push('sourceEvidenceDigest must be SHA-256');
     if (!/^[a-f0-9]{64}$/i.test(String(evidence?.artifactDigest ?? ''))) failures.push('artifactDigest must be SHA-256');
     if (evidence?.evidenceIntegrity?.placeholderOnly !== false) failures.push('evidenceIntegrity.placeholderOnly must be false');
