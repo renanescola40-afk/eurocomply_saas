@@ -61,7 +61,8 @@ describe('production provider exact-SHA evidence handoff', () => {
 
     const wrongVercel = evidence();
     const vercel = wrongVercel.providersReviewed.find((entry) => entry.provider === 'vercel');
-    if (vercel) vercel.checks.projectIdentityMatched = false;
+    if (!vercel) throw new Error('Vercel provider fixture missing');
+    (vercel.checks as Record<string, boolean>).projectIdentityMatched = false;
     expect(validateDownloadedEvidence(wrongVercel, { targetSha: sha, repository }).passed).toBe(false);
 
     const missing = evidence();
