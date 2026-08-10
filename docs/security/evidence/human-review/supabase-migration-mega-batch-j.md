@@ -4,9 +4,10 @@ Status: **OWNER-REVIEWED CLASSIFICATION — ATOMIC RUNTIME + ENTERPRISE SCIM/SSO
 
 Human reviewer: **Renan Rodrigues Cerqueira da Silva**
 Reviewer role: **Repository owner / human classification reviewer**
-Reviewed at: **2026-08-10T11:46:00+01:00**
+Reviewed at: **2026-08-10T12:04:00+01:00**
 Immutable subject SHA: `def59573bf2dbd2ad447f8f493048b0296be21ff`
 Verified current-inventory owner-classification progress: **79/211 → 94/211**
+Prerequisite evidence PR for the 79/211 baseline: **#1519 — Mega Batch I**
 Canonical reconciliation status: **NOT ACCEPTED FOR STAGING**
 Independent approver: **PENDING — not fabricated by this record**
 
@@ -70,6 +71,8 @@ This sequence is classification/dependency evidence only and is not an executabl
 - verified current-inventory baseline before J: **79/211**;
 - verified current-inventory progress after J: **94/211**;
 - remaining current-inventory files without owner classification after J: **117**.
+
+The **94/211** figure is conditional on the Batch I evidence lineage represented by PR #1519. Until #1519 and this batch are both accepted into the protected repository lineage, `main` must not be described as having 94 classified items.
 
 `94/211` is owner-review progress only. It is not canonical Decision Gate acceptance because split-review items remain and no distinct independent approver has sealed the full 211-item decision document.
 
