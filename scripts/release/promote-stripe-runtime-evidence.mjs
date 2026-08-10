@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path';
 
 const inputPath = resolve(process.argv[2] ?? 'artifacts/stripe-entitlement-runtime-proof/evidence.json');
 const outputPath = resolve(process.argv[3] ?? 'artifacts/stripe-runtime-evidence-promotion/promoted-evidence.json');
+const replayPath = resolve(process.argv[4] ?? 'artifacts/stripe-entitlement-runtime-proof/replay.json');
 const expectedSha = process.env.RELEASE_SHA ?? process.env.GITHUB_SHA;
 const sourceRunId = String(process.env.RUNTIME_PROOF_RUN_ID ?? '').trim();
 const sourceWorkflow = '.github/workflows/stripe-entitlement-runtime-proof.yml';
@@ -12,8 +13,10 @@ const sourceWorkflow = '.github/workflows/stripe-entitlement-runtime-proof.yml';
 if (!expectedSha || !/^[0-9a-f]{40}$/i.test(expectedSha)) throw new Error('RELEASE_SHA must be a full commit SHA');
 if (!/^\d+$/.test(sourceRunId)) throw new Error('RUNTIME_PROOF_RUN_ID must be numeric');
 if (!existsSync(inputPath)) throw new Error(`Runtime evidence not found: ${inputPath}`);
+if (!existsSync(replayPath)) throw new Error(`Runtime replay evidence not found: ${replayPath}`);
 
 const evidence = JSON.parse(readFileSync(inputPath, 'utf8'));
+const replay = JSON.parse(readFileSync(replayPath, 'utf8'));
 const requiredPassed = ['eventProcessed','snapshotObserved','policyObserved','limitsMatch','reconciliationObserved','rawEvidenceDeleted'];
 for (const key of requiredPassed) {
   if (evidence?.checks?.[key] !== true) throw new Error(`Runtime evidence check did not pass: ${key}`);
@@ -22,6 +25,15 @@ if (evidence.releaseSha !== expectedSha) throw new Error('Runtime evidence SHA d
 if (evidence.stripeTestModeConfirmed !== true) throw new Error('Only Stripe test-mode proof can be promoted by this workflow');
 if (evidence.containsSensitiveValues === true) throw new Error('Sensitive runtime evidence cannot be promoted');
 if (!evidence.catalogSha256 || !/^[0-9a-f]{64}$/i.test(evidence.catalogSha256)) throw new Error('Missing catalog SHA-256');
+
+const replaySafetyObserved = replay?.sameEventId === true
+  && replay?.firstDelivery?.processed === true
+  && replay?.secondDelivery?.duplicate === true
+  && replay?.before?.snapshotCount === replay?.after?.snapshotCount
+  && replay?.before?.policyVersion === replay?.after?.policyVersion
+  && JSON.stringify(replay?.before?.seatLimits) === JSON.stringify(replay?.after?.seatLimits)
+  && replay?.before?.reconciliationCount === replay?.after?.reconciliationCount;
+if (!replaySafetyObserved) throw new Error('Runtime replay evidence did not prove idempotency');
 
 const sourceArtifactName = `stripe-entitlement-runtime-proof-${expectedSha}`;
 const promoted = {
@@ -35,7 +47,7 @@ const promoted = {
   commitSha: expectedSha,
   reviewedAt: new Date().toISOString(),
   environment: evidence.environment,
-  controlsVerified: requiredPassed,
+  controlsVerified: [...requiredPassed, 'replaySafe'],
   runtimeProof: {
     executed: true,
     stripeTestModeConfirmed: true,
@@ -43,12 +55,13 @@ const promoted = {
     entitlementSnapshotObserved: true,
     canonicalSeatPolicyObserved: true,
     reconciliationLedgerObserved: true,
-    replaySafetyObserved: evidence.checks?.replaySafe === true,
+    replaySafetyObserved,
     sourceRunId,
     sourceWorkflow,
     sourceArtifactName,
   },
   sourceEvidenceDigest: createHash('sha256').update(JSON.stringify(evidence)).digest('hex'),
+  sourceReplayDigest: createHash('sha256').update(JSON.stringify(replay)).digest('hex'),
   artifactDigest: evidence.catalogSha256,
   redactionConfirmation: 'Redaction confirmed for runtime evidence.',
   evidenceIntegrity: {
@@ -61,4 +74,4 @@ const promoted = {
 
 mkdirSync(dirname(outputPath), { recursive: true });
 writeFileSync(outputPath, `${JSON.stringify(promoted, null, 2)}\n`);
-console.log(JSON.stringify({ status: promoted.status, commitSha: promoted.commitSha, sourceRunId, outputPath }, null, 2));
+console.log(JSON.stringify({ status: promoted.status, commitSha: promoted.commitSha, sourceRunId, replaySafetyObserved, outputPath }, null, 2));
