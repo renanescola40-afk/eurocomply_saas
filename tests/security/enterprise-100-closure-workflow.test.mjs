@@ -23,25 +23,34 @@ test('fan-in accepts only retained artifacts bound to the exact closure SHA', ()
   assert.match(workflow, /ENTERPRISE_CLOSURE_EVIDENCE_ROOTS/);
 });
 
-test('artifact downloads are restricted to authorized evidence producers', () => {
-  for (const artifactPattern of [
-    'enterprise-production-final-evidence-',
-    'enterprise-recovery-',
-    'enterprise-runtime-closeout-',
-    'enterprise-readiness-scorecard-',
-    'stripe-billing-validation',
-    'supabase-production-migration-dry-run-',
-    'final-legal-publication-gate-',
-    'enterprise-conversation-runtime-closeout-',
-  ]) {
+test('artifact downloads are restricted to authorized evidence families and producer workflow paths', () => {
+  const expectedPairs = new Map([
+    ['enterprise-production-final-evidence-', '.github/workflows/enterprise-production-gate.yml'],
+    ['enterprise-recovery-', '.github/workflows/enterprise-recovery-drill.yml'],
+    ['enterprise-runtime-closeout-', '.github/workflows/enterprise-runtime-evidence-closeout.yml'],
+    ['enterprise-readiness-scorecard-', '.github/workflows/enterprise-readiness-scorecard.yml'],
+    ['stripe-billing-validation', '.github/workflows/stripe-runtime-proof.yml'],
+    ['supabase-production-migration-dry-run-', '.github/workflows/supabase-production-migration-dry-run.yml'],
+    ['final-legal-publication-gate-', '.github/workflows/final-legal-publication-gate.yml'],
+    ['enterprise-conversation-runtime-closeout-', '.github/workflows/enterprise-conversation-runtime-closeout.yml'],
+  ]);
+
+  for (const [artifactPattern, workflowPath] of expectedPairs) {
     assert.ok(workflow.includes(artifactPattern), `missing artifact allowlist pattern ${artifactPattern}`);
+    assert.ok(workflow.includes(workflowPath), `missing producer workflow binding ${workflowPath}`);
   }
+
+  assert.match(workflow, /\.workflow_run\.id\] \| @tsv/);
+  assert.match(workflow, /actions\/runs\/\$\{source_run_id\}/);
+  assert.match(workflow, /actual_workflow_path/);
+  assert.match(workflow, /actual_workflow_path" != "\$expected_workflow_path/);
+  assert.match(workflow, /rejected_producer/);
   assert.match(workflow, /\*\) continue ;;/);
-  assert.doesNotMatch(workflow, /enterprise-final-closeout-dashboard-\*\|enterprise-100-closure-\*\) continue/);
 });
 
-test('human legal evidence producer triggers exact-SHA reevaluation', () => {
+test('human legal and conversation closeout producers trigger exact-SHA reevaluation', () => {
   assert.match(workflow, /- 'Final Legal Publication Gate'/);
+  assert.match(workflow, /- 'Enterprise Conversation Runtime Closeout'/);
 });
 
 test('producer completions queue instead of cancelling same-SHA closure runs', () => {
