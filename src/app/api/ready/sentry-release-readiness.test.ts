@@ -116,6 +116,19 @@ describe('enterprise Sentry release upload readiness', () => {
     expect(JSON.stringify(body)).not.toContain('SENTRY_PROJECT');
   });
 
+  it('still blocks enterprise runtime readiness when the deployed Sentry DSN is absent', async () => {
+    stubEnterpriseScanner();
+    vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', '');
+
+    const response = await GET(makeRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.status).toBe('not_ready');
+    expect(body.checks.sentryConfigured).toBe(false);
+    expect(body.checks.sentryObservabilityConfigured).toBe(false);
+  });
+
   it('reports configured build metadata while the build auth token remains absent', async () => {
     stubEnterpriseScanner();
     vi.stubEnv('SENTRY_ORG', 'risck-comply');
