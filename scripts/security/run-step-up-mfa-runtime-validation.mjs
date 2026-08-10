@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-// Executes a real Supabase MFA challenge with a dedicated synthetic account and
-// writes redacted, exact-SHA evidence for the enterprise step-up release gate.
+// Executes a real Supabase MFA enrollment/challenge/verification with a disposable
+// account and writes redacted, exact-SHA evidence for the enterprise step-up gate.
 
 import { createHmac } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -10,6 +10,10 @@ import { dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 import { loadLocalEnv } from '../lib/load-local-env.mjs';
+import {
+  cleanupEphemeralMfaUser,
+  createEphemeralMfaUser,
+} from './lib/ephemeral-mfa-fixture.mjs';
 
 loadLocalEnv();
 
@@ -23,11 +27,9 @@ const stepUpAcrEnv = env('STEP', 'UP', 'IDP', 'ACR', 'VALUES');
 const stepUpAmrEnv = env('STEP', 'UP', 'IDP', 'AMR', 'VALUES');
 const supabaseUrlEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'URL');
 const supabaseAnonEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'ANON', 'KEY');
+const supabaseServiceRoleEnv = env('SUPABASE', 'SERVICE', 'ROLE', 'KEY');
 const enterpriseReleaseEnv = env('RISCK', 'COMPLY', 'ENTERPRISE', 'RELEASE');
 const legacyEnterpriseReleaseEnv = env('EUROCOMPLY', 'ENTERPRISE', 'RELEASE');
-const liveUserEmailEnv = env('STEP', 'UP', 'LIVE', 'USER', 'EMAIL');
-const liveUserPasswordEnv = env('STEP', 'UP', 'LIVE', 'USER', 'PASSWORD');
-const liveTotpSecretEnv = env('STEP', 'UP', 'LIVE', 'TOTP', 'SECRET');
 const expectedShaEnv = env('ENTERPRISE', 'EXPECTED', 'SHA');
 const expectedBranchEnv = env('ENTERPRISE', 'EXPECTED', 'BRANCH');
 
@@ -104,6 +106,12 @@ function configuredList(name) {
 
 function redactedPresence(name) {
   return Boolean(readRuntimeSetting(name));
+}
+
+function supabaseClient(url, key) {
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
 }
 
 export function normalizeSha(value) {
@@ -215,18 +223,22 @@ function emptyLiveResult(providerMode, providerHost) {
     reason: 'live_validation_not_completed',
     providerMode,
     providerHost,
+    ephemeralFixtureCreated: false,
     signedIn: false,
+    factorEnrolled: false,
     verifiedFactorAvailable: false,
     challengeCreated: false,
     verificationSucceeded: false,
     aal2Observed: false,
     sessionUserMatched: false,
     verifiedTotpFactorCount: 0,
+    signedOut: false,
+    fixtureCleanupVerified: false,
     providerCode: null,
   };
 }
 
-async function executeSupabaseMfaFlow(supabase, { email, password, totpSecret, providerMode, providerHost }) {
+async function executeSupabaseMfaFlow(supabase, { email, password, providerMode, providerHost }) {
   let result = emptyLiveResult(providerMode, providerHost);
   const signIn = await supabase.auth.signInWithPassword({ email, password });
   const signedInUserId = signIn.data?.user?.id ?? null;
@@ -235,21 +247,18 @@ async function executeSupabaseMfaFlow(supabase, { email, password, totpSecret, p
   }
 
   result = { ...result, signedIn: true };
-  const factors = await supabase.auth.mfa.listFactors();
-  if (factors.error) {
-    return { ...result, reason: 'verified_factor_list_failed', providerCode: stableProviderCode(factors.error) };
+  const enrollment = await supabase.auth.mfa.enroll({
+    factorType: 'totp',
+    friendlyName: `risck-comply-proof-${Date.now()}`,
+  });
+  const factorId = enrollment.data?.id ?? null;
+  const totpSecret = enrollment.data?.totp?.secret ?? null;
+  if (enrollment.error || !factorId || !totpSecret) {
+    return { ...result, reason: 'totp_enrollment_failed', providerCode: stableProviderCode(enrollment.error) };
   }
 
-  const verifiedTotpFactors = (factors.data?.totp ?? []).filter((factor) => factor?.id && factor?.status === 'verified');
-  const factor = verifiedTotpFactors[0];
-  result = {
-    ...result,
-    verifiedFactorAvailable: Boolean(factor?.id),
-    verifiedTotpFactorCount: verifiedTotpFactors.length,
-  };
-  if (!factor?.id) return { ...result, reason: 'verified_totp_factor_required' };
-
-  const challenge = await supabase.auth.mfa.challenge({ factorId: factor.id });
+  result = { ...result, factorEnrolled: true };
+  const challenge = await supabase.auth.mfa.challenge({ factorId });
   const challengeId = challenge.data?.id ?? null;
   if (challenge.error || !challengeId) {
     return { ...result, reason: 'provider_challenge_failed', providerCode: stableProviderCode(challenge.error) };
@@ -257,12 +266,25 @@ async function executeSupabaseMfaFlow(supabase, { email, password, totpSecret, p
 
   result = { ...result, challengeCreated: true };
   const code = generateTotpCode(totpSecret);
-  const verification = await supabase.auth.mfa.verify({ factorId: factor.id, challengeId, code });
+  const verification = await supabase.auth.mfa.verify({ factorId, challengeId, code });
   if (verification.error) {
     return { ...result, reason: 'totp_verification_failed', providerCode: stableProviderCode(verification.error) };
   }
 
   result = { ...result, verificationSucceeded: true };
+  const factors = await supabase.auth.mfa.listFactors();
+  if (factors.error) {
+    return { ...result, reason: 'verified_factor_list_failed', providerCode: stableProviderCode(factors.error) };
+  }
+  const verifiedTotpFactors = (factors.data?.totp ?? []).filter((factor) => factor?.id && factor?.status === 'verified');
+  const verifiedFactorAvailable = verifiedTotpFactors.some((factor) => factor.id === factorId);
+  result = {
+    ...result,
+    verifiedFactorAvailable,
+    verifiedTotpFactorCount: verifiedTotpFactors.length,
+  };
+  if (!verifiedFactorAvailable) return { ...result, reason: 'verified_totp_factor_required' };
+
   const assurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   const currentLevel = assurance.data?.currentLevel ?? null;
   if (assurance.error || currentLevel !== 'aal2') {
@@ -285,68 +307,84 @@ async function runSupabaseMfaLiveValidation() {
   const providerMode = readRuntimeSetting(stepUpProviderEnv);
   const supabaseUrl = readRuntimeSetting(supabaseUrlEnv);
   const supabaseAnonKey = readRuntimeSetting(supabaseAnonEnv);
-  const email = readRuntimeSetting(liveUserEmailEnv);
-  const password = readRuntimeSetting(liveUserPasswordEnv);
-  const totpSecret = readRuntimeSetting(liveTotpSecretEnv);
+  const serviceRoleKey = readRuntimeSetting(supabaseServiceRoleEnv);
   const providerHost = normalizeProviderHost(supabaseUrl);
   const missingConfiguration = [
     [supabaseUrlEnv, supabaseUrl],
     [supabaseAnonEnv, supabaseAnonKey],
-    [liveUserEmailEnv, email],
-    [liveUserPasswordEnv, password],
-    [liveTotpSecretEnv, totpSecret],
+    [supabaseServiceRoleEnv, serviceRoleKey],
   ].filter(([, value]) => !value).map(([name]) => name);
 
   if (!['supabase_mfa', 'supabase_mfa_or_enterprise_idp'].includes(providerMode)) {
     return {
+      ...emptyLiveResult(providerMode || null, providerHost),
       status: 'Skipped',
       attempted: false,
       reason: providerMode === 'enterprise_idp'
         ? 'enterprise_idp_live_claim_proof_requires_separate_provider_runner'
         : 'supabase_mfa_provider_mode_not_enabled',
-      providerMode: providerMode || null,
-      providerHost,
       missingConfiguration: [],
     };
   }
 
   if (missingConfiguration.length > 0 || !providerHost) {
     return {
+      ...emptyLiveResult(providerMode, providerHost),
       status: 'Skipped',
       attempted: false,
-      reason: !providerHost && supabaseUrl ? 'invalid_supabase_provider_url' : 'missing_live_fixture_configuration',
-      providerMode,
-      providerHost,
+      reason: !providerHost && supabaseUrl ? 'invalid_supabase_provider_url' : 'missing_ephemeral_fixture_provider_configuration',
       missingConfiguration,
     };
   }
 
   const startedAt = Date.now();
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-  });
-  let flowResult;
+  const supabase = supabaseClient(supabaseUrl, supabaseAnonKey);
+  const admin = supabaseClient(supabaseUrl, serviceRoleKey);
+  let fixture = null;
+  let flowResult = emptyLiveResult(providerMode, providerHost);
+  let signedOut = false;
+  let cleanup = { verified: false, failure: 'ephemeral_fixture_not_created' };
+
   try {
-    flowResult = await executeSupabaseMfaFlow(supabase, { email, password, totpSecret, providerMode, providerHost });
+    fixture = await createEphemeralMfaUser(admin, { purpose: 'step-up-mfa-proof' });
+    flowResult = {
+      ...await executeSupabaseMfaFlow(supabase, {
+        email: fixture.email,
+        password: fixture.password,
+        providerMode,
+        providerHost,
+      }),
+      ephemeralFixtureCreated: true,
+    };
   } catch (error) {
     flowResult = {
-      ...emptyLiveResult(providerMode, providerHost),
+      ...flowResult,
+      ephemeralFixtureCreated: Boolean(fixture?.id),
       reason: error instanceof Error && error.message.startsWith('totp_')
         ? error.message
-        : 'unexpected_live_validation_failure',
+        : error instanceof Error && error.message.startsWith('ephemeral_')
+          ? error.message
+          : 'unexpected_live_validation_failure',
       providerCode: stableProviderCode(error),
     };
+  } finally {
+    const signOut = await supabase.auth.signOut();
+    signedOut = !signOut.error;
+    if (fixture?.id) cleanup = await cleanupEphemeralMfaUser(admin, fixture.id);
   }
 
-  const signOut = await supabase.auth.signOut();
-  const signedOut = !signOut.error;
-  const complete = flowResult.status === 'Complete' && signedOut;
+  const complete = flowResult.status === 'Complete' && signedOut && cleanup.verified;
   return {
     ...flowResult,
     status: complete ? 'Complete' : 'Failed',
-    reason: flowResult.status === 'Complete' && !signedOut ? 'fixture_sign_out_failed' : flowResult.reason,
+    reason: flowResult.status === 'Complete' && !signedOut
+      ? 'fixture_sign_out_failed'
+      : flowResult.status === 'Complete' && !cleanup.verified
+        ? cleanup.failure || 'fixture_cleanup_failed'
+        : flowResult.reason,
     signedOut,
-    signOutProviderCode: stableProviderCode(signOut.error),
+    fixtureCleanupVerified: cleanup.verified,
+    signOutProviderCode: null,
     durationMs: Date.now() - startedAt,
   };
 }
@@ -370,7 +408,9 @@ export function evaluateStepUpRuntimeEvidence({
     && /^\d+$/.test(String(githubRunId ?? ''))
     && githubRepository === repositoryName;
   const sourcesPassed = sourceFailures.length === 0;
-  const livePassed = liveValidation?.status === 'Complete' && liveValidation?.signedOut === true;
+  const livePassed = liveValidation?.status === 'Complete'
+    && liveValidation?.signedOut === true
+    && liveValidation?.fixtureCleanupVerified === true;
   const complete = sourcesPassed && provider.configured && livePassed && exactShaBound && branchBound && workflowProvenance;
   const attemptedFailure = liveValidation?.attempted === true && liveValidation?.status === 'Failed';
 
@@ -436,7 +476,7 @@ async function main() {
     environment: 'production-provider-validation',
     control: 'P0-MFA real step-up validation for critical actions',
     summary: evaluation.complete
-      ? 'A synthetic Supabase account completed a live verified TOTP challenge, produced aal2, retained the same user and revoked its session on the exact protected release SHA.'
+      ? 'A disposable Supabase account enrolled a real TOTP factor, completed a live challenge and verification, produced aal2, retained the same user, revoked its session and was removed on the exact protected release SHA.'
       : sourceFailures.length > 0
         ? 'Step-up source controls failed validation; enterprise release remains blocked.'
         : liveValidation.status === 'Failed'
@@ -468,17 +508,14 @@ async function main() {
       hasSupabaseAuth: provider.hasSupabaseAuth,
       hasIdpPolicy: provider.hasIdpPolicy,
       providerConfigured: provider.configured,
-      syntheticFixtureConfigured: redactedPresence(liveUserEmailEnv)
-        && redactedPresence(liveUserPasswordEnv)
-        && redactedPresence(liveTotpSecretEnv),
+      ephemeralFixtureRuntimeConfigured: redactedPresence(supabaseServiceRoleEnv),
+      persistentFixtureSecretsRequired: false,
       requiredEnvironmentNames: [
         supabaseUrlEnv,
         supabaseAnonEnv,
+        supabaseServiceRoleEnv,
         stepUpProviderEnv,
         stepUpSigningEnv,
-        liveUserEmailEnv,
-        liveUserPasswordEnv,
-        liveTotpSecretEnv,
         expectedShaEnv,
         expectedBranchEnv,
       ],
@@ -487,13 +524,16 @@ async function main() {
     acceptanceCriteria: {
       noCriticalActionWithoutStepUp: evaluation.checks.sourcesPassed,
       dedicatedSigningSecretRequired: evaluation.checks.dedicatedSigningSecretConfigured,
+      ephemeralFixtureCreated: liveValidation.ephemeralFixtureCreated === true,
       syntheticFixtureSignedIn: liveValidation.signedIn === true,
+      totpFactorEnrolled: liveValidation.factorEnrolled === true,
       verifiedTotpFactorAvailable: liveValidation.verifiedFactorAvailable === true,
       providerChallengeCreated: liveValidation.challengeCreated === true,
       totpVerificationSucceeded: liveValidation.verificationSucceeded === true,
       aal2Observed: liveValidation.aal2Observed === true,
       sessionUserMatched: liveValidation.sessionUserMatched === true,
       fixtureSessionRevoked: liveValidation.signedOut === true,
+      fixtureCleanupVerified: liveValidation.fixtureCleanupVerified === true,
       exactReleaseSha: evaluation.checks.exactShaBound,
       protectedMainBranch: evaluation.checks.branchBound,
       protectedWorkflowProvenance: evaluation.checks.workflowProvenance,
@@ -508,6 +548,7 @@ async function main() {
       factorIdentifiersStored: false,
       challengeIdentifiersStored: false,
       rawProviderPayloadStored: false,
+      ephemeralUserRemoved: liveValidation.fixtureCleanupVerified === true,
     },
     auditEvents: [
       'step_up_challenge_created',
@@ -530,7 +571,10 @@ async function main() {
       'POST /api/security/step-up/verify',
     ],
     evidenceGenerator: 'scripts/security/run-step-up-mfa-runtime-validation.mjs',
-    evidenceLocations: criticalFiles,
+    evidenceLocations: [
+      ...criticalFiles,
+      'scripts/security/lib/ephemeral-mfa-fixture.mjs',
+    ],
   };
 
   mkdirSync(dirname(evidencePath), { recursive: true });

@@ -30,23 +30,29 @@ function evidence() {
     },
     runtimeValidation: {
       status: 'Complete',
+      ephemeralFixtureCreated: true,
       signedIn: true,
+      factorEnrolled: true,
       verifiedFactorAvailable: true,
       challengeCreated: true,
       verificationSucceeded: true,
       aal2Observed: true,
       sessionUserMatched: true,
       signedOut: true,
+      fixtureCleanupVerified: true,
     },
     acceptanceCriteria: {
       dedicatedSigningSecretRequired: true,
+      ephemeralFixtureCreated: true,
       syntheticFixtureSignedIn: true,
+      totpFactorEnrolled: true,
       verifiedTotpFactorAvailable: true,
       providerChallengeCreated: true,
       totpVerificationSucceeded: true,
       aal2Observed: true,
       sessionUserMatched: true,
       fixtureSessionRevoked: true,
+      fixtureCleanupVerified: true,
       exactReleaseSha: true,
       protectedMainBranch: true,
       protectedWorkflowProvenance: true,
@@ -69,6 +75,7 @@ function evidence() {
       factorIdentifiersStored: false,
       challengeIdentifiersStored: false,
       rawProviderPayloadStored: false,
+      ephemeralUserRemoved: true,
     },
   };
 }
@@ -114,7 +121,7 @@ describe('Step-Up exact-SHA runtime evidence handoff', () => {
     })).toEqual([]);
   });
 
-  it('rejects stale SHA, wrong source run and incomplete live verification', () => {
+  it('rejects stale SHA, wrong source run, incomplete live verification or missing cleanup', () => {
     expect(validateDownloadedEvidence({ ...evidence(), targetSha: 'b'.repeat(40), checkedOutSha: 'b'.repeat(40) }, {
       targetSha: SHA,
       repository: REPOSITORY,
@@ -130,6 +137,18 @@ describe('Step-Up exact-SHA runtime evidence handoff', () => {
     }).failures).toContain('source_run_provenance_mismatch');
 
     expect(validateDownloadedEvidence({ ...evidence(), runtimeValidation: { ...evidence().runtimeValidation, aal2Observed: false } }, {
+      targetSha: SHA,
+      repository: REPOSITORY,
+      runId: RUN_ID,
+      now: new Date('2026-08-09T14:05:00.000Z'),
+    }).passed).toBe(false);
+
+    expect(validateDownloadedEvidence({
+      ...evidence(),
+      runtimeValidation: { ...evidence().runtimeValidation, fixtureCleanupVerified: false },
+      acceptanceCriteria: { ...evidence().acceptanceCriteria, fixtureCleanupVerified: false },
+      evidenceIntegrity: { ...evidence().evidenceIntegrity, ephemeralUserRemoved: false },
+    }, {
       targetSha: SHA,
       repository: REPOSITORY,
       runId: RUN_ID,

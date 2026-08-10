@@ -38,7 +38,7 @@ export async function cleanupEphemeralAuthFixtures(admin, created) {
     if (error) failures.push('organization_cleanup_failed');
   }
   for (const id of [...created.users].reverse()) {
-    const { error } = await admin.auth.admin.deleteUser(id, true);
+    const { error } = await admin.auth.admin.deleteUser(id);
     if (error) failures.push('user_cleanup_failed');
   }
 

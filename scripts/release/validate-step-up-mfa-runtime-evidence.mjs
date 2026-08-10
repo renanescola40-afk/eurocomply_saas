@@ -47,11 +47,41 @@ export function validateStepUpMfaRuntimeEvidence(
     if (evidence?.runtimeValidation?.status !== 'Complete') {
       failures.push('runtimeValidation.status must be Complete');
     }
-    for (const key of ['signedIn', 'verifiedFactorAvailable', 'challengeCreated', 'verificationSucceeded', 'aal2Observed', 'sessionUserMatched', 'signedOut']) {
-      if (evidence?.runtimeValidation?.[key] !== true) failures.push(`runtimeValidation.${key} must be true`);
+    for (const key of [
+      'ephemeralFixtureCreated',
+      'signedIn',
+      'factorEnrolled',
+      'verifiedFactorAvailable',
+      'challengeCreated',
+      'verificationSucceeded',
+      'aal2Observed',
+      'sessionUserMatched',
+      'signedOut',
+      'fixtureCleanupVerified',
+    ]) {
+      if (evidence?.runtimeValidation?.[key] !== true) {
+        failures.push(`runtimeValidation.${key} must be true`);
+      }
     }
-    for (const key of ['dedicatedSigningSecretRequired', 'syntheticFixtureSignedIn', 'verifiedTotpFactorAvailable', 'providerChallengeCreated', 'totpVerificationSucceeded', 'aal2Observed', 'sessionUserMatched', 'fixtureSessionRevoked', 'exactReleaseSha', 'protectedMainBranch', 'protectedWorkflowProvenance']) {
-      if (evidence?.acceptanceCriteria?.[key] !== true) failures.push(`acceptanceCriteria.${key} must be true`);
+    for (const key of [
+      'dedicatedSigningSecretRequired',
+      'ephemeralFixtureCreated',
+      'syntheticFixtureSignedIn',
+      'totpFactorEnrolled',
+      'verifiedTotpFactorAvailable',
+      'providerChallengeCreated',
+      'totpVerificationSucceeded',
+      'aal2Observed',
+      'sessionUserMatched',
+      'fixtureSessionRevoked',
+      'fixtureCleanupVerified',
+      'exactReleaseSha',
+      'protectedMainBranch',
+      'protectedWorkflowProvenance',
+    ]) {
+      if (evidence?.acceptanceCriteria?.[key] !== true) {
+        failures.push(`acceptanceCriteria.${key} must be true`);
+      }
     }
     if (evidence?.provenance?.source !== 'github_actions') failures.push('provenance.source must be github_actions');
     if (!/^\d+$/.test(String(evidence?.provenance?.runId ?? ''))) failures.push('provenance.runId must be numeric');
@@ -66,6 +96,9 @@ export function validateStepUpMfaRuntimeEvidence(
     if (evidence?.evidenceIntegrity?.placeholderOnly !== false) failures.push('evidenceIntegrity.placeholderOnly must be false');
     for (const key of ['rawSecretsStored', 'rawTokensStored', 'rawUserIdentifiersStored', 'factorIdentifiersStored', 'challengeIdentifiersStored', 'rawProviderPayloadStored']) {
       if (evidence?.evidenceIntegrity?.[key] !== false) failures.push(`evidenceIntegrity.${key} must be false`);
+    }
+    if (evidence?.evidenceIntegrity?.ephemeralUserRemoved !== true) {
+      failures.push('evidenceIntegrity.ephemeralUserRemoved must be true');
     }
     return failures;
   }
