@@ -24,20 +24,30 @@ function normalise(value) {
 }
 
 function findStatus(document) {
-  const candidates = [
-    document?.status,
-    document?.outcome,
+  // Strong, explicit release/human decisions take precedence over generic status fields.
+  const decisionCandidates = [
+    document?.publicationStatus,
+    document?.finalDecision,
+    document?.releaseDecision,
     document?.decision,
     document?.result,
-    document?.publicationStatus,
-    document?.releaseDecision,
-    document?.summary?.status,
     document?.summary?.decision,
   ];
-
-  for (const candidate of candidates) {
+  for (const candidate of decisionCandidates) {
     if (typeof candidate === 'string' && candidate.trim()) return normalise(candidate);
   }
+
+  const status = normalise(document?.status);
+  const outcome = normalise(document?.validationStatus ?? document?.outcome);
+  const completeStatuses = new Set(['COMPLETE', 'COMPLETED', 'SUCCESS', 'SUCCESSFUL', 'PASS', 'PASSED']);
+  const passingOutcomes = new Set(['PASS', 'PASSED', 'SUCCESS', 'SUCCESSFUL', 'GO', 'VERIFIED']);
+
+  if (completeStatuses.has(status) && passingOutcomes.has(outcome)) return 'PASS';
+  if (status) return status;
+  if (outcome) return outcome;
+
+  const summaryStatus = document?.summary?.status;
+  if (typeof summaryStatus === 'string' && summaryStatus.trim()) return normalise(summaryStatus);
 
   if (document?.success === true || document?.passed === true || document?.ok === true) {
     return 'SUCCESS';
@@ -50,6 +60,7 @@ function findSha(document) {
   const candidates = [
     document?.sha,
     document?.targetSha,
+    document?.expectedSha,
     document?.observedSha,
     document?.commitSha,
     document?.commit_sha,
@@ -64,6 +75,7 @@ function findSha(document) {
     document?.productSha,
     document?.product_sha,
     document?.provenance?.commitSha,
+    document?.provenance?.targetSha,
     document?.reviewBinding?.productSha,
   ];
 
