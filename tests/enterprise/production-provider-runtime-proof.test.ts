@@ -30,6 +30,8 @@ describe('protected production provider runtime proof', () => {
     expect(producer).toContain('decryptedProviderEnvironmentValuesStored: false');
     expect(producer).toContain('credentialsStored: false');
     expect(producer).toContain('valuesRedacted: true');
+    expect(producer).toContain('CANONICAL_REDACTION_CONFIRMATION');
+    expect(producer).toContain('No secret values, tokens, URLs, DSNs, cookies, Authorization headers or customer data are stored.');
     expect(producer).not.toContain('console.log(process.env');
   });
 
@@ -57,7 +59,7 @@ describe('protected production provider runtime proof', () => {
     expect(producer).toContain('/keys/?status=active');
     expect(producer).toContain('clientKeyInventoryReachable');
     expect(producer).toContain('activeClientKeyPresent');
-    expect(producer).toContain('Sentry DSNs/client keys');
+    expect(producer).toContain('DSN and token not stored');
   });
 
   it('requires the high-impact Vercel production controls that drive readiness', () => {
