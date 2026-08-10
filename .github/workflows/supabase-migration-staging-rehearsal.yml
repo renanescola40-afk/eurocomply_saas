@@ -62,7 +62,7 @@ jobs:
           test "$(jq -r '.head_sha' <<<"$RUN_JSON")" = "$TARGET_SHA"
 
       - name: Download exact execution plan
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: supabase-migration-execution-plan-${{ inputs.release_sha }}
           path: source-plan
