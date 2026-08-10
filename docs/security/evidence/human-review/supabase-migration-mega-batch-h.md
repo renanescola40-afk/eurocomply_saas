@@ -6,7 +6,8 @@ Human reviewer: **Renan Rodrigues Cerqueira da Silva**
 Reviewer role: **Repository owner / human classification reviewer**
 Reviewed at: **2026-08-10T09:42:00+01:00**
 Immutable subject SHA: `def59573bf2dbd2ad447f8f493048b0296be21ff`
-Owner-review progress transition: **59/211 → 71/211**
+Legacy conversation progress after H: **71/211**
+Verified current-inventory owner-classification progress after H: **41/211**
 Canonical reconciliation status: **NOT ACCEPTED FOR STAGING**
 Independent approver: **PENDING — not fabricated by this record**
 
@@ -25,7 +26,23 @@ Subject inventory provenance:
 - reconciliation inventory SHA-256: `cd453965b7e93b5ca5853838db1ba2ce561650fd30e865655f60891439158122`;
 - files requiring classification in that inventory: `211`.
 
-The Decision Gate additionally requires exact schema/object evidence, per-item reviewer metadata, zero unresolved split-review items, a sealed decision for all 211 inventory items, and a **distinct independent approver**. Those conditions are not satisfied by this batch record alone. Therefore `71/211` below means **owner-reviewed/classified conversation progress**, not canonical acceptance, execution authorization, migration repair authorization, or proof that 71 migrations are deployed.
+The Decision Gate additionally requires exact schema/object evidence, per-item reviewer metadata, zero unresolved split-review items, a sealed decision for all 211 inventory items, and a **distinct independent approver**. Those conditions are not satisfied by this batch record alone.
+
+## Legacy A–D ledger correction
+
+The earlier conversation carried a `30/211` baseline from Human Review Batches A–D. Reconciliation against the immutable `def595…` inventory shows that this historical baseline cannot be treated as current Decision-Gate classification credit:
+
+- the recovered A–D records used a generic `Approved` label rather than one of the current Decision Gate classes (`ALREADY_PRESENT_IN_SCHEMA`, `PENDING_DEPLOYMENT`, `SUPERSEDED`, `ARCHIVE_LEGACY`, `REQUIRES_SPLIT_REVIEW`);
+- multiple recovered A–D filenames no longer exist in the current 211-item reconciliation inventory;
+- five recovered `20260605_*` files still exist, but their old generic approval is not a current classification decision and therefore they must be classified again under the current inventory contract;
+- the five still-present recovered files show no Git commits after the old review timestamp, which is useful continuity evidence but does not convert the old generic approval into a current Decision Gate class.
+
+Therefore two counters are kept separately:
+
+- **legacy conversation progress after H: 71/211** — historical continuity only;
+- **verified current-inventory owner-classification progress after H: 41/211** — Batch E (2) + F (13) + G (14) + H (12), all expressed using current reconciliation classification semantics and tied to the current inventory lineage.
+
+The 30 legacy A–D items are not deleted; they are quarantined from the current numerator until each applicable current-inventory file receives a valid current classification. This correction prevents stale approvals from being represented as exact-inventory evidence.
 
 ## Owner-reviewed decisions
 
