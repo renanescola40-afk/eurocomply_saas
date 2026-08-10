@@ -10,6 +10,7 @@ const FULL_SHA = /^[a-f0-9]{40}$/;
 const VERCEL_TEAM_ID = /^team_[A-Za-z0-9]+$/;
 const VERCEL_PROJECT_ID = /^prj_[A-Za-z0-9]+$/;
 const API_TIMEOUT_MS = 8_000;
+const CANONICAL_REDACTION_CONFIRMATION = 'Only grouped configuration presence and accepted source labels are recorded. No secret values, tokens, URLs, DSNs, cookies, Authorization headers or customer data are stored.';
 
 const REQUIRED_VERCEL_KEYS = [
   'NEXT_PUBLIC_SUPABASE_URL',
@@ -425,7 +426,7 @@ async function main() {
       'scripts/release/validate-production-secrets-runtime-evidence.mjs',
       'docs/security/evidence/runtime/production-secrets-provider-stores.json',
     ],
-    redactionConfirmation: 'No secret values, credentials, Sentry DSNs/client keys, provider response bodies, tokens, IDs from customer data, or decrypted Vercel environment values are stored.',
+    redactionConfirmation: CANONICAL_REDACTION_CONFIRMATION,
     evidenceIntegrity: {
       containsSensitiveValues: false,
       rawValuesStored: false,
