@@ -5,57 +5,159 @@ on:
     paths:
       - 'config/enterprise-100-closure.json'
       - 'scripts/release/check-enterprise-100-closure.mjs'
+      - 'scripts/release/hydrate-enterprise-100-evidence.mjs'
       - 'tests/enterprise-100-closure.test.ts'
+      - 'tests/enterprise/enterprise-100-evidence-hydration.test.mjs'
       - '.github/workflows/enterprise-100-closure.yml'
   push:
+    branches: [main]
+  workflow_run:
+    workflows:
+      - 'Enterprise Production Gate'
+      - 'Enterprise Recovery Drill'
+      - 'Production Provider Runtime Proof'
+      - 'Enterprise Runtime Evidence Closeout'
+      - 'Enterprise Readiness Scorecard'
+      - 'Stripe Runtime Proof'
+      - 'Supabase Production Migration Dry Run'
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: enterprise-100-closure-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: enterprise-100-closure-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
 
 jobs:
   contract:
     name: Enterprise closure contract
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
-      ENTERPRISE_CLOSURE_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      ENTERPRISE_CLOSURE_EXPECTED_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+      RETAINED_ARTIFACT_ROOT: artifacts/enterprise-100-retained-artifacts
+      HYDRATED_CLOSURE_ROOT: artifacts/enterprise-100-evidence-root
     steps:
       - name: Checkout exact SHA
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.ENTERPRISE_CLOSURE_EXPECTED_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: 22
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
-      - name: Test closure verifier
-        run: npx vitest run tests/enterprise-100-closure.test.ts
+      - name: Test closure verifier and hydration contracts
+        run: |
+          node --check scripts/release/check-enterprise-100-closure.mjs
+          node --check scripts/release/hydrate-enterprise-100-evidence.mjs
+          npx vitest run tests/enterprise-100-closure.test.ts
+          node --test tests/enterprise/enterprise-100-evidence-hydration.test.mjs
 
       - name: Validate repository contract
         if: github.event_name == 'pull_request'
         run: |
-          node --check scripts/release/check-enterprise-100-closure.mjs
           node -e "const c=require('./config/enterprise-100-closure.json'); if(!Array.isArray(c.controls)||c.controls.length<10) process.exit(1)"
+          grep -Fq 'ENTERPRISE_CLOSURE_EVIDENCE_ROOTS' scripts/release/check-enterprise-100-closure.mjs
+          grep -Fq 'enterprise-100-evidence-hydration.v1' scripts/release/hydrate-enterprise-100-evidence.mjs
+
+      - name: Validate target SHA is immutable main lineage
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$ENTERPRISE_CLOSURE_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
+          comparison="$(gh api "repos/${GITHUB_REPOSITORY}/compare/${ENTERPRISE_CLOSURE_EXPECTED_SHA}...${main_sha}" --jq '.status')"
+          case "$comparison" in
+            identical|ahead) ;;
+            *) echo "Closure target SHA is not current main lineage: ${comparison}" >&2; exit 1 ;;
+          esac
+
+      - name: Collect retained artifacts bound to exact closure SHA
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RETAINED_ARTIFACT_ROOT" "$HYDRATED_CLOSURE_ROOT"
+          mkdir -p "$RETAINED_ARTIFACT_ROOT" "$HYDRATED_CLOSURE_ROOT"
+          collected=0
+
+          while IFS=$'\t' read -r artifact_id artifact_name expired artifact_sha; do
+            test "$expired" = 'false' || continue
+            test "$artifact_sha" = "$ENTERPRISE_CLOSURE_EXPECTED_SHA" || continue
+            case "$artifact_name" in
+              enterprise-100-closure-*) continue ;;
+            esac
+
+            safe_name="$(printf '%s' "$artifact_name" | tr -cs 'A-Za-z0-9._-' '_')"
+            destination="$RETAINED_ARTIFACT_ROOT/${artifact_id}-${safe_name}"
+            archive="${destination}.zip"
+            mkdir -p "$destination"
+            gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "$archive"
+            unzip -oq "$archive" -d "$destination"
+            rm -f "$archive"
+            collected=$((collected + 1))
+          done < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+              --jq '.artifacts[] | [.id, .name, .expired, .workflow_run.head_sha] | @tsv'
+          )
+
+          echo "Collected ${collected} retained artifact(s) for closure SHA ${ENTERPRISE_CLOSURE_EXPECTED_SHA}."
+
+      - name: Hydrate declared Enterprise 100 evidence
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          node scripts/release/hydrate-enterprise-100-evidence.mjs \
+            "$RETAINED_ARTIFACT_ROOT" \
+            "$HYDRATED_CLOSURE_ROOT" \
+            "$ENTERPRISE_CLOSURE_EXPECTED_SHA"
 
       - name: Enforce final exact-SHA closure
         if: github.event_name != 'pull_request'
+        env:
+          ENTERPRISE_CLOSURE_EVIDENCE_ROOTS: ${{ env.HYDRATED_CLOSURE_ROOT }}
         run: node scripts/release/check-enterprise-100-closure.mjs
+
+      - name: Publish closure summary
+        if: always() && github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          if [ -f release-validation/enterprise-100-closure.json ]; then
+            {
+              echo '## Enterprise 100 exact-SHA closure'
+              echo
+              jq -r '"- Decision: \(.decision)\n- Accepted controls: \(.acceptedControls)/\(.totalControls)\n- Target SHA: \(.expectedSha)"' release-validation/enterprise-100-closure.json
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f "$HYDRATED_CLOSURE_ROOT/enterprise-100-evidence-hydration.json" ]; then
+            jq -r '"- Hydrated retained evidence: \(.hydratedEvidence)/\(.expectedEvidence)\n- Ambiguous: \(.ambiguousEvidence)\n- Stale: \(.staleEvidence)\n- Missing: \(.missingEvidence)\n- Sensitive rejected: \(.rejectedSensitiveEvidence)"' \
+              "$HYDRATED_CLOSURE_ROOT/enterprise-100-evidence-hydration.json" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload closure result
         if: always() && github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: enterprise-100-closure-${{ env.ENTERPRISE_CLOSURE_EXPECTED_SHA }}
-          path: release-validation/enterprise-100-closure.json
+          path: |
+            release-validation/enterprise-100-closure.json
+            artifacts/enterprise-100-evidence-root/enterprise-100-evidence-hydration.json
           if-no-files-found: error
           retention-days: 90
