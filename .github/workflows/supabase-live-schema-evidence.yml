@@ -89,7 +89,7 @@ jobs:
           test "$(jq -r '.path' <<<"$RUN_JSON")" = '.github/workflows/supabase-production-migration-dry-run.yml'
 
       - name: Download exact migration inventory
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: supabase-production-migration-dry-run-${{ inputs.release_sha }}
           path: source-artifact
