@@ -53,6 +53,12 @@ export function buildOwnerReviewLedger({
   }
   if (!Array.isArray(reviews?.records)) blockers.push('reviews.records must be an array');
   if (!Array.isArray(reviews?.unresolvedCredits)) blockers.push('reviews.unresolvedCredits must be an array');
+  if (
+    reviews?.quarantinedHistoricalCredits !== undefined
+    && !Array.isArray(reviews.quarantinedHistoricalCredits)
+  ) {
+    blockers.push('reviews.quarantinedHistoricalCredits must be an array');
+  }
   if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 100) {
     blockers.push('batchSize must be an integer between 1 and 100');
   }
@@ -149,8 +155,27 @@ export function buildOwnerReviewLedger({
     unresolvedCreditCount += entry.count;
   }
 
+  let quarantinedHistoricalCreditCount = 0;
+  const quarantinedHistoricalCredits = Array.isArray(reviews?.quarantinedHistoricalCredits)
+    ? reviews.quarantinedHistoricalCredits
+    : [];
+  for (const [index, entry] of quarantinedHistoricalCredits.entries()) {
+    const prefix = `reviews.quarantinedHistoricalCredits[${index}]`;
+    if (!entry?.sourceLabel) blockers.push(`${prefix}.sourceLabel is required`);
+    if (!Number.isInteger(entry?.count) || entry.count < 1) {
+      blockers.push(`${prefix}.count must be a positive integer`);
+      continue;
+    }
+    if (entry?.creditPolicy !== 'QUARANTINED_NON_CREDITING') {
+      blockers.push(`${prefix}.creditPolicy must be QUARANTINED_NON_CREDITING`);
+    }
+    if (!entry?.reason) blockers.push(`${prefix}.reason is required`);
+    quarantinedHistoricalCreditCount += entry.count;
+  }
+
   const uniqueExactReviewed = exactReviewedByFilename.size;
   const documentedReviewedTotal = uniqueExactReviewed + unresolvedCreditCount;
+  const historicalClaimsTotal = documentedReviewedTotal + quarantinedHistoricalCreditCount;
   const exactUnmatchedItems = inventoryItems
     .filter((item) => !exactReviewedByFilename.has(item.filename))
     .sort(stableItemSort);
@@ -158,6 +183,9 @@ export function buildOwnerReviewLedger({
 
   if (documentedReviewedTotal > inventoryItems.length) {
     blockers.push('documented reviewed total exceeds inventory size');
+  }
+  if (historicalClaimsTotal > inventoryItems.length) {
+    blockers.push('historical claims total exceeds inventory size');
   }
   if (unresolvedCreditCount > exactUnmatchedItems.length) {
     blockers.push('unresolved credits exceed exact unmatched inventory items');
@@ -168,6 +196,14 @@ export function buildOwnerReviewLedger({
   ) {
     blockers.push(
       `documented reviewed total mismatch: expected ${reviews.expectedDocumentedReviewedTotal}, calculated ${documentedReviewedTotal}`,
+    );
+  }
+  if (
+    Number.isInteger(reviews?.expectedHistoricalClaimsTotal)
+    && reviews.expectedHistoricalClaimsTotal !== historicalClaimsTotal
+  ) {
+    blockers.push(
+      `historical claims total mismatch: expected ${reviews.expectedHistoricalClaimsTotal}, calculated ${historicalClaimsTotal}`,
     );
   }
 
@@ -205,18 +241,22 @@ export function buildOwnerReviewLedger({
       uniqueExactReviewed,
       reaffirmations: reaffirmations.length,
       unresolvedCredits: unresolvedCreditCount,
+      quarantinedHistoricalCredits: quarantinedHistoricalCreditCount,
       documentedReviewedTotal,
+      historicalClaimsTotal,
       exactUnmatchedItems: exactUnmatchedItems.length,
       documentedRemaining: Math.max(0, documentedRemaining),
       nextBatchItems: nextHumanReviewBatch.length,
     },
     blockers,
     unresolvedCredits,
+    quarantinedHistoricalCredits,
     reaffirmations,
     exactReviewed: [...exactReviewedByFilename.values()].sort(stableItemSort),
     nextHumanReviewBatch,
     safety: {
       automaticClassificationAllowed: false,
+      quarantinedHistoricalCreditsAreCredited: false,
       nextBatchSelectionAuthorized: safeNextBatchAvailable,
       canonicalDecisionAccepted: false,
       stagingExecutionAuthorized: false,
@@ -224,7 +264,7 @@ export function buildOwnerReviewLedger({
       migrationHistoryMutationAuthorized: false,
       productionWriteAuthorized: false,
     },
-    nonCreditingNotice: 'This ledger validates human-review provenance and deduplicates exact migration fingerprints. It never creates a migration classification, independent approval, staging authorization, migration-history repair authorization, or production authorization.',
+    nonCreditingNotice: 'This ledger validates human-review provenance and deduplicates exact migration fingerprints. Quarantined historical claims contribute zero exact-fingerprint credit. It never creates a migration classification, independent approval, staging authorization, migration-history repair authorization, or production authorization.',
   };
 }
 

@@ -5,22 +5,31 @@ on:
     paths:
       - 'scripts/supabase/build-migration-owner-review-ledger.mjs'
       - 'scripts/supabase/build-migration-owner-review-ledger.test.mjs'
+      - 'scripts/supabase/normalize-migration-owner-review-evidence.mjs'
+      - 'scripts/supabase/normalize-migration-owner-review-evidence.test.mjs'
       - '.github/workflows/supabase-owner-review-ledger-guard.yml'
       - 'docs/security/evidence/human-review/supabase-migration-owner-review-provenance.json'
+      - 'docs/security/evidence/human-review/supabase-migration-mega-batch-o-review-preparation.md'
       - 'docs/security/runbooks/SUPABASE_MIGRATION_OWNER_REVIEW_LEDGER.md'
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   contract:
-    name: Validate owner-review ledger fail-closed contracts
+    name: Validate owner-review ledger exact-fingerprint contracts
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
+    env:
+      SUBJECT_SHA: def59573bf2dbd2ad447f8f493048b0296be21ff
+      INVENTORY_RUN_ID: '31361564127'
+      INVENTORY_SHA256: cd453965b7e93b5ca5853838db1ba2ce561650fd30e865655f60891439158122
     steps:
       - name: Checkout exact PR head
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Setup Node.js 22
@@ -28,18 +37,95 @@ jobs:
         with:
           node-version: 22
 
-      - name: Validate ledger implementation
+      - name: Validate focused contracts
         run: |
           set -euo pipefail
           node --check scripts/supabase/build-migration-owner-review-ledger.mjs
-          node --test scripts/supabase/build-migration-owner-review-ledger.test.mjs
+          node --check scripts/supabase/normalize-migration-owner-review-evidence.mjs
+          node --test \
+            scripts/supabase/build-migration-owner-review-ledger.test.mjs \
+            scripts/supabase/normalize-migration-owner-review-evidence.test.mjs
 
-      - name: Assert provenance state remains non-authorizing
+      - name: Verify retained inventory provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RUN="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${INVENTORY_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$RUN")" = "$SUBJECT_SHA"
+          test "$(jq -r '.path' <<<"$RUN")" = '.github/workflows/supabase-production-migration-dry-run.yml'
+          test "$(jq -r '.conclusion' <<<"$RUN")" = 'success'
+
+      - name: Download immutable reconciliation inventory
+        uses: actions/download-artifact@v8
+        with:
+          name: supabase-production-migration-dry-run-${{ env.SUBJECT_SHA }}
+          path: inventory-artifact
+          github-token: ${{ github.token }}
+          run-id: ${{ env.INVENTORY_RUN_ID }}
+
+      - name: Normalize F-N owner evidence and build exact ledger
+        run: |
+          set -euo pipefail
+          INVENTORY="$(find inventory-artifact -type f -path '*/drift/migration-reconciliation-inventory.json' -print -quit)"
+          test -n "$INVENTORY"
+          test "$(sha256sum "$INVENTORY" | awk '{print $1}')" = "$INVENTORY_SHA256"
+
+          node scripts/supabase/normalize-migration-owner-review-evidence.mjs \
+            "$INVENTORY" \
+            /tmp/owner-review-records.json
+
+          node scripts/supabase/build-migration-owner-review-ledger.mjs \
+            "$INVENTORY" \
+            /tmp/owner-review-records.json \
+            /tmp/owner-review-ledger.json \
+            --batch-size=15
+
+      - name: Assert strict exact-fingerprint baseline and Batch O selection
+        run: |
+          set -euo pipefail
+          RECORDS=/tmp/owner-review-records.json
+          LEDGER=/tmp/owner-review-ledger.json
+
+          test "$(jq -r '.normalizationSummary.reviewRows' "$RECORDS")" = '152'
+          test "$(jq -r '.normalizationSummary.uniqueExactReviewed' "$RECORDS")" = '143'
+          test "$(jq -r '.normalizationSummary.reaffirmations' "$RECORDS")" = '9'
+          test "$(jq -r '.normalizationSummary.quarantinedHistoricalCredits' "$RECORDS")" = '2'
+
+          test "$(jq -r '.status' "$LEDGER")" = 'READY_FOR_NEXT_HUMAN_REVIEW_BATCH'
+          test "$(jq -r '.counts.inventoryItems' "$LEDGER")" = '211'
+          test "$(jq -r '.counts.reviewRows' "$LEDGER")" = '152'
+          test "$(jq -r '.counts.uniqueExactReviewed' "$LEDGER")" = '143'
+          test "$(jq -r '.counts.reaffirmations' "$LEDGER")" = '9'
+          test "$(jq -r '.counts.unresolvedCredits' "$LEDGER")" = '0'
+          test "$(jq -r '.counts.quarantinedHistoricalCredits' "$LEDGER")" = '2'
+          test "$(jq -r '.counts.documentedReviewedTotal' "$LEDGER")" = '143'
+          test "$(jq -r '.counts.historicalClaimsTotal' "$LEDGER")" = '145'
+          test "$(jq -r '.counts.exactUnmatchedItems' "$LEDGER")" = '68'
+          test "$(jq -r '.counts.nextBatchItems' "$LEDGER")" = '15'
+
+          test "$(jq -r '.nextHumanReviewBatch[0].filename' "$LEDGER")" = \
+            '20260606000100_create_compliance_metric_snapshots.sql'
+          test "$(jq -r '.nextHumanReviewBatch[14].filename' "$LEDGER")" = \
+            '20260623090000_stripe_webhook_events_enterprise_runtime.sql'
+          test "$(jq '[.nextHumanReviewBatch[] | select(.decision != null or .reviewer != null or .reviewedAt != null)] | length' "$LEDGER")" = '0'
+
+          test "$(jq -r '.safety.quarantinedHistoricalCreditsAreCredited' "$LEDGER")" = 'false'
+          test "$(jq -r '.safety.nextBatchSelectionAuthorized' "$LEDGER")" = 'true'
+          test "$(jq -r '.safety.automaticClassificationAllowed' "$LEDGER")" = 'false'
+          test "$(jq -r '.safety.canonicalDecisionAccepted' "$LEDGER")" = 'false'
+          test "$(jq -r '.safety.stagingExecutionAuthorized' "$LEDGER")" = 'false'
+          test "$(jq -r '.safety.migrationExecutionAuthorized' "$LEDGER")" = 'false'
+          test "$(jq -r '.safety.productionWriteAuthorized' "$LEDGER")" = 'false'
+
+      - name: Assert committed provenance remains non-authorizing
         run: |
           set -euo pipefail
           PROVENANCE='docs/security/evidence/human-review/supabase-migration-owner-review-provenance.json'
-          test "$(jq -r '.reconstruction.status' "$PROVENANCE")" = 'PROVENANCE_RECONSTRUCTION_REQUIRED'
-          test "$(jq -r '.reconstruction.safeNextBatchSelectionAuthorized' "$PROVENANCE")" = 'false'
+          test "$(jq -r '.exactFingerprintLedger.uniqueOwnerReviewed' "$PROVENANCE")" = '143'
+          test "$(jq -r '.exactFingerprintLedger.remainingUnique' "$PROVENANCE")" = '68'
+          test "$(jq -r '.reconstruction.status' "$PROVENANCE")" = 'HISTORICAL_CREDITS_QUARANTINED'
+          test "$(jq -r '.reconstruction.safeNextBatchSelectionAuthorized' "$PROVENANCE")" = 'true'
           test "$(jq -r '.canonicalDecisionAccepted' "$PROVENANCE")" = 'false'
           test "$(jq -r '.stagingExecutionAuthorized' "$PROVENANCE")" = 'false'
           test "$(jq -r '.migrationExecutionAuthorized' "$PROVENANCE")" = 'false'

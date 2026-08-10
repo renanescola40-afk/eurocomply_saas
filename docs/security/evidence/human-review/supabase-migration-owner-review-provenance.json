@@ -1,33 +1,67 @@
 {
   "schema": "risck-comply.supabase-migration-owner-review-provenance-state.v1",
-  "recordedAt": "2026-08-10T20:11:00+01:00",
+  "recordedAt": "2026-08-10T20:52:00+01:00",
   "subjectSha": "def59573bf2dbd2ad447f8f493048b0296be21ff",
   "inventory": {
     "sha256": "cd453965b7e93b5ca5853838db1ba2ce561650fd30e865655f60891439158122",
-    "itemCount": 211
+    "itemCount": 211,
+    "workflowRunId": 31361564127,
+    "artifactId": 9052542299,
+    "artifactSha256": "71671c1e48bda901f5e488994bd30be0fcc1d5783c0bcda953515dba4b44e895"
   },
-  "documentedLedger": {
-    "uniqueOwnerReviewed": 145,
-    "remainingUnique": 66,
+  "historicalDocumentedLedger": {
+    "ownerReviewedClaims": 145,
+    "remainingByHistoricalClaimArithmetic": 66,
     "completionPercentage": 68.72,
-    "sourceOfCurrentTotal": "docs/security/evidence/human-review/supabase-migration-mega-batch-n.md"
+    "sourceOfCurrentClaim": "docs/security/evidence/human-review/supabase-migration-mega-batch-n.md",
+    "creditPolicy": "HISTORICAL_ONLY_UNTIL_EXACT_FINGERPRINT_RECONSTRUCTION"
+  },
+  "exactFingerprintLedger": {
+    "sourceBatches": [
+      "F",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L",
+      "M",
+      "N"
+    ],
+    "reviewRows": 152,
+    "uniqueOwnerReviewed": 143,
+    "reaffirmations": 9,
+    "remainingUnique": 68,
+    "completionPercentage": 67.77,
+    "selectionBasis": "immutable filename + inventory SQL SHA-256 + owner classification + source evidence",
+    "status": "READY_FOR_NEXT_HUMAN_REVIEW_BATCH"
   },
   "reconstruction": {
-    "status": "PROVENANCE_RECONSTRUCTION_REQUIRED",
-    "safeNextBatchSelectionAuthorized": false,
+    "status": "HISTORICAL_CREDITS_QUARANTINED",
+    "safeNextBatchSelectionAuthorized": true,
     "knownCorrection": {
       "source": "docs/security/evidence/human-review/supabase-migration-ledger-correction-after-batch-l.md",
       "reason": "Nine Batch-L rows were reaffirmations already credited in earlier batches; only six were net-new."
     },
-    "unresolvedCredits": [
+    "quarantinedHistoricalCredits": [
       {
         "sourceLabel": "Mega Batch E",
         "count": 2,
         "consolidatedEvidence": "docs/security/evidence/human-review/supabase-migration-mega-batch-h.md",
         "exactImmutableFingerprintsReconstructed": false,
-        "reason": "Batch H preserves two current-inventory credits from Batch E, but the standalone two filename + SQL-digest records were not recovered from the protected repository history available to this control."
+        "creditPolicy": "QUARANTINED_NON_CREDITING",
+        "reason": "Batch H preserves two current-inventory classification claims from Batch E, but the standalone exact filename + SQL-digest records were not recovered. The claims remain preserved as history but contribute zero exact-fingerprint numerator credit."
       }
-    ]
+    ],
+    "unresolvedCreditedClaims": []
+  },
+  "nextReviewPreparation": {
+    "batchLabel": "Mega Batch O",
+    "batchSize": 15,
+    "selectionAuthorized": true,
+    "classificationAuthorized": false,
+    "ownerDecisionRecorded": false,
+    "source": "docs/security/evidence/human-review/supabase-migration-mega-batch-o-review-preparation.md"
   },
   "canonicalDecisionAccepted": false,
   "independentApprovalPresent": false,
@@ -35,5 +69,5 @@
   "migrationExecutionAuthorized": false,
   "migrationHistoryMutationAuthorized": false,
   "productionWriteAuthorized": false,
-  "nonCreditingNotice": "This provenance state records a ledger-integrity blocker. It does not create, revoke, or approve any migration classification."
+  "nonCreditingNotice": "Quarantining Batch E reduces the exact-fingerprint numerator from the historical 145 claim to 143. It does not revoke the historical statement or create any new classification. A later exact re-review or trustworthy reconstruction may convert a quarantined claim into exact credit once, never twice."
 }
