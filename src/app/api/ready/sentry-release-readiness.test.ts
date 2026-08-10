@@ -91,8 +91,6 @@ describe('enterprise Sentry release upload readiness', () => {
       configured: false,
       missingCount: 2,
       sourceMapsUploadRequiresAuthToken: true,
-      buildAuthTokenPresentAtRuntime: false,
-      buildAuthTokenRequiredAtRuntime: false,
     });
   });
 
@@ -103,8 +101,6 @@ describe('enterprise Sentry release upload readiness', () => {
       configured: false,
       missingCount: 2,
       sourceMapsUploadRequiresAuthToken: true,
-      buildAuthTokenPresentAtRuntime: false,
-      buildAuthTokenRequiredAtRuntime: false,
     });
 
     const response = await GET(makeRequest());
@@ -133,14 +129,12 @@ describe('enterprise Sentry release upload readiness', () => {
       configured: true,
       missingCount: 0,
       sourceMapsUploadRequiresAuthToken: true,
-      buildAuthTokenPresentAtRuntime: false,
-      buildAuthTokenRequiredAtRuntime: false,
     });
     expect(body.enterpriseStepUp.configured).toBe(true);
     expect(JSON.stringify(body)).not.toContain('configured-step-up-secret');
   });
 
-  it('reports a runtime build token as unnecessary without exposing it', async () => {
+  it('does not serialize a build-only Sentry auth token if one leaks into runtime', async () => {
     stubEnterpriseScanner();
     vi.stubEnv('SENTRY_ORG', 'risck-comply');
     vi.stubEnv('SENTRY_PROJECT', 'web');
@@ -150,8 +144,7 @@ describe('enterprise Sentry release upload readiness', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.sentryReleaseUploads.buildAuthTokenPresentAtRuntime).toBe(true);
-    expect(body.sentryReleaseUploads.buildAuthTokenRequiredAtRuntime).toBe(false);
+    expect(body.sentryReleaseUploads.configured).toBe(true);
     expect(JSON.stringify(body)).not.toContain('sensitive-build-only-token');
   });
 });
