@@ -16,7 +16,7 @@ function evidence() {
     stripe: { secretConfigured: true, apiReachable: true, threePriceIdsConfigured: true, priceLookup: true },
     sentry: { dsnConfigured: true, organizationConfigured: true, projectConfigured: true, buildAuthTokenConfigured: true, projectReachable: true },
   };
-  const providers = Object.keys(providerChecks);
+  const providers = ['github', 'vercel', 'supabase', 'stripe', 'sentry'] as const;
   return {
     schema: 'risck-comply.production-provider-runtime-evidence.v2',
     evidenceItem: 'production-secrets-provider-stores',
