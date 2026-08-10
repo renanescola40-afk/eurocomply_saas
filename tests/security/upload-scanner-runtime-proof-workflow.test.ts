@@ -41,8 +41,9 @@ describe('upload scanner runtime proof orchestration', () => {
     expect(workflow).toContain('aggregate-upload-scanner-runtime-evidence.mjs');
     expect(workflow).toContain("if: github.event_name == 'workflow_run'");
     expect(workflow).toContain(
-      "github.event.workflow.path == '.github/workflows/upload-security-ci.yml' && 'true' || 'false'",
+      "github.event.workflow_run.path == '.github/workflows/upload-security-ci.yml' && 'true' || 'false'",
     );
+    expect(workflow).not.toContain("github.event.workflow.path == '.github/workflows/upload-security-ci.yml'");
     expect(workflow).toContain('ref: ${{ env.ASSESSED_SHA }}');
     expect(workflow).not.toContain('contents: write');
     expect(workflow).not.toContain('pull_request_target');
