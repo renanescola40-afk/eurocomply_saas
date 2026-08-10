@@ -189,8 +189,6 @@ export function sentryReleaseUploadCheck() {
     configured: missingCount === 0,
     missingCount,
     sourceMapsUploadRequiresAuthToken: true,
-    buildAuthTokenPresentAtRuntime: Boolean(process.env.SENTRY_AUTH_TOKEN?.trim()),
-    buildAuthTokenRequiredAtRuntime: false,
   };
 }
 
