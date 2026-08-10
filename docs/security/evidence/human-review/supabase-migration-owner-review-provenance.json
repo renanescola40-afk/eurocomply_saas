@@ -1,0 +1,39 @@
+{
+  "schema": "risck-comply.supabase-migration-owner-review-provenance-state.v1",
+  "recordedAt": "2026-08-10T20:11:00+01:00",
+  "subjectSha": "def59573bf2dbd2ad447f8f493048b0296be21ff",
+  "inventory": {
+    "sha256": "cd453965b7e93b5ca5853838db1ba2ce561650fd30e865655f60891439158122",
+    "itemCount": 211
+  },
+  "documentedLedger": {
+    "uniqueOwnerReviewed": 145,
+    "remainingUnique": 66,
+    "completionPercentage": 68.72,
+    "sourceOfCurrentTotal": "docs/security/evidence/human-review/supabase-migration-mega-batch-n.md"
+  },
+  "reconstruction": {
+    "status": "PROVENANCE_RECONSTRUCTION_REQUIRED",
+    "safeNextBatchSelectionAuthorized": false,
+    "knownCorrection": {
+      "source": "docs/security/evidence/human-review/supabase-migration-ledger-correction-after-batch-l.md",
+      "reason": "Nine Batch-L rows were reaffirmations already credited in earlier batches; only six were net-new."
+    },
+    "unresolvedCredits": [
+      {
+        "sourceLabel": "Mega Batch E",
+        "count": 2,
+        "consolidatedEvidence": "docs/security/evidence/human-review/supabase-migration-mega-batch-h.md",
+        "exactImmutableFingerprintsReconstructed": false,
+        "reason": "Batch H preserves two current-inventory credits from Batch E, but the standalone two filename + SQL-digest records were not recovered from the protected repository history available to this control."
+      }
+    ]
+  },
+  "canonicalDecisionAccepted": false,
+  "independentApprovalPresent": false,
+  "stagingExecutionAuthorized": false,
+  "migrationExecutionAuthorized": false,
+  "migrationHistoryMutationAuthorized": false,
+  "productionWriteAuthorized": false,
+  "nonCreditingNotice": "This provenance state records a ledger-integrity blocker. It does not create, revoke, or approve any migration classification."
+}

@@ -1,0 +1,46 @@
+name: Supabase Owner Review Ledger Guard
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/supabase/build-migration-owner-review-ledger.mjs'
+      - 'scripts/supabase/build-migration-owner-review-ledger.test.mjs'
+      - '.github/workflows/supabase-owner-review-ledger-guard.yml'
+      - 'docs/security/evidence/human-review/supabase-migration-owner-review-provenance.json'
+      - 'docs/security/runbooks/SUPABASE_MIGRATION_OWNER_REVIEW_LEDGER.md'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Validate owner-review ledger fail-closed contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate ledger implementation
+        run: |
+          set -euo pipefail
+          node --check scripts/supabase/build-migration-owner-review-ledger.mjs
+          node --test scripts/supabase/build-migration-owner-review-ledger.test.mjs
+
+      - name: Assert provenance state remains non-authorizing
+        run: |
+          set -euo pipefail
+          PROVENANCE='docs/security/evidence/human-review/supabase-migration-owner-review-provenance.json'
+          test "$(jq -r '.reconstruction.status' "$PROVENANCE")" = 'PROVENANCE_RECONSTRUCTION_REQUIRED'
+          test "$(jq -r '.reconstruction.safeNextBatchSelectionAuthorized' "$PROVENANCE")" = 'false'
+          test "$(jq -r '.canonicalDecisionAccepted' "$PROVENANCE")" = 'false'
+          test "$(jq -r '.stagingExecutionAuthorized' "$PROVENANCE")" = 'false'
+          test "$(jq -r '.migrationExecutionAuthorized' "$PROVENANCE")" = 'false'
+          test "$(jq -r '.productionWriteAuthorized' "$PROVENANCE")" = 'false'
