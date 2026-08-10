@@ -31,7 +31,8 @@ export type BillingPlan = {
   salesLed: boolean;
   stripePriceEnvKeyMonthly?: string;
   stripePriceEnvKeyAnnual?: string;
-  legacyStripePriceEnvKeys: string[];
+  legacyStripePriceEnvKeysMonthly: string[];
+  legacyStripePriceEnvKeysAnnual: string[];
   limits: BillingEntitlements;
   features: string[];
 };
@@ -66,7 +67,8 @@ export const BILLING_PLANS: BillingPlanCatalog = [
     salesLed: false,
     stripePriceEnvKeyMonthly: 'STRIPE_PRICE_ESSENTIAL_MONTHLY',
     stripePriceEnvKeyAnnual: 'STRIPE_PRICE_ESSENTIAL_ANNUAL',
-    legacyStripePriceEnvKeys: ['STRIPE_PRICE_STARTER_MONTHLY'],
+    legacyStripePriceEnvKeysMonthly: ['STRIPE_PRICE_STARTER_MONTHLY'],
+    legacyStripePriceEnvKeysAnnual: ['STRIPE_PRICE_STARTER_ANNUAL'],
     limits: { users: 3, documents: 100, vendors: 5, risks: 25, organizations: 1, aiSystems: 25, storageGb: 10, apiRequestsMonthly: 0, webhooks: 0, exportsMonthly: 25, auditLogsDays: 30 },
     features: ['AI Inventory', 'Risk Classification', 'Dashboard', 'PDF Export', 'Basic audit', 'Email support'],
   },
@@ -80,7 +82,8 @@ export const BILLING_PLANS: BillingPlanCatalog = [
     salesLed: false,
     stripePriceEnvKeyMonthly: 'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
     stripePriceEnvKeyAnnual: 'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
-    legacyStripePriceEnvKeys: ['STRIPE_PRICE_GROWTH_MONTHLY'],
+    legacyStripePriceEnvKeysMonthly: ['STRIPE_PRICE_GROWTH_MONTHLY'],
+    legacyStripePriceEnvKeysAnnual: ['STRIPE_PRICE_GROWTH_ANNUAL'],
     limits: { users: 15, documents: 1000, vendors: 30, risks: 75, organizations: 1, aiSystems: 250, storageGb: 100, apiRequestsMonthly: 10000, webhooks: 10, exportsMonthly: 500, auditLogsDays: 180 },
     features: ['Risk Register', 'Tasks', 'Reports', 'Regulatory Monitoring', 'Vendor Register', 'FRIA', 'Annex IV Assistant', 'API', 'Webhooks', 'Branding'],
   },
@@ -94,7 +97,8 @@ export const BILLING_PLANS: BillingPlanCatalog = [
     salesLed: true,
     stripePriceEnvKeyMonthly: 'STRIPE_PRICE_BUSINESS_MONTHLY',
     stripePriceEnvKeyAnnual: 'STRIPE_PRICE_BUSINESS_ANNUAL',
-    legacyStripePriceEnvKeys: [],
+    legacyStripePriceEnvKeysMonthly: [],
+    legacyStripePriceEnvKeysAnnual: [],
     limits: { users: 75, documents: 10000, vendors: 150, risks: 300, organizations: 3, aiSystems: 1500, storageGb: 500, apiRequestsMonthly: 100000, webhooks: 100, exportsMonthly: 5000, auditLogsDays: 730 },
     features: ['AI Literacy', 'Procurement', 'QMS', 'Approval Workflows', 'Advanced Reporting', 'Priority Support', 'Integrations', 'Departments', 'Environments'],
   },
@@ -106,7 +110,8 @@ export const BILLING_PLANS: BillingPlanCatalog = [
     startingPriceMonthly: 990,
     annualDiscountPercent: null,
     salesLed: true,
-    legacyStripePriceEnvKeys: ['STRIPE_PRICE_ENTERPRISE_MONTHLY', 'STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY'],
+    legacyStripePriceEnvKeysMonthly: ['STRIPE_PRICE_ENTERPRISE_MONTHLY', 'STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY'],
+    legacyStripePriceEnvKeysAnnual: ['STRIPE_PRICE_ENTERPRISE_ANNUAL'],
     limits: { users: Number.MAX_SAFE_INTEGER, documents: Number.MAX_SAFE_INTEGER, vendors: Number.MAX_SAFE_INTEGER, risks: Number.MAX_SAFE_INTEGER, organizations: 'unlimited', aiSystems: 'unlimited', storageGb: 'unlimited', apiRequestsMonthly: 'unlimited', webhooks: 'unlimited', exportsMonthly: 'unlimited', auditLogsDays: 3650 },
     features: ['SSO', 'SCIM', 'Azure AD', 'Okta', 'Google Workspace', 'Advanced RBAC', 'Custom roles', 'Custom workflows', 'Enterprise SLA', 'Dedicated onboarding', 'Customer success', 'Priority roadmap'],
   },
@@ -136,9 +141,8 @@ export function getBillingEntitlements(planId: string | null | undefined): Billi
 export function getStripePriceId(plan: BillingPlan, interval: 'month' | 'year' = 'month') {
   const primaryKey = interval === 'year' ? plan.stripePriceEnvKeyAnnual : plan.stripePriceEnvKeyMonthly;
   const primaryPriceId = primaryKey ? process.env[primaryKey]?.trim() : undefined;
-  const legacyPriceId = interval === 'month'
-    ? plan.legacyStripePriceEnvKeys.map((key) => process.env[key]?.trim()).find(Boolean)
-    : undefined;
+  const legacyKeys = interval === 'year' ? plan.legacyStripePriceEnvKeysAnnual : plan.legacyStripePriceEnvKeysMonthly;
+  const legacyPriceId = legacyKeys.map((key) => process.env[key]?.trim()).find(Boolean);
   return primaryPriceId || legacyPriceId;
 }
 
@@ -147,7 +151,12 @@ export function getBillingPlanIdForStripePriceId(priceId: string | null | undefi
   if (!normalizedPriceId) return undefined;
 
   for (const plan of BILLING_PLANS) {
-    const envKeys = [plan.stripePriceEnvKeyMonthly, plan.stripePriceEnvKeyAnnual, ...plan.legacyStripePriceEnvKeys].filter((key): key is string => Boolean(key));
+    const envKeys = [
+      plan.stripePriceEnvKeyMonthly,
+      plan.stripePriceEnvKeyAnnual,
+      ...plan.legacyStripePriceEnvKeysMonthly,
+      ...plan.legacyStripePriceEnvKeysAnnual,
+    ].filter((key): key is string => Boolean(key));
     const configuredPriceIds = envKeys.map((key) => process.env[key]).filter((value): value is string => typeof value === 'string').map((value) => value.trim()).filter(Boolean);
     if (configuredPriceIds.includes(normalizedPriceId)) return plan.id;
   }
