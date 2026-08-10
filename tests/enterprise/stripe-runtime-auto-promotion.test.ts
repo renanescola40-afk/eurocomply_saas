@@ -7,6 +7,7 @@ import {
 } from '../../scripts/enterprise/fetch-stripe-entitlement-runtime-proof.mjs';
 
 const workflow = readFileSync('.github/workflows/stripe-runtime-evidence-promotion.yml', 'utf8');
+const promoter = readFileSync('scripts/release/promote-stripe-runtime-evidence.mjs', 'utf8');
 const sha = 'a'.repeat(40);
 
 function sourceRun(overrides = {}) {
@@ -36,7 +37,7 @@ function proof() {
         limitsMatch: true,
         reconciliationObserved: true,
         rawEvidenceDeleted: true,
-        replaySafe: true,
+        replaySafe: false,
       },
     },
     replay: {
@@ -83,16 +84,21 @@ describe('automatic Stripe runtime evidence promotion', () => {
     expect(selectExactArtifact([{ ...expected, expired: true }], sha)).toBeNull();
   });
 
-  it('requires all correlated billing and replay-safety facts before promotion', () => {
+  it('treats replay.json as the authoritative replay proof instead of the source evidence placeholder', () => {
     const { evidence, replay } = proof();
+    expect(evidence.checks.replaySafe).toBe(false);
     expect(validateSanitizedProof(evidence, replay, sha).failures).toEqual([]);
 
     const unsafe = proof();
-    unsafe.evidence.checks.replaySafe = false;
     unsafe.replay.secondDelivery.duplicate = false;
     const failures = validateSanitizedProof(unsafe.evidence, unsafe.replay, sha).failures;
-    expect(failures).toContain('evidence_check_replaySafe_failed');
     expect(failures).toContain('replay_second_delivery_not_duplicate');
+    expect(failures).not.toContain('evidence_check_replaySafe_failed');
+
+    expect(promoter).toContain('const replay = JSON.parse');
+    expect(promoter).toContain('const replaySafetyObserved = replay?.sameEventId === true');
+    expect(promoter).toContain("throw new Error('Runtime replay evidence did not prove idempotency')");
+    expect(promoter).toContain('sourceReplayDigest');
   });
 
   it('uses exact immutable GitHub actions and no artifact-download action dependency', () => {
