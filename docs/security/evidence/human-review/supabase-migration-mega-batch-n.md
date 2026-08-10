@@ -29,11 +29,25 @@ The protected `main` baseline of **130/211** is the deduplicated owner-review to
 
 `145/211` in this file means **unique current-inventory owner-reviewed classification progress only**. It is not canonical Decision Gate acceptance, a staging authorization, migration execution authorization, production authorization, migration-history repair authorization, or proof that any listed migration is deployed.
 
-## Approved decisions
+## Post-approval fail-closed technical validation
 
-The repository owner explicitly approved N1 through N15 as `PENDING_DEPLOYMENT`. N8, N9, N10, N14 and N15 carry an additional `PREREQUISITE_BLOCKED` execution boundary.
+After the owner approval was recorded, automated repository review of the exact Batch-N evidence commit identified an additional prerequisite that was not included in the owner's original blocker list:
 
-| ID | Migration | Approved classification | Dependency / execution boundary |
+- N7 `20260723170000_qualified_review_operations_platform.sql` creates authenticated read policies that call `public.is_organization_member(organization_id)`;
+- the approved predecessor M9 `20260707110000_enterprise_readiness_evidence_platform.sql` defines `enterprise_member_can_read` and `enterprise_member_can_manage`, not `is_organization_member`;
+- repository review has not identified an earlier migration at the immutable subject SHA that creates `public.is_organization_member`;
+- N13 `20260726140000_qualified_reviewer_portal.sql` also uses `public.is_organization_member` in its authenticated policies;
+- N10 already carried an owner-approved prerequisite blocker and also depends on the N7 qualified-review foundation.
+
+Therefore this evidence record applies a **stricter technical execution boundary** to N7 and N13: both remain owner-classified as `PENDING_DEPLOYMENT`, but are additionally treated as `PREREQUISITE_BLOCKED` for any future executable plan until either (a) exact-SHA live-schema evidence proves the helper exists with the required contract, or (b) a canonical migration foundation that creates the helper is identified and ordered first.
+
+This fail-closed correction does **not** rewrite or attribute a new decision to the owner. The owner's approval statement is preserved verbatim below. It only prevents an unsafe execution plan from being inferred from the classification evidence.
+
+## Approved decisions and effective execution boundaries
+
+The repository owner explicitly approved N1 through N15 as `PENDING_DEPLOYMENT` and explicitly named N8, N9, N10, N14 and N15 as `PREREQUISITE_BLOCKED`. Post-approval technical validation additionally fail-closes N7 and N13 as described above.
+
+| ID | Migration | Owner-approved class | Effective execution boundary |
 | --- | --- | --- | --- |
 | N1 | `20260722120500_fria_legal_review_and_compensation_hardening.sql` | `PENDING_DEPLOYMENT` | Must follow F7 → M12. Adds legal-review separation and FRIA approval compensation hardening. |
 | N2 | `20260722121000_fria_approval_evidence_gate.sql` | `PENDING_DEPLOYMENT` | Must follow N1. Tightens FRIA approval so required controls have usable evidence. |
@@ -41,15 +55,15 @@ The repository owner explicitly approved N1 through N15 as `PENDING_DEPLOYMENT`.
 | N4 | `20260722190000_regulatory_lifecycle_suite.sql` | `PENDING_DEPLOYMENT` | Requires the relevant GPAI/QMS/conformity/Annex IV foundations before the shared regulatory lifecycle layer. |
 | N5 | `20260722223000_qms_operational_workflow.sql` | `PENDING_DEPLOYMENT` | Must follow F8 QMS governance foundation. Adds audits, management reviews and QMS approval workflow. |
 | N6 | `20260722234000_qms_operational_transition_hardening.sql` | `PENDING_DEPLOYMENT` | Must follow N5. Adds atomic transition/immutability/compensation hardening for QMS operations. |
-| N7 | `20260723170000_qualified_review_operations_platform.sql` | `PENDING_DEPLOYMENT` | Must follow M9 enterprise evidence/readiness foundations. Creates qualified-review campaigns, reviewers, assignments, submissions, decisions and events. |
-| N8 | `20260724113000_enterprise_reconciliation_operations.sql` | `PENDING_DEPLOYMENT — PREREQUISITE_BLOCKED` | Blocked until canonical resolution of I-DUP-15 provides the reconciliation queue relation it operates on. |
-| N9 | `20260724200000_enterprise_access_operations_center.sql` | `PENDING_DEPLOYMENT — PREREQUISITE_BLOCKED` | Blocked until J10 + L11 and canonical resolution of I-DUP-14 provide the SCIM/group-access reconciliation contracts used by this operations center. |
-| N10 | `20260725102000_qualified_review_delivery_closeout.sql` | `PENDING_DEPLOYMENT — PREREQUISITE_BLOCKED` | Blocked until N7 exists and I-DUP-14 is canonically resolved because closeout logic relies on decision-control schema added in that duplicate chain. |
+| N7 | `20260723170000_qualified_review_operations_platform.sql` | `PENDING_DEPLOYMENT` | **PREREQUISITE_BLOCKED (post-approval technical validation):** requires canonical foundation or exact-SHA schema proof for `public.is_organization_member` after M9 and before N7. |
+| N8 | `20260724113000_enterprise_reconciliation_operations.sql` | `PENDING_DEPLOYMENT` | **PREREQUISITE_BLOCKED (owner-approved):** canonical resolution of I-DUP-15 must provide the reconciliation queue relation it operates on. |
+| N9 | `20260724200000_enterprise_access_operations_center.sql` | `PENDING_DEPLOYMENT` | **PREREQUISITE_BLOCKED (owner-approved):** J10 + L11 + canonical resolution of I-DUP-14 must provide the SCIM/group-access reconciliation contracts used by this operations center. |
+| N10 | `20260725102000_qualified_review_delivery_closeout.sql` | `PENDING_DEPLOYMENT` | **PREREQUISITE_BLOCKED (owner-approved):** requires executable N7 plus canonical resolution of I-DUP-14 / qualified-review decision-control contract. |
 | N11 | `20260725214500_harden_permissions_catalog_rls.sql` | `PENDING_DEPLOYMENT` | RLS/ACL hardening for permissions catalogs and Stripe webhook idempotency storage. |
 | N12 | `20260726123000_enterprise_privileged_access_governance.sql` | `PENDING_DEPLOYMENT` | Adds privileged-access requests, multi-approval records, expiry and event governance. |
-| N13 | `20260726140000_qualified_reviewer_portal.sql` | `PENDING_DEPLOYMENT` | Must follow N7. Adds reviewer invites, sessions and independence attestations. |
-| N14 | `20260726150000_enterprise_access_runtime_slo.sql` | `PENDING_DEPLOYMENT — PREREQUISITE_BLOCKED` | Blocked until `enterprise_access_operation_runs` is proven by exact schema evidence or a canonical foundation migration is identified. Repository review found this relation referenced here without an identified prior local creator. |
-| N15 | `20260726170000_enterprise_seat_concurrency_alerting.sql` | `PENDING_DEPLOYMENT — PREREQUISITE_BLOCKED` | Must follow G1/G6 enterprise contract/seat foundations and N14 runtime-alert foundations. |
+| N13 | `20260726140000_qualified_reviewer_portal.sql` | `PENDING_DEPLOYMENT` | **PREREQUISITE_BLOCKED (post-approval technical validation):** requires executable N7 and canonical foundation or exact-SHA schema proof for `public.is_organization_member`. |
+| N14 | `20260726150000_enterprise_access_runtime_slo.sql` | `PENDING_DEPLOYMENT` | **PREREQUISITE_BLOCKED (owner-approved):** `enterprise_access_operation_runs` must be proven by exact schema evidence or a canonical foundation migration. |
+| N15 | `20260726170000_enterprise_seat_concurrency_alerting.sql` | `PENDING_DEPLOYMENT` | **PREREQUISITE_BLOCKED (owner-approved):** must follow G1/G6 enterprise contract/seat foundations and an executable N14 runtime-alert foundation. |
 
 ## Inspected immutable-subject evidence
 
@@ -73,79 +87,45 @@ The classification review inspected the corresponding migration content at the i
 
 These are repository Git blob identifiers, not a substitute for the retained reconciliation artifact digest or exact-SHA live-schema evidence.
 
-## Approved reconciliation sequencing and blockers
+M9 inspection at the immutable subject SHA confirms that it creates `public.enterprise_member_can_read(uuid)` and `public.enterprise_member_can_manage(uuid)`; it does not provide the `public.is_organization_member(uuid)` helper referenced by the qualified-review policies.
 
-The owner explicitly approved the following future reconciliation constraints:
+## Approved reconciliation sequencing and fail-closed refinements
 
-1. FRIA hardening:
+The owner's explicitly approved future reconciliation constraints remain preserved:
 
-`F7 → M12 → N1 → N2`
+1. FRIA hardening: `F7 → M12 → N1 → N2`.
+2. Prohibited practices: `I-DUP-12 canonical resolution → M13 → N3`.
+3. Shared regulatory lifecycle: `F5 + F8 + F9 + F10/F11 → N4`.
+4. QMS operations: `F8 → N5 → N6`.
+5. Qualified-review platform, owner-approved sequence: `M9 → N7`.
+6. Group reconciliation operations: `I-DUP-15 canonical resolution → N8`.
+7. Access operations center: `J10 + L11 + I-DUP-14 canonical resolution → N9`.
+8. Qualified-review closeout: `N7 + I-DUP-14 canonical resolution → N10`.
+9. Reviewer portal: `N7 → N13`.
+10. Runtime SLO: `canonical foundation / exact schema proof for enterprise_access_operation_runs → N14`.
+11. Seat concurrency alerting: `G1/G6 + N14 → N15`.
 
-2. Prohibited-practices operations:
+Post-approval repository validation makes the executable form of the qualified-review chain stricter:
 
-`I-DUP-12 canonical resolution → M13 → N3`
+`M9 → canonical foundation / exact-SHA proof for public.is_organization_member(uuid) → N7 → N13`
 
-N3 is not executable while I-DUP-12 remains unresolved.
+and N10 must not execute until both N7 is executable and its separate I-DUP-14/decision-control prerequisite is resolved.
 
-3. Shared regulatory lifecycle:
-
-`F5 + F8 + F9 + F10/F11 → N4`
-
-This expresses prerequisite availability, not authorization to execute the migrations together.
-
-4. QMS operational workflow:
-
-`F8 → N5 → N6`
-
-5. Qualified-review operations platform:
-
-`M9 → N7`
-
-6. Enterprise group reconciliation operations:
-
-`I-DUP-15 canonical resolution → N8`
-
-N8 remains `PREREQUISITE_BLOCKED` until the duplicate-version queue foundation is resolved canonically.
-
-7. Enterprise access operations center:
-
-`J10 + L11 + I-DUP-14 canonical resolution → N9`
-
-N9 remains `PREREQUISITE_BLOCKED` while the SCIM/group-access reconciliation dependency chain is unresolved.
-
-8. Qualified-review delivery closeout:
-
-`N7 + I-DUP-14 canonical resolution → N10`
-
-N10 remains `PREREQUISITE_BLOCKED` until the required qualified-review decision-control contract is canonically available.
-
-9. Qualified reviewer portal:
-
-`N7 → N13`
-
-10. Enterprise access runtime SLO:
-
-`canonical foundation / exact schema proof for enterprise_access_operation_runs → N14`
-
-N14 remains blocked because the current repository review did not identify a prior local migration that creates `enterprise_access_operation_runs`. A future exact-SHA live-schema evidence record or a canonical migration foundation must resolve this before N14 can enter an executable plan.
-
-11. Enterprise seat concurrency alerting:
-
-`G1/G6 + N14 → N15`
-
-N15 remains blocked until both the contract/seat prerequisites and N14 runtime-alert prerequisites are canonically available.
+These sequences are reconciliation evidence only. They do not authorize execution.
 
 ## Classification summary
 
 - unique owner-reviewed filenames added by Mega Batch N: **15**;
-- `PENDING_DEPLOYMENT`: **15**;
-- additionally marked `PREREQUISITE_BLOCKED`: **N8, N9, N10, N14, N15**;
+- owner-approved canonical class `PENDING_DEPLOYMENT`: **15**;
+- owner-explicit `PREREQUISITE_BLOCKED`: **N8, N9, N10, N14, N15**;
+- additional post-approval technical fail-closed blockers: **N7, N13**;
+- effective execution-blocked Batch-N items: **N7, N8, N9, N10, N13, N14, N15**;
 - unique baseline before N: **130/211**;
-- unique progress after N: **145/211**;
+- unique owner-reviewed progress after N: **145/211**;
 - unique inventory remaining without owner classification: **66/211**;
 - unique owner-review completion: **68.72%**.
 
-No Batch-N item is credited as `ALREADY_PRESENT_IN_SCHEMA`, `SUPERSEDED`, `ARCHIVE_LEGACY`, or `REQUIRES_SPLIT_REVIEW`.
+No Batch-N filename is re-credited or removed by the technical blocker correction. No Batch-N item is owner-classified as `ALREADY_PRESENT_IN_SCHEMA`, `SUPERSEDED`, `ARCHIVE_LEGACY`, or `REQUIRES_SPLIT_REVIEW`.
 
 ## Canonical Decision Gate state
 
@@ -156,7 +136,9 @@ The canonical gate remains blocked because, at minimum:
 - **66/211** unique inventory filenames still lack owner classification;
 - previously identified duplicate-version / split-review groups remain unresolved;
 - prerequisite-blocked items remain outside any executable migration plan;
-- exact-SHA live-schema proof is still required where a classification depends on live-state claims;
+- the `public.is_organization_member(uuid)` prerequisite for N7/N13 is unresolved at the immutable subject lineage;
+- the `enterprise_access_operation_runs` prerequisite for N14 remains unresolved;
+- exact-SHA live-schema proof is still required where a classification or unblock decision depends on live-state claims;
 - a distinct independent approver has not been recorded by this owner-review evidence.
 
 `canonicalDecisionAccepted = false`
@@ -191,4 +173,4 @@ This owner review and evidence record do **not** authorize or perform:
 
 > Eu, Renan Rodrigues Cerqueira da Silva, revisei o Human Review Packet Mega Batch N do inventário imutável associado ao SHA def59573bf2dbd2ad447f8f493048b0296be21ff e aprovo N1 a N15 como PENDING_DEPLOYMENT, mantendo N8, N9, N10, N14 e N15 como PREREQUISITE_BLOCKED. Aprovo os sequenciamentos F7 → M12 → N1 → N2; I-DUP-12 canonical resolution → M13 → N3; F5 + F8 + F9 + F10/F11 → N4; F8 → N5 → N6; M9 → N7; I-DUP-15 canonical resolution → N8; J10 + L11 + I-DUP-14 canonical resolution → N9; N7 + I-DUP-14 canonical resolution → N10; N7 → N13; resolução canônica/prova exata de enterprise_access_operation_runs → N14; e G1/G6 + N14 → N15. Reconheço que esta aprovação leva o ledger único owner-reviewed de 130/211 para 145/211, restando 66/211 itens únicos. Esta decisão é apenas de classificação e dependências de reconciliation; não autoriza SQL, execução de migrations, migration repair, history mutation, renomeação destrutiva, backfill, db push, staging execution, schema/data mutation ou deploy em produção.
 
-This owner approval is preserved verbatim as human-review evidence. It is not represented as the distinct independent approval required by the canonical Decision Gate.
+This owner approval is preserved verbatim as human-review evidence. The stricter N7/N13 execution blockers above are post-approval technical validation findings and are not represented as additional owner statements. This record is not represented as the distinct independent approval required by the canonical Decision Gate.
