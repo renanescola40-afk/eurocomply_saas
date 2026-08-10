@@ -6,8 +6,11 @@ import { dirname, resolve } from 'node:path';
 const inputPath = resolve(process.argv[2] ?? 'artifacts/stripe-entitlement-runtime-proof/evidence.json');
 const outputPath = resolve(process.argv[3] ?? 'artifacts/stripe-runtime-evidence-promotion/promoted-evidence.json');
 const expectedSha = process.env.RELEASE_SHA ?? process.env.GITHUB_SHA;
+const sourceRunId = String(process.env.RUNTIME_PROOF_RUN_ID ?? '').trim();
+const sourceWorkflow = '.github/workflows/stripe-entitlement-runtime-proof.yml';
 
 if (!expectedSha || !/^[0-9a-f]{40}$/i.test(expectedSha)) throw new Error('RELEASE_SHA must be a full commit SHA');
+if (!/^\d+$/.test(sourceRunId)) throw new Error('RUNTIME_PROOF_RUN_ID must be numeric');
 if (!existsSync(inputPath)) throw new Error(`Runtime evidence not found: ${inputPath}`);
 
 const evidence = JSON.parse(readFileSync(inputPath, 'utf8'));
@@ -20,6 +23,7 @@ if (evidence.stripeTestModeConfirmed !== true) throw new Error('Only Stripe test
 if (evidence.containsSensitiveValues === true) throw new Error('Sensitive runtime evidence cannot be promoted');
 if (!evidence.catalogSha256 || !/^[0-9a-f]{64}$/i.test(evidence.catalogSha256)) throw new Error('Missing catalog SHA-256');
 
+const sourceArtifactName = `stripe-entitlement-runtime-proof-${expectedSha}`;
 const promoted = {
   id: 'stripe-entitlement-runtime-proof',
   evidenceItem: 'stripe-billing-validation',
@@ -40,6 +44,9 @@ const promoted = {
     canonicalSeatPolicyObserved: true,
     reconciliationLedgerObserved: true,
     replaySafetyObserved: evidence.checks?.replaySafe === true,
+    sourceRunId,
+    sourceWorkflow,
+    sourceArtifactName,
   },
   sourceEvidenceDigest: createHash('sha256').update(JSON.stringify(evidence)).digest('hex'),
   artifactDigest: evidence.catalogSha256,
@@ -54,4 +61,4 @@ const promoted = {
 
 mkdirSync(dirname(outputPath), { recursive: true });
 writeFileSync(outputPath, `${JSON.stringify(promoted, null, 2)}\n`);
-console.log(JSON.stringify({ status: promoted.status, commitSha: promoted.commitSha, outputPath }, null, 2));
+console.log(JSON.stringify({ status: promoted.status, commitSha: promoted.commitSha, sourceRunId, outputPath }, null, 2));
