@@ -7,6 +7,8 @@ const authFetcher = readFileSync('scripts/enterprise/fetch-auth-rbac-evidence.mj
 const supabaseFetcher = readFileSync('scripts/enterprise/fetch-supabase-rls-evidence.mjs', 'utf8');
 const stepUpFetcher = readFileSync('scripts/enterprise/fetch-step-up-runtime-evidence.mjs', 'utf8');
 const stripeFetcher = readFileSync('scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs', 'utf8');
+const publicFinalFetcher = readFileSync('scripts/enterprise/fetch-public-production-final-evidence.mjs', 'utf8');
+const auditChainFetcher = readFileSync('scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs', 'utf8');
 const smokeProof = readFileSync('scripts/release/run-production-runtime-response-proof.mjs', 'utf8');
 
 describe('P0 exact-SHA multi-producer runtime aggregation', () => {
@@ -19,6 +21,8 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
       'Production Runtime Proof',
       'Step-Up Runtime Proof',
       'Stripe Runtime Evidence Promotion',
+      'Public Production Final',
+      'Audit Chain Runtime Proof',
     ]) {
       expect(workflow).toContain(`- ${producer}`);
     }
@@ -33,6 +37,8 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
       'fetch-production-runtime-evidence.mjs',
       'fetch-step-up-runtime-evidence.mjs',
       'fetch-stripe-promoted-runtime-evidence.mjs',
+      'fetch-public-production-final-evidence.mjs',
+      'fetch-audit-chain-runtime-evidence.mjs',
     ]) {
       expect(workflow).toContain(fetcher);
     }
@@ -42,7 +48,7 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
     expect(workflow).toContain("github.event.workflow_run.conclusion == 'success'");
   });
 
-  it('uses the workflow definition path instead of dynamic run-name text', () => {
+  it('uses workflow_run.path instead of the aggregator workflow path or dynamic run-name text', () => {
     for (const path of [
       '.github/workflows/upload-security-ci.yml',
       '.github/workflows/branch-protection-runtime-proof.yml',
@@ -51,22 +57,32 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
       '.github/workflows/production-runtime-proof.yml',
       '.github/workflows/step-up-runtime-proof.yml',
       '.github/workflows/stripe-runtime-evidence-promotion.yml',
+      '.github/workflows/public-production-final.yml',
+      '.github/workflows/audit-chain-runtime-proof.yml',
     ]) {
-      expect(workflow).toContain(`github.event.workflow.path == '${path}'`);
+      expect(workflow).toContain(`github.event.workflow_run.path == '${path}'`);
     }
+    expect(workflow).not.toContain('github.event.workflow.path ==');
 
-    for (const fetcher of [authFetcher, supabaseFetcher, productionFetcher, stepUpFetcher, stripeFetcher]) {
+    for (const fetcher of [authFetcher, supabaseFetcher, productionFetcher, stepUpFetcher, stripeFetcher, publicFinalFetcher, auditChainFetcher]) {
       expect(fetcher).toContain("const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`");
       expect(fetcher).toContain('run?.path === WORKFLOW_PATH');
     }
   });
 
+  it('isolates workflow_run transactions so one producer cannot cancel another exact-SHA import', () => {
+    expect(workflow).toContain("group: p0-runtime-evidence-${{ github.event.workflow_run.id || github.event.pull_request.head.sha || github.sha }}");
+    expect(workflow).not.toContain('group: p0-runtime-evidence-${{ github.event.workflow_run.head_sha');
+  });
+
   it('requires the triggering producer but keeps other discovery fail-closed and optional', () => {
-    expect(workflow).toContain("AUTH_RBAC_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/auth-rbac-runtime-proof.yml' && 'true' || 'false' }}");
-    expect(workflow).toContain("SUPABASE_RLS_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/supabase-live-rls-validation.yml' && 'true' || 'false' }}");
-    expect(workflow).toContain("PRODUCTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/production-runtime-proof.yml' && 'true' || 'false' }}");
-    expect(workflow).toContain("STEP_UP_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/step-up-runtime-proof.yml' && 'true' || 'false' }}");
-    expect(workflow).toContain("STRIPE_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow.path == '.github/workflows/stripe-runtime-evidence-promotion.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("AUTH_RBAC_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/auth-rbac-runtime-proof.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("SUPABASE_RLS_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/supabase-live-rls-validation.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("PRODUCTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/production-runtime-proof.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("STEP_UP_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/step-up-runtime-proof.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("STRIPE_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/stripe-runtime-evidence-promotion.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("PUBLIC_FINAL_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/public-production-final.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("AUDIT_CHAIN_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/audit-chain-runtime-proof.yml' && 'true' || 'false' }}");
   });
 
   it('promotes only normalized deployment smoke from a successful production bundle', () => {
