@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 
 import { buildDashboard } from '../../scripts/enterprise/generate-final-closeout-dashboard.mjs';
@@ -65,4 +68,78 @@ test('never converts absent evidence into pass', () => {
   assert.equal(report.scores.runtime, 0);
   assert.equal(report.scores.completed, 0);
   assert.equal(report.scores.remaining, 100);
+});
+
+test('accepts PASS runtime evidence bound by releaseSha from an external evidence root', () => {
+  const targetSha = 'a'.repeat(40);
+  const root = mkdtempSync(path.join(os.tmpdir(), 'risck-closeout-dashboard-'));
+  const evidencePath = 'runtime/pass.json';
+  const absolute = path.join(root, evidencePath);
+  mkdirSync(path.dirname(absolute), { recursive: true });
+  writeFileSync(absolute, `${JSON.stringify({ status: 'PASS', releaseSha: targetSha })}\n`);
+  const previous = process.env.ENTERPRISE_EVIDENCE_ROOTS;
+  process.env.ENTERPRISE_EVIDENCE_ROOTS = root;
+
+  try {
+    const report = buildDashboard({
+      productRegistry: {
+        totalWeight: 100,
+        workstreams: [{
+          id: 'ONLY',
+          name: 'Only lane',
+          weight: 100,
+          implementationEvidence: ['package.json'],
+          testEvidence: ['package-lock.json'],
+          runtimeEvidence: [evidencePath],
+          humanReviewEvidence: [],
+        }],
+      },
+      closureRegistry: { requirements: [] },
+      targetSha,
+    });
+    assert.equal(report.scores.runtime, 100);
+    assert.equal(report.scores.completed, 100);
+    assert.equal(report.decision, 'ENTERPRISE_GO_CANDIDATE');
+  } finally {
+    if (previous === undefined) delete process.env.ENTERPRISE_EVIDENCE_ROOTS;
+    else process.env.ENTERPRISE_EVIDENCE_ROOTS = previous;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('rejects runtime evidence whose embedded SHA does not match', () => {
+  const targetSha = 'a'.repeat(40);
+  const root = mkdtempSync(path.join(os.tmpdir(), 'risck-closeout-dashboard-'));
+  const evidencePath = 'runtime/stale.json';
+  const absolute = path.join(root, evidencePath);
+  mkdirSync(path.dirname(absolute), { recursive: true });
+  writeFileSync(absolute, `${JSON.stringify({ status: 'PASS', provenance: { commitSha: 'b'.repeat(40) } })}\n`);
+  const previous = process.env.ENTERPRISE_EVIDENCE_ROOTS;
+  process.env.ENTERPRISE_EVIDENCE_ROOTS = root;
+
+  try {
+    const report = buildDashboard({
+      productRegistry: {
+        totalWeight: 100,
+        workstreams: [{
+          id: 'ONLY',
+          name: 'Only lane',
+          weight: 100,
+          implementationEvidence: ['package.json'],
+          testEvidence: ['package-lock.json'],
+          runtimeEvidence: [evidencePath],
+          humanReviewEvidence: [],
+        }],
+      },
+      closureRegistry: { requirements: [] },
+      targetSha,
+    });
+    assert.equal(report.scores.runtime, 0);
+    assert.equal(report.workstreams[0].runtime.status, 'REJECTED');
+    assert.equal(report.workstreams[0].runtime.reason, 'sha_mismatch');
+  } finally {
+    if (previous === undefined) delete process.env.ENTERPRISE_EVIDENCE_ROOTS;
+    else process.env.ENTERPRISE_EVIDENCE_ROOTS = previous;
+    rmSync(root, { recursive: true, force: true });
+  }
 });
