@@ -70,9 +70,10 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
     }
   });
 
-  it('isolates workflow_run transactions so one producer cannot cancel another exact-SHA import', () => {
-    expect(workflow).toContain("group: p0-runtime-evidence-${{ github.event.workflow_run.id || github.event.pull_request.head.sha || github.sha }}");
+  it('isolates producer transactions and separates direct push from pull-request validation', () => {
+    expect(workflow).toContain("group: p0-runtime-evidence-${{ github.event.workflow_run.id || github.event_name }}-${{ github.event.pull_request.head.sha || github.sha }}");
     expect(workflow).not.toContain('group: p0-runtime-evidence-${{ github.event.workflow_run.head_sha');
+    expect(workflow).not.toContain('group: p0-runtime-evidence-${{ github.event.workflow_run.id || github.event.pull_request.head.sha || github.sha }}');
   });
 
   it('requires the triggering producer but keeps other discovery fail-closed and optional', () => {
