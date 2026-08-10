@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 const OUTPUT = resolve('docs/security/evidence/runtime/production-secrets-provider-stores.json');
+const DEFAULT_PROVIDER_TARGETS_PATH = 'config/production-provider-targets.json';
+const PROVIDER_TARGETS_SCHEMA = 'risck-comply.production-provider-targets.v1';
 const FULL_SHA = /^[a-f0-9]{40}$/;
+const VERCEL_TEAM_ID = /^team_[A-Za-z0-9]+$/;
+const VERCEL_PROJECT_ID = /^prj_[A-Za-z0-9]+$/;
 const API_TIMEOUT_MS = 8_000;
+const CANONICAL_REDACTION_CONFIRMATION = 'Only grouped configuration presence and accepted source labels are recorded. No secret values, tokens, URLs, DSNs, cookies, Authorization headers or customer data are stored.';
 
 const REQUIRED_VERCEL_KEYS = [
   'NEXT_PUBLIC_SUPABASE_URL',
@@ -35,6 +40,31 @@ function cleanUrl(value) {
     return url.protocol === 'https:' ? url : null;
   } catch {
     return null;
+  }
+}
+
+function loadProviderTargets() {
+  try {
+    const path = resolve(env('PROVIDER_TARGETS_PATH') || DEFAULT_PROVIDER_TARGETS_PATH);
+    const parsed = JSON.parse(readFileSync(path, 'utf8'));
+    const vercel = parsed?.vercel;
+    const valid = parsed?.schema === PROVIDER_TARGETS_SCHEMA
+      && VERCEL_TEAM_ID.test(String(vercel?.teamId ?? ''))
+      && VERCEL_PROJECT_ID.test(String(vercel?.projectId ?? ''))
+      && String(vercel?.projectName ?? '') === 'eurocomply-saas';
+
+    return {
+      valid,
+      vercel: valid
+        ? {
+            teamId: String(vercel.teamId),
+            projectId: String(vercel.projectId),
+            projectName: String(vercel.projectName),
+          }
+        : null,
+    };
+  } catch {
+    return { valid: false, vercel: null };
   }
 }
 
@@ -135,23 +165,33 @@ async function githubProof(targetSha) {
 
 async function vercelProof() {
   const token = env('VERCEL_TOKEN');
-  const orgId = env('VERCEL_ORG_ID');
-  const projectId = env('VERCEL_PROJECT_ID');
+  const targets = loadProviderTargets();
+  const target = targets.vercel;
   let projectReachable = false;
+  let projectIdentityMatched = false;
   let productionEnvironmentEnumerated = false;
   let requiredEnvironmentKeysPresent = false;
   let requiredEnvironmentKeyCount = 0;
 
-  if (token && orgId && projectId) {
-    const projectResponse = await request(`https://api.vercel.com/v9/projects/${encodeURIComponent(projectId)}?teamId=${encodeURIComponent(orgId)}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  if (token && target) {
+    const projectResponse = await request(
+      `https://api.vercel.com/v9/projects/${encodeURIComponent(target.projectId)}?teamId=${encodeURIComponent(target.teamId)}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
     projectReachable = projectResponse?.status === 200;
-    await projectResponse?.body?.cancel().catch(() => undefined);
+    if (projectReachable) {
+      const body = await jsonBounded(projectResponse);
+      projectIdentityMatched = body?.id === target.projectId
+        && body?.name === target.projectName
+        && body?.accountId === target.teamId;
+    } else {
+      await projectResponse?.body?.cancel().catch(() => undefined);
+    }
 
-    const envResponse = await request(`https://api.vercel.com/v10/projects/${encodeURIComponent(projectId)}/env?target=production&decrypt=false&teamId=${encodeURIComponent(orgId)}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const envResponse = await request(
+      `https://api.vercel.com/v10/projects/${encodeURIComponent(target.projectId)}/env?target=production&decrypt=false&teamId=${encodeURIComponent(target.teamId)}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
     if (envResponse?.status === 200) {
       const body = await jsonBounded(envResponse);
       const entries = Array.isArray(body?.envs) ? body.envs : [];
@@ -170,8 +210,10 @@ async function vercelProof() {
   }
 
   const checks = {
-    credentialsConfigured: Boolean(token && orgId && projectId),
+    apiTokenConfigured: Boolean(token),
+    targetConfigurationBound: targets.valid,
     projectReachable,
+    projectIdentityMatched,
     productionEnvironmentEnumerated,
     requiredEnvironmentKeysPresent,
   };
@@ -264,27 +306,55 @@ async function stripeProof() {
   return { checks, metrics: { billableMonthlyPrices }, passed: Object.values(checks).every(Boolean) };
 }
 
+function sentryEntryHasActiveHttpsDsn(entry) {
+  if (!entry || entry?.isActive === false || String(entry?.status ?? '').toLowerCase() === 'inactive') return false;
+  const dsn = entry?.dsn;
+  const candidates = typeof dsn === 'string'
+    ? [dsn]
+    : dsn && typeof dsn === 'object'
+      ? Object.values(dsn).filter((value) => typeof value === 'string')
+      : [];
+  return candidates.some((candidate) => Boolean(cleanUrl(candidate)));
+}
+
 async function sentryProof() {
   const org = env('SENTRY_ORG');
   const project = env('SENTRY_PROJECT');
   const token = env('SENTRY_AUTH_TOKEN');
-  const dsn = cleanUrl(env('NEXT_PUBLIC_SENTRY_DSN'));
   let projectReachable = false;
+  let clientKeyInventoryReachable = false;
+  let activeClientKeyPresent = false;
 
   if (org && project && token) {
-    const response = await request(`https://sentry.io/api/0/projects/${encodeURIComponent(org)}/${encodeURIComponent(project)}/`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    });
-    projectReachable = response?.status === 200;
-    await response?.body?.cancel().catch(() => undefined);
+    const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
+    const projectResponse = await request(
+      `https://sentry.io/api/0/projects/${encodeURIComponent(org)}/${encodeURIComponent(project)}/`,
+      { headers },
+    );
+    projectReachable = projectResponse?.status === 200;
+    await projectResponse?.body?.cancel().catch(() => undefined);
+
+    const keysResponse = await request(
+      `https://sentry.io/api/0/projects/${encodeURIComponent(org)}/${encodeURIComponent(project)}/keys/?status=active`,
+      { headers },
+    );
+    if (keysResponse?.status === 200) {
+      const body = await jsonBounded(keysResponse, 512 * 1024);
+      const entries = Array.isArray(body) ? body : [];
+      clientKeyInventoryReachable = true;
+      activeClientKeyPresent = entries.some(sentryEntryHasActiveHttpsDsn);
+    } else {
+      await keysResponse?.body?.cancel().catch(() => undefined);
+    }
   }
 
   const checks = {
-    dsnConfigured: Boolean(dsn),
     organizationConfigured: Boolean(org),
     projectConfigured: Boolean(project),
     buildAuthTokenConfigured: Boolean(token),
     projectReachable,
+    clientKeyInventoryReachable,
+    activeClientKeyPresent,
   };
   return { checks, passed: Object.values(checks).every(Boolean) };
 }
@@ -315,10 +385,10 @@ async function main() {
 
   const providersReviewed = [
     providerEntry('github', github, '.github/workflows/production-provider-runtime-proof.yml'),
-    providerEntry('vercel', vercel, 'Vercel API project and production environment metadata (values never decrypted or stored)'),
+    providerEntry('vercel', vercel, 'Vercel API project identity and production environment metadata (values never decrypted or stored)'),
     providerEntry('supabase', supabase, 'Supabase REST connectivity using protected service-role credential (credential not stored)'),
     providerEntry('stripe', stripe, 'Stripe account and recurring price metadata probes (responses not stored)'),
-    providerEntry('sentry', sentry, 'Sentry project API reachability using CI-only auth token (token not stored)'),
+    providerEntry('sentry', sentry, 'Sentry project and active client-key metadata probes using CI-only auth token (DSN and token not stored)'),
   ];
   const allPassed = FULL_SHA.test(targetSha) && providersReviewed.every((entry) => entry.status === 'reviewed');
 
@@ -351,11 +421,12 @@ async function main() {
       .map((entry) => `${entry.provider} production provider configuration verified by protected runtime probe.`),
     evidenceLocations: [
       '.github/workflows/production-provider-runtime-proof.yml',
+      'config/production-provider-targets.json',
       'scripts/security/run-production-provider-runtime-proof.mjs',
       'scripts/release/validate-production-secrets-runtime-evidence.mjs',
       'docs/security/evidence/runtime/production-secrets-provider-stores.json',
     ],
-    redactionConfirmation: 'No secret values, credentials, provider response bodies, tokens, IDs from customer data, or decrypted Vercel environment values are stored.',
+    redactionConfirmation: CANONICAL_REDACTION_CONFIRMATION,
     evidenceIntegrity: {
       containsSensitiveValues: false,
       rawValuesStored: false,

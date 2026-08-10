@@ -81,7 +81,7 @@ describe('enterprise Sentry release upload readiness', () => {
     supabaseMock.limit.mockReset();
   });
 
-  it('does not block public readiness when release metadata and build credentials are absent', async () => {
+  it('reports build metadata gaps without blocking ordinary runtime readiness', async () => {
     const response = await GET(makeRequest());
     const body = await response.json();
 
@@ -94,7 +94,7 @@ describe('enterprise Sentry release upload readiness', () => {
     });
   });
 
-  it('fails enterprise readiness when non-secret release metadata is absent', async () => {
+  it('does not make build-only Sentry metadata a runtime liveness dependency for enterprise', async () => {
     stubEnterpriseScanner();
 
     expect(sentryReleaseUploadCheck()).toEqual({
@@ -106,15 +106,30 @@ describe('enterprise Sentry release upload readiness', () => {
     const response = await GET(makeRequest());
     const body = await response.json();
 
-    expect(response.status).toBe(503);
-    expect(body.status).toBe('not_ready');
+    expect(response.status).toBe(200);
+    expect(body.status).toBe('ready');
     expect(body.sentryReleaseUploads.configured).toBe(false);
+    expect(body.checks.sentryConfigured).toBe(true);
+    expect(body.checks.enterpriseStepUpConfigured).toBe(true);
     expect(JSON.stringify(body)).not.toContain('SENTRY_AUTH_TOKEN');
     expect(JSON.stringify(body)).not.toContain('SENTRY_ORG');
     expect(JSON.stringify(body)).not.toContain('SENTRY_PROJECT');
   });
 
-  it('passes enterprise readiness with runtime metadata while the build auth token remains absent', async () => {
+  it('still blocks enterprise runtime readiness when the deployed Sentry DSN is absent', async () => {
+    stubEnterpriseScanner();
+    vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', '');
+
+    const response = await GET(makeRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.status).toBe('not_ready');
+    expect(body.checks.sentryConfigured).toBe(false);
+    expect(body.checks.sentryObservabilityConfigured).toBe(false);
+  });
+
+  it('reports configured build metadata while the build auth token remains absent', async () => {
     stubEnterpriseScanner();
     vi.stubEnv('SENTRY_ORG', 'risck-comply');
     vi.stubEnv('SENTRY_PROJECT', 'web');

@@ -39,10 +39,11 @@ const REQUIRED_ENV_GROUPS = {
 const READINESS_DEPENDENCY_TIMEOUT_MS = 1_500;
 const STRIPE_READINESS_TIMEOUT_MS = READINESS_DEPENDENCY_TIMEOUT_MS;
 const TEST_PLACEHOLDER_VALUE = 'configured';
-// SENTRY_AUTH_TOKEN is intentionally a build/CI credential. Runtime readiness
-// requires only non-secret release-upload metadata; the protected provider proof
-// verifies the CI auth token against Sentry without placing it in the app runtime.
-const SENTRY_RELEASE_RUNTIME_ENV = ['SENTRY_ORG', 'SENTRY_PROJECT'] as const;
+// SENTRY_ORG, SENTRY_PROJECT and SENTRY_AUTH_TOKEN are build/control-plane
+// inputs for release/source-map uploads. They stay informational here because
+// runtime health is proven by NEXT_PUBLIC_SENTRY_DSN; the protected provider
+// proof validates the build/control-plane Sentry integration separately.
+const SENTRY_RELEASE_BUILD_ENV = ['SENTRY_ORG', 'SENTRY_PROJECT'] as const;
 const REAL_MALWARE_SCANNER_PROVIDERS = new Set(['clamav', 'clamd', 'http', 'generic-http', 'webhook']);
 const HTTP_MALWARE_SCANNER_PROVIDERS = new Set(['http', 'generic-http', 'webhook']);
 const CONTROLLED_DOCUMENT_BUCKET = 'controlled-documents';
@@ -184,7 +185,7 @@ export function readyEnvironmentCheck(): ReadyEnvironmentGroup[] {
 }
 
 export function sentryReleaseUploadCheck() {
-  const missingCount = SENTRY_RELEASE_RUNTIME_ENV.filter((variable) => !hasConfiguredEnvValue(variable)).length;
+  const missingCount = SENTRY_RELEASE_BUILD_ENV.filter((variable) => !hasConfiguredEnvValue(variable)).length;
   return {
     configured: missingCount === 0,
     missingCount,
@@ -350,12 +351,10 @@ export async function GET(request: Request) {
   const enterpriseStepUp = enterpriseStepUpReadinessCheck();
   const enterpriseStorageScanner = enterpriseStorageScannerCheck();
 
-  const enterpriseReadinessRequired = isEnterpriseReadinessRequired();
   const supabaseConfigured = checkConfigured(environment, 'supabase');
   const stripeConfigured = checkConfigured(environment, 'stripe');
   const redisConfigured = checkConfigured(environment, 'redis');
   const sentryConfigured = checkConfigured(environment, 'sentry');
-  const sentryReleaseUploadsConfigured = !enterpriseReadinessRequired || sentryReleaseUploads.configured;
   const stripe = await checkStripeConnectivity(stripeConfigured);
   const databaseReachable = database.adminClient && database.subscriptionsReadable;
   const stripeApiReachable = stripe.apiReachable && stripe.priceLookup;
@@ -365,7 +364,6 @@ export async function GET(request: Request) {
     && stripeConfigured
     && redisConfigured
     && sentryConfigured
-    && sentryReleaseUploadsConfigured
     && databaseReachable
     && stripeApiReachable
     && enterpriseStepUpConfigured
