@@ -41,10 +41,32 @@ function findEvidence(path) {
 function statusOf(document) {
   const status = String(document?.status ?? '').toLowerCase();
   const outcome = String(document?.outcome ?? '').toLowerCase();
-  if (['complete', 'passed', 'success', 'accepted'].includes(status)) return 'PASS';
-  if (['passed', 'success', 'accepted'].includes(outcome)) return 'PASS';
+  const decision = String(document?.decision ?? '').toLowerCase();
+  if (['pass', 'passed', 'complete', 'success', 'accepted', 'go'].includes(status)) return 'PASS';
+  if (['pass', 'passed', 'success', 'accepted', 'go'].includes(outcome)) return 'PASS';
+  if (['pass', 'passed', 'success', 'accepted', 'go'].includes(decision)) return 'PASS';
   if (['partial', 'in_progress'].includes(status)) return 'PARTIAL';
   return 'OPEN';
+}
+
+function evidenceShaOf(document) {
+  const candidates = [
+    document?.targetSha,
+    document?.observedSha,
+    document?.commitSha,
+    document?.releaseSha,
+    document?.release_sha,
+    document?.deploymentSha,
+    document?.deployment_sha,
+    document?.sourceSha,
+    document?.source_sha,
+    document?.productSha,
+    document?.product_sha,
+    document?.sha,
+    document?.provenance?.commitSha,
+    document?.reviewBinding?.productSha,
+  ];
+  return candidates.find((candidate) => typeof candidate === 'string' && candidate.trim())?.trim() ?? null;
 }
 
 function validateEvidence(path, targetSha, kind) {
@@ -59,7 +81,7 @@ function validateEvidence(path, targetSha, kind) {
   }
 
   const evidenceStatus = statusOf(document);
-  const sha = document.targetSha ?? document.observedSha ?? document.commitSha ?? null;
+  const sha = evidenceShaOf(document);
   const shaRequired = kind === 'runtime' && Boolean(targetSha);
   const shaMatches = !shaRequired || sha === targetSha;
   const sensitive = document?.evidenceIntegrity?.containsSensitiveValues === true
