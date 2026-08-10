@@ -32,8 +32,10 @@ describe('upload scanner P0 aggregation', () => {
 
     expect(workflow).toContain("if: github.event_name == 'workflow_run'");
     expect(workflow).toContain('aggregate-upload-scanner-runtime-evidence.mjs');
-    expect(workflow).toContain("github.event.workflow.path == '.github/workflows/upload-security-ci.yml'");
-    expect(workflow).toContain("github.event.workflow.path == '.github/workflows/branch-protection-runtime-proof.yml'");
+    expect(workflow).toContain("github.event.workflow_run.path == '.github/workflows/upload-security-ci.yml'");
+    expect(workflow).toContain("github.event.workflow_run.path == '.github/workflows/branch-protection-runtime-proof.yml'");
+    expect(workflow).not.toContain("github.event.workflow.path == '.github/workflows/upload-security-ci.yml'");
+    expect(workflow).not.toContain("github.event.workflow.path == '.github/workflows/branch-protection-runtime-proof.yml'");
     expect(workflow).toContain('actions: read');
     expect(workflow).toContain('contents: read');
     expect(workflow).not.toContain('contents: write');
