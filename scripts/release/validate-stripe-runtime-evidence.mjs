@@ -67,6 +67,7 @@ export function validateStripeRuntimeEvidence(
     }
 
     if (!/^[a-f0-9]{64}$/i.test(String(evidence?.sourceEvidenceDigest ?? ''))) failures.push('sourceEvidenceDigest must be SHA-256');
+    if (!/^[a-f0-9]{64}$/i.test(String(evidence?.sourceReplayDigest ?? ''))) failures.push('sourceReplayDigest must be SHA-256');
     if (!/^[a-f0-9]{64}$/i.test(String(evidence?.artifactDigest ?? ''))) failures.push('artifactDigest must be SHA-256');
     if (evidence?.evidenceIntegrity?.placeholderOnly !== false) failures.push('evidenceIntegrity.placeholderOnly must be false');
     if (evidence?.evidenceIntegrity?.runtimeProofInvented !== false) failures.push('evidenceIntegrity.runtimeProofInvented must be false');
