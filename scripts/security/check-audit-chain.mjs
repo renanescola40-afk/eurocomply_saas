@@ -17,6 +17,7 @@ const files = {
   evidencePackRoute: 'src/app/api/audit/evidence-pack/route.ts',
   cli: 'scripts/security/verify-audit-chain.mjs',
   liveValidation: 'scripts/security/run-audit-chain-live-validation.mjs',
+  ephemeralFixtures: 'scripts/security/lib/ephemeral-auth-fixtures.mjs',
   verifyRouteTest: 'src/app/api/audit/chain/verify/route.test.ts',
   evidencePackRouteTest: 'src/app/api/audit/evidence-pack/route.test.ts',
   runtimeEvidence: 'docs/security/evidence/runtime/audit-chain-live-validation.json',
@@ -36,7 +37,23 @@ const requiredTokens = {
   verifyRoute: ['getCurrentUser', 'assertOrganizationPermission', 'read_audit', 'requireStepUpForRequest', 'audit_chain_verify', 'checkDistributedRateLimit', 'createAuditEvent', 'audit_chain.verified'],
   evidencePackRoute: ['assertOrganizationPermission', 'export_data', 'requireStepUpForRequest', 'audit_chain_export', 'buildEvidencePackIntegrity', '!integrity.signed', 'audit_evidence_pack_signing_unavailable', 'audit_chain.evidence_exported'],
   cli: ['eurocomply.audit-chain.cli', '--input', '--expected-previous-hash', 'SIGNING_ENV', 'canonicalizeAuditEvent', 'buildAuditEventHash', 'missing_previous_hash', 'previous_hash_mismatch', 'event_hash_mismatch', 'signature_mismatch', 'payload.evidence?.auditEvents', 'evidence?.auditEvents', 'process.exit(result.ok ? 0 : 1)'],
-  liveValidation: ['run-audit-chain-live-validation', 'append_audit_event_chained', 'organizationEnv', 'proofEnv', 'appendConcurrent', 'tamperDetection', 'missingPreviousHash', 'criticalEventCoverage', 'enterpriseRelease', 'audit_chain_target_live_validation_incomplete'],
+  liveValidation: [
+    'run-audit-chain-live-validation',
+    'append_audit_event_chained',
+    'createEphemeralAuthFixtures',
+    'cleanupSyntheticAuditEvents',
+    'cleanupEphemeralAuthFixtures',
+    'persistentFixtureSecretsRequired',
+    'ephemeralFixtureCleanup',
+    'proofEnv',
+    'appendConcurrent',
+    'tamperDetection',
+    'missingPreviousHash',
+    'criticalEventCoverage',
+    'enterpriseRelease',
+    'audit_chain_target_live_validation_incomplete',
+  ],
+  ephemeralFixtures: ['createEphemeralAuthFixtures', 'cleanupEphemeralAuthFixtures', 'organizationA', 'created'],
   verifyRouteTest: ['rejects verification before step-up when RBAC is missing', 'verifies the chain only after RBAC and signed step-up', 'rejects verification without a valid step-up token', 'audit_chain.verified'],
   evidencePackRouteTest: ['returns a signed export only after RBAC and step-up', 'rejects export when RBAC is missing', 'fails closed when the evidence export cannot be signed', 'audit_chain.evidence_exported'],
   runtimeEvidence: ['audit-chain-live-validation', 'appendNormal', 'appendConcurrent', 'tamperDetection', 'missingPreviousHash', 'signedExport', 'verifyWithStepUp', 'criticalEventCoverage', 'cliVerifier', 'targetLiveValidation', 'AUDIT_CHAIN_LIVE_PROOF'],
@@ -71,6 +88,28 @@ const sources = Object.fromEntries(Object.entries(files).map(([key, path]) => [k
 
 for (const [key, tokens] of Object.entries(requiredTokens)) {
   if (sources[key]) requireTokens(files[key], sources[key], tokens);
+}
+
+if (sources.liveValidation) {
+  for (const legacyPersistentFixtureToken of [
+    'AUDIT_CHAIN_LIVE_ORGANIZATION_ID',
+    'AUDIT_CHAIN_LIVE_ACTOR_USER_ID',
+    'AUTH_RBAC_ORGANIZATION_A_ID',
+  ]) {
+    if (sources.liveValidation.includes(legacyPersistentFixtureToken)) {
+      failures.push(`${files.liveValidation} must not depend on persistent audit proof fixture token ${legacyPersistentFixtureToken}`);
+    }
+  }
+
+  if (!sources.liveValidation.includes('persistentFixtureSecretsRequired: false')) {
+    failures.push(`${files.liveValidation} must explicitly prove persistentFixtureSecretsRequired: false`);
+  }
+  if (!sources.liveValidation.includes("status: cleanupVerified ? 'Complete' : 'Failed'")) {
+    failures.push(`${files.liveValidation} must fail closed when disposable fixture cleanup is not verified`);
+  }
+  if (!sources.liveValidation.includes('syntheticAuditEventsRetained: liveValidation.cleanup?.auditEventsRemoved !== true')) {
+    failures.push(`${files.liveValidation} must expose retained synthetic audit events as an evidence-integrity failure`);
+  }
 }
 
 if (sources.runtimeEvidence) {
