@@ -38,7 +38,7 @@ permissions:
 
 concurrency:
   group: enterprise-final-closeout-dashboard-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || inputs.target_sha || github.sha }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   dashboard:
