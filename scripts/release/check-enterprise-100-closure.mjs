@@ -2,7 +2,7 @@
 
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 const root = process.cwd();
 const configPath = join(root, 'config/enterprise-100-closure.json');
@@ -49,16 +49,21 @@ function findStatus(document) {
 function findSha(document) {
   const candidates = [
     document?.sha,
+    document?.targetSha,
+    document?.observedSha,
     document?.commitSha,
     document?.commit_sha,
     document?.releaseSha,
     document?.release_sha,
+    document?.deploymentSha,
+    document?.deployment_sha,
     document?.buildSha,
     document?.build_sha,
     document?.sourceSha,
     document?.source_sha,
     document?.productSha,
     document?.product_sha,
+    document?.provenance?.commitSha,
     document?.reviewBinding?.productSha,
   ];
 
@@ -69,9 +74,51 @@ function digest(path) {
   return `sha256:${createHash('sha256').update(readFileSync(path)).digest('hex')}`;
 }
 
+function containsSensitiveValues(document) {
+  return document?.evidenceIntegrity?.containsSensitiveValues === true
+    || document?.containsSensitiveValues === true
+    || document?.containsSecrets === true
+    || document?.secretsRedacted === false;
+}
+
+function configuredEvidenceRoots() {
+  const configured = String(process.env.ENTERPRISE_CLOSURE_EVIDENCE_ROOTS ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => resolve(root, item));
+  return [...configured, root];
+}
+
+function evidenceCandidates(evidencePath, evidenceRoots) {
+  const seen = new Set();
+  return evidenceRoots
+    .map((evidenceRoot) => join(evidenceRoot, evidencePath))
+    .filter((absolutePath) => {
+      if (!existsSync(absolutePath) || seen.has(absolutePath)) return false;
+      seen.add(absolutePath);
+      return true;
+    });
+}
+
+function failureControl(control, overrides = {}) {
+  return {
+    id: control.id,
+    owner: control.owner,
+    evidence: control.evidence,
+    status: null,
+    sha: null,
+    shaMatches: false,
+    accepted: false,
+    source: null,
+    ...overrides,
+  };
+}
+
 export function evaluateEnterpriseClosure({
   expectedSha = process.env.ENTERPRISE_CLOSURE_EXPECTED_SHA?.trim() || process.env.GITHUB_SHA?.trim() || null,
   config = readJson(configPath).value,
+  evidenceRoots = configuredEvidenceRoots(),
 } = {}) {
   if (!config || !Array.isArray(config.controls)) {
     return {
@@ -85,58 +132,91 @@ export function evaluateEnterpriseClosure({
   }
 
   const controls = config.controls.map((control) => {
-    const absolutePath = join(root, control.evidence);
-    if (!existsSync(absolutePath)) {
-      return {
-        id: control.id,
-        owner: control.owner,
-        evidence: control.evidence,
+    const paths = evidenceCandidates(control.evidence, evidenceRoots);
+    if (paths.length === 0) {
+      return failureControl(control, {
         status: 'MISSING',
-        sha: null,
-        shaMatches: false,
-        accepted: false,
         reason: 'evidence_missing',
-      };
+      });
     }
 
-    const parsed = readJson(absolutePath);
-    if (!parsed.value) {
+    const parsedCandidates = paths.map((absolutePath) => {
+      const parsed = readJson(absolutePath);
       return {
-        id: control.id,
-        owner: control.owner,
-        evidence: control.evidence,
-        status: 'INVALID',
-        sha: null,
-        shaMatches: false,
-        accepted: false,
-        reason: parsed.error ?? 'invalid_json',
+        absolutePath,
+        value: parsed.value,
+        error: parsed.error,
+        digest: parsed.value ? digest(absolutePath) : null,
+        status: parsed.value ? findStatus(parsed.value) : null,
+        sha: parsed.value ? findSha(parsed.value) : null,
+        sensitive: parsed.value ? containsSensitiveValues(parsed.value) : false,
       };
+    });
+    const parseable = parsedCandidates.filter((candidate) => candidate.value);
+    if (parseable.length === 0) {
+      return failureControl(control, {
+        status: 'INVALID',
+        reason: 'invalid_json',
+        candidateCount: paths.length,
+      });
     }
 
-    const status = findStatus(parsed.value);
-    const evidenceSha = findSha(parsed.value);
+    const safe = parseable.filter((candidate) => !candidate.sensitive);
+    if (safe.length === 0) {
+      return failureControl(control, {
+        status: 'REJECTED',
+        reason: 'sensitive_evidence_rejected',
+        candidateCount: parseable.length,
+      });
+    }
+
+    const exact = safe.filter((candidate) => Boolean(expectedSha && candidate.sha === expectedSha));
+    if (exact.length === 0) {
+      const diagnostic = safe[0];
+      return failureControl(control, {
+        status: diagnostic.status,
+        sha: diagnostic.sha,
+        source: diagnostic.absolutePath,
+        digest: diagnostic.digest,
+        reason: 'exact_sha_not_proven',
+        candidateCount: safe.length,
+      });
+    }
+
+    const exactDigests = new Set(exact.map((candidate) => candidate.digest));
+    if (exactDigests.size > 1) {
+      return failureControl(control, {
+        status: 'AMBIGUOUS',
+        sha: expectedSha,
+        shaMatches: true,
+        reason: 'ambiguous_exact_sha_evidence',
+        candidateCount: exact.length,
+        digests: [...exactDigests].sort(),
+      });
+    }
+
+    const selected = exact[0];
     const acceptedStatuses = (control.acceptedStatuses ?? []).map(normalise);
-    const statusAccepted = status !== null && acceptedStatuses.includes(status);
-    const shaMatches = Boolean(expectedSha && evidenceSha && evidenceSha === expectedSha);
+    const statusAccepted = selected.status !== null && acceptedStatuses.includes(selected.status);
 
     return {
       id: control.id,
       owner: control.owner,
       evidence: control.evidence,
-      digest: digest(absolutePath),
-      status,
-      sha: evidenceSha,
-      shaMatches,
-      accepted: statusAccepted && shaMatches,
-      reason: !statusAccepted
-        ? 'status_not_accepted'
-        : !shaMatches
-          ? 'exact_sha_not_proven'
-          : null,
+      source: selected.absolutePath,
+      digest: selected.digest,
+      status: selected.status,
+      sha: selected.sha,
+      shaMatches: true,
+      accepted: statusAccepted,
+      reason: statusAccepted ? null : 'status_not_accepted',
+      equivalentCandidateCount: exact.length,
     };
   });
 
-  const blockers = controls.filter((control) => !control.accepted).map((control) => `${control.id}:${control.reason}`);
+  const blockers = controls
+    .filter((control) => !control.accepted)
+    .map((control) => `${control.id}:${control.reason}`);
   const passed = Boolean(expectedSha) && blockers.length === 0;
 
   if (!expectedSha) blockers.unshift('exact_sha_unavailable');
@@ -152,6 +232,7 @@ export function evaluateEnterpriseClosure({
     totalControls: controls.length,
     blockers,
     controls,
+    truthBoundary: 'Closure credit requires an accepted status and exact promoted SHA. Configured evidence roots only make retained proof discoverable; they do not create or upgrade evidence.',
   };
 }
 
