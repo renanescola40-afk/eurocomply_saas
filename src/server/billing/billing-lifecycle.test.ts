@@ -5,8 +5,18 @@ import { BILLING_PLANS, getStripePriceId, normalizeBillingInterval } from './pla
 
 describe('enterprise billing lifecycle catalog', () => {
   afterEach(() => {
-    delete process.env.STRIPE_PRICE_STARTER_MONTHLY;
-    delete process.env.STRIPE_PRICE_STARTER_ANNUAL;
+    for (const key of [
+      'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+      'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+      'STRIPE_PRICE_STARTER_MONTHLY',
+      'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+      'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
+      'STRIPE_PRICE_GROWTH_MONTHLY',
+      'STRIPE_PRICE_BUSINESS_MONTHLY',
+      'STRIPE_PRICE_BUSINESS_ANNUAL',
+    ]) {
+      delete process.env[key];
+    }
   });
 
   it('keeps annual pricing equal to ten monthly payments', () => {
@@ -16,11 +26,23 @@ describe('enterprise billing lifecycle catalog', () => {
     expect(BILLING_PLANS.enterprise.annualPriceCents).toBeNull();
   });
 
-  it('resolves monthly and annual Stripe prices independently', () => {
-    process.env.STRIPE_PRICE_STARTER_MONTHLY = 'price_starter_month';
-    process.env.STRIPE_PRICE_STARTER_ANNUAL = 'price_starter_year';
-    expect(getStripePriceId('starter', 'month')).toBe('price_starter_month');
-    expect(getStripePriceId('starter', 'year')).toBe('price_starter_year');
+  it('uses canonical Essential monthly and annual Stripe price keys', () => {
+    process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY = 'price_essential_month';
+    process.env.STRIPE_PRICE_ESSENTIAL_ANNUAL = 'price_essential_year';
+    expect(getStripePriceId('starter', 'month')).toBe('price_essential_month');
+    expect(getStripePriceId('starter', 'year')).toBe('price_essential_year');
+  });
+
+  it('preserves the legacy Starter monthly key only as a transition fallback', () => {
+    process.env.STRIPE_PRICE_STARTER_MONTHLY = 'price_legacy_starter_month';
+    expect(getStripePriceId('starter', 'month')).toBe('price_legacy_starter_month');
+    expect(() => getStripePriceId('starter', 'year')).toThrow('missing_stripe_price_starter_year');
+  });
+
+  it('prefers canonical Professional price over the legacy Growth fallback', () => {
+    process.env.STRIPE_PRICE_GROWTH_MONTHLY = 'price_legacy_growth';
+    process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY = 'price_professional';
+    expect(getStripePriceId('professional', 'month')).toBe('price_professional');
   });
 
   it('normalizes billing interval aliases', () => {
