@@ -8,10 +8,10 @@ const requiredEnvironments = ['production'];
 
 const providerRequiredChecks = Object.freeze({
   github: ['repositoryReachable', 'repositoryBound', 'currentMainShaBound', 'protectedProductionEnvironment', 'githubActionsRunBound', 'exactContext'],
-  vercel: ['credentialsConfigured', 'projectReachable', 'productionEnvironmentEnumerated', 'requiredEnvironmentKeysPresent'],
+  vercel: ['apiTokenConfigured', 'targetConfigurationBound', 'projectReachable', 'projectIdentityMatched', 'productionEnvironmentEnumerated', 'requiredEnvironmentKeysPresent'],
   supabase: ['urlConfigured', 'serviceRoleConfigured', 'projectReachable', 'serviceRoleAuthorized'],
   stripe: ['secretConfigured', 'apiReachable', 'threePriceIdsConfigured', 'priceLookup'],
-  sentry: ['dsnConfigured', 'organizationConfigured', 'projectConfigured', 'buildAuthTokenConfigured', 'projectReachable'],
+  sentry: ['organizationConfigured', 'projectConfigured', 'buildAuthTokenConfigured', 'projectReachable', 'clientKeyInventoryReachable', 'activeClientKeyPresent'],
 });
 
 export function validateProductionSecretsRuntimeEvidence(
@@ -123,8 +123,8 @@ export function validateProductionSecretsRuntimeEvidence(
   if (!Array.isArray(evidence?.controlsVerified) || evidence.controlsVerified.length < requiredProviders.length) {
     failures.push(`controlsVerified must include at least ${requiredProviders.length} verified provider controls`);
   }
-  if (!Array.isArray(evidence?.evidenceLocations) || evidence.evidenceLocations.length < 3) {
-    failures.push('evidenceLocations must include the protected workflow, producer and validator');
+  if (!Array.isArray(evidence?.evidenceLocations) || evidence.evidenceLocations.length < 4) {
+    failures.push('evidenceLocations must include the protected workflow, target configuration, producer and validator');
   }
   if (!String(evidence?.reviewer ?? '').trim()) failures.push('reviewer is required');
   if (!String(evidence?.summary ?? '').trim()) failures.push('summary is required');
