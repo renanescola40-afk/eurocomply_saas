@@ -98,7 +98,7 @@ jobs:
           echo "CURRENT_SHA=$CURRENT_SHA" >> "$GITHUB_ENV"
 
       - name: Download accepted classification artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: supabase-migration-reconciliation-decisions-${{ inputs.release_sha }}
           path: source-decision

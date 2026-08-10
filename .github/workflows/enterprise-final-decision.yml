@@ -70,7 +70,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
       - name: Download completed input packet
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: enterprise-final-decision-input-${{ env.TARGET_SHA }}
           path: source-artifact
