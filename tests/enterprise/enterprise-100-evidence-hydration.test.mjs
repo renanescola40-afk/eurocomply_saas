@@ -47,9 +47,66 @@ test('hydrates exact-SHA evidence into the declared closure path', async () => {
   });
 
   assert.equal(manifest.hydratedEvidence, 1);
+  assert.equal(manifest.aliasedEvidence, 0);
   assert.equal(manifest.missingEvidence, 0);
+  assert.equal(manifest.results[0]?.matchedBy, 'declared_path');
   const hydrated = JSON.parse(await readFile(path.join(outputRoot, 'release-validation/production-smoke.json'), 'utf8'));
   assert.equal(hydrated.releaseSha, TARGET);
+});
+
+test('hydrates only documented semantic aliases when the conceptual closure filename is absent', async () => {
+  const { sourceRoot, outputRoot } = await tempRoots();
+  await writeCandidate(sourceRoot, 'runtime/docs/security/evidence/runtime/authenticated-production-smoke.json', {
+    status: 'Complete',
+    outcome: 'passed',
+    releaseSha: TARGET,
+    evidenceIntegrity: { containsSensitiveValues: false },
+  });
+
+  const manifest = await hydrateEnterpriseClosureEvidence({
+    sourceRoot,
+    outputRoot,
+    targetSha: TARGET,
+    closureConfig: config,
+  });
+
+  assert.equal(manifest.hydratedEvidence, 1);
+  assert.equal(manifest.aliasedEvidence, 1);
+  assert.equal(manifest.results[0]?.matchedBy, 'explicit_alias');
+  assert.deepEqual(manifest.results[0]?.sourceAliases, [
+    'docs/security/evidence/runtime/authenticated-production-smoke.json',
+  ]);
+  const hydrated = JSON.parse(await readFile(path.join(outputRoot, 'release-validation/production-smoke.json'), 'utf8'));
+  assert.equal(hydrated.releaseSha, TARGET);
+  assert.equal(hydrated.outcome, 'passed');
+});
+
+test('recognizes legal publication expectedSha without inventing a new binding', async () => {
+  const { sourceRoot, outputRoot } = await tempRoots();
+  const legalConfig = {
+    controls: [{
+      id: 'legal-publication',
+      evidence: 'artifacts/legal-review/final-legal-publication-gate.json',
+    }],
+  };
+  await writeCandidate(sourceRoot, 'legal/final-legal-publication-gate.json', {
+    schema: 'risck-comply.final-legal-publication-gate.v1',
+    expectedSha: TARGET,
+    publicationStatus: 'COUNSEL_ACCEPTED',
+    evidenceIntegrity: { containsSensitiveValues: false },
+  });
+
+  const manifest = await hydrateEnterpriseClosureEvidence({
+    sourceRoot,
+    outputRoot,
+    targetSha: TARGET,
+    closureConfig: legalConfig,
+  });
+
+  assert.equal(manifest.hydratedEvidence, 1);
+  assert.equal(manifest.results[0]?.matchedBy, 'declared_path');
+  const hydrated = JSON.parse(await readFile(path.join(outputRoot, 'artifacts/legal-review/final-legal-publication-gate.json'), 'utf8'));
+  assert.equal(hydrated.expectedSha, TARGET);
 });
 
 test('never hydrates stale-SHA evidence', async () => {
@@ -135,4 +192,26 @@ test('deduplicates byte-identical exact-SHA evidence', async () => {
 
   assert.equal(manifest.hydratedEvidence, 1);
   assert.equal(manifest.results[0]?.equivalentCandidateCount, 2);
+});
+
+test('does not infer unlisted aliases from a similar filename', async () => {
+  const { sourceRoot, outputRoot } = await tempRoots();
+  const unsupportedConfig = {
+    controls: [{ id: 'repository-quality', evidence: 'release-validation/repository-quality.json' }],
+  };
+  await writeCandidate(sourceRoot, 'somewhere/repository-quality-proof.json', {
+    status: 'PASS',
+    targetSha: TARGET,
+  });
+
+  const manifest = await hydrateEnterpriseClosureEvidence({
+    sourceRoot,
+    outputRoot,
+    targetSha: TARGET,
+    closureConfig: unsupportedConfig,
+  });
+
+  assert.equal(manifest.hydratedEvidence, 0);
+  assert.equal(manifest.missingEvidence, 1);
+  assert.equal(manifest.results[0]?.matchedBy, 'none');
 });
