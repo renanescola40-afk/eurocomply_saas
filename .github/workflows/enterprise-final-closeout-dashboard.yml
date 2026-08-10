@@ -11,6 +11,15 @@ on:
       - '.github/workflows/enterprise-final-closeout-dashboard.yml'
   push:
     branches: [main]
+  workflow_run:
+    workflows:
+      - 'EU AI Act Final Runtime Closeout'
+      - 'Branch Protection Runtime Proof'
+      - 'Production Provider Runtime Proof'
+      - 'Enterprise Readiness Scorecard'
+      - 'Enterprise Runtime Evidence Closeout'
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       target_sha:
@@ -25,20 +34,27 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: enterprise-final-closeout-dashboard-${{ github.event.pull_request.number || github.ref }}
+  group: enterprise-final-closeout-dashboard-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || inputs.target_sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
   dashboard:
     name: Generate final closeout dashboard
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
+    env:
+      TARGET_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || inputs.target_sha || github.sha }}
+      RETAINED_ARTIFACT_ROOT: artifacts/exact-sha-retained-artifacts
+      HYDRATED_EVIDENCE_ROOT: artifacts/exact-sha-evidence-root
     steps:
       - name: Checkout exact source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
           persist-credentials: false
 
       - name: Setup Node.js
@@ -47,18 +63,81 @@ jobs:
           node-version: 22
 
       - name: Run focused contract tests
-        run: node --test tests/enterprise/final-closeout-dashboard.test.mjs
+        run: |
+          node --check scripts/enterprise/hydrate-exact-sha-evidence.mjs
+          node --test \
+            tests/enterprise/final-closeout-dashboard.test.mjs \
+            tests/enterprise/exact-sha-evidence-hydration.test.mjs
+
+      - name: Validate target SHA is immutable main lineage
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
+          comparison="$(gh api "repos/${GITHUB_REPOSITORY}/compare/${TARGET_SHA}...${main_sha}" --jq '.status')"
+          case "$comparison" in
+            identical|ahead) ;;
+            *) echo "Target SHA is not an ancestor of current main: ${comparison}" >&2; exit 1 ;;
+          esac
+
+      - name: Collect retained artifacts bound to exact target SHA
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RETAINED_ARTIFACT_ROOT" "$HYDRATED_EVIDENCE_ROOT"
+          mkdir -p "$RETAINED_ARTIFACT_ROOT" "$HYDRATED_EVIDENCE_ROOT"
+          collected=0
+
+          while IFS=$'\t' read -r artifact_id artifact_name expired artifact_sha; do
+            test "$expired" = 'false' || continue
+            test "$artifact_sha" = "$TARGET_SHA" || continue
+            case "$artifact_name" in
+              enterprise-final-closeout-dashboard-*|enterprise-100-closure-*) continue ;;
+            esac
+
+            safe_name="$(printf '%s' "$artifact_name" | tr -cs 'A-Za-z0-9._-' '_')"
+            destination="$RETAINED_ARTIFACT_ROOT/${artifact_id}-${safe_name}"
+            archive="${destination}.zip"
+            mkdir -p "$destination"
+            gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "$archive"
+            unzip -oq "$archive" -d "$destination"
+            rm -f "$archive"
+            collected=$((collected + 1))
+          done < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+              --jq '.artifacts[] | [.id, .name, .expired, .workflow_run.head_sha] | @tsv'
+          )
+
+          echo "Collected ${collected} retained artifact(s) for exact SHA ${TARGET_SHA}."
+
+      - name: Hydrate exact-SHA evidence root
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          node scripts/enterprise/hydrate-exact-sha-evidence.mjs \
+            "$RETAINED_ARTIFACT_ROOT" \
+            "$HYDRATED_EVIDENCE_ROOT" \
+            "$TARGET_SHA"
 
       - name: Generate report mode dashboard
         if: github.event_name != 'workflow_dispatch' || !inputs.strict
         env:
-          ENTERPRISE_TARGET_SHA: ${{ inputs.target_sha || github.sha }}
+          ENTERPRISE_TARGET_SHA: ${{ env.TARGET_SHA }}
+          ENTERPRISE_EVIDENCE_ROOTS: ${{ env.HYDRATED_EVIDENCE_ROOT }}
         run: node scripts/enterprise/generate-final-closeout-dashboard.mjs
 
       - name: Generate strict closeout decision
         if: github.event_name == 'workflow_dispatch' && inputs.strict
         env:
-          ENTERPRISE_TARGET_SHA: ${{ inputs.target_sha }}
+          ENTERPRISE_TARGET_SHA: ${{ env.TARGET_SHA }}
+          ENTERPRISE_EVIDENCE_ROOTS: ${{ env.HYDRATED_EVIDENCE_ROOT }}
         run: node scripts/enterprise/generate-final-closeout-dashboard.mjs --strict
 
       - name: Publish dashboard summary
@@ -68,12 +147,23 @@ jobs:
           if [ -f artifacts/enterprise-final-closeout/final-closeout-dashboard.md ]; then
             cat artifacts/enterprise-final-closeout/final-closeout-dashboard.md >> "$GITHUB_STEP_SUMMARY"
           fi
+          if [ -f "$HYDRATED_EVIDENCE_ROOT/exact-sha-evidence-hydration.json" ]; then
+            {
+              echo
+              echo '## Exact-SHA retained evidence hydration'
+              echo
+              jq -r '"- Hydrated: \(.hydratedEvidence)/\(.expectedEvidence)\n- Ambiguous: \(.ambiguousEvidence)\n- Stale: \(.staleEvidence)\n- Missing: \(.missingEvidence)\n- Sensitive rejected: \(.rejectedSensitiveEvidence)"' \
+                "$HYDRATED_EVIDENCE_ROOT/exact-sha-evidence-hydration.json"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload retained closeout dashboard
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: enterprise-final-closeout-dashboard-${{ github.sha }}
-          path: artifacts/enterprise-final-closeout
+          name: enterprise-final-closeout-dashboard-${{ env.TARGET_SHA }}
+          path: |
+            artifacts/enterprise-final-closeout
+            artifacts/exact-sha-evidence-root/exact-sha-evidence-hydration.json
           if-no-files-found: error
           retention-days: 90
