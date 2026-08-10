@@ -349,7 +349,7 @@ async function runLiveValidation() {
     status: 'Failed',
     failureCode: 'validation_not_started',
   };
-  let auditCleanup = { verified: false, failureCodes: ['audit_cleanup_not_run'] };
+  let auditCleanup;
   let authCleanup = { verified: false, failures: ['auth_fixture_cleanup_not_run'] };
 
   try {
