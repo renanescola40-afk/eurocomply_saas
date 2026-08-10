@@ -24,10 +24,9 @@ jobs:
     env:
       TARGET_SHA: ${{ github.sha }}
       PROVIDER_PROOF_ENVIRONMENT: production
+      PROVIDER_TARGETS_PATH: config/production-provider-targets.json
       GITHUB_TOKEN: ${{ github.token }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
@@ -38,7 +37,6 @@ jobs:
       STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ vars.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}
       STRIPE_PRICE_BUSINESS_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_MONTHLY }}
       STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY }}
-      NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
       SENTRY_ORG: ${{ vars.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -76,6 +74,7 @@ jobs:
       - name: Validate provider proof contracts
         run: |
           node --check scripts/security/run-production-provider-runtime-proof.mjs
+          node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync(process.env.PROVIDER_TARGETS_PATH,'utf8')); if(p.schema!=='risck-comply.production-provider-targets.v1') process.exit(1)"
           npx vitest run \
             scripts/release/validate-production-secrets-runtime-evidence.test.mjs \
             tests/enterprise/production-provider-runtime-proof.test.ts

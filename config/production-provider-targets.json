@@ -1,0 +1,8 @@
+{
+  "schema": "risck-comply.production-provider-targets.v1",
+  "vercel": {
+    "teamId": "team_wu3LZI6ReFxO16xipv73GLwG",
+    "projectId": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "projectName": "eurocomply-saas"
+  }
+}
