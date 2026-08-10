@@ -6,7 +6,8 @@ Human reviewer: **Renan Rodrigues Cerqueira da Silva**
 Reviewer role: **Repository owner / human classification reviewer**
 Reviewed at: **2026-08-10T12:04:00+01:00**
 Immutable subject SHA: `def59573bf2dbd2ad447f8f493048b0296be21ff`
-Verified current-inventory owner-classification progress: **79/211 → 94/211**
+Protected-`main` consolidated owner-classification ledger at PR creation: **41/211**
+Approved branch-series ledger if Mega Batch I (#1519) and this PR join the protected evidence lineage: **79/211 → 94/211**
 Prerequisite evidence PR for the 79/211 baseline: **#1519 — Mega Batch I**
 Canonical reconciliation status: **NOT ACCEPTED FOR STAGING**
 Independent approver: **PENDING — not fabricated by this record**
@@ -68,13 +69,14 @@ This sequence is classification/dependency evidence only and is not an executabl
 - new owner-reviewed decisions in Batch J: **15**;
 - `SUPERSEDED`: **1**;
 - `PENDING_DEPLOYMENT`: **14**;
-- verified current-inventory baseline before J: **79/211**;
-- verified current-inventory progress after J: **94/211**;
-- remaining current-inventory files without owner classification after J: **117**.
+- protected `main` consolidated baseline at this PR's creation: **41/211**;
+- Batch I owner-approved but not yet consolidated on `main`: **+38**, yielding branch-series baseline **79/211**;
+- Batch J owner-approved: **+15**, yielding branch-series projected progress **94/211**;
+- remaining current-inventory files without owner classification in that approved branch series: **117**.
 
-The **94/211** figure is conditional on the Batch I evidence lineage represented by PR #1519. Until #1519 and this batch are both accepted into the protected repository lineage, `main` must not be described as having 94 classified items.
+**Do not report `main` as 94/211 while #1519 or this PR remains unmerged.** The 94/211 figure is the approved sequential review ledger for I+J and becomes repository-lineage progress only after both evidence PRs enter the protected lineage.
 
-`94/211` is owner-review progress only. It is not canonical Decision Gate acceptance because split-review items remain and no distinct independent approver has sealed the full 211-item decision document.
+`94/211` is still owner-review progress only. It is not canonical Decision Gate acceptance because split-review items remain and no distinct independent approver has sealed the full 211-item decision document.
 
 ## Explicit safety boundary
 
