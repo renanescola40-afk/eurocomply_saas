@@ -110,6 +110,20 @@ function validSourceEvidence(): RuntimeEvidence {
     }
   }
 
+  // The dedicated workflow appends the ai_assessments proof in
+  // run-supabase-live-ai-assessments-rls.mjs before provenance is stamped.
+  // Keep the synthetic source fixture faithful to that final artifact shape.
+  for (const operation of [
+    'rls_enabled',
+    'cross_tenant_read',
+    'cross_tenant_insert',
+    'cross_tenant_update',
+    'cross_tenant_delete',
+    'same_tenant_read',
+  ]) {
+    testCases.push(passingCase('ai_assessments', operation));
+  }
+
   const base = buildTypedEvidencePayload({
     status: 'Complete',
     outcome: 'passed',
