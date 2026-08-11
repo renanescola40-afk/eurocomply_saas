@@ -90,6 +90,13 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
     expect(workflow).toContain("AUDIT_CHAIN_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/audit-chain-runtime-proof.yml' && 'true' || 'false' }}");
   });
 
+  it('allows Stripe P0 handoff only from automatic promotion or explicit recovery promotion runs', () => {
+    expect(stripeFetcher).toContain("const ALLOWED_PROMOTION_EVENTS = new Set(['workflow_run', 'workflow_dispatch'])");
+    expect(stripeFetcher).toContain('ALLOWED_PROMOTION_EVENTS.has(run?.event)');
+    expect(stripeFetcher).toContain('exact_sha_stripe_promotion_artifact_missing_or_ambiguous');
+    expect(stripeFetcher).not.toContain("run?.event === 'push'");
+  });
+
   it('promotes only normalized deployment smoke from a successful production bundle', () => {
     expect(productionFetcher).toContain("const DEPLOYMENT_SMOKE_PATH = 'docs/security/evidence/runtime/deployment-smoke-validation.json'");
     expect(productionFetcher).toContain("const RELEASE_SHA_PATH = 'docs/security/evidence/runtime/runtime-release-sha-validation.json'");

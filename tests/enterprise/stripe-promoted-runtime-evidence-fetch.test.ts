@@ -10,8 +10,10 @@ import { p0EvidenceCatalog } from '../../scripts/security/p0-runtime-evidence-ca
 
 const SHA = 'a'.repeat(40);
 const RUN_ID = '123456789';
+const SOURCE_RUN_ID = '987654321';
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const WORKFLOW_PATH = '.github/workflows/stripe-runtime-evidence-promotion.yml';
+const SOURCE_WORKFLOW_PATH = '.github/workflows/stripe-entitlement-runtime-proof.yml';
 
 function promotedEvidence() {
   return {
@@ -32,6 +34,7 @@ function promotedEvidence() {
       'limitsMatch',
       'reconciliationObserved',
       'rawEvidenceDeleted',
+      'replaySafe',
     ],
     runtimeProof: {
       executed: true,
@@ -41,8 +44,12 @@ function promotedEvidence() {
       canonicalSeatPolicyObserved: true,
       reconciliationLedgerObserved: true,
       replaySafetyObserved: true,
+      sourceRunId: SOURCE_RUN_ID,
+      sourceWorkflow: SOURCE_WORKFLOW_PATH,
+      sourceArtifactName: `stripe-entitlement-runtime-proof-${SHA}`,
     },
     sourceEvidenceDigest: 'b'.repeat(64),
+    sourceReplayDigest: 'd'.repeat(64),
     artifactDigest: 'c'.repeat(64),
     redactionConfirmation: 'Redaction confirmed for runtime evidence.',
     evidenceIntegrity: {
@@ -55,25 +62,32 @@ function promotedEvidence() {
 }
 
 describe('promoted Stripe exact-SHA runtime evidence handoff', () => {
-  it('selects only successful manual promotion for exact current main SHA', () => {
-    const run = {
+  it('selects successful automatic promotion or explicit manual recovery for exact main SHA', () => {
+    const automatic = {
       id: Number(RUN_ID),
       path: WORKFLOW_PATH,
       head_sha: SHA,
       head_branch: 'main',
-      event: 'workflow_dispatch',
+      event: 'workflow_run',
       status: 'completed',
       conclusion: 'success',
+      updated_at: '2026-08-09T14:02:00Z',
+    };
+    const manual = {
+      ...automatic,
+      id: Number(RUN_ID) - 1,
+      event: 'workflow_dispatch',
       updated_at: '2026-08-09T14:01:00Z',
     };
     expect(selectExactShaRun([
-      { ...run, id: 1, head_sha: 'b'.repeat(40) },
-      { ...run, id: 2, head_branch: 'feature' },
-      { ...run, id: 3, event: 'push' },
-      { ...run, id: 4, conclusion: 'failure' },
-      run,
-    ], SHA)).toEqual(run);
-    expect(selectExactShaRun([run], SHA, '999')).toBeNull();
+      manual,
+      { ...automatic, id: 1, head_sha: 'b'.repeat(40) },
+      { ...automatic, id: 2, head_branch: 'feature' },
+      { ...automatic, id: 3, event: 'push' },
+      { ...automatic, id: 4, conclusion: 'failure' },
+      automatic,
+    ], SHA)).toEqual(automatic);
+    expect(selectExactShaRun([automatic], SHA, '999')).toBeNull();
   });
 
   it('accepts promoted entitlement proof and closes the authoritative Stripe P0 entry', () => {
@@ -99,7 +113,7 @@ describe('promoted Stripe exact-SHA runtime evidence handoff', () => {
     })).toEqual([]);
   });
 
-  it('rejects uncorrelated, sensitive, non-test-mode, or stale-SHA promoted proof', () => {
+  it('rejects uncorrelated, sensitive, non-test-mode, stale-SHA or source-unbound promoted proof', () => {
     expect(validateDownloadedEvidence({ ...promotedEvidence(), commitSha: 'b'.repeat(40) }, {
       targetSha: SHA,
       repository: REPOSITORY,
@@ -107,6 +121,24 @@ describe('promoted Stripe exact-SHA runtime evidence handoff', () => {
     }).passed).toBe(false);
 
     expect(validateDownloadedEvidence({ ...promotedEvidence(), runtimeProof: { ...promotedEvidence().runtimeProof, stripeTestModeConfirmed: false } }, {
+      targetSha: SHA,
+      repository: REPOSITORY,
+      now: new Date('2026-08-09T14:05:00.000Z'),
+    }).passed).toBe(false);
+
+    expect(validateDownloadedEvidence({ ...promotedEvidence(), runtimeProof: { ...promotedEvidence().runtimeProof, sourceRunId: '' } }, {
+      targetSha: SHA,
+      repository: REPOSITORY,
+      now: new Date('2026-08-09T14:05:00.000Z'),
+    }).passed).toBe(false);
+
+    expect(validateDownloadedEvidence({ ...promotedEvidence(), runtimeProof: { ...promotedEvidence().runtimeProof, sourceArtifactName: `stripe-entitlement-runtime-proof-${'b'.repeat(40)}` } }, {
+      targetSha: SHA,
+      repository: REPOSITORY,
+      now: new Date('2026-08-09T14:05:00.000Z'),
+    }).passed).toBe(false);
+
+    expect(validateDownloadedEvidence({ ...promotedEvidence(), sourceReplayDigest: '' }, {
       targetSha: SHA,
       repository: REPOSITORY,
       now: new Date('2026-08-09T14:05:00.000Z'),

@@ -1,18 +1,22 @@
 name: Stripe Runtime Evidence Promotion
 
 on:
+  workflow_run:
+    workflows:
+      - Stripe Entitlement Runtime Proof
+    types: [completed]
   workflow_dispatch:
     inputs:
       release_sha:
-        description: Exact current main SHA proven by the runtime artifact
+        description: Exact current main SHA validated by the source runtime proof
         required: true
         type: string
       runtime_artifact_run_id:
-        description: Workflow run ID containing the sanitized runtime proof
+        description: Successful Stripe Entitlement Runtime Proof run ID
         required: true
         type: string
       confirmation:
-        description: Type PROMOTE_STRIPE_RUNTIME_EVIDENCE
+        description: Type PROMOTE_STRIPE_RUNTIME_EVIDENCE for manual recovery
         required: true
         type: string
 
@@ -21,77 +25,101 @@ permissions:
   actions: read
 
 concurrency:
-  group: stripe-runtime-evidence-promotion
+  group: stripe-runtime-evidence-promotion-${{ github.event.workflow_run.id || inputs.runtime_artifact_run_id || github.run_id }}
   cancel-in-progress: false
 
 jobs:
   promote:
-    name: Validate and promote exact-SHA Stripe evidence
-    runs-on: ubuntu-latest
+    name: Promote validated Stripe runtime evidence
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     environment: production
-    timeout-minutes: 15
+    env:
+      RELEASE_SHA: ${{ github.event.workflow_run.head_sha || inputs.release_sha }}
+      RUNTIME_PROOF_RUN_ID: ${{ github.event.workflow_run.id || inputs.runtime_artifact_run_id }}
+      MANUAL_CONFIRMATION: ${{ inputs.confirmation || '' }}
+      GITHUB_TOKEN: ${{ github.token }}
+
     steps:
-      - name: Check out trusted main
-        uses: actions/checkout@v7
+      - name: Validate promotion source and exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$RUNTIME_PROOF_RUN_ID" =~ ^[0-9]+$ ]]
+          RELEASE_SHA="${RELEASE_SHA,,}"
+          echo "RELEASE_SHA=$RELEASE_SHA" >> "$GITHUB_ENV"
+          if [[ "$GITHUB_EVENT_NAME" == 'workflow_dispatch' ]]; then
+            test "$MANUAL_CONFIRMATION" = 'PROMOTE_STRIPE_RUNTIME_EVIDENCE'
+          fi
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$RELEASE_SHA"
+
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: main
-          fetch-depth: 0
+          ref: ${{ env.RELEASE_SHA }}
+          fetch-depth: 1
           persist-credentials: false
 
-      - name: Authorize exact current main
-        env:
-          RELEASE_SHA: ${{ inputs.release_sha }}
-          CONFIRMATION: ${{ inputs.confirmation }}
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Validate promotion contracts
+        run: |
+          node --check scripts/enterprise/fetch-stripe-entitlement-runtime-proof.mjs
+          node --check scripts/release/validate-stripe-runtime-replay.mjs
+          node --check scripts/release/promote-stripe-runtime-evidence.mjs
+          npx vitest run \
+            tests/enterprise/stripe-runtime-auto-promotion.test.ts \
+            tests/release/stripe-runtime-evidence-promotion.test.ts
+
+      - name: Fetch and verify exact source runtime proof
+        run: node scripts/enterprise/fetch-stripe-entitlement-runtime-proof.mjs
+
+      - name: Revalidate replay safety
+        run: node scripts/release/validate-stripe-runtime-replay.mjs artifacts/stripe-entitlement-runtime-proof/replay.json
+
+      - name: Promote sanitized runtime proof
+        run: >-
+          node scripts/release/promote-stripe-runtime-evidence.mjs
+          artifacts/stripe-entitlement-runtime-proof/evidence.json
+          artifacts/stripe-runtime-evidence-promotion/promoted-evidence.json
+
+      - name: Validate promoted evidence with authoritative P0 validator
+        run: |
+          node -e "import('./scripts/release/validate-stripe-runtime-evidence.mjs').then(({validateStripeRuntimeEvidence})=>{const fs=require('node:fs');const e=JSON.parse(fs.readFileSync('artifacts/stripe-runtime-evidence-promotion/promoted-evidence.json','utf8'));const failures=validateStripeRuntimeEvidence(e,{expectedCommitSha:process.env.RELEASE_SHA});if(failures.length){console.error(failures.join('\n'));process.exit(1)}})"
+
+      - name: Record source provenance and checksums
+        shell: bash
         run: |
           set -euo pipefail
-          git fetch --no-tags origin main
-          main_sha="$(git rev-parse origin/main)"
-          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
-          test "${RELEASE_SHA,,}" = "$main_sha"
-          test "$(git rev-parse HEAD)" = "$main_sha"
-          test "$CONFIRMATION" = "PROMOTE_STRIPE_RUNTIME_EVIDENCE"
+          output=artifacts/stripe-runtime-evidence-promotion
+          printf '%s\n' "$RUNTIME_PROOF_RUN_ID" > "$output/source-runtime-proof-run-id.txt"
+          sha256sum "$output/promoted-evidence.json" > "$output/SHA256SUMS"
 
-      - name: Download sanitized runtime proof
-        uses: actions/download-artifact@v8
+      - name: Upload promoted exact-SHA evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          github-token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          run-id: ${{ inputs.runtime_artifact_run_id }}
-          name: stripe-entitlement-runtime-proof-${{ inputs.release_sha }}
-          path: artifacts/stripe-entitlement-runtime-proof
-
-      - name: Validate replay safety
-        run: node scripts/release/validate-stripe-runtime-replay.mjs
-
-      - name: Promote runtime evidence
-        env:
-          RELEASE_SHA: ${{ inputs.release_sha }}
-        run: node scripts/release/promote-stripe-runtime-evidence.mjs
-
-      - name: Generate checksums
-        run: |
-          set -euo pipefail
-          cd artifacts/stripe-runtime-evidence-promotion
-          sha256sum promoted-evidence.json > SHA256SUMS
-
-      - name: Publish bounded summary
-        env:
-          RELEASE_SHA: ${{ inputs.release_sha }}
-        run: |
-          {
-            echo '## Stripe runtime evidence promotion'
-            echo
-            echo "- Release SHA: \`$RELEASE_SHA\`"
-            echo '- Runtime proof: validated'
-            echo '- Replay safety: validated'
-            echo '- Redaction boundary: validated'
-            echo '- Promotion artifact: generated'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload promoted evidence
-        uses: actions/upload-artifact@v7
-        with:
-          name: stripe-runtime-evidence-promoted-${{ inputs.release_sha }}
+          name: stripe-runtime-evidence-promoted-${{ env.RELEASE_SHA }}
           path: artifacts/stripe-runtime-evidence-promotion
           if-no-files-found: error
           retention-days: 365
