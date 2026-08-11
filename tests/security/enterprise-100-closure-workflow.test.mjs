@@ -76,8 +76,8 @@ test('human legal and conversation closeout producers trigger exact-SHA reevalua
   assert.match(workflow, /- 'Enterprise Conversation Runtime Closeout'/);
 });
 
-test('generic production gate completion does not duplicate the push and scorecard reevaluation path', () => {
-  assert.doesNotMatch(workflow, /- 'Enterprise Production Gate'/);
+test('production gate completion retriggers closure after its exact-SHA artifact is uploaded', () => {
+  assert.match(workflow, /- 'Enterprise Production Gate'/);
   assert.match(workflow, /- 'Enterprise Readiness Scorecard'/);
   assert.match(workflow, /push:\n    branches: \[main\]/);
 });
