@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   hydrateEnterpriseRetainedRuntimeEvidence,
@@ -11,22 +11,32 @@ const repository = 'renanescola40-afk/eurocomply_saas';
 const sha = 'a'.repeat(40);
 const roots: string[] = [];
 
+type FetchOptions = Record<string, unknown>;
+
 function tempRoot() {
   const root = mkdtempSync(join(tmpdir(), 'risck-production-fanin-'));
   roots.push(root);
   return root;
 }
 
+function fakeFetcher(key: string, calls: Array<Record<string, unknown>>) {
+  return async (options: FetchOptions) => {
+    calls.push({ key, ...options });
+    return key === 'auditChain'
+      ? { found: true, runId: '4242', artifactId: '5252', targetSha: sha }
+      : { found: false, targetSha: sha };
+  };
+}
+
 function fakeFetchers(calls: Array<Record<string, unknown>>) {
-  return Object.fromEntries(RETAINED_RUNTIME_PRODUCERS.map((producer) => [
-    producer.key,
-    async (options: Record<string, unknown>) => {
-      calls.push({ key: producer.key, ...options });
-      return producer.key === 'auditChain'
-        ? { found: true, runId: '4242', artifactId: '5252', targetSha: sha }
-        : { found: false, targetSha: sha };
-    },
-  ]));
+  return {
+    authRbac: fakeFetcher('authRbac', calls),
+    auditChain: fakeFetcher('auditChain', calls),
+    productionProvider: fakeFetcher('productionProvider', calls),
+    branchProtection: fakeFetcher('branchProtection', calls),
+    stepUp: fakeFetcher('stepUp', calls),
+    stripePromoted: fakeFetcher('stripePromoted', calls),
+  };
 }
 
 afterEach(() => {
@@ -51,7 +61,7 @@ describe('enterprise production retained-proof fan-in', () => {
     for (const producer of RETAINED_RUNTIME_PRODUCERS) {
       for (const path of producer.evidencePaths) {
         const absolute = join(root, path);
-        mkdirSync(join(absolute, '..'), { recursive: true });
+        mkdirSync(dirname(absolute), { recursive: true });
         writeFileSync(absolute, '{"status":"Open","targetSha":"stale"}\n');
       }
     }
