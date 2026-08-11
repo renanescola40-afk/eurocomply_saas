@@ -14,36 +14,6 @@ const SHA = 'a'.repeat(40);
 const STALE = 'b'.repeat(40);
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 
-async function withEvidence(statuses, mutate = null) {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'repository-control-aggregation-'));
-  try {
-    for (const [index, relativePath] of REPOSITORY_CONTROL_OUTPUTS.entries()) {
-      const status = statuses[index] ?? 'Open';
-      const document = {
-        schema: `test.repository-control.${index}.v1`,
-        evidenceItem: `repository-control-${index}`,
-        status,
-        outcome: status === 'Complete' ? 'passed' : 'not_verified',
-        repository: REPOSITORY,
-        branch: 'main',
-        targetSha: SHA,
-        observedSha: SHA,
-        evidenceIntegrity: {
-          containsSensitiveValues: false,
-          exactShaBound: true,
-        },
-      };
-      mutate?.(document, index, relativePath);
-      const absolutePath = path.join(root, relativePath);
-      await mkdir(path.dirname(absolutePath), { recursive: true });
-      await writeFile(absolutePath, `${JSON.stringify(document, null, 2)}\n`);
-    }
-    return await arguments[2]?.(root);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-}
-
 async function createRoot({ statuses = [], mutate } = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'repository-control-aggregation-'));
   for (const [index, relativePath] of REPOSITORY_CONTROL_OUTPUTS.entries()) {
