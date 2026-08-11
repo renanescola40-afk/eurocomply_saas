@@ -34,6 +34,7 @@ test('artifact collection is restricted to authorized families and exact produce
     ['enterprise-readiness-scorecard-*', '.github/workflows/enterprise-readiness-scorecard.yml'],
     ['stripe-billing-validation', '.github/workflows/stripe-runtime-proof.yml'],
     ['supabase-production-migration-dry-run-*', '.github/workflows/supabase-production-migration-dry-run.yml'],
+    ['supabase-rls-reconciliation-*', '.github/workflows/supabase-production-rls-reconciliation.yml'],
     ['final-legal-publication-gate-*', '.github/workflows/final-legal-publication-gate.yml'],
     ['enterprise-conversation-runtime-closeout-*', '.github/workflows/enterprise-conversation-runtime-closeout.yml'],
   ]);
@@ -76,9 +77,10 @@ test('human legal and conversation closeout producers trigger exact-SHA reevalua
   assert.match(workflow, /- 'Enterprise Conversation Runtime Closeout'/);
 });
 
-test('production gate completion retriggers closure after its exact-SHA artifact is uploaded', () => {
+test('production and Supabase RLS producer completions retrigger exact-SHA closure', () => {
   assert.match(workflow, /- 'Enterprise Production Gate'/);
   assert.match(workflow, /- 'Enterprise Readiness Scorecard'/);
+  assert.match(workflow, /- 'Supabase Production RLS Reconciliation'/);
   assert.match(workflow, /push:\n    branches: \[main\]/);
 });
 
