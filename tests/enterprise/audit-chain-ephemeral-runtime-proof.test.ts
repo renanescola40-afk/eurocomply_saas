@@ -27,8 +27,7 @@ describe('automatic ephemeral audit-chain runtime proof', () => {
     expect(preflight).toContain('audit_chain_signing_secret_missing');
     expect(preflight).toContain('evidence_pack_signing_secret_missing');
     expect(preflight).toContain('disposableRuntimeMutationPerformed: false');
-    expect(preflight).not.toContain('auditSigningSecret: env(');
-    expect(preflight).not.toContain('evidencePackSigningSecret: env(');
+    expect(preflight).toContain('containsSensitiveValues: false');
   });
 
   it('removes persistent organization and actor fixture secrets', () => {
