@@ -6,10 +6,16 @@ on:
     paths:
       - '.github/workflows/stripe-runtime-evidence-promotion.yml'
       - '.github/workflows/stripe-runtime-evidence-promotion-contract.yml'
+      - 'scripts/enterprise/fetch-stripe-entitlement-runtime-proof.mjs'
+      - 'scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs'
       - 'scripts/release/promote-stripe-runtime-evidence.mjs'
+      - 'scripts/release/validate-stripe-runtime-evidence.mjs'
       - 'scripts/release/validate-stripe-runtime-replay.mjs'
+      - 'tests/enterprise/stripe-runtime-auto-promotion.test.ts'
+      - 'tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts'
       - 'tests/release/stripe-runtime-evidence-promotion.test.ts'
       - 'docs/enterprise/STRIPE_RUNTIME_EVIDENCE_PROMOTION.md'
+      - 'docs/enterprise/STRIPE_ENTITLEMENT_RUNTIME_PROOF.md'
   push:
     branches: [main]
   workflow_dispatch:
@@ -28,17 +34,40 @@ jobs:
     env:
       TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout exact tested SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
           persist-credentials: false
-      - run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-      - uses: actions/setup-node@v6
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: 22
           cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npx vitest run tests/release/stripe-runtime-evidence-promotion.test.ts
-      - name: Verify workflows contain no write permissions
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+      - name: Validate Stripe promotion contracts
+        run: >-
+          npx vitest run
+          tests/enterprise/stripe-runtime-auto-promotion.test.ts
+          tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts
+          tests/release/stripe-runtime-evidence-promotion.test.ts
+      - name: Verify promotion workflows remain read-only and immutable-action pinned
+        shell: bash
         run: |
-          ! grep -Eq 'contents: write|actions: write' .github/workflows/stripe-runtime-evidence-promotion.yml
+          set -euo pipefail
+          if grep -Eq 'contents: write|actions: write' .github/workflows/stripe-runtime-evidence-promotion.yml; then
+            echo "::error title=Unsafe workflow permissions::Stripe runtime evidence promotion must remain read-only."
+            exit 1
+          fi
+          if grep -Eq 'actions/(checkout|setup-node|upload-artifact)@v[0-9]+' .github/workflows/stripe-runtime-evidence-promotion.yml; then
+            echo "::error title=Mutable action reference::Stripe promotion workflow actions must remain pinned to immutable SHAs."
+            exit 1
+          fi
+          if grep -Eq 'actions/(checkout|setup-node)@v[0-9]+' .github/workflows/stripe-runtime-evidence-promotion-contract.yml; then
+            echo "::error title=Mutable action reference::Stripe promotion contract actions must remain pinned to immutable SHAs."
+            exit 1
+          fi
