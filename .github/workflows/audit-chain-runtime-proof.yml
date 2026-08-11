@@ -77,17 +77,36 @@ jobs:
         run: |
           node --check scripts/security/run-audit-chain-live-validation.mjs
           node --check scripts/security/validate-audit-chain-live-evidence.mjs
+          node --check scripts/security/preflight-audit-chain-runtime-proof.mjs
           node --check scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs
           npx vitest run \
             tests/enterprise/audit-chain-runtime-evidence-fetch.test.ts \
-            tests/enterprise/audit-chain-ephemeral-runtime-proof.test.ts
+            tests/enterprise/audit-chain-ephemeral-runtime-proof.test.ts \
+            tests/enterprise/audit-chain-runtime-preflight.test.ts
+
+      - name: Preflight protected audit-chain runtime prerequisites
+        id: runtime_preflight
+        run: node scripts/security/preflight-audit-chain-runtime-proof.mjs
 
       - name: Execute protected ephemeral live audit-chain proof
+        if: steps.runtime_preflight.outputs.ready == 'true'
         run: node scripts/security/run-audit-chain-live-validation.mjs
 
       - name: Validate raw redacted audit-chain evidence
+        if: steps.runtime_preflight.outputs.ready == 'true'
         run: |
           node -e "import('./scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs').then(({validateRawAuditChainEvidence})=>{const fs=require('node:fs');const e=JSON.parse(fs.readFileSync('docs/security/evidence/runtime/audit-chain-live-validation.json','utf8'));const r=validateRawAuditChainEvidence(e);if(!r.passed){console.error(r.failures.join('\n'));process.exit(1)}})"
+
+      - name: Fail closed when audit-chain prerequisites are blocked
+        if: steps.runtime_preflight.outputs.ready != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence=docs/security/evidence/runtime/audit-chain-live-validation.json
+          test -f "$evidence"
+          jq -r '.blockerCodes[] | "Audit-chain blocker: \(.)"' "$evidence"
+          echo 'Live audit-chain proof was intentionally not executed; no disposable runtime mutation was performed.'
+          exit 1
 
       - name: Upload redacted exact-SHA audit-chain evidence
         if: always()
