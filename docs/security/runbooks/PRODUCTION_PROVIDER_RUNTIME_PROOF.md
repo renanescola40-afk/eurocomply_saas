@@ -36,6 +36,8 @@ The Vercel probe must prove all of the following:
 5. the production environment-variable inventory can be listed with `decrypt=false`;
 6. every high-impact runtime key required by enterprise readiness is present by name.
 
+The authoritative provider proof performs these Vercel requests. The diagnostic helper does not repeat Vercel network requests from file-derived target identifiers; it reports the canonical proof's blocker codes and non-secret metrics instead.
+
 The proof never requests decrypted environment values and never stores provider responses.
 
 ## Sentry acceptance criteria
@@ -77,7 +79,9 @@ Allowed diagnostic data is deliberately narrow:
 - stable blocker codes such as `vercel_api_token_missing`;
 - provider names;
 - non-secret counts already present in canonical evidence;
-- HTTP status numbers and bounded categories such as `unauthenticated`, `forbidden_or_insufficient_scope`, `resource_not_found`, `rate_limited`, `timeout` or `provider_server_error`.
+- for Sentry only, HTTP status numbers and bounded categories such as `unauthenticated`, `forbidden_or_insufficient_scope`, `resource_not_found`, `rate_limited`, `timeout` or `provider_server_error`.
+
+The secondary diagnostic network scope is limited to the fixed `https://sentry.io` origin. Sentry organization/project identifiers come from protected workflow configuration and are percent-encoded before being placed in the fixed path. File-derived Vercel target identifiers are never sent by the diagnostic helper; Vercel network validation remains solely in the authoritative provider proof.
 
 The diagnostic artifact does not store request URLs, response bodies, provider IDs from responses, credentials, tokens, DSNs or decrypted environment values.
 
