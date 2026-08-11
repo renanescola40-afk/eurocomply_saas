@@ -55,7 +55,7 @@ const commands = [
   ['20-release-support-readiness', 'npm run security:release-support-readiness', 'npm', ['run', 'security:release-support-readiness']],
   ['21-release-operations', 'npm run security:release-operations', 'npm', ['run', 'security:release-operations']],
   ['22-write-enterprise-runtime-evidence', 'node scripts/release/write-enterprise-runtime-evidence.mjs', 'node', ['scripts/release/write-enterprise-runtime-evidence.mjs']],
-  ['23-check-release-go-no-go-evidence', 'npm run release:go-no-go-evidence', 'npm', ['run', 'release:go-no-go-evidence']],
+  ['23-check-release-go-no-go-evidence', 'node scripts/release/validate-release-go-no-go-evidence.mjs', 'node', ['scripts/release/validate-release-go-no-go-evidence.mjs']],
   ['24-check-enterprise-runtime-evidence', 'npm run release:enterprise-runtime-evidence', 'npm', ['run', 'release:enterprise-runtime-evidence']],
   ['25-p0-runtime-gap-strict', 'npm run security:p0-runtime-gap:strict', 'npm', ['run', 'security:p0-runtime-gap:strict']],
 ].map(([slug, label, command, args]) => ({ slug, label, command, args, critical: true }));
