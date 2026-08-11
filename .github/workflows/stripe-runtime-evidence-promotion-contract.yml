@@ -59,6 +59,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -Eq 'contents: write|actions: write' .github/workflows/stripe-runtime-evidence-promotion.yml
-          ! grep -Eq 'actions/(checkout|setup-node|upload-artifact)@v[0-9]+' .github/workflows/stripe-runtime-evidence-promotion.yml
-          ! grep -Eq 'actions/(checkout|setup-node)@v[0-9]+' .github/workflows/stripe-runtime-evidence-promotion-contract.yml
+          if grep -Eq 'contents: write|actions: write' .github/workflows/stripe-runtime-evidence-promotion.yml; then
+            echo "::error title=Unsafe workflow permissions::Stripe runtime evidence promotion must remain read-only."
+            exit 1
+          fi
+          if grep -Eq 'actions/(checkout|setup-node|upload-artifact)@v[0-9]+' .github/workflows/stripe-runtime-evidence-promotion.yml; then
+            echo "::error title=Mutable action reference::Stripe promotion workflow actions must remain pinned to immutable SHAs."
+            exit 1
+          fi
+          if grep -Eq 'actions/(checkout|setup-node)@v[0-9]+' .github/workflows/stripe-runtime-evidence-promotion-contract.yml; then
+            echo "::error title=Mutable action reference::Stripe promotion contract actions must remain pinned to immutable SHAs."
+            exit 1
+          fi
