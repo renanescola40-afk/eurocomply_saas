@@ -21,10 +21,16 @@ describe('GitHub checks evidence API boundary', () => {
     expect(collector).not.toContain('return response.json()');
   });
 
-  it('preserves exact-SHA evidence semantics', () => {
+  it('preserves exact-SHA evidence semantics through the dedicated selector', () => {
     const collector = read('scripts/enterprise/capture-github-checks-evidence.mjs');
+    const selector = read('scripts/enterprise/github-workflow-run-selection.mjs');
 
-    expect(collector).toContain('if (run.head_sha !== targetSha) continue');
+    expect(collector).toContain("import { latestCreditEligibleRunsByName } from './github-workflow-run-selection.mjs'");
+    expect(collector).toContain('latestCreditEligibleRunsByName(runs, { targetSha })');
+    expect(selector).toContain('if (run?.head_sha !== targetSha) continue');
+    expect(selector).toContain("run.name === 'Enterprise Production Gate'");
+    expect(selector).toContain("run.event === 'workflow_run'");
+    expect(selector).toContain("run.conclusion === 'skipped'");
     expect(collector).toContain("source: 'github-actions-api'");
     expect(collector).toContain('generatedFromRealEvidence: true');
     expect(collector).toContain("status: allRequiredPassed ? 'Complete' : 'Open'");
