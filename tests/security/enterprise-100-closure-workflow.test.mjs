@@ -76,9 +76,23 @@ test('human legal and conversation closeout producers trigger exact-SHA reevalua
   assert.match(workflow, /- 'Enterprise Conversation Runtime Closeout'/);
 });
 
-test('producer completions queue instead of cancelling same-SHA closure runs', () => {
+test('generic production gate completion does not duplicate the push and scorecard reevaluation path', () => {
+  assert.doesNotMatch(workflow, /- 'Enterprise Production Gate'/);
+  assert.match(workflow, /- 'Enterprise Readiness Scorecard'/);
+  assert.match(workflow, /push:\n    branches: \[main\]/);
+});
+
+test('same-SHA producer completions coalesce to the newest exact-SHA closure snapshot', () => {
   assert.match(workflow, /group: enterprise-100-closure-/);
-  assert.match(workflow, /cancel-in-progress: false/);
+  assert.match(workflow, /cancel-in-progress: true/);
+});
+
+test('closure summaries use valid jq string programs', () => {
+  assert.match(workflow, /jq -r '"- Status:/);
+  assert.match(workflow, /jq -r '"- Decision:/);
+  assert.match(workflow, /jq -r '"- Hydrated retained evidence:/);
+  assert.match(workflow, /errorCode \/\/ "none"/);
+  assert.doesNotMatch(workflow, /\\"none\\"/);
 });
 
 test('closure remains fail closed after artifact hydration', () => {

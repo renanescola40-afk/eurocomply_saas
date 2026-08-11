@@ -8,18 +8,6 @@ on:
   workflow_dispatch:
   workflow_run:
     workflows:
-      - CI
-      - CodeQL
-      - Semgrep
-      - Secret Scanning
-      - Scan repository for accidental secret exposure
-      - Dependency Review
-      - Actionlint
-      - Public Claims Guard
-      - Full Security Suite
-      - Enterprise Production Gate
-      - RISCK COMPLY Security CI
-      - Enterprise DAST
       - Distributed Rate Limit Runtime Proof
       - Auth RBAC Tenant Proof
       - Supabase Live RLS Validation
@@ -28,13 +16,14 @@ on:
       - Final Technical Controls Proof
       - Recovery Resilience Proof
     types: [completed]
+    branches: [main]
 
 permissions:
   actions: read
   contents: read
 
 concurrency:
-  group: enterprise-readiness-scorecard-${{ github.event.workflow_run.head_sha || github.ref }}
+  group: enterprise-readiness-scorecard-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -87,6 +76,7 @@ jobs:
         run: >-
           npx vitest run
           tests/enterprise/enterprise-readiness-scorecard.test.ts
+          tests/enterprise/enterprise-readiness-scorecard-orchestration.test.ts
           tests/enterprise/evidence-overrides-guard.test.ts
           tests/enterprise/architecture-review-evidence.test.ts
           tests/enterprise/incident-operations-evidence.test.ts
