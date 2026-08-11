@@ -159,9 +159,9 @@ jobs:
               echo "- Verification status: \`NOT_PRODUCED\`"
             fi
             if [ -f release-validation/supabase-rls-reconciliation.json ]; then
-              echo '- Enterprise 100 canonical evidence: `produced`'
+              echo "- Enterprise 100 canonical evidence: \`produced\`"
             else
-              echo '- Enterprise 100 canonical evidence: `not produced`'
+              echo "- Enterprise 100 canonical evidence: \`not produced\`"
             fi
             if [ -f artifacts/supabase-rls-reconciliation/reconciliation-proof.txt ]; then
               echo '- Verification evidence:'
