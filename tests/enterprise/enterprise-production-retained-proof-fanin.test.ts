@@ -11,7 +11,9 @@ const repository = 'renanescola40-afk/eurocomply_saas';
 const sha = 'a'.repeat(40);
 const roots: string[] = [];
 
-type FetchOptions = Record<string, unknown>;
+type HydrationOptions = Parameters<typeof hydrateEnterpriseRetainedRuntimeEvidence>[0];
+type Fetchers = NonNullable<HydrationOptions['fetchers']>;
+type FetchOptions = Parameters<Fetchers['authRbac']>[0];
 
 function tempRoot() {
   const root = mkdtempSync(join(tmpdir(), 'risck-production-fanin-'));
@@ -28,8 +30,8 @@ function fakeFetcher(key: string, calls: Array<Record<string, unknown>>) {
   };
 }
 
-function fakeFetchers(calls: Array<Record<string, unknown>>) {
-  return {
+function fakeFetchers(calls: Array<Record<string, unknown>>): Fetchers {
+  const fixtures = {
     authRbac: fakeFetcher('authRbac', calls),
     auditChain: fakeFetcher('auditChain', calls),
     productionProvider: fakeFetcher('productionProvider', calls),
@@ -37,6 +39,7 @@ function fakeFetchers(calls: Array<Record<string, unknown>>) {
     stepUp: fakeFetcher('stepUp', calls),
     stripePromoted: fakeFetcher('stripePromoted', calls),
   };
+  return fixtures as unknown as Fetchers;
 }
 
 afterEach(() => {
