@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -86,4 +87,11 @@ test('diagnostic mode never suppresses an invalid trigger-bound producer', async
       /synthetic_invalid_artifact/,
     );
   });
+});
+
+test('upload scanner lookup is bounded to the exact target SHA before parsing workflow-run JSON', () => {
+  const source = readFileSync('scripts/enterprise/fetch-upload-scanner-runtime-evidence.mjs', 'utf8');
+  assert.match(source, /head_sha=\$\{encodeURIComponent\(targetSha\)\}/);
+  assert.match(source, /per_page=20/);
+  assert.doesNotMatch(source, /status=success&branch=main&per_page=100/);
 });
