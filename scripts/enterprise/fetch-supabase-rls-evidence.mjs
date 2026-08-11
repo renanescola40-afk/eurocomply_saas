@@ -58,7 +58,7 @@ export function validateDownloadedEvidence(evidence, { targetSha, repository, ru
 
 export function normalizeSupabaseRlsEvidenceForRelease(
   evidence,
-  { targetSha, repository, runId },
+  { targetSha, repository, runId, now = new Date() },
 ) {
   const normalizedSha = String(targetSha || '').trim().toLowerCase();
   const normalizedRunId = String(runId || '').trim();
@@ -94,7 +94,7 @@ export function normalizeSupabaseRlsEvidenceForRelease(
   };
 
   const releaseFailures = validateReleaseSupabaseRlsRuntimeEvidence(normalized, {
-    now: new Date(normalized.generatedAt ?? normalized.reviewedAt ?? normalized.timestamp),
+    now,
     maxAgeDays: 7,
     expectedRepository: repository,
     expectedBranch: 'main',
