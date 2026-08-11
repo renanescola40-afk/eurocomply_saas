@@ -100,15 +100,16 @@ describe('enterprise production retained-proof fan-in', () => {
     expect(retained.status).toBe('Complete');
   });
 
-  it('requires the exact triggering workflow run while keeping sibling producers optional', async () => {
+  it('requires the exact triggering workflow run by stable path even when run-name is dynamic', async () => {
     const root = tempRoot();
     const calls: Array<Record<string, unknown>> = [];
-    await hydrateEnterpriseRetainedRuntimeEvidence({
+    const manifest = await hydrateEnterpriseRetainedRuntimeEvidence({
       root,
       repository,
       token: 'test-token',
       targetSha: sha,
-      sourceWorkflowName: 'Audit Chain Runtime Proof',
+      sourceWorkflowName: `Audit chain proof for ${sha}`,
+      sourceWorkflowPath: '.github/workflows/audit-chain-runtime-proof.yml',
       sourceRunId: '4242',
       fetchers: fakeFetchers(calls),
     });
@@ -118,6 +119,27 @@ describe('enterprise production retained-proof fan-in', () => {
     for (const call of calls.filter((candidate) => candidate.key !== 'auditChain')) {
       expect(call).toMatchObject({ sourceRunId: '', required: false, targetSha: sha });
     }
+    expect(manifest.sourceWorkflowPath).toBe('.github/workflows/audit-chain-runtime-proof.yml');
+    expect(manifest.sourceWorkflowName).toBe(`Audit chain proof for ${sha}`);
+    expect(manifest.evidenceIntegrity.triggerAuthorizationUsesStableWorkflowPath).toBe(true);
+  });
+
+  it('retains the canonical workflow-name fallback for direct legacy callers', async () => {
+    const root = tempRoot();
+    const calls: Array<Record<string, unknown>> = [];
+    const manifest = await hydrateEnterpriseRetainedRuntimeEvidence({
+      root,
+      repository,
+      token: 'test-token',
+      targetSha: sha,
+      sourceWorkflowName: 'Audit Chain Runtime Proof',
+      sourceRunId: '4242',
+      fetchers: fakeFetchers(calls),
+    });
+
+    expect(calls.find((call) => call.key === 'auditChain')).toMatchObject({ sourceRunId: '4242', required: true });
+    expect(manifest.sourceWorkflowPath).toBe('.github/workflows/audit-chain-runtime-proof.yml');
+    expect(manifest.evidenceIntegrity.triggerAuthorizationUsesStableWorkflowPath).toBe(false);
   });
 
   it('rejects unallowlisted trigger provenance and malformed source bindings', async () => {
@@ -127,17 +149,18 @@ describe('enterprise production retained-proof fan-in', () => {
       repository,
       token: 'test-token',
       targetSha: sha,
-      sourceWorkflowName: 'Untrusted Workflow',
+      sourceWorkflowName: 'Audit Chain Runtime Proof',
+      sourceWorkflowPath: '.github/workflows/untrusted-runtime-proof.yml',
       sourceRunId: '123',
       fetchers: fakeFetchers([]),
-    })).rejects.toThrow('source_workflow_not_allowlisted');
+    })).rejects.toThrow('source_workflow_path_not_allowlisted');
 
     await expect(hydrateEnterpriseRetainedRuntimeEvidence({
       root,
       repository,
       token: 'test-token',
       targetSha: sha,
-      sourceWorkflowName: 'Audit Chain Runtime Proof',
+      sourceWorkflowPath: '.github/workflows/audit-chain-runtime-proof.yml',
       sourceRunId: 'not-a-run-id',
       fetchers: fakeFetchers([]),
     })).rejects.toThrow('source_run_id_invalid');
