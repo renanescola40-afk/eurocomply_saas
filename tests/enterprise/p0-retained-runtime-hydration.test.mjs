@@ -12,6 +12,16 @@ import {
 
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const SHA = 'a'.repeat(40);
+const EXACT_SHA_FETCHERS = [
+  'scripts/enterprise/fetch-auth-rbac-evidence.mjs',
+  'scripts/enterprise/fetch-supabase-rls-evidence.mjs',
+  'scripts/enterprise/fetch-upload-scanner-runtime-evidence.mjs',
+  'scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs',
+  'scripts/enterprise/fetch-production-provider-runtime-evidence.mjs',
+  'scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs',
+  'scripts/enterprise/fetch-step-up-runtime-evidence.mjs',
+  'scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs',
+];
 
 function fetchersWithFailure(failingKey) {
   return Object.fromEntries(RETAINED_RUNTIME_PRODUCERS.map((producer) => [
@@ -89,9 +99,12 @@ test('diagnostic mode never suppresses an invalid trigger-bound producer', async
   });
 });
 
-test('upload scanner lookup is bounded to the exact target SHA before parsing workflow-run JSON', () => {
-  const source = readFileSync('scripts/enterprise/fetch-upload-scanner-runtime-evidence.mjs', 'utf8');
-  assert.match(source, /head_sha=\$\{encodeURIComponent\(targetSha\)\}/);
-  assert.match(source, /per_page=20/);
-  assert.doesNotMatch(source, /status=success&branch=main&per_page=100/);
+test('every retained producer bounds workflow-run lookup to the exact target SHA before local filtering', () => {
+  assert.equal(EXACT_SHA_FETCHERS.length, RETAINED_RUNTIME_PRODUCERS.length);
+  for (const file of EXACT_SHA_FETCHERS) {
+    const source = readFileSync(file, 'utf8');
+    assert.match(source, /head_sha=\$\{encodeURIComponent\(targetSha\)\}/, `${file} must query GitHub by exact target SHA`);
+    assert.match(source, /per_page=20/, `${file} must keep the exact-SHA response window bounded`);
+    assert.doesNotMatch(source, /status=success&branch=main&per_page=(?:50|100)/, `${file} must not list broad main runs before SHA filtering`);
+  }
 });
