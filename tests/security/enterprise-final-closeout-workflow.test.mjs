@@ -72,7 +72,14 @@ test('GitHub API infrastructure failures cannot produce a green synthetic zero-r
   assert.match(workflow, /Infrastructure error:/);
 });
 
-test('same-SHA producer completions queue instead of cancelling earlier closeout runs', () => {
+test('same-SHA producer completions coalesce to the newest closeout dashboard snapshot', () => {
   assert.match(workflow, /group: enterprise-final-closeout-dashboard-/);
-  assert.match(workflow, /cancel-in-progress: false/);
+  assert.match(workflow, /cancel-in-progress: true/);
+});
+
+test('dashboard summaries use valid jq string programs', () => {
+  assert.match(workflow, /jq -r '"- Status:/);
+  assert.match(workflow, /jq -r '"- Hydrated:/);
+  assert.match(workflow, /errorCode \/\/ "none"/);
+  assert.doesNotMatch(workflow, /\\"none\\"/);
 });
