@@ -54,7 +54,8 @@ test('promoted Stripe runtime proof is the only Stripe document eligible for bil
   assert.doesNotMatch(workflow, /- 'Stripe Runtime Proof'/);
   assert.match(workflow, /fetch-stripe-promoted-runtime-evidence\.mjs/);
   assert.match(workflow, /STRIPE_RUNTIME_EVIDENCE_REQUIRED: 'false'/);
-  assert.match(workflow, /stripe-billing-validation\.json\.legacy-open-ignored/);
+  assert.match(workflow, /find "\$RETAINED_ARTIFACT_ROOT" -type f -name 'stripe-billing-validation\.json'/);
+  assert.match(workflow, /\$\{legacy\}\.legacy-open-ignored/);
   assert.match(workflow, /authoritative-stripe-promotion/);
   assert.match(stripePromotionFetcher, /WORKFLOW_FILE = 'stripe-runtime-evidence-promotion\.yml'/);
   assert.match(stripePromotionFetcher, /evidence\?\.id !== 'stripe-entitlement-runtime-proof'/);
