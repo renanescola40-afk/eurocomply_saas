@@ -110,7 +110,10 @@ jobs:
           tests/release/production-runtime-scorecard-evidence.test.ts
 
       - name: Validate scorecard aggregation boundary
-        run: node --test tests/enterprise/repository-control-scorecard-aggregation.test.mjs
+        run: >-
+          node --test
+          tests/enterprise/repository-control-scorecard-aggregation.test.mjs
+          tests/enterprise/derived-scorecard-evidence-builder.test.mjs
 
       - name: Validate distributed rate-limit proof contracts
         shell: bash
@@ -207,34 +210,43 @@ jobs:
         env:
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
-        run: node scripts/enterprise/build-public-ux-evidence.mjs
+        run: node scripts/enterprise/run-derived-scorecard-evidence-builder.mjs publicUx
 
       - name: Build exact-SHA accessibility and analytics consent evidence
         env:
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
-        run: node scripts/enterprise/build-accessibility-consent-evidence.mjs
+        run: node scripts/enterprise/run-derived-scorecard-evidence-builder.mjs accessibilityConsent
 
       - name: Build exact-SHA account recovery evidence
         env:
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
-        run: node scripts/enterprise/build-account-recovery-evidence.mjs
+        run: node scripts/enterprise/run-derived-scorecard-evidence-builder.mjs accountRecovery
 
       - name: Build exact-SHA provider failure evidence
         env:
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
-        run: node scripts/enterprise/build-provider-failure-evidence.mjs
+        run: node scripts/enterprise/run-derived-scorecard-evidence-builder.mjs providerFailure
 
       - name: Build exact-SHA sensitive-action step-up evidence
         env:
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
-        run: node scripts/enterprise/build-step-up-evidence.mjs
+        run: node scripts/enterprise/run-derived-scorecard-evidence-builder.mjs stepUp
 
       - name: Validate sensitive-action step-up evidence contract
-        run: node scripts/security/check-p1-step-up-evidence.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence=docs/security/evidence/p1/step-up-sensitive-actions.json
+          status="$(jq -r '.status // "INVALID"' "$evidence")"
+          if [ "$status" = "Open" ]; then
+            echo "Sensitive-action step-up evidence remains NOT_VERIFIED for $ASSESSED_SHA."
+          else
+            node scripts/security/check-p1-step-up-evidence.mjs "$evidence"
+          fi
 
       - name: Retrieve exact-SHA distributed rate-limit runtime evidence
         env:
