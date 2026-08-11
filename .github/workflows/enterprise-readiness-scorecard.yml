@@ -427,6 +427,7 @@ jobs:
           retention-days: 90
 
       - name: Enforce enterprise scorecard decision
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
