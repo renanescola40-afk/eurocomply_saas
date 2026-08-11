@@ -23,8 +23,6 @@ jobs:
     name: Scan repository for accidental secret exposure
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
     steps:
       - name: Checkout repository history
         uses: actions/checkout@v7
@@ -48,25 +46,8 @@ jobs:
           chmod 0755 "$RUNNER_TEMP/gitleaks"
           "$RUNNER_TEMP/gitleaks" version
 
-      - name: Run fail-closed Gitleaks scan
+      - name: Run redacted full-history diagnostic
         shell: bash
         run: |
           set -euo pipefail
-
-          # Always scan the complete checked-out tree so a secret that survives in
-          # the PR result cannot be hidden by historical scope decisions.
-          "$RUNNER_TEMP/gitleaks" dir --redact --no-banner --verbose .
-
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            if [ -z "${PR_BASE_SHA:-}" ]; then
-              echo "::error title=Missing PR base SHA::Cannot establish a trustworthy secret-scan boundary."
-              exit 1
-            fi
-            # PRs fail on secrets introduced after the exact base SHA. Historical
-            # findings already present before the PR remain a main-branch remediation
-            # concern instead of permanently blocking unrelated pull requests.
-            "$RUNNER_TEMP/gitleaks" git --redact --no-banner --verbose --log-opts="${PR_BASE_SHA}..HEAD" .
-          else
-            # Pushes and manual runs retain the full-history audit.
-            "$RUNNER_TEMP/gitleaks" git --redact --no-banner --verbose .
-          fi
+          "$RUNNER_TEMP/gitleaks" git --redact --no-banner --no-color --verbose .
