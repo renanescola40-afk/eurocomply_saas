@@ -127,8 +127,8 @@ jobs:
     runs-on: ubuntu-24.04
     environment: Production
     env:
-      RELEASE_COMMIT_SHA: ${{ env.TARGET_SHA }}
-      RELEASE_BUILD_SHA: ${{ env.TARGET_SHA }}
+      RELEASE_COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      RELEASE_BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       RISCK_COMPLY_ENTERPRISE_RELEASE: 'true'
       RELEASE_DEPLOYMENT_URL: ${{ secrets.RELEASE_DEPLOYMENT_URL || vars.RELEASE_DEPLOYMENT_URL }}
       RELEASE_PRODUCTION_URL: ${{ secrets.RELEASE_PRODUCTION_URL || vars.RELEASE_PRODUCTION_URL }}
