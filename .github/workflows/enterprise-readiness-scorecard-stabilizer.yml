@@ -3,6 +3,19 @@ name: Enterprise Readiness Scorecard Stabilizer
 on:
   workflow_run:
     workflows:
+      - CI
+      - CodeQL
+      - Semgrep
+      - Secret Scanning
+      - Scan repository for accidental secret exposure
+      - Dependency Review
+      - Actionlint
+      - Public Claims Guard
+      - Full Security Suite
+      - Enterprise Production Gate
+      - RISCK COMPLY Security CI
+      - Enterprise DAST
+      - Dependency Vulnerability Proof
       - Distributed Rate Limit Runtime Proof
       - Auth RBAC Tenant Proof
       - Supabase Live RLS Validation
@@ -64,5 +77,5 @@ jobs:
             echo "- Dispatched terminal scorecard: ${DISPATCHED:-unknown}"
             echo "- Reason: ${REASON:-stabilizer-failed-before-output}"
             echo
-            echo 'This workflow only coalesces exact-SHA evidence producer completions and dispatches the existing readiness scorecard. It does not award PASS or mutate production.'
+            echo 'This workflow coalesces exact-SHA material producer completions and dispatches the existing readiness scorecard after the producer set reaches a quiet terminal state. It does not award PASS or mutate production.'
           } >> "$GITHUB_STEP_SUMMARY"
