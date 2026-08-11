@@ -107,7 +107,7 @@ describe('enterprise auth, RBAC and tenant-isolation invariants', () => {
     expect(existsSync(join(process.cwd(), evidencePath))).toBe(true);
 
     const review = readRepoFile(reviewPath);
-    const evidence = JSON.parse(readRepoFile(evidencePath)) as Record<string, any>;
+    const evidence = JSON.parse(readRepoFile(evidencePath));
 
     expect(review).toContain('Supabase Auth');
     expect(review).toContain('Go/No-Go');
