@@ -13,11 +13,15 @@ The production gate therefore performs a read-only exact-SHA fan-in before `npm 
 Only these producer workflows can feed the production release workspace:
 
 - `Auth RBAC Tenant Proof`;
+- `Supabase Live RLS Validation`;
+- `RISCK COMPLY Upload Security CI`;
 - `Audit Chain Runtime Proof`;
 - `Production Provider Runtime Proof`;
 - `Branch Protection Runtime Proof`;
 - `Step-Up Runtime Proof`;
 - `Stripe Runtime Evidence Promotion`.
+
+The `workflow_run` re-evaluation list must remain exactly equal to the hydrator allowlist. CI enforces that parity so a retained producer cannot become fetchable while remaining unable to wake the Production Gate after its exact-SHA artifact becomes available.
 
 Each producer keeps its own artifact-name, workflow-path, schema, provenance and semantic validator. The fan-in does not replace those validators.
 
@@ -25,7 +29,9 @@ Each producer keeps its own artifact-name, workflow-path, schema, provenance and
 
 `Enterprise Production Gate` still runs directly for pull requests, pushes to `main`, and manual dispatches.
 
-It also listens to completion of the approved proof producers on `main`. A successful producer completion causes the gate to re-evaluate the producer's exact `head_sha`.
+It also listens to completion of every approved proof producer on `main`. A successful producer completion causes the gate to re-evaluate the producer's exact `head_sha`.
+
+This is intentionally important for producers that run concurrently with the initial `main` push. The initial Production Gate may execute before a sibling proof artifact exists. When `Supabase Live RLS Validation`, `RISCK COMPLY Upload Security CI`, or any other allowlisted producer later completes successfully for that same SHA, its `workflow_run` event wakes the gate again and removes that timing race.
 
 The gate:
 
