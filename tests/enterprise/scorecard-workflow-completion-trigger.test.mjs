@@ -18,12 +18,14 @@ const requiredCompletionTriggers = Object.freeze([
   'Enterprise Production Gate',
   'RISCK COMPLY Security CI',
   'Enterprise DAST',
+  'Dependency Vulnerability Proof',
   'Distributed Rate Limit Runtime Proof',
   'Auth RBAC Tenant Proof',
   'Supabase Live RLS Validation',
   'Production Runtime Proof',
   'Branch Protection Runtime Proof',
   'Final Technical Controls Proof',
+  'Recovery Resilience Proof',
 ]);
 
 function workflowRunNames(source) {
@@ -50,7 +52,10 @@ test('scorecard workflow cannot trigger itself and only consumes successful work
   assert.doesNotMatch(workflow, /permissions:\s*write-all/);
 });
 
-test('scorecard concurrency is scoped to the exact workflow_run SHA', () => {
-  assert.match(workflow, /group: enterprise-readiness-scorecard-\$\{\{ github\.event\.workflow_run\.head_sha \|\| github\.ref \}\}/);
+test('scorecard concurrency is scoped to the exact assessed SHA', () => {
+  assert.match(
+    workflow,
+    /group: enterprise-readiness-scorecard-\$\{\{ github\.event\.workflow_run\.head_sha \|\| github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/,
+  );
   assert.match(workflow, /cancel-in-progress: true/);
 });

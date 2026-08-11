@@ -164,8 +164,10 @@ describe('repository enterprise control evidence', () => {
 
   it('retains exact-SHA header and no-store evidence when production runtime proof is absent', () => {
     const workflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
+    const aggregationWrapper = readFileSync('scripts/enterprise/run-repository-control-evidence-for-scorecard.mjs', 'utf8');
 
-    expect(workflow).toContain('node scripts/enterprise/build-repository-control-evidence.mjs');
+    expect(workflow).toContain('node scripts/enterprise/run-repository-control-evidence-for-scorecard.mjs');
+    expect(aggregationWrapper).toContain('scripts/enterprise/build-repository-control-evidence.mjs');
     expect(workflow).toContain('docs/security/evidence/runtime/security-headers-validation.json');
     expect(workflow).toContain('docs/security/evidence/runtime/no-store-validation.json');
     expect(workflow).not.toContain('rm -f docs/security/evidence/runtime/security-headers-validation.json');
