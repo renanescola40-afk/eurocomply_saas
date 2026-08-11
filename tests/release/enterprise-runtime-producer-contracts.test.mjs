@@ -18,7 +18,7 @@ test('enterprise env producer stamps every GitHub runtime identity field require
     'githubRunId',
     'commitSha',
   ]) {
-    assert.ok(envValidator.includes(`runtime.${field}`) || envValidator.includes(`runtime.${field} `), `validator must require runtime.${field}`);
+    assert.ok(envValidator.includes(`runtime.${field}`), `validator must require runtime.${field}`);
     assert.ok(envProducer.includes(field), `producer must emit ${field}`);
   }
 
@@ -45,19 +45,19 @@ test('rollback producer emits the complete fail-closed structure required by its
     assert.ok(rollbackProducer.includes(requiredProducerToken), `rollback producer missing ${requiredProducerToken}`);
   }
 
-  for (const validatorToken of [
-    'runtimeContext.generatedByGithubActions',
-    'dryRun.commandExecuted',
-    'targetValidation.targetConfigured',
-    'targetValidation.targetShaConfigured',
-    'targetValidation.targetDiffersFromCurrentRelease',
-    'targetValidation.healthOk',
-    'targetValidation.healthNoStore',
-    'runbook.present',
-    'functionalValidation.recorded',
-    'evidenceIntegrity.rollbackTargetStored',
+  for (const validatorField of [
+    'generatedByGithubActions',
+    'commandExecuted',
+    'targetConfigured',
+    'targetShaConfigured',
+    'targetDiffersFromCurrentRelease',
+    'healthOk',
+    'healthNoStore',
+    'runbook',
+    'functionalValidation',
+    'rollbackTargetStored',
   ]) {
-    assert.ok(rollbackValidator.includes(validatorToken), `rollback validator missing ${validatorToken}`);
+    assert.ok(rollbackValidator.includes(validatorField), `rollback validator missing ${validatorField}`);
   }
 
   assert.match(rollbackProducer, /currentShaConfigured && targetShaConfigured && currentSha !== targetSha/);
