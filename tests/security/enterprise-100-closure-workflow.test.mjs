@@ -42,9 +42,9 @@ test('artifact collection is restricted to authorized families and exact produce
     assert.ok(collector.includes(workflowPath), `missing producer workflow binding ${workflowPath}`);
   }
 
-  assert.match(collector, /actions\/workflows\/\$\{workflowId\}\/runs\?head_sha=\$\{targetSha\}&per_page=20/);
+  assert.match(collector, /actions\/workflows\/\$\{workflowId\}\/runs\?status=completed&head_sha=\$\{targetSha\}&per_page=\$\{RECENT_COMPLETED_RUN_WINDOW\}/);
   assert.match(collector, /run\?\.path !== spec\.workflowPath/);
-  assert.match(collector, /WORKFLOW_RUN_INVENTORY_TRUNCATED/);
+  assert.match(collector, /RECENT_RUN_WINDOW_EXHAUSTED/);
   assert.match(collector, /RUN_ARTIFACT_INVENTORY_TRUNCATED/);
 });
 
@@ -52,7 +52,7 @@ test('GitHub API failures cannot be converted into a synthetic zero-evidence clo
   assert.match(collector, /GITHUB_API_RATE_LIMITED/);
   assert.match(collector, /InfrastructureBlocked/);
   assert.match(collector, /refusing to reinterpret infrastructure failure as missing evidence/);
-  assert.match(collector, /A zero artifact count is emitted only after every authorized workflow-scoped GitHub API inventory completed successfully/);
+  assert.match(collector, /A zero artifact result for a producer is emitted only after its complete returned exact-SHA completed-run inventory was inspected/);
 });
 
 test('human legal and conversation closeout producers trigger exact-SHA reevaluation', () => {
