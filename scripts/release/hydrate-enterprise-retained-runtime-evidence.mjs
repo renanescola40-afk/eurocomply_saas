@@ -103,9 +103,19 @@ function normalize(value) {
   return String(value ?? '').trim();
 }
 
+function safeFailureCode(error) {
+  const raw = error instanceof Error ? error.message : String(error ?? 'unknown_error');
+  const code = raw.split(':')[0].trim();
+  return /^[A-Za-z0-9_.-]+$/.test(code) ? code : 'producer_evidence_invalid';
+}
+
+async function clearEvidencePaths(root, paths) {
+  await Promise.all(paths.map((relativePath) => rm(join(root, relativePath), { force: true })));
+}
+
 async function clearRepositorySnapshots(root) {
   const paths = [...new Set(RETAINED_RUNTIME_PRODUCERS.flatMap((producer) => producer.evidencePaths))];
-  await Promise.all(paths.map((relativePath) => rm(join(root, relativePath), { force: true })));
+  await clearEvidencePaths(root, paths);
   return paths;
 }
 
@@ -117,6 +127,7 @@ export async function hydrateEnterpriseRetainedRuntimeEvidence({
   sourceWorkflowName = '',
   sourceWorkflowPath = '',
   sourceRunId = '',
+  optionalProducerErrorsAsMissing = false,
   fetchers = DEFAULT_FETCHERS,
 }) {
   const normalizedTargetSha = normalize(targetSha).toLowerCase();
@@ -151,14 +162,34 @@ export async function hydrateEnterpriseRetainedRuntimeEvidence({
     const fetcher = fetchers?.[producer.key];
     if (typeof fetcher !== 'function') throw new Error(`fetcher_missing_${producer.key}`);
     const isTriggerSource = triggeredProducer?.key === producer.key;
-    const result = await fetcher({
-      root,
-      repository,
-      token,
-      targetSha: normalizedTargetSha,
-      sourceRunId: isTriggerSource ? normalizedSourceRunId : '',
-      required: isTriggerSource,
-    });
+    let result;
+
+    try {
+      result = await fetcher({
+        root,
+        repository,
+        token,
+        targetSha: normalizedTargetSha,
+        sourceRunId: isTriggerSource ? normalizedSourceRunId : '',
+        required: isTriggerSource,
+      });
+    } catch (error) {
+      await clearEvidencePaths(root, producer.evidencePaths);
+      if (isTriggerSource || !optionalProducerErrorsAsMissing) throw error;
+      results.push({
+        key: producer.key,
+        workflowName: producer.workflowName,
+        workflowPath: producer.workflowPath,
+        evidencePaths: [...producer.evidencePaths],
+        triggerSource: false,
+        found: false,
+        sourceRunId: null,
+        artifactId: null,
+        reason: `producer_validation_error:${safeFailureCode(error)}`,
+      });
+      continue;
+    }
+
     results.push({
       key: producer.key,
       workflowName: producer.workflowName,
@@ -185,6 +216,8 @@ export async function hydrateEnterpriseRetainedRuntimeEvidence({
     producerCount: RETAINED_RUNTIME_PRODUCERS.length,
     hydratedProducerCount: results.filter((result) => result.found).length,
     missingProducerCount: results.filter((result) => !result.found).length,
+    producerValidationErrorCount: results.filter((result) => String(result.reason || '').startsWith('producer_validation_error:')).length,
+    optionalProducerErrorsAsMissing: Boolean(optionalProducerErrorsAsMissing),
     clearedRepositorySnapshotPaths: clearedPaths,
     producers: results,
     evidenceIntegrity: {
@@ -195,8 +228,11 @@ export async function hydrateEnterpriseRetainedRuntimeEvidence({
       repositorySnapshotsClearedBeforeHydration: true,
       statusPromotionPerformedByHydrator: false,
       triggerAuthorizationUsesStableWorkflowPath: Boolean(normalizedSourceWorkflowPath),
+      optionalProducerErrorsCanBeReportedAsMissingOnlyInDiagnosticMode: true,
     },
-    truthBoundary: 'This fan-in only restores evidence that each dedicated producer fetcher independently validates for the exact target SHA and approved workflow provenance. Workflow-run trigger authorization uses an allowlisted stable workflow path rather than a mutable run-name. Missing proofs remain missing, failed producer runs are not converted into successful evidence, repository snapshots are cleared before retrieval, and downstream release validators remain authoritative for PASS/GO decisions.',
+    truthBoundary: optionalProducerErrorsAsMissing
+      ? 'Diagnostic mode restores only evidence independently validated for the exact target SHA. Invalid optional producer artifacts are cleared and reported as missing rather than aborting the diagnostic report; they receive no PASS credit. Trigger-bound producers remain fail-closed. This mode must not be used to weaken a release gate.'
+      : 'This fan-in only restores evidence that each dedicated producer fetcher independently validates for the exact target SHA and approved workflow provenance. Workflow-run trigger authorization uses an allowlisted stable workflow path rather than a mutable run-name. Missing proofs remain missing, failed producer runs are not converted into successful evidence, repository snapshots are cleared before retrieval, and downstream release validators remain authoritative for PASS/GO decisions.',
   };
 
   const manifestPath = join(root, MANIFEST_PATH);
@@ -215,11 +251,14 @@ async function main() {
     sourceWorkflowName: process.env.RETAINED_PROOF_SOURCE_WORKFLOW || '',
     sourceWorkflowPath: process.env.RETAINED_PROOF_SOURCE_WORKFLOW_PATH || '',
     sourceRunId: process.env.RETAINED_PROOF_SOURCE_RUN_ID || '',
+    optionalProducerErrorsAsMissing: process.env.RETAINED_PROOF_OPTIONAL_ERRORS_AS_MISSING === 'true',
   });
   console.log(JSON.stringify({
     targetSha: manifest.targetSha,
     hydratedProducerCount: manifest.hydratedProducerCount,
     missingProducerCount: manifest.missingProducerCount,
+    producerValidationErrorCount: manifest.producerValidationErrorCount,
+    optionalProducerErrorsAsMissing: manifest.optionalProducerErrorsAsMissing,
     sourceWorkflowName: manifest.sourceWorkflowName,
     sourceWorkflowPath: manifest.sourceWorkflowPath,
   }, null, 2));

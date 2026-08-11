@@ -10,8 +10,11 @@ on:
       - main
     paths:
       - 'scripts/security/*p0-runtime*'
+      - 'scripts/enterprise/fetch-production-gate-p0-evidence.mjs'
+      - 'scripts/release/hydrate-enterprise-retained-runtime-evidence.mjs'
       - 'tests/security/*p0-runtime*'
       - 'tests/security/p0-register-source-of-truth-contract.test.ts'
+      - 'tests/enterprise/p0-*.test.mjs'
       - 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md'
       - 'docs/security/evidence/runtime/**'
       - 'docs/security/evidence/schemas/p0-runtime-evidence-register.schema.json'
@@ -21,6 +24,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: p0-runtime-gap-report-${{ github.event.pull_request.head.sha || github.sha }}
@@ -62,12 +66,29 @@ jobs:
 
       - name: Run focused P0 source-of-truth contracts
         run: |
+          node --check scripts/enterprise/fetch-production-gate-p0-evidence.mjs
+          node --check scripts/release/hydrate-enterprise-retained-runtime-evidence.mjs
           node --test \
             tests/security/generate-p0-runtime-evidence-register.test.mjs \
-            tests/security/validate-generated-p0-runtime-evidence-register.test.mjs
+            tests/security/validate-generated-p0-runtime-evidence-register.test.mjs \
+            tests/enterprise/p0-retained-runtime-hydration.test.mjs \
+            tests/enterprise/p0-production-gate-evidence-hydration.test.mjs
           npx vitest run \
             scripts/security/report-p0-runtime-evidence-gap.test.mjs \
             tests/security/p0-register-source-of-truth-contract.test.ts
+
+      - name: Hydrate retained exact-SHA producer evidence for diagnostics
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+          RETAINED_PROOF_OPTIONAL_ERRORS_AS_MISSING: 'true'
+        run: node scripts/release/hydrate-enterprise-retained-runtime-evidence.mjs
+
+      - name: Hydrate exact-SHA Enterprise Production Gate evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+        run: node scripts/enterprise/fetch-production-gate-p0-evidence.mjs
 
       - name: Generate exact-SHA gap report and register
         run: |
@@ -79,6 +100,8 @@ jobs:
             --sha="$ASSESSED_SHA" \
             --output-dir="$output" \
             > "$output/generator-output.json"
+          cp release-validation/retained-runtime-evidence-hydration.json "$output/"
+          cp release-validation/p0-production-gate-evidence-hydration.json "$output/"
 
       - name: Validate generated register and schema syntax
         run: |
@@ -100,14 +123,19 @@ jobs:
           node --input-type=module <<'NODE' >> "$GITHUB_STEP_SUMMARY"
           import { readFileSync } from 'node:fs';
           const register = JSON.parse(readFileSync('artifacts/p0-runtime-evidence-register/p0-runtime-evidence-register.json', 'utf8'));
+          const retained = JSON.parse(readFileSync('release-validation/retained-runtime-evidence-hydration.json', 'utf8'));
+          const productionGate = JSON.parse(readFileSync('release-validation/p0-production-gate-evidence-hydration.json', 'utf8'));
           console.log('## P0 runtime evidence source of truth');
           console.log('');
           console.log(`- Exact SHA: \`${register.commitSha}\``);
           console.log(`- Decision: **${register.decision}**`);
           console.log(`- Completion: **${register.completed}/${register.total} (${register.completionPercent}%)**`);
           console.log(`- Blocking controls: **${register.blocked}**`);
+          console.log(`- Retained exact-SHA producers hydrated: **${retained.hydratedProducerCount}/${retained.producerCount}**`);
+          console.log(`- Invalid optional producer artifacts kept as missing: **${retained.producerValidationErrorCount}**`);
+          console.log(`- Production Gate exact-SHA P0 documents hydrated: **${productionGate.hydratedEvidence}/${productionGate.expectedEvidence}**`);
           console.log('');
-          console.log('Versioned Markdown statuses are advisory only; canonical validators determine the result.');
+          console.log('Versioned Markdown statuses are advisory only; canonical validators and exact-SHA artifact provenance determine the result.');
           NODE
 
       - name: Upload immutable P0 register artifact

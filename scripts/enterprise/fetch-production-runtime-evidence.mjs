@@ -238,7 +238,7 @@ export async function fetchProductionRuntimeEvidence({
   try {
     runs = sourceRunId
       ? [await githubJson(`https://api.github.com/repos/${repository}/actions/runs/${sourceRunId}`, token)]
-      : (await githubJson(`https://api.github.com/repos/${repository}/actions/workflows/${WORKFLOW_FILE}/runs?status=success&branch=main&per_page=100`, token)).workflow_runs;
+      : (await githubJson(`https://api.github.com/repos/${repository}/actions/workflows/${WORKFLOW_FILE}/runs?status=success&branch=main&head_sha=${encodeURIComponent(targetSha)}&per_page=20`, token)).workflow_runs;
   } catch (error) {
     if (isOptionalWorkflowUnavailable(error, { required, sourceRunId })) {
       console.log(`Production runtime workflow is not registered on main yet; evidence remains NOT_VERIFIED for ${targetSha}.`);
