@@ -47,7 +47,10 @@ jobs:
         with:
           category: '/language:${{ matrix.language }}'
           output: codeql-results
-          upload: ${{ github.event_name == 'pull_request' && 'never' || 'always' }}
+          # Keep the supported default upload path on pull requests as well as main.
+          # CodeQL Action v4 post-processes SARIF even when upload is disabled, and
+          # disabling PR upload can make result interpretation query a missing PR ref.
+          upload: always
 
       - name: Preserve CodeQL SARIF for pull requests
         if: github.event_name == 'pull_request'

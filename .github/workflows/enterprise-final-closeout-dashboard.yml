@@ -65,10 +65,12 @@ jobs:
 
       - name: Run focused contract tests
         run: |
+          node --check scripts/enterprise/collect-github-exact-sha-artifacts.mjs
           node --check scripts/enterprise/hydrate-exact-sha-evidence.mjs
           node --test \
             tests/enterprise/final-closeout-dashboard.test.mjs \
             tests/enterprise/exact-sha-evidence-hydration.test.mjs \
+            tests/enterprise/github-exact-sha-artifact-collector.test.mjs \
             tests/security/enterprise-final-closeout-workflow.test.mjs
 
       - name: Validate target SHA is immutable main lineage
@@ -90,34 +92,14 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: bash
         run: |
           set -euo pipefail
           rm -rf "$RETAINED_ARTIFACT_ROOT" "$HYDRATED_EVIDENCE_ROOT"
           mkdir -p "$RETAINED_ARTIFACT_ROOT" "$HYDRATED_EVIDENCE_ROOT"
-          collected=0
-
-          while IFS=$'\t' read -r artifact_id artifact_name expired artifact_sha; do
-            test "$expired" = 'false' || continue
-            test "$artifact_sha" = "$TARGET_SHA" || continue
-            case "$artifact_name" in
-              enterprise-final-closeout-dashboard-*|enterprise-100-closure-*) continue ;;
-            esac
-
-            safe_name="$(printf '%s' "$artifact_name" | tr -cs 'A-Za-z0-9._-' '_')"
-            destination="$RETAINED_ARTIFACT_ROOT/${artifact_id}-${safe_name}"
-            archive="${destination}.zip"
-            mkdir -p "$destination"
-            gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "$archive"
-            unzip -oq "$archive" -d "$destination"
-            rm -f "$archive"
-            collected=$((collected + 1))
-          done < <(
-            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
-              --jq '.artifacts[] | [.id, .name, .expired, .workflow_run.head_sha] | @tsv'
-          )
-
-          echo "Collected ${collected} retained artifact(s) for exact SHA ${TARGET_SHA}."
+          node scripts/enterprise/collect-github-exact-sha-artifacts.mjs \
+            dashboard \
+            "$TARGET_SHA" \
+            "$RETAINED_ARTIFACT_ROOT"
 
       - name: Hydrate exact-SHA evidence root
         if: github.event_name != 'pull_request'
@@ -146,6 +128,15 @@ jobs:
         if: always()
         shell: bash
         run: |
+          collection_manifest="$RETAINED_ARTIFACT_ROOT/github-exact-sha-artifact-collection.json"
+          if [ -f "$collection_manifest" ]; then
+            {
+              echo '## Exact-SHA retained artifact collection'
+              echo
+              jq -r '"- Status: \(.status)\n- Collected artifacts: \(.collectedArtifactCount)\n- Authorized producers: \(.producerCount)\n- Infrastructure error: \(.errorCode // \"none\")"' "$collection_manifest"
+              echo
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ -f artifacts/enterprise-final-closeout/final-closeout-dashboard.md ]; then
             cat artifacts/enterprise-final-closeout/final-closeout-dashboard.md >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -166,6 +157,7 @@ jobs:
           name: enterprise-final-closeout-dashboard-${{ env.TARGET_SHA }}
           path: |
             artifacts/enterprise-final-closeout
+            artifacts/exact-sha-retained-artifacts/github-exact-sha-artifact-collection.json
             artifacts/exact-sha-evidence-root/exact-sha-evidence-hydration.json
           if-no-files-found: error
           retention-days: 90

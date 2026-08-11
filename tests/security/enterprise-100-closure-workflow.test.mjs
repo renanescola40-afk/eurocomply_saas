@@ -5,6 +5,8 @@ import test from 'node:test';
 const workflow = readFileSync('.github/workflows/enterprise-100-closure.yml', 'utf8');
 const checker = readFileSync('scripts/release/check-enterprise-100-closure.mjs', 'utf8');
 const hydrator = readFileSync('scripts/release/hydrate-enterprise-100-evidence.mjs', 'utf8');
+const collector = readFileSync('scripts/enterprise/collect-github-exact-sha-artifacts.mjs', 'utf8');
+const stripePromotionFetcher = readFileSync('scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs', 'utf8');
 
 test('Enterprise 100 fan-in remains read-only and immutable-action pinned', () => {
   assert.match(workflow, /permissions:\n  contents: read\n  actions: read/);
@@ -15,37 +17,58 @@ test('Enterprise 100 fan-in remains read-only and immutable-action pinned', () =
   assert.doesNotMatch(workflow, /continue-on-error/);
 });
 
-test('fan-in accepts only retained artifacts bound to the exact closure SHA', () => {
-  assert.match(workflow, /\.workflow_run\.head_sha/);
-  assert.match(workflow, /test "\$artifact_sha" = "\$ENTERPRISE_CLOSURE_EXPECTED_SHA"/);
+test('fan-in delegates exact-SHA artifact collection to the fail-closed collector', () => {
+  assert.match(workflow, /collect-github-exact-sha-artifacts\.mjs \\\n            enterprise-100/);
+  assert.match(workflow, /github-exact-sha-artifact-collection\.json/);
   assert.match(workflow, /HYDRATED_CLOSURE_ROOT: artifacts\/enterprise-100-evidence-root/);
   assert.match(workflow, /hydrate-enterprise-100-evidence\.mjs/);
   assert.match(workflow, /ENTERPRISE_CLOSURE_EVIDENCE_ROOTS/);
+  assert.doesNotMatch(workflow, /gh api --paginate "repos\/\$\{GITHUB_REPOSITORY\}\/actions\/artifacts\?per_page=100"/);
 });
 
-test('artifact downloads are restricted to authorized evidence families and producer workflow paths', () => {
+test('artifact collection is restricted to authorized families and exact producer workflows', () => {
   const expectedPairs = new Map([
-    ['enterprise-production-final-evidence-', '.github/workflows/enterprise-production-gate.yml'],
-    ['enterprise-recovery-', '.github/workflows/enterprise-recovery-drill.yml'],
-    ['enterprise-runtime-closeout-', '.github/workflows/enterprise-runtime-evidence-closeout.yml'],
-    ['enterprise-readiness-scorecard-', '.github/workflows/enterprise-readiness-scorecard.yml'],
+    ['enterprise-production-final-evidence-*', '.github/workflows/enterprise-production-gate.yml'],
+    ['enterprise-recovery-*', '.github/workflows/enterprise-recovery-drill.yml'],
+    ['enterprise-runtime-closeout-*', '.github/workflows/enterprise-runtime-evidence-closeout.yml'],
+    ['enterprise-readiness-scorecard-*', '.github/workflows/enterprise-readiness-scorecard.yml'],
     ['stripe-billing-validation', '.github/workflows/stripe-runtime-proof.yml'],
-    ['supabase-production-migration-dry-run-', '.github/workflows/supabase-production-migration-dry-run.yml'],
-    ['final-legal-publication-gate-', '.github/workflows/final-legal-publication-gate.yml'],
-    ['enterprise-conversation-runtime-closeout-', '.github/workflows/enterprise-conversation-runtime-closeout.yml'],
+    ['supabase-production-migration-dry-run-*', '.github/workflows/supabase-production-migration-dry-run.yml'],
+    ['final-legal-publication-gate-*', '.github/workflows/final-legal-publication-gate.yml'],
+    ['enterprise-conversation-runtime-closeout-*', '.github/workflows/enterprise-conversation-runtime-closeout.yml'],
   ]);
 
   for (const [artifactPattern, workflowPath] of expectedPairs) {
-    assert.ok(workflow.includes(artifactPattern), `missing artifact allowlist pattern ${artifactPattern}`);
-    assert.ok(workflow.includes(workflowPath), `missing producer workflow binding ${workflowPath}`);
+    assert.ok(collector.includes(artifactPattern), `missing artifact allowlist pattern ${artifactPattern}`);
+    assert.ok(collector.includes(workflowPath), `missing producer workflow binding ${workflowPath}`);
   }
 
-  assert.match(workflow, /\.workflow_run\.id\] \| @tsv/);
-  assert.match(workflow, /actions\/runs\/\$\{source_run_id\}/);
-  assert.match(workflow, /actual_workflow_path/);
-  assert.match(workflow, /actual_workflow_path" != "\$expected_workflow_path/);
-  assert.match(workflow, /rejected_producer/);
-  assert.match(workflow, /\*\) continue ;;/);
+  assert.match(collector, /actions\/workflows\/\$\{workflowId\}\/runs\?status=completed&head_sha=\$\{targetSha\}&per_page=\$\{RECENT_COMPLETED_RUN_WINDOW\}/);
+  assert.match(collector, /run\?\.path !== spec\.workflowPath/);
+  assert.match(collector, /RECENT_RUN_WINDOW_EXHAUSTED/);
+  assert.match(collector, /RUN_ARTIFACT_INVENTORY_TRUNCATED/);
+});
+
+test('promoted Stripe runtime proof is the only Stripe document eligible for billing hydration', () => {
+  assert.match(workflow, /- 'Stripe Runtime Evidence Promotion'/);
+  assert.doesNotMatch(workflow, /- 'Stripe Runtime Proof'/);
+  assert.match(workflow, /fetch-stripe-promoted-runtime-evidence\.mjs/);
+  assert.match(workflow, /STRIPE_RUNTIME_EVIDENCE_REQUIRED: 'false'/);
+  assert.match(workflow, /find "\$RETAINED_ARTIFACT_ROOT" -type f -name 'stripe-billing-validation\.json'/);
+  assert.match(workflow, /\$\{legacy\}\.legacy-open-ignored/);
+  assert.match(workflow, /authoritative-stripe-promotion/);
+  assert.match(stripePromotionFetcher, /WORKFLOW_FILE = 'stripe-runtime-evidence-promotion\.yml'/);
+  assert.match(stripePromotionFetcher, /evidence\?\.id !== 'stripe-entitlement-runtime-proof'/);
+  assert.match(stripePromotionFetcher, /evidence\?\.status !== 'Complete' \|\| evidence\?\.outcome !== 'passed'/);
+  assert.match(stripePromotionFetcher, /expectedCommitSha: targetSha/);
+  assert.match(stripePromotionFetcher, /stripe-runtime-evidence-promoted-\$\{targetSha\}/);
+});
+
+test('GitHub API failures cannot be converted into a synthetic zero-evidence closure', () => {
+  assert.match(collector, /GITHUB_API_RATE_LIMITED/);
+  assert.match(collector, /InfrastructureBlocked/);
+  assert.match(collector, /refusing to reinterpret infrastructure failure as missing evidence/);
+  assert.match(collector, /A zero artifact result for a producer is emitted only after its complete returned exact-SHA completed-run inventory was inspected/);
 });
 
 test('human legal and conversation closeout producers trigger exact-SHA reevaluation', () => {
