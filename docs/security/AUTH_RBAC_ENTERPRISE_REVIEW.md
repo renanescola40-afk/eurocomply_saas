@@ -7,12 +7,12 @@
 
 RISCK COMPLY standardizes the active identity path on Supabase Auth. Browser state is not an authorization authority: server-side Supabase identity, `organization_members.user_id`, permission checks and Postgres RLS remain the security boundary.
 
-The protected `Auth RBAC Tenant Proof` now separates two evidence domains:
+The protected `Auth RBAC Tenant Proof` separates two evidence domains:
 
 1. **Core Auth/RBAC proof** — password login, session refresh/revocation, expected roles, same-tenant access, cross-tenant read/mutation denial and same-run cleanup.
 2. **Disposable identity journey** — real public Supabase signup followed by atomic organization creation and onboarding activation for a synthetic no-organization user, followed by verified same-run cleanup.
 
-A failed disposable signup/onboarding journey cannot erase an already-valid core RBAC proof. Conversely, the scorecard cannot promote signup or onboarding from static inspection or from the core proof alone.
+A failed or undispatched disposable signup/onboarding journey cannot erase an already-valid core RBAC proof. Conversely, the scorecard cannot promote signup or onboarding from static inspection or from the core proof alone.
 
 ## Chosen stack
 
@@ -50,10 +50,10 @@ A failed disposable signup/onboarding journey cannot erase an already-valid core
 | Session refresh and logout/revocation work | protected disposable Auth/RBAC runtime proof | Runtime provable |
 | Owner/member RBAC works | protected disposable Auth/RBAC runtime proof | Runtime provable |
 | Cross-tenant read and mutation isolation works | protected disposable Auth/RBAC runtime proof | Runtime provable |
-| Public signup works | `auth.signUp` in bounded disposable identity journey | Runtime provable after protected run |
-| New user starts without organization scope | disposable identity journey queries membership before creation | Runtime provable after protected run |
-| Organization creates owner membership atomically | `create_organization_with_owner_atomic` | Runtime provable after protected run |
-| Onboarding activation completes atomically | `complete_onboarding_activation_atomic` | Runtime provable after protected run |
+| Public signup works | `auth.signUp` in manually confirmed disposable identity journey | Runtime provable after confirmed run |
+| New user starts without organization scope | disposable identity journey queries membership before creation | Runtime provable after confirmed run |
+| Organization creates owner membership atomically | `create_organization_with_owner_atomic` | Runtime provable after confirmed run |
+| Onboarding activation completes atomically | `complete_onboarding_activation_atomic` | Runtime provable after confirmed run |
 | Signup/onboarding fixtures are removed | exact-ID/user cleanup plus absence verification | Required for promotion |
 | Google OAuth callback round trip works | real provider callback journey | **NOT_VERIFIED** until executed |
 
@@ -77,10 +77,22 @@ The workflow is exact-current-main bound and runs in the protected `production` 
 
 The core `checks` object remains authoritative for the existing Auth/RBAC proof. Every core check and cleanup check must pass before the source evidence can be `Complete/passed`.
 
+The core proof remains eligible to run automatically on `main` as before. Its result is not downgraded merely because the additional signup/onboarding journey has not been authorized or has not passed.
+
 ### Signup/onboarding journey
 
-`identityJourney` is independently bounded. A scorecard promotion requires:
+The public signup/onboarding subproof is **manual-only** because it creates disposable production identities/tenant rows and the public signup path may involve provider-side email behavior.
 
+It can execute only through `workflow_dispatch` with the exact confirmation literal:
+
+`PROVE_SIGNUP_ONBOARDING_RUNTIME`
+
+A normal `main` push sets the journey to `Open/blocked` with a redacted confirmation-required reason and performs no public signup/onboarding journey. The literal itself is not written to retained evidence; only a boolean `identityJourneyExplicitlyConfirmed` is retained.
+
+When explicitly confirmed, `identityJourney` is independently bounded. Scorecard promotion requires:
+
+- exact-current-main SHA binding;
+- explicit operator confirmation recorded as a boolean;
 - real `auth.signUp` success;
 - signup session termination where a session is issued;
 - a user initially without organization membership;
@@ -135,7 +147,7 @@ npm run security:ci
 npm run release:enterprise-readiness
 ```
 
-Protected runtime promotion additionally requires the exact-current-main `Auth RBAC Tenant Proof` artifact to pass its source and scorecard validators.
+Protected runtime promotion additionally requires the exact-current-main `Auth RBAC Tenant Proof` artifact to pass its source and scorecard validators. Signup/onboarding promotion additionally requires the explicitly confirmed manual journey described above.
 
 ## Known remaining risks / external evidence
 
@@ -148,4 +160,4 @@ Protected runtime promotion additionally requires the exact-current-main `Auth R
 
 **No-Go for Enterprise 100 until every canonical runtime and external gate passes.**
 
-A successful disposable signup/onboarding journey may close the `signup` and `organizationOnboarding` scorecard controls. It must not promote `oauthCallback`, Step-Up, provider governance, Stripe runtime evidence, branch governance, pentest or legal review.
+A successful explicitly confirmed disposable signup/onboarding journey may close the `signup` and `organizationOnboarding` scorecard controls. It must not promote `oauthCallback`, Step-Up, provider governance, Stripe runtime evidence, branch governance, pentest or legal review.
