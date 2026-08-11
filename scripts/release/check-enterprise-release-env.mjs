@@ -23,6 +23,29 @@ function group(name, required, passed, detail, remediation) {
   return { name, required, passed: Boolean(passed), detail, remediation };
 }
 
+function githubRuntimeContext() {
+  const githubRunId = String(process.env.GITHUB_RUN_ID || '').trim() || null;
+  const githubRunAttempt = String(process.env.GITHUB_RUN_ATTEMPT || '').trim() || null;
+  const repository = String(process.env.GITHUB_REPOSITORY || '').trim() || null;
+  const branch = String(process.env.GITHUB_REF_NAME || '').trim() || null;
+  const generatedByGithubActions = process.env.GITHUB_ACTIONS === 'true'
+    && Boolean(githubRunId)
+    && Boolean(repository)
+    && Boolean(branch);
+
+  return {
+    generatedByGithubActions,
+    repository,
+    branch,
+    commitSha,
+    buildSha,
+    githubRunId,
+    githubRunAttempt,
+    githubWorkflow: String(process.env.GITHUB_WORKFLOW || '').trim() || null,
+    githubEventName: String(process.env.GITHUB_EVENT_NAME || '').trim() || null,
+  };
+}
+
 const stripePricePrimary = ['STRIPE_PRICE_STARTER_MONTHLY', 'STRIPE_PRICE_GROWTH_MONTHLY', 'STRIPE_PRICE_ENTERPRISE_MONTHLY'];
 const stripePriceLegacyGroups = [
   ['STRIPE_PRICE_ESSENTIAL_MONTHLY'],
@@ -81,9 +104,10 @@ const checks = [
 const failedChecks = checks.filter((check) => check.required && !check.passed);
 const failures = failedChecks.map((check) => check.name);
 const outcome = failures.length === 0 ? 'passed' : 'failed';
+const runtimeContext = githubRuntimeContext();
 
 const evidence = {
-  schema: 'risck-comply.enterprise-release-env-readiness.v1',
+  schema: 'risck-comply.enterprise-release-env-readiness.v2',
   evidenceItem: 'enterprise-release-env-readiness',
   status: outcome === 'passed' ? 'Complete' : 'Open',
   outcome,
@@ -107,6 +131,7 @@ const evidence = {
   ],
   commitSha,
   buildSha,
+  runtimeContext,
   commandsExecuted: ['node scripts/release/check-enterprise-release-env.mjs'],
   controlsVerified: outcome === 'passed' ? checks.filter((check) => check.required && check.passed).map((check) => check.name) : [],
   checks,
@@ -125,6 +150,7 @@ const evidence = {
     cookiesStored: false,
     rawUrlsStored: false,
     placeholderOnly: outcome !== 'passed',
+    exactShaBound: runtimeContext.generatedByGithubActions && Boolean(commitSha),
   },
   releaseGate: outcome === 'passed'
     ? 'Enterprise release env preflight passed. Runtime smoke must still prove services are reachable.'

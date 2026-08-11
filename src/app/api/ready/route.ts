@@ -34,7 +34,10 @@ const REQUIRED_ENV_GROUPS = {
   sentry: ['NEXT_PUBLIC_SENTRY_DSN'],
 } as const;
 
-const READINESS_DEPENDENCY_TIMEOUT_MS = 1_500;
+// Production provider calls can legitimately exceed 1.5s during cold/network paths.
+// Keep the probe bounded and fail-closed, but allow enough time to distinguish
+// normal provider latency from an unavailable dependency.
+const READINESS_DEPENDENCY_TIMEOUT_MS = 5_000;
 const STRIPE_READINESS_TIMEOUT_MS = READINESS_DEPENDENCY_TIMEOUT_MS;
 const TEST_PLACEHOLDER_VALUE = 'configured';
 // SENTRY_ORG, SENTRY_PROJECT and SENTRY_AUTH_TOKEN are build/control-plane

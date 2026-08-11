@@ -146,7 +146,7 @@ function request(url, options = {}) {
       timeout: timeoutMs,
       headers: {
         Accept: accept,
-        'User-Agent': 'risck-comply-release-smoke/3.0',
+        'User-Agent': 'risck-comply-release-smoke/4.0',
         ...headers,
       },
     };
@@ -283,9 +283,11 @@ async function smoke(baseUrl) {
   checks.push(createCheck('readyEndpointDoesNotExposeSecrets', readyEvidenceIsRedacted(readyAuthenticated.body), { valuesRedacted: true }));
   checks.push(createCheck('supabaseEnvironmentConfigured', readyGroupConfigured(readyAuthenticated.body, 'supabase'), { group: readyGroup(readyAuthenticated.body, 'supabase') ?? null }));
   checks.push(createCheck('stripeEnvironmentConfigured', readyGroupConfigured(readyAuthenticated.body, 'stripe'), { group: readyGroup(readyAuthenticated.body, 'stripe') ?? null }));
+  checks.push(createCheck('redisEnvironmentConfigured', readyGroupConfigured(readyAuthenticated.body, 'redis'), { group: readyGroup(readyAuthenticated.body, 'redis') ?? null }));
   checks.push(createCheck('stripeApiReachable', readyAuthenticated.body?.checks?.stripeApiReachable === true, { stripe: readyAuthenticated.body?.stripe ?? null }));
   checks.push(createCheck('sentryObservabilityConfigured', readyAuthenticated.body?.checks?.sentryObservabilityConfigured === true, { group: readyGroup(readyAuthenticated.body, 'sentry') ?? null }));
   checks.push(createCheck('databaseReachable', readyAuthenticated.body?.checks?.databaseReachable === true, { database: readyAuthenticated.body?.database ?? null }));
+  checks.push(createCheck('enterpriseStepUpReady', readyAuthenticated.body?.checks?.enterpriseStepUpConfigured === true, { enterpriseStepUp: readyAuthenticated.body?.enterpriseStepUp ?? null }));
   checks.push(createCheck('enterpriseStorageScannerReady', readyAuthenticated.body?.checks?.enterpriseStorageScannerConfigured === true, { enterpriseStorageScanner: readyAuthenticated.body?.enterpriseStorageScanner ?? null }));
 
   const protectedRoutes = [
@@ -430,8 +432,8 @@ const evidence = {
   commitSha: metadata.commit?.sha ?? null,
   buildSha: metadata.build?.sha ?? null,
   summary: outcome === 'passed'
-    ? 'Production deployment smoke passed across public launch pages, protected routes, security headers, no-store controls, readiness, Stripe/Supabase/Sentry checks, rollback target, and build metadata.'
-    : 'Production deployment smoke is missing or failed; release remains blocked.',
+    ? 'Production deployment smoke passed across public launch pages, protected routes, security headers, no-store controls, readiness dependency domains, rollback target, and build metadata.'
+    : 'Production deployment smoke is missing or failed; release remains blocked with safe per-domain readiness diagnostics.',
   redactionConfirmation: 'Redaction confirmed: no token, cookie, authorization header, secret value, or secret environment variable name is written to this evidence file.',
   evidenceLocations: [
     'scripts/release/run-deployment-smoke.mjs',
@@ -477,5 +479,3 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-
-console.log('Deployment smoke validation passed.');

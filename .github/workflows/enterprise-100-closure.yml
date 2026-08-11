@@ -8,12 +8,15 @@ on:
       - 'scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs'
       - 'scripts/release/check-enterprise-100-closure.mjs'
       - 'scripts/release/hydrate-enterprise-100-evidence.mjs'
+      - 'scripts/supabase/write-rls-reconciliation-closure-evidence.mjs'
+      - 'scripts/supabase/write-rls-reconciliation-closure-evidence.test.mjs'
       - 'tests/enterprise-100-closure.test.ts'
       - 'tests/enterprise/enterprise-100-evidence-hydration.test.mjs'
       - 'tests/enterprise/github-exact-sha-artifact-collector.test.mjs'
       - 'tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts'
       - 'tests/security/enterprise-100-closure-workflow.test.mjs'
       - '.github/workflows/enterprise-100-closure.yml'
+      - '.github/workflows/supabase-production-rls-reconciliation.yml'
   push:
     branches: [main]
   workflow_run:
@@ -25,6 +28,7 @@ on:
       - 'Enterprise Readiness Scorecard'
       - 'Stripe Runtime Evidence Promotion'
       - 'Supabase Production Migration Dry Run'
+      - 'Supabase Production RLS Reconciliation'
       - 'Final Legal Publication Gate'
       - 'Enterprise Conversation Runtime Closeout'
     types: [completed]
@@ -71,10 +75,12 @@ jobs:
           node --check scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs
           node --check scripts/release/check-enterprise-100-closure.mjs
           node --check scripts/release/hydrate-enterprise-100-evidence.mjs
+          node --check scripts/supabase/write-rls-reconciliation-closure-evidence.mjs
           npx vitest run \
             tests/enterprise-100-closure.test.ts \
             tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts
           node --test \
+            scripts/supabase/write-rls-reconciliation-closure-evidence.test.mjs \
             tests/enterprise/enterprise-100-evidence-hydration.test.mjs \
             tests/enterprise/github-exact-sha-artifact-collector.test.mjs \
             tests/security/enterprise-100-closure-workflow.test.mjs
@@ -88,6 +94,7 @@ jobs:
           grep -Fq 'github-exact-sha-artifact-collection.v1' scripts/enterprise/collect-github-exact-sha-artifacts.mjs
           grep -Fq 'Enterprise Production Gate' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Stripe Runtime Evidence Promotion' .github/workflows/enterprise-100-closure.yml
+          grep -Fq 'Supabase Production RLS Reconciliation' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Final Legal Publication Gate' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Enterprise Conversation Runtime Closeout' .github/workflows/enterprise-100-closure.yml
 

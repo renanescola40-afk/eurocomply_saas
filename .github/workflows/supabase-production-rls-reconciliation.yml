@@ -69,9 +69,13 @@ jobs:
             *) echo 'SUPABASE_DB_POOLER_URL must use the Supabase pooler endpoint' >&2; exit 1 ;;
           esac
 
-      - name: Test proof verifier
+      - name: Test proof and closure evidence contracts
         shell: bash
-        run: node --test scripts/supabase/verify-rls-reconciliation-proof.test.mjs
+        run: |
+          set -euo pipefail
+          node --test \
+            scripts/supabase/verify-rls-reconciliation-proof.test.mjs \
+            scripts/supabase/write-rls-reconciliation-closure-evidence.test.mjs
 
       - name: Install PostgreSQL client
         shell: bash
@@ -122,6 +126,20 @@ jobs:
           sha256sum artifacts/supabase-rls-reconciliation/* \
             > artifacts/supabase-rls-reconciliation/SHA256SUMS
 
+      - name: Emit canonical exact-SHA Enterprise 100 evidence
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          node scripts/supabase/write-rls-reconciliation-closure-evidence.mjs \
+            artifacts/supabase-rls-reconciliation/verification.json \
+            artifacts/supabase-rls-reconciliation/reconciliation-proof.txt \
+            release-validation/supabase-rls-reconciliation.json \
+            "${RELEASE_SHA,,}" \
+            "$GITHUB_RUN_ID" \
+            "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
       - name: Publish verification summary
         if: always()
         shell: bash
@@ -140,6 +158,11 @@ jobs:
             else
               echo "- Verification status: \`NOT_PRODUCED\`"
             fi
+            if [ -f release-validation/supabase-rls-reconciliation.json ]; then
+              echo "- Enterprise 100 canonical evidence: \`produced\`"
+            else
+              echo "- Enterprise 100 canonical evidence: \`not produced\`"
+            fi
             if [ -f artifacts/supabase-rls-reconciliation/reconciliation-proof.txt ]; then
               echo '- Verification evidence:'
               echo '```text'
@@ -150,9 +173,11 @@ jobs:
 
       - name: Upload immutable reconciliation evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: supabase-rls-reconciliation-${{ inputs.release_sha }}
-          path: artifacts/supabase-rls-reconciliation
+          path: |
+            artifacts/supabase-rls-reconciliation
+            release-validation/supabase-rls-reconciliation.json
           if-no-files-found: error
           retention-days: 90
