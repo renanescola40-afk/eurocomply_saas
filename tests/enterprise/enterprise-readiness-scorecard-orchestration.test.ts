@@ -52,9 +52,14 @@ describe('enterprise readiness scorecard orchestration', () => {
     expect(workflow).not.toContain("github.run_id || 'active'");
   });
 
-  it('keeps repository-control Open evidence observable without weakening integrity failures', () => {
+  it('keeps Open derived evidence observable without weakening integrity failures', () => {
     expect(workflow).toContain('node scripts/enterprise/run-repository-control-evidence-for-scorecard.mjs');
-    expect(workflow).toContain('node --test tests/enterprise/repository-control-scorecard-aggregation.test.mjs');
+    expect(workflow).toContain('tests/enterprise/repository-control-scorecard-aggregation.test.mjs');
+    expect(workflow).toContain('tests/enterprise/derived-scorecard-evidence-builder.test.mjs');
+    for (const key of ['publicUx', 'accessibilityConsent', 'accountRecovery', 'providerFailure', 'stepUp']) {
+      expect(workflow).toContain(`node scripts/enterprise/run-derived-scorecard-evidence-builder.mjs ${key}`);
+    }
+    expect(workflow).toContain('Sensitive-action step-up evidence remains NOT_VERIFIED');
     expect(workflow).not.toContain('continue-on-error');
   });
 
