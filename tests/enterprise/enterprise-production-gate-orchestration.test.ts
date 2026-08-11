@@ -24,9 +24,10 @@ describe('enterprise production gate retained-proof orchestration', () => {
   });
 
   it('binds workflow-run re-evaluation and release evidence to the producer SHA', () => {
-    expect(workflow).toContain("TARGET_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}");
-    expect(workflow).toContain('RELEASE_COMMIT_SHA: ${{ env.TARGET_SHA }}');
-    expect(workflow).toContain('RELEASE_BUILD_SHA: ${{ env.TARGET_SHA }}');
+    const directTargetExpression = '${{ github.event.workflow_run.head_sha || github.sha }}';
+    expect(workflow).toContain(`TARGET_SHA: ${directTargetExpression}`);
+    expect(workflow).toContain(`RELEASE_COMMIT_SHA: ${directTargetExpression}`);
+    expect(workflow).toContain(`RELEASE_BUILD_SHA: ${directTargetExpression}`);
     expect(workflow).toContain('ref: ${{ env.TARGET_SHA }}');
     expect(workflow).toContain('test "$(git rev-parse HEAD)" = "$TARGET_SHA"');
     expect(workflow).toContain('test "$main_sha" = "$TARGET_SHA"');
