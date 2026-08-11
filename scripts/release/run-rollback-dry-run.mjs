@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 import http from 'node:http';
 import https from 'node:https';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -32,8 +31,8 @@ function normalizeUrl(value) {
   }
 }
 
-function route(baseUrl, path) {
-  return new URL(path, `${baseUrl}/`).toString();
+function route(baseUrl, routePath) {
+  return new URL(routePath, `${baseUrl}/`).toString();
 }
 
 function headerValue(headers, name) {
@@ -73,7 +72,7 @@ function request(url, options = {}) {
       timeout: timeoutMs,
       headers: {
         Accept: accept,
-        'User-Agent': 'risck-comply-rollback-dry-run/3.0',
+        'User-Agent': 'risck-comply-rollback-dry-run/4.0',
         ...headers,
       },
     }, (response) => {
@@ -106,6 +105,28 @@ function createCheck(name, passed, details = {}, critical = true) {
   return { name, critical, passed: Boolean(passed), details };
 }
 
+function githubRuntimeContext(commitSha, buildSha) {
+  const githubRunId = String(process.env.GITHUB_RUN_ID || '').trim() || null;
+  const repository = String(process.env.GITHUB_REPOSITORY || '').trim() || null;
+  const branch = String(process.env.GITHUB_REF_NAME || '').trim() || null;
+  const generatedByGithubActions = process.env.GITHUB_ACTIONS === 'true'
+    && Boolean(githubRunId)
+    && Boolean(repository)
+    && Boolean(branch);
+
+  return {
+    generatedByGithubActions,
+    repository,
+    branch,
+    githubRunId,
+    githubRunAttempt: String(process.env.GITHUB_RUN_ATTEMPT || '').trim() || null,
+    githubWorkflow: String(process.env.GITHUB_WORKFLOW || '').trim() || null,
+    githubEventName: String(process.env.GITHUB_EVENT_NAME || '').trim() || null,
+    commitSha,
+    buildSha,
+  };
+}
+
 const targetUrlConfig = firstConfigured([
   'RELEASE_ROLLBACK_TARGET_URL',
   'RELEASE_ROLLBACK_TARGET',
@@ -127,21 +148,29 @@ const targetShaConfig = firstConfigured([
 ]);
 const targetUrl = normalizeUrl(targetUrlConfig?.value);
 const targetSha = targetShaConfig?.value || '';
-const currentSha = process.env.GITHUB_SHA || process.env.RELEASE_CURRENT_SHA || process.env.RELEASE_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || '';
+const currentSha = process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || process.env.RELEASE_CURRENT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || '';
+const buildSha = process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_SHA || process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || null;
+const currentShaConfigured = shaPattern.test(currentSha);
+const targetShaConfigured = shaPattern.test(targetSha);
+const targetDiffersFromCurrentRelease = currentShaConfigured && targetShaConfigured && currentSha !== targetSha;
+const rollbackRunbookPresent = existsSync('docs/operations/ROLLBACK_RUNBOOK.md');
 const targetValidationProof = process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true';
 
 const checks = [
   createCheck('rollbackTargetUrlConfigured', Boolean(targetUrlConfig?.value), { source: targetUrlConfig?.name ?? null }),
   createCheck('rollbackTargetUrlValid', Boolean(targetUrl), { source: targetUrlConfig?.name ?? null }),
-  createCheck('rollbackTargetShaConfigured', shaPattern.test(targetSha), {
+  createCheck('rollbackTargetShaConfigured', targetShaConfigured, {
     source: targetShaConfig?.name ?? null,
     shaPrefix: targetSha ? `${targetSha.slice(0, 12)}…` : null,
   }),
-  createCheck('rollbackTargetDiffersFromCurrentRelease', !(currentSha && currentSha === targetSha), {
-    currentShaPresent: Boolean(currentSha),
-    targetShaPresent: Boolean(targetSha),
+  createCheck('currentReleaseShaConfigured', currentShaConfigured, {
+    shaPresent: Boolean(currentSha),
   }),
-  createCheck('rollbackRunbookPresent', existsSync('docs/operations/ROLLBACK_RUNBOOK.md'), {
+  createCheck('rollbackTargetDiffersFromCurrentRelease', targetDiffersFromCurrentRelease, {
+    currentShaPresent: currentShaConfigured,
+    targetShaPresent: targetShaConfigured,
+  }),
+  createCheck('rollbackRunbookPresent', rollbackRunbookPresent, {
     path: 'docs/operations/ROLLBACK_RUNBOOK.md',
   }),
   createCheck('legacyRollbackPlanPresent', existsSync('docs/RELEASE_ROLLBACK_PLAN.md'), {
@@ -189,11 +218,18 @@ if (targetUrl && runReadyCheck && readinessToken) {
   }, false));
 }
 
+const healthOk = rollbackHealth?.status === 200 && rollbackHealth?.body?.status === 'ok';
+const healthNoStore = Boolean(rollbackHealth && hasNoStore(rollbackHealth.headers));
+const readyOk = runReadyCheck
+  ? rollbackReady?.status === 200 && rollbackReady?.body?.status === 'ready'
+  : null;
+const readyNoStore = runReadyCheck ? Boolean(rollbackReady && hasNoStore(rollbackReady.headers)) : null;
 const failures = checks.filter((check) => check.critical && !check.passed).map((check) => check.name);
 const outcome = failures.length === 0 ? 'passed' : 'failed';
+const runtimeContext = githubRuntimeContext(currentSha || null, buildSha);
 
 const evidence = {
-  schema: 'risck-comply.rollback-dry-run-validation.v2',
+  schema: 'risck-comply.rollback-dry-run-validation.v3',
   evidenceItem: 'rollback-dry-run-validation',
   status: outcome === 'passed' ? 'Complete' : 'Open',
   outcome,
@@ -202,8 +238,9 @@ const evidence = {
   reviewer: 'RISCK COMPLY release automation',
   runner: 'RISCK COMPLY release automation',
   releaseTarget: process.env.RELEASE_TARGET || 'production',
-  commitSha: process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null,
-  buildSha: process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_SHA || process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || null,
+  commitSha: currentSha || null,
+  buildSha,
+  runtimeContext,
   summary: outcome === 'passed'
     ? 'Rollback dry-run verified previous known-good metadata, public health, no-store controls, and functional validation proof without mutating production.'
     : 'Rollback dry-run evidence is incomplete or the rollback target failed runtime validation; release remains blocked.',
@@ -225,20 +262,37 @@ const evidence = {
     urlSource: targetUrlConfig?.name ?? null,
     shaSource: targetShaConfig?.name ?? null,
     shaPrefix: targetSha ? `${targetSha.slice(0, 12)}…` : null,
-    shaFullRecordedPrivately: shaPattern.test(targetSha),
+    shaFullRecordedPrivately: targetShaConfigured,
     health: rollbackHealth ? safeResponseSummary(rollbackHealth) : null,
     readinessChecked: Boolean(rollbackReady),
     readiness: rollbackReady ? safeResponseSummary(rollbackReady) : null,
   },
   dryRun: {
     mutatesProduction: false,
+    commandExecuted: true,
     commandMode: 'metadata-plus-network-health-validation',
     timeoutMs,
   },
   targetValidation: {
     passed: targetValidationProof,
+    targetConfigured: Boolean(targetUrl),
+    targetShaConfigured,
+    targetDiffersFromCurrentRelease,
+    healthOk,
+    healthNoStore,
+    readyCheckRequired: runReadyCheck,
+    readyOk,
+    readyNoStore,
     requiredEnv: 'RELEASE_ROLLBACK_TARGET_VALIDATED=true',
     note: 'This flag must only be set after manual functional validation of the previous known-good deployment.',
+  },
+  runbook: {
+    present: rollbackRunbookPresent,
+    path: 'docs/operations/ROLLBACK_RUNBOOK.md',
+  },
+  functionalValidation: {
+    recorded: targetValidationProof,
+    source: 'RELEASE_ROLLBACK_TARGET_VALIDATED',
   },
   checks,
   failures,
@@ -250,6 +304,8 @@ const evidence = {
     valuesRedacted: true,
     authorizationHeaderStored: false,
     cookiesStored: false,
+    rollbackTargetStored: false,
+    exactShaBound: runtimeContext.generatedByGithubActions && currentShaConfigured,
   },
 };
 
