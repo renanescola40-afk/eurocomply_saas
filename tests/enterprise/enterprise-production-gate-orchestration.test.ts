@@ -40,8 +40,10 @@ describe('enterprise production gate retained-proof orchestration', () => {
     expect(hydrate).toBeGreaterThan(-1);
     expect(release).toBeGreaterThan(hydrate);
     expect(workflow).toContain("RETAINED_PROOF_SOURCE_WORKFLOW: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name || '' }}");
+    expect(workflow).toContain("RETAINED_PROOF_SOURCE_WORKFLOW_PATH: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.path || '' }}");
     expect(workflow).toContain("RETAINED_PROOF_SOURCE_RUN_ID: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || '' }}");
     expect(workflow).toContain('release-validation/retained-runtime-evidence-hydration.json');
+    expect(workflow).toContain('.sourceWorkflowPath // .sourceWorkflowName // "direct gate"');
   });
 
   it('keeps the fan-in read-only and fail-closed', () => {
