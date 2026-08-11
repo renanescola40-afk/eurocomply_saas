@@ -84,6 +84,7 @@ function trustedSource(overrides: Record<string, unknown> = {}) {
       organizationIdentifiersStored: false,
       rawProviderResponsesStored: false,
       cleanupVerified: true,
+      identityJourneyExplicitlyConfirmed: true,
     },
     ...overrides,
   };
@@ -94,7 +95,7 @@ function check(document: ReturnType<typeof buildAuthRbacScorecardEvidence>, name
 }
 
 describe('canonical Auth/RBAC scorecard evidence', () => {
-  it('promotes signup and organization onboarding only from trusted cleaned-up journey evidence', () => {
+  it('promotes signup and organization onboarding only from trusted confirmed cleaned-up journey evidence', () => {
     const evidence = buildAuthRbacScorecardEvidence(trustedSource(), {
       generatedAt: '2026-07-20T01:00:00.000Z',
     });
@@ -114,6 +115,7 @@ describe('canonical Auth/RBAC scorecard evidence', () => {
     expect(check(evidence, 'oauthCallback')).toMatchObject({ name: 'oauthCallback', status: 'NOT_VERIFIED' });
     expect(evidence.productionGate).toBe('blocked');
     expect(evidence.sourceEvidence.identityJourneyTrusted).toBe(true);
+    expect(evidence.sourceEvidence.identityJourneyExplicitlyConfirmed).toBe(true);
     expect(evidence.evidenceIntegrity.exactShaBound).toBe(true);
   });
 
@@ -123,6 +125,23 @@ describe('canonical Auth/RBAC scorecard evidence', () => {
     expect(evidence.controlsVerified).toEqual([]);
     expect(evidence.sourceEvidence.trusted).toBe(false);
     expect(evidence.sourceEvidence.identityJourneyTrusted).toBe(false);
+  });
+
+  it('does not promote signup or onboarding without explicit operator confirmation', () => {
+    const baseline = trustedSource();
+    const source = trustedSource({
+      evidenceIntegrity: {
+        ...baseline.evidenceIntegrity,
+        identityJourneyExplicitlyConfirmed: false,
+      },
+    });
+    const evidence = buildAuthRbacScorecardEvidence(source);
+
+    expect(evidence.controlsVerified).toEqual(['login', 'logout', 'sessionRefresh', 'rbac']);
+    expect(check(evidence, 'signup')).toMatchObject({ name: 'signup', status: 'NOT_VERIFIED' });
+    expect(check(evidence, 'organizationOnboarding')).toMatchObject({ name: 'organizationOnboarding', status: 'NOT_VERIFIED' });
+    expect(evidence.sourceEvidence.identityJourneyTrusted).toBe(false);
+    expect(evidence.sourceEvidence.identityJourneyExplicitlyConfirmed).toBe(false);
   });
 
   it('does not promote signup or onboarding when journey cleanup is missing', () => {
