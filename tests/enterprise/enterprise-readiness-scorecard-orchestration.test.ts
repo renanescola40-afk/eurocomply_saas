@@ -40,12 +40,14 @@ describe('enterprise readiness scorecard orchestration', () => {
     }
   });
 
-  it('limits workflow-run reevaluation to main and coalesces only the same exact SHA', () => {
+  it('limits workflow-run reevaluation to main and isolates non-success producer events from active exact-SHA assessment', () => {
     expect(workflow).toMatch(/workflow_run:[\s\S]*?types: \[completed\]\n    branches: \[main\]/);
     expect(workflow).toContain(
-      'group: enterprise-readiness-scorecard-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}',
+      "group: enterprise-readiness-scorecard-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}-${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success' && github.run_id || 'active' }}",
     );
     expect(workflow).toContain('cancel-in-progress: true');
+    expect(workflow).toContain("github.event.workflow_run.conclusion != 'success'");
+    expect(workflow).toContain("github.run_id || 'active'");
     expect(workflow).not.toContain(
       'group: enterprise-readiness-scorecard-${{ github.event.workflow_run.head_sha || github.ref }}',
     );
