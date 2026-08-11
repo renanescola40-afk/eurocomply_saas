@@ -50,6 +50,7 @@ function sourceIsTrusted(source) {
 function identityJourneyIsTrusted(source, trustedSource) {
   const journey = source?.identityJourney;
   return trustedSource
+    && source?.evidenceIntegrity?.identityJourneyExplicitlyConfirmed === true
     && journey?.schema === 'risck-comply.auth-identity-journey.v1'
     && journey?.status === 'Complete'
     && journey?.outcome === 'passed'
@@ -157,6 +158,7 @@ export function buildAuthRbacScorecardEvidence(
       generatedAt: source?.generatedAt ?? null,
       githubRunId: trusted ? String(source.provenance.runId) : null,
       identityJourneyTrusted: trustedJourney,
+      identityJourneyExplicitlyConfirmed: source?.evidenceIntegrity?.identityJourneyExplicitlyConfirmed === true,
       identityJourneyStatus: journey?.status ?? null,
       identityJourneyOutcome: journey?.outcome ?? null,
     },
@@ -176,7 +178,7 @@ export function buildAuthRbacScorecardEvidence(
       'scripts/security/write-auth-rbac-scorecard-evidence.mjs',
       '.github/workflows/auth-rbac-runtime-proof.yml',
     ],
-    evidenceBoundary: 'This artifact promotes only checks explicitly proven by trusted synthetic runtime evidence. Signup and organization onboarding require the separate cleaned-up disposable identity journey. OAuth callback remains NOT_VERIFIED until a real provider callback round trip succeeds; provider configuration or static code inspection cannot promote it.',
+    evidenceBoundary: 'This artifact promotes only checks explicitly proven by trusted synthetic runtime evidence. Signup and organization onboarding require an explicitly confirmed manual disposable identity journey with verified cleanup. OAuth callback remains NOT_VERIFIED until a real provider callback round trip succeeds; provider configuration or static code inspection cannot promote it.',
     evidenceIntegrity: {
       containsSensitiveValues: false,
       runtimeProofInvented: false,
