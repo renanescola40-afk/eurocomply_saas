@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   buildProviderBlockerDiagnostics,
@@ -6,6 +7,7 @@ import {
 } from '../../scripts/security/diagnose-production-provider-blockers.mjs';
 
 const sha = 'b'.repeat(40);
+const source = readFileSync('scripts/security/diagnose-production-provider-blockers.mjs', 'utf8');
 
 describe('production provider blocker diagnostics', () => {
   it('classifies HTTP failures without response bodies or request URLs', () => {
@@ -55,6 +57,15 @@ describe('production provider blocker diagnostics', () => {
     ]);
   });
 
+  it('keeps file-derived Vercel identity out of outbound diagnostic requests', () => {
+    expect(source).not.toContain('async function probe(url');
+    expect(source).toContain("secondaryNetworkProbeScope: 'sentry-only-fixed-origin'");
+    expect(source).toContain('fileDerivedOutboundTargetsUsed: false');
+    expect(source).toContain('canonical_provider_proof_is_authoritative');
+    expect(source).toContain('https://sentry.io/api/0/projects/');
+    expect(source).not.toContain('fetch(`https://api.vercel.com');
+  });
+
   it('keeps diagnostics separate from provider PASS semantics', async () => {
     const evidence = {
       status: 'Open',
@@ -83,6 +94,7 @@ describe('production provider blocker diagnostics', () => {
       credentialsStored: false,
       requestUrlsStored: false,
       providerResponseBodiesStored: false,
+      fileDerivedOutboundTargetsUsed: false,
     });
   });
 
