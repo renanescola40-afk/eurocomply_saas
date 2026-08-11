@@ -81,6 +81,37 @@ test('hydrates only documented semantic aliases when the conceptual closure file
   assert.equal(hydrated.outcome, 'passed');
 });
 
+test('hydrates exact-SHA GitHub checks as repository quality through the documented alias', async () => {
+  const { sourceRoot, outputRoot } = await tempRoots();
+  const repositoryConfig = {
+    controls: [{ id: 'repository-quality', evidence: 'release-validation/repository-quality.json' }],
+  };
+  await writeCandidate(sourceRoot, 'scorecard/artifacts/enterprise-readiness/github-checks-evidence.json', {
+    schema: 'risck-comply.github-checks-evidence.v1',
+    status: 'Complete',
+    outcome: 'passed',
+    targetSha: TARGET,
+    evidenceIntegrity: { containsSensitiveValues: false },
+  });
+
+  const manifest = await hydrateEnterpriseClosureEvidence({
+    sourceRoot,
+    outputRoot,
+    targetSha: TARGET,
+    closureConfig: repositoryConfig,
+  });
+
+  assert.equal(manifest.hydratedEvidence, 1);
+  assert.equal(manifest.aliasedEvidence, 1);
+  assert.equal(manifest.results[0]?.matchedBy, 'explicit_alias');
+  assert.deepEqual(manifest.results[0]?.sourceAliases, [
+    'artifacts/enterprise-readiness/github-checks-evidence.json',
+  ]);
+  const hydrated = JSON.parse(await readFile(path.join(outputRoot, 'release-validation/repository-quality.json'), 'utf8'));
+  assert.equal(hydrated.targetSha, TARGET);
+  assert.equal(hydrated.status, 'Complete');
+});
+
 test('recognizes legal publication expectedSha without inventing a new binding', async () => {
   const { sourceRoot, outputRoot } = await tempRoots();
   const legalConfig = {
