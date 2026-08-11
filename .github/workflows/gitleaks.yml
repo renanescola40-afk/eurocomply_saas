@@ -46,8 +46,8 @@ jobs:
           chmod 0755 "$RUNNER_TEMP/gitleaks"
           "$RUNNER_TEMP/gitleaks" version
 
-      - name: Run redacted full-history diagnostic
+      - name: Run Gitleaks repository and history scan
         shell: bash
         run: |
           set -euo pipefail
-          "$RUNNER_TEMP/gitleaks" git --redact --no-banner --no-color --verbose .
+          "$RUNNER_TEMP/gitleaks" git --redact --no-banner .
