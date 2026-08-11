@@ -7,6 +7,7 @@ import {
   cleanupEphemeralAuthFixtures,
   createEphemeralAuthFixtures,
 } from './lib/ephemeral-auth-fixtures.mjs';
+import { runEphemeralSignupOnboardingJourney } from './lib/ephemeral-auth-journeys.mjs';
 
 const OUTPUT = 'docs/security/evidence/runtime/auth-rbac-final-validation.json';
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
@@ -90,6 +91,35 @@ async function deniedMutation(query, label) {
 async function signOut(session) {
   const { error } = await session.supabase.auth.signOut();
   return !error;
+}
+
+function unavailableIdentityJourney(reason) {
+  return {
+    schema: 'risck-comply.auth-identity-journey.v1',
+    status: 'Open',
+    outcome: 'blocked',
+    checks: {
+      disposableSignup: false,
+      signupSessionRevoked: false,
+      disposableSignupCleanup: false,
+      onboardingUserInitiallyUnscoped: false,
+      onboardingOrganizationCreated: false,
+      onboardingActivationCompleted: false,
+      onboardingStateObserved: false,
+      onboardingCleanup: false,
+    },
+    failures: [reason],
+    cleanupVerified: false,
+    evidenceIntegrity: {
+      containsSensitiveValues: false,
+      rawCredentialsStored: false,
+      accessTokensStored: false,
+      userIdentifiersStored: false,
+      organizationIdentifiersStored: false,
+      rawProviderResponsesStored: false,
+      cleanupRequired: true,
+    },
+  };
 }
 
 export function evaluate({ checks, provenance }) {
@@ -239,6 +269,25 @@ async function main() {
   }
 
   const decision = evaluate({ checks, provenance });
+  const identityJourneyEnabled = env('AUTH_IDENTITY_JOURNEY_ENABLED') === 'true';
+  let identityJourney = unavailableIdentityJourney(
+    identityJourneyEnabled
+      ? 'core_auth_rbac_proof_incomplete'
+      : 'identity_journey_explicit_confirmation_required',
+  );
+  if (decision.complete && identityJourneyEnabled && admin && url && anonKey) {
+    try {
+      identityJourney = await runEphemeralSignupOnboardingJourney({
+        admin,
+        anon: client(url, anonKey),
+        purpose: 'auth-rbac-live-proof',
+      });
+    } catch {
+      identityJourney = unavailableIdentityJourney('identity_journey_unexpected_failure');
+    }
+  }
+
+  const journeyComplete = identityJourney.status === 'Complete' && identityJourney.outcome === 'passed';
   const evidence = {
     schema: 'risck-comply.auth-rbac-runtime-evidence.v2',
     evidenceItem: 'auth-rbac-final-validation',
@@ -254,21 +303,23 @@ async function main() {
     environment: 'production-auth-rbac-validation',
     providerHost: safeHost(url),
     summary: decision.complete
-      ? 'Protected live validation created disposable Supabase identities and tenants, proved password authentication, expected RBAC roles, same-tenant access, cross-tenant read and mutation denial, session refresh and revocation, then verified same-run fixture cleanup.'
-      : 'Protected Auth/RBAC and tenant-mutation runtime proof is incomplete or failed; enterprise release remains blocked until every live check and disposable-fixture cleanup check passes for the exact main SHA.',
+      ? `Protected live validation proved core Auth/RBAC, tenant isolation, session lifecycle and cleanup. The separately bounded disposable signup/onboarding journey is ${journeyComplete ? 'complete' : 'not yet complete'} and cannot change the core proof result.`
+      : 'Protected Auth/RBAC and tenant-mutation runtime proof is incomplete or failed; enterprise release remains blocked until every core live check and disposable-fixture cleanup check passes for the exact main SHA.',
     productionGate: decision.complete ? 'eligible for downstream enterprise gates' : 'blocked',
-    completionRule: 'Run the protected Auth RBAC Tenant Proof workflow for the exact current main SHA. The workflow creates, uses and removes all synthetic identities, organizations and memberships in the same protected run.',
+    completionRule: 'Run the protected Auth RBAC Tenant Proof workflow for the exact current main SHA. Core RBAC proof remains automatic. Disposable public signup/onboarding requires a manual workflow_dispatch with the exact confirmation literal PROVE_SIGNUP_ONBOARDING_RUNTIME; only an explicitly successful cleaned-up journey may be promoted into the identity scorecard.',
     checks,
+    identityJourney,
     provenance: { ...provenance, exactShaBound: expectedSha !== null && expectedSha === checkedOutSha },
     failures: [...new Set(failures)],
     evidenceLocations: [
       'scripts/security/lib/ephemeral-auth-fixtures.mjs',
+      'scripts/security/lib/ephemeral-auth-journeys.mjs',
       'scripts/security/run-auth-rbac-live-validation.mjs',
       '.github/workflows/auth-rbac-runtime-proof.yml',
       'docs/security/evidence/runtime/auth-rbac-final-validation.json',
     ],
     controlsVerified: decision.complete ? [
-      'Disposable Supabase users, organizations and memberships are created by the protected proof and removed in the same run.',
+      'Disposable Supabase users, organizations and memberships are created by the protected core proof and removed in the same run.',
       'Supabase password authentication works for disposable owner, member and outsider identities.',
       'A synthetic authenticated session refresh succeeds without persisting token values.',
       'Owner and member roles are observed through tenant-scoped organization_members reads.',
@@ -276,7 +327,7 @@ async function main() {
       'Cross-tenant organization and membership reads are denied by runtime policy.',
       'Cross-tenant organization and membership inserts, updates and deletes are denied.',
       'Synthetic validation sessions are revoked after execution.',
-      'Synthetic identity and tenant cleanup is verified after execution.',
+      'Synthetic core identity and tenant cleanup is verified after execution.',
       'Evidence is bound to the exact protected main-branch release SHA.',
     ] : [],
     redactionConfirmation: REDACTION,
@@ -293,12 +344,17 @@ async function main() {
       rawProviderResponsesStored: false,
       cleanupRequired: true,
       cleanupVerified: checks.ephemeralFixturesCleanup,
+      identityJourneyCredentialsStored: false,
+      identityJourneyIdentifiersStored: false,
+      identityJourneyCleanupRequired: true,
+      identityJourneyCleanupVerified: identityJourney.cleanupVerified === true,
+      identityJourneyExplicitlyConfirmed: identityJourneyEnabled,
     },
   };
 
   mkdirSync(dirname(OUTPUT), { recursive: true });
   writeFileSync(OUTPUT, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
-  console.log(`Auth/RBAC runtime evidence: ${evidence.status}/${evidence.outcome}`);
+  console.log(`Auth/RBAC runtime evidence: ${evidence.status}/${evidence.outcome}; identity journey: ${identityJourney.status}/${identityJourney.outcome}`);
   if (!decision.complete) process.exitCode = 1;
 }
 

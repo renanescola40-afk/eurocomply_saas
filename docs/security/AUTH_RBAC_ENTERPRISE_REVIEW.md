@@ -1,14 +1,18 @@
 # Auth, RBAC and Tenant Isolation Enterprise Review
 
-**Date:** 2026-07-08  
 **Decision:** Supabase Auth is the single primary identity stack for the active application.  
-**Status:** Code path corrected; enterprise production remains **No-Go** until CI/runtime validation passes in the target environment.
+**Status:** Core Auth/RBAC has a protected exact-SHA runtime proof. Enterprise production remains **No-Go** until every canonical identity control and the remaining production gates have real passing evidence.
 
 ## Executive summary
 
-Risck Comply had an identity-risk pattern where Supabase Auth was already used in the critical runtime path, while legacy Clerk artifacts still existed in dependencies, docs, helpers and retired routes. That creates operator confusion and can lead to split sessions, inconsistent RBAC, tenant lookup drift and RLS assumptions that do not match production behavior.
+RISCK COMPLY standardizes the active identity path on Supabase Auth. Browser state is not an authorization authority: server-side Supabase identity, `organization_members.user_id`, permission checks and Postgres RLS remain the security boundary.
 
-This review standardizes the active identity path on Supabase Auth because the application already relies on Supabase session cookies, `supabase.auth.getUser()`, Postgres tenant tables and Supabase RLS. Keeping Supabase as the source of truth avoids a second identity mapping layer before enterprise launch.
+The protected `Auth RBAC Tenant Proof` separates two evidence domains:
+
+1. **Core Auth/RBAC proof** — password login, session refresh/revocation, expected roles, same-tenant access, cross-tenant read/mutation denial and same-run cleanup.
+2. **Disposable identity journey** — real public Supabase signup followed by atomic organization creation and onboarding activation for a synthetic no-organization user, followed by verified same-run cleanup.
+
+A failed or undispatched disposable signup/onboarding journey cannot erase an already-valid core RBAC proof. Conversely, the scorecard cannot promote signup or onboarding from static inspection or from the core proof alone.
 
 ## Chosen stack
 
@@ -18,88 +22,116 @@ This review standardizes the active identity path on Supabase Auth because the a
 
 ### Why
 
-- Middleware already validates Supabase sessions server-side.
-- The client auth hook already performs Supabase email/password, signup, OAuth and sign-out.
-- Server queries already resolve the current user through Supabase Auth.
-- Tenant isolation and RBAC naturally map to `organization_members.user_id`.
-- Supabase RLS can use the authenticated Supabase user UUID without a translation layer.
-- Removing a competing identity provider reduces login loop, stale membership and cross-tenant risk.
+- Middleware validates Supabase sessions server-side.
+- The client auth hook performs Supabase email/password, signup, OAuth and sign-out.
+- Server queries resolve the current user through Supabase Auth.
+- Tenant isolation and RBAC map directly to `organization_members.user_id`.
+- Supabase RLS can use the authenticated Supabase user UUID without a second identity mapping layer.
+- A single identity source reduces login-loop, stale-membership and cross-tenant drift risk.
 
 ## Active identity architecture
 
 | Layer | Source of truth | Notes |
 | --- | --- | --- |
-| Browser session | Supabase Auth client | Used only for UX state, not authorization authority. |
+| Browser session | Supabase Auth client | UX state only; never the authorization authority. |
 | Middleware | Supabase `getUser()` via `@supabase/ssr` | Private routes redirect anonymous users to localized login with safe `next`. |
 | Server user | `src/server/queries/auth.ts` | Returns Supabase user UUID only. |
-| Organization membership | `organization_members.user_id` | Active RBAC no longer falls back to alternate identity columns. |
+| Organization membership | `organization_members.user_id` | Active RBAC has no alternate identity fallback. |
 | API authorization | `src/server/security/api-guards.ts` + `src/server/security/rbac.ts` | Validates user, organization, membership, permission and resource tenant. |
-| Database isolation | Supabase/Postgres RLS | RLS must remain enabled for tenant-scoped tables. |
+| Database isolation | Supabase/Postgres RLS | Required for tenant-scoped tables. |
 
 ## Required flow validation
 
-| Requirement | Implementation evidence | Status |
+| Requirement | Implementation / evidence | Status |
 | --- | --- | --- |
 | Anonymous private route redirects to login | `src/middleware.ts` localized redirect with `next` | Implemented |
-| Safe `next` handling | login, signup and OAuth callback reject external/ protocol-relative URLs | Implemented |
-| Login/signup success lands on onboarding | `AUTH_SUCCESS_PATH = '/onboarding'`, Supabase auth hook redirect | Implemented |
-| Onboarding validates server session | `src/app/[locale]/onboarding/page.tsx` calls `getCurrentUser()` | Implemented |
-| No organization shows creation flow | `getOnboardingActivationState()` returns null organization state | Implemented |
-| Organization creates owner membership | `src/server/actions/organizations.ts` writes `organization_members.user_id` with `role: 'owner'` | Implemented |
-| Existing completed organization redirects to dashboard | onboarding page checks `isOnboardingCompleted` | Implemented |
-| Dashboard validates server session/membership | organization dashboard layout/query guard | Implemented |
-| APIs validate user/org/RBAC server-side | `api-guards.ts` and `rbac.ts` | Implemented |
-| Cross-tenant resource IDs rejected | `assertApiResourceOrganization()` | Implemented |
+| Safe `next` handling | login, signup and OAuth callback reject external/protocol-relative URLs | Implemented |
+| Password login works | protected disposable Auth/RBAC runtime proof | Runtime provable |
+| Session refresh and logout/revocation work | protected disposable Auth/RBAC runtime proof | Runtime provable |
+| Owner/member RBAC works | protected disposable Auth/RBAC runtime proof | Runtime provable |
+| Cross-tenant read and mutation isolation works | protected disposable Auth/RBAC runtime proof | Runtime provable |
+| Public signup works | `auth.signUp` in manually confirmed disposable identity journey | Runtime provable after confirmed run |
+| New user starts without organization scope | disposable identity journey queries membership before creation | Runtime provable after confirmed run |
+| Organization creates owner membership atomically | `create_organization_with_owner_atomic` | Runtime provable after confirmed run |
+| Onboarding activation completes atomically | `complete_onboarding_activation_atomic` | Runtime provable after confirmed run |
+| Signup/onboarding fixtures are removed | exact-ID/user cleanup plus absence verification | Required for promotion |
+| Google OAuth callback round trip works | real provider callback journey | **NOT_VERIFIED** until executed |
+
+## Protected runtime evidence boundary
+
+Canonical source evidence:
+
+`docs/security/evidence/runtime/auth-rbac-final-validation.json`
+
+Canonical scorecard evidence:
+
+`docs/security/evidence/runtime/auth-rbac-validation.json`
+
+Protected workflow:
+
+`.github/workflows/auth-rbac-runtime-proof.yml`
+
+The workflow is exact-current-main bound and runs in the protected `production` environment. It uses the Supabase URL, anon key and service-role credential only at runtime. Credentials, passwords, access tokens, user UUIDs, organization UUIDs and raw provider responses are not written to retained evidence.
+
+### Core proof
+
+The core `checks` object remains authoritative for the existing Auth/RBAC proof. Every core check and cleanup check must pass before the source evidence can be `Complete/passed`.
+
+The core proof remains eligible to run automatically on `main` as before. Its result is not downgraded merely because the additional signup/onboarding journey has not been authorized or has not passed.
+
+### Signup/onboarding journey
+
+The public signup/onboarding subproof is **manual-only** because it creates disposable production identities/tenant rows and the public signup path may involve provider-side email behavior.
+
+It can execute only through `workflow_dispatch` with the exact confirmation literal:
+
+`PROVE_SIGNUP_ONBOARDING_RUNTIME`
+
+A normal `main` push sets the journey to `Open/blocked` with a redacted confirmation-required reason and performs no public signup/onboarding journey. The literal itself is not written to retained evidence; only a boolean `identityJourneyExplicitlyConfirmed` is retained.
+
+When explicitly confirmed, `identityJourney` is independently bounded. Scorecard promotion requires:
+
+- exact-current-main SHA binding;
+- explicit operator confirmation recorded as a boolean;
+- real `auth.signUp` success;
+- signup session termination where a session is issued;
+- a user initially without organization membership;
+- atomic organization + owner membership creation;
+- atomic onboarding activation;
+- persisted completed onboarding state observation;
+- deletion of activation run, AI system, membership, organization and disposable auth user where created;
+- post-cleanup absence verification;
+- zero retained credentials, tokens, user IDs, organization IDs or raw provider responses.
+
+The journey deliberately creates no invitation emails, recommended documents or suggested tasks. It uses a synthetic trial organization and a single synthetic AI system to minimize bounded production fixture surface.
+
+### OAuth callback
+
+`oauthCallback` stays `NOT_VERIFIED` even when Supabase Google provider configuration is valid. Configuration proof is not equivalent to a successful browser/provider callback round trip. Only real callback evidence may promote this control.
 
 ## Security controls
 
 ### Server-side authentication
 
-Private pages and APIs must never trust browser state as an authorization source. The active code path resolves identity with Supabase server-side helpers and uses the Supabase user UUID for downstream checks.
+Private pages and APIs resolve identity with Supabase server-side helpers and use the Supabase user UUID for downstream authorization.
 
-### RBAC
+### RBAC and tenant isolation
 
-RBAC is enforced through server helpers and permission matrices. Role checks must happen before billing, team, GDPR deletion, audit export and security-setting mutations.
-
-### Tenant isolation
-
-Tenant-scoped resources must be filtered and validated by `organization_id`. Client-supplied `organization_id` is untrusted until the server verifies membership.
+RBAC is enforced through server permission helpers. Tenant-scoped resources are filtered and validated by `organization_id`; client-supplied tenant identifiers remain untrusted until membership is verified.
 
 ### RLS
 
-RLS remains a required database control. Service-role usage is allowed only inside trusted server code paths and must not be exposed to the browser.
+RLS remains a required database control. Service-role usage is restricted to trusted server or protected proof code and must never be exposed to the browser.
 
-### no-store
+### no-store, logs and errors
 
-Private pages, sensitive APIs and auth callbacks use no-store behavior to avoid browser/proxy caching of tenant or session-sensitive responses.
-
-### Logs and errors
-
-API guard failures return sanitized errors and include a `requestId` for incident correlation. Logs must avoid tokens, secrets, raw request bodies and tenant data dumps.
-
-### Rate limiting
-
-The app has distributed rate-limit helpers for sensitive server mutations and organization creation. Supabase-hosted login/signup/password-reset rate limits must also be configured in Supabase Auth before enterprise production.
+Private routes and sensitive APIs use no-store behavior. API failures are sanitized and request-correlated. Logs and retained evidence must not contain tokens, secrets, disposable credentials or tenant data dumps.
 
 ### Step-up / MFA
 
-Enterprise step-up is required for these high-risk actions:
-
-- `manage_billing`
-- `manage_team`
-- `gdpr_delete`
-- `audit_chain_export`
-- `change_security_settings`
-
-Runtime provider proof is required before enterprise Go.
-
-## Removed or retired conflict surface
-
-The active runtime no longer uses competing identity imports, server queries or RBAC fallback logic. Legacy provider-specific helper files, docs and retired routes are removed from the active source tree. Historical migrations may still include legacy columns because migration history must not be rewritten casually; those columns are not the active identity source.
+Enterprise step-up remains required for high-risk actions including billing, team administration, GDPR deletion, audit-chain export and security-setting changes. Step-Up has its own protected runtime evidence boundary and is not implied by the Auth/RBAC proof.
 
 ## Validation checklist
-
-Required before production enterprise promotion:
 
 ```bash
 npm ci
@@ -115,16 +147,17 @@ npm run security:ci
 npm run release:enterprise-readiness
 ```
 
-## Known remaining risks
+Protected runtime promotion additionally requires the exact-current-main `Auth RBAC Tenant Proof` artifact to pass its source and scorecard validators. Signup/onboarding promotion additionally requires the explicitly confirmed manual journey described above.
 
-1. Runtime validation was not executed in this GitHub patch session.
-2. Supabase Auth project settings must be verified in the real production project: Site URL, redirect allowlist, OAuth provider status, email confirmation policy and hosted auth rate limits.
-3. RLS must be validated against the target Supabase project after migrations are applied.
-4. Enterprise step-up/MFA requires provider proof before enterprise production.
-5. Package lock should be regenerated with `npm run supply-chain:lockfile` after dependency removal so the lockfile is clean, not only active-dependency aligned.
+## Known remaining risks / external evidence
+
+1. A successful Google OAuth provider callback round trip still requires real provider/browser runtime evidence.
+2. Enterprise Step-Up/MFA has a separate production provider/runtime gate.
+3. Production provider proofs and branch-governance controls remain independent release gates; identity evidence cannot substitute for them.
+4. External security/legal evidence remains external and must never be synthesized from code tests.
 
 ## Go/No-Go
 
-**No-Go for enterprise production until CI and runtime gates pass.**
+**No-Go for Enterprise 100 until every canonical runtime and external gate passes.**
 
-The code path is corrected toward a single Supabase Auth architecture, but enterprise production approval requires passing the validation commands above with real environment configuration and updated runtime evidence.
+A successful explicitly confirmed disposable signup/onboarding journey may close the `signup` and `organizationOnboarding` scorecard controls. It must not promote `oauthCallback`, Step-Up, provider governance, Stripe runtime evidence, branch governance, pentest or legal review.
