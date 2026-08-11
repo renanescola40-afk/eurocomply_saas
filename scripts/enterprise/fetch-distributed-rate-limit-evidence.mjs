@@ -35,6 +35,7 @@ export function selectExactShaRun(runs, targetSha, sourceRunId = '') {
   const normalizedRunId = String(sourceRunId || '').trim();
   return (Array.isArray(runs) ? runs : [])
     .filter((run) => String(run?.head_sha || '').toLowerCase() === targetSha)
+    .filter((run) => run?.head_branch === 'main')
     .filter((run) => run?.status === 'completed' && run?.conclusion === 'success')
     .filter((run) => !normalizedRunId || String(run?.id) === normalizedRunId)
     .sort((left, right) => Date.parse(right?.updated_at || right?.created_at || 0) - Date.parse(left?.updated_at || left?.created_at || 0))[0] ?? null;
@@ -139,7 +140,7 @@ export async function fetchDistributedRateLimitEvidence({
     runs = [run];
   } else {
     const response = await githubJson(
-      `https://api.github.com/repos/${repository}/actions/workflows/${WORKFLOW_FILE}/runs?status=success&per_page=100`,
+      `https://api.github.com/repos/${repository}/actions/workflows/${WORKFLOW_FILE}/runs?status=success&branch=main&head_sha=${encodeURIComponent(targetSha)}&per_page=20`,
       token,
     );
     runs = response.workflow_runs;

@@ -21,6 +21,15 @@ describe('GitHub checks evidence API boundary', () => {
     expect(collector).not.toContain('return response.json()');
   });
 
+  it('does not poll protected main-only checks from a pull-request scorecard run', () => {
+    const collector = read('scripts/enterprise/capture-github-checks-evidence.mjs');
+
+    expect(collector).toContain("const timeoutMs = process.env.GITHUB_EVENT_NAME === 'pull_request' ? 0 : requestedTimeoutMs");
+    expect(collector).toContain("GITHUB_CHECKS_WAIT_MS must be a non-negative finite number");
+    expect(collector).toContain('Pull-request scorecard diagnostics do not poll protected main-only workflow history');
+    expect(collector).toContain('exclude_pull_requests=true');
+  });
+
   it('preserves exact-SHA evidence semantics through the dedicated selector', () => {
     const collector = read('scripts/enterprise/capture-github-checks-evidence.mjs');
     const selector = read('scripts/enterprise/github-workflow-run-selection.mjs');

@@ -10,7 +10,8 @@ const targetSha = process.env.TARGET_SHA;
 const outputPath = process.env.GITHUB_CHECKS_EVIDENCE_PATH
   || 'artifacts/enterprise-readiness/github-checks-evidence.json';
 const dastEvidencePath = 'docs/security/evidence/p1/dast-automated.json';
-const timeoutMs = Number(process.env.GITHUB_CHECKS_WAIT_MS || 18 * 60 * 1000);
+const requestedTimeoutMs = Number(process.env.GITHUB_CHECKS_WAIT_MS || 18 * 60 * 1000);
+const timeoutMs = process.env.GITHUB_EVENT_NAME === 'pull_request' ? 0 : requestedTimeoutMs;
 const pollMs = Number(process.env.GITHUB_CHECKS_POLL_MS || 15_000);
 const githubRequestTimeoutMs = Number(process.env.GITHUB_CHECKS_REQUEST_TIMEOUT_MS || 15_000);
 const MAX_GITHUB_API_RESPONSE_BYTES = 1024 * 1024;
@@ -19,6 +20,11 @@ const MAX_GITHUB_RUNS_PAGES = 10;
 
 if (!token || !repository || !/^[0-9a-f]{40}$/i.test(targetSha || '')) {
   console.error('GITHUB_TOKEN, GITHUB_REPOSITORY and a full 40-character TARGET_SHA are required.');
+  process.exit(1);
+}
+
+if (!Number.isFinite(requestedTimeoutMs) || requestedTimeoutMs < 0) {
+  console.error('GITHUB_CHECKS_WAIT_MS must be a non-negative finite number.');
   process.exit(1);
 }
 
@@ -259,6 +265,7 @@ const evidence = {
   workflowRuns: runMetadata,
   limitations: [
     'This artifact proves repository and CI checks for one exact SHA.',
+    'Pull-request scorecard diagnostics do not poll protected main-only workflow history; absent main proof is represented as NOT_VERIFIED without delay or PASS credit.',
     'A no-op Enterprise Production Gate run whose workflow_run source failed and therefore skipped every gate job is ignored for latest-run selection; the latest real evaluation for the exact SHA remains authoritative.',
     'The npmAudit result comes from the dedicated exact-SHA dependency vulnerability workflow.',
     'It does not prove production deployment, provider health, customer login, tenant isolation, rollback or restore.',
