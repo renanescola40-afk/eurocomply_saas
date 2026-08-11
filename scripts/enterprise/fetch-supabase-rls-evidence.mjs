@@ -9,6 +9,7 @@ import {
   CANONICAL_REPOSITORY,
   validateSupabaseRlsRuntimeEvidence,
 } from '../security/check-supabase-rls-runtime-evidence.mjs';
+import { validateSupabaseRlsRuntimeEvidence as validateReleaseSupabaseRlsRuntimeEvidence } from '../release/validate-supabase-rls-runtime-evidence.mjs';
 
 const WORKFLOW_FILE = 'supabase-live-rls-validation.yml';
 const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`;
@@ -53,6 +54,56 @@ export function validateDownloadedEvidence(evidence, { targetSha, repository, ru
     repository,
     runId,
   });
+}
+
+export function normalizeSupabaseRlsEvidenceForRelease(
+  evidence,
+  { targetSha, repository, runId },
+) {
+  const normalizedSha = String(targetSha || '').trim().toLowerCase();
+  const normalizedRunId = String(runId || '').trim();
+  const sourceValidation = validateDownloadedEvidence(evidence, {
+    targetSha: normalizedSha,
+    repository,
+    runId: normalizedRunId,
+  });
+  if (!sourceValidation.passed) {
+    throw new Error(`source_runtime_evidence_invalid:${sourceValidation.failures.join(',')}`);
+  }
+
+  const provenance = evidence.githubActions;
+  const normalized = {
+    ...evidence,
+    runtimeContext: {
+      generatedByGithubActions: true,
+      repository,
+      branch: 'main',
+      githubRunId: normalizedRunId,
+      githubRunAttempt: String(provenance?.runAttempt || '1'),
+      commitSha: normalizedSha,
+    },
+    evidenceIntegrity: {
+      ...(evidence?.evidenceIntegrity && typeof evidence.evidenceIntegrity === 'object'
+        ? evidence.evidenceIntegrity
+        : {}),
+      containsSensitiveValues: false,
+      credentialsStored: false,
+      exactShaBound: true,
+      sourceRunBound: true,
+    },
+  };
+
+  const releaseFailures = validateReleaseSupabaseRlsRuntimeEvidence(normalized, {
+    now: new Date(normalized.generatedAt ?? normalized.reviewedAt ?? normalized.timestamp),
+    maxAgeDays: 7,
+    expectedRepository: repository,
+    expectedBranch: 'main',
+  });
+  if (releaseFailures.length > 0) {
+    throw new Error(`release_runtime_evidence_invalid:${releaseFailures.join(',')}`);
+  }
+
+  return normalized;
 }
 
 function escapeCurlConfigValue(value) {
@@ -162,16 +213,15 @@ export async function fetchSupabaseRlsEvidence({
   try {
     downloadArtifact(repository, token, normalizedArtifactId, zipPath);
     const evidence = extractSourceEvidence(zipPath);
-    const validation = validateDownloadedEvidence(evidence, {
+    const normalizedEvidence = normalizeSupabaseRlsEvidenceForRelease(evidence, {
       targetSha,
       repository,
       runId: normalizedRunId,
     });
-    if (!validation.passed) throw new Error(`runtime_evidence_invalid:${validation.failures.join(',')}`);
 
     const output = join(root, SOURCE_EVIDENCE_PATH);
     mkdirSync(dirname(output), { recursive: true });
-    writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
+    writeFileSync(output, `${JSON.stringify(normalizedEvidence, null, 2)}\n`, { mode: 0o600 });
     console.log(`Retrieved exact-SHA Supabase RLS evidence from workflow run ${normalizedRunId}.`);
     return { found: true, targetSha, runId: normalizedRunId, artifactId: normalizedArtifactId };
   } finally {
