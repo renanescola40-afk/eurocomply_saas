@@ -8,6 +8,8 @@ on:
   workflow_run:
     workflows:
       - Auth RBAC Tenant Proof
+      - Supabase Live RLS Validation
+      - RISCK COMPLY Upload Security CI
       - Audit Chain Runtime Proof
       - Production Provider Runtime Proof
       - Branch Protection Runtime Proof
@@ -106,6 +108,8 @@ jobs:
           node --check scripts/release/verify-enterprise-evidence-bundle.mjs
           node --check scripts/release/hydrate-enterprise-retained-runtime-evidence.mjs
           node --check scripts/enterprise/fetch-auth-rbac-evidence.mjs
+          node --check scripts/enterprise/fetch-supabase-rls-evidence.mjs
+          node --check scripts/enterprise/fetch-upload-scanner-runtime-evidence.mjs
           node --check scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs
           node --check scripts/enterprise/fetch-production-provider-runtime-evidence.mjs
           node --check scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs
