@@ -18,6 +18,7 @@ on:
     branches: [main]
   workflow_run:
     workflows:
+      - 'Enterprise Production Gate'
       - 'Enterprise Recovery Drill'
       - 'Production Provider Runtime Proof'
       - 'Enterprise Runtime Evidence Closeout'
@@ -85,6 +86,7 @@ jobs:
           grep -Fq 'ENTERPRISE_CLOSURE_EVIDENCE_ROOTS' scripts/release/check-enterprise-100-closure.mjs
           grep -Fq 'enterprise-100-evidence-hydration.v1' scripts/release/hydrate-enterprise-100-evidence.mjs
           grep -Fq 'github-exact-sha-artifact-collection.v1' scripts/enterprise/collect-github-exact-sha-artifacts.mjs
+          grep -Fq 'Enterprise Production Gate' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Stripe Runtime Evidence Promotion' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Final Legal Publication Gate' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Enterprise Conversation Runtime Closeout' .github/workflows/enterprise-100-closure.yml
