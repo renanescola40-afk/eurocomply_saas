@@ -10,9 +10,9 @@ const isReleaseLifecycle = lifecycleEvent === 'release:readiness' || lifecycleEv
 const enforceLiveRls = process.argv.includes('--production')
   || productionTargets.has(releaseTarget)
   || (isReleaseLifecycle && !isPullRequest && !nonProductionTargets.has(releaseTarget));
+const expectedCommitSha = String(process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || '').trim().toLowerCase();
 
 const evidencePath = 'docs/security/evidence/runtime/supabase-live-rls-validation.json';
-const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
 const requiredTables = [
   'organizations',
   'organization_members',
@@ -92,22 +92,6 @@ function checkRequiredDocs() {
   }
 }
 
-function registerMarksSupabaseComplete() {
-  const register = readText(registerPath);
-  if (!register) return false;
-
-  const row = register
-    .split('\n')
-    .find((line) => line.startsWith('| Supabase live RLS validation completed |'));
-
-  if (!row) {
-    failures.push(`${registerPath} missing Supabase live RLS row`);
-    return false;
-  }
-
-  return row.includes('| Complete |');
-}
-
 function checkGithubActionsProvenance(evidence) {
   const provenance = evidence.githubActions;
   if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance)) {
@@ -126,11 +110,21 @@ function checkGithubActionsProvenance(evidence) {
   if (!expectedRunUrlPattern.test(runUrl)) {
     failures.push(`${evidencePath} githubActions.runUrl must point to a numeric GitHub Actions run URL`);
   }
+
+  if (/^[0-9a-f]{40}$/.test(expectedCommitSha)) {
+    const evidenceCommitSha = String(evidence.commitSha || '').trim().toLowerCase();
+    const provenanceCommitSha = String(provenance.commitSha || '').trim().toLowerCase();
+    if (evidenceCommitSha !== expectedCommitSha) {
+      failures.push(`${evidencePath} commitSha must match release commit ${expectedCommitSha}`);
+    }
+    if (provenanceCommitSha !== expectedCommitSha) {
+      failures.push(`${evidencePath} githubActions.commitSha must match release commit ${expectedCommitSha}`);
+    }
+  }
 }
 
 function enforceSupabaseLiveRlsComplete() {
   const evidence = readJson(evidencePath);
-  const registerComplete = registerMarksSupabaseComplete();
 
   if (!evidence) {
     failures.push(`${evidencePath} must exist for public production`);
@@ -159,8 +153,6 @@ function enforceSupabaseLiveRlsComplete() {
   for (const operation of requiredOperations) {
     if (!operations.has(operation)) failures.push(`${evidencePath} missing required operation coverage: ${operation}`);
   }
-
-  if (!registerComplete) failures.push(`${registerPath} must mark Supabase live RLS validation as Complete for public production`);
 }
 
 checkRequiredDocs();
