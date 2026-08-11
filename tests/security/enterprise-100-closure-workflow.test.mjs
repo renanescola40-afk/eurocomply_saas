@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const workflow = readFileSync('.github/workflows/enterprise-100-closure.yml', 'utf8');
+const rlsWorkflow = readFileSync('.github/workflows/supabase-production-rls-reconciliation.yml', 'utf8');
+const rlsEvidenceWriter = readFileSync('scripts/supabase/write-rls-reconciliation-closure-evidence.mjs', 'utf8');
 const checker = readFileSync('scripts/release/check-enterprise-100-closure.mjs', 'utf8');
 const hydrator = readFileSync('scripts/release/hydrate-enterprise-100-evidence.mjs', 'utf8');
 const collector = readFileSync('scripts/enterprise/collect-github-exact-sha-artifacts.mjs', 'utf8');
@@ -63,6 +65,30 @@ test('promoted Stripe runtime proof is the only Stripe document eligible for bil
   assert.match(stripePromotionFetcher, /evidence\?\.status !== 'Complete' \|\| evidence\?\.outcome !== 'passed'/);
   assert.match(stripePromotionFetcher, /expectedCommitSha: targetSha/);
   assert.match(stripePromotionFetcher, /stripe-runtime-evidence-promoted-\$\{targetSha\}/);
+});
+
+test('Supabase RLS reconciliation promotion remains manual, exact-SHA and production protected', () => {
+  assert.match(workflow, /- 'Supabase Production RLS Reconciliation'/);
+  assert.match(rlsWorkflow, /workflow_dispatch:/);
+  assert.match(rlsWorkflow, /environment: production/);
+  assert.match(rlsWorkflow, /APPLY_RLS_RECONCILIATION/);
+  assert.match(rlsWorkflow, /test "\$CONFIRMATION" = "APPLY_RLS_RECONCILIATION"/);
+  assert.match(rlsWorkflow, /git rev-parse origin\/main/);
+  assert.match(rlsWorkflow, /20260726070000_permissions_catalog_rls_hotfix\.sql/);
+  assert.doesNotMatch(rlsWorkflow, /\n  push:/);
+  assert.doesNotMatch(rlsWorkflow, /\n  workflow_run:/);
+  assert.doesNotMatch(rlsWorkflow, /continue-on-error/);
+});
+
+test('Supabase RLS canonical closure evidence is emitted only after deterministic PASS verification', () => {
+  assert.match(rlsWorkflow, /verify-rls-reconciliation-proof\.mjs/);
+  assert.match(rlsWorkflow, /write-rls-reconciliation-closure-evidence\.mjs/);
+  assert.match(rlsWorkflow, /release-validation\/supabase-rls-reconciliation\.json/);
+  assert.match(rlsWorkflow, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/);
+  assert.match(rlsEvidenceWriter, /verification\.status !== 'PASS'/);
+  assert.match(rlsEvidenceWriter, /expectedSha: targetSha/);
+  assert.match(rlsEvidenceWriter, /status: 'PASS'/);
+  assert.match(rlsEvidenceWriter, /containsSensitiveValues: false/);
 });
 
 test('GitHub API failures cannot be converted into a synthetic zero-evidence closure', () => {
