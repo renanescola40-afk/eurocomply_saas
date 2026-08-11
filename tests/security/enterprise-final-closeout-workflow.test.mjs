@@ -59,8 +59,9 @@ test('dashboard collector binds all accepted artifact families to exact producer
     assert.ok(collector.includes(workflowPath), `missing dashboard producer binding ${workflowPath}`);
   }
 
-  assert.match(collector, /actions\/workflows\/\$\{workflowId\}\/runs\?head_sha=\$\{targetSha\}&per_page=20/);
+  assert.match(collector, /actions\/workflows\/\$\{workflowId\}\/runs\?status=completed&head_sha=\$\{targetSha\}&per_page=\$\{RECENT_COMPLETED_RUN_WINDOW\}/);
   assert.match(collector, /run\?\.path !== spec\.workflowPath/);
+  assert.match(collector, /RECENT_RUN_WINDOW_EXHAUSTED/);
 });
 
 test('GitHub API infrastructure failures cannot produce a green synthetic zero-runtime dashboard', () => {
