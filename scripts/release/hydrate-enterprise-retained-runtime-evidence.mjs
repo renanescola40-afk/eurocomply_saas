@@ -10,6 +10,8 @@ import { fetchBranchProtectionRuntimeEvidence } from '../enterprise/fetch-branch
 import { fetchProductionProviderRuntimeEvidence } from '../enterprise/fetch-production-provider-runtime-evidence.mjs';
 import { fetchStepUpRuntimeEvidence } from '../enterprise/fetch-step-up-runtime-evidence.mjs';
 import { fetchStripePromotedRuntimeEvidence } from '../enterprise/fetch-stripe-promoted-runtime-evidence.mjs';
+import { fetchSupabaseRlsEvidence } from '../enterprise/fetch-supabase-rls-evidence.mjs';
+import { fetchUploadScannerRuntimeEvidence } from '../enterprise/fetch-upload-scanner-runtime-evidence.mjs';
 
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const NUMERIC_ID = /^\d+$/;
@@ -24,6 +26,23 @@ export const RETAINED_RUNTIME_PRODUCERS = Object.freeze([
     evidencePaths: Object.freeze([
       'docs/security/evidence/runtime/auth-rbac-final-validation.json',
       'docs/security/evidence/runtime/auth-rbac-validation.json',
+    ]),
+  }),
+  Object.freeze({
+    key: 'supabaseRls',
+    workflowName: 'Supabase Live RLS Validation',
+    workflowPath: '.github/workflows/supabase-live-rls-validation.yml',
+    evidencePaths: Object.freeze([
+      'docs/security/evidence/runtime/supabase-live-rls-validation.json',
+      'docs/security/evidence/runtime/supabase-rls-validation.json',
+    ]),
+  }),
+  Object.freeze({
+    key: 'uploadScanner',
+    workflowName: 'RISCK COMPLY Upload Security CI',
+    workflowPath: '.github/workflows/upload-security-ci.yml',
+    evidencePaths: Object.freeze([
+      'docs/security/evidence/runtime/upload-malware-scan-validation.json',
     ]),
   }),
   Object.freeze({
@@ -71,6 +90,8 @@ export const RETAINED_RUNTIME_PRODUCERS = Object.freeze([
 
 const DEFAULT_FETCHERS = Object.freeze({
   authRbac: fetchAuthRbacEvidence,
+  supabaseRls: fetchSupabaseRlsEvidence,
+  uploadScanner: fetchUploadScannerRuntimeEvidence,
   auditChain: fetchAuditChainRuntimeEvidence,
   productionProvider: fetchProductionProviderRuntimeEvidence,
   branchProtection: fetchBranchProtectionRuntimeEvidence,
