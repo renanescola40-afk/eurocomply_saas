@@ -18,6 +18,24 @@ import {
 
 const evidencePath = path.join('docs', 'security', 'evidence', 'runtime', 'supabase-live-rls-validation.json');
 const expectedCommitSha = String(process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || '').trim().toLowerCase();
+const aiAssessmentsTable = 'ai_assessments';
+const expectedCustomerTenantTables = [...customerTenantTables, aiAssessmentsTable];
+const expectedCriticalTables = [...criticalTables, aiAssessmentsTable];
+const requiredAiAssessmentOperations = [
+  'rls_enabled',
+  ...requiredCoverageOperations,
+  'same_tenant_read',
+  'same_tenant_insert',
+  'admin_same_tenant_insert',
+  'member_same_tenant_read',
+  'member_same_tenant_insert_denied',
+  'member_same_tenant_update_denied',
+  'member_same_tenant_delete_denied',
+  'viewer_same_tenant_read',
+  'viewer_same_tenant_insert_denied',
+  'viewer_same_tenant_update_denied',
+  'viewer_same_tenant_delete_denied',
+];
 const failures = [];
 
 function fail(message) {
@@ -76,14 +94,14 @@ function hasAnyPassed(testCases, table, operations) {
 
 function validateScope(evidence) {
   const tables = Array.isArray(evidence.criticalTables) ? evidence.criticalTables : [];
-  const expected = criticalTables.join(',');
+  const expected = expectedCriticalTables.join(',');
   const actual = tables.join(',');
   if (actual !== expected) {
-    fail(`${evidencePath} criticalTables must match the P0 live RLS proof scope: ${expected}`);
+    fail(`${evidencePath} criticalTables must match the expanded P0 live RLS proof scope: ${expected}`);
   }
 
-  if (Array.isArray(evidence.customerTenantTables) && evidence.customerTenantTables.join(',') !== customerTenantTables.join(',')) {
-    fail(`${evidencePath} customerTenantTables must match the P0 customer tenant scope`);
+  if (Array.isArray(evidence.customerTenantTables) && evidence.customerTenantTables.join(',') !== expectedCustomerTenantTables.join(',')) {
+    fail(`${evidencePath} customerTenantTables must include the expanded P0 customer tenant scope including ai_assessments`);
   }
 
   if (Array.isArray(evidence.globalReferenceTables) && evidence.globalReferenceTables.join(',') !== globalReferenceTables.join(',')) {
@@ -121,6 +139,18 @@ function validateScope(evidence) {
       if (!hasPassed(testCases, table, operation)) fail(`${evidencePath} missing global reference read-only proof: ${table}:${operation}`);
     }
   }
+
+  for (const operation of requiredAiAssessmentOperations) {
+    if (!hasPassed(testCases, aiAssessmentsTable, operation)) {
+      fail(`${evidencePath} missing ai_assessments live RLS proof: ${operation}`);
+    }
+  }
+
+  if (evidence.aiAssessmentsLiveValidation?.status !== 'Complete'
+    || evidence.aiAssessmentsLiveValidation?.outcome !== 'passed'
+    || evidence.aiAssessmentsLiveValidation?.crossTenantAccessDenied !== true) {
+    fail(`${evidencePath} aiAssessmentsLiveValidation must be Complete/passed with cross-tenant access denied`);
+  }
 }
 
 const evidence = readJson(evidencePath);
@@ -144,4 +174,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('Supabase live RLS production gate passed for the expanded P0 tenant isolation proof scope.');
+console.log('Supabase live RLS production gate passed for the expanded P0 tenant isolation proof scope, including ai_assessments.');
