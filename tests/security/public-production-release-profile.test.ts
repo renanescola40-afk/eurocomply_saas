@@ -61,7 +61,8 @@ describe('production release profiles', () => {
     expect(enterpriseRunner).toContain("const releaseTarget = process.env.RELEASE_TARGET || 'enterprise'");
     expect(enterpriseRunner).toContain('enterprise-runtime-evidence.json');
     expect(enterpriseRunner).toContain("RISCK_COMPLY_ENTERPRISE_RELEASE: 'true'");
-    expect(enterpriseRunner).toContain('npm run release:go-no-go-evidence');
+    expect(enterpriseRunner).toContain('node scripts/release/validate-release-go-no-go-evidence.mjs');
+    expect(enterpriseRunner).not.toContain('npm run release:go-no-go-evidence');
     expect(dispatcher).toContain("runNodeScript('scripts/release/write-enterprise-runtime-evidence.mjs'");
     expect(dispatcher).toContain("FINAL_VALIDATION_IN_PROGRESS: 'false'");
     expect(dispatcher).toContain("runNodeScript('scripts/release/validate-release-go-no-go-evidence.mjs')");

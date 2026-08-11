@@ -12,6 +12,9 @@ const FULL_SHA = /^[a-f0-9]{40}$/;
 // Explicit semantic aliases only. Each source already has its own evidence contract
 // elsewhere in the repository. Do not add aliases merely because filenames look similar.
 const EXPLICIT_SOURCE_ALIASES = Object.freeze({
+  'release-validation/repository-quality.json': [
+    'artifacts/enterprise-readiness/github-checks-evidence.json',
+  ],
   'release-validation/production-deployment.json': [
     'docs/security/evidence/runtime/deployment-smoke-validation.json',
   ],
