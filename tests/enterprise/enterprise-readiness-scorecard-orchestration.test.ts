@@ -51,6 +51,13 @@ describe('enterprise readiness scorecard orchestration', () => {
     );
   });
 
+  it('always emits a terminal reevaluation even when the newest runtime producer failed', () => {
+    expect(workflow).not.toContain(
+      "if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'",
+    );
+    expect(workflow).toContain('types: [completed]');
+  });
+
   it('keeps direct pull-request, push and manual entry points', () => {
     expect(workflow).toMatch(/pull_request:\n    branches: \[main\]/);
     expect(workflow).toMatch(/push:\n    branches: \[main\]/);
