@@ -47,6 +47,29 @@ function sourceIsTrusted(source) {
     && source?.evidenceIntegrity?.rawProviderResponsesStored === false;
 }
 
+function identityJourneyIsTrusted(source, trustedSource) {
+  const journey = source?.identityJourney;
+  return trustedSource
+    && journey?.schema === 'risck-comply.auth-identity-journey.v1'
+    && journey?.status === 'Complete'
+    && journey?.outcome === 'passed'
+    && journey?.checks
+    && typeof journey.checks === 'object'
+    && !Array.isArray(journey.checks)
+    && Object.values(journey.checks).length > 0
+    && Object.values(journey.checks).every((value) => value === true)
+    && Array.isArray(journey?.failures)
+    && journey.failures.length === 0
+    && journey?.cleanupVerified === true
+    && journey?.evidenceIntegrity?.containsSensitiveValues === false
+    && journey?.evidenceIntegrity?.rawCredentialsStored === false
+    && journey?.evidenceIntegrity?.accessTokensStored === false
+    && journey?.evidenceIntegrity?.userIdentifiersStored === false
+    && journey?.evidenceIntegrity?.organizationIdentifiersStored === false
+    && journey?.evidenceIntegrity?.rawProviderResponsesStored === false
+    && journey?.evidenceIntegrity?.cleanupRequired === true;
+}
+
 function pass(name, passed, reason) {
   return passed
     ? { name, passed: true }
@@ -62,11 +85,15 @@ export function buildAuthRbacScorecardEvidence(
 ) {
   const trusted = sourceIsTrusted(source);
   const checks = source?.checks && typeof source.checks === 'object' ? source.checks : {};
+  const journey = source?.identityJourney;
+  const journeyChecks = journey?.checks && typeof journey.checks === 'object' ? journey.checks : {};
+  const trustedJourney = identityJourneyIsTrusted(source, trusted);
 
-  const signup = trusted
-    && checks.disposableSignup === true
-    && checks.disposableSignupCleanup === true
-    && source?.evidenceIntegrity?.cleanupVerified === true;
+  const signup = trustedJourney
+    && journeyChecks.disposableSignup === true
+    && journeyChecks.signupSessionRevoked === true
+    && journeyChecks.disposableSignupCleanup === true
+    && journey.cleanupVerified === true;
   const login = trusted
     && checks.fixtureConfigurationPresent === true
     && checks.ownerRoleObserved === true
@@ -88,15 +115,22 @@ export function buildAuthRbacScorecardEvidence(
     && checks.crossTenantMembershipDeleteDenied === true
     && checks.crossTenantOrganizationUpdateDenied === true
     && checks.crossTenantOrganizationDeleteDenied === true;
+  const organizationOnboarding = trustedJourney
+    && journeyChecks.onboardingUserInitiallyUnscoped === true
+    && journeyChecks.onboardingOrganizationCreated === true
+    && journeyChecks.onboardingActivationCompleted === true
+    && journeyChecks.onboardingStateObserved === true
+    && journeyChecks.onboardingCleanup === true
+    && journey.cleanupVerified === true;
 
   const canonicalChecks = [
-    pass('signup', signup, 'Trusted disposable-user signup and same-run cleanup proof is unavailable.'),
+    pass('signup', signup, 'Trusted public signup, session termination and same-run user cleanup proof is unavailable.'),
     pass('login', login, 'Trusted synthetic-user login and role observation proof is unavailable.'),
     pass('logout', logout, 'Trusted synthetic sessions were not proven revoked.'),
     pass('sessionRefresh', sessionRefresh, 'Trusted authenticated session refresh proof is unavailable.'),
     pass('oauthCallback', false, 'A successful OAuth provider callback round trip has not been executed.'),
     pass('rbac', rbac, 'Trusted role, tenant-read and tenant-mutation denial proof is unavailable.'),
-    pass('organizationOnboarding', false, 'A disposable no-organization user has not completed and rolled back onboarding.'),
+    pass('organizationOnboarding', organizationOnboarding, 'A trusted disposable no-organization user has not completed onboarding with verified same-run cleanup.'),
   ];
 
   const verified = canonicalChecks.filter((check) => check.passed === true).map((check) => check.name);
@@ -122,6 +156,9 @@ export function buildAuthRbacScorecardEvidence(
       evidenceItem: source?.evidenceItem ?? null,
       generatedAt: source?.generatedAt ?? null,
       githubRunId: trusted ? String(source.provenance.runId) : null,
+      identityJourneyTrusted: trustedJourney,
+      identityJourneyStatus: journey?.status ?? null,
+      identityJourneyOutcome: journey?.outcome ?? null,
     },
     checks: canonicalChecks,
     controlsVerified: verified,
@@ -134,11 +171,12 @@ export function buildAuthRbacScorecardEvidence(
     productionGate: allPassed ? 'eligible for downstream enterprise gates' : 'blocked',
     evidenceLocations: [
       sourcePath,
+      'scripts/security/lib/ephemeral-auth-journeys.mjs',
       'scripts/security/run-auth-rbac-live-validation.mjs',
       'scripts/security/write-auth-rbac-scorecard-evidence.mjs',
       '.github/workflows/auth-rbac-runtime-proof.yml',
     ],
-    evidenceBoundary: 'This artifact promotes only checks explicitly proven by trusted synthetic runtime evidence. OAuth and onboarding remain NOT_VERIFIED until dedicated disposable-flow proofs run; static code inspection cannot promote them.',
+    evidenceBoundary: 'This artifact promotes only checks explicitly proven by trusted synthetic runtime evidence. Signup and organization onboarding require the separate cleaned-up disposable identity journey. OAuth callback remains NOT_VERIFIED until a real provider callback round trip succeeds; provider configuration or static code inspection cannot promote it.',
     evidenceIntegrity: {
       containsSensitiveValues: false,
       runtimeProofInvented: false,
