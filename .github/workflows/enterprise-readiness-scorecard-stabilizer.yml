@@ -1,0 +1,68 @@
+name: Enterprise Readiness Scorecard Stabilizer
+
+on:
+  workflow_run:
+    workflows:
+      - Distributed Rate Limit Runtime Proof
+      - Auth RBAC Tenant Proof
+      - Supabase Live RLS Validation
+      - Production Runtime Proof
+      - Branch Protection Runtime Proof
+      - Final Technical Controls Proof
+      - Recovery Resilience Proof
+    branches: [main]
+    types: [completed]
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: enterprise-readiness-scorecard-stabilizer-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+jobs:
+  stabilize:
+    name: Dispatch one terminal exact-SHA scorecard
+    if: github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Checkout exact producer SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+
+      - name: Validate stabilizer source
+        run: node --check scripts/release/stabilize-enterprise-readiness-scorecard.mjs
+
+      - name: Stabilize terminal exact-SHA scorecard
+        id: stabilize
+        run: node scripts/release/stabilize-enterprise-readiness-scorecard.mjs
+
+      - name: Publish stabilization summary
+        if: always()
+        shell: bash
+        env:
+          DISPATCHED: ${{ steps.stabilize.outputs.dispatched }}
+          REASON: ${{ steps.stabilize.outputs.reason }}
+          STABILIZED_SHA: ${{ steps.stabilize.outputs.target_sha }}
+        run: |
+          {
+            echo '## Enterprise readiness scorecard stabilizer'
+            echo
+            echo "- Target SHA: ${STABILIZED_SHA:-$TARGET_SHA}"
+            echo "- Dispatched terminal scorecard: ${DISPATCHED:-unknown}"
+            echo "- Reason: ${REASON:-stabilizer-failed-before-output}"
+            echo
+            echo 'This workflow only coalesces exact-SHA evidence producer completions and dispatches the existing readiness scorecard. It does not award PASS or mutate production.'
+          } >> "$GITHUB_STEP_SUMMARY"
