@@ -17,9 +17,23 @@ The workflow requires only production control-plane credentials/configuration th
 
 It does **not** require persistent test organization IDs, actor IDs, synthetic user emails or passwords.
 
+## Fail-closed prerequisite preflight
+
+Before any disposable user, organization or audit event is created, `scripts/security/preflight-audit-chain-runtime-proof.mjs` verifies presence of the exact-SHA and all protected runtime prerequisites.
+
+If a prerequisite is missing, the workflow:
+
+1. writes an `Open/blocked` redacted evidence document for the exact SHA;
+2. records only stable blocker codes and configuration-presence booleans;
+3. does **not** execute the live proof;
+4. records `disposableRuntimeMutationPerformed: false`;
+5. fails the workflow so the blocked run cannot be promoted by the exact-SHA fetcher.
+
+This prevents repeated disposable production writes when the proof cannot possibly satisfy the acceptance criteria, while preserving the existing fail-closed truth boundary.
+
 ## Disposable fixture model
 
-The proof creates temporary owner/member/outsider identities and two temporary organizations using the same hardened helper used by the Auth/RBAC live proof. The audit-chain transaction test uses the temporary owner and organization A.
+When the prerequisite preflight passes, the proof creates temporary owner/member/outsider identities and two temporary organizations using the same hardened helper used by the Auth/RBAC live proof. The audit-chain transaction test uses the temporary owner and organization A.
 
 The proof creates only synthetic audit events with action:
 
@@ -77,5 +91,7 @@ Only booleans, counts, bounded hash prefixes, stable failure codes and exact Git
 - the artifact name is exactly `audit-chain-runtime-proof-<SHA>` and is unique;
 - raw live validation and cleanup pass;
 - canonical exact-SHA provenance passes the authoritative validator.
+
+A preflight-blocked artifact is diagnostic only and is intentionally ineligible for promotion because its workflow run is unsuccessful and its raw evidence is not `Complete`.
 
 Never edit the evidence JSON by hand to convert a failed or incomplete proof into `Complete`.
