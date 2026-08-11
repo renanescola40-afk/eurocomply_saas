@@ -44,6 +44,7 @@ jobs:
           set +e
           npx vitest run \
             tests/enterprise/enterprise-readiness-scorecard.test.ts \
+            tests/enterprise/enterprise-readiness-scorecard-stabilizer.test.ts \
             tests/enterprise/evidence-overrides-guard.test.ts \
             tests/enterprise/architecture-review-evidence.test.ts \
             tests/enterprise/incident-operations-evidence.test.ts \
