@@ -76,11 +76,13 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Validate Supabase RLS proof contracts
-        run: >-
-          npx vitest run
-          tests/enterprise/supabase-rls-runtime-evidence-fetch.test.ts
-          tests/security/supabase-rls-scorecard-evidence.test.ts
-          tests/security/live-rls-inventory-migration.test.ts
+        run: |
+          node --check scripts/security/run-supabase-live-ai-assessments-rls.mjs
+          npx vitest run \
+            tests/enterprise/supabase-rls-runtime-evidence-fetch.test.ts \
+            tests/enterprise/supabase-rls-workflow-ai-assessments-contract.test.ts \
+            tests/security/supabase-rls-scorecard-evidence.test.ts \
+            tests/security/live-rls-inventory-migration.test.ts
 
       - name: Apply allowlisted live RLS proof migrations
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations }}
@@ -177,6 +179,14 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RLS_LIVE_UPDATE_REGISTER: '0'
         run: node scripts/security/run-supabase-live-tenant-isolation.mjs
+
+      - name: Append live ai_assessments RLS proof
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RLS_LIVE_KEEP_FIXTURES: '0'
+        run: node scripts/security/run-supabase-live-ai-assessments-rls.mjs
 
       - name: Stamp GitHub Actions provenance
         run: node scripts/security/stamp-supabase-live-rls-provenance.mjs
