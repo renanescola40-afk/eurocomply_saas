@@ -27,10 +27,15 @@ export function httpDiagnostic(status, errorCode = null) {
   return { httpStatus: status, category: 'request_rejected' };
 }
 
-async function probe(url, headers) {
+async function sentryApiProbe(kind, org, project, token) {
+  const encodedOrg = encodeURIComponent(org);
+  const encodedProject = encodeURIComponent(project);
+  const url = kind === 'client_keys'
+    ? `https://sentry.io/api/0/projects/${encodedOrg}/${encodedProject}/keys/?status=active`
+    : `https://sentry.io/api/0/projects/${encodedOrg}/${encodedProject}/`;
   try {
     const response = await fetch(url, {
-      headers,
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
       cache: 'no-store',
       redirect: 'error',
       signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -90,31 +95,27 @@ async function sentryDiagnostics(entry) {
   const project = env('SENTRY_PROJECT');
   const token = env('SENTRY_AUTH_TOKEN');
   if (!org || !project || !token) return { attempted: false, reason: 'configuration_missing' };
-  const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
-  const encodedOrg = encodeURIComponent(org);
-  const encodedProject = encodeURIComponent(project);
   const [projectProbe, clientKeysProbe] = await Promise.all([
-    probe(`https://sentry.io/api/0/projects/${encodedOrg}/${encodedProject}/`, headers),
-    probe(`https://sentry.io/api/0/projects/${encodedOrg}/${encodedProject}/keys/?status=active`, headers),
+    sentryApiProbe('project', org, project, token),
+    sentryApiProbe('client_keys', org, project, token),
   ]);
   return { attempted: true, projectProbe, clientKeysProbe };
 }
 
-async function vercelDiagnostics(entry) {
+function vercelDiagnostics(entry) {
   if (!entry || entry.status === 'reviewed') return null;
-  const token = env('VERCEL_TOKEN');
+  const tokenConfigured = Boolean(env('VERCEL_TOKEN'));
   const targets = loadTargets();
   const target = targets?.vercel;
-  if (!token) return { attempted: false, reason: 'api_token_missing' };
-  if (!target?.teamId || !target?.projectId) return { attempted: false, reason: 'target_configuration_missing' };
-  const headers = { Authorization: `Bearer ${token}` };
-  const team = encodeURIComponent(String(target.teamId));
-  const project = encodeURIComponent(String(target.projectId));
-  const [projectProbe, environmentProbe] = await Promise.all([
-    probe(`https://api.vercel.com/v9/projects/${project}?teamId=${team}`, headers),
-    probe(`https://api.vercel.com/v10/projects/${project}/env?target=production&decrypt=false&teamId=${team}`, headers),
-  ]);
-  return { attempted: true, projectProbe, environmentProbe };
+  if (!tokenConfigured) return { attempted: false, reason: 'api_token_missing' };
+  if (!target?.teamId || !target?.projectId || !target?.projectName) {
+    return { attempted: false, reason: 'target_configuration_missing' };
+  }
+  return {
+    attempted: false,
+    reason: 'canonical_provider_proof_is_authoritative',
+    targetConfigurationPresent: true,
+  };
 }
 
 export async function buildProviderBlockerDiagnostics(evidence) {
@@ -127,7 +128,7 @@ export async function buildProviderBlockerDiagnostics(evidence) {
   const vercel = providerEntry(evidence, 'vercel');
   const sentry = providerEntry(evidence, 'sentry');
   const [vercelProbe, sentryProbe] = await Promise.all([
-    vercelDiagnostics(vercel),
+    Promise.resolve(vercelDiagnostics(vercel)),
     sentryDiagnostics(sentry),
   ]);
 
@@ -150,14 +151,16 @@ export async function buildProviderBlockerDiagnostics(evidence) {
       vercel: vercelProbe,
       sentry: sentryProbe,
     },
+    secondaryNetworkProbeScope: 'sentry-only-fixed-origin',
     operatorActionRequired: blocked.length > 0,
-    truthBoundary: 'This diagnostic artifact explains why the provider proof is blocked. It never promotes provider evidence, never treats diagnostics as runtime PASS, and never stores request URLs, provider response bodies, credentials, tokens, DSNs or decrypted environment values.',
+    truthBoundary: 'This diagnostic artifact explains why the provider proof is blocked. It never promotes provider evidence, never treats diagnostics as runtime PASS, never sends file-derived provider targets to outbound network requests, and never stores request URLs, provider response bodies, credentials, tokens, DSNs or decrypted environment values.',
     evidenceIntegrity: {
       containsSensitiveValues: false,
       credentialsStored: false,
       requestUrlsStored: false,
       providerResponseBodiesStored: false,
       decryptedProviderEnvironmentValuesStored: false,
+      fileDerivedOutboundTargetsUsed: false,
       exactShaBound: true,
     },
   };
