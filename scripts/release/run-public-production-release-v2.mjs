@@ -25,6 +25,7 @@ const requiredEvidence = [
 // npm run release:observability-smoke
 // npm run release:rollback:dry-run
 // npm run release:production-final
+// node scripts/release/validate-retained-supabase-rls-release-proof.mjs
 // deployment-smoke-validation.json
 // observability-smoke-validation.json
 // rollback-dry-run-validation.json
@@ -40,7 +41,7 @@ const commands = [
   ['05-playwright-install', 'npx playwright install --with-deps', 'npx', ['playwright', 'install', '--with-deps']],
   ['06-test-e2e-production-like', 'npm run test:e2e', 'npm', ['run', 'test:e2e']],
   ['07-security-ci', 'npm run security:ci', 'npm', ['run', 'security:ci']],
-  ['08-security-rls-live', 'npm run security:rls:live', 'npm', ['run', 'security:rls:live']],
+  ['08-security-rls-live', 'node scripts/release/validate-retained-supabase-rls-release-proof.mjs', 'node', ['scripts/release/validate-retained-supabase-rls-release-proof.mjs']],
   ['09-release-deployment-smoke', 'npm run release:deployment-smoke', 'npm', ['run', 'release:deployment-smoke']],
   ['10-release-observability-smoke', 'npm run release:observability-smoke', 'npm', ['run', 'release:observability-smoke']],
   ['11-release-rollback-dry-run', 'npm run release:rollback:dry-run', 'npm', ['run', 'release:rollback:dry-run']],
@@ -224,7 +225,7 @@ const evidence = {
       'unit-tests',
       'production-like-e2e',
       'security-ci',
-      'supabase-live-rls',
+      'retained-exact-sha-supabase-live-rls',
       'deployment-smoke',
       'observability-smoke',
       'rollback-dry-run',
@@ -271,7 +272,9 @@ const summary = {
     staticSecurityCiIsolated: true,
     staticSecurityCiSkipsLiveSupabaseRuntimeConnections: true,
     liveRuntimeChecksRunInDedicatedSteps: true,
-    supabaseLiveRlsCommand: 'npm run security:rls:live',
+    retainedSupabaseLiveProofRequired: true,
+    releaseRunnerReexecutesSupabaseLiveProof: false,
+    supabaseLiveRlsCommand: 'node scripts/release/validate-retained-supabase-rls-release-proof.mjs',
     deploymentSmokeCommand: 'npm run release:deployment-smoke',
   },
   recursionGuard: {

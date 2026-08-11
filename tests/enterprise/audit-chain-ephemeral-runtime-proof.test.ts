@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/audit-chain-runtime-proof.yml', 'utf8');
 const producer = readFileSync('scripts/security/run-audit-chain-live-validation.mjs', 'utf8');
+const preflight = readFileSync('scripts/security/preflight-audit-chain-runtime-proof.mjs', 'utf8');
 const fetcher = readFileSync('scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs', 'utf8');
 
 describe('automatic ephemeral audit-chain runtime proof', () => {
@@ -13,6 +14,20 @@ describe('automatic ephemeral audit-chain runtime proof', () => {
     expect(workflow).toContain('test "$main_sha" = "$TARGET_SHA"');
     expect(workflow).toContain('persist-credentials: false');
     expect(workflow).not.toContain('pull_request_target');
+  });
+
+  it('preflights signing prerequisites before any live disposable runtime mutation', () => {
+    const preflightIndex = workflow.indexOf('run: node scripts/security/preflight-audit-chain-runtime-proof.mjs');
+    const liveIndex = workflow.indexOf('run: node scripts/security/run-audit-chain-live-validation.mjs');
+    expect(preflightIndex).toBeGreaterThan(-1);
+    expect(liveIndex).toBeGreaterThan(preflightIndex);
+    expect(workflow).toContain("if: steps.runtime_preflight.outputs.ready == 'true'");
+    expect(workflow).toContain("if: steps.runtime_preflight.outputs.ready != 'true'");
+    expect(workflow).toContain('Live audit-chain proof was intentionally not executed; no disposable runtime mutation was performed.');
+    expect(preflight).toContain('audit_chain_signing_secret_missing');
+    expect(preflight).toContain('evidence_pack_signing_secret_missing');
+    expect(preflight).toContain('disposableRuntimeMutationPerformed: false');
+    expect(preflight).toContain('containsSensitiveValues: false');
   });
 
   it('removes persistent organization and actor fixture secrets', () => {

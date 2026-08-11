@@ -99,7 +99,7 @@ describe('enterprise auth, RBAC and tenant-isolation invariants', () => {
     }
   });
 
-  it('documents the final auth/RBAC review and No-Go runtime evidence status', () => {
+  it('documents the final auth/RBAC review and validates placeholder or authoritative exact-SHA runtime evidence', () => {
     const reviewPath = 'docs/security/AUTH_RBAC_ENTERPRISE_REVIEW.md';
     const evidencePath = 'docs/security/evidence/runtime/auth-rbac-final-validation.json';
 
@@ -107,24 +107,53 @@ describe('enterprise auth, RBAC and tenant-isolation invariants', () => {
     expect(existsSync(join(process.cwd(), evidencePath))).toBe(true);
 
     const review = readRepoFile(reviewPath);
-    const evidence = JSON.parse(readRepoFile(evidencePath)) as {
-      primaryAuthStack?: string;
-      status?: string;
-      outcome?: string;
-      releaseDecision?: string;
-      goNoGo?: { status?: string };
-      evidenceIntegrity?: {
-        placeholderOnly?: boolean;
-        realRuntimeEvidenceAttached?: boolean;
-        customerFacingProof?: boolean;
-      };
-      validationCommands?: Array<{ command: string; status: string }>;
-    };
+    const evidence = JSON.parse(readRepoFile(evidencePath));
 
     expect(review).toContain('Supabase Auth');
     expect(review).toContain('Go/No-Go');
-    expect(review).toContain('No-Go for enterprise production until CI and runtime gates pass');
-    expect(review).toContain('Runtime validation was not executed in this GitHub patch session');
+
+    if (evidence.schema === 'risck-comply.auth-rbac-runtime-evidence.v2') {
+      expect(evidence.evidenceItem).toBe('auth-rbac-final-validation');
+      expect(evidence.status).toBe('Complete');
+      expect(evidence.outcome).toBe('passed');
+      expect(evidence.repository).toBe('renanescola40-afk/eurocomply_saas');
+      expect(evidence.branch).toBe('main');
+      expect(evidence.targetSha).toMatch(/^[a-f0-9]{40}$/);
+      expect(evidence.checkedOutSha).toBe(evidence.targetSha);
+      expect(evidence.environment).toBe('production-auth-rbac-validation');
+      expect(evidence.productionGate).toBe('eligible for downstream enterprise gates');
+      expect(evidence.provenance).toMatchObject({
+        githubActions: true,
+        repository: 'renanescola40-afk/eurocomply_saas',
+        branch: 'main',
+        expectedSha: evidence.targetSha,
+        checkedOutSha: evidence.targetSha,
+        exactShaBound: true,
+      });
+      expect(String(evidence.provenance?.runId || '')).toMatch(/^\d+$/);
+      expect(Object.values(evidence.checks || {}).length).toBeGreaterThan(0);
+      expect(Object.values(evidence.checks || {}).every((value) => value === true)).toBe(true);
+      expect(evidence.failures).toEqual([]);
+      expect(evidence.evidenceIntegrity).toMatchObject({
+        placeholderOnly: false,
+        runtimeProofInvented: false,
+        customerFacingProof: false,
+        rawCredentialsStored: false,
+        serviceRoleKeyStored: false,
+        disposablePasswordStored: false,
+        accessTokensStored: false,
+        userIdentifiersStored: false,
+        organizationIdentifiersStored: false,
+        rawProviderResponsesStored: false,
+        cleanupRequired: true,
+        cleanupVerified: true,
+      });
+      expect(evidence.evidenceLocations).toContain('.github/workflows/auth-rbac-runtime-proof.yml');
+      return;
+    }
+
+    expect(evidence.schemaVersion).toBe('1.0');
+    expect(evidence.evidenceItem).toBe('enterprise-final-readiness-validation');
     expect(evidence.primaryAuthStack).toBe('supabase-auth');
     expect(evidence.status).toBe('Open');
     expect(evidence.outcome).toBe('no_go');
@@ -133,6 +162,6 @@ describe('enterprise auth, RBAC and tenant-isolation invariants', () => {
     expect(evidence.evidenceIntegrity?.placeholderOnly).toBe(true);
     expect(evidence.evidenceIntegrity?.realRuntimeEvidenceAttached).toBe(false);
     expect(evidence.evidenceIntegrity?.customerFacingProof).toBe(false);
-    expect(evidence.validationCommands?.some((item) => item.command === 'npm run security:step-up')).toBe(true);
+    expect(evidence.validationCommands?.some((item: { command?: string }) => item.command === 'npm run security:step-up')).toBe(true);
   });
 });

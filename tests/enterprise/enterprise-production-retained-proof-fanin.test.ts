@@ -43,6 +43,8 @@ function fakeFetcher(key: string, calls: Array<Record<string, unknown>>) {
 function fakeFetchers(calls: Array<Record<string, unknown>>): Fetchers {
   const fixtures = {
     authRbac: fakeFetcher('authRbac', calls),
+    supabaseRls: fakeFetcher('supabaseRls', calls),
+    uploadScanner: fakeFetcher('uploadScanner', calls),
     auditChain: fakeFetcher('auditChain', calls),
     productionProvider: fakeFetcher('productionProvider', calls),
     branchProtection: fakeFetcher('branchProtection', calls),
@@ -60,6 +62,8 @@ describe('enterprise production retained-proof fan-in', () => {
   it('uses only the explicit release-critical producer allowlist', () => {
     expect(RETAINED_RUNTIME_PRODUCERS.map((producer) => producer.workflowName)).toEqual([
       'Auth RBAC Tenant Proof',
+      'Supabase Live RLS Validation',
+      'RISCK COMPLY Upload Security CI',
       'Audit Chain Runtime Proof',
       'Production Provider Runtime Proof',
       'Branch Protection Runtime Proof',
@@ -122,6 +126,30 @@ describe('enterprise production retained-proof fan-in', () => {
     expect(manifest.sourceWorkflowPath).toBe('.github/workflows/audit-chain-runtime-proof.yml');
     expect(manifest.sourceWorkflowName).toBe(`Audit chain proof for ${sha}`);
     expect(manifest.evidenceIntegrity.triggerAuthorizationUsesStableWorkflowPath).toBe(true);
+  });
+
+  it('accepts Supabase RLS and upload-scanner producers as stable exact-SHA trigger sources', async () => {
+    for (const [key, workflowPath] of [
+      ['supabaseRls', '.github/workflows/supabase-live-rls-validation.yml'],
+      ['uploadScanner', '.github/workflows/upload-security-ci.yml'],
+    ] as const) {
+      const root = tempRoot();
+      const calls: Array<Record<string, unknown>> = [];
+      await hydrateEnterpriseRetainedRuntimeEvidence({
+        root,
+        repository,
+        token: 'test-token',
+        targetSha: sha,
+        sourceWorkflowPath: workflowPath,
+        sourceRunId: '7777',
+        fetchers: fakeFetchers(calls),
+      });
+      expect(calls.find((call) => call.key === key)).toMatchObject({
+        sourceRunId: '7777',
+        required: true,
+        targetSha: sha,
+      });
+    }
   });
 
   it('retains the canonical workflow-name fallback for direct legacy callers', async () => {

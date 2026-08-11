@@ -36,6 +36,8 @@ The Vercel probe must prove all of the following:
 5. the production environment-variable inventory can be listed with `decrypt=false`;
 6. every high-impact runtime key required by enterprise readiness is present by name.
 
+The authoritative provider proof performs these Vercel requests. The diagnostic helper does not repeat Vercel network requests from file-derived target identifiers; it reports the canonical proof's blocker codes and non-secret metrics instead.
+
 The proof never requests decrypted environment values and never stores provider responses.
 
 ## Sentry acceptance criteria
@@ -64,15 +66,34 @@ It may contain only redacted control results, provider names, counts, timestamps
 
 A failed provider probe produces `status: Open` and exits non-zero. The P0 aggregator may promote only a successful exact-SHA artifact that passes the authoritative validator.
 
+## Redacted blocker diagnostics
+
+The workflow also runs `scripts/security/diagnose-production-provider-blockers.mjs` with `if: always()` so a blocked authoritative proof still produces actionable diagnostics at:
+
+`release-validation/provider-blocker-diagnostics.json`
+
+This file is **diagnostic only**. `status: Complete` means diagnostic collection completed; it never changes `production-secrets-provider-stores.json`, never promotes a blocked provider to PASS and is not accepted by the P0 runtime evidence fetcher.
+
+Allowed diagnostic data is deliberately narrow:
+
+- stable blocker codes such as `vercel_api_token_missing`;
+- provider names;
+- non-secret counts already present in canonical evidence;
+- for Sentry only, HTTP status numbers and bounded categories such as `unauthenticated`, `forbidden_or_insufficient_scope`, `resource_not_found`, `rate_limited`, `timeout` or `provider_server_error`.
+
+The secondary diagnostic network scope is limited to the fixed `https://sentry.io` origin. Sentry organization/project identifiers come from protected workflow configuration and are percent-encoded before being placed in the fixed path. File-derived Vercel target identifiers are never sent by the diagnostic helper; Vercel network validation remains solely in the authoritative provider proof.
+
+The diagnostic artifact does not store request URLs, response bodies, provider IDs from responses, credentials, tokens, DSNs or decrypted environment values.
+
 ## Operational remediation
 
 When the proof is blocked:
 
-- Vercel `apiTokenConfigured=false`: configure a read-capable `VERCEL_TOKEN` in the protected GitHub `production` environment.
-- Vercel `projectIdentityMatched=false`: verify the intended project before changing the versioned target; never weaken the identity check.
-- Vercel `requiredEnvironmentKeysPresent=false`: add the missing application runtime variables in Vercel production; do not put their values in evidence.
-- Sentry `projectReachable=false`: validate organization/project slugs and token scope.
-- Sentry `clientKeyInventoryReachable=false`: ensure the token can read project client keys.
-- Sentry `activeClientKeyPresent=false`: create or activate an appropriate Sentry project client key/DSN.
+- `vercel_api_token_missing`: configure a read-capable `VERCEL_TOKEN` in the protected GitHub `production` environment.
+- `vercel_project_identity_mismatch`: verify the intended project before changing the versioned target; never weaken the identity check.
+- `vercel_required_production_environment_keys_missing`: add the missing application runtime variables in Vercel production; do not put their values in evidence.
+- `sentry_project_api_unreachable`: use the diagnostic probe category to distinguish missing resource, authentication/scope, rate limit or provider/network failure.
+- `sentry_client_key_inventory_unavailable`: ensure the token can read project client keys.
+- `sentry_active_client_key_missing`: create or activate an appropriate Sentry project client key/DSN.
 
 After remediation, rerun the protected workflow against the exact current `main` SHA. Do not manually edit runtime evidence to convert a blocked result into `Complete`.

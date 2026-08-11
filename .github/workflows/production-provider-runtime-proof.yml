@@ -74,10 +74,12 @@ jobs:
       - name: Validate provider proof contracts
         run: |
           node --check scripts/security/run-production-provider-runtime-proof.mjs
+          node --check scripts/security/diagnose-production-provider-blockers.mjs
           node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync(process.env.PROVIDER_TARGETS_PATH,'utf8')); if(p.schema!=='risck-comply.production-provider-targets.v1') process.exit(1)"
           npx vitest run \
             scripts/release/validate-production-secrets-runtime-evidence.test.mjs \
-            tests/enterprise/production-provider-runtime-proof.test.ts
+            tests/enterprise/production-provider-runtime-proof.test.ts \
+            tests/enterprise/production-provider-blocker-diagnostics.test.ts
 
       - name: Execute live provider proof
         run: node scripts/security/run-production-provider-runtime-proof.mjs
@@ -86,11 +88,31 @@ jobs:
         run: >-
           node scripts/security/check-p0-runtime-evidence-files.mjs
 
+      - name: Diagnose provider blockers without storing provider values
+        if: always()
+        run: node scripts/security/diagnose-production-provider-blockers.mjs
+
+      - name: Publish provider blocker summary
+        if: always()
+        shell: bash
+        run: |
+          diagnostic=release-validation/provider-blocker-diagnostics.json
+          if [ -f "$diagnostic" ]; then
+            {
+              echo '## Production provider blocker diagnostics'
+              echo
+              jq -r '"- Provider proof: \(.providerProofStatus)/\(.providerProofOutcome)\n- Blocked providers: \(.blockedProviderCount)\n- Blocker codes: \(.blockerCount)"' "$diagnostic"
+              jq -r '.blockerCodes[]? | "- `\(.)`"' "$diagnostic"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload redacted provider evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: production-provider-runtime-proof-${{ env.TARGET_SHA }}
-          path: docs/security/evidence/runtime/production-secrets-provider-stores.json
+          path: |
+            docs/security/evidence/runtime/production-secrets-provider-stores.json
+            release-validation/provider-blocker-diagnostics.json
           if-no-files-found: error
           retention-days: 90

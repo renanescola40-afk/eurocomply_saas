@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/production-provider-runtime-proof.yml', 'utf8');
 const producer = readFileSync('scripts/security/run-production-provider-runtime-proof.mjs', 'utf8');
+const diagnostics = readFileSync('scripts/security/diagnose-production-provider-blockers.mjs', 'utf8');
 const targets = JSON.parse(readFileSync('config/production-provider-targets.json', 'utf8')) as {
   schema: string;
   vercel: { teamId: string; projectId: string; projectName: string };
@@ -60,6 +61,18 @@ describe('protected production provider runtime proof', () => {
     expect(producer).toContain('clientKeyInventoryReachable');
     expect(producer).toContain('activeClientKeyPresent');
     expect(producer).toContain('DSN and token not stored');
+  });
+
+  it('publishes redacted blocker codes even when the authoritative provider proof fails', () => {
+    expect(workflow).toContain('if: always()\n        run: node scripts/security/diagnose-production-provider-blockers.mjs');
+    expect(workflow).toContain('release-validation/provider-blocker-diagnostics.json');
+    expect(diagnostics).toContain('vercel_api_token_missing');
+    expect(diagnostics).toContain('sentry_project_api_unreachable');
+    expect(diagnostics).toContain('providerResponseBodiesStored: false');
+    expect(diagnostics).toContain('requestUrlsStored: false');
+    expect(diagnostics).toContain("category: 'forbidden_or_insufficient_scope'");
+    expect(diagnostics).not.toContain('response.text()');
+    expect(diagnostics).not.toContain('response.json()');
   });
 
   it('requires the high-impact Vercel production controls that drive readiness', () => {
