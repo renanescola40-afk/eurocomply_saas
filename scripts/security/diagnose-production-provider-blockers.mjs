@@ -1,0 +1,192 @@
+#!/usr/bin/env node
+
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const SOURCE = resolve('docs/security/evidence/runtime/production-secrets-provider-stores.json');
+const OUTPUT = resolve('release-validation/provider-blocker-diagnostics.json');
+const TARGETS = resolve(process.env.PROVIDER_TARGETS_PATH || 'config/production-provider-targets.json');
+const FULL_SHA = /^[a-f0-9]{40}$/;
+const TIMEOUT_MS = 8_000;
+
+function env(name) {
+  return String(process.env[name] ?? '').trim();
+}
+
+export function httpDiagnostic(status, errorCode = null) {
+  if (errorCode) return { httpStatus: null, category: errorCode };
+  if (!Number.isInteger(status)) return { httpStatus: null, category: 'network_or_unknown' };
+  if (status >= 200 && status < 300) return { httpStatus: status, category: 'success' };
+  if (status === 401) return { httpStatus: status, category: 'unauthenticated' };
+  if (status === 403) return { httpStatus: status, category: 'forbidden_or_insufficient_scope' };
+  if (status === 404) return { httpStatus: status, category: 'resource_not_found' };
+  if (status === 408) return { httpStatus: status, category: 'request_timeout' };
+  if (status === 429) return { httpStatus: status, category: 'rate_limited' };
+  if (status >= 500) return { httpStatus: status, category: 'provider_server_error' };
+  return { httpStatus: status, category: 'request_rejected' };
+}
+
+async function probe(url, headers) {
+  try {
+    const response = await fetch(url, {
+      headers,
+      cache: 'no-store',
+      redirect: 'error',
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    const result = httpDiagnostic(response.status);
+    await response.body?.cancel().catch(() => undefined);
+    return result;
+  } catch (error) {
+    const name = String(error?.name || '').toLowerCase();
+    return httpDiagnostic(null, name.includes('timeout') ? 'timeout' : 'network_error');
+  }
+}
+
+function providerEntry(evidence, provider) {
+  return (Array.isArray(evidence?.providersReviewed) ? evidence.providersReviewed : [])
+    .find((entry) => entry?.provider === provider) ?? null;
+}
+
+export function deriveProviderBlockerCodes(entry) {
+  if (!entry || entry.status === 'reviewed') return [];
+  const checks = entry.checks && typeof entry.checks === 'object' ? entry.checks : {};
+  const provider = String(entry.provider || 'provider');
+  const explicit = {
+    vercel: {
+      apiTokenConfigured: 'vercel_api_token_missing',
+      targetConfigurationBound: 'vercel_target_configuration_invalid',
+      projectReachable: 'vercel_project_api_unreachable',
+      projectIdentityMatched: 'vercel_project_identity_mismatch',
+      productionEnvironmentEnumerated: 'vercel_production_environment_inventory_unavailable',
+      requiredEnvironmentKeysPresent: 'vercel_required_production_environment_keys_missing',
+    },
+    sentry: {
+      organizationConfigured: 'sentry_organization_missing',
+      projectConfigured: 'sentry_project_missing',
+      buildAuthTokenConfigured: 'sentry_auth_token_missing',
+      projectReachable: 'sentry_project_api_unreachable',
+      clientKeyInventoryReachable: 'sentry_client_key_inventory_unavailable',
+      activeClientKeyPresent: 'sentry_active_client_key_missing',
+    },
+  };
+  return Object.entries(checks)
+    .filter(([, passed]) => passed !== true)
+    .map(([check]) => explicit[provider]?.[check] || `${provider}_${check}_failed`);
+}
+
+function loadTargets() {
+  try {
+    return JSON.parse(readFileSync(TARGETS, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+async function sentryDiagnostics(entry) {
+  if (!entry || entry.status === 'reviewed') return null;
+  const org = env('SENTRY_ORG');
+  const project = env('SENTRY_PROJECT');
+  const token = env('SENTRY_AUTH_TOKEN');
+  if (!org || !project || !token) return { attempted: false, reason: 'configuration_missing' };
+  const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
+  const encodedOrg = encodeURIComponent(org);
+  const encodedProject = encodeURIComponent(project);
+  const [projectProbe, clientKeysProbe] = await Promise.all([
+    probe(`https://sentry.io/api/0/projects/${encodedOrg}/${encodedProject}/`, headers),
+    probe(`https://sentry.io/api/0/projects/${encodedOrg}/${encodedProject}/keys/?status=active`, headers),
+  ]);
+  return { attempted: true, projectProbe, clientKeysProbe };
+}
+
+async function vercelDiagnostics(entry) {
+  if (!entry || entry.status === 'reviewed') return null;
+  const token = env('VERCEL_TOKEN');
+  const targets = loadTargets();
+  const target = targets?.vercel;
+  if (!token) return { attempted: false, reason: 'api_token_missing' };
+  if (!target?.teamId || !target?.projectId) return { attempted: false, reason: 'target_configuration_missing' };
+  const headers = { Authorization: `Bearer ${token}` };
+  const team = encodeURIComponent(String(target.teamId));
+  const project = encodeURIComponent(String(target.projectId));
+  const [projectProbe, environmentProbe] = await Promise.all([
+    probe(`https://api.vercel.com/v9/projects/${project}?teamId=${team}`, headers),
+    probe(`https://api.vercel.com/v10/projects/${project}/env?target=production&decrypt=false&teamId=${team}`, headers),
+  ]);
+  return { attempted: true, projectProbe, environmentProbe };
+}
+
+export async function buildProviderBlockerDiagnostics(evidence) {
+  const commitSha = String(evidence?.runtimeContext?.commitSha ?? '').trim().toLowerCase();
+  if (!FULL_SHA.test(commitSha)) throw new Error('provider_evidence_commit_sha_invalid');
+
+  const providers = Array.isArray(evidence?.providersReviewed) ? evidence.providersReviewed : [];
+  const blocked = providers.filter((entry) => entry?.status !== 'reviewed');
+  const blockerCodes = blocked.flatMap(deriveProviderBlockerCodes);
+  const vercel = providerEntry(evidence, 'vercel');
+  const sentry = providerEntry(evidence, 'sentry');
+  const [vercelProbe, sentryProbe] = await Promise.all([
+    vercelDiagnostics(vercel),
+    sentryDiagnostics(sentry),
+  ]);
+
+  return {
+    schema: 'risck-comply.production-provider-blocker-diagnostics.v1',
+    status: 'Complete',
+    generatedAt: new Date().toISOString(),
+    targetSha: commitSha,
+    providerProofStatus: evidence?.status || 'Open',
+    providerProofOutcome: evidence?.outcome || 'blocked',
+    blockedProviderCount: blocked.length,
+    blockerCount: blockerCodes.length,
+    blockerCodes,
+    providers: blocked.map((entry) => ({
+      provider: String(entry.provider || 'unknown'),
+      blockerCodes: deriveProviderBlockerCodes(entry),
+      ...(entry.metrics ? { metrics: entry.metrics } : {}),
+    })),
+    probes: {
+      vercel: vercelProbe,
+      sentry: sentryProbe,
+    },
+    operatorActionRequired: blocked.length > 0,
+    truthBoundary: 'This diagnostic artifact explains why the provider proof is blocked. It never promotes provider evidence, never treats diagnostics as runtime PASS, and never stores request URLs, provider response bodies, credentials, tokens, DSNs or decrypted environment values.',
+    evidenceIntegrity: {
+      containsSensitiveValues: false,
+      credentialsStored: false,
+      requestUrlsStored: false,
+      providerResponseBodiesStored: false,
+      decryptedProviderEnvironmentValuesStored: false,
+      exactShaBound: true,
+    },
+  };
+}
+
+export async function runProviderBlockerDiagnostics() {
+  let evidence;
+  try {
+    evidence = JSON.parse(readFileSync(SOURCE, 'utf8'));
+  } catch {
+    throw new Error('provider_runtime_evidence_missing_or_invalid');
+  }
+  const diagnostics = await buildProviderBlockerDiagnostics(evidence);
+  mkdirSync(dirname(OUTPUT), { recursive: true });
+  writeFileSync(OUTPUT, `${JSON.stringify(diagnostics, null, 2)}\n`, { mode: 0o600 });
+  console.log(JSON.stringify({
+    targetSha: diagnostics.targetSha,
+    blockedProviderCount: diagnostics.blockedProviderCount,
+    blockerCodes: diagnostics.blockerCodes,
+  }, null, 2));
+  return diagnostics;
+}
+
+const isMain = process.argv[1]
+  && fileURLToPath(new URL(`file://${process.argv[1]}`)) === fileURLToPath(import.meta.url);
+
+if (isMain) {
+  runProviderBlockerDiagnostics().catch((error) => {
+    console.error(`Provider blocker diagnostics failed: ${error instanceof Error ? error.message : 'unknown_error'}`);
+    process.exit(1);
+  });
+}
