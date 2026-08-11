@@ -14,7 +14,7 @@ describe('production provider blocker diagnostics', () => {
     expect(httpDiagnostic(404)).toEqual({ httpStatus: 404, category: 'resource_not_found' });
     expect(httpDiagnostic(429)).toEqual({ httpStatus: 429, category: 'rate_limited' });
     expect(httpDiagnostic(503)).toEqual({ httpStatus: 503, category: 'provider_server_error' });
-    expect(httpDiagnostic(null, 'timeout')).toEqual({ httpStatus: null, category: 'timeout' });
+    expect(httpDiagnostic(null)).toEqual({ httpStatus: null, category: 'network_or_unknown' });
   });
 
   it('turns current Vercel and Sentry blocked checks into actionable non-secret codes', () => {
