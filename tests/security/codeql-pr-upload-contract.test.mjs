@@ -24,3 +24,7 @@ for (const [name, workflow] of [
     assert.match(workflow, /path:\s*codeql-results/);
   });
 }
+
+// Regression boundary: CodeQL Action v4 performs SARIF post-processing even when
+// upload is disabled. This repository therefore keeps analyze upload enabled and
+// retains a second reviewable SARIF artifact instead of using `upload: never`.
