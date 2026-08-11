@@ -113,6 +113,7 @@ jobs:
           node --check scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs
           grep -Fq "npm run release:production-final" .github/workflows/enterprise-production-gate.yml
           grep -Fq "hydrate-enterprise-retained-runtime-evidence.mjs" .github/workflows/enterprise-production-gate.yml
+          grep -Fq "RETAINED_PROOF_SOURCE_WORKFLOW_PATH" .github/workflows/enterprise-production-gate.yml
           grep -Fq "node scripts/release/validate-release-go-no-go-evidence.mjs" scripts/release/run-public-production-release-v2.mjs
           grep -Fq "verify-enterprise-evidence-bundle.mjs" .github/workflows/enterprise-production-gate.yml
           grep -Fq "if-no-files-found: error" .github/workflows/enterprise-production-gate.yml
@@ -175,6 +176,7 @@ jobs:
       MALWARE_SCANNER_TIMEOUT_MS: ${{ vars.MALWARE_SCANNER_TIMEOUT_MS || secrets.MALWARE_SCANNER_TIMEOUT_MS }}
       GITHUB_TOKEN: ${{ github.token }}
       RETAINED_PROOF_SOURCE_WORKFLOW: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name || '' }}
+      RETAINED_PROOF_SOURCE_WORKFLOW_PATH: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.path || '' }}
       RETAINED_PROOF_SOURCE_RUN_ID: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || '' }}
     steps:
       - uses: actions/checkout@v7
@@ -207,7 +209,7 @@ jobs:
           {
             echo '## Retained exact-SHA runtime proof fan-in'
             echo
-            jq -r '"- Target SHA: `\(.targetSha)`\n- Hydrated producers: \(.hydratedProducerCount)/\(.producerCount)\n- Missing producers: \(.missingProducerCount)\n- Trigger source: \(.sourceWorkflowName // "direct gate")"' "$manifest"
+            jq -r '"- Target SHA: `\(.targetSha)`\n- Hydrated producers: \(.hydratedProducerCount)/\(.producerCount)\n- Missing producers: \(.missingProducerCount)\n- Trigger source: \(.sourceWorkflowPath // .sourceWorkflowName // "direct gate")"' "$manifest"
           } >> "$GITHUB_STEP_SUMMARY"
       - run: node scripts/release/check-enterprise-release-env.mjs
       - run: npm run release:production-final
