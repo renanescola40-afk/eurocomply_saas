@@ -1,4 +1,5 @@
 import { appendFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 export const PRODUCER_WORKFLOW_NAMES = Object.freeze([
   'Distributed Rate Limit Runtime Proof',
@@ -33,6 +34,11 @@ function timestampMs(run) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function createdTimestampMs(run) {
+  const parsed = Date.parse(run?.created_at ?? '');
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function exactShaProducerRuns(runs, targetSha) {
   const names = new Set(PRODUCER_WORKFLOW_NAMES);
   return runs.filter(
@@ -51,8 +57,7 @@ export function hasActiveProducer(runs) {
 export function scorecardAlreadyCoversEvidence(runs, targetSha, producerCutoffMs) {
   return runs.some((run) => {
     if (run?.head_sha !== targetSha || run?.name !== SCORECARD_WORKFLOW_NAME) return false;
-    const runTimestamp = timestampMs(run);
-    if (runTimestamp < producerCutoffMs) return false;
+    if (createdTimestampMs(run) < producerCutoffMs) return false;
     if (ACTIVE_RUN_STATUSES.has(run?.status)) return true;
     return run?.status === 'completed' && run?.conclusion === 'success';
   });
@@ -203,7 +208,7 @@ export async function stabilize({ now = () => Date.now() } = {}) {
   return { dispatched: true, reason: 'terminal-dispatch', targetSha };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   stabilize()
     .then((result) => {
       console.log(JSON.stringify(result));
