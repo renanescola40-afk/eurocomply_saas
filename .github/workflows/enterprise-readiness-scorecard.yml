@@ -8,6 +8,19 @@ on:
   workflow_dispatch:
   workflow_run:
     workflows:
+      - CI
+      - CodeQL
+      - Semgrep
+      - Secret Scanning
+      - Scan repository for accidental secret exposure
+      - Dependency Review
+      - Actionlint
+      - Public Claims Guard
+      - Full Security Suite
+      - Enterprise Production Gate
+      - RISCK COMPLY Security CI
+      - Enterprise DAST
+      - Dependency Vulnerability Proof
       - Distributed Rate Limit Runtime Proof
       - Auth RBAC Tenant Proof
       - Supabase Live RLS Validation
@@ -23,12 +36,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: enterprise-readiness-scorecard-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}-${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success' && github.run_id || 'active' }}
+  group: enterprise-readiness-scorecard-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
   scorecard:
     name: Generate evidence-backed enterprise scorecard
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -94,6 +108,9 @@ jobs:
           tests/enterprise/recovery-resilience-evidence-fetch.test.ts
           tests/security/supabase-rls-scorecard-evidence.test.ts
           tests/release/production-runtime-scorecard-evidence.test.ts
+
+      - name: Validate scorecard aggregation boundary
+        run: node --test tests/enterprise/repository-control-scorecard-aggregation.test.mjs
 
       - name: Validate distributed rate-limit proof contracts
         shell: bash
@@ -165,7 +182,7 @@ jobs:
         env:
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
-        run: node scripts/enterprise/build-repository-control-evidence.mjs
+        run: node scripts/enterprise/run-repository-control-evidence-for-scorecard.mjs
 
       - name: Retain repository control evidence diagnostics
         if: always()
@@ -408,3 +425,13 @@ jobs:
             docs/security/evidence/p1/backup-restore-tested.json
           if-no-files-found: warn
           retention-days: 90
+
+      - name: Enforce enterprise scorecard decision
+        shell: bash
+        run: |
+          set -euo pipefail
+          scorecard=artifacts/enterprise-readiness/enterprise-readiness-scorecard.json
+          test -f "$scorecard"
+          decision="$(jq -r '.releaseDecision // "NO_GO"' "$scorecard")"
+          echo "Enterprise scorecard terminal decision: $decision"
+          test "$decision" = "GO"
