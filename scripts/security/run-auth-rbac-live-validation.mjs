@@ -269,8 +269,13 @@ async function main() {
   }
 
   const decision = evaluate({ checks, provenance });
-  let identityJourney = unavailableIdentityJourney('core_auth_rbac_proof_incomplete');
-  if (decision.complete && admin && url && anonKey) {
+  const identityJourneyEnabled = env('AUTH_IDENTITY_JOURNEY_ENABLED') === 'true';
+  let identityJourney = unavailableIdentityJourney(
+    identityJourneyEnabled
+      ? 'core_auth_rbac_proof_incomplete'
+      : 'identity_journey_explicit_confirmation_required',
+  );
+  if (decision.complete && identityJourneyEnabled && admin && url && anonKey) {
     try {
       identityJourney = await runEphemeralSignupOnboardingJourney({
         admin,
@@ -301,7 +306,7 @@ async function main() {
       ? `Protected live validation proved core Auth/RBAC, tenant isolation, session lifecycle and cleanup. The separately bounded disposable signup/onboarding journey is ${journeyComplete ? 'complete' : 'not yet complete'} and cannot change the core proof result.`
       : 'Protected Auth/RBAC and tenant-mutation runtime proof is incomplete or failed; enterprise release remains blocked until every core live check and disposable-fixture cleanup check passes for the exact main SHA.',
     productionGate: decision.complete ? 'eligible for downstream enterprise gates' : 'blocked',
-    completionRule: 'Run the protected Auth RBAC Tenant Proof workflow for the exact current main SHA. Core RBAC proof and the disposable signup/onboarding journey are evaluated independently; only explicitly successful cleaned-up journey checks may be promoted into the identity scorecard.',
+    completionRule: 'Run the protected Auth RBAC Tenant Proof workflow for the exact current main SHA. Core RBAC proof remains automatic. Disposable public signup/onboarding requires a manual workflow_dispatch with the exact confirmation literal PROVE_SIGNUP_ONBOARDING_RUNTIME; only an explicitly successful cleaned-up journey may be promoted into the identity scorecard.',
     checks,
     identityJourney,
     provenance: { ...provenance, exactShaBound: expectedSha !== null && expectedSha === checkedOutSha },
@@ -343,6 +348,7 @@ async function main() {
       identityJourneyIdentifiersStored: false,
       identityJourneyCleanupRequired: true,
       identityJourneyCleanupVerified: identityJourney.cleanupVerified === true,
+      identityJourneyExplicitlyConfirmed: identityJourneyEnabled,
     },
   };
 
