@@ -113,7 +113,7 @@ export async function fetchStripePromotedRuntimeEvidence({ root, repository, tok
   if (sourceRunId) {
     runs = [await githubJson(`https://api.github.com/repos/${repository}/actions/runs/${sourceRunId}`, token)];
   } else {
-    const response = await githubJson(`https://api.github.com/repos/${repository}/actions/workflows/${WORKFLOW_FILE}/runs?status=success&branch=main&per_page=50`, token);
+    const response = await githubJson(`https://api.github.com/repos/${repository}/actions/workflows/${WORKFLOW_FILE}/runs?status=success&branch=main&head_sha=${encodeURIComponent(targetSha)}&per_page=20`, token);
     runs = response.workflow_runs;
   }
 
