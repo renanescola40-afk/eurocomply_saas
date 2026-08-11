@@ -3,6 +3,8 @@ name: Audit Chain Runtime Proof
 run-name: Audit-chain runtime proof for ${{ inputs.release_sha || github.sha }}
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       release_sha:
@@ -29,8 +31,6 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       AUDIT_CHAIN_SIGNING_SECRET: ${{ secrets.AUDIT_CHAIN_SIGNING_SECRET }}
       EVIDENCE_PACK_SIGNING_SECRET: ${{ secrets.EVIDENCE_PACK_SIGNING_SECRET }}
-      AUDIT_CHAIN_LIVE_ORGANIZATION_ID: ${{ secrets.AUDIT_CHAIN_LIVE_ORGANIZATION_ID || secrets.AUTH_RBAC_ORGANIZATION_A_ID }}
-      AUDIT_CHAIN_LIVE_ACTOR_USER_ID: ${{ secrets.AUDIT_CHAIN_LIVE_ACTOR_USER_ID }}
       AUDIT_CHAIN_LIVE_PROOF: 'true'
       RISCK_COMPLY_ENTERPRISE_RELEASE: 'true'
 
@@ -78,10 +78,16 @@ jobs:
           node --check scripts/security/run-audit-chain-live-validation.mjs
           node --check scripts/security/validate-audit-chain-live-evidence.mjs
           node --check scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs
-          npx vitest run tests/enterprise/audit-chain-runtime-evidence-fetch.test.ts
+          npx vitest run \
+            tests/enterprise/audit-chain-runtime-evidence-fetch.test.ts \
+            tests/enterprise/audit-chain-ephemeral-runtime-proof.test.ts
 
-      - name: Execute protected live audit-chain proof
+      - name: Execute protected ephemeral live audit-chain proof
         run: node scripts/security/run-audit-chain-live-validation.mjs
+
+      - name: Validate raw redacted audit-chain evidence
+        run: |
+          node -e "import('./scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs').then(({validateRawAuditChainEvidence})=>{const fs=require('node:fs');const e=JSON.parse(fs.readFileSync('docs/security/evidence/runtime/audit-chain-live-validation.json','utf8'));const r=validateRawAuditChainEvidence(e);if(!r.passed){console.error(r.failures.join('\n'));process.exit(1)}})"
 
       - name: Upload redacted exact-SHA audit-chain evidence
         if: always()

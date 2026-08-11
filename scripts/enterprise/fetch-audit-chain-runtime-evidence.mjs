@@ -12,6 +12,7 @@ const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`;
 const EVIDENCE_PATH = 'docs/security/evidence/runtime/audit-chain-live-validation.json';
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const NUMERIC_ID = /^\d+$/;
+const ALLOWED_EVENTS = new Set(['push', 'workflow_dispatch']);
 
 const REQUIRED_RAW_CRITERIA = Object.freeze([
   'migrationsApplied',
@@ -24,6 +25,7 @@ const REQUIRED_RAW_CRITERIA = Object.freeze([
   'verificationRequiresRbacAndStepUp',
   'exportRequiresRbacAndStepUp',
   'exportIsSigned',
+  'ephemeralFixtureCleanup',
   'liveProofAttached',
 ]);
 
@@ -52,7 +54,7 @@ export function selectExactShaRun(runs, targetSha, sourceRunId = '') {
     .filter((run) => run?.path === WORKFLOW_PATH)
     .filter((run) => String(run?.head_sha || '').toLowerCase() === targetSha)
     .filter((run) => run?.head_branch === 'main')
-    .filter((run) => run?.event === 'workflow_dispatch')
+    .filter((run) => ALLOWED_EVENTS.has(run?.event))
     .filter((run) => run?.status === 'completed' && run?.conclusion === 'success')
     .filter((run) => !requested || String(run?.id) === requested)
     .sort((a, b) => Date.parse(b?.updated_at || b?.created_at || 0) - Date.parse(a?.updated_at || a?.created_at || 0))[0] ?? null;
@@ -71,11 +73,26 @@ export function validateRawAuditChainEvidence(evidence) {
   if (evidence?.runtimeConfiguration?.hasAuditSigningSecret !== true) failures.push('audit_signing_secret_not_proven');
   if (evidence?.runtimeConfiguration?.hasEvidencePackSigningSecret !== true) failures.push('evidence_pack_signing_secret_not_proven');
   if (evidence?.runtimeConfiguration?.hasTargetOrganization !== true) failures.push('target_organization_not_proven');
+  if (evidence?.runtimeConfiguration?.ephemeralFixtureMode !== true) failures.push('ephemeral_fixture_mode_not_proven');
+  if (evidence?.runtimeConfiguration?.persistentFixtureSecretsRequired !== false) failures.push('persistent_fixture_secret_dependency_present');
   if (evidence?.runtimeConfiguration?.liveProof?.present !== true) failures.push('live_proof_not_present');
+  if (evidence?.liveValidation?.fixtureMode !== 'ephemeral') failures.push('live_fixture_mode_not_ephemeral');
+  if (evidence?.liveValidation?.ephemeralFixturesCreated !== true) failures.push('ephemeral_fixtures_not_created');
+  if (evidence?.liveValidation?.cleanup?.status !== 'Complete') failures.push('ephemeral_cleanup_not_complete');
+  if (evidence?.liveValidation?.cleanup?.auditEventsRemoved !== true) failures.push('synthetic_audit_events_not_removed');
+  if (evidence?.liveValidation?.cleanup?.authFixturesRemoved !== true) failures.push('auth_fixtures_not_removed');
 
   for (const criterion of REQUIRED_RAW_CRITERIA) {
     if (evidence?.acceptanceCriteria?.[criterion] !== true) failures.push(`acceptance_${criterion}_failed`);
   }
+
+  if (evidence?.evidenceIntegrity?.containsSensitiveValues !== false) failures.push('sensitive_values_present');
+  if (evidence?.evidenceIntegrity?.credentialsStored !== false) failures.push('credentials_stored');
+  if (evidence?.evidenceIntegrity?.rawAuditPayloadsStored !== false) failures.push('raw_audit_payloads_stored');
+  if (evidence?.evidenceIntegrity?.rawIdentifiersStored !== false) failures.push('raw_identifiers_stored');
+  if (evidence?.evidenceIntegrity?.persistentFixtureCredentialsStored !== false) failures.push('persistent_fixture_credentials_stored');
+  if (evidence?.evidenceIntegrity?.syntheticAuditEventsRetained !== false) failures.push('synthetic_audit_events_retained');
+  if (evidence?.evidenceIntegrity?.ephemeralFixtureCleanupVerified !== true) failures.push('ephemeral_fixture_cleanup_not_verified');
 
   return { passed: failures.length === 0, failures };
 }
@@ -87,7 +104,7 @@ export function normalizeAuditChainEvidenceForP0(evidence, { targetSha, reposito
     outcome: 'passed',
     reviewedAt: verifiedAt,
     reviewer: 'RISCK COMPLY protected audit-chain runtime proof',
-    summary: 'Protected exact-SHA production validation proved transactional append, concurrency safety, tamper detection, missing-link detection and signed evidence-pack readiness.',
+    summary: 'Protected exact-SHA production validation proved transactional append, concurrency safety, tamper detection, missing-link detection, signed evidence-pack readiness and same-run disposable fixture cleanup.',
     sourceRedactionConfirmation: evidence.redactionConfirmation,
     redactionConfirmation: 'Redaction confirmed for runtime evidence.',
     commitSha: targetSha,
@@ -105,6 +122,10 @@ export function normalizeAuditChainEvidenceForP0(evidence, { targetSha, reposito
       containsSensitiveValues: false,
       credentialsStored: false,
       rawAuditPayloadsStored: false,
+      rawIdentifiersStored: false,
+      persistentFixtureCredentialsStored: false,
+      syntheticAuditEventsRetained: false,
+      ephemeralFixtureCleanupVerified: true,
       valuesRedacted: true,
     },
     controlsVerified: [
@@ -113,9 +134,11 @@ export function normalizeAuditChainEvidenceForP0(evidence, { targetSha, reposito
       'Tampering and missing previous-hash links were detected.',
       'Audit verification and evidence export remain RBAC plus Step-Up protected.',
       'Evidence-pack signing configuration was present without storing secret values.',
+      'Disposable identities, tenants and synthetic audit events were removed and cleanup was verified in the same protected run.',
     ],
     evidenceLocations: [
       WORKFLOW_PATH,
+      'scripts/security/lib/ephemeral-auth-fixtures.mjs',
       'scripts/security/run-audit-chain-live-validation.mjs',
       'scripts/security/validate-audit-chain-live-evidence.mjs',
       EVIDENCE_PATH,
@@ -186,8 +209,11 @@ export async function fetchAuditChainRuntimeEvidence({ root, repository, token, 
   if (!NUMERIC_ID.test(runId)) throw new Error('runtime_workflow_run_id_invalid');
   const artifacts = await githubJson(`https://api.github.com/repos/${repository}/actions/runs/${runId}/artifacts`, token);
   const expectedName = `audit-chain-runtime-proof-${targetSha}`;
-  const artifact = (artifacts.artifacts ?? []).find((candidate) => candidate?.name === expectedName && candidate?.expired !== true);
-  if (!artifact || !NUMERIC_ID.test(String(artifact.id || ''))) throw new Error('exact_sha_audit_chain_artifact_missing');
+  const matching = (artifacts.artifacts ?? []).filter((candidate) => candidate?.name === expectedName && candidate?.expired !== true);
+  if (matching.length !== 1 || !NUMERIC_ID.test(String(matching[0]?.id || ''))) {
+    throw new Error('exact_sha_audit_chain_artifact_missing_or_ambiguous');
+  }
+  const artifact = matching[0];
 
   const zipPath = join(root, 'artifacts', 'enterprise-readiness', `audit-chain-${runId}.zip`);
   mkdirSync(dirname(zipPath), { recursive: true });
