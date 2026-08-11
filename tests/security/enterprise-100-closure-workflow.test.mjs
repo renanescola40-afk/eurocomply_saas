@@ -6,6 +6,7 @@ const workflow = readFileSync('.github/workflows/enterprise-100-closure.yml', 'u
 const checker = readFileSync('scripts/release/check-enterprise-100-closure.mjs', 'utf8');
 const hydrator = readFileSync('scripts/release/hydrate-enterprise-100-evidence.mjs', 'utf8');
 const collector = readFileSync('scripts/enterprise/collect-github-exact-sha-artifacts.mjs', 'utf8');
+const stripePromotionFetcher = readFileSync('scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs', 'utf8');
 
 test('Enterprise 100 fan-in remains read-only and immutable-action pinned', () => {
   assert.match(workflow, /permissions:\n  contents: read\n  actions: read/);
@@ -46,6 +47,20 @@ test('artifact collection is restricted to authorized families and exact produce
   assert.match(collector, /run\?\.path !== spec\.workflowPath/);
   assert.match(collector, /RECENT_RUN_WINDOW_EXHAUSTED/);
   assert.match(collector, /RUN_ARTIFACT_INVENTORY_TRUNCATED/);
+});
+
+test('promoted Stripe runtime proof is the only Stripe document eligible for billing hydration', () => {
+  assert.match(workflow, /- 'Stripe Runtime Evidence Promotion'/);
+  assert.doesNotMatch(workflow, /- 'Stripe Runtime Proof'/);
+  assert.match(workflow, /fetch-stripe-promoted-runtime-evidence\.mjs/);
+  assert.match(workflow, /STRIPE_RUNTIME_EVIDENCE_REQUIRED: 'false'/);
+  assert.match(workflow, /stripe-billing-validation\.json\.legacy-open-ignored/);
+  assert.match(workflow, /authoritative-stripe-promotion/);
+  assert.match(stripePromotionFetcher, /WORKFLOW_FILE = 'stripe-runtime-evidence-promotion\.yml'/);
+  assert.match(stripePromotionFetcher, /evidence\?\.id !== 'stripe-entitlement-runtime-proof'/);
+  assert.match(stripePromotionFetcher, /evidence\?\.status !== 'Complete' \|\| evidence\?\.outcome !== 'passed'/);
+  assert.match(stripePromotionFetcher, /expectedCommitSha: targetSha/);
+  assert.match(stripePromotionFetcher, /stripe-runtime-evidence-promoted-\$\{targetSha\}/);
 });
 
 test('GitHub API failures cannot be converted into a synthetic zero-evidence closure', () => {
