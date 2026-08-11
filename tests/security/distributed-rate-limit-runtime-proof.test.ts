@@ -197,6 +197,7 @@ describe('distributed rate-limit runtime proof', () => {
 
   it('reruns the scorecard after successful exact-SHA runtime proof completion while keeping failed proof uncredited', () => {
     const workflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
+    const fetcher = readFileSync('scripts/enterprise/fetch-distributed-rate-limit-evidence.mjs', 'utf8');
 
     expect(workflow).toContain('workflow_run:');
     expect(workflow).toContain('Distributed Rate Limit Runtime Proof');
@@ -206,13 +207,16 @@ describe('distributed rate-limit runtime proof', () => {
     expect(workflow).toContain("RATE_LIMIT_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Distributed Rate Limit Runtime Proof'");
     expect(workflow).toContain('node scripts/enterprise/fetch-distributed-rate-limit-evidence.mjs');
     expect(workflow).toContain('node scripts/security/check-p1-rate-limit-evidence.mjs');
+    expect(fetcher).toContain('branch=main&head_sha=${encodeURIComponent(targetSha)}&per_page=20');
+    expect(fetcher).not.toContain('status=success&per_page=100');
   });
 
-  it('selects only a successful exact-SHA runtime run and validates artifact provenance', () => {
+  it('selects only a successful exact-SHA main runtime run and validates artifact provenance', () => {
     const selected = selectExactShaRun([
-      { id: 1, head_sha: SHA, status: 'completed', conclusion: 'failure', updated_at: '2026-07-17T00:00:00Z' },
-      { id: 2, head_sha: 'b'.repeat(40), status: 'completed', conclusion: 'success', updated_at: '2026-07-17T01:00:00Z' },
-      { id: 12345, head_sha: SHA, status: 'completed', conclusion: 'success', updated_at: '2026-07-17T02:00:00Z' },
+      { id: 1, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'failure', updated_at: '2026-07-17T00:00:00Z' },
+      { id: 2, head_sha: 'b'.repeat(40), head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-07-17T01:00:00Z' },
+      { id: 3, head_sha: SHA, head_branch: 'feature/not-main', status: 'completed', conclusion: 'success', updated_at: '2026-07-17T03:00:00Z' },
+      { id: 12345, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-07-17T02:00:00Z' },
     ], SHA);
 
     expect(selected?.id).toBe(12345);
