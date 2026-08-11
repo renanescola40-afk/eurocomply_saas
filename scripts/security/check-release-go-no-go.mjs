@@ -23,6 +23,7 @@ const requiredTables = [
   'compliance_tasks',
   'subscriptions',
   'notifications',
+  'ai_assessments',
 ];
 const requiredOperations = [
   'cross_tenant_read',
