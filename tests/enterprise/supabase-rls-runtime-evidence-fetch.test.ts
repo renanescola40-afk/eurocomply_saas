@@ -14,9 +14,11 @@ import {
   sameTenantWritableTables,
 } from '../../scripts/security/supabase-live-rls-evidence.mjs';
 import {
+  normalizeSupabaseRlsEvidenceForRelease,
   selectExactShaRun,
   validateDownloadedEvidence,
 } from '../../scripts/enterprise/fetch-supabase-rls-evidence.mjs';
+import { validateSupabaseRlsRuntimeEvidence as validateReleaseSupabaseRlsRuntimeEvidence } from '../../scripts/release/validate-supabase-rls-runtime-evidence.mjs';
 import { p0EvidenceCatalog } from '../../scripts/security/p0-runtime-evidence-catalog.mjs';
 
 const SHA = 'a'.repeat(40);
@@ -126,6 +128,9 @@ function validSourceEvidence(): RuntimeEvidence {
 
   return {
     ...base,
+    generatedAt: '2026-08-09T13:00:00Z',
+    reviewedAt: '2026-08-09T13:00:00Z',
+    timestamp: '2026-08-09T13:00:00Z',
     githubActions: {
       generatedInGitHubActions: true,
       workflow: 'Supabase Live RLS Validation',
@@ -161,6 +166,52 @@ describe('Supabase RLS exact-SHA runtime evidence', () => {
       repository: REPOSITORY,
       runId: RUN_ID,
     })).toEqual({ passed: true, failures: [] });
+  });
+
+  it('adapts trusted producer provenance into the release validator contract without promoting new facts', () => {
+    const normalized = normalizeSupabaseRlsEvidenceForRelease(validSourceEvidence(), {
+      targetSha: SHA,
+      repository: REPOSITORY,
+      runId: RUN_ID,
+      now: new Date('2026-08-11T13:00:00Z'),
+    });
+
+    expect(normalized.githubActions).toMatchObject({
+      workflow: 'Supabase Live RLS Validation',
+      runId: String(RUN_ID),
+      repository: REPOSITORY,
+      commitSha: SHA,
+      refName: 'main',
+      eventName: 'push',
+    });
+    expect(normalized.runtimeContext).toEqual({
+      generatedByGithubActions: true,
+      repository: REPOSITORY,
+      branch: 'main',
+      githubRunId: String(RUN_ID),
+      githubRunAttempt: '1',
+      commitSha: SHA,
+    });
+    expect(normalized.evidenceIntegrity).toMatchObject({
+      containsSensitiveValues: false,
+      credentialsStored: false,
+      exactShaBound: true,
+      sourceRunBound: true,
+    });
+    expect(validateReleaseSupabaseRlsRuntimeEvidence(normalized, {
+      now: new Date('2026-08-11T13:00:00Z'),
+      expectedRepository: REPOSITORY,
+      expectedBranch: 'main',
+    })).toEqual([]);
+  });
+
+  it('refuses release normalization when the source proof is stale', () => {
+    expect(() => normalizeSupabaseRlsEvidenceForRelease(validSourceEvidence(), {
+      targetSha: SHA,
+      repository: REPOSITORY,
+      runId: RUN_ID,
+      now: new Date('2026-08-20T13:00:00Z'),
+    })).toThrow('release_runtime_evidence_invalid');
   });
 
   it('closes the authoritative P0 Supabase entry with the producer provenance shape', () => {
@@ -227,6 +278,7 @@ describe('Supabase RLS exact-SHA runtime evidence', () => {
     expect(workflow).not.toContain('pull_request_target');
     expect(fetcher).toContain("const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`");
     expect(fetcher).toContain('run?.path === WORKFLOW_PATH');
+    expect(fetcher).toContain('normalizeSupabaseRlsEvidenceForRelease');
     expect(catalog).toContain('validateSupabaseProducerEvidence');
     expect(catalog).not.toContain("validateSupabaseRlsRuntimeEvidence } from '../release/validate-supabase-rls-runtime-evidence.mjs'");
   });
