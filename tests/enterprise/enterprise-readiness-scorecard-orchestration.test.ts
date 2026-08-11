@@ -58,11 +58,12 @@ describe('enterprise readiness scorecard orchestration', () => {
     expect(workflow).not.toContain('continue-on-error');
   });
 
-  it('publishes the canonical scorecard before enforcing the terminal GO decision', () => {
+  it('publishes the canonical scorecard before enforcing the terminal GO decision on main only', () => {
     const uploadIndex = workflow.indexOf('- name: Upload scorecard artifact');
     const enforceIndex = workflow.indexOf('- name: Enforce enterprise scorecard decision');
     expect(uploadIndex).toBeGreaterThan(-1);
     expect(enforceIndex).toBeGreaterThan(uploadIndex);
+    expect(workflow.slice(enforceIndex)).toContain("if: github.event_name != 'pull_request'");
     expect(workflow).toContain("decision=\"$(jq -r '.releaseDecision // \"NO_GO\"' \"$scorecard\")\"");
     expect(workflow).toContain('test "$decision" = "GO"');
   });
