@@ -1,0 +1,120 @@
+name: Stripe Commercial Catalog Proof
+
+on:
+  pull_request:
+    paths:
+      - 'config/billing-commercial-catalog.json'
+      - 'src/lib/billing/plans.ts'
+      - 'src/server/billing/plans.ts'
+      - 'src/app/api/billing/catalog/route.ts'
+      - 'src/lib/security/env.ts'
+      - 'src/app/api/ops/smoke/route.ts'
+      - 'src/app/api/ready/route.ts'
+      - 'src/app/api/ready/route.test.ts'
+      - 'src/app/[locale]/checkout/page.tsx'
+      - 'src/app/[locale]/signup/page.tsx'
+      - 'src/app/[locale]/dashboard/organizations/billing/billing-page-view.tsx'
+      - '.env.example'
+      - 'src/lib/billing/__tests__/enterprise-pricing.test.ts'
+      - 'src/server/billing/billing-lifecycle.test.ts'
+      - 'tests/security/stripe-runtime-env-alignment.test.ts'
+      - 'tests/billing/checkout-sales-led-contract.test.mjs'
+      - 'scripts/security/run-stripe-commercial-catalog-proof.mjs'
+      - 'tests/enterprise/stripe-commercial-catalog-proof.test.mjs'
+      - '.github/workflows/stripe-commercial-catalog-proof.yml'
+      - 'docs/enterprise/ENTERPRISE_PRICING_AND_BILLING_ARCHITECTURE.md'
+      - 'docs/stripe-checkout-connection.md'
+  push:
+    branches: [main]
+    paths:
+      - 'config/billing-commercial-catalog.json'
+      - 'src/lib/billing/plans.ts'
+      - 'src/server/billing/plans.ts'
+      - 'src/lib/security/env.ts'
+      - 'src/app/api/ops/smoke/route.ts'
+      - 'src/app/api/ready/route.ts'
+      - 'src/app/[locale]/checkout/page.tsx'
+      - 'src/app/[locale]/signup/page.tsx'
+      - 'src/app/[locale]/dashboard/organizations/billing/billing-page-view.tsx'
+      - 'scripts/security/run-stripe-commercial-catalog-proof.mjs'
+      - '.github/workflows/stripe-commercial-catalog-proof.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stripe-commercial-catalog-proof-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Validate canonical billing catalog contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Validate pricing and proof contracts
+        run: |
+          node --check scripts/security/run-stripe-commercial-catalog-proof.mjs
+          npx vitest run \
+            src/lib/billing/__tests__/enterprise-pricing.test.ts \
+            src/server/billing/billing-lifecycle.test.ts \
+            src/app/api/ready/route.test.ts \
+            tests/security/stripe-runtime-env-alignment.test.ts
+          node --test \
+            tests/enterprise/stripe-commercial-catalog-proof.test.mjs \
+            tests/billing/checkout-sales-led-contract.test.mjs
+
+  production-proof:
+    name: Validate production Stripe catalog metadata
+    if: github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    env:
+      TARGET_SHA: ${{ github.sha }}
+      PROVIDER_PROOF_ENVIRONMENT: production
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ vars.STRIPE_PRICE_ESSENTIAL_MONTHLY }}
+      STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ vars.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}
+      STRIPE_PRICE_BUSINESS_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_MONTHLY }}
+      STRIPE_PRICE_STARTER_MONTHLY: ${{ vars.STRIPE_PRICE_STARTER_MONTHLY }}
+      STRIPE_PRICE_GROWTH_MONTHLY: ${{ vars.STRIPE_PRICE_GROWTH_MONTHLY }}
+    steps:
+      - name: Checkout exact main SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+
+      - name: Execute redacted canonical Stripe catalog proof
+        run: node scripts/security/run-stripe-commercial-catalog-proof.mjs
+
+      - name: Upload retained Stripe commercial catalog proof
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: stripe-commercial-catalog-proof-${{ github.sha }}
+          path: docs/security/evidence/runtime/stripe-commercial-catalog-proof.json
+          if-no-files-found: error
+          retention-days: 90

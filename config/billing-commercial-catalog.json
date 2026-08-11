@@ -1,0 +1,67 @@
+{
+  "schema": "risck-comply.billing-commercial-catalog.v1",
+  "currency": "EUR",
+  "annualBillingMonths": 10,
+  "plans": {
+    "essential": {
+      "internalId": "starter",
+      "name": "Essential",
+      "monthlyPriceCents": 4900,
+      "annualPriceCents": 49000,
+      "selfServe": true,
+      "salesLed": false,
+      "monthlyPriceEnvKey": "STRIPE_PRICE_ESSENTIAL_MONTHLY",
+      "annualPriceEnvKey": "STRIPE_PRICE_ESSENTIAL_ANNUAL",
+      "legacyMonthlyPriceEnvKeys": ["STRIPE_PRICE_STARTER_MONTHLY"],
+      "legacyAnnualPriceEnvKeys": ["STRIPE_PRICE_STARTER_ANNUAL"]
+    },
+    "professional": {
+      "internalId": "professional",
+      "name": "Professional",
+      "monthlyPriceCents": 14900,
+      "annualPriceCents": 149000,
+      "selfServe": true,
+      "salesLed": false,
+      "monthlyPriceEnvKey": "STRIPE_PRICE_PROFESSIONAL_MONTHLY",
+      "annualPriceEnvKey": "STRIPE_PRICE_PROFESSIONAL_ANNUAL",
+      "legacyMonthlyPriceEnvKeys": ["STRIPE_PRICE_GROWTH_MONTHLY"],
+      "legacyAnnualPriceEnvKeys": ["STRIPE_PRICE_GROWTH_ANNUAL"]
+    },
+    "business": {
+      "internalId": "business",
+      "name": "Business",
+      "monthlyPriceCents": 39900,
+      "annualPriceCents": 399000,
+      "selfServe": false,
+      "salesLed": true,
+      "monthlyPriceEnvKey": "STRIPE_PRICE_BUSINESS_MONTHLY",
+      "annualPriceEnvKey": "STRIPE_PRICE_BUSINESS_ANNUAL",
+      "legacyMonthlyPriceEnvKeys": [],
+      "legacyAnnualPriceEnvKeys": []
+    },
+    "enterprise": {
+      "internalId": "enterprise",
+      "name": "Enterprise",
+      "monthlyPriceCents": null,
+      "annualPriceCents": null,
+      "startingMonthlyPriceCents": 99000,
+      "selfServe": false,
+      "salesLed": true,
+      "fixedPublicStripePriceRequired": false,
+      "legacyMonthlyPriceEnvKeys": [
+        "STRIPE_PRICE_ENTERPRISE_MONTHLY",
+        "STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY"
+      ],
+      "legacyAnnualPriceEnvKeys": ["STRIPE_PRICE_ENTERPRISE_ANNUAL"]
+    }
+  },
+  "transitionPolicy": {
+    "preserveInternalStarterId": true,
+    "preserveLegacyEssentialAlias": true,
+    "preserveLegacyGrowthAlias": true,
+    "legacyStripePriceFallbackAllowed": true,
+    "legacyFallbackDoesNotProveCanonicalCommercialPrice": true,
+    "enterpriseUsesContractPricing": true
+  },
+  "truthBoundary": "This file is the repository commercial pricing contract. It does not create Stripe Products or Prices and does not prove that production provider configuration matches these amounts."
+}

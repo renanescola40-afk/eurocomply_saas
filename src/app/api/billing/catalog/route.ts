@@ -7,6 +7,13 @@ import { noStoreJson } from '@/server/security/no-store';
 const BILLING_CATALOG_RATE_LIMIT = 60;
 const BILLING_CATALOG_RATE_LIMIT_WINDOW_MS = 60_000;
 
+const PUBLIC_PLAN_IDS = {
+  starter: 'essential',
+  professional: 'professional',
+  business: 'business',
+  enterprise: 'enterprise',
+} as const;
+
 export async function GET(request: Request) {
   const rateLimit = await checkDistributedRateLimit({
     key: `billing-catalog:${request.headers.get('x-forwarded-for') ?? 'unknown'}`,
@@ -22,10 +29,13 @@ export async function GET(request: Request) {
     currency: 'EUR',
     plans: Object.entries(BILLING_PLANS).map(([id, plan]) => ({
       id,
+      publicId: PUBLIC_PLAN_IDS[id as keyof typeof PUBLIC_PLAN_IDS],
       name: plan.name,
       monthlyPriceCents: plan.monthlyPriceCents || null,
       annualPriceCents: plan.annualPriceCents,
+      startingMonthlyPriceCents: plan.startingMonthlyPriceCents ?? (plan.monthlyPriceCents || null),
       selfServe: plan.selfServe,
+      salesLed: plan.salesLed,
       entitlements: plan.entitlements,
     })),
     addOns: listActiveBillingAddOns().map((addOn) => ({

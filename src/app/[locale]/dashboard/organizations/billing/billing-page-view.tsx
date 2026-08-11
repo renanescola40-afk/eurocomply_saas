@@ -12,8 +12,6 @@ type BillingPageViewProps = {
   billingError?: string;
 };
 
-const SALES_LED_PLAN_IDS = new Set(['enterprise']);
-
 function formatLimitValue(value: number) {
   if (!Number.isFinite(value) || value <= 0) return 'Unlimited';
   return String(value);
@@ -22,6 +20,12 @@ function formatLimitValue(value: number) {
 function formatStatus(status: string | null) {
   if (!status) return 'No active subscription';
   return status.replaceAll('_', ' ');
+}
+
+function formatPlanPrice(plan: (typeof BILLING_PLANS)[number]) {
+  if (plan.priceMonthly != null) return `€${plan.priceMonthly}/month`;
+  if (plan.startingPriceMonthly != null) return `From €${plan.startingPriceMonthly}/month`;
+  return 'Contact sales';
 }
 
 export function BillingPageView({ locale, billing, checkout, billingError }: BillingPageViewProps) {
@@ -81,7 +85,7 @@ export function BillingPageView({ locale, billing, checkout, billingError }: Bil
         <section className="grid gap-5 lg:grid-cols-3">
           {BILLING_PLANS.map((plan) => {
             const isCurrent = plan.id === currentPlan.id;
-            const isSalesLed = SALES_LED_PLAN_IDS.has(plan.id);
+            const isSalesLed = plan.salesLed;
             const description = `${formatLimitValue(plan.limits.users)} users, ${formatLimitValue(plan.limits.documents)} documents and ${formatLimitValue(plan.limits.vendors)} vendors included.`;
 
             return (
@@ -97,7 +101,7 @@ export function BillingPageView({ locale, billing, checkout, billingError }: Bil
                   </div>
                 </CardHeader>
                 <CardContent className="flex flex-1 flex-col gap-5">
-                  <p className="text-4xl font-semibold tracking-[-0.04em]">€{plan.priceMonthly}<span className="text-sm font-normal text-white/45">/month</span></p>
+                  <p className="text-4xl font-semibold tracking-[-0.04em]">{formatPlanPrice(plan)}</p>
                   <ul className="space-y-2 text-sm text-white/58">
                     {plan.features.map((highlight) => <li key={highlight} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-white" /> {highlight}</li>)}
                   </ul>
