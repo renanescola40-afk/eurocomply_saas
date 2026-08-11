@@ -13,11 +13,15 @@ The production gate therefore performs a read-only exact-SHA fan-in before `npm 
 Only these producer workflows can feed the production release workspace:
 
 - `Auth RBAC Tenant Proof`;
+- `Supabase Live RLS Validation`;
+- `RISCK COMPLY Upload Security CI`;
 - `Audit Chain Runtime Proof`;
 - `Production Provider Runtime Proof`;
 - `Branch Protection Runtime Proof`;
 - `Step-Up Runtime Proof`;
 - `Stripe Runtime Evidence Promotion`.
+
+The `workflow_run` re-evaluation list must remain exactly equal to the hydrator allowlist. CI enforces that parity so a retained producer cannot become fetchable while remaining unable to wake the Production Gate after its exact-SHA artifact becomes available.
 
 Each producer keeps its own artifact-name, workflow-path, schema, provenance and semantic validator. The fan-in does not replace those validators.
 
@@ -25,7 +29,9 @@ Each producer keeps its own artifact-name, workflow-path, schema, provenance and
 
 `Enterprise Production Gate` still runs directly for pull requests, pushes to `main`, and manual dispatches.
 
-It also listens to completion of the approved proof producers on `main`. A successful producer completion causes the gate to re-evaluate the producer's exact `head_sha`.
+It also listens to completion of every approved proof producer on `main`. A successful producer completion causes the gate to re-evaluate the producer's exact `head_sha`.
+
+This is intentionally important for producers that run concurrently with the initial `main` push. The initial Production Gate may execute before a sibling proof artifact exists. When `Supabase Live RLS Validation`, `RISCK COMPLY Upload Security CI`, or any other allowlisted producer later completes successfully for that same SHA, its `workflow_run` event wakes the gate again and removes that timing race.
 
 The gate:
 
@@ -39,6 +45,20 @@ The gate:
 8. uploads the final evidence bundle plus the fan-in manifest.
 
 A failed producer completion is isolated from the active successful exact-SHA gate concurrency group and does not cancel a productive evaluation.
+
+## Scorecard selection of Production Gate runs
+
+A failed retained-proof producer still creates a GitHub `workflow_run` record for `Enterprise Production Gate`, but all gate jobs are intentionally skipped because only successful producers are allowed to trigger retained-proof hydration. GitHub reports that orchestration-only record with conclusion `skipped`.
+
+That skipped record is **not** a release evaluation. The enterprise GitHub-check collector therefore ignores only this precise no-op shape when choosing the latest Production Gate evidence:
+
+- workflow name is `Enterprise Production Gate`;
+- event is `workflow_run`;
+- conclusion is `skipped`.
+
+The latest real Production Gate evaluation for the same exact SHA remains authoritative. A newer real `failure`, `cancelled`, `timed_out`, `action_required`, or successful gate evaluation is never ignored. Skipped results from other required workflows are also not globally ignored.
+
+This prevents a failed sibling producer from downgrading repository evidence from 21/21 to 19/21 merely by creating a newer no-op gate record, while preserving fail-closed behavior for every actual gate execution.
 
 ## Fail-closed boundary
 

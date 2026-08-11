@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { RETAINED_RUNTIME_PRODUCERS } from '../../scripts/release/hydrate-enterprise-retained-runtime-evidence.mjs';
 
 const workflow = readFileSync('.github/workflows/enterprise-production-gate.yml', 'utf8');
 
@@ -10,15 +11,11 @@ function workflowRunProducers() {
 }
 
 describe('enterprise production gate retained-proof orchestration', () => {
-  it('re-evaluates after each approved retained runtime-proof producer', () => {
-    expect(workflowRunProducers()).toEqual([
-      'Auth RBAC Tenant Proof',
-      'Audit Chain Runtime Proof',
-      'Production Provider Runtime Proof',
-      'Branch Protection Runtime Proof',
-      'Step-Up Runtime Proof',
-      'Stripe Runtime Evidence Promotion',
-    ]);
+  it('re-evaluates after every allowlisted retained runtime-proof producer', () => {
+    const allowlistedProducers = RETAINED_RUNTIME_PRODUCERS.map((producer) => producer.workflowName);
+    expect(workflowRunProducers()).toEqual(allowlistedProducers);
+    expect(allowlistedProducers).toContain('Supabase Live RLS Validation');
+    expect(allowlistedProducers).toContain('RISCK COMPLY Upload Security CI');
     expect(workflow).toMatch(/workflow_run:[\s\S]*?types: \[completed\]\n    branches: \[main\]/);
     expect(workflow).not.toContain('Enterprise Production Gate\n      - Enterprise Production Gate');
   });
@@ -44,6 +41,22 @@ describe('enterprise production gate retained-proof orchestration', () => {
     expect(workflow).toContain("RETAINED_PROOF_SOURCE_RUN_ID: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || '' }}");
     expect(workflow).toContain('release-validation/retained-runtime-evidence-hydration.json');
     expect(workflow).toContain('.sourceWorkflowPath // .sourceWorkflowName // "direct gate"');
+  });
+
+  it('syntax-checks every exact-SHA fetcher that can trigger retained proof hydration', () => {
+    for (const producer of RETAINED_RUNTIME_PRODUCERS) {
+      const fetcherChecks = {
+        'Auth RBAC Tenant Proof': 'node --check scripts/enterprise/fetch-auth-rbac-evidence.mjs',
+        'Supabase Live RLS Validation': 'node --check scripts/enterprise/fetch-supabase-rls-evidence.mjs',
+        'RISCK COMPLY Upload Security CI': 'node --check scripts/enterprise/fetch-upload-scanner-runtime-evidence.mjs',
+        'Audit Chain Runtime Proof': 'node --check scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs',
+        'Production Provider Runtime Proof': 'node --check scripts/enterprise/fetch-production-provider-runtime-evidence.mjs',
+        'Branch Protection Runtime Proof': 'node --check scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs',
+        'Step-Up Runtime Proof': 'node --check scripts/enterprise/fetch-step-up-runtime-evidence.mjs',
+        'Stripe Runtime Evidence Promotion': 'node --check scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs',
+      } as const;
+      expect(workflow).toContain(fetcherChecks[producer.workflowName as keyof typeof fetcherChecks]);
+    }
   });
 
   it('keeps the fan-in read-only and fail-closed', () => {
