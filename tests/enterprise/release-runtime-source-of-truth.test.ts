@@ -27,6 +27,14 @@ describe('enterprise release runtime source-of-truth contract', () => {
     }
   });
 
+  it('keeps ai_assessments mandatory in release-time RLS evidence', () => {
+    expect(goNoGo).toContain("'ai_assessments'");
+    expect(rlsGate).toContain("const aiAssessmentsTable = 'ai_assessments'");
+    expect(rlsGate).toContain('requiredAiAssessmentOperations');
+    expect(rlsGate).toContain('aiAssessmentsLiveValidation');
+    expect(rlsGate).toContain('crossTenantAccessDenied');
+  });
+
   it('uses the shared conflict-aware exact-SHA resolver for enterprise evidence binding', () => {
     expect(writer).toContain("import { resolveEvidenceShaBinding } from './evidence-sha-binding.mjs'");
     expect(writer).toContain('resolution.conflict');
