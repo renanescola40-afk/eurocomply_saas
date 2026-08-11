@@ -5,6 +5,7 @@ import test from 'node:test';
 const workflow = readFileSync('.github/workflows/enterprise-final-closeout-dashboard.yml', 'utf8');
 const generator = readFileSync('scripts/enterprise/generate-final-closeout-dashboard.mjs', 'utf8');
 const hydrator = readFileSync('scripts/enterprise/hydrate-exact-sha-evidence.mjs', 'utf8');
+const collector = readFileSync('scripts/enterprise/collect-github-exact-sha-artifacts.mjs', 'utf8');
 
 test('workflow uses read-only permissions and immutable action pins', () => {
   assert.match(workflow, /permissions:\n  contents: read\n  actions: read/);
@@ -32,16 +33,42 @@ test('dashboard keeps implementation runtime and human review separate', () => {
   assert.match(generator, /does not create, fabricate or independently approve/);
 });
 
-test('retained evidence is filtered by exact workflow SHA and hydrated in isolation', () => {
-  assert.match(workflow, /\.workflow_run\.head_sha/);
-  assert.match(workflow, /\.workflow_run\.head_sha\] \| @tsv/);
-  assert.match(workflow, /test "\$artifact_sha" = "\$TARGET_SHA"/);
+test('retained evidence uses workflow-scoped exact-SHA collection and isolated hydration', () => {
+  assert.match(workflow, /collect-github-exact-sha-artifacts\.mjs \\\n            dashboard/);
+  assert.match(workflow, /github-exact-sha-artifact-collection\.json/);
   assert.match(workflow, /HYDRATED_EVIDENCE_ROOT: artifacts\/exact-sha-evidence-root/);
   assert.match(workflow, /hydrate-exact-sha-evidence\.mjs/);
+  assert.doesNotMatch(workflow, /gh api --paginate "repos\/\$\{GITHUB_REPOSITORY\}\/actions\/artifacts\?per_page=100"/);
   assert.match(hydrator, /REJECTED_SENSITIVE/);
   assert.match(hydrator, /AMBIGUOUS/);
   assert.match(hydrator, /candidate\.sha === targetSha/);
   assert.match(hydrator, /never converted into PASS/);
+});
+
+test('dashboard collector binds all accepted artifact families to exact producer workflow paths', () => {
+  const expectedPairs = new Map([
+    ['eu-ai-act-final-runtime-closeout-*', '.github/workflows/eu-ai-act-final-runtime-closeout.yml'],
+    ['branch-protection-runtime-proof-*', '.github/workflows/branch-protection-runtime-proof.yml'],
+    ['production-provider-runtime-proof-*', '.github/workflows/production-provider-runtime-proof.yml'],
+    ["artifactPatterns: Object.freeze(['*'])", '.github/workflows/enterprise-readiness-scorecard.yml'],
+    ['enterprise-runtime-closeout-*', '.github/workflows/enterprise-runtime-evidence-closeout.yml'],
+  ]);
+
+  for (const [artifactPattern, workflowPath] of expectedPairs) {
+    assert.ok(collector.includes(artifactPattern), `missing dashboard artifact pattern ${artifactPattern}`);
+    assert.ok(collector.includes(workflowPath), `missing dashboard producer binding ${workflowPath}`);
+  }
+
+  assert.match(collector, /actions\/workflows\/\$\{workflowId\}\/runs\?head_sha=\$\{targetSha\}&per_page=20/);
+  assert.match(collector, /run\?\.path !== spec\.workflowPath/);
+});
+
+test('GitHub API infrastructure failures cannot produce a green synthetic zero-runtime dashboard', () => {
+  assert.match(collector, /GITHUB_API_RATE_LIMITED/);
+  assert.match(collector, /InfrastructureBlocked/);
+  assert.match(collector, /Infrastructure failure is not evidence absence/);
+  assert.match(workflow, /if: always\(\)/);
+  assert.match(workflow, /Infrastructure error:/);
 });
 
 test('same-SHA producer completions queue instead of cancelling earlier closeout runs', () => {
