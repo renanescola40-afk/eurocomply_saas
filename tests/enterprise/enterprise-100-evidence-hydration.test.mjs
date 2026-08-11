@@ -244,5 +244,9 @@ test('does not infer unlisted aliases from a similar filename', async () => {
 
   assert.equal(manifest.hydratedEvidence, 0);
   assert.equal(manifest.missingEvidence, 1);
-  assert.equal(manifest.results[0]?.matchedBy, 'none');
+  assert.equal(manifest.results[0]?.matchedBy, 'explicit_alias');
+  assert.equal(manifest.results[0]?.candidateCount, 0);
+  assert.deepEqual(manifest.results[0]?.sourceAliases, [
+    'artifacts/enterprise-readiness/github-checks-evidence.json',
+  ]);
 });
