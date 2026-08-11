@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 const execFile = promisify(execFileCallback);
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const RECENT_COMPLETED_RUN_WINDOW = 20;
 
 const PRODUCERS = Object.freeze({
   'enterprise-100': Object.freeze([
@@ -176,7 +177,10 @@ async function githubRequest({
       lastError = new ArtifactCollectionError(
         'GITHUB_API_NETWORK_ERROR',
         'GitHub API request failed before a response was received',
-        { url: new URL(url).pathname, cause: error instanceof Error ? error.message : String(error) },
+        {
+          path: new URL(url).pathname,
+          cause: error instanceof Error ? error.message : String(error),
+        },
       );
       if (attempt < attempts) {
         await sleepImpl(500 * 2 ** (attempt - 1));
@@ -229,6 +233,57 @@ async function defaultExtractArchive(archivePath, destination) {
   await execFile('unzip', ['-oq', archivePath, '-d', destination]);
 }
 
+function validateProducerRun(run, spec, targetSha) {
+  if (run?.head_sha !== targetSha) return false;
+  if (run?.path !== spec.workflowPath) {
+    throw new ArtifactCollectionError(
+      'PRODUCER_PATH_MISMATCH',
+      `producer workflow path mismatch for ${spec.workflow}`,
+      { expected: spec.workflowPath, actual: run?.path ?? null, runId: run?.id ?? null },
+    );
+  }
+  return Number.isInteger(run?.id);
+}
+
+async function downloadArtifact({
+  artifact,
+  run,
+  spec,
+  destinationRoot,
+  repository,
+  token,
+  apiUrl,
+  fetchImpl,
+  sleepImpl,
+  extractArchive,
+}) {
+  const artifactName = String(artifact.name);
+  const destination = path.join(
+    destinationRoot,
+    `${artifact.id}-${safeSegment(artifactName)}`,
+  );
+  const archivePath = `${destination}.zip`;
+  const zip = await githubRequest({
+    url: `${apiUrl}/repos/${repository}/actions/artifacts/${artifact.id}/zip`,
+    token,
+    fetchImpl,
+    expectJson: false,
+    sleepImpl,
+  });
+  await writeFile(archivePath, zip);
+  try {
+    await extractArchive(archivePath, destination);
+  } finally {
+    await rm(archivePath, { force: true });
+  }
+  return {
+    artifactId: artifact.id,
+    artifactName,
+    producerWorkflow: spec.workflowPath,
+    sourceRunId: run.id,
+  };
+}
+
 export async function collectExactShaArtifacts({
   mode,
   targetSha,
@@ -259,7 +314,7 @@ export async function collectExactShaArtifacts({
   try {
     for (const spec of specs) {
       const workflowId = encodeURIComponent(spec.workflow);
-      const runsUrl = `${apiUrl}/repos/${repository}/actions/workflows/${workflowId}/runs?head_sha=${targetSha}&per_page=20`;
+      const runsUrl = `${apiUrl}/repos/${repository}/actions/workflows/${workflowId}/runs?status=completed&head_sha=${targetSha}&per_page=${RECENT_COMPLETED_RUN_WINDOW}`;
       const runs = await githubRequest({
         url: runsUrl,
         token,
@@ -268,29 +323,14 @@ export async function collectExactShaArtifacts({
         sleepImpl,
       });
 
-      const totalRuns = Number(runs?.total_count ?? 0);
-      if (totalRuns > 20) {
-        throw new ArtifactCollectionError(
-          'WORKFLOW_RUN_INVENTORY_TRUNCATED',
-          `more than 20 exact-SHA runs exist for ${spec.workflow}; refusing partial evidence inventory`,
-          { workflow: spec.workflow, totalRuns },
-        );
-      }
-
-      const matchingRuns = (runs?.workflow_runs ?? []).filter((run) => {
-        if (run?.head_sha !== targetSha) return false;
-        if (run?.path !== spec.workflowPath) {
-          throw new ArtifactCollectionError(
-            'PRODUCER_PATH_MISMATCH',
-            `producer workflow path mismatch for ${spec.workflow}`,
-            { expected: spec.workflowPath, actual: run?.path ?? null, runId: run?.id ?? null },
-          );
-        }
-        return Number.isInteger(run?.id);
-      });
-
+      const totalCompletedRuns = Number(runs?.total_count ?? 0);
+      const recentRuns = (runs?.workflow_runs ?? []).filter((run) => validateProducerRun(run, spec, targetSha));
+      let inspectedRunCount = 0;
+      let selectedRunId = null;
       let producerCollected = 0;
-      for (const run of matchingRuns) {
+
+      for (const run of recentRuns) {
+        inspectedRunCount += 1;
         const artifactsUrl = `${apiUrl}/repos/${repository}/actions/runs/${run.id}/artifacts?per_page=100`;
         const artifactInventory = await githubRequest({
           url: artifactsUrl,
@@ -309,43 +349,54 @@ export async function collectExactShaArtifacts({
           );
         }
 
-        for (const artifact of artifactInventory?.artifacts ?? []) {
-          if (!Number.isInteger(artifact?.id) || artifact?.expired === true) continue;
-          if (!artifactNameMatches(String(artifact?.name ?? ''), spec.artifactPatterns)) continue;
-          if (seenArtifactIds.has(artifact.id)) continue;
+        const eligible = (artifactInventory?.artifacts ?? []).filter((artifact) =>
+          Number.isInteger(artifact?.id)
+          && artifact?.expired !== true
+          && artifactNameMatches(String(artifact?.name ?? ''), spec.artifactPatterns)
+          && !seenArtifactIds.has(artifact.id),
+        );
 
-          const artifactName = String(artifact.name);
-          const safeName = safeSegment(artifactName);
-          const destination = path.join(absoluteDestination, `${artifact.id}-${safeName}`);
-          const archivePath = `${destination}.zip`;
-          const zip = await githubRequest({
-            url: `${apiUrl}/repos/${repository}/actions/artifacts/${artifact.id}/zip`,
+        if (eligible.length === 0) continue;
+
+        selectedRunId = run.id;
+        for (const artifact of eligible) {
+          const retained = await downloadArtifact({
+            artifact,
+            run,
+            spec,
+            destinationRoot: absoluteDestination,
+            repository,
             token,
+            apiUrl,
             fetchImpl,
-            expectJson: false,
             sleepImpl,
+            extractArchive,
           });
-          await writeFile(archivePath, zip);
-          try {
-            await extractArchive(archivePath, destination);
-          } finally {
-            await rm(archivePath, { force: true });
-          }
-
           seenArtifactIds.add(artifact.id);
           producerCollected += 1;
-          collected.push({
-            artifactId: artifact.id,
-            artifactName,
-            producerWorkflow: spec.workflowPath,
-            sourceRunId: run.id,
-          });
+          collected.push(retained);
         }
+        break;
+      }
+
+      if (producerCollected === 0 && totalCompletedRuns > recentRuns.length) {
+        throw new ArtifactCollectionError(
+          'RECENT_RUN_WINDOW_EXHAUSTED',
+          `no authorized artifact was found in the ${RECENT_COMPLETED_RUN_WINDOW} most recent completed exact-SHA runs for ${spec.workflow}; refusing to infer absence while older runs remain uninspected`,
+          {
+            workflow: spec.workflow,
+            totalCompletedRuns,
+            inspectedRunCount,
+            recentRunWindow: RECENT_COMPLETED_RUN_WINDOW,
+          },
+        );
       }
 
       producerResults.push({
         workflow: spec.workflowPath,
-        exactShaRunCount: matchingRuns.length,
+        totalExactShaCompletedRuns: totalCompletedRuns,
+        inspectedRunCount,
+        selectedRunId,
         collectedArtifacts: producerCollected,
       });
     }
@@ -357,6 +408,7 @@ export async function collectExactShaArtifacts({
       mode,
       targetSha,
       repository,
+      recentCompletedRunWindow: RECENT_COMPLETED_RUN_WINDOW,
       producerCount: specs.length,
       collectedArtifactCount: collected.length,
       producers: producerResults,
@@ -366,15 +418,19 @@ export async function collectExactShaArtifacts({
         tokenPersisted: false,
         exactShaBound: true,
         producerWorkflowBound: true,
+        freshestArtifactBearingRunSelected: true,
       },
-      truthBoundary: 'A zero artifact count is emitted only after every authorized workflow-scoped GitHub API inventory completed successfully. API, rate-limit, producer-identity, or truncation failures terminate collection as infrastructure-blocked instead of being reported as missing evidence.',
+      truthBoundary: 'A zero artifact result for a producer is emitted only after its complete returned exact-SHA completed-run inventory was inspected. If the recent run window is inconclusive, or an API, rate-limit, producer-identity, or artifact-inventory failure occurs, collection terminates infrastructure-blocked instead of reporting missing evidence.',
     };
     await writeManifest(absoluteDestination, manifest);
     return manifest;
   } catch (error) {
     const normalized = error instanceof ArtifactCollectionError
       ? error
-      : new ArtifactCollectionError('ARTIFACT_COLLECTION_FAILED', error instanceof Error ? error.message : String(error));
+      : new ArtifactCollectionError(
+        'ARTIFACT_COLLECTION_FAILED',
+        error instanceof Error ? error.message : String(error),
+      );
     await writeManifest(absoluteDestination, {
       schema: 'risck-comply.github-exact-sha-artifact-collection.v1',
       generatedAt: new Date().toISOString(),
@@ -382,6 +438,7 @@ export async function collectExactShaArtifacts({
       mode,
       targetSha,
       repository,
+      recentCompletedRunWindow: RECENT_COMPLETED_RUN_WINDOW,
       errorCode: normalized.code,
       details: normalized.details,
       producerCount: specs.length,
