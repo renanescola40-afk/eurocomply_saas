@@ -2,6 +2,7 @@
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { latestCreditEligibleRunsByName } from './github-workflow-run-selection.mjs';
 
 const token = process.env.GITHUB_TOKEN;
 const repository = process.env.GITHUB_REPOSITORY;
@@ -143,15 +144,7 @@ async function github(path) {
 }
 
 function latestRunsByName(runs) {
-  const selected = new Map();
-  for (const run of runs) {
-    if (run.head_sha !== targetSha) continue;
-    const existing = selected.get(run.name);
-    if (!existing || new Date(run.created_at) > new Date(existing.created_at)) {
-      selected.set(run.name, run);
-    }
-  }
-  return selected;
+  return latestCreditEligibleRunsByName(runs, { targetSha });
 }
 
 function conclusionStatus(conclusion) {
@@ -266,6 +259,7 @@ const evidence = {
   workflowRuns: runMetadata,
   limitations: [
     'This artifact proves repository and CI checks for one exact SHA.',
+    'A no-op Enterprise Production Gate run whose workflow_run source failed and therefore skipped every gate job is ignored for latest-run selection; the latest real evaluation for the exact SHA remains authoritative.',
     'The npmAudit result comes from the dedicated exact-SHA dependency vulnerability workflow.',
     'It does not prove production deployment, provider health, customer login, tenant isolation, rollback or restore.',
   ],
