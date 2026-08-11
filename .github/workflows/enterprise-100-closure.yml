@@ -4,10 +4,12 @@ on:
   pull_request:
     paths:
       - 'config/enterprise-100-closure.json'
+      - 'scripts/enterprise/collect-github-exact-sha-artifacts.mjs'
       - 'scripts/release/check-enterprise-100-closure.mjs'
       - 'scripts/release/hydrate-enterprise-100-evidence.mjs'
       - 'tests/enterprise-100-closure.test.ts'
       - 'tests/enterprise/enterprise-100-evidence-hydration.test.mjs'
+      - 'tests/enterprise/github-exact-sha-artifact-collector.test.mjs'
       - 'tests/security/enterprise-100-closure-workflow.test.mjs'
       - '.github/workflows/enterprise-100-closure.yml'
   push:
@@ -61,13 +63,15 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
-      - name: Test closure verifier and hydration contracts
+      - name: Test closure verifier hydration and artifact collection contracts
         run: |
+          node --check scripts/enterprise/collect-github-exact-sha-artifacts.mjs
           node --check scripts/release/check-enterprise-100-closure.mjs
           node --check scripts/release/hydrate-enterprise-100-evidence.mjs
           npx vitest run tests/enterprise-100-closure.test.ts
           node --test \
             tests/enterprise/enterprise-100-evidence-hydration.test.mjs \
+            tests/enterprise/github-exact-sha-artifact-collector.test.mjs \
             tests/security/enterprise-100-closure-workflow.test.mjs
 
       - name: Validate repository contract
@@ -76,6 +80,7 @@ jobs:
           node -e "const c=require('./config/enterprise-100-closure.json'); if(!Array.isArray(c.controls)||c.controls.length<10) process.exit(1)"
           grep -Fq 'ENTERPRISE_CLOSURE_EVIDENCE_ROOTS' scripts/release/check-enterprise-100-closure.mjs
           grep -Fq 'enterprise-100-evidence-hydration.v1' scripts/release/hydrate-enterprise-100-evidence.mjs
+          grep -Fq 'github-exact-sha-artifact-collection.v1' scripts/enterprise/collect-github-exact-sha-artifacts.mjs
           grep -Fq 'Final Legal Publication Gate' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Enterprise Conversation Runtime Closeout' .github/workflows/enterprise-100-closure.yml
 
@@ -98,72 +103,14 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: bash
         run: |
           set -euo pipefail
           rm -rf "$RETAINED_ARTIFACT_ROOT" "$HYDRATED_CLOSURE_ROOT"
           mkdir -p "$RETAINED_ARTIFACT_ROOT" "$HYDRATED_CLOSURE_ROOT"
-          collected=0
-          rejected_producer=0
-
-          while IFS=$'\t' read -r artifact_id artifact_name expired artifact_sha source_run_id; do
-            test "$expired" = 'false' || continue
-            test "$artifact_sha" = "$ENTERPRISE_CLOSURE_EXPECTED_SHA" || continue
-
-            expected_workflow_path=''
-            case "$artifact_name" in
-              enterprise-production-final-evidence-*)
-                expected_workflow_path='.github/workflows/enterprise-production-gate.yml' ;;
-              enterprise-recovery-*)
-                expected_workflow_path='.github/workflows/enterprise-recovery-drill.yml' ;;
-              enterprise-runtime-closeout-*)
-                expected_workflow_path='.github/workflows/enterprise-runtime-evidence-closeout.yml' ;;
-              enterprise-readiness-scorecard-*)
-                expected_workflow_path='.github/workflows/enterprise-readiness-scorecard.yml' ;;
-              stripe-billing-validation)
-                expected_workflow_path='.github/workflows/stripe-runtime-proof.yml' ;;
-              supabase-production-migration-dry-run-*)
-                expected_workflow_path='.github/workflows/supabase-production-migration-dry-run.yml' ;;
-              final-legal-publication-gate-*)
-                expected_workflow_path='.github/workflows/final-legal-publication-gate.yml' ;;
-              enterprise-conversation-runtime-closeout-*)
-                expected_workflow_path='.github/workflows/enterprise-conversation-runtime-closeout.yml' ;;
-              *) continue ;;
-            esac
-
-            if ! [[ "$source_run_id" =~ ^[0-9]+$ ]]; then
-              echo "Rejecting artifact ${artifact_id} (${artifact_name}): source workflow run id unavailable." >&2
-              rejected_producer=$((rejected_producer + 1))
-              continue
-            fi
-
-            actual_workflow_path=''
-            if ! actual_workflow_path="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${source_run_id}" --jq '.path' 2>/dev/null)"; then
-              echo "Rejecting artifact ${artifact_id} (${artifact_name}): source workflow identity could not be verified." >&2
-              rejected_producer=$((rejected_producer + 1))
-              continue
-            fi
-            if [ "$actual_workflow_path" != "$expected_workflow_path" ]; then
-              echo "Rejecting artifact ${artifact_id} (${artifact_name}): producer ${actual_workflow_path} != ${expected_workflow_path}." >&2
-              rejected_producer=$((rejected_producer + 1))
-              continue
-            fi
-
-            safe_name="$(printf '%s' "$artifact_name" | tr -cs 'A-Za-z0-9._-' '_')"
-            destination="$RETAINED_ARTIFACT_ROOT/${artifact_id}-${safe_name}"
-            archive="${destination}.zip"
-            mkdir -p "$destination"
-            gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "$archive"
-            unzip -oq "$archive" -d "$destination"
-            rm -f "$archive"
-            collected=$((collected + 1))
-          done < <(
-            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
-              --jq '.artifacts[] | [.id, .name, .expired, .workflow_run.head_sha, .workflow_run.id] | @tsv'
-          )
-
-          echo "Collected ${collected} authorized retained artifact(s) for closure SHA ${ENTERPRISE_CLOSURE_EXPECTED_SHA}."
-          echo "Rejected ${rejected_producer} artifact(s) with an unverifiable or unexpected producer workflow."
+          node scripts/enterprise/collect-github-exact-sha-artifacts.mjs \
+            enterprise-100 \
+            "$ENTERPRISE_CLOSURE_EXPECTED_SHA" \
+            "$RETAINED_ARTIFACT_ROOT"
 
       - name: Hydrate declared Enterprise 100 evidence
         if: github.event_name != 'pull_request'
@@ -184,6 +131,15 @@ jobs:
         if: always() && github.event_name != 'pull_request'
         shell: bash
         run: |
+          collection_manifest="$RETAINED_ARTIFACT_ROOT/github-exact-sha-artifact-collection.json"
+          if [ -f "$collection_manifest" ]; then
+            {
+              echo '## Exact-SHA retained artifact collection'
+              echo
+              jq -r '"- Status: \(.status)\n- Collected artifacts: \(.collectedArtifactCount)\n- Authorized producers: \(.producerCount)\n- Infrastructure error: \(.errorCode // \"none\")"' "$collection_manifest"
+              echo
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ -f release-validation/enterprise-100-closure.json ]; then
             {
               echo '## Enterprise 100 exact-SHA closure'
@@ -203,6 +159,7 @@ jobs:
           name: enterprise-100-closure-${{ env.ENTERPRISE_CLOSURE_EXPECTED_SHA }}
           path: |
             release-validation/enterprise-100-closure.json
+            artifacts/enterprise-100-retained-artifacts/github-exact-sha-artifact-collection.json
             artifacts/enterprise-100-evidence-root/enterprise-100-evidence-hydration.json
           if-no-files-found: error
           retention-days: 90
