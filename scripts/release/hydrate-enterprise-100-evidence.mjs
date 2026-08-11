@@ -5,6 +5,8 @@ import { cp, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { resolveEvidenceShaBinding } from './evidence-sha-binding.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const CLOSURE_CONFIG = path.join(ROOT, 'config/enterprise-100-closure.json');
 const FULL_SHA = /^[a-f0-9]{40}$/;
@@ -47,30 +49,6 @@ function sha256(value) {
 
 function normalisePath(value) {
   return value.split(path.sep).join('/');
-}
-
-function evidenceSha(document) {
-  const candidates = [
-    document?.targetSha,
-    document?.expectedSha,
-    document?.observedSha,
-    document?.commitSha,
-    document?.commit_sha,
-    document?.releaseSha,
-    document?.release_sha,
-    document?.deploymentSha,
-    document?.deployment_sha,
-    document?.sourceSha,
-    document?.source_sha,
-    document?.productSha,
-    document?.product_sha,
-    document?.buildSha,
-    document?.build_sha,
-    document?.sha,
-    document?.provenance?.commitSha,
-    document?.reviewBinding?.productSha,
-  ];
-  return candidates.find((value) => typeof value === 'string' && value.trim())?.trim() ?? null;
 }
 
 function containsSensitiveValues(document) {
@@ -163,12 +141,15 @@ export async function hydrateEnterpriseClosureEvidence({
       continue;
     }
 
+    const shaBinding = resolveEvidenceShaBinding(document);
     candidates.push({
       absolute,
       relative: normalisePath(path.relative(sourceRoot, absolute)),
       basename: path.basename(absolute),
       document,
-      sha: evidenceSha(document),
+      sha: shaBinding.sha,
+      shaSource: shaBinding.source,
+      shaConflict: shaBinding.conflict,
       digest: sha256(bytes),
       sensitive: containsSensitiveValues(document),
     });
@@ -179,17 +160,31 @@ export async function hydrateEnterpriseClosureEvidence({
 
   for (const expectedPath of expectedPaths) {
     const { pool, matchedBy, sourceAliases } = candidatePoolForExpectedPath(candidates, expectedPath);
-    const exact = pool.filter((candidate) => candidate.sha === targetSha && !candidate.sensitive);
-    const sensitive = pool.filter((candidate) => candidate.sha === targetSha && candidate.sensitive);
-    const stale = pool.filter((candidate) => candidate.sha && candidate.sha !== targetSha);
+    const conflicts = pool.filter((candidate) => candidate.shaConflict);
+    const exact = pool.filter((candidate) =>
+      !candidate.shaConflict && candidate.sha === targetSha && !candidate.sensitive,
+    );
+    const sensitive = pool.filter((candidate) =>
+      !candidate.shaConflict && candidate.sha === targetSha && candidate.sensitive,
+    );
+    const stale = pool.filter((candidate) =>
+      !candidate.shaConflict && candidate.sha && candidate.sha !== targetSha,
+    );
 
     if (exact.length === 0) {
       results.push({
         path: expectedPath,
-        status: sensitive.length > 0 ? 'REJECTED_SENSITIVE' : stale.length > 0 ? 'STALE' : 'MISSING',
+        status: conflicts.length > 0
+          ? 'SHA_CONFLICT'
+          : sensitive.length > 0
+            ? 'REJECTED_SENSITIVE'
+            : stale.length > 0
+              ? 'STALE'
+              : 'MISSING',
         matchedBy,
         sourceAliases,
         candidateCount: pool.length,
+        conflictingShaCandidateCount: conflicts.length,
         staleShaCount: stale.length,
         sensitiveCandidateCount: sensitive.length,
       });
@@ -219,6 +214,7 @@ export async function hydrateEnterpriseClosureEvidence({
       matchedBy,
       sourceAliases,
       source: selected.relative,
+      shaSource: selected.shaSource,
       digest: `sha256:${selected.digest}`,
       targetSha,
       equivalentCandidateCount: exact.length,
@@ -233,12 +229,13 @@ export async function hydrateEnterpriseClosureEvidence({
     hydratedEvidence: results.filter((item) => item.status === 'HYDRATED').length,
     aliasedEvidence: results.filter((item) => item.status === 'HYDRATED' && item.matchedBy === 'explicit_alias').length,
     ambiguousEvidence: results.filter((item) => item.status === 'AMBIGUOUS').length,
+    conflictingShaEvidence: results.filter((item) => item.status === 'SHA_CONFLICT').length,
     rejectedSensitiveEvidence: results.filter((item) => item.status === 'REJECTED_SENSITIVE').length,
     staleEvidence: results.filter((item) => item.status === 'STALE').length,
     missingEvidence: results.filter((item) => item.status === 'MISSING').length,
     invalidJsonFiles,
     results,
-    truthBoundary: 'Hydration restores only exact-SHA evidence by declared path or a small explicit semantic alias allowlist. It does not award PASS, approve human review, infer equivalence by filename similarity, or convert missing, stale, ambiguous or sensitive evidence into closure credit.',
+    truthBoundary: 'Hydration restores only exact-SHA evidence by declared path or a small explicit semantic alias allowlist. Known nested SHA provenance such as runtimeContext.commitSha is accepted, but conflicting SHA bindings are rejected. Hydration does not award PASS, approve human review, infer equivalence by filename similarity, or convert missing, stale, ambiguous, conflicting or sensitive evidence into closure credit.',
   };
 
   await writeFile(
@@ -268,6 +265,7 @@ async function main() {
     hydratedEvidence: manifest.hydratedEvidence,
     aliasedEvidence: manifest.aliasedEvidence,
     ambiguousEvidence: manifest.ambiguousEvidence,
+    conflictingShaEvidence: manifest.conflictingShaEvidence,
     staleEvidence: manifest.staleEvidence,
     missingEvidence: manifest.missingEvidence,
     rejectedSensitiveEvidence: manifest.rejectedSensitiveEvidence,
