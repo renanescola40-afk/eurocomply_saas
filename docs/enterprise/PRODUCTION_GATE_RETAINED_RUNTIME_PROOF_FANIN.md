@@ -46,6 +46,20 @@ The gate:
 
 A failed producer completion is isolated from the active successful exact-SHA gate concurrency group and does not cancel a productive evaluation.
 
+## Scorecard selection of Production Gate runs
+
+A failed retained-proof producer still creates a GitHub `workflow_run` record for `Enterprise Production Gate`, but all gate jobs are intentionally skipped because only successful producers are allowed to trigger retained-proof hydration. GitHub reports that orchestration-only record with conclusion `skipped`.
+
+That skipped record is **not** a release evaluation. The enterprise GitHub-check collector therefore ignores only this precise no-op shape when choosing the latest Production Gate evidence:
+
+- workflow name is `Enterprise Production Gate`;
+- event is `workflow_run`;
+- conclusion is `skipped`.
+
+The latest real Production Gate evaluation for the same exact SHA remains authoritative. A newer real `failure`, `cancelled`, `timed_out`, `action_required`, or successful gate evaluation is never ignored. Skipped results from other required workflows are also not globally ignored.
+
+This prevents a failed sibling producer from downgrading repository evidence from 21/21 to 19/21 merely by creating a newer no-op gate record, while preserving fail-closed behavior for every actual gate execution.
+
 ## Fail-closed boundary
 
 The fan-in never promotes a status by itself.
