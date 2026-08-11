@@ -23,7 +23,17 @@ function tempRoot() {
 
 function fakeFetcher(key: string, calls: Array<Record<string, unknown>>) {
   return async (options: FetchOptions) => {
-    calls.push({ key, ...options });
+    const observed = options as {
+      targetSha?: unknown;
+      sourceRunId?: unknown;
+      required?: unknown;
+    };
+    calls.push({
+      key,
+      targetSha: observed.targetSha,
+      sourceRunId: observed.sourceRunId,
+      required: observed.required,
+    });
     return key === 'auditChain'
       ? { found: true, runId: '4242', artifactId: '5252', targetSha: sha }
       : { found: false, targetSha: sha };
