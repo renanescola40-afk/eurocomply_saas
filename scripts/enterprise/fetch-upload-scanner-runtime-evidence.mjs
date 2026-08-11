@@ -263,7 +263,7 @@ export async function fetchUploadScannerRuntimeEvidence({
     ];
   } else {
     const response = await githubJson(
-      `https://api.github.com/repos/${repository}/actions/workflows/${WORKFLOW_FILE}/runs?status=success&branch=main&per_page=100`,
+      `https://api.github.com/repos/${repository}/actions/workflows/${WORKFLOW_FILE}/runs?status=success&branch=main&head_sha=${encodeURIComponent(targetSha)}&per_page=20`,
       token,
     );
     runs = response.workflow_runs;
