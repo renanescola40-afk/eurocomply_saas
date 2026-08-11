@@ -11,6 +11,10 @@ on:
         description: Optional full 40-character current main SHA; defaults to the triggering SHA
         required: false
         type: string
+      identity_journey_confirmation:
+        description: Optional exact literal PROVE_SIGNUP_ONBOARDING_RUNTIME to execute disposable public signup + onboarding in production
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -27,9 +31,10 @@ jobs:
     environment: production
     env:
       TARGET_SHA: ${{ inputs.release_sha || github.sha }}
+      IDENTITY_JOURNEY_CONFIRMATION: ${{ inputs.identity_journey_confirmation || '' }}
 
     steps:
-      - name: Validate requested release SHA
+      - name: Validate requested release SHA and identity-journey confirmation
         shell: bash
         run: |
           set -euo pipefail
@@ -38,6 +43,20 @@ jobs:
             exit 1
           fi
           echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
+
+          if [[ -n "$IDENTITY_JOURNEY_CONFIRMATION" && "$IDENTITY_JOURNEY_CONFIRMATION" != "PROVE_SIGNUP_ONBOARDING_RUNTIME" ]]; then
+            echo "identity_journey_confirmation must be empty or exactly PROVE_SIGNUP_ONBOARDING_RUNTIME" >&2
+            exit 1
+          fi
+          if [[ "$IDENTITY_JOURNEY_CONFIRMATION" == "PROVE_SIGNUP_ONBOARDING_RUNTIME" ]]; then
+            if [[ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]]; then
+              echo "Disposable signup/onboarding proof is manual-only" >&2
+              exit 1
+            fi
+            echo "AUTH_IDENTITY_JOURNEY_ENABLED=true" >> "$GITHUB_ENV"
+          else
+            echo "AUTH_IDENTITY_JOURNEY_ENABLED=false" >> "$GITHUB_ENV"
+          fi
 
       - name: Check out exact release SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -83,6 +102,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          AUTH_IDENTITY_JOURNEY_ENABLED: ${{ env.AUTH_IDENTITY_JOURNEY_ENABLED }}
         run: node scripts/security/run-auth-rbac-live-validation.mjs
 
       - name: Validate redacted source runtime evidence
