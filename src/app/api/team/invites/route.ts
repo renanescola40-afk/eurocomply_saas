@@ -34,7 +34,8 @@ const RATE_LIMIT_MAX_ATTEMPTS = 5;
 const INVITE_JSON_MAX_BYTES = 4 * 1024;
 
 function getAppUrl() {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+  const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  return (configuredAppUrl || 'http://localhost:3000').replace(/\/$/, '');
 }
 
 function getInviteEntityId(invite: unknown) {
