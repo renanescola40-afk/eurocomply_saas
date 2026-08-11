@@ -10,6 +10,7 @@ import {
 import { validateSupabaseRlsRuntimeEvidence as validateReleaseEvidence } from './validate-supabase-rls-runtime-evidence.mjs';
 
 const EVIDENCE_PATH = 'docs/security/evidence/runtime/supabase-live-rls-validation.json';
+const EXPECTED_WORKFLOW = 'Supabase Live RLS Validation';
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const NUMERIC = /^\d+$/;
 
@@ -36,7 +37,9 @@ export function validateRetainedSupabaseRlsReleaseProof(
   if (repository !== CANONICAL_REPOSITORY) return ['repository_not_canonical'];
 
   const sourceRunId = String(evidence?.githubActions?.runId || '').trim();
+  const sourceWorkflow = String(evidence?.githubActions?.workflow || '').trim();
   if (!NUMERIC.test(sourceRunId)) failures.push('source_run_id_invalid');
+  if (sourceWorkflow !== EXPECTED_WORKFLOW) failures.push('source_workflow_invalid');
 
   const producer = validateProducerEvidence(evidence, {
     expectedSha: sha,
@@ -80,7 +83,7 @@ export function runRetainedSupabaseRlsReleaseProofValidation() {
   console.log(JSON.stringify({
     status: 'passed',
     targetSha: sha,
-    sourceWorkflow: evidence.githubActions?.workflow || null,
+    sourceWorkflow: EXPECTED_WORKFLOW,
     sourceRunId: evidence.githubActions?.runId || null,
     liveProofReexecutedByReleaseRunner: false,
   }, null, 2));
