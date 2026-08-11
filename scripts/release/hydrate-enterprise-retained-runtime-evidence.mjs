@@ -94,21 +94,32 @@ export async function hydrateEnterpriseRetainedRuntimeEvidence({
   token,
   targetSha,
   sourceWorkflowName = '',
+  sourceWorkflowPath = '',
   sourceRunId = '',
   fetchers = DEFAULT_FETCHERS,
 }) {
   const normalizedTargetSha = normalize(targetSha).toLowerCase();
   const normalizedSourceWorkflow = normalize(sourceWorkflowName);
+  const normalizedSourceWorkflowPath = normalize(sourceWorkflowPath);
   const normalizedSourceRunId = normalize(sourceRunId);
 
   if (repository !== CANONICAL_REPOSITORY) throw new Error('repository_not_canonical');
   if (!token) throw new Error('github_token_missing');
   if (!FULL_SHA.test(normalizedTargetSha)) throw new Error('target_sha_invalid');
 
-  const triggeredProducer = normalizedSourceWorkflow
+  const triggeredProducerByPath = normalizedSourceWorkflowPath
+    ? RETAINED_RUNTIME_PRODUCERS.find((producer) => producer.workflowPath === normalizedSourceWorkflowPath)
+    : null;
+  if (normalizedSourceWorkflowPath && !triggeredProducerByPath) throw new Error('source_workflow_path_not_allowlisted');
+
+  const triggeredProducerByLegacyName = !normalizedSourceWorkflowPath && normalizedSourceWorkflow
     ? RETAINED_RUNTIME_PRODUCERS.find((producer) => producer.workflowName === normalizedSourceWorkflow)
     : null;
-  if (normalizedSourceWorkflow && !triggeredProducer) throw new Error('source_workflow_not_allowlisted');
+  if (!normalizedSourceWorkflowPath && normalizedSourceWorkflow && !triggeredProducerByLegacyName) {
+    throw new Error('source_workflow_not_allowlisted');
+  }
+
+  const triggeredProducer = triggeredProducerByPath || triggeredProducerByLegacyName;
   if (triggeredProducer && !NUMERIC_ID.test(normalizedSourceRunId)) throw new Error('source_run_id_invalid');
   if (!triggeredProducer && normalizedSourceRunId) throw new Error('source_run_without_workflow');
 
@@ -148,6 +159,7 @@ export async function hydrateEnterpriseRetainedRuntimeEvidence({
     repository,
     targetSha: normalizedTargetSha,
     sourceWorkflowName: normalizedSourceWorkflow || null,
+    sourceWorkflowPath: normalizedSourceWorkflowPath || triggeredProducer?.workflowPath || null,
     sourceRunId: normalizedSourceRunId || null,
     producerCount: RETAINED_RUNTIME_PRODUCERS.length,
     hydratedProducerCount: results.filter((result) => result.found).length,
@@ -161,8 +173,9 @@ export async function hydrateEnterpriseRetainedRuntimeEvidence({
       triggeringProducerArtifactRequiredWhenTriggered: Boolean(triggeredProducer),
       repositorySnapshotsClearedBeforeHydration: true,
       statusPromotionPerformedByHydrator: false,
+      triggerAuthorizationUsesStableWorkflowPath: Boolean(normalizedSourceWorkflowPath),
     },
-    truthBoundary: 'This fan-in only restores evidence that each dedicated producer fetcher independently validates for the exact target SHA and approved workflow provenance. Missing proofs remain missing, failed producer runs are not converted into successful evidence, repository snapshots are cleared before retrieval, and downstream release validators remain authoritative for PASS/GO decisions.',
+    truthBoundary: 'This fan-in only restores evidence that each dedicated producer fetcher independently validates for the exact target SHA and approved workflow provenance. Workflow-run trigger authorization uses an allowlisted stable workflow path rather than a mutable run-name. Missing proofs remain missing, failed producer runs are not converted into successful evidence, repository snapshots are cleared before retrieval, and downstream release validators remain authoritative for PASS/GO decisions.',
   };
 
   const manifestPath = join(root, MANIFEST_PATH);
@@ -179,6 +192,7 @@ async function main() {
     token: process.env.GITHUB_TOKEN || '',
     targetSha: process.env.TARGET_SHA || process.env.GITHUB_SHA || '',
     sourceWorkflowName: process.env.RETAINED_PROOF_SOURCE_WORKFLOW || '',
+    sourceWorkflowPath: process.env.RETAINED_PROOF_SOURCE_WORKFLOW_PATH || '',
     sourceRunId: process.env.RETAINED_PROOF_SOURCE_RUN_ID || '',
   });
   console.log(JSON.stringify({
@@ -186,6 +200,7 @@ async function main() {
     hydratedProducerCount: manifest.hydratedProducerCount,
     missingProducerCount: manifest.missingProducerCount,
     sourceWorkflowName: manifest.sourceWorkflowName,
+    sourceWorkflowPath: manifest.sourceWorkflowPath,
   }, null, 2));
 }
 
