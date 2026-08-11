@@ -10,7 +10,11 @@ import {
 import { validateSupabaseRlsRuntimeEvidence as validateReleaseEvidence } from './validate-supabase-rls-runtime-evidence.mjs';
 
 const EVIDENCE_PATH = 'docs/security/evidence/runtime/supabase-live-rls-validation.json';
-const EXPECTED_WORKFLOW = 'Supabase Live RLS Validation';
+const EXPECTED_PRODUCER = Object.freeze({
+  workflow: 'Supabase Live RLS Validation',
+  workflowPath: '.github/workflows/supabase-live-rls-validation.yml',
+  branch: 'main',
+});
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const NUMERIC = /^\d+$/;
 
@@ -38,8 +42,10 @@ export function validateRetainedSupabaseRlsReleaseProof(
 
   const sourceRunId = String(evidence?.githubActions?.runId || '').trim();
   const sourceWorkflow = String(evidence?.githubActions?.workflow || '').trim();
+  const sourceBranch = String(evidence?.githubActions?.refName || '').trim();
   if (!NUMERIC.test(sourceRunId)) failures.push('source_run_id_invalid');
-  if (sourceWorkflow !== EXPECTED_WORKFLOW) failures.push('source_workflow_invalid');
+  if (sourceWorkflow !== EXPECTED_PRODUCER.workflow) failures.push('source_workflow_invalid');
+  if (sourceBranch !== EXPECTED_PRODUCER.branch) failures.push('source_branch_invalid');
 
   const producer = validateProducerEvidence(evidence, {
     expectedSha: sha,
@@ -52,11 +58,12 @@ export function validateRetainedSupabaseRlsReleaseProof(
     now,
     maxAgeDays: 7,
     expectedRepository: repository,
-    expectedBranch: 'main',
+    expectedBranch: EXPECTED_PRODUCER.branch,
   }).map((failure) => `release:${failure}`));
 
   if (evidence?.runtimeContext?.commitSha !== sha) failures.push('runtime_context_sha_mismatch');
   if (String(evidence?.runtimeContext?.githubRunId || '') !== sourceRunId) failures.push('runtime_context_run_mismatch');
+  if (evidence?.runtimeContext?.branch !== EXPECTED_PRODUCER.branch) failures.push('runtime_context_branch_mismatch');
   if (evidence?.evidenceIntegrity?.exactShaBound !== true) failures.push('exact_sha_integrity_missing');
   if (evidence?.evidenceIntegrity?.sourceRunBound !== true) failures.push('source_run_integrity_missing');
 
@@ -83,7 +90,8 @@ export function runRetainedSupabaseRlsReleaseProofValidation() {
   console.log(JSON.stringify({
     status: 'passed',
     targetSha: sha,
-    sourceWorkflow: EXPECTED_WORKFLOW,
+    sourceWorkflow: EXPECTED_PRODUCER.workflow,
+    sourceWorkflowPath: EXPECTED_PRODUCER.workflowPath,
     sourceRunId: evidence.githubActions?.runId || null,
     liveProofReexecutedByReleaseRunner: false,
   }, null, 2));
