@@ -107,7 +107,7 @@ describe('Auth RBAC protected runtime proof', () => {
     });
   });
 
-  it('creates and verifies disposable fixtures without persistent fixture secrets', () => {
+  it('creates and verifies core disposable fixtures without persistent fixture secrets', () => {
     const script = readFileSync('scripts/security/run-auth-rbac-live-validation.mjs', 'utf8');
     const fixtures = readFileSync('scripts/security/lib/ephemeral-auth-fixtures.mjs', 'utf8');
     const workflow = readFileSync('.github/workflows/auth-rbac-runtime-proof.yml', 'utf8');
@@ -160,7 +160,28 @@ describe('Auth RBAC protected runtime proof', () => {
     expect(workflow).not.toContain('contents: write');
   });
 
-  it('runs real public signup and atomic onboarding with verified same-run cleanup', () => {
+  it('keeps public signup/onboarding manual-only with an exact confirmation literal', () => {
+    const script = readFileSync('scripts/security/run-auth-rbac-live-validation.mjs', 'utf8');
+    const workflow = readFileSync('.github/workflows/auth-rbac-runtime-proof.yml', 'utf8');
+
+    for (const token of [
+      'workflow_dispatch:',
+      'identity_journey_confirmation:',
+      'PROVE_SIGNUP_ONBOARDING_RUNTIME',
+      'AUTH_IDENTITY_JOURNEY_ENABLED=true',
+      'AUTH_IDENTITY_JOURNEY_ENABLED=false',
+      'Disposable signup/onboarding proof is manual-only',
+      'environment: production',
+    ]) expect(workflow).toContain(token);
+
+    for (const token of [
+      "env('AUTH_IDENTITY_JOURNEY_ENABLED') === 'true'",
+      'identity_journey_explicit_confirmation_required',
+      'identityJourneyExplicitlyConfirmed: identityJourneyEnabled',
+    ]) expect(script).toContain(token);
+  });
+
+  it('can execute real public signup and atomic onboarding with verified same-run cleanup after confirmation', () => {
     const script = readFileSync('scripts/security/run-auth-rbac-live-validation.mjs', 'utf8');
     const journey = readFileSync('scripts/security/lib/ephemeral-auth-journeys.mjs', 'utf8');
 
