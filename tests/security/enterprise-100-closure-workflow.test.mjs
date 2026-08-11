@@ -7,6 +7,7 @@ const rlsWorkflow = readFileSync('.github/workflows/supabase-production-rls-reco
 const rlsEvidenceWriter = readFileSync('scripts/supabase/write-rls-reconciliation-closure-evidence.mjs', 'utf8');
 const checker = readFileSync('scripts/release/check-enterprise-100-closure.mjs', 'utf8');
 const hydrator = readFileSync('scripts/release/hydrate-enterprise-100-evidence.mjs', 'utf8');
+const shaBindingResolver = readFileSync('scripts/release/evidence-sha-binding.mjs', 'utf8');
 const collector = readFileSync('scripts/enterprise/collect-github-exact-sha-artifacts.mjs', 'utf8');
 const stripePromotionFetcher = readFileSync('scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs', 'utf8');
 
@@ -127,13 +128,19 @@ test('closure remains fail closed after artifact hydration', () => {
   assert.match(checker, /ambiguous_exact_sha_evidence/);
   assert.match(checker, /sensitive_evidence_rejected/);
   assert.match(checker, /exact_sha_not_proven/);
+  assert.match(checker, /conflicting_sha_bindings/);
   assert.match(checker, /accepted: statusAccepted/);
-  assert.match(checker, /document\?\.expectedSha/);
+  assert.match(checker, /resolveEvidenceShaBinding/);
   assert.match(checker, /document\?\.finalDecision/);
   assert.match(checker, /document\?\.publicationStatus/);
   assert.match(hydrator, /REJECTED_SENSITIVE/);
+  assert.match(hydrator, /SHA_CONFLICT/);
   assert.match(hydrator, /AMBIGUOUS/);
+  assert.match(hydrator, /resolveEvidenceShaBinding/);
   assert.match(hydrator, /EXPLICIT_SOURCE_ALIASES/);
   assert.match(hydrator, /matchedBy: 'explicit_alias'/);
   assert.match(hydrator, /does not award PASS/);
+  assert.match(shaBindingResolver, /expectedSha/);
+  assert.match(shaBindingResolver, /runtimeContext\.commitSha/);
+  assert.match(shaBindingResolver, /distinctValidShas\.length > 1/);
 });

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const originalCwd = process.cwd();
 const originalSha = process.env.ENTERPRISE_CLOSURE_EXPECTED_SHA;
 const TARGET_SHA = 'a'.repeat(40);
+const STALE_SHA = 'b'.repeat(40);
 
 beforeEach(() => {
   vi.resetModules();
@@ -69,7 +70,7 @@ describe('enterprise 100 closure contract', () => {
 
   it('does not accept evidence that is not bound to the promoted SHA', async () => {
     const { evaluateEnterpriseClosure } = await import('../scripts/release/check-enterprise-100-closure.mjs');
-    const root = evidenceRoot({ status: 'PASS', releaseSha: 'b'.repeat(40) });
+    const root = evidenceRoot({ status: 'PASS', releaseSha: STALE_SHA });
 
     const result = evaluateEnterpriseClosure({
       expectedSha: TARGET_SHA,
@@ -119,6 +120,48 @@ describe('enterprise 100 closure contract', () => {
 
     expect(result.passed).toBe(true);
     expect(result.controls[0]?.status).toBe('PASS');
+  });
+
+  it('accepts Complete plus passed runtime evidence bound by runtimeContext.commitSha', async () => {
+    const { evaluateEnterpriseClosure } = await import('../scripts/release/check-enterprise-100-closure.mjs');
+    const root = evidenceRoot({
+      status: 'Complete',
+      outcome: 'passed',
+      runtimeContext: { commitSha: TARGET_SHA },
+      evidenceIntegrity: { containsSensitiveValues: false },
+    });
+
+    const result = evaluateEnterpriseClosure({
+      expectedSha: TARGET_SHA,
+      config: singleControlConfig,
+      evidenceRoots: [root],
+    });
+
+    expect(result.passed).toBe(true);
+    expect(result.controls[0]?.status).toBe('PASS');
+    expect(result.controls[0]?.sha).toBe(TARGET_SHA);
+    expect(result.controls[0]?.shaSource).toBe('runtimeContext.commitSha');
+  });
+
+  it('rejects conflicting SHA provenance even when the first binding matches', async () => {
+    const { evaluateEnterpriseClosure } = await import('../scripts/release/check-enterprise-100-closure.mjs');
+    const root = evidenceRoot({
+      status: 'Complete',
+      outcome: 'passed',
+      targetSha: TARGET_SHA,
+      runtimeContext: { commitSha: STALE_SHA },
+      evidenceIntegrity: { containsSensitiveValues: false },
+    });
+
+    const result = evaluateEnterpriseClosure({
+      expectedSha: TARGET_SHA,
+      config: singleControlConfig,
+      evidenceRoots: [root],
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.controls[0]?.status).toBe('SHA_CONFLICT');
+    expect(result.controls[0]?.reason).toBe('conflicting_sha_bindings');
   });
 
   it('does not convert Complete plus failed evidence into PASS', async () => {

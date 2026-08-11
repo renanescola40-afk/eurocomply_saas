@@ -54,6 +54,51 @@ test('hydrates exact-SHA evidence into the declared closure path', async () => {
   assert.equal(hydrated.releaseSha, TARGET);
 });
 
+test('hydrates known nested runtimeContext.commitSha evidence without changing its status', async () => {
+  const { sourceRoot, outputRoot } = await tempRoots();
+  await writeCandidate(sourceRoot, 'artifact/release-validation/production-smoke.json', {
+    status: 'Open',
+    outcome: 'failed',
+    runtimeContext: { commitSha: TARGET },
+    evidenceIntegrity: { containsSensitiveValues: false },
+  });
+
+  const manifest = await hydrateEnterpriseClosureEvidence({
+    sourceRoot,
+    outputRoot,
+    targetSha: TARGET,
+    closureConfig: config,
+  });
+
+  assert.equal(manifest.hydratedEvidence, 1);
+  assert.equal(manifest.conflictingShaEvidence, 0);
+  assert.equal(manifest.results[0]?.shaSource, 'runtimeContext.commitSha');
+  const hydrated = JSON.parse(await readFile(path.join(outputRoot, 'release-validation/production-smoke.json'), 'utf8'));
+  assert.equal(hydrated.status, 'Open');
+  assert.equal(hydrated.runtimeContext.commitSha, TARGET);
+});
+
+test('rejects conflicting valid SHA provenance instead of selecting the first binding', async () => {
+  const { sourceRoot, outputRoot } = await tempRoots();
+  await writeCandidate(sourceRoot, 'artifact/release-validation/production-smoke.json', {
+    status: 'PASS',
+    targetSha: TARGET,
+    runtimeContext: { commitSha: STALE },
+    evidenceIntegrity: { containsSensitiveValues: false },
+  });
+
+  const manifest = await hydrateEnterpriseClosureEvidence({
+    sourceRoot,
+    outputRoot,
+    targetSha: TARGET,
+    closureConfig: config,
+  });
+
+  assert.equal(manifest.hydratedEvidence, 0);
+  assert.equal(manifest.conflictingShaEvidence, 1);
+  assert.equal(manifest.results[0]?.status, 'SHA_CONFLICT');
+});
+
 test('hydrates only documented semantic aliases when the conceptual closure filename is absent', async () => {
   const { sourceRoot, outputRoot } = await tempRoots();
   await writeCandidate(sourceRoot, 'runtime/docs/security/evidence/runtime/authenticated-production-smoke.json', {

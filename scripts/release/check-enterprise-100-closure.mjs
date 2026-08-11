@@ -4,6 +4,8 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
+import { resolveEvidenceShaBinding } from './evidence-sha-binding.mjs';
+
 const root = process.cwd();
 const configPath = join(root, 'config/enterprise-100-closure.json');
 const outputPath = join(root, 'release-validation/enterprise-100-closure.json');
@@ -54,32 +56,6 @@ function findStatus(document) {
   }
 
   return null;
-}
-
-function findSha(document) {
-  const candidates = [
-    document?.sha,
-    document?.targetSha,
-    document?.expectedSha,
-    document?.observedSha,
-    document?.commitSha,
-    document?.commit_sha,
-    document?.releaseSha,
-    document?.release_sha,
-    document?.deploymentSha,
-    document?.deployment_sha,
-    document?.buildSha,
-    document?.build_sha,
-    document?.sourceSha,
-    document?.source_sha,
-    document?.productSha,
-    document?.product_sha,
-    document?.provenance?.commitSha,
-    document?.provenance?.targetSha,
-    document?.reviewBinding?.productSha,
-  ];
-
-  return candidates.find((candidate) => typeof candidate === 'string' && candidate.trim())?.trim() ?? null;
 }
 
 function digest(path) {
@@ -154,13 +130,16 @@ export function evaluateEnterpriseClosure({
 
     const parsedCandidates = paths.map((absolutePath) => {
       const parsed = readJson(absolutePath);
+      const shaBinding = parsed.value ? resolveEvidenceShaBinding(parsed.value) : null;
       return {
         absolutePath,
         value: parsed.value,
         error: parsed.error,
         digest: parsed.value ? digest(absolutePath) : null,
         status: parsed.value ? findStatus(parsed.value) : null,
-        sha: parsed.value ? findSha(parsed.value) : null,
+        sha: shaBinding?.sha ?? null,
+        shaSource: shaBinding?.source ?? null,
+        shaConflict: shaBinding?.conflict === true,
         sensitive: parsed.value ? containsSensitiveValues(parsed.value) : false,
       };
     });
@@ -182,15 +161,19 @@ export function evaluateEnterpriseClosure({
       });
     }
 
-    const exact = safe.filter((candidate) => Boolean(expectedSha && candidate.sha === expectedSha));
+    const exact = safe.filter((candidate) =>
+      !candidate.shaConflict && Boolean(expectedSha && candidate.sha === expectedSha),
+    );
     if (exact.length === 0) {
-      const diagnostic = safe[0];
+      const conflicting = safe.find((candidate) => candidate.shaConflict);
+      const diagnostic = conflicting ?? safe[0];
       return failureControl(control, {
-        status: diagnostic.status,
+        status: conflicting ? 'SHA_CONFLICT' : diagnostic.status,
         sha: diagnostic.sha,
+        shaSource: diagnostic.shaSource,
         source: diagnostic.absolutePath,
         digest: diagnostic.digest,
-        reason: 'exact_sha_not_proven',
+        reason: conflicting ? 'conflicting_sha_bindings' : 'exact_sha_not_proven',
         candidateCount: safe.length,
       });
     }
@@ -219,6 +202,7 @@ export function evaluateEnterpriseClosure({
       digest: selected.digest,
       status: selected.status,
       sha: selected.sha,
+      shaSource: selected.shaSource,
       shaMatches: true,
       accepted: statusAccepted,
       reason: statusAccepted ? null : 'status_not_accepted',
@@ -244,7 +228,7 @@ export function evaluateEnterpriseClosure({
     totalControls: controls.length,
     blockers,
     controls,
-    truthBoundary: 'Closure credit requires an accepted status and exact promoted SHA. Configured evidence roots only make retained proof discoverable; they do not create or upgrade evidence.',
+    truthBoundary: 'Closure credit requires an accepted status and an exact, non-conflicting promoted SHA. Known nested provenance bindings such as runtimeContext.commitSha are recognized, but conflicting SHA bindings remain blocked. Configured evidence roots only make retained proof discoverable; they do not create or upgrade evidence.',
   };
 }
 
