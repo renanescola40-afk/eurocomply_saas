@@ -84,7 +84,7 @@ jobs:
           node --check scripts/release/validate-release-go-no-go-evidence.mjs
           node --check scripts/release/verify-enterprise-evidence-bundle.mjs
           grep -Fq "npm run release:production-final" .github/workflows/enterprise-production-gate.yml
-          grep -Fq "release:go-no-go-evidence" scripts/release/run-public-production-release-v2.mjs
+          grep -Fq "node scripts/release/validate-release-go-no-go-evidence.mjs" scripts/release/run-public-production-release-v2.mjs
           grep -Fq "verify-enterprise-evidence-bundle.mjs" .github/workflows/enterprise-production-gate.yml
           grep -Fq "if-no-files-found: error" .github/workflows/enterprise-production-gate.yml
           grep -Fq "environment: Production" .github/workflows/enterprise-production-gate.yml
