@@ -3,6 +3,29 @@ import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
 
+const expectedCompletionTriggers = [
+  'CI',
+  'CodeQL',
+  'Semgrep',
+  'Secret Scanning',
+  'Scan repository for accidental secret exposure',
+  'Dependency Review',
+  'Actionlint',
+  'Public Claims Guard',
+  'Full Security Suite',
+  'Enterprise Production Gate',
+  'RISCK COMPLY Security CI',
+  'Enterprise DAST',
+  'Dependency Vulnerability Proof',
+  'Distributed Rate Limit Runtime Proof',
+  'Auth RBAC Tenant Proof',
+  'Supabase Live RLS Validation',
+  'Production Runtime Proof',
+  'Branch Protection Runtime Proof',
+  'Final Technical Controls Proof',
+  'Recovery Resilience Proof',
+];
+
 function workflowRunProducers() {
   const match = workflow.match(/workflow_run:\n    workflows:\n([\s\S]*?)    types: \[completed\]/);
   if (!match) throw new Error('workflow_run producer block missing');
@@ -11,53 +34,37 @@ function workflowRunProducers() {
 }
 
 describe('enterprise readiness scorecard orchestration', () => {
-  it('reacts only to runtime evidence producers after the direct push/PR assessment', () => {
-    expect(workflowRunProducers()).toEqual([
-      'Distributed Rate Limit Runtime Proof',
-      'Auth RBAC Tenant Proof',
-      'Supabase Live RLS Validation',
-      'Production Runtime Proof',
-      'Branch Protection Runtime Proof',
-      'Final Technical Controls Proof',
-      'Recovery Resilience Proof',
-    ]);
-
-    for (const redundantProducer of [
-      'CI',
-      'CodeQL',
-      'Semgrep',
-      'Secret Scanning',
-      'Scan repository for accidental secret exposure',
-      'Dependency Review',
-      'Actionlint',
-      'Public Claims Guard',
-      'Full Security Suite',
-      'Enterprise Production Gate',
-      'RISCK COMPLY Security CI',
-      'Enterprise DAST',
-    ]) {
-      expect(workflowRunProducers()).not.toContain(redundantProducer);
-    }
+  it('re-evaluates after every exact-SHA required check and runtime evidence producer completes', () => {
+    expect(workflowRunProducers()).toEqual(expectedCompletionTriggers);
+    expect(new Set(workflowRunProducers()).size).toBe(expectedCompletionTriggers.length);
+    expect(workflowRunProducers()).not.toContain('Enterprise Readiness Scorecard');
   });
 
-  it('limits workflow-run reevaluation to main and isolates non-success producer events from active exact-SHA assessment', () => {
+  it('limits workflow-run reevaluation to successful main completions and exact assessed SHA concurrency', () => {
     expect(workflow).toMatch(/workflow_run:[\s\S]*?types: \[completed\]\n    branches: \[main\]/);
     expect(workflow).toContain(
-      "group: enterprise-readiness-scorecard-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}-${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success' && github.run_id || 'active' }}",
+      'group: enterprise-readiness-scorecard-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}',
     );
     expect(workflow).toContain('cancel-in-progress: true');
-    expect(workflow).toContain("github.event.workflow_run.conclusion != 'success'");
-    expect(workflow).toContain("github.run_id || 'active'");
-    expect(workflow).not.toContain(
-      'group: enterprise-readiness-scorecard-${{ github.event.workflow_run.head_sha || github.ref }}',
-    );
-  });
-
-  it('always emits a terminal reevaluation even when the newest runtime producer failed', () => {
-    expect(workflow).not.toContain(
+    expect(workflow).toContain(
       "if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'",
     );
-    expect(workflow).toContain('types: [completed]');
+    expect(workflow).not.toContain("github.run_id || 'active'");
+  });
+
+  it('keeps repository-control Open evidence observable without weakening integrity failures', () => {
+    expect(workflow).toContain('node scripts/enterprise/run-repository-control-evidence-for-scorecard.mjs');
+    expect(workflow).toContain('node --test tests/enterprise/repository-control-scorecard-aggregation.test.mjs');
+    expect(workflow).not.toContain('continue-on-error');
+  });
+
+  it('publishes the canonical scorecard before enforcing the terminal GO decision', () => {
+    const uploadIndex = workflow.indexOf('- name: Upload scorecard artifact');
+    const enforceIndex = workflow.indexOf('- name: Enforce enterprise scorecard decision');
+    expect(uploadIndex).toBeGreaterThan(-1);
+    expect(enforceIndex).toBeGreaterThan(uploadIndex);
+    expect(workflow).toContain("decision=\"$(jq -r '.releaseDecision // \"NO_GO\"' \"$scorecard\")\"");
+    expect(workflow).toContain('test "$decision" = "GO"');
   });
 
   it('keeps direct pull-request, push and manual entry points', () => {
