@@ -14,7 +14,6 @@ const CURRENT_PLAN_BLOCKING_STATUSES = new Set([
   'unpaid',
   'incomplete',
 ]);
-const SALES_LED_PLAN_IDS = new Set(['enterprise']);
 
 const checkoutProof = [
   ['Stripe secure billing', 'Card, invoice details, tax IDs and billing addresses are handled by Stripe Checkout.'],
@@ -24,7 +23,7 @@ const checkoutProof = [
 
 const implementationSteps = [
   'Choose the plan that matches your current compliance workload.',
-  'Confirm billing details in Stripe Checkout for self-serve plans, or talk to sales for Enterprise rollout.',
+  'Confirm billing details in Stripe Checkout for self-serve plans, or talk to sales for assisted and contract plans.',
   'Return to the Risck Comply dashboard with the plan connected to your workspace.',
 ];
 
@@ -48,6 +47,12 @@ function formatNumber(value: number) {
 
 function isCurrentPlanSubscription(status: string | null | undefined) {
   return Boolean(status && CURRENT_PLAN_BLOCKING_STATUSES.has(status));
+}
+
+function planPriceLabel(plan: (typeof BILLING_PLANS)[number]) {
+  if (plan.priceMonthly != null) return `€${plan.priceMonthly}`;
+  if (plan.startingPriceMonthly != null) return `From €${plan.startingPriceMonthly}`;
+  return 'Contact sales';
 }
 
 function checkoutMessage(status?: string) {
@@ -78,7 +83,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   const selectedPlanId = firstSearchParam(resolvedSearchParams.plan);
   const checkoutStatus = firstSearchParam(resolvedSearchParams.checkout);
   const selectedPlan = getBillingPlan(selectedPlanId) ?? getBillingPlan(DEFAULT_PLAN_ID) ?? BILLING_PLANS[1];
-  const selectedPlanIsSalesLed = SALES_LED_PLAN_IDS.has(selectedPlan.id);
+  const selectedPlanIsSalesLed = selectedPlan.salesLed;
   const user = await getCurrentUser();
   const organization = user ? await getCurrentOrganizationForUser(user.id).catch(() => null) : null;
   const billing = organization ? await getOrganizationBillingContext(organization.id).catch(() => null) : null;
@@ -116,7 +121,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
               Activate your Risck Comply workspace.
             </h1>
             <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">
-              Select a monthly self-serve plan, confirm billing data in Stripe, or route Enterprise procurement through a sales-led rollout.
+              Select a monthly self-serve plan, confirm billing data in Stripe, or route assisted and Enterprise procurement through a sales-led rollout.
             </p>
 
             {message && (
@@ -128,8 +133,8 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
 
             {selectedPlanIsSalesLed && !selectedPlanIsCurrent && (
               <div className="mt-6 rounded-2xl border border-emerald-300/30 bg-emerald-300/10 p-4 text-emerald-100">
-                <p className="font-semibold">Enterprise is sales-led</p>
-                <p className="mt-1 text-sm opacity-85">Enterprise requires procurement, rollout scope and agreed commercial terms before subscription activation.</p>
+                <p className="font-semibold">{selectedPlan.name} is sales-led</p>
+                <p className="mt-1 text-sm opacity-85">This plan requires rollout scope and agreed commercial terms before subscription activation.</p>
               </div>
             )}
 
@@ -160,7 +165,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
                 </div>
                 <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-950">{selectedPlanIsCurrent ? 'Current' : selectedPlanIsSalesLed ? 'Sales-led' : 'Selected'}</span>
               </div>
-              <p className="mt-6 text-5xl font-bold">{selectedPlanIsSalesLed && !selectedPlanIsCurrent ? 'Custom' : `€${selectedPlan.priceMonthly}`}{(!selectedPlanIsSalesLed || selectedPlanIsCurrent) && <span className="text-base font-normal text-blue-100/70">/mo</span>}</p>
+              <p className="mt-6 text-5xl font-bold">{planPriceLabel(selectedPlan)}{selectedPlan.startingPriceMonthly != null || selectedPlan.priceMonthly != null ? <span className="text-base font-normal text-blue-100/70">/mo</span> : null}</p>
             </div>
 
             <div className="mt-5 grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
@@ -206,7 +211,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
                 <Link href={salesLedPath} className="flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">
                   Talk to sales
                 </Link>
-                <p className="mt-3 text-center text-xs text-slate-500">Enterprise subscriptions are activated after commercial approval.</p>
+                <p className="mt-3 text-center text-xs text-slate-500">Sales-led subscriptions are activated after commercial approval.</p>
               </div>
             ) : organization ? (
               <div className="mt-6">
@@ -256,7 +261,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {BILLING_PLANS.map((plan) => {
             const isSelected = plan.id === selectedPlan.id;
-            const isPlanSalesLed = SALES_LED_PLAN_IDS.has(plan.id);
+            const isPlanSalesLed = plan.salesLed;
 
             return (
               <Link
@@ -265,7 +270,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
                 className={`rounded-[1.5rem] border p-5 transition hover:-translate-y-1 ${isSelected ? 'border-blue-300 bg-white text-slate-950' : 'border-white/10 bg-slate-950 text-white hover:bg-white/[0.04]'}`}
               >
                 <p className="text-lg font-semibold">{plan.name}</p>
-                <p className={`mt-2 text-3xl font-bold ${isSelected ? 'text-slate-950' : 'text-white'}`}>{isPlanSalesLed ? 'Custom' : `€${plan.priceMonthly}`}</p>
+                <p className={`mt-2 text-3xl font-bold ${isSelected ? 'text-slate-950' : 'text-white'}`}>{planPriceLabel(plan)}</p>
                 <p className={`mt-2 text-xs ${isSelected ? 'text-slate-600' : 'text-slate-500'}`}>{isPlanSalesLed ? 'sales-led' : 'per month'}</p>
               </Link>
             );

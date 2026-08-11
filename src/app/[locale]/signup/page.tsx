@@ -55,6 +55,16 @@ function getSignupPlanHref(locale: string, planId: string, nextPath: string) {
   return `/${locale}/signup?${params.toString()}`;
 }
 
+function getSalesLedHref(locale: string, planId: string) {
+  return `/${locale}/contact?intent=sales&plan=${encodeURIComponent(planId)}`;
+}
+
+function getPlanPriceLabel(plan: (typeof BILLING_PLANS)[number]) {
+  if (plan.priceMonthly != null) return `€${plan.priceMonthly}/mo`;
+  if (plan.startingPriceMonthly != null) return `From €${plan.startingPriceMonthly}/mo`;
+  return 'Contact sales';
+}
+
 function getSignupCopy(activeLocale: Locale) {
   return activeLocale === 'pt'
     ? {
@@ -64,6 +74,9 @@ function getSignupCopy(activeLocale: Locale) {
         choosePlanSubtitle: 'Toda conta nova precisa começar com um plano selecionado para o billing e o onboarding ficarem alinhados.',
         selectPlan: 'Selecionar plano',
         selectedPlan: 'Plano selecionado',
+        salesLed: 'Falar com vendas',
+        salesLedTitle: 'Este plano é orientado por vendas',
+        salesLedSubtitle: 'Definimos escopo, rollout e termos comerciais antes de ativar a subscrição.',
         google: 'Criar conta com Google',
         divider: 'ou crie com email',
         email: 'Email profissional',
@@ -85,6 +98,9 @@ function getSignupCopy(activeLocale: Locale) {
         choosePlanSubtitle: 'Every new account must start with a selected plan so billing and onboarding stay aligned.',
         selectPlan: 'Select plan',
         selectedPlan: 'Selected plan',
+        salesLed: 'Talk to sales',
+        salesLedTitle: 'This plan is sales-led',
+        salesLedSubtitle: 'We agree rollout scope and commercial terms before subscription activation.',
         google: 'Create account with Google',
         divider: 'or create with email',
         email: 'Work email',
@@ -152,7 +168,10 @@ function SelectedPlanCard({ activeLocale, selectedPlan }: { activeLocale: Locale
   return (
     <div className="mt-5 rounded-2xl border border-blue-300/20 bg-blue-400/10 p-4 text-sm text-blue-50">
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-200/80">{text.selectedPlan}</p>
-      <p className="mt-2 text-xl font-semibold tracking-tight">{selectedPlan.name}</p>
+      <div className="mt-2 flex items-end justify-between gap-3">
+        <p className="text-xl font-semibold tracking-tight">{selectedPlan.name}</p>
+        <p className="text-sm font-semibold text-blue-100">{getPlanPriceLabel(selectedPlan)}</p>
+      </div>
     </div>
   );
 }
@@ -166,11 +185,14 @@ function PlanSelection({ activeLocale, planSelectionNextHref, signInUrl }: { act
       <div className="mt-6 grid gap-3">
         {BILLING_PLANS.map((plan) => {
           const nextWithPlan = getPlanContinuationHref(planSelectionNextHref, plan.id);
+          const href = plan.salesLed
+            ? getSalesLedHref(activeLocale, plan.id)
+            : getSignupPlanHref(activeLocale, plan.id, nextWithPlan);
 
           return (
             <Link
               key={plan.id}
-              href={getSignupPlanHref(activeLocale, plan.id, nextWithPlan)}
+              href={href}
               className="rounded-2xl border border-white/10 bg-black/30 p-4 transition hover:border-blue-300/60 hover:bg-blue-500/10"
             >
               <div className="flex items-start justify-between gap-3">
@@ -178,9 +200,9 @@ function PlanSelection({ activeLocale, planSelectionNextHref, signInUrl }: { act
                   <p className="text-lg font-semibold text-white">{plan.name}</p>
                   <p className="mt-1 text-xs leading-5 text-white/50">{plan.features[0]}</p>
                 </div>
-                <p className="text-right text-xl font-bold text-blue-100">€{plan.priceMonthly}<span className="text-xs font-normal text-white/45">/mo</span></p>
+                <p className="text-right text-xl font-bold text-blue-100">{getPlanPriceLabel(plan)}</p>
               </div>
-              <span className="mt-3 inline-flex text-sm font-semibold text-blue-200">{text.selectPlan} →</span>
+              <span className="mt-3 inline-flex text-sm font-semibold text-blue-200">{plan.salesLed ? text.salesLed : text.selectPlan} →</span>
             </Link>
           );
         })}
@@ -300,6 +322,26 @@ function SignupAuthForm({ activeLocale, selectedPlan, continuationHref, signInUr
   );
 }
 
+function SalesLedPlanHandoff({ activeLocale, selectedPlan, signInUrl }: { activeLocale: Locale; selectedPlan: NonNullable<ReturnType<typeof getBillingPlan>>; signInUrl: string }) {
+  const text = getSignupCopy(activeLocale);
+
+  return (
+    <SignupChrome activeLocale={activeLocale}>
+      <SignupHeader title={text.salesLedTitle} subtitle={text.salesLedSubtitle} />
+      <SelectedPlanCard activeLocale={activeLocale} selectedPlan={selectedPlan} />
+      <Link href={getSalesLedHref(activeLocale, selectedPlan.id)} className="mt-6 flex w-full items-center justify-center rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90">
+        {text.salesLed}
+      </Link>
+      <p className="mt-6 text-center text-sm text-white/50">
+        {text.haveAccount}{' '}
+        <Link href={signInUrl} className="font-semibold text-white hover:text-blue-200">
+          {text.signIn}
+        </Link>
+      </p>
+    </SignupChrome>
+  );
+}
+
 function SignupContent() {
   const params = useParams<{ locale: string }>();
   const searchParams = useSearchParams();
@@ -316,6 +358,10 @@ function SignupContent() {
   const selectedPlan = getBillingPlan(selectedPlanId);
   if (!selectedPlan) {
     return <PlanSelection activeLocale={activeLocale} planSelectionNextHref={continuationHref} signInUrl={signInUrl} />;
+  }
+
+  if (selectedPlan.salesLed) {
+    return <SalesLedPlanHandoff activeLocale={activeLocale} selectedPlan={selectedPlan} signInUrl={signInUrl} />;
   }
 
   return <SignupAuthForm activeLocale={activeLocale} selectedPlan={selectedPlan} continuationHref={continuationHref} signInUrl={signInUrl} />;

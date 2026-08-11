@@ -5,8 +5,20 @@ import { BILLING_PLANS, getStripePriceId, normalizeBillingInterval } from './pla
 
 describe('enterprise billing lifecycle catalog', () => {
   afterEach(() => {
-    delete process.env.STRIPE_PRICE_STARTER_MONTHLY;
-    delete process.env.STRIPE_PRICE_STARTER_ANNUAL;
+    for (const key of [
+      'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+      'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+      'STRIPE_PRICE_STARTER_MONTHLY',
+      'STRIPE_PRICE_STARTER_ANNUAL',
+      'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+      'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
+      'STRIPE_PRICE_GROWTH_MONTHLY',
+      'STRIPE_PRICE_GROWTH_ANNUAL',
+      'STRIPE_PRICE_BUSINESS_MONTHLY',
+      'STRIPE_PRICE_BUSINESS_ANNUAL',
+    ]) {
+      delete process.env[key];
+    }
   });
 
   it('keeps annual pricing equal to ten monthly payments', () => {
@@ -16,11 +28,27 @@ describe('enterprise billing lifecycle catalog', () => {
     expect(BILLING_PLANS.enterprise.annualPriceCents).toBeNull();
   });
 
-  it('resolves monthly and annual Stripe prices independently', () => {
-    process.env.STRIPE_PRICE_STARTER_MONTHLY = 'price_starter_month';
-    process.env.STRIPE_PRICE_STARTER_ANNUAL = 'price_starter_year';
-    expect(getStripePriceId('starter', 'month')).toBe('price_starter_month');
-    expect(getStripePriceId('starter', 'year')).toBe('price_starter_year');
+  it('uses canonical Essential monthly and annual Stripe price keys', () => {
+    process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY = 'price_essential_month';
+    process.env.STRIPE_PRICE_ESSENTIAL_ANNUAL = 'price_essential_year';
+    expect(getStripePriceId('starter', 'month')).toBe('price_essential_month');
+    expect(getStripePriceId('starter', 'year')).toBe('price_essential_year');
+  });
+
+  it('preserves legacy Starter monthly and annual keys only as transition fallbacks', () => {
+    process.env.STRIPE_PRICE_STARTER_MONTHLY = 'price_legacy_starter_month';
+    process.env.STRIPE_PRICE_STARTER_ANNUAL = 'price_legacy_starter_year';
+    expect(getStripePriceId('starter', 'month')).toBe('price_legacy_starter_month');
+    expect(getStripePriceId('starter', 'year')).toBe('price_legacy_starter_year');
+  });
+
+  it('prefers canonical Professional prices over legacy Growth fallbacks', () => {
+    process.env.STRIPE_PRICE_GROWTH_MONTHLY = 'price_legacy_growth_month';
+    process.env.STRIPE_PRICE_GROWTH_ANNUAL = 'price_legacy_growth_year';
+    process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY = 'price_professional_month';
+    process.env.STRIPE_PRICE_PROFESSIONAL_ANNUAL = 'price_professional_year';
+    expect(getStripePriceId('professional', 'month')).toBe('price_professional_month');
+    expect(getStripePriceId('professional', 'year')).toBe('price_professional_year');
   });
 
   it('normalizes billing interval aliases', () => {
