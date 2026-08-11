@@ -5,11 +5,13 @@ on:
     paths:
       - 'config/enterprise-100-closure.json'
       - 'scripts/enterprise/collect-github-exact-sha-artifacts.mjs'
+      - 'scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs'
       - 'scripts/release/check-enterprise-100-closure.mjs'
       - 'scripts/release/hydrate-enterprise-100-evidence.mjs'
       - 'tests/enterprise-100-closure.test.ts'
       - 'tests/enterprise/enterprise-100-evidence-hydration.test.mjs'
       - 'tests/enterprise/github-exact-sha-artifact-collector.test.mjs'
+      - 'tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts'
       - 'tests/security/enterprise-100-closure-workflow.test.mjs'
       - '.github/workflows/enterprise-100-closure.yml'
   push:
@@ -21,7 +23,7 @@ on:
       - 'Production Provider Runtime Proof'
       - 'Enterprise Runtime Evidence Closeout'
       - 'Enterprise Readiness Scorecard'
-      - 'Stripe Runtime Proof'
+      - 'Stripe Runtime Evidence Promotion'
       - 'Supabase Production Migration Dry Run'
       - 'Final Legal Publication Gate'
       - 'Enterprise Conversation Runtime Closeout'
@@ -66,9 +68,12 @@ jobs:
       - name: Test closure verifier hydration and artifact collection contracts
         run: |
           node --check scripts/enterprise/collect-github-exact-sha-artifacts.mjs
+          node --check scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs
           node --check scripts/release/check-enterprise-100-closure.mjs
           node --check scripts/release/hydrate-enterprise-100-evidence.mjs
-          npx vitest run tests/enterprise-100-closure.test.ts
+          npx vitest run \
+            tests/enterprise-100-closure.test.ts \
+            tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts
           node --test \
             tests/enterprise/enterprise-100-evidence-hydration.test.mjs \
             tests/enterprise/github-exact-sha-artifact-collector.test.mjs \
@@ -81,6 +86,7 @@ jobs:
           grep -Fq 'ENTERPRISE_CLOSURE_EVIDENCE_ROOTS' scripts/release/check-enterprise-100-closure.mjs
           grep -Fq 'enterprise-100-evidence-hydration.v1' scripts/release/hydrate-enterprise-100-evidence.mjs
           grep -Fq 'github-exact-sha-artifact-collection.v1' scripts/enterprise/collect-github-exact-sha-artifacts.mjs
+          grep -Fq 'Stripe Runtime Evidence Promotion' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Final Legal Publication Gate' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Enterprise Conversation Runtime Closeout' .github/workflows/enterprise-100-closure.yml
 
@@ -111,6 +117,36 @@ jobs:
             enterprise-100 \
             "$ENTERPRISE_CLOSURE_EXPECTED_SHA" \
             "$RETAINED_ARTIFACT_ROOT"
+
+      - name: Replace legacy Stripe Open state with authoritative promoted exact-SHA runtime evidence
+        if: github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ENTERPRISE_CLOSURE_EXPECTED_SHA }}
+          STRIPE_RUNTIME_EVIDENCE_REQUIRED: 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # stripe-runtime-proof.yml intentionally writes repository validation as Open.
+          # Retain those files for audit, but remove their .json extension so the
+          # closure hydrator cannot confuse them with promoted runtime proof.
+          while IFS= read -r -d '' legacy; do
+            mv "$legacy" "${legacy}.legacy-open-ignored"
+          done < <(find "$RETAINED_ARTIFACT_ROOT" -type f -name 'stripe-billing-validation.json' -print0)
+
+          rm -f docs/security/evidence/runtime/stripe-billing-validation.json
+          node scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs
+
+          canonical=docs/security/evidence/runtime/stripe-billing-validation.json
+          if [ -f "$canonical" ]; then
+            destination="$RETAINED_ARTIFACT_ROOT/authoritative-stripe-promotion/docs/security/evidence/runtime"
+            mkdir -p "$destination"
+            cp "$canonical" "$destination/stripe-billing-validation.json"
+            echo 'Authoritative promoted Stripe runtime evidence added to exact-SHA closure input.'
+          else
+            echo 'No successful authoritative promoted Stripe runtime evidence exists for this exact SHA; billing runtime remains uncredited.'
+          fi
 
       - name: Hydrate declared Enterprise 100 evidence
         if: github.event_name != 'pull_request'
