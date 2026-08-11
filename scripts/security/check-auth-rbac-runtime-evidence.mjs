@@ -9,7 +9,7 @@ function require(condition, message) {
   if (!condition) failures.push(message);
 }
 
-function validateIdentityJourney(journey) {
+function validateIdentityJourney(journey, explicitlyConfirmed) {
   require(journey && typeof journey === 'object' && !Array.isArray(journey), 'identity journey must be an object');
   if (!journey || typeof journey !== 'object' || Array.isArray(journey)) return;
 
@@ -30,6 +30,7 @@ function validateIdentityJourney(journey) {
   require(journey.evidenceIntegrity?.cleanupRequired === true, 'identity journey cleanup must be mandatory');
 
   if (journey.status === 'Complete') {
+    require(explicitlyConfirmed === true, 'Complete identity journey requires explicit operator confirmation');
     require(journey.outcome === 'passed', 'Complete identity journey must pass');
     require(Object.values(journey.checks ?? {}).every((value) => value === true), 'Complete identity journey requires every check');
     require(journey.cleanupVerified === true, 'Complete identity journey cleanup must be verified');
@@ -59,7 +60,13 @@ if (evidence.schema === 'risck-comply.auth-rbac-runtime-evidence.v2') {
   require(evidence.evidenceIntegrity?.identityJourneyCredentialsStored === false || evidence.identityJourney === undefined, 'identity journey credentials must not be stored');
   require(evidence.evidenceIntegrity?.identityJourneyIdentifiersStored === false || evidence.identityJourney === undefined, 'identity journey identifiers must not be stored');
   require(evidence.evidenceIntegrity?.identityJourneyCleanupRequired === true || evidence.identityJourney === undefined, 'identity journey cleanup must be mandatory');
-  if (evidence.identityJourney !== undefined) validateIdentityJourney(evidence.identityJourney);
+  require(typeof evidence.evidenceIntegrity?.identityJourneyExplicitlyConfirmed === 'boolean' || evidence.identityJourney === undefined, 'identity journey confirmation state must be boolean');
+  if (evidence.identityJourney !== undefined) {
+    validateIdentityJourney(
+      evidence.identityJourney,
+      evidence.evidenceIntegrity?.identityJourneyExplicitlyConfirmed === true,
+    );
+  }
 }
 
 if (evidence.status === 'Complete') {
