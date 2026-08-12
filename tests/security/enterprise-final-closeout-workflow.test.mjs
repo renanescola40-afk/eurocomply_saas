@@ -50,7 +50,7 @@ test('dashboard collector binds all accepted artifact families to exact producer
     ['eu-ai-act-final-runtime-closeout-*', '.github/workflows/eu-ai-act-final-runtime-closeout.yml'],
     ['branch-protection-runtime-proof-*', '.github/workflows/branch-protection-runtime-proof.yml'],
     ['production-provider-runtime-proof-*', '.github/workflows/production-provider-runtime-proof.yml'],
-    ["artifactPatterns: Object.freeze(['*'])", '.github/workflows/enterprise-readiness-scorecard.yml'],
+    ['enterprise-readiness-scorecard-*', '.github/workflows/enterprise-readiness-scorecard.yml'],
     ['enterprise-runtime-closeout-*', '.github/workflows/enterprise-runtime-evidence-closeout.yml'],
   ]);
 
@@ -59,6 +59,10 @@ test('dashboard collector binds all accepted artifact families to exact producer
     assert.ok(collector.includes(workflowPath), `missing dashboard producer binding ${workflowPath}`);
   }
 
+  assert.doesNotMatch(
+    collector,
+    /workflow: 'enterprise-readiness-scorecard\.yml'[\s\S]*?artifactPatterns: Object\.freeze\(\['\*'\]\)/,
+  );
   assert.match(collector, /actions\/workflows\/\$\{workflowId\}\/runs\?status=completed&head_sha=\$\{targetSha\}&per_page=\$\{RECENT_COMPLETED_RUN_WINDOW\}/);
   assert.match(collector, /run\?\.path !== spec\.workflowPath/);
   assert.match(collector, /RECENT_RUN_WINDOW_EXHAUSTED/);

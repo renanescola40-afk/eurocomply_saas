@@ -78,7 +78,7 @@ const PRODUCERS = Object.freeze({
     Object.freeze({
       workflow: 'enterprise-readiness-scorecard.yml',
       workflowPath: '.github/workflows/enterprise-readiness-scorecard.yml',
-      artifactPatterns: Object.freeze(['*']),
+      artifactPatterns: Object.freeze(['enterprise-readiness-scorecard-*']),
     }),
     Object.freeze({
       workflow: 'enterprise-runtime-evidence-closeout.yml',
