@@ -36,10 +36,13 @@ export const ACTIVE_RUN_STATUSES = new Set([
 
 const API_VERSION = '2022-11-28';
 const PER_PAGE = 100;
-const MAX_RUN_PAGES = 3;
+const MAX_RUN_PAGES = 5;
 const MAX_SETTLE_ATTEMPTS = 10;
 const SETTLE_INTERVAL_MS = 30_000;
 const QUIET_WINDOW_MS = 75_000;
+const MAX_API_ATTEMPTS = 5;
+const API_BACKOFF_BASE_MS = 2_000;
+const API_BACKOFF_CAP_MS = 30_000;
 
 function timestampMs(run) {
   const value = run.updated_at ?? run.run_started_at ?? run.created_at;
@@ -99,29 +102,85 @@ function writeOutput(name, value) {
   if (output) appendFileSync(output, `${name}=${String(value)}\n`);
 }
 
+function boundedRetryDelayMs(response, attempt) {
+  const exponential = Math.min(
+    API_BACKOFF_CAP_MS,
+    API_BACKOFF_BASE_MS * (2 ** Math.max(0, attempt - 1)),
+  );
+  const retryAfterSeconds = Number(response.headers.get('retry-after') ?? 0);
+  const retryAfterMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+    ? retryAfterSeconds * 1_000
+    : 0;
+  const resetSeconds = Number(response.headers.get('x-ratelimit-reset') ?? 0);
+  const resetMs = Number.isFinite(resetSeconds) && resetSeconds > 0
+    ? Math.max(0, (resetSeconds * 1_000) - Date.now())
+    : 0;
+
+  return Math.min(
+    API_BACKOFF_CAP_MS,
+    Math.max(exponential, retryAfterMs, resetMs),
+  );
+}
+
+function isRetryableStatus(status) {
+  return status === 403 || status === 429 || status >= 500;
+}
+
 async function githubApi(path, { method = 'GET', body } = {}) {
   const token = process.env.GITHUB_TOKEN;
   if (!token) throw new Error('GITHUB_TOKEN is required');
 
-  const response = await fetch(`https://api.github.com${path}`, {
-    method,
-    headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${token}`,
-      'X-GitHub-Api-Version': API_VERSION,
-      'User-Agent': 'risck-comply-scorecard-stabilizer',
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  for (let attempt = 1; attempt <= MAX_API_ATTEMPTS; attempt += 1) {
+    let response;
+    try {
+      response = await fetch(`https://api.github.com${path}`, {
+        method,
+        headers: {
+          Accept: 'application/vnd.github+json',
+          Authorization: `Bearer ${token}`,
+          'X-GitHub-Api-Version': API_VERSION,
+          'User-Agent': 'risck-comply-scorecard-stabilizer',
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (error) {
+      if (attempt >= MAX_API_ATTEMPTS) {
+        throw new Error(
+          `GitHub API ${method} ${path} failed after ${attempt} network attempts: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+      const delayMs = Math.min(
+        API_BACKOFF_CAP_MS,
+        API_BACKOFF_BASE_MS * (2 ** Math.max(0, attempt - 1)),
+      );
+      console.warn(`GitHub API ${method} ${path} network retry ${attempt}/${MAX_API_ATTEMPTS} in ${delayMs}ms`);
+      await sleep(delayMs);
+      continue;
+    }
 
-  if (!response.ok) {
+    if (response.ok) {
+      if (response.status === 204) return null;
+      return response.json();
+    }
+
     const requestId = response.headers.get('x-github-request-id') ?? 'unavailable';
-    throw new Error(`GitHub API ${method} ${path} failed with ${response.status}; request-id=${requestId}`);
+    const remaining = response.headers.get('x-ratelimit-remaining') ?? 'unknown';
+    const retryable = isRetryableStatus(response.status);
+    if (!retryable || attempt >= MAX_API_ATTEMPTS) {
+      throw new Error(
+        `GitHub API ${method} ${path} failed with ${response.status}; request-id=${requestId}; rate-remaining=${remaining}; attempts=${attempt}`,
+      );
+    }
+
+    const delayMs = boundedRetryDelayMs(response, attempt);
+    console.warn(
+      `GitHub API ${method} ${path} returned ${response.status}; retry ${attempt}/${MAX_API_ATTEMPTS} in ${delayMs}ms; request-id=${requestId}; rate-remaining=${remaining}`,
+    );
+    await sleep(delayMs);
   }
 
-  if (response.status === 204) return null;
-  return response.json();
+  throw new Error(`GitHub API ${method} ${path} exhausted retry loop unexpectedly`);
 }
 
 async function listExactShaRuns(repository, targetSha) {
@@ -227,6 +286,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       console.log(JSON.stringify(result));
     })
     .catch((error) => {
+      writeOutput('dispatched', false);
+      writeOutput('reason', 'stabilizer-error');
+      writeOutput('target_sha', process.env.TARGET_SHA ?? '');
       console.error(error instanceof Error ? error.message : String(error));
       process.exitCode = 1;
     });
