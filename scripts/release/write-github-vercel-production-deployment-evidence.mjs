@@ -254,13 +254,30 @@ export async function findExactShaVercelCommitStatus({
   return null;
 }
 
-export async function probeExactDeploymentHealth({ publicUrl, fetchImpl = globalThis.fetch }) {
+export async function probeExactDeploymentHealth({
+  publicUrl,
+  protectionBypassSecret = '',
+  fetchImpl = globalThis.fetch,
+}) {
   let healthUrl;
   try {
     healthUrl = new URL('/api/health', publicUrl);
   } catch {
-    return { passed: false, status: 0, bodyStatus: null, noStore: false };
+    return {
+      passed: false,
+      status: 0,
+      bodyStatus: null,
+      noStore: false,
+      protectionBypassUsed: false,
+    };
   }
+
+  const bypassSecret = String(protectionBypassSecret ?? '').trim();
+  const headers = {
+    Accept: 'application/json',
+    'User-Agent': 'risck-comply-production-deployment-proof',
+  };
+  if (bypassSecret) headers['x-vercel-protection-bypass'] = bypassSecret;
 
   let response;
   try {
@@ -268,13 +285,16 @@ export async function probeExactDeploymentHealth({ publicUrl, fetchImpl = global
       cache: 'no-store',
       redirect: 'error',
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'risck-comply-production-deployment-proof',
-      },
+      headers,
     });
   } catch {
-    return { passed: false, status: 0, bodyStatus: null, noStore: false };
+    return {
+      passed: false,
+      status: 0,
+      bodyStatus: null,
+      noStore: false,
+      protectionBypassUsed: Boolean(bypassSecret),
+    };
   }
 
   const body = response.ok ? await readBoundedJson(response, 64 * 1024) : null;
@@ -286,6 +306,18 @@ export async function probeExactDeploymentHealth({ publicUrl, fetchImpl = global
     status: response.status,
     bodyStatus: bodyStatus || null,
     noStore,
+    protectionBypassUsed: Boolean(bypassSecret),
+  };
+}
+
+function safeHealthEvidence(health) {
+  if (!health) return null;
+  return {
+    path: '/api/health',
+    status: Number(health.status) || 0,
+    bodyStatus: health.bodyStatus || null,
+    noStore: health.noStore === true,
+    protectionBypassUsed: health.protectionBypassUsed === true,
   };
 }
 
@@ -295,6 +327,7 @@ function failureEvidence(baseEvidence, blocker, deployment = null, health = null
     status: 'OPEN',
     outcome: 'failed',
     blockers: [blocker],
+    health: safeHealthEvidence(health),
     checks: {
       currentMainShaBound: blocker !== 'target_sha_is_not_current_main' && blocker !== 'invalid_proof_context',
       exactShaProductionDeploymentFound: Boolean(deployment),
@@ -310,6 +343,8 @@ function failureEvidence(baseEvidence, blocker, deployment = null, health = null
       liveHealthVerified: health?.passed === true,
       tokenPersisted: false,
       authorizationHeaderStored: false,
+      protectionBypassSecretPersisted: false,
+      rawResponseBodyStored: false,
     },
   };
 }
@@ -318,6 +353,7 @@ export async function buildProductionDeploymentEvidence({
   repository,
   targetSha,
   token,
+  protectionBypassSecret = '',
   fetchImpl = globalThis.fetch,
   sleepImpl = (ms) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms)),
   apiUrl = DEFAULT_API_URL,
@@ -366,7 +402,11 @@ export async function buildProductionDeploymentEvidence({
     }
 
     if (deployment) {
-      health = await probeExactDeploymentHealth({ publicUrl: deployment.publicUrl, fetchImpl });
+      health = await probeExactDeploymentHealth({
+        publicUrl: deployment.publicUrl,
+        protectionBypassSecret,
+        fetchImpl,
+      });
       if (health.passed) break;
     }
     if (attempt < attempts && waitMs > 0) await sleepImpl(waitMs);
@@ -427,6 +467,7 @@ export async function buildProductionDeploymentEvidence({
       liveHealthVerified: true,
       tokenPersisted: false,
       authorizationHeaderStored: false,
+      protectionBypassSecretPersisted: false,
       rawResponseBodyStored: false,
     },
     truthBoundary: immutableHealth
@@ -439,6 +480,7 @@ async function main() {
   const repository = env('GITHUB_REPOSITORY');
   const targetSha = (env('TARGET_SHA') || env('RELEASE_COMMIT_SHA') || env('GITHUB_SHA')).toLowerCase();
   const token = env('GITHUB_TOKEN');
+  const protectionBypassSecret = env('VERCEL_AUTOMATION_BYPASS_SECRET');
   const outputPath = resolve(env('PRODUCTION_DEPLOYMENT_EVIDENCE_PATH') || DEFAULT_OUTPUT);
   const maxAttempts = boundedInteger(env('PRODUCTION_DEPLOYMENT_PROOF_ATTEMPTS'), DEFAULT_ATTEMPTS, 1, 60);
   const pollMs = boundedInteger(env('PRODUCTION_DEPLOYMENT_PROOF_POLL_MS'), DEFAULT_POLL_MS, 0, 30_000);
@@ -447,6 +489,7 @@ async function main() {
     repository,
     targetSha,
     token,
+    protectionBypassSecret,
     maxAttempts,
     pollMs,
   });

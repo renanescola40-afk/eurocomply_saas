@@ -14,7 +14,10 @@ const controls = {
   metadataValidation: runtime.includes('metadataSchema.safeParse'),
   tenantBinding: runtime.includes('organization_id') && runtime.includes('entitlement_source_id'),
   sourceVersioning: runtime.includes('expectedSourceVersion'),
-  deferredCancellation: runtime.includes('deferredDowngrade'),
+  basilSubscriptionItemPeriods: runtime.includes('object.items?.data'),
+  basilInvoiceParentMetadata: runtime.includes('object.parent?.subscription_details?.metadata'),
+  billingPeriodFailClosed: runtime.includes('stripe_entitlement_billing_period_missing'),
+  cancellationAtTermination: runtime.includes('subscription_terminated'),
   delinquencyGrace: runtime.includes('grace_period_days'),
   replayRecovery: recovery.includes('recoverAbandonedStripeEventClaim'),
 };
