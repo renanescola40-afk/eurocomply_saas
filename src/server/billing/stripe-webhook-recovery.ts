@@ -30,6 +30,12 @@ type StripeEventClaim = {
   updated_at: string | null;
 };
 
+type ExistingEntitlementSnapshot = {
+  id: string;
+  applied_policy_version: number | null;
+  source_version: number;
+};
+
 export function isStripeEventProcessingLeaseExpired(updatedAt: string | null | undefined, nowMs = Date.now()) {
   if (!updatedAt) return false;
 
@@ -68,6 +74,31 @@ async function isProcessedStripeEvent(eventId: string) {
   return data?.id === eventId && data.status === 'processed';
 }
 
+async function findExistingStripeEntitlementReplay(eventId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('enterprise_entitlement_snapshots')
+    .select('id,applied_policy_version,source_version')
+    .eq('idempotency_key', `stripe:${eventId}`)
+    .limit(2);
+
+  if (error) throw error;
+  const rows = (data ?? []) as ExistingEntitlementSnapshot[];
+  if (rows.length === 0) return null;
+  if (rows.length !== 1 || !rows[0]?.id) {
+    throw new Error('stripe_entitlement_snapshot_ambiguous');
+  }
+
+  const snapshot = rows[0];
+  return {
+    outcome: 'idempotent_replay' as const,
+    stripeEventId: eventId,
+    snapshotId: snapshot.id,
+    appliedPolicyVersion: snapshot.applied_policy_version,
+    sourceVersion: snapshot.source_version,
+  };
+}
+
 async function reconcileEntitlementWhenEligible(event: Stripe.Event) {
   const entitlement = await reconcileStripeEntitlementEvent(event);
   if (entitlement.outcome === 'metadata_missing' || entitlement.outcome === 'unsupported') {
@@ -82,6 +113,12 @@ function entitlementRepairMaterialized(entitlement: Awaited<ReturnType<typeof re
 }
 
 async function repairProcessedStripeEntitlement(event: Stripe.Event) {
+  // A late/manual replay of an already-materialized event must remain idempotent
+  // even after its billing period has expired. Read the retained snapshot first;
+  // only missing snapshots are re-normalized and subject to current freshness rules.
+  const existingReplay = await findExistingStripeEntitlementReplay(event.id);
+  if (existingReplay) return existingReplay;
+
   const entitlement = await reconcileEntitlementWhenEligible(event);
   if (!entitlement) return null;
 
