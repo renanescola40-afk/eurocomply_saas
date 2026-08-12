@@ -18,8 +18,9 @@ describe('Supabase migration evidence latest-main guard', () => {
     expect(workflow).not.toContain('environment: production');
   });
 
-  it('cancels only non-terminal bootstrap runs from obsolete SHAs', () => {
+  it('cancels only non-terminal operational bootstrap runs from obsolete SHAs', () => {
     expect(workflow).toContain('BOOTSTRAP_WORKFLOW: supabase-migration-evidence-bootstrap.yml');
+    expect(workflow).toContain('select(.event == "push" or .event == "workflow_dispatch")');
     expect(workflow).toContain('select(.head_sha | ascii_downcase != $sha)');
     expect(workflow).toContain('.status == "queued"');
     expect(workflow).toContain('.status == "in_progress"');
@@ -30,9 +31,17 @@ describe('Supabase migration evidence latest-main guard', () => {
     expect(workflow).toContain('test "${head_sha,,}" != "${TARGET_SHA,,}"');
   });
 
-  it('proves the workflow subject is still current main before cancellation', () => {
+  it('rechecks current main immediately before each cancellation', () => {
+    expect(workflow).toContain('latest_main="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq \' .sha\')"'.replace("' .sha'", "'.sha'"));
+    expect(workflow).toContain('if [ "${TARGET_SHA,,}" != "${latest_main,,}" ]; then');
+    expect(workflow).toContain('refusing to cancel any additional bootstrap runs');
+  });
+
+  it('proves the workflow subject is current main and preserves a non-cancelled current bootstrap', () => {
     expect(workflow).toContain('repos/${GITHUB_REPOSITORY}/commits/main');
     expect(workflow).toContain('test "${TARGET_SHA,,}" = "${current_main,,}"');
+    expect(workflow).toContain('select(.conclusion != "cancelled")');
+    expect(workflow).toContain('test "$current_runs" -ge 1');
   });
 
   it('tolerates only the benign race where a stale run completed first', () => {
