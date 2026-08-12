@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const execFile = promisify(execFileCallback);
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const RECENT_COMPLETED_RUN_WINDOW = 20;
+const RECENT_COMPLETED_RUN_WINDOW = 100;
 
 const PRODUCERS = Object.freeze({
   'enterprise-100': Object.freeze([
