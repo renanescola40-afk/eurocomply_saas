@@ -22,7 +22,7 @@
 - `RECOVERY_SOURCE_DATABASE_URL`
 - `RECOVERY_ISOLATED_DATABASE_URL`
 
-The isolated database must be disposable, must not serve customers, and must not equal the production connection string.
+The isolated database must be disposable, must not serve customers, and must identify a database different from the source/production database.
 
 ## Protected prerequisite preflight
 
@@ -34,9 +34,12 @@ The preflight is fail-closed and records only:
 - whether the requested SHA matches the GitHub Actions SHA;
 - whether the required confirmation matched, as a boolean only;
 - the selected recovery exercise;
-- whether source and isolated database URLs are different, as a boolean only.
+- whether both PostgreSQL URLs can be reduced to an unambiguous canonical database identity;
+- whether those canonical source and isolated identities are different, as a boolean only.
 
-It does **not** store secret values, credentials, database URLs, provider URLs, confirmation strings or provider responses, and it performs no runtime mutation. A blocked preflight is retained as a redacted artifact so missing prerequisites can be diagnosed without first installing PostgreSQL or creating disposable fixtures.
+For backup/restore, isolation is based on canonical `host:port/database` identity. Credentials, PostgreSQL/PostgreSQL URI spelling, an omitted versus explicit default port (`5432`), TLS settings and query-parameter order cannot make the same database count as isolated. Connection strings that try to override identity through query parameters such as `host`, `port`, `dbname`, `service` or related fields are treated as ambiguous and block the exercise rather than being guessed safe.
+
+The preflight does **not** store secret values, credentials, database URLs, canonical database identities, provider URLs, confirmation strings or provider responses, and it performs no runtime mutation. A blocked preflight is retained as a redacted artifact so missing or ambiguous prerequisites can be diagnosed without first installing PostgreSQL or creating disposable fixtures.
 
 `Final Technical Controls Proof` uses the same preflight contract and requires `RECOVERY_ISOLATED_DATABASE_URL` before it is allowed to create synthetic auth/storage fixtures or run the rolled-back security-event transaction.
 
@@ -45,7 +48,7 @@ It does **not** store secret values, credentials, database URLs, provider URLs, 
 1. Open Actions → Recovery Resilience Proof → Run workflow.
 2. Select `backup-restore`.
 3. Approve the protected environment.
-4. The protected preflight verifies the backup/restore prerequisite group and database isolation without storing either connection string.
+4. The protected preflight verifies the backup/restore prerequisite group and canonical database isolation without storing either connection string or canonical identity.
 5. The workflow creates a custom-format logical backup.
 6. The workflow restores with `--clean --if-exists` into the isolated database.
 7. It compares aggregate counts for organizations, organization memberships and audit logs.
@@ -67,7 +70,7 @@ It does **not** store secret values, credentials, database URLs, provider URLs, 
 
 ## Abort conditions
 
-Do not approve execution when the target deployment is unknown, database migrations are backward-incompatible, provider configuration has changed incompatibly, the isolated database is not disposable, or incident command has not named a rollback owner.
+Do not approve execution when the target deployment is unknown, database migrations are backward-incompatible, provider configuration has changed incompatibly, the isolated database is not disposable, the preflight cannot establish an unambiguous different database identity, or incident command has not named a rollback owner.
 
 ## Recovery after the exercise
 
