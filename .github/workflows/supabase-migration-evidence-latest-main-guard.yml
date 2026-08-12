@@ -1,0 +1,115 @@
+name: Supabase Migration Evidence Latest Main Guard
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: supabase-migration-evidence-latest-main-guard
+  cancel-in-progress: true
+
+jobs:
+  retire-stale-bootstrap-runs:
+    name: Retire obsolete migration evidence bootstraps
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_SHA: ${{ github.sha }}
+      BOOTSTRAP_WORKFLOW: supabase-migration-evidence-bootstrap.yml
+    steps:
+      - name: Verify current main subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          current_main="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
+          test "${TARGET_SHA,,}" = "${current_main,,}"
+
+      - name: Cancel only obsolete bootstrap runs
+        id: retire
+        shell: bash
+        run: |
+          set -euo pipefail
+          retired=0
+          # $sha below is intentionally a jq variable, not a shell variable.
+          # shellcheck disable=SC2016
+          candidates="$(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${BOOTSTRAP_WORKFLOW}/runs?branch=main&per_page=100" \
+              --jq --arg sha "${TARGET_SHA,,}" '
+                [.workflow_runs[]
+                  | select(.event == "push" or .event == "workflow_dispatch")
+                  | select(.head_sha | ascii_downcase != $sha)
+                  | select(.status == "queued" or .status == "in_progress" or .status == "pending" or .status == "waiting" or .status == "requested")
+                  | {id, head_sha, status}]
+              '
+          )"
+
+          while IFS=$'\t' read -r run_id head_sha status; do
+            [ -n "$run_id" ] || continue
+            [[ "$run_id" =~ ^[0-9]+$ ]]
+            [[ "$head_sha" =~ ^[0-9a-fA-F]{40}$ ]]
+            test "${head_sha,,}" != "${TARGET_SHA,,}"
+
+            latest_main="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
+            if [ "${TARGET_SHA,,}" != "${latest_main,,}" ]; then
+              echo "Main advanced to ${latest_main}; refusing to cancel any additional bootstrap runs" >&2
+              exit 1
+            fi
+
+            echo "Retiring stale bootstrap run ${run_id} (${head_sha}, ${status})"
+            if gh api --silent --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/cancel"; then
+              retired=$((retired + 1))
+              continue
+            fi
+
+            refreshed_status="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '.status')"
+            if [ "$refreshed_status" = 'completed' ]; then
+              echo "Run ${run_id} completed before cancellation; no action required"
+              continue
+            fi
+
+            echo "Failed to retire stale bootstrap run ${run_id}; current status=${refreshed_status}" >&2
+            exit 1
+          done < <(jq -r '.[] | [.id, .head_sha, .status] | @tsv' <<<"$candidates")
+
+          echo "retired=$retired" >> "$GITHUB_OUTPUT"
+
+      - name: Prove current-SHA bootstrap was not canceled
+        shell: bash
+        run: |
+          set -euo pipefail
+          # $sha below is intentionally a jq variable, not a shell variable.
+          # shellcheck disable=SC2016
+          current_runs="$(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${BOOTSTRAP_WORKFLOW}/runs?branch=main&per_page=100" \
+              --jq --arg sha "${TARGET_SHA,,}" '
+                [.workflow_runs[]
+                  | select(.event == "push" or .event == "workflow_dispatch")
+                  | select((.head_sha | ascii_downcase) == $sha)
+                  | select(.conclusion != "cancelled")]
+                | length
+              '
+          )"
+          test "$current_runs" -ge 1
+
+      - name: Publish guard summary
+        if: always()
+        shell: bash
+        env:
+          RETIRED: ${{ steps.retire.outputs.retired }}
+        run: |
+          {
+            echo '## Supabase migration evidence latest-main guard'
+            echo
+            echo "- Current main SHA: \`$TARGET_SHA\`"
+            echo "- Obsolete bootstrap runs retired: \`${RETIRED:-unknown}\`"
+            echo '- Supabase/database mutation: no'
+            echo '- Migration-history mutation: no'
+            echo '- Production write authorization: no'
+          } >> "$GITHUB_STEP_SUMMARY"
