@@ -4,6 +4,11 @@ import http from 'node:http';
 import https from 'node:https';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import {
+  evaluateRuntimeReleaseSha,
+  sanitizeRuntimeReleaseResponse,
+  selectPersistedObservedCommitSha,
+} from './runtime-release-sha-contract.mjs';
 
 const evidencePath = 'docs/security/evidence/runtime/observability-smoke-validation.json';
 const timeoutMs = Number.parseInt(process.env.RELEASE_OBSERVABILITY_SMOKE_TIMEOUT_MS || '10000', 10);
@@ -147,7 +152,7 @@ function request(url, options = {}) {
     });
 
     req.on('timeout', () => req.destroy(new Error('request_timeout')));
-    req.on('error', (error) => resolve({ status: 0, headers: {}, body: null, error: error.message }));
+    req.on('error', () => resolve({ status: 0, headers: {}, body: null, error: 'request_failed' }));
     req.end();
   });
 }
@@ -156,8 +161,55 @@ function createCheck(name, passed, details = {}, critical = true) {
   return { name, critical, passed: Boolean(passed), details };
 }
 
-async function validateTarget(baseUrl) {
+async function validateTarget(baseUrl, { expectedCommitSha, expectedBuildSha }) {
   const checks = [];
+
+  let runtimeReleaseResponse = { status: 0, headers: {}, body: null, error: 'missing_healthcheck_token' };
+  if (readinessToken) {
+    runtimeReleaseResponse = await request(route(baseUrl, '/api/ready/release'), {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${readinessToken}`,
+      },
+    });
+  }
+
+  const runtimeRelease = sanitizeRuntimeReleaseResponse(runtimeReleaseResponse.body);
+  const runtimeReleaseEvaluation = evaluateRuntimeReleaseSha({
+    expectedCommitSha,
+    expectedBuildSha,
+    observedCommitSha: runtimeRelease.observedCommitSha,
+    endpointStatus: runtimeReleaseResponse.status,
+    cacheControl: headerValue(runtimeReleaseResponse.headers, 'cache-control'),
+  });
+  const persistedObservedCommitSha = selectPersistedObservedCommitSha({
+    expectedCommitSha: runtimeReleaseEvaluation.expectedCommitSha,
+    observedCommitSha: runtimeReleaseEvaluation.observedCommitSha,
+  });
+  const observedCommitShaMatchedExpected = Boolean(persistedObservedCommitSha);
+  const runtimeReleaseProvenanceAccepted = runtimeRelease.provenance === 'vercel' || runtimeRelease.provenance === 'build-env';
+
+  checks.push(createCheck('runtimeReleaseResponseStatusOk', runtimeRelease.statusOk, {
+    endpointStatus: runtimeReleaseResponse.status,
+  }));
+  checks.push(createCheck('runtimeReleaseMetadataAvailable', runtimeRelease.available, {
+    available: runtimeRelease.available,
+  }));
+  checks.push(createCheck('runtimeReleaseProvenanceAccepted', runtimeReleaseProvenanceAccepted, {
+    provenance: runtimeRelease.provenance,
+  }));
+  checks.push(createCheck('runtimeReleaseResponseDoesNotExposeSecrets', responseDoesNotExposeSecrets(runtimeReleaseResponse), {
+    valuesRedacted: true,
+  }));
+  for (const check of runtimeReleaseEvaluation.checks) {
+    checks.push(createCheck(check.name, check.passed, { valuesRedacted: true }));
+  }
+
+  const runtimeReleaseBindingPassed = runtimeRelease.statusOk
+    && runtimeRelease.available
+    && runtimeReleaseProvenanceAccepted
+    && runtimeReleaseEvaluation.passed
+    && observedCommitShaMatchedExpected;
 
   const anonymousPost = await request(route(baseUrl, '/api/observability/smoke'));
   checks.push(createCheck('observabilitySmokeRejectsAnonymous', anonymousPost.status === 401 && anonymousPost.body?.status === 'unauthorized', safeResponseSummary(anonymousPost)));
@@ -189,6 +241,16 @@ async function validateTarget(baseUrl) {
   return {
     baseUrl,
     passed: checks.filter((check) => check.critical).every((check) => check.passed),
+    runtimeReleaseBinding: {
+      passed: runtimeReleaseBindingPassed,
+      endpointStatus: runtimeReleaseResponse.status,
+      noStore: hasNoStore(runtimeReleaseResponse.headers),
+      metadataAvailable: runtimeRelease.available,
+      provenance: runtimeRelease.provenance,
+      observedCommitShaMatchedExpected,
+      rawResponseStored: false,
+      mismatchedObservedShaStored: false,
+    },
     checks,
     anonymousPost: safeResponseSummary(anonymousPost),
     methodProbe: safeResponseSummary(methodProbe),
@@ -204,7 +266,19 @@ const commitBinding = firstConfigured(['RELEASE_COMMIT_SHA', 'GITHUB_SHA', 'VERC
 const buildBinding = firstConfigured(['RELEASE_BUILD_SHA', 'NEXT_PUBLIC_BUILD_SHA', 'NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA', 'VERCEL_GIT_COMMIT_SHA', 'GITHUB_SHA']);
 const commitSha = String(commitBinding?.value || '').trim().toLowerCase();
 const buildSha = String(buildBinding?.value || '').trim().toLowerCase();
-const exactShaBound = FULL_SHA.test(commitSha) && FULL_SHA.test(buildSha) && commitSha === buildSha;
+const runnerShaBindingValid = FULL_SHA.test(commitSha) && FULL_SHA.test(buildSha) && commitSha === buildSha;
+
+const targetResults = [];
+for (const url of urls) {
+  targetResults.push(await validateTarget(url, {
+    expectedCommitSha: commitSha,
+    expectedBuildSha: buildSha,
+  }));
+}
+
+const deployedTargetsBoundToExpectedSha = targetResults.length > 0
+  && targetResults.every((target) => target.runtimeReleaseBinding?.passed === true);
+const exactShaBound = runnerShaBindingValid && deployedTargetsBoundToExpectedSha;
 const globalChecks = [
   createCheck('productionUrlConfigured', urls.length > 0, { targetCount: urls.length }),
   createCheck('sentryDsnConfigured', Boolean(sentryDsn), { source: sentryDsn?.name ?? null }),
@@ -217,14 +291,11 @@ const globalChecks = [
     buildShaConfigured: FULL_SHA.test(buildSha),
     commitShaSource: commitBinding?.name ?? null,
     buildShaSource: buildBinding?.name ?? null,
-    valuesMatch: FULL_SHA.test(commitSha) && FULL_SHA.test(buildSha) && commitSha === buildSha,
+    runnerValuesMatch: runnerShaBindingValid,
+    deployedTargetCount: targetResults.length,
+    allDeployedTargetsMatchExpected: deployedTargetsBoundToExpectedSha,
   }),
 ];
-
-const targetResults = [];
-for (const url of urls) {
-  targetResults.push(await validateTarget(url));
-}
 
 const allChecks = [...globalChecks, ...targetResults.flatMap((target) => target.checks)];
 const failures = allChecks
@@ -243,11 +314,13 @@ const evidence = {
   commitSha: FULL_SHA.test(commitSha) ? commitSha : null,
   buildSha: FULL_SHA.test(buildSha) ? buildSha : null,
   summary: outcome === 'passed'
-    ? 'Observability smoke validation verified exact-SHA release binding, protected access, no-store controls, request IDs, authenticated Sentry/local log emission, and secret redaction.'
-    : 'Observability smoke validation is missing or failed; release remains blocked.',
-  redactionConfirmation: 'Redaction confirmed: no token, cookie, authorization header, secret value, DSN or raw provider payload is written to this evidence file.',
+    ? 'Observability smoke validation verified that every probed deployment serves the exact expected release SHA, then verified protected access, no-store controls, request IDs, authenticated Sentry/local log emission, and secret redaction.'
+    : 'Observability smoke validation is missing, failed, or not bound to the deployed runtime SHA; release remains blocked.',
+  redactionConfirmation: 'Redaction confirmed: no token, cookie, authorization header, secret value, or DSN is written to this evidence file.',
   evidenceLocations: [
     'scripts/release/run-observability-smoke-validation.mjs',
+    'scripts/release/runtime-release-sha-contract.mjs',
+    'src/app/api/ready/release/route.ts',
     'src/app/api/observability/smoke/route.ts',
     'src/lib/observability/report-error.ts',
     'src/server/observability/logger.ts',
@@ -267,20 +340,24 @@ const evidence = {
     buildShaConfigured: FULL_SHA.test(buildSha),
     commitShaSource: commitBinding?.name ?? null,
     buildShaSource: buildBinding?.name ?? null,
+    runnerShaBindingValid,
+    deployedTargetsBoundToExpectedSha,
     exactShaBound,
   },
   globalChecks,
   targets: targetResults,
   failures,
   releaseGate: outcome === 'passed'
-    ? 'Observability smoke evidence is exact-SHA bound and passed.'
-    : 'Production and enterprise release remain blocked until observability smoke is Complete/passed and exact-SHA bound.',
+    ? 'Observability smoke evidence is bound to the deployed runtime SHA and passed.'
+    : 'Production and enterprise release remain blocked until observability smoke is Complete/passed and every probed deployment is proven to serve the expected SHA.',
   evidenceIntegrity: {
     containsSensitiveValues: false,
     valuesRedacted: true,
     authorizationHeaderStored: false,
     cookiesStored: false,
     rawProviderPayloadStored: false,
+    rawRuntimeReleaseResponseStored: false,
+    mismatchedObservedShaStored: false,
     exactShaBound,
   },
 };
