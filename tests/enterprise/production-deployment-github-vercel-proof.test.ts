@@ -27,6 +27,7 @@ function fixtureFetch(options: {
   healthBodyStatus?: string;
   healthNoStore?: boolean;
   mainShas?: string[];
+  requiredProtectionBypassSecret?: string;
 } = {}) {
   const {
     actor = 'vercel[bot]',
@@ -37,10 +38,11 @@ function fixtureFetch(options: {
     healthBodyStatus = 'ok',
     healthNoStore = true,
     mainShas = [SHA],
+    requiredProtectionBypassSecret,
   } = options;
   let mainReadCount = 0;
 
-  return async (input: RequestInfo | URL) => {
+  return async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
 
     if (url === `${API}/repos/${REPOSITORY}/commits/main`) {
@@ -79,6 +81,16 @@ function fixtureFetch(options: {
     }
 
     if (url === `${DEPLOYMENT_URL}/api/health`) {
+      if (requiredProtectionBypassSecret) {
+        const suppliedSecret = new Headers(init?.headers).get('x-vercel-protection-bypass');
+        if (suppliedSecret !== requiredProtectionBypassSecret) {
+          return jsonResponse(
+            { error: 'deployment protected' },
+            401,
+            { 'cache-control': 'no-store, private' },
+          );
+        }
+      }
       return jsonResponse(
         { status: healthBodyStatus },
         healthStatus,
@@ -118,6 +130,7 @@ describe('exact-SHA Vercel production deployment proof', () => {
       status: 200,
       bodyStatus: 'ok',
       noStore: true,
+      protectionBypassUsed: false,
     });
     expect(evidence.evidenceIntegrity).toMatchObject({
       containsSensitiveValues: false,
@@ -125,9 +138,67 @@ describe('exact-SHA Vercel production deployment proof', () => {
       githubDeploymentBound: true,
       liveHealthVerified: true,
       tokenPersisted: false,
+      protectionBypassSecretPersisted: false,
     });
     expect(JSON.stringify(evidence)).not.toContain('test-token');
     expect(JSON.stringify(evidence)).not.toContain('https://');
+  });
+
+  it('uses the Vercel automation bypass header for protected immutable deployment health', async () => {
+    const bypassSecret = 'test-protection-bypass-secret';
+    const evidence = await buildProductionDeploymentEvidence({
+      repository: REPOSITORY,
+      targetSha: SHA,
+      token: 'test-token',
+      protectionBypassSecret: bypassSecret,
+      fetchImpl: fixtureFetch({ requiredProtectionBypassSecret: bypassSecret }),
+      sleepImpl: async () => undefined,
+      apiUrl: API,
+      maxAttempts: 1,
+      pollMs: 0,
+    });
+
+    expect(evidence.status).toBe('PASS');
+    expect(evidence.outcome).toBe('passed');
+    expect(evidence.health).toMatchObject({
+      status: 200,
+      bodyStatus: 'ok',
+      noStore: true,
+      protectionBypassUsed: true,
+    });
+    expect(evidence.evidenceIntegrity).toMatchObject({
+      protectionBypassSecretPersisted: false,
+      rawResponseBodyStored: false,
+    });
+    expect(JSON.stringify(evidence)).not.toContain(bypassSecret);
+  });
+
+  it('remains fail-closed when protected deployment health cannot be authenticated', async () => {
+    const evidence = await buildProductionDeploymentEvidence({
+      repository: REPOSITORY,
+      targetSha: SHA,
+      token: 'test-token',
+      fetchImpl: fixtureFetch({ requiredProtectionBypassSecret: 'configured-at-vercel' }),
+      sleepImpl: async () => undefined,
+      apiUrl: API,
+      maxAttempts: 1,
+      pollMs: 0,
+    });
+
+    expect(evidence.status).toBe('OPEN');
+    expect(evidence.outcome).toBe('failed');
+    expect(evidence.blockers).toContain('exact_deployment_health_unproven');
+    expect(evidence.health).toEqual({
+      path: '/api/health',
+      status: 401,
+      bodyStatus: null,
+      noStore: true,
+      protectionBypassUsed: false,
+    });
+    expect(evidence.evidenceIntegrity).toMatchObject({
+      protectionBypassSecretPersisted: false,
+      rawResponseBodyStored: false,
+    });
   });
 
   it('fails closed if main advances after the initial binding check but before PASS', async () => {
