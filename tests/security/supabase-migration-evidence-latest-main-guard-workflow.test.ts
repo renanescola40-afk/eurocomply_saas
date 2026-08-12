@@ -32,7 +32,7 @@ describe('Supabase migration evidence latest-main guard', () => {
   });
 
   it('rechecks current main immediately before each cancellation', () => {
-    expect(workflow).toContain('latest_main="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq \' .sha\')"'.replace("' .sha'", "'.sha'"));
+    expect(workflow).toContain('latest_main="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main"');
     expect(workflow).toContain('if [ "${TARGET_SHA,,}" != "${latest_main,,}" ]; then');
     expect(workflow).toContain('refusing to cancel any additional bootstrap runs');
   });
