@@ -73,6 +73,19 @@ For deactivation failures, verify the SCIM identity is bound to the current orga
 6. Duplicate events are successful no-ops.
 7. Binding conflicts and invalid transitions return processing failure and must not fall through to the self-service handler.
 
+## Self-service subscription lifecycle stuck or uncertain
+
+Self-service upgrade, downgrade, cancellation, reactivation and add-on replacement are serialized by `billing_lifecycle_requests`. Never clear an active row only to unblock the UI.
+
+1. Identify the organization, lifecycle request UUID, request digest, Stripe subscription ID, action, `status`, `failure_code` and `updated_at`. Do not collect the raw `Idempotency-Key`.
+2. `processing` with `failure_code = null` means no provider side effect has been durably marked yet. A stale lease may be expired by the application and a new request can then claim the organization.
+3. `provider_in_flight` means the Stripe outcome may be unknown. If it becomes stale, the application returns `billing_provider_outcome_uncertain` and deliberately keeps serialization locked. Do not issue a new Stripe mutation or manually change the row to `failed`.
+4. `provider_succeeded_pending_audit` means the provider mutation already completed. Retry the same lifecycle request path/idempotency identity so the application resumes at audit persistence without calling the provider again.
+5. `audit_succeeded_pending_completion` means both provider mutation and audit persistence completed. Retry the same request so the application only finalizes the lifecycle ledger.
+6. `processing_lease_expired` is written only when a stale request had not entered a provider phase; this is safe pre-provider lease recovery, not evidence that a Stripe mutation failed.
+7. For `billing_provider_outcome_uncertain`, compare the Stripe subscription state and provider request/event history with the lifecycle row and audit chain. Escalate for controlled reconciliation; do not infer success from a browser redirect.
+8. Preserve the row and its timestamps as operational evidence. Any manual reconciliation must record the exact deployment SHA, operator, reason and Stripe identifiers in the audit trail.
+
 ## Past due and read-only
 
 1. Check `payment_due_at`, `grace_period_days`, `dunning_stage` and `billing_status`.
