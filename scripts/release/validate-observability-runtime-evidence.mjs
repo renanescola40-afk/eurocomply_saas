@@ -60,6 +60,12 @@ export function validateObservabilityRuntimeEvidence(
   if (evidence?.runtimeConfiguration?.hasProtectedReadinessToken !== true) {
     failures.push('runtimeConfiguration.hasProtectedReadinessToken must be true');
   }
+  if (evidence?.runtimeConfiguration?.runnerShaBindingValid !== true) {
+    failures.push('runtimeConfiguration.runnerShaBindingValid must be true');
+  }
+  if (evidence?.runtimeConfiguration?.deployedTargetsBoundToExpectedSha !== true) {
+    failures.push('runtimeConfiguration.deployedTargetsBoundToExpectedSha must be true');
+  }
   if (evidence?.runtimeConfiguration?.exactShaBound !== true) {
     failures.push('runtimeConfiguration.exactShaBound must be true');
   }
@@ -73,6 +79,8 @@ export function validateObservabilityRuntimeEvidence(
         failures.push(`critical global check ${check?.name ?? '<unknown>'} must pass`);
       }
     }
+    const bindingCheck = globalChecks.find((check) => check?.name === 'releaseShaBindingValid');
+    if (bindingCheck?.passed !== true) failures.push('releaseShaBindingValid must pass');
   }
 
   const targets = evidence?.targets ?? [];
@@ -81,6 +89,22 @@ export function validateObservabilityRuntimeEvidence(
   } else {
     for (const target of targets) {
       if (target?.passed !== true) failures.push('every observability target must pass');
+      if (target?.runtimeReleaseBinding?.passed !== true) {
+        failures.push('every observability target must prove deployed runtime SHA binding');
+      }
+      if (target?.runtimeReleaseBinding?.observedCommitShaMatchedExpected !== true) {
+        failures.push('every observability target runtime commit must match the expected SHA');
+      }
+      if (!['vercel', 'build-env'].includes(target?.runtimeReleaseBinding?.provenance)) {
+        failures.push('every observability target must expose accepted runtime provenance');
+      }
+      if (target?.runtimeReleaseBinding?.rawResponseStored !== false) {
+        failures.push('runtime release raw response must not be stored');
+      }
+      if (target?.runtimeReleaseBinding?.mismatchedObservedShaStored !== false) {
+        failures.push('mismatched observed runtime SHA must not be stored');
+      }
+
       const checks = target?.checks ?? [];
       for (const check of checks) {
         if (check?.critical === true && check?.passed !== true) {
@@ -89,6 +113,10 @@ export function validateObservabilityRuntimeEvidence(
       }
       const sentCheck = checks.find((check) => check?.name === 'observabilitySmokeEventSent');
       if (sentCheck?.passed !== true) failures.push('observabilitySmokeEventSent must pass');
+      const runtimeMatchCheck = checks.find((check) => check?.name === 'observedRuntimeCommitMatchesExpected');
+      if (runtimeMatchCheck?.passed !== true) failures.push('observedRuntimeCommitMatchesExpected must pass');
+      const runtimeEndpointCheck = checks.find((check) => check?.name === 'runtimeReleaseMetadataEndpointOk');
+      if (runtimeEndpointCheck?.passed !== true) failures.push('runtimeReleaseMetadataEndpointOk must pass');
     }
   }
 
@@ -103,6 +131,12 @@ export function validateObservabilityRuntimeEvidence(
   }
   if (evidence?.evidenceIntegrity?.cookiesStored !== false) {
     failures.push('evidenceIntegrity.cookiesStored must be false');
+  }
+  if (evidence?.evidenceIntegrity?.rawRuntimeReleaseResponseStored !== false) {
+    failures.push('evidenceIntegrity.rawRuntimeReleaseResponseStored must be false');
+  }
+  if (evidence?.evidenceIntegrity?.mismatchedObservedShaStored !== false) {
+    failures.push('evidenceIntegrity.mismatchedObservedShaStored must be false');
   }
   if (evidence?.evidenceIntegrity?.exactShaBound !== true) {
     failures.push('evidenceIntegrity.exactShaBound must be true');
