@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   isIgnorableVercelBuildPath,
+  requiresExactShaVercelBuild,
   shouldIgnoreBuildForChangedFiles,
   vercelGitDiffCandidates,
 } from '../../scripts/vercel/ignore-build.mjs';
@@ -13,7 +14,7 @@ const vercelConfig = JSON.parse(readFileSync('vercel.json', 'utf8')) as {
 };
 
 describe('Vercel ignored build rule', () => {
-  it('ignores docs, evidence, tests, workflow and enterprise-only script changes', () => {
+  it('ignores docs, evidence, tests, workflow and enterprise-only script changes outside production', () => {
     const result = shouldIgnoreBuildForChangedFiles([
       'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md',
       'docs/security/evidence/runtime/vercel-deployment-status-2026-06-30.json',
@@ -65,6 +66,25 @@ describe('Vercel ignored build rule', () => {
     expect(isIgnorableVercelBuildPath('src/middleware.ts')).toBe(false);
     expect(isIgnorableVercelBuildPath('next.config.mjs')).toBe(false);
     expect(isIgnorableVercelBuildPath('scripts/security/check-zod-compat.mjs')).toBe(false);
+  });
+
+  it('always builds main and production contexts to preserve exact-SHA provenance', () => {
+    expect(requiresExactShaVercelBuild({
+      gitRef: 'main',
+      targetEnvironment: 'production',
+    })).toBe(true);
+    expect(requiresExactShaVercelBuild({
+      gitRef: 'main',
+      targetEnvironment: 'preview',
+    })).toBe(true);
+    expect(requiresExactShaVercelBuild({
+      gitRef: 'release/emergency',
+      targetEnvironment: 'production',
+    })).toBe(true);
+    expect(requiresExactShaVercelBuild({
+      gitRef: 'agent/evidence-only',
+      targetEnvironment: 'preview',
+    })).toBe(false);
   });
 
   it('diffs from Vercel last successful deployment before commit-parent fallbacks', () => {
