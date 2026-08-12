@@ -167,12 +167,15 @@ const nextConfig: NextConfig = {
 };
 
 const nextIntlConfig = withNextIntl(nextConfig);
+const sentryOrg = process.env.SENTRY_ORG?.trim();
+const sentryProject = process.env.SENTRY_PROJECT?.trim();
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN?.trim();
 const sentryReleaseUploadConfig =
-  process.env.SENTRY_ORG && process.env.SENTRY_PROJECT && process.env.SENTRY_AUTH_TOKEN
+  sentryOrg && sentryProject && sentryAuthToken
     ? {
-        org: process.env.SENTRY_ORG,
-        project: process.env.SENTRY_PROJECT,
-        authToken: process.env.SENTRY_AUTH_TOKEN,
+        org: sentryOrg,
+        project: sentryProject,
+        authToken: sentryAuthToken,
         widenClientFileUpload: true,
       }
     : {};
@@ -184,5 +187,9 @@ export default withSentryConfig(nextIntlConfig, {
   ...sentryReleaseUploadConfig,
   silent: !process.env.CI,
   tunnelRoute: '/monitoring',
-  disableLogger: true,
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 });
