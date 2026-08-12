@@ -6,54 +6,22 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  workflow_run:
-    workflows:
-      - CI
-      - CodeQL
-      - Semgrep
-      - Secret Scanning
-      - Scan repository for accidental secret exposure
-      - Dependency Review
-      - Actionlint
-      - Public Claims Guard
-      - Full Security Suite
-      - Enterprise Production Gate
-      - RISCK COMPLY Security CI
-      - Enterprise DAST
-      - Dependency Vulnerability Proof
-      - Distributed Rate Limit Runtime Proof
-      - Auth RBAC Tenant Proof
-      - Supabase Live RLS Validation
-      - Production Runtime Proof
-      - Branch Protection Runtime Proof
-      - Final Technical Controls Proof
-      - Recovery Resilience Proof
-    types: [completed]
-    branches: [main]
 
 permissions:
   actions: read
   contents: read
 
 concurrency:
-  group: enterprise-readiness-scorecard-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+  group: enterprise-readiness-scorecard-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
   scorecard:
     name: Generate evidence-backed enterprise scorecard
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
-      ASSESSED_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
-      RATE_LIMIT_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Distributed Rate Limit Runtime Proof' && github.event.workflow_run.id || '' }}
-      AUTH_RBAC_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Auth RBAC Tenant Proof' && github.event.workflow_run.id || '' }}
-      SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Supabase Live RLS Validation' && github.event.workflow_run.id || '' }}
-      PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Production Runtime Proof' && github.event.workflow_run.id || '' }}
-      BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Branch Protection Runtime Proof' && github.event.workflow_run.id || '' }}
-      FINAL_TECHNICAL_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Final Technical Controls Proof' && github.event.workflow_run.id || '' }}
-      RECOVERY_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Recovery Resilience Proof' && github.event.workflow_run.id || '' }}
+      ASSESSED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Checkout exact assessed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -252,7 +220,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
-          RATE_LIMIT_RUNTIME_SOURCE_RUN_ID: ${{ env.RATE_LIMIT_RUNTIME_SOURCE_RUN_ID }}
         run: node scripts/enterprise/fetch-distributed-rate-limit-evidence.mjs
 
       - name: Validate distributed rate-limit evidence when available
@@ -264,7 +231,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
-          AUTH_RBAC_RUNTIME_SOURCE_RUN_ID: ${{ env.AUTH_RBAC_RUNTIME_SOURCE_RUN_ID }}
         run: node scripts/enterprise/fetch-auth-rbac-evidence.mjs
 
       - name: Derive and validate Auth RBAC scorecard evidence when available
@@ -283,7 +249,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
-          SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ env.SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID }}
         run: node scripts/enterprise/fetch-supabase-rls-evidence.mjs
 
       - name: Derive and validate Supabase RLS scorecard evidence when available
@@ -302,7 +267,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
-          PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ env.PRODUCTION_RUNTIME_SOURCE_RUN_ID }}
         run: node scripts/enterprise/fetch-production-runtime-evidence.mjs
 
       - name: Report unavailable production runtime evidence
@@ -317,7 +281,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
-          BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID: ${{ env.BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID }}
         run: node scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs
 
       - name: Remove stale branch protection evidence when unavailable
@@ -333,14 +296,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
-          FINAL_TECHNICAL_RUNTIME_SOURCE_RUN_ID: ${{ env.FINAL_TECHNICAL_RUNTIME_SOURCE_RUN_ID }}
         run: node scripts/enterprise/fetch-final-technical-controls-evidence.mjs
 
       - name: Retrieve exact-SHA recovery resilience evidence
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ASSESSED_SHA }}
-          RECOVERY_RUNTIME_SOURCE_RUN_ID: ${{ env.RECOVERY_RUNTIME_SOURCE_RUN_ID }}
         run: node scripts/enterprise/fetch-recovery-resilience-evidence.mjs
 
       - name: Validate recovery evidence when available

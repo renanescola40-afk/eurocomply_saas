@@ -195,18 +195,19 @@ describe('distributed rate-limit runtime proof', () => {
     expect(workflow).toContain('distributed-rate-limit-runtime-proof-${{ env.TARGET_SHA }}');
   });
 
-  it('reruns the scorecard after successful exact-SHA runtime proof completion while keeping failed proof uncredited', () => {
-    const workflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
+  it('routes exact-SHA runtime proof completion through the sole stabilizer while keeping failed proof uncredited', () => {
+    const scorecardWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
+    const stabilizerWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard-stabilizer.yml', 'utf8');
     const fetcher = readFileSync('scripts/enterprise/fetch-distributed-rate-limit-evidence.mjs', 'utf8');
 
-    expect(workflow).toContain('workflow_run:');
-    expect(workflow).toContain('Distributed Rate Limit Runtime Proof');
-    expect(workflow).toContain('Auth RBAC Tenant Proof');
-    expect(workflow).toContain('types: [completed]');
-    expect(workflow).toContain("if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'");
-    expect(workflow).toContain("RATE_LIMIT_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Distributed Rate Limit Runtime Proof'");
-    expect(workflow).toContain('node scripts/enterprise/fetch-distributed-rate-limit-evidence.mjs');
-    expect(workflow).toContain('node scripts/security/check-p1-rate-limit-evidence.mjs');
+    expect(scorecardWorkflow).not.toContain('workflow_run:');
+    expect(scorecardWorkflow).not.toContain('github.event.workflow_run');
+    expect(stabilizerWorkflow).toContain('workflow_run:');
+    expect(stabilizerWorkflow).toContain('- Distributed Rate Limit Runtime Proof');
+    expect(stabilizerWorkflow).toContain('- Auth RBAC Tenant Proof');
+    expect(stabilizerWorkflow).toContain('types: [completed]');
+    expect(scorecardWorkflow).toContain('node scripts/enterprise/fetch-distributed-rate-limit-evidence.mjs');
+    expect(scorecardWorkflow).toContain('node scripts/security/check-p1-rate-limit-evidence.mjs');
     expect(fetcher).toContain('branch=main&head_sha=${encodeURIComponent(targetSha)}&per_page=20');
     expect(fetcher).not.toContain('status=success&per_page=100');
   });

@@ -178,14 +178,16 @@ describe('Supabase RLS scorecard evidence', () => {
     expect(tenancy.controls[0].evidence.check).toBe('organizationOnboarding');
   });
 
-  it('integrates exact-SHA retrieval into the enterprise scorecard without inferring evidence', () => {
-    const workflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
+  it('integrates exact-SHA retrieval into the terminal scorecard without inferring evidence', () => {
+    const scorecardWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
+    const stabilizerWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard-stabilizer.yml', 'utf8');
 
-    expect(workflow).toContain('Supabase Live RLS Validation');
-    expect(workflow).toContain('SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID');
-    expect(workflow).toContain('node scripts/enterprise/fetch-supabase-rls-evidence.mjs');
-    expect(workflow).toContain('node scripts/security/write-supabase-rls-scorecard-evidence.mjs');
-    expect(workflow).toContain('node scripts/security/check-supabase-rls-scorecard-evidence.mjs');
-    expect(workflow).toContain('rm -f docs/security/evidence/runtime/supabase-rls-validation.json');
+    expect(stabilizerWorkflow).toContain('Supabase Live RLS Validation');
+    expect(scorecardWorkflow).not.toContain('Supabase Live RLS Validation');
+    expect(scorecardWorkflow).not.toContain('SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID');
+    expect(scorecardWorkflow).toContain('node scripts/enterprise/fetch-supabase-rls-evidence.mjs');
+    expect(scorecardWorkflow).toContain('node scripts/security/write-supabase-rls-scorecard-evidence.mjs');
+    expect(scorecardWorkflow).toContain('node scripts/security/check-supabase-rls-scorecard-evidence.mjs');
+    expect(scorecardWorkflow).toContain('rm -f docs/security/evidence/runtime/supabase-rls-validation.json');
   });
 });

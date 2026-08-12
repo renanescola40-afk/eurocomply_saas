@@ -16,6 +16,7 @@ const targetSha = 'a'.repeat(40);
 const runId = '123456';
 const roots: string[] = [];
 const scorecardWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
+const stabilizerWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard-stabilizer.yml', 'utf8');
 const controls = JSON.parse(readFileSync('docs/enterprise/controls.json', 'utf8'));
 
 function sourceEvidence() {
@@ -65,11 +66,11 @@ afterEach(() => {
 });
 
 describe('final technical controls evidence promotion', () => {
-  it('runs after the protected proof and before scorecard generation', () => {
-    expect(scorecardWorkflow).toContain('- Final Technical Controls Proof');
-    expect(scorecardWorkflow).toContain(
-      "github.event.workflow_run.name == 'Final Technical Controls Proof' && github.event.workflow_run.id || ''",
-    );
+  it('is orchestrated by the stabilizer and fetched before scorecard generation', () => {
+    expect(stabilizerWorkflow).toContain('- Final Technical Controls Proof');
+    expect(scorecardWorkflow).not.toContain('- Final Technical Controls Proof');
+    expect(scorecardWorkflow).not.toContain("github.event.workflow_run.name == 'Final Technical Controls Proof'");
+    expect(scorecardWorkflow).not.toContain('github.event.workflow_run');
     const fetchIndex = scorecardWorkflow.indexOf('Retrieve exact-SHA final technical controls evidence');
     const generateIndex = scorecardWorkflow.indexOf('Generate scorecard');
     expect(fetchIndex).toBeGreaterThan(0);
@@ -113,7 +114,8 @@ describe('final technical controls evidence promotion', () => {
     const evidence = buildCanonicalEvidence(sourceEvidence(), { targetSha, runId });
 
     expect(evaluateEvidenceDocument(evidence.securityEvents, 'securityEvents')).toBe('PASS');
-    expect(evaluateEvidenceDocument(evidence.storage)).toBe('PASS');
+    expect(evidence.storage.checks[0]?.name).toBe('storageTenantIsolation');
+    expect(evaluateEvidenceDocument(evidence.storage, 'storageTenantIsolation')).toBe('PASS');
     expect(evidence.securityEvents.sourceWorkflow.exactShaBound).toBe(true);
     expect(evidence.storage.evidenceIntegrity.syntheticStorageRemoved).toBe(true);
     expect(JSON.stringify(evidence)).not.toContain('password');
