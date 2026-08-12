@@ -37,6 +37,8 @@ const redactionTexts = new Set([
   'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
   'Redaction confirmed for runtime evidence.',
   'Redaction confirmed for runtime evidence. Rollback target values are not written to evidence.',
+  'Redaction confirmed: no token, cookie, authorization header, secret value, or secret environment variable name is written to this evidence file.',
+  'Redaction confirmed: no token, cookie, authorization header, secret value, or raw rollback URL is written to this evidence file.',
   'Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.',
   'Only grouped configuration presence and accepted source labels are recorded. No secret values, tokens, URLs, DSNs, cookies, Authorization headers or customer data are stored.',
 ]);
