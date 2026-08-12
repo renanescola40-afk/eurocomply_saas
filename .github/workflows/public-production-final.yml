@@ -52,6 +52,7 @@ env:
   RELEASE_ROLLBACK_TARGET_SHA: ${{ inputs.rollback_sha }}
   LAST_KNOWN_GOOD_SHA: ${{ inputs.rollback_sha }}
   RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ inputs.rollback_validated }}
+  RELEASE_RUN_OBSERVABILITY_SMOKE: 'true'
   HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
   NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
   NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -99,6 +100,7 @@ jobs:
           node --check scripts/release/verify-runtime-release-sha.mjs
           node --check scripts/release/write-security-response-evidence.mjs
           node --check scripts/release/record-security-response-final-evidence.mjs
+          grep -Fq "RELEASE_RUN_OBSERVABILITY_SMOKE: 'true'" .github/workflows/public-production-final.yml
 
       - name: Run public production final gate
         run: npm run release:production-final
