@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import type { CanonicalSubscriptionPlan } from '@/server/queries/subscription';
 import type { BillingAddOnSelection } from './add-ons';
 
 export const BILLING_LIFECYCLE_LEASE_MS = 2 * 60 * 1000;
@@ -9,8 +10,8 @@ export type BillingLifecycleReplaySnapshot = {
   subscriptionId: string;
   status: string;
   cancelAtPeriodEnd: boolean;
-  currentPeriodEnd: string | null;
-  plan: string;
+  currentPeriodEnd: number | null;
+  plan: CanonicalSubscriptionPlan;
   interval: 'month' | 'year';
   addOns: BillingAddOnSelection[];
 };
@@ -83,16 +84,26 @@ function canonicalizeAddOns(value: unknown) {
     .sort((left, right) => left.slug.localeCompare(right.slug));
 }
 
+function parseCanonicalPlan(value: unknown): CanonicalSubscriptionPlan | null {
+  return value === 'starter' || value === 'professional' || value === 'business' || value === 'enterprise'
+    ? value
+    : null;
+}
+
 function parseReplaySnapshot(value: unknown): BillingLifecycleReplaySnapshot | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
   const interval = row.interval;
   const currentPeriodEnd = row.currentPeriodEnd;
+  const plan = parseCanonicalPlan(row.plan);
   if (typeof row.subscriptionId !== 'string' || !row.subscriptionId.trim()) return null;
-  if (typeof row.status !== 'string' || !row.status.trim()) return null;
+  if (typeof row.status !== 'string' || !row.status.trim() || row.status.length > 64) return null;
   if (typeof row.cancelAtPeriodEnd !== 'boolean') return null;
-  if (currentPeriodEnd !== null && typeof currentPeriodEnd !== 'string') return null;
-  if (typeof row.plan !== 'string' || !row.plan.trim()) return null;
+  if (
+    currentPeriodEnd !== null &&
+    (typeof currentPeriodEnd !== 'number' || !Number.isSafeInteger(currentPeriodEnd) || currentPeriodEnd <= 0)
+  ) return null;
+  if (!plan) return null;
   if (interval !== 'month' && interval !== 'year') return null;
 
   const addOns = canonicalizeAddOns(row.addOns);
@@ -103,7 +114,7 @@ function parseReplaySnapshot(value: unknown): BillingLifecycleReplaySnapshot | n
     status: row.status,
     cancelAtPeriodEnd: row.cancelAtPeriodEnd,
     currentPeriodEnd,
-    plan: row.plan,
+    plan,
     interval,
     addOns,
   };
