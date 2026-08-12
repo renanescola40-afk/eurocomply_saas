@@ -114,7 +114,8 @@ describe('final technical controls evidence promotion', () => {
     const evidence = buildCanonicalEvidence(sourceEvidence(), { targetSha, runId });
 
     expect(evaluateEvidenceDocument(evidence.securityEvents, 'securityEvents')).toBe('PASS');
-    expect(evaluateEvidenceDocument(evidence.storage, 'storage')).toBe('PASS');
+    expect(evidence.storage.checks[0]?.name).toBe('storageTenantIsolation');
+    expect(evaluateEvidenceDocument(evidence.storage, 'storageTenantIsolation')).toBe('PASS');
     expect(evidence.securityEvents.sourceWorkflow.exactShaBound).toBe(true);
     expect(evidence.storage.evidenceIntegrity.syntheticStorageRemoved).toBe(true);
     expect(JSON.stringify(evidence)).not.toContain('password');
