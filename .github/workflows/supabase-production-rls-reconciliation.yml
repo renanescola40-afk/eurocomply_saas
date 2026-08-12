@@ -112,7 +112,7 @@ jobs:
           order by tablename, policyname;
 
           select 'grant|' || table_name || '|' || grantee || '|' || privilege_type
-          from information_schema.role_table_grants
+          from information_schema.table_privileges
           where table_schema = 'public'
             and table_name in ('permissions', 'role_permissions', 'stripe_webhook_events')
             and grantee in ('PUBLIC', 'anon', 'authenticated', 'service_role')
