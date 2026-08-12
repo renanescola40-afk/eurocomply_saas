@@ -254,7 +254,11 @@ export async function findExactShaVercelCommitStatus({
   return null;
 }
 
-export async function probeExactDeploymentHealth({ publicUrl, fetchImpl = globalThis.fetch }) {
+export async function probeExactDeploymentHealth({
+  publicUrl,
+  protectionBypassSecret = '',
+  fetchImpl = globalThis.fetch,
+}) {
   let healthUrl;
   try {
     healthUrl = new URL('/api/health', publicUrl);
