@@ -22,7 +22,6 @@ const RECOVERABLE_STRIPE_EVENT_TYPES = new Set([
 const MATERIALIZED_ENTITLEMENT_OUTCOMES = new Set([
   'reconciled',
   'idempotent_replay',
-  'deferred_downgrade',
 ]);
 
 type StripeEventClaim = {
