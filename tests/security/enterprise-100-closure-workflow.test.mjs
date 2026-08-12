@@ -8,11 +8,13 @@ const rlsEvidenceWriter = readFileSync('scripts/supabase/write-rls-reconciliatio
 const checker = readFileSync('scripts/release/check-enterprise-100-closure.mjs', 'utf8');
 const hydrator = readFileSync('scripts/release/hydrate-enterprise-100-evidence.mjs', 'utf8');
 const shaBindingResolver = readFileSync('scripts/release/evidence-sha-binding.mjs', 'utf8');
+const deploymentProof = readFileSync('scripts/release/write-github-vercel-production-deployment-evidence.mjs', 'utf8');
 const collector = readFileSync('scripts/enterprise/collect-github-exact-sha-artifacts.mjs', 'utf8');
 const stripePromotionFetcher = readFileSync('scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs', 'utf8');
 
 test('Enterprise 100 fan-in remains read-only and immutable-action pinned', () => {
-  assert.match(workflow, /permissions:\n  contents: read\n  actions: read/);
+  assert.match(workflow, /permissions:\n  contents: read\n  actions: read\n  statuses: read\n  deployments: read/);
+  assert.doesNotMatch(workflow, /(?:contents|actions|statuses|deployments|pull-requests|issues): write/);
   assert.match(workflow, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1/);
   assert.match(workflow, /actions\/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38/);
   assert.match(workflow, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/);
@@ -27,6 +29,21 @@ test('fan-in delegates exact-SHA artifact collection to the fail-closed collecto
   assert.match(workflow, /hydrate-enterprise-100-evidence\.mjs/);
   assert.match(workflow, /ENTERPRISE_CLOSURE_EVIDENCE_ROOTS/);
   assert.doesNotMatch(workflow, /gh api --paginate "repos\/\$\{GITHUB_REPOSITORY\}\/actions\/artifacts\?per_page=100"/);
+});
+
+test('closure generates exact-SHA Vercel deployment evidence directly before hydration', () => {
+  assert.match(workflow, /Generate direct exact-SHA production deployment evidence/);
+  assert.match(workflow, /write-github-vercel-production-deployment-evidence\.mjs/);
+  assert.match(workflow, /direct-production-deployment\/release-validation\/production-deployment\.json/);
+  assert.match(workflow, /PRODUCTION_DEPLOYMENT_PROOF_ATTEMPTS: '12'/);
+  assert.match(workflow, /PRODUCTION_DEPLOYMENT_PROOF_POLL_MS: '5000'/);
+  assert.match(workflow, /test -f "\$proof"/);
+  assert.match(deploymentProof, /findExactShaVercelProductionDeployment/);
+  assert.match(deploymentProof, /findExactShaVercelCommitStatus/);
+  assert.match(deploymentProof, /EXPECTED_VERCEL_STATUS_CONTEXT = 'Vercel'/);
+  assert.match(deploymentProof, /target_sha_is_not_current_main/);
+  assert.match(deploymentProof, /githubCommitStatusBound/);
+  assert.match(deploymentProof, /containsSensitiveValues: false/);
 });
 
 test('artifact collection is restricted to authorized families and exact producer workflows', () => {
