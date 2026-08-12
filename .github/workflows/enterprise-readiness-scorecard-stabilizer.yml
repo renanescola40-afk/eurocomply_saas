@@ -20,13 +20,18 @@ on:
       - Full Security Suite
       - Enterprise Production Gate
       - RISCK COMPLY Security CI
+      - RISCK COMPLY Upload Security CI
       - Enterprise DAST
       - Dependency Vulnerability Proof
       - Distributed Rate Limit Runtime Proof
       - Auth RBAC Tenant Proof
       - Supabase Live RLS Validation
       - Production Runtime Proof
+      - Audit Chain Runtime Proof
+      - Production Provider Runtime Proof
       - Branch Protection Runtime Proof
+      - Step-Up Runtime Proof
+      - Stripe Runtime Evidence Promotion
       - Final Technical Controls Proof
       - Recovery Resilience Proof
     branches: [main]
@@ -45,7 +50,7 @@ jobs:
     name: Dispatch one terminal exact-SHA scorecard
     if: github.event_name != 'workflow_run' || github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 35
     env:
       GITHUB_TOKEN: ${{ github.token }}
       TARGET_SHA: ${{ github.event.workflow_run.head_sha || inputs.target_sha || github.sha }}
@@ -93,7 +98,7 @@ jobs:
             echo "- Dispatched terminal scorecard: ${DISPATCHED:-unknown}"
             echo "- Reason: ${REASON:-stabilizer-failed-before-output}"
             echo
-            echo 'Producer-triggered runs debounce before checkout/API access. The surviving exact-SHA run retries transient GitHub API pressure and dispatches the existing readiness scorecard only after the reviewed producer set reaches a quiet terminal state.'
+            echo 'Producer-triggered runs debounce before checkout/API access. The surviving exact-SHA run retries transient GitHub API pressure, waits for the reviewed material producer set, refreshes the Enterprise Production Gate when its snapshot predates those producers, and only then dispatches the existing readiness scorecard.'
             echo
             echo 'This workflow does not award PASS or mutate production.'
           } >> "$GITHUB_STEP_SUMMARY"
