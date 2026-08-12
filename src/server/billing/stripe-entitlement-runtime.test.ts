@@ -43,6 +43,13 @@ function legacySubscriptionEvent(type: Stripe.Event.Type = 'customer.subscriptio
   });
 }
 
+function basilSubscriptionLine(periodEnd: number) {
+  return {
+    parent: { type: 'subscription_item_details' },
+    period: { end: periodEnd },
+  };
+}
+
 describe('Stripe entitlement billing period extraction', () => {
   it('reads Basil item-level subscription periods and chooses the earliest boundary', () => {
     const first = Math.floor(now.valueOf() / 1000) + oneDay * 30;
@@ -69,17 +76,17 @@ describe('Stripe entitlement billing period extraction', () => {
     expect(stripeEntitlementPeriodEnd(event)).toBe(Math.floor(now.valueOf() / 1000) + oneDay);
   });
 
-  it('reads invoice subscription metadata from the Basil parent and period from invoice lines', () => {
+  it('prefers canonical Basil subscription metadata even when invoice metadata is non-empty', () => {
     const periodEnd = Math.floor(now.valueOf() / 1000) + oneDay * 20;
     const event = stripeEvent('invoice.paid', {
-      metadata: {},
+      metadata: { invoice_note: 'ordinary merchant metadata' },
       parent: {
         subscription_details: { metadata },
       },
       lines: {
         data: [
-          { period: { end: periodEnd + oneDay } },
-          { period: { end: periodEnd } },
+          basilSubscriptionLine(periodEnd + oneDay),
+          basilSubscriptionLine(periodEnd),
         ],
       },
     });
@@ -93,11 +100,42 @@ describe('Stripe entitlement billing period extraction', () => {
     expect(normalized.snapshot.entitlements.billing_recovered).toBe(true);
   });
 
-  it('keeps legacy invoice subscription_details metadata compatible', () => {
+  it('ignores standalone invoice items when deriving the recurring entitlement period', () => {
+    const standaloneEnd = Math.floor(now.valueOf() / 1000) + 60;
+    const subscriptionEnd = Math.floor(now.valueOf() / 1000) + oneDay * 30;
+    const event = stripeEvent('invoice.paid', {
+      parent: { subscription_details: { metadata } },
+      lines: {
+        data: [
+          {
+            parent: { type: 'invoice_item_details' },
+            period: { end: standaloneEnd },
+          },
+          basilSubscriptionLine(subscriptionEnd),
+        ],
+      },
+    });
+
+    expect(stripeEntitlementPeriodEnd(event)).toBe(subscriptionEnd);
+    const normalized = normalizeStripeEntitlementEvent(event, now);
+    expect(normalized.outcome).toBe('normalized');
+    if (normalized.outcome !== 'normalized') return;
+    expect(normalized.snapshot.validUntil).toBe(new Date(subscriptionEnd * 1000).toISOString());
+  });
+
+  it('keeps legacy invoice subscription_details and subscription line shape compatible', () => {
     const periodEnd = Math.floor(now.valueOf() / 1000) + oneDay * 10;
     const event = stripeEvent('invoice.paid', {
       subscription_details: { metadata },
-      lines: { data: [{ period: { end: periodEnd } }] },
+      lines: {
+        data: [
+          {
+            type: 'subscription',
+            subscription_item: 'si_legacy',
+            period: { end: periodEnd },
+          },
+        ],
+      },
     });
 
     const normalized = normalizeStripeEntitlementEvent(event, now);
@@ -154,7 +192,7 @@ describe('normalizeStripeEntitlementEvent', () => {
     const periodEnd = Math.floor(now.valueOf() / 1000) + oneDay;
     const event = stripeEvent('invoice.payment_failed', {
       parent: { subscription_details: { metadata } },
-      lines: { data: [{ period: { end: periodEnd } }] },
+      lines: { data: [basilSubscriptionLine(periodEnd)] },
     });
     const result = normalizeStripeEntitlementEvent(event, now);
     expect(result.outcome).toBe('normalized');
@@ -174,7 +212,8 @@ describe('normalizeStripeEntitlementEvent', () => {
     expect(
       normalizeStripeEntitlementEvent(
         stripeEvent('invoice.paid', {
-          lines: { data: [{ period: { end: Math.floor(now.valueOf() / 1000) + oneDay } }] },
+          metadata: { invoice_note: 'not entitlement metadata' },
+          lines: { data: [basilSubscriptionLine(Math.floor(now.valueOf() / 1000) + oneDay)] },
         }),
         now,
       ),
