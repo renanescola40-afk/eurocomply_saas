@@ -69,6 +69,13 @@ export function shouldIgnoreBuildForChangedFiles(paths) {
   };
 }
 
+export function requiresExactShaVercelBuild({ gitRef = '', targetEnvironment = '' } = {}) {
+  const normalizedRef = String(gitRef || '').trim();
+  const normalizedTarget = String(targetEnvironment || '').trim().toLowerCase();
+
+  return normalizedRef === 'main' || normalizedTarget === 'production';
+}
+
 export function vercelGitDiffCandidates(previousSuccessfulSha) {
   const previous = String(previousSuccessfulSha || '').trim().toLowerCase();
   const refsToTry = [];
@@ -101,6 +108,16 @@ function changedFilesFromGit() {
 }
 
 export function runVercelIgnoreBuild() {
+  const gitRef = process.env.VERCEL_GIT_COMMIT_REF;
+  const targetEnvironment = process.env.VERCEL_TARGET_ENV || process.env.VERCEL_ENV;
+
+  if (requiresExactShaVercelBuild({ gitRef, targetEnvironment })) {
+    console.log(
+      `Vercel build required: exact-SHA production provenance for ${gitRef || 'unknown-ref'} in ${targetEnvironment || 'unknown-environment'}.`,
+    );
+    return 1;
+  }
+
   const result = shouldIgnoreBuildForChangedFiles(changedFilesFromGit());
 
   if (result.ignore) {
