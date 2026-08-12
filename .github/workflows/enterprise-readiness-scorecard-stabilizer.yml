@@ -1,6 +1,12 @@
 name: Enterprise Readiness Scorecard Stabilizer
 
 on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Optional exact current main SHA to stabilize
+        required: false
+        type: string
   workflow_run:
     workflows:
       - CI
@@ -31,24 +37,34 @@ permissions:
   contents: read
 
 concurrency:
-  group: enterprise-readiness-scorecard-stabilizer-${{ github.event.workflow_run.head_sha }}
+  group: enterprise-readiness-scorecard-stabilizer-${{ github.event.workflow_run.head_sha || inputs.target_sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
   stabilize:
     name: Dispatch one terminal exact-SHA scorecard
-    if: github.event.workflow_run.head_branch == 'main'
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 8
+    timeout-minutes: 10
     env:
       GITHUB_TOKEN: ${{ github.token }}
-      TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+      TARGET_SHA: ${{ github.event.workflow_run.head_sha || inputs.target_sha || github.sha }}
+      STABILIZER_DEBOUNCE_SECONDS: '90'
     steps:
+      - name: Debounce producer storm before checkout or API access
+        if: github.event_name == 'workflow_run'
+        shell: bash
+        run: sleep "$STABILIZER_DEBOUNCE_SECONDS"
+
       - name: Checkout exact producer SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ env.TARGET_SHA }}
           persist-credentials: false
+
+      - name: Verify exact producer SHA
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
 
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
@@ -77,5 +93,7 @@ jobs:
             echo "- Dispatched terminal scorecard: ${DISPATCHED:-unknown}"
             echo "- Reason: ${REASON:-stabilizer-failed-before-output}"
             echo
-            echo 'This workflow coalesces exact-SHA material producer completions and dispatches the existing readiness scorecard after the producer set reaches a quiet terminal state. It does not award PASS or mutate production.'
+            echo 'Producer-triggered runs debounce before checkout/API access. The surviving exact-SHA run retries transient GitHub API pressure and dispatches the existing readiness scorecard only after the reviewed producer set reaches a quiet terminal state.'
+            echo
+            echo 'This workflow does not award PASS or mutate production.'
           } >> "$GITHUB_STEP_SUMMARY"
