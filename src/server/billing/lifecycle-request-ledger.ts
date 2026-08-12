@@ -5,6 +5,16 @@ export const BILLING_LIFECYCLE_LEASE_MS = 2 * 60 * 1000;
 
 export type BillingLifecycleAction = 'upgrade' | 'downgrade' | 'cancel' | 'reactivate' | 'replace_add_ons';
 
+export type BillingLifecycleReplaySnapshot = {
+  subscriptionId: string;
+  status: string;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
+  plan: string;
+  interval: 'month' | 'year';
+  addOns: BillingAddOnSelection[];
+};
+
 export type BillingLifecycleRequestRow = {
   id: string;
   organization_id: string;
@@ -16,6 +26,8 @@ export type BillingLifecycleRequestRow = {
   add_ons: unknown;
   stripe_subscription_id: string | null;
   stripe_request_id: string | null;
+  request_fingerprint: string | null;
+  result_snapshot: unknown;
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
   failure_code: string | null;
   requested_at: string;
@@ -43,8 +55,14 @@ type ClaimInput = {
   addOns: BillingAddOnSelection[];
   stripeSubscriptionId: string;
   requestDigest: string;
+  requestFingerprint: string;
   now?: Date;
 };
+
+type CompletedReplayLookupInput = Pick<
+  ClaimInput,
+  'organizationId' | 'requestedBy' | 'action' | 'requestDigest' | 'requestFingerprint'
+>;
 
 export type BillingLifecycleRequestClaim =
   | { kind: 'claimed'; request: BillingLifecycleRequestRow }
@@ -57,7 +75,7 @@ function canonicalizeAddOns(value: unknown) {
     .map((item) => {
       if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
       const record = item as { slug?: unknown; quantity?: unknown };
-      const slug = typeof record.slug === 'string' ? record.slug.trim() : '';
+      const slug = typeof record.slug === 'string' ? record.slug.trim().toLowerCase() : '';
       const quantity = typeof record.quantity === 'number' && Number.isInteger(record.quantity) ? record.quantity : 0;
       return slug && quantity > 0 ? { slug, quantity } : null;
     })
@@ -65,11 +83,50 @@ function canonicalizeAddOns(value: unknown) {
     .sort((left, right) => left.slug.localeCompare(right.slug));
 }
 
+function parseReplaySnapshot(value: unknown): BillingLifecycleReplaySnapshot | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  const interval = row.interval;
+  const currentPeriodEnd = row.currentPeriodEnd;
+  if (typeof row.subscriptionId !== 'string' || !row.subscriptionId.trim()) return null;
+  if (typeof row.status !== 'string' || !row.status.trim()) return null;
+  if (typeof row.cancelAtPeriodEnd !== 'boolean') return null;
+  if (currentPeriodEnd !== null && typeof currentPeriodEnd !== 'string') return null;
+  if (typeof row.plan !== 'string' || !row.plan.trim()) return null;
+  if (interval !== 'month' && interval !== 'year') return null;
+
+  const addOns = canonicalizeAddOns(row.addOns);
+  if (!Array.isArray(row.addOns) || addOns.length !== row.addOns.length) return null;
+
+  return {
+    subscriptionId: row.subscriptionId,
+    status: row.status,
+    cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+    currentPeriodEnd,
+    plan: row.plan,
+    interval,
+    addOns,
+  };
+}
+
+function assertStableIdentity(row: BillingLifecycleRequestRow, input: CompletedReplayLookupInput) {
+  if (
+    row.organization_id !== input.organizationId ||
+    row.requested_by !== input.requestedBy ||
+    row.action !== input.action ||
+    !row.request_fingerprint ||
+    row.request_fingerprint !== input.requestFingerprint
+  ) {
+    throw new BillingLifecycleRequestError('billing_idempotency_conflict', 409);
+  }
+}
+
 function requestMatches(row: BillingLifecycleRequestRow, input: ClaimInput) {
   return (
     row.organization_id === input.organizationId &&
     row.requested_by === input.requestedBy &&
     row.action === input.action &&
+    row.request_fingerprint === input.requestFingerprint &&
     (row.target_plan ?? '') === input.targetPlan &&
     (row.billing_interval ?? '') === input.billingInterval &&
     (row.stripe_subscription_id ?? '') === input.stripeSubscriptionId &&
@@ -105,12 +162,34 @@ async function findByDigest(organizationId: string, requestDigest: string) {
   return (data ?? null) as BillingLifecycleRequestRow | null;
 }
 
+export async function findCompletedBillingLifecycleReplay(
+  input: CompletedReplayLookupInput,
+): Promise<BillingLifecycleReplaySnapshot | null> {
+  const existing = await findByDigest(input.organizationId, input.requestDigest);
+  if (!existing) return null;
+  assertStableIdentity(existing, input);
+  if (existing.status !== 'completed') return null;
+
+  const snapshot = parseReplaySnapshot(existing.result_snapshot);
+  if (!snapshot) storageFailure('completed_replay_invalid');
+  return snapshot;
+}
+
+export function getBillingLifecycleReplaySnapshot(
+  request: BillingLifecycleRequestRow,
+): BillingLifecycleReplaySnapshot {
+  const snapshot = parseReplaySnapshot(request.result_snapshot);
+  if (!snapshot) storageFailure('completed_replay_invalid');
+  return snapshot;
+}
+
 async function reclaimExisting(row: BillingLifecycleRequestRow, input: ClaimInput): Promise<BillingLifecycleRequestClaim> {
   if (!requestMatches(row, input)) {
     throw new BillingLifecycleRequestError('billing_idempotency_conflict', 409);
   }
 
   if (row.status === 'completed') {
+    getBillingLifecycleReplaySnapshot(row);
     return { kind: 'completed_replay', request: row };
   }
 
@@ -126,6 +205,7 @@ async function reclaimExisting(row: BillingLifecycleRequestRow, input: ClaimInpu
       status: 'processing',
       failure_code: null,
       completed_at: null,
+      result_snapshot: null,
       updated_at: now.toISOString(),
     })
     .eq('id', row.id)
@@ -165,6 +245,8 @@ export async function claimBillingLifecycleRequest(input: ClaimInput): Promise<B
       add_ons: canonicalizeAddOns(input.addOns),
       stripe_subscription_id: input.stripeSubscriptionId,
       stripe_request_id: input.requestDigest,
+      request_fingerprint: input.requestFingerprint,
+      result_snapshot: null,
       status: 'processing',
       failure_code: null,
       requested_at: now.toISOString(),
@@ -185,7 +267,10 @@ export async function claimBillingLifecycleRequest(input: ClaimInput): Promise<B
   return { kind: 'claimed', request: data as BillingLifecycleRequestRow };
 }
 
-export async function completeBillingLifecycleRequest(requestId: string) {
+export async function completeBillingLifecycleRequest(
+  requestId: string,
+  resultSnapshot: BillingLifecycleReplaySnapshot,
+) {
   const completedAt = new Date().toISOString();
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -193,6 +278,10 @@ export async function completeBillingLifecycleRequest(requestId: string) {
     .update({
       status: 'completed',
       failure_code: null,
+      result_snapshot: {
+        ...resultSnapshot,
+        addOns: canonicalizeAddOns(resultSnapshot.addOns),
+      },
       completed_at: completedAt,
       updated_at: completedAt,
     })
