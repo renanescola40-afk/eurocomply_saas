@@ -13,17 +13,24 @@ export const PRODUCER_WORKFLOW_NAMES = Object.freeze([
   'Full Security Suite',
   'Enterprise Production Gate',
   'RISCK COMPLY Security CI',
+  'RISCK COMPLY Upload Security CI',
   'Enterprise DAST',
   'Dependency Vulnerability Proof',
   'Distributed Rate Limit Runtime Proof',
   'Auth RBAC Tenant Proof',
   'Supabase Live RLS Validation',
   'Production Runtime Proof',
+  'Audit Chain Runtime Proof',
+  'Production Provider Runtime Proof',
   'Branch Protection Runtime Proof',
+  'Step-Up Runtime Proof',
+  'Stripe Runtime Evidence Promotion',
   'Final Technical Controls Proof',
   'Recovery Resilience Proof',
 ]);
 
+export const ENTERPRISE_PRODUCTION_GATE_NAME = 'Enterprise Production Gate';
+export const ENTERPRISE_PRODUCTION_GATE_PATH = 'enterprise-production-gate.yml';
 export const SCORECARD_WORKFLOW_NAME = 'Enterprise Readiness Scorecard';
 export const SCORECARD_WORKFLOW_PATH = 'enterprise-readiness-scorecard.yml';
 export const ACTIVE_RUN_STATUSES = new Set([
@@ -38,7 +45,9 @@ const API_VERSION = '2022-11-28';
 const PER_PAGE = 100;
 const MAX_RUN_PAGES = 5;
 const MAX_SETTLE_ATTEMPTS = 10;
+const MAX_GATE_SETTLE_ATTEMPTS = 80;
 const SETTLE_INTERVAL_MS = 30_000;
+const GATE_SETTLE_INTERVAL_MS = 15_000;
 const QUIET_WINDOW_MS = 75_000;
 const MAX_API_ATTEMPTS = 5;
 const API_BACKOFF_BASE_MS = 2_000;
@@ -62,12 +71,27 @@ export function exactShaProducerRuns(runs, targetSha) {
   );
 }
 
+export function exactShaUpstreamProducerRuns(runs, targetSha) {
+  return exactShaProducerRuns(runs, targetSha).filter(
+    (run) => run?.name !== ENTERPRISE_PRODUCTION_GATE_NAME,
+  );
+}
+
 export function latestProducerTimestamp(runs) {
   return runs.reduce((latest, run) => Math.max(latest, timestampMs(run)), 0);
 }
 
 export function hasActiveProducer(runs) {
   return runs.some((run) => ACTIVE_RUN_STATUSES.has(run?.status));
+}
+
+export function productionGateAlreadyCoversEvidence(runs, targetSha, producerCutoffMs) {
+  return runs.some((run) => {
+    if (run?.head_sha !== targetSha || run?.name !== ENTERPRISE_PRODUCTION_GATE_NAME) return false;
+    if (createdTimestampMs(run) < producerCutoffMs) return false;
+    if (ACTIVE_RUN_STATUSES.has(run?.status)) return true;
+    return run?.status === 'completed';
+  });
 }
 
 export function scorecardAlreadyCoversEvidence(runs, targetSha, producerCutoffMs) {
@@ -212,31 +236,54 @@ async function currentMainSha(repository) {
   return result?.object?.sha ?? '';
 }
 
-async function dispatchScorecard(repository) {
+async function dispatchWorkflow(repository, workflowPath) {
   await githubApi(
-    `/repos/${repository}/actions/workflows/${SCORECARD_WORKFLOW_PATH}/dispatches`,
+    `/repos/${repository}/actions/workflows/${workflowPath}/dispatches`,
     { method: 'POST', body: { ref: 'main' } },
   );
+}
+
+async function dispatchProductionGate(repository) {
+  await dispatchWorkflow(repository, ENTERPRISE_PRODUCTION_GATE_PATH);
+}
+
+async function dispatchScorecard(repository) {
+  await dispatchWorkflow(repository, SCORECARD_WORKFLOW_PATH);
+}
+
+async function waitForTerminalProductionGate(repository, targetSha, producerCutoffMs) {
+  for (let attempt = 1; attempt <= MAX_GATE_SETTLE_ATTEMPTS; attempt += 1) {
+    const runs = await listExactShaRuns(repository, targetSha);
+    const covered = runs
+      .filter((run) => run?.name === ENTERPRISE_PRODUCTION_GATE_NAME)
+      .filter((run) => createdTimestampMs(run) >= producerCutoffMs)
+      .sort((a, b) => createdTimestampMs(b) - createdTimestampMs(a));
+
+    const latest = covered[0];
+    if (latest?.status === 'completed') return latest;
+    if (attempt < MAX_GATE_SETTLE_ATTEMPTS) await sleep(GATE_SETTLE_INTERVAL_MS);
+  }
+  throw new Error('Terminal Enterprise Production Gate did not complete within the bounded settlement window');
 }
 
 export async function stabilize({ now = () => Date.now() } = {}) {
   const repository = validateRepository(process.env.GITHUB_REPOSITORY);
   const targetSha = validateSha(process.env.TARGET_SHA);
   let settledRuns = null;
-  let producerCutoffMs = 0;
+  let upstreamCutoffMs = 0;
 
   for (let attempt = 1; attempt <= MAX_SETTLE_ATTEMPTS; attempt += 1) {
     const runs = await listExactShaRuns(repository, targetSha);
-    const producers = exactShaProducerRuns(runs, targetSha);
+    const upstreamProducers = exactShaUpstreamProducerRuns(runs, targetSha);
 
-    if (producers.length === 0 || hasActiveProducer(producers)) {
+    if (upstreamProducers.length === 0 || hasActiveProducer(upstreamProducers)) {
       if (attempt < MAX_SETTLE_ATTEMPTS) await sleep(SETTLE_INTERVAL_MS);
       continue;
     }
 
-    producerCutoffMs = latestProducerTimestamp(producers);
-    const quietForMs = now() - producerCutoffMs;
-    if (producerCutoffMs === 0 || quietForMs < QUIET_WINDOW_MS) {
+    upstreamCutoffMs = latestProducerTimestamp(upstreamProducers);
+    const quietForMs = now() - upstreamCutoffMs;
+    if (upstreamCutoffMs === 0 || quietForMs < QUIET_WINDOW_MS) {
       if (attempt < MAX_SETTLE_ATTEMPTS) {
         await sleep(Math.min(SETTLE_INTERVAL_MS, Math.max(1_000, QUIET_WINDOW_MS - quietForMs)));
       }
@@ -251,7 +298,7 @@ export async function stabilize({ now = () => Date.now() } = {}) {
     throw new Error('Material evidence producers did not reach a bounded quiet terminal state');
   }
 
-  const mainSha = await currentMainSha(repository);
+  let mainSha = await currentMainSha(repository);
   if (mainSha !== targetSha) {
     writeOutput('dispatched', false);
     writeOutput('reason', 'main-advanced');
@@ -259,13 +306,54 @@ export async function stabilize({ now = () => Date.now() } = {}) {
     return { dispatched: false, reason: 'main-advanced', targetSha };
   }
 
-  const refreshedRuns = await listExactShaRuns(repository, targetSha);
-  const refreshedProducers = exactShaProducerRuns(refreshedRuns, targetSha);
-  if (hasActiveProducer(refreshedProducers)) {
+  let refreshedRuns = await listExactShaRuns(repository, targetSha);
+  let refreshedUpstream = exactShaUpstreamProducerRuns(refreshedRuns, targetSha);
+  if (hasActiveProducer(refreshedUpstream)) {
     throw new Error('A material evidence producer became active after the quiet-state check; refusing to dispatch');
   }
 
-  producerCutoffMs = latestProducerTimestamp(refreshedProducers);
+  upstreamCutoffMs = latestProducerTimestamp(refreshedUpstream);
+  if (!productionGateAlreadyCoversEvidence(refreshedRuns, targetSha, upstreamCutoffMs)) {
+    mainSha = await currentMainSha(repository);
+    if (mainSha !== targetSha) {
+      writeOutput('dispatched', false);
+      writeOutput('reason', 'main-advanced');
+      writeOutput('target_sha', targetSha);
+      return { dispatched: false, reason: 'main-advanced', targetSha };
+    }
+
+    await dispatchProductionGate(repository);
+  }
+
+  await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs);
+
+  refreshedRuns = await listExactShaRuns(repository, targetSha);
+  refreshedUpstream = exactShaUpstreamProducerRuns(refreshedRuns, targetSha);
+  if (hasActiveProducer(refreshedUpstream)) {
+    throw new Error('A material evidence producer became active while the production gate was settling; refusing to dispatch');
+  }
+
+  upstreamCutoffMs = latestProducerTimestamp(refreshedUpstream);
+  const terminalGate = refreshedRuns
+    .filter((run) => run?.name === ENTERPRISE_PRODUCTION_GATE_NAME)
+    .filter((run) => run?.status === 'completed')
+    .filter((run) => createdTimestampMs(run) >= upstreamCutoffMs)
+    .sort((a, b) => createdTimestampMs(b) - createdTimestampMs(a))[0];
+
+  if (!terminalGate) {
+    throw new Error('No terminal Enterprise Production Gate covers the latest material producer state');
+  }
+
+  mainSha = await currentMainSha(repository);
+  if (mainSha !== targetSha) {
+    writeOutput('dispatched', false);
+    writeOutput('reason', 'main-advanced');
+    writeOutput('target_sha', targetSha);
+    return { dispatched: false, reason: 'main-advanced', targetSha };
+  }
+
+  const allProducers = exactShaProducerRuns(refreshedRuns, targetSha);
+  const producerCutoffMs = latestProducerTimestamp(allProducers);
   if (scorecardAlreadyCoversEvidence(refreshedRuns, targetSha, producerCutoffMs)) {
     writeOutput('dispatched', false);
     writeOutput('reason', 'scorecard-current');

@@ -19,15 +19,31 @@ const producerNames = [
   'Full Security Suite',
   'Enterprise Production Gate',
   'RISCK COMPLY Security CI',
+  'RISCK COMPLY Upload Security CI',
   'Enterprise DAST',
   'Dependency Vulnerability Proof',
   'Distributed Rate Limit Runtime Proof',
   'Auth RBAC Tenant Proof',
   'Supabase Live RLS Validation',
   'Production Runtime Proof',
+  'Audit Chain Runtime Proof',
+  'Production Provider Runtime Proof',
   'Branch Protection Runtime Proof',
+  'Step-Up Runtime Proof',
+  'Stripe Runtime Evidence Promotion',
   'Final Technical Controls Proof',
   'Recovery Resilience Proof',
+];
+
+const retainedFanInNames = [
+  'Auth RBAC Tenant Proof',
+  'Supabase Live RLS Validation',
+  'RISCK COMPLY Upload Security CI',
+  'Audit Chain Runtime Proof',
+  'Production Provider Runtime Proof',
+  'Branch Protection Runtime Proof',
+  'Step-Up Runtime Proof',
+  'Stripe Runtime Evidence Promotion',
 ];
 
 describe('enterprise readiness scorecard terminal stabilizer', () => {
@@ -41,11 +57,19 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
       expect(script).toContain(`  '${producer}',`);
     }
 
-    expect(new Set(producerNames).size).toBe(20);
+    expect(new Set(producerNames).size).toBe(25);
     expect(workflow).toMatch(/workflow_run:[\s\S]*?branches: \[main\][\s\S]*?types: \[completed\]/);
     expect(workflow).not.toContain('Enterprise Readiness Scorecard\n');
     expect(workflow).not.toContain('pull_request_target:');
     expect(workflow).not.toContain('repository_dispatch:');
+  });
+
+  it('tracks every retained Enterprise Production Gate proof producer', () => {
+    for (const producer of retainedFanInNames) {
+      expect(workflow).toContain(`      - ${producer}`);
+      expect(script).toContain(`  '${producer}',`);
+    }
+    expect(new Set(retainedFanInNames).size).toBe(8);
   });
 
   it('debounces the producer storm before checkout or GitHub API access', () => {
@@ -76,24 +100,42 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(workflow).toContain('GITHUB_TOKEN: ${{ github.token }}');
     expect(workflow).not.toContain('secrets.');
     expect(workflow).not.toContain('environment: production');
+    expect(workflow).toContain('timeout-minutes: 35');
   });
 
   it('fails closed on inventory ambiguity while tolerating transient GitHub API pressure', () => {
     expect(script).toContain('const MAX_RUN_PAGES = 5;');
     expect(script).toContain('const MAX_SETTLE_ATTEMPTS = 10;');
+    expect(script).toContain('const MAX_GATE_SETTLE_ATTEMPTS = 80;');
     expect(script).toContain('const QUIET_WINDOW_MS = 75_000;');
     expect(script).toContain('const MAX_API_ATTEMPTS = 5;');
     expect(script).toContain('const API_BACKOFF_CAP_MS = 30_000;');
-    expect(script).toContain("status === 403 || status === 429 || status >= 500");
+    expect(script).toContain('status === 403 || status === 429 || status >= 500');
     expect(script).toContain("response.headers.get('retry-after')");
     expect(script).toContain("response.headers.get('x-ratelimit-reset')");
     expect(script).toContain('actions/runs?head_sha=${encodedSha}&per_page=${PER_PAGE}&page=${page}');
     expect(script).toContain('Exact-SHA run inventory exceeds bounded pagination');
     expect(script).toContain('Material evidence producers did not reach a bounded quiet terminal state');
     expect(script).toContain('A material evidence producer became active after the quiet-state check; refusing to dispatch');
+    expect(script).toContain('A material evidence producer became active while the production gate was settling; refusing to dispatch');
   });
 
-  it('dispatches only the fixed existing scorecard after proving main is still the target SHA', () => {
+  it('refreshes the production gate before the scorecard when retained evidence is newer', () => {
+    expect(script).toContain("export const ENTERPRISE_PRODUCTION_GATE_PATH = 'enterprise-production-gate.yml';");
+    expect(script).toContain('productionGateAlreadyCoversEvidence');
+    expect(script).toContain('await dispatchProductionGate(repository);');
+    expect(script).toContain('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs);');
+    expect(script).toContain('No terminal Enterprise Production Gate covers the latest material producer state');
+
+    const gateDispatch = script.indexOf('await dispatchProductionGate(repository);');
+    const gateWait = script.indexOf('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs);');
+    const scorecardDispatch = script.indexOf('await dispatchScorecard(repository);');
+    expect(gateDispatch).toBeGreaterThan(-1);
+    expect(gateWait).toBeGreaterThan(gateDispatch);
+    expect(scorecardDispatch).toBeGreaterThan(gateWait);
+  });
+
+  it('dispatches only fixed existing workflows after proving main is still the target SHA', () => {
     expect(script).toContain("export const SCORECARD_WORKFLOW_PATH = 'enterprise-readiness-scorecard.yml';");
     expect(script).toContain('/git/ref/heads/main');
     expect(script).toContain('if (mainSha !== targetSha)');
