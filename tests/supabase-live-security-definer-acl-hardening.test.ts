@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const migration = readFileSync(
-  'supabase/migrations/20260804230000_live_security_definer_acl_hardening.sql',
+  'supabase/migrations/20260804224915_live_security_definer_acl_hardening.sql',
   'utf8',
 ).toLowerCase();
 
