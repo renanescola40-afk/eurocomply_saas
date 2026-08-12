@@ -78,10 +78,13 @@ jobs:
       - name: Validate Supabase RLS proof contracts
         run: |
           node --check scripts/security/run-supabase-live-ai-assessments-rls.mjs
+          node --check scripts/security/append-supabase-live-horizontal-isolation.mjs
+          node --check scripts/security/supabase-horizontal-rls-evidence.mjs
           npx vitest run \
             tests/enterprise/supabase-rls-runtime-evidence-fetch.test.ts \
             tests/enterprise/supabase-rls-workflow-ai-assessments-contract.test.ts \
             tests/security/supabase-rls-scorecard-evidence.test.ts \
+            tests/security/supabase-horizontal-rls-evidence.test.mjs \
             tests/security/live-rls-inventory-migration.test.ts
 
       - name: Apply allowlisted live RLS proof migrations
@@ -111,7 +114,8 @@ jobs:
             supabase/migrations/20260626120000_clerk_uuid_safe_rls_helpers.sql \
             supabase/migrations/20260629110000_enterprise_tenant_rls_cleanup_indexes.sql \
             supabase/migrations/20260701150000_supabase_production_rls_proof_hardening.sql \
-            supabase/migrations/20260702112000_apply_invitations_live_rls_validation.sql
+            supabase/migrations/20260702112000_apply_invitations_live_rls_validation.sql \
+            supabase/migrations/20260812230911_tighten_monitoring_preferences_horizontal_read_isolation.sql
           do
             psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction --file="$migration"
           done
@@ -179,6 +183,13 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RLS_LIVE_UPDATE_REGISTER: '0'
         run: node scripts/security/run-supabase-live-tenant-isolation.mjs
+
+      - name: Append same-tenant horizontal isolation proof
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/security/append-supabase-live-horizontal-isolation.mjs
 
       - name: Append live ai_assessments RLS proof
         env:
