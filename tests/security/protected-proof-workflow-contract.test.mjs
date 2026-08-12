@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const finalTechnical = readFileSync('.github/workflows/final-technical-controls-proof.yml', 'utf8');
 const recovery = readFileSync('.github/workflows/recovery-resilience-proof.yml', 'utf8');
+const preflight = readFileSync('scripts/security/preflight-protected-proof.mjs', 'utf8');
 const observability = readFileSync('scripts/release/run-observability-smoke-validation.mjs', 'utf8');
 const observabilityValidator = readFileSync('scripts/release/validate-observability-runtime-evidence.mjs', 'utf8');
 
@@ -31,14 +32,28 @@ test('recovery proof preflights before psql, backup restore, or rollback', () =>
   assert.match(recovery, /if: always\(\)/);
 });
 
-test('observability runtime evidence is intrinsically bound to exact commit and build SHA', () => {
+test('recovery isolation is based on canonical host port and database identity', () => {
+  assert.match(preflight, /canonicalPostgresDatabaseIdentity/);
+  assert.match(preflight, /parsed\.port \|\| '5432'/);
+  assert.match(preflight, /sourceIdentity !== isolatedIdentity/);
+  assert.match(preflight, /recovery_database_identity_unverifiable/);
+  assert.match(preflight, /POSTGRES_IDENTITY_OVERRIDE_PARAMS/);
+  assert.match(preflight, /databaseIdentitiesStored: false/);
+  assert.doesNotMatch(preflight, /RECOVERY_SOURCE_DATABASE_URL'\) !== env\('RECOVERY_ISOLATED_DATABASE_URL/);
+});
+
+test('observability runtime evidence binds every probed hostname to the deployed SHA, not only runner variables', () => {
   assert.match(observability, /RELEASE_COMMIT_SHA/);
   assert.match(observability, /RELEASE_BUILD_SHA/);
+  assert.match(observability, /\/api\/ready\/release/);
+  assert.match(observability, /sanitizeRuntimeReleaseResponse/);
+  assert.match(observability, /evaluateRuntimeReleaseSha/);
+  assert.match(observability, /observedCommitShaMatchedExpected/);
+  assert.match(observability, /deployedTargetsBoundToExpectedSha/);
   assert.match(observability, /releaseShaBindingValid/);
-  assert.match(observability, /commitSha:/);
-  assert.match(observability, /buildSha:/);
-  assert.match(observability, /exactShaBound/);
-  assert.match(observabilityValidator, /commitSha must be a full lowercase SHA/);
-  assert.match(observabilityValidator, /buildSha must match commitSha/);
+  assert.match(observability, /rawRuntimeReleaseResponseStored: false/);
+  assert.match(observability, /mismatchedObservedShaStored: false/);
+  assert.match(observabilityValidator, /every observability target must prove deployed runtime SHA binding/);
+  assert.match(observabilityValidator, /observedRuntimeCommitMatchesExpected must pass/);
   assert.match(observabilityValidator, /evidenceIntegrity\.exactShaBound must be true/);
 });
