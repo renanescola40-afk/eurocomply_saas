@@ -51,14 +51,41 @@ async function runCoreStripeWebhookHandler(event: Stripe.Event) {
   );
 }
 
-async function runStripeWebhookHandler(event: Stripe.Event) {
-  const result = await runCoreStripeWebhookHandler(event);
-  if (result.duplicate || result.skipped || result.unsupported) return result;
+async function isProcessedStripeEvent(eventId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('stripe_events_processed')
+    .select('id,status')
+    .eq('id', eventId)
+    .maybeSingle<Pick<StripeEventClaim, 'id' | 'status'>>();
 
+  if (error) throw error;
+  return data?.id === eventId && data.status === 'processed';
+}
+
+async function reconcileEntitlementWhenEligible(event: Stripe.Event) {
   const entitlement = await reconcileStripeEntitlementEvent(event);
   if (entitlement.outcome === 'metadata_missing' || entitlement.outcome === 'unsupported') {
-    return result;
+    return null;
   }
+  return entitlement;
+}
+
+async function runStripeWebhookHandler(event: Stripe.Event) {
+  const result = await runCoreStripeWebhookHandler(event);
+
+  if (result.unsupported || (result.skipped && !result.duplicate)) return result;
+
+  if (result.duplicate) {
+    // Core Stripe processing is intentionally idempotent. A completed core event may
+    // still predate/fail the enterprise entitlement side effect, so a verified replay
+    // may repair only that idempotent snapshot. Never do this while another worker's
+    // processing claim is still active; abandoned claims use the lease recovery path.
+    if (!(await isProcessedStripeEvent(event.id))) return result;
+  }
+
+  const entitlement = await reconcileEntitlementWhenEligible(event);
+  if (!entitlement) return result;
 
   return { ...result, entitlement };
 }
@@ -136,6 +163,12 @@ export async function handleStripeWebhookEventWithRecovery(event: Stripe.Event) 
   const result = await runStripeWebhookHandler(event);
 
   if (!result.duplicate) {
+    return result;
+  }
+
+  // A processed duplicate already had its core side effects and may have just repaired
+  // the entitlement snapshot above. Only processing claims are eligible for lease replay.
+  if (await isProcessedStripeEvent(event.id)) {
     return result;
   }
 
