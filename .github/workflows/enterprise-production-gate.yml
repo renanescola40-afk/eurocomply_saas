@@ -118,6 +118,7 @@ jobs:
           grep -Fq "npm run release:production-final" .github/workflows/enterprise-production-gate.yml
           grep -Fq "hydrate-enterprise-retained-runtime-evidence.mjs" .github/workflows/enterprise-production-gate.yml
           grep -Fq "RETAINED_PROOF_SOURCE_WORKFLOW_PATH" .github/workflows/enterprise-production-gate.yml
+          grep -Fq "RELEASE_RUN_OBSERVABILITY_SMOKE: 'true'" .github/workflows/enterprise-production-gate.yml
           grep -Fq "node scripts/release/validate-release-go-no-go-evidence.mjs" scripts/release/run-public-production-release-v2.mjs
           grep -Fq "verify-enterprise-evidence-bundle.mjs" .github/workflows/enterprise-production-gate.yml
           grep -Fq "if-no-files-found: error" .github/workflows/enterprise-production-gate.yml
@@ -167,7 +168,7 @@ jobs:
       LAST_KNOWN_GOOD_COMMIT_SHA: ${{ vars.LAST_KNOWN_GOOD_COMMIT_SHA || secrets.LAST_KNOWN_GOOD_COMMIT_SHA }}
       LAST_KNOWN_GOOD_SHA: ${{ vars.LAST_KNOWN_GOOD_SHA || secrets.LAST_KNOWN_GOOD_SHA }}
       RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ vars.RELEASE_ROLLBACK_TARGET_VALIDATED || secrets.RELEASE_ROLLBACK_TARGET_VALIDATED }}
-      RELEASE_RUN_OBSERVABILITY_SMOKE: ${{ vars.RELEASE_RUN_OBSERVABILITY_SMOKE || secrets.RELEASE_RUN_OBSERVABILITY_SMOKE }}
+      RELEASE_RUN_OBSERVABILITY_SMOKE: 'true'
       REQUIRE_MALWARE_SCAN_FOR_UPLOADS: ${{ vars.REQUIRE_MALWARE_SCAN_FOR_UPLOADS || secrets.REQUIRE_MALWARE_SCAN_FOR_UPLOADS }}
       MALWARE_SCANNER_PROVIDER: ${{ vars.MALWARE_SCANNER_PROVIDER || secrets.MALWARE_SCANNER_PROVIDER }}
       MALWARE_SCANNER_ENDPOINT: ${{ secrets.MALWARE_SCANNER_ENDPOINT || vars.MALWARE_SCANNER_ENDPOINT }}
