@@ -327,7 +327,7 @@ async function githubJson(url, token, fetchImpl = fetch) {
 export async function githubJsonWithCredentialFallback(
   url,
   candidates,
-  { fetchImpl = fetch, acceptData = () => true } = {},
+  { fetchImpl = fetch, acceptData = (_data) => true } = {},
 ) {
   const attempts = Array.isArray(candidates) ? candidates : [];
   let lastError = new Error('github_api_no_credential');
