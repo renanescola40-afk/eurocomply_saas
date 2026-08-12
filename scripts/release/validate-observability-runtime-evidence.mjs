@@ -1,3 +1,5 @@
+const FULL_SHA = /^[0-9a-f]{40}$/;
+
 function parseTimestamp(value) {
   const timestamp = Date.parse(String(value ?? ''));
   return Number.isFinite(timestamp) ? timestamp : null;
@@ -37,6 +39,15 @@ export function validateObservabilityRuntimeEvidence(
   if (!['production', 'enterprise', 'public-production'].includes(evidence?.releaseTarget)) {
     failures.push('releaseTarget must be production, enterprise, or public-production');
   }
+
+  const commitSha = String(evidence?.commitSha ?? '').trim().toLowerCase();
+  const buildSha = String(evidence?.buildSha ?? '').trim().toLowerCase();
+  if (!FULL_SHA.test(commitSha)) failures.push('commitSha must be a full lowercase SHA');
+  if (!FULL_SHA.test(buildSha)) failures.push('buildSha must be a full lowercase SHA');
+  if (FULL_SHA.test(commitSha) && FULL_SHA.test(buildSha) && commitSha !== buildSha) {
+    failures.push('buildSha must match commitSha');
+  }
+
   if (evidence?.runtimeConfiguration?.targetCount < 1) {
     failures.push('runtimeConfiguration.targetCount must be at least 1');
   }
@@ -48,6 +59,9 @@ export function validateObservabilityRuntimeEvidence(
   }
   if (evidence?.runtimeConfiguration?.hasProtectedReadinessToken !== true) {
     failures.push('runtimeConfiguration.hasProtectedReadinessToken must be true');
+  }
+  if (evidence?.runtimeConfiguration?.exactShaBound !== true) {
+    failures.push('runtimeConfiguration.exactShaBound must be true');
   }
 
   const globalChecks = evidence?.globalChecks ?? [];
@@ -89,6 +103,9 @@ export function validateObservabilityRuntimeEvidence(
   }
   if (evidence?.evidenceIntegrity?.cookiesStored !== false) {
     failures.push('evidenceIntegrity.cookiesStored must be false');
+  }
+  if (evidence?.evidenceIntegrity?.exactShaBound !== true) {
+    failures.push('evidenceIntegrity.exactShaBound must be true');
   }
 
   return failures;
