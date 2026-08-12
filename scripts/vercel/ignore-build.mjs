@@ -3,6 +3,8 @@
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
+const FULL_SHA = /^[a-f0-9]{40}$/;
+
 const IGNORABLE_FILE_NAMES = new Set([
   'README.md',
   'CHANGELOG.md',
@@ -13,9 +15,12 @@ const IGNORABLE_FILE_NAMES = new Set([
 ]);
 
 const IGNORABLE_PREFIXES = [
+  '.github/',
   'docs/',
+  'tests/',
   'agent_log.d/',
   'release-validation/',
+  'scripts/enterprise/',
 ];
 
 const IGNORABLE_SUFFIXES = [
@@ -57,18 +62,31 @@ export function shouldIgnoreBuildForChangedFiles(paths) {
   return {
     ignore: buildRelevant.length === 0,
     reason: buildRelevant.length === 0
-      ? 'only docs/evidence/log files changed'
+      ? 'only non-runtime docs/evidence/tests/workflow/enterprise-script files changed'
       : 'build-relevant files changed',
     changed,
     buildRelevant,
   };
 }
 
-function changedFilesFromGit() {
-  const refsToTry = [
+export function vercelGitDiffCandidates(previousSuccessfulSha) {
+  const previous = String(previousSuccessfulSha || '').trim().toLowerCase();
+  const refsToTry = [];
+
+  if (FULL_SHA.test(previous)) {
+    refsToTry.push(['diff', '--name-only', previous, 'HEAD']);
+  }
+
+  refsToTry.push(
     ['diff', '--name-only', 'HEAD^', 'HEAD'],
     ['diff', '--name-only', 'HEAD~1', 'HEAD'],
-  ];
+  );
+
+  return refsToTry;
+}
+
+function changedFilesFromGit() {
+  const refsToTry = vercelGitDiffCandidates(process.env.VERCEL_GIT_PREVIOUS_SHA);
 
   for (const args of refsToTry) {
     try {
