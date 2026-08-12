@@ -96,11 +96,15 @@ jobs:
           node --check scripts/release/run-public-production-release-final.mjs
           node --check scripts/release/write-public-production-go-no-go-evidence.mjs
           node --check scripts/release/validate-public-production-go-no-go-evidence.mjs
+          node --check scripts/release/validate-public-production-final-runtime-evidence.mjs
+          node --check scripts/release/validate-observability-runtime-evidence.mjs
+          node --check scripts/release/validate-rollback-runtime-evidence.mjs
           node --check scripts/release/runtime-release-sha-contract.mjs
           node --check scripts/release/verify-runtime-release-sha.mjs
           node --check scripts/release/write-security-response-evidence.mjs
           node --check scripts/release/record-security-response-final-evidence.mjs
           grep -Fq "RELEASE_RUN_OBSERVABILITY_SMOKE: 'true'" .github/workflows/public-production-final.yml
+          grep -Fq 'validatePublicProductionFinalRuntimeEvidence' scripts/enterprise/fetch-public-production-final-evidence.mjs
 
       - name: Run public production final gate
         run: npm run release:production-final
