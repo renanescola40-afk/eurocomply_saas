@@ -140,6 +140,7 @@ function buildRequest(body: unknown, headers: HeadersInit = {}) {
       'content-type': 'application/json',
       origin: 'https://app.eurocomply.test',
       'x-eurocomply-step-up-token': 'step_up_token',
+      'Idempotency-Key': 'checkout-request-00000001',
       ...headers,
     },
     body: JSON.stringify(body),
@@ -204,6 +205,16 @@ describe('billing checkout API security gates', () => {
     expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
   });
 
+  it('requires an idempotency key before contacting Stripe', async () => {
+    const response = await POST(buildRequest({ plan: 'growth', locale: 'en' }, { 'Idempotency-Key': '' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toEqual({ error: 'idempotency_key_required' });
+    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
+    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
+  });
+
   it('blocks an existing billing change without a valid step-up token', async () => {
     mocks.requireStepUpForRequest.mockResolvedValue({
       ok: false,
@@ -238,29 +249,36 @@ describe('billing checkout API security gates', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ url: 'https://checkout.stripe.com/session-fixture', stepUpRequired: false });
+    expect(body).toEqual({ url: 'https://checkout.stripe.com/session-fixture', idempotencyProtected: true, stepUpRequired: false });
     expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
-    expect(mocks.stripeCustomerCreate).toHaveBeenCalledWith(expect.objectContaining({
-      email: 'admin@example.test',
-      name: 'Acme Corp',
-      metadata: expect.objectContaining({
-        organization_id: 'org_a',
-        plan: 'starter',
-        billing_flow: 'initial_subscription',
-        step_up_action: 'not_required_initial_checkout',
+    expect(mocks.stripeCustomerCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'admin@example.test',
+        name: 'Acme Corp',
+        metadata: expect.objectContaining({
+          organization_id: 'org_a',
+          plan: 'starter',
+          billing_flow: 'initial_subscription',
+          step_up_action: 'not_required_initial_checkout',
+        }),
       }),
-    }));
-    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(expect.objectContaining({
-      mode: 'subscription',
-      customer: 'cus_created_for_org_a',
-      line_items: [{ price: 'price_starter', quantity: 1 }],
-      success_url: 'https://app.eurocomply.test/pt/dashboard/organizations?checkout=success',
-    }));
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
+    );
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'subscription',
+        customer: 'cus_created_for_org_a',
+        line_items: [{ price: 'price_starter', quantity: 1 }],
+        success_url: 'https://app.eurocomply.test/pt/dashboard/organizations?checkout=success',
+      }),
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
+    );
     expect(mocks.writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
       action: 'checkout_created',
       metadata: expect.objectContaining({
         billingFlow: 'initial_subscription',
         stepUpRequired: false,
+        idempotencyProtected: true,
       }),
     }));
   });
@@ -270,7 +288,7 @@ describe('billing checkout API security gates', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ url: 'https://checkout.stripe.com/session-fixture', stepUp: { verified: true } });
+    expect(body).toEqual({ url: 'https://checkout.stripe.com/session-fixture', idempotencyProtected: true, stepUp: { verified: true } });
     expect(mocks.assertOrganizationPermission).toHaveBeenCalledWith(expect.objectContaining({
       userId: 'user_admin',
       organizationId: 'org_a',
@@ -284,22 +302,27 @@ describe('billing checkout API security gates', () => {
     expect(mocks.stripeCustomerUpdate).toHaveBeenCalledWith(
       'cus_existing_for_org_a',
       expect.objectContaining({ metadata: expect.objectContaining({ plan: 'growth' }) }),
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
     );
     expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
-    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(expect.objectContaining({
-      customer: 'cus_existing_for_org_a',
-      line_items: [{ price: 'price_growth', quantity: 1 }],
-      metadata: expect.objectContaining({
-        billing_flow: 'existing_billing_change',
-        step_up_action: 'manage_billing',
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customer: 'cus_existing_for_org_a',
+        line_items: [{ price: 'price_growth', quantity: 1 }],
+        metadata: expect.objectContaining({
+          billing_flow: 'existing_billing_change',
+          step_up_action: 'manage_billing',
+        }),
       }),
-    }));
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
+    );
     expect(mocks.writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
       action: 'checkout_created',
       metadata: expect.objectContaining({
         billingFlow: 'existing_billing_change',
         stepUpRequired: true,
         stepUpAction: 'manage_billing',
+        idempotencyProtected: true,
       }),
     }));
   });

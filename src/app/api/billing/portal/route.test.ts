@@ -67,12 +67,14 @@ vi.mock('@/server/security/step-up', () => ({
 
 import { POST } from './route';
 
-function buildRequest(returnPath = '/dashboard/organizations/billing') {
+function buildRequest(returnPath = '/dashboard/organizations/billing', headers: HeadersInit = {}) {
   return new Request(`https://app.eurocomply.test/api/billing/portal?locale=en&returnPath=${encodeURIComponent(returnPath)}`, {
     method: 'POST',
     headers: {
       origin: 'https://app.eurocomply.test',
       'x-eurocomply-step-up-token': 'step_up_token',
+      'Idempotency-Key': 'portal-request-00000001',
+      ...headers,
     },
   });
 }
@@ -134,6 +136,16 @@ describe('billing portal API security gates', () => {
     expect(mocks.writeAuditLog).not.toHaveBeenCalled();
   });
 
+  it('requires an idempotency key before step-up or Stripe calls', async () => {
+    const response = await POST(buildRequest(undefined, { 'Idempotency-Key': '' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toEqual({ error: 'idempotency_key_required' });
+    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
+    expect(mocks.stripePortalCreate).not.toHaveBeenCalled();
+  });
+
   it('blocks billing portal access without valid step-up', async () => {
     mocks.requireStepUpForRequest.mockResolvedValue({
       ok: false,
@@ -179,23 +191,32 @@ describe('billing portal API security gates', () => {
     );
   });
 
-  it('creates a billing portal session only after RBAC, trusted mutation, step-up, and durable audit persistence', async () => {
+  it('creates a billing portal session only after RBAC, trusted mutation, idempotency, step-up, and durable audit persistence', async () => {
     const response = await POST(buildRequest());
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ url: 'https://billing.stripe.test/session-fixture', stepUp: { verified: true } });
+    expect(body).toEqual({
+      url: 'https://billing.stripe.test/session-fixture',
+      idempotencyProtected: true,
+      stepUp: { verified: true },
+    });
     expect(mocks.requirePermission).toHaveBeenCalledWith({
       userId: 'user_admin',
       organizationId: 'org_a',
       permission: 'manage_billing',
     });
     expect(mocks.requireTrustedMutation).toHaveBeenCalled();
-    expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(expect.objectContaining({ action: 'manage_billing', userId: 'user_admin', organizationId: 'org_a' }));
-    expect(mocks.stripePortalCreate).toHaveBeenCalledWith({
-      customer: 'cus_123',
-      return_url: 'https://app.eurocomply.test/en/dashboard/organizations/billing',
-    });
+    expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'manage_billing', userId: 'user_admin', organizationId: 'org_a' }),
+    );
+    expect(mocks.stripePortalCreate).toHaveBeenCalledWith(
+      {
+        customer: 'cus_123',
+        return_url: 'https://app.eurocomply.test/en/dashboard/organizations/billing',
+      },
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:portal:') }),
+    );
     expect(mocks.writeAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'billing_portal_created',
@@ -208,6 +229,7 @@ describe('billing portal API security gates', () => {
           returnUrl: 'https://app.eurocomply.test/en/dashboard/organizations/billing',
           rbacPermission: 'manage_billing',
           trustedOriginRequired: true,
+          idempotencyProtected: true,
         }),
       }),
     );
