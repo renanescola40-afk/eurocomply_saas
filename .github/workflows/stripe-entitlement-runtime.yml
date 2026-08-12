@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'src/server/billing/stripe-entitlement-runtime*'
-      - 'src/server/billing/stripe-webhook-recovery.ts'
+      - 'src/server/billing/stripe-webhook-recovery*'
       - 'tests/security/stripe-entitlement-runtime-workflow.test.ts'
       - 'scripts/enterprise/report-stripe-entitlement-runtime.mjs'
       - 'docs/enterprise/STRIPE_ENTITLEMENT_RUNTIME.md'
@@ -51,6 +51,9 @@ jobs:
         run: >-
           npx vitest run
           src/server/billing/stripe-entitlement-runtime.test.ts
+          src/server/billing/stripe-entitlement-runtime-reconcile.test.ts
+          src/server/billing/stripe-webhook-recovery.test.ts
+          src/server/billing/stripe-webhook-recovery-expired-replay.test.ts
           tests/security/stripe-entitlement-runtime-workflow.test.ts
 
       - name: Generate exact-SHA report
