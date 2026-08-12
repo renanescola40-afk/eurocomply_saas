@@ -111,9 +111,17 @@ jobs:
             and tablename in ('permissions', 'role_permissions', 'stripe_webhook_events')
           order by tablename, policyname;
 
+          select 'grant|' || table_name || '|' || grantee || '|' || privilege_type
+          from information_schema.role_table_grants
+          where table_schema = 'public'
+            and table_name in ('permissions', 'role_permissions', 'stripe_webhook_events')
+            and grantee in ('PUBLIC', 'anon', 'authenticated', 'service_role')
+          order by table_name, grantee, privilege_type;
+
           select 'history|' || version || '|' || coalesce(name, '')
           from supabase_migrations.schema_migrations
-          where version = '20260726070000';
+          where version in ('20260726070000', '20260812224650')
+          order by version;
           SQL
 
       - name: Verify reconciliation proof deterministically
