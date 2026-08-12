@@ -48,21 +48,45 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(workflow).not.toContain('repository_dispatch:');
   });
 
-  it('uses minimal write permission and trusted exact-SHA checkout', () => {
+  it('debounces the producer storm before checkout or GitHub API access', () => {
+    const debounceIndex = workflow.indexOf('- name: Debounce producer storm before checkout or API access');
+    const checkoutIndex = workflow.indexOf('- name: Checkout exact producer SHA');
+    const stabilizeIndex = workflow.indexOf('- name: Stabilize terminal exact-SHA scorecard');
+
+    expect(debounceIndex).toBeGreaterThan(-1);
+    expect(checkoutIndex).toBeGreaterThan(debounceIndex);
+    expect(stabilizeIndex).toBeGreaterThan(checkoutIndex);
+    expect(workflow).toContain("STABILIZER_DEBOUNCE_SECONDS: '90'");
+    expect(workflow).toContain('run: sleep "$STABILIZER_DEBOUNCE_SECONDS"');
+    expect(workflow).toContain("if: github.event_name == 'workflow_run'");
+  });
+
+  it('uses minimal write permission, exact-SHA checkout and a manual recovery entry point', () => {
     expect(workflow).toMatch(/permissions:\n  actions: write\n  contents: read/);
-    expect(workflow).toContain('group: enterprise-readiness-scorecard-stabilizer-${{ github.event.workflow_run.head_sha }}');
+    expect(workflow).toContain(
+      'group: enterprise-readiness-scorecard-stabilizer-${{ github.event.workflow_run.head_sha || inputs.target_sha || github.sha }}',
+    );
     expect(workflow).toContain('cancel-in-progress: true');
-    expect(workflow).toContain('ref: ${{ github.event.workflow_run.head_sha }}');
+    expect(workflow).toContain('workflow_dispatch:');
+    expect(workflow).toContain('target_sha:');
+    expect(workflow).toContain('TARGET_SHA: ${{ github.event.workflow_run.head_sha || inputs.target_sha || github.sha }}');
+    expect(workflow).toContain('ref: ${{ env.TARGET_SHA }}');
+    expect(workflow).toContain('test "$(git rev-parse HEAD)" = "$TARGET_SHA"');
     expect(workflow).toContain('persist-credentials: false');
     expect(workflow).toContain('GITHUB_TOKEN: ${{ github.token }}');
     expect(workflow).not.toContain('secrets.');
     expect(workflow).not.toContain('environment: production');
   });
 
-  it('fails closed on inventory ambiguity and bounds GitHub API consumption', () => {
-    expect(script).toContain('const MAX_RUN_PAGES = 3;');
+  it('fails closed on inventory ambiguity while tolerating transient GitHub API pressure', () => {
+    expect(script).toContain('const MAX_RUN_PAGES = 5;');
     expect(script).toContain('const MAX_SETTLE_ATTEMPTS = 10;');
     expect(script).toContain('const QUIET_WINDOW_MS = 75_000;');
+    expect(script).toContain('const MAX_API_ATTEMPTS = 5;');
+    expect(script).toContain('const API_BACKOFF_CAP_MS = 30_000;');
+    expect(script).toContain("status === 403 || status === 429 || status >= 500");
+    expect(script).toContain("response.headers.get('retry-after')");
+    expect(script).toContain("response.headers.get('x-ratelimit-reset')");
     expect(script).toContain('actions/runs?head_sha=${encodedSha}&per_page=${PER_PAGE}&page=${page}');
     expect(script).toContain('Exact-SHA run inventory exceeds bounded pagination');
     expect(script).toContain('Material evidence producers did not reach a bounded quiet terminal state');
@@ -72,7 +96,7 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
   it('dispatches only the fixed existing scorecard after proving main is still the target SHA', () => {
     expect(script).toContain("export const SCORECARD_WORKFLOW_PATH = 'enterprise-readiness-scorecard.yml';");
     expect(script).toContain('/git/ref/heads/main');
-    expect(script).toContain("if (mainSha !== targetSha)");
+    expect(script).toContain('if (mainSha !== targetSha)');
     expect(script).toContain("{ method: 'POST', body: { ref: 'main' } }");
     expect(script).not.toMatch(/body:\s*\{\s*ref:\s*process\.env/);
   });
@@ -84,11 +108,12 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(script).toContain("return { dispatched: false, reason: 'scorecard-current', targetSha };");
   });
 
-  it('never awards readiness status or mutates production', () => {
+  it('surfaces a stable failure reason without weakening readiness or mutating production', () => {
+    expect(script).toContain("writeOutput('reason', 'stabilizer-error');");
     expect(script).not.toMatch(/\bPASS\b/);
     expect(script).not.toContain('/deployments');
     expect(script).not.toContain('/environments');
     expect(script).not.toContain('/secrets');
-    expect(workflow).toContain('It does not award PASS or mutate production.');
+    expect(workflow).toContain('This workflow does not award PASS or mutate production.');
   });
 });
