@@ -170,6 +170,36 @@ describe('Stripe webhook processing lease recovery', () => {
     expect(state.updates).toHaveLength(0);
   });
 
+  it('fails closed when a processed replay does not materialize an entitlement snapshot', async () => {
+    state.lookupData = {
+      id: 'evt_lease_recovery',
+      status: 'processed',
+      updated_at: '2026-07-14T11:00:00.000Z',
+    };
+    mocks.handleStripeWebhookEvent.mockResolvedValue({ skipped: true, duplicate: true });
+    mocks.reconcileStripeEntitlementEvent.mockResolvedValue({
+      outcome: 'rejected',
+      stripeEventId: 'evt_lease_recovery',
+      snapshotId: null,
+      appliedPolicyVersion: null,
+      sourceVersion: 1,
+    });
+
+    await expect(handleStripeWebhookEventWithRecovery(makeEvent())).rejects.toThrow('stripe_entitlement_repair_failed');
+
+    expect(mocks.handleStripeWebhookEvent).toHaveBeenCalledTimes(1);
+    expect(mocks.reconcileStripeEntitlementEvent).toHaveBeenCalledTimes(1);
+    expect(mocks.reportError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        area: 'stripe_entitlement_processed_repair',
+        stripeEventId: 'evt_lease_recovery',
+        entitlementOutcome: 'rejected',
+      }),
+    );
+    expect(state.updates).toHaveLength(0);
+  });
+
   it('repairs the entitlement handoff race when processing becomes processed between duplicate checks', async () => {
     const nowMs = Date.parse('2026-07-14T12:00:00.000Z');
     state.lookupSequence = [
@@ -202,6 +232,40 @@ describe('Stripe webhook processing lease recovery', () => {
       entitlement: expect.objectContaining({ outcome: 'idempotent_replay' }),
     });
     expect(mocks.handleStripeWebhookEvent).toHaveBeenCalledTimes(1);
+    expect(mocks.reconcileStripeEntitlementEvent).toHaveBeenCalledTimes(1);
+    expect(state.updates).toHaveLength(0);
+  });
+
+  it('rechecks processed status after an unsuccessful recovery handoff', async () => {
+    const nowMs = Date.parse('2026-07-14T12:00:00.000Z');
+    const processing = {
+      id: 'evt_lease_recovery',
+      status: 'processing',
+      updated_at: new Date(nowMs - 60_000).toISOString(),
+    };
+    const processed = {
+      id: 'evt_lease_recovery',
+      status: 'processed',
+      updated_at: new Date(nowMs).toISOString(),
+    };
+    state.lookupSequence = [processing, processing, processed, processed];
+    mocks.handleStripeWebhookEvent.mockResolvedValue({ skipped: true, duplicate: true });
+    mocks.reconcileStripeEntitlementEvent.mockResolvedValue({
+      outcome: 'reconciled',
+      stripeEventId: 'evt_lease_recovery',
+      snapshotId: 'snapshot_after_handoff',
+      appliedPolicyVersion: 5,
+      sourceVersion: 1,
+    });
+
+    vi.spyOn(Date, 'now').mockReturnValue(nowMs);
+    const result = await handleStripeWebhookEventWithRecovery(makeEvent());
+
+    expect(result).toEqual({
+      skipped: true,
+      duplicate: true,
+      entitlement: expect.objectContaining({ snapshotId: 'snapshot_after_handoff' }),
+    });
     expect(mocks.reconcileStripeEntitlementEvent).toHaveBeenCalledTimes(1);
     expect(state.updates).toHaveLength(0);
   });
