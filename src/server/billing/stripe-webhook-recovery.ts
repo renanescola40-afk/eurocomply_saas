@@ -22,13 +22,18 @@ const RECOVERABLE_STRIPE_EVENT_TYPES = new Set([
 const MATERIALIZED_ENTITLEMENT_OUTCOMES = new Set([
   'reconciled',
   'idempotent_replay',
-  'deferred_downgrade',
 ]);
 
 type StripeEventClaim = {
   id: string;
   status: string | null;
   updated_at: string | null;
+};
+
+type ExistingEntitlementSnapshot = {
+  id: string;
+  applied_policy_version: number | null;
+  source_version: number;
 };
 
 export function isStripeEventProcessingLeaseExpired(updatedAt: string | null | undefined, nowMs = Date.now()) {
@@ -69,6 +74,31 @@ async function isProcessedStripeEvent(eventId: string) {
   return data?.id === eventId && data.status === 'processed';
 }
 
+async function findExistingStripeEntitlementReplay(eventId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('enterprise_entitlement_snapshots')
+    .select('id,applied_policy_version,source_version')
+    .eq('idempotency_key', `stripe:${eventId}`)
+    .limit(2);
+
+  if (error) throw error;
+  const rows = (data ?? []) as ExistingEntitlementSnapshot[];
+  if (rows.length === 0) return null;
+  if (rows.length !== 1 || !rows[0]?.id) {
+    throw new Error('stripe_entitlement_snapshot_ambiguous');
+  }
+
+  const snapshot = rows[0];
+  return {
+    outcome: 'idempotent_replay' as const,
+    stripeEventId: eventId,
+    snapshotId: snapshot.id,
+    appliedPolicyVersion: snapshot.applied_policy_version,
+    sourceVersion: snapshot.source_version,
+  };
+}
+
 async function reconcileEntitlementWhenEligible(event: Stripe.Event) {
   const entitlement = await reconcileStripeEntitlementEvent(event);
   if (entitlement.outcome === 'metadata_missing' || entitlement.outcome === 'unsupported') {
@@ -82,8 +112,26 @@ function entitlementRepairMaterialized(entitlement: Awaited<ReturnType<typeof re
   return typeof ('snapshotId' in entitlement ? entitlement.snapshotId : null) === 'string';
 }
 
+function isBillingPeriodMissingError(error: unknown) {
+  return error instanceof Error && error.message === 'stripe_entitlement_billing_period_missing';
+}
+
 async function repairProcessedStripeEntitlement(event: Stripe.Event) {
-  const entitlement = await reconcileEntitlementWhenEligible(event);
+  let entitlement: Awaited<ReturnType<typeof reconcileStripeEntitlementEvent>> | null;
+  try {
+    entitlement = await reconcileEntitlementWhenEligible(event);
+  } catch (error) {
+    if (!isBillingPeriodMissingError(error)) throw error;
+
+    // A late/manual replay can arrive after its billing period ends. If the exact
+    // Stripe idempotency key already has one retained snapshot, return that proof
+    // instead of turning an already-materialized event into a permanent 500 loop.
+    // Missing snapshots remain fail-closed and preserve the original freshness error.
+    const existingReplay = await findExistingStripeEntitlementReplay(event.id);
+    if (existingReplay) return existingReplay;
+    throw error;
+  }
+
   if (!entitlement) return null;
 
   if (!entitlementRepairMaterialized(entitlement)) {
