@@ -9,6 +9,7 @@ const evidencePath = 'docs/security/evidence/runtime/observability-smoke-validat
 const timeoutMs = Number.parseInt(process.env.RELEASE_OBSERVABILITY_SMOKE_TIMEOUT_MS || '10000', 10);
 const readinessToken = (process.env.HEALTHCHECK_TOKEN || '').trim();
 const emitAuthenticatedSmoke = process.env.RELEASE_RUN_OBSERVABILITY_SMOKE === 'true';
+const FULL_SHA = /^[0-9a-f]{40}$/;
 
 const SENSITIVE_MARKERS = [
   process.env.HEALTHCHECK_TOKEN,
@@ -196,14 +197,27 @@ async function validateTarget(baseUrl) {
 }
 
 const generatedAt = new Date().toISOString();
+const releaseTarget = process.env.RELEASE_TARGET || 'production';
 const urls = targetUrls();
 const sentryDsn = firstConfigured(['NEXT_PUBLIC_SENTRY_DSN', 'SENTRY_DSN']);
+const commitBinding = firstConfigured(['RELEASE_COMMIT_SHA', 'GITHUB_SHA', 'VERCEL_GIT_COMMIT_SHA']);
+const buildBinding = firstConfigured(['RELEASE_BUILD_SHA', 'NEXT_PUBLIC_BUILD_SHA', 'NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA', 'VERCEL_GIT_COMMIT_SHA', 'GITHUB_SHA']);
+const commitSha = String(commitBinding?.value || '').trim().toLowerCase();
+const buildSha = String(buildBinding?.value || '').trim().toLowerCase();
+const exactShaBound = FULL_SHA.test(commitSha) && FULL_SHA.test(buildSha) && commitSha === buildSha;
 const globalChecks = [
   createCheck('productionUrlConfigured', urls.length > 0, { targetCount: urls.length }),
   createCheck('sentryDsnConfigured', Boolean(sentryDsn), { source: sentryDsn?.name ?? null }),
   createCheck('protectedReadinessTokenConfiguredForEmission', Boolean(readinessToken) || !emitAuthenticatedSmoke, {
     requiredWhen: 'RELEASE_RUN_OBSERVABILITY_SMOKE=true',
     present: Boolean(readinessToken),
+  }),
+  createCheck('releaseShaBindingValid', exactShaBound, {
+    commitShaConfigured: FULL_SHA.test(commitSha),
+    buildShaConfigured: FULL_SHA.test(buildSha),
+    commitShaSource: commitBinding?.name ?? null,
+    buildShaSource: buildBinding?.name ?? null,
+    valuesMatch: FULL_SHA.test(commitSha) && FULL_SHA.test(buildSha) && commitSha === buildSha,
   }),
 ];
 
@@ -225,11 +239,13 @@ const evidence = {
   generatedAt,
   reviewedAt: generatedAt,
   reviewer: 'RISCK COMPLY release automation',
-  releaseTarget: process.env.RELEASE_TARGET || 'production',
+  releaseTarget,
+  commitSha: FULL_SHA.test(commitSha) ? commitSha : null,
+  buildSha: FULL_SHA.test(buildSha) ? buildSha : null,
   summary: outcome === 'passed'
-    ? 'Observability smoke validation verified protected access, no-store controls, request IDs, Sentry/local log emission mode, and secret redaction.'
+    ? 'Observability smoke validation verified exact-SHA release binding, protected access, no-store controls, request IDs, authenticated Sentry/local log emission, and secret redaction.'
     : 'Observability smoke validation is missing or failed; release remains blocked.',
-  redactionConfirmation: 'Redaction confirmed: no token, cookie, authorization header, secret value, or DSN is written to this evidence file.',
+  redactionConfirmation: 'Redaction confirmed: no token, cookie, authorization header, secret value, DSN or raw provider payload is written to this evidence file.',
   evidenceLocations: [
     'scripts/release/run-observability-smoke-validation.mjs',
     'src/app/api/observability/smoke/route.ts',
@@ -247,18 +263,25 @@ const evidence = {
     sentryDsnSource: sentryDsn?.name ?? null,
     authenticatedSmokeEmissionEnabled: emitAuthenticatedSmoke,
     hasProtectedReadinessToken: Boolean(readinessToken),
+    commitShaConfigured: FULL_SHA.test(commitSha),
+    buildShaConfigured: FULL_SHA.test(buildSha),
+    commitShaSource: commitBinding?.name ?? null,
+    buildShaSource: buildBinding?.name ?? null,
+    exactShaBound,
   },
   globalChecks,
   targets: targetResults,
   failures,
   releaseGate: outcome === 'passed'
-    ? 'Observability smoke evidence is present and passed.'
-    : 'Production and enterprise release remain blocked until observability smoke is Complete/passed.',
+    ? 'Observability smoke evidence is exact-SHA bound and passed.'
+    : 'Production and enterprise release remain blocked until observability smoke is Complete/passed and exact-SHA bound.',
   evidenceIntegrity: {
     containsSensitiveValues: false,
     valuesRedacted: true,
     authorizationHeaderStored: false,
     cookiesStored: false,
+    rawProviderPayloadStored: false,
+    exactShaBound,
   },
 };
 
