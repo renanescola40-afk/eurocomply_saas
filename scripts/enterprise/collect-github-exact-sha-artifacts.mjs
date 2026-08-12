@@ -19,9 +19,19 @@ const PRODUCERS = Object.freeze({
       artifactPatterns: Object.freeze(['enterprise-production-final-evidence-*']),
     }),
     Object.freeze({
+      workflow: 'production-runtime-proof.yml',
+      workflowPath: '.github/workflows/production-runtime-proof.yml',
+      artifactPatterns: Object.freeze(['production-runtime-proof-*']),
+    }),
+    Object.freeze({
       workflow: 'enterprise-recovery-drill.yml',
       workflowPath: '.github/workflows/enterprise-recovery-drill.yml',
       artifactPatterns: Object.freeze(['enterprise-recovery-*']),
+    }),
+    Object.freeze({
+      workflow: 'recovery-resilience-proof.yml',
+      workflowPath: '.github/workflows/recovery-resilience-proof.yml',
+      artifactPatterns: Object.freeze(['recovery-resilience-proof-*']),
     }),
     Object.freeze({
       workflow: 'enterprise-runtime-evidence-closeout.yml',
