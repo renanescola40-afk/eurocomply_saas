@@ -16,6 +16,10 @@ const EXPECTED_REF = 'main';
 const EXPECTED_ENVIRONMENT = 'production';
 const EXPECTED_VERCEL_ACTOR = 'vercel[bot]';
 const EXPECTED_VERCEL_HOST_PREFIX = 'eurocomply-saas-';
+const EXPECTED_VERCEL_STATUS_CONTEXT = 'Vercel';
+const EXPECTED_VERCEL_INSPECTOR_HOST = 'vercel.com';
+const EXPECTED_VERCEL_PROJECT_PATH = '/renanescola40-afks-projects/eurocomply-saas/';
+const CANONICAL_PRODUCTION_ORIGIN = 'https://www.risckcomply.com';
 
 function env(name) {
   return String(process.env[name] ?? '').trim();
@@ -48,6 +52,28 @@ function isExpectedVercelHost(value) {
 function safeVercelHost(value) {
   if (!isExpectedVercelHost(value)) return null;
   return new URL(value).hostname;
+}
+
+function parseVercelInspectorTarget(value) {
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol !== 'https:'
+      || url.username !== ''
+      || url.password !== ''
+      || url.port !== ''
+      || url.hostname !== EXPECTED_VERCEL_INSPECTOR_HOST
+      || url.search !== ''
+      || url.hash !== ''
+      || !url.pathname.startsWith(EXPECTED_VERCEL_PROJECT_PATH)
+    ) return null;
+
+    const deploymentId = url.pathname.slice(EXPECTED_VERCEL_PROJECT_PATH.length);
+    if (!/^[A-Za-z0-9_-]{8,128}$/.test(deploymentId)) return null;
+    return deploymentId;
+  } catch {
+    return null;
+  }
 }
 
 async function readBoundedJson(response, maxBytes = MAX_JSON_BYTES) {
@@ -129,7 +155,7 @@ function deploymentMatches(deployment, targetSha) {
     && normalizeEnvironment(deployment?.environment) === EXPECTED_ENVIRONMENT;
 }
 
-function successfulVercelStatus(status) {
+function successfulVercelDeploymentStatus(status) {
   const target = status?.environment_url || status?.target_url;
   return Number.isInteger(status?.id)
     && String(status?.state ?? '').toLowerCase() === 'success'
@@ -164,13 +190,15 @@ export async function findExactShaVercelProductionDeployment({
     });
     if (!statusesResponse.ok || !Array.isArray(statusesResponse.body)) continue;
 
-    const status = statusesResponse.body.find(successfulVercelStatus);
+    const status = statusesResponse.body.find(successfulVercelDeploymentStatus);
     if (!status) continue;
 
     const publicUrl = status.environment_url || status.target_url;
     return {
+      source: 'github_deployment_status',
       deploymentId: deployment.id,
       deploymentStatusId: status.id,
+      providerDeploymentId: null,
       deploymentCreatedAt: deployment.created_at ?? null,
       deploymentUpdatedAt: deployment.updated_at ?? null,
       statusCreatedAt: status.created_at ?? null,
@@ -183,11 +211,50 @@ export async function findExactShaVercelProductionDeployment({
   return null;
 }
 
-export async function probeExactDeploymentHealth({
-  publicUrl,
-  protectionBypassSecret = '',
+export async function findExactShaVercelCommitStatus({
+  repository,
+  targetSha,
+  token,
   fetchImpl = globalThis.fetch,
+  apiUrl = DEFAULT_API_URL,
 }) {
+  const response = await githubJson({
+    url: `${apiUrl}/repos/${repository}/commits/${targetSha}/status`,
+    token,
+    fetchImpl,
+  });
+  if (!response.ok || String(response.body?.sha ?? '') !== targetSha || !Array.isArray(response.body?.statuses)) {
+    return null;
+  }
+
+  for (const status of response.body.statuses) {
+    if (
+      !Number.isInteger(status?.id)
+      || String(status?.state ?? '').toLowerCase() !== 'success'
+      || String(status?.context ?? '') !== EXPECTED_VERCEL_STATUS_CONTEXT
+    ) continue;
+
+    const providerDeploymentId = parseVercelInspectorTarget(status?.target_url);
+    if (!providerDeploymentId) continue;
+
+    return {
+      source: 'github_commit_status',
+      deploymentId: null,
+      deploymentStatusId: status.id,
+      providerDeploymentId,
+      deploymentCreatedAt: null,
+      deploymentUpdatedAt: null,
+      statusCreatedAt: status.created_at ?? null,
+      statusUpdatedAt: status.updated_at ?? null,
+      targetHost: new URL(CANONICAL_PRODUCTION_ORIGIN).hostname,
+      publicUrl: CANONICAL_PRODUCTION_ORIGIN,
+    };
+  }
+
+  return null;
+}
+
+export async function probeExactDeploymentHealth({ publicUrl, fetchImpl = globalThis.fetch }) {
   let healthUrl;
   try {
     healthUrl = new URL('/api/health', publicUrl);
@@ -261,13 +328,14 @@ function failureEvidence(baseEvidence, blocker, deployment = null, health = null
       currentMainShaBound: blocker !== 'target_sha_is_not_current_main' && blocker !== 'invalid_proof_context',
       exactShaProductionDeploymentFound: Boolean(deployment),
       vercelSuccessStatusFound: Boolean(deployment),
-      exactDeploymentHealthOk: health?.passed === true,
-      exactDeploymentHealthNoStore: health?.noStore === true,
+      productionHealthOk: health?.passed === true,
+      productionHealthNoStore: health?.noStore === true,
     },
     evidenceIntegrity: {
       containsSensitiveValues: false,
       exactShaBound: FULL_SHA.test(baseEvidence.targetSha),
-      githubDeploymentBound: Boolean(deployment),
+      githubDeploymentBound: deployment?.source === 'github_deployment_status',
+      githubCommitStatusBound: deployment?.source === 'github_commit_status',
       liveHealthVerified: health?.passed === true,
       tokenPersisted: false,
       authorizationHeaderStored: false,
@@ -319,6 +387,16 @@ export async function buildProductionDeploymentEvidence({
       fetchImpl,
       apiUrl,
     });
+    if (!deployment) {
+      deployment = await findExactShaVercelCommitStatus({
+        repository,
+        targetSha,
+        token,
+        fetchImpl,
+        apiUrl,
+      });
+    }
+
     if (deployment) {
       health = await probeExactDeploymentHealth({
         publicUrl: deployment.publicUrl,
@@ -331,7 +409,7 @@ export async function buildProductionDeploymentEvidence({
   }
 
   if (!deployment) return failureEvidence(baseEvidence, 'exact_vercel_production_deployment_unproven');
-  if (!health?.passed) return failureEvidence(baseEvidence, 'exact_deployment_health_unproven', deployment, health);
+  if (!health?.passed) return failureEvidence(baseEvidence, 'production_deployment_health_unproven', deployment, health);
 
   // The deployment/status polling window can overlap a newer main commit. Re-read
   // main immediately before PASS so the retained proof never claims a stale target
@@ -339,42 +417,58 @@ export async function buildProductionDeploymentEvidence({
   const finalMainMatches = await currentMainMatches({ repository, targetSha, token, fetchImpl, apiUrl });
   if (!finalMainMatches) return failureEvidence(baseEvidence, 'target_sha_is_not_current_main', deployment, health);
 
+  const immutableHealth = deployment.source === 'github_deployment_status';
   return {
     ...baseEvidence,
     status: 'PASS',
     outcome: 'passed',
-    summary: 'GitHub records a successful Vercel Production deployment for the exact current main SHA, and the immutable deployment health endpoint responds successfully with no-store.',
+    summary: immutableHealth
+      ? 'GitHub records a successful Vercel Production deployment for the exact current main SHA, and the immutable deployment health endpoint responds successfully with no-store.'
+      : 'GitHub records Vercel deployment success on the exact current main SHA, including the unique Vercel deployment identifier, and the canonical production health endpoint responds successfully with no-store.',
     deployment: {
+      proofSource: deployment.source,
       id: deployment.deploymentId,
       statusId: deployment.deploymentStatusId,
+      providerDeploymentId: deployment.providerDeploymentId,
       targetHost: deployment.targetHost,
       deploymentCreatedAt: deployment.deploymentCreatedAt,
       deploymentUpdatedAt: deployment.deploymentUpdatedAt,
       statusCreatedAt: deployment.statusCreatedAt,
       statusUpdatedAt: deployment.statusUpdatedAt,
       status: 'success',
-      actor: EXPECTED_VERCEL_ACTOR,
+      actor: deployment.source === 'github_deployment_status' ? EXPECTED_VERCEL_ACTOR : EXPECTED_VERCEL_STATUS_CONTEXT,
     },
     checks: {
       currentMainShaBound: true,
       exactShaProductionDeploymentFound: true,
       vercelSuccessStatusFound: true,
-      exactDeploymentHealthOk: true,
-      exactDeploymentHealthNoStore: true,
+      productionHealthOk: true,
+      productionHealthNoStore: true,
+      immutableDeploymentHealthOk: immutableHealth ? true : null,
     },
-    health: safeHealthEvidence(health),
+    health: {
+      path: '/api/health',
+      status: health.status,
+      bodyStatus: health.bodyStatus,
+      noStore: health.noStore,
+      targetClass: immutableHealth ? 'immutable_vercel_deployment' : 'canonical_production_origin',
+    },
     evidenceIntegrity: {
       containsSensitiveValues: false,
       exactShaBound: true,
-      githubDeploymentBound: true,
-      vercelStatusActorBound: true,
+      githubDeploymentBound: deployment.source === 'github_deployment_status',
+      githubCommitStatusBound: deployment.source === 'github_commit_status',
+      uniqueProviderDeploymentIdBound: Boolean(deployment.providerDeploymentId),
+      vercelStatusActorBound: deployment.source === 'github_deployment_status',
       liveHealthVerified: true,
       tokenPersisted: false,
       authorizationHeaderStored: false,
       protectionBypassSecretPersisted: false,
       rawResponseBodyStored: false,
     },
-    truthBoundary: 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through GitHub deployment status and that the immutable deployment /api/health endpoint passed, using Vercel Protection Bypass for Automation when a protected deployment requires it. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
+    truthBoundary: immutableHealth
+      ? 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through GitHub deployment status and that the immutable deployment /api/health endpoint passed. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.'
+      : 'This evidence proves only that the Vercel GitHub integration attached a successful deployment status and unique Vercel deployment identifier to the exact current main SHA, and that the canonical production /api/health endpoint passed. It does not claim that the health probe itself was sent to the immutable deployment URL, and it does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
   };
 }
 
@@ -400,11 +494,11 @@ async function main() {
   await writeFile(outputPath, `${JSON.stringify(evidence, null, 2)}\n`);
 
   console.log(JSON.stringify({
-    evidence: DEFAULT_OUTPUT,
+    evidence: outputPath,
     targetSha,
     status: evidence.status,
     outcome: evidence.outcome,
-    deploymentId: evidence.deployment?.id ?? null,
+    proofSource: evidence.deployment?.proofSource ?? null,
     blockers: evidence.blockers ?? [],
   }, null, 2));
 
