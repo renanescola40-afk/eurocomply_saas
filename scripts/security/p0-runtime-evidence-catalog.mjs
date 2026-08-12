@@ -10,6 +10,7 @@ import { validateStripeRuntimeEvidence } from '../release/validate-stripe-runtim
 import { validateUploadScannerRuntimeEvidence } from '../release/validate-upload-scanner-runtime-evidence.mjs';
 import { validateAuditChainLiveEvidence } from './validate-audit-chain-live-evidence.mjs';
 import { validateBranchProtectionFreshness } from './validate-branch-protection-freshness.mjs';
+import { validateRequiredStatusChecksRuntimeEvidence } from './validate-required-status-checks-runtime-evidence.mjs';
 import { validateSupabaseRlsRuntimeEvidence as validateSupabaseProducerEvidence } from './check-supabase-rls-runtime-evidence.mjs';
 
 const runtimeValidator = (validator) => (evidence, context = {}) => validator(evidence, {
@@ -38,8 +39,8 @@ export const p0EvidenceCatalog = Object.freeze([
   {
     item: 'Required status checks configured',
     kind: 'runtime',
-    file: 'branch-protection-required-checks.json',
-    validator: runtimeValidator(validateBranchProtectionFreshness),
+    file: 'required-status-checks.json',
+    validator: runtimeValidator(validateRequiredStatusChecksRuntimeEvidence),
   },
   {
     item: 'Production provider configuration evidence',

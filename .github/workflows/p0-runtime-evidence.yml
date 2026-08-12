@@ -82,15 +82,25 @@ jobs:
           [[ "$ASSESSED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$ASSESSED_SHA"
 
+      - name: Generate exact-SHA required status checks evidence
+        if: github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+          CHECKED_OUT_SHA: ${{ env.ASSESSED_SHA }}
+        run: node scripts/enterprise/build-required-status-checks-runtime-evidence.mjs
+
       - name: Test canonical P0 source-of-truth contracts
         run: |
           npx vitest run \
             scripts/security/p0-runtime-evidence-catalog.test.mjs \
             scripts/security/report-p0-runtime-evidence-gap.test.mjs \
             scripts/security/validate-branch-protection-freshness.test.mjs \
+            scripts/security/validate-required-status-checks-runtime-evidence.test.mjs \
             scripts/release/validate-upload-scanner-runtime-evidence.test.mjs \
             scripts/release/validate-production-secrets-runtime-evidence.test.mjs \
             tests/enterprise/branch-protection-runtime-evidence-fetch.test.ts \
+            tests/enterprise/required-status-checks-evidence-decomposition.test.ts \
             tests/enterprise/upload-scanner-runtime-evidence-fetch.test.ts \
             tests/enterprise/upload-scanner-p0-aggregation.test.ts \
             tests/enterprise/p0-runtime-multi-producer-aggregation.test.ts \
