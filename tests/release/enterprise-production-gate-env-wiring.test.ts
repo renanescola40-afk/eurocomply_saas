@@ -21,6 +21,16 @@ describe('enterprise production provider environment wiring', () => {
     expect(job).toContain("RISCK_COMPLY_ENTERPRISE_RELEASE: 'true'");
   });
 
+  it('forces a real authenticated observability smoke for enterprise release evidence', () => {
+    const job = productionValidationEnvBlock();
+    expect(job).toContain("RELEASE_RUN_OBSERVABILITY_SMOKE: 'true'");
+    expect(job).not.toContain('RELEASE_RUN_OBSERVABILITY_SMOKE: ${{ vars.');
+    expect(job).not.toContain('RELEASE_RUN_OBSERVABILITY_SMOKE: ${{ secrets.');
+    expect(workflow).toContain(
+      'grep -Fq "RELEASE_RUN_OBSERVABILITY_SMOKE: \'true\'" .github/workflows/enterprise-production-gate.yml',
+    );
+  });
+
   it('passes every provider group required by the fail-closed enterprise preflight', () => {
     const job = productionValidationEnvBlock();
     const requiredBindings = [
