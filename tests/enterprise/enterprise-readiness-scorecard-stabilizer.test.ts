@@ -8,6 +8,19 @@ const workflow = readFileSync(workflowPath, 'utf8');
 const script = readFileSync(scriptPath, 'utf8');
 
 const producerNames = [
+  'CI',
+  'CodeQL',
+  'Semgrep',
+  'Secret Scanning',
+  'Scan repository for accidental secret exposure',
+  'Dependency Review',
+  'Actionlint',
+  'Public Claims Guard',
+  'Full Security Suite',
+  'Enterprise Production Gate',
+  'RISCK COMPLY Security CI',
+  'Enterprise DAST',
+  'Dependency Vulnerability Proof',
   'Distributed Rate Limit Runtime Proof',
   'Auth RBAC Tenant Proof',
   'Supabase Live RLS Validation',
@@ -22,12 +35,13 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(() => execFileSync(process.execPath, ['--check', scriptPath])).not.toThrow();
   });
 
-  it('listens only to the reviewed runtime evidence producer set on main', () => {
+  it('listens to the full reviewed material producer set on main', () => {
     for (const producer of producerNames) {
       expect(workflow).toContain(`      - ${producer}`);
       expect(script).toContain(`  '${producer}',`);
     }
 
+    expect(new Set(producerNames).size).toBe(20);
     expect(workflow).toMatch(/workflow_run:[\s\S]*?branches: \[main\][\s\S]*?types: \[completed\]/);
     expect(workflow).not.toContain('Enterprise Readiness Scorecard\n');
     expect(workflow).not.toContain('pull_request_target:');
@@ -51,8 +65,8 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(script).toContain('const QUIET_WINDOW_MS = 75_000;');
     expect(script).toContain('actions/runs?head_sha=${encodedSha}&per_page=${PER_PAGE}&page=${page}');
     expect(script).toContain('Exact-SHA run inventory exceeds bounded pagination');
-    expect(script).toContain('Runtime evidence producers did not reach a bounded quiet terminal state');
-    expect(script).toContain('A runtime evidence producer became active after the quiet-state check; refusing to dispatch');
+    expect(script).toContain('Material evidence producers did not reach a bounded quiet terminal state');
+    expect(script).toContain('A material evidence producer became active after the quiet-state check; refusing to dispatch');
   });
 
   it('dispatches only the fixed existing scorecard after proving main is still the target SHA', () => {
