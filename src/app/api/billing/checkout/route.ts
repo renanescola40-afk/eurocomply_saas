@@ -6,6 +6,7 @@ import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
+import { deriveStripeIdempotencyKey, readBillingIdempotencyKey, type BillingIdempotencyContext } from '@/server/billing/idempotency';
 import { getStripeClient } from '@/server/billing/stripe';
 import { getStripePriceId, isSelfServePlan, normalizeBillingPlanId } from '@/server/billing/plans';
 import {
@@ -83,6 +84,7 @@ async function ensureOrganizationStripeCustomer({
   userEmail,
   metadata,
   existingCustomerId,
+  idempotency,
 }: {
   stripe: Stripe;
   organizationId: string;
@@ -90,10 +92,15 @@ async function ensureOrganizationStripeCustomer({
   userEmail?: string | null;
   metadata: Record<string, string>;
   existingCustomerId?: string | null;
+  idempotency: BillingIdempotencyContext;
 }) {
   if (existingCustomerId) {
     try {
-      await stripe.customers.update(existingCustomerId, { metadata });
+      await stripe.customers.update(
+        existingCustomerId,
+        { metadata },
+        { idempotencyKey: deriveStripeIdempotencyKey(idempotency, 'customer-metadata') },
+      );
       return existingCustomerId;
     } catch (error) {
       throw classifyProviderFailure('stripe', 'customer_update', error);
@@ -101,11 +108,14 @@ async function ensureOrganizationStripeCustomer({
   }
 
   try {
-    const customer = await stripe.customers.create({
-      ...(userEmail ? { email: userEmail } : {}),
-      ...(organizationName ? { name: organizationName } : {}),
-      metadata,
-    });
+    const customer = await stripe.customers.create(
+      {
+        ...(userEmail ? { email: userEmail } : {}),
+        ...(organizationName ? { name: organizationName } : {}),
+        metadata,
+      },
+      { idempotencyKey: deriveStripeIdempotencyKey(idempotency, 'customer-create') },
+    );
     return customer.id;
   } catch (error) {
     throw classifyProviderFailure('stripe', 'customer_create', error);
@@ -153,6 +163,15 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
     }
 
+    const idempotency = readBillingIdempotencyKey(request, {
+      scope: 'checkout',
+      organizationId: organization.id,
+      userId: user.id,
+    });
+    if (!idempotency.ok) {
+      return noStoreJson({ error: idempotency.error }, { status: 400 });
+    }
+
     const billingBinding = await getOrganizationBillingBinding(organization.id);
     const isInitialCheckout = !hasExistingBillingRelationship(billingBinding);
     const stepUp = isInitialCheckout
@@ -197,33 +216,37 @@ export async function POST(request: Request) {
       userEmail: user.email,
       metadata,
       existingCustomerId: billingBinding?.stripe_customer_id,
+      idempotency: idempotency.context,
     });
 
     let session: Stripe.Checkout.Session;
     try {
-      session = await stripe.checkout.sessions.create({
-        mode: 'subscription',
-        customer: stripeCustomerId,
-        line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations?checkout=success`,
-        cancel_url: `${returnBaseUrl.appUrl}/${locale}/checkout?plan=${plan}&checkout=cancelled`,
-        client_reference_id: organization.id,
-        locale,
-        metadata,
-        subscription_data: {
+      session = await stripe.checkout.sessions.create(
+        {
+          mode: 'subscription',
+          customer: stripeCustomerId,
+          line_items: [{ price: priceId, quantity: 1 }],
+          success_url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations?checkout=success`,
+          cancel_url: `${returnBaseUrl.appUrl}/${locale}/checkout?plan=${plan}&checkout=cancelled`,
+          client_reference_id: organization.id,
+          locale,
           metadata,
+          subscription_data: {
+            metadata,
+          },
+          billing_address_collection: 'required',
+          customer_update: {
+            address: 'auto',
+            name: 'auto',
+          },
+          tax_id_collection: {
+            enabled: true,
+          },
+          payment_method_collection: 'always',
+          allow_promotion_codes: true,
         },
-        billing_address_collection: 'required',
-        customer_update: {
-          address: 'auto',
-          name: 'auto',
-        },
-        tax_id_collection: {
-          enabled: true,
-        },
-        payment_method_collection: 'always',
-        allow_promotion_codes: true,
-      });
+        { idempotencyKey: deriveStripeIdempotencyKey(idempotency.context, 'checkout-session') },
+      );
     } catch (error) {
       throw classifyProviderFailure('stripe', 'checkout_session_create', error);
     }
@@ -250,6 +273,7 @@ export async function POST(request: Request) {
         trustedOriginRequired: true,
         rbacPermission: 'manage_billing',
         stripeCheckoutHost: STRIPE_CHECKOUT_URL_HOST,
+        idempotencyProtected: true,
       },
     });
 
@@ -276,6 +300,7 @@ export async function POST(request: Request) {
 
     return noStoreJson({
       url: session.url,
+      idempotencyProtected: true,
       ...(stepUp?.ok ? { stepUp: publicStepUpSummary(stepUp.assessment) } : { stepUpRequired: false }),
     });
   } catch (error) {

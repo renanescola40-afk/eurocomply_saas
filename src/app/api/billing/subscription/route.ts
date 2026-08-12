@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 import { readBoundedJsonRequest } from '@/lib/security/validate';
-import { mutateSubscriptionLifecycle } from '@/server/billing/subscription-lifecycle';
+import { readBillingIdempotencyKey } from '@/server/billing/idempotency';
+import { isBillingLifecycleRequestError, mutateSubscriptionLifecycle } from '@/server/billing/subscription-lifecycle';
 import { normalizeBillingPlanId } from '@/server/billing/plans';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreJson } from '@/server/security/no-store';
@@ -47,6 +48,13 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'sales_assisted_plan_required' }, { status: 400 });
     }
 
+    const idempotency = readBillingIdempotencyKey(request, {
+      scope: 'subscription',
+      organizationId: organization.id,
+      userId: user.id,
+    });
+    if (!idempotency.ok) return noStoreJson({ error: idempotency.error }, { status: 400 });
+
     const stepUp = await requireStepUpForRequest({ request, action: 'manage_billing', userId: user.id, organizationId: organization.id });
     if (!stepUp.ok) return stepUp.response;
 
@@ -58,10 +66,14 @@ export async function POST(request: Request) {
       plan,
       interval: parsed.data.interval,
       addOns: parsed.data.addOns,
+      idempotency: idempotency.context,
     });
 
     return noStoreJson({ ...result, stepUp: publicStepUpSummary(stepUp.assessment) });
   } catch (error) {
+    if (isBillingLifecycleRequestError(error)) {
+      return noStoreJson({ error: error.code }, { status: error.status });
+    }
     return secureApiError(error, request);
   }
 }

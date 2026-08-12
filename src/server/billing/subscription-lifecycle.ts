@@ -5,10 +5,19 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { classifyProviderFailure } from '@/server/providers/failure';
 import type { CanonicalSubscriptionPlan } from '@/server/queries/subscription';
 import { getStripeAddOnPriceId, normalizeAddOnSelections, type BillingAddOnSelection } from './add-ons';
+import { deriveStripeIdempotencyKey, type BillingIdempotencyContext } from './idempotency';
+import {
+  BillingLifecycleRequestError,
+  claimBillingLifecycleRequest,
+  completeBillingLifecycleRequest,
+  failBillingLifecycleRequest,
+  type BillingLifecycleAction,
+} from './lifecycle-request-ledger';
 import { getStripeClient } from './stripe';
-import { getStripePriceId, normalizeBillingInterval, type BillingInterval } from './plans';
+import { getStripePriceId, normalizeBillingInterval, normalizeBillingPlanId, type BillingInterval } from './plans';
 
-export type BillingLifecycleAction = 'upgrade' | 'downgrade' | 'cancel' | 'reactivate' | 'replace_add_ons';
+export type { BillingLifecycleAction } from './lifecycle-request-ledger';
+export { BillingLifecycleRequestError } from './lifecycle-request-ledger';
 
 type SubscriptionAuthority = {
   stripe_subscription_id: string | null;
@@ -37,8 +46,52 @@ function getBaseSubscriptionItem(subscription: Stripe.Subscription) {
   return item;
 }
 
+function getSubscriptionCustomerId(subscription: Stripe.Subscription) {
+  if (typeof subscription.customer === 'string') return subscription.customer;
+  return subscription.customer?.id ?? null;
+}
+
+function assertSubscriptionAuthority(
+  subscription: Stripe.Subscription,
+  authority: SubscriptionAuthority,
+  organizationId: string,
+) {
+  const providerCustomerId = getSubscriptionCustomerId(subscription);
+  if (authority.stripe_customer_id && providerCustomerId !== authority.stripe_customer_id) {
+    throw new Error('stripe_subscription_customer_mismatch');
+  }
+
+  const providerOrganizationId = subscription.metadata.organization_id ?? subscription.metadata.organizationId ?? null;
+  if (providerOrganizationId && providerOrganizationId !== organizationId) {
+    throw new Error('stripe_subscription_organization_mismatch');
+  }
+}
+
+function getCurrentBillingInterval(baseItem: Stripe.SubscriptionItem): BillingInterval {
+  return baseItem.price.recurring?.interval === 'year' ? 'year' : 'month';
+}
+
 function buildAddOnItems(selections: BillingAddOnSelection[], interval: BillingInterval) {
   return selections.map((selection) => ({ price: getStripeAddOnPriceId(selection.slug, interval), quantity: selection.quantity }));
+}
+
+function lifecycleResult(input: {
+  subscription: Stripe.Subscription;
+  plan: CanonicalSubscriptionPlan;
+  interval: BillingInterval;
+  addOns: BillingAddOnSelection[];
+  idempotentReplay: boolean;
+}) {
+  return {
+    subscriptionId: input.subscription.id,
+    status: input.subscription.status,
+    cancelAtPeriodEnd: input.subscription.cancel_at_period_end,
+    currentPeriodEnd: input.subscription.current_period_end,
+    plan: input.plan,
+    interval: input.interval,
+    addOns: input.addOns,
+    idempotentReplay: input.idempotentReplay,
+  };
 }
 
 export async function mutateSubscriptionLifecycle(input: {
@@ -49,6 +102,7 @@ export async function mutateSubscriptionLifecycle(input: {
   plan?: CanonicalSubscriptionPlan;
   interval?: string | null;
   addOns?: Array<{ slug?: unknown; quantity?: unknown }>;
+  idempotency: BillingIdempotencyContext;
 }) {
   const authority = await getSubscriptionAuthority(input.organizationId);
   const stripe = getStripeClient();
@@ -60,33 +114,77 @@ export async function mutateSubscriptionLifecycle(input: {
     throw classifyProviderFailure('stripe', 'subscription_retrieve', error);
   }
 
-  const interval = normalizeBillingInterval(input.interval);
+  assertSubscriptionAuthority(subscription, authority, input.organizationId);
+
   const baseItem = getBaseSubscriptionItem(subscription);
-  const currentPlan = (authority.plan ?? subscription.metadata.plan ?? 'starter') as CanonicalSubscriptionPlan;
+  const currentPlan = normalizeBillingPlanId(authority.plan ?? subscription.metadata.plan) ?? 'starter';
+  const interval = input.interval ? normalizeBillingInterval(input.interval) : getCurrentBillingInterval(baseItem);
   const targetPlan = input.plan ?? currentPlan;
   const addOns = normalizeAddOnSelections(input.addOns, targetPlan);
+  const claim = await claimBillingLifecycleRequest({
+    organizationId: input.organizationId,
+    requestedBy: input.userId,
+    action: input.action,
+    sourcePlan: currentPlan,
+    targetPlan,
+    billingInterval: interval,
+    addOns,
+    stripeSubscriptionId: subscription.id,
+    requestDigest: input.idempotency.digest,
+  });
 
+  if (claim.kind === 'completed_replay') {
+    return lifecycleResult({ subscription, plan: targetPlan, interval, addOns, idempotentReplay: true });
+  }
+
+  const requestId = claim.request.id;
   let updated: Stripe.Subscription;
+
   try {
+    const requestOptions = {
+      idempotencyKey: deriveStripeIdempotencyKey(input.idempotency, `subscription-${input.action}`),
+    };
+
     if (input.action === 'cancel') {
-      updated = await stripe.subscriptions.update(subscription.id, { cancel_at_period_end: true });
+      updated = await stripe.subscriptions.update(
+        subscription.id,
+        { cancel_at_period_end: true },
+        requestOptions,
+      );
     } else if (input.action === 'reactivate') {
-      updated = await stripe.subscriptions.update(subscription.id, { cancel_at_period_end: false });
+      updated = await stripe.subscriptions.update(
+        subscription.id,
+        { cancel_at_period_end: false },
+        requestOptions,
+      );
     } else {
       const isDowngrade = input.action === 'downgrade';
-      updated = await stripe.subscriptions.update(subscription.id, {
-        cancel_at_period_end: false,
-        proration_behavior: isDowngrade ? 'none' : 'create_prorations',
-        billing_cycle_anchor: 'unchanged',
-        items: [
-          { id: baseItem.id, price: getStripePriceId(targetPlan, interval), quantity: 1 },
-          ...subscription.items.data.filter((item) => item.id !== baseItem.id).map((item) => ({ id: item.id, deleted: true as const })),
-          ...buildAddOnItems(addOns, interval),
-        ],
-        metadata: { ...subscription.metadata, organization_id: input.organizationId, user_id: input.userId, plan: targetPlan, billing_interval: interval },
-      });
+      updated = await stripe.subscriptions.update(
+        subscription.id,
+        {
+          cancel_at_period_end: false,
+          proration_behavior: isDowngrade ? 'none' : 'create_prorations',
+          billing_cycle_anchor: 'unchanged',
+          items: [
+            { id: baseItem.id, price: getStripePriceId(targetPlan, interval), quantity: 1 },
+            ...subscription.items.data
+              .filter((item) => item.id !== baseItem.id)
+              .map((item) => ({ id: item.id, deleted: true as const })),
+            ...buildAddOnItems(addOns, interval),
+          ],
+          metadata: {
+            ...subscription.metadata,
+            organization_id: input.organizationId,
+            user_id: input.userId,
+            plan: targetPlan,
+            billing_interval: interval,
+          },
+        },
+        requestOptions,
+      );
     }
   } catch (error) {
+    await failBillingLifecycleRequest(requestId, 'stripe_mutation_failed');
     throw classifyProviderFailure('stripe', `subscription_${input.action}`, error);
   }
 
@@ -104,17 +202,27 @@ export async function mutateSubscriptionLifecycle(input: {
       actorRole: input.actorRole,
       cancelAtPeriodEnd: updated.cancel_at_period_end,
       providerStatus: updated.status,
+      lifecycleRequestId: requestId,
+      idempotencyProtected: true,
     },
   });
-  if (!audit.persisted) throw new Error('billing_lifecycle_audit_unavailable');
 
-  return {
-    subscriptionId: updated.id,
-    status: updated.status,
-    cancelAtPeriodEnd: updated.cancel_at_period_end,
-    currentPeriodEnd: updated.current_period_end,
+  if (!audit.persisted) {
+    await failBillingLifecycleRequest(requestId, 'audit_persistence_failed');
+    throw new Error('billing_lifecycle_audit_unavailable');
+  }
+
+  await completeBillingLifecycleRequest(requestId);
+
+  return lifecycleResult({
+    subscription: updated,
     plan: targetPlan,
     interval,
     addOns,
-  };
+    idempotentReplay: false,
+  });
+}
+
+export function isBillingLifecycleRequestError(error: unknown): error is BillingLifecycleRequestError {
+  return error instanceof BillingLifecycleRequestError;
 }

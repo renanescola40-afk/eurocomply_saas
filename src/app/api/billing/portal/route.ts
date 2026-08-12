@@ -4,6 +4,7 @@ import { normalizeLocale } from '@/lib/i18n/locales';
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { deriveStripeIdempotencyKey, readBillingIdempotencyKey } from '@/server/billing/idempotency';
 import { getStripeClient } from '@/server/billing/stripe';
 import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
 import { classifyProviderFailure } from '@/server/providers/failure';
@@ -43,12 +44,27 @@ export async function POST(request: Request) {
     const mutationDenied = await requireTrustedMutation(request, {
       rateLimit: {
         key: `billing:portal:${organization.id}:${user.id}`,
+        policy: 'billing-checkout',
+        userId: user.id,
+        organizationId: organization.id,
+        action: 'billing_portal_create',
+        route: '/api/billing/portal',
         limit: 10,
         windowMs: 60 * 1000,
+        failureMode: 'fail-closed',
       },
     });
 
     if (mutationDenied) return mutationDenied;
+
+    const idempotency = readBillingIdempotencyKey(request, {
+      scope: 'portal',
+      organizationId: organization.id,
+      userId: user.id,
+    });
+    if (!idempotency.ok) {
+      return noStoreJson({ error: idempotency.error }, { status: 400 });
+    }
 
     const stepUp = await requireStepUpForRequest({
       request,
@@ -102,10 +118,13 @@ export async function POST(request: Request) {
 
     let portalSession;
     try {
-      portalSession = await stripe.billingPortal.sessions.create({
-        customer: subscription.stripe_customer_id,
-        return_url: returnUrl,
-      });
+      portalSession = await stripe.billingPortal.sessions.create(
+        {
+          customer: subscription.stripe_customer_id,
+          return_url: returnUrl,
+        },
+        { idempotencyKey: deriveStripeIdempotencyKey(idempotency.context, 'portal-session') },
+      );
     } catch (providerError) {
       throw classifyProviderFailure('stripe', 'billing_portal_session_create', providerError);
     }
@@ -124,6 +143,7 @@ export async function POST(request: Request) {
         stepUpVerifiedAt: stepUp.assessment.verifiedAt ?? null,
         trustedOriginRequired: true,
         rbacPermission: 'manage_billing',
+        idempotencyProtected: true,
       },
     });
 
@@ -138,6 +158,7 @@ export async function POST(request: Request) {
 
     return noStoreJson({
       url: portalSession.url,
+      idempotencyProtected: true,
       stepUp: publicStepUpSummary(stepUp.assessment),
     });
   } catch (error) {
