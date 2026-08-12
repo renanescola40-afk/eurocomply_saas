@@ -98,6 +98,14 @@ async function deleteDenied(admin, client, table, id) {
   return result(Boolean(observed?.id), data, error, { rowStillExists: Boolean(observed?.id) });
 }
 
+async function cleanupUnexpectedRows(admin, table, rows) {
+  const ids = Array.isArray(rows) ? rows.map((row) => row?.id).filter(Boolean) : [];
+  for (const id of ids) {
+    await admin.from(table).delete().eq('id', id);
+  }
+  return ids.length;
+}
+
 async function notificationInsertDenied(admin, client, payload) {
   const { data, error } = await client.from('notifications').insert(payload).select('id');
   const { data: observed, error: verifyError } = await admin
@@ -106,7 +114,9 @@ async function notificationInsertDenied(admin, client, payload) {
     .eq('organization_id', payload.organization_id)
     .eq('title', payload.title);
   if (verifyError) return result(false, data, verifyError, { mutationError: safeError(error) });
-  return result(rowCount(observed) === 0, data, error, { persistedRowsAfterAttempt: rowCount(observed) });
+  const persistedRows = rowCount(observed);
+  const unexpectedRowsCleaned = persistedRows > 0 ? await cleanupUnexpectedRows(admin, 'notifications', observed) : 0;
+  return result(persistedRows === 0, data, error, { persistedRowsAfterAttempt: persistedRows, unexpectedRowsCleaned });
 }
 
 async function onboardingInsertDenied(admin, client, payload) {
@@ -118,7 +128,9 @@ async function onboardingInsertDenied(admin, client, payload) {
     .eq('created_by', payload.created_by)
     .eq('readiness_score', payload.readiness_score);
   if (verifyError) return result(false, data, verifyError, { mutationError: safeError(error) });
-  return result(rowCount(observed) === 0, data, error, { persistedRowsAfterAttempt: rowCount(observed) });
+  const persistedRows = rowCount(observed);
+  const unexpectedRowsCleaned = persistedRows > 0 ? await cleanupUnexpectedRows(admin, 'onboarding_activation_runs', observed) : 0;
+  return result(persistedRows === 0, data, error, { persistedRowsAfterAttempt: persistedRows, unexpectedRowsCleaned });
 }
 
 async function monitoringSelfInsertAllowed(memberClient, payload, createdRows) {
