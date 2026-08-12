@@ -8,11 +8,13 @@ on:
       - 'scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs'
       - 'scripts/release/check-enterprise-100-closure.mjs'
       - 'scripts/release/hydrate-enterprise-100-evidence.mjs'
+      - 'scripts/release/write-github-vercel-production-deployment-evidence.mjs'
       - 'scripts/supabase/write-rls-reconciliation-closure-evidence.mjs'
       - 'scripts/supabase/write-rls-reconciliation-closure-evidence.test.mjs'
       - 'tests/enterprise-100-closure.test.ts'
       - 'tests/enterprise/enterprise-100-evidence-hydration.test.mjs'
       - 'tests/enterprise/github-exact-sha-artifact-collector.test.mjs'
+      - 'tests/enterprise/production-deployment-github-vercel-proof.test.ts'
       - 'tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts'
       - 'tests/security/enterprise-100-closure-workflow.test.mjs'
       - '.github/workflows/enterprise-100-closure.yml'
@@ -38,6 +40,8 @@ on:
 permissions:
   contents: read
   actions: read
+  statuses: read
+  deployments: read
 
 concurrency:
   group: enterprise-100-closure-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
@@ -75,9 +79,11 @@ jobs:
           node --check scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs
           node --check scripts/release/check-enterprise-100-closure.mjs
           node --check scripts/release/hydrate-enterprise-100-evidence.mjs
+          node --check scripts/release/write-github-vercel-production-deployment-evidence.mjs
           node --check scripts/supabase/write-rls-reconciliation-closure-evidence.mjs
           npx vitest run \
             tests/enterprise-100-closure.test.ts \
+            tests/enterprise/production-deployment-github-vercel-proof.test.ts \
             tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts
           node --test \
             scripts/supabase/write-rls-reconciliation-closure-evidence.test.mjs \
@@ -92,6 +98,8 @@ jobs:
           grep -Fq 'ENTERPRISE_CLOSURE_EVIDENCE_ROOTS' scripts/release/check-enterprise-100-closure.mjs
           grep -Fq 'enterprise-100-evidence-hydration.v1' scripts/release/hydrate-enterprise-100-evidence.mjs
           grep -Fq 'github-exact-sha-artifact-collection.v1' scripts/enterprise/collect-github-exact-sha-artifacts.mjs
+          grep -Fq 'write-github-vercel-production-deployment-evidence.mjs' .github/workflows/enterprise-100-closure.yml
+          grep -Fq 'direct-production-deployment/release-validation/production-deployment.json' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Enterprise Production Gate' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Stripe Runtime Evidence Promotion' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Supabase Production RLS Reconciliation' .github/workflows/enterprise-100-closure.yml
@@ -125,6 +133,28 @@ jobs:
             enterprise-100 \
             "$ENTERPRISE_CLOSURE_EXPECTED_SHA" \
             "$RETAINED_ARTIFACT_ROOT"
+
+      - name: Generate direct exact-SHA production deployment evidence
+        if: github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ENTERPRISE_CLOSURE_EXPECTED_SHA }}
+          PRODUCTION_DEPLOYMENT_PROOF_ATTEMPTS: '12'
+          PRODUCTION_DEPLOYMENT_PROOF_POLL_MS: '5000'
+        shell: bash
+        run: |
+          set -euo pipefail
+          proof="$RETAINED_ARTIFACT_ROOT/direct-production-deployment/release-validation/production-deployment.json"
+          mkdir -p "$(dirname "$proof")"
+          set +e
+          PRODUCTION_DEPLOYMENT_EVIDENCE_PATH="$proof" \
+            node scripts/release/write-github-vercel-production-deployment-evidence.mjs
+          proof_exit=$?
+          set -e
+          test -f "$proof"
+          if [ "$proof_exit" -ne 0 ]; then
+            echo 'Exact-SHA production deployment proof remains OPEN; retaining fail-closed evidence for closure evaluation.'
+          fi
 
       - name: Replace legacy Stripe Open state with authoritative promoted exact-SHA runtime evidence
         if: github.event_name != 'pull_request'
