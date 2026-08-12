@@ -11,6 +11,12 @@ type StatusRow = {
   updated_at: string | null;
 };
 
+type CreatedStatusRow = {
+  id: string;
+  status: string;
+  created_at: string | null;
+};
+
 type StageRow = {
   id: string;
   stage: string;
@@ -34,6 +40,15 @@ function statusRecord(row: StatusRow | undefined): RegulatoryWorkflowRecord | nu
   };
 }
 
+function createdStatusRecord(row: CreatedStatusRow | undefined): RegulatoryWorkflowRecord | null {
+  if (!row) return null;
+  return {
+    id: row.id,
+    lifecycleState: row.status,
+    updatedAt: row.created_at,
+  };
+}
+
 function stageRecord(row: StageRow | undefined): RegulatoryWorkflowRecord | null {
   if (!row) return null;
   return {
@@ -53,6 +68,7 @@ export async function getRegulatoryControlTowerSnapshot(organizationId: string) 
     providerDataResult,
     annexIvResult,
     qmsResult,
+    article50Result,
     conformityResult,
   ] = await Promise.all([
     supabase
@@ -92,6 +108,12 @@ export async function getRegulatoryControlTowerSnapshot(organizationId: string) 
       .order('updated_at', { ascending: false })
       .limit(1),
     supabase
+      .from('ai_article50_assessments')
+      .select('id,status,created_at')
+      .eq('organization_id', organizationId)
+      .order('version', { ascending: false })
+      .limit(1),
+    supabase
       .from('ai_conformity_assessments')
       .select('id,status,updated_at')
       .eq('organization_id', organizationId)
@@ -106,6 +128,7 @@ export async function getRegulatoryControlTowerSnapshot(organizationId: string) 
     ['ai_provider_data_programs', providerDataResult],
     ['ai_annex_iv_packages', annexIvResult],
     ['ai_qms_systems', qmsResult],
+    ['ai_article50_assessments', article50Result],
     ['ai_conformity_assessments', conformityResult],
   ] as const;
 
@@ -120,6 +143,7 @@ export async function getRegulatoryControlTowerSnapshot(organizationId: string) 
     high_risk_provider_data: statusRecord((providerDataResult.data?.[0] ?? undefined) as StatusRow | undefined),
     annex_iv: statusRecord((annexIvResult.data?.[0] ?? undefined) as StatusRow | undefined),
     qms: statusRecord((qmsResult.data?.[0] ?? undefined) as StatusRow | undefined),
+    article_50_transparency: createdStatusRecord((article50Result.data?.[0] ?? undefined) as CreatedStatusRow | undefined),
     conformity: statusRecord((conformityResult.data?.[0] ?? undefined) as StatusRow | undefined),
   };
 

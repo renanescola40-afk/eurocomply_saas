@@ -1,16 +1,22 @@
+import { AI_ACT_LEGAL_RULES_VERSION, type AiActLegalRole } from '@/server/ai-governance/legal-rules';
+
 export const REGULATORY_CONTROL_TOWER_WORKSTREAMS = [
   'ai_literacy',
-  'fria',
   'prohibited_practices',
   'high_risk_provider_data',
   'annex_iv',
   'qms',
+  'fria',
+  'article_50_transparency',
+  'deployer_obligations',
+  'post_market_monitoring',
   'conformity',
 ] as const;
 
 export type RegulatoryControlTowerWorkstreamId = (typeof REGULATORY_CONTROL_TOWER_WORKSTREAMS)[number];
 export type RegulatoryControlTowerStatus = 'not_started' | 'in_progress' | 'ready' | 'blocked' | 'not_applicable';
 export type RegulatoryControlTowerOverallStatus = 'not_started' | 'in_progress' | 'ready' | 'blocked';
+export type RegulatoryControlTowerImplementationState = 'persisted_workflow' | 'capability_gap';
 
 export type RegulatoryWorkflowRecord = {
   id: string;
@@ -24,6 +30,7 @@ export type RegulatoryControlTowerWorkstream = {
   id: RegulatoryControlTowerWorkstreamId;
   label: string;
   articleReference: string;
+  legalRoles: AiActLegalRole[];
   weight: number;
   status: RegulatoryControlTowerStatus;
   lifecycleState: string | null;
@@ -31,10 +38,14 @@ export type RegulatoryControlTowerWorkstream = {
   updatedAt: string | null;
   route: string | null;
   requiredAction: string | null;
+  implementationState: RegulatoryControlTowerImplementationState;
+  humanReviewRequired: boolean;
+  legalRulesVersion: string;
 };
 
 export type RegulatoryControlTowerDecision = {
   version: string;
+  legalRulesVersion: string;
   overallStatus: RegulatoryControlTowerOverallStatus;
   activationPercent: number;
   readyPercent: number;
@@ -46,61 +57,117 @@ export type RegulatoryControlTowerDecision = {
   inProgressCount: number;
   notStartedCount: number;
   notApplicableCount: number;
+  capabilityGapCount: number;
   workstreams: RegulatoryControlTowerWorkstream[];
   blockingWorkstreamIds: RegulatoryControlTowerWorkstreamId[];
+  capabilityGapWorkstreamIds: RegulatoryControlTowerWorkstreamId[];
   requiredActions: string[];
   evidenceBoundary: string;
+  humanReviewBoundary: string;
 };
 
-const VERSION = '2026-07-22.2';
+const VERSION = '2026-08-12.1';
 
-const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, {
+type WorkstreamDefinition = {
   label: string;
   articleReference: string;
+  legalRoles: AiActLegalRole[];
   weight: number;
   route: string | null;
-}> = {
+  implementationState: RegulatoryControlTowerImplementationState;
+  humanReviewRequired: boolean;
+};
+
+const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, WorkstreamDefinition> = {
   ai_literacy: {
     label: 'AI Literacy',
     articleReference: 'Article 4',
+    legalRoles: ['provider', 'deployer'],
     weight: 6,
     route: '/dashboard/ai-literacy',
-  },
-  fria: {
-    label: 'Fundamental Rights Impact Assessment',
-    articleReference: 'Article 27',
-    weight: 6,
-    route: '/dashboard/fria',
+    implementationState: 'persisted_workflow',
+    humanReviewRequired: true,
   },
   prohibited_practices: {
     label: 'Prohibited Practices',
     articleReference: 'Article 5',
+    legalRoles: ['provider', 'deployer', 'importer', 'distributor', 'product_manufacturer'],
     weight: 7,
     route: '/dashboard/prohibited-practices',
+    implementationState: 'persisted_workflow',
+    humanReviewRequired: true,
   },
   high_risk_provider_data: {
     label: 'High-Risk Provider Data Governance',
-    articleReference: 'Article 10',
+    articleReference: 'Articles 9–10',
+    legalRoles: ['provider', 'product_manufacturer'],
     weight: 9,
     route: '/dashboard/provider-data',
+    implementationState: 'persisted_workflow',
+    humanReviewRequired: true,
   },
   annex_iv: {
     label: 'Annex IV Technical Documentation',
     articleReference: 'Article 11 and Annex IV',
+    legalRoles: ['provider', 'product_manufacturer'],
     weight: 6,
     route: '/dashboard/annex-iv',
+    implementationState: 'persisted_workflow',
+    humanReviewRequired: true,
   },
   qms: {
     label: 'Quality Management System',
     articleReference: 'Article 17',
+    legalRoles: ['provider', 'product_manufacturer'],
     weight: 5,
     route: '/dashboard/qms',
+    implementationState: 'persisted_workflow',
+    humanReviewRequired: true,
+  },
+  fria: {
+    label: 'Fundamental Rights Impact Assessment',
+    articleReference: 'Article 27',
+    legalRoles: ['deployer', 'public_authority', 'private_public_service_provider'],
+    weight: 6,
+    route: '/dashboard/fria',
+    implementationState: 'persisted_workflow',
+    humanReviewRequired: true,
+  },
+  article_50_transparency: {
+    label: 'Transparency and Synthetic Content',
+    articleReference: 'Article 50',
+    legalRoles: ['provider', 'deployer'],
+    weight: 8,
+    route: '/dashboard/compliance',
+    implementationState: 'persisted_workflow',
+    humanReviewRequired: true,
+  },
+  deployer_obligations: {
+    label: 'Deployer Obligations',
+    articleReference: 'Article 26',
+    legalRoles: ['deployer'],
+    weight: 7,
+    route: '/dashboard/compliance',
+    implementationState: 'capability_gap',
+    humanReviewRequired: true,
+  },
+  post_market_monitoring: {
+    label: 'Post-Market Monitoring and Incident Governance',
+    articleReference: 'Articles 72–73 and incident-supporting controls',
+    legalRoles: ['provider', 'deployer'],
+    weight: 6,
+    route: '/dashboard/compliance',
+    implementationState: 'capability_gap',
+    humanReviewRequired: true,
   },
   conformity: {
     label: 'Conformity, Declaration, CE and Registration',
     articleReference: 'Articles 43–49',
+    legalRoles: ['provider', 'authorised_representative', 'importer', 'product_manufacturer'],
     weight: 5,
     route: null,
+    implementationState: 'persisted_workflow',
+    humanReviewRequired: true,
   },
 };
 
@@ -123,7 +190,13 @@ function classify(record: RegulatoryWorkflowRecord | null | undefined): Regulato
   return 'in_progress';
 }
 
-function actionFor(status: RegulatoryControlTowerStatus, definition: (typeof DEFINITIONS)[RegulatoryControlTowerWorkstreamId]) {
+function actionFor(
+  status: RegulatoryControlTowerStatus,
+  definition: WorkstreamDefinition,
+) {
+  if (definition.implementationState === 'capability_gap') {
+    return `Connect a tenant-persisted, evidence-backed workflow for ${definition.label}; capability code alone must not be counted as completed operational evidence.`;
+  }
   if (status === 'not_started') return `Create and scope the ${definition.label} workflow.`;
   if (status === 'blocked') return `Resolve the blocking findings in ${definition.label} before release readiness.`;
   if (status === 'in_progress') return `Complete evidence, review and approval for ${definition.label}.`;
@@ -140,6 +213,7 @@ export function buildRegulatoryControlTower(input: RegulatoryControlTowerInput):
       id,
       label: definition.label,
       articleReference: definition.articleReference,
+      legalRoles: definition.legalRoles,
       weight: definition.weight,
       status,
       lifecycleState: record?.lifecycleState ?? null,
@@ -147,6 +221,9 @@ export function buildRegulatoryControlTower(input: RegulatoryControlTowerInput):
       updatedAt: record?.updatedAt ?? null,
       route: definition.route,
       requiredAction: actionFor(status, definition),
+      implementationState: definition.implementationState,
+      humanReviewRequired: definition.humanReviewRequired,
+      legalRulesVersion: AI_ACT_LEGAL_RULES_VERSION,
     };
   });
 
@@ -158,14 +235,16 @@ export function buildRegulatoryControlTower(input: RegulatoryControlTowerInput):
   const notStarted = workstreams.filter((item) => item.status === 'not_started');
   const ready = workstreams.filter((item) => item.status === 'ready');
   const notApplicable = workstreams.filter((item) => item.status === 'not_applicable');
+  const capabilityGaps = workstreams.filter((item) => item.implementationState === 'capability_gap');
 
   let overallStatus: RegulatoryControlTowerOverallStatus = 'not_started';
-  if (blocked.length > 0) overallStatus = 'blocked';
+  if (blocked.length > 0 || capabilityGaps.length > 0) overallStatus = 'blocked';
   else if (readyWeight === totalWeight) overallStatus = 'ready';
   else if (activatedWeight > 0) overallStatus = 'in_progress';
 
   return {
     version: VERSION,
+    legalRulesVersion: AI_ACT_LEGAL_RULES_VERSION,
     overallStatus,
     activationPercent: Math.round((activatedWeight / totalWeight) * 100),
     readyPercent: Math.round((readyWeight / totalWeight) * 100),
@@ -177,9 +256,12 @@ export function buildRegulatoryControlTower(input: RegulatoryControlTowerInput):
     inProgressCount: inProgress.length,
     notStartedCount: notStarted.length,
     notApplicableCount: notApplicable.length,
+    capabilityGapCount: capabilityGaps.length,
     workstreams,
     blockingWorkstreamIds: blocked.map((item) => item.id),
+    capabilityGapWorkstreamIds: capabilityGaps.map((item) => item.id),
     requiredActions: workstreams.map((item) => item.requiredAction).filter((action): action is string => Boolean(action)),
     evidenceBoundary: 'This control tower aggregates persisted workflow lifecycle states for operational visibility. It does not validate underlying evidence, certify compliance, authorize market placement or replace legal, technical or conformity assessment review.',
+    humanReviewBoundary: 'HUMAN_REVIEW_REQUIRED for customer-specific facts, legal interpretation, high-risk determination, fundamental-rights analysis, exceptions, proportionality, adequacy and technical performance in real deployment.',
   };
 }
