@@ -327,15 +327,18 @@ async function githubJson(url, token, fetchImpl = fetch) {
 export async function githubJsonWithCredentialFallback(
   url,
   candidates,
-  { fetchImpl = fetch } = {},
+  { fetchImpl = fetch, acceptData = () => true } = {},
 ) {
   const attempts = Array.isArray(candidates) ? candidates : [];
   let lastError = new Error('github_api_no_credential');
+  let lastSuccessfulResponse = null;
 
   for (const candidate of attempts) {
     try {
       const data = await githubJson(url, candidate?.token, fetchImpl);
-      return { data, authMode: candidate?.label || 'unknown-token' };
+      const response = { data, authMode: candidate?.label || 'unknown-token' };
+      lastSuccessfulResponse = response;
+      if (acceptData(data)) return response;
     } catch (error) {
       lastError = error;
       const code = errorCode(error);
@@ -344,6 +347,7 @@ export async function githubJsonWithCredentialFallback(
     }
   }
 
+  if (lastSuccessfulResponse) return lastSuccessfulResponse;
   throw lastError;
 }
 
@@ -379,6 +383,7 @@ async function fetchRepositoryRulesets(repository, credentials) {
     const detail = await githubJsonWithCredentialFallback(
       `https://api.github.com/repos/${repository}/rulesets/${id}?includes_parents=true`,
       credentials,
+      { acceptData: (data) => Array.isArray(data?.bypass_actors) },
     );
     details.push(detail.data);
     authModes.push(detail.authMode);
