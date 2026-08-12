@@ -36,7 +36,7 @@ The entitlement layer accepts:
 - `source_version`
 - `grace_period_days`
 
-For subscription events the metadata is read from the subscription object. For current Stripe Invoice objects, subscription metadata is read from `parent.subscription_details.metadata`, with the legacy `subscription_details.metadata` form retained for older API-version events.
+For subscription events the metadata is read from the subscription object. For current Stripe Invoice objects, subscription metadata is read first from `parent.subscription_details.metadata`, with the legacy `subscription_details.metadata` form retained for older API-version events. Invoice-level metadata is considered only if it independently satisfies the complete canonical entitlement schema, so ordinary invoice metadata cannot mask the subscription authority.
 
 Missing or invalid metadata returns `metadata_missing`; no entitlement change occurs.
 
@@ -46,9 +46,10 @@ The normalizer supports both historical and current Stripe API shapes:
 
 - pre-Basil subscriptions: top-level `current_period_end`;
 - Basil subscriptions: `items.data[].current_period_end`;
-- invoices: `lines.data[].period.end`.
+- current invoices: `lines.data[].period.end` only for lines whose `parent.type` is `subscription_item_details`;
+- legacy invoices: subscription lines identified by the historical `type=subscription` / `subscription_item` fields.
 
-When multiple item/line periods exist, the earliest valid end is selected. This is intentionally conservative: a plan-wide entitlement must not outlive a billed component without a newer Stripe event extending it.
+For mixed-interval subscription items, the earliest valid recurring period end is selected. For invoices, standalone invoice items, one-off adjustments and other non-subscription lines are excluded before selecting the earliest recurring period end. This is intentionally conservative without allowing an unrelated short-lived invoice item to truncate the plan-wide entitlement window.
 
 A billable subscription/invoice event with no usable future billing period fails closed as `stripe_entitlement_billing_period_missing`. The runtime does not invent `now` as a synthetic period end and does not call the canonical reconciliation RPC in that state.
 
@@ -66,12 +67,14 @@ The Stripe event ID becomes the organization-scoped reconciliation idempotency k
 
 For already-processed events, replay repair is accepted only when the enterprise reconciliation materializes or finds an existing snapshot. A rejected/non-materialized repair fails closed so the webhook is not silently acknowledged as repaired.
 
+A replay can legitimately arrive after its original billing period has expired. In that case the recovery path does **not** reopen or synthesize a billing window. It first lets freshness validation reject the replay, then performs a read-only lookup for the exact retained `stripe:<event_id>` snapshot. Exactly one retained snapshot is returned as `idempotent_replay`; no snapshot preserves the freshness failure; multiple matches fail closed as ambiguous.
+
 ## Failure outcomes
 
 - `unsupported`: event type is outside the entitlement contract.
 - `metadata_missing`: canonical tenant or plan metadata is unavailable.
 - `billing_period_missing`: the billable event has no usable future billing period; reconciliation fails closed before the RPC.
-- `idempotent_replay`: the event was already reconciled.
+- `idempotent_replay`: the event was already reconciled or an exact retained snapshot proves an expired processed replay was previously materialized.
 - `source_version_conflict`: Stripe metadata is stale (`version_conflict` from the atomic RPC).
 - `lower_priority_source`: a stronger contract source controls the organization (`lower_priority` from the atomic RPC).
 - `rejected`: canonical reconciliation declined the snapshot for another reason.
@@ -82,9 +85,9 @@ For already-processed events, replay repair is accepted only when the enterprise
 2. Register one Stripe authority source per contracted organization.
 3. Populate canonical metadata on subscriptions and ensure invoice subscription metadata is preserved.
 4. Configure the production webhook secret and endpoint.
-5. Verify Basil subscription item billing periods and invoice parent metadata in test mode.
+5. Verify current item-level subscription billing periods and invoice parent metadata in test mode.
 6. Replay signed test events in non-production.
-7. Verify duplicate delivery and lease recovery.
+7. Verify duplicate delivery, expired replay and lease recovery.
 8. Verify upgrade, payment failure, recovery and cancellation.
 9. Attach exact event, snapshot and seat-policy evidence.
 
