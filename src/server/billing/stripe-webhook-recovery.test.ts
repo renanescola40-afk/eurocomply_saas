@@ -270,7 +270,7 @@ describe('Stripe webhook processing lease recovery', () => {
     expect(state.updates).toHaveLength(0);
   });
 
-  it('does not repair or replay a fresh processing claim', async () => {
+  it('does not replay a fresh processing claim', async () => {
     const nowMs = Date.parse('2026-07-14T12:00:00.000Z');
     state.lookupData = {
       id: 'evt_lease_recovery',

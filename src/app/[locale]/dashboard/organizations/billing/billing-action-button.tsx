@@ -6,7 +6,7 @@ import { ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const STEP_UP_TOKEN_HEADER = 'x-eurocomply-step-up-token';
-
+const BILLING_IDEMPOTENCY_HEADER = 'Idempotency-Key';
 const DASHBOARD_BILLING_RETURN_PATH = '/dashboard/organizations/billing';
 
 type BillingActionButtonProps = {
@@ -114,14 +114,19 @@ async function requestBillingAction({
   action,
   locale,
   planId,
+  idempotencyKey,
   stepUpToken,
 }: {
   action: BillingActionButtonProps['action'];
   locale: string;
   planId?: string;
+  idempotencyKey: string;
   stepUpToken?: string;
 }) {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    [BILLING_IDEMPOTENCY_HEADER]: idempotencyKey,
+  };
   if (stepUpToken) headers[STEP_UP_TOKEN_HEADER] = stepUpToken;
 
   const portalUrl = `/api/billing/portal?locale=${encodeURIComponent(locale)}&returnPath=${encodeURIComponent(DASHBOARD_BILLING_RETURN_PATH)}`;
@@ -143,13 +148,14 @@ export function BillingActionButton({ action, locale, planId, disabled, children
     if (disabled || loading) return;
 
     setLoading(true);
+    const idempotencyKey = crypto.randomUUID();
 
     try {
-      let { response, json } = await requestBillingAction({ action, locale, planId });
+      let { response, json } = await requestBillingAction({ action, locale, planId, idempotencyKey });
 
       if (response.status === 403 && json.error === 'step_up_required') {
         const stepUpToken = await getBillingStepUpToken();
-        ({ response, json } = await requestBillingAction({ action, locale, planId, stepUpToken }));
+        ({ response, json } = await requestBillingAction({ action, locale, planId, idempotencyKey, stepUpToken }));
       }
 
       if (!response.ok || typeof json.url !== 'string') {

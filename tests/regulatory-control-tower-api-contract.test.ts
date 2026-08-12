@@ -30,6 +30,7 @@ describe('regulatory control tower API contract', () => {
       'ai_provider_data_programs',
       'ai_annex_iv_packages',
       'ai_qms_systems',
+      'ai_article50_assessments',
       'ai_conformity_assessments',
     ];
 
