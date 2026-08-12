@@ -12,16 +12,18 @@ describe('public production final exact-SHA evidence fetch', () => {
       { id: 11, path: '.github/workflows/public-production-final.yml', head_sha: sha, head_branch: 'main', event: 'push', status: 'completed', conclusion: 'success', updated_at: '2026-08-10T18:01:00Z' },
       { id: 12, path: '.github/workflows/public-production-final.yml', head_sha: 'b'.repeat(40), head_branch: 'main', event: 'workflow_dispatch', status: 'completed', conclusion: 'success', updated_at: '2026-08-10T18:02:00Z' },
     ], sha);
-
     expect(run?.id).toBe(10);
   });
 
-  it('requires the exact protected final artifact and all four P0 validators', () => {
+  it('requires the exact protected final artifact and four profile-correct validators', () => {
     expect(source).toContain('public-production-final-validation-${targetSha}');
     expect(source).toContain('validateDeploymentRuntimeEvidence');
-    expect(source).toContain('validateFinalValidationRuntimeEvidence');
+    expect(source).toContain('validatePublicProductionFinalRuntimeEvidence');
+    expect(source).not.toContain('validateFinalValidationRuntimeEvidence');
     expect(source).toContain('validateObservabilityRuntimeEvidence');
     expect(source).toContain('validateRollbackRuntimeEvidence');
+    expect(source).toContain("expectedReleaseTarget: 'public-production'");
+    expect(source).toContain('expectedCommitSha: targetSha');
     expect(source).toContain("'docs/security/evidence/runtime/deployment-smoke-validation.json'");
     expect(source).toContain("'docs/security/evidence/runtime/final-validation-runner.json'");
     expect(source).toContain("'docs/security/evidence/runtime/observability-smoke-validation.json'");
