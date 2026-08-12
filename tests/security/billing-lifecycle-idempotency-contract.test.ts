@@ -12,7 +12,7 @@ describe('enterprise billing lifecycle idempotency contract', () => {
     const button = read('src/app/[locale]/dashboard/organizations/billing/billing-action-button.tsx');
 
     expect(checkout).toContain("scope: 'checkout'");
-    expect(checkout).toContain("deriveStripeIdempotencyKey(idempotency.context, 'customer-create')");
+    expect(checkout).toContain("deriveStripeIdempotencyKey(idempotency, 'customer-create')");
     expect(checkout).toContain("deriveStripeIdempotencyKey(idempotency.context, 'checkout-session')");
     expect(portal).toContain("scope: 'portal'");
     expect(portal).toContain("deriveStripeIdempotencyKey(idempotency.context, 'portal-session')");
