@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
@@ -47,6 +48,16 @@ jobs:
 
       - name: Required GitHub checks drift gate
         run: node scripts/security/check-ci-required-checks-validation.mjs
+
+      - name: Production deployment environment governance gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          GITHUB_ENVIRONMENT_NAME=Production node scripts/security/check-github-environment-governance.mjs
+          GITHUB_ENVIRONMENT_NAME=enterprise-production-closeout node scripts/security/check-github-environment-governance.mjs
 
       - name: Lint
         shell: bash
