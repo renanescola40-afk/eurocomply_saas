@@ -6,6 +6,7 @@ import {
 } from '../../scripts/release/write-github-vercel-production-deployment-evidence.mjs';
 
 const SHA = '8059a007670dca287297f47e2e70ca2d3171af2d';
+const NEWER_SHA = '1111111111111111111111111111111111111111';
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const API = 'https://api.github.test';
 const DEPLOYMENT_URL = 'https://eurocomply-saas-gdhajd6uu-renanescola40-afks-projects.vercel.app';
@@ -25,6 +26,7 @@ function fixtureFetch(options: {
   healthStatus?: number;
   healthBodyStatus?: string;
   healthNoStore?: boolean;
+  mainShas?: string[];
 } = {}) {
   const {
     actor = 'vercel[bot]',
@@ -34,13 +36,18 @@ function fixtureFetch(options: {
     healthStatus = 200,
     healthBodyStatus = 'ok',
     healthNoStore = true,
+    mainShas = [SHA],
   } = options;
+  let mainReadCount = 0;
 
   return async (input: RequestInfo | URL) => {
     const url = String(input);
 
     if (url === `${API}/repos/${REPOSITORY}/commits/main`) {
-      return jsonResponse({ sha: SHA });
+      const index = Math.min(mainReadCount, mainShas.length - 1);
+      const sha = mainShas[index] ?? SHA;
+      mainReadCount += 1;
+      return jsonResponse({ sha });
     }
 
     if (url.startsWith(`${API}/repos/${REPOSITORY}/deployments?sha=`)) {
@@ -123,6 +130,24 @@ describe('exact-SHA Vercel production deployment proof', () => {
     expect(JSON.stringify(evidence)).not.toContain('https://');
   });
 
+  it('fails closed if main advances after the initial binding check but before PASS', async () => {
+    const evidence = await buildProductionDeploymentEvidence({
+      repository: REPOSITORY,
+      targetSha: SHA,
+      token: 'test-token',
+      fetchImpl: fixtureFetch({ mainShas: [SHA, NEWER_SHA] }),
+      sleepImpl: async () => undefined,
+      apiUrl: API,
+      maxAttempts: 1,
+      pollMs: 0,
+    });
+
+    expect(evidence.status).toBe('OPEN');
+    expect(evidence.outcome).toBe('failed');
+    expect(evidence.blockers).toContain('target_sha_is_not_current_main');
+    expect(evidence.checks?.currentMainShaBound).toBe(false);
+  });
+
   it('rejects a success status not created by the Vercel GitHub integration', async () => {
     const deployment = await findExactShaVercelProductionDeployment({
       repository: REPOSITORY,
@@ -147,7 +172,7 @@ describe('exact-SHA Vercel production deployment proof', () => {
       repository: REPOSITORY,
       targetSha: SHA,
       token: 'test-token',
-      fetchImpl: fixtureFetch({ deploymentSha: '1111111111111111111111111111111111111111' }),
+      fetchImpl: fixtureFetch({ deploymentSha: NEWER_SHA }),
       apiUrl: API,
     });
 
