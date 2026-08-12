@@ -35,6 +35,16 @@ test('collector modes use explicit producer workflow bindings', () => {
   assert.ok(dashboard.some((producer) => producer.workflowPath === '.github/workflows/enterprise-readiness-scorecard.yml'));
 });
 
+test('dashboard requires the terminal readiness scorecard artifact instead of preliminary diagnostics', () => {
+  const dashboard = producerSpecsForMode('dashboard');
+  const scorecard = dashboard.find((producer) => producer.workflowPath === '.github/workflows/enterprise-readiness-scorecard.yml');
+
+  assert.deepEqual(scorecard?.artifactPatterns, ['enterprise-readiness-scorecard-*']);
+  assert.equal(artifactNameMatches(`enterprise-readiness-scorecard-${SHA}`, scorecard.artifactPatterns), true);
+  assert.equal(artifactNameMatches(`release-documentation-evidence-${SHA}`, scorecard.artifactPatterns), false);
+  assert.equal(artifactNameMatches(`distributed-rate-limit-proof-test-diagnostics-${SHA}`, scorecard.artifactPatterns), false);
+});
+
 test('artifact patterns remain exact or prefix-bound', () => {
   assert.equal(artifactNameMatches('stripe-billing-validation', ['stripe-billing-validation']), true);
   assert.equal(artifactNameMatches('stripe-billing-validation-old', ['stripe-billing-validation']), false);
@@ -81,6 +91,68 @@ test('zero artifacts is valid only after all workflow-scoped inventories succeed
       assert.match(url, /per_page=100/);
       assert.doesNotMatch(url, /\/actions\/artifacts\?per_page=/);
     }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('dashboard skips a newer partial scorecard run and selects the newest terminal scorecard artifact', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'exact-sha-dashboard-terminal-'));
+  try {
+    const manifest = await collectExactShaArtifacts({
+      mode: 'dashboard',
+      targetSha: SHA,
+      destinationRoot: root,
+      repository: 'owner/repo',
+      token: 'test-token',
+      fetchImpl: async (url) => {
+        const value = String(url);
+        if (value.includes('/actions/workflows/enterprise-readiness-scorecard.yml/runs?')) {
+          return jsonResponse({
+            total_count: 2,
+            workflow_runs: [
+              { id: 202, head_sha: SHA, path: '.github/workflows/enterprise-readiness-scorecard.yml' },
+              { id: 201, head_sha: SHA, path: '.github/workflows/enterprise-readiness-scorecard.yml' },
+            ],
+          });
+        }
+        if (value.includes('/actions/runs/202/artifacts?')) {
+          return jsonResponse({
+            total_count: 2,
+            artifacts: [
+              { id: 602, name: `release-documentation-evidence-${SHA}`, expired: false },
+              { id: 603, name: `distributed-rate-limit-proof-test-diagnostics-${SHA}`, expired: false },
+            ],
+          });
+        }
+        if (value.includes('/actions/runs/201/artifacts?')) {
+          return jsonResponse({
+            total_count: 1,
+            artifacts: [
+              { id: 601, name: `enterprise-readiness-scorecard-${SHA}`, expired: false },
+            ],
+          });
+        }
+        if (value.endsWith('/actions/artifacts/601/zip')) {
+          return new Response(new Uint8Array([1, 2, 3]), { status: 200 });
+        }
+        if (value.includes('/actions/workflows/')) {
+          return jsonResponse({ total_count: 0, workflow_runs: [] });
+        }
+        return jsonResponse({ total_count: 0, artifacts: [] });
+      },
+      sleepImpl: async () => {},
+      extractArchive: async () => {},
+    });
+
+    const scorecardProducer = manifest.producers.find(
+      (producer) => producer.workflow === '.github/workflows/enterprise-readiness-scorecard.yml',
+    );
+    assert.equal(scorecardProducer?.inspectedRunCount, 2);
+    assert.equal(scorecardProducer?.selectedRunId, 201);
+    assert.equal(scorecardProducer?.collectedArtifacts, 1);
+    assert.ok(manifest.artifacts.some((artifact) => artifact.artifactName === `enterprise-readiness-scorecard-${SHA}`));
+    assert.ok(!manifest.artifacts.some((artifact) => artifact.artifactName.startsWith('release-documentation-evidence-')));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
