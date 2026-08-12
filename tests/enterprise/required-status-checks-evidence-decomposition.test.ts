@@ -14,9 +14,10 @@ import { validateRequiredStatusChecksRuntimeEvidence } from '../../scripts/secur
 const SHA = 'd'.repeat(40);
 const RUN_ID = '31594083982';
 const GENERATED_AT = '2026-08-12T12:00:00.000Z';
+const ALIASES = REQUIRED_CHECK_ALIASES as Readonly<Record<string, string[]>>;
 
 function configuredAlias(check: string) {
-  return REQUIRED_CHECK_ALIASES[check]?.[0] ?? check;
+  return ALIASES[check]?.[0] ?? check;
 }
 
 function branchFixture() {
