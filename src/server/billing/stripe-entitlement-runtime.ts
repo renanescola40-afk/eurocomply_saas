@@ -34,6 +34,17 @@ export type StripeEntitlementRuntimeOutcome =
 
 type StripeMetadata = Record<string, string>;
 
+type InvoiceLineCandidate = {
+  type?: string | null;
+  subscription_item?: string | null;
+  parent?: {
+    type?: string | null;
+  } | null;
+  period?: {
+    end?: number | null;
+  } | null;
+};
+
 type EntitlementEventObject = {
   metadata?: StripeMetadata | null;
   current_period_end?: number | null;
@@ -43,11 +54,7 @@ type EntitlementEventObject = {
     }>;
   } | null;
   lines?: {
-    data?: Array<{
-      period?: {
-        end?: number | null;
-      } | null;
-    }>;
+    data?: InvoiceLineCandidate[];
   } | null;
   parent?: {
     subscription_details?: {
@@ -63,18 +70,29 @@ function hasMetadata(metadata: StripeMetadata | null | undefined): metadata is S
   return Boolean(metadata && Object.keys(metadata).length > 0);
 }
 
-function metadataFromEvent(event: Stripe.Event): StripeMetadata {
+function canonicalMetadataFromEvent(event: Stripe.Event) {
   const object = event.data.object as EntitlementEventObject;
+  const invoiceEvent = event.type === 'invoice.paid' || event.type === 'invoice.payment_failed';
 
-  if (hasMetadata(object.metadata)) return object.metadata;
+  // Invoice-level metadata can contain unrelated merchant fields. For invoice
+  // events, prefer the subscription metadata snapshot that Stripe carries under
+  // parent.subscription_details, then its legacy location. Only fall back to the
+  // invoice metadata when it independently satisfies the full entitlement schema.
+  const candidates = invoiceEvent
+    ? [
+        object.parent?.subscription_details?.metadata,
+        object.subscription_details?.metadata,
+        object.metadata,
+      ]
+    : [object.metadata];
 
-  // Stripe Basil moved invoice subscription details under invoice.parent.
-  // Keep the legacy subscription_details fallback for older API-version events.
-  const parentMetadata = object.parent?.subscription_details?.metadata;
-  if (hasMetadata(parentMetadata)) return parentMetadata;
+  for (const candidate of candidates) {
+    if (!hasMetadata(candidate)) continue;
+    const parsed = metadataSchema.safeParse(candidate);
+    if (parsed.success) return parsed.data;
+  }
 
-  const legacySubscriptionMetadata = object.subscription_details?.metadata;
-  return hasMetadata(legacySubscriptionMetadata) ? legacySubscriptionMetadata : {};
+  return null;
 }
 
 function validEpochSeconds(value: unknown): number | null {
@@ -88,8 +106,26 @@ function earliestTimestamp(values: Array<number | null>) {
   return timestamps.length > 0 ? Math.min(...timestamps) : null;
 }
 
+function isSubscriptionBackedInvoiceLine(line: InvoiceLineCandidate) {
+  // Basil replaces the legacy line `type`/`subscription_item` fields with a
+  // polymorphic parent. Only recurring subscription-item lines are entitlement
+  // authorities; standalone invoice items and adjustments must not shorten the
+  // plan-wide billing window.
+  if (line.parent?.type === 'subscription_item_details') return true;
+  return line.type === 'subscription' || Boolean(line.subscription_item);
+}
+
 export function stripeEntitlementPeriodEnd(event: Stripe.Event): number | null {
   const object = event.data.object as EntitlementEventObject;
+  const invoiceEvent = event.type === 'invoice.paid' || event.type === 'invoice.payment_failed';
+
+  if (invoiceEvent) {
+    return earliestTimestamp(
+      (object.lines?.data ?? [])
+        .filter(isSubscriptionBackedInvoiceLine)
+        .map((line) => validEpochSeconds(line.period?.end)),
+    );
+  }
 
   // Pre-Basil subscription events exposed one top-level period end.
   const legacySubscriptionPeriodEnd = validEpochSeconds(object.current_period_end);
@@ -98,25 +134,17 @@ export function stripeEntitlementPeriodEnd(event: Stripe.Event): number | null {
   // Basil subscription periods are item-level. When mixed intervals exist, use
   // the earliest period end so a plan-wide entitlement never outlives any billed
   // component without a newer Stripe event extending it.
-  const itemPeriodEnd = earliestTimestamp(
-    (object.items?.data ?? []).map((item) => validEpochSeconds(item.current_period_end)),
-  );
-  if (itemPeriodEnd) return itemPeriodEnd;
-
-  // Invoice events expose service windows on invoice lines. Use the earliest end
-  // for the same conservative plan-wide entitlement boundary.
   return earliestTimestamp(
-    (object.lines?.data ?? []).map((line) => validEpochSeconds(line.period?.end)),
+    (object.items?.data ?? []).map((item) => validEpochSeconds(item.current_period_end)),
   );
 }
 
 export function normalizeStripeEntitlementEvent(event: Stripe.Event, now = new Date()) {
   if (!SUPPORTED_ENTITLEMENT_EVENTS.has(event.type)) return { outcome: 'unsupported' as const };
 
-  const parsed = metadataSchema.safeParse(metadataFromEvent(event));
-  if (!parsed.success) return { outcome: 'metadata_missing' as const };
+  const metadata = canonicalMetadataFromEvent(event);
+  if (!metadata) return { outcome: 'metadata_missing' as const };
 
-  const metadata = parsed.data;
   const cancelled = event.type === 'customer.subscription.deleted';
   const delinquent = event.type === 'invoice.payment_failed';
   const paid = event.type === 'invoice.paid';
