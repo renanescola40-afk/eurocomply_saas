@@ -19,6 +19,12 @@ const RECOVERABLE_STRIPE_EVENT_TYPES = new Set([
   'invoice.paid',
 ]);
 
+const MATERIALIZED_ENTITLEMENT_OUTCOMES = new Set([
+  'reconciled',
+  'idempotent_replay',
+  'deferred_downgrade',
+]);
+
 type StripeEventClaim = {
   id: string;
   status: string | null;
@@ -71,6 +77,28 @@ async function reconcileEntitlementWhenEligible(event: Stripe.Event) {
   return entitlement;
 }
 
+function entitlementRepairMaterialized(entitlement: Awaited<ReturnType<typeof reconcileStripeEntitlementEvent>>) {
+  if (!MATERIALIZED_ENTITLEMENT_OUTCOMES.has(entitlement.outcome)) return false;
+  return typeof ('snapshotId' in entitlement ? entitlement.snapshotId : null) === 'string';
+}
+
+async function repairProcessedStripeEntitlement(event: Stripe.Event) {
+  const entitlement = await reconcileEntitlementWhenEligible(event);
+  if (!entitlement) return null;
+
+  if (!entitlementRepairMaterialized(entitlement)) {
+    reportError(new Error('Processed Stripe entitlement repair did not materialize a snapshot'), {
+      area: 'stripe_entitlement_processed_repair',
+      stripeEventId: event.id,
+      stripeEventType: event.type,
+      entitlementOutcome: entitlement.outcome,
+    });
+    throw new Error('stripe_entitlement_repair_failed');
+  }
+
+  return entitlement;
+}
+
 async function runStripeWebhookHandler(event: Stripe.Event) {
   const result = await runCoreStripeWebhookHandler(event);
 
@@ -82,6 +110,8 @@ async function runStripeWebhookHandler(event: Stripe.Event) {
     // may repair only that idempotent snapshot. Never do this while another worker's
     // processing claim is still active; abandoned claims use the lease recovery path.
     if (!(await isProcessedStripeEvent(event.id))) return result;
+    const entitlement = await repairProcessedStripeEntitlement(event);
+    return entitlement ? { ...result, entitlement } : result;
   }
 
   const entitlement = await reconcileEntitlementWhenEligible(event);
@@ -162,21 +192,28 @@ export async function recoverAbandonedStripeEventClaim(event: Stripe.Event, nowM
 export async function handleStripeWebhookEventWithRecovery(event: Stripe.Event) {
   const result = await runStripeWebhookHandler(event);
 
-  if (!result.duplicate) {
+  if (!result.duplicate || 'entitlement' in result) {
     return result;
   }
 
   // If the first duplicate lookup observed an in-flight claim and the core worker
   // finished immediately after it, repair the entitlement side effect here instead
   // of waiting for another Stripe retry. The snapshot RPC is itself idempotent.
-  if ('entitlement' in result) return result;
   if (await isProcessedStripeEvent(event.id)) {
-    const entitlement = await reconcileEntitlementWhenEligible(event);
+    const entitlement = await repairProcessedStripeEntitlement(event);
     return entitlement ? { ...result, entitlement } : result;
   }
 
   const recovered = await recoverAbandonedStripeEventClaim(event);
   if (!recovered) {
+    // The original worker can win the processing->processed transition while this
+    // request is attempting lease recovery. Recheck after losing that race before
+    // acknowledging the duplicate; otherwise a completed core event whose entitlement
+    // side effect died would remain permanently unrepaired.
+    if (await isProcessedStripeEvent(event.id)) {
+      const entitlement = await repairProcessedStripeEntitlement(event);
+      return entitlement ? { ...result, entitlement } : result;
+    }
     return result;
   }
 
