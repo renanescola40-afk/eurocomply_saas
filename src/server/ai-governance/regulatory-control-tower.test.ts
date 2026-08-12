@@ -2,60 +2,127 @@ import { describe, expect, it } from 'vitest';
 
 import { AI_ACT_LEGAL_RULES_VERSION } from '@/server/ai-governance/legal-rules';
 import {
-  REGULATORY_CONTROL_TOWER_WORKSTREAMS,
   buildRegulatoryControlTower,
+  REGULATORY_CONTROL_TOWER_WORKSTREAMS,
   type RegulatoryControlTowerInput,
 } from './regulatory-control-tower';
 
+const record = (id: string, lifecycleState: string) => ({
+  id,
+  lifecycleState,
+  updatedAt: '2026-08-12T19:00:00.000Z',
+});
+
 const readyPersisted: RegulatoryControlTowerInput = {
-  ai_literacy: { id: 'literacy', lifecycleState: 'active', updatedAt: '2026-08-12T10:00:00Z' },
-  prohibited_practices: { id: 'prohibited', lifecycleState: 'approved', updatedAt: '2026-08-12T10:00:00Z' },
-  high_risk_provider_data: { id: 'provider-data', lifecycleState: 'ready', updatedAt: '2026-08-12T10:00:00Z' },
-  annex_iv: { id: 'annex-iv', lifecycleState: 'complete', updatedAt: '2026-08-12T10:00:00Z' },
-  qms: { id: 'qms', lifecycleState: 'approved', updatedAt: '2026-08-12T10:00:00Z' },
-  fria: { id: 'fria', lifecycleState: 'approved', updatedAt: '2026-08-12T10:00:00Z' },
-  article_50_transparency: { id: 'article-50', lifecycleState: 'READY', updatedAt: '2026-08-12T10:00:00Z' },
-  conformity: { id: 'conformity', lifecycleState: 'approved', updatedAt: '2026-08-12T10:00:00Z' },
+  ai_literacy: record('literacy', 'active'),
+  fria: record('fria', 'approved'),
+  prohibited_practices: record('prohibited', 'approved'),
+  high_risk_provider_data: record('provider-data', 'approved'),
+  annex_iv: record('annex', 'approved'),
+  qms: record('qms', 'approved'),
+  article_50_transparency: record('article-50', 'READY'),
+  conformity: record('conformity', 'approved'),
 };
 
-describe('EU AI Act regulatory control tower', () => {
-  it('surfaces Article 50 and never hides known product capability gaps', () => {
-    const tower = buildRegulatoryControlTower(readyPersisted);
+describe('buildRegulatoryControlTower', () => {
+  it('reports zero activation while still surfacing known capability gaps', () => {
+    const result = buildRegulatoryControlTower({});
 
-    expect(REGULATORY_CONTROL_TOWER_WORKSTREAMS).toContain('article_50_transparency');
-    expect(REGULATORY_CONTROL_TOWER_WORKSTREAMS).toContain('deployer_obligations');
-    expect(REGULATORY_CONTROL_TOWER_WORKSTREAMS).toContain('post_market_monitoring');
-    expect(tower.workstreams.find((item) => item.id === 'article_50_transparency')).toMatchObject({
+    expect(result.overallStatus).toBe('blocked');
+    expect(result.activationPercent).toBe(0);
+    expect(result.readyPercent).toBe(0);
+    expect(result.notStartedCount).toBe(REGULATORY_CONTROL_TOWER_WORKSTREAMS.length);
+    expect(result.capabilityGapWorkstreamIds).toEqual(['deployer_obligations', 'post_market_monitoring']);
+    expect(result.requiredActions).toHaveLength(REGULATORY_CONTROL_TOWER_WORKSTREAMS.length);
+  });
+
+  it('does not report full readiness while deployer and post-market operational persistence are missing', () => {
+    const result = buildRegulatoryControlTower(readyPersisted);
+
+    expect(result.overallStatus).toBe('blocked');
+    expect(result.activationPercent).toBe(80);
+    expect(result.readyPercent).toBe(80);
+    expect(result.readyCount).toBe(8);
+    expect(result.capabilityGapCount).toBe(2);
+    expect(result.blockingWorkstreamIds).toEqual([]);
+  });
+
+  it('surfaces Article 50 as a persisted, human-reviewed workstream', () => {
+    const result = buildRegulatoryControlTower(readyPersisted);
+
+    expect(result.workstreams.find((item) => item.id === 'article_50_transparency')).toMatchObject({
       articleReference: 'Article 50',
       status: 'ready',
       implementationState: 'persisted_workflow',
       humanReviewRequired: true,
     });
-    expect(tower.capabilityGapWorkstreamIds).toEqual(['deployer_obligations', 'post_market_monitoring']);
-    expect(tower.capabilityGapCount).toBe(2);
-    expect(tower.overallStatus).toBe('blocked');
   });
 
   it('maps Article 50 NEEDS_REVIEW to in-progress rather than treating it as a legal pass', () => {
-    const tower = buildRegulatoryControlTower({
+    const result = buildRegulatoryControlTower({
       ...readyPersisted,
-      article_50_transparency: {
-        id: 'article-50',
-        lifecycleState: 'NEEDS_REVIEW',
-        updatedAt: '2026-08-12T10:00:00Z',
-      },
+      article_50_transparency: record('article-50', 'NEEDS_REVIEW'),
     });
 
-    expect(tower.workstreams.find((item) => item.id === 'article_50_transparency')?.status).toBe('in_progress');
+    expect(result.workstreams.find((item) => item.id === 'article_50_transparency')?.status).toBe('in_progress');
+    expect(result.inProgressCount).toBe(1);
   });
 
-  it('anchors every workstream to the versioned legal rule set and explicit human-review boundary', () => {
-    const tower = buildRegulatoryControlTower(readyPersisted);
+  it('fails closed when any persisted workflow is blocked', () => {
+    const result = buildRegulatoryControlTower({
+      ...readyPersisted,
+      prohibited_practices: record('prohibited', 'blocked'),
+    });
 
-    expect(tower.legalRulesVersion).toBe(AI_ACT_LEGAL_RULES_VERSION);
-    expect(tower.workstreams.every((item) => item.legalRulesVersion === AI_ACT_LEGAL_RULES_VERSION)).toBe(true);
-    expect(tower.workstreams.every((item) => item.humanReviewRequired)).toBe(true);
-    expect(tower.humanReviewBoundary).toContain('HUMAN_REVIEW_REQUIRED');
-    expect(tower.evidenceBoundary).toContain('does not validate underlying evidence');
+    expect(result.overallStatus).toBe('blocked');
+    expect(result.blockedCount).toBe(1);
+    expect(result.blockingWorkstreamIds).toEqual(['prohibited_practices']);
+    expect(result.readyPercent).toBeLessThan(80);
+    expect(result.requiredActions.join(' ')).toContain('Resolve the blocking findings');
+  });
+
+  it('separates activation from readiness for draft and review states', () => {
+    const result = buildRegulatoryControlTower({
+      ai_literacy: record('literacy', 'draft'),
+      fria: record('fria', 'assessment'),
+      annex_iv: record('annex', 'review'),
+    });
+
+    expect(result.overallStatus).toBe('blocked');
+    expect(result.activationPercent).toBeGreaterThan(0);
+    expect(result.readyPercent).toBe(0);
+    expect(result.inProgressCount).toBe(3);
+  });
+
+  it('counts reviewed non-applicability as ready-weight without claiming an approved workflow', () => {
+    const result = buildRegulatoryControlTower({
+      ...readyPersisted,
+      conformity: record('conformity', 'not_applicable'),
+    });
+
+    expect(result.overallStatus).toBe('blocked');
+    expect(result.readyPercent).toBe(80);
+    expect(result.readyCount).toBe(7);
+    expect(result.notApplicableCount).toBe(1);
+  });
+
+  it('treats archived and retired workflows as inactive', () => {
+    const result = buildRegulatoryControlTower({
+      ai_literacy: record('literacy', 'archived'),
+      qms: record('qms', 'retired'),
+    });
+
+    expect(result.activationPercent).toBe(0);
+    expect(result.notStartedCount).toBe(REGULATORY_CONTROL_TOWER_WORKSTREAMS.length);
+  });
+
+  it('anchors every workstream to the versioned legal rules and explicit human-review boundary', () => {
+    const result = buildRegulatoryControlTower(readyPersisted);
+
+    expect(result.legalRulesVersion).toBe(AI_ACT_LEGAL_RULES_VERSION);
+    expect(result.workstreams.every((item) => item.legalRulesVersion === AI_ACT_LEGAL_RULES_VERSION)).toBe(true);
+    expect(result.workstreams.every((item) => item.humanReviewRequired)).toBe(true);
+    expect(result.humanReviewBoundary).toContain('HUMAN_REVIEW_REQUIRED');
+    expect(result.evidenceBoundary).toContain('does not validate underlying evidence');
   });
 });
