@@ -23,6 +23,7 @@ permissions:
   contents: read
   pull-requests: read
   actions: read
+  deployments: read
   security-events: read
 
 env:
@@ -107,6 +108,7 @@ jobs:
           node --check scripts/release/validate-release-go-no-go-evidence.mjs
           node --check scripts/release/verify-enterprise-evidence-bundle.mjs
           node --check scripts/release/hydrate-enterprise-retained-runtime-evidence.mjs
+          node --check scripts/release/write-github-vercel-production-deployment-evidence.mjs
           node --check scripts/enterprise/fetch-auth-rbac-evidence.mjs
           node --check scripts/enterprise/fetch-supabase-rls-evidence.mjs
           node --check scripts/enterprise/fetch-upload-scanner-runtime-evidence.mjs
@@ -119,6 +121,8 @@ jobs:
           grep -Fq "hydrate-enterprise-retained-runtime-evidence.mjs" .github/workflows/enterprise-production-gate.yml
           grep -Fq "RETAINED_PROOF_SOURCE_WORKFLOW_PATH" .github/workflows/enterprise-production-gate.yml
           grep -Fq "RELEASE_RUN_OBSERVABILITY_SMOKE: 'true'" .github/workflows/enterprise-production-gate.yml
+          grep -Fq "write-github-vercel-production-deployment-evidence.mjs" .github/workflows/enterprise-production-gate.yml
+          grep -Fq "deployments: read" .github/workflows/enterprise-production-gate.yml
           grep -Fq "node scripts/release/validate-release-go-no-go-evidence.mjs" scripts/release/run-public-production-release-v2.mjs
           grep -Fq "verify-enterprise-evidence-bundle.mjs" .github/workflows/enterprise-production-gate.yml
           grep -Fq "if-no-files-found: error" .github/workflows/enterprise-production-gate.yml
@@ -219,6 +223,12 @@ jobs:
       - run: node scripts/release/check-enterprise-release-env.mjs
       - run: npm run release:production-final
       - run: node scripts/release/verify-enterprise-evidence-bundle.mjs
+      - name: Write exact-SHA Vercel production deployment evidence
+        if: always()
+        env:
+          PRODUCTION_DEPLOYMENT_PROOF_ATTEMPTS: '12'
+          PRODUCTION_DEPLOYMENT_PROOF_POLL_MS: '5000'
+        run: node scripts/release/write-github-vercel-production-deployment-evidence.mjs
       - if: always()
         uses: actions/upload-artifact@v7
         with:
