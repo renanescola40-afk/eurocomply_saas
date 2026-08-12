@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const migration = readFileSync(
-  'supabase/migrations/20260804230332_move_rls_helpers_to_private_schema.sql',
+  'supabase/migrations/20260804230433_move_rls_helpers_to_private_schema.sql',
   'utf8',
 ).toLowerCase();
 
