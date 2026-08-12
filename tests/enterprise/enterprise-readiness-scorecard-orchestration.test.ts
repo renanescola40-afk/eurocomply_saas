@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const workflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
+const scorecardWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
+const stabilizerWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard-stabilizer.yml', 'utf8');
 
 const expectedCompletionTriggers = [
   'CI',
@@ -26,56 +27,87 @@ const expectedCompletionTriggers = [
   'Recovery Resilience Proof',
 ];
 
-function workflowRunProducers() {
-  const match = workflow.match(/workflow_run:\n    workflows:\n([\s\S]*?)    types: \[completed\]/);
-  if (!match) throw new Error('workflow_run producer block missing');
+function stabilizerProducers() {
+  const match = stabilizerWorkflow.match(/workflow_run:\n    workflows:\n([\s\S]*?)    branches: \[main\]/);
+  if (!match) throw new Error('stabilizer workflow_run producer block missing');
 
   return [...match[1].matchAll(/^      - (.+)$/gm)].map((entry) => entry[1].trim());
 }
 
 describe('enterprise readiness scorecard orchestration', () => {
-  it('re-evaluates after every exact-SHA required check and runtime evidence producer completes', () => {
-    expect(workflowRunProducers()).toEqual(expectedCompletionTriggers);
-    expect(new Set(workflowRunProducers()).size).toBe(expectedCompletionTriggers.length);
-    expect(workflowRunProducers()).not.toContain('Enterprise Readiness Scorecard');
+  it('uses the stabilizer as the sole material-producer completion fan-in', () => {
+    expect(stabilizerProducers()).toEqual(expectedCompletionTriggers);
+    expect(new Set(stabilizerProducers()).size).toBe(expectedCompletionTriggers.length);
+    expect(stabilizerProducers()).not.toContain('Enterprise Readiness Scorecard');
+
+    expect(scorecardWorkflow).not.toContain('workflow_run:');
+    expect(scorecardWorkflow).not.toContain('github.event.workflow_run');
+    for (const producer of expectedCompletionTriggers) {
+      expect(scorecardWorkflow).not.toContain(`      - ${producer}\n`);
+    }
   });
 
-  it('limits workflow-run reevaluation to successful main completions and exact assessed SHA concurrency', () => {
-    expect(workflow).toMatch(/workflow_run:[\s\S]*?types: \[completed\]\n    branches: \[main\]/);
-    expect(workflow).toContain(
-      'group: enterprise-readiness-scorecard-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}',
+  it('keeps exact-SHA concurrency for direct PR, push and terminal manual runs', () => {
+    expect(scorecardWorkflow).toContain(
+      'group: enterprise-readiness-scorecard-${{ github.event.pull_request.head.sha || github.sha }}',
     );
-    expect(workflow).toContain('cancel-in-progress: true');
-    expect(workflow).toContain(
-      "if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'",
+    expect(scorecardWorkflow).toContain('cancel-in-progress: true');
+    expect(scorecardWorkflow).toContain(
+      'ASSESSED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}',
     );
-    expect(workflow).not.toContain("github.run_id || 'active'");
+    expect(scorecardWorkflow).not.toContain("github.run_id || 'active'");
+  });
+
+  it('discovers exact-SHA retained runtime evidence instead of depending on triggering producer IDs', () => {
+    for (const sourceRunVariable of [
+      'RATE_LIMIT_RUNTIME_SOURCE_RUN_ID',
+      'AUTH_RBAC_RUNTIME_SOURCE_RUN_ID',
+      'SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID',
+      'PRODUCTION_RUNTIME_SOURCE_RUN_ID',
+      'BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID',
+      'FINAL_TECHNICAL_RUNTIME_SOURCE_RUN_ID',
+      'RECOVERY_RUNTIME_SOURCE_RUN_ID',
+    ]) {
+      expect(scorecardWorkflow).not.toContain(sourceRunVariable);
+    }
+
+    for (const fetcher of [
+      'fetch-distributed-rate-limit-evidence.mjs',
+      'fetch-auth-rbac-evidence.mjs',
+      'fetch-supabase-rls-evidence.mjs',
+      'fetch-production-runtime-evidence.mjs',
+      'fetch-branch-protection-runtime-evidence.mjs',
+      'fetch-final-technical-controls-evidence.mjs',
+      'fetch-recovery-resilience-evidence.mjs',
+    ]) {
+      expect(scorecardWorkflow).toContain(fetcher);
+    }
   });
 
   it('keeps Open derived evidence observable without weakening integrity failures', () => {
-    expect(workflow).toContain('node scripts/enterprise/run-repository-control-evidence-for-scorecard.mjs');
-    expect(workflow).toContain('tests/enterprise/repository-control-scorecard-aggregation.test.mjs');
-    expect(workflow).toContain('tests/enterprise/derived-scorecard-evidence-builder.test.mjs');
+    expect(scorecardWorkflow).toContain('node scripts/enterprise/run-repository-control-evidence-for-scorecard.mjs');
+    expect(scorecardWorkflow).toContain('tests/enterprise/repository-control-scorecard-aggregation.test.mjs');
+    expect(scorecardWorkflow).toContain('tests/enterprise/derived-scorecard-evidence-builder.test.mjs');
     for (const key of ['publicUx', 'accessibilityConsent', 'accountRecovery', 'providerFailure', 'stepUp']) {
-      expect(workflow).toContain(`node scripts/enterprise/run-derived-scorecard-evidence-builder.mjs ${key}`);
+      expect(scorecardWorkflow).toContain(`node scripts/enterprise/run-derived-scorecard-evidence-builder.mjs ${key}`);
     }
-    expect(workflow).toContain('Sensitive-action step-up evidence remains NOT_VERIFIED');
-    expect(workflow).not.toContain('continue-on-error');
+    expect(scorecardWorkflow).toContain('Sensitive-action step-up evidence remains NOT_VERIFIED');
+    expect(scorecardWorkflow).not.toContain('continue-on-error');
   });
 
   it('publishes the canonical scorecard before enforcing the terminal GO decision on main only', () => {
-    const uploadIndex = workflow.indexOf('- name: Upload scorecard artifact');
-    const enforceIndex = workflow.indexOf('- name: Enforce enterprise scorecard decision');
+    const uploadIndex = scorecardWorkflow.indexOf('- name: Upload scorecard artifact');
+    const enforceIndex = scorecardWorkflow.indexOf('- name: Enforce enterprise scorecard decision');
     expect(uploadIndex).toBeGreaterThan(-1);
     expect(enforceIndex).toBeGreaterThan(uploadIndex);
-    expect(workflow.slice(enforceIndex)).toContain("if: github.event_name != 'pull_request'");
-    expect(workflow).toContain("decision=\"$(jq -r '.releaseDecision // \"NO_GO\"' \"$scorecard\")\"");
-    expect(workflow).toContain('test "$decision" = "GO"');
+    expect(scorecardWorkflow.slice(enforceIndex)).toContain("if: github.event_name != 'pull_request'");
+    expect(scorecardWorkflow).toContain("decision=\"$(jq -r '.releaseDecision // \"NO_GO\"' \"$scorecard\")\"");
+    expect(scorecardWorkflow).toContain('test "$decision" = "GO"');
   });
 
   it('keeps direct pull-request, push and manual entry points', () => {
-    expect(workflow).toMatch(/pull_request:\n    branches: \[main\]/);
-    expect(workflow).toMatch(/push:\n    branches: \[main\]/);
-    expect(workflow).toContain('workflow_dispatch:');
+    expect(scorecardWorkflow).toMatch(/pull_request:\n    branches: \[main\]/);
+    expect(scorecardWorkflow).toMatch(/push:\n    branches: \[main\]/);
+    expect(scorecardWorkflow).toContain('workflow_dispatch:');
   });
 });
