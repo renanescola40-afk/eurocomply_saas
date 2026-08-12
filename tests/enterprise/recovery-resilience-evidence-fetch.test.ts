@@ -16,6 +16,7 @@ const targetSha = 'a'.repeat(40);
 const runId = '123456';
 const roots: string[] = [];
 const workflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
+const stabilizerWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard-stabilizer.yml', 'utf8');
 
 function rollbackSource() {
   return {
@@ -57,9 +58,11 @@ afterEach(() => {
 });
 
 describe('recovery resilience scorecard promotion', () => {
-  it('connects the protected recovery workflow before scorecard generation', () => {
-    expect(workflow).toContain('- Recovery Resilience Proof');
-    expect(workflow).toContain("github.event.workflow_run.name == 'Recovery Resilience Proof' && github.event.workflow_run.id || ''");
+  it('is orchestrated by the stabilizer and fetched before scorecard generation', () => {
+    expect(stabilizerWorkflow).toContain('- Recovery Resilience Proof');
+    expect(workflow).not.toContain('- Recovery Resilience Proof');
+    expect(workflow).not.toContain("github.event.workflow_run.name == 'Recovery Resilience Proof'");
+    expect(workflow).not.toContain('github.event.workflow_run');
     const fetchIndex = workflow.indexOf('Retrieve exact-SHA recovery resilience evidence');
     const scorecardIndex = workflow.indexOf('Generate scorecard');
     expect(fetchIndex).toBeGreaterThan(0);
