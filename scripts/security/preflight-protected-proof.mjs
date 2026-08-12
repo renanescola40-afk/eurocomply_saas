@@ -4,6 +4,16 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 const FULL_SHA = /^[0-9a-f]{40}$/;
+const POSTGRES_PROTOCOLS = new Set(['postgres:', 'postgresql:']);
+const POSTGRES_IDENTITY_OVERRIDE_PARAMS = new Set([
+  'host',
+  'hostaddr',
+  'port',
+  'dbname',
+  'database',
+  'service',
+  'servicefile',
+]);
 const mode = String(process.argv[2] || '').trim();
 const env = (name) => String(process.env[name] || '').trim();
 
@@ -54,6 +64,38 @@ function validateShaBinding(targetName) {
   return targetValid ? targetSha : null;
 }
 
+function canonicalPostgresDatabaseIdentity(rawValue) {
+  const raw = String(rawValue || '').trim();
+  if (!raw) return null;
+
+  try {
+    const parsed = new URL(raw);
+    if (!POSTGRES_PROTOCOLS.has(parsed.protocol)) return null;
+    if (!parsed.hostname) return null;
+
+    for (const key of parsed.searchParams.keys()) {
+      if (POSTGRES_IDENTITY_OVERRIDE_PARAMS.has(String(key).toLowerCase())) return null;
+    }
+
+    const host = parsed.hostname.toLowerCase();
+    if (host.includes(',')) return null;
+    const port = parsed.port || '5432';
+    if (!/^\d{1,5}$/.test(port)) return null;
+
+    let database;
+    try {
+      database = decodeURIComponent(parsed.pathname.replace(/^\/+/, ''));
+    } catch {
+      return null;
+    }
+    if (!database || database.includes('/') || database.includes('\0')) return null;
+
+    return `${host}:${port}/${database}`;
+  } catch {
+    return null;
+  }
+}
+
 let targetSha = null;
 let exercise = null;
 let databaseIsolationVerified = null;
@@ -81,10 +123,22 @@ if (mode === 'final-technical') {
     const sourcePresent = requireConfigured('RECOVERY_SOURCE_DATABASE_URL');
     const isolatedPresent = requireConfigured('RECOVERY_ISOLATED_DATABASE_URL');
     if (sourcePresent && isolatedPresent) {
-      databaseIsolationVerified = env('RECOVERY_SOURCE_DATABASE_URL') !== env('RECOVERY_ISOLATED_DATABASE_URL');
-      checks.recoveryDatabaseIsolationVerified = databaseIsolationVerified;
-      if (!databaseIsolationVerified) failures.push('recovery_source_matches_isolated_database');
+      const sourceIdentity = canonicalPostgresDatabaseIdentity(env('RECOVERY_SOURCE_DATABASE_URL'));
+      const isolatedIdentity = canonicalPostgresDatabaseIdentity(env('RECOVERY_ISOLATED_DATABASE_URL'));
+      const identitiesVerifiable = Boolean(sourceIdentity && isolatedIdentity);
+      checks.recoveryDatabaseIdentityCanonicalized = identitiesVerifiable;
+
+      if (!identitiesVerifiable) {
+        databaseIsolationVerified = false;
+        checks.recoveryDatabaseIsolationVerified = false;
+        failures.push('recovery_database_identity_unverifiable');
+      } else {
+        databaseIsolationVerified = sourceIdentity !== isolatedIdentity;
+        checks.recoveryDatabaseIsolationVerified = databaseIsolationVerified;
+        if (!databaseIsolationVerified) failures.push('recovery_source_matches_isolated_database');
+      }
     } else {
+      checks.recoveryDatabaseIdentityCanonicalized = false;
       checks.recoveryDatabaseIsolationVerified = false;
       databaseIsolationVerified = false;
     }
@@ -128,11 +182,12 @@ const evidence = {
     credentialsStored: false,
     rawUrlsStored: false,
     databaseUrlsStored: false,
+    databaseIdentitiesStored: false,
     confirmationValuesStored: false,
     providerResponsesStored: false,
     runtimeMutationPerformed: false,
   },
-  evidenceBoundary: 'Preflight records only configuration presence, exact-SHA/confirmation booleans, exercise selection and database-isolation equality. It never stores secret values, credentials, database URLs, provider URLs, confirmations or provider responses and performs no runtime mutation.',
+  evidenceBoundary: 'Preflight records only configuration presence, exact-SHA/confirmation booleans, exercise selection, whether database identities were canonicalizable, and whether canonical source/isolated identities differ. It never stores secret values, credentials, database URLs, canonical database identities, provider URLs, confirmations or provider responses and performs no runtime mutation.',
 };
 
 mkdirSync(dirname(output), { recursive: true });
