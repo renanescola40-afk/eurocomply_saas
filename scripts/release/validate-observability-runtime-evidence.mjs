@@ -34,8 +34,8 @@ export function validateObservabilityRuntimeEvidence(
   if (evidence?.status !== 'Complete') return failures;
 
   if (evidence?.outcome !== 'passed') failures.push('Complete evidence outcome must be passed');
-  if (!['production', 'enterprise'].includes(evidence?.releaseTarget)) {
-    failures.push('releaseTarget must be production or enterprise');
+  if (!['production', 'enterprise', 'public-production'].includes(evidence?.releaseTarget)) {
+    failures.push('releaseTarget must be production, enterprise, or public-production');
   }
   if (evidence?.runtimeConfiguration?.targetCount < 1) {
     failures.push('runtimeConfiguration.targetCount must be at least 1');
