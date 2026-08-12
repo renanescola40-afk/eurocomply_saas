@@ -112,14 +112,26 @@ function entitlementRepairMaterialized(entitlement: Awaited<ReturnType<typeof re
   return typeof ('snapshotId' in entitlement ? entitlement.snapshotId : null) === 'string';
 }
 
-async function repairProcessedStripeEntitlement(event: Stripe.Event) {
-  // A late/manual replay of an already-materialized event must remain idempotent
-  // even after its billing period has expired. Read the retained snapshot first;
-  // only missing snapshots are re-normalized and subject to current freshness rules.
-  const existingReplay = await findExistingStripeEntitlementReplay(event.id);
-  if (existingReplay) return existingReplay;
+function isBillingPeriodMissingError(error: unknown) {
+  return error instanceof Error && error.message === 'stripe_entitlement_billing_period_missing';
+}
 
-  const entitlement = await reconcileEntitlementWhenEligible(event);
+async function repairProcessedStripeEntitlement(event: Stripe.Event) {
+  let entitlement: Awaited<ReturnType<typeof reconcileStripeEntitlementEvent>> | null;
+  try {
+    entitlement = await reconcileEntitlementWhenEligible(event);
+  } catch (error) {
+    if (!isBillingPeriodMissingError(error)) throw error;
+
+    // A late/manual replay can arrive after its billing period ends. If the exact
+    // Stripe idempotency key already has one retained snapshot, return that proof
+    // instead of turning an already-materialized event into a permanent 500 loop.
+    // Missing snapshots remain fail-closed and preserve the original freshness error.
+    const existingReplay = await findExistingStripeEntitlementReplay(event.id);
+    if (existingReplay) return existingReplay;
+    throw error;
+  }
+
   if (!entitlement) return null;
 
   if (!entitlementRepairMaterialized(entitlement)) {
