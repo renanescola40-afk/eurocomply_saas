@@ -1,0 +1,136 @@
+name: Stripe Entitlement Stored Event Recovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact 40-character SHA currently at main
+        required: true
+        type: string
+      stripe_event_id:
+        description: Retained processed Stripe test-mode event ID
+        required: true
+        type: string
+      organization_id:
+        description: Organization UUID expected in the retained event
+        required: true
+        type: string
+      stripe_test_mode_confirmed:
+        description: Confirm the retained event is Stripe test mode
+        required: true
+        type: boolean
+      confirmation:
+        description: Type REPAIR_STRIPE_ENTITLEMENT_SNAPSHOT
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stripe-entitlement-stored-event-recovery-${{ inputs.stripe_event_id }}
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    name: Repair entitlement from retained processed Stripe event
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      STRIPE_EVENT_ID: ${{ inputs.stripe_event_id }}
+      EXPECTED_ORGANIZATION_ID: ${{ inputs.organization_id }}
+      STRIPE_TEST_MODE_CONFIRMED: ${{ inputs.stripe_test_mode_confirmed }}
+      RECOVERY_CONFIRMATION: ${{ inputs.confirmation }}
+
+    steps:
+      - name: Validate exact current main and explicit recovery confirmation
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$STRIPE_EVENT_ID" =~ ^evt_[A-Za-z0-9_]+$ ]]
+          [[ "$EXPECTED_ORGANIZATION_ID" =~ ^[0-9a-fA-F-]{36}$ ]]
+          test "$STRIPE_TEST_MODE_CONFIRMED" = 'true'
+          test "$RECOVERY_CONFIRMATION" = 'REPAIR_STRIPE_ENTITLEMENT_SNAPSHOT'
+          RELEASE_SHA="${RELEASE_SHA,,}"
+          echo "RELEASE_SHA=$RELEASE_SHA" >> "$GITHUB_ENV"
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$RELEASE_SHA"
+
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Validate recovery contracts
+        run: |
+          node --check scripts/enterprise/recover-stored-stripe-entitlement.mjs
+          npx vitest run tests/enterprise/stripe-entitlement-stored-event-recovery.test.ts
+
+      - name: Revalidate current main immediately before production mutation
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$RELEASE_SHA"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+
+      - name: Repair only the missing enterprise entitlement snapshot
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/enterprise/recover-stored-stripe-entitlement.mjs
+
+      - name: Validate sanitized recovery evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence=artifacts/stripe-entitlement-recovery/evidence.json
+          test -s "$evidence"
+          test "$(jq -r '.status' "$evidence")" = 'Complete'
+          test "$(jq -r '.outcome' "$evidence")" = 'passed'
+          test "$(jq -r '.targetSha' "$evidence")" = "$RELEASE_SHA"
+          test "$(jq -r '.observedSha' "$evidence")" = "$RELEASE_SHA"
+          test "$(jq -r '.snapshotMaterialized' "$evidence")" = 'true'
+          test "$(jq -r '.safety.stripeTestModeOnly' "$evidence")" = 'true'
+          test "$(jq -r '.safety.coreBillingHandlerInvoked' "$evidence")" = 'false'
+          test "$(jq -r '.safety.customerChargeCreated' "$evidence")" = 'false'
+          test "$(jq -r '.safety.customerEmailSent' "$evidence")" = 'false'
+          test "$(jq -r '.safety.rawStripePayloadStoredInEvidence' "$evidence")" = 'false'
+          test "$(jq -r '.safety.serviceRoleStoredInEvidence' "$evidence")" = 'false'
+
+      - name: Upload retained sanitized recovery evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: stripe-entitlement-recovery-${{ env.RELEASE_SHA }}-${{ inputs.stripe_event_id }}
+          path: artifacts/stripe-entitlement-recovery/evidence.json
+          if-no-files-found: error
+          retention-days: 365
