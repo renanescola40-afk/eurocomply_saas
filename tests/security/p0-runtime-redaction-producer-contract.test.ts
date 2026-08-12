@@ -39,6 +39,7 @@ describe('P0 runtime redaction producer contract', () => {
   it.each([
     'Redaction confirmed: no token, cookie, authorization header, secret value, or secret environment variable name is written to this evidence file.',
     'Redaction confirmed: no token, cookie, authorization header, secret value, or raw rollback URL is written to this evidence file.',
+    'Redaction confirmed: no token, cookie, authorization header, secret value, or DSN is written to this evidence file.',
   ])('accepts an exact redaction confirmation emitted by a protected production producer', (confirmation) => {
     const result = runValidator(confirmation);
 
