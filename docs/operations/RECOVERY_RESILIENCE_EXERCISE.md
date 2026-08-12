@@ -24,17 +24,34 @@
 
 The isolated database must be disposable, must not serve customers, and must not equal the production connection string.
 
+## Protected prerequisite preflight
+
+Before installing PostgreSQL tooling or executing any backup, restore, rollback, storage fixture or database transaction, protected proof workflows run `scripts/security/preflight-protected-proof.mjs`.
+
+The preflight is fail-closed and records only:
+
+- whether each required configuration name is present;
+- whether the requested SHA matches the GitHub Actions SHA;
+- whether the required confirmation matched, as a boolean only;
+- the selected recovery exercise;
+- whether source and isolated database URLs are different, as a boolean only.
+
+It does **not** store secret values, credentials, database URLs, provider URLs, confirmation strings or provider responses, and it performs no runtime mutation. A blocked preflight is retained as a redacted artifact so missing prerequisites can be diagnosed without first installing PostgreSQL or creating disposable fixtures.
+
+`Final Technical Controls Proof` uses the same preflight contract and requires `RECOVERY_ISOLATED_DATABASE_URL` before it is allowed to create synthetic auth/storage fixtures or run the rolled-back security-event transaction.
+
 ## Backup and restore procedure
 
 1. Open Actions → Recovery Resilience Proof → Run workflow.
 2. Select `backup-restore`.
 3. Approve the protected environment.
-4. The workflow creates a custom-format logical backup.
-5. The workflow restores with `--clean --if-exists` into the isolated database.
-6. It compares aggregate counts for organizations, organization memberships and audit logs.
-7. It verifies RLS is enabled and policies exist after restore.
-8. It records RPO/RTO and deletes the dump.
-9. Review the redacted evidence artifact before accepting any scorecard promotion.
+4. The protected preflight verifies the backup/restore prerequisite group and database isolation without storing either connection string.
+5. The workflow creates a custom-format logical backup.
+6. The workflow restores with `--clean --if-exists` into the isolated database.
+7. It compares aggregate counts for organizations, organization memberships and audit logs.
+8. It verifies RLS is enabled and policies exist after restore.
+9. It records RPO/RTO and deletes the dump.
+10. Review the redacted evidence artifact before accepting any scorecard promotion.
 
 ## Controlled rollback procedure
 
@@ -44,8 +61,9 @@ The isolated database must be disposable, must not serve customers, and must not
 4. Select `production-rollback`.
 5. Enter exactly `EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK`.
 6. Approve the protected environment.
-7. The workflow invokes Vercel Instant Rollback, checks rollback status and validates `/api/health` plus `Cache-Control: no-store` on the production hostname.
-8. Review the generated evidence and incident timeline.
+7. The protected preflight verifies the rollback prerequisite group without storing provider credentials or URLs.
+8. The workflow invokes Vercel Instant Rollback, checks rollback status and validates `/api/health` plus `Cache-Control: no-store` on the production hostname.
+9. Review the generated evidence and incident timeline.
 
 ## Abort conditions
 
@@ -57,4 +75,4 @@ Vercel disables automatic production-domain assignment while a rollback is activ
 
 ## Evidence acceptance
 
-Evidence is accepted only when it is `Complete/passed`, exact-SHA bound, has no failures, contains no sensitive values, and all controls referenced by `scripts/recovery/check-recovery-evidence.mjs` pass.
+Preflight evidence is diagnostic only and never earns recovery or final-technical PASS credit. Canonical recovery evidence is accepted only when it is `Complete/passed`, exact-SHA bound, has no failures, contains no sensitive values, and all controls referenced by `scripts/recovery/check-recovery-evidence.mjs` pass.
