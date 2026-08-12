@@ -2,7 +2,7 @@
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
 
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const DEFAULT_OUTPUT = 'release-validation/production-deployment.json';
@@ -208,14 +208,37 @@ export async function probeExactDeploymentHealth({ publicUrl, fetchImpl = global
 
   const body = response.ok ? await readBoundedJson(response, 64 * 1024) : null;
   if (!response.ok) await response.body?.cancel().catch(() => undefined);
-  const cacheControl = String(response.headers.get('cache-control') ?? '');
-  const noStore = /\bno-store\b/i.test(cacheControl);
+  const noStore = /\bno-store\b/i.test(String(response.headers.get('cache-control') ?? ''));
   const bodyStatus = String(body?.status ?? '');
   return {
     passed: response.status === 200 && bodyStatus === 'ok' && noStore,
     status: response.status,
     bodyStatus: bodyStatus || null,
     noStore,
+  };
+}
+
+function failureEvidence(baseEvidence, blocker, deployment = null, health = null) {
+  return {
+    ...baseEvidence,
+    status: 'OPEN',
+    outcome: 'failed',
+    blockers: [blocker],
+    checks: {
+      currentMainShaBound: blocker !== 'target_sha_is_not_current_main' && blocker !== 'invalid_proof_context',
+      exactShaProductionDeploymentFound: Boolean(deployment),
+      vercelSuccessStatusFound: Boolean(deployment),
+      exactDeploymentHealthOk: health?.passed === true,
+      exactDeploymentHealthNoStore: health?.noStore === true,
+    },
+    evidenceIntegrity: {
+      containsSensitiveValues: false,
+      exactShaBound: FULL_SHA.test(baseEvidence.targetSha),
+      githubDeploymentBound: Boolean(deployment),
+      liveHealthVerified: health?.passed === true,
+      tokenPersisted: false,
+      authorizationHeaderStored: false,
+    },
   };
 }
 
@@ -229,11 +252,10 @@ export async function buildProductionDeploymentEvidence({
   maxAttempts = DEFAULT_ATTEMPTS,
   pollMs = DEFAULT_POLL_MS,
 }) {
-  const generatedAt = new Date().toISOString();
   const baseEvidence = {
     schema: 'risck-comply.production-deployment-evidence.v1',
     evidenceItem: 'production-deployment',
-    generatedAt,
+    generatedAt: new Date().toISOString(),
     targetSha,
     commitSha: targetSha,
     repository,
@@ -242,35 +264,11 @@ export async function buildProductionDeploymentEvidence({
   };
 
   if (repository !== EXPECTED_REPOSITORY || !FULL_SHA.test(targetSha) || !token) {
-    return {
-      ...baseEvidence,
-      status: 'OPEN',
-      outcome: 'failed',
-      blockers: ['invalid_proof_context'],
-      evidenceIntegrity: {
-        containsSensitiveValues: false,
-        exactShaBound: FULL_SHA.test(targetSha),
-        githubDeploymentBound: false,
-        liveHealthVerified: false,
-      },
-    };
+    return failureEvidence(baseEvidence, 'invalid_proof_context');
   }
 
   const mainMatches = await currentMainMatches({ repository, targetSha, token, fetchImpl, apiUrl });
-  if (!mainMatches) {
-    return {
-      ...baseEvidence,
-      status: 'OPEN',
-      outcome: 'failed',
-      blockers: ['target_sha_is_not_current_main'],
-      evidenceIntegrity: {
-        containsSensitiveValues: false,
-        exactShaBound: true,
-        githubDeploymentBound: false,
-        liveHealthVerified: false,
-      },
-    };
-  }
+  if (!mainMatches) return failureEvidence(baseEvidence, 'target_sha_is_not_current_main');
 
   let deployment = null;
   let health = null;
@@ -292,27 +290,8 @@ export async function buildProductionDeploymentEvidence({
     if (attempt < attempts && waitMs > 0) await sleepImpl(waitMs);
   }
 
-  if (!deployment || !health?.passed) {
-    return {
-      ...baseEvidence,
-      status: 'OPEN',
-      outcome: 'failed',
-      blockers: [deployment ? 'exact_deployment_health_unproven' : 'exact_vercel_production_deployment_unproven'],
-      checks: {
-        currentMainShaBound: true,
-        exactShaProductionDeploymentFound: Boolean(deployment),
-        vercelSuccessStatusFound: Boolean(deployment),
-        exactDeploymentHealthOk: health?.passed === true,
-        exactDeploymentHealthNoStore: health?.noStore === true,
-      },
-      evidenceIntegrity: {
-        containsSensitiveValues: false,
-        exactShaBound: true,
-        githubDeploymentBound: Boolean(deployment),
-        liveHealthVerified: health?.passed === true,
-      },
-    };
-  }
+  if (!deployment) return failureEvidence(baseEvidence, 'exact_vercel_production_deployment_unproven');
+  if (!health?.passed) return failureEvidence(baseEvidence, 'exact_deployment_health_unproven', deployment, health);
 
   return {
     ...baseEvidence,
@@ -389,6 +368,4 @@ async function main() {
 }
 
 const invokedPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : null;
-if (invokedPath && import.meta.url === invokedPath) {
-  await main();
-}
+if (invokedPath && import.meta.url === invokedPath) await main();
