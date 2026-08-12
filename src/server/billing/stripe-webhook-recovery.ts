@@ -166,10 +166,13 @@ export async function handleStripeWebhookEventWithRecovery(event: Stripe.Event) 
     return result;
   }
 
-  // A processed duplicate already had its core side effects and may have just repaired
-  // the entitlement snapshot above. Only processing claims are eligible for lease replay.
+  // If the first duplicate lookup observed an in-flight claim and the core worker
+  // finished immediately after it, repair the entitlement side effect here instead
+  // of waiting for another Stripe retry. The snapshot RPC is itself idempotent.
+  if ('entitlement' in result) return result;
   if (await isProcessedStripeEvent(event.id)) {
-    return result;
+    const entitlement = await reconcileEntitlementWhenEligible(event);
+    return entitlement ? { ...result, entitlement } : result;
   }
 
   const recovered = await recoverAbandonedStripeEventClaim(event);
