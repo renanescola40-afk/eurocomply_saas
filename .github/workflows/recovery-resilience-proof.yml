@@ -78,6 +78,14 @@ jobs:
           test "$GITHUB_SHA" = "$TARGET_SHA"
           test "$GITHUB_REF_NAME" = "main"
 
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+
+      - name: Preflight protected recovery proof
+        run: node scripts/security/preflight-protected-proof.mjs recovery
+
       - name: Install PostgreSQL client
         if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
         shell: bash
@@ -103,6 +111,7 @@ jobs:
         with:
           name: recovery-resilience-proof-${{ inputs.release_sha }}
           path: |
+            docs/security/evidence/runtime/recovery-resilience-preflight.json
             docs/security/evidence/runtime/rollback-validation.json
             docs/security/evidence/p1/backup-restore-tested.json
           if-no-files-found: error

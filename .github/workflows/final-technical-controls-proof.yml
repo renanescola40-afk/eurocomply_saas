@@ -58,6 +58,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Preflight protected final technical proof
+        run: node scripts/security/preflight-protected-proof.mjs final-technical
       - name: Install deterministic dependencies
         run: npm ci --ignore-scripts
       - name: Install PostgreSQL client
@@ -73,6 +75,8 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: final-technical-controls-proof-${{ env.ENTERPRISE_EXPECTED_SHA }}
-          path: docs/security/evidence/runtime/final-technical-controls-validation.json
+          path: |
+            docs/security/evidence/runtime/final-technical-controls-preflight.json
+            docs/security/evidence/runtime/final-technical-controls-validation.json
           if-no-files-found: error
           retention-days: 90

@@ -1,3 +1,5 @@
+const FULL_SHA = /^[0-9a-f]{40}$/;
+
 function parseTimestamp(value) {
   const timestamp = Date.parse(String(value ?? ''));
   return Number.isFinite(timestamp) ? timestamp : null;
@@ -37,6 +39,15 @@ export function validateObservabilityRuntimeEvidence(
   if (!['production', 'enterprise', 'public-production'].includes(evidence?.releaseTarget)) {
     failures.push('releaseTarget must be production, enterprise, or public-production');
   }
+
+  const commitSha = String(evidence?.commitSha ?? '').trim().toLowerCase();
+  const buildSha = String(evidence?.buildSha ?? '').trim().toLowerCase();
+  if (!FULL_SHA.test(commitSha)) failures.push('commitSha must be a full lowercase SHA');
+  if (!FULL_SHA.test(buildSha)) failures.push('buildSha must be a full lowercase SHA');
+  if (FULL_SHA.test(commitSha) && FULL_SHA.test(buildSha) && commitSha !== buildSha) {
+    failures.push('buildSha must match commitSha');
+  }
+
   if (evidence?.runtimeConfiguration?.targetCount < 1) {
     failures.push('runtimeConfiguration.targetCount must be at least 1');
   }
@@ -49,6 +60,15 @@ export function validateObservabilityRuntimeEvidence(
   if (evidence?.runtimeConfiguration?.hasProtectedReadinessToken !== true) {
     failures.push('runtimeConfiguration.hasProtectedReadinessToken must be true');
   }
+  if (evidence?.runtimeConfiguration?.runnerShaBindingValid !== true) {
+    failures.push('runtimeConfiguration.runnerShaBindingValid must be true');
+  }
+  if (evidence?.runtimeConfiguration?.deployedTargetsBoundToExpectedSha !== true) {
+    failures.push('runtimeConfiguration.deployedTargetsBoundToExpectedSha must be true');
+  }
+  if (evidence?.runtimeConfiguration?.exactShaBound !== true) {
+    failures.push('runtimeConfiguration.exactShaBound must be true');
+  }
 
   const globalChecks = evidence?.globalChecks ?? [];
   if (!Array.isArray(globalChecks) || globalChecks.length === 0) {
@@ -59,6 +79,8 @@ export function validateObservabilityRuntimeEvidence(
         failures.push(`critical global check ${check?.name ?? '<unknown>'} must pass`);
       }
     }
+    const bindingCheck = globalChecks.find((check) => check?.name === 'releaseShaBindingValid');
+    if (bindingCheck?.passed !== true) failures.push('releaseShaBindingValid must pass');
   }
 
   const targets = evidence?.targets ?? [];
@@ -67,6 +89,22 @@ export function validateObservabilityRuntimeEvidence(
   } else {
     for (const target of targets) {
       if (target?.passed !== true) failures.push('every observability target must pass');
+      if (target?.runtimeReleaseBinding?.passed !== true) {
+        failures.push('every observability target must prove deployed runtime SHA binding');
+      }
+      if (target?.runtimeReleaseBinding?.observedCommitShaMatchedExpected !== true) {
+        failures.push('every observability target runtime commit must match the expected SHA');
+      }
+      if (!['vercel', 'build-env'].includes(target?.runtimeReleaseBinding?.provenance)) {
+        failures.push('every observability target must expose accepted runtime provenance');
+      }
+      if (target?.runtimeReleaseBinding?.rawResponseStored !== false) {
+        failures.push('runtime release raw response must not be stored');
+      }
+      if (target?.runtimeReleaseBinding?.mismatchedObservedShaStored !== false) {
+        failures.push('mismatched observed runtime SHA must not be stored');
+      }
+
       const checks = target?.checks ?? [];
       for (const check of checks) {
         if (check?.critical === true && check?.passed !== true) {
@@ -75,6 +113,10 @@ export function validateObservabilityRuntimeEvidence(
       }
       const sentCheck = checks.find((check) => check?.name === 'observabilitySmokeEventSent');
       if (sentCheck?.passed !== true) failures.push('observabilitySmokeEventSent must pass');
+      const runtimeMatchCheck = checks.find((check) => check?.name === 'observedRuntimeCommitMatchesExpected');
+      if (runtimeMatchCheck?.passed !== true) failures.push('observedRuntimeCommitMatchesExpected must pass');
+      const runtimeEndpointCheck = checks.find((check) => check?.name === 'runtimeReleaseMetadataEndpointOk');
+      if (runtimeEndpointCheck?.passed !== true) failures.push('runtimeReleaseMetadataEndpointOk must pass');
     }
   }
 
@@ -89,6 +131,15 @@ export function validateObservabilityRuntimeEvidence(
   }
   if (evidence?.evidenceIntegrity?.cookiesStored !== false) {
     failures.push('evidenceIntegrity.cookiesStored must be false');
+  }
+  if (evidence?.evidenceIntegrity?.rawRuntimeReleaseResponseStored !== false) {
+    failures.push('evidenceIntegrity.rawRuntimeReleaseResponseStored must be false');
+  }
+  if (evidence?.evidenceIntegrity?.mismatchedObservedShaStored !== false) {
+    failures.push('evidenceIntegrity.mismatchedObservedShaStored must be false');
+  }
+  if (evidence?.evidenceIntegrity?.exactShaBound !== true) {
+    failures.push('evidenceIntegrity.exactShaBound must be true');
   }
 
   return failures;
