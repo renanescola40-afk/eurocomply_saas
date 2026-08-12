@@ -84,6 +84,7 @@ describe('protected production provider runtime proof', () => {
       'UPSTASH_REDIS_REST_TOKEN',
       'HEALTHCHECK_TOKEN',
       'NEXT_PUBLIC_SENTRY_DSN',
+      'SENTRY_AUTH_TOKEN',
       'STEP_UP_SIGNING_SECRET',
       'STEP_UP_PROVIDER_MODE',
       'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
