@@ -52,6 +52,25 @@ describe('canonical P0 runtime evidence catalog', () => {
     }
   });
 
+  it('keeps branch governance and required status checks on independent evidence contracts', () => {
+    const branchProtection = p0EvidenceCatalog.find(
+      (entry) => entry.item === 'Branch protection applied on `main`',
+    );
+    const requiredChecks = p0EvidenceCatalog.find(
+      (entry) => entry.item === 'Required status checks configured',
+    );
+
+    expect(branchProtection).toMatchObject({
+      kind: 'runtime',
+      file: 'branch-protection-required-checks.json',
+    });
+    expect(requiredChecks).toMatchObject({
+      kind: 'runtime',
+      file: 'required-status-checks.json',
+    });
+    expect(branchProtection?.validator).not.toBe(requiredChecks?.validator);
+  });
+
   it('keeps Auth/RBAC inside the strict release inventory', () => {
     const authRbac = activeP0RuntimeEvidenceItems().find(
       (entry) => entry.item === 'Auth/RBAC final runtime validation',
