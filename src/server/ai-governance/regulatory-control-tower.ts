@@ -16,7 +16,7 @@ export const REGULATORY_CONTROL_TOWER_WORKSTREAMS = [
 export type RegulatoryControlTowerWorkstreamId = (typeof REGULATORY_CONTROL_TOWER_WORKSTREAMS)[number];
 export type RegulatoryControlTowerStatus = 'not_started' | 'in_progress' | 'ready' | 'blocked' | 'not_applicable';
 export type RegulatoryControlTowerOverallStatus = 'not_started' | 'in_progress' | 'ready' | 'blocked';
-export type RegulatoryControlTowerImplementationState = 'persisted_workflow' | 'capability_gap';
+export type RegulatoryControlTowerStateSource = 'persisted_tenant_state' | 'repository_control';
 
 export type RegulatoryWorkflowRecord = {
   id: string;
@@ -38,7 +38,7 @@ export type RegulatoryControlTowerWorkstream = {
   updatedAt: string | null;
   route: string | null;
   requiredAction: string | null;
-  implementationState: RegulatoryControlTowerImplementationState;
+  stateSource: RegulatoryControlTowerStateSource;
   humanReviewRequired: boolean;
   legalRulesVersion: string;
 };
@@ -57,16 +57,16 @@ export type RegulatoryControlTowerDecision = {
   inProgressCount: number;
   notStartedCount: number;
   notApplicableCount: number;
-  capabilityGapCount: number;
+  repositoryControlCount: number;
   workstreams: RegulatoryControlTowerWorkstream[];
   blockingWorkstreamIds: RegulatoryControlTowerWorkstreamId[];
-  capabilityGapWorkstreamIds: RegulatoryControlTowerWorkstreamId[];
+  repositoryControlWorkstreamIds: RegulatoryControlTowerWorkstreamId[];
   requiredActions: string[];
   evidenceBoundary: string;
   humanReviewBoundary: string;
 };
 
-const VERSION = '2026-08-12.1';
+const VERSION = '2026-08-12.2';
 
 type WorkstreamDefinition = {
   label: string;
@@ -74,7 +74,7 @@ type WorkstreamDefinition = {
   legalRoles: AiActLegalRole[];
   weight: number;
   route: string | null;
-  implementationState: RegulatoryControlTowerImplementationState;
+  stateSource: RegulatoryControlTowerStateSource;
   humanReviewRequired: boolean;
 };
 
@@ -85,7 +85,7 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, WorkstreamDefiniti
     legalRoles: ['provider', 'deployer'],
     weight: 6,
     route: '/dashboard/ai-literacy',
-    implementationState: 'persisted_workflow',
+    stateSource: 'persisted_tenant_state',
     humanReviewRequired: true,
   },
   prohibited_practices: {
@@ -94,7 +94,7 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, WorkstreamDefiniti
     legalRoles: ['provider', 'deployer', 'importer', 'distributor', 'product_manufacturer'],
     weight: 7,
     route: '/dashboard/prohibited-practices',
-    implementationState: 'persisted_workflow',
+    stateSource: 'persisted_tenant_state',
     humanReviewRequired: true,
   },
   high_risk_provider_data: {
@@ -103,7 +103,7 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, WorkstreamDefiniti
     legalRoles: ['provider', 'product_manufacturer'],
     weight: 9,
     route: '/dashboard/provider-data',
-    implementationState: 'persisted_workflow',
+    stateSource: 'persisted_tenant_state',
     humanReviewRequired: true,
   },
   annex_iv: {
@@ -112,7 +112,7 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, WorkstreamDefiniti
     legalRoles: ['provider', 'product_manufacturer'],
     weight: 6,
     route: '/dashboard/annex-iv',
-    implementationState: 'persisted_workflow',
+    stateSource: 'persisted_tenant_state',
     humanReviewRequired: true,
   },
   qms: {
@@ -121,7 +121,7 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, WorkstreamDefiniti
     legalRoles: ['provider', 'product_manufacturer'],
     weight: 5,
     route: '/dashboard/qms',
-    implementationState: 'persisted_workflow',
+    stateSource: 'persisted_tenant_state',
     humanReviewRequired: true,
   },
   fria: {
@@ -130,7 +130,7 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, WorkstreamDefiniti
     legalRoles: ['deployer', 'public_authority', 'private_public_service_provider'],
     weight: 6,
     route: '/dashboard/fria',
-    implementationState: 'persisted_workflow',
+    stateSource: 'persisted_tenant_state',
     humanReviewRequired: true,
   },
   article_50_transparency: {
@@ -138,8 +138,8 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, WorkstreamDefiniti
     articleReference: 'Article 50',
     legalRoles: ['provider', 'deployer'],
     weight: 8,
-    route: '/dashboard/compliance',
-    implementationState: 'persisted_workflow',
+    route: '/dashboard/transparencia',
+    stateSource: 'persisted_tenant_state',
     humanReviewRequired: true,
   },
   deployer_obligations: {
@@ -148,7 +148,7 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, WorkstreamDefiniti
     legalRoles: ['deployer'],
     weight: 7,
     route: '/dashboard/compliance',
-    implementationState: 'capability_gap',
+    stateSource: 'repository_control',
     humanReviewRequired: true,
   },
   post_market_monitoring: {
@@ -157,7 +157,7 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, WorkstreamDefiniti
     legalRoles: ['provider', 'deployer'],
     weight: 6,
     route: '/dashboard/compliance',
-    implementationState: 'capability_gap',
+    stateSource: 'repository_control',
     humanReviewRequired: true,
   },
   conformity: {
@@ -166,7 +166,7 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, WorkstreamDefiniti
     legalRoles: ['provider', 'authorised_representative', 'importer', 'product_manufacturer'],
     weight: 5,
     route: null,
-    implementationState: 'persisted_workflow',
+    stateSource: 'persisted_tenant_state',
     humanReviewRequired: true,
   },
 };
@@ -190,12 +190,9 @@ function classify(record: RegulatoryWorkflowRecord | null | undefined): Regulato
   return 'in_progress';
 }
 
-function actionFor(
-  status: RegulatoryControlTowerStatus,
-  definition: WorkstreamDefinition,
-) {
-  if (definition.implementationState === 'capability_gap') {
-    return `Connect a tenant-persisted, evidence-backed workflow for ${definition.label}; capability code alone must not be counted as completed operational evidence.`;
+function actionFor(status: RegulatoryControlTowerStatus, definition: WorkstreamDefinition) {
+  if (definition.stateSource === 'repository_control' && status === 'not_started') {
+    return `Capture organization-specific runtime evidence for ${definition.label}; repository implementation and CI coverage alone are not a tenant readiness pass.`;
   }
   if (status === 'not_started') return `Create and scope the ${definition.label} workflow.`;
   if (status === 'blocked') return `Resolve the blocking findings in ${definition.label} before release readiness.`;
@@ -221,7 +218,7 @@ export function buildRegulatoryControlTower(input: RegulatoryControlTowerInput):
       updatedAt: record?.updatedAt ?? null,
       route: definition.route,
       requiredAction: actionFor(status, definition),
-      implementationState: definition.implementationState,
+      stateSource: definition.stateSource,
       humanReviewRequired: definition.humanReviewRequired,
       legalRulesVersion: AI_ACT_LEGAL_RULES_VERSION,
     };
@@ -235,10 +232,10 @@ export function buildRegulatoryControlTower(input: RegulatoryControlTowerInput):
   const notStarted = workstreams.filter((item) => item.status === 'not_started');
   const ready = workstreams.filter((item) => item.status === 'ready');
   const notApplicable = workstreams.filter((item) => item.status === 'not_applicable');
-  const capabilityGaps = workstreams.filter((item) => item.implementationState === 'capability_gap');
+  const repositoryControls = workstreams.filter((item) => item.stateSource === 'repository_control');
 
   let overallStatus: RegulatoryControlTowerOverallStatus = 'not_started';
-  if (blocked.length > 0 || capabilityGaps.length > 0) overallStatus = 'blocked';
+  if (blocked.length > 0) overallStatus = 'blocked';
   else if (readyWeight === totalWeight) overallStatus = 'ready';
   else if (activatedWeight > 0) overallStatus = 'in_progress';
 
@@ -256,12 +253,12 @@ export function buildRegulatoryControlTower(input: RegulatoryControlTowerInput):
     inProgressCount: inProgress.length,
     notStartedCount: notStarted.length,
     notApplicableCount: notApplicable.length,
-    capabilityGapCount: capabilityGaps.length,
+    repositoryControlCount: repositoryControls.length,
     workstreams,
     blockingWorkstreamIds: blocked.map((item) => item.id),
-    capabilityGapWorkstreamIds: capabilityGaps.map((item) => item.id),
+    repositoryControlWorkstreamIds: repositoryControls.map((item) => item.id),
     requiredActions: workstreams.map((item) => item.requiredAction).filter((action): action is string => Boolean(action)),
-    evidenceBoundary: 'This control tower aggregates persisted workflow lifecycle states for operational visibility. It does not validate underlying evidence, certify compliance, authorize market placement or replace legal, technical or conformity assessment review.',
+    evidenceBoundary: 'This control tower aggregates persisted workflow lifecycle states and repository controls for operational visibility. It does not validate underlying evidence, certify compliance, authorize market placement or replace legal, technical or conformity assessment review.',
     humanReviewBoundary: 'HUMAN_REVIEW_REQUIRED for customer-specific facts, legal interpretation, high-risk determination, fundamental-rights analysis, exceptions, proportionality, adequacy and technical performance in real deployment.',
   };
 }

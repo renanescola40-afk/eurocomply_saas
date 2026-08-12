@@ -31,31 +31,31 @@ No paid access is granted from a Checkout success redirect. Subscription/entitle
 
 | Article / obligation | Role(s) | Product implementation | Test / evidence path | Runtime state | Human review | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| Article 4 — AI literacy | provider, deployer | Persisted AI literacy programmes, assignments, completion/evidence workflow | `docs/compliance/article-function-evidence-registry.v1.json`; AI literacy API/tests | Exact-head runtime revalidation required | Required for adequacy/context | IMPLEMENTED — REVALIDATION REQUIRED |
-| Article 5 — prohibited practices | provider, deployer, importer, distributor, product manufacturer | Persisted review workflow, signals, evidence, escalation and decision support | compliance registry + prohibited-practices workflow/tests | Exact-head runtime revalidation required | `HUMAN_REVIEW_REQUIRED` | IMPLEMENTED — REVALIDATION REQUIRED |
+| Article 4 — AI literacy | provider, deployer | Persisted AI literacy programmes, assignments, completion/evidence workflow | `docs/compliance/article-function-evidence-registry.v1.json`; AI literacy API/tests | Exact-head runtime revalidation required | Required for adequacy/context | IMPLEMENTED — CI EVIDENCE REQUIRED PER SHA |
+| Article 5 — prohibited practices | provider, deployer, importer, distributor, product manufacturer | Persisted review workflow, signals, evidence, escalation and decision support | compliance registry + prohibited-practices workflow/tests | Exact-head runtime revalidation required | `HUMAN_REVIEW_REQUIRED` | IMPLEMENTED — CI EVIDENCE REQUIRED PER SHA |
 | High-risk classification / Annex III | provider/deployer and other applicable economic operators | Versioned scope/high-risk decision support represented in the legal/control registries | `src/server/ai-governance/legal-rules.ts`; product coverage registry | Customer-specific runtime facts not proven | `HUMAN_REVIEW_REQUIRED` | IMPLEMENTED DECISION SUPPORT — HUMAN DETERMINATION |
-| Articles 9–10 — risk/data governance | provider, product manufacturer where applicable | Persisted provider-data/risk workflow with evidence and lifecycle state | `ai_provider_data_programs` workflow + compliance registries | Exact-head runtime revalidation required | `HUMAN_REVIEW_REQUIRED` | IMPLEMENTED — REVALIDATION REQUIRED |
-| Article 11 + Annex IV | provider, product manufacturer | Persisted Annex IV package/workspace with lifecycle state | `ai_annex_iv_packages`; `/dashboard/annex-iv` | Exact-head runtime revalidation required | Required for completeness/approval | IMPLEMENTED — REVALIDATION REQUIRED |
+| Articles 9–10 — risk/data governance | provider, product manufacturer where applicable | Persisted provider-data/risk workflow with evidence and lifecycle state | `ai_provider_data_programs` workflow + compliance registries | Exact-head runtime revalidation required | `HUMAN_REVIEW_REQUIRED` | IMPLEMENTED — CI EVIDENCE REQUIRED PER SHA |
+| Article 11 + Annex IV | provider, product manufacturer | Persisted Annex IV package/workspace with lifecycle state | `ai_annex_iv_packages`; `/dashboard/annex-iv` | Exact-head runtime revalidation required | Required for completeness/approval | IMPLEMENTED — CI EVIDENCE REQUIRED PER SHA |
 | Articles 12–15 — records, instructions, oversight, performance, robustness/cybersecurity | provider/deployer as applicable | Cross-workflow evidence, audit/logging and incident support in existing control plane | article/function registry + evidence/audit/incident modules | Runtime technical performance remains deployment-specific | `HUMAN_REVIEW_REQUIRED` | IMPLEMENTED SUPPORT — RUNTIME EVIDENCE REQUIRED |
-| Article 17 — QMS | provider | Persisted QMS system/workflow | `ai_qms_systems`; `/dashboard/qms` | Exact-head runtime revalidation required | Required for QMS approval | IMPLEMENTED — REVALIDATION REQUIRED |
-| Article 26 — deployer obligations | deployer | Decision model exists in `src/server/ai-governance/deployer-obligations.ts` | pure decision support + compliance registry | No dedicated tenant-persisted deployer workspace/control-state is connected to the Control Tower | `HUMAN_REVIEW_REQUIRED` | CAPABILITY GAP |
-| Article 27 — FRIA | deployer/public bodies and applicable service providers | Persisted FRIA assessment lifecycle | `ai_fria_assessments`; `/dashboard/fria` | Exact-head runtime revalidation required | `HUMAN_REVIEW_REQUIRED` | IMPLEMENTED — REVALIDATION REQUIRED |
-| Article 50 — transparency | provider, deployer | Versioned assessments, evidence and event ledger in `ai_article50_*`; now surfaced by Regulatory Control Tower | `src/server/queries/article-50-workspace.ts`; Control Tower tests | Exact-head runtime revalidation required | `HUMAN_REVIEW_REQUIRED` | IMPLEMENTED — CONTROL TOWER CONNECTED |
-| Post-market monitoring / incident operations | provider/deployer as applicable | `ai_incidents` provides incident severity, owner, timeline/deadline plan, evidence-oriented triage and audit-chain creation | `/api/ai-incidents`; incident query/triage tests | Dedicated tenant-persisted post-market monitoring programme/control-state is not connected | `HUMAN_REVIEW_REQUIRED` | CAPABILITY GAP |
+| Article 17 — QMS | provider | Persisted QMS system/workflow | `ai_qms_systems`; `/dashboard/qms` | Exact-head runtime revalidation required | Required for QMS approval | IMPLEMENTED — CI EVIDENCE REQUIRED PER SHA |
+| Article 26 — deployer obligations | deployer | Repository control/workspace guidance and deployer decision model are registered as implementation-ready by the canonical product coverage registry | `docs/compliance/DEPLOYER_OBLIGATIONS_WORKSPACE.md`; `src/server/ai-governance/deployer-obligations.ts`; tests | Organization/runtime evidence still required | `HUMAN_REVIEW_REQUIRED` | IMPLEMENTED — RUNTIME + HUMAN EVIDENCE REQUIRED |
+| Article 27 — FRIA | deployer/public bodies and applicable service providers | Persisted FRIA assessment lifecycle | `ai_fria_assessments`; `/dashboard/fria` | Exact-head runtime revalidation required | `HUMAN_REVIEW_REQUIRED` | IMPLEMENTED — CI EVIDENCE REQUIRED PER SHA |
+| Article 50 — transparency | provider, deployer | Versioned assessments, evidence and event ledger in `ai_article50_*`; now surfaced by Regulatory Control Tower | `src/server/queries/article-50-workspace.ts`; `/dashboard/transparencia`; Control Tower tests | Exact-head runtime revalidation required | `HUMAN_REVIEW_REQUIRED` | IMPLEMENTED — CONTROL TOWER CONNECTED |
+| Post-market monitoring / incident operations | provider/deployer as applicable | Incident operations API and audit-backed triage are registered as implementation-ready by the canonical product coverage registry | `/api/ai-incidents`; `/api/ai-incidents/[id]`; `tests/security/incident-operations-evidence.test.ts` | Release/runtime incident evidence still required | Human escalation remains contextual | IMPLEMENTED — RUNTIME EVIDENCE REQUIRED |
 
 ## Regulatory Control Tower behavior
 
 The Control Tower now:
 
-- includes Article 50 as a real persisted workstream;
+- includes Article 50 as a real persisted workstream and routes it to the existing transparency workspace;
 - exposes legal roles, the repository legal-rules version and a human-review flag per workstream;
-- explicitly reports Article 26 and post-market monitoring as `capability_gap` rather than silently excluding them or counting them as ready;
-- blocks overall `ready` while known capability gaps exist;
+- surfaces Article 26 and post-market monitoring as repository controls whose implementation can be CI-verified but whose organization-specific readiness still requires runtime/evidence state;
+- never counts repository implementation alone as tenant readiness;
 - preserves the existing evidence disclaimer that a lifecycle state is not legal certification or proof of underlying evidence quality.
 
 ## Public claims
 
-A repository code-search pass on this baseline did not return the prohibited phrases `100% compliant`, `guaranteed compliant`, `EU approved`, `legally certified`, `replaces lawyers`, `pentested`, `SOC 2`, or `ISO 27001`. This is a useful regression signal, not external legal or marketing approval. Existing claim scanners and evidence gates remain authoritative.
+Dangerous public claims remain governed by the repository Public Claims Guard. A repository search on the baseline did not return the prohibited phrases `100% compliant`, `guaranteed compliant`, `EU approved`, `legally certified`, `replaces lawyers`, `pentested`, `SOC 2`, or `ISO 27001`; the exact-head workflow result remains authoritative.
 
 ## Verification required on the PR exact head
 
@@ -71,6 +71,8 @@ npm run security:ci
 
 Focused checks added/updated by this package cover billing idempotency, durable lifecycle lease recovery, checkout hardening, tenant/provider binding, annual-interval preservation and Regulatory Control Tower legal/human-review boundaries.
 
+The canonical `EU AI Act Product Coverage` workflow is the authority for implementation/CI/runtime/completed coverage on each exact SHA. Its categories must not be collapsed into a legal-compliance guarantee.
+
 ## Runtime work that must not be fabricated
 
 The following remain external until a protected exact-SHA run produces evidence:
@@ -84,4 +86,4 @@ The following remain external until a protected exact-SHA run produces evidence:
 - authenticated production E2E for onboarding and the complete role matrix;
 - qualified legal review for the legal-decision boundaries above.
 
-No runtime item above is marked PASS by this repository-only implementation commit.
+No runtime item above is marked PASS by a repository-only implementation commit.

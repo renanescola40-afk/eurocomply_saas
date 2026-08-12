@@ -25,26 +25,27 @@ const readyPersisted: RegulatoryControlTowerInput = {
 };
 
 describe('buildRegulatoryControlTower', () => {
-  it('reports zero activation while still surfacing known capability gaps', () => {
+  it('reports zero activation without organization-specific workflow evidence', () => {
     const result = buildRegulatoryControlTower({});
 
-    expect(result.overallStatus).toBe('blocked');
+    expect(result.overallStatus).toBe('not_started');
     expect(result.activationPercent).toBe(0);
     expect(result.readyPercent).toBe(0);
     expect(result.notStartedCount).toBe(REGULATORY_CONTROL_TOWER_WORKSTREAMS.length);
-    expect(result.capabilityGapWorkstreamIds).toEqual(['deployer_obligations', 'post_market_monitoring']);
+    expect(result.repositoryControlWorkstreamIds).toEqual(['deployer_obligations', 'post_market_monitoring']);
     expect(result.requiredActions).toHaveLength(REGULATORY_CONTROL_TOWER_WORKSTREAMS.length);
   });
 
-  it('does not report full readiness while deployer and post-market operational persistence are missing', () => {
+  it('keeps repository implementation coverage separate from tenant runtime readiness', () => {
     const result = buildRegulatoryControlTower(readyPersisted);
 
-    expect(result.overallStatus).toBe('blocked');
+    expect(result.overallStatus).toBe('in_progress');
     expect(result.activationPercent).toBe(80);
     expect(result.readyPercent).toBe(80);
     expect(result.readyCount).toBe(8);
-    expect(result.capabilityGapCount).toBe(2);
+    expect(result.repositoryControlCount).toBe(2);
     expect(result.blockingWorkstreamIds).toEqual([]);
+    expect(result.requiredActions.join(' ')).toContain('repository implementation and CI coverage alone are not a tenant readiness pass');
   });
 
   it('surfaces Article 50 as a persisted, human-reviewed workstream', () => {
@@ -53,8 +54,9 @@ describe('buildRegulatoryControlTower', () => {
     expect(result.workstreams.find((item) => item.id === 'article_50_transparency')).toMatchObject({
       articleReference: 'Article 50',
       status: 'ready',
-      implementationState: 'persisted_workflow',
+      stateSource: 'persisted_tenant_state',
       humanReviewRequired: true,
+      route: '/dashboard/transparencia',
     });
   });
 
@@ -88,7 +90,7 @@ describe('buildRegulatoryControlTower', () => {
       annex_iv: record('annex', 'review'),
     });
 
-    expect(result.overallStatus).toBe('blocked');
+    expect(result.overallStatus).toBe('in_progress');
     expect(result.activationPercent).toBeGreaterThan(0);
     expect(result.readyPercent).toBe(0);
     expect(result.inProgressCount).toBe(3);
@@ -100,7 +102,7 @@ describe('buildRegulatoryControlTower', () => {
       conformity: record('conformity', 'not_applicable'),
     });
 
-    expect(result.overallStatus).toBe('blocked');
+    expect(result.overallStatus).toBe('in_progress');
     expect(result.readyPercent).toBe(80);
     expect(result.readyCount).toBe(7);
     expect(result.notApplicableCount).toBe(1);
