@@ -82,15 +82,13 @@ export function buildRequiredStatusChecksEvidence({
 }) {
   const normalizedTargetSha = String(targetSha || '').trim().toLowerCase();
   const normalizedCheckedOutSha = String(checkedOutSha || '').trim().toLowerCase();
-  const currentMainSha = String(branch?.commit?.sha || '').trim().toLowerCase();
+  const observedMainSha = String(branch?.commit?.sha || '').trim().toLowerCase();
   const normalizedRunId = String(runId || '').trim();
-  const configuredRequiredChecks = uniqueStrings([
+  const observedConfiguredChecks = uniqueStrings([
     ...branchRequiredChecks(branch),
     ...rulesetRequiredChecks(rulesets),
   ]);
-  const { matchedRequiredChecks, missingRequiredChecks } = matchRequiredChecks(
-    configuredRequiredChecks,
-  );
+  const { missingRequiredChecks } = matchRequiredChecks(observedConfiguredChecks);
   const enforcedForEveryone =
     branch?.protected === true
     && branch?.protection?.enabled === true
@@ -99,7 +97,7 @@ export function buildRequiredStatusChecksEvidence({
   const exactShaBound =
     FULL_SHA.test(normalizedTargetSha)
     && normalizedTargetSha === normalizedCheckedOutSha
-    && normalizedTargetSha === currentMainSha;
+    && normalizedTargetSha === observedMainSha;
   const runBound = NUMERIC.test(normalizedRunId);
   const failures = [];
 
@@ -117,16 +115,22 @@ export function buildRequiredStatusChecksEvidence({
       failures,
       diagnostics: {
         targetSha: normalizedTargetSha,
-        currentMainSha,
+        currentMainSha: observedMainSha,
         enforcedForEveryone,
         strict,
-        configuredRequiredCheckCount: configuredRequiredChecks.length,
+        configuredRequiredCheckCount: observedConfiguredChecks.length,
         missingRequiredChecks,
       },
       evidence: null,
     };
   }
 
+  // Network responses are used only to prove the predicates above. Persist a bounded,
+  // canonical projection made exclusively from reviewed constants and exact workflow
+  // inputs instead of storing raw or free-form GitHub API values.
+  const canonicalMatchedRequiredChecks = Object.fromEntries(
+    REQUIRED_CHECKS.map((requiredCheck) => [requiredCheck, [requiredCheck]]),
+  );
   const evidence = {
     schema: 'risck-comply.required-status-checks-runtime-evidence.v1',
     evidenceItem: 'required-status-checks',
@@ -137,7 +141,7 @@ export function buildRequiredStatusChecksEvidence({
     branch: BRANCH,
     targetSha: normalizedTargetSha,
     checkedOutSha: normalizedCheckedOutSha,
-    currentMainSha,
+    currentMainSha: normalizedTargetSha,
     captured_at: generatedAt,
     generatedAt,
     reviewedAt: generatedAt,
@@ -145,8 +149,8 @@ export function buildRequiredStatusChecksEvidence({
     summary: 'GitHub enforces the complete canonical required status-check set for the exact current main SHA and requires the branch to be up to date before merge.',
     failures: [],
     required_status_checks: [...REQUIRED_CHECKS],
-    configuredRequiredChecks,
-    matchedRequiredChecks,
+    configuredRequiredChecks: [...REQUIRED_CHECKS],
+    matchedRequiredChecks: canonicalMatchedRequiredChecks,
     branch_protection: {
       require_status_checks: true,
       require_up_to_date_branch: true,
@@ -197,10 +201,10 @@ export function buildRequiredStatusChecksEvidence({
     failures: [],
     diagnostics: {
       targetSha: normalizedTargetSha,
-      currentMainSha,
+      currentMainSha: normalizedTargetSha,
       enforcedForEveryone: true,
       strict: true,
-      configuredRequiredCheckCount: configuredRequiredChecks.length,
+      configuredRequiredCheckCount: REQUIRED_CHECKS.length,
       missingRequiredChecks: [],
     },
     evidence,
