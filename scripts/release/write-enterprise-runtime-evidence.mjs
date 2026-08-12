@@ -3,6 +3,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+import { resolveEvidenceShaBinding } from './evidence-sha-binding.mjs';
+
 const runtimeDir = 'docs/security/evidence/runtime';
 const enterpriseEvidencePath = `${runtimeDir}/enterprise-runtime-evidence.json`;
 const goNoGoPath = `${runtimeDir}/release-go-no-go.json`;
@@ -54,21 +56,25 @@ function basePass(evidence) {
   return evidence.present && evidence.parseable && evidence.status === 'Complete' && ['passed', 'Go', 'GO'].includes(evidence.outcome);
 }
 
-function collectCommitShas(raw = {}) {
-  return [
-    raw.commitSha,
-    raw.releaseCommitSha,
-    raw.targetSha,
-    raw.releaseSha,
-    raw.githubActions?.commitSha,
-    raw.provenance?.commitSha,
-  ]
-    .map((value) => String(value ?? '').trim().toLowerCase())
-    .filter((value) => /^[0-9a-f]{40}$/.test(value));
+function releaseShaResolution(evidence) {
+  if (!evidence?.raw) {
+    return {
+      sha: null,
+      source: null,
+      validBindings: [],
+      conflict: false,
+      distinctValidShas: [],
+    };
+  }
+  return resolveEvidenceShaBinding(evidence.raw);
 }
 
 function matchesReleaseCommit(evidence) {
-  return collectCommitShas(evidence.raw).includes(String(commitSha ?? '').toLowerCase());
+  const expected = String(commitSha ?? '').trim().toLowerCase();
+  if (!/^[0-9a-f]{40}$/.test(expected)) return false;
+  const resolution = releaseShaResolution(evidence);
+  if (resolution.conflict || resolution.distinctValidShas.length !== 1) return false;
+  return resolution.distinctValidShas[0]?.toLowerCase() === expected;
 }
 
 function targetHasPassedDeploymentSmoke(evidence) {
@@ -114,7 +120,14 @@ for (const [key, , required, commitBound] of requiredEvidence) {
   if (!required) continue;
   const item = evidence[key];
   if (!basePass(item)) blockers.push(`${item.path} must be Complete/passed; current status=${item.status}, outcome=${item.outcome}`);
-  if (commitBound && !matchesReleaseCommit(item)) blockers.push(`${item.path} must be bound to release commit ${commitSha || '<missing>'}.`);
+  if (commitBound && !matchesReleaseCommit(item)) {
+    const resolution = releaseShaResolution(item);
+    if (resolution.conflict) {
+      blockers.push(`${item.path} has conflicting exact-SHA provenance bindings and cannot be bound to release commit ${commitSha || '<missing>'}.`);
+    } else {
+      blockers.push(`${item.path} must be bound to release commit ${commitSha || '<missing>'}.`);
+    }
+  }
 }
 
 if (!targetHasPassedDeploymentSmoke(evidence.deploymentSmoke)) blockers.push('Deployment smoke must prove at least one target passed and zero smoke targets failed.');
@@ -158,6 +171,7 @@ const controlsVerified = outcome === 'passed'
 const evidenceFiles = Object.fromEntries(Object.entries(evidence).map(([key, item]) => {
   const definition = requiredEvidence.find(([candidate]) => candidate === key);
   const commitBound = definition?.[3] === true;
+  const resolution = commitBound ? releaseShaResolution(item) : null;
   return [key, {
     path: item.path,
     present: item.present,
@@ -168,6 +182,8 @@ const evidenceFiles = Object.fromEntries(Object.entries(evidence).map(([key, ite
     releaseTarget: item.releaseTarget || null,
     commitBound,
     shaMatches: commitBound ? matchesReleaseCommit(item) : null,
+    shaSource: commitBound ? resolution?.source ?? null : null,
+    shaConflict: commitBound ? resolution?.conflict === true : null,
   }];
 }));
 

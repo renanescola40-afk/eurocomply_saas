@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 
 const SHA = 'a'.repeat(40);
+const OTHER_SHA = 'b'.repeat(40);
 const writer = resolve('scripts/release/write-enterprise-runtime-evidence.mjs');
 const validator = resolve('scripts/release/validate-release-go-no-go-evidence.mjs');
 const definitions = [
@@ -56,7 +57,7 @@ function workspace(staleFile = null) {
       outcome: 'passed',
       generatedAt: '2026-07-29T18:00:00.000Z',
       releaseTarget: 'enterprise',
-      ...(commitBound ? { commitSha: file === staleFile ? 'b'.repeat(40) : SHA } : {}),
+      ...(commitBound ? { commitSha: file === staleFile ? OTHER_SHA : SHA } : {}),
       ...extra,
     })}\n`);
   }
@@ -74,6 +75,13 @@ function environment() {
   };
 }
 
+function rewriteEvidence(root, file, value) {
+  writeFileSync(
+    join(root, 'docs/security/evidence/runtime', file),
+    `${JSON.stringify(value)}\n`,
+  );
+}
+
 test('writer and validator retain Go only for exact-SHA prerequisite evidence', () => {
   const root = workspace();
   try {
@@ -84,6 +92,39 @@ test('writer and validator retain Go only for exact-SHA prerequisite evidence', 
     assert.equal(decision.finalDecision, 'Go');
     assert.equal(decision.p0Blockers.length, 0);
     assert.equal(decision.evidenceFiles.deploymentSmoke.shaMatches, true);
+    assert.equal(decision.evidenceFiles.deploymentSmoke.shaSource, 'commitSha');
+    assert.equal(decision.evidenceFiles.deploymentSmoke.shaConflict, false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('writer accepts canonical nested runtimeContext.commitSha binding', () => {
+  const root = workspace();
+  try {
+    rewriteEvidence(root, 'upload-malware-scan-validation.json', {
+      status: 'Complete',
+      outcome: 'passed',
+      generatedAt: '2026-07-29T18:00:00.000Z',
+      releaseTarget: 'enterprise',
+      runtimeContext: {
+        commitSha: SHA,
+        repository: 'renanescola40-afk/eurocomply_saas',
+        branch: 'main',
+      },
+      evidenceIntegrity: {
+        containsSensitiveValues: false,
+        exactShaBound: true,
+      },
+    });
+
+    execFileSync(process.execPath, [writer], { cwd: root, env: environment(), stdio: 'pipe' });
+    const decision = JSON.parse(readFileSync(join(root, 'docs/security/evidence/runtime/release-go-no-go.json'), 'utf8'));
+
+    assert.equal(decision.finalDecision, 'Go');
+    assert.equal(decision.evidenceFiles.uploadScannerValidation.shaMatches, true);
+    assert.equal(decision.evidenceFiles.uploadScannerValidation.shaSource, 'runtimeContext.commitSha');
+    assert.equal(decision.evidenceFiles.uploadScannerValidation.shaConflict, false);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -103,6 +144,39 @@ test('writer emits No-Go when one commit-bound prerequisite is stale', () => {
     assert.equal(decision.finalDecision, 'No-Go');
     assert.equal(decision.evidenceFiles.deploymentSmoke.shaMatches, false);
     assert.ok(decision.p0Blockers.some(({ blocker }) => blocker.includes('deployment-smoke-validation.json must be bound')));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('writer fails closed when canonical SHA bindings conflict', () => {
+  const root = workspace();
+  try {
+    rewriteEvidence(root, 'upload-malware-scan-validation.json', {
+      status: 'Complete',
+      outcome: 'passed',
+      generatedAt: '2026-07-29T18:00:00.000Z',
+      releaseTarget: 'enterprise',
+      commitSha: SHA,
+      runtimeContext: { commitSha: OTHER_SHA },
+      evidenceIntegrity: {
+        containsSensitiveValues: false,
+        exactShaBound: true,
+      },
+    });
+
+    const result = spawnSync(process.execPath, [writer], {
+      cwd: root,
+      env: environment(),
+      encoding: 'utf8',
+    });
+    const decision = JSON.parse(readFileSync(join(root, 'docs/security/evidence/runtime/release-go-no-go.json'), 'utf8'));
+
+    assert.notEqual(result.status, 0);
+    assert.equal(decision.finalDecision, 'No-Go');
+    assert.equal(decision.evidenceFiles.uploadScannerValidation.shaMatches, false);
+    assert.equal(decision.evidenceFiles.uploadScannerValidation.shaConflict, true);
+    assert.ok(decision.p0Blockers.some(({ blocker }) => blocker.includes('conflicting exact-SHA provenance bindings')));
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
