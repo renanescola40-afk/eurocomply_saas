@@ -45,6 +45,10 @@ describe('production release profiles', () => {
     const workflow = read('.github/workflows/public-production-final.yml');
 
     expect(workflow).toContain('RELEASE_TARGET: public-production');
+    expect(workflow).toContain("RELEASE_RUN_OBSERVABILITY_SMOKE: 'true'");
+    expect(workflow).toContain(
+      'grep -Fq "RELEASE_RUN_OBSERVABILITY_SMOKE: \'true\'" .github/workflows/public-production-final.yml',
+    );
     expect(workflow).toContain('public-production-release-env-readiness.json');
     expect(workflow).toContain('observability-smoke-validation.json');
     expect(workflow).toContain('write-public-production-go-no-go-evidence.mjs');

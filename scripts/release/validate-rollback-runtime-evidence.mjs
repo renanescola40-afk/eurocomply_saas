@@ -10,6 +10,7 @@ export function validateRollbackRuntimeEvidence(
     maxAgeDays = 7,
     expectedRepository = 'renanescola40-afk/eurocomply_saas',
     expectedBranch = 'main',
+    expectedCommitSha,
   } = {},
 ) {
   const failures = [];
@@ -39,8 +40,8 @@ export function validateRollbackRuntimeEvidence(
   if (evidence?.status !== 'Complete') return failures;
 
   if (evidence?.outcome !== 'passed') failures.push('Complete evidence outcome must be passed');
-  if (!['production', 'enterprise'].includes(evidence?.releaseTarget)) {
-    failures.push('releaseTarget must be production or enterprise');
+  if (!['production', 'enterprise', 'public-production'].includes(evidence?.releaseTarget)) {
+    failures.push('releaseTarget must be production, enterprise, or public-production');
   }
   if (evidence?.runtimeContext?.generatedByGithubActions !== true) {
     failures.push('runtimeContext.generatedByGithubActions must be true');
@@ -54,54 +55,35 @@ export function validateRollbackRuntimeEvidence(
   if (!String(evidence?.runtimeContext?.githubRunId ?? '').trim()) {
     failures.push('runtimeContext.githubRunId is required');
   }
-  if (!/^[a-f0-9]{40}$/i.test(String(evidence?.runtimeContext?.commitSha ?? ''))) {
+  const commitSha = String(evidence?.runtimeContext?.commitSha ?? '').toLowerCase();
+  const normalizedExpectedSha = String(expectedCommitSha ?? '').toLowerCase();
+  if (!/^[a-f0-9]{40}$/.test(commitSha)) {
     failures.push('runtimeContext.commitSha must be a full commit SHA');
   }
+  if (expectedCommitSha && !/^[a-f0-9]{40}$/i.test(String(expectedCommitSha))) {
+    failures.push('expectedCommitSha must be a full commit SHA');
+  } else if (normalizedExpectedSha && commitSha !== normalizedExpectedSha) {
+    failures.push('runtimeContext.commitSha must match expectedCommitSha');
+  }
 
-  if (evidence?.dryRun?.mutatesProduction !== false) {
-    failures.push('dryRun.mutatesProduction must be false');
-  }
-  if (evidence?.dryRun?.commandExecuted !== true) {
-    failures.push('dryRun.commandExecuted must be true');
-  }
-  if (evidence?.targetValidation?.passed !== true) {
-    failures.push('targetValidation.passed must be true');
-  }
-  if (evidence?.targetValidation?.targetConfigured !== true) {
-    failures.push('targetValidation.targetConfigured must be true');
-  }
-  if (evidence?.targetValidation?.targetShaConfigured !== true) {
-    failures.push('targetValidation.targetShaConfigured must be true');
-  }
-  if (evidence?.targetValidation?.targetDiffersFromCurrentRelease !== true) {
-    failures.push('targetValidation.targetDiffersFromCurrentRelease must be true');
-  }
-  if (evidence?.targetValidation?.healthOk !== true) {
-    failures.push('targetValidation.healthOk must be true');
-  }
-  if (evidence?.targetValidation?.healthNoStore !== true) {
-    failures.push('targetValidation.healthNoStore must be true');
-  }
+  if (evidence?.dryRun?.mutatesProduction !== false) failures.push('dryRun.mutatesProduction must be false');
+  if (evidence?.dryRun?.commandExecuted !== true) failures.push('dryRun.commandExecuted must be true');
+  if (evidence?.targetValidation?.passed !== true) failures.push('targetValidation.passed must be true');
+  if (evidence?.targetValidation?.targetConfigured !== true) failures.push('targetValidation.targetConfigured must be true');
+  if (evidence?.targetValidation?.targetShaConfigured !== true) failures.push('targetValidation.targetShaConfigured must be true');
+  if (evidence?.targetValidation?.targetDiffersFromCurrentRelease !== true) failures.push('targetValidation.targetDiffersFromCurrentRelease must be true');
+  if (evidence?.targetValidation?.healthOk !== true) failures.push('targetValidation.healthOk must be true');
+  if (evidence?.targetValidation?.healthNoStore !== true) failures.push('targetValidation.healthNoStore must be true');
   if (evidence?.targetValidation?.readyCheckRequired === true && evidence?.targetValidation?.readyOk !== true) {
     failures.push('targetValidation.readyOk must be true when readyCheckRequired=true');
   }
   if (evidence?.runbook?.present !== true) failures.push('runbook.present must be true');
-  if (evidence?.functionalValidation?.recorded !== true) {
-    failures.push('functionalValidation.recorded must be true');
-  }
+  if (evidence?.functionalValidation?.recorded !== true) failures.push('functionalValidation.recorded must be true');
 
-  if (evidence?.evidenceIntegrity?.containsSensitiveValues !== false) {
-    failures.push('evidenceIntegrity.containsSensitiveValues must be false');
-  }
-  if (evidence?.evidenceIntegrity?.authorizationHeaderStored !== false) {
-    failures.push('evidenceIntegrity.authorizationHeaderStored must be false');
-  }
-  if (evidence?.evidenceIntegrity?.cookiesStored !== false) {
-    failures.push('evidenceIntegrity.cookiesStored must be false');
-  }
-  if (evidence?.evidenceIntegrity?.rollbackTargetStored !== false) {
-    failures.push('evidenceIntegrity.rollbackTargetStored must be false');
-  }
+  if (evidence?.evidenceIntegrity?.containsSensitiveValues !== false) failures.push('evidenceIntegrity.containsSensitiveValues must be false');
+  if (evidence?.evidenceIntegrity?.authorizationHeaderStored !== false) failures.push('evidenceIntegrity.authorizationHeaderStored must be false');
+  if (evidence?.evidenceIntegrity?.cookiesStored !== false) failures.push('evidenceIntegrity.cookiesStored must be false');
+  if (evidence?.evidenceIntegrity?.rollbackTargetStored !== false) failures.push('evidenceIntegrity.rollbackTargetStored must be false');
 
   return failures;
 }

@@ -65,7 +65,6 @@ LAST_KNOWN_GOOD_DEPLOYMENT_URL
 RELEASE_ROLLBACK_TARGET_SHA
 LAST_KNOWN_GOOD_COMMIT_SHA
 RELEASE_ROLLBACK_TARGET_VALIDATED=true
-RELEASE_RUN_OBSERVABILITY_SMOKE=true
 SENTRY_ORG
 SENTRY_PROJECT
 STRIPE_PRICE_STARTER_MONTHLY
@@ -81,6 +80,16 @@ STRIPE_PRICE_PROFESSIONAL_MONTHLY
 STRIPE_PRICE_BUSINESS_MONTHLY
 STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY
 ```
+
+## Authenticated observability smoke
+
+The **Enterprise Production Gate** and **Public Production Final** pin `RELEASE_RUN_OBSERVABILITY_SMOKE=true` internally. It is not an operator-controlled variable for either protected production release path.
+
+This is intentional: canonical Enterprise/P0 observability evidence requires a real authenticated request to `/api/observability/smoke`, not only anonymous access-control checks. A protected `HEALTHCHECK_TOKEN` is used for the request, but the token, authorization header, DSN, cookies and provider response payloads are not stored in the evidence artifact.
+
+A protected production runtime validation can therefore emit one controlled observability smoke event for each release execution that reaches this step. Standalone or non-release tooling may still use `RELEASE_RUN_OBSERVABILITY_SMOKE` explicitly when its own contract allows optional emission.
+
+Both protected production release paths must fail closed if the authenticated smoke request cannot be emitted or does not return the expected success response. The canonical validator accepts `production`, `enterprise` and `public-production` release targets, but the authenticated smoke, readiness token, Sentry runtime configuration and sensitive-value boundaries remain mandatory for all three. Do not change the canonical validator to accept a skipped authenticated smoke as `Complete/passed` evidence.
 
 ## Enterprise upload scanner
 
@@ -131,7 +140,7 @@ MALWARE_SCANNER_CLAMAV_PORT
 After configuration, rerun the workflow manually:
 
 ```text
-Actions -> Enterprise Production Gate -> Run workflow -> release_target: enterprise
+Actions -> Enterprise Production Gate -> Run workflow
 ```
 
 The release is not enterprise-ready until all runtime evidence is `Complete/passed` and `docs/security/evidence/runtime/release-go-no-go.json` records `finalDecision: Go`.

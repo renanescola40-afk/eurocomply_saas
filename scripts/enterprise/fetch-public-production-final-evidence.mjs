@@ -5,7 +5,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateDeploymentRuntimeEvidence } from '../release/validate-deployment-runtime-evidence.mjs';
-import { validateFinalValidationRuntimeEvidence } from '../release/validate-final-validation-runtime-evidence.mjs';
+import { validatePublicProductionFinalRuntimeEvidence } from '../release/validate-public-production-final-runtime-evidence.mjs';
 import { validateObservabilityRuntimeEvidence } from '../release/validate-observability-runtime-evidence.mjs';
 import { validateRollbackRuntimeEvidence } from '../release/validate-rollback-runtime-evidence.mjs';
 
@@ -24,7 +24,8 @@ const EVIDENCE = Object.freeze([
   {
     path: 'docs/security/evidence/runtime/final-validation-runner.json',
     suffix: 'final-validation-runner.json',
-    validator: validateFinalValidationRuntimeEvidence,
+    validator: validatePublicProductionFinalRuntimeEvidence,
+    publicFinal: true,
   },
   {
     path: 'docs/security/evidence/runtime/observability-smoke-validation.json',
@@ -119,12 +120,19 @@ export function validatePublicFinalBundle(bundle, { targetSha, repository, now =
       failures.push(`${descriptor.path}:missing`);
       continue;
     }
-    const result = descriptor.validator(evidence, {
-      now,
-      expectedRepository: repository,
-      expectedBranch: 'main',
-      expectedCommitSha: targetSha,
-    });
+    const result = descriptor.validator(evidence, descriptor.publicFinal
+      ? {
+          now,
+          expectedCommitSha: targetSha,
+          expectedBuildSha: targetSha,
+          expectedReleaseTarget: 'public-production',
+        }
+      : {
+          now,
+          expectedRepository: repository,
+          expectedBranch: 'main',
+          expectedCommitSha: targetSha,
+        });
     for (const failure of result) failures.push(`${descriptor.path}:${failure}`);
   }
 

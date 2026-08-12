@@ -45,6 +45,15 @@ describe('validateObservabilityRuntimeEvidence', () => {
     expect(validateObservabilityRuntimeEvidence(completeEvidence(), { now })).toEqual([]);
   });
 
+  it('accepts authenticated public-production evidence under the same strict controls', () => {
+    expect(
+      validateObservabilityRuntimeEvidence(
+        completeEvidence({ releaseTarget: 'public-production' }),
+        { now },
+      ),
+    ).toEqual([]);
+  });
+
   it('rejects stale evidence', () => {
     expect(
       validateObservabilityRuntimeEvidence(

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { validateRollbackRuntimeEvidence } from './validate-rollback-runtime-evidence.mjs';
 
 const now = new Date('2026-07-11T15:00:00Z');
+const sha = 'a'.repeat(40);
 
 function completeEvidence(overrides = {}) {
   return {
@@ -16,12 +17,9 @@ function completeEvidence(overrides = {}) {
       repository: 'renanescola40-afk/eurocomply_saas',
       branch: 'main',
       githubRunId: '29160000000',
-      commitSha: 'a'.repeat(40),
+      commitSha: sha,
     },
-    dryRun: {
-      mutatesProduction: false,
-      commandExecuted: true,
-    },
+    dryRun: { mutatesProduction: false, commandExecuted: true },
     targetValidation: {
       passed: true,
       targetConfigured: true,
@@ -46,16 +44,27 @@ function completeEvidence(overrides = {}) {
 
 describe('validateRollbackRuntimeEvidence', () => {
   it('accepts fresh complete rollback proof for main', () => {
-    expect(validateRollbackRuntimeEvidence(completeEvidence(), { now })).toEqual([]);
+    expect(validateRollbackRuntimeEvidence(completeEvidence(), { now, expectedCommitSha: sha })).toEqual([]);
+  });
+
+  it('accepts public-production under the same exact-SHA rollback controls', () => {
+    expect(validateRollbackRuntimeEvidence(completeEvidence({ releaseTarget: 'public-production' }), {
+      now,
+      expectedCommitSha: sha,
+    })).toEqual([]);
+  });
+
+  it('rejects rollback evidence bound to another release SHA', () => {
+    const evidence = completeEvidence();
+    evidence.runtimeContext.commitSha = 'b'.repeat(40);
+    expect(validateRollbackRuntimeEvidence(evidence, { now, expectedCommitSha: sha })).toContain(
+      'runtimeContext.commitSha must match expectedCommitSha',
+    );
   });
 
   it('rejects stale rollback evidence', () => {
-    expect(
-      validateRollbackRuntimeEvidence(
-        completeEvidence({ generatedAt: '2026-07-01T14:00:00Z' }),
-        { now },
-      ),
-    ).toContain('generatedAt is older than 7 days');
+    expect(validateRollbackRuntimeEvidence(completeEvidence({ generatedAt: '2026-07-01T14:00:00Z' }), { now }))
+      .toContain('generatedAt is older than 7 days');
   });
 
   it('rejects a rollback target equal to the current release', () => {
@@ -69,17 +78,13 @@ describe('validateRollbackRuntimeEvidence', () => {
   it('rejects a dry-run that may mutate production', () => {
     const evidence = completeEvidence();
     evidence.dryRun.mutatesProduction = true;
-    expect(validateRollbackRuntimeEvidence(evidence, { now })).toContain(
-      'dryRun.mutatesProduction must be false',
-    );
+    expect(validateRollbackRuntimeEvidence(evidence, { now })).toContain('dryRun.mutatesProduction must be false');
   });
 
   it('rejects missing health no-store proof', () => {
     const evidence = completeEvidence();
     evidence.targetValidation.healthNoStore = false;
-    expect(validateRollbackRuntimeEvidence(evidence, { now })).toContain(
-      'targetValidation.healthNoStore must be true',
-    );
+    expect(validateRollbackRuntimeEvidence(evidence, { now })).toContain('targetValidation.healthNoStore must be true');
   });
 
   it('requires readiness success when the ready check is enabled', () => {
