@@ -53,7 +53,7 @@ function fixtureFetch(options: {
   } = options;
   let mainReadCount = 0;
 
-  return async (input: RequestInfo | URL) => {
+  return async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
 
     if (url === `${API}/repos/${REPOSITORY}/commits/main`) {
@@ -156,6 +156,7 @@ describe('exact-SHA Vercel production deployment proof', () => {
       githubCommitStatusBound: false,
       liveHealthVerified: true,
       tokenPersisted: false,
+      protectionBypassSecretPersisted: false,
     });
     expect(JSON.stringify(evidence)).not.toContain('test-token');
     expect(JSON.stringify(evidence)).not.toContain('https://');
