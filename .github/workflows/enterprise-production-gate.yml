@@ -31,7 +31,7 @@ env:
 
 concurrency:
   group: enterprise-production-gate-${{ github.event.workflow_run.head_sha || github.sha }}-${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success' && github.run_id || 'active' }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   quality-security-build:
@@ -122,6 +122,8 @@ jobs:
           grep -Fq "RETAINED_PROOF_SOURCE_WORKFLOW_PATH" .github/workflows/enterprise-production-gate.yml
           grep -Fq "RELEASE_RUN_OBSERVABILITY_SMOKE: 'true'" .github/workflows/enterprise-production-gate.yml
           grep -Fq "write-github-vercel-production-deployment-evidence.mjs" .github/workflows/enterprise-production-gate.yml
+          grep -Fq "VERCEL_AUTOMATION_BYPASS_SECRET" .github/workflows/enterprise-production-gate.yml
+          grep -Fq "cancel-in-progress: false" .github/workflows/enterprise-production-gate.yml
           grep -Fq "deployments: read" .github/workflows/enterprise-production-gate.yml
           grep -Fq "node scripts/release/validate-release-go-no-go-evidence.mjs" scripts/release/run-public-production-release-v2.mjs
           grep -Fq "verify-enterprise-evidence-bundle.mjs" .github/workflows/enterprise-production-gate.yml
@@ -226,6 +228,7 @@ jobs:
       - name: Write exact-SHA Vercel production deployment evidence
         if: always()
         env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           PRODUCTION_DEPLOYMENT_PROOF_ATTEMPTS: '12'
           PRODUCTION_DEPLOYMENT_PROOF_POLL_MS: '5000'
         run: node scripts/release/write-github-vercel-production-deployment-evidence.mjs

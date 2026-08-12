@@ -15,9 +15,17 @@ describe('Stripe entitlement runtime workflow', () => {
     expect(workflow).toContain('git rev-parse HEAD');
   });
 
-  it('runs runtime and governance contracts', () => {
+  it('runs normalization, reconciliation, recovery and governance contracts', () => {
     expect(workflow).toContain('stripe-entitlement-runtime.test.ts');
+    expect(workflow).toContain('stripe-entitlement-runtime-reconcile.test.ts');
+    expect(workflow).toContain('stripe-webhook-recovery.test.ts');
+    expect(workflow).toContain('stripe-webhook-recovery-expired-replay.test.ts');
     expect(workflow).toContain('stripe-entitlement-runtime-workflow.test.ts');
+  });
+
+  it('re-runs when entitlement or recovery implementation/tests change', () => {
+    expect(workflow).toContain("'src/server/billing/stripe-entitlement-runtime*'");
+    expect(workflow).toContain("'src/server/billing/stripe-webhook-recovery*'");
   });
 
   it('uploads retained evidence with least privilege', () => {

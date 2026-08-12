@@ -59,7 +59,7 @@ describe('enterprise production gate retained-proof orchestration', () => {
     }
   });
 
-  it('keeps the fan-in read-only and fail-closed', () => {
+  it('keeps the fan-in read-only, fail-closed, and preserves an in-flight exact-SHA runner', () => {
     expect(workflow).toContain('actions: read');
     expect(workflow).toContain('contents: read');
     expect(workflow).not.toContain('actions: write');
@@ -67,7 +67,8 @@ describe('enterprise production gate retained-proof orchestration', () => {
     expect(workflow).not.toContain('continue-on-error: true');
     expect(workflow).toContain("github.event.workflow_run.conclusion == 'success'");
     expect(workflow).toContain("github.event.workflow_run.conclusion != 'success' && github.run_id || 'active'");
-    expect(workflow).toContain('cancel-in-progress: true');
+    expect(workflow).toContain('cancel-in-progress: false');
+    expect(workflow).not.toContain('cancel-in-progress: true');
   });
 
   it('retains direct PR, push and manual release entry points', () => {
