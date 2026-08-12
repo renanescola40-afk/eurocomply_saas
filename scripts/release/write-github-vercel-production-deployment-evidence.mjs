@@ -293,6 +293,12 @@ export async function buildProductionDeploymentEvidence({
   if (!deployment) return failureEvidence(baseEvidence, 'exact_vercel_production_deployment_unproven');
   if (!health?.passed) return failureEvidence(baseEvidence, 'exact_deployment_health_unproven', deployment, health);
 
+  // The deployment/status polling window can overlap a newer main commit. Re-read
+  // main immediately before PASS so the retained proof never claims a stale target
+  // is still the current protected branch tip.
+  const finalMainMatches = await currentMainMatches({ repository, targetSha, token, fetchImpl, apiUrl });
+  if (!finalMainMatches) return failureEvidence(baseEvidence, 'target_sha_is_not_current_main', deployment, health);
+
   return {
     ...baseEvidence,
     status: 'PASS',
