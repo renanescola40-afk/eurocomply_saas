@@ -17,7 +17,25 @@ import {
 } from './supabase-live-rls-evidence.mjs';
 
 const evidencePath = path.join('docs', 'security', 'evidence', 'runtime', 'supabase-live-rls-validation.json');
-const registerPath = path.join('docs', 'security', 'P0_RUNTIME_EVIDENCE_REGISTER.md');
+const expectedCommitSha = String(process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || '').trim().toLowerCase();
+const aiAssessmentsTable = 'ai_assessments';
+const expectedCustomerTenantTables = [...customerTenantTables, aiAssessmentsTable];
+const expectedCriticalTables = [...criticalTables, aiAssessmentsTable];
+const requiredAiAssessmentOperations = [
+  'rls_enabled',
+  ...requiredCoverageOperations,
+  'same_tenant_read',
+  'same_tenant_insert',
+  'admin_same_tenant_insert',
+  'member_same_tenant_read',
+  'member_same_tenant_insert_denied',
+  'member_same_tenant_update_denied',
+  'member_same_tenant_delete_denied',
+  'viewer_same_tenant_read',
+  'viewer_same_tenant_insert_denied',
+  'viewer_same_tenant_update_denied',
+  'viewer_same_tenant_delete_denied',
+];
 const failures = [];
 
 function fail(message) {
@@ -31,25 +49,6 @@ function readJson(file) {
     fail(`${file} is missing or invalid JSON: ${error instanceof Error ? error.message : error}`);
     return null;
   }
-}
-
-function registerMarksComplete() {
-  if (!fs.existsSync(registerPath)) {
-    fail(`${registerPath} is missing`);
-    return false;
-  }
-
-  const register = fs.readFileSync(registerPath, 'utf8');
-  const row = register
-    .split('\n')
-    .find((line) => line.startsWith('| Supabase live RLS validation completed |'));
-
-  if (!row) {
-    fail(`${registerPath} missing Supabase live RLS row`);
-    return false;
-  }
-
-  return row.includes('| Complete |');
 }
 
 function validateGithubActionsProvenance(evidence) {
@@ -72,6 +71,17 @@ function validateGithubActionsProvenance(evidence) {
   if (typeof provenance.runUrl === 'string' && !/\/actions\/runs\/[0-9]+$/.test(provenance.runUrl)) {
     fail(`${evidencePath} githubActions.runUrl must point to a GitHub Actions run`);
   }
+
+  if (/^[0-9a-f]{40}$/.test(expectedCommitSha)) {
+    const evidenceCommitSha = String(evidence.commitSha || '').trim().toLowerCase();
+    const provenanceCommitSha = String(provenance.commitSha || '').trim().toLowerCase();
+    if (evidenceCommitSha !== expectedCommitSha) {
+      fail(`${evidencePath} commitSha must match release commit ${expectedCommitSha}`);
+    }
+    if (provenanceCommitSha !== expectedCommitSha) {
+      fail(`${evidencePath} githubActions.commitSha must match release commit ${expectedCommitSha}`);
+    }
+  }
 }
 
 function hasPassed(testCases, table, operation) {
@@ -84,14 +94,14 @@ function hasAnyPassed(testCases, table, operations) {
 
 function validateScope(evidence) {
   const tables = Array.isArray(evidence.criticalTables) ? evidence.criticalTables : [];
-  const expected = criticalTables.join(',');
+  const expected = expectedCriticalTables.join(',');
   const actual = tables.join(',');
   if (actual !== expected) {
-    fail(`${evidencePath} criticalTables must match the P0 live RLS proof scope: ${expected}`);
+    fail(`${evidencePath} criticalTables must match the expanded P0 live RLS proof scope: ${expected}`);
   }
 
-  if (Array.isArray(evidence.customerTenantTables) && evidence.customerTenantTables.join(',') !== customerTenantTables.join(',')) {
-    fail(`${evidencePath} customerTenantTables must match the P0 customer tenant scope`);
+  if (Array.isArray(evidence.customerTenantTables) && evidence.customerTenantTables.join(',') !== expectedCustomerTenantTables.join(',')) {
+    fail(`${evidencePath} customerTenantTables must include the expanded P0 customer tenant scope including ai_assessments`);
   }
 
   if (Array.isArray(evidence.globalReferenceTables) && evidence.globalReferenceTables.join(',') !== globalReferenceTables.join(',')) {
@@ -129,10 +139,21 @@ function validateScope(evidence) {
       if (!hasPassed(testCases, table, operation)) fail(`${evidencePath} missing global reference read-only proof: ${table}:${operation}`);
     }
   }
+
+  for (const operation of requiredAiAssessmentOperations) {
+    if (!hasPassed(testCases, aiAssessmentsTable, operation)) {
+      fail(`${evidencePath} missing ai_assessments live RLS proof: ${operation}`);
+    }
+  }
+
+  if (evidence.aiAssessmentsLiveValidation?.status !== 'Complete'
+    || evidence.aiAssessmentsLiveValidation?.outcome !== 'passed'
+    || evidence.aiAssessmentsLiveValidation?.crossTenantAccessDenied !== true) {
+    fail(`${evidencePath} aiAssessmentsLiveValidation must be Complete/passed with cross-tenant access denied`);
+  }
 }
 
 const evidence = readJson(evidencePath);
-const registerComplete = registerMarksComplete();
 
 if (evidence) {
   const validation = validatePassingEvidence(evidence);
@@ -146,15 +167,11 @@ if (evidence) {
   validateGithubActionsProvenance(evidence);
 }
 
-if (!registerComplete) {
-  fail(`${registerPath} must mark Supabase live RLS validation as Complete for public production`);
-}
-
 if (failures.length > 0) {
   console.error('Supabase live RLS production gate failed:');
   for (const failure of failures) console.error(`- ${failure}`);
-  console.error('Public production and enterprise procurement remain blocked until scripts/security/run-supabase-live-tenant-isolation.mjs --update-register passes against the target Supabase project and is stamped with GitHub Actions provenance.');
+  console.error('Public production and enterprise procurement remain blocked until a Complete/passed live RLS artifact for the exact release SHA is generated by the protected workflow and stamped with GitHub Actions provenance.');
   process.exit(1);
 }
 
-console.log('Supabase live RLS production gate passed for the expanded P0 tenant isolation proof scope.');
+console.log('Supabase live RLS production gate passed for the expanded P0 tenant isolation proof scope, including ai_assessments.');

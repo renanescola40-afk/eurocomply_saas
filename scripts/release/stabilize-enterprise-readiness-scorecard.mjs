@@ -2,6 +2,19 @@ import { appendFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 export const PRODUCER_WORKFLOW_NAMES = Object.freeze([
+  'CI',
+  'CodeQL',
+  'Semgrep',
+  'Secret Scanning',
+  'Scan repository for accidental secret exposure',
+  'Dependency Review',
+  'Actionlint',
+  'Public Claims Guard',
+  'Full Security Suite',
+  'Enterprise Production Gate',
+  'RISCK COMPLY Security CI',
+  'Enterprise DAST',
+  'Dependency Vulnerability Proof',
   'Distributed Rate Limit Runtime Proof',
   'Auth RBAC Tenant Proof',
   'Supabase Live RLS Validation',
@@ -176,7 +189,7 @@ export async function stabilize({ now = () => Date.now() } = {}) {
   }
 
   if (!settledRuns) {
-    throw new Error('Runtime evidence producers did not reach a bounded quiet terminal state');
+    throw new Error('Material evidence producers did not reach a bounded quiet terminal state');
   }
 
   const mainSha = await currentMainSha(repository);
@@ -190,7 +203,7 @@ export async function stabilize({ now = () => Date.now() } = {}) {
   const refreshedRuns = await listExactShaRuns(repository, targetSha);
   const refreshedProducers = exactShaProducerRuns(refreshedRuns, targetSha);
   if (hasActiveProducer(refreshedProducers)) {
-    throw new Error('A runtime evidence producer became active after the quiet-state check; refusing to dispatch');
+    throw new Error('A material evidence producer became active after the quiet-state check; refusing to dispatch');
   }
 
   producerCutoffMs = latestProducerTimestamp(refreshedProducers);

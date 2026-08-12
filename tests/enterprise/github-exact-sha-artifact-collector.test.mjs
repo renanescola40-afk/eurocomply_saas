@@ -78,6 +78,7 @@ test('zero artifacts is valid only after all workflow-scoped inventories succeed
       assert.match(url, /\/actions\/workflows\//);
       assert.match(url, /status=completed/);
       assert.match(url, new RegExp(`head_sha=${SHA}`));
+      assert.match(url, /per_page=100/);
       assert.doesNotMatch(url, /\/actions\/artifacts\?per_page=/);
     }
   } finally {
@@ -85,7 +86,7 @@ test('zero artifacts is valid only after all workflow-scoped inventories succeed
   }
 });
 
-test('high-churn producer can exceed the recent run window when a fresh artifact-bearing run is found', async () => {
+test('high-churn producer can exceed the historical 20-run window when a fresh artifact-bearing run is found', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'exact-sha-high-churn-'));
   try {
     const manifest = await collectExactShaArtifacts({
@@ -97,6 +98,7 @@ test('high-churn producer can exceed the recent run window when a fresh artifact
       fetchImpl: async (url) => {
         const value = String(url);
         if (value.includes('/actions/workflows/enterprise-production-gate.yml/runs?')) {
+          assert.match(value, /per_page=100/);
           return jsonResponse({
             total_count: 26,
             workflow_runs: [{
@@ -135,7 +137,7 @@ test('high-churn producer can exceed the recent run window when a fresh artifact
   }
 });
 
-test('an inconclusive recent window is infrastructure-blocked instead of declaring evidence absent', async () => {
+test('an inconclusive bounded window is infrastructure-blocked instead of declaring evidence absent', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'exact-sha-window-'));
   try {
     await assert.rejects(
@@ -147,7 +149,7 @@ test('an inconclusive recent window is infrastructure-blocked instead of declari
         token: 'test-token',
         fetchImpl: async (url) => {
           if (String(url).includes('/actions/workflows/enterprise-production-gate.yml/runs?')) {
-            return jsonResponse({ total_count: 26, workflow_runs: [] });
+            return jsonResponse({ total_count: 101, workflow_runs: [] });
           }
           return jsonResponse({ total_count: 0, workflow_runs: [] });
         },
@@ -163,6 +165,7 @@ test('an inconclusive recent window is infrastructure-blocked instead of declari
     ));
     assert.equal(manifest.status, 'InfrastructureBlocked');
     assert.equal(manifest.errorCode, 'RECENT_RUN_WINDOW_EXHAUSTED');
+    assert.equal(manifest.recentCompletedRunWindow, 100);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
