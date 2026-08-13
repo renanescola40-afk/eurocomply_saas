@@ -92,6 +92,32 @@ describe('production provider blocker diagnostics', () => {
     })).toEqual(['sentry_auth_token_insufficient_scope']);
   });
 
+  it('keeps project 404 diagnostics tied to the project probe', () => {
+    expect(deriveProviderBlockerCodes({
+      provider: 'sentry', status: 'blocked', checks: {
+        organizationConfigured: true, projectConfigured: true, buildAuthTokenConfigured: true,
+        projectReachable: false, clientKeyInventoryReachable: true, activeClientKeyPresent: true,
+      },
+    }, {
+      attempted: true,
+      projectProbe: { httpStatus: 404, category: 'resource_not_found' },
+      clientKeysProbe: { httpStatus: 200, category: 'success' },
+    })).toEqual(['sentry_project_not_found_or_inaccessible']);
+  });
+
+  it('keeps client-key inventory 404 diagnostics distinct from project reachability', () => {
+    expect(deriveProviderBlockerCodes({
+      provider: 'sentry', status: 'blocked', checks: {
+        organizationConfigured: true, projectConfigured: true, buildAuthTokenConfigured: true,
+        projectReachable: true, clientKeyInventoryReachable: false, activeClientKeyPresent: false,
+      },
+    }, {
+      attempted: true,
+      projectProbe: { httpStatus: 200, category: 'success' },
+      clientKeysProbe: { httpStatus: 404, category: 'resource_not_found' },
+    })).toEqual(['sentry_client_key_inventory_not_found_or_inaccessible']);
+  });
+
   it('keeps generic Sentry reachability blockers when no secondary probe classification exists', () => {
     expect(deriveProviderBlockerCodes({
       provider: 'sentry', status: 'blocked', checks: {
