@@ -110,9 +110,20 @@ function dockerUserArgs(port, comment) {
   return ['DOCKER-USER', '-p', 'tcp', '--dport', port, '-m', 'comment', '--comment', comment, '-j', 'DROP'];
 }
 
+function ruleExists(binary, args) {
+  try {
+    run('sudo', [binary, '-C', ...args], { capture: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function installRule(binary, args) {
+  if (ruleExists(binary, args)) return false;
   run('sudo', [binary, '-I', ...args]);
   run('sudo', [binary, '-C', ...args]);
+  return true;
 }
 
 function removeRule(binary, args) {
@@ -145,21 +156,17 @@ function hardenWildcardBindings(containerName, projectId) {
       ensureDockerUserChain('iptables');
       const input = firewallArgs('INPUT', DB_HOST_PORT, comment);
       const dockerUser = dockerUserArgs(DB_CONTAINER_PORT, comment);
-      installRule('iptables', input);
-      rules.push(['iptables', input]);
-      installRule('iptables', dockerUser);
-      rules.push(['iptables', dockerUser]);
+      if (installRule('iptables', input)) rules.push(['iptables', input]);
+      if (installRule('iptables', dockerUser)) rules.push(['iptables', dockerUser]);
     }
 
     if (classes.includes('wildcard-v6')) {
       const input6 = firewallArgs('INPUT', DB_HOST_PORT, comment);
-      installRule('ip6tables', input6);
-      rules.push(['ip6tables', input6]);
+      if (installRule('ip6tables', input6)) rules.push(['ip6tables', input6]);
       try {
         ensureDockerUserChain('ip6tables');
         const dockerUser6 = dockerUserArgs(DB_CONTAINER_PORT, comment);
-        installRule('ip6tables', dockerUser6);
-        rules.push(['ip6tables', dockerUser6]);
+        if (installRule('ip6tables', dockerUser6)) rules.push(['ip6tables', dockerUser6]);
       } catch {
         const globalIpv6 = String(run('ip', ['-6', '-o', 'addr', 'show', 'scope', 'global'], { capture: true })).trim();
         if (globalIpv6) throw new Error('IPv6 Docker exposure could not be restricted through DOCKER-USER');
@@ -171,6 +178,16 @@ function hardenWildcardBindings(containerName, projectId) {
     for (const [binary, args] of [...rules].reverse()) removeRule(binary, args);
     throw error;
   }
+}
+
+function mergeFirewallState(previous, current) {
+  if (!previous) return current;
+  return {
+    bindings: current.bindings,
+    classes: [...new Set([...previous.classes, ...current.classes])],
+    rules: [...previous.rules, ...current.rules],
+    comment: current.comment,
+  };
 }
 
 function testLocalConnection(dbUrl) {
@@ -225,10 +242,10 @@ function applyExactShaProjectSchema(workDir, dbUrl, projectId) {
   const expectedVersions = copyExactShaProjectMigrations(workDir);
   run('supabase', ['--workdir', workDir, 'db', 'reset', '--local', '--no-seed']);
   const containerName = findDatabaseContainer(projectId);
-  readPublishedBindings(containerName);
+  const firewall = hardenWildcardBindings(containerName, projectId);
   testLocalConnection(dbUrl);
   verifyExactShaMigrations(dbUrl, expectedVersions);
-  return { containerName, migrationCount: expectedVersions.length };
+  return { containerName, migrationCount: expectedVersions.length, firewall };
 }
 
 function start(mode = 'restore-target') {
@@ -274,6 +291,7 @@ function start(mode = 'restore-target') {
       const applied = applyExactShaProjectSchema(workDir, dbUrl, projectId);
       containerName = applied.containerName;
       migrationCount = applied.migrationCount;
+      firewall = mergeFirewallState(firewall, applied.firewall);
     }
 
     const observedServerVersion = serverVersion(containerName);
