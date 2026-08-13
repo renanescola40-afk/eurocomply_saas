@@ -75,7 +75,7 @@ jobs:
     needs: authorize-release
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    environment: Production
+    environment: production
 
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
