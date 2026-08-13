@@ -14,7 +14,6 @@ const expectedCompletionTriggers = [
   'Actionlint',
   'Public Claims Guard',
   'Full Security Suite',
-  'Enterprise Production Gate',
   'RISCK COMPLY Security CI',
   'RISCK COMPLY Upload Security CI',
   'Enterprise DAST',
@@ -44,6 +43,7 @@ describe('enterprise readiness scorecard orchestration', () => {
     expect(stabilizerProducers()).toEqual(expectedCompletionTriggers);
     expect(new Set(stabilizerProducers()).size).toBe(expectedCompletionTriggers.length);
     expect(stabilizerProducers()).not.toContain('Enterprise Readiness Scorecard');
+    expect(stabilizerProducers()).not.toContain('Enterprise Production Gate');
 
     expect(scorecardWorkflow).not.toContain('workflow_run:');
     expect(scorecardWorkflow).not.toContain('github.event.workflow_run');
@@ -106,7 +106,7 @@ describe('enterprise readiness scorecard orchestration', () => {
     expect(uploadIndex).toBeGreaterThan(-1);
     expect(enforceIndex).toBeGreaterThan(uploadIndex);
     expect(scorecardWorkflow.slice(enforceIndex)).toContain("if: github.event_name != 'pull_request'");
-    expect(scorecardWorkflow).toContain("decision=\"$(jq -r '.releaseDecision // \"NO_GO\"' \"$scorecard\")\"");
+    expect(scorecardWorkflow).toContain("decision=\"$(jq -r '.releaseDecision // \\\"NO_GO\\\"' \\\"$scorecard\\\")\"");
     expect(scorecardWorkflow).toContain('test "$decision" = "GO"');
   });
 
