@@ -34,10 +34,14 @@ describe('ephemeral Supabase logical restore PR smoke', () => {
     expect(workflow).not.toContain("'supabase/migrations/**'");
   });
 
-  it('uses the same supported roles schema data sequence as the protected recovery exercise', () => {
+  it('uses the supported roles schema data sequence and excludes target-managed vector storage data', () => {
     expect(smoke).toContain("'--role-only', '--file', rolesPath");
     expect(smoke).toContain("run('supabase', ['db', 'dump', '--db-url', url, '--file', schemaPath])");
-    expect(smoke).toContain("'--data-only', '--use-copy', '--file', dataPath");
+    expect(smoke).toContain("'--data-only', '--use-copy'");
+    expect(smoke).toContain("'--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[0]");
+    expect(smoke).toContain("'--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[1]");
+    expect(smoke).toContain("'storage.buckets_vectors'");
+    expect(smoke).toContain("'storage.vector_indexes'");
     expect(smoke).toContain("'--single-transaction'");
     expect(smoke).toContain("'SET session_replication_role = replica;'");
   });
