@@ -43,7 +43,7 @@ describe('production environment governance boundaries', () => {
     expect(preflight).not.toMatch(/secrets\./);
 
     const protectedBoundary = vercelProductionWorkflow.slice(protectedJob);
-    expect(protectedBoundary).toContain('environment: Production');
+    expect(protectedBoundary).toContain('environment: production');
   });
 
   it('fails closed on closeout governance before the runtime evidence job can load protected secrets', () => {
