@@ -24,8 +24,11 @@ on:
   workflow_run:
     workflows:
       - 'Enterprise Production Gate'
+      - 'Production Runtime Proof'
       - 'Enterprise Recovery Drill'
+      - 'Recovery Resilience Proof'
       - 'Production Provider Runtime Proof'
+      - 'Enterprise Safe Runtime Bootstrap'
       - 'Enterprise Runtime Evidence Closeout'
       - 'Enterprise Readiness Scorecard'
       - 'Stripe Runtime Evidence Promotion'
@@ -45,7 +48,7 @@ permissions:
 
 concurrency:
   group: enterprise-100-closure-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   contract:
@@ -101,6 +104,9 @@ jobs:
           grep -Fq 'write-github-vercel-production-deployment-evidence.mjs' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'direct-production-deployment/release-validation/production-deployment.json' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Enterprise Production Gate' .github/workflows/enterprise-100-closure.yml
+          grep -Fq 'Production Runtime Proof' .github/workflows/enterprise-100-closure.yml
+          grep -Fq 'Recovery Resilience Proof' .github/workflows/enterprise-100-closure.yml
+          grep -Fq 'Enterprise Safe Runtime Bootstrap' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Stripe Runtime Evidence Promotion' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Supabase Production RLS Reconciliation' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Final Legal Publication Gate' .github/workflows/enterprise-100-closure.yml
