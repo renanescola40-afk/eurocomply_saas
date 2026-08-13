@@ -13,8 +13,16 @@ import {
 
 const manager = fs.readFileSync('scripts/recovery/manage-ephemeral-recovery-database.mjs', 'utf8');
 const replay = fs.readFileSync('scripts/recovery/run-ephemeral-project-schema-replay.mjs', 'utf8');
+const reviewedBoundaryBridge = fs.readFileSync(
+  'scripts/recovery/run-reviewed-ephemeral-schema-boundary.mjs',
+  'utf8',
+);
 const duplicateReview = fs.readFileSync(DUPLICATE_REVIEW_REFERENCE, 'utf8');
 const invalidReview = fs.readFileSync(INVALID_REVIEW_REFERENCE, 'utf8');
+const batchNReview = fs.readFileSync(
+  'docs/security/evidence/human-review/supabase-migration-mega-batch-n.md',
+  'utf8',
+);
 const ephemeralSmoke = fs.readFileSync('.github/workflows/ephemeral-supabase-project-smoke.yml', 'utf8');
 const addOnReplacement = fs.readFileSync(
   'supabase/migrations/20260813124224_reconcile_organization_add_ons.sql',
@@ -38,6 +46,11 @@ const recovery = fs.readFileSync('.github/workflows/recovery-resilience-proof.ym
 
 const duplicateVersions = Object.keys(KNOWN_DUPLICATE_MIGRATION_GROUPS).sort();
 const duplicateFiles = Object.values(KNOWN_DUPLICATE_MIGRATION_GROUPS).flat();
+const blockedQualifiedReviewDuplicateFiles = [
+  '20260723223000_qualified_review_consolidated.sql',
+  '20260724001000_qualified_review_decision_controls.sql',
+  '20260724103000_qualified_review_api_operations.sql',
+];
 
 describe('exact-SHA disposable project schema workflows', () => {
   it('replays a prepared temporary migration tree through pinned Supabase CLI', () => {
@@ -68,6 +81,26 @@ describe('exact-SHA disposable project schema workflows', () => {
     expect(invalidReview).toContain('REQUIRES_SPLIT_REVIEW');
     expect(replay).toContain("const UNAPPLIED_LEGACY_VERSION = '20260605'");
     expect(replay).toContain('for (const canonicalName of UNRESOLVED_INVALID_MIGRATIONS)');
+  });
+
+  it('suppresses qualified-review duplicate schema effects only behind reviewed prerequisite evidence', () => {
+    expect(blockedQualifiedReviewDuplicateFiles).toHaveLength(3);
+    expect(duplicateReview).toContain('REQUIRES_SPLIT_REVIEW');
+    expect(batchNReview).toContain('N7 | `20260723170000_qualified_review_operations_platform.sql`');
+    expect(batchNReview).toContain('public.is_organization_member(uuid)');
+    expect(batchNReview).toContain('PREREQUISITE_BLOCKED');
+    for (const file of blockedQualifiedReviewDuplicateFiles) {
+      expect(duplicateReview).toContain(`\`${file}\``);
+      expect(reviewedBoundaryBridge).toContain(file);
+    }
+    expect(reviewedBoundaryBridge).toContain('stageBlockedDuplicateSchemaEffects');
+    expect(reviewedBoundaryBridge).toContain('restoreBlockedDuplicateSchemaEffects');
+    expect(reviewedBoundaryBridge).toContain(
+      "appendGithubEnv('RECOVERY_EPHEMERAL_PREREQUISITE_BLOCKED_DUPLICATE_FILE_COUNT'",
+    );
+    expect(ephemeralSmoke).toContain(
+      'RECOVERY_EPHEMERAL_PREREQUISITE_BLOCKED_DUPLICATE_FILE_COUNT\" = \"3',
+    );
   });
 
   it('replaces invalid historical schema effects only through explicit later canonical migrations', () => {
