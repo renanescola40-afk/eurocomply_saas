@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const WORKFLOW_FILE = 'final-technical-controls-proof.yml';
+const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`;
 const WORKFLOW_NAME = 'Final Technical Controls Proof';
 const SOURCE_FILE = 'final-technical-controls-validation.json';
 const SECURITY_EVENTS_OUTPUT = 'docs/security/evidence/runtime/security-events-validation.json';
@@ -90,7 +91,7 @@ async function githubJson(url, token) {
 export function selectExactShaRun(runs, targetSha, sourceRunId = '') {
   const requested = String(sourceRunId || '').trim();
   return (Array.isArray(runs) ? runs : [])
-    .filter((run) => run?.name === WORKFLOW_NAME)
+    .filter((run) => run?.path === WORKFLOW_PATH)
     .filter((run) => String(run?.head_sha || '').toLowerCase() === targetSha)
     .filter((run) => run?.head_branch === 'main')
     .filter((run) => run?.event === 'workflow_dispatch')
@@ -143,7 +144,7 @@ function commonEvidence(source, { targetSha, runId, artifactName }) {
     targetSha,
     sourceWorkflow: {
       name: WORKFLOW_NAME,
-      file: `.github/workflows/${WORKFLOW_FILE}`,
+      file: WORKFLOW_PATH,
       runId: String(runId),
       artifact: artifactName,
       exactShaBound: true,
@@ -304,6 +305,7 @@ export async function fetchFinalTechnicalControlsEvidence({
     return { found: false, targetSha };
   }
 
+  if (run.path !== WORKFLOW_PATH) throw new Error('final_technical_workflow_path_invalid');
   const runId = String(run.id || '').trim();
   if (!NUMERIC.test(runId)) throw new Error('run_id_invalid');
   const artifactName = `final-technical-controls-proof-${targetSha}`;
