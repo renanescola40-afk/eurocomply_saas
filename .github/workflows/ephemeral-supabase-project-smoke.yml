@@ -9,6 +9,7 @@ on:
       - 'scripts/recovery/run-ephemeral-project-schema-replay-reviewed-boundary.mjs'
       - 'scripts/recovery/run-ephemeral-project-schema-replay-reviewed-boundary-v2.mjs'
       - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary.mjs'
+      - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v2.mjs'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
       - 'supabase/migrations/**'
       - '.github/workflows/final-technical-controls-proof.yml'
@@ -63,7 +64,7 @@ jobs:
           sudo apt-get install --yes postgresql-client
 
       - name: Start exact-SHA disposable project database
-        run: node scripts/recovery/run-reviewed-ephemeral-schema-boundary.mjs
+        run: node scripts/recovery/run-reviewed-ephemeral-schema-boundary-v2.mjs
 
       - name: Validate local runtime, replay boundary, RLS and representative schema
         shell: bash
@@ -79,6 +80,7 @@ jobs:
           test "$RECOVERY_EPHEMERAL_UNRESOLVED_INVALID_EXCLUDED_FILE_COUNT" = "1"
           test "$RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLACED_FILE_COUNT" = "2"
           test "$RECOVERY_EPHEMERAL_PREREQUISITE_BLOCKED_DUPLICATE_FILE_COUNT" = "3"
+          test "$RECOVERY_EPHEMERAL_SPLIT_REVIEW_BLOCKED_FILE_COUNT" = "2"
           test "$RECOVERY_EPHEMERAL_SYNTAX_COMPAT_FILE_COUNT" = "1"
           test "$RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL" = "false"
           case "$RECOVERY_ISOLATED_DATABASE_URL" in
