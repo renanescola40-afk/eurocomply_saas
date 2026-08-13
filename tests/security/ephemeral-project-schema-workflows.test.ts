@@ -51,21 +51,26 @@ describe('exact-SHA disposable project schema workflows', () => {
     expect(duplicates).toEqual([['20260605', knownLegacyCollisions]]);
   });
 
-  it('stages only known duplicate-prefix legacy migrations and restores their exact bytes after replay', () => {
+  it('quarantines only known never-applied legacy migrations and restores their exact bytes after replay', () => {
     for (const migration of knownLegacyCollisions) {
       expect(replay).toContain(migration);
     }
+    expect(replay).toContain('UNAPPLIED_LEGACY_MIGRATIONS');
     expect(replay).toContain("LEGACY_COLLISION_VERSION = '20260605'");
     expect(replay).toContain('assertKnownLegacyCollisionOnly(migrationsDir)');
     expect(replay).toContain('assertNoMigrationVersionCollisions(migrationsDir)');
     expect(replay).toContain('Expected exactly one known legacy migration version collision');
     expect(replay).toContain('Unknown migration version collision detected');
     expect(replay).toContain("createHash('sha256')");
-    expect(replay).toContain('renameSync(canonicalPath, replayPath)');
-    expect(replay).toContain('sha256(replayPath) !== digest');
-    expect(replay).toContain('restoreLegacyReplay(staged)');
-    expect(replay).toContain('if (staged.length > 0)');
+    expect(replay).toContain('copyFileSync(canonicalPath, quarantinePath)');
+    expect(replay).toContain('sha256(quarantinePath) !== digest');
+    expect(replay).toContain('rmSync(canonicalPath)');
+    expect(replay).toContain('restoreLegacyQuarantine(quarantined)');
+    expect(replay).toContain('if (quarantined.length > 0)');
     expect(replay).toContain('and rollback failed');
+    expect(replay).not.toContain('legacy_gap_analysis.sql');
+    expect(replay).not.toContain('legacy_findings_tasks.sql');
+    expect(replay).not.toContain('legacy_compliance_evidence.sql');
     expect(replay).toContain("['scripts/recovery/manage-ephemeral-recovery-database.mjs', 'start-project']");
     expect(replay).toContain("process.env.GITHUB_ACTIONS !== 'true'");
   });
