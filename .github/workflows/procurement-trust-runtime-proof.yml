@@ -24,12 +24,11 @@ concurrency:
 jobs:
   trust-proof:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 35
     environment: production-procurement-trust-proof
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
       PROCUREMENT_TRUST_CONFIRMATION: ${{ inputs.confirmation }}
-      RECOVERY_ISOLATED_DATABASE_URL: ${{ secrets.RECOVERY_ISOLATED_DATABASE_URL }}
       TRUST_CENTER_PUBLIC_URL: ${{ secrets.TRUST_CENTER_PUBLIC_URL }}
       TRUST_PACKAGE_ENCRYPTION_REQUIRED: ${{ vars.TRUST_PACKAGE_ENCRYPTION_REQUIRED }}
       PROCUREMENT_SLA_DAYS: ${{ vars.PROCUREMENT_SLA_DAYS }}
@@ -58,14 +57,26 @@ jobs:
           test "$GITHUB_SHA" = "$TARGET_SHA"
           test "$GITHUB_REF_NAME" = "main"
 
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.101.0
+
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Start exact-SHA disposable Supabase project database
+        run: node scripts/recovery/run-ephemeral-project-schema-replay.mjs
 
       - name: Execute procurement trust proof
         run: node scripts/procurement/run-procurement-trust-runtime-proof.mjs
 
       - name: Validate redacted evidence
         run: node scripts/procurement/check-procurement-trust-evidence.mjs
+
+      - name: Remove disposable project database
+        if: always()
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
 
       - name: Upload evidence
         if: always()

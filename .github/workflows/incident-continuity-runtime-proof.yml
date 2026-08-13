@@ -24,12 +24,11 @@ concurrency:
 jobs:
   prove:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 35
     environment: production-incident-proof
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
       INCIDENT_PROOF_CONFIRMATION: ${{ inputs.confirmation }}
-      RECOVERY_ISOLATED_DATABASE_URL: ${{ secrets.RECOVERY_ISOLATED_DATABASE_URL }}
       INCIDENT_SEV1_ACK_TARGET_MINUTES: ${{ vars.INCIDENT_SEV1_ACK_TARGET_MINUTES }}
       INCIDENT_SEV1_CONTAINMENT_TARGET_MINUTES: ${{ vars.INCIDENT_SEV1_CONTAINMENT_TARGET_MINUTES }}
       INCIDENT_TABLETOP_MAX_AGE_DAYS: ${{ vars.INCIDENT_TABLETOP_MAX_AGE_DAYS }}
@@ -59,6 +58,11 @@ jobs:
           test "$GITHUB_SHA" = "$TARGET_SHA"
           test "$GITHUB_REF_NAME" = "main"
 
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.101.0
+
       - name: Install PostgreSQL client
         shell: bash
         run: |
@@ -66,11 +70,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
+      - name: Start exact-SHA disposable Supabase project database
+        run: node scripts/recovery/run-ephemeral-project-schema-replay.mjs
+
       - name: Run incident continuity proof
         run: node scripts/incident/run-incident-continuity-runtime-proof.mjs
 
       - name: Validate canonical evidence
         run: node scripts/incident/check-incident-continuity-evidence.mjs
+
+      - name: Remove disposable project database
+        if: always()
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
 
       - name: Upload redacted evidence
         if: always()

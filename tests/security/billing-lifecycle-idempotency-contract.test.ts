@@ -20,24 +20,43 @@ describe('enterprise billing lifecycle idempotency contract', () => {
     expect(button).toContain("const BILLING_IDEMPOTENCY_HEADER = 'Idempotency-Key'");
   });
 
-  it('serializes subscription changes through the protected lifecycle ledger', () => {
+  it('serializes subscription changes through a durable protected lifecycle ledger', () => {
     const route = read('src/app/api/billing/subscription/route.ts');
     const lifecycle = read('src/server/billing/subscription-lifecycle.ts');
     const ledger = read('src/server/billing/lifecycle-request-ledger.ts');
-    const migration = read('supabase/migrations/20260728170000_billing_lifecycle_requests.sql');
+    const migration = read('supabase/migrations/20260813102900_add_durable_billing_lifecycle_replay_contract.sql');
 
     expect(route).toContain("scope: 'subscription'");
     expect(route).toContain("permission: 'manage_billing'");
     expect(route).toContain('requireStepUpForRequest');
+    expect(lifecycle).toContain('findCompletedBillingLifecycleReplay');
+    expect(lifecycle).toContain('billingLifecycleRequestFingerprint');
     expect(lifecycle).toContain('claimBillingLifecycleRequest');
     expect(lifecycle).toContain('completeBillingLifecycleRequest');
     expect(lifecycle).toContain('failBillingLifecycleRequest');
     expect(lifecycle).toContain("deriveStripeIdempotencyKey(input.idempotency, `subscription-${input.action}`)");
-    expect(ledger).toContain("stripe_request_id: input.requestDigest");
+    expect(ledger).toContain('request_fingerprint: input.requestFingerprint');
+    expect(ledger).toContain('result_snapshot: snapshot');
     expect(ledger).toContain("status: 'processing'");
     expect(ledger).toContain('isBillingLifecycleLeaseStale');
-    expect(migration).toContain('force row level security');
-    expect(migration).toContain('revoke all on public.billing_lifecycle_requests from anon, authenticated');
+    expect(migration).toContain('billing_lifecycle_requests_org_request_unique_idx');
+    expect(migration).toContain('billing_lifecycle_requests_request_fingerprint_format');
+    expect(migration).toContain('billing_lifecycle_requests_result_snapshot_shape');
+  });
+
+  it('replays a completed request before authority/provider reads and never reconstructs durable replay from current Stripe state', () => {
+    const lifecycle = read('src/server/billing/subscription-lifecycle.ts');
+    const replayLookup = lifecycle.indexOf('findCompletedBillingLifecycleReplay({');
+    const replayReturn = lifecycle.indexOf('if (completedReplay) return replayResult(completedReplay);');
+    const authorityLookup = lifecycle.indexOf('getSubscriptionAuthority(input.organizationId)');
+    const stripeClient = lifecycle.indexOf('getStripeClient()');
+
+    expect(replayLookup).toBeGreaterThan(-1);
+    expect(replayReturn).toBeGreaterThan(replayLookup);
+    expect(authorityLookup).toBeGreaterThan(replayReturn);
+    expect(stripeClient).toBeGreaterThan(replayReturn);
+    expect(lifecycle).toContain("return replayResult(getBillingLifecycleReplaySnapshot(claim.request));");
+    expect(lifecycle).not.toContain('lifecycleResult({ subscription, plan: targetPlan, interval, addOns, idempotentReplay: true })');
   });
 
   it('fails closed on Stripe customer or tenant authority mismatch and preserves annual interval by default', () => {
@@ -49,7 +68,7 @@ describe('enterprise billing lifecycle idempotency contract', () => {
     expect(lifecycle).toContain("baseItem.price.recurring?.interval === 'year' ? 'year' : 'month'");
   });
 
-  it('records provider/audit phases before releasing lifecycle serialization', () => {
+  it('persists provider result before audit and completes only after audit success', () => {
     const lifecycle = read('src/server/billing/subscription-lifecycle.ts');
     const ledger = read('src/server/billing/lifecycle-request-ledger.ts');
 
@@ -62,7 +81,7 @@ describe('enterprise billing lifecycle idempotency contract', () => {
 
     const providerInFlightIndex = lifecycle.indexOf('await markBillingLifecycleProviderInFlight(requestId)');
     const providerMutationIndex = lifecycle.indexOf('stripe.subscriptions.update(');
-    const providerSucceededIndex = lifecycle.indexOf('await markBillingLifecycleProviderSucceeded(requestId)');
+    const providerSucceededIndex = lifecycle.indexOf('await markBillingLifecycleProviderSucceeded(requestId, providerSnapshot)');
     const auditIndex = lifecycle.indexOf('const audit = await writeAuditLog({');
     const auditSucceededIndex = lifecycle.indexOf('await markBillingLifecycleAuditSucceeded(requestId)');
     const completeIndex = lifecycle.indexOf('await completeBillingLifecycleRequest(requestId)', auditSucceededIndex);
@@ -75,5 +94,27 @@ describe('enterprise billing lifecycle idempotency contract', () => {
     expect(completeIndex).toBeGreaterThan(auditSucceededIndex);
     expect(lifecycle).toContain("claim.kind === 'audit_succeeded_recovery'");
     expect(lifecycle).toContain("claim.kind === 'provider_succeeded_recovery'");
+    expect(lifecycle).toContain('durableResultSnapshot: true');
+  });
+
+  it('recovers pre-fingerprint post-provider rows only after stable intent and live provider-state verification', () => {
+    const lifecycle = read('src/server/billing/subscription-lifecycle.ts');
+    const ledger = read('src/server/billing/lifecycle-request-ledger.ts');
+
+    expect(ledger).toContain("BILLING_LIFECYCLE_PHASE_LEGACY_PROVIDER_SUCCEEDED = 'legacy_provider_succeeded_pending_snapshot'");
+    expect(ledger).toContain('requestIntentMatches(row, input)');
+    expect(ledger).toContain('hasNewerLifecycleRequest(row)');
+    expect(ledger).toContain(".eq('failure_code', 'audit_persistence_failed')");
+    expect(ledger).toContain(".is('request_fingerprint', null)");
+    expect(ledger).toContain('request_fingerprint: input.requestFingerprint');
+    expect(ledger).toContain("kind: 'legacy_provider_succeeded_recovery'");
+    expect(ledger).toContain('markBillingLifecycleLegacyProviderSucceeded');
+
+    expect(lifecycle).toContain("claim.kind === 'legacy_provider_succeeded_recovery'");
+    expect(lifecycle).toContain('assertLegacyRecoveredProviderState({');
+    expect(lifecycle).toContain('await markBillingLifecycleLegacyProviderSucceeded(requestId, providerSnapshot)');
+    expect(lifecycle).toContain("const providerWasAlreadyCompleted = claim.kind === 'provider_succeeded_recovery' || isLegacyProviderRecovery;");
+    expect(lifecycle).toContain('legacyProviderSnapshotRecovered: isLegacyProviderRecovery');
+    expect(lifecycle).toContain("throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409)");
   });
 });

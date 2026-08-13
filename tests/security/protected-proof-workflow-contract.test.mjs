@@ -16,20 +16,30 @@ function before(source, first, second) {
   assert.ok(firstIndex < secondIndex, `${first} must run before ${second}`);
 }
 
-test('final technical proof preflights before dependencies, psql, or runtime fixtures', () => {
-  before(finalTechnical, 'Preflight protected final technical proof', 'Install deterministic dependencies');
-  before(finalTechnical, 'Preflight protected final technical proof', 'Install PostgreSQL client');
+test('final technical proof provisions exact-SHA project isolation before preflight and always removes it after proof', () => {
+  const projectStart = 'Start exact-SHA disposable Supabase project database';
+  before(finalTechnical, 'Set up pinned Supabase CLI', projectStart);
+  before(finalTechnical, 'Install PostgreSQL client', projectStart);
+  before(finalTechnical, projectStart, 'Preflight protected final technical proof');
   before(finalTechnical, 'Preflight protected final technical proof', 'Execute protected final technical proof');
+  before(finalTechnical, 'Execute protected final technical proof', 'Remove disposable recovery database');
   assert.match(finalTechnical, /final-technical-controls-preflight\.json/);
-  assert.match(finalTechnical, /if: always\(\)/);
+  assert.match(finalTechnical, /Remove disposable recovery database[\s\S]*?if: always\(\)/);
+  assert.doesNotMatch(finalTechnical, /secrets\.RECOVERY_ISOLATED_DATABASE_URL/);
 });
 
-test('recovery proof preflights before psql, backup restore, or rollback', () => {
-  before(recovery, 'Preflight protected recovery proof', 'Install PostgreSQL client');
+test('recovery proof provisions an empty restore target before preflight and keeps rollback independently protected', () => {
+  before(recovery, 'Set up pinned Supabase CLI', 'Start disposable Supabase recovery database');
+  before(recovery, 'Install PostgreSQL client', 'Start disposable Supabase recovery database');
+  before(recovery, 'Start disposable Supabase recovery database', 'Preflight protected recovery proof');
   before(recovery, 'Preflight protected recovery proof', 'Execute isolated backup and restore');
   before(recovery, 'Preflight protected recovery proof', 'Execute controlled Vercel rollback');
+  before(recovery, 'Execute isolated backup and restore', 'Remove disposable recovery database');
   assert.match(recovery, /recovery-resilience-preflight\.json/);
-  assert.match(recovery, /if: always\(\)/);
+  assert.match(recovery, /Remove disposable recovery database[\s\S]*?if: always\(\) &&/);
+  assert.doesNotMatch(recovery, /secrets\.RECOVERY_ISOLATED_DATABASE_URL/);
+  assert.match(recovery, /RECOVERY_EXERCISE_CONFIRMATION/);
+  assert.match(recovery, /EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK/);
 });
 
 test('recovery isolation is based on canonical host port and database identity', () => {

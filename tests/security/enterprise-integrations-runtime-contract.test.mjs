@@ -29,21 +29,30 @@ test('runtime validator is fail-closed for schema, RLS, composite FKs and audit 
   assert.match(validation, /not has_table_privilege\('authenticated'/);
 });
 
-test('protected workflow binds evidence to exact current main', () => {
+test('protected workflow binds evidence to exact current main through a disposable project database', () => {
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /environment: production-integrations-proof/);
-  assert.match(workflow, /RECOVERY_ISOLATED_DATABASE_URL/);
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /git rev-parse origin\/main/);
+  assert.match(workflow, /GITHUB_SHA/);
+  assert.match(workflow, /GITHUB_REF_NAME/);
+  assert.match(workflow, /supabase\/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520/);
+  assert.match(workflow, /version: 2\.101\.0/);
+  assert.match(workflow, /run-ephemeral-project-schema-replay\.mjs/);
+  assert.doesNotMatch(workflow, /manage-ephemeral-recovery-database\.mjs start-project/);
+  assert.match(workflow, /manage-ephemeral-recovery-database\.mjs stop/);
+  assert.match(workflow, /Remove disposable project database[\s\S]*?if: always\(\)/);
+  assert.doesNotMatch(workflow, /secrets\.RECOVERY_ISOLATED_DATABASE_URL/);
+  assert.match(workflow, /DATABASE_URL=%s/);
   assert.match(workflow, /release_sha:sha/);
   assert.match(workflow, /status:"PASS"/);
   assert.match(workflow, /retention-days: 90/);
   assert.doesNotMatch(workflow, /echo .*DATABASE_URL|cat .*DATABASE_URL/);
 });
 
-test('migration application remains explicit and isolated', () => {
-  assert.match(workflow, /apply_migrations:/);
-  assert.match(workflow, /default: false/);
-  assert.match(workflow, /if: inputs\.apply_migrations/);
-  assert.match(workflow, /isolated database/);
+test('exact-SHA project migrations replace selective manual migration application', () => {
+  assert.doesNotMatch(workflow, /apply_migrations:/);
+  assert.doesNotMatch(workflow, /20260721113000_enterprise_integrations_platform\.sql/);
+  assert.doesNotMatch(workflow, /20260721114500_enterprise_integrations_tenant_relations\.sql/);
+  assert.match(workflow, /run-ephemeral-project-schema-replay\.mjs/);
 });

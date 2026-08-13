@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type Stripe from 'stripe';
 
 import { writeAuditLog } from '@/lib/security/audit-log';
@@ -11,10 +12,14 @@ import {
   claimBillingLifecycleRequest,
   completeBillingLifecycleRequest,
   failBillingLifecycleRequest,
+  findCompletedBillingLifecycleReplay,
+  getBillingLifecycleReplaySnapshot,
   markBillingLifecycleAuditSucceeded,
+  markBillingLifecycleLegacyProviderSucceeded,
   markBillingLifecycleProviderInFlight,
   markBillingLifecycleProviderSucceeded,
   type BillingLifecycleAction,
+  type BillingLifecycleReplaySnapshot,
 } from './lifecycle-request-ledger';
 import { getStripeClient } from './stripe';
 import { getStripePriceId, normalizeBillingInterval, normalizeBillingPlanId, type BillingInterval } from './plans';
@@ -27,6 +32,17 @@ type SubscriptionAuthority = {
   stripe_customer_id: string | null;
   plan: string | null;
   status: string | null;
+};
+
+type SubscriptionLifecycleInput = {
+  action: BillingLifecycleAction;
+  organizationId: string;
+  userId: string;
+  actorRole: string;
+  plan?: CanonicalSubscriptionPlan;
+  interval?: string | null;
+  addOns?: Array<{ slug?: unknown; quantity?: unknown }>;
+  idempotency: BillingIdempotencyContext;
 };
 
 async function getSubscriptionAuthority(organizationId: string): Promise<SubscriptionAuthority> {
@@ -78,6 +94,27 @@ function buildAddOnItems(selections: BillingAddOnSelection[], interval: BillingI
   return selections.map((selection) => ({ price: getStripeAddOnPriceId(selection.slug, interval), quantity: selection.quantity }));
 }
 
+function canonicalRequestAddOns(value: SubscriptionLifecycleInput['addOns']) {
+  return (value ?? [])
+    .map((item) => ({
+      slug: typeof item.slug === 'string' ? item.slug.trim().toLowerCase() : '',
+      quantity: typeof item.quantity === 'number' && Number.isInteger(item.quantity) ? item.quantity : 1,
+    }))
+    .sort((left, right) => left.slug.localeCompare(right.slug) || left.quantity - right.quantity);
+}
+
+export function billingLifecycleRequestFingerprint(
+  input: Pick<SubscriptionLifecycleInput, 'action' | 'plan' | 'interval' | 'addOns'>,
+) {
+  const payload = JSON.stringify({
+    action: input.action,
+    plan: input.plan ?? null,
+    interval: input.interval ? normalizeBillingInterval(input.interval) : null,
+    addOns: canonicalRequestAddOns(input.addOns),
+  });
+  return createHash('sha256').update(payload).digest('hex');
+}
+
 function lifecycleResult(input: {
   subscription: Stripe.Subscription;
   plan: CanonicalSubscriptionPlan;
@@ -97,16 +134,79 @@ function lifecycleResult(input: {
   };
 }
 
-export async function mutateSubscriptionLifecycle(input: {
+function snapshotFromResult(result: ReturnType<typeof lifecycleResult>): BillingLifecycleReplaySnapshot {
+  return {
+    subscriptionId: result.subscriptionId,
+    status: result.status,
+    cancelAtPeriodEnd: result.cancelAtPeriodEnd,
+    currentPeriodEnd: result.currentPeriodEnd,
+    plan: result.plan,
+    interval: result.interval,
+    addOns: result.addOns,
+  };
+}
+
+function replayResult(snapshot: BillingLifecycleReplaySnapshot) {
+  return { ...snapshot, idempotentReplay: true };
+}
+
+function canonicalProviderAddOnItems(subscription: Stripe.Subscription, baseItemId: string) {
+  return subscription.items.data
+    .filter((item) => item.id !== baseItemId)
+    .map((item) => ({ price: item.price.id, quantity: item.quantity ?? 0 }))
+    .sort((left, right) => left.price.localeCompare(right.price) || left.quantity - right.quantity);
+}
+
+function canonicalExpectedAddOnItems(addOns: BillingAddOnSelection[], interval: BillingInterval) {
+  return buildAddOnItems(addOns, interval)
+    .map((item) => ({ price: item.price, quantity: item.quantity }))
+    .sort((left, right) => left.price.localeCompare(right.price) || left.quantity - right.quantity);
+}
+
+function assertLegacyRecoveredProviderState(input: {
   action: BillingLifecycleAction;
-  organizationId: string;
-  userId: string;
-  actorRole: string;
-  plan?: CanonicalSubscriptionPlan;
-  interval?: string | null;
-  addOns?: Array<{ slug?: unknown; quantity?: unknown }>;
-  idempotency: BillingIdempotencyContext;
+  subscription: Stripe.Subscription;
+  baseItem: Stripe.SubscriptionItem;
+  targetPlan: CanonicalSubscriptionPlan;
+  interval: BillingInterval;
+  addOns: BillingAddOnSelection[];
 }) {
+  if (input.action === 'cancel') {
+    if (!input.subscription.cancel_at_period_end) {
+      throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+    }
+    return;
+  }
+
+  if (input.action === 'reactivate') {
+    if (input.subscription.cancel_at_period_end) {
+      throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+    }
+    return;
+  }
+
+  if (input.subscription.cancel_at_period_end || input.baseItem.price.id !== getStripePriceId(input.targetPlan, input.interval)) {
+    throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+  }
+
+  const actualAddOns = canonicalProviderAddOnItems(input.subscription, input.baseItem.id);
+  const expectedAddOns = canonicalExpectedAddOnItems(input.addOns, input.interval);
+  if (JSON.stringify(actualAddOns) !== JSON.stringify(expectedAddOns)) {
+    throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+  }
+}
+
+export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleInput) {
+  const requestFingerprint = billingLifecycleRequestFingerprint(input);
+  const completedReplay = await findCompletedBillingLifecycleReplay({
+    organizationId: input.organizationId,
+    requestedBy: input.userId,
+    action: input.action,
+    requestDigest: input.idempotency.digest,
+    requestFingerprint,
+  });
+  if (completedReplay) return replayResult(completedReplay);
+
   const authority = await getSubscriptionAuthority(input.organizationId);
   const stripe = getStripeClient();
   let subscription: Stripe.Subscription;
@@ -134,21 +234,47 @@ export async function mutateSubscriptionLifecycle(input: {
     addOns,
     stripeSubscriptionId: subscription.id,
     requestDigest: input.idempotency.digest,
+    requestFingerprint,
   });
 
   if (claim.kind === 'completed_replay') {
-    return lifecycleResult({ subscription, plan: targetPlan, interval, addOns, idempotentReplay: true });
+    return replayResult(getBillingLifecycleReplaySnapshot(claim.request));
   }
 
   const requestId = claim.request.id;
+  const isLegacyProviderRecovery = claim.kind === 'legacy_provider_succeeded_recovery';
+  const recoveredSnapshot =
+    claim.kind === 'claimed' || isLegacyProviderRecovery
+      ? null
+      : getBillingLifecycleReplaySnapshot(claim.request);
 
   if (claim.kind === 'audit_succeeded_recovery') {
     await completeBillingLifecycleRequest(requestId);
-    return lifecycleResult({ subscription, plan: targetPlan, interval, addOns, idempotentReplay: true });
+    return replayResult(recoveredSnapshot!);
   }
 
   let updated = subscription;
-  const providerWasAlreadyCompleted = claim.kind === 'provider_succeeded_recovery';
+  const providerWasAlreadyCompleted = claim.kind === 'provider_succeeded_recovery' || isLegacyProviderRecovery;
+  let providerSnapshot = recoveredSnapshot;
+
+  if (isLegacyProviderRecovery) {
+    assertLegacyRecoveredProviderState({
+      action: input.action,
+      subscription,
+      baseItem,
+      targetPlan,
+      interval,
+      addOns,
+    });
+    providerSnapshot = snapshotFromResult(lifecycleResult({
+      subscription,
+      plan: targetPlan,
+      interval,
+      addOns,
+      idempotentReplay: true,
+    }));
+    await markBillingLifecycleLegacyProviderSucceeded(requestId, providerSnapshot);
+  }
 
   if (!providerWasAlreadyCompleted) {
     await markBillingLifecycleProviderInFlight(requestId);
@@ -201,30 +327,41 @@ export async function mutateSubscriptionLifecycle(input: {
       throw classifyProviderFailure('stripe', `subscription_${input.action}`, error);
     }
 
-    await markBillingLifecycleProviderSucceeded(requestId);
+    providerSnapshot = snapshotFromResult(lifecycleResult({
+      subscription: updated,
+      plan: targetPlan,
+      interval,
+      addOns,
+      idempotentReplay: false,
+    }));
+    await markBillingLifecycleProviderSucceeded(requestId, providerSnapshot);
   }
 
+  if (!providerSnapshot) throw new Error('billing_lifecycle_result_snapshot_unavailable');
+
   const auditPreviousPlan = normalizeBillingPlanId(claim.request.source_plan) ?? currentPlan;
-  const auditTargetPlan = normalizeBillingPlanId(claim.request.target_plan) ?? targetPlan;
-  const auditInterval = claim.request.billing_interval === 'year' ? 'year' : interval;
+  const auditTargetPlan = normalizeBillingPlanId(claim.request.target_plan) ?? providerSnapshot.plan;
+  const auditInterval = claim.request.billing_interval === 'year' ? 'year' : providerSnapshot.interval;
 
   const audit = await writeAuditLog({
     action: `billing.subscription_${input.action}`,
     organizationId: input.organizationId,
     userId: input.userId,
     entityType: 'stripe_subscription',
-    entityId: subscription.id,
+    entityId: providerSnapshot.subscriptionId,
     metadata: {
       previousPlan: auditPreviousPlan,
       targetPlan: auditTargetPlan,
       interval: auditInterval,
-      addOns,
+      addOns: providerSnapshot.addOns,
       actorRole: input.actorRole,
-      cancelAtPeriodEnd: updated.cancel_at_period_end,
-      providerStatus: updated.status,
+      cancelAtPeriodEnd: providerSnapshot.cancelAtPeriodEnd,
+      providerStatus: providerSnapshot.status,
       lifecycleRequestId: requestId,
       idempotencyProtected: true,
       providerMutationReplayed: providerWasAlreadyCompleted,
+      legacyProviderSnapshotRecovered: isLegacyProviderRecovery,
+      durableResultSnapshot: true,
     },
   });
 
@@ -235,13 +372,9 @@ export async function mutateSubscriptionLifecycle(input: {
   await markBillingLifecycleAuditSucceeded(requestId);
   await completeBillingLifecycleRequest(requestId);
 
-  return lifecycleResult({
-    subscription: updated,
-    plan: targetPlan,
-    interval,
-    addOns,
-    idempotentReplay: providerWasAlreadyCompleted,
-  });
+  return providerWasAlreadyCompleted
+    ? replayResult(providerSnapshot)
+    : { ...providerSnapshot, idempotentReplay: false };
 }
 
 export function isBillingLifecycleRequestError(error: unknown): error is BillingLifecycleRequestError {

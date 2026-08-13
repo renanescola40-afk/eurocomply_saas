@@ -7,11 +7,18 @@ const runtime = readFileSync('scripts/procurement/run-procurement-trust-runtime-
 const validator = readFileSync('scripts/procurement/check-procurement-trust-evidence.mjs', 'utf8');
 
 describe('procurement trust operations megapack', () => {
-  it('uses protected exact-main manual execution', () => {
+  it('uses protected exact-main manual execution with a disposable exact-SHA project database', () => {
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain('environment: production-procurement-trust-proof');
     expect(workflow).toContain('EXECUTE_PROCUREMENT_TRUST_PROOF');
     expect(workflow).toContain('persist-credentials: false');
+    expect(workflow).toContain('supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520');
+    expect(workflow).toContain('version: 2.101.0');
+    expect(workflow).toContain('run-ephemeral-project-schema-replay.mjs');
+    expect(workflow).not.toContain('manage-ephemeral-recovery-database.mjs start-project');
+    expect(workflow).toContain('manage-ephemeral-recovery-database.mjs stop');
+    expect(workflow).toMatch(/Remove disposable project database[\s\S]*?if: always\(\)/);
+    expect(workflow).not.toContain('secrets.RECOVERY_ISOLATED_DATABASE_URL');
     expect(workflow).not.toContain('pull_request_target');
     expect(workflow).not.toContain('contents: write');
   });

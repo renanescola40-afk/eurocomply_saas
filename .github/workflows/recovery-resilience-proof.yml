@@ -33,7 +33,7 @@ concurrency:
 jobs:
   recovery-proof:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 75
     environment: production-recovery
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
@@ -41,7 +41,6 @@ jobs:
       RECOVERY_REQUIRED_EXERCISE: ${{ inputs.exercise }}
       RECOVERY_EXERCISE_CONFIRMATION: ${{ inputs.confirmation }}
       RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.RECOVERY_SOURCE_DATABASE_URL }}
-      RECOVERY_ISOLATED_DATABASE_URL: ${{ secrets.RECOVERY_ISOLATED_DATABASE_URL }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -83,8 +82,11 @@ jobs:
         with:
           node-version: 22
 
-      - name: Preflight protected recovery proof
-        run: node scripts/security/preflight-protected-proof.mjs recovery
+      - name: Set up pinned Supabase CLI
+        if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.101.0
 
       - name: Install PostgreSQL client
         if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
@@ -93,6 +95,13 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install --yes postgresql-client
+
+      - name: Start disposable Supabase recovery database
+        if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start
+
+      - name: Preflight protected recovery proof
+        run: node scripts/security/preflight-protected-proof.mjs recovery
 
       - name: Execute isolated backup and restore
         if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
@@ -104,6 +113,10 @@ jobs:
 
       - name: Validate canonical recovery evidence
         run: node scripts/recovery/check-recovery-evidence.mjs
+
+      - name: Remove disposable recovery database
+        if: always() && (inputs.exercise == 'full' || inputs.exercise == 'backup-restore')
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
 
       - name: Upload redacted recovery evidence
         if: always()

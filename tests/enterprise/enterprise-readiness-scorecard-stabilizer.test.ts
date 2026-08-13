@@ -8,56 +8,23 @@ const workflow = readFileSync(workflowPath, 'utf8');
 const script = readFileSync(scriptPath, 'utf8');
 
 const producerNames = [
-  'CI',
-  'CodeQL',
-  'Semgrep',
-  'Secret Scanning',
-  'Scan repository for accidental secret exposure',
-  'Dependency Review',
-  'Actionlint',
-  'Public Claims Guard',
-  'Full Security Suite',
-  'Enterprise Production Gate',
-  'RISCK COMPLY Security CI',
-  'RISCK COMPLY Upload Security CI',
-  'Enterprise DAST',
-  'Dependency Vulnerability Proof',
-  'Distributed Rate Limit Runtime Proof',
-  'Auth RBAC Tenant Proof',
-  'Supabase Live RLS Validation',
-  'Production Runtime Proof',
-  'Audit Chain Runtime Proof',
-  'Production Provider Runtime Proof',
-  'Branch Protection Runtime Proof',
-  'Step-Up Runtime Proof',
-  'Stripe Runtime Evidence Promotion',
-  'Final Technical Controls Proof',
-  'Recovery Resilience Proof',
+  'CI','CodeQL','Semgrep','Secret Scanning','Scan repository for accidental secret exposure','Dependency Review','Actionlint','Public Claims Guard','Full Security Suite','Enterprise Production Gate','RISCK COMPLY Security CI','RISCK COMPLY Upload Security CI','Enterprise DAST','Dependency Vulnerability Proof','Distributed Rate Limit Runtime Proof','Auth RBAC Tenant Proof','Supabase Live RLS Validation','Production Runtime Proof','Audit Chain Runtime Proof','Production Provider Runtime Proof','Branch Protection Runtime Proof','Step-Up Runtime Proof','Stripe Runtime Evidence Promotion','Final Technical Controls Proof','Recovery Resilience Proof',
 ];
-
-const retainedFanInNames = [
-  'Auth RBAC Tenant Proof',
-  'Supabase Live RLS Validation',
-  'RISCK COMPLY Upload Security CI',
-  'Audit Chain Runtime Proof',
-  'Production Provider Runtime Proof',
-  'Branch Protection Runtime Proof',
-  'Step-Up Runtime Proof',
-  'Stripe Runtime Evidence Promotion',
-];
+const retainedFanInNames = ['Auth RBAC Tenant Proof','Supabase Live RLS Validation','RISCK COMPLY Upload Security CI','Audit Chain Runtime Proof','Production Provider Runtime Proof','Branch Protection Runtime Proof','Step-Up Runtime Proof','Stripe Runtime Evidence Promotion'];
 
 describe('enterprise readiness scorecard terminal stabilizer', () => {
   it('is syntactically valid JavaScript', () => {
     expect(() => execFileSync(process.execPath, ['--check', scriptPath])).not.toThrow();
   });
 
-  it('listens to the full reviewed material producer set on main', () => {
+  it('listens to the reviewed producer set while ignoring its own workflow-dispatched Production Gate completion', () => {
     for (const producer of producerNames) {
       expect(workflow).toContain(`      - ${producer}`);
       expect(script).toContain(`  '${producer}',`);
     }
-
     expect(new Set(producerNames).size).toBe(25);
+    expect(workflow).toContain("github.event.workflow_run.name != 'Enterprise Production Gate'");
+    expect(workflow).toContain("github.event.workflow_run.event != 'workflow_dispatch'");
     expect(workflow).toMatch(/workflow_run:[\s\S]*?branches: \[main\][\s\S]*?types: \[completed\]/);
     expect(workflow).not.toContain('Enterprise Readiness Scorecard\n');
     expect(workflow).not.toContain('pull_request_target:');
@@ -76,7 +43,6 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     const debounceIndex = workflow.indexOf('- name: Debounce producer storm before checkout or API access');
     const checkoutIndex = workflow.indexOf('- name: Checkout exact producer SHA');
     const stabilizeIndex = workflow.indexOf('- name: Stabilize terminal exact-SHA scorecard');
-
     expect(debounceIndex).toBeGreaterThan(-1);
     expect(checkoutIndex).toBeGreaterThan(debounceIndex);
     expect(stabilizeIndex).toBeGreaterThan(checkoutIndex);
@@ -87,9 +53,7 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
 
   it('uses minimal write permission, exact-SHA checkout and a manual recovery entry point', () => {
     expect(workflow).toMatch(/permissions:\n  actions: write\n  contents: read/);
-    expect(workflow).toContain(
-      'group: enterprise-readiness-scorecard-stabilizer-${{ github.event.workflow_run.head_sha || inputs.target_sha || github.sha }}',
-    );
+    expect(workflow).toContain('group: enterprise-readiness-scorecard-stabilizer-${{ github.event.workflow_run.head_sha || inputs.target_sha || github.sha }}');
     expect(workflow).toContain('cancel-in-progress: true');
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain('target_sha:');
@@ -125,8 +89,7 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(script).toContain('productionGateAlreadyCoversEvidence');
     expect(script).toContain('await dispatchProductionGate(repository);');
     expect(script).toContain('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs);');
-    expect(script).toContain('No terminal Enterprise Production Gate covers the latest material producer state');
-
+    expect(script).toContain('No successful terminal Enterprise Production Gate covers the latest material producer state');
     const gateDispatch = script.indexOf('await dispatchProductionGate(repository);');
     const gateWait = script.indexOf('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs);');
     const scorecardDispatch = script.indexOf('await dispatchScorecard(repository);');

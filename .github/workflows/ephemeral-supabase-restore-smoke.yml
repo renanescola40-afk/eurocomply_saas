@@ -1,0 +1,77 @@
+name: Ephemeral Supabase Restore Smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/recovery/manage-ephemeral-recovery-database.mjs'
+      - 'scripts/recovery/run-backup-restore-exercise.mjs'
+      - 'scripts/recovery/run-ephemeral-restore-smoke.mjs'
+      - '.github/workflows/recovery-resilience-proof.yml'
+      - '.github/workflows/ephemeral-supabase-restore-smoke.yml'
+      - 'tests/security/ephemeral-recovery-database-contract.test.ts'
+      - 'tests/security/ephemeral-supabase-restore-smoke-workflow.test.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ephemeral-supabase-restore-smoke-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  synthetic-logical-restore:
+    name: Synthetic roles/schema/data restore
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      - name: Checkout untrusted PR head without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Verify checked-out PR head
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.101.0
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Start clean disposable synthetic source
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start
+
+      - name: Create synthetic roles schema and data dumps
+        run: node scripts/recovery/run-ephemeral-restore-smoke.mjs dump
+
+      - name: Destroy disposable source project
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
+
+      - name: Start clean disposable restore target
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start
+
+      - name: Restore synthetic logical backup and validate integrity
+        run: node scripts/recovery/run-ephemeral-restore-smoke.mjs restore
+
+      - name: Remove disposable restore target
+        if: always()
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
+
+      - name: Remove synthetic dump files
+        if: always()
+        run: node scripts/recovery/run-ephemeral-restore-smoke.mjs clean

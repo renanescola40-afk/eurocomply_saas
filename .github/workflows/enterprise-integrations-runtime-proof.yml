@@ -1,5 +1,7 @@
 name: Enterprise Integrations Runtime Proof
 
+run-name: Enterprise integrations proof for ${{ inputs.release_sha }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -7,11 +9,6 @@ on:
         description: Full 40-character current main SHA
         required: true
         type: string
-      apply_migrations:
-        description: Apply the integrations migrations to the isolated validation database
-        required: true
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -23,11 +20,10 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
     environment: production-integrations-proof
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
-      DATABASE_URL: ${{ secrets.RECOVERY_ISOLATED_DATABASE_URL }}
 
     steps:
       - name: Validate release SHA
@@ -46,26 +42,46 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$DATABASE_URL"
           git fetch --no-tags origin main
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+          test "$GITHUB_SHA" = "$RELEASE_SHA"
+          test "$GITHUB_REF_NAME" = "main"
 
-      - name: Apply integrations migrations to isolated database
-        if: inputs.apply_migrations
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.101.0
+
+      - name: Install PostgreSQL client
         shell: bash
         run: |
           set -euo pipefail
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20260721113000_enterprise_integrations_platform.sql
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20260721114500_enterprise_integrations_tenant_relations.sql
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Start exact-SHA disposable Supabase project database
+        run: node scripts/recovery/run-ephemeral-project-schema-replay.mjs
+
+      - name: Bind disposable database to integration validator
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RECOVERY_ISOLATED_DATABASE_URL"
+          printf 'DATABASE_URL=%s\n' "$RECOVERY_ISOLATED_DATABASE_URL" >> "$GITHUB_ENV"
 
       - name: Execute fail-closed runtime validation
         shell: bash
         run: |
           set -euo pipefail
+          test -n "$DATABASE_URL"
           mkdir -p artifacts
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/security/validate-enterprise-integrations-runtime.sql > artifacts/enterprise-integrations-runtime.txt
           node -e 'const fs=require("fs"); const sha=process.env.RELEASE_SHA; fs.writeFileSync("artifacts/enterprise-integrations-runtime.json", JSON.stringify({schema_version:1,release_sha:sha,release_branch:"main",status:"PASS",validated_at:new Date().toISOString(),controls:["INT-SCHEMA","INT-RLS","INT-TENANT-FK","INT-AUDIT-IMMUTABLE","INT-CREDENTIAL-DIGEST"],limitations:["Provider interoperability, webhook delivery SLA, live OIDC/SAML login and SCIM conformance require separate provider testing."]},null,2)+"\n");'
+
+      - name: Remove disposable project database
+        if: always()
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
 
       - name: Upload redacted runtime evidence
         if: always()

@@ -1,0 +1,66 @@
+begin;
+
+create extension if not exists pgcrypto;
+
+create table if not exists public.organization_add_ons (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  add_on_id text not null,
+  status text not null default 'inactive',
+  stripe_subscription_item_id text,
+  stripe_price_id text,
+  quantity integer not null default 1,
+  current_period_start timestamptz,
+  current_period_end timestamptz,
+  activated_at timestamptz,
+  cancelled_at timestamptz,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint organization_add_ons_status_check check (status in ('inactive', 'active', 'trialing', 'past_due', 'cancelled')),
+  constraint organization_add_ons_quantity_check check (quantity > 0),
+  constraint organization_add_ons_unique_org_addon unique (organization_id, add_on_id)
+);
+
+create index if not exists organization_add_ons_org_status_idx on public.organization_add_ons (organization_id, status);
+create index if not exists organization_add_ons_stripe_subscription_item_idx on public.organization_add_ons (stripe_subscription_item_id) where stripe_subscription_item_id is not null;
+
+alter table public.organization_add_ons enable row level security;
+alter table public.organization_add_ons force row level security;
+
+drop policy if exists "organization members can read add-ons" on public.organization_add_ons;
+create policy "organization members can read add-ons" on public.organization_add_ons for select to authenticated using (
+  exists (
+    select 1 from public.organization_members members
+    where members.organization_id = organization_add_ons.organization_id
+      and members.user_id = auth.uid()
+  )
+);
+
+revoke all on table public.organization_add_ons from anon;
+revoke insert, update, delete, truncate, references, trigger on table public.organization_add_ons from authenticated;
+grant select on table public.organization_add_ons to authenticated;
+grant all on table public.organization_add_ons to service_role;
+
+create or replace function public.touch_organization_add_on_updated_at()
+returns trigger
+language plpgsql
+set search_path = pg_catalog
+as $function$
+begin
+  new.updated_at := statement_timestamp();
+  return new;
+end;
+$function$;
+
+revoke all on function public.touch_organization_add_on_updated_at() from public;
+revoke all on function public.touch_organization_add_on_updated_at() from anon;
+revoke all on function public.touch_organization_add_on_updated_at() from authenticated;
+grant execute on function public.touch_organization_add_on_updated_at() to service_role;
+
+drop trigger if exists organization_add_ons_set_updated_at on public.organization_add_ons;
+create trigger organization_add_ons_set_updated_at before update on public.organization_add_ons for each row execute function public.touch_organization_add_on_updated_at();
+
+comment on table public.organization_add_ons is 'Canonical organization-scoped Stripe add-on state. Browser writes are denied; service-role billing flows own mutations.';
+
+commit;

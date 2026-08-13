@@ -21,7 +21,15 @@ export type BillingAddOn = {
 const allPaidPlans: CanonicalSubscriptionPlan[] = ['starter', 'professional', 'business', 'enterprise'];
 const proAndUp: CanonicalSubscriptionPlan[] = ['professional', 'business', 'enterprise'];
 
-function addOn(slug: string, name: string, description: string, priceMonthly: number, category: AddOnCategory, availableOn: CanonicalSubscriptionPlan[], dependencies: string[] = []): BillingAddOn {
+function addOn<const TSlug extends string>(
+  slug: TSlug,
+  name: string,
+  description: string,
+  priceMonthly: number,
+  category: AddOnCategory,
+  availableOn: CanonicalSubscriptionPlan[],
+  dependencies: string[] = [],
+) {
   const envSlug = slug.toUpperCase().replaceAll('-', '_');
   return {
     id: `addon_${slug}`,
@@ -33,13 +41,13 @@ function addOn(slug: string, name: string, description: string, priceMonthly: nu
     category,
     availableOn,
     dependencies,
-    status: 'active',
+    status: 'active' as const,
     stripePriceEnvKeyMonthly: `STRIPE_ADDON_${envSlug}_MONTHLY`,
     stripePriceEnvKeyAnnual: `STRIPE_ADDON_${envSlug}_ANNUAL`,
   };
 }
 
-export const BILLING_ADD_ONS: BillingAddOn[] = [
+export const BILLING_ADD_ONS = [
   addOn('regulatory-monitoring-pro', 'Regulatory Monitoring Pro', 'Expanded regulatory feeds, alerts and monitoring workflows.', 39, 'compliance', allPaidPlans),
   addOn('ai-literacy-hub', 'AI Literacy Hub', 'Training assignments, attestations and literacy evidence.', 49, 'compliance', allPaidPlans),
   addOn('fria-workspace', 'FRIA Workspace', 'Dedicated fundamental-rights impact assessment workspace.', 79, 'compliance', allPaidPlans),
@@ -53,7 +61,9 @@ export const BILLING_ADD_ONS: BillingAddOn[] = [
   addOn('extra-organization', 'Extra Organization', 'One additional licensed organization.', 29, 'capacity', allPaidPlans),
   addOn('extra-user', 'Extra User', 'One additional licensed user seat.', 8, 'capacity', allPaidPlans),
   addOn('extra-storage-100gb', 'Extra Storage 100GB', 'An additional 100 GB storage allocation.', 19, 'capacity', allPaidPlans),
-];
+] satisfies BillingAddOn[];
+
+export type BillingAddOnSlug = (typeof BILLING_ADD_ONS)[number]['slug'];
 
 export function getBillingAddOn(slug: string | null | undefined) {
   const normalized = slug?.trim().toLowerCase();

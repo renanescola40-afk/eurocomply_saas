@@ -1,0 +1,142 @@
+name: Ephemeral Supabase Project Smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/recovery/manage-ephemeral-recovery-database.mjs'
+      - 'scripts/recovery/run-ephemeral-project-schema-replay.mjs'
+      - 'scripts/recovery/run-ephemeral-project-schema-replay-reviewed-boundary.mjs'
+      - 'scripts/recovery/run-ephemeral-project-schema-replay-reviewed-boundary-v2.mjs'
+      - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary.mjs'
+      - 'scripts/recovery/run-backup-restore-exercise.mjs'
+      - 'supabase/migrations/**'
+      - '.github/workflows/final-technical-controls-proof.yml'
+      - '.github/workflows/recovery-resilience-proof.yml'
+      - '.github/workflows/data-governance-runtime-proof.yml'
+      - '.github/workflows/incident-continuity-runtime-proof.yml'
+      - '.github/workflows/procurement-trust-runtime-proof.yml'
+      - '.github/workflows/enterprise-integrations-runtime-proof.yml'
+      - '.github/workflows/ephemeral-supabase-project-smoke.yml'
+      - 'tests/security/ephemeral-recovery-database-contract.test.ts'
+      - 'tests/security/ephemeral-project-schema-workflows.test.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ephemeral-supabase-project-smoke-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  exact-sha-project-schema:
+    name: Exact-SHA disposable Supabase schema
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      - name: Checkout untrusted PR head without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Verify checked-out PR head
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.101.0
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Start exact-SHA disposable project database
+        run: node scripts/recovery/run-reviewed-ephemeral-schema-boundary.mjs
+
+      - name: Validate local runtime, replay boundary, RLS and representative schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RECOVERY_EPHEMERAL_DATABASE_PROVISIONED" = "true"
+          test "$RECOVERY_EPHEMERAL_DATABASE_MODE" = "project-schema"
+          test "$RECOVERY_SUPABASE_POSTGRES_VERSION" != ""
+          test "$RECOVERY_EPHEMERAL_MIGRATION_COUNT" -gt 0
+          test "$RECOVERY_EPHEMERAL_DUPLICATE_GROUP_COUNT" = "16"
+          test "$RECOVERY_EPHEMERAL_REPLAY_STAGED_FILE_COUNT" = "32"
+          test "$RECOVERY_EPHEMERAL_LEGACY_EXCLUDED_FILE_COUNT" = "5"
+          test "$RECOVERY_EPHEMERAL_UNRESOLVED_INVALID_EXCLUDED_FILE_COUNT" = "1"
+          test "$RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLACED_FILE_COUNT" = "2"
+          test "$RECOVERY_EPHEMERAL_PREREQUISITE_BLOCKED_DUPLICATE_FILE_COUNT" = "3"
+          test "$RECOVERY_EPHEMERAL_SYNTAX_COMPAT_FILE_COUNT" = "1"
+          test "$RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL" = "false"
+          case "$RECOVERY_ISOLATED_DATABASE_URL" in
+            postgresql://*@127.0.0.1:54322/*|postgres://*@127.0.0.1:54322/*|postgresql://*@localhost:54322/*|postgres://*@localhost:54322/*) ;;
+            *) echo 'Disposable database URL is not loopback-bound' >&2; exit 1 ;;
+          esac
+
+          psql "$RECOVERY_ISOLATED_DATABASE_URL" --no-psqlrc --set ON_ERROR_STOP=1 <<'SQL'
+          do $proof$
+          declare
+            missing integer;
+            rls_missing integer;
+          begin
+            select count(*) into missing
+            from (values
+              ('organizations'),
+              ('organization_members'),
+              ('audit_logs'),
+              ('security_incidents'),
+              ('data_retention_policies'),
+              ('enterprise_scim_connections'),
+              ('organization_add_ons')
+            ) required(table_name)
+            where to_regclass('public.' || required.table_name) is null;
+            if missing <> 0 then
+              raise exception 'representative exact-SHA schema objects missing: %', missing;
+            end if;
+
+            select count(*) into rls_missing
+            from (values
+              ('organizations'),
+              ('organization_members'),
+              ('audit_logs'),
+              ('security_incidents'),
+              ('organization_add_ons')
+            ) required(table_name)
+            where not exists (
+              select 1
+              from pg_class c
+              join pg_namespace n on n.oid = c.relnamespace
+              where n.nspname = 'public'
+                and c.relname = required.table_name
+                and c.relrowsecurity
+                and c.relforcerowsecurity
+            );
+            if rls_missing <> 0 then
+              raise exception 'representative exact-SHA tables are missing RLS/FORCE RLS: %', rls_missing;
+            end if;
+
+            if not exists (
+              select 1 from supabase_migrations.schema_migrations
+            ) then
+              raise exception 'disposable replay history is empty';
+            end if;
+          end
+          $proof$;
+          SQL
+
+      - name: Remove disposable project database
+        if: always()
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
