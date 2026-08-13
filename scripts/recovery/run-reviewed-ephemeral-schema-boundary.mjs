@@ -31,6 +31,15 @@ const blockedDuplicateRules = Object.freeze([
     marker: 'create unique index if not exists qualified_review_submissions_one_current',
   }),
 ]);
+const syntaxCompatibilityRules = Object.freeze([
+  Object.freeze({
+    group: 'I-DUP-14',
+    name: '20260724001000_enterprise_group_access_reconciliation.sql',
+    marker: 'create or replace function public.list_enterprise_group_access_reconciliation_candidates(',
+    invalid: '  current_role text,',
+    replacement: '  "current_role" text,',
+  }),
+]);
 
 function fail(message) {
   throw new Error(message);
@@ -73,7 +82,29 @@ function stageBlockedDuplicateSchemaEffects(items, duplicateReview, batchNReview
   }
 }
 
-function restoreBlockedDuplicateSchemaEffects(items) {
+function stageSyntaxCompatibility(items, duplicateReview) {
+  for (const rule of syntaxCompatibilityRules) {
+    if (!duplicateReview.includes(`### ${rule.group}`) || !duplicateReview.includes(`\`${rule.name}\``)) {
+      fail(`Duplicate review boundary drifted for syntax compatibility ${rule.group} ${rule.name}`);
+    }
+
+    const path = join(migrationsDir, rule.name);
+    const bytes = readFileSync(path);
+    const sql = bytes.toString('utf8');
+    if (!sql.includes(rule.marker)) {
+      fail(`Syntax compatibility function marker drifted for ${rule.name}`);
+    }
+    const occurrences = sql.split(rule.invalid).length - 1;
+    if (occurrences !== 1) {
+      fail(`Expected one reviewed reserved output identifier in ${rule.name}, found ${occurrences}`);
+    }
+
+    items.push({ path, bytes, name: rule.name });
+    writeFileSync(path, sql.replace(rule.invalid, rule.replacement), 'utf8');
+  }
+}
+
+function restoreHistoricalBytes(items, label) {
   const failures = [];
   for (const item of [...items].reverse()) {
     try {
@@ -82,7 +113,7 @@ function restoreBlockedDuplicateSchemaEffects(items) {
       failures.push(`${item.name}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-  if (failures.length) fail(`Failed to restore blocked duplicate migration bytes: ${failures.join('; ')}`);
+  if (failures.length) fail(`Failed to restore ${label} migration bytes: ${failures.join('; ')}`);
 }
 
 function main() {
@@ -102,17 +133,20 @@ function main() {
   }
 
   const blockedDuplicateItems = [];
+  const syntaxCompatibilityItems = [];
   let replayError = null;
   let restoreError = null;
   try {
     writeFileSync(legacyPath, legacySql.replace(invalidStatement, safeStatement), 'utf8');
     stageBlockedDuplicateSchemaEffects(blockedDuplicateItems, duplicateReview, batchNReview);
+    stageSyntaxCompatibility(syntaxCompatibilityItems, duplicateReview);
     execFileSync(process.execPath, [reviewedReplay], { stdio: 'inherit', env: process.env });
   } catch (error) {
     replayError = error;
   } finally {
     try {
-      restoreBlockedDuplicateSchemaEffects(blockedDuplicateItems);
+      restoreHistoricalBytes(syntaxCompatibilityItems, 'syntax-compatible');
+      restoreHistoricalBytes(blockedDuplicateItems, 'blocked duplicate');
       writeFileSync(legacyPath, legacyBytes);
     } catch (error) {
       restoreError = error;
@@ -123,8 +157,9 @@ function main() {
   if (replayError) throw replayError;
 
   appendGithubEnv('RECOVERY_EPHEMERAL_PREREQUISITE_BLOCKED_DUPLICATE_FILE_COUNT', String(blockedDuplicateRules.length));
+  appendGithubEnv('RECOVERY_EPHEMERAL_SYNTAX_COMPAT_FILE_COUNT', String(syntaxCompatibilityRules.length));
   process.stdout.write(
-    `Disposable billing lifecycle bridge completed; ${blockedDuplicateRules.length} qualified-review duplicate schema effects were suppressed by reviewed prerequisite boundaries and canonical historical bytes were restored.\n`,
+    `Disposable billing lifecycle bridge completed; ${blockedDuplicateRules.length} qualified-review duplicate schema effects were suppressed by reviewed prerequisite boundaries, ${syntaxCompatibilityRules.length} split-history migration received disposable syntax compatibility, and canonical historical bytes were restored.\n`,
   );
 }
 
