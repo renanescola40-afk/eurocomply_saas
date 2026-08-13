@@ -29,6 +29,12 @@ function fixtureFetch(options: {
   healthStatus?: number;
   healthBodyStatus?: string;
   healthNoStore?: boolean;
+  deploymentHealthStatus?: number;
+  deploymentHealthBodyStatus?: string;
+  deploymentHealthNoStore?: boolean;
+  canonicalHealthStatus?: number;
+  canonicalHealthBodyStatus?: string;
+  canonicalHealthNoStore?: boolean;
   mainShas?: string[];
   useCommitStatus?: boolean;
   commitStatusState?: string;
@@ -44,6 +50,12 @@ function fixtureFetch(options: {
     healthStatus = 200,
     healthBodyStatus = 'ok',
     healthNoStore = true,
+    deploymentHealthStatus = healthStatus,
+    deploymentHealthBodyStatus = healthBodyStatus,
+    deploymentHealthNoStore = healthNoStore,
+    canonicalHealthStatus = healthStatus,
+    canonicalHealthBodyStatus = healthBodyStatus,
+    canonicalHealthNoStore = healthNoStore,
     mainShas = [SHA],
     useCommitStatus = false,
     commitStatusState = 'success',
@@ -108,14 +120,23 @@ function fixtureFetch(options: {
       });
     }
 
-    if (url === `${DEPLOYMENT_URL}/api/health` || url === `${CANONICAL_URL}/api/health`) {
+    if (url === `${DEPLOYMENT_URL}/api/health`) {
       return jsonResponse(
-        { status: healthBodyStatus },
-        healthStatus,
-        { 'cache-control': healthNoStore ? 'no-store, private' : 'public, max-age=60' },
+        { status: deploymentHealthBodyStatus },
+        deploymentHealthStatus,
+        { 'cache-control': deploymentHealthNoStore ? 'no-store, private' : 'public, max-age=60' },
       );
     }
 
+    if (url === `${CANONICAL_URL}/api/health`) {
+      return jsonResponse(
+        { status: canonicalHealthBodyStatus },
+        canonicalHealthStatus,
+        { 'cache-control': canonicalHealthNoStore ? 'no-store, private' : 'public, max-age=60' },
+      );
+    }
+
+    void init;
     return jsonResponse({ error: 'unexpected request', url }, 404);
   };
 }
@@ -198,6 +219,66 @@ describe('exact-SHA Vercel production deployment proof', () => {
     expect(evidence.truthBoundary).toContain('does not claim that the health probe itself was sent to the immutable deployment URL');
     expect(JSON.stringify(evidence)).not.toContain(INSPECTOR_URL);
     expect(JSON.stringify(evidence)).not.toContain(CANONICAL_URL);
+  });
+
+  it('falls back to exact-SHA Vercel commit status and canonical health when the immutable deployment is edge-protected', async () => {
+    const evidence = await buildProductionDeploymentEvidence({
+      repository: REPOSITORY,
+      targetSha: SHA,
+      token: 'test-token',
+      fetchImpl: fixtureFetch({
+        deploymentHealthStatus: 401,
+        deploymentHealthBodyStatus: 'protected',
+        deploymentHealthNoStore: true,
+        canonicalHealthStatus: 200,
+        canonicalHealthBodyStatus: 'ok',
+        canonicalHealthNoStore: true,
+      }),
+      sleepImpl: async () => undefined,
+      apiUrl: API,
+      maxAttempts: 1,
+      pollMs: 0,
+    });
+
+    expect(evidence.status).toBe('PASS');
+    expect(evidence.deployment).toMatchObject({
+      proofSource: 'github_commit_status',
+      providerDeploymentId: 'GNiVwyNHt5ocuy5BURnBkoP2SRUF',
+    });
+    expect(evidence.health).toMatchObject({
+      targetClass: 'canonical_production_origin',
+      status: 200,
+      bodyStatus: 'ok',
+      noStore: true,
+    });
+    expect(evidence.checks?.immutableDeploymentHealthOk).toBeNull();
+    expect(evidence.evidenceIntegrity).toMatchObject({
+      githubDeploymentBound: false,
+      githubCommitStatusBound: true,
+      uniqueProviderDeploymentIdBound: true,
+    });
+  });
+
+  it('does not treat canonical health as proof when the exact-SHA Vercel commit status is invalid', async () => {
+    const evidence = await buildProductionDeploymentEvidence({
+      repository: REPOSITORY,
+      targetSha: SHA,
+      token: 'test-token',
+      fetchImpl: fixtureFetch({
+        deploymentHealthStatus: 401,
+        commitStatusState: 'failure',
+        canonicalHealthStatus: 200,
+      }),
+      sleepImpl: async () => undefined,
+      apiUrl: API,
+      maxAttempts: 1,
+      pollMs: 0,
+    });
+
+    expect(evidence.status).toBe('OPEN');
+    expect(evidence.blockers).toContain('production_deployment_health_unproven');
+    expect(evidence.evidenceIntegrity?.githubDeploymentBound).toBe(true);
+    expect(evidence.evidenceIntegrity?.githubCommitStatusBound).toBe(false);
   });
 
   it('rejects spoofed or non-success Vercel commit statuses', async () => {
