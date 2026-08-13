@@ -15,11 +15,9 @@ import { join } from 'node:path';
 
 export const DUPLICATE_REVIEW_REFERENCE =
   'docs/security/evidence/human-review/supabase-migration-mega-batch-i.md';
+export const INVALID_REVIEW_REFERENCE =
+  'docs/security/evidence/human-review/supabase-migration-mega-batch-o-review-preparation.md';
 
-// Exact duplicate-version inventory explicitly owner-reviewed in Mega Batch I.
-// This allowlist authorizes only disposable schema-effect replay. It does NOT
-// resolve REQUIRES_SPLIT_REVIEW, repair migration history, authorize staging,
-// or authorize production execution.
 export const KNOWN_DUPLICATE_MIGRATION_GROUPS = Object.freeze({
   '20260605': [
     '20260605_compliance_evidence.sql',
@@ -94,39 +92,27 @@ export const KNOWN_DUPLICATE_MIGRATION_GROUPS = Object.freeze({
   ],
 });
 
-// Read-only production verification on 2026-08-13 found no matching ledger
-// version for these date-only files and no canonical workspaces/workspace_members
-// model they require. They remain source artifacts and are never executed here.
 export const UNAPPLIED_LEGACY_MIGRATIONS = Object.freeze([
   ...KNOWN_DUPLICATE_MIGRATION_GROUPS['20260605'],
 ]);
+export const UNRESOLVED_INVALID_MIGRATIONS = Object.freeze([
+  '20260619_multi_tenant_rls_hardening.sql',
+]);
 const UNAPPLIED_LEGACY_VERSION = '20260605';
 
-function fail(message) {
-  throw new Error(message);
-}
-
-function sha256(path) {
-  return createHash('sha256').update(readFileSync(path)).digest('hex');
-}
-
-function migrationVersion(name) {
-  return name.match(/^(\d+).*\.sql$/)?.[1] ?? null;
-}
-
-function migrationFiles(migrationsDir) {
-  return readdirSync(migrationsDir, { withFileTypes: true })
+function fail(message) { throw new Error(message); }
+function sha256(path) { return createHash('sha256').update(readFileSync(path)).digest('hex'); }
+function migrationVersion(name) { return name.match(/^(\d+).*\.sql$/)?.[1] ?? null; }
+function migrationFiles(dir) {
+  return readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && /^(\d+).*\.sql$/.test(entry.name))
-    .map((entry) => entry.name)
-    .sort();
+    .map((entry) => entry.name).sort();
 }
 
-export function inspectMigrationReplayDebt(migrationsDir) {
-  const names = migrationFiles(migrationsDir);
+export function inspectMigrationReplayDebt(dir) {
   const invalidFiles = [];
   const byVersion = new Map();
-
-  for (const name of names) {
+  for (const name of migrationFiles(dir)) {
     if (!/^\d{14}_.+\.sql$/.test(name)) invalidFiles.push(name);
     const version = migrationVersion(name);
     if (!version) continue;
@@ -134,282 +120,193 @@ export function inspectMigrationReplayDebt(migrationsDir) {
     group.push(name);
     byVersion.set(version, group);
   }
-
   const duplicateVersions = [...byVersion.entries()]
     .filter(([, files]) => files.length > 1)
     .map(([version, files]) => ({ version, files: [...files].sort() }))
-    .sort((left, right) => left.version.localeCompare(right.version));
-
+    .sort((a, b) => a.version.localeCompare(b.version));
   return { invalidFiles, duplicateVersions };
 }
 
 function expectedDuplicateVersions() {
   return Object.entries(KNOWN_DUPLICATE_MIGRATION_GROUPS)
     .map(([version, files]) => ({ version, files: [...files].sort() }))
-    .sort((left, right) => left.version.localeCompare(right.version));
+    .sort((a, b) => a.version.localeCompare(b.version));
 }
 
-function assertReviewedDuplicateInventory(migrationsDir) {
-  if (!existsSync(DUPLICATE_REVIEW_REFERENCE)) {
-    fail(`Reviewed duplicate migration evidence is missing: ${DUPLICATE_REVIEW_REFERENCE}`);
-  }
-  const review = readFileSync(DUPLICATE_REVIEW_REFERENCE, 'utf8');
-  const debt = inspectMigrationReplayDebt(migrationsDir);
+function assertReviewedReplayInventory(dir) {
+  if (!existsSync(DUPLICATE_REVIEW_REFERENCE)) fail(`Missing duplicate review evidence: ${DUPLICATE_REVIEW_REFERENCE}`);
+  if (!existsSync(INVALID_REVIEW_REFERENCE)) fail(`Missing invalid-file review evidence: ${INVALID_REVIEW_REFERENCE}`);
+  const duplicateReview = readFileSync(DUPLICATE_REVIEW_REFERENCE, 'utf8');
+  const invalidReview = readFileSync(INVALID_REVIEW_REFERENCE, 'utf8');
+  const debt = inspectMigrationReplayDebt(dir);
   const expected = expectedDuplicateVersions();
 
   if (JSON.stringify(debt.duplicateVersions) !== JSON.stringify(expected)) {
-    fail(
-      `MIGRATION_DUPLICATE_INVENTORY_DRIFT expected_groups=${expected.length} `
-      + `observed_groups=${debt.duplicateVersions.length}`,
-    );
+    fail(`MIGRATION_DUPLICATE_INVENTORY_DRIFT expected_groups=${expected.length} observed_groups=${debt.duplicateVersions.length}`);
   }
-
   for (const { version, files } of expected) {
-    if (!review.includes(`version \`${version}\``)) {
-      fail(`Reviewed duplicate migration version missing from evidence: ${version}`);
-    }
-    for (const file of files) {
-      if (!review.includes(`\`${file}\``)) {
-        fail(`Reviewed duplicate migration file missing from evidence: ${file}`);
-      }
+    if (!duplicateReview.includes(`version \`${version}\``)) fail(`Duplicate review missing version ${version}`);
+    for (const file of files) if (!duplicateReview.includes(`\`${file}\``)) fail(`Duplicate review missing file ${file}`);
+  }
+  for (const file of UNRESOLVED_INVALID_MIGRATIONS) {
+    if (!invalidReview.includes(`\`${file}\``) || !invalidReview.includes('REQUIRES_SPLIT_REVIEW')) {
+      fail(`Invalid migration review boundary missing for ${file}`);
     }
   }
 
-  const unexpectedInvalid = debt.invalidFiles
-    .filter((file) => !UNAPPLIED_LEGACY_MIGRATIONS.includes(file));
+  const reviewedDuplicateFiles = new Set(expected.flatMap(({ files }) => files));
+  const allowedInvalid = new Set([...reviewedDuplicateFiles, ...UNRESOLVED_INVALID_MIGRATIONS]);
+  const unexpectedInvalid = debt.invalidFiles.filter((file) => !allowedInvalid.has(file));
   if (unexpectedInvalid.length > 0) {
     fail(`MIGRATION_RECONCILIATION_REQUIRED unexpected_invalid_files=${unexpectedInvalid.join(',')}`);
   }
-
-  return debt;
 }
 
 function stagingDirectory() {
-  const runnerTemp = process.env.RUNNER_TEMP;
-  if (!runnerTemp) fail('RUNNER_TEMP is required for disposable migration replay staging');
+  const root = process.env.RUNNER_TEMP;
+  if (!root) fail('RUNNER_TEMP is required for disposable migration replay staging');
   const runId = String(process.env.GITHUB_RUN_ID ?? 'local').replace(/[^A-Za-z0-9_-]/g, '-');
   const attempt = String(process.env.GITHUB_RUN_ATTEMPT ?? '1').replace(/[^A-Za-z0-9_-]/g, '-');
-  return join(runnerTemp, `risck-schema-effect-replay-${runId}-${attempt}`);
-}
-
-function parseTimestamp(version) {
-  const normalized = version.length === 8 ? `${version}000000` : version;
-  if (!/^\d{14}$/.test(normalized)) fail(`Unsupported duplicate migration version: ${version}`);
-  const parts = [
-    Number(normalized.slice(0, 4)),
-    Number(normalized.slice(4, 6)),
-    Number(normalized.slice(6, 8)),
-    Number(normalized.slice(8, 10)),
-    Number(normalized.slice(10, 12)),
-    Number(normalized.slice(12, 14)),
-  ];
-  const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], parts[3], parts[4], parts[5]));
-  if (formatTimestamp(date) !== normalized) fail(`Invalid duplicate migration timestamp: ${version}`);
-  return date;
+  return join(root, `risck-schema-effect-replay-${runId}-${attempt}`);
 }
 
 function formatTimestamp(date) {
-  const pad = (value, width = 2) => String(value).padStart(width, '0');
-  return `${pad(date.getUTCFullYear(), 4)}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}`
-    + `${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}`;
+  const p = (value, width = 2) => String(value).padStart(width, '0');
+  return `${p(date.getUTCFullYear(), 4)}${p(date.getUTCMonth() + 1)}${p(date.getUTCDate())}`
+    + `${p(date.getUTCHours())}${p(date.getUTCMinutes())}${p(date.getUTCSeconds())}`;
 }
-
+function parseTimestamp(version) {
+  const normalized = version.length === 8 ? `${version}000000` : version;
+  if (!/^\d{14}$/.test(normalized)) fail(`Unsupported duplicate version ${version}`);
+  const d = new Date(Date.UTC(
+    Number(normalized.slice(0, 4)), Number(normalized.slice(4, 6)) - 1,
+    Number(normalized.slice(6, 8)), Number(normalized.slice(8, 10)),
+    Number(normalized.slice(10, 12)), Number(normalized.slice(12, 14)),
+  ));
+  if (formatTimestamp(d) !== normalized) fail(`Invalid duplicate timestamp ${version}`);
+  return d;
+}
 function allocateReplayVersions(version, count, occupied) {
   const cursor = parseTimestamp(version);
-  const sourceDay = formatTimestamp(cursor).slice(0, 8);
-  const result = [];
-
-  while (result.length < count) {
+  const day = formatTimestamp(cursor).slice(0, 8);
+  const out = [];
+  while (out.length < count) {
     const candidate = formatTimestamp(cursor);
-    if (!occupied.has(candidate)) {
-      occupied.add(candidate);
-      result.push(candidate);
-    }
+    if (!occupied.has(candidate)) { occupied.add(candidate); out.push(candidate); }
     cursor.setUTCSeconds(cursor.getUTCSeconds() + 1);
-    if (formatTimestamp(cursor).slice(0, 8) !== sourceDay) {
-      fail(`No same-day disposable replay slots remain for ${version}`);
-    }
+    if (formatTimestamp(cursor).slice(0, 8) !== day) fail(`No same-day replay slots remain for ${version}`);
   }
-  return result;
+  return out;
 }
-
-function replayName(canonicalName, version) {
-  const suffix = canonicalName.replace(/^\d+_?/, '');
-  if (!suffix || suffix === canonicalName) fail(`Cannot derive replay suffix for ${canonicalName}`);
+function replayName(canonical, version) {
+  const suffix = canonical.replace(/^\d+_?/, '');
+  if (!suffix || suffix === canonical) fail(`Cannot derive replay suffix for ${canonical}`);
   return `${version}_${suffix}`;
 }
 
-function removeAndRestoreReplayFiles(items) {
+function restoreItems(items) {
   const failures = [];
-
   for (const item of [...items].reverse()) {
     try {
       if (item.replayPath) {
-        if (!existsSync(item.replayPath)) {
-          failures.push(`missing disposable replay file ${item.replayName}`);
-          continue;
-        }
-        if (sha256(item.replayPath) !== item.digest) {
-          failures.push(`disposable replay digest mismatch for ${item.canonicalName}`);
-          continue;
+        if (!existsSync(item.replayPath) || sha256(item.replayPath) !== item.digest) {
+          failures.push(`replay integrity failure ${item.canonicalName}`); continue;
         }
         rmSync(item.replayPath, { force: true });
       }
       if (!existsSync(item.backupPath) || sha256(item.backupPath) !== item.digest) {
-        failures.push(`replay backup integrity failure for ${item.canonicalName}`);
-        continue;
+        failures.push(`backup integrity failure ${item.canonicalName}`); continue;
       }
-      if (existsSync(item.canonicalPath)) {
-        failures.push(`canonical file unexpectedly exists before restore: ${item.canonicalName}`);
-        continue;
-      }
+      if (existsSync(item.canonicalPath)) { failures.push(`canonical path reappeared ${item.canonicalName}`); continue; }
       copyFileSync(item.backupPath, item.canonicalPath);
-      if (sha256(item.canonicalPath) !== item.digest) {
-        failures.push(`canonical restore digest mismatch for ${item.canonicalName}`);
-        continue;
-      }
+      if (sha256(item.canonicalPath) !== item.digest) { failures.push(`restore digest mismatch ${item.canonicalName}`); continue; }
       rmSync(item.backupPath, { force: true });
-    } catch (error) {
-      failures.push(`${item.canonicalName}: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    } catch (error) { failures.push(`${item.canonicalName}: ${error instanceof Error ? error.message : String(error)}`); }
   }
-
   const dir = items[0]?.stagingDir;
   if (failures.length === 0 && dir) rmSync(dir, { recursive: true, force: true });
-  if (failures.length > 0) {
-    fail(`Failed to restore repository migration bytes after disposable replay: ${failures.join('; ')}`);
-  }
+  if (failures.length) fail(`Failed to restore repository migration bytes: ${failures.join('; ')}`);
 }
 
-function prepareSchemaEffectReplay(migrationsDir) {
-  assertReviewedDuplicateInventory(migrationsDir);
-  const dir = stagingDirectory();
-  if (existsSync(dir)) fail(`Disposable migration replay staging already exists: ${dir}`);
-  mkdirSync(dir, { recursive: false, mode: 0o700 });
+function backupAndRemove(dir, stagingDir, canonicalName) {
+  const canonicalPath = join(dir, canonicalName);
+  const backupPath = join(stagingDir, canonicalName);
+  if (!existsSync(canonicalPath)) fail(`Missing reviewed migration artifact ${canonicalName}`);
+  const digest = sha256(canonicalPath);
+  copyFileSync(canonicalPath, backupPath);
+  if (sha256(backupPath) !== digest) fail(`Backup digest mismatch ${canonicalName}`);
+  rmSync(canonicalPath);
+  return { canonicalName, canonicalPath, backupPath, stagingDir, digest, replayName: null, replayPath: null };
+}
 
+function prepareSchemaEffectReplay(dir) {
+  assertReviewedReplayInventory(dir);
+  const stagingDir = stagingDirectory();
+  if (existsSync(stagingDir)) fail(`Replay staging already exists: ${stagingDir}`);
+  mkdirSync(stagingDir, { recursive: false, mode: 0o700 });
   const duplicateVersions = new Set(Object.keys(KNOWN_DUPLICATE_MIGRATION_GROUPS));
-  const occupied = new Set(
-    migrationFiles(migrationsDir)
-      .map(migrationVersion)
-      .filter((version) => version && !duplicateVersions.has(version)),
-  );
+  const occupied = new Set(migrationFiles(dir).map(migrationVersion).filter((v) => v && !duplicateVersions.has(v)));
   const items = [];
   let replayed = 0;
-
   try {
     for (const { version, files } of expectedDuplicateVersions()) {
-      const executeEffects = version !== UNAPPLIED_LEGACY_VERSION;
-      const replayVersions = executeEffects
-        ? allocateReplayVersions(version, files.length, occupied)
-        : [];
-
+      const execute = version !== UNAPPLIED_LEGACY_VERSION;
+      const versions = execute ? allocateReplayVersions(version, files.length, occupied) : [];
       for (const [index, canonicalName] of files.entries()) {
-        const canonicalPath = join(migrationsDir, canonicalName);
-        const backupPath = join(dir, canonicalName);
-        if (!existsSync(canonicalPath)) fail(`Missing reviewed duplicate migration: ${canonicalName}`);
-        const digest = sha256(canonicalPath);
-        copyFileSync(canonicalPath, backupPath);
-        if (sha256(backupPath) !== digest) fail(`Replay backup digest mismatch for ${canonicalName}`);
-        rmSync(canonicalPath);
-
-        let stagedName = null;
-        let stagedPath = null;
-        if (executeEffects) {
-          stagedName = replayName(canonicalName, replayVersions[index]);
-          stagedPath = join(migrationsDir, stagedName);
-          if (existsSync(stagedPath)) fail(`Disposable replay path already exists: ${stagedName}`);
-          copyFileSync(backupPath, stagedPath);
-          if (sha256(stagedPath) !== digest) fail(`Replay staging digest mismatch for ${canonicalName}`);
+        const item = backupAndRemove(dir, stagingDir, canonicalName);
+        if (execute) {
+          item.replayName = replayName(canonicalName, versions[index]);
+          item.replayPath = join(dir, item.replayName);
+          copyFileSync(item.backupPath, item.replayPath);
+          if (sha256(item.replayPath) !== item.digest) fail(`Replay digest mismatch ${canonicalName}`);
           replayed += 1;
         }
-
-        items.push({
-          canonicalName,
-          canonicalPath,
-          backupPath,
-          stagingDir: dir,
-          digest,
-          replayName: stagedName,
-          replayPath: stagedPath,
-        });
+        items.push(item);
       }
     }
-
-    const remainingDebt = inspectMigrationReplayDebt(migrationsDir);
-    if (remainingDebt.invalidFiles.length > 0 || remainingDebt.duplicateVersions.length > 0) {
-      fail(
-        `Disposable schema-effect staging is not replayable: invalid=${remainingDebt.invalidFiles.length} `
-        + `duplicates=${remainingDebt.duplicateVersions.length}`,
-      );
+    for (const canonicalName of UNRESOLVED_INVALID_MIGRATIONS) {
+      items.push(backupAndRemove(dir, stagingDir, canonicalName));
+    }
+    const remaining = inspectMigrationReplayDebt(dir);
+    if (remaining.invalidFiles.length || remaining.duplicateVersions.length) {
+      fail(`Disposable replay remains invalid: invalid=${remaining.invalidFiles.length} duplicates=${remaining.duplicateVersions.length}`);
     }
     return { items, replayed };
   } catch (error) {
-    if (items.length > 0) {
-      try {
-        removeAndRestoreReplayFiles(items);
-      } catch (restoreError) {
-        const original = error instanceof Error ? error.message : String(error);
-        const restore = restoreError instanceof Error ? restoreError.message : String(restoreError);
-        fail(`Disposable replay preparation failed (${original}); repository restore also failed (${restore})`);
+    if (items.length) {
+      try { restoreItems(items); } catch (restoreError) {
+        fail(`Replay preparation failed and restore failed: ${error instanceof Error ? error.message : String(error)} / ${restoreError instanceof Error ? restoreError.message : String(restoreError)}`);
       }
-    } else {
-      rmSync(dir, { recursive: true, force: true });
-    }
+    } else rmSync(stagingDir, { recursive: true, force: true });
     throw error;
   }
 }
 
 function appendGithubEnv(name, value) {
-  const file = process.env.GITHUB_ENV;
-  if (file) appendFileSync(file, `${name}=${value}\n`, { encoding: 'utf8' });
+  if (process.env.GITHUB_ENV) appendFileSync(process.env.GITHUB_ENV, `${name}=${value}\n`, 'utf8');
 }
 
 function main() {
-  if (process.env.GITHUB_ACTIONS !== 'true') {
-    fail('Disposable schema-effect replay is restricted to GitHub Actions');
-  }
-
-  const migrationsDir = join(process.cwd(), 'supabase', 'migrations');
-  const { items, replayed } = prepareSchemaEffectReplay(migrationsDir);
+  if (process.env.GITHUB_ACTIONS !== 'true') fail('Disposable schema-effect replay is restricted to GitHub Actions');
+  const dir = join(process.cwd(), 'supabase', 'migrations');
+  const { items, replayed } = prepareSchemaEffectReplay(dir);
   let replayError = null;
-
   try {
-    execFileSync(
-      process.execPath,
-      ['scripts/recovery/manage-ephemeral-recovery-database.mjs', 'start-project'],
-      { stdio: 'inherit', env: process.env },
-    );
-  } catch (error) {
-    replayError = error;
-  }
-
+    execFileSync(process.execPath, ['scripts/recovery/manage-ephemeral-recovery-database.mjs', 'start-project'], { stdio: 'inherit', env: process.env });
+  } catch (error) { replayError = error; }
   let restoreError = null;
-  try {
-    removeAndRestoreReplayFiles(items);
-  } catch (error) {
-    restoreError = error;
-  }
-
+  try { restoreItems(items); } catch (error) { restoreError = error; }
   if (restoreError) throw restoreError;
   if (replayError) throw replayError;
 
   appendGithubEnv('RECOVERY_EPHEMERAL_DUPLICATE_GROUP_COUNT', '16');
   appendGithubEnv('RECOVERY_EPHEMERAL_REPLAY_STAGED_FILE_COUNT', String(replayed));
   appendGithubEnv('RECOVERY_EPHEMERAL_LEGACY_EXCLUDED_FILE_COUNT', String(UNAPPLIED_LEGACY_MIGRATIONS.length));
+  appendGithubEnv('RECOVERY_EPHEMERAL_UNRESOLVED_INVALID_EXCLUDED_FILE_COUNT', String(UNRESOLVED_INVALID_MIGRATIONS.length));
   appendGithubEnv('RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL', 'false');
-
-  process.stdout.write(
-    `Disposable schema-effect replay staged ${replayed} reviewed duplicate files, excluded `
-    + `${UNAPPLIED_LEGACY_MIGRATIONS.length} proven unapplied legacy files, and restored all repository bytes. `
-    + 'Replay-only timestamps are not migration-history repair evidence.\n',
-  );
+  process.stdout.write(`Disposable schema-effect replay staged ${replayed} duplicate files, excluded ${UNAPPLIED_LEGACY_MIGRATIONS.length} legacy and ${UNRESOLVED_INVALID_MIGRATIONS.length} unresolved-invalid file; replay timestamps are not migration-history repair evidence.\n`);
 }
 
 if (process.argv[1]?.endsWith('run-ephemeral-project-schema-replay.mjs')) {
-  try {
-    main();
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
-  }
+  try { main(); } catch (error) { console.error(error instanceof Error ? error.message : String(error)); process.exit(1); }
 }
