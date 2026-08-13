@@ -7,6 +7,7 @@ import { basename, dirname } from 'node:path';
 const output = 'docs/security/evidence/p1/backup-restore-tested.json';
 const workDir = 'artifacts/recovery-exercise';
 const legacyDumpPath = `${workDir}/production-backup.dump`;
+const rolesDumpPath = `${workDir}/production-roles.sql`;
 const schemaDumpPath = `${workDir}/production-schema.sql`;
 const dataDumpPath = `${workDir}/production-data.sql`;
 const env = (name) => String(process.env[name] ?? '').trim();
@@ -48,22 +49,28 @@ function inspectLogicalBackup(paths) {
     : null;
   return { exists, digest, bytes: inspected.reduce((sum, entry) => sum + entry.bytes, 0) };
 }
-function copyAndRestoreSql(container, path) {
+function copySqlToContainer(container, path) {
   const containerPath = `/tmp/${basename(path)}`;
   run('docker', ['cp', path, `${container}:${containerPath}`]);
-  try {
-    run('docker', ['exec', container, 'psql', '-U', 'postgres', '-d', 'postgres', '--no-psqlrc', '--set', 'ON_ERROR_STOP=1', '--file', containerPath]);
-  } finally {
-    try { run('docker', ['exec', container, 'rm', '-f', containerPath]); } catch {}
-  }
+  return containerPath;
 }
 function restoreIntoEphemeralSupabase(container) {
-  run('docker', [
-    'exec', container, 'psql', '-U', 'postgres', '-d', 'postgres', '--no-psqlrc', '--set', 'ON_ERROR_STOP=1',
-    '--command', 'drop schema if exists app_private cascade; drop schema if exists public cascade; create schema public;',
-  ]);
-  copyAndRestoreSql(container, schemaDumpPath);
-  copyAndRestoreSql(container, dataDumpPath);
+  const containerPaths = [rolesDumpPath, schemaDumpPath, dataDumpPath]
+    .map((path) => copySqlToContainer(container, path));
+  try {
+    run('docker', [
+      'exec', container, 'psql', '-U', 'postgres', '-d', 'postgres', '--no-psqlrc',
+      '--single-transaction', '--set', 'ON_ERROR_STOP=1',
+      '--file', containerPaths[0],
+      '--file', containerPaths[1],
+      '--command', 'SET session_replication_role = replica;',
+      '--file', containerPaths[2],
+    ]);
+  } finally {
+    for (const path of containerPaths) {
+      try { run('docker', ['exec', container, 'rm', '-f', path]); } catch {}
+    }
+  }
 }
 
 const source = required('RECOVERY_SOURCE_DATABASE_URL');
@@ -86,15 +93,21 @@ let backupBytes = 0;
 const sourceCounts = {};
 const restoredCounts = {};
 const criticalTables = ['organizations', 'organization_members', 'audit_logs'];
+let sourceAuthUsers = null;
+let restoredAuthUsers = null;
 
 try {
   if (failures.length) throw new Error('recovery_preconditions_failed');
 
   if (ephemeralMode) {
-    run('supabase', ['db', 'dump', '--db-url', source, '--schema', 'public,app_private', '--file', schemaDumpPath]);
-    run('supabase', ['db', 'dump', '--db-url', source, '--schema', 'public,app_private', '--data-only', '--use-copy', '--file', dataDumpPath]);
+    // Follow Supabase's supported platform-to-self-hosted logical restore sequence:
+    // filtered roles, schema, then complete data. The data dump includes auth.users,
+    // which preserves foreign-key integrity for public tables that reference Auth users.
+    run('supabase', ['db', 'dump', '--db-url', source, '--role-only', '--file', rolesDumpPath]);
+    run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath]);
+    run('supabase', ['db', 'dump', '--db-url', source, '--data-only', '--use-copy', '--file', dataDumpPath]);
     backupCompletedAt = new Date().toISOString();
-    const inspectedDump = inspectLogicalBackup([schemaDumpPath, dataDumpPath]);
+    const inspectedDump = inspectLogicalBackup([rolesDumpPath, schemaDumpPath, dataDumpPath]);
     checks.backupExists = inspectedDump.exists;
     digest = inspectedDump.digest;
     backupBytes = inspectedDump.bytes;
@@ -118,6 +131,9 @@ try {
     restoredCounts[table] = Number(sql(restore, `select count(*) from public.${table};`));
   }
   checks.dataIntegrity = criticalTables.every((table) => sourceCounts[table] === restoredCounts[table]);
+  sourceAuthUsers = Number(sql(source, 'select count(*) from auth.users;'));
+  restoredAuthUsers = Number(sql(restore, 'select count(*) from auth.users;'));
+  checks.authUsersIntegrity = sourceAuthUsers === restoredAuthUsers;
   const rlsRows = Number(sql(restore, "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('organizations','organization_members','audit_logs') and c.relrowsecurity=true;"));
   checks.rlsAfterRestore = rlsRows === criticalTables.length;
   const policyCount = Number(sql(restore, "select count(*) from pg_policies where schemaname='public' and tablename in ('organizations','organization_members','audit_logs');"));
@@ -129,7 +145,7 @@ try {
 } catch (error) {
   failures.push(error instanceof Error ? error.message : 'unknown_recovery_failure');
 } finally {
-  for (const path of [legacyDumpPath, schemaDumpPath, dataDumpPath]) rmSync(path, { force: true });
+  for (const path of [legacyDumpPath, rolesDumpPath, schemaDumpPath, dataDumpPath]) rmSync(path, { force: true });
 }
 
 const finishedAt = Date.now();
@@ -139,10 +155,10 @@ const evidence = {
   generatedAt: new Date().toISOString(), repository: env('GITHUB_REPOSITORY'), branch: env('GITHUB_REF_NAME'), targetSha: targetSha || null, observedSha: observedSha || null,
   runId: env('GITHUB_RUN_ID') || null, controlsVerified: ['REC-05', 'REC-06', 'REC-07', 'REC-08', 'REC-09', 'REC-10'], checks,
   metrics: { rpoSeconds: backupCompletedAt ? Math.max(0, Math.round((Date.now() - Date.parse(backupCompletedAt)) / 1000)) : null, rtoSeconds: restoreCompletedAt ? Math.round((Date.parse(restoreCompletedAt) - startedAt) / 1000) : null, totalExerciseSeconds: Math.round((finishedAt - startedAt) / 1000), backupBytes },
-  integrity: { criticalTables, sourceCounts, restoredCounts, backupSha256Prefix: digest ? `${digest.slice(0, 16)}…` : null, recoveryMode: ephemeralMode ? 'ephemeral-supabase-postgres' : 'external-isolated-database' }, failures: [...new Set(failures)],
+  integrity: { criticalTables, sourceCounts, restoredCounts, sourceAuthUsers, restoredAuthUsers, backupSha256Prefix: digest ? `${digest.slice(0, 16)}…` : null, recoveryMode: ephemeralMode ? 'ephemeral-supabase-postgres' : 'external-isolated-database' }, failures: [...new Set(failures)],
   evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
   evidenceBoundary: ephemeralMode
-    ? 'Logical schema and data backups were produced with the pinned Supabase CLI/Postgres toolchain and restored into a disposable loopback-only Supabase Postgres database. Evidence stores only aggregate counts and a truncated combined digest; backup files and local database volumes are deleted by the protected workflow.'
+    ? 'Supabase-compatible logical roles, schema, and data backups were restored transactionally into a disposable isolated Supabase Postgres database. Evidence stores only aggregate counts and a truncated combined digest; backup files and local database volumes are deleted by the protected workflow.'
     : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts and a truncated digest; the dump is deleted before completion.',
 };
 mkdirSync(dirname(output), { recursive: true });
