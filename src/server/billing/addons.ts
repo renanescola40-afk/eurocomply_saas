@@ -10,7 +10,7 @@ type OrganizationAddOnRow = {
   current_period_end?: string | null;
 };
 
-function isActiveAddOnRow(row: OrganizationAddOnRow, now: Date) {
+export function isActiveAddOnRow(row: OrganizationAddOnRow, now: Date) {
   if (!row.add_on_id || !VALID_ADD_ON_IDS.has(row.add_on_id as AddOnId)) {
     return false;
   }
@@ -24,7 +24,7 @@ function isActiveAddOnRow(row: OrganizationAddOnRow, now: Date) {
   }
 
   const currentPeriodEnd = new Date(row.current_period_end);
-  return Number.isNaN(currentPeriodEnd.getTime()) || currentPeriodEnd > now;
+  return !Number.isNaN(currentPeriodEnd.getTime()) && currentPeriodEnd > now;
 }
 
 export async function listActiveOrganizationAddOns(organizationId: string): Promise<AddOnId[]> {
