@@ -15,6 +15,10 @@ const helperBlockedMigrations = Object.freeze([
   '20260721123000_gpai_third_party_model_governance.sql',
   '20260721133000_post_market_ai_incident_governance.sql',
 ]);
+const batchLBlockedMigrations = Object.freeze([
+  { id: 'L10', name: '20260722073000_enterprise_usage_backend_only_rls.sql' },
+  { id: 'L14', name: '20260724093000_enterprise_group_access_admin_controls.sql' },
+]);
 const batchNBlockedMigrations = Object.freeze([
   { id: 'N7', name: '20260723170000_qualified_review_operations_platform.sql' },
   { id: 'N8', name: '20260724113000_enterprise_reconciliation_operations.sql' },
@@ -26,9 +30,11 @@ const batchNBlockedMigrations = Object.freeze([
 ]);
 const prerequisiteBlockedMigrations = Object.freeze([
   ...helperBlockedMigrations,
+  ...batchLBlockedMigrations.map(({ name }) => name),
   ...batchNBlockedMigrations.map(({ name }) => name),
 ]);
 const batchFReviewPath = 'docs/security/decisions/2026-08-10-supabase-human-review-mega-batch-f.md';
+const batchLReviewPath = 'docs/security/evidence/human-review/supabase-migration-mega-batch-l.md';
 const helperReviewPath = 'docs/security/evidence/human-review/supabase-migration-mega-batch-n.md';
 
 const friaMigration = '20260721143000_fria_fundamental_rights_governance.sql';
@@ -100,14 +106,30 @@ function validateFriaBoundary(batchFReview) {
   }
 }
 
+function validateBlockedReviewRows(review, batch, rows) {
+  for (const { id, name } of rows) {
+    const record = blockedRecord(name);
+    assertPresent(record.sourcePath, `Batch-${batch} prerequisite-blocked migration`);
+    assertAbsent(record.heldPath, `Batch-${batch} prerequisite hold path`);
+    const reviewRow = review
+      .split('\n')
+      .find((line) => line.includes(`| ${id} | \`${name}\``));
+    if (!reviewRow || !reviewRow.includes('PENDING_DEPLOYMENT') || !reviewRow.includes('PREREQUISITE_BLOCKED')) {
+      fail(`Batch-${batch} effective execution boundary drifted for ${id} ${name}`);
+    }
+  }
+}
+
 function validateReviewedBoundary() {
   if (process.env.GITHUB_ACTIONS !== 'true') {
     fail('Reviewed-boundary disposable replay is restricted to GitHub Actions');
   }
 
   assertPresent(batchFReviewPath, 'Batch-F review evidence');
+  assertPresent(batchLReviewPath, 'Batch-L review evidence');
   assertPresent(helperReviewPath, 'membership-helper review evidence');
   const batchFReview = readFileSync(batchFReviewPath, 'utf8');
+  const batchLReview = readFileSync(batchLReviewPath, 'utf8');
   const helperReview = readFileSync(helperReviewPath, 'utf8');
 
   if (!helperReview.includes('public.is_organization_member(uuid)')
@@ -128,18 +150,8 @@ function validateReviewedBoundary() {
     }
   }
 
-  for (const { id, name } of batchNBlockedMigrations) {
-    const record = blockedRecord(name);
-    assertPresent(record.sourcePath, 'Batch-N prerequisite-blocked migration');
-    assertAbsent(record.heldPath, 'Batch-N prerequisite hold path');
-    const reviewRow = helperReview
-      .split('\n')
-      .find((line) => line.includes(`| ${id} | \`${name}\``));
-    if (!reviewRow || !reviewRow.includes('PENDING_DEPLOYMENT') || !reviewRow.includes('PREREQUISITE_BLOCKED')) {
-      fail(`Batch-N effective execution boundary drifted for ${id} ${name}`);
-    }
-  }
-
+  validateBlockedReviewRows(batchLReview, 'L', batchLBlockedMigrations);
+  validateBlockedReviewRows(helperReview, 'N', batchNBlockedMigrations);
   validateFriaBoundary(batchFReview);
 
   for (const [path, label] of [
