@@ -80,18 +80,23 @@ Required configuration:
 
 Do not rely on GitHub implicitly creating a missing environment when a workflow first references it. An implicitly created environment has no accepted protection evidence and is not valid for enterprise production closeout.
 
-## Fail-closed environment governance gate
+## Fail-closed environment governance boundary
 
-The required `CI / quality` context executes `scripts/security/check-github-environment-governance.mjs` against both `Production` and `enterprise-production-closeout`. The gate uses only the workflow `GITHUB_TOKEN` with read-only Actions permission; it does not load production secrets and cannot mutate repository administration settings.
+Mutable GitHub Environment administration is intentionally **not** part of pull-request mergeability. Ordinary PR CI validates the governance code and workflow contracts, but does not make `CI / quality` depend on the live state of repository environments.
 
-The gate fails unless each secrets-bearing environment:
+Instead, each secrets-bearing production workflow performs a read-only governance preflight **before** its protected job can load environment secrets:
+
+- `Vercel Production Deploy` validates `Production` in the unprotected `authorize-release` job;
+- `Enterprise Runtime Evidence Closeout` validates `enterprise-production-closeout` in the unprotected `environment-governance` job.
+
+Both preflights use `scripts/security/check-github-environment-governance.mjs` with only the workflow `GITHUB_TOKEN` and read-only Actions permission. They fail unless the target environment:
 
 - already exists;
 - has administrator bypass disabled;
 - has at least one required deployment reviewer;
 - allows deployment from protected branches only.
 
-This deliberately converts missing GitHub administration into a merge/release blocker instead of silently treating an unprotected environment as production approval.
+This preserves fail-closed production behavior without allowing mutable repository administration to create false-negative PR checks or prevent ordinary code validation from running.
 
 ### Current administrative blocker
 
@@ -100,7 +105,7 @@ The latest repository governance inspection found:
 - `Production` exists, but administrator bypass is enabled, no required reviewer rule is configured and no deployment branch policy is configured;
 - `enterprise-production-closeout` does not exist.
 
-Repository code cannot safely correct those settings with the ordinary `GITHUB_TOKEN`: environment creation/update requires repository Administration write permission. Until an administrator configures both environments as specified above, the enterprise deployment path remains **No-Go** by design.
+Repository code cannot safely correct those settings with the ordinary `GITHUB_TOKEN`: environment creation/update requires repository Administration write permission. Until an administrator configures both environments as specified above, production deployment and enterprise runtime closeout remain **No-Go** by design, while repository PRs can still complete their code-quality checks.
 
 ## Enterprise Step-Up runtime synchronization
 
