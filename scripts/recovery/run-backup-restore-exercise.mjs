@@ -4,8 +4,6 @@ import { createHash } from 'node:crypto';
 import { closeSync, fstatSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname } from 'node:path';
 
-import { buildRecoveryCommandDiagnostic } from './recovery-command-observability.mjs';
-
 const output = 'docs/security/evidence/p1/backup-restore-tested.json';
 const workDir = 'artifacts/recovery-exercise';
 const legacyDumpPath = `${workDir}/production-backup.dump`;
