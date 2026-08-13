@@ -84,7 +84,7 @@ jobs:
 
       - name: Set up pinned Supabase CLI
         if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
-        uses: supabase/setup-cli@46f89843689f213b433d85a0508d1183e1803070
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
         with:
           version: 2.101.0
 
