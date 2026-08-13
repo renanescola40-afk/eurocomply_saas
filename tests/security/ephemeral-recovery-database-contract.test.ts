@@ -88,7 +88,7 @@ describe('ephemeral Supabase recovery database contract', () => {
   it('removes the persistent isolated database secret from protected workflows', () => {
     for (const workflow of [finalTechnical, recovery]) {
       expect(workflow).not.toContain('secrets.RECOVERY_ISOLATED_DATABASE_URL');
-      expect(workflow).toContain('supabase/setup-cli@46f89843689f213b433d85a0508d1183e1803070');
+      expect(workflow).toContain('supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520');
       expect(workflow).toContain('version: 2.101.0');
     }
     expect(finalTechnical).toContain('Start exact-SHA disposable Supabase project database');
