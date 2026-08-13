@@ -92,21 +92,35 @@ function getSubscriptionCurrentPeriodEnd(subscription: Stripe.Subscription) {
   return typeof periodEnd === 'number' ? new Date(periodEnd * 1000).toISOString() : null;
 }
 
-function getSubscriptionStripePriceId(subscription: Stripe.Subscription) {
+function getSubscriptionStripePriceIds(subscription: Stripe.Subscription) {
   const typedSubscription = subscription as SubscriptionWithPeriod;
-  const priceId = typedSubscription.items?.data?.[0]?.price?.id;
+  const priceIds = new Set<string>();
 
-  return typeof priceId === 'string' && priceId.trim() ? priceId.trim() : null;
+  for (const item of typedSubscription.items?.data ?? []) {
+    const priceId = item.price?.id;
+    if (typeof priceId === 'string' && priceId.trim()) priceIds.add(priceId.trim());
+  }
+
+  return [...priceIds];
 }
 
 export function resolveStripeSubscriptionPlan(subscription: Stripe.Subscription) {
-  const stripePriceId = getSubscriptionStripePriceId(subscription);
-  const planFromPrice = getBillingPlanIdForStripePriceId(stripePriceId);
+  const stripePriceIds = getSubscriptionStripePriceIds(subscription);
+  const planMatches = stripePriceIds
+    .map((stripePriceId) => ({ stripePriceId, plan: getBillingPlanIdForStripePriceId(stripePriceId) }))
+    .filter((match): match is { stripePriceId: string; plan: NonNullable<typeof match.plan> } => Boolean(match.plan));
+  const distinctPlans = new Set(planMatches.map((match) => match.plan));
 
-  if (planFromPrice) {
-    return { plan: planFromPrice, stripePriceId, source: 'stripe_price_id' as const };
+  if (distinctPlans.size > 1) {
+    throw new Error('Stripe subscription contains conflicting base plan prices');
   }
 
+  const planMatch = planMatches[0];
+  if (planMatch) {
+    return { plan: planMatch.plan, stripePriceId: planMatch.stripePriceId, source: 'stripe_price_id' as const };
+  }
+
+  const stripePriceId = stripePriceIds[0] ?? null;
   const metadataPlan = getPlanIdFromMetadata(subscription.metadata);
   const planFromMetadata = getBillingPlan(metadataPlan)?.id;
 
