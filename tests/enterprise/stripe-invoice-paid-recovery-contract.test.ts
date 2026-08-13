@@ -51,12 +51,15 @@ function makeInvoicePaidEvent(): Stripe.Event {
 }
 
 describe('Stripe invoice.paid recovery lane', () => {
-  it('claims entitlement-only paid events in the canonical Stripe event ledger before reconciliation', () => {
+  it('claims and atomically finalizes entitlement-only paid events in the canonical Stripe event ledger', () => {
     expect(recoverySource).toContain('const ENTITLEMENT_ONLY_STRIPE_EVENT_TYPES = new Set([');
     expect(recoverySource).toMatch(/ENTITLEMENT_ONLY_STRIPE_EVENT_TYPES[\s\S]*?'invoice\.paid'/);
     expect(recoverySource).toContain('return runEntitlementOnlyStripeEvent(event);');
     expect(recoverySource).toContain('const claimed = await claimStripeEventForProcessing(event);');
-    expect(recoverySource).toContain('await markStripeEventProcessed(event);');
+    expect(recoverySource).toContain('await finalizeEntitlementOnlyStripeEvent(event);');
+    expect(recoverySource).toContain(".eq('status', 'processing')");
+    expect(recoverySource).toContain('organization_id: organizationId');
+    expect(recoverySource).toContain("throw new Error('stripe_entitlement_only_finalize_conflict')");
     expect(recoverySource).toContain('await markStripeEventFailed(event, error);');
   });
 
