@@ -76,6 +76,19 @@ export function deriveSentryProbeBlockerCode(probe) {
   return null;
 }
 
+function narrowedSentryProbe(probe, { projectReachabilityFailed, clientKeysReachabilityFailed }) {
+  if (!probe?.attempted) return probe;
+  return {
+    attempted: true,
+    projectProbe: projectReachabilityFailed
+      ? probe.projectProbe
+      : { httpStatus: 200, category: 'success' },
+    clientKeysProbe: clientKeysReachabilityFailed
+      ? probe.clientKeysProbe
+      : { httpStatus: 200, category: 'success' },
+  };
+}
+
 export function deriveProviderBlockerCodes(entry, probe = null) {
   if (!entry || entry.status === 'reviewed') return [];
   const checks = entry.checks && typeof entry.checks === 'object' ? entry.checks : {};
@@ -95,8 +108,27 @@ export function deriveProviderBlockerCodes(entry, probe = null) {
     if (checks.buildAuthTokenConfigured !== true) prerequisites.push('sentry_auth_token_missing');
     if (prerequisites.length > 0) return prerequisites;
 
-    const probeCode = deriveSentryProbeBlockerCode(probe);
-    if (probeCode) return [probeCode];
+    const projectReachabilityFailed = checks.projectReachable !== true;
+    const clientKeysReachabilityFailed = checks.clientKeyInventoryReachable !== true;
+    const canonicalReachabilityCodes = [];
+    if (projectReachabilityFailed) canonicalReachabilityCodes.push('sentry_project_api_unreachable');
+    if (clientKeysReachabilityFailed) canonicalReachabilityCodes.push('sentry_client_key_inventory_unavailable');
+
+    const independentCodes = [];
+    if (checks.clientKeyInventoryReachable === true && checks.activeClientKeyPresent !== true) {
+      independentCodes.push('sentry_active_client_key_missing');
+    }
+
+    if (canonicalReachabilityCodes.length > 0) {
+      const probeCode = deriveSentryProbeBlockerCode(narrowedSentryProbe(probe, {
+        projectReachabilityFailed,
+        clientKeysReachabilityFailed,
+      }));
+      if (probeCode) return [probeCode, ...independentCodes];
+      return [...canonicalReachabilityCodes, ...independentCodes];
+    }
+
+    return independentCodes;
   }
 
   const explicit = {
@@ -105,11 +137,6 @@ export function deriveProviderBlockerCodes(entry, probe = null) {
       projectIdentityMatched: 'vercel_project_identity_mismatch',
       productionEnvironmentEnumerated: 'vercel_production_environment_inventory_unavailable',
       requiredEnvironmentKeysPresent: 'vercel_required_production_environment_keys_missing',
-    },
-    sentry: {
-      projectReachable: 'sentry_project_api_unreachable',
-      clientKeyInventoryReachable: 'sentry_client_key_inventory_unavailable',
-      activeClientKeyPresent: 'sentry_active_client_key_missing',
     },
   };
   return Object.entries(checks)
