@@ -6,6 +6,7 @@ export const BILLING_LIFECYCLE_LEASE_MS = 2 * 60 * 1000;
 export const BILLING_LIFECYCLE_PHASE_PROVIDER_IN_FLIGHT = 'provider_in_flight';
 export const BILLING_LIFECYCLE_PHASE_PROVIDER_SUCCEEDED = 'provider_succeeded_pending_audit';
 export const BILLING_LIFECYCLE_PHASE_AUDIT_SUCCEEDED = 'audit_succeeded_pending_completion';
+export const BILLING_LIFECYCLE_PHASE_LEGACY_PROVIDER_SUCCEEDED = 'legacy_provider_succeeded_pending_snapshot';
 
 export type BillingLifecycleAction = 'upgrade' | 'downgrade' | 'cancel' | 'reactivate' | 'replace_add_ons';
 
@@ -75,6 +76,7 @@ export type BillingLifecycleRequestClaim =
   | { kind: 'claimed'; request: BillingLifecycleRequestRow }
   | { kind: 'completed_replay'; request: BillingLifecycleRequestRow }
   | { kind: 'provider_succeeded_recovery'; request: BillingLifecycleRequestRow }
+  | { kind: 'legacy_provider_succeeded_recovery'; request: BillingLifecycleRequestRow }
   | { kind: 'audit_succeeded_recovery'; request: BillingLifecycleRequestRow };
 
 type ActiveLeaseRow = Pick<BillingLifecycleRequestRow, 'id' | 'status' | 'failure_code' | 'updated_at'>;
@@ -128,29 +130,40 @@ function parseReplaySnapshot(value: unknown): BillingLifecycleReplaySnapshot | n
   };
 }
 
-function assertStableIdentity(row: BillingLifecycleRequestRow, input: CompletedReplayLookupInput) {
+function assertBasicIdentity(row: BillingLifecycleRequestRow, input: CompletedReplayLookupInput) {
   if (
     row.organization_id !== input.organizationId ||
     row.requested_by !== input.requestedBy ||
-    row.action !== input.action ||
-    !row.request_fingerprint ||
-    row.request_fingerprint !== input.requestFingerprint
+    row.action !== input.action
   ) {
     throw new BillingLifecycleRequestError('billing_idempotency_conflict', 409);
   }
 }
 
-function requestMatches(row: BillingLifecycleRequestRow, input: ClaimInput) {
+function assertStableIdentity(row: BillingLifecycleRequestRow, input: CompletedReplayLookupInput) {
+  assertBasicIdentity(row, input);
+  if (!row.request_fingerprint) {
+    throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+  }
+  if (row.request_fingerprint !== input.requestFingerprint) {
+    throw new BillingLifecycleRequestError('billing_idempotency_conflict', 409);
+  }
+}
+
+function requestIntentMatches(row: BillingLifecycleRequestRow, input: ClaimInput) {
   return (
     row.organization_id === input.organizationId &&
     row.requested_by === input.requestedBy &&
     row.action === input.action &&
-    row.request_fingerprint === input.requestFingerprint &&
     (row.target_plan ?? '') === input.targetPlan &&
     (row.billing_interval ?? '') === input.billingInterval &&
     (row.stripe_subscription_id ?? '') === input.stripeSubscriptionId &&
     JSON.stringify(canonicalizeAddOns(row.add_ons)) === JSON.stringify(canonicalizeAddOns(input.addOns))
   );
+}
+
+function requestMatches(row: BillingLifecycleRequestRow, input: ClaimInput) {
+  return requestIntentMatches(row, input) && row.request_fingerprint === input.requestFingerprint;
 }
 
 export function isBillingLifecycleLeaseStale(updatedAt: string | null | undefined, nowMs = Date.now()) {
@@ -189,13 +202,28 @@ async function findByDigest(organizationId: string, requestDigest: string) {
   return (data ?? null) as BillingLifecycleRequestRow | null;
 }
 
+async function hasNewerLifecycleRequest(row: BillingLifecycleRequestRow) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('billing_lifecycle_requests')
+    .select('id')
+    .eq('organization_id', row.organization_id)
+    .gt('requested_at', row.requested_at)
+    .neq('id', row.id)
+    .order('requested_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) storageFailure('legacy_newer_request_lookup', error);
+  return Boolean(data);
+}
+
 export async function findCompletedBillingLifecycleReplay(
   input: CompletedReplayLookupInput,
 ): Promise<BillingLifecycleReplaySnapshot | null> {
   const existing = await findByDigest(input.organizationId, input.requestDigest);
-  if (!existing) return null;
+  if (!existing || existing.status !== 'completed') return null;
   assertStableIdentity(existing, input);
-  if (existing.status !== 'completed') return null;
   return getBillingLifecycleReplaySnapshot(existing);
 }
 
@@ -205,20 +233,26 @@ export function getBillingLifecycleReplaySnapshot(request: BillingLifecycleReque
   return snapshot;
 }
 
-async function recoverLegacyPostProviderFailure(row: BillingLifecycleRequestRow) {
+async function recoverLegacyPostProviderFailure(row: BillingLifecycleRequestRow, input: ClaimInput) {
+  if (await hasNewerLifecycleRequest(row)) {
+    throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+  }
+
   const now = new Date().toISOString();
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('billing_lifecycle_requests')
     .update({
+      request_fingerprint: input.requestFingerprint,
       status: 'processing',
-      failure_code: BILLING_LIFECYCLE_PHASE_PROVIDER_SUCCEEDED,
+      failure_code: BILLING_LIFECYCLE_PHASE_LEGACY_PROVIDER_SUCCEEDED,
       completed_at: null,
       updated_at: now,
     })
     .eq('id', row.id)
     .eq('status', 'failed')
     .eq('failure_code', 'audit_persistence_failed')
+    .is('request_fingerprint', null)
     .select('*')
     .maybeSingle();
 
@@ -227,7 +261,31 @@ async function recoverLegacyPostProviderFailure(row: BillingLifecycleRequestRow)
 }
 
 async function reclaimExisting(row: BillingLifecycleRequestRow, input: ClaimInput): Promise<BillingLifecycleRequestClaim> {
-  if (!requestMatches(row, input)) {
+  const legacyIdentity = !row.request_fingerprint;
+  if (legacyIdentity) {
+    if (!requestIntentMatches(row, input)) {
+      throw new BillingLifecycleRequestError('billing_idempotency_conflict', 409);
+    }
+
+    if (row.status === 'completed') {
+      throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+    }
+
+    if (row.status === 'failed' && row.failure_code === 'audit_persistence_failed') {
+      const recovered = await recoverLegacyPostProviderFailure(row, input);
+      if (!recovered) throw new BillingLifecycleRequestError('billing_request_in_progress', 409);
+      return { kind: 'legacy_provider_succeeded_recovery', request: recovered };
+    }
+
+    if (
+      row.status === 'processing' &&
+      (row.failure_code === BILLING_LIFECYCLE_PHASE_PROVIDER_SUCCEEDED ||
+        row.failure_code === BILLING_LIFECYCLE_PHASE_AUDIT_SUCCEEDED ||
+        row.failure_code === BILLING_LIFECYCLE_PHASE_LEGACY_PROVIDER_SUCCEEDED)
+    ) {
+      throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+    }
+  } else if (!requestMatches(row, input)) {
     throw new BillingLifecycleRequestError('billing_idempotency_conflict', 409);
   }
 
@@ -237,7 +295,7 @@ async function reclaimExisting(row: BillingLifecycleRequestRow, input: ClaimInpu
   }
 
   if (row.status === 'failed' && row.failure_code === 'audit_persistence_failed') {
-    const recovered = await recoverLegacyPostProviderFailure(row);
+    const recovered = await recoverLegacyPostProviderFailure(row, input);
     if (!recovered) throw new BillingLifecycleRequestError('billing_request_in_progress', 409);
     return { kind: 'provider_succeeded_recovery', request: recovered };
   }
@@ -269,6 +327,10 @@ async function reclaimExisting(row: BillingLifecycleRequestRow, input: ClaimInpu
     throw new BillingLifecycleRequestError('billing_request_in_progress', 409);
   }
 
+  if (legacyIdentity && (await hasNewerLifecycleRequest(row))) {
+    throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+  }
+
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('billing_lifecycle_requests')
@@ -276,6 +338,7 @@ async function reclaimExisting(row: BillingLifecycleRequestRow, input: ClaimInpu
       status: 'processing',
       failure_code: null,
       completed_at: null,
+      request_fingerprint: row.request_fingerprint ?? input.requestFingerprint,
       result_snapshot: null,
       updated_at: now.toISOString(),
     })
@@ -423,6 +486,31 @@ export async function markBillingLifecycleProviderSucceeded(
     .maybeSingle();
 
   if (error || !data) storageFailure('provider_succeeded', error);
+}
+
+export async function markBillingLifecycleLegacyProviderSucceeded(
+  requestId: string,
+  resultSnapshot: BillingLifecycleReplaySnapshot,
+) {
+  const updatedAt = new Date().toISOString();
+  const snapshot = parseReplaySnapshot(resultSnapshot);
+  if (!snapshot) storageFailure('legacy_provider_result_invalid');
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('billing_lifecycle_requests')
+    .update({
+      failure_code: BILLING_LIFECYCLE_PHASE_PROVIDER_SUCCEEDED,
+      result_snapshot: snapshot,
+      updated_at: updatedAt,
+    })
+    .eq('id', requestId)
+    .eq('status', 'processing')
+    .eq('failure_code', BILLING_LIFECYCLE_PHASE_LEGACY_PROVIDER_SUCCEEDED)
+    .not('request_fingerprint', 'is', null)
+    .select('id')
+    .maybeSingle();
+
+  if (error || !data) storageFailure('legacy_provider_succeeded', error);
 }
 
 export async function markBillingLifecycleAuditSucceeded(requestId: string) {
