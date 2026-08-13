@@ -5,10 +5,8 @@ on:
     branches: [main]
     paths:
       - 'scripts/recovery/manage-ephemeral-recovery-database.mjs'
-      - 'scripts/recovery/run-ephemeral-project-schema-replay.mjs'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
       - 'scripts/recovery/run-ephemeral-restore-smoke.mjs'
-      - 'supabase/migrations/**'
       - '.github/workflows/recovery-resilience-proof.yml'
       - '.github/workflows/ephemeral-supabase-restore-smoke.yml'
       - 'tests/security/ephemeral-recovery-database-contract.test.ts'
@@ -55,8 +53,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes postgresql-client
 
-      - name: Start exact-SHA disposable source project
-        run: node scripts/recovery/run-ephemeral-project-schema-replay.mjs
+      - name: Start clean disposable synthetic source
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start
 
       - name: Create synthetic roles schema and data dumps
         run: node scripts/recovery/run-ephemeral-restore-smoke.mjs dump
