@@ -10,6 +10,16 @@ const TARGETS = resolve(process.env.PROVIDER_TARGETS_PATH || 'config/production-
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const TIMEOUT_MS = 8_000;
 
+/**
+ * @typedef {{ httpStatus: number | null, category: string }} HttpDiagnostic
+ * @typedef {{
+ *   attempted?: boolean,
+ *   reason?: string,
+ *   projectProbe?: HttpDiagnostic | null,
+ *   clientKeysProbe?: HttpDiagnostic | null,
+ * }} SentryDiagnosticProbe
+ */
+
 function env(name) {
   return String(process.env[name] ?? '').trim();
 }
@@ -54,6 +64,7 @@ function providerEntry(evidence, provider) {
     .find((entry) => entry?.provider === provider) ?? null;
 }
 
+/** @param {SentryDiagnosticProbe | null | undefined} probe */
 export function deriveSentryProbeBlockerCode(probe) {
   if (!probe?.attempted) return null;
   const projectCategory = probe?.projectProbe?.category;
@@ -76,6 +87,11 @@ export function deriveSentryProbeBlockerCode(probe) {
   return null;
 }
 
+/**
+ * @param {SentryDiagnosticProbe | null | undefined} probe
+ * @param {{ projectReachabilityFailed: boolean, clientKeysReachabilityFailed: boolean }} failures
+ * @returns {SentryDiagnosticProbe | null | undefined}
+ */
 function narrowedSentryProbe(probe, { projectReachabilityFailed, clientKeysReachabilityFailed }) {
   if (!probe?.attempted) return probe;
   return {
@@ -89,6 +105,10 @@ function narrowedSentryProbe(probe, { projectReachabilityFailed, clientKeysReach
   };
 }
 
+/**
+ * @param {any} entry
+ * @param {SentryDiagnosticProbe | null} [probe]
+ */
 export function deriveProviderBlockerCodes(entry, probe = null) {
   if (!entry || entry.status === 'reviewed') return [];
   const checks = entry.checks && typeof entry.checks === 'object' ? entry.checks : {};
@@ -258,7 +278,7 @@ const isMain = process.argv[1]
 
 if (isMain) {
   runProviderBlockerDiagnostics().catch((error) => {
-    console.error(`Provider blocker diagnostics failed: ${error instanceof Error ? error.message : 'unknown_error'}`);
+    console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   });
 }
