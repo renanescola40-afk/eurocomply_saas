@@ -16,10 +16,11 @@ function before(source, first, second) {
   assert.ok(firstIndex < secondIndex, `${first} must run before ${second}`);
 }
 
-test('final technical proof provisions isolation before preflight and always removes it after proof', () => {
-  before(finalTechnical, 'Set up pinned Supabase CLI', 'Start disposable Supabase recovery database');
-  before(finalTechnical, 'Install PostgreSQL client', 'Start disposable Supabase recovery database');
-  before(finalTechnical, 'Start disposable Supabase recovery database', 'Preflight protected final technical proof');
+test('final technical proof provisions exact-SHA project isolation before preflight and always removes it after proof', () => {
+  const projectStart = 'Start exact-SHA disposable Supabase project database';
+  before(finalTechnical, 'Set up pinned Supabase CLI', projectStart);
+  before(finalTechnical, 'Install PostgreSQL client', projectStart);
+  before(finalTechnical, projectStart, 'Preflight protected final technical proof');
   before(finalTechnical, 'Preflight protected final technical proof', 'Execute protected final technical proof');
   before(finalTechnical, 'Execute protected final technical proof', 'Remove disposable recovery database');
   assert.match(finalTechnical, /final-technical-controls-preflight\.json/);
@@ -27,7 +28,7 @@ test('final technical proof provisions isolation before preflight and always rem
   assert.doesNotMatch(finalTechnical, /secrets\.RECOVERY_ISOLATED_DATABASE_URL/);
 });
 
-test('recovery proof provisions isolation before preflight and keeps rollback independently protected', () => {
+test('recovery proof provisions an empty restore target before preflight and keeps rollback independently protected', () => {
   before(recovery, 'Set up pinned Supabase CLI', 'Start disposable Supabase recovery database');
   before(recovery, 'Install PostgreSQL client', 'Start disposable Supabase recovery database');
   before(recovery, 'Start disposable Supabase recovery database', 'Preflight protected recovery proof');
