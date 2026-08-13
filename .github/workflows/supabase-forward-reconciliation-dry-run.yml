@@ -6,6 +6,7 @@ on:
       - 'config/supabase-forward-reconciliation.json'
       - 'scripts/supabase/forward-reconciliation-control-plane.mjs'
       - 'scripts/supabase/verify-forward-reconciliation-postconditions.sql'
+      - 'scripts/recovery/run-backup-restore-exercise.mjs'
       - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
       - '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
   workflow_dispatch:
@@ -59,10 +60,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(grep -c --fixed-string 'db push --dry-run' .github/workflows/supabase-forward-reconciliation-dry-run.yml)" -eq 1
-          ! grep -n --fixed-string -- '--include-all' .github/workflows/supabase-forward-reconciliation-dry-run.yml
-          ! grep -n --fixed-string 'migration repair' .github/workflows/supabase-forward-reconciliation-dry-run.yml
-          ! grep -nE '(^|[[:space:]])db push([[:space:]]|$)' .github/workflows/supabase-forward-reconciliation-dry-run.yml | grep -v -- '--dry-run'
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/supabase-forward-reconciliation-dry-run.yml')
+          text = path.read_text(encoding='utf-8')
+          forbidden = [
+              '--include' + '-all',
+              'migration ' + 'repair',
+          ]
+          for token in forbidden:
+              if token in text:
+                  raise SystemExit('filtered dry-run workflow contains a forbidden migration shortcut')
+
+          push_lines = [
+              line.strip()
+              for line in text.splitlines()
+              if line.strip().startswith('supabase ') and ' db push ' in f' {line.strip()} '
+          ]
+          expected = 'supabase --workdir "$WORKDIR" db push --dry-run --db-url "$SUPABASE_DB_POOLER_URL"'
+          if push_lines != [expected]:
+              raise SystemExit(f'expected exactly one dry-run-only db push; observed {len(push_lines)}')
+          PY
 
   dry-run:
     name: Prove remote plus selected set and execute Supabase dry run
@@ -157,6 +176,7 @@ jobs:
           set -euo pipefail
           WORKDIR="$RUNNER_TEMP/risck-forward-reconciliation"
           echo "WORKDIR=$WORKDIR" >> "$GITHUB_ENV"
+          mkdir -p "$WORKDIR"
           supabase --workdir "$WORKDIR" init --force
           rm -rf "$WORKDIR/supabase/migrations"
           mkdir -p "$WORKDIR/supabase/migrations"
