@@ -79,6 +79,7 @@ jobs:
           test "$RECOVERY_EPHEMERAL_UNRESOLVED_INVALID_EXCLUDED_FILE_COUNT" = "1"
           test "$RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLACED_FILE_COUNT" = "2"
           test "$RECOVERY_EPHEMERAL_PREREQUISITE_BLOCKED_DUPLICATE_FILE_COUNT" = "3"
+          test "$RECOVERY_EPHEMERAL_SYNTAX_COMPAT_FILE_COUNT" = "1"
           test "$RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL" = "false"
           case "$RECOVERY_ISOLATED_DATABASE_URL" in
             postgresql://*@127.0.0.1:54322/*|postgres://*@127.0.0.1:54322/*|postgresql://*@localhost:54322/*|postgres://*@localhost:54322/*) ;;
