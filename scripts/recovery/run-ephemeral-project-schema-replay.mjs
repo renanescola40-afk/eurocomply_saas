@@ -99,8 +99,15 @@ export const UNRESOLVED_INVALID_MIGRATIONS = Object.freeze([
   '20260619_multi_tenant_rls_hardening.sql',
 ]);
 export const SCHEMA_EFFECT_REPLACED_MIGRATIONS = Object.freeze({
-  '20260613_organization_add_ons.sql':
+  '20260613_organization_add_ons.sql': Object.freeze([
     'supabase/migrations/20260813121500_reconcile_organization_add_ons.sql',
+  ]),
+  '20260620120000_enterprise_multi_tenant_rls_final_lock.sql': Object.freeze([
+    'supabase/migrations/20260619103000_complete_multi_tenant_rls_policies.sql',
+    'supabase/migrations/20260629110000_enterprise_tenant_rls_cleanup_indexes.sql',
+    'supabase/migrations/20260807091341_reconcile_membership_rls_and_remove_permissive_bypasses.sql',
+    'supabase/migrations/20260809135000_enterprise_core_runtime_schema_reconciliation.sql',
+  ]),
 });
 const UNAPPLIED_LEGACY_VERSION = '20260605';
 
@@ -157,9 +164,11 @@ function assertReviewedReplayInventory(dir) {
       fail(`Invalid migration review boundary missing for ${file}`);
     }
   }
-  for (const [legacyFile, replacementPath] of Object.entries(SCHEMA_EFFECT_REPLACED_MIGRATIONS)) {
+  for (const [legacyFile, replacementPaths] of Object.entries(SCHEMA_EFFECT_REPLACED_MIGRATIONS)) {
     if (!duplicateReview.includes(`\`${legacyFile}\``)) fail(`Replacement source is not in reviewed duplicate inventory: ${legacyFile}`);
-    if (!existsSync(replacementPath)) fail(`Canonical schema-effect replacement is missing: ${replacementPath}`);
+    for (const replacementPath of replacementPaths) {
+      if (!existsSync(replacementPath)) fail(`Canonical schema-effect replacement is missing: ${replacementPath}`);
+    }
   }
 
   const reviewedDuplicateFiles = new Set(expected.flatMap(({ files }) => files));
@@ -322,7 +331,7 @@ function main() {
   appendGithubEnv('RECOVERY_EPHEMERAL_UNRESOLVED_INVALID_EXCLUDED_FILE_COUNT', String(UNRESOLVED_INVALID_MIGRATIONS.length));
   appendGithubEnv('RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLACED_FILE_COUNT', String(replaced));
   appendGithubEnv('RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL', 'false');
-  process.stdout.write(`Disposable schema-effect replay staged ${replayed} duplicate files, excluded ${UNAPPLIED_LEGACY_MIGRATIONS.length} legacy, ${UNRESOLVED_INVALID_MIGRATIONS.length} unresolved-invalid, and ${replaced} schema-effect-replaced file; replay timestamps are not migration-history repair evidence.\n`);
+  process.stdout.write(`Disposable schema-effect replay staged ${replayed} duplicate files, excluded ${UNAPPLIED_LEGACY_MIGRATIONS.length} legacy, ${UNRESOLVED_INVALID_MIGRATIONS.length} unresolved-invalid, and ${replaced} schema-effect-replaced files; replay timestamps are not migration-history repair evidence.\n`);
 }
 
 if (process.argv[1]?.endsWith('run-ephemeral-project-schema-replay.mjs')) {
