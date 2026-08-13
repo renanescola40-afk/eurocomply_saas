@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: vercel-production-${{ inputs.release_sha }}
@@ -62,6 +63,13 @@ jobs:
           git cat-file -e "${RELEASE_SHA}^{commit}"
           test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
 
+      - name: Verify Production environment governance before protected secrets
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: Production
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
   deploy-production:
     name: P0 gates and deploy exact SHA to Vercel production
     needs: authorize-release
@@ -90,7 +98,8 @@ jobs:
       HEALTHCHECK_TOKEN: ${{ secrets['HEALTHCHECK_TOKEN'] }}
       EVIDENCE_PACK_SIGNING_SECRET: ${{ secrets['EVIDENCE_PACK_SIGNING_SECRET'] }}
       AUDIT_CHAIN_SIGNING_SECRET: ${{ secrets['AUDIT_CHAIN_SIGNING_SECRET'] }}
-      STEP_UP_SIGNING_SECRET: ${{ secrets['STEP_UP_SIGNING_SECRET'] }}
+      STEP_UP_PROVIDER_MODE: supabase_mfa
+      STEP_UP_SIGNING_SECRET: ${{ secrets['STEP_UP_ASSERTION_SIGNING_SECRET'] || secrets['STEP_UP_SIGNING_SECRET'] }}
       CRON_SECRET: ${{ secrets['CRON_SECRET'] }}
       INTERNAL_CRON_SECRET: ${{ secrets['INTERNAL_CRON_SECRET'] }}
       UPSTASH_REDIS_REST_URL: ${{ secrets['UPSTASH_REDIS_REST_URL'] }}
@@ -128,13 +137,27 @@ jobs:
           test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
 
       - name: Setup Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dcba9c38 # v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           cache: npm
 
       - name: Install dependencies deterministically
         run: npm ci
+
+      - name: Validate dedicated Enterprise Step-Up deployment input
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$STEP_UP_PROVIDER_MODE" = 'supabase_mfa'
+          if [ -z "${STEP_UP_SIGNING_SECRET:-}" ]; then
+            echo '::error title=Missing Enterprise Step-Up signing secret::Configure a dedicated STEP_UP_ASSERTION_SIGNING_SECRET or STEP_UP_SIGNING_SECRET in the protected production environment.'
+            exit 1
+          fi
+          if [ -n "${AUDIT_CHAIN_SIGNING_SECRET:-}" ] && [ "$STEP_UP_SIGNING_SECRET" = "$AUDIT_CHAIN_SIGNING_SECRET" ]; then
+            echo '::error title=Enterprise Step-Up key separation required::The Step-Up signing secret must be distinct from the audit-chain signing secret.'
+            exit 1
+          fi
 
       - name: Run lint gate
         run: npm run lint
@@ -164,7 +187,26 @@ jobs:
         if: env.RELEASE_TARGET == 'enterprise'
         run: npm run release:enterprise-readiness
 
-      - name: Pull Vercel production environment
+      - name: Link and pull current Vercel production environment
+        run: npx --yes "vercel@${VERCEL_CLI_VERSION}" pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Reverify current main immediately before production environment mutation
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
+
+      - name: Synchronize Enterprise Step-Up runtime configuration to Vercel production
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$STEP_UP_SIGNING_SECRET" \
+            | npx --yes "vercel@${VERCEL_CLI_VERSION}" env add STEP_UP_SIGNING_SECRET production --force --sensitive --token="$VERCEL_TOKEN" >/dev/null
+          printf '%s' "$STEP_UP_PROVIDER_MODE" \
+            | npx --yes "vercel@${VERCEL_CLI_VERSION}" env add STEP_UP_PROVIDER_MODE production --force --no-sensitive --token="$VERCEL_TOKEN" >/dev/null
+
+      - name: Refresh Vercel production environment after Step-Up synchronization
         run: npx --yes "vercel@${VERCEL_CLI_VERSION}" pull --yes --environment=production --token="$VERCEL_TOKEN"
 
       - name: Build Vercel production artifact

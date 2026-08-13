@@ -21,7 +21,7 @@ The canonical `Deployment Health Proof` workflow now validates:
 
 ## GitHub environments
 
-Create exactly these environments in repository settings.
+Create exactly these deployment environments in repository settings and keep them protected. Environment names are case-insensitive in GitHub, but repository documentation uses the canonical names below.
 
 ### `preview`
 
@@ -41,7 +41,7 @@ Required configuration:
 
 Preview may skip readiness or Vercel metadata verification when the corresponding secret is absent, but the evidence records the verification as skipped or not verified. Preview evidence must never be reused as production evidence.
 
-### `production`
+### `Production`
 
 Purpose:
 
@@ -52,12 +52,75 @@ Purpose:
 Required configuration:
 
 - at least one required reviewer;
-- deployment branch policy restricted to `main`;
+- administrator bypass disabled;
+- deployment branch policy set to **Protected branches only**;
+- `main` protected by the repository ruleset;
 - secret `HEALTHCHECK_TOKEN` matching the production runtime;
-- secret `VERCEL_TOKEN` with the minimum read scope required to retrieve deployment metadata;
+- secret `VERCEL_TOKEN` with the minimum read/write scope required by the protected production deployment workflow;
+- `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` scoped to the canonical production project;
+- a dedicated Enterprise Step-Up signing secret provided as `STEP_UP_ASSERTION_SIGNING_SECRET` or `STEP_UP_SIGNING_SECRET`;
+- the Step-Up signing secret must be distinct from `AUDIT_CHAIN_SIGNING_SECRET`;
 - variable `VERCEL_TEAM_ID` when applicable;
-- no bypass for ordinary contributors;
-- prevent self-review when the GitHub plan supports it.
+- prevent self-review when a second trusted deployment reviewer is available.
+
+### `enterprise-production-closeout`
+
+Purpose:
+
+- gate the secrets-bearing exact-SHA runtime closeout workflow;
+- require an explicit deployment approval before live tenant isolation, authenticated smoke and observability validation run with production credentials.
+
+Required configuration:
+
+- environment must be created explicitly before any closeout dispatch;
+- at least one required reviewer;
+- administrator bypass disabled;
+- deployment branch policy set to **Protected branches only**;
+- only the minimum runtime-closeout secrets/variables documented by `.github/workflows/enterprise-runtime-evidence-closeout.yml` may be present.
+
+Do not rely on GitHub implicitly creating a missing environment when a workflow first references it. An implicitly created environment has no accepted protection evidence and is not valid for enterprise production closeout.
+
+## Fail-closed environment governance boundary
+
+Mutable GitHub Environment administration is intentionally **not** part of pull-request mergeability. Ordinary PR CI validates the governance code and workflow contracts, but does not make `CI / quality` depend on the live state of repository environments.
+
+Instead, each secrets-bearing production workflow performs a read-only governance preflight **before** its protected job can load environment secrets:
+
+- `Vercel Production Deploy` validates `Production` in the unprotected `authorize-release` job;
+- `Enterprise Runtime Evidence Closeout` validates `enterprise-production-closeout` in the unprotected `environment-governance` job.
+
+Both preflights use `scripts/security/check-github-environment-governance.mjs` with only the workflow `GITHUB_TOKEN` and read-only Actions permission. They fail unless the target environment:
+
+- already exists;
+- has administrator bypass disabled;
+- has at least one required deployment reviewer;
+- allows deployment from protected branches only.
+
+This preserves fail-closed production behavior without allowing mutable repository administration to create false-negative PR checks or prevent ordinary code validation from running.
+
+### Current administrative blocker
+
+The latest repository governance inspection found:
+
+- `Production` exists, but administrator bypass is enabled, no required reviewer rule is configured and no deployment branch policy is configured;
+- `enterprise-production-closeout` does not exist.
+
+Repository code cannot safely correct those settings with the ordinary `GITHUB_TOKEN`: environment creation/update requires repository Administration write permission. Until an administrator configures both environments as specified above, production deployment and enterprise runtime closeout remain **No-Go** by design, while repository PRs can still complete their code-quality checks.
+
+## Enterprise Step-Up runtime synchronization
+
+Enterprise readiness intentionally fails closed when the canonical Vercel runtime does not have both a dedicated Step-Up signing key and a supported provider mode. A successful Vercel build alone is not evidence that these server-side runtime settings exist.
+
+The protected `Vercel Production Deploy` workflow therefore owns the synchronization boundary for these two settings:
+
+- GitHub protected secret `STEP_UP_ASSERTION_SIGNING_SECRET` or `STEP_UP_SIGNING_SECRET` is written to the canonical Vercel Production variable `STEP_UP_SIGNING_SECRET` as **sensitive**;
+- `STEP_UP_PROVIDER_MODE` is written as `supabase_mfa`, matching the live Step-Up provider proof;
+- the exact release SHA is revalidated against the current `main` tip immediately before the Vercel environment mutation;
+- the Vercel production environment is pulled again after synchronization and before the prebuilt production build;
+- the signing-secret value is never printed, stored in an evidence artifact, or passed as a command-line argument;
+- the workflow fails before mutation when the Step-Up secret is missing or when it equals the audit-chain signing secret.
+
+Changing the Vercel project configuration does not make the already-running deployment ready by itself. A new protected production deployment of the exact current `main` SHA is required before `/api/ready` and the production runtime evidence can become authoritative for the new configuration.
 
 ## Vercel project separation
 
@@ -116,10 +179,9 @@ Use `docs/operations/ROLLBACK_RUNBOOK.md` and the existing rollback validation s
 
 The block is repository-complete only after the following GitHub/Vercel settings are verified with durable redacted evidence:
 
-- `preview` environment exists;
-- `production` environment exists;
-- production has a required reviewer;
-- production permits deployment only from `main`;
+- `preview` environment exists and contains no production credentials;
+- `Production` exists with administrator bypass disabled, a required reviewer and protected-branches-only deployment policy;
+- `enterprise-production-closeout` exists with the same governance protections before runtime-closeout secrets are used;
 - Vercel environment variables are scoped correctly;
 - GitHub contains only the minimum required deployment-assurance secret and variable values;
 - the workflow produces a successful preview artifact;
