@@ -18,7 +18,6 @@ on:
       - Actionlint
       - Public Claims Guard
       - Full Security Suite
-      - Enterprise Production Gate
       - RISCK COMPLY Security CI
       - RISCK COMPLY Upload Security CI
       - Enterprise DAST
