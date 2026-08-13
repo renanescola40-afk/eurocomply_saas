@@ -22,79 +22,83 @@ describe('production provider blocker diagnostics', () => {
 
   it('suppresses dependent Vercel symptoms when the API token prerequisite is missing', () => {
     expect(deriveProviderBlockerCodes({
-      provider: 'vercel',
-      status: 'blocked',
-      checks: {
-        apiTokenConfigured: false,
-        targetConfigurationBound: true,
-        projectReachable: false,
-        projectIdentityMatched: false,
-        productionEnvironmentEnumerated: false,
-        requiredEnvironmentKeysPresent: false,
+      provider: 'vercel', status: 'blocked', checks: {
+        apiTokenConfigured: false, targetConfigurationBound: true,
+        projectReachable: false, projectIdentityMatched: false,
+        productionEnvironmentEnumerated: false, requiredEnvironmentKeysPresent: false,
       },
-    })).toEqual([
-      'vercel_api_token_missing',
-    ]);
+    })).toEqual(['vercel_api_token_missing']);
   });
 
   it('reports independent Vercel prerequisite failures without downstream noise', () => {
     expect(deriveProviderBlockerCodes({
-      provider: 'vercel',
-      status: 'blocked',
-      checks: {
-        apiTokenConfigured: false,
-        targetConfigurationBound: false,
-        projectReachable: false,
-        projectIdentityMatched: false,
+      provider: 'vercel', status: 'blocked', checks: {
+        apiTokenConfigured: false, targetConfigurationBound: false,
+        projectReachable: false, projectIdentityMatched: false,
       },
-    })).toEqual([
-      'vercel_api_token_missing',
-      'vercel_target_configuration_invalid',
-    ]);
+    })).toEqual(['vercel_api_token_missing', 'vercel_target_configuration_invalid']);
   });
 
   it('turns Sentry diagnostic HTTP categories into one actionable root-cause code', () => {
-    const entry = {
-      provider: 'sentry',
-      status: 'blocked',
-      checks: {
-        organizationConfigured: true,
-        projectConfigured: true,
-        buildAuthTokenConfigured: true,
-        projectReachable: false,
-        clientKeyInventoryReachable: false,
-        activeClientKeyPresent: false,
-      },
-    };
+    const entry = { provider: 'sentry', status: 'blocked', checks: {
+      organizationConfigured: true, projectConfigured: true, buildAuthTokenConfigured: true,
+      projectReachable: false, clientKeyInventoryReachable: false, activeClientKeyPresent: false,
+    } };
     const forbiddenProbe = {
       attempted: true,
       projectProbe: { httpStatus: 403, category: 'forbidden_or_insufficient_scope' },
       clientKeysProbe: { httpStatus: 403, category: 'forbidden_or_insufficient_scope' },
     };
-
     expect(deriveSentryProbeBlockerCode(forbiddenProbe)).toBe('sentry_auth_token_insufficient_scope');
-    expect(deriveProviderBlockerCodes(entry, forbiddenProbe)).toEqual([
-      'sentry_auth_token_insufficient_scope',
-    ]);
+    expect(deriveProviderBlockerCodes(entry, forbiddenProbe)).toEqual(['sentry_auth_token_insufficient_scope']);
   });
 
-  it('keeps generic Sentry blocked checks when no secondary probe classification exists', () => {
+  it('preserves a canonical missing active Sentry client key when secondary probes transiently fail', () => {
     expect(deriveProviderBlockerCodes({
-      provider: 'sentry',
-      status: 'blocked',
-      checks: {
-        organizationConfigured: true,
-        projectConfigured: true,
-        buildAuthTokenConfigured: true,
-        projectReachable: false,
-        clientKeyInventoryReachable: false,
-        activeClientKeyPresent: false,
+      provider: 'sentry', status: 'blocked', checks: {
+        organizationConfigured: true, projectConfigured: true, buildAuthTokenConfigured: true,
+        projectReachable: true, clientKeyInventoryReachable: true, activeClientKeyPresent: false,
       },
-    })).toEqual([
-      'sentry_project_api_unreachable',
-      'sentry_client_key_inventory_unavailable',
-      'sentry_active_client_key_missing',
-    ]);
+    }, {
+      attempted: true,
+      projectProbe: { httpStatus: 429, category: 'rate_limited' },
+      clientKeysProbe: { httpStatus: 429, category: 'rate_limited' },
+    })).toEqual(['sentry_active_client_key_missing']);
+  });
+
+  it('classifies only failed Sentry reachability probes while preserving independent canonical blockers', () => {
+    expect(deriveProviderBlockerCodes({
+      provider: 'sentry', status: 'blocked', checks: {
+        organizationConfigured: true, projectConfigured: true, buildAuthTokenConfigured: true,
+        projectReachable: false, clientKeyInventoryReachable: true, activeClientKeyPresent: false,
+      },
+    }, {
+      attempted: true,
+      projectProbe: { httpStatus: 403, category: 'forbidden_or_insufficient_scope' },
+      clientKeysProbe: { httpStatus: 429, category: 'rate_limited' },
+    })).toEqual(['sentry_auth_token_insufficient_scope', 'sentry_active_client_key_missing']);
+  });
+
+  it('does not report active-client-key absence independently when key inventory is unreachable', () => {
+    expect(deriveProviderBlockerCodes({
+      provider: 'sentry', status: 'blocked', checks: {
+        organizationConfigured: true, projectConfigured: true, buildAuthTokenConfigured: true,
+        projectReachable: true, clientKeyInventoryReachable: false, activeClientKeyPresent: false,
+      },
+    }, {
+      attempted: true,
+      projectProbe: { httpStatus: 200, category: 'success' },
+      clientKeysProbe: { httpStatus: 403, category: 'forbidden_or_insufficient_scope' },
+    })).toEqual(['sentry_auth_token_insufficient_scope']);
+  });
+
+  it('keeps generic Sentry reachability blockers when no secondary probe classification exists', () => {
+    expect(deriveProviderBlockerCodes({
+      provider: 'sentry', status: 'blocked', checks: {
+        organizationConfigured: true, projectConfigured: true, buildAuthTokenConfigured: true,
+        projectReachable: false, clientKeyInventoryReachable: false, activeClientKeyPresent: false,
+      },
+    })).toEqual(['sentry_project_api_unreachable', 'sentry_client_key_inventory_unavailable']);
   });
 
   it('keeps file-derived Vercel identity out of outbound diagnostic requests', () => {
@@ -108,20 +112,12 @@ describe('production provider blocker diagnostics', () => {
 
   it('keeps diagnostics separate from provider PASS semantics', async () => {
     const evidence = {
-      status: 'Open',
-      outcome: 'blocked',
-      runtimeContext: { commitSha: sha },
+      status: 'Open', outcome: 'blocked', runtimeContext: { commitSha: sha },
       providersReviewed: [
         { provider: 'github', status: 'reviewed', checks: { exactContext: true } },
-        {
-          provider: 'vercel',
-          status: 'blocked',
-          checks: { apiTokenConfigured: false, targetConfigurationBound: true },
-          metrics: { requiredEnvironmentKeys: 15, requiredEnvironmentKeysPresent: 0 },
-        },
+        { provider: 'vercel', status: 'blocked', checks: { apiTokenConfigured: false, targetConfigurationBound: true }, metrics: { requiredEnvironmentKeys: 15, requiredEnvironmentKeysPresent: 0 } },
       ],
     };
-
     const diagnostics = await buildProviderBlockerDiagnostics(evidence);
     expect(diagnostics.status).toBe('Complete');
     expect(diagnostics.providerProofStatus).toBe('Open');
@@ -130,19 +126,13 @@ describe('production provider blocker diagnostics', () => {
     expect(diagnostics.targetSha).toBe(sha);
     expect(diagnostics.blockerCodes).toEqual(['vercel_api_token_missing']);
     expect(diagnostics.evidenceIntegrity).toMatchObject({
-      containsSensitiveValues: false,
-      credentialsStored: false,
-      requestUrlsStored: false,
-      providerResponseBodiesStored: false,
+      containsSensitiveValues: false, credentialsStored: false,
+      requestUrlsStored: false, providerResponseBodiesStored: false,
       fileDerivedOutboundTargetsUsed: false,
     });
   });
 
   it('does not emit blockers for reviewed providers', () => {
-    expect(deriveProviderBlockerCodes({
-      provider: 'stripe',
-      status: 'reviewed',
-      checks: { apiReachable: true },
-    })).toEqual([]);
+    expect(deriveProviderBlockerCodes({ provider: 'stripe', status: 'reviewed', checks: { apiReachable: true } })).toEqual([]);
   });
 });
