@@ -28,9 +28,11 @@ const EXPLICIT_SOURCE_ALIASES = Object.freeze({
   ],
   'release-validation/backup-restore.json': [
     'recovery-source.json',
+    'docs/security/evidence/p1/backup-restore-tested.json',
   ],
   'release-validation/rollback-rehearsal.json': [
     'rollback-source.json',
+    'docs/security/evidence/runtime/rollback-validation.json',
   ],
   'release-validation/observability-runtime.json': [
     'docs/security/evidence/runtime/observability-production-validation.json',
@@ -41,6 +43,16 @@ const EXPLICIT_SOURCE_ALIASES = Object.freeze({
   'release-validation/final-go-no-go.json': [
     'docs/security/evidence/runtime/release-go-no-go.json',
   ],
+});
+
+// Sources created inside this closure run are more authoritative than retained
+// documents carrying the same conceptual path. The prefix is anchored at the
+// isolated source root, so downloaded artifacts cannot impersonate it by nesting
+// the same path under their artifact-id directory.
+const AUTHORITATIVE_DECLARED_SOURCES = Object.freeze({
+  'release-validation/production-deployment.json': Object.freeze([
+    'direct-production-deployment/release-validation/production-deployment.json',
+  ]),
 });
 
 function sha256(value) {
@@ -94,11 +106,23 @@ function candidatesForPath(candidates, requestedPath) {
 function candidatePoolForExpectedPath(candidates, expectedPath) {
   const direct = candidatesForPath(candidates, expectedPath);
   if (direct.length > 0) {
-    return { pool: direct, matchedBy: 'declared_path', sourceAliases: [] };
+    const authoritativePaths = AUTHORITATIVE_DECLARED_SOURCES[normalisePath(expectedPath)] ?? [];
+    const authoritative = direct.filter((candidate) => authoritativePaths.includes(candidate.relative));
+    if (authoritative.length > 0) {
+      return {
+        pool: authoritative,
+        matchedBy: 'authoritative_declared_path',
+        sourceAliases: [],
+        shadowedCandidateCount: direct.length - authoritative.length,
+      };
+    }
+    return { pool: direct, matchedBy: 'declared_path', sourceAliases: [], shadowedCandidateCount: 0 };
   }
 
   const aliases = EXPLICIT_SOURCE_ALIASES[normalisePath(expectedPath)] ?? [];
-  if (aliases.length === 0) return { pool: [], matchedBy: 'none', sourceAliases: [] };
+  if (aliases.length === 0) return {
+    pool: [], matchedBy: 'none', sourceAliases: [], shadowedCandidateCount: 0,
+  };
 
   const aliasCandidates = [];
   for (const alias of aliases) {
@@ -106,7 +130,9 @@ function candidatePoolForExpectedPath(candidates, expectedPath) {
       if (!aliasCandidates.some((item) => item.absolute === candidate.absolute)) aliasCandidates.push(candidate);
     }
   }
-  return { pool: aliasCandidates, matchedBy: 'explicit_alias', sourceAliases: aliases };
+  return {
+    pool: aliasCandidates, matchedBy: 'explicit_alias', sourceAliases: aliases, shadowedCandidateCount: 0,
+  };
 }
 
 export async function hydrateEnterpriseClosureEvidence({
@@ -159,7 +185,9 @@ export async function hydrateEnterpriseClosureEvidence({
   const results = [];
 
   for (const expectedPath of expectedPaths) {
-    const { pool, matchedBy, sourceAliases } = candidatePoolForExpectedPath(candidates, expectedPath);
+    const {
+      pool, matchedBy, sourceAliases, shadowedCandidateCount,
+    } = candidatePoolForExpectedPath(candidates, expectedPath);
     const conflicts = pool.filter((candidate) => candidate.shaConflict);
     const exact = pool.filter((candidate) =>
       !candidate.shaConflict && candidate.sha === targetSha && !candidate.sensitive,
@@ -183,6 +211,7 @@ export async function hydrateEnterpriseClosureEvidence({
               : 'MISSING',
         matchedBy,
         sourceAliases,
+        shadowedCandidateCount,
         candidateCount: pool.length,
         conflictingShaCandidateCount: conflicts.length,
         staleShaCount: stale.length,
@@ -198,6 +227,7 @@ export async function hydrateEnterpriseClosureEvidence({
         status: 'AMBIGUOUS',
         matchedBy,
         sourceAliases,
+        shadowedCandidateCount,
         candidateCount: exact.length,
         digests: [...digests].sort(),
       });
@@ -213,6 +243,7 @@ export async function hydrateEnterpriseClosureEvidence({
       status: 'HYDRATED',
       matchedBy,
       sourceAliases,
+      shadowedCandidateCount,
       source: selected.relative,
       shaSource: selected.shaSource,
       digest: `sha256:${selected.digest}`,
@@ -235,7 +266,7 @@ export async function hydrateEnterpriseClosureEvidence({
     missingEvidence: results.filter((item) => item.status === 'MISSING').length,
     invalidJsonFiles,
     results,
-    truthBoundary: 'Hydration restores only exact-SHA evidence by declared path or a small explicit semantic alias allowlist. Known nested SHA provenance such as runtimeContext.commitSha is accepted, but conflicting SHA bindings are rejected. Hydration does not award PASS, approve human review, infer equivalence by filename similarity, or convert missing, stale, ambiguous, conflicting or sensitive evidence into closure credit.',
+    truthBoundary: 'Hydration restores only exact-SHA evidence by declared path or a small explicit semantic alias allowlist. A closure-generated source may override retained copies only through an anchored authoritative-source allowlist; conflicts within that authority still fail closed. Known nested SHA provenance such as runtimeContext.commitSha is accepted, but conflicting SHA bindings are rejected. Hydration does not award PASS, approve human review, infer equivalence by filename similarity, or convert missing, stale, ambiguous, conflicting or sensitive evidence into closure credit.',
   };
 
   await writeFile(
