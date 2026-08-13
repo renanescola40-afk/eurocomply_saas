@@ -349,6 +349,16 @@ function failureEvidence(baseEvidence, blocker, deployment = null, health = null
   };
 }
 
+async function tryDeploymentHealthCandidate({ deployment, protectionBypassSecret, fetchImpl }) {
+  if (!deployment) return null;
+  const health = await probeExactDeploymentHealth({
+    publicUrl: deployment.publicUrl,
+    protectionBypassSecret,
+    fetchImpl,
+  });
+  return { deployment, health };
+}
+
 export async function buildProductionDeploymentEvidence({
   repository,
   targetSha,
@@ -384,31 +394,54 @@ export async function buildProductionDeploymentEvidence({
   const waitMs = boundedInteger(pollMs, DEFAULT_POLL_MS, 0, 30_000);
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    deployment = await findExactShaVercelProductionDeployment({
+    const deploymentStatusCandidate = await findExactShaVercelProductionDeployment({
       repository,
       targetSha,
       token,
       fetchImpl,
       apiUrl,
     });
-    if (!deployment) {
-      deployment = await findExactShaVercelCommitStatus({
-        repository,
-        targetSha,
-        token,
-        fetchImpl,
-        apiUrl,
-      });
+
+    const immutableAttempt = await tryDeploymentHealthCandidate({
+      deployment: deploymentStatusCandidate,
+      protectionBypassSecret,
+      fetchImpl,
+    });
+    if (immutableAttempt?.health.passed) {
+      deployment = immutableAttempt.deployment;
+      health = immutableAttempt.health;
+      break;
     }
 
-    if (deployment) {
-      health = await probeExactDeploymentHealth({
-        publicUrl: deployment.publicUrl,
-        protectionBypassSecret,
-        fetchImpl,
-      });
-      if (health.passed) break;
+    const commitStatusCandidate = await findExactShaVercelCommitStatus({
+      repository,
+      targetSha,
+      token,
+      fetchImpl,
+      apiUrl,
+    });
+    const canonicalAttempt = await tryDeploymentHealthCandidate({
+      deployment: commitStatusCandidate,
+      protectionBypassSecret: '',
+      fetchImpl,
+    });
+    if (canonicalAttempt?.health.passed) {
+      deployment = canonicalAttempt.deployment;
+      health = canonicalAttempt.health;
+      break;
     }
+
+    if (canonicalAttempt) {
+      deployment = canonicalAttempt.deployment;
+      health = canonicalAttempt.health;
+    } else if (immutableAttempt) {
+      deployment = immutableAttempt.deployment;
+      health = immutableAttempt.health;
+    } else {
+      deployment = null;
+      health = null;
+    }
+
     if (attempt < attempts && waitMs > 0) await sleepImpl(waitMs);
   }
 
