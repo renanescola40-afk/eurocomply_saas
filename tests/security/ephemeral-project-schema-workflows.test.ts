@@ -4,6 +4,10 @@ import { describe, expect, it } from 'vitest';
 const manager = fs.readFileSync('scripts/recovery/manage-ephemeral-recovery-database.mjs', 'utf8');
 const replay = fs.readFileSync('scripts/recovery/run-ephemeral-project-schema-replay.mjs', 'utf8');
 const ephemeralSmoke = fs.readFileSync('.github/workflows/ephemeral-supabase-project-smoke.yml', 'utf8');
+const migrationNames = fs
+  .readdirSync('supabase/migrations', { withFileTypes: true })
+  .filter((entry) => entry.isFile() && /^(\d+).*\.sql$/.test(entry.name))
+  .map((entry) => entry.name);
 const schemaWorkflows = [
   '.github/workflows/final-technical-controls-proof.yml',
   '.github/workflows/data-governance-runtime-proof.yml',
@@ -12,6 +16,13 @@ const schemaWorkflows = [
   '.github/workflows/enterprise-integrations-runtime-proof.yml',
 ].map((path) => ({ path, source: fs.readFileSync(path, 'utf8') }));
 const recovery = fs.readFileSync('.github/workflows/recovery-resilience-proof.yml', 'utf8');
+const knownLegacyCollisions = [
+  '20260605_gap_analysis.sql',
+  '20260605_findings_tasks.sql',
+  '20260605_compliance_evidence.sql',
+  '20260605_evidence_vault.sql',
+  '20260605_gap_analysis_user_scoped_patch.sql',
+].sort();
 
 describe('exact-SHA disposable project schema workflows', () => {
   it('copies only committed project migrations and reapplies them through Supabase CLI', () => {
@@ -25,20 +36,36 @@ describe('exact-SHA disposable project schema workflows', () => {
     expect(manager).toContain("appendGithubEnv('RECOVERY_EPHEMERAL_MIGRATION_COUNT', String(migrationCount))");
   });
 
+  it('contains exactly the known legacy duplicate migration version group', () => {
+    const byVersion = new Map<string, string[]>();
+    for (const name of migrationNames) {
+      const version = name.match(/^(\d+).*\.sql$/)?.[1];
+      if (!version) continue;
+      byVersion.set(version, [...(byVersion.get(version) ?? []), name]);
+    }
+
+    const duplicates = [...byVersion.entries()]
+      .filter(([, names]) => names.length > 1)
+      .map(([version, names]) => [version, [...names].sort()] as const);
+
+    expect(duplicates).toEqual([['20260605', knownLegacyCollisions]]);
+  });
+
   it('stages only known duplicate-prefix legacy migrations and restores their exact bytes after replay', () => {
-    for (const migration of [
-      '20260605_gap_analysis.sql',
-      '20260605_findings_tasks.sql',
-      '20260605_compliance_evidence.sql',
-      '20260605_evidence_vault.sql',
-      '20260605_gap_analysis_user_scoped_patch.sql',
-    ]) {
+    for (const migration of knownLegacyCollisions) {
       expect(replay).toContain(migration);
     }
+    expect(replay).toContain("LEGACY_COLLISION_VERSION = '20260605'");
+    expect(replay).toContain('assertKnownLegacyCollisionOnly(migrationsDir)');
+    expect(replay).toContain('assertNoMigrationVersionCollisions(migrationsDir)');
+    expect(replay).toContain('Expected exactly one known legacy migration version collision');
+    expect(replay).toContain('Unknown migration version collision detected');
     expect(replay).toContain("createHash('sha256')");
     expect(replay).toContain('renameSync(canonicalPath, replayPath)');
     expect(replay).toContain('sha256(replayPath) !== digest');
     expect(replay).toContain('restoreLegacyReplay(staged)');
+    expect(replay).toContain('if (staged.length > 0)');
+    expect(replay).toContain('and rollback failed');
     expect(replay).toContain("['scripts/recovery/manage-ephemeral-recovery-database.mjs', 'start-project']");
     expect(replay).toContain("process.env.GITHUB_ACTIONS !== 'true'");
   });
