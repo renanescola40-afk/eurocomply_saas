@@ -97,19 +97,19 @@ describe('ephemeral Supabase recovery database contract', () => {
 
   it('uses supported roles schema data dumps, excludes managed vector storage data and restores transactionally', () => {
     expect(exercise).toContain("'--role-only', '--file', rolesDumpPath");
-    expect(exercise).toContain("run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath])");
+    expect(exercise).toContain("run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath], {}, 'recovery_schema_dump_failed')");
     expect(exercise).toContain("'--data-only', '--use-copy'");
     expect(exercise).toContain("'--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[0]");
     expect(exercise).toContain("'--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[1]");
     expect(exercise).toContain("'storage.buckets_vectors'");
     expect(exercise).toContain("'storage.vector_indexes'");
     expect(exercise).not.toContain("'--schema', 'public,app_private'");
-    expect(exercise).toContain("run('docker', ['cp', path, `${container}:${containerPath}`])");
+    expect(exercise).toContain("run('docker', ['cp', path, `${container}:${containerPath}`], {}, 'recovery_copy_dump_to_isolated_target_failed')");
     expect(exercise).toContain("'--single-transaction', '--set', 'ON_ERROR_STOP=1'");
     expect(exercise).toContain("'--command', 'SET session_replication_role = replica;'");
     expect(exercise).toContain("criticalTables = ['organizations', 'organization_members', 'audit_logs']");
-    expect(exercise).toContain("sourceAuthUsers = Number(sql(source, 'select count(*) from auth.users;'))");
-    expect(exercise).toContain("restoredAuthUsers = Number(sql(restore, 'select count(*) from auth.users;'))");
+    expect(exercise).toContain("sourceAuthUsers = Number(sql(source, 'select count(*) from auth.users;', 'recovery_source_auth_users_count_failed'))");
+    expect(exercise).toContain("restoredAuthUsers = Number(sql(restore, 'select count(*) from auth.users;', 'recovery_restored_auth_users_count_failed'))");
     expect(exercise).toContain('checks.authUsersIntegrity');
     expect(exercise).toContain('checks.rlsAfterRestore');
     expect(exercise).toContain('checks.rlsPoliciesPresent');
@@ -121,6 +121,10 @@ describe('ephemeral Supabase recovery database contract', () => {
     expect(exercise).toContain('checks.exactShaBound');
     expect(exercise).toContain('databaseUrlsStored: false');
     expect(exercise).toContain('rowDataStored: false');
+    expect(exercise).toContain('credentialsStored: false');
+    expect(exercise).toContain('commandArgumentsStored: false');
+    expect(exercise).toContain('rawErrorMessagesStored: false');
+    expect(exercise).toContain('failures.push(safeFailureCode(error))');
     expect(recovery).toContain('EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK');
     expect(recovery).toContain('LAST_KNOWN_GOOD_COMMIT_SHA');
     expect(recovery).toContain('VERCEL_TOKEN');
