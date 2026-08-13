@@ -2,15 +2,24 @@ import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
+  DEFAULT_RECOVERY_DB_PORT,
   DEFAULT_RECOVERY_DB_URL,
+  RECOVERY_DYNAMIC_PORT_ATTEMPTS,
+  RECOVERY_DYNAMIC_PORT_MIN,
+  RECOVERY_DYNAMIC_PORT_SPAN,
   RECOVERY_EXPECTED_SERVER_PREFIX,
   RECOVERY_POSTGRES_MAJOR_VERSION,
   buildProjectId,
+  buildRecoveryDbUrl,
   classifyPublishedBinding,
   configurePostgresMajorVersion,
+  configureRecoveryDatabase,
+  databaseUrlUsesPort,
   isLoopbackDatabaseUrl,
   parseLocalDbUrl,
+  readConfiguredDatabasePort,
   readConfiguredPostgresMajorVersion,
+  selectRecoveryHostPort,
 } from '../../scripts/recovery/manage-ephemeral-recovery-database.mjs';
 
 const manager = fs.readFileSync('scripts/recovery/manage-ephemeral-recovery-database.mjs', 'utf8');
@@ -19,55 +28,78 @@ const finalTechnical = fs.readFileSync('.github/workflows/final-technical-contro
 const recovery = fs.readFileSync('.github/workflows/recovery-resilience-proof.yml', 'utf8');
 
 describe('ephemeral Supabase recovery database contract', () => {
-  it('pins the local project to PostgreSQL 17 and verifies the production 17.6 server line', () => {
+  it('pins PostgreSQL 17 while allowing an isolated per-run host port', () => {
     expect(RECOVERY_POSTGRES_MAJOR_VERSION).toBe(17);
     expect(RECOVERY_EXPECTED_SERVER_PREFIX).toBe('17.6');
+    expect(DEFAULT_RECOVERY_DB_PORT).toBe(54322);
     expect(DEFAULT_RECOVERY_DB_URL).toBe('postgresql://postgres:postgres@127.0.0.1:54322/postgres');
 
-    const configured = configurePostgresMajorVersion('[db]\nport = 54322\nmajor_version = 15\n');
+    const configured = configureRecoveryDatabase('[db]\nport = 54322\nmajor_version = 15\n', 31873);
     expect(readConfiguredPostgresMajorVersion(configured)).toBe(17);
+    expect(readConfiguredDatabasePort(configured)).toBe(31873);
     expect(configured).toContain('major_version = 17');
+    expect(configured).toContain('port = 31873');
     expect(() => configurePostgresMajorVersion('[db]\nport = 54322\n')).toThrow('db.major_version');
+    expect(() => configureRecoveryDatabase('[db]\nmajor_version = 17\n', 31873)).toThrow('db.port');
     expect(manager).toContain('observedServerVersion.startsWith(RECOVERY_EXPECTED_SERVER_PREFIX)');
   });
 
-  it('accepts only loopback connection URLs for the disposable target', () => {
-    expect(isLoopbackDatabaseUrl(DEFAULT_RECOVERY_DB_URL)).toBe(true);
-    expect(isLoopbackDatabaseUrl('postgres://postgres:postgres@localhost:54322/postgres')).toBe(true);
-    expect(isLoopbackDatabaseUrl('postgres://postgres:postgres@127.0.0.1:54322/postgres')).toBe(true);
-    expect(isLoopbackDatabaseUrl('postgres://postgres:postgres@db.example.com:54322/postgres')).toBe(false);
+  it('selects a bounded deterministic free port and skips occupied candidates', () => {
+    const first = selectRecoveryHostPort('12345', '2', []);
+    expect(first).toBeGreaterThanOrEqual(RECOVERY_DYNAMIC_PORT_MIN);
+    expect(first).toBeLessThan(RECOVERY_DYNAMIC_PORT_MIN + RECOVERY_DYNAMIC_PORT_SPAN);
+    expect(selectRecoveryHostPort('12345', '2', [])).toBe(first);
+    const occupied = Array.from({ length: RECOVERY_DYNAMIC_PORT_ATTEMPTS - 1 }, (_, index) =>
+      RECOVERY_DYNAMIC_PORT_MIN + ((first - RECOVERY_DYNAMIC_PORT_MIN + index) % RECOVERY_DYNAMIC_PORT_SPAN));
+    const selected = selectRecoveryHostPort('12345', '2', occupied);
+    expect(occupied).not.toContain(selected);
+    expect(manager).toContain("run('ss', ['-H', '-ltn']");
+    expect(manager).toContain('listeningTcpPorts()');
+  });
+
+  it('accepts only loopback connection URLs and validates the selected host port', () => {
+    const dynamicUrl = buildRecoveryDbUrl(31873);
+    expect(dynamicUrl).toBe('postgresql://postgres:postgres@127.0.0.1:31873/postgres');
+    expect(isLoopbackDatabaseUrl(dynamicUrl)).toBe(true);
+    expect(isLoopbackDatabaseUrl('postgres://postgres:postgres@localhost:31873/postgres')).toBe(true);
+    expect(isLoopbackDatabaseUrl('postgres://postgres:postgres@db.example.com:31873/postgres')).toBe(false);
     expect(isLoopbackDatabaseUrl('not-a-url')).toBe(false);
+    expect(databaseUrlUsesPort(dynamicUrl, 31873)).toBe(true);
+    expect(databaseUrlUsesPort(dynamicUrl, 31874)).toBe(false);
   });
 
-  it('classifies Docker bindings and fails closed on unexpected published endpoints', () => {
-    expect(classifyPublishedBinding('127.0.0.1:54322')).toBe('loopback');
-    expect(classifyPublishedBinding('[::1]:54322')).toBe('loopback');
-    expect(classifyPublishedBinding('0.0.0.0:54322')).toBe('wildcard-v4');
-    expect(classifyPublishedBinding('[::]:54322')).toBe('wildcard-v6');
-    expect(classifyPublishedBinding('10.0.0.4:54322')).toBe('invalid');
-    expect(classifyPublishedBinding('0.0.0.0:6543')).toBe('invalid');
+  it('classifies Docker bindings against the selected host port and fails closed on mismatches', () => {
+    expect(classifyPublishedBinding('127.0.0.1:31873', 31873)).toBe('loopback');
+    expect(classifyPublishedBinding('[::1]:31873', 31873)).toBe('loopback');
+    expect(classifyPublishedBinding('0.0.0.0:31873', 31873)).toBe('wildcard-v4');
+    expect(classifyPublishedBinding('[::]:31873', 31873)).toBe('wildcard-v6');
+    expect(classifyPublishedBinding('10.0.0.4:31873', 31873)).toBe('invalid');
+    expect(classifyPublishedBinding('0.0.0.0:54322', 31873)).toBe('invalid');
   });
 
-  it('installs host and Docker firewall rules before restored production data can be loaded', () => {
+  it('installs host and Docker firewall rules using the selected host port before restored data is loaded', () => {
     expect(manager).toContain("ensureDockerUserChain('iptables')");
-    expect(manager).toContain("firewallArgs('INPUT', DB_HOST_PORT, comment)");
+    expect(manager).toContain("firewallArgs('INPUT', hostPort, comment)");
     expect(manager).toContain('dockerUserArgs(DB_CONTAINER_PORT, comment)');
     expect(manager).toContain("installRule('iptables', input)");
     expect(manager).toContain("installRule('iptables', dockerUser)");
     expect(manager).toContain("installRule('ip6tables', input6)");
     expect(manager).toContain('testLocalConnection(dbUrl)');
-    expect(manager.indexOf('hardenWildcardBindings(containerName, projectId)'))
+    expect(manager.indexOf('hardenWildcardBindings(containerName, projectId, hostPort)'))
       .toBeLessThan(manager.indexOf('testLocalConnection(dbUrl)'));
     expect(manager).toContain('cleanupPersistedFirewallRules');
+    expect(manager).toContain("process.env.RECOVERY_LOCAL_DB_HOST_PORT");
+    expect(manager).toContain("appendGithubEnv('RECOVERY_LOCAL_DB_HOST_PORT', String(hostPort))");
   });
 
   it('parses Supabase CLI env and pretty status formats without exposing the URL to evidence', () => {
-    expect(parseLocalDbUrl('DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"\n'))
-      .toBe(DEFAULT_RECOVERY_DB_URL);
-    expect(parseLocalDbUrl(`DB URL: ${DEFAULT_RECOVERY_DB_URL}\n`)).toBe(DEFAULT_RECOVERY_DB_URL);
+    const dynamicUrl = buildRecoveryDbUrl(31873);
+    expect(parseLocalDbUrl(`DB_URL=\"${dynamicUrl}\"\n`)).toBe(dynamicUrl);
+    expect(parseLocalDbUrl(`DB URL: ${dynamicUrl}\n`)).toBe(dynamicUrl);
     expect(parseLocalDbUrl('API_URL=http://127.0.0.1:54321')).toBeNull();
     expect(manager).toContain('::add-mask::${dbUrl}');
     expect(manager).toContain("appendGithubEnv('RECOVERY_ISOLATED_DATABASE_URL', dbUrl)");
+    expect(manager).toContain('parseLocalDbUrl(status) || buildRecoveryDbUrl(hostPort)');
   });
 
   it('derives bounded per-run project identifiers', () => {

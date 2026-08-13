@@ -15,8 +15,11 @@ import { basename, join } from 'node:path';
 
 export const RECOVERY_POSTGRES_MAJOR_VERSION = 17;
 export const RECOVERY_EXPECTED_SERVER_PREFIX = '17.6';
-export const DEFAULT_RECOVERY_DB_URL = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
-const DB_HOST_PORT = '54322';
+export const DEFAULT_RECOVERY_DB_PORT = 54322;
+export const DEFAULT_RECOVERY_DB_URL = `postgresql://postgres:postgres@127.0.0.1:${DEFAULT_RECOVERY_DB_PORT}/postgres`;
+export const RECOVERY_DYNAMIC_PORT_MIN = 20000;
+export const RECOVERY_DYNAMIC_PORT_SPAN = 20000;
+export const RECOVERY_DYNAMIC_PORT_ATTEMPTS = 64;
 const DB_CONTAINER_PORT = '5432';
 
 function safeToken(value) {
@@ -31,6 +34,38 @@ export function buildProjectId(runId, runAttempt = '1') {
   const run = safeToken(runId) || 'local';
   const attempt = safeToken(runAttempt) || '1';
   return `risck-recovery-${run}-${attempt}`.slice(0, 63);
+}
+
+function stablePortSeed(runId, runAttempt = '1') {
+  const value = `${String(runId ?? 'local')}:${String(runAttempt ?? '1')}`;
+  let hash = 2166136261;
+  for (const char of value) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return hash;
+}
+
+export function selectRecoveryHostPort(runId, runAttempt = '1', occupiedPorts = []) {
+  const occupied = new Set(
+    [...occupiedPorts]
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0 && value <= 65535),
+  );
+  const seed = stablePortSeed(runId, runAttempt);
+  for (let offset = 0; offset < RECOVERY_DYNAMIC_PORT_ATTEMPTS; offset += 1) {
+    const candidate = RECOVERY_DYNAMIC_PORT_MIN + ((seed + offset) % RECOVERY_DYNAMIC_PORT_SPAN);
+    if (!occupied.has(candidate)) return candidate;
+  }
+  throw new Error('No free bounded host port is available for the ephemeral recovery database');
+}
+
+export function buildRecoveryDbUrl(hostPort) {
+  const port = Number(hostPort);
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error('Recovery database host port is invalid');
+  }
+  return `postgresql://postgres:postgres@127.0.0.1:${port}/postgres`;
 }
 
 export function parseLocalDbUrl(statusOutput) {
@@ -50,6 +85,17 @@ export function isLoopbackDatabaseUrl(value) {
   }
 }
 
+export function databaseUrlUsesPort(value, hostPort) {
+  try {
+    const parsed = new URL(String(value));
+    const expected = Number(hostPort);
+    const observed = parsed.port ? Number(parsed.port) : 5432;
+    return Number.isInteger(expected) && observed === expected;
+  } catch {
+    return false;
+  }
+}
+
 export function configurePostgresMajorVersion(configText, majorVersion = RECOVERY_POSTGRES_MAJOR_VERSION) {
   const source = String(configText ?? '');
   if (!/^\s*major_version\s*=\s*\d+\s*$/m.test(source)) {
@@ -58,11 +104,29 @@ export function configurePostgresMajorVersion(configText, majorVersion = RECOVER
   return source.replace(/^\s*major_version\s*=\s*\d+\s*$/m, `major_version = ${majorVersion}`);
 }
 
-export function classifyPublishedBinding(line) {
+function dbPortPattern() {
+  return /(\[db\][\s\S]*?^\s*)port\s*=\s*\d+\s*$/m;
+}
+
+export function configureRecoveryDatabase(configText, hostPort, majorVersion = RECOVERY_POSTGRES_MAJOR_VERSION) {
+  const port = Number(hostPort);
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error('Recovery database host port is invalid');
+  }
+  const withMajor = configurePostgresMajorVersion(configText, majorVersion);
+  const pattern = dbPortPattern();
+  if (!pattern.test(withMajor)) {
+    throw new Error('Supabase config is missing db.port');
+  }
+  return withMajor.replace(pattern, `$1port = ${port}`);
+}
+
+export function classifyPublishedBinding(line, hostPort = DEFAULT_RECOVERY_DB_PORT) {
+  const port = String(hostPort);
   const value = String(line ?? '').trim();
-  if (value === `127.0.0.1:${DB_HOST_PORT}` || value === `[::1]:${DB_HOST_PORT}`) return 'loopback';
-  if (value === `0.0.0.0:${DB_HOST_PORT}`) return 'wildcard-v4';
-  if (value === `[::]:${DB_HOST_PORT}` || value === `:::${DB_HOST_PORT}`) return 'wildcard-v6';
+  if (value === `127.0.0.1:${port}` || value === `[::1]:${port}`) return 'loopback';
+  if (value === `0.0.0.0:${port}`) return 'wildcard-v4';
+  if (value === `[::]:${port}` || value === `:::${port}`) return 'wildcard-v6';
   return 'invalid';
 }
 
@@ -81,6 +145,19 @@ function run(command, args, options = {}) {
     stdio: options.capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
     ...options,
   });
+}
+
+function listeningTcpPorts() {
+  const output = String(run('ss', ['-H', '-ltn'], { capture: true }));
+  return output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.split(/\s+/)[3] ?? '')
+    .map((endpoint) => endpoint.match(/:(\d+)$/)?.[1] ?? '')
+    .filter(Boolean)
+    .map(Number)
+    .filter((port) => Number.isInteger(port));
 }
 
 function appendGithubEnv(name, value) {
@@ -103,11 +180,11 @@ function findDatabaseContainer(projectId) {
 }
 
 function firewallArgs(chain, port, comment) {
-  return [chain, '!', '-i', 'lo', '-p', 'tcp', '--dport', port, '-m', 'comment', '--comment', comment, '-j', 'DROP'];
+  return [chain, '!', '-i', 'lo', '-p', 'tcp', '--dport', String(port), '-m', 'comment', '--comment', comment, '-j', 'DROP'];
 }
 
 function dockerUserArgs(port, comment) {
-  return ['DOCKER-USER', '-p', 'tcp', '--dport', port, '-m', 'comment', '--comment', comment, '-j', 'DROP'];
+  return ['DOCKER-USER', '-p', 'tcp', '--dport', String(port), '-m', 'comment', '--comment', comment, '-j', 'DROP'];
 }
 
 function ruleExists(binary, args) {
@@ -136,32 +213,32 @@ function ensureDockerUserChain(binary) {
   run('sudo', [binary, '-S', 'DOCKER-USER'], { capture: true });
 }
 
-function readPublishedBindings(containerName) {
+function readPublishedBindings(containerName, hostPort) {
   const raw = String(run('docker', ['port', containerName, `${DB_CONTAINER_PORT}/tcp`], { capture: true }));
   const bindings = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   if (bindings.length === 0) throw new Error('Supabase recovery database has no published PostgreSQL binding');
-  const classes = bindings.map(classifyPublishedBinding);
+  const classes = bindings.map((line) => classifyPublishedBinding(line, hostPort));
   if (classes.includes('invalid')) {
     throw new Error(`Unexpected Supabase PostgreSQL port binding: ${bindings.join(', ')}`);
   }
   return { bindings, classes };
 }
 
-function hardenWildcardBindings(containerName, projectId) {
-  const { bindings, classes } = readPublishedBindings(containerName);
+function hardenWildcardBindings(containerName, projectId, hostPort) {
+  const { bindings, classes } = readPublishedBindings(containerName, hostPort);
   const rules = [];
   const comment = `risck-recovery-${safeToken(projectId)}`.slice(0, 120);
   try {
     if (classes.includes('wildcard-v4')) {
       ensureDockerUserChain('iptables');
-      const input = firewallArgs('INPUT', DB_HOST_PORT, comment);
+      const input = firewallArgs('INPUT', hostPort, comment);
       const dockerUser = dockerUserArgs(DB_CONTAINER_PORT, comment);
       if (installRule('iptables', input)) rules.push(['iptables', input]);
       if (installRule('iptables', dockerUser)) rules.push(['iptables', dockerUser]);
     }
 
     if (classes.includes('wildcard-v6')) {
-      const input6 = firewallArgs('INPUT', DB_HOST_PORT, comment);
+      const input6 = firewallArgs('INPUT', hostPort, comment);
       if (installRule('ip6tables', input6)) rules.push(['ip6tables', input6]);
       try {
         ensureDockerUserChain('ip6tables');
@@ -238,11 +315,11 @@ function verifyExactShaMigrations(dbUrl, expectedVersions) {
   }
 }
 
-function applyExactShaProjectSchema(workDir, dbUrl, projectId) {
+function applyExactShaProjectSchema(workDir, dbUrl, projectId, hostPort) {
   const expectedVersions = copyExactShaProjectMigrations(workDir);
   run('supabase', ['--workdir', workDir, 'db', 'reset', '--local', '--no-seed']);
   const containerName = findDatabaseContainer(projectId);
-  const firewall = hardenWildcardBindings(containerName, projectId);
+  const firewall = hardenWildcardBindings(containerName, projectId, hostPort);
   testLocalConnection(dbUrl);
   verifyExactShaMigrations(dbUrl, expectedVersions);
   return { containerName, migrationCount: expectedVersions.length, firewall };
@@ -259,6 +336,11 @@ function start(mode = 'restore-target') {
   if (!runnerTemp) throw new Error('RUNNER_TEMP is required');
 
   const projectId = buildProjectId(process.env.GITHUB_RUN_ID, process.env.GITHUB_RUN_ATTEMPT);
+  const hostPort = selectRecoveryHostPort(
+    process.env.GITHUB_RUN_ID,
+    process.env.GITHUB_RUN_ATTEMPT,
+    listeningTcpPorts(),
+  );
   const workDir = join(runnerTemp, projectId);
   mkdirSync(workDir, { recursive: true });
   let firewall = null;
@@ -266,7 +348,7 @@ function start(mode = 'restore-target') {
   try {
     run('supabase', ['--workdir', workDir, 'init', '--force']);
     const configPath = join(workDir, 'supabase', 'config.toml');
-    const configured = configurePostgresMajorVersion(readFileSync(configPath, 'utf8'));
+    const configured = configureRecoveryDatabase(readFileSync(configPath, 'utf8'), hostPort);
     writeFileSync(configPath, configured, { mode: 0o600 });
 
     run('supabase', ['--workdir', workDir, 'db', 'start']);
@@ -277,18 +359,21 @@ function start(mode = 'restore-target') {
     } catch {
       status = String(run('supabase', ['--workdir', workDir, 'status'], { capture: true }));
     }
-    const dbUrl = parseLocalDbUrl(status) || DEFAULT_RECOVERY_DB_URL;
+    const dbUrl = parseLocalDbUrl(status) || buildRecoveryDbUrl(hostPort);
     if (!isLoopbackDatabaseUrl(dbUrl)) {
       throw new Error('Supabase CLI returned a non-loopback recovery database URL');
     }
+    if (!databaseUrlUsesPort(dbUrl, hostPort)) {
+      throw new Error('Supabase CLI returned a recovery database URL on an unexpected host port');
+    }
 
     let containerName = findDatabaseContainer(projectId);
-    firewall = hardenWildcardBindings(containerName, projectId);
+    firewall = hardenWildcardBindings(containerName, projectId, hostPort);
     testLocalConnection(dbUrl);
 
     let migrationCount = 0;
     if (mode === 'project-schema') {
-      const applied = applyExactShaProjectSchema(workDir, dbUrl, projectId);
+      const applied = applyExactShaProjectSchema(workDir, dbUrl, projectId, hostPort);
       containerName = applied.containerName;
       migrationCount = applied.migrationCount;
       firewall = mergeFirewallState(firewall, applied.firewall);
@@ -306,6 +391,7 @@ function start(mode = 'restore-target') {
     appendGithubEnv('RECOVERY_EPHEMERAL_PROJECT_ID', projectId);
     appendGithubEnv('RECOVERY_EPHEMERAL_WORKDIR', workDir);
     appendGithubEnv('RECOVERY_LOCAL_DB_CONTAINER', containerName);
+    appendGithubEnv('RECOVERY_LOCAL_DB_HOST_PORT', String(hostPort));
     appendGithubEnv('RECOVERY_SUPABASE_POSTGRES_VERSION', observedServerVersion);
     appendGithubEnv('RECOVERY_EPHEMERAL_MIGRATION_COUNT', String(migrationCount));
     appendGithubEnv('RECOVERY_FIREWALL_COMMENT', firewall.comment);
@@ -329,13 +415,17 @@ function start(mode = 'restore-target') {
 function cleanupPersistedFirewallRules() {
   const comment = process.env.RECOVERY_FIREWALL_COMMENT;
   if (!comment) return;
+  const hostPort = Number(process.env.RECOVERY_LOCAL_DB_HOST_PORT);
+  if (!Number.isInteger(hostPort) || hostPort <= 0 || hostPort > 65535) {
+    throw new Error('Persisted recovery database host port is invalid');
+  }
   if (process.env.RECOVERY_FIREWALL_IPV4 === 'true') {
     removeRule('iptables', dockerUserArgs(DB_CONTAINER_PORT, comment));
-    removeRule('iptables', firewallArgs('INPUT', DB_HOST_PORT, comment));
+    removeRule('iptables', firewallArgs('INPUT', hostPort, comment));
   }
   if (process.env.RECOVERY_FIREWALL_IPV6 === 'true') {
     removeRule('ip6tables', dockerUserArgs(DB_CONTAINER_PORT, comment));
-    removeRule('ip6tables', firewallArgs('INPUT', DB_HOST_PORT, comment));
+    removeRule('ip6tables', firewallArgs('INPUT', hostPort, comment));
   }
 }
 
@@ -352,6 +442,11 @@ function stop() {
 
 export function readConfiguredPostgresMajorVersion(configText) {
   const match = String(configText ?? '').match(/^\s*major_version\s*=\s*(\d+)\s*$/m);
+  return match ? Number(match[1]) : null;
+}
+
+export function readConfiguredDatabasePort(configText) {
+  const match = String(configText ?? '').match(/\[db\][\s\S]*?^\s*port\s*=\s*(\d+)\s*$/m);
   return match ? Number(match[1]) : null;
 }
 
