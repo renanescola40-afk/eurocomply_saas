@@ -3,6 +3,10 @@
   "changeSet": "2026-08-13-runtime-schema-reconciliation",
   "migrations": [
     {
+      "filename": "20260813175000_optimize_organization_add_ons_rls_initplan.sql",
+      "purpose": "evaluate organization add-on membership auth once per statement while preserving tenant scope"
+    },
+    {
       "filename": "20260813194500_reconcile_step_up_challenges_runtime.sql",
       "purpose": "materialize backend-only enterprise step-up challenge storage"
     },
