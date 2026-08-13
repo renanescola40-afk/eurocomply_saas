@@ -28,7 +28,7 @@ describe('ephemeral Supabase recovery database contract', () => {
     expect(readConfiguredPostgresMajorVersion(configured)).toBe(17);
     expect(configured).toContain('major_version = 17');
     expect(() => configurePostgresMajorVersion('[db]\nport = 54322\n')).toThrow('db.major_version');
-    expect(manager).toContain("serverVersion.startsWith(RECOVERY_EXPECTED_SERVER_PREFIX)");
+    expect(manager).toContain('observedServerVersion.startsWith(RECOVERY_EXPECTED_SERVER_PREFIX)');
   });
 
   it('accepts only loopback connection URLs for the disposable target', () => {
@@ -88,10 +88,11 @@ describe('ephemeral Supabase recovery database contract', () => {
   it('removes the persistent isolated database secret from protected workflows', () => {
     for (const workflow of [finalTechnical, recovery]) {
       expect(workflow).not.toContain('secrets.RECOVERY_ISOLATED_DATABASE_URL');
-      expect(workflow).toContain('Start disposable Supabase recovery database');
       expect(workflow).toContain('supabase/setup-cli@46f89843689f213b433d85a0508d1183e1803070');
       expect(workflow).toContain('version: 2.101.0');
     }
+    expect(finalTechnical).toContain('Start exact-SHA disposable Supabase project database');
+    expect(recovery).toContain('Start disposable Supabase recovery database');
   });
 
   it('uses the supported Supabase roles schema data dump sequence and transactional local restore', () => {
