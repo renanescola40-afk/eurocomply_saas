@@ -10,7 +10,6 @@ import {
   getStripeEventAuditContext,
   handleStripeWebhookEvent,
   markStripeEventFailed,
-  markStripeEventProcessed,
 } from '@/server/billing/stripe-webhooks';
 import { buildIdempotencyKey } from '@/server/jobs/idempotency-key';
 
@@ -46,6 +45,14 @@ type ExistingEntitlementSnapshot = {
   source_version: number;
 };
 
+type InvoiceWithSubscriptionMetadata = Stripe.Invoice & {
+  parent?: {
+    subscription_details?: {
+      metadata?: Stripe.Metadata | null;
+    } | null;
+  } | null;
+};
+
 export function isStripeEventProcessingLeaseExpired(updatedAt: string | null | undefined, nowMs = Date.now()) {
   if (!updatedAt) return false;
 
@@ -62,13 +69,22 @@ function paymentFailedEmailIdempotencyKey(event: Stripe.Event) {
   });
 }
 
+function getEntitlementOnlyOrganizationId(event: Stripe.Event) {
+  if (event.type !== 'invoice.paid') return null;
+
+  const invoice = event.data.object as InvoiceWithSubscriptionMetadata;
+  const metadata = invoice.parent?.subscription_details?.metadata;
+  const value = metadata?.organization_id ?? metadata?.organizationId;
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
 async function recordEntitlementOnlyReplayAudit(event: Stripe.Event) {
   const context = getStripeEventAuditContext(event);
 
   try {
     await writeAuditLog({
       action: 'webhook_replayed',
-      organizationId: context.organizationId,
+      organizationId: context.organizationId ?? getEntitlementOnlyOrganizationId(event),
       userId: context.actorUserId,
       entityType: 'stripe_webhook_event',
       entityId: event.id,
@@ -89,6 +105,26 @@ async function recordEntitlementOnlyReplayAudit(event: Stripe.Event) {
   }
 }
 
+async function finalizeEntitlementOnlyStripeEvent(event: Stripe.Event) {
+  const supabase = createAdminClient();
+  const organizationId = getEntitlementOnlyOrganizationId(event);
+  const { data, error } = await supabase
+    .from('stripe_events_processed')
+    .update({
+      status: 'processed',
+      processed_at: new Date().toISOString(),
+      organization_id: organizationId,
+      error: null,
+    })
+    .eq('id', event.id)
+    .eq('status', 'processing')
+    .select('id')
+    .maybeSingle<{ id: string }>();
+
+  if (error) throw error;
+  if (data?.id !== event.id) throw new Error('stripe_entitlement_only_finalize_conflict');
+}
+
 async function runEntitlementOnlyStripeEvent(event: Stripe.Event) {
   const claimed = await claimStripeEventForProcessing(event);
 
@@ -98,7 +134,7 @@ async function runEntitlementOnlyStripeEvent(event: Stripe.Event) {
   }
 
   try {
-    await markStripeEventProcessed(event);
+    await finalizeEntitlementOnlyStripeEvent(event);
     return { skipped: false };
   } catch (error) {
     await markStripeEventFailed(event, error);
@@ -232,7 +268,7 @@ async function recordLeaseRecoveryAudit(event: Stripe.Event) {
   try {
     await writeAuditLog({
       action: 'webhook_processing_lease_recovered',
-      organizationId: context.organizationId,
+      organizationId: context.organizationId ?? getEntitlementOnlyOrganizationId(event),
       userId: context.actorUserId,
       entityType: 'stripe_webhook_event',
       entityId: event.id,
