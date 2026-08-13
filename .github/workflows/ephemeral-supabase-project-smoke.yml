@@ -22,7 +22,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ephemeral-supabase-project-smoke-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+  group: ephemeral-supabase-project-smoke-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
