@@ -3,31 +3,65 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const workflow = readFileSync(
+const ciWorkflow = readFileSync(
   join(process.cwd(), '.github/workflows/ci.yml'),
   'utf8',
 );
+const vercelProductionWorkflow = readFileSync(
+  join(process.cwd(), '.github/workflows/vercel-production.yml'),
+  'utf8',
+);
+const runtimeCloseoutWorkflow = readFileSync(
+  join(process.cwd(), '.github/workflows/enterprise-runtime-evidence-closeout.yml'),
+  'utf8',
+);
 
-describe('required CI production environment governance', () => {
-  it('has read-only Actions permission for environment verification', () => {
-    expect(workflow).toContain('permissions:');
-    expect(workflow).toContain('contents: read');
-    expect(workflow).toContain('actions: read');
-    expect(workflow).not.toMatch(/actions:\s*write/);
+describe('production environment governance boundaries', () => {
+  it('keeps mutable live environment state out of pull-request quality checks', () => {
+    expect(ciWorkflow).toContain('permissions:');
+    expect(ciWorkflow).toContain('contents: read');
+    expect(ciWorkflow).not.toContain('Production deployment environment governance gate');
+    expect(ciWorkflow).not.toContain('GITHUB_ENVIRONMENT_NAME');
+    expect(ciWorkflow).not.toContain('check-github-environment-governance.mjs');
+    expect(ciWorkflow).not.toMatch(/secrets\./);
   });
 
-  it('fails closed on both secrets-bearing production environments before ordinary quality gates', () => {
-    const governance = workflow.indexOf('Production deployment environment governance gate');
-    const lint = workflow.indexOf('- name: Lint');
+  it('fails closed on Production governance before the Vercel job can load protected secrets', () => {
+    const governance = vercelProductionWorkflow.indexOf(
+      'Verify Production environment governance before protected secrets',
+    );
+    const protectedJob = vercelProductionWorkflow.indexOf('  deploy-production:');
 
     expect(governance).toBeGreaterThan(-1);
-    expect(lint).toBeGreaterThan(governance);
+    expect(protectedJob).toBeGreaterThan(governance);
 
-    const boundary = workflow.slice(governance, lint);
-    expect(boundary).toContain('GITHUB_TOKEN: ${{ github.token }}');
-    expect(boundary).toContain("REQUIRE_PROTECTED_BRANCHES: 'true'");
-    expect(boundary).toContain('GITHUB_ENVIRONMENT_NAME=Production node scripts/security/check-github-environment-governance.mjs');
-    expect(boundary).toContain('GITHUB_ENVIRONMENT_NAME=enterprise-production-closeout node scripts/security/check-github-environment-governance.mjs');
-    expect(boundary).not.toMatch(/secrets\./);
+    const preflight = vercelProductionWorkflow.slice(0, protectedJob);
+    expect(preflight).toContain('GITHUB_TOKEN: ${{ github.token }}');
+    expect(preflight).toContain('GITHUB_ENVIRONMENT_NAME: Production');
+    expect(preflight).toContain("REQUIRE_PROTECTED_BRANCHES: 'true'");
+    expect(preflight).toContain('node scripts/security/check-github-environment-governance.mjs');
+    expect(preflight).not.toMatch(/secrets\./);
+
+    const protectedBoundary = vercelProductionWorkflow.slice(protectedJob);
+    expect(protectedBoundary).toContain('environment: Production');
+  });
+
+  it('fails closed on closeout governance before the runtime evidence job can load protected secrets', () => {
+    const governanceJob = runtimeCloseoutWorkflow.indexOf('  environment-governance:');
+    const protectedJob = runtimeCloseoutWorkflow.indexOf('  closeout:');
+
+    expect(governanceJob).toBeGreaterThan(-1);
+    expect(protectedJob).toBeGreaterThan(governanceJob);
+
+    const preflight = runtimeCloseoutWorkflow.slice(governanceJob, protectedJob);
+    expect(preflight).toContain('GITHUB_TOKEN: ${{ github.token }}');
+    expect(preflight).toContain('GITHUB_ENVIRONMENT_NAME: enterprise-production-closeout');
+    expect(preflight).toContain("REQUIRE_PROTECTED_BRANCHES: 'true'");
+    expect(preflight).toContain('node scripts/security/check-github-environment-governance.mjs');
+    expect(preflight).not.toMatch(/secrets\./);
+
+    const protectedBoundary = runtimeCloseoutWorkflow.slice(protectedJob);
+    expect(protectedBoundary).toContain('needs: [contract, environment-governance]');
+    expect(protectedBoundary).toContain('environment: enterprise-production-closeout');
   });
 });
