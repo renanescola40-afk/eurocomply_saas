@@ -61,7 +61,7 @@ jobs:
           sudo apt-get install --yes postgresql-client
 
       - name: Start exact-SHA disposable Supabase project database
-        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start-project
+        run: node scripts/recovery/run-ephemeral-project-schema-replay.mjs
 
       - name: Bind disposable database to integration validator
         shell: bash
