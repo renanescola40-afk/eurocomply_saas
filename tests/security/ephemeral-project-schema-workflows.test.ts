@@ -5,6 +5,7 @@ import {
   DUPLICATE_REVIEW_REFERENCE,
   INVALID_REVIEW_REFERENCE,
   KNOWN_DUPLICATE_MIGRATION_GROUPS,
+  SCHEMA_EFFECT_REPLACED_MIGRATIONS,
   UNAPPLIED_LEGACY_MIGRATIONS,
   UNRESOLVED_INVALID_MIGRATIONS,
   inspectMigrationReplayDebt,
@@ -15,6 +16,10 @@ const replay = fs.readFileSync('scripts/recovery/run-ephemeral-project-schema-re
 const duplicateReview = fs.readFileSync(DUPLICATE_REVIEW_REFERENCE, 'utf8');
 const invalidReview = fs.readFileSync(INVALID_REVIEW_REFERENCE, 'utf8');
 const ephemeralSmoke = fs.readFileSync('.github/workflows/ephemeral-supabase-project-smoke.yml', 'utf8');
+const addOnReplacement = fs.readFileSync(
+  'supabase/migrations/20260813121500_reconcile_organization_add_ons.sql',
+  'utf8',
+);
 const schemaWorkflows = [
   '.github/workflows/final-technical-controls-proof.yml',
   '.github/workflows/data-governance-runtime-proof.yml',
@@ -49,31 +54,42 @@ describe('exact-SHA disposable project schema workflows', () => {
     }
   });
 
-  it('excludes five proven legacy files and one unresolved invalid RLS artifact', () => {
+  it('keeps legacy and unresolved invalid history excluded from disposable execution', () => {
     expect(UNAPPLIED_LEGACY_MIGRATIONS).toHaveLength(5);
     expect(UNRESOLVED_INVALID_MIGRATIONS).toEqual(['20260619_multi_tenant_rls_hardening.sql']);
     expect(invalidReview).toContain('`20260619_multi_tenant_rls_hardening.sql`');
     expect(invalidReview).toContain('REQUIRES_SPLIT_REVIEW');
     expect(replay).toContain("const UNAPPLIED_LEGACY_VERSION = '20260605'");
     expect(replay).toContain('for (const canonicalName of UNRESOLVED_INVALID_MIGRATIONS)');
-    expect(replay).toContain("appendGithubEnv('RECOVERY_EPHEMERAL_UNRESOLVED_INVALID_EXCLUDED_FILE_COUNT'");
   });
 
-  it('stages the other 34 duplicate files only for disposable schema effects', () => {
-    expect(duplicateFiles.length - UNAPPLIED_LEGACY_MIGRATIONS.length).toBe(34);
-    expect(replay).toContain('allocateReplayVersions(version, files.length, occupied)');
+  it('replaces the invalid historical add-on effect with a unique canonical migration', () => {
+    expect(SCHEMA_EFFECT_REPLACED_MIGRATIONS).toEqual({
+      '20260613_organization_add_ons.sql':
+        'supabase/migrations/20260813121500_reconcile_organization_add_ons.sql',
+    });
+    expect(addOnReplacement).toContain('create table if not exists public.organization_add_ons');
+    expect(addOnReplacement).toContain('force row level security');
+    expect(addOnReplacement).toContain('revoke insert, update, delete, truncate, references, trigger');
+    expect(addOnReplacement).toContain('grant select on table public.organization_add_ons to authenticated');
+    expect(addOnReplacement).toContain('grant all on table public.organization_add_ons to service_role');
+    expect(addOnReplacement).toContain('set search_path = pg_catalog');
+    expect(addOnReplacement).toContain('drop trigger if exists organization_add_ons_set_updated_at');
+    expect(addOnReplacement).not.toContain('create policy if not exists');
+    expect(addOnReplacement).not.toContain('create trigger if not exists');
+  });
+
+  it('stages only 33 duplicate files and preserves migration-history fail-closed status', () => {
+    expect(
+      duplicateFiles.length
+        - UNAPPLIED_LEGACY_MIGRATIONS.length
+        - Object.keys(SCHEMA_EFFECT_REPLACED_MIGRATIONS).length,
+    ).toBe(33);
+    expect(replay).toContain('allocateReplayVersions(version, executableFiles.length, occupied)');
     expect(replay).toContain('copyFileSync(item.backupPath, item.replayPath)');
-    expect(replay).toContain("appendGithubEnv('RECOVERY_EPHEMERAL_REPLAY_STAGED_FILE_COUNT'");
+    expect(replay).toContain("appendGithubEnv('RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLACED_FILE_COUNT'");
     expect(replay).toContain("appendGithubEnv('RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL', 'false')");
     expect(replay).toContain('replay timestamps are not migration-history repair evidence');
-    expect(replay).toContain('restoreItems(items)');
-  });
-
-  it('never promotes disposable replay into migration-history authority', () => {
-    expect(replay).toContain(DUPLICATE_REVIEW_REFERENCE);
-    expect(replay).toContain(INVALID_REVIEW_REFERENCE);
-    expect(replay).toContain("process.env.GITHUB_ACTIONS !== 'true'");
-    expect(ephemeralSmoke).toContain('RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL');
   });
 
   it('revalidates and hardens Docker bindings after project schema reset', () => {
@@ -102,5 +118,6 @@ describe('exact-SHA disposable project schema workflows', () => {
     expect(recovery).toContain('manage-ephemeral-recovery-database.mjs start');
     expect(recovery).not.toContain('run-ephemeral-project-schema-replay.mjs');
     expect(recovery).not.toContain('secrets.RECOVERY_ISOLATED_DATABASE_URL');
+    expect(ephemeralSmoke).toContain('RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL');
   });
 });
