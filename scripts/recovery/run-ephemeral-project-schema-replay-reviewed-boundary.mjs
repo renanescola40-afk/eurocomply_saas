@@ -4,7 +4,11 @@ import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
-const blockedMigration = '20260721093000_enterprise_workflow_automation.sql';
+const blockedMigrations = Object.freeze([
+  '20260721093000_enterprise_workflow_automation.sql',
+  '20260721123000_gpai_third_party_model_governance.sql',
+  '20260721133000_post_market_ai_incident_governance.sql',
+]);
 const workflowReviewPath = 'docs/security/decisions/2026-08-10-supabase-human-review-mega-batch-f.md';
 const helperReviewPath = 'docs/security/evidence/human-review/supabase-migration-mega-batch-n.md';
 
@@ -16,9 +20,6 @@ const tenantRelationsReviewPath = 'docs/security/evidence/human-review/supabase-
 const licensingReviewPath = 'docs/security/evidence/human-review/supabase-migration-mega-batch-g.md';
 
 const migrationsDir = join(process.cwd(), 'supabase', 'migrations');
-const sourcePath = join(migrationsDir, blockedMigration);
-const heldPath = join(migrationsDir, `${blockedMigration}.prerequisite-blocked`);
-
 const integrationSourcePath = join(migrationsDir, integrationMigration);
 const integrationHeldPath = join(migrationsDir, `${integrationMigration}.dependency-reordered`);
 const integrationReplayPath = join(migrationsDir, '20260721193001_enterprise_integrations_platform.sql');
@@ -47,30 +48,40 @@ function assertSameBytes(leftPath, rightPath, label) {
   }
 }
 
+function blockedRecord(name) {
+  return {
+    name,
+    sourcePath: join(migrationsDir, name),
+    heldPath: join(migrationsDir, `${name}.prerequisite-blocked`),
+  };
+}
+
 function validateReviewedBoundary() {
   if (process.env.GITHUB_ACTIONS !== 'true') {
     fail('Reviewed-boundary disposable replay is restricted to GitHub Actions');
   }
 
-  assertPresent(sourcePath, 'prerequisite-blocked migration');
-  assertAbsent(heldPath, 'prerequisite hold path');
-  assertPresent(workflowReviewPath, 'workflow review evidence');
+  assertPresent(workflowReviewPath, 'workflow/GPAI/post-market review evidence');
   assertPresent(helperReviewPath, 'membership-helper review evidence');
 
   const workflowReview = readFileSync(workflowReviewPath, 'utf8');
   const helperReview = readFileSync(helperReviewPath, 'utf8');
-  const migrationSql = readFileSync(sourcePath, 'utf8');
-
-  if (!workflowReview.includes(`\`${blockedMigration}\``) || !workflowReview.includes('PENDING_DEPLOYMENT')) {
-    fail(`Reviewed classification boundary drifted for ${blockedMigration}`);
-  }
   if (!helperReview.includes('public.is_organization_member(uuid)')
       || !helperReview.includes('PREREQUISITE_BLOCKED')
       || !helperReview.includes('canonical foundation')) {
     fail('Membership-helper prerequisite evidence no longer proves the unresolved boundary');
   }
-  if (!migrationSql.includes('public.is_organization_member(organization_id)')) {
-    fail(`${blockedMigration} no longer contains the reviewed unresolved helper dependency`);
+
+  for (const name of blockedMigrations) {
+    const record = blockedRecord(name);
+    assertPresent(record.sourcePath, 'prerequisite-blocked migration');
+    assertAbsent(record.heldPath, 'prerequisite hold path');
+    if (!workflowReview.includes(`\`${name}\``) || !workflowReview.includes('PENDING_DEPLOYMENT')) {
+      fail(`Batch-F owner classification boundary drifted for ${name}`);
+    }
+    if (!readFileSync(record.sourcePath, 'utf8').includes('public.is_organization_member(organization_id)')) {
+      fail(`${name} no longer contains the reviewed unresolved membership-helper dependency`);
+    }
   }
 
   for (const [path, label] of [
@@ -119,6 +130,20 @@ function validateReviewedBoundary() {
   }
 }
 
+function stageBlockedMigrations() {
+  const records = blockedMigrations.map(blockedRecord);
+  for (const record of records) renameSync(record.sourcePath, record.heldPath);
+  return records;
+}
+
+function restoreBlockedMigrations(records) {
+  for (const record of [...records].reverse()) {
+    if (!existsSync(record.heldPath)) fail(`Prerequisite hold artifact disappeared: ${record.heldPath}`);
+    if (existsSync(record.sourcePath)) fail(`Prerequisite-blocked migration unexpectedly reappeared before restore: ${record.sourcePath}`);
+    renameSync(record.heldPath, record.sourcePath);
+  }
+}
+
 function stageReviewedReplayOrder() {
   renameSync(integrationSourcePath, integrationHeldPath);
   renameSync(tenantRelationsSourcePath, tenantRelationsHeldPath);
@@ -144,10 +169,11 @@ function restoreReviewedReplayOrder() {
 function main() {
   validateReviewedBoundary();
   let replayError = null;
+  let blockedRecords = [];
   let integrationOrderStaged = false;
 
-  renameSync(sourcePath, heldPath);
   try {
+    blockedRecords = stageBlockedMigrations();
     stageReviewedReplayOrder();
     integrationOrderStaged = true;
     execFileSync(process.execPath, [replayScript], {
@@ -160,14 +186,12 @@ function main() {
     if (integrationOrderStaged || existsSync(integrationHeldPath) || existsSync(tenantRelationsHeldPath)) {
       restoreReviewedReplayOrder();
     }
-    if (!existsSync(heldPath)) fail(`Prerequisite hold artifact disappeared: ${heldPath}`);
-    if (existsSync(sourcePath)) fail(`Prerequisite-blocked migration unexpectedly reappeared before restore: ${sourcePath}`);
-    renameSync(heldPath, sourcePath);
+    if (blockedRecords.length) restoreBlockedMigrations(blockedRecords);
   }
 
   if (replayError) throw replayError;
   process.stdout.write(
-    `Disposable replay excluded ${blockedMigration} under reviewed unresolved-prerequisite evidence and replayed ${integrationMigration} → ${tenantRelationsMigration} immediately after ${licensingFoundationMigration}; canonical migration history remains unresolved.\n`,
+    `Disposable replay excluded ${blockedRecords.length} reviewed Batch-F migrations that depend on unresolved public.is_organization_member(uuid), and replayed ${integrationMigration} → ${tenantRelationsMigration} immediately after ${licensingFoundationMigration}; canonical migration history remains unresolved.\n`,
   );
 }
 
