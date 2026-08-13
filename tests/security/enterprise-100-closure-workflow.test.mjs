@@ -49,7 +49,9 @@ test('closure generates exact-SHA Vercel deployment evidence directly before hyd
 test('artifact collection is restricted to authorized families and exact producer workflows', () => {
   const expectedPairs = new Map([
     ['enterprise-production-final-evidence-*', '.github/workflows/enterprise-production-gate.yml'],
+    ['production-runtime-proof-*', '.github/workflows/production-runtime-proof.yml'],
     ['enterprise-recovery-*', '.github/workflows/enterprise-recovery-drill.yml'],
+    ['recovery-resilience-proof-*', '.github/workflows/recovery-resilience-proof.yml'],
     ['enterprise-runtime-closeout-*', '.github/workflows/enterprise-runtime-evidence-closeout.yml'],
     ['enterprise-readiness-scorecard-*', '.github/workflows/enterprise-readiness-scorecard.yml'],
     ['stripe-billing-validation', '.github/workflows/stripe-runtime-proof.yml'],
@@ -123,14 +125,17 @@ test('human legal and conversation closeout producers trigger exact-SHA reevalua
 
 test('production and Supabase RLS producer completions retrigger exact-SHA closure', () => {
   assert.match(workflow, /- 'Enterprise Production Gate'/);
+  assert.match(workflow, /- 'Production Runtime Proof'/);
+  assert.match(workflow, /- 'Recovery Resilience Proof'/);
+  assert.match(workflow, /- 'Enterprise Safe Runtime Bootstrap'/);
   assert.match(workflow, /- 'Enterprise Readiness Scorecard'/);
   assert.match(workflow, /- 'Supabase Production RLS Reconciliation'/);
   assert.match(workflow, /push:\n    branches: \[main\]/);
 });
 
-test('same-SHA producer completions coalesce to the newest exact-SHA closure snapshot', () => {
+test('same-SHA producer completions preserve one running exact-SHA closure snapshot', () => {
   assert.match(workflow, /group: enterprise-100-closure-/);
-  assert.match(workflow, /cancel-in-progress: true/);
+  assert.match(workflow, /cancel-in-progress: false/);
 });
 
 test('closure summaries use valid jq string programs', () => {
@@ -156,6 +161,8 @@ test('closure remains fail closed after artifact hydration', () => {
   assert.match(hydrator, /resolveEvidenceShaBinding/);
   assert.match(hydrator, /EXPLICIT_SOURCE_ALIASES/);
   assert.match(hydrator, /matchedBy: 'explicit_alias'/);
+  assert.match(hydrator, /authoritative_declared_path/);
+  assert.match(hydrator, /direct-production-deployment\/release-validation\/production-deployment\.json/);
   assert.match(hydrator, /does not award PASS/);
   assert.match(shaBindingResolver, /expectedSha/);
   assert.match(shaBindingResolver, /runtimeContext\.commitSha/);
