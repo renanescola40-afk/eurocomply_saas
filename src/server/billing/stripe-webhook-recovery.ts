@@ -243,8 +243,9 @@ async function repairProcessedStripeEntitlement(event: Stripe.Event) {
 
 async function runStripeWebhookHandler(event: Stripe.Event) {
   const result = await runCoreStripeWebhookHandler(event);
+  const unsupported = 'unsupported' in result ? result.unsupported ?? false : false;
 
-  if (result.unsupported || (result.skipped && !result.duplicate)) return result;
+  if (unsupported || (result.skipped && !result.duplicate)) return result;
 
   if (result.duplicate) {
     // Core Stripe processing is intentionally idempotent. A completed core event may
