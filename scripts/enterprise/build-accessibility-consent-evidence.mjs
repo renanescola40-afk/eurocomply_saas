@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { evaluateRepositoryCheckBoundary } from './repository-evidence-boundary.mjs';
 
 const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const FULL_SHA = /^[a-f0-9]{40}$/;
@@ -14,11 +15,6 @@ const DEFAULT_GITHUB_CHECKS = 'artifacts/enterprise-readiness/github-checks-evid
 
 function digest(value) {
   return createHash('sha256').update(value).digest('hex');
-}
-
-function checkStatus(document, name) {
-  const check = document?.checks?.find((item) => item?.name === name);
-  return check?.status === 'PASS';
 }
 
 export function evaluateAccessibilityConsentCoverage({
@@ -75,11 +71,12 @@ export function evaluateAccessibilityConsentCoverage({
 }
 
 export function evaluateExactShaChecks(githubChecks, targetSha) {
+  const boundary = evaluateRepositoryCheckBoundary(githubChecks, targetSha);
   return {
-    evidenceComplete: githubChecks?.status === 'Complete' && githubChecks?.outcome === 'passed',
-    exactSha: githubChecks?.targetSha === targetSha,
-    fullSecuritySuite: checkStatus(githubChecks, 'fullSecuritySuite'),
-    requiredChecks: checkStatus(githubChecks, 'requiredChecks'),
+    evidenceComplete: boundary.repositoryEvidenceComplete,
+    exactSha: boundary.exactSha,
+    fullSecuritySuite: boundary.fullSecuritySuite,
+    requiredChecks: boundary.requiredChecks,
   };
 }
 
@@ -106,8 +103,7 @@ export function buildAccessibilityConsentEvidence({
   const exactShaProvenance = provenanceFailures.length === 0;
   const executionProven = exactChecks.evidenceComplete
     && exactChecks.exactSha
-    && exactChecks.fullSecuritySuite
-    && exactChecks.requiredChecks;
+    && exactChecks.fullSecuritySuite;
   const keyboardPassed = coverage.keyboardCoverage && executionProven && exactShaProvenance;
   const screenReaderPassed = coverage.screenReaderCoverage && executionProven && exactShaProvenance;
   const analyticsPassed = coverage.analyticsConsentCoverage && executionProven && exactShaProvenance;
@@ -123,6 +119,7 @@ export function buildAccessibilityConsentEvidence({
     sourceDigests,
     executionEvidence: {
       exactShaChecksComplete: exactChecks.evidenceComplete,
+      repositoryChecksPassed: exactChecks.evidenceComplete,
       exactShaMatches: exactChecks.exactSha,
       fullSecuritySuitePassed: exactChecks.fullSecuritySuite,
       requiredChecksPassed: exactChecks.requiredChecks,
@@ -162,7 +159,7 @@ export function buildAccessibilityConsentEvidence({
         'src/components/analytics/AnalyticsConsentBanner.tsx',
         DEFAULT_GITHUB_CHECKS,
       ],
-      evidenceBoundary: 'Validates keyboard reachability, focus behavior, semantic landmarks, programmatic labels, accessible names, ARIA references and image alternatives in Chromium for the exact SHA. It does not certify every assistive technology, WCAG conformance level or authenticated product surface.',
+      evidenceBoundary: 'Validates keyboard reachability, focus behavior, semantic landmarks, programmatic labels, accessible names, ARIA references and image alternatives in Chromium for the exact SHA. Repository evidence completion does not imply Enterprise Production Gate or production runtime closure. It does not certify every assistive technology, WCAG conformance level or authenticated product surface.',
     },
     analytics: {
       schema: 'risck-comply.analytics-consent-validation.v1',
@@ -192,7 +189,7 @@ export function buildAccessibilityConsentEvidence({
         '.github/workflows/full-security-suite.yml',
         DEFAULT_GITHUB_CHECKS,
       ],
-      evidenceBoundary: 'Validates that the PostHog script is absent before consent, denial persists without loading analytics, explicit grant enables the synthetic provider script, and session recording remains consent-gated on the exact SHA. It does not prove production PostHog ingestion, legal advice or consent-copy approval.',
+      evidenceBoundary: 'Validates that the PostHog script is absent before consent, denial persists without loading analytics, explicit grant enables the synthetic provider script, and session recording remains consent-gated on the exact SHA. Repository evidence completion does not imply Enterprise Production Gate or production runtime closure. It does not prove production PostHog ingestion, legal advice or consent-copy approval.',
     },
   };
 }
