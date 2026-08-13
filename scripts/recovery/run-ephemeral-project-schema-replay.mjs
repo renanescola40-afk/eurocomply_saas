@@ -116,7 +116,7 @@ function restoreLegacyQuarantine(quarantined) {
   }
 
   const quarantineDir = quarantined[0]?.quarantineDir;
-  if (quarantineDir) {
+  if (failures.length === 0 && quarantineDir) {
     try {
       rmSync(quarantineDir, { recursive: true, force: true });
     } catch (error) {
