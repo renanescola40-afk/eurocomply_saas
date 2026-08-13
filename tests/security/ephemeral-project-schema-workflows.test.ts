@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const manager = fs.readFileSync('scripts/recovery/manage-ephemeral-recovery-database.mjs', 'utf8');
+const replay = fs.readFileSync('scripts/recovery/run-ephemeral-project-schema-replay.mjs', 'utf8');
 const ephemeralSmoke = fs.readFileSync('.github/workflows/ephemeral-supabase-project-smoke.yml', 'utf8');
 const schemaWorkflows = [
   '.github/workflows/final-technical-controls-proof.yml',
@@ -22,6 +23,24 @@ describe('exact-SHA disposable project schema workflows', () => {
     expect(manager).toContain('supabase_migrations.schema_migrations');
     expect(manager).toContain("appendGithubEnv('RECOVERY_EPHEMERAL_DATABASE_MODE', mode)");
     expect(manager).toContain("appendGithubEnv('RECOVERY_EPHEMERAL_MIGRATION_COUNT', String(migrationCount))");
+  });
+
+  it('stages only known duplicate-prefix legacy migrations and restores their exact bytes after replay', () => {
+    for (const migration of [
+      '20260605_gap_analysis.sql',
+      '20260605_findings_tasks.sql',
+      '20260605_compliance_evidence.sql',
+      '20260605_evidence_vault.sql',
+      '20260605_gap_analysis_user_scoped_patch.sql',
+    ]) {
+      expect(replay).toContain(migration);
+    }
+    expect(replay).toContain("createHash('sha256')");
+    expect(replay).toContain('renameSync(canonicalPath, replayPath)');
+    expect(replay).toContain('sha256(replayPath) !== digest');
+    expect(replay).toContain('restoreLegacyReplay(staged)');
+    expect(replay).toContain("['scripts/recovery/manage-ephemeral-recovery-database.mjs', 'start-project']");
+    expect(replay).toContain("process.env.GITHUB_ACTIONS !== 'true'");
   });
 
   it('revalidates and hardens Docker bindings after project schema reset', () => {
@@ -49,13 +68,15 @@ describe('exact-SHA disposable project schema workflows', () => {
     expect(ephemeralSmoke).toContain('EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}');
     expect(ephemeralSmoke).toContain('ref: ${{ github.event.pull_request.head.sha }}');
     expect(ephemeralSmoke).toContain('test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"');
+    expect(ephemeralSmoke).toContain('run-ephemeral-project-schema-replay.mjs');
   });
 
-  it('uses start-project and mandatory cleanup for every schema-only protected proof', () => {
+  it('uses deterministic project replay and mandatory cleanup for every schema-only protected proof', () => {
     for (const { path, source } of schemaWorkflows) {
       expect(source, path).toContain('supabase/setup-cli@46f89843689f213b433d85a0508d1183e1803070');
       expect(source, path).toContain('version: 2.101.0');
-      expect(source, path).toContain('manage-ephemeral-recovery-database.mjs start-project');
+      expect(source, path).toContain('run-ephemeral-project-schema-replay.mjs');
+      expect(source, path).not.toContain('manage-ephemeral-recovery-database.mjs start-project');
       expect(source, path).toContain('manage-ephemeral-recovery-database.mjs stop');
       expect(source, path).toMatch(/if: always\(\)/);
       expect(source, path).not.toContain('secrets.RECOVERY_ISOLATED_DATABASE_URL');
@@ -66,6 +87,7 @@ describe('exact-SHA disposable project schema workflows', () => {
   it('keeps production backup restore on a clean restore-target instead of preapplying project migrations', () => {
     expect(recovery).toContain('manage-ephemeral-recovery-database.mjs start');
     expect(recovery).not.toContain('manage-ephemeral-recovery-database.mjs start-project');
+    expect(recovery).not.toContain('run-ephemeral-project-schema-replay.mjs');
     expect(recovery).not.toContain('secrets.RECOVERY_ISOLATED_DATABASE_URL');
     expect(recovery).toContain('run-backup-restore-exercise.mjs');
     expect(recovery).toMatch(/Remove disposable recovery database[\s\S]*?if: always\(\) &&/);
