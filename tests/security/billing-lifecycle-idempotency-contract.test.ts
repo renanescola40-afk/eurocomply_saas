@@ -48,4 +48,32 @@ describe('enterprise billing lifecycle idempotency contract', () => {
     expect(lifecycle).toContain("input.interval ? normalizeBillingInterval(input.interval) : getCurrentBillingInterval(baseItem)");
     expect(lifecycle).toContain("baseItem.price.recurring?.interval === 'year' ? 'year' : 'month'");
   });
+
+  it('records provider/audit phases before releasing lifecycle serialization', () => {
+    const lifecycle = read('src/server/billing/subscription-lifecycle.ts');
+    const ledger = read('src/server/billing/lifecycle-request-ledger.ts');
+
+    expect(ledger).toContain("BILLING_LIFECYCLE_PHASE_PROVIDER_IN_FLIGHT = 'provider_in_flight'");
+    expect(ledger).toContain("BILLING_LIFECYCLE_PHASE_PROVIDER_SUCCEEDED = 'provider_succeeded_pending_audit'");
+    expect(ledger).toContain("BILLING_LIFECYCLE_PHASE_AUDIT_SUCCEEDED = 'audit_succeeded_pending_completion'");
+    expect(ledger).toContain("'billing_provider_outcome_uncertain'");
+    expect(ledger).toContain('expireStaleOrganizationLease');
+    expect(ledger).toContain('canExpireBillingLifecycleLease');
+
+    const providerInFlightIndex = lifecycle.indexOf('await markBillingLifecycleProviderInFlight(requestId)');
+    const providerMutationIndex = lifecycle.indexOf('stripe.subscriptions.update(');
+    const providerSucceededIndex = lifecycle.indexOf('await markBillingLifecycleProviderSucceeded(requestId)');
+    const auditIndex = lifecycle.indexOf('const audit = await writeAuditLog({');
+    const auditSucceededIndex = lifecycle.indexOf('await markBillingLifecycleAuditSucceeded(requestId)');
+    const completeIndex = lifecycle.indexOf('await completeBillingLifecycleRequest(requestId)', auditSucceededIndex);
+
+    expect(providerInFlightIndex).toBeGreaterThan(-1);
+    expect(providerMutationIndex).toBeGreaterThan(providerInFlightIndex);
+    expect(providerSucceededIndex).toBeGreaterThan(providerMutationIndex);
+    expect(auditIndex).toBeGreaterThan(providerSucceededIndex);
+    expect(auditSucceededIndex).toBeGreaterThan(auditIndex);
+    expect(completeIndex).toBeGreaterThan(auditSucceededIndex);
+    expect(lifecycle).toContain("claim.kind === 'audit_succeeded_recovery'");
+    expect(lifecycle).toContain("claim.kind === 'provider_succeeded_recovery'");
+  });
 });

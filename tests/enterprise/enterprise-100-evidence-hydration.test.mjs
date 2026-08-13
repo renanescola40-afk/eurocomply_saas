@@ -249,6 +249,96 @@ test('fails closed on conflicting exact-SHA evidence', async () => {
   assert.equal(manifest.results[0]?.status, 'AMBIGUOUS');
 });
 
+test('prefers the root-anchored closure deployment proof over conflicting retained copies', async () => {
+  const { sourceRoot, outputRoot } = await tempRoots();
+  const deploymentConfig = {
+    controls: [{ id: 'production-deployment', evidence: 'release-validation/production-deployment.json' }],
+  };
+  await writeCandidate(sourceRoot, '501-retained/release-validation/production-deployment.json', {
+    status: 'Open',
+    targetSha: TARGET,
+    source: 'retained-production-gate',
+  });
+  await writeCandidate(
+    sourceRoot,
+    'direct-production-deployment/release-validation/production-deployment.json',
+    { status: 'PASS', targetSha: TARGET, source: 'closure-generated' },
+  );
+
+  const manifest = await hydrateEnterpriseClosureEvidence({
+    sourceRoot,
+    outputRoot,
+    targetSha: TARGET,
+    closureConfig: deploymentConfig,
+  });
+
+  assert.equal(manifest.hydratedEvidence, 1);
+  assert.equal(manifest.ambiguousEvidence, 0);
+  assert.equal(manifest.results[0]?.matchedBy, 'authoritative_declared_path');
+  assert.equal(manifest.results[0]?.shadowedCandidateCount, 1);
+  const hydrated = JSON.parse(await readFile(
+    path.join(outputRoot, 'release-validation/production-deployment.json'),
+    'utf8',
+  ));
+  assert.equal(hydrated.source, 'closure-generated');
+});
+
+test('does not let a nested retained path impersonate the root-anchored deployment authority', async () => {
+  const { sourceRoot, outputRoot } = await tempRoots();
+  const deploymentConfig = {
+    controls: [{ id: 'production-deployment', evidence: 'release-validation/production-deployment.json' }],
+  };
+  await writeCandidate(
+    sourceRoot,
+    '501-retained/direct-production-deployment/release-validation/production-deployment.json',
+    { status: 'PASS', targetSha: TARGET, source: 'nested-retained' },
+  );
+  await writeCandidate(sourceRoot, '502-retained/release-validation/production-deployment.json', {
+    status: 'Open',
+    targetSha: TARGET,
+    source: 'retained-production-gate',
+  });
+
+  const manifest = await hydrateEnterpriseClosureEvidence({
+    sourceRoot,
+    outputRoot,
+    targetSha: TARGET,
+    closureConfig: deploymentConfig,
+  });
+
+  assert.equal(manifest.hydratedEvidence, 0);
+  assert.equal(manifest.ambiguousEvidence, 1);
+  assert.equal(manifest.results[0]?.matchedBy, 'declared_path');
+});
+
+test('fails closed on an invalid authoritative deployment proof instead of falling back', async () => {
+  const { sourceRoot, outputRoot } = await tempRoots();
+  const deploymentConfig = {
+    controls: [{ id: 'production-deployment', evidence: 'release-validation/production-deployment.json' }],
+  };
+  await writeCandidate(sourceRoot, '501-retained/release-validation/production-deployment.json', {
+    status: 'PASS',
+    targetSha: TARGET,
+  });
+  await writeCandidate(
+    sourceRoot,
+    'direct-production-deployment/release-validation/production-deployment.json',
+    { status: 'Open', targetSha: STALE },
+  );
+
+  const manifest = await hydrateEnterpriseClosureEvidence({
+    sourceRoot,
+    outputRoot,
+    targetSha: TARGET,
+    closureConfig: deploymentConfig,
+  });
+
+  assert.equal(manifest.hydratedEvidence, 0);
+  assert.equal(manifest.staleEvidence, 1);
+  assert.equal(manifest.results[0]?.matchedBy, 'authoritative_declared_path');
+  assert.equal(manifest.results[0]?.shadowedCandidateCount, 1);
+});
+
 test('deduplicates byte-identical exact-SHA evidence', async () => {
   const { sourceRoot, outputRoot } = await tempRoots();
   const evidence = {
