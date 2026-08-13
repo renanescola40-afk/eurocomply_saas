@@ -4,6 +4,8 @@ import { createHash } from 'node:crypto';
 import { closeSync, fstatSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname } from 'node:path';
 
+import { buildRecoveryCommandDiagnostic } from './recovery-command-observability.mjs';
+
 const output = 'docs/security/evidence/p1/backup-restore-tested.json';
 const workDir = 'artifacts/recovery-exercise';
 const legacyDumpPath = `${workDir}/production-backup.dump`;
@@ -15,6 +17,7 @@ const startedAt = Date.now();
 const checks = {};
 const failures = [];
 let failurePhase = null;
+let failureDiagnostic = null;
 
 const SUPABASE_MANAGED_DATA_EXCLUDES = [
   'storage.buckets_vectors',
@@ -64,7 +67,16 @@ function run(command, args, extraEnv = {}, failureCode = `command_${command}_fai
       timeout: 15 * 60_000,
       env: { ...process.env, ...extraEnv },
     }).toString('utf8');
-  } catch {
+  } catch (error) {
+    // Classify the first process failure while keeping stderr/stdout/arguments out
+    // of persisted evidence. Later cleanup failures must not replace root cause.
+    if (!failureDiagnostic) {
+      failureDiagnostic = buildRecoveryCommandDiagnostic({
+        error,
+        phase: failurePhase,
+        command,
+      });
+    }
     // Never persist Error.message from execFileSync. Node includes the complete
     // command arguments in that message, which can contain database credentials.
     throw new Error(failureCode);
@@ -124,7 +136,7 @@ function restoreIntoEphemeralSupabase(container) {
     copySqlToContainer(container, dataDumpPath),
   ];
   try {
-    run('restore_transaction', 'docker', [
+    run('docker', [
       'exec', container, 'psql', '-U', 'postgres', '-d', 'postgres', '--no-psqlrc',
       '--single-transaction', '--set', 'ON_ERROR_STOP=1',
       '--file', containerPaths[0],
@@ -241,10 +253,11 @@ const evidence = {
   runId: env('GITHUB_RUN_ID') || null, controlsVerified: ['REC-05', 'REC-06', 'REC-07', 'REC-08', 'REC-09', 'REC-10'], checks,
   metrics: { rpoSeconds: backupCompletedAt ? Math.max(0, Math.round((Date.now() - Date.parse(backupCompletedAt)) / 1000)) : null, rtoSeconds: restoreCompletedAt ? Math.round((Date.parse(restoreCompletedAt) - startedAt) / 1000) : null, totalExerciseSeconds: Math.round((finishedAt - startedAt) / 1000), backupBytes },
   integrity: { criticalTables, sourceCounts, restoredCounts, sourceAuthUsers, restoredAuthUsers, backupSha256Prefix: digest ? `${digest.slice(0, 16)}…` : null, recoveryMode: ephemeralMode ? 'ephemeral-supabase-postgres' : 'external-isolated-database' }, failures: [...new Set(failures)], failurePhase: passed ? null : failurePhase,
+  failureDiagnostic: passed ? null : failureDiagnostic,
   evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
   evidenceBoundary: ephemeralMode
-    ? 'Supabase-compatible logical roles, schema, and application/auth data backups were restored transactionally into a disposable isolated Supabase Postgres database; target-managed vector storage tables were excluded from the data dump. Evidence stores only aggregate counts, safe failure codes and a truncated combined digest; connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
-    : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts, safe failure codes and a truncated digest; connection strings, raw command arguments, raw process errors and the dump are not retained.',
+    ? 'Supabase-compatible logical roles, schema, and application/auth data backups were restored transactionally into a disposable isolated Supabase Postgres database; target-managed vector storage tables were excluded from the data dump. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
+    : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated digest; connection strings, raw command arguments, raw process errors and the dump are not retained.',
 };
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
