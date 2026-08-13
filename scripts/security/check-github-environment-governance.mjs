@@ -1,9 +1,22 @@
 import { pathToFileURL } from 'node:url';
 
-export function validateGitHubEnvironmentGovernance(environment, {
-  expectedName,
-  requireProtectedBranches = true,
-} = {}) {
+/**
+ * @typedef {object} GitHubEnvironmentGovernanceOptions
+ * @property {string} [expectedName]
+ * @property {boolean} [requireProtectedBranches]
+ */
+
+/**
+ * Validate the governance controls returned by the GitHub Environments API.
+ *
+ * @param {any} environment
+ * @param {GitHubEnvironmentGovernanceOptions} [options]
+ */
+export function validateGitHubEnvironmentGovernance(environment, options = {}) {
+  const {
+    expectedName,
+    requireProtectedBranches = true,
+  } = options;
   const failures = [];
 
   if (!environment || typeof environment !== 'object') {
