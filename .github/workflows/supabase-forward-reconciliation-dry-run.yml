@@ -1,0 +1,218 @@
+name: Supabase Forward Reconciliation Dry Run
+
+on:
+  pull_request:
+    paths:
+      - 'config/supabase-forward-reconciliation.json'
+      - 'scripts/supabase/forward-reconciliation-control-plane.mjs'
+      - 'scripts/supabase/verify-forward-reconciliation-postconditions.sql'
+      - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
+      - '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA containing the rehearsed reconciliation set
+        required: true
+        type: string
+      rehearsal_run_id:
+        description: Successful Supabase Forward Reconciliation Rehearsal run ID for the exact SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: supabase-forward-reconciliation-dry-run-${{ inputs.release_sha || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    name: Validate filtered dry-run contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Validate syntax and selected manifest
+        shell: bash
+        env:
+          CONTRACT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          node --check scripts/supabase/forward-reconciliation-control-plane.mjs
+          node scripts/supabase/forward-reconciliation-control-plane.mjs compile \
+            config/supabase-forward-reconciliation.json \
+            "$RUNNER_TEMP/forward-reconciliation-manifest.json" \
+            --expected-sha="$CONTRACT_SHA"
+      - name: Enforce no-write CLI boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(grep -c --fixed-string 'db push --dry-run' .github/workflows/supabase-forward-reconciliation-dry-run.yml)" -eq 1
+          ! grep -n --fixed-string -- '--include-all' .github/workflows/supabase-forward-reconciliation-dry-run.yml
+          ! grep -n --fixed-string 'migration repair' .github/workflows/supabase-forward-reconciliation-dry-run.yml
+          ! grep -nE '(^|[[:space:]])db push([[:space:]]|$)' .github/workflows/supabase-forward-reconciliation-dry-run.yml | grep -v -- '--dry-run'
+
+  dry-run:
+    name: Prove remote plus selected set and execute Supabase dry run
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: supabase-production-migration-dry-run
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      REHEARSAL_RUN_ID: ${{ inputs.rehearsal_run_id }}
+      SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+      CURRENT_MANIFEST: artifacts/supabase-forward-reconciliation/current-manifest.json
+      REMOTE_VERSIONS: artifacts/supabase-forward-reconciliation/remote-before.json
+      FILTERED_SET_PROOF: artifacts/supabase-forward-reconciliation/filtered-set-proof.json
+    steps:
+      - name: Validate exact current main and rehearsal provenance
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$REHEARSAL_RUN_ID" =~ ^[0-9]+$ ]]
+          test "$GITHUB_REF_NAME" = 'main'
+          test "$GITHUB_SHA" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+          test -n "${SUPABASE_DB_POOLER_URL:-}"
+          RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${REHEARSAL_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$RUN_JSON")" = "$TARGET_SHA"
+          test "$(jq -r '.path' <<<"$RUN_JSON")" = '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
+          test "$(jq -r '.event' <<<"$RUN_JSON")" = 'workflow_dispatch'
+          test "$(jq -r '.conclusion' <<<"$RUN_JSON")" = 'success'
+
+      - name: Checkout exact current main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Download exact-SHA rehearsal artifact
+        uses: actions/download-artifact@v8
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.rehearsal_run_id }}
+          name: supabase-forward-reconciliation-rehearsal-${{ inputs.release_sha }}
+          path: rehearsal-source
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.101.0
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Recompile and validate exact rehearsal selection
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$CURRENT_MANIFEST")"
+          node scripts/supabase/forward-reconciliation-control-plane.mjs compile \
+            config/supabase-forward-reconciliation.json \
+            "$CURRENT_MANIFEST" \
+            --expected-sha="$TARGET_SHA"
+          mapfile -t ATTESTATIONS < <(find rehearsal-source -type f -name 'rehearsal-attestation.json' -print)
+          test "${#ATTESTATIONS[@]}" -eq 1
+          node scripts/supabase/forward-reconciliation-control-plane.mjs validate-rehearsal \
+            "$CURRENT_MANIFEST" \
+            "${ATTESTATIONS[0]}" \
+            --expected-sha="$TARGET_SHA"
+          cp "${ATTESTATIONS[0]}" artifacts/supabase-forward-reconciliation/source-rehearsal-attestation.json
+
+      - name: Build filtered workdir from remote migration history
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORKDIR="$RUNNER_TEMP/risck-forward-reconciliation"
+          echo "WORKDIR=$WORKDIR" >> "$GITHUB_ENV"
+          supabase --workdir "$WORKDIR" init --force
+          rm -rf "$WORKDIR/supabase/migrations"
+          mkdir -p "$WORKDIR/supabase/migrations"
+          supabase --workdir "$WORKDIR" migration fetch --db-url "$SUPABASE_DB_POOLER_URL"
+
+          psql "$SUPABASE_DB_POOLER_URL" \
+            --no-psqlrc \
+            --tuples-only \
+            --no-align \
+            --set ON_ERROR_STOP=1 \
+            --command 'select version from supabase_migrations.schema_migrations order by version;' \
+            | sed '/^[[:space:]]*$/d' \
+            | jq -R -s 'split("\n") | map(select(length > 0))' > "$REMOTE_VERSIONS"
+
+          while IFS=$'\t' read -r filename expected_digest; do
+            [[ "$filename" =~ ^[0-9]{14}_[a-z0-9_]+\.sql$ ]]
+            source_path="supabase/migrations/$filename"
+            observed_digest="$(sha256sum "$source_path" | awk '{print $1}')"
+            test "$observed_digest" = "$expected_digest"
+            cp "$source_path" "$WORKDIR/supabase/migrations/$filename"
+          done < <(jq -r '.migrations[] | [.filename, .sha256] | @tsv' "$CURRENT_MANIFEST")
+
+      - name: Prove pending set is exactly the selected set
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/supabase/forward-reconciliation-control-plane.mjs verify-set \
+            "$CURRENT_MANIFEST" \
+            "$REMOTE_VERSIONS" \
+            "$WORKDIR/supabase/migrations" \
+            "$FILTERED_SET_PROOF" \
+            --expected-sha="$TARGET_SHA"
+          jq -e '.status == "PASS" and .checks.pendingSetEqualsSelectedSet == true and .checks.unauthorizedPendingMigrations == false' "$FILTERED_SET_PROOF" >/dev/null
+
+      - name: Execute filtered Supabase migration dry run only
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase --workdir "$WORKDIR" db push --dry-run --db-url "$SUPABASE_DB_POOLER_URL"
+
+      - name: Revalidate current main after remote observation
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+
+      - name: Upload filtered dry-run evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: supabase-forward-reconciliation-dry-run-${{ inputs.release_sha }}
+          path: |
+            artifacts/supabase-forward-reconciliation/current-manifest.json
+            artifacts/supabase-forward-reconciliation/source-rehearsal-attestation.json
+            artifacts/supabase-forward-reconciliation/remote-before.json
+            artifacts/supabase-forward-reconciliation/filtered-set-proof.json
+          if-no-files-found: error
+          retention-days: 90
