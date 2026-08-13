@@ -36,13 +36,61 @@ describe('Vercel production deployment authority', () => {
     expect(finalBoundary).toContain('test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"');
   });
 
+  it('verifies Production environment governance before the secrets-bearing deployment job', () => {
+    const governance = workflow.indexOf('Verify Production environment governance before protected secrets');
+    const protectedJob = workflow.indexOf('  deploy-production:');
+
+    expect(governance).toBeGreaterThan(-1);
+    expect(protectedJob).toBeGreaterThan(governance);
+
+    const preflight = workflow.slice(0, protectedJob);
+    expect(preflight).toContain('GITHUB_TOKEN: ${{ github.token }}');
+    expect(preflight).toContain('GITHUB_ENVIRONMENT_NAME: Production');
+    expect(preflight).toContain('node scripts/security/check-github-environment-governance.mjs');
+    expect(preflight).not.toMatch(/secrets\./);
+  });
+
+  it('synchronizes dedicated Step-Up runtime configuration before the production build', () => {
+    expect(workflow).toContain('STEP_UP_PROVIDER_MODE: supabase_mfa');
+    expect(workflow).toContain(
+      "STEP_UP_SIGNING_SECRET: ${{ secrets['STEP_UP_ASSERTION_SIGNING_SECRET'] || secrets['STEP_UP_SIGNING_SECRET'] }}",
+    );
+    expect(workflow).toContain('Validate dedicated Enterprise Step-Up deployment input');
+    expect(workflow).toContain('[ -z "${STEP_UP_SIGNING_SECRET:-}" ]');
+    expect(workflow).toContain('[ "$STEP_UP_SIGNING_SECRET" = "$AUDIT_CHAIN_SIGNING_SECRET" ]');
+
+    const initialPull = workflow.indexOf('Link and pull current Vercel production environment');
+    const mutationReverify = workflow.indexOf('Reverify current main immediately before production environment mutation');
+    const synchronization = workflow.indexOf('Synchronize Enterprise Step-Up runtime configuration to Vercel production');
+    const refresh = workflow.indexOf('Refresh Vercel production environment after Step-Up synchronization');
+    const build = workflow.indexOf('Build Vercel production artifact');
+
+    expect(initialPull).toBeGreaterThan(-1);
+    expect(mutationReverify).toBeGreaterThan(initialPull);
+    expect(synchronization).toBeGreaterThan(mutationReverify);
+    expect(refresh).toBeGreaterThan(synchronization);
+    expect(build).toBeGreaterThan(refresh);
+
+    const mutationBoundary = workflow.slice(mutationReverify, synchronization);
+    expect(mutationBoundary).toContain('git fetch --no-tags origin main');
+    expect(mutationBoundary).toContain('test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"');
+    expect(mutationBoundary).toContain('test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"');
+
+    const syncBoundary = workflow.slice(synchronization, refresh);
+    expect(syncBoundary).toContain('env add STEP_UP_SIGNING_SECRET production --force --sensitive');
+    expect(syncBoundary).toContain('env add STEP_UP_PROVIDER_MODE production --force --no-sensitive');
+    expect(syncBoundary).toContain('printf \'%s\' "$STEP_UP_SIGNING_SECRET"');
+    expect(syncBoundary).toContain('printf \'%s\' "$STEP_UP_PROVIDER_MODE"');
+    expect(syncBoundary).not.toContain('echo "$STEP_UP_SIGNING_SECRET"');
+  });
+
   it('uses protected production approval and immutable tool references', () => {
     expect(workflow).toContain('environment: production');
     expect(workflow).toContain(
       'actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0',
     );
     expect(workflow).toContain(
-      'actions/setup-node@249970729cb0ef3589644e2896645e5dcba9c38',
+      'actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38',
     );
     expect(workflow).toContain("VERCEL_CLI_VERSION: '56.3.2'");
     expect(workflow).toContain('"vercel@${VERCEL_CLI_VERSION}" deploy --prebuilt --prod');
