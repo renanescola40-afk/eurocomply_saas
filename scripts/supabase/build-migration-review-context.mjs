@@ -39,7 +39,8 @@ function addReference(map, kind, qualified, operation, parent = null) {
 export function analyzeMigrationSql(sql) {
   const clean = stripComments(sql);
   const refs = new Map();
-  const qualified = '[A-Za-z_][A-Za-z0-9_$]*(?:\\.[A-Za-z_][A-Za-z0-9_$]*)?';
+  const identifier = '(?:"(?:[^"]|"")*"|[A-Za-z_][A-Za-z0-9_$]*)';
+  const qualified = `${identifier}(?:\\.${identifier})?`;
 
   for (const match of clean.matchAll(new RegExp(`\\b(create|alter|drop)\\s+table(?:\\s+if\\s+(?:not\\s+)?exists)?\\s+(${qualified})`, 'gi'))) {
     addReference(refs, 'table', match[2], match[1].toUpperCase());
@@ -47,11 +48,11 @@ export function analyzeMigrationSql(sql) {
   for (const match of clean.matchAll(new RegExp(`\\b(create(?:\\s+or\\s+replace)?|alter|drop)\\s+function(?:\\s+if\\s+exists)?\\s+(${qualified})`, 'gi'))) {
     addReference(refs, 'function', match[2], match[1].toUpperCase().replace(/\\s+/g, '_'));
   }
-  for (const match of clean.matchAll(new RegExp(`\\b(create|drop)\\s+policy\\s+"?([A-Za-z_][A-Za-z0-9_$ ]*)"?\\s+on\\s+(${qualified})`, 'gi'))) {
+  for (const match of clean.matchAll(new RegExp(`\\b(create|alter|drop)\\s+policy\\s+(?:if\\s+exists\\s+)?(${identifier})\\s+on\\s+(${qualified})`, 'gi'))) {
     const table = splitName(match[3]);
     addReference(refs, 'policy', `${table.schema}.${match[2].trim()}`, match[1].toUpperCase(), table.name);
   }
-  for (const match of clean.matchAll(new RegExp(`\\bcreate\\s+(?:unique\\s+)?index(?:\\s+if\\s+not\\s+exists)?\\s+([A-Za-z_][A-Za-z0-9_$]*)\\s+on\\s+(${qualified})`, 'gi'))) {
+  for (const match of clean.matchAll(new RegExp(`\\bcreate\\s+(?:unique\\s+)?index(?:\\s+if\\s+not\\s+exists)?\\s+(${identifier})\\s+on\\s+(${qualified})`, 'gi'))) {
     const table = splitName(match[2]);
     addReference(refs, 'index', `${table.schema}.${match[1]}`, 'CREATE', table.name);
   }
@@ -81,7 +82,8 @@ function catalogKeys(catalog) {
   return keys;
 }
 
-function liveState(reference, keys) {
+export function liveState(reference, keys, capturedSchemas) {
+  if (!capturedSchemas.has(reference.schema)) return 'NOT_CAPTURED';
   const parent = reference.parent ? `${reference.parent}:` : '';
   return keys.has(`${reference.kind}:${reference.schema}:${parent}${reference.name}`)
     ? 'PRESENT'
@@ -97,6 +99,9 @@ async function buildContext(inventoryPath, catalogPath, migrationDir) {
   const catalog = JSON.parse(catalogBytes.toString('utf8'));
   if (inventory.schema !== INVENTORY_SCHEMA) throw new Error('unsupported inventory schema');
   if (catalog.schema !== CATALOG_SCHEMA) throw new Error('unsupported catalog schema');
+  if (!Array.isArray(catalog.schemas) || catalog.schemas.length === 0) {
+    throw new Error('production catalog must declare captured schemas');
+  }
 
   const filenames = (await readdir(migrationDir)).filter((name) => name.endsWith('.sql')).sort();
   const analyzed = new Map();
@@ -105,18 +110,29 @@ async function buildContext(inventoryPath, catalogPath, migrationDir) {
     analyzed.set(filename, { sha256: sha256(sql), ...analyzeMigrationSql(sql) });
   }
   const keys = catalogKeys(catalog);
+  const capturedSchemas = new Set(catalog.schemas);
   const items = inventory.items.map((item) => {
     const current = analyzed.get(item.filename);
     if (!current) throw new Error(`migration file missing: ${item.filename}`);
     if (current.sha256 !== item.sha256) throw new Error(`migration digest mismatch: ${item.filename}`);
-    const references = current.references.map((ref) => ({ ...ref, liveCatalogState: liveState(ref, keys) }));
+    const references = current.references.map((ref) => ({
+      ...ref,
+      liveCatalogState: liveState(ref, keys, capturedSchemas),
+    }));
     const present = references.filter((ref) => ref.liveCatalogState === 'PRESENT').length;
+    const absent = references.filter((ref) => ref.liveCatalogState === 'ABSENT').length;
+    const notCaptured = references.filter((ref) => ref.liveCatalogState === 'NOT_CAPTURED').length;
     return {
       filename: item.filename,
       sha256: item.sha256,
       sqlSignals: current.signals,
       objectReferences: references,
-      liveCatalogMatchSummary: { referencedObjectCount: references.length, present, absent: references.length - present },
+      liveCatalogMatchSummary: {
+        referencedObjectCount: references.length,
+        present,
+        absent,
+        notCaptured,
+      },
       advisoryNotice: 'Catalog-name matches and SQL signals are reviewer aids only and do not prove migration equivalence or classification.',
     };
   });
@@ -127,6 +143,7 @@ async function buildContext(inventoryPath, catalogPath, migrationDir) {
     inventorySha256: sha256(inventoryBytes),
     catalogSha256: sha256(catalogBytes),
     catalogCapturedAt: catalog.capturedAt,
+    catalogSchemas: [...capturedSchemas].sort(),
     itemCount: items.length,
     items,
     acceptedDecisions: 0,
