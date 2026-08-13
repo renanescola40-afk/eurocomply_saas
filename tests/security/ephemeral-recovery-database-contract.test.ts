@@ -95,10 +95,14 @@ describe('ephemeral Supabase recovery database contract', () => {
     expect(recovery).toContain('Start disposable Supabase recovery database');
   });
 
-  it('uses the supported Supabase roles schema data dump sequence and transactional local restore', () => {
+  it('uses supported roles schema data dumps, excludes managed vector storage data and restores transactionally', () => {
     expect(exercise).toContain("'--role-only', '--file', rolesDumpPath");
     expect(exercise).toContain("run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath])");
-    expect(exercise).toContain("'--data-only', '--use-copy', '--file', dataDumpPath");
+    expect(exercise).toContain("'--data-only', '--use-copy'");
+    expect(exercise).toContain("'--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[0]");
+    expect(exercise).toContain("'--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[1]");
+    expect(exercise).toContain("'storage.buckets_vectors'");
+    expect(exercise).toContain("'storage.vector_indexes'");
     expect(exercise).not.toContain("'--schema', 'public,app_private'");
     expect(exercise).toContain("run('docker', ['cp', path, `${container}:${containerPath}`])");
     expect(exercise).toContain("'--single-transaction', '--set', 'ON_ERROR_STOP=1'");
