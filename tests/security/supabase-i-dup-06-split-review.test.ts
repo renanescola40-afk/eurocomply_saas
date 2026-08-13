@@ -21,6 +21,15 @@ const canonicalStepUp = fs.readFileSync(
   'supabase/migrations/20260813194500_reconcile_step_up_challenges_runtime.sql',
   'utf8',
 );
+const iDup07 = fs.readFileSync(
+  'docs/security/evidence/human-review/split-reviews/i-dup-07-live-object-evidence.md',
+  'utf8',
+);
+const subscriptionDefaults = fs.readFileSync(
+  'supabase/migrations/20260813200000_reconcile_subscription_schema_defaults.sql',
+  'utf8',
+);
+const billingPlans = fs.readFileSync('src/lib/billing/plans.ts', 'utf8');
 
 describe('Supabase I-DUP-06 technical split review', () => {
   it('binds the RLS inventory helper to the explicit privilege repair', () => {
@@ -47,5 +56,33 @@ describe('Supabase I-DUP-06 technical split review', () => {
     expect(dossier).toContain('migrationExecutionAuthorized = false');
     expect(dossier).toContain('independentApprovalPresent = false');
     expect(dossier).toContain('canonicalDecisionAccepted = false');
+  });
+});
+
+describe('Supabase I-DUP-07 technical split review', () => {
+  it('keeps the evolved identity helper lineage non-replayable', () => {
+    expect(iDup07).toContain('Technical disposition candidate: `ALREADY_PRESENT_IN_SCHEMA`');
+    expect(iDup07).toContain('20260804230433_move_rls_helpers_to_private_schema.sql');
+    expect(iDup07).toContain('app_private.is_org_member(uuid)');
+  });
+
+  it('locks future subscription defaults to the canonical four-plan catalog without row rewrites', () => {
+    expect(subscriptionDefaults).toContain("alter column plan set default 'starter'");
+    expect(subscriptionDefaults).toContain("alter column tier set default 'starter'");
+    expect(subscriptionDefaults).toContain("alter column status set default 'inactive'");
+    expect(subscriptionDefaults).toContain("check (plan in ('starter', 'professional', 'business', 'enterprise'))");
+    expect(subscriptionDefaults).toContain("check (tier in ('starter', 'professional', 'business', 'enterprise'))");
+    expect(subscriptionDefaults).not.toMatch(/update\s+public\.subscriptions/i);
+    expect(billingPlans).toContain("id: 'starter'");
+    expect(billingPlans).toContain("id: 'professional'");
+    expect(billingPlans).toContain("id: 'business'");
+    expect(billingPlans).toContain("id: 'enterprise'");
+  });
+
+  it('preserves the I-DUP-07 non-authorizing evidence boundary', () => {
+    expect(iDup07).toContain('productionWriteAuthorized = false');
+    expect(iDup07).toContain('migrationExecutionAuthorized = false');
+    expect(iDup07).toContain('independentApprovalPresent = false');
+    expect(iDup07).toContain('canonicalDecisionAccepted = false');
   });
 });
