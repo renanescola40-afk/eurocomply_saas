@@ -17,6 +17,8 @@ export const DUPLICATE_REVIEW_REFERENCE =
   'docs/security/evidence/human-review/supabase-migration-mega-batch-i.md';
 export const INVALID_REVIEW_REFERENCE =
   'docs/security/evidence/human-review/supabase-migration-mega-batch-o-review-preparation.md';
+export const UNAPPLIED_UNIQUE_REVIEW_REFERENCE =
+  'docs/security/decisions/2026-08-13-enterprise-workflow-automation-unapplied-history.md';
 
 export const KNOWN_DUPLICATE_MIGRATION_GROUPS = Object.freeze({
   '20260605': [
@@ -95,6 +97,9 @@ export const KNOWN_DUPLICATE_MIGRATION_GROUPS = Object.freeze({
 export const UNAPPLIED_LEGACY_MIGRATIONS = Object.freeze([
   ...KNOWN_DUPLICATE_MIGRATION_GROUPS['20260605'],
 ]);
+export const UNAPPLIED_UNIQUE_MIGRATIONS = Object.freeze([
+  '20260721093000_enterprise_workflow_automation.sql',
+]);
 export const UNRESOLVED_INVALID_MIGRATIONS = Object.freeze([
   '20260619_multi_tenant_rls_hardening.sql',
 ]);
@@ -157,8 +162,10 @@ function expectedDuplicateVersions() {
 function assertReviewedReplayInventory(dir) {
   if (!existsSync(DUPLICATE_REVIEW_REFERENCE)) fail(`Missing duplicate review evidence: ${DUPLICATE_REVIEW_REFERENCE}`);
   if (!existsSync(INVALID_REVIEW_REFERENCE)) fail(`Missing invalid-file review evidence: ${INVALID_REVIEW_REFERENCE}`);
+  if (!existsSync(UNAPPLIED_UNIQUE_REVIEW_REFERENCE)) fail(`Missing unapplied unique review evidence: ${UNAPPLIED_UNIQUE_REVIEW_REFERENCE}`);
   const duplicateReview = readFileSync(DUPLICATE_REVIEW_REFERENCE, 'utf8');
   const invalidReview = readFileSync(INVALID_REVIEW_REFERENCE, 'utf8');
+  const unappliedUniqueReview = readFileSync(UNAPPLIED_UNIQUE_REVIEW_REFERENCE, 'utf8');
   const debt = inspectMigrationReplayDebt(dir);
   const expected = expectedDuplicateVersions();
 
@@ -172,6 +179,14 @@ function assertReviewedReplayInventory(dir) {
   for (const file of UNRESOLVED_INVALID_MIGRATIONS) {
     if (!invalidReview.includes(`\`${file}\``) || !invalidReview.includes('REQUIRES_SPLIT_REVIEW')) {
       fail(`Invalid migration review boundary missing for ${file}`);
+    }
+  }
+  for (const file of UNAPPLIED_UNIQUE_MIGRATIONS) {
+    if (!existsSync(join(dir, file))) fail(`Reviewed unapplied unique migration is missing: ${file}`);
+    if (!unappliedUniqueReview.includes(`\`${file}\``)
+      || !unappliedUniqueReview.includes('unapplied historical migration')
+      || !unappliedUniqueReview.includes('RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL=false')) {
+      fail(`Unapplied unique migration review boundary missing for ${file}`);
     }
   }
   for (const [legacyFile, replacementPaths] of Object.entries(SCHEMA_EFFECT_REPLACED_MIGRATIONS)) {
@@ -304,6 +319,7 @@ function prepareSchemaEffectReplay(dir) {
   let replayed = 0;
   let replaced = 0;
   let reordered = 0;
+  let unappliedUnique = 0;
   try {
     for (const { version, files } of expectedDuplicateVersions()) {
       const executableFiles = files.filter((file) =>
@@ -335,11 +351,15 @@ function prepareSchemaEffectReplay(dir) {
     for (const canonicalName of UNRESOLVED_INVALID_MIGRATIONS) {
       items.push(backupAndRemove(dir, stagingDir, canonicalName));
     }
+    for (const canonicalName of UNAPPLIED_UNIQUE_MIGRATIONS) {
+      items.push(backupAndRemove(dir, stagingDir, canonicalName));
+      unappliedUnique += 1;
+    }
     const remaining = inspectMigrationReplayDebt(dir);
     if (remaining.invalidFiles.length || remaining.duplicateVersions.length) {
       fail(`Disposable replay remains invalid: invalid=${remaining.invalidFiles.length} duplicates=${remaining.duplicateVersions.length}`);
     }
-    return { items, replayed, replaced, reordered };
+    return { items, replayed, replaced, reordered, unappliedUnique };
   } catch (error) {
     if (items.length) {
       try { restoreItems(items); } catch (restoreError) {
@@ -357,7 +377,7 @@ function appendGithubEnv(name, value) {
 function main() {
   if (process.env.GITHUB_ACTIONS !== 'true') fail('Disposable schema-effect replay is restricted to GitHub Actions');
   const dir = join(process.cwd(), 'supabase', 'migrations');
-  const { items, replayed, replaced, reordered } = prepareSchemaEffectReplay(dir);
+  const { items, replayed, replaced, reordered, unappliedUnique } = prepareSchemaEffectReplay(dir);
   let replayError = null;
   try {
     execFileSync(process.execPath, ['scripts/recovery/manage-ephemeral-recovery-database.mjs', 'start-project'], { stdio: 'inherit', env: process.env });
@@ -370,11 +390,12 @@ function main() {
   appendGithubEnv('RECOVERY_EPHEMERAL_DUPLICATE_GROUP_COUNT', '16');
   appendGithubEnv('RECOVERY_EPHEMERAL_REPLAY_STAGED_FILE_COUNT', String(replayed));
   appendGithubEnv('RECOVERY_EPHEMERAL_LEGACY_EXCLUDED_FILE_COUNT', String(UNAPPLIED_LEGACY_MIGRATIONS.length));
+  appendGithubEnv('RECOVERY_EPHEMERAL_UNAPPLIED_UNIQUE_EXCLUDED_FILE_COUNT', String(unappliedUnique));
   appendGithubEnv('RECOVERY_EPHEMERAL_UNRESOLVED_INVALID_EXCLUDED_FILE_COUNT', String(UNRESOLVED_INVALID_MIGRATIONS.length));
   appendGithubEnv('RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLACED_FILE_COUNT', String(replaced));
   appendGithubEnv('RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REORDERED_FILE_COUNT', String(reordered));
   appendGithubEnv('RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL', 'false');
-  process.stdout.write(`Disposable schema-effect replay staged ${replayed} duplicate files, dependency-reordered ${reordered}, excluded ${UNAPPLIED_LEGACY_MIGRATIONS.length} legacy, ${UNRESOLVED_INVALID_MIGRATIONS.length} unresolved-invalid, and ${replaced} schema-effect-replaced files; replay timestamps are not migration-history repair evidence.\n`);
+  process.stdout.write(`Disposable schema-effect replay staged ${replayed} duplicate files, dependency-reordered ${reordered}, excluded ${UNAPPLIED_LEGACY_MIGRATIONS.length} legacy, ${unappliedUnique} reviewed-unapplied unique, ${UNRESOLVED_INVALID_MIGRATIONS.length} unresolved-invalid, and ${replaced} schema-effect-replaced files; replay timestamps are not migration-history repair evidence.\n`);
 }
 
 if (process.argv[1]?.endsWith('run-ephemeral-project-schema-replay.mjs')) {
