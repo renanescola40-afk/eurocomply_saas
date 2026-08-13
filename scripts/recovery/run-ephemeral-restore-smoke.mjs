@@ -9,6 +9,10 @@ const rolesPath = join(workDir, 'roles.sql');
 const schemaPath = join(workDir, 'schema.sql');
 const dataPath = join(workDir, 'data.sql');
 const marker = 'risck-ephemeral-restore-smoke-v1';
+const SUPABASE_MANAGED_DATA_EXCLUDES = [
+  'storage.buckets_vectors',
+  'storage.vector_indexes',
+];
 
 function env(name) {
   return String(process.env[name] ?? '').trim();
@@ -113,7 +117,13 @@ function dump() {
 
   run('supabase', ['db', 'dump', '--db-url', url, '--role-only', '--file', rolesPath]);
   run('supabase', ['db', 'dump', '--db-url', url, '--file', schemaPath]);
-  run('supabase', ['db', 'dump', '--db-url', url, '--data-only', '--use-copy', '--file', dataPath]);
+  run('supabase', [
+    'db', 'dump', '--db-url', url,
+    '--data-only', '--use-copy',
+    '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[0],
+    '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[1],
+    '--file', dataPath,
+  ]);
 
   for (const path of [rolesPath, schemaPath, dataPath]) {
     const contents = readFileSync(path);
