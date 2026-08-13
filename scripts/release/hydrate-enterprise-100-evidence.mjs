@@ -31,7 +31,6 @@ const EXPLICIT_SOURCE_ALIASES = Object.freeze({
     'docs/security/evidence/p1/backup-restore-tested.json',
   ],
   'release-validation/rollback-rehearsal.json': [
-    'rollback-source.json',
     'docs/security/evidence/runtime/rollback-validation.json',
   ],
   'release-validation/observability-runtime.json': [
