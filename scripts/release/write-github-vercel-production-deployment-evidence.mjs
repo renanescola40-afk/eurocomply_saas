@@ -275,7 +275,7 @@ export async function probeExactDeploymentHealth({
   const bypassSecret = String(protectionBypassSecret ?? '').trim();
   const headers = {
     Accept: 'application/json',
-    'User-Agent': 'risck-comply-production-deployment-proof',
+    'User-Agent': 'risck-comply-production-response-proof/1.0',
   };
   if (bypassSecret) headers['x-vercel-protection-bypass'] = bypassSecret;
 
@@ -283,7 +283,7 @@ export async function probeExactDeploymentHealth({
   try {
     response = await fetchImpl(healthUrl, {
       cache: 'no-store',
-      redirect: 'error',
+      redirect: 'manual',
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       headers,
     });
