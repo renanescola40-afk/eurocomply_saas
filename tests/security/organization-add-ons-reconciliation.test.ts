@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const root = process.cwd();
-const migrationPath = 'supabase/migrations/20260813121500_reconcile_organization_add_ons.sql';
+const migrationPath = 'supabase/migrations/20260813124224_reconcile_organization_add_ons.sql';
 const sql = fs.readFileSync(path.join(root, migrationPath), 'utf8');
 
 describe('organization add-ons canonical reconciliation', () => {
