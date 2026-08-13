@@ -37,14 +37,12 @@ jobs:
         run: |
           set -euo pipefail
           retired=0
-          # $sha below is intentionally a jq variable, not a shell variable.
-          # shellcheck disable=SC2016
           candidates="$(
-            gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${BOOTSTRAP_WORKFLOW}/runs?branch=main&per_page=100" \
-              --jq --arg sha "${TARGET_SHA,,}" '
+            gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${BOOTSTRAP_WORKFLOW}/runs?branch=main&per_page=100" |
+              jq --arg sha "${TARGET_SHA,,}" '
                 [.workflow_runs[]
                   | select(.event == "push" or .event == "workflow_dispatch")
-                  | select(.head_sha | ascii_downcase != $sha)
+                  | select((.head_sha | ascii_downcase) != $sha)
                   | select(.status == "queued" or .status == "in_progress" or .status == "pending" or .status == "waiting" or .status == "requested")
                   | {id, head_sha, status}]
               '
@@ -84,11 +82,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # $sha below is intentionally a jq variable, not a shell variable.
-          # shellcheck disable=SC2016
           current_runs="$(
-            gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${BOOTSTRAP_WORKFLOW}/runs?branch=main&per_page=100" \
-              --jq --arg sha "${TARGET_SHA,,}" '
+            gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${BOOTSTRAP_WORKFLOW}/runs?branch=main&per_page=100" |
+              jq -r --arg sha "${TARGET_SHA,,}" '
                 [.workflow_runs[]
                   | select(.event == "push" or .event == "workflow_dispatch")
                   | select((.head_sha | ascii_downcase) == $sha)
@@ -96,6 +92,7 @@ jobs:
                 | length
               '
           )"
+          [[ "$current_runs" =~ ^[0-9]+$ ]]
           test "$current_runs" -ge 1
 
       - name: Publish guard summary
