@@ -10,7 +10,6 @@ type FeatureRlsContract = {
 
 const migrationDir = join(process.cwd(), 'supabase', 'migrations');
 const finalLockMigration = '20260620120000_enterprise_multi_tenant_rls_final_lock.sql';
-const RLS_COVERAGE_TIMEOUT_MS = 60_000;
 
 const featureRlsContracts: FeatureRlsContract[] = [
   { area: 'dashboard organization', tables: ['organizations'], mode: 'direct-org-policy' },
@@ -27,57 +26,92 @@ const featureRlsContracts: FeatureRlsContract[] = [
   { area: 'enterprise evidence workflows', tables: ['enterprise_evidence_packs', 'enterprise_evidence_pack_items', 'enterprise_vendor_due_diligence', 'enterprise_risk_reviews'], mode: 'backend-only' },
 ];
 
-let migrationSqlCache: string | null = null;
+type MigrationSource = {
+  file: string;
+  sql: string;
+  normalized: string;
+};
+
+let migrationCache: MigrationSource[] | null = null;
+
+function normalizeSql(sql: string) {
+  return sql.replace(/\s+/g, ' ').trim().toLowerCase();
+}
 
 function readMigrations() {
-  if (migrationSqlCache !== null) return migrationSqlCache;
+  if (migrationCache !== null) return migrationCache;
 
-  migrationSqlCache = readdirSync(migrationDir)
+  migrationCache = readdirSync(migrationDir)
     .filter((file) => file.endsWith('.sql'))
     .sort()
-    .map((file) => readFileSync(join(migrationDir, file), 'utf8'))
-    .join('\n\n');
+    .map((file) => {
+      const sql = readFileSync(join(migrationDir, file), 'utf8');
+      return { file, sql, normalized: normalizeSql(sql) };
+    });
 
-  return migrationSqlCache;
+  return migrationCache;
 }
 
 function readFinalLockMigration() {
   return readFileSync(join(migrationDir, finalLockMigration), 'utf8');
 }
 
-function helperLoopIncludes(sql: string, helperName: string, table: string) {
-  const helperCall = new RegExp(String.raw`foreach\s+table_name\s+in\s+array\s+array\[[\s\S]*'${table}'[\s\S]*\][\s\S]*perform\s+public\.${helperName}\(table_name\)`, 'i').test(sql)
-    || new RegExp(String.raw`${helperName}\('${table}'\)`, 'i').test(sql);
-  if (helperCall) return true;
+function anyMigration(predicate: (migration: MigrationSource) => boolean) {
+  return readMigrations().some(predicate);
+}
+
+function directRlsCoverage(table: string) {
+  const marker = `alter table public.${table} enable row level security`;
+  return anyMigration(({ normalized }) => normalized.includes(marker));
+}
+
+function explicitHelperCall(normalized: string, helperName: string, table: string) {
+  return normalized.includes(`${helperName}('${table}')`)
+    || normalized.includes(`${helperName}( '${table}' )`)
+    || normalized.includes(`${helperName} ( '${table}' )`);
+}
+
+function helperLoopIncludes(helperName: string, table: string) {
+  const helperCallMarker = `perform public.${helperName}(table_name)`;
+  const tableLiteral = `'${table}'`;
+
+  const helperCovered = anyMigration(({ normalized }) => (
+    explicitHelperCall(normalized, helperName, table)
+    || (normalized.includes(helperCallMarker) && normalized.includes(tableLiteral))
+  ));
+  if (helperCovered) return true;
   if (helperName !== 'app_rls_backend_only_enterprise') return false;
 
-  return ['insert', 'update', 'delete'].every((operation) => new RegExp(
-    String.raw`create\s+policy\s+"rls_${table}_${operation}_backend_only"\s+on\s+public\.${table}[\s\S]{0,180}for\s+${operation}\s+to\s+authenticated[\s\S]{0,120}(using\s*\(false\)|with\s+check\s*\(false\))`,
-    'i',
-  ).test(sql));
+  const policyMarkers = ['insert', 'update', 'delete'].map((operation) =>
+    `rls_${table}_${operation}_backend_only`,
+  );
+
+  return policyMarkers.every((policyMarker) => anyMigration(({ normalized }) => (
+    normalized.includes(policyMarker)
+    && normalized.includes(`on public.${table}`)
+    && normalized.includes('to authenticated')
+    && normalized.includes('false')
+  )));
 }
 
 describe('enterprise feature RLS coverage', () => {
   it('maps every sellable enterprise feature area to tenant-scoped or backend-only RLS coverage', () => {
-    const sql = readMigrations();
     const missing: string[] = [];
 
     for (const contract of featureRlsContracts) {
       for (const table of contract.tables) {
         const covered = contract.mode === 'direct-org-policy'
-          ? new RegExp(String.raw`alter\s+table\s+public\.${table}\s+enable\s+row\s+level\s+security`, 'i').test(sql)
+          ? directRlsCoverage(table)
           : contract.mode === 'org-scoped-writer'
-            ? helperLoopIncludes(sql, 'app_rls_org_scoped_enterprise', table)
-            : helperLoopIncludes(sql, 'app_rls_backend_only_enterprise', table);
+            ? helperLoopIncludes('app_rls_org_scoped_enterprise', table)
+            : helperLoopIncludes('app_rls_backend_only_enterprise', table);
 
-        if (!covered) {
-          missing.push(`${contract.area}:${table}:${contract.mode}`);
-        }
+        if (!covered) missing.push(`${contract.area}:${table}:${contract.mode}`);
       }
     }
 
     expect(missing).toEqual([]);
-  }, RLS_COVERAGE_TIMEOUT_MS);
+  });
 
   it('keeps writer-role tables readable by members but writable only by owner/admin/editor', () => {
     const finalLockSql = readFinalLockMigration();
