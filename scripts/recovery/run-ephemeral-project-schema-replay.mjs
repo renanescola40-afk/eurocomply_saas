@@ -100,7 +100,7 @@ export const UNRESOLVED_INVALID_MIGRATIONS = Object.freeze([
 ]);
 export const SCHEMA_EFFECT_REPLACED_MIGRATIONS = Object.freeze({
   '20260613_organization_add_ons.sql': Object.freeze([
-    'supabase/migrations/20260813121500_reconcile_organization_add_ons.sql',
+    'supabase/migrations/20260813124224_reconcile_organization_add_ons.sql',
   ]),
   '20260620120000_enterprise_multi_tenant_rls_final_lock.sql': Object.freeze([
     'supabase/migrations/20260619103000_complete_multi_tenant_rls_policies.sql',
