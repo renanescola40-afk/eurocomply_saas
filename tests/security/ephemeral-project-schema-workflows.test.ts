@@ -62,12 +62,14 @@ describe('exact-SHA disposable project schema workflows', () => {
     expect(replay).toContain('Expected exactly one known legacy migration version collision');
     expect(replay).toContain('Unknown migration version collision detected');
     expect(replay).toContain("createHash('sha256')");
+    expect(replay).toContain("if (!runnerTemp) fail('RUNNER_TEMP is required for legacy migration quarantine')");
     expect(replay).toContain('copyFileSync(canonicalPath, quarantinePath)');
     expect(replay).toContain('sha256(quarantinePath) !== digest');
     expect(replay).toContain('rmSync(canonicalPath)');
     expect(replay).toContain('restoreLegacyQuarantine(quarantined)');
     expect(replay).toContain('if (quarantined.length > 0)');
     expect(replay).toContain('and rollback failed');
+    expect(replay).toContain('if (failures.length === 0 && quarantineDir)');
     expect(replay).not.toContain('legacy_gap_analysis.sql');
     expect(replay).not.toContain('legacy_findings_tasks.sql');
     expect(replay).not.toContain('legacy_compliance_evidence.sql');
