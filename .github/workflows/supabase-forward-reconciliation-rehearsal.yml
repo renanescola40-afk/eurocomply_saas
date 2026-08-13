@@ -1,0 +1,206 @@
+name: Supabase Forward Reconciliation Rehearsal
+
+on:
+  pull_request:
+    paths:
+      - 'config/supabase-forward-reconciliation.json'
+      - 'scripts/supabase/forward-reconciliation-control-plane.mjs'
+      - 'scripts/supabase/verify-forward-reconciliation-postconditions.sql'
+      - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
+      - '.github/workflows/supabase-forward-reconciliation-production.yml'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA containing the reviewed forward reconciliation set
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-forward-reconciliation-rehearsal-${{ inputs.release_sha || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    name: Validate bounded reconciliation contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Validate control-plane syntax
+        run: node --check scripts/supabase/forward-reconciliation-control-plane.mjs
+      - name: Compile exact PR-head manifest
+        shell: bash
+        env:
+          CONTRACT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          node scripts/supabase/forward-reconciliation-control-plane.mjs compile \
+            config/supabase-forward-reconciliation.json \
+            "$RUNNER_TEMP/forward-reconciliation-manifest.json" \
+            --expected-sha="$CONTRACT_SHA"
+          jq -e '.checks.productionWriteAuthorized == false' "$RUNNER_TEMP/forward-reconciliation-manifest.json" >/dev/null
+          jq -e '.checks.migrationHistoryRepairAuthorized == false' "$RUNNER_TEMP/forward-reconciliation-manifest.json" >/dev/null
+          jq -e '.checks.unrestrictedDbPushAuthorized == false' "$RUNNER_TEMP/forward-reconciliation-manifest.json" >/dev/null
+          test "$(jq '.migrations | length' "$RUNNER_TEMP/forward-reconciliation-manifest.json")" -ge 1
+          test "$(jq '.migrations | length' "$RUNNER_TEMP/forward-reconciliation-manifest.json")" -le 25
+      - name: Reject dangerous production shortcuts in bounded workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -R --line-number --fixed-string -- '--include-all' \
+            .github/workflows/supabase-forward-reconciliation-*.yml \
+            scripts/supabase/forward-reconciliation-control-plane.mjs
+          ! grep -R --line-number --fixed-string 'migration repair' \
+            .github/workflows/supabase-forward-reconciliation-*.yml \
+            scripts/supabase/forward-reconciliation-control-plane.mjs
+
+  rehearse:
+    name: Rehearse selected migrations on isolated production restore
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    environment: supabase-production-migration-dry-run
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      RECOVERY_REQUIRED_EXERCISE: backup-restore
+      RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+      MANIFEST_PATH: artifacts/supabase-forward-reconciliation/manifest.json
+      ATTESTATION_PATH: artifacts/supabase-forward-reconciliation/rehearsal-attestation.json
+    steps:
+      - name: Validate exact current main subject
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$GITHUB_REF_NAME" = 'main'
+          test "$GITHUB_SHA" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+          test -n "${RECOVERY_SOURCE_DATABASE_URL:-}"
+
+      - name: Checkout exact current main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Verify checked out source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.101.0
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Compile immutable selected migration manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$MANIFEST_PATH")"
+          node scripts/supabase/forward-reconciliation-control-plane.mjs compile \
+            config/supabase-forward-reconciliation.json \
+            "$MANIFEST_PATH" \
+            --expected-sha="$TARGET_SHA"
+
+      - name: Start disposable isolated Supabase restore target
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start
+
+      - name: Preflight protected backup restore proof
+        run: node scripts/security/preflight-protected-proof.mjs recovery
+
+      - name: Restore current production snapshot into isolated target
+        run: node scripts/recovery/run-backup-restore-exercise.mjs
+
+      - name: Apply only selected exact-byte migrations to isolated target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${RECOVERY_ISOLATED_DATABASE_URL:-}"
+          while IFS=$'\t' read -r filename expected_digest; do
+            [[ "$filename" =~ ^[0-9]{14}_[a-z0-9_]+\.sql$ ]]
+            path="supabase/migrations/$filename"
+            test -f "$path"
+            observed_digest="$(sha256sum "$path" | awk '{print $1}')"
+            test "$observed_digest" = "$expected_digest"
+            psql "$RECOVERY_ISOLATED_DATABASE_URL" \
+              --no-psqlrc \
+              --set ON_ERROR_STOP=1 \
+              --file "$path"
+          done < <(jq -r '.migrations[] | [.filename, .sha256] | @tsv' "$MANIFEST_PATH")
+
+      - name: Verify selected migration postconditions on isolated target
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$RECOVERY_ISOLATED_DATABASE_URL" \
+            --no-psqlrc \
+            --set ON_ERROR_STOP=1 \
+            --file scripts/supabase/verify-forward-reconciliation-postconditions.sql
+          echo 'FORWARD_RECONCILIATION_POSTCONDITIONS=passed' >> "$GITHUB_ENV"
+
+      - name: Seal non-authorizing exact-SHA rehearsal attestation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/supabase/forward-reconciliation-control-plane.mjs attest \
+            "$MANIFEST_PATH" \
+            docs/security/evidence/p1/backup-restore-tested.json \
+            "$ATTESTATION_PATH" \
+            --expected-sha="$TARGET_SHA"
+          node scripts/supabase/forward-reconciliation-control-plane.mjs validate-rehearsal \
+            "$MANIFEST_PATH" \
+            "$ATTESTATION_PATH" \
+            --expected-sha="$TARGET_SHA"
+
+      - name: Remove disposable recovery database
+        if: always()
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
+
+      - name: Upload redacted immutable rehearsal evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: supabase-forward-reconciliation-rehearsal-${{ inputs.release_sha }}
+          path: |
+            artifacts/supabase-forward-reconciliation/manifest.json
+            artifacts/supabase-forward-reconciliation/rehearsal-attestation.json
+            docs/security/evidence/runtime/recovery-resilience-preflight.json
+            docs/security/evidence/p1/backup-restore-tested.json
+          if-no-files-found: error
+          retention-days: 90
