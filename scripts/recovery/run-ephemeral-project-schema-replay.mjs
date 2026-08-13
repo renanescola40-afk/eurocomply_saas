@@ -2,20 +2,27 @@
 
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync, renameSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+} from 'node:fs';
 import { join } from 'node:path';
 
-// These five historical migrations predate the timestamped migration convention and
-// share the same 20260605 ledger prefix. Production has already consumed their
-// canonical filenames, so they must never be renamed in the repository. A clean-room
-// replay, however, needs their dependency order made explicit because lexical order
-// would apply compliance_evidence before gap_analysis/findings.
-const LEGACY_REPLAY_ORDER = [
-  ['20260605_gap_analysis.sql', '20260605223000_legacy_gap_analysis.sql'],
-  ['20260605_findings_tasks.sql', '20260605223100_legacy_findings_tasks.sql'],
-  ['20260605_compliance_evidence.sql', '20260605223200_legacy_compliance_evidence.sql'],
-  ['20260605_evidence_vault.sql', '20260605223300_legacy_evidence_vault.sql'],
-  ['20260605_gap_analysis_user_scoped_patch.sql', '20260605223400_legacy_gap_analysis_user_scoped_patch.sql'],
+// These five unversioned files are retained as historical source artifacts, but they
+// were never recorded in the production Supabase migration ledger and their legacy
+// workspaces/workspace_members dependencies are not part of the canonical production
+// schema. Clean-room replay must therefore quarantine them rather than manufacture
+// synthetic migration versions that would create schema production never applied.
+export const UNAPPLIED_LEGACY_MIGRATIONS = [
+  '20260605_gap_analysis.sql',
+  '20260605_findings_tasks.sql',
+  '20260605_compliance_evidence.sql',
+  '20260605_evidence_vault.sql',
+  '20260605_gap_analysis_user_scoped_patch.sql',
 ];
 const LEGACY_COLLISION_VERSION = '20260605';
 
@@ -49,7 +56,7 @@ function duplicateMigrationVersions(migrationsDir) {
 
 function assertKnownLegacyCollisionOnly(migrationsDir) {
   const duplicates = duplicateMigrationVersions(migrationsDir);
-  const expectedNames = LEGACY_REPLAY_ORDER.map(([canonicalName]) => canonicalName).sort();
+  const expectedNames = [...UNAPPLIED_LEGACY_MIGRATIONS].sort();
 
   if (duplicates.length !== 1) {
     fail(`Expected exactly one known legacy migration version collision; observed ${duplicates.length}`);
@@ -65,69 +72,103 @@ function assertNoMigrationVersionCollisions(migrationsDir) {
   const duplicates = duplicateMigrationVersions(migrationsDir);
   if (duplicates.length > 0) {
     fail(
-      `Migration version collision remains after deterministic staging: ${duplicates
+      `Migration version collision remains after legacy quarantine: ${duplicates
         .map(([version, names]) => `${version}=[${names.join(',')}]`)
         .join('; ')}`,
     );
   }
 }
 
-function restoreLegacyReplay(staged) {
+function quarantineDirectory() {
+  const runnerTemp = process.env.RUNNER_TEMP;
+  if (!runnerTemp) fail('RUNNER_TEMP is required for legacy migration quarantine');
+  const runId = String(process.env.GITHUB_RUN_ID ?? 'local').replace(/[^A-Za-z0-9_-]/g, '-');
+  const attempt = String(process.env.GITHUB_RUN_ATTEMPT ?? '1').replace(/[^A-Za-z0-9_-]/g, '-');
+  return join(runnerTemp, `risck-unapplied-legacy-migrations-${runId}-${attempt}`);
+}
+
+function restoreLegacyQuarantine(quarantined) {
   const failures = [];
 
-  for (const item of [...staged].reverse()) {
+  for (const item of [...quarantined].reverse()) {
     try {
-      if (!existsSync(item.replayPath)) {
-        failures.push(`missing staged file ${item.canonicalName}`);
+      if (!existsSync(item.quarantinePath)) {
+        failures.push(`missing quarantined file ${item.canonicalName}`);
         continue;
       }
-      if (sha256(item.replayPath) !== item.digest) {
-        failures.push(`digest mismatch for ${item.canonicalName}`);
+      if (sha256(item.quarantinePath) !== item.digest) {
+        failures.push(`quarantine digest mismatch for ${item.canonicalName}`);
         continue;
       }
-      renameSync(item.replayPath, item.canonicalPath);
+      if (existsSync(item.canonicalPath)) {
+        failures.push(`canonical file unexpectedly reappeared before restore: ${item.canonicalName}`);
+        continue;
+      }
+      copyFileSync(item.quarantinePath, item.canonicalPath);
       if (sha256(item.canonicalPath) !== item.digest) {
         failures.push(`restored digest mismatch for ${item.canonicalName}`);
+        continue;
       }
+      rmSync(item.quarantinePath, { force: true });
     } catch (error) {
       failures.push(`${item.canonicalName}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
+  const quarantineDir = quarantined[0]?.quarantineDir;
+  if (quarantineDir) {
+    try {
+      rmSync(quarantineDir, { recursive: true, force: true });
+    } catch (error) {
+      failures.push(`quarantine cleanup: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   if (failures.length > 0) {
-    fail(`Failed to restore canonical legacy migrations after ephemeral replay: ${failures.join('; ')}`);
+    fail(`Failed to restore canonical legacy migration artifacts after ephemeral replay: ${failures.join('; ')}`);
   }
 }
 
-function stageLegacyReplay(migrationsDir) {
+function quarantineUnappliedLegacyMigrations(migrationsDir) {
   assertKnownLegacyCollisionOnly(migrationsDir);
-  const staged = [];
+  const quarantineDir = quarantineDirectory();
+  if (existsSync(quarantineDir)) {
+    fail(`Legacy migration quarantine already exists: ${quarantineDir}`);
+  }
+  mkdirSync(quarantineDir, { recursive: false, mode: 0o700 });
+  const quarantined = [];
 
   try {
-    for (const [canonicalName, replayName] of LEGACY_REPLAY_ORDER) {
+    for (const canonicalName of UNAPPLIED_LEGACY_MIGRATIONS) {
       const canonicalPath = join(migrationsDir, canonicalName);
-      const replayPath = join(migrationsDir, replayName);
+      const quarantinePath = join(quarantineDir, canonicalName);
 
-      if (!existsSync(canonicalPath)) fail(`Missing canonical legacy migration: ${canonicalName}`);
-      if (existsSync(replayPath)) fail(`Unexpected staged migration already exists: ${replayName}`);
+      if (!existsSync(canonicalPath)) fail(`Missing canonical legacy migration artifact: ${canonicalName}`);
+      if (existsSync(quarantinePath)) fail(`Unexpected quarantined migration already exists: ${canonicalName}`);
 
       const digest = sha256(canonicalPath);
-      renameSync(canonicalPath, replayPath);
-      if (sha256(replayPath) !== digest) fail(`Legacy migration bytes changed while staging: ${canonicalName}`);
-      staged.push({ canonicalPath, replayPath, canonicalName, digest });
+      copyFileSync(canonicalPath, quarantinePath);
+      if (sha256(quarantinePath) !== digest) {
+        fail(`Legacy migration bytes changed while entering quarantine: ${canonicalName}`);
+      }
+      rmSync(canonicalPath);
+      if (existsSync(canonicalPath)) fail(`Legacy migration remained visible after quarantine: ${canonicalName}`);
+      quarantined.push({ canonicalPath, quarantinePath, quarantineDir, canonicalName, digest });
     }
 
     assertNoMigrationVersionCollisions(migrationsDir);
-    return staged;
+    return quarantined;
   } catch (error) {
-    if (staged.length > 0) {
+    if (quarantined.length > 0) {
       try {
-        restoreLegacyReplay(staged);
+        restoreLegacyQuarantine(quarantined);
       } catch (restoreError) {
         const original = error instanceof Error ? error.message : String(error);
         const restore = restoreError instanceof Error ? restoreError.message : String(restoreError);
-        fail(`Legacy migration staging failed (${original}) and rollback failed (${restore})`);
+        fail(`Legacy migration quarantine failed (${original}) and rollback failed (${restore})`);
       }
+    } else {
+      rmSync(quarantineDir, { recursive: true, force: true });
     }
     throw error;
   }
@@ -135,11 +176,11 @@ function stageLegacyReplay(migrationsDir) {
 
 function main() {
   if (process.env.GITHUB_ACTIONS !== 'true') {
-    fail('Legacy migration replay staging is restricted to GitHub Actions');
+    fail('Legacy migration clean-room replay is restricted to GitHub Actions');
   }
 
   const migrationsDir = join(process.cwd(), 'supabase', 'migrations');
-  const staged = stageLegacyReplay(migrationsDir);
+  const quarantined = quarantineUnappliedLegacyMigrations(migrationsDir);
   let replayError = null;
 
   try {
@@ -154,7 +195,7 @@ function main() {
 
   let restoreError = null;
   try {
-    restoreLegacyReplay(staged);
+    restoreLegacyQuarantine(quarantined);
   } catch (error) {
     restoreError = error;
   }
@@ -163,7 +204,7 @@ function main() {
   if (replayError) throw replayError;
 
   process.stdout.write(
-    `Ephemeral schema replay staged ${LEGACY_REPLAY_ORDER.length} legacy migrations in dependency order without changing canonical repository filenames.\n`,
+    `Ephemeral schema replay quarantined ${UNAPPLIED_LEGACY_MIGRATIONS.length} unapplied legacy migration artifacts and restored their exact bytes after canonical migration replay.\n`,
   );
 }
 
