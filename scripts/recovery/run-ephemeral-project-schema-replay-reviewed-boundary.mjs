@@ -107,7 +107,7 @@ function validateReviewedBoundary() {
     const record = blockedRecord(name);
     assertPresent(record.sourcePath, 'prerequisite-blocked migration');
     assertAbsent(record.heldPath, 'prerequisite hold path');
-    if (!batchFReview.includes('`' + name + '`') || !batchFReview.includes('PENDING_DEPLOYMENT')) {
+    if (!batchFReview.includes(`\`${name}\``) || !batchFReview.includes('PENDING_DEPLOYMENT')) {
       fail(`Batch-F owner classification boundary drifted for ${name}`);
     }
     if (!readFileSync(record.sourcePath, 'utf8').includes('public.is_organization_member(organization_id)')) {
