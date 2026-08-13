@@ -10,6 +10,7 @@ It is intentionally separate from the global migration reconciliation gate. The 
 
 The authoritative selection is `config/supabase-forward-reconciliation.json` and currently contains only:
 
+- `20260813175000_optimize_organization_add_ons_rls_initplan.sql`
 - `20260813194500_reconcile_step_up_challenges_runtime.sql`
 - `20260813200000_reconcile_subscription_schema_defaults.sql`
 - `20260813201500_reconcile_controlled_document_storage.sql`
@@ -17,23 +18,40 @@ The authoritative selection is `config/supabase-forward-reconciliation.json` and
 
 The control plane compiles the exact Git SHA, migration filenames, migration versions, byte sizes and SHA-256 digests into one immutable selection digest.
 
-Changing any selected SQL byte, filename or release SHA changes the selection digest and invalidates previous rehearsal evidence.
+Changing any selected SQL byte, filename or release SHA changes the selection digest and invalidates previous rehearsal evidence. Both bounded workflow path filters explicitly include every selected migration so a selected SQL-byte change cannot skip PR validation.
+
+## Administrative prerequisites
+
+The runtime lane is designed for a secrets-bearing GitHub deployment environment, but current live GitHub metadata must be treated as authoritative rather than assumed from the environment name.
+
+Before dispatching either runtime stage as production evidence:
+
+1. harden `supabase-production-migration-dry-run` so administrator bypass is disabled;
+2. configure at least one required deployment reviewer;
+3. restrict deployment to protected branches only;
+4. rotate/correct the `SUPABASE_DB_POOLER_URL` credential after the evidence incident tracked by #1620;
+5. verify the replacement value contains no embedded CR/LF/control characters and update every authorized dependent location without publishing the value;
+6. keep the broader production-control-plane work tracked by #1621 open until live evidence passes.
+
+Do not call the environment protected merely because its name contains `production` or `dry-run`.
 
 ## Stage 1 — isolated production-restore rehearsal
 
-Run `Supabase Forward Reconciliation Rehearsal` manually from the exact current `main` SHA.
+Run `Supabase Forward Reconciliation Rehearsal` manually from the exact current `main` SHA only after the administrative prerequisites above are satisfied.
 
-The protected workflow:
+The workflow is designed to:
 
-1. verifies the supplied SHA is the exact current `main` and the workflow run itself is bound to that SHA;
-2. compiles the selected migration manifest;
-3. reads production only through the protected Supabase pooler credential;
-4. restores the production database into a disposable runner-local Supabase/PostgreSQL target;
-5. verifies each selected migration's SHA-256 before applying it to the isolated restore;
-6. applies only those selected files to the isolated target;
-7. runs `scripts/supabase/verify-forward-reconciliation-postconditions.sql` against the isolated target;
-8. emits a redacted attestation that explicitly records `productionWritePerformed=false`;
-9. destroys the disposable database.
+1. verify the supplied SHA is the exact current `main` and the workflow run itself is bound to that SHA;
+2. compile the selected migration manifest;
+3. read production only through the Supabase pooler credential;
+4. restore the production database into a disposable runner-local Supabase/PostgreSQL target;
+5. verify each selected migration's SHA-256 before applying it to the isolated restore;
+6. apply only those selected files to the isolated target;
+7. run `scripts/supabase/verify-forward-reconciliation-postconditions.sql` against the isolated target;
+8. emit a redacted attestation that explicitly records `productionWritePerformed=false`;
+9. destroy the disposable database.
+
+The canonical backup/restore producer normalizes accidental CR/LF before PostgreSQL-tool use and records only bounded failure codes; raw subprocess errors, command arguments, database URLs and credentials must never be retained in evidence.
 
 A rehearsal PASS does not authorize production deployment.
 
@@ -44,7 +62,7 @@ Run `Supabase Forward Reconciliation Dry Run` with:
 - the same exact current `main` SHA; and
 - the successful Stage 1 rehearsal run ID.
 
-The workflow validates the source workflow/repository/SHA/conclusion, recompiles the manifest and validates the rehearsal attestation.
+The workflow validates the source workflow/repository/SHA/conclusion, recompiles the manifest after exact-current-main checkout and validates the rehearsal attestation.
 
 It then creates a temporary Supabase workdir, fetches the current remote migration history into that workdir, copies only the exact selected migration files into the temporary migration directory, and proves:
 
@@ -53,9 +71,9 @@ It then creates a temporary Supabase workdir, fetches the current remote migrati
 - the local migration set is exactly `remote history + selected set`;
 - the pending migration set is exactly the selected set;
 - there are no unauthorized pending migration versions;
-- neither migration-history repair nor `--include-all` is required.
+- neither migration-history repair nor unrestricted migration inclusion is required.
 
-Only after those assertions pass does it execute a Supabase `db push --dry-run` against production.
+Only after those assertions pass does it execute a Supabase migration **dry run** against production.
 
 The dry-run workflow does not perform a production write.
 
@@ -75,8 +93,8 @@ Production application still requires an independently protected, human-approved
 Do not replace this boundary with:
 
 - direct production SQL from an ad-hoc terminal;
-- `supabase migration repair`;
-- unrestricted `supabase db push --include-all`;
+- migration-history repair;
+- unrestricted migration inclusion;
 - manual insertion into `supabase_migrations.schema_migrations`;
 - filename-only or catalog-only migration equivalence;
 - automatic classification of historical migrations.
@@ -85,6 +103,6 @@ If production execution tooling is added later, it must use the filtered remote-
 
 ## Historical backlog remains separate
 
-This lane does not close or alter the unresolved historical migration reconciliation program. Historical duplicate versions, invalid legacy filenames/timestamps, local-only historical files and owner-review decisions remain governed by the global migration reconciliation workflows.
+This lane does not close or alter the unresolved historical migration reconciliation program. Current fingerprint-backed provenance still requires the remaining human owner decisions and independent approval before the global historical gate can open.
 
 The goal here is narrower: prove that a specifically reviewed set of new forward-only runtime reconciliations is safe and deployable without exposing the production database to the unresolved historical backlog.
