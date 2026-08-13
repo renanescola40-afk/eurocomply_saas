@@ -85,7 +85,7 @@ describe('Vercel production deployment authority', () => {
   });
 
   it('uses protected production approval and immutable tool references', () => {
-    expect(workflow).toContain('environment: Production');
+    expect(workflow).toContain('environment: production');
     expect(workflow).toContain(
       'actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0',
     );
