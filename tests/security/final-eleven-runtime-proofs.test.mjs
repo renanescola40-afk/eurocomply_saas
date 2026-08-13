@@ -37,9 +37,9 @@ test('final technical proof exercises disposable auth, storage isolation, cleanu
   assert.match(technicalWorkflow, /environment: production-final-technical-proof/);
   assert.match(technicalWorkflow, /EXECUTE_FINAL_TECHNICAL_PROOF/);
   assert.match(technicalWorkflow, /persist-credentials: false/);
-  assert.match(technicalWorkflow, /Start disposable Supabase recovery database/);
+  assert.match(technicalWorkflow, /Start exact-SHA disposable Supabase project database/);
   assert.match(technicalWorkflow, /Remove disposable recovery database/);
-  assert.match(technicalWorkflow, /supabase\/setup-cli@46f89843689f213b433d85a0508d1183e1803070/);
+  assert.match(technicalWorkflow, /supabase\/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520/);
   assert.doesNotMatch(technicalWorkflow, /secrets\.RECOVERY_ISOLATED_DATABASE_URL/);
   assert.match(ephemeralRecovery, /RECOVERY_ISOLATED_DATABASE_URL/);
   assert.match(ephemeralRecovery, /supabase.*db.*start/s);
