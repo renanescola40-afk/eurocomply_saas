@@ -3,10 +3,14 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_RECOVERY_DB_URL,
-  RECOVERY_POSTGRES_VERSION,
+  RECOVERY_EXPECTED_SERVER_PREFIX,
+  RECOVERY_POSTGRES_MAJOR_VERSION,
   buildProjectId,
+  classifyPublishedBinding,
+  configurePostgresMajorVersion,
   isLoopbackDatabaseUrl,
   parseLocalDbUrl,
+  readConfiguredPostgresMajorVersion,
 } from '../../scripts/recovery/manage-ephemeral-recovery-database.mjs';
 
 const manager = fs.readFileSync('scripts/recovery/manage-ephemeral-recovery-database.mjs', 'utf8');
@@ -15,21 +19,46 @@ const finalTechnical = fs.readFileSync('.github/workflows/final-technical-contro
 const recovery = fs.readFileSync('.github/workflows/recovery-resilience-proof.yml', 'utf8');
 
 describe('ephemeral Supabase recovery database contract', () => {
-  it('pins the disposable database to the production-compatible Supabase Postgres 17.6 line', () => {
-    expect(RECOVERY_POSTGRES_VERSION).toBe('17.6.1.136');
+  it('pins the local project to PostgreSQL 17 and verifies the production 17.6 server line', () => {
+    expect(RECOVERY_POSTGRES_MAJOR_VERSION).toBe(17);
+    expect(RECOVERY_EXPECTED_SERVER_PREFIX).toBe('17.6');
     expect(DEFAULT_RECOVERY_DB_URL).toBe('postgresql://postgres:postgres@127.0.0.1:54322/postgres');
-    expect(manager).toContain("writeFileSync(join(tempDir, 'postgres-version')");
-    expect(manager).toContain("serverVersion.startsWith('17.6')");
+
+    const configured = configurePostgresMajorVersion('[db]\nport = 54322\nmajor_version = 15\n');
+    expect(readConfiguredPostgresMajorVersion(configured)).toBe(17);
+    expect(configured).toContain('major_version = 17');
+    expect(() => configurePostgresMajorVersion('[db]\nport = 54322\n')).toThrow('db.major_version');
+    expect(manager).toContain("serverVersion.startsWith(RECOVERY_EXPECTED_SERVER_PREFIX)");
   });
 
-  it('accepts only loopback database endpoints for the disposable target', () => {
+  it('accepts only loopback connection URLs for the disposable target', () => {
     expect(isLoopbackDatabaseUrl(DEFAULT_RECOVERY_DB_URL)).toBe(true);
     expect(isLoopbackDatabaseUrl('postgres://postgres:postgres@localhost:54322/postgres')).toBe(true);
     expect(isLoopbackDatabaseUrl('postgres://postgres:postgres@127.0.0.1:54322/postgres')).toBe(true);
     expect(isLoopbackDatabaseUrl('postgres://postgres:postgres@db.example.com:54322/postgres')).toBe(false);
     expect(isLoopbackDatabaseUrl('not-a-url')).toBe(false);
-    expect(manager).toContain("startsWith('supabase_db_')");
-    expect(manager).toMatch(/127\\\.0\\\.0\\\.1\|\\\[::1\\\]/);
+  });
+
+  it('classifies Docker bindings and fails closed on unexpected published endpoints', () => {
+    expect(classifyPublishedBinding('127.0.0.1:54322')).toBe('loopback');
+    expect(classifyPublishedBinding('[::1]:54322')).toBe('loopback');
+    expect(classifyPublishedBinding('0.0.0.0:54322')).toBe('wildcard-v4');
+    expect(classifyPublishedBinding('[::]:54322')).toBe('wildcard-v6');
+    expect(classifyPublishedBinding('10.0.0.4:54322')).toBe('invalid');
+    expect(classifyPublishedBinding('0.0.0.0:6543')).toBe('invalid');
+  });
+
+  it('installs host and Docker firewall rules before restored production data can be loaded', () => {
+    expect(manager).toContain("ensureDockerUserChain('iptables')");
+    expect(manager).toContain("firewallArgs('INPUT', DB_HOST_PORT, comment)");
+    expect(manager).toContain('dockerUserArgs(DB_CONTAINER_PORT, comment)');
+    expect(manager).toContain("installRule('iptables', input)");
+    expect(manager).toContain("installRule('iptables', dockerUser)");
+    expect(manager).toContain("installRule('ip6tables', input6)");
+    expect(manager).toContain('testLocalConnection(dbUrl)');
+    expect(manager.indexOf('hardenWildcardBindings(containerName, projectId)'))
+      .toBeLessThan(manager.indexOf('testLocalConnection(dbUrl)'));
+    expect(manager).toContain('cleanupPersistedFirewallRules');
   });
 
   it('parses Supabase CLI env and pretty status formats without exposing the URL to evidence', () => {
@@ -47,10 +76,11 @@ describe('ephemeral Supabase recovery database contract', () => {
     expect(buildProjectId('x'.repeat(200), '1').length).toBeLessThanOrEqual(63);
   });
 
-  it('starts only the database service and always destroys local volumes after proof', () => {
+  it('starts only the database service and destroys local volumes plus temporary firewall rules after proof', () => {
     expect(manager).toContain("'db', 'start'");
     expect(manager).not.toContain("'start', '--exclude'");
     expect(manager).toContain("'stop', '--no-backup'");
+    expect(manager).toContain('local volumes, and temporary firewall rules removed');
     expect(finalTechnical).toMatch(/Remove disposable recovery database[\s\S]*?if: always\(\)/);
     expect(recovery).toMatch(/Remove disposable recovery database[\s\S]*?if: always\(\) &&/);
   });
