@@ -1,8 +1,17 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import {
+  appendFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { basename, join } from 'node:path';
 
 export const RECOVERY_POSTGRES_MAJOR_VERSION = 17;
 export const RECOVERY_EXPECTED_SERVER_PREFIX = '17.6';
@@ -57,6 +66,15 @@ export function classifyPublishedBinding(line) {
   return 'invalid';
 }
 
+export function listProjectMigrationVersions(migrationsDir) {
+  if (!existsSync(migrationsDir)) throw new Error(`Project migrations directory is missing: ${migrationsDir}`);
+  return readdirSync(migrationsDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /^\d+.*\.sql$/.test(entry.name))
+    .map((entry) => entry.name.match(/^(\d+)/)?.[1] ?? '')
+    .filter(Boolean)
+    .sort();
+}
+
 function run(command, args, options = {}) {
   return execFileSync(command, args, {
     encoding: 'utf8',
@@ -107,16 +125,19 @@ function ensureDockerUserChain(binary) {
   run('sudo', [binary, '-S', 'DOCKER-USER'], { capture: true });
 }
 
-function hardenWildcardBindings(containerName, projectId) {
+function readPublishedBindings(containerName) {
   const raw = String(run('docker', ['port', containerName, `${DB_CONTAINER_PORT}/tcp`], { capture: true }));
   const bindings = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   if (bindings.length === 0) throw new Error('Supabase recovery database has no published PostgreSQL binding');
-
   const classes = bindings.map(classifyPublishedBinding);
   if (classes.includes('invalid')) {
     throw new Error(`Unexpected Supabase PostgreSQL port binding: ${bindings.join(', ')}`);
   }
+  return { bindings, classes };
+}
 
+function hardenWildcardBindings(containerName, projectId) {
+  const { bindings, classes } = readPublishedBindings(containerName);
   const rules = [];
   const comment = `risck-recovery-${safeToken(projectId)}`.slice(0, 120);
   try {
@@ -153,13 +174,69 @@ function hardenWildcardBindings(containerName, projectId) {
 }
 
 function testLocalConnection(dbUrl) {
-  const result = String(run('psql', [dbUrl, '--no-psqlrc', '--tuples-only', '--no-align', '--set', 'ON_ERROR_STOP=1', '--command', 'select 1;'], { capture: true })).trim();
+  const result = String(run('psql', [
+    dbUrl,
+    '--no-psqlrc',
+    '--tuples-only',
+    '--no-align',
+    '--set', 'ON_ERROR_STOP=1',
+    '--command', 'select 1;',
+  ], { capture: true })).trim();
   if (result !== '1') throw new Error('Ephemeral recovery database is not reachable through its loopback URL');
 }
 
-function start() {
+function serverVersion(containerName) {
+  return String(run('docker', [
+    'exec', containerName, 'psql', '-U', 'postgres', '-d', 'postgres', '-At',
+    '-c', "select current_setting('server_version');",
+  ], { capture: true })).trim();
+}
+
+function copyExactShaProjectMigrations(workDir) {
+  const sourceDir = join(process.cwd(), 'supabase', 'migrations');
+  const targetDir = join(workDir, 'supabase', 'migrations');
+  const expectedVersions = listProjectMigrationVersions(sourceDir);
+  if (expectedVersions.length === 0) throw new Error('No project migrations were found in the exact-SHA checkout');
+  rmSync(targetDir, { recursive: true, force: true });
+  cpSync(sourceDir, targetDir, { recursive: true, force: true });
+  return expectedVersions;
+}
+
+function verifyExactShaMigrations(dbUrl, expectedVersions) {
+  const rows = String(run('psql', [
+    dbUrl,
+    '--no-psqlrc',
+    '--tuples-only',
+    '--no-align',
+    '--set', 'ON_ERROR_STOP=1',
+    '--command', 'select version from supabase_migrations.schema_migrations order by version;',
+  ], { capture: true }))
+    .split(/\r?\n/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const observed = new Set(rows);
+  const missing = expectedVersions.filter((version) => !observed.has(version));
+  if (missing.length > 0) {
+    throw new Error(`Exact-SHA project migrations were not fully applied; missing ${missing.length}, first ${missing[0]}`);
+  }
+}
+
+function applyExactShaProjectSchema(workDir, dbUrl, projectId) {
+  const expectedVersions = copyExactShaProjectMigrations(workDir);
+  run('supabase', ['--workdir', workDir, 'db', 'reset', '--local', '--no-seed']);
+  const containerName = findDatabaseContainer(projectId);
+  readPublishedBindings(containerName);
+  testLocalConnection(dbUrl);
+  verifyExactShaMigrations(dbUrl, expectedVersions);
+  return { containerName, migrationCount: expectedVersions.length };
+}
+
+function start(mode = 'restore-target') {
   if (process.env.GITHUB_ACTIONS !== 'true') {
     throw new Error('Ephemeral recovery database provisioning is restricted to GitHub Actions');
+  }
+  if (!['restore-target', 'project-schema'].includes(mode)) {
+    throw new Error(`Unsupported ephemeral recovery database mode: ${mode}`);
   }
   const runnerTemp = process.env.RUNNER_TEMP;
   if (!runnerTemp) throw new Error('RUNNER_TEMP is required');
@@ -188,30 +265,37 @@ function start() {
       throw new Error('Supabase CLI returned a non-loopback recovery database URL');
     }
 
-    const containerName = findDatabaseContainer(projectId);
+    let containerName = findDatabaseContainer(projectId);
     firewall = hardenWildcardBindings(containerName, projectId);
     testLocalConnection(dbUrl);
 
-    const serverVersion = String(run('docker', [
-      'exec', containerName, 'psql', '-U', 'postgres', '-d', 'postgres', '-At',
-      '-c', "select current_setting('server_version');",
-    ], { capture: true })).trim();
-    if (!serverVersion.startsWith(RECOVERY_EXPECTED_SERVER_PREFIX)) {
-      throw new Error(`Unexpected ephemeral Postgres version: ${serverVersion || 'unknown'}`);
+    let migrationCount = 0;
+    if (mode === 'project-schema') {
+      const applied = applyExactShaProjectSchema(workDir, dbUrl, projectId);
+      containerName = applied.containerName;
+      migrationCount = applied.migrationCount;
+    }
+
+    const observedServerVersion = serverVersion(containerName);
+    if (!observedServerVersion.startsWith(RECOVERY_EXPECTED_SERVER_PREFIX)) {
+      throw new Error(`Unexpected ephemeral Postgres version: ${observedServerVersion || 'unknown'}`);
     }
 
     process.stdout.write(`::add-mask::${dbUrl}\n`);
     appendGithubEnv('RECOVERY_ISOLATED_DATABASE_URL', dbUrl);
     appendGithubEnv('RECOVERY_EPHEMERAL_DATABASE_PROVISIONED', 'true');
+    appendGithubEnv('RECOVERY_EPHEMERAL_DATABASE_MODE', mode);
     appendGithubEnv('RECOVERY_EPHEMERAL_PROJECT_ID', projectId);
     appendGithubEnv('RECOVERY_EPHEMERAL_WORKDIR', workDir);
     appendGithubEnv('RECOVERY_LOCAL_DB_CONTAINER', containerName);
-    appendGithubEnv('RECOVERY_SUPABASE_POSTGRES_VERSION', serverVersion);
+    appendGithubEnv('RECOVERY_SUPABASE_POSTGRES_VERSION', observedServerVersion);
+    appendGithubEnv('RECOVERY_EPHEMERAL_MIGRATION_COUNT', String(migrationCount));
     appendGithubEnv('RECOVERY_FIREWALL_COMMENT', firewall.comment);
     appendGithubEnv('RECOVERY_FIREWALL_IPV4', firewall.classes.includes('wildcard-v4') ? 'true' : 'false');
     appendGithubEnv('RECOVERY_FIREWALL_IPV6', firewall.classes.includes('wildcard-v6') ? 'true' : 'false');
 
-    process.stdout.write(`Ephemeral Supabase recovery database ready using PostgreSQL ${serverVersion}; published bindings are restricted before restore data is loaded.\n`);
+    const schemaSummary = mode === 'project-schema' ? ` with ${migrationCount} exact-SHA project migrations` : '';
+    process.stdout.write(`Ephemeral Supabase database ready using PostgreSQL ${observedServerVersion}${schemaSummary}; published bindings are restricted before proof execution.\n`);
   } catch (error) {
     if (firewall?.rules) {
       for (const [binary, args] of [...firewall.rules].reverse()) removeRule(binary, args);
@@ -256,7 +340,14 @@ export function readConfiguredPostgresMajorVersion(configText) {
 const command = process.argv[2];
 if (command === 'start') {
   try {
-    start();
+    start('restore-target');
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+} else if (command === 'start-project') {
+  try {
+    start('project-schema');
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
@@ -268,7 +359,7 @@ if (command === 'start') {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
-} else if (process.argv[1]?.endsWith('manage-ephemeral-recovery-database.mjs')) {
-  console.error('Usage: manage-ephemeral-recovery-database.mjs <start|stop>');
+} else if (process.argv[1]?.endsWith(basename(import.meta.url))) {
+  console.error('Usage: manage-ephemeral-recovery-database.mjs <start|start-project|stop>');
   process.exit(2);
 }
