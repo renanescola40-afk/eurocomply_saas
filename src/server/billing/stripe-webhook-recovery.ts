@@ -5,7 +5,13 @@ import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { reconcileStripeEntitlementEvent } from '@/server/billing/stripe-entitlement-runtime';
-import { getStripeEventAuditContext, handleStripeWebhookEvent } from '@/server/billing/stripe-webhooks';
+import {
+  claimStripeEventForProcessing,
+  getStripeEventAuditContext,
+  handleStripeWebhookEvent,
+  markStripeEventFailed,
+  markStripeEventProcessed,
+} from '@/server/billing/stripe-webhooks';
 import { buildIdempotencyKey } from '@/server/jobs/idempotency-key';
 
 export const STRIPE_EVENT_PROCESSING_LEASE_MS = 15 * 60 * 1000;
@@ -16,6 +22,10 @@ const RECOVERABLE_STRIPE_EVENT_TYPES = new Set([
   'customer.subscription.updated',
   'customer.subscription.deleted',
   'invoice.payment_failed',
+  'invoice.paid',
+]);
+
+const ENTITLEMENT_ONLY_STRIPE_EVENT_TYPES = new Set([
   'invoice.paid',
 ]);
 
@@ -52,7 +62,55 @@ function paymentFailedEmailIdempotencyKey(event: Stripe.Event) {
   });
 }
 
+async function recordEntitlementOnlyReplayAudit(event: Stripe.Event) {
+  const context = getStripeEventAuditContext(event);
+
+  try {
+    await writeAuditLog({
+      action: 'webhook_replayed',
+      organizationId: context.organizationId,
+      userId: context.actorUserId,
+      entityType: 'stripe_webhook_event',
+      entityId: event.id,
+      metadata: {
+        stripeEventId: event.id,
+        stripeEventType: event.type,
+        livemode: event.livemode,
+        objectId: context.objectId ?? null,
+        processingLane: 'entitlement_only',
+      },
+    });
+  } catch (error) {
+    reportError(error, {
+      area: 'stripe_entitlement_only_replay_audit',
+      stripeEventId: event.id,
+      stripeEventType: event.type,
+    });
+  }
+}
+
+async function runEntitlementOnlyStripeEvent(event: Stripe.Event) {
+  const claimed = await claimStripeEventForProcessing(event);
+
+  if (!claimed) {
+    await recordEntitlementOnlyReplayAudit(event);
+    return { skipped: true, duplicate: true };
+  }
+
+  try {
+    await markStripeEventProcessed(event);
+    return { skipped: false };
+  } catch (error) {
+    await markStripeEventFailed(event, error);
+    throw error;
+  }
+}
+
 async function runCoreStripeWebhookHandler(event: Stripe.Event) {
+  if (ENTITLEMENT_ONLY_STRIPE_EVENT_TYPES.has(event.type)) {
+    return runEntitlementOnlyStripeEvent(event);
+  }
+
   if (event.type !== 'invoice.payment_failed') {
     return handleStripeWebhookEvent(event);
   }
