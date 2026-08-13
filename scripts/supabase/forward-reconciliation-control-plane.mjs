@@ -270,7 +270,6 @@ export function verifyFilteredMigrationSet({ manifest, expectedSha, remoteVersio
   const selected = normalizeVersionArray(manifest.migrations.map((migration) => migration.version), 'selected migration versions');
   const remoteSet = new Set(remote);
   const localSet = new Set(local);
-  const selectedSet = new Set(selected);
 
   for (const version of selected) assert(!remoteSet.has(version), `selected migration is already present in remote history: ${version}`);
   for (const version of remote) assert(localSet.has(version), `filtered workdir is missing remote migration version ${version}`);
