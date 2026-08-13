@@ -15,6 +15,7 @@ import {
   findCompletedBillingLifecycleReplay,
   getBillingLifecycleReplaySnapshot,
   markBillingLifecycleAuditSucceeded,
+  markBillingLifecycleLegacyProviderSucceeded,
   markBillingLifecycleProviderInFlight,
   markBillingLifecycleProviderSucceeded,
   type BillingLifecycleAction,
@@ -149,6 +150,52 @@ function replayResult(snapshot: BillingLifecycleReplaySnapshot) {
   return { ...snapshot, idempotentReplay: true };
 }
 
+function canonicalProviderAddOnItems(subscription: Stripe.Subscription, baseItemId: string) {
+  return subscription.items.data
+    .filter((item) => item.id !== baseItemId)
+    .map((item) => ({ price: item.price.id, quantity: item.quantity ?? 0 }))
+    .sort((left, right) => left.price.localeCompare(right.price) || left.quantity - right.quantity);
+}
+
+function canonicalExpectedAddOnItems(addOns: BillingAddOnSelection[], interval: BillingInterval) {
+  return buildAddOnItems(addOns, interval)
+    .map((item) => ({ price: item.price, quantity: item.quantity }))
+    .sort((left, right) => left.price.localeCompare(right.price) || left.quantity - right.quantity);
+}
+
+function assertLegacyRecoveredProviderState(input: {
+  action: BillingLifecycleAction;
+  subscription: Stripe.Subscription;
+  baseItem: Stripe.SubscriptionItem;
+  targetPlan: CanonicalSubscriptionPlan;
+  interval: BillingInterval;
+  addOns: BillingAddOnSelection[];
+}) {
+  if (input.action === 'cancel') {
+    if (!input.subscription.cancel_at_period_end) {
+      throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+    }
+    return;
+  }
+
+  if (input.action === 'reactivate') {
+    if (input.subscription.cancel_at_period_end) {
+      throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+    }
+    return;
+  }
+
+  if (input.subscription.cancel_at_period_end || input.baseItem.price.id !== getStripePriceId(input.targetPlan, input.interval)) {
+    throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+  }
+
+  const actualAddOns = canonicalProviderAddOnItems(input.subscription, input.baseItem.id);
+  const expectedAddOns = canonicalExpectedAddOnItems(input.addOns, input.interval);
+  if (JSON.stringify(actualAddOns) !== JSON.stringify(expectedAddOns)) {
+    throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+  }
+}
+
 export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleInput) {
   const requestFingerprint = billingLifecycleRequestFingerprint(input);
   const completedReplay = await findCompletedBillingLifecycleReplay({
@@ -195,7 +242,11 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
   }
 
   const requestId = claim.request.id;
-  const recoveredSnapshot = claim.kind === 'claimed' ? null : getBillingLifecycleReplaySnapshot(claim.request);
+  const isLegacyProviderRecovery = claim.kind === 'legacy_provider_succeeded_recovery';
+  const recoveredSnapshot =
+    claim.kind === 'claimed' || isLegacyProviderRecovery
+      ? null
+      : getBillingLifecycleReplaySnapshot(claim.request);
 
   if (claim.kind === 'audit_succeeded_recovery') {
     await completeBillingLifecycleRequest(requestId);
@@ -203,8 +254,27 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
   }
 
   let updated = subscription;
-  const providerWasAlreadyCompleted = claim.kind === 'provider_succeeded_recovery';
+  const providerWasAlreadyCompleted = claim.kind === 'provider_succeeded_recovery' || isLegacyProviderRecovery;
   let providerSnapshot = recoveredSnapshot;
+
+  if (isLegacyProviderRecovery) {
+    assertLegacyRecoveredProviderState({
+      action: input.action,
+      subscription,
+      baseItem,
+      targetPlan,
+      interval,
+      addOns,
+    });
+    providerSnapshot = snapshotFromResult(lifecycleResult({
+      subscription,
+      plan: targetPlan,
+      interval,
+      addOns,
+      idempotentReplay: true,
+    }));
+    await markBillingLifecycleLegacyProviderSucceeded(requestId, providerSnapshot);
+  }
 
   if (!providerWasAlreadyCompleted) {
     await markBillingLifecycleProviderInFlight(requestId);
@@ -290,6 +360,7 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
       lifecycleRequestId: requestId,
       idempotencyProtected: true,
       providerMutationReplayed: providerWasAlreadyCompleted,
+      legacyProviderSnapshotRecovered: isLegacyProviderRecovery,
       durableResultSnapshot: true,
     },
   });
