@@ -6,8 +6,9 @@ on:
       - 'config/supabase-forward-reconciliation.json'
       - 'scripts/supabase/forward-reconciliation-control-plane.mjs'
       - 'scripts/supabase/verify-forward-reconciliation-postconditions.sql'
+      - 'scripts/recovery/run-backup-restore-exercise.mjs'
       - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
-      - '.github/workflows/supabase-forward-reconciliation-production.yml'
+      - '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
   workflow_dispatch:
     inputs:
       release_sha:
@@ -60,12 +61,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -R --line-number --fixed-string -- '--include-all' \
-            .github/workflows/supabase-forward-reconciliation-*.yml \
-            scripts/supabase/forward-reconciliation-control-plane.mjs
-          ! grep -R --line-number --fixed-string 'migration repair' \
-            .github/workflows/supabase-forward-reconciliation-*.yml \
-            scripts/supabase/forward-reconciliation-control-plane.mjs
+          python - <<'PY'
+          from pathlib import Path
+
+          forbidden = [
+              '--include' + '-all',
+              'migration ' + 'repair',
+          ]
+          paths = [
+              Path('.github/workflows/supabase-forward-reconciliation-rehearsal.yml'),
+              Path('.github/workflows/supabase-forward-reconciliation-dry-run.yml'),
+              Path('scripts/supabase/forward-reconciliation-control-plane.mjs'),
+          ]
+          for path in paths:
+              text = path.read_text(encoding='utf-8')
+              for token in forbidden:
+                  if token in text:
+                      raise SystemExit(f'forbidden bounded-reconciliation shortcut in {path}')
+          PY
 
   rehearse:
     name: Rehearse selected migrations on isolated production restore
