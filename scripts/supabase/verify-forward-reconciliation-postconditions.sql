@@ -10,6 +10,23 @@ declare
   step_up_function_oid oid := to_regprocedure('public.touch_step_up_challenges_updated_at()');
   uploader_function_oid oid := to_regprocedure('public.enforce_document_uploader_member_scope()');
 begin
+  if not exists (
+    select 1
+    from pg_policy policy
+    where policy.polrelid = 'public.organization_add_ons'::regclass
+      and policy.polname = 'organization members can read add-ons'
+      and policy.polcmd = 'r'
+      and exists (
+        select 1
+        from pg_roles role
+        where role.rolname = 'authenticated'
+          and role.oid = any(policy.polroles)
+      )
+      and pg_get_expr(policy.polqual, policy.polrelid) ~* 'members\.user_id\s*=\s*\(\s*SELECT\s+auth\.uid\(\)'
+  ) then
+    raise exception 'organization_add_ons SELECT policy is not using the statement-scoped auth initplan';
+  end if;
+
   if to_regclass('public.step_up_challenges') is null then
     raise exception 'step_up_challenges is missing';
   end if;
