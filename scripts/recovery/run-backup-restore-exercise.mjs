@@ -15,6 +15,11 @@ const startedAt = Date.now();
 const checks = {};
 const failures = [];
 
+const SUPABASE_MANAGED_DATA_EXCLUDES = [
+  'storage.buckets_vectors',
+  'storage.vector_indexes',
+];
+
 function required(name) {
   const value = env(name);
   if (!value) failures.push(`missing_${name.toLowerCase()}`);
@@ -101,11 +106,18 @@ try {
 
   if (ephemeralMode) {
     // Follow Supabase's supported platform-to-self-hosted logical restore sequence:
-    // filtered roles, schema, then complete data. The data dump includes auth.users,
-    // which preserves foreign-key integrity for public tables that reference Auth users.
+    // filtered roles, schema, then complete application/auth data. Supabase-managed
+    // vector storage tables are explicitly excluded from the logical data dump;
+    // they are platform-owned and are recreated/managed by the target project.
     run('supabase', ['db', 'dump', '--db-url', source, '--role-only', '--file', rolesDumpPath]);
     run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath]);
-    run('supabase', ['db', 'dump', '--db-url', source, '--data-only', '--use-copy', '--file', dataDumpPath]);
+    run('supabase', [
+      'db', 'dump', '--db-url', source,
+      '--data-only', '--use-copy',
+      '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[0],
+      '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[1],
+      '--file', dataDumpPath,
+    ]);
     backupCompletedAt = new Date().toISOString();
     const inspectedDump = inspectLogicalBackup([rolesDumpPath, schemaDumpPath, dataDumpPath]);
     checks.backupExists = inspectedDump.exists;
@@ -158,7 +170,7 @@ const evidence = {
   integrity: { criticalTables, sourceCounts, restoredCounts, sourceAuthUsers, restoredAuthUsers, backupSha256Prefix: digest ? `${digest.slice(0, 16)}…` : null, recoveryMode: ephemeralMode ? 'ephemeral-supabase-postgres' : 'external-isolated-database' }, failures: [...new Set(failures)],
   evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
   evidenceBoundary: ephemeralMode
-    ? 'Supabase-compatible logical roles, schema, and data backups were restored transactionally into a disposable isolated Supabase Postgres database. Evidence stores only aggregate counts and a truncated combined digest; backup files and local database volumes are deleted by the protected workflow.'
+    ? 'Supabase-compatible logical roles, schema, and application/auth data backups were restored transactionally into a disposable isolated Supabase Postgres database; target-managed vector storage tables were excluded from the data dump. Evidence stores only aggregate counts and a truncated combined digest; backup files and local database volumes are deleted by the protected workflow.'
     : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts and a truncated digest; the dump is deleted before completion.',
 };
 mkdirSync(dirname(output), { recursive: true });
