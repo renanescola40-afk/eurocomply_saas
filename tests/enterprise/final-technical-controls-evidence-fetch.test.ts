@@ -14,6 +14,7 @@ import { evaluateEvidenceDocument } from '../../scripts/enterprise/generate-read
 
 const targetSha = 'a'.repeat(40);
 const runId = '123456';
+const workflowPath = '.github/workflows/final-technical-controls-proof.yml';
 const roots: string[] = [];
 const scorecardWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
 const stabilizerWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard-stabilizer.yml', 'utf8');
@@ -79,10 +80,11 @@ describe('final technical controls evidence promotion', () => {
     expect(scorecardWorkflow).toContain('docs/security/evidence/runtime/storage-tenant-isolation-validation.json');
   });
 
-  it('selects only the successful workflow-dispatch run on exact main SHA', () => {
+  it('selects only the canonical successful workflow-dispatch run on exact main SHA despite dynamic run-name', () => {
     const accepted = {
       id: Number(runId),
-      name: 'Final Technical Controls Proof',
+      name: `Final technical controls proof for ${targetSha}`,
+      path: workflowPath,
       head_sha: targetSha,
       head_branch: 'main',
       event: 'workflow_dispatch',
@@ -90,10 +92,13 @@ describe('final technical controls evidence promotion', () => {
       conclusion: 'success',
       updated_at: '2026-08-05T17:01:00.000Z',
     };
-    const rejected = { ...accepted, id: 8, event: 'push' };
+    const rejectedEvent = { ...accepted, id: 8, event: 'push' };
+    const rejectedPath = { ...accepted, id: 9, path: '.github/workflows/not-final-technical.yml' };
 
-    expect(selectExactShaRun([rejected, accepted], targetSha, runId)?.id).toBe(Number(runId));
-    expect(selectExactShaRun([rejected], targetSha)).toBeNull();
+    expect(accepted.name).not.toBe('Final Technical Controls Proof');
+    expect(selectExactShaRun([rejectedEvent, rejectedPath, accepted], targetSha, runId)?.id).toBe(Number(runId));
+    expect(selectExactShaRun([rejectedEvent], targetSha)).toBeNull();
+    expect(selectExactShaRun([rejectedPath], targetSha)).toBeNull();
   });
 
   it('fails closed on incomplete, SHA-mismatched or sensitive source evidence', () => {
@@ -117,6 +122,7 @@ describe('final technical controls evidence promotion', () => {
     expect(evidence.storage.checks[0]?.name).toBe('storageTenantIsolation');
     expect(evaluateEvidenceDocument(evidence.storage, 'storageTenantIsolation')).toBe('PASS');
     expect(evidence.securityEvents.sourceWorkflow.exactShaBound).toBe(true);
+    expect(evidence.securityEvents.sourceWorkflow.file).toBe(workflowPath);
     expect(evidence.storage.evidenceIntegrity.syntheticStorageRemoved).toBe(true);
     expect(JSON.stringify(evidence)).not.toContain('password');
   });
