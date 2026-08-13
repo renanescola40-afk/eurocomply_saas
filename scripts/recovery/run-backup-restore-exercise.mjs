@@ -121,9 +121,9 @@ function copySqlToContainer(container, path) {
 
 function restoreIntoEphemeralSupabase(container) {
   const containerPaths = [
-    copySqlToContainer(container, rolesDumpPath, 'restore_copy_roles'),
-    copySqlToContainer(container, schemaDumpPath, 'restore_copy_schema'),
-    copySqlToContainer(container, dataDumpPath, 'restore_copy_data'),
+    copySqlToContainer(container, rolesDumpPath),
+    copySqlToContainer(container, schemaDumpPath),
+    copySqlToContainer(container, dataDumpPath),
   ];
   try {
     run('restore_transaction', 'docker', [
