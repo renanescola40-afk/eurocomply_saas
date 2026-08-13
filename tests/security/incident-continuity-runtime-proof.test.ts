@@ -10,11 +10,17 @@ const packageLock = JSON.parse(readFileSync('package-lock.json', 'utf8')) as {
 };
 
 describe('incident response and continuity megapack', () => {
-  it('uses protected exact-main manual execution', () => {
+  it('uses protected exact-main manual execution with a disposable exact-SHA project database', () => {
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain('environment: production-incident-proof');
     expect(workflow).toContain('EXECUTE_INCIDENT_CONTINUITY_PROOF');
     expect(workflow).toContain('persist-credentials: false');
+    expect(workflow).toContain('supabase/setup-cli@46f89843689f213b433d85a0508d1183e1803070');
+    expect(workflow).toContain('version: 2.101.0');
+    expect(workflow).toContain('manage-ephemeral-recovery-database.mjs start-project');
+    expect(workflow).toContain('manage-ephemeral-recovery-database.mjs stop');
+    expect(workflow).toMatch(/Remove disposable project database[\s\S]*?if: always\(\)/);
+    expect(workflow).not.toContain('secrets.RECOVERY_ISOLATED_DATABASE_URL');
     expect(workflow).not.toContain('pull_request_target');
     expect(workflow).not.toContain('contents: write');
   });
