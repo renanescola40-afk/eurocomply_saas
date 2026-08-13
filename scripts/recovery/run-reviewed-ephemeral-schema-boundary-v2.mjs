@@ -5,13 +5,30 @@ import { appendFileSync, existsSync, readFileSync, renameSync, writeFileSync } f
 import { join } from 'node:path';
 
 const root = process.cwd();
+const batchIPath = join(root, 'docs', 'security', 'evidence', 'human-review', 'supabase-migration-mega-batch-i.md');
 const batchLPath = join(root, 'docs', 'security', 'evidence', 'human-review', 'supabase-migration-mega-batch-l.md');
 const batchHPath = join(root, 'docs', 'security', 'evidence', 'human-review', 'supabase-migration-mega-batch-h.md');
 const batchNPath = join(root, 'docs', 'security', 'evidence', 'human-review', 'supabase-migration-mega-batch-n.md');
 const delegate = join(root, 'scripts', 'recovery', 'run-reviewed-ephemeral-schema-boundary.mjs');
-const derivedDependentName = '20260725180000_enterprise_access_operations_explicit_deny_policies.sql';
-const derivedDependentPath = join(root, 'supabase', 'migrations', derivedDependentName);
-const derivedHeldPath = `${derivedDependentPath}.derived-prerequisite-blocked`;
+
+const derivedRules = Object.freeze([
+  Object.freeze({
+    id: 'H11<-N9',
+    name: '20260725180000_enterprise_access_operations_explicit_deny_policies.sql',
+    heldSuffix: '.derived-prerequisite-blocked',
+    sourceMarkers: Object.freeze(['on public.enterprise_access_operations']),
+  }),
+  Object.freeze({
+    id: 'qualified-review-control-center<-I-DUP-13/N7',
+    name: '20260727153000_qualified_review_control_center.sql',
+    heldSuffix: '.derived-prerequisite-blocked',
+    sourceMarkers: Object.freeze([
+      'create or replace view public.qualified_review_control_center_v1',
+      'from public.qualified_review_campaigns c',
+      'left join public.qualified_review_assignments a',
+    ]),
+  }),
+]);
 
 const blockedRules = Object.freeze([
   Object.freeze({
@@ -58,24 +75,39 @@ function validateReviewBoundary(review, rule) {
   }
 }
 
-function validateDerivedPrerequisiteBoundary() {
+function validateDerivedPrerequisiteBoundaries() {
   const batchH = readFileSync(batchHPath, 'utf8');
+  const batchI = readFileSync(batchIPath, 'utf8');
   const batchN = readFileSync(batchNPath, 'utf8');
-  if (!batchH.includes(`| H11 | \`${derivedDependentName}\` | \`PENDING_DEPLOYMENT\``)) {
+
+  if (!batchH.includes('| H11 | `20260725180000_enterprise_access_operations_explicit_deny_policies.sql` | `PENDING_DEPLOYMENT`')) {
     fail('Batch-H evidence no longer proves H11 pending-deployment classification');
   }
   if (!batchN.includes('| N9 | `20260724200000_enterprise_access_operations_center.sql` | `PENDING_DEPLOYMENT` | **PREREQUISITE_BLOCKED')) {
     fail('Batch-N evidence no longer proves N9 prerequisite-blocked execution boundary');
   }
+  if (!batchI.includes('### I-DUP-13 — version `20260723223000`')
+      || !batchI.includes('`20260723223000_qualified_review_consolidated.sql`')
+      || !batchI.includes('classification for every Batch I item: `REQUIRES_SPLIT_REVIEW`')) {
+    fail('Batch-I evidence no longer proves I-DUP-13 split-review boundary');
+  }
+  if (!batchN.includes('| N7 | `20260723170000_qualified_review_operations_platform.sql` | `PENDING_DEPLOYMENT` | **PREREQUISITE_BLOCKED')) {
+    fail('Batch-N evidence no longer proves N7 prerequisite-blocked execution boundary');
+  }
   if (!batchN.includes('prerequisiteBlockedExecutionAuthorized = false')) {
     fail('Batch-N evidence no longer preserves prerequisite-blocked execution denial');
   }
-  if (!existsSync(derivedDependentPath) || existsSync(derivedHeldPath)) {
-    fail('H11 derived prerequisite hold paths are not in the expected state');
-  }
-  const sql = readFileSync(derivedDependentPath, 'utf8');
-  if (!sql.includes('on public.enterprise_access_operations')) {
-    fail('H11 no longer depends on the N9 enterprise_access_operations relation');
+
+  for (const rule of derivedRules) {
+    const path = join(root, 'supabase', 'migrations', rule.name);
+    const heldPath = `${path}${rule.heldSuffix}`;
+    if (!existsSync(path) || existsSync(heldPath)) {
+      fail(`${rule.id} derived prerequisite hold paths are not in the expected state`);
+    }
+    const sql = readFileSync(path, 'utf8');
+    for (const marker of rule.sourceMarkers) {
+      if (!sql.includes(marker)) fail(`${rule.id} dependency marker drifted: ${marker}`);
+    }
   }
 }
 
@@ -97,6 +129,32 @@ function stageBlockedRule(rule) {
     'utf8',
   );
   return { path, bytes, name: rule.name };
+}
+
+function holdDerivedRules() {
+  const held = [];
+  for (const rule of derivedRules) {
+    const path = join(root, 'supabase', 'migrations', rule.name);
+    const heldPath = `${path}${rule.heldSuffix}`;
+    renameSync(path, heldPath);
+    held.push({ ...rule, path, heldPath });
+  }
+  return held;
+}
+
+function restoreDerivedRules(items) {
+  const failures = [];
+  for (const item of [...items].reverse()) {
+    try {
+      if (!existsSync(item.heldPath) || existsSync(item.path)) {
+        fail(`${item.id} derived prerequisite hold state drifted before restore`);
+      }
+      renameSync(item.heldPath, item.path);
+    } catch (error) {
+      failures.push(`${item.name}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  if (failures.length) fail(`Failed to restore derived prerequisite migrations: ${failures.join('; ')}`);
 }
 
 function restoreHistoricalBytes(items) {
@@ -122,27 +180,21 @@ function main() {
   }
 
   for (const rule of blockedRules) validateReviewBoundary(review, rule);
-  validateDerivedPrerequisiteBoundary();
+  validateDerivedPrerequisiteBoundaries();
 
   const staged = [];
-  let derivedHeld = false;
+  let derivedHeld = [];
   let delegatedError = null;
   let restoreError = null;
   try {
     for (const rule of blockedRules) staged.push(stageBlockedRule(rule));
-    renameSync(derivedDependentPath, derivedHeldPath);
-    derivedHeld = true;
+    derivedHeld = holdDerivedRules();
     execFileSync(process.execPath, [delegate], { stdio: 'inherit', env: process.env });
   } catch (error) {
     delegatedError = error;
   } finally {
     try {
-      if (derivedHeld || existsSync(derivedHeldPath)) {
-        if (!existsSync(derivedHeldPath) || existsSync(derivedDependentPath)) {
-          fail('H11 derived prerequisite hold state drifted before restore');
-        }
-        renameSync(derivedHeldPath, derivedDependentPath);
-      }
+      restoreDerivedRules(derivedHeld);
       restoreHistoricalBytes(staged);
     } catch (error) {
       restoreError = error;
@@ -153,9 +205,9 @@ function main() {
   if (delegatedError) throw delegatedError;
 
   appendGithubEnv('RECOVERY_EPHEMERAL_SPLIT_REVIEW_BLOCKED_FILE_COUNT', String(blockedRules.length));
-  appendGithubEnv('RECOVERY_EPHEMERAL_DERIVED_PREREQUISITE_BLOCKED_FILE_COUNT', '1');
+  appendGithubEnv('RECOVERY_EPHEMERAL_DERIVED_PREREQUISITE_BLOCKED_FILE_COUNT', String(derivedRules.length));
   process.stdout.write(
-    `Reviewed disposable schema boundary v2 preserved ${blockedRules.map((rule) => rule.id).join(', ')} as split-review blocked, held H11 behind prerequisite-blocked N9, and restored canonical historical bytes.\n`,
+    `Reviewed disposable schema boundary v2 preserved ${blockedRules.map((rule) => rule.id).join(', ')} as split-review blocked, held ${derivedRules.map((rule) => rule.id).join(', ')} behind reviewed prerequisites, and restored canonical historical bytes.\n`,
   );
 }
 
