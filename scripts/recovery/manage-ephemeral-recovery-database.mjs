@@ -104,16 +104,21 @@ export function configurePostgresMajorVersion(configText, majorVersion = RECOVER
   return source.replace(/^\s*major_version\s*=\s*\d+\s*$/m, `major_version = ${majorVersion}`);
 }
 
+function dbPortPattern() {
+  return /(\[db\][\s\S]*?^\s*)port\s*=\s*\d+\s*$/m;
+}
+
 export function configureRecoveryDatabase(configText, hostPort, majorVersion = RECOVERY_POSTGRES_MAJOR_VERSION) {
   const port = Number(hostPort);
   if (!Number.isInteger(port) || port <= 0 || port > 65535) {
     throw new Error('Recovery database host port is invalid');
   }
   const withMajor = configurePostgresMajorVersion(configText, majorVersion);
-  if (!/^\s*port\s*=\s*\d+\s*$/m.test(withMajor)) {
+  const pattern = dbPortPattern();
+  if (!pattern.test(withMajor)) {
     throw new Error('Supabase config is missing db.port');
   }
-  return withMajor.replace(/^\s*port\s*=\s*\d+\s*$/m, `port = ${port}`);
+  return withMajor.replace(pattern, `$1port = ${port}`);
 }
 
 export function classifyPublishedBinding(line, hostPort = DEFAULT_RECOVERY_DB_PORT) {
@@ -441,7 +446,7 @@ export function readConfiguredPostgresMajorVersion(configText) {
 }
 
 export function readConfiguredDatabasePort(configText) {
-  const match = String(configText ?? '').match(/^\s*port\s*=\s*(\d+)\s*$/m);
+  const match = String(configText ?? '').match(/\[db\][\s\S]*?^\s*port\s*=\s*(\d+)\s*$/m);
   return match ? Number(match[1]) : null;
 }
 
