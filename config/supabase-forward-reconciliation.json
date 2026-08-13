@@ -1,0 +1,29 @@
+{
+  "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
+  "changeSet": "2026-08-13-runtime-schema-reconciliation",
+  "migrations": [
+    {
+      "filename": "20260813194500_reconcile_step_up_challenges_runtime.sql",
+      "purpose": "materialize backend-only enterprise step-up challenge storage"
+    },
+    {
+      "filename": "20260813200000_reconcile_subscription_schema_defaults.sql",
+      "purpose": "tighten canonical subscription plan, tier and defaults fail-closed"
+    },
+    {
+      "filename": "20260813201500_reconcile_controlled_document_storage.sql",
+      "purpose": "materialize controlled-document runtime metadata and storage boundaries"
+    },
+    {
+      "filename": "20260813201600_force_tasks_rls.sql",
+      "purpose": "force RLS on the tenant-scoped tasks table"
+    }
+  ],
+  "truthBoundary": {
+    "automaticClassification": false,
+    "productionWriteAuthorizedByConfig": false,
+    "migrationHistoryRepairAllowed": false,
+    "unrestrictedDbPushAllowed": false,
+    "onlyListedForwardMigrationsMayBeRehearsedOrRequested": true
+  }
+}
