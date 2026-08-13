@@ -5,7 +5,12 @@ import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { reconcileStripeEntitlementEvent } from '@/server/billing/stripe-entitlement-runtime';
-import { getStripeEventAuditContext, handleStripeWebhookEvent } from '@/server/billing/stripe-webhooks';
+import {
+  claimStripeEventForProcessing,
+  getStripeEventAuditContext,
+  handleStripeWebhookEvent,
+  markStripeEventFailed,
+} from '@/server/billing/stripe-webhooks';
 import { buildIdempotencyKey } from '@/server/jobs/idempotency-key';
 
 export const STRIPE_EVENT_PROCESSING_LEASE_MS = 15 * 60 * 1000;
@@ -16,6 +21,10 @@ const RECOVERABLE_STRIPE_EVENT_TYPES = new Set([
   'customer.subscription.updated',
   'customer.subscription.deleted',
   'invoice.payment_failed',
+  'invoice.paid',
+]);
+
+const ENTITLEMENT_ONLY_STRIPE_EVENT_TYPES = new Set([
   'invoice.paid',
 ]);
 
@@ -36,6 +45,14 @@ type ExistingEntitlementSnapshot = {
   source_version: number;
 };
 
+type InvoiceWithSubscriptionMetadata = Stripe.Invoice & {
+  parent?: {
+    subscription_details?: {
+      metadata?: Stripe.Metadata | null;
+    } | null;
+  } | null;
+};
+
 export function isStripeEventProcessingLeaseExpired(updatedAt: string | null | undefined, nowMs = Date.now()) {
   if (!updatedAt) return false;
 
@@ -52,7 +69,84 @@ function paymentFailedEmailIdempotencyKey(event: Stripe.Event) {
   });
 }
 
+function getEntitlementOnlyOrganizationId(event: Stripe.Event) {
+  if (event.type !== 'invoice.paid') return null;
+
+  const invoice = event.data.object as InvoiceWithSubscriptionMetadata;
+  const metadata = invoice.parent?.subscription_details?.metadata;
+  const value = metadata?.organization_id ?? metadata?.organizationId;
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+async function recordEntitlementOnlyReplayAudit(event: Stripe.Event) {
+  const context = getStripeEventAuditContext(event);
+
+  try {
+    await writeAuditLog({
+      action: 'webhook_replayed',
+      organizationId: context.organizationId ?? getEntitlementOnlyOrganizationId(event),
+      userId: context.actorUserId,
+      entityType: 'stripe_webhook_event',
+      entityId: event.id,
+      metadata: {
+        stripeEventId: event.id,
+        stripeEventType: event.type,
+        livemode: event.livemode,
+        objectId: context.objectId ?? null,
+        processingLane: 'entitlement_only',
+      },
+    });
+  } catch (error) {
+    reportError(error, {
+      area: 'stripe_entitlement_only_replay_audit',
+      stripeEventId: event.id,
+      stripeEventType: event.type,
+    });
+  }
+}
+
+async function finalizeEntitlementOnlyStripeEvent(event: Stripe.Event) {
+  const supabase = createAdminClient();
+  const organizationId = getEntitlementOnlyOrganizationId(event);
+  const { data, error } = await supabase
+    .from('stripe_events_processed')
+    .update({
+      status: 'processed',
+      processed_at: new Date().toISOString(),
+      organization_id: organizationId,
+      error: null,
+    })
+    .eq('id', event.id)
+    .eq('status', 'processing')
+    .select('id')
+    .maybeSingle<{ id: string }>();
+
+  if (error) throw error;
+  if (data?.id !== event.id) throw new Error('stripe_entitlement_only_finalize_conflict');
+}
+
+async function runEntitlementOnlyStripeEvent(event: Stripe.Event) {
+  const claimed = await claimStripeEventForProcessing(event);
+
+  if (!claimed) {
+    await recordEntitlementOnlyReplayAudit(event);
+    return { skipped: true, duplicate: true };
+  }
+
+  try {
+    await finalizeEntitlementOnlyStripeEvent(event);
+    return { skipped: false };
+  } catch (error) {
+    await markStripeEventFailed(event, error);
+    throw error;
+  }
+}
+
 async function runCoreStripeWebhookHandler(event: Stripe.Event) {
+  if (ENTITLEMENT_ONLY_STRIPE_EVENT_TYPES.has(event.type)) {
+    return runEntitlementOnlyStripeEvent(event);
+  }
+
   if (event.type !== 'invoice.payment_failed') {
     return handleStripeWebhookEvent(event);
   }
@@ -149,8 +243,9 @@ async function repairProcessedStripeEntitlement(event: Stripe.Event) {
 
 async function runStripeWebhookHandler(event: Stripe.Event) {
   const result = await runCoreStripeWebhookHandler(event);
+  const unsupported = 'unsupported' in result ? result.unsupported ?? false : false;
 
-  if (result.unsupported || (result.skipped && !result.duplicate)) return result;
+  if (unsupported || (result.skipped && !result.duplicate)) return result;
 
   if (result.duplicate) {
     // Core Stripe processing is intentionally idempotent. A completed core event may
@@ -174,7 +269,7 @@ async function recordLeaseRecoveryAudit(event: Stripe.Event) {
   try {
     await writeAuditLog({
       action: 'webhook_processing_lease_recovered',
-      organizationId: context.organizationId,
+      organizationId: context.organizationId ?? getEntitlementOnlyOrganizationId(event),
       userId: context.actorUserId,
       entityType: 'stripe_webhook_event',
       entityId: event.id,

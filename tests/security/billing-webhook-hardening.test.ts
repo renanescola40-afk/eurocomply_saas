@@ -57,10 +57,11 @@ describe('billing webhook hardening invariants', () => {
     }
   });
 
-  it('returns duplicate and unsupported flags from both webhook routes', () => {
+  it('returns duplicate and safely narrowed unsupported flags from both webhook routes', () => {
     for (const route of webhookRoutes) {
       expect(route).toContain('duplicate: result.duplicate ?? false');
-      expect(route).toContain('unsupported: result.unsupported ?? false');
+      expect(route).toContain("const unsupported = 'unsupported' in result ? result.unsupported ?? false : false;");
+      expect(route).toContain('unsupported,');
     }
   });
 });
