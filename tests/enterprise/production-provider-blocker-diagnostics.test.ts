@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildProviderBlockerDiagnostics,
   deriveProviderBlockerCodes,
+  deriveSentryProbeBlockerCode,
   httpDiagnostic,
 } from '../../scripts/security/diagnose-production-provider-blockers.mjs';
 
@@ -19,7 +20,7 @@ describe('production provider blocker diagnostics', () => {
     expect(httpDiagnostic(null)).toEqual({ httpStatus: null, category: 'network_or_unknown' });
   });
 
-  it('turns current Vercel and Sentry blocked checks into actionable non-secret codes', () => {
+  it('suppresses dependent Vercel symptoms when the API token prerequisite is missing', () => {
     expect(deriveProviderBlockerCodes({
       provider: 'vercel',
       status: 'blocked',
@@ -33,12 +34,51 @@ describe('production provider blocker diagnostics', () => {
       },
     })).toEqual([
       'vercel_api_token_missing',
-      'vercel_project_api_unreachable',
-      'vercel_project_identity_mismatch',
-      'vercel_production_environment_inventory_unavailable',
-      'vercel_required_production_environment_keys_missing',
     ]);
+  });
 
+  it('reports independent Vercel prerequisite failures without downstream noise', () => {
+    expect(deriveProviderBlockerCodes({
+      provider: 'vercel',
+      status: 'blocked',
+      checks: {
+        apiTokenConfigured: false,
+        targetConfigurationBound: false,
+        projectReachable: false,
+        projectIdentityMatched: false,
+      },
+    })).toEqual([
+      'vercel_api_token_missing',
+      'vercel_target_configuration_invalid',
+    ]);
+  });
+
+  it('turns Sentry diagnostic HTTP categories into one actionable root-cause code', () => {
+    const entry = {
+      provider: 'sentry',
+      status: 'blocked',
+      checks: {
+        organizationConfigured: true,
+        projectConfigured: true,
+        buildAuthTokenConfigured: true,
+        projectReachable: false,
+        clientKeyInventoryReachable: false,
+        activeClientKeyPresent: false,
+      },
+    };
+    const forbiddenProbe = {
+      attempted: true,
+      projectProbe: { httpStatus: 403, category: 'forbidden_or_insufficient_scope' },
+      clientKeysProbe: { httpStatus: 403, category: 'forbidden_or_insufficient_scope' },
+    };
+
+    expect(deriveSentryProbeBlockerCode(forbiddenProbe)).toBe('sentry_auth_token_insufficient_scope');
+    expect(deriveProviderBlockerCodes(entry, forbiddenProbe)).toEqual([
+      'sentry_auth_token_insufficient_scope',
+    ]);
+  });
+
+  it('keeps generic Sentry blocked checks when no secondary probe classification exists', () => {
     expect(deriveProviderBlockerCodes({
       provider: 'sentry',
       status: 'blocked',
@@ -88,7 +128,7 @@ describe('production provider blocker diagnostics', () => {
     expect(diagnostics.providerProofOutcome).toBe('blocked');
     expect(diagnostics.operatorActionRequired).toBe(true);
     expect(diagnostics.targetSha).toBe(sha);
-    expect(diagnostics.blockerCodes).toContain('vercel_api_token_missing');
+    expect(diagnostics.blockerCodes).toEqual(['vercel_api_token_missing']);
     expect(diagnostics.evidenceIntegrity).toMatchObject({
       containsSensitiveValues: false,
       credentialsStored: false,
