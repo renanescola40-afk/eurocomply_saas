@@ -24,7 +24,7 @@ concurrency:
 jobs:
   prove-final-technical-controls:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 45
     environment: production-final-technical-proof
     env:
       ENTERPRISE_EXPECTED_SHA: ${{ inputs.release_sha }}
@@ -69,8 +69,8 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install --yes postgresql-client
-      - name: Start disposable Supabase recovery database
-        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start
+      - name: Start exact-SHA disposable Supabase project database
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start-project
       - name: Preflight protected final technical proof
         run: node scripts/security/preflight-protected-proof.mjs final-technical
       - name: Execute protected final technical proof
