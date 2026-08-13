@@ -14,6 +14,7 @@ import { evaluateEvidenceDocument } from '../../scripts/enterprise/generate-read
 
 const targetSha = 'a'.repeat(40);
 const runId = '123456';
+const workflowPath = '.github/workflows/recovery-resilience-proof.yml';
 const roots: string[] = [];
 const workflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
 const stabilizerWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard-stabilizer.yml', 'utf8');
@@ -71,14 +72,26 @@ describe('recovery resilience scorecard promotion', () => {
     expect(workflow).toContain('docs/security/evidence/p1/backup-restore-tested.json');
   });
 
-  it('selects only a successful workflow-dispatch run on exact main SHA', () => {
+  it('selects only the canonical successful workflow-dispatch run on exact main SHA despite dynamic run-name', () => {
     const accepted = {
-      id: Number(runId), name: 'Recovery Resilience Proof', head_sha: targetSha, head_branch: 'main',
-      event: 'workflow_dispatch', status: 'completed', conclusion: 'success', updated_at: '2026-08-07T10:02:00.000Z',
+      id: Number(runId),
+      name: `Recovery resilience proof for ${targetSha} (full)`,
+      path: workflowPath,
+      head_sha: targetSha,
+      head_branch: 'main',
+      event: 'workflow_dispatch',
+      status: 'completed',
+      conclusion: 'success',
+      updated_at: '2026-08-07T10:02:00.000Z',
     };
-    expect(selectExactShaRecoveryRun([{ ...accepted, id: 7, event: 'push' }, accepted], targetSha, runId)?.id)
-      .toBe(Number(runId));
+    expect(accepted.name).not.toBe('Recovery Resilience Proof');
+    expect(selectExactShaRecoveryRun([
+      { ...accepted, id: 7, event: 'push' },
+      { ...accepted, id: 8, path: '.github/workflows/not-recovery.yml' },
+      accepted,
+    ], targetSha, runId)?.id).toBe(Number(runId));
     expect(selectExactShaRecoveryRun([{ ...accepted, head_branch: 'agent/unsafe' }], targetSha)).toBeNull();
+    expect(selectExactShaRecoveryRun([{ ...accepted, path: '.github/workflows/not-recovery.yml' }], targetSha)).toBeNull();
   });
 
   it('fails closed on mismatched SHA, run, controls, checks and sensitive evidence', () => {
@@ -107,6 +120,7 @@ describe('recovery resilience scorecard promotion', () => {
     }
     expect([...evidence.rollback.controlsVerified, ...evidence.restore.controlsVerified])
       .toEqual(Array.from({ length: 10 }, (_, index) => `REC-${String(index + 1).padStart(2, '0')}`));
+    expect(evidence.rollback.sourceWorkflow.file).toBe(workflowPath);
     expect(JSON.stringify(evidence)).not.toContain('databaseUrl');
   });
 
