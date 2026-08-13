@@ -24,12 +24,11 @@ concurrency:
 jobs:
   governance-proof:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     environment: production-data-governance-proof
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
       DATA_GOVERNANCE_CONFIRMATION: ${{ inputs.confirmation }}
-      RECOVERY_ISOLATED_DATABASE_URL: ${{ secrets.RECOVERY_ISOLATED_DATABASE_URL }}
       DATA_RESIDENCY_REGION: ${{ vars.DATA_RESIDENCY_REGION }}
       DATA_RETENTION_DEFAULT_DAYS: ${{ vars.DATA_RETENTION_DEFAULT_DAYS }}
       DATA_EXPORT_ENCRYPTION_REQUIRED: ${{ vars.DATA_EXPORT_ENCRYPTION_REQUIRED }}
@@ -57,16 +56,28 @@ jobs:
           test "$GITHUB_SHA" = "$TARGET_SHA"
           test "$GITHUB_REF_NAME" = "main"
 
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f89843689f213b433d85a0508d1183e1803070
+        with:
+          version: 2.101.0
+
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
           sudo apt-get install --yes postgresql-client
+
+      - name: Start exact-SHA disposable Supabase project database
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start-project
 
       - name: Execute governance proof
         run: node scripts/data-governance/run-data-governance-runtime-proof.mjs
 
       - name: Validate evidence
         run: node scripts/data-governance/check-data-governance-evidence.mjs
+
+      - name: Remove disposable project database
+        if: always()
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
 
       - name: Upload redacted evidence
         if: always()
