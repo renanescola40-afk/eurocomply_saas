@@ -56,14 +56,14 @@ function providerEntry(evidence, provider) {
 
 export function deriveSentryProbeBlockerCode(probe) {
   if (!probe?.attempted) return null;
-  const categories = [
-    probe?.projectProbe?.category,
-    probe?.clientKeysProbe?.category,
-  ].filter(Boolean);
+  const projectCategory = probe?.projectProbe?.category;
+  const clientKeysCategory = probe?.clientKeysProbe?.category;
+  const categories = [projectCategory, clientKeysCategory].filter(Boolean);
 
   if (categories.includes('unauthenticated')) return 'sentry_auth_token_unauthenticated';
   if (categories.includes('forbidden_or_insufficient_scope')) return 'sentry_auth_token_insufficient_scope';
-  if (categories.includes('resource_not_found')) return 'sentry_project_not_found_or_inaccessible';
+  if (projectCategory === 'resource_not_found') return 'sentry_project_not_found_or_inaccessible';
+  if (clientKeysCategory === 'resource_not_found') return 'sentry_client_key_inventory_not_found_or_inaccessible';
   if (categories.includes('rate_limited')) return 'sentry_api_rate_limited';
   if (categories.some((category) => category === 'request_timeout' || category === 'timeout')) {
     return 'sentry_api_timeout';
