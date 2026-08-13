@@ -14,6 +14,7 @@ const SUPPORTED_STRIPE_WEBHOOK_EVENTS = new Set([
   'customer.subscription.updated',
   'customer.subscription.deleted',
   'invoice.payment_failed',
+  'invoice.paid',
 ]);
 
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing', 'past_due', 'unpaid', 'incomplete']);
