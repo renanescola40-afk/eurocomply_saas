@@ -132,13 +132,14 @@ export async function POST(request: Request) {
     }
 
     const result = await handleStripeWebhookEventWithRecovery(event);
+    const unsupported = 'unsupported' in result ? result.unsupported ?? false : false;
 
     return noStoreJson({
       received: true,
       enterprise: false,
       skipped: result.skipped,
       duplicate: result.duplicate ?? false,
-      unsupported: result.unsupported ?? false,
+      unsupported,
     });
   } catch (processingError) {
     await recordBillingWebhookRouteAudit({ action: 'webhook_rejected', event, reason: 'processing_failed' });
