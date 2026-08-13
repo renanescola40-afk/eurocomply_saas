@@ -1,12 +1,17 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = process.cwd();
 const batchLPath = join(root, 'docs', 'security', 'evidence', 'human-review', 'supabase-migration-mega-batch-l.md');
+const batchHPath = join(root, 'docs', 'security', 'evidence', 'human-review', 'supabase-migration-mega-batch-h.md');
+const batchNPath = join(root, 'docs', 'security', 'evidence', 'human-review', 'supabase-migration-mega-batch-n.md');
 const delegate = join(root, 'scripts', 'recovery', 'run-reviewed-ephemeral-schema-boundary.mjs');
+const derivedDependentName = '20260725180000_enterprise_access_operations_explicit_deny_policies.sql';
+const derivedDependentPath = join(root, 'supabase', 'migrations', derivedDependentName);
+const derivedHeldPath = `${derivedDependentPath}.derived-prerequisite-blocked`;
 
 const blockedRules = Object.freeze([
   Object.freeze({
@@ -53,6 +58,27 @@ function validateReviewBoundary(review, rule) {
   }
 }
 
+function validateDerivedPrerequisiteBoundary() {
+  const batchH = readFileSync(batchHPath, 'utf8');
+  const batchN = readFileSync(batchNPath, 'utf8');
+  if (!batchH.includes(`| H11 | \`${derivedDependentName}\` | \`PENDING_DEPLOYMENT\``)) {
+    fail('Batch-H evidence no longer proves H11 pending-deployment classification');
+  }
+  if (!batchN.includes('| N9 | `20260724200000_enterprise_access_operations_center.sql` | `PENDING_DEPLOYMENT` | **PREREQUISITE_BLOCKED')) {
+    fail('Batch-N evidence no longer proves N9 prerequisite-blocked execution boundary');
+  }
+  if (!batchN.includes('prerequisiteBlockedExecutionAuthorized = false')) {
+    fail('Batch-N evidence no longer preserves prerequisite-blocked execution denial');
+  }
+  if (!existsSync(derivedDependentPath) || existsSync(derivedHeldPath)) {
+    fail('H11 derived prerequisite hold paths are not in the expected state');
+  }
+  const sql = readFileSync(derivedDependentPath, 'utf8');
+  if (!sql.includes('on public.enterprise_access_operations')) {
+    fail('H11 no longer depends on the N9 enterprise_access_operations relation');
+  }
+}
+
 function stageBlockedRule(rule) {
   const path = join(root, 'supabase', 'migrations', rule.name);
   const bytes = readFileSync(path);
@@ -96,17 +122,27 @@ function main() {
   }
 
   for (const rule of blockedRules) validateReviewBoundary(review, rule);
+  validateDerivedPrerequisiteBoundary();
 
   const staged = [];
+  let derivedHeld = false;
   let delegatedError = null;
   let restoreError = null;
   try {
     for (const rule of blockedRules) staged.push(stageBlockedRule(rule));
+    renameSync(derivedDependentPath, derivedHeldPath);
+    derivedHeld = true;
     execFileSync(process.execPath, [delegate], { stdio: 'inherit', env: process.env });
   } catch (error) {
     delegatedError = error;
   } finally {
     try {
+      if (derivedHeld || existsSync(derivedHeldPath)) {
+        if (!existsSync(derivedHeldPath) || existsSync(derivedDependentPath)) {
+          fail('H11 derived prerequisite hold state drifted before restore');
+        }
+        renameSync(derivedHeldPath, derivedDependentPath);
+      }
       restoreHistoricalBytes(staged);
     } catch (error) {
       restoreError = error;
@@ -117,8 +153,9 @@ function main() {
   if (delegatedError) throw delegatedError;
 
   appendGithubEnv('RECOVERY_EPHEMERAL_SPLIT_REVIEW_BLOCKED_FILE_COUNT', String(blockedRules.length));
+  appendGithubEnv('RECOVERY_EPHEMERAL_DERIVED_PREREQUISITE_BLOCKED_FILE_COUNT', '1');
   process.stdout.write(
-    `Reviewed disposable schema boundary v2 preserved ${blockedRules.map((rule) => rule.id).join(', ')} as split-review blocked and restored canonical historical bytes.\n`,
+    `Reviewed disposable schema boundary v2 preserved ${blockedRules.map((rule) => rule.id).join(', ')} as split-review blocked, held H11 behind prerequisite-blocked N9, and restored canonical historical bytes.\n`,
   );
 }
 
