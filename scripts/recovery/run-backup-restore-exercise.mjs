@@ -14,6 +14,7 @@ const env = (name) => String(process.env[name] ?? '').trim();
 const startedAt = Date.now();
 const checks = {};
 const failures = [];
+let failurePhase = null;
 
 const SUPABASE_MANAGED_DATA_EXCLUDES = [
   'storage.buckets_vectors',
@@ -25,12 +26,66 @@ function required(name) {
   if (!value) failures.push(`missing_${name.toLowerCase()}`);
   return value;
 }
-function run(command, args, extraEnv = {}) {
-  return execFileSync(command, args, { stdio: 'pipe', timeout: 15 * 60_000, env: { ...process.env, ...extraEnv } }).toString('utf8');
+
+function postgresConnection(name) {
+  const raw = String(process.env[name] ?? '');
+  if (!raw.trim()) {
+    failures.push(`missing_${name.toLowerCase()}`);
+    return '';
+  }
+
+  // Action secrets copied from dashboards can accidentally contain CR/LF. Raw
+  // PostgreSQL URLs cannot contain literal control characters, so normalize only
+  // line endings; every other control character remains a hard failure.
+  const normalized = raw.replace(/[\r\n]+/g, '').trim();
+  if (/[\u0000-\u001f\u007f]/.test(normalized)) {
+    failures.push(`invalid_${name.toLowerCase()}_control_character`);
+    return '';
+  }
+
+  try {
+    const parsed = new URL(normalized);
+    if (!['postgres:', 'postgresql:'].includes(parsed.protocol) || !parsed.hostname || !parsed.pathname || parsed.pathname === '/') {
+      failures.push(`invalid_${name.toLowerCase()}_postgres_url`);
+      return '';
+    }
+  } catch {
+    failures.push(`invalid_${name.toLowerCase()}_postgres_url`);
+    return '';
+  }
+
+  return normalized;
 }
-function sql(connection, statement) {
-  return run('psql', [connection, '--no-psqlrc', '--tuples-only', '--no-align', '--set', 'ON_ERROR_STOP=1', '--command', statement]).trim();
+
+function run(command, args, extraEnv = {}, failureCode = `command_${command}_failed`) {
+  try {
+    return execFileSync(command, args, {
+      stdio: 'pipe',
+      timeout: 15 * 60_000,
+      env: { ...process.env, ...extraEnv },
+    }).toString('utf8');
+  } catch {
+    // Never persist Error.message from execFileSync. Node includes the complete
+    // command arguments in that message, which can contain database credentials.
+    throw new Error(failureCode);
+  }
 }
+
+function sql(connection, statement, failureCode = 'recovery_validation_query_failed') {
+  return run(
+    'psql',
+    [connection, '--no-psqlrc', '--tuples-only', '--no-align', '--set', 'ON_ERROR_STOP=1', '--command', statement],
+    {},
+    failureCode,
+  ).trim();
+}
+
+function safeFailureCode(error) {
+  const message = error instanceof Error ? error.message : '';
+  if (/^[a-z0-9_:-]{1,160}$/i.test(message)) return message;
+  return failurePhase ? `recovery_${failurePhase}_failed` : 'unknown_recovery_failure';
+}
+
 function inspectFile(path) {
   const descriptor = openSync(path, 'r');
   try {
@@ -46,6 +101,7 @@ function inspectFile(path) {
     closeSync(descriptor);
   }
 }
+
 function inspectLogicalBackup(paths) {
   const inspected = paths.map(inspectFile);
   const exists = inspected.every((entry) => entry.exists && entry.digest);
@@ -54,11 +110,13 @@ function inspectLogicalBackup(paths) {
     : null;
   return { exists, digest, bytes: inspected.reduce((sum, entry) => sum + entry.bytes, 0) };
 }
+
 function copySqlToContainer(container, path) {
   const containerPath = `/tmp/${basename(path)}`;
-  run('docker', ['cp', path, `${container}:${containerPath}`]);
+  run('docker', ['cp', path, `${container}:${containerPath}`], {}, 'recovery_copy_dump_to_isolated_target_failed');
   return containerPath;
 }
+
 function restoreIntoEphemeralSupabase(container) {
   const containerPaths = [rolesDumpPath, schemaDumpPath, dataDumpPath]
     .map((path) => copySqlToContainer(container, path));
@@ -70,16 +128,16 @@ function restoreIntoEphemeralSupabase(container) {
       '--file', containerPaths[1],
       '--command', 'SET session_replication_role = replica;',
       '--file', containerPaths[2],
-    ]);
+    ], {}, 'recovery_isolated_restore_failed');
   } finally {
     for (const path of containerPaths) {
-      try { run('docker', ['exec', container, 'rm', '-f', path]); } catch {}
+      try { run('docker', ['exec', container, 'rm', '-f', path], {}, 'recovery_isolated_cleanup_failed'); } catch {}
     }
   }
 }
 
-const source = required('RECOVERY_SOURCE_DATABASE_URL');
-const restore = required('RECOVERY_ISOLATED_DATABASE_URL');
+const source = postgresConnection('RECOVERY_SOURCE_DATABASE_URL');
+const restore = postgresConnection('RECOVERY_ISOLATED_DATABASE_URL');
 const targetSha = required('RELEASE_SHA');
 const observedSha = required('GITHUB_SHA');
 const localContainer = env('RECOVERY_LOCAL_DB_CONTAINER');
@@ -88,6 +146,7 @@ checks.protectedMainExecution = env('GITHUB_ACTIONS') === 'true' && env('GITHUB_
 checks.distinctDatabases = Boolean(source && restore && source !== restore);
 checks.exactShaBound = /^[a-f0-9]{40}$/.test(targetSha) && observedSha === targetSha;
 checks.isolatedTarget = ephemeralMode ? /^postgres(?:ql)?:\/\/[^@]*@(?:127\.0\.0\.1|localhost):54322\//.test(restore) : Boolean(restore);
+checks.connectionStringsSanitized = Boolean(source && restore);
 if (!Object.values(checks).every(Boolean)) failures.push('preconditions_failed');
 
 mkdirSync(workDir, { recursive: true });
@@ -109,53 +168,64 @@ try {
     // filtered roles, schema, then complete application/auth data. Supabase-managed
     // vector storage tables are explicitly excluded from the logical data dump;
     // they are platform-owned and are recreated/managed by the target project.
-    run('supabase', ['db', 'dump', '--db-url', source, '--role-only', '--file', rolesDumpPath]);
-    run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath]);
+    failurePhase = 'roles_dump';
+    run('supabase', ['db', 'dump', '--db-url', source, '--role-only', '--file', rolesDumpPath], {}, 'recovery_roles_dump_failed');
+    failurePhase = 'schema_dump';
+    run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath], {}, 'recovery_schema_dump_failed');
+    failurePhase = 'data_dump';
     run('supabase', [
       'db', 'dump', '--db-url', source,
       '--data-only', '--use-copy',
       '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[0],
       '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[1],
       '--file', dataDumpPath,
-    ]);
+    ], {}, 'recovery_data_dump_failed');
     backupCompletedAt = new Date().toISOString();
+    failurePhase = 'backup_inspection';
     const inspectedDump = inspectLogicalBackup([rolesDumpPath, schemaDumpPath, dataDumpPath]);
     checks.backupExists = inspectedDump.exists;
     digest = inspectedDump.digest;
     backupBytes = inspectedDump.bytes;
     if (!checks.backupExists || !digest) throw new Error('backup_dump_invalid');
+    failurePhase = 'isolated_restore';
     restoreIntoEphemeralSupabase(localContainer);
   } else {
-    run('pg_dump', [source, '--format=custom', '--no-owner', '--no-privileges', '--file', legacyDumpPath]);
+    failurePhase = 'legacy_dump';
+    run('pg_dump', [source, '--format=custom', '--no-owner', '--no-privileges', '--file', legacyDumpPath], {}, 'recovery_legacy_dump_failed');
     backupCompletedAt = new Date().toISOString();
+    failurePhase = 'backup_inspection';
     const inspectedDump = inspectFile(legacyDumpPath);
     checks.backupExists = inspectedDump.exists;
     digest = inspectedDump.digest;
     backupBytes = inspectedDump.bytes;
     if (!checks.backupExists || !digest) throw new Error('backup_dump_invalid');
-    run('pg_restore', ['--dbname', restore, '--clean', '--if-exists', '--no-owner', '--no-privileges', '--exit-on-error', legacyDumpPath]);
+    failurePhase = 'legacy_restore';
+    run('pg_restore', ['--dbname', restore, '--clean', '--if-exists', '--no-owner', '--no-privileges', '--exit-on-error', legacyDumpPath], {}, 'recovery_legacy_restore_failed');
   }
 
   restoreCompletedAt = new Date().toISOString();
   checks.restoreExecuted = true;
+  failurePhase = 'integrity_counts';
   for (const table of criticalTables) {
-    sourceCounts[table] = Number(sql(source, `select count(*) from public.${table};`));
-    restoredCounts[table] = Number(sql(restore, `select count(*) from public.${table};`));
+    sourceCounts[table] = Number(sql(source, `select count(*) from public.${table};`, `recovery_source_${table}_count_failed`));
+    restoredCounts[table] = Number(sql(restore, `select count(*) from public.${table};`, `recovery_restored_${table}_count_failed`));
   }
   checks.dataIntegrity = criticalTables.every((table) => sourceCounts[table] === restoredCounts[table]);
-  sourceAuthUsers = Number(sql(source, 'select count(*) from auth.users;'));
-  restoredAuthUsers = Number(sql(restore, 'select count(*) from auth.users;'));
+  sourceAuthUsers = Number(sql(source, 'select count(*) from auth.users;', 'recovery_source_auth_users_count_failed'));
+  restoredAuthUsers = Number(sql(restore, 'select count(*) from auth.users;', 'recovery_restored_auth_users_count_failed'));
   checks.authUsersIntegrity = sourceAuthUsers === restoredAuthUsers;
-  const rlsRows = Number(sql(restore, "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('organizations','organization_members','audit_logs') and c.relrowsecurity=true;"));
+  failurePhase = 'rls_validation';
+  const rlsRows = Number(sql(restore, "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('organizations','organization_members','audit_logs') and c.relrowsecurity=true;", 'recovery_restored_rls_count_failed'));
   checks.rlsAfterRestore = rlsRows === criticalTables.length;
-  const policyCount = Number(sql(restore, "select count(*) from pg_policies where schemaname='public' and tablename in ('organizations','organization_members','audit_logs');"));
+  const policyCount = Number(sql(restore, "select count(*) from pg_policies where schemaname='public' and tablename in ('organizations','organization_members','audit_logs');", 'recovery_restored_policy_count_failed'));
   checks.rlsPoliciesPresent = policyCount >= criticalTables.length;
   checks.backupExists = checks.backupExists === true;
   checks.rpoMeasured = Boolean(backupCompletedAt);
   checks.rtoMeasured = Boolean(restoreCompletedAt);
   if (!Object.values(checks).every(Boolean)) failures.push('one_or_more_recovery_checks_failed');
+  failurePhase = null;
 } catch (error) {
-  failures.push(error instanceof Error ? error.message : 'unknown_recovery_failure');
+  failures.push(safeFailureCode(error));
 } finally {
   for (const path of [legacyDumpPath, rolesDumpPath, schemaDumpPath, dataDumpPath]) rmSync(path, { force: true });
 }
@@ -167,11 +237,11 @@ const evidence = {
   generatedAt: new Date().toISOString(), repository: env('GITHUB_REPOSITORY'), branch: env('GITHUB_REF_NAME'), targetSha: targetSha || null, observedSha: observedSha || null,
   runId: env('GITHUB_RUN_ID') || null, controlsVerified: ['REC-05', 'REC-06', 'REC-07', 'REC-08', 'REC-09', 'REC-10'], checks,
   metrics: { rpoSeconds: backupCompletedAt ? Math.max(0, Math.round((Date.now() - Date.parse(backupCompletedAt)) / 1000)) : null, rtoSeconds: restoreCompletedAt ? Math.round((Date.parse(restoreCompletedAt) - startedAt) / 1000) : null, totalExerciseSeconds: Math.round((finishedAt - startedAt) / 1000), backupBytes },
-  integrity: { criticalTables, sourceCounts, restoredCounts, sourceAuthUsers, restoredAuthUsers, backupSha256Prefix: digest ? `${digest.slice(0, 16)}…` : null, recoveryMode: ephemeralMode ? 'ephemeral-supabase-postgres' : 'external-isolated-database' }, failures: [...new Set(failures)],
-  evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
+  integrity: { criticalTables, sourceCounts, restoredCounts, sourceAuthUsers, restoredAuthUsers, backupSha256Prefix: digest ? `${digest.slice(0, 16)}…` : null, recoveryMode: ephemeralMode ? 'ephemeral-supabase-postgres' : 'external-isolated-database' }, failures: [...new Set(failures)], failurePhase: passed ? null : failurePhase,
+  evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
   evidenceBoundary: ephemeralMode
-    ? 'Supabase-compatible logical roles, schema, and application/auth data backups were restored transactionally into a disposable isolated Supabase Postgres database; target-managed vector storage tables were excluded from the data dump. Evidence stores only aggregate counts and a truncated combined digest; backup files and local database volumes are deleted by the protected workflow.'
-    : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts and a truncated digest; the dump is deleted before completion.',
+    ? 'Supabase-compatible logical roles, schema, and application/auth data backups were restored transactionally into a disposable isolated Supabase Postgres database; target-managed vector storage tables were excluded from the data dump. Evidence stores only aggregate counts, safe failure codes and a truncated combined digest; connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
+    : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts, safe failure codes and a truncated digest; connection strings, raw command arguments, raw process errors and the dump are not retained.',
 };
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
