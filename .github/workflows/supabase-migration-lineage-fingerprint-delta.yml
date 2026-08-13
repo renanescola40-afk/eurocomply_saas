@@ -1,0 +1,29 @@
+name: Supabase Migration Lineage Fingerprint Delta
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/supabase/build-migration-lineage-fingerprint-delta.mjs'
+      - 'scripts/supabase/build-migration-lineage-fingerprint-delta.test.mjs'
+      - '.github/workflows/supabase-migration-lineage-fingerprint-delta.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Validate migration lineage fingerprint delta
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+      - name: Validate deterministic module
+        run: |
+          set -euo pipefail
+          node --check scripts/supabase/build-migration-lineage-fingerprint-delta.mjs
+          node --test scripts/supabase/build-migration-lineage-fingerprint-delta.test.mjs

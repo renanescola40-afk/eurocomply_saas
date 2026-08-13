@@ -1,0 +1,202 @@
+name: Supabase Migration Review Context
+
+on:
+  workflow_run:
+    workflows: ['Supabase Production Migration Dry Run']
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: supabase-migration-review-context-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+jobs:
+  review-context:
+    name: Build metadata-only migration review context
+    if: >-
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: supabase-production-migration-dry-run
+    env:
+      TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+      UPSTREAM_RUN_ID: ${{ github.event.workflow_run.id }}
+      OUTPUT_DIR: artifacts/supabase-migration-review-context
+
+    steps:
+      - name: Validate exact current main SHA
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          CURRENT_MAIN_SHA="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$CURRENT_MAIN_SHA" = "$TARGET_SHA"
+
+      - name: Check out exact trusted main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download blocked dry-run evidence
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: supabase-production-migration-dry-run-${{ github.event.workflow_run.head_sha }}
+          path: artifacts/upstream-migration-dry-run
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Verify upstream inventory exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s artifacts/upstream-migration-dry-run/drift/migration-reconciliation-inventory.json
+          test -s artifacts/upstream-migration-dry-run/reconciliation-review/index.json
+          test "$(jq -r '.acceptedDecisions' artifacts/upstream-migration-dry-run/reconciliation-review/index.json)" = '0'
+
+      - name: Install PostgreSQL client for metadata-only catalog read
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install --yes --no-install-recommends postgresql-client
+
+      - name: Prepare protected production database connection
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          test -n "${SUPABASE_PROJECT_ID:-}"
+          echo "SUPABASE_DB_URL_FILE=$RUNNER_TEMP/supabase-review-context-db-url" >> "$GITHUB_ENV"
+          node scripts/supabase/prepare-production-db-connection.mjs \
+            --write-file "$RUNNER_TEMP/supabase-review-context-db-url" >/dev/null
+          test "$(stat -c '%a' "$RUNNER_TEMP/supabase-review-context-db-url")" = '600'
+
+      - name: Capture metadata-only production catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          DB_URL="$(cat "$SUPABASE_DB_URL_FILE")"
+          psql "$DB_URL" --no-psqlrc --no-align --tuples-only --set ON_ERROR_STOP=1 <<'SQL' > "$OUTPUT_DIR/production-catalog.json"
+          select jsonb_build_object(
+            'schema', 'risck-comply.supabase-production-catalog.v1',
+            'capturedAt', to_char(clock_timestamp() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+            'schemas', jsonb_build_array('public', 'app_private'),
+            'tables', coalesce((
+              select jsonb_agg(jsonb_build_object(
+                'schema', n.nspname,
+                'name', c.relname,
+                'rls', c.relrowsecurity,
+                'forceRls', c.relforcerowsecurity
+              ) order by n.nspname, c.relname)
+              from pg_catalog.pg_class c
+              join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+              where n.nspname in ('public', 'app_private') and c.relkind in ('r', 'p')
+            ), '[]'::jsonb),
+            'functions', coalesce((
+              select jsonb_agg(jsonb_build_object(
+                'schema', n.nspname,
+                'name', p.proname,
+                'args', pg_catalog.pg_get_function_identity_arguments(p.oid),
+                'securityDefiner', p.prosecdef
+              ) order by n.nspname, p.proname, pg_catalog.pg_get_function_identity_arguments(p.oid))
+              from pg_catalog.pg_proc p
+              join pg_catalog.pg_namespace n on n.oid = p.pronamespace
+              where n.nspname in ('public', 'app_private')
+            ), '[]'::jsonb),
+            'policies', coalesce((
+              select jsonb_agg(jsonb_build_object(
+                'schema', schemaname,
+                'table', tablename,
+                'name', policyname,
+                'cmd', cmd,
+                'roles', roles
+              ) order by schemaname, tablename, policyname)
+              from pg_catalog.pg_policies
+              where schemaname in ('public', 'app_private')
+            ), '[]'::jsonb),
+            'indexes', coalesce((
+              select jsonb_agg(jsonb_build_object(
+                'schema', schemaname,
+                'table', tablename,
+                'name', indexname
+              ) order by schemaname, tablename, indexname)
+              from pg_catalog.pg_indexes
+              where schemaname in ('public', 'app_private')
+            ), '[]'::jsonb)
+          );
+          SQL
+          jq -e '
+            .schema == "risck-comply.supabase-production-catalog.v1" and
+            (.tables | type == "array") and
+            (.functions | type == "array") and
+            (.policies | type == "array") and
+            (.indexes | type == "array")
+          ' "$OUTPUT_DIR/production-catalog.json" >/dev/null
+
+      - name: Build non-crediting per-migration context
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/supabase/build-migration-review-context.mjs \
+            artifacts/upstream-migration-dry-run/drift/migration-reconciliation-inventory.json \
+            "$OUTPUT_DIR/production-catalog.json" \
+            supabase/migrations \
+            "$OUTPUT_DIR/migration-review-context.json"
+          test "$(jq -r '.acceptedDecisions' "$OUTPUT_DIR/migration-review-context.json")" = '0'
+          test "$(jq -r '.productionWritePerformed' "$OUTPUT_DIR/migration-review-context.json")" = 'false'
+
+      - name: Publish reviewer triage summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -r '
+            def all_present: .liveCatalogMatchSummary as $s | $s.referencedObjectCount > 0 and $s.present == $s.referencedObjectCount;
+            def has_absent: .liveCatalogMatchSummary.absent > 0;
+            [
+              "# Supabase migration review context",
+              "",
+              "**Status:** HUMAN_REVIEW_REQUIRED",
+              "",
+              "- Exact main SHA: `" + env.TARGET_SHA + "`",
+              "- Review items: " + (.itemCount|tostring),
+              "- Items with every named catalog reference present: " + ([.items[] | select(all_present)]|length|tostring),
+              "- Items with at least one named catalog reference absent: " + ([.items[] | select(has_absent)]|length|tostring),
+              "- Items with no captured named reference: " + ([.items[] | select(.liveCatalogMatchSummary.referencedObjectCount == 0)]|length|tostring),
+              "- Items containing privileged/security signals: " + ([.items[] | select(.sqlSignals.securityDefiner or .sqlSignals.policyChange or .sqlSignals.grantOrRevoke or .sqlSignals.rowLevelSecurity)]|length|tostring),
+              "- Accepted migration decisions: 0",
+              "- Production writes: none",
+              "",
+              "Catalog matches are reviewer aids only. They do not prove that a complete migration is already present or safe to repair/deploy."
+            ] | .[]
+          ' "$OUTPUT_DIR/migration-review-context.json" | tee "$OUTPUT_DIR/summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove temporary database connection material
+        if: always()
+        shell: bash
+        run: rm -f "${SUPABASE_DB_URL_FILE:-}"
+
+      - name: Upload metadata-only review context
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: supabase-migration-review-context-${{ env.TARGET_SHA }}
+          path: artifacts/supabase-migration-review-context
+          if-no-files-found: error
+          retention-days: 90

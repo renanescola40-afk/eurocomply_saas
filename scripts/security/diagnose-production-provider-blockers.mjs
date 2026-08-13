@@ -10,6 +10,16 @@ const TARGETS = resolve(process.env.PROVIDER_TARGETS_PATH || 'config/production-
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const TIMEOUT_MS = 8_000;
 
+/**
+ * @typedef {{ httpStatus: number | null, category: string }} HttpDiagnostic
+ * @typedef {{
+ *   attempted?: boolean,
+ *   reason?: string,
+ *   projectProbe?: HttpDiagnostic | null,
+ *   clientKeysProbe?: HttpDiagnostic | null,
+ * }} SentryDiagnosticProbe
+ */
+
 function env(name) {
   return String(process.env[name] ?? '').trim();
 }
@@ -54,26 +64,99 @@ function providerEntry(evidence, provider) {
     .find((entry) => entry?.provider === provider) ?? null;
 }
 
-export function deriveProviderBlockerCodes(entry) {
+/** @param {SentryDiagnosticProbe | null | undefined} probe */
+export function deriveSentryProbeBlockerCode(probe) {
+  if (!probe?.attempted) return null;
+  const projectCategory = probe?.projectProbe?.category;
+  const clientKeysCategory = probe?.clientKeysProbe?.category;
+  const categories = [projectCategory, clientKeysCategory].filter(Boolean);
+
+  if (categories.includes('unauthenticated')) return 'sentry_auth_token_unauthenticated';
+  if (categories.includes('forbidden_or_insufficient_scope')) return 'sentry_auth_token_insufficient_scope';
+  if (projectCategory === 'resource_not_found') return 'sentry_project_not_found_or_inaccessible';
+  if (clientKeysCategory === 'resource_not_found') return 'sentry_client_key_inventory_not_found_or_inaccessible';
+  if (categories.includes('rate_limited')) return 'sentry_api_rate_limited';
+  if (categories.some((category) => category === 'request_timeout' || category === 'timeout')) {
+    return 'sentry_api_timeout';
+  }
+  if (categories.includes('provider_server_error')) return 'sentry_provider_server_error';
+  if (categories.some((category) => category === 'network_error' || category === 'network_or_unknown')) {
+    return 'sentry_network_unavailable';
+  }
+  if (categories.some((category) => category === 'request_rejected')) return 'sentry_api_request_rejected';
+  return null;
+}
+
+/**
+ * @param {SentryDiagnosticProbe | null | undefined} probe
+ * @param {{ projectReachabilityFailed: boolean, clientKeysReachabilityFailed: boolean }} failures
+ * @returns {SentryDiagnosticProbe | null | undefined}
+ */
+function narrowedSentryProbe(probe, { projectReachabilityFailed, clientKeysReachabilityFailed }) {
+  if (!probe?.attempted) return probe;
+  return {
+    attempted: true,
+    projectProbe: projectReachabilityFailed
+      ? probe.projectProbe
+      : { httpStatus: 200, category: 'success' },
+    clientKeysProbe: clientKeysReachabilityFailed
+      ? probe.clientKeysProbe
+      : { httpStatus: 200, category: 'success' },
+  };
+}
+
+/**
+ * @param {any} entry
+ * @param {SentryDiagnosticProbe | null} [probe]
+ */
+export function deriveProviderBlockerCodes(entry, probe = null) {
   if (!entry || entry.status === 'reviewed') return [];
   const checks = entry.checks && typeof entry.checks === 'object' ? entry.checks : {};
   const provider = String(entry.provider || 'provider');
+
+  if (provider === 'vercel') {
+    const prerequisites = [];
+    if (checks.apiTokenConfigured !== true) prerequisites.push('vercel_api_token_missing');
+    if (checks.targetConfigurationBound !== true) prerequisites.push('vercel_target_configuration_invalid');
+    if (prerequisites.length > 0) return prerequisites;
+  }
+
+  if (provider === 'sentry') {
+    const prerequisites = [];
+    if (checks.organizationConfigured !== true) prerequisites.push('sentry_organization_missing');
+    if (checks.projectConfigured !== true) prerequisites.push('sentry_project_missing');
+    if (checks.buildAuthTokenConfigured !== true) prerequisites.push('sentry_auth_token_missing');
+    if (prerequisites.length > 0) return prerequisites;
+
+    const projectReachabilityFailed = checks.projectReachable !== true;
+    const clientKeysReachabilityFailed = checks.clientKeyInventoryReachable !== true;
+    const canonicalReachabilityCodes = [];
+    if (projectReachabilityFailed) canonicalReachabilityCodes.push('sentry_project_api_unreachable');
+    if (clientKeysReachabilityFailed) canonicalReachabilityCodes.push('sentry_client_key_inventory_unavailable');
+
+    const independentCodes = [];
+    if (checks.clientKeyInventoryReachable === true && checks.activeClientKeyPresent !== true) {
+      independentCodes.push('sentry_active_client_key_missing');
+    }
+
+    if (canonicalReachabilityCodes.length > 0) {
+      const probeCode = deriveSentryProbeBlockerCode(narrowedSentryProbe(probe, {
+        projectReachabilityFailed,
+        clientKeysReachabilityFailed,
+      }));
+      if (probeCode) return [probeCode, ...independentCodes];
+      return [...canonicalReachabilityCodes, ...independentCodes];
+    }
+
+    return independentCodes;
+  }
+
   const explicit = {
     vercel: {
-      apiTokenConfigured: 'vercel_api_token_missing',
-      targetConfigurationBound: 'vercel_target_configuration_invalid',
       projectReachable: 'vercel_project_api_unreachable',
       projectIdentityMatched: 'vercel_project_identity_mismatch',
       productionEnvironmentEnumerated: 'vercel_production_environment_inventory_unavailable',
       requiredEnvironmentKeysPresent: 'vercel_required_production_environment_keys_missing',
-    },
-    sentry: {
-      organizationConfigured: 'sentry_organization_missing',
-      projectConfigured: 'sentry_project_missing',
-      buildAuthTokenConfigured: 'sentry_auth_token_missing',
-      projectReachable: 'sentry_project_api_unreachable',
-      clientKeyInventoryReachable: 'sentry_client_key_inventory_unavailable',
-      activeClientKeyPresent: 'sentry_active_client_key_missing',
     },
   };
   return Object.entries(checks)
@@ -124,13 +207,23 @@ export async function buildProviderBlockerDiagnostics(evidence) {
 
   const providers = Array.isArray(evidence?.providersReviewed) ? evidence.providersReviewed : [];
   const blocked = providers.filter((entry) => entry?.status !== 'reviewed');
-  const blockerCodes = blocked.flatMap(deriveProviderBlockerCodes);
   const vercel = providerEntry(evidence, 'vercel');
   const sentry = providerEntry(evidence, 'sentry');
   const [vercelProbe, sentryProbe] = await Promise.all([
     Promise.resolve(vercelDiagnostics(vercel)),
     sentryDiagnostics(sentry),
   ]);
+  const probeFor = (entry) => {
+    if (entry?.provider === 'vercel') return vercelProbe;
+    if (entry?.provider === 'sentry') return sentryProbe;
+    return null;
+  };
+  const providerDiagnostics = blocked.map((entry) => ({
+    provider: String(entry.provider || 'unknown'),
+    blockerCodes: deriveProviderBlockerCodes(entry, probeFor(entry)),
+    ...(entry.metrics ? { metrics: entry.metrics } : {}),
+  }));
+  const blockerCodes = providerDiagnostics.flatMap((entry) => entry.blockerCodes);
 
   return {
     schema: 'risck-comply.production-provider-blocker-diagnostics.v1',
@@ -142,11 +235,7 @@ export async function buildProviderBlockerDiagnostics(evidence) {
     blockedProviderCount: blocked.length,
     blockerCount: blockerCodes.length,
     blockerCodes,
-    providers: blocked.map((entry) => ({
-      provider: String(entry.provider || 'unknown'),
-      blockerCodes: deriveProviderBlockerCodes(entry),
-      ...(entry.metrics ? { metrics: entry.metrics } : {}),
-    })),
+    providers: providerDiagnostics,
     probes: {
       vercel: vercelProbe,
       sentry: sentryProbe,
@@ -189,7 +278,7 @@ const isMain = process.argv[1]
 
 if (isMain) {
   runProviderBlockerDiagnostics().catch((error) => {
-    console.error(`Provider blocker diagnostics failed: ${error instanceof Error ? error.message : 'unknown_error'}`);
+    console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   });
 }
