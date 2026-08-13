@@ -13,6 +13,7 @@ import {
   requiredViewerAdminDenyOperations,
   sameTenantWritableTables,
 } from '../../scripts/security/supabase-live-rls-evidence.mjs';
+import { requiredHorizontalIsolationOperations } from '../../scripts/security/supabase-horizontal-rls-evidence.mjs';
 import { buildSupabaseRlsScorecardEvidence } from '../../scripts/security/write-supabase-rls-scorecard-evidence.mjs';
 import { validateSupabaseRlsScorecardEvidence } from '../../scripts/security/check-supabase-rls-scorecard-evidence.mjs';
 
@@ -88,6 +89,9 @@ function validSourceEvidence(): RuntimeEvidence {
   for (const table of globalReferenceTables) {
     for (const operation of requiredGlobalReferenceOperations) add(table, operation);
   }
+  for (const [table, operations] of Object.entries(requiredHorizontalIsolationOperations)) {
+    for (const operation of operations) add(table, operation);
+  }
 
   const base = buildTypedEvidencePayload({
     status: 'Complete',
@@ -107,6 +111,12 @@ function validSourceEvidence(): RuntimeEvidence {
 
   return {
     ...base,
+    horizontalIsolation: {
+      status: 'passed',
+      sameTenantDistinctUsers: true,
+      testedTables: Object.keys(requiredHorizontalIsolationOperations),
+      checkedAt: '2026-07-18T00:00:00.000Z',
+    },
     githubActions: {
       generatedInGitHubActions: true,
       workflow: 'Supabase Live RLS Validation',
