@@ -23,6 +23,10 @@ const batchNReview = fs.readFileSync(
   'docs/security/evidence/human-review/supabase-migration-mega-batch-n.md',
   'utf8',
 );
+const groupAccessReconciliation = fs.readFileSync(
+  'supabase/migrations/20260724001000_enterprise_group_access_reconciliation.sql',
+  'utf8',
+);
 const ephemeralSmoke = fs.readFileSync('.github/workflows/ephemeral-supabase-project-smoke.yml', 'utf8');
 const addOnReplacement = fs.readFileSync(
   'supabase/migrations/20260813124224_reconcile_organization_add_ons.sql',
@@ -94,13 +98,29 @@ describe('exact-SHA disposable project schema workflows', () => {
       expect(reviewedBoundaryBridge).toContain(file);
     }
     expect(reviewedBoundaryBridge).toContain('stageBlockedDuplicateSchemaEffects');
-    expect(reviewedBoundaryBridge).toContain('restoreBlockedDuplicateSchemaEffects');
+    expect(reviewedBoundaryBridge).toContain('restoreHistoricalBytes');
     expect(reviewedBoundaryBridge).toContain(
       "appendGithubEnv('RECOVERY_EPHEMERAL_PREREQUISITE_BLOCKED_DUPLICATE_FILE_COUNT'",
     );
     expect(ephemeralSmoke).toContain(
       'RECOVERY_EPHEMERAL_PREREQUISITE_BLOCKED_DUPLICATE_FILE_COUNT\" = \"3',
     );
+  });
+
+  it('quotes the reserved current_role output only for the disposable I-DUP-14 replay', () => {
+    expect(duplicateReview).toContain('### I-DUP-14');
+    expect(duplicateReview).toContain('`20260724001000_enterprise_group_access_reconciliation.sql`');
+    expect(groupAccessReconciliation).toContain(
+      'create or replace function public.list_enterprise_group_access_reconciliation_candidates(',
+    );
+    expect(groupAccessReconciliation).toContain('  current_role text,');
+    expect(reviewedBoundaryBridge).toContain('stageSyntaxCompatibility');
+    expect(reviewedBoundaryBridge).toContain("invalid: '  current_role text,'");
+    expect(reviewedBoundaryBridge).toContain("replacement: '  \"current_role\" text,'");
+    expect(reviewedBoundaryBridge).toContain(
+      "appendGithubEnv('RECOVERY_EPHEMERAL_SYNTAX_COMPAT_FILE_COUNT'",
+    );
+    expect(ephemeralSmoke).toContain('RECOVERY_EPHEMERAL_SYNTAX_COMPAT_FILE_COUNT\" = \"1');
   });
 
   it('replaces invalid historical schema effects only through explicit later canonical migrations', () => {
