@@ -11,6 +11,9 @@ import {
   claimBillingLifecycleRequest,
   completeBillingLifecycleRequest,
   failBillingLifecycleRequest,
+  markBillingLifecycleAuditSucceeded,
+  markBillingLifecycleProviderInFlight,
+  markBillingLifecycleProviderSucceeded,
   type BillingLifecycleAction,
 } from './lifecycle-request-ledger';
 import { getStripeClient } from './stripe';
@@ -138,55 +141,72 @@ export async function mutateSubscriptionLifecycle(input: {
   }
 
   const requestId = claim.request.id;
-  let updated: Stripe.Subscription;
 
-  try {
-    const requestOptions = {
-      idempotencyKey: deriveStripeIdempotencyKey(input.idempotency, `subscription-${input.action}`),
-    };
-
-    if (input.action === 'cancel') {
-      updated = await stripe.subscriptions.update(
-        subscription.id,
-        { cancel_at_period_end: true },
-        requestOptions,
-      );
-    } else if (input.action === 'reactivate') {
-      updated = await stripe.subscriptions.update(
-        subscription.id,
-        { cancel_at_period_end: false },
-        requestOptions,
-      );
-    } else {
-      const isDowngrade = input.action === 'downgrade';
-      updated = await stripe.subscriptions.update(
-        subscription.id,
-        {
-          cancel_at_period_end: false,
-          proration_behavior: isDowngrade ? 'none' : 'create_prorations',
-          billing_cycle_anchor: 'unchanged',
-          items: [
-            { id: baseItem.id, price: getStripePriceId(targetPlan, interval), quantity: 1 },
-            ...subscription.items.data
-              .filter((item) => item.id !== baseItem.id)
-              .map((item) => ({ id: item.id, deleted: true as const })),
-            ...buildAddOnItems(addOns, interval),
-          ],
-          metadata: {
-            ...subscription.metadata,
-            organization_id: input.organizationId,
-            user_id: input.userId,
-            plan: targetPlan,
-            billing_interval: interval,
-          },
-        },
-        requestOptions,
-      );
-    }
-  } catch (error) {
-    await failBillingLifecycleRequest(requestId, 'stripe_mutation_failed');
-    throw classifyProviderFailure('stripe', `subscription_${input.action}`, error);
+  if (claim.kind === 'audit_succeeded_recovery') {
+    await completeBillingLifecycleRequest(requestId);
+    return lifecycleResult({ subscription, plan: targetPlan, interval, addOns, idempotentReplay: true });
   }
+
+  let updated = subscription;
+  const providerWasAlreadyCompleted = claim.kind === 'provider_succeeded_recovery';
+
+  if (!providerWasAlreadyCompleted) {
+    await markBillingLifecycleProviderInFlight(requestId);
+
+    try {
+      const requestOptions = {
+        idempotencyKey: deriveStripeIdempotencyKey(input.idempotency, `subscription-${input.action}`),
+      };
+
+      if (input.action === 'cancel') {
+        updated = await stripe.subscriptions.update(
+          subscription.id,
+          { cancel_at_period_end: true },
+          requestOptions,
+        );
+      } else if (input.action === 'reactivate') {
+        updated = await stripe.subscriptions.update(
+          subscription.id,
+          { cancel_at_period_end: false },
+          requestOptions,
+        );
+      } else {
+        const isDowngrade = input.action === 'downgrade';
+        updated = await stripe.subscriptions.update(
+          subscription.id,
+          {
+            cancel_at_period_end: false,
+            proration_behavior: isDowngrade ? 'none' : 'create_prorations',
+            billing_cycle_anchor: 'unchanged',
+            items: [
+              { id: baseItem.id, price: getStripePriceId(targetPlan, interval), quantity: 1 },
+              ...subscription.items.data
+                .filter((item) => item.id !== baseItem.id)
+                .map((item) => ({ id: item.id, deleted: true as const })),
+              ...buildAddOnItems(addOns, interval),
+            ],
+            metadata: {
+              ...subscription.metadata,
+              organization_id: input.organizationId,
+              user_id: input.userId,
+              plan: targetPlan,
+              billing_interval: interval,
+            },
+          },
+          requestOptions,
+        );
+      }
+    } catch (error) {
+      await failBillingLifecycleRequest(requestId, 'stripe_mutation_failed');
+      throw classifyProviderFailure('stripe', `subscription_${input.action}`, error);
+    }
+
+    await markBillingLifecycleProviderSucceeded(requestId);
+  }
+
+  const auditPreviousPlan = normalizeBillingPlanId(claim.request.source_plan) ?? currentPlan;
+  const auditTargetPlan = normalizeBillingPlanId(claim.request.target_plan) ?? targetPlan;
+  const auditInterval = claim.request.billing_interval === 'year' ? 'year' : interval;
 
   const audit = await writeAuditLog({
     action: `billing.subscription_${input.action}`,
@@ -195,23 +215,24 @@ export async function mutateSubscriptionLifecycle(input: {
     entityType: 'stripe_subscription',
     entityId: subscription.id,
     metadata: {
-      previousPlan: currentPlan,
-      targetPlan,
-      interval,
+      previousPlan: auditPreviousPlan,
+      targetPlan: auditTargetPlan,
+      interval: auditInterval,
       addOns,
       actorRole: input.actorRole,
       cancelAtPeriodEnd: updated.cancel_at_period_end,
       providerStatus: updated.status,
       lifecycleRequestId: requestId,
       idempotencyProtected: true,
+      providerMutationReplayed: providerWasAlreadyCompleted,
     },
   });
 
   if (!audit.persisted) {
-    await failBillingLifecycleRequest(requestId, 'audit_persistence_failed');
     throw new Error('billing_lifecycle_audit_unavailable');
   }
 
+  await markBillingLifecycleAuditSucceeded(requestId);
   await completeBillingLifecycleRequest(requestId);
 
   return lifecycleResult({
@@ -219,7 +240,7 @@ export async function mutateSubscriptionLifecycle(input: {
     plan: targetPlan,
     interval,
     addOns,
-    idempotentReplay: false,
+    idempotentReplay: providerWasAlreadyCompleted,
   });
 }
 

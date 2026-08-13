@@ -27,18 +27,20 @@ describe('permissions catalog least-privilege hardening', () => {
     const reconciliation = read(reconciliationPath);
 
     expect(reconciliation).toContain('force row level security');
-    expect(reconciliation).toContain('revoke all on table public.permissions from anon, authenticated');
-    expect(reconciliation).toContain('revoke all on table public.role_permissions from anon, authenticated');
+    expect(reconciliation).toContain('revoke all on table public.permissions from PUBLIC, anon, authenticated');
+    expect(reconciliation).toContain('revoke all on table public.role_permissions from PUBLIC, anon, authenticated');
+    expect(reconciliation).toContain('revoke all on table public.stripe_webhook_events from PUBLIC, anon, authenticated');
     expect(reconciliation).toContain('grant select on table public.permissions to authenticated');
     expect(reconciliation).toContain('grant select on table public.role_permissions to authenticated');
     expect(reconciliation).toContain("raise exception 'authenticated write/admin privilege survived for public.%'");
   });
 
-  it('requires effective privilege and exact migration-history evidence before closure PASS', () => {
+  it('requires complete effective privilege and exact migration-history evidence before closure PASS', () => {
     const workflow = read(workflowPath);
     const verifier = read('scripts/supabase/verify-rls-reconciliation-proof.mjs');
 
     expect(workflow).toContain("select 'grant|' || table_name || '|' || grantee || '|' || privilege_type");
+    expect(workflow).toContain('from information_schema.table_privileges');
     expect(workflow).toContain("and grantee in ('PUBLIC', 'anon', 'authenticated', 'service_role')");
     expect(workflow).toContain("where version in ('20260726070000', '20260812224650')");
     expect(verifier).toContain("'20260812224650|tighten_permissions_catalog_authenticated_grants'");

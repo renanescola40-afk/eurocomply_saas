@@ -7,9 +7,9 @@ alter table if exists public.role_permissions force row level security;
 alter table if exists public.stripe_webhook_events enable row level security;
 alter table if exists public.stripe_webhook_events force row level security;
 
-revoke all on table public.permissions from anon, authenticated;
-revoke all on table public.role_permissions from anon, authenticated;
-revoke all on table public.stripe_webhook_events from anon, authenticated;
+revoke all on table public.permissions from PUBLIC, anon, authenticated;
+revoke all on table public.role_permissions from PUBLIC, anon, authenticated;
+revoke all on table public.stripe_webhook_events from PUBLIC, anon, authenticated;
 
 grant select on table public.permissions to authenticated;
 grant select on table public.role_permissions to authenticated;
