@@ -62,7 +62,7 @@ jobs:
       - name: Start exact-SHA disposable project database
         run: node scripts/recovery/run-ephemeral-project-schema-replay.mjs
 
-      - name: Validate local runtime, migration history, RLS and representative schema
+      - name: Validate local runtime, replay boundary, RLS and representative schema
         shell: bash
         run: |
           set -euo pipefail
@@ -70,6 +70,10 @@ jobs:
           test "$RECOVERY_EPHEMERAL_DATABASE_MODE" = "project-schema"
           test "$RECOVERY_SUPABASE_POSTGRES_VERSION" != ""
           test "$RECOVERY_EPHEMERAL_MIGRATION_COUNT" -gt 0
+          test "$RECOVERY_EPHEMERAL_DUPLICATE_GROUP_COUNT" = "16"
+          test "$RECOVERY_EPHEMERAL_REPLAY_STAGED_FILE_COUNT" = "34"
+          test "$RECOVERY_EPHEMERAL_LEGACY_EXCLUDED_FILE_COUNT" = "5"
+          test "$RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL" = "false"
           case "$RECOVERY_ISOLATED_DATABASE_URL" in
             postgresql://*@127.0.0.1:54322/*|postgres://*@127.0.0.1:54322/*|postgresql://*@localhost:54322/*|postgres://*@localhost:54322/*) ;;
             *) echo 'Disposable database URL is not loopback-bound' >&2; exit 1 ;;
@@ -118,7 +122,7 @@ jobs:
             if not exists (
               select 1 from supabase_migrations.schema_migrations
             ) then
-              raise exception 'migration history is empty';
+              raise exception 'disposable replay history is empty';
             end if;
           end
           $proof$;
