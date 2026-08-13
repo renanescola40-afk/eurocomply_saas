@@ -139,6 +139,14 @@ test('same-SHA producer completions collapse to the newest exact-SHA closure sna
   assert.doesNotMatch(workflow, /cancel-in-progress: false/);
 });
 
+test('closure execution requires the exact current main SHA rather than merely an ancestor of main', () => {
+  assert.match(workflow, /Validate target SHA is exact current main/);
+  assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$ENTERPRISE_CLOSURE_EXPECTED_SHA"/);
+  assert.match(workflow, /test "\$main_sha" = "\$ENTERPRISE_CLOSURE_EXPECTED_SHA"/);
+  assert.doesNotMatch(workflow, /compare\/\$\{ENTERPRISE_CLOSURE_EXPECTED_SHA\}\.\.\.\$\{main_sha\}/);
+  assert.doesNotMatch(workflow, /identical\|ahead/);
+});
+
 test('closure summaries use valid jq string programs', () => {
   assert.match(workflow, /jq -r '"- Status:/);
   assert.match(workflow, /jq -r '"- Decision:/);
