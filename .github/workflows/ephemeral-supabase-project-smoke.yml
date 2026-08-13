@@ -73,6 +73,7 @@ jobs:
           test "$RECOVERY_EPHEMERAL_DUPLICATE_GROUP_COUNT" = "16"
           test "$RECOVERY_EPHEMERAL_REPLAY_STAGED_FILE_COUNT" = "34"
           test "$RECOVERY_EPHEMERAL_LEGACY_EXCLUDED_FILE_COUNT" = "5"
+          test "$RECOVERY_EPHEMERAL_UNRESOLVED_INVALID_EXCLUDED_FILE_COUNT" = "1"
           test "$RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL" = "false"
           case "$RECOVERY_ISOLATED_DATABASE_URL" in
             postgresql://*@127.0.0.1:54322/*|postgres://*@127.0.0.1:54322/*|postgresql://*@localhost:54322/*|postgres://*@localhost:54322/*) ;;
