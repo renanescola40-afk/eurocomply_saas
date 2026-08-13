@@ -4,6 +4,8 @@ import { createHash } from 'node:crypto';
 import { closeSync, fstatSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname } from 'node:path';
 
+import { buildRecoveryCommandDiagnostic } from './recovery-command-observability.mjs';
+
 const output = 'docs/security/evidence/p1/backup-restore-tested.json';
 const workDir = 'artifacts/recovery-exercise';
 const legacyDumpPath = `${workDir}/production-backup.dump`;
@@ -14,6 +16,7 @@ const env = (name) => String(process.env[name] ?? '').trim();
 const startedAt = Date.now();
 const checks = {};
 const failures = [];
+let failureDiagnostic = null;
 
 const SUPABASE_MANAGED_DATA_EXCLUDES = [
   'storage.buckets_vectors',
@@ -25,11 +28,35 @@ function required(name) {
   if (!value) failures.push(`missing_${name.toLowerCase()}`);
   return value;
 }
-function run(command, args, extraEnv = {}) {
-  return execFileSync(command, args, { stdio: 'pipe', timeout: 15 * 60_000, env: { ...process.env, ...extraEnv } }).toString('utf8');
+function run(phase, command, args, extraEnv = {}) {
+  try {
+    return execFileSync(command, args, {
+      stdio: 'pipe',
+      timeout: 15 * 60_000,
+      env: { ...process.env, ...extraEnv },
+    }).toString('utf8');
+  } catch (error) {
+    const diagnostic = buildRecoveryCommandDiagnostic({ error, phase, command });
+    if (!failureDiagnostic) failureDiagnostic = diagnostic;
+    throw new Error(`recovery_command_failed:${diagnostic.phase}:${diagnostic.category}`);
+  }
 }
-function sql(connection, statement) {
-  return run('psql', [connection, '--no-psqlrc', '--tuples-only', '--no-align', '--set', 'ON_ERROR_STOP=1', '--command', statement]).trim();
+function runBestEffort(command, args) {
+  try {
+    execFileSync(command, args, { stdio: 'ignore', timeout: 60_000, env: process.env });
+  } catch {}
+}
+function sql(phase, connection, statement) {
+  return run(phase, 'psql', [
+    connection,
+    '--no-psqlrc',
+    '--tuples-only',
+    '--no-align',
+    '--set',
+    'ON_ERROR_STOP=1',
+    '--command',
+    statement,
+  ]).trim();
 }
 function inspectFile(path) {
   const descriptor = openSync(path, 'r');
@@ -54,16 +81,19 @@ function inspectLogicalBackup(paths) {
     : null;
   return { exists, digest, bytes: inspected.reduce((sum, entry) => sum + entry.bytes, 0) };
 }
-function copySqlToContainer(container, path) {
+function copySqlToContainer(container, path, phase) {
   const containerPath = `/tmp/${basename(path)}`;
-  run('docker', ['cp', path, `${container}:${containerPath}`]);
+  run(phase, 'docker', ['cp', path, `${container}:${containerPath}`]);
   return containerPath;
 }
 function restoreIntoEphemeralSupabase(container) {
-  const containerPaths = [rolesDumpPath, schemaDumpPath, dataDumpPath]
-    .map((path) => copySqlToContainer(container, path));
+  const containerPaths = [
+    copySqlToContainer(container, rolesDumpPath, 'restore_copy_roles'),
+    copySqlToContainer(container, schemaDumpPath, 'restore_copy_schema'),
+    copySqlToContainer(container, dataDumpPath, 'restore_copy_data'),
+  ];
   try {
-    run('docker', [
+    run('restore_transaction', 'docker', [
       'exec', container, 'psql', '-U', 'postgres', '-d', 'postgres', '--no-psqlrc',
       '--single-transaction', '--set', 'ON_ERROR_STOP=1',
       '--file', containerPaths[0],
@@ -73,7 +103,7 @@ function restoreIntoEphemeralSupabase(container) {
     ]);
   } finally {
     for (const path of containerPaths) {
-      try { run('docker', ['exec', container, 'rm', '-f', path]); } catch {}
+      runBestEffort('docker', ['exec', container, 'rm', '-f', path]);
     }
   }
 }
@@ -105,13 +135,9 @@ try {
   if (failures.length) throw new Error('recovery_preconditions_failed');
 
   if (ephemeralMode) {
-    // Follow Supabase's supported platform-to-self-hosted logical restore sequence:
-    // filtered roles, schema, then complete application/auth data. Supabase-managed
-    // vector storage tables are explicitly excluded from the logical data dump;
-    // they are platform-owned and are recreated/managed by the target project.
-    run('supabase', ['db', 'dump', '--db-url', source, '--role-only', '--file', rolesDumpPath]);
-    run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath]);
-    run('supabase', [
+    run('roles_dump', 'supabase', ['db', 'dump', '--db-url', source, '--role-only', '--file', rolesDumpPath]);
+    run('schema_dump', 'supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath]);
+    run('data_dump', 'supabase', [
       'db', 'dump', '--db-url', source,
       '--data-only', '--use-copy',
       '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[0],
@@ -126,29 +152,29 @@ try {
     if (!checks.backupExists || !digest) throw new Error('backup_dump_invalid');
     restoreIntoEphemeralSupabase(localContainer);
   } else {
-    run('pg_dump', [source, '--format=custom', '--no-owner', '--no-privileges', '--file', legacyDumpPath]);
+    run('legacy_dump', 'pg_dump', [source, '--format=custom', '--no-owner', '--no-privileges', '--file', legacyDumpPath]);
     backupCompletedAt = new Date().toISOString();
     const inspectedDump = inspectFile(legacyDumpPath);
     checks.backupExists = inspectedDump.exists;
     digest = inspectedDump.digest;
     backupBytes = inspectedDump.bytes;
     if (!checks.backupExists || !digest) throw new Error('backup_dump_invalid');
-    run('pg_restore', ['--dbname', restore, '--clean', '--if-exists', '--no-owner', '--no-privileges', '--exit-on-error', legacyDumpPath]);
+    run('legacy_restore', 'pg_restore', ['--dbname', restore, '--clean', '--if-exists', '--no-owner', '--no-privileges', '--exit-on-error', legacyDumpPath]);
   }
 
   restoreCompletedAt = new Date().toISOString();
   checks.restoreExecuted = true;
   for (const table of criticalTables) {
-    sourceCounts[table] = Number(sql(source, `select count(*) from public.${table};`));
-    restoredCounts[table] = Number(sql(restore, `select count(*) from public.${table};`));
+    sourceCounts[table] = Number(sql(`source_count_${table}`, source, `select count(*) from public.${table};`));
+    restoredCounts[table] = Number(sql(`restored_count_${table}`, restore, `select count(*) from public.${table};`));
   }
   checks.dataIntegrity = criticalTables.every((table) => sourceCounts[table] === restoredCounts[table]);
-  sourceAuthUsers = Number(sql(source, 'select count(*) from auth.users;'));
-  restoredAuthUsers = Number(sql(restore, 'select count(*) from auth.users;'));
+  sourceAuthUsers = Number(sql('source_auth_users_count', source, 'select count(*) from auth.users;'));
+  restoredAuthUsers = Number(sql('restored_auth_users_count', restore, 'select count(*) from auth.users;'));
   checks.authUsersIntegrity = sourceAuthUsers === restoredAuthUsers;
-  const rlsRows = Number(sql(restore, "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('organizations','organization_members','audit_logs') and c.relrowsecurity=true;"));
+  const rlsRows = Number(sql('restored_rls_check', restore, "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('organizations','organization_members','audit_logs') and c.relrowsecurity=true;"));
   checks.rlsAfterRestore = rlsRows === criticalTables.length;
-  const policyCount = Number(sql(restore, "select count(*) from pg_policies where schemaname='public' and tablename in ('organizations','organization_members','audit_logs');"));
+  const policyCount = Number(sql('restored_policy_check', restore, "select count(*) from pg_policies where schemaname='public' and tablename in ('organizations','organization_members','audit_logs');"));
   checks.rlsPoliciesPresent = policyCount >= criticalTables.length;
   checks.backupExists = checks.backupExists === true;
   checks.rpoMeasured = Boolean(backupCompletedAt);
@@ -163,16 +189,58 @@ try {
 const finishedAt = Date.now();
 const passed = failures.length === 0 && Object.values(checks).every(Boolean);
 const evidence = {
-  schema: 'risck-comply.backup-restore-evidence.v2', evidenceItem: 'backup-restore-tested', status: passed ? 'Complete' : 'Open', outcome: passed ? 'passed' : 'failed',
-  generatedAt: new Date().toISOString(), repository: env('GITHUB_REPOSITORY'), branch: env('GITHUB_REF_NAME'), targetSha: targetSha || null, observedSha: observedSha || null,
-  runId: env('GITHUB_RUN_ID') || null, controlsVerified: ['REC-05', 'REC-06', 'REC-07', 'REC-08', 'REC-09', 'REC-10'], checks,
-  metrics: { rpoSeconds: backupCompletedAt ? Math.max(0, Math.round((Date.now() - Date.parse(backupCompletedAt)) / 1000)) : null, rtoSeconds: restoreCompletedAt ? Math.round((Date.parse(restoreCompletedAt) - startedAt) / 1000) : null, totalExerciseSeconds: Math.round((finishedAt - startedAt) / 1000), backupBytes },
-  integrity: { criticalTables, sourceCounts, restoredCounts, sourceAuthUsers, restoredAuthUsers, backupSha256Prefix: digest ? `${digest.slice(0, 16)}…` : null, recoveryMode: ephemeralMode ? 'ephemeral-supabase-postgres' : 'external-isolated-database' }, failures: [...new Set(failures)],
-  evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
+  schema: 'risck-comply.backup-restore-evidence.v2',
+  evidenceItem: 'backup-restore-tested',
+  status: passed ? 'Complete' : 'Open',
+  outcome: passed ? 'passed' : 'failed',
+  generatedAt: new Date().toISOString(),
+  repository: env('GITHUB_REPOSITORY'),
+  branch: env('GITHUB_REF_NAME'),
+  targetSha: targetSha || null,
+  observedSha: observedSha || null,
+  runId: env('GITHUB_RUN_ID') || null,
+  controlsVerified: ['REC-05', 'REC-06', 'REC-07', 'REC-08', 'REC-09', 'REC-10'],
+  checks,
+  failureDiagnostic,
+  metrics: {
+    rpoSeconds: backupCompletedAt ? Math.max(0, Math.round((Date.now() - Date.parse(backupCompletedAt)) / 1000)) : null,
+    rtoSeconds: restoreCompletedAt ? Math.round((Date.parse(restoreCompletedAt) - startedAt) / 1000) : null,
+    totalExerciseSeconds: Math.round((finishedAt - startedAt) / 1000),
+    backupBytes,
+  },
+  integrity: {
+    criticalTables,
+    sourceCounts,
+    restoredCounts,
+    sourceAuthUsers,
+    restoredAuthUsers,
+    backupSha256Prefix: digest ? `${digest.slice(0, 16)}…` : null,
+    recoveryMode: ephemeralMode ? 'ephemeral-supabase-postgres' : 'external-isolated-database',
+  },
+  failures: [...new Set(failures)],
+  evidenceIntegrity: {
+    containsSensitiveValues: false,
+    exactShaBound: checks.exactShaBound === true,
+    databaseUrlsStored: false,
+    dumpStored: false,
+    rowDataStored: false,
+    credentialsStored: false,
+    commandArgumentsStored: false,
+    rawCommandOutputStored: false,
+    singleDescriptorInspection: !ephemeralMode,
+    logicalBackupFilesDeleted: true,
+  },
   evidenceBoundary: ephemeralMode
-    ? 'Supabase-compatible logical roles, schema, and application/auth data backups were restored transactionally into a disposable isolated Supabase Postgres database; target-managed vector storage tables were excluded from the data dump. Evidence stores only aggregate counts and a truncated combined digest; backup files and local database volumes are deleted by the protected workflow.'
-    : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts and a truncated digest; the dump is deleted before completion.',
+    ? 'Supabase-compatible logical roles, schema, and application/auth data backups were restored transactionally into a disposable isolated Supabase Postgres database; target-managed vector storage tables were excluded from the data dump. Evidence stores only aggregate counts, a redacted command-failure classification when needed, and a truncated combined digest; backup files and local database volumes are deleted by the protected workflow.'
+    : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts, a redacted command-failure classification when needed, and a truncated digest; the dump is deleted before completion.',
 };
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
-if (!passed) process.exit(1);
+if (!passed) {
+  console.error(JSON.stringify({
+    outcome: evidence.outcome,
+    failureDiagnostic: evidence.failureDiagnostic,
+    failures: evidence.failures,
+  }, null, 2));
+  process.exit(1);
+}
