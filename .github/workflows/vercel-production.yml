@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: vercel-production-${{ inputs.release_sha }}
@@ -62,12 +63,19 @@ jobs:
           git cat-file -e "${RELEASE_SHA}^{commit}"
           test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
 
+      - name: Verify Production environment governance before protected secrets
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: Production
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
   deploy-production:
     name: P0 gates and deploy exact SHA to Vercel production
     needs: authorize-release
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    environment: production
+    environment: Production
 
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
@@ -129,7 +137,7 @@ jobs:
           test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
 
       - name: Setup Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dcba9c38 # v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           cache: npm
