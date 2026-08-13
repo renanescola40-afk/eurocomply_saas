@@ -17,11 +17,11 @@ describe('ephemeral Supabase logical restore PR smoke', () => {
     expect(workflow).toContain('version: 2.101.0');
   });
 
-  it('replays the canonical source, destroys it, then restores into a clean target', () => {
-    const sourceStart = workflow.indexOf('run-ephemeral-project-schema-replay.mjs');
+  it('creates a synthetic source independently from unresolved project migration history', () => {
+    const sourceStart = workflow.indexOf('Start clean disposable synthetic source');
     const dump = workflow.indexOf('run-ephemeral-restore-smoke.mjs dump');
     const sourceStop = workflow.indexOf('Destroy disposable source project');
-    const targetStart = workflow.indexOf('manage-ephemeral-recovery-database.mjs start\n', dump);
+    const targetStart = workflow.indexOf('Start clean disposable restore target');
     const restore = workflow.indexOf('run-ephemeral-restore-smoke.mjs restore');
 
     expect(sourceStart).toBeGreaterThan(-1);
@@ -29,7 +29,9 @@ describe('ephemeral Supabase logical restore PR smoke', () => {
     expect(sourceStop).toBeGreaterThan(dump);
     expect(targetStart).toBeGreaterThan(sourceStop);
     expect(restore).toBeGreaterThan(targetStart);
+    expect(workflow).not.toContain('run-ephemeral-project-schema-replay.mjs');
     expect(workflow).not.toContain('manage-ephemeral-recovery-database.mjs start-project');
+    expect(workflow).not.toContain("'supabase/migrations/**'");
   });
 
   it('uses the same supported roles schema data sequence as the protected recovery exercise', () => {
@@ -40,9 +42,15 @@ describe('ephemeral Supabase logical restore PR smoke', () => {
     expect(smoke).toContain("'SET session_replication_role = replica;'");
   });
 
-  it('proves restored synthetic data, auth schema and RLS without storing production data', () => {
+  it('builds and restores synthetic critical tables, rows, policies, auth schema and RLS', () => {
+    expect(smoke).toContain('createSyntheticEnterpriseSource(url)');
+    expect(smoke).toContain('create table public.organizations');
+    expect(smoke).toContain('create table public.organization_members');
+    expect(smoke).toContain('create table public.audit_logs');
     expect(smoke).toContain('__risck_restore_smoke');
     expect(smoke).toContain('risck-ephemeral-restore-smoke-v1');
+    expect(smoke).toContain("rowCounts !== '1:1:1'");
+    expect(smoke).toContain("policyname like 'restore smoke % deny'");
     expect(smoke).toContain("to_regclass('auth.users') is not null");
     expect(smoke).toContain("c.relname in ('organizations','organization_members','audit_logs')");
     expect(smoke).toContain('c.relrowsecurity');
