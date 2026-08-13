@@ -36,9 +36,10 @@ test('protected workflow binds evidence to exact current main through a disposab
   assert.match(workflow, /git rev-parse origin\/main/);
   assert.match(workflow, /GITHUB_SHA/);
   assert.match(workflow, /GITHUB_REF_NAME/);
-  assert.match(workflow, /supabase\/setup-cli@46f89843689f213b433d85a0508d1183e1803070/);
+  assert.match(workflow, /supabase\/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520/);
   assert.match(workflow, /version: 2\.101\.0/);
-  assert.match(workflow, /manage-ephemeral-recovery-database\.mjs start-project/);
+  assert.match(workflow, /run-ephemeral-project-schema-replay\.mjs/);
+  assert.doesNotMatch(workflow, /manage-ephemeral-recovery-database\.mjs start-project/);
   assert.match(workflow, /manage-ephemeral-recovery-database\.mjs stop/);
   assert.match(workflow, /Remove disposable project database[\s\S]*?if: always\(\)/);
   assert.doesNotMatch(workflow, /secrets\.RECOVERY_ISOLATED_DATABASE_URL/);
@@ -53,5 +54,5 @@ test('exact-SHA project migrations replace selective manual migration applicatio
   assert.doesNotMatch(workflow, /apply_migrations:/);
   assert.doesNotMatch(workflow, /20260721113000_enterprise_integrations_platform\.sql/);
   assert.doesNotMatch(workflow, /20260721114500_enterprise_integrations_tenant_relations\.sql/);
-  assert.match(workflow, /start-project/);
+  assert.match(workflow, /run-ephemeral-project-schema-replay\.mjs/);
 });
