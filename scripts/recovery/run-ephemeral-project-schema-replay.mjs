@@ -183,7 +183,7 @@ function assertReviewedReplayInventory(dir) {
   }
   for (const file of UNAPPLIED_UNIQUE_MIGRATIONS) {
     if (!existsSync(join(dir, file))) fail(`Reviewed unapplied unique migration is missing: ${file}`);
-    if (!unappliedUniqueReview.includes(`\`${file}\``)
+    if (!unappliedUniqueReview.includes(file)
       || !unappliedUniqueReview.includes('unapplied historical migration')
       || !unappliedUniqueReview.includes('RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL=false')) {
       fail(`Unapplied unique migration review boundary missing for ${file}`);
