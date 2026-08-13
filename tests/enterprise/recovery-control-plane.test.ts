@@ -2,49 +2,49 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/enterprise-recovery-drill.yml', 'utf8');
-const builder = readFileSync('scripts/enterprise/build-recovery-evidence.mjs', 'utf8');
-
-const requiredControls = [
-  'rollbackTargetConfigured',
-  'distinctDeployment',
-  'rollbackExecuted',
-  'postRollbackHealth',
-  'backupExists',
-  'restoreExecuted',
-  'dataIntegrity',
-  'rlsAfterRestore',
-  'rpoMeasured',
-  'rtoMeasured',
-];
+const backupRestore = readFileSync('scripts/recovery/run-backup-restore-exercise.mjs', 'utf8');
+const evidenceValidator = readFileSync('scripts/recovery/check-recovery-evidence.mjs', 'utf8');
 
 describe('enterprise recovery control plane', () => {
-  it('runs only from protected main or manual dispatch with read-only repository permissions', () => {
+  it('runs only for exact protected main with read-only repository permissions', () => {
     expect(workflow).toContain('branches: [main]');
     expect(workflow).toContain('workflow_dispatch:');
-    expect(workflow).toMatch(/jobs:\s*\n\s+recovery:[\s\S]*?environment:\s*\n\s+name: Production/);
+    expect(workflow).toMatch(/jobs:\s*\n\s+recovery:[\s\S]*?environment:\s*\n\s+name: supabase-production-migration-dry-run/);
     expect(workflow).toContain('contents: read');
     expect(workflow).toContain('persist-credentials: false');
-  });
-
-  it('requires isolated backup and restore infrastructure and exact-SHA provenance', () => {
-    expect(workflow).toContain('RECOVERY_SOURCE_DATABASE_URL');
-    expect(workflow).toContain('RECOVERY_ISOLATED_DATABASE_URL');
+    expect(workflow).toContain('test "$GITHUB_REF_NAME" = \'main\'');
     expect(workflow).toContain('git ls-remote origin refs/heads/main');
-    expect(workflow).toContain('pg_dump');
-    expect(workflow).toContain('pg_restore');
-    expect(workflow).toContain('pg_policies');
   });
 
-  it('covers all ten recovery controls and fails closed on integrity mismatch', () => {
-    for (const control of requiredControls) expect(builder).toContain(control);
-    expect(builder).toContain('sourceRows === restoredRows');
-    expect(builder).toContain('sourcePolicies === restoredPolicies');
-    expect(builder).toContain('process.exitCode = 1');
+  it('reuses the protected Supabase source and provisions a disposable isolated target', () => {
+    expect(workflow).toContain('RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}');
+    expect(workflow).toContain('RECOVERY_REQUIRED_EXERCISE: backup-restore');
+    expect(workflow).toContain('manage-ephemeral-recovery-database.mjs start');
+    expect(workflow).toContain('manage-ephemeral-recovery-database.mjs stop');
+    expect(workflow).not.toContain('secrets.RECOVERY_ISOLATED_DATABASE_URL');
+    expect(workflow).not.toContain('secrets.RECOVERY_SOURCE_DATABASE_URL');
   });
 
-  it('stores only derived metrics and redacted provenance', () => {
-    expect(builder).not.toContain('SOURCE_DATABASE_URL');
-    expect(builder).not.toContain('RESTORE_DATABASE_URL');
-    expect(builder).toContain('No deployment URL, token, provider payload or customer data is stored.');
+  it('uses the supported logical backup path and canonical evidence validator', () => {
+    expect(workflow).toContain('preflight-protected-proof.mjs recovery');
+    expect(workflow).toContain('run-backup-restore-exercise.mjs');
+    expect(workflow).toContain('check-recovery-evidence.mjs');
+    expect(workflow).toContain('docs/security/evidence/p1/backup-restore-tested.json');
+
+    expect(backupRestore).toContain("'db', 'dump'");
+    expect(backupRestore).toContain("'--role-only'");
+    expect(backupRestore).toContain("'--data-only', '--use-copy'");
+    expect(backupRestore).toContain('checks.dataIntegrity');
+    expect(backupRestore).toContain('checks.rlsAfterRestore');
+    expect(evidenceValidator).toContain("restore.schema === 'risck-comply.backup-restore-evidence.v2'");
+  });
+
+  it('never manufactures rollback credit from the automatic backup restore drill', () => {
+    expect(workflow).not.toContain('ROLLBACK_EXECUTED=true');
+    expect(workflow).not.toContain('POST_ROLLBACK_HEALTH=true');
+    expect(workflow).not.toContain('rollback-source.json');
+    expect(workflow).not.toContain('build-recovery-evidence.mjs');
+    expect(workflow).not.toContain('LAST_KNOWN_GOOD_DEPLOYMENT_URL');
+    expect(workflow).not.toContain('RELEASE_ROLLBACK_TARGET');
   });
 });
