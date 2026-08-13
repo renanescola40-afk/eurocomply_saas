@@ -9,17 +9,42 @@ const REQUIRED_POLICIES = new Set([
   'permissions|permissions_authenticated_read|SELECT|authenticated',
   'role_permissions|role_permissions_authenticated_read|SELECT|authenticated',
 ]);
-const REQUIRED_HISTORY = '20260726070000|permissions_catalog_rls_hotfix';
+const REQUIRED_HISTORY = new Set([
+  '20260726070000|permissions_catalog_rls_hotfix',
+  '20260812224650|tighten_permissions_catalog_authenticated_grants',
+]);
+const REQUIRED_GRANTS = new Set([
+  'permissions|authenticated|SELECT',
+  'role_permissions|authenticated|SELECT',
+  'permissions|service_role|SELECT',
+  'permissions|service_role|INSERT',
+  'permissions|service_role|UPDATE',
+  'permissions|service_role|DELETE',
+  'role_permissions|service_role|SELECT',
+  'role_permissions|service_role|INSERT',
+  'role_permissions|service_role|UPDATE',
+  'role_permissions|service_role|DELETE',
+  'stripe_webhook_events|service_role|SELECT',
+  'stripe_webhook_events|service_role|INSERT',
+  'stripe_webhook_events|service_role|UPDATE',
+  'stripe_webhook_events|service_role|DELETE',
+]);
 const BOOLEAN_TRUE = new Set(['t', 'true', 'on', '1']);
+const CLIENT_ROLES = new Set(['PUBLIC', 'anon', 'authenticated']);
 
 function normalize(value) {
   return String(value ?? '').trim();
+}
+
+function isAllowedClientGrant(grant) {
+  return grant === 'permissions|authenticated|SELECT' || grant === 'role_permissions|authenticated|SELECT';
 }
 
 export function verifyProof(text) {
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const rls = new Map();
   const policies = new Set();
+  const grants = new Set();
   const history = new Set();
   const errors = [];
 
@@ -29,6 +54,8 @@ export function verifyProof(text) {
       rls.set(parts[1], { enabled: parts[2].toLowerCase(), forced: parts[3].toLowerCase() });
     } else if (parts[0] === 'policy' && parts.length >= 5) {
       policies.add(parts.slice(1, 5).join('|'));
+    } else if (parts[0] === 'grant' && parts.length >= 4) {
+      grants.add(parts.slice(1, 4).join('|'));
     } else if (parts[0] === 'history' && parts.length >= 3) {
       history.add(parts.slice(1, 3).join('|'));
     }
@@ -54,8 +81,21 @@ export function verifyProof(text) {
     }
   }
 
-  if (!history.has(REQUIRED_HISTORY)) {
-    errors.push(`Missing migration history evidence: ${REQUIRED_HISTORY}`);
+  for (const grant of REQUIRED_GRANTS) {
+    if (!grants.has(grant)) errors.push(`Missing required privilege evidence: ${grant}`);
+  }
+
+  for (const grant of grants) {
+    const [, role] = grant.split('|');
+    if (CLIENT_ROLES.has(role) && !isAllowedClientGrant(grant)) {
+      errors.push(`Unexpected client privilege: ${grant}`);
+    }
+  }
+
+  for (const requiredHistory of REQUIRED_HISTORY) {
+    if (!history.has(requiredHistory)) {
+      errors.push(`Missing migration history evidence: ${requiredHistory}`);
+    }
   }
 
   return {
@@ -67,7 +107,14 @@ export function verifyProof(text) {
       requiredPolicies: REQUIRED_POLICIES.size,
       observedRequiredPolicies: [...REQUIRED_POLICIES].filter((policy) => policies.has(policy)).length,
       forbiddenWebhookPolicies: [...policies].filter((policy) => policy.startsWith('stripe_webhook_events|')).length,
-      migrationHistoryPresent: history.has(REQUIRED_HISTORY),
+      requiredGrants: REQUIRED_GRANTS.size,
+      observedRequiredGrants: [...REQUIRED_GRANTS].filter((grant) => grants.has(grant)).length,
+      unexpectedClientGrants: [...grants].filter((grant) => {
+        const [, role] = grant.split('|');
+        return CLIENT_ROLES.has(role) && !isAllowedClientGrant(grant);
+      }).length,
+      requiredMigrationHistory: REQUIRED_HISTORY.size,
+      observedRequiredMigrationHistory: [...REQUIRED_HISTORY].filter((entry) => history.has(entry)).length,
     },
   };
 }
