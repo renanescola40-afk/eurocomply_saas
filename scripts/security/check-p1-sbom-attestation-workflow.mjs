@@ -7,7 +7,7 @@ const pinnedActions = [
   'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
   'actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38',
   'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
-  'actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373',
+  'actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8',
 ];
 const requiredSnippets = [
   'permissions:',
