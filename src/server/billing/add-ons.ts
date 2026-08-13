@@ -40,6 +40,23 @@ export function getStripeAddOnPriceId(slug: string, interval: BillingInterval) {
   return priceId;
 }
 
+export function resolveBillingAddOnFromStripePriceId(priceId: string | null | undefined) {
+  const normalizedPriceId = priceId?.trim();
+  if (!normalizedPriceId) return null;
+
+  for (const addOn of BILLING_ADD_ONS) {
+    if (process.env[addOn.stripePriceEnvKeyMonthly]?.trim() === normalizedPriceId) {
+      return { addOn, interval: 'month' as const };
+    }
+
+    if (process.env[addOn.stripePriceEnvKeyAnnual]?.trim() === normalizedPriceId) {
+      return { addOn, interval: 'year' as const };
+    }
+  }
+
+  return null;
+}
+
 export function listActiveBillingAddOns() {
   return BILLING_ADD_ONS.filter((addOn) => addOn.status === 'active');
 }
