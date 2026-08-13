@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const WORKFLOW_FILE = 'recovery-resilience-proof.yml';
+const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`;
 const WORKFLOW_NAME = 'Recovery Resilience Proof';
 const ROLLBACK_SOURCE = 'rollback-validation.json';
 const RESTORE_SOURCE = 'backup-restore-tested.json';
@@ -78,7 +79,7 @@ async function githubJson(url, token) {
 export function selectExactShaRecoveryRun(runs, targetSha, sourceRunId = '') {
   const requested = String(sourceRunId || '').trim();
   return (Array.isArray(runs) ? runs : [])
-    .filter((run) => run?.name === WORKFLOW_NAME)
+    .filter((run) => run?.path === WORKFLOW_PATH)
     .filter((run) => String(run?.head_sha || '').toLowerCase() === targetSha)
     .filter((run) => run?.head_branch === 'main')
     .filter((run) => run?.event === 'workflow_dispatch')
@@ -146,7 +147,7 @@ export function buildCanonicalRecoveryEvidence(rollback, restore, { targetSha, r
     runId: String(runId),
     sourceWorkflow: {
       name: WORKFLOW_NAME,
-      file: `.github/workflows/${WORKFLOW_FILE}`,
+      file: WORKFLOW_PATH,
       runId: String(runId),
       artifact: `recovery-resilience-proof-${targetSha}`,
       exactShaBound: true,
@@ -276,6 +277,7 @@ export async function fetchRecoveryResilienceEvidence({ root, repository, token,
     console.log(`Recovery evidence remains NOT_VERIFIED for ${targetSha}.`);
     return { found: false, targetSha };
   }
+  if (run.path !== WORKFLOW_PATH) throw new Error('recovery_workflow_path_invalid');
   const runId = String(run.id || '').trim();
   if (!NUMERIC.test(runId)) throw new Error('run_id_invalid');
   const artifactName = `recovery-resilience-proof-${targetSha}`;
