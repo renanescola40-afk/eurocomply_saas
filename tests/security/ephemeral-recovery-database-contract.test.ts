@@ -94,13 +94,18 @@ describe('ephemeral Supabase recovery database contract', () => {
     }
   });
 
-  it('uses the pinned Supabase dump toolchain and Postgres 17 container for restore', () => {
-    expect(exercise).toContain("run('supabase', ['db', 'dump', '--db-url', source");
-    expect(exercise).toContain("'--schema', 'public,app_private'");
-    expect(exercise).toContain("'--data-only', '--use-copy'");
+  it('uses the supported Supabase roles schema data dump sequence and transactional local restore', () => {
+    expect(exercise).toContain("'--role-only', '--file', rolesDumpPath");
+    expect(exercise).toContain("run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath])");
+    expect(exercise).toContain("'--data-only', '--use-copy', '--file', dataDumpPath");
+    expect(exercise).not.toContain("'--schema', 'public,app_private'");
     expect(exercise).toContain("run('docker', ['cp', path, `${container}:${containerPath}`])");
-    expect(exercise).toContain("'exec', container, 'psql', '-U', 'postgres'");
+    expect(exercise).toContain("'--single-transaction', '--set', 'ON_ERROR_STOP=1'");
+    expect(exercise).toContain("'--command', 'SET session_replication_role = replica;'");
     expect(exercise).toContain("criticalTables = ['organizations', 'organization_members', 'audit_logs']");
+    expect(exercise).toContain("sourceAuthUsers = Number(sql(source, 'select count(*) from auth.users;'))");
+    expect(exercise).toContain("restoredAuthUsers = Number(sql(restore, 'select count(*) from auth.users;'))");
+    expect(exercise).toContain('checks.authUsersIntegrity');
     expect(exercise).toContain('checks.rlsAfterRestore');
     expect(exercise).toContain('checks.rlsPoliciesPresent');
     expect(exercise).toContain('logicalBackupFilesDeleted: true');
