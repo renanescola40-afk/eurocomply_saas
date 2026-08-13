@@ -103,11 +103,12 @@ describe('exact-SHA disposable project schema workflows', () => {
     expect(ephemeralSmoke).toContain('ref: ${{ github.event.pull_request.head.sha }}');
     expect(ephemeralSmoke).toContain('test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"');
     expect(ephemeralSmoke).toContain('run-ephemeral-project-schema-replay.mjs');
+    expect(ephemeralSmoke).toContain('supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520');
   });
 
   it('uses deterministic project replay and mandatory cleanup for every schema-only protected proof', () => {
     for (const { path, source } of schemaWorkflows) {
-      expect(source, path).toContain('supabase/setup-cli@46f89843689f213b433d85a0508d1183e1803070');
+      expect(source, path).toContain('supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520');
       expect(source, path).toContain('version: 2.101.0');
       expect(source, path).toContain('run-ephemeral-project-schema-replay.mjs');
       expect(source, path).not.toContain('manage-ephemeral-recovery-database.mjs start-project');
@@ -119,6 +120,7 @@ describe('exact-SHA disposable project schema workflows', () => {
   });
 
   it('keeps production backup restore on a clean restore-target instead of preapplying project migrations', () => {
+    expect(recovery).toContain('supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520');
     expect(recovery).toContain('manage-ephemeral-recovery-database.mjs start');
     expect(recovery).not.toContain('manage-ephemeral-recovery-database.mjs start-project');
     expect(recovery).not.toContain('run-ephemeral-project-schema-replay.mjs');
