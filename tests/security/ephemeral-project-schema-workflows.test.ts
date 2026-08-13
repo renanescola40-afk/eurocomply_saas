@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const manager = fs.readFileSync('scripts/recovery/manage-ephemeral-recovery-database.mjs', 'utf8');
+const ephemeralSmoke = fs.readFileSync('.github/workflows/ephemeral-supabase-project-smoke.yml', 'utf8');
 const schemaWorkflows = [
   '.github/workflows/final-technical-controls-proof.yml',
   '.github/workflows/data-governance-runtime-proof.yml',
@@ -35,6 +36,19 @@ describe('exact-SHA disposable project schema workflows', () => {
     expect(migrationVerifyIndex).toBeGreaterThan(postResetFirewallIndex);
     expect(manager).toContain('ruleExists(binary, args)');
     expect(manager).toContain('if (ruleExists(binary, args)) return false');
+  });
+
+  it('deduplicates stale disposable smoke runs by PR while keeping exact-SHA checkout inside the surviving run', () => {
+    expect(ephemeralSmoke).toContain(
+      'group: ephemeral-supabase-project-smoke-pr-${{ github.event.pull_request.number }}',
+    );
+    expect(ephemeralSmoke).toContain('cancel-in-progress: true');
+    expect(ephemeralSmoke).not.toContain(
+      'group: ephemeral-supabase-project-smoke-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}',
+    );
+    expect(ephemeralSmoke).toContain('EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}');
+    expect(ephemeralSmoke).toContain('ref: ${{ github.event.pull_request.head.sha }}');
+    expect(ephemeralSmoke).toContain('test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"');
   });
 
   it('uses start-project and mandatory cleanup for every schema-only protected proof', () => {
