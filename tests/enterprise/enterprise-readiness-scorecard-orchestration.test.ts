@@ -14,6 +14,7 @@ const expectedCompletionTriggers = [
   'Actionlint',
   'Public Claims Guard',
   'Full Security Suite',
+  'Enterprise Production Gate',
   'RISCK COMPLY Security CI',
   'RISCK COMPLY Upload Security CI',
   'Enterprise DAST',
@@ -39,11 +40,13 @@ function stabilizerProducers() {
 }
 
 describe('enterprise readiness scorecard orchestration', () => {
-  it('uses the stabilizer as the sole material-producer completion fan-in', () => {
+  it('uses the stabilizer as the sole material-producer completion fan-in while suppressing self-dispatched Gate feedback', () => {
     expect(stabilizerProducers()).toEqual(expectedCompletionTriggers);
     expect(new Set(stabilizerProducers()).size).toBe(expectedCompletionTriggers.length);
     expect(stabilizerProducers()).not.toContain('Enterprise Readiness Scorecard');
-    expect(stabilizerProducers()).not.toContain('Enterprise Production Gate');
+    expect(stabilizerProducers()).toContain('Enterprise Production Gate');
+    expect(stabilizerWorkflow).toContain("github.event.workflow_run.name != 'Enterprise Production Gate'");
+    expect(stabilizerWorkflow).toContain("github.event.workflow_run.event != 'workflow_dispatch'");
 
     expect(scorecardWorkflow).not.toContain('workflow_run:');
     expect(scorecardWorkflow).not.toContain('github.event.workflow_run');
