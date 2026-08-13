@@ -133,9 +133,10 @@ test('production and Supabase RLS producer completions retrigger exact-SHA closu
   assert.match(workflow, /push:\n    branches: \[main\]/);
 });
 
-test('same-SHA producer completions preserve one running exact-SHA closure snapshot', () => {
+test('same-SHA producer completions collapse to the newest exact-SHA closure snapshot', () => {
   assert.match(workflow, /group: enterprise-100-closure-/);
-  assert.match(workflow, /cancel-in-progress: false/);
+  assert.match(workflow, /cancel-in-progress: true/);
+  assert.doesNotMatch(workflow, /cancel-in-progress: false/);
 });
 
 test('closure summaries use valid jq string programs', () => {
