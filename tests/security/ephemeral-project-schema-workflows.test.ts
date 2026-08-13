@@ -1,13 +1,11 @@
 import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
+import { inspectMigrationReplayDebt } from '../../scripts/recovery/run-ephemeral-project-schema-replay.mjs';
+
 const manager = fs.readFileSync('scripts/recovery/manage-ephemeral-recovery-database.mjs', 'utf8');
 const replay = fs.readFileSync('scripts/recovery/run-ephemeral-project-schema-replay.mjs', 'utf8');
 const ephemeralSmoke = fs.readFileSync('.github/workflows/ephemeral-supabase-project-smoke.yml', 'utf8');
-const migrationNames = fs
-  .readdirSync('supabase/migrations', { withFileTypes: true })
-  .filter((entry) => entry.isFile() && /^(\d+).*\.sql$/.test(entry.name))
-  .map((entry) => entry.name);
 const schemaWorkflows = [
   '.github/workflows/final-technical-controls-proof.yml',
   '.github/workflows/data-governance-runtime-proof.yml',
@@ -16,13 +14,25 @@ const schemaWorkflows = [
   '.github/workflows/enterprise-integrations-runtime-proof.yml',
 ].map((path) => ({ path, source: fs.readFileSync(path, 'utf8') }));
 const recovery = fs.readFileSync('.github/workflows/recovery-resilience-proof.yml', 'utf8');
-const knownLegacyCollisions = [
-  '20260605_gap_analysis.sql',
-  '20260605_findings_tasks.sql',
-  '20260605_compliance_evidence.sql',
-  '20260605_evidence_vault.sql',
-  '20260605_gap_analysis_user_scoped_patch.sql',
-].sort();
+
+const expectedDuplicateVersions = [
+  '20260605',
+  '20260610',
+  '20260612',
+  '20260613',
+  '20260620120000',
+  '20260623120000',
+  '20260626120000',
+  '20260629113000',
+  '20260706103000',
+  '20260719224500',
+  '20260720190000',
+  '20260721200000',
+  '20260723223000',
+  '20260724001000',
+  '20260724103000',
+  '20260728170000',
+];
 
 describe('exact-SHA disposable project schema workflows', () => {
   it('copies only committed project migrations and reapplies them through Supabase CLI', () => {
@@ -36,44 +46,35 @@ describe('exact-SHA disposable project schema workflows', () => {
     expect(manager).toContain("appendGithubEnv('RECOVERY_EPHEMERAL_MIGRATION_COUNT', String(migrationCount))");
   });
 
-  it('contains exactly the known legacy duplicate migration version group', () => {
-    const byVersion = new Map<string, string[]>();
-    for (const name of migrationNames) {
-      const version = name.match(/^(\d+).*\.sql$/)?.[1];
-      if (!version) continue;
-      byVersion.set(version, [...(byVersion.get(version) ?? []), name]);
-    }
-
-    const duplicates = [...byVersion.entries()]
-      .filter(([, names]) => names.length > 1)
-      .map(([version, names]) => [version, [...names].sort()] as const);
-
-    expect(duplicates).toEqual([['20260605', knownLegacyCollisions]]);
+  it('reports the complete known duplicate migration-version debt instead of hiding all but one legacy group', () => {
+    const debt = inspectMigrationReplayDebt('supabase/migrations');
+    expect(debt.duplicateVersions.map(({ version }) => version)).toEqual(expectedDuplicateVersions);
+    expect(debt.invalidFiles.length).toBeGreaterThan(0);
+    expect(debt.duplicateVersions.find(({ version }) => version === '20260605')?.files).toEqual([
+      '20260605_compliance_evidence.sql',
+      '20260605_evidence_vault.sql',
+      '20260605_findings_tasks.sql',
+      '20260605_gap_analysis.sql',
+      '20260605_gap_analysis_user_scoped_patch.sql',
+    ]);
+    expect(debt.duplicateVersions.find(({ version }) => version === '20260724103000')?.files).toEqual([
+      '20260724103000_enterprise_group_access_reconciliation_queue.sql',
+      '20260724103000_enterprise_seat_concurrency.sql',
+      '20260724103000_qualified_review_api_operations.sql',
+    ]);
   });
 
-  it('quarantines only known never-applied legacy migrations and restores their exact bytes after replay', () => {
-    for (const migration of knownLegacyCollisions) {
-      expect(replay).toContain(migration);
-    }
-    expect(replay).toContain('UNAPPLIED_LEGACY_MIGRATIONS');
-    expect(replay).toContain("LEGACY_COLLISION_VERSION = '20260605'");
-    expect(replay).toContain('assertKnownLegacyCollisionOnly(migrationsDir)');
-    expect(replay).toContain('assertNoMigrationVersionCollisions(migrationsDir)');
-    expect(replay).toContain('Expected exactly one known legacy migration version collision');
-    expect(replay).toContain('Unknown migration version collision detected');
-    expect(replay).toContain("createHash('sha256')");
-    expect(replay).toContain("if (!runnerTemp) fail('RUNNER_TEMP is required for legacy migration quarantine')");
-    expect(replay).toContain('copyFileSync(canonicalPath, quarantinePath)');
-    expect(replay).toContain('sha256(quarantinePath) !== digest');
-    expect(replay).toContain('rmSync(canonicalPath)');
-    expect(replay).toContain('restoreLegacyQuarantine(quarantined)');
-    expect(replay).toContain('if (quarantined.length > 0)');
-    expect(replay).toContain('and rollback failed');
-    expect(replay).toContain('if (failures.length === 0 && quarantineDir)');
-    expect(replay).not.toContain('legacy_gap_analysis.sql');
-    expect(replay).not.toContain('legacy_findings_tasks.sql');
-    expect(replay).not.toContain('legacy_compliance_evidence.sql');
+  it('fails project replay closed until migration reconciliation is explicitly reviewed', () => {
+    expect(replay).toContain('MIGRATION_RECONCILIATION_REQUIRED');
+    expect(replay).toContain('invalid_local_files=${debt.invalidFiles.length}');
+    expect(replay).toContain('duplicate_versions=${debt.duplicateVersions.length}');
+    expect(replay).toContain('assertProjectSchemaReplayDeployable(migrationsDir)');
     expect(replay).toContain("['scripts/recovery/manage-ephemeral-recovery-database.mjs', 'start-project']");
+    expect(replay.indexOf('assertProjectSchemaReplayDeployable(migrationsDir)'))
+      .toBeLessThan(replay.indexOf("['scripts/recovery/manage-ephemeral-recovery-database.mjs', 'start-project']"));
+    expect(replay).not.toContain('renameSync(');
+    expect(replay).not.toContain('quarantineUnappliedLegacyMigrations');
+    expect(replay).not.toContain('UNAPPLIED_LEGACY_MIGRATIONS');
     expect(replay).toContain("process.env.GITHUB_ACTIONS !== 'true'");
   });
 
@@ -106,7 +107,7 @@ describe('exact-SHA disposable project schema workflows', () => {
     expect(ephemeralSmoke).toContain('supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520');
   });
 
-  it('uses deterministic project replay and mandatory cleanup for every schema-only protected proof', () => {
+  it('uses the fail-closed project replay and mandatory cleanup for every schema-only protected proof', () => {
     for (const { path, source } of schemaWorkflows) {
       expect(source, path).toContain('supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520');
       expect(source, path).toContain('version: 2.101.0');
