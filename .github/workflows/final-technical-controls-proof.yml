@@ -24,7 +24,7 @@ concurrency:
 jobs:
   prove-final-technical-controls:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
     environment: production-final-technical-proof
     env:
       ENTERPRISE_EXPECTED_SHA: ${{ inputs.release_sha }}
@@ -32,7 +32,6 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      RECOVERY_ISOLATED_DATABASE_URL: ${{ secrets.RECOVERY_ISOLATED_DATABASE_URL }}
     steps:
       - name: Validate requested SHA and confirmation
         shell: bash
@@ -58,8 +57,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Preflight protected final technical proof
-        run: node scripts/security/preflight-protected-proof.mjs final-technical
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f89843689f213b433d85a0508d1183e1803070
+        with:
+          version: 2.101.0
       - name: Install deterministic dependencies
         run: npm ci --ignore-scripts
       - name: Install PostgreSQL client
@@ -68,8 +69,15 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install --yes postgresql-client
+      - name: Start disposable Supabase recovery database
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start
+      - name: Preflight protected final technical proof
+        run: node scripts/security/preflight-protected-proof.mjs final-technical
       - name: Execute protected final technical proof
         run: node scripts/security/run-final-technical-controls-proof.mjs
+      - name: Remove disposable recovery database
+        if: always()
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
       - name: Upload redacted proof evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
