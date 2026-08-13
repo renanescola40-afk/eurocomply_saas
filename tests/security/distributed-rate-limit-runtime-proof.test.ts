@@ -10,6 +10,7 @@ import {
 } from '../../scripts/enterprise/fetch-distributed-rate-limit-evidence.mjs';
 
 const SHA = 'a'.repeat(40);
+const WORKFLOW_PATH = '.github/workflows/distributed-rate-limit-runtime-proof.yml';
 const temporaryDirectories: string[] = [];
 
 function validEvidence() {
@@ -214,14 +215,15 @@ describe('distributed rate-limit runtime proof', () => {
 
   it('selects only a successful exact-SHA main runtime run and validates artifact provenance', () => {
     const selected = selectExactShaRun([
-      { id: 1, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'failure', updated_at: '2026-07-17T00:00:00Z' },
-      { id: 2, head_sha: 'b'.repeat(40), head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-07-17T01:00:00Z' },
-      { id: 3, head_sha: SHA, head_branch: 'feature/not-main', status: 'completed', conclusion: 'success', updated_at: '2026-07-17T03:00:00Z' },
-      { id: 12345, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-07-17T02:00:00Z' },
+      { id: 1, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'failure', updated_at: '2026-07-17T00:00:00Z' },
+      { id: 2, path: WORKFLOW_PATH, head_sha: 'b'.repeat(40), head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-07-17T01:00:00Z' },
+      { id: 3, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'feature/not-main', status: 'completed', conclusion: 'success', updated_at: '2026-07-17T03:00:00Z' },
+      { id: 12345, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-07-17T02:00:00Z' },
     ], SHA);
 
     expect(selected?.id).toBe(12345);
     expect(selectExactShaRun([selected], SHA, '999')).toBeNull();
+    expect(selectExactShaRun([{ ...selected, path: '.github/workflows/not-the-proof.yml' }], SHA)).toBeNull();
     expect(validateDownloadedEvidence(validEvidence(), {
       targetSha: SHA,
       repository: 'renanescola40-afk/eurocomply_saas',
