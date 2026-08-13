@@ -15,6 +15,19 @@ const helperBlockedMigrations = Object.freeze([
   '20260721123000_gpai_third_party_model_governance.sql',
   '20260721133000_post_market_ai_incident_governance.sql',
 ]);
+const batchNBlockedMigrations = Object.freeze([
+  { id: 'N7', name: '20260723170000_qualified_review_operations_platform.sql' },
+  { id: 'N8', name: '20260724113000_enterprise_reconciliation_operations.sql' },
+  { id: 'N9', name: '20260724200000_enterprise_access_operations_center.sql' },
+  { id: 'N10', name: '20260725102000_qualified_review_delivery_closeout.sql' },
+  { id: 'N13', name: '20260726140000_qualified_reviewer_portal.sql' },
+  { id: 'N14', name: '20260726150000_enterprise_access_runtime_slo.sql' },
+  { id: 'N15', name: '20260726170000_enterprise_seat_concurrency_alerting.sql' },
+]);
+const prerequisiteBlockedMigrations = Object.freeze([
+  ...helperBlockedMigrations,
+  ...batchNBlockedMigrations.map(({ name }) => name),
+]);
 const batchFReviewPath = 'docs/security/decisions/2026-08-10-supabase-human-review-mega-batch-f.md';
 const helperReviewPath = 'docs/security/evidence/human-review/supabase-migration-mega-batch-n.md';
 
@@ -115,6 +128,18 @@ function validateReviewedBoundary() {
     }
   }
 
+  for (const { id, name } of batchNBlockedMigrations) {
+    const record = blockedRecord(name);
+    assertPresent(record.sourcePath, 'Batch-N prerequisite-blocked migration');
+    assertAbsent(record.heldPath, 'Batch-N prerequisite hold path');
+    const reviewRow = helperReview
+      .split('\n')
+      .find((line) => line.includes(`| ${id} | \`${name}\``));
+    if (!reviewRow || !reviewRow.includes('PENDING_DEPLOYMENT') || !reviewRow.includes('PREREQUISITE_BLOCKED')) {
+      fail(`Batch-N effective execution boundary drifted for ${id} ${name}`);
+    }
+  }
+
   validateFriaBoundary(batchFReview);
 
   for (const [path, label] of [
@@ -164,7 +189,7 @@ function validateReviewedBoundary() {
 }
 
 function stageBlockedMigrations() {
-  const records = helperBlockedMigrations.map(blockedRecord);
+  const records = prerequisiteBlockedMigrations.map(blockedRecord);
   for (const record of records) renameSync(record.sourcePath, record.heldPath);
   return records;
 }
@@ -250,7 +275,7 @@ function main() {
 
   if (replayError) throw replayError;
   process.stdout.write(
-    `Disposable replay excluded ${blockedRecords.length} reviewed Batch-F migrations that depend on unresolved public.is_organization_member(uuid), replayed FRIA F7 with its existing unique-index statement moved before dependent FKs, and replayed ${integrationMigration} → ${tenantRelationsMigration} immediately after ${licensingFoundationMigration}; canonical migration history remains unresolved.\n`,
+    `Disposable replay excluded ${blockedRecords.length} reviewed prerequisite-blocked migrations, replayed FRIA F7 with its existing unique-index statement moved before dependent FKs, and replayed ${integrationMigration} → ${tenantRelationsMigration} immediately after ${licensingFoundationMigration}; canonical migration history remains unresolved.\n`,
   );
 }
 
