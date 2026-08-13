@@ -7,7 +7,7 @@ const builder = readFileSync('scripts/supabase/build-migration-review-context.mj
 describe('Supabase migration review context boundary', () => {
   it('remains metadata-only and non-crediting', () => {
     expect(workflow).toContain('permissions:\n  actions: read\n  contents: read');
-    expect(workflow).toContain('Metadata-only context; human review remains required');
+    expect(workflow).toContain('Catalog matches are reviewer aids only');
     expect(workflow).not.toContain('supabase db push');
     expect(workflow).not.toContain('supabase migration repair');
     expect(builder).toContain('acceptedDecisions: 0');
