@@ -104,6 +104,7 @@ jobs:
             tests/enterprise/upload-scanner-runtime-evidence-fetch.test.ts \
             tests/enterprise/upload-scanner-p0-aggregation.test.ts \
             tests/enterprise/p0-runtime-multi-producer-aggregation.test.ts \
+            tests/enterprise/p0-runtime-unified-fanin.test.ts \
             tests/enterprise/p0-production-gate-authoritative-fanin.test.ts \
             tests/enterprise/auth-rbac-runtime-evidence-fetch.test.ts \
             tests/enterprise/supabase-rls-runtime-evidence-fetch.test.ts \
@@ -124,6 +125,14 @@ jobs:
 
       - name: Validate P0 policy register
         run: node scripts/security/check-p0-runtime-evidence-register.mjs
+
+      - name: Hydrate all independently valid exact-SHA retained runtime evidence
+        if: github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+          RETAINED_PROOF_OPTIONAL_ERRORS_AS_MISSING: 'true'
+        run: node scripts/release/hydrate-enterprise-retained-runtime-evidence.mjs
 
       - name: Retrieve exact-SHA upload scanner runtime evidence
         if: github.event_name == 'workflow_run'
