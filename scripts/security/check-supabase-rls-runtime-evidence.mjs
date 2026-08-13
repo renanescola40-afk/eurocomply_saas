@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { validateHorizontalIsolationEvidence } from './supabase-horizontal-rls-evidence.mjs';
 import { validatePassingEvidence } from './supabase-live-rls-evidence.mjs';
 
 export const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
@@ -27,11 +28,15 @@ export function validateSupabaseRlsRuntimeEvidence(
   const normalizedSha = normalizeSha(expectedSha);
   const normalizedRunId = String(runId || '').trim();
   const sourceValidation = validatePassingEvidence(evidence);
+  const horizontalValidation = validateHorizontalIsolationEvidence(evidence);
 
   if (repository !== CANONICAL_REPOSITORY) failures.push('repository_not_canonical');
   if (!FULL_SHA.test(normalizedSha)) failures.push('expected_sha_invalid');
   if (!sourceValidation.valid) {
     failures.push(...sourceValidation.errors.map((error) => `source:${error}`));
+  }
+  if (!horizontalValidation.valid) {
+    failures.push(...horizontalValidation.errors.map((error) => `horizontal:${error}`));
   }
   if (normalizeSha(evidence?.commitSha) !== normalizedSha) failures.push('evidence_sha_mismatch');
   if (evidence?.supabaseProjectReferenceRedacted !== true) failures.push('project_reference_not_redacted');
