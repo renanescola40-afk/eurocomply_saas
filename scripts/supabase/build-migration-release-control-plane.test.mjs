@@ -1,116 +1,162 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 
 import { evaluateReleaseControlPlane } from './build-migration-release-control-plane.mjs';
 
 const sha = 'a'.repeat(40);
-const item = {
-  filename: '20260101000000_example.sql',
-  sha256: 'b'.repeat(64),
-  deployOrderDecision: 1,
-  stagedExecutionEvidenceReference: 'artifact://staging/1',
-  rollbackReference: 'runbook://rollback/1',
-};
-const plan = {
-  schema: 'risck-comply.supabase-migration-execution-plan.v1',
-  releaseSha: sha,
-  decisionStatus: 'RECONCILIATION_ACCEPTED',
-  dryRunAuthorized: false,
-  productionWriteAuthorized: false,
-  deploymentBatches: [{
-    batchNumber: 1,
-    items: [item],
-    stagingEvidenceReference: 'artifact://batch/staging',
-    rollbackEvidenceReference: 'artifact://batch/rollback',
-    preBatchSnapshotReference: 'artifact://snapshot',
-  }],
-};
-const planBytes = Buffer.from(JSON.stringify(plan));
-const rehearsal = {
-  schema: 'risck-comply.supabase-migration-staging-rehearsal.v1',
-  releaseSha: sha,
-  executionPlanSha256: 'placeholder',
-  status: 'PASSED',
-  productionDatabaseUsed: false,
-  allBatchesPassed: true,
-  stagingCloneReference: 'artifact://clone',
-  dryRunOutputReference: 'artifact://dry-run',
-  rlsValidationReference: 'artifact://rls',
-  applicationSmokeReference: 'artifact://smoke',
-  rollbackRehearsalReference: 'artifact://rollback',
-};
+const hash = (value) => createHash('sha256').update(value).digest('hex');
 
-function authorization(rehearsalSha256) {
-  return {
+function fixture() {
+  const plan = {
+    schema: 'risck-comply.supabase-migration-execution-plan.v1',
+    generatedAt: '2026-08-13T20:00:00.000Z',
+    releaseSha: sha,
+    accepted: true,
+    status: 'PLANNING_COMPLETE_AWAITING_STAGING_REHEARSAL',
+    batches: [{
+      batchId: 'batch-001',
+      sequence: 1,
+      itemCount: 1,
+      items: [{
+        filename: '20260813000000_example.sql',
+        sha256: 'b'.repeat(64),
+        version: '20260813000000',
+        deployOrderDecision: 1,
+        schemaEvidenceReference: 'artifact://schema',
+        rollbackReference: 'artifact://rollback',
+      }],
+      executionAuthorized: false,
+    }],
+    safety: {
+      sqlExecuted: false,
+      databaseModified: false,
+      migrationHistoryModified: false,
+      dryRunAuthorized: false,
+      productionWriteAuthorized: false,
+    },
+  };
+  const stagedBatches = [{
+    batch: 1,
+    batchId: 'batch-001',
+    migrations: [{
+      filename: '20260813000000_example.sql',
+      sha256: 'b'.repeat(64),
+      version: '20260813000000',
+      deployOrder: 1,
+    }],
+  }];
+  const rehearsal = {
+    schema: 'risck-comply.supabase-staging-rehearsal-attestation.v2',
+    releaseSha: sha,
+    targetSha: sha,
+    status: 'STAGING_REHEARSAL_PASSED',
+    stagedMigrationSetDigest: hash(JSON.stringify(stagedBatches)),
+    batchesPassed: 1,
+    stagedBatches,
+    operator: 'operator-a',
+    approver: 'reviewer-b',
+    safety: {
+      productionWritePerformed: false,
+      productionPushAuthorized: false,
+      automaticExecutionAllowed: false,
+    },
+  };
+  const planBytes = Buffer.from(`${JSON.stringify(plan, null, 2)}\n`);
+  const rehearsalBytes = Buffer.from(`${JSON.stringify(rehearsal, null, 2)}\n`);
+  const authorization = {
     schema: 'risck-comply.supabase-migration-production-authorization.v1',
     releaseSha: sha,
-    executionPlanSha256: 'placeholder',
-    rehearsalSha256,
+    executionPlanSha256: hash(planBytes),
+    rehearsalSha256: hash(rehearsalBytes),
     status: 'APPROVED',
     backupOrPitrReference: 'artifact://backup',
-    maintenanceWindowReference: 'calendar://window',
-    incidentCommander: 'incident-commander@example.invalid',
-    databaseOperator: 'operator@example.invalid',
-    independentApprover: 'approver@example.invalid',
-    approvalReference: 'change://123',
-    rollbackOwner: 'rollback@example.invalid',
+    maintenanceWindowReference: 'change://window',
+    incidentCommander: 'commander-a',
+    databaseOperator: 'operator-a',
+    independentApprover: 'reviewer-b',
+    approvalReference: 'change://approval',
+    rollbackOwner: 'rollback-a',
     automaticExecutionAllowed: false,
   };
-}
-
-async function validInput() {
-  const { createHash } = await import('node:crypto');
-  const hash = (value) => createHash('sha256').update(value).digest('hex');
-  const fixedRehearsal = { ...rehearsal, executionPlanSha256: hash(planBytes) };
   return {
     executionPlan: plan,
     executionPlanBytes: planBytes,
-    rehearsal: fixedRehearsal,
-    authorization: {
-      ...authorization(hash(Buffer.from(JSON.stringify(fixedRehearsal)))),
-      executionPlanSha256: hash(planBytes),
-    },
+    rehearsal,
+    rehearsalBytes,
+    authorization,
     expectedReleaseSha: sha,
   };
 }
 
-test('accepts complete prerequisites but never authorizes production write', async () => {
-  const result = evaluateReleaseControlPlane(await validInput());
+test('accepts current plan and staging attestation contracts without granting execution', () => {
+  const result = evaluateReleaseControlPlane(fixture());
   assert.equal(result.accepted, true);
+  assert.equal(result.schema, 'risck-comply.supabase-migration-release-control-plane-result.v2');
+  assert.equal(result.batchCount, 1);
+  assert.equal(result.migrationCount, 1);
   assert.equal(result.authorization.productionWriteAuthorizedByThisArtifact, false);
   assert.equal(result.authorization.automaticExecutionAllowed, false);
 });
 
-test('fails when reconciliation was not accepted', async () => {
-  const input = await validInput();
-  input.executionPlan = { ...input.executionPlan, decisionStatus: 'HUMAN_REVIEW_REQUIRED' };
+test('blocks a plan that was not accepted', () => {
+  const input = fixture();
+  input.executionPlan.accepted = false;
   const result = evaluateReleaseControlPlane(input);
   assert.equal(result.accepted, false);
   assert.ok(result.blockers.includes('reconciliation_not_accepted'));
 });
 
-test('fails duplicate deployment ordering', async () => {
-  const input = await validInput();
-  input.executionPlan = {
-    ...input.executionPlan,
-    deploymentBatches: [{ ...input.executionPlan.deploymentBatches[0], items: [item, { ...item, filename: '20260101000001_second.sql' }] }],
-  };
+test('rejects duplicate deploy ordering', () => {
+  const input = fixture();
+  input.executionPlan.batches[0].items.push({
+    ...input.executionPlan.batches[0].items[0],
+    filename: '20260813000001_second.sql',
+    sha256: 'c'.repeat(64),
+    version: '20260813000001',
+  });
+  input.executionPlan.batches[0].itemCount = 2;
   const result = evaluateReleaseControlPlane(input);
   assert.equal(result.accepted, false);
   assert.ok(result.failures.includes('duplicate_deploy_order_1'));
 });
 
-test('fails when staging used production database', async () => {
-  const input = await validInput();
-  input.rehearsal = { ...input.rehearsal, productionDatabaseUsed: true };
+test('rejects staged migration identity drift', () => {
+  const input = fixture();
+  input.rehearsal.stagedBatches[0].migrations[0].sha256 = '0'.repeat(64);
+  input.rehearsal.stagedMigrationSetDigest = hash(JSON.stringify(input.rehearsal.stagedBatches));
   const result = evaluateReleaseControlPlane(input);
   assert.equal(result.accepted, false);
-  assert.ok(result.failures.includes('rehearsal_must_not_use_production_database'));
+  assert.ok(result.failures.includes('staging_batch_1_item_1_identity_mismatch'));
 });
 
-test('fails when operator and approver are the same person', async () => {
-  const input = await validInput();
-  input.authorization = { ...input.authorization, independentApprover: input.authorization.databaseOperator };
+test('rejects staging evidence that crosses the write boundary', () => {
+  const input = fixture();
+  input.rehearsal.safety.productionWritePerformed = true;
+  const result = evaluateReleaseControlPlane(input);
+  assert.equal(result.accepted, false);
+  assert.ok(result.failures.includes('rehearsal_must_not_write_production'));
+});
+
+test('requires separate staging operator and reviewer', () => {
+  const input = fixture();
+  input.rehearsal.approver = input.rehearsal.operator;
+  const result = evaluateReleaseControlPlane(input);
+  assert.equal(result.accepted, false);
+  assert.ok(result.failures.includes('staging_operator_and_approver_must_differ'));
+});
+
+test('binds authorization to exact rehearsal bytes', () => {
+  const input = fixture();
+  input.authorization.rehearsalSha256 = hash(Buffer.from(JSON.stringify(input.rehearsal)));
+  const result = evaluateReleaseControlPlane(input);
+  assert.equal(result.accepted, false);
+  assert.ok(result.failures.includes('authorization_rehearsal_digest_mismatch'));
+});
+
+test('requires separate release operator and reviewer', () => {
+  const input = fixture();
+  input.authorization.independentApprover = input.authorization.databaseOperator;
   const result = evaluateReleaseControlPlane(input);
   assert.equal(result.accepted, false);
   assert.ok(result.failures.includes('operator_and_approver_must_differ'));
