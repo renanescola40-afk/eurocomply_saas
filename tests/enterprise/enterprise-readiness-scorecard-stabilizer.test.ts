@@ -10,7 +10,6 @@ const script = readFileSync(scriptPath, 'utf8');
 const producerNames = [
   'CI','CodeQL','Semgrep','Secret Scanning','Scan repository for accidental secret exposure','Dependency Review','Actionlint','Public Claims Guard','Full Security Suite','Enterprise Production Gate','RISCK COMPLY Security CI','RISCK COMPLY Upload Security CI','Enterprise DAST','Dependency Vulnerability Proof','Distributed Rate Limit Runtime Proof','Auth RBAC Tenant Proof','Supabase Live RLS Validation','Production Runtime Proof','Audit Chain Runtime Proof','Production Provider Runtime Proof','Branch Protection Runtime Proof','Step-Up Runtime Proof','Stripe Runtime Evidence Promotion','Final Technical Controls Proof','Recovery Resilience Proof',
 ];
-const automaticProducerNames = producerNames.filter((name) => name !== 'Enterprise Production Gate');
 const retainedFanInNames = ['Auth RBAC Tenant Proof','Supabase Live RLS Validation','RISCK COMPLY Upload Security CI','Audit Chain Runtime Proof','Production Provider Runtime Proof','Branch Protection Runtime Proof','Step-Up Runtime Proof','Stripe Runtime Evidence Promotion'];
 
 describe('enterprise readiness scorecard terminal stabilizer', () => {
@@ -18,12 +17,14 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(() => execFileSync(process.execPath, ['--check', scriptPath])).not.toThrow();
   });
 
-  it('listens to the reviewed upstream producer set without feeding the Production Gate back into itself', () => {
-    for (const producer of automaticProducerNames) expect(workflow).toContain(`      - ${producer}`);
-    for (const producer of producerNames) expect(script).toContain(`  '${producer}',`);
-    expect(workflow).not.toContain('      - Enterprise Production Gate\n');
-    expect(script).toContain("  'Enterprise Production Gate',");
+  it('listens to the reviewed producer set while ignoring its own workflow-dispatched Production Gate completion', () => {
+    for (const producer of producerNames) {
+      expect(workflow).toContain(`      - ${producer}`);
+      expect(script).toContain(`  '${producer}',`);
+    }
     expect(new Set(producerNames).size).toBe(25);
+    expect(workflow).toContain("github.event.workflow_run.name != 'Enterprise Production Gate'");
+    expect(workflow).toContain("github.event.workflow_run.event != 'workflow_dispatch'");
     expect(workflow).toMatch(/workflow_run:[\s\S]*?branches: \[main\][\s\S]*?types: \[completed\]/);
     expect(workflow).not.toContain('Enterprise Readiness Scorecard\n');
     expect(workflow).not.toContain('pull_request_target:');
