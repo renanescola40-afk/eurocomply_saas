@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/recovery/manage-ephemeral-recovery-database.mjs'
       - 'scripts/recovery/run-ephemeral-project-schema-replay.mjs'
+      - 'scripts/recovery/run-ephemeral-project-schema-replay-reviewed-boundary.mjs'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
       - 'supabase/migrations/**'
       - '.github/workflows/final-technical-controls-proof.yml'
@@ -60,7 +61,7 @@ jobs:
           sudo apt-get install --yes postgresql-client
 
       - name: Start exact-SHA disposable project database
-        run: node scripts/recovery/run-ephemeral-project-schema-replay.mjs
+        run: node scripts/recovery/run-ephemeral-project-schema-replay-reviewed-boundary.mjs
 
       - name: Validate local runtime, replay boundary, RLS and representative schema
         shell: bash
