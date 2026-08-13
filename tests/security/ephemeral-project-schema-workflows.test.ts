@@ -17,7 +17,7 @@ const duplicateReview = fs.readFileSync(DUPLICATE_REVIEW_REFERENCE, 'utf8');
 const invalidReview = fs.readFileSync(INVALID_REVIEW_REFERENCE, 'utf8');
 const ephemeralSmoke = fs.readFileSync('.github/workflows/ephemeral-supabase-project-smoke.yml', 'utf8');
 const addOnReplacement = fs.readFileSync(
-  'supabase/migrations/20260813121500_reconcile_organization_add_ons.sql',
+  'supabase/migrations/20260813124224_reconcile_organization_add_ons.sql',
   'utf8',
 );
 const finalRlsReplacementFiles = [
@@ -73,7 +73,7 @@ describe('exact-SHA disposable project schema workflows', () => {
   it('replaces invalid historical schema effects only through explicit later canonical migrations', () => {
     expect(SCHEMA_EFFECT_REPLACED_MIGRATIONS).toEqual({
       '20260613_organization_add_ons.sql': [
-        'supabase/migrations/20260813121500_reconcile_organization_add_ons.sql',
+        'supabase/migrations/20260813124224_reconcile_organization_add_ons.sql',
       ],
       '20260620120000_enterprise_multi_tenant_rls_final_lock.sql': finalRlsReplacementFiles,
     });
