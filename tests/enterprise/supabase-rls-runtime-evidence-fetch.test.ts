@@ -13,6 +13,7 @@ import {
   requiredViewerAdminDenyOperations,
   sameTenantWritableTables,
 } from '../../scripts/security/supabase-live-rls-evidence.mjs';
+import { requiredHorizontalIsolationOperations } from '../../scripts/security/supabase-horizontal-rls-evidence.mjs';
 import {
   normalizeSupabaseRlsEvidenceForRelease,
   selectExactShaRun,
@@ -83,6 +84,12 @@ function passingCase(table: string, operation: string): EvidenceCase {
   return { table, operation, passed: true };
 }
 
+function appendHorizontalPassingCases(testCases: EvidenceCase[]) {
+  for (const [table, operations] of Object.entries(requiredHorizontalIsolationOperations)) {
+    for (const operation of operations) testCases.push(passingCase(table, operation));
+  }
+}
+
 function validSourceEvidence(): RuntimeEvidence {
   const testCases: EvidenceCase[] = [];
 
@@ -109,6 +116,9 @@ function validSourceEvidence(): RuntimeEvidence {
       testCases.push(passingCase(table, operation));
     }
   }
+
+  // The dedicated workflow appends the same-tenant proof before provenance is stamped.
+  appendHorizontalPassingCases(testCases);
 
   // The dedicated workflow appends the ai_assessments proof in
   // run-supabase-live-ai-assessments-rls.mjs before provenance is stamped.
@@ -145,6 +155,12 @@ function validSourceEvidence(): RuntimeEvidence {
     generatedAt: '2026-08-09T13:00:00Z',
     reviewedAt: '2026-08-09T13:00:00Z',
     timestamp: '2026-08-09T13:00:00Z',
+    horizontalIsolation: {
+      status: 'passed',
+      sameTenantDistinctUsers: true,
+      testedTables: Object.keys(requiredHorizontalIsolationOperations),
+      checkedAt: '2026-08-09T13:00:00Z',
+    },
     githubActions: {
       generatedInGitHubActions: true,
       workflow: 'Supabase Live RLS Validation',
@@ -287,6 +303,7 @@ describe('Supabase RLS exact-SHA runtime evidence', () => {
     expect(workflow).toContain('test "$MAIN_SHA" = "$TARGET_SHA"');
     expect(workflow).toContain("RLS_LIVE_UPDATE_REGISTER: '0'");
     expect(workflow).toContain('supabase-live-rls-runtime-proof-${{ env.TARGET_SHA }}');
+    expect(workflow).toContain('Append same-tenant horizontal isolation proof');
     expect(workflow).not.toContain('git push');
     expect(workflow).not.toContain('gh pr create');
     expect(workflow).not.toContain('pull_request_target');
