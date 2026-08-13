@@ -58,19 +58,58 @@ function requireLocalDatabase() {
   return { url, container };
 }
 
-function dump() {
-  assertGithubActions();
-  const { url } = requireLocalDatabase();
-  mkdirSync(workDir, { recursive: true });
-
+function createSyntheticEnterpriseSource(url) {
   sql(url, `
-    drop table if exists public.__risck_restore_smoke;
+    drop table if exists public.__risck_restore_smoke cascade;
+    drop table if exists public.audit_logs cascade;
+    drop table if exists public.organization_members cascade;
+    drop table if exists public.organizations cascade;
+
+    create table public.organizations (
+      id bigint primary key,
+      name text not null
+    );
+
+    create table public.organization_members (
+      id bigint primary key,
+      organization_id bigint not null references public.organizations(id),
+      user_ref text not null
+    );
+
+    create table public.audit_logs (
+      id bigint primary key,
+      organization_id bigint not null references public.organizations(id),
+      action text not null
+    );
+
+    alter table public.organizations enable row level security;
+    alter table public.organizations force row level security;
+    alter table public.organization_members enable row level security;
+    alter table public.organization_members force row level security;
+    alter table public.audit_logs enable row level security;
+    alter table public.audit_logs force row level security;
+
+    create policy "restore smoke organizations deny" on public.organizations for all using (false) with check (false);
+    create policy "restore smoke members deny" on public.organization_members for all using (false) with check (false);
+    create policy "restore smoke audit deny" on public.audit_logs for all using (false) with check (false);
+
     create table public.__risck_restore_smoke (
       id integer primary key,
       marker text not null
     );
+
+    insert into public.organizations (id, name) values (1, 'synthetic-enterprise');
+    insert into public.organization_members (id, organization_id, user_ref) values (1, 1, 'synthetic-user');
+    insert into public.audit_logs (id, organization_id, action) values (1, 1, 'synthetic.restore.smoke');
     insert into public.__risck_restore_smoke (id, marker) values (1, '${marker}');
   `);
+}
+
+function dump() {
+  assertGithubActions();
+  const { url } = requireLocalDatabase();
+  mkdirSync(workDir, { recursive: true });
+  createSyntheticEnterpriseSource(url);
 
   run('supabase', ['db', 'dump', '--db-url', url, '--role-only', '--file', rolesPath]);
   run('supabase', ['db', 'dump', '--db-url', url, '--file', schemaPath]);
@@ -81,7 +120,7 @@ function dump() {
     if (contents.byteLength === 0) throw new Error(`Synthetic recovery smoke dump is empty: ${basename(path)}`);
   }
 
-  process.stdout.write('Synthetic Supabase roles/schema/data dumps created from the exact-SHA disposable source.\n');
+  process.stdout.write('Synthetic Supabase roles/schema/data dumps created from an isolated disposable source.\n');
 }
 
 function copyToContainer(container, path) {
@@ -116,6 +155,15 @@ function restore() {
     const observed = sql(url, 'select marker from public.__risck_restore_smoke where id = 1;');
     if (observed !== marker) throw new Error('Synthetic restored row did not match the source marker');
 
+    const rowCounts = sql(url, `
+      select concat(
+        (select count(*) from public.organizations), ':',
+        (select count(*) from public.organization_members), ':',
+        (select count(*) from public.audit_logs)
+      );
+    `);
+    if (rowCounts !== '1:1:1') throw new Error(`Synthetic restore lost critical table rows: ${rowCounts}`);
+
     const rlsCount = Number(sql(url, `
       select count(*)
       from pg_class c
@@ -126,6 +174,15 @@ function restore() {
         and c.relforcerowsecurity;
     `));
     if (rlsCount !== 3) throw new Error(`Synthetic restore lost RLS/FORCE RLS on critical tables: ${rlsCount}/3`);
+
+    const policyCount = Number(sql(url, `
+      select count(*)
+      from pg_policies
+      where schemaname = 'public'
+        and tablename in ('organizations','organization_members','audit_logs')
+        and policyname like 'restore smoke % deny';
+    `));
+    if (policyCount !== 3) throw new Error(`Synthetic restore lost critical RLS policies: ${policyCount}/3`);
 
     const authTable = sql(url, "select to_regclass('auth.users') is not null;");
     if (authTable !== 't') throw new Error('Synthetic restore target is missing auth.users');
