@@ -48,7 +48,7 @@ permissions:
 
 concurrency:
   group: enterprise-100-closure-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   contract:
