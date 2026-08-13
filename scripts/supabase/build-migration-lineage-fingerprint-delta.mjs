@@ -31,6 +31,23 @@ function indexInventory(inventory, label, blockers) {
   return index;
 }
 
+function countOpaqueClaims(entries, label, blockers) {
+  if (entries === undefined) return 0;
+  if (!Array.isArray(entries)) {
+    blockers.push(`${label} must be an array`);
+    return 0;
+  }
+  let count = 0;
+  for (const entry of entries) {
+    if (!Number.isInteger(entry?.count) || entry.count < 1) {
+      blockers.push(`${label} contains an invalid count`);
+      continue;
+    }
+    count += entry.count;
+  }
+  return count;
+}
+
 export function buildMigrationLineageFingerprintDelta({ sourceInventory, sourceInventorySha256, targetInventory, targetInventorySha256, recordSet }) {
   const blockers = [];
   if (!isDigest(sourceInventorySha256)) blockers.push('source inventory digest is invalid');
@@ -40,6 +57,10 @@ export function buildMigrationLineageFingerprintDelta({ sourceInventory, sourceI
   if (recordSet?.schema !== RECORD_SET_SCHEMA || !Array.isArray(recordSet?.records)) blockers.push('historical fingerprint record set is invalid');
   if (!isDigest(recordSet?.inventorySha256)) blockers.push('historical fingerprint record set digest is invalid');
   else if (recordSet.inventorySha256.toLowerCase() !== String(sourceInventorySha256).toLowerCase()) blockers.push('historical fingerprint record set is not bound to the source inventory');
+
+  const unresolvedClaimCount = countOpaqueClaims(recordSet?.unresolvedCredits, 'historical unresolved claims', blockers);
+  const quarantinedClaimCount = countOpaqueClaims(recordSet?.quarantinedHistoricalCredits, 'quarantined historical claims', blockers);
+  if (unresolvedClaimCount > 0) blockers.push('historical unresolved claims must be reconstructed or explicitly quarantined before fingerprint selection');
 
   const historical = new Map();
   let duplicateHistoricalRows = 0;
@@ -54,7 +75,7 @@ export function buildMigrationLineageFingerprintDelta({ sourceInventory, sourceI
       continue;
     }
     if (String(sourceItem.sha256).toLowerCase() !== record.sha256.toLowerCase()) {
-      blockers.push(`historical fingerprint differs from reviewed source bytes: ${record.filename}`);
+      blockers.push(`historical fingerprint differs from source bytes: ${record.filename}`);
       continue;
     }
     const existing = historical.get(record.filename);
@@ -105,6 +126,8 @@ export function buildMigrationLineageFingerprintDelta({ sourceInventory, sourceI
       historicalRows: Array.isArray(recordSet?.records) ? recordSet.records.length : 0,
       historicalUniqueFingerprints: historical.size,
       duplicateHistoricalRows,
+      unresolvedHistoricalClaims: unresolvedClaimCount,
+      quarantinedHistoricalClaims: quarantinedClaimCount,
       exactMatches: exactMatches.length,
       changedMatches: changedMatches.length,
       removedHistorical: removedHistorical.length,
@@ -117,6 +140,8 @@ export function buildMigrationLineageFingerprintDelta({ sourceInventory, sourceI
     currentUnmatched,
     safety: {
       historicalRecordSetCreditedToTarget: false,
+      unresolvedClaimsCanSelectTargetItems: false,
+      quarantinedHistoricalClaimsCredited: false,
       automaticDecisionAllowed: false,
       stagingAuthorized: false,
       migrationExecutionAuthorized: false,
@@ -132,13 +157,7 @@ async function main() {
   const sourceBytes = await readFile(sourcePath);
   const targetBytes = await readFile(targetPath);
   const recordBytes = await readFile(recordsPath);
-  const result = buildMigrationLineageFingerprintDelta({
-    sourceInventory: JSON.parse(sourceBytes.toString('utf8')),
-    sourceInventorySha256: sha256(sourceBytes),
-    targetInventory: JSON.parse(targetBytes.toString('utf8')),
-    targetInventorySha256: sha256(targetBytes),
-    recordSet: JSON.parse(recordBytes.toString('utf8')),
-  });
+  const result = buildMigrationLineageFingerprintDelta({ sourceInventory: JSON.parse(sourceBytes.toString('utf8')), sourceInventorySha256: sha256(sourceBytes), targetInventory: JSON.parse(targetBytes.toString('utf8')), targetInventorySha256: sha256(targetBytes), recordSet: JSON.parse(recordBytes.toString('utf8')) });
   await mkdir(path.dirname(outputPath), { recursive: true });
   await writeFile(outputPath, `${JSON.stringify(result, null, 2)}\n`);
   process.stdout.write(`${JSON.stringify({ status: result.status, counts: result.counts, blockers: result.blockers }, null, 2)}\n`);
