@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, readFileSync, renameSync, rmSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 
 const blockedMigrations = Object.freeze([
@@ -12,6 +19,12 @@ const blockedMigrations = Object.freeze([
 const workflowReviewPath = 'docs/security/decisions/2026-08-10-supabase-human-review-mega-batch-f.md';
 const helperReviewPath = 'docs/security/evidence/human-review/supabase-migration-mega-batch-n.md';
 
+const friaMigration = '20260721143000_fria_fundamental_rights_governance.sql';
+const friaReviewPath = workflowReviewPath;
+const friaUniqueIndexStatement =
+  'create unique index if not exists ai_fria_assessments_org_id_id on public.ai_fria_assessments(organization_id,id);';
+const friaEvidenceMarker = 'create table if not exists public.ai_fria_evidence (';
+
 const integrationMigration = '20260721113000_enterprise_integrations_platform.sql';
 const tenantRelationsMigration = '20260721114500_enterprise_integrations_tenant_relations.sql';
 const licensingFoundationMigration = '20260721193000_enterprise_tenant_licensing_core.sql';
@@ -20,6 +33,8 @@ const tenantRelationsReviewPath = 'docs/security/evidence/human-review/supabase-
 const licensingReviewPath = 'docs/security/evidence/human-review/supabase-migration-mega-batch-g.md';
 
 const migrationsDir = join(process.cwd(), 'supabase', 'migrations');
+const friaSourcePath = join(migrationsDir, friaMigration);
+const friaHeldPath = join(migrationsDir, `${friaMigration}.statement-reordered`);
 const integrationSourcePath = join(migrationsDir, integrationMigration);
 const integrationHeldPath = join(migrationsDir, `${integrationMigration}.dependency-reordered`);
 const integrationReplayPath = join(migrationsDir, '20260721193001_enterprise_integrations_platform.sql');
@@ -56,12 +71,31 @@ function blockedRecord(name) {
   };
 }
 
+function validateFriaBoundary(workflowReview) {
+  assertPresent(friaSourcePath, 'FRIA foundation migration');
+  assertAbsent(friaHeldPath, 'FRIA historical-order hold path');
+  if (!workflowReview.includes(`F7 — \`${friaMigration}\```) || !workflowReview.includes('PENDING_DEPLOYMENT')) {
+    fail('FRIA Batch-F classification evidence drifted');
+  }
+
+  const sql = readFileSync(friaSourcePath, 'utf8');
+  const indexPosition = sql.indexOf(friaUniqueIndexStatement);
+  const evidencePosition = sql.indexOf(friaEvidenceMarker);
+  if (indexPosition < 0 || evidencePosition < 0) fail('FRIA reviewed statement markers are missing');
+  if (indexPosition < evidencePosition) {
+    fail('FRIA historical statement order is no longer defective; review the canonical source before disposable replay');
+  }
+  if (!sql.includes('foreign key (organization_id, assessment_id) references public.ai_fria_assessments(organization_id, id)')) {
+    fail('FRIA migration no longer contains the reviewed composite assessment FK dependency');
+  }
+}
+
 function validateReviewedBoundary() {
   if (process.env.GITHUB_ACTIONS !== 'true') {
     fail('Reviewed-boundary disposable replay is restricted to GitHub Actions');
   }
 
-  assertPresent(workflowReviewPath, 'workflow/GPAI/post-market review evidence');
+  assertPresent(workflowReviewPath, 'workflow/GPAI/post-market/FRIA review evidence');
   assertPresent(helperReviewPath, 'membership-helper review evidence');
 
   const workflowReview = readFileSync(workflowReviewPath, 'utf8');
@@ -83,6 +117,8 @@ function validateReviewedBoundary() {
       fail(`${name} no longer contains the reviewed unresolved membership-helper dependency`);
     }
   }
+
+  validateFriaBoundary(workflowReview);
 
   for (const [path, label] of [
     [integrationSourcePath, 'enterprise integration migration'],
@@ -144,6 +180,28 @@ function restoreBlockedMigrations(records) {
   }
 }
 
+function stageFriaStatementOrder() {
+  const originalSql = readFileSync(friaSourcePath, 'utf8');
+  renameSync(friaSourcePath, friaHeldPath);
+
+  const withoutIndex = originalSql.replace(`${friaUniqueIndexStatement}\n`, '');
+  if (withoutIndex === originalSql) fail('FRIA unique-index statement could not be isolated');
+  const evidencePosition = withoutIndex.indexOf(friaEvidenceMarker);
+  if (evidencePosition < 0) fail('FRIA evidence-table marker disappeared during disposable rewrite');
+
+  const replaySql = `${withoutIndex.slice(0, evidencePosition)}${friaUniqueIndexStatement}\n${withoutIndex.slice(evidencePosition)}`;
+  if (replaySql.indexOf(friaUniqueIndexStatement) > replaySql.indexOf(friaEvidenceMarker)) {
+    fail('FRIA disposable statement reorder failed');
+  }
+  writeFileSync(friaSourcePath, replaySql, 'utf8');
+}
+
+function restoreFriaStatementOrder() {
+  if (existsSync(friaSourcePath)) rmSync(friaSourcePath, { force: true });
+  if (!existsSync(friaHeldPath)) fail(`FRIA historical-order hold artifact disappeared: ${friaHeldPath}`);
+  renameSync(friaHeldPath, friaSourcePath);
+}
+
 function stageReviewedReplayOrder() {
   renameSync(integrationSourcePath, integrationHeldPath);
   renameSync(tenantRelationsSourcePath, tenantRelationsHeldPath);
@@ -170,10 +228,13 @@ function main() {
   validateReviewedBoundary();
   let replayError = null;
   let blockedRecords = [];
+  let friaOrderStaged = false;
   let integrationOrderStaged = false;
 
   try {
     blockedRecords = stageBlockedMigrations();
+    stageFriaStatementOrder();
+    friaOrderStaged = true;
     stageReviewedReplayOrder();
     integrationOrderStaged = true;
     execFileSync(process.execPath, [replayScript], {
@@ -186,12 +247,13 @@ function main() {
     if (integrationOrderStaged || existsSync(integrationHeldPath) || existsSync(tenantRelationsHeldPath)) {
       restoreReviewedReplayOrder();
     }
+    if (friaOrderStaged || existsSync(friaHeldPath)) restoreFriaStatementOrder();
     if (blockedRecords.length) restoreBlockedMigrations(blockedRecords);
   }
 
   if (replayError) throw replayError;
   process.stdout.write(
-    `Disposable replay excluded ${blockedRecords.length} reviewed Batch-F migrations that depend on unresolved public.is_organization_member(uuid), and replayed ${integrationMigration} → ${tenantRelationsMigration} immediately after ${licensingFoundationMigration}; canonical migration history remains unresolved.\n`,
+    `Disposable replay excluded ${blockedRecords.length} reviewed Batch-F migrations that depend on unresolved public.is_organization_member(uuid), replayed FRIA F7 with its existing unique-index statement moved before dependent FKs, and replayed ${integrationMigration} → ${tenantRelationsMigration} immediately after ${licensingFoundationMigration}; canonical migration history remains unresolved.\n`,
   );
 }
 
