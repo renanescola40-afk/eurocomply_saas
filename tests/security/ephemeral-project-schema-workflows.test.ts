@@ -20,6 +20,13 @@ const addOnReplacement = fs.readFileSync(
   'supabase/migrations/20260813121500_reconcile_organization_add_ons.sql',
   'utf8',
 );
+const finalRlsReplacementFiles = [
+  'supabase/migrations/20260619103000_complete_multi_tenant_rls_policies.sql',
+  'supabase/migrations/20260629110000_enterprise_tenant_rls_cleanup_indexes.sql',
+  'supabase/migrations/20260807091341_reconcile_membership_rls_and_remove_permissive_bypasses.sql',
+  'supabase/migrations/20260809135000_enterprise_core_runtime_schema_reconciliation.sql',
+];
+const finalRlsReplacements = finalRlsReplacementFiles.map((path) => fs.readFileSync(path, 'utf8'));
 const schemaWorkflows = [
   '.github/workflows/final-technical-controls-proof.yml',
   '.github/workflows/data-governance-runtime-proof.yml',
@@ -63,33 +70,44 @@ describe('exact-SHA disposable project schema workflows', () => {
     expect(replay).toContain('for (const canonicalName of UNRESOLVED_INVALID_MIGRATIONS)');
   });
 
-  it('replaces the invalid historical add-on effect with a unique canonical migration', () => {
+  it('replaces invalid historical schema effects only through explicit later canonical migrations', () => {
     expect(SCHEMA_EFFECT_REPLACED_MIGRATIONS).toEqual({
-      '20260613_organization_add_ons.sql':
+      '20260613_organization_add_ons.sql': [
         'supabase/migrations/20260813121500_reconcile_organization_add_ons.sql',
+      ],
+      '20260620120000_enterprise_multi_tenant_rls_final_lock.sql': finalRlsReplacementFiles,
     });
+
     expect(addOnReplacement).toContain('create table if not exists public.organization_add_ons');
     expect(addOnReplacement).toContain('force row level security');
     expect(addOnReplacement).toContain('revoke insert, update, delete, truncate, references, trigger');
     expect(addOnReplacement).toContain('grant select on table public.organization_add_ons to authenticated');
     expect(addOnReplacement).toContain('grant all on table public.organization_add_ons to service_role');
     expect(addOnReplacement).toContain('set search_path = pg_catalog');
-    expect(addOnReplacement).toContain('drop trigger if exists organization_add_ons_set_updated_at');
     expect(addOnReplacement).not.toContain('create policy if not exists');
     expect(addOnReplacement).not.toContain('create trigger if not exists');
+
+    expect(finalRlsReplacements[0]).toContain('Complete multi-tenant RLS policy coverage');
+    expect(finalRlsReplacements[1]).toContain('Enterprise tenant RLS cleanup');
+    expect(finalRlsReplacements[2]).toContain('app_private.is_org_member');
+    expect(finalRlsReplacements[2]).toContain('A permissive tenant RLS bypass policy remains after cleanup');
+    expect(finalRlsReplacements[3]).toContain('rls_tasks_select_member');
+    expect(finalRlsReplacements[3]).toContain('app_private.has_org_role');
   });
 
-  it('stages only 33 duplicate files and preserves migration-history fail-closed status', () => {
+  it('stages only 32 duplicate files and preserves migration-history fail-closed status', () => {
     expect(
       duplicateFiles.length
         - UNAPPLIED_LEGACY_MIGRATIONS.length
         - Object.keys(SCHEMA_EFFECT_REPLACED_MIGRATIONS).length,
-    ).toBe(33);
+    ).toBe(32);
     expect(replay).toContain('allocateReplayVersions(version, executableFiles.length, occupied)');
     expect(replay).toContain('copyFileSync(item.backupPath, item.replayPath)');
     expect(replay).toContain("appendGithubEnv('RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLACED_FILE_COUNT'");
     expect(replay).toContain("appendGithubEnv('RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL', 'false')");
     expect(replay).toContain('replay timestamps are not migration-history repair evidence');
+    expect(ephemeralSmoke).toContain('RECOVERY_EPHEMERAL_REPLAY_STAGED_FILE_COUNT\" = \"32');
+    expect(ephemeralSmoke).toContain('RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLACED_FILE_COUNT\" = \"2');
   });
 
   it('revalidates and hardens Docker bindings after project schema reset', () => {
