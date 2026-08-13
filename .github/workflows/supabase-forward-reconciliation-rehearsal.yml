@@ -34,9 +34,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Checkout repository
+      - name: Checkout exact contract SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Setup Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
@@ -53,6 +54,7 @@ jobs:
           CONTRACT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CONTRACT_SHA"
           node scripts/supabase/forward-reconciliation-control-plane.mjs compile \
             config/supabase-forward-reconciliation.json \
             "$RUNNER_TEMP/forward-reconciliation-manifest.json" \
