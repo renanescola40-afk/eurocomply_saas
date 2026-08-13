@@ -70,7 +70,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes postgresql-client
       - name: Start exact-SHA disposable Supabase project database
-        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start-project
+        run: node scripts/recovery/run-ephemeral-project-schema-replay.mjs
       - name: Preflight protected final technical proof
         run: node scripts/security/preflight-protected-proof.mjs final-technical
       - name: Execute protected final technical proof
