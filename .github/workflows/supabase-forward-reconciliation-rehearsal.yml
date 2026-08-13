@@ -7,6 +7,11 @@ on:
       - 'scripts/supabase/forward-reconciliation-control-plane.mjs'
       - 'scripts/supabase/verify-forward-reconciliation-postconditions.sql'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
+      - 'supabase/migrations/20260813175000_optimize_organization_add_ons_rls_initplan.sql'
+      - 'supabase/migrations/20260813194500_reconcile_step_up_challenges_runtime.sql'
+      - 'supabase/migrations/20260813200000_reconcile_subscription_schema_defaults.sql'
+      - 'supabase/migrations/20260813201500_reconcile_controlled_document_storage.sql'
+      - 'supabase/migrations/20260813201600_force_tasks_rls.sql'
       - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
       - '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
   workflow_dispatch:
