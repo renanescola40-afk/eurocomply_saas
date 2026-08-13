@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const WORKFLOW_FILE = 'distributed-rate-limit-runtime-proof.yml';
+const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`;
 const WORKFLOW_NAME = 'Distributed Rate Limit Runtime Proof';
 const EVIDENCE_PATH = 'docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json';
 const FULL_SHA = /^[a-f0-9]{40}$/;
@@ -37,6 +38,7 @@ export function selectExactShaRun(runs, targetSha, sourceRunId = '') {
     .filter((run) => String(run?.head_sha || '').toLowerCase() === targetSha)
     .filter((run) => run?.head_branch === 'main')
     .filter((run) => run?.status === 'completed' && run?.conclusion === 'success')
+    .filter((run) => run?.path === WORKFLOW_PATH)
     .filter((run) => !normalizedRunId || String(run?.id) === normalizedRunId)
     .sort((left, right) => Date.parse(right?.updated_at || right?.created_at || 0) - Date.parse(left?.updated_at || left?.created_at || 0))[0] ?? null;
 }
@@ -149,11 +151,11 @@ export async function fetchDistributedRateLimitEvidence({
   const run = selectExactShaRun(runs, targetSha, sourceRunId);
   if (!run) {
     if (required) throw new Error('exact_sha_runtime_run_missing');
-    console.log(`Distributed rate-limit evidence remains open: no successful exact-SHA runtime run for ${targetSha}.`);
+    console.log(`Distributed rate-limit evidence remains open: no successful canonical exact-SHA runtime run for ${targetSha}.`);
     return { found: false, targetSha };
   }
 
-  if (run.name !== WORKFLOW_NAME) throw new Error('runtime_workflow_name_invalid');
+  if (run.path !== WORKFLOW_PATH) throw new Error('runtime_workflow_path_invalid');
   const normalizedRunId = String(run.id || '').trim();
   if (!NUMERIC_ID.test(normalizedRunId)) throw new Error('runtime_workflow_run_id_invalid');
 
