@@ -109,6 +109,16 @@ export const SCHEMA_EFFECT_REPLACED_MIGRATIONS = Object.freeze({
     'supabase/migrations/20260809135000_enterprise_core_runtime_schema_reconciliation.sql',
   ]),
 });
+
+// This historical file is valid SQL only after the optional proof table that it
+// references exists. Production lineage is not rewritten: the rule below is
+// restricted to the disposable schema-effect runner and preserves source bytes.
+export const SCHEMA_EFFECT_REORDERED_MIGRATIONS = Object.freeze({
+  '20260624174000_live_rls_validation_min_policy_patch.sql': Object.freeze({
+    afterVersion: '20260624220000',
+    prerequisitePath: 'supabase/migrations/20260624220000_live_rls_validation_missing_tables.sql',
+  }),
+});
 const UNAPPLIED_LEGACY_VERSION = '20260605';
 
 function fail(message) { throw new Error(message); }
@@ -168,6 +178,23 @@ function assertReviewedReplayInventory(dir) {
     if (!duplicateReview.includes(`\`${legacyFile}\``)) fail(`Replacement source is not in reviewed duplicate inventory: ${legacyFile}`);
     for (const replacementPath of replacementPaths) {
       if (!existsSync(replacementPath)) fail(`Canonical schema-effect replacement is missing: ${replacementPath}`);
+    }
+  }
+  for (const [historicalFile, rule] of Object.entries(SCHEMA_EFFECT_REORDERED_MIGRATIONS)) {
+    const historicalPath = join(dir, historicalFile);
+    if (!existsSync(historicalPath)) fail(`Schema-effect ordering source is missing: ${historicalFile}`);
+    if (!existsSync(rule.prerequisitePath)) fail(`Schema-effect ordering prerequisite is missing: ${rule.prerequisitePath}`);
+    const prerequisiteName = rule.prerequisitePath.split('/').at(-1) ?? '';
+    if (migrationVersion(prerequisiteName) !== rule.afterVersion) {
+      fail(`Schema-effect ordering prerequisite version drift for ${historicalFile}`);
+    }
+    const historicalSql = readFileSync(historicalPath, 'utf8');
+    const prerequisiteSql = readFileSync(rule.prerequisitePath, 'utf8');
+    if (!historicalSql.includes('alter table public.tasks enable row level security')) {
+      fail(`Schema-effect ordering source no longer contains the reviewed tasks dependency: ${historicalFile}`);
+    }
+    if (!prerequisiteSql.includes('create table if not exists public.tasks')) {
+      fail(`Schema-effect ordering prerequisite no longer creates public.tasks: ${rule.prerequisitePath}`);
     }
   }
 
@@ -256,6 +283,16 @@ function backupAndRemove(dir, stagingDir, canonicalName) {
   return { canonicalName, canonicalPath, backupPath, stagingDir, digest, replayName: null, replayPath: null };
 }
 
+function stageReplayItem(dir, stagingDir, canonicalName, version, occupied) {
+  const item = backupAndRemove(dir, stagingDir, canonicalName);
+  const [replayVersion] = allocateReplayVersions(version, 1, occupied);
+  item.replayName = replayName(canonicalName, replayVersion);
+  item.replayPath = join(dir, item.replayName);
+  copyFileSync(item.backupPath, item.replayPath);
+  if (sha256(item.replayPath) !== item.digest) fail(`Replay digest mismatch ${canonicalName}`);
+  return item;
+}
+
 function prepareSchemaEffectReplay(dir) {
   assertReviewedReplayInventory(dir);
   const stagingDir = stagingDirectory();
@@ -266,6 +303,7 @@ function prepareSchemaEffectReplay(dir) {
   const items = [];
   let replayed = 0;
   let replaced = 0;
+  let reordered = 0;
   try {
     for (const { version, files } of expectedDuplicateVersions()) {
       const executableFiles = files.filter((file) =>
@@ -290,6 +328,10 @@ function prepareSchemaEffectReplay(dir) {
         items.push(item);
       }
     }
+    for (const [canonicalName, rule] of Object.entries(SCHEMA_EFFECT_REORDERED_MIGRATIONS)) {
+      items.push(stageReplayItem(dir, stagingDir, canonicalName, rule.afterVersion, occupied));
+      reordered += 1;
+    }
     for (const canonicalName of UNRESOLVED_INVALID_MIGRATIONS) {
       items.push(backupAndRemove(dir, stagingDir, canonicalName));
     }
@@ -297,7 +339,7 @@ function prepareSchemaEffectReplay(dir) {
     if (remaining.invalidFiles.length || remaining.duplicateVersions.length) {
       fail(`Disposable replay remains invalid: invalid=${remaining.invalidFiles.length} duplicates=${remaining.duplicateVersions.length}`);
     }
-    return { items, replayed, replaced };
+    return { items, replayed, replaced, reordered };
   } catch (error) {
     if (items.length) {
       try { restoreItems(items); } catch (restoreError) {
@@ -315,7 +357,7 @@ function appendGithubEnv(name, value) {
 function main() {
   if (process.env.GITHUB_ACTIONS !== 'true') fail('Disposable schema-effect replay is restricted to GitHub Actions');
   const dir = join(process.cwd(), 'supabase', 'migrations');
-  const { items, replayed, replaced } = prepareSchemaEffectReplay(dir);
+  const { items, replayed, replaced, reordered } = prepareSchemaEffectReplay(dir);
   let replayError = null;
   try {
     execFileSync(process.execPath, ['scripts/recovery/manage-ephemeral-recovery-database.mjs', 'start-project'], { stdio: 'inherit', env: process.env });
@@ -330,8 +372,9 @@ function main() {
   appendGithubEnv('RECOVERY_EPHEMERAL_LEGACY_EXCLUDED_FILE_COUNT', String(UNAPPLIED_LEGACY_MIGRATIONS.length));
   appendGithubEnv('RECOVERY_EPHEMERAL_UNRESOLVED_INVALID_EXCLUDED_FILE_COUNT', String(UNRESOLVED_INVALID_MIGRATIONS.length));
   appendGithubEnv('RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLACED_FILE_COUNT', String(replaced));
+  appendGithubEnv('RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REORDERED_FILE_COUNT', String(reordered));
   appendGithubEnv('RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL', 'false');
-  process.stdout.write(`Disposable schema-effect replay staged ${replayed} duplicate files, excluded ${UNAPPLIED_LEGACY_MIGRATIONS.length} legacy, ${UNRESOLVED_INVALID_MIGRATIONS.length} unresolved-invalid, and ${replaced} schema-effect-replaced files; replay timestamps are not migration-history repair evidence.\n`);
+  process.stdout.write(`Disposable schema-effect replay staged ${replayed} duplicate files, dependency-reordered ${reordered}, excluded ${UNAPPLIED_LEGACY_MIGRATIONS.length} legacy, ${UNRESOLVED_INVALID_MIGRATIONS.length} unresolved-invalid, and ${replaced} schema-effect-replaced files; replay timestamps are not migration-history repair evidence.\n`);
 }
 
 if (process.argv[1]?.endsWith('run-ephemeral-project-schema-replay.mjs')) {
