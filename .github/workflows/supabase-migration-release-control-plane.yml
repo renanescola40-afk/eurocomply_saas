@@ -23,11 +23,11 @@ on:
         required: true
         type: string
       execution_plan_run_id:
-        description: Run ID containing the bounded execution plan artifact
+        description: Successful Supabase Migration Execution Plan run ID
         required: true
         type: string
       rehearsal_artifact_run_id:
-        description: Run ID containing staging rehearsal evidence
+        description: Successful Supabase Staging Rehearsal run ID
         required: true
         type: string
       authorization_path:
@@ -94,7 +94,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify main and source runs
+      - name: Verify exact current main and source-run provenance
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -102,10 +102,18 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+
           PLAN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PLAN_RUN_ID}")"
-          REHEARSAL_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${REHEARSAL_RUN_ID}")"
           test "$(jq -r '.head_sha' <<<"$PLAN_JSON")" = "$TARGET_SHA"
+          test "$(jq -r '.path' <<<"$PLAN_JSON")" = '.github/workflows/supabase-migration-execution-plan.yml'
+          test "$(jq -r '.event' <<<"$PLAN_JSON")" = 'workflow_dispatch'
+          test "$(jq -r '.conclusion' <<<"$PLAN_JSON")" = 'success'
+
+          REHEARSAL_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${REHEARSAL_RUN_ID}")"
           test "$(jq -r '.head_sha' <<<"$REHEARSAL_JSON")" = "$TARGET_SHA"
+          test "$(jq -r '.path' <<<"$REHEARSAL_JSON")" = '.github/workflows/supabase-staging-rehearsal.yml'
+          test "$(jq -r '.event' <<<"$REHEARSAL_JSON")" = 'workflow_dispatch'
+          test "$(jq -r '.conclusion' <<<"$REHEARSAL_JSON")" = 'success'
 
       - name: Download exact execution plan
         uses: actions/download-artifact@v8
@@ -115,10 +123,10 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.execution_plan_run_id }}
 
-      - name: Download exact staging rehearsal
+      - name: Download exact canonical staging attestation
         uses: actions/download-artifact@v8
         with:
-          name: supabase-migration-staging-rehearsal-${{ inputs.release_sha }}
+          name: supabase-staging-rehearsal-${{ inputs.release_sha }}
           path: source-rehearsal
           github-token: ${{ github.token }}
           run-id: ${{ inputs.rehearsal_artifact_run_id }}
@@ -127,8 +135,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PLAN="$(find source-plan -type f -name 'migration-execution-plan.json' -print -quit)"
-          REHEARSAL="$(find source-rehearsal -type f -name 'staging-rehearsal.json' -print -quit)"
+          PLAN="$(find source-plan -type f -name 'execution-plan.json' -print -quit)"
+          REHEARSAL="$(find source-rehearsal -type f -name 'staging-rehearsal-attestation.json' -print -quit)"
           test -n "$PLAN"
           test -n "$REHEARSAL"
           test -f "$AUTHORIZATION_PATH"
@@ -144,11 +152,13 @@ jobs:
             echo '## Supabase migration release control plane'
             echo
             echo "- Release SHA: \`$TARGET_SHA\`"
-            echo '- SQL executed: no'
-            echo '- Migration history modified: no'
+            echo '- Execution-plan source: canonical v1 artifact'
+            echo '- Staging source: canonical v2 attestation'
+            echo '- SQL executed by this workflow: no'
+            echo '- Migration history modified by this workflow: no'
             echo '- Production write authorized by this workflow: no'
             echo '- Automatic execution: prohibited'
-            echo '- A distinct protected manual workflow remains required'
+            echo '- A distinct protected manual workflow and independent approval remain required'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload retained control-plane artifact
