@@ -111,7 +111,7 @@ jobs:
           grep -Fq 'Supabase Production RLS Reconciliation' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Final Legal Publication Gate' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Enterprise Conversation Runtime Closeout' .github/workflows/enterprise-100-closure.yml
-          grep -Fq 'test "$main_sha" = "$ENTERPRISE_CLOSURE_EXPECTED_SHA"' .github/workflows/enterprise-100-closure.yml
+          grep -Fq "test \"\$main_sha\" = \"\$ENTERPRISE_CLOSURE_EXPECTED_SHA\"" .github/workflows/enterprise-100-closure.yml
 
       - name: Validate target SHA is exact current main
         if: github.event_name != 'pull_request'
