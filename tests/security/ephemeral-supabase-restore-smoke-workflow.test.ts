@@ -13,6 +13,8 @@ describe('ephemeral Supabase logical restore PR smoke', () => {
     expect(workflow).not.toContain('secrets.');
     expect(workflow).toContain('persist-credentials: false');
     expect(workflow).toContain('github.event.pull_request.head.sha');
+    expect(workflow).toContain('supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520');
+    expect(workflow).toContain('version: 2.101.0');
   });
 
   it('replays the canonical source, destroys it, then restores into a clean target', () => {
