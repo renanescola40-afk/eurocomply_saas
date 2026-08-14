@@ -118,6 +118,22 @@ as $$
   );
 $$;
 
+-- Compatibility contract consumed by later reviewed enterprise migrations.
+-- Keep this wrapper SECURITY INVOKER: the privileged membership implementation
+-- remains the M9 helper and no additional SECURITY DEFINER is exposed publicly.
+create or replace function public.is_organization_member(p_organization_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select public.enterprise_member_can_read(p_organization_id);
+$$;
+
+revoke all on function public.is_organization_member(uuid) from public;
+grant execute on function public.is_organization_member(uuid) to authenticated, service_role;
+
 -- Evidence packs
 
 drop policy if exists "Members can read enterprise evidence packs" on public.enterprise_evidence_packs;
