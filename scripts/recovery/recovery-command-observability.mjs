@@ -1,6 +1,21 @@
 import { basename } from 'node:path';
 
 const SAFE_COMMANDS = new Set(['supabase', 'docker', 'psql', 'pg_dump', 'pg_restore']);
+const SAFE_DATABASE_SCOPES = Object.freeze([
+  'auth',
+  'storage',
+  'public',
+  'extensions',
+  'realtime',
+  'vault',
+  'cron',
+  'net',
+  'pgmq',
+  'graphql',
+  'graphql_public',
+  'supabase_functions',
+  'app_private',
+]);
 const RESTORE_STAGE_MARKERS = Object.freeze({
   risck_recovery_stage_roles: 'roles',
   risck_recovery_stage_schema: 'schema',
@@ -62,6 +77,16 @@ export function classifyRecoveryMissingObjectKind(error) {
   return null;
 }
 
+export function classifyRecoveryMissingObjectScope(error) {
+  const value = processOutputText(error);
+  for (const scope of SAFE_DATABASE_SCOPES) {
+    const qualified = new RegExp(`(?:^|[^a-z0-9_])${scope.replace(/_/g, '[_]')}\\s*\\.`);
+    const schemaMissing = new RegExp(`\\bschema\\s+["']?${scope.replace(/_/g, '[_]')}["']?\\s+does not exist\\b`);
+    if (qualified.test(value) || schemaMissing.test(value)) return scope;
+  }
+  return null;
+}
+
 export function classifyRecoveryCommandCategory(error) {
   const value = combinedErrorText(error);
 
@@ -99,6 +124,7 @@ export function buildRecoveryCommandDiagnostic({ error, phase, command }) {
     : 'unknown';
   const category = classifyRecoveryCommandCategory(error);
   const isolatedRestore = phase === 'isolated_restore' && commandFamily === 'docker';
+  const missingObject = category === 'database_object_missing';
 
   return {
     phase: typeof phase === 'string' && phase.length > 0 ? phase : 'unknown',
@@ -108,6 +134,7 @@ export function buildRecoveryCommandDiagnostic({ error, phase, command }) {
     signal: typeof error?.signal === 'string' && error.signal.length > 0 ? error.signal : null,
     timedOut: error?.code === 'ETIMEDOUT' || error?.killed === true,
     restoreStage: isolatedRestore ? classifyRecoveryRestoreStage(error) : null,
-    missingObjectKind: category === 'database_object_missing' ? classifyRecoveryMissingObjectKind(error) : null,
+    missingObjectKind: missingObject ? classifyRecoveryMissingObjectKind(error) : null,
+    missingObjectScope: missingObject ? classifyRecoveryMissingObjectScope(error) : null,
   };
 }
