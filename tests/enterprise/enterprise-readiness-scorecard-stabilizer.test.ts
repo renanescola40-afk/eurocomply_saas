@@ -88,23 +88,30 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(script).toContain("export const ENTERPRISE_PRODUCTION_GATE_PATH = 'enterprise-production-gate.yml';");
     expect(script).toContain('productionGateAlreadyCoversEvidence');
     expect(script).toContain('await dispatchProductionGate(repository);');
-    expect(script).toContain('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs);');
+    expect(script).toContain('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs, {');
+    expect(script).toContain('refreshAlreadyDispatched: productionGateRefreshDispatched');
     expect(script).toContain('No terminal Enterprise Production Gate evaluation covers the latest material producer state');
     const gateDispatch = script.indexOf('await dispatchProductionGate(repository);');
-    const gateWait = script.indexOf('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs);');
+    const gateWait = script.indexOf('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs, {');
     const scorecardDispatch = script.indexOf('await dispatchScorecard(repository);');
     expect(gateDispatch).toBeGreaterThan(-1);
     expect(gateWait).toBeGreaterThan(gateDispatch);
     expect(scorecardDispatch).toBeGreaterThan(gateWait);
   });
 
-  it('accepts only success/failure as evaluated and ignores skipped/cancelled runs while waiting', () => {
+  it('accepts only success/failure as evaluated and performs at most one fallback refresh after non-evaluation settlement', () => {
     expect(script).toContain("export const TERMINAL_EVALUATION_CONCLUSIONS = new Set(['success', 'failure']);");
     expect(script).toContain('export function isTerminalEvaluation(run)');
     expect(script).toContain("return run?.status === 'completed' && TERMINAL_EVALUATION_CONCLUSIONS.has(run?.conclusion);");
+    expect(script).toContain('let fallbackRefreshAvailable = !refreshAlreadyDispatched;');
+    expect(script).toContain('let consecutiveNonEvaluationPolls = 0;');
     expect(script).toContain('const latestTerminalEvaluation = covered.find((run) => isTerminalEvaluation(run));');
     expect(script).toContain('if (latestTerminalEvaluation) return latestTerminalEvaluation;');
     expect(script).toContain('const latestActiveEvaluation = covered.find((run) => ACTIVE_RUN_STATUSES.has(run?.status));');
+    expect(script).toContain('consecutiveNonEvaluationPolls >= 2');
+    expect(script).toContain('Main advanced while Production Gate refresh recovery was pending');
+    expect(script).toContain('Dispatched one bounded fallback Enterprise Production Gate refresh after non-evaluation settlement');
+    expect(script).toContain('fallbackRefreshAvailable = false;');
     expect(script).toContain('Ignoring non-evaluation Enterprise Production Gate conclusion');
     expect(script).toContain('Terminal Enterprise Production Gate did not complete within the bounded settlement window');
     expect(script).toContain('.filter((run) => isTerminalEvaluation(run))');
