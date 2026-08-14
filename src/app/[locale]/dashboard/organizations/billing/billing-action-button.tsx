@@ -38,6 +38,13 @@ function billingErrorRedirect(locale: string, message: string, errorReturnHref?:
     throw new Error('redirecting_to_billing_error');
   }
 
+  if (window.location.pathname === `/${locale}/checkout`) {
+    const checkoutUrl = new URL(window.location.href);
+    checkoutUrl.searchParams.set('checkout', 'error');
+    window.location.href = `${checkoutUrl.pathname}${checkoutUrl.search}`;
+    throw new Error('redirecting_to_billing_error');
+  }
+
   window.location.href = `/${locale}/dashboard/organizations/billing?billing_error=${encodeURIComponent(message)}`;
   throw new Error('redirecting_to_billing_error');
 }
