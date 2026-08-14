@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 const PORTAL_ROUTE = new URL('../../src/app/api/billing/portal/route.ts', import.meta.url);
 const SUBSCRIPTION_ROUTE = new URL('../../src/app/api/billing/subscription/route.ts', import.meta.url);
+const LIFECYCLE = new URL('../../src/server/billing/subscription-lifecycle.ts', import.meta.url);
 const COMPLETE_PAGE = new URL('../../src/app/[locale]/checkout/complete/page.tsx', import.meta.url);
 
 describe('billing portal authority', () => {
@@ -29,7 +30,7 @@ describe('billing lifecycle authority', () => {
     expect(source).toContain("{ error: 'contract_managed_billing' }");
   });
 
-  it('requires live subscription authority before upgrade, cancel, reactivate or add-on mutations', async () => {
+  it('requires live subscription authority before upgrade, downgrade, cancel, reactivate or add-on mutations', async () => {
     const source = await readFile(SUBSCRIPTION_ROUTE, 'utf8');
 
     const liveLookup = source.indexOf('const liveBinding = await getLiveSubscriptionBinding');
@@ -38,13 +39,24 @@ describe('billing lifecycle authority', () => {
     expect(mutation).toBeGreaterThan(liveLookup);
     expect(source).toContain('hasProcessedLiveStripeSubscriptionAuthority');
     expect(source).toContain("{ error: 'live_stripe_subscription_not_found' }");
+    expect(source).not.toContain('billing_downgrade_schedule_required');
   });
 
-  it('blocks the old immediate downgrade implementation rather than reducing entitlements mid-period', async () => {
-    const source = await readFile(SUBSCRIPTION_ROUTE, 'utf8');
+  it('schedules downgrades from the existing subscription and preserves the paid current phase', async () => {
+    const source = await readFile(LIFECYCLE, 'utf8');
+    const downgradeStart = source.indexOf('async function scheduleDowngradeAtPeriodEnd');
+    const mutationStart = source.indexOf('export async function mutateSubscriptionLifecycle');
+    const downgrade = source.slice(downgradeStart, mutationStart);
 
-    expect(source).toContain("parsed.data.action === 'downgrade'");
-    expect(source).toContain("{ error: 'billing_downgrade_schedule_required' }");
+    expect(downgradeStart).toBeGreaterThan(-1);
+    expect(downgrade).toContain('from_subscription: input.subscription.id');
+    expect(downgrade).toContain('currentPhaseParams(currentPhase)');
+    expect(downgrade).toContain('futureDowngradePhase({');
+    expect(downgrade).toContain("end_behavior: 'release'");
+    expect(downgrade).toContain("proration_behavior: 'none'");
+    expect(source).toContain('assertPlanTransition(input.action, currentPlan, targetPlan)');
+    expect(source).toContain("throw new BillingLifecycleRequestError('billing_invalid_plan_transition', 409)");
+    expect(source).toContain("throw new BillingLifecycleRequestError('billing_schedule_conflict', 409)");
   });
 });
 
