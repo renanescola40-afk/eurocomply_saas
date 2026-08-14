@@ -61,18 +61,23 @@ describe('enterprise recovery control plane', () => {
     expect(evidenceValidator).toContain("mode === 'full' || mode === 'production-rollback'");
   });
 
-  it('reconciles source extensions only on the disposable restore target before schema restore', () => {
+  it('reconciles exact source extension name schema and version only on the disposable target', () => {
     const parityIndex = backupRestore.indexOf("failurePhase = 'extension_parity'");
     const restoreIndex = backupRestore.indexOf("failurePhase = 'isolated_restore'");
     expect(parityIndex).toBeGreaterThan(-1);
     expect(restoreIndex).toBeGreaterThan(parityIndex);
+    expect(backupRestore).toContain("'version', e.extversion");
+    expect(backupRestore).toContain("'version', v.version");
     expect(backupRestore).toContain('planExtensionParity(sourceExtensions, targetExtensions, availableExtensions)');
     expect(backupRestore).toContain('checks.extensionParity = extensionParitySatisfied');
-    expect(backupRestore).toContain("throw new Error('recovery_target_extension_unavailable')");
+    expect(backupRestore).toContain("throw new Error('recovery_target_extension_version_unavailable')");
+    expect(backupRestore).toContain("throw new Error('recovery_target_extension_version_mismatch')");
     expect(backupRestore).toContain("throw new Error('recovery_target_extension_schema_mismatch')");
     expect(backupRestore).toContain('extensionNamesStored: false');
+    expect(backupRestore).toContain('extensionVersionsStored: false');
     expect(extensionParity).toContain('create extension if not exists');
     expect(extensionParity).toContain('quotePgIdentifier');
+    expect(extensionParity).toContain('quotePgLiteral');
   });
 
   it('never manufactures rollback credit from the automatic backup restore drill', () => {
