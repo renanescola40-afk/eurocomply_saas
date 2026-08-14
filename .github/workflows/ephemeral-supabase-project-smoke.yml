@@ -12,7 +12,10 @@ on:
       - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v2.mjs'
       - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
+      - 'scripts/recovery/recovery-extension-parity.mjs'
       - 'supabase/migrations/**'
+      - 'docs/security/evidence/human-review/**'
+      - 'docs/security/decisions/**'
       - '.github/workflows/final-technical-controls-proof.yml'
       - '.github/workflows/recovery-resilience-proof.yml'
       - '.github/workflows/data-governance-runtime-proof.yml'
@@ -23,6 +26,7 @@ on:
       - 'tests/security/ephemeral-recovery-database-contract.test.ts'
       - 'tests/security/ephemeral-project-schema-workflows.test.ts'
       - 'tests/security/ephemeral-main-schema-proof-contract.test.ts'
+      - 'tests/security/recovery-extension-parity.test.ts'
   pull_request:
     branches: [main]
     paths:
@@ -34,7 +38,10 @@ on:
       - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v2.mjs'
       - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
+      - 'scripts/recovery/recovery-extension-parity.mjs'
       - 'supabase/migrations/**'
+      - 'docs/security/evidence/human-review/**'
+      - 'docs/security/decisions/**'
       - '.github/workflows/final-technical-controls-proof.yml'
       - '.github/workflows/recovery-resilience-proof.yml'
       - '.github/workflows/data-governance-runtime-proof.yml'
@@ -45,6 +52,7 @@ on:
       - 'tests/security/ephemeral-recovery-database-contract.test.ts'
       - 'tests/security/ephemeral-project-schema-workflows.test.ts'
       - 'tests/security/ephemeral-main-schema-proof-contract.test.ts'
+      - 'tests/security/recovery-extension-parity.test.ts'
 
 permissions:
   contents: read
