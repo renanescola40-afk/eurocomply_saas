@@ -268,7 +268,7 @@ export async function POST(request: Request) {
     const locale = normalizeCheckoutLocale(parsedBody.data.locale);
 
     // Existing live subscribers must never create another Checkout subscription.
-    // Preserve one logical self-serve subscription per organization and route
+    // Preserve one logical self-serve subscription per organization and route all
     // allowed plan changes through the durable lifecycle mutation path instead.
     if (hasLiveSubscription) {
       const currentPlan = normalizeBillingPlanId(billingBinding?.plan);
@@ -284,12 +284,9 @@ export async function POST(request: Request) {
         });
       }
 
-      if (currentPlan === 'professional' && plan === 'starter') {
-        return noStoreJson({ error: 'billing_downgrade_schedule_required' }, { status: 409 });
-      }
-
-      await mutateSubscriptionLifecycle({
-        action: 'upgrade',
+      const action = currentPlan === 'professional' && plan === 'starter' ? 'downgrade' : 'upgrade';
+      const lifecycle = await mutateSubscriptionLifecycle({
+        action,
         organizationId: organization.id,
         userId: user.id,
         actorRole: permission.role ?? 'unknown',
@@ -298,9 +295,11 @@ export async function POST(request: Request) {
         idempotency: idempotency.context,
       });
 
+      const billingOutcome = action === 'downgrade' ? 'scheduled' : 'updated';
       return noStoreJson({
-        url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations/billing?billing=updated`,
+        url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations/billing?billing=${billingOutcome}`,
         idempotencyProtected: true,
+        lifecycle,
         stepUp: stepUp?.ok ? publicStepUpSummary(stepUp.assessment) : undefined,
       });
     }
