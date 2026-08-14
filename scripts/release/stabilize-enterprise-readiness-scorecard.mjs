@@ -70,6 +70,14 @@ export function isTerminalEvaluation(run) {
   return run?.status === 'completed' && TERMINAL_EVALUATION_CONCLUSIONS.has(run?.conclusion);
 }
 
+export function relevantProductionGateRuns(runs, targetSha, producerCutoffMs) {
+  return runs
+    .filter((run) => run?.head_sha === targetSha && run?.name === ENTERPRISE_PRODUCTION_GATE_NAME)
+    .filter((run) => createdTimestampMs(run) >= producerCutoffMs)
+    .filter((run) => ACTIVE_RUN_STATUSES.has(run?.status) || isTerminalEvaluation(run))
+    .sort((a, b) => createdTimestampMs(b) - createdTimestampMs(a));
+}
+
 export function exactShaProducerRuns(runs, targetSha) {
   const names = new Set(PRODUCER_WORKFLOW_NAMES);
   return runs.filter(
@@ -92,12 +100,7 @@ export function hasActiveProducer(runs) {
 }
 
 export function productionGateAlreadyCoversEvidence(runs, targetSha, producerCutoffMs) {
-  return runs.some((run) => {
-    if (run?.head_sha !== targetSha || run?.name !== ENTERPRISE_PRODUCTION_GATE_NAME) return false;
-    if (createdTimestampMs(run) < producerCutoffMs) return false;
-    if (ACTIVE_RUN_STATUSES.has(run?.status)) return true;
-    return isTerminalEvaluation(run);
-  });
+  return relevantProductionGateRuns(runs, targetSha, producerCutoffMs).length > 0;
 }
 
 export function scorecardAlreadyCoversEvidence(runs, targetSha, producerCutoffMs) {
@@ -260,16 +263,8 @@ async function dispatchScorecard(repository) {
 async function waitForTerminalProductionGate(repository, targetSha, producerCutoffMs) {
   for (let attempt = 1; attempt <= MAX_GATE_SETTLE_ATTEMPTS; attempt += 1) {
     const runs = await listExactShaRuns(repository, targetSha);
-    const covered = runs
-      .filter((run) => run?.name === ENTERPRISE_PRODUCTION_GATE_NAME)
-      .filter((run) => createdTimestampMs(run) >= producerCutoffMs)
-      .sort((a, b) => createdTimestampMs(b) - createdTimestampMs(a));
-
-    const latest = covered[0];
+    const latest = relevantProductionGateRuns(runs, targetSha, producerCutoffMs)[0];
     if (isTerminalEvaluation(latest)) return latest;
-    if (latest?.status === 'completed') {
-      throw new Error(`Terminal Enterprise Production Gate ended with non-evaluation conclusion (${latest?.conclusion ?? 'unknown'})`);
-    }
     if (attempt < MAX_GATE_SETTLE_ATTEMPTS) await sleep(GATE_SETTLE_INTERVAL_MS);
   }
   throw new Error('Terminal Enterprise Production Gate did not complete within the bounded settlement window');
