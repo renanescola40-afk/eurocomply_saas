@@ -51,8 +51,9 @@ describe('billing checkout route contract', () => {
     expect(existingBranch).toBeGreaterThan(stepUp);
     expect(source.slice(stepUp, existingBranch)).toContain('requireStepUpForRequest');
     expect(existingFlow).toContain('mutateSubscriptionLifecycle');
-    expect(existingFlow).toContain("action: 'upgrade'");
-    expect(existingFlow).toContain('billing_downgrade_schedule_required');
+    expect(existingFlow).toContain("? 'downgrade' : 'upgrade'");
+    expect(existingFlow).toContain("action,");
+    expect(existingFlow).toContain("billingOutcome = action === 'downgrade' ? 'scheduled' : 'updated'");
     expect(existingFlow).not.toContain('stripe.checkout.sessions.create');
   });
 
