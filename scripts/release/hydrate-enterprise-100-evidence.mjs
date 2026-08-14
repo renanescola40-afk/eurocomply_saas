@@ -16,6 +16,7 @@ const FULL_SHA = /^[a-f0-9]{40}$/;
 const EXPLICIT_SOURCE_ALIASES = Object.freeze({
   'release-validation/repository-quality.json': [
     'artifacts/enterprise-readiness/github-checks-evidence.json',
+    'artifacts/enterprise-readiness/github-checks-repository-compatibility.json',
   ],
   'release-validation/production-deployment.json': [
     'docs/security/evidence/runtime/deployment-smoke-validation.json',
@@ -45,6 +46,16 @@ const EXPLICIT_SOURCE_ALIASES = Object.freeze({
   'release-validation/final-go-no-go.json': [
     'docs/security/evidence/runtime/release-go-no-go.json',
   ],
+});
+
+// When multiple explicitly equivalent documents are emitted by one reviewed producer,
+// prefer the narrower semantic view instead of treating the expected pair as ambiguous.
+// The raw GitHub checks document remains a backwards-compatible fallback: it receives
+// credit only when the purpose-built repository compatibility document is absent.
+const AUTHORITATIVE_ALIAS_SOURCES = Object.freeze({
+  'release-validation/repository-quality.json': Object.freeze([
+    'artifacts/enterprise-readiness/github-checks-repository-compatibility.json',
+  ]),
 });
 
 // Sources created inside this closure run are more authoritative than retained
@@ -106,9 +117,10 @@ function candidatesForPath(candidates, requestedPath) {
 }
 
 function candidatePoolForExpectedPath(candidates, expectedPath) {
+  const normalizedExpectedPath = normalisePath(expectedPath);
   const direct = candidatesForPath(candidates, expectedPath);
   if (direct.length > 0) {
-    const authoritativePaths = AUTHORITATIVE_DECLARED_SOURCES[normalisePath(expectedPath)] ?? [];
+    const authoritativePaths = AUTHORITATIVE_DECLARED_SOURCES[normalizedExpectedPath] ?? [];
     const authoritative = direct.filter((candidate) => authoritativePaths.includes(candidate.relative));
     if (authoritative.length > 0) {
       return {
@@ -121,7 +133,7 @@ function candidatePoolForExpectedPath(candidates, expectedPath) {
     return { pool: direct, matchedBy: 'declared_path', sourceAliases: [], shadowedCandidateCount: 0 };
   }
 
-  const aliases = EXPLICIT_SOURCE_ALIASES[normalisePath(expectedPath)] ?? [];
+  const aliases = EXPLICIT_SOURCE_ALIASES[normalizedExpectedPath] ?? [];
   if (aliases.length === 0) return {
     pool: [], matchedBy: 'none', sourceAliases: [], shadowedCandidateCount: 0,
   };
@@ -132,6 +144,22 @@ function candidatePoolForExpectedPath(candidates, expectedPath) {
       if (!aliasCandidates.some((item) => item.absolute === candidate.absolute)) aliasCandidates.push(candidate);
     }
   }
+
+  const authoritativeAliasPaths = AUTHORITATIVE_ALIAS_SOURCES[normalizedExpectedPath] ?? [];
+  const authoritativeAliases = aliasCandidates.filter((candidate) =>
+    authoritativeAliasPaths.some((alias) =>
+      candidate.relative === alias || candidate.relative.endsWith(`/${alias}`),
+    ),
+  );
+  if (authoritativeAliases.length > 0) {
+    return {
+      pool: authoritativeAliases,
+      matchedBy: 'authoritative_explicit_alias',
+      sourceAliases: aliases,
+      shadowedCandidateCount: aliasCandidates.length - authoritativeAliases.length,
+    };
+  }
+
   return {
     pool: aliasCandidates, matchedBy: 'explicit_alias', sourceAliases: aliases, shadowedCandidateCount: 0,
   };
@@ -260,7 +288,10 @@ export async function hydrateEnterpriseClosureEvidence({
     targetSha,
     expectedEvidence: expectedPaths.length,
     hydratedEvidence: results.filter((item) => item.status === 'HYDRATED').length,
-    aliasedEvidence: results.filter((item) => item.status === 'HYDRATED' && item.matchedBy === 'explicit_alias').length,
+    aliasedEvidence: results.filter((item) =>
+      item.status === 'HYDRATED'
+      && (item.matchedBy === 'explicit_alias' || item.matchedBy === 'authoritative_explicit_alias'),
+    ).length,
     ambiguousEvidence: results.filter((item) => item.status === 'AMBIGUOUS').length,
     conflictingShaEvidence: results.filter((item) => item.status === 'SHA_CONFLICT').length,
     rejectedSensitiveEvidence: results.filter((item) => item.status === 'REJECTED_SENSITIVE').length,
@@ -268,7 +299,7 @@ export async function hydrateEnterpriseClosureEvidence({
     missingEvidence: results.filter((item) => item.status === 'MISSING').length,
     invalidJsonFiles,
     results,
-    truthBoundary: 'Hydration restores only exact-SHA evidence by declared path or a small explicit semantic alias allowlist. A closure-generated source may override retained copies only through an anchored authoritative-source allowlist; conflicts within that authority still fail closed. Known nested SHA provenance such as runtimeContext.commitSha is accepted, but conflicting SHA bindings are rejected. Hydration does not award PASS, approve human review, infer equivalence by filename similarity, or convert missing, stale, ambiguous, conflicting or sensitive evidence into closure credit.',
+    truthBoundary: 'Hydration restores only exact-SHA evidence by declared path or a small explicit semantic alias allowlist. A purpose-built narrower compatibility view may supersede a broader alias only through an explicit authoritative-alias allowlist; otherwise conflicting distinct evidence fails closed. A closure-generated source may override retained copies only through an anchored authoritative-source allowlist; conflicts within that authority still fail closed. Known nested SHA provenance such as runtimeContext.commitSha is accepted, but conflicting SHA bindings are rejected. Hydration does not award PASS, approve human review, infer equivalence by filename similarity, or convert missing, stale, ambiguous, conflicting or sensitive evidence into closure credit.',
   };
 
   await writeFile(
