@@ -1,7 +1,15 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  copyFileSync,
+  existsSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 
 const root = process.cwd();
@@ -15,6 +23,15 @@ const breakGlassForwardName = '20260813234000_reconcile_enterprise_break_glass_g
 const breakGlassHistoricalPath = join(root, 'supabase', 'migrations', breakGlassHistoricalName);
 const breakGlassHeldPath = `${breakGlassHistoricalPath}.unapplied-history-held`;
 const breakGlassForwardPath = join(root, 'supabase', 'migrations', breakGlassForwardName);
+const billingCatalogName = '20260727193000_enterprise_billing_catalog.sql';
+const billingCatalogPath = join(root, 'supabase', 'migrations', billingCatalogName);
+const addOnForwardName = '20260813124224_reconcile_organization_add_ons.sql';
+const addOnForwardPath = join(root, 'supabase', 'migrations', addOnForwardName);
+const addOnForwardHeldPath = `${addOnForwardPath}.dependency-reordered`;
+const addOnForwardReplayName = '20260727192950_reconcile_organization_add_ons.sql';
+const addOnForwardReplayPath = join(root, 'supabase', 'migrations', addOnForwardReplayName);
+const replayContractPath = join(root, 'scripts', 'recovery', 'run-ephemeral-project-schema-replay.mjs');
+const billingCatalogEvidencePath = join(root, 'docs', 'security', 'evidence', 'human-review', 'split-reviews', 'i-dup-16-live-object-evidence.md');
 const delegate = join(root, 'scripts', 'recovery', 'run-reviewed-ephemeral-schema-boundary.mjs');
 
 const derivedRules = Object.freeze([
@@ -143,6 +160,51 @@ function validateBreakGlassReplayBoundary() {
   }
 }
 
+function validateAddOnReplayOrderBoundary() {
+  for (const [path, label] of [
+    [billingCatalogPath, 'billing catalog migration'],
+    [addOnForwardPath, 'organization add-on forward reconciliation'],
+    [replayContractPath, 'schema replay contract'],
+    [billingCatalogEvidencePath, 'billing catalog split-review evidence'],
+  ]) {
+    if (!existsSync(path)) fail(`Missing ${label}: ${path}`);
+  }
+  for (const [path, label] of [
+    [addOnForwardHeldPath, 'organization add-on forward hold path'],
+    [addOnForwardReplayPath, 'organization add-on forward replay path'],
+  ]) {
+    if (existsSync(path)) fail(`${label} already exists: ${path}`);
+  }
+
+  const billingCatalogSql = readFileSync(billingCatalogPath, 'utf8');
+  if (!billingCatalogSql.includes('alter table public.organization_add_ons')
+      || !billingCatalogSql.includes('create table if not exists public.add_ons')) {
+    fail('Billing catalog no longer proves its organization_add_ons prerequisite');
+  }
+
+  const addOnForwardSql = readFileSync(addOnForwardPath, 'utf8');
+  for (const marker of [
+    'create table if not exists public.organization_add_ons',
+    'constraint organization_add_ons_unique_org_addon unique (organization_id, add_on_id)',
+    'alter table public.organization_add_ons force row level security',
+  ]) {
+    if (!addOnForwardSql.includes(marker)) fail(`Organization add-on forward marker drifted: ${marker}`);
+  }
+
+  const replayContract = readFileSync(replayContractPath, 'utf8');
+  if (!replayContract.includes("'20260613_organization_add_ons.sql': [")
+      || !replayContract.includes("'supabase/migrations/20260813124224_reconcile_organization_add_ons.sql'")) {
+    fail('Schema replay contract no longer proves canonical add-on schema-effect replacement');
+  }
+
+  const evidence = readFileSync(billingCatalogEvidencePath, 'utf8');
+  if (!evidence.includes(billingCatalogName)
+      || !evidence.includes('current add-on code and production use `organization_add_ons`')
+      || !evidence.includes('billing-catalog lineage is reconciled')) {
+    fail('Billing catalog evidence no longer proves the add-on authority dependency boundary');
+  }
+}
+
 function stageBlockedRule(rule) {
   const path = join(root, 'supabase', 'migrations', rule.name);
   const bytes = readFileSync(path);
@@ -202,6 +264,24 @@ function restoreBreakGlassHistoricalMigration(held) {
   renameSync(breakGlassHeldPath, breakGlassHistoricalPath);
 }
 
+function stageAddOnForwardReplayOrder() {
+  renameSync(addOnForwardPath, addOnForwardHeldPath);
+  copyFileSync(addOnForwardHeldPath, addOnForwardReplayPath);
+  if (!readFileSync(addOnForwardHeldPath).equals(readFileSync(addOnForwardReplayPath))) {
+    fail('Organization add-on forward replay byte integrity mismatch');
+  }
+  return true;
+}
+
+function restoreAddOnForwardReplayOrder(staged) {
+  if (!staged) return;
+  rmSync(addOnForwardReplayPath, { force: true });
+  if (!existsSync(addOnForwardHeldPath) || existsSync(addOnForwardPath)) {
+    fail('Organization add-on forward replay hold state drifted before restore');
+  }
+  renameSync(addOnForwardHeldPath, addOnForwardPath);
+}
+
 function restoreHistoricalBytes(items) {
   const failures = [];
   for (const item of [...items].reverse()) {
@@ -227,21 +307,25 @@ function main() {
   for (const rule of blockedRules) validateReviewBoundary(review, rule);
   validateDerivedPrerequisiteBoundaries();
   validateBreakGlassReplayBoundary();
+  validateAddOnReplayOrderBoundary();
 
   const staged = [];
   let derivedHeld = [];
   let breakGlassHeld = false;
+  let addOnOrderStaged = false;
   let delegatedError = null;
   let restoreError = null;
   try {
     for (const rule of blockedRules) staged.push(stageBlockedRule(rule));
     derivedHeld = holdDerivedRules();
     breakGlassHeld = holdBreakGlassHistoricalMigration();
+    addOnOrderStaged = stageAddOnForwardReplayOrder();
     execFileSync(process.execPath, [delegate], { stdio: 'inherit', env: process.env });
   } catch (error) {
     delegatedError = error;
   } finally {
     try {
+      restoreAddOnForwardReplayOrder(addOnOrderStaged);
       restoreBreakGlassHistoricalMigration(breakGlassHeld);
       restoreDerivedRules(derivedHeld);
       restoreHistoricalBytes(staged);
@@ -256,8 +340,9 @@ function main() {
   appendGithubEnv('RECOVERY_EPHEMERAL_SPLIT_REVIEW_BLOCKED_FILE_COUNT', String(blockedRules.length));
   appendGithubEnv('RECOVERY_EPHEMERAL_DERIVED_PREREQUISITE_BLOCKED_FILE_COUNT', String(derivedRules.length));
   appendGithubEnv('RECOVERY_EPHEMERAL_BREAK_GLASS_UNAPPLIED_EXCLUDED_FILE_COUNT', '1');
+  appendGithubEnv('RECOVERY_EPHEMERAL_ADD_ON_FORWARD_REORDERED_FILE_COUNT', '1');
   process.stdout.write(
-    `Reviewed disposable schema boundary v2 preserved ${blockedRules.map((rule) => rule.id).join(', ')} as split-review blocked, held ${derivedRules.map((rule) => rule.id).join(', ')} behind reviewed prerequisites, excluded ${breakGlassHistoricalName} under its forward-reconciliation decision, and restored canonical historical bytes.\n`,
+    `Reviewed disposable schema boundary v2 preserved ${blockedRules.map((rule) => rule.id).join(', ')} as split-review blocked, held ${derivedRules.map((rule) => rule.id).join(', ')} behind reviewed prerequisites, excluded ${breakGlassHistoricalName} under its forward-reconciliation decision, replayed ${addOnForwardName} immediately before ${billingCatalogName}, and restored canonical historical bytes.\n`,
   );
 }
 
