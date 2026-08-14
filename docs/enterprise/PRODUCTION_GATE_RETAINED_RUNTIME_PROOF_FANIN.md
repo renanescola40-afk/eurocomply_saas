@@ -58,6 +58,8 @@ That skipped record is **not** a release evaluation. The enterprise GitHub-check
 
 The latest real Production Gate evaluation for the same exact SHA remains authoritative. A newer real `failure`, `cancelled`, `timed_out`, `action_required`, or successful gate evaluation is never ignored. Skipped results from other required workflows are also not globally ignored.
 
+The Enterprise Readiness Scorecard stabilizer uses the same no-op predicate. It never treats the orchestration-only skipped record as PASS. If an active gate that appeared to cover the producer cutoff settles into only that precise no-op shape, the stabilizer may request at most one exact-main manual refresh after two skipped-only polls, and only when it did not already dispatch a refresh. A real terminal non-success/failure gate conclusion remains authoritative and stops stabilization instead of falling back to an older result.
+
 This prevents a failed sibling producer from downgrading repository evidence from 21/21 to 19/21 merely by creating a newer no-op gate record, while preserving fail-closed behavior for every actual gate execution.
 
 ## Fail-closed boundary
