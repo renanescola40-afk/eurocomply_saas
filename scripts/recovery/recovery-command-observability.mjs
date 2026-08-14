@@ -158,6 +158,6 @@ export function buildRecoveryCommandDiagnostic({ error, phase, command }) {
     timedOut: error?.code === 'ETIMEDOUT' || error?.killed === true,
     restoreStage: isolatedRestore ? classifyRecoveryRestoreStage(error) : null,
     missingObjectKind: diagnosticMissingObject ? classifyRecoveryMissingObjectKind(error) : null,
-    missingObjectScope: diagnosticMissingObject ? classifyRecoveryMissingObjectScope(error) : null,
+    missingObjectScope: null,
   };
 }
