@@ -30,6 +30,13 @@ describe('billing lifecycle authority', () => {
     expect(source).toContain("{ error: 'contract_managed_billing' }");
   });
 
+  it('does not expose annual self-serve billing before live annual Prices are provider-verified', async () => {
+    const source = await readFile(SUBSCRIPTION_ROUTE, 'utf8');
+
+    expect(source).toContain("parsed.data.interval === 'year' || parsed.data.interval === 'annual'");
+    expect(source).toContain("{ error: 'annual_billing_not_available' }");
+  });
+
   it('requires live subscription authority before upgrade, downgrade, cancel, reactivate or add-on mutations', async () => {
     const source = await readFile(SUBSCRIPTION_ROUTE, 'utf8');
 
