@@ -46,10 +46,13 @@ describe('bounded Supabase forward reconciliation contract', () => {
     }
   });
 
-  it('keeps the dry-run write boundary fail-closed', () => {
+  it('keeps the bounded workflows fail-closed for production writes', () => {
     expect(dryRun).toContain('db push --dry-run --db-url "$SUPABASE_DB_POOLER_URL"');
     expect(dryRun).not.toContain('db push --db-url "$SUPABASE_DB_POOLER_URL"');
-    expect(rehearsal).toContain('productionWritePerformed=false');
+    expect(rehearsal).not.toContain('db push');
+    expect(config.truthBoundary.productionWriteAuthorizedByConfig).toBe(false);
+    expect(config.truthBoundary.migrationHistoryRepairAllowed).toBe(false);
+    expect(config.truthBoundary.unrestrictedDbPushAllowed).toBe(false);
   });
 
   it('proves the Break-Glass tenant and backend-only postconditions', () => {
