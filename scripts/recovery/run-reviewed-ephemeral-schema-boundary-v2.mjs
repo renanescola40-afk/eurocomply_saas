@@ -9,6 +9,12 @@ const batchIPath = join(root, 'docs', 'security', 'evidence', 'human-review', 's
 const batchLPath = join(root, 'docs', 'security', 'evidence', 'human-review', 'supabase-migration-mega-batch-l.md');
 const batchHPath = join(root, 'docs', 'security', 'evidence', 'human-review', 'supabase-migration-mega-batch-h.md');
 const batchNPath = join(root, 'docs', 'security', 'evidence', 'human-review', 'supabase-migration-mega-batch-n.md');
+const breakGlassDecisionPath = join(root, 'docs', 'security', 'decisions', '2026-08-13-enterprise-break-glass-unapplied-history.md');
+const breakGlassHistoricalName = '20260727160000_enterprise_break_glass_governance.sql';
+const breakGlassForwardName = '20260813234000_reconcile_enterprise_break_glass_governance.sql';
+const breakGlassHistoricalPath = join(root, 'supabase', 'migrations', breakGlassHistoricalName);
+const breakGlassHeldPath = `${breakGlassHistoricalPath}.unapplied-history-held`;
+const breakGlassForwardPath = join(root, 'supabase', 'migrations', breakGlassForwardName);
 const delegate = join(root, 'scripts', 'recovery', 'run-reviewed-ephemeral-schema-boundary.mjs');
 
 const derivedRules = Object.freeze([
@@ -111,6 +117,32 @@ function validateDerivedPrerequisiteBoundaries() {
   }
 }
 
+function validateBreakGlassReplayBoundary() {
+  if (!existsSync(breakGlassDecisionPath)) fail(`Missing Break-Glass replay decision: ${breakGlassDecisionPath}`);
+  if (!existsSync(breakGlassHistoricalPath)) fail(`Missing Break-Glass historical migration: ${breakGlassHistoricalName}`);
+  if (existsSync(breakGlassHeldPath)) fail(`Break-Glass historical hold path already exists: ${breakGlassHeldPath}`);
+  if (!existsSync(breakGlassForwardPath)) fail(`Missing Break-Glass forward reconciliation: ${breakGlassForwardName}`);
+
+  const decision = readFileSync(breakGlassDecisionPath, 'utf8');
+  for (const marker of [
+    breakGlassHistoricalName,
+    breakGlassForwardName,
+    'unapplied historical schema-effect source',
+    'RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL=false',
+  ]) {
+    if (!decision.includes(marker)) fail(`Break-Glass replay decision marker drifted: ${marker}`);
+  }
+
+  const forwardSql = readFileSync(breakGlassForwardPath, 'utf8');
+  for (const marker of [
+    'organization_members_organization_id_id_key',
+    'enterprise_break_glass_requests_organization_id_id_key',
+    'create table if not exists public.enterprise_break_glass_requests',
+  ]) {
+    if (!forwardSql.includes(marker)) fail(`Break-Glass forward reconciliation marker drifted: ${marker}`);
+  }
+}
+
 function stageBlockedRule(rule) {
   const path = join(root, 'supabase', 'migrations', rule.name);
   const bytes = readFileSync(path);
@@ -157,6 +189,19 @@ function restoreDerivedRules(items) {
   if (failures.length) fail(`Failed to restore derived prerequisite migrations: ${failures.join('; ')}`);
 }
 
+function holdBreakGlassHistoricalMigration() {
+  renameSync(breakGlassHistoricalPath, breakGlassHeldPath);
+  return true;
+}
+
+function restoreBreakGlassHistoricalMigration(held) {
+  if (!held) return;
+  if (!existsSync(breakGlassHeldPath) || existsSync(breakGlassHistoricalPath)) {
+    fail('Break-Glass historical hold state drifted before restore');
+  }
+  renameSync(breakGlassHeldPath, breakGlassHistoricalPath);
+}
+
 function restoreHistoricalBytes(items) {
   const failures = [];
   for (const item of [...items].reverse()) {
@@ -181,19 +226,23 @@ function main() {
 
   for (const rule of blockedRules) validateReviewBoundary(review, rule);
   validateDerivedPrerequisiteBoundaries();
+  validateBreakGlassReplayBoundary();
 
   const staged = [];
   let derivedHeld = [];
+  let breakGlassHeld = false;
   let delegatedError = null;
   let restoreError = null;
   try {
     for (const rule of blockedRules) staged.push(stageBlockedRule(rule));
     derivedHeld = holdDerivedRules();
+    breakGlassHeld = holdBreakGlassHistoricalMigration();
     execFileSync(process.execPath, [delegate], { stdio: 'inherit', env: process.env });
   } catch (error) {
     delegatedError = error;
   } finally {
     try {
+      restoreBreakGlassHistoricalMigration(breakGlassHeld);
       restoreDerivedRules(derivedHeld);
       restoreHistoricalBytes(staged);
     } catch (error) {
@@ -206,8 +255,9 @@ function main() {
 
   appendGithubEnv('RECOVERY_EPHEMERAL_SPLIT_REVIEW_BLOCKED_FILE_COUNT', String(blockedRules.length));
   appendGithubEnv('RECOVERY_EPHEMERAL_DERIVED_PREREQUISITE_BLOCKED_FILE_COUNT', String(derivedRules.length));
+  appendGithubEnv('RECOVERY_EPHEMERAL_BREAK_GLASS_UNAPPLIED_EXCLUDED_FILE_COUNT', '1');
   process.stdout.write(
-    `Reviewed disposable schema boundary v2 preserved ${blockedRules.map((rule) => rule.id).join(', ')} as split-review blocked, held ${derivedRules.map((rule) => rule.id).join(', ')} behind reviewed prerequisites, and restored canonical historical bytes.\n`,
+    `Reviewed disposable schema boundary v2 preserved ${blockedRules.map((rule) => rule.id).join(', ')} as split-review blocked, held ${derivedRules.map((rule) => rule.id).join(', ')} behind reviewed prerequisites, excluded ${breakGlassHistoricalName} under its forward-reconciliation decision, and restored canonical historical bytes.\n`,
   );
 }
 
