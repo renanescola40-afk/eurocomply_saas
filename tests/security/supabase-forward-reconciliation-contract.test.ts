@@ -14,14 +14,15 @@ const selected = config.migrations.map((migration) => migration.filename);
 describe('bounded Supabase forward reconciliation contract', () => {
   it('selects exactly the seven reviewed forward-only reconciliations', () => {
     expect(selected).toEqual([
-      '20260809135000_enterprise_core_runtime_schema_reconciliation.sql',
       '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
       '20260813194500_reconcile_step_up_challenges_runtime.sql',
       '20260813200000_reconcile_subscription_schema_defaults.sql',
       '20260813201500_reconcile_controlled_document_storage.sql',
       '20260813201600_force_tasks_rls.sql',
       '20260813234000_reconcile_enterprise_break_glass_governance.sql',
+      '20260814101500_reconcile_enterprise_core_active_runtime.sql',
     ]);
+    expect(selected).not.toContain('20260809135000_enterprise_core_runtime_schema_reconciliation.sql');
     expect(config.truthBoundary).toMatchObject({
       automaticClassification: false,
       productionWriteAuthorizedByConfig: false,
