@@ -139,6 +139,15 @@ describe('ephemeral Supabase recovery database contract', () => {
     expect(exercise).toContain("run('docker', ['cp', path, `${container}:${containerPath}`], {}, 'recovery_copy_dump_to_isolated_target_failed')");
     expect(exercise).toContain("'--single-transaction', '--set', 'ON_ERROR_STOP=1'");
     expect(exercise).toContain("'--command', 'SET session_replication_role = replica;'");
+    expect(exercise).toContain("'--command', `\\\\echo ${RESTORE_STAGE_MARKERS.roles}`");
+    expect(exercise).toContain("'--command', `\\\\echo ${RESTORE_STAGE_MARKERS.schema}`");
+    expect(exercise).toContain("'--command', `\\\\echo ${RESTORE_STAGE_MARKERS.data}`");
+    expect(exercise.indexOf("`\\\\echo ${RESTORE_STAGE_MARKERS.roles}`"))
+      .toBeLessThan(exercise.indexOf("`\\\\echo ${RESTORE_STAGE_MARKERS.schema}`"));
+    expect(exercise.indexOf("`\\\\echo ${RESTORE_STAGE_MARKERS.schema}`"))
+      .toBeLessThan(exercise.indexOf("`\\\\echo ${RESTORE_STAGE_MARKERS.data}`"));
+    expect(exercise).not.toContain("'--echo-all'");
+    expect(exercise).not.toContain("'--echo-hidden'");
     expect(exercise).toContain("criticalTables = ['organizations', 'organization_members', 'audit_logs']");
     expect(exercise).toContain("sourceAuthUsers = Number(sql(source, 'select count(*) from auth.users;', 'recovery_source_auth_users_count_failed'))");
     expect(exercise).toContain("restoredAuthUsers = Number(sql(restore, 'select count(*) from auth.users;', 'recovery_restored_auth_users_count_failed'))");
@@ -156,6 +165,7 @@ describe('ephemeral Supabase recovery database contract', () => {
     expect(exercise).toContain('credentialsStored: false');
     expect(exercise).toContain('commandArgumentsStored: false');
     expect(exercise).toContain('rawErrorMessagesStored: false');
+    expect(exercise).toContain('SQL identifiers');
     expect(exercise).toContain('failures.push(safeFailureCode(error))');
     expect(recovery).toContain('EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK');
     expect(recovery).toContain('LAST_KNOWN_GOOD_COMMIT_SHA');
