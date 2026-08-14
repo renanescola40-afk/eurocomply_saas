@@ -84,6 +84,16 @@ describe('billing UI API boundary', () => {
     expect(billingPage).toContain('canManageBilling ? (');
   });
 
+  it('does not present failed-payment subscriptions as a healthy current plan', () => {
+    expect(publicCheckoutPage).toContain("const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing'])");
+    expect(publicCheckoutPage).toContain("const PAYMENT_RECOVERY_STATUSES = new Set(['past_due', 'unpaid', 'incomplete'])");
+    expect(publicCheckoutPage).toContain('const needsPaymentRecovery = hasStatus(billing?.status, PAYMENT_RECOVERY_STATUSES)');
+    expect(publicCheckoutPage).toContain('needsPaymentRecovery && organization');
+    expect(publicCheckoutPage).toContain('BillingActionButton action="portal"');
+    expect(publicCheckoutPage).toContain('paymentRecoveryCopy');
+    expect(publicCheckoutPage).not.toContain('CURRENT_PLAN_BLOCKING_STATUSES');
+  });
+
   it('has no legacy billing action helper file', () => {
     expect(existsSync(legacyBillingActionsPath)).toBe(false);
   });
