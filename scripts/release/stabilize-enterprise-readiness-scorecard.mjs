@@ -265,11 +265,16 @@ async function waitForTerminalProductionGate(repository, targetSha, producerCuto
       .filter((run) => createdTimestampMs(run) >= producerCutoffMs)
       .sort((a, b) => createdTimestampMs(b) - createdTimestampMs(a));
 
-    const latest = covered[0];
-    if (isTerminalEvaluation(latest)) return latest;
-    if (latest?.status === 'completed') {
-      throw new Error(`Terminal Enterprise Production Gate ended with non-evaluation conclusion (${latest?.conclusion ?? 'unknown'})`);
+    const latestTerminalEvaluation = covered.find((run) => isTerminalEvaluation(run));
+    if (latestTerminalEvaluation) return latestTerminalEvaluation;
+
+    const latestActiveEvaluation = covered.find((run) => ACTIVE_RUN_STATUSES.has(run?.status));
+    if (!latestActiveEvaluation && covered[0]?.status === 'completed') {
+      console.warn(
+        `Ignoring non-evaluation Enterprise Production Gate conclusion (${covered[0]?.conclusion ?? 'unknown'}) while waiting for a bounded success/failure evaluation`,
+      );
     }
+
     if (attempt < MAX_GATE_SETTLE_ATTEMPTS) await sleep(GATE_SETTLE_INTERVAL_MS);
   }
   throw new Error('Terminal Enterprise Production Gate did not complete within the bounded settlement window');
