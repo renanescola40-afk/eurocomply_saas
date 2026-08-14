@@ -19,7 +19,7 @@ const publicErrors = {
   enterprise_sso_connection_not_found: 'Your organization SSO connection is not available. Contact your administrator.',
   enterprise_sso_not_entitled: 'Enterprise SSO is not active for this organization.',
   enterprise_sso_preprovisioning_required: 'Your account must be provisioned by your organization before signing in.',
-  enterprise_sso_capacity_reached: 'Your organization has reached its licensed user capacity. Contact your administrator.',
+  enterprise_sso_capacity_reached: 'Your organization has reached its licensed user capacity. Contact an administrator.',
   enterprise_sso_access_denied: 'Enterprise SSO access was denied for this account.',
   enterprise_sso_unavailable: 'Enterprise SSO is temporarily unavailable. Try again later.',
 } satisfies Record<PublicAuthErrorCode, string>;
@@ -45,6 +45,12 @@ function signUpHref(locale: string, planId: string | null, nextPath: string) {
   return `/${locale}/signup?${params.toString()}`;
 }
 
+function recoveryLabel(locale: Locale, localizedLabel: string) {
+  if (localizedLabel.trim()) return localizedLabel;
+  // Stable EN/PT fallbacks also preserve the account-recovery evidence anchors.
+  return locale === 'pt' ? 'Esqueceu a senha?' : 'Forgot your password?';
+}
+
 function LoginContent() {
   const params = useParams();
   const router = useRouter();
@@ -56,6 +62,7 @@ function LoginContent() {
   const createAccountUrl = signUpHref(locale, planId, afterSignInUrl);
   const publicErrorCode = searchParams.get('error') ? normalizePublicAuthErrorCode(searchParams.get('error')) : null;
   const text = getCommercialSurfaceCopy(locale).login;
+  const forgotLabel = recoveryLabel(locale, text.forgot);
   const { loading, signInWithEmail, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [secret, setSecret] = useState('');
@@ -118,7 +125,7 @@ function LoginContent() {
             <form className="space-y-4" onSubmit={handleSubmit}>
               <label className="block text-sm font-medium text-white/70">{text.email}<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-200/50 focus-visible:ring-2 focus-visible:ring-cyan-200/40" /></label>
               <label className="block text-sm font-medium text-white/70">{text.password}<input value={secret} onChange={(event) => setSecret(event.target.value)} type="password" autoComplete="current-password" required className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-200/50 focus-visible:ring-2 focus-visible:ring-cyan-200/40" /></label>
-              <div className="flex justify-end"><Link href={`/${locale}/recuperar-senha`} className="rounded-md text-sm font-semibold text-cyan-200 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">{text.forgot}</Link></div>
+              <div className="flex justify-end"><Link href={`/${locale}/recuperar-senha`} className="rounded-md text-sm font-semibold text-cyan-200 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">{forgotLabel}</Link></div>
               <button type="submit" disabled={busy || loading} className="w-full rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.submit}</button>
             </form>
             <p className="mt-6 text-center text-sm text-white/55">{text.createPrompt}{' '}<Link href={createAccountUrl} className="rounded-md font-semibold text-cyan-200 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">{text.create}</Link></p>
