@@ -260,7 +260,13 @@ async function dispatchScorecard(repository) {
   await dispatchWorkflow(repository, SCORECARD_WORKFLOW_PATH);
 }
 
-async function waitForTerminalProductionGate(repository, targetSha, producerCutoffMs) {
+async function waitForTerminalProductionGate(
+  repository,
+  targetSha,
+  producerCutoffMs,
+  { refreshAlreadyDispatched = false } = {},
+) {
+
   for (let attempt = 1; attempt <= MAX_GATE_SETTLE_ATTEMPTS; attempt += 1) {
     const runs = await listExactShaRuns(repository, targetSha);
     const latest = relevantProductionGateRuns(runs, targetSha, producerCutoffMs)[0];
@@ -317,6 +323,7 @@ export async function stabilize({ now = () => Date.now() } = {}) {
   }
 
   upstreamCutoffMs = latestProducerTimestamp(refreshedUpstream);
+  let productionGateRefreshDispatched = false;
   if (!productionGateAlreadyCoversEvidence(refreshedRuns, targetSha, upstreamCutoffMs)) {
     mainSha = await currentMainSha(repository);
     if (mainSha !== targetSha) {
@@ -327,9 +334,12 @@ export async function stabilize({ now = () => Date.now() } = {}) {
     }
 
     await dispatchProductionGate(repository);
+    productionGateRefreshDispatched = true;
   }
 
-  await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs);
+  await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs, {
+    refreshAlreadyDispatched: productionGateRefreshDispatched,
+  });
 
   refreshedRuns = await listExactShaRuns(repository, targetSha);
   refreshedUpstream = exactShaUpstreamProducerRuns(refreshedRuns, targetSha);
