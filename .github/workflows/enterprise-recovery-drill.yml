@@ -7,14 +7,45 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: enterprise-recovery-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  environment-governance:
+    name: Verify recovery environment governance before protected secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ github.sha }}
+    steps:
+      - name: Checkout exact assessed main SHA without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Verify exact current main SHA before governance lookup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = 'main'
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git ls-remote origin refs/heads/main | grep -q "^${TARGET_SHA}"
+
+      - name: Verify recovery environment governance before protected secrets
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: supabase-production-migration-dry-run
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
   recovery:
     name: Exact-SHA isolated backup restore and RPO RTO proof
+    needs: environment-governance
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     environment:

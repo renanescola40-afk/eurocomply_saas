@@ -1,6 +1,32 @@
 name: Ephemeral Supabase Project Smoke
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/recovery/manage-ephemeral-recovery-database.mjs'
+      - 'scripts/recovery/run-ephemeral-project-schema-replay.mjs'
+      - 'scripts/recovery/run-ephemeral-project-schema-replay-reviewed-boundary.mjs'
+      - 'scripts/recovery/run-ephemeral-project-schema-replay-reviewed-boundary-v2.mjs'
+      - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary.mjs'
+      - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v2.mjs'
+      - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs'
+      - 'scripts/recovery/run-backup-restore-exercise.mjs'
+      - 'scripts/recovery/recovery-extension-parity.mjs'
+      - 'supabase/migrations/**'
+      - 'docs/security/evidence/human-review/**'
+      - 'docs/security/decisions/**'
+      - '.github/workflows/final-technical-controls-proof.yml'
+      - '.github/workflows/recovery-resilience-proof.yml'
+      - '.github/workflows/data-governance-runtime-proof.yml'
+      - '.github/workflows/incident-continuity-runtime-proof.yml'
+      - '.github/workflows/procurement-trust-runtime-proof.yml'
+      - '.github/workflows/enterprise-integrations-runtime-proof.yml'
+      - '.github/workflows/ephemeral-supabase-project-smoke.yml'
+      - 'tests/security/ephemeral-recovery-database-contract.test.ts'
+      - 'tests/security/ephemeral-project-schema-workflows.test.ts'
+      - 'tests/security/ephemeral-main-schema-proof-contract.test.ts'
+      - 'tests/security/recovery-extension-parity.test.ts'
   pull_request:
     branches: [main]
     paths:
@@ -12,7 +38,10 @@ on:
       - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v2.mjs'
       - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
+      - 'scripts/recovery/recovery-extension-parity.mjs'
       - 'supabase/migrations/**'
+      - 'docs/security/evidence/human-review/**'
+      - 'docs/security/decisions/**'
       - '.github/workflows/final-technical-controls-proof.yml'
       - '.github/workflows/recovery-resilience-proof.yml'
       - '.github/workflows/data-governance-runtime-proof.yml'
@@ -22,12 +51,14 @@ on:
       - '.github/workflows/ephemeral-supabase-project-smoke.yml'
       - 'tests/security/ephemeral-recovery-database-contract.test.ts'
       - 'tests/security/ephemeral-project-schema-workflows.test.ts'
+      - 'tests/security/ephemeral-main-schema-proof-contract.test.ts'
+      - 'tests/security/recovery-extension-parity.test.ts'
 
 permissions:
   contents: read
 
 concurrency:
-  group: ephemeral-supabase-project-smoke-pr-${{ github.event.pull_request.number }}
+  group: ephemeral-supabase-project-smoke-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
   cancel-in-progress: true
 
 jobs:
@@ -36,16 +67,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:
-      EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      EXPECTED_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
     steps:
-      - name: Checkout untrusted PR head without credentials
+      - name: Checkout exact assessed SHA without credentials
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
           persist-credentials: false
 
-      - name: Verify checked-out PR head
+      - name: Verify checked-out exact assessed SHA
         shell: bash
         run: |
           set -euo pipefail
@@ -110,7 +141,7 @@ jobs:
         if: env.EPHEMERAL_SCHEMA_REPLAY_EXIT_CODE != '0'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: ephemeral-schema-replay-diagnostics-${{ github.event.pull_request.head.sha }}
+          name: ephemeral-schema-replay-diagnostics-${{ env.EXPECTED_HEAD_SHA }}
           path: ${{ runner.temp }}/ephemeral-schema-replay.sanitized.log
           if-no-files-found: error
           retention-days: 14
