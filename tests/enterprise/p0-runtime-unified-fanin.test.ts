@@ -29,14 +29,20 @@ describe('P0 runtime unified retained-evidence fan-in', () => {
     const hydrateStep = workflow.indexOf('Hydrate all independently valid exact-SHA retained runtime evidence');
     const dedicatedUploadStep = workflow.indexOf('Retrieve exact-SHA upload scanner runtime evidence');
     const dedicatedBranchStep = workflow.indexOf('Retrieve exact-SHA branch protection runtime evidence');
+    const dedicatedProductionStep = workflow.indexOf('Retrieve exact-SHA production runtime evidence');
+    const dedicatedPublicFinalStep = workflow.indexOf('Retrieve exact-SHA public production final evidence');
 
     expect(dedicatedUploadStep).toBeGreaterThan(hydrateStep);
     expect(dedicatedBranchStep).toBeGreaterThan(hydrateStep);
+    expect(dedicatedProductionStep).toBeGreaterThan(hydrateStep);
+    expect(dedicatedPublicFinalStep).toBeGreaterThan(hydrateStep);
     expect(workflow).toContain("UPLOAD_SCANNER_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/upload-security-ci.yml' && 'true' || 'false' }}");
     expect(workflow).toContain("BRANCH_PROTECTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/branch-protection-runtime-proof.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("PRODUCTION_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/production-runtime-proof.yml' && 'true' || 'false' }}");
+    expect(workflow).toContain("PUBLIC_FINAL_RUNTIME_EVIDENCE_REQUIRED: ${{ github.event.workflow_run.path == '.github/workflows/public-production-final.yml' && 'true' || 'false' }}");
   });
 
-  it('uses the existing fail-closed retained-producer allowlist and never promotes missing proofs', () => {
+  it('uses the fail-closed retained-producer allowlist and never promotes missing proofs', () => {
     const hydrator = read(hydratorPath);
 
     for (const key of [
@@ -44,13 +50,17 @@ describe('P0 runtime unified retained-evidence fan-in', () => {
       'supabaseRls',
       'uploadScanner',
       'auditChain',
+      'productionRuntime',
       'productionProvider',
       'branchProtection',
       'stepUp',
       'stripePromoted',
+      'publicProductionFinal',
     ]) {
       expect(hydrator).toContain(`key: '${key}'`);
     }
+    expect(hydrator).toContain('fetchProductionRuntimeEvidence');
+    expect(hydrator).toContain('fetchPublicProductionFinalEvidence');
     expect(hydrator).toContain('repositorySnapshotsClearedBeforeHydration: true');
     expect(hydrator).toContain('statusPromotionPerformedByHydrator: false');
     expect(hydrator).toContain('Invalid optional producer artifacts are cleared and reported as missing rather than aborting the diagnostic report; they receive no PASS credit.');

@@ -32,6 +32,7 @@ on:
       - Branch Protection Runtime Proof
       - Step-Up Runtime Proof
       - Stripe Runtime Evidence Promotion
+      - Public Production Final
       - Final Technical Controls Proof
       - Recovery Resilience Proof
     branches: [main]
@@ -106,7 +107,7 @@ jobs:
             echo "- Dispatched terminal scorecard: ${DISPATCHED:-unknown}"
             echo "- Reason: ${REASON:-stabilizer-failed-before-output}"
             echo
-            echo 'Producer-triggered runs debounce before checkout or API access. The surviving exact-SHA run retries transient GitHub API pressure, waits for the reviewed material producer set, refreshes the Enterprise Production Gate when its snapshot predates those producers, and only then dispatches the existing readiness scorecard. A Production Gate run dispatched by this stabilizer is ignored on completion so it cannot recursively restart the stabilizer.'
+            echo 'Producer-triggered runs debounce before checkout or API access. The surviving exact-SHA run retries transient GitHub API pressure, waits for the reviewed material producer set, refreshes the Enterprise Production Gate when its snapshot predates those producers, accepts a terminal GO or NO_GO gate as a completed evaluation, and only then dispatches the existing readiness scorecard when needed. A Production Gate run dispatched by this stabilizer is ignored on completion so it cannot recursively restart the stabilizer.'
             echo
-            echo 'This workflow does not award PASS or mutate production.'
+            echo 'Terminal evaluation status never awards PASS: the Production Gate and scorecard artifacts remain authoritative for GO/NO_GO and runtime closure. This workflow does not mutate production.'
           } >> "$GITHUB_STEP_SUMMARY"

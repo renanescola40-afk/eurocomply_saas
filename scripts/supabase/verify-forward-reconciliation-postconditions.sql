@@ -7,9 +7,110 @@ do $verify$
 declare
   document_runtime_columns integer;
   controlled_policy_count integer;
+  break_glass_rls_count integer;
+  break_glass_browser_privileges integer;
   step_up_function_oid oid := to_regprocedure('public.touch_step_up_challenges_updated_at()');
   uploader_function_oid oid := to_regprocedure('public.enforce_document_uploader_member_scope()');
+  break_glass_expiry_function_oid oid := to_regprocedure('public.expire_enterprise_break_glass_requests(integer)');
+  organization_bootstrap_function_oid oid := to_regprocedure('public.create_organization_with_owner_atomic(text,text,uuid)');
 begin
+  -- Active application contracts currently exercised by production jobs/routes.
+  if to_regclass('public.intelligence_items') is null
+     or to_regclass('public.intelligence_calendar_suggestions') is null
+     or to_regclass('public.email_notification_events') is null
+     or to_regclass('public.vendor_review_history') is null then
+    raise exception 'enterprise core runtime reconciliation objects are incomplete';
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'vendors'
+      and column_name = 'next_review_at'
+      and data_type = 'date'
+  ) then
+    raise exception 'vendors.next_review_at runtime contract is missing';
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'email_notification_events'
+      and column_name = 'entity_id'
+      and data_type = 'text'
+  ) then
+    raise exception 'email_notification_events.entity_id is not canonical text';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'intelligence_items'
+      and policyname = 'Authenticated users can read published intelligence'
+      and cmd = 'SELECT'
+  ) or not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'email_notification_events'
+      and policyname = 'rls_email_notification_events_select_member'
+      and cmd = 'SELECT'
+  ) or not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'vendors'
+      and policyname = 'rls_vendors_select_member'
+      and cmd = 'SELECT'
+  ) then
+    raise exception 'enterprise core runtime RLS policies are incomplete';
+  end if;
+
+  if has_table_privilege('authenticated', 'public.email_notification_events', 'INSERT')
+     or has_table_privilege('authenticated', 'public.email_notification_events', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.email_notification_events', 'DELETE')
+     or has_table_privilege('authenticated', 'public.vendors', 'INSERT')
+     or has_table_privilege('authenticated', 'public.vendors', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.vendors', 'DELETE') then
+    raise exception 'enterprise core backend-only tables expose authenticated DML';
+  end if;
+
+  if organization_bootstrap_function_oid is null
+     or has_function_privilege('anon', organization_bootstrap_function_oid, 'EXECUTE')
+     or has_function_privilege('authenticated', organization_bootstrap_function_oid, 'EXECUTE')
+     or not has_function_privilege('service_role', organization_bootstrap_function_oid, 'EXECUTE') then
+    raise exception 'atomic organization bootstrap function privileges are not canonical';
+  end if;
+
+  if exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and policyname like 'live_rls_%'
+  ) then
+    raise exception 'temporary live_rls validation policy remains after core reconciliation';
+  end if;
+
+  if to_regprocedure('public.live_rls_validation_apply_backend_only(text)') is not null
+     or to_regprocedure('public.live_rls_validation_apply_org_scoped(text)') is not null
+     or to_regprocedure('public.live_rls_validation_has_column(text,text)') is not null
+     or to_regprocedure('app_private.live_rls_validation_is_org_member(uuid)') is not null then
+    raise exception 'temporary live RLS validation helper remains after core reconciliation';
+  end if;
+
+  if exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'subscriptions'
+      and policyname = 'Owners can manage subscriptions'
+  ) then
+    raise exception 'legacy direct subscription mutation policy remains after core reconciliation';
+  end if;
+
   if not exists (
     select 1
     from pg_policy policy
@@ -167,6 +268,111 @@ begin
       and c.relforcerowsecurity
   ) then
     raise exception 'tasks RLS/FORCE RLS is incomplete';
+  end if;
+
+  if to_regclass('public.enterprise_break_glass_requests') is null
+     or to_regclass('public.enterprise_break_glass_approvals') is null
+     or to_regclass('public.enterprise_break_glass_events') is null
+     or to_regclass('public.enterprise_break_glass_reviews') is null then
+    raise exception 'enterprise break-glass runtime tables are incomplete';
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.organization_members'::regclass
+      and conname = 'organization_members_organization_id_id_key'
+      and contype = 'u'
+  ) then
+    raise exception 'organization_members tenant composite key is missing';
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.enterprise_break_glass_requests'::regclass
+      and conname = 'enterprise_break_glass_requests_organization_id_id_key'
+      and contype = 'u'
+  ) then
+    raise exception 'break-glass request tenant composite key is missing';
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.enterprise_break_glass_requests'::regclass
+      and conname = 'enterprise_break_glass_target_tenant_fk'
+      and contype = 'f'
+  ) then
+    raise exception 'break-glass target tenant foreign key is missing';
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.enterprise_break_glass_approvals'::regclass
+      and conname = 'enterprise_break_glass_approvals_request_tenant_fk'
+      and contype = 'f'
+  ) or not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.enterprise_break_glass_events'::regclass
+      and conname = 'enterprise_break_glass_events_request_tenant_fk'
+      and contype = 'f'
+  ) or not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.enterprise_break_glass_reviews'::regclass
+      and conname = 'enterprise_break_glass_reviews_request_tenant_fk'
+      and contype = 'f'
+  ) then
+    raise exception 'break-glass child tenant foreign keys are incomplete';
+  end if;
+
+  select count(*)
+    into break_glass_rls_count
+  from pg_class c
+  join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname = 'public'
+    and c.relname in (
+      'enterprise_break_glass_requests',
+      'enterprise_break_glass_approvals',
+      'enterprise_break_glass_events',
+      'enterprise_break_glass_reviews'
+    )
+    and c.relrowsecurity
+    and c.relforcerowsecurity;
+
+  if break_glass_rls_count <> 4 then
+    raise exception 'break-glass RLS/FORCE RLS boundary is incomplete';
+  end if;
+
+  select count(*)
+    into break_glass_browser_privileges
+  from information_schema.role_table_grants
+  where table_schema = 'public'
+    and table_name in (
+      'enterprise_break_glass_requests',
+      'enterprise_break_glass_approvals',
+      'enterprise_break_glass_events',
+      'enterprise_break_glass_reviews'
+    )
+    and grantee in ('anon','authenticated');
+
+  if break_glass_browser_privileges <> 0 then
+    raise exception 'browser roles unexpectedly retain break-glass table privileges';
+  end if;
+
+  if break_glass_expiry_function_oid is null
+     or has_function_privilege('anon', break_glass_expiry_function_oid, 'EXECUTE')
+     or has_function_privilege('authenticated', break_glass_expiry_function_oid, 'EXECUTE')
+     or not has_function_privilege('service_role', break_glass_expiry_function_oid, 'EXECUTE') then
+    raise exception 'break-glass expiry function privileges are not canonical';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_proc p
+    cross join lateral unnest(coalesce(p.proconfig, array[]::text[])) setting
+    where p.oid = break_glass_expiry_function_oid
+      and p.prosecdef
+      and setting = 'search_path=pg_catalog'
+  ) then
+    raise exception 'break-glass expiry function security configuration is not fixed';
   end if;
 end
 $verify$;

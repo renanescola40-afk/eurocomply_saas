@@ -12,6 +12,8 @@ on:
       - 'supabase/migrations/20260813200000_reconcile_subscription_schema_defaults.sql'
       - 'supabase/migrations/20260813201500_reconcile_controlled_document_storage.sql'
       - 'supabase/migrations/20260813201600_force_tasks_rls.sql'
+      - 'supabase/migrations/20260813234000_reconcile_enterprise_break_glass_governance.sql'
+      - 'supabase/migrations/20260814101500_reconcile_enterprise_core_active_runtime.sql'
       - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
       - '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
   workflow_dispatch:
@@ -139,7 +141,7 @@ jobs:
       - name: Set up pinned Supabase CLI
         uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
         with:
-          version: 2.101.0
+          version: 2.114.0
 
       - name: Install PostgreSQL client
         shell: bash
