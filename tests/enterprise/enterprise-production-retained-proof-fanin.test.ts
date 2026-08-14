@@ -46,10 +46,12 @@ function fakeFetchers(calls: Array<Record<string, unknown>>): Fetchers {
     supabaseRls: fakeFetcher('supabaseRls', calls),
     uploadScanner: fakeFetcher('uploadScanner', calls),
     auditChain: fakeFetcher('auditChain', calls),
+    productionRuntime: fakeFetcher('productionRuntime', calls),
     productionProvider: fakeFetcher('productionProvider', calls),
     branchProtection: fakeFetcher('branchProtection', calls),
     stepUp: fakeFetcher('stepUp', calls),
     stripePromoted: fakeFetcher('stripePromoted', calls),
+    publicProductionFinal: fakeFetcher('publicProductionFinal', calls),
   };
   return fixtures as unknown as Fetchers;
 }
@@ -65,10 +67,12 @@ describe('enterprise production retained-proof fan-in', () => {
       'Supabase Live RLS Validation',
       'RISCK COMPLY Upload Security CI',
       'Audit Chain Runtime Proof',
+      'Production Runtime Proof',
       'Production Provider Runtime Proof',
       'Branch Protection Runtime Proof',
       'Step-Up Runtime Proof',
       'Stripe Runtime Evidence Promotion',
+      'Public Production Final',
     ]);
     expect(RETAINED_RUNTIME_PRODUCERS.every((producer) => producer.workflowPath.startsWith('.github/workflows/'))).toBe(true);
   });
