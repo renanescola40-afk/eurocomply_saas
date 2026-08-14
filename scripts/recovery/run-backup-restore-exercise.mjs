@@ -39,9 +39,6 @@ function postgresConnection(name) {
     return '';
   }
 
-  // Action secrets copied from dashboards can accidentally contain CR/LF. Raw
-  // PostgreSQL URLs cannot contain literal control characters, so normalize only
-  // line endings; every other control character remains a hard failure.
   const normalized = raw.replace(/[\r\n]+/g, '').trim();
   if (/[\u0000-\u001f\u007f]/.test(normalized)) {
     failures.push(`invalid_${name.toLowerCase()}_control_character`);
@@ -70,8 +67,6 @@ function run(command, args, extraEnv = {}, failureCode = `command_${command}_fai
       env: { ...process.env, ...extraEnv },
     }).toString('utf8');
   } catch (error) {
-    // Classify the first process failure while keeping stderr/stdout/arguments out
-    // of persisted evidence. Later cleanup failures must not replace root cause.
     if (!failureDiagnostic) {
       failureDiagnostic = buildRecoveryCommandDiagnostic({
         error,
@@ -79,8 +74,6 @@ function run(command, args, extraEnv = {}, failureCode = `command_${command}_fai
         command,
       });
     }
-    // Never persist Error.message from execFileSync. Node includes the complete
-    // command arguments in that message, which can contain database credentials.
     throw new Error(failureCode);
   }
 }
@@ -107,7 +100,7 @@ function parseInventoryJson(value, failureCode) {
 function readInstalledExtensions(connection, failureCode) {
   const payload = sql(
     connection,
-    `select coalesce(json_agg(json_build_object('name', e.extname, 'schema', n.nspname) order by e.extname)::text, '[]') from pg_extension e join pg_namespace n on n.oid = e.extnamespace;`,
+    `select coalesce(json_agg(json_build_object('name', e.extname, 'schema', n.nspname, 'version', e.extversion) order by e.extname)::text, '[]') from pg_extension e join pg_namespace n on n.oid = e.extnamespace;`,
     failureCode,
   );
   return parseInventoryJson(payload, failureCode);
@@ -116,7 +109,7 @@ function readInstalledExtensions(connection, failureCode) {
 function readAvailableExtensions(connection) {
   const payload = sql(
     connection,
-    `select coalesce(json_agg(json_build_object('name', v.name, 'relocatable', v.relocatable, 'schema', v.schema) order by v.name)::text, '[]') from pg_available_extension_versions v join pg_available_extensions e on e.name = v.name and e.default_version = v.version;`,
+    `select coalesce(json_agg(json_build_object('name', v.name, 'version', v.version, 'relocatable', v.relocatable, 'schema', v.schema) order by v.name, v.version)::text, '[]') from pg_available_extension_versions v;`,
     'recovery_target_available_extensions_query_failed',
   );
   return parseInventoryJson(payload, 'recovery_target_available_extensions_invalid');
@@ -222,10 +215,6 @@ try {
   if (failures.length) throw new Error('recovery_preconditions_failed');
 
   if (ephemeralMode) {
-    // Follow Supabase's supported platform-to-self-hosted logical restore sequence:
-    // filtered roles, schema, then complete application/auth data. Supabase-managed
-    // vector storage tables are explicitly excluded from the logical data dump;
-    // they are platform-owned and are recreated/managed by the target project.
     failurePhase = 'roles_dump';
     run('supabase', ['db', 'dump', '--db-url', source, '--role-only', '--file', rolesDumpPath], {}, 'recovery_roles_dump_failed');
     failurePhase = 'schema_dump';
@@ -246,9 +235,9 @@ try {
     backupBytes = inspectedDump.bytes;
     if (!checks.backupExists || !digest) throw new Error('backup_dump_invalid');
 
-    // Supabase platform-to-self-hosted restore requires source extensions to be
-    // available on the target before schema restore. Reconcile only the disposable
-    // loopback target; production remains read-only throughout this exercise.
+    // The isolated target must reproduce the source extension implementation,
+    // not merely the extension names. The source stays read-only; any CREATE
+    // statements are restricted to the disposable loopback target.
     failurePhase = 'extension_parity';
     const sourceExtensions = readInstalledExtensions(source, 'recovery_source_extensions_query_failed');
     const targetExtensions = readInstalledExtensions(restore, 'recovery_target_extensions_query_failed');
@@ -257,8 +246,9 @@ try {
     extensionParity.sourceCount = extensionPlan.source.length;
     extensionParity.targetInitialCount = extensionPlan.target.length;
     extensionParity.enabledCount = extensionPlan.enable.length;
-    if (extensionPlan.unavailable.length > 0) throw new Error('recovery_target_extension_unavailable');
+    if (extensionPlan.unavailableVersions.length > 0) throw new Error('recovery_target_extension_version_unavailable');
     if (extensionPlan.schemaMismatches.length > 0) throw new Error('recovery_target_extension_schema_mismatch');
+    if (extensionPlan.versionMismatches.length > 0) throw new Error('recovery_target_extension_version_mismatch');
     for (const entry of extensionPlan.enable) {
       sql(restore, entry.sql, 'recovery_target_extension_enable_failed');
     }
@@ -319,9 +309,9 @@ const evidence = {
   metrics: { rpoSeconds: backupCompletedAt ? Math.max(0, Math.round((Date.now() - Date.parse(backupCompletedAt)) / 1000)) : null, rtoSeconds: restoreCompletedAt ? Math.round((Date.parse(restoreCompletedAt) - startedAt) / 1000) : null, totalExerciseSeconds: Math.round((finishedAt - startedAt) / 1000), backupBytes },
   integrity: { criticalTables, sourceCounts, restoredCounts, sourceAuthUsers, restoredAuthUsers, extensionParity, backupSha256Prefix: digest ? `${digest.slice(0, 16)}…` : null, recoveryMode: ephemeralMode ? 'ephemeral-supabase-postgres' : 'external-isolated-database' }, failures: [...new Set(failures)], failurePhase: passed ? null : failurePhase,
   failureDiagnostic: passed ? null : failureDiagnostic,
-  evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, extensionNamesStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
+  evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, extensionNamesStored: false, extensionVersionsStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
   evidenceBoundary: ephemeralMode
-    ? 'Supabase-compatible logical roles, schema, and application/auth data backups were restored transactionally into a disposable isolated Supabase Postgres database after aggregate-only extension parity was verified; target-managed vector storage tables were excluded from the data dump. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; extension names, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
+    ? 'Supabase-compatible logical roles, schema, and application/auth data backups were restored transactionally into a disposable isolated Supabase Postgres database after aggregate-only exact extension name/schema/version parity was verified; target-managed vector storage tables were excluded from the data dump. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
     : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated digest; connection strings, raw command arguments, raw process errors and the dump are not retained.',
 };
 mkdirSync(dirname(output), { recursive: true });
