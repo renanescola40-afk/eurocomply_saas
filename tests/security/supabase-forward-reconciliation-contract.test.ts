@@ -8,8 +8,21 @@ const config = JSON.parse(readFileSync('config/supabase-forward-reconciliation.j
 const rehearsal = readFileSync('.github/workflows/supabase-forward-reconciliation-rehearsal.yml', 'utf8');
 const dryRun = readFileSync('.github/workflows/supabase-forward-reconciliation-dry-run.yml', 'utf8');
 const postconditions = readFileSync('scripts/supabase/verify-forward-reconciliation-postconditions.sql', 'utf8');
+const historicalCore = readFileSync(
+  'supabase/migrations/20260809135000_enterprise_core_runtime_schema_reconciliation.sql',
+  'utf8',
+);
+const forwardCore = readFileSync(
+  'supabase/migrations/20260814101500_reconcile_enterprise_core_active_runtime.sql',
+  'utf8',
+);
 
 const selected = config.migrations.map((migration) => migration.filename);
+const sqlBodyFromBegin = (source: string) => {
+  const index = source.indexOf('begin;');
+  expect(index).toBeGreaterThanOrEqual(0);
+  return source.slice(index);
+};
 
 describe('bounded Supabase forward reconciliation contract', () => {
   it('selects exactly the seven reviewed forward-only reconciliations', () => {
@@ -30,6 +43,12 @@ describe('bounded Supabase forward reconciliation contract', () => {
       unrestrictedDbPushAllowed: false,
       onlyListedForwardMigrationsMayBeRehearsedOrRequested: true,
     });
+  });
+
+  it('keeps the forward active-core SQL body identical to the historical reviewed reconciliation', () => {
+    expect(sqlBodyFromBegin(forwardCore)).toBe(sqlBodyFromBegin(historicalCore));
+    expect(historicalCore).toContain('enterprise-migration-review: approved');
+    expect(forwardCore).not.toContain('enterprise-migration-review: approved');
   });
 
   it('triggers both bounded workflows when any selected SQL byte changes', () => {
