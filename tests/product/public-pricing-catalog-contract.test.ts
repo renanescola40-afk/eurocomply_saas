@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const pricingPage = readFileSync(join(process.cwd(), 'src/app/[locale]/pricing/page.tsx'), 'utf8');
+const organizationDashboard = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/page.tsx'), 'utf8');
 
 describe('public pricing catalog contract', () => {
   it('renders plans from the canonical billing catalog instead of maintaining a second pricing table', () => {
@@ -48,5 +49,13 @@ describe('public pricing catalog contract', () => {
     expect(pricingPage).toContain('does not guarantee regulatory compliance');
     expect(pricingPage).toContain('does not replace legal counsel');
     expect(pricingPage).toContain('Taxes or VAT, where applicable');
+  });
+
+  it('uses the canonical catalog name on the authenticated dashboard instead of legacy Starter/Growth labels', () => {
+    expect(organizationDashboard).toContain('const currentCatalogPlan = getBillingPlan(entitlements.plan)');
+    expect(organizationDashboard).toContain('const planName = currentCatalogPlan?.name ?? entitlements.plan');
+    expect(organizationDashboard).not.toContain("professional: 'Growth'");
+    expect(organizationDashboard).not.toContain("business: 'Growth'");
+    expect(organizationDashboard).not.toContain("starter: 'Starter'");
   });
 });
