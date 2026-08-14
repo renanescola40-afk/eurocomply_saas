@@ -1,6 +1,6 @@
 name: Supabase Production RLS Reconciliation
 
-run-name: Supabase RLS reconciliation for ${{ inputs.release_sha }}
+run-name: Supabase RLS ${{ inputs.mode }} for ${{ inputs.release_sha }}
 
 on:
   workflow_dispatch:
@@ -9,12 +9,22 @@ on:
         description: Exact 40-character SHA currently at the tip of main
         required: true
         type: string
-      confirmation:
-        description: Type APPLY_RLS_RECONCILIATION to authorize the production hotfix
+      mode:
+        description: Verify current production state without writes, or explicitly apply the idempotent hotfix first
         required: true
+        default: verify_only
+        type: choice
+        options:
+          - verify_only
+          - apply
+      confirmation:
+        description: Required only for apply mode; type APPLY_RLS_RECONCILIATION
+        required: false
+        default: ''
         type: string
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -22,9 +32,40 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  governance:
+    name: Verify production environment governance before protected secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      GITHUB_ENVIRONMENT_NAME: production
+      REQUIRE_PROTECTED_BRANCHES: 'true'
+      GITHUB_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout exact assessed main SHA without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Verify exact current main SHA before governance lookup
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git ls-remote origin refs/heads/main | grep -q "^${TARGET_SHA}"
+
+      - name: Verify production environment governance before protected secrets
+        shell: bash
+        run: node scripts/security/check-github-environment-governance.mjs
+
   reconcile:
-    name: Apply and verify idempotent production RLS reconciliation
-    runs-on: ubuntu-latest
+    name: Verify or explicitly apply production RLS reconciliation
+    needs: governance
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: production
     env:
@@ -40,10 +81,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Authorize exact main SHA
+      - name: Authorize exact main SHA and requested mode
         shell: bash
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
+          MODE: ${{ inputs.mode }}
           CONFIRMATION: ${{ inputs.confirmation }}
         run: |
           set -euo pipefail
@@ -51,8 +93,18 @@ jobs:
           main_sha="$(git rev-parse origin/main)"
           [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
           test "${RELEASE_SHA,,}" = "$main_sha"
-          test "$CONFIRMATION" = "APPLY_RLS_RECONCILIATION"
           test "$(git rev-parse HEAD)" = "$main_sha"
+          case "$MODE" in
+            verify_only)
+              ;;
+            apply)
+              test "$CONFIRMATION" = "APPLY_RLS_RECONCILIATION"
+              ;;
+            *)
+              echo 'Unsupported RLS reconciliation mode' >&2
+              exit 1
+              ;;
+          esac
 
       - name: Validate production configuration
         shell: bash
@@ -84,7 +136,8 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y postgresql-client
 
-      - name: Apply idempotent RLS reconciliation
+      - name: Apply idempotent RLS reconciliation only when explicitly authorized
+        if: ${{ inputs.mode == 'apply' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -92,7 +145,7 @@ jobs:
             --set ON_ERROR_STOP=1 \
             --file supabase/reconciliation/20260726070000_permissions_catalog_rls_hotfix.sql
 
-      - name: Collect RLS, grants, policies and migration evidence
+      - name: Collect RLS, grants, policies and migration evidence read-only
         shell: bash
         run: |
           set -euo pipefail
@@ -153,13 +206,20 @@ jobs:
         shell: bash
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
+          MODE: ${{ inputs.mode }}
         run: |
           {
             echo '## Supabase production RLS reconciliation'
             echo
             echo "- Release SHA: \`$RELEASE_SHA\`"
+            echo "- Mode: \`$MODE\`"
             echo "- Project ref suffix: \`${SUPABASE_PROJECT_ID: -6}\`"
             echo '- Connection path: Supabase Session Pooler (secret-backed)'
+            if [ "$MODE" = 'verify_only' ]; then
+              echo '- Production SQL mutation requested: `false`'
+            else
+              echo '- Production SQL mutation requested: `true` (explicit apply mode)'
+            fi
             if [ -f artifacts/supabase-rls-reconciliation/verification.json ]; then
               status="$(node -e "const r=require('./artifacts/supabase-rls-reconciliation/verification.json'); process.stdout.write(r.status)")"
               echo "- Verification status: \`$status\`"
