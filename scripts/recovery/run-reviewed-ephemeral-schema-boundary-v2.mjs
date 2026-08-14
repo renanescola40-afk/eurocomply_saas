@@ -63,6 +63,26 @@ const derivedRules = Object.freeze([
       'download_count integer not null default 0',
     ]),
   }),
+  Object.freeze({
+    id: 'qualified-review-evidence-handoff<-I-DUP-13/N7',
+    name: '20260728103000_qualified_review_evidence_handoff.sql',
+    heldSuffix: '.derived-prerequisite-blocked',
+    sourceMarkers: Object.freeze([
+      'references public.qualified_review_campaigns(id, organization_id)',
+      'from public.qualified_review_assignments a',
+      'using (public.is_organization_member(organization_id))',
+    ]),
+  }),
+  Object.freeze({
+    id: 'qualified-review-final-closeout<-I-DUP-13/N7',
+    name: '20260730101500_qualified_review_final_technical_closeout.sql',
+    heldSuffix: '.derived-prerequisite-blocked',
+    sourceMarkers: Object.freeze([
+      'references public.qualified_review_campaigns(id, organization_id)',
+      'create table if not exists public.qualified_review_technical_closeouts',
+      'using (public.is_organization_member(organization_id))',
+    ]),
+  }),
 ]);
 
 const blockedRules = Object.freeze([
