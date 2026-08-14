@@ -15,6 +15,10 @@ const trustPage = readFileSync(join(process.cwd(), 'src/app/[locale]/trust/page.
 const trustComponent = readFileSync(join(process.cwd(), 'src/components/marketing/trust-center-page.tsx'), 'utf8');
 const consentBanner = readFileSync(join(process.cwd(), 'src/components/analytics/AnalyticsConsentBanner.tsx'), 'utf8');
 const posthogClient = readFileSync(join(process.cwd(), 'src/lib/analytics/posthog-client.ts'), 'utf8');
+const upgradeCard = readFileSync(join(process.cwd(), 'src/components/billing/upgrade-required-card.tsx'), 'utf8');
+const raciPage = readFileSync(join(process.cwd(), 'src/app/[locale]/raci/page.tsx'), 'utf8');
+const approvalsPage = readFileSync(join(process.cwd(), 'src/app/[locale]/aprovacoes/page.tsx'), 'utf8');
+const executiveReportsPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/reports-governance/page.tsx'), 'utf8');
 
 describe('commercial surface locale continuity', () => {
   it('defines complete purchase/auth/consent copy for every configured locale', () => {
@@ -113,7 +117,24 @@ describe('commercial surface locale continuity', () => {
     expect(aiSystemsPage).not.toContain("de: { ...baseInventoryCopy }");
   });
 
-  it('preserves keyboard focus treatment on purchase, auth, onboarding, AI inventory and trust controls', () => {
+  it('keeps locked-feature upgrade UX in the selected locale without changing entitlement decisions', () => {
+    expect(upgradeCard).toContain('Record<Locale');
+    expect(upgradeCard).toContain("es: { required: (plan) => `Se requiere el plan ${plan}`");
+    expect(upgradeCard).toContain("fr: { required: (plan) => `Plan ${plan} requis`");
+    expect(upgradeCard).toContain("it: { required: (plan) => `Piano ${plan} richiesto`");
+    expect(upgradeCard).toContain("de: { required: (plan) => `${plan}-Plan erforderlich`");
+    expect(upgradeCard).toContain('ctaLabel ?? localized.plans');
+    expect(upgradeCard).not.toContain("ctaLabel = 'Ver planos'");
+
+    for (const page of [raciPage, approvalsPage, executiveReportsPage]) {
+      expect(page).toContain('const upgradeCopy: Record<Locale');
+      expect(page).toContain('title={lockedCopy.title}');
+      expect(page).toContain('description={lockedCopy.description}');
+      expect(page).toContain('getOrganizationEntitlements');
+    }
+  });
+
+  it('preserves keyboard focus treatment on purchase, auth, onboarding, AI inventory, trust and upgrade controls', () => {
     expect(pricingPage).toContain('focus-visible:ring-2');
     expect(checkoutPage).toContain('focus-visible:ring-2');
     expect(loginPage).toContain('focus-visible:ring-2');
@@ -121,5 +142,6 @@ describe('commercial surface locale continuity', () => {
     expect(onboardingFlow).toContain('focus-visible:ring-2');
     expect(aiSystemsPage).toContain('focus-visible:ring-2');
     expect(trustComponent).toContain('focus-visible:ring-2');
+    expect(upgradeCard).toContain('focus-visible:ring-2');
   });
 });
