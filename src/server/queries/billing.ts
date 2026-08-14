@@ -1,5 +1,10 @@
 import { unstable_noStore as noStore } from 'next/cache';
+
 import { createAdminClient } from '@/lib/supabase/admin';
+import {
+  getAuthoritativeSignedContractPlan,
+  hasProcessedLiveStripeSubscriptionAuthority,
+} from '@/server/billing/subscription-authority';
 import { normalizePlan } from '@/server/queries/subscription';
 
 export type BillingUsage = {
@@ -17,6 +22,13 @@ export type OrganizationBillingContext = {
 
 type SupabaseAdminClient = ReturnType<typeof createAdminClient>;
 type BillingCountTable = 'organization_members' | 'documents' | 'vendors' | 'risks';
+
+type SubscriptionRow = {
+  plan: string | null;
+  status: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+};
 
 const ACTIVE_BILLING_STATUSES = ['active', 'trialing'] as const;
 const SAFE_DEFAULT_PLAN = 'starter';
@@ -40,21 +52,21 @@ async function countRows(supabase: SupabaseAdminClient, table: BillingCountTable
   return count ?? 0;
 }
 
-async function getSubscription(supabase: SupabaseAdminClient, organizationId: string) {
+async function getSubscription(supabase: SupabaseAdminClient, organizationId: string): Promise<SubscriptionRow | null> {
   const { data, error } = await supabase
     .from('subscriptions')
-    .select('plan,status,updated_at,created_at')
+    .select('plan,status,stripe_customer_id,stripe_subscription_id,updated_at,created_at')
     .eq('organization_id', organizationId)
     .order('updated_at', { ascending: false })
     .limit(1)
-    .maybeSingle();
+    .maybeSingle<SubscriptionRow>();
 
   if (error) {
     console.warn('[billing] subscription_lookup_failed', { code: error.code ?? 'unknown' });
     throw new Error(BILLING_CONTEXT_UNAVAILABLE);
   }
 
-  return data;
+  return data ?? null;
 }
 
 export async function getOrganizationBillingContext(
@@ -63,18 +75,33 @@ export async function getOrganizationBillingContext(
   noStore();
 
   const supabase = createAdminClient();
-  const [subscription, users, documents, vendors, risks] = await Promise.all([
+  const [subscription, signedContractPlan, users, documents, vendors, risks] = await Promise.all([
     getSubscription(supabase, organizationId),
+    getAuthoritativeSignedContractPlan(organizationId),
     countRows(supabase, 'organization_members', organizationId),
     countRows(supabase, 'documents', organizationId),
     countRows(supabase, 'vendors', organizationId),
     countRows(supabase, 'risks', organizationId),
   ]);
 
-  const status = subscription?.status ?? null;
-  const plan = hasPaidEntitlementStatus(status)
-    ? normalizePlan(subscription?.plan ?? SAFE_DEFAULT_PLAN)
-    : SAFE_DEFAULT_PLAN;
+  const liveStripeAuthority = signedContractPlan
+    ? false
+    : await hasProcessedLiveStripeSubscriptionAuthority({
+        organizationId,
+        stripeCustomerId: subscription?.stripe_customer_id,
+        stripeSubscriptionId: subscription?.stripe_subscription_id,
+      });
+  const livePaidStatus = liveStripeAuthority && hasPaidEntitlementStatus(subscription?.status);
+  const plan = signedContractPlan
+    ? normalizePlan(signedContractPlan)
+    : livePaidStatus
+      ? normalizePlan(subscription?.plan ?? SAFE_DEFAULT_PLAN)
+      : SAFE_DEFAULT_PLAN;
+  const status = signedContractPlan
+    ? 'active'
+    : liveStripeAuthority
+      ? subscription?.status ?? null
+      : null;
 
   return {
     plan,
