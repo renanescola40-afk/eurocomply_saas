@@ -119,6 +119,15 @@ describe('Enterprise Control Plane + SCIM forward reconciliation', () => {
     expect(integrations).toContain('enterprise SCIM RPC security configuration is not fixed');
   });
 
+  it('preserves the membership-aware SCIM identity lookup row type', () => {
+    expect(integrations).toContain(
+      'returns table (outcome text,identity_id uuid,external_id text,user_id uuid,membership_id uuid,email text,role text,seat_type text,active boolean,created_at timestamptz,updated_at timestamptz)',
+    );
+    expect(integrations).toContain(
+      'left join public.organization_members member on member.organization_id=identity.organization_id and member.user_id=identity.user_id',
+    );
+  });
+
   it('binds integration child rows to their tenant with validated composite foreign keys', () => {
     for (const constraint of [
       'enterprise_api_keys_service_account_tenant_fk',
@@ -190,8 +199,8 @@ describe('Enterprise Control Plane + SCIM forward reconciliation', () => {
     expect(contractControl).toContain('limits_below_current_usage');
     expect(contractControl).toContain('limits_below_committed_usage');
     expect(contractControl).toContain('platform_role_required');
-    expect(contractControl).toContain('enterprise contract control RPC privileges are not service-role-only');
-    expect(contractControl).toContain('enterprise contract control RPC security configuration is not fixed');
+    expect(contractControl).toContain('Enterprise contract control RPC privileges are not service-role-only');
+    expect(contractControl).toContain('Enterprise contract control RPC security configuration is not fixed');
   });
 
   it('validates active plus pending commitments before replacing the compatibility envelope', () => {
