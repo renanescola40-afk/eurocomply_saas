@@ -3,6 +3,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+import { buildSafeReadinessDiagnostics } from './production-readiness-diagnostics.mjs';
+
 const OUTPUT = 'docs/security/evidence/runtime/deployment-smoke-validation.json';
 const CANONICAL_HOST = 'www.risckcomply.com';
 const configuredBaseUrl = String(
@@ -45,67 +47,6 @@ function noStore(response) {
   return /\bno-store\b/i.test(response.headers.get('cache-control') || '');
 }
 
-function booleanField(source, key) {
-  return typeof source?.[key] === 'boolean' ? source[key] : null;
-}
-
-function finiteNumberField(source, key) {
-  return Number.isFinite(source?.[key]) ? Number(source[key]) : null;
-}
-
-function readinessDiagnostics(body) {
-  if (!body || typeof body !== 'object') return { responseAvailable: false };
-
-  const environment = Array.isArray(body.environment)
-    ? body.environment.map((item) => ({
-      name: typeof item?.name === 'string' ? item.name : 'unknown',
-      configured: booleanField(item, 'configured'),
-      missingCount: finiteNumberField(item, 'missingCount'),
-    }))
-    : [];
-
-  return {
-    responseAvailable: true,
-    status: typeof body.status === 'string' ? body.status : 'unknown',
-    environment,
-    database: {
-      adminClient: booleanField(body.database, 'adminClient'),
-      subscriptionsReadable: booleanField(body.database, 'subscriptionsReadable'),
-      detail: typeof body.database?.detail === 'string' ? body.database.detail : 'unknown',
-    },
-    stripe: {
-      configured: booleanField(body.stripe, 'configured'),
-      apiReachable: booleanField(body.stripe, 'apiReachable'),
-      priceLookup: booleanField(body.stripe, 'priceLookup'),
-      pricesChecked: finiteNumberField(body.stripe, 'pricesChecked'),
-      detail: typeof body.stripe?.detail === 'string' ? body.stripe.detail : 'unknown',
-    },
-    sentryReleaseUploads: {
-      configured: booleanField(body.sentryReleaseUploads, 'configured'),
-      missingCount: finiteNumberField(body.sentryReleaseUploads, 'missingCount'),
-      sourceMapsUploadRequiresAuthToken: booleanField(body.sentryReleaseUploads, 'sourceMapsUploadRequiresAuthToken'),
-    },
-    enterpriseStepUp: {
-      required: booleanField(body.enterpriseStepUp, 'required'),
-      configured: booleanField(body.enterpriseStepUp, 'configured'),
-      dedicatedSigningSecretConfigured: booleanField(body.enterpriseStepUp, 'dedicatedSigningSecretConfigured'),
-      runtimeConfigurationConfigured: booleanField(body.enterpriseStepUp, 'runtimeConfigurationConfigured'),
-    },
-    enterpriseStorageScanner: {
-      required: booleanField(body.enterpriseStorageScanner, 'required'),
-      configured: booleanField(body.enterpriseStorageScanner, 'configured'),
-      storageBucketConfigured: booleanField(body.enterpriseStorageScanner, 'storageBucketConfigured'),
-      malwareScanningRequired: booleanField(body.enterpriseStorageScanner, 'malwareScanningRequired'),
-      realScannerProviderConfigured: booleanField(body.enterpriseStorageScanner, 'realScannerProviderConfigured'),
-      scannerTransportConfigured: booleanField(body.enterpriseStorageScanner, 'scannerTransportConfigured'),
-    },
-    checks: Object.fromEntries(
-      Object.entries(body.checks && typeof body.checks === 'object' ? body.checks : {})
-        .filter(([, value]) => typeof value === 'boolean'),
-    ),
-  };
-}
-
 async function request(path, options = {}) {
   try {
     const response = await fetch(`${BASE_URL}${path}`, {
@@ -142,7 +83,7 @@ const securityHeadersPresent = Boolean(landing.response) && requiredHeaders.ever
 const redirectToLogin = (result) => Boolean(result.response && [301, 302, 303, 307, 308].includes(result.response.status) && (result.response.headers.get('location') || '').includes('/pt/login'));
 const privateRoutesNoStore = [dashboard, organizationDashboard].every((result) => result.response && noStore(result.response));
 const sensitiveApisNoStore = [health, readyAnonymous, readyAuthenticated, observabilityAnonymous].every((result) => result.response && noStore(result.response));
-const protectedReadinessDiagnostics = readinessDiagnostics(readyAuthenticated.body);
+const protectedReadinessDiagnostics = buildSafeReadinessDiagnostics(readyAuthenticated.body);
 
 const detailedChecks = [
   check('securityHeadersPresent', securityHeadersPresent, { headers: headerState }),
@@ -172,7 +113,7 @@ const evidence = {
   reviewer: 'RISCK COMPLY protected runtime automation',
   releaseTarget: 'production-response-controls',
   summary: passed ? 'Focused exact-host production response proof passed.' : 'Focused production response proof failed.',
-  redactionConfirmation: 'No bearer token, cookie, authorization header, raw response body, query string, secret, or customer data is stored. Readiness diagnostics retain only booleans, counts and fixed status labels.',
+  redactionConfirmation: 'No bearer token, cookie, authorization header, raw response body, query string, secret, or customer data is stored. Readiness diagnostics retain only allowlisted fixed labels, booleans and counts.',
   globalChecks: [
     check('productionUrlConfigured', true, { targetCount: 1 }),
     check('protectedReadinessTokenConfigured', Boolean(token), { present: Boolean(token) }),
@@ -186,7 +127,7 @@ const evidence = {
     detailedChecks,
   }],
   failures,
-  evidenceBoundary: 'This focused artifact proves only canonical-host security headers, no-store behavior, health, protected readiness, anonymous route boundaries, and public landing availability. Redacted readiness diagnostics identify failed control categories but store no environment values. It does not prove rollback, provider readiness, authenticated user journeys, observability delivery, or tenant isolation.',
+  evidenceBoundary: 'This focused artifact proves only canonical-host security headers, no-store behavior, health, protected readiness, anonymous route boundaries, and public landing availability. Readiness diagnostics are reduced to allowlisted fixed labels, booleans and counts and store no environment values. It does not prove rollback, provider readiness, authenticated user journeys, observability delivery, or tenant isolation.',
   evidenceIntegrity: {
     containsSensitiveValues: false,
     valuesRedacted: true,
@@ -201,6 +142,9 @@ mkdirSync(dirname(OUTPUT), { recursive: true });
 writeFileSync(OUTPUT, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
 console.log(`Wrote ${OUTPUT}`);
 if (!passed) {
-  for (const failure of failures) console.error(`- ${failure}`);
+  console.error(JSON.stringify({
+    failures,
+    readiness: protectedReadinessDiagnostics,
+  }, null, 2));
   process.exit(1);
 }

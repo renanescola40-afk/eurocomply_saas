@@ -215,6 +215,9 @@ describe('production runtime scorecard evidence', () => {
     expect(smokeProof).toContain("const CANONICAL_HOST = 'www.risckcomply.com'");
     expect(smokeProof).toContain("parsedBaseUrl.protocol !== 'https:'");
     expect(smokeProof).toContain("parsedBaseUrl.hostname.toLowerCase() !== CANONICAL_HOST");
+    expect(smokeProof).toContain('readiness: protectedReadinessDiagnostics');
+    expect(smokeProof).not.toContain('console.error(readyAuthenticated.body');
+    expect(smokeProof).not.toContain('console.log(readyAuthenticated.body');
     expect(fetcher).toContain("const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`");
     expect(fetcher).toContain('run?.path === WORKFLOW_PATH');
     expect(workflow).not.toContain('pull_request_target');
