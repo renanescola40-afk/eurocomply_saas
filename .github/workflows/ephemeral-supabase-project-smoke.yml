@@ -137,10 +137,20 @@ jobs:
           test "$RECOVERY_EPHEMERAL_SPLIT_REVIEW_BLOCKED_FILE_COUNT" = "2"
           test "$RECOVERY_EPHEMERAL_SYNTAX_COMPAT_FILE_COUNT" = "1"
           test "$RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL" = "false"
-          case "$RECOVERY_ISOLATED_DATABASE_URL" in
-            postgresql://*@127.0.0.1:54322/*|postgres://*@127.0.0.1:54322/*|postgresql://*@localhost:54322/*|postgres://*@localhost:54322/*) ;;
-            *) echo 'Disposable database URL is not loopback-bound' >&2; exit 1 ;;
-          esac
+          [[ "$RECOVERY_LOCAL_DB_HOST_PORT" =~ ^[0-9]+$ ]]
+          test "$RECOVERY_LOCAL_DB_HOST_PORT" -ge 20000
+          test "$RECOVERY_LOCAL_DB_HOST_PORT" -lt 40000
+
+          RECOVERY_URL="$RECOVERY_ISOLATED_DATABASE_URL" RECOVERY_PORT="$RECOVERY_LOCAL_DB_HOST_PORT" node <<'NODE'
+          const url = new URL(process.env.RECOVERY_URL);
+          const port = Number(process.env.RECOVERY_PORT);
+          if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(url.hostname)) {
+            throw new Error('Disposable database URL is not loopback-bound');
+          }
+          if (!Number.isInteger(port) || Number(url.port || 5432) !== port) {
+            throw new Error('Disposable database URL does not use the selected host port');
+          }
+          NODE
 
           psql "$RECOVERY_ISOLATED_DATABASE_URL" --no-psqlrc --set ON_ERROR_STOP=1 <<'SQL'
           do $proof$
