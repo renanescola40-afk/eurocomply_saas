@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This lane exists to rehearse and dry-run a small set of new, forward-only reconciliation migrations without reclassifying, repairing, or accidentally deploying the repository's unresolved historical migration backlog.
+This lane exists to rehearse and dry-run a small set of reviewed, forward-only reconciliation migrations without reclassifying, repairing, or accidentally deploying the repository's unresolved historical migration backlog.
 
 It is intentionally separate from the global migration reconciliation gate. The global gate remains authoritative for historical lineage repair and historical migration classification.
 
@@ -10,6 +10,7 @@ It is intentionally separate from the global migration reconciliation gate. The 
 
 The authoritative selection is `config/supabase-forward-reconciliation.json` and currently contains only:
 
+- `20260809135000_enterprise_core_runtime_schema_reconciliation.sql`
 - `20260813175000_optimize_organization_add_ons_rls_initplan.sql`
 - `20260813194500_reconcile_step_up_challenges_runtime.sql`
 - `20260813200000_reconcile_subscription_schema_defaults.sql`
@@ -17,7 +18,19 @@ The authoritative selection is `config/supabase-forward-reconciliation.json` and
 - `20260813201600_force_tasks_rls.sql`
 - `20260813234000_reconcile_enterprise_break_glass_governance.sql`
 
-The Break-Glass row is the forward-only reconciliation for the unapplied historical `20260727160000_enterprise_break_glass_governance.sql`. The historical file remains immutable; the new execution identity exists specifically so the intended backend-only tenant-safe runtime can be reviewed and promoted without rewriting migration history.
+### Active core runtime reconciliation
+
+`20260809135000_enterprise_core_runtime_schema_reconciliation.sql` is included because current production is demonstrably behind application contracts already deployed by the server. Read-only production inspection on 2026-08-14 showed:
+
+- `public.intelligence_items` is absent while `/api/intelligence/refresh` upserts it; retained Vercel runtime evidence shows PostgREST error `PGRST205` on that route;
+- `public.email_notification_events` is absent while compliance-alert jobs use it for idempotent delivery tracking;
+- `public.vendors.next_review_at` is absent while the vendor alert job selects, filters and orders by it.
+
+The migration is already authored as an idempotent, fail-closed reconciliation and also restores canonical RLS/runtime boundaries, removes temporary `live_rls_*` validation artifacts and creates the backend-only atomic organization bootstrap RPC. Inclusion in this lane is **not** production approval: it only makes the active runtime drift part of the same exact-SHA isolated rehearsal and filtered dry-run proof.
+
+### Break-Glass reconciliation
+
+`20260813234000_reconcile_enterprise_break_glass_governance.sql` is the forward-only reconciliation for the unapplied historical `20260727160000_enterprise_break_glass_governance.sql`. The historical file remains immutable; the new execution identity exists so the intended backend-only tenant-safe runtime can be reviewed and promoted without rewriting migration history.
 
 The control plane compiles the exact Git SHA, migration filenames, migration versions, byte sizes and SHA-256 digests into one immutable selection digest.
 
@@ -53,9 +66,10 @@ The workflow is designed to:
 5. verify each selected migration's SHA-256 before applying it to the isolated restore;
 6. apply only those selected files to the isolated target;
 7. run `scripts/supabase/verify-forward-reconciliation-postconditions.sql` against the isolated target;
-8. require the Break-Glass postcondition proof to confirm tenant composite keys/FKs, RLS + FORCE RLS on all four Break-Glass tables, zero browser-role table grants, and service-role-only execution of the hardened expiry function with fixed `search_path`;
-9. emit a redacted attestation that explicitly records `productionWritePerformed=false`;
-10. destroy the disposable database.
+8. require active-core postconditions proving Intelligence, notification-dedupe, vendor governance, atomic onboarding and canonical temporary-RLS cleanup;
+9. require Break-Glass postconditions proving tenant composite keys/FKs, RLS + FORCE RLS on all four Break-Glass tables, zero browser-role table grants, and service-role-only execution of the hardened expiry function with fixed `search_path`;
+10. emit a redacted attestation that explicitly records no production write authorization;
+11. destroy the disposable database.
 
 The canonical backup/restore producer normalizes accidental CR/LF before PostgreSQL-tool use and records only bounded failure codes; raw subprocess errors, command arguments, database URLs and credentials must never be retained in evidence.
 
@@ -111,4 +125,4 @@ If production execution tooling is added later, it must use the filtered remote-
 
 This lane does not close or alter the unresolved historical migration reconciliation program. Current fingerprint-backed provenance still requires the remaining human owner decisions and independent approval before the global historical gate can open.
 
-The goal here is narrower: prove that a specifically reviewed set of new forward-only runtime reconciliations is safe and deployable without exposing the production database to the unresolved historical backlog.
+The goal here is narrower: prove that a specifically reviewed set of active forward-only runtime reconciliations is safe and deployable without exposing the production database to the unresolved historical backlog.
