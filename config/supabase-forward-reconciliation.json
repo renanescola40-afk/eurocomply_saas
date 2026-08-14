@@ -1,7 +1,11 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-08-14-runtime-schema-reconciliation-v2",
+  "changeSet": "2026-08-14-runtime-schema-reconciliation-v3",
   "migrations": [
+    {
+      "filename": "20260809135000_enterprise_core_runtime_schema_reconciliation.sql",
+      "purpose": "reconcile active Intelligence, notification-dedupe, vendor-governance, atomic onboarding and canonical RLS runtime contracts already deployed by the application"
+    },
     {
       "filename": "20260813175000_optimize_organization_add_ons_rls_initplan.sql",
       "purpose": "evaluate organization add-on membership auth once per statement while preserving tenant scope"
