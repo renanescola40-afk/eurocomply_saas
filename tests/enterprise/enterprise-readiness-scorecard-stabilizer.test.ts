@@ -2,6 +2,11 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
+import {
+  productionGateAlreadyCoversEvidence,
+  relevantProductionGateRuns,
+} from '../../scripts/release/stabilize-enterprise-readiness-scorecard.mjs';
+
 const workflowPath = '.github/workflows/enterprise-readiness-scorecard-stabilizer.yml';
 const scriptPath = 'scripts/release/stabilize-enterprise-readiness-scorecard.mjs';
 const workflow = readFileSync(workflowPath, 'utf8');
@@ -98,14 +103,40 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(scorecardDispatch).toBeGreaterThan(gateWait);
   });
 
-  it('treats success/failure as evaluated while rejecting cancelled/skipped terminal runs', () => {
+  it('treats success/failure as evaluated while excluding cancelled/skipped wrappers from gate selection', () => {
     expect(script).toContain("export const TERMINAL_EVALUATION_CONCLUSIONS = new Set(['success', 'failure']);");
     expect(script).toContain('export function isTerminalEvaluation(run)');
     expect(script).toContain("return run?.status === 'completed' && TERMINAL_EVALUATION_CONCLUSIONS.has(run?.conclusion);");
+    expect(script).toContain('export function relevantProductionGateRuns(runs, targetSha, producerCutoffMs)');
+    expect(script).toContain('.filter((run) => ACTIVE_RUN_STATUSES.has(run?.status) || isTerminalEvaluation(run))');
+    expect(script).toContain('const latest = relevantProductionGateRuns(runs, targetSha, producerCutoffMs)[0];');
     expect(script).toContain('if (isTerminalEvaluation(latest)) return latest;');
-    expect(script).toContain('.filter((run) => isTerminalEvaluation(run))');
-    expect(script).toContain('Terminal Enterprise Production Gate ended with non-evaluation conclusion');
+    expect(script).not.toContain('Terminal Enterprise Production Gate ended with non-evaluation conclusion');
     expect(script).not.toContain("run?.status === 'completed' && run?.conclusion === 'success'");
+
+    const sha = 'a'.repeat(40);
+    const cutoff = Date.parse('2026-08-14T13:00:00Z');
+    const gateRun = (overrides: Record<string, unknown>) => ({
+      name: 'Enterprise Production Gate',
+      head_sha: sha,
+      status: 'completed',
+      conclusion: 'success',
+      created_at: '2026-08-14T13:01:00Z',
+      ...overrides,
+    });
+    const runs = [
+      gateRun({ status: 'completed', conclusion: 'skipped', created_at: '2026-08-14T13:05:00Z' }),
+      gateRun({ status: 'completed', conclusion: 'cancelled', created_at: '2026-08-14T13:04:00Z' }),
+      gateRun({ status: 'queued', conclusion: null, created_at: '2026-08-14T13:03:00Z' }),
+      gateRun({ status: 'completed', conclusion: 'failure', created_at: '2026-08-14T13:02:00Z' }),
+    ];
+
+    expect(relevantProductionGateRuns(runs, sha, cutoff).map((run) => [run.status, run.conclusion])).toEqual([
+      ['queued', null],
+      ['completed', 'failure'],
+    ]);
+    expect(productionGateAlreadyCoversEvidence(runs, sha, cutoff)).toBe(true);
+    expect(productionGateAlreadyCoversEvidence(runs.slice(0, 2), sha, cutoff)).toBe(false);
     expect(workflow).toContain('accepts a terminal GO or NO_GO gate as a completed evaluation');
     expect(workflow).toContain('Terminal evaluation status never awards PASS');
   });
