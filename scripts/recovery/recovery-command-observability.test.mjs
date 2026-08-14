@@ -5,6 +5,7 @@ import {
   buildRecoveryCommandDiagnostic,
   classifyRecoveryCommandCategory,
   classifyRecoveryMissingObjectKind,
+  classifyRecoveryMissingObjectScope,
   classifyRecoveryRestoreStage,
 } from './recovery-command-observability.mjs';
 
@@ -47,6 +48,7 @@ test('emits only allowlisted redacted diagnostic fields', () => {
     timedOut: false,
     restoreStage: null,
     missingObjectKind: null,
+    missingObjectScope: null,
   });
   for (const forbidden of ['stderr', 'stdout', 'message', 'args', 'url']) {
     assert.equal(forbidden in diagnostic, false);
@@ -61,6 +63,7 @@ test('derives the latest allowlisted restore stage from process output only', ()
   });
   assert.equal(classifyRecoveryRestoreStage(error), 'schema');
   assert.equal(classifyRecoveryMissingObjectKind(error), 'relation');
+  assert.equal(classifyRecoveryMissingObjectScope(error), null);
 
   const diagnostic = buildRecoveryCommandDiagnostic({
     error,
@@ -69,10 +72,26 @@ test('derives the latest allowlisted restore stage from process output only', ()
   });
   assert.equal(diagnostic.restoreStage, 'schema');
   assert.equal(diagnostic.missingObjectKind, 'relation');
+  assert.equal(diagnostic.missingObjectScope, null);
   assert.equal(diagnostic.category, 'database_object_missing');
   assert.equal(diagnostic.exitStatus, 3);
   assert.equal(JSON.stringify(diagnostic).includes('private_customer_123'), false);
   assert.equal(JSON.stringify(diagnostic).includes('RISCK_RECOVERY_STAGE_'), false);
+});
+
+test('retains only allowlisted public database scopes and never object identifiers', () => {
+  const safe = errorWith('ERROR: relation "auth.private_identity_123" does not exist');
+  assert.equal(classifyRecoveryMissingObjectScope(safe), 'auth');
+  const safeDiagnostic = buildRecoveryCommandDiagnostic({ error: safe, phase: 'isolated_restore', command: 'docker' });
+  assert.equal(safeDiagnostic.missingObjectScope, 'auth');
+  assert.equal(JSON.stringify(safeDiagnostic).includes('private_identity_123'), false);
+
+  const unknown = errorWith('ERROR: relation "customer_secret.private_table" does not exist');
+  assert.equal(classifyRecoveryMissingObjectScope(unknown), null);
+  const unknownDiagnostic = buildRecoveryCommandDiagnostic({ error: unknown, phase: 'isolated_restore', command: 'docker' });
+  assert.equal(unknownDiagnostic.missingObjectScope, null);
+  assert.equal(JSON.stringify(unknownDiagnostic).includes('customer_secret'), false);
+  assert.equal(JSON.stringify(unknownDiagnostic).includes('private_table'), false);
 });
 
 test('classifies missing object kinds without retaining identifiers', () => {
@@ -98,12 +117,14 @@ test('classifies missing object kinds without retaining identifiers', () => {
 test('does not trust restore marker text embedded only in an exec error message', () => {
   const error = errorWith('ERROR: undefined object', {
     stdout: Buffer.from('no restore marker emitted'),
-    message: 'docker args RISCK_RECOVERY_STAGE_DATA secret-url-like-text',
+    message: 'docker args RISCK_RECOVERY_STAGE_DATA auth.private_table secret-url-like-text',
   });
   assert.equal(classifyRecoveryRestoreStage(error), null);
+  assert.equal(classifyRecoveryMissingObjectScope(error), null);
   const diagnostic = buildRecoveryCommandDiagnostic({ error, phase: 'isolated_restore', command: 'docker' });
   assert.equal(diagnostic.restoreStage, null);
   assert.equal(diagnostic.missingObjectKind, 'object');
+  assert.equal(diagnostic.missingObjectScope, null);
 });
 
 test('does not expose unknown executable names', () => {
@@ -116,6 +137,7 @@ test('does not expose unknown executable names', () => {
   assert.equal(diagnostic.category, 'command_failed');
   assert.equal(diagnostic.restoreStage, null);
   assert.equal(diagnostic.missingObjectKind, null);
+  assert.equal(diagnostic.missingObjectScope, null);
 });
 
 test('records timeout state without raw process output', () => {
