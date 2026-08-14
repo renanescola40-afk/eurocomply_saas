@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
   noStore: vi.fn(),
+  getAuthoritativeSignedContractPlan: vi.fn(),
+  hasProcessedLiveStripeSubscriptionAuthority: vi.fn(),
 }));
 
 vi.mock('next/cache', () => ({
@@ -15,13 +17,22 @@ vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: mocks.createAdminClient,
 }));
 
+vi.mock('@/server/billing/subscription-authority', () => ({
+  getAuthoritativeSignedContractPlan: mocks.getAuthoritativeSignedContractPlan,
+  hasProcessedLiveStripeSubscriptionAuthority: mocks.hasProcessedLiveStripeSubscriptionAuthority,
+}));
+
 import { getOrganizationBillingContext } from './billing';
 
-type SubscriptionRow = { plan: string | null; status: string | null } | null;
+type SubscriptionRow = {
+  plan: string | null;
+  status: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+} | null;
 
 let subscriptionRow: SubscriptionRow;
 let countByTable: Record<string, number>;
-let subscriptionStatusFilters: string[];
 
 function makeCountBuilder(table: string) {
   return {
@@ -35,10 +46,6 @@ function makeSubscriptionBuilder() {
   const builder = {
     select: vi.fn(() => builder),
     eq: vi.fn(() => builder),
-    in: vi.fn((_column: string, statuses: string[]) => {
-      subscriptionStatusFilters = statuses;
-      return builder;
-    }),
     order: vi.fn(() => builder),
     limit: vi.fn(() => builder),
     maybeSingle: vi.fn(async () => ({ data: subscriptionRow, error: null })),
@@ -66,16 +73,27 @@ describe('organization billing context', () => {
       vendors: 1,
       risks: 3,
     };
-    subscriptionStatusFilters = [];
     mocks.createAdminClient.mockReturnValue(makeSupabaseClient());
+    mocks.getAuthoritativeSignedContractPlan.mockResolvedValue(null);
+    mocks.hasProcessedLiveStripeSubscriptionAuthority.mockResolvedValue(false);
   });
 
-  it('uses the active subscription plan when Stripe has a valid subscription', async () => {
-    subscriptionRow = { plan: 'business', status: 'active' };
+  it('uses a paid plan only when a live Stripe subscription is correlated', async () => {
+    subscriptionRow = {
+      plan: 'business',
+      status: 'active',
+      stripe_customer_id: 'cus_live',
+      stripe_subscription_id: 'sub_live',
+    };
+    mocks.hasProcessedLiveStripeSubscriptionAuthority.mockResolvedValue(true);
 
     const context = await getOrganizationBillingContext('org_a');
 
-    expect(subscriptionStatusFilters).toEqual([]);
+    expect(mocks.hasProcessedLiveStripeSubscriptionAuthority).toHaveBeenCalledWith({
+      organizationId: 'org_a',
+      stripeCustomerId: 'cus_live',
+      stripeSubscriptionId: 'sub_live',
+    });
     expect(context).toEqual({
       plan: 'business',
       status: 'active',
@@ -88,22 +106,48 @@ describe('organization billing context', () => {
     });
   });
 
-  it('preserves delinquent subscription status without granting paid entitlements', async () => {
-    subscriptionRow = { plan: 'business', status: 'past_due' };
+  it('demotes status-only legacy rows instead of granting paid access', async () => {
+    subscriptionRow = {
+      plan: 'business',
+      status: 'active',
+      stripe_customer_id: null,
+      stripe_subscription_id: null,
+    };
 
     const context = await getOrganizationBillingContext('org_a');
 
-    expect(subscriptionStatusFilters).toEqual([]);
+    expect(context.plan).toBe('starter');
+    expect(context.status).toBeNull();
+  });
+
+  it('preserves delinquent live status without granting paid entitlements', async () => {
+    subscriptionRow = {
+      plan: 'business',
+      status: 'past_due',
+      stripe_customer_id: 'cus_live',
+      stripe_subscription_id: 'sub_live',
+    };
+    mocks.hasProcessedLiveStripeSubscriptionAuthority.mockResolvedValue(true);
+
+    const context = await getOrganizationBillingContext('org_a');
+
     expect(context.plan).toBe('starter');
     expect(context.status).toBe('past_due');
   });
 
-  it('does not grant paid entitlements when there is no subscription row', async () => {
-    subscriptionRow = null;
+  it('treats an applied signed contract as independent paid authority', async () => {
+    mocks.getAuthoritativeSignedContractPlan.mockResolvedValue('enterprise');
 
     const context = await getOrganizationBillingContext('org_a');
 
-    expect(subscriptionStatusFilters).toEqual([]);
+    expect(context.plan).toBe('enterprise');
+    expect(context.status).toBe('active');
+    expect(mocks.hasProcessedLiveStripeSubscriptionAuthority).not.toHaveBeenCalled();
+  });
+
+  it('does not grant paid entitlements when there is no subscription or contract', async () => {
+    const context = await getOrganizationBillingContext('org_a');
+
     expect(context.plan).toBe('starter');
     expect(context.status).toBeNull();
   });
