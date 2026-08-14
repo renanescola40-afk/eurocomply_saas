@@ -15,10 +15,15 @@ The authoritative selection is `config/supabase-forward-reconciliation.json` and
 - `20260813200000_reconcile_subscription_schema_defaults.sql`
 - `20260813201500_reconcile_controlled_document_storage.sql`
 - `20260813201600_force_tasks_rls.sql`
+- `20260813234000_reconcile_enterprise_break_glass_governance.sql`
+
+The Break-Glass row is the forward-only reconciliation for the unapplied historical `20260727160000_enterprise_break_glass_governance.sql`. The historical file remains immutable; the new execution identity exists specifically so the intended backend-only tenant-safe runtime can be reviewed and promoted without rewriting migration history.
 
 The control plane compiles the exact Git SHA, migration filenames, migration versions, byte sizes and SHA-256 digests into one immutable selection digest.
 
 Changing any selected SQL byte, filename or release SHA changes the selection digest and invalidates previous rehearsal evidence. Both bounded workflow path filters explicitly include every selected migration so a selected SQL-byte change cannot skip PR validation.
+
+The rehearsal and filtered dry-run stages use the same pinned Supabase CLI baseline. A CLI-version change therefore invalidates workflow checks and must be reviewed like any other control-plane change.
 
 ## Administrative prerequisites
 
@@ -48,8 +53,9 @@ The workflow is designed to:
 5. verify each selected migration's SHA-256 before applying it to the isolated restore;
 6. apply only those selected files to the isolated target;
 7. run `scripts/supabase/verify-forward-reconciliation-postconditions.sql` against the isolated target;
-8. emit a redacted attestation that explicitly records `productionWritePerformed=false`;
-9. destroy the disposable database.
+8. require the Break-Glass postcondition proof to confirm tenant composite keys/FKs, RLS + FORCE RLS on all four Break-Glass tables, zero browser-role table grants, and service-role-only execution of the hardened expiry function with fixed `search_path`;
+9. emit a redacted attestation that explicitly records `productionWritePerformed=false`;
+10. destroy the disposable database.
 
 The canonical backup/restore producer normalizes accidental CR/LF before PostgreSQL-tool use and records only bounded failure codes; raw subprocess errors, command arguments, database URLs and credentials must never be retained in evidence.
 
