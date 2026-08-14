@@ -24,6 +24,11 @@ const SUPABASE_MANAGED_DATA_EXCLUDES = [
   'storage.buckets_vectors',
   'storage.vector_indexes',
 ];
+const RESTORE_STAGE_MARKERS = Object.freeze({
+  roles: 'RISCK_RECOVERY_STAGE_ROLES',
+  schema: 'RISCK_RECOVERY_STAGE_SCHEMA',
+  data: 'RISCK_RECOVERY_STAGE_DATA',
+});
 
 function required(name) {
   const value = env(name);
@@ -137,11 +142,18 @@ function restoreIntoEphemeralSupabase(container) {
     copySqlToContainer(container, dataDumpPath),
   ];
   try {
+    // psql processes -c/-f actions in order. --single-transaction keeps the entire
+    // restore atomic, while client-side \echo markers reveal only the safe stage
+    // reached before a failure. No SQL text, rows, identifiers or credentials are
+    // emitted by these allowlisted markers.
     run('docker', [
       'exec', container, 'psql', '-U', 'postgres', '-d', 'postgres', '--no-psqlrc',
       '--single-transaction', '--set', 'ON_ERROR_STOP=1',
+      '--command', `\\echo ${RESTORE_STAGE_MARKERS.roles}`,
       '--file', containerPaths[0],
+      '--command', `\\echo ${RESTORE_STAGE_MARKERS.schema}`,
       '--file', containerPaths[1],
+      '--command', `\\echo ${RESTORE_STAGE_MARKERS.data}`,
       '--command', 'SET session_replication_role = replica;',
       '--file', containerPaths[2],
     ], {}, 'recovery_isolated_restore_failed');
@@ -264,7 +276,7 @@ const evidence = {
   failureDiagnostic: passed ? null : failureDiagnostic,
   evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
   evidenceBoundary: ephemeralMode
-    ? 'Supabase-compatible logical roles, schema, and application/auth data backups were restored transactionally into a disposable isolated Supabase Postgres database; target-managed vector storage tables were excluded from the data dump. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
+    ? 'Supabase-compatible logical roles, schema, and application/auth data backups were restored transactionally into a disposable isolated Supabase Postgres database; target-managed vector storage tables were excluded from the data dump. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification, an allowlisted restore stage/object kind and a truncated combined digest; connection strings, raw command arguments, raw process errors, SQL identifiers, backup files and local database volumes are not retained.'
     : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated digest; connection strings, raw command arguments, raw process errors and the dump are not retained.',
 };
 mkdirSync(dirname(output), { recursive: true });
