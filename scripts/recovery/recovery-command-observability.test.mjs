@@ -95,11 +95,12 @@ test('classifies the terminal missing-object payload instead of psql location or
   assert.equal(diagnostic.category, 'database_object_missing');
   assert.equal(diagnostic.restoreStage, 'schema');
   assert.equal(diagnostic.missingObjectKind, 'relation');
-  assert.equal(diagnostic.missingObjectScope, 'auth');
+  assert.equal(diagnostic.missingObjectScope, null);
   const serialized = JSON.stringify(diagnostic);
   assert.equal(serialized.includes('production-schema.sql'), false);
   assert.equal(serialized.includes('private_identity_123'), false);
   assert.equal(serialized.includes('old_table'), false);
+  assert.equal(serialized.includes('auth'), false);
 });
 
 test('derives the metadata gate from the terminal error rather than earlier restore-conflict text', () => {
@@ -115,8 +116,9 @@ test('derives the metadata gate from the terminal error rather than earlier rest
   const diagnostic = buildRecoveryCommandDiagnostic({ error, phase: 'isolated_restore', command: 'docker' });
   assert.equal(diagnostic.category, 'database_object_missing');
   assert.equal(diagnostic.missingObjectKind, 'relation');
-  assert.equal(diagnostic.missingObjectScope, 'auth');
+  assert.equal(diagnostic.missingObjectScope, null);
   assert.equal(JSON.stringify(diagnostic).includes('private_identity_123'), false);
+  assert.equal(JSON.stringify(diagnostic).includes('auth'), false);
 });
 
 test('ignores NOTICE-only missing-object messages when there is no terminal ERROR or FATAL line', () => {
@@ -139,11 +141,12 @@ test('ignores NOTICE-only missing-object messages when there is no terminal ERRO
   assert.equal(JSON.stringify(diagnostic).includes('private_identity_123'), false);
 });
 
-test('retains only allowlisted public database scopes and never object identifiers', () => {
+test('can classify an allowlisted scope internally without persisting any SQL scope in evidence', () => {
   const safe = errorWith('ERROR: relation "auth.private_identity_123" does not exist');
   assert.equal(classifyRecoveryMissingObjectScope(safe), 'auth');
   const safeDiagnostic = buildRecoveryCommandDiagnostic({ error: safe, phase: 'isolated_restore', command: 'docker' });
-  assert.equal(safeDiagnostic.missingObjectScope, 'auth');
+  assert.equal(safeDiagnostic.missingObjectScope, null);
+  assert.equal(JSON.stringify(safeDiagnostic).includes('auth'), false);
   assert.equal(JSON.stringify(safeDiagnostic).includes('private_identity_123'), false);
 
   const unknown = errorWith('ERROR: relation "customer_secret.private_table" does not exist');
@@ -180,6 +183,7 @@ test('classifies missing object kinds without retaining identifiers', () => {
     assert.equal(classifyRecoveryMissingObjectKind(error), expected);
     const diagnostic = buildRecoveryCommandDiagnostic({ error, phase: 'isolated_restore', command: 'docker' });
     assert.equal(diagnostic.missingObjectKind, expected);
+    assert.equal(diagnostic.missingObjectScope, null);
     assert.equal(JSON.stringify(diagnostic).includes('private_'), false);
   }
 });
