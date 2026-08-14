@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 const pricingPage = readFileSync(join(process.cwd(), 'src/app/[locale]/pricing/page.tsx'), 'utf8');
 const checkoutPage = readFileSync(join(process.cwd(), 'src/app/[locale]/checkout/page.tsx'), 'utf8');
 const organizationDashboard = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/page.tsx'), 'utf8');
+const dashboardCopy = readFileSync(join(process.cwd(), 'src/lib/i18n/dashboard-copy.ts'), 'utf8');
 
 describe('public pricing catalog contract', () => {
   it('renders plans from the canonical billing catalog instead of maintaining a second pricing table', () => {
@@ -62,11 +63,15 @@ describe('public pricing catalog contract', () => {
     expect(checkoutPage).not.toContain("const DEFAULT_PLAN_ID = 'growth'");
   });
 
-  it('uses the canonical catalog name on the authenticated dashboard instead of legacy Starter/Growth labels', () => {
+  it('uses canonical commercial names throughout authenticated dashboard product copy', () => {
     expect(organizationDashboard).toContain('const currentCatalogPlan = getBillingPlan(entitlements.plan)');
     expect(organizationDashboard).toContain('const planName = currentCatalogPlan?.name ?? entitlements.plan');
     expect(organizationDashboard).not.toContain("professional: 'Growth'");
     expect(organizationDashboard).not.toContain("business: 'Growth'");
     expect(organizationDashboard).not.toContain("starter: 'Starter'");
+    expect(dashboardCopy).toContain('Professional plan or higher required');
+    expect(dashboardCopy).toContain('Monitoring is available on Professional plans or higher');
+    expect(dashboardCopy).not.toContain('Growth plan or higher required');
+    expect(dashboardCopy).not.toContain('Growth or Enterprise plans');
   });
 });
