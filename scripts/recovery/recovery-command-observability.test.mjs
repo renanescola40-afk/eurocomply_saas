@@ -4,6 +4,8 @@ import test from 'node:test';
 import {
   buildRecoveryCommandDiagnostic,
   classifyRecoveryCommandCategory,
+  classifyRecoveryMissingObjectKind,
+  classifyRecoveryRestoreStage,
 } from './recovery-command-observability.mjs';
 
 function errorWith(stderr, overrides = {}) {
@@ -43,10 +45,65 @@ test('emits only allowlisted redacted diagnostic fields', () => {
     exitStatus: 1,
     signal: null,
     timedOut: false,
+    restoreStage: null,
+    missingObjectKind: null,
   });
   for (const forbidden of ['stderr', 'stdout', 'message', 'args', 'url']) {
     assert.equal(forbidden in diagnostic, false);
   }
+});
+
+test('derives the latest allowlisted restore stage from process output only', () => {
+  const error = errorWith('ERROR: relation "private_customer_123" does not exist', {
+    stdout: Buffer.from('RISCK_RECOVERY_STAGE_ROLES\nRISCK_RECOVERY_STAGE_SCHEMA\n'),
+    message: 'docker command contains RISCK_RECOVERY_STAGE_DATA but must not influence classification',
+    status: 3,
+  });
+  assert.equal(classifyRecoveryRestoreStage(error), 'schema');
+  assert.equal(classifyRecoveryMissingObjectKind(error), 'relation');
+
+  const diagnostic = buildRecoveryCommandDiagnostic({
+    error,
+    phase: 'isolated_restore',
+    command: 'docker',
+  });
+  assert.equal(diagnostic.restoreStage, 'schema');
+  assert.equal(diagnostic.missingObjectKind, 'relation');
+  assert.equal(diagnostic.category, 'database_object_missing');
+  assert.equal(diagnostic.exitStatus, 3);
+  assert.equal(JSON.stringify(diagnostic).includes('private_customer_123'), false);
+  assert.equal(JSON.stringify(diagnostic).includes('RISCK_RECOVERY_STAGE_'), false);
+});
+
+test('classifies missing object kinds without retaining identifiers', () => {
+  const cases = [
+    ['schema', 'ERROR: schema "tenant_secret" does not exist'],
+    ['role', 'ERROR: role "tenant_owner" does not exist'],
+    ['relation', 'ERROR: relation "private_table" does not exist'],
+    ['function', 'ERROR: function private_fn(uuid) does not exist'],
+    ['type', 'ERROR: type "private_enum" does not exist'],
+    ['sequence', 'ERROR: sequence "private_seq" does not exist'],
+    ['extension', 'ERROR: extension "private_ext" does not exist'],
+    ['column', 'ERROR: column "private_col" does not exist'],
+  ];
+  for (const [expected, stderr] of cases) {
+    const error = errorWith(stderr);
+    assert.equal(classifyRecoveryMissingObjectKind(error), expected);
+    const diagnostic = buildRecoveryCommandDiagnostic({ error, phase: 'isolated_restore', command: 'docker' });
+    assert.equal(diagnostic.missingObjectKind, expected);
+    assert.equal(JSON.stringify(diagnostic).includes('private_'), false);
+  }
+});
+
+test('does not trust restore marker text embedded only in an exec error message', () => {
+  const error = errorWith('ERROR: undefined object', {
+    stdout: Buffer.from('no restore marker emitted'),
+    message: 'docker args RISCK_RECOVERY_STAGE_DATA secret-url-like-text',
+  });
+  assert.equal(classifyRecoveryRestoreStage(error), null);
+  const diagnostic = buildRecoveryCommandDiagnostic({ error, phase: 'isolated_restore', command: 'docker' });
+  assert.equal(diagnostic.restoreStage, null);
+  assert.equal(diagnostic.missingObjectKind, 'object');
 });
 
 test('does not expose unknown executable names', () => {
@@ -57,6 +114,8 @@ test('does not expose unknown executable names', () => {
   });
   assert.equal(diagnostic.commandFamily, 'unknown');
   assert.equal(diagnostic.category, 'command_failed');
+  assert.equal(diagnostic.restoreStage, null);
+  assert.equal(diagnostic.missingObjectKind, null);
 });
 
 test('records timeout state without raw process output', () => {
