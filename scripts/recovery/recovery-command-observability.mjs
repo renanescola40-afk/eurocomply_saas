@@ -53,6 +53,21 @@ function processOutputText(error) {
     .toLowerCase();
 }
 
+function terminalDatabaseErrorText(error) {
+  const lines = processOutputText(error)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    if (/\b(?:error|fatal):/.test(lines[index])) return lines[index];
+  }
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    if (/does not exist|undefined table|undefined object/.test(lines[index])) return lines[index];
+  }
+  return '';
+}
+
 export function classifyRecoveryRestoreStage(error) {
   const value = processOutputText(error);
   let latestStage = null;
@@ -68,7 +83,7 @@ export function classifyRecoveryRestoreStage(error) {
 }
 
 export function classifyRecoveryMissingObjectKind(error) {
-  const value = processOutputText(error);
+  const value = terminalDatabaseErrorText(error);
   for (const [kind, pattern] of MISSING_OBJECT_PATTERNS) {
     if (pattern.test(value)) return kind;
   }
@@ -78,7 +93,7 @@ export function classifyRecoveryMissingObjectKind(error) {
 }
 
 export function classifyRecoveryMissingObjectScope(error) {
-  const value = processOutputText(error);
+  const value = terminalDatabaseErrorText(error);
   for (const scope of SAFE_DATABASE_SCOPES) {
     const qualified = new RegExp(`(?:^|[^a-z0-9_])${scope.replace(/_/g, '[_]')}\\s*\\.`);
     const schemaMissing = new RegExp(`\\bschema\\s+["']?${scope.replace(/_/g, '[_]')}["']?\\s+does not exist\\b`);
