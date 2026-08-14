@@ -1,4 +1,9 @@
-const ENVIRONMENT_GROUPS = new Set(['supabase', 'stripe', 'redis', 'sentry']);
+const ENVIRONMENT_GROUP_LIMITS = Object.freeze({
+  supabase: 3,
+  stripe: 4,
+  redis: 2,
+  sentry: 1,
+});
 const READINESS_STATUSES = new Set(['ready', 'not_ready', 'unauthorized']);
 const DATABASE_DETAILS = new Set(['ok', 'not_ready']);
 const STRIPE_DETAILS = new Set(['ok', 'not_ready', 'not_configured']);
@@ -19,28 +24,31 @@ function booleanField(source, key) {
   return typeof source?.[key] === 'boolean' ? source[key] : null;
 }
 
-function finiteNumberField(source, key) {
-  return Number.isFinite(source?.[key]) ? Number(source[key]) : null;
+function boundedIntegerField(source, key, minimum, maximum) {
+  const value = source?.[key];
+  return Number.isInteger(value) && value >= minimum && value <= maximum ? value : null;
 }
 
 function fixedLabel(value, allowed, fallback = 'unknown') {
   return typeof value === 'string' && allowed.has(value) ? value : fallback;
 }
 
+function boundedEnvironmentDiagnostics(environment) {
+  if (!Array.isArray(environment)) return [];
+
+  return Object.entries(ENVIRONMENT_GROUP_LIMITS).flatMap(([name, maximumMissing]) => {
+    const item = environment.find((candidate) => candidate?.name === name);
+    if (!item) return [];
+    return [{
+      name,
+      configured: booleanField(item, 'configured'),
+      missingCount: boundedIntegerField(item, 'missingCount', 0, maximumMissing),
+    }];
+  });
+}
+
 export function buildSafeReadinessDiagnostics(body) {
   if (!body || typeof body !== 'object') return { responseAvailable: false };
-
-  const environment = Array.isArray(body.environment)
-    ? body.environment.flatMap((item) => {
-      const name = typeof item?.name === 'string' ? item.name : '';
-      if (!ENVIRONMENT_GROUPS.has(name)) return [];
-      return [{
-        name,
-        configured: booleanField(item, 'configured'),
-        missingCount: finiteNumberField(item, 'missingCount'),
-      }];
-    })
-    : [];
 
   const checks = Object.fromEntries(
     CHECK_KEYS.flatMap((key) => {
@@ -52,7 +60,7 @@ export function buildSafeReadinessDiagnostics(body) {
   return {
     responseAvailable: true,
     status: fixedLabel(body.status, READINESS_STATUSES),
-    environment,
+    environment: boundedEnvironmentDiagnostics(body.environment),
     database: {
       adminClient: booleanField(body.database, 'adminClient'),
       subscriptionsReadable: booleanField(body.database, 'subscriptionsReadable'),
@@ -62,12 +70,12 @@ export function buildSafeReadinessDiagnostics(body) {
       configured: booleanField(body.stripe, 'configured'),
       apiReachable: booleanField(body.stripe, 'apiReachable'),
       priceLookup: booleanField(body.stripe, 'priceLookup'),
-      pricesChecked: finiteNumberField(body.stripe, 'pricesChecked'),
+      pricesChecked: boundedIntegerField(body.stripe, 'pricesChecked', 0, 2),
       detail: fixedLabel(body.stripe?.detail, STRIPE_DETAILS),
     },
     sentryReleaseUploads: {
       configured: booleanField(body.sentryReleaseUploads, 'configured'),
-      missingCount: finiteNumberField(body.sentryReleaseUploads, 'missingCount'),
+      missingCount: boundedIntegerField(body.sentryReleaseUploads, 'missingCount', 0, 2),
       sourceMapsUploadRequiresAuthToken: booleanField(body.sentryReleaseUploads, 'sourceMapsUploadRequiresAuthToken'),
     },
     enterpriseStepUp: {
