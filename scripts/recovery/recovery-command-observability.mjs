@@ -1,6 +1,22 @@
 import { basename } from 'node:path';
 
 const SAFE_COMMANDS = new Set(['supabase', 'docker', 'psql', 'pg_dump', 'pg_restore']);
+const RESTORE_STAGE_MARKERS = Object.freeze({
+  risck_recovery_stage_roles: 'roles',
+  risck_recovery_stage_schema: 'schema',
+  risck_recovery_stage_data: 'data',
+});
+const MISSING_OBJECT_PATTERNS = Object.freeze([
+  ['schema', /\bschema\b[^\n]{0,240}\bdoes not exist\b/],
+  ['role', /\brole\b[^\n]{0,240}\bdoes not exist\b/],
+  ['relation', /\brelation\b[^\n]{0,240}\bdoes not exist\b/],
+  ['table', /\btable\b[^\n]{0,240}\bdoes not exist\b/],
+  ['sequence', /\bsequence\b[^\n]{0,240}\bdoes not exist\b/],
+  ['function', /\bfunction\b[^\n]{0,240}\bdoes not exist\b/],
+  ['type', /\btype\b[^\n]{0,240}\bdoes not exist\b/],
+  ['extension', /\bextension\b[^\n]{0,240}\bdoes not exist\b/],
+  ['column', /\bcolumn\b[^\n]{0,240}\bdoes not exist\b/],
+]);
 
 function text(value) {
   if (value == null) return '';
@@ -13,6 +29,37 @@ function combinedErrorText(error) {
     .map(text)
     .join('\n')
     .toLowerCase();
+}
+
+function processOutputText(error) {
+  return [error?.stderr, error?.stdout]
+    .map(text)
+    .join('\n')
+    .toLowerCase();
+}
+
+export function classifyRecoveryRestoreStage(error) {
+  const value = processOutputText(error);
+  let latestStage = null;
+  let latestIndex = -1;
+  for (const [marker, stage] of Object.entries(RESTORE_STAGE_MARKERS)) {
+    const index = value.lastIndexOf(marker);
+    if (index > latestIndex) {
+      latestIndex = index;
+      latestStage = stage;
+    }
+  }
+  return latestIndex >= 0 ? latestStage : null;
+}
+
+export function classifyRecoveryMissingObjectKind(error) {
+  const value = processOutputText(error);
+  for (const [kind, pattern] of MISSING_OBJECT_PATTERNS) {
+    if (pattern.test(value)) return kind;
+  }
+  if (/undefined table/.test(value)) return 'relation';
+  if (/undefined object/.test(value)) return 'object';
+  return null;
 }
 
 export function classifyRecoveryCommandCategory(error) {
@@ -50,13 +97,17 @@ export function buildRecoveryCommandDiagnostic({ error, phase, command }) {
   const commandFamily = SAFE_COMMANDS.has(basename(String(command ?? '')))
     ? basename(String(command))
     : 'unknown';
+  const category = classifyRecoveryCommandCategory(error);
+  const isolatedRestore = phase === 'isolated_restore' && commandFamily === 'docker';
 
   return {
     phase: typeof phase === 'string' && phase.length > 0 ? phase : 'unknown',
     commandFamily,
-    category: classifyRecoveryCommandCategory(error),
+    category,
     exitStatus: Number.isInteger(error?.status) ? error.status : null,
     signal: typeof error?.signal === 'string' && error.signal.length > 0 ? error.signal : null,
     timedOut: error?.code === 'ETIMEDOUT' || error?.killed === true,
+    restoreStage: isolatedRestore ? classifyRecoveryRestoreStage(error) : null,
+    missingObjectKind: category === 'database_object_missing' ? classifyRecoveryMissingObjectKind(error) : null,
   };
 }
