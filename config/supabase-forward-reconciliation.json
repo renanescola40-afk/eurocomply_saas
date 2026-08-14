@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-08-13-runtime-schema-reconciliation",
+  "changeSet": "2026-08-14-runtime-schema-reconciliation-v2",
   "migrations": [
     {
       "filename": "20260813175000_optimize_organization_add_ons_rls_initplan.sql",
@@ -21,6 +21,10 @@
     {
       "filename": "20260813201600_force_tasks_rls.sql",
       "purpose": "force RLS on the tenant-scoped tasks table"
+    },
+    {
+      "filename": "20260813234000_reconcile_enterprise_break_glass_governance.sql",
+      "purpose": "materialize the backend-only tenant-bound Enterprise Break-Glass runtime without rewriting unapplied historical migration bytes"
     }
   ],
   "truthBoundary": {
