@@ -269,7 +269,7 @@ describe('billing checkout API security gates', () => {
         mode: 'subscription',
         customer: 'cus_created_for_org_a',
         line_items: [{ price: 'price_starter', quantity: 1 }],
-        success_url: 'https://app.eurocomply.test/pt/dashboard/organizations?checkout=success',
+        success_url: 'https://app.eurocomply.test/pt/checkout/complete',
       }),
       expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
     );
