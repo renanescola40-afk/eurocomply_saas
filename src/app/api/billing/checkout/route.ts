@@ -226,7 +226,7 @@ export async function POST(request: Request) {
           mode: 'subscription',
           customer: stripeCustomerId,
           line_items: [{ price: priceId, quantity: 1 }],
-          success_url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations?checkout=success`,
+          success_url: `${returnBaseUrl.appUrl}/${locale}/checkout/complete`,
           cancel_url: `${returnBaseUrl.appUrl}/${locale}/checkout?plan=${plan}&checkout=cancelled`,
           client_reference_id: organization.id,
           locale,
