@@ -99,23 +99,28 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(scorecardDispatch).toBeGreaterThan(gateWait);
   });
 
-  it('accepts only success/failure as evaluated and performs at most one fallback refresh after non-evaluation settlement', () => {
+  it('ignores only orchestration workflow_run/skipped gates and keeps real terminal conclusions authoritative', () => {
     expect(script).toContain("export const TERMINAL_EVALUATION_CONCLUSIONS = new Set(['success', 'failure']);");
     expect(script).toContain('export function isTerminalEvaluation(run)');
-    expect(script).toContain("return run?.status === 'completed' && TERMINAL_EVALUATION_CONCLUSIONS.has(run?.conclusion);");
+    expect(script).toContain('export function isOrchestrationOnlySkippedGateRun(run)');
+    expect(script).toContain("run?.event === 'workflow_run'");
+    expect(script).toContain("run?.conclusion === 'skipped'");
+    expect(script).toContain('if (isOrchestrationOnlySkippedGateRun(run)) return false;');
+    expect(script).toContain("return run?.status === 'completed';");
+    expect(script).toContain('const latestRelevant = covered.find((run) => !isOrchestrationOnlySkippedGateRun(run));');
+    expect(script).toContain('if (isTerminalEvaluation(latestRelevant)) return latestRelevant;');
+    expect(script).toContain('if (latestRelevant?.status === \'completed\')');
+    expect(script).toContain('Terminal Enterprise Production Gate ended with authoritative non-evaluation conclusion');
+    expect(script).toContain('covered.every((run) => isOrchestrationOnlySkippedGateRun(run))');
+    expect(script).toContain('Ignoring orchestration-only workflow_run/skipped Enterprise Production Gate record');
     expect(script).toContain('let fallbackRefreshAvailable = !refreshAlreadyDispatched;');
-    expect(script).toContain('let consecutiveNonEvaluationPolls = 0;');
-    expect(script).toContain('const latestTerminalEvaluation = covered.find((run) => isTerminalEvaluation(run));');
-    expect(script).toContain('if (latestTerminalEvaluation) return latestTerminalEvaluation;');
-    expect(script).toContain('const latestActiveEvaluation = covered.find((run) => ACTIVE_RUN_STATUSES.has(run?.status));');
-    expect(script).toContain('consecutiveNonEvaluationPolls >= 2');
+    expect(script).toContain('let consecutiveSkippedOnlyPolls = 0;');
+    expect(script).toContain('consecutiveSkippedOnlyPolls >= 2');
     expect(script).toContain('Main advanced while Production Gate refresh recovery was pending');
-    expect(script).toContain('Dispatched one bounded fallback Enterprise Production Gate refresh after non-evaluation settlement');
+    expect(script).toContain('Dispatched one bounded fallback Enterprise Production Gate refresh after skipped-only settlement');
     expect(script).toContain('fallbackRefreshAvailable = false;');
-    expect(script).toContain('Ignoring non-evaluation Enterprise Production Gate conclusion');
     expect(script).toContain('Terminal Enterprise Production Gate did not complete within the bounded settlement window');
     expect(script).toContain('.filter((run) => isTerminalEvaluation(run))');
-    expect(script).not.toContain('Terminal Enterprise Production Gate ended with non-evaluation conclusion');
     expect(script).not.toContain("run?.status === 'completed' && run?.conclusion === 'success'");
     expect(workflow).toContain('accepts a terminal GO or NO_GO gate as a completed evaluation');
     expect(workflow).toContain('Terminal evaluation status never awards PASS');
