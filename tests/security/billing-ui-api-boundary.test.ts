@@ -94,6 +94,12 @@ describe('billing UI API boundary', () => {
     expect(publicCheckoutPage).not.toContain('CURRENT_PLAN_BLOCKING_STATUSES');
   });
 
+  it('keeps billing-action failures on checkout when the dashboard is access-gated', () => {
+    expect(billingActionButton).toContain("window.location.pathname === `/${locale}/checkout`");
+    expect(billingActionButton).toContain("checkoutUrl.searchParams.set('checkout', 'error')");
+    expect(billingActionButton).toContain('window.location.href = `${checkoutUrl.pathname}${checkoutUrl.search}`');
+  });
+
   it('has no legacy billing action helper file', () => {
     expect(existsSync(legacyBillingActionsPath)).toBe(false);
   });
