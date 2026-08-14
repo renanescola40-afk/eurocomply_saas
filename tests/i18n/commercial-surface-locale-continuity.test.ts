@@ -9,6 +9,8 @@ const pricingPage = readFileSync(join(process.cwd(), 'src/app/[locale]/pricing/p
 const checkoutPage = readFileSync(join(process.cwd(), 'src/app/[locale]/checkout/page.tsx'), 'utf8');
 const loginPage = readFileSync(join(process.cwd(), 'src/app/[locale]/login/page.tsx'), 'utf8');
 const signupPage = readFileSync(join(process.cwd(), 'src/app/[locale]/signup/page.tsx'), 'utf8');
+const trustPage = readFileSync(join(process.cwd(), 'src/app/[locale]/trust/page.tsx'), 'utf8');
+const trustComponent = readFileSync(join(process.cwd(), 'src/components/marketing/trust-center-page.tsx'), 'utf8');
 const consentBanner = readFileSync(join(process.cwd(), 'src/components/analytics/AnalyticsConsentBanner.tsx'), 'utf8');
 const posthogClient = readFileSync(join(process.cwd(), 'src/lib/analytics/posthog-client.ts'), 'utf8');
 
@@ -70,10 +72,19 @@ describe('commercial surface locale continuity', () => {
     expect(consentBanner).toContain('{copy.allow}');
   });
 
-  it('preserves keyboard focus treatment on purchase and auth controls', () => {
+  it('renders the already-authored localized Trust Center overview instead of discarding it', () => {
+    expect(trustPage).toContain("localizedCopy={locale === 'en' ? undefined : copy}");
+    expect(trustComponent).toContain("localizedCopy && kind === 'trust' ? localizedLandingContent(localizedCopy)");
+    expect(trustComponent).toContain('lang="en"');
+    expect(trustComponent).toContain('copy.procurementItems');
+    expect(trustComponent).toContain('copy.evidenceItems');
+  });
+
+  it('preserves keyboard focus treatment on purchase, auth and trust controls', () => {
     expect(pricingPage).toContain('focus-visible:ring-2');
     expect(checkoutPage).toContain('focus-visible:ring-2');
     expect(loginPage).toContain('focus-visible:ring-2');
     expect(signupPage).toContain('focus-visible:ring-2');
+    expect(trustComponent).toContain('focus-visible:ring-2');
   });
 });
