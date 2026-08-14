@@ -16,6 +16,8 @@ describe('enterprise production gate retained-proof orchestration', () => {
     expect(workflowRunProducers()).toEqual(allowlistedProducers);
     expect(allowlistedProducers).toContain('Supabase Live RLS Validation');
     expect(allowlistedProducers).toContain('RISCK COMPLY Upload Security CI');
+    expect(allowlistedProducers).toContain('Production Runtime Proof');
+    expect(allowlistedProducers).toContain('Public Production Final');
     expect(workflow).toMatch(/workflow_run:[\s\S]*?types: \[completed\]\n    branches: \[main\]/);
     expect(workflow).not.toContain('Enterprise Production Gate\n      - Enterprise Production Gate');
   });
@@ -50,10 +52,12 @@ describe('enterprise production gate retained-proof orchestration', () => {
         'Supabase Live RLS Validation': 'node --check scripts/enterprise/fetch-supabase-rls-evidence.mjs',
         'RISCK COMPLY Upload Security CI': 'node --check scripts/enterprise/fetch-upload-scanner-runtime-evidence.mjs',
         'Audit Chain Runtime Proof': 'node --check scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs',
+        'Production Runtime Proof': 'node --check scripts/enterprise/fetch-production-runtime-evidence.mjs',
         'Production Provider Runtime Proof': 'node --check scripts/enterprise/fetch-production-provider-runtime-evidence.mjs',
         'Branch Protection Runtime Proof': 'node --check scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs',
         'Step-Up Runtime Proof': 'node --check scripts/enterprise/fetch-step-up-runtime-evidence.mjs',
         'Stripe Runtime Evidence Promotion': 'node --check scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs',
+        'Public Production Final': 'node --check scripts/enterprise/fetch-public-production-final-evidence.mjs',
       } as const;
       expect(workflow).toContain(fetcherChecks[producer.workflowName as keyof typeof fetcherChecks]);
     }

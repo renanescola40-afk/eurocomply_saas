@@ -17,16 +17,14 @@ const RETAINED_EXACT_SHA_FETCHERS = [
   'scripts/enterprise/fetch-supabase-rls-evidence.mjs',
   'scripts/enterprise/fetch-upload-scanner-runtime-evidence.mjs',
   'scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs',
+  'scripts/enterprise/fetch-production-runtime-evidence.mjs',
   'scripts/enterprise/fetch-production-provider-runtime-evidence.mjs',
   'scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs',
   'scripts/enterprise/fetch-step-up-runtime-evidence.mjs',
   'scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs',
-];
-const P0_EXACT_SHA_FETCHERS = [
-  ...RETAINED_EXACT_SHA_FETCHERS,
-  'scripts/enterprise/fetch-production-runtime-evidence.mjs',
   'scripts/enterprise/fetch-public-production-final-evidence.mjs',
 ];
+const P0_EXACT_SHA_FETCHERS = [...RETAINED_EXACT_SHA_FETCHERS];
 
 function fetchersWithFailure(failingKey) {
   return Object.fromEntries(RETAINED_RUNTIME_PRODUCERS.map((producer) => [
@@ -102,6 +100,23 @@ test('diagnostic mode never suppresses an invalid trigger-bound producer', async
       /synthetic_invalid_artifact/,
     );
   });
+});
+
+test('production runtime and public final are retained independently without shared-path ownership', () => {
+  const productionRuntime = RETAINED_RUNTIME_PRODUCERS.find((producer) => producer.key === 'productionRuntime');
+  const publicFinal = RETAINED_RUNTIME_PRODUCERS.find((producer) => producer.key === 'publicProductionFinal');
+
+  assert.ok(productionRuntime);
+  assert.ok(publicFinal);
+  assert.deepEqual(productionRuntime.evidencePaths, [
+    'docs/security/evidence/runtime/deployment-smoke-validation.json',
+  ]);
+  assert.deepEqual(publicFinal.evidencePaths, [
+    'docs/security/evidence/runtime/final-validation-runner.json',
+    'docs/security/evidence/runtime/observability-smoke-validation.json',
+    'docs/security/evidence/runtime/rollback-dry-run-validation.json',
+  ]);
+  assert.equal(publicFinal.evidencePaths.includes('docs/security/evidence/runtime/deployment-smoke-validation.json'), false);
 });
 
 test('every retained producer is covered by the exact-SHA query contract', () => {
