@@ -250,3 +250,59 @@ test('records timeout state without raw process output', () => {
   assert.equal('stderr' in diagnostic, false);
   assert.equal('stdout' in diagnostic, false);
 });
+
+test('retains only an allowlisted restore file and safe missing relation identifier', () => {
+  const diagnostic = buildRecoveryCommandDiagnostic({
+    error: errorWith(
+      'psql:/tmp/production-schema.sql:812: ERROR: relation "public.enterprise_contracts" does not exist\nDETAIL: internal-only text',
+      { message: 'Command failed: docker exec ... postgresql://user:secret@example.invalid/db' },
+    ),
+    phase: 'isolated_restore',
+    command: 'docker',
+  });
+
+  assert.deepEqual(diagnostic, {
+    phase: 'isolated_restore',
+    commandFamily: 'docker',
+    category: 'database_object_missing',
+    exitStatus: 1,
+    signal: null,
+    timedOut: false,
+    sourceFile: 'production-schema.sql',
+    databaseObjectKind: 'relation',
+    databaseObjectIdentifier: 'public.enterprise_contracts',
+  });
+  const serialized = JSON.stringify(diagnostic);
+  assert.equal(serialized.includes('internal-only text'), false);
+  assert.equal(serialized.includes('secret'), false);
+  assert.equal(serialized.includes('postgresql://'), false);
+});
+
+test('retains a safe missing function name without argument text', () => {
+  const diagnostic = buildRecoveryCommandDiagnostic({
+    error: errorWith(
+      'psql:/tmp/production-schema.sql:44: ERROR: function extensions.digest(text, text) does not exist',
+    ),
+    phase: 'isolated_restore',
+    command: 'docker',
+  });
+
+  assert.equal(diagnostic.databaseObjectKind, 'function');
+  assert.equal(diagnostic.databaseObjectIdentifier, 'extensions.digest');
+  assert.equal('functionArguments' in diagnostic, false);
+});
+
+test('drops unsafe or unrecognized missing-object text instead of persisting it', () => {
+  const diagnostic = buildRecoveryCommandDiagnostic({
+    error: errorWith(
+      'psql:/tmp/customer-export.sql:9: ERROR: relation "public.safe;select_secret" does not exist',
+    ),
+    phase: 'isolated_restore',
+    command: 'docker',
+  });
+
+  assert.equal(diagnostic.category, 'database_object_missing');
+  assert.equal('sourceFile' in diagnostic, false);
+  assert.equal('databaseObjectIdentifier' in diagnostic, false);
+  assert.equal('databaseObjectKind' in diagnostic, false);
+});

@@ -1,37 +1,22 @@
 import { basename } from 'node:path';
 
 const SAFE_COMMANDS = new Set(['supabase', 'docker', 'psql', 'pg_dump', 'pg_restore']);
-const SAFE_DATABASE_SCOPES = Object.freeze([
-  'auth',
-  'storage',
-  'public',
-  'extensions',
-  'realtime',
-  'vault',
-  'cron',
-  'net',
-  'pgmq',
-  'graphql',
-  'graphql_public',
-  'supabase_functions',
-  'app_private',
+const SAFE_RESTORE_FILES = new Set([
+  'production-roles.sql',
+  'production-schema.sql',
+  'production-data.sql',
 ]);
-const RESTORE_STAGE_MARKERS = Object.freeze({
-  risck_recovery_stage_roles: 'roles',
-  risck_recovery_stage_schema: 'schema',
-  risck_recovery_stage_data: 'data',
-});
-const MISSING_OBJECT_PREFIXES = Object.freeze([
-  ['schema', /^schema\b/],
-  ['role', /^role\b/],
-  ['relation', /^relation\b/],
-  ['table', /^table\b/],
-  ['sequence', /^sequence\b/],
-  ['function', /^function\b/],
-  ['type', /^type\b/],
-  ['extension', /^extension\b/],
-  ['column', /^column\b/],
+const SAFE_OBJECT_KINDS = new Set([
+  'relation',
+  'table',
+  'schema',
+  'type',
+  'function',
+  'sequence',
+  'extension',
+  'role',
 ]);
+const SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_$]*(?:\.[A-Za-z_][A-Za-z0-9_$]*)?$/;
 
 function text(value) {
   if (value == null) return '';
@@ -46,18 +31,14 @@ function combinedErrorText(error) {
     .toLowerCase();
 }
 
-function processOutputText(error) {
+function processOutput(error) {
   return [error?.stderr, error?.stdout]
     .map(text)
-    .join('\n')
-    .toLowerCase();
+    .join('\n');
 }
 
-function terminalDatabaseErrorPayload(error) {
-  const lines = processOutputText(error)
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+export function classifyRecoveryCommandCategory(error) {
+  const value = combinedErrorText(error);
 
   for (let index = lines.length - 1; index >= 0; index -= 1) {
     const match = lines[index].match(/\b(?:error|fatal):\s*(.*)$/);
@@ -94,61 +75,49 @@ function classifyRecoveryCategoryFromText(value) {
   return 'command_failed';
 }
 
-export function classifyRecoveryRestoreStage(error) {
-  const value = processOutputText(error);
-  let latestStage = null;
-  let latestIndex = -1;
-  for (const [marker, stage] of Object.entries(RESTORE_STAGE_MARKERS)) {
-    const index = value.lastIndexOf(marker);
-    if (index > latestIndex) {
-      latestIndex = index;
-      latestStage = stage;
-    }
-  }
-  return latestIndex >= 0 ? latestStage : null;
+function extractRestoreSourceFile(error) {
+  const value = processOutput(error);
+  const match = value.match(/psql:\/tmp\/(production-(?:roles|schema|data)\.sql):\d+:/i);
+  if (!match) return null;
+  const filename = match[1].toLowerCase();
+  return SAFE_RESTORE_FILES.has(filename) ? filename : null;
 }
 
-export function classifyRecoveryMissingObjectKind(error) {
-  const value = terminalDatabaseErrorPayload(error);
-  if (!value) return null;
-  for (const [kind, pattern] of MISSING_OBJECT_PREFIXES) {
-    if (pattern.test(value)) return kind;
+function normalizeDatabaseIdentifier(value) {
+  const normalized = String(value ?? '').trim();
+  return SAFE_IDENTIFIER.test(normalized) ? normalized : null;
+}
+
+function extractMissingDatabaseObject(error) {
+  const value = processOutput(error);
+
+  const quoted = value.match(
+    /\b(relation|table|schema|type|sequence|extension|role)\s+"([A-Za-z_][A-Za-z0-9_$]*(?:\.[A-Za-z_][A-Za-z0-9_$]*)?)"\s+does not exist/i,
+  );
+  if (quoted) {
+    const kind = quoted[1].toLowerCase();
+    const identifier = normalizeDatabaseIdentifier(quoted[2]);
+    if (SAFE_OBJECT_KINDS.has(kind) && identifier) return { kind, identifier };
   }
-  if (/^undefined table\b/.test(value)) return 'relation';
-  if (/^undefined object\b/.test(value)) return 'object';
+
+  const functionMatch = value.match(
+    /\bfunction\s+([A-Za-z_][A-Za-z0-9_$]*(?:\.[A-Za-z_][A-Za-z0-9_$]*)?)\s*\([^\r\n]*?\)\s+does not exist/i,
+  );
+  if (functionMatch) {
+    const identifier = normalizeDatabaseIdentifier(functionMatch[1]);
+    if (identifier) return { kind: 'function', identifier };
+  }
+
   return null;
-}
-
-export function classifyRecoveryMissingObjectScope(error) {
-  const value = terminalDatabaseErrorPayload(error);
-  if (!value) return null;
-  for (const scope of SAFE_DATABASE_SCOPES) {
-    const qualified = new RegExp(`(?:^|[^a-z0-9_])${scope.replace(/_/g, '[_]')}\\s*\\.`);
-    const schemaMissing = new RegExp(`\\bschema\\s+["']?${scope.replace(/_/g, '[_]')}["']?\\s+does not exist\\b`);
-    if (qualified.test(value) || schemaMissing.test(value)) return scope;
-  }
-  return null;
-}
-
-export function classifyRecoveryCommandCategory(error) {
-  if (error?.code === 'ETIMEDOUT' || error?.killed === true) return 'command_timeout';
-  if (error?.code === 'ENOENT') return 'command_unavailable';
-  return classifyRecoveryCategoryFromText(combinedErrorText(error));
 }
 
 export function buildRecoveryCommandDiagnostic({ error, phase, command }) {
   const commandFamily = SAFE_COMMANDS.has(basename(String(command ?? '')))
     ? basename(String(command))
     : 'unknown';
-  const isolatedRestore = phase === 'isolated_restore' && commandFamily === 'docker';
-  const terminalPayload = isolatedRestore ? terminalDatabaseErrorPayload(error) : '';
-  const genericCategory = classifyRecoveryCommandCategory(error);
-  const category = terminalPayload
-    ? classifyRecoveryCategoryFromText(terminalPayload)
-    : genericCategory;
-  const diagnosticMissingObject = isolatedRestore
-    && Boolean(terminalPayload)
-    && category === 'database_object_missing';
+  const category = classifyRecoveryCommandCategory(error);
+  const sourceFile = category === 'database_object_missing' ? extractRestoreSourceFile(error) : null;
+  const missingObject = category === 'database_object_missing' ? extractMissingDatabaseObject(error) : null;
 
   return {
     phase: typeof phase === 'string' && phase.length > 0 ? phase : 'unknown',
@@ -157,8 +126,10 @@ export function buildRecoveryCommandDiagnostic({ error, phase, command }) {
     exitStatus: Number.isInteger(error?.status) ? error.status : null,
     signal: typeof error?.signal === 'string' && error.signal.length > 0 ? error.signal : null,
     timedOut: error?.code === 'ETIMEDOUT' || error?.killed === true,
-    restoreStage: isolatedRestore ? classifyRecoveryRestoreStage(error) : null,
-    missingObjectKind: diagnosticMissingObject ? classifyRecoveryMissingObjectKind(error) : null,
-    missingObjectScope: null,
+    ...(sourceFile ? { sourceFile } : {}),
+    ...(missingObject ? {
+      databaseObjectKind: missingObject.kind,
+      databaseObjectIdentifier: missingObject.identifier,
+    } : {}),
   };
 }
