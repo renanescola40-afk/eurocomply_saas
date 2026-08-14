@@ -45,7 +45,7 @@ begin
   if not exists (
     select 1 from pg_constraint
     where conrelid='public.enterprise_contracts'::regclass
-      and conname='enterprise_contracts_contract_mode_check' and convalidated
+      and conname='enterprise_contracts_mode_check' and convalidated
   ) or not exists (
     select 1 from pg_constraint
     where conrelid='public.enterprise_contracts'::regclass
@@ -56,8 +56,15 @@ begin
 
   if exists (
     select 1 from public.enterprise_contracts contract
+    where contract.contract_mode not in ('compatibility','negotiated')
+  ) then
+    raise exception 'Enterprise contract modes are not canonical';
+  end if;
+
+  if exists (
+    select 1 from public.enterprise_contracts contract
     where coalesce((contract.custom_features ->> 'legacy_compatibility')::boolean,false)
-      and contract.contract_mode<>'legacy_compatibility'
+      and contract.contract_mode<>'compatibility'
   ) then
     raise exception 'Legacy compatibility contracts are eligible for negotiated billing sync';
   end if;
@@ -65,10 +72,10 @@ begin
   if exists (
     select 1 from public.enterprise_contracts contract
     join public.organization_entitlements entitlement on entitlement.organization_id=contract.organization_id
-    where contract.contract_mode='legacy_compatibility'
+    where contract.contract_mode='compatibility'
       and (entitlement.sso_enabled or entitlement.scim_enabled or entitlement.api_enabled or entitlement.webhooks_enabled)
   ) then
-    raise exception 'Legacy compatibility contracts unexpectedly enable Enterprise integrations';
+    raise exception 'Compatibility contracts unexpectedly enable Enterprise integrations';
   end if;
 
   if billing_rpc is null or lifecycle_rpc is null or transition_rpc is null then
