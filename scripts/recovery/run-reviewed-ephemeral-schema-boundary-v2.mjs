@@ -29,6 +29,10 @@ const addOnForwardName = '20260813124224_reconcile_organization_add_ons.sql';
 const addOnForwardPath = join(root, 'supabase', 'migrations', addOnForwardName);
 const addOnForwardReplayName = '20260727192950_reconcile_organization_add_ons.sql';
 const addOnForwardReplayPath = join(root, 'supabase', 'migrations', addOnForwardReplayName);
+const rlsHelperSourceName = '20260701150000_supabase_production_rls_proof_hardening.sql';
+const rlsHelperSourcePath = join(root, 'supabase', 'migrations', rlsHelperSourceName);
+const billingHelperBootstrapPath = join(root, 'supabase', 'migrations', '20260727192955_replay_billing_rls_helpers.sql');
+const billingHelperCleanupPath = join(root, 'supabase', 'migrations', '20260727193005_cleanup_billing_rls_helpers.sql');
 const replayContractPath = join(root, 'scripts', 'recovery', 'run-ephemeral-project-schema-replay.mjs');
 const billingCatalogEvidencePath = join(root, 'docs', 'security', 'evidence', 'human-review', 'split-reviews', 'i-dup-16-live-object-evidence.md');
 const delegate = join(root, 'scripts', 'recovery', 'run-reviewed-ephemeral-schema-boundary.mjs');
@@ -159,23 +163,29 @@ function validateBreakGlassReplayBoundary() {
   }
 }
 
-function validateAddOnReplayOrderBoundary() {
+function validateBillingCatalogReplayBoundary() {
   for (const [path, label] of [
     [billingCatalogPath, 'billing catalog migration'],
     [addOnForwardPath, 'organization add-on forward reconciliation'],
+    [rlsHelperSourcePath, 'reviewed RLS helper source migration'],
     [replayContractPath, 'schema replay contract'],
     [billingCatalogEvidencePath, 'billing catalog split-review evidence'],
   ]) {
     if (!existsSync(path)) fail(`Missing ${label}: ${path}`);
   }
-  if (existsSync(addOnForwardReplayPath)) {
-    fail(`Organization add-on forward replay path already exists: ${addOnForwardReplayPath}`);
+  for (const [path, label] of [
+    [addOnForwardReplayPath, 'organization add-on forward replay path'],
+    [billingHelperBootstrapPath, 'billing helper bootstrap replay path'],
+    [billingHelperCleanupPath, 'billing helper cleanup replay path'],
+  ]) {
+    if (existsSync(path)) fail(`${label} already exists: ${path}`);
   }
 
   const billingCatalogSql = readFileSync(billingCatalogPath, 'utf8');
   if (!billingCatalogSql.includes('alter table public.organization_add_ons')
-      || !billingCatalogSql.includes('create table if not exists public.add_ons')) {
-    fail('Billing catalog no longer proves its organization_add_ons prerequisite');
+      || !billingCatalogSql.includes('create table if not exists public.add_ons')
+      || !billingCatalogSql.includes("select public.app_rls_harden_backend_only_table('seat_usage')")) {
+    fail('Billing catalog no longer proves its reviewed add-on/RLS prerequisites');
   }
 
   const addOnForwardSql = readFileSync(addOnForwardPath, 'utf8');
@@ -196,8 +206,21 @@ function validateAddOnReplayOrderBoundary() {
   const evidence = readFileSync(billingCatalogEvidencePath, 'utf8');
   if (!evidence.includes(billingCatalogName)
       || !evidence.includes('current add-on code and production use `organization_add_ons`')
+      || !evidence.includes('Earlier RLS migrations define that helper but also explicitly remove it again.')
       || !evidence.includes('billing-catalog lineage is reconciled')) {
-    fail('Billing catalog evidence no longer proves the add-on authority dependency boundary');
+    fail('Billing catalog evidence no longer proves the reviewed helper/add-on dependency boundary');
+  }
+
+  const helperSource = readFileSync(rlsHelperSourcePath, 'utf8');
+  for (const marker of [
+    'create or replace function public.app_rls_table_exists(p_table_name text)',
+    'create or replace function public.app_rls_has_column(p_table_name text, p_column_name text)',
+    'create or replace function public.app_rls_drop_known_policies(p_table_name text, p_policy_names text[])',
+    'create or replace function public.app_rls_harden_backend_only_table(p_table_name text)',
+    'drop function if exists public.app_rls_harden_backend_only_table(text);',
+    'drop function if exists public.app_rls_table_exists(text);',
+  ]) {
+    if (!helperSource.includes(marker)) fail(`Reviewed RLS helper source marker drifted: ${marker}`);
   }
 }
 
@@ -260,16 +283,50 @@ function restoreBreakGlassHistoricalMigration(held) {
   renameSync(breakGlassHeldPath, breakGlassHistoricalPath);
 }
 
-function stageAddOnForwardReplayOrder() {
+function stageBillingCatalogReplayBoundary() {
   copyFileSync(addOnForwardPath, addOnForwardReplayPath);
   if (!readFileSync(addOnForwardPath).equals(readFileSync(addOnForwardReplayPath))) {
     fail('Organization add-on forward replay byte integrity mismatch');
   }
+
+  const helperSource = readFileSync(rlsHelperSourcePath, 'utf8');
+  const helperStart = helperSource.indexOf('create or replace function public.app_rls_table_exists(p_table_name text)');
+  const helperEnd = helperSource.indexOf('create or replace function public.app_rls_harden_monitoring_preferences()', helperStart);
+  if (helperStart < 0 || helperEnd <= helperStart) {
+    fail('Unable to isolate reviewed billing RLS helper definitions');
+  }
+  const helperDefinitions = helperSource.slice(helperStart, helperEnd).trim();
+  if (!helperDefinitions.includes('create or replace function public.app_rls_harden_backend_only_table(p_table_name text)')) {
+    fail('Reviewed billing RLS helper extraction lost backend-only helper');
+  }
+
+  writeFileSync(
+    billingHelperBootstrapPath,
+    '-- Disposable schema-effect replay only: restore the exact reviewed helper lifecycle needed by the historical billing catalog.\n'
+      + 'begin;\n\n'
+      + helperDefinitions
+      + '\n\ncommit;\n',
+    'utf8',
+  );
+  writeFileSync(
+    billingHelperCleanupPath,
+    '-- Disposable schema-effect replay only: restore the historical post-helper schema shape.\n'
+      + 'begin;\n'
+      + 'drop function if exists public.app_rls_harden_backend_only_table(text);\n'
+      + 'drop function if exists public.app_rls_harden_org_writable_table(text, text);\n'
+      + 'drop function if exists public.app_rls_drop_known_policies(text, text[]);\n'
+      + 'drop function if exists public.app_rls_has_column(text, text);\n'
+      + 'drop function if exists public.app_rls_table_exists(text);\n'
+      + 'commit;\n',
+    'utf8',
+  );
   return true;
 }
 
-function restoreAddOnForwardReplayOrder(staged) {
+function restoreBillingCatalogReplayBoundary(staged) {
   if (!staged) return;
+  rmSync(billingHelperCleanupPath, { force: true });
+  rmSync(billingHelperBootstrapPath, { force: true });
   rmSync(addOnForwardReplayPath, { force: true });
 }
 
@@ -298,25 +355,25 @@ function main() {
   for (const rule of blockedRules) validateReviewBoundary(review, rule);
   validateDerivedPrerequisiteBoundaries();
   validateBreakGlassReplayBoundary();
-  validateAddOnReplayOrderBoundary();
+  validateBillingCatalogReplayBoundary();
 
   const staged = [];
   let derivedHeld = [];
   let breakGlassHeld = false;
-  let addOnOrderStaged = false;
+  let billingCatalogBoundaryStaged = false;
   let delegatedError = null;
   let restoreError = null;
   try {
     for (const rule of blockedRules) staged.push(stageBlockedRule(rule));
     derivedHeld = holdDerivedRules();
     breakGlassHeld = holdBreakGlassHistoricalMigration();
-    addOnOrderStaged = stageAddOnForwardReplayOrder();
+    billingCatalogBoundaryStaged = stageBillingCatalogReplayBoundary();
     execFileSync(process.execPath, [delegate], { stdio: 'inherit', env: process.env });
   } catch (error) {
     delegatedError = error;
   } finally {
     try {
-      restoreAddOnForwardReplayOrder(addOnOrderStaged);
+      restoreBillingCatalogReplayBoundary(billingCatalogBoundaryStaged);
       restoreBreakGlassHistoricalMigration(breakGlassHeld);
       restoreDerivedRules(derivedHeld);
       restoreHistoricalBytes(staged);
@@ -332,8 +389,9 @@ function main() {
   appendGithubEnv('RECOVERY_EPHEMERAL_DERIVED_PREREQUISITE_BLOCKED_FILE_COUNT', String(derivedRules.length));
   appendGithubEnv('RECOVERY_EPHEMERAL_BREAK_GLASS_UNAPPLIED_EXCLUDED_FILE_COUNT', '1');
   appendGithubEnv('RECOVERY_EPHEMERAL_ADD_ON_FORWARD_REORDERED_FILE_COUNT', '1');
+  appendGithubEnv('RECOVERY_EPHEMERAL_BILLING_HELPER_REPLAY_FILE_COUNT', '2');
   process.stdout.write(
-    `Reviewed disposable schema boundary v2 preserved ${blockedRules.map((rule) => rule.id).join(', ')} as split-review blocked, held ${derivedRules.map((rule) => rule.id).join(', ')} behind reviewed prerequisites, excluded ${breakGlassHistoricalName} under its forward-reconciliation decision, replayed ${addOnForwardName} immediately before ${billingCatalogName} while retaining its canonical path, and restored canonical historical bytes.\n`,
+    `Reviewed disposable schema boundary v2 preserved ${blockedRules.map((rule) => rule.id).join(', ')} as split-review blocked, held ${derivedRules.map((rule) => rule.id).join(', ')} behind reviewed prerequisites, excluded ${breakGlassHistoricalName} under its forward-reconciliation decision, replayed ${addOnForwardName} before ${billingCatalogName}, restored the exact reviewed billing RLS helper lifecycle around that catalog, and restored canonical historical bytes.\n`,
   );
 }
 
