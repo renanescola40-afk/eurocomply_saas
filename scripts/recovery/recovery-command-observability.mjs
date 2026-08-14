@@ -124,7 +124,7 @@ export function buildRecoveryCommandDiagnostic({ error, phase, command }) {
     : 'unknown';
   const category = classifyRecoveryCommandCategory(error);
   const isolatedRestore = phase === 'isolated_restore' && commandFamily === 'docker';
-  const missingObject = category === 'database_object_missing';
+  const diagnosticMissingObject = isolatedRestore && category === 'database_object_missing';
 
   return {
     phase: typeof phase === 'string' && phase.length > 0 ? phase : 'unknown',
@@ -134,7 +134,7 @@ export function buildRecoveryCommandDiagnostic({ error, phase, command }) {
     signal: typeof error?.signal === 'string' && error.signal.length > 0 ? error.signal : null,
     timedOut: error?.code === 'ETIMEDOUT' || error?.killed === true,
     restoreStage: isolatedRestore ? classifyRecoveryRestoreStage(error) : null,
-    missingObjectKind: missingObject ? classifyRecoveryMissingObjectKind(error) : null,
-    missingObjectScope: missingObject ? classifyRecoveryMissingObjectScope(error) : null,
+    missingObjectKind: diagnosticMissingObject ? classifyRecoveryMissingObjectKind(error) : null,
+    missingObjectScope: diagnosticMissingObject ? classifyRecoveryMissingObjectScope(error) : null,
   };
 }
