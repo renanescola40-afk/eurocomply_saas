@@ -53,58 +53,20 @@ function processOutputText(error) {
     .toLowerCase();
 }
 
-function terminalDatabaseErrorText(error) {
+function terminalDatabaseErrorPayload(error) {
   const lines = processOutputText(error)
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 
   for (let index = lines.length - 1; index >= 0; index -= 1) {
-    if (/\b(?:error|fatal):/.test(lines[index])) return lines[index];
-  }
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    if (/does not exist|undefined table|undefined object/.test(lines[index])) return lines[index];
+    const match = lines[index].match(/\b(?:error|fatal):\s*(.*)$/);
+    if (match) return match[1].trim();
   }
   return '';
 }
 
-export function classifyRecoveryRestoreStage(error) {
-  const value = processOutputText(error);
-  let latestStage = null;
-  let latestIndex = -1;
-  for (const [marker, stage] of Object.entries(RESTORE_STAGE_MARKERS)) {
-    const index = value.lastIndexOf(marker);
-    if (index > latestIndex) {
-      latestIndex = index;
-      latestStage = stage;
-    }
-  }
-  return latestIndex >= 0 ? latestStage : null;
-}
-
-export function classifyRecoveryMissingObjectKind(error) {
-  const value = terminalDatabaseErrorText(error);
-  for (const [kind, pattern] of MISSING_OBJECT_PATTERNS) {
-    if (pattern.test(value)) return kind;
-  }
-  if (/undefined table/.test(value)) return 'relation';
-  if (/undefined object/.test(value)) return 'object';
-  return null;
-}
-
-export function classifyRecoveryMissingObjectScope(error) {
-  const value = terminalDatabaseErrorText(error);
-  for (const scope of SAFE_DATABASE_SCOPES) {
-    const qualified = new RegExp(`(?:^|[^a-z0-9_])${scope.replace(/_/g, '[_]')}\\s*\\.`);
-    const schemaMissing = new RegExp(`\\bschema\\s+["']?${scope.replace(/_/g, '[_]')}["']?\\s+does not exist\\b`);
-    if (qualified.test(value) || schemaMissing.test(value)) return scope;
-  }
-  return null;
-}
-
-export function classifyRecoveryCommandCategory(error) {
-  const value = combinedErrorText(error);
-
+function classifyRecoveryCategoryFromText(value, error = {}) {
   if (/password authentication failed|authentication failed|no password supplied|sasl authentication failed/.test(value)) {
     return 'authentication_failed';
   }
@@ -133,13 +95,59 @@ export function classifyRecoveryCommandCategory(error) {
   return 'command_failed';
 }
 
+export function classifyRecoveryRestoreStage(error) {
+  const value = processOutputText(error);
+  let latestStage = null;
+  let latestIndex = -1;
+  for (const [marker, stage] of Object.entries(RESTORE_STAGE_MARKERS)) {
+    const index = value.lastIndexOf(marker);
+    if (index > latestIndex) {
+      latestIndex = index;
+      latestStage = stage;
+    }
+  }
+  return latestIndex >= 0 ? latestStage : null;
+}
+
+export function classifyRecoveryMissingObjectKind(error) {
+  const value = terminalDatabaseErrorPayload(error);
+  if (!value) return null;
+  for (const [kind, pattern] of MISSING_OBJECT_PATTERNS) {
+    if (pattern.test(value)) return kind;
+  }
+  if (/undefined table/.test(value)) return 'relation';
+  if (/undefined object/.test(value)) return 'object';
+  return null;
+}
+
+export function classifyRecoveryMissingObjectScope(error) {
+  const value = terminalDatabaseErrorPayload(error);
+  if (!value) return null;
+  for (const scope of SAFE_DATABASE_SCOPES) {
+    const qualified = new RegExp(`(?:^|[^a-z0-9_])${scope.replace(/_/g, '[_]')}\\s*\\.`);
+    const schemaMissing = new RegExp(`\\bschema\\s+["']?${scope.replace(/_/g, '[_]')}["']?\\s+does not exist\\b`);
+    if (qualified.test(value) || schemaMissing.test(value)) return scope;
+  }
+  return null;
+}
+
+export function classifyRecoveryCommandCategory(error) {
+  return classifyRecoveryCategoryFromText(combinedErrorText(error), error);
+}
+
 export function buildRecoveryCommandDiagnostic({ error, phase, command }) {
   const commandFamily = SAFE_COMMANDS.has(basename(String(command ?? '')))
     ? basename(String(command))
     : 'unknown';
-  const category = classifyRecoveryCommandCategory(error);
   const isolatedRestore = phase === 'isolated_restore' && commandFamily === 'docker';
-  const diagnosticMissingObject = isolatedRestore && category === 'database_object_missing';
+  const terminalPayload = isolatedRestore ? terminalDatabaseErrorPayload(error) : '';
+  const genericCategory = classifyRecoveryCommandCategory(error);
+  const category = terminalPayload
+    ? classifyRecoveryCategoryFromText(terminalPayload, error)
+    : genericCategory;
+  const diagnosticMissingObject = isolatedRestore
+    && Boolean(terminalPayload)
+    && category === 'database_object_missing';
 
   return {
     phase: typeof phase === 'string' && phase.length > 0 ? phase : 'unknown',
