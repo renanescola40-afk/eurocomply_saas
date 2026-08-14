@@ -166,7 +166,7 @@ describe('exact-SHA disposable project schema workflows', () => {
   it('revalidates and hardens Docker bindings after project schema reset', () => {
     const resetIndex = manager.indexOf("'db', 'reset', '--local', '--no-seed'");
     const postResetContainerIndex = manager.indexOf('findDatabaseContainer(projectId)', resetIndex);
-    const postResetFirewallIndex = manager.indexOf('hardenWildcardBindings(containerName, projectId)', resetIndex);
+    const postResetFirewallIndex = manager.indexOf('hardenWildcardBindings(containerName, projectId, hostPort)', resetIndex);
     const migrationVerifyIndex = manager.indexOf('verifyExactShaMigrations(dbUrl, expectedVersions)', resetIndex);
     expect(resetIndex).toBeGreaterThan(-1);
     expect(postResetContainerIndex).toBeGreaterThan(resetIndex);
