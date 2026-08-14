@@ -10,6 +10,7 @@ on:
       - 'scripts/recovery/run-ephemeral-project-schema-replay-reviewed-boundary-v2.mjs'
       - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary.mjs'
       - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v2.mjs'
+      - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
       - 'supabase/migrations/**'
       - '.github/workflows/final-technical-controls-proof.yml'
@@ -71,7 +72,7 @@ jobs:
           safe_log="$RUNNER_TEMP/ephemeral-schema-replay.sanitized.log"
 
           set +e
-          node scripts/recovery/run-reviewed-ephemeral-schema-boundary-v2.mjs >"$raw_log" 2>&1
+          node scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs >"$raw_log" 2>&1
           replay_status=$?
           set -e
 
@@ -136,6 +137,7 @@ jobs:
           test "$RECOVERY_EPHEMERAL_PREREQUISITE_BLOCKED_DUPLICATE_FILE_COUNT" = "3"
           test "$RECOVERY_EPHEMERAL_SPLIT_REVIEW_BLOCKED_FILE_COUNT" = "2"
           test "$RECOVERY_EPHEMERAL_SYNTAX_COMPAT_FILE_COUNT" = "1"
+          test "$RECOVERY_EPHEMERAL_MARKET_LEADERSHIP_PREREQUISITE_BLOCKED_FILE_COUNT" = "1"
           test "$RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL" = "false"
           [[ "$RECOVERY_LOCAL_DB_HOST_PORT" =~ ^[0-9]+$ ]]
           test "$RECOVERY_LOCAL_DB_HOST_PORT" -ge 20000
