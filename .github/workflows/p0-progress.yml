@@ -8,24 +8,56 @@ on:
   push:
     branches:
       - main
+  workflow_run:
+    workflows:
+      - P0 Runtime Evidence
+    types: [completed]
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: p0-progress-${{ github.ref }}
+  group: p0-progress-${{ github.event_name }}-${{ github.event.workflow_run.id || github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
   p0-progress:
     name: Report P0 enterprise progress
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      ASSESSED_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
     steps:
-      - name: Checkout repository
+      - name: Checkout exact assessed SHA
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.ASSESSED_SHA }}
+          fetch-depth: 1
           persist-credentials: false
+
+      - name: Verify exact assessed checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$ASSESSED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$ASSESSED_SHA"
+
+      - name: Download authoritative P0 runtime register
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v8
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+          name: p0-runtime-evidence-register-${{ env.ASSESSED_SHA }}
+          path: artifacts/p0-runtime-source
+
+      - name: Validate P0 runtime progress fan-in contract
+        run: node --test tests/security/p0-enterprise-progress-runtime-fanin.test.mjs
 
       - name: Show runner Node.js and npm versions
         run: |
@@ -33,6 +65,9 @@ jobs:
           npm --version
 
       - name: Generate P0 progress report
+        env:
+          P0_PROGRESS_ASSESSED_SHA: ${{ env.ASSESSED_SHA }}
+          P0_RUNTIME_EVIDENCE_PATH: ${{ github.event_name == 'workflow_run' && 'artifacts/p0-runtime-source/p0-runtime-evidence-register.json' || '' }}
         run: node scripts/security/write-p0-enterprise-progress.mjs
 
       - name: Upload P0 progress report
