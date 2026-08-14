@@ -28,6 +28,7 @@ const expectedCompletionTriggers = [
   'Branch Protection Runtime Proof',
   'Step-Up Runtime Proof',
   'Stripe Runtime Evidence Promotion',
+  'Public Production Final',
   'Final Technical Controls Proof',
   'Recovery Resilience Proof',
 ];
@@ -45,6 +46,7 @@ describe('enterprise readiness scorecard orchestration', () => {
     expect(new Set(stabilizerProducers()).size).toBe(expectedCompletionTriggers.length);
     expect(stabilizerProducers()).not.toContain('Enterprise Readiness Scorecard');
     expect(stabilizerProducers()).toContain('Enterprise Production Gate');
+    expect(stabilizerProducers()).toContain('Public Production Final');
     expect(stabilizerWorkflow).toContain("github.event.workflow_run.name != 'Enterprise Production Gate'");
     expect(stabilizerWorkflow).toContain("github.event.workflow_run.event != 'workflow_dispatch'");
 

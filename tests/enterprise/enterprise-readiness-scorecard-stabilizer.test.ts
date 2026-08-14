@@ -8,9 +8,9 @@ const workflow = readFileSync(workflowPath, 'utf8');
 const script = readFileSync(scriptPath, 'utf8');
 
 const producerNames = [
-  'CI','CodeQL','Semgrep','Secret Scanning','Scan repository for accidental secret exposure','Dependency Review','Actionlint','Public Claims Guard','Full Security Suite','Enterprise Production Gate','RISCK COMPLY Security CI','RISCK COMPLY Upload Security CI','Enterprise DAST','Dependency Vulnerability Proof','Distributed Rate Limit Runtime Proof','Auth RBAC Tenant Proof','Supabase Live RLS Validation','Production Runtime Proof','Audit Chain Runtime Proof','Production Provider Runtime Proof','Branch Protection Runtime Proof','Step-Up Runtime Proof','Stripe Runtime Evidence Promotion','Final Technical Controls Proof','Recovery Resilience Proof',
+  'CI','CodeQL','Semgrep','Secret Scanning','Scan repository for accidental secret exposure','Dependency Review','Actionlint','Public Claims Guard','Full Security Suite','Enterprise Production Gate','RISCK COMPLY Security CI','RISCK COMPLY Upload Security CI','Enterprise DAST','Dependency Vulnerability Proof','Distributed Rate Limit Runtime Proof','Auth RBAC Tenant Proof','Supabase Live RLS Validation','Production Runtime Proof','Audit Chain Runtime Proof','Production Provider Runtime Proof','Branch Protection Runtime Proof','Step-Up Runtime Proof','Stripe Runtime Evidence Promotion','Public Production Final','Final Technical Controls Proof','Recovery Resilience Proof',
 ];
-const retainedFanInNames = ['Auth RBAC Tenant Proof','Supabase Live RLS Validation','RISCK COMPLY Upload Security CI','Audit Chain Runtime Proof','Production Provider Runtime Proof','Branch Protection Runtime Proof','Step-Up Runtime Proof','Stripe Runtime Evidence Promotion'];
+const retainedFanInNames = ['Auth RBAC Tenant Proof','Supabase Live RLS Validation','RISCK COMPLY Upload Security CI','Audit Chain Runtime Proof','Production Runtime Proof','Production Provider Runtime Proof','Branch Protection Runtime Proof','Step-Up Runtime Proof','Stripe Runtime Evidence Promotion','Public Production Final'];
 
 describe('enterprise readiness scorecard terminal stabilizer', () => {
   it('is syntactically valid JavaScript', () => {
@@ -22,7 +22,7 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
       expect(workflow).toContain(`      - ${producer}`);
       expect(script).toContain(`  '${producer}',`);
     }
-    expect(new Set(producerNames).size).toBe(25);
+    expect(new Set(producerNames).size).toBe(26);
     expect(workflow).toContain("github.event.workflow_run.name != 'Enterprise Production Gate'");
     expect(workflow).toContain("github.event.workflow_run.event != 'workflow_dispatch'");
     expect(workflow).toMatch(/workflow_run:[\s\S]*?branches: \[main\][\s\S]*?types: \[completed\]/);
@@ -36,7 +36,7 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
       expect(workflow).toContain(`      - ${producer}`);
       expect(script).toContain(`  '${producer}',`);
     }
-    expect(new Set(retainedFanInNames).size).toBe(8);
+    expect(new Set(retainedFanInNames).size).toBe(10);
   });
 
   it('debounces the producer storm before checkout or GitHub API access', () => {
@@ -89,13 +89,25 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(script).toContain('productionGateAlreadyCoversEvidence');
     expect(script).toContain('await dispatchProductionGate(repository);');
     expect(script).toContain('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs);');
-    expect(script).toContain('No successful terminal Enterprise Production Gate covers the latest material producer state');
+    expect(script).toContain('No terminal Enterprise Production Gate evaluation covers the latest material producer state');
     const gateDispatch = script.indexOf('await dispatchProductionGate(repository);');
     const gateWait = script.indexOf('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs);');
     const scorecardDispatch = script.indexOf('await dispatchScorecard(repository);');
     expect(gateDispatch).toBeGreaterThan(-1);
     expect(gateWait).toBeGreaterThan(gateDispatch);
     expect(scorecardDispatch).toBeGreaterThan(gateWait);
+  });
+
+  it('treats success/failure as evaluated while rejecting cancelled/skipped terminal runs', () => {
+    expect(script).toContain("export const TERMINAL_EVALUATION_CONCLUSIONS = new Set(['success', 'failure']);");
+    expect(script).toContain('export function isTerminalEvaluation(run)');
+    expect(script).toContain("return run?.status === 'completed' && TERMINAL_EVALUATION_CONCLUSIONS.has(run?.conclusion);");
+    expect(script).toContain('if (isTerminalEvaluation(latest)) return latest;');
+    expect(script).toContain('.filter((run) => isTerminalEvaluation(run))');
+    expect(script).toContain('Terminal Enterprise Production Gate ended with non-evaluation conclusion');
+    expect(script).not.toContain("run?.status === 'completed' && run?.conclusion === 'success'");
+    expect(workflow).toContain('accepts a terminal GO or NO_GO gate as a completed evaluation');
+    expect(workflow).toContain('Terminal evaluation status never awards PASS');
   });
 
   it('dispatches only fixed existing workflows after proving main is still the target SHA', () => {
@@ -109,7 +121,6 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
   it('requires scorecard creation after the latest producer completion before treating evidence as covered', () => {
     expect(script).toContain("const parsed = Date.parse(run?.created_at ?? '');");
     expect(script).toContain('if (createdTimestampMs(run) < producerCutoffMs) return false;');
-    expect(script).toContain("run?.status === 'completed' && run?.conclusion === 'success'");
     expect(script).toContain("return { dispatched: false, reason: 'scorecard-current', targetSha };");
   });
 
@@ -119,6 +130,6 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(script).not.toContain('/deployments');
     expect(script).not.toContain('/environments');
     expect(script).not.toContain('/secrets');
-    expect(workflow).toContain('This workflow does not award PASS or mutate production.');
+    expect(workflow).toContain('does not mutate production');
   });
 });

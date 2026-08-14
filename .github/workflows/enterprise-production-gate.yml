@@ -11,10 +11,12 @@ on:
       - Supabase Live RLS Validation
       - RISCK COMPLY Upload Security CI
       - Audit Chain Runtime Proof
+      - Production Runtime Proof
       - Production Provider Runtime Proof
       - Branch Protection Runtime Proof
       - Step-Up Runtime Proof
       - Stripe Runtime Evidence Promotion
+      - Public Production Final
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -113,10 +115,12 @@ jobs:
           node --check scripts/enterprise/fetch-supabase-rls-evidence.mjs
           node --check scripts/enterprise/fetch-upload-scanner-runtime-evidence.mjs
           node --check scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs
+          node --check scripts/enterprise/fetch-production-runtime-evidence.mjs
           node --check scripts/enterprise/fetch-production-provider-runtime-evidence.mjs
           node --check scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs
           node --check scripts/enterprise/fetch-step-up-runtime-evidence.mjs
           node --check scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs
+          node --check scripts/enterprise/fetch-public-production-final-evidence.mjs
           grep -Fq "npm run release:production-final" .github/workflows/enterprise-production-gate.yml
           grep -Fq "hydrate-enterprise-retained-runtime-evidence.mjs" .github/workflows/enterprise-production-gate.yml
           grep -Fq "RETAINED_PROOF_SOURCE_WORKFLOW_PATH" .github/workflows/enterprise-production-gate.yml
