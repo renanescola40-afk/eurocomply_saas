@@ -1,4 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import {
+  getAuthoritativeSignedContractPlan,
+  hasProcessedLiveStripeSubscriptionAuthority,
+} from '@/server/billing/subscription-authority';
 
 export type CanonicalSubscriptionPlan = 'starter' | 'professional' | 'business' | 'enterprise';
 export type LegacySubscriptionPlan = 'essential' | 'growth';
@@ -19,6 +23,8 @@ type OrganizationSubscriptionRow = {
   plan?: string | null;
   tier?: string | null;
   status?: string | null;
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
 };
 
 export function normalizePlan(value: string | null | undefined): CanonicalSubscriptionPlan {
@@ -57,15 +63,44 @@ async function getLatestSubscriptionRow(organizationId: string, select: string):
   return data;
 }
 
+async function rowHasLiveStripeAuthority(organizationId: string, row: OrganizationSubscriptionRow | null) {
+  if (!row?.stripe_customer_id || !row.stripe_subscription_id) return false;
+
+  return hasProcessedLiveStripeSubscriptionAuthority({
+    organizationId,
+    stripeCustomerId: row.stripe_customer_id,
+    stripeSubscriptionId: row.stripe_subscription_id,
+  });
+}
+
 export async function getOrganizationPlan(organizationId: string): Promise<CanonicalSubscriptionPlan> {
-  const primary = await getLatestSubscriptionRow(organizationId, 'plan,status,created_at');
+  // A negotiated signed contract is deliberately evaluated before ordinary
+  // Stripe state so a routine subscription event cannot silently replace an
+  // Enterprise commercial relationship.
+  const signedContractPlan = await getAuthoritativeSignedContractPlan(organizationId);
+  if (signedContractPlan) return normalizePlan(signedContractPlan);
 
-  if (primary?.plan) return normalizePlan(primary.plan);
+  const primary = await getLatestSubscriptionRow(
+    organizationId,
+    'plan,status,created_at,stripe_customer_id,stripe_subscription_id',
+  );
 
-  const legacy = await getLatestSubscriptionRow(organizationId, 'tier,status,created_at');
+  if (primary?.plan && await rowHasLiveStripeAuthority(organizationId, primary)) {
+    return normalizePlan(primary.plan);
+  }
 
-  if (legacy?.tier) return normalizePlan(legacy.tier);
+  const legacy = await getLatestSubscriptionRow(
+    organizationId,
+    'tier,status,created_at,stripe_customer_id,stripe_subscription_id',
+  );
 
+  if (legacy?.tier && await rowHasLiveStripeAuthority(organizationId, legacy)) {
+    return normalizePlan(legacy.tier);
+  }
+
+  // Seeded rows, status-only rows, stale identifiers and test-mode Stripe rows
+  // are intentionally non-authoritative. They remain visible for reconciliation
+  // but cannot grant paid product access.
   return 'starter';
 }
 
