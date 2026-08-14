@@ -12,6 +12,7 @@ on:
       - 'supabase/migrations/20260813200000_reconcile_subscription_schema_defaults.sql'
       - 'supabase/migrations/20260813201500_reconcile_controlled_document_storage.sql'
       - 'supabase/migrations/20260813201600_force_tasks_rls.sql'
+      - 'supabase/migrations/20260813234000_reconcile_enterprise_break_glass_governance.sql'
       - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
       - '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
   workflow_dispatch:
