@@ -8,6 +8,14 @@ async function expectHealthyDocument(page: Page, label: string) {
   expect(page.url(), `${label} should never navigate to /undefined`).not.toContain('/undefined');
 }
 
+const localizedJourney = [
+  { locale: 'pt', pricing: /Comece pela preparação de IA/i, checkout: /Ative o seu workspace RISCK COMPLY/i, login: /Entrar na RISCK COMPLY/i, signup: /Criar conta RISCK COMPLY/i },
+  { locale: 'es', pricing: /Empieza con preparación de IA/i, checkout: /Activa tu workspace RISCK COMPLY/i, login: /Inicia sesión en RISCK COMPLY/i, signup: /Crea tu cuenta RISCK COMPLY/i },
+  { locale: 'fr', pricing: /Commencez par la préparation IA/i, checkout: /Activez votre workspace RISCK COMPLY/i, login: /Se connecter à RISCK COMPLY/i, signup: /Créez votre compte RISCK COMPLY/i },
+  { locale: 'it', pricing: /Inizia dalla preparazione IA/i, checkout: /Attiva il tuo workspace RISCK COMPLY/i, login: /Accedi a RISCK COMPLY/i, signup: /Crea il tuo account RISCK COMPLY/i },
+  { locale: 'de', pricing: /Starten Sie mit KI-Readiness/i, checkout: /Aktivieren Sie Ihren RISCK COMPLY Workspace/i, login: /Bei RISCK COMPLY anmelden/i, signup: /RISCK COMPLY Konto erstellen/i },
+] as const;
+
 test.describe('public product journey', () => {
   test('landing and pricing production CTAs stay routable and localized', async ({ page }) => {
     await page.goto('/pt', { waitUntil: 'domcontentloaded' });
@@ -20,8 +28,28 @@ test.describe('public product journey', () => {
     await page.goto('/pt/pricing', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/pt\/pricing(?:$|[?#])/);
     await expectHealthyDocument(page, 'pricing');
-    await expect(page.getByRole('link', { name: /start|começar|trial|demo|sales|vendas/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /iniciar|começar|demo|vendas/i }).first()).toBeVisible();
   });
+
+  for (const localeCase of localizedJourney) {
+    test(`${localeCase.locale} keeps pricing, checkout, login and signup in the selected locale`, async ({ page }) => {
+      await page.goto(`/${localeCase.locale}/pricing`, { waitUntil: 'domcontentloaded' });
+      await expectHealthyDocument(page, `${localeCase.locale} pricing`);
+      await expect(page.getByRole('heading', { level: 1 })).toContainText(localeCase.pricing);
+
+      await page.goto(`/${localeCase.locale}/checkout?plan=professional`, { waitUntil: 'domcontentloaded' });
+      await expectHealthyDocument(page, `${localeCase.locale} checkout`);
+      await expect(page.getByRole('heading', { level: 1 })).toContainText(localeCase.checkout);
+
+      await page.goto(`/${localeCase.locale}/login`, { waitUntil: 'domcontentloaded' });
+      await expectHealthyDocument(page, `${localeCase.locale} login`);
+      await expect(page.getByRole('heading', { level: 1 })).toContainText(localeCase.login);
+
+      await page.goto(`/${localeCase.locale}/signup?plan=professional`, { waitUntil: 'domcontentloaded' });
+      await expectHealthyDocument(page, `${localeCase.locale} signup`);
+      await expect(page.locator('body')).toContainText(localeCase.signup);
+    });
+  }
 
   test('pricing exposes only actionable critical CTAs', async ({ page }) => {
     await page.goto('/pt/pricing', { waitUntil: 'domcontentloaded' });
@@ -32,6 +60,17 @@ test.describe('public product journey', () => {
 
     const brokenCriticalLinks = await page.locator('a[href="#"], a:not([href]), a[href*="/undefined"]').count();
     expect(brokenCriticalLinks, 'pricing should not expose placeholder or /undefined links').toBe(0);
+  });
+
+  test('commercial surfaces do not create document-level horizontal overflow on mobile', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    for (const route of ['/pt/pricing', '/pt/checkout?plan=professional', '/pt/login', '/pt/signup?plan=professional']) {
+      await page.goto(route, { waitUntil: 'domcontentloaded' });
+      await expectHealthyDocument(page, `mobile ${route}`);
+      const overflowsViewport = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+      expect(overflowsViewport, `${route} should not overflow the mobile viewport`).toBe(false);
+    }
   });
 
   test('signup route is reachable from the production landing', async ({ page }) => {
