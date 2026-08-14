@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { closeSync, fstatSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname } from 'node:path';
 
+import { databaseUrlUsesPort, isLoopbackDatabaseUrl } from './manage-ephemeral-recovery-database.mjs';
 import { buildRecoveryCommandDiagnostic } from './recovery-command-observability.mjs';
 
 const output = 'docs/security/evidence/p1/backup-restore-tested.json';
@@ -156,11 +157,18 @@ const restore = postgresConnection('RECOVERY_ISOLATED_DATABASE_URL');
 const targetSha = required('RELEASE_SHA');
 const observedSha = required('GITHUB_SHA');
 const localContainer = env('RECOVERY_LOCAL_DB_CONTAINER');
+const localHostPort = Number(env('RECOVERY_LOCAL_DB_HOST_PORT'));
 const ephemeralMode = env('RECOVERY_EPHEMERAL_DATABASE_PROVISIONED') === 'true' && Boolean(localContainer);
 checks.protectedMainExecution = env('GITHUB_ACTIONS') === 'true' && env('GITHUB_REF_NAME') === 'main';
 checks.distinctDatabases = Boolean(source && restore && source !== restore);
 checks.exactShaBound = /^[a-f0-9]{40}$/.test(targetSha) && observedSha === targetSha;
-checks.isolatedTarget = ephemeralMode ? /^postgres(?:ql)?:\/\/[^@]*@(?:127\.0\.0\.1|localhost):54322\//.test(restore) : Boolean(restore);
+checks.isolatedTarget = ephemeralMode
+  ? Number.isInteger(localHostPort)
+    && localHostPort > 0
+    && localHostPort <= 65535
+    && isLoopbackDatabaseUrl(restore)
+    && databaseUrlUsesPort(restore, localHostPort)
+  : Boolean(restore);
 checks.connectionStringsSanitized = Boolean(source && restore);
 if (!Object.values(checks).every(Boolean)) failures.push('preconditions_failed');
 
