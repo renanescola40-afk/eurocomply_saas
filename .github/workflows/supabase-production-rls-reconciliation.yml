@@ -216,9 +216,9 @@ jobs:
             echo "- Project ref suffix: \`${SUPABASE_PROJECT_ID: -6}\`"
             echo '- Connection path: Supabase Session Pooler (secret-backed)'
             if [ "$MODE" = 'verify_only' ]; then
-              echo '- Production SQL mutation requested: `false`'
+              echo "- Production SQL mutation requested: \`false\`"
             else
-              echo '- Production SQL mutation requested: `true` (explicit apply mode)'
+              echo "- Production SQL mutation requested: \`true\` (explicit apply mode)"
             fi
             if [ -f artifacts/supabase-rls-reconciliation/verification.json ]; then
               status="$(node -e "const r=require('./artifacts/supabase-rls-reconciliation/verification.json'); process.stdout.write(r.status)")"
