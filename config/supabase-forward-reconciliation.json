@@ -1,7 +1,11 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-08-14-enterprise-control-plane-reconciliation-v5",
+  "changeSet": "2026-08-14-enterprise-control-plane-reconciliation-v6",
   "migrations": [
+    {
+      "filename": "20260730204500_repair_live_rls_validation_inventory.sql",
+      "purpose": "restore service-role-only execution for the live RLS inventory helper while preserving SECURITY INVOKER and fixed search_path"
+    },
     {
       "filename": "20260813175000_optimize_organization_add_ons_rls_initplan.sql",
       "purpose": "evaluate organization add-on membership auth once per statement while preserving tenant scope"
