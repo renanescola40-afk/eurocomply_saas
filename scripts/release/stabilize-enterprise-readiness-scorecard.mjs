@@ -41,6 +41,7 @@ export const ACTIVE_RUN_STATUSES = new Set([
   'requested',
   'pending',
 ]);
+export const TERMINAL_EVALUATION_CONCLUSIONS = new Set(['success', 'failure']);
 
 const API_VERSION = '2022-11-28';
 const PER_PAGE = 100;
@@ -63,6 +64,10 @@ function timestampMs(run) {
 function createdTimestampMs(run) {
   const parsed = Date.parse(run?.created_at ?? '');
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function isTerminalEvaluation(run) {
+  return run?.status === 'completed' && TERMINAL_EVALUATION_CONCLUSIONS.has(run?.conclusion);
 }
 
 export function exactShaProducerRuns(runs, targetSha) {
@@ -91,7 +96,7 @@ export function productionGateAlreadyCoversEvidence(runs, targetSha, producerCut
     if (run?.head_sha !== targetSha || run?.name !== ENTERPRISE_PRODUCTION_GATE_NAME) return false;
     if (createdTimestampMs(run) < producerCutoffMs) return false;
     if (ACTIVE_RUN_STATUSES.has(run?.status)) return true;
-    return run?.status === 'completed';
+    return isTerminalEvaluation(run);
   });
 }
 
@@ -100,7 +105,7 @@ export function scorecardAlreadyCoversEvidence(runs, targetSha, producerCutoffMs
     if (run?.head_sha !== targetSha || run?.name !== SCORECARD_WORKFLOW_NAME) return false;
     if (createdTimestampMs(run) < producerCutoffMs) return false;
     if (ACTIVE_RUN_STATUSES.has(run?.status)) return true;
-    return run?.status === 'completed';
+    return isTerminalEvaluation(run);
   });
 }
 
@@ -261,7 +266,10 @@ async function waitForTerminalProductionGate(repository, targetSha, producerCuto
       .sort((a, b) => createdTimestampMs(b) - createdTimestampMs(a));
 
     const latest = covered[0];
-    if (latest?.status === 'completed') return latest;
+    if (isTerminalEvaluation(latest)) return latest;
+    if (latest?.status === 'completed') {
+      throw new Error(`Terminal Enterprise Production Gate ended with non-evaluation conclusion (${latest?.conclusion ?? 'unknown'})`);
+    }
     if (attempt < MAX_GATE_SETTLE_ATTEMPTS) await sleep(GATE_SETTLE_INTERVAL_MS);
   }
   throw new Error('Terminal Enterprise Production Gate did not complete within the bounded settlement window');
@@ -337,12 +345,12 @@ export async function stabilize({ now = () => Date.now() } = {}) {
   upstreamCutoffMs = latestProducerTimestamp(refreshedUpstream);
   const terminalGate = refreshedRuns
     .filter((run) => run?.name === ENTERPRISE_PRODUCTION_GATE_NAME)
-    .filter((run) => run?.status === 'completed')
+    .filter((run) => isTerminalEvaluation(run))
     .filter((run) => createdTimestampMs(run) >= upstreamCutoffMs)
     .sort((a, b) => createdTimestampMs(b) - createdTimestampMs(a))[0];
 
   if (!terminalGate) {
-    throw new Error('No terminal Enterprise Production Gate covers the latest material producer state');
+    throw new Error('No terminal Enterprise Production Gate evaluation covers the latest material producer state');
   }
 
   mainSha = await currentMainSha(repository);
