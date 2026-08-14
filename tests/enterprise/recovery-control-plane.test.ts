@@ -16,6 +16,12 @@ describe('enterprise recovery control plane', () => {
     expect(workflow).toContain('git ls-remote origin refs/heads/main');
   });
 
+  it('pins the recovery CLI to the current managed-stack compatibility baseline', () => {
+    expect(workflow).toContain('supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520');
+    expect(workflow).toContain('version: 2.114.0');
+    expect(workflow).not.toContain('version: latest');
+  });
+
   it('reuses the protected Supabase source and provisions a disposable isolated target', () => {
     expect(workflow).toContain('RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}');
     expect(workflow).toContain('RECOVERY_REQUIRED_EXERCISE: backup-restore');
