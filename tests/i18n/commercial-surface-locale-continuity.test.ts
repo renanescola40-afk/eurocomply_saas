@@ -10,6 +10,7 @@ const checkoutPage = readFileSync(join(process.cwd(), 'src/app/[locale]/checkout
 const loginPage = readFileSync(join(process.cwd(), 'src/app/[locale]/login/page.tsx'), 'utf8');
 const signupPage = readFileSync(join(process.cwd(), 'src/app/[locale]/signup/page.tsx'), 'utf8');
 const aiSystemsPage = readFileSync(join(process.cwd(), 'src/app/[locale]/ai-systems/ai-systems-client.tsx'), 'utf8');
+const onboardingFlow = readFileSync(join(process.cwd(), 'src/components/onboarding/b2b-onboarding-flow.tsx'), 'utf8');
 const trustPage = readFileSync(join(process.cwd(), 'src/app/[locale]/trust/page.tsx'), 'utf8');
 const trustComponent = readFileSync(join(process.cwd(), 'src/components/marketing/trust-center-page.tsx'), 'utf8');
 const consentBanner = readFileSync(join(process.cwd(), 'src/components/analytics/AnalyticsConsentBanner.tsx'), 'utf8');
@@ -81,6 +82,19 @@ describe('commercial surface locale continuity', () => {
     expect(trustComponent).toContain('copy.evidenceItems');
   });
 
+  it('localizes onboarding chrome, steps, field labels and selection values for every configured locale', () => {
+    expect(onboardingFlow).toContain('const copyByLocale: Record<string, LocaleCopy> = { en, pt, es, fr, it, de };');
+    expect(onboardingFlow).toContain("const t = (ptText: string, enText: string) => translate(locale, enText, ptText)");
+    expect(onboardingFlow).toContain("title: 'Construye la base operativa para la gobernanza de IA'");
+    expect(onboardingFlow).toContain("title: 'Construisez la base opérationnelle de votre gouvernance IA'");
+    expect(onboardingFlow).toContain("title: 'Costruisci la base operativa per la governance IA'");
+    expect(onboardingFlow).toContain("title: 'Schaffen Sie die operative Grundlage für KI-Governance'");
+    expect(onboardingFlow).toContain('{translate(locale, labels[item])}');
+    expect(onboardingFlow).toContain('{translate(locale, titleEn, titlePt)}');
+    expect(onboardingFlow).not.toContain("const isPt = locale === 'pt'");
+    expect(onboardingFlow).not.toContain('isPt ? titlePt : titleEn');
+  });
+
   it('localizes the first AI-system workflow across all configured non-English locales', () => {
     expect(aiSystemsPage).toContain("es: {");
     expect(aiSystemsPage).toContain("title: 'Inventario de sistemas de IA'");
@@ -99,11 +113,12 @@ describe('commercial surface locale continuity', () => {
     expect(aiSystemsPage).not.toContain("de: { ...baseInventoryCopy }");
   });
 
-  it('preserves keyboard focus treatment on purchase, auth, AI inventory and trust controls', () => {
+  it('preserves keyboard focus treatment on purchase, auth, onboarding, AI inventory and trust controls', () => {
     expect(pricingPage).toContain('focus-visible:ring-2');
     expect(checkoutPage).toContain('focus-visible:ring-2');
     expect(loginPage).toContain('focus-visible:ring-2');
     expect(signupPage).toContain('focus-visible:ring-2');
+    expect(onboardingFlow).toContain('focus-visible:ring-2');
     expect(aiSystemsPage).toContain('focus-visible:ring-2');
     expect(trustComponent).toContain('focus-visible:ring-2');
   });
