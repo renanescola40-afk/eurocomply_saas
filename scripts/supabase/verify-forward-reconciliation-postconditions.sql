@@ -12,7 +12,105 @@ declare
   step_up_function_oid oid := to_regprocedure('public.touch_step_up_challenges_updated_at()');
   uploader_function_oid oid := to_regprocedure('public.enforce_document_uploader_member_scope()');
   break_glass_expiry_function_oid oid := to_regprocedure('public.expire_enterprise_break_glass_requests(integer)');
+  organization_bootstrap_function_oid oid := to_regprocedure('public.create_organization_with_owner_atomic(text,text,uuid)');
 begin
+  -- Active application contracts currently exercised by production jobs/routes.
+  if to_regclass('public.intelligence_items') is null
+     or to_regclass('public.intelligence_calendar_suggestions') is null
+     or to_regclass('public.email_notification_events') is null
+     or to_regclass('public.vendor_review_history') is null then
+    raise exception 'enterprise core runtime reconciliation objects are incomplete';
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'vendors'
+      and column_name = 'next_review_at'
+      and data_type = 'date'
+  ) then
+    raise exception 'vendors.next_review_at runtime contract is missing';
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'email_notification_events'
+      and column_name = 'entity_id'
+      and data_type = 'text'
+  ) then
+    raise exception 'email_notification_events.entity_id is not canonical text';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'intelligence_items'
+      and policyname = 'Authenticated users can read published intelligence'
+      and cmd = 'SELECT'
+  ) or not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'email_notification_events'
+      and policyname = 'rls_email_notification_events_select_member'
+      and cmd = 'SELECT'
+  ) or not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'vendors'
+      and policyname = 'rls_vendors_select_member'
+      and cmd = 'SELECT'
+  ) then
+    raise exception 'enterprise core runtime RLS policies are incomplete';
+  end if;
+
+  if has_table_privilege('authenticated', 'public.email_notification_events', 'INSERT')
+     or has_table_privilege('authenticated', 'public.email_notification_events', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.email_notification_events', 'DELETE')
+     or has_table_privilege('authenticated', 'public.vendors', 'INSERT')
+     or has_table_privilege('authenticated', 'public.vendors', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.vendors', 'DELETE') then
+    raise exception 'enterprise core backend-only tables expose authenticated DML';
+  end if;
+
+  if organization_bootstrap_function_oid is null
+     or has_function_privilege('anon', organization_bootstrap_function_oid, 'EXECUTE')
+     or has_function_privilege('authenticated', organization_bootstrap_function_oid, 'EXECUTE')
+     or not has_function_privilege('service_role', organization_bootstrap_function_oid, 'EXECUTE') then
+    raise exception 'atomic organization bootstrap function privileges are not canonical';
+  end if;
+
+  if exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and policyname like 'live_rls_%'
+  ) then
+    raise exception 'temporary live_rls validation policy remains after core reconciliation';
+  end if;
+
+  if to_regprocedure('public.live_rls_validation_apply_backend_only(text)') is not null
+     or to_regprocedure('public.live_rls_validation_apply_org_scoped(text)') is not null
+     or to_regprocedure('public.live_rls_validation_has_column(text,text)') is not null
+     or to_regprocedure('app_private.live_rls_validation_is_org_member(uuid)') is not null then
+    raise exception 'temporary live RLS validation helper remains after core reconciliation';
+  end if;
+
+  if exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'subscriptions'
+      and policyname = 'Owners can manage subscriptions'
+  ) then
+    raise exception 'legacy direct subscription mutation policy remains after core reconciliation';
+  end if;
+
   if not exists (
     select 1
     from pg_policy policy
