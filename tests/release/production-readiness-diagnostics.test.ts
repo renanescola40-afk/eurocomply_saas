@@ -53,8 +53,8 @@ describe('production readiness diagnostic redaction', () => {
     expect(diagnostics.environment).toEqual([
       { name: 'supabase', configured: true, missingCount: 0 },
     ]);
-    expect(diagnostics.database.detail).toBe('unknown');
-    expect(diagnostics.stripe.detail).toBe('unknown');
+    expect(diagnostics.database?.detail).toBe('unknown');
+    expect(diagnostics.stripe?.detail).toBe('unknown');
     expect(diagnostics.checks).toEqual({
       supabaseConfigured: true,
       stripeApiReachable: false,
@@ -103,9 +103,9 @@ describe('production readiness diagnostic redaction', () => {
       { name: 'redis', configured: false, missingCount: null },
       { name: 'sentry', configured: false, missingCount: null },
     ]);
-    expect(diagnostics.environment.filter((entry) => entry.name === 'supabase')).toHaveLength(1);
-    expect(diagnostics.stripe.pricesChecked).toBeNull();
-    expect(diagnostics.sentryReleaseUploads.missingCount).toBeNull();
+    expect((diagnostics.environment ?? []).filter((entry) => entry.name === 'supabase')).toHaveLength(1);
+    expect(diagnostics.stripe?.pricesChecked).toBeNull();
+    expect(diagnostics.sentryReleaseUploads?.missingCount).toBeNull();
     expect(JSON.stringify(diagnostics)).not.toContain('123456789');
     expect(JSON.stringify(diagnostics)).not.toContain('987654321');
   });
@@ -120,9 +120,9 @@ describe('production readiness diagnostic redaction', () => {
     });
 
     expect(diagnostics.status).toBe('not_ready');
-    expect(diagnostics.environment[0]?.name).toBe('stripe');
-    expect(diagnostics.database.detail).toBe('ok');
-    expect(diagnostics.stripe.detail).toBe('not_configured');
+    expect(diagnostics.environment?.[0]?.name).toBe('stripe');
+    expect(diagnostics.database?.detail).toBe('ok');
+    expect(diagnostics.stripe?.detail).toBe('not_configured');
     expect(diagnostics.checks).toEqual({ healthcheckProtected: true });
   });
 
