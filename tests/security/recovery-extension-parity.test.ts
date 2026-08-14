@@ -83,7 +83,7 @@ describe('isolated recovery extension parity', () => {
     ]);
   });
 
-  it('requires exact extension name schema and version parity after target preparation', () => {
+  it('requires exact bidirectional extension name schema and version parity after target preparation', () => {
     const source = [
       { name: 'pgcrypto', schema: 'extensions', version: '1.3' },
       { name: 'supabase_vault', schema: 'vault', version: '0.3.1' },
@@ -97,6 +97,14 @@ describe('isolated recovery extension parity', () => {
       { name: 'pgcrypto', schema: 'extensions', version: '1.2' },
       { name: 'supabase_vault', schema: 'vault', version: '0.3.1' },
     ])).toBe(false);
+    expect(extensionParitySatisfied(source, [
+      ...source,
+      { name: 'target_only_extension', schema: 'extensions', version: '1.0' },
+    ])).toBe(false);
+    expect(extensionParitySatisfied([
+      ...source,
+      { name: 'source_only_extension', schema: 'extensions', version: '1.0' },
+    ], source)).toBe(false);
   });
 
   it('quotes identifiers and extension versions without raw SQL concatenation', () => {
