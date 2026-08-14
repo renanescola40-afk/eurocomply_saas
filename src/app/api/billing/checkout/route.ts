@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { z } from 'zod';
 
+import { getBillingEntitlements } from '@/lib/billing/plans';
 import { reportError } from '@/lib/observability/report-error';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { writeAuditLog } from '@/lib/security/audit-log';
@@ -9,6 +10,10 @@ import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
 import { deriveStripeIdempotencyKey, readBillingIdempotencyKey, type BillingIdempotencyContext } from '@/server/billing/idempotency';
 import { getStripeClient } from '@/server/billing/stripe';
 import { getStripePriceId, isSelfServePlan, normalizeBillingPlanId } from '@/server/billing/plans';
+import {
+  getAuthoritativeSignedContractPlan,
+  hasProcessedLiveStripeSubscriptionAuthority,
+} from '@/server/billing/subscription-authority';
 import {
   classifyProviderFailure,
   providerFailureContext,
@@ -35,6 +40,11 @@ type BillingBinding = {
   status: string | null;
 };
 
+type StripeCustomerBinding = {
+  id: string;
+  created: boolean;
+};
+
 const checkoutBodySchema = z.object({
   plan: z.string().trim().min(1).max(64),
   locale: z.string().trim().max(16).optional().default('en'),
@@ -56,6 +66,15 @@ function isSafeStripeCheckoutUrl(url: string | null): url is string {
   }
 }
 
+function isStripeResourceMissing(error: unknown) {
+  return Boolean(
+    error
+    && typeof error === 'object'
+    && 'code' in error
+    && (error as { code?: unknown }).code === 'resource_missing',
+  );
+}
+
 async function getOrganizationBillingBinding(organizationId: string): Promise<BillingBinding | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -66,15 +85,16 @@ async function getOrganizationBillingBinding(organizationId: string): Promise<Bi
     .limit(1)
     .maybeSingle<BillingBinding>();
 
-  if (error) {
-    throw error;
-  }
-
+  if (error) throw error;
   return data ?? null;
 }
 
-function hasExistingBillingRelationship(binding: BillingBinding | null) {
-  return Boolean(binding?.stripe_customer_id || binding?.stripe_subscription_id || binding?.status);
+async function hasLiveSubscriptionRelationship(organizationId: string, binding: BillingBinding | null) {
+  return hasProcessedLiveStripeSubscriptionAuthority({
+    organizationId,
+    stripeCustomerId: binding?.stripe_customer_id,
+    stripeSubscriptionId: binding?.stripe_subscription_id,
+  });
 }
 
 async function ensureOrganizationStripeCustomer({
@@ -93,7 +113,7 @@ async function ensureOrganizationStripeCustomer({
   metadata: Record<string, string>;
   existingCustomerId?: string | null;
   idempotency: BillingIdempotencyContext;
-}) {
+}): Promise<StripeCustomerBinding> {
   if (existingCustomerId) {
     try {
       await stripe.customers.update(
@@ -101,9 +121,15 @@ async function ensureOrganizationStripeCustomer({
         { metadata },
         { idempotencyKey: deriveStripeIdempotencyKey(idempotency, 'customer-metadata') },
       );
-      return existingCustomerId;
+      return { id: existingCustomerId, created: false };
     } catch (error) {
-      throw classifyProviderFailure('stripe', 'customer_update', error);
+      // Production historically contained test-mode customer IDs. A live Stripe
+      // client returns resource_missing for those IDs. Treat that precise case as
+      // a recoverable stale binding and create one live customer; all other
+      // provider errors remain fail-closed.
+      if (!isStripeResourceMissing(error)) {
+        throw classifyProviderFailure('stripe', 'customer_update', error);
+      }
     }
   }
 
@@ -116,10 +142,54 @@ async function ensureOrganizationStripeCustomer({
       },
       { idempotencyKey: deriveStripeIdempotencyKey(idempotency, 'customer-create') },
     );
-    return customer.id;
+    return { id: customer.id, created: true };
   } catch (error) {
     throw classifyProviderFailure('stripe', 'customer_create', error);
   }
+}
+
+async function persistPendingLiveCustomerBinding({
+  stripe,
+  organizationId,
+  customer,
+}: {
+  stripe: Stripe;
+  organizationId: string;
+  customer: StripeCustomerBinding;
+}) {
+  const supabase = createAdminClient();
+  const starterEntitlements = getBillingEntitlements('starter');
+  const { error } = await supabase.from('subscriptions').upsert(
+    {
+      organization_id: organizationId,
+      stripe_customer_id: customer.id,
+      stripe_subscription_id: null,
+      plan: 'starter',
+      tier: 'starter',
+      status: 'incomplete',
+      current_period_end: null,
+      entitlements: starterEntitlements,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'organization_id' },
+  );
+
+  if (!error) return;
+
+  if (customer.created) {
+    try {
+      await stripe.customers.del(customer.id);
+    } catch (cleanupError) {
+      const providerFailure = classifyProviderFailure('stripe', 'customer_cleanup', cleanupError);
+      reportError(providerFailure, {
+        area: 'billing_customer_binding_compensation',
+        organizationId,
+        ...providerFailureContext(providerFailure),
+      });
+    }
+  }
+
+  throw error;
 }
 
 export async function POST(request: Request) {
@@ -163,6 +233,11 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
     }
 
+    const signedContractPlan = await getAuthoritativeSignedContractPlan(organization.id);
+    if (signedContractPlan) {
+      return noStoreJson({ error: 'contract_managed_billing' }, { status: 409 });
+    }
+
     const idempotency = readBillingIdempotencyKey(request, {
       scope: 'checkout',
       organizationId: organization.id,
@@ -173,7 +248,8 @@ export async function POST(request: Request) {
     }
 
     const billingBinding = await getOrganizationBillingBinding(organization.id);
-    const isInitialCheckout = !hasExistingBillingRelationship(billingBinding);
+    const hasLiveSubscription = await hasLiveSubscriptionRelationship(organization.id, billingBinding);
+    const isInitialCheckout = !hasLiveSubscription;
     const stepUp = isInitialCheckout
       ? null
       : await requireStepUpForRequest({
@@ -183,12 +259,9 @@ export async function POST(request: Request) {
           organizationId: organization.id,
         });
 
-    if (stepUp && !stepUp.ok) {
-      return stepUp.response;
-    }
+    if (stepUp && !stepUp.ok) return stepUp.response;
 
     const returnBaseUrl = resolveBillingReturnBaseUrl(request.url);
-
     if (!returnBaseUrl.ok) {
       return noStoreJson({ error: 'billing_app_url_unavailable' }, { status: 503 });
     }
@@ -209,7 +282,7 @@ export async function POST(request: Request) {
       step_up_action: stepUp?.assessment.action ?? 'not_required_initial_checkout',
       step_up_verified_at: stepUp?.assessment.verifiedAt ?? '',
     };
-    const stripeCustomerId = await ensureOrganizationStripeCustomer({
+    const customer = await ensureOrganizationStripeCustomer({
       stripe,
       organizationId: organization.id,
       organizationName,
@@ -219,29 +292,32 @@ export async function POST(request: Request) {
       idempotency: idempotency.context,
     });
 
+    // For initial/recovery checkout persist the live customer immediately. This
+    // makes retries reuse one logical live Stripe customer and atomically replaces
+    // stale status-only/test-mode identifiers with a non-entitled pending state.
+    if (!hasLiveSubscription) {
+      await persistPendingLiveCustomerBinding({ stripe, organizationId: organization.id, customer });
+    }
+
     let session: Stripe.Checkout.Session;
     try {
       session = await stripe.checkout.sessions.create(
         {
           mode: 'subscription',
-          customer: stripeCustomerId,
+          customer: customer.id,
           line_items: [{ price: priceId, quantity: 1 }],
           success_url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations?checkout=success`,
           cancel_url: `${returnBaseUrl.appUrl}/${locale}/checkout?plan=${plan}&checkout=cancelled`,
           client_reference_id: organization.id,
           locale,
           metadata,
-          subscription_data: {
-            metadata,
-          },
+          subscription_data: { metadata },
           billing_address_collection: 'required',
           customer_update: {
             address: 'auto',
             name: 'auto',
           },
-          tax_id_collection: {
-            enabled: true,
-          },
+          tax_id_collection: { enabled: true },
           payment_method_collection: 'always',
           allow_promotion_codes: true,
         },
@@ -264,7 +340,7 @@ export async function POST(request: Request) {
       metadata: {
         plan,
         priceId,
-        stripeCustomerId,
+        stripeCustomerId: customer.id,
         actorRole: permission.role ?? 'unknown',
         billingFlow: isInitialCheckout ? 'initial_subscription' : 'existing_billing_change',
         stepUpRequired: !isInitialCheckout,
@@ -274,6 +350,8 @@ export async function POST(request: Request) {
         rbacPermission: 'manage_billing',
         stripeCheckoutHost: STRIPE_CHECKOUT_URL_HOST,
         idempotencyProtected: true,
+        liveSubscriptionAuthority: hasLiveSubscription,
+        pendingCustomerBindingPersisted: !hasLiveSubscription,
       },
     });
 
