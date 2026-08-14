@@ -34,12 +34,12 @@ for (const fixture of roleFixtures) {
       await expectHealthyAuthenticatedPage(page, `${fixture.role} billing`);
 
       if (fixture.canManageBilling) {
-        await expect(page.getByText('Billing is read-only for your role')).toHaveCount(0);
-        await expect(page.getByRole('button', { name: /open billing portal/i })).toBeVisible();
+        await expect(page.getByText(/A faturação é apenas de leitura para a sua função/i)).toHaveCount(0);
+        await expect(page.getByRole('button', { name: /abrir portal de faturação/i })).toBeVisible();
       } else {
-        await expect(page.getByText('Billing is read-only for your role')).toBeVisible();
-        await expect(page.getByRole('button', { name: /owner access required/i })).toBeDisabled();
-        await expect(page.getByRole('button', { name: /owner action required/i }).first()).toBeDisabled();
+        await expect(page.getByText(/A faturação é apenas de leitura para a sua função/i)).toBeVisible();
+        await expect(page.getByRole('button', { name: /acesso de owner necessário/i })).toBeDisabled();
+        await expect(page.getByRole('button', { name: /ação do owner necessária/i }).first()).toBeDisabled();
       }
     });
   });
