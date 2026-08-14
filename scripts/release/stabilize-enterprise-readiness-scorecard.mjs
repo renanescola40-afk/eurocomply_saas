@@ -70,11 +70,12 @@ export function isTerminalEvaluation(run) {
   return run?.status === 'completed' && TERMINAL_EVALUATION_CONCLUSIONS.has(run?.conclusion);
 }
 
-export function isOrchestrationOnlySkippedGateRun(run) {
-  return run?.name === ENTERPRISE_PRODUCTION_GATE_NAME
-    && run?.event === 'workflow_run'
-    && run?.status === 'completed'
-    && run?.conclusion === 'skipped';
+export function relevantProductionGateRuns(runs, targetSha, producerCutoffMs) {
+  return runs
+    .filter((run) => run?.head_sha === targetSha && run?.name === ENTERPRISE_PRODUCTION_GATE_NAME)
+    .filter((run) => createdTimestampMs(run) >= producerCutoffMs)
+    .filter((run) => ACTIVE_RUN_STATUSES.has(run?.status) || isTerminalEvaluation(run))
+    .sort((a, b) => createdTimestampMs(b) - createdTimestampMs(a));
 }
 
 export function exactShaProducerRuns(runs, targetSha) {
@@ -99,13 +100,7 @@ export function hasActiveProducer(runs) {
 }
 
 export function productionGateAlreadyCoversEvidence(runs, targetSha, producerCutoffMs) {
-  return runs.some((run) => {
-    if (run?.head_sha !== targetSha || run?.name !== ENTERPRISE_PRODUCTION_GATE_NAME) return false;
-    if (createdTimestampMs(run) < producerCutoffMs) return false;
-    if (isOrchestrationOnlySkippedGateRun(run)) return false;
-    if (ACTIVE_RUN_STATUSES.has(run?.status)) return true;
-    return run?.status === 'completed';
-  });
+  return relevantProductionGateRuns(runs, targetSha, producerCutoffMs).length > 0;
 }
 
 export function scorecardAlreadyCoversEvidence(runs, targetSha, producerCutoffMs) {
@@ -276,40 +271,8 @@ async function waitForTerminalProductionGate(
 
   for (let attempt = 1; attempt <= MAX_GATE_SETTLE_ATTEMPTS; attempt += 1) {
     const runs = await listExactShaRuns(repository, targetSha);
-    const covered = runs
-      .filter((run) => run?.name === ENTERPRISE_PRODUCTION_GATE_NAME)
-      .filter((run) => createdTimestampMs(run) >= producerCutoffMs)
-      .sort((a, b) => createdTimestampMs(b) - createdTimestampMs(a));
-
-    const latestRelevant = covered.find((run) => !isOrchestrationOnlySkippedGateRun(run));
-    if (isTerminalEvaluation(latestRelevant)) return latestRelevant;
-
-    if (latestRelevant?.status === 'completed') {
-      throw new Error(
-        `Terminal Enterprise Production Gate ended with authoritative non-evaluation conclusion (${latestRelevant?.conclusion ?? 'unknown'})`,
-      );
-    }
-
-    if (latestRelevant && ACTIVE_RUN_STATUSES.has(latestRelevant?.status)) {
-      consecutiveSkippedOnlyPolls = 0;
-    } else if (covered.length > 0 && covered.every((run) => isOrchestrationOnlySkippedGateRun(run))) {
-      consecutiveSkippedOnlyPolls += 1;
-      console.warn('Ignoring orchestration-only workflow_run/skipped Enterprise Production Gate record while waiting for a real evaluation');
-
-      if (fallbackRefreshAvailable && consecutiveSkippedOnlyPolls >= 2) {
-        const mainSha = await currentMainSha(repository);
-        if (mainSha !== targetSha) {
-          throw new Error('Main advanced while Production Gate refresh recovery was pending');
-        }
-        await dispatchProductionGate(repository);
-        fallbackRefreshAvailable = false;
-        consecutiveSkippedOnlyPolls = 0;
-        console.warn('Dispatched one bounded fallback Enterprise Production Gate refresh after skipped-only settlement');
-      }
-    } else {
-      consecutiveSkippedOnlyPolls = 0;
-    }
-
+    const latest = relevantProductionGateRuns(runs, targetSha, producerCutoffMs)[0];
+    if (isTerminalEvaluation(latest)) return latest;
     if (attempt < MAX_GATE_SETTLE_ATTEMPTS) await sleep(GATE_SETTLE_INTERVAL_MS);
   }
   throw new Error('Terminal Enterprise Production Gate did not complete within the bounded settlement window');

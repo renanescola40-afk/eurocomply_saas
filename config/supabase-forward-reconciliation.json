@@ -1,7 +1,11 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-08-14-runtime-schema-reconciliation-v4",
+  "changeSet": "2026-08-14-enterprise-control-plane-reconciliation-v6",
   "migrations": [
+    {
+      "filename": "20260730204500_repair_live_rls_validation_inventory.sql",
+      "purpose": "restore service-role-only execution for the live RLS inventory helper while preserving SECURITY INVOKER and fixed search_path"
+    },
     {
       "filename": "20260813175000_optimize_organization_add_ons_rls_initplan.sql",
       "purpose": "evaluate organization add-on membership auth once per statement while preserving tenant scope"
@@ -25,6 +29,34 @@
     {
       "filename": "20260813234000_reconcile_enterprise_break_glass_governance.sql",
       "purpose": "materialize the backend-only tenant-bound Enterprise Break-Glass runtime without rewriting unapplied historical migration bytes"
+    },
+    {
+      "filename": "20260814090000_reconcile_enterprise_licensing_control_plane.sql",
+      "purpose": "materialize Enterprise licensing, entitlements, usage, seat enforcement and platform-admin control-plane boundaries"
+    },
+    {
+      "filename": "20260814091000_reconcile_enterprise_integrations_scim.sql",
+      "purpose": "materialize backend-only Enterprise integrations and SCIM identity runtime"
+    },
+    {
+      "filename": "20260814091100_harden_scim_identity_connection_delete_boundary.sql",
+      "purpose": "harden SCIM identity connection deletion with tenant-safe restrictive foreign-key behavior"
+    },
+    {
+      "filename": "20260814091900_bridge_enterprise_contract_mode_compatibility.sql",
+      "purpose": "bridge legacy Enterprise contract rows into explicit compatibility mode before billing lifecycle activation"
+    },
+    {
+      "filename": "20260814092000_reconcile_enterprise_billing_lifecycle.sql",
+      "purpose": "materialize Enterprise billing lifecycle events, contract billing state and service-role-only synchronization controls"
+    },
+    {
+      "filename": "20260814092100_finalize_enterprise_contract_mode_compatibility.sql",
+      "purpose": "finalize canonical compatibility versus negotiated Enterprise contract mode constraints"
+    },
+    {
+      "filename": "20260814093000_reconcile_enterprise_contract_control_rpcs.sql",
+      "purpose": "materialize service-role-only Enterprise contract provisioning, entitlement and lifecycle control RPCs"
     },
     {
       "filename": "20260814101500_reconcile_enterprise_core_active_runtime.sql",

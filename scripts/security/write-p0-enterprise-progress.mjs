@@ -89,13 +89,17 @@ const repoReadinessChecks = [
   {
     id: 'rls-live-evidence-required',
     label: 'Live RLS validation evidence is required by release checklist',
-    done: fileIncludes('docs/RELEASE_EVIDENCE_CHECKLIST.md', 'Live RLS validation completed against the target Supabase project'),
+    done:
+      fileIncludes('docs/RELEASE_EVIDENCE_CHECKLIST.md', '`supabase-live-rls-validation.json`') &&
+      fileIncludes('docs/RELEASE_EVIDENCE_CHECKLIST.md', '`npm run security:rls:live`'),
     evidence: 'docs/RELEASE_EVIDENCE_CHECKLIST.md',
   },
   {
     id: 'external-review-required',
     label: 'External security review or pentest evidence is required',
-    done: fileIncludes('docs/RELEASE_EVIDENCE_CHECKLIST.md', 'External security review or pentest completed'),
+    done:
+      fileIncludes('docs/RELEASE_EVIDENCE_CHECKLIST.md', '`external-security-review-or-pentest.json`') &&
+      fileIncludes('docs/RELEASE_EVIDENCE_CHECKLIST.md', 'External review evidence'),
     evidence: 'docs/RELEASE_EVIDENCE_CHECKLIST.md',
   },
 ];

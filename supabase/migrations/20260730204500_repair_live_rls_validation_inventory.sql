@@ -1,3 +1,5 @@
+begin;
+
 -- Repair and harden the live RLS validation inventory helper.
 --
 -- The original migration is intentionally re-applied under a newer timestamp so
@@ -56,3 +58,5 @@ comment on function public.eurocomply_live_rls_inventory(text[]) is
   'Controlled service-role helper for exact-target live RLS validation. Not a public application RPC.';
 
 notify pgrst, 'reload schema';
+
+commit;
