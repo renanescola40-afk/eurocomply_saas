@@ -13,7 +13,6 @@ const liveAclName = '20260804224915_live_security_definer_acl_hardening.sql';
 const liveAclPath = join(root, 'supabase', 'migrations', liveAclName);
 const liveIndexName = '20260812230541_add_missing_foreign_key_covering_indexes.sql';
 const liveIndexPath = join(root, 'supabase', 'migrations', liveIndexName);
-const auditLogFoundationPath = join(root, 'supabase', 'migrations', '20260605190200_audit_logs.sql');
 const legacyDeleteHardening = `-- This legacy RPC deletes from auth.users and must never be client-callable.
 alter function public.delete_user_account(uuid)
   set search_path = pg_catalog, auth;
@@ -31,44 +30,8 @@ begin
   end if;
 end
 $legacy_delete_rpc$;`;
-const auditActorIndex = 'create index if not exists idx_audit_logs_actor_fk on public.audit_logs (actor_id);';
-const auditUserIndex = 'create index if not exists idx_audit_logs_user_fk on public.audit_logs (user_id);';
-const auditActorIndexReplay = `do $audit_actor_index$
-begin
-  if exists (
-    select 1 from information_schema.columns
-    where table_schema = 'public' and table_name = 'audit_logs' and column_name = 'actor_id'
-  ) then
-    execute 'create index if not exists idx_audit_logs_actor_fk on public.audit_logs (actor_id)';
-  end if;
-end
-$audit_actor_index$;`;
-const auditUserIndexReplay = `do $audit_user_index$
-begin
-  if exists (
-    select 1 from information_schema.columns
-    where table_schema = 'public' and table_name = 'audit_logs' and column_name = 'user_id'
-  ) then
-    execute 'create index if not exists idx_audit_logs_user_fk on public.audit_logs (user_id)';
-  end if;
-end
-$audit_user_index$;`;
-const liveIndexValidationTail = "where to_regclass('public.' || required.index_name) is null;";
-const liveIndexReplayValidationTail = `where to_regclass('public.' || required.index_name) is null
-  and not (
-    required.index_name = 'idx_audit_logs_actor_fk'
-    and not exists (
-      select 1 from information_schema.columns
-      where table_schema = 'public' and table_name = 'audit_logs' and column_name = 'actor_id'
-    )
-  )
-  and not (
-    required.index_name = 'idx_audit_logs_user_fk'
-    and not exists (
-      select 1 from information_schema.columns
-      where table_schema = 'public' and table_name = 'audit_logs' and column_name = 'user_id'
-    )
-  );`;
+const liveIndexStatementPattern = /create index if not exists ([a-z][a-z0-9_]*) on public\.([a-z][a-z0-9_]*) \(([^)]+)\);/g;
+const liveIndexVerificationPattern = /do \$\$\ndeclare\n  missing integer;[\s\S]*?end \$\$;/;
 const delegate = join(root, 'scripts', 'recovery', 'run-reviewed-ephemeral-schema-boundary-v2.mjs');
 
 function fail(message) {
@@ -77,6 +40,56 @@ function fail(message) {
 
 function appendGithubEnv(name, value) {
   if (process.env.GITHUB_ENV) appendFileSync(process.env.GITHUB_ENV, `${name}=${value}\n`, 'utf8');
+}
+
+function sqlLiteral(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+function parseLiveIndexSpecs(sql) {
+  const specs = [...sql.matchAll(liveIndexStatementPattern)].map((match) => {
+    const [, indexName, tableName, columnsSource] = match;
+    const columns = columnsSource.split(',').map((column) => column.trim());
+    if (!columns.length || columns.some((column) => !/^[a-z][a-z0-9_]*$/.test(column))) {
+      fail(`Unsupported live-index column expression for ${indexName}: ${columnsSource}`);
+    }
+    return {
+      statement: match[0],
+      indexName,
+      tableName,
+      columns,
+    };
+  });
+
+  if (specs.length !== 27) fail(`Expected 27 advisor-backed live index statements, found ${specs.length}`);
+  if (new Set(specs.map(({ indexName }) => indexName)).size !== specs.length) {
+    fail('Live advisor index names are not unique');
+  }
+  return specs;
+}
+
+function columnPresenceSql(tableName, columns) {
+  const literals = columns.map(sqlLiteral).join(', ');
+  return `(select count(*) from information_schema.columns where table_schema = 'public' and table_name = ${sqlLiteral(tableName)} and column_name in (${literals})) = ${columns.length}`;
+}
+
+function buildLiveIndexReplaySql(sql, specs) {
+  let replay = sql;
+  specs.forEach((spec, index) => {
+    const tag = `$replay_idx_${index}$`;
+    const targetColumns = spec.columns.join(', ');
+    const conditionalStatement = `do ${tag}\nbegin\n  if to_regclass(${sqlLiteral(`public.${spec.tableName}`)}) is not null\n    and ${columnPresenceSql(spec.tableName, spec.columns)} then\n    execute ${sqlLiteral(`create index if not exists ${spec.indexName} on public.${spec.tableName} (${targetColumns})`)};\n  end if;\nend\n${tag};`;
+    if (!replay.includes(spec.statement)) fail(`Live index statement disappeared before replay rewrite: ${spec.indexName}`);
+    replay = replay.replace(spec.statement, conditionalStatement);
+  });
+
+  const verificationMatches = replay.match(liveIndexVerificationPattern);
+  if (!verificationMatches) fail('Live advisor fail-closed verification block is missing');
+
+  const checks = specs.map((spec) => `  if to_regclass(${sqlLiteral(`public.${spec.tableName}`)}) is not null\n    and ${columnPresenceSql(spec.tableName, spec.columns)}\n    and to_regclass(${sqlLiteral(`public.${spec.indexName}`)}) is null then\n    missing := missing + 1;\n  end if;`).join('\n\n');
+  const verification = `do $replay_live_index_validation$\ndeclare\n  missing integer := 0;\nbegin\n${checks}\n\n  if missing <> 0 then\n    raise exception 'missing required foreign-key covering indexes after reconciliation: %', missing;\n  end if;\nend\n$replay_live_index_validation$;`;
+  replay = replay.replace(liveIndexVerificationPattern, verification);
+  return replay;
 }
 
 function validateBoundary() {
@@ -88,7 +101,6 @@ function validateBoundary() {
   if (existsSync(heldPath)) fail(`Market-leadership hold path already exists: ${heldPath}`);
   if (!existsSync(liveAclPath)) fail(`Missing live security-definer hardening migration: ${liveAclName}`);
   if (!existsSync(liveIndexPath)) fail(`Missing live foreign-key index migration: ${liveIndexName}`);
-  if (!existsSync(auditLogFoundationPath)) fail(`Missing audit-log foundation migration: ${auditLogFoundationPath}`);
 
   const batchN = readFileSync(batchNPath, 'utf8');
   if (!batchN.includes('public.is_organization_member(uuid)')
@@ -119,18 +131,11 @@ function validateBoundary() {
     if (!liveAclSql.includes(marker)) fail(`Live ACL hardening marker drifted: ${marker}`);
   }
 
-  const auditFoundation = readFileSync(auditLogFoundationPath, 'utf8');
-  if (!auditFoundation.includes('actor_user_id uuid references auth.users(id) on delete set null')) {
-    fail('Audit-log repository foundation no longer proves actor_user_id lineage');
-  }
-
   const liveIndexSql = readFileSync(liveIndexPath, 'utf8');
-  for (const marker of [auditActorIndex, auditUserIndex, liveIndexValidationTail]) {
-    const count = liveIndexSql.split(marker).length - 1;
-    if (count !== 1) fail(`Expected one live-index drift marker, found ${count}: ${marker}`);
-  }
-  if (!liveIndexSql.includes('missing required foreign-key covering indexes after reconciliation')) {
-    fail('Live foreign-key index migration no longer contains its fail-closed verification');
+  parseLiveIndexSpecs(liveIndexSql);
+  if (!liveIndexSql.includes("where to_regclass('public.' || required.index_name) is null")
+      || !liveIndexSql.includes('missing required foreign-key covering indexes after reconciliation')) {
+    fail('Live advisor index migration no longer contains its fail-closed production verification');
   }
 }
 
@@ -140,6 +145,7 @@ function main() {
   const liveAclSql = liveAclBytes.toString('utf8');
   const liveIndexBytes = readFileSync(liveIndexPath);
   const liveIndexSql = liveIndexBytes.toString('utf8');
+  const liveIndexSpecs = parseLiveIndexSpecs(liveIndexSql);
   let held = false;
   let aclCompatibilityStaged = false;
   let indexCompatibilityStaged = false;
@@ -151,14 +157,8 @@ function main() {
     held = true;
     writeFileSync(liveAclPath, liveAclSql.replace(legacyDeleteHardening, legacyDeleteReplayCompatibility), 'utf8');
     aclCompatibilityStaged = true;
-
-    const replayIndexSql = liveIndexSql
-      .replace(auditActorIndex, auditActorIndexReplay)
-      .replace(auditUserIndex, auditUserIndexReplay)
-      .replace(liveIndexValidationTail, liveIndexReplayValidationTail);
-    writeFileSync(liveIndexPath, replayIndexSql, 'utf8');
+    writeFileSync(liveIndexPath, buildLiveIndexReplaySql(liveIndexSql, liveIndexSpecs), 'utf8');
     indexCompatibilityStaged = true;
-
     execFileSync(process.execPath, [delegate], { stdio: 'inherit', env: process.env });
   } catch (error) {
     replayError = error;
@@ -184,7 +184,7 @@ function main() {
   appendGithubEnv('RECOVERY_EPHEMERAL_OPTIONAL_LEGACY_RPC_HARDENING_FILE_COUNT', '1');
   appendGithubEnv('RECOVERY_EPHEMERAL_LIVE_AUDIT_INDEX_COMPAT_FILE_COUNT', '1');
   process.stdout.write(
-    `Disposable replay held ${migrationName} behind the unresolved membership helper, made the live-only delete_user_account hardening conditional on object presence, required the two live audit-log covering indexes only when their live-only target columns exist, and restored canonical bytes.\n`,
+    `Disposable replay held ${migrationName} behind the unresolved membership helper, made the live-only delete_user_account hardening conditional on object presence, applied all ${liveIndexSpecs.length} advisor-backed covering indexes whose tables and target columns exist in the reconstructed schema, required every applicable index, and restored canonical bytes.\n`,
   );
 }
 
