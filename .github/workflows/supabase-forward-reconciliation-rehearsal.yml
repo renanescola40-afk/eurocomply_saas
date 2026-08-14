@@ -7,6 +7,7 @@ on:
       - 'scripts/supabase/forward-reconciliation-control-plane.mjs'
       - 'scripts/supabase/verify-forward-reconciliation-postconditions.sql'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
+      - 'supabase/migrations/20260809135000_enterprise_core_runtime_schema_reconciliation.sql'
       - 'supabase/migrations/20260813175000_optimize_organization_add_ons_rls_initplan.sql'
       - 'supabase/migrations/20260813194500_reconcile_step_up_challenges_runtime.sql'
       - 'supabase/migrations/20260813200000_reconcile_subscription_schema_defaults.sql'
