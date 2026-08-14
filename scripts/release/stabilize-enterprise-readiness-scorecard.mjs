@@ -257,7 +257,15 @@ async function dispatchScorecard(repository) {
   await dispatchWorkflow(repository, SCORECARD_WORKFLOW_PATH);
 }
 
-async function waitForTerminalProductionGate(repository, targetSha, producerCutoffMs) {
+async function waitForTerminalProductionGate(
+  repository,
+  targetSha,
+  producerCutoffMs,
+  { refreshAlreadyDispatched = false } = {},
+) {
+  let fallbackRefreshAvailable = !refreshAlreadyDispatched;
+  let consecutiveNonEvaluationPolls = 0;
+
   for (let attempt = 1; attempt <= MAX_GATE_SETTLE_ATTEMPTS; attempt += 1) {
     const runs = await listExactShaRuns(repository, targetSha);
     const covered = runs
@@ -269,10 +277,24 @@ async function waitForTerminalProductionGate(repository, targetSha, producerCuto
     if (latestTerminalEvaluation) return latestTerminalEvaluation;
 
     const latestActiveEvaluation = covered.find((run) => ACTIVE_RUN_STATUSES.has(run?.status));
-    if (!latestActiveEvaluation && covered[0]?.status === 'completed') {
+    if (latestActiveEvaluation) {
+      consecutiveNonEvaluationPolls = 0;
+    } else if (covered[0]?.status === 'completed') {
+      consecutiveNonEvaluationPolls += 1;
       console.warn(
         `Ignoring non-evaluation Enterprise Production Gate conclusion (${covered[0]?.conclusion ?? 'unknown'}) while waiting for a bounded success/failure evaluation`,
       );
+
+      if (fallbackRefreshAvailable && consecutiveNonEvaluationPolls >= 2) {
+        const mainSha = await currentMainSha(repository);
+        if (mainSha !== targetSha) {
+          throw new Error('Main advanced while Production Gate refresh recovery was pending');
+        }
+        await dispatchProductionGate(repository);
+        fallbackRefreshAvailable = false;
+        consecutiveNonEvaluationPolls = 0;
+        console.warn('Dispatched one bounded fallback Enterprise Production Gate refresh after non-evaluation settlement');
+      }
     }
 
     if (attempt < MAX_GATE_SETTLE_ATTEMPTS) await sleep(GATE_SETTLE_INTERVAL_MS);
@@ -327,6 +349,7 @@ export async function stabilize({ now = () => Date.now() } = {}) {
   }
 
   upstreamCutoffMs = latestProducerTimestamp(refreshedUpstream);
+  let productionGateRefreshDispatched = false;
   if (!productionGateAlreadyCoversEvidence(refreshedRuns, targetSha, upstreamCutoffMs)) {
     mainSha = await currentMainSha(repository);
     if (mainSha !== targetSha) {
@@ -337,9 +360,12 @@ export async function stabilize({ now = () => Date.now() } = {}) {
     }
 
     await dispatchProductionGate(repository);
+    productionGateRefreshDispatched = true;
   }
 
-  await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs);
+  await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs, {
+    refreshAlreadyDispatched: productionGateRefreshDispatched,
+  });
 
   refreshedRuns = await listExactShaRuns(repository, targetSha);
   refreshedUpstream = exactShaUpstreamProducerRuns(refreshedRuns, targetSha);
