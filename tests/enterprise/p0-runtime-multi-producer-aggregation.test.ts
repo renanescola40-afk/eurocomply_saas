@@ -11,6 +11,7 @@ const stripeFetcher = readFileSync('scripts/enterprise/fetch-stripe-promoted-run
 const publicFinalFetcher = readFileSync('scripts/enterprise/fetch-public-production-final-evidence.mjs', 'utf8');
 const auditChainFetcher = readFileSync('scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs', 'utf8');
 const smokeProof = readFileSync('scripts/release/run-production-runtime-response-proof.mjs', 'utf8');
+const readinessDiagnostics = readFileSync('scripts/release/production-readiness-diagnostics.mjs', 'utf8');
 
 describe('P0 exact-SHA multi-producer runtime aggregation', () => {
   it('listens to protected P0 runtime producers', () => {
@@ -118,9 +119,11 @@ describe('P0 exact-SHA multi-producer runtime aggregation', () => {
   });
 
   it('retains only redacted readiness categories for failed production probes', () => {
-    expect(smokeProof).toContain('function readinessDiagnostics(body)');
-    expect(smokeProof).toContain('sourceMapsUploadRequiresAuthToken');
-    expect(smokeProof).toContain('scannerTransportConfigured');
+    expect(smokeProof).toContain("import { buildSafeReadinessDiagnostics } from './production-readiness-diagnostics.mjs'");
+    expect(smokeProof).toContain('buildSafeReadinessDiagnostics(readyAuthenticated.body)');
+    expect(readinessDiagnostics).toContain('function buildSafeReadinessDiagnostics');
+    expect(readinessDiagnostics).toContain('sourceMapsUploadRequiresAuthToken');
+    expect(readinessDiagnostics).toContain('scannerTransportConfigured');
     expect(smokeProof).toContain('readinessValuesStored: false');
     expect(smokeProof).toContain('responseBodiesStored: false');
     expect(smokeProof).not.toContain('body: readyAuthenticated.body');
