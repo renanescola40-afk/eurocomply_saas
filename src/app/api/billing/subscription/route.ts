@@ -73,6 +73,14 @@ export async function POST(request: Request) {
     const parsed = schema.safeParse(await readBoundedJsonRequest(request, { maxBytes: BODY_MAX_BYTES }).catch(() => null));
     if (!parsed.success) return noStoreJson({ error: 'invalid_billing_lifecycle_request' }, { status: 400 });
 
+    // Annual amounts exist only as repository commercial references until
+    // matching production Stripe Prices are provider-verified. Keep the public
+    // monthly self-serve contract fail-closed rather than allowing a hidden API
+    // caller to discover a missing Price through a 500/provider error.
+    if (parsed.data.interval === 'year' || parsed.data.interval === 'annual') {
+      return noStoreJson({ error: 'annual_billing_not_available' }, { status: 409 });
+    }
+
     const plan = parsed.data.plan ? normalizeBillingPlanId(parsed.data.plan) : undefined;
     if (parsed.data.plan && !plan) return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
     if (
