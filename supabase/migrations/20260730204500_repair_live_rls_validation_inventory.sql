@@ -5,6 +5,8 @@
 -- deployment. This function exposes schema-security metadata and must remain
 -- callable only by the Supabase service role used by the controlled proof runner.
 
+begin;
+
 create or replace function public.eurocomply_live_rls_inventory(table_names text[])
 returns table (
   table_name text,
@@ -56,3 +58,5 @@ comment on function public.eurocomply_live_rls_inventory(text[]) is
   'Controlled service-role helper for exact-target live RLS validation. Not a public application RPC.';
 
 notify pgrst, 'reload schema';
+
+commit;
