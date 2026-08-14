@@ -8,6 +8,8 @@ import { fetchAuditChainRuntimeEvidence } from '../enterprise/fetch-audit-chain-
 import { fetchAuthRbacEvidence } from '../enterprise/fetch-auth-rbac-evidence.mjs';
 import { fetchBranchProtectionRuntimeEvidence } from '../enterprise/fetch-branch-protection-runtime-evidence.mjs';
 import { fetchProductionProviderRuntimeEvidence } from '../enterprise/fetch-production-provider-runtime-evidence.mjs';
+import { fetchProductionRuntimeEvidence } from '../enterprise/fetch-production-runtime-evidence.mjs';
+import { fetchPublicProductionFinalEvidence } from '../enterprise/fetch-public-production-final-evidence.mjs';
 import { fetchStepUpRuntimeEvidence } from '../enterprise/fetch-step-up-runtime-evidence.mjs';
 import { fetchStripePromotedRuntimeEvidence } from '../enterprise/fetch-stripe-promoted-runtime-evidence.mjs';
 import { fetchSupabaseRlsEvidence } from '../enterprise/fetch-supabase-rls-evidence.mjs';
@@ -54,6 +56,14 @@ export const RETAINED_RUNTIME_PRODUCERS = Object.freeze([
     ]),
   }),
   Object.freeze({
+    key: 'productionRuntime',
+    workflowName: 'Production Runtime Proof',
+    workflowPath: '.github/workflows/production-runtime-proof.yml',
+    evidencePaths: Object.freeze([
+      'docs/security/evidence/runtime/deployment-smoke-validation.json',
+    ]),
+  }),
+  Object.freeze({
     key: 'productionProvider',
     workflowName: 'Production Provider Runtime Proof',
     workflowPath: '.github/workflows/production-provider-runtime-proof.yml',
@@ -86,6 +96,16 @@ export const RETAINED_RUNTIME_PRODUCERS = Object.freeze([
       'docs/security/evidence/runtime/stripe-billing-validation.json',
     ]),
   }),
+  Object.freeze({
+    key: 'publicProductionFinal',
+    workflowName: 'Public Production Final',
+    workflowPath: '.github/workflows/public-production-final.yml',
+    evidencePaths: Object.freeze([
+      'docs/security/evidence/runtime/final-validation-runner.json',
+      'docs/security/evidence/runtime/observability-smoke-validation.json',
+      'docs/security/evidence/runtime/rollback-dry-run-validation.json',
+    ]),
+  }),
 ]);
 
 const DEFAULT_FETCHERS = Object.freeze({
@@ -93,10 +113,12 @@ const DEFAULT_FETCHERS = Object.freeze({
   supabaseRls: fetchSupabaseRlsEvidence,
   uploadScanner: fetchUploadScannerRuntimeEvidence,
   auditChain: fetchAuditChainRuntimeEvidence,
+  productionRuntime: fetchProductionRuntimeEvidence,
   productionProvider: fetchProductionProviderRuntimeEvidence,
   branchProtection: fetchBranchProtectionRuntimeEvidence,
   stepUp: fetchStepUpRuntimeEvidence,
   stripePromoted: fetchStripePromotedRuntimeEvidence,
+  publicProductionFinal: fetchPublicProductionFinalEvidence,
 });
 
 function normalize(value) {
