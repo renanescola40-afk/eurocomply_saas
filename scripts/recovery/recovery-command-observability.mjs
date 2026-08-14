@@ -21,16 +21,16 @@ const RESTORE_STAGE_MARKERS = Object.freeze({
   risck_recovery_stage_schema: 'schema',
   risck_recovery_stage_data: 'data',
 });
-const MISSING_OBJECT_PATTERNS = Object.freeze([
-  ['schema', /\bschema\b[^\n]{0,240}\bdoes not exist\b/],
-  ['role', /\brole\b[^\n]{0,240}\bdoes not exist\b/],
-  ['relation', /\brelation\b[^\n]{0,240}\bdoes not exist\b/],
-  ['table', /\btable\b[^\n]{0,240}\bdoes not exist\b/],
-  ['sequence', /\bsequence\b[^\n]{0,240}\bdoes not exist\b/],
-  ['function', /\bfunction\b[^\n]{0,240}\bdoes not exist\b/],
-  ['type', /\btype\b[^\n]{0,240}\bdoes not exist\b/],
-  ['extension', /\bextension\b[^\n]{0,240}\bdoes not exist\b/],
-  ['column', /\bcolumn\b[^\n]{0,240}\bdoes not exist\b/],
+const MISSING_OBJECT_PREFIXES = Object.freeze([
+  ['schema', /^schema\b/],
+  ['role', /^role\b/],
+  ['relation', /^relation\b/],
+  ['table', /^table\b/],
+  ['sequence', /^sequence\b/],
+  ['function', /^function\b/],
+  ['type', /^type\b/],
+  ['extension', /^extension\b/],
+  ['column', /^column\b/],
 ]);
 
 function text(value) {
@@ -66,7 +66,7 @@ function terminalDatabaseErrorPayload(error) {
   return '';
 }
 
-function classifyRecoveryCategoryFromText(value, error = {}) {
+function classifyRecoveryCategoryFromText(value) {
   if (/password authentication failed|authentication failed|no password supplied|sasl authentication failed/.test(value)) {
     return 'authentication_failed';
   }
@@ -90,8 +90,7 @@ function classifyRecoveryCategoryFromText(value, error = {}) {
   if (/certificate|tls handshake|ssl error|ssl syscall/.test(value)) return 'tls_connection_error';
   if (/duplicate key|violates unique constraint|already exists/.test(value)) return 'restore_conflict';
   if (/does not exist|undefined table|undefined object/.test(value)) return 'database_object_missing';
-  if (error?.code === 'ENOENT' || /command not found/.test(value)) return 'command_unavailable';
-  if (error?.code === 'ETIMEDOUT' || error?.killed === true) return 'command_timeout';
+  if (/command not found/.test(value)) return 'command_unavailable';
   return 'command_failed';
 }
 
@@ -112,11 +111,11 @@ export function classifyRecoveryRestoreStage(error) {
 export function classifyRecoveryMissingObjectKind(error) {
   const value = terminalDatabaseErrorPayload(error);
   if (!value) return null;
-  for (const [kind, pattern] of MISSING_OBJECT_PATTERNS) {
+  for (const [kind, pattern] of MISSING_OBJECT_PREFIXES) {
     if (pattern.test(value)) return kind;
   }
-  if (/undefined table/.test(value)) return 'relation';
-  if (/undefined object/.test(value)) return 'object';
+  if (/^undefined table\b/.test(value)) return 'relation';
+  if (/^undefined object\b/.test(value)) return 'object';
   return null;
 }
 
@@ -132,7 +131,9 @@ export function classifyRecoveryMissingObjectScope(error) {
 }
 
 export function classifyRecoveryCommandCategory(error) {
-  return classifyRecoveryCategoryFromText(combinedErrorText(error), error);
+  if (error?.code === 'ETIMEDOUT' || error?.killed === true) return 'command_timeout';
+  if (error?.code === 'ENOENT') return 'command_unavailable';
+  return classifyRecoveryCategoryFromText(combinedErrorText(error));
 }
 
 export function buildRecoveryCommandDiagnostic({ error, phase, command }) {
@@ -143,7 +144,7 @@ export function buildRecoveryCommandDiagnostic({ error, phase, command }) {
   const terminalPayload = isolatedRestore ? terminalDatabaseErrorPayload(error) : '';
   const genericCategory = classifyRecoveryCommandCategory(error);
   const category = terminalPayload
-    ? classifyRecoveryCategoryFromText(terminalPayload, error)
+    ? classifyRecoveryCategoryFromText(terminalPayload)
     : genericCategory;
   const diagnosticMissingObject = isolatedRestore
     && Boolean(terminalPayload)
