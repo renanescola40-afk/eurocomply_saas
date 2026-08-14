@@ -1,3 +1,5 @@
+begin;
+
 -- Forward execution identity for the reviewed 20260809135000 Enterprise core
 -- runtime reconciliation. The historical migration remains byte-for-byte
 -- immutable and unapplied; this newer identity stays strictly after the current
@@ -8,8 +10,6 @@
 -- This forward identity deliberately carries no historical human-approval
 -- marker. It also preserves later vendor-governance tenant-integrity hardening
 -- that exists elsewhere in repository history instead of regressing it.
-
-begin;
 
 -- ---------------------------------------------------------------------------
 -- 1. Intelligence runtime objects required by /api/intelligence/refresh.
@@ -233,8 +233,8 @@ $$;
 revoke all on function public.enforce_vendor_governance_integrity() from public, anon, authenticated;
 grant execute on function public.enforce_vendor_governance_integrity() to service_role;
 
-drop function if exists public.bump_vendor_review_version();
 drop trigger if exists bump_vendor_review_version on public.vendors;
+drop function if exists public.bump_vendor_review_version();
 drop trigger if exists enforce_vendor_actor_scope on public.vendors;
 drop trigger if exists enforce_vendor_governance_integrity on public.vendors;
 create trigger enforce_vendor_governance_integrity
@@ -561,7 +561,7 @@ begin
       ('subscriptions', 'rls_subscriptions_delete_backend_only'),
       ('notifications', 'rls_notifications_select_recipient'),
       ('notifications', 'rls_notifications_insert_backend_only'),
-      ('monitoring_preferences', 'rls_monitoring_preferences_select_member_or_owner'),
+      ('monitoring_preferences', 'rls_monitoring_preferences_select_self_or_admin'),
       ('monitoring_preferences', 'rls_monitoring_preferences_update_self_or_admin'),
       ('onboarding_activation_runs', 'rls_onboarding_activation_runs_select_member'),
       ('onboarding_activation_runs', 'rls_onboarding_activation_runs_insert_writer'),

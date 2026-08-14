@@ -20,7 +20,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 45
     environment: production-integrations-proof
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
@@ -60,24 +60,36 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes postgresql-client
 
-      - name: Start exact-SHA disposable Supabase project database
-        run: node scripts/recovery/run-ephemeral-project-schema-replay.mjs
+      - name: Start exact-SHA reviewed disposable Supabase project database
+        run: node scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs
 
-      - name: Bind disposable database to integration validator
+      - name: Bind disposable database to Enterprise validators
         shell: bash
         run: |
           set -euo pipefail
           test -n "$RECOVERY_ISOLATED_DATABASE_URL"
           printf 'DATABASE_URL=%s\n' "$RECOVERY_ISOLATED_DATABASE_URL" >> "$GITHUB_ENV"
 
-      - name: Execute fail-closed runtime validation
+      - name: Execute fail-closed integrations and SCIM validation
         shell: bash
         run: |
           set -euo pipefail
           test -n "$DATABASE_URL"
           mkdir -p artifacts
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/security/validate-enterprise-integrations-runtime.sql > artifacts/enterprise-integrations-runtime.txt
-          node -e 'const fs=require("fs"); const sha=process.env.RELEASE_SHA; fs.writeFileSync("artifacts/enterprise-integrations-runtime.json", JSON.stringify({schema_version:1,release_sha:sha,release_branch:"main",status:"PASS",validated_at:new Date().toISOString(),controls:["INT-SCHEMA","INT-RLS","INT-TENANT-FK","INT-AUDIT-IMMUTABLE","INT-CREDENTIAL-DIGEST"],limitations:["Provider interoperability, webhook delivery SLA, live OIDC/SAML login and SCIM conformance require separate provider testing."]},null,2)+"\n");'
+
+      - name: Execute fail-closed Enterprise billing lifecycle validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$DATABASE_URL"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/security/validate-enterprise-billing-runtime.sql > artifacts/enterprise-billing-runtime.txt
+
+      - name: Seal exact-SHA runtime evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e 'const fs=require("fs"); const sha=process.env.RELEASE_SHA; fs.writeFileSync("artifacts/enterprise-integrations-runtime.json", JSON.stringify({schema_version:2,release_sha:sha,release_branch:"main",status:"PASS",validated_at:new Date().toISOString(),controls:["LICENSING-SCHEMA","LICENSING-SEAT-ATOMICITY","INT-SCHEMA","INT-RLS","INT-TENANT-FK","INT-CREDENTIAL-DIGEST","SCIM-RPC","BILLING-LIFECYCLE","BILLING-BINDING"],limitations:["Provider interoperability, webhook delivery SLA, live OIDC/SAML login, live Stripe endpoint delivery and SCIM protocol conformance require separate provider testing." ]},null,2)+"\n");'
 
       - name: Remove disposable project database
         if: always()
@@ -91,5 +103,6 @@ jobs:
           path: |
             artifacts/enterprise-integrations-runtime.json
             artifacts/enterprise-integrations-runtime.txt
+            artifacts/enterprise-billing-runtime.txt
           if-no-files-found: error
           retention-days: 90
