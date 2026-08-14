@@ -5,6 +5,7 @@ on:
     paths:
       - 'config/supabase-forward-reconciliation.json'
       - 'scripts/supabase/forward-reconciliation-control-plane.mjs'
+      - 'scripts/supabase/verify-forward-version-order.mjs'
       - 'scripts/supabase/verify-forward-reconciliation-postconditions.sql'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
       - 'supabase/migrations/20260813175000_optimize_organization_add_ons_rls_initplan.sql'
@@ -59,6 +60,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check scripts/supabase/forward-reconciliation-control-plane.mjs
+          node --check scripts/supabase/verify-forward-version-order.mjs
           node scripts/supabase/forward-reconciliation-control-plane.mjs compile \
             config/supabase-forward-reconciliation.json \
             "$RUNNER_TEMP/forward-reconciliation-manifest.json" \
@@ -103,6 +105,7 @@ jobs:
       SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
       CURRENT_MANIFEST: artifacts/supabase-forward-reconciliation/current-manifest.json
       REMOTE_VERSIONS: artifacts/supabase-forward-reconciliation/remote-before.json
+      VERSION_ORDER_PROOF: artifacts/supabase-forward-reconciliation/version-order-proof.json
       FILTERED_SET_PROOF: artifacts/supabase-forward-reconciliation/filtered-set-proof.json
     steps:
       - name: Validate exact current main and rehearsal provenance
@@ -206,6 +209,17 @@ jobs:
             cp "$source_path" "$WORKDIR/supabase/migrations/$filename"
           done < <(jq -r '.migrations[] | [.filename, .sha256] | @tsv' "$CURRENT_MANIFEST")
 
+      - name: Prove selected versions are forward of remote head
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/supabase/verify-forward-version-order.mjs \
+            "$CURRENT_MANIFEST" \
+            "$REMOTE_VERSIONS" \
+            "$VERSION_ORDER_PROOF" \
+            "$TARGET_SHA"
+          jq -e '.status == "PASS" and .checks.allSelectedVersionsAfterRemoteHead == true and .checks.includeAllRequired == false' "$VERSION_ORDER_PROOF" >/dev/null
+
       - name: Prove pending set is exactly the selected set
         shell: bash
         run: |
@@ -240,6 +254,7 @@ jobs:
             artifacts/supabase-forward-reconciliation/current-manifest.json
             artifacts/supabase-forward-reconciliation/source-rehearsal-attestation.json
             artifacts/supabase-forward-reconciliation/remote-before.json
+            artifacts/supabase-forward-reconciliation/version-order-proof.json
             artifacts/supabase-forward-reconciliation/filtered-set-proof.json
           if-no-files-found: error
           retention-days: 90
