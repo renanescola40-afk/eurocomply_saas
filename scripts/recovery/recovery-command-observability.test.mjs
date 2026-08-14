@@ -79,6 +79,26 @@ test('derives the latest allowlisted restore stage from process output only', ()
   assert.equal(JSON.stringify(diagnostic).includes('RISCK_RECOVERY_STAGE_'), false);
 });
 
+test('classifies the terminal missing-object error instead of an earlier benign notice', () => {
+  const error = errorWith([
+    'NOTICE: schema "storage" does not exist, skipping',
+    'NOTICE: relation "public.old_table" does not exist, skipping',
+    'psql:/tmp/production-schema.sql:420: ERROR: relation "auth.private_identity_123" does not exist',
+  ].join('\n'), {
+    stdout: Buffer.from('RISCK_RECOVERY_STAGE_ROLES\nRISCK_RECOVERY_STAGE_SCHEMA\n'),
+    status: 3,
+  });
+
+  assert.equal(classifyRecoveryMissingObjectKind(error), 'relation');
+  assert.equal(classifyRecoveryMissingObjectScope(error), 'auth');
+  const diagnostic = buildRecoveryCommandDiagnostic({ error, phase: 'isolated_restore', command: 'docker' });
+  assert.equal(diagnostic.restoreStage, 'schema');
+  assert.equal(diagnostic.missingObjectKind, 'relation');
+  assert.equal(diagnostic.missingObjectScope, 'auth');
+  assert.equal(JSON.stringify(diagnostic).includes('private_identity_123'), false);
+  assert.equal(JSON.stringify(diagnostic).includes('old_table'), false);
+});
+
 test('retains only allowlisted public database scopes and never object identifiers', () => {
   const safe = errorWith('ERROR: relation "auth.private_identity_123" does not exist');
   assert.equal(classifyRecoveryMissingObjectScope(safe), 'auth');
