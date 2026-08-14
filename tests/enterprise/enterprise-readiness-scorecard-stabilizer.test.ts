@@ -98,13 +98,17 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(scorecardDispatch).toBeGreaterThan(gateWait);
   });
 
-  it('treats success/failure as evaluated while rejecting cancelled/skipped terminal runs', () => {
+  it('accepts only success/failure as evaluated and ignores skipped/cancelled runs while waiting', () => {
     expect(script).toContain("export const TERMINAL_EVALUATION_CONCLUSIONS = new Set(['success', 'failure']);");
     expect(script).toContain('export function isTerminalEvaluation(run)');
     expect(script).toContain("return run?.status === 'completed' && TERMINAL_EVALUATION_CONCLUSIONS.has(run?.conclusion);");
-    expect(script).toContain('if (isTerminalEvaluation(latest)) return latest;');
+    expect(script).toContain('const latestTerminalEvaluation = covered.find((run) => isTerminalEvaluation(run));');
+    expect(script).toContain('if (latestTerminalEvaluation) return latestTerminalEvaluation;');
+    expect(script).toContain('const latestActiveEvaluation = covered.find((run) => ACTIVE_RUN_STATUSES.has(run?.status));');
+    expect(script).toContain('Ignoring non-evaluation Enterprise Production Gate conclusion');
+    expect(script).toContain('Terminal Enterprise Production Gate did not complete within the bounded settlement window');
     expect(script).toContain('.filter((run) => isTerminalEvaluation(run))');
-    expect(script).toContain('Terminal Enterprise Production Gate ended with non-evaluation conclusion');
+    expect(script).not.toContain('Terminal Enterprise Production Gate ended with non-evaluation conclusion');
     expect(script).not.toContain("run?.status === 'completed' && run?.conclusion === 'success'");
     expect(workflow).toContain('accepts a terminal GO or NO_GO gate as a completed evaluation');
     expect(workflow).toContain('Terminal evaluation status never awards PASS');
