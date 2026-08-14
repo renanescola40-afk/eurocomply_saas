@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { buildRepositoryDerivedCompatibilityView } from './run-derived-scorecard-evidence-builder.mjs';
+
 const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const FULL_SHA = /^[a-f0-9]{40}$/;
+const DEFAULT_GITHUB_CHECKS = 'artifacts/enterprise-readiness/github-checks-evidence.json';
+const REPOSITORY_COMPATIBILITY_CHECKS = 'artifacts/enterprise-readiness/github-checks-repository-compatibility.json';
 
 export const REPOSITORY_CONTROL_OUTPUTS = Object.freeze([
   'docs/security/evidence/runtime/security-headers-validation.json',
@@ -109,6 +113,19 @@ export function repositoryControlBuilderExitIsAcceptable({ builderExitCode, vali
   return false;
 }
 
+function spawnBuilder({ spawn, builderPath, root, targetSha, checksPath }) {
+  return spawn(process.execPath, [builderPath], {
+    cwd: root,
+    env: {
+      ...process.env,
+      TARGET_SHA: targetSha,
+      ...(checksPath ? { GITHUB_CHECKS_EVIDENCE_PATH: checksPath } : {}),
+    },
+    encoding: 'utf8',
+    stdio: ['ignore', 'inherit', 'inherit'],
+  });
+}
+
 export function runRepositoryControlEvidenceForScorecard({
   root = process.cwd(),
   targetSha = String(process.env.TARGET_SHA || process.env.ASSESSED_SHA || '').trim().toLowerCase(),
@@ -119,18 +136,43 @@ export function runRepositoryControlEvidenceForScorecard({
   if (repository !== CANONICAL_REPOSITORY) throw new Error('repository_not_canonical');
 
   const builderPath = resolve(root, 'scripts/enterprise/build-repository-control-evidence.mjs');
-  const child = spawn(process.execPath, [builderPath], {
-    cwd: root,
-    env: { ...process.env, TARGET_SHA: targetSha },
-    encoding: 'utf8',
-    stdio: ['ignore', 'inherit', 'inherit'],
-  });
+  let child = spawnBuilder({ spawn, builderPath, root, targetSha });
 
   if (child.error) throw new Error('repository_control_builder_spawn_failed');
   if (child.signal) throw new Error('repository_control_builder_terminated');
 
-  const builderExitCode = Number.isInteger(child.status) ? child.status : null;
-  const validation = validateRepositoryControlAggregationOutputs({ root, targetSha, repository });
+  let builderExitCode = Number.isInteger(child.status) ? child.status : null;
+  let validation = validateRepositoryControlAggregationOutputs({ root, targetSha, repository });
+  let repositoryCompatibilityApplied = false;
+
+  if (builderExitCode === 1 && validation.passed && validation.openCount > 0) {
+    const checksRelativePath = process.env.GITHUB_CHECKS_EVIDENCE_PATH || DEFAULT_GITHUB_CHECKS;
+    const checksAbsolutePath = resolve(root, checksRelativePath);
+    const githubChecks = existsSync(checksAbsolutePath)
+      ? JSON.parse(readFileSync(checksAbsolutePath, 'utf8'))
+      : null;
+    const compatibility = buildRepositoryDerivedCompatibilityView({ githubChecks, targetSha });
+
+    if (compatibility.enabled) {
+      const compatibilityAbsolutePath = resolve(root, REPOSITORY_COMPATIBILITY_CHECKS);
+      writeFileSync(compatibilityAbsolutePath, `${JSON.stringify(compatibility.document, null, 2)}\n`);
+
+      child = spawnBuilder({
+        spawn,
+        builderPath,
+        root,
+        targetSha,
+        checksPath: REPOSITORY_COMPATIBILITY_CHECKS,
+      });
+      if (child.error) throw new Error('repository_control_builder_compatibility_spawn_failed');
+      if (child.signal) throw new Error('repository_control_builder_compatibility_terminated');
+
+      builderExitCode = Number.isInteger(child.status) ? child.status : null;
+      validation = validateRepositoryControlAggregationOutputs({ root, targetSha, repository });
+      repositoryCompatibilityApplied = true;
+    }
+  }
+
   if (!repositoryControlBuilderExitIsAcceptable({ builderExitCode, validation })) {
     const reason = validation.failures[0] || `builder_exit_${builderExitCode ?? 'unknown'}`;
     throw new Error(`repository_control_aggregation_invalid:${reason}`);
@@ -140,13 +182,14 @@ export function runRepositoryControlEvidenceForScorecard({
     mode: 'scorecard_aggregation',
     targetSha,
     builderExitCode,
+    repositoryCompatibilityApplied,
     completeCount: validation.completeCount,
     openCount: validation.openCount,
     totalCount: validation.totalCount,
-    truthBoundary: 'Open evidence is retained for scorecard aggregation but is never promoted to PASS. Missing, malformed, stale-SHA, sensitive, or provenance-invalid evidence remains fatal.',
+    truthBoundary: 'Repository-control evidence may use the canonical exact-SHA CI/security compatibility view only after the repository evidence boundary passes. This never changes the real requiredChecks or Enterprise Production Gate signals and never grants production/runtime release credit. Open evidence is retained but never promoted to PASS; missing, malformed, stale-SHA, sensitive, or provenance-invalid evidence remains fatal.',
   }, null, 2));
 
-  return { builderExitCode, validation };
+  return { builderExitCode, repositoryCompatibilityApplied, validation };
 }
 
 async function main() {
