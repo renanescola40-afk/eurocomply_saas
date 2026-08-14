@@ -4,9 +4,13 @@ import { normalizeLocale } from '@/lib/i18n/locales';
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
 import { deriveStripeIdempotencyKey, readBillingIdempotencyKey } from '@/server/billing/idempotency';
 import { getStripeClient } from '@/server/billing/stripe';
-import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
+import {
+  getAuthoritativeSignedContractPlan,
+  hasProcessedLiveStripeSubscriptionAuthority,
+} from '@/server/billing/subscription-authority';
 import { classifyProviderFailure } from '@/server/providers/failure';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreJson } from '@/server/security/no-store';
@@ -73,30 +77,42 @@ export async function POST(request: Request) {
       organizationId: organization.id,
     });
 
-    if (!stepUp.ok) {
-      return stepUp.response;
+    if (!stepUp.ok) return stepUp.response;
+
+    // Contract-managed organizations have negotiated billing semantics. The
+    // generic Stripe portal must not silently mutate a signed Enterprise deal.
+    if (await getAuthoritativeSignedContractPlan(organization.id)) {
+      return noStoreJson({ error: 'contract_managed_billing' }, { status: 409 });
     }
 
     const supabase = createAdminClient();
     const { data: subscription, error } = await supabase
       .from('subscriptions')
-      .select('stripe_customer_id')
+      .select('stripe_customer_id,stripe_subscription_id,status')
       .eq('organization_id', organization.id)
-      .not('stripe_customer_id', 'is', null)
       .order('updated_at', { ascending: false })
       .limit(1)
-      .maybeSingle();
+      .maybeSingle<{
+        stripe_customer_id: string | null;
+        stripe_subscription_id: string | null;
+        status: string | null;
+      }>();
 
     if (error) {
       throw classifyProviderFailure('supabase', 'billing_profile_lookup', error);
     }
 
-    if (!subscription?.stripe_customer_id) {
-      return noStoreJson({ error: 'stripe_customer_not_found' }, { status: 404 });
+    const liveAuthority = await hasProcessedLiveStripeSubscriptionAuthority({
+      organizationId: organization.id,
+      stripeCustomerId: subscription?.stripe_customer_id,
+      stripeSubscriptionId: subscription?.stripe_subscription_id,
+    });
+
+    if (!liveAuthority || !subscription?.stripe_customer_id) {
+      return noStoreJson({ error: 'live_stripe_subscription_not_found' }, { status: 404 });
     }
 
     const returnBaseUrl = resolveBillingReturnBaseUrl(request.url);
-
     if (!returnBaseUrl.ok) {
       return noStoreJson({ error: 'billing_app_url_unavailable' }, { status: 503 });
     }
@@ -137,6 +153,7 @@ export async function POST(request: Request) {
       entityId: portalSession.id ?? subscription.stripe_customer_id,
       metadata: {
         stripeCustomerId: subscription.stripe_customer_id,
+        stripeSubscriptionId: subscription.stripe_subscription_id,
         returnUrl,
         actorRole: permission.role ?? 'unknown',
         stepUpAction: stepUp.assessment.action,
@@ -144,6 +161,7 @@ export async function POST(request: Request) {
         trustedOriginRequired: true,
         rbacPermission: 'manage_billing',
         idempotencyProtected: true,
+        liveSubscriptionAuthority: true,
       },
     });
 
