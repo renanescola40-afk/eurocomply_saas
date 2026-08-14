@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   buildRecoveryCommandDiagnostic,
   classifyRecoveryCommandCategory,
+  classifyRecoveryRestoreInput,
 } from './recovery-command-observability.mjs';
 
 function errorWith(stderr, overrides = {}) {
@@ -29,6 +30,13 @@ test('classifies compatibility and permission failures', () => {
   assert.equal(classifyRecoveryCommandCategory(errorWith('permission denied')), 'permission_denied');
 });
 
+test('classifies only allowlisted restore input filenames', () => {
+  assert.equal(classifyRecoveryRestoreInput(errorWith('psql:/tmp/production-roles.sql:4: ERROR: role does not exist')), 'roles');
+  assert.equal(classifyRecoveryRestoreInput(errorWith('psql:/tmp/production-schema.sql:9: ERROR: relation does not exist')), 'schema');
+  assert.equal(classifyRecoveryRestoreInput(errorWith('psql:/tmp/production-data.sql:12: ERROR: relation does not exist')), 'data');
+  assert.equal(classifyRecoveryRestoreInput(errorWith('psql:/tmp/customer-private-name.sql:12: ERROR: relation secret_table does not exist')), null);
+});
+
 test('emits only allowlisted redacted diagnostic fields', () => {
   const diagnostic = buildRecoveryCommandDiagnostic({
     error: errorWith('authentication failed'),
@@ -40,13 +48,29 @@ test('emits only allowlisted redacted diagnostic fields', () => {
     phase: 'roles_dump',
     commandFamily: 'supabase',
     category: 'authentication_failed',
+    restoreInput: null,
     exitStatus: 1,
     signal: null,
     timedOut: false,
   });
-  for (const forbidden of ['stderr', 'stdout', 'message', 'args', 'url']) {
+  for (const forbidden of ['stderr', 'stdout', 'message', 'args', 'url', 'sql', 'objectName']) {
     assert.equal(forbidden in diagnostic, false);
   }
+});
+
+test('emits the safe restore input without leaking raw SQL or object names', () => {
+  const diagnostic = buildRecoveryCommandDiagnostic({
+    error: errorWith('psql:/tmp/production-data.sql:42: ERROR: relation customer_secret_table does not exist'),
+    phase: 'isolated_restore',
+    command: 'docker',
+  });
+
+  assert.equal(diagnostic.category, 'database_object_missing');
+  assert.equal(diagnostic.restoreInput, 'data');
+  const serialized = JSON.stringify(diagnostic);
+  assert.equal(serialized.includes('customer_secret_table'), false);
+  assert.equal(serialized.includes('production-data.sql'), false);
+  assert.equal(serialized.includes('psql:'), false);
 });
 
 test('does not expose unknown executable names', () => {
