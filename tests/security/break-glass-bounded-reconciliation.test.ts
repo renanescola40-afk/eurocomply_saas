@@ -86,6 +86,7 @@ describe('bounded Enterprise Break-Glass reconciliation', () => {
     expect(decision).toContain('Production history action: none');
     expect(decision).toContain('Production write authorized by this document: no');
     expect(decision).toContain('`RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL=false`');
-    expect(migration).toContain('without rewriting historical migration records');
+    expect(migration).toContain('historical 20260727160000 migration was never applied');
+    expect(migration).toContain('rewriting historical migration records');
   });
 });
