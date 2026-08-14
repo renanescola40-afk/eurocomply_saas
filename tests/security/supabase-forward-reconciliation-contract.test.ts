@@ -12,20 +12,19 @@ const historicalCore = readFileSync(
   'supabase/migrations/20260809135000_enterprise_core_runtime_schema_reconciliation.sql',
   'utf8',
 );
+const historicalVendorIntegrity = readFileSync(
+  'supabase/migrations/20260720044500_vendor_governance_integrity.sql',
+  'utf8',
+);
 const forwardCore = readFileSync(
   'supabase/migrations/20260814101500_reconcile_enterprise_core_active_runtime.sql',
   'utf8',
 );
 
 const selected = config.migrations.map((migration) => migration.filename);
-const sqlBodyFromBegin = (source: string) => {
-  const index = source.indexOf('begin;');
-  expect(index).toBeGreaterThanOrEqual(0);
-  return source.slice(index);
-};
 
 describe('bounded Supabase forward reconciliation contract', () => {
-  it('selects exactly the seven reviewed forward-only reconciliations', () => {
+  it('selects exactly the seven bounded forward-only reconciliation identities', () => {
     expect(selected).toEqual([
       '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
       '20260813194500_reconcile_step_up_challenges_runtime.sql',
@@ -45,10 +44,44 @@ describe('bounded Supabase forward reconciliation contract', () => {
     });
   });
 
-  it('keeps the forward active-core SQL body identical to the historical reviewed reconciliation', () => {
-    expect(sqlBodyFromBegin(forwardCore)).toBe(sqlBodyFromBegin(historicalCore));
+  it('does not carry historical human approval into the newer active-core execution identity', () => {
     expect(historicalCore).toContain('enterprise-migration-review: approved');
     expect(forwardCore).not.toContain('enterprise-migration-review: approved');
+    expect(forwardCore).toContain('The historical migration remains byte-for-byte');
+    expect(forwardCore).toContain('contains no destructive data rewrite');
+  });
+
+  it('preserves active-core objects while retaining later vendor tenant-integrity hardening', () => {
+    for (const invariant of [
+      'create table if not exists public.intelligence_items',
+      'create table if not exists public.email_notification_events',
+      'create table if not exists public.vendor_review_history',
+      'public.create_organization_with_owner_atomic',
+      "policyname like 'live_rls_%'",
+    ]) {
+      expect(historicalCore).toContain(invariant);
+      expect(forwardCore).toContain(invariant);
+    }
+
+    for (const invariant of [
+      'vendor creator must belong to organization',
+      'vendor approver must be an authorized organization member',
+      "om.user_id = new.created_by",
+      "om.user_id = new.approved_by",
+      "om.role in ('owner', 'admin', 'compliance_manager')",
+    ]) {
+      expect(historicalVendorIntegrity).toContain(invariant);
+      expect(forwardCore).toContain(invariant);
+    }
+
+    expect(forwardCore).toContain('create or replace function public.enforce_vendor_governance_integrity()');
+    expect(forwardCore).toContain('security definer');
+    expect(forwardCore).toContain('set search_path = pg_catalog, public');
+    expect(forwardCore).toContain('new.review_version = old.review_version + 1');
+    expect(forwardCore).toContain('before insert or update on public.vendors');
+    expect(forwardCore).toContain('revoke all on function public.enforce_vendor_governance_integrity() from public, anon, authenticated');
+    expect(forwardCore).toContain('grant execute on function public.enforce_vendor_governance_integrity() to service_role');
+    expect(forwardCore).toContain('Vendor governance tenant-integrity trigger is missing after reconciliation');
   });
 
   it('triggers both bounded workflows when any selected SQL byte changes', () => {
