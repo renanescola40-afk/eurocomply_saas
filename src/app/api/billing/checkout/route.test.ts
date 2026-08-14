@@ -40,12 +40,16 @@ describe('billing checkout route contract', () => {
 
   it('does not create a second subscription for an existing live subscriber', async () => {
     const source = await readFile(ROUTE_FILE, 'utf8');
+    const stepUp = source.indexOf('const stepUp = hasLiveSubscription');
+    const existingBranch = source.indexOf('if (hasLiveSubscription) {');
     const existingFlow = source.slice(
-      source.indexOf('if (hasLiveSubscription) {'),
+      existingBranch,
       source.indexOf('const stripe = getStripeClient();'),
     );
 
-    expect(existingFlow).toContain('requireStepUpForRequest');
+    expect(stepUp).toBeGreaterThan(-1);
+    expect(existingBranch).toBeGreaterThan(stepUp);
+    expect(source.slice(stepUp, existingBranch)).toContain('requireStepUpForRequest');
     expect(existingFlow).toContain('mutateSubscriptionLifecycle');
     expect(existingFlow).toContain("action: 'upgrade'");
     expect(existingFlow).toContain('billing_downgrade_schedule_required');
