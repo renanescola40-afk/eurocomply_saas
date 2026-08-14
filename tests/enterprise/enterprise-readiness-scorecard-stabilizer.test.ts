@@ -89,7 +89,7 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(script).toContain('productionGateAlreadyCoversEvidence');
     expect(script).toContain('await dispatchProductionGate(repository);');
     expect(script).toContain('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs);');
-    expect(script).toContain('No terminal Enterprise Production Gate covers the latest material producer state');
+    expect(script).toContain('No terminal Enterprise Production Gate evaluation covers the latest material producer state');
     const gateDispatch = script.indexOf('await dispatchProductionGate(repository);');
     const gateWait = script.indexOf('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs);');
     const scorecardDispatch = script.indexOf('await dispatchScorecard(repository);');
@@ -98,11 +98,13 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(scorecardDispatch).toBeGreaterThan(gateWait);
   });
 
-  it('treats terminal GO or NO_GO evaluation as covered without awarding PASS', () => {
-    expect(script).toContain("return run?.status === 'completed';");
-    expect(script).toContain("if (latest?.status === 'completed') return latest;");
-    expect(script).toContain(".filter((run) => run?.status === 'completed')");
-    expect(script).not.toContain('Terminal Enterprise Production Gate completed without success');
+  it('treats success/failure as evaluated while rejecting cancelled/skipped terminal runs', () => {
+    expect(script).toContain("export const TERMINAL_EVALUATION_CONCLUSIONS = new Set(['success', 'failure']);");
+    expect(script).toContain('export function isTerminalEvaluation(run)');
+    expect(script).toContain("return run?.status === 'completed' && TERMINAL_EVALUATION_CONCLUSIONS.has(run?.conclusion);");
+    expect(script).toContain('if (isTerminalEvaluation(latest)) return latest;');
+    expect(script).toContain('.filter((run) => isTerminalEvaluation(run))');
+    expect(script).toContain('Terminal Enterprise Production Gate ended with non-evaluation conclusion');
     expect(script).not.toContain("run?.status === 'completed' && run?.conclusion === 'success'");
     expect(workflow).toContain('accepts a terminal GO or NO_GO gate as a completed evaluation');
     expect(workflow).toContain('Terminal evaluation status never awards PASS');
