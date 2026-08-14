@@ -13,15 +13,25 @@ function text(value) {
   return String(value);
 }
 
+function combinedProcessOutputText(error) {
+  return [error?.stderr, error?.stdout]
+    .map(text)
+    .join('\n')
+    .toLowerCase();
+}
+
 function combinedErrorText(error) {
-  return [error?.stderr, error?.stdout, error?.message]
+  return [combinedProcessOutputText(error), error?.message]
     .map(text)
     .join('\n')
     .toLowerCase();
 }
 
 export function classifyRecoveryRestoreInput(error) {
-  const value = combinedErrorText(error);
+  // execFileSync Error.message can echo the complete command line, including all
+  // restore filenames. Only process output can identify which psql input emitted
+  // the failure without confusing safe command arguments with the failing file.
+  const value = combinedProcessOutputText(error);
   for (const [filename, restoreInput] of SAFE_RESTORE_INPUTS) {
     if (value.includes(filename)) return restoreInput;
   }
