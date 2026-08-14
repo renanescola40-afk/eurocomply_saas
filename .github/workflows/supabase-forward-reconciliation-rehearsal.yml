@@ -8,6 +8,7 @@ on:
       - 'scripts/supabase/verify-forward-reconciliation-postconditions.sql'
       - 'scripts/security/validate-enterprise-integrations-runtime.sql'
       - 'scripts/security/validate-enterprise-billing-runtime.sql'
+      - 'scripts/security/validate-live-rls-inventory-helper-boundary.sql'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
       - 'supabase/migrations/**'
       - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
@@ -189,7 +190,8 @@ jobs:
           for validator in \
             scripts/supabase/verify-forward-reconciliation-postconditions.sql \
             scripts/security/validate-enterprise-integrations-runtime.sql \
-            scripts/security/validate-enterprise-billing-runtime.sql; do
+            scripts/security/validate-enterprise-billing-runtime.sql \
+            scripts/security/validate-live-rls-inventory-helper-boundary.sql; do
             psql "$RECOVERY_ISOLATED_DATABASE_URL" \
               --no-psqlrc \
               --set ON_ERROR_STOP=1 \
