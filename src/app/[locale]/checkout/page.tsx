@@ -4,19 +4,24 @@ import { BillingActionButton } from '@/app/[locale]/dashboard/organizations/bill
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
 import { getCommercialSurfaceCopy, type CommercialSurfaceCopy } from '@/lib/i18n/commercial-surface-copy';
+import { locales, type Locale } from '@/lib/i18n/routing';
 import { getSafeLocale } from '@/lib/seo/public-metadata';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
 const DEFAULT_PLAN_ID = 'professional';
-const CURRENT_PLAN_BLOCKING_STATUSES = new Set([
-  'active',
-  'trialing',
-  'past_due',
-  'unpaid',
-  'incomplete',
-]);
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing']);
+const PAYMENT_RECOVERY_STATUSES = new Set(['past_due', 'unpaid', 'incomplete']);
+
+const paymentRecoveryCopy: Record<Locale, { title: string; body: string; action: string; badge: string }> = {
+  en: { title: 'Payment requires attention', body: 'Your workspace is protected while the subscription needs payment attention. Open secure billing to update the payment method or complete the outstanding payment.', action: 'Resolve payment securely', badge: 'Payment action' },
+  pt: { title: 'O pagamento requer atenção', body: 'O seu workspace permanece protegido enquanto a subscrição precisa de regularização. Abra a faturação segura para atualizar o método de pagamento ou concluir o pagamento pendente.', action: 'Regularizar pagamento', badge: 'Ação de pagamento' },
+  es: { title: 'El pago requiere atención', body: 'Tu workspace permanece protegido mientras la suscripción necesita regularización. Abre la facturación segura para actualizar el método de pago o completar el pago pendiente.', action: 'Resolver el pago', badge: 'Acción de pago' },
+  fr: { title: 'Le paiement nécessite votre attention', body: 'Votre workspace reste protégé pendant la régularisation de l’abonnement. Ouvrez la facturation sécurisée pour mettre à jour le moyen de paiement ou finaliser le paiement en attente.', action: 'Régulariser le paiement', badge: 'Action de paiement' },
+  it: { title: 'Il pagamento richiede attenzione', body: 'Il workspace resta protetto mentre l’abbonamento necessita di regolarizzazione. Apri la fatturazione sicura per aggiornare il metodo di pagamento o completare il pagamento in sospeso.', action: 'Regolarizza il pagamento', badge: 'Azione di pagamento' },
+  de: { title: 'Die Zahlung erfordert Aufmerksamkeit', body: 'Ihr Workspace bleibt geschützt, während das Abonnement eine Zahlungsaktion erfordert. Öffnen Sie die sichere Abrechnung, um die Zahlungsmethode zu aktualisieren oder die offene Zahlung abzuschließen.', action: 'Zahlung klären', badge: 'Zahlungsaktion' },
+};
 
 type CheckoutSearchParams = {
   plan?: string | string[];
@@ -45,8 +50,8 @@ function formatCheckoutLimit(
   return plan.id === 'enterprise' || value === Number.MAX_SAFE_INTEGER ? copy.byContract : formatNumber(value, locale);
 }
 
-function isCurrentPlanSubscription(status: string | null | undefined) {
-  return Boolean(status && CURRENT_PLAN_BLOCKING_STATUSES.has(status));
+function hasStatus(status: string | null | undefined, statuses: Set<string>) {
+  return Boolean(status && statuses.has(status));
 }
 
 function planPriceLabel(plan: (typeof BILLING_PLANS)[number], locale: string, copy: CommercialSurfaceCopy['checkout']) {
@@ -82,6 +87,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   ]);
   const locale = getSafeLocale(requestedLocale);
   const copy = getCommercialSurfaceCopy(locale).checkout;
+  const recoveryCopy = paymentRecoveryCopy[locales.includes(locale as Locale) ? (locale as Locale) : 'en'];
   const selectedPlanId = firstSearchParam(resolvedSearchParams.plan);
   const checkoutStatus = firstSearchParam(resolvedSearchParams.checkout);
   const selectedPlan = getBillingPlan(selectedPlanId) ?? getBillingPlan(DEFAULT_PLAN_ID) ?? BILLING_PLANS[1];
@@ -89,7 +95,8 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   const user = await getCurrentUser();
   const organization = user ? await getCurrentOrganizationForUser(user.id).catch(() => null) : null;
   const billing = organization ? await getOrganizationBillingContext(organization.id).catch(() => null) : null;
-  const selectedPlanIsCurrent = billing?.plan === selectedPlan.id && isCurrentPlanSubscription(billing.status);
+  const selectedPlanIsCurrent = billing?.plan === selectedPlan.id && hasStatus(billing.status, ACTIVE_SUBSCRIPTION_STATUSES);
+  const needsPaymentRecovery = hasStatus(billing?.status, PAYMENT_RECOVERY_STATUSES);
   const message = checkoutMessage(checkoutStatus, copy);
   const checkoutContinuationPath = `/${locale}/checkout?plan=${selectedPlan.id}`;
   const salesLedPath = `/${locale}/contact?intent=sales&plan=${selectedPlan.id}`;
@@ -103,7 +110,9 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
           <Link href={`/${locale}`} className="shrink-0 rounded-md text-sm font-bold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 sm:text-lg">RISCK COMPLY</Link>
           <nav className="flex min-w-0 items-center justify-end gap-1 text-xs sm:gap-2 sm:text-sm" aria-label={copy.navLabel}>
             <Link href={`/${locale}/pricing`} className="hidden rounded-full border border-white/15 px-3 py-2 font-medium text-slate-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 sm:inline-flex">{copy.plans}</Link>
-            {user ? (
+            {user && needsPaymentRecovery ? (
+              <BillingActionButton action="portal" locale={locale} className="rounded-full bg-white px-3 py-2 text-xs font-semibold text-black hover:bg-white/90 sm:px-4 sm:text-sm">{recoveryCopy.action}</BillingActionButton>
+            ) : user ? (
               <Link href={billingDashboardPath} className="rounded-full bg-white px-3 py-2 font-semibold text-black hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 sm:px-4">{copy.billing}</Link>
             ) : selectedPlanIsSalesLed ? (
               <Link href={salesLedPath} className="rounded-full bg-white px-3 py-2 font-semibold text-black hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 sm:px-4">{copy.talkToSales}</Link>
@@ -130,14 +139,21 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
               </div>
             )}
 
-            {selectedPlanIsSalesLed && !selectedPlanIsCurrent && (
+            {needsPaymentRecovery && (
+              <div className="mt-6 rounded-2xl border border-amber-300/30 bg-amber-300/10 p-4 text-amber-100" role="alert">
+                <p className="font-semibold">{recoveryCopy.title}</p>
+                <p className="mt-1 text-sm opacity-85">{recoveryCopy.body}</p>
+              </div>
+            )}
+
+            {selectedPlanIsSalesLed && !selectedPlanIsCurrent && !needsPaymentRecovery && (
               <div className="mt-6 rounded-2xl border border-emerald-300/30 bg-emerald-300/10 p-4 text-emerald-100" role="status">
                 <p className="font-semibold">{copy.salesLedTitle(selectedPlan.name)}</p>
                 <p className="mt-1 text-sm opacity-85">{copy.salesLedBody}</p>
               </div>
             )}
 
-            {selectedPlanIsCurrent && (
+            {selectedPlanIsCurrent && !needsPaymentRecovery && (
               <div className="mt-6 rounded-2xl border border-emerald-300/30 bg-emerald-300/10 p-4 text-emerald-100" role="status">
                 <p className="font-semibold">{copy.currentTitle}</p>
                 <p className="mt-1 text-sm opacity-85">{copy.currentBody}</p>
@@ -160,9 +176,9 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-3xl font-semibold">{selectedPlan.name}</h2>
-                  <p className="mt-2 text-sm leading-6 text-blue-100/80">{selectedPlanIsSalesLed && !selectedPlanIsCurrent ? copy.salesLedSummary : copy.monthlySummary}</p>
+                  <p className="mt-2 text-sm leading-6 text-blue-100/80">{selectedPlanIsSalesLed && !selectedPlanIsCurrent && !needsPaymentRecovery ? copy.salesLedSummary : copy.monthlySummary}</p>
                 </div>
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-950">{selectedPlanIsCurrent ? copy.currentBadge : selectedPlanIsSalesLed ? copy.salesLedBadge : copy.selectedBadge}</span>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-950">{needsPaymentRecovery ? recoveryCopy.badge : selectedPlanIsCurrent ? copy.currentBadge : selectedPlanIsSalesLed ? copy.salesLedBadge : copy.selectedBadge}</span>
               </div>
               <p className="mt-6 text-5xl font-bold">{priceLabel}{selectedPlan.startingPriceMonthly != null || selectedPlan.priceMonthly != null ? <span className="text-base font-normal text-blue-100/70">{copy.month}</span> : null}</p>
             </div>
@@ -187,7 +203,12 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
               ))}
             </ul>
 
-            {selectedPlanIsCurrent && organization ? (
+            {needsPaymentRecovery && organization ? (
+              <div className="mt-6">
+                <BillingActionButton action="portal" locale={locale} className="flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">{recoveryCopy.action}</BillingActionButton>
+                <p className="mt-3 text-center text-xs text-slate-500">{copy.workspace}: {organization.name}</p>
+              </div>
+            ) : selectedPlanIsCurrent && organization ? (
               <div className="mt-6">
                 <BillingActionButton action="checkout" locale={locale} planId={selectedPlan.id} disabled className="flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/40">{copy.currentPlan}</BillingActionButton>
                 <p className="mt-3 text-center text-xs text-slate-500">{copy.workspace}: {organization.name}</p>
