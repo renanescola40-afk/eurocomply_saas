@@ -5,6 +5,7 @@ import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
+import { validateStripeWebhookEventMode } from '@/server/billing/stripe-event-mode';
 import { handleStripeWebhookEventWithRecovery } from '@/server/billing/stripe-webhook-recovery';
 import { getStripeEventAuditContext } from '@/server/billing/stripe-webhooks';
 import { noStoreJson } from '@/server/security/no-store';
@@ -109,6 +110,21 @@ export async function POST(request: Request) {
     await recordWebhookRouteAudit({ action: 'webhook_rejected', reason: 'invalid_signature' });
     reportError(new Error('Invalid Stripe webhook signature'), { area: 'stripe_webhook_signature' });
     return noStoreJson({ error: 'invalid_webhook' }, { status: 400 });
+  }
+
+  const mode = validateStripeWebhookEventMode(event);
+  if (!mode.ok) {
+    const misconfigured = mode.reason === 'secret_key_mode_unknown';
+    await recordWebhookRouteAudit({ action: 'webhook_rejected', event, reason: mode.reason });
+    reportError(new Error(misconfigured ? 'Stripe provider mode is not configured' : 'Stripe webhook mode does not match provider mode'), {
+      area: 'stripe_webhook_mode_binding',
+      expectedMode: mode.expectedMode ?? 'unknown',
+      actualMode: mode.actualMode,
+    });
+    return noStoreJson(
+      { error: misconfigured ? 'webhook_mode_not_configured' : 'webhook_mode_mismatch' },
+      { status: misconfigured ? 500 : 400 },
+    );
   }
 
   await recordWebhookRouteAudit({ action: 'webhook_received', event });
