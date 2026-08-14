@@ -15,6 +15,18 @@ describe('exact-main ephemeral Supabase schema proof', () => {
     );
   });
 
+  it('reruns when human-review or decision inputs change the replay authorization boundary', () => {
+    for (const path of [
+      "'docs/security/evidence/human-review/**'",
+      "'docs/security/decisions/**'",
+      "'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs'",
+      "'scripts/recovery/run-ephemeral-project-schema-replay.mjs'",
+      "'supabase/migrations/**'",
+    ]) {
+      expect(workflow.split(path).length - 1).toBe(2);
+    }
+  });
+
   it('checks out and verifies the exact assessed SHA without credentials', () => {
     expect(workflow).toContain('ref: ${{ env.EXPECTED_HEAD_SHA }}');
     expect(workflow).toContain('persist-credentials: false');
