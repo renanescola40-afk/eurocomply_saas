@@ -12,8 +12,9 @@ const postconditions = readFileSync('scripts/supabase/verify-forward-reconciliat
 const selected = config.migrations.map((migration) => migration.filename);
 
 describe('bounded Supabase forward reconciliation contract', () => {
-  it('selects exactly the six reviewed forward-only reconciliations', () => {
+  it('selects exactly the seven reviewed forward-only reconciliations', () => {
     expect(selected).toEqual([
+      '20260809135000_enterprise_core_runtime_schema_reconciliation.sql',
       '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
       '20260813194500_reconcile_step_up_challenges_runtime.sql',
       '20260813200000_reconcile_subscription_schema_defaults.sql',
@@ -53,6 +54,25 @@ describe('bounded Supabase forward reconciliation contract', () => {
     expect(config.truthBoundary.productionWriteAuthorizedByConfig).toBe(false);
     expect(config.truthBoundary.migrationHistoryRepairAllowed).toBe(false);
     expect(config.truthBoundary.unrestrictedDbPushAllowed).toBe(false);
+  });
+
+  it('proves active core runtime contracts that production jobs already require', () => {
+    for (const table of [
+      'intelligence_items',
+      'intelligence_calendar_suggestions',
+      'email_notification_events',
+      'vendor_review_history',
+    ]) {
+      expect(postconditions).toContain(table);
+    }
+    expect(postconditions).toContain("table_name = 'vendors'");
+    expect(postconditions).toContain("column_name = 'next_review_at'");
+    expect(postconditions).toContain("table_name = 'email_notification_events'");
+    expect(postconditions).toContain("column_name = 'entity_id'");
+    expect(postconditions).toContain('public.create_organization_with_owner_atomic(text,text,uuid)');
+    expect(postconditions).toContain("policyname like 'live_rls_%'");
+    expect(postconditions).toContain('temporary live RLS validation helper remains after core reconciliation');
+    expect(postconditions).toContain('legacy direct subscription mutation policy remains after core reconciliation');
   });
 
   it('proves the Break-Glass tenant and backend-only postconditions', () => {
