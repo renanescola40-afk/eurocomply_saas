@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const config = JSON.parse(readFileSync('config/supabase-forward-reconciliation.json', 'utf8')) as {
@@ -8,6 +8,8 @@ const config = JSON.parse(readFileSync('config/supabase-forward-reconciliation.j
 const rehearsal = readFileSync('.github/workflows/supabase-forward-reconciliation-rehearsal.yml', 'utf8');
 const dryRun = readFileSync('.github/workflows/supabase-forward-reconciliation-dry-run.yml', 'utf8');
 const postconditions = readFileSync('scripts/supabase/verify-forward-reconciliation-postconditions.sql', 'utf8');
+const integrationsRuntime = readFileSync('scripts/security/validate-enterprise-integrations-runtime.sql', 'utf8');
+const billingRuntime = readFileSync('scripts/security/validate-enterprise-billing-runtime.sql', 'utf8');
 const historicalCore = readFileSync(
   'supabase/migrations/20260809135000_enterprise_core_runtime_schema_reconciliation.sql',
   'utf8',
@@ -24,7 +26,7 @@ const forwardCore = readFileSync(
 const selected = config.migrations.map((migration) => migration.filename);
 
 describe('bounded Supabase forward reconciliation contract', () => {
-  it('selects exactly the seven bounded forward-only reconciliation identities', () => {
+  it('selects exactly the fourteen bounded forward-only reconciliation identities in version order', () => {
     expect(selected).toEqual([
       '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
       '20260813194500_reconcile_step_up_challenges_runtime.sql',
@@ -32,9 +34,19 @@ describe('bounded Supabase forward reconciliation contract', () => {
       '20260813201500_reconcile_controlled_document_storage.sql',
       '20260813201600_force_tasks_rls.sql',
       '20260813234000_reconcile_enterprise_break_glass_governance.sql',
+      '20260814090000_reconcile_enterprise_licensing_control_plane.sql',
+      '20260814091000_reconcile_enterprise_integrations_scim.sql',
+      '20260814091100_harden_scim_identity_connection_delete_boundary.sql',
+      '20260814091900_bridge_enterprise_contract_mode_compatibility.sql',
+      '20260814092000_reconcile_enterprise_billing_lifecycle.sql',
+      '20260814092100_finalize_enterprise_contract_mode_compatibility.sql',
+      '20260814093000_reconcile_enterprise_contract_control_rpcs.sql',
       '20260814101500_reconcile_enterprise_core_active_runtime.sql',
     ]);
     expect(selected).not.toContain('20260809135000_enterprise_core_runtime_schema_reconciliation.sql');
+    for (const filename of selected) {
+      expect(existsSync(`supabase/migrations/${filename}`)).toBe(true);
+    }
     expect(config.truthBoundary).toMatchObject({
       automaticClassification: false,
       productionWriteAuthorizedByConfig: false,
@@ -84,12 +96,25 @@ describe('bounded Supabase forward reconciliation contract', () => {
     expect(forwardCore).toContain('Vendor governance tenant-integrity trigger is missing after reconciliation');
   });
 
-  it('triggers both bounded workflows when any selected SQL byte changes', () => {
-    for (const filename of selected) {
-      const path = `supabase/migrations/${filename}`;
-      expect(rehearsal).toContain(`- '${path}'`);
-      expect(dryRun).toContain(`- '${path}'`);
+  it('triggers both bounded workflows for any migration byte change without widening the selected set', () => {
+    for (const workflow of [rehearsal, dryRun]) {
+      expect(workflow).toContain("- 'supabase/migrations/**'");
     }
+    expect(config.truthBoundary.onlyListedForwardMigrationsMayBeRehearsedOrRequested).toBe(true);
+  });
+
+  it('runs existing read-only Enterprise integration and billing validators after isolated rehearsal', () => {
+    for (const validator of [
+      'scripts/supabase/verify-forward-reconciliation-postconditions.sql',
+      'scripts/security/validate-enterprise-integrations-runtime.sql',
+      'scripts/security/validate-enterprise-billing-runtime.sql',
+    ]) {
+      expect(rehearsal).toContain(validator);
+    }
+    expect(integrationsRuntime).toContain('This proof is read-only');
+    expect(integrationsRuntime).toContain("select 'enterprise_integrations_runtime_validation_passed' as status");
+    expect(billingRuntime).toContain("select 'enterprise_billing_runtime_validation_passed' as status");
+    expect(rehearsal).toContain("echo 'FORWARD_RECONCILIATION_POSTCONDITIONS=passed'");
   });
 
   it('uses one pinned Supabase CLI baseline across rehearsal and filtered dry-run', () => {
@@ -126,6 +151,32 @@ describe('bounded Supabase forward reconciliation contract', () => {
     expect(postconditions).toContain("policyname like 'live_rls_%'");
     expect(postconditions).toContain('temporary live RLS validation helper remains after core reconciliation');
     expect(postconditions).toContain('legacy direct subscription mutation policy remains after core reconciliation');
+  });
+
+  it('proves Enterprise licensing, SCIM and integration runtime boundaries', () => {
+    for (const table of [
+      'platform_admin_users',
+      'enterprise_contracts',
+      'organization_entitlements',
+      'organization_usage',
+      'enterprise_seat_operations',
+      'enterprise_identity_connections',
+      'enterprise_scim_tokens',
+      'enterprise_scim_identities',
+    ]) {
+      expect(integrationsRuntime).toContain(table);
+    }
+    expect(integrationsRuntime).toContain('Enterprise control-plane RLS/FORCE RLS incomplete');
+    expect(integrationsRuntime).toContain('Enterprise licensing/SCIM RPC set incomplete');
+    expect(integrationsRuntime).toContain('Enterprise licensing/SCIM RPC grants are not service-role-only');
+  });
+
+  it('proves Enterprise billing lifecycle and contract-control runtime boundaries', () => {
+    expect(billingRuntime).toContain('enterprise_contract_billing_events');
+    expect(billingRuntime).toContain('Enterprise contract billing columns incomplete');
+    expect(billingRuntime).toContain('Enterprise contract control/billing RPC set incomplete');
+    expect(billingRuntime).toContain('Enterprise contract control/billing RPC privileges are not service-role-only');
+    expect(billingRuntime).toContain("contract.contract_mode not in ('compatibility','negotiated')");
   });
 
   it('proves the Break-Glass tenant and backend-only postconditions', () => {
