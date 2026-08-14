@@ -1,4 +1,5 @@
 const MAX_IDENTIFIER_BYTES = 128;
+const MAX_CATALOG_TEXT_BYTES = 256;
 
 function assertIdentifier(value, label) {
   if (typeof value !== 'string' || value.length === 0) {
@@ -10,8 +11,22 @@ function assertIdentifier(value, label) {
   return value;
 }
 
+function assertCatalogText(value, label) {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new Error(`${label}_missing`);
+  }
+  if (/\p{Cc}/u.test(value) || Buffer.byteLength(value, 'utf8') > MAX_CATALOG_TEXT_BYTES) {
+    throw new Error(`${label}_invalid`);
+  }
+  return value;
+}
+
 export function quotePgIdentifier(value) {
   return `"${assertIdentifier(value, 'postgres_identifier').replaceAll('"', '""')}"`;
+}
+
+export function quotePgLiteral(value) {
+  return `'${assertCatalogText(value, 'postgres_literal').replaceAll("'", "''")}'`;
 }
 
 export function normalizeInstalledExtensions(value) {
@@ -20,9 +35,10 @@ export function normalizeInstalledExtensions(value) {
   const normalized = value.map((entry) => {
     const name = assertIdentifier(entry?.name, 'extension_name');
     const schema = assertIdentifier(entry?.schema, 'extension_schema');
+    const version = assertCatalogText(entry?.version, 'extension_version');
     if (seen.has(name)) throw new Error('installed_extension_inventory_duplicate');
     seen.add(name);
-    return { name, schema };
+    return { name, schema, version };
   });
   return normalized.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -32,18 +48,21 @@ export function normalizeAvailableExtensions(value) {
   const seen = new Set();
   const normalized = value.map((entry) => {
     const name = assertIdentifier(entry?.name, 'available_extension_name');
-    if (seen.has(name)) throw new Error('available_extension_inventory_duplicate');
-    seen.add(name);
+    const version = assertCatalogText(entry?.version, 'available_extension_version');
+    const key = `${name}\u0000${version}`;
+    if (seen.has(key)) throw new Error('available_extension_inventory_duplicate');
+    seen.add(key);
     const fixedSchema = entry?.schema == null || entry.schema === ''
       ? null
       : assertIdentifier(entry.schema, 'available_extension_schema');
     return {
       name,
+      version,
       relocatable: entry?.relocatable === true,
       schema: fixedSchema,
     };
   });
-  return normalized.sort((a, b) => a.name.localeCompare(b.name));
+  return normalized.sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version));
 }
 
 export function planExtensionParity(sourceInventory, targetInventory, availableInventory) {
@@ -51,10 +70,13 @@ export function planExtensionParity(sourceInventory, targetInventory, availableI
   const target = normalizeInstalledExtensions(targetInventory);
   const available = normalizeAvailableExtensions(availableInventory);
   const targetByName = new Map(target.map((entry) => [entry.name, entry]));
-  const availableByName = new Map(available.map((entry) => [entry.name, entry]));
+  const availableByNameVersion = new Map(
+    available.map((entry) => [`${entry.name}\u0000${entry.version}`, entry]),
+  );
   const enable = [];
-  const unavailable = [];
+  const unavailableVersions = [];
   const schemaMismatches = [];
+  const versionMismatches = [];
 
   for (const expected of source) {
     const installed = targetByName.get(expected.name);
@@ -66,12 +88,19 @@ export function planExtensionParity(sourceInventory, targetInventory, availableI
           observedSchema: installed.schema,
         });
       }
+      if (installed.version !== expected.version) {
+        versionMismatches.push({
+          name: expected.name,
+          expectedVersion: expected.version,
+          observedVersion: installed.version,
+        });
+      }
       continue;
     }
 
-    const candidate = availableByName.get(expected.name);
+    const candidate = availableByNameVersion.get(`${expected.name}\u0000${expected.version}`);
     if (!candidate) {
-      unavailable.push(expected.name);
+      unavailableVersions.push({ name: expected.name, version: expected.version });
       continue;
     }
 
@@ -85,18 +114,34 @@ export function planExtensionParity(sourceInventory, targetInventory, availableI
     }
 
     const schemaSql = `create schema if not exists ${quotePgIdentifier(expected.schema)};`;
+    const versionSql = quotePgLiteral(expected.version);
     const extensionSql = candidate.relocatable
-      ? `create extension if not exists ${quotePgIdentifier(expected.name)} with schema ${quotePgIdentifier(expected.schema)};`
-      : `create extension if not exists ${quotePgIdentifier(expected.name)};`;
-    enable.push({ name: expected.name, schema: expected.schema, sql: `${schemaSql}\n${extensionSql}` });
+      ? `create extension if not exists ${quotePgIdentifier(expected.name)} with schema ${quotePgIdentifier(expected.schema)} version ${versionSql};`
+      : `create extension if not exists ${quotePgIdentifier(expected.name)} version ${versionSql};`;
+    enable.push({
+      name: expected.name,
+      schema: expected.schema,
+      version: expected.version,
+      sql: `${schemaSql}\n${extensionSql}`,
+    });
   }
 
-  return { source, target, enable, unavailable, schemaMismatches };
+  return {
+    source,
+    target,
+    enable,
+    unavailableVersions,
+    schemaMismatches,
+    versionMismatches,
+  };
 }
 
 export function extensionParitySatisfied(sourceInventory, targetInventory) {
   const source = normalizeInstalledExtensions(sourceInventory);
   const target = normalizeInstalledExtensions(targetInventory);
-  const targetByName = new Map(target.map((entry) => [entry.name, entry.schema]));
-  return source.every((entry) => targetByName.get(entry.name) === entry.schema);
+  const targetByName = new Map(target.map((entry) => [entry.name, entry]));
+  return source.every((entry) => {
+    const observed = targetByName.get(entry.name);
+    return observed?.schema === entry.schema && observed.version === entry.version;
+  });
 }
