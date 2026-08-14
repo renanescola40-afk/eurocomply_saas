@@ -134,11 +134,36 @@ test('ignores NOTICE-only missing-object messages when there is no terminal ERRO
 
   assert.equal(classifyRecoveryMissingObjectKind(error), null);
   assert.equal(classifyRecoveryMissingObjectScope(error), null);
+  assert.equal(classifyRecoveryCommandCategory(error), 'command_timeout');
   const diagnostic = buildRecoveryCommandDiagnostic({ error, phase: 'isolated_restore', command: 'docker' });
   assert.equal(diagnostic.category, 'command_timeout');
   assert.equal(diagnostic.missingObjectKind, null);
   assert.equal(diagnostic.missingObjectScope, null);
   assert.equal(JSON.stringify(diagnostic).includes('private_identity_123'), false);
+});
+
+test('anchors the missing object kind to PostgreSQL grammar, not identifier words', () => {
+  const relationNamedSchema = errorWith('ERROR: relation "schema" does not exist');
+  assert.equal(classifyRecoveryMissingObjectKind(relationNamedSchema), 'relation');
+  const relationDiagnostic = buildRecoveryCommandDiagnostic({
+    error: relationNamedSchema,
+    phase: 'isolated_restore',
+    command: 'docker',
+  });
+  assert.equal(relationDiagnostic.missingObjectKind, 'relation');
+  assert.equal(JSON.stringify(relationDiagnostic).includes('schema'), false);
+
+  const functionNamedRelation = errorWith('ERROR: function public.relation(uuid) does not exist');
+  assert.equal(classifyRecoveryMissingObjectKind(functionNamedRelation), 'function');
+  const functionDiagnostic = buildRecoveryCommandDiagnostic({
+    error: functionNamedRelation,
+    phase: 'isolated_restore',
+    command: 'docker',
+  });
+  assert.equal(functionDiagnostic.missingObjectKind, 'function');
+  assert.equal(functionDiagnostic.missingObjectScope, null);
+  assert.equal(JSON.stringify(functionDiagnostic).includes('public'), false);
+  assert.equal(JSON.stringify(functionDiagnostic).includes('relation(uuid)'), false);
 });
 
 test('can classify an allowlisted scope internally without persisting any SQL scope in evidence', () => {
@@ -221,7 +246,7 @@ test('records timeout state without raw process output', () => {
     command: 'supabase',
   });
   assert.equal(diagnostic.timedOut, true);
-  assert.equal(diagnostic.category, 'connection_timeout');
+  assert.equal(diagnostic.category, 'command_timeout');
   assert.equal('stderr' in diagnostic, false);
   assert.equal('stdout' in diagnostic, false);
 });
