@@ -7,9 +7,14 @@ const config = JSON.parse(readFileSync('config/supabase-forward-reconciliation.j
 };
 const rehearsal = readFileSync('.github/workflows/supabase-forward-reconciliation-rehearsal.yml', 'utf8');
 const dryRun = readFileSync('.github/workflows/supabase-forward-reconciliation-dry-run.yml', 'utf8');
+const liveRlsWorkflow = readFileSync('.github/workflows/supabase-live-rls-validation.yml', 'utf8');
 const postconditions = readFileSync('scripts/supabase/verify-forward-reconciliation-postconditions.sql', 'utf8');
 const integrationsRuntime = readFileSync('scripts/security/validate-enterprise-integrations-runtime.sql', 'utf8');
 const billingRuntime = readFileSync('scripts/security/validate-enterprise-billing-runtime.sql', 'utf8');
+const liveRlsInventoryRepair = readFileSync(
+  'supabase/migrations/20260730204500_repair_live_rls_validation_inventory.sql',
+  'utf8',
+);
 const historicalCore = readFileSync(
   'supabase/migrations/20260809135000_enterprise_core_runtime_schema_reconciliation.sql',
   'utf8',
@@ -26,8 +31,9 @@ const forwardCore = readFileSync(
 const selected = config.migrations.map((migration) => migration.filename);
 
 describe('bounded Supabase forward reconciliation contract', () => {
-  it('selects exactly the fourteen bounded forward-only reconciliation identities in version order', () => {
+  it('selects exactly the fifteen bounded forward-only reconciliation identities in version order', () => {
     expect(selected).toEqual([
+      '20260730204500_repair_live_rls_validation_inventory.sql',
       '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
       '20260813194500_reconcile_step_up_challenges_runtime.sql',
       '20260813200000_reconcile_subscription_schema_defaults.sql',
@@ -54,6 +60,20 @@ describe('bounded Supabase forward reconciliation contract', () => {
       unrestrictedDbPushAllowed: false,
       onlyListedForwardMigrationsMayBeRehearsedOrRequested: true,
     });
+  });
+
+  it('reconciles the live RLS inventory helper to a service-role-only boundary', () => {
+    expect(liveRlsInventoryRepair).toContain('security invoker');
+    expect(liveRlsInventoryRepair).toContain('set search_path = public, pg_catalog');
+    expect(liveRlsInventoryRepair).toContain('revoke all on function public.eurocomply_live_rls_inventory(text[]) from public');
+    expect(liveRlsInventoryRepair).toContain('revoke execute on function public.eurocomply_live_rls_inventory(text[]) from anon');
+    expect(liveRlsInventoryRepair).toContain('revoke execute on function public.eurocomply_live_rls_inventory(text[]) from authenticated');
+    expect(liveRlsInventoryRepair).toContain('grant execute on function public.eurocomply_live_rls_inventory(text[]) to service_role');
+    expect(liveRlsWorkflow).toContain('Verify live inventory helper privilege boundary');
+    expect(liveRlsWorkflow).toContain("has_function_privilege('anon', function_oid, 'EXECUTE')");
+    expect(liveRlsWorkflow).toContain("has_function_privilege('authenticated', function_oid, 'EXECUTE')");
+    expect(liveRlsWorkflow).toContain("has_function_privilege('service_role', function_oid, 'EXECUTE')");
+    expect(liveRlsWorkflow).toContain("setting = 'search_path=public, pg_catalog'");
   });
 
   it('does not carry historical human approval into the newer active-core execution identity', () => {
