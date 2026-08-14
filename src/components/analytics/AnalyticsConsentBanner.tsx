@@ -1,8 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
+
 import { Button } from '@/components/ui/button';
 import { denyAnalyticsConsent, grantAnalyticsConsent, initPostHog } from '@/lib/analytics/posthog-client';
+import { getCommercialSurfaceCopy } from '@/lib/i18n/commercial-surface-copy';
+import { locales, type Locale } from '@/lib/i18n/routing';
 
 const CONSENT_STORAGE_KEY = 'risckcomply.analytics.consent';
 const CONSENT_TITLE_ID = 'analytics-consent-title';
@@ -12,7 +16,14 @@ function consentIsRequired() {
   return process.env.NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT === 'true';
 }
 
+function localeFromPath(pathname: string): Locale {
+  const candidate = pathname.split('/').filter(Boolean)[0];
+  return (locales.includes(candidate as Locale) ? candidate : 'en') as Locale;
+}
+
 export function AnalyticsConsentBanner() {
+  const pathname = usePathname() || '/';
+  const copy = getCommercialSurfaceCopy(localeFromPath(pathname)).consent;
   const [visible, setVisible] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -41,10 +52,8 @@ export function AnalyticsConsentBanner() {
     >
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p id={CONSENT_TITLE_ID} className="text-sm font-semibold">Privacy-first product analytics</p>
-          <p id={CONSENT_DESCRIPTION_ID} className="mt-1 text-xs leading-5 text-muted-foreground">
-            Help us improve RISCK COMPLY by sharing privacy-safe usage analytics. We do not capture document contents, risk notes, vendor names, form inputs or compliance data.
-          </p>
+          <p id={CONSENT_TITLE_ID} className="text-sm font-semibold">{copy.title}</p>
+          <p id={CONSENT_DESCRIPTION_ID} className="mt-1 text-xs leading-5 text-muted-foreground">{copy.body}</p>
         </div>
         <div className="flex shrink-0 gap-2">
           <Button
@@ -56,7 +65,7 @@ export function AnalyticsConsentBanner() {
               setVisible(false);
             }}
           >
-            Decline
+            {copy.decline}
           </Button>
           <Button
             type="button"
@@ -67,7 +76,7 @@ export function AnalyticsConsentBanner() {
               setVisible(false);
             }}
           >
-            Allow
+            {copy.allow}
           </Button>
         </div>
       </div>
