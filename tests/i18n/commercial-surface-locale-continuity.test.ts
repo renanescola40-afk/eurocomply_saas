@@ -9,6 +9,7 @@ const pricingPage = readFileSync(join(process.cwd(), 'src/app/[locale]/pricing/p
 const checkoutPage = readFileSync(join(process.cwd(), 'src/app/[locale]/checkout/page.tsx'), 'utf8');
 const loginPage = readFileSync(join(process.cwd(), 'src/app/[locale]/login/page.tsx'), 'utf8');
 const signupPage = readFileSync(join(process.cwd(), 'src/app/[locale]/signup/page.tsx'), 'utf8');
+const aiSystemsPage = readFileSync(join(process.cwd(), 'src/app/[locale]/ai-systems/ai-systems-client.tsx'), 'utf8');
 const trustPage = readFileSync(join(process.cwd(), 'src/app/[locale]/trust/page.tsx'), 'utf8');
 const trustComponent = readFileSync(join(process.cwd(), 'src/components/marketing/trust-center-page.tsx'), 'utf8');
 const consentBanner = readFileSync(join(process.cwd(), 'src/components/analytics/AnalyticsConsentBanner.tsx'), 'utf8');
@@ -80,11 +81,30 @@ describe('commercial surface locale continuity', () => {
     expect(trustComponent).toContain('copy.evidenceItems');
   });
 
-  it('preserves keyboard focus treatment on purchase, auth and trust controls', () => {
+  it('localizes the first AI-system workflow across all configured non-English locales', () => {
+    expect(aiSystemsPage).toContain("es: {");
+    expect(aiSystemsPage).toContain("title: 'Inventario de sistemas de IA'");
+    expect(aiSystemsPage).toContain("title: 'Inventaire des systèmes IA'");
+    expect(aiSystemsPage).toContain("title: 'Inventario dei sistemi IA'");
+    expect(aiSystemsPage).toContain("title: 'KI-Systeminventar'");
+    expect(aiSystemsPage).toContain("submit: 'Clasificar y guardar'");
+    expect(aiSystemsPage).toContain("submit: 'Classifier et enregistrer'");
+    expect(aiSystemsPage).toContain("submit: 'Classifica e salva'");
+    expect(aiSystemsPage).toContain("submit: 'Klassifizieren und speichern'");
+    expect(aiSystemsPage).toContain('getRiskLabel(locale, system.risk_level)');
+    expect(aiSystemsPage).toContain('options.domains[value]');
+    expect(aiSystemsPage).not.toContain("es: { ...baseInventoryCopy }");
+    expect(aiSystemsPage).not.toContain("fr: { ...baseInventoryCopy }");
+    expect(aiSystemsPage).not.toContain("it: { ...baseInventoryCopy }");
+    expect(aiSystemsPage).not.toContain("de: { ...baseInventoryCopy }");
+  });
+
+  it('preserves keyboard focus treatment on purchase, auth, AI inventory and trust controls', () => {
     expect(pricingPage).toContain('focus-visible:ring-2');
     expect(checkoutPage).toContain('focus-visible:ring-2');
     expect(loginPage).toContain('focus-visible:ring-2');
     expect(signupPage).toContain('focus-visible:ring-2');
+    expect(aiSystemsPage).toContain('focus-visible:ring-2');
     expect(trustComponent).toContain('focus-visible:ring-2');
   });
 });
