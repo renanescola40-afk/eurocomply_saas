@@ -74,6 +74,42 @@ describe('production readiness diagnostic redaction', () => {
     }
   });
 
+  it('bounds numeric fields and emits at most one entry per documented environment group', () => {
+    const diagnostics = buildSafeReadinessDiagnostics({
+      environment: [
+        { name: 'supabase', configured: false, missingCount: 999999 },
+        { name: 'supabase', configured: true, missingCount: 1 },
+        { name: 'stripe', configured: false, missingCount: 4 },
+        { name: 'redis', configured: false, missingCount: -1 },
+        { name: 'sentry', configured: false, missingCount: 1.5 },
+      ],
+      stripe: {
+        configured: true,
+        apiReachable: false,
+        priceLookup: false,
+        pricesChecked: 123456789,
+        detail: 'not_ready',
+      },
+      sentryReleaseUploads: {
+        configured: false,
+        missingCount: 987654321,
+        sourceMapsUploadRequiresAuthToken: true,
+      },
+    });
+
+    expect(diagnostics.environment).toEqual([
+      { name: 'supabase', configured: false, missingCount: null },
+      { name: 'stripe', configured: false, missingCount: 4 },
+      { name: 'redis', configured: false, missingCount: null },
+      { name: 'sentry', configured: false, missingCount: null },
+    ]);
+    expect(diagnostics.environment.filter((entry) => entry.name === 'supabase')).toHaveLength(1);
+    expect(diagnostics.stripe.pricesChecked).toBeNull();
+    expect(diagnostics.sentryReleaseUploads.missingCount).toBeNull();
+    expect(JSON.stringify(diagnostics)).not.toContain('123456789');
+    expect(JSON.stringify(diagnostics)).not.toContain('987654321');
+  });
+
   it('preserves only documented runtime labels when they are valid', () => {
     const diagnostics = buildSafeReadinessDiagnostics({
       status: 'not_ready',
