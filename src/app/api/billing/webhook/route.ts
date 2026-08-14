@@ -5,6 +5,7 @@ import { writeAuditLog } from '@/lib/security/audit-log';
 import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { getStripeClient } from '@/server/billing/stripe';
+import { validateStripeWebhookEventMode } from '@/server/billing/stripe-event-mode';
 import { handleStripeWebhookEventWithRecovery } from '@/server/billing/stripe-webhook-recovery';
 import { getStripeEventAuditContext } from '@/server/billing/stripe-webhooks';
 import { syncEnterpriseContractBillingEvent } from '@/server/enterprise/billing';
@@ -112,6 +113,21 @@ export async function POST(request: Request) {
     await recordBillingWebhookRouteAudit({ action: 'webhook_rejected', reason: 'invalid_signature' });
     reportError(new Error('Invalid provider webhook signature'), { area: 'billing_stripe_webhook_signature' });
     return noStoreJson({ error: 'invalid_webhook' }, { status: 400 });
+  }
+
+  const mode = validateStripeWebhookEventMode(event);
+  if (!mode.ok) {
+    const misconfigured = mode.reason === 'secret_key_mode_unknown';
+    await recordBillingWebhookRouteAudit({ action: 'webhook_rejected', event, reason: mode.reason });
+    reportError(new Error(misconfigured ? 'Stripe provider mode is not configured' : 'Stripe webhook mode does not match provider mode'), {
+      area: 'billing_stripe_webhook_mode_binding',
+      expectedMode: mode.expectedMode ?? 'unknown',
+      actualMode: mode.actualMode,
+    });
+    return noStoreJson(
+      { error: misconfigured ? 'webhook_mode_not_configured' : 'webhook_mode_mismatch' },
+      { status: misconfigured ? 500 : 400 },
+    );
   }
 
   await recordBillingWebhookRouteAudit({ action: 'webhook_received', event });
