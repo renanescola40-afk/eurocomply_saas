@@ -1,6 +1,11 @@
 import { basename } from 'node:path';
 
 const SAFE_COMMANDS = new Set(['supabase', 'docker', 'psql', 'pg_dump', 'pg_restore']);
+const SAFE_RESTORE_INPUTS = [
+  ['production-roles.sql', 'roles'],
+  ['production-schema.sql', 'schema'],
+  ['production-data.sql', 'data'],
+];
 
 function text(value) {
   if (value == null) return '';
@@ -13,6 +18,14 @@ function combinedErrorText(error) {
     .map(text)
     .join('\n')
     .toLowerCase();
+}
+
+export function classifyRecoveryRestoreInput(error) {
+  const value = combinedErrorText(error);
+  for (const [filename, restoreInput] of SAFE_RESTORE_INPUTS) {
+    if (value.includes(filename)) return restoreInput;
+  }
+  return null;
 }
 
 export function classifyRecoveryCommandCategory(error) {
@@ -55,6 +68,7 @@ export function buildRecoveryCommandDiagnostic({ error, phase, command }) {
     phase: typeof phase === 'string' && phase.length > 0 ? phase : 'unknown',
     commandFamily,
     category: classifyRecoveryCommandCategory(error),
+    restoreInput: classifyRecoveryRestoreInput(error),
     exitStatus: Number.isInteger(error?.status) ? error.status : null,
     signal: typeof error?.signal === 'string' && error.signal.length > 0 ? error.signal : null,
     timedOut: error?.code === 'ETIMEDOUT' || error?.killed === true,
