@@ -17,15 +17,6 @@ import { getOrganizationDashboardData } from '@/server/queries/organization-dash
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-const planLabels = {
-  essential: 'Starter',
-  starter: 'Starter',
-  professional: 'Growth',
-  growth: 'Growth',
-  business: 'Growth',
-  enterprise: 'Enterprise',
-};
-
 type PageProps = {
   params: Promise<{ locale: string }>;
   searchParams?: Promise<{ plan?: string }>;
@@ -120,9 +111,9 @@ export default async function OrganizationDashboardPage({ params, searchParams }
   const entitlements = data.entitlements;
   const localizedDashboardBasePath = `/${safeLocale}/dashboard/organizations`;
   const localizedTasksPath = `/${safeLocale}/aprovacoes`;
-  const planName = planLabels[entitlements.plan as keyof typeof planLabels] ?? entitlements.plan;
-  const requestedPlan = getBillingPlan(resolvedSearchParams.plan);
   const currentCatalogPlan = getBillingPlan(entitlements.plan);
+  const planName = currentCatalogPlan?.name ?? entitlements.plan;
+  const requestedPlan = getBillingPlan(resolvedSearchParams.plan);
   const shouldShowPlanContinuation = Boolean(requestedPlan && requestedPlan.id !== currentCatalogPlan?.id);
   const planContinuationHref = data.canManageBilling
     ? `/${safeLocale}/dashboard/organizations/billing?plan=${encodeURIComponent(requestedPlan?.id ?? '')}`

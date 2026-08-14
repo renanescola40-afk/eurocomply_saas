@@ -15,7 +15,7 @@ const baseDashboardCopy = {
     site: 'Site',
     dashboard: 'Dashboard',
     loading: 'Loading workspace...',
-    proRequired: 'Growth plan or higher required',
+    proRequired: 'Professional plan or higher required',
     system: 'System',
   },
   overview: {
@@ -49,7 +49,7 @@ const baseDashboardCopy = {
     assessmentError: 'Error creating assessment',
     documentCreated: 'Document created successfully',
     documentError: 'Error creating document',
-    monitoringPlanRequired: 'Monitoring is available only on Growth or Enterprise plans',
+    monitoringPlanRequired: 'Monitoring is available on Professional plans or higher',
     monitoringSaved: 'Monitoring preferences saved',
     monitoringSaveError: 'Error saving preferences',
     invalidSession: 'Invalid session to start checkout',
