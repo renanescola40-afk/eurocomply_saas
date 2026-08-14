@@ -13,8 +13,20 @@ const scimDeleteBoundary = readFileSync(
   'supabase/migrations/20260814091100_harden_scim_identity_connection_delete_boundary.sql',
   'utf8',
 );
+const contractModeBridge = readFileSync(
+  'supabase/migrations/20260814091900_bridge_enterprise_contract_mode_compatibility.sql',
+  'utf8',
+);
 const billing = readFileSync(
   'supabase/migrations/20260814092000_reconcile_enterprise_billing_lifecycle.sql',
+  'utf8',
+);
+const contractModeFinal = readFileSync(
+  'supabase/migrations/20260814092100_finalize_enterprise_contract_mode_compatibility.sql',
+  'utf8',
+);
+const contractControl = readFileSync(
+  'supabase/migrations/20260814093000_reconcile_enterprise_contract_control_rpcs.sql',
   'utf8',
 );
 const licensingRuntime = readFileSync('src/server/enterprise/licensing.ts', 'utf8');
@@ -22,6 +34,7 @@ const provisioningRuntime = readFileSync('src/server/enterprise/provisioning.ts'
 const scimRuntime = readFileSync('src/server/enterprise/scim.ts', 'utf8');
 const billingRuntime = readFileSync('src/server/enterprise/billing.ts', 'utf8');
 const lifecycleRuntime = readFileSync('src/server/enterprise/contract-lifecycle.ts', 'utf8');
+const contractsRuntime = readFileSync('src/server/enterprise/contracts.ts', 'utf8');
 
 const integrationTables = [
   'enterprise_service_accounts',
@@ -43,6 +56,12 @@ const scimRpcs = [
   'deactivate_enterprise_scim_identity_atomic',
 ];
 
+const contractControlRpcs = [
+  'provision_enterprise_contract_atomic',
+  'update_enterprise_contract_entitlements_atomic',
+  'transition_enterprise_contract_status_atomic',
+];
+
 describe('Enterprise Control Plane + SCIM forward reconciliation', () => {
   it('materializes the exact licensing RPC names consumed by the application', () => {
     for (const rpc of [
@@ -56,7 +75,7 @@ describe('Enterprise Control Plane + SCIM forward reconciliation', () => {
     expect(licensing).toContain('public.release_organization_seat_atomic');
   });
 
-  it('keeps legacy compatibility contracts fail-closed for Enterprise feature flags', () => {
+  it('keeps compatibility contracts fail-closed for Enterprise feature flags', () => {
     expect(licensing).toContain("jsonb_build_object('legacy_compatibility', true)");
     expect(licensing).toContain('Enterprise SSO/SCIM/API/webhooks remain disabled until explicitly contracted.');
     expect(licensing).toContain('sso_enabled boolean not null default false');
@@ -125,12 +144,14 @@ describe('Enterprise Control Plane + SCIM forward reconciliation', () => {
     expect(licensing).toContain('audit_logs (organization_id,actor_id,action,entity_type,entity_id,metadata)');
     expect(integrations).toContain('audit_logs(organization_id,actor_id,action,entity_type,entity_id,metadata)');
     expect(billing).toContain('audit_logs(organization_id,actor_id,action,entity_type,entity_id,metadata)');
+    expect(contractControl).toContain('audit_logs(organization_id,actor_id,action,entity_type,entity_id,metadata)');
     expect(licensing).not.toContain('audit_logs (organization_id,actor_user_id');
     expect(integrations).not.toContain('audit_logs(organization_id,actor_user_id');
     expect(billing).not.toContain('audit_logs(organization_id,actor_user_id');
+    expect(contractControl).not.toContain('audit_logs(organization_id,actor_user_id');
   });
 
-  it('materializes the Enterprise billing RPC and lifecycle processor consumed by the app', () => {
+  it('materializes Enterprise billing and lifecycle RPCs consumed by the app', () => {
     expect(billingRuntime).toContain('sync_enterprise_contract_billing_v2_atomic');
     expect(billing).toContain('public.sync_enterprise_contract_billing_v2_atomic');
     expect(lifecycleRuntime).toContain('process_enterprise_contract_lifecycle_v2_atomic');
@@ -139,11 +160,17 @@ describe('Enterprise Control Plane + SCIM forward reconciliation', () => {
     expect(billing).toContain('revoke all on table public.enterprise_contract_billing_events from public,anon,authenticated');
   });
 
-  it('never binds Stripe billing events to legacy compatibility envelopes', () => {
-    expect(billing).toContain("set contract_mode = 'legacy_compatibility'");
+  it('bridges historical contract modes and finishes on compatibility|negotiated only', () => {
+    expect(contractModeBridge).toContain("check (contract_mode in ('compatibility','legacy_compatibility','negotiated'))");
+    expect(contractModeFinal).toContain("set contract_mode='compatibility'");
+    expect(contractModeFinal).toContain("check (contract_mode in ('compatibility','negotiated'))");
+    expect(contractModeFinal).toContain('Legacy compatibility contracts are not canonicalized');
+  });
+
+  it('never binds ordinary Stripe events to compatibility envelopes', () => {
     expect(billing).toContain("contract.contract_mode='negotiated'");
     expect(billing).toContain("where contract.contract_mode='negotiated'");
-    expect(billing).toContain("check (contract_mode in ('negotiated','legacy_compatibility'))");
+    expect(contractModeFinal).toContain("contract_mode='compatibility'");
   });
 
   it('hardens billing SECURITY DEFINER RPCs and keeps browser execution denied', () => {
@@ -152,5 +179,26 @@ describe('Enterprise Control Plane + SCIM forward reconciliation', () => {
     expect(billing).toContain('enterprise billing lifecycle RPC security configuration is not fixed');
     expect(billing).toContain('grant execute on function public.sync_enterprise_contract_billing_v2_atomic');
     expect(billing).toContain('grant execute on function public.process_enterprise_contract_lifecycle_v2_atomic');
+  });
+
+  it('materializes the exact platform Control Center contract RPCs', () => {
+    for (const rpc of contractControlRpcs) {
+      expect(contractsRuntime).toContain(rpc);
+      expect(contractControl).toContain(`public.${rpc}`);
+    }
+    expect(contractControl).toContain("contract.contract_mode='negotiated'");
+    expect(contractControl).toContain('limits_below_current_usage');
+    expect(contractControl).toContain('limits_below_committed_usage');
+    expect(contractControl).toContain('platform_role_required');
+    expect(contractControl).toContain('enterprise contract control RPC privileges are not service-role-only');
+    expect(contractControl).toContain('enterprise contract control RPC security configuration is not fixed');
+  });
+
+  it('validates active plus pending commitments before replacing the compatibility envelope', () => {
+    const committedUsageCheck = contractControl.indexOf('v_active_members+v_pending_members>p_member_limit');
+    const compatibilityDelete = contractControl.indexOf("contract.contract_mode='compatibility'");
+    expect(committedUsageCheck).toBeGreaterThan(-1);
+    expect(compatibilityDelete).toBeGreaterThan(committedUsageCheck);
+    expect(contractControl).toContain("'negotiated','enterprise'");
   });
 });
