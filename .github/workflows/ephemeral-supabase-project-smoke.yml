@@ -169,7 +169,7 @@ jobs:
               ('audit_logs'),
               ('security_incidents'),
               ('data_retention_policies'),
-              ('enterprise_scim_connections'),
+              ('enterprise_identity_connections'),
               ('organization_add_ons')
             ) required(table_name)
             where to_regclass('public.' || required.table_name) is null;
