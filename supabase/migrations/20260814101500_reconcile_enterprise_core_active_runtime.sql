@@ -1,3 +1,5 @@
+begin;
+
 -- Forward execution identity for the reviewed 20260809135000 Enterprise core
 -- runtime reconciliation. The historical migration remains byte-for-byte
 -- immutable and unapplied; this newer identity stays strictly after the current
@@ -8,8 +10,6 @@
 -- This forward identity deliberately carries no historical human-approval
 -- marker. It also preserves later vendor-governance tenant-integrity hardening
 -- that exists elsewhere in repository history instead of regressing it.
-
-begin;
 
 -- ---------------------------------------------------------------------------
 -- 1. Intelligence runtime objects required by /api/intelligence/refresh.
