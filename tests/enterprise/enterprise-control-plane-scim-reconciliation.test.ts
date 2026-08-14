@@ -1,0 +1,124 @@
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+
+const licensing = readFileSync(
+  'supabase/migrations/20260814090000_reconcile_enterprise_licensing_control_plane.sql',
+  'utf8',
+);
+const integrations = readFileSync(
+  'supabase/migrations/20260814091000_reconcile_enterprise_integrations_scim.sql',
+  'utf8',
+);
+const scimDeleteBoundary = readFileSync(
+  'supabase/migrations/20260814091100_harden_scim_identity_connection_delete_boundary.sql',
+  'utf8',
+);
+const licensingRuntime = readFileSync('src/server/enterprise/licensing.ts', 'utf8');
+const provisioningRuntime = readFileSync('src/server/enterprise/provisioning.ts', 'utf8');
+const scimRuntime = readFileSync('src/server/enterprise/scim.ts', 'utf8');
+
+const integrationTables = [
+  'enterprise_service_accounts',
+  'enterprise_api_keys',
+  'enterprise_webhook_subscriptions',
+  'enterprise_webhook_deliveries',
+  'enterprise_identity_connections',
+  'enterprise_scim_tokens',
+  'enterprise_integration_audit_events',
+  'enterprise_scim_identities',
+];
+
+const scimRpcs = [
+  'create_enterprise_scim_token_atomic',
+  'authenticate_enterprise_scim_token',
+  'upsert_enterprise_scim_identity_atomic',
+  'get_enterprise_scim_identity',
+  'find_enterprise_scim_identity',
+  'deactivate_enterprise_scim_identity_atomic',
+];
+
+describe('Enterprise Control Plane + SCIM forward reconciliation', () => {
+  it('materializes the exact licensing RPC names consumed by the application', () => {
+    for (const rpc of [
+      'resolve_organization_entitlements_v2',
+      'reserve_organization_seat_idempotent_atomic',
+    ]) {
+      expect(licensingRuntime).toContain(rpc);
+      expect(licensing).toContain(`public.${rpc}`);
+    }
+    expect(provisioningRuntime).toContain('release_organization_seat_atomic');
+    expect(licensing).toContain('public.release_organization_seat_atomic');
+  });
+
+  it('keeps legacy compatibility contracts fail-closed for Enterprise feature flags', () => {
+    expect(licensing).toContain("jsonb_build_object('legacy_compatibility', true)");
+    expect(licensing).toContain('Enterprise SSO/SCIM/API/webhooks remain disabled until explicitly contracted.');
+    expect(licensing).toContain('sso_enabled boolean not null default false');
+    expect(licensing).toContain('scim_enabled boolean not null default false');
+    expect(licensing).toContain('api_enabled boolean not null default false');
+    expect(licensing).toContain('webhooks_enabled boolean not null default false');
+  });
+
+  it('hardens licensing persistence and RPCs as backend-only', () => {
+    for (const table of [
+      'platform_admin_users',
+      'enterprise_contracts',
+      'organization_entitlements',
+      'organization_usage',
+      'enterprise_seat_operations',
+    ]) {
+      expect(licensing).toContain(`alter table public.${table} force row level security`);
+      expect(licensing).toContain(`revoke all on table public.${table} from public, anon, authenticated`);
+    }
+    expect(licensing).toContain('set search_path = pg_catalog');
+    expect(licensing).toContain('audit_logs (organization_id,actor_id,action,entity_type,entity_id,metadata)');
+    expect(licensing).not.toContain('audit_logs (organization_id,actor_user_id');
+  });
+
+  it('materializes every integration/SCIM table with forced RLS and no browser table grants', () => {
+    for (const table of integrationTables) {
+      expect(integrations).toContain(`create table if not exists public.${table}`);
+      expect(integrations).toContain(`alter table public.${table} force row level security`);
+      expect(integrations).toContain(`revoke all on table public.${table} from public,anon,authenticated`);
+      expect(integrations).toContain(`grant all on table public.${table} to service_role`);
+    }
+  });
+
+  it('materializes the exact SCIM RPC names consumed by the application as service-role-only', () => {
+    for (const rpc of scimRpcs) {
+      expect(scimRuntime).toContain(rpc);
+      expect(integrations).toContain(`public.${rpc}`);
+    }
+    expect(integrations.match(/security definer set search_path=pg_catalog/g)?.length ?? 0).toBeGreaterThanOrEqual(6);
+    expect(integrations).toContain('enterprise SCIM RPC privileges are not canonical');
+    expect(integrations).toContain('enterprise SCIM RPC security configuration is not fixed');
+  });
+
+  it('binds integration child rows to their tenant with validated composite foreign keys', () => {
+    for (const constraint of [
+      'enterprise_api_keys_service_account_tenant_fk',
+      'enterprise_api_keys_rotation_tenant_fk',
+      'enterprise_webhook_deliveries_subscription_tenant_fk',
+      'enterprise_scim_tokens_connection_tenant_fk',
+      'enterprise_integration_audit_service_account_tenant_fk',
+      'enterprise_scim_identities_connection_tenant_fk',
+    ]) {
+      expect(integrations).toContain(constraint);
+    }
+    expect(integrations).toContain("if tenant_fk_count<>6 then raise exception 'enterprise integration tenant foreign keys incomplete'");
+  });
+
+  it('prevents composite SCIM identity deletion from nulling the tenant key', () => {
+    expect(scimDeleteBoundary).toContain('drop constraint if exists enterprise_scim_identities_connection_tenant_fk');
+    expect(scimDeleteBoundary).toContain('on delete restrict');
+    expect(scimDeleteBoundary).toContain("delete_action is distinct from 'r'");
+    expect(scimDeleteBoundary).not.toContain('on delete set null');
+  });
+
+  it('uses the live audit actor column rather than stale historical actor_user_id writes', () => {
+    expect(licensing).toContain('audit_logs (organization_id,actor_id,action,entity_type,entity_id,metadata)');
+    expect(integrations).toContain('audit_logs(organization_id,actor_id,action,entity_type,entity_id,metadata)');
+    expect(licensing).not.toContain('audit_logs (organization_id,actor_user_id');
+    expect(integrations).not.toContain('audit_logs(organization_id,actor_user_id');
+  });
+});
