@@ -54,6 +54,15 @@ const derivedRules = Object.freeze([
       'left join public.qualified_review_assignments a',
     ]),
   }),
+  Object.freeze({
+    id: 'access-export-download-audit<-N14',
+    name: '20260728100000_enterprise_access_export_download_audit.sql',
+    heldSuffix: '.derived-prerequisite-blocked',
+    sourceMarkers: Object.freeze([
+      'alter table public.enterprise_access_export_jobs',
+      'download_count integer not null default 0',
+    ]),
+  }),
 ]);
 
 const blockedRules = Object.freeze([
@@ -111,6 +120,9 @@ function validateDerivedPrerequisiteBoundaries() {
   }
   if (!batchN.includes('| N9 | `20260724200000_enterprise_access_operations_center.sql` | `PENDING_DEPLOYMENT` | **PREREQUISITE_BLOCKED')) {
     fail('Batch-N evidence no longer proves N9 prerequisite-blocked execution boundary');
+  }
+  if (!batchN.includes('| N14 | `20260726150000_enterprise_access_runtime_slo.sql` | `PENDING_DEPLOYMENT` | **PREREQUISITE_BLOCKED')) {
+    fail('Batch-N evidence no longer proves N14 prerequisite-blocked execution boundary');
   }
   if (!batchI.includes('### I-DUP-13 — version `20260723223000`')
       || !batchI.includes('`20260723223000_qualified_review_consolidated.sql`')
