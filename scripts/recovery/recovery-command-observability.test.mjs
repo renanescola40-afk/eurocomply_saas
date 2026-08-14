@@ -30,11 +30,21 @@ test('classifies compatibility and permission failures', () => {
   assert.equal(classifyRecoveryCommandCategory(errorWith('permission denied')), 'permission_denied');
 });
 
-test('classifies only allowlisted restore input filenames', () => {
+test('classifies only allowlisted restore input filenames from process output', () => {
   assert.equal(classifyRecoveryRestoreInput(errorWith('psql:/tmp/production-roles.sql:4: ERROR: role does not exist')), 'roles');
   assert.equal(classifyRecoveryRestoreInput(errorWith('psql:/tmp/production-schema.sql:9: ERROR: relation does not exist')), 'schema');
   assert.equal(classifyRecoveryRestoreInput(errorWith('psql:/tmp/production-data.sql:12: ERROR: relation does not exist')), 'data');
   assert.equal(classifyRecoveryRestoreInput(errorWith('psql:/tmp/customer-private-name.sql:12: ERROR: relation secret_table does not exist')), null);
+});
+
+test('ignores command arguments echoed in Error.message when selecting the failing restore input', () => {
+  const error = errorWith(
+    'psql:/tmp/production-data.sql:12: ERROR: relation tenant_secret does not exist',
+    {
+      message: 'docker exec psql --file /tmp/production-roles.sql --file /tmp/production-schema.sql --file /tmp/production-data.sql failed',
+    },
+  );
+  assert.equal(classifyRecoveryRestoreInput(error), 'data');
 });
 
 test('emits only allowlisted redacted diagnostic fields', () => {
