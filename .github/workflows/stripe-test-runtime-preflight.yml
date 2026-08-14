@@ -1,0 +1,110 @@
+name: Stripe Test Runtime Preflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA to preflight
+        required: true
+        type: string
+      target_base_url:
+        description: HTTPS staging base URL configured for Stripe test mode
+        required: true
+        type: string
+      confirmation:
+        description: Type PREFLIGHT_STRIPE_TEST_RUNTIME
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stripe-test-runtime-preflight-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Validate isolated Stripe test-mode staging binding
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: staging
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      TARGET_BASE_URL: ${{ inputs.target_base_url }}
+      TARGET_ENVIRONMENT: staging
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY || secrets.STRIPE_SECRET_KEY }}
+      STRIPE_PRICE_STARTER_MONTHLY: ${{ secrets.STRIPE_TEST_PRICE_STARTER_MONTHLY || secrets.STRIPE_PRICE_STARTER_MONTHLY }}
+      STRIPE_PRICE_GROWTH_MONTHLY: ${{ secrets.STRIPE_TEST_PRICE_GROWTH_MONTHLY || secrets.STRIPE_PRICE_GROWTH_MONTHLY }}
+      STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ secrets.STRIPE_TEST_PRICE_ENTERPRISE_MONTHLY || secrets.STRIPE_PRICE_ENTERPRISE_MONTHLY }}
+
+    steps:
+      - name: Check out exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Authorize exact current main and staging-only execution
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          test "$CONFIRMATION" = 'PREFLIGHT_STRIPE_TEST_RUNTIME'
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "${RELEASE_SHA,,}"
+          node --input-type=module <<'NODE'
+          const url = new URL(process.env.TARGET_BASE_URL);
+          if (url.protocol !== 'https:') throw new Error('target_base_url must use https');
+          const productionHosts = new Set(['risckcomply.com', 'www.risckcomply.com', 'app.risckcomply.com', 'eurocomply-saas.vercel.app']);
+          if (productionHosts.has(url.hostname.toLowerCase())) throw new Error('production host is forbidden for Stripe test runtime preflight');
+          NODE
+          case "$STRIPE_SECRET_KEY" in sk_test_*) ;; *) echo 'staging Stripe key must be test mode' >&2; exit 1 ;; esac
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deterministic dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Validate preflight implementation
+        run: |
+          node --check scripts/enterprise/run-stripe-test-runtime-preflight.mjs
+          npx vitest run \
+            src/server/billing/stripe-event-mode.test.ts \
+            tests/security/stripe-test-runtime-preflight-contract.test.ts
+
+      - name: Run read-only Stripe test runtime preflight
+        run: node scripts/enterprise/run-stripe-test-runtime-preflight.mjs
+
+      - name: Publish bounded result
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/stripe-test-runtime-preflight/evidence.json ]]; then
+            jq '{status,validationStatus,commitSha,targetEnvironment,targetHost,checks,failedChecks,truthBoundary}' \
+              artifacts/stripe-test-runtime-preflight/evidence.json >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Stripe test runtime preflight failed before sanitized evidence creation.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload sanitized preflight evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: stripe-test-runtime-preflight-${{ inputs.release_sha }}
+          path: artifacts/stripe-test-runtime-preflight/evidence.json
+          if-no-files-found: warn
+          retention-days: 30

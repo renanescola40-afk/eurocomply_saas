@@ -175,14 +175,11 @@ describe('exact-SHA disposable project schema workflows', () => {
     expect(manager).toContain('if (ruleExists(binary, args)) return false');
   });
 
-  it('uses the reviewed disposable schema-effect replay and cleanup in schema-only proofs', () => {
+  it('uses the reviewed disposable schema-effect replay and cleanup in every schema-only proof', () => {
     for (const { path, source } of schemaWorkflows) {
-      const replayEntrypoint =
-        path === '.github/workflows/enterprise-integrations-runtime-proof.yml'
-          ? 'run-reviewed-ephemeral-schema-boundary-v4.mjs'
-          : 'run-ephemeral-project-schema-replay.mjs';
       expect(source, path).toContain('supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520');
-      expect(source, path).toContain(replayEntrypoint);
+      expect(source, path).toContain('run-reviewed-ephemeral-schema-boundary-v4.mjs');
+      expect(source, path).not.toContain('run-ephemeral-project-schema-replay.mjs');
       expect(source, path).toContain('manage-ephemeral-recovery-database.mjs stop');
       expect(source, path).not.toContain('secrets.RECOVERY_ISOLATED_DATABASE_URL');
       expect(source, path).toContain('persist-credentials: false');
