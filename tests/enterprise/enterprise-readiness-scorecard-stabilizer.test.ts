@@ -131,7 +131,7 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
       gateRun({ status: 'completed', conclusion: 'failure', created_at: '2026-08-14T13:02:00Z' }),
     ];
 
-    expect(relevantProductionGateRuns(runs, sha, cutoff).map((run) => [run.status, run.conclusion])).toEqual([
+    expect(relevantProductionGateRuns(runs, sha, cutoff).map((run: { status?: string; conclusion?: string | null }) => [run.status, run.conclusion])).toEqual([
       ['queued', null],
       ['completed', 'failure'],
     ]);
