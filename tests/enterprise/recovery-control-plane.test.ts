@@ -10,11 +10,31 @@ describe('enterprise recovery control plane', () => {
   it('runs only for exact protected main with read-only repository permissions', () => {
     expect(workflow).toContain('branches: [main]');
     expect(workflow).toContain('workflow_dispatch:');
-    expect(workflow).toMatch(/jobs:\s*\n\s+recovery:[\s\S]*?environment:\s*\n\s+name: supabase-production-migration-dry-run/);
+    expect(workflow).toMatch(/recovery:[\s\S]*?environment:\s*\n\s+name: supabase-production-migration-dry-run/);
     expect(workflow).toContain('contents: read');
     expect(workflow).toContain('persist-credentials: false');
     expect(workflow).toContain('test "$GITHUB_REF_NAME" = \'main\'');
     expect(workflow).toContain('git ls-remote origin refs/heads/main');
+  });
+
+  it('verifies live environment governance before the job can load the protected source secret', () => {
+    const governanceJob = workflow.indexOf('  environment-governance:');
+    const recoveryJob = workflow.indexOf('  recovery:');
+    expect(governanceJob).toBeGreaterThan(-1);
+    expect(recoveryJob).toBeGreaterThan(governanceJob);
+
+    const preflight = workflow.slice(governanceJob, recoveryJob);
+    expect(preflight).toContain('Verify recovery environment governance before protected secrets');
+    expect(preflight).toContain('GITHUB_TOKEN: ${{ github.token }}');
+    expect(preflight).toContain('GITHUB_ENVIRONMENT_NAME: supabase-production-migration-dry-run');
+    expect(preflight).toContain("REQUIRE_PROTECTED_BRANCHES: 'true'");
+    expect(preflight).toContain('node scripts/security/check-github-environment-governance.mjs');
+    expect(preflight).not.toMatch(/secrets\./);
+
+    const protectedBoundary = workflow.slice(recoveryJob);
+    expect(protectedBoundary).toContain('needs: environment-governance');
+    expect(protectedBoundary).toContain('name: supabase-production-migration-dry-run');
+    expect(protectedBoundary).toContain('RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}');
   });
 
   it('reuses the protected Supabase source and provisions a disposable isolated target', () => {
