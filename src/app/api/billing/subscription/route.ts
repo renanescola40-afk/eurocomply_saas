@@ -91,13 +91,6 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'live_stripe_subscription_not_found' }, { status: 409 });
     }
 
-    // The existing provider implementation updates the Price immediately even
-    // with proration disabled. Until the scheduled-at-period-end transition is
-    // wired, fail closed rather than reducing paid entitlements early.
-    if (parsed.data.action === 'downgrade') {
-      return noStoreJson({ error: 'billing_downgrade_schedule_required' }, { status: 409 });
-    }
-
     const idempotency = readBillingIdempotencyKey(request, {
       scope: 'subscription',
       organizationId: organization.id,
