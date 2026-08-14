@@ -93,10 +93,11 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(script).toContain("export const ENTERPRISE_PRODUCTION_GATE_PATH = 'enterprise-production-gate.yml';");
     expect(script).toContain('productionGateAlreadyCoversEvidence');
     expect(script).toContain('await dispatchProductionGate(repository);');
-    expect(script).toContain('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs);');
+    expect(script).toContain('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs, {');
+    expect(script).toContain('refreshAlreadyDispatched: productionGateRefreshDispatched');
     expect(script).toContain('No terminal Enterprise Production Gate evaluation covers the latest material producer state');
     const gateDispatch = script.indexOf('await dispatchProductionGate(repository);');
-    const gateWait = script.indexOf('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs);');
+    const gateWait = script.indexOf('await waitForTerminalProductionGate(repository, targetSha, upstreamCutoffMs, {');
     const scorecardDispatch = script.indexOf('await dispatchScorecard(repository);');
     expect(gateDispatch).toBeGreaterThan(-1);
     expect(gateWait).toBeGreaterThan(gateDispatch);
