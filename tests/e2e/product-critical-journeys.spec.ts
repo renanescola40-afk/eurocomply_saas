@@ -16,6 +16,15 @@ const localizedJourney = [
   { locale: 'de', pricing: /Starten Sie mit KI-Readiness/i, checkout: /Aktivieren Sie Ihren RISCK COMPLY Workspace/i, login: /Bei RISCK COMPLY anmelden/i, signup: /RISCK COMPLY Konto erstellen/i },
 ] as const;
 
+const commercialRoutes = ['/pt/pricing', '/pt/checkout?plan=professional', '/pt/login', '/pt/signup?plan=professional'] as const;
+
+async function expectNoDocumentOverflow(page: Page, route: string, label: string) {
+  await page.goto(route, { waitUntil: 'domcontentloaded' });
+  await expectHealthyDocument(page, `${label} ${route}`);
+  const overflowsViewport = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+  expect(overflowsViewport, `${route} should not overflow the ${label} viewport`).toBe(false);
+}
+
 test.describe('public product journey', () => {
   test('landing and pricing production CTAs stay routable and localized', async ({ page }) => {
     await page.goto('/pt', { waitUntil: 'domcontentloaded' });
@@ -64,13 +73,17 @@ test.describe('public product journey', () => {
 
   test('commercial surfaces do not create document-level horizontal overflow on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
+    for (const route of commercialRoutes) await expectNoDocumentOverflow(page, route, 'mobile');
+  });
 
-    for (const route of ['/pt/pricing', '/pt/checkout?plan=professional', '/pt/login', '/pt/signup?plan=professional']) {
-      await page.goto(route, { waitUntil: 'domcontentloaded' });
-      await expectHealthyDocument(page, `mobile ${route}`);
-      const overflowsViewport = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
-      expect(overflowsViewport, `${route} should not overflow the mobile viewport`).toBe(false);
-    }
+  test('commercial surfaces remain stable at tablet width', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    for (const route of commercialRoutes) await expectNoDocumentOverflow(page, route, 'tablet');
+  });
+
+  test('commercial surfaces remain stable on desktop', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    for (const route of commercialRoutes) await expectNoDocumentOverflow(page, route, 'desktop');
   });
 
   test('signup route is reachable from the production landing', async ({ page }) => {
