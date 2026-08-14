@@ -1,6 +1,22 @@
 import { basename } from 'node:path';
 
 const SAFE_COMMANDS = new Set(['supabase', 'docker', 'psql', 'pg_dump', 'pg_restore']);
+const SAFE_RESTORE_FILES = new Set([
+  'production-roles.sql',
+  'production-schema.sql',
+  'production-data.sql',
+]);
+const SAFE_OBJECT_KINDS = new Set([
+  'relation',
+  'table',
+  'schema',
+  'type',
+  'function',
+  'sequence',
+  'extension',
+  'role',
+]);
+const SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_$]*(?:\.[A-Za-z_][A-Za-z0-9_$]*)?$/;
 
 function text(value) {
   if (value == null) return '';
@@ -13,6 +29,12 @@ function combinedErrorText(error) {
     .map(text)
     .join('\n')
     .toLowerCase();
+}
+
+function processOutput(error) {
+  return [error?.stderr, error?.stdout]
+    .map(text)
+    .join('\n');
 }
 
 export function classifyRecoveryCommandCategory(error) {
@@ -46,17 +68,61 @@ export function classifyRecoveryCommandCategory(error) {
   return 'command_failed';
 }
 
+function extractRestoreSourceFile(error) {
+  const value = processOutput(error);
+  const match = value.match(/psql:\/tmp\/(production-(?:roles|schema|data)\.sql):\d+:/i);
+  if (!match) return null;
+  const filename = match[1].toLowerCase();
+  return SAFE_RESTORE_FILES.has(filename) ? filename : null;
+}
+
+function normalizeDatabaseIdentifier(value) {
+  const normalized = String(value ?? '').trim();
+  return SAFE_IDENTIFIER.test(normalized) ? normalized : null;
+}
+
+function extractMissingDatabaseObject(error) {
+  const value = processOutput(error);
+
+  const quoted = value.match(
+    /\b(relation|table|schema|type|sequence|extension|role)\s+"([A-Za-z_][A-Za-z0-9_$]*(?:\.[A-Za-z_][A-Za-z0-9_$]*)?)"\s+does not exist/i,
+  );
+  if (quoted) {
+    const kind = quoted[1].toLowerCase();
+    const identifier = normalizeDatabaseIdentifier(quoted[2]);
+    if (SAFE_OBJECT_KINDS.has(kind) && identifier) return { kind, identifier };
+  }
+
+  const functionMatch = value.match(
+    /\bfunction\s+([A-Za-z_][A-Za-z0-9_$]*(?:\.[A-Za-z_][A-Za-z0-9_$]*)?)\s*\([^\r\n]*?\)\s+does not exist/i,
+  );
+  if (functionMatch) {
+    const identifier = normalizeDatabaseIdentifier(functionMatch[1]);
+    if (identifier) return { kind: 'function', identifier };
+  }
+
+  return null;
+}
+
 export function buildRecoveryCommandDiagnostic({ error, phase, command }) {
   const commandFamily = SAFE_COMMANDS.has(basename(String(command ?? '')))
     ? basename(String(command))
     : 'unknown';
+  const category = classifyRecoveryCommandCategory(error);
+  const sourceFile = category === 'database_object_missing' ? extractRestoreSourceFile(error) : null;
+  const missingObject = category === 'database_object_missing' ? extractMissingDatabaseObject(error) : null;
 
   return {
     phase: typeof phase === 'string' && phase.length > 0 ? phase : 'unknown',
     commandFamily,
-    category: classifyRecoveryCommandCategory(error),
+    category,
     exitStatus: Number.isInteger(error?.status) ? error.status : null,
     signal: typeof error?.signal === 'string' && error.signal.length > 0 ? error.signal : null,
     timedOut: error?.code === 'ETIMEDOUT' || error?.killed === true,
+    ...(sourceFile ? { sourceFile } : {}),
+    ...(missingObject ? {
+      databaseObjectKind: missingObject.kind,
+      databaseObjectIdentifier: missingObject.identifier,
+    } : {}),
   };
 }
