@@ -27,7 +27,6 @@ const billingCatalogName = '20260727193000_enterprise_billing_catalog.sql';
 const billingCatalogPath = join(root, 'supabase', 'migrations', billingCatalogName);
 const addOnForwardName = '20260813124224_reconcile_organization_add_ons.sql';
 const addOnForwardPath = join(root, 'supabase', 'migrations', addOnForwardName);
-const addOnForwardHeldPath = `${addOnForwardPath}.dependency-reordered`;
 const addOnForwardReplayName = '20260727192950_reconcile_organization_add_ons.sql';
 const addOnForwardReplayPath = join(root, 'supabase', 'migrations', addOnForwardReplayName);
 const replayContractPath = join(root, 'scripts', 'recovery', 'run-ephemeral-project-schema-replay.mjs');
@@ -169,11 +168,8 @@ function validateAddOnReplayOrderBoundary() {
   ]) {
     if (!existsSync(path)) fail(`Missing ${label}: ${path}`);
   }
-  for (const [path, label] of [
-    [addOnForwardHeldPath, 'organization add-on forward hold path'],
-    [addOnForwardReplayPath, 'organization add-on forward replay path'],
-  ]) {
-    if (existsSync(path)) fail(`${label} already exists: ${path}`);
+  if (existsSync(addOnForwardReplayPath)) {
+    fail(`Organization add-on forward replay path already exists: ${addOnForwardReplayPath}`);
   }
 
   const billingCatalogSql = readFileSync(billingCatalogPath, 'utf8');
@@ -265,9 +261,8 @@ function restoreBreakGlassHistoricalMigration(held) {
 }
 
 function stageAddOnForwardReplayOrder() {
-  renameSync(addOnForwardPath, addOnForwardHeldPath);
-  copyFileSync(addOnForwardHeldPath, addOnForwardReplayPath);
-  if (!readFileSync(addOnForwardHeldPath).equals(readFileSync(addOnForwardReplayPath))) {
+  copyFileSync(addOnForwardPath, addOnForwardReplayPath);
+  if (!readFileSync(addOnForwardPath).equals(readFileSync(addOnForwardReplayPath))) {
     fail('Organization add-on forward replay byte integrity mismatch');
   }
   return true;
@@ -276,10 +271,6 @@ function stageAddOnForwardReplayOrder() {
 function restoreAddOnForwardReplayOrder(staged) {
   if (!staged) return;
   rmSync(addOnForwardReplayPath, { force: true });
-  if (!existsSync(addOnForwardHeldPath) || existsSync(addOnForwardPath)) {
-    fail('Organization add-on forward replay hold state drifted before restore');
-  }
-  renameSync(addOnForwardHeldPath, addOnForwardPath);
 }
 
 function restoreHistoricalBytes(items) {
@@ -342,7 +333,7 @@ function main() {
   appendGithubEnv('RECOVERY_EPHEMERAL_BREAK_GLASS_UNAPPLIED_EXCLUDED_FILE_COUNT', '1');
   appendGithubEnv('RECOVERY_EPHEMERAL_ADD_ON_FORWARD_REORDERED_FILE_COUNT', '1');
   process.stdout.write(
-    `Reviewed disposable schema boundary v2 preserved ${blockedRules.map((rule) => rule.id).join(', ')} as split-review blocked, held ${derivedRules.map((rule) => rule.id).join(', ')} behind reviewed prerequisites, excluded ${breakGlassHistoricalName} under its forward-reconciliation decision, replayed ${addOnForwardName} immediately before ${billingCatalogName}, and restored canonical historical bytes.\n`,
+    `Reviewed disposable schema boundary v2 preserved ${blockedRules.map((rule) => rule.id).join(', ')} as split-review blocked, held ${derivedRules.map((rule) => rule.id).join(', ')} behind reviewed prerequisites, excluded ${breakGlassHistoricalName} under its forward-reconciliation decision, replayed ${addOnForwardName} immediately before ${billingCatalogName} while retaining its canonical path, and restored canonical historical bytes.\n`,
   );
 }
 
