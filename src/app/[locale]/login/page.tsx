@@ -3,10 +3,12 @@
 import { Suspense, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+
 import { EnterpriseSsoLogin } from '@/components/auth/enterprise-sso-login';
 import { useAuth } from '@/hooks/useAuth';
-import { getBillingPlan } from '@/lib/billing/plans';
 import { normalizePublicAuthErrorCode, type PublicAuthErrorCode } from '@/lib/auth/public-errors';
+import { getBillingPlan } from '@/lib/billing/plans';
+import { getCommercialSurfaceCopy } from '@/lib/i18n/commercial-surface-copy';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
 const publicErrors = {
@@ -17,7 +19,7 @@ const publicErrors = {
   enterprise_sso_connection_not_found: 'Your organization SSO connection is not available. Contact your administrator.',
   enterprise_sso_not_entitled: 'Enterprise SSO is not active for this organization.',
   enterprise_sso_preprovisioning_required: 'Your account must be provisioned by your organization before signing in.',
-  enterprise_sso_capacity_reached: 'Your organization has reached its licensed user capacity. Contact an administrator.',
+  enterprise_sso_capacity_reached: 'Your organization has reached its licensed user capacity. Contact your administrator.',
   enterprise_sso_access_denied: 'Enterprise SSO access was denied for this account.',
   enterprise_sso_unavailable: 'Enterprise SSO is temporarily unavailable. Try again later.',
 } satisfies Record<PublicAuthErrorCode, string>;
@@ -43,44 +45,6 @@ function signUpHref(locale: string, planId: string | null, nextPath: string) {
   return `/${locale}/signup?${params.toString()}`;
 }
 
-function copy(locale: Locale) {
-  return locale === 'pt'
-    ? {
-        title: 'Entrar na RISCK COMPLY',
-        subtitle: 'Entre com Google, email profissional ou SSO Enterprise.',
-        google: 'Continuar com Google',
-        divider: 'ou entre com email',
-        email: 'Email profissional',
-        password: 'Senha',
-        forgot: 'Esqueceu a senha?',
-        submit: 'Entrar com segurança',
-        loading: 'A entrar...',
-        createPrompt: 'Ainda não tem conta?',
-        create: 'Criar conta',
-        authLoading: 'A autenticação ainda está a carregar. Tente novamente dentro de alguns segundos.',
-        failed: 'Não foi possível entrar. Verifique os dados e tente novamente.',
-        googleFailed: 'Não foi possível iniciar o login com Google. Tente novamente.',
-        accessNote: 'Contas novas concluem o onboarding e o pagamento seguro no Stripe antes de aceder ao SaaS.',
-      }
-    : {
-        title: 'Sign in to RISCK COMPLY',
-        subtitle: 'Continue with Google, work email or Enterprise SSO.',
-        google: 'Continue with Google',
-        divider: 'or sign in with email',
-        email: 'Work email',
-        password: 'Password',
-        forgot: 'Forgot your password?',
-        submit: 'Sign in securely',
-        loading: 'Signing in...',
-        createPrompt: 'No account yet?',
-        create: 'Create account',
-        authLoading: 'Authentication is still loading. Please try again in a moment.',
-        failed: 'Could not sign in. Check your details and try again.',
-        googleFailed: 'Could not start Google sign-in. Please try again.',
-        accessNote: 'New accounts complete onboarding and secure Stripe payment before accessing the SaaS.',
-      };
-}
-
 function LoginContent() {
   const params = useParams();
   const router = useRouter();
@@ -91,7 +55,7 @@ function LoginContent() {
   const afterSignInUrl = safeNext(searchParams.get('next'), locale, planId);
   const createAccountUrl = signUpHref(locale, planId, afterSignInUrl);
   const publicErrorCode = searchParams.get('error') ? normalizePublicAuthErrorCode(searchParams.get('error')) : null;
-  const text = copy(locale);
+  const text = getCommercialSurfaceCopy(locale).login;
   const { loading, signInWithEmail, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [secret, setSecret] = useState('');
@@ -135,12 +99,12 @@ function LoginContent() {
     <main className="min-h-screen overflow-hidden bg-[#050505] text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,.16),transparent_34rem),radial-gradient(circle_at_top_right,rgba(34,197,94,.1),transparent_30rem)]" />
       <div className="relative mx-auto flex min-h-screen max-w-6xl items-center justify-center px-4 py-10 sm:px-6 lg:px-8">
-        <section className="grid w-full gap-8 rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 shadow-2xl shadow-black/40 backdrop-blur md:grid-cols-[1fr_0.9fr] md:p-8">
+        <section className="grid w-full gap-8 rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 shadow-2xl shadow-black/40 backdrop-blur md:grid-cols-[1fr_0.9fr] md:p-8" aria-labelledby="login-title">
           <div className="flex flex-col justify-between rounded-[1.5rem] border border-white/10 bg-black/35 p-6">
             <div>
-              <Link href={`/${locale}`} className="text-sm font-semibold uppercase tracking-[0.28em] text-cyan-200/70">RISCK COMPLY</Link>
-              <div className="mt-10 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">Secure workspace access</div>
-              <h1 className="mt-5 text-4xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">{text.title}</h1>
+              <Link href={`/${locale}`} className="rounded-md text-sm font-semibold uppercase tracking-[0.28em] text-cyan-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">RISCK COMPLY</Link>
+              <div className="mt-10 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">{text.badge}</div>
+              <h1 id="login-title" className="mt-5 text-4xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">{text.title}</h1>
               <p className="mt-4 max-w-md text-base leading-7 text-white/65">{text.subtitle}</p>
             </div>
             <div className="mt-10 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.07] p-4 text-sm leading-6 text-cyan-50/75">{text.accessNote}</div>
@@ -148,16 +112,16 @@ function LoginContent() {
 
           <div className="rounded-[1.5rem] border border-white/10 bg-[#080b12] p-6">
             {error ? <div className="mb-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100" role="alert">{error}</div> : null}
-            <button type="button" onClick={handleProvider} disabled={busy || loading} className="w-full rounded-full border border-white/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.google}</button>
+            <button type="button" onClick={handleProvider} disabled={busy || loading} className="w-full rounded-full border border-white/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.google}</button>
             <EnterpriseSsoLogin locale={locale} next={afterSignInUrl} />
             <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-white/35"><span className="h-px flex-1 bg-white/10" /> {text.divider} <span className="h-px flex-1 bg-white/10" /></div>
             <form className="space-y-4" onSubmit={handleSubmit}>
-              <label className="block text-sm font-medium text-white/70">{text.email}<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-200/50" /></label>
-              <label className="block text-sm font-medium text-white/70">{text.password}<input value={secret} onChange={(event) => setSecret(event.target.value)} type="password" autoComplete="current-password" required className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-200/50" /></label>
-              <div className="flex justify-end"><Link href={`/${locale}/recuperar-senha`} className="text-sm font-semibold text-cyan-200 hover:text-cyan-100">{text.forgot}</Link></div>
-              <button type="submit" disabled={busy || loading} className="w-full rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.submit}</button>
+              <label className="block text-sm font-medium text-white/70">{text.email}<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-200/50 focus-visible:ring-2 focus-visible:ring-cyan-200/40" /></label>
+              <label className="block text-sm font-medium text-white/70">{text.password}<input value={secret} onChange={(event) => setSecret(event.target.value)} type="password" autoComplete="current-password" required className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-200/50 focus-visible:ring-2 focus-visible:ring-cyan-200/40" /></label>
+              <div className="flex justify-end"><Link href={`/${locale}/recuperar-senha`} className="rounded-md text-sm font-semibold text-cyan-200 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">{text.forgot}</Link></div>
+              <button type="submit" disabled={busy || loading} className="w-full rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.submit}</button>
             </form>
-            <p className="mt-6 text-center text-sm text-white/55">{text.createPrompt}{' '}<Link href={createAccountUrl} className="font-semibold text-cyan-200 hover:text-cyan-100">{text.create}</Link></p>
+            <p className="mt-6 text-center text-sm text-white/55">{text.createPrompt}{' '}<Link href={createAccountUrl} className="rounded-md font-semibold text-cyan-200 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">{text.create}</Link></p>
           </div>
         </section>
       </div>
@@ -167,7 +131,7 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen bg-[#050505]" />}>
+    <Suspense fallback={<main className="min-h-screen bg-[#050505]" aria-busy="true" />}>
       <LoginContent />
     </Suspense>
   );
