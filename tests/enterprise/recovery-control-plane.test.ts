@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/enterprise-recovery-drill.yml', 'utf8');
 const backupRestore = readFileSync('scripts/recovery/run-backup-restore-exercise.mjs', 'utf8');
+const extensionParity = readFileSync('scripts/recovery/recovery-extension-parity.mjs', 'utf8');
 const evidenceValidator = readFileSync('scripts/recovery/check-recovery-evidence.mjs', 'utf8');
 
 describe('enterprise recovery control plane', () => {
@@ -38,6 +39,20 @@ describe('enterprise recovery control plane', () => {
     expect(backupRestore).toContain('checks.rlsAfterRestore');
     expect(evidenceValidator).toContain("restore.schema === 'risck-comply.backup-restore-evidence.v2'");
     expect(evidenceValidator).toContain("mode === 'full' || mode === 'production-rollback'");
+  });
+
+  it('reconciles source extensions only on the disposable restore target before schema restore', () => {
+    const parityIndex = backupRestore.indexOf("failurePhase = 'extension_parity'");
+    const restoreIndex = backupRestore.indexOf("failurePhase = 'isolated_restore'");
+    expect(parityIndex).toBeGreaterThan(-1);
+    expect(restoreIndex).toBeGreaterThan(parityIndex);
+    expect(backupRestore).toContain('planExtensionParity(sourceExtensions, targetExtensions, availableExtensions)');
+    expect(backupRestore).toContain('checks.extensionParity = extensionParitySatisfied');
+    expect(backupRestore).toContain("throw new Error('recovery_target_extension_unavailable')");
+    expect(backupRestore).toContain("throw new Error('recovery_target_extension_schema_mismatch')");
+    expect(backupRestore).toContain('extensionNamesStored: false');
+    expect(extensionParity).toContain('create extension if not exists');
+    expect(extensionParity).toContain('quotePgIdentifier');
   });
 
   it('never manufactures rollback credit from the automatic backup restore drill', () => {
