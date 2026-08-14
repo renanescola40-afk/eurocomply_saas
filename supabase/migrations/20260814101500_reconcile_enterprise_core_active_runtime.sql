@@ -561,7 +561,7 @@ begin
       ('subscriptions', 'rls_subscriptions_delete_backend_only'),
       ('notifications', 'rls_notifications_select_recipient'),
       ('notifications', 'rls_notifications_insert_backend_only'),
-      ('monitoring_preferences', 'rls_monitoring_preferences_select_member_or_owner'),
+      ('monitoring_preferences', 'rls_monitoring_preferences_select_self_or_admin'),
       ('monitoring_preferences', 'rls_monitoring_preferences_update_self_or_admin'),
       ('onboarding_activation_runs', 'rls_onboarding_activation_runs_select_member'),
       ('onboarding_activation_runs', 'rls_onboarding_activation_runs_insert_writer'),
