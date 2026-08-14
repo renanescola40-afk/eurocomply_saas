@@ -15,6 +15,9 @@ The authoritative selection is `config/supabase-forward-reconciliation.json` and
 - `20260813200000_reconcile_subscription_schema_defaults.sql`
 - `20260813201500_reconcile_controlled_document_storage.sql`
 - `20260813201600_force_tasks_rls.sql`
+- `20260813234000_reconcile_enterprise_break_glass_governance.sql`
+
+The Break-Glass reconciliation is the canonical forward runtime identity for the schema effect described in `docs/security/decisions/2026-08-13-enterprise-break-glass-unapplied-history.md`. The historical `20260727160000_enterprise_break_glass_governance.sql` file remains unchanged and is not treated as applied production history. Disposable project replay may hold that historical file only behind the reviewed schema-effect boundary and must restore its repository bytes afterward.
 
 The control plane compiles the exact Git SHA, migration filenames, migration versions, byte sizes and SHA-256 digests into one immutable selection digest.
 
@@ -47,7 +50,7 @@ The workflow is designed to:
 4. restore the production database into a disposable runner-local Supabase/PostgreSQL target;
 5. verify each selected migration's SHA-256 before applying it to the isolated restore;
 6. apply only those selected files to the isolated target;
-7. run `scripts/supabase/verify-forward-reconciliation-postconditions.sql` against the isolated target;
+7. run `scripts/supabase/verify-forward-reconciliation-postconditions.sql` against the isolated target, including Break-Glass composite tenant keys/FKs, RLS/FORCE RLS, browser ACL denial and expiry-function security;
 8. emit a redacted attestation that explicitly records `productionWritePerformed=false`;
 9. destroy the disposable database.
 
