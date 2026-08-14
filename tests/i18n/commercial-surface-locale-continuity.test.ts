@@ -19,6 +19,7 @@ const upgradeCard = readFileSync(join(process.cwd(), 'src/components/billing/upg
 const raciPage = readFileSync(join(process.cwd(), 'src/app/[locale]/raci/page.tsx'), 'utf8');
 const approvalsPage = readFileSync(join(process.cwd(), 'src/app/[locale]/aprovacoes/page.tsx'), 'utf8');
 const executiveReportsPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/reports-governance/page.tsx'), 'utf8');
+const regulatoryJournalPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/reports-governance/news/page.tsx'), 'utf8');
 
 describe('commercial surface locale continuity', () => {
   it('defines complete purchase/auth/consent copy for every configured locale', () => {
@@ -134,6 +135,20 @@ describe('commercial surface locale continuity', () => {
     }
   });
 
+  it('localizes regulatory journal chrome without rewriting stored editorial intelligence', () => {
+    expect(regulatoryJournalPage).toContain('const journalCopy: Record<Locale, JournalCopy>');
+    expect(regulatoryJournalPage).toContain("es: {");
+    expect(regulatoryJournalPage).toContain("fr: {");
+    expect(regulatoryJournalPage).toContain("it: {");
+    expect(regulatoryJournalPage).toContain("de: {");
+    expect(regulatoryJournalPage).toContain('{copy.premiumPreview}');
+    expect(regulatoryJournalPage).toContain('{copy.empty}');
+    expect(regulatoryJournalPage).toContain('{item.title}');
+    expect(regulatoryJournalPage).toContain('{item.articleParagraphs[0]}');
+    expect(regulatoryJournalPage).toContain('{item.recommendedActions.map');
+    expect(regulatoryJournalPage).not.toContain('Matéria premium em preview. Ative Notícias Premium para ver análise completa');
+  });
+
   it('preserves keyboard focus treatment on purchase, auth, onboarding, AI inventory, trust and upgrade controls', () => {
     expect(pricingPage).toContain('focus-visible:ring-2');
     expect(checkoutPage).toContain('focus-visible:ring-2');
@@ -143,5 +158,6 @@ describe('commercial surface locale continuity', () => {
     expect(aiSystemsPage).toContain('focus-visible:ring-2');
     expect(trustComponent).toContain('focus-visible:ring-2');
     expect(upgradeCard).toContain('focus-visible:ring-2');
+    expect(regulatoryJournalPage).toContain('focus-visible:ring-2');
   });
 });
