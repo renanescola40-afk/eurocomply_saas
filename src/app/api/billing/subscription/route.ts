@@ -1,8 +1,13 @@
 import { z } from 'zod';
 
 import { readBoundedJsonRequest } from '@/lib/security/validate';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { readBillingIdempotencyKey } from '@/server/billing/idempotency';
 import { isSelfServePlan, normalizeBillingPlanId } from '@/server/billing/plans';
+import {
+  getAuthoritativeSignedContractPlan,
+  hasProcessedLiveStripeSubscriptionAuthority,
+} from '@/server/billing/subscription-authority';
 import { isBillingLifecycleRequestError, mutateSubscriptionLifecycle } from '@/server/billing/subscription-lifecycle';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreJson } from '@/server/security/no-store';
@@ -16,6 +21,32 @@ const schema = z.object({
   interval: z.enum(['month', 'year', 'monthly', 'annual']).optional(),
   addOns: z.array(z.object({ slug: z.string().trim().min(1).max(80), quantity: z.number().int().min(1).max(10000).optional() })).max(25).optional(),
 });
+
+async function getLiveSubscriptionBinding(organizationId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select('stripe_customer_id,stripe_subscription_id,status')
+    .eq('organization_id', organizationId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle<{
+      stripe_customer_id: string | null;
+      stripe_subscription_id: string | null;
+      status: string | null;
+    }>();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  const authoritative = await hasProcessedLiveStripeSubscriptionAuthority({
+    organizationId,
+    stripeCustomerId: data.stripe_customer_id,
+    stripeSubscriptionId: data.stripe_subscription_id,
+  });
+
+  return authoritative ? data : null;
+}
 
 export async function POST(request: Request) {
   try {
@@ -49,6 +80,23 @@ export async function POST(request: Request) {
       && (!plan || !isSelfServePlan(plan))
     ) {
       return noStoreJson({ error: 'sales_assisted_plan_required' }, { status: 400 });
+    }
+
+    if (await getAuthoritativeSignedContractPlan(organization.id)) {
+      return noStoreJson({ error: 'contract_managed_billing' }, { status: 409 });
+    }
+
+    const liveBinding = await getLiveSubscriptionBinding(organization.id);
+    if (!liveBinding) {
+      return noStoreJson({ error: 'live_stripe_subscription_not_found' }, { status: 409 });
+    }
+
+    // Downgrades must preserve the already-paid entitlement window. The current
+    // direct update implementation changes the Stripe Price immediately even with
+    // proration disabled, so it is intentionally blocked until a Subscription
+    // Schedule or correctly configured Customer Portal applies it at period end.
+    if (parsed.data.action === 'downgrade') {
+      return noStoreJson({ error: 'billing_downgrade_schedule_required' }, { status: 409 });
     }
 
     const idempotency = readBillingIdempotencyKey(request, {
