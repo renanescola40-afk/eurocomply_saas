@@ -1,11 +1,11 @@
+begin;
+
 -- Repair and harden the live RLS validation inventory helper.
 --
 -- The original migration is intentionally re-applied under a newer timestamp so
 -- target projects with migration drift receive the helper on the next migration
 -- deployment. This function exposes schema-security metadata and must remain
 -- callable only by the Supabase service role used by the controlled proof runner.
-
-begin;
 
 create or replace function public.eurocomply_live_rls_inventory(table_names text[])
 returns table (
