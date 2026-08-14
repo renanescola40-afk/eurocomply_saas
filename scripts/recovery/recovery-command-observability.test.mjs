@@ -94,6 +94,16 @@ test('retains only allowlisted public database scopes and never object identifie
   assert.equal(JSON.stringify(unknownDiagnostic).includes('private_table'), false);
 });
 
+test('does not retain missing object metadata outside isolated restore', () => {
+  const error = errorWith('ERROR: relation "auth.private_identity_123" does not exist');
+  const diagnostic = buildRecoveryCommandDiagnostic({ error, phase: 'schema_dump', command: 'supabase' });
+  assert.equal(diagnostic.category, 'database_object_missing');
+  assert.equal(diagnostic.restoreStage, null);
+  assert.equal(diagnostic.missingObjectKind, null);
+  assert.equal(diagnostic.missingObjectScope, null);
+  assert.equal(JSON.stringify(diagnostic).includes('private_identity_123'), false);
+});
+
 test('classifies missing object kinds without retaining identifiers', () => {
   const cases = [
     ['schema', 'ERROR: schema "tenant_secret" does not exist'],
