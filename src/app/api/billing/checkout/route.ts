@@ -1,14 +1,20 @@
 import Stripe from 'stripe';
 import { z } from 'zod';
 
+import { getBillingEntitlements } from '@/lib/billing/plans';
 import { reportError } from '@/lib/observability/report-error';
-import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { writeAuditLog } from '@/lib/security/audit-log';
+import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
 import { deriveStripeIdempotencyKey, readBillingIdempotencyKey, type BillingIdempotencyContext } from '@/server/billing/idempotency';
-import { getStripeClient } from '@/server/billing/stripe';
 import { getStripePriceId, isSelfServePlan, normalizeBillingPlanId } from '@/server/billing/plans';
+import { getStripeClient } from '@/server/billing/stripe';
+import {
+  getAuthoritativeSignedContractPlan,
+  hasProcessedLiveStripeSubscriptionAuthority,
+} from '@/server/billing/subscription-authority';
+import { mutateSubscriptionLifecycle } from '@/server/billing/subscription-lifecycle';
 import {
   classifyProviderFailure,
   providerFailureContext,
@@ -33,6 +39,12 @@ type BillingBinding = {
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   status: string | null;
+  plan: string | null;
+};
+
+type StripeCustomerBinding = {
+  id: string;
+  created: boolean;
 };
 
 const checkoutBodySchema = z.object({
@@ -56,30 +68,39 @@ function isSafeStripeCheckoutUrl(url: string | null): url is string {
   }
 }
 
+function isStripeResourceMissing(error: unknown) {
+  return Boolean(
+    error
+    && typeof error === 'object'
+    && 'code' in error
+    && (error as { code?: unknown }).code === 'resource_missing',
+  );
+}
+
 async function getOrganizationBillingBinding(organizationId: string): Promise<BillingBinding | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('subscriptions')
-    .select('stripe_customer_id,stripe_subscription_id,status')
+    .select('stripe_customer_id,stripe_subscription_id,status,plan')
     .eq('organization_id', organizationId)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle<BillingBinding>();
 
-  if (error) {
-    throw error;
-  }
-
+  if (error) throw error;
   return data ?? null;
 }
 
-function hasExistingBillingRelationship(binding: BillingBinding | null) {
-  return Boolean(binding?.stripe_customer_id || binding?.stripe_subscription_id || binding?.status);
+async function hasLiveSubscriptionRelationship(organizationId: string, binding: BillingBinding | null) {
+  return hasProcessedLiveStripeSubscriptionAuthority({
+    organizationId,
+    stripeCustomerId: binding?.stripe_customer_id,
+    stripeSubscriptionId: binding?.stripe_subscription_id,
+  });
 }
 
 async function ensureOrganizationStripeCustomer({
   stripe,
-  organizationId,
   organizationName,
   userEmail,
   metadata,
@@ -87,13 +108,12 @@ async function ensureOrganizationStripeCustomer({
   idempotency,
 }: {
   stripe: Stripe;
-  organizationId: string;
   organizationName?: string | null;
   userEmail?: string | null;
   metadata: Record<string, string>;
   existingCustomerId?: string | null;
   idempotency: BillingIdempotencyContext;
-}) {
+}): Promise<StripeCustomerBinding> {
   if (existingCustomerId) {
     try {
       await stripe.customers.update(
@@ -101,9 +121,15 @@ async function ensureOrganizationStripeCustomer({
         { metadata },
         { idempotencyKey: deriveStripeIdempotencyKey(idempotency, 'customer-metadata') },
       );
-      return existingCustomerId;
+      return { id: existingCustomerId, created: false };
     } catch (error) {
-      throw classifyProviderFailure('stripe', 'customer_update', error);
+      // A production database can contain a historical test-mode customer ID.
+      // A live Stripe client reports resource_missing for that precise case.
+      // Only that condition is recoverable; all other provider failures remain
+      // fail-closed.
+      if (!isStripeResourceMissing(error)) {
+        throw classifyProviderFailure('stripe', 'customer_update', error);
+      }
     }
   }
 
@@ -116,10 +142,54 @@ async function ensureOrganizationStripeCustomer({
       },
       { idempotencyKey: deriveStripeIdempotencyKey(idempotency, 'customer-create') },
     );
-    return customer.id;
+    return { id: customer.id, created: true };
   } catch (error) {
     throw classifyProviderFailure('stripe', 'customer_create', error);
   }
+}
+
+async function persistPendingLiveCustomerBinding({
+  stripe,
+  organizationId,
+  customer,
+}: {
+  stripe: Stripe;
+  organizationId: string;
+  customer: StripeCustomerBinding;
+}) {
+  const supabase = createAdminClient();
+  const starterEntitlements = getBillingEntitlements('starter');
+  const { error } = await supabase.from('subscriptions').upsert(
+    {
+      organization_id: organizationId,
+      stripe_customer_id: customer.id,
+      stripe_subscription_id: null,
+      plan: 'starter',
+      tier: 'starter',
+      status: 'incomplete',
+      current_period_end: null,
+      entitlements: starterEntitlements,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'organization_id' },
+  );
+
+  if (!error) return;
+
+  if (customer.created) {
+    try {
+      await stripe.customers.del(customer.id);
+    } catch (cleanupError) {
+      const providerFailure = classifyProviderFailure('stripe', 'customer_cleanup', cleanupError);
+      reportError(providerFailure, {
+        area: 'billing_customer_binding_compensation',
+        organizationId,
+        ...providerFailureContext(providerFailure),
+      });
+    }
+  }
+
+  throw error;
 }
 
 export async function POST(request: Request) {
@@ -163,6 +233,10 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
     }
 
+    if (await getAuthoritativeSignedContractPlan(organization.id)) {
+      return noStoreJson({ error: 'contract_managed_billing' }, { status: 409 });
+    }
+
     const idempotency = readBillingIdempotencyKey(request, {
       scope: 'checkout',
       organizationId: organization.id,
@@ -173,28 +247,64 @@ export async function POST(request: Request) {
     }
 
     const billingBinding = await getOrganizationBillingBinding(organization.id);
-    const isInitialCheckout = !hasExistingBillingRelationship(billingBinding);
-    const stepUp = isInitialCheckout
-      ? null
-      : await requireStepUpForRequest({
+    const hasLiveSubscription = await hasLiveSubscriptionRelationship(organization.id, billingBinding);
+    const stepUp = hasLiveSubscription
+      ? await requireStepUpForRequest({
           request,
           action: 'manage_billing',
           userId: user.id,
           organizationId: organization.id,
-        });
+        })
+      : null;
 
-    if (stepUp && !stepUp.ok) {
-      return stepUp.response;
-    }
+    if (stepUp && !stepUp.ok) return stepUp.response;
 
     const returnBaseUrl = resolveBillingReturnBaseUrl(request.url);
-
     if (!returnBaseUrl.ok) {
       return noStoreJson({ error: 'billing_app_url_unavailable' }, { status: 503 });
     }
 
     const plan = normalizedPlan;
     const locale = normalizeCheckoutLocale(parsedBody.data.locale);
+
+    // Existing live subscribers must never create another Checkout subscription.
+    // Preserve one logical self-serve subscription per organization and route
+    // allowed plan changes through the durable lifecycle mutation path instead.
+    if (hasLiveSubscription) {
+      const currentPlan = normalizeBillingPlanId(billingBinding?.plan);
+      if (!currentPlan || !isSelfServePlan(currentPlan)) {
+        return noStoreJson({ error: 'sales_assisted_plan_required' }, { status: 409 });
+      }
+
+      if (currentPlan === plan) {
+        return noStoreJson({
+          url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations/billing`,
+          idempotencyProtected: true,
+          stepUp: stepUp?.ok ? publicStepUpSummary(stepUp.assessment) : undefined,
+        });
+      }
+
+      if (currentPlan === 'professional' && plan === 'starter') {
+        return noStoreJson({ error: 'billing_downgrade_schedule_required' }, { status: 409 });
+      }
+
+      await mutateSubscriptionLifecycle({
+        action: 'upgrade',
+        organizationId: organization.id,
+        userId: user.id,
+        actorRole: permission.role ?? 'unknown',
+        plan,
+        interval: 'month',
+        idempotency: idempotency.context,
+      });
+
+      return noStoreJson({
+        url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations/billing?billing=updated`,
+        idempotencyProtected: true,
+        stepUp: stepUp?.ok ? publicStepUpSummary(stepUp.assessment) : undefined,
+      });
+    }
+
     const stripe = getStripeClient();
     const priceId = getStripePriceId(plan);
     const organizationName = typeof organization.name === 'string' ? organization.name : null;
@@ -205,13 +315,12 @@ export async function POST(request: Request) {
       userId: user.id,
       plan,
       actor_role: permission.role ?? 'unknown',
-      billing_flow: isInitialCheckout ? 'initial_subscription' : 'existing_billing_change',
-      step_up_action: stepUp?.assessment.action ?? 'not_required_initial_checkout',
-      step_up_verified_at: stepUp?.assessment.verifiedAt ?? '',
+      billing_flow: 'initial_subscription',
+      step_up_action: 'not_required_initial_checkout',
+      step_up_verified_at: '',
     };
-    const stripeCustomerId = await ensureOrganizationStripeCustomer({
+    const customer = await ensureOrganizationStripeCustomer({
       stripe,
-      organizationId: organization.id,
       organizationName,
       userEmail: user.email,
       metadata,
@@ -219,29 +328,30 @@ export async function POST(request: Request) {
       idempotency: idempotency.context,
     });
 
+    // Persist the live customer before redirecting to Stripe. This makes retries
+    // reuse one customer and replaces stale status-only/test-mode identifiers with
+    // a non-entitled pending state until a signed live webhook confirms payment.
+    await persistPendingLiveCustomerBinding({ stripe, organizationId: organization.id, customer });
+
     let session: Stripe.Checkout.Session;
     try {
       session = await stripe.checkout.sessions.create(
         {
           mode: 'subscription',
-          customer: stripeCustomerId,
+          customer: customer.id,
           line_items: [{ price: priceId, quantity: 1 }],
-          success_url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations?checkout=success`,
+          success_url: `${returnBaseUrl.appUrl}/${locale}/checkout/complete?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${returnBaseUrl.appUrl}/${locale}/checkout?plan=${plan}&checkout=cancelled`,
           client_reference_id: organization.id,
           locale,
           metadata,
-          subscription_data: {
-            metadata,
-          },
+          subscription_data: { metadata },
           billing_address_collection: 'required',
           customer_update: {
             address: 'auto',
             name: 'auto',
           },
-          tax_id_collection: {
-            enabled: true,
-          },
+          tax_id_collection: { enabled: true },
           payment_method_collection: 'always',
           allow_promotion_codes: true,
         },
@@ -264,16 +374,16 @@ export async function POST(request: Request) {
       metadata: {
         plan,
         priceId,
-        stripeCustomerId,
+        stripeCustomerId: customer.id,
         actorRole: permission.role ?? 'unknown',
-        billingFlow: isInitialCheckout ? 'initial_subscription' : 'existing_billing_change',
-        stepUpRequired: !isInitialCheckout,
-        stepUpAction: stepUp?.assessment.action ?? null,
-        stepUpVerifiedAt: stepUp?.assessment.verifiedAt ?? null,
+        billingFlow: 'initial_subscription',
+        stepUpRequired: false,
         trustedOriginRequired: true,
         rbacPermission: 'manage_billing',
         stripeCheckoutHost: STRIPE_CHECKOUT_URL_HOST,
         idempotencyProtected: true,
+        liveSubscriptionAuthority: false,
+        pendingCustomerBindingPersisted: true,
       },
     });
 
@@ -301,7 +411,7 @@ export async function POST(request: Request) {
     return noStoreJson({
       url: session.url,
       idempotencyProtected: true,
-      ...(stepUp?.ok ? { stepUp: publicStepUpSummary(stepUp.assessment) } : { stepUpRequired: false }),
+      stepUpRequired: false,
     });
   } catch (error) {
     return secureApiError(error, request);
