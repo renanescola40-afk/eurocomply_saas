@@ -17,6 +17,7 @@ type BillingActionButtonProps = {
   children: ReactNode;
   variant?: 'default' | 'outline';
   className?: string;
+  errorReturnHref?: string;
 };
 
 type ApiJson = Record<string, unknown>;
@@ -31,7 +32,12 @@ type StepUpChallenge = {
   message?: string;
 };
 
-function billingErrorRedirect(locale: string, message: string): never {
+function billingErrorRedirect(locale: string, message: string, errorReturnHref?: string): never {
+  if (errorReturnHref) {
+    window.location.href = errorReturnHref;
+    throw new Error('redirecting_to_billing_error');
+  }
+
   window.location.href = `/${locale}/dashboard/organizations/billing?billing_error=${encodeURIComponent(message)}`;
   throw new Error('redirecting_to_billing_error');
 }
@@ -140,7 +146,7 @@ async function requestBillingAction({
   return { response, json };
 }
 
-export function BillingActionButton({ action, locale, planId, disabled, children, variant = 'default', className }: BillingActionButtonProps) {
+export function BillingActionButton({ action, locale, planId, disabled, children, variant = 'default', className, errorReturnHref }: BillingActionButtonProps) {
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -159,13 +165,13 @@ export function BillingActionButton({ action, locale, planId, disabled, children
       }
 
       if (!response.ok || typeof json.url !== 'string') {
-        billingErrorRedirect(locale, String(json.error ?? 'Billing action could not be completed.'));
+        billingErrorRedirect(locale, String(json.error ?? 'Billing action could not be completed.'), errorReturnHref);
       }
 
       window.location.assign(json.url);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Billing action could not be completed.';
-      billingErrorRedirect(locale, message);
+      billingErrorRedirect(locale, message, errorReturnHref);
     } finally {
       setLoading(false);
     }
