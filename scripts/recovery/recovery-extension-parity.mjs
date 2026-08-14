@@ -139,9 +139,11 @@ export function planExtensionParity(sourceInventory, targetInventory, availableI
 export function extensionParitySatisfied(sourceInventory, targetInventory) {
   const source = normalizeInstalledExtensions(sourceInventory);
   const target = normalizeInstalledExtensions(targetInventory);
-  const targetByName = new Map(target.map((entry) => [entry.name, entry]));
-  return source.every((entry) => {
-    const observed = targetByName.get(entry.name);
-    return observed?.schema === entry.schema && observed.version === entry.version;
+  if (source.length !== target.length) return false;
+  return source.every((entry, index) => {
+    const observed = target[index];
+    return observed?.name === entry.name
+      && observed.schema === entry.schema
+      && observed.version === entry.version;
   });
 }
