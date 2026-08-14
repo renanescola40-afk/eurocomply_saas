@@ -233,8 +233,8 @@ $$;
 revoke all on function public.enforce_vendor_governance_integrity() from public, anon, authenticated;
 grant execute on function public.enforce_vendor_governance_integrity() to service_role;
 
-drop function if exists public.bump_vendor_review_version();
 drop trigger if exists bump_vendor_review_version on public.vendors;
+drop function if exists public.bump_vendor_review_version();
 drop trigger if exists enforce_vendor_actor_scope on public.vendors;
 drop trigger if exists enforce_vendor_governance_integrity on public.vendors;
 create trigger enforce_vendor_governance_integrity
