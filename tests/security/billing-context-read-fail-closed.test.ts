@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 const QUERY_FILE = new URL('../../src/server/queries/billing.ts', import.meta.url);
 
 describe('billing context read failure contract', () => {
-  it('requires the privileged client instead of returning a synthetic starter context', async () => {
+  it('requires the privileged client instead of returning a synthetic paid context', async () => {
     const source = await readFile(QUERY_FILE, 'utf8');
 
     expect(source).toContain("import { createAdminClient } from '@/lib/supabase/admin';");
@@ -33,16 +33,18 @@ describe('billing context read failure contract', () => {
 
     expect(getSubscription).toContain("console.warn('[billing] subscription_lookup_failed'");
     expect(getSubscription).toContain('throw new Error(BILLING_CONTEXT_UNAVAILABLE);');
-    expect(getSubscription).not.toContain('return null;');
   });
 
-  it('preserves tenant-scoped exact counts and conservative inactive-plan behavior', async () => {
+  it('preserves tenant-scoped exact counts and requires live Stripe or signed-contract authority', async () => {
     const source = await readFile(QUERY_FILE, 'utf8');
 
     expect(source).toContain(".select('id', { count: 'exact', head: true })");
     expect(source).toContain(".eq('organization_id', organizationId)");
     expect(source).toContain("const SAFE_DEFAULT_PLAN = 'starter';");
-    expect(source).toContain('hasPaidEntitlementStatus(status)');
+    expect(source).toContain('getAuthoritativeSignedContractPlan(organizationId)');
+    expect(source).toContain('hasProcessedLiveStripeSubscriptionAuthority');
+    expect(source).toContain('const livePaidStatus = liveStripeAuthority && hasPaidEntitlementStatus(subscription?.status);');
+    expect(source).toContain("? 'active'");
     expect(source).toContain('return count ?? 0;');
   });
 });
