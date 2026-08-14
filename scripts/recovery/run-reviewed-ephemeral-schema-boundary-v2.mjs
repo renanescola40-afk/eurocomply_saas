@@ -192,7 +192,7 @@ function validateAddOnReplayOrderBoundary() {
   }
 
   const replayContract = readFileSync(replayContractPath, 'utf8');
-  if (!replayContract.includes("'20260613_organization_add_ons.sql': [")
+  if (!replayContract.includes("'20260613_organization_add_ons.sql': Object.freeze([")
       || !replayContract.includes("'supabase/migrations/20260813124224_reconcile_organization_add_ons.sql'")) {
     fail('Schema replay contract no longer proves canonical add-on schema-effect replacement');
   }
