@@ -6,14 +6,11 @@ on:
       - 'config/supabase-forward-reconciliation.json'
       - 'scripts/supabase/forward-reconciliation-control-plane.mjs'
       - 'scripts/supabase/verify-forward-reconciliation-postconditions.sql'
+      - 'scripts/security/validate-enterprise-integrations-runtime.sql'
+      - 'scripts/security/validate-enterprise-billing-runtime.sql'
+      - 'scripts/security/validate-live-rls-inventory-helper-boundary.sql'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
-      - 'supabase/migrations/20260813175000_optimize_organization_add_ons_rls_initplan.sql'
-      - 'supabase/migrations/20260813194500_reconcile_step_up_challenges_runtime.sql'
-      - 'supabase/migrations/20260813200000_reconcile_subscription_schema_defaults.sql'
-      - 'supabase/migrations/20260813201500_reconcile_controlled_document_storage.sql'
-      - 'supabase/migrations/20260813201600_force_tasks_rls.sql'
-      - 'supabase/migrations/20260813234000_reconcile_enterprise_break_glass_governance.sql'
-      - 'supabase/migrations/20260814101500_reconcile_enterprise_core_active_runtime.sql'
+      - 'supabase/migrations/**'
       - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
       - '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
   workflow_dispatch:
@@ -190,10 +187,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          psql "$RECOVERY_ISOLATED_DATABASE_URL" \
-            --no-psqlrc \
-            --set ON_ERROR_STOP=1 \
-            --file scripts/supabase/verify-forward-reconciliation-postconditions.sql
+          for validator in \
+            scripts/supabase/verify-forward-reconciliation-postconditions.sql \
+            scripts/security/validate-enterprise-integrations-runtime.sql \
+            scripts/security/validate-enterprise-billing-runtime.sql \
+            scripts/security/validate-live-rls-inventory-helper-boundary.sql; do
+            psql "$RECOVERY_ISOLATED_DATABASE_URL" \
+              --no-psqlrc \
+              --set ON_ERROR_STOP=1 \
+              --file "$validator"
+          done
           echo 'FORWARD_RECONCILIATION_POSTCONDITIONS=passed' >> "$GITHUB_ENV"
 
       - name: Seal non-authorizing exact-SHA rehearsal attestation
