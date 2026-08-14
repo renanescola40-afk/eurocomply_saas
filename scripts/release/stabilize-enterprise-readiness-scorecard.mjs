@@ -267,7 +267,6 @@ async function waitForTerminalProductionGate(
   { refreshAlreadyDispatched = false } = {},
 ) {
   let fallbackRefreshAvailable = !refreshAlreadyDispatched;
-  let consecutiveSkippedOnlyPolls = 0;
 
   for (let attempt = 1; attempt <= MAX_GATE_SETTLE_ATTEMPTS; attempt += 1) {
     const runs = await listExactShaRuns(repository, targetSha);
