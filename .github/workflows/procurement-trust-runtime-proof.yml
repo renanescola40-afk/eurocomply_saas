@@ -66,7 +66,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Start exact-SHA disposable Supabase project database
-        run: node scripts/recovery/run-ephemeral-project-schema-replay.mjs
+        run: node scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs
 
       - name: Execute procurement trust proof
         run: node scripts/procurement/run-procurement-trust-runtime-proof.mjs
