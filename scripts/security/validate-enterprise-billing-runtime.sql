@@ -4,7 +4,10 @@ do $proof$
 declare
   billing_rpc oid:=to_regprocedure('public.sync_enterprise_contract_billing_v2_atomic(text,text,uuid,uuid,text,text,text,text,text,boolean,timestamptz,text)');
   lifecycle_rpc oid:=to_regprocedure('public.process_enterprise_contract_lifecycle_v2_atomic(integer)');
-  transition_rpc oid:=to_regprocedure('public.is_valid_enterprise_contract_transition(text,text)');
+  transition_helper oid:=to_regprocedure('public.is_valid_enterprise_contract_transition(text,text)');
+  provision_rpc oid:=to_regprocedure('public.provision_enterprise_contract_atomic(uuid,text,text,bigint,timestamptz,timestamptz,timestamptz,integer,integer,integer,integer,integer,integer,integer,integer,integer,bigint,integer,boolean,boolean,boolean,boolean,boolean,boolean,boolean,uuid)');
+  entitlement_rpc oid:=to_regprocedure('public.update_enterprise_contract_entitlements_atomic(uuid,integer,integer,integer,integer,integer,integer,integer,integer,bigint,integer,boolean,boolean,boolean,boolean,boolean,boolean,boolean,uuid,text)');
+  status_rpc oid:=to_regprocedure('public.transition_enterprise_contract_status_atomic(uuid,text,text,uuid,text)');
   rpc oid;
   billing_columns integer;
 begin
@@ -78,35 +81,36 @@ begin
     raise exception 'Compatibility contracts unexpectedly enable Enterprise integrations';
   end if;
 
-  if billing_rpc is null or lifecycle_rpc is null or transition_rpc is null then
-    raise exception 'Enterprise billing lifecycle RPC set incomplete';
+  if billing_rpc is null or lifecycle_rpc is null or transition_helper is null
+     or provision_rpc is null or entitlement_rpc is null or status_rpc is null then
+    raise exception 'Enterprise contract control/billing RPC set incomplete';
   end if;
 
-  foreach rpc in array array[billing_rpc,lifecycle_rpc] loop
+  foreach rpc in array array[billing_rpc,lifecycle_rpc,provision_rpc,entitlement_rpc,status_rpc] loop
     if has_function_privilege('anon',rpc,'EXECUTE')
        or has_function_privilege('authenticated',rpc,'EXECUTE')
        or not has_function_privilege('service_role',rpc,'EXECUTE') then
-      raise exception 'Enterprise billing lifecycle RPC privileges are not service-role-only';
+      raise exception 'Enterprise contract control/billing RPC privileges are not service-role-only';
     end if;
     if not exists (
       select 1 from pg_proc p
       cross join lateral unnest(coalesce(p.proconfig,array[]::text[])) setting
       where p.oid=rpc and p.prosecdef and setting='search_path=pg_catalog'
     ) then
-      raise exception 'Enterprise billing lifecycle SECURITY DEFINER search_path hardening incomplete';
+      raise exception 'Enterprise contract control/billing SECURITY DEFINER search_path hardening incomplete';
     end if;
   end loop;
 
-  if has_function_privilege('anon',transition_rpc,'EXECUTE')
-     or has_function_privilege('authenticated',transition_rpc,'EXECUTE')
-     or not has_function_privilege('service_role',transition_rpc,'EXECUTE') then
+  if has_function_privilege('anon',transition_helper,'EXECUTE')
+     or has_function_privilege('authenticated',transition_helper,'EXECUTE')
+     or not has_function_privilege('service_role',transition_helper,'EXECUTE') then
     raise exception 'Enterprise contract transition helper privileges are not service-role-only';
   end if;
 
   if not exists (
     select 1 from pg_proc p
     cross join lateral unnest(coalesce(p.proconfig,array[]::text[])) setting
-    where p.oid=transition_rpc and not p.prosecdef and setting='search_path=pg_catalog'
+    where p.oid=transition_helper and not p.prosecdef and setting='search_path=pg_catalog'
   ) then
     raise exception 'Enterprise contract transition helper search_path hardening incomplete';
   end if;
