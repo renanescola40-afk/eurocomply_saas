@@ -97,7 +97,8 @@ for (const fixture of blockedSubscriptionFixtures) {
     test('paid product fails closed and routes to commercial recovery', async ({ page }) => {
       await page.goto('/pt/dashboard/organizations', { waitUntil: 'domcontentloaded' });
       await expect(page).toHaveURL(/\/pt\/(checkout\?plan=|contact\?intent=sales&plan=)/);
-      expect(page.url()).toContain('access=required') || expect(page.url()).toContain('checkout=required');
+      const recoveryUrl = page.url();
+      expect(recoveryUrl.includes('access=required') || recoveryUrl.includes('checkout=required')).toBe(true);
       await expect(page.locator('body')).not.toContainText(/Unhandled Runtime Error|Application error|Stack trace/i);
     });
   });
