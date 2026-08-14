@@ -1,9 +1,20 @@
 #!/usr/bin/env node
 
-const MAX_PROVIDER_RESPONSE_BYTES = 64 * 1024;
+import { readFileSync } from 'node:fs';
 
-function requiredEnv(name, fallbackName) {
-  const value = String(process.env[name] ?? '').trim() || String(process.env[fallbackName] ?? '').trim();
+const MAX_PROVIDER_RESPONSE_BYTES = 64 * 1024;
+const COMMERCIAL_CATALOG_PATH = 'config/billing-commercial-catalog.json';
+const WEBHOOK_CONTRACT_PATH = 'config/stripe-webhook-contract.json';
+const CANONICAL_PUBLIC_PLANS = ['essential', 'professional', 'business'];
+
+function loadJson(path, expectedSchema) {
+  const value = JSON.parse(readFileSync(path, 'utf8'));
+  if (value?.schema !== expectedSchema) throw new Error(`Invalid contract schema: ${path}`);
+  return value;
+}
+
+function requiredEnv(name) {
+  const value = String(process.env[name] ?? '').trim();
   if (!value) throw new Error(`Missing required environment: ${name}`);
   return value;
 }
@@ -49,15 +60,31 @@ async function readBoundedJsonResponse(response) {
   return JSON.parse(text);
 }
 
-const stripeSecretKey = String(process.env.STRIPE_SECRET_KEY ?? '').trim();
-if (!stripeSecretKey) throw new Error('Missing required environment: STRIPE_SECRET_KEY');
+const commercialCatalog = loadJson(COMMERCIAL_CATALOG_PATH, 'risck-comply.billing-commercial-catalog.v1');
+const webhookContract = loadJson(WEBHOOK_CONTRACT_PATH, 'risck-comply.stripe-webhook-contract.v1');
+const stripeSecretKey = requiredEnv('STRIPE_SECRET_KEY');
 
-const starterPriceId = requiredEnv('STRIPE_PRICE_STARTER_MONTHLY', 'STRIPE_PRICE_STARTER');
-const growthPriceId = requiredEnv('STRIPE_PRICE_GROWTH_MONTHLY', 'STRIPE_PRICE_GROWTH');
-const enterprisePriceId = requiredEnv('STRIPE_PRICE_ENTERPRISE_MONTHLY', 'STRIPE_PRICE_ENTERPRISE');
+if (!/^(?:sk|rk)_live_/.test(stripeSecretKey)) {
+  throw new Error('Stripe production provider proof requires a live-mode secret or restricted key');
+}
 
-if (!stripeSecretKey.startsWith('sk_test_')) {
-  throw new Error('Stripe provider proof must run with a test-mode secret key');
+const priceBindings = CANONICAL_PUBLIC_PLANS.map((publicId) => {
+  const plan = commercialCatalog.plans?.[publicId];
+  if (!plan || !Number.isInteger(plan.monthlyPriceCents) || typeof plan.monthlyPriceEnvKey !== 'string') {
+    throw new Error(`Invalid canonical billing plan contract: ${publicId}`);
+  }
+
+  return {
+    publicId,
+    expectedAmountCents: plan.monthlyPriceCents,
+    priceId: requiredEnv(plan.monthlyPriceEnvKey),
+  };
+});
+
+const canonicalWebhookUrl = `${String(webhookContract.productionBaseUrl).replace(/\/$/, '')}${webhookContract.canonicalPath}`;
+const requiredEvents = Array.isArray(webhookContract.requiredEvents) ? webhookContract.requiredEvents : [];
+if (!canonicalWebhookUrl.startsWith('https://') || requiredEvents.length === 0) {
+  throw new Error('Invalid Stripe webhook contract');
 }
 
 const headers = { Authorization: `Bearer ${stripeSecretKey}` };
@@ -72,50 +99,47 @@ async function stripe(path) {
   return readBoundedJsonResponse(response);
 }
 
-const [account, starter, growth, enterprise, webhooks] = await Promise.all([
+const [account, webhooks, ...prices] = await Promise.all([
   stripe('/account'),
-  stripe(`/prices/${encodeURIComponent(starterPriceId)}`),
-  stripe(`/prices/${encodeURIComponent(growthPriceId)}`),
-  stripe(`/prices/${encodeURIComponent(enterprisePriceId)}`),
   stripe('/webhook_endpoints?limit=100'),
+  ...priceBindings.map(({ priceId }) => stripe(`/prices/${encodeURIComponent(priceId)}?expand[]=product`)),
 ]);
 
-const requiredEvents = new Set([
-  'checkout.session.completed',
-  'customer.subscription.created',
-  'customer.subscription.updated',
-  'customer.subscription.deleted',
-  'invoice.payment_failed',
-]);
-
-const enabledEndpoint = Array.isArray(webhooks.data) && webhooks.data.some((endpoint) => {
-  if (endpoint.status !== 'enabled' || !endpoint.url?.startsWith('https://')) return false;
-  const events = new Set(endpoint.enabled_events ?? []);
-  return events.has('*') || [...requiredEvents].every((event) => events.has(event));
-});
-
-function isActiveRecurringTestPrice(price) {
-  return price.livemode === false
-    && price.active === true
-    && price.type === 'recurring'
-    && Boolean(price.recurring?.interval);
+function isCanonicalLivePrice(price, expectedAmountCents) {
+  return price?.livemode === true
+    && price?.active === true
+    && price?.type === 'recurring'
+    && price?.recurring?.interval === 'month'
+    && String(price?.currency ?? '').toLowerCase() === String(commercialCatalog.currency ?? '').toLowerCase()
+    && price?.unit_amount === expectedAmountCents
+    && price?.product?.active === true;
 }
 
+const inspectedPrices = priceBindings.map((binding, index) => ({
+  publicId: binding.publicId,
+  passed: isCanonicalLivePrice(prices[index], binding.expectedAmountCents),
+}));
+
+const exactWebhook = Array.isArray(webhooks?.data)
+  ? webhooks.data.find((endpoint) => endpoint?.url === canonicalWebhookUrl && endpoint?.status === 'enabled' && endpoint?.livemode === true)
+  : null;
+const enabledEvents = new Set(exactWebhook?.enabled_events ?? []);
+const requiredWebhookEventsPresent = Boolean(exactWebhook)
+  && requiredEvents.every((event) => enabledEvents.has(event));
+
 const result = {
-  testModeConfirmed: account.livemode === false
-    && starter.livemode === false
-    && growth.livemode === false
-    && enterprise.livemode === false,
-  accountActive: account.charges_enabled === true || account.details_submitted === true,
-  starterPriceActive: isActiveRecurringTestPrice(starter),
-  growthPriceActive: isActiveRecurringTestPrice(growth),
-  enterprisePriceActive: isActiveRecurringTestPrice(enterprise),
-  recurringIntervalsPresent: Boolean(starter.recurring?.interval && growth.recurring?.interval && enterprise.recurring?.interval),
-  enabledWebhookEndpointPresent: enabledEndpoint,
+  liveModeConfirmed: prices.every((price) => price?.livemode === true) && exactWebhook?.livemode === true,
+  accountActive: account?.charges_enabled === true || account?.details_submitted === true,
+  essentialPriceActive: inspectedPrices.find(({ publicId }) => publicId === 'essential')?.passed === true,
+  professionalPriceActive: inspectedPrices.find(({ publicId }) => publicId === 'professional')?.passed === true,
+  businessPriceActive: inspectedPrices.find(({ publicId }) => publicId === 'business')?.passed === true,
+  canonicalPriceMetadataMatches: inspectedPrices.every(({ passed }) => passed),
+  exactWebhookEndpointPresent: Boolean(exactWebhook),
+  requiredWebhookEventsPresent,
 };
 
 if (Object.values(result).some((value) => value !== true)) {
-  throw new Error('Stripe provider configuration proof failed');
+  throw new Error('Stripe production provider configuration proof failed');
 }
 
 process.stdout.write(`${JSON.stringify(result)}\n`);
