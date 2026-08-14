@@ -1,6 +1,6 @@
 name: Stripe Provider Proof
 
-run-name: Stripe provider proof for ${{ inputs.release_sha }}
+run-name: Stripe live provider proof for ${{ inputs.release_sha }}
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   validate-stripe-provider:
-    name: Validate Stripe test-mode provider configuration
+    name: Validate Stripe live production provider configuration
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
@@ -55,16 +55,13 @@ jobs:
         with:
           node-version: 22
 
-      - name: Probe Stripe provider configuration
+      - name: Probe Stripe production provider configuration
         id: probe
         env:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-          STRIPE_PRICE_STARTER_MONTHLY: ${{ secrets.STRIPE_PRICE_STARTER_MONTHLY }}
-          STRIPE_PRICE_GROWTH_MONTHLY: ${{ secrets.STRIPE_PRICE_GROWTH_MONTHLY }}
-          STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ secrets.STRIPE_PRICE_ENTERPRISE_MONTHLY }}
-          STRIPE_PRICE_STARTER: ${{ secrets.STRIPE_PRICE_STARTER }}
-          STRIPE_PRICE_GROWTH: ${{ secrets.STRIPE_PRICE_GROWTH }}
-          STRIPE_PRICE_ENTERPRISE: ${{ secrets.STRIPE_PRICE_ENTERPRISE }}
+          STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ vars.STRIPE_PRICE_ESSENTIAL_MONTHLY }}
+          STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ vars.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}
+          STRIPE_PRICE_BUSINESS_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_MONTHLY }}
         run: node scripts/security/probe-stripe-provider-config.mjs
 
       - name: Write redacted evidence

@@ -1,15 +1,17 @@
 #!/usr/bin/env node
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 const MAX_RESPONSE_BYTES = 64 * 1024;
-const REQUIRED_EVENTS = [
-  'checkout.session.completed',
-  'customer.subscription.created',
-  'customer.subscription.updated',
-  'customer.subscription.deleted',
-  'invoice.payment_failed',
-];
+const COMMERCIAL_CATALOG_PATH = 'config/billing-commercial-catalog.json';
+const WEBHOOK_CONTRACT_PATH = 'config/stripe-webhook-contract.json';
+const CANONICAL_PUBLIC_PLANS = ['essential', 'professional', 'business'];
+
+function loadJson(path, expectedSchema) {
+  const value = JSON.parse(readFileSync(path, 'utf8'));
+  if (value?.schema !== expectedSchema) throw new Error(`Invalid contract schema: ${path}`);
+  return value;
+}
 
 function required(name, fallback) {
   const value = String(process.env[name] ?? '').trim() || String(fallback ?? '').trim();
@@ -41,6 +43,8 @@ async function stripe(path, secretKey) {
   return boundedJson(response);
 }
 
+const commercialCatalog = loadJson(COMMERCIAL_CATALOG_PATH, 'risck-comply.billing-commercial-catalog.v1');
+const webhookContract = loadJson(WEBHOOK_CONTRACT_PATH, 'risck-comply.stripe-webhook-contract.v1');
 const releaseSha = required('RELEASE_SHA');
 if (!/^[a-f0-9]{40}$/i.test(releaseSha)) throw new Error('RELEASE_SHA must be a full Git SHA');
 
@@ -51,39 +55,60 @@ if (targetEnvironment !== 'staging') throw new Error('Stripe test runtime prefli
 const stripeSecretKey = required('STRIPE_SECRET_KEY');
 if (!stripeSecretKey.startsWith('sk_test_')) throw new Error('Stripe test runtime preflight requires an sk_test_ key');
 
-const webhookUrl = `${targetBaseUrl}/api/stripe/webhook`;
-const starterPriceId = required('STRIPE_PRICE_STARTER_MONTHLY', process.env.STRIPE_PRICE_STARTER);
-const growthPriceId = required('STRIPE_PRICE_GROWTH_MONTHLY', process.env.STRIPE_PRICE_GROWTH);
-const enterprisePriceId = required('STRIPE_PRICE_ENTERPRISE_MONTHLY', process.env.STRIPE_PRICE_ENTERPRISE);
+const canonicalWebhookUrl = `${targetBaseUrl}${webhookContract.canonicalPath}`;
+const requiredEvents = Array.isArray(webhookContract.requiredEvents) ? webhookContract.requiredEvents : [];
+if (requiredEvents.length === 0) throw new Error('Stripe webhook contract has no required events');
 
-const [account, starter, growth, enterprise, webhooks, healthResponse] = await Promise.all([
-  stripe('/account', stripeSecretKey),
-  stripe(`/prices/${encodeURIComponent(starterPriceId)}`, stripeSecretKey),
-  stripe(`/prices/${encodeURIComponent(growthPriceId)}`, stripeSecretKey),
-  stripe(`/prices/${encodeURIComponent(enterprisePriceId)}`, stripeSecretKey),
+const priceBindings = CANONICAL_PUBLIC_PLANS.map((publicId) => {
+  const plan = commercialCatalog.plans?.[publicId];
+  if (!plan || !Number.isInteger(plan.monthlyPriceCents) || typeof plan.monthlyPriceEnvKey !== 'string') {
+    throw new Error(`Invalid canonical billing plan contract: ${publicId}`);
+  }
+  return {
+    publicId,
+    expectedAmountCents: plan.monthlyPriceCents,
+    priceId: required(plan.monthlyPriceEnvKey),
+  };
+});
+
+const [webhooks, healthResponse, ...prices] = await Promise.all([
   stripe('/webhook_endpoints?limit=100', stripeSecretKey),
   fetch(`${targetBaseUrl}/api/health`, { redirect: 'error', signal: AbortSignal.timeout(15_000) }),
+  ...priceBindings.map(({ priceId }) => stripe(`/prices/${encodeURIComponent(priceId)}?expand[]=product`, stripeSecretKey)),
 ]);
 
-function recurringTestPrice(price) {
-  return price?.livemode === false && price?.active === true && price?.type === 'recurring' && Boolean(price?.recurring?.interval);
+function isCanonicalTestPrice(price, expectedAmountCents) {
+  return price?.livemode === false
+    && price?.active === true
+    && price?.type === 'recurring'
+    && price?.recurring?.interval === 'month'
+    && String(price?.currency ?? '').toLowerCase() === String(commercialCatalog.currency ?? '').toLowerCase()
+    && price?.unit_amount === expectedAmountCents
+    && price?.product?.active === true;
 }
 
+const inspectedPrices = priceBindings.map((binding, index) => ({
+  publicId: binding.publicId,
+  expectedAmountCents: binding.expectedAmountCents,
+  passed: isCanonicalTestPrice(prices[index], binding.expectedAmountCents),
+}));
+
 const exactWebhook = Array.isArray(webhooks?.data)
-  ? webhooks.data.find((endpoint) => endpoint?.url === webhookUrl && endpoint?.status === 'enabled')
+  ? webhooks.data.find((endpoint) => endpoint?.url === canonicalWebhookUrl && endpoint?.status === 'enabled' && endpoint?.livemode === false)
   : null;
 const enabledEvents = new Set(exactWebhook?.enabled_events ?? []);
-const webhookEventsComplete = Boolean(exactWebhook) && (enabledEvents.has('*') || REQUIRED_EVENTS.every((event) => enabledEvents.has(event)));
+const requiredWebhookEventsPresent = Boolean(exactWebhook)
+  && requiredEvents.every((event) => enabledEvents.has(event));
 const healthCacheControl = String(healthResponse.headers.get('cache-control') ?? '').toLowerCase();
 
 const checks = {
-  testModeConfirmed: account?.livemode === false,
-  accountActive: account?.charges_enabled === true || account?.details_submitted === true,
-  starterPriceActive: recurringTestPrice(starter),
-  growthPriceActive: recurringTestPrice(growth),
-  enterprisePriceActive: recurringTestPrice(enterprise),
+  testModeConfirmed: prices.every((price) => price?.livemode === false) && exactWebhook?.livemode === false,
+  essentialPriceActive: inspectedPrices.find(({ publicId }) => publicId === 'essential')?.passed === true,
+  professionalPriceActive: inspectedPrices.find(({ publicId }) => publicId === 'professional')?.passed === true,
+  businessPriceActive: inspectedPrices.find(({ publicId }) => publicId === 'business')?.passed === true,
+  canonicalPriceMetadataMatches: inspectedPrices.every(({ passed }) => passed),
   exactWebhookEndpointPresent: Boolean(exactWebhook),
-  requiredWebhookEventsPresent: webhookEventsComplete,
+  requiredWebhookEventsPresent,
   targetHealthOk: healthResponse.status === 200,
   targetHealthNoStore: healthCacheControl.includes('no-store'),
 };
@@ -100,16 +125,19 @@ const evidence = {
   commitSha: releaseSha.toLowerCase(),
   targetEnvironment,
   targetHost: new URL(targetBaseUrl).host,
-  webhookPath: '/api/stripe/webhook',
-  requiredEvents: REQUIRED_EVENTS,
+  webhookPath: webhookContract.canonicalPath,
+  requiredEvents,
+  prices: inspectedPrices,
   checks,
   failedChecks,
   evidenceIntegrity: {
     containsSensitiveValues: false,
     mutationPerformed: false,
     p0PromotionPerformed: false,
+    stripePriceIdsStored: false,
+    webhookUrlStored: false,
   },
-  truthBoundary: 'This preflight proves only test-mode provider, price, exact webhook URL/event subscription and staging health configuration. It does not create Stripe objects, deliver an entitlement event, prove database mutation, or close billing runtime evidence.',
+  truthBoundary: 'This preflight proves only isolated Stripe test-mode canonical price metadata, exact webhook URL/event subscription and staging health configuration. It does not create Stripe objects, deliver an entitlement event, prove database mutation, or close billing runtime evidence.',
 };
 
 const outputPath = process.env.STRIPE_TEST_PREFLIGHT_OUTPUT || 'artifacts/stripe-test-runtime-preflight/evidence.json';
