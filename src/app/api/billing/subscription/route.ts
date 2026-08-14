@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { readBillingIdempotencyKey } from '@/server/billing/idempotency';
+import { isSelfServePlan, normalizeBillingPlanId } from '@/server/billing/plans';
 import { isBillingLifecycleRequestError, mutateSubscriptionLifecycle } from '@/server/billing/subscription-lifecycle';
-import { normalizeBillingPlanId } from '@/server/billing/plans';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreJson } from '@/server/security/no-store';
 import { requireApiUser, requirePermission, requireTrustedMutation, secureApiError } from '@/server/security/api-guards';
@@ -44,7 +44,10 @@ export async function POST(request: Request) {
 
     const plan = parsed.data.plan ? normalizeBillingPlanId(parsed.data.plan) : undefined;
     if (parsed.data.plan && !plan) return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
-    if ((parsed.data.action === 'upgrade' || parsed.data.action === 'downgrade') && (!plan || plan === 'enterprise')) {
+    if (
+      (parsed.data.action === 'upgrade' || parsed.data.action === 'downgrade')
+      && (!plan || !isSelfServePlan(plan))
+    ) {
       return noStoreJson({ error: 'sales_assisted_plan_required' }, { status: 400 });
     }
 
