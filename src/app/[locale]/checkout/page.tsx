@@ -6,7 +6,7 @@ import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
-const DEFAULT_PLAN_ID = 'growth';
+const DEFAULT_PLAN_ID = 'professional';
 const CURRENT_PLAN_BLOCKING_STATUSES = new Set([
   'active',
   'trialing',
@@ -43,6 +43,10 @@ function firstSearchParam(value: string | string[] | undefined) {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-US').format(value);
+}
+
+function formatCheckoutLimit(plan: (typeof BILLING_PLANS)[number], value: number) {
+  return plan.id === 'enterprise' || value === Number.MAX_SAFE_INTEGER ? 'By contract' : formatNumber(value);
 }
 
 function isCurrentPlanSubscription(status: string | null | undefined) {
@@ -171,19 +175,19 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
             <div className="mt-5 grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                 <p className="text-slate-500">Users</p>
-                <p className="mt-1 text-xl font-semibold text-white">{formatNumber(selectedPlan.limits.users)}</p>
+                <p className="mt-1 text-xl font-semibold text-white">{formatCheckoutLimit(selectedPlan, selectedPlan.limits.users)}</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                 <p className="text-slate-500">Documents</p>
-                <p className="mt-1 text-xl font-semibold text-white">{formatNumber(selectedPlan.limits.documents)}</p>
+                <p className="mt-1 text-xl font-semibold text-white">{formatCheckoutLimit(selectedPlan, selectedPlan.limits.documents)}</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                 <p className="text-slate-500">Vendors</p>
-                <p className="mt-1 text-xl font-semibold text-white">{formatNumber(selectedPlan.limits.vendors)}</p>
+                <p className="mt-1 text-xl font-semibold text-white">{formatCheckoutLimit(selectedPlan, selectedPlan.limits.vendors)}</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                 <p className="text-slate-500">Risks</p>
-                <p className="mt-1 text-xl font-semibold text-white">{formatNumber(selectedPlan.limits.risks)}</p>
+                <p className="mt-1 text-xl font-semibold text-white">{formatCheckoutLimit(selectedPlan, selectedPlan.limits.risks)}</p>
               </div>
             </div>
 

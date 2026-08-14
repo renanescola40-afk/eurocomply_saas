@@ -5,6 +5,11 @@ const workflow = readFileSync('.github/workflows/stripe-test-runtime-preflight.y
 const preflight = readFileSync('scripts/enterprise/run-stripe-test-runtime-preflight.mjs', 'utf8');
 const primaryRoute = readFileSync('src/app/api/stripe/webhook/route.ts', 'utf8');
 const legacyRoute = readFileSync('src/app/api/billing/webhook/route.ts', 'utf8');
+const recovery = readFileSync('src/server/billing/stripe-webhook-recovery.ts', 'utf8');
+const webhookContract = JSON.parse(readFileSync('config/stripe-webhook-contract.json', 'utf8')) as {
+  canonicalPath: string;
+  requiredEvents: string[];
+};
 
 describe('Stripe test runtime preflight contract', () => {
   it('is manual, exact-SHA, staging-only and explicitly confirmed', () => {
@@ -19,12 +24,27 @@ describe('Stripe test runtime preflight contract', () => {
     expect(workflow).toContain('production host is forbidden for Stripe test runtime preflight');
   });
 
-  it('uses test-mode provider configuration and the exact staging webhook URL read-only', () => {
-    expect(preflight).toContain("if (!stripeSecretKey.startsWith('sk_test_'))");
-    expect(preflight).toContain("const webhookUrl = `${targetBaseUrl}/api/stripe/webhook`;");
+  it('uses the canonical Essential Professional and Business price contract', () => {
+    expect(preflight).toContain("const CANONICAL_PUBLIC_PLANS = ['essential', 'professional', 'business']");
+    expect(preflight).toContain("COMMERCIAL_CATALOG_PATH = 'config/billing-commercial-catalog.json'");
+    expect(preflight).toContain("required(plan.monthlyPriceEnvKey)");
+    expect(preflight).toContain('canonicalPriceMetadataMatches');
+    expect(workflow).toContain('STRIPE_PRICE_ESSENTIAL_MONTHLY:');
+    expect(workflow).toContain('STRIPE_PRICE_PROFESSIONAL_MONTHLY:');
+    expect(workflow).toContain('STRIPE_PRICE_BUSINESS_MONTHLY:');
+    expect(workflow).not.toContain('STRIPE_PRICE_ENTERPRISE_MONTHLY:');
+  });
+
+  it('uses the exact staging webhook URL read-only and requires invoice-paid recovery coverage', () => {
+    expect(webhookContract.canonicalPath).toBe('/api/stripe/webhook');
+    expect(webhookContract.requiredEvents).toContain('invoice.payment_failed');
+    expect(webhookContract.requiredEvents).toContain('invoice.paid');
+    expect(preflight).toContain("WEBHOOK_CONTRACT_PATH = 'config/stripe-webhook-contract.json'");
+    expect(preflight).toContain("const canonicalWebhookUrl = `${targetBaseUrl}${webhookContract.canonicalPath}`;");
     expect(preflight).toContain("stripe('/webhook_endpoints?limit=100', stripeSecretKey)");
-    expect(preflight).toContain("endpoint?.url === webhookUrl && endpoint?.status === 'enabled'");
-    expect(preflight).toContain('requiredWebhookEventsPresent: webhookEventsComplete');
+    expect(preflight).toContain("endpoint?.url === canonicalWebhookUrl && endpoint?.status === 'enabled' && endpoint?.livemode === false");
+    expect(preflight).toContain('requiredWebhookEventsPresent');
+    expect(recovery).toContain("'invoice.paid'");
     expect(preflight).not.toContain("method: 'POST'");
     expect(preflight).not.toContain("method: 'DELETE'");
   });
@@ -44,7 +64,7 @@ describe('Stripe test runtime preflight contract', () => {
       const receivedAudit = route.indexOf("action: 'webhook_received', event");
       expect(modeCheck).toBeGreaterThan(-1);
       expect(receivedAudit).toBeGreaterThan(modeCheck);
-      expect(route).toContain("reason: mode.reason");
+      expect(route).toContain('reason: mode.reason');
       expect(route).toContain("'webhook_mode_mismatch'");
       expect(route).toContain("'webhook_mode_not_configured'");
     }

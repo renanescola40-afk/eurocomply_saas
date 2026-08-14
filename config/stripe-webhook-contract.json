@@ -1,0 +1,15 @@
+{
+  "schema": "risck-comply.stripe-webhook-contract.v1",
+  "canonicalPath": "/api/stripe/webhook",
+  "productionBaseUrl": "https://www.risckcomply.com",
+  "legacyCompatibilityPath": "/api/billing/webhook",
+  "requiredEvents": [
+    "checkout.session.completed",
+    "customer.subscription.created",
+    "customer.subscription.updated",
+    "customer.subscription.deleted",
+    "invoice.payment_failed",
+    "invoice.paid"
+  ],
+  "truthBoundary": "This file is the canonical repository contract for the Stripe webhook URL and event subscription set. It does not create a provider endpoint, store a signing secret, prove delivery, or replace runtime evidence."
+}

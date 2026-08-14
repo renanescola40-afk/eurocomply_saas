@@ -34,9 +34,9 @@ jobs:
       TARGET_BASE_URL: ${{ inputs.target_base_url }}
       TARGET_ENVIRONMENT: staging
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY || secrets.STRIPE_SECRET_KEY }}
-      STRIPE_PRICE_STARTER_MONTHLY: ${{ secrets.STRIPE_TEST_PRICE_STARTER_MONTHLY || secrets.STRIPE_PRICE_STARTER_MONTHLY }}
-      STRIPE_PRICE_GROWTH_MONTHLY: ${{ secrets.STRIPE_TEST_PRICE_GROWTH_MONTHLY || secrets.STRIPE_PRICE_GROWTH_MONTHLY }}
-      STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ secrets.STRIPE_TEST_PRICE_ENTERPRISE_MONTHLY || secrets.STRIPE_PRICE_ENTERPRISE_MONTHLY }}
+      STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ secrets.STRIPE_TEST_PRICE_ESSENTIAL_MONTHLY || secrets.STRIPE_PRICE_ESSENTIAL_MONTHLY || secrets.STRIPE_TEST_PRICE_STARTER_MONTHLY || secrets.STRIPE_PRICE_STARTER_MONTHLY }}
+      STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ secrets.STRIPE_TEST_PRICE_PROFESSIONAL_MONTHLY || secrets.STRIPE_PRICE_PROFESSIONAL_MONTHLY || secrets.STRIPE_TEST_PRICE_GROWTH_MONTHLY || secrets.STRIPE_PRICE_GROWTH_MONTHLY }}
+      STRIPE_PRICE_BUSINESS_MONTHLY: ${{ secrets.STRIPE_TEST_PRICE_BUSINESS_MONTHLY || secrets.STRIPE_PRICE_BUSINESS_MONTHLY }}
 
     steps:
       - name: Check out exact release SHA
@@ -84,7 +84,8 @@ jobs:
           node --check scripts/enterprise/run-stripe-test-runtime-preflight.mjs
           npx vitest run \
             src/server/billing/stripe-event-mode.test.ts \
-            tests/security/stripe-test-runtime-preflight-contract.test.ts
+            tests/security/stripe-test-runtime-preflight-contract.test.ts \
+            tests/security/stripe-provider-proof-contract.test.ts
 
       - name: Run read-only Stripe test runtime preflight
         run: node scripts/enterprise/run-stripe-test-runtime-preflight.mjs
