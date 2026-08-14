@@ -1,10 +1,13 @@
--- enterprise-migration-review: technical-forward-reconciliation-pending-human-approval
 -- Forward execution identity for the reviewed 20260809135000 Enterprise core
 -- runtime reconciliation. The historical migration remains byte-for-byte
 -- immutable and unapplied; this newer identity stays strictly after the current
 -- production migration ledger so the bounded lane never needs --include-all or
 -- migration-history repair. The SQL is intentionally idempotent, fail-closed,
 -- and contains no destructive data rewrite.
+--
+-- This forward identity deliberately carries no historical human-approval
+-- marker. It also preserves later vendor-governance tenant-integrity hardening
+-- that exists elsewhere in repository history instead of regressing it.
 
 begin;
 
@@ -168,6 +171,9 @@ alter table public.vendors
   drop constraint if exists vendors_data_access_level_check,
   add constraint vendors_data_access_level_check
     check (data_access_level in ('unknown', 'none', 'low', 'medium', 'high')) not valid,
+  drop constraint if exists vendors_risk_level_check,
+  add constraint vendors_risk_level_check
+    check (risk_level in ('low', 'medium', 'high')) not valid,
   drop constraint if exists vendors_review_status_check,
   add constraint vendors_review_status_check
     check (review_status in ('pending', 'in_review', 'approved', 'rejected')) not valid,
@@ -186,27 +192,54 @@ create index if not exists vendors_org_review_due_idx
 create index if not exists vendors_org_risk_status_idx
   on public.vendors (organization_id, risk_level, review_status);
 
-create or replace function public.bump_vendor_review_version()
+-- Preserve the tenant-integrity checks introduced by the reviewed vendor
+-- governance hardening while also providing the review-version bump required by
+-- the active runtime. Service-role writes are not allowed to manufacture a
+-- creator/approver from another organization.
+create or replace function public.enforce_vendor_governance_integrity()
 returns trigger
 language plpgsql
+security definer
 set search_path = pg_catalog, public
 as $$
 begin
+  if new.created_by is not null and not exists (
+    select 1
+    from public.organization_members om
+    where om.organization_id = new.organization_id
+      and om.user_id = new.created_by
+  ) then
+    raise exception 'vendor creator must belong to organization' using errcode = '23514';
+  end if;
+
+  if new.approved_by is not null and not exists (
+    select 1
+    from public.organization_members om
+    where om.organization_id = new.organization_id
+      and om.user_id = new.approved_by
+      and om.role in ('owner', 'admin', 'compliance_manager')
+  ) then
+    raise exception 'vendor approver must be an authorized organization member' using errcode = '23514';
+  end if;
+
   if tg_op = 'UPDATE' then
     new.review_version = old.review_version + 1;
     new.updated_at = now();
   end if;
+
   return new;
 end;
 $$;
-revoke all on function public.bump_vendor_review_version() from public, anon, authenticated;
-grant execute on function public.bump_vendor_review_version() to service_role;
+revoke all on function public.enforce_vendor_governance_integrity() from public, anon, authenticated;
+grant execute on function public.enforce_vendor_governance_integrity() to service_role;
 
-drop trigger if exists enforce_vendor_governance_integrity on public.vendors;
+drop function if exists public.bump_vendor_review_version();
 drop trigger if exists bump_vendor_review_version on public.vendors;
-create trigger bump_vendor_review_version
-before update on public.vendors
-for each row execute function public.bump_vendor_review_version();
+drop trigger if exists enforce_vendor_actor_scope on public.vendors;
+drop trigger if exists enforce_vendor_governance_integrity on public.vendors;
+create trigger enforce_vendor_governance_integrity
+before insert or update on public.vendors
+for each row execute function public.enforce_vendor_governance_integrity();
 
 create table if not exists public.vendor_review_history (
   id uuid primary key default gen_random_uuid(),
@@ -465,6 +498,35 @@ begin
 
   if to_regprocedure('public.create_organization_with_owner_atomic(text,text,uuid)') is null then
     raise exception 'Atomic organization creation RPC is missing after reconciliation';
+  end if;
+
+  if to_regprocedure('public.enforce_vendor_governance_integrity()') is null then
+    raise exception 'Vendor governance tenant-integrity function is missing after reconciliation';
+  end if;
+
+  if has_function_privilege('anon', 'public.enforce_vendor_governance_integrity()'::regprocedure, 'EXECUTE')
+    or has_function_privilege('authenticated', 'public.enforce_vendor_governance_integrity()'::regprocedure, 'EXECUTE')
+    or not has_function_privilege('service_role', 'public.enforce_vendor_governance_integrity()'::regprocedure, 'EXECUTE') then
+    raise exception 'Vendor governance tenant-integrity function privileges are not canonical';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_trigger
+    where tgrelid = 'public.vendors'::regclass
+      and tgname = 'enforce_vendor_governance_integrity'
+      and not tgisinternal
+  ) then
+    raise exception 'Vendor governance tenant-integrity trigger is missing after reconciliation';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.vendors'::regclass
+      and conname = 'vendors_risk_level_check'
+  ) then
+    raise exception 'Vendor risk-level constraint is missing after reconciliation';
   end if;
 
   if exists (
