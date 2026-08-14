@@ -201,6 +201,9 @@ mkdirSync(dirname(OUTPUT), { recursive: true });
 writeFileSync(OUTPUT, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
 console.log(`Wrote ${OUTPUT}`);
 if (!passed) {
-  for (const failure of failures) console.error(`- ${failure}`);
+  console.error(JSON.stringify({
+    failures,
+    readiness: protectedReadinessDiagnostics,
+  }, null, 2));
   process.exit(1);
 }
