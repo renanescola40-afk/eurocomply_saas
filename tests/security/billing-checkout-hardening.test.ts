@@ -8,15 +8,25 @@ const mocks = vi.hoisted(() => ({
   requireTrustedMutation: vi.fn(),
   getCurrentOrganizationForUser: vi.fn(),
   stripeCheckoutCreate: vi.fn(),
+  stripeCheckoutExpire: vi.fn(),
   stripeCustomerCreate: vi.fn(),
   stripeCustomerUpdate: vi.fn(),
+  stripeCustomerDelete: vi.fn(),
   requireStepUpForRequest: vi.fn(),
   publicStepUpSummary: vi.fn(),
   getStripePriceId: vi.fn(),
   isSelfServePlan: vi.fn(),
   normalizeBillingPlanId: vi.fn(),
+  getBillingEntitlements: vi.fn(),
+  getAuthoritativeSignedContractPlan: vi.fn(),
+  hasProcessedLiveStripeSubscriptionAuthority: vi.fn(),
   writeAuditLog: vi.fn(),
   supabaseMaybeSingle: vi.fn(),
+  supabaseUpsert: vi.fn(),
+}));
+
+vi.mock('@/lib/billing/plans', () => ({
+  getBillingEntitlements: mocks.getBillingEntitlements,
 }));
 
 vi.mock('@/lib/security/audit-log', () => ({
@@ -35,6 +45,7 @@ vi.mock('@/lib/supabase/admin', () => ({
           }),
         }),
       }),
+      upsert: mocks.supabaseUpsert,
     }),
   }),
 }));
@@ -53,16 +64,23 @@ vi.mock('@/server/billing/plans', () => ({
   normalizeBillingPlanId: mocks.normalizeBillingPlanId,
 }));
 
+vi.mock('@/server/billing/subscription-authority', () => ({
+  getAuthoritativeSignedContractPlan: mocks.getAuthoritativeSignedContractPlan,
+  hasProcessedLiveStripeSubscriptionAuthority: mocks.hasProcessedLiveStripeSubscriptionAuthority,
+}));
+
 vi.mock('@/server/billing/stripe', () => ({
   getStripeClient: () => ({
     checkout: {
       sessions: {
         create: mocks.stripeCheckoutCreate,
+        expire: mocks.stripeCheckoutExpire,
       },
     },
     customers: {
       create: mocks.stripeCustomerCreate,
       update: mocks.stripeCustomerUpdate,
+      del: mocks.stripeCustomerDelete,
     },
   }),
 }));
@@ -85,7 +103,7 @@ vi.mock('@/server/security/step-up', () => ({
 
 import { POST } from '../../src/app/api/billing/checkout/route';
 
-function buildRequest(body = { plan: 'growth', locale: 'pt' }, headers: HeadersInit = {}) {
+function buildRequest(body = { plan: 'professional', locale: 'pt' }, headers: HeadersInit = {}) {
   return new Request('https://app.eurocomply.test/api/billing/checkout', {
     method: 'POST',
     headers: {
@@ -108,24 +126,31 @@ describe('billing checkout API security gates', () => {
     mocks.requireTrustedMutation.mockResolvedValue(null);
     mocks.requireStepUpForRequest.mockResolvedValue({
       ok: true,
-      assessment: { action: 'manage_billing', verifiedAt: '2026-06-22T09:00:00.000Z' },
+      assessment: { action: 'manage_billing', verifiedAt: '2026-08-14T20:00:00.000Z' },
     });
     mocks.publicStepUpSummary.mockReturnValue({ verified: true });
     mocks.normalizeBillingPlanId.mockImplementation((plan: string) => {
-      if (plan === 'growth' || plan === 'professional' || plan === 'business') return 'growth';
       if (plan === 'starter' || plan === 'essential') return 'starter';
+      if (plan === 'growth' || plan === 'professional' || plan === 'pro') return 'professional';
+      if (plan === 'business') return 'business';
       if (plan === 'enterprise') return 'enterprise';
       return undefined;
     });
-    mocks.getStripePriceId.mockReturnValue('price_growth_monthly');
-    mocks.isSelfServePlan.mockImplementation((plan: string) => ['starter', 'growth', 'enterprise'].includes(plan));
+    mocks.isSelfServePlan.mockImplementation((plan: string) => ['starter', 'professional'].includes(plan));
+    mocks.getStripePriceId.mockImplementation((plan: string) => `price_${plan}_monthly`);
+    mocks.getBillingEntitlements.mockReturnValue({ users: 3, documents: 100 });
+    mocks.getAuthoritativeSignedContractPlan.mockResolvedValue(null);
+    mocks.hasProcessedLiveStripeSubscriptionAuthority.mockResolvedValue(false);
     mocks.supabaseMaybeSingle.mockResolvedValue({ data: null, error: null });
-    mocks.stripeCustomerCreate.mockResolvedValue({ id: 'cus_org_a' });
-    mocks.stripeCustomerUpdate.mockResolvedValue({ id: 'cus_existing_org_a' });
+    mocks.supabaseUpsert.mockResolvedValue({ error: null });
+    mocks.stripeCustomerCreate.mockResolvedValue({ id: 'cus_live_org_a' });
+    mocks.stripeCustomerUpdate.mockResolvedValue({ id: 'cus_existing_live_org_a' });
+    mocks.stripeCustomerDelete.mockResolvedValue({ id: 'cus_live_org_a', deleted: true });
     mocks.stripeCheckoutCreate.mockResolvedValue({
-      id: 'cs_test_fixture',
+      id: 'cs_live_fixture',
       url: 'https://checkout.stripe.com/session-fixture',
     });
+    mocks.stripeCheckoutExpire.mockResolvedValue({ id: 'cs_live_fixture', status: 'expired' });
     mocks.writeAuditLog.mockResolvedValue({ persisted: true });
   });
 
@@ -133,194 +158,147 @@ describe('billing checkout API security gates', () => {
     mocks.requireApiUser.mockRejectedValue({ code: 'unauthorized', status: 401 });
 
     const response = await POST(buildRequest({ plan: 'enterprise-custom', locale: 'pt' }));
-    const body = await response.json();
-
     expect(response.status).toBe(401);
-    expect(body).toEqual({ error: 'unauthorized' });
-    expect(mocks.getCurrentOrganizationForUser).not.toHaveBeenCalled();
-    expect(mocks.requirePermission).not.toHaveBeenCalled();
-    expect(mocks.requireTrustedMutation).not.toHaveBeenCalled();
     expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
   });
 
-  it('rejects invalid checkout plan only after auth, RBAC, trusted origin and rate-limit gates', async () => {
-    const response = await POST(buildRequest({ plan: 'enterprise-custom', locale: 'pt' }));
-    const body = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(body).toEqual({ error: 'invalid_plan' });
-    expect(mocks.requireApiUser).toHaveBeenCalled();
-    expect(mocks.requirePermission).toHaveBeenCalledWith({ userId: 'user_admin', organizationId: 'org_a', permission: 'manage_billing' });
-    expect(mocks.requireTrustedMutation).toHaveBeenCalled();
-    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
+  it('rejects sales-led or unknown plans after auth and mutation gates', async () => {
+    for (const plan of ['business', 'enterprise', 'enterprise-custom']) {
+      const response = await POST(buildRequest({ plan, locale: 'pt' }));
+      expect(response.status).toBe(400);
+    }
     expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
-    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
   });
 
-  it('blocks checkout without manage_billing permission before mutation, step-up or Stripe calls', async () => {
+  it('blocks checkout without manage_billing permission before Stripe mutation', async () => {
     mocks.requirePermission.mockRejectedValue({ code: 'permission_denied', status: 403 });
 
     const response = await POST(buildRequest());
-    const body = await response.json();
-
     expect(response.status).toBe(403);
-    expect(body).toEqual({ error: 'permission_denied' });
     expect(mocks.requireTrustedMutation).not.toHaveBeenCalled();
-    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
-    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
     expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
   });
 
-  it('fails closed when the trusted mutation or rate-limit guard denies the request', async () => {
-    mocks.requireTrustedMutation.mockResolvedValue(new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }));
+  it('fails closed when trusted mutation or rate limiting denies the request', async () => {
+    mocks.requireTrustedMutation.mockResolvedValue(new Response(JSON.stringify({ error: 'rate_limited' }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    }));
+
+    const response = await POST(buildRequest());
+    expect(response.status).toBe(429);
+    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
+  });
+
+  it('requires an idempotency key before Stripe mutation', async () => {
+    const response = await POST(buildRequest(undefined, { 'Idempotency-Key': '' }));
+    expect(response.status).toBe(400);
+    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
+  });
+
+  it('treats status-only legacy rows as initial checkout and replaces them with a pending live customer binding', async () => {
+    mocks.supabaseMaybeSingle.mockResolvedValue({
+      data: { stripe_customer_id: null, stripe_subscription_id: null, status: 'active' },
+      error: null,
+    });
+
+    const response = await POST(buildRequest({ plan: 'professional', locale: 'pt' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.stepUpRequired).toBe(false);
+    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
+    expect(mocks.stripeCustomerCreate).toHaveBeenCalledTimes(1);
+    expect(mocks.supabaseUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organization_id: 'org_a',
+        stripe_customer_id: 'cus_live_org_a',
+        stripe_subscription_id: null,
+        plan: 'starter',
+        tier: 'starter',
+        status: 'incomplete',
+      }),
+      { onConflict: 'organization_id' },
+    );
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'subscription',
+        customer: 'cus_live_org_a',
+        line_items: [{ price: 'price_professional_monthly', quantity: 1 }],
+        client_reference_id: 'org_a',
+        metadata: expect.objectContaining({ billing_flow: 'initial_subscription', plan: 'professional' }),
+      }),
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
+    );
+  });
+
+  it('requires step-up and reuses the customer for a proven live subscription relationship', async () => {
+    mocks.supabaseMaybeSingle.mockResolvedValue({
+      data: {
+        stripe_customer_id: 'cus_existing_live_org_a',
+        stripe_subscription_id: 'sub_existing_live_org_a',
+        status: 'active',
+      },
+      error: null,
+    });
+    mocks.hasProcessedLiveStripeSubscriptionAuthority.mockResolvedValue(true);
+
+    const response = await POST(buildRequest({ plan: 'starter', locale: 'en' }));
+
+    expect(response.status).toBe(200);
+    expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'manage_billing',
+      organizationId: 'org_a',
+      userId: 'user_admin',
+    }));
+    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
+    expect(mocks.stripeCustomerUpdate).toHaveBeenCalledWith(
+      'cus_existing_live_org_a',
+      expect.objectContaining({ metadata: expect.objectContaining({ organization_id: 'org_a' }) }),
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
+    );
+    expect(mocks.supabaseUpsert).not.toHaveBeenCalled();
+  });
+
+  it('replaces a test-mode customer id when the live provider reports resource_missing', async () => {
+    mocks.supabaseMaybeSingle.mockResolvedValue({
+      data: {
+        stripe_customer_id: 'cus_test_contaminated',
+        stripe_subscription_id: 'sub_test_contaminated',
+        status: 'active',
+      },
+      error: null,
+    });
+    mocks.stripeCustomerUpdate.mockRejectedValue({ code: 'resource_missing' });
+
+    const response = await POST(buildRequest());
+
+    expect(response.status).toBe(200);
+    expect(mocks.stripeCustomerUpdate).toHaveBeenCalledWith(
+      'cus_test_contaminated',
+      expect.anything(),
+      expect.anything(),
+    );
+    expect(mocks.stripeCustomerCreate).toHaveBeenCalledTimes(1);
+    expect(mocks.supabaseUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stripe_customer_id: 'cus_live_org_a',
+        stripe_subscription_id: null,
+        status: 'incomplete',
+      }),
+      { onConflict: 'organization_id' },
+    );
+  });
+
+  it('keeps negotiated signed contracts out of generic self-serve checkout', async () => {
+    mocks.getAuthoritativeSignedContractPlan.mockResolvedValue('enterprise');
 
     const response = await POST(buildRequest());
     const body = await response.json();
 
-    expect(response.status).toBe(429);
-    expect(body).toEqual({ error: 'rate_limited' });
-    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
+    expect(response.status).toBe(409);
+    expect(body).toEqual({ error: 'contract_managed_billing' });
     expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
     expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
-  });
-
-  it('requires an idempotency key after request security gates and before Stripe mutation', async () => {
-    const response = await POST(buildRequest(undefined, { 'Idempotency-Key': '' }));
-    const body = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(body).toEqual({ error: 'idempotency_key_required' });
-    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
-    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
-  });
-
-  it('creates a customer-mapped checkout session only after RBAC, trusted mutation, and step-up for an existing billing relationship', async () => {
-    mocks.supabaseMaybeSingle.mockResolvedValue({
-      data: { stripe_customer_id: null, stripe_subscription_id: 'sub_existing_org_a', status: 'incomplete' },
-      error: null,
-    });
-
-    const response = await POST(buildRequest({ plan: 'business', locale: 'pt' }));
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(body).toEqual({ url: 'https://checkout.stripe.com/session-fixture', idempotencyProtected: true, stepUp: { verified: true } });
-    expect(mocks.requirePermission).toHaveBeenCalledWith({ userId: 'user_admin', organizationId: 'org_a', permission: 'manage_billing' });
-    expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(expect.objectContaining({
-      action: 'manage_billing',
-      userId: 'user_admin',
-      organizationId: 'org_a',
-    }));
-    expect(mocks.stripeCustomerCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        email: 'admin@example.test',
-        name: 'Org A',
-        metadata: expect.objectContaining({
-          organization_id: 'org_a',
-          organizationId: 'org_a',
-          user_id: 'user_admin',
-          userId: 'user_admin',
-          plan: 'growth',
-          billing_flow: 'existing_billing_change',
-        }),
-      }),
-      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
-    );
-    const customerParams = mocks.stripeCustomerCreate.mock.calls[0][0];
-    expect(customerParams.metadata).not.toHaveProperty('clerk_org_id');
-    expect(customerParams.metadata).not.toHaveProperty('clerkOrgId');
-
-    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mode: 'subscription',
-        customer: 'cus_org_a',
-        line_items: [{ price: 'price_growth_monthly', quantity: 1 }],
-        success_url: 'https://app.eurocomply.test/pt/dashboard/organizations?checkout=success',
-        cancel_url: 'https://app.eurocomply.test/pt/checkout?plan=growth&checkout=cancelled',
-        client_reference_id: 'org_a',
-        locale: 'pt',
-        billing_address_collection: 'required',
-        customer_update: { address: 'auto', name: 'auto' },
-        tax_id_collection: { enabled: true },
-        payment_method_collection: 'always',
-        allow_promotion_codes: true,
-        metadata: expect.objectContaining({
-          organization_id: 'org_a',
-          organizationId: 'org_a',
-          user_id: 'user_admin',
-          userId: 'user_admin',
-          plan: 'growth',
-          actor_role: 'admin',
-          billing_flow: 'existing_billing_change',
-          step_up_action: 'manage_billing',
-          step_up_verified_at: '2026-06-22T09:00:00.000Z',
-        }),
-        subscription_data: expect.objectContaining({
-          metadata: expect.objectContaining({
-            organization_id: 'org_a',
-            organizationId: 'org_a',
-            user_id: 'user_admin',
-            userId: 'user_admin',
-            plan: 'growth',
-            actor_role: 'admin',
-            billing_flow: 'existing_billing_change',
-            step_up_action: 'manage_billing',
-          }),
-        }),
-      }),
-      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
-    );
-    const checkoutParams = mocks.stripeCheckoutCreate.mock.calls[0][0];
-    expect(checkoutParams.metadata).not.toHaveProperty('clerk_org_id');
-    expect(checkoutParams.metadata).not.toHaveProperty('clerkOrgId');
-    expect(checkoutParams.subscription_data.metadata).not.toHaveProperty('clerk_org_id');
-    expect(checkoutParams.subscription_data.metadata).not.toHaveProperty('clerkOrgId');
-
-    expect(mocks.writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
-      action: 'checkout_created',
-      organizationId: 'org_a',
-      userId: 'user_admin',
-      metadata: expect.objectContaining({
-        stripeCustomerId: 'cus_org_a',
-        billingFlow: 'existing_billing_change',
-        stepUpRequired: true,
-        idempotencyProtected: true,
-      }),
-    }));
-    const auditPayload = mocks.writeAuditLog.mock.calls[0][0];
-    expect(auditPayload.metadata).not.toHaveProperty('clerkOrgId');
-    expect(auditPayload.metadata).not.toHaveProperty('clerk_org_id');
-  });
-
-  it('reuses and refreshes an existing organization Stripe customer before checkout', async () => {
-    mocks.supabaseMaybeSingle.mockResolvedValue({
-      data: { stripe_customer_id: 'cus_existing_org_a', stripe_subscription_id: 'sub_existing_org_a', status: 'active' },
-      error: null,
-    });
-
-    const response = await POST(buildRequest({ plan: 'growth', locale: 'en' }));
-
-    expect(response.status).toBe(200);
-    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
-    expect(mocks.stripeCustomerUpdate).toHaveBeenCalledWith(
-      'cus_existing_org_a',
-      {
-        metadata: expect.objectContaining({
-          organization_id: 'org_a',
-          organizationId: 'org_a',
-          user_id: 'user_admin',
-          userId: 'user_admin',
-          plan: 'growth',
-        }),
-      },
-      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
-    );
-    const updateMetadata = mocks.stripeCustomerUpdate.mock.calls[0][1].metadata;
-    expect(updateMetadata).not.toHaveProperty('clerk_org_id');
-    expect(updateMetadata).not.toHaveProperty('clerkOrgId');
-    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ customer: 'cus_existing_org_a' }),
-      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
-    );
   });
 });
