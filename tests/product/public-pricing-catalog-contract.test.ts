@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const pricingPage = readFileSync(join(process.cwd(), 'src/app/[locale]/pricing/page.tsx'), 'utf8');
+const checkoutPage = readFileSync(join(process.cwd(), 'src/app/[locale]/checkout/page.tsx'), 'utf8');
 const organizationDashboard = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/page.tsx'), 'utf8');
 
 describe('public pricing catalog contract', () => {
@@ -49,6 +50,16 @@ describe('public pricing catalog contract', () => {
     expect(pricingPage).toContain('does not guarantee regulatory compliance');
     expect(pricingPage).toContain('does not replace legal counsel');
     expect(pricingPage).toContain('Taxes or VAT, where applicable');
+  });
+
+  it('keeps checkout on the canonical Professional fallback and never exposes technical enterprise sentinel limits', () => {
+    expect(checkoutPage).toContain("const DEFAULT_PLAN_ID = 'professional'");
+    expect(checkoutPage).toContain("plan.id === 'enterprise' || value === Number.MAX_SAFE_INTEGER ? 'By contract'");
+    expect(checkoutPage).toContain('formatCheckoutLimit(selectedPlan, selectedPlan.limits.users)');
+    expect(checkoutPage).toContain('formatCheckoutLimit(selectedPlan, selectedPlan.limits.documents)');
+    expect(checkoutPage).toContain('formatCheckoutLimit(selectedPlan, selectedPlan.limits.vendors)');
+    expect(checkoutPage).toContain('formatCheckoutLimit(selectedPlan, selectedPlan.limits.risks)');
+    expect(checkoutPage).not.toContain("const DEFAULT_PLAN_ID = 'growth'");
   });
 
   it('uses the canonical catalog name on the authenticated dashboard instead of legacy Starter/Growth labels', () => {
