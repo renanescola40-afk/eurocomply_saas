@@ -7,8 +7,11 @@ do $verify$
 declare
   document_runtime_columns integer;
   controlled_policy_count integer;
+  break_glass_rls_count integer;
+  break_glass_browser_privileges integer;
   step_up_function_oid oid := to_regprocedure('public.touch_step_up_challenges_updated_at()');
   uploader_function_oid oid := to_regprocedure('public.enforce_document_uploader_member_scope()');
+  break_glass_expiry_function_oid oid := to_regprocedure('public.expire_enterprise_break_glass_requests(integer)');
 begin
   if not exists (
     select 1
@@ -167,6 +170,126 @@ begin
       and c.relforcerowsecurity
   ) then
     raise exception 'tasks RLS/FORCE RLS is incomplete';
+  end if;
+
+  if to_regclass('public.enterprise_break_glass_requests') is null
+     or to_regclass('public.enterprise_break_glass_approvals') is null
+     or to_regclass('public.enterprise_break_glass_events') is null
+     or to_regclass('public.enterprise_break_glass_reviews') is null then
+    raise exception 'enterprise break-glass runtime tables are incomplete';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.organization_members'::regclass
+      and conname = 'organization_members_organization_id_id_key'
+      and contype = 'u'
+      and convalidated
+  ) then
+    raise exception 'organization_members tenant composite key is missing';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.enterprise_break_glass_requests'::regclass
+      and conname = 'enterprise_break_glass_requests_organization_id_id_key'
+      and contype = 'u'
+      and convalidated
+  ) then
+    raise exception 'break-glass request tenant composite key is missing';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.enterprise_break_glass_requests'::regclass
+      and conname = 'enterprise_break_glass_target_tenant_fk'
+      and contype = 'f'
+      and convalidated
+  ) or not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.enterprise_break_glass_approvals'::regclass
+      and conname = 'enterprise_break_glass_approvals_request_tenant_fk'
+      and contype = 'f'
+      and convalidated
+  ) or not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.enterprise_break_glass_events'::regclass
+      and conname = 'enterprise_break_glass_events_request_tenant_fk'
+      and contype = 'f'
+      and convalidated
+  ) or not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.enterprise_break_glass_reviews'::regclass
+      and conname = 'enterprise_break_glass_reviews_request_tenant_fk'
+      and contype = 'f'
+      and convalidated
+  ) then
+    raise exception 'break-glass tenant foreign-key boundary is incomplete';
+  end if;
+
+  select count(*)
+    into break_glass_rls_count
+  from pg_class c
+  join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname = 'public'
+    and c.relname in (
+      'enterprise_break_glass_requests',
+      'enterprise_break_glass_approvals',
+      'enterprise_break_glass_events',
+      'enterprise_break_glass_reviews'
+    )
+    and c.relrowsecurity
+    and c.relforcerowsecurity;
+
+  if break_glass_rls_count <> 4 then
+    raise exception 'break-glass RLS/FORCE RLS boundary is incomplete';
+  end if;
+
+  select count(*)
+    into break_glass_browser_privileges
+  from information_schema.role_table_grants
+  where table_schema = 'public'
+    and table_name in (
+      'enterprise_break_glass_requests',
+      'enterprise_break_glass_approvals',
+      'enterprise_break_glass_events',
+      'enterprise_break_glass_reviews'
+    )
+    and grantee in ('anon', 'authenticated');
+
+  if break_glass_browser_privileges <> 0 then
+    raise exception 'browser roles unexpectedly retain break-glass table privileges';
+  end if;
+
+  if not has_table_privilege('service_role', 'public.enterprise_break_glass_requests', 'SELECT,INSERT,UPDATE,DELETE')
+     or not has_table_privilege('service_role', 'public.enterprise_break_glass_approvals', 'SELECT,INSERT,UPDATE,DELETE')
+     or not has_table_privilege('service_role', 'public.enterprise_break_glass_events', 'SELECT,INSERT,UPDATE,DELETE')
+     or not has_table_privilege('service_role', 'public.enterprise_break_glass_reviews', 'SELECT,INSERT,UPDATE,DELETE') then
+    raise exception 'service_role break-glass table privileges are incomplete';
+  end if;
+
+  if break_glass_expiry_function_oid is null
+     or has_function_privilege('anon', break_glass_expiry_function_oid, 'EXECUTE')
+     or has_function_privilege('authenticated', break_glass_expiry_function_oid, 'EXECUTE')
+     or not has_function_privilege('service_role', break_glass_expiry_function_oid, 'EXECUTE') then
+    raise exception 'break-glass expiry function privileges are not canonical';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_proc p
+    cross join lateral unnest(coalesce(p.proconfig, array[]::text[])) setting
+    where p.oid = break_glass_expiry_function_oid
+      and p.prosecdef
+      and setting = 'search_path=pg_catalog'
+  ) then
+    raise exception 'break-glass expiry function security configuration is not fixed';
   end if;
 end
 $verify$;
