@@ -1,81 +1,93 @@
 # E2E Coverage Matrix
 
-Date: 2026-07-06
-Scope: Playwright coverage for route health, critical CTAs, forms, auth redirects, billing entry points, trust/security pages, mobile smoke, keyboard navigation and seeded authenticated flows.
+Date: 2026-08-14  
+Scope: Playwright coverage for public acquisition, auth redirects, localized commercial surfaces, paid-access recovery, role-aware billing UX and opt-in authenticated product smoke.
 
 ## Current completion status
 
-- **Automated public/anonymous coverage:** 100% of the requested critical public routes, CTAs, form feedback states, protected redirects, no-store redirect guard, mobile smoke and keyboard baseline are covered by deterministic checks.
-- **Seeded authenticated smoke coverage:** implemented behind explicit QA fixture gates so no real data is used.
-- **Remaining path to true 100%:** create disposable owner/admin/member/viewer fixtures and enable full role-specific mutation assertions for create/edit/delete flows.
+- **Automated public/anonymous coverage:** deterministic coverage exists for critical public routes, CTA actionability, protected redirects, no-store, localized pricing/auth/checkout, mobile overflow and runtime-error smoke.
+- **Authenticated commercial smoke:** executable opt-in tests now exist in `tests/e2e/authenticated-commercial-acceptance.spec.ts` for paid owner/admin/member/viewer personas and blocked subscription states.
+- **Synthetic writes:** first-AI-system creation is executable only when a disposable paid-owner fixture and `E2E_ALLOW_SYNTHETIC_APP_WRITES=true` are explicitly provided.
+- **Not yet executable end-to-end:** onboarding completion writes, task/document create/edit/delete, and full role-specific mutation matrices remain open QA work. They are not counted as covered.
+- **Real Stripe payment return:** remains blocked on the authoritative billing handoff tracked in issue #1650; repository smoke is not proof of live provider behavior.
 
 ## CI gate
 
-`npm run quality:routes` now validates the route-health artifacts **and** the product route/action audit artifacts. The gate fails if the following coverage disappears:
+`npm run quality:routes` validates route-health and product route/action audit artifacts. Product acceptance additionally relies on:
 
-- `docs/product/ROUTE_AND_ACTION_AUDIT.md`
-- `docs/product/E2E_COVERAGE_MATRIX.md`
 - `tests/e2e/product-critical-journeys.spec.ts`
-- public CTA coverage
-- public form loading/success/error coverage
-- protected redirect and no-store coverage
-- mobile and keyboard coverage
-- seeded authenticated flow gates
-- synthetic data policy markers
+- `tests/e2e/authenticated-commercial-acceptance.spec.ts`
+- `tests/e2e/route-health.spec.ts`
+- `tests/i18n/commercial-surface-locale-continuity.test.ts`
+- `tests/security/billing-ui-api-boundary.test.ts`
 
 ## Acceptance coverage
 
-| Acceptance item | Coverage file | Test / mechanism | Data mode | Status |
-| --- | --- | --- | --- | --- |
-| Landing -> pricing -> signup | `tests/e2e/product-critical-journeys.spec.ts` | `landing and pricing signup CTAs stay routable and localized` | Public synthetic | Covered |
-| Login redirect | `tests/e2e/product-critical-journeys.spec.ts` | `login page accepts next continuation without losing the target` | Public synthetic | Covered |
-| Protected route redirect | `tests/e2e/product-critical-journeys.spec.ts` and `tests/e2e/route-health.spec.ts` | Anonymous private routes redirect to localized login and preserve `next` | Public synthetic | Covered |
-| Protected route no-store | `tests/e2e/product-critical-journeys.spec.ts` | `anonymous private redirect response is no-store and preserves the next URL` | Public synthetic | Covered |
-| Onboarding complete | `tests/e2e/product-critical-journeys.spec.ts` | `onboarding complete journey is guarded behind synthetic fixture opt-in` | Seeded disposable QA only | Gated |
-| Dashboard load | `tests/e2e/product-critical-journeys.spec.ts` | `dashboard load journey renders for a seeded authenticated persona` | Seeded storage state | Gated |
-| Create AI system | `tests/e2e/product-critical-journeys.spec.ts` | `create AI system journey is guarded behind synthetic fixture opt-in` | Seeded disposable QA only | Gated |
-| Create task/document | `tests/e2e/product-critical-journeys.spec.ts` | `create task/document journey is guarded behind synthetic fixture opt-in` | Seeded disposable QA only | Gated |
-| Billing CTA | `tests/e2e/product-critical-journeys.spec.ts` | `checkout selected plan shows anonymous account and sign-in CTAs`; `billing CTA renders for a seeded billing-capable persona` | Public synthetic + seeded | Covered/Gated |
-| Trust/security pages | `tests/e2e/product-critical-journeys.spec.ts` and `tests/e2e/route-health.spec.ts` | Trust, security, privacy and terms health checks | Public synthetic | Covered |
-| Mobile smoke | `tests/e2e/product-critical-journeys.spec.ts` and `tests/e2e/route-health.spec.ts` | 390x844 viewport smoke checks | Public synthetic | Covered |
-| Keyboard basic navigation | `tests/e2e/product-critical-journeys.spec.ts` | `landing exposes reachable keyboard targets and avoids focus traps` | Public synthetic | Covered |
-| `/undefined` protection | `tests/e2e/route-health.spec.ts` | Legacy undefined route guard | Public synthetic | Covered |
-| Public form loading/success | `tests/e2e/product-critical-journeys.spec.ts` | Waitlist and book-demo success tests | API intercepted synthetic | Covered |
-| Public form error feedback | `tests/e2e/product-critical-journeys.spec.ts` | Waitlist and book-demo controlled error tests | API intercepted synthetic | Covered |
-| Checkout without plan | `tests/e2e/product-critical-journeys.spec.ts` | Missing-plan redirect to pricing with marker | Public synthetic | Covered |
+| Acceptance item | Coverage file | Data mode | Current status |
+| --- | --- | --- | --- |
+| Landing -> pricing -> signup/login | `tests/e2e/product-critical-journeys.spec.ts` | Public | Covered |
+| PT/ES/FR/IT/DE pricing -> checkout -> login -> signup locale continuity | `tests/e2e/product-critical-journeys.spec.ts` | Public | Covered |
+| Protected route redirect + preserved `next` | `tests/e2e/product-critical-journeys.spec.ts` | Public | Covered |
+| Protected redirect `no-store` | `tests/e2e/product-critical-journeys.spec.ts` | Public | Covered |
+| Mobile 390x844 purchase/auth overflow | `tests/e2e/product-critical-journeys.spec.ts` | Public | Covered |
+| Active paid owner dashboard | `tests/e2e/authenticated-commercial-acceptance.spec.ts` | `E2E_OWNER_STORAGE_STATE` | Executable, fixture-gated |
+| Active paid admin/member/viewer dashboard | `tests/e2e/authenticated-commercial-acceptance.spec.ts` | Role-specific storage states | Executable, fixture-gated |
+| Owner vs non-owner billing controls | `tests/e2e/authenticated-commercial-acceptance.spec.ts` | Role-specific storage states | Executable, fixture-gated |
+| Existing paid owner recurring routes | `tests/e2e/authenticated-commercial-acceptance.spec.ts` | Paid owner fixture | Executable, fixture-gated |
+| First AI system creation | `tests/e2e/authenticated-commercial-acceptance.spec.ts` | Disposable owner + write gate | Executable, write-gated |
+| Canceled subscription fails closed | `tests/e2e/authenticated-commercial-acceptance.spec.ts` | `E2E_CANCELED_STORAGE_STATE` | Executable, fixture-gated |
+| `past_due` subscription fails closed | `tests/e2e/authenticated-commercial-acceptance.spec.ts` | `E2E_PAST_DUE_STORAGE_STATE` | Executable, fixture-gated |
+| `unpaid` subscription fails closed | `tests/e2e/authenticated-commercial-acceptance.spec.ts` | `E2E_UNPAID_STORAGE_STATE` | Executable, fixture-gated |
+| FRIA route load | `tests/e2e/authenticated-commercial-acceptance.spec.ts` | Paid owner fixture | Executable, fixture-gated |
+| Evidence/document route load | `tests/e2e/authenticated-commercial-acceptance.spec.ts` | Paid owner fixture | Executable, fixture-gated |
+| Audit route load | `tests/e2e/authenticated-commercial-acceptance.spec.ts` | Paid owner fixture | Executable, fixture-gated |
+| Onboarding completion write | — | Disposable QA required | **Open** |
+| Task/document create/edit/delete | — | Disposable QA required | **Open** |
+| Admin/member/viewer mutation-denied matrix | — | Disposable role fixtures required | **Open** |
+| Real Stripe success return with delayed webhook | issue #1650 / provider-backed E2E | Stripe test runtime | **Blocked** |
+
+## Authenticated fixture contract
+
+The authenticated suite never assumes production accounts. Each persona requires its own explicit storage-state file:
+
+- `E2E_OWNER_STORAGE_STATE`
+- `E2E_ADMIN_STORAGE_STATE`
+- `E2E_MEMBER_STORAGE_STATE`
+- `E2E_VIEWER_STORAGE_STATE`
+- `E2E_CANCELED_STORAGE_STATE`
+- `E2E_PAST_DUE_STORAGE_STATE`
+- `E2E_UNPAID_STORAGE_STATE`
+
+Synthetic product writes require:
+
+```bash
+E2E_ALLOW_SYNTHETIC_APP_WRITES=true
+```
+
+The storage states must point to disposable QA users/workspaces. Do not use production customer sessions or production customer data.
 
 ## Route-health coverage
 
-| Route group | Routes covered | Expected anonymous outcome | Expected authenticated/seeded outcome |
-| --- | --- | --- | --- |
-| Public marketing | `/{locale}`, `/pricing`, `/resources`, `/faq`, `/about`, `/contact`, `/book-demo` | Render without 404/500, stack trace, `/undefined`, or dead primary controls. | Same public rendering unless auth-entry redirect applies. |
-| Public trust/legal | `/trust`, `/security`, `/privacy`, `/terms`, `/data-processing`, `/sla`, `/dpa`, `/subprocessors`, `/status`, `/vulnerability-disclosure` | Render without missing pages or broken visible links. | Same. |
-| Auth entry | `/login`, `/signup`, `/recuperar-senha`, `/atualizar-senha` | Render controlled auth surfaces. | Authenticated users redirect to onboarding by middleware. |
-| Checkout | `/checkout?plan=professional`, `/checkout` | Selected plan renders account/sign-in CTAs; missing plan redirects to pricing marker. | Authenticated users continue to billing or onboarding depending on org state. |
-| Core protected | `/onboarding`, `/dashboard`, `/dashboard/organizations`, `/settings` | Redirect to localized login with `next` and no-store. | Seeded tests can render. |
-| Org protected | `/dashboard/organizations/team`, `/dashboard/organizations/documents`, `/dashboard/organizations/risks`, `/dashboard/organizations/billing`, `/dashboard/tasks` | Redirect to localized login with `next` and no-store. | Seeded tests can render; RBAC fixtures required for role-specific assertions. |
-| Product protected | `/ai-systems`, `/dashboard/inventario`, `/vendor-assurance`, `/aprovacoes`, `/auditoria`, `/security-center` | Redirect to localized login with `next` and no-store. | Seeded tests can render; synthetic write gates required for create/update flows. |
+| Route group | Anonymous expectation | Authenticated/seeded expectation |
+| --- | --- | --- |
+| Public marketing | Render without 404/500/runtime error or dead primary controls. | Same public rendering unless auth-entry redirect applies. |
+| Public trust/legal | Render controlled public pages without missing routes or broken critical links. | Same. |
+| Auth entry | Render localized controlled auth surfaces. | Authenticated users follow middleware continuation policy. |
+| Checkout | Selected self-serve plan exposes account/sign-in continuation; missing plan is controlled. | Existing subscription/org state controls the next action. |
+| Core protected | Redirect anonymous visitor to localized login with `next` and no-store. | Paid fixtures render or commercial access policy redirects. |
+| Product protected | Redirect anonymous visitor to localized login. | Paid fixtures can smoke dashboard, AI systems, FRIA, evidence and audit routes. |
 
 ## Action-state coverage
 
-| Action type | Loading state | Error state | Success state | Test strategy |
-| --- | --- | --- | --- | --- |
-| Link CTA | Browser navigation | 404/500/stack trace assertions | Destination renders | Route health + explicit CTA href assertions |
-| Waitlist form | Submit disabled during intercepted pending request | Intercepted 500 checks visible feedback | Intercepted 200 checks status text | Public synthetic |
-| Book-demo form | Submit disabled during intercepted pending request | Intercepted 503 checks visible feedback | Intercepted 200 checks live-region text | Public synthetic |
-| Billing checkout | Button-level pending expected in component | Error marker/controlled response expected | Stripe redirect/return expected | Public CTA + seeded billing smoke |
-| Onboarding write | Pending form state expected | Validation feedback expected | Redirect/dashboard expected | Gated seeded QA only |
-| AI system write | Pending state expected | Validation feedback expected | Created item/healthy route expected | Gated seeded QA only |
-| Task/document write | Pending state expected | Validation feedback expected | Created item/healthy route expected | Gated seeded QA only |
-
-## Synthetic data policy
-
-- Public tests use `qa+playwright@example.test` and intercepted API responses.
-- Authenticated tests require `E2E_AUTH_STORAGE_STATE` generated from a disposable QA user.
-- Write flows require explicit gates:
-  - `E2E_ALLOW_SYNTHETIC_ONBOARDING_WRITE=true`
-  - `E2E_ALLOW_SYNTHETIC_APP_WRITES=true`
-- These tests must not run against production customer data.
+| Action type | Current executable evidence |
+| --- | --- |
+| Link CTA | Route navigation + runtime health assertions |
+| Public purchase/auth journey | Localized route smoke + actionable links + mobile overflow |
+| Billing controls | Role-aware source contract + fixture-gated owner/non-owner browser assertions |
+| AI system write | Disposable paid-owner fixture + explicit write gate |
+| Onboarding write | Open |
+| Task/document writes | Open |
+| Payment success return | Blocked on #1650 and real Stripe test-mode evidence |
 
 ## Commands
 
@@ -85,14 +97,24 @@ npm run quality:routes:e2e
 npm run quality:routes
 ```
 
-Seeded QA examples:
+Example disposable QA run:
 
 ```bash
-E2E_AUTH_STORAGE_STATE=.e2e/storage-state.json npm run test:e2e
-E2E_AUTH_STORAGE_STATE=.e2e/storage-state.json E2E_ALLOW_SYNTHETIC_ONBOARDING_WRITE=true npm run test:e2e
-E2E_AUTH_STORAGE_STATE=.e2e/storage-state.json E2E_ALLOW_SYNTHETIC_APP_WRITES=true npm run test:e2e
+E2E_OWNER_STORAGE_STATE=.e2e/owner.json \
+E2E_ADMIN_STORAGE_STATE=.e2e/admin.json \
+E2E_MEMBER_STORAGE_STATE=.e2e/member.json \
+E2E_VIEWER_STORAGE_STATE=.e2e/viewer.json \
+npm run test:e2e
+```
+
+Write-enabled example:
+
+```bash
+E2E_OWNER_STORAGE_STATE=.e2e/owner.json \
+E2E_ALLOW_SYNTHETIC_APP_WRITES=true \
+npm run test:e2e tests/e2e/authenticated-commercial-acceptance.spec.ts
 ```
 
 ## Remaining QA gap
 
-Full role-specific RBAC visual assertions still need seeded owner, admin, member/editor and viewer fixtures. The anonymous/public and seeded-smoke coverage is deterministic today; role mutation assertions should be enabled only in a disposable QA Supabase project.
+Final Product/Commercial PASS still requires actual disposable-fixture execution for role-specific authenticated flows, onboarding completion/mutations, task/document mutations, and the provider-backed Stripe success-return path. Skipped fixture-gated tests are capability, not proof of runtime PASS.
