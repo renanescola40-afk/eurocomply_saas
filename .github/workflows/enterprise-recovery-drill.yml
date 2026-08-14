@@ -63,7 +63,7 @@ jobs:
       - name: Set up pinned Supabase CLI
         uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
         with:
-          version: 2.101.0
+          version: 2.114.0
 
       - name: Install PostgreSQL client
         shell: bash
