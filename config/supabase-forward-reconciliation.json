@@ -21,6 +21,10 @@
     {
       "filename": "20260813201600_force_tasks_rls.sql",
       "purpose": "force RLS on the tenant-scoped tasks table"
+    },
+    {
+      "filename": "20260813234000_reconcile_enterprise_break_glass_governance.sql",
+      "purpose": "materialize backend-only enterprise break-glass governance with tenant-safe composite keys, forced RLS and service-role-only persistence"
     }
   ],
   "truthBoundary": {
