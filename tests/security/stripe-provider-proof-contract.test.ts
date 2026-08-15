@@ -5,10 +5,23 @@ const probe = readFileSync('scripts/security/probe-stripe-provider-config.mjs', 
 const writer = readFileSync('scripts/security/write-stripe-provider-evidence.mjs', 'utf8');
 const workflow = readFileSync('.github/workflows/stripe-provider-proof.yml', 'utf8');
 const portalBinding = readFileSync('src/server/billing/portal-configuration.ts', 'utf8');
+const portalPolicyModule = readFileSync('scripts/security/stripe-billing-portal-policy.mjs', 'utf8');
 const adr = readFileSync('docs/decisions/ADR-0092-versioned-stripe-billing-portal-authority.md', 'utf8');
 const portalContract = JSON.parse(readFileSync('config/stripe-billing-portal-contract.json', 'utf8')) as {
   schema: string;
   configurationId: string | null;
+};
+const portalPolicy = JSON.parse(readFileSync('config/stripe-billing-portal-policy.json', 'utf8')) as {
+  schema: string;
+  defaultReturnUrl: string;
+  managementMetadata: Record<string, string>;
+  features: {
+    customerUpdate: { enabled: boolean; allowedUpdates: string[] };
+    invoiceHistory: { enabled: boolean };
+    paymentMethodUpdate: { enabled: boolean };
+    subscriptionCancel: { enabled: boolean };
+    subscriptionUpdate: { enabled: boolean };
+  };
 };
 const webhookContract = JSON.parse(readFileSync('config/stripe-webhook-contract.json', 'utf8')) as {
   canonicalPath: string;
@@ -47,10 +60,11 @@ describe('Stripe provider proof contract', () => {
   });
 
   it('uses one versioned Billing Portal configuration authority for runtime and provider proof', () => {
-    expect(portalContract).toEqual({
-      schema: 'risck-comply.stripe-billing-portal-contract.v1',
-      configurationId: null,
-    });
+    expect(portalContract.schema).toBe('risck-comply.stripe-billing-portal-contract.v1');
+    expect(
+      portalContract.configurationId === null
+      || /^bpc_[A-Za-z0-9]+$/.test(portalContract.configurationId),
+    ).toBe(true);
     expect(portalBinding).toContain("../../../config/stripe-billing-portal-contract.json");
     expect(portalBinding).toContain("risck-comply.stripe-billing-portal-contract.v1");
     expect(portalBinding).toContain('/^bpc_[A-Za-z0-9]+$/');
@@ -78,6 +92,26 @@ describe('Stripe provider proof contract', () => {
     expect(writer).toContain('billingPortalConfigurationBindingValid: true');
     expect(writer).toContain("portalConfigurationBindingMode = portalContract.configurationId ? 'explicit' : 'default'");
     expect(writer).toContain('billingPortalConfigurationIdsStored: false');
+  });
+
+  it('versions and proves the safe Billing Portal feature policy', () => {
+    expect(portalPolicy.schema).toBe('risck-comply.stripe-billing-portal-policy.v1');
+    expect(portalPolicy.defaultReturnUrl).toBe('https://www.risckcomply.com/pt/dashboard/organizations/billing');
+    expect(portalPolicy.features.customerUpdate).toEqual({ enabled: true, allowedUpdates: ['address', 'tax_id'] });
+    expect(portalPolicy.features.invoiceHistory.enabled).toBe(true);
+    expect(portalPolicy.features.paymentMethodUpdate.enabled).toBe(true);
+    expect(portalPolicy.features.subscriptionCancel.enabled).toBe(false);
+    expect(portalPolicy.features.subscriptionUpdate.enabled).toBe(false);
+    expect(portalPolicy.managementMetadata.risck_comply_managed_by).toBe('protected-portal-bootstrap-v1');
+
+    expect(portalPolicyModule).toContain('subscription lifecycle must remain application-controlled');
+    expect(portalPolicyModule).toContain('stripeBillingPortalConfigurationMatchesPolicy');
+    expect(probe).toContain('loadStripeBillingPortalPolicy');
+    expect(probe).toContain('stripeBillingPortalConfigurationMatchesPolicy');
+    expect(probe).toContain('billingPortalConfigurationPolicyMatches');
+    expect(probe).toContain('requireManagementMetadata: Boolean(explicitPortalConfigurationId)');
+    expect(writer).toContain('billingPortalConfigurationPolicyMatches: true');
+    expect(writer).toContain('STRIPE_BILLING_PORTAL_POLICY_PATH');
   });
 
   it('forbids a second GitHub or Vercel environment authority for portal configuration selection', () => {
