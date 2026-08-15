@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   publicStepUpSummary: vi.fn(),
   writeAuditLog: vi.fn(),
   reportError: vi.fn(),
+  getAuthoritativeSignedContractPlan: vi.fn(),
+  hasProcessedLiveStripeSubscriptionAuthority: vi.fn(),
 }));
 
 vi.mock('@/lib/i18n/locales', () => ({
@@ -37,6 +39,11 @@ vi.mock('@/server/billing/app-url', () => ({
 
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: mocks.createAdminClient,
+}));
+
+vi.mock('@/server/billing/subscription-authority', () => ({
+  getAuthoritativeSignedContractPlan: mocks.getAuthoritativeSignedContractPlan,
+  hasProcessedLiveStripeSubscriptionAuthority: mocks.hasProcessedLiveStripeSubscriptionAuthority,
 }));
 
 vi.mock('@/server/billing/stripe', () => ({
@@ -79,14 +86,21 @@ function buildRequest(returnPath = '/dashboard/organizations/billing', headers: 
   });
 }
 
-function makeSubscriptionLookup(stripeCustomerId = 'cus_123') {
+function makeSubscriptionLookup(stripeCustomerId = 'cus_123', stripeSubscriptionId = 'sub_123') {
   const builder = {
     select: vi.fn(() => builder),
     eq: vi.fn(() => builder),
     not: vi.fn(() => builder),
     order: vi.fn(() => builder),
     limit: vi.fn(() => builder),
-    maybeSingle: vi.fn(async () => ({ data: { stripe_customer_id: stripeCustomerId }, error: null })),
+    maybeSingle: vi.fn(async () => ({
+      data: {
+        stripe_customer_id: stripeCustomerId,
+        stripe_subscription_id: stripeSubscriptionId,
+        status: 'active',
+      },
+      error: null,
+    })),
   };
 
   return builder;
@@ -104,6 +118,8 @@ describe('billing portal API security gates', () => {
       assessment: { action: 'manage_billing', verifiedAt: '2026-06-21T09:00:00.000Z' },
     });
     mocks.publicStepUpSummary.mockReturnValue({ verified: true });
+    mocks.getAuthoritativeSignedContractPlan.mockResolvedValue(null);
+    mocks.hasProcessedLiveStripeSubscriptionAuthority.mockResolvedValue(true);
     mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => makeSubscriptionLookup()) });
     mocks.stripePortalCreate.mockResolvedValue({ id: 'portal_session_fixture', url: 'https://billing.stripe.test/session-fixture' });
     mocks.writeAuditLog.mockResolvedValue({ persisted: true, legacyPersisted: true, chained: true });
@@ -191,7 +207,7 @@ describe('billing portal API security gates', () => {
     );
   });
 
-  it('creates a billing portal session only after RBAC, trusted mutation, idempotency, step-up, and durable audit persistence', async () => {
+  it('creates a billing portal session only after RBAC, trusted mutation, idempotency, step-up, live authority, and durable audit persistence', async () => {
     const response = await POST(buildRequest());
     const body = await response.json();
 
@@ -210,6 +226,11 @@ describe('billing portal API security gates', () => {
     expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'manage_billing', userId: 'user_admin', organizationId: 'org_a' }),
     );
+    expect(mocks.hasProcessedLiveStripeSubscriptionAuthority).toHaveBeenCalledWith({
+      organizationId: 'org_a',
+      stripeCustomerId: 'cus_123',
+      stripeSubscriptionId: 'sub_123',
+    });
     expect(mocks.stripePortalCreate).toHaveBeenCalledWith(
       {
         customer: 'cus_123',
@@ -226,10 +247,12 @@ describe('billing portal API security gates', () => {
         entityId: 'portal_session_fixture',
         metadata: expect.objectContaining({
           stripeCustomerId: 'cus_123',
+          stripeSubscriptionId: 'sub_123',
           returnUrl: 'https://app.eurocomply.test/en/dashboard/organizations/billing',
           rbacPermission: 'manage_billing',
           trustedOriginRequired: true,
           idempotencyProtected: true,
+          liveSubscriptionAuthority: true,
         }),
       }),
     );

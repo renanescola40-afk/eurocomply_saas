@@ -32,24 +32,36 @@ describe('public launch auth and billing access flow', () => {
     expect(onboardingState).toContain('selectedPlan: membership.selected_plan');
   });
 
-  it('requires an active or trialing subscription before organization dashboard access', () => {
+  it('requires authoritative active or trialing billing before organization dashboard access', () => {
     const dashboardAccess = readRepoFile('src/server/queries/organization-dashboard-access.ts');
+    const billingContext = readRepoFile('src/server/queries/billing.ts');
 
     expect(dashboardAccess).toContain('getOrganizationBillingContext');
     expect(dashboardAccess).toContain("new Set(['active', 'trialing'])");
     expect(dashboardAccess).toContain('checkout=required');
     expect(dashboardAccess).toContain('currentOrganization.selected_plan');
+    expect(billingContext).toContain('getAuthoritativeSignedContractPlan');
+    expect(billingContext).toContain('hasProcessedLiveStripeSubscriptionAuthority');
+    expect(billingContext).toContain('status = signedContractPlan');
   });
 
-  it('allows the first Stripe checkout without forcing a brand-new Google user to enroll MFA first', () => {
+  it('allows first live Stripe checkout without forcing a new Google user to enroll MFA first', () => {
     const checkoutRoute = readRepoFile('src/app/api/billing/checkout/route.ts');
+    const activationRoute = readRepoFile('src/app/api/billing/checkout/activation/route.ts');
 
-    expect(checkoutRoute).toContain('const isInitialCheckout = !hasExistingBillingRelationship(billingBinding)');
-    expect(checkoutRoute).toContain("billing_flow: isInitialCheckout ? 'initial_subscription' : 'existing_billing_change'");
+    expect(checkoutRoute).toContain('const hasLiveSubscription = await hasLiveSubscriptionRelationship');
+    expect(checkoutRoute).toContain("billing_flow: 'initial_subscription'");
     expect(checkoutRoute).toContain('requireStepUpForRequest');
-    expect(checkoutRoute).toContain('stepUpRequired: !isInitialCheckout');
+    expect(checkoutRoute).toContain('pendingCustomerBindingPersisted: true');
     expect(checkoutRoute).toContain('requireTrustedMutation');
     expect(checkoutRoute).toContain("permission: 'manage_billing'");
     expect(checkoutRoute).toContain('writeAuditLog');
+    expect(checkoutRoute).toContain('/checkout/complete');
+    expect(checkoutRoute).not.toContain('/dashboard/organizations?checkout=success');
+
+    expect(activationRoute).toContain('getCurrentOrganizationForUser(user.id)');
+    expect(activationRoute).toContain("new Set(['active', 'trialing'])");
+    expect(activationRoute).toContain("authority: 'persisted_subscription'");
+    expect(activationRoute).not.toContain('session_id');
   });
 });
