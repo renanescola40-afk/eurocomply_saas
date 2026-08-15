@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-08-15-production-runtime-onboarding-closure-v8",
+  "changeSet": "2026-08-15-production-runtime-onboarding-seat-closure-v9",
   "migrations": [
     {
       "filename": "20260813175000_optimize_organization_add_ons_rls_initplan.sql",
@@ -63,8 +63,16 @@
       "purpose": "re-issue the unapplied live-RLS inventory privilege repair under a production-forward execution identity and prove service-role-only access"
     },
     {
+      "filename": "20260815141000_reconcile_enterprise_invitation_seat_authority.sql",
+      "purpose": "restore backend-only seat-aware invitation creation and acceptance with active-admin authorization, pending-capacity accounting and tenant quota enforcement"
+    },
+    {
       "filename": "20260815142500_reconcile_active_onboarding_runtime.sql",
-      "purpose": "materialize the active onboarding profile, activation-ledger, recommendation/task metadata and backend-only atomic activation RPC against the live production schema"
+      "purpose": "materialize the active onboarding profile, activation-ledger, recommendation/task metadata and reconciled atomic activation implementation against the live production schema"
+    },
+    {
+      "filename": "20260815143000_harden_active_onboarding_enterprise_boundaries.sql",
+      "purpose": "preserve completed onboarding evidence and expose the final active-owner/admin, seat-aware transactional onboarding authority"
     }
   ],
   "truthBoundary": {
