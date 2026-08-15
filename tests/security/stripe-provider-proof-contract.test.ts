@@ -40,6 +40,16 @@ describe('Stripe provider proof contract', () => {
     expect(probe).toContain('requiredWebhookEventsPresent');
   });
 
+  it('requires the active live default Billing Portal configuration used by portal sessions', () => {
+    expect(probe).toContain("'/billing_portal/configurations?active=true&is_default=true&limit=100'");
+    expect(probe).toContain('configuration?.active === true');
+    expect(probe).toContain('configuration?.is_default === true');
+    expect(probe).toContain('configuration?.livemode === true');
+    expect(probe).toContain('defaultBillingPortalConfigurationPresent');
+    expect(writer).toContain('defaultBillingPortalConfigurationPresent: true');
+    expect(writer).toContain('billingPortalConfigurationIdsStored: false');
+  });
+
   it('bounds every Stripe API response before JSON parsing', () => {
     expect(probe).toContain('const MAX_PROVIDER_RESPONSE_BYTES = 64 * 1024');
     expect(probe).toContain("response.headers.get('content-length')");
@@ -59,6 +69,7 @@ describe('Stripe provider proof contract', () => {
     expect(writer).not.toContain('STRIPE_PRICE_BUSINESS_MONTHLY');
     expect(writer).toContain('priceIdsStored: false');
     expect(writer).toContain('webhookUrlsStored: false');
+    expect(writer).toContain('billingPortalConfigurationIdsStored: false');
     expect(writer).toContain('providerPayloadStored: false');
   });
 
