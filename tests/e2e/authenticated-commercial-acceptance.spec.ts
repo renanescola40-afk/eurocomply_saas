@@ -12,10 +12,10 @@ async function expectHealthyAuthenticatedPage(page: Page, label: string) {
 }
 
 const roleFixtures = [
-  { role: 'owner', env: 'E2E_OWNER_STORAGE_STATE', canManageBilling: true, canManageTasks: true, canManageDocuments: true, canManageTeam: true },
-  { role: 'admin', env: 'E2E_ADMIN_STORAGE_STATE', canManageBilling: false, canManageTasks: true, canManageDocuments: true, canManageTeam: true },
-  { role: 'member', env: 'E2E_MEMBER_STORAGE_STATE', canManageBilling: false, canManageTasks: false, canManageDocuments: true, canManageTeam: false },
-  { role: 'viewer', env: 'E2E_VIEWER_STORAGE_STATE', canManageBilling: false, canManageTasks: false, canManageDocuments: false, canManageTeam: false },
+  { role: 'owner', env: 'E2E_OWNER_STORAGE_STATE', canManageBilling: true, canManageTasks: true, canManageDocuments: true, canManageTeam: true, canManageAi: true },
+  { role: 'admin', env: 'E2E_ADMIN_STORAGE_STATE', canManageBilling: false, canManageTasks: true, canManageDocuments: true, canManageTeam: true, canManageAi: true },
+  { role: 'member', env: 'E2E_MEMBER_STORAGE_STATE', canManageBilling: false, canManageTasks: false, canManageDocuments: true, canManageTeam: false, canManageAi: false },
+  { role: 'viewer', env: 'E2E_VIEWER_STORAGE_STATE', canManageBilling: false, canManageTasks: false, canManageDocuments: false, canManageTeam: false, canManageAi: false },
 ] as const;
 
 for (const fixture of roleFixtures) {
@@ -42,6 +42,19 @@ for (const fixture of roleFixtures) {
         await expect(page.getByText(/A faturação é apenas de leitura para a sua função/i)).toBeVisible();
         await expect(page.getByRole('button', { name: /acesso de owner necessário/i })).toBeDisabled();
         await expect(page.getByRole('button', { name: /ação do owner necessária/i }).first()).toBeDisabled();
+      }
+    });
+
+    test('AI inventory creation controls match canonical governance permissions', async ({ page }) => {
+      await page.goto('/en/ai-systems', { waitUntil: 'domcontentloaded' });
+      await expectHealthyAuthenticatedPage(page, `${fixture.role} AI inventory`);
+      const readOnly = page.getByText(/your role can review AI systems, risk classification and governance readiness/i);
+      if (fixture.canManageAi) {
+        await expect(readOnly).toHaveCount(0);
+        await expect(page.getByRole('button', { name: /classify and save/i })).toBeVisible();
+      } else {
+        await expect(readOnly).toBeVisible();
+        await expect(page.getByRole('button', { name: /classify and save/i })).toHaveCount(0);
       }
     });
 
