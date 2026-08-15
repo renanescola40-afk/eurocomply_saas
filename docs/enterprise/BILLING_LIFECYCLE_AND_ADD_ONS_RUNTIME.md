@@ -2,13 +2,13 @@
 
 ## Scope
 
-This runtime closes the gap between the canonical commercial catalog and live Stripe subscription operations.
+This runtime closes the gap between the canonical commercial catalog and Stripe subscription lifecycle operations.
 
 It supports:
 
-- monthly and annual Stripe prices;
+- monthly pricing and annual pricing when the corresponding provider Price is configured;
 - upgrade with Stripe proration;
-- downgrade without immediate proration;
+- downgrade scheduled for the end of the current paid period;
 - cancellation at the end of the paid period;
 - reactivation before period end;
 - complete add-on replacement;
@@ -16,7 +16,7 @@ It supports:
 - dependency validation;
 - plan eligibility validation;
 - Customer Portal coexistence;
-- server-side audit evidence.
+- durable lifecycle-request and chained audit evidence.
 
 ## API
 
@@ -36,19 +36,25 @@ The route requires authentication, organization membership, `manage_billing`, tr
 
 ## Stripe behavior
 
-Upgrades use `create_prorations`. Downgrades use `none` and preserve the existing billing-cycle anchor. Cancellation uses `cancel_at_period_end`, protecting already-paid access. Reactivation clears that flag.
+Upgrades mutate the active subscription using `create_prorations` while preserving the billing-cycle anchor.
 
-All existing non-base subscription items are replaced atomically when add-ons are changed. This prevents orphaned subscription items and duplicated quantities.
+Downgrades do **not** immediately replace the paid plan. The server creates or validates a Stripe Subscription Schedule, preserves the current phase, appends the lower-plan phase for the next period, uses `proration_behavior: none`, and releases the schedule after the transition. Conflicting or ambiguous schedules fail closed.
 
-## Annual pricing
+Cancellation sets `cancel_at_period_end`, protecting already-paid access. Reactivation clears that flag before the period ends.
 
-Starter, Professional and Business annual prices equal ten monthly payments:
+Add-on replacement removes the prior non-base subscription items and installs the canonical requested set under the same idempotent lifecycle request.
 
-- Starter: €490/year;
-- Professional: €1,990/year;
-- Business: €6,990/year.
+## Canonical annual pricing contract
 
-Enterprise remains contract-priced and cannot be selected through the self-service lifecycle API.
+`config/billing-commercial-catalog.json` defines annual billing as ten monthly payments:
+
+- Essential: €490/year;
+- Professional: €1,490/year;
+- Business: €3,990/year.
+
+Business is sales-led in the commercial catalog even though a canonical annual amount exists. Enterprise is negotiated contract pricing and has no fixed public annual or monthly Price requirement.
+
+Repository catalog values do not prove that corresponding Stripe live Prices exist. An interval must remain unavailable when its required provider Price binding is absent.
 
 ## Add-on safety
 
@@ -65,15 +71,35 @@ The server validates:
 
 `billing_lifecycle_requests` provides protected operational evidence for subscription changes. It is service-role only, has forced RLS and prevents multiple simultaneous pending/processing requests for one organization.
 
-The existing audit-log system records actor, organization, previous plan, target plan, billing interval, add-ons, Stripe state and cancellation state.
+Durable requests persist a SHA-256 request fingerprint and a bounded result snapshot after provider success. The audit ledger records `billing.subscription_<action>` with the lifecycle request ID, actor/tenant context, source and target plans, interval, provider state, cancellation state, idempotency state and scheduled-downgrade metadata.
+
+## Billing Lifecycle Runtime Proof
+
+`.github/workflows/billing-lifecycle-runtime-proof.yml` is a protected, read-only observation workflow. It never calls Stripe mutation APIs and does not execute a charge.
+
+For one pre-authorized organization and Stripe subscription it requires persisted evidence for:
+
+1. authoritative processed Stripe subscription event correlated to the exact organization, customer and subscription;
+2. live-mode event authority when the target environment is `production`;
+3. completed `upgrade`, `downgrade`, `cancel` and `reactivate` lifecycle requests;
+4. valid request fingerprints and durable result snapshots bound to the exact subscription;
+5. cancellation followed by a later successful reactivation;
+6. downgrade audit evidence showing `scheduledForPeriodEnd` and a scheduled effective time;
+7. exact lifecycle-request-to-audit correlation for all four actions;
+8. SHA-256 chained audit integrity and predecessor resolution.
+
+Inputs are exact release SHA, target environment, authorized organization UUID, Stripe subscription ID and a processed Stripe event ID. Retained artifacts contain only booleans, bounded identifier suffixes, provenance and a source digest; raw database rows are deleted before upload.
+
+A `Complete` proof means those already-executed lifecycle actions were observed for that one subscription at that exact release SHA. It does not itself perform the smoke test, settle payment, prove every tenant, or guarantee future provider availability.
 
 ## External validation required
 
-Repository CI cannot prove live provider configuration. Production release requires:
+Repository CI cannot manufacture provider truth. Production closure still requires:
 
-- all monthly and annual Stripe Price environment variables;
-- all add-on monthly and annual Stripe Price environment variables;
-- Customer Portal configuration;
-- webhook delivery for subscription updates;
-- production migration application;
-- one upgrade, downgrade, cancellation and reactivation smoke test in Stripe test mode before live activation.
+- canonical live monthly Prices used by enabled plans;
+- annual/add-on Prices for any annual or add-on path that is actually enabled;
+- an active usable Customer Portal configuration;
+- signed webhook delivery and durable live Stripe event processing;
+- required production migrations;
+- a controlled lifecycle exercise before running the observation proof;
+- the resulting `Billing Lifecycle Runtime Proof` artifact bound to the exact current `main` SHA.
