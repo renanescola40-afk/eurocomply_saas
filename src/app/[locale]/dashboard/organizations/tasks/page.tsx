@@ -20,45 +20,59 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
   const copy = getCoreWorkflowCopy(params.locale).tasks;
   const tasks = await listComplianceTasks(organization.id);
 
-  async function currentContext() {
+  async function handleCreateTask(input: CreateComplianceTaskFormInput) {
+    'use server';
     const currentUser = await getCurrentUser();
     if (!currentUser) redirect(`/${params.locale}/login`);
     const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
     if (!currentOrganization) redirect(`/${params.locale}/onboarding`);
-    return currentOrganization;
-  }
 
-  function refreshTaskViews() {
+    await createComplianceTask({
+      organizationId: currentOrganization.id,
+      title: input.title,
+      description: input.description,
+      category: input.category,
+      priority: input.priority,
+      dueDate: input.dueDate,
+    });
     revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
     revalidatePath(`/${params.locale}/dashboard/organizations`);
   }
 
-  async function handleCreateTask(input: CreateComplianceTaskFormInput) {
-    'use server';
-    const currentOrganization = await currentContext();
-    await createComplianceTask({ organizationId: currentOrganization.id, title: input.title, description: input.description, category: input.category, priority: input.priority, dueDate: input.dueDate });
-    refreshTaskViews();
-  }
-
   async function handleEditTask(taskId: string, input: EditComplianceTaskInput) {
     'use server';
-    const currentOrganization = await currentContext();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) redirect(`/${params.locale}/login`);
+    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
+    if (!currentOrganization) redirect(`/${params.locale}/onboarding`);
+
     await updateComplianceTask(taskId, currentOrganization.id, input);
-    refreshTaskViews();
+    revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
+    revalidatePath(`/${params.locale}/dashboard/organizations`);
   }
 
   async function handleCompleteTask(taskId: string) {
     'use server';
-    const currentOrganization = await currentContext();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) redirect(`/${params.locale}/login`);
+    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
+    if (!currentOrganization) redirect(`/${params.locale}/onboarding`);
+
     await updateComplianceTask(taskId, currentOrganization.id, { status: 'done' });
-    refreshTaskViews();
+    revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
+    revalidatePath(`/${params.locale}/dashboard/organizations`);
   }
 
   async function handleDeleteTask(taskId: string) {
     'use server';
-    const currentOrganization = await currentContext();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) redirect(`/${params.locale}/login`);
+    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
+    if (!currentOrganization) redirect(`/${params.locale}/onboarding`);
+
     await deleteComplianceTask(taskId, currentOrganization.id);
-    refreshTaskViews();
+    revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
+    revalidatePath(`/${params.locale}/dashboard/organizations`);
   }
 
   return (
