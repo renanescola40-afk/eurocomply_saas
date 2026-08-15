@@ -6,23 +6,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getTeamWorkflowCopy } from '@/lib/i18n/team-workflow-copy';
 
 const roles = ['admin', 'member'] as const;
-
 type Role = (typeof roles)[number];
 
-const roleLabels: Record<Role, string> = {
-  admin: 'Admin',
-  member: 'Member',
-};
-
 type InviteMemberFormProps = {
+  locale: string;
   onSubmit: (input: { email: string; role: Role }) => Promise<void> | void;
 };
 
 export type InviteMemberInput = { email: string; role: Role };
 
-export function InviteMemberForm({ onSubmit }: InviteMemberFormProps) {
+export function InviteMemberForm({ locale, onSubmit }: InviteMemberFormProps) {
+  const copy = getTeamWorkflowCopy(locale).invite;
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('member');
   const [submitting, setSubmitting] = useState(false);
@@ -38,7 +35,7 @@ export function InviteMemberForm({ onSubmit }: InviteMemberFormProps) {
       setEmail('');
       setRole('member');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not send invitation.');
+      setError(err instanceof Error ? err.message : copy.error);
     } finally {
       setSubmitting(false);
     }
@@ -47,43 +44,33 @@ export function InviteMemberForm({ onSubmit }: InviteMemberFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Invite team member</CardTitle>
-        <CardDescription>Add collaborators to help manage compliance work.</CardDescription>
+        <CardTitle>{copy.title}</CardTitle>
+        <CardDescription>{copy.body}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="space-y-4" onSubmit={handleSubmit} aria-busy={submitting}>
           <div className="space-y-2">
-            <Label htmlFor="invite-email">Email</Label>
-            <Input
-              id="invite-email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="name@company.com"
-              required
-            />
+            <Label htmlFor="invite-email">{copy.email}</Label>
+            <Input id="invite-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@company.com" required className="focus-visible:ring-2" />
           </div>
 
           <div className="space-y-2">
-            <Label>Role</Label>
+            <Label htmlFor="invite-role">{copy.role}</Label>
             <Select value={role} onValueChange={(value) => setRole(value as Role)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select role" />
+              <SelectTrigger id="invite-role" className="focus-visible:ring-2">
+                <SelectValue placeholder={copy.selectRole} />
               </SelectTrigger>
               <SelectContent>
-                {roles.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {roleLabels[item]}
-                  </SelectItem>
-                ))}
+                <SelectItem value="admin">{copy.admin}</SelectItem>
+                <SelectItem value="member">{copy.member}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          {error ? <p className="text-sm text-red-600" role="alert" aria-live="assertive">{error}</p> : null}
 
-          <Button type="submit" disabled={submitting}>
-            {submitting ? 'Sending...' : 'Send invitation'}
+          <Button type="submit" disabled={submitting} className="focus-visible:ring-2">
+            {submitting ? copy.sending : copy.send}
           </Button>
         </form>
       </CardContent>
