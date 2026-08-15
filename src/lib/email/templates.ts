@@ -247,7 +247,7 @@ export function trialUpgradeEmail(input: TrialUpgradeEmailInput): BuiltEmail {
   const daysLabel = t(locale, { en: 'Days remaining', pt: 'Dias restantes', es: 'Días restantes', fr: 'Jours restants', it: 'Giorni rimanenti', de: 'Verbleibende Tage' });
   const body = t(locale, { en: `This existing trial period has about ${days} day${days === 1 ? '' : 's'} remaining.`, pt: `Este período de teste existente tem cerca de ${days} dia${days === 1 ? '' : 's'} restante${days === 1 ? '' : 's'}.`, es: `Este período de prueba existente tiene aproximadamente ${days} día${days === 1 ? '' : 's'} restante${days === 1 ? '' : 's'}.`, fr: `Cette période d’essai existante se termine dans environ ${days} jour${days === 1 ? '' : 's'}.`, it: `Questo periodo di prova esistente termina tra circa ${days} giorn${days === 1 ? 'o' : 'i'}.`, de: `Diese bestehende Testphase endet in etwa ${days} Tag${days === 1 ? '' : 'en'}.` });
   const ctaLabel = t(locale, { en: 'Review billing options', pt: 'Rever opções de faturação', es: 'Revisar opciones de facturación', fr: 'Consulter les options de facturation', it: 'Controlla opzioni di fatturazione', de: 'Abrechnungsoptionen prüfen' });
-  return buildEmail({ locale, template: 'trial_upgrade', subject, title, body, ctaLabel, ctaUrl: input.billingUrl, textLines: [title, `${daysLabel}: ${days}`] });
+  return buildEmail({ locale, template: 'trial_upgrade', subject, title, body, ctaLabel, ctaUrl: input.billingUrl, textLines: [title, body, `${daysLabel}: ${days}`] });
 }
 
 export function documentExpiringEmail(input: DocumentExpiringEmailInput): BuiltEmail {
