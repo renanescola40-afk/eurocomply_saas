@@ -87,7 +87,7 @@ describe('recipient locale authority', () => {
     }
   });
 
-  it('renders every shared transactional template in all configured locales while preserving payload values', () => {
+  it('renders every shared transactional template in all configured locales', () => {
     const builders = [
       (locale: string) => welcomeOnboardingEmail({ locale, organizationName: 'ACME GmbH', dashboardUrl: '/dashboard' }),
       (locale: string) => organizationCreatedEmail({ locale, organizationName: 'ACME GmbH', organizationUrl: '/organizations/acme', createdByName: 'Jane Doe' }),
@@ -108,11 +108,25 @@ describe('recipient locale authority', () => {
         const email = builder(locale);
         expect(email.subject).toBeTruthy();
         expect(email.html).toContain(`lang="${locale}"`);
-        expect(email.html).toContain('ACME GmbH');
         expect(email.text).toBeTruthy();
         if (locale !== 'en') expect(email.subject).not.toBe(english.subject);
       }
     }
+  });
+
+  it('preserves dynamic business payload values instead of translating or rewriting them', () => {
+    const invitation = memberInvitedEmail({ locale: 'fr', organizationName: 'ACME GmbH', role: 'Editor', inviteUrl: '/invite/token', invitedByName: 'Jane Doe' });
+    expect(`${invitation.subject}\n${invitation.html}\n${invitation.text}`).toContain('ACME GmbH');
+    expect(`${invitation.subject}\n${invitation.html}\n${invitation.text}`).toContain('Editor');
+    expect(`${invitation.subject}\n${invitation.html}\n${invitation.text}`).toContain('Jane Doe');
+
+    const deadline = complianceDeadlineReminderEmail({ locale: 'de', organizationName: 'ACME GmbH', deadlineName: 'Article 50 review', dueDate: '2026-09-01', dashboardUrl: '/dashboard' });
+    expect(`${deadline.subject}\n${deadline.html}\n${deadline.text}`).toContain('Article 50 review');
+    expect(`${deadline.subject}\n${deadline.html}\n${deadline.text}`).toContain('2026-09-01');
+
+    const vendor = vendorReviewEmail({ locale: 'es', organizationName: 'ACME GmbH', vendorName: 'Vendor-X', vendorsUrl: '/vendors', reviewDueAt: '2026-09-20' });
+    expect(`${vendor.subject}\n${vendor.html}\n${vendor.text}`).toContain('Vendor-X');
+    expect(`${vendor.subject}\n${vendor.html}\n${vendor.text}`).toContain('2026-09-20');
   });
 
   it('keeps legacy callers backward-compatible with English fallback', () => {
