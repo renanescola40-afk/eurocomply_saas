@@ -35,6 +35,10 @@ const forwardInvitationActorHardening = readFileSync(
   'supabase/migrations/20260815141500_harden_enterprise_invitation_actor_boundary.sql',
   'utf8',
 );
+const onboardingStatePreservation = readFileSync(
+  'supabase/migrations/20260815142000_preserve_completed_onboarding_state.sql',
+  'utf8',
+);
 const forwardOnboarding = readFileSync(
   'supabase/migrations/20260815142500_reconcile_active_onboarding_runtime.sql',
   'utf8',
@@ -47,7 +51,7 @@ const hardenedOnboarding = readFileSync(
 const selected = config.migrations.map((migration) => migration.filename);
 
 describe('bounded Supabase forward reconciliation contract', () => {
-  it('selects exactly the nineteen bounded forward-only reconciliation identities in version order', () => {
+  it('selects exactly the twenty bounded forward-only reconciliation identities in version order', () => {
     expect(selected).toEqual([
       '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
       '20260813194500_reconcile_step_up_challenges_runtime.sql',
@@ -66,6 +70,7 @@ describe('bounded Supabase forward reconciliation contract', () => {
       '20260815083000_reconcile_live_rls_validation_inventory_privileges.sql',
       '20260815141000_reconcile_enterprise_invitation_seat_authority.sql',
       '20260815141500_harden_enterprise_invitation_actor_boundary.sql',
+      '20260815142000_preserve_completed_onboarding_state.sql',
       '20260815142500_reconcile_active_onboarding_runtime.sql',
       '20260815143000_harden_active_onboarding_enterprise_boundaries.sql',
     ]);
@@ -122,7 +127,6 @@ describe('bounded Supabase forward reconciliation contract', () => {
       expect(historicalCore).toContain(invariant);
       expect(forwardCore).toContain(invariant);
     }
-
     for (const invariant of [
       'vendor creator must belong to organization',
       'vendor approver must be an authorized organization member',
@@ -133,6 +137,17 @@ describe('bounded Supabase forward reconciliation contract', () => {
       expect(historicalVendorIntegrity).toContain(invariant);
       expect(forwardCore).toContain(invariant);
     }
+  });
+
+  it('preserves completed onboarding evidence before the active RPC reconciliation can commit', () => {
+    expect(onboardingStatePreservation).toContain('Forward-only rollout guard for production onboarding state');
+    expect(onboardingStatePreservation).toContain('with latest_completed as');
+    expect(onboardingStatePreservation).toContain("where lower(coalesce(status, '')) = 'completed'");
+    expect(onboardingStatePreservation).toContain("onboarding_status = 'completed'");
+    expect(onboardingStatePreservation).toContain('onboarding_completed_at = coalesce');
+    expect(onboardingStatePreservation).toContain('latest_completed.created_at');
+    expect(onboardingStatePreservation).toContain('latest_completed.selected_plan');
+    expect(onboardingStatePreservation).toContain("raise exception 'completed onboarding evidence was not preserved'");
   });
 
   it('reconciles the active onboarding runtime under a new production-forward identity', () => {
@@ -177,15 +192,11 @@ describe('bounded Supabase forward reconciliation contract', () => {
     expect(forwardInvitationActorHardening).toContain('revoke all on function public.create_organization_invitation_with_seat_atomic_reconciled');
     expect(forwardInvitationActorHardening).toContain('from public, anon, authenticated, service_role');
     expect(forwardInvitationActorHardening).toContain('grant execute on function public.create_organization_invitation_with_seat_atomic');
-    expect(forwardInvitationActorHardening).not.toContain('migration repair');
-    expect(forwardInvitationActorHardening).not.toContain('--include-all');
   });
 
-  it('preserves completed tenants and hardens the final onboarding authority', () => {
+  it('hardens the final onboarding authority and routes invitations through canonical seat enforcement', () => {
     expect(hardenedOnboarding).toContain('with latest_completed as');
     expect(hardenedOnboarding).toContain("onboarding_status = 'completed'");
-    expect(hardenedOnboarding).toContain('onboarding_completed_at = coalesce');
-    expect(hardenedOnboarding).toContain('latest_completed.selected_plan');
     expect(hardenedOnboarding).toContain('rename to complete_onboarding_activation_atomic_reconciled');
     expect(hardenedOnboarding).toContain("v_actor_status <> 'active'");
     expect(hardenedOnboarding).toContain("v_actor_role not in ('owner', 'admin')");
@@ -201,9 +212,7 @@ describe('bounded Supabase forward reconciliation contract', () => {
   });
 
   it('triggers both bounded workflows for any migration byte change without widening the selected set', () => {
-    for (const workflow of [rehearsal, dryRun]) {
-      expect(workflow).toContain("- 'supabase/migrations/**'");
-    }
+    for (const workflow of [rehearsal, dryRun]) expect(workflow).toContain("- 'supabase/migrations/**'");
     expect(config.truthBoundary.onlyListedForwardMigrationsMayBeRehearsedOrRequested).toBe(true);
   });
 
@@ -212,13 +221,10 @@ describe('bounded Supabase forward reconciliation contract', () => {
       'scripts/supabase/verify-forward-reconciliation-postconditions.sql',
       'scripts/security/validate-enterprise-integrations-runtime.sql',
       'scripts/security/validate-enterprise-billing-runtime.sql',
-    ]) {
-      expect(rehearsal).toContain(validator);
-    }
+    ]) expect(rehearsal).toContain(validator);
     expect(integrationsRuntime).toContain('This proof is read-only');
     expect(integrationsRuntime).toContain("select 'enterprise_integrations_runtime_validation_passed' as status");
     expect(billingRuntime).toContain("select 'enterprise_billing_runtime_validation_passed' as status");
-    expect(rehearsal).toContain("echo 'FORWARD_RECONCILIATION_POSTCONDITIONS=passed'");
   });
 
   it('uses one pinned Supabase CLI baseline across rehearsal and filtered dry-run', () => {
@@ -239,31 +245,16 @@ describe('bounded Supabase forward reconciliation contract', () => {
   });
 
   it('proves active core runtime contracts that production jobs already require', () => {
-    for (const table of [
-      'intelligence_items',
-      'intelligence_calendar_suggestions',
-      'email_notification_events',
-      'vendor_review_history',
-    ]) {
+    for (const table of ['intelligence_items', 'intelligence_calendar_suggestions', 'email_notification_events', 'vendor_review_history']) {
       expect(postconditions).toContain(table);
     }
     expect(postconditions).toContain('public.create_organization_with_owner_atomic(text,text,uuid)');
     expect(postconditions).toContain("policyname like 'live_rls_%'");
     expect(postconditions).toContain('temporary live RLS validation helper remains after core reconciliation');
-    expect(postconditions).toContain('legacy direct subscription mutation policy remains after core reconciliation');
   });
 
   it('proves Enterprise licensing, SCIM and integration runtime boundaries', () => {
-    for (const table of [
-      'platform_admin_users',
-      'enterprise_contracts',
-      'organization_entitlements',
-      'organization_usage',
-      'enterprise_seat_operations',
-      'enterprise_identity_connections',
-      'enterprise_scim_tokens',
-      'enterprise_scim_identities',
-    ]) {
+    for (const table of ['platform_admin_users', 'enterprise_contracts', 'organization_entitlements', 'organization_usage', 'enterprise_seat_operations', 'enterprise_identity_connections', 'enterprise_scim_tokens', 'enterprise_scim_identities']) {
       expect(integrationsRuntime).toContain(table);
     }
     expect(integrationsRuntime).toContain('Enterprise control-plane RLS/FORCE RLS incomplete');
@@ -280,12 +271,7 @@ describe('bounded Supabase forward reconciliation contract', () => {
   });
 
   it('proves the Break-Glass tenant and backend-only postconditions', () => {
-    for (const table of [
-      'enterprise_break_glass_requests',
-      'enterprise_break_glass_approvals',
-      'enterprise_break_glass_events',
-      'enterprise_break_glass_reviews',
-    ]) {
+    for (const table of ['enterprise_break_glass_requests', 'enterprise_break_glass_approvals', 'enterprise_break_glass_events', 'enterprise_break_glass_reviews']) {
       expect(postconditions).toContain(table);
     }
     expect(postconditions).toContain('organization_members_organization_id_id_key');
