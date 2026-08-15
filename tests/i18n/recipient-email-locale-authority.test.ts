@@ -74,7 +74,7 @@ describe('recipient locale authority', () => {
     expect(profilePage).toContain('supabase.auth.updateUser');
     expect(profilePage).toContain('withRecipientLocaleMetadata(metadata, selectedLanguage)');
     expect(profilePage).toContain('LOCALE_META[language].nativeName');
-    expect(profilePage).not.toMatch(/from\(['"]profiles['"]\).*preferred_language/s);
+    expect(profilePage).not.toMatch(/from\(['"]profiles['"]\)[\s\S]*preferred_language/);
     expect(profilePage).not.toContain("update({ preferred_language");
     expect(supabaseTypes).not.toContain('preferred_language: string | null');
   });
