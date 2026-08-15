@@ -21,7 +21,6 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
   const tasks = await listComplianceTasks(organization.id);
 
   async function currentContext() {
-    'use server';
     const currentUser = await getCurrentUser();
     if (!currentUser) redirect(`/${params.locale}/login`);
     const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
@@ -29,8 +28,7 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
     return currentOrganization;
   }
 
-  async function refreshTaskViews() {
-    'use server';
+  function refreshTaskViews() {
     revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
     revalidatePath(`/${params.locale}/dashboard/organizations`);
   }
@@ -39,28 +37,28 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
     'use server';
     const currentOrganization = await currentContext();
     await createComplianceTask({ organizationId: currentOrganization.id, title: input.title, description: input.description, category: input.category, priority: input.priority, dueDate: input.dueDate });
-    await refreshTaskViews();
+    refreshTaskViews();
   }
 
   async function handleEditTask(taskId: string, input: EditComplianceTaskInput) {
     'use server';
     const currentOrganization = await currentContext();
     await updateComplianceTask(taskId, currentOrganization.id, input);
-    await refreshTaskViews();
+    refreshTaskViews();
   }
 
   async function handleCompleteTask(taskId: string) {
     'use server';
     const currentOrganization = await currentContext();
     await updateComplianceTask(taskId, currentOrganization.id, { status: 'done' });
-    await refreshTaskViews();
+    refreshTaskViews();
   }
 
   async function handleDeleteTask(taskId: string) {
     'use server';
     const currentOrganization = await currentContext();
     await deleteComplianceTask(taskId, currentOrganization.id);
-    await refreshTaskViews();
+    refreshTaskViews();
   }
 
   return (
