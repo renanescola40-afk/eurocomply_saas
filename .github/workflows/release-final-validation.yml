@@ -92,8 +92,6 @@ jobs:
           name: release-validation-${{ github.run_id }}
           path: |
             assessed-commit.txt
-            release-validation/summary.json
-            release-validation/summary.md
-            release-validation/logs/*.log
+            release-validation/**
           retention-days: 14
           if-no-files-found: warn
