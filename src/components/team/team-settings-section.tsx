@@ -21,6 +21,16 @@ type TeamSettingsSectionProps = {
   members: TeamMember[];
   invitations: PendingInvitation[];
   currentUserId?: string;
+  canManageTeam: boolean;
+};
+
+const readOnlyCopy: Record<string, string> = {
+  en: 'Your role can review team access but cannot invite, remove or cancel invitations.',
+  pt: 'A sua função pode consultar o acesso da equipa, mas não pode convidar, remover membros ou cancelar convites.',
+  es: 'Tu rol puede consultar el acceso del equipo, pero no puede invitar, eliminar miembros ni cancelar invitaciones.',
+  fr: 'Votre rôle peut consulter les accès de l’équipe, mais ne peut pas inviter, retirer des membres ou annuler des invitations.',
+  it: 'Il tuo ruolo può consultare gli accessi del team, ma non può invitare, rimuovere membri o annullare inviti.',
+  de: 'Ihre Rolle kann Teamzugriffe einsehen, aber keine Einladungen senden, Mitglieder entfernen oder Einladungen abbrechen.',
 };
 
 async function parseError(response: Response, fallback: string) {
@@ -39,7 +49,7 @@ function teamActionRequest(operation: PendingTeamOperation, token: string) {
   return fetch('/api/team/invitations/cancel', { method: 'POST', headers, credentials: 'same-origin', body: JSON.stringify(operation.payload) });
 }
 
-export function TeamSettingsSection({ locale, members, invitations, currentUserId }: TeamSettingsSectionProps) {
+export function TeamSettingsSection({ locale, members, invitations, currentUserId, canManageTeam }: TeamSettingsSectionProps) {
   const router = useRouter();
   const copy = getTeamWorkflowCopy(locale);
   const [pendingOperation, setPendingOperation] = useState<PendingTeamOperation | null>(null);
@@ -54,7 +64,7 @@ export function TeamSettingsSection({ locale, members, invitations, currentUserI
 
   const handleStepUpToken = useCallback(async (token: string) => {
     const operation = pendingOperation;
-    if (!operation) return;
+    if (!operation || !canManageTeam) return;
     try {
       const response = await teamActionRequest(operation, token);
       if (!response.ok) throw new Error(await parseError(response, copy.section.actionFailed));
@@ -65,7 +75,7 @@ export function TeamSettingsSection({ locale, members, invitations, currentUserI
       operation.reject(error instanceof Error ? error : new Error(copy.section.actionFailed));
       setPendingOperation(null);
     }
-  }, [copy.section.actionFailed, pendingOperation, router]);
+  }, [canManageTeam, copy.section.actionFailed, pendingOperation, router]);
 
   const handleStepUpCancel = useCallback(() => {
     if (pendingOperation) {
@@ -82,9 +92,20 @@ export function TeamSettingsSection({ locale, members, invitations, currentUserI
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{copy.section.body}</p>
       </div>
 
-      <InviteMemberForm locale={locale} onSubmit={handleInvite} />
-      <TeamManagementCard locale={locale} members={members} invitations={invitations} currentUserId={currentUserId} onRemoveMember={handleRemoveMember} onCancelInvitation={handleCancelInvitation} />
-      <StepUpMfaDialog action="manage_team" open={Boolean(pendingOperation)} title={copy.section.verifyTitle} description={copy.section.verifyBody} onCancel={handleStepUpCancel} onToken={handleStepUpToken} />
+      {canManageTeam ? (
+        <InviteMemberForm locale={locale} onSubmit={handleInvite} />
+      ) : (
+        <p className="rounded-xl border bg-muted/35 p-4 text-sm text-muted-foreground" role="status">{readOnlyCopy[locale] ?? readOnlyCopy.en}</p>
+      )}
+      <TeamManagementCard
+        locale={locale}
+        members={members}
+        invitations={invitations}
+        currentUserId={currentUserId}
+        onRemoveMember={canManageTeam ? handleRemoveMember : undefined}
+        onCancelInvitation={canManageTeam ? handleCancelInvitation : undefined}
+      />
+      {canManageTeam ? <StepUpMfaDialog action="manage_team" open={Boolean(pendingOperation)} title={copy.section.verifyTitle} description={copy.section.verifyBody} onCancel={handleStepUpCancel} onToken={handleStepUpToken} /> : null}
     </section>
   );
 }
