@@ -62,13 +62,12 @@ describe('recipient locale authority', () => {
     expect(existing).not.toHaveProperty('preferred_language');
   });
 
-  it('seeds the selected UI locale for new email and OAuth accounts without overwriting an existing preference', () => {
+  it('seeds the selected UI locale only when creating a new email account', () => {
     expect(authClient).toContain('preferred_language: getRecipientLocaleFromWindow()');
     expect(authClient).toContain('resolveRecipientLocale(getLocaleFromWindow())');
-    expect(authCallback).toContain('const hasStoredLocale');
-    expect(authCallback).toContain('if (!hasStoredLocale)');
-    expect(authCallback).toContain('withRecipientLocaleMetadata(userMetadata, locale)');
-    expect(authCallback).toContain('auth_locale_preference_update_failed');
+    expect(authCallback).not.toContain('preferred_language');
+    expect(authCallback).not.toContain('withRecipientLocaleMetadata');
+    expect(authCallback).not.toContain('auth.updateUser');
   });
 
   it('persists the preference through Auth metadata instead of a nonexistent profiles column', () => {
