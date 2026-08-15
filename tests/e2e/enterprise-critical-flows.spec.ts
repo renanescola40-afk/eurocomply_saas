@@ -27,6 +27,8 @@ const guardedFeatureRoutes: GuardedRoute[] = [
   { area: 'AI incidents', path: '/ai-incidents' },
   { area: 'tasks and approvals', path: '/aprovacoes' },
   { area: 'team permissions', path: '/dashboard/organizations/team' },
+  { area: 'Upgrade Center', path: '/dashboard/organizations/add-ons' },
+  { area: 'Regulatory Intelligence', path: '/dashboard/organizations/reports-governance/news' },
   { area: 'billing', path: '/billing' },
   { area: 'organization billing', path: '/dashboard/organizations/billing' },
 ];

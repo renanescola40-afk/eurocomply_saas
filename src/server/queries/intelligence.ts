@@ -2,8 +2,15 @@ import { getPersonaByCategory, type IntelligencePersona } from '@/lib/news/intel
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export type IntelligenceImpact = 'Monitorar' | 'Médio' | 'Alto' | 'Crítico';
-export type IntelligenceReliability = 'Alta' | 'Média';
-export type IntelligenceSourceType = 'Regulador' | 'Fonte oficial' | 'Instituição europeia' | 'Observatório técnico';
+export type IntelligenceReliability = 'Alta' | 'Média' | 'Baixa' | 'Não classificada';
+export type IntelligenceSourceType =
+  | 'Regulador'
+  | 'Fonte oficial'
+  | 'Instituição europeia'
+  | 'Observatório técnico'
+  | 'Mídia licenciada'
+  | 'Referência de mídia'
+  | 'Fonte não classificada';
 
 type IntelligenceDatabaseRow = {
   id: string;
@@ -21,6 +28,9 @@ type IntelligenceDatabaseRow = {
   internal_analysis: string;
   affected_companies: unknown;
   recommended_actions: unknown;
+  reference_label: string | null;
+  reference_url: string | null;
+  content_rights: string | null;
   premium: boolean | null;
 };
 
@@ -31,6 +41,8 @@ export type IntelligenceItem = {
   jurisdiction: string;
   publishedAt: string;
   source: string;
+  sourceUrl: string;
+  referenceLabel: string;
   sourceType: IntelligenceSourceType;
   author: string;
   reliability: IntelligenceReliability;
@@ -40,6 +52,7 @@ export type IntelligenceItem = {
   affectedCompanies: string[];
   recommendedActions: string[];
   calendarSuggestion: string;
+  contentRights: string;
   premium: boolean;
   persona: IntelligencePersona;
   newspaperDeck: string;
@@ -55,7 +68,7 @@ function buildArticleParagraphs(item: Pick<IntelligenceItem, 'title' | 'category
     `A fonte monitorada nesta edição é ${item.source}, com foco em ${item.jurisdiction}. O ponto central é simples: ${item.executiveSummary}`,
     `Para ${affected}, o impacto aparece em contratos, fornecedores, evidências, políticas internas e capacidade de responder a auditorias. Uma empresa que deixa esse tipo de mudança fora do radar tende a descobrir tarde demais que uma decisão técnica virou risco jurídico, operacional ou financeiro.`,
     `${item.risckComplyAnalysis} O primeiro movimento recomendado pela redação é ${firstAction.toLowerCase()}.`,
-    'Esta matéria é uma síntese editorial própria do RISCK COMPLY Intelligence: ela preserva referência, data, fonte e contexto, mas não republica textos integrais de terceiros. Quando a origem for mídia comercial ou paywall, o produto deve manter metadados e análise própria, apontando o leitor para a fonte original.',
+    'Esta matéria é uma síntese editorial própria do RISCK COMPLY Intelligence. A referência, a data e a fonte original permanecem visíveis para que o leitor possa verificar a origem; o produto não substitui aconselhamento jurídico.',
   ];
 }
 
@@ -63,108 +76,21 @@ function buildNewspaperDeck(summary: string) {
   return summary.length > 180 ? `${summary.slice(0, 177).trim()}...` : summary;
 }
 
-export const fallbackIntelligenceItems: IntelligenceItem[] = [
-  {
-    id: 'eu-ai-act-high-risk-readiness',
-    title: 'EU AI Act: empresas devem preparar evidências para sistemas de IA de alto risco',
-    category: 'AI Act',
-    jurisdiction: 'União Europeia',
-    publishedAt: '2026-06-10',
-    source: 'European Commission / EU AI Act policy pages',
-    sourceType: 'Instituição europeia',
-    author: 'RISCK COMPLY Intelligence Desk',
-    reliability: 'Alta',
-    impact: 'Alto',
-    executiveSummary: 'Empresas que usam ou fornecem sistemas de IA com impacto em pessoas precisam manter inventário, gestão de risco, documentação, supervisão humana e logs auditáveis.',
-    risckComplyAnalysis: 'A organização deve mapear sistemas de IA, confirmar o papel contratual e anexar evidências por obrigação. O maior risco é tratar uso operacional externo como simples ferramenta interna.',
-    affectedCompanies: ['SaaS B2B', 'Fintech', 'RH e recrutamento', 'Educação', 'Healthtech'],
-    recommendedActions: ['Atualizar inventário de IA.', 'Classificar risco AI Act.', 'Criar revisão para sistemas com clientes.', 'Separar evidências de logs e transparência.'],
-    calendarSuggestion: 'Criar tarefa de revisão do inventário de IA em 30 dias, prioridade alta.',
-    premium: false,
-    persona: getPersonaByCategory('AI Act'),
-    newspaperDeck: 'O regulador deixou claro que IA de alto risco exige inventário, evidência e supervisão. Para empresas, a notícia vira tarefa operacional.',
-    articleParagraphs: buildArticleParagraphs({
-      title: 'EU AI Act: empresas devem preparar evidências para sistemas de IA de alto risco',
-      category: 'AI Act',
-      jurisdiction: 'União Europeia',
-      source: 'European Commission / EU AI Act policy pages',
-      executiveSummary: 'Empresas que usam ou fornecem sistemas de IA com impacto em pessoas precisam manter inventário, gestão de risco, documentação, supervisão humana e logs auditáveis.',
-      risckComplyAnalysis: 'A organização deve mapear sistemas de IA, confirmar o papel contratual e anexar evidências por obrigação. O maior risco é tratar uso operacional externo como simples ferramenta interna.',
-      affectedCompanies: ['SaaS B2B', 'Fintech', 'RH e recrutamento', 'Educação', 'Healthtech'],
-      recommendedActions: ['Atualizar inventário de IA.'],
-    }),
-  },
-  {
-    id: 'edpb-ai-gdpr-transparency',
-    title: 'IA e RGPD: transparência e base legal continuam centrais para uso corporativo de modelos',
-    category: 'RGPD / Dados pessoais',
-    jurisdiction: 'União Europeia',
-    publishedAt: '2026-06-08',
-    source: 'EDPB / autoridades europeias de proteção de dados',
-    sourceType: 'Regulador',
-    author: 'RISCK COMPLY Intelligence Desk',
-    reliability: 'Alta',
-    impact: 'Médio',
-    executiveSummary: 'Empresas que usam IA com dados pessoais precisam demonstrar finalidade, minimização, transparência, controle de acesso, retenção e base legal adequada.',
-    risckComplyAnalysis: 'O cliente deve revisar política de uso aceitável de IA, DPIA quando houver alto risco e fornecedores que processam dados fora da empresa.',
-    affectedCompanies: ['E-commerce', 'SaaS com suporte ao cliente', 'Consultorias', 'Empresas com CRM'],
-    recommendedActions: ['Revisar política interna de IA.', 'Adicionar fornecedores de IA ao registro de terceiros.', 'Criar evidência de base legal.', 'Treinar equipes que usam prompts.'],
-    calendarSuggestion: 'Criar revisão de política de IA generativa e RGPD em 45 dias.',
-    premium: false,
-    persona: getPersonaByCategory('RGPD / Dados pessoais'),
-    newspaperDeck: 'O uso corporativo de IA com dados pessoais exige explicação, base legal e controle. A pressão agora é transformar política em evidência.',
-    articleParagraphs: buildArticleParagraphs({
-      title: 'IA e RGPD: transparência e base legal continuam centrais para uso corporativo de modelos',
-      category: 'RGPD / Dados pessoais',
-      jurisdiction: 'União Europeia',
-      source: 'EDPB / autoridades europeias de proteção de dados',
-      executiveSummary: 'Empresas que usam IA com dados pessoais precisam demonstrar finalidade, minimização, transparência, controle de acesso, retenção e base legal adequada.',
-      risckComplyAnalysis: 'O cliente deve revisar política de uso aceitável de IA, DPIA quando houver alto risco e fornecedores que processam dados fora da empresa.',
-      affectedCompanies: ['E-commerce', 'SaaS com suporte ao cliente', 'Consultorias', 'Empresas com CRM'],
-      recommendedActions: ['Revisar política interna de IA.'],
-    }),
-  },
-  {
-    id: 'nis2-dora-technology-governance',
-    title: 'Governança tecnológica: NIS2 e DORA elevam pressão sobre risco de terceiros e incidentes',
-    category: 'Cibersegurança / Terceiros',
-    jurisdiction: 'União Europeia',
-    publishedAt: '2026-06-05',
-    source: 'ENISA / autoridades nacionais competentes',
-    sourceType: 'Fonte oficial',
-    author: 'RISCK COMPLY Intelligence Desk',
-    reliability: 'Alta',
-    impact: 'Alto',
-    executiveSummary: 'Empresas reguladas e fornecedores críticos precisam mostrar rastreabilidade de incidentes, continuidade operacional, fornecedores essenciais e evidências de resposta.',
-    risckComplyAnalysis: 'A notícia deve acionar revisão de vendors críticos, SLAs, DPA, incident response e continuidade. O calendário inteligente deve sugerir revisão periódica.',
-    affectedCompanies: ['Fintech', 'SaaS corporativo', 'Cloud providers', 'Empresas com fornecedores críticos'],
-    recommendedActions: ['Marcar fornecedores críticos.', 'Validar plano de continuidade.', 'Testar resposta a incidentes.', 'Atualizar subprocessadores.'],
-    calendarSuggestion: 'Criar revisão de terceiros críticos e continuidade operacional em 30 dias.',
-    premium: true,
-    persona: getPersonaByCategory('business vendor risk'),
-    newspaperDeck: 'Resiliência e terceiros viraram assunto de diretoria. O risco agora mora em contratos, fornecedores e capacidade de provar resposta.',
-    articleParagraphs: buildArticleParagraphs({
-      title: 'Governança tecnológica: NIS2 e DORA elevam pressão sobre risco de terceiros e incidentes',
-      category: 'Cibersegurança / Terceiros',
-      jurisdiction: 'União Europeia',
-      source: 'ENISA / autoridades nacionais competentes',
-      executiveSummary: 'Empresas reguladas e fornecedores críticos precisam mostrar rastreabilidade de incidentes, continuidade operacional, fornecedores essenciais e evidências de resposta.',
-      risckComplyAnalysis: 'A notícia deve acionar revisão de vendors críticos, SLAs, DPA, incident response e continuidade. O calendário inteligente deve sugerir revisão periódica.',
-      affectedCompanies: ['Fintech', 'SaaS corporativo', 'Cloud providers', 'Empresas com fornecedores críticos'],
-      recommendedActions: ['Marcar fornecedores críticos.'],
-    }),
-  },
-];
-
 function mapSourceType(sourceType: string | null | undefined): IntelligenceSourceType {
+  if (sourceType === 'official') return 'Fonte oficial';
   if (sourceType === 'regulator') return 'Regulador';
   if (sourceType === 'institution') return 'Instituição europeia';
   if (sourceType === 'technical_observatory') return 'Observatório técnico';
-  return 'Fonte oficial';
+  if (sourceType === 'licensed_media') return 'Mídia licenciada';
+  if (sourceType === 'media_reference') return 'Referência de mídia';
+  return 'Fonte não classificada';
 }
 
 function mapReliability(reliability: string | null | undefined): IntelligenceReliability {
-  return reliability === 'medium' || reliability === 'low' ? 'Média' : 'Alta';
+  if (reliability === 'high') return 'Alta';
+  if (reliability === 'medium') return 'Média';
+  if (reliability === 'low') return 'Baixa';
+  return 'Não classificada';
 }
 
 function mapImpact(impact: string | null | undefined): IntelligenceImpact {
@@ -182,14 +108,29 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-function mapDatabaseItem(item: IntelligenceDatabaseRow): IntelligenceItem {
+function normalizeVerifiedSourceUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'https:' ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function mapDatabaseItem(item: IntelligenceDatabaseRow): IntelligenceItem | null {
+  const sourceUrl = normalizeVerifiedSourceUrl(item.reference_url);
+  if (!item.published_at || !sourceUrl) return null;
+
   const base = {
     id: item.external_id ?? item.id,
     title: item.title,
     category: item.category,
     jurisdiction: item.jurisdiction,
-    publishedAt: item.published_at ?? new Date().toISOString(),
+    publishedAt: item.published_at,
     source: item.source_name,
+    sourceUrl,
+    referenceLabel: item.reference_label?.trim() || item.source_name,
     sourceType: mapSourceType(item.source_type),
     author: item.author ?? 'RISCK COMPLY Intelligence Desk',
     reliability: mapReliability(item.reliability),
@@ -199,6 +140,7 @@ function mapDatabaseItem(item: IntelligenceDatabaseRow): IntelligenceItem {
     affectedCompanies: normalizeStringArray(item.affected_companies),
     recommendedActions: normalizeStringArray(item.recommended_actions),
     calendarSuggestion: item.impact === 'high' || item.impact === 'critical' ? 'Criar revisão no calendário inteligente em até 30 dias.' : 'Monitorar e criar tarefa se houver impacto direto na empresa.',
+    contentRights: item.content_rights ?? 'metadata_and_analysis_only',
     premium: Boolean(item.premium),
     persona: getPersonaByCategory(item.category),
   };
@@ -210,7 +152,7 @@ function mapDatabaseItem(item: IntelligenceDatabaseRow): IntelligenceItem {
   };
 }
 
-const intelligenceSelect = 'id,external_id,title,category,jurisdiction,published_at,source_name,source_type,author,reliability,impact,executive_summary,internal_analysis,affected_companies,recommended_actions,premium';
+const intelligenceSelect = 'id,external_id,title,category,jurisdiction,published_at,source_name,source_type,author,reliability,impact,executive_summary,internal_analysis,affected_companies,recommended_actions,reference_label,reference_url,content_rights,premium';
 
 function intelligenceReadError(operation: string, code?: string | null): Error {
   console.error('Intelligence read failed', { operation, code: code ?? 'unknown' });
@@ -224,16 +166,19 @@ export async function listPublishedIntelligenceItems(): Promise<IntelligenceItem
     .from('intelligence_items')
     .select(intelligenceSelect)
     .eq('status', 'published')
+    .not('published_at', 'is', null)
+    .not('reference_url', 'is', null)
     .order('published_at', { ascending: false })
     .limit(50);
 
   if (error) throw intelligenceReadError('list_published', error.code);
-  if (!data?.length) return fallbackIntelligenceItems;
-  return (data as IntelligenceDatabaseRow[]).map((item) => mapDatabaseItem(item));
+  if (!data?.length) return [];
+  return (data as IntelligenceDatabaseRow[])
+    .map((item) => mapDatabaseItem(item))
+    .filter((item): item is IntelligenceItem => item !== null);
 }
 
 export async function getPublishedIntelligenceItem(id: string): Promise<IntelligenceItem | null> {
-  const fallback = fallbackIntelligenceItems.find((item) => item.id === id);
   const supabase = createAdminClient();
 
   const { data: externalMatch, error: externalError } = await supabase
@@ -245,7 +190,7 @@ export async function getPublishedIntelligenceItem(id: string): Promise<Intellig
 
   if (externalError) throw intelligenceReadError('get_published_external_id', externalError.code);
   if (externalMatch) return mapDatabaseItem(externalMatch as IntelligenceDatabaseRow);
-  if (!isUuid(id)) return fallback ?? null;
+  if (!isUuid(id)) return null;
 
   const { data: uuidMatch, error: uuidError } = await supabase
     .from('intelligence_items')

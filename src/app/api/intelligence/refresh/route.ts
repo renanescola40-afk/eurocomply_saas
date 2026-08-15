@@ -15,7 +15,7 @@ type IntelligenceRefreshPayload = {
   source_name: string;
   source_type: 'official' | 'regulator' | 'institution' | 'technical_observatory' | 'licensed_media' | 'media_reference';
   author: string;
-  published_at: string;
+  published_at: string | null;
   reliability: 'high' | 'medium' | 'low';
   impact: 'monitor' | 'medium' | 'high' | 'critical';
   executive_summary: string;
@@ -23,6 +23,7 @@ type IntelligenceRefreshPayload = {
   affected_companies: string[];
   recommended_actions: string[];
   reference_label: string;
+  reference_url: string | null;
   content_rights: 'official_open' | 'licensed_full_text' | 'metadata_and_analysis_only';
   full_text_allowed: boolean;
   premium: boolean;
@@ -38,7 +39,7 @@ function buildMaintenanceItem(): IntelligenceRefreshPayload {
     source_name: 'RISCK COMPLY Intelligence Desk',
     source_type: 'technical_observatory',
     author: 'RISCK COMPLY Intelligence Desk',
-    published_at: new Date().toISOString(),
+    published_at: null,
     reliability: 'medium',
     impact: 'monitor',
     executive_summary: 'Registro técnico usado para validar que o fluxo de atualização do Jornal IA está operacional sem copiar conteúdo protegido de terceiros.',
@@ -46,10 +47,11 @@ function buildMaintenanceItem(): IntelligenceRefreshPayload {
     affected_companies: ['Compliance', 'Legal', 'Risk management'],
     recommended_actions: ['Validar fontes oficiais.', 'Revisar direitos de conteúdo.', 'Confirmar sugestões de calendário antes de criar obrigações.'],
     reference_label: 'RISCK COMPLY internal refresh check',
+    reference_url: null,
     content_rights: 'metadata_and_analysis_only',
     full_text_allowed: false,
     premium: false,
-    status: 'published',
+    status: 'draft',
   };
 }
 
