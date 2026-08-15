@@ -8,6 +8,7 @@ import { getTeamWorkflowCopy } from '@/lib/i18n/team-workflow-copy';
 
 const source = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
 const taskPage = source('src/app/[locale]/dashboard/organizations/tasks/page.tsx');
+const taskList = source('src/components/dashboard/compliance-task-list.tsx');
 const documentPage = source('src/app/[locale]/dashboard/organizations/documents/page.tsx');
 const teamPage = source('src/app/[locale]/dashboard/organizations/team/page.tsx');
 const teamSettings = source('src/components/team/team-settings-section.tsx');
@@ -31,6 +32,9 @@ describe('final commercial UX closure contracts', () => {
     expect(taskPage).toContain('getCoreWorkflowCopy(params.locale).tasks');
     expect(taskPage).toContain('<CreateComplianceTaskForm locale={params.locale}');
     expect(taskPage).toContain('<ComplianceTaskList locale={params.locale}');
+    expect(taskPage).toContain('onEdit={handleEditTask}');
+    expect(taskList).toContain('EditComplianceTaskInput');
+    expect(taskList).toContain('data-task-id={task.id}');
     expect(documentPage).toContain('getCoreWorkflowCopy(params.locale).documents');
     expect(documentPage).toContain('<CreateDocumentForm locale={params.locale}');
     expect(documentPage).toContain('<DocumentDownloadButton locale={params.locale}');
@@ -52,6 +56,12 @@ describe('final commercial UX closure contracts', () => {
     expect(inviteRoute).toContain('`${getAppUrl()}/${locale}/invite/');
     expect(inviteRoute).toContain('localizedInvitationEmail');
     expect(inviteRoute).not.toContain('`${getAppUrl()}/en/invite/');
+  });
+
+  it('preserves the selected self-serve plan when checkout needs onboarding first', () => {
+    expect(checkoutPage).toContain('const onboardingPath = `/${locale}/onboarding?plan=${encodeURIComponent(selectedPlan.id)}`');
+    expect(checkoutPage).toContain('<Link href={onboardingPath}');
+    expect(checkoutPage).not.toContain('/onboarding?next=${encodeURIComponent(checkoutContinuationPath)}');
   });
 
   it('keeps checkout completion browser UX subordinate to persisted subscription authority', () => {
