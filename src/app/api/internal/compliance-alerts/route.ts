@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { buildNotificationIdempotencyKey } from '@/server/jobs/notification-idempotency';
 import { enforceInternalAuthenticationRateLimit } from '@/server/security/internal-auth-rate-limit';
 import { noStoreJson } from '@/server/security/no-store';
-import { getUserEmailById } from '@/server/users/email';
+import { getUserEmailContextById } from '@/server/users/email';
 
 export const runtime = 'nodejs';
 
@@ -32,8 +32,8 @@ function addDays(days: number) {
   return date.toISOString().slice(0, 10);
 }
 
-async function getOrganizationOwnerEmail(userId: string) {
-  return getUserEmailById(userId, 'compliance_alert_owner_lookup');
+async function getOrganizationOwnerContact(userId: string) {
+  return getUserEmailContextById(userId, 'compliance_alert_owner_lookup');
 }
 
 async function hasNotificationBeenSent(input: NotificationDedupe) {
@@ -108,15 +108,15 @@ async function sendDocumentExpiryAlerts() {
 
     if (!organization?.created_by || !document.expires_at) continue;
 
-    const emailAddress = await getOrganizationOwnerEmail(organization.created_by);
-    if (!emailAddress) continue;
+    const recipient = await getOrganizationOwnerContact(organization.created_by);
+    if (!recipient.email) continue;
 
     const dedupe: NotificationDedupe = {
       organizationId: document.organization_id,
       eventType: 'document.expiring',
       entityType: 'document',
       entityId: document.id,
-      recipientEmail: emailAddress,
+      recipientEmail: recipient.email,
     };
 
     if (await hasNotificationBeenSent(dedupe)) {
@@ -129,12 +129,13 @@ async function sendDocumentExpiryAlerts() {
       organizationName: organization.name,
       documentName: document.name,
       expiresAt: document.expires_at,
-      documentsUrl: `${appUrl}/dashboard/organizations/documents`,
+      documentsUrl: `${appUrl}/${recipient.locale}/dashboard/organizations/documents`,
+      locale: recipient.locale,
     });
 
     try {
       const delivery = await sendEmail({
-        to: emailAddress,
+        to: recipient.email,
         subject: email.subject,
         html: email.html,
         text: email.text,
@@ -146,6 +147,7 @@ async function sendDocumentExpiryAlerts() {
           source: 'document_expiry_alert_job',
           documentId: document.id,
           expiresAt: document.expires_at,
+          locale: recipient.locale,
         },
       });
 
@@ -157,7 +159,7 @@ async function sendDocumentExpiryAlerts() {
       await recordNotificationSent({
         ...dedupe,
         idempotencyKey,
-        metadata: { expiresAt: document.expires_at },
+        metadata: { expiresAt: document.expires_at, locale: recipient.locale },
       });
       sent += 1;
     } catch (emailError) {
@@ -193,15 +195,15 @@ async function sendVendorReviewAlerts() {
     const organization = Array.isArray(vendor.organizations) ? vendor.organizations[0] : vendor.organizations;
     if (!organization?.created_by) continue;
 
-    const emailAddress = await getOrganizationOwnerEmail(organization.created_by);
-    if (!emailAddress) continue;
+    const recipient = await getOrganizationOwnerContact(organization.created_by);
+    if (!recipient.email) continue;
 
     const dedupe: NotificationDedupe = {
       organizationId: vendor.organization_id,
       eventType: 'vendor.review_pending',
       entityType: 'vendor',
       entityId: vendor.id,
-      recipientEmail: emailAddress,
+      recipientEmail: recipient.email,
     };
 
     if (await hasNotificationBeenSent(dedupe)) {
@@ -214,12 +216,13 @@ async function sendVendorReviewAlerts() {
       organizationName: organization.name,
       vendorName: vendor.name,
       reviewDueAt: vendor.next_review_at,
-      vendorsUrl: `${appUrl}/dashboard/organizations/vendors`,
+      vendorsUrl: `${appUrl}/${recipient.locale}/dashboard/organizations/vendors`,
+      locale: recipient.locale,
     });
 
     try {
       const delivery = await sendEmail({
-        to: emailAddress,
+        to: recipient.email,
         subject: email.subject,
         html: email.html,
         text: email.text,
@@ -231,6 +234,7 @@ async function sendVendorReviewAlerts() {
           source: 'vendor_review_alert_job',
           vendorId: vendor.id,
           reviewDueAt: vendor.next_review_at,
+          locale: recipient.locale,
         },
       });
 
@@ -242,7 +246,7 @@ async function sendVendorReviewAlerts() {
       await recordNotificationSent({
         ...dedupe,
         idempotencyKey,
-        metadata: { reviewDueAt: vendor.next_review_at },
+        metadata: { reviewDueAt: vendor.next_review_at, locale: recipient.locale },
       });
       sent += 1;
     } catch (emailError) {
