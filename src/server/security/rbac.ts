@@ -47,7 +47,7 @@ function isSupabaseUserId(value: string) {
 }
 
 export function isActiveOrganizationMembership(status: string | null | undefined) {
-  return status == null || status.trim().toLowerCase() === 'active';
+  return typeof status === 'string' && status.trim().toLowerCase() === 'active';
 }
 
 async function recordRbacDeniedAuditEvent({
