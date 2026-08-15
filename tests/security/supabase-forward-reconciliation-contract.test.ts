@@ -31,6 +31,10 @@ const forwardInvitationSeatAuthority = readFileSync(
   'supabase/migrations/20260815141000_reconcile_enterprise_invitation_seat_authority.sql',
   'utf8',
 );
+const forwardInvitationActorHardening = readFileSync(
+  'supabase/migrations/20260815141500_harden_enterprise_invitation_actor_boundary.sql',
+  'utf8',
+);
 const forwardOnboarding = readFileSync(
   'supabase/migrations/20260815142500_reconcile_active_onboarding_runtime.sql',
   'utf8',
@@ -43,7 +47,7 @@ const hardenedOnboarding = readFileSync(
 const selected = config.migrations.map((migration) => migration.filename);
 
 describe('bounded Supabase forward reconciliation contract', () => {
-  it('selects exactly the eighteen bounded forward-only reconciliation identities in version order', () => {
+  it('selects exactly the nineteen bounded forward-only reconciliation identities in version order', () => {
     expect(selected).toEqual([
       '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
       '20260813194500_reconcile_step_up_challenges_runtime.sql',
@@ -61,6 +65,7 @@ describe('bounded Supabase forward reconciliation contract', () => {
       '20260814101500_reconcile_enterprise_core_active_runtime.sql',
       '20260815083000_reconcile_live_rls_validation_inventory_privileges.sql',
       '20260815141000_reconcile_enterprise_invitation_seat_authority.sql',
+      '20260815141500_harden_enterprise_invitation_actor_boundary.sql',
       '20260815142500_reconcile_active_onboarding_runtime.sql',
       '20260815143000_harden_active_onboarding_enterprise_boundaries.sql',
     ]);
@@ -146,7 +151,6 @@ describe('bounded Supabase forward reconciliation contract', () => {
     ]) {
       expect(forwardOnboarding).toContain(column);
     }
-
     expect(forwardOnboarding).toContain('create or replace function public.complete_onboarding_activation_atomic');
     expect(forwardOnboarding).toContain('security definer');
     expect(forwardOnboarding).toContain('set search_path = pg_catalog, public');
@@ -158,22 +162,23 @@ describe('bounded Supabase forward reconciliation contract', () => {
     expect(forwardOnboarding).not.toContain('--include-all');
   });
 
-  it('restores the canonical Enterprise seat-aware invitation authority without selecting historical identities', () => {
+  it('reconciles seat-aware invitation quotas and then hides the implementation behind an active-actor wrapper', () => {
     expect(forwardInvitationSeatAuthority).toContain('create or replace function public.create_organization_invitation_with_seat_atomic');
     expect(forwardInvitationSeatAuthority).toContain('create or replace function public.accept_organization_invitation_atomic');
     expect(forwardInvitationSeatAuthority).toContain('create or replace function public.sync_organization_pending_invitation_usage');
     expect(forwardInvitationSeatAuthority).toContain('invitations_sync_pending_usage');
-    expect(forwardInvitationSeatAuthority).toContain("v_actor_status <> 'active'");
-    expect(forwardInvitationSeatAuthority).toContain("v_actor_role not in ('owner', 'admin')");
     expect(forwardInvitationSeatAuthority).toContain('invitation.seat_type = v_seat_type');
     expect(forwardInvitationSeatAuthority).toContain('v_active_members + v_pending_members >= v_member_limit');
     expect(forwardInvitationSeatAuthority).toContain('v_active_seats + v_pending_seats >= v_seat_limit');
     expect(forwardInvitationSeatAuthority).toContain('v_active_admins + v_pending_admins >= v_admin_limit');
-    expect(forwardInvitationSeatAuthority).toContain('set search_path = pg_catalog, public');
-    expect(forwardInvitationSeatAuthority).toContain('revoke all on function public.create_organization_invitation_with_seat_atomic');
-    expect(forwardInvitationSeatAuthority).toContain('grant execute on function public.create_organization_invitation_with_seat_atomic');
-    expect(forwardInvitationSeatAuthority).not.toContain('migration repair');
-    expect(forwardInvitationSeatAuthority).not.toContain('--include-all');
+    expect(forwardInvitationActorHardening).toContain('rename to create_organization_invitation_with_seat_atomic_reconciled');
+    expect(forwardInvitationActorHardening).toContain("v_actor_status is distinct from 'active'");
+    expect(forwardInvitationActorHardening).toContain("coalesce(v_actor_role, '') not in ('owner', 'admin')");
+    expect(forwardInvitationActorHardening).toContain('revoke all on function public.create_organization_invitation_with_seat_atomic_reconciled');
+    expect(forwardInvitationActorHardening).toContain('from public, anon, authenticated, service_role');
+    expect(forwardInvitationActorHardening).toContain('grant execute on function public.create_organization_invitation_with_seat_atomic');
+    expect(forwardInvitationActorHardening).not.toContain('migration repair');
+    expect(forwardInvitationActorHardening).not.toContain('--include-all');
   });
 
   it('preserves completed tenants and hardens the final onboarding authority', () => {
