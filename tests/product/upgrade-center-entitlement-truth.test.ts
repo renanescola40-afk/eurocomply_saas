@@ -44,6 +44,16 @@ describe('upgrade center entitlement truth', () => {
     expect(card).toContain('Access changes only after billing confirms the entitlement.');
   });
 
+  it('honors an active advanced-reporting add-on instead of checking only the plan tier', () => {
+    const reports = read('src/app/[locale]/dashboard/organizations/reports-governance/page.tsx');
+
+    expect(reports).toContain("canAccessFeature('advanced_reporting'");
+    expect(reports).toContain('listActiveOrganizationAddOns');
+    expect(reports).toContain('activeAddOns,');
+    expect(reports).toContain('addOnSlug="advanced-reporting"');
+    expect(reports).not.toContain("isPlanAtLeast(entitlements.plan, 'business')");
+  });
+
   it('localizes the Upgrade Center chrome across every configured product language', () => {
     const copy = read('src/lib/i18n/add-ons-copy.ts');
 
