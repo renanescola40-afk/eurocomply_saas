@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 const route = readFileSync('src/app/api/ai-governance/fria/route.ts', 'utf8');
 const queries = readFileSync('src/server/queries/fria.ts', 'utf8');
 const page = readFileSync('src/app/[locale]/dashboard/fria/page.tsx', 'utf8');
+const copy = readFileSync('src/lib/i18n/fria-workflow-copy.ts', 'utf8');
 const controlTower = readFileSync('src/server/ai-governance/regulatory-control-tower.ts', 'utf8');
 const evidenceGate = readFileSync('supabase/migrations/20260722121000_fria_approval_evidence_gate.sql', 'utf8');
 
@@ -79,7 +80,11 @@ describe('FRIA operational API contract', () => {
     expect(page).toContain("fetch('/api/ai-governance/fria'");
     expect(page).toContain("fetch('/api/ai-systems'");
     expect(page).toContain('expectedUpdatedAt: assessment.updated_at');
-    expect(page).toContain('FRIA Workspace');
+    expect(page).toContain('getFriaWorkflowCopy(locale)');
+    expect(copy).toContain("title: 'FRIA workspace'");
+    expect(copy).toContain("title: 'Workspace FRIA'");
+    expect(copy).toContain("title: 'Espace FRIA'");
+    expect(copy).toContain("title: 'FRIA-Workspace'");
     expect(controlTower).toContain("route: '/dashboard/fria'");
   });
 });

@@ -99,6 +99,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   const needsPaymentRecovery = hasStatus(billing?.status, PAYMENT_RECOVERY_STATUSES);
   const message = checkoutMessage(checkoutStatus, copy);
   const checkoutContinuationPath = `/${locale}/checkout?plan=${selectedPlan.id}`;
+  const onboardingPath = `/${locale}/onboarding?plan=${encodeURIComponent(selectedPlan.id)}`;
   const salesLedPath = `/${locale}/contact?intent=sales&plan=${selectedPlan.id}`;
   const billingDashboardPath = `/${locale}/dashboard/organizations/billing`;
   const priceLabel = planPriceLabel(selectedPlan, locale, copy);
@@ -224,7 +225,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
                 <p className="mt-3 text-center text-xs text-slate-500">{copy.workspace}: {organization.name}</p>
               </div>
             ) : user ? (
-              <Link href={`/${locale}/onboarding?next=${encodeURIComponent(checkoutContinuationPath)}`} className="mt-6 flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">{copy.createWorkspace}</Link>
+              <Link href={onboardingPath} className="mt-6 flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">{copy.createWorkspace}</Link>
             ) : (
               <div className="mt-6 grid gap-3">
                 <Link href={`/${locale}/signup?plan=${selectedPlan.id}&next=${encodeURIComponent(checkoutContinuationPath)}`} className="flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">{copy.createAccount}</Link>

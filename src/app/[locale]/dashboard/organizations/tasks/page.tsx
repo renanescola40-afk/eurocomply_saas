@@ -2,42 +2,41 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { CreateComplianceTaskForm, type CreateComplianceTaskFormInput } from '@/components/compliance/create-compliance-task-form';
-import { ComplianceTaskList } from '@/components/dashboard/compliance-task-list';
+import { ComplianceTaskList, type EditComplianceTaskInput } from '@/components/dashboard/compliance-task-list';
 import { StepUpCsvExportButton } from '@/components/reports/step-up-csv-export-button';
+import { getCoreWorkflowCopy } from '@/lib/i18n/core-workflow-copy';
+import { roleHasPermission } from '@/lib/security/permissions';
 import { createComplianceTask, deleteComplianceTask, updateComplianceTask } from '@/server/actions/compliance-tasks';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { getCurrentUser } from '@/server/queries/auth';
 import { listComplianceTasks } from '@/server/queries/compliance-tasks';
 
+const readOnlyCopy: Record<string, string> = {
+  en: 'Your role can review compliance tasks but cannot create, edit, complete or delete them.',
+  pt: 'A sua função pode consultar tarefas de compliance, mas não pode criar, editar, concluir ou eliminar tarefas.',
+  es: 'Tu rol puede consultar tareas de compliance, pero no puede crear, editar, completar ni eliminar tareas.',
+  fr: 'Votre rôle peut consulter les tâches de conformité, mais ne peut pas les créer, modifier, terminer ou supprimer.',
+  it: 'Il tuo ruolo può consultare le attività di compliance, ma non può crearle, modificarle, completarle o eliminarle.',
+  de: 'Ihre Rolle kann Compliance-Aufgaben einsehen, aber nicht erstellen, bearbeiten, abschließen oder löschen.',
+};
+
 export default async function OrganizationComplianceTasksPage({ params }: { params: { locale: string } }) {
   const user = await getCurrentUser();
-
-  if (!user) {
-    redirect(`/${params.locale}/login`);
-  }
+  if (!user) redirect(`/${params.locale}/login`);
 
   const organization = await getCurrentOrganizationForUser(user.id);
+  if (!organization) redirect(`/${params.locale}/onboarding`);
 
-  if (!organization) {
-    redirect(`/${params.locale}/onboarding`);
-  }
-
+  const copy = getCoreWorkflowCopy(params.locale).tasks;
   const tasks = await listComplianceTasks(organization.id);
+  const canManageTasks = roleHasPermission(organization.role, 'manage_ai_governance');
 
   async function handleCreateTask(input: CreateComplianceTaskFormInput) {
     'use server';
-
     const currentUser = await getCurrentUser();
-
-    if (!currentUser) {
-      redirect(`/${params.locale}/login`);
-    }
-
+    if (!currentUser) redirect(`/${params.locale}/login`);
     const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
-
-    if (!currentOrganization) {
-      redirect(`/${params.locale}/onboarding`);
-    }
+    if (!currentOrganization) redirect(`/${params.locale}/onboarding`);
 
     await createComplianceTask({
       organizationId: currentOrganization.id,
@@ -47,25 +46,28 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
       priority: input.priority,
       dueDate: input.dueDate,
     });
+    revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
+    revalidatePath(`/${params.locale}/dashboard/organizations`);
+  }
 
+  async function handleEditTask(taskId: string, input: EditComplianceTaskInput) {
+    'use server';
+    const currentUser = await getCurrentUser();
+    if (!currentUser) redirect(`/${params.locale}/login`);
+    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
+    if (!currentOrganization) redirect(`/${params.locale}/onboarding`);
+
+    await updateComplianceTask(taskId, currentOrganization.id, input);
     revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
     revalidatePath(`/${params.locale}/dashboard/organizations`);
   }
 
   async function handleCompleteTask(taskId: string) {
     'use server';
-
     const currentUser = await getCurrentUser();
-
-    if (!currentUser) {
-      redirect(`/${params.locale}/login`);
-    }
-
+    if (!currentUser) redirect(`/${params.locale}/login`);
     const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
-
-    if (!currentOrganization) {
-      redirect(`/${params.locale}/onboarding`);
-    }
+    if (!currentOrganization) redirect(`/${params.locale}/onboarding`);
 
     await updateComplianceTask(taskId, currentOrganization.id, { status: 'done' });
     revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
@@ -74,18 +76,10 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
 
   async function handleDeleteTask(taskId: string) {
     'use server';
-
     const currentUser = await getCurrentUser();
-
-    if (!currentUser) {
-      redirect(`/${params.locale}/login`);
-    }
-
+    if (!currentUser) redirect(`/${params.locale}/login`);
     const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
-
-    if (!currentOrganization) {
-      redirect(`/${params.locale}/onboarding`);
-    }
+    if (!currentOrganization) redirect(`/${params.locale}/onboarding`);
 
     await deleteComplianceTask(taskId, currentOrganization.id);
     revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
@@ -93,19 +87,29 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
   }
 
   return (
-    <main className="min-h-screen bg-[#050505] px-5 py-8 text-white lg:px-8">
+    <main className="min-h-screen bg-[#050505] px-4 py-8 text-white sm:px-5 lg:px-8">
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.24em] text-white/40">{organization.name}</p>
-            <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">Compliance tasks</h1>
-            <p className="max-w-2xl text-white/55">Track requirements, owners, priorities and deadlines for your compliance program.</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-white/40 sm:text-sm">{organization.name} · {copy.eyebrow}</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-5xl">{copy.title}</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55 sm:text-base">{copy.subtitle}</p>
           </div>
-          <StepUpCsvExportButton endpoint="/api/reports/tasks.csv" filename="tasks-report.csv" className="inline-flex h-10 items-center justify-center rounded-md border border-white/15 px-4 text-sm font-medium hover:bg-white/10 disabled:opacity-60" />
+          <StepUpCsvExportButton endpoint="/api/reports/tasks.csv" filename="tasks-report.csv" className="inline-flex h-10 items-center justify-center rounded-md border border-white/15 px-4 text-sm font-medium hover:bg-white/10 focus-visible:ring-2 disabled:opacity-60" />
         </div>
 
-        <CreateComplianceTaskForm onSubmit={handleCreateTask} />
-        <ComplianceTaskList tasks={tasks} onDelete={handleDeleteTask} onComplete={handleCompleteTask} />
+        {canManageTasks ? (
+          <CreateComplianceTaskForm locale={params.locale} onSubmit={handleCreateTask} />
+        ) : (
+          <p className="rounded-xl border border-white/10 bg-white/[0.035] p-4 text-sm text-white/65" role="status">{readOnlyCopy[params.locale] ?? readOnlyCopy.en}</p>
+        )}
+        <ComplianceTaskList
+          locale={params.locale}
+          tasks={tasks}
+          onEdit={canManageTasks ? handleEditTask : undefined}
+          onDelete={canManageTasks ? handleDeleteTask : undefined}
+          onComplete={canManageTasks ? handleCompleteTask : undefined}
+        />
       </div>
     </main>
   );
