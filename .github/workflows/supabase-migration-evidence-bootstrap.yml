@@ -128,6 +128,20 @@ jobs:
             mv "$tmp" "$STATE"
           }
 
+          mark_child_wait_blocked() {
+            local run_id="$1"
+            local tmp
+            tmp="$(mktemp)"
+            jq \
+              --arg runId "$run_id" \
+              --arg completedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+              '.status = "BLOCKED_AWAITING_ENVIRONMENT_REVIEW"
+               | .blockedRunId = $runId
+               | .completedAt = $completedAt' \
+              "$STATE" > "$tmp"
+            mv "$tmp" "$STATE"
+          }
+
           dispatch_workflow() {
             local workflow="$1"
             shift
@@ -180,6 +194,7 @@ jobs:
               return 1
             fi
 
+            local waiting_polls=0
             for _ in $(seq 1 1080); do
               local status
               if ! status="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '.status')"; then
@@ -196,7 +211,16 @@ jobs:
                   printf '%s\n' "$conclusion"
                   return 0
                   ;;
-                queued|in_progress|pending|waiting|requested)
+                waiting)
+                  waiting_polls=$((waiting_polls + 1))
+                  if (( waiting_polls >= 3 )); then
+                    mark_child_wait_blocked "$run_id"
+                    echo "Child workflow run ${run_id} is blocked awaiting protected environment review; bootstrap remains fail-closed." >&2
+                    return 1
+                  fi
+                  ;;
+                queued|in_progress|pending|requested)
+                  waiting_polls=0
                   ;;
                 *)
                   echo "Unexpected workflow status for ${run_id}: ${status}" >&2
@@ -342,6 +366,9 @@ jobs:
             echo "- Subject SHA: \`$TARGET_SHA\`"
             if test -f "$OUTPUT_DIR/bootstrap-state.json"; then
               echo "- Status: \`$(jq -r '.status' "$OUTPUT_DIR/bootstrap-state.json")\`"
+              if test "$(jq -r '.blockedRunId // empty' "$OUTPUT_DIR/bootstrap-state.json")" != ''; then
+                echo "- Blocked child run: \`$(jq -r '.blockedRunId' "$OUTPUT_DIR/bootstrap-state.json")\`"
+              fi
               echo
               echo '### Child workflow runs'
               jq -r '.stages | to_entries[] | [.key, .value.runId, .value.conclusion] | @tsv' "$OUTPUT_DIR/bootstrap-state.json" |
