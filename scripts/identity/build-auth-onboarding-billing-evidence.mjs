@@ -8,7 +8,7 @@ const evidencePath = process.argv[3] ?? 'artifacts/auth-onboarding-billing-runti
 const summaryPath = process.argv[4] ?? 'artifacts/auth-onboarding-billing-runtime-proof/summary.md';
 const env = (name) => String(process.env[name] ?? '').trim();
 
-const requiredChecks = [
+const baseRequiredChecks = [
   'schemaReady',
   'organizationObserved',
   'organizationOnboardingCompleted',
@@ -21,12 +21,19 @@ const requiredChecks = [
   'stripeBindingPresent',
   'entitlementsPresent',
   'stripeEventProcessed',
+  'stripeEventAuthoritativeType',
+  'stripeEventBindingMatches',
   'webhookAuditObserved',
   'subscriptionUpdatedAuditObserved',
   'subscriptionSyncedAuditObserved',
   'auditHashesPresent',
   'auditPredecessorLinksResolve',
 ];
+const productionRequiredChecks = [
+  'stripeEventLiveMode',
+  'productionLiveAuthorityRequired',
+];
+const allChecks = [...baseRequiredChecks, ...productionRequiredChecks];
 
 const failures = [];
 let rawBytes = Buffer.alloc(0);
@@ -54,14 +61,18 @@ if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 if (!/^evt_[A-Za-z0-9]+$/.test(stripeEventId)) failures.push('stripe_event_id_invalid');
 if (!/^[a-z][a-z0-9_-]{1,119}$/.test(expectedPlan)) failures.push('expected_plan_invalid');
 
-const checks = Object.fromEntries(requiredChecks.map((name) => [name, observed?.[name] === true]));
-for (const [name, passed] of Object.entries(checks)) {
-  if (!passed) failures.push(`check_failed:${name}`);
+const checks = Object.fromEntries(allChecks.map((name) => [name, observed?.[name] === true]));
+const requiredChecks = targetEnvironment === 'production'
+  ? [...baseRequiredChecks, ...productionRequiredChecks]
+  : baseRequiredChecks;
+for (const name of requiredChecks) {
+  if (checks[name] !== true) failures.push(`check_failed:${name}`);
 }
 
 const passed = failures.length === 0;
 const sourceSha256 = createHash('sha256').update(rawBytes).digest('hex');
 const suffix = (value, length = 8) => value ? value.slice(-length) : null;
+const liveStripeAuthorityRequired = targetEnvironment === 'production';
 
 const evidence = {
   schema: 'risck-comply.auth-onboarding-billing-runtime-evidence.v1',
@@ -74,6 +85,14 @@ const evidence = {
   workflowRunId: env('GITHUB_RUN_ID') || null,
   targetEnvironment,
   expectedPlan,
+  authorityPolicy: {
+    productionRequiresLiveStripeAuthority: true,
+    liveStripeAuthorityRequired,
+    authoritativeSubscriptionEventTypes: [
+      'customer.subscription.created',
+      'customer.subscription.updated',
+    ],
+  },
   correlation: {
     organizationIdSuffix: suffix(organizationId),
     stripeEventIdSuffix: suffix(stripeEventId, 12),
@@ -89,7 +108,9 @@ const evidence = {
     connectionStringsStored: false,
     rawDatabaseRowsStored: false,
   },
-  boundary: 'Read-only exact-SHA observation of one pre-authorized organization. The artifact stores booleans, bounded plan/status metadata, identifier suffixes and a source digest only. It does not prove every tenant, payment settlement, legal compliance or future deployment.',
+  boundary: liveStripeAuthorityRequired
+    ? 'Read-only exact-SHA observation of one pre-authorized production organization. Completion requires a processed live-mode Stripe subscription-created/updated event correlated to the exact organization, customer and subscription. The artifact stores booleans, bounded plan/status metadata, identifier suffixes and a source digest only; it does not prove every tenant, payment settlement, legal compliance or future deployment.'
+    : 'Read-only exact-SHA observation of one pre-authorized staging organization. Event processing, authoritative subscription-event type and exact customer/subscription binding are required, but staging completion does not claim live-mode Stripe authority. The artifact stores booleans, bounded plan/status metadata, identifier suffixes and a source digest only.',
 };
 
 const summary = [
@@ -100,6 +121,7 @@ const summary = [
   `- Release SHA: \`${releaseSha || 'missing'}\``,
   `- Environment: \`${targetEnvironment || 'missing'}\``,
   `- Expected plan: \`${expectedPlan || 'missing'}\``,
+  `- Live Stripe authority required: **${liveStripeAuthorityRequired ? 'yes' : 'no'}**`,
   '',
   '## Controls',
   '',
