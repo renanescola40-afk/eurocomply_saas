@@ -5,10 +5,20 @@ import { CreateComplianceTaskForm, type CreateComplianceTaskFormInput } from '@/
 import { ComplianceTaskList, type EditComplianceTaskInput } from '@/components/dashboard/compliance-task-list';
 import { StepUpCsvExportButton } from '@/components/reports/step-up-csv-export-button';
 import { getCoreWorkflowCopy } from '@/lib/i18n/core-workflow-copy';
+import { roleHasPermission } from '@/lib/security/permissions';
 import { createComplianceTask, deleteComplianceTask, updateComplianceTask } from '@/server/actions/compliance-tasks';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { getCurrentUser } from '@/server/queries/auth';
 import { listComplianceTasks } from '@/server/queries/compliance-tasks';
+
+const readOnlyCopy: Record<string, string> = {
+  en: 'Your role can review compliance tasks but cannot create, edit, complete or delete them.',
+  pt: 'A sua função pode consultar tarefas de compliance, mas não pode criar, editar, concluir ou eliminar tarefas.',
+  es: 'Tu rol puede consultar tareas de compliance, pero no puede crear, editar, completar ni eliminar tareas.',
+  fr: 'Votre rôle peut consulter les tâches de conformité, mais ne peut pas les créer, modifier, terminer ou supprimer.',
+  it: 'Il tuo ruolo può consultare le attività di compliance, ma non può crearle, modificarle, completarle o eliminarle.',
+  de: 'Ihre Rolle kann Compliance-Aufgaben einsehen, aber nicht erstellen, bearbeiten, abschließen oder löschen.',
+};
 
 export default async function OrganizationComplianceTasksPage({ params }: { params: { locale: string } }) {
   const user = await getCurrentUser();
@@ -19,6 +29,7 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
 
   const copy = getCoreWorkflowCopy(params.locale).tasks;
   const tasks = await listComplianceTasks(organization.id);
+  const canManageTasks = roleHasPermission(organization.role, 'manage_ai_governance');
 
   async function handleCreateTask(input: CreateComplianceTaskFormInput) {
     'use server';
@@ -87,8 +98,18 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
           <StepUpCsvExportButton endpoint="/api/reports/tasks.csv" filename="tasks-report.csv" className="inline-flex h-10 items-center justify-center rounded-md border border-white/15 px-4 text-sm font-medium hover:bg-white/10 focus-visible:ring-2 disabled:opacity-60" />
         </div>
 
-        <CreateComplianceTaskForm locale={params.locale} onSubmit={handleCreateTask} />
-        <ComplianceTaskList locale={params.locale} tasks={tasks} onEdit={handleEditTask} onDelete={handleDeleteTask} onComplete={handleCompleteTask} />
+        {canManageTasks ? (
+          <CreateComplianceTaskForm locale={params.locale} onSubmit={handleCreateTask} />
+        ) : (
+          <p className="rounded-xl border border-white/10 bg-white/[0.035] p-4 text-sm text-white/65" role="status">{readOnlyCopy[params.locale] ?? readOnlyCopy.en}</p>
+        )}
+        <ComplianceTaskList
+          locale={params.locale}
+          tasks={tasks}
+          onEdit={canManageTasks ? handleEditTask : undefined}
+          onDelete={canManageTasks ? handleDeleteTask : undefined}
+          onComplete={canManageTasks ? handleCompleteTask : undefined}
+        />
       </div>
     </main>
   );
