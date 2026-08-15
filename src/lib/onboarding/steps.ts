@@ -102,9 +102,9 @@ export function buildOnboardingSteps(input: OnboardingState): OnboardingStep[] {
       status: status(input.hasMembers),
     },
     {
-      id: 'plan-or-trial',
-      title: 'Choose plan or continue trial',
-      description: 'Let the customer continue the trial or carry a selected plan into billing review.',
+      id: 'plan',
+      title: 'Confirm selected plan',
+      description: 'Carry the customer’s selected commercial plan into billing review.',
       status: status(input.hasPlanIntent),
     },
   ];
