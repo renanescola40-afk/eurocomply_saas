@@ -8,7 +8,8 @@ with proof_input as (
   select
     :'organization_id'::uuid as organization_id,
     :'stripe_event_id'::text as stripe_event_id,
-    lower(:'expected_plan'::text) as expected_plan
+    lower(:'expected_plan'::text) as expected_plan,
+    lower(:'target_environment'::text) as target_environment
 ),
 schema_checks as (
   select
@@ -41,8 +42,28 @@ schema_checks as (
     ) as subscription_entitlements_column,
     exists (
       select 1 from information_schema.columns
+      where table_schema = 'public' and table_name = 'subscriptions' and column_name = 'stripe_customer_id'
+    ) as subscription_customer_column,
+    exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public' and table_name = 'subscriptions' and column_name = 'stripe_subscription_id'
+    ) as subscription_id_column,
+    exists (
+      select 1 from information_schema.columns
       where table_schema = 'public' and table_name = 'stripe_events_processed' and column_name = 'organization_id'
     ) as stripe_event_organization_column,
+    exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public' and table_name = 'stripe_events_processed' and column_name = 'livemode'
+    ) as stripe_event_livemode_column,
+    exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public' and table_name = 'stripe_events_processed' and column_name = 'type'
+    ) as stripe_event_type_column,
+    exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public' and table_name = 'stripe_events_processed' and column_name = 'payload'
+    ) as stripe_event_payload_column,
     exists (
       select 1 from information_schema.columns
       where table_schema = 'public' and table_name = 'audit_events' and column_name = 'event_hash'
@@ -68,29 +89,37 @@ activation_state as (
   left join public.onboarding_activation_runs r on r.organization_id = i.organization_id
   group by i.organization_id, i.expected_plan
 ),
+stripe_event_state as (
+  select
+    e.id,
+    lower(coalesce(to_jsonb(e) ->> 'type', '')) as event_type,
+    lower(coalesce(to_jsonb(e) ->> 'livemode', 'false')) = 'true' as livemode,
+    e.status,
+    e.error,
+    e.processed_at,
+    lower(coalesce(to_jsonb(e) ->> 'organization_id', '')) as organization_id,
+    coalesce(to_jsonb(e) #>> '{payload,data,object,id}', '') as payload_subscription_id,
+    coalesce(
+      nullif(to_jsonb(e) #>> '{payload,data,object,customer,id}', ''),
+      nullif(to_jsonb(e) #>> '{payload,data,object,customer}', ''),
+      ''
+    ) as payload_customer_id
+  from public.stripe_events_processed e
+  join proof_input i on i.stripe_event_id = e.id
+),
 subscription_state as (
   select
     s.organization_id,
     lower(coalesce(s.plan, '')) as plan,
     lower(coalesce(to_jsonb(s) ->> 'tier', s.plan, '')) as tier,
     lower(coalesce(s.status, '')) as status,
-    nullif(trim(coalesce(s.stripe_customer_id, '')), '') is not null as has_customer,
-    nullif(trim(coalesce(s.stripe_subscription_id, '')), '') is not null as has_subscription,
+    nullif(trim(coalesce(s.stripe_customer_id, '')), '') as stripe_customer_id,
+    nullif(trim(coalesce(s.stripe_subscription_id, '')), '') as stripe_subscription_id,
     jsonb_typeof(to_jsonb(s) -> 'entitlements') = 'object'
-      and coalesce(to_jsonb(s) -> 'entitlements', '{}'::jsonb) <> '{}'::jsonb as has_entitlements,
-    s.stripe_subscription_id
+      and coalesce(to_jsonb(s) -> 'entitlements', '{}'::jsonb) <> '{}'::jsonb as has_entitlements
   from public.subscriptions s
   join proof_input i on i.organization_id = s.organization_id
-),
-stripe_event_state as (
-  select
-    e.id,
-    e.status,
-    e.error,
-    e.processed_at,
-    lower(coalesce(to_jsonb(e) ->> 'organization_id', '')) as organization_id
-  from public.stripe_events_processed e
-  join proof_input i on i.stripe_event_id = e.id
+  join stripe_event_state e on e.payload_subscription_id = s.stripe_subscription_id
 ),
 target_audit_events as (
   select a.*
@@ -140,7 +169,12 @@ select jsonb_build_object(
       and organization_selected_plan_column
       and subscription_tier_column
       and subscription_entitlements_column
+      and subscription_customer_column
+      and subscription_id_column
       and stripe_event_organization_column
+      and stripe_event_livemode_column
+      and stripe_event_type_column
+      and stripe_event_payload_column
       and audit_event_hash_column
     from schema_checks
   ),
@@ -167,7 +201,8 @@ select jsonb_build_object(
     from subscription_state s cross join proof_input i limit 1
   ), false),
   'stripeBindingPresent', coalesce((
-    select has_customer and has_subscription from subscription_state limit 1
+    select stripe_customer_id is not null and stripe_subscription_id is not null
+    from subscription_state limit 1
   ), false),
   'entitlementsPresent', coalesce((select has_entitlements from subscription_state limit 1), false),
   'stripeEventProcessed', coalesce((
@@ -177,6 +212,22 @@ select jsonb_build_object(
       and e.processed_at is not null
       and e.organization_id = i.organization_id::text
     from stripe_event_state e cross join proof_input i limit 1
+  ), false),
+  'stripeEventLiveMode', coalesce((select livemode from stripe_event_state limit 1), false),
+  'stripeEventAuthoritativeType', coalesce((
+    select event_type in ('customer.subscription.created', 'customer.subscription.updated')
+    from stripe_event_state limit 1
+  ), false),
+  'stripeEventBindingMatches', coalesce((
+    select
+      e.payload_subscription_id = s.stripe_subscription_id
+      and e.payload_customer_id = s.stripe_customer_id
+    from stripe_event_state e
+    join subscription_state s on s.stripe_subscription_id = e.payload_subscription_id
+    limit 1
+  ), false),
+  'productionLiveAuthorityRequired', coalesce((
+    select target_environment = 'production' from proof_input limit 1
   ), false),
   'webhookAuditObserved', coalesce((select webhook_received_count > 0 from audit_summary), false),
   'subscriptionUpdatedAuditObserved', coalesce((select subscription_updated_count > 0 from audit_summary), false),

@@ -2,7 +2,9 @@
 
 ## Purpose
 
-Run one protected, read-only proof that observes the production path from completed onboarding through active Stripe-backed access and chained audit evidence. The proof is bound to the exact current `main` SHA and never mutates tenant data.
+Run one protected, read-only proof that observes the target path from completed onboarding through Stripe-backed access and chained audit evidence. The proof is bound to the exact current `main` SHA and never mutates tenant data.
+
+Production has a stricter commercial-authority boundary than staging: a production proof can only complete when the selected Stripe event is a processed **live-mode** `customer.subscription.created` or `customer.subscription.updated` event whose payload subscription and customer identifiers match the exact persisted subscription for the authorized organization. A status-only subscription row or a processed test-mode event cannot satisfy the production proof.
 
 ## Preconditions
 
@@ -12,8 +14,11 @@ Run one protected, read-only proof that observes the production path from comple
 - the selected organization is explicitly authorized for evidence collection;
 - onboarding was completed through the real application flow;
 - the organization has an active or trialing Stripe subscription;
-- a successfully processed Stripe event is available;
+- a successfully processed authoritative Stripe subscription event is available;
+- for `production`, that event is `livemode=true` and its payload customer/subscription binding matches the persisted organization subscription;
 - the canonical chained audit ledger is enabled.
+
+The separate **Stripe Provider Proof** must also be green before commercial launch. It validates the live account, canonical live monthly prices, exact production webhook contract, and the active live **default Billing Portal configuration** used by application portal sessions that do not specify a configuration ID. A runtime organization proof does not substitute for provider configuration readiness.
 
 ## Workflow inputs
 
@@ -22,7 +27,7 @@ Open **Actions → Auth Onboarding Billing Runtime Proof → Run workflow** and 
 - `release_sha`: full 40-character SHA currently at `main`;
 - `target_environment`: `staging` or `production`;
 - `organization_id`: authorized organization UUID;
-- `stripe_event_id`: successfully processed `evt_...` identifier;
+- `stripe_event_id`: successfully processed authoritative subscription `evt_...` identifier;
 - `expected_plan`: canonical plan such as `professional`;
 - `confirmation`: `PROVE_AUTH_ONBOARDING_BILLING_RUNTIME`.
 
@@ -35,13 +40,18 @@ The workflow verifies:
 3. the organization exists and has completed onboarding;
 4. the organization-selected plan matches the expected plan;
 5. a completed onboarding activation run exists for that plan;
-6. the subscription is active or trialing;
+6. the subscription matched by the event payload is active or trialing;
 7. subscription `plan` and `tier` match;
 8. Stripe customer and subscription bindings exist;
 9. entitlement data is present;
-10. the correlated Stripe event is processed without error;
-11. `webhook_received`, `billing.subscription_updated` and `subscription_synced` audit events exist;
-12. the audit events use SHA-256 hashes and their predecessor links resolve.
+10. the correlated Stripe event is processed without error for the exact organization;
+11. the event type is `customer.subscription.created` or `customer.subscription.updated`;
+12. the event payload subscription and customer match the exact persisted subscription row;
+13. in `production`, the event is explicitly `livemode=true`;
+14. `webhook_received`, `billing.subscription_updated` and `subscription_synced` audit events exist;
+15. the audit events use SHA-256 hashes and their predecessor links resolve.
+
+Staging evidence can complete without claiming live-mode authority, but it still requires an authoritative subscription event type and exact event/customer/subscription correlation. The retained artifact records whether live authority was required so staging evidence cannot be mistaken for production commercial proof.
 
 ## Schema-drift reconciliation
 
@@ -71,14 +81,15 @@ The raw SQL observation is temporary and deleted before artifact upload. Retaine
 - exact release SHA and workflow run ID;
 - bounded environment and expected-plan metadata;
 - organization and Stripe-event suffixes;
+- the authority policy used for the selected environment;
 - source SHA-256 and byte length;
 - truth-boundary text.
 
-No database URL, credential, service-role secret, full organization UUID, full Stripe event ID or raw row is retained.
+No database URL, credential, service-role secret, full organization UUID, full Stripe event ID, Stripe customer ID, Stripe subscription ID or raw row is retained.
 
 ## Failure handling
 
-The proof remains `Open/failed` when any control is absent. Use the generated summary to identify the exact failed control.
+The proof remains `Open/failed` when any required control is absent. Use the generated summary to identify the exact failed control.
 
 Common failures:
 
@@ -89,9 +100,13 @@ Common failures:
 - `subscriptionActive`: correct or renew the Stripe subscription;
 - `subscriptionPlanMatches`: reconcile Stripe metadata and the canonical subscription row;
 - `stripeEventProcessed`: inspect the webhook delivery and `stripe_events_processed` failure reason;
+- `stripeEventAuthoritativeType`: use the processed subscription-created/updated event that grants commercial authority, not checkout/test evidence;
+- `stripeEventBindingMatches`: investigate organization/customer/subscription correlation before granting access;
+- `stripeEventLiveMode`: production cannot complete from test-mode Stripe evidence;
+- provider proof `defaultBillingPortalConfigurationPresent`: activate/configure the live default Customer Portal in Stripe before treating self-service billing as ready;
 - audit failures: inspect `audit_events` and the chained append RPC.
 
-Do not edit the evidence artifact to turn a failed control green. Correct the runtime state and execute a new workflow run for the exact current SHA.
+Do not edit the evidence artifact to turn a failed control green. Correct the runtime/provider state and execute a new workflow run for the exact current SHA.
 
 ## Rollback
 
@@ -101,4 +116,4 @@ The reconciliation migration is additive. Do not drop the onboarding columns whi
 
 ## Truth boundary
 
-A green result proves the observed path for one pre-authorized organization at one point in time and one exact release SHA. It does not prove every tenant, future deployments, payment settlement, legal compliance, external certification or universal availability.
+A green production result proves the observed path for one pre-authorized organization, one exact release SHA and one exact processed live authoritative Stripe subscription event. It does not prove every tenant, future deployments, payment settlement, legal compliance, external certification or universal availability. A green staging result does not claim live-mode Stripe authority.

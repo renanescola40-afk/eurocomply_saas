@@ -98,6 +98,7 @@ jobs:
             --set organization_id="$ORGANIZATION_ID" \
             --set stripe_event_id="$STRIPE_EVENT_ID" \
             --set expected_plan="$EXPECTED_PLAN" \
+            --set target_environment="$TARGET_ENVIRONMENT" \
             --file scripts/identity/auth-onboarding-billing-runtime-proof.sql \
             > artifacts/auth-onboarding-billing-runtime-proof/raw.json
           test -s artifacts/auth-onboarding-billing-runtime-proof/raw.json

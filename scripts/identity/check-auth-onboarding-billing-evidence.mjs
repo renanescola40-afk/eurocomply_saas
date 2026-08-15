@@ -13,8 +13,15 @@ if (evidence?.outcome !== 'passed') failures.push('outcome_not_passed');
 if (!/^[a-f0-9]{40}$/i.test(String(evidence?.releaseSha ?? ''))) failures.push('release_sha_invalid');
 if (!['staging', 'production'].includes(evidence?.targetEnvironment)) failures.push('target_environment_invalid');
 if (!/^[a-z][a-z0-9_-]{1,119}$/.test(String(evidence?.expectedPlan ?? ''))) failures.push('expected_plan_invalid');
+if (evidence?.authorityPolicy?.productionRequiresLiveStripeAuthority !== true) failures.push('production_live_authority_policy_invalid');
+if (!Array.isArray(evidence?.authorityPolicy?.authoritativeSubscriptionEventTypes)
+  || evidence.authorityPolicy.authoritativeSubscriptionEventTypes.length !== 2
+  || !evidence.authorityPolicy.authoritativeSubscriptionEventTypes.includes('customer.subscription.created')
+  || !evidence.authorityPolicy.authoritativeSubscriptionEventTypes.includes('customer.subscription.updated')) {
+  failures.push('authoritative_event_policy_invalid');
+}
 
-const requiredChecks = [
+const baseRequiredChecks = [
   'schemaReady',
   'organizationObserved',
   'organizationOnboardingCompleted',
@@ -27,14 +34,29 @@ const requiredChecks = [
   'stripeBindingPresent',
   'entitlementsPresent',
   'stripeEventProcessed',
+  'stripeEventAuthoritativeType',
+  'stripeEventBindingMatches',
   'webhookAuditObserved',
   'subscriptionUpdatedAuditObserved',
   'subscriptionSyncedAuditObserved',
   'auditHashesPresent',
   'auditPredecessorLinksResolve',
 ];
+const productionRequiredChecks = [
+  'stripeEventLiveMode',
+  'productionLiveAuthorityRequired',
+];
+const requiredChecks = evidence?.targetEnvironment === 'production'
+  ? [...baseRequiredChecks, ...productionRequiredChecks]
+  : baseRequiredChecks;
 for (const check of requiredChecks) {
   if (evidence?.checks?.[check] !== true) failures.push(`check_failed:${check}`);
+}
+
+if (evidence?.targetEnvironment === 'production') {
+  if (evidence?.authorityPolicy?.liveStripeAuthorityRequired !== true) failures.push('production_live_authority_requirement_missing');
+} else if (evidence?.targetEnvironment === 'staging') {
+  if (evidence?.authorityPolicy?.liveStripeAuthorityRequired !== false) failures.push('staging_live_authority_boundary_invalid');
 }
 
 if (!Array.isArray(evidence?.failures) || evidence.failures.length !== 0) failures.push('evidence_contains_failures');
@@ -54,6 +76,7 @@ const forbidden = [
   /(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9_=-]+/i,
   /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i,
   /\bevt_[A-Za-z0-9]+\b/,
+  /\b(?:cus|sub)_[A-Za-z0-9]+\b/,
 ];
 for (const pattern of forbidden) {
   if (pattern.test(text)) failures.push(`forbidden_pattern:${pattern.source}`);
