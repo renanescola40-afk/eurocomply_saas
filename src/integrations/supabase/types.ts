@@ -19,7 +19,6 @@ type Profile = {
   full_name: string | null
   avatar_url: string | null
   onboarding_completed: boolean | null
-  preferred_language: string | null
   created_at: string | null
   updated_at: string | null
 }
