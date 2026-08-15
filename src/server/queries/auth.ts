@@ -1,3 +1,5 @@
+import { getRecipientLocaleFromMetadata } from '@/lib/i18n/recipient-locale';
+import type { Locale } from '@/lib/i18n/routing';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 type CurrentAppUser = {
@@ -6,6 +8,7 @@ type CurrentAppUser = {
   firstName?: string | null;
   lastName?: string | null;
   imageUrl?: string | null;
+  locale: Locale;
   source: 'supabase';
   supabaseUserId: string;
 };
@@ -36,6 +39,7 @@ export async function getCurrentUser(): Promise<CurrentAppUser | null> {
       firstName: readMetadataString(metadata, 'first_name') ?? nameParts[0] ?? null,
       lastName: readMetadataString(metadata, 'last_name') ?? inferredLastName,
       imageUrl: readMetadataString(metadata, 'avatar_url') ?? readMetadataString(metadata, 'picture'),
+      locale: getRecipientLocaleFromMetadata(metadata),
       source: 'supabase',
     };
   } catch {
