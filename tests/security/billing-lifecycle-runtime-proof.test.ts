@@ -68,7 +68,7 @@ describe('billing lifecycle runtime proof', () => {
     expect(workflow).toContain('permissions:\n  contents: read');
     expect(workflow).toContain('PROVE_BILLING_LIFECYCLE_RUNTIME');
     expect(workflow).toContain('persist-credentials: false');
-    expect(workflow).toContain('begin transaction read only');
+    expect(sql).toContain('begin transaction read only');
     expect(workflow).not.toContain('contents: write');
     expect(workflow).not.toContain('pull_request_target');
     expect(workflow).not.toContain('continue-on-error');
@@ -83,7 +83,7 @@ describe('billing lifecycle runtime proof', () => {
       "payload_customer_id",
       "stripeEventBindingMatches",
       "stripeEventLiveMode",
-      "organization_id=e.organization_id",
+      "e.organization_id=i.organization_id::text",
     ]) expect(sql).toContain(token);
   });
 
