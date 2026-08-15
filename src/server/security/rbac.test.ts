@@ -29,8 +29,8 @@ describe('organization RBAC', () => {
     expect(isActiveOrganizationMembership(' ACTIVE ')).toBe(true);
     expect(isActiveOrganizationMembership('suspended')).toBe(false);
     expect(isActiveOrganizationMembership('deprovisioned')).toBe(false);
-    // Missing status is accepted only for the explicit pre-migration fallback.
-    expect(isActiveOrganizationMembership(undefined)).toBe(true);
+    expect(isActiveOrganizationMembership(undefined)).toBe(false);
+    expect(isActiveOrganizationMembership(null)).toBe(false);
   });
 
   it('allows admin to manage team and billing', () => {
