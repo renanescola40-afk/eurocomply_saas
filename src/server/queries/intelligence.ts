@@ -2,8 +2,15 @@ import { getPersonaByCategory, type IntelligencePersona } from '@/lib/news/intel
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export type IntelligenceImpact = 'Monitorar' | 'Médio' | 'Alto' | 'Crítico';
-export type IntelligenceReliability = 'Alta' | 'Média';
-export type IntelligenceSourceType = 'Regulador' | 'Fonte oficial' | 'Instituição europeia' | 'Observatório técnico';
+export type IntelligenceReliability = 'Alta' | 'Média' | 'Baixa' | 'Não classificada';
+export type IntelligenceSourceType =
+  | 'Regulador'
+  | 'Fonte oficial'
+  | 'Instituição europeia'
+  | 'Observatório técnico'
+  | 'Mídia licenciada'
+  | 'Referência de mídia'
+  | 'Fonte não classificada';
 
 type IntelligenceDatabaseRow = {
   id: string;
@@ -70,14 +77,20 @@ function buildNewspaperDeck(summary: string) {
 }
 
 function mapSourceType(sourceType: string | null | undefined): IntelligenceSourceType {
+  if (sourceType === 'official') return 'Fonte oficial';
   if (sourceType === 'regulator') return 'Regulador';
   if (sourceType === 'institution') return 'Instituição europeia';
   if (sourceType === 'technical_observatory') return 'Observatório técnico';
-  return 'Fonte oficial';
+  if (sourceType === 'licensed_media') return 'Mídia licenciada';
+  if (sourceType === 'media_reference') return 'Referência de mídia';
+  return 'Fonte não classificada';
 }
 
 function mapReliability(reliability: string | null | undefined): IntelligenceReliability {
-  return reliability === 'medium' || reliability === 'low' ? 'Média' : 'Alta';
+  if (reliability === 'high') return 'Alta';
+  if (reliability === 'medium') return 'Média';
+  if (reliability === 'low') return 'Baixa';
+  return 'Não classificada';
 }
 
 function mapImpact(impact: string | null | undefined): IntelligenceImpact {
