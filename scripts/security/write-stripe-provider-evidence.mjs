@@ -7,13 +7,18 @@ const releaseSha = String(process.env.ENTERPRISE_EXPECTED_SHA ?? '').trim().toLo
 const repository = String(process.env.GITHUB_REPOSITORY ?? '');
 const runId = String(process.env.GITHUB_RUN_ID ?? '');
 const branch = String(process.env.ENTERPRISE_EXPECTED_BRANCH ?? '');
+const explicitPortalConfigurationId = String(process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID ?? '').trim();
 
 if (!/^[0-9a-f]{40}$/.test(releaseSha)) throw new Error('ENTERPRISE_EXPECTED_SHA must be a full commit SHA');
 if (repository !== 'renanescola40-afk/eurocomply_saas') throw new Error('Unexpected repository provenance');
 if (branch !== 'main') throw new Error('Stripe provider proof must target main');
 if (!/^\d+$/.test(runId)) throw new Error('Missing numeric GitHub Actions run id');
 if (process.env.STRIPE_PROVIDER_PROBE_PASSED !== 'true') throw new Error('Stripe provider probe did not pass');
+if (explicitPortalConfigurationId && !/^bpc_[A-Za-z0-9]+$/.test(explicitPortalConfigurationId)) {
+  throw new Error('Invalid Stripe Billing Portal configuration binding');
+}
 
+const portalConfigurationBindingMode = explicitPortalConfigurationId ? 'explicit' : 'default';
 const now = new Date().toISOString();
 const evidence = {
   schema: 'risck-comply/runtime-evidence/v1',
@@ -28,13 +33,14 @@ const evidence = {
   targetSha: releaseSha,
   buildSha: releaseSha,
   environment: 'production-provider-live-mode',
-  summary: 'Protected Stripe API validation confirmed live-mode provider access, canonical Essential, Professional and Business monthly EUR prices, the exact enabled production webhook endpoint, and an active live default Billing Portal configuration for the exact release SHA.',
+  billingPortalConfigurationBindingMode: portalConfigurationBindingMode,
+  summary: 'Protected Stripe API validation confirmed live-mode provider access, canonical Essential, Professional and Business monthly EUR prices, the exact enabled production webhook endpoint, and an active live Billing Portal configuration matching the runtime binding mode for the exact release SHA.',
   controlsVerified: [
     'Stripe production provider proof uses live mode only',
     'Canonical Essential, Professional and Business prices match repository amount, currency, interval and active Product requirements',
     'The exact canonical production webhook endpoint is enabled in live mode',
     'Webhook coverage includes checkout, subscription lifecycle, payment failure and invoice-paid recovery events',
-    'An active live default Billing Portal configuration exists for portal sessions that do not specify a configuration ID',
+    'An active live Billing Portal configuration matches the explicitly pinned configuration when configured, otherwise the active live account default',
     'Evidence is bound to the exact main-branch release SHA and protected GitHub Actions run',
   ],
   checks: {
@@ -46,12 +52,14 @@ const evidence = {
     canonicalPriceMetadataMatches: true,
     exactWebhookEndpointPresent: true,
     requiredWebhookEventsPresent: true,
-    defaultBillingPortalConfigurationPresent: true,
+    billingPortalConfigurationPresent: true,
+    billingPortalConfigurationBindingValid: true,
   },
   failures: [],
   evidenceLocations: [
     'config/billing-commercial-catalog.json',
     'config/stripe-webhook-contract.json',
+    'src/server/billing/portal-configuration.ts',
     'scripts/security/probe-stripe-provider-config.mjs',
     'scripts/security/write-stripe-provider-evidence.mjs',
     '.github/workflows/stripe-provider-proof.yml',
