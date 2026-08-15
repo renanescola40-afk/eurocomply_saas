@@ -7,13 +7,11 @@ import {
   ClipboardCheck,
   Database,
   FileCheck2,
-  Globe2,
   KeyRound,
   LifeBuoy,
   LockKeyhole,
   Mail,
   Scale,
-  Server,
   ShieldAlert,
   ShieldCheck,
   Users2,
@@ -94,6 +92,15 @@ const SECURITY_EMAIL = 'security@risckcomply.com';
 const LAST_REVIEWED = '30 July 2026';
 
 const trustCardIcons = [ShieldCheck, Database, Users2, LockKeyhole, Scale, Activity];
+
+const trustUiCopy: Record<string, { lastReviewed: string; evidenceOnly: string; open: string; openTrust: string }> = {
+  en: { lastReviewed: 'Last reviewed', evidenceOnly: 'Certification claims are shown only when evidence exists.', open: 'Open', openTrust: 'Open Trust Center' },
+  pt: { lastReviewed: 'Última revisão', evidenceOnly: 'Afirmações de certificação só aparecem quando existe evidência.', open: 'Abrir', openTrust: 'Abrir Centro de Confiança' },
+  es: { lastReviewed: 'Última revisión', evidenceOnly: 'Las afirmaciones de certificación solo aparecen cuando existe evidencia.', open: 'Abrir', openTrust: 'Abrir Centro de Confianza' },
+  fr: { lastReviewed: 'Dernière révision', evidenceOnly: 'Les affirmations de certification n’apparaissent qu’avec des preuves.', open: 'Ouvrir', openTrust: 'Ouvrir le Centre de confiance' },
+  it: { lastReviewed: 'Ultima revisione', evidenceOnly: 'Le dichiarazioni di certificazione compaiono solo quando esistono evidenze.', open: 'Apri', openTrust: 'Apri Centro fiducia' },
+  de: { lastReviewed: 'Letzte Prüfung', evidenceOnly: 'Zertifizierungsaussagen werden nur mit Nachweis angezeigt.', open: 'Öffnen', openTrust: 'Trust Center öffnen' },
+};
 
 const sharedSecuritySections: TrustSection[] = [
   {
@@ -271,18 +278,47 @@ function localizeHref(locale: string, href: string) {
   return href === '/' ? prefix : `${prefix}${href}`;
 }
 
-export function TrustCenterPage({ locale, kind }: { locale: string; kind: TrustPageKind }) {
-  const content = PAGE_CONTENT[kind] ?? PAGE_CONTENT.trust;
+function localizedLandingContent(copy: LocalizedTrustCopy): TrustPageContent {
+  return {
+    ...PAGE_CONTENT.trust,
+    eyebrow: copy.eyebrow,
+    title: copy.title,
+    subtitle: copy.subtitle,
+    badge: copy.eyebrow,
+    summaryTitle: copy.evidenceTitle,
+    summary: copy.evidenceItems,
+    cards: copy.cards.map((card, index) => ({
+      title: card.title,
+      description: card.body,
+      href: card.href,
+      icon: trustCardIcons[index % trustCardIcons.length],
+    })),
+    sections: [
+      {
+        title: copy.procurementTitle,
+        description: copy.notice,
+        items: copy.procurementItems,
+        icon: ClipboardCheck,
+      },
+    ],
+    disclosure: copy.notice,
+  };
+}
+
+export function TrustCenterPage({ locale, kind, localizedCopy }: { locale: string; kind: TrustPageKind; localizedCopy?: LocalizedTrustCopy }) {
+  const normalizedLocale = normalizeLocale(locale);
+  const content = localizedCopy && kind === 'trust' ? localizedLandingContent(localizedCopy) : (PAGE_CONTENT[kind] ?? PAGE_CONTENT.trust);
   const prefix = getLocalizedPrefix(locale);
   const legalPublication = getLegalPublicationState();
+  const ui = trustUiCopy[normalizedLocale] ?? trustUiCopy.en;
 
   return (
     <main className="min-h-screen bg-[#050505] text-white">
       <section className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,.22),transparent_30rem),linear-gradient(180deg,#050505_0%,#071018_100%)] px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
-          <Link href={prefix} className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200/70">Risck comply</Link>
+          <Link href={prefix} className="rounded-md text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">{localizedCopy?.brand ?? 'Risck comply'}</Link>
           <div className="mt-10 inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-300/[0.08] px-4 py-2 text-sm text-cyan-50/80">
-            <ShieldCheck className="h-4 w-4" /> {content.badge}
+            <ShieldCheck className="h-4 w-4" aria-hidden="true" /> {content.badge}
           </div>
           <p className="mt-6 text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200/60">{content.eyebrow}</p>
           <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-[-0.055em] text-white sm:text-6xl">{content.title}</h1>
@@ -299,11 +335,11 @@ export function TrustCenterPage({ locale, kind }: { locale: string; kind: TrustP
                 <p key={item} className="text-sm leading-7 text-white/58">{item}</p>
               ))}
             </div>
-            <div className="mt-6 rounded-2xl border border-amber-200/20 bg-amber-200/[0.06] p-4">
+            <div className="mt-6 rounded-2xl border border-amber-200/20 bg-amber-200/[0.06] p-4" lang="en">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/80">{legalPublication.label}</p>
               <p className="mt-2 text-xs leading-6 text-white/52">{legalPublication.notice}</p>
             </div>
-            <p className="mt-6 text-xs leading-6 text-white/36">Last reviewed: {LAST_REVIEWED}. Certification claims are shown only when evidence exists.</p>
+            <p className="mt-6 text-xs leading-6 text-white/36">{ui.lastReviewed}: {LAST_REVIEWED}. {ui.evidenceOnly}</p>
           </aside>
 
           <div className="space-y-5">
@@ -312,13 +348,13 @@ export function TrustCenterPage({ locale, kind }: { locale: string; kind: TrustP
                 {content.cards.map((card, index) => {
                   const Icon = card.icon ?? trustCardIcons[index % trustCardIcons.length];
                   return (
-                    <Link key={card.href} href={localizeHref(locale, card.href)} className="group rounded-[1.6rem] border border-white/10 bg-black/30 p-5 transition hover:border-cyan-200/40 hover:bg-cyan-300/[0.06]">
+                    <Link key={card.href} href={localizeHref(locale, card.href)} className="group rounded-[1.6rem] border border-white/10 bg-black/30 p-5 transition hover:border-cyan-200/40 hover:bg-cyan-300/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">
                       <div className="flex items-start gap-4">
-                        <div className="rounded-2xl bg-white/10 p-3 text-white"><Icon className="h-5 w-5" /></div>
+                        <div className="rounded-2xl bg-white/10 p-3 text-white"><Icon className="h-5 w-5" aria-hidden="true" /></div>
                         <div>
                           <h2 className="font-semibold text-white">{card.title}</h2>
                           <p className="mt-2 text-sm leading-6 text-white/52">{card.description}</p>
-                          <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-cyan-100">Open <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span>
+                          <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-cyan-100">{ui.open} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden="true" /></span>
                         </div>
                       </div>
                     </Link>
@@ -332,13 +368,13 @@ export function TrustCenterPage({ locale, kind }: { locale: string; kind: TrustP
               return (
                 <article key={section.title} className="rounded-[1.8rem] border border-white/10 bg-black/28 p-6">
                   <div className="flex items-start gap-4">
-                    <div className="rounded-2xl bg-white/10 p-3 text-white"><Icon className="h-5 w-5" /></div>
+                    <div className="rounded-2xl bg-white/10 p-3 text-white"><Icon className="h-5 w-5" aria-hidden="true" /></div>
                     <div>
                       <h2 className="text-xl font-semibold text-white">{section.title}</h2>
                       <p className="mt-2 text-sm leading-7 text-white/54">{section.description}</p>
                       <ul className="mt-4 space-y-2">
                         {section.items.map((item) => (
-                          <li key={item} className="flex gap-2 text-sm leading-6 text-white/56"><CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-cyan-100" /> {item}</li>
+                          <li key={item} className="flex gap-2 text-sm leading-6 text-white/56"><CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-cyan-100" aria-hidden="true" /> {item}</li>
                         ))}
                       </ul>
                     </div>
@@ -379,11 +415,11 @@ export function TrustCenterPage({ locale, kind }: { locale: string; kind: TrustP
       <section className="border-y border-white/10 bg-white/[0.03] px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 text-sm leading-7 text-white/50 md:flex-row md:items-center md:justify-between">
           <p>{content.disclosure}</p>
-          <Link href={localizeHref(locale, '/trust')} className="inline-flex items-center gap-2 font-semibold text-cyan-100">Open Trust Center <ArrowRight className="h-4 w-4" /></Link>
+          <Link href={localizeHref(locale, '/trust')} className="inline-flex items-center gap-2 rounded-md font-semibold text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">{ui.openTrust} <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
         </div>
       </section>
 
-      <PublicFooter locale={normalizeLocale(locale)} />
+      <PublicFooter locale={normalizedLocale} />
     </main>
   );
 }

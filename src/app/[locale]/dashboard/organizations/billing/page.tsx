@@ -1,8 +1,10 @@
-import { redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
+import { redirect } from 'next/navigation';
+
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
+import { canManageDashboardBilling } from '@/server/queries/organization-dashboard';
 import { BillingPageView } from './billing-page-view';
 
 type BillingPageProps = {
@@ -31,11 +33,13 @@ export default async function BillingPage({ params, searchParams }: BillingPageP
   }
 
   const billing = await getOrganizationBillingContext(organization.id);
+  const canManageBilling = canManageDashboardBilling(organization.role);
 
   return (
     <BillingPageView
       locale={locale}
       billing={billing}
+      canManageBilling={canManageBilling}
       checkout={resolvedSearchParams.checkout}
       billingError={resolvedSearchParams.billing_error}
     />

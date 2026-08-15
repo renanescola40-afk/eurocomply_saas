@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+const billingPageRoute = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/page.tsx'), 'utf8');
 const billingPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/billing-page-view.tsx'), 'utf8');
 const publicCheckoutPage = readFileSync(join(process.cwd(), 'src/app/[locale]/checkout/page.tsx'), 'utf8');
 const enterpriseHome = readFileSync(join(process.cwd(), 'src/components/marketing/enterprise-home.tsx'), 'utf8');
@@ -70,6 +71,33 @@ describe('billing UI API boundary', () => {
     expect(billingActionButton).toContain("'/api/security/step-up/verify'");
     expect(billingActionButton).toContain('STEP_UP_TOKEN_HEADER');
     expect(billingActionButton).toContain("action: 'manage_billing'");
+  });
+
+  it('keeps non-owner billing UX read-only before a protected mutation is attempted', () => {
+    expect(billingPageRoute).toContain('canManageDashboardBilling(organization.role)');
+    expect(billingPageRoute).toContain('canManageBilling={canManageBilling}');
+    expect(billingPage).toContain('canManageBilling: boolean');
+    expect(billingPage).toContain('Billing is read-only for your role');
+    expect(billingPage).toContain('Only the workspace owner can open the billing portal or change subscription plans');
+    expect(billingPage).toContain('Owner access required');
+    expect(billingPage).toContain('Owner action required');
+    expect(billingPage).toContain('canManageBilling ? (');
+  });
+
+  it('does not present failed-payment subscriptions as a healthy current plan', () => {
+    expect(publicCheckoutPage).toContain("const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing'])");
+    expect(publicCheckoutPage).toContain("const PAYMENT_RECOVERY_STATUSES = new Set(['past_due', 'unpaid', 'incomplete'])");
+    expect(publicCheckoutPage).toContain('const needsPaymentRecovery = hasStatus(billing?.status, PAYMENT_RECOVERY_STATUSES)');
+    expect(publicCheckoutPage).toContain('needsPaymentRecovery && organization');
+    expect(publicCheckoutPage).toContain('BillingActionButton action="portal"');
+    expect(publicCheckoutPage).toContain('paymentRecoveryCopy');
+    expect(publicCheckoutPage).not.toContain('CURRENT_PLAN_BLOCKING_STATUSES');
+  });
+
+  it('keeps billing-action failures on checkout when the dashboard is access-gated', () => {
+    expect(billingActionButton).toContain("window.location.pathname === `/${locale}/checkout`");
+    expect(billingActionButton).toContain("checkoutUrl.searchParams.set('checkout', 'error')");
+    expect(billingActionButton).toContain('window.location.href = `${checkoutUrl.pathname}${checkoutUrl.search}`');
   });
 
   it('has no legacy billing action helper file', () => {

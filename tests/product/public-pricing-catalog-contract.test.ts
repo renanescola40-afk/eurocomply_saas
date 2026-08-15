@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 const pricingPage = readFileSync(join(process.cwd(), 'src/app/[locale]/pricing/page.tsx'), 'utf8');
 const checkoutPage = readFileSync(join(process.cwd(), 'src/app/[locale]/checkout/page.tsx'), 'utf8');
+const commercialCopy = readFileSync(join(process.cwd(), 'src/lib/i18n/commercial-surface-copy.ts'), 'utf8');
 const organizationDashboard = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/page.tsx'), 'utf8');
 const dashboardCopy = readFileSync(join(process.cwd(), 'src/lib/i18n/dashboard-copy.ts'), 'utf8');
 
@@ -30,8 +31,7 @@ describe('public pricing catalog contract', () => {
   });
 
   it('preserves the approved public Essential alias without changing the internal starter authority', () => {
-    expect(pricingPage).toContain("starter: {");
-    expect(pricingPage).toContain("publicSlug: 'essential'");
+    expect(pricingPage).toContain("starter: { publicSlug: 'essential' }");
     expect(pricingPage).toContain('planPresentation[plan.id].publicSlug');
   });
 
@@ -43,23 +43,20 @@ describe('public pricing catalog contract', () => {
 
   it('surfaces the approved Enterprise starting reference as contract pricing rather than a fake fixed price', () => {
     expect(pricingPage).toContain('plan.startingPriceMonthly');
-    expect(pricingPage).toContain('From €');
-    expect(pricingPage).toContain('Enterprise uses negotiated contract pricing');
+    expect(commercialCopy).toContain("from: 'From'");
+    expect(commercialCopy).toContain('Enterprise uses negotiated contract pricing');
   });
 
   it('retains prudent claims and VAT/tax messaging on the purchase surface', () => {
-    expect(pricingPage).toContain('does not guarantee regulatory compliance');
-    expect(pricingPage).toContain('does not replace legal counsel');
-    expect(pricingPage).toContain('Taxes or VAT, where applicable');
+    expect(commercialCopy).toContain('does not guarantee regulatory compliance');
+    expect(commercialCopy).toContain('does not replace legal counsel');
+    expect(commercialCopy).toContain('Taxes or VAT, where applicable');
   });
 
   it('keeps checkout on the canonical Professional fallback and never exposes technical enterprise sentinel limits', () => {
     expect(checkoutPage).toContain("const DEFAULT_PLAN_ID = 'professional'");
-    expect(checkoutPage).toContain("plan.id === 'enterprise' || value === Number.MAX_SAFE_INTEGER ? 'By contract'");
-    expect(checkoutPage).toContain('formatCheckoutLimit(selectedPlan, selectedPlan.limits.users)');
-    expect(checkoutPage).toContain('formatCheckoutLimit(selectedPlan, selectedPlan.limits.documents)');
-    expect(checkoutPage).toContain('formatCheckoutLimit(selectedPlan, selectedPlan.limits.vendors)');
-    expect(checkoutPage).toContain('formatCheckoutLimit(selectedPlan, selectedPlan.limits.risks)');
+    expect(checkoutPage).toContain("plan.id === 'enterprise' || value === Number.MAX_SAFE_INTEGER ? copy.byContract");
+    expect(checkoutPage).toContain('formatCheckoutLimit(selectedPlan, Number(value), locale, copy)');
     expect(checkoutPage).not.toContain("const DEFAULT_PLAN_ID = 'growth'");
   });
 
