@@ -8,9 +8,16 @@ describe('Product FRIA ephemeral runtime workflow', () => {
     expect(workflow).toContain('--override-name api.url=NEXT_PUBLIC_SUPABASE_URL');
     expect(workflow).toContain('--override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_ANON_KEY');
     expect(workflow).toContain('--override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY');
-    expect(workflow).toContain("values.get('NEXT_PUBLIC_SUPABASE_URL', '')");
-    expect(workflow).toContain("values.get('NEXT_PUBLIC_SUPABASE_ANON_KEY', '')");
-    expect(workflow).toContain("values.get('SUPABASE_SERVICE_ROLE_KEY', '')");
+  });
+
+  it('accepts current and legacy Supabase status variable names without weakening the runtime boundary', () => {
+    expect(workflow).toContain("first_value('NEXT_PUBLIC_SUPABASE_URL', 'API_URL', 'SUPABASE_URL')");
+    expect(workflow).toContain("'NEXT_PUBLIC_SUPABASE_ANON_KEY'");
+    expect(workflow).toContain("'ANON_KEY'");
+    expect(workflow).toContain("'PUBLISHABLE_KEY'");
+    expect(workflow).toContain("'SUPABASE_SERVICE_ROLE_KEY'");
+    expect(workflow).toContain("'SERVICE_ROLE_KEY'");
+    expect(workflow).toContain("'SECRET_KEY'");
   });
 
   it('keeps the runtime loopback-only and masks credentials before exporting them', () => {
