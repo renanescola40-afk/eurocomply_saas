@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/supabase-forward-reconciliation-production-promotion.yml', 'utf8');
+const verifier = readFileSync('scripts/supabase/verify-forward-promotion-transition.mjs', 'utf8');
 const runbook = readFileSync('docs/runbooks/SUPABASE_FORWARD_RECONCILIATION.md', 'utf8');
 
 function executableDbPushLines(text: string) {
@@ -44,11 +45,16 @@ describe('bounded Supabase production promotion workflow', () => {
     expect(workflow).toContain('verify-forward-reconciliation-postconditions.sql');
     expect(workflow).toContain('remoteAfterEqualsBeforePlusSelected');
     expect(workflow).toContain('unauthorizedMigrationApplied == false');
-    expect(workflow).toContain('containsSensitiveValues');
+    expect(verifier).toContain('containsSensitiveValues: false');
+    expect(verifier).toContain('databaseUrlsStored: false');
+    expect(verifier).toContain('migrationHistoryRepairPerformed: false');
+    expect(verifier).toContain('unrestrictedDbPushPerformed: false');
   });
 
-  it('documents the human-approved production boundary rather than automatic promotion', () => {
-    expect(runbook).toContain('## Production boundary');
-    expect(runbook).toContain('explicit human approval/confirmation');
+  it('documents manual protected promotion and prohibits migration shortcuts', () => {
+    expect(runbook).toContain('## Stage 3 — human-approved bounded production promotion');
+    expect(runbook).toContain('explicit confirmation `PROMOTE <release_sha> USING DRY-RUN <dry_run_run_id>`');
+    expect(runbook).toContain('`db push --include-all`');
+    expect(runbook).toContain('migration-history repair');
   });
 });
