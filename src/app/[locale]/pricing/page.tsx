@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { BILLING_PLANS, type BillingPlan, type BillingLimit } from '@/lib/billing/plans';
 import { getCommercialSurfaceCopy, type CommercialSurfaceCopy } from '@/lib/i18n/commercial-surface-copy';
+import { applyPricingCommercialTruth } from '@/lib/i18n/pricing-commercial-truth';
 import { type Locale } from '@/lib/i18n/routing';
 import { getCanonicalUrl, getSafeLocale, makePublicMetadata, SITE_NAME } from '@/lib/seo/public-metadata';
 
@@ -145,7 +146,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PricingPage({ params }: Props) {
   const { locale: requestedLocale } = await params;
   const locale = getSafeLocale(requestedLocale);
-  const copy = getCommercialSurfaceCopy(locale).pricing;
+  const copy = applyPricingCommercialTruth(locale, getCommercialSurfaceCopy(locale).pricing);
   const comparisonRows = [
     { label: copy.monthlyReference, value: (plan: BillingPlan) => { const price = monthlyPrice(plan, locale, copy); return `${price.label}${price.period}`; } },
     { label: copy.includedUsers, value: (plan: BillingPlan) => usersLabel(plan, locale, copy) },
