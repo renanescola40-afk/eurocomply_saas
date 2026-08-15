@@ -109,6 +109,7 @@ function makeSubscriptionLookup(stripeCustomerId = 'cus_123', stripeSubscription
 describe('billing portal API security gates', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID;
     mocks.requireApiUser.mockResolvedValue({ id: 'user_admin' });
     mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: 'org_a' });
     mocks.requirePermission.mockResolvedValue({ ok: true, role: 'admin' });
@@ -186,6 +187,26 @@ describe('billing portal API security gates', () => {
     expect(mocks.stripePortalCreate).not.toHaveBeenCalled();
   });
 
+  it('fails closed before Stripe when an explicit portal configuration binding is malformed', async () => {
+    process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID = 'not-a-bpc';
+
+    const response = await POST(buildRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body).toEqual({ error: 'billing_portal_configuration_invalid' });
+    expect(mocks.stripePortalCreate).not.toHaveBeenCalled();
+    expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+    expect(mocks.reportError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        area: 'billing_portal_configuration',
+        organizationId: 'org_a',
+        userId: 'user_admin',
+      }),
+    );
+  });
+
   it('withholds the portal URL when audit persistence fails', async () => {
     mocks.writeAuditLog.mockResolvedValueOnce({ persisted: false, legacyPersisted: false, chained: true });
 
@@ -207,7 +228,7 @@ describe('billing portal API security gates', () => {
     );
   });
 
-  it('creates a billing portal session only after RBAC, trusted mutation, idempotency, step-up, live authority, and durable audit persistence', async () => {
+  it('creates a billing portal session with the account default configuration when no explicit pin is configured', async () => {
     const response = await POST(buildRequest());
     const body = await response.json();
 
@@ -253,9 +274,37 @@ describe('billing portal API security gates', () => {
           trustedOriginRequired: true,
           idempotencyProtected: true,
           liveSubscriptionAuthority: true,
+          billingPortalConfigurationSource: 'default',
+          billingPortalConfigurationPinned: false,
         }),
       }),
     );
     expect(mocks.reportError).not.toHaveBeenCalled();
+  });
+
+  it('pins a validated explicit Billing Portal configuration without storing its identifier in audit metadata', async () => {
+    process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID = 'bpc_livefixture123';
+
+    const response = await POST(buildRequest());
+
+    expect(response.status).toBe(200);
+    expect(mocks.stripePortalCreate).toHaveBeenCalledWith(
+      {
+        customer: 'cus_123',
+        return_url: 'https://app.eurocomply.test/en/dashboard/organizations/billing',
+        configuration: 'bpc_livefixture123',
+      },
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:portal:') }),
+    );
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          billingPortalConfigurationSource: 'explicit',
+          billingPortalConfigurationPinned: true,
+        }),
+      }),
+    );
+    const auditInput = mocks.writeAuditLog.mock.calls[0]?.[0];
+    expect(JSON.stringify(auditInput)).not.toContain('bpc_livefixture123');
   });
 });
