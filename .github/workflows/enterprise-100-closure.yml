@@ -17,6 +17,7 @@ on:
       - 'tests/enterprise/production-deployment-github-vercel-proof.test.ts'
       - 'tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts'
       - 'tests/security/enterprise-100-closure-workflow.test.mjs'
+      - 'tests/security/enterprise-100-stale-workflow-run-guard.test.mjs'
       - '.github/workflows/enterprise-100-closure.yml'
       - '.github/workflows/supabase-production-rls-reconciliation.yml'
   push:
@@ -52,7 +53,8 @@ concurrency:
 
 jobs:
   contract:
-    name: Enterprise closure contract
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.head_sha == github.sha }}
+    name: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha != github.sha && 'Stale Enterprise closure trigger (ignored)' || 'Enterprise closure contract' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -92,7 +94,8 @@ jobs:
             scripts/supabase/write-rls-reconciliation-closure-evidence.test.mjs \
             tests/enterprise/enterprise-100-evidence-hydration.test.mjs \
             tests/enterprise/github-exact-sha-artifact-collector.test.mjs \
-            tests/security/enterprise-100-closure-workflow.test.mjs
+            tests/security/enterprise-100-closure-workflow.test.mjs \
+            tests/security/enterprise-100-stale-workflow-run-guard.test.mjs
 
       - name: Validate repository contract
         if: github.event_name == 'pull_request'
