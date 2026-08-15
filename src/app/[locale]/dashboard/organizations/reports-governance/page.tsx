@@ -1,11 +1,14 @@
 import { redirect } from 'next/navigation';
+
 import { UpgradeRequiredCard } from '@/components/billing/upgrade-required-card';
 import { ReportsGovernanceWorkspace } from '@/components/dashboard/reports-governance-workspace';
+import { canAccessFeature } from '@/lib/billing/feature-gates';
 import { locales, type Locale } from '@/lib/i18n/routing';
+import { listActiveOrganizationAddOns } from '@/server/billing/addons';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationDashboardData } from '@/server/queries/organization-dashboard';
-import { isPlanAtLeast } from '@/server/queries/subscription';
+import { normalizePlan } from '@/server/queries/subscription';
 
 const upgradeCopy: Record<Locale, { title: string; description: string }> = {
   en: { title: 'Executive reports unlock consolidated governance operations', description: 'Business adds governance reports, executive visibility, review-ready evidence and consolidated risk views for companies scaling across Europe.' },
@@ -29,8 +32,14 @@ export default async function OrganizationReportsGovernancePage({ params }: { pa
   if (!data) redirect(`/${locale}/onboarding`);
 
   const localizedDashboardBasePath = `/${locale}/dashboard/organizations`;
-  const entitlements = await getOrganizationEntitlements(data.organization.id);
-  const canViewExecutiveReports = isPlanAtLeast(entitlements.plan, 'business');
+  const [entitlements, activeAddOns] = await Promise.all([
+    getOrganizationEntitlements(data.organization.id),
+    listActiveOrganizationAddOns(data.organization.id),
+  ]);
+  const canViewExecutiveReports = canAccessFeature('advanced_reporting', {
+    plan: normalizePlan(entitlements.plan),
+    activeAddOns,
+  });
   const lockedCopy = getUpgradeCopy(locale);
 
   return (
@@ -52,6 +61,7 @@ export default async function OrganizationReportsGovernancePage({ params }: { pa
           <UpgradeRequiredCard
             locale={locale}
             requiredPlan="Business"
+            addOnSlug="advanced-reporting"
             title={lockedCopy.title}
             description={lockedCopy.description}
           />
