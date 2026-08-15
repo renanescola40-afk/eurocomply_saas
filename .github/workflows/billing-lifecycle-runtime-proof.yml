@@ -51,6 +51,7 @@ jobs:
       REPOSITORY: ${{ github.repository }}
       SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
       PGSSLMODE: require
+      PGOPTIONS: -c default_transaction_read_only=on -c statement_timeout=45000 -c lock_timeout=5000
 
     steps:
       - name: Check out trusted main
