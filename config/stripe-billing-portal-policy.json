@@ -1,0 +1,26 @@
+{
+  "schema": "risck-comply.stripe-billing-portal-policy.v1",
+  "defaultReturnUrl": "https://www.risckcomply.com/pt/dashboard/organizations/billing",
+  "managementMetadata": {
+    "risck_comply_managed_by": "protected-portal-bootstrap-v1",
+    "risck_comply_policy_schema": "risck-comply.stripe-billing-portal-policy.v1"
+  },
+  "features": {
+    "customerUpdate": {
+      "enabled": true,
+      "allowedUpdates": ["address", "tax_id"]
+    },
+    "invoiceHistory": {
+      "enabled": true
+    },
+    "paymentMethodUpdate": {
+      "enabled": true
+    },
+    "subscriptionCancel": {
+      "enabled": false
+    },
+    "subscriptionUpdate": {
+      "enabled": false
+    }
+  }
+}

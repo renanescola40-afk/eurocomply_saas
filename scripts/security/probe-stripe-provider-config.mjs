@@ -2,6 +2,11 @@
 
 import { readFileSync } from 'node:fs';
 
+import {
+  loadStripeBillingPortalPolicy,
+  stripeBillingPortalConfigurationMatchesPolicy,
+} from './stripe-billing-portal-policy.mjs';
+
 const MAX_PROVIDER_RESPONSE_BYTES = 64 * 1024;
 const COMMERCIAL_CATALOG_PATH = 'config/billing-commercial-catalog.json';
 const WEBHOOK_CONTRACT_PATH = 'config/stripe-webhook-contract.json';
@@ -65,6 +70,7 @@ async function readBoundedJsonResponse(response) {
 const commercialCatalog = loadJson(COMMERCIAL_CATALOG_PATH, 'risck-comply.billing-commercial-catalog.v1');
 const webhookContract = loadJson(WEBHOOK_CONTRACT_PATH, 'risck-comply.stripe-webhook-contract.v1');
 const portalContract = loadJson(BILLING_PORTAL_CONTRACT_PATH, 'risck-comply.stripe-billing-portal-contract.v1');
+const portalPolicy = loadStripeBillingPortalPolicy();
 const stripeSecretKey = requiredEnv('STRIPE_SECRET_KEY');
 const explicitPortalConfigurationId = portalContract.configurationId;
 
@@ -163,6 +169,10 @@ const billingPortalConfigurationBindingValid = billingPortalConfigurationPresent
   && (explicitPortalConfigurationId
     ? portalConfiguration?.id === explicitPortalConfigurationId
     : portalConfiguration?.is_default === true);
+const billingPortalConfigurationPolicyMatches = billingPortalConfigurationPresent
+  && stripeBillingPortalConfigurationMatchesPolicy(portalConfiguration, portalPolicy, {
+    requireManagementMetadata: Boolean(explicitPortalConfigurationId),
+  });
 
 const result = {
   liveModeConfirmed: prices.every((price) => price?.livemode === true)
@@ -177,6 +187,7 @@ const result = {
   requiredWebhookEventsPresent,
   billingPortalConfigurationPresent,
   billingPortalConfigurationBindingValid,
+  billingPortalConfigurationPolicyMatches,
 };
 
 if (Object.values(result).some((value) => value !== true)) {
