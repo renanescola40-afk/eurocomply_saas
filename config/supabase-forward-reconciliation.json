@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-08-15-production-runtime-release-closure-v7",
+  "changeSet": "2026-08-15-production-runtime-onboarding-closure-v8",
   "migrations": [
     {
       "filename": "20260813175000_optimize_organization_add_ons_rls_initplan.sql",
@@ -56,11 +56,15 @@
     },
     {
       "filename": "20260814101500_reconcile_enterprise_core_active_runtime.sql",
-      "purpose": "forward execution identity for active Intelligence, notification-dedupe, vendor-governance, atomic onboarding and canonical RLS runtime reconciliation"
+      "purpose": "forward execution identity for active Intelligence, notification-dedupe, vendor-governance, atomic organization bootstrap and canonical RLS runtime reconciliation"
     },
     {
       "filename": "20260815083000_reconcile_live_rls_validation_inventory_privileges.sql",
       "purpose": "re-issue the unapplied live-RLS inventory privilege repair under a production-forward execution identity and prove service-role-only access"
+    },
+    {
+      "filename": "20260815142500_reconcile_active_onboarding_runtime.sql",
+      "purpose": "materialize the active onboarding profile, activation-ledger, recommendation/task metadata and backend-only atomic activation RPC against the live production schema"
     }
   ],
   "truthBoundary": {
