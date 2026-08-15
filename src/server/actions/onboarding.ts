@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 
 import { sendEmail } from '@/lib/email/client';
-import { invitationEmail } from '@/lib/email/templates';
+import { localizedInvitationEmail } from '@/lib/email/localized-invitation';
 import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
@@ -132,12 +132,15 @@ async function deliverOnboardingInvitations(input: {
   locale: string;
   invitations: OnboardingInvitationDelivery[];
 }) {
+  const locale = getSafeLocale(input.locale);
+
   await Promise.all(input.invitations.map(async (invitation) => {
-    const inviteUrl = `${getAppUrl()}/${getSafeLocale(input.locale)}/invite/${encodeURIComponent(invitation.token)}`;
-    const builtEmail = invitationEmail({
+    const inviteUrl = `${getAppUrl()}/${locale}/invite/${encodeURIComponent(invitation.token)}`;
+    const builtEmail = localizedInvitationEmail({
       organizationName: input.organizationName,
       role: invitation.role,
       inviteUrl,
+      locale,
     });
 
     try {
@@ -154,6 +157,7 @@ async function deliverOnboardingInvitations(input: {
           source: 'onboarding_activation',
           invitationId: invitation.id,
           role: invitation.role,
+          locale,
         },
       });
 
@@ -166,6 +170,7 @@ async function deliverOnboardingInvitations(input: {
         organizationId: input.organizationId,
         invitationId: invitation.id,
         emailDomain: invitation.email.split('@')[1] ?? 'unknown',
+        locale,
       });
       throw onboardingActionError('Onboarding data was saved, but invitation delivery failed. Retry onboarding to resend pending invitations.');
     }
