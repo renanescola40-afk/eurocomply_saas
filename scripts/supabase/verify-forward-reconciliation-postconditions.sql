@@ -378,3 +378,11 @@ end
 $verify$;
 
 select 'forward_reconciliation_postconditions_passed' as status;
+
+-- Keep the production proof aligned with the isolated rehearsal: these
+-- validators cover enterprise licensing/integrations/SCIM, negotiated billing
+-- controls, and the service-role-only live-RLS inventory helper boundary.
+-- \ir resolves relative to this file under psql and remains read-only.
+\ir ../security/validate-enterprise-integrations-runtime.sql
+\ir ../security/validate-enterprise-billing-runtime.sql
+\ir ../security/validate-live-rls-inventory-helper-boundary.sql
