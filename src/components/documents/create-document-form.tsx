@@ -25,6 +25,7 @@ export function CreateDocumentForm({ locale, onSubmit }: { locale: string; onSub
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     setError(null);
 
     if (!file) {
@@ -40,7 +41,7 @@ export function CreateDocumentForm({ locale, onSubmit }: { locale: string; onSub
       setCategory('general');
       setExpiresAt('');
       setFile(null);
-      event.currentTarget.reset();
+      form.reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : copy.uploadError);
     } finally {
@@ -66,7 +67,7 @@ export function CreateDocumentForm({ locale, onSubmit }: { locale: string; onSub
         </div>
         <div className="space-y-2">
           <Label htmlFor="document-file">{copy.fileLabel}</Label>
-          <Input id="document-file" type="file" accept="application/pdf,image/png,image/jpeg,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => setFile(event.target.files?.[0] ?? null)} required className="focus-visible:ring-2" />
+          <Input id="document-file" type="file" aria-describedby="document-file-help" accept="application/pdf,image/png,image/jpeg,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => setFile(event.target.files?.[0] ?? null)} required className="focus-visible:ring-2" />
           <p id="document-file-help" className="text-xs text-white/45">{copy.fileHelp}</p>
         </div>
         <div className="space-y-2">
