@@ -8,6 +8,8 @@ import { buildOnboardingSteps, getOnboardingProgress, type OnboardingState } fro
 
 type OnboardingProgressCardProps = {
   state: OnboardingState;
+  compact?: boolean;
+  locale?: string;
 };
 
 const estimates: Record<string, string> = {
@@ -25,7 +27,103 @@ const estimates: Record<string, string> = {
   'plan-or-trial': '30 sec',
 };
 
-export function OnboardingProgressCard({ state }: OnboardingProgressCardProps) {
+const compactCopy = {
+  en: {
+    eyebrow: 'Workspace activation',
+    title: 'Operational setup progress',
+    body: 'A compact view of the milestones that make the workspace useful after onboarding. This is activation progress, not a compliance score.',
+    organization: 'Organization',
+    aiSystem: 'First AI system',
+    risk: 'Risk classification',
+    evidence: 'Evidence',
+    tasks: 'Initial tasks',
+    team: 'Team',
+    complete: 'complete',
+    next: 'Next milestone',
+    ready: 'Core workspace activation is complete.',
+  },
+  pt: {
+    eyebrow: 'Ativação do workspace',
+    title: 'Progresso da configuração operacional',
+    body: 'Uma visão compacta dos marcos que tornam o workspace útil depois do onboarding. É progresso de ativação, não um score de compliance.',
+    organization: 'Organização',
+    aiSystem: 'Primeiro sistema de IA',
+    risk: 'Classificação de risco',
+    evidence: 'Evidências',
+    tasks: 'Tarefas iniciais',
+    team: 'Equipa',
+    complete: 'concluído',
+    next: 'Próximo marco',
+    ready: 'A ativação principal do workspace está concluída.',
+  },
+};
+
+function getCompactCopy(locale?: string) {
+  return locale === 'pt' ? compactCopy.pt : compactCopy.en;
+}
+
+function CompactActivationProgress({ state, locale }: { state: OnboardingState; locale?: string }) {
+  const copy = getCompactCopy(locale);
+  const milestones = [
+    { id: 'organization', label: copy.organization, complete: state.hasOrganization },
+    { id: 'ai-system', label: copy.aiSystem, complete: Boolean(state.hasFirstAiSystem ?? state.hasVendors) },
+    { id: 'risk', label: copy.risk, complete: Boolean(state.hasRiskClassification ?? state.hasRisks ?? state.hasComplianceTasks) },
+    { id: 'evidence', label: copy.evidence, complete: Boolean(state.hasDocumentSuggestions ?? state.hasDocuments) },
+    { id: 'tasks', label: copy.tasks, complete: Boolean(state.hasInitialTasks ?? state.hasComplianceTasks) },
+    { id: 'team', label: copy.team, complete: state.hasMembers },
+  ];
+  const completed = milestones.filter((milestone) => milestone.complete).length;
+  const percentage = Math.round((completed / milestones.length) * 100);
+  const nextMilestone = milestones.find((milestone) => !milestone.complete);
+
+  return (
+    <Card className="border-white/10 bg-white/[0.025] text-white shadow-none">
+      <OnboardingTelemetry
+        progress={percentage}
+        hasOrganization={state.hasOrganization}
+        hasMembers={state.hasMembers}
+        hasDocuments={Boolean(state.hasDocumentSuggestions ?? state.hasDocuments)}
+        hasRisks={Boolean(state.hasRiskClassification ?? state.hasRisks ?? state.hasComplianceTasks)}
+        hasVendors={Boolean(state.hasFirstAiSystem ?? state.hasVendors)}
+        hasDashboardOpened={Boolean(state.hasReadinessScore ?? state.hasDashboardOpened)}
+      />
+      <CardContent className="p-5 md:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <Badge variant="outline" className="rounded-full border-white/10 bg-white/[0.035] text-white/55">{copy.eyebrow}</Badge>
+            <CardTitle className="mt-3 text-xl text-white md:text-2xl">{copy.title}</CardTitle>
+            <p className="mt-2 text-sm leading-6 text-white/48">{copy.body}</p>
+          </div>
+          <div className="min-w-48 lg:text-right">
+            <p className="text-3xl font-semibold text-white">{percentage}%</p>
+            <p className="text-xs text-white/38">{completed}/{milestones.length} {copy.complete}</p>
+          </div>
+        </div>
+
+        <Progress value={percentage} className="mt-5 h-1.5 bg-white/10" />
+
+        <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {milestones.map((milestone) => (
+            <div key={milestone.id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm">
+              {milestone.complete ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" /> : <Circle className="h-4 w-4 shrink-0 text-white/30" />}
+              <span className={milestone.complete ? 'text-white/72' : 'text-white/45'}>{milestone.label}</span>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-4 text-sm text-white/46">
+          {nextMilestone ? <>{copy.next}: <span className="font-medium text-white/78">{nextMilestone.label}</span></> : copy.ready}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function OnboardingProgressCard({ state, compact = false, locale }: OnboardingProgressCardProps) {
+  if (compact) {
+    return <CompactActivationProgress state={state} locale={locale} />;
+  }
+
   const steps = buildOnboardingSteps(state);
   const progress = getOnboardingProgress(steps);
   const nextStep = steps.find((step) => step.status === 'pending');
