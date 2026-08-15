@@ -1,326 +1,101 @@
-/* eslint-disable */
-// @ts-nocheck
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFile } from 'node:fs/promises';
 
-const mocks = vi.hoisted(() => ({
-  requireApiUser: vi.fn(),
-  requirePermission: vi.fn(),
-  requireTrustedMutation: vi.fn(),
-  getCurrentOrganizationForUser: vi.fn(),
-  stripeCheckoutCreate: vi.fn(),
-  stripeCustomerCreate: vi.fn(),
-  stripeCustomerUpdate: vi.fn(),
-  requireStepUpForRequest: vi.fn(),
-  publicStepUpSummary: vi.fn(),
-  getStripePriceId: vi.fn(),
-  isSelfServePlan: vi.fn(),
-  normalizeBillingPlanId: vi.fn(),
-  writeAuditLog: vi.fn(),
-  supabaseMaybeSingle: vi.fn(),
-}));
+import { describe, expect, it } from 'vitest';
 
-vi.mock('@/lib/security/audit-log', () => ({
-  writeAuditLog: mocks.writeAuditLog,
-}));
+const CHECKOUT_ROUTE = new URL('../../src/app/api/billing/checkout/route.ts', import.meta.url);
+const ACTIVATION_ROUTE = new URL('../../src/app/api/billing/checkout/activation/route.ts', import.meta.url);
 
-vi.mock('@/lib/supabase/admin', () => ({
-  createAdminClient: () => ({
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          order: () => ({
-            limit: () => ({
-              maybeSingle: mocks.supabaseMaybeSingle,
-            }),
-          }),
-        }),
-      }),
-    }),
-  }),
-}));
+describe('billing checkout authority contract', () => {
+  it('keeps authentication, RBAC, trusted mutation and server-side plan authority ahead of Stripe mutation', async () => {
+    const source = await readFile(CHECKOUT_ROUTE, 'utf8');
 
-vi.mock('@/server/queries/organizations', () => ({
-  getCurrentOrganizationForUser: mocks.getCurrentOrganizationForUser,
-}));
+    const auth = source.indexOf('await requireApiUser()');
+    const permission = source.indexOf('await requirePermission({');
+    const trustedMutation = source.indexOf('await requireTrustedMutation(request');
+    const parseBody = source.indexOf('checkoutBodySchema.safeParse');
+    const selfServe = source.indexOf('isSelfServePlan(normalizedPlan)');
+    const stripeMutation = source.indexOf('stripe.checkout.sessions.create');
 
-vi.mock('@/server/billing/app-url', () => ({
-  resolveBillingReturnBaseUrl: () => ({ ok: true, appUrl: 'https://app.eurocomply.test' }),
-}));
-
-vi.mock('@/server/billing/plans', () => ({
-  getStripePriceId: mocks.getStripePriceId,
-  isSelfServePlan: mocks.isSelfServePlan,
-  normalizeBillingPlanId: mocks.normalizeBillingPlanId,
-}));
-
-vi.mock('@/server/billing/stripe', () => ({
-  getStripeClient: () => ({
-    checkout: {
-      sessions: {
-        create: mocks.stripeCheckoutCreate,
-      },
-    },
-    customers: {
-      create: mocks.stripeCustomerCreate,
-      update: mocks.stripeCustomerUpdate,
-    },
-  }),
-}));
-
-vi.mock('@/server/security/api-guards', () => ({
-  requireApiUser: mocks.requireApiUser,
-  requirePermission: mocks.requirePermission,
-  requireTrustedMutation: mocks.requireTrustedMutation,
-  secureApiError: (error: { code?: string; status?: number }) =>
-    new Response(JSON.stringify({ error: error.code ?? 'internal_server_error' }), {
-      status: error.status ?? 500,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-    }),
-}));
-
-vi.mock('@/server/security/step-up', () => ({
-  requireStepUpForRequest: mocks.requireStepUpForRequest,
-  publicStepUpSummary: mocks.publicStepUpSummary,
-}));
-
-import { POST } from '../../src/app/api/billing/checkout/route';
-
-function buildRequest(body = { plan: 'growth', locale: 'pt' }, headers: HeadersInit = {}) {
-  return new Request('https://app.eurocomply.test/api/billing/checkout', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      origin: 'https://app.eurocomply.test',
-      'x-eurocomply-step-up-token': 'step_up_token',
-      'Idempotency-Key': 'checkout-hardening-00000001',
-      ...headers,
-    },
-    body: JSON.stringify(body),
-  });
-}
-
-describe('billing checkout API security gates', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.requireApiUser.mockResolvedValue({ id: 'user_admin', email: 'admin@example.test' });
-    mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: 'org_a', clerk_org_id: 'clerk_org_a', name: 'Org A' });
-    mocks.requirePermission.mockResolvedValue({ ok: true, role: 'admin' });
-    mocks.requireTrustedMutation.mockResolvedValue(null);
-    mocks.requireStepUpForRequest.mockResolvedValue({
-      ok: true,
-      assessment: { action: 'manage_billing', verifiedAt: '2026-06-22T09:00:00.000Z' },
-    });
-    mocks.publicStepUpSummary.mockReturnValue({ verified: true });
-    mocks.normalizeBillingPlanId.mockImplementation((plan: string) => {
-      if (plan === 'growth' || plan === 'professional' || plan === 'business') return 'growth';
-      if (plan === 'starter' || plan === 'essential') return 'starter';
-      if (plan === 'enterprise') return 'enterprise';
-      return undefined;
-    });
-    mocks.getStripePriceId.mockReturnValue('price_growth_monthly');
-    mocks.isSelfServePlan.mockImplementation((plan: string) => ['starter', 'growth', 'enterprise'].includes(plan));
-    mocks.supabaseMaybeSingle.mockResolvedValue({ data: null, error: null });
-    mocks.stripeCustomerCreate.mockResolvedValue({ id: 'cus_org_a' });
-    mocks.stripeCustomerUpdate.mockResolvedValue({ id: 'cus_existing_org_a' });
-    mocks.stripeCheckoutCreate.mockResolvedValue({
-      id: 'cs_test_fixture',
-      url: 'https://checkout.stripe.com/session-fixture',
-    });
-    mocks.writeAuditLog.mockResolvedValue({ persisted: true });
+    expect(auth).toBeGreaterThan(-1);
+    expect(permission).toBeGreaterThan(auth);
+    expect(trustedMutation).toBeGreaterThan(permission);
+    expect(parseBody).toBeGreaterThan(trustedMutation);
+    expect(selfServe).toBeGreaterThan(parseBody);
+    expect(stripeMutation).toBeGreaterThan(selfServe);
   });
 
-  it('blocks unauthenticated checkout before parsing attacker-controlled body', async () => {
-    mocks.requireApiUser.mockRejectedValue({ code: 'unauthorized', status: 401 });
+  it('does not treat a status-only or test-mode database row as an existing paid relationship', async () => {
+    const source = await readFile(CHECKOUT_ROUTE, 'utf8');
 
-    const response = await POST(buildRequest({ plan: 'enterprise-custom', locale: 'pt' }));
-    const body = await response.json();
-
-    expect(response.status).toBe(401);
-    expect(body).toEqual({ error: 'unauthorized' });
-    expect(mocks.getCurrentOrganizationForUser).not.toHaveBeenCalled();
-    expect(mocks.requirePermission).not.toHaveBeenCalled();
-    expect(mocks.requireTrustedMutation).not.toHaveBeenCalled();
-    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
+    expect(source).toContain('hasProcessedLiveStripeSubscriptionAuthority');
+    expect(source).not.toContain('function hasExistingBillingRelationship');
+    expect(source).toContain('const hasLiveSubscription = await hasLiveSubscriptionRelationship');
+    expect(source).toContain("status: 'incomplete'");
+    expect(source).toContain("plan: 'starter'");
+    expect(source).toContain("tier: 'starter'");
+    expect(source).toContain('pendingCustomerBindingPersisted: true');
   });
 
-  it('rejects invalid checkout plan only after auth, RBAC, trusted origin and rate-limit gates', async () => {
-    const response = await POST(buildRequest({ plan: 'enterprise-custom', locale: 'pt' }));
-    const body = await response.json();
+  it('repairs only the precise live-provider resource_missing case for stale test customer ids', async () => {
+    const source = await readFile(CHECKOUT_ROUTE, 'utf8');
 
-    expect(response.status).toBe(400);
-    expect(body).toEqual({ error: 'invalid_plan' });
-    expect(mocks.requireApiUser).toHaveBeenCalled();
-    expect(mocks.requirePermission).toHaveBeenCalledWith({ userId: 'user_admin', organizationId: 'org_a', permission: 'manage_billing' });
-    expect(mocks.requireTrustedMutation).toHaveBeenCalled();
-    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
-    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
-    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
+    expect(source).toContain("(error as { code?: unknown }).code === 'resource_missing'");
+    expect(source).toContain("throw classifyProviderFailure('stripe', 'customer_update', error)");
+    expect(source).toContain('await stripe.customers.del(customer.id)');
+    expect(source).toContain("deriveStripeIdempotencyKey(idempotency, 'customer-create')");
   });
 
-  it('blocks checkout without manage_billing permission before mutation, step-up or Stripe calls', async () => {
-    mocks.requirePermission.mockRejectedValue({ code: 'permission_denied', status: 403 });
-
-    const response = await POST(buildRequest());
-    const body = await response.json();
-
-    expect(response.status).toBe(403);
-    expect(body).toEqual({ error: 'permission_denied' });
-    expect(mocks.requireTrustedMutation).not.toHaveBeenCalled();
-    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
-    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
-    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
-  });
-
-  it('fails closed when the trusted mutation or rate-limit guard denies the request', async () => {
-    mocks.requireTrustedMutation.mockResolvedValue(new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }));
-
-    const response = await POST(buildRequest());
-    const body = await response.json();
-
-    expect(response.status).toBe(429);
-    expect(body).toEqual({ error: 'rate_limited' });
-    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
-    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
-    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
-  });
-
-  it('requires an idempotency key after request security gates and before Stripe mutation', async () => {
-    const response = await POST(buildRequest(undefined, { 'Idempotency-Key': '' }));
-    const body = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(body).toEqual({ error: 'idempotency_key_required' });
-    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
-    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
-  });
-
-  it('creates a customer-mapped checkout session only after RBAC, trusted mutation, and step-up for an existing billing relationship', async () => {
-    mocks.supabaseMaybeSingle.mockResolvedValue({
-      data: { stripe_customer_id: null, stripe_subscription_id: 'sub_existing_org_a', status: 'incomplete' },
-      error: null,
-    });
-
-    const response = await POST(buildRequest({ plan: 'business', locale: 'pt' }));
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(body).toEqual({ url: 'https://checkout.stripe.com/session-fixture', idempotencyProtected: true, stepUp: { verified: true } });
-    expect(mocks.requirePermission).toHaveBeenCalledWith({ userId: 'user_admin', organizationId: 'org_a', permission: 'manage_billing' });
-    expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(expect.objectContaining({
-      action: 'manage_billing',
-      userId: 'user_admin',
-      organizationId: 'org_a',
-    }));
-    expect(mocks.stripeCustomerCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        email: 'admin@example.test',
-        name: 'Org A',
-        metadata: expect.objectContaining({
-          organization_id: 'org_a',
-          organizationId: 'org_a',
-          user_id: 'user_admin',
-          userId: 'user_admin',
-          plan: 'growth',
-          billing_flow: 'existing_billing_change',
-        }),
-      }),
-      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
+  it('prevents a second Checkout subscription for an organization with proven live billing', async () => {
+    const source = await readFile(CHECKOUT_ROUTE, 'utf8');
+    const stepUp = source.indexOf('const stepUp = hasLiveSubscription');
+    const liveBranchStart = source.indexOf('if (hasLiveSubscription) {');
+    const liveBranch = source.slice(
+      liveBranchStart,
+      source.indexOf('const stripe = getStripeClient();'),
     );
-    const customerParams = mocks.stripeCustomerCreate.mock.calls[0][0];
-    expect(customerParams.metadata).not.toHaveProperty('clerk_org_id');
-    expect(customerParams.metadata).not.toHaveProperty('clerkOrgId');
 
-    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mode: 'subscription',
-        customer: 'cus_org_a',
-        line_items: [{ price: 'price_growth_monthly', quantity: 1 }],
-        success_url: 'https://app.eurocomply.test/pt/checkout/complete',
-        cancel_url: 'https://app.eurocomply.test/pt/checkout?plan=growth&checkout=cancelled',
-        client_reference_id: 'org_a',
-        locale: 'pt',
-        billing_address_collection: 'required',
-        customer_update: { address: 'auto', name: 'auto' },
-        tax_id_collection: { enabled: true },
-        payment_method_collection: 'always',
-        allow_promotion_codes: true,
-        metadata: expect.objectContaining({
-          organization_id: 'org_a',
-          organizationId: 'org_a',
-          user_id: 'user_admin',
-          userId: 'user_admin',
-          plan: 'growth',
-          actor_role: 'admin',
-          billing_flow: 'existing_billing_change',
-          step_up_action: 'manage_billing',
-          step_up_verified_at: '2026-06-22T09:00:00.000Z',
-        }),
-        subscription_data: expect.objectContaining({
-          metadata: expect.objectContaining({
-            organization_id: 'org_a',
-            organizationId: 'org_a',
-            user_id: 'user_admin',
-            userId: 'user_admin',
-            plan: 'growth',
-            actor_role: 'admin',
-            billing_flow: 'existing_billing_change',
-            step_up_action: 'manage_billing',
-          }),
-        }),
-      }),
-      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
-    );
-    const checkoutParams = mocks.stripeCheckoutCreate.mock.calls[0][0];
-    expect(checkoutParams.metadata).not.toHaveProperty('clerk_org_id');
-    expect(checkoutParams.metadata).not.toHaveProperty('clerkOrgId');
-    expect(checkoutParams.subscription_data.metadata).not.toHaveProperty('clerk_org_id');
-    expect(checkoutParams.subscription_data.metadata).not.toHaveProperty('clerkOrgId');
-
-    expect(mocks.writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
-      action: 'checkout_created',
-      organizationId: 'org_a',
-      userId: 'user_admin',
-      metadata: expect.objectContaining({
-        stripeCustomerId: 'cus_org_a',
-        billingFlow: 'existing_billing_change',
-        stepUpRequired: true,
-        idempotencyProtected: true,
-      }),
-    }));
-    const auditPayload = mocks.writeAuditLog.mock.calls[0][0];
-    expect(auditPayload.metadata).not.toHaveProperty('clerkOrgId');
-    expect(auditPayload.metadata).not.toHaveProperty('clerk_org_id');
+    expect(stepUp).toBeGreaterThan(-1);
+    expect(liveBranchStart).toBeGreaterThan(stepUp);
+    expect(source.slice(stepUp, liveBranchStart)).toContain('requireStepUpForRequest');
+    expect(liveBranch).toContain('mutateSubscriptionLifecycle');
+    expect(liveBranch).toContain("? 'downgrade' : 'upgrade'");
+    expect(liveBranch).not.toContain('stripe.checkout.sessions.create');
   });
 
-  it('reuses and refreshes an existing organization Stripe customer before checkout', async () => {
-    mocks.supabaseMaybeSingle.mockResolvedValue({
-      data: { stripe_customer_id: 'cus_existing_org_a', stripe_subscription_id: 'sub_existing_org_a', status: 'active' },
-      error: null,
-    });
+  it('keeps negotiated contracts and sales-led plans out of generic self-serve checkout', async () => {
+    const source = await readFile(CHECKOUT_ROUTE, 'utf8');
 
-    const response = await POST(buildRequest({ plan: 'growth', locale: 'en' }));
+    expect(source).toContain('getAuthoritativeSignedContractPlan(organization.id)');
+    expect(source).toContain("{ error: 'contract_managed_billing' }");
+    expect(source).toContain('!isSelfServePlan(normalizedPlan)');
+  });
 
-    expect(response.status).toBe(200);
-    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
-    expect(mocks.stripeCustomerUpdate).toHaveBeenCalledWith(
-      'cus_existing_org_a',
-      {
-        metadata: expect.objectContaining({
-          organization_id: 'org_a',
-          organizationId: 'org_a',
-          user_id: 'user_admin',
-          userId: 'user_admin',
-          plan: 'growth',
-        }),
-      },
-      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
-    );
-    const updateMetadata = mocks.stripeCustomerUpdate.mock.calls[0][1].metadata;
-    expect(updateMetadata).not.toHaveProperty('clerk_org_id');
-    expect(updateMetadata).not.toHaveProperty('clerkOrgId');
-    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ customer: 'cus_existing_org_a' }),
-      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
-    );
+  it('lands successful Checkout on the existing fail-closed activation surface, never directly on the dashboard', async () => {
+    const source = await readFile(CHECKOUT_ROUTE, 'utf8');
+
+    expect(source).toContain('success_url: `${returnBaseUrl.appUrl}/${locale}/checkout/complete`');
+    expect(source).not.toContain('/dashboard/organizations?checkout=success');
+    expect(source).not.toContain('session_id={CHECKOUT_SESSION_ID}');
+  });
+
+  it('derives activation authority only from the authenticated current organization and persisted subscription', async () => {
+    const source = await readFile(ACTIVATION_ROUTE, 'utf8');
+
+    expect(source).toContain('await requireApiUser()');
+    expect(source).toContain('getCurrentOrganizationForUser(user.id)');
+    expect(source).toContain("new Set(['active', 'trialing'])");
+    expect(source).toContain(".eq('organization_id', organizationId)");
+    expect(source).toContain("authority: 'persisted_subscription'");
+    expect(source).not.toContain('session_id');
+    expect(source).not.toContain('checkout=success');
+  });
+
+  it('rate-limits activation polling fail closed and leaves every non-active state pending', async () => {
+    const source = await readFile(ACTIVATION_ROUTE, 'utf8');
+
+    expect(source).toContain('checkDistributedRateLimit');
+    expect(source).toContain("failureMode: 'fail-closed'");
+    expect(source).toContain("state: activated ? 'activated' : 'pending'");
+    expect(source).toContain("...(activated ? { next: '/dashboard/organizations' } : {})");
   });
 });

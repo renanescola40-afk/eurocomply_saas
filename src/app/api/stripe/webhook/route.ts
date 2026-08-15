@@ -6,6 +6,7 @@ import { writeAuditLog } from '@/lib/security/audit-log';
 import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { validateStripeWebhookEventMode } from '@/server/billing/stripe-event-mode';
+import { syncStripeSubscriptionForInvoiceEvent } from '@/server/billing/stripe-invoice-subscription-sync';
 import { handleStripeWebhookEventWithRecovery } from '@/server/billing/stripe-webhook-recovery';
 import { getStripeEventAuditContext } from '@/server/billing/stripe-webhooks';
 import { noStoreJson } from '@/server/security/no-store';
@@ -125,6 +126,18 @@ export async function POST(request: Request) {
       { error: misconfigured ? 'webhook_mode_not_configured' : 'webhook_mode_mismatch' },
       { status: misconfigured ? 500 : 400 },
     );
+  }
+
+  try {
+    // invoice.paid/payment_failed can arrive before a matching subscription.updated.
+    // Refresh provider truth first so access and entitlements never depend on the
+    // ordering of two different Stripe event types. The event ledger below still
+    // owns replay/idempotency and all event-specific side effects.
+    await syncStripeSubscriptionForInvoiceEvent(event);
+  } catch (syncError) {
+    await recordWebhookRouteAudit({ action: 'webhook_rejected', event, reason: 'invoice_subscription_sync_failed' });
+    reportError(syncError, { area: 'stripe_invoice_subscription_sync_failed', stripeEventId: event.id });
+    return noStoreJson({ error: 'webhook_processing_failed' }, { status: 500 });
   }
 
   await recordWebhookRouteAudit({ action: 'webhook_received', event });

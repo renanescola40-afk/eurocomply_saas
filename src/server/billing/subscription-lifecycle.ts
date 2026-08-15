@@ -4,7 +4,7 @@ import type Stripe from 'stripe';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { classifyProviderFailure } from '@/server/providers/failure';
-import type { CanonicalSubscriptionPlan } from '@/server/queries/subscription';
+import { isPlanAtLeast, type CanonicalSubscriptionPlan } from '@/server/queries/subscription';
 import { getStripeAddOnPriceId, normalizeAddOnSelections, type BillingAddOnSelection } from './add-ons';
 import { deriveStripeIdempotencyKey, type BillingIdempotencyContext } from './idempotency';
 import {
@@ -43,6 +43,14 @@ type SubscriptionLifecycleInput = {
   interval?: string | null;
   addOns?: Array<{ slug?: unknown; quantity?: unknown }>;
   idempotency: BillingIdempotencyContext;
+};
+
+type SchedulePhase = Stripe.SubscriptionSchedule['phases'][number];
+type SchedulePhaseItem = SchedulePhase['items'][number];
+type ScheduleUpdatePhase = NonNullable<Stripe.SubscriptionScheduleUpdateParams['phases']>[number];
+
+type ScheduleItemDiscount = {
+  id?: string | null;
 };
 
 async function getSubscriptionAuthority(organizationId: string): Promise<SubscriptionAuthority> {
@@ -185,6 +193,13 @@ function assertLegacyRecoveredProviderState(input: {
     return;
   }
 
+  // Legacy downgrade requests predate durable schedule snapshots, so there is no
+  // safe way to infer whether a future provider phase was committed. Do not turn
+  // an ambiguous historical request into an immediate price mutation.
+  if (input.action === 'downgrade') {
+    throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+  }
+
   if (input.subscription.cancel_at_period_end || input.baseItem.price.id !== getStripePriceId(input.targetPlan, input.interval)) {
     throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
   }
@@ -194,6 +209,206 @@ function assertLegacyRecoveredProviderState(input: {
   if (JSON.stringify(actualAddOns) !== JSON.stringify(expectedAddOns)) {
     throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
   }
+}
+
+function assertPlanTransition(action: BillingLifecycleAction, currentPlan: CanonicalSubscriptionPlan, targetPlan: CanonicalSubscriptionPlan) {
+  if (action !== 'upgrade' && action !== 'downgrade') return;
+
+  const samePlan = currentPlan === targetPlan;
+  const targetAtLeastCurrent = isPlanAtLeast(targetPlan, currentPlan);
+  const currentAtLeastTarget = isPlanAtLeast(currentPlan, targetPlan);
+  const valid = action === 'upgrade'
+    ? !samePlan && targetAtLeastCurrent
+    : !samePlan && currentAtLeastTarget;
+
+  if (!valid) {
+    throw new BillingLifecycleRequestError('billing_invalid_plan_transition', 409);
+  }
+}
+
+function stripeScheduleId(subscription: Stripe.Subscription) {
+  if (!subscription.schedule) return null;
+  return typeof subscription.schedule === 'string' ? subscription.schedule : subscription.schedule.id;
+}
+
+function scheduleItemPriceId(item: SchedulePhaseItem) {
+  return typeof item.price === 'string' ? item.price : item.price.id;
+}
+
+function scheduleObjectId(value: string | { id?: string | null } | null | undefined) {
+  if (typeof value === 'string') return value;
+  return value?.id ?? null;
+}
+
+function scheduleDiscountParams(value: unknown) {
+  if (!Array.isArray(value)) return undefined;
+  const discounts = value
+    .map((discount) => {
+      if (typeof discount === 'string') return { discount };
+      if (!discount || typeof discount !== 'object') return null;
+      const id = (discount as ScheduleItemDiscount).id;
+      return id ? { discount: id } : null;
+    })
+    .filter((discount): discount is { discount: string } => Boolean(discount));
+  return discounts.length > 0 ? discounts : undefined;
+}
+
+function scheduleTaxRateIds(value: unknown) {
+  if (!Array.isArray(value)) return undefined;
+  const ids = value
+    .map((taxRate) => scheduleObjectId(taxRate as string | { id?: string | null } | null | undefined))
+    .filter((id): id is string => Boolean(id));
+  return ids.length > 0 ? ids : undefined;
+}
+
+function phaseItemParams(item: SchedulePhaseItem) {
+  const raw = item as SchedulePhaseItem & { discounts?: unknown; tax_rates?: unknown };
+  return {
+    price: scheduleItemPriceId(item),
+    quantity: item.quantity ?? 1,
+    ...(scheduleDiscountParams(raw.discounts) ? { discounts: scheduleDiscountParams(raw.discounts) } : {}),
+    ...(scheduleTaxRateIds(raw.tax_rates) ? { tax_rates: scheduleTaxRateIds(raw.tax_rates) } : {}),
+  };
+}
+
+function currentPhaseParams(phase: SchedulePhase): ScheduleUpdatePhase {
+  const raw = phase as SchedulePhase & {
+    discounts?: unknown;
+    default_tax_rates?: unknown;
+    default_payment_method?: string | { id?: string | null } | null;
+    collection_method?: 'charge_automatically' | 'send_invoice' | null;
+    trial_end?: number | null;
+  };
+  const discounts = scheduleDiscountParams(raw.discounts);
+  const defaultTaxRates = scheduleTaxRateIds(raw.default_tax_rates);
+  const defaultPaymentMethod = scheduleObjectId(raw.default_payment_method);
+
+  return {
+    items: phase.items.map(phaseItemParams),
+    start_date: phase.start_date,
+    end_date: phase.end_date,
+    proration_behavior: phase.proration_behavior ?? 'none',
+    ...(phase.metadata ? { metadata: phase.metadata } : {}),
+    ...(discounts ? { discounts } : {}),
+    ...(defaultTaxRates ? { default_tax_rates: defaultTaxRates } : {}),
+    ...(defaultPaymentMethod ? { default_payment_method: defaultPaymentMethod } : {}),
+    ...(raw.collection_method ? { collection_method: raw.collection_method } : {}),
+    ...(typeof raw.trial_end === 'number' ? { trial_end: raw.trial_end } : {}),
+  } as ScheduleUpdatePhase;
+}
+
+function canonicalScheduleItems(items: SchedulePhaseItem[]) {
+  return items
+    .map((item) => ({ price: scheduleItemPriceId(item), quantity: item.quantity ?? 1 }))
+    .sort((left, right) => left.price.localeCompare(right.price) || left.quantity - right.quantity);
+}
+
+function canonicalSubscriptionItems(subscription: Stripe.Subscription) {
+  return subscription.items.data
+    .map((item) => ({ price: item.price.id, quantity: item.quantity ?? 1 }))
+    .sort((left, right) => left.price.localeCompare(right.price) || left.quantity - right.quantity);
+}
+
+function assertScheduleCanAcceptDowngrade(schedule: Stripe.SubscriptionSchedule, subscription: Stripe.Subscription) {
+  if (schedule.status !== 'active' && schedule.status !== 'not_started') {
+    throw new BillingLifecycleRequestError('billing_schedule_conflict', 409);
+  }
+
+  if (schedule.phases.length !== 1) {
+    throw new BillingLifecycleRequestError('billing_schedule_conflict', 409);
+  }
+
+  if (JSON.stringify(canonicalScheduleItems(schedule.phases[0].items)) !== JSON.stringify(canonicalSubscriptionItems(subscription))) {
+    throw new BillingLifecycleRequestError('billing_schedule_conflict', 409);
+  }
+}
+
+function futureDowngradePhase(input: {
+  currentPhase: SchedulePhase;
+  currentBasePriceId: string;
+  targetPriceId: string;
+  targetPlan: CanonicalSubscriptionPlan;
+  organizationId: string;
+  userId: string;
+  interval: BillingInterval;
+}): ScheduleUpdatePhase {
+  const items = input.currentPhase.items.map((item) => {
+    const params = phaseItemParams(item);
+    return scheduleItemPriceId(item) === input.currentBasePriceId
+      ? { ...params, price: input.targetPriceId, quantity: 1 }
+      : params;
+  });
+
+  return {
+    items,
+    iterations: 1,
+    proration_behavior: 'none',
+    metadata: {
+      ...(input.currentPhase.metadata ?? {}),
+      organization_id: input.organizationId,
+      user_id: input.userId,
+      plan: input.targetPlan,
+      billing_interval: input.interval,
+      billing_transition: 'scheduled_downgrade',
+    },
+  } as ScheduleUpdatePhase;
+}
+
+async function scheduleDowngradeAtPeriodEnd(input: {
+  stripe: ReturnType<typeof getStripeClient>;
+  subscription: Stripe.Subscription;
+  baseItem: Stripe.SubscriptionItem;
+  targetPlan: CanonicalSubscriptionPlan;
+  interval: BillingInterval;
+  organizationId: string;
+  userId: string;
+  idempotency: BillingIdempotencyContext;
+}) {
+  let schedule: Stripe.SubscriptionSchedule;
+  const existingScheduleId = stripeScheduleId(input.subscription);
+
+  if (existingScheduleId) {
+    schedule = await input.stripe.subscriptionSchedules.retrieve(existingScheduleId);
+  } else {
+    schedule = await input.stripe.subscriptionSchedules.create(
+      { from_subscription: input.subscription.id },
+      { idempotencyKey: deriveStripeIdempotencyKey(input.idempotency, 'subscription-downgrade-schedule-create') },
+    );
+  }
+
+  assertScheduleCanAcceptDowngrade(schedule, input.subscription);
+  const currentPhase = schedule.phases[0];
+  const targetPriceId = getStripePriceId(input.targetPlan, input.interval);
+
+  await input.stripe.subscriptionSchedules.update(
+    schedule.id,
+    {
+      end_behavior: 'release',
+      proration_behavior: 'none',
+      metadata: {
+        organization_id: input.organizationId,
+        subscription_id: input.subscription.id,
+        target_plan: input.targetPlan,
+        billing_interval: input.interval,
+        lifecycle: 'period_end_downgrade',
+      },
+      phases: [
+        currentPhaseParams(currentPhase),
+        futureDowngradePhase({
+          currentPhase,
+          currentBasePriceId: input.baseItem.price.id,
+          targetPriceId,
+          targetPlan: input.targetPlan,
+          organizationId: input.organizationId,
+          userId: input.userId,
+          interval: input.interval,
+        }),
+      ],
+    },
+    { idempotencyKey: deriveStripeIdempotencyKey(input.idempotency, 'subscription-downgrade-schedule-update') },
+  );
+
+  return input.subscription;
 }
 
 export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleInput) {
@@ -223,6 +438,7 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
   const currentPlan = normalizeBillingPlanId(authority.plan ?? subscription.metadata.plan) ?? 'starter';
   const interval = input.interval ? normalizeBillingInterval(input.interval) : getCurrentBillingInterval(baseItem);
   const targetPlan = input.plan ?? currentPlan;
+  assertPlanTransition(input.action, currentPlan, targetPlan);
   const addOns = normalizeAddOnSelections(input.addOns, targetPlan);
   const claim = await claimBillingLifecycleRequest({
     organizationId: input.organizationId,
@@ -296,13 +512,23 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
           { cancel_at_period_end: false },
           requestOptions,
         );
+      } else if (input.action === 'downgrade') {
+        updated = await scheduleDowngradeAtPeriodEnd({
+          stripe,
+          subscription,
+          baseItem,
+          targetPlan,
+          interval,
+          organizationId: input.organizationId,
+          userId: input.userId,
+          idempotency: input.idempotency,
+        });
       } else {
-        const isDowngrade = input.action === 'downgrade';
         updated = await stripe.subscriptions.update(
           subscription.id,
           {
             cancel_at_period_end: false,
-            proration_behavior: isDowngrade ? 'none' : 'create_prorations',
+            proration_behavior: 'create_prorations',
             billing_cycle_anchor: 'unchanged',
             items: [
               { id: baseItem.id, price: getStripePriceId(targetPlan, interval), quantity: 1 },
@@ -324,6 +550,7 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
       }
     } catch (error) {
       await failBillingLifecycleRequest(requestId, 'stripe_mutation_failed');
+      if (error instanceof BillingLifecycleRequestError) throw error;
       throw classifyProviderFailure('stripe', `subscription_${input.action}`, error);
     }
 
@@ -362,6 +589,8 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
       providerMutationReplayed: providerWasAlreadyCompleted,
       legacyProviderSnapshotRecovered: isLegacyProviderRecovery,
       durableResultSnapshot: true,
+      scheduledForPeriodEnd: input.action === 'downgrade',
+      scheduledEffectiveAt: input.action === 'downgrade' ? providerSnapshot.currentPeriodEnd : null,
     },
   });
 
