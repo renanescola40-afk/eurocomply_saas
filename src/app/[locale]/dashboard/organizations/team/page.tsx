@@ -1,14 +1,16 @@
 import { redirect } from 'next/navigation';
 
-import { PlanGate } from '@/components/billing/plan-gate';
 import { EnterpriseAccessConsole } from '@/components/team/enterprise-access-console';
 import { TeamSettingsSection } from '@/components/team/team-settings-section';
+import { isWithinPlanLimit } from '@/lib/billing/entitlements';
 import { getTeamWorkflowCopy } from '@/lib/i18n/team-workflow-copy';
 import { roleHasPermission } from '@/lib/security/permissions';
+import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { listOrganizationMembers, listPendingInvitations } from '@/server/queries/members';
+import { isPlanAtLeast } from '@/server/queries/subscription';
 
 type TeamPageProps = { params: Promise<{ locale: string }> };
 
@@ -48,11 +50,16 @@ export default async function OrganizationTeamPage({ params }: TeamPageProps) {
     );
   }
 
-  const [members, invitations, billing] = await Promise.all([
+  const [members, invitations, billing, entitlements] = await Promise.all([
     listOrganizationMembers(organization.id),
     listPendingInvitations(organization.id),
     getOrganizationBillingContext(organization.id),
+    getOrganizationEntitlements(organization.id),
   ]);
+  const withinSeatCapacity = isWithinPlanLimit(billing.plan, 'users', billing.usage.users);
+  const canInviteMembers = entitlements.employeeInvites && withinSeatCapacity;
+  const inviteBlockReason = !entitlements.employeeInvites ? 'plan' as const : !withinSeatCapacity ? 'capacity' as const : null;
+  const canInviteAdmin = isPlanAtLeast(entitlements.plan, 'enterprise');
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.16),_transparent_34rem),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.08),_transparent_30rem),linear-gradient(180deg,#050505_0%,#080b12_46%,#050505_100%)] px-4 py-8 sm:px-6 lg:px-8">
@@ -67,12 +74,19 @@ export default async function OrganizationTeamPage({ params }: TeamPageProps) {
           </div>
         </header>
 
-        <PlanGate planId={billing.plan} metric="users" currentUsage={billing.usage.users}>
-          <div className="space-y-10">
-            <TeamSettingsSection locale={locale} members={members} invitations={invitations} currentUserId={user.id} canManageTeam />
-            <EnterpriseAccessConsole />
-          </div>
-        </PlanGate>
+        <div className="space-y-10">
+          <TeamSettingsSection
+            locale={locale}
+            members={members}
+            invitations={invitations}
+            currentUserId={user.id}
+            canManageTeam
+            canInviteMembers={canInviteMembers}
+            canInviteAdmin={canInviteAdmin}
+            inviteBlockReason={inviteBlockReason}
+          />
+          <EnterpriseAccessConsole />
+        </div>
       </div>
     </main>
   );
