@@ -54,7 +54,7 @@ concurrency:
 jobs:
   contract:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.head_sha == github.sha }}
-    name: Enterprise closure contract
+    name: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha != github.sha && 'Stale Enterprise closure trigger (ignored)' || 'Enterprise closure contract' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
