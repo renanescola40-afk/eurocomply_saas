@@ -1,14 +1,56 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 const ownerStorageState = process.env.E2E_OWNER_STORAGE_STATE;
 const approverStorageState = process.env.E2E_FRIA_APPROVER_STORAGE_STATE;
+const ownerEmail = process.env.E2E_FRIA_OWNER_EMAIL?.trim().toLowerCase();
+const ownerPassword = process.env.E2E_FRIA_OWNER_PASSWORD;
 const reviewerEmail = process.env.E2E_FRIA_REVIEWER_EMAIL?.trim().toLowerCase();
 const approverEmail = process.env.E2E_FRIA_APPROVER_EMAIL?.trim().toLowerCase();
+const approverPassword = process.env.E2E_FRIA_APPROVER_PASSWORD;
 const allowSyntheticWrites = process.env.E2E_ALLOW_SYNTHETIC_APP_WRITES === 'true';
 const baseURL = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:3000';
+const evidencePath = process.env.E2E_FRIA_RUNTIME_EVIDENCE_PATH?.trim();
+const ownerSessionConfigured = Boolean(ownerStorageState || (ownerEmail && ownerPassword));
+const approverSessionConfigured = Boolean(approverStorageState || (approverEmail && approverPassword));
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function writeRuntimeEvidence() {
+  if (!evidencePath) return;
+  const evidence = {
+    schema: 'risck-comply.product-fria-runtime-acceptance.v1',
+    outcome: 'passed',
+    generatedAt: new Date().toISOString(),
+    targetSha: process.env.EXPECTED_HEAD_SHA ?? process.env.GITHUB_SHA ?? null,
+    environment: process.env.GITHUB_ACTIONS === 'true' ? 'github-actions-disposable-qa' : 'disposable-qa',
+    checks: {
+      ownerAuthenticated: true,
+      aiSystemCreated: true,
+      assessmentCreated: true,
+      humanReviewerAssigned: true,
+      distinctApproverAssigned: true,
+      legalReviewCompleted: true,
+      fria01EvidenceSubmitted: true,
+      fria15EvidenceSubmitted: true,
+      approverAuthenticatedSeparately: true,
+      approvalPersisted: true,
+      approvedStateImmutable: true,
+    },
+    evidenceIntegrity: {
+      syntheticWritesExplicitlyEnabled: allowSyntheticWrites,
+      credentialsStored: false,
+      emailsStored: false,
+      userIdentifiersStored: false,
+      organizationIdentifiersStored: false,
+      rawProviderResponsesStored: false,
+    },
+  };
+  mkdirSync(dirname(evidencePath), { recursive: true });
+  writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
 }
 
 async function expectHealthyAuthenticatedPage(page: Page, label: string) {
@@ -17,6 +59,15 @@ async function expectHealthyAuthenticatedPage(page: Page, label: string) {
     /Unhandled Runtime Error|Application error|ReferenceError:|TypeError:|SyntaxError:|Stack trace/i,
   );
   expect(page.url(), `${label} should not fall back to login`).not.toContain('/login');
+}
+
+async function loginWithDisposableCredentials(page: Page, email: string, password: string) {
+  await page.goto('/en/login?next=/en/dashboard/organizations', { waitUntil: 'domcontentloaded' });
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000 });
+  await expectHealthyAuthenticatedPage(page, 'disposable authenticated session');
 }
 
 async function selectOptionContaining(page: Page, selector: string, value: string) {
@@ -36,8 +87,8 @@ function workflowResponse(page: Page, workflow: string) {
 }
 
 test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
-  test.skip(!ownerStorageState, 'E2E_OWNER_STORAGE_STATE must point to a disposable paid-owner QA fixture.');
-  test.skip(!approverStorageState, 'E2E_FRIA_APPROVER_STORAGE_STATE must point to the disposable QA approver session.');
+  test.skip(!ownerSessionConfigured, 'Provide E2E_OWNER_STORAGE_STATE or disposable owner email/password credentials.');
+  test.skip(!approverSessionConfigured, 'Provide E2E_FRIA_APPROVER_STORAGE_STATE or disposable approver credentials.');
   test.skip(!reviewerEmail, 'E2E_FRIA_REVIEWER_EMAIL must identify an eligible non-owner governance reviewer.');
   test.skip(!approverEmail, 'E2E_FRIA_APPROVER_EMAIL must identify an eligible non-owner governance approver.');
   test.skip(
@@ -50,6 +101,10 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
 
   test('owner creates and evidences a FRIA; assigned approver independently approves it', async ({ page, browser }) => {
     const systemName = `QA FRIA system ${Date.now()}`;
+
+    if (!ownerStorageState) {
+      await loginWithDisposableCredentials(page, ownerEmail!, ownerPassword!);
+    }
 
     await page.goto('/en/ai-systems', { waitUntil: 'domcontentloaded' });
     await expectHealthyAuthenticatedPage(page, 'AI inventory prerequisite');
@@ -105,12 +160,15 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
     await expect(page.getByText('2 evidence records', { exact: true })).toBeVisible();
 
     const approverContext = await browser.newContext({
-      storageState: approverStorageState!,
+      ...(approverStorageState ? { storageState: approverStorageState } : {}),
       baseURL,
     });
 
     try {
       const approverPage = await approverContext.newPage();
+      if (!approverStorageState) {
+        await loginWithDisposableCredentials(approverPage, approverEmail!, approverPassword!);
+      }
       await approverPage.goto('/en/dashboard/fria', { waitUntil: 'domcontentloaded' });
       await expectHealthyAuthenticatedPage(approverPage, 'FRIA approver workspace');
       await expect(approverPage.getByRole('heading', { name: 'FRIA workspace' })).toBeVisible();
@@ -128,6 +186,7 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
       expect(approveResponse.status()).toBe(200);
       await expect(approverPage.getByText('approved', { exact: true }).first()).toBeVisible();
       await expect(approverPage.getByRole('button', { name: 'Approve assessment' })).toHaveCount(0);
+      writeRuntimeEvidence();
     } finally {
       await approverContext.close();
     }
