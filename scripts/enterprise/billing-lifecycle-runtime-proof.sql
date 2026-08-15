@@ -101,15 +101,15 @@ request_summary as (
   from latest_completed
 ),
 reactivation_sequence as (
-  select exists(
-    select 1
-    from completed_requests c
-    join completed_requests r on r.action='reactivate'
+  select coalesce((
+    select c.completed_at <= r.completed_at
+    from latest_completed c
+    join latest_completed r on r.action='reactivate'
     where c.action='cancel'
       and c.completed_at is not null
       and r.completed_at is not null
-      and c.completed_at <= r.completed_at
-  ) as cancel_precedes_reactivate
+    limit 1
+  ), false) as cancel_precedes_reactivate
 ),
 matched_audits as (
   select
