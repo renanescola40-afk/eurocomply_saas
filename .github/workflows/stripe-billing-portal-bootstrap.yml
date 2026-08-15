@@ -80,9 +80,9 @@ jobs:
           {
             echo '## Stripe Billing Portal bootstrap'
             echo
-            echo "- Source SHA: \`${RELEASE_SHA,,}\`"
-            echo "- Provider result: \`$DISPOSITION\`"
-            echo "- Configuration to review and pin: \`$CONFIGURATION_ID\`"
+            echo "- Source SHA: ${RELEASE_SHA,,}"
+            echo "- Provider result: $DISPOSITION"
+            echo "- Configuration to review and pin: $CONFIGURATION_ID"
             echo
-            echo 'No application contract was changed by this workflow. Pin the reviewed ID in `config/stripe-billing-portal-contract.json` through a normal pull request, deploy that exact merged SHA, then run Stripe Provider Proof.'
+            echo 'No application contract was changed by this workflow. Pin the reviewed ID in config/stripe-billing-portal-contract.json through a normal pull request, deploy that exact merged SHA, then run Stripe Provider Proof.'
           } >> "$GITHUB_STEP_SUMMARY"
