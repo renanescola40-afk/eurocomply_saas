@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/rate-limit';
+import { validateFriaAssignmentMembers } from '@/server/ai-governance/fria-assignees';
 import { decideFria } from '@/server/ai-governance/fria-fundamental-rights';
 import { getAiSystem } from '@/server/queries/ai-systems';
 import { buildAuditRequestContextFromRequest, createAuditEvent } from '@/server/queries/audit-events';
@@ -280,6 +281,23 @@ export async function POST(request: Request) {
     if (before.stage === 'approved' || before.stage === 'retired') {
       return noStoreJson({ error: 'fria_assessment_immutable' }, { status: 409 });
     }
+
+    const assignmentValidation = await validateFriaAssignmentMembers({
+      organizationId: organization.id,
+      selection: {
+        ownerId: before.owner_id,
+        reviewerId: body.reviewerId,
+        approverId: body.approverId,
+        legalReviewerId: body.legalReviewerId,
+      },
+    });
+    if (!assignmentValidation.ok) {
+      return noStoreJson(
+        { error: assignmentValidation.error, field: assignmentValidation.field },
+        { status: assignmentValidation.error === 'fria_assignee_not_eligible' ? 400 : 409 },
+      );
+    }
+
     const legalReviewComplete = Boolean(body.legalReviewComplete && body.legalReviewerId);
     const decision = decideFria({
       applicability: body.applicability,
