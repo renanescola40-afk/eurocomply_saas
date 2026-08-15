@@ -6,6 +6,7 @@ const MAX_PROVIDER_RESPONSE_BYTES = 64 * 1024;
 const COMMERCIAL_CATALOG_PATH = 'config/billing-commercial-catalog.json';
 const WEBHOOK_CONTRACT_PATH = 'config/stripe-webhook-contract.json';
 const CANONICAL_PUBLIC_PLANS = ['essential', 'professional', 'business'];
+const BILLING_PORTAL_CONFIGURATION_ID_PATTERN = /^bpc_[A-Za-z0-9]+$/;
 
 function loadJson(path, expectedSchema) {
   const value = JSON.parse(readFileSync(path, 'utf8'));
@@ -63,9 +64,14 @@ async function readBoundedJsonResponse(response) {
 const commercialCatalog = loadJson(COMMERCIAL_CATALOG_PATH, 'risck-comply.billing-commercial-catalog.v1');
 const webhookContract = loadJson(WEBHOOK_CONTRACT_PATH, 'risck-comply.stripe-webhook-contract.v1');
 const stripeSecretKey = requiredEnv('STRIPE_SECRET_KEY');
+const explicitPortalConfigurationId = String(process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID ?? '').trim();
 
 if (!/^(?:sk|rk)_live_/.test(stripeSecretKey)) {
   throw new Error('Stripe production provider proof requires a live-mode secret or restricted key');
+}
+
+if (explicitPortalConfigurationId && !BILLING_PORTAL_CONFIGURATION_ID_PATTERN.test(explicitPortalConfigurationId)) {
+  throw new Error('STRIPE_BILLING_PORTAL_CONFIGURATION_ID must be a Stripe Billing Portal configuration id');
 }
 
 const priceBindings = CANONICAL_PUBLIC_PLANS.map((publicId) => {
@@ -99,10 +105,14 @@ async function stripe(path) {
   return readBoundedJsonResponse(response);
 }
 
-const [account, webhooks, portalConfigurations, ...prices] = await Promise.all([
+const portalConfigurationPath = explicitPortalConfigurationId
+  ? `/billing_portal/configurations/${encodeURIComponent(explicitPortalConfigurationId)}`
+  : '/billing_portal/configurations?active=true&is_default=true&limit=100';
+
+const [account, webhooks, portalConfigurationResponse, ...prices] = await Promise.all([
   stripe('/account'),
   stripe('/webhook_endpoints?limit=100'),
-  stripe('/billing_portal/configurations?active=true&is_default=true&limit=100'),
+  stripe(portalConfigurationPath),
   ...priceBindings.map(({ priceId }) => stripe(`/prices/${encodeURIComponent(priceId)}?expand[]=product`)),
 ]);
 
@@ -128,21 +138,28 @@ const enabledEvents = new Set(exactWebhook?.enabled_events ?? []);
 const requiredWebhookEventsPresent = Boolean(exactWebhook)
   && requiredEvents.every((event) => enabledEvents.has(event));
 
-// Billing portal sessions are created without an explicit configuration ID, so
-// Stripe will use the account's default configuration. Prove that the default
-// configuration is both active and live before calling provider readiness green.
-const defaultPortalConfiguration = Array.isArray(portalConfigurations?.data)
-  ? portalConfigurations.data.find((configuration) => (
-      configuration?.active === true
-      && configuration?.is_default === true
-      && configuration?.livemode === true
-    ))
-  : null;
+const portalConfiguration = explicitPortalConfigurationId
+  ? portalConfigurationResponse
+  : Array.isArray(portalConfigurationResponse?.data)
+    ? portalConfigurationResponse.data.find((configuration) => (
+        configuration?.active === true
+        && configuration?.is_default === true
+        && configuration?.livemode === true
+      ))
+    : null;
+
+const billingPortalConfigurationPresent = Boolean(portalConfiguration)
+  && portalConfiguration?.active === true
+  && portalConfiguration?.livemode === true;
+const billingPortalConfigurationBindingValid = billingPortalConfigurationPresent
+  && (explicitPortalConfigurationId
+    ? portalConfiguration?.id === explicitPortalConfigurationId
+    : portalConfiguration?.is_default === true);
 
 const result = {
   liveModeConfirmed: prices.every((price) => price?.livemode === true)
     && exactWebhook?.livemode === true
-    && defaultPortalConfiguration?.livemode === true,
+    && portalConfiguration?.livemode === true,
   accountActive: account?.charges_enabled === true || account?.details_submitted === true,
   essentialPriceActive: inspectedPrices.find(({ publicId }) => publicId === 'essential')?.passed === true,
   professionalPriceActive: inspectedPrices.find(({ publicId }) => publicId === 'professional')?.passed === true,
@@ -150,7 +167,8 @@ const result = {
   canonicalPriceMetadataMatches: inspectedPrices.every(({ passed }) => passed),
   exactWebhookEndpointPresent: Boolean(exactWebhook),
   requiredWebhookEventsPresent,
-  defaultBillingPortalConfigurationPresent: Boolean(defaultPortalConfiguration),
+  billingPortalConfigurationPresent,
+  billingPortalConfigurationBindingValid,
 };
 
 if (Object.values(result).some((value) => value !== true)) {
