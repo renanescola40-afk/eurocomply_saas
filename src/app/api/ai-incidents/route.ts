@@ -15,7 +15,10 @@ const AI_INCIDENT_JSON_MAX_BYTES = 64 * 1024;
 const aiIncidentBodySchema = z.object({
   title: z.string().trim().min(3).max(180),
   summary: z.string().trim().min(12).max(6000),
-  aiSystemId: z.string().trim().max(96).nullable().optional(),
+  aiSystemId: z.preprocess(
+    (value) => value === '' ? null : value,
+    z.string().uuid().nullable().optional(),
+  ),
   severity: z.unknown().optional(),
   category: z.unknown().optional(),
   detectedAt: z.string().trim().max(80).nullable().optional(),
@@ -127,7 +130,13 @@ export async function POST(request: Request) {
 
     const systems = await listAiSystems(organization.id);
     const requestedSystemId = asText(body.aiSystemId) || null;
-    const aiSystemId = requestedSystemId && systems.some((system) => system.id === requestedSystemId) ? requestedSystemId : null;
+    const aiSystem = requestedSystemId
+      ? systems.find((system) => system.id === requestedSystemId) ?? null
+      : null;
+    if (requestedSystemId && !aiSystem) {
+      return noStoreJson({ error: 'ai_system_not_found' }, { status: 404 });
+    }
+    const aiSystemId = aiSystem?.id ?? null;
     const severity = normalizeAiIncidentSeverity(body.severity);
     const category = normalizeAiIncidentCategory(body.category);
     const detectedAt = detectedAtResult.value;
