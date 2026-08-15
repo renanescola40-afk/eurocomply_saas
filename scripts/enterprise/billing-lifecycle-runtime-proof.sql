@@ -1,11 +1,8 @@
 \set ON_ERROR_STOP on
 
 -- Read-only exact-tenant observation of the Stripe billing lifecycle evidence chain.
+-- The workflow enforces default_transaction_read_only=on through PGOPTIONS.
 -- Inputs are supplied through psql variables and the output is one JSON object.
-begin transaction read only;
-set local statement_timeout = '45s';
-set local lock_timeout = '5s';
-
 with proof_input as (
   select
     :'organization_id'::uuid as organization_id,
@@ -195,5 +192,3 @@ select jsonb_build_object(
   'auditHashesPresent', coalesce((select hashes_present from audit_summary),false),
   'auditPredecessorLinksResolve', coalesce((select predecessor_links_resolve from audit_summary),false)
 )::text;
-
-rollback;
