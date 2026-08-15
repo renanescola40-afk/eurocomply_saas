@@ -18,4 +18,10 @@ describe('release final validation artifact hygiene', () => {
     expect(workflow).toContain('if: always()');
     expect(workflow).toContain('uses: actions/upload-artifact@v7');
   });
+
+  it('binds both validation profiles to the canonical protected Production environment', () => {
+    expect(workflow).toContain('environment: Production');
+    expect(workflow).not.toContain('environment: ${{ inputs.release_target }}');
+    expect(workflow).toContain('RELEASE_TARGET: ${{ inputs.release_target }}');
+  });
 });
