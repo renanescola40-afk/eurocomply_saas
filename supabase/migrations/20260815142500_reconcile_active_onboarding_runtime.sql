@@ -4,8 +4,10 @@ begin;
 -- Historical onboarding migrations remain immutable and are not reused as
 -- production execution identities because they predate the live migration head.
 -- This patch is additive/idempotent and is intended to run after the existing
--- bounded reconciliation set, including controlled document storage and the
--- active core organization bootstrap reconciliation.
+-- bounded reconciliation set, including controlled document storage, the
+-- active core organization bootstrap reconciliation, and seat-aware invitation
+-- authority. The RPC created here is safe even if later hardening migrations
+-- are not reached during a partial rollout.
 
 do $preflight$
 begin
@@ -21,6 +23,10 @@ begin
 
   if to_regprocedure('public.create_organization_with_owner_atomic(text,text,uuid)') is null then
     raise exception 'atomic organization bootstrap must be reconciled before onboarding activation';
+  end if;
+
+  if to_regprocedure('public.create_organization_invitation_with_seat_atomic(uuid,text,text,text,text,uuid,timestamptz)') is null then
+    raise exception 'seat-aware invitation authority must be reconciled before onboarding activation';
   end if;
 
   if not exists (
@@ -107,9 +113,6 @@ alter table public.onboarding_activation_runs
   add column if not exists suggested_tasks jsonb not null default '[]'::jsonb,
   add column if not exists idempotency_key text;
 
--- Preserve legacy evidence where equivalent columns already existed under
--- earlier names. Dynamic SQL keeps this forward identity valid even when a
--- clean environment was created from the newer canonical column names.
 do $legacy_backfill$
 begin
   if exists (
@@ -165,8 +168,8 @@ as $$
 declare
   v_organization public.organizations%rowtype;
   v_existing_run public.onboarding_activation_runs%rowtype;
-  v_invitation public.invitations%rowtype;
   v_actor_role text;
+  v_actor_status text;
   v_organization_profile jsonb := coalesce(p_activation -> 'organization', '{}'::jsonb);
   v_ai_system jsonb := coalesce(p_activation -> 'aiSystem', '{}'::jsonb);
   v_recommended_documents jsonb := coalesce(p_activation -> 'recommendedDocuments', '[]'::jsonb);
@@ -176,9 +179,10 @@ declare
   v_readiness_score integer;
   v_ai_system_id uuid;
   v_activation_run_id uuid;
-  v_existing_invitation_id uuid;
   v_item jsonb;
   v_email text;
+  v_invitation_token text;
+  v_seat_invitation record;
   v_documents_created integer := 0;
   v_tasks_created integer := 0;
   v_invitations_created integer := 0;
@@ -232,13 +236,14 @@ begin
     return;
   end if;
 
-  select lower(trim(members.role))
-  into v_actor_role
+  select lower(trim(members.role)), lower(trim(members.status))
+  into v_actor_role, v_actor_status
   from public.organization_members as members
   where members.organization_id = p_organization_id
     and members.user_id = p_actor_user_id;
 
-  if v_actor_role is null or v_actor_role not in ('owner', 'admin') then
+  if v_actor_status is distinct from 'active'
+     or coalesce(v_actor_role, '') not in ('owner', 'admin') then
     return query select
       'forbidden'::text, null::uuid, null::uuid, 0, 0, 0, v_organization.name, '[]'::jsonb;
     return;
@@ -267,6 +272,7 @@ begin
     from public.invitations as invitations
     where invitations.organization_id = p_organization_id
       and invitations.accepted_at is null
+      and invitations.revoked_at is null
       and invitations.expires_at > now()
       and invitations.email = any(coalesce(v_existing_run.invited_emails, '{}'::text[]));
 
@@ -462,51 +468,34 @@ begin
       raise exception 'invalid_invitation_email' using errcode = '22023';
     end if;
 
-    select invitations.id
-    into v_existing_invitation_id
-    from public.invitations as invitations
-    where invitations.organization_id = p_organization_id
-      and invitations.email = v_email;
+    v_invitation_token := replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
 
-    if v_existing_invitation_id is null then
-      v_invitations_created := v_invitations_created + 1;
-    end if;
-
-    insert into public.invitations (
-      organization_id,
-      email,
-      role,
-      token,
-      invited_by,
-      accepted_at,
-      expires_at
-    ) values (
+    select *
+    into v_seat_invitation
+    from public.create_organization_invitation_with_seat_atomic(
       p_organization_id,
       v_email,
       'viewer',
-      replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''),
+      'viewer',
+      v_invitation_token,
       p_actor_user_id,
-      null,
       now() + interval '7 days'
-    )
-    on conflict (organization_id, email) do update
-    set
-      role = excluded.role,
-      token = excluded.token,
-      invited_by = excluded.invited_by,
-      accepted_at = null,
-      expires_at = excluded.expires_at
-    returning * into v_invitation;
+    );
 
+    if v_seat_invitation.outcome <> 'created' then
+      raise exception 'onboarding_invitation_seat_authority_denied:%', v_seat_invitation.outcome
+        using errcode = 'P0001';
+    end if;
+
+    v_invitations_created := v_invitations_created + 1;
     v_invitation_deliveries := v_invitation_deliveries || jsonb_build_array(
       jsonb_build_object(
-        'id', v_invitation.id,
-        'email', v_invitation.email,
-        'role', v_invitation.role,
-        'token', v_invitation.token
+        'id', v_seat_invitation.invitation_id,
+        'email', v_seat_invitation.email,
+        'role', v_seat_invitation.applied_role,
+        'token', v_invitation_token
       )
     );
-    v_existing_invitation_id := null;
   end loop;
 
   insert into public.onboarding_activation_runs (
@@ -594,7 +583,7 @@ revoke all on function public.complete_onboarding_activation_atomic(uuid, uuid, 
 grant execute on function public.complete_onboarding_activation_atomic(uuid, uuid, text, jsonb) to service_role;
 
 comment on function public.complete_onboarding_activation_atomic(uuid, uuid, text, jsonb)
-is 'Backend-only, idempotent and tenant-bound database transaction for the active onboarding runtime.';
+is 'Backend-only, idempotent, tenant-bound and seat-aware database transaction for the active onboarding runtime.';
 
 do $verify$
 declare
