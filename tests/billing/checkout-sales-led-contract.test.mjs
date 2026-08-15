@@ -21,15 +21,18 @@ test('signup sends sales-led plan selections to sales instead of self-serve auth
   assert.doesNotMatch(signupPage, /€\{plan\.priceMonthly\}/);
 });
 
-test('billing dashboard derives sales-led actions from catalog metadata', () => {
+test('billing dashboard derives sales-led actions and localized price labels from catalog metadata', () => {
   assert.match(billingPage, /const isSalesLed = plan\.salesLed/);
   assert.match(billingPage, /contact\?intent=sales&plan=/);
-  assert.match(billingPage, /formatPlanPrice\(plan\)/);
+  assert.match(billingPage, /formatPlanPrice\(plan, copy\)/);
+  assert.match(billingPage, /plan\.priceMonthly/);
+  assert.match(billingPage, /plan\.startingPriceMonthly/);
   assert.doesNotMatch(billingPage, /plan\.id === 'enterprise'/);
 });
 
 test('sales-led plans keep fixed or starting catalog price references visible', () => {
-  assert.match(checkoutPage, /planPriceLabel\(plan\)/);
+  assert.match(checkoutPage, /planPriceLabel\(plan, locale, copy\)/);
+  assert.match(checkoutPage, /plan\.priceMonthly/);
   assert.match(checkoutPage, /startingPriceMonthly/);
   assert.match(signupPage, /getPlanPriceLabel\(plan\)/);
   assert.match(signupPage, /startingPriceMonthly/);

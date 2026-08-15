@@ -6,6 +6,7 @@ import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
 import { deriveStripeIdempotencyKey, readBillingIdempotencyKey } from '@/server/billing/idempotency';
+import { resolveStripeBillingPortalConfigurationBinding } from '@/server/billing/portal-configuration';
 import { getStripeClient } from '@/server/billing/stripe';
 import {
   getAuthoritativeSignedContractPlan,
@@ -125,6 +126,16 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'invalid_billing_portal_query' }, { status: 400 });
     }
 
+    const portalConfiguration = resolveStripeBillingPortalConfigurationBinding();
+    if (!portalConfiguration.ok) {
+      reportError(new Error('Stripe Billing Portal configuration binding is invalid'), {
+        area: 'billing_portal_configuration',
+        organizationId: organization.id,
+        userId: user.id,
+      });
+      return noStoreJson({ error: portalConfiguration.error }, { status: 503 });
+    }
+
     const locale = normalizeLocale(parsedQuery.data.locale);
     const returnPath = parsedQuery.data.returnPath ?? DEFAULT_BILLING_RETURN_PATH;
     const returnUrl = `${returnBaseUrl.appUrl}/${locale}${returnPath}`;
@@ -136,6 +147,9 @@ export async function POST(request: Request) {
         {
           customer: subscription.stripe_customer_id,
           return_url: returnUrl,
+          ...(portalConfiguration.configurationId
+            ? { configuration: portalConfiguration.configurationId }
+            : {}),
         },
         { idempotencyKey: deriveStripeIdempotencyKey(idempotency.context, 'portal-session') },
       );
@@ -160,6 +174,8 @@ export async function POST(request: Request) {
         rbacPermission: 'manage_billing',
         idempotencyProtected: true,
         liveSubscriptionAuthority: true,
+        billingPortalConfigurationSource: portalConfiguration.source,
+        billingPortalConfigurationPinned: portalConfiguration.source === 'explicit',
       },
     });
 
