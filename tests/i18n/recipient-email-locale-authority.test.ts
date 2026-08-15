@@ -25,7 +25,9 @@ import {
 } from '@/lib/i18n/recipient-locale';
 import { locales } from '@/lib/i18n/routing';
 
-const profilePage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/perfil/page.tsx'), 'utf8');
+const canonicalProfilePage = readFileSync(join(process.cwd(), 'src/app/[locale]/profile/page.tsx'), 'utf8');
+const profileControls = readFileSync(join(process.cwd(), 'src/components/profile/profile-personal-controls.tsx'), 'utf8');
+const legacyProfilePage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/perfil/page.tsx'), 'utf8');
 const authClient = readFileSync(join(process.cwd(), 'src/hooks/useAuth.tsx'), 'utf8');
 const authCallback = readFileSync(join(process.cwd(), 'src/app/auth/callback/route.ts'), 'utf8');
 const userEmailResolver = readFileSync(join(process.cwd(), 'src/server/users/email.ts'), 'utf8');
@@ -70,12 +72,22 @@ describe('recipient locale authority', () => {
     expect(authCallback).not.toContain('auth.updateUser');
   });
 
+  it('keeps one discoverable canonical profile surface for account and locale controls', () => {
+    expect(canonicalProfilePage).toContain("import { ProfilePersonalControls } from '@/components/profile/profile-personal-controls';");
+    expect(canonicalProfilePage).toContain('<ProfilePersonalControls locale={safeLocale} />');
+    expect(canonicalProfilePage).toContain('getCurrentOrganizationForUser(user.id)');
+    expect(canonicalProfilePage).toContain('canManageDashboardBilling(organization.role)');
+
+    expect(legacyProfilePage).toContain("redirect(`/${safeLocale}/profile`)");
+    expect(legacyProfilePage).not.toContain('supabase.auth.updateUser');
+  });
+
   it('persists the preference through Auth metadata instead of a nonexistent profiles column', () => {
-    expect(profilePage).toContain('supabase.auth.updateUser');
-    expect(profilePage).toContain('withRecipientLocaleMetadata(metadata, selectedLanguage)');
-    expect(profilePage).toContain('LOCALE_META[language].nativeName');
-    expect(profilePage).not.toMatch(/from\(['"]profiles['"]\)[\s\S]*preferred_language/);
-    expect(profilePage).not.toContain("update({ preferred_language");
+    expect(profileControls).toContain('supabase.auth.updateUser');
+    expect(profileControls).toContain('withRecipientLocaleMetadata(metadata, selectedLanguage)');
+    expect(profileControls).toContain('LOCALE_META[language].nativeName');
+    expect(profileControls).not.toMatch(/from\(['"]profiles['"]\)[\s\S]*preferred_language/);
+    expect(profileControls).not.toContain("update({ preferred_language");
     expect(supabaseTypes).not.toContain('preferred_language: string | null');
   });
 
