@@ -76,9 +76,17 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs
+
+      - name: Verify published disposable database bindings
+        shell: bash
+        run: |
+          set -euo pipefail
           test "${RECOVERY_EPHEMERAL_DATABASE_PROVISIONED:-}" = 'true'
           test "${RECOVERY_EPHEMERAL_DATABASE_MODE:-}" = 'project-schema'
           test -n "${RECOVERY_EPHEMERAL_WORKDIR:-}"
+          test "${RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL:-}" = 'false'
+          test "${RECOVERY_EPHEMERAL_MIGRATION_COUNT:-0}" -gt 0
+          test "${RECOVERY_EPHEMERAL_MIGRATION_APPLIED_COUNT:-0}" -gt 0
 
       - name: Promote disposable database to local Supabase Auth and REST stack
         shell: bash
