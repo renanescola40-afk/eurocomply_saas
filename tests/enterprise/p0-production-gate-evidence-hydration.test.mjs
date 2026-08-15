@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   evidenceCommitSha,
   selectEvidenceZipEntry,
+  selectLatestProductionGateArtifact,
   selectProductionGateRuns,
   validateProductionGateP0Evidence,
 } from '../../scripts/enterprise/fetch-production-gate-p0-evidence.mjs';
@@ -21,6 +22,39 @@ test('selectProductionGateRuns keeps completed exact-main-SHA canonical workflow
   ], SHA);
 
   assert.deepEqual(runs.map((run) => run.id), [2, 1]);
+});
+
+test('selectLatestProductionGateArtifact chooses the strictly newest artifact from reruns of the same workflow run', () => {
+  const selection = selectLatestProductionGateArtifact([
+    { id: 100, created_at: '2026-08-15T19:17:29Z' },
+    { id: 200, created_at: '2026-08-15T19:41:25Z' },
+  ]);
+
+  assert.equal(selection.artifact?.id, 200);
+  assert.equal(selection.supersededArtifactCount, 1);
+});
+
+test('selectLatestProductionGateArtifact preserves the single-artifact path without requiring timestamp metadata', () => {
+  const selection = selectLatestProductionGateArtifact([{ id: 100 }]);
+  assert.equal(selection.artifact?.id, 100);
+  assert.equal(selection.supersededArtifactCount, 0);
+});
+
+test('selectLatestProductionGateArtifact fails closed when rerun recency cannot be determined uniquely', () => {
+  assert.throws(
+    () => selectLatestProductionGateArtifact([
+      { id: 100, created_at: '2026-08-15T19:41:25Z' },
+      { id: 200, created_at: '2026-08-15T19:41:25Z' },
+    ]),
+    /exact_sha_production_gate_latest_artifact_ambiguous/,
+  );
+  assert.throws(
+    () => selectLatestProductionGateArtifact([
+      { id: 100, created_at: 'not-a-date' },
+      { id: 200, created_at: '2026-08-15T19:41:25Z' },
+    ]),
+    /production_gate_artifact_created_at_invalid/,
+  );
 });
 
 test('selectEvidenceZipEntry accepts one canonical nested path and rejects ambiguity or traversal', () => {

@@ -145,6 +145,27 @@ export function selectProductionGateRuns(runs, targetSha) {
       - Date.parse(left?.updated_at || left?.created_at || 0));
 }
 
+export function selectLatestProductionGateArtifact(matches) {
+  const candidates = Array.isArray(matches) ? matches : [];
+  if (candidates.length === 0) return { artifact: null, supersededArtifactCount: 0 };
+  if (candidates.length === 1) return { artifact: candidates[0], supersededArtifactCount: 0 };
+
+  const timestamped = candidates.map((artifact) => {
+    const createdAt = Date.parse(String(artifact?.created_at || ''));
+    if (!Number.isFinite(createdAt)) throw new Error('production_gate_artifact_created_at_invalid');
+    return { artifact, createdAt };
+  }).sort((left, right) => right.createdAt - left.createdAt);
+
+  if (timestamped[0].createdAt === timestamped[1].createdAt) {
+    throw new Error('exact_sha_production_gate_latest_artifact_ambiguous');
+  }
+
+  return {
+    artifact: timestamped[0].artifact,
+    supersededArtifactCount: timestamped.length - 1,
+  };
+}
+
 function isSafeZipEntry(entry) {
   if (!entry || entry.length > 320 || entry.includes('\\') || entry.includes('\u0000')) return false;
   if (entry.startsWith('/') || /^[A-Za-z]:/.test(entry)) return false;
@@ -226,12 +247,26 @@ async function selectArtifactBearingRun({ token, targetSha }) {
     const expectedName = `enterprise-production-final-evidence-${targetSha}`;
     const matches = (inventory?.artifacts || []).filter((artifact) =>
       artifact?.name === expectedName && artifact?.expired !== true && Number.isInteger(artifact?.id));
-    if (matches.length > 1) throw new Error('exact_sha_production_gate_artifact_not_unique');
-    if (matches.length === 1) return { run, artifact: matches[0], totalCount, inspectedRuns: runs.indexOf(run) + 1 };
+    const selected = selectLatestProductionGateArtifact(matches);
+    if (selected.artifact) {
+      return {
+        run,
+        artifact: selected.artifact,
+        supersededArtifactCount: selected.supersededArtifactCount,
+        totalCount,
+        inspectedRuns: runs.indexOf(run) + 1,
+      };
+    }
   }
 
   if (totalCount > runs.length) throw new Error('recent_run_window_exhausted');
-  return { run: null, artifact: null, totalCount, inspectedRuns: runs.length };
+  return {
+    run: null,
+    artifact: null,
+    supersededArtifactCount: 0,
+    totalCount,
+    inspectedRuns: runs.length,
+  };
 }
 
 export async function fetchProductionGateP0Evidence({ root, token, targetSha, now = new Date() }) {
@@ -302,6 +337,8 @@ export async function fetchProductionGateP0Evidence({ root, token, targetSha, no
     sourceRunConclusion: selection.run?.conclusion || null,
     sourceArtifactId: selection.artifact ? String(selection.artifact.id) : null,
     sourceArtifactName: selection.artifact?.name || null,
+    sourceArtifactCreatedAt: selection.artifact?.created_at || null,
+    supersededSameRunArtifacts: selection.supersededArtifactCount,
     exactShaCompletedRuns: selection.totalCount,
     inspectedRuns: selection.inspectedRuns,
     expectedEvidence: P0_PRODUCTION_GATE_EVIDENCE.length,
@@ -315,9 +352,11 @@ export async function fetchProductionGateP0Evidence({ root, token, targetSha, no
       canonicalValidatorsRequiredBeforeWrite: true,
       workflowPathBound: true,
       artifactNameBoundToTargetSha: true,
+      latestSameRunRerunArtifactSelectedByCreatedAt: true,
+      ambiguousLatestArtifactFailsClosed: true,
       sourceRunConclusionDoesNotGrantCredit: true,
     },
-    truthBoundary: 'This diagnostic fetcher can consume an artifact from a completed exact-main-SHA Enterprise Production Gate run even when that overall run failed, because each requested P0 evidence document is independently exact-SHA checked and validated before being written. A failed gate never grants credit by itself; missing, stale, ambiguous, sensitive or validator-failing evidence remains absent.',
+    truthBoundary: 'This diagnostic fetcher can consume the newest artifact from a completed exact-main-SHA Enterprise Production Gate run even when the run was re-executed or the overall gate failed. Older same-run artifacts are superseded only by a strictly newer created_at timestamp. Every requested P0 evidence document is still independently exact-SHA checked and validated before being written. A failed gate or newer artifact never grants credit by itself; missing, stale, ambiguous, sensitive or validator-failing evidence remains absent.',
   };
 
   const manifestPath = join(root, MANIFEST_PATH);

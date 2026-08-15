@@ -151,6 +151,7 @@ test('hydrates exact-SHA GitHub checks as repository quality through the documen
   assert.equal(manifest.results[0]?.matchedBy, 'explicit_alias');
   assert.deepEqual(manifest.results[0]?.sourceAliases, [
     'artifacts/enterprise-readiness/github-checks-evidence.json',
+    'artifacts/enterprise-readiness/github-checks-repository-compatibility.json',
   ]);
   const hydrated = JSON.parse(await readFile(path.join(outputRoot, 'release-validation/repository-quality.json'), 'utf8'));
   assert.equal(hydrated.targetSha, TARGET);
@@ -383,5 +384,6 @@ test('does not infer unlisted aliases from a similar filename', async () => {
   assert.equal(manifest.results[0]?.candidateCount, 0);
   assert.deepEqual(manifest.results[0]?.sourceAliases, [
     'artifacts/enterprise-readiness/github-checks-evidence.json',
+    'artifacts/enterprise-readiness/github-checks-repository-compatibility.json',
   ]);
 });
