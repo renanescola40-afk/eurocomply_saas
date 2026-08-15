@@ -78,24 +78,29 @@ describe('billing checkout authority contract', () => {
     expect(source).not.toContain('session_id={CHECKOUT_SESSION_ID}');
   });
 
-  it('derives activation authority only from the authenticated current organization and persisted subscription', async () => {
+  it('derives activation authority only from current tenant, canonical Stripe ids and a processed live event', async () => {
     const source = await readFile(ACTIVATION_ROUTE, 'utf8');
 
     expect(source).toContain('await requireApiUser()');
     expect(source).toContain('getCurrentOrganizationForUser(user.id)');
     expect(source).toContain("new Set(['active', 'trialing'])");
     expect(source).toContain(".eq('organization_id', organizationId)");
-    expect(source).toContain("authority: 'persisted_subscription'");
+    expect(source).toContain('stripe_customer_id');
+    expect(source).toContain('stripe_subscription_id');
+    expect(source).toContain('hasProcessedLiveStripeSubscriptionAuthority');
+    expect(source).toContain("authority: 'processed_live_stripe_subscription_event'");
+    expect(source).not.toContain("authority: 'persisted_subscription'");
     expect(source).not.toContain('session_id');
     expect(source).not.toContain('checkout=success');
   });
 
-  it('rate-limits activation polling fail closed and leaves every non-active state pending', async () => {
+  it('rate-limits activation polling fail closed and leaves every unproven state pending', async () => {
     const source = await readFile(ACTIVATION_ROUTE, 'utf8');
 
     expect(source).toContain('checkDistributedRateLimit');
     expect(source).toContain("failureMode: 'fail-closed'");
     expect(source).toContain("state: activated ? 'activated' : 'pending'");
+    expect(source).toContain('const activated = hasActivatableStatus && hasCanonicalStripeBinding && liveStripeAuthority');
     expect(source).toContain("...(activated ? { next: '/dashboard/organizations' } : {})");
   });
 });

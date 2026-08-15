@@ -61,7 +61,10 @@ describe('public launch auth and billing access flow', () => {
 
     expect(activationRoute).toContain('getCurrentOrganizationForUser(user.id)');
     expect(activationRoute).toContain("new Set(['active', 'trialing'])");
-    expect(activationRoute).toContain("authority: 'persisted_subscription'");
+    expect(activationRoute).toContain('hasProcessedLiveStripeSubscriptionAuthority');
+    expect(activationRoute).toContain('stripe_customer_id');
+    expect(activationRoute).toContain('stripe_subscription_id');
+    expect(activationRoute).toContain("authority: 'processed_live_stripe_subscription_event'");
     expect(activationRoute).not.toContain('session_id');
   });
 });
