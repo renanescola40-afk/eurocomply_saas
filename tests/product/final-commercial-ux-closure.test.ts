@@ -122,9 +122,13 @@ describe('final commercial UX closure contracts', () => {
     expect(checkoutPage).not.toContain('/onboarding?next=${encodeURIComponent(checkoutContinuationPath)}');
   });
 
-  it('keeps checkout completion browser UX subordinate to persisted subscription authority', () => {
+  it('keeps checkout completion browser UX subordinate to processed live Stripe authority', () => {
     expect(activationRoute).toContain("const ACTIVATED_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing'])");
-    expect(activationRoute).toContain("authority: 'persisted_subscription'");
+    expect(activationRoute).toContain('hasProcessedLiveStripeSubscriptionAuthority');
+    expect(activationRoute).toContain('stripe_customer_id');
+    expect(activationRoute).toContain('stripe_subscription_id');
+    expect(activationRoute).toContain("authority: 'processed_live_stripe_subscription_event'");
+    expect(activationRoute).not.toContain("authority: 'persisted_subscription'");
     expect(activationClient).toContain("fetch('/api/billing/checkout/activation'");
     expect(activationClient).toContain("if (data.state === 'activated')");
     expect(activationClient).toContain("window.location.replace(`/${locale}${data.next ?? '/dashboard/organizations'}`)");
