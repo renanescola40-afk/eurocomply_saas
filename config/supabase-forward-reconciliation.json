@@ -1,11 +1,7 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-08-14-enterprise-control-plane-reconciliation-v6",
+  "changeSet": "2026-08-15-production-runtime-release-closure-v7",
   "migrations": [
-    {
-      "filename": "20260730204500_repair_live_rls_validation_inventory.sql",
-      "purpose": "restore service-role-only execution for the live RLS inventory helper while preserving SECURITY INVOKER and fixed search_path"
-    },
     {
       "filename": "20260813175000_optimize_organization_add_ons_rls_initplan.sql",
       "purpose": "evaluate organization add-on membership auth once per statement while preserving tenant scope"
@@ -61,6 +57,10 @@
     {
       "filename": "20260814101500_reconcile_enterprise_core_active_runtime.sql",
       "purpose": "forward execution identity for active Intelligence, notification-dedupe, vendor-governance, atomic onboarding and canonical RLS runtime reconciliation"
+    },
+    {
+      "filename": "20260815083000_reconcile_live_rls_validation_inventory_privileges.sql",
+      "purpose": "re-issue the unapplied live-RLS inventory privilege repair under a production-forward execution identity and prove service-role-only access"
     }
   ],
   "truthBoundary": {
