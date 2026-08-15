@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   reportError: vi.fn(),
   getAuthoritativeSignedContractPlan: vi.fn(),
   hasProcessedLiveStripeSubscriptionAuthority: vi.fn(),
+  resolveStripeBillingPortalConfigurationBinding: vi.fn(),
 }));
 
 vi.mock('@/lib/i18n/locales', () => ({
@@ -44,6 +45,10 @@ vi.mock('@/lib/supabase/admin', () => ({
 vi.mock('@/server/billing/subscription-authority', () => ({
   getAuthoritativeSignedContractPlan: mocks.getAuthoritativeSignedContractPlan,
   hasProcessedLiveStripeSubscriptionAuthority: mocks.hasProcessedLiveStripeSubscriptionAuthority,
+}));
+
+vi.mock('@/server/billing/portal-configuration', () => ({
+  resolveStripeBillingPortalConfigurationBinding: mocks.resolveStripeBillingPortalConfigurationBinding,
 }));
 
 vi.mock('@/server/billing/stripe', () => ({
@@ -109,7 +114,6 @@ function makeSubscriptionLookup(stripeCustomerId = 'cus_123', stripeSubscription
 describe('billing portal API security gates', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    delete process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID;
     mocks.requireApiUser.mockResolvedValue({ id: 'user_admin' });
     mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: 'org_a' });
     mocks.requirePermission.mockResolvedValue({ ok: true, role: 'admin' });
@@ -121,6 +125,11 @@ describe('billing portal API security gates', () => {
     mocks.publicStepUpSummary.mockReturnValue({ verified: true });
     mocks.getAuthoritativeSignedContractPlan.mockResolvedValue(null);
     mocks.hasProcessedLiveStripeSubscriptionAuthority.mockResolvedValue(true);
+    mocks.resolveStripeBillingPortalConfigurationBinding.mockReturnValue({
+      ok: true,
+      configurationId: null,
+      source: 'default',
+    });
     mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => makeSubscriptionLookup()) });
     mocks.stripePortalCreate.mockResolvedValue({ id: 'portal_session_fixture', url: 'https://billing.stripe.test/session-fixture' });
     mocks.writeAuditLog.mockResolvedValue({ persisted: true, legacyPersisted: true, chained: true });
@@ -187,8 +196,11 @@ describe('billing portal API security gates', () => {
     expect(mocks.stripePortalCreate).not.toHaveBeenCalled();
   });
 
-  it('fails closed before Stripe when an explicit portal configuration binding is malformed', async () => {
-    process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID = 'not-a-bpc';
+  it('fails closed before Stripe when the versioned portal configuration contract is invalid', async () => {
+    mocks.resolveStripeBillingPortalConfigurationBinding.mockReturnValue({
+      ok: false,
+      error: 'billing_portal_configuration_invalid',
+    });
 
     const response = await POST(buildRequest());
     const body = await response.json();
@@ -228,7 +240,7 @@ describe('billing portal API security gates', () => {
     );
   });
 
-  it('creates a billing portal session with the account default configuration when no explicit pin is configured', async () => {
+  it('creates a billing portal session with the account default configuration when the contract selects default mode', async () => {
     const response = await POST(buildRequest());
     const body = await response.json();
 
@@ -282,8 +294,12 @@ describe('billing portal API security gates', () => {
     expect(mocks.reportError).not.toHaveBeenCalled();
   });
 
-  it('pins a validated explicit Billing Portal configuration without storing its identifier in audit metadata', async () => {
-    process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID = 'bpc_livefixture123';
+  it('pins the explicit configuration selected by the versioned contract without storing its identifier in audit metadata', async () => {
+    mocks.resolveStripeBillingPortalConfigurationBinding.mockReturnValue({
+      ok: true,
+      configurationId: 'bpc_livefixture123',
+      source: 'explicit',
+    });
 
     const response = await POST(buildRequest());
 
