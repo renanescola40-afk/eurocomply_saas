@@ -16,13 +16,9 @@ test.describe('new customer commercial activation', () => {
 
     const createWorkspace = page.getByRole('link', { name: /create workspace/i });
     await expect(createWorkspace).toBeVisible();
+    await expect(createWorkspace).toHaveAttribute('href', /\/en\/onboarding\?plan=professional/);
     await createWorkspace.click();
-    await expect(page).toHaveURL(/\/en\/onboarding/);
-
-    // The onboarding route opened from checkout must retain the commercial plan intent.
-    if (!page.url().includes('plan=professional')) {
-      await page.goto('/en/onboarding?plan=professional', { waitUntil: 'domcontentloaded' });
-    }
+    await expect(page).toHaveURL(/\/en\/onboarding\?plan=professional/);
 
     await page.getByLabel('Organization name').fill(organizationName);
     await expect(page.getByLabel('Workspace slug')).not.toHaveValue('');
