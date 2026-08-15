@@ -90,13 +90,32 @@ jobs:
           applied_count="$(psql "$RECOVERY_ISOLATED_DATABASE_URL" --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1 --command 'select count(*) from supabase_migrations.schema_migrations;' | tr -d '[:space:]')"
           [[ "$applied_count" =~ ^[0-9]+$ ]]
           test "$applied_count" -gt 0
+          echo "E2E_FRIA_PRE_RESTART_MIGRATION_COUNT=$applied_count" >> "$GITHUB_ENV"
 
-      - name: Promote disposable database to local Supabase Auth and REST stack
+      - name: Restart disposable database as minimal local Auth and REST stack
         shell: bash
         run: |
           set -euo pipefail
           test -n "${RECOVERY_EPHEMERAL_WORKDIR:-}"
-          supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" start
+          test -n "${RECOVERY_ISOLATED_DATABASE_URL:-}"
+          test "${E2E_FRIA_PRE_RESTART_MIGRATION_COUNT:-0}" -gt 0
+
+          # `supabase db start` intentionally provisions only Postgres. A direct
+          # `supabase start` sees that project as already running and leaves Auth,
+          # Kong and PostgREST stopped. Stop with backup semantics first so the
+          # exact-SHA schema volume is preserved, then start only the services
+          # required for authenticated Product acceptance.
+          supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" stop
+          supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" start \
+            -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+          post_restart_count="$(psql "$RECOVERY_ISOLATED_DATABASE_URL" --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1 --command 'select count(*) from supabase_migrations.schema_migrations;' | tr -d '[:space:]')"
+          [[ "$post_restart_count" =~ ^[0-9]+$ ]]
+          test "$post_restart_count" = "$E2E_FRIA_PRE_RESTART_MIGRATION_COUNT"
+
+          fria_table="$(psql "$RECOVERY_ISOLATED_DATABASE_URL" --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1 --command "select coalesce(to_regclass('public.ai_fria_assessments')::text, '');" | tr -d '[:space:]')"
+          test "$fria_table" = 'ai_fria_assessments'
+
           supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" status -o env > "$RUNNER_TEMP/fria-supabase-status.env"
 
       - name: Export masked loopback Supabase runtime configuration
@@ -148,6 +167,17 @@ jobs:
                   handle.write(f'{key}={value}\n')
           PY
           rm -f "$RUNNER_TEMP/fria-supabase-status.env"
+
+      - name: Verify local Auth and REST endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${NEXT_PUBLIC_SUPABASE_URL:-}"
+          test -n "${SUPABASE_ANON_KEY:-}"
+          curl --fail --silent --show-error "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/health" >/dev/null
+          curl --fail --silent --show-error \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/" >/dev/null
 
       - name: Create disposable FRIA identities and tenant
         run: node scripts/product/create-fria-ephemeral-fixtures.mjs
