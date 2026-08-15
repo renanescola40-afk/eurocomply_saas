@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/supabase-forward-reconciliation-production-promotion.yml', 'utf8');
 const verifier = readFileSync('scripts/supabase/verify-forward-promotion-transition.mjs', 'utf8');
+const postconditions = readFileSync('scripts/supabase/verify-forward-reconciliation-postconditions.sql', 'utf8');
 const runbook = readFileSync('docs/runbooks/SUPABASE_FORWARD_RECONCILIATION.md', 'utf8');
 
 function executableDbPushLines(text: string) {
@@ -38,7 +39,7 @@ describe('bounded Supabase production promotion workflow', () => {
     expect(workflow).not.toContain('migration repair');
   });
 
-  it('binds selected bytes and verifies the post-write ledger plus live security postconditions', () => {
+  it('binds selected bytes and verifies the post-write ledger plus all live security postconditions', () => {
     expect(workflow).toContain('sha256sum "$source_path"');
     expect(workflow).toContain('selectionDigest');
     expect(workflow).toContain('verify-forward-promotion-transition.mjs');
@@ -49,6 +50,9 @@ describe('bounded Supabase production promotion workflow', () => {
     expect(verifier).toContain('databaseUrlsStored: false');
     expect(verifier).toContain('migrationHistoryRepairPerformed: false');
     expect(verifier).toContain('unrestrictedDbPushPerformed: false');
+    expect(postconditions).toContain('\\ir ../security/validate-enterprise-integrations-runtime.sql');
+    expect(postconditions).toContain('\\ir ../security/validate-enterprise-billing-runtime.sql');
+    expect(postconditions).toContain('\\ir ../security/validate-live-rls-inventory-helper-boundary.sql');
   });
 
   it('documents manual protected promotion and prohibits migration shortcuts', () => {
