@@ -1,79 +1,26 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-08-15-production-runtime-onboarding-seat-closure-v9",
+  "changeSet": "2026-08-15-production-runtime-onboarding-seat-closure-v10",
   "migrations": [
-    {
-      "filename": "20260813175000_optimize_organization_add_ons_rls_initplan.sql",
-      "purpose": "evaluate organization add-on membership auth once per statement while preserving tenant scope"
-    },
-    {
-      "filename": "20260813194500_reconcile_step_up_challenges_runtime.sql",
-      "purpose": "materialize backend-only enterprise step-up challenge storage"
-    },
-    {
-      "filename": "20260813200000_reconcile_subscription_schema_defaults.sql",
-      "purpose": "tighten canonical subscription plan, tier and defaults fail-closed"
-    },
-    {
-      "filename": "20260813201500_reconcile_controlled_document_storage.sql",
-      "purpose": "materialize controlled-document runtime metadata and storage boundaries"
-    },
-    {
-      "filename": "20260813201600_force_tasks_rls.sql",
-      "purpose": "force RLS on the tenant-scoped tasks table"
-    },
-    {
-      "filename": "20260813234000_reconcile_enterprise_break_glass_governance.sql",
-      "purpose": "materialize the backend-only tenant-bound Enterprise Break-Glass runtime without rewriting unapplied historical migration bytes"
-    },
-    {
-      "filename": "20260814090000_reconcile_enterprise_licensing_control_plane.sql",
-      "purpose": "materialize Enterprise licensing, entitlements, usage, seat enforcement and platform-admin control-plane boundaries"
-    },
-    {
-      "filename": "20260814091000_reconcile_enterprise_integrations_scim.sql",
-      "purpose": "materialize backend-only Enterprise integrations and SCIM identity runtime"
-    },
-    {
-      "filename": "20260814091100_harden_scim_identity_connection_delete_boundary.sql",
-      "purpose": "harden SCIM identity connection deletion with tenant-safe restrictive foreign-key behavior"
-    },
-    {
-      "filename": "20260814091900_bridge_enterprise_contract_mode_compatibility.sql",
-      "purpose": "bridge legacy Enterprise contract rows into explicit compatibility mode before billing lifecycle activation"
-    },
-    {
-      "filename": "20260814092000_reconcile_enterprise_billing_lifecycle.sql",
-      "purpose": "materialize Enterprise billing lifecycle events, contract billing state and service-role-only synchronization controls"
-    },
-    {
-      "filename": "20260814092100_finalize_enterprise_contract_mode_compatibility.sql",
-      "purpose": "finalize canonical compatibility versus negotiated Enterprise contract mode constraints"
-    },
-    {
-      "filename": "20260814093000_reconcile_enterprise_contract_control_rpcs.sql",
-      "purpose": "materialize service-role-only Enterprise contract provisioning, entitlement and lifecycle control RPCs"
-    },
-    {
-      "filename": "20260814101500_reconcile_enterprise_core_active_runtime.sql",
-      "purpose": "forward execution identity for active Intelligence, notification-dedupe, vendor-governance, atomic organization bootstrap and canonical RLS runtime reconciliation"
-    },
-    {
-      "filename": "20260815083000_reconcile_live_rls_validation_inventory_privileges.sql",
-      "purpose": "re-issue the unapplied live-RLS inventory privilege repair under a production-forward execution identity and prove service-role-only access"
-    },
-    {
-      "filename": "20260815141000_reconcile_enterprise_invitation_seat_authority.sql",
-      "purpose": "restore backend-only seat-aware invitation creation and acceptance with active-admin authorization, pending-capacity accounting and tenant quota enforcement"
-    },
-    {
-      "filename": "20260815142500_reconcile_active_onboarding_runtime.sql",
-      "purpose": "materialize the active onboarding profile, activation-ledger, recommendation/task metadata and reconciled atomic activation implementation against the live production schema"
-    },
-    {
-      "filename": "20260815143000_harden_active_onboarding_enterprise_boundaries.sql",
-      "purpose": "preserve completed onboarding evidence and expose the final active-owner/admin, seat-aware transactional onboarding authority"
-    }
+    { "filename": "20260813175000_optimize_organization_add_ons_rls_initplan.sql", "purpose": "evaluate organization add-on membership auth once per statement while preserving tenant scope" },
+    { "filename": "20260813194500_reconcile_step_up_challenges_runtime.sql", "purpose": "materialize backend-only enterprise step-up challenge storage" },
+    { "filename": "20260813200000_reconcile_subscription_schema_defaults.sql", "purpose": "tighten canonical subscription plan, tier and defaults fail-closed" },
+    { "filename": "20260813201500_reconcile_controlled_document_storage.sql", "purpose": "materialize controlled-document runtime metadata and storage boundaries" },
+    { "filename": "20260813201600_force_tasks_rls.sql", "purpose": "force RLS on the tenant-scoped tasks table" },
+    { "filename": "20260813234000_reconcile_enterprise_break_glass_governance.sql", "purpose": "materialize the backend-only tenant-bound Enterprise Break-Glass runtime without rewriting unapplied historical migration bytes" },
+    { "filename": "20260814090000_reconcile_enterprise_licensing_control_plane.sql", "purpose": "materialize Enterprise licensing, entitlements, usage, seat enforcement and platform-admin control-plane boundaries" },
+    { "filename": "20260814091000_reconcile_enterprise_integrations_scim.sql", "purpose": "materialize backend-only Enterprise integrations and SCIM identity runtime" },
+    { "filename": "20260814091100_harden_scim_identity_connection_delete_boundary.sql", "purpose": "harden SCIM identity connection deletion with tenant-safe restrictive foreign-key behavior" },
+    { "filename": "20260814091900_bridge_enterprise_contract_mode_compatibility.sql", "purpose": "bridge legacy Enterprise contract rows into explicit compatibility mode before billing lifecycle activation" },
+    { "filename": "20260814092000_reconcile_enterprise_billing_lifecycle.sql", "purpose": "materialize Enterprise billing lifecycle events, contract billing state and service-role-only synchronization controls" },
+    { "filename": "20260814092100_finalize_enterprise_contract_mode_compatibility.sql", "purpose": "finalize canonical compatibility versus negotiated Enterprise contract mode constraints" },
+    { "filename": "20260814093000_reconcile_enterprise_contract_control_rpcs.sql", "purpose": "materialize service-role-only Enterprise contract provisioning, entitlement and lifecycle control RPCs" },
+    { "filename": "20260814101500_reconcile_enterprise_core_active_runtime.sql", "purpose": "forward execution identity for active Intelligence, notification-dedupe, vendor-governance, atomic organization bootstrap and canonical RLS runtime reconciliation" },
+    { "filename": "20260815083000_reconcile_live_rls_validation_inventory_privileges.sql", "purpose": "re-issue the unapplied live-RLS inventory privilege repair under a production-forward execution identity and prove service-role-only access" },
+    { "filename": "20260815141000_reconcile_enterprise_invitation_seat_authority.sql", "purpose": "restore backend-only seat-aware invitation creation and acceptance with pending-capacity accounting and tenant quota enforcement" },
+    { "filename": "20260815141500_harden_enterprise_invitation_actor_boundary.sql", "purpose": "expose the seat-aware invitation creation authority only behind an active owner/admin wrapper and make the reconciled implementation internal" },
+    { "filename": "20260815142500_reconcile_active_onboarding_runtime.sql", "purpose": "materialize the active onboarding profile, activation-ledger, recommendation/task metadata and reconciled atomic activation implementation against the live production schema" },
+    { "filename": "20260815143000_harden_active_onboarding_enterprise_boundaries.sql", "purpose": "preserve completed onboarding evidence and expose the final active-owner/admin, seat-aware transactional onboarding authority" }
   ],
   "truthBoundary": {
     "automaticClassification": false,
