@@ -7,7 +7,8 @@ const mocks = vi.hoisted(() => ({
   writeAuditLog: vi.fn(),
   reportError: vi.fn(),
   sendEmail: vi.fn(),
-  getUserEmailById: vi.fn(),
+  paymentFailedEmail: vi.fn(),
+  getUserEmailContextById: vi.fn(),
 }));
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -27,16 +28,11 @@ vi.mock('@/lib/email/client', () => ({
 }));
 
 vi.mock('@/lib/email/templates', () => ({
-  paymentFailedEmail: () => ({
-    subject: 'Payment failed',
-    html: '<p>Payment failed</p>',
-    text: 'Payment failed',
-    template: 'invoice_failed',
-  }),
+  paymentFailedEmail: mocks.paymentFailedEmail,
 }));
 
 vi.mock('@/server/users/email', () => ({
-  getUserEmailById: mocks.getUserEmailById,
+  getUserEmailContextById: mocks.getUserEmailContextById,
 }));
 
 import { handleStripeWebhookEvent } from './stripe-webhooks';
@@ -189,7 +185,13 @@ describe('Stripe webhook billing hardening', () => {
     };
     mocks.createAdminClient.mockImplementation(buildSupabaseClient);
     mocks.writeAuditLog.mockResolvedValue(undefined);
-    mocks.getUserEmailById.mockResolvedValue('billing@example.test');
+    mocks.getUserEmailContextById.mockResolvedValue({ email: 'billing@example.test', locale: 'fr' });
+    mocks.paymentFailedEmail.mockReturnValue({
+      subject: 'Payment failed',
+      html: '<p>Payment failed</p>',
+      text: 'Payment failed',
+      template: 'invoice_failed',
+    });
     mocks.sendEmail.mockResolvedValue({ sent: true, provider: 'resend', status: 'sent', attempts: 1 });
   });
 
@@ -280,7 +282,7 @@ describe('Stripe webhook billing hardening', () => {
     );
   });
 
-  it('handles failed payment waves without creating or upgrading entitlements', async () => {
+  it('handles failed payment waves without creating or upgrading entitlements and preserves recipient locale', async () => {
     state.subscriptionData = [
       {
         organization_id: 'org_a',
@@ -293,6 +295,12 @@ describe('Stripe webhook billing hardening', () => {
 
     expect(result).toEqual({ skipped: false });
     expect(state.upsert).not.toHaveBeenCalled();
+    expect(mocks.getUserEmailContextById).toHaveBeenCalledWith('user_admin', 'billing_contact_lookup');
+    expect(mocks.paymentFailedEmail).toHaveBeenCalledWith({
+      locale: 'fr',
+      organizationName: 'Acme Compliance',
+      billingUrl: 'http://localhost:3000/fr/dashboard/organizations/billing',
+    });
     expect(mocks.sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         to: 'billing@example.test',
@@ -304,6 +312,7 @@ describe('Stripe webhook billing hardening', () => {
           source: 'stripe_payment_failed_webhook',
           stripeEventType: 'invoice.payment_failed',
           livemode: false,
+          recipientLocale: 'fr',
         }),
       }),
     );
@@ -317,6 +326,7 @@ describe('Stripe webhook billing hardening', () => {
         metadata: expect.objectContaining({
           stripeCustomerId: 'cus_123',
           stripeSubscriptionId: 'sub_123',
+          recipientLocale: 'fr',
         }),
       }),
     );
@@ -380,7 +390,7 @@ describe('Stripe webhook billing hardening', () => {
 
   it('fails the webhook claim when no billing contact can be resolved', async () => {
     state.subscriptionData = [{ organization_id: 'org_a', stripe_subscription_id: 'sub_123', stripe_customer_id: 'cus_123' }];
-    mocks.getUserEmailById.mockResolvedValue(null);
+    mocks.getUserEmailContextById.mockResolvedValue({ email: null, locale: 'de' });
 
     await expect(
       handleStripeWebhookEvent(makeStripeEvent('invoice.payment_failed', makeInvoicePaymentFailed())),
