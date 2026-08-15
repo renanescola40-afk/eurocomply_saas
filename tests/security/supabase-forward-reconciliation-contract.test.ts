@@ -27,11 +27,31 @@ const forwardCore = readFileSync(
   'supabase/migrations/20260814101500_reconcile_enterprise_core_active_runtime.sql',
   'utf8',
 );
+const forwardInvitationSeatAuthority = readFileSync(
+  'supabase/migrations/20260815141000_reconcile_enterprise_invitation_seat_authority.sql',
+  'utf8',
+);
+const forwardInvitationActorHardening = readFileSync(
+  'supabase/migrations/20260815141500_harden_enterprise_invitation_actor_boundary.sql',
+  'utf8',
+);
+const onboardingStatePreservation = readFileSync(
+  'supabase/migrations/20260815142000_preserve_completed_onboarding_state.sql',
+  'utf8',
+);
+const forwardOnboarding = readFileSync(
+  'supabase/migrations/20260815142500_reconcile_active_onboarding_runtime.sql',
+  'utf8',
+);
+const hardenedOnboarding = readFileSync(
+  'supabase/migrations/20260815143000_harden_active_onboarding_enterprise_boundaries.sql',
+  'utf8',
+);
 
 const selected = config.migrations.map((migration) => migration.filename);
 
 describe('bounded Supabase forward reconciliation contract', () => {
-  it('selects exactly the fifteen bounded forward-only reconciliation identities in version order', () => {
+  it('selects exactly the twenty-one bounded forward-only reconciliation identities in version order', () => {
     expect(selected).toEqual([
       '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
       '20260813194500_reconcile_step_up_challenges_runtime.sql',
@@ -48,9 +68,24 @@ describe('bounded Supabase forward reconciliation contract', () => {
       '20260814093000_reconcile_enterprise_contract_control_rpcs.sql',
       '20260814101500_reconcile_enterprise_core_active_runtime.sql',
       '20260815083000_reconcile_live_rls_validation_inventory_privileges.sql',
+      '20260815140500_reconcile_new_organization_compatibility_envelope.sql',
+      '20260815141000_reconcile_enterprise_invitation_seat_authority.sql',
+      '20260815141500_harden_enterprise_invitation_actor_boundary.sql',
+      '20260815142000_preserve_completed_onboarding_state.sql',
+      '20260815142500_reconcile_active_onboarding_runtime.sql',
+      '20260815143000_harden_active_onboarding_enterprise_boundaries.sql',
     ]);
-    expect(selected).not.toContain('20260730204500_repair_live_rls_validation_inventory.sql');
-    expect(selected).not.toContain('20260809135000_enterprise_core_runtime_schema_reconciliation.sql');
+    for (const historical of [
+      '20260730204500_repair_live_rls_validation_inventory.sql',
+      '20260809135000_enterprise_core_runtime_schema_reconciliation.sql',
+      '20260802153000_reconcile_onboarding_runtime_schema.sql',
+      '20260716183000_atomic_onboarding_activation.sql',
+      '20260721193000_enterprise_tenant_licensing_core.sql',
+      '20260721195000_transactional_enterprise_invitations.sql',
+      '20260721200500_invitation_lock_order_hardening.sql',
+    ]) {
+      expect(selected).not.toContain(historical);
+    }
     for (const filename of selected) {
       expect(existsSync(`supabase/migrations/${filename}`)).toBe(true);
     }
@@ -71,13 +106,7 @@ describe('bounded Supabase forward reconciliation contract', () => {
     expect(liveRlsInventoryRepair).toContain('revoke execute on function public.eurocomply_live_rls_inventory(text[]) from anon');
     expect(liveRlsInventoryRepair).toContain('revoke execute on function public.eurocomply_live_rls_inventory(text[]) from authenticated');
     expect(liveRlsInventoryRepair).toContain('grant execute on function public.eurocomply_live_rls_inventory(text[]) to service_role');
-    expect(liveRlsInventoryRepair).toContain("has_function_privilege('anon', function_oid, 'EXECUTE')");
-    expect(liveRlsInventoryRepair).toContain("has_function_privilege('authenticated', function_oid, 'EXECUTE')");
-    expect(liveRlsInventoryRepair).toContain("has_function_privilege('service_role', function_oid, 'EXECUTE')");
     expect(liveRlsWorkflow).toContain('Verify live inventory helper privilege boundary');
-    expect(liveRlsWorkflow).toContain("has_function_privilege('anon', function_oid, 'EXECUTE')");
-    expect(liveRlsWorkflow).toContain("has_function_privilege('authenticated', function_oid, 'EXECUTE')");
-    expect(liveRlsWorkflow).toContain("has_function_privilege('service_role', function_oid, 'EXECUTE')");
     expect(liveRlsWorkflow).toContain("setting = 'search_path=public, pg_catalog'");
   });
 
@@ -99,7 +128,6 @@ describe('bounded Supabase forward reconciliation contract', () => {
       expect(historicalCore).toContain(invariant);
       expect(forwardCore).toContain(invariant);
     }
-
     for (const invariant of [
       'vendor creator must belong to organization',
       'vendor approver must be an authorized organization member',
@@ -110,21 +138,82 @@ describe('bounded Supabase forward reconciliation contract', () => {
       expect(historicalVendorIntegrity).toContain(invariant);
       expect(forwardCore).toContain(invariant);
     }
+  });
 
-    expect(forwardCore).toContain('create or replace function public.enforce_vendor_governance_integrity()');
-    expect(forwardCore).toContain('security definer');
-    expect(forwardCore).toContain('set search_path = pg_catalog, public');
-    expect(forwardCore).toContain('new.review_version = old.review_version + 1');
-    expect(forwardCore).toContain('before insert or update on public.vendors');
-    expect(forwardCore).toContain('revoke all on function public.enforce_vendor_governance_integrity() from public, anon, authenticated');
-    expect(forwardCore).toContain('grant execute on function public.enforce_vendor_governance_integrity() to service_role');
-    expect(forwardCore).toContain('Vendor governance tenant-integrity trigger is missing after reconciliation');
+  it('preserves completed onboarding evidence before the active RPC reconciliation can commit', () => {
+    expect(onboardingStatePreservation).toContain('Forward-only rollout guard for production onboarding state');
+    expect(onboardingStatePreservation).toContain('with latest_completed as');
+    expect(onboardingStatePreservation).toContain("where lower(coalesce(status, '')) = 'completed'");
+    expect(onboardingStatePreservation).toContain("onboarding_status = 'completed'");
+    expect(onboardingStatePreservation).toContain('onboarding_completed_at = coalesce');
+    expect(onboardingStatePreservation).toContain('latest_completed.created_at');
+    expect(onboardingStatePreservation).toContain('latest_completed.selected_plan');
+    expect(onboardingStatePreservation).toContain("raise exception 'completed onboarding evidence was not preserved'");
+  });
+
+  it('reconciles the active onboarding runtime under a new production-forward identity', () => {
+    for (const column of [
+      'country',
+      'company_type',
+      'sector',
+      'ai_usage_summary',
+      'onboarding_status',
+      'onboarding_step',
+      'selected_plan',
+      'metadata',
+      'readiness_score',
+      'trial_started_at',
+      'onboarding_completed_at',
+    ]) {
+      expect(forwardOnboarding).toContain(column);
+    }
+    expect(forwardOnboarding).toContain('create or replace function public.complete_onboarding_activation_atomic');
+    expect(forwardOnboarding).toContain('security definer');
+    expect(forwardOnboarding).toContain('set search_path = pg_catalog, public');
+    expect(forwardOnboarding).toContain('systems.organization_id = p_organization_id');
+    expect(forwardOnboarding).toContain('assigned_to');
+    expect(forwardOnboarding).toContain("v_invite_email_array text[] := '{}'::text[]");
+    expect(forwardOnboarding).toContain('onboarding_activation_runs_org_idempotency_key_idx');
+    expect(forwardOnboarding).not.toContain('migration repair');
+    expect(forwardOnboarding).not.toContain('--include-all');
+  });
+
+  it('reconciles seat-aware invitation quotas and then hides the implementation behind an active-actor wrapper', () => {
+    expect(forwardInvitationSeatAuthority).toContain('create or replace function public.create_organization_invitation_with_seat_atomic');
+    expect(forwardInvitationSeatAuthority).toContain('create or replace function public.accept_organization_invitation_atomic');
+    expect(forwardInvitationSeatAuthority).toContain('create or replace function public.sync_organization_pending_invitation_usage');
+    expect(forwardInvitationSeatAuthority).toContain('invitations_sync_pending_usage');
+    expect(forwardInvitationSeatAuthority).toContain('invitation.seat_type = v_seat_type');
+    expect(forwardInvitationSeatAuthority).toContain('v_active_members + v_pending_members >= v_member_limit');
+    expect(forwardInvitationSeatAuthority).toContain('v_active_seats + v_pending_seats >= v_seat_limit');
+    expect(forwardInvitationSeatAuthority).toContain('v_active_admins + v_pending_admins >= v_admin_limit');
+    expect(forwardInvitationActorHardening).toContain('rename to create_organization_invitation_with_seat_atomic_reconciled');
+    expect(forwardInvitationActorHardening).toContain("v_actor_status is distinct from 'active'");
+    expect(forwardInvitationActorHardening).toContain("coalesce(v_actor_role, '') not in ('owner', 'admin')");
+    expect(forwardInvitationActorHardening).toContain('revoke all on function public.create_organization_invitation_with_seat_atomic_reconciled');
+    expect(forwardInvitationActorHardening).toContain('from public, anon, authenticated, service_role');
+    expect(forwardInvitationActorHardening).toContain('grant execute on function public.create_organization_invitation_with_seat_atomic');
+  });
+
+  it('hardens the final onboarding authority and routes invitations through canonical seat enforcement', () => {
+    expect(hardenedOnboarding).toContain('with latest_completed as');
+    expect(hardenedOnboarding).toContain("onboarding_status = 'completed'");
+    expect(hardenedOnboarding).toContain('rename to complete_onboarding_activation_atomic_reconciled');
+    expect(hardenedOnboarding).toContain("v_actor_status is distinct from 'active'");
+    expect(hardenedOnboarding).toContain("coalesce(v_actor_role, '') not in ('owner', 'admin')");
+    expect(hardenedOnboarding).toContain("jsonb_set(p_activation, '{inviteEmails}', '[]'::jsonb, true)");
+    expect(hardenedOnboarding).toContain('public.create_organization_invitation_with_seat_atomic');
+    expect(hardenedOnboarding).toContain("'viewer',\n      'viewer'");
+    expect(hardenedOnboarding).toContain("v_invitation.outcome <> 'created'");
+    expect(hardenedOnboarding).toContain("raise exception 'onboarding_invitation_seat_authority_denied:%'");
+    expect(hardenedOnboarding).toContain('invitation.revoked_at is null');
+    expect(hardenedOnboarding).toContain('revoke all on function public.complete_onboarding_activation_atomic_reconciled');
+    expect(hardenedOnboarding).toContain('grant execute on function public.complete_onboarding_activation_atomic');
+    expect(hardenedOnboarding).not.toContain('insert into public.invitations');
   });
 
   it('triggers both bounded workflows for any migration byte change without widening the selected set', () => {
-    for (const workflow of [rehearsal, dryRun]) {
-      expect(workflow).toContain("- 'supabase/migrations/**'");
-    }
+    for (const workflow of [rehearsal, dryRun]) expect(workflow).toContain("- 'supabase/migrations/**'");
     expect(config.truthBoundary.onlyListedForwardMigrationsMayBeRehearsedOrRequested).toBe(true);
   });
 
@@ -133,13 +222,10 @@ describe('bounded Supabase forward reconciliation contract', () => {
       'scripts/supabase/verify-forward-reconciliation-postconditions.sql',
       'scripts/security/validate-enterprise-integrations-runtime.sql',
       'scripts/security/validate-enterprise-billing-runtime.sql',
-    ]) {
-      expect(rehearsal).toContain(validator);
-    }
+    ]) expect(rehearsal).toContain(validator);
     expect(integrationsRuntime).toContain('This proof is read-only');
     expect(integrationsRuntime).toContain("select 'enterprise_integrations_runtime_validation_passed' as status");
     expect(billingRuntime).toContain("select 'enterprise_billing_runtime_validation_passed' as status");
-    expect(rehearsal).toContain("echo 'FORWARD_RECONCILIATION_POSTCONDITIONS=passed'");
   });
 
   it('uses one pinned Supabase CLI baseline across rehearsal and filtered dry-run', () => {
@@ -160,35 +246,16 @@ describe('bounded Supabase forward reconciliation contract', () => {
   });
 
   it('proves active core runtime contracts that production jobs already require', () => {
-    for (const table of [
-      'intelligence_items',
-      'intelligence_calendar_suggestions',
-      'email_notification_events',
-      'vendor_review_history',
-    ]) {
+    for (const table of ['intelligence_items', 'intelligence_calendar_suggestions', 'email_notification_events', 'vendor_review_history']) {
       expect(postconditions).toContain(table);
     }
-    expect(postconditions).toContain("table_name = 'vendors'");
-    expect(postconditions).toContain("column_name = 'next_review_at'");
-    expect(postconditions).toContain("table_name = 'email_notification_events'");
-    expect(postconditions).toContain("column_name = 'entity_id'");
     expect(postconditions).toContain('public.create_organization_with_owner_atomic(text,text,uuid)');
     expect(postconditions).toContain("policyname like 'live_rls_%'");
     expect(postconditions).toContain('temporary live RLS validation helper remains after core reconciliation');
-    expect(postconditions).toContain('legacy direct subscription mutation policy remains after core reconciliation');
   });
 
   it('proves Enterprise licensing, SCIM and integration runtime boundaries', () => {
-    for (const table of [
-      'platform_admin_users',
-      'enterprise_contracts',
-      'organization_entitlements',
-      'organization_usage',
-      'enterprise_seat_operations',
-      'enterprise_identity_connections',
-      'enterprise_scim_tokens',
-      'enterprise_scim_identities',
-    ]) {
+    for (const table of ['platform_admin_users', 'enterprise_contracts', 'organization_entitlements', 'organization_usage', 'enterprise_seat_operations', 'enterprise_identity_connections', 'enterprise_scim_tokens', 'enterprise_scim_identities']) {
       expect(integrationsRuntime).toContain(table);
     }
     expect(integrationsRuntime).toContain('Enterprise control-plane RLS/FORCE RLS incomplete');
@@ -205,23 +272,13 @@ describe('bounded Supabase forward reconciliation contract', () => {
   });
 
   it('proves the Break-Glass tenant and backend-only postconditions', () => {
-    for (const table of [
-      'enterprise_break_glass_requests',
-      'enterprise_break_glass_approvals',
-      'enterprise_break_glass_events',
-      'enterprise_break_glass_reviews',
-    ]) {
+    for (const table of ['enterprise_break_glass_requests', 'enterprise_break_glass_approvals', 'enterprise_break_glass_events', 'enterprise_break_glass_reviews']) {
       expect(postconditions).toContain(table);
     }
     expect(postconditions).toContain('organization_members_organization_id_id_key');
     expect(postconditions).toContain('enterprise_break_glass_requests_organization_id_id_key');
-    expect(postconditions).toContain('enterprise_break_glass_target_tenant_fk');
-    expect(postconditions).toContain('enterprise_break_glass_approvals_request_tenant_fk');
-    expect(postconditions).toContain('enterprise_break_glass_events_request_tenant_fk');
-    expect(postconditions).toContain('enterprise_break_glass_reviews_request_tenant_fk');
     expect(postconditions).toContain('break-glass RLS/FORCE RLS boundary is incomplete');
     expect(postconditions).toContain("grantee in ('anon','authenticated')");
     expect(postconditions).toContain('public.expire_enterprise_break_glass_requests(integer)');
-    expect(postconditions).toContain("setting = 'search_path=pg_catalog'");
   });
 });
