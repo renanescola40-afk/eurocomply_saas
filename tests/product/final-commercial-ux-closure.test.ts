@@ -48,7 +48,8 @@ describe('final commercial UX closure contracts', () => {
     expect(documentPage).toContain("roleHasPermission(currentOrganization.role, 'manage_documents')");
     expect(documentPage).toContain('canManageDocuments ? (');
     expect(teamPage).toContain("roleHasPermission(organization.role, 'manage_team')");
-    expect(teamPage).toContain('canManageTeam={canManageTeam}');
+    expect(teamPage).toContain('if (!canManageTeam)');
+    expect(teamPage.indexOf('if (!canManageTeam)')).toBeLessThan(teamPage.indexOf('const [members, invitations, billing]'));
     expect(teamSettings).toContain('canManageTeam: boolean');
     expect(teamSettings).toContain('onRemoveMember={canManageTeam ? handleRemoveMember : undefined}');
   });
