@@ -74,9 +74,87 @@ describe('billing checkout authority contract', () => {
   });
 });
 
-describe('post-checkout status authority contract', () => {
-  it('never grants readiness from the query string or payment status alone', async () => {
-    const source = await readFile(STATUS_ROUTE, 'utf8');
+  it('creates a customer-mapped checkout session only after RBAC, trusted mutation, and step-up for an existing billing relationship', async () => {
+    mocks.supabaseMaybeSingle.mockResolvedValue({
+      data: { stripe_customer_id: null, stripe_subscription_id: 'sub_existing_org_a', status: 'incomplete' },
+      error: null,
+    });
+
+    const response = await POST(buildRequest({ plan: 'business', locale: 'pt' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ url: 'https://checkout.stripe.com/session-fixture', idempotencyProtected: true, stepUp: { verified: true } });
+    expect(mocks.requirePermission).toHaveBeenCalledWith({ userId: 'user_admin', organizationId: 'org_a', permission: 'manage_billing' });
+    expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'manage_billing',
+      userId: 'user_admin',
+      organizationId: 'org_a',
+    }));
+    expect(mocks.stripeCustomerCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'admin@example.test',
+        name: 'Org A',
+        metadata: expect.objectContaining({
+          organization_id: 'org_a',
+          organizationId: 'org_a',
+          user_id: 'user_admin',
+          userId: 'user_admin',
+          plan: 'growth',
+          billing_flow: 'existing_billing_change',
+        }),
+      }),
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
+    );
+    const customerParams = mocks.stripeCustomerCreate.mock.calls[0][0];
+    expect(customerParams.metadata).not.toHaveProperty('clerk_org_id');
+    expect(customerParams.metadata).not.toHaveProperty('clerkOrgId');
+
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'subscription',
+        customer: 'cus_org_a',
+        line_items: [{ price: 'price_growth_monthly', quantity: 1 }],
+        success_url: 'https://app.eurocomply.test/pt/checkout/complete',
+        cancel_url: 'https://app.eurocomply.test/pt/checkout?plan=growth&checkout=cancelled',
+        client_reference_id: 'org_a',
+        locale: 'pt',
+        billing_address_collection: 'required',
+        customer_update: { address: 'auto', name: 'auto' },
+        tax_id_collection: { enabled: true },
+        payment_method_collection: 'always',
+        allow_promotion_codes: true,
+        metadata: expect.objectContaining({
+          organization_id: 'org_a',
+          organizationId: 'org_a',
+          user_id: 'user_admin',
+          userId: 'user_admin',
+          plan: 'growth',
+          actor_role: 'admin',
+          billing_flow: 'existing_billing_change',
+          step_up_action: 'manage_billing',
+          step_up_verified_at: '2026-06-22T09:00:00.000Z',
+        }),
+        subscription_data: expect.objectContaining({
+          metadata: expect.objectContaining({
+            organization_id: 'org_a',
+            organizationId: 'org_a',
+            user_id: 'user_admin',
+            userId: 'user_admin',
+            plan: 'growth',
+            actor_role: 'admin',
+            billing_flow: 'existing_billing_change',
+            step_up_action: 'manage_billing',
+          }),
+        }),
+      }),
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
+    );
+    const checkoutParams = mocks.stripeCheckoutCreate.mock.calls[0][0];
+    expect(checkoutParams.metadata).not.toHaveProperty('clerk_org_id');
+    expect(checkoutParams.metadata).not.toHaveProperty('clerkOrgId');
+    expect(checkoutParams.subscription_data.metadata).not.toHaveProperty('clerk_org_id');
+    expect(checkoutParams.subscription_data.metadata).not.toHaveProperty('clerkOrgId');
 
     expect(source).toContain('await stripe.checkout.sessions.retrieve(sessionId)');
     expect(source).toContain('sessionBelongsToOrganization(session, organization.id)');

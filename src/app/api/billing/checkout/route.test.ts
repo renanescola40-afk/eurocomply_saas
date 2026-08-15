@@ -81,10 +81,82 @@ describe('billing checkout route contract', () => {
   it('uses a bounded authoritative confirmation handoff after hosted Checkout', async () => {
     const source = await readFile(ROUTE_FILE, 'utf8');
 
-    expect(source).toContain('/checkout/complete?session_id={CHECKOUT_SESSION_ID}');
-    expect(source).toContain("client_reference_id: organization.id");
-    expect(source).toContain('subscription_data: { metadata }');
-    expect(source).toContain("payment_method_collection: 'always'");
-    expect(source).toContain('tax_id_collection: { enabled: true }');
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ url: 'https://checkout.stripe.com/session-fixture', idempotencyProtected: true, stepUpRequired: false });
+    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
+    expect(mocks.stripeCustomerCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'admin@example.test',
+        name: 'Acme Corp',
+        metadata: expect.objectContaining({
+          organization_id: 'org_a',
+          plan: 'starter',
+          billing_flow: 'initial_subscription',
+          step_up_action: 'not_required_initial_checkout',
+        }),
+      }),
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
+    );
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'subscription',
+        customer: 'cus_created_for_org_a',
+        line_items: [{ price: 'price_starter', quantity: 1 }],
+        success_url: 'https://app.eurocomply.test/pt/checkout/complete',
+      }),
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
+    );
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'checkout_created',
+      metadata: expect.objectContaining({
+        billingFlow: 'initial_subscription',
+        stepUpRequired: false,
+        idempotencyProtected: true,
+      }),
+    }));
+  });
+
+  it('protects an existing billing change with step-up and reuses the mapped Stripe customer', async () => {
+    const response = await POST(buildRequest({ plan: 'business', locale: 'en' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ url: 'https://checkout.stripe.com/session-fixture', idempotencyProtected: true, stepUp: { verified: true } });
+    expect(mocks.assertOrganizationPermission).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'user_admin',
+      organizationId: 'org_a',
+      permission: 'manage_billing',
+    }));
+    expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'manage_billing',
+      userId: 'user_admin',
+      organizationId: 'org_a',
+    }));
+    expect(mocks.stripeCustomerUpdate).toHaveBeenCalledWith(
+      'cus_existing_for_org_a',
+      expect.objectContaining({ metadata: expect.objectContaining({ plan: 'growth' }) }),
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
+    );
+    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customer: 'cus_existing_for_org_a',
+        line_items: [{ price: 'price_growth', quantity: 1 }],
+        metadata: expect.objectContaining({
+          billing_flow: 'existing_billing_change',
+          step_up_action: 'manage_billing',
+        }),
+      }),
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('risck:checkout:') }),
+    );
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'checkout_created',
+      metadata: expect.objectContaining({
+        billingFlow: 'existing_billing_change',
+        stepUpRequired: true,
+        stepUpAction: 'manage_billing',
+        idempotencyProtected: true,
+      }),
+    }));
   });
 });
