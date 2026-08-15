@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { DashboardHomeOverview } from '@/components/dashboard/dashboard-home-overview';
 import { EnterpriseComplianceCommandCenter } from '@/components/dashboard/enterprise-compliance-command-center';
-import { EnterpriseDashboardOverview } from '@/components/dashboard/enterprise-dashboard-overview';
 import { OnboardingProgressCard } from '@/components/onboarding/onboarding-progress-card';
 import { getBillingPlan } from '@/lib/billing/plans';
 import { locales, type Locale } from '@/lib/i18n/routing';
@@ -66,22 +65,14 @@ async function getTeamActivationStatus(organizationId: string) {
 function DashboardHomeOverviewSkeleton() {
   return (
     <div className="space-y-6" aria-label="Loading dashboard overview" role="status" aria-live="polite">
-      <div className="grid gap-4 md:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, index) => (
+      <div className="grid gap-4 md:grid-cols-2">
+        {Array.from({ length: 2 }).map((_, index) => (
           <div key={index} className="premium-card rounded-[1.5rem] p-5">
             <div className="skeleton-pulse h-4 w-24 rounded-full bg-white/[0.055]" />
-            <div className="skeleton-pulse mt-4 h-8 w-20 rounded-xl bg-white/[0.055]" />
+            <div className="skeleton-pulse mt-4 h-8 w-40 rounded-xl bg-white/[0.055]" />
             <div className="skeleton-pulse mt-3 h-4 w-full rounded-full bg-white/[0.055]" />
           </div>
         ))}
-      </div>
-      <div className="premium-card rounded-[2rem] p-6">
-        <div className="skeleton-pulse h-6 w-56 rounded-full bg-white/[0.055]" />
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="skeleton-pulse h-24 rounded-2xl bg-white/[0.055]" />
-          ))}
-        </div>
       </div>
     </div>
   );
@@ -110,7 +101,7 @@ export default async function OrganizationDashboardPage({ params, searchParams }
 
   const entitlements = data.entitlements;
   const localizedDashboardBasePath = `/${safeLocale}/dashboard/organizations`;
-  const localizedTasksPath = `/${safeLocale}/aprovacoes`;
+  const localizedTasksPath = `${localizedDashboardBasePath}/tasks`;
   const currentCatalogPlan = getBillingPlan(entitlements.plan);
   const planName = currentCatalogPlan?.name ?? entitlements.plan;
   const requestedPlan = getBillingPlan(resolvedSearchParams.plan);
@@ -126,6 +117,11 @@ export default async function OrganizationDashboardPage({ params, searchParams }
     hasDocuments: data.summary.totals.documents > 0 || data.documentsExpiringSoon.length > 0,
     hasRisks: data.summary.totals.risks > 0 || data.topRisks.length > 0,
     hasVendors: data.summary.totals.vendors > 0 || data.vendorsRequiringReview.length > 0,
+    hasFirstAiSystem: data.aiSystemSummary.total > 0,
+    hasRiskClassification: data.summary.totals.risks > 0,
+    hasDocumentSuggestions: data.summary.totals.documents > 0,
+    hasInitialTasks: data.summary.totals.tasks > 0,
+    hasReadinessScore: data.summary.totals.tasks + data.summary.totals.risks + data.summary.totals.documents + data.summary.totals.vendors > 0,
     hasDashboardOpened: true,
   };
   const limitsSummary = [
@@ -175,6 +171,7 @@ export default async function OrganizationDashboardPage({ params, searchParams }
         />
 
         <Suspense fallback={<DashboardHomeOverviewSkeleton />}>
+          <OnboardingProgressCard state={activationState} compact locale={safeLocale} />
           <DashboardHomeOverview
             summary={data.summary}
             tasks={data.tasks}
@@ -184,18 +181,6 @@ export default async function OrganizationDashboardPage({ params, searchParams }
             vendorsRequiringReview={data.vendorsRequiringReview}
             documentsExpiringSoon={data.documentsExpiringSoon}
           />
-          <EnterpriseDashboardOverview
-            copy={copy.enterprise}
-            summary={data.summary}
-            tasks={data.tasks}
-            vendorsRequiringReview={data.vendorsRequiringReview}
-            documentsExpiringSoon={data.documentsExpiringSoon}
-            basePath={localizedDashboardBasePath}
-            tasksPath={localizedTasksPath}
-            planName={planName}
-            limitsSummary={limitsSummary}
-          />
-          <OnboardingProgressCard state={activationState} />
         </Suspense>
       </div>
     </main>

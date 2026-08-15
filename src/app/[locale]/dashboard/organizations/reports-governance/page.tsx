@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { UpgradeRequiredCard } from '@/components/billing/upgrade-required-card';
-import { ReportsGovernancePage } from '@/components/dashboard/dashboard-overview';
+import { ReportsGovernanceWorkspace } from '@/components/dashboard/reports-governance-workspace';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -20,27 +20,37 @@ function getUpgradeCopy(locale: string) {
   return upgradeCopy[locales.includes(locale as Locale) ? (locale as Locale) : 'en'];
 }
 
-export default async function OrganizationReportsGovernancePage({ params }: { params: { locale: string } }) {
+export default async function OrganizationReportsGovernancePage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
   const user = await getCurrentUser();
-  if (!user) redirect(`/${params.locale}/login`);
+  if (!user) redirect(`/${locale}/login`);
 
   const data = await getOrganizationDashboardData(user.id);
-  if (!data) redirect(`/${params.locale}/onboarding`);
+  if (!data) redirect(`/${locale}/onboarding`);
 
-  const dashboardBasePath = '/dashboard/organizations';
-  const localizedDashboardBasePath = `/${params.locale}${dashboardBasePath}`;
+  const localizedDashboardBasePath = `/${locale}/dashboard/organizations`;
   const entitlements = await getOrganizationEntitlements(data.organization.id);
   const canViewExecutiveReports = isPlanAtLeast(entitlements.plan, 'business');
-  const lockedCopy = getUpgradeCopy(params.locale);
+  const lockedCopy = getUpgradeCopy(locale);
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.16),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.34))]">
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 md:px-8 md:py-10">
         {canViewExecutiveReports ? (
-          <ReportsGovernancePage summary={data.summary} tasks={data.tasks} trendHistory={data.trendHistory} trendComparison={data.trendComparison} basePath={localizedDashboardBasePath} topRisks={data.topRisks} vendorsRequiringReview={data.vendorsRequiringReview} documentsExpiringSoon={data.documentsExpiringSoon} />
+          <ReportsGovernanceWorkspace
+            summary={data.summary}
+            tasks={data.tasks}
+            trendHistory={data.trendHistory}
+            trendComparison={data.trendComparison}
+            workflowReadiness={data.workflowReadiness}
+            basePath={localizedDashboardBasePath}
+            topRisks={data.topRisks}
+            vendorsRequiringReview={data.vendorsRequiringReview}
+            documentsExpiringSoon={data.documentsExpiringSoon}
+          />
         ) : (
           <UpgradeRequiredCard
-            locale={params.locale}
+            locale={locale}
             requiredPlan="Business"
             title={lockedCopy.title}
             description={lockedCopy.description}
