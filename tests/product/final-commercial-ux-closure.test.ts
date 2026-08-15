@@ -13,6 +13,7 @@ const documentPage = source('src/app/[locale]/dashboard/organizations/documents/
 const teamPage = source('src/app/[locale]/dashboard/organizations/team/page.tsx');
 const teamSettings = source('src/components/team/team-settings-section.tsx');
 const inviteRoute = source('src/app/api/team/invites/route.ts');
+const onboardingAction = source('src/server/actions/onboarding.ts');
 const activationClient = source('src/app/[locale]/checkout/complete/checkout-activation-client.tsx');
 const activationRoute = source('src/app/api/billing/checkout/activation/route.ts');
 const checkoutPage = source('src/app/[locale]/checkout/page.tsx');
@@ -41,7 +42,7 @@ describe('final commercial UX closure contracts', () => {
     expect(documentPage).toContain('<DocumentDeleteButton locale={params.locale}');
   });
 
-  it('keeps team invitation locale explicit from UI to API to email rendering', () => {
+  it('keeps team and onboarding invitation locale explicit through email rendering', () => {
     for (const locale of locales) {
       const copy = getTeamWorkflowCopy(locale);
       expect(copy.invite.send).toBeTruthy();
@@ -56,6 +57,11 @@ describe('final commercial UX closure contracts', () => {
     expect(inviteRoute).toContain('`${getAppUrl()}/${locale}/invite/');
     expect(inviteRoute).toContain('localizedInvitationEmail');
     expect(inviteRoute).not.toContain('`${getAppUrl()}/en/invite/');
+
+    expect(onboardingAction).toContain('localizedInvitationEmail');
+    expect(onboardingAction).toContain('const inviteUrl = `${getAppUrl()}/${locale}/invite/');
+    expect(onboardingAction).toContain('locale,');
+    expect(onboardingAction).not.toContain("import { invitationEmail } from '@/lib/email/templates'");
   });
 
   it('preserves the selected self-serve plan when checkout needs onboarding first', () => {
