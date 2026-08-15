@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from 'next/cache';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowUpRight, CheckCircle2, Crown, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react';
@@ -14,6 +15,9 @@ import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { normalizePlan, type CanonicalSubscriptionPlan } from '@/server/queries/subscription';
+
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -43,6 +47,7 @@ function planList(addOn: BillingAddOn) {
 }
 
 export default async function AddOnsAndCreditsPage({ params, searchParams }: PageProps) {
+  noStore();
   const { locale } = await params;
   const query = searchParams ? await searchParams : {};
   const copy = getAddOnsCopy(locale);
@@ -64,7 +69,8 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
   const currentPlanName = getPlanDisplayName(canonicalPlan);
   const activeAddOns = new Set<AddOnId>(activeAddOnIds);
   const canManageBilling = roleHasPermission(role, 'manage_billing');
-  const selectedPlanDiffers = selectedPlan && normalizePlan(selectedPlan.entitlementPlan) !== canonicalPlan;
+  const selectedPlanDiffers = Boolean(selectedPlan && normalizePlan(selectedPlan.id) !== canonicalPlan);
+  const selectedPlanPrice = selectedPlan?.priceMonthly ?? selectedPlan?.startingPriceMonthly ?? null;
   const focusedAddOn = BILLING_ADD_ONS.find((addOn) => addOn.slug === query.addon);
   const includedCount = BILLING_ADD_ONS.filter((addOn) => getUpgradeStatus(canonicalPlan, addOn, activeAddOns) === 'included').length;
   const activeCount = BILLING_ADD_ONS.filter((addOn) => getUpgradeStatus(canonicalPlan, addOn, activeAddOns) === 'active').length;
@@ -87,10 +93,12 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
                 <h2 id="selected-plan-title" className="text-2xl font-semibold tracking-tight">{selectedPlan.name}</h2>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-blue-50/75">{copy.selectedPlanBody}</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-left md:text-right">
-                <p className="text-xs uppercase tracking-[0.16em] text-white/50">{copy.selectedPlanPrice}</p>
-                <p className="mt-1 text-3xl font-semibold">€{selectedPlan.priceMonthly}<span className="text-sm font-normal text-white/50">{copy.perMonth}</span></p>
-              </div>
+              {selectedPlanPrice !== null ? (
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-left md:text-right">
+                  <p className="text-xs uppercase tracking-[0.16em] text-white/50">{copy.selectedPlanPrice}</p>
+                  <p className="mt-1 text-3xl font-semibold">€{selectedPlanPrice}<span className="text-sm font-normal text-white/50">{copy.perMonth}</span></p>
+                </div>
+              ) : null}
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link href={`/${locale}/pricing`} className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/15 px-5 text-sm font-semibold transition hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">{copy.backToPricing}</Link>
