@@ -13,12 +13,13 @@ type Role = (typeof roles)[number];
 
 type InviteMemberFormProps = {
   locale: string;
+  canInviteAdmin: boolean;
   onSubmit: (input: { email: string; role: Role }) => Promise<void> | void;
 };
 
 export type InviteMemberInput = { email: string; role: Role };
 
-export function InviteMemberForm({ locale, onSubmit }: InviteMemberFormProps) {
+export function InviteMemberForm({ locale, canInviteAdmin, onSubmit }: InviteMemberFormProps) {
   const copy = getTeamWorkflowCopy(locale).invite;
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('viewer');
@@ -61,7 +62,7 @@ export function InviteMemberForm({ locale, onSubmit }: InviteMemberFormProps) {
                 <SelectValue placeholder={copy.selectRole} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">{copy.admin}</SelectItem>
+                {canInviteAdmin ? <SelectItem value="admin">{copy.admin}</SelectItem> : null}
                 <SelectItem value="editor">{copy.editor}</SelectItem>
                 <SelectItem value="viewer">{copy.viewer}</SelectItem>
               </SelectContent>
