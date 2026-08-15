@@ -15,6 +15,15 @@ type TeamPageProps = { params: Promise<{ locale: string }> };
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
+const deniedCopy: Record<string, { title: string; body: string }> = {
+  en: { title: 'Team access is restricted', body: 'Your organization role does not include team-management access. Ask an owner or administrator if you need member or invitation changes.' },
+  pt: { title: 'O acesso à equipa é restrito', body: 'A sua função na organização não inclui gestão da equipa. Fale com um owner ou administrador se precisar de alterar membros ou convites.' },
+  es: { title: 'El acceso al equipo está restringido', body: 'Tu rol en la organización no incluye gestión del equipo. Contacta con un owner o administrador si necesitas cambiar miembros o invitaciones.' },
+  fr: { title: 'L’accès à l’équipe est restreint', body: 'Votre rôle dans l’organisation n’inclut pas la gestion de l’équipe. Contactez un owner ou un administrateur pour modifier les membres ou invitations.' },
+  it: { title: 'L’accesso al team è limitato', body: 'Il tuo ruolo nell’organizzazione non include la gestione del team. Contatta un owner o un amministratore per modificare membri o inviti.' },
+  de: { title: 'Der Teamzugriff ist eingeschränkt', body: 'Ihre Organisationsrolle umfasst keine Teamverwaltung. Wenden Sie sich an einen Owner oder Administrator, wenn Mitglieder oder Einladungen geändert werden müssen.' },
+};
+
 export default async function OrganizationTeamPage({ params }: TeamPageProps) {
   const { locale } = await params;
   const user = await getCurrentUser();
@@ -25,6 +34,20 @@ export default async function OrganizationTeamPage({ params }: TeamPageProps) {
 
   const copy = getTeamWorkflowCopy(locale).page;
   const canManageTeam = roleHasPermission(organization.role, 'manage_team');
+
+  if (!canManageTeam) {
+    const denied = deniedCopy[locale] ?? deniedCopy.en;
+    return (
+      <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.16),_transparent_34rem),linear-gradient(180deg,#050505_0%,#080b12_46%,#050505_100%)] px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 text-white shadow-2xl shadow-black/20 md:p-8" role="status">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-200/70">{copy.eyebrow}</p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight">{denied.title}</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60 md:text-base">{denied.body}</p>
+        </div>
+      </main>
+    );
+  }
+
   const [members, invitations, billing] = await Promise.all([
     listOrganizationMembers(organization.id),
     listPendingInvitations(organization.id),
@@ -46,8 +69,8 @@ export default async function OrganizationTeamPage({ params }: TeamPageProps) {
 
         <PlanGate planId={billing.plan} metric="users" currentUsage={billing.usage.users}>
           <div className="space-y-10">
-            <TeamSettingsSection locale={locale} members={members} invitations={invitations} currentUserId={user.id} canManageTeam={canManageTeam} />
-            {canManageTeam ? <EnterpriseAccessConsole /> : null}
+            <TeamSettingsSection locale={locale} members={members} invitations={invitations} currentUserId={user.id} canManageTeam />
+            <EnterpriseAccessConsole />
           </div>
         </PlanGate>
       </div>
