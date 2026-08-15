@@ -13,8 +13,14 @@ type InvoiceWithSubscriptionReference = Stripe.Invoice & {
 };
 
 function stripeObjectId(value: string | { id?: string | null } | null | undefined) {
-  if (typeof value === 'string' && value.trim()) return value.trim();
-  return value?.id?.trim() || null;
+  if (typeof value === 'string') {
+    const id = value.trim();
+    return id || null;
+  }
+
+  if (!value) return null;
+  const id = value.id;
+  return typeof id === 'string' && id.trim() ? id.trim() : null;
 }
 
 function invoiceSubscriptionId(invoice: Stripe.Invoice) {
