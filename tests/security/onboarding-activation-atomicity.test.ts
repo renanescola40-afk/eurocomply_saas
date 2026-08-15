@@ -67,8 +67,8 @@ describe('atomic onboarding activation contract', () => {
     expect(reconciliationSource).toContain("'ai_system_not_found'::text");
     expect(hardeningSource).toContain('member.organization_id = p_organization_id');
     expect(hardeningSource).toContain('member.user_id = p_actor_user_id');
-    expect(hardeningSource).toContain("v_actor_status <> 'active'");
-    expect(hardeningSource).toContain("v_actor_role not in ('owner', 'admin')");
+    expect(hardeningSource).toContain("v_actor_status is distinct from 'active'");
+    expect(hardeningSource).toContain("coalesce(v_actor_role, '') not in ('owner', 'admin')");
   });
 
   it('makes retries deterministic without duplicating activation data', () => {
@@ -83,7 +83,8 @@ describe('atomic onboarding activation contract', () => {
 
   it('routes onboarding invitations through the same seat-aware Enterprise authority', () => {
     expect(seatAuthoritySource).toContain('create or replace function public.create_organization_invitation_with_seat_atomic');
-    expect(seatAuthoritySource).toContain("v_actor_status <> 'active'");
+    expect(seatAuthoritySource).toContain("v_actor_status is distinct from 'active'");
+    expect(seatAuthoritySource).toContain("coalesce(v_actor_role, '') not in ('owner', 'admin')");
     expect(seatAuthoritySource).toContain('v_active_members + v_pending_members >= v_member_limit');
     expect(seatAuthoritySource).toContain('v_active_seats + v_pending_seats >= v_seat_limit');
     expect(hardeningSource).toContain("jsonb_set(p_activation, '{inviteEmails}', '[]'::jsonb, true)");
