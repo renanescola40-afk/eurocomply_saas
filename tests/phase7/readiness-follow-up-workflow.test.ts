@@ -17,25 +17,25 @@ describe('Phase 7 readiness follow-up workflow', () => {
   it('uses the existing readiness summary and action surfaces', () => {
     const summary = read('src/components/dashboard/workflow-readiness-summary.tsx');
     const actions = read('src/components/dashboard/next-best-actions.tsx');
-    const overview = read('src/components/dashboard/dashboard-home-overview.tsx');
+    const workspace = read('src/components/dashboard/reports-governance-workspace.tsx');
 
     expect(summary).toContain('Read-only reporting snapshot');
     expect(summary).toContain('workflowReadiness?.reasons');
     expect(actions).toContain('buildWorkflowReadinessAction');
     expect(actions).toContain('current workflow readiness');
-    expect(overview).toContain('WorkflowReadinessSummary');
+    expect(workspace).toContain('WorkflowReadinessSummary');
   });
 
-  it('renders the readiness follow-up planning surface', () => {
+  it('renders the readiness follow-up planning surface in Reports & Governance', () => {
     const plan = read('src/components/dashboard/readiness-follow-up-plan.tsx');
-    const overview = read('src/components/dashboard/dashboard-home-overview.tsx');
+    const workspace = read('src/components/dashboard/reports-governance-workspace.tsx');
 
     expect(plan).toContain('ReadinessFollowUpPlan');
     expect(plan).toContain('Follow-up planning');
     expect(plan).toContain('Open follow-up area');
     expect(plan).toContain('workflowReadiness?.reasons');
-    expect(overview).toContain('ReadinessFollowUpPlan');
-    expect(overview).toContain('readiness-follow-up');
+    expect(workspace).toContain('ReadinessFollowUpPlan');
+    expect(workspace).toContain('readiness-follow-up');
   });
 
   it('keeps the workflow safe before additional runtime changes', () => {

@@ -40,12 +40,15 @@ describe('Phase 6 readiness reporting surface', () => {
     expect(actions).toContain('current workflow readiness');
   });
 
-  it('renders a dedicated read-only readiness reporting summary', () => {
-    const overview = read('src/components/dashboard/dashboard-home-overview.tsx');
+  it('renders the dedicated read-only readiness summary in Reports & Governance', () => {
+    const workspace = read('src/components/dashboard/reports-governance-workspace.tsx');
+    const reportsPage = read('src/app/[locale]/dashboard/organizations/reports-governance/page.tsx');
     const summary = read('src/components/dashboard/workflow-readiness-summary.tsx');
 
-    expect(overview).toContain('WorkflowReadinessSummary');
-    expect(overview).toContain('workflow-readiness');
+    expect(reportsPage).toContain('ReportsGovernanceWorkspace');
+    expect(reportsPage).toContain('workflowReadiness={data.workflowReadiness}');
+    expect(workspace).toContain('WorkflowReadinessSummary');
+    expect(workspace).toContain('workflow-readiness');
     expect(summary).toContain('Read-only reporting snapshot');
     expect(summary).toContain('workflowReadiness?.reasons');
     expect(summary).toContain('Readiness healthy');
