@@ -68,6 +68,25 @@ describe('Supabase migration evidence bootstrap workflow', () => {
     expect(workflow).toContain('Unexpected workflow status for ${run_id}: ${status}');
   });
 
+  it('fails closed promptly when a child is waiting for protected environment review', () => {
+    expect(workflow).toContain('local waiting_polls=0');
+    expect(workflow).toContain('waiting_polls=$((waiting_polls + 1))');
+    expect(workflow).toContain('if (( waiting_polls >= 3 )); then');
+    expect(workflow).toContain('mark_child_wait_blocked "$run_id"');
+    expect(workflow).toContain('BLOCKED_AWAITING_ENVIRONMENT_REVIEW');
+    expect(workflow).toContain('Child workflow run ${run_id} is blocked awaiting protected environment review; bootstrap remains fail-closed.');
+    expect(workflow).toContain('queued|in_progress|pending|requested)');
+    expect(workflow).not.toContain('queued|in_progress|pending|waiting|requested)');
+  });
+
+  it('retains blocked child provenance without treating approval as success', () => {
+    expect(workflow).toContain('.blockedRunId = $runId');
+    expect(workflow).toContain('Blocked child run:');
+    expect(workflow).toContain('return 1');
+    expect(workflow).toContain('productionWriteAuthorized: false');
+    expect(workflow).toContain('productionWritePerformed: false');
+  });
+
   it('tolerates short artifact-index propagation without weakening evidence checks', () => {
     expect(workflow).toContain('for _ in $(seq 1 30); do');
     expect(workflow).toContain('Missing expected artifact ${artifact_name} for workflow run ${run_id}');
