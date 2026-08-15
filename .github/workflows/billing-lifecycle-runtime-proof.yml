@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_sha:
-        description: Exact 40-character SHA currently at main
+        description: Exact 40-character SHA currently at main and deployed to the target runtime
         required: true
         type: string
       target_environment:
@@ -44,10 +44,16 @@ jobs:
     environment: ${{ inputs.target_environment }}
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
+      RELEASE_COMMIT_SHA: ${{ inputs.release_sha }}
+      RELEASE_BUILD_SHA: ${{ inputs.release_sha }}
       TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
       ORGANIZATION_ID: ${{ inputs.organization_id }}
       STRIPE_SUBSCRIPTION_ID: ${{ inputs.stripe_subscription_id }}
       STRIPE_EVENT_ID: ${{ inputs.stripe_event_id }}
+      CONFIRMATION_INPUT: ${{ inputs.confirmation }}
+      RUNTIME_BASE_URL: ${{ vars.RUNTIME_BASE_URL }}
+      HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
+      AUDIT_CHAIN_SIGNING_SECRET: ${{ secrets.AUDIT_CHAIN_SIGNING_SECRET }}
       REPOSITORY: ${{ github.repository }}
       SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
       PGSSLMODE: require
@@ -61,6 +67,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+
       - name: Authorize exact release and bounded inputs
         shell: bash
         run: |
@@ -70,15 +81,52 @@ jobs:
           [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
           test "${RELEASE_SHA,,}" = "$main_sha"
           test "$(git rev-parse HEAD)" = "$main_sha"
-          test "${{ inputs.confirmation }}" = "PROVE_BILLING_LIFECYCLE_RUNTIME"
+          test "$CONFIRMATION_INPUT" = "PROVE_BILLING_LIFECYCLE_RUNTIME"
           [[ "$ORGANIZATION_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$ ]]
           [[ "$STRIPE_SUBSCRIPTION_ID" =~ ^sub_[A-Za-z0-9]+$ ]]
           [[ "$STRIPE_EVENT_ID" =~ ^evt_[A-Za-z0-9]+$ ]]
           test -n "$SUPABASE_DB_POOLER_URL"
+          test -n "$HEALTHCHECK_TOKEN"
           case "$SUPABASE_DB_POOLER_URL" in
             postgresql://*|postgres://*) ;;
             *) echo "SUPABASE_DB_POOLER_URL must be a PostgreSQL URI" >&2; exit 1 ;;
           esac
+
+      - name: Bind proof to deployed runtime SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$TARGET_ENVIRONMENT" = "production" ]; then
+            runtime_url="https://www.risckcomply.com"
+          else
+            runtime_url="${RUNTIME_BASE_URL:-}"
+            test -n "$runtime_url"
+          fi
+
+          RUNTIME_URL_TO_VALIDATE="$runtime_url" node --input-type=module <<'NODE'
+          const value = process.env.RUNTIME_URL_TO_VALIDATE ?? '';
+          const url = new URL(value);
+          const host = url.hostname.toLowerCase();
+          if (url.protocol !== 'https:' || url.username || url.password || url.port) process.exit(1);
+          if (host !== 'risckcomply.com' && !host.endsWith('.risckcomply.com')) process.exit(1);
+          NODE
+
+          {
+            echo "RELEASE_DEPLOYMENT_URL=$runtime_url"
+            echo "RELEASE_PRODUCTION_URL=$runtime_url"
+            echo "RELEASE_TARGET=billing-lifecycle-runtime-proof"
+          } >> "$GITHUB_ENV"
+
+      - name: Verify exact deployed runtime SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/release/verify-runtime-release-sha.mjs
+          echo "RUNTIME_RELEASE_SHA_VERIFIED=true" >> "$GITHUB_ENV"
+          rm -f docs/security/evidence/runtime/runtime-release-sha-validation.json
+          git restore --worktree -- \
+            docs/security/evidence/runtime/production-final-validation.json \
+            docs/security/evidence/runtime/final-validation-runner.json 2>/dev/null || true
 
       - name: Install PostgreSQL client
         shell: bash
@@ -104,18 +152,51 @@ jobs:
             > artifacts/billing-lifecycle-runtime-proof/raw.json
           test -s artifacts/billing-lifecycle-runtime-proof/raw.json
 
+      - name: Collect ephemeral canonical audit chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_POOLER_URL" \
+            --set ON_ERROR_STOP=1 \
+            --tuples-only \
+            --no-align \
+            --set organization_id="$ORGANIZATION_ID" \
+            --file scripts/enterprise/billing-lifecycle-audit-chain.sql \
+            > artifacts/billing-lifecycle-runtime-proof/raw-audit-chain.json
+          test -s artifacts/billing-lifecycle-runtime-proof/raw-audit-chain.json
+
+      - name: Verify canonical audit hash chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/security/verify-audit-chain.mjs \
+            --input artifacts/billing-lifecycle-runtime-proof/raw-audit-chain.json \
+            > artifacts/billing-lifecycle-runtime-proof/audit-chain-verification.json
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const result = JSON.parse(readFileSync('artifacts/billing-lifecycle-runtime-proof/audit-chain-verification.json', 'utf8'));
+          if (result.ok !== true || !Number.isSafeInteger(result.checked) || result.checked < 4) process.exit(1);
+          NODE
+          echo "AUDIT_CHAIN_CRYPTOGRAPHICALLY_VERIFIED=true" >> "$GITHUB_ENV"
+
       - name: Build sanitized evidence
         run: node scripts/enterprise/build-billing-lifecycle-runtime-proof.mjs
 
-      - name: Remove raw database observation
+      - name: Remove raw database and verifier observations
         shell: bash
-        run: rm -f artifacts/billing-lifecycle-runtime-proof/raw.json
+        run: |
+          rm -f \
+            artifacts/billing-lifecycle-runtime-proof/raw.json \
+            artifacts/billing-lifecycle-runtime-proof/raw-audit-chain.json \
+            artifacts/billing-lifecycle-runtime-proof/audit-chain-verification.json
 
       - name: Reject sensitive retained content
         shell: bash
         run: |
           set -euo pipefail
           test ! -e artifacts/billing-lifecycle-runtime-proof/raw.json
+          test ! -e artifacts/billing-lifecycle-runtime-proof/raw-audit-chain.json
+          test ! -e artifacts/billing-lifecycle-runtime-proof/audit-chain-verification.json
           ! grep -RIE 'postgres(ql)?://|supabase\.co|service[_-]?role|whsec_|(sk|rk|pk)_(live|test)_|\bsub_[A-Za-z0-9]+\b|\bevt_[A-Za-z0-9]+\b|\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b' artifacts/billing-lifecycle-runtime-proof
 
       - name: Publish bounded summary
