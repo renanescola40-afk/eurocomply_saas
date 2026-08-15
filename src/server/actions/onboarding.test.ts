@@ -120,9 +120,11 @@ describe('atomic onboarding activation', () => {
         p_actor_user_id: actorUserId,
         p_idempotency_key: expect.stringMatching(/^[a-f0-9]{64}$/),
         p_activation: expect.objectContaining({
+          organization: expect.objectContaining({
+            selectedPlan: 'professional',
+          }),
           inviteEmails: ['teammate@example.test'],
           readinessScore: expect.any(Number),
-          selectedPlan: 'professional',
         }),
       }),
     );
@@ -135,7 +137,7 @@ describe('atomic onboarding activation', () => {
       tasksCreated: 4,
       invitationsCreated: 1,
       invitationsDelivered: 1,
-      dashboardPath: '/pt/dashboard/organizations?onboarding=completed',
+      dashboardPath: '/pt/dashboard/organizations?plan=professional',
     });
   });
 
@@ -200,6 +202,6 @@ describe('atomic onboarding activation', () => {
     expect(mocks.assertCurrentUserCan).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(mocks.sendEmail).not.toHaveBeenCalled();
-    expect(result.dashboardPath).toBe('/en/dashboard/organizations?onboarding=completed');
+    expect(result.dashboardPath).toBe('/en/dashboard/organizations?plan=professional');
   });
 });
