@@ -18,7 +18,7 @@ Production has a stricter commercial-authority boundary than staging: a producti
 - for `production`, that event is `livemode=true` and its payload customer/subscription binding matches the persisted organization subscription;
 - the canonical chained audit ledger is enabled.
 
-The separate **Stripe Provider Proof** must also be green before commercial launch. It validates the live account, canonical live monthly prices, exact production webhook contract, and the active live **default Billing Portal configuration** used by application portal sessions that do not specify a configuration ID. A runtime organization proof does not substitute for provider configuration readiness.
+The separate **Stripe Provider Proof** must also be green before commercial launch. It validates the live account, canonical live monthly prices, exact production webhook contract, and the active live Billing Portal configuration used by runtime sessions. When `STRIPE_BILLING_PORTAL_CONFIGURATION_ID` is configured, the proof retrieves and validates that exact `bpc_...` configuration. When the binding is absent, the runtime intentionally falls back to the account default and the proof requires that default to be active and live. The retained evidence records only whether the binding mode was `explicit` or `default`; it does not retain the configuration ID. A runtime organization proof does not substitute for provider configuration readiness.
 
 ## Workflow inputs
 
@@ -85,7 +85,7 @@ The raw SQL observation is temporary and deleted before artifact upload. Retaine
 - source SHA-256 and byte length;
 - truth-boundary text.
 
-No database URL, credential, service-role secret, full organization UUID, full Stripe event ID, Stripe customer ID, Stripe subscription ID or raw row is retained.
+No database URL, credential, service-role secret, full organization UUID, full Stripe event ID, Stripe customer ID, Stripe subscription ID, Billing Portal configuration ID or raw row is retained.
 
 ## Failure handling
 
@@ -103,7 +103,8 @@ Common failures:
 - `stripeEventAuthoritativeType`: use the processed subscription-created/updated event that grants commercial authority, not checkout/test evidence;
 - `stripeEventBindingMatches`: investigate organization/customer/subscription correlation before granting access;
 - `stripeEventLiveMode`: production cannot complete from test-mode Stripe evidence;
-- provider proof `defaultBillingPortalConfigurationPresent`: activate/configure the live default Customer Portal in Stripe before treating self-service billing as ready;
+- provider proof `billingPortalConfigurationPresent`: configure an active live Customer Portal configuration in Stripe;
+- provider proof `billingPortalConfigurationBindingValid`: if `STRIPE_BILLING_PORTAL_CONFIGURATION_ID` is set, make sure it names the exact active live configuration intended for runtime sessions; otherwise maintain a usable active live account default;
 - audit failures: inspect `audit_events` and the chained append RPC.
 
 Do not edit the evidence artifact to turn a failed control green. Correct the runtime/provider state and execute a new workflow run for the exact current SHA.
