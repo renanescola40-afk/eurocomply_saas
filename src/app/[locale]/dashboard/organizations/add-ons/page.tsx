@@ -1,225 +1,189 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { CheckCircle2, Coins, Crown } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, Crown, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
+import { BILLING_ADD_ONS, type BillingAddOn } from '@/lib/billing/add-ons';
+import { getPlanDisplayName, type AddOnId } from '@/lib/billing/addons';
+import { getBillingPlan } from '@/lib/billing/plans';
+import { getAddOnsCopy } from '@/lib/i18n/add-ons-copy';
+import { roleHasPermission } from '@/lib/security/permissions';
+import { getOrganizationRoleForUser } from '@/server/auth/permissions';
+import { listActiveOrganizationAddOns } from '@/server/billing/addons';
+import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { getOrganizationEntitlements } from '@/server/billing/entitlements';
-import { listActiveOrganizationAddOns } from '@/server/billing/addons';
-import { ADD_ON_CATALOG, CREDIT_PACKS, getAddOnStatus, getPlanDisplayName } from '@/lib/billing/addons';
-import { getBillingPlan } from '@/lib/billing/plans';
-import type { AddOnId } from '@/lib/billing/addons';
-
-const enterpriseDemoModules = [
-  ['Command Center', '/dashboard/organizations/command-center'],
-  ['AI Governance', '/ai-systems'],
-  ['AI Incidents', '/ai-incidents'],
-  ['Evidence & Risk', '/dashboard/organizations/evidence-risk'],
-  ['Reports & Governance', '/dashboard/organizations/reports-governance'],
-  ['Jornal IA Premium', '/dashboard/organizations/reports-governance/news'],
-  ['Enterprise Readiness', '/enterprise-readiness'],
-  ['Audit Pack', '/audit-pack'],
-  ['Vendor Assurance', '/vendor-assurance'],
-  ['Compliance Calendar', '/calendario-compliance'],
-  ['Security Questionnaire', '/security-questionnaire'],
-  ['Documentos', '/dashboard/organizations/documents'],
-] as const;
-
-const enterpriseDemoEnabled = process.env.NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO === 'true';
+import { normalizePlan, type CanonicalSubscriptionPlan } from '@/server/queries/subscription';
 
 type PageProps = {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ demo?: string; plan?: string }>;
+  searchParams?: Promise<{ plan?: string; addon?: string }>;
 };
+
+type UpgradeStatus = 'included' | 'active' | 'available' | 'blocked';
+
+function getUpgradeStatus(plan: CanonicalSubscriptionPlan, addOn: BillingAddOn, activeAddOnIds: Set<string>): UpgradeStatus {
+  if (plan === 'enterprise') return 'included';
+  if (activeAddOnIds.has(addOn.slug)) return 'active';
+  return addOn.availableOn.includes(plan) ? 'available' : 'blocked';
+}
+
+function statusTone(status: UpgradeStatus) {
+  if (status === 'included' || status === 'active') return 'border-emerald-400/25 bg-emerald-400/10 text-emerald-100';
+  if (status === 'available') return 'border-blue-400/25 bg-blue-400/10 text-blue-100';
+  return 'border-white/10 bg-white/[0.035] text-white/60';
+}
+
+function getStatusIcon(status: UpgradeStatus) {
+  return status === 'blocked' ? LockKeyhole : status === 'available' ? Sparkles : CheckCircle2;
+}
+
+function planList(addOn: BillingAddOn) {
+  return addOn.availableOn.map((plan) => getPlanDisplayName(plan)).join(' · ');
+}
 
 export default async function AddOnsAndCreditsPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
   const query = searchParams ? await searchParams : {};
-  const requestedEnterpriseDemo = query.demo === 'enterprise' || query.demo === 'premium';
-  const isEnterpriseDemo = enterpriseDemoEnabled && requestedEnterpriseDemo;
+  const copy = getAddOnsCopy(locale);
   const selectedPlan = query.plan ? getBillingPlan(query.plan) : undefined;
   const user = await getCurrentUser();
 
-  if (!user) {
-    redirect(`/${locale}/login`);
-  }
+  if (!user) redirect(`/${locale}/login`);
 
   const organization = await getCurrentOrganizationForUser(user.id);
+  if (!organization?.id) redirect(`/${locale}/risck-comply-home`);
 
-  if (!organization?.id) {
-    redirect(`/${locale}/risck-comply-home`);
-  }
+  const [entitlements, activeAddOnIds, role] = await Promise.all([
+    getOrganizationEntitlements(organization.id),
+    listActiveOrganizationAddOns(organization.id),
+    getOrganizationRoleForUser(organization.id, user.id),
+  ]);
 
-  const entitlements = await getOrganizationEntitlements(organization.id);
-  const activeAddOnIds: AddOnId[] = isEnterpriseDemo ? [] : await listActiveOrganizationAddOns(organization.id);
-  const currentPlan = isEnterpriseDemo ? ('enterprise' as const) : entitlements.plan;
-  const isPremium = currentPlan === 'enterprise';
-  const activeAddOnCount = activeAddOnIds.length;
-  const selectedPlanDiffers = selectedPlan && selectedPlan.id !== currentPlan;
+  const canonicalPlan = normalizePlan(entitlements.plan);
+  const currentPlanName = getPlanDisplayName(canonicalPlan);
+  const activeAddOns = new Set<AddOnId>(activeAddOnIds);
+  const canManageBilling = roleHasPermission(role, 'manage_billing');
+  const selectedPlanDiffers = selectedPlan && normalizePlan(selectedPlan.entitlementPlan) !== canonicalPlan;
+  const focusedAddOn = BILLING_ADD_ONS.find((addOn) => addOn.slug === query.addon);
+  const includedCount = BILLING_ADD_ONS.filter((addOn) => getUpgradeStatus(canonicalPlan, addOn, activeAddOns) === 'included').length;
+  const activeCount = BILLING_ADD_ONS.filter((addOn) => getUpgradeStatus(canonicalPlan, addOn, activeAddOns) === 'active').length;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 md:px-8 md:py-12">
-        {requestedEnterpriseDemo && !enterpriseDemoEnabled ? (
-          <section className="rounded-[1.5rem] border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-100">
-            Enterprise demo is disabled in this environment. Set NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO=true only for controlled sales/demo deployments.
-          </section>
-        ) : null}
-
+    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.16),_transparent_34rem),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.08),_transparent_28rem),linear-gradient(180deg,#050505_0%,#080b12_48%,#050505_100%)] text-white">
+      <div className="pointer-events-none fixed inset-0 tech-grid opacity-20" />
+      <div className="relative mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 md:py-10 lg:px-8">
         {query.plan && !selectedPlan ? (
-          <section className="rounded-[1.5rem] border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-100">
-            Plano solicitado inválido. A página está mostrando o estado real da organização.
+          <section className="rounded-[1.5rem] border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-50" role="status">
+            {copy.invalidPlan}
           </section>
         ) : null}
 
-        {selectedPlanDiffers ? (
-          <section className="rounded-[1.75rem] border border-primary/25 bg-primary/10 p-5 shadow-sm md:p-6">
-            <Badge variant="outline" className="rounded-full bg-background/80">Plano selecionado para revisão</Badge>
-            <div className="mt-3 grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+        {selectedPlanDiffers && selectedPlan ? (
+          <section className="rounded-[1.75rem] border border-blue-400/25 bg-blue-400/10 p-5 shadow-sm md:p-6" aria-labelledby="selected-plan-title">
+            <Badge variant="outline" className="rounded-full border-blue-300/25 bg-black/20 text-blue-100">{copy.selectedPlan}</Badge>
+            <div className="mt-4 grid gap-5 md:grid-cols-[1fr_auto] md:items-end">
               <div>
-                <h2 className="text-2xl font-semibold tracking-tight">{selectedPlan.name} ainda não está ativo nesta organização.</h2>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-                  Esta é uma intenção de compra/revisão enviada pelo pricing ou onboarding. Ela não desbloqueia permissões, add-ons ou demo. Para ativar, o checkout real e o webhook de cobrança precisam confirmar a assinatura.
-                </p>
+                <h2 id="selected-plan-title" className="text-2xl font-semibold tracking-tight">{selectedPlan.name}</h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-blue-50/75">{copy.selectedPlanBody}</p>
               </div>
-              <div className="rounded-2xl border bg-background/80 p-4 text-right">
-                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Preço do plano</p>
-                <p className="mt-1 text-3xl font-semibold">€{selectedPlan.priceMonthly}<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-left md:text-right">
+                <p className="text-xs uppercase tracking-[0.16em] text-white/50">{copy.selectedPlanPrice}</p>
+                <p className="mt-1 text-3xl font-semibold">€{selectedPlan.priceMonthly}<span className="text-sm font-normal text-white/50">{copy.perMonth}</span></p>
               </div>
             </div>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Link href={`/${locale}/pricing`} className="inline-flex h-10 items-center justify-center rounded-full border bg-background px-4 text-sm font-semibold transition hover:bg-muted">
-                Voltar ao pricing
-              </Link>
-              <Link href={`/${locale}/dashboard/organizations?plan=${selectedPlan.id}`} className="inline-flex h-10 items-center justify-center rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90">
-                Continuar revisão do plano
-              </Link>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link href={`/${locale}/pricing`} className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/15 px-5 text-sm font-semibold transition hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">{copy.backToPricing}</Link>
+              <Link href={canManageBilling ? `/${locale}/dashboard/organizations/billing?plan=${selectedPlan.id}` : `/${locale}/dashboard/organizations/team`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-blue-500 px-5 text-sm font-semibold text-white transition hover:bg-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">{copy.continuePlanReview}<ArrowUpRight className="h-4 w-4" aria-hidden="true" /></Link>
             </div>
           </section>
         ) : null}
 
-        <section className="rounded-[2rem] border bg-background/90 p-6 shadow-xl shadow-primary/5 md:p-9">
-          <Badge className="rounded-full px-3 py-1 uppercase tracking-[0.18em]">
-            {isEnterpriseDemo ? 'Enterprise demo' : 'Add-ons & créditos'}
-          </Badge>
-          <div className="mt-5 grid gap-6 md:grid-cols-[1.4fr_0.6fr] md:items-end">
+        <section className="enterprise-panel rounded-[2rem] p-6 md:p-9" aria-labelledby="upgrade-center-title">
+          <div className="grid gap-8 lg:grid-cols-[1.45fr_0.55fr] lg:items-end">
             <div>
-              <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.04em] md:text-5xl">
-                {isEnterpriseDemo ? 'Entrada Premium para visualizar todas as funcionalidades.' : 'Veja o que já está ativo antes de comprar adicionais.'}
-              </h1>
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
-                {isEnterpriseDemo
-                  ? 'Simulação comercial do pacote Enterprise/Premium completo, sem alterar Stripe, assinatura real ou permissões de produção.'
-                  : 'Recursos incluídos no Premium aparecem como incluídos, adicionais contratados aparecem como ativos e recursos disponíveis aparecem como não ativos.'}
-              </p>
+              <p className="enterprise-kicker">{copy.eyebrow}</p>
+              <h1 id="upgrade-center-title" className="mt-3 max-w-4xl text-4xl font-semibold tracking-[-0.045em] md:text-6xl">{copy.title}</h1>
+              <p className="enterprise-muted mt-4 max-w-3xl text-sm leading-7 md:text-base">{copy.subtitle}</p>
             </div>
-            <div className="rounded-[1.5rem] border bg-muted/30 p-5">
-              <p className="text-sm text-muted-foreground">Plano visualizado</p>
-              <div className="mt-2 flex items-center gap-2">
-                <Crown className="h-5 w-5 text-primary" />
-                <h2 className="text-3xl font-semibold">{isEnterpriseDemo ? 'Enterprise Demo' : getPlanDisplayName(currentPlan)}</h2>
+            <div className="rounded-[1.5rem] border border-white/10 bg-black/25 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">{copy.currentPlan}</p>
+              <div className="mt-2 flex items-center gap-2"><Crown className="h-5 w-5 text-blue-300" aria-hidden="true" /><p className="text-3xl font-semibold">{currentPlanName}</p></div>
+              <div className="mt-4 flex flex-wrap gap-2 text-xs text-white/60">
+                <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-emerald-100">{copy.planActive}</span>
+                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1">{copy.activeAddOns}: {activeCount + includedCount}</span>
               </div>
-              <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                {isPremium ? 'Add-ons principais e franquia Premium incluídos.' : `${activeAddOnCount} add-on(s) ativo(s) nesta organização.`}
-              </p>
             </div>
           </div>
         </section>
 
-        {isEnterpriseDemo ? (
-          <section className="rounded-[2rem] border bg-background/90 p-6 shadow-sm md:p-8">
-            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-              <div>
-                <Badge variant="outline" className="rounded-full">Vitrine Enterprise</Badge>
-                <h2 className="mt-3 text-2xl font-semibold tracking-tight">Mapa rápido dos módulos Premium</h2>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-                  Use estes atalhos para abrir cada módulo e verificar a experiência do plano mais caro.
-                </p>
-              </div>
-              <Link href={`/${locale}/pricing`} className="inline-flex h-10 items-center justify-center rounded-full border px-4 text-sm font-semibold transition hover:bg-muted">
-                Ver pricing
-              </Link>
-            </div>
-            <div className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-              {enterpriseDemoModules.map(([title, href]) => (
-                <Link key={title} href={`/${locale}${href}`} className="rounded-2xl border bg-muted/20 p-4 text-sm font-semibold transition hover:border-primary/40 hover:bg-muted/40">
-                  {title}
-                </Link>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <section className="grid gap-4 md:grid-cols-3">
-          <article className="rounded-[1.75rem] border bg-background/90 p-5 shadow-sm">
-            <p className="text-sm text-muted-foreground">Status Premium</p>
-            <p className="mt-2 text-3xl font-semibold">{isPremium ? 'Ativo' : 'Não ativo'}</p>
-            <p className="mt-2 text-sm text-muted-foreground">{isPremium ? 'Add-ons principais incluídos no plano.' : 'Premium desbloqueia todos os add-ons principais.'}</p>
+        <section className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+          <article className="rounded-[1.75rem] border border-emerald-400/20 bg-emerald-400/[0.07] p-5 md:p-6">
+            <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 text-emerald-300" aria-hidden="true" /><div><h2 className="text-lg font-semibold">{copy.billingAuthority}</h2><p className="mt-2 text-sm leading-6 text-white/65">{copy.billingAuthorityBody}</p></div></div>
           </article>
-          <article className="rounded-[1.75rem] border bg-background/90 p-5 shadow-sm">
-            <p className="text-sm text-muted-foreground">Add-ons ativos</p>
-            <p className="mt-2 text-3xl font-semibold">{isPremium ? 'Todos' : activeAddOnCount}</p>
-            <p className="mt-2 text-sm text-muted-foreground">{isPremium ? 'Franquia Premium ativa.' : 'Lidos da tabela organization_add_ons quando disponível.'}</p>
-          </article>
-          <article className="rounded-[1.75rem] border bg-background/90 p-5 shadow-sm">
-            <p className="text-sm text-muted-foreground">Proteção contra duplicidade</p>
-            <p className="mt-2 text-3xl font-semibold">Ativa</p>
-            <p className="mt-2 text-sm text-muted-foreground">Itens incluídos ou já ativos aparecem bloqueados para nova compra.</p>
+          <article className="rounded-[1.75rem] border border-amber-400/20 bg-amber-400/[0.07] p-5 md:p-6">
+            <div className="flex items-start gap-3"><LockKeyhole className="mt-0.5 h-5 w-5 text-amber-300" aria-hidden="true" /><div><h2 className="text-lg font-semibold">{copy.noDirectPurchase}</h2><p className="mt-2 text-sm leading-6 text-white/65">{copy.noDirectPurchaseBody}</p></div></div>
           </article>
         </section>
 
-        <section className="rounded-[2rem] border bg-background/90 p-6 shadow-sm md:p-8">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        {focusedAddOn ? (
+          <section className="rounded-[1.75rem] border border-blue-400/25 bg-blue-400/[0.08] p-5 md:p-6" aria-labelledby="focused-addon-title">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-200">{copy.focusLabel}</p>
+            <h2 id="focused-addon-title" className="mt-2 text-2xl font-semibold">{focusedAddOn.name}</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/65">{focusedAddOn.description}</p>
+          </section>
+        ) : null}
+
+        <section className="space-y-5" aria-labelledby="addon-catalog-title">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight">Add-ons mensais</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Premium inclui todos os add-ons principais.</p>
+              <h2 id="addon-catalog-title" className="text-2xl font-semibold tracking-tight md:text-3xl">{copy.catalogTitle}</h2>
+              <p className="enterprise-muted mt-2 max-w-3xl text-sm leading-6">{copy.catalogSubtitle}</p>
             </div>
-            <Badge variant="outline" className="w-fit rounded-full">Premium inclui tudo</Badge>
+            <Link href={`/${locale}/pricing`} className="inline-flex min-h-11 w-fit items-center justify-center gap-2 rounded-full border border-white/15 px-5 text-sm font-semibold transition hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">{copy.viewPlans}<ArrowUpRight className="h-4 w-4" aria-hidden="true" /></Link>
           </div>
-          <div className="mt-6 grid gap-4 lg:grid-cols-3">
-            {ADD_ON_CATALOG.map((addOn) => {
-              const status = getAddOnStatus(currentPlan, addOn, activeAddOnIds);
-              const statusLabel = status === 'included' ? 'Incluído no Premium' : status === 'active' ? 'Ativo' : status === 'blocked' ? 'Bloqueado neste plano' : 'Não ativo';
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {BILLING_ADD_ONS.map((addOn) => {
+              const status = getUpgradeStatus(canonicalPlan, addOn, activeAddOns);
+              const Icon = getStatusIcon(status);
+              const statusLabel = status === 'included' ? copy.included : status === 'active' ? copy.active : status === 'available' ? copy.available : copy.unavailable;
+              const dependencies = addOn.dependencies.map((slug) => BILLING_ADD_ONS.find((candidate) => candidate.slug === slug)?.name ?? slug);
+              const isFocused = focusedAddOn?.slug === addOn.slug;
+
               return (
-                <article key={addOn.id} className="flex min-h-[250px] flex-col rounded-[1.5rem] border bg-muted/20 p-5 transition hover:border-primary/35 hover:bg-muted/30">
+                <article key={addOn.slug} id={`addon-${addOn.slug}`} className={`flex min-h-[310px] flex-col rounded-[1.65rem] border p-5 transition ${isFocused ? 'border-blue-300/45 bg-blue-400/[0.08] shadow-[0_0_0_1px_rgba(147,197,253,0.08)]' : 'border-white/10 bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.04]'}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{addOn.category}</p>
-                      <h3 className="mt-2 text-xl font-semibold">{addOn.name}</h3>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">{copy.categories[addOn.category]}</p>
+                      <h3 className="mt-2 text-xl font-semibold tracking-tight">{addOn.name}</h3>
                     </div>
-                    <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold text-primary">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      {statusLabel}
-                    </span>
+                    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusTone(status)}`}><Icon className="h-3.5 w-3.5" aria-hidden="true" />{statusLabel}</span>
                   </div>
-                  <p className="mt-4 text-sm leading-6 text-muted-foreground">{addOn.description}</p>
-                  <div className="mt-auto pt-5">
-                    <p className="text-2xl font-semibold">€{addOn.priceMonthly}<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
-                    <p className="mt-1 text-xs text-muted-foreground">Premium: incluído.</p>
+
+                  <p className="mt-4 text-sm leading-6 text-white/60">{addOn.description}</p>
+
+                  <dl className="mt-5 space-y-2 text-xs text-white/50">
+                    <div className="flex justify-between gap-4"><dt>{copy.availableOn}</dt><dd className="text-right text-white/70">{planList(addOn)}</dd></div>
+                    {dependencies.length ? <div className="flex justify-between gap-4"><dt>{copy.dependencies}</dt><dd className="text-right text-white/70">{dependencies.join(' · ')}</dd></div> : null}
+                  </dl>
+
+                  <div className="mt-auto pt-6">
+                    {status === 'included' ? (
+                      <p className="text-sm font-semibold text-emerald-200">{copy.includedWithEnterprise}</p>
+                    ) : (
+                      <div className="flex items-end justify-between gap-4">
+                        <div><p className="text-2xl font-semibold">€{addOn.priceMonthly}<span className="text-sm font-normal text-white/45">{copy.perMonth}</span></p><p className="mt-1 text-xs text-white/40">€{addOn.priceAnnual}{copy.perYear}</p></div>
+                        {status === 'available' && canManageBilling ? <Link href={`/${locale}/dashboard/organizations/billing`} className="inline-flex min-h-10 items-center justify-center rounded-full border border-blue-300/25 bg-blue-400/10 px-4 text-xs font-semibold text-blue-100 transition hover:bg-blue-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">{copy.reviewBilling}</Link> : null}
+                        {status === 'blocked' ? <Link href={`/${locale}/pricing`} className="inline-flex min-h-10 items-center justify-center rounded-full border border-white/15 px-4 text-xs font-semibold transition hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">{copy.viewPlans}</Link> : null}
+                      </div>
+                    )}
+                    {status === 'available' && !canManageBilling ? <p className="mt-3 text-xs leading-5 text-amber-100/75">{copy.contactBillingAdmin}</p> : null}
+                    {status === 'blocked' ? <p className="mt-3 text-xs leading-5 text-white/45">{copy.requiresPlan(getPlanDisplayName(addOn.availableOn[0]))}</p> : null}
                   </div>
                 </article>
               );
             })}
-          </div>
-        </section>
-
-        <section className="rounded-[2rem] border bg-background/90 p-6 shadow-sm md:p-8">
-          <div className="flex items-start gap-3">
-            <div className="rounded-2xl bg-primary/10 p-3 text-primary"><Coins className="h-5 w-5" /></div>
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight">Créditos avulsos</h2>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">Créditos servem para consumo adicional, como relatórios, análises assistidas e exportações grandes.</p>
-            </div>
-          </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {CREDIT_PACKS.map((pack) => (
-              <article key={pack.id} className="rounded-[1.5rem] border bg-muted/20 p-5">
-                <h3 className="font-semibold">{pack.name}</h3>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">{pack.description}</p>
-                <p className="mt-5 text-2xl font-semibold">€{pack.price}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{pack.credits.toLocaleString('pt-PT')} créditos</p>
-              </article>
-            ))}
           </div>
         </section>
       </div>
