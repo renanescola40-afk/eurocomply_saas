@@ -26,6 +26,8 @@ import {
 import { locales } from '@/lib/i18n/routing';
 
 const profilePage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/perfil/page.tsx'), 'utf8');
+const authClient = readFileSync(join(process.cwd(), 'src/hooks/useAuth.tsx'), 'utf8');
+const authCallback = readFileSync(join(process.cwd(), 'src/app/auth/callback/route.ts'), 'utf8');
 const userEmailResolver = readFileSync(join(process.cwd(), 'src/server/users/email.ts'), 'utf8');
 const authQuery = readFileSync(join(process.cwd(), 'src/server/queries/auth.ts'), 'utf8');
 const organizationAction = readFileSync(join(process.cwd(), 'src/server/actions/organizations.ts'), 'utf8');
@@ -58,6 +60,15 @@ describe('recipient locale authority', () => {
 
     expect(next).toEqual({ ...existing, preferred_language: 'fr' });
     expect(existing).not.toHaveProperty('preferred_language');
+  });
+
+  it('seeds the selected UI locale for new email and OAuth accounts without overwriting an existing preference', () => {
+    expect(authClient).toContain('preferred_language: getRecipientLocaleFromWindow()');
+    expect(authClient).toContain('resolveRecipientLocale(getLocaleFromWindow())');
+    expect(authCallback).toContain('const hasStoredLocale');
+    expect(authCallback).toContain('if (!hasStoredLocale)');
+    expect(authCallback).toContain('withRecipientLocaleMetadata(userMetadata, locale)');
+    expect(authCallback).toContain('auth_locale_preference_update_failed');
   });
 
   it('persists the preference through Auth metadata instead of a nonexistent profiles column', () => {
