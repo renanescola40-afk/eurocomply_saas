@@ -1,0 +1,88 @@
+name: Stripe Billing Portal Bootstrap
+
+run-name: Stripe Billing Portal bootstrap for ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA whose reviewed Portal policy will be provisioned
+        required: true
+        type: string
+      confirmation:
+        description: Type PROVISION_STRIPE_BILLING_PORTAL_CONFIGURATION
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stripe-billing-portal-bootstrap-production
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    name: Provision reviewed live Billing Portal configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - name: Check out main history
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact current main SHA
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          git fetch --no-tags --prune origin main
+          CURRENT_MAIN="$(git rev-parse origin/main)"
+          test "$CURRENT_MAIN" = "${RELEASE_SHA,,}"
+          git checkout --detach "${RELEASE_SHA,,}"
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
+
+      - name: Validate operator confirmation
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$CONFIRMATION" = "PROVISION_STRIPE_BILLING_PORTAL_CONFIGURATION"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Provision or reuse managed Stripe Billing Portal configuration
+        id: portal
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_BILLING_PORTAL_BOOTSTRAP_CONFIRMATION: ${{ inputs.confirmation }}
+        run: node scripts/ops/provision-stripe-billing-portal-config.mjs
+
+      - name: Publish operator handoff
+        shell: bash
+        env:
+          CONFIGURATION_ID: ${{ steps.portal.outputs.configuration_id }}
+          DISPOSITION: ${{ steps.portal.outputs.disposition }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$CONFIGURATION_ID" =~ ^bpc_[A-Za-z0-9]+$ ]]
+          {
+            echo '## Stripe Billing Portal bootstrap'
+            echo
+            echo "- Source SHA: ${RELEASE_SHA,,}"
+            echo "- Provider result: $DISPOSITION"
+            echo "- Configuration to review and pin: $CONFIGURATION_ID"
+            echo
+            echo 'No application contract was changed by this workflow. Pin the reviewed ID in config/stripe-billing-portal-contract.json through a normal pull request, deploy that exact merged SHA, then run Stripe Provider Proof.'
+          } >> "$GITHUB_STEP_SUMMARY"
