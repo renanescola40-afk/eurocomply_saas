@@ -53,7 +53,7 @@ describe('final commercial UX closure contracts', () => {
     expect(documentPage).toContain('canManageDocuments ? (');
     expect(teamPage).toContain("roleHasPermission(organization.role, 'manage_team')");
     expect(teamPage).toContain('if (!canManageTeam)');
-    expect(teamPage.indexOf('if (!canManageTeam)')).toBeLessThan(teamPage.indexOf('const [members, invitations, billing]'));
+    expect(teamPage.indexOf('if (!canManageTeam)')).toBeLessThan(teamPage.indexOf('const [members, invitations, billing, entitlements]'));
     expect(teamSettings).toContain('canManageTeam: boolean');
     expect(teamSettings).toContain('onRemoveMember={canManageTeam ? handleRemoveMember : undefined}');
 
@@ -69,13 +69,27 @@ describe('final commercial UX closure contracts', () => {
 
   it('keeps invitation role labels aligned with roles the API actually persists', () => {
     expect(inviteMemberForm).toContain("const roles = ['admin', 'editor', 'viewer'] as const");
-    expect(inviteMemberForm).toContain('<SelectItem value="admin">{copy.admin}</SelectItem>');
+    expect(inviteMemberForm).toContain('canInviteAdmin: boolean');
+    expect(inviteMemberForm).toContain('{canInviteAdmin ? <SelectItem value="admin">{copy.admin}</SelectItem> : null}');
     expect(inviteMemberForm).toContain('<SelectItem value="editor">{copy.editor}</SelectItem>');
     expect(inviteMemberForm).toContain('<SelectItem value="viewer">{copy.viewer}</SelectItem>');
     expect(inviteMemberForm).not.toContain('value="member"');
     expect(teamSettings).toContain("if (role === 'admin') return 'Admin'");
     expect(teamSettings).toContain("if (role === 'editor') return 'Editor'");
     expect(teamSettings).toContain("return 'Visualizador'");
+  });
+
+  it('keeps roster recovery available when invitation entitlement or seat capacity is locked', () => {
+    expect(teamPage).toContain('getOrganizationEntitlements(organization.id)');
+    expect(teamPage).toContain("isWithinPlanLimit(billing.plan, 'users', billing.usage.users)");
+    expect(teamPage).toContain('const canInviteMembers = entitlements.employeeInvites && withinSeatCapacity');
+    expect(teamPage).toContain("const canInviteAdmin = isPlanAtLeast(entitlements.plan, 'enterprise')");
+    expect(teamPage).not.toContain('<PlanGate');
+    expect(teamSettings).toContain('canInviteMembers: boolean');
+    expect(teamSettings).toContain('canInviteAdmin: boolean');
+    expect(teamSettings).toContain("type InviteBlockReason = 'plan' | 'capacity' | null");
+    expect(teamSettings).toContain('<TeamManagementCard');
+    expect(teamSettings).toContain('canInviteMembers ? (');
   });
 
   it('keeps team and onboarding invitation locale explicit through email rendering', () => {
@@ -88,7 +102,7 @@ describe('final commercial UX closure contracts', () => {
       expect(copy.email.subject('QA Org')).toContain('QA Org');
     }
 
-    expect(teamPage).toContain('<TeamSettingsSection locale={locale}');
+    expect(teamPage).toContain('<TeamSettingsSection');
     expect(teamSettings).toContain('locale: string');
     expect(teamSettings).toContain("payload: { email: string; role: string; locale: string }");
     expect(inviteRoute).toContain("locale: z.enum(['en', 'pt', 'es', 'fr', 'it', 'de']).default('en')");
