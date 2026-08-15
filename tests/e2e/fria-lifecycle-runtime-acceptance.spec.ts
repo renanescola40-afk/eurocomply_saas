@@ -1,3 +1,5 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 const ownerStorageState = process.env.E2E_OWNER_STORAGE_STATE;
@@ -9,11 +11,46 @@ const approverEmail = process.env.E2E_FRIA_APPROVER_EMAIL?.trim().toLowerCase();
 const approverPassword = process.env.E2E_FRIA_APPROVER_PASSWORD;
 const allowSyntheticWrites = process.env.E2E_ALLOW_SYNTHETIC_APP_WRITES === 'true';
 const baseURL = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:3000';
+const evidencePath = process.env.E2E_FRIA_RUNTIME_EVIDENCE_PATH?.trim();
 const ownerSessionConfigured = Boolean(ownerStorageState || (ownerEmail && ownerPassword));
 const approverSessionConfigured = Boolean(approverStorageState || (approverEmail && approverPassword));
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function writeRuntimeEvidence() {
+  if (!evidencePath) return;
+  const evidence = {
+    schema: 'risck-comply.product-fria-runtime-acceptance.v1',
+    outcome: 'passed',
+    generatedAt: new Date().toISOString(),
+    targetSha: process.env.EXPECTED_HEAD_SHA ?? process.env.GITHUB_SHA ?? null,
+    environment: process.env.GITHUB_ACTIONS === 'true' ? 'github-actions-disposable-qa' : 'disposable-qa',
+    checks: {
+      ownerAuthenticated: true,
+      aiSystemCreated: true,
+      assessmentCreated: true,
+      humanReviewerAssigned: true,
+      distinctApproverAssigned: true,
+      legalReviewCompleted: true,
+      fria01EvidenceSubmitted: true,
+      fria15EvidenceSubmitted: true,
+      approverAuthenticatedSeparately: true,
+      approvalPersisted: true,
+      approvedStateImmutable: true,
+    },
+    evidenceIntegrity: {
+      syntheticWritesExplicitlyEnabled: allowSyntheticWrites,
+      credentialsStored: false,
+      emailsStored: false,
+      userIdentifiersStored: false,
+      organizationIdentifiersStored: false,
+      rawProviderResponsesStored: false,
+    },
+  };
+  mkdirSync(dirname(evidencePath), { recursive: true });
+  writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
 }
 
 async function expectHealthyAuthenticatedPage(page: Page, label: string) {
@@ -149,6 +186,7 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
       expect(approveResponse.status()).toBe(200);
       await expect(approverPage.getByText('approved', { exact: true }).first()).toBeVisible();
       await expect(approverPage.getByRole('button', { name: 'Approve assessment' })).toHaveCount(0);
+      writeRuntimeEvidence();
     } finally {
       await approverContext.close();
     }
