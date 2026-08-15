@@ -326,23 +326,23 @@ jobs:
         shell: bash
         run: |
           {
-            echo '## Supabase forward reconciliation production promotion'
+            echo "## Supabase forward reconciliation production promotion"
             echo
-            echo "- Exact release SHA: \`$TARGET_SHA\`"
-            echo "- Rehearsal run: \`$REHEARSAL_RUN_ID\`"
-            echo "- Filtered dry-run: \`$DRY_RUN_ID\`"
-            echo '- Migration-history repair: `false`'
-            echo '- Unrestricted db push / include-all: `false`'
+            echo "- Exact release SHA: $TARGET_SHA"
+            echo "- Rehearsal run: $REHEARSAL_RUN_ID"
+            echo "- Filtered dry-run: $DRY_RUN_ID"
+            echo "- Migration-history repair: false"
+            echo "- Unrestricted db push / include-all: false"
             if [ -f "$PROMOTION_EVIDENCE" ]; then
-              echo "- Ledger transition: \`$(jq -r '.status' "$PROMOTION_EVIDENCE")\`"
-              echo "- Applied migration count: \`$(jq -r '.selectedMigrationCount' "$PROMOTION_EVIDENCE")\`"
+              echo "- Ledger transition: $(jq -r '.status' "$PROMOTION_EVIDENCE")"
+              echo "- Applied migration count: $(jq -r '.selectedMigrationCount' "$PROMOTION_EVIDENCE")"
             else
-              echo '- Ledger transition: `NOT_PRODUCED`'
+              echo "- Ledger transition: NOT_PRODUCED"
             fi
             if [ -f "$EVIDENCE_DIR/live-postconditions.json" ]; then
-              echo '- Live postconditions: `PASS`'
+              echo "- Live postconditions: PASS"
             else
-              echo '- Live postconditions: `NOT_PRODUCED`'
+              echo "- Live postconditions: NOT_PRODUCED"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload redacted exact-SHA production-promotion evidence
