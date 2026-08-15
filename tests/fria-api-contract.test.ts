@@ -79,7 +79,7 @@ describe('FRIA operational API contract', () => {
   it('exposes the localized workspace from the control tower and inventory', () => {
     expect(page).toContain("fetch('/api/ai-governance/fria'");
     expect(page).toContain("fetch('/api/ai-systems'");
-    expect(page).toContain('expectedUpdatedAt: current.updated_at');
+    expect(page).toContain('expectedUpdatedAt: assessment.updated_at');
     expect(page).toContain('getFriaWorkflowCopy(locale)');
     expect(copy).toContain("title: 'FRIA workspace'");
     expect(copy).toContain("title: 'Workspace FRIA'");
