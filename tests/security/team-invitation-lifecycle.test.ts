@@ -17,8 +17,9 @@ describe('team invitation lifecycle', () => {
     expect(cancelRoute).not.toContain(".from('organization_invites')");
   });
 
-  it('delivers the raw token only through the invitation email', () => {
-    expect(createRoute).toContain('/en/invite/${encodeURIComponent(result.token)}');
+  it('delivers the raw token only through the locale-preserving invitation email', () => {
+    expect(createRoute).toContain('`/${locale}/invite/${encodeURIComponent(result.token)}`');
+    expect(createRoute).toContain('localizedInvitationEmail({ organizationName: result.organizationName, role: result.invite.role, inviteUrl, locale })');
     expect(createRoute).toContain('const delivery = await sendEmail({');
     expect(createRoute).toContain('if (!delivery.sent)');
     expect(createRoute).not.toContain('token: result.token');
