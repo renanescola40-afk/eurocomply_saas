@@ -14,30 +14,30 @@ describe('Phase 8 executive reporting package', () => {
     expect(validation).toContain('Executive readiness reporting package preparation');
   });
 
-  it('uses the executive summary, readiness summary, and follow-up surfaces', () => {
+  it('uses the executive summary, readiness summary, and follow-up surfaces in Reports & Governance', () => {
     const hero = read('src/components/dashboard/executive-dashboard-hero.tsx');
     const readiness = read('src/components/dashboard/workflow-readiness-summary.tsx');
     const followUp = read('src/components/dashboard/readiness-follow-up-plan.tsx');
-    const overview = read('src/components/dashboard/dashboard-home-overview.tsx');
+    const workspace = read('src/components/dashboard/reports-governance-workspace.tsx');
 
     expect(hero).toContain('ExecutiveDashboardHero');
     expect(readiness).toContain('Read-only reporting snapshot');
     expect(followUp).toContain('Follow-up planning');
-    expect(overview).toContain('ExecutiveDashboardHero');
-    expect(overview).toContain('WorkflowReadinessSummary');
-    expect(overview).toContain('ReadinessFollowUpPlan');
+    expect(workspace).toContain('ExecutiveDashboardHero');
+    expect(workspace).toContain('WorkflowReadinessSummary');
+    expect(workspace).toContain('ReadinessFollowUpPlan');
   });
 
-  it('renders the executive reporting package surface', () => {
+  it('renders the executive reporting package surface in the dedicated governance workspace', () => {
     const reportingPackage = read('src/components/dashboard/executive-reporting-package.tsx');
-    const overview = read('src/components/dashboard/dashboard-home-overview.tsx');
+    const workspace = read('src/components/dashboard/reports-governance-workspace.tsx');
 
     expect(reportingPackage).toContain('ExecutiveReportingPackage');
     expect(reportingPackage).toContain('Executive reporting package');
     expect(reportingPackage).toContain('Open reports');
     expect(reportingPackage).toContain('workflowReadiness?.reasons.length');
-    expect(overview).toContain('ExecutiveReportingPackage');
-    expect(overview).toContain('executive-reporting-package');
+    expect(workspace).toContain('ExecutiveReportingPackage');
+    expect(workspace).toContain('executive-reporting-package');
   });
 
   it('keeps the package safe before additional runtime changes', () => {
