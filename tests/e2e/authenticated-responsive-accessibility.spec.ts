@@ -22,6 +22,8 @@ test.describe('authenticated responsive and accessibility acceptance', () => {
     ['/en/dashboard/organizations/tasks', 'tasks'],
     ['/en/dashboard/organizations/documents', 'documents'],
     ['/en/dashboard/organizations/team', 'team'],
+    ['/en/dashboard/organizations/add-ons', 'Upgrade Center'],
+    ['/en/dashboard/organizations/reports-governance/news', 'Regulatory Intelligence'],
     ['/en/ai-systems', 'AI systems'],
   ] as const;
 
@@ -75,5 +77,25 @@ test.describe('authenticated responsive and accessibility acceptance', () => {
     await page.goto('/en/dashboard/organizations/team', { waitUntil: 'domcontentloaded' });
     await expect(page.getByLabel('Email')).toBeVisible();
     await expect(page.getByRole('button', { name: /send invitation/i })).toBeVisible();
+  });
+
+  test('Upgrade Center exposes a single purpose and keyboard-focusable commercial actions', async ({ page }) => {
+    await page.goto('/en/dashboard/organizations/add-ons', { waitUntil: 'domcontentloaded' });
+    await expectNoRuntimeError(page, 'Upgrade Center accessibility');
+    await expect(page.getByRole('heading', { name: /know exactly what your organization can use/i })).toBeVisible();
+    await expect(page.getByText(/provider-backed add-on checkout is not enabled yet/i)).toBeVisible();
+    await expect(page.getByRole('link', { name: /view plans/i }).first()).toBeVisible();
+    await expectNoHorizontalOverflow(page, 'Upgrade Center accessibility');
+  });
+
+  test('Regulatory Intelligence exposes verified provenance or an honest empty state', async ({ page }) => {
+    await page.goto('/en/dashboard/organizations/reports-governance/news', { waitUntil: 'domcontentloaded' });
+    await expectNoRuntimeError(page, 'Regulatory Intelligence accessibility');
+    await expect(page.getByRole('heading', { name: 'EU AI Act & Regulatory Intelligence' })).toBeVisible();
+
+    const originalSource = page.getByRole('link', { name: /open original source/i }).first();
+    const honestEmptyState = page.getByText(/no source-verified regulatory updates are published right now/i);
+    await expect(originalSource.or(honestEmptyState)).toBeVisible();
+    await expectNoHorizontalOverflow(page, 'Regulatory Intelligence accessibility');
   });
 });

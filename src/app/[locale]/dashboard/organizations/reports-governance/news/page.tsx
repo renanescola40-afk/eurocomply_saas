@@ -1,62 +1,68 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Building2, CalendarDays, CheckCircle2, FileText, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
+import { Building2, CalendarDays, CheckCircle2, ExternalLink, FileText, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
 
 import { UpgradeRequiredCard } from '@/components/billing/upgrade-required-card';
+import { canAccessFeature } from '@/lib/billing/feature-gates';
 import { locales, type Locale } from '@/lib/i18n/routing';
+import { listActiveOrganizationAddOns } from '@/server/billing/addons';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
-import { listPublishedIntelligenceItems, type IntelligenceImpact } from '@/server/queries/intelligence';
 import { getCurrentUser } from '@/server/queries/auth';
+import { listPublishedIntelligenceItems, type IntelligenceImpact } from '@/server/queries/intelligence';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { isPlanAtLeast } from '@/server/queries/subscription';
+import { normalizePlan } from '@/server/queries/subscription';
 
 type JournalCopy = {
   back: string;
   title: string;
   subtitle: string;
-  premiumAddon: string;
+  monitoringAddon: string;
   calendar: string;
   editorial: string;
   articles: string;
   highImpact: string;
   calendarMetric: string;
   desks: string;
-  premiumLockedTitle: string;
-  premiumLockedBody: (count: number) => string;
+  lockedTitle: string;
+  lockedBody: (count: number) => string;
   addons: string;
   search: string;
   allRegions: string;
   allDesks: string;
   filter: string;
   impact: string;
-  premiumPreview: string;
+  preview: string;
   fullArticle: string;
   readFull: string;
   smartCalendar: string;
   addCalendar: string;
   affectedCompanies: string;
   recommendedActions: string;
-  empty: string;
+  source: string;
+  verifiedSource: string;
+  noVerifiedItems: string;
+  noMatches: string;
+  provenanceNote: string;
 };
 
 const journalCopy: Record<Locale, JournalCopy> = {
   en: {
-    back: 'Reports & Governance', title: 'The Compliance Intelligence Journal.', subtitle: 'Global technology, AI, business, regulation and geopolitics intelligence for teams that need to turn news into decisions, evidence and calendar actions.', premiumAddon: 'View Premium News add-on', calendar: 'Open smart calendar', editorial: 'Editorial panel', articles: 'Articles', highImpact: 'High impact', calendarMetric: 'Calendar', desks: 'Desks', premiumLockedTitle: 'Premium News is not active yet', premiumLockedBody: (count) => `Your current access includes essential intelligence. ${count} premium articles remain in preview until Premium News or an eligible plan is activated.`, addons: 'View add-ons', search: 'Search topic, law, country or market', allRegions: 'All regions', allDesks: 'All desks', filter: 'Filter journal', impact: 'Impact', premiumPreview: 'Premium article preview. Activate Premium News to access the complete analysis and detailed actions.', fullArticle: 'Full article', readFull: 'Read full journal entry', smartCalendar: 'Smart calendar', addCalendar: 'Add to calendar', affectedCompanies: 'Affected companies', recommendedActions: 'Recommended actions', empty: 'No articles match these filters.',
+    back: 'Reports & Governance', title: 'EU AI Act & Regulatory Intelligence', subtitle: 'Source-verifiable regulatory intelligence that turns dated official updates into governance decisions, evidence work and calendar actions.', monitoringAddon: 'Regulatory Monitoring Pro', calendar: 'Open smart calendar', editorial: 'Editorial panel', articles: 'Verified updates', highImpact: 'High impact', calendarMetric: 'Calendar-ready', desks: 'Desks', lockedTitle: 'Regulatory Monitoring Pro is not active', lockedBody: (count) => `${count} premium update${count === 1 ? '' : 's'} remain in preview until the eligible plan or add-on entitlement is active.`, addons: 'Review access options', search: 'Search topic, law, country or market', allRegions: 'All regions', allDesks: 'All desks', filter: 'Filter intelligence', impact: 'Impact', preview: 'Premium preview. Activate eligible Regulatory Monitoring access for complete analysis and recommended actions.', fullArticle: 'RISCK COMPLY analysis', readFull: 'Open intelligence entry', smartCalendar: 'Suggested next step', addCalendar: 'Add to calendar', affectedCompanies: 'Potentially affected organizations', recommendedActions: 'Recommended actions', source: 'Source', verifiedSource: 'Open original source', noVerifiedItems: 'No source-verified regulatory updates are published right now. RISCK COMPLY does not substitute synthetic or undated content for a live intelligence feed.', noMatches: 'No verified updates match these filters.', provenanceNote: 'Only published items with a real publication date and an HTTPS reference are shown here.',
   },
   pt: {
-    back: 'Relatórios e Governação', title: 'The Compliance Intelligence Journal.', subtitle: 'Jornal global de tecnologia, IA, negócios, regulação e geopolítica para empresas que precisam transformar notícia em decisão, evidência e calendário.', premiumAddon: 'Ver add-on Notícias Premium', calendar: 'Abrir calendário inteligente', editorial: 'Painel editorial', articles: 'Matérias', highImpact: 'Impacto alto', calendarMetric: 'Calendário', desks: 'Editorias', premiumLockedTitle: 'Notícias Premium ainda não estão ativas', premiumLockedBody: (count) => `O acesso atual mostra matérias essenciais. ${count} matérias premium ficam em preview até ativar Notícias Premium ou um plano elegível.`, addons: 'Ver add-ons', search: 'Buscar tema, lei, país ou mercado', allRegions: 'Todas as regiões', allDesks: 'Todas as editorias', filter: 'Filtrar jornal', impact: 'Impacto', premiumPreview: 'Matéria premium em preview. Ative Notícias Premium para ver análise completa e ações detalhadas.', fullArticle: 'Matéria completa', readFull: 'Ler jornal completo', smartCalendar: 'Calendário inteligente', addCalendar: 'Adicionar ao calendário', affectedCompanies: 'Empresas afetadas', recommendedActions: 'Ações recomendadas', empty: 'Nenhuma matéria encontrada com estes filtros.',
+    back: 'Relatórios e Governação', title: 'EU AI Act & Regulatory Intelligence', subtitle: 'Inteligência regulatória com fonte verificável que transforma atualizações oficiais datadas em decisões, evidências e ações de calendário.', monitoringAddon: 'Regulatory Monitoring Pro', calendar: 'Abrir calendário inteligente', editorial: 'Painel editorial', articles: 'Atualizações verificadas', highImpact: 'Impacto alto', calendarMetric: 'Prontas para calendário', desks: 'Editorias', lockedTitle: 'Regulatory Monitoring Pro não está ativo', lockedBody: (count) => `${count} atualização${count === 1 ? '' : 'ões'} premium permanece${count === 1 ? '' : 'm'} em preview até o plano elegível ou add-on ficar ativo.`, addons: 'Rever opções de acesso', search: 'Buscar tema, lei, país ou mercado', allRegions: 'Todas as regiões', allDesks: 'Todas as editorias', filter: 'Filtrar inteligência', impact: 'Impacto', preview: 'Preview premium. Ative um acesso elegível ao Regulatory Monitoring para ver análise completa e ações recomendadas.', fullArticle: 'Análise RISCK COMPLY', readFull: 'Abrir atualização', smartCalendar: 'Próximo passo sugerido', addCalendar: 'Adicionar ao calendário', affectedCompanies: 'Organizações potencialmente afetadas', recommendedActions: 'Ações recomendadas', source: 'Fonte', verifiedSource: 'Abrir fonte original', noVerifiedItems: 'Nenhuma atualização regulatória com fonte verificável está publicada agora. A RISCK COMPLY não substitui um feed real por notícias sintéticas ou sem data.', noMatches: 'Nenhuma atualização verificada corresponde a estes filtros.', provenanceNote: 'Só aparecem aqui itens publicados com data real e referência HTTPS verificável.',
   },
   es: {
-    back: 'Informes y gobernanza', title: 'The Compliance Intelligence Journal.', subtitle: 'Inteligencia global sobre tecnología, IA, negocios, regulación y geopolítica para equipos que necesitan convertir noticias en decisiones, evidencias y acciones de calendario.', premiumAddon: 'Ver add-on Noticias Premium', calendar: 'Abrir calendario inteligente', editorial: 'Panel editorial', articles: 'Artículos', highImpact: 'Impacto alto', calendarMetric: 'Calendario', desks: 'Secciones', premiumLockedTitle: 'Noticias Premium aún no está activo', premiumLockedBody: (count) => `El acceso actual incluye inteligencia esencial. ${count} artículos premium permanecen en vista previa hasta activar Noticias Premium o un plan elegible.`, addons: 'Ver add-ons', search: 'Buscar tema, ley, país o mercado', allRegions: 'Todas las regiones', allDesks: 'Todas las secciones', filter: 'Filtrar journal', impact: 'Impacto', premiumPreview: 'Artículo premium en vista previa. Activa Noticias Premium para acceder al análisis completo y las acciones detalladas.', fullArticle: 'Artículo completo', readFull: 'Leer artículo completo', smartCalendar: 'Calendario inteligente', addCalendar: 'Añadir al calendario', affectedCompanies: 'Empresas afectadas', recommendedActions: 'Acciones recomendadas', empty: 'No hay artículos que coincidan con estos filtros.',
+    back: 'Informes y gobernanza', title: 'EU AI Act & Regulatory Intelligence', subtitle: 'Inteligencia regulatoria con fuente verificable que convierte actualizaciones oficiales fechadas en decisiones, evidencias y acciones de calendario.', monitoringAddon: 'Regulatory Monitoring Pro', calendar: 'Abrir calendario inteligente', editorial: 'Panel editorial', articles: 'Actualizaciones verificadas', highImpact: 'Impacto alto', calendarMetric: 'Listas para calendario', desks: 'Secciones', lockedTitle: 'Regulatory Monitoring Pro no está activo', lockedBody: (count) => `${count} actualización${count === 1 ? '' : 'es'} premium permanece${count === 1 ? '' : 'n'} en vista previa hasta activar un plan o add-on elegible.`, addons: 'Revisar opciones de acceso', search: 'Buscar tema, ley, país o mercado', allRegions: 'Todas las regiones', allDesks: 'Todas las secciones', filter: 'Filtrar inteligencia', impact: 'Impacto', preview: 'Vista previa premium. Active un acceso elegible a Regulatory Monitoring para ver el análisis completo y las acciones recomendadas.', fullArticle: 'Análisis RISCK COMPLY', readFull: 'Abrir actualización', smartCalendar: 'Siguiente paso sugerido', addCalendar: 'Añadir al calendario', affectedCompanies: 'Organizaciones potencialmente afectadas', recommendedActions: 'Acciones recomendadas', source: 'Fuente', verifiedSource: 'Abrir fuente original', noVerifiedItems: 'No hay actualizaciones regulatorias con fuente verificada publicadas ahora. RISCK COMPLY no sustituye un feed real por noticias sintéticas o sin fecha.', noMatches: 'Ninguna actualización verificada coincide con estos filtros.', provenanceNote: 'Solo se muestran elementos publicados con fecha real y referencia HTTPS verificable.',
   },
   fr: {
-    back: 'Rapports et gouvernance', title: 'The Compliance Intelligence Journal.', subtitle: 'Veille mondiale sur la technologie, l’IA, les affaires, la réglementation et la géopolitique pour transformer l’actualité en décisions, preuves et actions calendrier.', premiumAddon: 'Voir l’add-on Actualités Premium', calendar: 'Ouvrir le calendrier intelligent', editorial: 'Panneau éditorial', articles: 'Articles', highImpact: 'Impact élevé', calendarMetric: 'Calendrier', desks: 'Rubriques', premiumLockedTitle: 'Actualités Premium n’est pas encore actif', premiumLockedBody: (count) => `L’accès actuel inclut la veille essentielle. ${count} articles premium restent en aperçu jusqu’à l’activation d’Actualités Premium ou d’un plan éligible.`, addons: 'Voir les add-ons', search: 'Rechercher un thème, une loi, un pays ou un marché', allRegions: 'Toutes les régions', allDesks: 'Toutes les rubriques', filter: 'Filtrer le journal', impact: 'Impact', premiumPreview: 'Article premium en aperçu. Activez Actualités Premium pour accéder à l’analyse complète et aux actions détaillées.', fullArticle: 'Article complet', readFull: 'Lire l’article complet', smartCalendar: 'Calendrier intelligent', addCalendar: 'Ajouter au calendrier', affectedCompanies: 'Entreprises concernées', recommendedActions: 'Actions recommandées', empty: 'Aucun article ne correspond à ces filtres.',
+    back: 'Rapports et gouvernance', title: 'EU AI Act & Regulatory Intelligence', subtitle: 'Veille réglementaire avec source vérifiable transformant les mises à jour officielles datées en décisions, preuves et actions calendrier.', monitoringAddon: 'Regulatory Monitoring Pro', calendar: 'Ouvrir le calendrier intelligent', editorial: 'Panneau éditorial', articles: 'Mises à jour vérifiées', highImpact: 'Impact élevé', calendarMetric: 'Prêtes pour calendrier', desks: 'Rubriques', lockedTitle: 'Regulatory Monitoring Pro n’est pas actif', lockedBody: (count) => `${count} mise${count === 1 ? '' : 's'} à jour premium reste${count === 1 ? '' : 'nt'} en aperçu jusqu’à l’activation d’un plan ou add-on éligible.`, addons: 'Voir les options d’accès', search: 'Rechercher un thème, une loi, un pays ou un marché', allRegions: 'Toutes les régions', allDesks: 'Toutes les rubriques', filter: 'Filtrer la veille', impact: 'Impact', preview: 'Aperçu premium. Activez un accès Regulatory Monitoring éligible pour l’analyse complète et les actions recommandées.', fullArticle: 'Analyse RISCK COMPLY', readFull: 'Ouvrir la mise à jour', smartCalendar: 'Prochaine étape suggérée', addCalendar: 'Ajouter au calendrier', affectedCompanies: 'Organisations potentiellement concernées', recommendedActions: 'Actions recommandées', source: 'Source', verifiedSource: 'Ouvrir la source originale', noVerifiedItems: 'Aucune mise à jour réglementaire à source vérifiée n’est publiée actuellement. RISCK COMPLY ne remplace pas un flux réel par des actualités synthétiques ou non datées.', noMatches: 'Aucune mise à jour vérifiée ne correspond à ces filtres.', provenanceNote: 'Seuls les éléments publiés avec une date réelle et une référence HTTPS vérifiable sont affichés.',
   },
   it: {
-    back: 'Report e governance', title: 'The Compliance Intelligence Journal.', subtitle: 'Intelligence globale su tecnologia, IA, business, regolamentazione e geopolitica per trasformare le notizie in decisioni, evidenze e azioni di calendario.', premiumAddon: 'Vedi add-on Notizie Premium', calendar: 'Apri calendario intelligente', editorial: 'Pannello editoriale', articles: 'Articoli', highImpact: 'Impatto alto', calendarMetric: 'Calendario', desks: 'Sezioni', premiumLockedTitle: 'Notizie Premium non è ancora attivo', premiumLockedBody: (count) => `L’accesso attuale include l’intelligence essenziale. ${count} articoli premium restano in anteprima fino all’attivazione di Notizie Premium o di un piano idoneo.`, addons: 'Vedi add-on', search: 'Cerca tema, legge, paese o mercato', allRegions: 'Tutte le regioni', allDesks: 'Tutte le sezioni', filter: 'Filtra journal', impact: 'Impatto', premiumPreview: 'Articolo premium in anteprima. Attiva Notizie Premium per accedere all’analisi completa e alle azioni dettagliate.', fullArticle: 'Articolo completo', readFull: 'Leggi articolo completo', smartCalendar: 'Calendario intelligente', addCalendar: 'Aggiungi al calendario', affectedCompanies: 'Aziende interessate', recommendedActions: 'Azioni consigliate', empty: 'Nessun articolo corrisponde a questi filtri.',
+    back: 'Report e governance', title: 'EU AI Act & Regulatory Intelligence', subtitle: 'Intelligence normativa con fonte verificabile che trasforma aggiornamenti ufficiali datati in decisioni, evidenze e azioni di calendario.', monitoringAddon: 'Regulatory Monitoring Pro', calendar: 'Apri calendario intelligente', editorial: 'Pannello editoriale', articles: 'Aggiornamenti verificati', highImpact: 'Impatto alto', calendarMetric: 'Pronti per calendario', desks: 'Sezioni', lockedTitle: 'Regulatory Monitoring Pro non è attivo', lockedBody: (count) => `${count} aggiornament${count === 1 ? 'o' : 'i'} premium ${count === 1 ? 'rimane' : 'rimangono'} in anteprima fino all’attivazione di un piano o add-on idoneo.`, addons: 'Rivedi opzioni di accesso', search: 'Cerca tema, legge, paese o mercato', allRegions: 'Tutte le regioni', allDesks: 'Tutte le sezioni', filter: 'Filtra intelligence', impact: 'Impatto', preview: 'Anteprima premium. Attiva un accesso Regulatory Monitoring idoneo per analisi completa e azioni consigliate.', fullArticle: 'Analisi RISCK COMPLY', readFull: 'Apri aggiornamento', smartCalendar: 'Prossimo passo suggerito', addCalendar: 'Aggiungi al calendario', affectedCompanies: 'Organizzazioni potenzialmente interessate', recommendedActions: 'Azioni consigliate', source: 'Fonte', verifiedSource: 'Apri fonte originale', noVerifiedItems: 'Nessun aggiornamento normativo con fonte verificata è pubblicato ora. RISCK COMPLY non sostituisce un feed reale con notizie sintetiche o senza data.', noMatches: 'Nessun aggiornamento verificato corrisponde ai filtri.', provenanceNote: 'Sono mostrati solo elementi pubblicati con data reale e riferimento HTTPS verificabile.',
   },
   de: {
-    back: 'Berichte & Governance', title: 'The Compliance Intelligence Journal.', subtitle: 'Globale Intelligence zu Technologie, KI, Wirtschaft, Regulierung und Geopolitik, um Nachrichten in Entscheidungen, Evidenz und Kalenderaktionen zu übersetzen.', premiumAddon: 'Premium News Add-on ansehen', calendar: 'Intelligenten Kalender öffnen', editorial: 'Redaktionsbereich', articles: 'Artikel', highImpact: 'Hoher Einfluss', calendarMetric: 'Kalender', desks: 'Ressorts', premiumLockedTitle: 'Premium News ist noch nicht aktiv', premiumLockedBody: (count) => `Der aktuelle Zugriff umfasst wesentliche Intelligence. ${count} Premium-Artikel bleiben in der Vorschau, bis Premium News oder ein berechtigter Plan aktiviert wird.`, addons: 'Add-ons ansehen', search: 'Thema, Gesetz, Land oder Markt suchen', allRegions: 'Alle Regionen', allDesks: 'Alle Ressorts', filter: 'Journal filtern', impact: 'Einfluss', premiumPreview: 'Premium-Artikel in der Vorschau. Aktivieren Sie Premium News für die vollständige Analyse und detaillierte Maßnahmen.', fullArticle: 'Vollständiger Artikel', readFull: 'Vollständigen Artikel lesen', smartCalendar: 'Intelligenter Kalender', addCalendar: 'Zum Kalender hinzufügen', affectedCompanies: 'Betroffene Unternehmen', recommendedActions: 'Empfohlene Maßnahmen', empty: 'Keine Artikel entsprechen diesen Filtern.',
+    back: 'Berichte & Governance', title: 'EU AI Act & Regulatory Intelligence', subtitle: 'Quellenverifizierbare Regulatory Intelligence, die datierte offizielle Updates in Entscheidungen, Evidenzarbeit und Kalenderaktionen übersetzt.', monitoringAddon: 'Regulatory Monitoring Pro', calendar: 'Intelligenten Kalender öffnen', editorial: 'Redaktionsbereich', articles: 'Verifizierte Updates', highImpact: 'Hoher Einfluss', calendarMetric: 'Kalenderbereit', desks: 'Ressorts', lockedTitle: 'Regulatory Monitoring Pro ist nicht aktiv', lockedBody: (count) => `${count} Premium-Update${count === 1 ? '' : 's'} bleiben in der Vorschau, bis ein berechtigter Plan oder Add-on aktiv ist.`, addons: 'Zugriffsoptionen prüfen', search: 'Thema, Gesetz, Land oder Markt suchen', allRegions: 'Alle Regionen', allDesks: 'Alle Ressorts', filter: 'Intelligence filtern', impact: 'Einfluss', preview: 'Premium-Vorschau. Aktivieren Sie einen berechtigten Regulatory-Monitoring-Zugriff für vollständige Analyse und empfohlene Maßnahmen.', fullArticle: 'RISCK COMPLY Analyse', readFull: 'Update öffnen', smartCalendar: 'Empfohlener nächster Schritt', addCalendar: 'Zum Kalender hinzufügen', affectedCompanies: 'Potenziell betroffene Organisationen', recommendedActions: 'Empfohlene Maßnahmen', source: 'Quelle', verifiedSource: 'Originalquelle öffnen', noVerifiedItems: 'Derzeit sind keine regulatorischen Updates mit verifizierter Quelle veröffentlicht. RISCK COMPLY ersetzt einen echten Feed nicht durch synthetische oder undatierte Nachrichten.', noMatches: 'Keine verifizierten Updates entsprechen diesen Filtern.', provenanceNote: 'Hier erscheinen nur veröffentlichte Elemente mit echtem Datum und verifizierbarer HTTPS-Referenz.',
   },
 };
 
@@ -72,7 +78,7 @@ function getImpactTone(impact: IntelligenceImpact) {
 }
 
 function formatDate(date: string, locale: string) {
-  return new Intl.DateTimeFormat(locale === 'pt' ? 'pt-PT' : locale, { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${date.slice(0, 10)}T12:00:00Z`));
+  return new Intl.DateTimeFormat(locale === 'pt' ? 'pt-PT' : locale, { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(date));
 }
 
 function buildCalendarSuggestionHref(locale: string, item: { title: string; jurisdiction: string; executiveSummary: string }) {
@@ -89,9 +95,17 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
   if (!user) redirect(`/${locale}/login`);
 
   const organization = await getCurrentOrganizationForUser(user.id);
-  const entitlements = organization ? await getOrganizationEntitlements(organization.id) : null;
-  const canUsePremiumNews = entitlements ? isPlanAtLeast(entitlements.plan, 'professional') : false;
-  const intelligenceItems = await listPublishedIntelligenceItems();
+  if (!organization?.id) redirect(`/${locale}/onboarding`);
+
+  const [entitlements, activeAddOns, intelligenceItems] = await Promise.all([
+    getOrganizationEntitlements(organization.id),
+    listActiveOrganizationAddOns(organization.id),
+    listPublishedIntelligenceItems(),
+  ]);
+  const canUsePremiumNews = canAccessFeature('regulatory_monitoring', {
+    plan: normalizePlan(entitlements.plan),
+    activeAddOns,
+  });
   const wantsPremium = query.premium === '1';
   const term = (query.q ?? '').toLowerCase().trim();
   const jurisdiction = query.jurisdiction ?? 'all';
@@ -99,7 +113,7 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
 
   const visibleNews = intelligenceItems.filter((item) => !item.premium || canUsePremiumNews || wantsPremium);
   const filtered = visibleNews.filter((item) => {
-    const haystack = `${item.title} ${item.category} ${item.jurisdiction} ${item.executiveSummary} ${item.risckComplyAnalysis}`.toLowerCase();
+    const haystack = `${item.title} ${item.category} ${item.jurisdiction} ${item.executiveSummary} ${item.source}`.toLowerCase();
     return (!term || haystack.includes(term)) && (jurisdiction === 'all' || item.jurisdiction === jurisdiction) && (category === 'all' || item.category === category);
   });
   const jurisdictions = Array.from(new Set(intelligenceItems.map((item) => item.jurisdiction)));
@@ -115,29 +129,32 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-primary">RISCK COMPLY Intelligence</p>
           <h1 id="intelligence-journal-title" className="mt-3 max-w-4xl text-4xl font-semibold tracking-[-0.045em] md:text-6xl">{copy.title}</h1>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">{copy.subtitle}</p>
+          <p className="mt-3 flex max-w-3xl items-center gap-2 text-xs leading-5 text-muted-foreground"><ShieldCheck className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />{copy.provenanceNote}</p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href={`/${locale}/dashboard/organizations/add-ons`} className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Sparkles className="h-4 w-4" aria-hidden="true" /> {copy.premiumAddon}</Link>
-            <Link href={`/${locale}/calendario-compliance`} className="inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-bold transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><CalendarDays className="h-4 w-4" aria-hidden="true" /> {copy.calendar}</Link>
-            <Link href={`/${locale}/dashboard/organizations/reports-governance/news/editorial`} className="inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-bold transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><ShieldCheck className="h-4 w-4" aria-hidden="true" /> {copy.editorial}</Link>
+            <Link href={`/${locale}/dashboard/organizations/add-ons?addon=regulatory-monitoring-pro`} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Sparkles className="h-4 w-4" aria-hidden="true" /> {copy.monitoringAddon}</Link>
+            <Link href={`/${locale}/calendario-compliance`} className="inline-flex min-h-11 items-center gap-2 rounded-full border px-5 py-3 text-sm font-bold transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><CalendarDays className="h-4 w-4" aria-hidden="true" /> {copy.calendar}</Link>
+            <Link href={`/${locale}/dashboard/organizations/reports-governance/news/editorial`} className="inline-flex min-h-11 items-center gap-2 rounded-full border px-5 py-3 text-sm font-bold transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><ShieldCheck className="h-4 w-4" aria-hidden="true" /> {copy.editorial}</Link>
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-4" aria-label="Journal summary">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Intelligence summary">
           {[{ label: copy.articles, value: intelligenceItems.length.toString(), icon: FileText }, { label: copy.highImpact, value: intelligenceItems.filter((item) => item.impact === 'Alto' || item.impact === 'Crítico').length.toString(), icon: ShieldCheck }, { label: copy.calendarMetric, value: intelligenceItems.length.toString(), icon: CalendarDays }, { label: copy.desks, value: new Set(intelligenceItems.map((item) => item.persona.desk)).size.toString(), icon: Building2 }].map((metric) => {
             const Icon = metric.icon;
             return <article key={metric.label} className="rounded-[1.5rem] border bg-background/90 p-5 shadow-sm"><div className="flex items-center justify-between"><p className="text-sm text-muted-foreground">{metric.label}</p><Icon className="h-4 w-4 text-primary" aria-hidden="true" /></div><p className="mt-2 text-3xl font-semibold">{metric.value}</p></article>;
           })}
         </section>
 
-        {wantsPremium && !canUsePremiumNews ? <UpgradeRequiredCard locale={locale} title={copy.premiumLockedTitle} description={copy.premiumLockedBody(lockedCount)} ctaLabel={copy.addons} /> : null}
+        {wantsPremium && !canUsePremiumNews ? <UpgradeRequiredCard locale={locale} requiredPlan="Professional" addOnSlug="regulatory-monitoring-pro" title={copy.lockedTitle} description={copy.lockedBody(lockedCount)} ctaLabel={copy.addons} /> : null}
 
-        <form className="grid gap-3 rounded-[1.5rem] border bg-background/90 p-5 shadow-sm md:grid-cols-4" action={`/${locale}/dashboard/organizations/reports-governance/news`} role="search">
-          <input name="q" defaultValue={query.q ?? ''} placeholder={copy.search} aria-label={copy.search} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-ring" />
-          <select name="jurisdiction" defaultValue={jurisdiction} aria-label={copy.allRegions} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-ring"><option value="all">{copy.allRegions}</option>{jurisdictions.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-          <select name="category" defaultValue={category} aria-label={copy.allDesks} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-ring"><option value="all">{copy.allDesks}</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-          <button className="rounded-2xl bg-foreground px-4 py-3 text-sm font-bold text-background transition hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" type="submit">{copy.filter}</button>
-          {wantsPremium ? <input type="hidden" name="premium" value="1" /> : null}
-        </form>
+        {intelligenceItems.length > 0 ? (
+          <form className="grid gap-3 rounded-[1.5rem] border bg-background/90 p-5 shadow-sm md:grid-cols-4" action={`/${locale}/dashboard/organizations/reports-governance/news`} role="search">
+            <input name="q" defaultValue={query.q ?? ''} placeholder={copy.search} aria-label={copy.search} className="min-h-11 rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-ring" />
+            <select name="jurisdiction" defaultValue={jurisdiction} aria-label={copy.allRegions} className="min-h-11 rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-ring"><option value="all">{copy.allRegions}</option>{jurisdictions.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+            <select name="category" defaultValue={category} aria-label={copy.allDesks} className="min-h-11 rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-ring"><option value="all">{copy.allDesks}</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+            <button className="min-h-11 rounded-2xl bg-foreground px-4 py-3 text-sm font-bold text-background transition hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" type="submit">{copy.filter}</button>
+            {wantsPremium ? <input type="hidden" name="premium" value="1" /> : null}
+          </form>
+        ) : null}
 
         <section className="grid gap-5">
           {filtered.map((item) => {
@@ -148,15 +165,20 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
                 <div className="flex flex-wrap gap-2"><span className="rounded-full border bg-muted/50 px-3 py-1 text-xs font-semibold">{item.persona.desk}</span><span className="rounded-full border bg-muted/50 px-3 py-1 text-xs font-semibold">{item.category}</span><span className="rounded-full border bg-muted/50 px-3 py-1 text-xs font-semibold">{item.jurisdiction}</span><span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getImpactTone(item.impact)}`}>{copy.impact}: {item.impact}</span>{item.premium ? <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Premium</span> : null}</div>
                 <h2 className="mt-4 text-2xl font-semibold tracking-tight md:text-3xl"><Link href={detailHref} className="rounded-sm transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{item.title}</Link></h2>
                 <p className="mt-3 text-base leading-7 text-muted-foreground md:text-lg">{item.newspaperDeck}</p>
-                <div className="mt-5 grid gap-3 text-sm text-muted-foreground md:grid-cols-4"><p className="flex items-center gap-2"><UserRound className="h-4 w-4" aria-hidden="true" /> {item.persona.name}</p><p className="flex items-center gap-2"><FileText className="h-4 w-4" aria-hidden="true" /> {item.source}</p><p className="flex items-center gap-2"><CalendarDays className="h-4 w-4" aria-hidden="true" /> {formatDate(item.publishedAt, locale)}</p><p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" aria-hidden="true" /> {item.reliability}</p></div>
-                {locked ? <div className="mt-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-100" role="status">{copy.premiumPreview}</div> : <div className="mt-6 grid gap-4 lg:grid-cols-2"><section className="rounded-[1.5rem] border bg-muted/20 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">{copy.fullArticle}</h3><p className="mt-3 text-sm leading-7">{item.articleParagraphs[0]}</p><Link href={detailHref} className="mt-4 inline-flex rounded-full bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{copy.readFull}</Link></section><section className="rounded-[1.5rem] border bg-muted/20 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">{copy.smartCalendar}</h3><p className="mt-3 text-sm leading-6">{item.calendarSuggestion}</p><Link href={buildCalendarSuggestionHref(locale, item)} className="mt-4 inline-flex rounded-full border px-4 py-2 text-xs font-bold transition hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{copy.addCalendar}</Link></section></div>}
+                <div className="mt-5 grid gap-3 text-sm text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
+                  <p className="flex items-center gap-2"><UserRound className="h-4 w-4" aria-hidden="true" /> {item.persona.name}</p>
+                  <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><ExternalLink className="h-4 w-4" aria-hidden="true" /><span className="truncate">{item.source}</span><span className="sr-only"> — {copy.verifiedSource}</span></a>
+                  <p className="flex items-center gap-2"><CalendarDays className="h-4 w-4" aria-hidden="true" /> {formatDate(item.publishedAt, locale)}</p>
+                  <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" aria-hidden="true" /> {item.reliability}</p>
+                </div>
+                {locked ? <div className="mt-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-100" role="status">{copy.preview}</div> : <div className="mt-6 grid gap-4 lg:grid-cols-2"><section className="rounded-[1.5rem] border bg-muted/20 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">{copy.fullArticle}</h3><p className="mt-3 text-sm leading-7">{item.articleParagraphs[0]}</p><Link href={detailHref} className="mt-4 inline-flex min-h-10 items-center rounded-full bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{copy.readFull}</Link></section><section className="rounded-[1.5rem] border bg-muted/20 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">{copy.smartCalendar}</h3><p className="mt-3 text-sm leading-6">{item.calendarSuggestion}</p><Link href={buildCalendarSuggestionHref(locale, item)} className="mt-4 inline-flex min-h-10 items-center rounded-full border px-4 py-2 text-xs font-bold transition hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{copy.addCalendar}</Link></section></div>}
                 {!locked ? <div className="mt-5 grid gap-4 lg:grid-cols-2"><section><h3 className="text-sm font-semibold">{copy.affectedCompanies}</h3><div className="mt-3 flex flex-wrap gap-2">{item.affectedCompanies.map((company) => <span key={company} className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{company}</span>)}</div></section><section><h3 className="text-sm font-semibold">{copy.recommendedActions}</h3><ul className="mt-3 space-y-2 text-sm text-muted-foreground">{item.recommendedActions.map((action) => <li key={action} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" /> {action}</li>)}</ul></section></div> : null}
               </article>
             );
           })}
         </section>
 
-        {filtered.length === 0 ? <p className="rounded-[1.5rem] border border-dashed bg-background/80 p-8 text-center text-sm font-semibold text-muted-foreground" role="status">{copy.empty}</p> : null}
+        {intelligenceItems.length === 0 ? <p className="rounded-[1.5rem] border border-dashed bg-background/80 p-8 text-center text-sm font-semibold leading-6 text-muted-foreground" role="status">{copy.noVerifiedItems}</p> : filtered.length === 0 ? <p className="rounded-[1.5rem] border border-dashed bg-background/80 p-8 text-center text-sm font-semibold text-muted-foreground" role="status">{copy.noMatches}</p> : null}
       </div>
     </main>
   );
