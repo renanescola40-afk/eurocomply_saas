@@ -97,7 +97,11 @@ jobs:
           set -euo pipefail
           test -n "${RECOVERY_EPHEMERAL_WORKDIR:-}"
           supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" start
-          supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" status -o env > "$RUNNER_TEMP/fria-supabase-status.env"
+          supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" status -o env \
+            --override-name api.url=NEXT_PUBLIC_SUPABASE_URL \
+            --override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_ANON_KEY \
+            --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
+            > "$RUNNER_TEMP/fria-supabase-status.env"
 
       - name: Export masked loopback Supabase runtime configuration
         shell: bash
@@ -115,6 +119,8 @@ jobs:
                   continue
               key, raw_value = raw_line.split('=', 1)
               key = key.strip()
+              if key.startswith('export '):
+                  key = key.removeprefix('export ').strip()
               raw_value = raw_value.strip()
               try:
                   parsed = shlex.split(raw_value)
@@ -123,14 +129,16 @@ jobs:
                   value = raw_value.strip('"\'')
               values[key] = value
 
-          api_url = values.get('API_URL', '')
-          anon_key = values.get('ANON_KEY', '')
-          service_role = values.get('SERVICE_ROLE_KEY', '')
+          api_url = values.get('NEXT_PUBLIC_SUPABASE_URL', '')
+          anon_key = values.get('NEXT_PUBLIC_SUPABASE_ANON_KEY', '')
+          service_role = values.get('SUPABASE_SERVICE_ROLE_KEY', '')
           host = urlparse(api_url).hostname
           if host not in {'127.0.0.1', 'localhost', '::1'}:
-              raise SystemExit('Local Supabase API_URL is not loopback')
+              safe_keys = ','.join(sorted(values))
+              raise SystemExit(f'Local Supabase API URL is not loopback; available keys: {safe_keys}')
           if not anon_key or not service_role:
-              raise SystemExit('Local Supabase status did not expose required runtime keys')
+              safe_keys = ','.join(sorted(values))
+              raise SystemExit(f'Local Supabase status did not expose required runtime keys; available keys: {safe_keys}')
 
           for value in (anon_key, service_role):
               print(f'::add-mask::{value}')
