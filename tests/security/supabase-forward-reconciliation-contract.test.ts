@@ -12,7 +12,7 @@ const postconditions = readFileSync('scripts/supabase/verify-forward-reconciliat
 const integrationsRuntime = readFileSync('scripts/security/validate-enterprise-integrations-runtime.sql', 'utf8');
 const billingRuntime = readFileSync('scripts/security/validate-enterprise-billing-runtime.sql', 'utf8');
 const liveRlsInventoryRepair = readFileSync(
-  'supabase/migrations/20260730204500_repair_live_rls_validation_inventory.sql',
+  'supabase/migrations/20260815083000_reconcile_live_rls_validation_inventory_privileges.sql',
   'utf8',
 );
 const historicalCore = readFileSync(
@@ -33,7 +33,6 @@ const selected = config.migrations.map((migration) => migration.filename);
 describe('bounded Supabase forward reconciliation contract', () => {
   it('selects exactly the fifteen bounded forward-only reconciliation identities in version order', () => {
     expect(selected).toEqual([
-      '20260730204500_repair_live_rls_validation_inventory.sql',
       '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
       '20260813194500_reconcile_step_up_challenges_runtime.sql',
       '20260813200000_reconcile_subscription_schema_defaults.sql',
@@ -48,7 +47,9 @@ describe('bounded Supabase forward reconciliation contract', () => {
       '20260814092100_finalize_enterprise_contract_mode_compatibility.sql',
       '20260814093000_reconcile_enterprise_contract_control_rpcs.sql',
       '20260814101500_reconcile_enterprise_core_active_runtime.sql',
+      '20260815083000_reconcile_live_rls_validation_inventory_privileges.sql',
     ]);
+    expect(selected).not.toContain('20260730204500_repair_live_rls_validation_inventory.sql');
     expect(selected).not.toContain('20260809135000_enterprise_core_runtime_schema_reconciliation.sql');
     for (const filename of selected) {
       expect(existsSync(`supabase/migrations/${filename}`)).toBe(true);
@@ -63,12 +64,16 @@ describe('bounded Supabase forward reconciliation contract', () => {
   });
 
   it('reconciles the live RLS inventory helper to a service-role-only boundary', () => {
+    expect(liveRlsInventoryRepair).toContain('Forward-only reconciliation for the live RLS inventory helper');
     expect(liveRlsInventoryRepair).toContain('security invoker');
     expect(liveRlsInventoryRepair).toContain('set search_path = public, pg_catalog');
     expect(liveRlsInventoryRepair).toContain('revoke all on function public.eurocomply_live_rls_inventory(text[]) from public');
     expect(liveRlsInventoryRepair).toContain('revoke execute on function public.eurocomply_live_rls_inventory(text[]) from anon');
     expect(liveRlsInventoryRepair).toContain('revoke execute on function public.eurocomply_live_rls_inventory(text[]) from authenticated');
     expect(liveRlsInventoryRepair).toContain('grant execute on function public.eurocomply_live_rls_inventory(text[]) to service_role');
+    expect(liveRlsInventoryRepair).toContain("has_function_privilege('anon', function_oid, 'EXECUTE')");
+    expect(liveRlsInventoryRepair).toContain("has_function_privilege('authenticated', function_oid, 'EXECUTE')");
+    expect(liveRlsInventoryRepair).toContain("has_function_privilege('service_role', function_oid, 'EXECUTE')");
     expect(liveRlsWorkflow).toContain('Verify live inventory helper privilege boundary');
     expect(liveRlsWorkflow).toContain("has_function_privilege('anon', function_oid, 'EXECUTE')");
     expect(liveRlsWorkflow).toContain("has_function_privilege('authenticated', function_oid, 'EXECUTE')");
