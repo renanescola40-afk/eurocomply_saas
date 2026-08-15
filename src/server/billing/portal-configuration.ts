@@ -1,5 +1,12 @@
-const STRIPE_BILLING_PORTAL_CONFIGURATION_ID = 'STRIPE_BILLING_PORTAL_CONFIGURATION_ID';
+import portalContract from '../../../config/stripe-billing-portal-contract.json';
+
+const BILLING_PORTAL_CONTRACT_SCHEMA = 'risck-comply.stripe-billing-portal-contract.v1';
 const BILLING_PORTAL_CONFIGURATION_ID_PATTERN = /^bpc_[A-Za-z0-9]+$/;
+
+type StripeBillingPortalContract = {
+  schema?: unknown;
+  configurationId?: unknown;
+};
 
 export type StripeBillingPortalConfigurationBinding =
   | {
@@ -13,17 +20,22 @@ export type StripeBillingPortalConfigurationBinding =
     };
 
 export function resolveStripeBillingPortalConfigurationBinding(
-  rawValue = process.env[STRIPE_BILLING_PORTAL_CONFIGURATION_ID],
+  contract: StripeBillingPortalContract = portalContract,
 ): StripeBillingPortalConfigurationBinding {
-  const configurationId = String(rawValue ?? '').trim();
-
-  if (!configurationId) {
-    return { ok: true, configurationId: null, source: 'default' };
-  }
-
-  if (!BILLING_PORTAL_CONFIGURATION_ID_PATTERN.test(configurationId)) {
+  if (contract?.schema !== BILLING_PORTAL_CONTRACT_SCHEMA) {
     return { ok: false, error: 'billing_portal_configuration_invalid' };
   }
 
-  return { ok: true, configurationId, source: 'explicit' };
+  if (contract.configurationId === null || contract.configurationId === undefined) {
+    return { ok: true, configurationId: null, source: 'default' };
+  }
+
+  if (
+    typeof contract.configurationId !== 'string'
+    || !BILLING_PORTAL_CONFIGURATION_ID_PATTERN.test(contract.configurationId)
+  ) {
+    return { ok: false, error: 'billing_portal_configuration_invalid' };
+  }
+
+  return { ok: true, configurationId: contract.configurationId, source: 'explicit' };
 }
