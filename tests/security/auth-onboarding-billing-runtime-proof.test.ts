@@ -124,10 +124,13 @@ describe('auth onboarding billing runtime proof', () => {
       "lower(coalesce(s.tier, s.plan, ''))",
       'jsonb_typeof(s.entitlements)',
       '    e.organization_id\n  from public.stripe_events_processed e',
-      'e.livemode',
-      'e.type',
-      'e.payload',
     ]) expect(sql).not.toContain(unsafeReference);
+
+    for (const unsafePhysicalColumn of [
+      /\be\.livemode\b/,
+      /\be\.type\b/,
+      /\be\.payload\b/,
+    ]) expect(sql).not.toMatch(unsafePhysicalColumn);
   });
 
   it('ships an additive idempotent reconciliation migration with bounded backfill', () => {
