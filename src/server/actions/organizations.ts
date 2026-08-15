@@ -131,8 +131,12 @@ export async function createOrganization(input: CreateOrganizationInput) {
     }
 
     if (user.email) {
-      const dashboardUrl = `${getAppUrl()}/dashboard/organizations`;
-      const email = onboardingEmail({ organizationName: organization.name, dashboardUrl });
+      const dashboardUrl = `${getAppUrl()}/${user.locale}/dashboard/organizations`;
+      const email = onboardingEmail({
+        organizationName: organization.name,
+        dashboardUrl,
+        locale: user.locale,
+      });
 
       try {
         await sendEmail({
@@ -146,6 +150,7 @@ export async function createOrganization(input: CreateOrganizationInput) {
           metadata: {
             source: 'organization_created_action',
             organizationSlug: payload.slug,
+            locale: user.locale,
           },
         });
       } catch (emailError) {
