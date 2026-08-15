@@ -18,7 +18,7 @@ Production has a stricter commercial-authority boundary than staging: a producti
 - for `production`, that event is `livemode=true` and its payload customer/subscription binding matches the persisted organization subscription;
 - the canonical chained audit ledger is enabled.
 
-The separate **Stripe Provider Proof** must also be green before commercial launch. It validates the live account, canonical live monthly prices, exact production webhook contract, and the active live Billing Portal configuration used by runtime sessions. `config/stripe-billing-portal-contract.json` is the single configuration authority compiled into the same release SHA: `configurationId: null` intentionally uses the active live account default, while a reviewed non-null `bpc_...` value pins that exact configuration. The protected provider proof reads the same checked-out contract, so GitHub/Vercel environment drift cannot select a different portal configuration. Retained evidence records only whether the binding mode was `explicit` or `default`; it does not retain the configuration ID. See `docs/decisions/ADR-0092-versioned-stripe-billing-portal-authority.md`. A runtime organization proof does not substitute for provider configuration readiness.
+The separate **Stripe Provider Proof** must also be green before commercial launch. It validates the live account, canonical live monthly prices, exact production webhook contract, and the active live Billing Portal configuration used by runtime sessions. `config/stripe-billing-portal-contract.json` is the single configuration authority compiled into the same release SHA: `configurationId: null` intentionally uses the active live account default, while a reviewed non-null `bpc_...` value pins that exact configuration. `config/stripe-billing-portal-policy.json` separately defines the reviewed provider features and keeps direct provider subscription update/cancel disabled. The protected provider proof reads both checked-out files, so GitHub/Vercel environment drift cannot select a different portal configuration and undocumented provider feature drift cannot silently pass. Retained evidence records only whether the binding mode was `explicit` or `default`; it does not retain the configuration ID. See `docs/decisions/ADR-0092-versioned-stripe-billing-portal-authority.md` and `docs/runbooks/stripe-billing-portal-bootstrap.md`. A runtime organization proof does not substitute for provider configuration readiness.
 
 ## Workflow inputs
 
@@ -103,8 +103,9 @@ Common failures:
 - `stripeEventAuthoritativeType`: use the processed subscription-created/updated event that grants commercial authority, not checkout/test evidence;
 - `stripeEventBindingMatches`: investigate organization/customer/subscription correlation before granting access;
 - `stripeEventLiveMode`: production cannot complete from test-mode Stripe evidence;
-- provider proof `billingPortalConfigurationPresent`: configure an active live Customer Portal configuration in Stripe;
+- provider proof `billingPortalConfigurationPresent`: provision an active live Customer Portal configuration. Prefer the protected `Stripe Billing Portal Bootstrap` when no usable configuration exists;
 - provider proof `billingPortalConfigurationBindingValid`: compare `config/stripe-billing-portal-contract.json` with Stripe live state. `configurationId: null` requires a usable active live account default; a non-null reviewed `bpc_...` must name that exact active live configuration;
+- provider proof `billingPortalConfigurationPolicyMatches`: compare the selected Stripe object with `config/stripe-billing-portal-policy.json`. Do not enable direct Stripe Portal subscription update/cancel to make the proof pass; reconcile provider state through the reviewed bootstrap/change-control path;
 - audit failures: inspect `audit_events` and the chained append RPC.
 
 Do not edit the evidence artifact to turn a failed control green. Correct the runtime/provider state and execute a new workflow run for the exact current SHA.
@@ -113,7 +114,7 @@ Do not edit the evidence artifact to turn a failed control green. Correct the ru
 
 The proof workflow is read-only. Rollback consists of disabling or removing the workflow and associated scripts. Revoking the environment secret immediately prevents future executions.
 
-The Billing Portal authority rollback is documented in ADR-0092. Setting the versioned contract back to `configurationId: null` through a reviewed PR restores account-default selection after that exact SHA is deployed.
+The Billing Portal authority rollback is documented in ADR-0092. Setting the versioned contract back to `configurationId: null` through a reviewed PR restores account-default selection after that exact SHA is deployed. A bootstrap-created provider object must not be deactivated while any deployed release pins it.
 
 The reconciliation migration is additive. Do not drop the onboarding columns while application code or runtime proofs depend on them. To reverse only its data backfill, restore the affected organization rows from the pre-migration backup while retaining the schema columns and constraints.
 

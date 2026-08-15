@@ -2,9 +2,12 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+import { loadStripeBillingPortalPolicy, STRIPE_BILLING_PORTAL_POLICY_PATH } from './stripe-billing-portal-policy.mjs';
+
 const output = 'docs/security/evidence/runtime/stripe-provider-configuration-validation.json';
 const portalContractPath = 'config/stripe-billing-portal-contract.json';
 const portalContract = JSON.parse(readFileSync(portalContractPath, 'utf8'));
+loadStripeBillingPortalPolicy();
 const releaseSha = String(process.env.ENTERPRISE_EXPECTED_SHA ?? '').trim().toLowerCase();
 const repository = String(process.env.GITHUB_REPOSITORY ?? '');
 const runId = String(process.env.GITHUB_RUN_ID ?? '');
@@ -44,13 +47,14 @@ const evidence = {
   buildSha: releaseSha,
   environment: 'production-provider-live-mode',
   billingPortalConfigurationBindingMode: portalConfigurationBindingMode,
-  summary: 'Protected Stripe API validation confirmed live-mode provider access, canonical Essential, Professional and Business monthly EUR prices, the exact enabled production webhook endpoint, and an active live Billing Portal configuration matching the repository contract compiled into the runtime release SHA.',
+  summary: 'Protected Stripe API validation confirmed live-mode provider access, canonical Essential, Professional and Business monthly EUR prices, the exact enabled production webhook endpoint, and an active live Billing Portal configuration matching both the versioned runtime binding and the reviewed feature policy.',
   controlsVerified: [
     'Stripe production provider proof uses live mode only',
     'Canonical Essential, Professional and Business prices match repository amount, currency, interval and active Product requirements',
     'The exact canonical production webhook endpoint is enabled in live mode',
     'Webhook coverage includes checkout, subscription lifecycle, payment failure and invoice-paid recovery events',
-    'An active live Billing Portal configuration matches the versioned repository contract used by runtime sessions',
+    'An active live Billing Portal configuration matches the versioned repository binding used by runtime sessions',
+    'The Billing Portal feature policy allows payment-method maintenance and invoice history while keeping subscription update/cancel application-controlled',
     'Evidence is bound to the exact main-branch release SHA and protected GitHub Actions run',
   ],
   checks: {
@@ -64,13 +68,16 @@ const evidence = {
     requiredWebhookEventsPresent: true,
     billingPortalConfigurationPresent: true,
     billingPortalConfigurationBindingValid: true,
+    billingPortalConfigurationPolicyMatches: true,
   },
   failures: [],
   evidenceLocations: [
     'config/billing-commercial-catalog.json',
     'config/stripe-webhook-contract.json',
     portalContractPath,
+    STRIPE_BILLING_PORTAL_POLICY_PATH,
     'src/server/billing/portal-configuration.ts',
+    'scripts/security/stripe-billing-portal-policy.mjs',
     'scripts/security/probe-stripe-provider-config.mjs',
     'scripts/security/write-stripe-provider-evidence.mjs',
     '.github/workflows/stripe-provider-proof.yml',
