@@ -77,20 +77,28 @@ Durable requests persist a SHA-256 request fingerprint and a bounded result snap
 
 `.github/workflows/billing-lifecycle-runtime-proof.yml` is a protected, read-only observation workflow. It never calls Stripe mutation APIs and does not execute a charge.
 
+Before database evidence is accepted, the workflow independently proves that the selected target hostname is serving the exact requested/current `main` SHA through the protected `/api/ready/release` contract and the repository's canonical `scripts/release/verify-runtime-release-sha.mjs` verifier. Production is pinned to `https://www.risckcomply.com`; staging must use a protected environment `RUNTIME_BASE_URL` under the `risckcomply.com` domain. A checked-out repository SHA alone is never treated as deployment proof.
+
 For one pre-authorized organization and Stripe subscription it requires persisted evidence for:
 
-1. authoritative processed Stripe subscription event correlated to the exact organization, customer and subscription;
-2. live-mode event authority when the target environment is `production`;
-3. completed `upgrade`, `downgrade`, `cancel` and `reactivate` lifecycle requests;
-4. valid request fingerprints and durable result snapshots bound to the exact subscription;
-5. cancellation followed by a later successful reactivation;
-6. downgrade audit evidence showing `scheduledForPeriodEnd` and a scheduled effective time;
-7. exact lifecycle-request-to-audit correlation for all four actions;
-8. SHA-256 chained audit integrity and predecessor resolution.
+1. exact deployed runtime SHA matching the selected/current `main` release;
+2. authoritative processed Stripe subscription event correlated to the exact organization, customer and subscription;
+3. live-mode event authority when the target environment is `production`;
+4. completed `upgrade`, `downgrade`, `cancel` and `reactivate` lifecycle requests;
+5. valid request fingerprints and durable result snapshots bound to the exact subscription;
+6. the latest selected cancellation followed by the latest selected successful reactivation, so an older historical pair cannot mask a newer cancellation;
+7. downgrade audit evidence showing `scheduledForPeriodEnd` and a scheduled effective time;
+8. exact lifecycle-request-to-audit correlation for all four actions;
+9. SHA-256 audit metadata on the matched lifecycle events;
+10. canonical hash-chain recomputation using `scripts/security/verify-audit-chain.mjs` over the ordered tenant chain before evidence can become `Complete`.
 
-Inputs are exact release SHA, target environment, authorized organization UUID, Stripe subscription ID and a processed Stripe event ID. Retained artifacts contain only booleans, bounded identifier suffixes, provenance and a source digest; raw database rows are deleted before upload.
+The canonical verifier consumes an ephemeral raw audit-chain export containing the fields required to recompute each hash and immediate predecessor relationship. The raw chain and verifier output are deleted before retained artifacts are uploaded. If `AUDIT_CHAIN_SIGNING_SECRET` is present in the protected environment, the canonical verifier also checks the event HMAC signatures; no signing material is written to artifacts.
 
-A `Complete` proof means those already-executed lifecycle actions were observed for that one subscription at that exact release SHA. It does not itself perform the smoke test, settle payment, prove every tenant, or guarantee future provider availability.
+Workflow-dispatch values are first assigned to environment variables before shell comparison. In particular, the confirmation phrase is never interpolated directly into Bash source.
+
+Inputs are exact release SHA, target environment, authorized organization UUID, Stripe subscription ID and a processed Stripe event ID. Retained artifacts contain only booleans, bounded identifier suffixes, provenance and a source digest; raw database rows, raw audit events and verifier output are deleted before upload.
+
+A `Complete` proof means those already-executed lifecycle actions were observed for that one subscription on a target runtime independently proven to serve the exact release SHA, with canonical audit-chain verification. It does not itself perform the smoke test, settle payment, prove every tenant, or guarantee future provider availability.
 
 ## External validation required
 
@@ -102,4 +110,5 @@ Repository CI cannot manufacture provider truth. Production closure still requir
 - signed webhook delivery and durable live Stripe event processing;
 - required production migrations;
 - a controlled lifecycle exercise before running the observation proof;
-- the resulting `Billing Lifecycle Runtime Proof` artifact bound to the exact current `main` SHA.
+- a protected `HEALTHCHECK_TOKEN` that permits exact deployed-SHA verification;
+- the resulting `Billing Lifecycle Runtime Proof` artifact bound to the exact current `main` SHA and independently observed deployed SHA.
