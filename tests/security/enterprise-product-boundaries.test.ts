@@ -22,7 +22,7 @@ describe('enterprise product information architecture', () => {
     const profilePage = read('src/app/[locale]/profile/page.tsx');
     const organizationSettings = read('src/app/[locale]/settings/organization/page.tsx');
 
-    expect(navigation).toContain("href: '/profile'");
+    expect(navigation).toContain("localizeHref(activeLocale, '/profile')");
     expect(navigation).toContain("href: '/settings/organization'");
     expect(navigation).toContain('href: `${dashboardRoot}/team`');
     expect(navigation).toContain('href: `${dashboardRoot}/add-ons`');
