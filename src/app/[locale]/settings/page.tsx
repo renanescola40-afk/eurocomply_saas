@@ -4,5 +4,5 @@ export const dynamic = 'force-dynamic';
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  redirect(`/${locale}/profile`);
+  redirect(`/${locale}/settings/organization`);
 }
