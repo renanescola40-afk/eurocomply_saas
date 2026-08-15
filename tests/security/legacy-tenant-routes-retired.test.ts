@@ -65,7 +65,8 @@ describe('legacy tenant-data route retirement', () => {
 
     expect(approvals).toContain(canonicalDocumentsPath);
     expect(raci).toContain(canonicalDocumentsPath);
-    expect(addOns).toContain(`'${canonicalDocumentsPath}'`);
+    expect(addOns).toContain('BILLING_ADD_ONS');
+    expect(addOns).not.toContain("NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO");
   });
 
   it('retains server-side tenant authority on both canonical pages', () => {
