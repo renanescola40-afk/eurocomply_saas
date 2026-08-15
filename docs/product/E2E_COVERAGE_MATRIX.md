@@ -46,6 +46,30 @@ Scope: Playwright coverage for public acquisition, auth redirects, localized com
 | Admin/member/viewer mutation-denied matrix | — | Disposable role fixtures required | **Open** |
 | Real Stripe success return with delayed webhook | issue #1650 / provider-backed E2E | Stripe test runtime | **Blocked** |
 
+## Route-quality contract index
+
+The route-quality gate checks for stable coverage labels as a fail-closed documentation contract. Presence in this index means the scenario is explicitly tracked; it does **not** turn an `Open`, fixture-gated or provider-blocked scenario into runtime evidence.
+
+| Contract marker | Evidence / boundary | Status |
+| --- | --- | --- |
+| Login redirect | Public auth/continuation coverage in `tests/e2e/product-critical-journeys.spec.ts` | Covered |
+| Protected route no-store | Anonymous protected redirects assert cache-safe behavior | Covered |
+| Onboarding complete | Completion mutation requires disposable QA execution | **Open** |
+| Dashboard load | Role-specific authenticated storage states | Executable, fixture-gated |
+| Create AI system | Explicit synthetic app-write opt-in on disposable paid-owner fixture | Executable, write-gated |
+| Create task/document | Disposable mutation fixtures are still required | **Open** |
+| Billing CTA | Public purchase route plus role-aware authenticated billing controls | Covered / fixture-gated |
+| Trust/security pages | Public trust/security route smoke | Covered |
+| Mobile smoke | 390x844 purchase/auth overflow and public conversion smoke | Covered |
+| Keyboard basic navigation | Public critical controls retain keyboard/focus coverage | Covered |
+| Public form loading/success | Deterministic public form state coverage | Covered |
+| Public form error feedback | Deterministic controlled-error feedback coverage | Covered |
+| Checkout without plan | Missing-plan checkout remains a controlled route state | Covered |
+| Synthetic data policy | Synthetic writes are restricted to disposable QA fixtures and explicit opt-in | Enforced |
+| E2E_AUTH_STORAGE_STATE | General seeded-fixture contract retained for route-quality compatibility; commercial acceptance uses role-specific storage states | Fixture contract |
+| E2E_ALLOW_SYNTHETIC_ONBOARDING_WRITE | Reserved explicit opt-in boundary for disposable onboarding writes; onboarding completion is not claimed as executed here | **Open / not runtime proof** |
+| E2E_ALLOW_SYNTHETIC_APP_WRITES | Explicit opt-in required for disposable product writes | Enforced |
+
 ## Authenticated fixture contract
 
 The authenticated suite never assumes production accounts. Each persona requires its own explicit storage-state file:
