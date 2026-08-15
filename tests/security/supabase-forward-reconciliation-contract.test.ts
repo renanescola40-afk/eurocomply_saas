@@ -51,7 +51,7 @@ const hardenedOnboarding = readFileSync(
 const selected = config.migrations.map((migration) => migration.filename);
 
 describe('bounded Supabase forward reconciliation contract', () => {
-  it('selects exactly the twenty bounded forward-only reconciliation identities in version order', () => {
+  it('selects exactly the twenty-one bounded forward-only reconciliation identities in version order', () => {
     expect(selected).toEqual([
       '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
       '20260813194500_reconcile_step_up_challenges_runtime.sql',
@@ -68,6 +68,7 @@ describe('bounded Supabase forward reconciliation contract', () => {
       '20260814093000_reconcile_enterprise_contract_control_rpcs.sql',
       '20260814101500_reconcile_enterprise_core_active_runtime.sql',
       '20260815083000_reconcile_live_rls_validation_inventory_privileges.sql',
+      '20260815140500_reconcile_new_organization_compatibility_envelope.sql',
       '20260815141000_reconcile_enterprise_invitation_seat_authority.sql',
       '20260815141500_harden_enterprise_invitation_actor_boundary.sql',
       '20260815142000_preserve_completed_onboarding_state.sql',
@@ -198,8 +199,8 @@ describe('bounded Supabase forward reconciliation contract', () => {
     expect(hardenedOnboarding).toContain('with latest_completed as');
     expect(hardenedOnboarding).toContain("onboarding_status = 'completed'");
     expect(hardenedOnboarding).toContain('rename to complete_onboarding_activation_atomic_reconciled');
-    expect(hardenedOnboarding).toContain("v_actor_status <> 'active'");
-    expect(hardenedOnboarding).toContain("v_actor_role not in ('owner', 'admin')");
+    expect(hardenedOnboarding).toContain("v_actor_status is distinct from 'active'");
+    expect(hardenedOnboarding).toContain("coalesce(v_actor_role, '') not in ('owner', 'admin')");
     expect(hardenedOnboarding).toContain("jsonb_set(p_activation, '{inviteEmails}', '[]'::jsonb, true)");
     expect(hardenedOnboarding).toContain('public.create_organization_invitation_with_seat_atomic');
     expect(hardenedOnboarding).toContain("'viewer',\n      'viewer'");
