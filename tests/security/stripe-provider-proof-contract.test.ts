@@ -5,6 +5,11 @@ const probe = readFileSync('scripts/security/probe-stripe-provider-config.mjs', 
 const writer = readFileSync('scripts/security/write-stripe-provider-evidence.mjs', 'utf8');
 const workflow = readFileSync('.github/workflows/stripe-provider-proof.yml', 'utf8');
 const portalBinding = readFileSync('src/server/billing/portal-configuration.ts', 'utf8');
+const adr = readFileSync('docs/decisions/ADR-0092-versioned-stripe-billing-portal-authority.md', 'utf8');
+const portalContract = JSON.parse(readFileSync('config/stripe-billing-portal-contract.json', 'utf8')) as {
+  schema: string;
+  configurationId: string | null;
+};
 const webhookContract = JSON.parse(readFileSync('config/stripe-webhook-contract.json', 'utf8')) as {
   canonicalPath: string;
   productionBaseUrl: string;
@@ -41,11 +46,22 @@ describe('Stripe provider proof contract', () => {
     expect(probe).toContain('requiredWebhookEventsPresent');
   });
 
-  it('proves the same Billing Portal configuration binding used by runtime sessions', () => {
-    expect(portalBinding).toContain("STRIPE_BILLING_PORTAL_CONFIGURATION_ID");
+  it('uses one versioned Billing Portal configuration authority for runtime and provider proof', () => {
+    expect(portalContract).toEqual({
+      schema: 'risck-comply.stripe-billing-portal-contract.v1',
+      configurationId: null,
+    });
+    expect(portalBinding).toContain("../../../config/stripe-billing-portal-contract.json");
+    expect(portalBinding).toContain("risck-comply.stripe-billing-portal-contract.v1");
     expect(portalBinding).toContain('/^bpc_[A-Za-z0-9]+$/');
     expect(portalBinding).toContain("source: 'explicit' | 'default'");
-    expect(probe).toContain('process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID');
+    expect(portalBinding).not.toContain('process.env');
+    expect(portalBinding).not.toContain('STRIPE_BILLING_PORTAL_CONFIGURATION_ID');
+
+    expect(probe).toContain("BILLING_PORTAL_CONTRACT_PATH = 'config/stripe-billing-portal-contract.json'");
+    expect(probe).toContain("loadJson(BILLING_PORTAL_CONTRACT_PATH, 'risck-comply.stripe-billing-portal-contract.v1')");
+    expect(probe).toContain('const explicitPortalConfigurationId = portalContract.configurationId');
+    expect(probe).not.toContain('process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID');
     expect(probe).toContain('/^bpc_[A-Za-z0-9]+$/');
     expect(probe).toContain('`/billing_portal/configurations/${encodeURIComponent(explicitPortalConfigurationId)}`');
     expect(probe).toContain("'/billing_portal/configurations?active=true&is_default=true&limit=100'");
@@ -55,10 +71,23 @@ describe('Stripe provider proof contract', () => {
     expect(probe).toContain('portalConfiguration?.is_default === true');
     expect(probe).toContain('billingPortalConfigurationPresent');
     expect(probe).toContain('billingPortalConfigurationBindingValid');
+
+    expect(writer).toContain("portalContractPath = 'config/stripe-billing-portal-contract.json'");
+    expect(writer).toContain('readFileSync(portalContractPath');
     expect(writer).toContain('billingPortalConfigurationPresent: true');
     expect(writer).toContain('billingPortalConfigurationBindingValid: true');
-    expect(writer).toContain("portalConfigurationBindingMode = explicitPortalConfigurationId ? 'explicit' : 'default'");
+    expect(writer).toContain("portalConfigurationBindingMode = portalContract.configurationId ? 'explicit' : 'default'");
     expect(writer).toContain('billingPortalConfigurationIdsStored: false');
+  });
+
+  it('forbids a second GitHub or Vercel environment authority for portal configuration selection', () => {
+    expect(workflow).not.toContain('STRIPE_BILLING_PORTAL_CONFIGURATION_ID');
+    expect(probe).not.toContain('STRIPE_BILLING_PORTAL_CONFIGURATION_ID');
+    expect(writer).not.toContain('STRIPE_BILLING_PORTAL_CONFIGURATION_ID');
+    expect(adr).toContain('single source of truth');
+    expect(adr).toContain('No Vercel variable, GitHub variable');
+    expect(adr).toContain('configurationId: null');
+    expect(adr).toContain('Rollback');
   });
 
   it('bounds every Stripe API response before JSON parsing', () => {
@@ -82,7 +111,6 @@ describe('Stripe provider proof contract', () => {
     expect(writer).toContain('webhookUrlsStored: false');
     expect(writer).toContain('billingPortalConfigurationIdsStored: false');
     expect(writer).toContain('providerPayloadStored: false');
-    expect(writer).not.toContain('configurationId: explicitPortalConfigurationId');
     expect(writer).not.toContain('billingPortalConfigurationId:');
   });
 
@@ -97,7 +125,6 @@ describe('Stripe provider proof contract', () => {
     expect(workflow).toContain('STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ vars.STRIPE_PRICE_ESSENTIAL_MONTHLY }}');
     expect(workflow).toContain('STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ vars.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}');
     expect(workflow).toContain('STRIPE_PRICE_BUSINESS_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_MONTHLY }}');
-    expect(workflow).toContain('STRIPE_BILLING_PORTAL_CONFIGURATION_ID: ${{ vars.STRIPE_BILLING_PORTAL_CONFIGURATION_ID }}');
     expect(workflow).not.toContain('STRIPE_PRICE_ENTERPRISE_MONTHLY');
     expect(workflow).not.toContain('pull_request_target');
     expect(writer).toContain("branch !== 'main'");
