@@ -71,16 +71,17 @@ for (const fixture of roleFixtures) {
       }
     });
 
-    test('team mutation controls match canonical role permissions', async ({ page }) => {
+    test('team workspace is denied unless the role has manage_team', async ({ page }) => {
       await page.goto('/en/dashboard/organizations/team', { waitUntil: 'domcontentloaded' });
       await expectHealthyAuthenticatedPage(page, `${fixture.role} team`);
-      const readOnly = page.getByText(/can review team access but cannot invite, remove or cancel invitations/i);
+      const denied = page.getByText(/team access is restricted/i);
       if (fixture.canManageTeam) {
-        await expect(readOnly).toHaveCount(0);
+        await expect(denied).toHaveCount(0);
       } else {
-        await expect(readOnly).toBeVisible();
+        await expect(denied).toBeVisible();
         await expect(page.getByRole('button', { name: /send invitation/i })).toHaveCount(0);
         await expect(page.getByRole('button', { name: /remove/i })).toHaveCount(0);
+        await expect(page.getByText(/pending invitations/i)).toHaveCount(0);
       }
     });
   });
