@@ -124,7 +124,9 @@ describe('commercial surface locale continuity', () => {
     expect(upgradeCard).toContain("fr: { required: (plan) => `Plan ${plan} requis`");
     expect(upgradeCard).toContain("it: { required: (plan) => `Piano ${plan} richiesto`");
     expect(upgradeCard).toContain("de: { required: (plan) => `${plan}-Plan erforderlich`");
-    expect(upgradeCard).toContain('ctaLabel ?? localized.plans');
+    expect(upgradeCard).toContain('ctaLabel ?? localized.upgrades');
+    expect(upgradeCard).toContain('{localized.plans}');
+    expect(upgradeCard).toContain('/dashboard/organizations/add-ons');
     expect(upgradeCard).not.toContain("ctaLabel = 'Ver planos'");
 
     for (const page of [raciPage, approvalsPage, executiveReportsPage]) {
@@ -141,13 +143,14 @@ describe('commercial surface locale continuity', () => {
     expect(regulatoryJournalPage).toContain("fr: {");
     expect(regulatoryJournalPage).toContain("it: {");
     expect(regulatoryJournalPage).toContain("de: {");
-    expect(regulatoryJournalPage).toContain('{copy.premiumPreview}');
-    expect(regulatoryJournalPage).toContain('{copy.empty}');
+    expect(regulatoryJournalPage).toContain('{copy.preview}');
+    expect(regulatoryJournalPage).toContain('{copy.noVerifiedItems}');
     expect(regulatoryJournalPage).toContain('{item.title}');
     expect(regulatoryJournalPage).toContain('{item.newspaperDeck}');
     expect(regulatoryJournalPage).toContain('{item.articleParagraphs[0]}');
     expect(regulatoryJournalPage).toContain('{item.calendarSuggestion}');
     expect(regulatoryJournalPage).toContain('{item.recommendedActions.map');
+    expect(regulatoryJournalPage).toContain('href={item.sourceUrl}');
   });
 
   it('preserves keyboard focus treatment on purchase, auth, onboarding, AI inventory, trust and upgrade controls', () => {
