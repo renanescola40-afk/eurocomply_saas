@@ -27,6 +27,7 @@ import { locales } from '@/lib/i18n/routing';
 
 const profilePage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/perfil/page.tsx'), 'utf8');
 const userEmailResolver = readFileSync(join(process.cwd(), 'src/server/users/email.ts'), 'utf8');
+const supabaseTypes = readFileSync(join(process.cwd(), 'src/integrations/supabase/types.ts'), 'utf8');
 const billingWebhook = readFileSync(join(process.cwd(), 'src/server/billing/stripe-webhooks.ts'), 'utf8');
 const trialReminder = readFileSync(join(process.cwd(), 'src/app/api/internal/trial-reminders/route.ts'), 'utf8');
 
@@ -62,6 +63,7 @@ describe('recipient locale authority', () => {
     expect(profilePage).toContain('LOCALE_META[language].nativeName');
     expect(profilePage).not.toMatch(/from\(['"]profiles['"]\).*preferred_language/s);
     expect(profilePage).not.toContain("update({ preferred_language");
+    expect(supabaseTypes).not.toContain('preferred_language: string | null');
   });
 
   it('resolves recipient email and locale in one bounded Auth lookup without global user enumeration', () => {
