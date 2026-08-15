@@ -6,7 +6,7 @@ import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeClient } from '@/server/billing/stripe';
-import { getUserEmailById } from '@/server/users/email';
+import { getUserEmailContextById } from '@/server/users/email';
 
 const SUPPORTED_STRIPE_WEBHOOK_EVENTS = new Set([
   'checkout.session.completed',
@@ -489,8 +489,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
   });
 }
 
-async function getBillingContactEmail(userId: string) {
-  return getUserEmailById(userId, 'billing_contact_lookup');
+async function getBillingContactContext(userId: string) {
+  return getUserEmailContextById(userId, 'billing_contact_lookup');
 }
 
 export async function sendPaymentFailedEmail(invoice: Stripe.Invoice, event?: Stripe.Event) {
@@ -537,19 +537,23 @@ export async function sendPaymentFailedEmail(invoice: Stripe.Invoice, event?: St
     throw new Error('Payment failed notification organization lookup failed');
   }
 
-  const emailAddress = await getBillingContactEmail(organization.created_by);
+  const recipient = await getBillingContactContext(organization.created_by);
 
-  if (!emailAddress) {
+  if (!recipient.email) {
     const error = new Error('Payment failed notification billing contact was not found');
     reportError(error, { area: 'payment_failed_email', organizationId: organization.id, userId: organization.created_by });
     throw error;
   }
 
-  const billingUrl = `${getAppUrl()}/dashboard/organizations/billing`;
-  const email = paymentFailedEmail({ organizationName: organization.name, billingUrl });
+  const billingUrl = `${getAppUrl()}/${recipient.locale}/dashboard/organizations/billing`;
+  const email = paymentFailedEmail({
+    locale: recipient.locale,
+    organizationName: organization.name,
+    billingUrl,
+  });
 
   const delivery = await sendEmail({
-    to: emailAddress,
+    to: recipient.email,
     subject: email.subject,
     html: email.html,
     text: email.text,
@@ -560,6 +564,7 @@ export async function sendPaymentFailedEmail(invoice: Stripe.Invoice, event?: St
       source: 'stripe_payment_failed_webhook',
       stripeEventType: event?.type ?? 'invoice.payment_failed',
       livemode: event?.livemode ?? false,
+      recipientLocale: recipient.locale,
     },
   });
 
@@ -586,6 +591,7 @@ export async function sendPaymentFailedEmail(invoice: Stripe.Invoice, event?: St
       metadata: {
         stripeCustomerId: customerId ?? null,
         stripeSubscriptionId: subscriptionId ?? null,
+        recipientLocale: recipient.locale,
       },
     });
   }
