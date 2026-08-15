@@ -68,7 +68,8 @@ describe('billing lifecycle runtime proof', () => {
     expect(workflow).toContain('permissions:\n  contents: read');
     expect(workflow).toContain('PROVE_BILLING_LIFECYCLE_RUNTIME');
     expect(workflow).toContain('persist-credentials: false');
-    expect(sql).toContain('begin transaction read only');
+    expect(workflow).toContain('PGOPTIONS: -c default_transaction_read_only=on');
+    expect(sql).toContain('default_transaction_read_only=on');
     expect(workflow).not.toContain('contents: write');
     expect(workflow).not.toContain('pull_request_target');
     expect(workflow).not.toContain('continue-on-error');
