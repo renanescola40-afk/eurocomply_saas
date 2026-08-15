@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 const MAX_PROVIDER_RESPONSE_BYTES = 64 * 1024;
 const COMMERCIAL_CATALOG_PATH = 'config/billing-commercial-catalog.json';
 const WEBHOOK_CONTRACT_PATH = 'config/stripe-webhook-contract.json';
+const BILLING_PORTAL_CONTRACT_PATH = 'config/stripe-billing-portal-contract.json';
 const CANONICAL_PUBLIC_PLANS = ['essential', 'professional', 'business'];
 const BILLING_PORTAL_CONFIGURATION_ID_PATTERN = /^bpc_[A-Za-z0-9]+$/;
 
@@ -63,15 +64,22 @@ async function readBoundedJsonResponse(response) {
 
 const commercialCatalog = loadJson(COMMERCIAL_CATALOG_PATH, 'risck-comply.billing-commercial-catalog.v1');
 const webhookContract = loadJson(WEBHOOK_CONTRACT_PATH, 'risck-comply.stripe-webhook-contract.v1');
+const portalContract = loadJson(BILLING_PORTAL_CONTRACT_PATH, 'risck-comply.stripe-billing-portal-contract.v1');
 const stripeSecretKey = requiredEnv('STRIPE_SECRET_KEY');
-const explicitPortalConfigurationId = String(process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID ?? '').trim();
+const explicitPortalConfigurationId = portalContract.configurationId;
 
 if (!/^(?:sk|rk)_live_/.test(stripeSecretKey)) {
   throw new Error('Stripe production provider proof requires a live-mode secret or restricted key');
 }
 
-if (explicitPortalConfigurationId && !BILLING_PORTAL_CONFIGURATION_ID_PATTERN.test(explicitPortalConfigurationId)) {
-  throw new Error('STRIPE_BILLING_PORTAL_CONFIGURATION_ID must be a Stripe Billing Portal configuration id');
+if (
+  explicitPortalConfigurationId !== null
+  && (
+    typeof explicitPortalConfigurationId !== 'string'
+    || !BILLING_PORTAL_CONFIGURATION_ID_PATTERN.test(explicitPortalConfigurationId)
+  )
+) {
+  throw new Error('Invalid Stripe Billing Portal repository contract');
 }
 
 const priceBindings = CANONICAL_PUBLIC_PLANS.map((publicId) => {
