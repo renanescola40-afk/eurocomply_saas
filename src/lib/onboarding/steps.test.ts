@@ -35,8 +35,12 @@ describe('onboarding steps', () => {
       'document-suggestions',
       'initial-tasks',
       'invite-team',
-      'plan-or-trial',
+      'plan',
     ]);
+    expect(steps.at(-1)).toMatchObject({
+      title: 'Confirm selected plan',
+      description: 'Carry the customer’s selected commercial plan into billing review.',
+    });
     expect(steps.every((step) => step.status === 'complete')).toBe(true);
   });
 
