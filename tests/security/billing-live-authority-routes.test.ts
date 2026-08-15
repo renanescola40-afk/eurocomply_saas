@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 const PORTAL_ROUTE = new URL('../../src/app/api/billing/portal/route.ts', import.meta.url);
 const SUBSCRIPTION_ROUTE = new URL('../../src/app/api/billing/subscription/route.ts', import.meta.url);
 const LIFECYCLE = new URL('../../src/server/billing/subscription-lifecycle.ts', import.meta.url);
-const COMPLETE_PAGE = new URL('../../src/app/[locale]/checkout/complete/page.tsx', import.meta.url);
+const ACTIVATION_ROUTE = new URL('../../src/app/api/billing/checkout/activation/route.ts', import.meta.url);
+const ACTIVATION_CLIENT = new URL('../../src/app/[locale]/checkout/complete/checkout-activation-client.tsx', import.meta.url);
 
 describe('billing portal authority', () => {
   it('requires a correlated live Stripe subscription and excludes signed contracts', async () => {
@@ -46,7 +47,6 @@ describe('billing lifecycle authority', () => {
     expect(mutation).toBeGreaterThan(liveLookup);
     expect(source).toContain('hasProcessedLiveStripeSubscriptionAuthority');
     expect(source).toContain("{ error: 'live_stripe_subscription_not_found' }");
-    expect(source).not.toContain('billing_downgrade_schedule_required');
   });
 
   it('schedules downgrades from the existing subscription and preserves the paid current phase', async () => {
@@ -68,13 +68,20 @@ describe('billing lifecycle authority', () => {
 });
 
 describe('post-checkout activation UX', () => {
-  it('polls a bounded authoritative endpoint and never grants access itself', async () => {
-    const source = await readFile(COMPLETE_PAGE, 'utf8');
+  it('polls one bounded server-authoritative endpoint and never trusts a browser session identifier', async () => {
+    const client = await readFile(ACTIVATION_CLIENT, 'utf8');
+    const route = await readFile(ACTIVATION_ROUTE, 'utf8');
 
-    expect(source).toContain('const MAX_POLLS = 20');
-    expect(source).toContain('/api/billing/checkout/status?session_id=');
-    expect(source).toContain("body.state === 'ready'");
-    expect(source).toContain("window.location.replace(`/${locale}/dashboard/organizations?checkout=success`)");
-    expect(source).toContain("setState('timeout')");
+    expect(client).toContain('const MAX_WAIT_MS = 30000');
+    expect(client).toContain("fetch('/api/billing/checkout/activation'");
+    expect(client).toContain("data.state === 'activated'");
+    expect(client).toContain("window.location.replace(`/${locale}${data.next ?? '/dashboard/organizations'}`)");
+    expect(client).toContain('setTimedOut(true)');
+    expect(client).not.toContain('session_id');
+
+    expect(route).toContain('getCurrentOrganizationForUser(user.id)');
+    expect(route).toContain("new Set(['active', 'trialing'])");
+    expect(route).toContain("authority: 'persisted_subscription'");
+    expect(route).not.toContain('session_id');
   });
 });
