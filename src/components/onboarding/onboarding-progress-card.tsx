@@ -37,8 +37,8 @@ const compactCopy = {
     risk: 'Risk classification',
     evidence: 'Evidence',
     tasks: 'Initial tasks',
-    team: 'Team',
-    complete: 'complete',
+    team: 'Team (optional)',
+    complete: 'core milestones complete',
     next: 'Next milestone',
     ready: 'Core workspace activation is complete.',
   },
@@ -51,8 +51,8 @@ const compactCopy = {
     risk: 'Classificação de risco',
     evidence: 'Evidências',
     tasks: 'Tarefas iniciais',
-    team: 'Equipa',
-    complete: 'concluído',
+    team: 'Equipa (opcional)',
+    complete: 'marcos essenciais concluídos',
     next: 'Próximo marco',
     ready: 'A ativação principal do workspace está concluída.',
   },
@@ -65,16 +65,17 @@ function getCompactCopy(locale?: string) {
 function CompactActivationProgress({ state, locale }: { state: OnboardingState; locale?: string }) {
   const copy = getCompactCopy(locale);
   const milestones = [
-    { id: 'organization', label: copy.organization, complete: state.hasOrganization },
-    { id: 'ai-system', label: copy.aiSystem, complete: Boolean(state.hasFirstAiSystem ?? state.hasVendors) },
-    { id: 'risk', label: copy.risk, complete: Boolean(state.hasRiskClassification ?? state.hasRisks ?? state.hasComplianceTasks) },
-    { id: 'evidence', label: copy.evidence, complete: Boolean(state.hasDocumentSuggestions ?? state.hasDocuments) },
-    { id: 'tasks', label: copy.tasks, complete: Boolean(state.hasInitialTasks ?? state.hasComplianceTasks) },
-    { id: 'team', label: copy.team, complete: state.hasMembers },
+    { id: 'organization', label: copy.organization, complete: state.hasOrganization, required: true },
+    { id: 'ai-system', label: copy.aiSystem, complete: Boolean(state.hasFirstAiSystem ?? state.hasVendors), required: true },
+    { id: 'risk', label: copy.risk, complete: Boolean(state.hasRiskClassification ?? state.hasRisks ?? state.hasComplianceTasks), required: true },
+    { id: 'evidence', label: copy.evidence, complete: Boolean(state.hasDocumentSuggestions ?? state.hasDocuments), required: true },
+    { id: 'tasks', label: copy.tasks, complete: Boolean(state.hasInitialTasks ?? state.hasComplianceTasks), required: true },
+    { id: 'team', label: copy.team, complete: state.hasMembers, required: false },
   ];
-  const completed = milestones.filter((milestone) => milestone.complete).length;
-  const percentage = Math.round((completed / milestones.length) * 100);
-  const nextMilestone = milestones.find((milestone) => !milestone.complete);
+  const requiredMilestones = milestones.filter((milestone) => milestone.required);
+  const completed = requiredMilestones.filter((milestone) => milestone.complete).length;
+  const percentage = Math.round((completed / requiredMilestones.length) * 100);
+  const nextMilestone = requiredMilestones.find((milestone) => !milestone.complete);
 
   return (
     <Card className="border-white/10 bg-white/[0.025] text-white shadow-none">
@@ -96,7 +97,7 @@ function CompactActivationProgress({ state, locale }: { state: OnboardingState; 
           </div>
           <div className="min-w-48 lg:text-right">
             <p className="text-3xl font-semibold text-white">{percentage}%</p>
-            <p className="text-xs text-white/38">{completed}/{milestones.length} {copy.complete}</p>
+            <p className="text-xs text-white/38">{completed}/{requiredMilestones.length} {copy.complete}</p>
           </div>
         </div>
 
