@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { sendEmail } from '@/lib/email/client';
-import { invitationEmail } from '@/lib/email/templates';
+import { localizedInvitationEmail } from '@/lib/email/localized-invitation';
 import { reportError } from '@/lib/observability/report-error';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
@@ -27,6 +27,7 @@ const inviteSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
   role: z.enum(['Admin', 'Editor', 'Visualizador']).default('Visualizador'),
   seatType: z.enum(['full', 'participant', 'viewer']).optional(),
+  locale: z.enum(['en', 'pt', 'es', 'fr', 'it', 'de']).default('en'),
 });
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -39,57 +40,23 @@ function getAppUrl() {
 }
 
 function getInviteEntityId(invite: unknown) {
-  if (!invite || typeof invite !== 'object' || !('id' in invite)) {
-    return undefined;
-  }
-
+  if (!invite || typeof invite !== 'object' || !('id' in invite)) return undefined;
   const { id } = invite as { id?: unknown };
   return typeof id === 'string' ? id : undefined;
 }
 
 function inviteCapacityResponse(error: OrganizationInviteError) {
   if (error.code === 'member_limit_reached' || error.code === 'seat_limit_reached') {
-    return noStoreJson(
-      {
-        error: 'organization_seat_limit_reached',
-        message: 'The organization has no available contracted seat for this invitation.',
-      },
-      { status: 409 },
-    );
+    return noStoreJson({ error: 'organization_seat_limit_reached', message: 'The organization has no available contracted seat for this invitation.' }, { status: 409 });
   }
-
   if (error.code === 'admin_limit_reached') {
-    return noStoreJson(
-      {
-        error: 'organization_admin_limit_reached',
-        message: 'The organization has reached its contracted administrator limit.',
-      },
-      { status: 409 },
-    );
+    return noStoreJson({ error: 'organization_admin_limit_reached', message: 'The organization has reached its contracted administrator limit.' }, { status: 409 });
   }
-
-  if (
-    error.code === 'contract_missing'
-    || error.code === 'contract_not_active'
-    || error.code === 'entitlements_missing'
-  ) {
-    return noStoreJson(
-      {
-        error: 'organization_contract_not_accepting_members',
-        message: 'The organization contract is not currently accepting new members.',
-      },
-      { status: 403 },
-    );
+  if (error.code === 'contract_missing' || error.code === 'contract_not_active' || error.code === 'entitlements_missing') {
+    return noStoreJson({ error: 'organization_contract_not_accepting_members', message: 'The organization contract is not currently accepting new members.' }, { status: 403 });
   }
-
-  if (error.code === 'already_accepted') {
-    return noStoreJson({ error: 'user_already_joined_organization' }, { status: 409 });
-  }
-
-  if (error.code === 'invalid_invitation') {
-    return noStoreJson({ error: 'invalid_invite_payload' }, { status: 400 });
-  }
-
+  if (error.code === 'already_accepted') return noStoreJson({ error: 'user_already_joined_organization' }, { status: 409 });
+  if (error.code === 'invalid_invitation') return noStoreJson({ error: 'invalid_invite_payload' }, { status: 400 });
   return noStoreJson({ error: 'invitation_persistence_unavailable' }, { status: 503 });
 }
 
@@ -97,17 +64,9 @@ export async function POST(request: Request) {
   try {
     const user = await requireApiUser();
     const organization = await getCurrentOrganizationForUser(user.id);
+    if (!organization) return noStoreJson({ error: 'Organization not found' }, { status: 404 });
 
-    if (!organization) {
-      return noStoreJson({ error: 'Organization not found' }, { status: 404 });
-    }
-
-    const permission = await requirePermission({
-      userId: user.id,
-      organizationId: organization.id,
-      permission: 'manage_team',
-    });
-
+    const permission = await requirePermission({ userId: user.id, organizationId: organization.id, permission: 'manage_team' });
     const mutationDenied = await requireTrustedMutation(request, {
       rateLimit: {
         key: `team-invite:${organization.id}:${user.id}`,
@@ -121,59 +80,27 @@ export async function POST(request: Request) {
         failureMode: 'fail-closed',
       },
     });
-
     if (mutationDenied) return mutationDenied;
 
-    const stepUp = await requireStepUpForRequest({
-      request,
-      action: 'manage_team',
-      userId: user.id,
-      organizationId: organization.id,
-    });
-
-    if (!stepUp.ok) {
-      return stepUp.response;
-    }
+    const stepUp = await requireStepUpForRequest({ request, action: 'manage_team', userId: user.id, organizationId: organization.id });
+    if (!stepUp.ok) return stepUp.response;
 
     const payload = await readBoundedJsonRequest(request, { maxBytes: INVITE_JSON_MAX_BYTES }).catch(() => null);
     const parsed = inviteSchema.safeParse(payload);
-
-    if (!parsed.success) {
-      return noStoreJson({ error: 'invalid_invite_payload' }, { status: 400 });
-    }
+    if (!parsed.success) return noStoreJson({ error: 'invalid_invite_payload' }, { status: 400 });
 
     const entitlements = await getOrganizationEntitlements(organization.id);
-
     if (!entitlements.employeeInvites) {
-      await createAuditEvent({
-        organizationId: organization.id,
-        actorUserId: user.id,
-        action: 'team_invite_blocked',
-        entityType: 'team_invite',
-        metadata: { reason: 'business_required', plan: entitlements.plan, role: permission.role },
-      });
-      return noStoreJson(
-        { error: 'business_plan_required', message: 'Team invites require the Business plan or higher.' },
-        { status: 402 },
-      );
+      await createAuditEvent({ organizationId: organization.id, actorUserId: user.id, action: 'team_invite_blocked', entityType: 'team_invite', metadata: { reason: 'business_required', plan: entitlements.plan, role: permission.role } });
+      return noStoreJson({ error: 'business_plan_required', message: 'Team invites require the Business plan or higher.' }, { status: 402 });
     }
 
-    const { email, role, seatType } = parsed.data;
-
+    const { email, role, seatType, locale } = parsed.data;
     if (role === 'Admin' && !isPlanAtLeast(entitlements.plan, 'enterprise')) {
-      return noStoreJson(
-        { error: 'enterprise_plan_required', message: 'Admin invitations require the Enterprise plan.' },
-        { status: 402 },
-      );
+      return noStoreJson({ error: 'enterprise_plan_required', message: 'Admin invitations require the Enterprise plan.' }, { status: 402 });
     }
 
-    const result = await createOrganizationInvite({
-      organizationId: organization.id,
-      invitedBy: user.id,
-      email,
-      role,
-      seatType,
-    });
+    const result = await createOrganizationInvite({ organizationId: organization.id, invitedBy: user.id, email, role, seatType });
     const audit = await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
@@ -188,32 +115,21 @@ export async function POST(request: Request) {
         plan: entitlements.plan,
         persisted: result.persisted,
         emailDeliveryPending: true,
+        locale,
       },
     });
 
     if (!audit.persisted) {
       try {
-        await deleteOrganizationInvite({
-          organizationId: organization.id,
-          invitationId: result.invite.id,
-        });
+        await deleteOrganizationInvite({ organizationId: organization.id, invitationId: result.invite.id });
       } catch (compensationError) {
-        reportError(compensationError, {
-          area: 'team_invitation_audit_compensation',
-          organizationId: organization.id,
-          invitationId: result.invite.id,
-        });
+        reportError(compensationError, { area: 'team_invitation_audit_compensation', organizationId: organization.id, invitationId: result.invite.id });
       }
-
       return noStoreJson({ error: 'team_invite_audit_unavailable' }, { status: 503 });
     }
 
-    const inviteUrl = `${getAppUrl()}/en/invite/${encodeURIComponent(result.token)}`;
-    const builtEmail = invitationEmail({
-      organizationName: result.organizationName,
-      role: result.invite.role,
-      inviteUrl,
-    });
+    const inviteUrl = `${getAppUrl()}/${locale}/invite/${encodeURIComponent(result.token)}`;
+    const builtEmail = localizedInvitationEmail({ organizationName: result.organizationName, role: result.invite.role, inviteUrl, locale });
 
     try {
       const delivery = await sendEmail({
@@ -225,38 +141,18 @@ export async function POST(request: Request) {
         organizationId: organization.id,
         userId: user.id,
         idempotencyKey: `team-invite:${result.invite.id}:${result.tokenFingerprint}`,
-        metadata: {
-          source: 'team_invites_api',
-          invitationId: result.invite.id,
-          role: result.invite.role,
-          seatType: result.invite.seat_type,
-        },
+        metadata: { source: 'team_invites_api', invitationId: result.invite.id, role: result.invite.role, seatType: result.invite.seat_type, locale },
       });
-
-      if (!delivery.sent) {
-        throw new Error(`Invitation email delivery was not confirmed (${delivery.status})`);
-      }
+      if (!delivery.sent) throw new Error(`Invitation email delivery was not confirmed (${delivery.status})`);
     } catch (emailError) {
-      reportError(emailError, {
-        area: 'team_invitation_delivery',
-        organizationId: organization.id,
-        invitationId: result.invite.id,
-        emailDomain: email.split('@')[1] ?? 'unknown',
-      });
+      reportError(emailError, { area: 'team_invitation_delivery', organizationId: organization.id, invitationId: result.invite.id, emailDomain: email.split('@')[1] ?? 'unknown' });
 
       let inviteRevoked = false;
       try {
-        await deleteOrganizationInvite({
-          organizationId: organization.id,
-          invitationId: result.invite.id,
-        });
+        await deleteOrganizationInvite({ organizationId: organization.id, invitationId: result.invite.id });
         inviteRevoked = true;
       } catch (compensationError) {
-        reportError(compensationError, {
-          area: 'team_invitation_delivery_compensation',
-          organizationId: organization.id,
-          invitationId: result.invite.id,
-        });
+        reportError(compensationError, { area: 'team_invitation_delivery_compensation', organizationId: organization.id, invitationId: result.invite.id });
       }
 
       const failedAudit = await createAuditEvent({
@@ -265,38 +161,19 @@ export async function POST(request: Request) {
         action: 'team_invite_delivery_failed',
         entityType: 'invitation',
         entityId: result.invite.id,
-        metadata: {
-          emailDomain: email.split('@')[1] ?? 'unknown',
-          role: result.invite.role,
-          seatType: result.invite.seat_type,
-          actorRole: permission.role,
-          inviteRevoked,
-        },
+        metadata: { emailDomain: email.split('@')[1] ?? 'unknown', role: result.invite.role, seatType: result.invite.seat_type, actorRole: permission.role, inviteRevoked, locale },
       });
-      return noStoreJson(
-        {
-          error: 'invitation_delivery_failed',
-          persisted: !inviteRevoked,
-          auditPersisted: failedAudit.persisted,
-        },
-        { status: 503 },
-      );
+      return noStoreJson({ error: 'invitation_delivery_failed', persisted: !inviteRevoked, auditPersisted: failedAudit.persisted }, { status: 503 });
     }
 
     const notification = await createNotification({
       organizationId: organization.id,
       userId: user.id,
       type: 'invite',
-      message: `Convite de equipa enviado com permissão ${role}.`,
+      message: `Team invitation sent with ${role} permission.`,
     });
 
-    return noStoreJson({
-      invite: result.invite,
-      persisted: result.persisted,
-      auditPersisted: true,
-      notificationPersisted: notification.persisted,
-      plan: entitlements.plan,
-    });
+    return noStoreJson({ invite: result.invite, persisted: result.persisted, auditPersisted: true, notificationPersisted: notification.persisted, plan: entitlements.plan, locale });
   } catch (error) {
     if (error instanceof OrganizationInviteError) return inviteCapacityResponse(error);
     return secureApiError(error);
