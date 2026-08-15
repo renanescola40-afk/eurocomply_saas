@@ -47,9 +47,15 @@ function runReporter(register, expectedSha = SHA) {
   return { dir, evidencePath, outputPath, result };
 }
 
-test('P0 Progress refreshes only after the exact-SHA P0 Runtime Evidence producer succeeds', () => {
+test('P0 Progress refreshes only after an artifact-backed exact-SHA P0 Runtime Evidence producer succeeds', () => {
   assert.match(WORKFLOW, /workflow_run:\s*[\s\S]*P0 Runtime Evidence/);
-  assert.match(WORKFLOW, /github\.event\.workflow_run\.conclusion == 'success'/);
+  assert.match(WORKFLOW, /classify-source:/);
+  assert.match(WORKFLOW, /PARENT_CONCLUSION: \$\{\{ github\.event\.workflow_run\.conclusion \|\| '' \}\}/);
+  assert.match(WORKFLOW, /\[ "\$PARENT_CONCLUSION" != 'success' \]/);
+  assert.match(WORKFLOW, /\[ "\$PARENT_SHA" != "\$WORKFLOW_SHA" \]/);
+  assert.match(WORKFLOW, /actions\/runs\/\$\{PARENT_RUN_ID\}\/artifacts\?per_page=100/);
+  assert.match(WORKFLOW, /artifact_count=.*select\(\.name == \$name and \.expired == false\)/);
+  assert.match(WORKFLOW, /name: \$\{\{ needs\.classify-source\.outputs\.authoritative == 'true' && 'Report P0 enterprise progress' \|\| 'Stale P0 progress trigger \(ignored\)' \}\}/);
   assert.match(WORKFLOW, /run-id: \$\{\{ github\.event\.workflow_run\.id \}\}/);
   assert.match(WORKFLOW, /name: p0-runtime-evidence-register-\$\{\{ env\.ASSESSED_SHA \}\}/);
   assert.match(WORKFLOW, /P0_PROGRESS_ASSESSED_SHA: \$\{\{ env\.ASSESSED_SHA \}\}/);
