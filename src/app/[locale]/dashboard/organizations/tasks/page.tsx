@@ -2,7 +2,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { CreateComplianceTaskForm, type CreateComplianceTaskFormInput } from '@/components/compliance/create-compliance-task-form';
-import { ComplianceTaskList } from '@/components/dashboard/compliance-task-list';
+import { ComplianceTaskList, type EditComplianceTaskInput } from '@/components/dashboard/compliance-task-list';
 import { StepUpCsvExportButton } from '@/components/reports/step-up-csv-export-button';
 import { getCoreWorkflowCopy } from '@/lib/i18n/core-workflow-copy';
 import { createComplianceTask, deleteComplianceTask, updateComplianceTask } from '@/server/actions/compliance-tasks';
@@ -20,47 +20,47 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
   const copy = getCoreWorkflowCopy(params.locale).tasks;
   const tasks = await listComplianceTasks(organization.id);
 
-  async function handleCreateTask(input: CreateComplianceTaskFormInput) {
+  async function currentContext() {
     'use server';
     const currentUser = await getCurrentUser();
     if (!currentUser) redirect(`/${params.locale}/login`);
     const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
     if (!currentOrganization) redirect(`/${params.locale}/onboarding`);
+    return currentOrganization;
+  }
 
-    await createComplianceTask({
-      organizationId: currentOrganization.id,
-      title: input.title,
-      description: input.description,
-      category: input.category,
-      priority: input.priority,
-      dueDate: input.dueDate,
-    });
+  async function refreshTaskViews() {
+    'use server';
     revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
     revalidatePath(`/${params.locale}/dashboard/organizations`);
+  }
+
+  async function handleCreateTask(input: CreateComplianceTaskFormInput) {
+    'use server';
+    const currentOrganization = await currentContext();
+    await createComplianceTask({ organizationId: currentOrganization.id, title: input.title, description: input.description, category: input.category, priority: input.priority, dueDate: input.dueDate });
+    await refreshTaskViews();
+  }
+
+  async function handleEditTask(taskId: string, input: EditComplianceTaskInput) {
+    'use server';
+    const currentOrganization = await currentContext();
+    await updateComplianceTask(taskId, currentOrganization.id, input);
+    await refreshTaskViews();
   }
 
   async function handleCompleteTask(taskId: string) {
     'use server';
-    const currentUser = await getCurrentUser();
-    if (!currentUser) redirect(`/${params.locale}/login`);
-    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
-    if (!currentOrganization) redirect(`/${params.locale}/onboarding`);
-
+    const currentOrganization = await currentContext();
     await updateComplianceTask(taskId, currentOrganization.id, { status: 'done' });
-    revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
-    revalidatePath(`/${params.locale}/dashboard/organizations`);
+    await refreshTaskViews();
   }
 
   async function handleDeleteTask(taskId: string) {
     'use server';
-    const currentUser = await getCurrentUser();
-    if (!currentUser) redirect(`/${params.locale}/login`);
-    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
-    if (!currentOrganization) redirect(`/${params.locale}/onboarding`);
-
+    const currentOrganization = await currentContext();
     await deleteComplianceTask(taskId, currentOrganization.id);
-    revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
-    revalidatePath(`/${params.locale}/dashboard/organizations`);
+    await refreshTaskViews();
   }
 
   return (
@@ -76,7 +76,7 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
         </div>
 
         <CreateComplianceTaskForm locale={params.locale} onSubmit={handleCreateTask} />
-        <ComplianceTaskList locale={params.locale} tasks={tasks} onDelete={handleDeleteTask} onComplete={handleCompleteTask} />
+        <ComplianceTaskList locale={params.locale} tasks={tasks} onEdit={handleEditTask} onDelete={handleDeleteTask} onComplete={handleCompleteTask} />
       </div>
     </main>
   );
