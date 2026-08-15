@@ -28,12 +28,13 @@ const evidence = {
   targetSha: releaseSha,
   buildSha: releaseSha,
   environment: 'production-provider-live-mode',
-  summary: 'Protected Stripe API validation confirmed live-mode provider access, canonical Essential, Professional and Business monthly EUR prices, and the exact enabled production webhook endpoint with the complete billing event contract for the exact release SHA.',
+  summary: 'Protected Stripe API validation confirmed live-mode provider access, canonical Essential, Professional and Business monthly EUR prices, the exact enabled production webhook endpoint, and an active live default Billing Portal configuration for the exact release SHA.',
   controlsVerified: [
     'Stripe production provider proof uses live mode only',
     'Canonical Essential, Professional and Business prices match repository amount, currency, interval and active Product requirements',
     'The exact canonical production webhook endpoint is enabled in live mode',
     'Webhook coverage includes checkout, subscription lifecycle, payment failure and invoice-paid recovery events',
+    'An active live default Billing Portal configuration exists for portal sessions that do not specify a configuration ID',
     'Evidence is bound to the exact main-branch release SHA and protected GitHub Actions run',
   ],
   checks: {
@@ -45,6 +46,7 @@ const evidence = {
     canonicalPriceMetadataMatches: true,
     exactWebhookEndpointPresent: true,
     requiredWebhookEventsPresent: true,
+    defaultBillingPortalConfigurationPresent: true,
   },
   failures: [],
   evidenceLocations: [
@@ -61,6 +63,7 @@ const evidence = {
     stripeSecretStored: false,
     priceIdsStored: false,
     webhookUrlsStored: false,
+    billingPortalConfigurationIdsStored: false,
     providerPayloadStored: false,
     customerDataStored: false,
   },

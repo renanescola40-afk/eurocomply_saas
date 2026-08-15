@@ -3,6 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { resolveRecipientLocale } from '@/lib/i18n/recipient-locale';
 
 type SignupMetadata = {
   name?: string;
@@ -38,6 +39,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 function getLocaleFromWindow() {
   if (typeof window === 'undefined') return 'pt';
   return window.location.pathname.split('/').filter(Boolean)[0] ?? 'pt';
+}
+
+function getRecipientLocaleFromWindow() {
+  return resolveRecipientLocale(getLocaleFromWindow());
 }
 
 function getLocalizedPath(path: string) {
@@ -151,6 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           full_name: metadata?.name,
           company_name: metadata?.company_name,
           requested_plan: metadata?.requested_plan,
+          preferred_language: getRecipientLocaleFromWindow(),
         },
       },
     });

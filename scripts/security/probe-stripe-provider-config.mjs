@@ -99,9 +99,10 @@ async function stripe(path) {
   return readBoundedJsonResponse(response);
 }
 
-const [account, webhooks, ...prices] = await Promise.all([
+const [account, webhooks, portalConfigurations, ...prices] = await Promise.all([
   stripe('/account'),
   stripe('/webhook_endpoints?limit=100'),
+  stripe('/billing_portal/configurations?active=true&is_default=true&limit=100'),
   ...priceBindings.map(({ priceId }) => stripe(`/prices/${encodeURIComponent(priceId)}?expand[]=product`)),
 ]);
 
@@ -127,8 +128,21 @@ const enabledEvents = new Set(exactWebhook?.enabled_events ?? []);
 const requiredWebhookEventsPresent = Boolean(exactWebhook)
   && requiredEvents.every((event) => enabledEvents.has(event));
 
+// Billing portal sessions are created without an explicit configuration ID, so
+// Stripe will use the account's default configuration. Prove that the default
+// configuration is both active and live before calling provider readiness green.
+const defaultPortalConfiguration = Array.isArray(portalConfigurations?.data)
+  ? portalConfigurations.data.find((configuration) => (
+      configuration?.active === true
+      && configuration?.is_default === true
+      && configuration?.livemode === true
+    ))
+  : null;
+
 const result = {
-  liveModeConfirmed: prices.every((price) => price?.livemode === true) && exactWebhook?.livemode === true,
+  liveModeConfirmed: prices.every((price) => price?.livemode === true)
+    && exactWebhook?.livemode === true
+    && defaultPortalConfiguration?.livemode === true,
   accountActive: account?.charges_enabled === true || account?.details_submitted === true,
   essentialPriceActive: inspectedPrices.find(({ publicId }) => publicId === 'essential')?.passed === true,
   professionalPriceActive: inspectedPrices.find(({ publicId }) => publicId === 'professional')?.passed === true,
@@ -136,6 +150,7 @@ const result = {
   canonicalPriceMetadataMatches: inspectedPrices.every(({ passed }) => passed),
   exactWebhookEndpointPresent: Boolean(exactWebhook),
   requiredWebhookEventsPresent,
+  defaultBillingPortalConfigurationPresent: Boolean(defaultPortalConfiguration),
 };
 
 if (Object.values(result).some((value) => value !== true)) {
