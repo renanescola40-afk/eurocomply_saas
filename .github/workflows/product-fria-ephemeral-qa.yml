@@ -86,7 +86,10 @@ jobs:
           test -n "${RECOVERY_EPHEMERAL_WORKDIR:-}"
           test "${RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL:-}" = 'false'
           test "${RECOVERY_EPHEMERAL_MIGRATION_COUNT:-0}" -gt 0
-          test "${RECOVERY_EPHEMERAL_MIGRATION_APPLIED_COUNT:-0}" -gt 0
+          test -n "${RECOVERY_ISOLATED_DATABASE_URL:-}"
+          applied_count="$(psql "$RECOVERY_ISOLATED_DATABASE_URL" --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1 --command 'select count(*) from supabase_migrations.schema_migrations;' | tr -d '[:space:]')"
+          [[ "$applied_count" =~ ^[0-9]+$ ]]
+          test "$applied_count" -gt 0
 
       - name: Promote disposable database to local Supabase Auth and REST stack
         shell: bash
