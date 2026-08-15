@@ -16,6 +16,10 @@ const onboardingFlow = readFileSync(
   join(process.cwd(), 'src/components/onboarding/b2b-onboarding-flow.tsx'),
   'utf8',
 );
+const onboardingSteps = readFileSync(
+  join(process.cwd(), 'src/lib/onboarding/steps.ts'),
+  'utf8',
+);
 
 const validActivation = {
   organizationName: 'QA Organization',
@@ -45,6 +49,7 @@ describe('onboarding commercial plan truth', () => {
     expect(getOnboardingPlanIntent(undefined)).toBe('professional');
     expect(getOnboardingPlanIntent(null)).toBe('professional');
     expect(getOnboardingPlanIntent('not-a-plan')).toBe('professional');
+    expect(onboardingFlow).toContain("org?.selectedPlan, 'professional')");
   });
 
   it('preserves the canonical Starter compatibility boundary without inventing a trial', () => {
@@ -77,5 +82,21 @@ describe('onboarding commercial plan truth', () => {
       ...validActivation,
       selectedPlan: 'trial',
     }).success).toBe(false);
+  });
+
+  it('removes retired trial language from every customer-visible onboarding step', () => {
+    expect(onboardingFlow).toContain("['plan', CheckCircle2, 'Confirm plan', 'Confirmar plano']");
+    expect(onboardingFlow).toContain("'Confirm plan': 'Confirmar plan'");
+    expect(onboardingFlow).toContain("'Confirm plan': 'Confirmer le plan'");
+    expect(onboardingFlow).toContain("'Confirm plan': 'Conferma piano'");
+    expect(onboardingFlow).toContain("'Confirm plan': 'Plan bestätigen'");
+    expect(onboardingFlow).not.toContain('Plan or trial');
+    expect(onboardingFlow).not.toContain('Plano ou trial');
+    expect(onboardingFlow).not.toContain('Keep exploring now and choose billing later.');
+
+    expect(onboardingSteps).toContain("id: 'plan'");
+    expect(onboardingSteps).toContain("title: 'Confirm selected plan'");
+    expect(onboardingSteps).not.toContain('continue trial');
+    expect(onboardingSteps).not.toContain('plan-or-trial');
   });
 });
