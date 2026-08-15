@@ -23,8 +23,6 @@ begin
 end
 $preflight$;
 
--- Preserve already-completed onboarding when the organization columns were
--- introduced after activation evidence already existed.
 with latest_completed as (
   select distinct on (organization_id)
     organization_id,
@@ -48,8 +46,6 @@ set
 from latest_completed
 where organizations.id = latest_completed.organization_id;
 
--- Keep the reconciled implementation private and expose only the hardened
--- wrapper under the canonical RPC name.
 alter function public.complete_onboarding_activation_atomic(uuid, uuid, text, jsonb)
   rename to complete_onboarding_activation_atomic_reconciled;
 
@@ -95,7 +91,8 @@ begin
   where member.organization_id = p_organization_id
     and member.user_id = p_actor_user_id;
 
-  if v_actor_status <> 'active' or v_actor_role not in ('owner', 'admin') then
+  if v_actor_status is distinct from 'active'
+     or coalesce(v_actor_role, '') not in ('owner', 'admin') then
     return query select
       'forbidden'::text,
       null::uuid,
@@ -128,8 +125,6 @@ begin
   into v_invited_emails
   from jsonb_array_elements(v_invite_emails) as invited(value);
 
-  -- The reconciled implementation remains responsible for organization/AI/
-  -- document/task activation, but it must not directly write invitations.
   v_inner_activation := jsonb_set(p_activation, '{inviteEmails}', '[]'::jsonb, true);
 
   select *
@@ -142,8 +137,6 @@ begin
   );
 
   if v_activation.outcome = 'replayed' then
-    -- A successful prior wrapper execution persisted the canonical invited email
-    -- list and seat-aware invitations. Return only currently valid deliveries.
     select coalesce(
       jsonb_agg(
         jsonb_build_object(
