@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const actionSource = fs.readFileSync('src/server/actions/onboarding.ts', 'utf8');
 const migrationSource = fs.readFileSync(
-  'supabase/migrations/20260716183000_atomic_onboarding_activation.sql',
+  'supabase/migrations/20260815142500_reconcile_active_onboarding_runtime.sql',
   'utf8',
 );
 const completionSource = actionSource.slice(
@@ -79,6 +79,15 @@ describe('atomic onboarding activation contract', () => {
     expect(migrationSource).toContain(
       'grant execute on function public.complete_onboarding_activation_atomic(uuid, uuid, text, jsonb) to service_role',
     );
+  });
+
+  it('adapts the atomic write to the actual production schema instead of replaying stale assumptions', () => {
+    expect(migrationSource).toContain('assigned_to');
+    expect(migrationSource).not.toContain('user_id,\n        title');
+    expect(migrationSource).toContain("v_invite_email_array text[] := '{}'::text[]");
+    expect(migrationSource).toContain("invitations.email = any(coalesce(v_existing_run.invited_emails, '{}'::text[]))");
+    expect(migrationSource).toContain('recommended_documents');
+    expect(migrationSource).toContain('suggested_tasks');
   });
 
   it('treats provider delivery as a truthful retryable post-commit side effect', () => {
