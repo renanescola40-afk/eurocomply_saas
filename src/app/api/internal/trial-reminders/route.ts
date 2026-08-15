@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { enforceInternalAuthenticationRateLimit } from '@/server/security/internal-auth-rate-limit';
 import { noStoreJson } from '@/server/security/no-store';
 import { buildTrialReminderIdempotencyKey } from '@/server/jobs/trial-reminder-idempotency';
-import { getUserEmailById } from '@/server/users/email';
+import { getUserEmailContextById } from '@/server/users/email';
 
 export const runtime = 'nodejs';
 
@@ -27,10 +27,6 @@ function addDays(days: number) {
 
 function daysUntil(value: string) {
   return Math.max(0, Math.ceil((new Date(value).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-}
-
-async function getOwnerEmail(userId: string) {
-  return getUserEmailById(userId, 'trial_reminder_owner_lookup');
 }
 
 async function hasReminderBeenSent(organizationId: string, subscriptionId: string, recipientEmail: string) {
@@ -86,7 +82,7 @@ async function sendTrialReminders() {
   const supabase = createAdminClient();
   const today = new Date().toISOString().slice(0, 10);
   const reminderDate = addDays(TRIAL_REMINDER_DAYS);
-  const billingUrl = `${getAppUrl()}/dashboard/organizations/billing`;
+  const appUrl = getAppUrl();
 
   const { data: subscriptions, error } = await supabase
     .from('subscriptions')
@@ -112,7 +108,8 @@ async function sendTrialReminders() {
 
     if (!ownerUserId || !subscription.current_period_end) continue;
 
-    const recipientEmail = await getOwnerEmail(ownerUserId);
+    const recipient = await getUserEmailContextById(ownerUserId, 'trial_reminder_owner_lookup');
+    const recipientEmail = recipient.email;
 
     if (!recipientEmail) continue;
 
@@ -127,7 +124,9 @@ async function sendTrialReminders() {
       currentPeriodEnd: subscription.current_period_end,
       recipientEmail,
     });
+    const billingUrl = `${appUrl}/${recipient.locale}/dashboard/organizations/billing`;
     const email = trialUpgradeEmail({
+      locale: recipient.locale,
       organizationName: organization.name,
       billingUrl,
       daysRemaining: daysUntil(subscription.current_period_end),
@@ -147,6 +146,7 @@ async function sendTrialReminders() {
           source: 'trial_reminder_job',
           subscriptionId: subscription.id,
           currentPeriodEnd: subscription.current_period_end,
+          recipientLocale: recipient.locale,
         },
       });
 
