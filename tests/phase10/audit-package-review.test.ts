@@ -14,19 +14,21 @@ describe('Phase 10 audit package review', () => {
     expect(validation).toContain('Audit package review');
   });
 
-  it('uses readiness export and package supporting surfaces', () => {
+  it('uses readiness export and package supporting surfaces in Reports & Governance', () => {
     const exportPreparation = read('src/components/dashboard/readiness-export-preparation.tsx');
     const reportingPackage = read('src/components/dashboard/executive-reporting-package.tsx');
     const readiness = read('src/components/dashboard/workflow-readiness-summary.tsx');
     const followUp = read('src/components/dashboard/readiness-follow-up-plan.tsx');
-    const overview = read('src/components/dashboard/dashboard-home-overview.tsx');
+    const workspace = read('src/components/dashboard/reports-governance-workspace.tsx');
 
     expect(exportPreparation).toContain('Readiness export preparation');
     expect(exportPreparation).toContain('Prepare from reports');
     expect(reportingPackage).toContain('Executive reporting package');
     expect(readiness).toContain('Read-only reporting snapshot');
     expect(followUp).toContain('Follow-up planning');
-    expect(overview).toContain('readiness-export-preparation');
+    expect(workspace).toContain('readiness-export-preparation');
+    expect(workspace).toContain('AuditPackageReview');
+    expect(workspace).toContain('audit-package-review');
   });
 
   it('keeps audit package review safe before additional runtime changes', () => {

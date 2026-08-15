@@ -31,3 +31,4 @@ phase3-auth-session-readiness-report.json
 phase3-completion-gates-report.json
 security-endpoints-inventory.json
 docs-manifest.json
+release-validation/
