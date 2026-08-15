@@ -5,6 +5,7 @@ import { CreateDocumentForm, type UploadDocumentFormInput } from '@/components/d
 import { DocumentDeleteButton } from '@/components/documents/document-delete-button';
 import { DocumentDownloadButton } from '@/components/documents/document-download-button';
 import { getCoreWorkflowCopy } from '@/lib/i18n/core-workflow-copy';
+import { roleHasPermission } from '@/lib/security/permissions';
 import { createDocumentSignedDownloadUrl } from '@/server/actions/document-downloads';
 import { deleteDocument, uploadDocument } from '@/server/actions/documents';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -14,6 +15,15 @@ import { listDocuments } from '@/server/queries/documents';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
+
+const readOnlyCopy: Record<string, string> = {
+  en: 'Your role can review and download compliance documents but cannot upload or delete them.',
+  pt: 'A sua função pode consultar e descarregar documentos de compliance, mas não pode carregar ou eliminar documentos.',
+  es: 'Tu rol puede consultar y descargar documentos de compliance, pero no puede subirlos ni eliminarlos.',
+  fr: 'Votre rôle peut consulter et télécharger les documents de conformité, mais ne peut pas les téléverser ou les supprimer.',
+  it: 'Il tuo ruolo può consultare e scaricare i documenti di compliance, ma non può caricarli o eliminarli.',
+  de: 'Ihre Rolle kann Compliance-Dokumente einsehen und herunterladen, aber nicht hochladen oder löschen.',
+};
 
 function documentStatusKey(status: string | null | undefined) {
   const normalized = String(status ?? 'pending').toLowerCase();
@@ -36,6 +46,7 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
   const documents = await listDocuments(currentOrganization.id);
   const billing = await getOrganizationBillingContext(currentOrganization.id);
   const dashboardBasePath = `/${params.locale}/dashboard/organizations`;
+  const canManageDocuments = roleHasPermission(currentOrganization.role, 'manage_documents');
 
   async function uploadDocumentAction(input: UploadDocumentFormInput) {
     'use server';
@@ -79,9 +90,13 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
           <p className="mt-4 max-w-2xl text-sm leading-6 text-white/58 sm:text-base">{copy.subtitle(currentOrganization.name)}</p>
         </header>
 
-        <PlanGate planId={billing.plan} metric="documents" currentUsage={billing.usage.documents} onUpgradeHref={`${dashboardBasePath}/billing`}>
-          <CreateDocumentForm locale={params.locale} onSubmit={uploadDocumentAction} />
-        </PlanGate>
+        {canManageDocuments ? (
+          <PlanGate planId={billing.plan} metric="documents" currentUsage={billing.usage.documents} onUpgradeHref={`${dashboardBasePath}/billing`}>
+            <CreateDocumentForm locale={params.locale} onSubmit={uploadDocumentAction} />
+          </PlanGate>
+        ) : (
+          <p className="rounded-xl border border-white/10 bg-white/[0.035] p-4 text-sm text-white/65" role="status">{readOnlyCopy[params.locale] ?? readOnlyCopy.en}</p>
+        )}
 
         <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5" aria-labelledby="document-register-title">
           <div className="mb-4">
@@ -108,7 +123,7 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
                       </div>
                       <div className="flex flex-wrap gap-2 md:justify-end">
                         <DocumentDownloadButton locale={params.locale} documentId={document.id} onCreateSignedUrl={createDownloadUrlAction} />
-                        <DocumentDeleteButton locale={params.locale} documentId={document.id} documentName={title} onDelete={deleteDocumentAction} />
+                        {canManageDocuments ? <DocumentDeleteButton locale={params.locale} documentId={document.id} documentName={title} onDelete={deleteDocumentAction} /> : null}
                       </div>
                     </div>
                   </article>
