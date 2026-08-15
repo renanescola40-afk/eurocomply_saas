@@ -41,7 +41,7 @@ describe('FRIA human assignment UX', () => {
     expect(page).not.toContain('placeholder="UUID"');
 
     expect(assigneeRoute).toContain("permission: 'manage_ai_governance'");
-    expect(assigneeRoute).toContain('loadFriaAssigneeCandidates');
+    expect(assigneeRoute).toContain('listFriaAssigneeCandidates');
   });
 
   it('keeps read-only roles out of mutation and assignee operations', () => {
