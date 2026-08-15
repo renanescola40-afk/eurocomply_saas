@@ -39,7 +39,9 @@ async function parseError(response: Response, fallback: string) {
 }
 
 function toApiInviteRole(role: InviteMemberInput['role']) {
-  return role === 'admin' ? 'Admin' : 'Visualizador';
+  if (role === 'admin') return 'Admin';
+  if (role === 'editor') return 'Editor';
+  return 'Visualizador';
 }
 
 function teamActionRequest(operation: PendingTeamOperation, token: string) {
