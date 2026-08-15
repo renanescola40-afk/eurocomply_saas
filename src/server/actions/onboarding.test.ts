@@ -57,7 +57,7 @@ const baseInput = {
   biometricIdentification: false,
   manipulativeOrExploitative: false,
   inviteEmails: ['Teammate@Example.test'],
-  selectedPlan: 'trial',
+  selectedPlan: 'professional',
 };
 
 function installSupabaseMock(options: {
@@ -122,6 +122,7 @@ describe('atomic onboarding activation', () => {
         p_activation: expect.objectContaining({
           inviteEmails: ['teammate@example.test'],
           readinessScore: expect.any(Number),
+          selectedPlan: 'professional',
         }),
       }),
     );
