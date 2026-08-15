@@ -154,7 +154,8 @@ begin
   where member.organization_id = p_organization_id
     and member.user_id = p_invited_by;
 
-  if v_actor_status <> 'active' or v_actor_role not in ('owner', 'admin') then
+  if v_actor_status is distinct from 'active'
+     or coalesce(v_actor_role, '') not in ('owner', 'admin') then
     return query select 'forbidden'::text, null::uuid, p_organization_id, v_email, v_role, v_seat_type, null::timestamptz, null::timestamptz;
     return;
   end if;
