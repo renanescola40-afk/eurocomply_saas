@@ -1,0 +1,355 @@
+name: Supabase Forward Reconciliation Production Promotion
+
+run-name: Promote bounded Supabase reconciliation for ${{ inputs.release_sha || github.sha }}
+
+on:
+  pull_request:
+    paths:
+      - 'config/supabase-forward-reconciliation.json'
+      - 'scripts/supabase/forward-reconciliation-control-plane.mjs'
+      - 'scripts/supabase/verify-forward-version-order.mjs'
+      - 'scripts/supabase/verify-forward-reconciliation-postconditions.sql'
+      - 'scripts/supabase/verify-forward-promotion-transition.mjs'
+      - 'scripts/supabase/verify-forward-promotion-transition.test.mjs'
+      - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
+      - '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
+      - '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
+      - 'tests/security/supabase-forward-promotion-workflow.test.ts'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA whose selected reconciliation set passed rehearsal and filtered dry-run
+        required: true
+        type: string
+      rehearsal_run_id:
+        description: Successful exact-SHA Supabase Forward Reconciliation Rehearsal run ID
+        required: true
+        type: string
+      dry_run_run_id:
+        description: Successful exact-SHA Supabase Forward Reconciliation Dry Run run ID
+        required: true
+        type: string
+      confirmation:
+        description: Type PROMOTE <release_sha> USING DRY-RUN <dry_run_run_id>
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: supabase-forward-reconciliation-production-promotion
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    name: Validate bounded production-promotion contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Validate promotion verifier and workflow contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/supabase/verify-forward-promotion-transition.mjs
+          node --test scripts/supabase/verify-forward-promotion-transition.test.mjs
+          npx vitest run tests/security/supabase-forward-promotion-workflow.test.ts
+
+  governance:
+    name: Verify Production governance before protected secrets
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      REHEARSAL_RUN_ID: ${{ inputs.rehearsal_run_id }}
+      DRY_RUN_ID: ${{ inputs.dry_run_run_id }}
+      INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+      GITHUB_ENVIRONMENT_NAME: Production
+      REQUIRE_PROTECTED_BRANCHES: 'true'
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout exact current main SHA without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Validate exact-SHA authorization inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$REHEARSAL_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$DRY_RUN_ID" =~ ^[0-9]+$ ]]
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git ls-remote origin refs/heads/main | grep -q "^${TARGET_SHA}"
+          EXPECTED_CONFIRMATION="PROMOTE ${TARGET_SHA} USING DRY-RUN ${DRY_RUN_ID}"
+          test "$INPUT_CONFIRMATION" = "$EXPECTED_CONFIRMATION"
+      - name: Verify Production environment governance before secrets
+        shell: bash
+        run: node scripts/security/check-github-environment-governance.mjs
+
+  promote:
+    name: Promote exactly the rehearsed and dry-run migration set
+    if: github.event_name == 'workflow_dispatch'
+    needs: [contract, governance]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: Production
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      REHEARSAL_RUN_ID: ${{ inputs.rehearsal_run_id }}
+      DRY_RUN_ID: ${{ inputs.dry_run_run_id }}
+      SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+      PGSSLMODE: require
+      EVIDENCE_DIR: artifacts/supabase-forward-production-promotion
+      CURRENT_MANIFEST: artifacts/supabase-forward-production-promotion/current-manifest.json
+      REMOTE_BEFORE: artifacts/supabase-forward-production-promotion/remote-before.json
+      REMOTE_AFTER: artifacts/supabase-forward-production-promotion/remote-after.json
+      VERSION_ORDER_PROOF: artifacts/supabase-forward-production-promotion/version-order-proof.json
+      FILTERED_SET_PROOF: artifacts/supabase-forward-production-promotion/filtered-set-proof.json
+      PROMOTION_EVIDENCE: artifacts/supabase-forward-production-promotion/promotion-transition.json
+    steps:
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.114.0
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Revalidate exact current main and protected database secret
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+          test -n "${SUPABASE_DB_POOLER_URL:-}"
+          case "$SUPABASE_DB_POOLER_URL" in
+            postgresql://*|postgres://*) ;;
+            *) echo 'SUPABASE_DB_POOLER_URL must be a PostgreSQL connection string' >&2; exit 1 ;;
+          esac
+          case "$SUPABASE_DB_POOLER_URL" in
+            *pooler.supabase.com*) ;;
+            *) echo 'SUPABASE_DB_POOLER_URL must use the Supabase pooler endpoint' >&2; exit 1 ;;
+          esac
+      - name: Verify exact-SHA rehearsal and dry-run provenance
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REHEARSAL_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${REHEARSAL_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$REHEARSAL_JSON")" = "$TARGET_SHA"
+          test "$(jq -r '.path' <<<"$REHEARSAL_JSON")" = '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
+          test "$(jq -r '.event' <<<"$REHEARSAL_JSON")" = 'workflow_dispatch'
+          test "$(jq -r '.conclusion' <<<"$REHEARSAL_JSON")" = 'success'
+
+          DRY_RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${DRY_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$DRY_RUN_JSON")" = "$TARGET_SHA"
+          test "$(jq -r '.path' <<<"$DRY_RUN_JSON")" = '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
+          test "$(jq -r '.event' <<<"$DRY_RUN_JSON")" = 'workflow_dispatch'
+          test "$(jq -r '.conclusion' <<<"$DRY_RUN_JSON")" = 'success'
+      - name: Download exact source evidence with GitHub CLI
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p source-rehearsal source-dry-run "$EVIDENCE_DIR"
+          gh run download "$REHEARSAL_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "supabase-forward-reconciliation-rehearsal-${TARGET_SHA}" \
+            --dir source-rehearsal
+          gh run download "$DRY_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "supabase-forward-reconciliation-dry-run-${TARGET_SHA}" \
+            --dir source-dry-run
+      - name: Recompile and bind the exact selected migration bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/supabase/forward-reconciliation-control-plane.mjs compile \
+            config/supabase-forward-reconciliation.json \
+            "$CURRENT_MANIFEST" \
+            --expected-sha="$TARGET_SHA"
+
+          mapfile -t REHEARSAL_ATTESTATIONS < <(find source-rehearsal -type f -name 'rehearsal-attestation.json' -print)
+          mapfile -t DRY_MANIFESTS < <(find source-dry-run -type f -name 'current-manifest.json' -print)
+          mapfile -t DRY_VERSION_PROOFS < <(find source-dry-run -type f -name 'version-order-proof.json' -print)
+          mapfile -t DRY_SET_PROOFS < <(find source-dry-run -type f -name 'filtered-set-proof.json' -print)
+          test "${#REHEARSAL_ATTESTATIONS[@]}" -eq 1
+          test "${#DRY_MANIFESTS[@]}" -eq 1
+          test "${#DRY_VERSION_PROOFS[@]}" -eq 1
+          test "${#DRY_SET_PROOFS[@]}" -eq 1
+
+          node scripts/supabase/forward-reconciliation-control-plane.mjs validate-rehearsal \
+            "$CURRENT_MANIFEST" \
+            "${REHEARSAL_ATTESTATIONS[0]}" \
+            --expected-sha="$TARGET_SHA"
+
+          CURRENT_DIGEST="$(jq -r '.selectionDigest' "$CURRENT_MANIFEST")"
+          test "$(jq -r '.targetSha' "${DRY_MANIFESTS[0]}")" = "$TARGET_SHA"
+          test "$(jq -r '.selectionDigest' "${DRY_MANIFESTS[0]}")" = "$CURRENT_DIGEST"
+          jq -e --arg sha "$TARGET_SHA" --arg digest "$CURRENT_DIGEST" \
+            '.status == "PASS" and .targetSha == $sha and .selectionDigest == $digest and .checks.allSelectedVersionsAfterRemoteHead == true and .checks.includeAllRequired == false' \
+            "${DRY_VERSION_PROOFS[0]}" >/dev/null
+          jq -e --arg sha "$TARGET_SHA" --arg digest "$CURRENT_DIGEST" \
+            '.status == "PASS" and .targetSha == $sha and .selectionDigest == $digest and .checks.pendingSetEqualsSelectedSet == true and .checks.unauthorizedPendingMigrations == false' \
+            "${DRY_SET_PROOFS[0]}" >/dev/null
+
+          cp "${REHEARSAL_ATTESTATIONS[0]}" "$EVIDENCE_DIR/source-rehearsal-attestation.json"
+          cp "${DRY_MANIFESTS[0]}" "$EVIDENCE_DIR/source-dry-run-manifest.json"
+          cp "${DRY_VERSION_PROOFS[0]}" "$EVIDENCE_DIR/source-dry-run-version-order-proof.json"
+          cp "${DRY_SET_PROOFS[0]}" "$EVIDENCE_DIR/source-dry-run-filtered-set-proof.json"
+      - name: Build a fresh filtered workdir from current production history
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORKDIR="$RUNNER_TEMP/risck-forward-production-promotion"
+          echo "WORKDIR=$WORKDIR" >> "$GITHUB_ENV"
+          mkdir -p "$WORKDIR"
+          supabase --workdir "$WORKDIR" init --force
+          rm -rf "$WORKDIR/supabase/migrations"
+          mkdir -p "$WORKDIR/supabase/migrations"
+          supabase --workdir "$WORKDIR" migration fetch --db-url "$SUPABASE_DB_POOLER_URL"
+
+          psql "$SUPABASE_DB_POOLER_URL" \
+            --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1 \
+            --command 'select version from supabase_migrations.schema_migrations order by version;' \
+            | sed '/^[[:space:]]*$/d' \
+            | jq -R -s 'split("\n") | map(select(length > 0))' > "$REMOTE_BEFORE"
+
+          while IFS=$'\t' read -r filename expected_digest; do
+            [[ "$filename" =~ ^[0-9]{14}_[a-z0-9_]+\.sql$ ]]
+            source_path="supabase/migrations/$filename"
+            observed_digest="$(sha256sum "$source_path" | awk '{print $1}')"
+            test "$observed_digest" = "$expected_digest"
+            cp "$source_path" "$WORKDIR/supabase/migrations/$filename"
+          done < <(jq -r '.migrations[] | [.filename, .sha256] | @tsv' "$CURRENT_MANIFEST")
+      - name: Re-prove forward order and exact pending set immediately before write
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/supabase/verify-forward-version-order.mjs \
+            "$CURRENT_MANIFEST" "$REMOTE_BEFORE" "$VERSION_ORDER_PROOF" "$TARGET_SHA"
+          jq -e '.status == "PASS" and .checks.allSelectedVersionsAfterRemoteHead == true and .checks.includeAllRequired == false' "$VERSION_ORDER_PROOF" >/dev/null
+
+          node scripts/supabase/forward-reconciliation-control-plane.mjs verify-set \
+            "$CURRENT_MANIFEST" "$REMOTE_BEFORE" "$WORKDIR/supabase/migrations" "$FILTERED_SET_PROOF" \
+            --expected-sha="$TARGET_SHA"
+          jq -e '.status == "PASS" and .checks.pendingSetEqualsSelectedSet == true and .checks.unauthorizedPendingMigrations == false' "$FILTERED_SET_PROOF" >/dev/null
+      - name: Execute final filtered dry run immediately before promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase --workdir "$WORKDIR" db push --dry-run --db-url "$SUPABASE_DB_POOLER_URL"
+      - name: Revalidate current main immediately before production write
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+      - name: Apply only the filtered selected migration set
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase --workdir "$WORKDIR" db push --db-url "$SUPABASE_DB_POOLER_URL"
+      - name: Capture exact remote ledger transition
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_POOLER_URL" \
+            --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1 \
+            --command 'select version from supabase_migrations.schema_migrations order by version;' \
+            | sed '/^[[:space:]]*$/d' \
+            | jq -R -s 'split("\n") | map(select(length > 0))' > "$REMOTE_AFTER"
+
+          node scripts/supabase/verify-forward-promotion-transition.mjs \
+            "$CURRENT_MANIFEST" "$REMOTE_BEFORE" "$REMOTE_AFTER" "$PROMOTION_EVIDENCE" "$TARGET_SHA"
+          jq -e '.status == "Complete" and .outcome == "passed" and .checks.remoteAfterEqualsBeforePlusSelected == true and .checks.unauthorizedMigrationApplied == false' "$PROMOTION_EVIDENCE" >/dev/null
+      - name: Prove live schema and security postconditions read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_POOLER_URL" \
+            --no-psqlrc --set ON_ERROR_STOP=1 \
+            --file scripts/supabase/verify-forward-reconciliation-postconditions.sql \
+            >/dev/null
+          printf '%s\n' '{"status":"PASS","readOnly":true,"postconditions":"forward_reconciliation_postconditions_passed"}' \
+            > "$EVIDENCE_DIR/live-postconditions.json"
+      - name: Detect main movement after promotion
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          OBSERVED_MAIN="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
+          if [ "$OBSERVED_MAIN" != "$TARGET_SHA" ]; then
+            echo "main moved after the bounded production write; production state is valid for $TARGET_SHA but release evidence must be regenerated for the new main" >&2
+            exit 1
+          fi
+      - name: Publish bounded promotion summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Supabase forward reconciliation production promotion'
+            echo
+            echo "- Exact release SHA: \`$TARGET_SHA\`"
+            echo "- Rehearsal run: \`$REHEARSAL_RUN_ID\`"
+            echo "- Filtered dry-run: \`$DRY_RUN_ID\`"
+            echo '- Migration-history repair: `false`'
+            echo '- Unrestricted db push / include-all: `false`'
+            if [ -f "$PROMOTION_EVIDENCE" ]; then
+              echo "- Ledger transition: \`$(jq -r '.status' "$PROMOTION_EVIDENCE")\`"
+              echo "- Applied migration count: \`$(jq -r '.selectedMigrationCount' "$PROMOTION_EVIDENCE")\`"
+            else
+              echo '- Ledger transition: `NOT_PRODUCED`'
+            fi
+            if [ -f "$EVIDENCE_DIR/live-postconditions.json" ]; then
+              echo '- Live postconditions: `PASS`'
+            else
+              echo '- Live postconditions: `NOT_PRODUCED`'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload redacted exact-SHA production-promotion evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: supabase-forward-production-promotion-${{ inputs.release_sha }}
+          path: ${{ env.EVIDENCE_DIR }}
+          if-no-files-found: error
+          retention-days: 90
