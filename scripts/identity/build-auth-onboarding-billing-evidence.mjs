@@ -33,7 +33,6 @@ const productionRequiredChecks = [
   'stripeEventLiveMode',
   'productionLiveAuthorityRequired',
 ];
-const allChecks = [...baseRequiredChecks, ...productionRequiredChecks];
 
 const failures = [];
 let rawBytes = Buffer.alloc(0);
@@ -61,10 +60,10 @@ if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 if (!/^evt_[A-Za-z0-9]+$/.test(stripeEventId)) failures.push('stripe_event_id_invalid');
 if (!/^[a-z][a-z0-9_-]{1,119}$/.test(expectedPlan)) failures.push('expected_plan_invalid');
 
-const checks = Object.fromEntries(allChecks.map((name) => [name, observed?.[name] === true]));
 const requiredChecks = targetEnvironment === 'production'
   ? [...baseRequiredChecks, ...productionRequiredChecks]
   : baseRequiredChecks;
+const checks = Object.fromEntries(requiredChecks.map((name) => [name, observed?.[name] === true]));
 for (const name of requiredChecks) {
   if (checks[name] !== true) failures.push(`check_failed:${name}`);
 }
