@@ -12,10 +12,10 @@ async function expectHealthyAuthenticatedPage(page: Page, label: string) {
 }
 
 const roleFixtures = [
-  { role: 'owner', env: 'E2E_OWNER_STORAGE_STATE', canManageBilling: true },
-  { role: 'admin', env: 'E2E_ADMIN_STORAGE_STATE', canManageBilling: false },
-  { role: 'member', env: 'E2E_MEMBER_STORAGE_STATE', canManageBilling: false },
-  { role: 'viewer', env: 'E2E_VIEWER_STORAGE_STATE', canManageBilling: false },
+  { role: 'owner', env: 'E2E_OWNER_STORAGE_STATE', canManageBilling: true, canManageTasks: true, canManageDocuments: true, canManageTeam: true },
+  { role: 'admin', env: 'E2E_ADMIN_STORAGE_STATE', canManageBilling: false, canManageTasks: true, canManageDocuments: true, canManageTeam: true },
+  { role: 'member', env: 'E2E_MEMBER_STORAGE_STATE', canManageBilling: false, canManageTasks: false, canManageDocuments: true, canManageTeam: false },
+  { role: 'viewer', env: 'E2E_VIEWER_STORAGE_STATE', canManageBilling: false, canManageTasks: false, canManageDocuments: false, canManageTeam: false },
 ] as const;
 
 for (const fixture of roleFixtures) {
@@ -42,6 +42,45 @@ for (const fixture of roleFixtures) {
         await expect(page.getByText(/A faturação é apenas de leitura para a sua função/i)).toBeVisible();
         await expect(page.getByRole('button', { name: /acesso de owner necessário/i })).toBeDisabled();
         await expect(page.getByRole('button', { name: /ação do owner necessária/i }).first()).toBeDisabled();
+      }
+    });
+
+    test('task mutation controls match canonical role permissions', async ({ page }) => {
+      await page.goto('/en/dashboard/organizations/tasks', { waitUntil: 'domcontentloaded' });
+      await expectHealthyAuthenticatedPage(page, `${fixture.role} tasks`);
+      const readOnly = page.getByText(/can review compliance tasks but cannot create, edit, complete or delete/i);
+      if (fixture.canManageTasks) {
+        await expect(readOnly).toHaveCount(0);
+      } else {
+        await expect(readOnly).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Create task' })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Edit' })).toHaveCount(0);
+      }
+    });
+
+    test('document mutation controls match canonical role permissions', async ({ page }) => {
+      await page.goto('/en/dashboard/organizations/documents', { waitUntil: 'domcontentloaded' });
+      await expectHealthyAuthenticatedPage(page, `${fixture.role} documents`);
+      const readOnly = page.getByText(/can review and download compliance documents but cannot upload or delete/i);
+      if (fixture.canManageDocuments) {
+        await expect(readOnly).toHaveCount(0);
+      } else {
+        await expect(readOnly).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Upload document' })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(0);
+      }
+    });
+
+    test('team mutation controls match canonical role permissions', async ({ page }) => {
+      await page.goto('/en/dashboard/organizations/team', { waitUntil: 'domcontentloaded' });
+      await expectHealthyAuthenticatedPage(page, `${fixture.role} team`);
+      const readOnly = page.getByText(/can review team access but cannot invite, remove or cancel invitations/i);
+      if (fixture.canManageTeam) {
+        await expect(readOnly).toHaveCount(0);
+      } else {
+        await expect(readOnly).toBeVisible();
+        await expect(page.getByRole('button', { name: /send invitation/i })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: /remove/i })).toHaveCount(0);
       }
     });
   });
@@ -185,19 +224,3 @@ for (const fixture of blockedSubscriptionFixtures) {
     }
   });
 }
-
-test.describe('viewer denied mutation UX', () => {
-  const viewerStorageState = process.env.E2E_VIEWER_STORAGE_STATE;
-  test.skip(!viewerStorageState || !allowSyntheticWrites, 'Viewer denial writes require a disposable viewer fixture and E2E_ALLOW_SYNTHETIC_APP_WRITES=true.');
-  if (viewerStorageState) test.use({ storageState: viewerStorageState });
-
-  test('viewer cannot create a compliance task', async ({ page }) => {
-    const title = `Denied viewer task ${Date.now()}`;
-    await page.goto('/en/dashboard/organizations/tasks', { waitUntil: 'domcontentloaded' });
-    await expectHealthyAuthenticatedPage(page, 'viewer task denial');
-    await page.getByLabel('Title').first().fill(title);
-    await page.getByRole('button', { name: 'Create task' }).click();
-    await expect(page.getByRole('alert')).toBeVisible();
-    await expect(page.getByText(title, { exact: true })).toHaveCount(0);
-  });
-});
