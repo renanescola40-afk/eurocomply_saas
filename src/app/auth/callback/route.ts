@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { RECIPIENT_LOCALE_METADATA_KEY, withRecipientLocaleMetadata } from '@/lib/i18n/recipient-locale';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 import { applyNoStoreHeaders, noStoreJson } from '@/server/security/no-store';
 import { resolveAuthAppBaseUrl } from '@/server/security/auth-callback';
@@ -90,6 +91,16 @@ export async function GET(request: NextRequest) {
   if (userError || !user) {
     await supabase.auth.signOut().catch(() => undefined);
     return redirectToLogin({ loginUrl, error: 'auth_exchange_failed', next });
+  }
+
+  const userMetadata = user.user_metadata ?? {};
+  const storedLocale = userMetadata[RECIPIENT_LOCALE_METADATA_KEY];
+  const hasStoredLocale = typeof storedLocale === 'string' && locales.includes(storedLocale as Locale);
+  if (!hasStoredLocale) {
+    const { error: localePreferenceError } = await supabase.auth.updateUser({
+      data: withRecipientLocaleMetadata(userMetadata, locale),
+    });
+    if (localePreferenceError) console.warn('auth_locale_preference_update_failed');
   }
 
   const claimsApi = supabase.auth as unknown as SupabaseClaimsApi;
