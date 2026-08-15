@@ -1,7 +1,6 @@
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
-import type { AiGovernanceReadiness } from '@/server/ai-governance/readiness';
 import type { AiSystemRecord } from '@/server/queries/ai-systems';
 
 const copy: Record<string, {
@@ -32,7 +31,7 @@ export function AiSystemsReadonlyView({
   locale: string;
   systems: AiSystemRecord[];
   organizationName?: string | null;
-  readiness: AiGovernanceReadiness;
+  readiness: { score: number | null };
 }) {
   const t = copy[locale] ?? copy.en;
 
