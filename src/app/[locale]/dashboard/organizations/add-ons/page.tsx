@@ -5,7 +5,7 @@ import { ArrowUpRight, CheckCircle2, Crown, LockKeyhole, ShieldCheck, Sparkles }
 
 import { Badge } from '@/components/ui/badge';
 import { BILLING_ADD_ONS, type BillingAddOn } from '@/lib/billing/add-ons';
-import { getPlanDisplayName, type AddOnId } from '@/lib/billing/addons';
+import { getPlanDisplayName } from '@/lib/billing/addons';
 import { getBillingPlan } from '@/lib/billing/plans';
 import { getAddOnsCopy } from '@/lib/i18n/add-ons-copy';
 import { roleHasPermission } from '@/lib/security/permissions';
@@ -67,7 +67,7 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
 
   const canonicalPlan = normalizePlan(entitlements.plan);
   const currentPlanName = getPlanDisplayName(canonicalPlan);
-  const activeAddOns = new Set<AddOnId>(activeAddOnIds);
+  const activeAddOns = new Set<string>(activeAddOnIds);
   const canManageBilling = roleHasPermission(role, 'manage_billing');
   const selectedPlanDiffers = Boolean(selectedPlan && normalizePlan(selectedPlan.id) !== canonicalPlan);
   const selectedPlanPrice = selectedPlan?.priceMonthly ?? selectedPlan?.startingPriceMonthly ?? null;
