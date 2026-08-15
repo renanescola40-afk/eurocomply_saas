@@ -136,14 +136,14 @@ export function organizationCreatedEmail(input: OrganizationCreatedEmailInput): 
     it: `${input.organizationName} è stata creata`,
     de: `${input.organizationName} wurde erstellt`,
   });
-  const body = input.createdByName
+  const bodyText = input.createdByName
     ? t(locale, {
-        en: `Created by: ${escapeHtml(input.createdByName)}.`,
-        pt: `Criada por: ${escapeHtml(input.createdByName)}.`,
-        es: `Creada por: ${escapeHtml(input.createdByName)}.`,
-        fr: `Créée par : ${escapeHtml(input.createdByName)}.`,
-        it: `Creata da: ${escapeHtml(input.createdByName)}.`,
-        de: `Erstellt von: ${escapeHtml(input.createdByName)}.`,
+        en: `Created by: ${input.createdByName}.`,
+        pt: `Criada por: ${input.createdByName}.`,
+        es: `Creada por: ${input.createdByName}.`,
+        fr: `Créée par : ${input.createdByName}.`,
+        it: `Creata da: ${input.createdByName}.`,
+        de: `Erstellt von: ${input.createdByName}.`,
       })
     : t(locale, {
         en: 'The organization workspace has been created.',
@@ -153,8 +153,9 @@ export function organizationCreatedEmail(input: OrganizationCreatedEmailInput): 
         it: 'Il workspace dell’organizzazione è stato creato.',
         de: 'Der Organisations-Workspace wurde erstellt.',
       });
+  const body = escapeHtml(bodyText);
   const ctaLabel = t(locale, { en: 'Open organization', pt: 'Abrir organização', es: 'Abrir organización', fr: 'Ouvrir l’organisation', it: 'Apri organizzazione', de: 'Organisation öffnen' });
-  return buildEmail({ locale, template: 'organization_created', subject, title, body, ctaLabel, ctaUrl: input.organizationUrl, textLines: [subject, body.replace(/<[^>]+>/g, '')] });
+  return buildEmail({ locale, template: 'organization_created', subject, title, body, ctaLabel, ctaUrl: input.organizationUrl, textLines: [subject, bodyText] });
 }
 
 export function memberInvitedEmail(input: MemberInvitedEmailInput): BuiltEmail {
