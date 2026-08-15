@@ -27,6 +27,9 @@ import { locales } from '@/lib/i18n/routing';
 
 const profilePage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/perfil/page.tsx'), 'utf8');
 const userEmailResolver = readFileSync(join(process.cwd(), 'src/server/users/email.ts'), 'utf8');
+const authQuery = readFileSync(join(process.cwd(), 'src/server/queries/auth.ts'), 'utf8');
+const organizationAction = readFileSync(join(process.cwd(), 'src/server/actions/organizations.ts'), 'utf8');
+const complianceAlerts = readFileSync(join(process.cwd(), 'src/app/api/internal/compliance-alerts/route.ts'), 'utf8');
 const supabaseTypes = readFileSync(join(process.cwd(), 'src/integrations/supabase/types.ts'), 'utf8');
 const billingWebhook = readFileSync(join(process.cwd(), 'src/server/billing/stripe-webhooks.ts'), 'utf8');
 const trialReminder = readFileSync(join(process.cwd(), 'src/app/api/internal/trial-reminders/route.ts'), 'utf8');
@@ -71,6 +74,11 @@ describe('recipient locale authority', () => {
     expect(userEmailResolver).toContain('getRecipientLocaleFromMetadata(data.user?.user_metadata)');
     expect(userEmailResolver).toContain('getUserEmailContextById');
     expect(userEmailResolver).not.toContain('listUsers');
+  });
+
+  it('propagates the persisted locale through the authenticated current-user boundary', () => {
+    expect(authQuery).toContain('locale: Locale');
+    expect(authQuery).toContain('locale: getRecipientLocaleFromMetadata(metadata)');
   });
 
   it('localizes the profile application chrome across every configured locale', () => {
@@ -129,6 +137,16 @@ describe('recipient locale authority', () => {
     const vendor = vendorReviewEmail({ locale: 'es', organizationName: 'ACME GmbH', vendorName: 'Vendor-X', vendorsUrl: '/vendors', reviewDueAt: '2026-09-20' });
     expect(`${vendor.subject}\n${vendor.html}\n${vendor.text}`).toContain('Vendor-X');
     expect(`${vendor.subject}\n${vendor.html}\n${vendor.text}`).toContain('2026-09-20');
+  });
+
+  it('uses recipient locale for Product-owned organization and compliance email callers', () => {
+    expect(organizationAction).toContain('locale: user.locale');
+    expect(organizationAction).toContain('`${getAppUrl()}/${user.locale}/dashboard/organizations`');
+
+    expect(complianceAlerts).toContain('getUserEmailContextById');
+    expect(complianceAlerts).toContain('locale: recipient.locale');
+    expect(complianceAlerts).toContain('`${appUrl}/${recipient.locale}/dashboard/organizations/documents`');
+    expect(complianceAlerts).toContain('`${appUrl}/${recipient.locale}/dashboard/organizations/vendors`');
   });
 
   it('keeps legacy callers backward-compatible with English fallback', () => {
