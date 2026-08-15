@@ -1,0 +1,211 @@
+name: Product FRIA Ephemeral Runtime QA
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/product-fria-ephemeral-qa.yml'
+      - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
+      - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/product-fria-ephemeral-qa.yml'
+      - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
+      - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: product-fria-ephemeral-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fria-runtime:
+    name: Disposable authenticated FRIA lifecycle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      EXPECTED_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      E2E_BASE_URL: http://127.0.0.1:3000
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      SITE_URL: http://127.0.0.1:3000
+
+    steps:
+      - name: Checkout exact assessed SHA without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact assessed SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install application dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Install Chromium for focused Playwright acceptance
+        run: npx playwright install --with-deps chromium
+
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.101.0
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Start reviewed exact-SHA disposable database
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs
+          test "${RECOVERY_EPHEMERAL_DATABASE_PROVISIONED:-}" = 'true'
+          test "${RECOVERY_EPHEMERAL_DATABASE_MODE:-}" = 'project-schema'
+          test -n "${RECOVERY_EPHEMERAL_WORKDIR:-}"
+
+      - name: Promote disposable database to local Supabase Auth and REST stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${RECOVERY_EPHEMERAL_WORKDIR:-}"
+          supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" start
+          supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" status -o env > "$RUNNER_TEMP/fria-supabase-status.env"
+
+      - name: Export masked loopback Supabase runtime configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          STATUS_FILE="$RUNNER_TEMP/fria-supabase-status.env" python - <<'PY'
+          import os
+          import shlex
+          from pathlib import Path
+          from urllib.parse import urlparse
+
+          values = {}
+          for raw_line in Path(os.environ['STATUS_FILE']).read_text(encoding='utf-8').splitlines():
+              if '=' not in raw_line:
+                  continue
+              key, raw_value = raw_line.split('=', 1)
+              key = key.strip()
+              raw_value = raw_value.strip()
+              try:
+                  parsed = shlex.split(raw_value)
+                  value = parsed[0] if parsed else ''
+              except ValueError:
+                  value = raw_value.strip('"\'')
+              values[key] = value
+
+          api_url = values.get('API_URL', '')
+          anon_key = values.get('ANON_KEY', '')
+          service_role = values.get('SERVICE_ROLE_KEY', '')
+          host = urlparse(api_url).hostname
+          if host not in {'127.0.0.1', 'localhost', '::1'}:
+              raise SystemExit('Local Supabase API_URL is not loopback')
+          if not anon_key or not service_role:
+              raise SystemExit('Local Supabase status did not expose required runtime keys')
+
+          for value in (anon_key, service_role):
+              print(f'::add-mask::{value}')
+
+          exports = {
+              'NEXT_PUBLIC_SUPABASE_URL': api_url,
+              'NEXT_PUBLIC_SUPABASE_ANON_KEY': anon_key,
+              'SUPABASE_URL': api_url,
+              'SUPABASE_ANON_KEY': anon_key,
+              'SUPABASE_SERVICE_ROLE_KEY': service_role,
+              'E2E_FRIA_RUNTIME_EVIDENCE_PATH': os.path.join(os.environ['RUNNER_TEMP'], 'fria-runtime-evidence.json'),
+          }
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as handle:
+              for key, value in exports.items():
+                  handle.write(f'{key}={value}\n')
+          PY
+          rm -f "$RUNNER_TEMP/fria-supabase-status.env"
+
+      - name: Create disposable FRIA identities and tenant
+        run: node scripts/product/create-fria-ephemeral-fixtures.mjs
+
+      - name: Start application against loopback Supabase
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run dev > "$RUNNER_TEMP/fria-next.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/fria-next.pid"
+          ready=false
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent --show-error "$E2E_BASE_URL/en/login" >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != 'true' ]; then
+            tail -n 200 "$RUNNER_TEMP/fria-next.log" >&2 || true
+            exit 1
+          fi
+
+      - name: Execute authenticated FRIA lifecycle acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${E2E_FRIA_OWNER_EMAIL:-}"
+          test -n "${E2E_FRIA_OWNER_PASSWORD:-}"
+          test -n "${E2E_FRIA_REVIEWER_EMAIL:-}"
+          test -n "${E2E_FRIA_APPROVER_EMAIL:-}"
+          test -n "${E2E_FRIA_APPROVER_PASSWORD:-}"
+          test "${E2E_ALLOW_SYNTHETIC_APP_WRITES:-}" = 'true'
+          rm -f "$E2E_FRIA_RUNTIME_EVIDENCE_PATH"
+          npx playwright test tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts --project=chromium --reporter=line
+
+      - name: Require executed sanitized FRIA evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$E2E_FRIA_RUNTIME_EVIDENCE_PATH"
+          EVIDENCE="$E2E_FRIA_RUNTIME_EVIDENCE_PATH" EXPECTED="$EXPECTED_HEAD_SHA" node - <<'NODE'
+          const fs = require('node:fs');
+          const evidence = JSON.parse(fs.readFileSync(process.env.EVIDENCE, 'utf8'));
+          if (evidence.schema !== 'risck-comply.product-fria-runtime-acceptance.v1') throw new Error('unexpected_evidence_schema');
+          if (evidence.outcome !== 'passed') throw new Error('fria_runtime_not_passed');
+          if (evidence.targetSha !== process.env.EXPECTED) throw new Error('fria_runtime_sha_mismatch');
+          if (!evidence.checks || !Object.values(evidence.checks).every(Boolean)) throw new Error('fria_runtime_check_incomplete');
+          if (evidence.evidenceIntegrity?.syntheticWritesExplicitlyEnabled !== true) throw new Error('synthetic_write_boundary_missing');
+          for (const key of ['credentialsStored','emailsStored','userIdentifiersStored','organizationIdentifiersStored','rawProviderResponsesStored']) {
+            if (evidence.evidenceIntegrity?.[key] !== false) throw new Error(`unsafe_evidence_${key}`);
+          }
+          NODE
+
+      - name: Upload sanitized FRIA runtime evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: product-fria-runtime-${{ env.EXPECTED_HEAD_SHA }}
+          path: ${{ runner.temp }}/fria-runtime-evidence.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Stop disposable runtime
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [ -f "$RUNNER_TEMP/fria-next.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/fria-next.pid")" 2>/dev/null || true
+          fi
+          node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
+          rm -f "$RUNNER_TEMP/fria-next.log" "$RUNNER_TEMP/fria-next.pid" "$RUNNER_TEMP/fria-supabase-status.env"
