@@ -62,7 +62,6 @@ jobs:
           STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ vars.STRIPE_PRICE_ESSENTIAL_MONTHLY }}
           STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ vars.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}
           STRIPE_PRICE_BUSINESS_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_MONTHLY }}
-          STRIPE_BILLING_PORTAL_CONFIGURATION_ID: ${{ vars.STRIPE_BILLING_PORTAL_CONFIGURATION_ID }}
         run: node scripts/security/probe-stripe-provider-config.mjs
 
       - name: Write redacted evidence
@@ -70,7 +69,6 @@ jobs:
           ENTERPRISE_EXPECTED_SHA: ${{ inputs.release_sha }}
           ENTERPRISE_EXPECTED_BRANCH: main
           STRIPE_PROVIDER_PROBE_PASSED: 'true'
-          STRIPE_BILLING_PORTAL_CONFIGURATION_ID: ${{ vars.STRIPE_BILLING_PORTAL_CONFIGURATION_ID }}
         run: node scripts/security/write-stripe-provider-evidence.mjs
 
       - name: Upload redacted evidence
