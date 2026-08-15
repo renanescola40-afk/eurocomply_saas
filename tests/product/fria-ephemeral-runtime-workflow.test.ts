@@ -10,14 +10,15 @@ describe('Product FRIA ephemeral runtime workflow', () => {
     expect(workflow).toContain('--override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY');
   });
 
-  it('accepts current and legacy Supabase status variable names without weakening the runtime boundary', () => {
+  it('accepts legacy local role keys and derives disposable HS256 role keys only from the local JWT secret when needed', () => {
     expect(workflow).toContain("first_value('NEXT_PUBLIC_SUPABASE_URL', 'API_URL', 'SUPABASE_URL')");
-    expect(workflow).toContain("'NEXT_PUBLIC_SUPABASE_ANON_KEY'");
-    expect(workflow).toContain("'ANON_KEY'");
-    expect(workflow).toContain("'PUBLISHABLE_KEY'");
-    expect(workflow).toContain("'SUPABASE_SERVICE_ROLE_KEY'");
-    expect(workflow).toContain("'SERVICE_ROLE_KEY'");
-    expect(workflow).toContain("'SECRET_KEY'");
+    expect(workflow).toContain("first_value('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'ANON_KEY', 'SUPABASE_ANON_KEY')");
+    expect(workflow).toContain("first_value('SUPABASE_SERVICE_ROLE_KEY', 'SERVICE_ROLE_KEY')");
+    expect(workflow).toContain("first_value('JWT_SECRET', 'SUPABASE_JWT_SECRET')");
+    expect(workflow).toContain("local_role_key(jwt_secret, 'anon')");
+    expect(workflow).toContain("local_role_key(jwt_secret, 'service_role')");
+    expect(workflow).toContain("'alg': 'HS256'");
+    expect(workflow).toContain("'iss': 'supabase-demo'");
   });
 
   it('keeps the runtime loopback-only and masks credentials before exporting them', () => {
