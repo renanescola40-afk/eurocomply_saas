@@ -27,11 +27,15 @@ const forwardCore = readFileSync(
   'supabase/migrations/20260814101500_reconcile_enterprise_core_active_runtime.sql',
   'utf8',
 );
+const forwardOnboarding = readFileSync(
+  'supabase/migrations/20260815142500_reconcile_active_onboarding_runtime.sql',
+  'utf8',
+);
 
 const selected = config.migrations.map((migration) => migration.filename);
 
 describe('bounded Supabase forward reconciliation contract', () => {
-  it('selects exactly the fifteen bounded forward-only reconciliation identities in version order', () => {
+  it('selects exactly the sixteen bounded forward-only reconciliation identities in version order', () => {
     expect(selected).toEqual([
       '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
       '20260813194500_reconcile_step_up_challenges_runtime.sql',
@@ -48,9 +52,12 @@ describe('bounded Supabase forward reconciliation contract', () => {
       '20260814093000_reconcile_enterprise_contract_control_rpcs.sql',
       '20260814101500_reconcile_enterprise_core_active_runtime.sql',
       '20260815083000_reconcile_live_rls_validation_inventory_privileges.sql',
+      '20260815142500_reconcile_active_onboarding_runtime.sql',
     ]);
     expect(selected).not.toContain('20260730204500_repair_live_rls_validation_inventory.sql');
     expect(selected).not.toContain('20260809135000_enterprise_core_runtime_schema_reconciliation.sql');
+    expect(selected).not.toContain('20260802153000_reconcile_onboarding_runtime_schema.sql');
+    expect(selected).not.toContain('20260716183000_atomic_onboarding_activation.sql');
     for (const filename of selected) {
       expect(existsSync(`supabase/migrations/${filename}`)).toBe(true);
     }
@@ -119,6 +126,39 @@ describe('bounded Supabase forward reconciliation contract', () => {
     expect(forwardCore).toContain('revoke all on function public.enforce_vendor_governance_integrity() from public, anon, authenticated');
     expect(forwardCore).toContain('grant execute on function public.enforce_vendor_governance_integrity() to service_role');
     expect(forwardCore).toContain('Vendor governance tenant-integrity trigger is missing after reconciliation');
+  });
+
+  it('reconciles the active onboarding runtime under a new production-forward identity', () => {
+    for (const column of [
+      'country',
+      'company_type',
+      'sector',
+      'ai_usage_summary',
+      'onboarding_status',
+      'onboarding_step',
+      'selected_plan',
+      'metadata',
+      'readiness_score',
+      'trial_started_at',
+      'onboarding_completed_at',
+    ]) {
+      expect(forwardOnboarding).toContain(column);
+    }
+
+    expect(forwardOnboarding).toContain('create or replace function public.complete_onboarding_activation_atomic');
+    expect(forwardOnboarding).toContain('security definer');
+    expect(forwardOnboarding).toContain('set search_path = pg_catalog, public');
+    expect(forwardOnboarding).toContain("v_actor_role not in ('owner', 'admin')");
+    expect(forwardOnboarding).toContain('systems.organization_id = p_organization_id');
+    expect(forwardOnboarding).toContain('assigned_to');
+    expect(forwardOnboarding).toContain("v_invite_email_array text[] := '{}'::text[]");
+    expect(forwardOnboarding).toContain('onboarding_activation_runs_org_idempotency_key_idx');
+    expect(forwardOnboarding).toContain('revoke all on function public.complete_onboarding_activation_atomic(uuid, uuid, text, jsonb) from anon');
+    expect(forwardOnboarding).toContain('revoke all on function public.complete_onboarding_activation_atomic(uuid, uuid, text, jsonb) from authenticated');
+    expect(forwardOnboarding).toContain('grant execute on function public.complete_onboarding_activation_atomic(uuid, uuid, text, jsonb) to service_role');
+    expect(forwardOnboarding).toContain("raise exception 'atomic onboarding activation function privileges are not canonical'");
+    expect(forwardOnboarding).not.toContain('migration repair');
+    expect(forwardOnboarding).not.toContain('--include-all');
   });
 
   it('triggers both bounded workflows for any migration byte change without widening the selected set', () => {
