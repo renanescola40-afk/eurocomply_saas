@@ -12,6 +12,7 @@ const taskList = source('src/components/dashboard/compliance-task-list.tsx');
 const documentPage = source('src/app/[locale]/dashboard/organizations/documents/page.tsx');
 const teamPage = source('src/app/[locale]/dashboard/organizations/team/page.tsx');
 const teamSettings = source('src/components/team/team-settings-section.tsx');
+const inviteMemberForm = source('src/components/team/invite-member-form.tsx');
 const aiSystemsPage = source('src/app/[locale]/ai-systems/page.tsx');
 const aiReadonlyView = source('src/app/[locale]/ai-systems/ai-systems-readonly-view.tsx');
 const aiSystemDetail = source('src/app/[locale]/ai-systems/[id]/page.tsx');
@@ -66,10 +67,23 @@ describe('final commercial UX closure contracts', () => {
     expect(aiSystemDetail).toContain('<AiSystemEditForm');
   });
 
+  it('keeps invitation role labels aligned with roles the API actually persists', () => {
+    expect(inviteMemberForm).toContain("const roles = ['admin', 'editor', 'viewer'] as const");
+    expect(inviteMemberForm).toContain('<SelectItem value="admin">{copy.admin}</SelectItem>');
+    expect(inviteMemberForm).toContain('<SelectItem value="editor">{copy.editor}</SelectItem>');
+    expect(inviteMemberForm).toContain('<SelectItem value="viewer">{copy.viewer}</SelectItem>');
+    expect(inviteMemberForm).not.toContain('value="member"');
+    expect(teamSettings).toContain("if (role === 'admin') return 'Admin'");
+    expect(teamSettings).toContain("if (role === 'editor') return 'Editor'");
+    expect(teamSettings).toContain("return 'Visualizador'");
+  });
+
   it('keeps team and onboarding invitation locale explicit through email rendering', () => {
     for (const locale of locales) {
       const copy = getTeamWorkflowCopy(locale);
       expect(copy.invite.send).toBeTruthy();
+      expect(copy.invite.editor).toBeTruthy();
+      expect(copy.invite.viewer).toBeTruthy();
       expect(copy.email.cta).toBeTruthy();
       expect(copy.email.subject('QA Org')).toContain('QA Org');
     }
