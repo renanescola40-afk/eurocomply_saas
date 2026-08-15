@@ -57,7 +57,7 @@ describe('Stripe Billing Portal bootstrap contract', () => {
     expect(workflow).not.toContain('git push');
     expect(workflow).not.toContain('gh pr create');
     expect(workflow).not.toContain('auto-merge');
-    expect(workflow).toContain('Pin the reviewed ID in `config/stripe-billing-portal-contract.json` through a normal pull request');
+    expect(workflow).toContain('Pin the reviewed ID in config/stripe-billing-portal-contract.json through a normal pull request');
     expect(provisioner).not.toContain('writeFileSync');
     expect(provisioner).not.toContain('stripe-billing-portal-contract.json');
   });
