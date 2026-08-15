@@ -12,6 +12,9 @@ const taskList = source('src/components/dashboard/compliance-task-list.tsx');
 const documentPage = source('src/app/[locale]/dashboard/organizations/documents/page.tsx');
 const teamPage = source('src/app/[locale]/dashboard/organizations/team/page.tsx');
 const teamSettings = source('src/components/team/team-settings-section.tsx');
+const aiSystemsPage = source('src/app/[locale]/ai-systems/page.tsx');
+const aiReadonlyView = source('src/app/[locale]/ai-systems/ai-systems-readonly-view.tsx');
+const aiSystemDetail = source('src/app/[locale]/ai-systems/[id]/page.tsx');
 const inviteRoute = source('src/app/api/team/invites/route.ts');
 const onboardingAction = source('src/server/actions/onboarding.ts');
 const activationClient = source('src/app/[locale]/checkout/complete/checkout-activation-client.tsx');
@@ -52,6 +55,15 @@ describe('final commercial UX closure contracts', () => {
     expect(teamPage.indexOf('if (!canManageTeam)')).toBeLessThan(teamPage.indexOf('const [members, invitations, billing]'));
     expect(teamSettings).toContain('canManageTeam: boolean');
     expect(teamSettings).toContain('onRemoveMember={canManageTeam ? handleRemoveMember : undefined}');
+
+    expect(aiSystemsPage).toContain("roleHasPermission(organization.role, 'manage_ai_governance')");
+    expect(aiSystemsPage).toContain('canManageAiGovernance ? (');
+    expect(aiSystemsPage).toContain('<AiSystemsReadonlyView');
+    expect(aiReadonlyView).not.toContain('onSubmit=');
+    expect(aiReadonlyView).not.toContain('<form');
+    expect(aiSystemDetail).toContain("roleHasPermission(currentMembership?.role, 'manage_ai_governance')");
+    expect(aiSystemDetail).toContain('canManageAiGovernance ? (');
+    expect(aiSystemDetail).toContain('<AiSystemEditForm');
   });
 
   it('keeps team and onboarding invitation locale explicit through email rendering', () => {
