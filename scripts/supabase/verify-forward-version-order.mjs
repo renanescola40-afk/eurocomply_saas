@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 
 const VERSION = /^\d{14}$/;
 const SHA = /^[a-f0-9]{40}$/;
+const DIGEST = /^sha256:[a-f0-9]{64}$/;
 const SCHEMA = 'risck-comply.supabase-forward-version-order-proof.v1';
 
 function assert(condition, message) {
@@ -25,6 +26,7 @@ export function verifyForwardVersionOrder({ manifest, remoteVersions, expectedSh
   assert(SHA.test(targetSha), 'expected SHA must be a lowercase 40-character Git SHA');
   assert(manifest?.schema === 'risck-comply.supabase-forward-reconciliation-manifest.v1', 'manifest schema is invalid');
   assert(manifest?.targetSha === targetSha, 'manifest target SHA mismatch');
+  assert(DIGEST.test(String(manifest?.selectionDigest ?? '')), 'manifest selection digest is invalid');
 
   const selected = normalizeVersions(
     (manifest?.migrations ?? []).map((migration) => migration?.version),
@@ -50,17 +52,19 @@ export function verifyForwardVersionOrder({ manifest, remoteVersions, expectedSh
     status: 'PASS',
     outcome: 'passed',
     targetSha,
+    selectionDigest: manifest.selectionDigest,
     remoteHeadVersion,
     earliestSelectedVersion,
     selectedMigrationCount: selected.length,
     checks: {
       selectedSetNonEmpty: true,
+      exactSelectionDigestBound: true,
       allSelectedVersionsAfterRemoteHead: true,
       outOfOrderMigrationRequired: false,
       includeAllRequired: false,
       migrationHistoryRepairRequired: false,
     },
-    truthBoundary: 'PASS proves only that every selected reconciliation version is strictly later than the observed remote migration head. It does not classify migrations, authorize a production write, or mutate migration history.',
+    truthBoundary: 'PASS proves that every migration version in the exact manifest selection digest is strictly later than the observed remote migration head. It does not classify migrations, authorize a production write, or mutate migration history.',
   };
 }
 
