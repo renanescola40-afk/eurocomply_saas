@@ -73,15 +73,7 @@ export function normalizeOrganizationRole(role: string | null | undefined): Orga
   if (['owner', 'proprietario', 'proprietário', 'dono'].includes(normalized)) return 'owner';
   if (['admin', 'administrator', 'administrador'].includes(normalized)) return 'admin';
   if (
-    [
-      'editor',
-      'manager',
-      'gestor',
-      'compliance-manager',
-      'compliance_manager',
-      'compliance manager',
-      'compliance-manager'.replace('-', ':'),
-    ].includes(normalized)
+    ['editor', 'manager', 'gestor', 'compliance-manager', 'compliance_manager', 'compliance manager'].includes(normalized)
   ) return 'editor';
   if (['visualizador', 'viewer', 'read_only', 'readonly', 'leitor'].includes(normalized)) return 'viewer';
   if (['member', 'membro'].includes(normalized)) return 'member';
