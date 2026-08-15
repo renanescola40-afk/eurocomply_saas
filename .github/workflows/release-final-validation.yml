@@ -28,7 +28,7 @@ jobs:
     name: Generate final validation bundle
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    environment: ${{ inputs.release_target }}
+    environment: Production
 
     steps:
       - name: Checkout repository
