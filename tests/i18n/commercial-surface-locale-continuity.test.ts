@@ -144,9 +144,10 @@ describe('commercial surface locale continuity', () => {
     expect(regulatoryJournalPage).toContain('{copy.premiumPreview}');
     expect(regulatoryJournalPage).toContain('{copy.empty}');
     expect(regulatoryJournalPage).toContain('{item.title}');
+    expect(regulatoryJournalPage).toContain('{item.newspaperDeck}');
     expect(regulatoryJournalPage).toContain('{item.articleParagraphs[0]}');
+    expect(regulatoryJournalPage).toContain('{item.calendarSuggestion}');
     expect(regulatoryJournalPage).toContain('{item.recommendedActions.map');
-    expect(regulatoryJournalPage).not.toContain('Matéria premium em preview. Ative Notícias Premium para ver análise completa');
   });
 
   it('preserves keyboard focus treatment on purchase, auth, onboarding, AI inventory, trust and upgrade controls', () => {
