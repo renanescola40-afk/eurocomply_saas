@@ -253,7 +253,7 @@ describe('authenticated dashboard UX acceptance', () => {
         auditEvents={[{ id: 'audit-1', action: 'document_approved' }]}
         workflowReadiness={{ status: 'attention', reasons: ['open-compliance-work'] }}
         basePath="/pt/dashboard/organizations"
-        tasksPath="/pt/aprovacoes"
+        tasksPath="/pt/dashboard/organizations/tasks"
         planName="Growth"
         limitsSummary="Documents: 100 · Users: 10"
         currentUserRole="viewer"
@@ -264,18 +264,22 @@ describe('authenticated dashboard UX acceptance', () => {
 
     const region = container.querySelector<HTMLElement>('section[aria-labelledby="enterprise-command-center-title"]');
     expect(region).not.toBeNull();
-    expect(container.querySelector('#enterprise-command-center-title')?.textContent).toBe('AI Act readiness cockpit');
+    expect(container.querySelector('#enterprise-command-center-title')?.textContent).toBe('Command Center');
     expect(container.textContent).toContain('72%');
-    expect(container.textContent).toContain('Role: viewer');
-    expect(container.textContent).toContain('Needs attention');
-    expect(container.textContent).not.toContain('Open billing');
-    expect(container.textContent).not.toContain('Review tasks');
+    expect(container.textContent).toContain('Função: viewer');
+    expect(container.textContent).toContain('Atenção necessária');
+    expect(container.textContent).toContain('Próxima melhor ação');
+    expect(container.textContent).toContain('Progresso operacional');
+    expect(container.textContent).toContain('Atividade recente');
+    expect(container.textContent).not.toContain('Abrir faturação');
+    expect(container.textContent).not.toContain('Rever tarefas');
 
     const links = [...container.querySelectorAll<HTMLAnchorElement>('a[href]')];
-    expect(links.length).toBeGreaterThanOrEqual(9);
+    expect(links.length).toBeGreaterThanOrEqual(8);
     expect(links.every((link) => link.getAttribute('href')?.startsWith('/pt/'))).toBe(true);
     expect(links.some((link) => link.getAttribute('href') === '/pt/dashboard/organizations/documents')).toBe(true);
     expect(links.some((link) => link.getAttribute('href') === '/pt/ai-systems')).toBe(true);
+    expect(links.some((link) => link.getAttribute('href') === '/pt/dashboard/organizations/tasks')).toBe(true);
     expect(links.some((link) => link.getAttribute('href')?.includes('/undefined'))).toBe(false);
   });
 
@@ -292,7 +296,7 @@ describe('authenticated dashboard UX acceptance', () => {
         auditEvents={[]}
         workflowReadiness={{ status: 'ready', reasons: [] }}
         basePath="/en/dashboard/organizations"
-        tasksPath="/en/aprovacoes"
+        tasksPath="/en/dashboard/organizations/tasks"
         planName="Enterprise"
         limitsSummary="Documents: Unlimited · Users: Unlimited"
         currentUserRole="owner"
@@ -301,10 +305,10 @@ describe('authenticated dashboard UX acceptance', () => {
       />,
     );
 
-    expect(container.textContent).toContain('Strong readiness posture');
+    expect(container.textContent).toContain('Operationally ready for review');
     expect(container.textContent).toContain('Review tasks');
     expect(container.textContent).toContain('Open billing');
-    expect(container.querySelector<HTMLAnchorElement>('a[href="/en/aprovacoes"]')).not.toBeNull();
+    expect(container.querySelector<HTMLAnchorElement>('a[href="/en/dashboard/organizations/tasks"]')).not.toBeNull();
     expect(container.querySelector<HTMLAnchorElement>('a[href="/en/dashboard/organizations/billing"]')).not.toBeNull();
   });
 });
