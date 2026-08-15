@@ -15,6 +15,11 @@ export {
 type MembershipRow = {
   organization_id: string;
   role: string | null;
+  status?: string | null;
+};
+
+type MembershipQueryError = {
+  code?: string | null;
 };
 
 export type PermissionCheckAllowed = {
@@ -39,6 +44,10 @@ export type PermissionCheckResult = PermissionCheckAllowed | PermissionCheckDeni
 
 function isSupabaseUserId(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+export function isActiveOrganizationMembership(status: string | null | undefined) {
+  return status == null || status.trim().toLowerCase() === 'active';
 }
 
 async function recordRbacDeniedAuditEvent({
@@ -80,18 +89,42 @@ export async function getOrganizationMembership(userId: string, organizationId: 
   const { createAdminClient } = await import('@/lib/supabase/admin');
   const supabase = createAdminClient();
 
-  const { data, error } = await supabase
+  const statusAware = await supabase
     .from('organization_members')
-    .select('organization_id, role')
+    .select('organization_id, role, status')
     .eq('organization_id', organizationId)
     .eq('user_id', userId)
     .maybeSingle();
 
-  if (error) {
-    return { membership: null, error };
+  let membership = statusAware.data as unknown as MembershipRow | null;
+  let membershipError = statusAware.error as MembershipQueryError | null;
+
+  // Production is being migrated forward to the canonical status column. Only
+  // the exact missing-column SQLSTATE may use the temporary legacy projection;
+  // every other provider/query failure remains fail-closed.
+  if (membershipError?.code === '42703') {
+    const legacy = await supabase
+      .from('organization_members')
+      .select('organization_id, role')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    membership = legacy.data
+      ? { ...(legacy.data as unknown as Omit<MembershipRow, 'status'>), status: 'active' }
+      : null;
+    membershipError = legacy.error as MembershipQueryError | null;
   }
 
-  return { membership: data as unknown as MembershipRow | null, error: null };
+  if (membershipError) {
+    return { membership: null, error: membershipError };
+  }
+
+  if (membership && !isActiveOrganizationMembership(membership.status)) {
+    return { membership: null, error: null };
+  }
+
+  return { membership, error: null };
 }
 
 export async function assertOrganizationPermission({
@@ -122,7 +155,7 @@ export async function assertOrganizationPermission({
       ok: false,
       status: 403,
       error: 'organization_membership_required',
-      message: 'You are not a member of this organization.',
+      message: 'You are not an active member of this organization.',
       permission,
     };
     await recordRbacDeniedAuditEvent({ userId, organizationId, result });
