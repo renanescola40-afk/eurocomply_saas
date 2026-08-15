@@ -129,9 +129,27 @@ jobs:
                   value = raw_value.strip('"\'')
               values[key] = value
 
-          api_url = values.get('NEXT_PUBLIC_SUPABASE_URL', '')
-          anon_key = values.get('NEXT_PUBLIC_SUPABASE_ANON_KEY', '')
-          service_role = values.get('SUPABASE_SERVICE_ROLE_KEY', '')
+          def first_value(*names):
+              for name in names:
+                  value = values.get(name, '')
+                  if value:
+                      return value
+              return ''
+
+          api_url = first_value('NEXT_PUBLIC_SUPABASE_URL', 'API_URL', 'SUPABASE_URL')
+          anon_key = first_value(
+              'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+              'ANON_KEY',
+              'SUPABASE_ANON_KEY',
+              'PUBLISHABLE_KEY',
+              'SUPABASE_PUBLISHABLE_KEY',
+          )
+          service_role = first_value(
+              'SUPABASE_SERVICE_ROLE_KEY',
+              'SERVICE_ROLE_KEY',
+              'SECRET_KEY',
+              'SUPABASE_SECRET_KEY',
+          )
           host = urlparse(api_url).hostname
           if host not in {'127.0.0.1', 'localhost', '::1'}:
               safe_keys = ','.join(sorted(values))
