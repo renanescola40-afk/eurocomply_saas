@@ -9,6 +9,7 @@ const summaryPath = process.argv[4] ?? 'artifacts/billing-lifecycle-runtime-proo
 const env = (name) => String(process.env[name] ?? '').trim();
 
 const baseChecks = [
+  'runtimeReleaseShaVerified',
   'schemaReady',
   'subscriptionObserved',
   'subscriptionActive',
@@ -31,6 +32,7 @@ const baseChecks = [
   'reactivateAuditMatches',
   'auditHashesPresent',
   'auditPredecessorLinksResolve',
+  'auditChainCryptographicallyVerified',
 ];
 
 const failures = [];
@@ -57,8 +59,22 @@ if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 if (!/^sub_[A-Za-z0-9]+$/.test(stripeSubscriptionId)) failures.push('stripe_subscription_id_invalid');
 if (!/^evt_[A-Za-z0-9]+$/.test(stripeEventId)) failures.push('stripe_event_id_invalid');
 
+const externallyVerifiedChecks = {
+  runtimeReleaseShaVerified: env('RUNTIME_RELEASE_SHA_VERIFIED') === 'true',
+  auditChainCryptographicallyVerified: env('AUDIT_CHAIN_CRYPTOGRAPHICALLY_VERIFIED') === 'true',
+};
+const observedChecks = Object.fromEntries(
+  baseChecks
+    .filter((name) => !(name in externallyVerifiedChecks))
+    .map((name) => [name, observed?.[name] === true]),
+);
 const allCheckNames = [...baseChecks, 'stripeEventLiveMode', 'productionLiveAuthorityRequired'];
-const checks = Object.fromEntries(allCheckNames.map((name) => [name, observed?.[name] === true]));
+const checks = Object.fromEntries(allCheckNames.map((name) => [
+  name,
+  name in externallyVerifiedChecks
+    ? externallyVerifiedChecks[name]
+    : (name in observedChecks ? observedChecks[name] : observed?.[name] === true),
+]));
 const requiredChecks = targetEnvironment === 'production'
   ? [...baseChecks, 'stripeEventLiveMode', 'productionLiveAuthorityRequired']
   : baseChecks;
@@ -91,6 +107,8 @@ const evidence = {
   authorityPolicy: {
     productionRequiresLiveStripeAuthority: true,
     liveStripeAuthorityRequired: liveAuthorityRequired,
+    exactDeployedRuntimeShaRequired: true,
+    canonicalAuditHashChainVerificationRequired: true,
     evidenceIsReadOnlyObservation: true,
   },
   checks,
@@ -103,8 +121,10 @@ const evidence = {
     connectionStringsStored: false,
     rawDatabaseRowsStored: false,
     providerPayloadStored: false,
+    rawAuditEventsStored: false,
+    auditVerifierOutputStored: false,
   },
-  boundary: 'Read-only exact-SHA observation of one pre-authorized organization and one Stripe subscription. Completion proves correlated persisted lifecycle evidence for upgrade, scheduled downgrade, cancellation and later reactivation; it does not execute a charge, mutate Stripe, prove every tenant, or guarantee future provider availability.',
+  boundary: 'Read-only observation of one pre-authorized organization and one Stripe subscription, bound to the exact SHA independently reported by the target runtime. Completion proves correlated persisted lifecycle evidence for upgrade, scheduled downgrade, cancellation and later reactivation plus canonical audit hash-chain verification; it does not execute a charge, mutate Stripe, prove every tenant, or guarantee future provider availability.',
 };
 
 const summary = [
