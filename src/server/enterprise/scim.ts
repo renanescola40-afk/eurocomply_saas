@@ -15,6 +15,7 @@ export type ScimAuthentication = {
   tokenId: string;
   organizationId: string;
   identityConnectionId: string | null;
+  actorUserId: string;
 };
 
 export type ScimIdentity = {
@@ -92,6 +93,23 @@ function tokenDigest(token: string) {
 
 function operationKey(namespace: string, value: string) {
   return `${namespace}:${createHash('sha256').update(value, 'utf8').digest('hex')}`.slice(0, 160);
+}
+
+async function resolveScimAuditActor(tokenId: string, organizationId: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from('enterprise_scim_tokens')
+    .select('created_by')
+    .eq('id', tokenId)
+    .eq('organization_id', organizationId)
+    .eq('status', 'active')
+    .maybeSingle<{ created_by: string | null }>();
+
+  if (error || !data?.created_by) {
+    throw new ScimError('scim_authentication_unavailable', 503);
+  }
+
+  return data.created_by;
 }
 
 function identityFromRow(row: IdentityRow | null): ScimIdentity | null {
@@ -188,10 +206,13 @@ export async function authenticateScimRequest(request: Request): Promise<ScimAut
     throw new ScimError('scim_authentication_unavailable', 503);
   }
 
+  const actorUserId = await resolveScimAuditActor(tokenId, organizationId);
+
   return {
     tokenId,
     organizationId,
     identityConnectionId: stringOrNull(row.identity_connection_id),
+    actorUserId,
   };
 }
 
@@ -289,7 +310,7 @@ export async function createScimUser(input: {
     const reservation = await provisionEnterpriseIdentity({
       organizationId: input.authentication.organizationId,
       userId,
-      actorUserId: userId,
+      actorUserId: input.authentication.actorUserId,
       role: input.role,
       seatType: input.seatType,
       source: 'scim',
@@ -335,7 +356,7 @@ export async function updateScimUser(input: {
   const reservation = await provisionEnterpriseIdentity({
     organizationId: input.authentication.organizationId,
     userId: input.identity.userId,
-    actorUserId: input.identity.userId,
+    actorUserId: input.authentication.actorUserId,
     role: input.role,
     seatType: input.seatType,
     source: 'scim',
@@ -372,7 +393,7 @@ export async function deactivateScimUser(
   const release = await deprovisionEnterpriseIdentity({
     organizationId: authentication.organizationId,
     membershipId: identity.membershipId,
-    actorUserId: identity.userId,
+    actorUserId: authentication.actorUserId,
     source: 'scim',
     idempotencyKey: operationKey('scim-deactivate', `${identity.id}:${identity.updatedAt}`),
   });
