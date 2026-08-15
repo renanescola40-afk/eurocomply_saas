@@ -23,13 +23,67 @@ describe('billing checkout route contract', () => {
     expect(stripeCheckout).toBeGreaterThan(idempotency);
   });
 
+  it('blocks checkout without an authenticated user before tenant lookup or Stripe mutation', async () => {
+    const source = await readFile(ROUTE_FILE, 'utf8');
+
+    const auth = source.indexOf('const user = await requireApiUser()');
+    const organization = source.indexOf('getCurrentOrganizationForUser(user.id)');
+    const stripeCheckout = source.indexOf('stripe.checkout.sessions.create');
+
+    expect(auth).toBeGreaterThan(-1);
+    expect(organization).toBeGreaterThan(auth);
+    expect(stripeCheckout).toBeGreaterThan(organization);
+  });
+
+  it('blocks checkout without manage_billing permission before trusted mutation or Stripe mutation', async () => {
+    const source = await readFile(ROUTE_FILE, 'utf8');
+
+    const permission = source.indexOf("permission: 'manage_billing'");
+    const trustedMutation = source.indexOf('await requireTrustedMutation(request');
+    const stripeCheckout = source.indexOf('stripe.checkout.sessions.create');
+
+    expect(permission).toBeGreaterThan(-1);
+    expect(trustedMutation).toBeGreaterThan(permission);
+    expect(stripeCheckout).toBeGreaterThan(trustedMutation);
+  });
+
+  it('blocks an existing billing change without a valid step-up token before lifecycle mutation', async () => {
+    const source = await readFile(ROUTE_FILE, 'utf8');
+
+    const liveAuthority = source.indexOf('const hasLiveSubscription = await hasLiveSubscriptionRelationship');
+    const stepUp = source.indexOf('await requireStepUpForRequest({');
+    const stepUpDeny = source.indexOf('if (stepUp && !stepUp.ok) return stepUp.response;');
+    const lifecycleMutation = source.indexOf('const lifecycle = await mutateSubscriptionLifecycle({');
+
+    expect(liveAuthority).toBeGreaterThan(-1);
+    expect(stepUp).toBeGreaterThan(liveAuthority);
+    expect(stepUpDeny).toBeGreaterThan(stepUp);
+    expect(lifecycleMutation).toBeGreaterThan(stepUpDeny);
+  });
+
+  it('rejects non-self-serve plans before contract, idempotency or Stripe mutation', async () => {
+    const source = await readFile(ROUTE_FILE, 'utf8');
+
+    const selfServeDeny = source.indexOf('!isSelfServePlan(normalizedPlan)');
+    const invalidPlan = source.indexOf("return noStoreJson({ error: 'invalid_plan' }, { status: 400 });");
+    const contractAuthority = source.indexOf('getAuthoritativeSignedContractPlan(organization.id)');
+    const idempotency = source.indexOf('readBillingIdempotencyKey(request');
+    const stripeCheckout = source.indexOf('stripe.checkout.sessions.create');
+
+    expect(selfServeDeny).toBeGreaterThan(-1);
+    expect(invalidPlan).toBeGreaterThan(selfServeDeny);
+    expect(contractAuthority).toBeGreaterThan(invalidPlan);
+    expect(idempotency).toBeGreaterThan(contractAuthority);
+    expect(stripeCheckout).toBeGreaterThan(idempotency);
+  });
+
   it('keeps sales-led plans out of generic self-serve checkout', async () => {
     const source = await readFile(ROUTE_FILE, 'utf8');
 
     expect(source).toContain('!isSelfServePlan(normalizedPlan)');
     expect(source).toContain("return noStoreJson({ error: 'invalid_plan' }, { status: 400 });");
     expect(source).toContain('getAuthoritativeSignedContractPlan(organization.id)');
-    expect(source).toContain("contract_managed_billing");
+    expect(source).toContain('contract_managed_billing');
   });
 
   it('uses live event correlation rather than database status to decide whether billing already exists', async () => {
