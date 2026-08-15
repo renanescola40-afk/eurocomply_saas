@@ -45,7 +45,8 @@ describe('billing UI API boundary', () => {
   it('keeps the selected plan through account creation and onboarding before checkout', () => {
     expect(publicCheckoutPage).toContain('checkoutContinuationPath');
     expect(publicCheckoutPage).toContain('next=${encodeURIComponent(checkoutContinuationPath)}');
-    expect(publicCheckoutPage).toContain('/onboarding?next=');
+    expect(publicCheckoutPage).toContain('const onboardingPath = `/${locale}/onboarding?plan=${encodeURIComponent(selectedPlan.id)}`');
+    expect(publicCheckoutPage).not.toContain('/onboarding?next=');
   });
 
   it('keeps checkout session creation ready for European B2B billing', () => {
