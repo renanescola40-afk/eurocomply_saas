@@ -28,6 +28,10 @@ const passingObservation = {
   stripeBindingPresent: true,
   entitlementsPresent: true,
   stripeEventProcessed: true,
+  stripeEventLiveMode: true,
+  stripeEventAuthoritativeType: true,
+  stripeEventBindingMatches: true,
+  productionLiveAuthorityRequired: false,
   webhookAuditObserved: true,
   subscriptionUpdatedAuditObserved: true,
   subscriptionSyncedAuditObserved: true,
@@ -35,7 +39,10 @@ const passingObservation = {
   auditPredecessorLinksResolve: true,
 };
 
-function generateEvidence(observation: Record<string, boolean>) {
+function generateEvidence(
+  observation: Record<string, boolean>,
+  targetEnvironment: 'staging' | 'production' = 'staging',
+) {
   const directory = mkdtempSync(join(tmpdir(), 'auth-onboarding-proof-'));
   const raw = join(directory, 'raw.json');
   const evidence = join(directory, 'evidence.json');
@@ -48,7 +55,7 @@ function generateEvidence(observation: Record<string, boolean>) {
       ...process.env,
       RELEASE_SHA: 'a'.repeat(40),
       REPOSITORY: 'renanescola40-afk/eurocomply_saas',
-      TARGET_ENVIRONMENT: 'staging',
+      TARGET_ENVIRONMENT: targetEnvironment,
       ORGANIZATION_ID: '13ff8175-04f8-45c9-80d4-46d76bfd1895',
       STRIPE_EVENT_ID: 'evt_1TyzFjCJ9hVhCOFDwVcc3S4h',
       EXPECTED_PLAN: 'professional',
@@ -66,23 +73,36 @@ describe('auth onboarding billing runtime proof', () => {
     expect(workflow).toContain('persist-credentials: false');
     expect(workflow).toContain('--tuples-only');
     expect(workflow).toContain('--no-align');
+    expect(workflow).toContain('--set target_environment="$TARGET_ENVIRONMENT"');
     expect(workflow).toContain('Remove raw database observation');
     expect(workflow).not.toContain('continue-on-error');
     expect(workflow).not.toContain('contents: write');
     expect(workflow).not.toContain('pull_request_target');
   });
 
-  it('observes onboarding, billing, Stripe idempotency and chained audit controls', () => {
+  it('observes onboarding, billing, exact Stripe authority and chained audit controls', () => {
     for (const token of [
       'complete_onboarding_activation_atomic',
       'organizationOnboardingCompleted',
       'activationRunObserved',
       'subscriptionActive',
       'stripeEventProcessed',
+      'stripeEventLiveMode',
+      'stripeEventAuthoritativeType',
+      'stripeEventBindingMatches',
+      "customer.subscription.created",
+      "customer.subscription.updated",
       'billing.subscription_updated',
       'subscription_synced',
       'auditPredecessorLinksResolve',
     ]) expect(sql).toContain(token);
+  });
+
+  it('binds the selected subscription row to the Stripe event payload', () => {
+    expect(sql).toContain("to_jsonb(e) #>> '{payload,data,object,id}'");
+    expect(sql).toContain("to_jsonb(e) #>> '{payload,data,object,customer}'");
+    expect(sql).toContain('join stripe_event_state e on e.payload_subscription_id = s.stripe_subscription_id');
+    expect(sql).toContain('e.payload_customer_id = s.stripe_customer_id');
   });
 
   it('reads optional rollout columns without parse-time physical-column references', () => {
@@ -93,6 +113,8 @@ describe('auth onboarding billing runtime proof', () => {
       "to_jsonb(s) ->> 'tier'",
       "to_jsonb(s) -> 'entitlements'",
       "to_jsonb(e) ->> 'organization_id'",
+      "to_jsonb(e) ->> 'livemode'",
+      "to_jsonb(e) ->> 'type'",
     ]) expect(sql).toContain(token);
 
     for (const unsafeReference of [
@@ -102,6 +124,9 @@ describe('auth onboarding billing runtime proof', () => {
       "lower(coalesce(s.tier, s.plan, ''))",
       'jsonb_typeof(s.entitlements)',
       '    e.organization_id\n  from public.stripe_events_processed e',
+      'e.livemode',
+      'e.type',
+      'e.payload',
     ]) expect(sql).not.toContain(unsafeReference);
   });
 
@@ -122,17 +147,40 @@ describe('auth onboarding billing runtime proof', () => {
     expect(reconciliationMigration).not.toContain('delete from');
   });
 
-  it('builds and validates passing sanitized evidence', () => {
+  it('builds and validates passing sanitized staging evidence without claiming live authority', () => {
     const generated = generateEvidence(passingObservation);
     expect(generated.result.status).toBe(0);
     const parsed = JSON.parse(readFileSync(generated.evidence, 'utf8'));
     expect(parsed.status).toBe('Complete');
     expect(parsed.outcome).toBe('passed');
+    expect(parsed.authorityPolicy.productionRequiresLiveStripeAuthority).toBe(true);
+    expect(parsed.authorityPolicy.liveStripeAuthorityRequired).toBe(false);
     expect(parsed.correlation.rawIdentifiersStored).toBe(false);
     expect(JSON.stringify(parsed)).not.toContain('13ff8175-04f8-45c9-80d4-46d76bfd1895');
     expect(JSON.stringify(parsed)).not.toContain('evt_1TyzFjCJ9hVhCOFDwVcc3S4h');
     const validation = spawnSync(process.execPath, [validator, generated.evidence], { encoding: 'utf8' });
     expect(validation.status).toBe(0);
+  });
+
+  it('requires live-mode authority for production evidence', () => {
+    const failed = generateEvidence({
+      ...passingObservation,
+      stripeEventLiveMode: false,
+      productionLiveAuthorityRequired: true,
+    }, 'production');
+    const failedEvidence = JSON.parse(readFileSync(failed.evidence, 'utf8'));
+    expect(failedEvidence.status).toBe('Open');
+    expect(failedEvidence.failures).toContain('check_failed:stripeEventLiveMode');
+    expect(spawnSync(process.execPath, [validator, failed.evidence], { encoding: 'utf8' }).status).not.toBe(0);
+
+    const passed = generateEvidence({
+      ...passingObservation,
+      productionLiveAuthorityRequired: true,
+    }, 'production');
+    const passedEvidence = JSON.parse(readFileSync(passed.evidence, 'utf8'));
+    expect(passedEvidence.status).toBe('Complete');
+    expect(passedEvidence.authorityPolicy.liveStripeAuthorityRequired).toBe(true);
+    expect(spawnSync(process.execPath, [validator, passed.evidence], { encoding: 'utf8' }).status).toBe(0);
   });
 
   it('preserves diagnostic evidence but fails closed on a missing runtime control', () => {
@@ -150,11 +198,15 @@ describe('auth onboarding billing runtime proof', () => {
       'rawIdentifiersStored: false',
       'connectionStringsStored: false',
       'rawDatabaseRowsStored: false',
+      'productionRequiresLiveStripeAuthority: true',
       'sourceSha256',
     ]) expect(builderSource).toContain(token);
     for (const token of [
       'status_not_complete',
       'auditPredecessorLinksResolve',
+      'stripeEventLiveMode',
+      'stripeEventBindingMatches',
+      'production_live_authority_requirement_missing',
       'forbidden_pattern',
       'source_digest_invalid',
     ]) expect(validatorSource).toContain(token);
