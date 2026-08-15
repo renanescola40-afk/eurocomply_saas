@@ -148,7 +148,7 @@ jobs:
           npm run dev > "$RUNNER_TEMP/fria-next.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/fria-next.pid"
           ready=false
-          for attempt in $(seq 1 90); do
+          for _ in $(seq 1 90); do
             if curl --fail --silent --show-error "$E2E_BASE_URL/en/login" >/dev/null; then
               ready=true
               break
