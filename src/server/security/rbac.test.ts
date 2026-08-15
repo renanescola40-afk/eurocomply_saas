@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getOrganizationPermissionMatrix,
   getRolePermissions,
+  isActiveOrganizationMembership,
   normalizeOrganizationRole,
   ORGANIZATION_ROLES,
   permissionDeniedResponse,
@@ -21,6 +22,15 @@ describe('organization RBAC', () => {
   it('falls back unknown roles to viewer', () => {
     expect(normalizeOrganizationRole('unexpected-role')).toBe('viewer');
     expect(normalizeOrganizationRole(null)).toBe('viewer');
+  });
+
+  it('treats only active canonical membership status as authorized after rollout', () => {
+    expect(isActiveOrganizationMembership('active')).toBe(true);
+    expect(isActiveOrganizationMembership(' ACTIVE ')).toBe(true);
+    expect(isActiveOrganizationMembership('suspended')).toBe(false);
+    expect(isActiveOrganizationMembership('deprovisioned')).toBe(false);
+    expect(isActiveOrganizationMembership(undefined)).toBe(false);
+    expect(isActiveOrganizationMembership(null)).toBe(false);
   });
 
   it('allows admin to manage team and billing', () => {
