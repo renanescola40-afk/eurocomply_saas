@@ -127,7 +127,7 @@ function buildNavigation(copy: NavigationCopy): MenuItem[] {
   ];
 }
 
-// Kept as an exported canonical map for route-contract tests and other product tooling.
+// Canonical route map for product tooling and route-contract tests.
 export const dashboardNavigation: MenuItem[] = buildNavigation(navigationCopy.en);
 
 type DashboardCommandNavigationProps = {
@@ -143,6 +143,50 @@ function isActiveNavigationItem(item: MenuItem, activePage: string) {
   return item.label === activePage || item.aliases?.includes(activePage) === true;
 }
 
+function MobileNavigation({ locale, copy, navigation }: { locale: Locale; copy: NavigationCopy; navigation: MenuItem[] }) {
+  return (
+    <details className="group ml-auto lg:hidden">
+      <summary
+        className="inline-flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-lg border bg-background text-muted-foreground transition hover:bg-muted [&::-webkit-details-marker]:hidden"
+        aria-label={copy.openMenu}
+      >
+        <Menu className="h-5 w-5 group-open:hidden" />
+        <X className="hidden h-5 w-5 group-open:block" />
+      </summary>
+
+      <div className="absolute left-0 right-0 top-full max-h-[calc(100vh-4rem)] overflow-y-auto border-b border-white/10 bg-background/98 px-4 py-4 shadow-2xl backdrop-blur-xl">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <LanguageSwitcher currentLocale={locale} compact />
+          <div className="flex items-center gap-1">
+            <Link href={localizeHref(locale, '/notificacoes')} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border text-muted-foreground" aria-label={copy.notifications}><Bell className="h-4 w-4" /></Link>
+            <Link href={localizeHref(locale, '/profile')} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border text-muted-foreground" aria-label={copy.profile}><UserCircle className="h-4 w-4" /></Link>
+          </div>
+        </div>
+
+        <nav className="space-y-2" aria-label={copy.mobileNavigation}>
+          {navigation.map((item) => (
+            <details key={item.label} className="group/item rounded-2xl border bg-muted/20 p-2 open:bg-muted/40">
+              <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl px-3 py-2 font-medium [&::-webkit-details-marker]:hidden">
+                <Link href={localizeHref(locale, item.href)}>{item.label}</Link>
+                {item.sections?.length ? <ChevronDown className="h-4 w-4 transition group-open/item:rotate-180" /> : null}
+              </summary>
+              {item.sections?.length ? (
+                <div className="mt-1 space-y-1 border-t pt-2">
+                  {item.sections.map((section) => (
+                    <Link key={section.href + section.label} href={localizeHref(locale, section.href)} className="block rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-primary/10 hover:text-primary">
+                      {section.label}
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+            </details>
+          ))}
+        </nav>
+      </div>
+    </details>
+  );
+}
+
 export function DashboardCommandNavigation({ locale, activePage = 'RISCK COMPLY' }: DashboardCommandNavigationProps) {
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
   const copy = navigationCopy[activeLocale];
@@ -151,8 +195,6 @@ export function DashboardCommandNavigation({ locale, activePage = 'RISCK COMPLY'
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-background/92 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/78">
       <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-4 py-3 md:px-6 xl:px-8">
-        <input id="risck-comply-mobile-menu" type="checkbox" className="peer sr-only" aria-hidden="true" />
-
         <Link
           href={localizeHref(activeLocale, dashboardRoot)}
           className="group flex shrink-0 items-center gap-2 rounded-xl px-2 py-2 focus:outline-none focus:ring-2 focus:ring-primary/70"
@@ -171,11 +213,7 @@ export function DashboardCommandNavigation({ locale, activePage = 'RISCK COMPLY'
               <div key={item.label} className="group relative shrink-0">
                 <Link
                   href={localizeHref(activeLocale, item.href)}
-                  className={`flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                    isActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-                  }`}
+                  className={`flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'}`}
                 >
                   {item.label}
                   {hasSubmenu ? <ChevronDown className="h-3.5 w-3.5 transition group-hover:rotate-180" /> : null}
@@ -184,11 +222,7 @@ export function DashboardCommandNavigation({ locale, activePage = 'RISCK COMPLY'
                 {hasSubmenu ? (
                   <div className="invisible absolute left-0 top-full z-50 mt-2 w-80 translate-y-2 rounded-2xl border border-white/10 bg-background/98 p-2 opacity-0 shadow-2xl shadow-black/30 backdrop-blur-xl transition duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
                     {item.sections?.map((section) => (
-                      <Link
-                        key={section.href + section.label}
-                        href={localizeHref(activeLocale, section.href)}
-                        className="block rounded-xl px-3 py-2.5 transition hover:bg-primary/10 focus:bg-primary/10 focus:outline-none"
-                      >
+                      <Link key={section.href + section.label} href={localizeHref(activeLocale, section.href)} className="block rounded-xl px-3 py-2.5 transition hover:bg-primary/10 focus:bg-primary/10 focus:outline-none">
                         <span className="block text-sm font-medium text-foreground">{section.label}</span>
                         {section.description ? <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{section.description}</span> : null}
                       </Link>
@@ -201,60 +235,17 @@ export function DashboardCommandNavigation({ locale, activePage = 'RISCK COMPLY'
         </nav>
 
         <div className="ml-auto hidden items-center gap-1 lg:flex">
-          <Link
-            href={localizeHref(activeLocale, '/notificacoes')}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/70"
-            aria-label={copy.notifications}
-          >
+          <Link href={localizeHref(activeLocale, '/notificacoes')} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/70" aria-label={copy.notifications}>
             <Bell className="h-4 w-4" />
           </Link>
-          <Link
-            href={localizeHref(activeLocale, '/profile')}
-            className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium transition ${activePage === 'Perfil' || activePage === 'Profile' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-          >
+          <Link href={localizeHref(activeLocale, '/profile')} className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium transition ${activePage === 'Perfil' || activePage === 'Profile' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
             <UserCircle className="h-4 w-4" />
             <span className="hidden xl:inline">{copy.profile}</span>
           </Link>
           <LanguageSwitcher currentLocale={activeLocale} compact />
         </div>
 
-        <label
-          htmlFor="risck-comply-mobile-menu"
-          className="ml-auto inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border bg-background text-muted-foreground transition hover:bg-muted lg:hidden"
-          aria-label={copy.openMenu}
-        >
-          <Menu className="h-5 w-5 peer-checked:hidden" />
-          <X className="hidden h-5 w-5 peer-checked:block" />
-        </label>
-      </div>
-
-      <div className="hidden max-h-[calc(100vh-4rem)] overflow-y-auto border-t bg-background/98 px-4 py-4 shadow-xl peer-checked:block lg:hidden">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <LanguageSwitcher currentLocale={activeLocale} compact />
-          <div className="flex items-center gap-1">
-            <Link href={localizeHref(activeLocale, '/notificacoes')} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border text-muted-foreground" aria-label={copy.notifications}><Bell className="h-4 w-4" /></Link>
-            <Link href={localizeHref(activeLocale, '/profile')} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border text-muted-foreground" aria-label={copy.profile}><UserCircle className="h-4 w-4" /></Link>
-          </div>
-        </div>
-        <nav className="space-y-2" aria-label={copy.mobileNavigation}>
-          {navigation.map((item) => (
-            <details key={item.label} className="group rounded-2xl border bg-muted/20 p-2 open:bg-muted/40">
-              <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl px-3 py-2 font-medium">
-                <Link href={localizeHref(activeLocale, item.href)}>{item.label}</Link>
-                {item.sections?.length ? <ChevronDown className="h-4 w-4 transition group-open:rotate-180" /> : null}
-              </summary>
-              {item.sections?.length ? (
-                <div className="mt-1 space-y-1 border-t pt-2">
-                  {item.sections.map((section) => (
-                    <Link key={section.href + section.label} href={localizeHref(activeLocale, section.href)} className="block rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-primary/10 hover:text-primary">
-                      {section.label}
-                    </Link>
-                  ))}
-                </div>
-              ) : null}
-            </details>
-          ))}
-        </nav>
+        <MobileNavigation locale={activeLocale} copy={copy} navigation={navigation} />
       </div>
     </header>
   );
