@@ -4,6 +4,7 @@ import { PlanGate } from '@/components/billing/plan-gate';
 import { EnterpriseAccessConsole } from '@/components/team/enterprise-access-console';
 import { TeamSettingsSection } from '@/components/team/team-settings-section';
 import { getTeamWorkflowCopy } from '@/lib/i18n/team-workflow-copy';
+import { roleHasPermission } from '@/lib/security/permissions';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
@@ -23,6 +24,7 @@ export default async function OrganizationTeamPage({ params }: TeamPageProps) {
   if (!organization) redirect(`/${locale}/onboarding`);
 
   const copy = getTeamWorkflowCopy(locale).page;
+  const canManageTeam = roleHasPermission(organization.role, 'manage_team');
   const [members, invitations, billing] = await Promise.all([
     listOrganizationMembers(organization.id),
     listPendingInvitations(organization.id),
@@ -44,8 +46,8 @@ export default async function OrganizationTeamPage({ params }: TeamPageProps) {
 
         <PlanGate planId={billing.plan} metric="users" currentUsage={billing.usage.users}>
           <div className="space-y-10">
-            <TeamSettingsSection locale={locale} members={members} invitations={invitations} currentUserId={user.id} />
-            <EnterpriseAccessConsole />
+            <TeamSettingsSection locale={locale} members={members} invitations={invitations} currentUserId={user.id} canManageTeam={canManageTeam} />
+            {canManageTeam ? <EnterpriseAccessConsole /> : null}
           </div>
         </PlanGate>
       </div>
