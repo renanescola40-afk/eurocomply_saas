@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-08-15-production-runtime-onboarding-seat-closure-v10",
+  "changeSet": "2026-08-15-production-runtime-onboarding-seat-closure-v11",
   "migrations": [
     { "filename": "20260813175000_optimize_organization_add_ons_rls_initplan.sql", "purpose": "evaluate organization add-on membership auth once per statement while preserving tenant scope" },
     { "filename": "20260813194500_reconcile_step_up_challenges_runtime.sql", "purpose": "materialize backend-only enterprise step-up challenge storage" },
@@ -19,7 +19,8 @@
     { "filename": "20260815083000_reconcile_live_rls_validation_inventory_privileges.sql", "purpose": "re-issue the unapplied live-RLS inventory privilege repair under a production-forward execution identity and prove service-role-only access" },
     { "filename": "20260815141000_reconcile_enterprise_invitation_seat_authority.sql", "purpose": "restore backend-only seat-aware invitation creation and acceptance with pending-capacity accounting and tenant quota enforcement" },
     { "filename": "20260815141500_harden_enterprise_invitation_actor_boundary.sql", "purpose": "expose the seat-aware invitation creation authority only behind an active owner/admin wrapper and make the reconciled implementation internal" },
-    { "filename": "20260815142500_reconcile_active_onboarding_runtime.sql", "purpose": "materialize the active onboarding profile, activation-ledger, recommendation/task metadata and reconciled atomic activation implementation against the live production schema" },
+    { "filename": "20260815142000_preserve_completed_onboarding_state.sql", "purpose": "materialize onboarding profile read fields and preserve completed activation evidence before later runtime RPC reconciliation" },
+    { "filename": "20260815142500_reconcile_active_onboarding_runtime.sql", "purpose": "materialize the activation-ledger, recommendation/task metadata and reconciled atomic activation implementation against the live production schema" },
     { "filename": "20260815143000_harden_active_onboarding_enterprise_boundaries.sql", "purpose": "preserve completed onboarding evidence and expose the final active-owner/admin, seat-aware transactional onboarding authority" }
   ],
   "truthBoundary": {
