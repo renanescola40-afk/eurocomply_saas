@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getTeamWorkflowCopy } from '@/lib/i18n/team-workflow-copy';
 
-const roles = ['admin', 'member'] as const;
+const roles = ['admin', 'editor', 'viewer'] as const;
 type Role = (typeof roles)[number];
 
 type InviteMemberFormProps = {
@@ -21,7 +21,7 @@ export type InviteMemberInput = { email: string; role: Role };
 export function InviteMemberForm({ locale, onSubmit }: InviteMemberFormProps) {
   const copy = getTeamWorkflowCopy(locale).invite;
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<Role>('member');
+  const [role, setRole] = useState<Role>('viewer');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +33,7 @@ export function InviteMemberForm({ locale, onSubmit }: InviteMemberFormProps) {
     try {
       await onSubmit({ email, role });
       setEmail('');
-      setRole('member');
+      setRole('viewer');
     } catch (err) {
       setError(err instanceof Error ? err.message : copy.error);
     } finally {
@@ -62,7 +62,8 @@ export function InviteMemberForm({ locale, onSubmit }: InviteMemberFormProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="admin">{copy.admin}</SelectItem>
-                <SelectItem value="member">{copy.member}</SelectItem>
+                <SelectItem value="editor">{copy.editor}</SelectItem>
+                <SelectItem value="viewer">{copy.viewer}</SelectItem>
               </SelectContent>
             </Select>
           </div>
