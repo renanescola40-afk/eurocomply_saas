@@ -171,7 +171,7 @@ describe('recipient locale authority', () => {
     expect(complianceAlerts).toContain('`${appUrl}/${recipient.locale}/dashboard/organizations/vendors`');
   });
 
-  it('keeps legacy callers backward-compatible with English fallback', () => {
+  it('keeps legacy template callers backward-compatible with English fallback', () => {
     const implicit = invoiceFailedEmail({ organizationName: 'ACME GmbH', billingUrl: '/billing' });
     const explicit = invoiceFailedEmail({ locale: 'en', organizationName: 'ACME GmbH', billingUrl: '/billing' });
     const invalid = invoiceFailedEmail({ locale: 'unsupported', organizationName: 'ACME GmbH', billingUrl: '/billing' });
@@ -180,10 +180,18 @@ describe('recipient locale authority', () => {
     expect(invalid).toEqual(explicit);
   });
 
-  it('does not modify Billing-owned callers in the Product locale-authority closure', () => {
-    expect(billingWebhook).toContain('paymentFailedEmail({ organizationName: organization.name, billingUrl })');
-    expect(trialReminder).toContain('trialUpgradeEmail({');
-    expect(trialReminder).not.toContain('getUserEmailContextById');
+  it('uses the canonical recipient locale authority for Billing-owned transactional callers', () => {
+    expect(billingWebhook).toContain('getUserEmailContextById');
+    expect(billingWebhook).toContain("getUserEmailContextById(userId, 'billing_contact_lookup')");
+    expect(billingWebhook).toContain('locale: recipient.locale');
+    expect(billingWebhook).toContain('`${getAppUrl()}/${recipient.locale}/dashboard/organizations/billing`');
+    expect(billingWebhook).toContain('recipientLocale: recipient.locale');
+
+    expect(trialReminder).toContain('getUserEmailContextById');
+    expect(trialReminder).toContain("getUserEmailContextById(ownerUserId, 'trial_reminder_owner_lookup')");
+    expect(trialReminder).toContain('locale: recipient.locale');
+    expect(trialReminder).toContain('`${appUrl}/${recipient.locale}/dashboard/organizations/billing`');
+    expect(trialReminder).toContain('recipientLocale: recipient.locale');
   });
 
   it('frames trial reminders only for already-existing trialing subscriptions', () => {
