@@ -81,7 +81,12 @@ describe('post-checkout activation UX', () => {
 
     expect(route).toContain('getCurrentOrganizationForUser(user.id)');
     expect(route).toContain("new Set(['active', 'trialing'])");
-    expect(route).toContain("authority: 'persisted_subscription'");
+    expect(route).toContain('hasProcessedLiveStripeSubscriptionAuthority');
+    expect(route).toContain('stripeCustomerId: subscription?.stripe_customer_id');
+    expect(route).toContain('stripeSubscriptionId: subscription?.stripe_subscription_id');
+    expect(route).toContain("authority: 'processed_live_stripe_subscription_event'");
+    expect(route).toContain('liveStripeAuthority');
+    expect(route).not.toContain("authority: 'persisted_subscription'");
     expect(route).not.toContain('session_id');
   });
 });
