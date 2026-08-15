@@ -115,7 +115,7 @@ export function welcomeOnboardingEmail(input: WelcomeOnboardingEmailInput): Buil
     de: `Der Workspace ${escapeHtml(input.organizationName)} ist bereit.`,
   });
   const ctaLabel = t(locale, { en: 'Start onboarding', pt: 'Iniciar onboarding', es: 'Iniciar onboarding', fr: 'Commencer l’onboarding', it: 'Avvia onboarding', de: 'Onboarding starten' });
-  return buildEmail({ locale, template: 'welcome_onboarding', subject, title: subject, body, ctaLabel, ctaUrl: input.dashboardUrl, textLines: [subject, body.replace(/<[^>]+>/g, '')] });
+  return buildEmail({ locale, template: 'welcome_onboarding', subject, title: subject, body, ctaLabel, ctaUrl: input.dashboardUrl, textLines: [subject, body.replace(/[<>]/g, '')] });
 }
 
 export function organizationCreatedEmail(input: OrganizationCreatedEmailInput): BuiltEmail {
