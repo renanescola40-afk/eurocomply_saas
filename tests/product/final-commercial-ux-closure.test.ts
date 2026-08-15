@@ -32,14 +32,25 @@ describe('final commercial UX closure contracts', () => {
 
     expect(taskPage).toContain('getCoreWorkflowCopy(params.locale).tasks');
     expect(taskPage).toContain('<CreateComplianceTaskForm locale={params.locale}');
-    expect(taskPage).toContain('<ComplianceTaskList locale={params.locale}');
-    expect(taskPage).toContain('onEdit={handleEditTask}');
+    expect(taskPage).toContain('<ComplianceTaskList');
+    expect(taskPage).toContain('onEdit={canManageTasks ? handleEditTask : undefined}');
     expect(taskList).toContain('EditComplianceTaskInput');
     expect(taskList).toContain('data-task-id={task.id}');
     expect(documentPage).toContain('getCoreWorkflowCopy(params.locale).documents');
     expect(documentPage).toContain('<CreateDocumentForm locale={params.locale}');
     expect(documentPage).toContain('<DocumentDownloadButton locale={params.locale}');
-    expect(documentPage).toContain('<DocumentDeleteButton locale={params.locale}');
+    expect(documentPage).toContain('canManageDocuments ? <DocumentDeleteButton');
+  });
+
+  it('keeps mutation presentation aligned with the canonical role permission matrix', () => {
+    expect(taskPage).toContain("roleHasPermission(organization.role, 'manage_ai_governance')");
+    expect(taskPage).toContain('canManageTasks ? (');
+    expect(documentPage).toContain("roleHasPermission(currentOrganization.role, 'manage_documents')");
+    expect(documentPage).toContain('canManageDocuments ? (');
+    expect(teamPage).toContain("roleHasPermission(organization.role, 'manage_team')");
+    expect(teamPage).toContain('canManageTeam={canManageTeam}');
+    expect(teamSettings).toContain('canManageTeam: boolean');
+    expect(teamSettings).toContain('onRemoveMember={canManageTeam ? handleRemoveMember : undefined}');
   });
 
   it('keeps team and onboarding invitation locale explicit through email rendering', () => {
