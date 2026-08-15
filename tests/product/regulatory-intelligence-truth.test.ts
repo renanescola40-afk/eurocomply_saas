@@ -15,6 +15,20 @@ describe('regulatory intelligence product truth', () => {
     expect(query).not.toContain('publishedAt: item.published_at ?? new Date().toISOString()');
   });
 
+  it('preserves source class and reliability without upgrading weak provenance', () => {
+    const query = read('src/server/queries/intelligence.ts');
+
+    expect(query).toContain("if (sourceType === 'official') return 'Fonte oficial';");
+    expect(query).toContain("if (sourceType === 'licensed_media') return 'Mídia licenciada';");
+    expect(query).toContain("if (sourceType === 'media_reference') return 'Referência de mídia';");
+    expect(query).toContain("return 'Fonte não classificada';");
+    expect(query).toContain("if (reliability === 'high') return 'Alta';");
+    expect(query).toContain("if (reliability === 'medium') return 'Média';");
+    expect(query).toContain("if (reliability === 'low') return 'Baixa';");
+    expect(query).toContain("return 'Não classificada';");
+    expect(query).not.toContain("reliability === 'medium' || reliability === 'low' ? 'Média' : 'Alta'");
+  });
+
   it('keeps internal refresh probes draft and non-public', () => {
     const refresh = read('src/app/api/intelligence/refresh/route.ts');
 
