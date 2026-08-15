@@ -21,7 +21,7 @@ test.describe('FRIA product acceptance with disposable governance fixtures', () 
     await expect(page.getByRole('heading', { name: 'FRIA workspace' })).toBeVisible();
     await expect(page.getByText(/reviewer uuid|approver uuid|legal reviewer uuid/i)).toHaveCount(0);
 
-    await page.getByLabel('Select an AI system').selectOption({ label: /QA FRIA System/ });
+    await page.getByLabel('Select an AI system').selectOption({ label: aiSystemName });
     await page.getByRole('button', { name: 'Create assessment' }).click();
     await expect(page.getByText(/Assessment v1/).last()).toBeVisible({ timeout: 20_000 });
 
