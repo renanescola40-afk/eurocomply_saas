@@ -17,7 +17,8 @@ describe('onboarding runtime boundary', () => {
     expect(getOnboardingPlanIntent('professional')).toBe('professional');
     expect(getOnboardingPlanIntent('business')).toBe('business');
     expect(getOnboardingPlanIntent('enterprise')).toBe('enterprise');
-    expect(getOnboardingPlanIntent('unknown-plan')).toBeNull();
+    expect(getOnboardingPlanIntent('unknown-plan')).toBe('professional');
+    expect(getOnboardingPlanIntent(undefined)).toBe('professional');
   });
 
   it('never serializes provider or database details into the browser-facing error', () => {

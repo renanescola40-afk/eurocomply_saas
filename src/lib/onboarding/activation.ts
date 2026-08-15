@@ -7,14 +7,26 @@ export const AI_USAGE_LEVELS = ['not_started', 'exploring', 'internal_productivi
 export const AI_SYSTEM_ROLES = ['provider', 'deployer', 'importer', 'distributor', 'other'] as const;
 export const AI_SYSTEM_STATUSES = ['planned', 'pilot', 'production', 'retired'] as const;
 export const AI_RISK_DOMAINS = ['general_productivity', 'customer_support', 'content_generation', 'biometrics', 'employment', 'education', 'credit_finance', 'essential_services', 'law_enforcement', 'migration_border', 'justice_democratic_processes', 'safety_component', 'critical_infrastructure'] as const;
-export const PLAN_INTENTS = ['trial', 'essential', 'professional', 'business', 'enterprise'] as const;
+
+/**
+ * `trial` is retained in the TypeScript union only so historical onboarding
+ * state can be interpreted safely. It is intentionally absent from the
+ * runtime plan choices and schemas because RISCK COMPLY does not offer a
+ * public free-trial onboarding path.
+ */
+export type PlanIntent = 'trial' | 'essential' | 'professional' | 'business' | 'enterprise';
+export const PLAN_INTENTS: readonly [PlanIntent, PlanIntent, PlanIntent, PlanIntent] = [
+  'essential',
+  'professional',
+  'business',
+  'enterprise',
+];
 
 export type CountryCode = (typeof COUNTRY_CODES)[number];
 export type CompanyType = (typeof COMPANY_TYPES)[number];
 export type CompanySector = (typeof COMPANY_SECTORS)[number];
 export type AiUsageLevel = (typeof AI_USAGE_LEVELS)[number];
 export type AiActRiskLevel = 'prohibited_review' | 'high_risk_review' | 'limited_transparency' | 'minimal_or_low';
-export type PlanIntent = (typeof PLAN_INTENTS)[number];
 
 export type OnboardingRecommendation = {
   id: string;
@@ -110,7 +122,7 @@ export const onboardingDraftSchema = z.object({
   aiUsage: z.enum(AI_USAGE_LEVELS).optional(),
   aiUsageSummary: z.string().trim().max(1000).optional().default(''),
   onboardingStep: z.string().trim().max(80).optional().default('create-organization'),
-  selectedPlan: z.enum(PLAN_INTENTS).optional().default('trial'),
+  selectedPlan: z.enum(PLAN_INTENTS).optional().default('professional'),
 });
 
 export const onboardingActivationSchema = z.object({
@@ -136,7 +148,7 @@ export const onboardingActivationSchema = z.object({
   biometricIdentification: z.boolean().default(false),
   manipulativeOrExploitative: z.boolean().default(false),
   inviteEmails: inviteEmailsSchema,
-  selectedPlan: z.enum(PLAN_INTENTS).default('trial'),
+  selectedPlan: z.enum(PLAN_INTENTS).default('professional'),
 });
 
 export type OnboardingDraftInput = z.infer<typeof onboardingDraftSchema>;
