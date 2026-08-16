@@ -111,11 +111,15 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
 
     await page.goto('/en/ai-systems', { waitUntil: 'domcontentloaded' });
     await expectHealthyAuthenticatedPage(page, 'AI inventory prerequisite');
-    await page.getByPlaceholder(/system name/i).fill(systemName);
-    await page.getByPlaceholder(/example: summarises/i).fill(
+    const aiSystemForm = page.locator('form:visible').filter({
+      has: page.getByRole('textbox', { name: 'System name', exact: true }),
+    });
+    await expect(aiSystemForm, 'AI system registration form should be uniquely visible').toHaveCount(1);
+    await aiSystemForm.getByRole('textbox', { name: 'System name', exact: true }).fill(systemName);
+    await aiSystemForm.getByPlaceholder(/example: summarises/i).fill(
       'Synthetic disposable QA system used only to prove the FRIA lifecycle and separation of functions.',
     );
-    await page.getByRole('button', { name: /classify and save/i }).click();
+    await aiSystemForm.getByRole('button', { name: /classify and save/i }).click();
     await expect(page.getByText(systemName, { exact: true })).toBeVisible();
 
     await page.goto('/en/dashboard/fria', { waitUntil: 'domcontentloaded' });
