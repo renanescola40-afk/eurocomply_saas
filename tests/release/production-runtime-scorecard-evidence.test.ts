@@ -19,17 +19,15 @@ const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const CANONICAL_PRODUCTION_URL = 'https://www.risckcomply.com';
 const CANONICAL_PRODUCTION_HOST = 'www.risckcomply.com';
 const WORKFLOW_PATH = '.github/workflows/production-runtime-proof.yml';
-const FIXTURE_NOW = new Date();
-const FIXTURE_GENERATED_AT = new Date(FIXTURE_NOW.getTime() - 5 * 60 * 1000).toISOString();
 
-function source() {
+function source(generatedAt = new Date(Date.now() - 60_000).toISOString()) {
   return {
     smoke: {
       evidenceItem: 'deployment-smoke-validation',
       status: 'Complete',
       outcome: 'passed',
-      generatedAt: FIXTURE_GENERATED_AT,
-      reviewedAt: FIXTURE_GENERATED_AT,
+      generatedAt,
+      reviewedAt: generatedAt,
       reviewer: 'RISCK COMPLY protected runtime automation',
       failures: [],
       globalChecks: [
@@ -85,7 +83,7 @@ function source() {
 describe('production runtime scorecard evidence', () => {
   it('promotes exactly the five release checks from an exact production SHA', () => {
     const { smoke, sha } = source();
-    const evidence = buildProductionRuntimeScorecardEvidence(smoke, sha, SHA, FIXTURE_GENERATED_AT);
+    const evidence = buildProductionRuntimeScorecardEvidence(smoke, sha, SHA, '2026-08-09T13:05:00.000Z');
 
     expect(evidence.status).toBe('Complete');
     expect(evidence.outcome).toBe('passed');
@@ -100,7 +98,9 @@ describe('production runtime scorecard evidence', () => {
   });
 
   it('normalizes a successful focused production proof into the canonical P0 deployment contract', () => {
-    const { smoke } = source();
+    const now = new Date();
+    const generatedAt = new Date(now.getTime() - 60_000).toISOString();
+    const { smoke } = source(generatedAt);
     const normalized = normalizeDeploymentSmokeEvidence(smoke, {
       targetSha: SHA,
       repository: REPOSITORY,
@@ -128,7 +128,7 @@ describe('production runtime scorecard evidence', () => {
     expect(validator).toBeDefined();
     if (!validator) throw new Error('Deployment P0 validator missing');
     expect(validator(normalized, {
-      now: FIXTURE_NOW,
+      now,
       expectedRepository: REPOSITORY,
       expectedBranch: 'main',
       expectedCommitSha: SHA,
@@ -149,7 +149,7 @@ describe('production runtime scorecard evidence', () => {
   });
 
   it('selects only successful exact-main-SHA runs from the production workflow path', () => {
-    const run = { id: Number(RUN_ID), name: `Production runtime proof for ${SHA}`, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: FIXTURE_GENERATED_AT };
+    const run = { id: Number(RUN_ID), name: `Production runtime proof for ${SHA}`, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-08-09T13:05:00Z' };
     expect(selectExactShaRun([
       { ...run, id: 1, conclusion: 'failure' },
       { ...run, id: 2, head_branch: 'feature' },
