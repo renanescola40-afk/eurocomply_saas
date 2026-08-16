@@ -34,10 +34,11 @@ concurrency:
 
 jobs:
   p0-runtime-evidence:
-    name: Validate P0 runtime evidence register
+    name: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha != github.sha && 'Stale P0 runtime evidence trigger (ignored)' || 'Validate P0 runtime evidence register' }}
     if: >-
       github.event_name != 'workflow_run' ||
-      (github.event.workflow_run.head_branch == 'main' &&
+      (github.event.workflow_run.head_sha == github.sha &&
+       github.event.workflow_run.head_branch == 'main' &&
        ((github.event.workflow_run.conclusion == 'success' &&
          (github.event.workflow_run.event == 'push' ||
           github.event.workflow_run.event == 'workflow_dispatch')) ||
@@ -119,6 +120,7 @@ jobs:
             tests/security/p0-runtime-gap-strict-contract.test.ts \
             tests/security/p0-register-source-of-truth-contract.test.ts
           node --test \
+            tests/security/p0-runtime-stale-workflow-run-guard.test.mjs \
             tests/security/generate-p0-runtime-evidence-register.test.mjs \
             tests/security/validate-generated-p0-runtime-evidence-register.test.mjs \
             tests/enterprise/p0-production-gate-evidence-hydration.test.mjs
