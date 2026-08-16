@@ -212,7 +212,7 @@ jobs:
           test -n "${E2E_FRIA_APPROVER_PASSWORD:-}"
           test "${E2E_ALLOW_SYNTHETIC_APP_WRITES:-}" = 'true'
           rm -f "$E2E_FRIA_RUNTIME_EVIDENCE_PATH"
-          npx playwright test tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts --project=chromium --reporter=line
+          npx playwright test tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts --project=chromium --reporter=line,github
 
       - name: Require executed sanitized FRIA evidence
         shell: bash
