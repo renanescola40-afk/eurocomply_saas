@@ -9,6 +9,7 @@ const ENTITLEMENTS = new URL('../../src/server/billing/entitlements.ts', import.
 const DASHBOARD_LAYOUT = new URL('../../src/app/[locale]/dashboard/layout.tsx', import.meta.url);
 const MIDDLEWARE = new URL('../../src/middleware.ts', import.meta.url);
 const CHECKOUT_INTENT = new URL('../../src/app/api/billing/checkout-intent/route.ts', import.meta.url);
+const RBAC = new URL('../../src/server/security/rbac.ts', import.meta.url);
 
 describe('billing commercial authority boundary', () => {
   it('keeps catalog plan labels separate from durable paid authority', async () => {
@@ -73,5 +74,29 @@ describe('billing commercial authority boundary', () => {
     expect(source).toContain('const priceId = plan.salesLed ? undefined : getStripePriceId(plan);');
     expect(source).toContain("? 'contact_sales'");
     expect(source).toContain('checkoutReady: !plan.salesLed');
+  });
+
+  it('requires durable commercial authority on direct paid product API permissions', async () => {
+    const source = await readFile(RBAC, 'utf8');
+    const commercialPermissions = source.slice(
+      source.indexOf('const COMMERCIAL_PRODUCT_PERMISSIONS'),
+      source.indexOf('function isSupabaseUserId'),
+    );
+
+    expect(commercialPermissions).toContain("'manage_ai_governance'");
+    expect(commercialPermissions).toContain("'read_ai_governance'");
+    expect(commercialPermissions).toContain("'manage_ai_incidents'");
+    expect(commercialPermissions).toContain("'read_ai_incidents'");
+    expect(commercialPermissions).toContain("'manage_vendors'");
+    expect(commercialPermissions).toContain("'manage_risks'");
+    expect(commercialPermissions).toContain("'manage_documents'");
+    expect(commercialPermissions).toContain("'export_data'");
+    expect(commercialPermissions).not.toContain("'manage_billing'");
+    expect(source).toContain("await import('@/server/queries/subscription')");
+    expect(source).toContain('getOrganizationBillingAuthority(organizationId)');
+    expect(source).toContain('if (authority.licensed) return null;');
+    expect(source).toContain("error: 'subscription_required'");
+    expect(source).toContain("error: 'billing_authority_unavailable'");
+    expect(source).toContain('if (commercialAuthorityDenied) return commercialAuthorityDenied;');
   });
 });
