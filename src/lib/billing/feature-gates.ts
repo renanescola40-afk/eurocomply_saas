@@ -69,11 +69,16 @@ const PLAN_RANK: Record<CanonicalSubscriptionPlan, number> = { starter: 1, profe
 
 export type LicenseContext = {
   plan: CanonicalSubscriptionPlan;
+  licensed?: boolean;
   activeAddOns?: Iterable<string>;
   featureFlags?: Record<string, boolean>;
 };
 
 export function canAccessFeature(feature: LicensedFeature, context: LicenseContext) {
+  // Catalog plan labels are not commercial authority. Organization-scoped callers
+  // must propagate licensed=false when no signed contract or correlated live Stripe
+  // authority exists. Add-ons and feature flags can never override that boundary.
+  if (context.licensed === false) return false;
   if (context.featureFlags?.[feature] === false) return false;
 
   const rule = RULES[feature];
