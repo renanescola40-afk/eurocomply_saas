@@ -28,6 +28,16 @@ function exportEnv(name, value) {
   appendFileSync(process.env.GITHUB_ENV, `${name}=${value}\n`, 'utf8');
 }
 
+function safeAuthError(error) {
+  if (!error || typeof error !== 'object') return 'unknown_auth_error';
+  const code = typeof error.code === 'string' ? error.code : 'unknown_code';
+  const status = Number.isFinite(error.status) ? String(error.status) : 'unknown_status';
+  const message = typeof error.message === 'string'
+    ? error.message.replace(/[\r\n]+/g, ' ').slice(0, 160)
+    : 'unknown_message';
+  return `${code}:${status}:${message}`;
+}
+
 async function createUser(admin, label, suffix) {
   const email = `fria-${label}-${suffix}@example.test`;
   const secret = password();
@@ -41,6 +51,19 @@ async function createUser(admin, label, suffix) {
   return { id: data.user.id, email, password: secret };
 }
 
+async function provePasswordGrant(url, publicKey, identity, label) {
+  const browserEquivalentClient = createClient(url, publicKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+  const { data, error } = await browserEquivalentClient.auth.signInWithPassword({
+    email: identity.email,
+    password: identity.password,
+  });
+  if (error || !data.user?.id || data.user.id !== identity.id) {
+    throw new Error(`fria_${label}_password_grant_failed:${safeAuthError(error)}`);
+  }
+}
+
 async function insertOne(admin, table, row, label) {
   const { data, error } = await admin.from(table).insert(row).select('*').single();
   if (error || !data?.id) throw new Error(`${label}_create_failed`);
@@ -50,6 +73,7 @@ async function insertOne(admin, table, row, label) {
 async function main() {
   if (env('GITHUB_ACTIONS') !== 'true') throw new Error('github_actions_required');
   const url = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
+  const publicKey = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
   const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
   const parsed = new URL(url);
   if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(parsed.hostname)) {
@@ -63,6 +87,9 @@ async function main() {
   const owner = await createUser(admin, 'owner', suffix);
   const reviewer = await createUser(admin, 'reviewer', suffix);
   const approver = await createUser(admin, 'approver', suffix);
+
+  await provePasswordGrant(url, publicKey, owner, 'owner');
+  await provePasswordGrant(url, publicKey, approver, 'approver');
 
   const organization = await insertOne(admin, 'organizations', {
     name: `FRIA Disposable QA ${suffix}`,
@@ -85,7 +112,7 @@ async function main() {
   exportEnv('E2E_FRIA_APPROVER_PASSWORD', approver.password);
   appendFileSync(process.env.GITHUB_ENV, 'E2E_ALLOW_SYNTHETIC_APP_WRITES=true\n', 'utf8');
 
-  process.stdout.write('Disposable FRIA owner/reviewer/approver identities and tenant created on loopback Supabase.\n');
+  process.stdout.write('Disposable FRIA owner/reviewer/approver identities, password grants and tenant created on loopback Supabase.\n');
 }
 
 main().catch((error) => {
