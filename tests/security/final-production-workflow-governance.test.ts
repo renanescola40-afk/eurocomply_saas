@@ -29,6 +29,7 @@ function expectGovernanceBoundary(
   expect(workflow).toContain(PINNED_CHECKOUT);
   expect(workflow).toContain('Revalidate exact current main after environment approval');
   expect(workflow).toContain('Revalidate environment governance after admission');
+  expect(workflow).toContain('Revalidate protected producer boundary');
 }
 
 function expectExactInputSha(workflow: string) {
@@ -44,11 +45,22 @@ function expectSecretOnlyAfterStep(workflow: string, stepName: string, secretRef
   expect(workflow.slice(0, stepIndex)).not.toContain(secretReference);
 }
 
+function expectProducerBoundaryImmediatelyBefore(workflow: string, secretStepName: string) {
+  const producerIndex = workflow.indexOf('- name: Revalidate protected producer boundary');
+  const secretIndex = workflow.indexOf(`- name: ${secretStepName}`);
+  expect(producerIndex).toBeGreaterThanOrEqual(0);
+  expect(secretIndex).toBeGreaterThan(producerIndex);
+  expect(workflow.slice(producerIndex, secretIndex)).toContain('git fetch --no-tags --depth=1 origin main');
+  expect(workflow.slice(producerIndex, secretIndex)).toContain('git rev-parse origin/main');
+  expect(workflow.slice(producerIndex, secretIndex)).toContain(GOVERNANCE_CHECK);
+}
+
 describe('final production workflow governance boundary', () => {
   it('keeps public production secrets behind exact-main governance and only on the final runtime step', () => {
     expectGovernanceBoundary(publicFinal, 'production-environment-governance', 'Production', 'production-final');
     expect(publicFinal).toContain('needs: production-environment-governance');
     expect(publicFinal).toContain('Verify checked-out SHA still equals current main');
+    expectProducerBoundaryImmediatelyBefore(publicFinal, 'Run public production final gate');
 
     for (const secretName of [
       'HEALTHCHECK_TOKEN',
@@ -73,6 +85,7 @@ describe('final production workflow governance boundary', () => {
     expect(releaseFinal).toContain('test "$MAIN_COMMIT" = "$GITHUB_SHA"');
     expect(releaseFinal).not.toContain('git checkout --detach "$RESOLVED_COMMIT"');
     expect(releaseFinal).not.toContain('git fetch --no-tags --prune origin "$ASSESSED_COMMIT" || true');
+    expectProducerBoundaryImmediatelyBefore(releaseFinal, 'Run final validation bundle');
   });
 
   it('keeps platform provider credentials on the proof step only', () => {
@@ -84,6 +97,7 @@ describe('final production workflow governance boundary', () => {
     );
     expect(platformProviders).toContain('needs: platform-proof-environment-governance');
     expectExactInputSha(platformProviders);
+    expectProducerBoundaryImmediatelyBefore(platformProviders, 'Run platform provider proof');
     for (const secretName of ['PLATFORM_PROOF_TOKEN', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'SENTRY_DSN']) {
       expectSecretOnlyAfterStep(platformProviders, 'Run platform provider proof', `secrets.${secretName}`);
     }
@@ -98,6 +112,7 @@ describe('final production workflow governance boundary', () => {
     );
     expect(platformDrift).toContain('needs: [contract, platform-closeout-environment-governance]');
     expect(platformDrift).toContain('Verify checked-out SHA still equals current main');
+    expectProducerBoundaryImmediatelyBefore(platformDrift, 'Materialize protected evidence');
     expectSecretOnlyAfterStep(
       platformDrift,
       'Materialize protected evidence',
@@ -109,6 +124,7 @@ describe('final production workflow governance boundary', () => {
     expectGovernanceBoundary(scimProof, 'identity-environment-governance', 'production-identity-proof', 'scim-runtime-proof');
     expect(scimProof).toContain('needs: identity-environment-governance');
     expectExactInputSha(scimProof);
+    expectProducerBoundaryImmediatelyBefore(scimProof, 'Execute SCIM Users and Groups lifecycle proof');
     expectSecretOnlyAfterStep(scimProof, 'Execute SCIM Users and Groups lifecycle proof', 'secrets.SCIM_PROOF_BEARER_TOKEN');
   });
 
@@ -116,6 +132,7 @@ describe('final production workflow governance boundary', () => {
     expectGovernanceBoundary(samlProof, 'identity-environment-governance', 'production-identity-proof', 'saml-sso-runtime-proof');
     expect(samlProof).toContain('needs: identity-environment-governance');
     expectExactInputSha(samlProof);
+    expectProducerBoundaryImmediatelyBefore(samlProof, 'Await a new production SAML SSO login');
     expectSecretOnlyAfterStep(samlProof, 'Await a new production SAML SSO login', 'secrets.SUPABASE_SERVICE_ROLE_KEY');
   });
 
@@ -125,6 +142,7 @@ describe('final production workflow governance boundary', () => {
     expectExactInputSha(googleProof);
     expect(googleProof).toContain('npm ci --ignore-scripts');
     expect(googleProof).not.toContain('ref: main');
+    expectProducerBoundaryImmediatelyBefore(googleProof, 'Validate Supabase Google OAuth configuration');
     expectSecretOnlyAfterStep(googleProof, 'Validate Supabase Google OAuth configuration', 'secrets.SUPABASE_ACCESS_TOKEN');
   });
 
@@ -133,6 +151,7 @@ describe('final production workflow governance boundary', () => {
     expect(stripeProof).toContain('needs: production-environment-governance');
     expectExactInputSha(stripeProof);
     expect(stripeProof).not.toContain('git checkout --detach');
+    expectProducerBoundaryImmediatelyBefore(stripeProof, 'Probe Stripe production provider configuration');
     expectSecretOnlyAfterStep(stripeProof, 'Probe Stripe production provider configuration', 'secrets.STRIPE_SECRET_KEY');
   });
 });
