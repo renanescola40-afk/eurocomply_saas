@@ -173,11 +173,11 @@ const nextConfig: NextConfig = {
         headers: [...noIndexHeaders],
       },
       {
-        source: '/:locale(en|pt|es|fr|it|de)/(pricing|resources|faq|about|contact|trust|security|compliance|privacy|terms|data-processing|sla|dpa|subprocessors|status)',
+        source: '/:locale(en|pt|es|fr|it|de)/(pricing|resources|faq|about|contact|trust|security|compliance|privacy|terms|data-processing|sla|dpa|subprocessors|status|vulnerability-disclosure)',
         headers: [...publicCacheHeaders],
       },
       {
-        source: '/:locale(pt|es|fr|it|de)/(trust|security|compliance|privacy|terms|data-processing|sla|dpa|subprocessors|status|vulnerability-disclosure)',
+        source: '/:locale(pt|es|fr|it|de)/(compliance|status)',
         headers: [...provisionalLocaleNoIndexHeaders],
       },
       {

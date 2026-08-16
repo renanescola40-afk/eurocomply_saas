@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { TrustCenterPage } from '@/components/trust/trust-page';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 import { getSafeLocale, makePublicMetadata } from '@/lib/seo/public-metadata';
-import { getTrustCenterPage } from '@/lib/trust-center/content';
+import { getLocalizedTrustCenterPage } from '@/lib/trust-center/localized-content';
 import { isTrustCenterSlug, TRUST_CENTER_ROUTES } from '@/lib/trust-center/routes';
 
 export const dynamic = 'force-static';
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const locale = getSafeLocale(requestedLocale);
-  const page = getTrustCenterPage(trustPage, locale);
+  const page = getLocalizedTrustCenterPage(trustPage, locale);
 
   return makePublicMetadata({
     locale,
@@ -49,7 +49,7 @@ export default async function PublicTrustRoute({ params }: PageProps) {
   }
 
   const locale = safeLocale(requestedLocale);
-  const page = getTrustCenterPage(trustPage, locale);
+  const page = getLocalizedTrustCenterPage(trustPage, locale);
 
   return <TrustCenterPage locale={locale} page={page} />;
 }
