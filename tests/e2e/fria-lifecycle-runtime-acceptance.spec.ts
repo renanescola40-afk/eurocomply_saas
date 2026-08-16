@@ -144,7 +144,19 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
     await page.getByRole('button', { name: 'Save assessment' }).click();
     const updateResponse = await updateResponsePromise;
     expect(updateResponse.status()).toBe(200);
-    await expect(page.getByRole('status')).toContainText('Workflow saved and audit evidence persisted.');
+
+    // Prove the workflow survived a fresh authenticated browser read instead of binding
+    // runtime acceptance to a transient notification that is cleared by revalidation.
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expectHealthyAuthenticatedPage(page, 'FRIA persisted workflow refresh');
+    const persistedAssessment = page.getByRole('button').filter({ hasText: systemName }).first();
+    await expect(persistedAssessment).toBeVisible();
+    await persistedAssessment.click();
+    await expect(page.locator('#fria-applicability')).toHaveValue('not_required');
+    await expect(page.locator('#fria-reviewer')).toHaveValue(reviewerId);
+    await expect(page.locator('#fria-approver')).toHaveValue(approverId);
+    await expect(page.locator('#fria-legal-reviewer')).toHaveValue(reviewerId);
+    await expect(page.getByLabel('Legal review completed')).toBeChecked();
 
     const submitEvidence = async (controlId: 'FRIA-01' | 'FRIA-15', digestCharacter: string) => {
       await page.locator('#fria-control-id').fill(controlId);
