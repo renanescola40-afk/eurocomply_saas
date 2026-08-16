@@ -4,6 +4,10 @@ begin;
 -- Organization-scoped task mutations remain backend-only; authenticated browser
 -- DML is limited to creation of a personal task that is cryptographically bound
 -- by auth.uid() and cannot be moved into an organization scope.
+--
+-- This selected forward migration is not present in the production migration
+-- ledger. It also closes the live compliance_metric_snapshots tenant-isolation
+-- gap discovered during production audit without rewriting any applied history.
 
 do $guard$
 begin
@@ -12,6 +16,9 @@ begin
   end if;
   if to_regclass('public.compliance_findings') is null then
     raise exception 'required reconciled table public.compliance_findings is missing';
+  end if;
+  if to_regclass('public.compliance_metric_snapshots') is null then
+    raise exception 'required canonical table public.compliance_metric_snapshots is missing';
   end if;
 end
 $guard$;
@@ -113,11 +120,57 @@ create policy "restrict_authenticated_compliance_task_insert_to_personal"
     and (assigned_to is null or assigned_to = auth.uid())
   );
 
+-- compliance_metric_snapshots is written and read exclusively by server-side
+-- administrative code. The live schema still carries a legacy authenticated
+-- allow-all metric snapshot read policy, which would expose every tenant
+-- snapshot to every authenticated browser once rows exist.
+-- Fail closed instead: require a tenant id on every row, remove all browser RLS
+-- policies and table privileges, and retain only explicit backend authority.
+do $snapshot_preconditions$
+begin
+  if exists (
+    select 1
+    from public.compliance_metric_snapshots
+    where organization_id is null
+  ) then
+    raise exception 'compliance_metric_snapshots contains rows without organization_id';
+  end if;
+end
+$snapshot_preconditions$;
+
+alter table public.compliance_metric_snapshots
+  alter column organization_id set not null;
+alter table public.compliance_metric_snapshots enable row level security;
+alter table public.compliance_metric_snapshots force row level security;
+
+do $drop_snapshot_policies$
+declare
+  snapshot_policy record;
+begin
+  for snapshot_policy in
+    select policyname
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'compliance_metric_snapshots'
+  loop
+    execute format(
+      'drop policy if exists %I on public.compliance_metric_snapshots',
+      snapshot_policy.policyname
+    );
+  end loop;
+end
+$drop_snapshot_policies$;
+
+revoke all on table public.compliance_metric_snapshots from public, anon, authenticated;
+grant select, insert, update, delete on table public.compliance_metric_snapshots to service_role;
+
 -- Fail closed on the exact privilege/policy posture required by the client and
 -- the audited/rate-limited organization task server actions.
 do $verify$
 declare
   permanent_mutation_guard_count integer;
+  snapshots_rls_enabled boolean;
+  snapshots_force_rls boolean;
 begin
   if not has_table_privilege('authenticated', 'public.compliance_tasks', 'SELECT') then
     raise exception 'authenticated compliance_tasks SELECT privilege is missing';
@@ -218,6 +271,55 @@ begin
       and convalidated
   ) then
     raise exception 'exclusive compliance_tasks tenant-scope constraint is missing or unvalidated';
+  end if;
+
+  if exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'compliance_metric_snapshots'
+  ) then
+    raise exception 'compliance_metric_snapshots must not expose browser RLS policies';
+  end if;
+
+  if has_table_privilege('anon', 'public.compliance_metric_snapshots', 'SELECT')
+     or has_table_privilege('anon', 'public.compliance_metric_snapshots', 'INSERT')
+     or has_table_privilege('anon', 'public.compliance_metric_snapshots', 'UPDATE')
+     or has_table_privilege('anon', 'public.compliance_metric_snapshots', 'DELETE')
+     or has_table_privilege('authenticated', 'public.compliance_metric_snapshots', 'SELECT')
+     or has_table_privilege('authenticated', 'public.compliance_metric_snapshots', 'INSERT')
+     or has_table_privilege('authenticated', 'public.compliance_metric_snapshots', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.compliance_metric_snapshots', 'DELETE') then
+    raise exception 'compliance_metric_snapshots browser privileges are not fully revoked';
+  end if;
+
+  if not has_table_privilege('service_role', 'public.compliance_metric_snapshots', 'SELECT')
+     or not has_table_privilege('service_role', 'public.compliance_metric_snapshots', 'INSERT') then
+    raise exception 'compliance_metric_snapshots service-role runtime privileges are incomplete';
+  end if;
+
+  select c.relrowsecurity, c.relforcerowsecurity
+    into snapshots_rls_enabled, snapshots_force_rls
+  from pg_class c
+  join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname = 'public'
+    and c.relname = 'compliance_metric_snapshots'
+    and c.relkind in ('r', 'p');
+
+  if not coalesce(snapshots_rls_enabled, false)
+     or not coalesce(snapshots_force_rls, false) then
+    raise exception 'compliance_metric_snapshots RLS/FORCE RLS boundary is incomplete';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_attribute a
+    where a.attrelid = 'public.compliance_metric_snapshots'::regclass
+      and a.attname = 'organization_id'
+      and a.attnotnull
+      and not a.attisdropped
+  ) then
+    raise exception 'compliance_metric_snapshots.organization_id must be NOT NULL';
   end if;
 end
 $verify$;
