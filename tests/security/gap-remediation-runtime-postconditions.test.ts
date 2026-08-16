@@ -35,7 +35,10 @@ describe('gap/remediation reconciliation runtime postconditions', () => {
     expect(gapRuntime).toContain('compliance_tasks.organization_id must remain nullable');
     expect(gapRuntime).toContain('compliance_tasks_requires_tenant_scope');
     expect(gapRuntime).toContain('legacy workspace_id foreign key is present');
-    expect(gapRuntime).toContain('canonical organization compliance_tasks policies were not preserved');
+    expect(gapRuntime).toContain('authenticated compliance_tasks organization mutation boundary is not backend-only');
+    expect(gapRuntime).toContain('restrictive personal compliance_tasks insert guard is missing');
+    expect(gapRuntime).toContain('canonical organization compliance_tasks read policy was not preserved');
+    expect(gapRuntime).toContain('direct compliance_tasks mutation policy unexpectedly remains active');
   });
 
   it('proves browser denial and private evidence storage ownership boundaries', () => {
