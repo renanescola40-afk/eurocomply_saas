@@ -27,7 +27,7 @@ const copyByLocale: Record<Locale, Copy> = {
     body: 'Your selection is preserved here. Commercial access is granted only after the normal checkout or sales-led activation completes.',
     continuePlan: (planName) => `Continue with ${planName}`,
     contactSales: (planName) => `Continue with ${planName} sales`,
-    ownerRequired: 'Owner or admin action required',
+    ownerRequired: 'Owner action required',
   },
   pt: {
     eyebrow: 'Selecionado no onboarding',
@@ -35,7 +35,7 @@ const copyByLocale: Record<Locale, Copy> = {
     body: 'A sua seleção foi preservada. O acesso comercial só é concedido depois de o checkout normal ou a ativação assistida por vendas terminar.',
     continuePlan: (planName) => `Continuar com ${planName}`,
     contactSales: (planName) => `Continuar com vendas ${planName}`,
-    ownerRequired: 'É necessária ação de owner ou admin',
+    ownerRequired: 'É necessária ação do owner',
   },
   es: {
     eyebrow: 'Seleccionado durante el onboarding',
@@ -43,7 +43,7 @@ const copyByLocale: Record<Locale, Copy> = {
     body: 'Tu selección se ha conservado. El acceso comercial solo se concede cuando finaliza el checkout normal o la activación asistida por ventas.',
     continuePlan: (planName) => `Continuar con ${planName}`,
     contactSales: (planName) => `Continuar con ventas ${planName}`,
-    ownerRequired: 'Se requiere acción de owner o admin',
+    ownerRequired: 'Se requiere acción del owner',
   },
   fr: {
     eyebrow: 'Sélectionné pendant l’onboarding',
@@ -51,7 +51,7 @@ const copyByLocale: Record<Locale, Copy> = {
     body: 'Votre sélection est conservée. L’accès commercial n’est accordé qu’après la fin du checkout normal ou de l’activation assistée par les ventes.',
     continuePlan: (planName) => `Continuer avec ${planName}`,
     contactSales: (planName) => `Continuer avec les ventes ${planName}`,
-    ownerRequired: 'Action owner ou admin requise',
+    ownerRequired: 'Action du owner requise',
   },
   it: {
     eyebrow: 'Selezionato durante l’onboarding',
@@ -59,7 +59,7 @@ const copyByLocale: Record<Locale, Copy> = {
     body: 'La selezione è stata conservata. L’accesso commerciale viene concesso solo dopo il completamento del checkout normale o dell’attivazione assistita dalle vendite.',
     continuePlan: (planName) => `Continua con ${planName}`,
     contactSales: (planName) => `Continua con vendite ${planName}`,
-    ownerRequired: 'È richiesta un’azione owner o admin',
+    ownerRequired: 'È richiesta un’azione del owner',
   },
   de: {
     eyebrow: 'Beim Onboarding ausgewählt',
@@ -67,7 +67,7 @@ const copyByLocale: Record<Locale, Copy> = {
     body: 'Ihre Auswahl bleibt erhalten. Kommerzieller Zugriff wird erst nach dem regulären Checkout oder der vertriebsgeführten Aktivierung gewährt.',
     continuePlan: (planName) => `Mit ${planName} fortfahren`,
     contactSales: (planName) => `${planName} mit Vertrieb fortsetzen`,
-    ownerRequired: 'Owner- oder Admin-Aktion erforderlich',
+    ownerRequired: 'Owner-Aktion erforderlich',
   },
 };
 
