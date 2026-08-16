@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Request } from '@playwright/test';
 
 const ownerStorageState = process.env.E2E_OWNER_STORAGE_STATE;
 const approverStorageState = process.env.E2E_FRIA_APPROVER_STORAGE_STATE;
@@ -61,15 +61,55 @@ async function expectHealthyAuthenticatedPage(page: Page, label: string) {
   expect(page.url(), `${label} should not fall back to login`).not.toContain('/login');
 }
 
+function configuredLoopbackSupabaseOrigin() {
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!rawUrl) return null;
+  try {
+    const parsed = new URL(rawUrl);
+    if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(parsed.hostname)) return null;
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
 async function loginWithDisposableCredentials(page: Page, email: string, password: string) {
-  await page.goto('/en/login?next=/en/dashboard/organizations', { waitUntil: 'domcontentloaded' });
+  const loginResponse = await page.goto('/en/login?next=/en/dashboard/organizations', { waitUntil: 'domcontentloaded' });
+  const loopbackSupabaseOrigin = configuredLoopbackSupabaseOrigin();
+  if (loopbackSupabaseOrigin) {
+    const csp = loginResponse?.headers()['content-security-policy'] ?? '';
+    expect(csp, 'local Product QA CSP should allow only its configured loopback Supabase Auth origin').toContain(loopbackSupabaseOrigin);
+    expect(csp, 'local Product QA CSP must not upgrade loopback HTTP Auth to unsupported TLS').not.toContain('upgrade-insecure-requests');
+  }
+
   const credentialEmail = page.getByRole('textbox', { name: 'Work email', exact: true });
   const credentialForm = page.locator('form').filter({ has: credentialEmail });
   await expect(credentialForm, 'credential login form should be uniquely addressable beside Enterprise SSO').toHaveCount(1);
   await credentialEmail.fill(email);
   await credentialForm.getByLabel('Password', { exact: true }).fill(password);
-  await credentialForm.locator('button[type="submit"]').click();
-  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000 });
+
+  const failedAuthRequests: string[] = [];
+  const onRequestFailed = (request: Request) => {
+    if (!loopbackSupabaseOrigin || !request.url().startsWith(loopbackSupabaseOrigin)) return;
+    failedAuthRequests.push(`${request.method()} ${new URL(request.url()).pathname}: ${request.failure()?.errorText ?? 'unknown failure'}`);
+  };
+  page.on('requestfailed', onRequestFailed);
+
+  try {
+    await credentialForm.locator('button[type="submit"]').click();
+    try {
+      await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000 });
+    } catch {
+      const alert = page.getByRole('alert').first();
+      const alertText = await alert.isVisible().then((visible) => visible ? alert.textContent() : null).catch(() => null);
+      throw new Error(
+        `Disposable credential login did not leave /login. Public alert: ${alertText?.trim() || 'none'}. Auth request failures: ${failedAuthRequests.join(' | ') || 'none'}.`,
+      );
+    }
+  } finally {
+    page.off('requestfailed', onRequestFailed);
+  }
+
   await expectHealthyAuthenticatedPage(page, 'disposable authenticated session');
 }
 
