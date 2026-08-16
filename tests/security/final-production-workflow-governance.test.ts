@@ -35,14 +35,19 @@ function expectExactInputSha(workflow: string) {
   expect(workflow).not.toContain('git merge-base --is-ancestor');
 }
 
+function expectSecretOnlyAfterStep(workflow: string, stepName: string, secretReference: string) {
+  const stepIndex = workflow.indexOf(`- name: ${stepName}`);
+  const secretIndex = workflow.indexOf(secretReference);
+  expect(stepIndex).toBeGreaterThanOrEqual(0);
+  expect(secretIndex).toBeGreaterThan(stepIndex);
+  expect(workflow.slice(0, stepIndex)).not.toContain(secretReference);
+}
+
 describe('final production workflow governance boundary', () => {
-  it('keeps public production secrets behind exact-main environment governance', () => {
+  it('keeps public production secrets behind exact-main governance and only on the final runtime step', () => {
     expectGovernanceBoundary(publicFinal, 'production-environment-governance', 'Production', 'production-final');
     expect(publicFinal).toContain('needs: production-environment-governance');
-
-    const [unprotectedBoundary, protectedBoundary] = publicFinal.split('\n  production-final:\n');
-    expect(unprotectedBoundary).toBeDefined();
-    expect(protectedBoundary).toBeDefined();
+    expect(publicFinal).toContain('Verify checked-out SHA still equals current main');
 
     for (const secretName of [
       'HEALTHCHECK_TOKEN',
@@ -52,8 +57,7 @@ describe('final production workflow governance boundary', () => {
       'UPSTASH_REDIS_REST_TOKEN',
       'NEXT_PUBLIC_SENTRY_DSN',
     ]) {
-      expect(unprotectedBoundary).not.toContain(`secrets.${secretName}`);
-      expect(protectedBoundary).toContain(`secrets.${secretName}`);
+      expectSecretOnlyAfterStep(publicFinal, 'Run public production final gate', `secrets.${secretName}`);
     }
 
     expect(publicFinal).toContain('test "$main_sha" = "$GITHUB_SHA"');
@@ -70,7 +74,7 @@ describe('final production workflow governance boundary', () => {
     expect(releaseFinal).not.toContain('git fetch --no-tags --prune origin "$ASSESSED_COMMIT" || true');
   });
 
-  it('keeps platform provider credentials behind exact-main environment governance', () => {
+  it('keeps platform provider credentials on the proof step only', () => {
     expectGovernanceBoundary(
       platformProviders,
       'platform-proof-environment-governance',
@@ -79,9 +83,12 @@ describe('final production workflow governance boundary', () => {
     );
     expect(platformProviders).toContain('needs: platform-proof-environment-governance');
     expectExactInputSha(platformProviders);
+    for (const secretName of ['PLATFORM_PROOF_TOKEN', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'SENTRY_DSN']) {
+      expectSecretOnlyAfterStep(platformProviders, 'Run platform provider proof', `secrets.${secretName}`);
+    }
   });
 
-  it('guards scheduled platform drift evidence before the protected source is materialized', () => {
+  it('guards scheduled platform drift evidence and materializes the secret only at its bounded step', () => {
     expectGovernanceBoundary(
       platformDrift,
       'platform-closeout-environment-governance',
@@ -89,28 +96,26 @@ describe('final production workflow governance boundary', () => {
       'protected-drift-check',
     );
     expect(platformDrift).toContain('needs: [contract, platform-closeout-environment-governance]');
-
-    const [preflightBoundary, protectedBoundary] = platformDrift.split('\n  protected-drift-check:\n');
-    expect(preflightBoundary).not.toContain('secrets.PLATFORM_FINAL_RELEASE_EVIDENCE_JSON');
-    expect(protectedBoundary).toContain('secrets.PLATFORM_FINAL_RELEASE_EVIDENCE_JSON');
+    expect(platformDrift).toContain('Verify checked-out SHA still equals current main');
+    expectSecretOnlyAfterStep(
+      platformDrift,
+      'Materialize protected evidence',
+      'secrets.PLATFORM_FINAL_RELEASE_EVIDENCE_JSON',
+    );
   });
 
   it('keeps SCIM proof credentials behind protected identity governance', () => {
     expectGovernanceBoundary(scimProof, 'identity-environment-governance', 'production-identity-proof', 'scim-runtime-proof');
     expect(scimProof).toContain('needs: identity-environment-governance');
     expectExactInputSha(scimProof);
-    const [preflightBoundary, protectedBoundary] = scimProof.split('\n  scim-runtime-proof:\n');
-    expect(preflightBoundary).not.toContain('secrets.SCIM_PROOF_BEARER_TOKEN');
-    expect(protectedBoundary).toContain('secrets.SCIM_PROOF_BEARER_TOKEN');
+    expectSecretOnlyAfterStep(scimProof, 'Execute SCIM Users and Groups lifecycle proof', 'secrets.SCIM_PROOF_BEARER_TOKEN');
   });
 
   it('keeps SAML proof credentials behind protected identity governance', () => {
     expectGovernanceBoundary(samlProof, 'identity-environment-governance', 'production-identity-proof', 'saml-sso-runtime-proof');
     expect(samlProof).toContain('needs: identity-environment-governance');
     expectExactInputSha(samlProof);
-    const [preflightBoundary, protectedBoundary] = samlProof.split('\n  saml-sso-runtime-proof:\n');
-    expect(preflightBoundary).not.toContain('secrets.SUPABASE_SERVICE_ROLE_KEY');
-    expect(protectedBoundary).toContain('secrets.SUPABASE_SERVICE_ROLE_KEY');
+    expectSecretOnlyAfterStep(samlProof, 'Await a new production SAML SSO login', 'secrets.SUPABASE_SERVICE_ROLE_KEY');
   });
 
   it('requires exact current main before Google OAuth provider secrets', () => {
@@ -119,6 +124,7 @@ describe('final production workflow governance boundary', () => {
     expectExactInputSha(googleProof);
     expect(googleProof).toContain('npm ci --ignore-scripts');
     expect(googleProof).not.toContain('ref: main');
+    expectSecretOnlyAfterStep(googleProof, 'Validate Supabase Google OAuth configuration', 'secrets.SUPABASE_ACCESS_TOKEN');
   });
 
   it('requires exact current main before Stripe provider secrets', () => {
@@ -126,5 +132,6 @@ describe('final production workflow governance boundary', () => {
     expect(stripeProof).toContain('needs: production-environment-governance');
     expectExactInputSha(stripeProof);
     expect(stripeProof).not.toContain('git checkout --detach');
+    expectSecretOnlyAfterStep(stripeProof, 'Probe Stripe production provider configuration', 'secrets.STRIPE_SECRET_KEY');
   });
 });
