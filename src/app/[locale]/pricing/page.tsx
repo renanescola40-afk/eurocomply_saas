@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { BILLING_PLANS, type BillingPlan, type BillingLimit } from '@/lib/billing/plans';
+import { getBillingFeatureLabel } from '@/lib/i18n/billing-feature-labels';
 import { getCommercialSurfaceCopy, type CommercialSurfaceCopy } from '@/lib/i18n/commercial-surface-copy';
 import { applyPricingCommercialTruth } from '@/lib/i18n/pricing-commercial-truth';
 import { type Locale } from '@/lib/i18n/routing';
@@ -33,24 +34,24 @@ const pricingMetadata: Record<Locale, { title: string; description: string }> = 
     description: 'Compare RISCK COMPLY plans for AI inventory, risk ownership, evidence preparation, policy workflows, security review and AI Act readiness operations.',
   },
   pt: {
-    title: 'Preços RISCK COMPLY - Planos de AI Act Readiness para equipas B2B',
-    description: 'Compare planos para inventário de IA, ownership de risco, evidências, workflows de políticas, security review e operações de AI Act readiness.',
+    title: 'Preços RISCK COMPLY - Planos de preparação para o AI Act para equipas B2B',
+    description: 'Compare planos para inventário de IA, responsabilidade por risco, preparação de evidências, fluxos de políticas, revisão de segurança e operações de preparação para o AI Act.',
   },
   es: {
-    title: 'Precios RISCK COMPLY - Planes de AI Act readiness para equipos B2B',
-    description: 'Compara planes para inventario de IA, responsables de riesgo, evidencias, políticas, security review y operaciones de AI Act readiness.',
+    title: 'Precios RISCK COMPLY - Planes de preparación para el AI Act para equipos B2B',
+    description: 'Compara planes para inventario de IA, responsabilidad de riesgos, preparación de evidencias, flujos de políticas, revisión de seguridad y operaciones de preparación para el AI Act.',
   },
   fr: {
-    title: 'Tarifs RISCK COMPLY - Plans AI Act readiness pour équipes B2B',
-    description: 'Comparez les plans pour inventaire IA, ownership des risques, preuves, politiques, security review et opérations AI Act readiness.',
+    title: 'Tarifs RISCK COMPLY - Plans de préparation à l’AI Act pour équipes B2B',
+    description: 'Comparez les plans pour l’inventaire IA, la responsabilité des risques, la préparation des preuves, les flux de politiques, la revue de sécurité et la préparation à l’AI Act.',
   },
   it: {
-    title: 'Prezzi RISCK COMPLY - Piani AI Act readiness per team B2B',
-    description: 'Confronta i piani per inventario IA, ownership del rischio, evidenze, policy workflow, security review e operazioni AI Act readiness.',
+    title: 'Prezzi RISCK COMPLY - Piani di preparazione all’AI Act per team B2B',
+    description: 'Confronta i piani per inventario IA, responsabilità del rischio, preparazione delle evidenze, flussi delle policy, revisione della sicurezza e preparazione all’AI Act.',
   },
   de: {
-    title: 'RISCK COMPLY Preise - AI Act Readiness Pläne für B2B-Teams',
-    description: 'Vergleichen Sie Pläne für KI-Inventar, Risiko-Ownership, Nachweise, Policy-Workflows, Security Review und AI Act Readiness.',
+    title: 'RISCK COMPLY Preise - Pläne zur Vorbereitung auf den AI Act für B2B-Teams',
+    description: 'Vergleichen Sie Pläne für KI-Inventar, Risikoverantwortung, Nachweisvorbereitung, Richtlinienabläufe, Sicherheitsprüfung und die Vorbereitung auf den AI Act.',
   },
 };
 
@@ -214,7 +215,7 @@ export default async function PricingPage({ params }: Props) {
                   </div>
                   <ul className="mt-6 space-y-3 text-sm">
                     {plan.features.slice(0, 6).map((feature) => (
-                      <li key={feature} className={isFeatured ? 'text-slate-700' : 'text-slate-300'}>• {feature}</li>
+                      <li key={feature} className={isFeatured ? 'text-slate-700' : 'text-slate-300'}>• {getBillingFeatureLabel(locale, feature)}</li>
                     ))}
                   </ul>
                   <Link href={planHref(locale, plan)} className={`mt-8 inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 ${isFeatured ? 'bg-slate-950 text-white hover:bg-slate-800' : 'border border-white/15 text-white hover:bg-white/10'}`}>

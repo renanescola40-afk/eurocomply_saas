@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { BillingActionButton } from '@/app/[locale]/dashboard/organizations/billing/billing-action-button';
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
+import { getBillingFeatureLabel } from '@/lib/i18n/billing-feature-labels';
 import { getCommercialSurfaceCopy, type CommercialSurfaceCopy } from '@/lib/i18n/commercial-surface-copy';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { getSafeLocale } from '@/lib/seo/public-metadata';
@@ -16,11 +17,11 @@ const PAYMENT_RECOVERY_STATUSES = new Set(['past_due', 'unpaid', 'incomplete']);
 
 const paymentRecoveryCopy: Record<Locale, { title: string; body: string; action: string; badge: string }> = {
   en: { title: 'Payment requires attention', body: 'Your workspace is protected while the subscription needs payment attention. Open secure billing to update the payment method or complete the outstanding payment.', action: 'Resolve payment securely', badge: 'Payment action' },
-  pt: { title: 'O pagamento requer atenção', body: 'O seu workspace permanece protegido enquanto a subscrição precisa de regularização. Abra a faturação segura para atualizar o método de pagamento ou concluir o pagamento pendente.', action: 'Regularizar pagamento', badge: 'Ação de pagamento' },
-  es: { title: 'El pago requiere atención', body: 'Tu workspace permanece protegido mientras la suscripción necesita regularización. Abre la facturación segura para actualizar el método de pago o completar el pago pendiente.', action: 'Resolver el pago', badge: 'Acción de pago' },
-  fr: { title: 'Le paiement nécessite votre attention', body: 'Votre workspace reste protégé pendant la régularisation de l’abonnement. Ouvrez la facturation sécurisée pour mettre à jour le moyen de paiement ou finaliser le paiement en attente.', action: 'Régulariser le paiement', badge: 'Action de paiement' },
-  it: { title: 'Il pagamento richiede attenzione', body: 'Il workspace resta protetto mentre l’abbonamento necessita di regolarizzazione. Apri la fatturazione sicura per aggiornare il metodo di pagamento o completare il pagamento in sospeso.', action: 'Regolarizza il pagamento', badge: 'Azione di pagamento' },
-  de: { title: 'Die Zahlung erfordert Aufmerksamkeit', body: 'Ihr Workspace bleibt geschützt, während das Abonnement eine Zahlungsaktion erfordert. Öffnen Sie die sichere Abrechnung, um die Zahlungsmethode zu aktualisieren oder die offene Zahlung abzuschließen.', action: 'Zahlung klären', badge: 'Zahlungsaktion' },
+  pt: { title: 'O pagamento requer atenção', body: 'O seu espaço de trabalho permanece protegido enquanto a subscrição precisa de regularização. Abra a faturação segura para atualizar o método de pagamento ou concluir o pagamento pendente.', action: 'Regularizar pagamento', badge: 'Ação de pagamento' },
+  es: { title: 'El pago requiere atención', body: 'Tu espacio de trabajo permanece protegido mientras la suscripción necesita regularización. Abre la facturación segura para actualizar el método de pago o completar el pago pendiente.', action: 'Resolver el pago', badge: 'Acción de pago' },
+  fr: { title: 'Le paiement nécessite votre attention', body: 'Votre espace de travail reste protégé pendant la régularisation de l’abonnement. Ouvrez la facturation sécurisée pour mettre à jour le moyen de paiement ou finaliser le paiement en attente.', action: 'Régulariser le paiement', badge: 'Action de paiement' },
+  it: { title: 'Il pagamento richiede attenzione', body: 'Lo spazio di lavoro resta protetto mentre l’abbonamento necessita di regolarizzazione. Apri la fatturazione sicura per aggiornare il metodo di pagamento o completare il pagamento in sospeso.', action: 'Regolarizza il pagamento', badge: 'Azione di pagamento' },
+  de: { title: 'Die Zahlung erfordert Aufmerksamkeit', body: 'Ihr Arbeitsbereich bleibt geschützt, während das Abonnement eine Zahlungsaktion erfordert. Öffnen Sie die sichere Abrechnung, um die Zahlungsmethode zu aktualisieren oder die offene Zahlung abzuschließen.', action: 'Zahlung klären', badge: 'Zahlungsaktion' },
 };
 
 type CheckoutSearchParams = {
@@ -200,7 +201,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
 
             <ul className="mt-5 space-y-3 text-sm text-slate-300">
               {selectedPlan.features.slice(0, 6).map((feature) => (
-                <li key={feature} className="flex gap-3"><span className="text-emerald-300" aria-hidden="true">✓</span><span>{feature}</span></li>
+                <li key={feature} className="flex gap-3"><span className="text-emerald-300" aria-hidden="true">✓</span><span>{getBillingFeatureLabel(locale, feature)}</span></li>
               ))}
             </ul>
 

@@ -22,6 +22,7 @@ on:
         type: boolean
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -45,30 +46,36 @@ jobs:
       - name: Run contract tests
         run: node --test tests/security/platform-final-release-evidence-pack.test.mjs
 
-  protected-final-proof:
-    name: Exact-SHA platform release closeout
+  platform-closeout-environment-governance:
+    name: Verify platform closeout governance before final evidence
     if: github.event_name == 'workflow_dispatch' && inputs.strict_runtime
+    needs: contract
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    environment: production-platform-closeout
+    timeout-minutes: 5
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
-      PLATFORM_EVIDENCE_MAX_AGE_HOURS: ${{ vars.PLATFORM_EVIDENCE_MAX_AGE_HOURS }}
-      PLATFORM_FINAL_RELEASE_EVIDENCE_JSON: ${{ secrets.PLATFORM_FINAL_RELEASE_EVIDENCE_JSON }}
     steps:
-      - name: Validate requested SHA
+      - name: Bind final platform proof to exact current main
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$RELEASE_SHA"
 
-      - name: Checkout exact release SHA
+      - name: Check out exact trusted release SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ inputs.release_sha }}
           persist-credentials: false
 
-      - name: Verify exact current main
+      - name: Verify exact current main checkout
         shell: bash
         run: |
           set -euo pipefail
@@ -76,8 +83,92 @@ jobs:
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
 
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+
+      - name: Verify platform closeout environment governance
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: production-platform-closeout
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
+  protected-final-proof:
+    name: Exact-SHA platform release closeout
+    if: github.event_name == 'workflow_dispatch' && inputs.strict_runtime
+    needs: platform-closeout-environment-governance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production-platform-closeout
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+    steps:
+      - name: Revalidate exact current main after environment approval
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$RELEASE_SHA"
+
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Verify exact current main checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+
+      - name: Revalidate environment governance after admission
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: production-platform-closeout
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
+      - name: Revalidate protected producer boundary
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: production-platform-closeout
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$RELEASE_SHA"
+          node scripts/security/check-github-environment-governance.mjs
+
       - name: Materialize protected input
         shell: bash
+        env:
+          PLATFORM_FINAL_RELEASE_EVIDENCE_JSON: ${{ secrets.PLATFORM_FINAL_RELEASE_EVIDENCE_JSON }}
         run: |
           set -euo pipefail
           test -n "$PLATFORM_FINAL_RELEASE_EVIDENCE_JSON"
@@ -86,6 +177,8 @@ jobs:
           chmod 600 artifacts/platform-final-release-input.json
 
       - name: Build final release evidence pack
+        env:
+          PLATFORM_EVIDENCE_MAX_AGE_HOURS: ${{ vars.PLATFORM_EVIDENCE_MAX_AGE_HOURS }}
         run: node scripts/platform/build-final-release-evidence-pack.mjs --strict --input=artifacts/platform-final-release-input.json --output=artifacts/platform-final-release-evidence-pack.json
 
       - name: Remove protected source
