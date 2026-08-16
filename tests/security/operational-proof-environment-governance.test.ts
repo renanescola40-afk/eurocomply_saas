@@ -6,6 +6,7 @@ const incidentContinuity = readFileSync('.github/workflows/incident-continuity-r
 const procurementTrust = readFileSync('.github/workflows/procurement-trust-runtime-proof.yml', 'utf8');
 const safeRuntimeBootstrap = readFileSync('.github/workflows/enterprise-safe-runtime-bootstrap.yml', 'utf8');
 const platformFinalRelease = readFileSync('.github/workflows/platform-final-release-evidence.yml', 'utf8');
+const recoveryResilience = readFileSync('.github/workflows/recovery-resilience-proof.yml', 'utf8');
 
 const GOVERNANCE_CHECK = 'node scripts/security/check-github-environment-governance.mjs';
 const PINNED_CHECKOUT = 'actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0';
@@ -17,7 +18,7 @@ function expectOperationalProofBoundary(
   protectedJobName: string,
   proofStepName: string,
 ) {
-  expect(workflow).toContain('permissions:\n  actions: read\n  contents: read');
+  expect(workflow).toMatch(/permissions:\n(?:  actions: read\n  contents: read|  contents: read\n  actions: read)/);
 
   const governanceJob = workflow.indexOf(`  ${governanceJobName}:`);
   const protectedJob = workflow.indexOf(`  ${protectedJobName}:`);
@@ -135,5 +136,29 @@ describe('operational production proof environment governance', () => {
     expect(maxAgeReference).toBeGreaterThan(buildStep);
     expect(platformFinalRelease.slice(0, materializeStep)).not.toContain('secrets.PLATFORM_FINAL_RELEASE_EVIDENCE_JSON');
     expect(platformFinalRelease.slice(0, buildStep)).not.toContain('vars.PLATFORM_EVIDENCE_MAX_AGE_HOURS');
+  });
+
+  it('keeps recovery and rollback credentials step-scoped behind repeated exact-main governance', () => {
+    expectOperationalProofBoundary(
+      recoveryResilience,
+      'recovery-environment-governance',
+      'production-recovery',
+      'recovery-proof',
+      'Preflight protected recovery proof',
+    );
+
+    const protectedJob = recoveryResilience.indexOf('  recovery-proof:');
+    const preflightStep = recoveryResilience.indexOf('- name: Preflight protected recovery proof');
+    const rollbackBoundary = recoveryResilience.indexOf('- name: Revalidate rollback producer boundary');
+    const rollbackStep = recoveryResilience.indexOf('- name: Execute controlled Vercel rollback');
+    const protectedJobBeforePreflight = recoveryResilience.slice(protectedJob, preflightStep);
+    const beforeRollback = recoveryResilience.slice(0, rollbackStep);
+
+    expect(protectedJobBeforePreflight).not.toMatch(/secrets\./);
+    expect(rollbackBoundary).toBeGreaterThan(preflightStep);
+    expect(rollbackStep).toBeGreaterThan(rollbackBoundary);
+    expect(recoveryResilience.indexOf('secrets.RECOVERY_SOURCE_DATABASE_URL')).toBeGreaterThan(preflightStep);
+    expect(recoveryResilience.indexOf('secrets.VERCEL_TOKEN')).toBeGreaterThan(preflightStep);
+    expect(beforeRollback).toContain('- name: Revalidate rollback producer boundary');
   });
 });
