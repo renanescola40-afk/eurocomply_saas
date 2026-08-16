@@ -132,6 +132,16 @@ begin
     raise exception 'compliance_tasks personal-scope foreign keys are incomplete';
   end if;
 
+  if not has_table_privilege('authenticated', 'public.compliance_tasks', 'SELECT')
+     or not has_table_privilege('authenticated', 'public.compliance_tasks', 'INSERT') then
+    raise exception 'authenticated compliance_tasks personal read/create privileges are incomplete';
+  end if;
+
+  if has_table_privilege('authenticated', 'public.compliance_tasks', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.compliance_tasks', 'DELETE') then
+    raise exception 'authenticated compliance_tasks organization mutation boundary is not backend-only';
+  end if;
+
   select count(*)
     into personal_task_policy_count
   from pg_policies
@@ -139,13 +149,24 @@ begin
     and tablename = 'compliance_tasks'
     and policyname in (
       'rls_compliance_tasks_select_personal',
-      'rls_compliance_tasks_insert_personal',
-      'rls_compliance_tasks_update_personal'
+      'rls_compliance_tasks_insert_personal'
     )
     and roles = array['authenticated']::name[];
 
-  if personal_task_policy_count <> 3 then
-    raise exception 'personal compliance_tasks RLS policy set is incomplete';
+  if personal_task_policy_count <> 2 then
+    raise exception 'personal compliance_tasks read/create RLS policy set is incomplete';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'compliance_tasks'
+      and policyname = 'restrict_authenticated_compliance_task_insert_to_personal'
+      and permissive = 'RESTRICTIVE'
+      and roles = array['authenticated']::name[]
+  ) then
+    raise exception 'restrictive personal compliance_tasks insert guard is missing';
   end if;
 
   if not exists (
@@ -153,23 +174,22 @@ begin
     where schemaname = 'public'
       and tablename = 'compliance_tasks'
       and policyname = 'rls_compliance_tasks_select_member'
-  ) or not exists (
-    select 1 from pg_policies
-    where schemaname = 'public'
-      and tablename = 'compliance_tasks'
-      and policyname = 'rls_compliance_tasks_insert_writer'
-  ) or not exists (
-    select 1 from pg_policies
-    where schemaname = 'public'
-      and tablename = 'compliance_tasks'
-      and policyname = 'rls_compliance_tasks_update_writer'
-  ) or not exists (
-    select 1 from pg_policies
-    where schemaname = 'public'
-      and tablename = 'compliance_tasks'
-      and policyname = 'rls_compliance_tasks_delete_admin'
   ) then
-    raise exception 'canonical organization compliance_tasks policies were not preserved';
+    raise exception 'canonical organization compliance_tasks read policy was not preserved';
+  end if;
+
+  if exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'compliance_tasks'
+      and policyname in (
+        'rls_compliance_tasks_insert_writer',
+        'rls_compliance_tasks_update_writer',
+        'rls_compliance_tasks_delete_admin',
+        'rls_compliance_tasks_update_personal'
+      )
+  ) then
+    raise exception 'direct compliance_tasks mutation policy unexpectedly remains active';
   end if;
 
   select count(*)
