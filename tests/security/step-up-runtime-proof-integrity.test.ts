@@ -48,86 +48,45 @@ describe('step-up runtime proof integrity', () => {
 
   it('marks evidence Complete only for protected exact-SHA main-branch workflow proof and verified cleanup', () => {
     expect(evaluateStepUpRuntimeEvidence({
-      sourceFailures: [],
-      provider,
-      liveValidation,
-      expectedSha: SHA_A,
-      checkedOutSha: SHA_A,
-      expectedBranch: 'main',
-      githubActions: true,
-      githubRunId: '123456789',
+      sourceFailures: [], provider, liveValidation, expectedSha: SHA_A, checkedOutSha: SHA_A,
+      expectedBranch: 'main', githubActions: true, githubRunId: '123456789',
       githubRepository: 'renanescola40-afk/eurocomply_saas',
     })).toMatchObject({
-      status: 'Complete',
-      outcome: 'passed',
-      complete: true,
-      checks: {
-        exactShaBound: true,
-        branchBound: true,
-        workflowProvenance: true,
-        liveProviderVerificationPassed: true,
-      },
+      status: 'Complete', outcome: 'passed', complete: true,
+      checks: { exactShaBound: true, branchBound: true, workflowProvenance: true, liveProviderVerificationPassed: true },
     });
   });
 
   it('fails closed for stale SHA, local execution, missing proof, failed sign-out or failed fixture cleanup', () => {
     const stale = evaluateStepUpRuntimeEvidence({
-      sourceFailures: [],
-      provider,
-      liveValidation,
-      expectedSha: SHA_A,
-      checkedOutSha: SHA_B,
-      expectedBranch: 'main',
-      githubActions: true,
-      githubRunId: '123456789',
-      githubRepository: 'renanescola40-afk/eurocomply_saas',
+      sourceFailures: [], provider, liveValidation, expectedSha: SHA_A, checkedOutSha: SHA_B,
+      expectedBranch: 'main', githubActions: true, githubRunId: '123456789', githubRepository: 'renanescola40-afk/eurocomply_saas',
     });
     expect(stale.complete).toBe(false);
     expect(stale.status).toBe('Open');
     expect(stale.checks.exactShaBound).toBe(false);
 
     const local = evaluateStepUpRuntimeEvidence({
-      sourceFailures: [],
-      provider,
-      liveValidation,
-      expectedSha: SHA_A,
-      checkedOutSha: SHA_A,
-      expectedBranch: 'main',
-      githubActions: false,
-      githubRunId: '',
-      githubRepository: '',
+      sourceFailures: [], provider, liveValidation, expectedSha: SHA_A, checkedOutSha: SHA_A,
+      expectedBranch: 'main', githubActions: false, githubRunId: '', githubRepository: '',
     });
     expect(local.complete).toBe(false);
     expect(local.checks.workflowProvenance).toBe(false);
 
     const notRun = evaluateStepUpRuntimeEvidence({
-      sourceFailures: [],
-      provider,
-      liveValidation: { status: 'Skipped', attempted: false },
-      expectedSha: SHA_A,
-      checkedOutSha: SHA_A,
-      expectedBranch: 'main',
-      githubActions: true,
-      githubRunId: '123456789',
-      githubRepository: 'renanescola40-afk/eurocomply_saas',
+      sourceFailures: [], provider, liveValidation: { status: 'Skipped', attempted: false },
+      expectedSha: SHA_A, checkedOutSha: SHA_A, expectedBranch: 'main', githubActions: true,
+      githubRunId: '123456789', githubRepository: 'renanescola40-afk/eurocomply_saas',
     });
     expect(notRun.complete).toBe(false);
     expect(notRun.outcome).toBe('blocked');
 
     for (const patch of [
-      { signedOut: false },
-      { fixtureCleanupVerified: false },
-      { verificationSucceeded: false, status: 'Failed' },
+      { signedOut: false }, { fixtureCleanupVerified: false }, { verificationSucceeded: false, status: 'Failed' },
     ]) {
       const result = evaluateStepUpRuntimeEvidence({
-        sourceFailures: [],
-        provider,
-        liveValidation: { ...liveValidation, ...patch },
-        expectedSha: SHA_A,
-        checkedOutSha: SHA_A,
-        expectedBranch: 'main',
-        githubActions: true,
-        githubRunId: '123456789',
+        sourceFailures: [], provider, liveValidation: { ...liveValidation, ...patch }, expectedSha: SHA_A,
+        checkedOutSha: SHA_A, expectedBranch: 'main', githubActions: true, githubRunId: '123456789',
         githubRepository: 'renanescola40-afk/eurocomply_saas',
       });
       expect(result.complete).toBe(false);
@@ -176,17 +135,16 @@ describe('step-up runtime proof integrity', () => {
     expect(gate).toContain('acceptance.protectedWorkflowProvenance === true');
 
     expect(workflow).toContain('workflow_dispatch:');
-    expect(workflow).toContain('environment: production');
+    expect(workflow).toContain('environment: Production');
+    expect(workflow).toContain('needs: production-environment-governance');
     expect(workflow).toContain('permissions:\n  contents: read');
     expect(workflow).toContain('ref: ${{ inputs.release_sha }}');
     expect(workflow).toContain('STEP_UP_PROVIDER_MODE: supabase_mfa');
     expect(workflow).toContain('SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}');
     expect(workflow).toContain('npm run security:step-up:runtime');
-    for (const removedSecret of [
-      'STEP_UP_LIVE_USER_EMAIL',
-      'STEP_UP_LIVE_USER_PASSWORD',
-      'STEP_UP_LIVE_TOTP_SECRET',
-    ]) expect(workflow).not.toContain(removedSecret);
+    for (const removedSecret of ['STEP_UP_LIVE_USER_EMAIL', 'STEP_UP_LIVE_USER_PASSWORD', 'STEP_UP_LIVE_TOTP_SECRET']) {
+      expect(workflow).not.toContain(removedSecret);
+    }
     expect(workflow).not.toContain('pull_request_target');
     expect(workflow).not.toContain('contents: write');
     expect(workflow).not.toContain('STEP_UP_RUNTIME_PROVIDER_PROOF');
