@@ -87,7 +87,7 @@ async function handleCheckoutIntent(request: Request) {
   const entitlements = await getOrganizationEntitlements(organization.id);
   const targetEntitlementPlan = BILLING_TO_ENTITLEMENT_PLAN[plan.id];
   const priceId = getStripePriceId(plan);
-  const alreadyOnPlan = entitlements.plan === targetEntitlementPlan;
+  const alreadyOnPlan = entitlements.licensed && entitlements.plan === targetEntitlementPlan;
 
   return noStoreJson({
     ok: true,
@@ -103,7 +103,9 @@ async function handleCheckoutIntent(request: Request) {
         name: organization.name,
         slug: organization.slug,
       },
-      currentPlan: entitlements.plan,
+      currentPlan: entitlements.licensed ? entitlements.plan : null,
+      licensed: entitlements.licensed,
+      authoritySource: entitlements.authoritySource,
       alreadyOnPlan,
       checkoutReady: Boolean(priceId) && !alreadyOnPlan,
       nextAction: alreadyOnPlan
