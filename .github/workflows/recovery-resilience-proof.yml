@@ -31,7 +31,54 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  recovery-environment-governance:
+    name: Verify production-recovery governance before recovery secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      RECOVERY_REQUIRED_EXERCISE: ${{ inputs.exercise }}
+      RECOVERY_EXERCISE_CONFIRMATION: ${{ inputs.confirmation }}
+    steps:
+      - name: Validate exact current main and explicit rollback authorization
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$GITHUB_REF_NAME" = "main"
+          case "$RECOVERY_REQUIRED_EXERCISE" in
+            full|backup-restore|production-rollback) ;;
+            *) echo 'Unsupported recovery exercise' >&2; exit 1 ;;
+          esac
+          if [ "$RECOVERY_REQUIRED_EXERCISE" = "full" ] || [ "$RECOVERY_REQUIRED_EXERCISE" = "production-rollback" ]; then
+            test "$RECOVERY_EXERCISE_CONFIRMATION" = "EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK"
+          fi
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$TARGET_SHA"
+      - name: Check out exact trusted release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+      - name: Verify production-recovery environment governance before protected secrets
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: production-recovery
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
   recovery-proof:
+    needs: recovery-environment-governance
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     environment: production-recovery

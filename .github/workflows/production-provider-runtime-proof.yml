@@ -16,11 +16,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  production-environment-governance:
+    name: Verify Production governance before provider secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Bind proof to exact current main before governance lookup
+        shell: bash
+        env:
+          TARGET_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_REF" = "refs/heads/main"
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$TARGET_SHA"
+      - name: Check out exact trusted release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+      - name: Verify Production environment governance before protected secrets
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: Production
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
   validate-production-providers:
     name: Validate production provider control plane
+    needs: production-environment-governance
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    environment: production
+    environment: Production
     env:
       TARGET_SHA: ${{ github.sha }}
       PROVIDER_PROOF_ENVIRONMENT: production
@@ -85,8 +122,7 @@ jobs:
         run: node scripts/security/run-production-provider-runtime-proof.mjs
 
       - name: Validate generated exact-SHA provider evidence
-        run: >-
-          node scripts/security/check-p0-runtime-evidence-files.mjs
+        run: node scripts/security/check-p0-runtime-evidence-files.mjs
 
       - name: Diagnose provider blockers without storing provider values
         if: always()
