@@ -95,6 +95,43 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e -- tests/e2e/enterprise-production-gate.spec.ts
 
+  production-environment-governance:
+    name: Verify Production governance before final runtime secrets
+    if: >-
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Verify exact current main before governance lookup
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$TARGET_SHA"
+      - name: Verify Production environment governance before protected secrets
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: Production
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
   production-release-contract:
     name: Production release contract
     if: github.event_name == 'pull_request'
@@ -129,6 +166,8 @@ jobs:
           grep -Fq "VERCEL_AUTOMATION_BYPASS_SECRET" .github/workflows/enterprise-production-gate.yml
           grep -Fq "cancel-in-progress: true" .github/workflows/enterprise-production-gate.yml
           grep -Fq "deployments: read" .github/workflows/enterprise-production-gate.yml
+          grep -Fq "check-github-environment-governance.mjs" .github/workflows/enterprise-production-gate.yml
+          grep -Fq "needs: [quality-security-build, e2e-production-like, production-environment-governance]" .github/workflows/enterprise-production-gate.yml
           grep -Fq "node scripts/release/validate-release-go-no-go-evidence.mjs" scripts/release/run-public-production-release-v2.mjs
           grep -Fq "verify-enterprise-evidence-bundle.mjs" .github/workflows/enterprise-production-gate.yml
           grep -Fq "if-no-files-found: error" .github/workflows/enterprise-production-gate.yml
@@ -139,7 +178,7 @@ jobs:
     if: >-
       github.event_name != 'pull_request' &&
       (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
-    needs: [quality-security-build, e2e-production-like]
+    needs: [quality-security-build, e2e-production-like, production-environment-governance]
     runs-on: ubuntu-24.04
     environment: Production
     env:
@@ -250,7 +289,7 @@ jobs:
     if: >-
       always() &&
       (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
-    needs: [quality-security-build, e2e-production-like, production-release-contract, production-release-validation]
+    needs: [quality-security-build, e2e-production-like, production-environment-governance, production-release-contract, production-release-validation]
     runs-on: ubuntu-24.04
     steps:
       - name: Enforce required jobs
@@ -258,6 +297,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           QUALITY: ${{ needs.quality-security-build.result }}
           E2E: ${{ needs.e2e-production-like.result }}
+          GOVERNANCE: ${{ needs.production-environment-governance.result }}
           CONTRACT: ${{ needs.production-release-contract.result }}
           RUNTIME: ${{ needs.production-release-validation.result }}
         run: |
@@ -266,5 +306,6 @@ jobs:
           if [ "$EVENT" = pull_request ]; then
             test "$CONTRACT" = success
           else
+            test "$GOVERNANCE" = success
             test "$RUNTIME" = success
           fi
