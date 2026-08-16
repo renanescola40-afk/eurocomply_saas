@@ -83,7 +83,7 @@ function source(generatedAt = new Date(Date.now() - 60_000).toISOString()) {
 describe('production runtime scorecard evidence', () => {
   it('promotes exactly the five release checks from an exact production SHA', () => {
     const { smoke, sha } = source();
-    const evidence = buildProductionRuntimeScorecardEvidence(smoke, sha, SHA, '2026-08-09T13:00:00.000Z');
+    const evidence = buildProductionRuntimeScorecardEvidence(smoke, sha, SHA, '2026-08-09T13:05:00.000Z');
 
     expect(evidence.status).toBe('Complete');
     expect(evidence.outcome).toBe('passed');
@@ -149,7 +149,7 @@ describe('production runtime scorecard evidence', () => {
   });
 
   it('selects only successful exact-main-SHA runs from the production workflow path', () => {
-    const run = { id: Number(RUN_ID), name: `Production runtime proof for ${SHA}`, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-08-09T13:00:00Z' };
+    const run = { id: Number(RUN_ID), name: `Production runtime proof for ${SHA}`, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-08-09T13:05:00Z' };
     expect(selectExactShaRun([
       { ...run, id: 1, conclusion: 'failure' },
       { ...run, id: 2, head_branch: 'feature' },
