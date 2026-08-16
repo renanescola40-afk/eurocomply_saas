@@ -64,11 +64,6 @@ jobs:
     environment: production-platform-proof
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
-      PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
-      PLATFORM_PROOF_TOKEN: ${{ secrets.PLATFORM_PROOF_TOKEN }}
-      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     steps:
       - name: Revalidate exact current main after environment approval
         shell: bash
@@ -103,6 +98,12 @@ jobs:
           test "$GITHUB_REF_NAME" = "main"
 
       - name: Run platform provider proof
+        env:
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+          PLATFORM_PROOF_TOKEN: ${{ secrets.PLATFORM_PROOF_TOKEN }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: node scripts/platform/run-platform-providers-runtime-validation.mjs
 
       - name: Validate canonical evidence
