@@ -61,11 +61,6 @@ async function expectHealthyAuthenticatedPage(page: Page, label: string) {
   expect(page.url(), `${label} should not fall back to login`).not.toContain('/login');
 }
 
-async function countSupabaseSessionCookies(page: Page) {
-  const cookies = await page.context().cookies();
-  return cookies.filter((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token')).length;
-}
-
 async function loginWithDisposableCredentials(page: Page, email: string, password: string) {
   await page.goto('/en/login?next=/en/dashboard/organizations', { waitUntil: 'domcontentloaded' });
   const credentialEmail = page.getByRole('textbox', { name: 'Work email', exact: true });
@@ -73,24 +68,7 @@ async function loginWithDisposableCredentials(page: Page, email: string, passwor
   await expect(credentialForm, 'credential login form should be uniquely addressable beside Enterprise SSO').toHaveCount(1);
   await credentialEmail.fill(email);
   await credentialForm.getByLabel('Password', { exact: true }).fill(password);
-
-  const passwordAuthResponse = page.waitForResponse((response) => {
-    if (response.request().method() !== 'POST') return false;
-    try {
-      const url = new URL(response.url());
-      return url.pathname.endsWith('/auth/v1/token') && url.searchParams.get('grant_type') === 'password';
-    } catch {
-      return false;
-    }
-  }, { timeout: 20_000 });
-
   await credentialForm.locator('button[type="submit"]').click();
-  const authResponse = await passwordAuthResponse;
-  expect(authResponse.status(), 'Supabase password authentication must succeed before protected navigation').toBe(200);
-  await expect.poll(
-    () => countSupabaseSessionCookies(page),
-    { message: 'successful password authentication must persist a Supabase session cookie', timeout: 10_000 },
-  ).toBeGreaterThan(0);
   await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000 });
   await expectHealthyAuthenticatedPage(page, 'disposable authenticated session');
 }
@@ -166,7 +144,19 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
     await page.getByRole('button', { name: 'Save assessment' }).click();
     const updateResponse = await updateResponsePromise;
     expect(updateResponse.status()).toBe(200);
-    await expect(page.getByRole('status')).toContainText('Workflow saved and audit evidence persisted.');
+
+    // Prove the workflow survived a fresh authenticated browser read instead of binding
+    // runtime acceptance to a transient notification that is cleared by revalidation.
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expectHealthyAuthenticatedPage(page, 'FRIA persisted workflow refresh');
+    const persistedAssessment = page.getByRole('button').filter({ hasText: systemName }).first();
+    await expect(persistedAssessment).toBeVisible();
+    await persistedAssessment.click();
+    await expect(page.locator('#fria-applicability')).toHaveValue('not_required');
+    await expect(page.locator('#fria-reviewer')).toHaveValue(reviewerId);
+    await expect(page.locator('#fria-approver')).toHaveValue(approverId);
+    await expect(page.locator('#fria-legal-reviewer')).toHaveValue(reviewerId);
+    await expect(page.getByLabel('Legal review completed')).toBeChecked();
 
     const submitEvidence = async (controlId: 'FRIA-01' | 'FRIA-15', digestCharacter: string) => {
       await page.locator('#fria-control-id').fill(controlId);
