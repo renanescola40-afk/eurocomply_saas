@@ -9,7 +9,7 @@ const DASHBOARD_LAYOUT = new URL('../../src/app/[locale]/dashboard/layout.tsx', 
 const CHECKOUT_INTENT = new URL('../../src/app/api/billing/checkout-intent/route.ts', import.meta.url);
 
 describe('post-billing commercial customer journey closure', () => {
-  it('hands completed onboarding to the billing recovery lane instead of a gated product route', async () => {
+  it('hands fresh completed onboarding to the billing recovery lane instead of a gated product route', async () => {
     const [page, boundary] = await Promise.all([
       readFile(ONBOARDING_PAGE, 'utf8'),
       readFile(ONBOARDING_BOUNDARY, 'utf8'),
@@ -23,6 +23,16 @@ describe('post-billing commercial customer journey closure', () => {
     expect(boundary).toContain("onboarding: 'completed'");
     expect(boundary).toContain("dashboardPath: getBillingRecoveryPath(locale, input.selectedPlan)");
     expect(boundary).toContain('/dashboard/organizations/billing?');
+  });
+
+  it('routes a returning licensed subscriber directly back into the product', async () => {
+    const page = await readFile(ONBOARDING_PAGE, 'utf8');
+
+    expect(page).toContain("import { getOrganizationBillingAuthority } from '@/server/queries/subscription';");
+    expect(page).toContain('const authority = await getOrganizationBillingAuthority(initialState.organization.id);');
+    expect(page).toContain('if (authority.licensed)');
+    expect(page).toContain('redirect(`/${safeLocale}/dashboard`);');
+    expect(page).toContain('redirect(getBillingRecoveryPath(safeLocale, resolvedSearchParams.plan));');
   });
 
   it('keeps the fail-closed commercial authority boundary intact while allowing recovery', async () => {
