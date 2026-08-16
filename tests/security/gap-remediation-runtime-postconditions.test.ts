@@ -37,6 +37,8 @@ describe('gap/remediation reconciliation runtime postconditions', () => {
     expect(gapRuntime).toContain('legacy workspace_id foreign key is present');
     expect(gapRuntime).toContain('authenticated compliance_tasks organization mutation boundary is not backend-only');
     expect(gapRuntime).toContain('restrictive personal compliance_tasks insert guard is missing');
+    expect(gapRuntime).toContain('transitional compliance_tasks insert guard was not retired');
+    expect(gapRuntime).toContain('authenticated compliance_tasks permanent update/delete guard is incomplete');
     expect(gapRuntime).toContain('canonical organization compliance_tasks read policy was not preserved');
     expect(gapRuntime).toContain('direct compliance_tasks mutation policy unexpectedly remains active');
   });
