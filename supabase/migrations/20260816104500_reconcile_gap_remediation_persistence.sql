@@ -1,3 +1,5 @@
+begin;
+
 -- Forward-only reconciliation for the unapplied 20260605 gap/remediation/evidence lineage.
 --
 -- The historical 20260605 duplicate-version files are preserved byte-for-byte and
@@ -6,8 +8,6 @@
 -- while the current application still reads/writes the tables reconciled here.
 -- This migration materializes the required schema against the current organization
 -- model without recreating the removed public.workspaces dependency.
-
-begin;
 
 create extension if not exists pgcrypto;
 
