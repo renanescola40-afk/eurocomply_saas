@@ -68,6 +68,13 @@ begin
 end
 $guard$;
 
+-- Historical replay can still materialize compliance_tasks with organization_id
+-- NOT NULL even though the live canonical table is already nullable. Personal Gap
+-- Analysis rows intentionally use organization_id = NULL and must be representable
+-- before the dual-scope tenant constraint below is validated.
+alter table public.compliance_tasks
+  alter column organization_id drop not null;
+
 alter table public.compliance_tasks
   add column if not exists workspace_id uuid,
   add column if not exists finding_id uuid references public.compliance_findings(id) on delete set null,
@@ -227,7 +234,7 @@ drop policy if exists "workspace members can insert gap answers" on public.gap_a
 drop policy if exists "workspace members can update gap answers" on public.gap_answers;
 drop policy if exists "users can read own gap answers" on public.gap_answers;
 drop policy if exists "users can insert own gap answers" on public.gap_answers;
-drop policy if exists "users can update own gap answers" on public.gap_answers;
+drop policy if exists "users can update gap answers" on public.gap_answers;
 
 drop policy if exists "rls_gap_answers_select_owner" on public.gap_answers;
 drop policy if exists "rls_gap_answers_insert_owner" on public.gap_answers;
@@ -266,7 +273,7 @@ drop policy if exists "workspace members can insert compliance findings" on publ
 drop policy if exists "workspace members can update compliance findings" on public.compliance_findings;
 drop policy if exists "users can read own compliance findings" on public.compliance_findings;
 drop policy if exists "users can insert own compliance findings" on public.compliance_findings;
-drop policy if exists "users can update own compliance findings" on public.compliance_findings;
+drop policy if exists "users can update compliance findings" on public.compliance_findings;
 
 drop policy if exists "rls_compliance_findings_select_owner" on public.compliance_findings;
 drop policy if exists "rls_compliance_findings_insert_owner" on public.compliance_findings;
@@ -408,11 +415,39 @@ create policy "rls_compliance_evidence_select_owner"
   using (user_id = auth.uid());
 create policy "rls_compliance_evidence_insert_owner"
   on public.compliance_evidence for insert to authenticated
-  with check (user_id = auth.uid());
+  with check (
+    user_id = auth.uid()
+    and (finding_id is null or exists (
+      select 1 from public.compliance_findings cf
+      where cf.id = compliance_evidence.finding_id and cf.user_id = auth.uid()
+    ))
+    and (task_id is null or exists (
+      select 1 from public.compliance_tasks ct
+      where ct.id = compliance_evidence.task_id
+        and (
+          (ct.organization_id is null and ct.user_id = auth.uid())
+          or (ct.organization_id is not null and app_private.is_org_member(ct.organization_id))
+        )
+    ))
+  );
 create policy "rls_compliance_evidence_update_owner"
   on public.compliance_evidence for update to authenticated
   using (user_id = auth.uid())
-  with check (user_id = auth.uid());
+  with check (
+    user_id = auth.uid()
+    and (finding_id is null or exists (
+      select 1 from public.compliance_findings cf
+      where cf.id = compliance_evidence.finding_id and cf.user_id = auth.uid()
+    ))
+    and (task_id is null or exists (
+      select 1 from public.compliance_tasks ct
+      where ct.id = compliance_evidence.task_id
+        and (
+          (ct.organization_id is null and ct.user_id = auth.uid())
+          or (ct.organization_id is not null and app_private.is_org_member(ct.organization_id))
+        )
+    ))
+  );
 create policy "rls_compliance_evidence_delete_owner"
   on public.compliance_evidence for delete to authenticated
   using (user_id = auth.uid());
