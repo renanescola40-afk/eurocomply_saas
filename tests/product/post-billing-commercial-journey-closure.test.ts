@@ -7,6 +7,7 @@ const ONBOARDING_BOUNDARY = new URL('../../src/components/onboarding/onboarding-
 const BILLING_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/billing/page.tsx', import.meta.url);
 const BILLING_VIEW = new URL('../../src/app/[locale]/dashboard/organizations/billing/billing-page-view.tsx', import.meta.url);
 const BILLING_INTENT_BANNER = new URL('../../src/app/[locale]/dashboard/organizations/billing/billing-plan-intent-banner.tsx', import.meta.url);
+const BILLING_ACTION_BUTTON = new URL('../../src/app/[locale]/dashboard/organizations/billing/billing-action-button.tsx', import.meta.url);
 const DASHBOARD_LAYOUT = new URL('../../src/app/[locale]/dashboard/layout.tsx', import.meta.url);
 const CHECKOUT_INTENT = new URL('../../src/app/api/billing/checkout-intent/route.ts', import.meta.url);
 
@@ -94,6 +95,23 @@ describe('post-billing commercial customer journey closure', () => {
     expect(source).toContain("unpaid: 'Unpaid'");
     expect(source).toContain("canceled: 'Canceled'");
     expect(source).toContain("incomplete: 'Incomplete'");
+  });
+
+  it('does not expose provider errors in recovery URLs or render query-controlled billing messages', async () => {
+    const [page, actionButton] = await Promise.all([
+      readFile(BILLING_PAGE, 'utf8'),
+      readFile(BILLING_ACTION_BUTTON, 'utf8'),
+    ]);
+
+    expect(actionButton).toContain("const PUBLIC_BILLING_ERROR_CODE = 'action_failed';");
+    expect(actionButton).toContain('billing_error=${PUBLIC_BILLING_ERROR_CODE}');
+    expect(actionButton).not.toContain('encodeURIComponent(message)');
+    expect(actionButton).not.toContain("String(json.error ?? 'Billing action could not be completed.')");
+
+    expect(page).toContain('function getPublicBillingFailureMessage(locale: string)');
+    expect(page).toContain('resolvedSearchParams.billing_error');
+    expect(page).toContain('getPublicBillingFailureMessage(locale)');
+    expect(page).not.toContain('billingError={resolvedSearchParams.billing_error}');
   });
 
   it('preserves role-safe billing UX and locale-aware activation navigation', async () => {
