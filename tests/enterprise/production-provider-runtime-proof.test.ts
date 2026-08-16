@@ -10,9 +10,10 @@ const targets = JSON.parse(readFileSync('config/production-provider-targets.json
 };
 
 describe('protected production provider runtime proof', () => {
-  it('runs on exact main with the protected production environment and read-only permissions', () => {
+  it('runs on exact main with the protected Production environment and read-only permissions', () => {
     expect(workflow).toContain('push:\n    branches: [main]');
-    expect(workflow).toContain('environment: production');
+    expect(workflow).toContain('environment: Production');
+    expect(workflow).toContain('needs: production-environment-governance');
     expect(workflow).toContain('contents: read');
     expect(workflow).toContain('actions: read');
     expect(workflow).not.toContain('contents: write');
