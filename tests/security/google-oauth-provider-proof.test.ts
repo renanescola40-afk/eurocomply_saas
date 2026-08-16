@@ -5,17 +5,25 @@ import { describe, expect, it } from 'vitest';
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
 
 describe('Google OAuth provider proof contract', () => {
-  it('uses a protected read-only exact-SHA workflow bound to main ancestry', () => {
+  it('uses a protected read-only exact-current-main workflow', () => {
     const workflow = read('.github/workflows/google-oauth-provider-proof.yml');
     expect(workflow).toContain('workflow_dispatch:');
-    expect(workflow).toContain('environment: production');
+    expect(workflow).toContain('environment: Production');
+    expect(workflow).toContain('production-environment-governance:');
+    expect(workflow).toContain('needs: production-environment-governance');
+    expect(workflow).toContain('GITHUB_ENVIRONMENT_NAME: Production');
+    expect(workflow).toContain("REQUIRE_PROTECTED_BRANCHES: 'true'");
+    expect(workflow).toContain('node scripts/security/check-github-environment-governance.mjs');
     expect(workflow).toContain('contents: read');
     expect(workflow).toContain('persist-credentials: false');
-    expect(workflow).toContain('ref: main');
-    expect(workflow).toContain('fetch-depth: 0');
-    expect(workflow).toContain('git merge-base --is-ancestor "${RELEASE_SHA}" origin/main');
+    expect(workflow).toContain('test "$GITHUB_REF_NAME" = "main"');
+    expect(workflow).toContain('test "$GITHUB_SHA" = "$TARGET_SHA"');
+    expect(workflow).toContain('/commits/main');
     expect(workflow).toContain('ref: ${{ inputs.release_sha }}');
-    expect(workflow).toContain('test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"');
+    expect(workflow).toContain('npm ci --ignore-scripts');
+    expect(workflow).toContain('Revalidate exact current main after environment approval');
+    expect(workflow).not.toContain('git merge-base --is-ancestor');
+    expect(workflow).not.toContain('ref: main');
     expect(workflow).not.toContain('pull_request_target');
   });
 
