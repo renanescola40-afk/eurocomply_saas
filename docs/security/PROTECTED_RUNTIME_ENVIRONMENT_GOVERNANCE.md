@@ -1,10 +1,10 @@
 # Protected runtime environment governance
 
-Sensitive production evidence workflows must prove GitHub Environment governance **before** any protected secret or operational attestation is allowed to participate in release evidence.
+Sensitive production evidence workflows must prove GitHub Environment governance **before** any protected secret, operational attestation, or evidence-promotion authority is allowed to participate in release evidence.
 
 ## Required controls
 
-Every production environment used by the release proof plane for protected secrets or authoritative operational attestations must satisfy all of the following:
+Every production environment used by the release proof plane for protected secrets, authoritative operational attestations, or evidence promotion must satisfy all of the following:
 
 - administrator bypass is disabled;
 - at least one required deployment reviewer is configured;
@@ -12,7 +12,8 @@ Every production environment used by the release proof plane for protected secre
 - the workflow is bound to the exact current `main` SHA before the governance lookup;
 - the governance preflight itself contains no `secrets.*` or environment `vars.*` evidence inputs;
 - after environment admission, exact-current-main and environment governance are revalidated before the protected producer step;
-- secret references are materialized only on the bounded step that needs them.
+- secret references are materialized only on the bounded step that needs them;
+- write-level Actions permission used to orchestrate runtime evidence is granted only to the protected producer job, never to the governance preflight.
 
 The canonical validator is `scripts/security/check-github-environment-governance.mjs`.
 
@@ -41,6 +42,10 @@ Used by the scheduled/final platform evidence drift closeout. The protected fina
 ### `production-identity-proof`
 
 Used by protected enterprise identity runtime proofs such as SAML and SCIM. Identity-provider credentials remain bounded behind exact-current-main and environment governance checks.
+
+### `production-enterprise-safe-runtime`
+
+Used by Enterprise Safe Runtime Bootstrap to reuse or dispatch non-destructive exact-SHA runtime lanes and promote completed evidence. The workflow must prove exact-current-main and environment governance before entering the promotion environment. `actions: write` remains scoped to the protected bootstrap job and is revalidated behind the governed boundary before any campaign dispatch or evidence promotion occurs.
 
 ### `production-data-governance-proof`
 
