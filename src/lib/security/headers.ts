@@ -67,25 +67,52 @@ const ALLOWED_CONNECT_SRC = [
   "https://*.stripe.com",
 ];
 
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
+
+function configuredDevelopmentSupabaseOrigin(): string | null {
+  if (process.env.NODE_ENV === 'production') return null;
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!rawUrl) return null;
+
+  try {
+    const parsed = new URL(rawUrl);
+    if (!LOOPBACK_HOSTS.has(parsed.hostname)) return null;
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
 /** Frames (para iframes internos, se necessário) */
 const ALLOWED_FRAME_SRC = ["'self'"];
 
 /** Construir a CSP string */
-function buildCSP(): string {
+export function buildCSP(): string {
+  const developmentSupabaseOrigin = configuredDevelopmentSupabaseOrigin();
+  const connectSources = developmentSupabaseOrigin
+    ? [...ALLOWED_CONNECT_SRC, developmentSupabaseOrigin]
+    : ALLOWED_CONNECT_SRC;
   const directives = [
     `default-src 'none'`,
     `script-src ${ALLOWED_SCRIPT_SRC.join(' ')}`,
     `style-src ${ALLOWED_STYLE_SRC.join(' ')}`,
     `img-src ${ALLOWED_IMG_SRC.join(' ')}`,
     `font-src ${ALLOWED_FONT_SRC.join(' ')}`,
-    `connect-src ${ALLOWED_CONNECT_SRC.join(' ')}`,
+    `connect-src ${connectSources.join(' ')}`,
     `frame-src ${ALLOWED_FRAME_SRC.join(' ')}`,
     `frame-ancestors ${ALLOWED_FRAME_ANCESTORS}`,
     `form-action 'self'`,
     `base-uri 'self'`,
     `object-src 'none'`,
-    `upgrade-insecure-requests`,
   ];
+
+  // Production should upgrade accidental HTTP subresources. Local Product QA
+  // deliberately talks to a loopback Supabase stack over HTTP, so applying the
+  // upgrade directive there would turn a valid local Auth request into HTTPS
+  // against a non-TLS development endpoint.
+  if (process.env.NODE_ENV === 'production') directives.push('upgrade-insecure-requests');
+
   return directives.join('; ');
 }
 
