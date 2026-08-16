@@ -73,6 +73,23 @@ function configuredLoopbackSupabaseOrigin() {
   }
 }
 
+async function sanitizedAuthResponseDiagnostic(response: Awaited<ReturnType<Page['waitForResponse']>> | null) {
+  if (!response) return 'not_observed';
+  const status = response.status();
+  if (response.ok()) return `HTTP ${status}`;
+
+  const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
+  if (!payload || typeof payload !== 'object') return `HTTP ${status}`;
+
+  const safeFields = ['error_code', 'code', 'msg', 'message', 'error_description'];
+  const details = safeFields.flatMap((field) => {
+    const value = payload[field];
+    if (typeof value !== 'string' || !value.trim()) return [];
+    return [`${field}=${value.replace(/[\r\n]+/g, ' ').slice(0, 160)}`];
+  });
+  return `HTTP ${status}${details.length ? ` (${details.join(', ')})` : ''}`;
+}
+
 async function loginWithDisposableCredentials(page: Page, email: string, password: string) {
   const loginResponse = await page.goto('/en/login?next=/en/dashboard/organizations', { waitUntil: 'domcontentloaded' });
   const loopbackSupabaseOrigin = configuredLoopbackSupabaseOrigin();
@@ -95,15 +112,25 @@ async function loginWithDisposableCredentials(page: Page, email: string, passwor
   };
   page.on('requestfailed', onRequestFailed);
 
+  const passwordGrantResponse = loopbackSupabaseOrigin
+    ? page.waitForResponse((response) => {
+        if (response.request().method() !== 'POST' || !response.url().startsWith(loopbackSupabaseOrigin)) return false;
+        const url = new URL(response.url());
+        return url.pathname === '/auth/v1/token' && url.searchParams.get('grant_type') === 'password';
+      }, { timeout: 12_000 }).catch(() => null)
+    : Promise.resolve(null);
+
   try {
     await credentialForm.locator('button[type="submit"]').click();
+    const authResponse = await passwordGrantResponse;
     try {
       await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000 });
     } catch {
       const alert = page.getByRole('alert').first();
       const alertText = await alert.isVisible().then((visible) => visible ? alert.textContent() : null).catch(() => null);
+      const authDiagnostic = await sanitizedAuthResponseDiagnostic(authResponse);
       throw new Error(
-        `Disposable credential login did not leave /login. Public alert: ${alertText?.trim() || 'none'}. Auth request failures: ${failedAuthRequests.join(' | ') || 'none'}.`,
+        `Disposable credential login did not leave /login. Public alert: ${alertText?.trim() || 'none'}. Password grant: ${authDiagnostic}. Auth request failures: ${failedAuthRequests.join(' | ') || 'none'}.`,
       );
     }
   } finally {
