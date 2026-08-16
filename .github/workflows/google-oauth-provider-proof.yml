@@ -6,11 +6,12 @@ on:
   workflow_dispatch:
     inputs:
       release_sha:
-        description: Full 40-character main SHA deployed to production
+        description: Full 40-character current main SHA deployed to production
         required: true
         type: string
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -18,47 +19,89 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  validate-provider:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: production
+  production-environment-governance:
+    name: Verify Production governance before Google OAuth provider secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
     steps:
-      - name: Validate requested SHA
+      - name: Bind provider proof to exact current main
+        shell: bash
         env:
-          RELEASE_SHA: ${{ inputs.release_sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
-      - name: Check out trusted main history
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Verify release SHA is on main
-        env:
-          RELEASE_SHA: ${{ inputs.release_sha }}
-        run: |
-          set -euo pipefail
-          git fetch --no-tags origin main
-          git cat-file -e "${RELEASE_SHA}^{commit}"
-          git merge-base --is-ancestor "${RELEASE_SHA}" origin/main
-      - name: Check out exact release SHA
-        uses: actions/checkout@v4
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_REF_NAME" = "main"
+          test "$GITHUB_SHA" = "$TARGET_SHA"
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$TARGET_SHA"
+      - name: Check out exact trusted release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ inputs.release_sha }}
           persist-credentials: false
-      - name: Verify exact checkout
-        env:
-          RELEASE_SHA: ${{ inputs.release_sha }}
-        run: test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+      - name: Verify Production environment governance before protected secrets
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: Production
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
+  validate-provider:
+    needs: production-environment-governance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: Production
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+    steps:
+      - name: Revalidate exact current main after environment approval
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "main"
+          test "$GITHUB_SHA" = "$TARGET_SHA"
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$TARGET_SHA"
+
+      - name: Check out exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(git rev-parse origin/main)" = "$TARGET_SHA"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: 22
           cache: npm
-      - name: Install dependencies
-        run: npm ci
+
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
       - name: Validate Supabase Google OAuth configuration
         env:
           ENTERPRISE_EXPECTED_SHA: ${{ inputs.release_sha }}
@@ -66,9 +109,10 @@ jobs:
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           RELEASE_PRODUCTION_URL: ${{ vars.RELEASE_PRODUCTION_URL || secrets.RELEASE_PRODUCTION_URL || vars.NEXT_PUBLIC_APP_URL || secrets.NEXT_PUBLIC_APP_URL }}
         run: node scripts/security/run-google-oauth-provider-validation.mjs
+
       - name: Upload redacted evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: google-oauth-provider-proof-${{ inputs.release_sha }}
           path: docs/security/evidence/runtime/google-oauth-validation.json
