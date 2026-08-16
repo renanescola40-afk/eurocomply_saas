@@ -25,6 +25,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: recovery-resilience-${{ inputs.release_sha }}-${{ inputs.exercise }}
