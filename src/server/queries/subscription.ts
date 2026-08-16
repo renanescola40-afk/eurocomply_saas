@@ -7,6 +7,13 @@ import {
 export type CanonicalSubscriptionPlan = 'starter' | 'professional' | 'business' | 'enterprise';
 export type LegacySubscriptionPlan = 'essential' | 'growth';
 export type SubscriptionPlan = CanonicalSubscriptionPlan | LegacySubscriptionPlan;
+export type BillingAuthoritySource = 'signed_contract' | 'live_stripe' | 'none';
+
+export type OrganizationBillingAuthority = {
+  plan: CanonicalSubscriptionPlan;
+  licensed: boolean;
+  source: BillingAuthoritySource;
+};
 
 const SUBSCRIPTION_PLAN_UNAVAILABLE = 'subscription_plan_unavailable';
 
@@ -27,6 +34,11 @@ type OrganizationSubscriptionRow = {
   stripe_subscription_id?: string | null;
 };
 
+/**
+ * Compatibility normalizer for display/catalog consumers. This intentionally
+ * preserves the historical starter fallback, but it is NOT a paid-access
+ * decision. Paid access must use getOrganizationBillingAuthority().licensed.
+ */
 export function normalizePlan(value: string | null | undefined): CanonicalSubscriptionPlan {
   const normalized = value?.toLowerCase().trim();
 
@@ -35,6 +47,16 @@ export function normalizePlan(value: string | null | undefined): CanonicalSubscr
   if (normalized === 'professional' || normalized === 'pro' || normalized === 'growth') return 'professional';
 
   return 'starter';
+}
+
+function normalizeAuthoritativePlan(value: string | null | undefined): CanonicalSubscriptionPlan | null {
+  const normalized = value?.toLowerCase().trim();
+  if (!normalized) return null;
+  if (normalized === 'enterprise') return 'enterprise';
+  if (normalized === 'business') return 'business';
+  if (normalized === 'professional' || normalized === 'pro' || normalized === 'growth') return 'professional';
+  if (normalized === 'starter' || normalized === 'essential' || normalized === 'basic') return 'starter';
+  return null;
 }
 
 export function isPlanAtLeast(plan: SubscriptionPlan, minimumPlan: SubscriptionPlan) {
@@ -73,12 +95,30 @@ async function rowHasLiveStripeAuthority(organizationId: string, row: Organizati
   });
 }
 
-export async function getOrganizationPlan(organizationId: string): Promise<CanonicalSubscriptionPlan> {
-  // A negotiated signed contract is deliberately evaluated before ordinary
-  // Stripe state so a routine subscription event cannot silently replace an
-  // Enterprise commercial relationship.
+function requireAuthoritativePlan(value: string | null | undefined, source: Exclude<BillingAuthoritySource, 'none'>) {
+  const plan = normalizeAuthoritativePlan(value);
+  if (plan) return plan;
+
+  console.warn('[subscription] authoritative_plan_invalid', { source });
+  throw new Error(SUBSCRIPTION_PLAN_UNAVAILABLE);
+}
+
+/**
+ * Resolve commercial authority independently from the compatibility plan label.
+ * A local subscriptions row, status flag, checkout redirect, client flag, seeded
+ * record or test-mode Stripe identifier cannot set licensed=true.
+ */
+export async function getOrganizationBillingAuthority(
+  organizationId: string,
+): Promise<OrganizationBillingAuthority> {
   const signedContractPlan = await getAuthoritativeSignedContractPlan(organizationId);
-  if (signedContractPlan) return normalizePlan(signedContractPlan);
+  if (signedContractPlan) {
+    return {
+      plan: requireAuthoritativePlan(signedContractPlan, 'signed_contract'),
+      licensed: true,
+      source: 'signed_contract',
+    };
+  }
 
   const primary = await getLatestSubscriptionRow(
     organizationId,
@@ -86,7 +126,11 @@ export async function getOrganizationPlan(organizationId: string): Promise<Canon
   );
 
   if (primary?.plan && await rowHasLiveStripeAuthority(organizationId, primary)) {
-    return normalizePlan(primary.plan);
+    return {
+      plan: requireAuthoritativePlan(primary.plan, 'live_stripe'),
+      licensed: true,
+      source: 'live_stripe',
+    };
   }
 
   const legacy = await getLatestSubscriptionRow(
@@ -95,21 +139,29 @@ export async function getOrganizationPlan(organizationId: string): Promise<Canon
   );
 
   if (legacy?.tier && await rowHasLiveStripeAuthority(organizationId, legacy)) {
-    return normalizePlan(legacy.tier);
+    return {
+      plan: requireAuthoritativePlan(legacy.tier, 'live_stripe'),
+      licensed: true,
+      source: 'live_stripe',
+    };
   }
 
-  // Seeded rows, status-only rows, stale identifiers and test-mode Stripe rows
-  // are intentionally non-authoritative. They remain visible for reconciliation
-  // but cannot grant paid product access.
-  return 'starter';
+  // Starter remains a compatibility/display fallback only. licensed=false is
+  // the commercial authority and downstream entitlement gates must preserve it.
+  return { plan: 'starter', licensed: false, source: 'none' };
+}
+
+export async function getOrganizationPlan(organizationId: string): Promise<CanonicalSubscriptionPlan> {
+  return (await getOrganizationBillingAuthority(organizationId)).plan;
 }
 
 export async function requirePlanAtLeast(organizationId: string, minimumPlan: SubscriptionPlan) {
-  const plan = await getOrganizationPlan(organizationId);
+  const authority = await getOrganizationBillingAuthority(organizationId);
+  if (!authority.licensed || !isPlanAtLeast(authority.plan, minimumPlan)) {
+    throw new Error(`${minimumPlan}_required`);
+  }
 
-  if (!isPlanAtLeast(plan, minimumPlan)) throw new Error(`${minimumPlan}_required`);
-
-  return plan;
+  return authority.plan;
 }
 
 export async function requireProfessionalPlan(organizationId: string) {

@@ -16,6 +16,8 @@ const LOCALE_COOKIE = 'NEXT_LOCALE';
 const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations';
 const AUTH_SUCCESS_PATH = '/onboarding';
 const SENTRY_TUNNEL_PATH = '/monitoring';
+const INTERNAL_PATHNAME_HEADER = 'x-risck-internal-pathname';
+const PREMIUM_NEWS_PATH = '/dashboard/organizations/reports-governance/news';
 const CHECKOUT_PLAN_IDS = new Set(['starter', 'growth', 'enterprise', 'essential', 'professional', 'business', 'basic', 'pro']);
 const AUTH_ENTRY_ROUTES = new Set(['/login', '/signup', '/register']);
 
@@ -119,14 +121,23 @@ function withRequestId(response: NextResponse, requestId: string) {
   return attachRequestIdHeader(response, requestId);
 }
 
-function nextWithRequestId(req: NextRequest, requestId: string) {
+function trustedRequestHeaders(req: NextRequest, requestId: string) {
   const requestHeaders = buildCorrelatedRequestHeaders(req.headers, requestId);
+  // Always overwrite the client-provided value. Server layouts use this only to
+  // identify narrowly-approved billing recovery routes; it is never commercial
+  // authority by itself.
+  requestHeaders.set(INTERNAL_PATHNAME_HEADER, req.nextUrl.pathname);
+  return requestHeaders;
+}
+
+function nextWithRequestId(req: NextRequest, requestId: string) {
+  const requestHeaders = trustedRequestHeaders(req, requestId);
   return withRequestId(NextResponse.next({ request: { headers: requestHeaders } }), requestId);
 }
 
 function requestWithRequestId(req: NextRequest, requestId: string) {
   return new NextRequest(req, {
-    headers: buildCorrelatedRequestHeaders(req.headers, requestId),
+    headers: trustedRequestHeaders(req, requestId),
   });
 }
 
@@ -219,6 +230,19 @@ function getCheckoutPlanRedirect(pathname: string, req: NextRequest) {
   return NextResponse.redirect(pricingUrl);
 }
 
+function getUnsafePremiumSelectorRedirect(pathname: string, req: NextRequest) {
+  const segments = pathname.split('/').filter(Boolean);
+  const locale = locales.includes(segments[0] as 'en') ? segments[0] : null;
+  if (!locale || stripLocale(pathname, locale) !== PREMIUM_NEWS_PATH) return null;
+  if (!req.nextUrl.searchParams.has('premium')) return null;
+
+  // The page historically treated ?premium=1 as a visibility override. Query
+  // parameters are presentation inputs only and can never grant a paid feature.
+  const safeUrl = new URL(req.url);
+  safeUrl.searchParams.delete('premium');
+  return withPrivateNoStore(NextResponse.redirect(safeUrl));
+}
+
 async function hasSupabaseSession(req: NextRequest): Promise<SupabaseSessionCheck> {
   const response = NextResponse.next({ request: { headers: req.headers } });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -276,6 +300,11 @@ export default async function middleware(req: NextRequest) {
   const checkoutPlanRedirect = getCheckoutPlanRedirect(pathname, req);
   if (checkoutPlanRedirect) {
     return withRequestId(checkoutPlanRedirect, requestId);
+  }
+
+  const premiumSelectorRedirect = getUnsafePremiumSelectorRedirect(pathname, req);
+  if (premiumSelectorRedirect) {
+    return withRequestId(premiumSelectorRedirect, requestId);
   }
 
   const normalizedLegacyPath = normalizeLegacyUndefinedPath(pathname);
