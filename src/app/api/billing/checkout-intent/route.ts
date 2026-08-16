@@ -86,8 +86,8 @@ async function handleCheckoutIntent(request: Request) {
 
   const entitlements = await getOrganizationEntitlements(organization.id);
   const targetEntitlementPlan = BILLING_TO_ENTITLEMENT_PLAN[plan.id];
-  const priceId = getStripePriceId(plan);
   const alreadyOnPlan = entitlements.licensed && entitlements.plan === targetEntitlementPlan;
+  const priceId = plan.salesLed ? undefined : getStripePriceId(plan);
 
   return noStoreJson({
     ok: true,
@@ -97,6 +97,7 @@ async function handleCheckoutIntent(request: Request) {
         name: plan.name,
         priceMonthly: plan.priceMonthly,
         targetEntitlementPlan,
+        salesLed: plan.salesLed,
       },
       organization: {
         id: organization.id,
@@ -107,12 +108,14 @@ async function handleCheckoutIntent(request: Request) {
       licensed: entitlements.licensed,
       authoritySource: entitlements.authoritySource,
       alreadyOnPlan,
-      checkoutReady: Boolean(priceId) && !alreadyOnPlan,
+      checkoutReady: !plan.salesLed && Boolean(priceId) && !alreadyOnPlan,
       nextAction: alreadyOnPlan
         ? 'already_subscribed'
-        : priceId
-          ? 'create_checkout_session'
-          : 'configure_plan_price',
+        : plan.salesLed
+          ? 'contact_sales'
+          : priceId
+            ? 'create_checkout_session'
+            : 'configure_plan_price',
     },
   });
 }
