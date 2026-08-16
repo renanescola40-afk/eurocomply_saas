@@ -63,10 +63,12 @@ drop policy if exists "rls_compliance_tasks_delete_admin" on public.compliance_t
 drop policy if exists "users can update own compliance tasks" on public.compliance_tasks;
 drop policy if exists "rls_compliance_tasks_update_personal" on public.compliance_tasks;
 
--- The pre-reconciliation INSERT guard deliberately blocked every authenticated
--- insert while the compatibility migration ran. Release only that one guard now;
--- UPDATE/DELETE guards stay permanently restrictive as defense in depth.
+-- Retire all transitional rollout guards only after the compatibility schema and
+-- privileges are ready. Permanent backend-only UPDATE/DELETE guards are recreated
+-- immediately below with names that describe their steady-state purpose.
 drop policy if exists "restrict_authenticated_compliance_task_insert_during_reconciliation" on public.compliance_tasks;
+drop policy if exists "restrict_authenticated_compliance_task_update_during_reconciliation" on public.compliance_tasks;
+drop policy if exists "restrict_authenticated_compliance_task_delete_during_reconciliation" on public.compliance_tasks;
 
 -- Recreate the personal insert policy with every user-bearing relationship bound
 -- to the current authenticated subject. A known UUID from another user/tenant is
@@ -95,10 +97,13 @@ create policy "rls_compliance_tasks_insert_personal"
   );
 
 -- Defense in depth: PostgreSQL ANDs RESTRICTIVE policies with the OR of all
--- permissive policies. This guard prevents a future permissive organization
--- insert policy from accidentally reopening direct organization writes while the
--- authenticated table-level INSERT grant exists for personal creation.
+-- permissive policies. The insert guard prevents a future permissive organization
+-- insert policy from reopening direct organization writes. UPDATE/DELETE remain
+-- backend-only even if table privileges are broadened accidentally later.
 drop policy if exists "restrict_authenticated_compliance_task_insert_to_personal" on public.compliance_tasks;
+drop policy if exists "restrict_authenticated_compliance_task_update_backend_only" on public.compliance_tasks;
+drop policy if exists "restrict_authenticated_compliance_task_delete_backend_only" on public.compliance_tasks;
+
 create policy "restrict_authenticated_compliance_task_insert_to_personal"
   on public.compliance_tasks
   as restrictive
@@ -112,6 +117,21 @@ create policy "restrict_authenticated_compliance_task_insert_to_personal"
     and (created_by is null or created_by = auth.uid())
     and (assigned_to is null or assigned_to = auth.uid())
   );
+
+create policy "restrict_authenticated_compliance_task_update_backend_only"
+  on public.compliance_tasks
+  as restrictive
+  for update
+  to authenticated
+  using (false)
+  with check (false);
+
+create policy "restrict_authenticated_compliance_task_delete_backend_only"
+  on public.compliance_tasks
+  as restrictive
+  for delete
+  to authenticated
+  using (false);
 
 -- Fail closed on the exact privilege/policy posture required by the client and
 -- the audited/rate-limited organization task server actions.
@@ -188,9 +208,13 @@ begin
     from pg_policies
     where schemaname = 'public'
       and tablename = 'compliance_tasks'
-      and policyname = 'restrict_authenticated_compliance_task_insert_during_reconciliation'
+      and policyname in (
+        'restrict_authenticated_compliance_task_insert_during_reconciliation',
+        'restrict_authenticated_compliance_task_update_during_reconciliation',
+        'restrict_authenticated_compliance_task_delete_during_reconciliation'
+      )
   ) then
-    raise exception 'transitional compliance_tasks insert guard was not retired';
+    raise exception 'transitional compliance_tasks mutation guard was not retired';
   end if;
 
   select count(*)
@@ -199,8 +223,8 @@ begin
   where schemaname = 'public'
     and tablename = 'compliance_tasks'
     and policyname in (
-      'restrict_authenticated_compliance_task_update_during_reconciliation',
-      'restrict_authenticated_compliance_task_delete_during_reconciliation'
+      'restrict_authenticated_compliance_task_update_backend_only',
+      'restrict_authenticated_compliance_task_delete_backend_only'
     )
     and permissive = 'RESTRICTIVE'
     and roles = array['authenticated']::name[];
