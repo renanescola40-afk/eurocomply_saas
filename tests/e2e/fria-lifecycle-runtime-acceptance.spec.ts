@@ -61,6 +61,11 @@ async function expectHealthyAuthenticatedPage(page: Page, label: string) {
   expect(page.url(), `${label} should not fall back to login`).not.toContain('/login');
 }
 
+async function countSupabaseSessionCookies(page: Page) {
+  const cookies = await page.context().cookies();
+  return cookies.filter((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token')).length;
+}
+
 async function loginWithDisposableCredentials(page: Page, email: string, password: string) {
   await page.goto('/en/login?next=/en/dashboard/organizations', { waitUntil: 'domcontentloaded' });
   const credentialEmail = page.getByRole('textbox', { name: 'Work email', exact: true });
@@ -68,7 +73,24 @@ async function loginWithDisposableCredentials(page: Page, email: string, passwor
   await expect(credentialForm, 'credential login form should be uniquely addressable beside Enterprise SSO').toHaveCount(1);
   await credentialEmail.fill(email);
   await credentialForm.getByLabel('Password', { exact: true }).fill(password);
+
+  const passwordAuthResponse = page.waitForResponse((response) => {
+    if (response.request().method() !== 'POST') return false;
+    try {
+      const url = new URL(response.url());
+      return url.pathname.endsWith('/auth/v1/token') && url.searchParams.get('grant_type') === 'password';
+    } catch {
+      return false;
+    }
+  }, { timeout: 20_000 });
+
   await credentialForm.locator('button[type="submit"]').click();
+  const authResponse = await passwordAuthResponse;
+  expect(authResponse.status(), 'Supabase password authentication must succeed before protected navigation').toBe(200);
+  await expect.poll(
+    () => countSupabaseSessionCookies(page),
+    { message: 'successful password authentication must persist a Supabase session cookie', timeout: 10_000 },
+  ).toBeGreaterThan(0);
   await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000 });
   await expectHealthyAuthenticatedPage(page, 'disposable authenticated session');
 }
