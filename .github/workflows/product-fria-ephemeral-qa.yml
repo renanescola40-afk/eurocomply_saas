@@ -6,12 +6,14 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/product-fria-ephemeral-qa.yml'
+      - 'next.config.ts'
       - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
   push:
     branches: [main]
     paths:
       - '.github/workflows/product-fria-ephemeral-qa.yml'
+      - 'next.config.ts'
       - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
 
