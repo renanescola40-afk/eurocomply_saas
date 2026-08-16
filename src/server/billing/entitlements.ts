@@ -1,6 +1,12 @@
 import { getBillingEntitlements } from '@/lib/billing/plans';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getOrganizationPlan, isPlanAtLeast, normalizePlan, type SubscriptionPlan } from '@/server/queries/subscription';
+import {
+  getOrganizationBillingAuthority,
+  isPlanAtLeast,
+  normalizePlan,
+  type BillingAuthoritySource,
+  type SubscriptionPlan,
+} from '@/server/queries/subscription';
 
 export type PlanEntitlements = {
   plan: SubscriptionPlan;
@@ -17,6 +23,11 @@ export type PlanEntitlements = {
   csvExports: boolean;
   gdprSelfService: boolean;
   whiteLabelReports: boolean;
+};
+
+export type OrganizationEntitlements = PlanEntitlements & {
+  licensed: boolean;
+  authoritySource: BillingAuthoritySource;
 };
 
 const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
@@ -112,6 +123,22 @@ const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
   },
 };
 
+const UNLICENSED_ENTITLEMENTS: Omit<PlanEntitlements, 'plan'> = {
+  maxDocuments: 0,
+  maxUsers: 0,
+  maxFiscalCountries: 0,
+  aiCalendar: 'basic',
+  aiNews: 'basic',
+  riskMatrix: 'simple',
+  auditLog: false,
+  employeeInvites: false,
+  approvalWorkflows: false,
+  executiveReports: false,
+  csvExports: false,
+  gdprSelfService: false,
+  whiteLabelReports: false,
+};
+
 export function formatLimit(limit: number) {
   return Number.isFinite(limit) ? String(limit) : 'unlimited';
 }
@@ -129,14 +156,29 @@ export function getPlanEntitlements(plan: SubscriptionPlan): PlanEntitlements {
   };
 }
 
-export async function getOrganizationEntitlements(organizationId: string): Promise<PlanEntitlements> {
-  return getPlanEntitlements(await getOrganizationPlan(organizationId));
+export async function getOrganizationEntitlements(organizationId: string): Promise<OrganizationEntitlements> {
+  const authority = await getOrganizationBillingAuthority(organizationId);
+
+  if (!authority.licensed) {
+    return {
+      plan: authority.plan,
+      ...UNLICENSED_ENTITLEMENTS,
+      licensed: false,
+      authoritySource: 'none',
+    };
+  }
+
+  return {
+    ...getPlanEntitlements(authority.plan),
+    licensed: true,
+    authoritySource: authority.source,
+  };
 }
 
 export async function assertPlanAtLeast(organizationId: string, minimumPlan: SubscriptionPlan) {
   const entitlements = await getOrganizationEntitlements(organizationId);
 
-  if (!isPlanAtLeast(entitlements.plan, minimumPlan)) {
+  if (!entitlements.licensed || !isPlanAtLeast(entitlements.plan, minimumPlan)) {
     return {
       ok: false as const,
       status: 402,
@@ -153,7 +195,7 @@ export async function assertPlanAtLeast(organizationId: string, minimumPlan: Sub
 export async function assertCsvExportsEnabled(organizationId: string) {
   const entitlements = await getOrganizationEntitlements(organizationId);
 
-  if (!entitlements.csvExports) {
+  if (!entitlements.licensed || !entitlements.csvExports) {
     return {
       ok: false as const,
       status: 402,
@@ -169,7 +211,7 @@ export async function assertCsvExportsEnabled(organizationId: string) {
 export async function assertGdprSelfServiceEnabled(organizationId: string) {
   const entitlements = await getOrganizationEntitlements(organizationId);
 
-  if (!entitlements.gdprSelfService) {
+  if (!entitlements.licensed || !entitlements.gdprSelfService) {
     return {
       ok: false as const,
       status: 402,
@@ -184,6 +226,18 @@ export async function assertGdprSelfServiceEnabled(organizationId: string) {
 
 export async function assertDocumentQuota(organizationId: string) {
   const entitlements = await getOrganizationEntitlements(organizationId);
+
+  if (!entitlements.licensed) {
+    return {
+      ok: false as const,
+      status: 402,
+      error: 'subscription_required',
+      message: 'An active paid subscription or signed contract is required.',
+      entitlements,
+      currentCount: 0,
+    };
+  }
+
   const supabase = createAdminClient();
   const { count, error } = await supabase
     .from('documents')
