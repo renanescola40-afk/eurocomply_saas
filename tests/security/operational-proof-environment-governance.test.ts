@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 const dataGovernance = readFileSync('.github/workflows/data-governance-runtime-proof.yml', 'utf8');
 const incidentContinuity = readFileSync('.github/workflows/incident-continuity-runtime-proof.yml', 'utf8');
 const procurementTrust = readFileSync('.github/workflows/procurement-trust-runtime-proof.yml', 'utf8');
+const safeRuntimeBootstrap = readFileSync('.github/workflows/enterprise-safe-runtime-bootstrap.yml', 'utf8');
 
 const GOVERNANCE_CHECK = 'node scripts/security/check-github-environment-governance.mjs';
 const PINNED_CHECKOUT = 'actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0';
@@ -94,5 +95,24 @@ describe('operational production proof environment governance', () => {
     const secretReference = procurementTrust.indexOf('secrets.TRUST_CENTER_PUBLIC_URL');
     expect(secretReference).toBeGreaterThan(proofStep);
     expect(procurementTrust.slice(0, proofStep)).not.toContain('secrets.TRUST_CENTER_PUBLIC_URL');
+  });
+
+  it('fails closed before safe runtime evidence can be dispatched or promoted', () => {
+    expectOperationalProofBoundary(
+      safeRuntimeBootstrap,
+      'safe-runtime-environment-governance',
+      'production-enterprise-safe-runtime',
+      'bootstrap',
+      'Reuse or dispatch safe exact-SHA runtime lanes concurrently',
+    );
+
+    const governanceJob = safeRuntimeBootstrap.indexOf('  safe-runtime-environment-governance:');
+    const protectedJob = safeRuntimeBootstrap.indexOf('  bootstrap:');
+    const preflight = safeRuntimeBootstrap.slice(governanceJob, protectedJob);
+    const protectedText = safeRuntimeBootstrap.slice(protectedJob);
+
+    expect(preflight).not.toContain('actions: write');
+    expect(protectedText).toContain('permissions:\n      actions: write\n      contents: read');
+    expect(protectedText).toContain('RELEASE_SHA: ${{ needs.safe-runtime-environment-governance.outputs.release_sha }}');
   });
 });
