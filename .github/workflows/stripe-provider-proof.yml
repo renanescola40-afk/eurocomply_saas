@@ -100,6 +100,13 @@ jobs:
         with:
           node-version: 22
 
+      - name: Revalidate environment governance after admission
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: Production
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
       - name: Probe Stripe production provider configuration
         id: probe
         env:
