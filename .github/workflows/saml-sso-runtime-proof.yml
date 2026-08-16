@@ -103,6 +103,18 @@ jobs:
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           test "$(git rev-parse origin/main)" = "$TARGET_SHA"
 
+      - name: Set up protected Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+
+      - name: Revalidate environment governance after admission
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: production-identity-proof
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
       - name: Await a new production SAML SSO login
         env:
           PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
