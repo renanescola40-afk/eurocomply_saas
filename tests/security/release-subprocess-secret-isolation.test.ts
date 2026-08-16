@@ -42,10 +42,16 @@ describe('release subprocess secret isolation', () => {
   it('scrubs enterprise protected configuration before the nested static/evidence runner starts', () => {
     expect(dispatcher).toContain("await import('./check-enterprise-release-env.mjs');");
     expect(dispatcher).toMatch(/check-enterprise-release-env\.mjs'\);[\s\S]*stripProtectedReleaseEnv\(process\.env\);[\s\S]*run-public-production-release-v2\.mjs/);
-    expect(dispatcher).toContain('env: buildReleaseSubprocessEnv({ ...process.env, ...envOverrides })');
+    expect(dispatcher).toContain('env: buildReleaseSubprocessEnv({ ...process.env, ...envOverrides }, allowProtectedKeys)');
   });
 
   it('scrubs public protected configuration before post-run evidence subprocesses', () => {
     expect(dispatcher).toMatch(/run-public-production-release-final\.mjs'\);[\s\S]*stripProtectedReleaseEnv\(process\.env\);[\s\S]*write-public-production-go-no-go-evidence\.mjs/);
+  });
+
+  it('restores only the readiness token for the live runtime SHA verifier', () => {
+    expect(dispatcher).toMatch(/verify-runtime-release-sha\.mjs'[\s\S]*\['HEALTHCHECK_TOKEN'\]/);
+    expect(dispatcher).not.toMatch(/verify-runtime-release-sha\.mjs'[\s\S]*\['SUPABASE_SERVICE_ROLE_KEY'\]/);
+    expect(dispatcher).not.toMatch(/verify-runtime-release-sha\.mjs'[\s\S]*\['STRIPE_SECRET_KEY'\]/);
   });
 });
