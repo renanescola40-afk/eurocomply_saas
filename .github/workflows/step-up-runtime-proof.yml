@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: step-up-runtime-proof-${{ inputs.release_sha }}
