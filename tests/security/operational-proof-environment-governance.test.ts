@@ -5,6 +5,7 @@ const dataGovernance = readFileSync('.github/workflows/data-governance-runtime-p
 const incidentContinuity = readFileSync('.github/workflows/incident-continuity-runtime-proof.yml', 'utf8');
 const procurementTrust = readFileSync('.github/workflows/procurement-trust-runtime-proof.yml', 'utf8');
 const safeRuntimeBootstrap = readFileSync('.github/workflows/enterprise-safe-runtime-bootstrap.yml', 'utf8');
+const platformFinalRelease = readFileSync('.github/workflows/platform-final-release-evidence.yml', 'utf8');
 
 const GOVERNANCE_CHECK = 'node scripts/security/check-github-environment-governance.mjs';
 const PINNED_CHECKOUT = 'actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0';
@@ -114,5 +115,25 @@ describe('operational production proof environment governance', () => {
     expect(preflight).not.toContain('actions: write');
     expect(protectedText).toContain('permissions:\n      actions: write\n      contents: read');
     expect(protectedText).toContain('RELEASE_SHA: ${{ needs.safe-runtime-environment-governance.outputs.release_sha }}');
+  });
+
+  it('keeps platform final release evidence behind governed exact-main admission', () => {
+    expectOperationalProofBoundary(
+      platformFinalRelease,
+      'platform-closeout-environment-governance',
+      'production-platform-closeout',
+      'protected-final-proof',
+      'Materialize protected input',
+    );
+
+    const materializeStep = platformFinalRelease.indexOf('- name: Materialize protected input');
+    const secretReference = platformFinalRelease.indexOf('secrets.PLATFORM_FINAL_RELEASE_EVIDENCE_JSON');
+    const buildStep = platformFinalRelease.indexOf('- name: Build final release evidence pack');
+    const maxAgeReference = platformFinalRelease.indexOf('vars.PLATFORM_EVIDENCE_MAX_AGE_HOURS');
+
+    expect(secretReference).toBeGreaterThan(materializeStep);
+    expect(maxAgeReference).toBeGreaterThan(buildStep);
+    expect(platformFinalRelease.slice(0, materializeStep)).not.toContain('secrets.PLATFORM_FINAL_RELEASE_EVIDENCE_JSON');
+    expect(platformFinalRelease.slice(0, buildStep)).not.toContain('vars.PLATFORM_EVIDENCE_MAX_AGE_HOURS');
   });
 });
