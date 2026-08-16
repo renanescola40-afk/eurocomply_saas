@@ -32,6 +32,17 @@ function getPlanQuery(planId?: string) {
   return plan ? `?plan=${encodeURIComponent(plan.id)}` : '';
 }
 
+function getBillingRecoveryPath(locale: Locale, planId?: string) {
+  const query = new URLSearchParams({ onboarding: 'completed' });
+  const plan = getBillingPlan(planId);
+
+  if (plan) {
+    query.set('plan', plan.id);
+  }
+
+  return `/${locale}/dashboard/organizations/billing?${query.toString()}`;
+}
+
 export default async function OnboardingPage({ params, searchParams }: OnboardingPageProps) {
   noStore();
 
@@ -52,7 +63,7 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
   const initialState = await getOnboardingActivationState(user.id);
 
   if (initialState.organization?.isOnboardingCompleted) {
-    redirect(`/${safeLocale}/dashboard/organizations${planQuery}`);
+    redirect(getBillingRecoveryPath(safeLocale, resolvedSearchParams.plan));
   }
 
   async function saveDraftFromOnboarding(input: OnboardingDraftInput): Promise<OnboardingMutationResult> {
