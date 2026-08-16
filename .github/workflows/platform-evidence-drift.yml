@@ -76,7 +76,6 @@ jobs:
     timeout-minutes: 10
     environment: production-platform-closeout
     env:
-      PLATFORM_FINAL_RELEASE_EVIDENCE_JSON: ${{ secrets.PLATFORM_FINAL_RELEASE_EVIDENCE_JSON }}
       PLATFORM_EVIDENCE_WARN_HOURS: ${{ vars.PLATFORM_EVIDENCE_WARN_HOURS }}
     steps:
       - name: Revalidate exact current main after environment approval
@@ -112,6 +111,8 @@ jobs:
           node-version: 22
       - name: Materialize protected evidence
         shell: bash
+        env:
+          PLATFORM_FINAL_RELEASE_EVIDENCE_JSON: ${{ secrets.PLATFORM_FINAL_RELEASE_EVIDENCE_JSON }}
         run: |
           set -euo pipefail
           mkdir -p artifacts
