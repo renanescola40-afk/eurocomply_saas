@@ -15,6 +15,10 @@ const liveRlsInventoryRepair = readFileSync(
   'supabase/migrations/20260815083000_reconcile_live_rls_validation_inventory_privileges.sql',
   'utf8',
 );
+const gapTaskRolloutGuard = readFileSync(
+  'supabase/migrations/20260816104000_guard_compliance_task_browser_mutations.sql',
+  'utf8',
+);
 const gapTaskWriteHardening = readFileSync(
   'supabase/migrations/20260816110000_harden_gap_personal_task_write_boundary.sql',
   'utf8',
@@ -55,7 +59,7 @@ const hardenedOnboarding = readFileSync(
 const selected = config.migrations.map((migration) => migration.filename);
 
 describe('bounded Supabase forward reconciliation contract', () => {
-  it('selects exactly the twenty-three bounded forward-only reconciliation identities in version order', () => {
+  it('selects exactly the twenty-four bounded forward-only reconciliation identities in version order', () => {
     expect(selected).toEqual([
       '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
       '20260813194500_reconcile_step_up_challenges_runtime.sql',
@@ -78,6 +82,7 @@ describe('bounded Supabase forward reconciliation contract', () => {
       '20260815142000_preserve_completed_onboarding_state.sql',
       '20260815142500_reconcile_active_onboarding_runtime.sql',
       '20260815143000_harden_active_onboarding_enterprise_boundaries.sql',
+      '20260816104000_guard_compliance_task_browser_mutations.sql',
       '20260816104500_reconcile_gap_remediation_persistence.sql',
       '20260816110000_harden_gap_personal_task_write_boundary.sql',
     ]);
@@ -116,18 +121,37 @@ describe('bounded Supabase forward reconciliation contract', () => {
     expect(liveRlsWorkflow).toContain("setting = 'search_path=public, pg_catalog'");
   });
 
+  it('guards every authenticated task mutation before compatibility reconciliation', () => {
+    expect(gapTaskRolloutGuard.trimStart()).toMatch(/^begin;/i);
+    for (const policy of [
+      'restrict_authenticated_compliance_task_insert_during_reconciliation',
+      'restrict_authenticated_compliance_task_update_during_reconciliation',
+      'restrict_authenticated_compliance_task_delete_during_reconciliation',
+    ]) {
+      expect(gapTaskRolloutGuard).toContain(policy);
+    }
+    expect(gapTaskRolloutGuard).toContain('as restrictive');
+    expect(gapTaskRolloutGuard).toContain('with check (false)');
+    expect(gapTaskRolloutGuard).toContain('using (false)');
+    expect(gapTaskRolloutGuard).toContain("raise exception 'authenticated compliance_tasks reconciliation guard is incomplete'");
+  });
+
   it('keeps organization task mutations backend-only while allowing only personal browser inserts', () => {
     expect(gapTaskWriteHardening).toContain('revoke insert, update, delete on table public.compliance_tasks from authenticated');
     expect(gapTaskWriteHardening).toContain('grant select, insert on table public.compliance_tasks to authenticated');
     expect(gapTaskWriteHardening).toContain('drop policy if exists "rls_compliance_tasks_insert_writer"');
     expect(gapTaskWriteHardening).toContain('drop policy if exists "rls_compliance_tasks_update_writer"');
     expect(gapTaskWriteHardening).toContain('drop policy if exists "rls_compliance_tasks_delete_admin"');
+    expect(gapTaskWriteHardening).toContain('drop policy if exists "restrict_authenticated_compliance_task_insert_during_reconciliation"');
+    expect(gapTaskWriteHardening).toContain('restrict_authenticated_compliance_task_update_during_reconciliation');
+    expect(gapTaskWriteHardening).toContain('restrict_authenticated_compliance_task_delete_during_reconciliation');
     expect(gapTaskWriteHardening).toContain('as restrictive');
     expect(gapTaskWriteHardening).toContain('restrict_authenticated_compliance_task_insert_to_personal');
     expect(gapTaskWriteHardening).toContain('workspace_id is null');
     expect(gapTaskWriteHardening).toContain('user_id = auth.uid()');
     expect(gapTaskWriteHardening).toContain('cf.user_id = auth.uid()');
     expect(gapTaskWriteHardening).toContain('authenticated compliance_tasks UPDATE/DELETE must remain backend-only');
+    expect(gapTaskWriteHardening).toContain('authenticated compliance_tasks permanent update/delete guard is incomplete');
   });
 
   it('does not carry historical human approval into the newer active-core execution identity', () => {
