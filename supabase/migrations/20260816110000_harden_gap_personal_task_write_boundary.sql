@@ -121,9 +121,9 @@ create policy "restrict_authenticated_compliance_task_insert_to_personal"
   );
 
 -- compliance_metric_snapshots is written and read exclusively by server-side
--- administrative code. The live schema still carries a legacy
--- `Authenticated can read metric snapshots USING (true)` policy, which would
--- expose every tenant snapshot to every authenticated browser once rows exist.
+-- administrative code. The live schema still carries a legacy authenticated
+-- allow-all metric snapshot read policy, which would expose every tenant
+-- snapshot to every authenticated browser once rows exist.
 -- Fail closed instead: require a tenant id on every row, remove all browser RLS
 -- policies and table privileges, and retain only explicit backend authority.
 do $snapshot_preconditions$
