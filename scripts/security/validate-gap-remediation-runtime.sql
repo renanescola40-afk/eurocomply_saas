@@ -9,6 +9,7 @@ declare
   reconciled_rls_count integer;
   anon_privilege_count integer;
   personal_task_policy_count integer;
+  permanent_mutation_guard_count integer;
   evidence_policy_count integer;
   storage_policy_count integer;
 begin
@@ -167,6 +168,32 @@ begin
       and roles = array['authenticated']::name[]
   ) then
     raise exception 'restrictive personal compliance_tasks insert guard is missing';
+  end if;
+
+  if exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'compliance_tasks'
+      and policyname = 'restrict_authenticated_compliance_task_insert_during_reconciliation'
+  ) then
+    raise exception 'transitional compliance_tasks insert guard was not retired';
+  end if;
+
+  select count(*)
+    into permanent_mutation_guard_count
+  from pg_policies
+  where schemaname = 'public'
+    and tablename = 'compliance_tasks'
+    and policyname in (
+      'restrict_authenticated_compliance_task_update_during_reconciliation',
+      'restrict_authenticated_compliance_task_delete_during_reconciliation'
+    )
+    and permissive = 'RESTRICTIVE'
+    and roles = array['authenticated']::name[];
+
+  if permanent_mutation_guard_count <> 2 then
+    raise exception 'authenticated compliance_tasks permanent update/delete guard is incomplete';
   end if;
 
   if not exists (
