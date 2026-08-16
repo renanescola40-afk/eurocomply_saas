@@ -42,6 +42,21 @@ export type PermissionCheckDenied = {
 
 export type PermissionCheckResult = PermissionCheckAllowed | PermissionCheckDenied;
 
+const COMMERCIAL_PRODUCT_PERMISSIONS = new Set<OrganizationPermission>([
+  'manage_documents',
+  'read_documents',
+  'manage_vendors',
+  'read_vendors',
+  'manage_risks',
+  'read_risks',
+  'manage_ai_governance',
+  'read_ai_governance',
+  'manage_ai_incidents',
+  'read_ai_incidents',
+  'read_audit',
+  'export_data',
+]);
+
 function isSupabaseUserId(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
@@ -78,6 +93,53 @@ async function recordRbacDeniedAuditEvent({
     });
   } catch {
     // Keep the original authorization result even if best-effort audit logging fails.
+  }
+}
+
+async function assertCommercialProductAuthority({
+  userId,
+  organizationId,
+  permission,
+  role,
+  rawRole,
+}: {
+  userId: string;
+  organizationId: string;
+  permission: OrganizationPermission;
+  role: OrganizationRole;
+  rawRole: string | null;
+}): Promise<PermissionCheckDenied | null> {
+  if (!COMMERCIAL_PRODUCT_PERMISSIONS.has(permission)) return null;
+
+  try {
+    const { getOrganizationBillingAuthority } = await import('@/server/queries/subscription');
+    const authority = await getOrganizationBillingAuthority(organizationId);
+
+    if (authority.licensed) return null;
+
+    const result: PermissionCheckDenied = {
+      ok: false,
+      status: 403,
+      error: 'subscription_required',
+      message: 'An active paid subscription or signed contract is required.',
+      role,
+      rawRole,
+      permission,
+    };
+    await recordRbacDeniedAuditEvent({ userId, organizationId, result });
+    return result;
+  } catch {
+    const result: PermissionCheckDenied = {
+      ok: false,
+      status: 503,
+      error: 'billing_authority_unavailable',
+      message: 'Could not verify commercial product authority.',
+      role,
+      rawRole,
+      permission,
+    };
+    await recordRbacDeniedAuditEvent({ userId, organizationId, result });
+    return result;
   }
 }
 
@@ -177,6 +239,15 @@ export async function assertOrganizationPermission({
     await recordRbacDeniedAuditEvent({ userId, organizationId, result });
     return result;
   }
+
+  const commercialAuthorityDenied = await assertCommercialProductAuthority({
+    userId,
+    organizationId,
+    permission,
+    role,
+    rawRole: membership.role,
+  });
+  if (commercialAuthorityDenied) return commercialAuthorityDenied;
 
   return {
     ok: true,
