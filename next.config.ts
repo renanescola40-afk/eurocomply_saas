@@ -14,6 +14,7 @@ const DEFAULT_IMAGE_REMOTE_HOSTS = [
 
 const POSTHOG_SCRIPT_HOSTS = ['https://eu-assets.i.posthog.com'] as const;
 const POSTHOG_CONNECT_HOSTS = ['https://eu.i.posthog.com', 'https://eu-assets.i.posthog.com'] as const;
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
 
 function normalizeTrustedImageHostname(value: string) {
   const candidate = value.trim().toLowerCase();
@@ -42,6 +43,21 @@ function getSupabaseImageHost() {
   }
 }
 
+function getDevelopmentSupabaseConnectOrigin() {
+  if (isProduction) return null;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!supabaseUrl) return null;
+
+  try {
+    const parsed = new URL(supabaseUrl);
+    if (!LOOPBACK_HOSTS.has(parsed.hostname)) return null;
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
 function getTrustedImageHostnames() {
   const configuredHosts = (process.env.NEXT_IMAGE_REMOTE_HOSTS ?? '')
     .split(',')
@@ -55,6 +71,18 @@ const trustedImageHostnames = getTrustedImageHostnames();
 const imageSrcPolicy = ["img-src 'self' data: blob:", ...trustedImageHostnames.map((hostname) => `https://${hostname}`)].join(' ');
 const posthogScriptSrcPolicy = POSTHOG_SCRIPT_HOSTS.join(' ');
 const posthogConnectSrcPolicy = POSTHOG_CONNECT_HOSTS.join(' ');
+const developmentSupabaseConnectOrigin = getDevelopmentSupabaseConnectOrigin();
+const connectSrcPolicy = [
+  "connect-src 'self'",
+  'https://*.supabase.co',
+  'https://api.stripe.com',
+  'https://checkout.stripe.com',
+  'https://*.sentry.io',
+  'https://*.ingest.sentry.io',
+  'https://vitals.vercel-insights.com',
+  posthogConnectSrcPolicy,
+  ...(developmentSupabaseConnectOrigin ? [developmentSupabaseConnectOrigin] : []),
+].join(' ');
 
 const securityHeaders = [
   {
@@ -68,14 +96,14 @@ const securityHeaders = [
       imageSrcPolicy,
       "media-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      `connect-src 'self' https://*.supabase.co https://api.stripe.com https://checkout.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://vitals.vercel-insights.com ${posthogConnectSrcPolicy}`,
+      connectSrcPolicy,
       "frame-src https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self' https://checkout.stripe.com",
       "frame-ancestors 'none'",
-      'upgrade-insecure-requests',
-    ].join('; '),
+      isProduction ? 'upgrade-insecure-requests' : null,
+    ].filter((directive): directive is string => Boolean(directive)).join('; '),
   },
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
