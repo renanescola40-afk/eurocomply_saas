@@ -5,7 +5,7 @@ import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import type { SubscriptionPlan } from '@/server/queries/subscription';
+import type { CanonicalSubscriptionPlan } from '@/server/queries/subscription';
 import { noStoreJson } from '@/server/security/no-store';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
@@ -17,16 +17,11 @@ type CheckoutIntentRequest = {
   planId?: string;
 };
 
-type BillingPlanAliasId = SubscriptionPlan | 'starter' | 'growth' | 'pro';
-
 const CHECKOUT_INTENT_JSON_MAX_BYTES = 2 * 1024;
 
-const BILLING_TO_ENTITLEMENT_PLAN: Record<BillingPlanAliasId, SubscriptionPlan> = {
-  essential: 'essential',
-  starter: 'essential',
+const BILLING_TO_ENTITLEMENT_PLAN: Record<'starter' | 'professional' | 'business' | 'enterprise', CanonicalSubscriptionPlan> = {
+  starter: 'starter',
   professional: 'professional',
-  growth: 'professional',
-  pro: 'professional',
   business: 'business',
   enterprise: 'enterprise',
 };
