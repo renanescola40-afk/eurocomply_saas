@@ -39,6 +39,7 @@ describe('gap/remediation forward reconciliation', () => {
     expect(migration).toContain('historical 20260605 duplicate-version files are preserved byte-for-byte');
     expect(migration).not.toContain('supabase_migrations.schema_migrations');
     expect(migration).not.toContain('migration repair');
+    expect(migration.trimStart()).toMatch(/^begin;/i);
   });
 
   it('materializes the runtime tables that are absent when the legacy group is excluded', () => {
@@ -51,6 +52,7 @@ describe('gap/remediation forward reconciliation', () => {
 
   it('extends the canonical organization task table without replacing its organization scope', () => {
     expect(migration).toContain("if to_regclass('public.compliance_tasks') is null then");
+    expect(migration).toContain('alter column organization_id drop not null');
     expect(migration).toContain('alter table public.compliance_tasks');
     for (const column of requiredTaskColumns) {
       expect(migration).toContain(`add column if not exists ${column}`);
@@ -74,6 +76,8 @@ describe('gap/remediation forward reconciliation', () => {
     expect(migration).toContain('cf.user_id = auth.uid()');
     expect(migration).toContain('ct.user_id = auth.uid()');
     expect(migration).toContain('app_private.is_org_member(ct.organization_id)');
+    expect(migration).toContain('where cf.id = compliance_evidence.finding_id and cf.user_id = auth.uid()');
+    expect(migration).toContain('where ct.id = compliance_evidence.task_id');
     expect(migration).not.toContain('using (true)');
     expect(migration).not.toContain('with check (true)');
   });
