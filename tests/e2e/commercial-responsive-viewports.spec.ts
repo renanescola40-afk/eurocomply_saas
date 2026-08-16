@@ -25,6 +25,7 @@ const publicCommercialRoutes = [
 ] as const;
 
 for (const viewport of [
+  { name: 'mobile', width: 390, height: 844 },
   { name: 'tablet', width: 768, height: 1024 },
   { name: 'desktop', width: 1440, height: 900 },
 ] as const) {
