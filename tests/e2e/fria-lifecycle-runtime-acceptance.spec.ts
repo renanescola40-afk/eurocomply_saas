@@ -63,9 +63,12 @@ async function expectHealthyAuthenticatedPage(page: Page, label: string) {
 
 async function loginWithDisposableCredentials(page: Page, email: string, password: string) {
   await page.goto('/en/login?next=/en/dashboard/organizations', { waitUntil: 'domcontentloaded' });
-  await page.locator('input[type="email"]').fill(email);
-  await page.locator('input[type="password"]').fill(password);
-  await page.locator('button[type="submit"]').click();
+  const credentialEmail = page.getByRole('textbox', { name: 'Work email', exact: true });
+  const credentialForm = page.locator('form').filter({ has: credentialEmail });
+  await expect(credentialForm, 'credential login form should be uniquely addressable beside Enterprise SSO').toHaveCount(1);
+  await credentialEmail.fill(email);
+  await credentialForm.getByLabel('Password', { exact: true }).fill(password);
+  await credentialForm.locator('button[type="submit"]').click();
   await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000 });
   await expectHealthyAuthenticatedPage(page, 'disposable authenticated session');
 }
