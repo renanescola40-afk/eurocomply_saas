@@ -49,7 +49,7 @@ describe('post-billing commercial customer journey closure', () => {
     expect(page).toContain('<BillingPlanIntentBanner');
     expect(page).toContain('selectedPlan={selectedPlan}');
 
-    expect(banner).toContain("action=\"checkout\"");
+    expect(banner).toContain('action="checkout"');
     expect(banner).toContain('planId={selectedPlan.id}');
     expect(banner).toContain('selectedPlan.salesLed ?');
     expect(banner).toContain("href={`/${locale}/contact?intent=sales&plan=${selectedPlan.id}&source=onboarding`}");
@@ -114,6 +114,41 @@ describe('post-billing commercial customer journey closure', () => {
     expect(page).not.toContain('billingError={resolvedSearchParams.billing_error}');
   });
 
+  it('localizes customer-visible billing recovery and MFA step-up copy', async () => {
+    const [view, actionButton] = await Promise.all([
+      readFile(BILLING_VIEW, 'utf8'),
+      readFile(BILLING_ACTION_BUTTON, 'utf8'),
+    ]);
+
+    expect(view).toContain("continueToDashboard: 'Continuar para o painel'");
+    expect(view).toContain("continueToDashboard: 'Continuar al panel'");
+    expect(view).toContain("continueToDashboard: 'Continuer vers le tableau de bord'");
+    expect(view).toContain("continueToDashboard: 'Continua al pannello'");
+    expect(view).toContain("ownerAccessRequired: 'Zugriff des Inhabers erforderlich'");
+    expect(view).toContain("checkoutCompleted: 'Pagamento concluído'");
+    expect(view).toContain("checkoutCompleted: 'Pago completado'");
+    expect(view).toContain("checkoutCompleted: 'Paiement terminé'");
+    expect(view).toContain("checkoutCompleted: 'Pagamento completato'");
+    expect(view).toContain("checkoutCompleted: 'Zahlung abgeschlossen'");
+    expect(view).not.toContain('owner do workspace');
+    expect(view).not.toContain('owner del workspace');
+    expect(view).not.toContain('owner du workspace');
+    expect(view).not.toContain('owner del workspace');
+    expect(view).not.toContain('Workspace-Owner');
+    expect(view).not.toContain("checkoutCompleted: 'Checkout concluído'");
+    expect(view).not.toContain("checkoutCompleted: 'Checkout completado'");
+    expect(view).not.toContain("checkoutCompleted: 'Checkout terminé'");
+    expect(view).not.toContain("checkoutCompleted: 'Checkout annullato'");
+
+    expect(actionButton).toContain('function getStepUpCopy(locale: string)');
+    expect(actionButton).toContain('Escolha um método de autenticação multifator');
+    expect(actionButton).toContain('Elige un método de autenticación multifactor');
+    expect(actionButton).toContain('Choisissez une méthode d’authentification multifacteur');
+    expect(actionButton).toContain('Scegli un metodo di autenticazione a più fattori');
+    expect(actionButton).toContain('Wählen Sie eine Methode für die Mehrfaktor-Authentifizierung');
+    expect(actionButton).toContain('getBillingStepUpToken(locale)');
+  });
+
   it('preserves role-safe billing UX and locale-aware activation navigation', async () => {
     const source = await readFile(BILLING_VIEW, 'utf8');
 
@@ -123,10 +158,10 @@ describe('post-billing commercial customer journey closure', () => {
     expect(source).toContain('role="alert"');
     expect(source).toContain("href={`/${locale}/dashboard`}");
     expect(source).toContain("continueToDashboard: 'Continue to dashboard'");
-    expect(source).toContain("continueToDashboard: 'Continuar para o dashboard'");
-    expect(source).toContain("continueToDashboard: 'Continuar al dashboard'");
+    expect(source).toContain("continueToDashboard: 'Continuar para o painel'");
+    expect(source).toContain("continueToDashboard: 'Continuar al panel'");
     expect(source).toContain("continueToDashboard: 'Continuer vers le tableau de bord'");
-    expect(source).toContain("continueToDashboard: 'Continua alla dashboard'");
+    expect(source).toContain("continueToDashboard: 'Continua al pannello'");
     expect(source).toContain("continueToDashboard: 'Zum Dashboard'");
     expect(source).toContain('focus-visible:ring-2');
   });
