@@ -30,44 +30,44 @@ const copyByLocale: Record<Locale, Copy> = {
     ownerRequired: 'Owner action required',
   },
   pt: {
-    eyebrow: 'Selecionado no onboarding',
+    eyebrow: 'Selecionado durante a configuração',
     title: (planName) => `${planName} está pronto para continuar`,
-    body: 'A sua seleção foi preservada. O acesso comercial só é concedido depois de o checkout normal ou a ativação assistida por vendas terminar.',
+    body: 'A sua seleção foi preservada. O acesso comercial só é concedido depois de o processo normal de pagamento ou a ativação assistida por vendas terminar.',
     continuePlan: (planName) => `Continuar com ${planName}`,
-    contactSales: (planName) => `Continuar com vendas ${planName}`,
-    ownerRequired: 'É necessária ação do owner',
+    contactSales: (planName) => `Continuar com vendas para ${planName}`,
+    ownerRequired: 'É necessária ação do proprietário',
   },
   es: {
-    eyebrow: 'Seleccionado durante el onboarding',
+    eyebrow: 'Seleccionado durante la configuración',
     title: (planName) => `${planName} está listo para continuar`,
-    body: 'Tu selección se ha conservado. El acceso comercial solo se concede cuando finaliza el checkout normal o la activación asistida por ventas.',
+    body: 'Tu selección se ha conservado. El acceso comercial solo se concede cuando finaliza el proceso normal de pago o la activación asistida por ventas.',
     continuePlan: (planName) => `Continuar con ${planName}`,
-    contactSales: (planName) => `Continuar con ventas ${planName}`,
-    ownerRequired: 'Se requiere acción del owner',
+    contactSales: (planName) => `Continuar con ventas para ${planName}`,
+    ownerRequired: 'Se requiere acción del propietario',
   },
   fr: {
-    eyebrow: 'Sélectionné pendant l’onboarding',
+    eyebrow: 'Sélectionné pendant la configuration',
     title: (planName) => `${planName} est prêt à continuer`,
-    body: 'Votre sélection est conservée. L’accès commercial n’est accordé qu’après la fin du checkout normal ou de l’activation assistée par les ventes.',
+    body: 'Votre sélection est conservée. L’accès commercial n’est accordé qu’après la fin du processus normal de paiement ou de l’activation assistée par les ventes.',
     continuePlan: (planName) => `Continuer avec ${planName}`,
-    contactSales: (planName) => `Continuer avec les ventes ${planName}`,
-    ownerRequired: 'Action du owner requise',
+    contactSales: (planName) => `Continuer avec les ventes pour ${planName}`,
+    ownerRequired: 'Action du propriétaire requise',
   },
   it: {
-    eyebrow: 'Selezionato durante l’onboarding',
+    eyebrow: 'Selezionato durante la configurazione',
     title: (planName) => `${planName} è pronto per continuare`,
-    body: 'La selezione è stata conservata. L’accesso commerciale viene concesso solo dopo il completamento del checkout normale o dell’attivazione assistita dalle vendite.',
+    body: 'La selezione è stata conservata. L’accesso commerciale viene concesso solo dopo il completamento del normale processo di pagamento o dell’attivazione assistita dalle vendite.',
     continuePlan: (planName) => `Continua con ${planName}`,
-    contactSales: (planName) => `Continua con vendite ${planName}`,
-    ownerRequired: 'È richiesta un’azione del owner',
+    contactSales: (planName) => `Continua con le vendite per ${planName}`,
+    ownerRequired: 'È richiesta un’azione del proprietario',
   },
   de: {
-    eyebrow: 'Beim Onboarding ausgewählt',
+    eyebrow: 'Bei der Einrichtung ausgewählt',
     title: (planName) => `${planName} kann fortgesetzt werden`,
-    body: 'Ihre Auswahl bleibt erhalten. Kommerzieller Zugriff wird erst nach dem regulären Checkout oder der vertriebsgeführten Aktivierung gewährt.',
+    body: 'Ihre Auswahl bleibt erhalten. Kommerzieller Zugriff wird erst nach dem regulären Zahlungsvorgang oder der vertriebsgeführten Aktivierung gewährt.',
     continuePlan: (planName) => `Mit ${planName} fortfahren`,
-    contactSales: (planName) => `${planName} mit Vertrieb fortsetzen`,
-    ownerRequired: 'Owner-Aktion erforderlich',
+    contactSales: (planName) => `${planName} mit dem Vertrieb fortsetzen`,
+    ownerRequired: 'Aktion des Inhabers erforderlich',
   },
 };
 
@@ -101,25 +101,25 @@ export function BillingPlanIntentBanner({ locale, selectedPlan, canManageBilling
               type="button"
               disabled
               aria-disabled="true"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/10 px-5 text-sm font-semibold text-white/40 disabled:cursor-not-allowed"
+              className="inline-flex h-11 max-w-full items-center justify-center gap-2 rounded-full border border-white/10 px-5 text-sm font-semibold text-white/40 disabled:cursor-not-allowed"
             >
-              <LockKeyhole className="h-4 w-4" aria-hidden="true" />
+              <LockKeyhole className="h-4 w-4 shrink-0" aria-hidden="true" />
               {copy.ownerRequired}
             </button>
           ) : selectedPlan.salesLed ? (
             <Link
               href={`/${locale}/contact?intent=sales&plan=${selectedPlan.id}&source=onboarding`}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-black transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+              className="inline-flex h-11 max-w-full items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-black transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
             >
               {copy.contactSales(selectedPlan.name)}
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
             </Link>
           ) : (
             <BillingActionButton
               action="checkout"
               locale={locale}
               planId={selectedPlan.id}
-              className="h-11 rounded-full px-5"
+              className="h-11 max-w-full rounded-full px-5"
             >
               {copy.continuePlan(selectedPlan.name)}
             </BillingActionButton>
