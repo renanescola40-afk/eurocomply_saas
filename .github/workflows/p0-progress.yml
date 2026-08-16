@@ -22,18 +22,68 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  classify-source:
+    name: Classify P0 progress source
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      authoritative: ${{ steps.source.outputs.authoritative }}
+      assessed_sha: ${{ steps.source.outputs.assessed_sha }}
+    steps:
+      - name: Classify exact-SHA producer authority
+        id: source
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_SHA: ${{ github.sha }}
+          DIRECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PARENT_RUN_ID: ${{ github.event.workflow_run.id || '' }}
+          PARENT_SHA: ${{ github.event.workflow_run.head_sha || '' }}
+          PARENT_BRANCH: ${{ github.event.workflow_run.head_branch || '' }}
+          PARENT_CONCLUSION: ${{ github.event.workflow_run.conclusion || '' }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" != 'workflow_run' ]; then
+            echo 'authoritative=true' >> "$GITHUB_OUTPUT"
+            echo "assessed_sha=$DIRECT_SHA" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "assessed_sha=$PARENT_SHA" >> "$GITHUB_OUTPUT"
+          if [ "$PARENT_BRANCH" != 'main' ] || [ "$PARENT_CONCLUSION" != 'success' ] || [ "$PARENT_SHA" != "$WORKFLOW_SHA" ]; then
+            echo 'authoritative=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          expected_artifact="p0-runtime-evidence-register-${PARENT_SHA}"
+          response="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${PARENT_RUN_ID}/artifacts?per_page=100")"
+          artifact_count="$(jq --arg name "$expected_artifact" '[.artifacts[] | select(.name == $name and .expired == false)] | length' <<< "$response")"
+          if [ "$artifact_count" = '1' ]; then
+            echo 'authoritative=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'authoritative=false' >> "$GITHUB_OUTPUT"
+          fi
+
   p0-progress:
-    name: Report P0 enterprise progress
-    if: >-
-      github.event_name != 'workflow_run' ||
-      (github.event.workflow_run.head_branch == 'main' &&
-       github.event.workflow_run.conclusion == 'success')
+    needs: classify-source
+    name: ${{ needs.classify-source.outputs.authoritative == 'true' && 'Report P0 enterprise progress' || 'Stale P0 progress trigger (ignored)' }}
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      ASSESSED_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+      ASSESSED_SHA: ${{ needs.classify-source.outputs.assessed_sha }}
     steps:
+      - name: Ignore non-authoritative P0 source
+        if: needs.classify-source.outputs.authoritative != 'true'
+        run: echo 'Ignoring non-authoritative or artifact-less P0 Runtime Evidence trigger.'
+
       - name: Checkout exact assessed SHA
+        if: needs.classify-source.outputs.authoritative == 'true'
         uses: actions/checkout@v7
         with:
           ref: ${{ env.ASSESSED_SHA }}
@@ -41,6 +91,7 @@ jobs:
           persist-credentials: false
 
       - name: Verify exact assessed checkout
+        if: needs.classify-source.outputs.authoritative == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -48,7 +99,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$ASSESSED_SHA"
 
       - name: Download authoritative P0 runtime register
-        if: github.event_name == 'workflow_run'
+        if: needs.classify-source.outputs.authoritative == 'true' && github.event_name == 'workflow_run'
         uses: actions/download-artifact@v8
         with:
           github-token: ${{ github.token }}
@@ -57,20 +108,24 @@ jobs:
           path: artifacts/p0-runtime-source
 
       - name: Validate P0 runtime progress fan-in contract
+        if: needs.classify-source.outputs.authoritative == 'true'
         run: node --test tests/security/p0-enterprise-progress-runtime-fanin.test.mjs
 
       - name: Show runner Node.js and npm versions
+        if: needs.classify-source.outputs.authoritative == 'true'
         run: |
           node --version
           npm --version
 
       - name: Generate P0 progress report
+        if: needs.classify-source.outputs.authoritative == 'true'
         env:
           P0_PROGRESS_ASSESSED_SHA: ${{ env.ASSESSED_SHA }}
           P0_RUNTIME_EVIDENCE_PATH: ${{ github.event_name == 'workflow_run' && 'artifacts/p0-runtime-source/p0-runtime-evidence-register.json' || '' }}
         run: node scripts/security/write-p0-enterprise-progress.mjs
 
       - name: Upload P0 progress report
+        if: needs.classify-source.outputs.authoritative == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: p0-enterprise-progress
