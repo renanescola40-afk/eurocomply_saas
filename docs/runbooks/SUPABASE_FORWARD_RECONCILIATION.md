@@ -6,27 +6,29 @@ This lane rehearses, dry-runs and — only after explicit protected approval —
 
 It remains intentionally separate from the global migration-reconciliation gate. The global gate is still authoritative for historical lineage repair and historical migration classification.
 
-## Current selected set
+## Authoritative selected set
 
-The authoritative selection is `config/supabase-forward-reconciliation.json`. The current change set contains exactly:
+`config/supabase-forward-reconciliation.json` is the **only authoritative source** for the currently selected forward migrations. Do not duplicate the full list or a fixed migration count in this runbook: the set evolves as reviewed forward identities are added, and stale prose must never be accepted as promotion evidence.
 
-- `20260813175000_optimize_organization_add_ons_rls_initplan.sql`
-- `20260813194500_reconcile_step_up_challenges_runtime.sql`
-- `20260813200000_reconcile_subscription_schema_defaults.sql`
-- `20260813201500_reconcile_controlled_document_storage.sql`
-- `20260813201600_force_tasks_rls.sql`
-- `20260813234000_reconcile_enterprise_break_glass_governance.sql`
-- `20260814090000_reconcile_enterprise_licensing_control_plane.sql`
-- `20260814091000_reconcile_enterprise_integrations_scim.sql`
-- `20260814091100_harden_scim_identity_connection_delete_boundary.sql`
-- `20260814091900_bridge_enterprise_contract_mode_compatibility.sql`
-- `20260814092000_reconcile_enterprise_billing_lifecycle.sql`
-- `20260814092100_finalize_enterprise_contract_mode_compatibility.sql`
-- `20260814093000_reconcile_enterprise_contract_control_rpcs.sql`
-- `20260814101500_reconcile_enterprise_core_active_runtime.sql`
-- `20260815083000_reconcile_live_rls_validation_inventory_privileges.sql`
+For every rehearsal, dry-run and production promotion, compile the manifest from the exact current release SHA and require the same:
 
-All selected execution identities must remain later than the remote migration head observed immediately before promotion. The lane never requires `--include-all`, migration-history repair or manual ledger insertion.
+- ordered filenames and versions;
+- source-byte SHA-256 values;
+- migration count derived from the manifest;
+- immutable selection digest;
+- exact release SHA.
+
+All selected execution identities must remain strictly later than the remote migration head observed immediately before promotion. No selected version may already be recorded remotely. The lane never requires `--include-all`, migration-history repair or manual ledger insertion.
+
+### Current Gap Analysis/remediation closure ordering
+
+When present in the authoritative manifest, the following three migrations form one ordered security boundary and must remain contiguous/in this order:
+
+1. `20260816104000_guard_compliance_task_browser_mutations.sql` — installs RESTRICTIVE fail-closed authenticated INSERT/UPDATE/DELETE guards before any compatibility widening;
+2. `20260816104500_reconcile_gap_remediation_persistence.sql` — forward-reconciles the unapplied `20260605_*` Gap Analysis/remediation/evidence schema effects without recreating `public.workspaces`;
+3. `20260816110000_harden_gap_personal_task_write_boundary.sql` — restores the steady-state backend-only organization mutation boundary and releases only authenticated, owner-bound personal task creation.
+
+This ordering protects partial rollout: if execution stops after the guard or compatibility step, authenticated task mutations remain fail-closed. Any byte or ordering change invalidates prior Stage 1/Stage 2 evidence.
 
 ### Active core runtime reconciliation
 
@@ -42,7 +44,7 @@ The historical `20260809135000_enterprise_core_runtime_schema_reconciliation.sql
 
 `20260815083000_reconcile_live_rls_validation_inventory_privileges.sql` reissues the required service-role-only helper privilege boundary under a version later than the current production head. It preserves `SECURITY INVOKER`, a fixed search path and removes browser-role execution.
 
-The control plane compiles the exact Git SHA, filenames, versions, byte sizes and SHA-256 digests into one immutable selection digest. Changing any selected SQL byte, filename or release SHA changes that digest and invalidates prior rehearsal/dry-run evidence.
+The control plane compiles the exact Git SHA, filenames, versions, byte sizes and SHA-256 digests into one immutable selection digest. Changing any selected SQL byte, filename, order or release SHA changes that digest and invalidates prior rehearsal/dry-run evidence.
 
 ## Administrative prerequisites
 
@@ -76,13 +78,13 @@ The workflow:
 3. reads production through the protected pooler credential;
 4. restores production into a disposable runner-local database;
 5. verifies every selected SHA-256 before application;
-6. applies only the selected files to the isolated target;
+6. applies only the selected files to the isolated target, in manifest order;
 7. runs `scripts/supabase/verify-forward-reconciliation-postconditions.sql`;
-8. requires active-core, Step-Up, controlled-storage, Break-Glass and enterprise-control postconditions;
+8. requires active-core, Step-Up, controlled-storage, Break-Glass, enterprise-control and any current manifest-specific postconditions;
 9. emits redacted exact-SHA attestation evidence;
 10. destroys the disposable database.
 
-A Stage 1 PASS does not authorize production deployment.
+A Stage 1 PASS does not authorize production deployment. A PR-event rehearsal job that only validates the manifest/contract is not a substitute for the protected isolated-production-restore job.
 
 ## Stage 2 — filtered remote dry-run
 
@@ -95,7 +97,7 @@ It revalidates source workflow/SHA/conclusion and attestation provenance, then c
 
 It proves the selected versions remain after the remote head, no selected migration is already remote, the pending set equals the selected set, and no unauthorized pending migration exists. Only then does it execute a filtered `supabase db push --dry-run` against production.
 
-Stage 2 performs no production write.
+Stage 2 performs no production write. A PR-event contract job is non-crediting for the protected remote dry-run.
 
 ## Stage 3 — human-approved bounded production promotion
 
