@@ -28,6 +28,7 @@ function expectGovernanceBoundary(
   expect(workflow).toContain(`${protectedJobName}:`);
   expect(workflow).toContain(PINNED_CHECKOUT);
   expect(workflow).toContain('Revalidate exact current main after environment approval');
+  expect(workflow).toContain('Revalidate environment governance after admission');
 }
 
 function expectExactInputSha(workflow: string) {
