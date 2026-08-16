@@ -9,7 +9,8 @@ const fetcher = readFileSync('scripts/enterprise/fetch-audit-chain-runtime-evide
 describe('automatic ephemeral audit-chain runtime proof', () => {
   it('runs automatically on protected main and remains exact-SHA bound', () => {
     expect(workflow).toContain('push:\n    branches: [main]');
-    expect(workflow).toContain('environment: production');
+    expect(workflow).toContain('environment: Production');
+    expect(workflow).toContain('needs: production-environment-governance');
     expect(workflow).toContain('/commits/main');
     expect(workflow).toContain('test "$main_sha" = "$TARGET_SHA"');
     expect(workflow).toContain('persist-credentials: false');
