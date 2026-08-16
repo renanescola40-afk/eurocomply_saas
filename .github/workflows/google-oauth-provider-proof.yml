@@ -99,6 +99,13 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Revalidate environment governance after admission
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: Production
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
       - name: Install dependencies without lifecycle scripts
         run: npm ci --ignore-scripts
 
