@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-08-16-production-runtime-gap-remediation-closure-v15",
+  "changeSet": "2026-08-16-production-runtime-gap-remediation-closure-v16",
   "migrations": [
     { "filename": "20260813175000_optimize_organization_add_ons_rls_initplan.sql", "purpose": "evaluate organization add-on membership auth once per statement while preserving tenant scope" },
     { "filename": "20260813194500_reconcile_step_up_challenges_runtime.sql", "purpose": "materialize backend-only enterprise step-up challenge storage" },
@@ -25,7 +25,7 @@
     { "filename": "20260815143000_harden_active_onboarding_enterprise_boundaries.sql", "purpose": "preserve completed onboarding evidence and expose the final active-owner/admin, seat-aware transactional onboarding authority" },
     { "filename": "20260816104000_guard_compliance_task_browser_mutations.sql", "purpose": "install restrictive fail-closed authenticated task mutation guards before gap compatibility reconciliation so a partial rollout cannot reopen organization browser writes" },
     { "filename": "20260816104500_reconcile_gap_remediation_persistence.sql", "purpose": "forward-reconcile the unapplied 20260605 Gap Analysis, remediation and evidence schema effects against the current organization runtime without rewriting historical migration bytes" },
-    { "filename": "20260816110000_harden_gap_personal_task_write_boundary.sql", "purpose": "preserve backend-only organization task mutations while allowing only authenticated personal Gap Analysis task creation under an exclusive tenant scope and restrictive RLS guard" }
+    { "filename": "20260816110000_harden_gap_personal_task_write_boundary.sql", "purpose": "preserve backend-only organization task mutations, allow only authenticated personal Gap Analysis task creation, and close the live backend-only compliance metric snapshot tenant-isolation boundary" }
   ],
   "truthBoundary": {
     "automaticClassification": false,
