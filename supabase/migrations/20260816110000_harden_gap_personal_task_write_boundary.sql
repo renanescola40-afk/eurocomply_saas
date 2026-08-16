@@ -63,6 +63,11 @@ drop policy if exists "rls_compliance_tasks_delete_admin" on public.compliance_t
 drop policy if exists "users can update own compliance tasks" on public.compliance_tasks;
 drop policy if exists "rls_compliance_tasks_update_personal" on public.compliance_tasks;
 
+-- The pre-reconciliation INSERT guard deliberately blocked every authenticated
+-- insert while the compatibility migration ran. Release only that one guard now;
+-- UPDATE/DELETE guards stay permanently restrictive as defense in depth.
+drop policy if exists "restrict_authenticated_compliance_task_insert_during_reconciliation" on public.compliance_tasks;
+
 -- Recreate the personal insert policy with every user-bearing relationship bound
 -- to the current authenticated subject. A known UUID from another user/tenant is
 -- not enough to create a cross-scope relationship.
@@ -111,6 +116,8 @@ create policy "restrict_authenticated_compliance_task_insert_to_personal"
 -- Fail closed on the exact privilege/policy posture required by the client and
 -- the audited/rate-limited organization task server actions.
 do $verify$
+declare
+  permanent_mutation_guard_count integer;
 begin
   if not has_table_privilege('authenticated', 'public.compliance_tasks', 'SELECT') then
     raise exception 'authenticated compliance_tasks SELECT privilege is missing';
@@ -174,6 +181,32 @@ begin
       and permissive = 'RESTRICTIVE'
   ) then
     raise exception 'restrictive personal compliance_tasks insert guard is missing';
+  end if;
+
+  if exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'compliance_tasks'
+      and policyname = 'restrict_authenticated_compliance_task_insert_during_reconciliation'
+  ) then
+    raise exception 'transitional compliance_tasks insert guard was not retired';
+  end if;
+
+  select count(*)
+    into permanent_mutation_guard_count
+  from pg_policies
+  where schemaname = 'public'
+    and tablename = 'compliance_tasks'
+    and policyname in (
+      'restrict_authenticated_compliance_task_update_during_reconciliation',
+      'restrict_authenticated_compliance_task_delete_during_reconciliation'
+    )
+    and permissive = 'RESTRICTIVE'
+    and roles = array['authenticated']::name[];
+
+  if permanent_mutation_guard_count <> 2 then
+    raise exception 'authenticated compliance_tasks permanent update/delete guard is incomplete';
   end if;
 
   if not exists (
