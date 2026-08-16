@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { getFeaturePages } from '@/lib/seo/feature-pages';
-import { getTrustCenterPages } from '@/lib/trust-center/content';
+import { getLocalizedTrustCenterPages } from '@/lib/trust-center/localized-content';
 
 type FooterLink = { label: string; href: string };
 type FooterCopy = {
@@ -36,12 +36,12 @@ const footerCopy: Record<Locale, FooterCopy> = {
     ],
   },
   pt: {
-    tagline: 'Governança de IA, workflows de risco e preparação de evidências para equipas B2B europeias.',
-    assuranceNote: 'Criado para operações de governança e preparação de evidências. Não alegamos certificação, aconselhamento jurídico ou garantia de conformidade.',
-    featuresTitle: 'Funcionalidades de governança de IA',
+    tagline: 'Governação de IA, fluxos de risco e preparação de evidências para equipas B2B europeias.',
+    assuranceNote: 'Criado para operações de governação e preparação de evidências. Não alegamos certificação, aconselhamento jurídico ou garantia de conformidade.',
+    featuresTitle: 'Funcionalidades de governação de IA',
     productTitle: 'Plataforma',
     trustTitle: 'Confiança',
-    featureNavLabel: 'Links de funcionalidades de governança de IA',
+    featureNavLabel: 'Links de funcionalidades de governação de IA',
     productNavLabel: 'Links do produto',
     trustNavLabel: 'Links de confiança',
     productLinks: [
@@ -68,8 +68,8 @@ const footerCopy: Record<Locale, FooterCopy> = {
     ],
   },
   fr: {
-    tagline: 'Gouvernance IA, workflows de risque et préparation des preuves pour les équipes B2B européennes.',
-    assuranceNote: 'Conçu pour les opérations de gouvernance et la préparation des preuves. Aucune certification, conseil juridique ou garantie de conformité n’est revendiqué.',
+    tagline: 'Gouvernance IA, flux de risque et préparation des preuves pour les équipes B2B européennes.',
+    assuranceNote: 'Conçu pour les opérations de gouvernance et la préparation des preuves. Aucune certification, aucun conseil juridique ni aucune garantie de conformité ne sont revendiqués.',
     featuresTitle: 'Fonctionnalités de gouvernance IA',
     productTitle: 'Plateforme',
     trustTitle: 'Confiance',
@@ -84,7 +84,7 @@ const footerCopy: Record<Locale, FooterCopy> = {
     ],
   },
   it: {
-    tagline: 'Governance IA, workflow di rischio e preparazione delle evidenze per team B2B europei.',
+    tagline: 'Governance IA, flussi di rischio e preparazione delle evidenze per team B2B europei.',
     assuranceNote: 'Creato per le operazioni di governance e la preparazione delle evidenze. Non dichiariamo certificazioni, consulenza legale o garanzie di conformità.',
     featuresTitle: 'Funzionalità di governance IA',
     productTitle: 'Piattaforma',
@@ -100,14 +100,14 @@ const footerCopy: Record<Locale, FooterCopy> = {
     ],
   },
   de: {
-    tagline: 'KI-Governance, Risikoworkflows und Nachweisvorbereitung für europäische B2B-Teams.',
+    tagline: 'KI-Governance, Risikoabläufe und Nachweisvorbereitung für europäische B2B-Teams.',
     assuranceNote: 'Entwickelt für Governance-Prozesse und Nachweisvorbereitung. Wir behaupten keine Zertifizierung, Rechtsberatung oder Compliance-Garantie.',
     featuresTitle: 'KI-Governance-Funktionen',
     productTitle: 'Plattform',
     trustTitle: 'Vertrauen',
     featureNavLabel: 'Links zu KI-Governance-Funktionen',
     productNavLabel: 'Produktlinks',
-    trustNavLabel: 'Trust-Links',
+    trustNavLabel: 'Vertrauenslinks',
     productLinks: [
       { label: 'Plattform', href: '/#platform' },
       { label: 'Preise', href: '/pricing' },
@@ -126,14 +126,28 @@ function localizeHref(locale: Locale, href: string) {
   return `/${locale}${href}`;
 }
 
+function localizeFeatureLabel(locale: Locale, label: string) {
+  if (locale === 'pt') {
+    return label
+      .replace(/^Workflows de governança$/i, 'Fluxos de governação')
+      .replace(/^Documentação de compliance$/i, 'Documentação de conformidade');
+  }
+  return label;
+}
+
+const footerLinkClass = 'rounded-sm transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]';
+
 export function PublicFooter({ locale }: { locale: string }) {
   const activeLocale = getActiveLocale(locale);
   const copy = footerCopy[activeLocale];
   const featureLinks = getFeaturePages(activeLocale).map((page) => ({
-    label: page.navLabel,
+    label: localizeFeatureLabel(activeLocale, page.navLabel),
     href: `/${activeLocale}/features/${page.slug}`,
   }));
-  const trustLinks = getTrustCenterPages(activeLocale).map((page) => ({ label: page.navLabel, href: `/${page.slug}` }));
+  const trustLinks = getLocalizedTrustCenterPages(activeLocale).map((page) => ({
+    label: page.navLabel,
+    href: `/${page.slug}`,
+  }));
 
   return (
     <footer className="border-t border-white/10 bg-[#050505] px-6 py-12 text-sm text-white/55">
@@ -149,7 +163,7 @@ export function PublicFooter({ locale }: { locale: string }) {
           <ul className="mt-4 grid gap-x-5 gap-y-2.5 sm:grid-cols-2 xl:grid-cols-1">
             {featureLinks.map((link) => (
               <li key={link.href}>
-                <Link href={link.href} className="transition hover:text-white">{link.label}</Link>
+                <Link href={link.href} className={footerLinkClass}>{link.label}</Link>
               </li>
             ))}
           </ul>
@@ -160,7 +174,7 @@ export function PublicFooter({ locale }: { locale: string }) {
           <ul className="mt-4 space-y-2.5">
             {copy.productLinks.map((link) => (
               <li key={link.href}>
-                <Link href={localizeHref(activeLocale, link.href)} className="transition hover:text-white">{link.label}</Link>
+                <Link href={localizeHref(activeLocale, link.href)} className={footerLinkClass}>{link.label}</Link>
               </li>
             ))}
           </ul>
@@ -171,7 +185,7 @@ export function PublicFooter({ locale }: { locale: string }) {
           <ul className="mt-4 space-y-2.5">
             {trustLinks.map((link) => (
               <li key={link.href}>
-                <Link href={localizeHref(activeLocale, link.href)} className="transition hover:text-white">{link.label}</Link>
+                <Link href={localizeHref(activeLocale, link.href)} className={footerLinkClass}>{link.label}</Link>
               </li>
             ))}
           </ul>
