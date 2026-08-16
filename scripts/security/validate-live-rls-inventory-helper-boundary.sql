@@ -50,3 +50,9 @@ end
 $verify$;
 
 select 'live_rls_inventory_helper_boundary_passed' as status;
+
+-- This validator is the final read-only include in the shared forward
+-- reconciliation postcondition runner. Chain the Gap Analysis/remediation
+-- runtime proof here so isolated rehearsal and protected promotion execute the
+-- same fail-closed current-schema validation without a second workflow path.
+\ir validate-gap-remediation-runtime.sql
