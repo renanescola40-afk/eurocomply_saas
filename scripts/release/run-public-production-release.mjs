@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
+import { buildReleaseSubprocessEnv, stripProtectedReleaseEnv } from './release-subprocess-env.mjs';
 
 const releaseTarget = String(process.env.RELEASE_TARGET || 'public-production').trim().toLowerCase();
 const enterpriseRequested = releaseTarget === 'enterprise' || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true';
 
-function runNodeScript(path, envOverrides = {}) {
+function runNodeScript(path, envOverrides = {}, allowProtectedKeys = []) {
   const result = spawnSync(process.execPath, [path], {
-    env: { ...process.env, ...envOverrides },
+    env: buildReleaseSubprocessEnv({ ...process.env, ...envOverrides }, allowProtectedKeys),
     stdio: 'inherit',
   });
 
@@ -18,7 +19,11 @@ function runNodeScript(path, envOverrides = {}) {
 }
 
 function verifyRuntimeReleaseSha() {
-  runNodeScript('scripts/release/verify-runtime-release-sha.mjs');
+  runNodeScript(
+    'scripts/release/verify-runtime-release-sha.mjs',
+    {},
+    ['HEALTHCHECK_TOKEN'],
+  );
 }
 
 async function finalizeSecurityResponseEvidence() {
@@ -42,7 +47,12 @@ async function finalizeSecurityResponseEvidence() {
 }
 
 if (enterpriseRequested) {
+  // The preflight is the only enterprise parent-process consumer of protected
+  // configuration. Enterprise final validation consumes retained exact-SHA
+  // runtime evidence, so nested install/static/evidence subprocesses must not
+  // inherit provider credentials.
   await import('./check-enterprise-release-env.mjs');
+  stripProtectedReleaseEnv(process.env);
   await import('./run-public-production-release-v2.mjs');
   runNodeScript('scripts/release/write-enterprise-runtime-evidence.mjs', {
     FINAL_VALIDATION_IN_PROGRESS: 'false',
@@ -53,6 +63,7 @@ if (enterpriseRequested) {
 } else if (releaseTarget === 'public-production' || releaseTarget === 'production') {
   await import('./check-public-production-release-env.mjs');
   await import('./run-public-production-release-final.mjs');
+  stripProtectedReleaseEnv(process.env);
   runNodeScript('scripts/release/write-public-production-go-no-go-evidence.mjs');
   runNodeScript('scripts/release/validate-public-production-go-no-go-evidence.mjs');
   await finalizeSecurityResponseEvidence();

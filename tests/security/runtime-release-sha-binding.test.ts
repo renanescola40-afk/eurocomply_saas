@@ -118,7 +118,9 @@ describe('runtime release SHA binding', () => {
 
     expect(finalizerStart).toBeGreaterThan(-1);
     expect(finalizer).toContain('verifyRuntimeReleaseSha();');
-    expect(wrapper).toContain("runNodeScript('scripts/release/verify-runtime-release-sha.mjs');");
+    expect(wrapper).toContain('function verifyRuntimeReleaseSha()');
+    expect(wrapper).toContain("'scripts/release/verify-runtime-release-sha.mjs',");
+    expect(wrapper).toContain("['HEALTHCHECK_TOKEN'],");
     expect(enterpriseBlock).toContain("await import('./run-public-production-release-v2.mjs');");
     expect(enterpriseBlock).toContain('await finalizeSecurityResponseEvidence();');
     expect(publicBlock).toContain("await import('./run-public-production-release-final.mjs');");

@@ -3,6 +3,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
+import { buildReleaseSubprocessEnv } from './release-subprocess-env.mjs';
 
 const outputDir = process.env.RELEASE_VALIDATION_DIR || 'release-validation/public-production';
 const logDir = join(outputDir, 'logs');
@@ -26,7 +27,7 @@ const requiredEvidence = [
 ];
 
 const commands = [
-  ['00-npm-ci', 'npm ci', 'npm', ['ci']],
+  ['00-npm-ci', 'npm ci --ignore-scripts', 'npm', ['ci', '--ignore-scripts']],
   ['01-lint', 'npm run lint', 'npm', ['run', 'lint']],
   ['02-typecheck', 'npm run typecheck', 'npm', ['run', 'typecheck']],
   ['03-test', 'npm run test', 'npm', ['run', 'test']],
@@ -50,6 +51,13 @@ const commands = [
   ['21-release-operations', 'npm run security:release-operations', 'npm', ['run', 'security:release-operations']],
   ['22-p0-runtime-gap-strict', 'npm run security:p0-runtime-gap:strict', 'npm', ['run', 'security:p0-runtime-gap:strict']],
 ].map(([slug, label, command, args]) => ({ slug, label, command, args, critical: true }));
+
+const protectedKeysByStep = new Map([
+  ['08-security-rls-live', ['SUPABASE_SERVICE_ROLE_KEY']],
+  ['09-release-deployment-smoke', ['HEALTHCHECK_TOKEN']],
+  ['10-release-observability-smoke', ['HEALTHCHECK_TOKEN']],
+  ['11-release-rollback-dry-run', ['HEALTHCHECK_TOKEN']],
+]);
 
 mkdirSync(logDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
@@ -98,7 +106,7 @@ function buildStepEnv(step) {
   const isUnitTestStep = step.slug === '03-test';
   const isStaticSecurityCiStep = step.slug === '07-security-ci';
   const env = {
-    ...process.env,
+    ...buildReleaseSubprocessEnv(process.env, protectedKeysByStep.get(step.slug) || []),
     CI: 'true',
     NEXT_TELEMETRY_DISABLED: process.env.NEXT_TELEMETRY_DISABLED || '1',
     RELEASE_TARGET: releaseTarget,

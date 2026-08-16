@@ -338,7 +338,9 @@ describe('runtime security response evidence', () => {
       expect(finalization).toBeGreaterThan(strictRunner);
     }
 
-    expect(source).toContain("runNodeScript('scripts/release/verify-runtime-release-sha.mjs');");
+    expect(source).toContain('function verifyRuntimeReleaseSha()');
+    expect(source).toContain("'scripts/release/verify-runtime-release-sha.mjs',");
+    expect(source).toContain("['HEALTHCHECK_TOKEN'],");
     expect(source).toContain('recordSecurityResponseFinalEvidence({ passed: true })');
     expect(source).toContain('recordSecurityResponseFinalEvidence({ passed: false })');
     expect(source).not.toContain("runNodeScript('scripts/release/run-deployment-smoke.mjs');");
