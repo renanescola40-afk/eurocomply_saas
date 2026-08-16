@@ -19,6 +19,8 @@ const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const CANONICAL_PRODUCTION_URL = 'https://www.risckcomply.com';
 const CANONICAL_PRODUCTION_HOST = 'www.risckcomply.com';
 const WORKFLOW_PATH = '.github/workflows/production-runtime-proof.yml';
+const FIXTURE_NOW = new Date();
+const FIXTURE_GENERATED_AT = new Date(FIXTURE_NOW.getTime() - 5 * 60 * 1000).toISOString();
 
 function source() {
   return {
@@ -26,8 +28,8 @@ function source() {
       evidenceItem: 'deployment-smoke-validation',
       status: 'Complete',
       outcome: 'passed',
-      generatedAt: '2026-08-09T13:00:00.000Z',
-      reviewedAt: '2026-08-09T13:00:00.000Z',
+      generatedAt: FIXTURE_GENERATED_AT,
+      reviewedAt: FIXTURE_GENERATED_AT,
       reviewer: 'RISCK COMPLY protected runtime automation',
       failures: [],
       globalChecks: [
@@ -83,7 +85,7 @@ function source() {
 describe('production runtime scorecard evidence', () => {
   it('promotes exactly the five release checks from an exact production SHA', () => {
     const { smoke, sha } = source();
-    const evidence = buildProductionRuntimeScorecardEvidence(smoke, sha, SHA, '2026-08-09T13:00:00.000Z');
+    const evidence = buildProductionRuntimeScorecardEvidence(smoke, sha, SHA, FIXTURE_GENERATED_AT);
 
     expect(evidence.status).toBe('Complete');
     expect(evidence.outcome).toBe('passed');
@@ -126,7 +128,7 @@ describe('production runtime scorecard evidence', () => {
     expect(validator).toBeDefined();
     if (!validator) throw new Error('Deployment P0 validator missing');
     expect(validator(normalized, {
-      now: new Date('2026-08-09T13:05:00.000Z'),
+      now: FIXTURE_NOW,
       expectedRepository: REPOSITORY,
       expectedBranch: 'main',
       expectedCommitSha: SHA,
@@ -147,7 +149,7 @@ describe('production runtime scorecard evidence', () => {
   });
 
   it('selects only successful exact-main-SHA runs from the production workflow path', () => {
-    const run = { id: Number(RUN_ID), name: `Production runtime proof for ${SHA}`, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-08-09T13:00:00Z' };
+    const run = { id: Number(RUN_ID), name: `Production runtime proof for ${SHA}`, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: FIXTURE_GENERATED_AT };
     expect(selectExactShaRun([
       { ...run, id: 1, conclusion: 'failure' },
       { ...run, id: 2, head_branch: 'feature' },
