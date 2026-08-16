@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { getBillingFeatureLabel } from '@/lib/i18n/billing-feature-labels';
 import { commercialSurfaceCopy } from '@/lib/i18n/commercial-surface-copy';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
@@ -11,8 +12,8 @@ const loginPage = readFileSync(join(process.cwd(), 'src/app/[locale]/login/page.
 const signupPage = readFileSync(join(process.cwd(), 'src/app/[locale]/signup/page.tsx'), 'utf8');
 const aiSystemsPage = readFileSync(join(process.cwd(), 'src/app/[locale]/ai-systems/ai-systems-client.tsx'), 'utf8');
 const onboardingFlow = readFileSync(join(process.cwd(), 'src/components/onboarding/b2b-onboarding-flow.tsx'), 'utf8');
-const trustPage = readFileSync(join(process.cwd(), 'src/app/[locale]/trust/page.tsx'), 'utf8');
-const trustComponent = readFileSync(join(process.cwd(), 'src/components/marketing/trust-center-page.tsx'), 'utf8');
+const runtimeTrustRoute = readFileSync(join(process.cwd(), 'src/app/[locale]/[trustPage]/page.tsx'), 'utf8');
+const runtimeTrustComponent = readFileSync(join(process.cwd(), 'src/components/trust/trust-page.tsx'), 'utf8');
 const consentBanner = readFileSync(join(process.cwd(), 'src/components/analytics/AnalyticsConsentBanner.tsx'), 'utf8');
 const posthogClient = readFileSync(join(process.cwd(), 'src/lib/analytics/posthog-client.ts'), 'utf8');
 const upgradeCard = readFileSync(join(process.cwd(), 'src/components/billing/upgrade-required-card.tsx'), 'utf8');
@@ -57,10 +58,19 @@ describe('commercial surface locale continuity', () => {
     expect(signupPage).toContain('BILLING_PLANS.map((plan) =>');
     expect(pricingPage).toContain('plan.features.slice(0, 6).map');
     expect(checkoutPage).toContain('selectedPlan.features.slice(0, 6).map');
+    expect(pricingPage).toContain('getBillingFeatureLabel(locale, feature)');
+    expect(checkoutPage).toContain('getBillingFeatureLabel(locale, feature)');
     expect(pricingPage).toContain('getCommercialSurfaceCopy(locale).pricing');
     expect(checkoutPage).toContain('getCommercialSurfaceCopy(locale).checkout');
     expect(loginPage).toContain('getCommercialSurfaceCopy(locale).login');
     expect(signupPage).toContain('getCommercialSurfaceCopy(activeLocale).signup');
+
+    expect(getBillingFeatureLabel('pt', 'AI Inventory')).toBe('Inventário de IA');
+    expect(getBillingFeatureLabel('es', 'Risk Register')).toBe('Registro de riesgos');
+    expect(getBillingFeatureLabel('fr', 'Approval Workflows')).toBe('Flux d’approbation');
+    expect(getBillingFeatureLabel('it', 'Regulatory Monitoring')).toBe('Monitoraggio normativo');
+    expect(getBillingFeatureLabel('de', 'Advanced Reporting')).toBe('Erweiterte Berichte');
+    expect(getBillingFeatureLabel('en', 'AI Inventory')).toBe('AI Inventory');
   });
 
   it('keeps the compact purchase headers usable on small screens', () => {
@@ -79,12 +89,13 @@ describe('commercial surface locale continuity', () => {
     expect(consentBanner).toContain('{copy.allow}');
   });
 
-  it('renders the already-authored localized Trust Center overview instead of discarding it', () => {
-    expect(trustPage).toContain("localizedCopy={locale === 'en' ? undefined : copy}");
-    expect(trustComponent).toContain("localizedCopy && kind === 'trust' ? localizedLandingContent(localizedCopy)");
-    expect(trustComponent).toContain('lang="en"');
-    expect(trustComponent).toContain('copy.procurementItems');
-    expect(trustComponent).toContain('copy.evidenceItems');
+  it('validates the consolidated runtime Trust Center rather than the shadowed legacy route', () => {
+    expect(runtimeTrustRoute).toContain("getLocalizedTrustCenterPage(trustPage, locale)");
+    expect(runtimeTrustComponent).toContain('getLocalizedTrustCenterPages(locale)');
+    expect(runtimeTrustComponent).toContain('getTrustCenterUi(locale)');
+    expect(runtimeTrustComponent).toContain('ui.proofBadges.map');
+    expect(runtimeTrustComponent).toContain('{ui.lastUpdated}: {page.updated}');
+    expect(runtimeTrustComponent).not.toContain("['Security review', 'Procurement diligence', 'Evidence preparation']");
   });
 
   it('localizes onboarding chrome, steps, field labels and selection values for every configured locale', () => {
@@ -160,7 +171,7 @@ describe('commercial surface locale continuity', () => {
     expect(signupPage).toContain('focus-visible:ring-2');
     expect(onboardingFlow).toContain('focus-visible:ring-2');
     expect(aiSystemsPage).toContain('focus-visible:ring-2');
-    expect(trustComponent).toContain('focus-visible:ring-2');
+    expect(runtimeTrustComponent).toContain('focus-visible:ring-2');
     expect(upgradeCard).toContain('focus-visible:ring-2');
     expect(regulatoryJournalPage).toContain('focus-visible:ring-2');
   });
