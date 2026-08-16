@@ -58,6 +58,13 @@ const COMMERCIAL_PRODUCT_PERMISSIONS = new Set<OrganizationPermission>([
   'export_data',
 ]);
 
+const MINIMUM_PLAN_BY_PERMISSION: Partial<Record<OrganizationPermission, SubscriptionPlan>> = {
+  manage_vendors: 'professional',
+  read_vendors: 'professional',
+  manage_risks: 'professional',
+  read_risks: 'professional',
+};
+
 function isSupabaseUserId(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
@@ -112,7 +119,8 @@ async function assertCommercialProductAuthority({
   rawRole: string | null;
   minimumPlan?: SubscriptionPlan;
 }): Promise<PermissionCheckDenied | null> {
-  if (!COMMERCIAL_PRODUCT_PERMISSIONS.has(permission) && !minimumPlan) return null;
+  const requiredPlan = minimumPlan ?? MINIMUM_PLAN_BY_PERMISSION[permission];
+  if (!COMMERCIAL_PRODUCT_PERMISSIONS.has(permission) && !requiredPlan) return null;
 
   try {
     const { getOrganizationBillingAuthority, isPlanAtLeast } = await import('@/server/queries/subscription');
@@ -132,12 +140,12 @@ async function assertCommercialProductAuthority({
       return result;
     }
 
-    if (minimumPlan && !isPlanAtLeast(authority.plan, minimumPlan)) {
+    if (requiredPlan && !isPlanAtLeast(authority.plan, requiredPlan)) {
       const result: PermissionCheckDenied = {
         ok: false,
         status: 403,
         error: 'upgrade_required',
-        message: `${minimumPlan} plan or higher is required.`,
+        message: `${requiredPlan} plan or higher is required.`,
         role,
         rawRole,
         permission,
