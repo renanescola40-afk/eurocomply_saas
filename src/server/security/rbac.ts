@@ -1,5 +1,6 @@
 import { noStoreJson } from '@/server/security/no-store';
 import { normalizeOrganizationRole, roleHasPermission, type OrganizationPermission, type OrganizationRole } from '@/lib/security/permissions';
+import type { SubscriptionPlan } from '@/server/queries/subscription';
 
 export {
   getOrganizationPermissionMatrix,
@@ -102,32 +103,50 @@ async function assertCommercialProductAuthority({
   permission,
   role,
   rawRole,
+  minimumPlan,
 }: {
   userId: string;
   organizationId: string;
   permission: OrganizationPermission;
   role: OrganizationRole;
   rawRole: string | null;
+  minimumPlan?: SubscriptionPlan;
 }): Promise<PermissionCheckDenied | null> {
-  if (!COMMERCIAL_PRODUCT_PERMISSIONS.has(permission)) return null;
+  if (!COMMERCIAL_PRODUCT_PERMISSIONS.has(permission) && !minimumPlan) return null;
 
   try {
-    const { getOrganizationBillingAuthority } = await import('@/server/queries/subscription');
+    const { getOrganizationBillingAuthority, isPlanAtLeast } = await import('@/server/queries/subscription');
     const authority = await getOrganizationBillingAuthority(organizationId);
 
-    if (authority.licensed) return null;
+    if (!authority.licensed) {
+      const result: PermissionCheckDenied = {
+        ok: false,
+        status: 403,
+        error: 'subscription_required',
+        message: 'An active paid subscription or signed contract is required.',
+        role,
+        rawRole,
+        permission,
+      };
+      await recordRbacDeniedAuditEvent({ userId, organizationId, result });
+      return result;
+    }
 
-    const result: PermissionCheckDenied = {
-      ok: false,
-      status: 403,
-      error: 'subscription_required',
-      message: 'An active paid subscription or signed contract is required.',
-      role,
-      rawRole,
-      permission,
-    };
-    await recordRbacDeniedAuditEvent({ userId, organizationId, result });
-    return result;
+    if (minimumPlan && !isPlanAtLeast(authority.plan, minimumPlan)) {
+      const result: PermissionCheckDenied = {
+        ok: false,
+        status: 403,
+        error: 'upgrade_required',
+        message: `${minimumPlan} plan or higher is required.`,
+        role,
+        rawRole,
+        permission,
+      };
+      await recordRbacDeniedAuditEvent({ userId, organizationId, result });
+      return result;
+    }
+
+    return null;
   } catch {
     const result: PermissionCheckDenied = {
       ok: false,
@@ -193,10 +212,12 @@ export async function assertOrganizationPermission({
   userId,
   organizationId,
   permission,
+  minimumPlan,
 }: {
   userId: string;
   organizationId: string;
   permission: OrganizationPermission;
+  minimumPlan?: SubscriptionPlan;
 }): Promise<PermissionCheckResult> {
   const { membership, error } = await getOrganizationMembership(userId, organizationId);
 
@@ -246,6 +267,7 @@ export async function assertOrganizationPermission({
     permission,
     role,
     rawRole: membership.role,
+    minimumPlan,
   });
   if (commercialAuthorityDenied) return commercialAuthorityDenied;
 
