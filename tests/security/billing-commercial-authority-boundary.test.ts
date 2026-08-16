@@ -68,6 +68,7 @@ describe('billing commercial authority boundary', () => {
   it('keeps unlicensed organizations checkout eligible and sales-led plans out of self-serve', async () => {
     const source = await readFile(CHECKOUT_INTENT, 'utf8');
 
+    expect(source).toContain("starter: 'starter'");
     expect(source).toContain('const alreadyOnPlan = entitlements.licensed &&');
     expect(source).toContain('const priceId = plan.salesLed ? undefined : getStripePriceId(plan);');
     expect(source).toContain("? 'contact_sales'");
