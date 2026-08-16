@@ -9,7 +9,7 @@ Every production secret-bearing environment used by the release proof plane must
 - administrator bypass is disabled;
 - at least one required deployment reviewer is configured;
 - deployment is restricted to protected branches only;
-- the workflow is dispatched from `main` and bound to the exact current `main` SHA before the governance lookup;
+- the workflow is bound to the exact current `main` SHA before the governance lookup;
 - the governance preflight itself contains no `secrets.*` references.
 
 The canonical validator is `scripts/security/check-github-environment-governance.mjs`.
@@ -18,7 +18,9 @@ The canonical validator is `scripts/security/check-github-environment-governance
 
 ### `Production`
 
-Used by Production Runtime Proof, Production Provider Runtime Proof, Audit Chain Runtime Proof and Step-Up Runtime Proof. It must be hardened before those jobs may load healthcheck, Supabase, Vercel, Stripe, Sentry or signing credentials.
+Used by Production Runtime Proof, Production Provider Runtime Proof, Audit Chain Runtime Proof, Step-Up Runtime Proof and the final Enterprise Production Gate runtime job. It must be hardened before those jobs may load healthcheck, Supabase, Vercel, Stripe, Sentry, malware-scanner, rollback or signing credentials.
+
+Pull-request contract validation remains secret-free and does not require the protected environment. On `main`, the final Enterprise Production Gate now requires its governance preflight in addition to quality/security/build and production-like E2E before the secret-bearing runtime job can start.
 
 ### `production-recovery`
 

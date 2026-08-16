@@ -36,6 +36,31 @@ describe('protected runtime evidence environment governance', () => {
     });
   }
 
+  it('Enterprise Production Gate proves Production governance before final release secrets', () => {
+    const workflow = read('.github/workflows/enterprise-production-gate.yml');
+    const governanceJob = workflow.indexOf('  production-environment-governance:');
+    const contractBoundary = workflow.indexOf('  production-release-contract:');
+    const protectedBoundary = workflow.indexOf('  production-release-validation:');
+
+    expect(governanceJob).toBeGreaterThan(-1);
+    expect(contractBoundary).toBeGreaterThan(governanceJob);
+    expect(protectedBoundary).toBeGreaterThan(contractBoundary);
+
+    const preflight = workflow.slice(governanceJob, contractBoundary);
+    expect(preflight).toContain('GITHUB_TOKEN: ${{ github.token }}');
+    expect(preflight).toContain('GITHUB_ENVIRONMENT_NAME: Production');
+    expect(preflight).toContain("REQUIRE_PROTECTED_BRANCHES: 'true'");
+    expect(preflight).toContain('node scripts/security/check-github-environment-governance.mjs');
+    expect(preflight).toContain('test "$(git rev-parse HEAD)" = "$TARGET_SHA"');
+    expect(preflight).not.toMatch(/secrets\./);
+
+    const protectedJobText = workflow.slice(protectedBoundary);
+    expect(protectedJobText).toContain(
+      'needs: [quality-security-build, e2e-production-like, production-environment-governance]',
+    );
+    expect(protectedJobText).toContain('environment: Production');
+  });
+
   it('Recovery requires a pre-existing governed production-recovery environment before secrets or rollback', () => {
     const workflow = read('.github/workflows/recovery-resilience-proof.yml');
     const governanceJob = workflow.indexOf('  recovery-environment-governance:');
