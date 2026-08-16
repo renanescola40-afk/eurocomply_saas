@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest';
 
 const ONBOARDING_PAGE = new URL('../../src/app/[locale]/onboarding/page.tsx', import.meta.url);
 const ONBOARDING_BOUNDARY = new URL('../../src/components/onboarding/onboarding-runtime-boundary.tsx', import.meta.url);
+const BILLING_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/billing/page.tsx', import.meta.url);
 const BILLING_VIEW = new URL('../../src/app/[locale]/dashboard/organizations/billing/billing-page-view.tsx', import.meta.url);
+const BILLING_INTENT_BANNER = new URL('../../src/app/[locale]/dashboard/organizations/billing/billing-plan-intent-banner.tsx', import.meta.url);
 const DASHBOARD_LAYOUT = new URL('../../src/app/[locale]/dashboard/layout.tsx', import.meta.url);
 const CHECKOUT_INTENT = new URL('../../src/app/api/billing/checkout-intent/route.ts', import.meta.url);
 
@@ -33,6 +35,27 @@ describe('post-billing commercial customer journey closure', () => {
     expect(page).toContain('if (authority.licensed)');
     expect(page).toContain('redirect(`/${safeLocale}/dashboard`);');
     expect(page).toContain('redirect(getBillingRecoveryPath(safeLocale, resolvedSearchParams.plan));');
+  });
+
+  it('consumes the selected onboarding plan without treating query intent as commercial authority', async () => {
+    const [page, banner] = await Promise.all([
+      readFile(BILLING_PAGE, 'utf8'),
+      readFile(BILLING_INTENT_BANNER, 'utf8'),
+    ]);
+
+    expect(page).toContain('plan?: string');
+    expect(page).toContain('const selectedPlan = getBillingPlan(resolvedSearchParams.plan);');
+    expect(page).toContain('<BillingPlanIntentBanner');
+    expect(page).toContain('selectedPlan={selectedPlan}');
+
+    expect(banner).toContain("action=\"checkout\"");
+    expect(banner).toContain('planId={selectedPlan.id}');
+    expect(banner).toContain('selectedPlan.salesLed ?');
+    expect(banner).toContain("href={`/${locale}/contact?intent=sales&plan=${selectedPlan.id}&source=onboarding`}");
+    expect(banner).toContain('!canManageBilling ?');
+    expect(banner).toContain('aria-disabled="true"');
+    expect(banner).toContain('Commercial access is granted only after the normal checkout or sales-led activation completes.');
+    expect(banner).not.toContain('licensed=true');
   });
 
   it('keeps the fail-closed commercial authority boundary intact while allowing recovery', async () => {
