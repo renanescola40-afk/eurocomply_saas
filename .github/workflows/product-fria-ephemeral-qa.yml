@@ -90,31 +90,35 @@ jobs:
           applied_count="$(psql "$RECOVERY_ISOLATED_DATABASE_URL" --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1 --command 'select count(*) from supabase_migrations.schema_migrations;' | tr -d '[:space:]')"
           [[ "$applied_count" =~ ^[0-9]+$ ]]
           test "$applied_count" -gt 0
+          echo "FRIA_SCHEMA_MIGRATION_COUNT=$applied_count" >> "$GITHUB_ENV"
 
-      - name: Promote disposable database to local Supabase Auth and REST stack
+      - name: Promote preserved exact-SHA database to local Supabase Auth and REST stack
         shell: bash
         run: |
           set -euo pipefail
           test -n "${RECOVERY_EPHEMERAL_WORKDIR:-}"
+          test -n "${RECOVERY_ISOLATED_DATABASE_URL:-}"
+          test "${FRIA_SCHEMA_MIGRATION_COUNT:-0}" -gt 0
+
+          # The recovery helper intentionally starts only Postgres via `supabase db start`.
+          # Stop without --no-backup so Docker volumes/data are preserved, then start the
+          # same project as a full local Supabase stack (Auth + PostgREST + API gateway).
+          supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" stop
           supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" start
-          supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" status -o env \
-            --override-name api.url=NEXT_PUBLIC_SUPABASE_URL \
-            --override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_ANON_KEY \
-            --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
-            > "$RUNNER_TEMP/fria-supabase-status.env"
+
+          promoted_count="$(psql "$RECOVERY_ISOLATED_DATABASE_URL" --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1 --command 'select count(*) from supabase_migrations.schema_migrations;' | tr -d '[:space:]')"
+          [[ "$promoted_count" =~ ^[0-9]+$ ]]
+          test "$promoted_count" = "$FRIA_SCHEMA_MIGRATION_COUNT"
+
+          supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" status -o env > "$RUNNER_TEMP/fria-supabase-status.env"
 
       - name: Export masked loopback Supabase runtime configuration
         shell: bash
         run: |
           set -euo pipefail
           STATUS_FILE="$RUNNER_TEMP/fria-supabase-status.env" python - <<'PY'
-          import base64
-          import hashlib
-          import hmac
-          import json
           import os
           import shlex
-          import time
           from pathlib import Path
           from urllib.parse import urlparse
 
@@ -141,41 +145,31 @@ jobs:
                       return value
               return ''
 
-          def b64url(payload):
-              return base64.urlsafe_b64encode(payload).rstrip(b'=').decode('ascii')
-
-          def local_role_key(secret, role):
-              header = b64url(json.dumps({'alg': 'HS256', 'typ': 'JWT'}, separators=(',', ':')).encode('utf-8'))
-              payload = b64url(json.dumps({
-                  'iss': 'supabase-demo',
-                  'role': role,
-                  'exp': int(time.time()) + 7200,
-              }, separators=(',', ':')).encode('utf-8'))
-              signing_input = f'{header}.{payload}'
-              signature = b64url(hmac.new(secret.encode('utf-8'), signing_input.encode('ascii'), hashlib.sha256).digest())
-              return f'{signing_input}.{signature}'
-
-          api_url = first_value('NEXT_PUBLIC_SUPABASE_URL', 'API_URL', 'SUPABASE_URL')
-          anon_key = first_value('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'ANON_KEY', 'SUPABASE_ANON_KEY')
-          service_role = first_value('SUPABASE_SERVICE_ROLE_KEY', 'SERVICE_ROLE_KEY')
-          jwt_secret = first_value('JWT_SECRET', 'SUPABASE_JWT_SECRET')
+          api_url = first_value('API_URL', 'SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL')
+          anon_key = first_value(
+              'ANON_KEY',
+              'SUPABASE_ANON_KEY',
+              'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+              'PUBLISHABLE_KEY',
+              'SUPABASE_PUBLISHABLE_KEY',
+          )
+          service_role = first_value(
+              'SERVICE_ROLE_KEY',
+              'SUPABASE_SERVICE_ROLE_KEY',
+              'SECRET_KEY',
+              'SUPABASE_SECRET_KEY',
+          )
 
           host = urlparse(api_url).hostname
           if host not in {'127.0.0.1', 'localhost', '::1'}:
               safe_keys = ','.join(sorted(values))
               raise SystemExit(f'Local Supabase API URL is not loopback; available keys: {safe_keys}')
-
-          if (not anon_key or not service_role) and jwt_secret:
-              anon_key = anon_key or local_role_key(jwt_secret, 'anon')
-              service_role = service_role or local_role_key(jwt_secret, 'service_role')
-
           if not anon_key or not service_role:
               safe_keys = ','.join(sorted(values))
-              raise SystemExit(f'Local Supabase status did not expose role keys or JWT secret; available keys: {safe_keys}')
+              raise SystemExit(f'Local full-stack Supabase status did not expose required runtime keys; available keys: {safe_keys}')
 
-          for value in (anon_key, service_role, jwt_secret):
-              if value:
-                  print(f'::add-mask::{value}')
+          for value in (anon_key, service_role):
+              print(f'::add-mask::{value}')
 
           exports = {
               'NEXT_PUBLIC_SUPABASE_URL': api_url,
