@@ -6,9 +6,9 @@ import { buildReleaseSubprocessEnv, stripProtectedReleaseEnv } from './release-s
 const releaseTarget = String(process.env.RELEASE_TARGET || 'public-production').trim().toLowerCase();
 const enterpriseRequested = releaseTarget === 'enterprise' || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true';
 
-function runNodeScript(path, envOverrides = {}) {
+function runNodeScript(path, envOverrides = {}, allowProtectedKeys = []) {
   const result = spawnSync(process.execPath, [path], {
-    env: buildReleaseSubprocessEnv({ ...process.env, ...envOverrides }),
+    env: buildReleaseSubprocessEnv({ ...process.env, ...envOverrides }, allowProtectedKeys),
     stdio: 'inherit',
   });
 
@@ -19,7 +19,11 @@ function runNodeScript(path, envOverrides = {}) {
 }
 
 function verifyRuntimeReleaseSha() {
-  runNodeScript('scripts/release/verify-runtime-release-sha.mjs');
+  runNodeScript(
+    'scripts/release/verify-runtime-release-sha.mjs',
+    {},
+    ['HEALTHCHECK_TOKEN'],
+  );
 }
 
 async function finalizeSecurityResponseEvidence() {
