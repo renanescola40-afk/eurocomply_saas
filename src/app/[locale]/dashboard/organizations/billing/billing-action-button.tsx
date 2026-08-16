@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 const STEP_UP_TOKEN_HEADER = 'x-eurocomply-step-up-token';
 const BILLING_IDEMPOTENCY_HEADER = 'Idempotency-Key';
 const DASHBOARD_BILLING_RETURN_PATH = '/dashboard/organizations/billing';
+const PUBLIC_BILLING_ERROR_CODE = 'action_failed';
 
 type BillingActionButtonProps = {
   action: 'checkout' | 'portal';
@@ -32,7 +33,7 @@ type StepUpChallenge = {
   message?: string;
 };
 
-function billingErrorRedirect(locale: string, message: string, errorReturnHref?: string): never {
+function billingErrorRedirect(locale: string, errorReturnHref?: string): never {
   if (errorReturnHref) {
     window.location.href = errorReturnHref;
     throw new Error('redirecting_to_billing_error');
@@ -45,7 +46,7 @@ function billingErrorRedirect(locale: string, message: string, errorReturnHref?:
     throw new Error('redirecting_to_billing_error');
   }
 
-  window.location.href = `/${locale}/dashboard/organizations/billing?billing_error=${encodeURIComponent(message)}`;
+  window.location.href = `/${locale}/dashboard/organizations/billing?billing_error=${PUBLIC_BILLING_ERROR_CODE}`;
   throw new Error('redirecting_to_billing_error');
 }
 
@@ -172,13 +173,12 @@ export function BillingActionButton({ action, locale, planId, disabled, children
       }
 
       if (!response.ok || typeof json.url !== 'string') {
-        billingErrorRedirect(locale, String(json.error ?? 'Billing action could not be completed.'), errorReturnHref);
+        billingErrorRedirect(locale, errorReturnHref);
       }
 
       window.location.assign(json.url);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Billing action could not be completed.';
-      billingErrorRedirect(locale, message, errorReturnHref);
+    } catch {
+      billingErrorRedirect(locale, errorReturnHref);
     } finally {
       setLoading(false);
     }
