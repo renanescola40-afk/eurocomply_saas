@@ -4,21 +4,27 @@ import { describe, expect, it } from 'vitest';
 const workflow = readFileSync('.github/workflows/product-fria-ephemeral-qa.yml', 'utf8');
 
 describe('Product FRIA ephemeral runtime workflow', () => {
-  it('asks Supabase CLI for the application runtime variable names explicitly', () => {
-    expect(workflow).toContain('--override-name api.url=NEXT_PUBLIC_SUPABASE_URL');
-    expect(workflow).toContain('--override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_ANON_KEY');
-    expect(workflow).toContain('--override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY');
+  it('promotes the reviewed DB-only runtime by preserving its volume before starting the full stack', () => {
+    const stop = 'supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" stop';
+    const start = 'supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" start';
+
+    expect(workflow).toContain('FRIA_SCHEMA_MIGRATION_COUNT');
+    expect(workflow).toContain(stop);
+    expect(workflow).toContain(start);
+    expect(workflow.indexOf(stop)).toBeLessThan(workflow.indexOf(start));
+    expect(workflow).not.toContain('supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" stop --no-backup');
+    expect(workflow).toContain('test "$promoted_count" = "$FRIA_SCHEMA_MIGRATION_COUNT"');
   });
 
-  it('accepts legacy local role keys and derives disposable HS256 role keys only from the local JWT secret when needed', () => {
-    expect(workflow).toContain("first_value('NEXT_PUBLIC_SUPABASE_URL', 'API_URL', 'SUPABASE_URL')");
-    expect(workflow).toContain("first_value('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'ANON_KEY', 'SUPABASE_ANON_KEY')");
-    expect(workflow).toContain("first_value('SUPABASE_SERVICE_ROLE_KEY', 'SERVICE_ROLE_KEY')");
-    expect(workflow).toContain("first_value('JWT_SECRET', 'SUPABASE_JWT_SECRET')");
-    expect(workflow).toContain("local_role_key(jwt_secret, 'anon')");
-    expect(workflow).toContain("local_role_key(jwt_secret, 'service_role')");
-    expect(workflow).toContain("'alg': 'HS256'");
-    expect(workflow).toContain("'iss': 'supabase-demo'");
+  it('reads real full-stack status keys rather than deriving or hardcoding API credentials', () => {
+    expect(workflow).toContain('status -o env > "$RUNNER_TEMP/fria-supabase-status.env"');
+    expect(workflow).toContain("first_value('API_URL', 'SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL')");
+    expect(workflow).toContain("'ANON_KEY'");
+    expect(workflow).toContain("'PUBLISHABLE_KEY'");
+    expect(workflow).toContain("'SERVICE_ROLE_KEY'");
+    expect(workflow).toContain("'SECRET_KEY'");
+    expect(workflow).not.toContain('local_role_key');
+    expect(workflow).not.toContain("'alg': 'HS256'");
   });
 
   it('keeps the runtime loopback-only and masks credentials before exporting them', () => {
