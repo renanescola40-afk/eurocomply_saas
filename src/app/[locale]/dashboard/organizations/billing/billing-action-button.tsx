@@ -33,6 +33,46 @@ type StepUpChallenge = {
   message?: string;
 };
 
+type StepUpCopy = {
+  chooseFactor: string;
+  enterCode: string;
+};
+
+function getStepUpCopy(locale: string): StepUpCopy {
+  switch (locale) {
+    case 'pt':
+      return {
+        chooseFactor: 'Escolha um método de autenticação multifator para continuar a faturação:',
+        enterCode: 'Introduza o código de autenticação multifator para continuar a faturação.',
+      };
+    case 'es':
+      return {
+        chooseFactor: 'Elige un método de autenticación multifactor para continuar con la facturación:',
+        enterCode: 'Introduce el código de autenticación multifactor para continuar con la facturación.',
+      };
+    case 'fr':
+      return {
+        chooseFactor: 'Choisissez une méthode d’authentification multifacteur pour continuer la facturation :',
+        enterCode: 'Saisissez le code d’authentification multifacteur pour continuer la facturation.',
+      };
+    case 'it':
+      return {
+        chooseFactor: 'Scegli un metodo di autenticazione a più fattori per continuare con la fatturazione:',
+        enterCode: 'Inserisci il codice di autenticazione a più fattori per continuare con la fatturazione.',
+      };
+    case 'de':
+      return {
+        chooseFactor: 'Wählen Sie eine Methode für die Mehrfaktor-Authentifizierung, um mit der Abrechnung fortzufahren:',
+        enterCode: 'Geben Sie den Code für die Mehrfaktor-Authentifizierung ein, um mit der Abrechnung fortzufahren.',
+      };
+    default:
+      return {
+        chooseFactor: 'Choose an MFA method to continue billing:',
+        enterCode: 'Enter your MFA code to continue billing.',
+      };
+  }
+}
+
 function billingErrorRedirect(locale: string, errorReturnHref?: string): never {
   if (errorReturnHref) {
     window.location.href = errorReturnHref;
@@ -54,7 +94,7 @@ async function readJson(response: Response): Promise<ApiJson> {
   return response.json().catch(() => ({}));
 }
 
-function chooseMfaFactor(challenge: StepUpChallenge) {
+function chooseMfaFactor(challenge: StepUpChallenge, copy: StepUpCopy) {
   const factors = challenge.factors ?? [];
   if (challenge.factorId) return challenge.factorId;
   if (factors.length === 1) return factors[0].id;
@@ -62,7 +102,7 @@ function chooseMfaFactor(challenge: StepUpChallenge) {
   const factorList = factors
     .map((factor, index) => `${index + 1}. ${factor.name ?? factor.type}`)
     .join('\n');
-  const selection = window.prompt(`Choose an MFA factor for billing step-up:\n${factorList}`);
+  const selection = window.prompt(`${copy.chooseFactor}\n${factorList}`);
   const selectedIndex = Number(selection) - 1;
 
   return factors[selectedIndex]?.id ?? null;
@@ -98,7 +138,8 @@ async function verifyStepUpChallenge(body: Record<string, unknown>) {
   return json.token;
 }
 
-async function getBillingStepUpToken() {
+async function getBillingStepUpToken(locale: string) {
+  const copy = getStepUpCopy(locale);
   const initialChallenge = await createStepUpChallenge({ action: 'manage_billing' });
 
   if (initialChallenge.provider === 'enterprise_idp' || initialChallenge.requiresCode === false) {
@@ -108,11 +149,11 @@ async function getBillingStepUpToken() {
     });
   }
 
-  const factorId = chooseMfaFactor(initialChallenge);
+  const factorId = chooseMfaFactor(initialChallenge, copy);
   if (!factorId) throw new Error('MFA factor selection is required for billing step-up.');
 
   const providerChallenge = await createStepUpChallenge({ action: 'manage_billing', factorId });
-  const code = window.prompt('Enter your MFA code to continue billing.');
+  const code = window.prompt(copy.enterCode);
   if (!code) throw new Error('MFA code is required for billing step-up.');
 
   return verifyStepUpChallenge({
@@ -168,7 +209,7 @@ export function BillingActionButton({ action, locale, planId, disabled, children
       let { response, json } = await requestBillingAction({ action, locale, planId, idempotencyKey });
 
       if (response.status === 403 && json.error === 'step_up_required') {
-        const stepUpToken = await getBillingStepUpToken();
+        const stepUpToken = await getBillingStepUpToken(locale);
         ({ response, json } = await requestBillingAction({ action, locale, planId, idempotencyKey, stepUpToken }));
       }
 
