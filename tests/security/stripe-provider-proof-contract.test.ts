@@ -148,14 +148,23 @@ describe('Stripe provider proof contract', () => {
     expect(writer).not.toContain('billingPortalConfigurationId:');
   });
 
-  it('requires exact main-sha protected provenance with read-only permissions', () => {
+  it('requires exact current-main protected provenance with read-only permissions', () => {
     expect(workflow).toContain('workflow_dispatch:');
-    expect(workflow).toContain('environment: production');
+    expect(workflow).toContain('environment: Production');
+    expect(workflow).toContain('production-environment-governance:');
+    expect(workflow).toContain('needs: production-environment-governance');
+    expect(workflow).toContain('GITHUB_ENVIRONMENT_NAME: Production');
+    expect(workflow).toContain("REQUIRE_PROTECTED_BRANCHES: 'true'");
+    expect(workflow).toContain('node scripts/security/check-github-environment-governance.mjs');
     expect(workflow).toContain('contents: read');
     expect(workflow).toContain('persist-credentials: false');
-    expect(workflow).toContain('fetch-depth: 0');
-    expect(workflow).toContain('git merge-base --is-ancestor "${RELEASE_SHA,,}" origin/main');
-    expect(workflow).toContain('git checkout --detach "${RELEASE_SHA,,}"');
+    expect(workflow).toContain('test "$GITHUB_REF_NAME" = "main"');
+    expect(workflow).toContain('test "$GITHUB_SHA" = "$TARGET_SHA"');
+    expect(workflow).toContain('/commits/main');
+    expect(workflow).toContain('ref: ${{ inputs.release_sha }}');
+    expect(workflow).toContain('Revalidate exact current main after environment approval');
+    expect(workflow).not.toContain('git merge-base --is-ancestor');
+    expect(workflow).not.toContain('git checkout --detach');
     expect(workflow).toContain('STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ vars.STRIPE_PRICE_ESSENTIAL_MONTHLY }}');
     expect(workflow).toContain('STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ vars.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}');
     expect(workflow).toContain('STRIPE_PRICE_BUSINESS_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_MONTHLY }}');
