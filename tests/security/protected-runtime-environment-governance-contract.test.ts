@@ -19,6 +19,7 @@ describe('protected runtime evidence environment governance', () => {
       const governanceJob = workflow.indexOf('  production-environment-governance:');
       const protectedBoundary = workflow.indexOf(`  ${protectedJob}:`);
 
+      expect(workflow).toContain('permissions:\n  contents: read\n  actions: read');
       expect(governanceJob).toBeGreaterThan(-1);
       expect(protectedBoundary).toBeGreaterThan(governanceJob);
 
@@ -42,6 +43,8 @@ describe('protected runtime evidence environment governance', () => {
     const contractBoundary = workflow.indexOf('  production-release-contract:');
     const protectedBoundary = workflow.indexOf('  production-release-validation:');
 
+    expect(workflow).toContain('permissions:\n  contents: read');
+    expect(workflow).toContain('  actions: read');
     expect(governanceJob).toBeGreaterThan(-1);
     expect(contractBoundary).toBeGreaterThan(governanceJob);
     expect(protectedBoundary).toBeGreaterThan(contractBoundary);
@@ -66,6 +69,7 @@ describe('protected runtime evidence environment governance', () => {
     const governanceJob = workflow.indexOf('  recovery-environment-governance:');
     const protectedBoundary = workflow.indexOf('  recovery-proof:');
 
+    expect(workflow).toContain('permissions:\n  contents: read\n  actions: read');
     expect(governanceJob).toBeGreaterThan(-1);
     expect(protectedBoundary).toBeGreaterThan(governanceJob);
 
