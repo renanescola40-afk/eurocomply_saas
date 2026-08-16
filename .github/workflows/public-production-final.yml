@@ -97,20 +97,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: Production
     timeout-minutes: 90
-    env:
-      HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-      STRIPE_PRICE_STARTER_MONTHLY: ${{ vars.STRIPE_PRICE_STARTER_MONTHLY || secrets.STRIPE_PRICE_STARTER_MONTHLY }}
-      STRIPE_PRICE_GROWTH_MONTHLY: ${{ vars.STRIPE_PRICE_GROWTH_MONTHLY || secrets.STRIPE_PRICE_GROWTH_MONTHLY }}
-      STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ vars.STRIPE_PRICE_ENTERPRISE_MONTHLY || secrets.STRIPE_PRICE_ENTERPRISE_MONTHLY }}
-      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-      NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-
     steps:
       - name: Revalidate exact current main after environment approval
         shell: bash
@@ -170,6 +156,19 @@ jobs:
           grep -Fq 'validatePublicProductionFinalRuntimeEvidence' scripts/enterprise/fetch-public-production-final-evidence.mjs
 
       - name: Run public production final gate
+        env:
+          HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PRICE_STARTER_MONTHLY: ${{ vars.STRIPE_PRICE_STARTER_MONTHLY || secrets.STRIPE_PRICE_STARTER_MONTHLY }}
+          STRIPE_PRICE_GROWTH_MONTHLY: ${{ vars.STRIPE_PRICE_GROWTH_MONTHLY || secrets.STRIPE_PRICE_GROWTH_MONTHLY }}
+          STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ vars.STRIPE_PRICE_ENTERPRISE_MONTHLY || secrets.STRIPE_PRICE_ENTERPRISE_MONTHLY }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
         run: npm run release:production-final
 
       - name: Capture exact-SHA GitHub checks for final scorecard
