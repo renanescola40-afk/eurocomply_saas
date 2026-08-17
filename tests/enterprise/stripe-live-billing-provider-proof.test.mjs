@@ -14,6 +14,7 @@ const portalContract = {
   schema: 'risck-comply.stripe-billing-portal-contract.v1',
   configurationId: 'bpc_reviewed',
 };
+const portalConfigurationId = 'bpc_reviewed';
 
 function jsonResponse(value, status = 200) {
   return new Response(JSON.stringify(value), {
@@ -128,6 +129,7 @@ test('passes only with canonical monthly+annual prices, production bindings, rev
   const proof = await buildStripeLiveBillingProviderProof({
     targetSha: TARGET_SHA,
     secret: 'sk_live_redacted',
+    portalConfigurationId,
     catalog,
     portalContract,
     portalPolicy,
@@ -160,6 +162,7 @@ test('fails closed when an annual canonical binding is absent even if legacy ali
   const proof = await buildStripeLiveBillingProviderProof({
     targetSha: TARGET_SHA,
     secret: 'sk_live_redacted',
+    portalConfigurationId,
     catalog,
     portalContract,
     portalPolicy,
@@ -176,6 +179,7 @@ test('fails closed until the reviewed Billing Portal configuration is pinned', a
   const proof = await buildStripeLiveBillingProviderProof({
     targetSha: TARGET_SHA,
     secret: 'sk_live_redacted',
+    portalConfigurationId,
     catalog,
     portalContract: { ...portalContract, configurationId: null },
     portalPolicy,
@@ -187,11 +191,36 @@ test('fails closed until the reviewed Billing Portal configuration is pinned', a
   assert.equal(proof.checks.billingPortalConfigurationPinnedAndPolicyMatched, false);
 });
 
+test('fails closed when runtime Portal id differs from the reviewed contract without sending file data outbound', async () => {
+  installProviderMock();
+  const providerFetch = globalThis.fetch;
+  const outbound = [];
+  globalThis.fetch = async (url, init) => {
+    outbound.push(String(url));
+    return providerFetch(url, init);
+  };
+
+  const proof = await buildStripeLiveBillingProviderProof({
+    targetSha: TARGET_SHA,
+    secret: 'sk_live_redacted',
+    portalConfigurationId: 'bpc_runtimeDifferent',
+    catalog,
+    portalContract,
+    portalPolicy,
+    providerTargets,
+  });
+
+  assert.equal(proof.status, 'Open');
+  assert.equal(proof.portal.pinned, false);
+  assert.equal(outbound.some((url) => url.includes('/v1/billing_portal/configurations/')), false);
+});
+
 test('fails closed when the lifecycle webhook is missing a required event', async () => {
   installProviderMock({ webhookEvents: ['invoice.paid'] });
   const proof = await buildStripeLiveBillingProviderProof({
     targetSha: TARGET_SHA,
     secret: 'sk_live_redacted',
+    portalConfigurationId,
     catalog,
     portalContract,
     portalPolicy,
@@ -208,6 +237,7 @@ test('fails closed outside exact production context', async () => {
   const proof = await buildStripeLiveBillingProviderProof({
     targetSha: TARGET_SHA,
     secret: 'sk_live_redacted',
+    portalConfigurationId,
     catalog,
     portalContract,
     portalPolicy,
@@ -237,6 +267,7 @@ test('fails closed without sending repository-controlled Vercel target data outb
   const proof = await buildStripeLiveBillingProviderProof({
     targetSha: TARGET_SHA,
     secret: 'sk_live_redacted',
+    portalConfigurationId,
     catalog,
     portalContract,
     portalPolicy,
