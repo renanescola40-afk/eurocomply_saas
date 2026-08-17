@@ -17,9 +17,10 @@ function jsonResponse(value, status = 200) {
 beforeEach(() => {
   process.env.GITHUB_REF_NAME = 'main';
   process.env.PROVIDER_PROOF_ENVIRONMENT = 'production';
-  process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY = 'price_essential';
-  process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY = 'price_professional';
-  process.env.STRIPE_PRICE_BUSINESS_MONTHLY = 'price_business';
+  process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY = 'price_essential_monthly';
+  process.env.STRIPE_PRICE_ESSENTIAL_ANNUAL = 'price_essential_annual';
+  process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY = 'price_professional_monthly';
+  process.env.STRIPE_PRICE_PROFESSIONAL_ANNUAL = 'price_professional_annual';
   process.env.STRIPE_PRICE_STARTER_MONTHLY = 'price_legacy_starter';
   process.env.STRIPE_PRICE_GROWTH_MONTHLY = 'price_legacy_growth';
 });
@@ -32,75 +33,91 @@ afterEach(() => {
   for (const [key, value] of Object.entries(originalEnv)) process.env[key] = value;
 });
 
-function installStripeMock({ professionalAmount = 14900 } = {}) {
-  const amounts = new Map([
-    ['price_essential', 4900],
-    ['price_professional', professionalAmount],
-    ['price_business', 39900],
+function installStripeMock({ professionalAnnualAmount = 149000 } = {}) {
+  const prices = new Map([
+    ['price_essential_monthly', { amount: 4900, interval: 'month' }],
+    ['price_essential_annual', { amount: 49000, interval: 'year' }],
+    ['price_professional_monthly', { amount: 14900, interval: 'month' }],
+    ['price_professional_annual', { amount: professionalAnnualAmount, interval: 'year' }],
   ]);
   globalThis.fetch = async (url) => {
     const value = String(url);
     if (value === 'https://api.stripe.com/v1/account') return jsonResponse({ id: 'acct_redacted' });
     const priceId = decodeURIComponent(value.split('/').pop().split('?')[0]);
-    if (!amounts.has(priceId)) return jsonResponse({ error: 'not_found' }, 404);
+    const price = prices.get(priceId);
+    if (!price) return jsonResponse({ error: 'not_found' }, 404);
     return jsonResponse({
+      livemode: true,
       active: true,
       type: 'recurring',
-      recurring: { interval: 'month' },
+      recurring: { interval: price.interval },
       currency: 'eur',
-      unit_amount: amounts.get(priceId),
+      unit_amount: price.amount,
       product: { active: true },
     });
   };
 }
 
-test('passes only when canonical Essential Professional and Business prices match the approved catalog', async () => {
+test('passes only when canonical Essential and Professional monthly+annual prices match the approved catalog', async () => {
   installStripeMock();
-  const proof = await buildStripeCommercialCatalogProof({ targetSha: TARGET_SHA, secret: 'sk_test_redacted' });
+  const proof = await buildStripeCommercialCatalogProof({ targetSha: TARGET_SHA, secret: 'sk_live_redacted' });
 
   assert.equal(proof.status, 'Complete');
   assert.equal(proof.outcome, 'passed');
-  assert.equal(proof.checks.allCanonicalMonthlyPricesMatchCatalog, true);
-  assert.deepEqual(proof.plans.map((plan) => [plan.publicId, plan.expectedAmountCents]), [
-    ['essential', 4900],
-    ['professional', 14900],
-    ['business', 39900],
+  assert.equal(proof.checks.allCanonicalSelfServePricesMatchCatalog, true);
+  assert.equal(proof.checks.fourCanonicalSelfServePriceKeysConfigured, true);
+  assert.equal(proof.checks.businessSalesLedPolicyValid, true);
+  assert.deepEqual(proof.prices.map((price) => [price.publicId, price.cadence, price.expectedAmountCents]), [
+    ['essential', 'monthly', 4900],
+    ['essential', 'annual', 49000],
+    ['professional', 'monthly', 14900],
+    ['professional', 'annual', 149000],
   ]);
   assert.equal(proof.enterprisePolicy.startingMonthlyPriceCents, true);
   assert.equal(proof.legacyCompatibility.allowed, false);
   assert.equal(proof.legacyCompatibility.provesCanonicalCommercialPrice, false);
-  assert.equal(JSON.stringify(proof).includes('price_essential'), false);
-  assert.equal(JSON.stringify(proof).includes('sk_test_redacted'), false);
+  assert.equal(JSON.stringify(proof).includes('price_essential_monthly'), false);
+  assert.equal(JSON.stringify(proof).includes('sk_live_redacted'), false);
 });
 
 test('does not treat legacy price env keys as canonical commercial proof or checkout authority', async () => {
   delete process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY;
+  delete process.env.STRIPE_PRICE_ESSENTIAL_ANNUAL;
   delete process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY;
-  delete process.env.STRIPE_PRICE_BUSINESS_MONTHLY;
+  delete process.env.STRIPE_PRICE_PROFESSIONAL_ANNUAL;
   installStripeMock();
 
-  const proof = await buildStripeCommercialCatalogProof({ targetSha: TARGET_SHA, secret: 'sk_test_redacted' });
+  const proof = await buildStripeCommercialCatalogProof({ targetSha: TARGET_SHA, secret: 'sk_live_redacted' });
 
   assert.equal(proof.status, 'Open');
-  assert.equal(proof.checks.threeCanonicalMonthlyPriceKeysConfigured, false);
+  assert.equal(proof.checks.fourCanonicalSelfServePriceKeysConfigured, false);
   assert.equal(proof.legacyCompatibility.allowed, false);
   assert.equal(proof.legacyCompatibility.provesCanonicalCommercialPrice, false);
 });
 
-test('fails closed when a canonical Stripe Price has the old amount', async () => {
-  installStripeMock({ professionalAmount: 19900 });
-  const proof = await buildStripeCommercialCatalogProof({ targetSha: TARGET_SHA, secret: 'sk_test_redacted' });
+test('fails closed when a canonical annual Stripe Price has the wrong amount', async () => {
+  installStripeMock({ professionalAnnualAmount: 199000 });
+  const proof = await buildStripeCommercialCatalogProof({ targetSha: TARGET_SHA, secret: 'sk_live_redacted' });
 
   assert.equal(proof.status, 'Open');
-  assert.equal(proof.checks.allCanonicalMonthlyPricesMatchCatalog, false);
-  const professional = proof.plans.find((plan) => plan.publicId === 'professional');
-  assert.equal(professional?.checks.amountMatches, false);
+  assert.equal(proof.checks.allCanonicalSelfServePricesMatchCatalog, false);
+  const professionalAnnual = proof.prices.find((price) => price.publicId === 'professional' && price.cadence === 'annual');
+  assert.equal(professionalAnnual?.checks.amountMatches, false);
+});
+
+test('fails closed when a canonical self-serve Price is duplicated across cadence bindings', async () => {
+  process.env.STRIPE_PRICE_PROFESSIONAL_ANNUAL = process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY;
+  installStripeMock();
+  const proof = await buildStripeCommercialCatalogProof({ targetSha: TARGET_SHA, secret: 'sk_live_redacted' });
+
+  assert.equal(proof.status, 'Open');
+  assert.equal(proof.checks.fourCanonicalSelfServePricesDistinct, false);
 });
 
 test('fails closed outside the exact protected production context', async () => {
   installStripeMock();
   process.env.GITHUB_REF_NAME = 'feature';
-  const proof = await buildStripeCommercialCatalogProof({ targetSha: TARGET_SHA, secret: 'sk_test_redacted' });
+  const proof = await buildStripeCommercialCatalogProof({ targetSha: TARGET_SHA, secret: 'sk_live_redacted' });
 
   assert.equal(proof.status, 'Open');
   assert.equal(proof.checks.exactProductionContext, false);

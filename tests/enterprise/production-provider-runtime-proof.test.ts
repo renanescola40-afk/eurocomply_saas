@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/production-provider-runtime-proof.yml', 'utf8');
 const producer = readFileSync('scripts/security/run-production-provider-runtime-proof.mjs', 'utf8');
+const billingProducer = readFileSync('scripts/security/run-stripe-live-billing-provider-proof.mjs', 'utf8');
 const diagnostics = readFileSync('scripts/security/diagnose-production-provider-blockers.mjs', 'utf8');
 const targets = JSON.parse(readFileSync('config/production-provider-targets.json', 'utf8')) as {
   schema: string;
@@ -95,9 +96,56 @@ describe('protected production provider runtime proof', () => {
     }
   });
 
+  it('uses canonical Stripe bindings as authority and rejects legacy provider-variable truth', () => {
+    for (const key of [
+      'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+      'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+      'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+      'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
+    ]) {
+      expect(workflow).toContain(`${key}: ` + '${{ vars.' + key + ' }}');
+      expect(billingProducer).toContain(`'${key}'`);
+    }
+    expect(workflow).not.toContain('STRIPE_PRICE_STARTER_MONTHLY: ${{ vars.STRIPE_PRICE_STARTER_MONTHLY }}');
+    expect(workflow).not.toContain('STRIPE_PRICE_GROWTH_MONTHLY: ${{ vars.STRIPE_PRICE_GROWTH_MONTHLY }}');
+    expect(workflow).not.toContain('STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ vars.STRIPE_PRICE_ENTERPRISE_MONTHLY }}');
+    expect(billingProducer).toContain('transitionPolicyRejectsLegacy');
+    expect(billingProducer).toContain('fourCanonicalSelfServeBindingsConfigured');
+    expect(billingProducer).toContain('fourCanonicalSelfServeBindingsDistinct');
+  });
+
+  it('gates provider completion on Portal policy, canonical webhook and production runtime binding presence', () => {
+    expect(workflow).toContain('node --check scripts/security/run-stripe-live-billing-provider-proof.mjs');
+    expect(workflow).toContain('node --test tests/enterprise/stripe-live-billing-provider-proof.test.mjs');
+    expect(workflow).toContain('run: node scripts/security/run-stripe-live-billing-provider-proof.mjs');
+    expect(billingProducer).toContain('billingPortalConfigurationPinnedAndPolicyMatched');
+    expect(billingProducer).toContain('canonicalLifecycleWebhookLive');
+    expect(billingProducer).toContain('productionRuntimeBindingKeysPresent');
+    expect(billingProducer).toContain('decrypt=false');
+    expect(billingProducer).toContain('providerResponseBodiesStored: false');
+    expect(billingProducer).toContain('stripePriceIdsStored: false');
+    expect(billingProducer).toContain('portalConfigurationIdStored: false');
+    expect(billingProducer).toContain('webhookEndpointIdStored: false');
+  });
+
+  it('stages supplemental billing proof outside the canonical P0 evidence namespace', () => {
+    const strictProofIndex = workflow.indexOf('run: node scripts/security/run-stripe-live-billing-provider-proof.mjs');
+    const stagingIndex = workflow.indexOf('Stage strict billing provider evidence outside canonical P0 evidence namespace');
+    const scannerIndex = workflow.indexOf('run: node scripts/security/check-p0-runtime-evidence-files.mjs');
+
+    expect(strictProofIndex).toBeGreaterThanOrEqual(0);
+    expect(stagingIndex).toBeGreaterThan(strictProofIndex);
+    expect(scannerIndex).toBeGreaterThan(stagingIndex);
+    expect(workflow).toContain('mv docs/security/evidence/runtime/stripe-live-billing-provider-proof.json');
+    expect(workflow).toContain('release-validation/stripe-live-billing-provider-proof.json');
+  });
+
   it('fails closed instead of emitting Complete when any provider is blocked', () => {
     expect(producer).toContain("status: allPassed ? 'Complete' : 'Open'");
     expect(producer).toContain("outcome: allPassed ? 'passed' : 'blocked'");
     expect(producer).toContain('if (!allPassed) process.exitCode = 1');
+    expect(billingProducer).toContain("status: passed ? 'Complete' : 'Open'");
+    expect(billingProducer).toContain("outcome: passed ? 'passed' : 'blocked'");
+    expect(billingProducer).toContain("if (evidence.outcome !== 'passed') process.exitCode = 1");
   });
 });
