@@ -202,9 +202,12 @@ function sameStringSet(actual, expected) {
   return a.every((value, index) => value === b[index]);
 }
 
-async function inspectPortal(secret, contract, policy) {
-  const configurationId = String(contract?.configurationId ?? '').trim();
-  const pinned = PORTAL_CONFIGURATION_ID.test(configurationId);
+async function inspectPortal(secret, contract, policy, runtimeConfigurationId) {
+  const reviewedConfigurationId = String(contract?.configurationId ?? '').trim();
+  const configurationId = String(runtimeConfigurationId ?? '').trim();
+  const pinned = PORTAL_CONFIGURATION_ID.test(reviewedConfigurationId)
+    && PORTAL_CONFIGURATION_ID.test(configurationId)
+    && configurationId === reviewedConfigurationId;
   if (!secret || !pinned) {
     return {
       pinned,
@@ -350,6 +353,7 @@ async function inspectVercelBindingPresence(targets) {
 export async function buildStripeLiveBillingProviderProof({
   targetSha = env('TARGET_SHA').toLowerCase(),
   secret = env('STRIPE_SECRET_KEY'),
+  portalConfigurationId = env('STRIPE_BILLING_PORTAL_CONFIGURATION_ID'),
   catalog = loadCatalog(),
   portalContract = loadPortalContract(),
   portalPolicy = loadPortalPolicy(),
@@ -379,7 +383,7 @@ export async function buildStripeLiveBillingProviderProof({
       expectedAmountCents: binding.expectedAmountCents,
       checks: await inspectPrice(secret, binding),
     }))),
-    inspectPortal(secret, portalContract, portalPolicy),
+    inspectPortal(secret, portalContract, portalPolicy, portalConfigurationId),
     inspectWebhook(secret),
     inspectVercelBindingPresence(providerTargets),
   ]);
