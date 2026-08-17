@@ -132,7 +132,7 @@ jobs:
           fetch-depth: 1
 
       - name: Download exact-SHA rehearsal artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v8.0.1
         with:
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}

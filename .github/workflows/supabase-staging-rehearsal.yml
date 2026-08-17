@@ -107,7 +107,7 @@ jobs:
           git merge-base --is-ancestor "$PLAN_HEAD" "$CURRENT_SHA"
 
       - name: Download immutable execution plan
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v8.0.1
         with:
           name: supabase-migration-execution-plan-${{ inputs.release_sha }}
           run-id: ${{ inputs.execution_plan_run_id }}

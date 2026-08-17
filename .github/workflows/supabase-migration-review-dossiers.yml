@@ -86,7 +86,7 @@ jobs:
           test "$(jq -r '.path' <<<"$SCHEMA_RUN")" = '.github/workflows/supabase-live-schema-evidence.yml'
 
       - name: Download exact migration inventory
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v8.0.1
         with:
           name: supabase-production-migration-dry-run-${{ inputs.release_sha }}
           path: inventory-artifact
@@ -94,7 +94,7 @@ jobs:
           run-id: ${{ inputs.inventory_run_id }}
 
       - name: Download exact live schema evidence
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v8.0.1
         with:
           name: supabase-live-schema-evidence-${{ inputs.release_sha }}
           path: schema-artifact
