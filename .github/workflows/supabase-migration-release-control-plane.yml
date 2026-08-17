@@ -116,7 +116,7 @@ jobs:
           test "$(jq -r '.conclusion' <<<"$REHEARSAL_JSON")" = 'success'
 
       - name: Download exact execution plan
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v8.0.1
         with:
           name: supabase-migration-execution-plan-${{ inputs.release_sha }}
           path: source-plan
@@ -124,7 +124,7 @@ jobs:
           run-id: ${{ inputs.execution_plan_run_id }}
 
       - name: Download exact canonical staging attestation
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v8.0.1
         with:
           name: supabase-staging-rehearsal-${{ inputs.release_sha }}
           path: source-rehearsal
