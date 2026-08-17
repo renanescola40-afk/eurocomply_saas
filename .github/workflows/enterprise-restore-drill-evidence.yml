@@ -68,7 +68,7 @@ jobs:
           ref: ${{ env.EXPECTED_MAIN_SHA }}
           persist-credentials: false
       - name: Download sanitized source evidence
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v8.0.1
         with:
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}

@@ -67,12 +67,13 @@ test('passes only when canonical Essential Professional and Business prices matc
     ['business', 39900],
   ]);
   assert.equal(proof.enterprisePolicy.startingMonthlyPriceCents, true);
+  assert.equal(proof.legacyCompatibility.allowed, false);
   assert.equal(proof.legacyCompatibility.provesCanonicalCommercialPrice, false);
   assert.equal(JSON.stringify(proof).includes('price_essential'), false);
   assert.equal(JSON.stringify(proof).includes('sk_test_redacted'), false);
 });
 
-test('does not treat legacy price env keys as canonical commercial proof', async () => {
+test('does not treat legacy price env keys as canonical commercial proof or checkout authority', async () => {
   delete process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY;
   delete process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY;
   delete process.env.STRIPE_PRICE_BUSINESS_MONTHLY;
@@ -82,7 +83,7 @@ test('does not treat legacy price env keys as canonical commercial proof', async
 
   assert.equal(proof.status, 'Open');
   assert.equal(proof.checks.threeCanonicalMonthlyPriceKeysConfigured, false);
-  assert.equal(proof.legacyCompatibility.allowed, true);
+  assert.equal(proof.legacyCompatibility.allowed, false);
   assert.equal(proof.legacyCompatibility.provesCanonicalCommercialPrice, false);
 });
 

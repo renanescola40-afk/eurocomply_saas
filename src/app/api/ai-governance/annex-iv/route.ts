@@ -24,7 +24,7 @@ export async function GET() {
   try {
     const user = await requireApiUser(); const organization = await getCurrentOrganizationForUser(user.id);
     if (!organization) return noStoreJson({ error: 'organization_required' }, { status: 403 });
-    const permission = await assertOrganizationPermission({ userId: user.id, organizationId: organization.id, permission: 'read_ai_governance' });
+    const permission = await assertOrganizationPermission({ userId: user.id, organizationId: organization.id, permission: 'read_ai_governance', minimumPlan: 'professional' });
     if (!permission.ok) return permissionDeniedResponse(permission);
     return noStoreJson({ ...(await listAnnexIvSnapshot(organization.id)), role: permission.role });
   } catch (error) { return secureApiError(error); }
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     const workflow = workflowOf(request); if (!workflow) return noStoreJson({ error: 'unsupported_workflow' }, { status: 400 });
     const user = await requireApiUser(); const organization = await getCurrentOrganizationForUser(user.id);
     if (!organization) return noStoreJson({ error: 'organization_required' }, { status: 403 });
-    const permission = await assertOrganizationPermission({ userId: user.id, organizationId: organization.id, permission: 'manage_ai_governance' });
+    const permission = await assertOrganizationPermission({ userId: user.id, organizationId: organization.id, permission: 'manage_ai_governance', minimumPlan: 'professional' });
     if (!permission.ok) return permissionDeniedResponse(permission);
     const limit = await checkDistributedRateLimit({ key: `annex-iv:${workflow}:${organization.id}:${user.id}`, limit: workflow === 'evidence_submit' ? 20 : 10, windowMs: 60_000 });
     if (!limit.allowed) return denied(limit);

@@ -103,7 +103,7 @@ jobs:
           git merge-base --is-ancestor "$REHEARSAL_HEAD" "$CURRENT_SHA"
 
       - name: Download exact staging rehearsal artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v8.0.1
         with:
           name: supabase-staging-rehearsal-${{ inputs.release_sha }}
           run-id: ${{ inputs.rehearsal_run_id }}
