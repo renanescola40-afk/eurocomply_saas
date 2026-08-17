@@ -99,6 +99,11 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs
+
+      - name: Verify disposable recovery boundary exports
+        shell: bash
+        run: |
+          set -euo pipefail
           test "${RECOVERY_EPHEMERAL_DATABASE_PROVISIONED:-}" = 'true'
           test "${RECOVERY_EPHEMERAL_DATABASE_MODE:-}" = 'project-schema'
           test -n "${RECOVERY_EPHEMERAL_WORKDIR:-}"
