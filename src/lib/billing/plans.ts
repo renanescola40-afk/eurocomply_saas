@@ -141,6 +141,12 @@ export function getBillingEntitlements(planId: string | null | undefined): Billi
 export function getStripePriceId(plan: BillingPlan, interval: 'month' | 'year' = 'month') {
   const primaryKey = interval === 'year' ? plan.stripePriceEnvKeyAnnual : plan.stripePriceEnvKeyMonthly;
   const primaryPriceId = primaryKey ? process.env[primaryKey]?.trim() : undefined;
+
+  // Public self-serve catalog helpers must never silently resolve legacy
+  // Starter/Growth prices. Existing legacy subscription reconciliation is
+  // handled separately by getBillingPlanIdForStripePriceId below.
+  if (!plan.salesLed) return primaryPriceId;
+
   const legacyKeys = interval === 'year' ? plan.legacyStripePriceEnvKeysAnnual : plan.legacyStripePriceEnvKeysMonthly;
   const legacyPriceId = legacyKeys.map((key) => process.env[key]?.trim()).find(Boolean);
   return primaryPriceId || legacyPriceId;

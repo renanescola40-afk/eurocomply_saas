@@ -59,9 +59,9 @@
     "preserveInternalStarterId": true,
     "preserveLegacyEssentialAlias": true,
     "preserveLegacyGrowthAlias": true,
-    "legacyStripePriceFallbackAllowed": true,
+    "legacyStripePriceFallbackAllowed": false,
     "legacyFallbackDoesNotProveCanonicalCommercialPrice": true,
     "enterpriseUsesContractPricing": true
   },
-  "truthBoundary": "This file is the repository commercial pricing contract. It does not create Stripe Products or Prices and does not prove that production provider configuration matches these amounts."
+  "truthBoundary": "This file is the repository commercial pricing contract. Self-serve checkout requires the canonical Essential and Professional Stripe Price bindings; legacy price keys remain migration metadata only and do not authorize checkout or prove production pricing. This file does not create Stripe Products or Prices and does not prove that production provider configuration matches these amounts."
 }

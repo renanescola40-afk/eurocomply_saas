@@ -118,6 +118,15 @@ export function getStripePriceId(plan: BillingPlan, interval: BillingInterval = 
   const definition = BILLING_PLANS[plan];
   const primaryKey = interval === 'year' ? definition.annualEnvPriceKey : definition.monthlyEnvPriceKey;
   const primaryPriceId = primaryKey ? process.env[primaryKey]?.trim() : undefined;
+
+  // Self-serve checkout must bind to the canonical reviewed price. Legacy
+  // Starter/Growth environment keys are migration metadata only; silently using
+  // them can charge an obsolete amount while granting current entitlements.
+  if (definition.selfServe) {
+    if (!primaryPriceId) throw new Error(`missing_stripe_price_${plan}_${interval}`);
+    return primaryPriceId;
+  }
+
   const legacyKeys = interval === 'year' ? definition.legacyAnnualEnvPriceKeys : definition.legacyMonthlyEnvPriceKeys;
   const legacyPriceId = legacyKeys.map((key) => process.env[key]?.trim()).find(Boolean);
   const priceId = primaryPriceId || legacyPriceId;
