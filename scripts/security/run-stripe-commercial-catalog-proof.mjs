@@ -198,7 +198,7 @@ export async function buildStripeCommercialCatalogProof({
   const passed = Object.values(checks).every(Boolean);
 
   return {
-    schema: 'risck-comply.stripe-commercial-catalog-proof.v2',
+    schema: 'risck-comply.stripe-commercial-catalog-proof.v1',
     evidenceItem: 'stripe-commercial-catalog-proof',
     status: passed ? 'Complete' : 'Open',
     outcome: passed ? 'passed' : 'blocked',
