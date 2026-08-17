@@ -33,6 +33,7 @@ export async function GET() {
       userId: user.id,
       organizationId: organization.id,
       permission: 'read_ai_governance',
+      minimumPlan: 'professional',
     });
     if (!permission.ok) return permissionDeniedResponse(permission);
 

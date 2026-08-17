@@ -1,5 +1,6 @@
 import { noStoreJson } from '@/server/security/no-store';
 import { normalizeOrganizationRole, roleHasPermission, type OrganizationPermission, type OrganizationRole } from '@/lib/security/permissions';
+import type { SubscriptionPlan } from '@/server/queries/subscription';
 
 export {
   getOrganizationPermissionMatrix,
@@ -42,6 +43,28 @@ export type PermissionCheckDenied = {
 
 export type PermissionCheckResult = PermissionCheckAllowed | PermissionCheckDenied;
 
+const COMMERCIAL_PRODUCT_PERMISSIONS = new Set<OrganizationPermission>([
+  'manage_documents',
+  'read_documents',
+  'manage_vendors',
+  'read_vendors',
+  'manage_risks',
+  'read_risks',
+  'manage_ai_governance',
+  'read_ai_governance',
+  'manage_ai_incidents',
+  'read_ai_incidents',
+  'read_audit',
+  'export_data',
+]);
+
+const MINIMUM_PLAN_BY_PERMISSION: Partial<Record<OrganizationPermission, SubscriptionPlan>> = {
+  manage_vendors: 'professional',
+  read_vendors: 'professional',
+  manage_risks: 'professional',
+  read_risks: 'professional',
+};
+
 function isSupabaseUserId(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
@@ -78,6 +101,72 @@ async function recordRbacDeniedAuditEvent({
     });
   } catch {
     // Keep the original authorization result even if best-effort audit logging fails.
+  }
+}
+
+async function assertCommercialProductAuthority({
+  userId,
+  organizationId,
+  permission,
+  role,
+  rawRole,
+  minimumPlan,
+}: {
+  userId: string;
+  organizationId: string;
+  permission: OrganizationPermission;
+  role: OrganizationRole;
+  rawRole: string | null;
+  minimumPlan?: SubscriptionPlan;
+}): Promise<PermissionCheckDenied | null> {
+  const requiredPlan = minimumPlan ?? MINIMUM_PLAN_BY_PERMISSION[permission];
+  if (!COMMERCIAL_PRODUCT_PERMISSIONS.has(permission) && !requiredPlan) return null;
+
+  try {
+    const { getOrganizationBillingAuthority, isPlanAtLeast } = await import('@/server/queries/subscription');
+    const authority = await getOrganizationBillingAuthority(organizationId);
+
+    if (!authority.licensed) {
+      const result: PermissionCheckDenied = {
+        ok: false,
+        status: 403,
+        error: 'subscription_required',
+        message: 'An active paid subscription or signed contract is required.',
+        role,
+        rawRole,
+        permission,
+      };
+      await recordRbacDeniedAuditEvent({ userId, organizationId, result });
+      return result;
+    }
+
+    if (requiredPlan && !isPlanAtLeast(authority.plan, requiredPlan)) {
+      const result: PermissionCheckDenied = {
+        ok: false,
+        status: 403,
+        error: 'upgrade_required',
+        message: `${requiredPlan} plan or higher is required.`,
+        role,
+        rawRole,
+        permission,
+      };
+      await recordRbacDeniedAuditEvent({ userId, organizationId, result });
+      return result;
+    }
+
+    return null;
+  } catch {
+    const result: PermissionCheckDenied = {
+      ok: false,
+      status: 503,
+      error: 'billing_authority_unavailable',
+      message: 'Could not verify commercial product authority.',
+      role,
+      rawRole,
+      permission,
+    };
+    await recordRbacDeniedAuditEvent({ userId, organizationId, result });
+    return result;
   }
 }
 
@@ -131,10 +220,12 @@ export async function assertOrganizationPermission({
   userId,
   organizationId,
   permission,
+  minimumPlan,
 }: {
   userId: string;
   organizationId: string;
   permission: OrganizationPermission;
+  minimumPlan?: SubscriptionPlan;
 }): Promise<PermissionCheckResult> {
   const { membership, error } = await getOrganizationMembership(userId, organizationId);
 
@@ -177,6 +268,16 @@ export async function assertOrganizationPermission({
     await recordRbacDeniedAuditEvent({ userId, organizationId, result });
     return result;
   }
+
+  const commercialAuthorityDenied = await assertCommercialProductAuthority({
+    userId,
+    organizationId,
+    permission,
+    role,
+    rawRole: membership.role,
+    minimumPlan,
+  });
+  if (commercialAuthorityDenied) return commercialAuthorityDenied;
 
   return {
     ok: true,
