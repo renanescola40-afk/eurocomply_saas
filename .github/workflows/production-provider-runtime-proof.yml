@@ -130,6 +130,17 @@ jobs:
         if: always()
         run: node scripts/security/run-production-provider-runtime-proof.mjs
 
+      - name: Stage strict billing provider evidence outside canonical P0 evidence namespace
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-validation
+          if [ -f docs/security/evidence/runtime/stripe-live-billing-provider-proof.json ]; then
+            mv docs/security/evidence/runtime/stripe-live-billing-provider-proof.json \
+              release-validation/stripe-live-billing-provider-proof.json
+          fi
+
       - name: Validate generated exact-SHA provider evidence
         if: always()
         run: node scripts/security/check-p0-runtime-evidence-files.mjs
@@ -159,7 +170,7 @@ jobs:
           name: production-provider-runtime-proof-${{ env.TARGET_SHA }}
           path: |
             docs/security/evidence/runtime/production-secrets-provider-stores.json
-            docs/security/evidence/runtime/stripe-live-billing-provider-proof.json
+            release-validation/stripe-live-billing-provider-proof.json
             release-validation/provider-blocker-diagnostics.json
           if-no-files-found: error
           retention-days: 90
