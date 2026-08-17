@@ -19,6 +19,7 @@ test.describe('authenticated responsive and accessibility acceptance', () => {
 
   const routes = [
     ['/en/dashboard/organizations', 'dashboard'],
+    ['/en/dashboard/organizations/billing', 'billing'],
     ['/en/dashboard/organizations/tasks', 'tasks'],
     ['/en/dashboard/organizations/documents', 'documents'],
     ['/en/dashboard/organizations/team', 'team'],
