@@ -118,7 +118,6 @@ describe('protected production provider runtime proof', () => {
     expect(workflow).toContain('node --check scripts/security/run-stripe-live-billing-provider-proof.mjs');
     expect(workflow).toContain('node --test tests/enterprise/stripe-live-billing-provider-proof.test.mjs');
     expect(workflow).toContain('run: node scripts/security/run-stripe-live-billing-provider-proof.mjs');
-    expect(workflow).toContain('docs/security/evidence/runtime/stripe-live-billing-provider-proof.json');
     expect(billingProducer).toContain('billingPortalConfigurationPinnedAndPolicyMatched');
     expect(billingProducer).toContain('canonicalLifecycleWebhookLive');
     expect(billingProducer).toContain('productionRuntimeBindingKeysPresent');
@@ -127,6 +126,18 @@ describe('protected production provider runtime proof', () => {
     expect(billingProducer).toContain('stripePriceIdsStored: false');
     expect(billingProducer).toContain('portalConfigurationIdStored: false');
     expect(billingProducer).toContain('webhookEndpointIdStored: false');
+  });
+
+  it('stages supplemental billing proof outside the canonical P0 evidence namespace', () => {
+    const strictProofIndex = workflow.indexOf('run: node scripts/security/run-stripe-live-billing-provider-proof.mjs');
+    const stagingIndex = workflow.indexOf('Stage strict billing provider evidence outside canonical P0 evidence namespace');
+    const scannerIndex = workflow.indexOf('run: node scripts/security/check-p0-runtime-evidence-files.mjs');
+
+    expect(strictProofIndex).toBeGreaterThanOrEqual(0);
+    expect(stagingIndex).toBeGreaterThan(strictProofIndex);
+    expect(scannerIndex).toBeGreaterThan(stagingIndex);
+    expect(workflow).toContain('mv docs/security/evidence/runtime/stripe-live-billing-provider-proof.json');
+    expect(workflow).toContain('release-validation/stripe-live-billing-provider-proof.json');
   });
 
   it('fails closed instead of emitting Complete when any provider is blocked', () => {
