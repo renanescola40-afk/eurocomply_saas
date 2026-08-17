@@ -237,7 +237,7 @@ export async function uploadEvidenceFile(params: { organizationId: string; evide
   const fileSha256 = await sha256Hex(params.file);
   const fileSizeBytes = params.file.size;
 
-  const { error: reservationError } = await supabase
+  const { data: reservation, error: reservationError } = await supabase
     .from('evidence_items')
     .update({
       file_name: fileName,
@@ -250,9 +250,20 @@ export async function uploadEvidenceFile(params: { organizationId: string; evide
     })
     .eq('id', params.evidenceId)
     .eq('organization_id', params.organizationId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .select('id,organization_id,storage_object_path,file_sha256,file_size_bytes')
+    .single();
 
   if (reservationError) throw reservationError;
+  if (
+    reservation?.id !== params.evidenceId
+    || reservation?.organization_id !== params.organizationId
+    || reservation?.storage_object_path !== objectPath
+    || reservation?.file_sha256 !== fileSha256
+    || reservation?.file_size_bytes !== fileSizeBytes
+  ) {
+    throw new Error('Evidence attachment metadata reservation could not be verified.');
+  }
 
   const { error: uploadError } = await supabase.storage
     .from(EVIDENCE_BUCKET)
