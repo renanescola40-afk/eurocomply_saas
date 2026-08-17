@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { appendFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 
@@ -78,6 +78,66 @@ async function main() {
     }, `fria_${role}_membership`);
   }
 
+  // Commercial Product acceptance must exercise the same durable authority used
+  // by the runtime. This is deliberately NOT a seeded subscriptions row or fake
+  // Stripe event: the disposable tenant receives a current signed-contract source
+  // with an applied Professional entitlement snapshot, which satisfies both the
+  // dashboard license boundary and the FRIA Professional+ API gate.
+  const effectiveFrom = new Date(Date.now() - 60_000).toISOString();
+  const commercialPayload = JSON.stringify({
+    purpose: 'fria-ephemeral-product-acceptance',
+    organizationId: organization.id,
+    planCode: 'professional',
+    sourceVersion: 1,
+  });
+  const payloadSha256 = createHash('sha256').update(commercialPayload).digest('hex');
+  const commercialAuthority = await insertOne(admin, 'enterprise_entitlement_sources', {
+    organization_id: organization.id,
+    source_kind: 'signed_contract',
+    external_reference: `fria-qa-professional-${suffix}`,
+    priority: 900,
+    active: true,
+    version: 1,
+    effective_from: effectiveFrom,
+    effective_until: null,
+  }, 'fria_commercial_authority');
+
+  await insertOne(admin, 'enterprise_entitlement_snapshots', {
+    organization_id: organization.id,
+    source_id: commercialAuthority.id,
+    idempotency_key: `fria-qa-professional-${suffix}`,
+    source_version: 1,
+    plan_code: 'professional',
+    full_seat_limit: 10,
+    participant_seat_limit: 10,
+    viewer_seat_limit: 10,
+    entitlements: {
+      purpose: 'fria-ephemeral-product-acceptance',
+      commercialAuthority: 'signed_contract',
+    },
+    source_payload_sha256: payloadSha256,
+    observed_at: effectiveFrom,
+    valid_from: effectiveFrom,
+    valid_until: null,
+    status: 'applied',
+    applied_policy_version: 1,
+  }, 'fria_commercial_entitlement_snapshot');
+
+  const { data: authorityProof, error: authorityProofError } = await admin
+    .from('enterprise_entitlement_snapshots')
+    .select('plan_code,status,source_id')
+    .eq('organization_id', organization.id)
+    .eq('source_id', commercialAuthority.id)
+    .eq('status', 'applied')
+    .single();
+  if (
+    authorityProofError
+    || authorityProof?.plan_code !== 'professional'
+    || authorityProof?.source_id !== commercialAuthority.id
+  ) {
+    throw new Error('fria_commercial_authority_verification_failed');
+  }
+
   exportEnv('E2E_FRIA_OWNER_EMAIL', owner.email);
   exportEnv('E2E_FRIA_OWNER_PASSWORD', owner.password);
   exportEnv('E2E_FRIA_REVIEWER_EMAIL', reviewer.email);
@@ -85,7 +145,7 @@ async function main() {
   exportEnv('E2E_FRIA_APPROVER_PASSWORD', approver.password);
   appendFileSync(process.env.GITHUB_ENV, 'E2E_ALLOW_SYNTHETIC_APP_WRITES=true\n', 'utf8');
 
-  process.stdout.write('Disposable FRIA owner/reviewer/approver identities and tenant created on loopback Supabase.\n');
+  process.stdout.write('Disposable FRIA identities, tenant and Professional signed-contract authority created on loopback Supabase.\n');
 }
 
 main().catch((error) => {
