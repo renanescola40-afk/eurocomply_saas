@@ -13,6 +13,11 @@ const PRICE_ID = /^price_[A-Za-z0-9]+$/;
 const PORTAL_CONFIGURATION_ID = /^bpc_[A-Za-z0-9]+$/;
 const API_TIMEOUT_MS = 8_000;
 const CANONICAL_WEBHOOK_URL = 'https://www.risckcomply.com/api/stripe/webhook';
+const CANONICAL_VERCEL_TARGET = Object.freeze({
+  teamId: 'team_wu3LZI6ReFxO16xipv73GLwG',
+  projectId: 'prj_APpXAyQFy1Gie50xfbO45zjkyUSm',
+  projectName: 'eurocomply-saas',
+});
 const REQUIRED_WEBHOOK_EVENTS = [
   'checkout.session.completed',
   'customer.subscription.created',
@@ -288,9 +293,9 @@ async function inspectWebhook(secret) {
 async function inspectVercelBindingPresence(targets) {
   const token = env('VERCEL_TOKEN');
   const target = targets?.vercel;
-  const validTarget = /^team_[A-Za-z0-9]+$/.test(String(target?.teamId ?? ''))
-    && /^prj_[A-Za-z0-9]+$/.test(String(target?.projectId ?? ''))
-    && String(target?.projectName ?? '') === 'eurocomply-saas';
+  const validTarget = String(target?.teamId ?? '') === CANONICAL_VERCEL_TARGET.teamId
+    && String(target?.projectId ?? '') === CANONICAL_VERCEL_TARGET.projectId
+    && String(target?.projectName ?? '') === CANONICAL_VERCEL_TARGET.projectName;
   if (!token || !validTarget) {
     return {
       tokenConfigured: Boolean(token),
@@ -303,8 +308,9 @@ async function inspectVercelBindingPresence(targets) {
     };
   }
 
+  // The versioned target file is verified above, but file data is never copied into the outbound request.
   const response = await request(
-    `https://api.vercel.com/v10/projects/${encodeURIComponent(target.projectId)}/env?target=production&decrypt=false&teamId=${encodeURIComponent(target.teamId)}`,
+    `https://api.vercel.com/v10/projects/${CANONICAL_VERCEL_TARGET.projectId}/env?target=production&decrypt=false&teamId=${CANONICAL_VERCEL_TARGET.teamId}`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
   if (response?.status !== 200) {
