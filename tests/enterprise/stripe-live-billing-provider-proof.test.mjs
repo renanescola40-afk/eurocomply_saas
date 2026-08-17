@@ -217,3 +217,34 @@ test('fails closed outside exact production context', async () => {
   assert.equal(proof.status, 'Open');
   assert.equal(proof.checks.exactProductionContext, false);
 });
+
+test('fails closed without sending repository-controlled Vercel target data outbound', async () => {
+  installProviderMock();
+  const providerFetch = globalThis.fetch;
+  const outbound = [];
+  globalThis.fetch = async (url, init) => {
+    outbound.push(String(url));
+    return providerFetch(url, init);
+  };
+
+  const tamperedTargets = {
+    ...providerTargets,
+    vercel: {
+      ...providerTargets.vercel,
+      projectId: 'prj_untrustedRepositoryValue',
+    },
+  };
+  const proof = await buildStripeLiveBillingProviderProof({
+    targetSha: TARGET_SHA,
+    secret: 'sk_live_redacted',
+    catalog,
+    portalContract,
+    portalPolicy,
+    providerTargets: tamperedTargets,
+  });
+
+  assert.equal(proof.status, 'Open');
+  assert.equal(proof.checks.productionRuntimeBindingKeysPresent, false);
+  assert.equal(outbound.some((url) => url.includes('prj_untrustedRepositoryValue')), false);
+  assert.equal(outbound.some((url) => url.includes('api.vercel.com')), false);
+});
