@@ -53,9 +53,11 @@ jobs:
       - name: Record pull request validation boundary
         shell: bash
         run: |
-          echo 'Pull requests validate resolver and workflow contracts without requesting the protected production environment.' >> "$GITHUB_STEP_SUMMARY"
-          echo 'No production database secret or connection is available to this job.' >> "$GITHUB_STEP_SUMMARY"
-          echo 'The scheduled or manually dispatched audit remains responsible for fail-closed live migration drift evidence.' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo 'Pull requests validate resolver and workflow contracts without requesting the protected production environment.'
+            echo 'No production database secret or connection is available to this job.'
+            echo 'The scheduled or manually dispatched audit remains responsible for fail-closed live migration drift evidence.'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   audit:
     name: Audit local and production migration history
