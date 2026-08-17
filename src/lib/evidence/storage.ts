@@ -50,12 +50,17 @@ export type EvidenceInput = {
   status?: EvidenceStatus;
   articleRefs?: string[];
   ownerName?: string;
-  fileName?: string;
-  filePath?: string;
-  fileMimeType?: string;
-  fileSha256?: string;
-  fileSizeBytes?: number;
   expiresAt?: string | null;
+  /** @deprecated Attach bytes with uploadEvidenceFile after metadata creation. */
+  fileName?: string;
+  /** @deprecated Attach bytes with uploadEvidenceFile after metadata creation. */
+  filePath?: string;
+  /** @deprecated Attach bytes with uploadEvidenceFile after metadata creation. */
+  fileMimeType?: string;
+  /** @deprecated Attach bytes with uploadEvidenceFile after metadata creation. */
+  fileSha256?: string;
+  /** @deprecated Attach bytes with uploadEvidenceFile after metadata creation. */
+  fileSizeBytes?: number;
 };
 
 const EVIDENCE_BUCKET = 'compliance-evidence' as const;
@@ -68,6 +73,16 @@ function normalizeError(error: unknown) {
 
 function normalizeOrganizationIds(rows: Array<{ organization_id?: string | null }> | null | undefined) {
   return [...new Set((rows ?? []).map((row) => row.organization_id).filter((value): value is string => Boolean(value)))];
+}
+
+function hasLegacyAttachmentInput(input: EvidenceInput) {
+  return Boolean(
+    input.fileName
+      || input.filePath
+      || input.fileMimeType
+      || input.fileSha256
+      || input.fileSizeBytes !== undefined,
+  );
 }
 
 /**
@@ -96,6 +111,10 @@ export async function resolveEvidenceOrganization(userId: string, preferredOrgan
 }
 
 export async function createEvidenceItem(input: EvidenceInput) {
+  if (hasLegacyAttachmentInput(input)) {
+    throw new Error('Create Evidence metadata first, then attach bytes with uploadEvidenceFile.');
+  }
+
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError) throw authError;
   if (!authData.user?.id) throw new Error('Authentication is required to create evidence.');
@@ -113,13 +132,7 @@ export async function createEvidenceItem(input: EvidenceInput) {
       status: input.status || 'draft',
       article_refs: input.articleRefs || [],
       owner_name: input.ownerName || null,
-      file_name: input.fileName || null,
-      file_path: input.filePath || null,
-      file_mime_type: input.fileMimeType || null,
       storage_bucket: EVIDENCE_BUCKET,
-      storage_object_path: input.filePath || null,
-      file_sha256: input.fileSha256 || null,
-      file_size_bytes: input.fileSizeBytes ?? null,
       expires_at: input.expiresAt || null,
     })
     .select('*')
@@ -164,9 +177,10 @@ export async function tryListEvidenceItems(params: { organizationId: string; lim
 export async function updateEvidenceStatus(params: { id: string; organizationId: string; status: EvidenceStatus }) {
   const { data, error } = await supabase
     .from('evidence_items')
-    .update({ status: params.status, updated_at: new Date().toISOString() })
+    .update({ status: params.status })
     .eq('id', params.id)
     .eq('organization_id', params.organizationId)
+    .is('deleted_at', null)
     .select('*')
     .single();
 
@@ -189,7 +203,6 @@ export async function softDeleteEvidenceItem(params: { id: string; organizationI
       deleted_at: new Date().toISOString(),
       deleted_by_subject: authData.user.id,
       delete_reason: reason,
-      updated_at: new Date().toISOString(),
     })
     .eq('id', params.id)
     .eq('organization_id', params.organizationId)
@@ -212,28 +225,50 @@ async function sha256Hex(file: File) {
   return Array.from(new Uint8Array(digest)).map((value) => value.toString(16).padStart(2, '0')).join('');
 }
 
-/** Upload bytes under the canonical <organization_id>/<object_id>/<filename> key. */
-export async function uploadEvidenceFile(params: { organizationId: string; file: File }) {
-  const objectId = crypto.randomUUID();
+/**
+ * Reserve immutable attachment metadata, then insert bytes under the exact
+ * <organization_id>/<evidence_id>/<filename> key. No browser UPDATE or DELETE
+ * policy exists for the Storage object after insertion.
+ */
+export async function uploadEvidenceFile(params: { organizationId: string; evidenceId: string; file: File }) {
   const fileName = sanitizeFileName(params.file.name);
-  const objectPath = `${params.organizationId}/${objectId}/${fileName}`;
+  const objectPath = `${params.organizationId}/${params.evidenceId}/${fileName}`;
+  const fileMimeType = params.file.type || 'application/octet-stream';
   const fileSha256 = await sha256Hex(params.file);
+  const fileSizeBytes = params.file.size;
 
-  const { error } = await supabase.storage
+  const { error: reservationError } = await supabase
+    .from('evidence_items')
+    .update({
+      file_name: fileName,
+      file_path: objectPath,
+      file_mime_type: fileMimeType,
+      storage_bucket: EVIDENCE_BUCKET,
+      storage_object_path: objectPath,
+      file_sha256: fileSha256,
+      file_size_bytes: fileSizeBytes,
+    })
+    .eq('id', params.evidenceId)
+    .eq('organization_id', params.organizationId)
+    .is('deleted_at', null);
+
+  if (reservationError) throw reservationError;
+
+  const { error: uploadError } = await supabase.storage
     .from(EVIDENCE_BUCKET)
     .upload(objectPath, params.file, {
       upsert: false,
-      contentType: params.file.type || 'application/octet-stream',
+      contentType: fileMimeType,
       cacheControl: '3600',
     });
 
-  if (error) throw error;
+  if (uploadError) throw uploadError;
   return {
     bucket: EVIDENCE_BUCKET,
     objectPath,
     fileName,
-    fileMimeType: params.file.type || 'application/octet-stream',
-    fileSizeBytes: params.file.size,
+    fileMimeType,
+    fileSizeBytes,
     fileSha256,
   };
 }
