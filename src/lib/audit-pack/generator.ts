@@ -37,11 +37,17 @@ export type AuditPackData = {
   }>;
 };
 
-export async function buildAuditPackData(params: { userId: string; workspaceId?: string | null }): Promise<AuditPackData> {
+export async function buildAuditPackData(params: {
+  userId: string;
+  workspaceId?: string | null;
+  organizationId?: string | null;
+}): Promise<AuditPackData> {
   const [assessment, work, evidenceItems] = await Promise.all([
     tryLoadLatestGapAssessment({ userId: params.userId, workspaceId: params.workspaceId || null }),
     tryLoadOpenComplianceWork({ userId: params.userId, workspaceId: params.workspaceId || null }),
-    tryListEvidenceItems({ userId: params.userId, workspaceId: params.workspaceId || null, limit: 100 }),
+    params.organizationId
+      ? tryListEvidenceItems({ organizationId: params.organizationId, limit: 100 })
+      : Promise.resolve([]),
   ]);
 
   const evidenceSummary = summarizeEvidence(evidenceItems);
