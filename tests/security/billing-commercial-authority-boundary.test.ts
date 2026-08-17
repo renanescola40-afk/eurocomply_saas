@@ -9,6 +9,11 @@ const ENTITLEMENTS = new URL('../../src/server/billing/entitlements.ts', import.
 const DASHBOARD_LAYOUT = new URL('../../src/app/[locale]/dashboard/layout.tsx', import.meta.url);
 const MIDDLEWARE = new URL('../../src/middleware.ts', import.meta.url);
 const CHECKOUT_INTENT = new URL('../../src/app/api/billing/checkout-intent/route.ts', import.meta.url);
+const RBAC = new URL('../../src/server/security/rbac.ts', import.meta.url);
+const FRIA_ROUTE = new URL('../../src/app/api/ai-governance/fria/route.ts', import.meta.url);
+const ANNEX_IV_ROUTE = new URL('../../src/app/api/ai-governance/annex-iv/route.ts', import.meta.url);
+const QMS_ROUTE = new URL('../../src/app/api/ai-governance/qms/route.ts', import.meta.url);
+const REGULATORY_CONTROL_TOWER_ROUTE = new URL('../../src/app/api/ai-governance/regulatory-control-tower/route.ts', import.meta.url);
 
 describe('billing commercial authority boundary', () => {
   it('keeps catalog plan labels separate from durable paid authority', async () => {
@@ -73,5 +78,62 @@ describe('billing commercial authority boundary', () => {
     expect(source).toContain('const priceId = plan.salesLed ? undefined : getStripePriceId(plan);');
     expect(source).toContain("? 'contact_sales'");
     expect(source).toContain('checkoutReady: !plan.salesLed');
+  });
+
+  it('requires durable commercial authority on direct paid product API permissions', async () => {
+    const source = await readFile(RBAC, 'utf8');
+    const commercialPermissions = source.slice(
+      source.indexOf('const COMMERCIAL_PRODUCT_PERMISSIONS'),
+      source.indexOf('const MINIMUM_PLAN_BY_PERMISSION'),
+    );
+
+    expect(commercialPermissions).toContain("'manage_ai_governance'");
+    expect(commercialPermissions).toContain("'read_ai_governance'");
+    expect(commercialPermissions).toContain("'manage_ai_incidents'");
+    expect(commercialPermissions).toContain("'read_ai_incidents'");
+    expect(commercialPermissions).toContain("'manage_vendors'");
+    expect(commercialPermissions).toContain("'manage_risks'");
+    expect(commercialPermissions).toContain("'manage_documents'");
+    expect(commercialPermissions).toContain("'export_data'");
+    expect(commercialPermissions).not.toContain("'manage_billing'");
+    expect(source).toContain("await import('@/server/queries/subscription')");
+    expect(source).toContain('getOrganizationBillingAuthority(organizationId)');
+    expect(source).toContain('if (!authority.licensed)');
+    expect(source).toContain("error: 'subscription_required'");
+    expect(source).toContain("error: 'billing_authority_unavailable'");
+    expect(source).toContain('if (commercialAuthorityDenied) return commercialAuthorityDenied;');
+  });
+
+  it('enforces catalog plan floors on vendor and risk permissions', async () => {
+    const source = await readFile(RBAC, 'utf8');
+    const planMap = source.slice(
+      source.indexOf('const MINIMUM_PLAN_BY_PERMISSION'),
+      source.indexOf('function isSupabaseUserId'),
+    );
+
+    expect(planMap).toContain("manage_vendors: 'professional'");
+    expect(planMap).toContain("read_vendors: 'professional'");
+    expect(planMap).toContain("manage_risks: 'professional'");
+    expect(planMap).toContain("read_risks: 'professional'");
+    expect(source).toContain('minimumPlan ?? MINIMUM_PLAN_BY_PERMISSION[permission]');
+    expect(source).toContain('!isPlanAtLeast(authority.plan, requiredPlan)');
+    expect(source).toContain("error: 'upgrade_required'");
+  });
+
+  it('requires Professional for FRIA, Annex IV and regulatory monitoring APIs', async () => {
+    const [fria, annexIv, controlTower] = await Promise.all([
+      readFile(FRIA_ROUTE, 'utf8'),
+      readFile(ANNEX_IV_ROUTE, 'utf8'),
+      readFile(REGULATORY_CONTROL_TOWER_ROUTE, 'utf8'),
+    ]);
+
+    expect((fria.match(/minimumPlan: 'professional'/g) ?? [])).toHaveLength(2);
+    expect((annexIv.match(/minimumPlan: 'professional'/g) ?? [])).toHaveLength(2);
+    expect((controlTower.match(/minimumPlan: 'professional'/g) ?? [])).toHaveLength(1);
+  });
+
+  it('requires Business for QMS APIs', async () => {
+    const source = await readFile(QMS_ROUTE, 'utf8');
+    expect((source.match(/minimumPlan:'business'/g) ?? [])).toHaveLength(2);
   });
 });

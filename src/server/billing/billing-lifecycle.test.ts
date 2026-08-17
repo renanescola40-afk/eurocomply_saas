@@ -35,14 +35,21 @@ describe('enterprise billing lifecycle catalog', () => {
     expect(getStripePriceId('starter', 'year')).toBe('price_essential_year');
   });
 
-  it('preserves legacy Starter monthly and annual keys only as transition fallbacks', () => {
+  it('fails closed instead of using legacy Starter price keys for self-serve checkout', () => {
     process.env.STRIPE_PRICE_STARTER_MONTHLY = 'price_legacy_starter_month';
     process.env.STRIPE_PRICE_STARTER_ANNUAL = 'price_legacy_starter_year';
-    expect(getStripePriceId('starter', 'month')).toBe('price_legacy_starter_month');
-    expect(getStripePriceId('starter', 'year')).toBe('price_legacy_starter_year');
+    expect(() => getStripePriceId('starter', 'month')).toThrow('missing_stripe_price_starter_month');
+    expect(() => getStripePriceId('starter', 'year')).toThrow('missing_stripe_price_starter_year');
   });
 
-  it('prefers canonical Professional prices over legacy Growth fallbacks', () => {
+  it('fails closed instead of using legacy Growth prices for Professional checkout', () => {
+    process.env.STRIPE_PRICE_GROWTH_MONTHLY = 'price_legacy_growth_month';
+    process.env.STRIPE_PRICE_GROWTH_ANNUAL = 'price_legacy_growth_year';
+    expect(() => getStripePriceId('professional', 'month')).toThrow('missing_stripe_price_professional_month');
+    expect(() => getStripePriceId('professional', 'year')).toThrow('missing_stripe_price_professional_year');
+  });
+
+  it('uses canonical Professional prices even when legacy Growth keys also exist', () => {
     process.env.STRIPE_PRICE_GROWTH_MONTHLY = 'price_legacy_growth_month';
     process.env.STRIPE_PRICE_GROWTH_ANNUAL = 'price_legacy_growth_year';
     process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY = 'price_professional_month';

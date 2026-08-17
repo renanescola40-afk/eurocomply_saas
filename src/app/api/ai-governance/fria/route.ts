@@ -119,6 +119,7 @@ export async function GET() {
       userId: user.id,
       organizationId: organization.id,
       permission: 'read_ai_governance',
+      minimumPlan: 'professional',
     });
     if (!permission.ok) return permissionDeniedResponse(permission);
     return noStoreJson({ ...(await listFriaSnapshot(organization.id)), role: permission.role });
@@ -140,6 +141,7 @@ export async function POST(request: Request) {
       userId: user.id,
       organizationId: organization.id,
       permission: 'manage_ai_governance',
+      minimumPlan: 'professional',
     });
     if (!permission.ok) return permissionDeniedResponse(permission);
     const limit = await checkDistributedRateLimit({
