@@ -67,13 +67,17 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-      STRIPE_PRICE_STARTER_MONTHLY: ${{ vars.STRIPE_PRICE_STARTER_MONTHLY }}
-      STRIPE_PRICE_GROWTH_MONTHLY: ${{ vars.STRIPE_PRICE_GROWTH_MONTHLY }}
-      STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ vars.STRIPE_PRICE_ENTERPRISE_MONTHLY }}
+      STRIPE_BILLING_PORTAL_CONFIGURATION_ID: ${{ vars.STRIPE_BILLING_PORTAL_CONFIGURATION_ID }}
       STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ vars.STRIPE_PRICE_ESSENTIAL_MONTHLY }}
+      STRIPE_PRICE_ESSENTIAL_ANNUAL: ${{ vars.STRIPE_PRICE_ESSENTIAL_ANNUAL }}
       STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ vars.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}
+      STRIPE_PRICE_PROFESSIONAL_ANNUAL: ${{ vars.STRIPE_PRICE_PROFESSIONAL_ANNUAL }}
       STRIPE_PRICE_BUSINESS_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_MONTHLY }}
-      STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY }}
+      # Compatibility inputs for the older broad provider probe are deliberately
+      # sourced from canonical bindings. Legacy repository variables are not authority.
+      STRIPE_PRICE_STARTER_MONTHLY: ${{ vars.STRIPE_PRICE_ESSENTIAL_MONTHLY }}
+      STRIPE_PRICE_GROWTH_MONTHLY: ${{ vars.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}
+      STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_MONTHLY }}
       SENTRY_ORG: ${{ vars.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -111,17 +115,35 @@ jobs:
       - name: Validate provider proof contracts
         run: |
           node --check scripts/security/run-production-provider-runtime-proof.mjs
+          node --check scripts/security/run-stripe-live-billing-provider-proof.mjs
           node --check scripts/security/diagnose-production-provider-blockers.mjs
           node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync(process.env.PROVIDER_TARGETS_PATH,'utf8')); if(p.schema!=='risck-comply.production-provider-targets.v1') process.exit(1)"
           npx vitest run \
             scripts/release/validate-production-secrets-runtime-evidence.test.mjs \
             tests/enterprise/production-provider-runtime-proof.test.ts \
             tests/enterprise/production-provider-blocker-diagnostics.test.ts
+          node --test tests/enterprise/stripe-live-billing-provider-proof.test.mjs
 
-      - name: Execute live provider proof
+      - name: Execute strict live billing provider proof
+        run: node scripts/security/run-stripe-live-billing-provider-proof.mjs
+
+      - name: Execute broad live provider proof
+        if: always()
         run: node scripts/security/run-production-provider-runtime-proof.mjs
 
+      - name: Stage strict billing provider evidence outside canonical P0 evidence namespace
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-validation
+          if [ -f docs/security/evidence/runtime/stripe-live-billing-provider-proof.json ]; then
+            mv docs/security/evidence/runtime/stripe-live-billing-provider-proof.json \
+              release-validation/stripe-live-billing-provider-proof.json
+          fi
+
       - name: Validate generated exact-SHA provider evidence
+        if: always()
         run: node scripts/security/check-p0-runtime-evidence-files.mjs
 
       - name: Diagnose provider blockers without storing provider values
@@ -149,6 +171,7 @@ jobs:
           name: production-provider-runtime-proof-${{ env.TARGET_SHA }}
           path: |
             docs/security/evidence/runtime/production-secrets-provider-stores.json
+            release-validation/stripe-live-billing-provider-proof.json
             release-validation/provider-blocker-diagnostics.json
           if-no-files-found: error
           retention-days: 90

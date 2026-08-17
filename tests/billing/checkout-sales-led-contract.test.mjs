@@ -34,7 +34,7 @@ test('sales-led plans keep fixed or starting catalog price references visible', 
   assert.match(checkoutPage, /planPriceLabel\(plan, locale, copy\)/);
   assert.match(checkoutPage, /plan\.priceMonthly/);
   assert.match(checkoutPage, /startingPriceMonthly/);
-  assert.match(signupPage, /getPlanPriceLabel\(plan\)/);
+  assert.match(signupPage, /getPlanPriceLabel\(plan, activeLocale\)/);
   assert.match(signupPage, /startingPriceMonthly/);
   assert.match(billingPage, /startingPriceMonthly/);
 });
