@@ -10,6 +10,7 @@ import { getOnboardingPlanIntent } from '@/lib/onboarding/plan-intent';
 import { completeOnboardingActivation, saveOnboardingDraft } from '@/server/actions/onboarding';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOnboardingActivationState } from '@/server/queries/onboarding';
+import { getOrganizationBillingAuthority } from '@/server/queries/subscription';
 
 type OnboardingSearchParams = {
   plan?: string;
@@ -32,6 +33,17 @@ function getPlanQuery(planId?: string) {
   return plan ? `?plan=${encodeURIComponent(plan.id)}` : '';
 }
 
+function getBillingRecoveryPath(locale: Locale, planId?: string) {
+  const query = new URLSearchParams({ onboarding: 'completed' });
+  const plan = getBillingPlan(planId);
+
+  if (plan) {
+    query.set('plan', plan.id);
+  }
+
+  return `/${locale}/dashboard/organizations/billing?${query.toString()}`;
+}
+
 export default async function OnboardingPage({ params, searchParams }: OnboardingPageProps) {
   noStore();
 
@@ -52,7 +64,16 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
   const initialState = await getOnboardingActivationState(user.id);
 
   if (initialState.organization?.isOnboardingCompleted) {
-    redirect(`/${safeLocale}/dashboard/organizations${planQuery}`);
+    // Reuse the Billing authority as read-only routing truth. A returning
+    // licensed subscriber should re-enter the product directly after login,
+    // while an unlicensed organization must stay in the recovery lane that is
+    // explicitly reachable through the dashboard fail-close boundary.
+    const authority = await getOrganizationBillingAuthority(initialState.organization.id);
+    if (authority.licensed) {
+      redirect(`/${safeLocale}/dashboard`);
+    }
+
+    redirect(getBillingRecoveryPath(safeLocale, resolvedSearchParams.plan));
   }
 
   async function saveDraftFromOnboarding(input: OnboardingDraftInput): Promise<OnboardingMutationResult> {

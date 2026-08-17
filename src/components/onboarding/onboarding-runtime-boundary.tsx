@@ -31,6 +31,15 @@ function unwrapMutationResult(result: OnboardingMutationResult): OnboardingActio
   return result;
 }
 
+function getBillingRecoveryPath(locale: string, selectedPlan: string) {
+  const query = new URLSearchParams({
+    onboarding: 'completed',
+    plan: selectedPlan,
+  });
+
+  return `/${locale}/dashboard/organizations/billing?${query.toString()}`;
+}
+
 export function OnboardingRuntimeBoundary({
   locale,
   requestedPlan,
@@ -47,7 +56,16 @@ export function OnboardingRuntimeBoundary({
   }
 
   async function complete(input: OnboardingActivationInput) {
-    return unwrapMutationResult(await onComplete(input));
+    const result = unwrapMutationResult(await onComplete(input));
+
+    // Commercial authority is established after onboarding. Keep fresh,
+    // unlicensed organizations inside the billing-recovery route explicitly
+    // allowed by the dashboard licensing boundary instead of sending them to a
+    // product route that immediately fail-closes back to pricing.
+    return {
+      ...result,
+      dashboardPath: getBillingRecoveryPath(locale, input.selectedPlan),
+    };
   }
 
   return (
