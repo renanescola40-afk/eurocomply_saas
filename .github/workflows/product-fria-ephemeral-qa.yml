@@ -9,6 +9,12 @@ on:
       - 'next.config.ts'
       - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
+      - 'src/middleware.ts'
+      - 'src/app/[locale]/dashboard/layout.tsx'
+      - 'src/app/api/ai-governance/fria/route.ts'
+      - 'src/server/security/rbac.ts'
+      - 'src/server/queries/subscription.ts'
+      - 'src/server/billing/subscription-authority.ts'
   push:
     branches: [main]
     paths:
@@ -16,6 +22,12 @@ on:
       - 'next.config.ts'
       - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
+      - 'src/middleware.ts'
+      - 'src/app/[locale]/dashboard/layout.tsx'
+      - 'src/app/api/ai-governance/fria/route.ts'
+      - 'src/server/security/rbac.ts'
+      - 'src/server/queries/subscription.ts'
+      - 'src/server/billing/subscription-authority.ts'
 
 permissions:
   contents: read
