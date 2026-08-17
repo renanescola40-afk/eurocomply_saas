@@ -69,29 +69,41 @@ function loadCatalog() {
   return catalog;
 }
 
-function canonicalMonthlyPlans(catalog) {
-  return ['essential', 'professional', 'business'].map((publicId) => {
+function canonicalSelfServePrices(catalog) {
+  const prices = [];
+  for (const publicId of ['essential', 'professional']) {
     const plan = catalog.plans?.[publicId];
-    if (!plan || typeof plan.monthlyPriceEnvKey !== 'string' || !Number.isInteger(plan.monthlyPriceCents)) {
-      throw new Error(`invalid_canonical_monthly_plan_${publicId}`);
+    if (!plan || plan.selfServe !== true || plan.salesLed !== false) {
+      throw new Error(`invalid_canonical_self_serve_plan_${publicId}`);
     }
-    return {
-      publicId,
-      expectedAmountCents: plan.monthlyPriceCents,
-      envKey: plan.monthlyPriceEnvKey,
-      priceId: env(plan.monthlyPriceEnvKey),
-    };
-  });
+    for (const cadence of ['monthly', 'annual']) {
+      const envKey = plan[`${cadence}PriceEnvKey`];
+      const amount = plan[`${cadence}PriceCents`];
+      if (typeof envKey !== 'string' || !Number.isInteger(amount)) {
+        throw new Error(`invalid_canonical_self_serve_price_${publicId}_${cadence}`);
+      }
+      prices.push({
+        publicId,
+        cadence,
+        expectedInterval: cadence === 'monthly' ? 'month' : 'year',
+        expectedAmountCents: amount,
+        envKey,
+        priceId: env(envKey),
+      });
+    }
+  }
+  return prices;
 }
 
-async function inspectPrice(secret, plan) {
-  if (!secret || !plan.priceId) {
+async function inspectPrice(secret, price) {
+  if (!secret || !price.priceId) {
     return {
-      configured: Boolean(plan.priceId),
+      configured: Boolean(price.priceId),
       reachable: false,
+      liveMode: false,
       active: false,
       productActive: false,
-      recurringMonthly: false,
+      recurringCadenceMatches: false,
       eur: false,
       amountMatches: false,
       passed: false,
@@ -99,7 +111,7 @@ async function inspectPrice(secret, plan) {
   }
 
   const response = await request(
-    `https://api.stripe.com/v1/prices/${encodeURIComponent(plan.priceId)}?expand[]=product`,
+    `https://api.stripe.com/v1/prices/${encodeURIComponent(price.priceId)}?expand[]=product`,
     { headers: { Authorization: `Bearer ${secret}` } },
   );
   if (response?.status !== 200) {
@@ -107,9 +119,10 @@ async function inspectPrice(secret, plan) {
     return {
       configured: true,
       reachable: false,
+      liveMode: false,
       active: false,
       productActive: false,
-      recurringMonthly: false,
+      recurringCadenceMatches: false,
       eur: false,
       amountMatches: false,
       passed: false,
@@ -120,11 +133,12 @@ async function inspectPrice(secret, plan) {
   const result = {
     configured: true,
     reachable: Boolean(body),
+    liveMode: body?.livemode === true,
     active: body?.active === true,
     productActive: body?.product?.active === true,
-    recurringMonthly: body?.type === 'recurring' && body?.recurring?.interval === 'month',
+    recurringCadenceMatches: body?.type === 'recurring' && body?.recurring?.interval === price.expectedInterval,
     eur: String(body?.currency ?? '').toLowerCase() === 'eur',
-    amountMatches: body?.unit_amount === plan.expectedAmountCents,
+    amountMatches: body?.unit_amount === price.expectedAmountCents,
   };
   return { ...result, passed: Object.values(result).every(Boolean) };
 }
@@ -148,32 +162,43 @@ export async function buildStripeCommercialCatalogProof({
     await account?.body?.cancel().catch(() => undefined);
   }
 
-  const plans = canonicalMonthlyPlans(catalog);
-  const inspected = await Promise.all(plans.map(async (plan) => ({
-    publicId: plan.publicId,
-    expectedAmountCents: plan.expectedAmountCents,
-    priceEnvKey: plan.envKey,
-    checks: await inspectPrice(secret, plan),
+  const prices = canonicalSelfServePrices(catalog);
+  const inspected = await Promise.all(prices.map(async (price) => ({
+    publicId: price.publicId,
+    cadence: price.cadence,
+    expectedAmountCents: price.expectedAmountCents,
+    priceEnvKey: price.envKey,
+    checks: await inspectPrice(secret, price),
   })));
+  const business = catalog.plans?.business;
   const enterprise = catalog.plans?.enterprise;
+  const businessPolicy = {
+    salesLed: business?.salesLed === true,
+    selfServeDisabled: business?.selfServe === false,
+  };
   const enterprisePolicy = {
     salesLed: enterprise?.salesLed === true,
+    selfServeDisabled: enterprise?.selfServe === false,
     fixedPublicStripePriceRequired: enterprise?.fixedPublicStripePriceRequired === false,
     startingMonthlyPriceCents: enterprise?.startingMonthlyPriceCents === 99000,
   };
 
+  const configuredIds = prices.map((price) => price.priceId).filter(Boolean);
   const checks = {
     exactProductionContext: exactContext,
     stripeSecretConfigured: Boolean(secret),
     stripeAccountReachable: accountReachable,
-    threeCanonicalMonthlyPriceKeysConfigured: plans.every((plan) => Boolean(plan.priceId)),
-    allCanonicalMonthlyPricesMatchCatalog: inspected.every((plan) => plan.checks.passed),
+    fourCanonicalSelfServePriceKeysConfigured: prices.every((price) => Boolean(price.priceId)),
+    fourCanonicalSelfServePricesDistinct: configuredIds.length === 4 && new Set(configuredIds).size === 4,
+    allCanonicalSelfServePricesMatchCatalog: inspected.every((price) => price.checks.passed),
+    businessSalesLedPolicyValid: Object.values(businessPolicy).every(Boolean),
     enterpriseContractPricingPolicyValid: Object.values(enterprisePolicy).every(Boolean),
+    legacyStripePriceFallbackRejected: catalog.transitionPolicy?.legacyStripePriceFallbackAllowed === false,
   };
   const passed = Object.values(checks).every(Boolean);
 
   return {
-    schema: 'risck-comply.stripe-commercial-catalog-proof.v1',
+    schema: 'risck-comply.stripe-commercial-catalog-proof.v2',
     evidenceItem: 'stripe-commercial-catalog-proof',
     status: passed ? 'Complete' : 'Open',
     outcome: passed ? 'passed' : 'blocked',
@@ -182,7 +207,8 @@ export async function buildStripeCommercialCatalogProof({
     commitSha: targetSha || null,
     currency: catalog.currency,
     checks,
-    plans: inspected,
+    prices: inspected,
+    businessPolicy,
     enterprisePolicy,
     legacyCompatibility: {
       allowed: catalog.transitionPolicy?.legacyStripePriceFallbackAllowed === true,
@@ -196,7 +222,7 @@ export async function buildStripeCommercialCatalogProof({
       stripeSecretStored: false,
       customerDataStored: false,
     },
-    truthBoundary: 'This proof validates only configured canonical monthly Stripe Price metadata against the versioned commercial catalog. It does not create Prices, change subscriptions, prove tax configuration, approve Enterprise contracts or migrate existing customers.',
+    truthBoundary: 'This proof validates the four canonical self-serve Essential/Professional monthly and annual live Stripe Price bindings against the versioned commercial catalog. Business and Enterprise remain sales-led. It does not create Prices, change subscriptions, prove tax configuration, approve Enterprise contracts or migrate existing customers.',
   };
 }
 
@@ -209,7 +235,12 @@ async function main() {
     outcome: evidence.outcome,
     commitSha: evidence.commitSha,
     checks: evidence.checks,
-    plans: evidence.plans.map((plan) => ({ publicId: plan.publicId, expectedAmountCents: plan.expectedAmountCents, checks: plan.checks })),
+    prices: evidence.prices.map((price) => ({
+      publicId: price.publicId,
+      cadence: price.cadence,
+      expectedAmountCents: price.expectedAmountCents,
+      checks: price.checks,
+    })),
   }, null, 2));
   if (evidence.outcome !== 'passed') process.exitCode = 1;
 }
