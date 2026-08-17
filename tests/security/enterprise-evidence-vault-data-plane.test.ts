@@ -29,22 +29,35 @@ describe('Enterprise Evidence Vault data plane', () => {
       selected.indexOf('20260817001500_reconcile_enterprise_evidence_vault.sql'),
     );
 
+    expect(reconciliation.truthBoundary.automaticClassification).toBe(false);
     expect(reconciliation.truthBoundary.productionWriteAuthorizedByConfig).toBe(false);
     expect(reconciliation.truthBoundary.migrationHistoryRepairAllowed).toBe(false);
     expect(reconciliation.truthBoundary.unrestrictedDbPushAllowed).toBe(false);
+    expect(reconciliation.truthBoundary.onlyListedForwardMigrationsMayBeRehearsedOrRequested).toBe(true);
   });
 
   it('fails closed when legacy tenant or object ownership cannot be proved', () => {
     expect(migration).toContain('having count(distinct om.organization_id) = 1');
     expect(migration).toContain('do not map to exactly one organization');
-    expect(migration).toContain('legacy object path(s) require explicit tenant-safe Storage migration');
+    expect(migration).toContain('require explicit object copy and SHA-256 reconciliation');
     expect(migration).toContain('alter column organization_id set not null');
     expect(migration).toContain('evidence_items_organization_id_fkey');
+  });
+
+  it('makes tenant, creator, attachment and deletion boundaries immutable', () => {
+    expect(migration).toContain('app_private.enforce_evidence_item_invariants()');
+    expect(migration).toContain('evidence_items_enforce_invariants');
+    expect(migration).toContain('Evidence tenant, creator, identity and creation boundary are immutable');
+    expect(migration).toContain('Evidence attachment metadata is write-once');
+    expect(migration).toContain('Soft-deleted Evidence Vault records are immutable');
+    expect(migration).toContain('new.updated_at := now()');
+    expect(migration).toContain('Evidence creator must match the authenticated actor');
   });
 
   it('enforces canonical metadata RLS, soft delete, append-only audit and hash metadata', () => {
     expect(migration).toContain('alter table public.evidence_items enable row level security');
     expect(migration).toContain('alter table public.evidence_items force row level security');
+    expect(migration).toContain('alter table public.evidence_item_audit_events force row level security');
     expect(migration).toContain('rls_evidence_items_select_organization');
     expect(migration).toContain('rls_evidence_items_insert_organization');
     expect(migration).toContain('rls_evidence_items_update_organization');
@@ -53,27 +66,32 @@ describe('Enterprise Evidence Vault data plane', () => {
     expect(migration).toContain('grant select, insert, update on table public.evidence_items to authenticated');
     expect(migration).toContain('Evidence Vault records are append-audited and must be soft-deleted');
     expect(migration).toContain('create table if not exists public.evidence_item_audit_events');
+    expect(migration).toContain('evidence_items_attachment_completeness_check');
     expect(migration).toContain('file_sha256 ~');
     expect(migration).toContain("event_type in ('created', 'updated', 'soft_deleted')");
   });
 
-  it('enforces private tenant-prefixed Storage without authenticated hard delete', () => {
+  it('binds Storage objects to organization and Evidence IDs with no browser mutation policy', () => {
     expect(migration).toContain("values ('compliance-evidence', 'compliance-evidence', false)");
-    expect(migration).toContain('app_private.evidence_storage_organization_id(name)');
+    expect(migration).toContain('app_private.evidence_storage_organization_id(object_name text)');
+    expect(migration).toContain('app_private.evidence_storage_evidence_id(object_name text)');
+    expect(migration).toContain('e.storage_object_path = storage.objects.name');
     expect(migration).toContain('rls_compliance_evidence_objects_select_organization');
     expect(migration).toContain('rls_compliance_evidence_objects_insert_organization');
-    expect(migration).toContain('rls_compliance_evidence_objects_update_organization');
+    expect(migration).not.toContain('create policy "rls_compliance_evidence_objects_update_organization"');
     expect(migration).not.toContain('create policy "rls_compliance_evidence_objects_delete_organization"');
-    expect(migration).toContain('legacy authenticated Evidence Storage delete policy remains present');
+    expect(migration).toContain('authenticated Evidence Storage UPDATE/DELETE policy remains present');
   });
 
-  it('binds the application contract to organization_id instead of caller-supplied user_id', () => {
+  it('binds the application contract to organization_id and the Evidence record id', () => {
     expect(evidenceRuntime).toContain('organizationId: string');
+    expect(evidenceRuntime).toContain('evidenceId: string');
     expect(evidenceRuntime).toContain(".eq('organization_id', params.organizationId)");
     expect(evidenceRuntime).toContain('Multiple organizations are available; select an organization');
-    expect(evidenceRuntime).toContain('`${params.organizationId}/${objectId}/${fileName}`');
+    expect(evidenceRuntime).toContain('`${params.organizationId}/${params.evidenceId}/${fileName}`');
     expect(evidenceRuntime).toContain("crypto.subtle.digest('SHA-256', buffer)");
-    expect(evidenceRuntime).not.toContain('userId: string;\n  workspaceId');
+    expect(evidenceRuntime).toContain('Create Evidence metadata first, then attach bytes with uploadEvidenceFile.');
+    expect(evidenceRuntime).not.toContain('`${params.organizationId}/${objectId}/${fileName}`');
     expect(evidencePage).toContain('resolveEvidenceOrganization');
     expect(evidencePage).toContain('organizationId,');
   });
