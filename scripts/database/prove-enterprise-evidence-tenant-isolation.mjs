@@ -69,6 +69,15 @@ async function expectZeroRows(operation, label) {
   if (!Array.isArray(result?.data) || result.data.length !== 0) throw new Error(`${label}_cross_tenant_rows_visible`);
 }
 
+async function expectStorageObjectPreservedAfterDeleteAttempt(operation, download, expectedBytes, label) {
+  await operation();
+  const { data, error } = await download();
+  if (error || !data) throw new Error(`${label}_object_missing_after_attempt`);
+
+  const actualBytes = Buffer.from(await data.arrayBuffer());
+  if (!actualBytes.equals(expectedBytes)) throw new Error(`${label}_object_changed_after_attempt`);
+}
+
 async function main() {
   if (env('GITHUB_ACTIONS') !== 'true') throw new Error('github_actions_required');
 
@@ -220,8 +229,10 @@ async function main() {
     ),
     'tenant_a_storage_update',
   );
-  await expectError(
+  await expectStorageObjectPreservedAfterDeleteAttempt(
     () => tenantA.storage.from('compliance-evidence').remove([objectPath]),
+    () => tenantA.storage.from('compliance-evidence').download(objectPath),
+    bytes,
     'tenant_a_storage_delete',
   );
 
