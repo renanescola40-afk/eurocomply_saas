@@ -59,7 +59,7 @@ const hardenedOnboarding = readFileSync(
 const selected = config.migrations.map((migration) => migration.filename);
 
 describe('bounded Supabase forward reconciliation contract', () => {
-  it('selects exactly the twenty-four bounded forward-only reconciliation identities in version order', () => {
+  it('selects exactly the twenty-five bounded forward-only reconciliation identities in version order', () => {
     expect(selected).toEqual([
       '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
       '20260813194500_reconcile_step_up_challenges_runtime.sql',
@@ -85,6 +85,7 @@ describe('bounded Supabase forward reconciliation contract', () => {
       '20260816104000_guard_compliance_task_browser_mutations.sql',
       '20260816104500_reconcile_gap_remediation_persistence.sql',
       '20260816110000_harden_gap_personal_task_write_boundary.sql',
+      '20260817001500_reconcile_enterprise_evidence_vault.sql',
     ]);
     for (const historical of [
       '20260730204500_repair_live_rls_validation_inventory.sql',
