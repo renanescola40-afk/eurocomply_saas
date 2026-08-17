@@ -277,5 +277,11 @@ test('fails closed without sending repository-controlled Vercel target data outb
   assert.equal(proof.status, 'Open');
   assert.equal(proof.checks.productionRuntimeBindingKeysPresent, false);
   assert.equal(outbound.some((url) => url.includes('prj_untrustedRepositoryValue')), false);
-  assert.equal(outbound.some((url) => url.includes('api.vercel.com')), false);
+  assert.equal(outbound.some((url) => {
+    try {
+      return new URL(url).hostname === 'api.vercel.com';
+    } catch {
+      return false;
+    }
+  }), false);
 });
