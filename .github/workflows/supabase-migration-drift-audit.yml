@@ -22,8 +22,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  pr-contract:
+    name: Validate drift-audit contract without production access
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out trusted source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Test connection resolver and workflow contracts
+        run: >-
+          npx vitest run
+          scripts/supabase/prepare-production-db-connection.test.mjs
+          tests/security/supabase-migration-drift-audit-workflow.test.ts
+
+      - name: Record pull request validation boundary
+        shell: bash
+        run: |
+          echo 'Pull requests validate resolver and workflow contracts without requesting the protected production environment.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No production database secret or connection is available to this job.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'The scheduled or manually dispatched audit remains responsible for fail-closed live migration drift evidence.' >> "$GITHUB_STEP_SUMMARY"
+
   audit:
     name: Audit local and production migration history
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: production
@@ -48,7 +84,6 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Validate production configuration
-        if: github.event_name != 'pull_request'
         shell: bash
         env:
           SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
@@ -68,7 +103,6 @@ jobs:
           echo "SUPABASE_DB_URL_FILE=$RUNNER_TEMP/supabase-production-db-url" >> "$GITHUB_ENV"
 
       - name: Prepare explicit production database connection
-        if: github.event_name != 'pull_request'
         shell: bash
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
@@ -88,28 +122,18 @@ jobs:
           scripts/supabase/prepare-production-db-connection.test.mjs
           tests/security/supabase-migration-drift-audit-workflow.test.ts
 
-      - name: Record pull request validation boundary
-        if: github.event_name == 'pull_request'
-        shell: bash
-        run: |
-          echo 'Pull requests validate resolver and workflow contracts without opening a production database connection.' >> "$GITHUB_STEP_SUMMARY"
-          echo 'The scheduled or manually dispatched audit remains responsible for fail-closed live migration drift evidence.' >> "$GITHUB_STEP_SUMMARY"
-
       - name: Install pinned Supabase CLI
-        if: github.event_name != 'pull_request'
         uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
         with:
           version: ${{ env.SUPABASE_CLI_VERSION }}
 
       - name: Verify pinned Supabase CLI version
-        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
           test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
 
       - name: Capture remote migration state
-        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
@@ -119,7 +143,6 @@ jobs:
             | tee "$EVIDENCE_DIR/migration-state-remote.txt"
 
       - name: Generate drift evidence
-        if: github.event_name != 'pull_request'
         id: drift
         shell: bash
         run: |
@@ -135,7 +158,7 @@ jobs:
           exit 0
 
       - name: Publish audit summary
-        if: ${{ github.event_name != 'pull_request' && always() }}
+        if: always()
         shell: bash
         run: |
           if [ -f "$EVIDENCE_DIR/migration-drift.md" ]; then
@@ -145,13 +168,13 @@ jobs:
           fi
 
       - name: Remove temporary database connection material
-        if: ${{ github.event_name != 'pull_request' && always() }}
+        if: always()
         shell: bash
         run: |
           rm -f "$SUPABASE_DB_URL_FILE"
 
       - name: Upload migration drift evidence
-        if: ${{ github.event_name != 'pull_request' && always() }}
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: supabase-migration-drift-${{ github.sha }}
@@ -160,7 +183,7 @@ jobs:
           retention-days: 14
 
       - name: Enforce critical drift gate
-        if: ${{ github.event_name != 'pull_request' && steps.drift.outputs.result != '0' }}
+        if: steps.drift.outputs.result != '0'
         shell: bash
         run: |
           echo 'Critical Supabase migration drift detected. Review the generated job summary and artifact.' >&2
