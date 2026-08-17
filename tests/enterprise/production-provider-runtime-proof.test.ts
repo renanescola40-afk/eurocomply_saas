@@ -103,7 +103,7 @@ describe('protected production provider runtime proof', () => {
       'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
       'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
     ]) {
-      expect(workflow).toContain(`${key}: ${{ vars.${key} }}`);
+      expect(workflow).toContain(`${key}: ` + '${{ vars.' + key + ' }}');
       expect(billingProducer).toContain(`'${key}'`);
     }
     expect(workflow).not.toContain('STRIPE_PRICE_STARTER_MONTHLY: ${{ vars.STRIPE_PRICE_STARTER_MONTHLY }}');
