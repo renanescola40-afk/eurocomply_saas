@@ -23,6 +23,8 @@ Each item should be marked as one of:
 | Landing page links to Trust Center | Complete before customer disclosure | `src/components/marketing/enterprise-home.tsx` |
 | Pricing page links to Trust Center | Complete before customer disclosure | `src/app/[locale]/pricing/page.tsx` |
 | Demo page captures enterprise readiness leads | Complete before launch | `src/app/[locale]/book-demo/page.tsx`, `src/app/api/leads/route.ts` |
+| Dedicated corporate security channel | Complete after external delivery and authorized-owner monitoring are verified | `SECURITY.md`, `docs/trust/INCIDENT_RESPONSE.md` |
+| Public incident-communication authority | Complete after controlled public incident create/update/resolve proof | `src/app/[locale]/status/page.tsx`, `src/lib/trust-center/verified-authority.ts` |
 
 ## AI governance procurement packet
 
@@ -48,9 +50,10 @@ Each item should be marked as one of:
 | Sensitive configuration | How are privileged runtime settings handled? | `src/lib/supabase/admin.ts`, security scripts | Intended to remain server-side and outside browser-delivered bundles. |
 | Backups | Are backups and restores tested? | `docs/trust/BACKUP_AND_RECOVERY.md` | Provider-managed posture; do not promise tested restore, RTO, or RPO without evidence. |
 | Incident response | What happens during a security issue? | `docs/trust/INCIDENT_RESPONSE.md`, `SECURITY.md` | Documented workflow exists; 24/7 staffed monitoring is not currently claimed. |
+| Public incident communication | Where are customer-facing incident updates published? | `https://risckcomplystatus1.statuspage.io/`, `src/app/[locale]/status/page.tsx` | Verified public Statuspage authority; do not convert this into an unsupported uptime or staffing claim. |
 | Subprocessors | Which providers may process data? | `docs/trust/SUBPROCESSORS.md` | Register must be verified before contractual disclosure. |
 | Data retention | How long is data kept? | `docs/trust/DATA_PROTECTION.md` | Formal retention schedule remains agreement-dependent. |
-| Responsible disclosure | How are reports submitted? | `SECURITY.md` | Reports go privately to `renansilva2002@gmail.com` until a dedicated mailbox exists. |
+| Responsible disclosure | How are reports submitted? | `SECURITY.md` | Reports go privately to the verified corporate channel `security@risckcomply.com`. |
 
 ## Compliance claim guardrails
 
@@ -99,6 +102,8 @@ Before an enterprise deal is marked procurement-ready, confirm:
 - all mandatory trust docs exist;
 - public Trust Center and Security pages render;
 - footer, landing, pricing and demo surfaces link to Trust Center or demo capture;
+- the responsible disclosure authority is `security@risckcomply.com` and does not fall back to a personal/free-mail account;
+- the canonical public incident authority remains `https://risckcomplystatus1.statuspage.io/`;
 - AI governance claims are framed as readiness/evidence support, not legal guarantees;
 - `npm run security:trust-package` passes;
 - release evidence records current blockers honestly;

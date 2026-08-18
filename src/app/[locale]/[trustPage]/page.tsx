@@ -6,6 +6,7 @@ import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 import { getSafeLocale, makePublicMetadata } from '@/lib/seo/public-metadata';
 import { getLocalizedTrustCenterPage } from '@/lib/trust-center/localized-content';
 import { isTrustCenterSlug, TRUST_CENTER_ROUTES } from '@/lib/trust-center/routes';
+import { applyVerifiedTrustAuthority } from '@/lib/trust-center/verified-authority';
 
 export const dynamic = 'force-static';
 export const revalidate = 300;
@@ -30,7 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const locale = getSafeLocale(requestedLocale);
-  const page = getLocalizedTrustCenterPage(trustPage, locale);
+  const page = applyVerifiedTrustAuthority(getLocalizedTrustCenterPage(trustPage, locale), locale);
 
   return makePublicMetadata({
     locale,
@@ -49,7 +50,7 @@ export default async function PublicTrustRoute({ params }: PageProps) {
   }
 
   const locale = safeLocale(requestedLocale);
-  const page = getLocalizedTrustCenterPage(trustPage, locale);
+  const page = applyVerifiedTrustAuthority(getLocalizedTrustCenterPage(trustPage, locale), locale);
 
   return <TrustCenterPage locale={locale} page={page} />;
 }
