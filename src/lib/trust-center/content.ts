@@ -37,8 +37,9 @@ export const TRUST_PROHIBITED_CLAIMS = [
   'Automatic EU AI Act compliance or replacement for lawyers, DPOs or compliance officers.',
 ] as const;
 
-const updated = '2026-07-06';
-const contact = 'renansilva2002@gmail.com';
+const updated = '2026-08-18';
+const contact = 'security@risckcomply.com';
+const statusPage = 'https://risckcomplystatus1.statuspage.io/';
 const disclosureSlug = TRUST_CENTER_ROUTES[9];
 
 const pageCopy: Record<string, Omit<TrustPage, 'slug' | 'updated'>> = {
@@ -64,7 +65,7 @@ const pageCopy: Record<string, Omit<TrustPage, 'slug' | 'updated'>> = {
       { title: 'Encryption', body: 'Encryption in transit is provided through HTTPS/TLS by managed hosting and provider connections. Encryption at rest is handled by managed infrastructure providers where available. RISCK COMPLY does not claim end-to-end encryption.' },
       { title: 'Audit logs', body: 'Security-relevant and compliance-relevant events are designed to be recorded for review and investigation. Audit records should not be marketed as externally immutable unless separate evidence exists.' },
       { title: 'Backups and availability', body: 'Backups and availability depend on managed provider capabilities and production configuration. Restore testing and formal disaster recovery evidence remain on the assurance roadmap.' },
-      { title: 'Incident response', body: 'Incidents should be triaged privately, assessed for customer impact, communicated clearly when required and followed by corrective action tracking.' },
+      { title: 'Incident response', body: `Security reports use ${contact}; public incident communication uses ${statusPage}. Incident updates should be evidence-based and must not expose sensitive customer or security details.` },
     ],
   },
   privacy: {
@@ -119,17 +120,17 @@ const pageCopy: Record<string, Omit<TrustPage, 'slug' | 'updated'>> = {
     sections: [
       { title: 'Availability approach', body: 'RISCK COMPLY is designed to use managed hosting and infrastructure providers for application availability. Public pages do not promise a numeric uptime SLA unless a signed plan or enterprise agreement states one.' },
       { title: 'Support', body: 'Support response times depend on customer plan and operational capacity. RISCK COMPLY does not publicly promise 24/7 human support at this stage.' },
-      { title: 'Maintenance', body: 'Planned maintenance, incident updates and degraded service notices should be communicated through the status page or direct customer communication when applicable.' },
+      { title: 'Maintenance', body: `Planned maintenance, incident updates and degraded service notices should be communicated through the verified public status authority at ${statusPage} or direct customer communication when applicable.` },
     ],
   },
   status: {
     navLabel: 'Status',
     title: 'System Status',
-    subtitle: 'Simple public status surface for service availability and incidents.',
-    status: 'Static status page. Live monitoring integration pending.',
+    subtitle: 'Verified public incident communication and service-component status.',
+    status: 'Verified public Statuspage authority is active.',
     sections: [
-      { title: 'Current public status', body: 'No live third-party status integration is connected on this page yet. Production teams should update this page or link it to a dedicated provider before relying on it for external incident communication.' },
-      { title: 'Components to track', body: 'Recommended components include web application, authentication, database, storage, document generation, billing, email delivery and external provider dependencies.' },
+      { title: 'Current public status', body: `The canonical public incident-communication authority is ${statusPage}. Authorized operators can create, update, monitor and resolve incidents there.` },
+      { title: 'Components tracked', body: 'The public authority supports web application, authentication, database, storage, document generation, billing, email delivery and external provider dependencies.' },
       { title: 'Incident updates', body: 'Incident updates should describe affected components, customer impact, mitigation, resolution and follow-up actions without exposing sensitive security details.' },
     ],
   },
@@ -150,7 +151,7 @@ const pageCopy: Record<string, Omit<TrustPage, 'slug' | 'updated'>> = {
     subtitle: 'How customers and security reviewers can report issues safely and privately.',
     status: 'Responsible disclosure channel active. Bug bounty not currently offered.',
     sections: [
-      { title: 'Reporting contact', body: `Send security reports privately to ${contact} until a dedicated security mailbox is provisioned.` },
+      { title: 'Reporting contact', body: `Send security reports privately to ${contact}. This dedicated corporate security channel has verified external delivery and authorized owner monitoring.` },
       { title: 'What to include', body: 'Reports should include affected component, clear reproduction context, business impact, account or organization context and whether customer data may be affected.' },
       { title: 'Research boundaries', body: 'Reports must be limited to safe, authorized research and must not disrupt the service or access data that does not belong to the reporter.' },
       { title: 'Response limitations', body: 'RISCK COMPLY does not currently operate a public bug bounty, does not promise 24/7 response and does not guarantee monetary rewards.' },
@@ -166,7 +167,7 @@ const ptLabels: Partial<Record<string, Pick<TrustPage, 'navLabel' | 'title' | 's
   dpa: { navLabel: 'DPA', title: 'Data Processing Addendum', subtitle: 'Resumo de compromissos esperados de tratamento de dados para clientes enterprise.' },
   subprocessors: { navLabel: 'Subprocessadores', title: 'Subprocessadores', subtitle: 'Fornecedores usados para entregar, proteger, hospedar, faturar e operar o servico.' },
   sla: { navLabel: 'SLA', title: 'Compromissos de Servico', subtitle: 'Linguagem honesta sobre disponibilidade e suporte, sem prometer 24/7 sem equipa dedicada.' },
-  status: { navLabel: 'Estado', title: 'Estado do Sistema', subtitle: 'Superficie publica simples para disponibilidade e comunicacao de incidentes.' },
+  status: { navLabel: 'Estado', title: 'Estado do Sistema', subtitle: 'Superficie publica para disponibilidade e comunicacao verificada de incidentes.' },
   'data-processing': { navLabel: 'Tratamento de Dados', title: 'Tratamento de Dados', subtitle: 'Visao operacional dos dados tratados e como devem ser controlados.' },
   [disclosureSlug]: { navLabel: 'Disclosure de Vulnerabilidades', title: 'Disclosure de Vulnerabilidades', subtitle: 'Como clientes e reviewers de seguranca podem reportar problemas com seguranca.' },
 };
