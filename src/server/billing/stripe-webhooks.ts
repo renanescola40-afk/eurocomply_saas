@@ -6,6 +6,7 @@ import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeClient } from '@/server/billing/stripe';
+import { retrieveCurrentStripeSubscriptionForEvent } from '@/server/billing/stripe-subscription-provider-truth';
 import { getUserEmailContextById } from '@/server/users/email';
 
 const SUPPORTED_STRIPE_WEBHOOK_EVENTS = new Set([
@@ -435,7 +436,7 @@ export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscrip
         status: subscription.status,
         stripeCustomerId: customerId,
         clerkOrgId: clerkOrgId ?? null,
-        syncSource: 'stripe_webhook',
+        syncSource: 'stripe_provider_truth',
       },
     });
   }
@@ -608,7 +609,8 @@ async function processStripeWebhookEvent(event: Stripe.Event) {
     event.type === 'customer.subscription.updated' ||
     event.type === 'customer.subscription.deleted'
   ) {
-    await upsertSubscriptionFromStripe(event.data.object as Stripe.Subscription, event);
+    const currentSubscription = await retrieveCurrentStripeSubscriptionForEvent(event);
+    await upsertSubscriptionFromStripe(currentSubscription, event);
     return;
   }
 
