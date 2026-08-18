@@ -232,9 +232,15 @@ jobs:
         run: |
           set -euo pipefail
           npm run dev > "$RUNNER_TEMP/fria-next.log" 2>&1 &
-          echo $! > "$RUNNER_TEMP/fria-next.pid"
+          next_pid=$!
+          echo "$next_pid" > "$RUNNER_TEMP/fria-next.pid"
           ready=false
           for _ in $(seq 1 90); do
+            if ! kill -0 "$next_pid" 2>/dev/null; then
+              echo 'Product QA application process exited before readiness.' >&2
+              tail -n 200 "$RUNNER_TEMP/fria-next.log" >&2 || true
+              exit 1
+            fi
             if curl --fail --silent --show-error "$E2E_BASE_URL/en/login" >/dev/null; then
               ready=true
               break
@@ -242,6 +248,7 @@ jobs:
             sleep 2
           done
           if [ "$ready" != 'true' ]; then
+            echo 'Product QA application did not become ready within the bounded startup window.' >&2
             tail -n 200 "$RUNNER_TEMP/fria-next.log" >&2 || true
             exit 1
           fi
@@ -259,7 +266,18 @@ jobs:
           test "${E2E_FRIA_COMMERCIAL_AUTHORITY_VERIFIED:-}" = 'true'
           test "${E2E_FRIA_EVIDENCE_VAULT_SCHEMA_VERIFIED:-}" = 'true'
           rm -f "$E2E_FRIA_RUNTIME_EVIDENCE_PATH"
-          npx playwright test tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts --project=chromium --reporter=line,github
+          if ! npx playwright test tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts --project=chromium --reporter=line,github --retries=1; then
+            app_healthy=false
+            auth_healthy=false
+            if curl --fail --silent --show-error "$E2E_BASE_URL/en/login" >/dev/null; then
+              app_healthy=true
+            fi
+            if curl --fail --silent --show-error "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/health" >/dev/null; then
+              auth_healthy=true
+            fi
+            echo "Product QA sanitized failure diagnostic: app_healthy=$app_healthy auth_healthy=$auth_healthy" >&2
+            exit 1
+          fi
 
       - name: Require executed sanitized FRIA evidence
         shell: bash

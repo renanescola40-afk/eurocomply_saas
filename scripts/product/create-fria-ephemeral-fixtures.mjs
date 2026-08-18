@@ -41,6 +41,19 @@ async function createUser(admin, label, suffix) {
   return { id: data.user.id, email, password: secret };
 }
 
+async function verifyPasswordGrant(url, anonKey, identity, label) {
+  const authClient = createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+  const { data, error } = await authClient.auth.signInWithPassword({
+    email: identity.email,
+    password: identity.password,
+  });
+  if (error || !data.session?.access_token || data.user?.id !== identity.id) {
+    throw new Error(`fria_${label}_password_grant_failed`);
+  }
+}
+
 async function insertOne(admin, table, row, label) {
   const { data, error } = await admin.from(table).insert(row).select('*').single();
   if (error || !data?.id) throw new Error(`${label}_create_failed`);
@@ -50,6 +63,7 @@ async function insertOne(admin, table, row, label) {
 async function main() {
   if (env('GITHUB_ACTIONS') !== 'true') throw new Error('github_actions_required');
   const url = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
+  const anonKey = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
   const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
   const parsed = new URL(url);
   if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(parsed.hostname)) {
@@ -63,6 +77,12 @@ async function main() {
   const owner = await createUser(admin, 'owner', suffix);
   const reviewer = await createUser(admin, 'reviewer', suffix);
   const approver = await createUser(admin, 'approver', suffix);
+
+  // Prove that the exact disposable browser credentials are accepted by the same
+  // loopback GoTrue instance before Product UI acceptance starts. This intentionally
+  // stores or prints neither credentials nor token/provider payloads.
+  await verifyPasswordGrant(url, anonKey, owner, 'owner');
+  await verifyPasswordGrant(url, anonKey, approver, 'approver');
 
   const organization = await insertOne(admin, 'organizations', {
     name: `FRIA Disposable QA ${suffix}`,
@@ -162,7 +182,7 @@ async function main() {
     'utf8',
   );
 
-  process.stdout.write('Disposable FRIA identities, tenant, Professional signed-contract authority and Evidence Vault schema verified on loopback Supabase.\n');
+  process.stdout.write('Disposable FRIA identities, password grants, tenant, Professional signed-contract authority and Evidence Vault schema verified on loopback Supabase.\n');
 }
 
 main().catch((error) => {
