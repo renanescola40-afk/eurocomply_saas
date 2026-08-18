@@ -27,9 +27,13 @@ Pull-request contract validation remains secret-free and does not require the pr
 
 ### `production-recovery`
 
-Used only by Recovery Resilience Proof. This environment must be created and hardened explicitly before a recovery exercise is dispatched. Do not rely on workflow execution to create the environment implicitly.
+Shared only by the two canonical recovery lanes: **Recovery Resilience Proof** and **Enterprise Recovery Drill**. Both workflows perform destructive-capable or production-data recovery assurance and therefore use the same dedicated recovery authority rather than borrowing migration-review or migration-dry-run environments.
 
-For `full` and `production-rollback` exercises the existing explicit confirmation phrase `EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK` remains mandatory in addition to environment governance.
+This environment must be created and hardened explicitly before a recovery exercise is dispatched. Do not rely on workflow execution to create the environment implicitly. The protected source database credential is recovery-scoped and must remain a `production-recovery` secret; it is referenced only by the bounded preflight/backup producer steps after post-approval exact-current-main and governance revalidation.
+
+`Enterprise Recovery Drill` is restricted to the backup/restore lane and cannot manufacture rollback credit. `Recovery Resilience Proof` additionally owns controlled rollback. For `full` and `production-rollback` exercises in Recovery Resilience Proof, the explicit confirmation phrase `EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK` remains mandatory in addition to environment governance.
+
+Provider authentication tests performed in Supabase migration environments can establish credential reachability for those separate controls, but they are not substitutes for a completed `production-recovery` backup/restore or rollback proof.
 
 ### `production-platform-proof`
 
