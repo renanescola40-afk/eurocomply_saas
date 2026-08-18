@@ -1,6 +1,8 @@
 # ADR-0095 — Global commercial access boundary
 
-Status: Accepted
+- Status: Accepted
+- Date: 2026-08-18
+- Owners: Application Security / Billing Engineering / Product Platform
 
 ## Context
 
@@ -75,3 +77,7 @@ The shared locale layout reads the trusted request pathname to apply the boundar
 ## Follow-up boundary
 
 This ADR closes the page/render boundary. Direct APIs, server actions, service-role mutations, tenant isolation and lifecycle edge cases remain independently subject to their own authorization controls and should continue to be audited as a separate Mega PR cluster.
+
+## Rollback
+
+Revert the commits from PR #1721 that add the commercial route policy, canonical page access resolver and locale/dashboard layout enforcement. The rollback requires no database migration, Stripe mutation, Supabase schema change, secret rotation or provider-side operation. If rolled back, the historical top-level paid-route bypass returns, so rollback is an emergency availability action only and must be accompanied by an application-level maintenance restriction until a corrected commercial boundary is redeployed.
