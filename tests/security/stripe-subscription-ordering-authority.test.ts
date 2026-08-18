@@ -56,14 +56,16 @@ describe('Stripe out-of-order commercial authority', () => {
     expect(result.snapshot.entitlements.stripe_subscription_status).toBe('canceled');
   });
 
-  it('retrieves live provider truth after the raw event is durably claimed and before subscription state is upserted', async () => {
+  it('claims the raw event before processing and uses provider truth before subscription upsert', async () => {
     const source = await readFile(WEBHOOKS, 'utf8');
 
     const claimIndex = source.indexOf('const claimed = await claimStripeEventForProcessing(event);');
+    const processCallIndex = source.indexOf('await processStripeWebhookEvent(event);');
     const providerIndex = source.indexOf('const currentSubscription = await retrieveCurrentStripeSubscriptionForEvent(event);');
     const upsertIndex = source.indexOf('await upsertSubscriptionFromStripe(currentSubscription, event);');
 
     expect(claimIndex).toBeGreaterThan(-1);
+    expect(processCallIndex).toBeGreaterThan(claimIndex);
     expect(providerIndex).toBeGreaterThan(-1);
     expect(upsertIndex).toBeGreaterThan(providerIndex);
     expect(source).toContain('payload: event as unknown as Record<string, unknown>');
