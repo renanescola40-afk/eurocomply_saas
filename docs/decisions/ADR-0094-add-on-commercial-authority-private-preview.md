@@ -39,6 +39,32 @@ An add-on may move to `active` only after code and runtime evidence prove all of
 - tests proving client state, query parameters and stale rows cannot grant authority;
 - legitimate live runtime acceptance without synthetic customer charges created solely for evidence.
 
+## Consequences
+
+### Positive
+
+- Customers cannot be charged through RISCK COMPLY for an add-on whose protected feature or quota effect is not yet authoritative end to end.
+- Stale database rows and client-side add-on identifiers cannot silently reactivate a preview capability.
+- The complete catalog, pricing model and lifecycle primitives remain versioned so a future provider-backed activation can be reviewed as an explicit commercial change.
+- Existing Essential and Professional self-serve subscription behavior is unchanged.
+
+### Risks and trade-offs
+
+- Add-on revenue and self-serve expansion are intentionally unavailable while provider-backed reconciliation is incomplete.
+- Some Upgrade Center entries remain visible as roadmap/private-preview capabilities rather than purchasable products; copy and state must continue to avoid implying an active commercial offer.
+- Re-activating add-ons later requires coordinated Stripe Price bindings, webhook reconciliation, feature/quota consumption and live acceptance rather than a catalog-only status change.
+- Private preview is a commercial safety boundary, not proof that the future add-on implementation is complete.
+
+## Validation
+
+Regression coverage verifies that private-preview add-ons are omitted from the public active catalog, rejected before subscription-item mutations are constructed, ignored as stale organization entitlement rows, unable to elevate lower-plan feature gates and rendered without a purchase CTA in the Upgrade Center.
+
+The existing Stripe catalog/runtime/security workflows continue to validate base-plan billing independently. No runtime PASS is inferred from this ADR.
+
 ## Security and commercial boundary
 
 This decision intentionally prefers an unavailable add-on over a charge for an unenforceable entitlement. It does not delete the add-on engine or catalog; it keeps the future capability versioned while preventing premature sale.
+
+## Rollback
+
+Revert this PR only if the previous add-on commercial behavior must be restored. Doing so would re-expose add-ons as active and is therefore safe only after the provider-backed authority chain described above has been implemented and proven. No database rollback, Stripe object mutation, customer charge, migration reversal or entitlement-data rewrite is required by this PR itself.
