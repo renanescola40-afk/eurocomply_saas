@@ -1,0 +1,255 @@
+name: Supabase Enterprise Data Plane QA
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/supabase-enterprise-data-plane-qa.yml'
+      - 'config/supabase-forward-reconciliation.json'
+      - 'scripts/database/reconcile-supabase-enterprise-forward.mjs'
+      - 'scripts/database/prove-enterprise-evidence-tenant-isolation.mjs'
+      - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs'
+      - 'src/lib/evidence/storage.ts'
+      - 'src/app/[locale]/dashboard/evidence/page.tsx'
+      - 'supabase/migrations/**'
+      - 'tests/security/enterprise-evidence-vault-data-plane.test.ts'
+      - 'tests/security/compliance-metric-snapshot-tenant-boundary.test.ts'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/supabase-enterprise-data-plane-qa.yml'
+      - 'config/supabase-forward-reconciliation.json'
+      - 'scripts/database/reconcile-supabase-enterprise-forward.mjs'
+      - 'scripts/database/prove-enterprise-evidence-tenant-isolation.mjs'
+      - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs'
+      - 'src/lib/evidence/storage.ts'
+      - 'src/app/[locale]/dashboard/evidence/page.tsx'
+      - 'supabase/migrations/**'
+      - 'tests/security/enterprise-evidence-vault-data-plane.test.ts'
+      - 'tests/security/compliance-metric-snapshot-tenant-boundary.test.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-enterprise-data-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  exact-sha-data-plane:
+    name: Exact-SHA disposable tenant isolation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      EXPECTED_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Checkout exact assessed SHA without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact assessed SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install application dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Verify bounded exact migration manifest
+        shell: bash
+        env:
+          SUPABASE_FORWARD_RECONCILIATION_REPORT: ${{ runner.temp }}/supabase-forward-reconciliation-evidence.json
+        run: |
+          set -euo pipefail
+          node scripts/database/reconcile-supabase-enterprise-forward.mjs
+          test -s "$SUPABASE_FORWARD_RECONCILIATION_REPORT"
+
+      - name: Run focused static security contracts
+        run: >-
+          npx vitest run
+          tests/security/enterprise-evidence-vault-data-plane.test.ts
+          tests/security/compliance-metric-snapshot-tenant-boundary.test.ts
+
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.101.0
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Start reviewed exact-SHA disposable database
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs
+
+      - name: Verify disposable recovery boundary exports
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${RECOVERY_EPHEMERAL_DATABASE_PROVISIONED:-}" = 'true'
+          test "${RECOVERY_EPHEMERAL_DATABASE_MODE:-}" = 'project-schema'
+          test -n "${RECOVERY_EPHEMERAL_WORKDIR:-}"
+          test -n "${RECOVERY_ISOLATED_DATABASE_URL:-}"
+
+      - name: Verify Enterprise Evidence schema postconditions before API runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$RECOVERY_ISOLATED_DATABASE_URL" --no-psqlrc --set ON_ERROR_STOP=1 <<'SQL'
+          do $proof$
+          declare
+            storage_policies integer;
+            forensic_triggers integer;
+          begin
+            if to_regclass('public.evidence_items') is null
+               or to_regclass('public.evidence_item_audit_events') is null then
+              raise exception 'Evidence Vault schema missing in disposable exact-SHA database';
+            end if;
+
+            if not exists (
+              select 1
+              from pg_class c
+              join pg_namespace n on n.oid = c.relnamespace
+              where n.nspname = 'public'
+                and c.relname = 'evidence_items'
+                and c.relrowsecurity
+                and c.relforcerowsecurity
+            ) then
+              raise exception 'Evidence Vault metadata RLS/FORCE RLS postcondition failed';
+            end if;
+
+            if not exists (
+              select 1 from storage.buckets
+              where id = 'compliance-evidence' and public = false
+            ) then
+              raise exception 'Evidence Vault private bucket postcondition failed';
+            end if;
+
+            select count(*) into storage_policies
+            from pg_policies
+            where schemaname = 'storage'
+              and tablename = 'objects'
+              and policyname in (
+                'rls_compliance_evidence_objects_select_organization',
+                'rls_compliance_evidence_objects_insert_organization'
+              );
+            if storage_policies <> 2 then
+              raise exception 'Evidence Vault Storage policy postcondition failed';
+            end if;
+
+            select count(*) into forensic_triggers
+            from pg_trigger
+            where tgrelid = 'public.evidence_items'::regclass
+              and not tgisinternal
+              and tgname in (
+                'evidence_items_enforce_invariants',
+                'evidence_items_audit_change',
+                'evidence_items_reject_hard_delete'
+              );
+            if forensic_triggers <> 3 then
+              raise exception 'Evidence Vault forensic trigger postcondition failed';
+            end if;
+          end
+          $proof$;
+          SQL
+
+      - name: Restart disposable database with Auth REST and Storage APIs
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" stop
+          supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" start \
+            -x realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+          supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" status -o env > "$RUNNER_TEMP/evidence-supabase-status.env"
+
+      - name: Export masked loopback Supabase runtime configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          STATUS_FILE="$RUNNER_TEMP/evidence-supabase-status.env" python - <<'PY'
+          import os
+          import shlex
+          from pathlib import Path
+          from urllib.parse import urlparse
+
+          values = {}
+          for raw_line in Path(os.environ['STATUS_FILE']).read_text(encoding='utf-8').splitlines():
+              if '=' not in raw_line:
+                  continue
+              key, raw_value = raw_line.split('=', 1)
+              key = key.strip()
+              raw_value = raw_value.strip()
+              try:
+                  parsed = shlex.split(raw_value)
+                  value = parsed[0] if parsed else ''
+              except ValueError:
+                  value = raw_value.strip('"\'')
+              values[key] = value
+
+          api_url = values.get('API_URL', '')
+          anon_key = values.get('ANON_KEY', '')
+          service_role = values.get('SERVICE_ROLE_KEY', '')
+          host = urlparse(api_url).hostname
+          if host not in {'127.0.0.1', 'localhost', '::1'}:
+              raise SystemExit('Local Supabase API_URL is not loopback')
+          if not anon_key or not service_role:
+              raise SystemExit('Local Supabase status did not expose required runtime keys')
+
+          for value in (anon_key, service_role):
+              print(f'::add-mask::{value}')
+
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as handle:
+              handle.write(f'NEXT_PUBLIC_SUPABASE_URL={api_url}\n')
+              handle.write(f'SUPABASE_ANON_KEY={anon_key}\n')
+              handle.write(f'SUPABASE_SERVICE_ROLE_KEY={service_role}\n')
+          PY
+          rm -f "$RUNNER_TEMP/evidence-supabase-status.env"
+
+      - name: Verify local Auth REST and Storage endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/health" >/dev/null
+          curl --fail --silent --show-error \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/" >/dev/null
+          curl --fail --silent --show-error \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            "$NEXT_PUBLIC_SUPABASE_URL/storage/v1/bucket" >/dev/null
+
+      - name: Execute disposable tenant A/B Evidence Vault proof
+        run: node scripts/database/prove-enterprise-evidence-tenant-isolation.mjs
+
+      - name: Upload exact-SHA bounded reconciliation evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: supabase-enterprise-data-plane-${{ env.EXPECTED_HEAD_SHA }}
+          path: ${{ runner.temp }}/supabase-forward-reconciliation-evidence.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Stop disposable runtime
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
+          rm -f "$RUNNER_TEMP/evidence-supabase-status.env"
