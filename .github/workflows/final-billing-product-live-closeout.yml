@@ -46,18 +46,10 @@ jobs:
       RELEASE_COMMIT_SHA: ${{ inputs.release_sha }}
       RELEASE_BUILD_SHA: ${{ inputs.release_sha }}
       PROVIDER_PROOF_ENVIRONMENT: production
-      ORGANIZATION_ID: ${{ inputs.organization_id }}
-      STRIPE_SUBSCRIPTION_ID: ${{ inputs.stripe_subscription_id }}
-      STRIPE_EVENT_ID: ${{ inputs.stripe_event_id }}
-      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ vars.STRIPE_PRICE_ESSENTIAL_MONTHLY }}
       STRIPE_PRICE_ESSENTIAL_ANNUAL: ${{ vars.STRIPE_PRICE_ESSENTIAL_ANNUAL }}
       STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ vars.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}
       STRIPE_PRICE_PROFESSIONAL_ANNUAL: ${{ vars.STRIPE_PRICE_PROFESSIONAL_ANNUAL }}
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
-      AUDIT_CHAIN_SIGNING_SECRET: ${{ secrets.AUDIT_CHAIN_SIGNING_SECRET }}
-      SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
       PGSSLMODE: require
       PGOPTIONS: -c default_transaction_read_only=on -c statement_timeout=45000 -c lock_timeout=5000
       RELEASE_DEPLOYMENT_URL: https://www.risckcomply.com
@@ -77,6 +69,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           CONFIRMATION: ${{ inputs.confirmation }}
+          ORGANIZATION_ID: ${{ inputs.organization_id }}
+          STRIPE_SUBSCRIPTION_ID: ${{ inputs.stripe_subscription_id }}
+          STRIPE_EVENT_ID: ${{ inputs.stripe_event_id }}
         run: |
           set -euo pipefail
           [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
@@ -94,10 +89,6 @@ jobs:
           [[ "$ORGANIZATION_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$ ]]
           [[ "$STRIPE_SUBSCRIPTION_ID" =~ ^sub_[A-Za-z0-9]+$ ]]
           [[ "$STRIPE_EVENT_ID" =~ ^evt_[A-Za-z0-9]+$ ]]
-          case "$SUPABASE_DB_POOLER_URL" in
-            postgresql://*|postgres://*) ;;
-            *) echo 'SUPABASE_DB_POOLER_URL must be a PostgreSQL URI' >&2; exit 1 ;;
-          esac
 
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
@@ -119,6 +110,7 @@ jobs:
         continue-on-error: true
         shell: bash
         env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_BILLING_PORTAL_BOOTSTRAP_CONFIRMATION: PROVISION_STRIPE_BILLING_PORTAL_CONFIGURATION
         run: |
           set -euo pipefail
@@ -134,18 +126,25 @@ jobs:
         id: stripe_control_plane
         if: always() && steps.portal.outcome == 'success'
         continue-on-error: true
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: node scripts/security/run-final-stripe-control-plane-proof.mjs
 
       - name: Prove four canonical self-serve Stripe prices
         id: commercial_catalog
         if: always()
         continue-on-error: true
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
         run: node scripts/security/run-stripe-commercial-catalog-proof.mjs
 
       - name: Verify exact deployed production runtime SHA
         id: runtime_sha
         if: always()
         continue-on-error: true
+        env:
+          HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
@@ -155,21 +154,32 @@ jobs:
             docs/security/evidence/runtime/production-final-validation.json \
             docs/security/evidence/runtime/final-validation-runner.json 2>/dev/null || true
 
-      - name: Install PostgreSQL client
-        if: always() && steps.runtime_sha.outcome == 'success'
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update -y
-          sudo apt-get install -y postgresql-client
-
-      - name: Collect legitimate live lifecycle observation read-only
-        id: lifecycle_observation
+      - name: Verify hosted PostgreSQL client availability
+        id: postgres_client
         if: always() && steps.runtime_sha.outcome == 'success'
         continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
+          command -v psql >/dev/null
+          psql --version
+
+      - name: Collect legitimate live lifecycle observation read-only
+        id: lifecycle_observation
+        if: always() && steps.runtime_sha.outcome == 'success' && steps.postgres_client.outcome == 'success'
+        continue-on-error: true
+        env:
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+          ORGANIZATION_ID: ${{ inputs.organization_id }}
+          STRIPE_SUBSCRIPTION_ID: ${{ inputs.stripe_subscription_id }}
+          STRIPE_EVENT_ID: ${{ inputs.stripe_event_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$SUPABASE_DB_POOLER_URL" in
+            postgresql://*|postgres://*) ;;
+            *) echo 'SUPABASE_DB_POOLER_URL must be a PostgreSQL URI' >&2; exit 1 ;;
+          esac
           mkdir -p artifacts/billing-lifecycle-runtime-proof
           psql "$SUPABASE_DB_POOLER_URL" \
             --set ON_ERROR_STOP=1 \
@@ -187,6 +197,9 @@ jobs:
         id: audit_collect
         if: always() && steps.lifecycle_observation.outcome == 'success'
         continue-on-error: true
+        env:
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+          ORGANIZATION_ID: ${{ inputs.organization_id }}
         shell: bash
         run: |
           set -euo pipefail
@@ -203,6 +216,8 @@ jobs:
         id: audit_chain
         if: always() && steps.audit_collect.outcome == 'success'
         continue-on-error: true
+        env:
+          AUDIT_CHAIN_SIGNING_SECRET: ${{ secrets.AUDIT_CHAIN_SIGNING_SECRET }}
         shell: bash
         run: |
           set -euo pipefail
@@ -214,12 +229,19 @@ jobs:
           const result = JSON.parse(readFileSync('artifacts/billing-lifecycle-runtime-proof/audit-chain-verification.json', 'utf8'));
           if (result.ok !== true || !Number.isSafeInteger(result.checked) || result.checked < 4) process.exit(1);
           NODE
-          echo 'AUDIT_CHAIN_CRYPTOGRAPHICALLY_VERIFIED=true' >> "$GITHUB_ENV"
 
       - name: Build sanitized durable lifecycle evidence
         id: lifecycle_evidence
         if: always() && steps.lifecycle_observation.outcome == 'success' && steps.audit_chain.outcome == 'success'
         continue-on-error: true
+        env:
+          REPOSITORY: ${{ github.repository }}
+          TARGET_ENVIRONMENT: production
+          ORGANIZATION_ID: ${{ inputs.organization_id }}
+          STRIPE_SUBSCRIPTION_ID: ${{ inputs.stripe_subscription_id }}
+          STRIPE_EVENT_ID: ${{ inputs.stripe_event_id }}
+          RUNTIME_RELEASE_SHA_VERIFIED: ${{ steps.runtime_sha.outcome == 'success' && 'true' || 'false' }}
+          AUDIT_CHAIN_CRYPTOGRAPHICALLY_VERIFIED: ${{ steps.audit_chain.outcome == 'success' && 'true' || 'false' }}
         run: node scripts/enterprise/build-billing-lifecycle-runtime-proof.mjs
 
       - name: Remove raw database observations before retention
