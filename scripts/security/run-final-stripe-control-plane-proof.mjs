@@ -136,12 +136,14 @@ function portalMatches(configuration, policy, { requireDefault }) {
 async function inspectPortal(secret, contract, policy) {
   const headers = { Authorization: `Bearer ${secret}` };
   const explicitId = contract.configurationId;
+  const list = await requestJson(
+    'https://api.stripe.com/v1/billing_portal/configurations?active=true&limit=100',
+    { headers },
+  );
+  const active = Array.isArray(list?.data) ? list.data : [];
 
   if (typeof explicitId === 'string') {
-    const configuration = await requestJson(
-      `https://api.stripe.com/v1/billing_portal/configurations/${encodeURIComponent(explicitId)}`,
-      { headers },
-    );
+    const configuration = active.find((candidate) => candidate?.id === explicitId) ?? null;
     const passed = Boolean(configuration)
       && configuration.id === explicitId
       && portalMatches(configuration, policy, { requireDefault: false });
@@ -154,11 +156,6 @@ async function inspectPortal(secret, contract, policy) {
     };
   }
 
-  const list = await requestJson(
-    'https://api.stripe.com/v1/billing_portal/configurations?active=true&limit=100',
-    { headers },
-  );
-  const active = Array.isArray(list?.data) ? list.data : [];
   const defaults = active.filter((configuration) => (
     configuration?.active === true
     && configuration?.livemode === true
