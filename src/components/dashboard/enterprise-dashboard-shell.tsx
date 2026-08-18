@@ -16,6 +16,7 @@ import {
   Newspaper,
   Puzzle,
   Radar,
+  Scale,
   Settings,
   ShieldCheck,
   Sparkles,
@@ -58,6 +59,7 @@ type ShellCopy = {
   evidence: string;
   documents: string;
   reports: string;
+  controlTower: string;
   regulatory: string;
   team: string;
   addOns: string;
@@ -75,27 +77,27 @@ type ShellCopy = {
 const copy: Record<string, ShellCopy> = {
   en: {
     commandCenter: 'Command center', intelligence: 'AI & risk', governance: 'Evidence & governance', workspace: 'Workspace',
-    overview: 'Overview', command: 'Control center', aiSystems: 'AI systems', tasks: 'Tasks', risks: 'Risks', evidence: 'Evidence vault', documents: 'Documents', reports: 'Reports', regulatory: 'Regulatory intelligence', team: 'Team & access', addOns: 'Add-ons', billing: 'Billing', settings: 'Organization settings', profile: 'Profile', notifications: 'Notifications', protected: 'Protected workspace', navigation: 'Enterprise dashboard navigation', mobileNavigation: 'Mobile dashboard navigation', menu: 'Open dashboard menu', tagline: 'AI governance, operational evidence and regulatory readiness in one workspace.',
+    overview: 'Overview', command: 'Control center', aiSystems: 'AI systems', tasks: 'Tasks', risks: 'Risks', evidence: 'Evidence vault', documents: 'Documents', reports: 'Reports', controlTower: 'Regulatory control tower', regulatory: 'EU AI Act intelligence', team: 'Team & access', addOns: 'Add-ons', billing: 'Billing', settings: 'Organization settings', profile: 'Profile', notifications: 'Notifications', protected: 'Protected workspace', navigation: 'Enterprise dashboard navigation', mobileNavigation: 'Mobile dashboard navigation', menu: 'Open dashboard menu', tagline: 'AI governance, operational evidence and regulatory readiness in one workspace.',
   },
   pt: {
     commandCenter: 'Centro de comando', intelligence: 'IA e risco', governance: 'Evidências e governança', workspace: 'Workspace',
-    overview: 'Visão geral', command: 'Control center', aiSystems: 'Sistemas de IA', tasks: 'Tarefas', risks: 'Riscos', evidence: 'Cofre de evidências', documents: 'Documentos', reports: 'Relatórios', regulatory: 'Inteligência regulatória', team: 'Equipa e acessos', addOns: 'Add-ons', billing: 'Faturação', settings: 'Definições da organização', profile: 'Perfil', notifications: 'Notificações', protected: 'Workspace protegido', navigation: 'Navegação enterprise da dashboard', mobileNavigation: 'Navegação móvel da dashboard', menu: 'Abrir menu da dashboard', tagline: 'Governança de IA, evidência operacional e prontidão regulatória num único workspace.',
+    overview: 'Visão geral', command: 'Control center', aiSystems: 'Sistemas de IA', tasks: 'Tarefas', risks: 'Riscos', evidence: 'Cofre de evidências', documents: 'Documentos', reports: 'Relatórios', controlTower: 'Control tower regulatório', regulatory: 'Inteligência EU AI Act', team: 'Equipa e acessos', addOns: 'Add-ons', billing: 'Faturação', settings: 'Definições da organização', profile: 'Perfil', notifications: 'Notificações', protected: 'Workspace protegido', navigation: 'Navegação enterprise da dashboard', mobileNavigation: 'Navegação móvel da dashboard', menu: 'Abrir menu da dashboard', tagline: 'Governança de IA, evidência operacional e prontidão regulatória num único workspace.',
   },
   es: {
     commandCenter: 'Centro de mando', intelligence: 'IA y riesgo', governance: 'Evidencias y gobernanza', workspace: 'Workspace',
-    overview: 'Resumen', command: 'Centro de control', aiSystems: 'Sistemas de IA', tasks: 'Tareas', risks: 'Riesgos', evidence: 'Bóveda de evidencias', documents: 'Documentos', reports: 'Informes', regulatory: 'Inteligencia regulatoria', team: 'Equipo y accesos', addOns: 'Add-ons', billing: 'Facturación', settings: 'Configuración de organización', profile: 'Perfil', notifications: 'Notificaciones', protected: 'Workspace protegido', navigation: 'Navegación enterprise del dashboard', mobileNavigation: 'Navegación móvil del dashboard', menu: 'Abrir menú del dashboard', tagline: 'Gobernanza de IA, evidencia operativa y preparación regulatoria en un único workspace.',
+    overview: 'Resumen', command: 'Centro de control', aiSystems: 'Sistemas de IA', tasks: 'Tareas', risks: 'Riesgos', evidence: 'Bóveda de evidencias', documents: 'Documentos', reports: 'Informes', controlTower: 'Torre de control regulatoria', regulatory: 'Inteligencia EU AI Act', team: 'Equipo y accesos', addOns: 'Add-ons', billing: 'Facturación', settings: 'Configuración de organización', profile: 'Perfil', notifications: 'Notificaciones', protected: 'Workspace protegido', navigation: 'Navegación enterprise del dashboard', mobileNavigation: 'Navegación móvil del dashboard', menu: 'Abrir menú del dashboard', tagline: 'Gobernanza de IA, evidencia operativa y preparación regulatoria en un único workspace.',
   },
   fr: {
     commandCenter: 'Centre de commande', intelligence: 'IA et risques', governance: 'Preuves et gouvernance', workspace: 'Workspace',
-    overview: 'Vue générale', command: 'Centre de contrôle', aiSystems: 'Systèmes IA', tasks: 'Tâches', risks: 'Risques', evidence: 'Coffre de preuves', documents: 'Documents', reports: 'Rapports', regulatory: 'Intelligence réglementaire', team: 'Équipe et accès', addOns: 'Modules', billing: 'Facturation', settings: 'Paramètres organisation', profile: 'Profil', notifications: 'Notifications', protected: 'Workspace protégé', navigation: 'Navigation enterprise du dashboard', mobileNavigation: 'Navigation mobile du dashboard', menu: 'Ouvrir le menu du dashboard', tagline: 'Gouvernance de l’IA, preuves opérationnelles et préparation réglementaire dans un seul workspace.',
+    overview: 'Vue générale', command: 'Centre de contrôle', aiSystems: 'Systèmes IA', tasks: 'Tâches', risks: 'Risques', evidence: 'Coffre de preuves', documents: 'Documents', reports: 'Rapports', controlTower: 'Tour de contrôle réglementaire', regulatory: 'Intelligence EU AI Act', team: 'Équipe et accès', addOns: 'Modules', billing: 'Facturation', settings: 'Paramètres organisation', profile: 'Profil', notifications: 'Notifications', protected: 'Workspace protégé', navigation: 'Navigation enterprise du dashboard', mobileNavigation: 'Navigation mobile du dashboard', menu: 'Ouvrir le menu du dashboard', tagline: 'Gouvernance de l’IA, preuves opérationnelles et préparation réglementaire dans un seul workspace.',
   },
   it: {
     commandCenter: 'Centro di comando', intelligence: 'IA e rischio', governance: 'Evidenze e governance', workspace: 'Workspace',
-    overview: 'Panoramica', command: 'Centro di controllo', aiSystems: 'Sistemi IA', tasks: 'Attività', risks: 'Rischi', evidence: 'Archivio evidenze', documents: 'Documenti', reports: 'Report', regulatory: 'Intelligence normativa', team: 'Team e accessi', addOns: 'Add-on', billing: 'Fatturazione', settings: 'Impostazioni organizzazione', profile: 'Profilo', notifications: 'Notifiche', protected: 'Workspace protetto', navigation: 'Navigazione enterprise della dashboard', mobileNavigation: 'Navigazione mobile della dashboard', menu: 'Apri menu dashboard', tagline: 'Governance IA, evidenze operative e readiness normativa in un unico workspace.',
+    overview: 'Panoramica', command: 'Centro di controllo', aiSystems: 'Sistemi IA', tasks: 'Attività', risks: 'Rischi', evidence: 'Archivio evidenze', documents: 'Documenti', reports: 'Report', controlTower: 'Torre di controllo normativa', regulatory: 'Intelligence EU AI Act', team: 'Team e accessi', addOns: 'Add-on', billing: 'Fatturazione', settings: 'Impostazioni organizzazione', profile: 'Profilo', notifications: 'Notifiche', protected: 'Workspace protetto', navigation: 'Navigazione enterprise della dashboard', mobileNavigation: 'Navigazione mobile della dashboard', menu: 'Apri menu dashboard', tagline: 'Governance IA, evidenze operative e readiness normativa in un unico workspace.',
   },
   de: {
     commandCenter: 'Kommandozentrale', intelligence: 'KI und Risiko', governance: 'Nachweise und Governance', workspace: 'Workspace',
-    overview: 'Übersicht', command: 'Kontrollzentrum', aiSystems: 'KI-Systeme', tasks: 'Aufgaben', risks: 'Risiken', evidence: 'Nachweis-Tresor', documents: 'Dokumente', reports: 'Berichte', regulatory: 'Regulatorische Intelligence', team: 'Team & Zugriff', addOns: 'Add-ons', billing: 'Abrechnung', settings: 'Organisationseinstellungen', profile: 'Profil', notifications: 'Benachrichtigungen', protected: 'Geschützter Workspace', navigation: 'Enterprise-Dashboard-Navigation', mobileNavigation: 'Mobile Dashboard-Navigation', menu: 'Dashboard-Menü öffnen', tagline: 'KI-Governance, operative Nachweise und regulatorische Bereitschaft in einem Workspace.',
+    overview: 'Übersicht', command: 'Kontrollzentrum', aiSystems: 'KI-Systeme', tasks: 'Aufgaben', risks: 'Risiken', evidence: 'Nachweis-Tresor', documents: 'Dokumente', reports: 'Berichte', controlTower: 'Regulatorischer Kontrollturm', regulatory: 'EU AI Act Intelligence', team: 'Team & Zugriff', addOns: 'Add-ons', billing: 'Abrechnung', settings: 'Organisationseinstellungen', profile: 'Profil', notifications: 'Benachrichtigungen', protected: 'Geschützter Workspace', navigation: 'Enterprise-Dashboard-Navigation', mobileNavigation: 'Mobile Dashboard-Navigation', menu: 'Dashboard-Menü öffnen', tagline: 'KI-Governance, operative Nachweise und regulatorische Bereitschaft in einem Workspace.',
   },
 };
 
@@ -153,6 +155,7 @@ export function EnterpriseDashboardShell({
         { label: text.evidence, href: localized(locale, '/dashboard/evidence'), icon: Archive },
         { label: text.documents, href: localized(locale, '/dashboard/organizations/documents'), icon: FileText },
         { label: text.reports, href: localized(locale, '/dashboard/organizations/reports-governance'), icon: ShieldCheck },
+        { label: text.controlTower, href: localized(locale, '/dashboard/organizations/regulatory-control-tower'), icon: Scale },
         { label: text.regulatory, href: localized(locale, '/dashboard/organizations/reports-governance/news'), icon: Newspaper },
       ],
     },
@@ -204,11 +207,11 @@ export function EnterpriseDashboardShell({
   );
 
   return (
-    <div className="min-h-screen bg-[#050608] text-white selection:bg-white selection:text-black">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(49,97,255,0.13),transparent_28rem),radial-gradient(circle_at_90%_10%,rgba(16,185,129,0.07),transparent_24rem),linear-gradient(180deg,#050608_0%,#07090d_44%,#050608_100%)]" />
-      <div className="pointer-events-none fixed inset-0 opacity-[0.11] [background-image:linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:42px_42px]" />
+    <div className="min-h-screen bg-[#050608] text-white selection:bg-white selection:text-black print:min-h-0 print:bg-white print:text-black">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(49,97,255,0.13),transparent_28rem),radial-gradient(circle_at_90%_10%,rgba(16,185,129,0.07),transparent_24rem),linear-gradient(180deg,#050608_0%,#07090d_44%,#050608_100%)] print:hidden" />
+      <div className="pointer-events-none fixed inset-0 opacity-[0.11] [background-image:linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:42px_42px] print:hidden" />
 
-      <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#07090d]/88 backdrop-blur-2xl">
+      <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#07090d]/88 backdrop-blur-2xl print:hidden">
         <div className="flex h-[72px] items-center gap-3 px-4 sm:px-5 lg:px-6">
           <Link href={root} className={`flex shrink-0 items-center gap-3 rounded-xl ${focusRing}`} aria-label="RISCK COMPLY — Dashboard">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[11px] font-black tracking-[-0.08em] text-black shadow-[0_6px_24px_rgba(255,255,255,0.12)]">RC</span>
@@ -262,8 +265,8 @@ export function EnterpriseDashboardShell({
         </div>
       </header>
 
-      <div className="relative flex min-h-[calc(100vh-72px)]">
-        <aside className="sticky top-[72px] hidden h-[calc(100vh-72px)] w-[268px] shrink-0 border-r border-white/[0.08] bg-black/10 px-4 py-5 lg:block">
+      <div className="relative flex min-h-[calc(100vh-72px)] print:block print:min-h-0">
+        <aside className="sticky top-[72px] hidden h-[calc(100vh-72px)] w-[268px] shrink-0 border-r border-white/[0.08] bg-black/10 px-4 py-5 lg:block print:!hidden">
           <div className="flex h-full flex-col">
             <div className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.12)_transparent]">
               {renderNavigation(text.navigation)}
@@ -278,9 +281,9 @@ export function EnterpriseDashboardShell({
           </div>
         </aside>
 
-        <div className="min-w-0 flex-1">
-          <div className="relative mx-auto w-full max-w-[1680px] p-3 sm:p-4 lg:p-6 xl:p-8">
-            <div className="rounded-[24px] border border-white/[0.065] bg-[#090b0f]/78 shadow-[0_28px_100px_rgba(0,0,0,0.28)] backdrop-blur-sm [&>main]:!min-h-0 [&>main]:!bg-transparent [&>main]:!overflow-visible">
+        <div className="min-w-0 flex-1 print:block print:w-full">
+          <div className="relative mx-auto w-full max-w-[1680px] p-3 sm:p-4 lg:p-6 xl:p-8 print:max-w-none print:p-0">
+            <div className="rounded-[24px] border border-white/[0.065] bg-[#090b0f]/78 shadow-[0_28px_100px_rgba(0,0,0,0.28)] backdrop-blur-sm [&>main]:!min-h-0 [&>main]:!bg-transparent [&>main]:!overflow-visible print:rounded-none print:border-0 print:bg-transparent print:shadow-none print:backdrop-blur-none">
               {children}
             </div>
           </div>
