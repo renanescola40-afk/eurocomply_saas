@@ -10,11 +10,25 @@ on:
       - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
       - 'src/middleware.ts'
+      - 'src/hooks/useAuth.ts'
+      - 'src/integrations/supabase/**'
+      - 'src/app/[locale]/pricing/**'
+      - 'src/app/[locale]/signup/**'
+      - 'src/app/[locale]/login/**'
+      - 'src/app/[locale]/ai-systems/**'
       - 'src/app/[locale]/dashboard/layout.tsx'
+      - 'src/app/[locale]/dashboard/organizations/**'
+      - 'src/app/[locale]/dashboard/fria/**'
+      - 'src/app/[locale]/dashboard/evidence/**'
       - 'src/app/api/ai-governance/fria/route.ts'
       - 'src/server/security/rbac.ts'
       - 'src/server/queries/subscription.ts'
       - 'src/server/billing/subscription-authority.ts'
+      - 'src/lib/billing/plans.ts'
+      - 'src/lib/i18n/commercial-surface-copy.ts'
+      - 'src/lib/i18n/pricing-commercial-truth.ts'
+      - 'src/lib/evidence/**'
+      - 'supabase/migrations/**'
   push:
     branches: [main]
     paths:
@@ -23,11 +37,25 @@ on:
       - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
       - 'src/middleware.ts'
+      - 'src/hooks/useAuth.ts'
+      - 'src/integrations/supabase/**'
+      - 'src/app/[locale]/pricing/**'
+      - 'src/app/[locale]/signup/**'
+      - 'src/app/[locale]/login/**'
+      - 'src/app/[locale]/ai-systems/**'
       - 'src/app/[locale]/dashboard/layout.tsx'
+      - 'src/app/[locale]/dashboard/organizations/**'
+      - 'src/app/[locale]/dashboard/fria/**'
+      - 'src/app/[locale]/dashboard/evidence/**'
       - 'src/app/api/ai-governance/fria/route.ts'
       - 'src/server/security/rbac.ts'
       - 'src/server/queries/subscription.ts'
       - 'src/server/billing/subscription-authority.ts'
+      - 'src/lib/billing/plans.ts'
+      - 'src/lib/i18n/commercial-surface-copy.ts'
+      - 'src/lib/i18n/pricing-commercial-truth.ts'
+      - 'src/lib/evidence/**'
+      - 'supabase/migrations/**'
 
 permissions:
   contents: read
@@ -130,6 +158,9 @@ jobs:
           fria_table="$(psql "$RECOVERY_ISOLATED_DATABASE_URL" --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1 --command "select coalesce(to_regclass('public.ai_fria_assessments')::text, '');" | tr -d '[:space:]')"
           test "$fria_table" = 'ai_fria_assessments'
 
+          evidence_table="$(psql "$RECOVERY_ISOLATED_DATABASE_URL" --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1 --command "select coalesce(to_regclass('public.evidence_items')::text, '');" | tr -d '[:space:]')"
+          test "$evidence_table" = 'evidence_items'
+
           supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" status -o env > "$RUNNER_TEMP/fria-supabase-status.env"
 
       - name: Export masked loopback Supabase runtime configuration
@@ -225,6 +256,8 @@ jobs:
           test -n "${E2E_FRIA_APPROVER_EMAIL:-}"
           test -n "${E2E_FRIA_APPROVER_PASSWORD:-}"
           test "${E2E_ALLOW_SYNTHETIC_APP_WRITES:-}" = 'true'
+          test "${E2E_FRIA_COMMERCIAL_AUTHORITY_VERIFIED:-}" = 'true'
+          test "${E2E_FRIA_EVIDENCE_VAULT_SCHEMA_VERIFIED:-}" = 'true'
           rm -f "$E2E_FRIA_RUNTIME_EVIDENCE_PATH"
           npx playwright test tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts --project=chromium --reporter=line,github
 
@@ -236,10 +269,32 @@ jobs:
           EVIDENCE="$E2E_FRIA_RUNTIME_EVIDENCE_PATH" EXPECTED="$EXPECTED_HEAD_SHA" node - <<'NODE'
           const fs = require('node:fs');
           const evidence = JSON.parse(fs.readFileSync(process.env.EVIDENCE, 'utf8'));
-          if (evidence.schema !== 'risck-comply.product-fria-runtime-acceptance.v1') throw new Error('unexpected_evidence_schema');
+          if (evidence.schema !== 'risck-comply.product-fria-runtime-acceptance.v2') throw new Error('unexpected_evidence_schema');
           if (evidence.outcome !== 'passed') throw new Error('fria_runtime_not_passed');
           if (evidence.targetSha !== process.env.EXPECTED) throw new Error('fria_runtime_sha_mismatch');
-          if (!evidence.checks || !Object.values(evidence.checks).every(Boolean)) throw new Error('fria_runtime_check_incomplete');
+          const requiredChecks = [
+            'publicPricingRendered',
+            'professionalPlanCtaRendered',
+            'commercialAuthorityVerified',
+            'evidenceVaultSchemaVerified',
+            'ownerAuthenticated',
+            'aiSystemCreated',
+            'assessmentCreated',
+            'humanReviewerAssigned',
+            'distinctApproverAssigned',
+            'legalReviewCompleted',
+            'fria01EvidenceSubmitted',
+            'fria15EvidenceSubmitted',
+            'evidenceVaultRendered',
+            'evidenceVaultItemCreated',
+            'approverAuthenticatedSeparately',
+            'approvalPersisted',
+            'approvedStateImmutable',
+          ];
+          for (const key of requiredChecks) {
+            if (evidence.checks?.[key] !== true) throw new Error(`fria_runtime_check_missing_${key}`);
+          }
+          if (Object.keys(evidence.checks ?? {}).length !== requiredChecks.length) throw new Error('fria_runtime_unexpected_check_set');
           if (evidence.evidenceIntegrity?.syntheticWritesExplicitlyEnabled !== true) throw new Error('synthetic_write_boundary_missing');
           for (const key of ['credentialsStored','emailsStored','userIdentifiersStored','organizationIdentifiersStored','rawProviderResponsesStored']) {
             if (evidence.evidenceIntegrity?.[key] !== false) throw new Error(`unsafe_evidence_${key}`);
