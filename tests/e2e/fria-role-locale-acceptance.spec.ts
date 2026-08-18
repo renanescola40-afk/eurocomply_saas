@@ -47,11 +47,20 @@ test.describe('FRIA six-locale presentation', () => {
     ['it', 'Workspace FRIA'],
     ['de', 'FRIA-Workspace'],
   ] as const;
+  const legacyAssessmentId = '00000000-0000-4000-8000-000000000001';
 
   for (const [locale, title] of locales) {
     test(`${locale} renders localized FRIA application chrome`, async ({ page }) => {
       await page.goto(`/${locale}/dashboard/fria`, { waitUntil: 'domcontentloaded' });
       await expect(page.getByRole('heading', { name: title })).toBeVisible();
+      await expect(page.locator('body')).not.toContainText(/Unhandled Runtime Error|Application error|Stack trace/i);
+    });
+
+    test(`${locale} legacy assessment deep link preserves locale and converges on the canonical workspace`, async ({ page }) => {
+      await page.goto(`/${locale}/dashboard/assessments/${legacyAssessmentId}/fria`, { waitUntil: 'domcontentloaded' });
+      await expect(page.getByRole('heading', { name: title })).toBeVisible();
+      await expect.poll(() => new URL(page.url()).pathname).toBe(`/${locale}/dashboard/fria`);
+      expect(new URL(page.url()).searchParams.get('assessment')).toBe(legacyAssessmentId);
       await expect(page.locator('body')).not.toContainText(/Unhandled Runtime Error|Application error|Stack trace/i);
     });
   }

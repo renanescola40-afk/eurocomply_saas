@@ -25,6 +25,7 @@ test.describe('authenticated responsive and accessibility acceptance', () => {
     ['/en/dashboard/organizations/team', 'team'],
     ['/en/dashboard/organizations/add-ons', 'Upgrade Center'],
     ['/en/dashboard/organizations/reports-governance/news', 'Regulatory Intelligence'],
+    ['/en/dashboard/fria', 'FRIA workspace'],
     ['/en/ai-systems', 'AI systems'],
   ] as const;
 
