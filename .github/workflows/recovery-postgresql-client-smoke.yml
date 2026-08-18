@@ -1,32 +1,46 @@
-name: Recovery PostgreSQL Client Smoke
+name: Supabase PostgreSQL Client Smoke
 
 on:
   push:
     branches: [main]
     paths:
       - 'scripts/recovery/verify-postgresql-client.mjs'
-      - '.github/workflows/enterprise-recovery-drill.yml'
-      - '.github/workflows/recovery-resilience-proof.yml'
+      - '.github/workflows/ephemeral-supabase-project-smoke.yml'
+      - '.github/workflows/ephemeral-supabase-restore-smoke.yml'
       - '.github/workflows/final-technical-controls-proof.yml'
+      - '.github/workflows/supabase-enterprise-data-plane-qa.yml'
+      - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
+      - '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
+      - '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
       - '.github/workflows/recovery-postgresql-client-smoke.yml'
       - 'tests/security/recovery-postgresql-client.test.mjs'
+      - 'tests/security/hermetic-supabase-smoke-workflows.test.mjs'
+      - 'tests/security/hermetic-forward-reconciliation-workflows.test.mjs'
       - 'tests/security/protected-proof-workflow-contract.test.mjs'
+      - 'tests/security/supabase-forward-promotion-workflow.test.ts'
   pull_request:
     branches: [main]
     paths:
       - 'scripts/recovery/verify-postgresql-client.mjs'
-      - '.github/workflows/enterprise-recovery-drill.yml'
-      - '.github/workflows/recovery-resilience-proof.yml'
+      - '.github/workflows/ephemeral-supabase-project-smoke.yml'
+      - '.github/workflows/ephemeral-supabase-restore-smoke.yml'
       - '.github/workflows/final-technical-controls-proof.yml'
+      - '.github/workflows/supabase-enterprise-data-plane-qa.yml'
+      - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
+      - '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
+      - '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
       - '.github/workflows/recovery-postgresql-client-smoke.yml'
       - 'tests/security/recovery-postgresql-client.test.mjs'
+      - 'tests/security/hermetic-supabase-smoke-workflows.test.mjs'
+      - 'tests/security/hermetic-forward-reconciliation-workflows.test.mjs'
       - 'tests/security/protected-proof-workflow-contract.test.mjs'
+      - 'tests/security/supabase-forward-promotion-workflow.test.ts'
 
 permissions:
   contents: read
 
 concurrency:
-  group: recovery-postgresql-client-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref }}
+  group: supabase-postgresql-client-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref }}
   cancel-in-progress: true
 
 jobs:
