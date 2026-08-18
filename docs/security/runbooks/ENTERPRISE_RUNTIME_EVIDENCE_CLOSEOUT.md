@@ -59,17 +59,31 @@ A manual dispatch accepts one full 40-character `release_sha`. Before any protec
 
 A new commit on `main` invalidates the previous closeout run for final release credit. Do not reuse an older artifact after a merge.
 
+## Secret admission order
+
+The protected environment approval is not sufficient on its own to admit runtime credentials. The workflow intentionally uses a second exact-main boundary after environment approval:
+
+1. the unprivileged governance job proves that the requested SHA is current `main` and that `enterprise-production-closeout` has the required protections;
+2. a human/environment approval admits the protected job;
+3. the protected job re-queries GitHub and proves the requested SHA is **still** current `main`;
+4. only after that post-approval revalidation may secret-bearing validation steps receive their step-local secret mappings.
+
+Protected secrets are not declared at the `closeout` job `env` scope. Job scope is limited to non-secret release coordinates such as the requested SHA, production URL, provider/project identifiers, price identifiers and rollback metadata. `HEALTHCHECK_TOKEN`, Supabase credentials, test-user credentials, Stripe secrets, Redis credentials and Sentry credentials are injected only into the steps that consume them.
+
+This ordering reduces the TOCTOU window and avoids materializing unrelated credentials into later provenance, aggregation or upload steps. Do not move protected secrets back to job scope and do not insert a secret-bearing step before `Revalidate exact current main after environment approval`.
+
 ## Execution sequence
 
 1. Confirm the intended release SHA is the exact current `main` SHA and is deployed to the production hostname.
 2. Confirm migration reconciliation and the migration release control plane are complete for the same SHA.
 3. Run **Enterprise Runtime Evidence Closeout** manually with the full 40-character SHA.
 4. Approve `enterprise-production-closeout` only after confirming the target hostname and provider project identities.
-5. The workflow runs **Public Production Final** once. That canonical runner already produces deployment smoke, live Supabase RLS evidence, authenticated observability smoke, rollback dry-run evidence, and `production-final-validation.json`; the closeout does not repeat the live RLS mutation pass.
-6. `run-authenticated-production-smoke.mjs` then proves the deployed SHA via the protected `/api/ready/release` endpoint and executes two isolated real browser journeys: login -> dashboard for test user A and test user B.
-7. `run-production-observability-validation.mjs` validates and promotes the exact-SHA `observability-smoke-validation.json` into the filename required by the consolidated closeout. If Public Production Final already produced valid evidence, it is reused so the closeout does not emit a duplicate Sentry smoke event. Invalid or stale source evidence is regenerated once and still fails closed if the canonical validator rejects it.
-8. Common workflow provenance is stamped into all six runtime documents.
-9. `validate-enterprise-runtime-closeout.mjs` verifies the consolidated bundle and the workflow retains the 90-day artifact `enterprise-runtime-closeout-<sha>`.
+5. The protected job revalidates that the requested SHA is still current `main`; only then can secret-bearing runtime steps execute.
+6. The workflow runs **Public Production Final** once. That canonical runner already produces deployment smoke, live Supabase RLS evidence, authenticated observability smoke, rollback dry-run evidence, and `production-final-validation.json`; the closeout does not repeat the live RLS mutation pass.
+7. `run-authenticated-production-smoke.mjs` then proves the deployed SHA via the protected `/api/ready/release` endpoint and executes two isolated real browser journeys: login -> canonical dashboard for test user A and test user B.
+8. `run-production-observability-validation.mjs` validates and promotes the exact-SHA `observability-smoke-validation.json` into the filename required by the consolidated closeout. If Public Production Final already produced valid evidence, it is reused so the closeout does not emit a duplicate Sentry smoke event. Invalid or stale source evidence is regenerated once and still fails closed if the canonical validator rejects it.
+9. Common workflow provenance is stamped into all six runtime documents.
+10. `validate-enterprise-runtime-closeout.mjs` verifies the consolidated bundle and the workflow retains the 90-day artifact `enterprise-runtime-closeout-<sha>`.
 
 ## Authenticated production smoke safety
 
@@ -123,6 +137,7 @@ The accepted artifact still does not independently grant Enterprise GO. Legal re
 - Missing production credentials or environment approval is `BLOCKED`, not `PASS`.
 - A failed authenticated journey is not replaced with a Supabase-only login check.
 - A successful local Sentry emission is not relabeled as downstream provider ingestion.
+- A protected job whose SHA became stale after approval must fail before any secret-bearing validation step executes.
 
 ## Issue linkage
 
