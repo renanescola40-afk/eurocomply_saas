@@ -44,6 +44,18 @@ test('final closeout composes Portal, provider, catalog and durable lifecycle pr
   assert.match(workflow, /BILLING_PRODUCT_EU_AI_ACT: PASS/);
 });
 
+test('closeout secrets and live identifiers are step-scoped and recovery does not depend on apt networking', () => {
+  const jobEnvStart = workflow.indexOf('    env:\n');
+  const stepsStart = workflow.indexOf('    steps:\n', jobEnvStart);
+  assert.notEqual(jobEnvStart, -1);
+  assert.notEqual(stepsStart, -1);
+  const jobEnv = workflow.slice(jobEnvStart, stepsStart);
+  assert.doesNotMatch(jobEnv, /secrets\./);
+  assert.doesNotMatch(jobEnv, /organization_id|stripe_subscription_id|stripe_event_id/i);
+  assert.doesNotMatch(workflow, /apt-get\s+(?:update|install)/);
+  assert.match(workflow, /command -v psql/);
+});
+
 test('closeout workflow never creates commercial lifecycle objects for evidence', () => {
   const forbiddenCommercialMutations = [
     /customers\.create/i,
