@@ -144,13 +144,20 @@ jobs:
         with:
           version: 2.101.0
 
-      - name: Install PostgreSQL client
+      - name: Install pinned recovery psql shim
         if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --yes postgresql-client
+          shim_dir="$RUNNER_TEMP/risck-recovery-bin"
+          mkdir -p "$shim_dir"
+          cat > "$shim_dir/psql" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          exec node "$GITHUB_WORKSPACE/scripts/recovery/run-pinned-recovery-psql.mjs" "$@"
+          EOF
+          chmod 0700 "$shim_dir/psql"
+          echo "$shim_dir" >> "$GITHUB_PATH"
 
       - name: Start disposable Supabase recovery database
         if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
