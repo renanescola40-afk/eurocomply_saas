@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const AI_SYSTEMS_PAGE = new URL('../../src/app/[locale]/ai-systems/page.tsx', import.meta.url);
 const DASHBOARD_LAYOUT = new URL('../../src/app/[locale]/dashboard/layout.tsx', import.meta.url);
+const LEGACY_HOME_PAGE = new URL('../../src/app/[locale]/risck-comply-home/page.tsx', import.meta.url);
 const SHELL = new URL('../../src/components/dashboard/enterprise-dashboard-shell.tsx', import.meta.url);
 
 describe('enterprise dashboard template consistency', () => {
@@ -30,5 +31,13 @@ describe('enterprise dashboard template consistency', () => {
     expect(source).toContain('organizationName={organization.name}');
     expect(source).toContain('role={organization.role}');
     expect(source).toContain('selectedPlan={authority?.plan}');
+  });
+
+  it('retires the legacy authenticated home and forwards old bookmarks to the canonical enterprise dashboard', async () => {
+    const source = await readFile(LEGACY_HOME_PAGE, 'utf8');
+
+    expect(source).not.toContain('DashboardCommandNavigation');
+    expect(source).not.toContain('getOrganizationDashboardData');
+    expect(source).toContain('redirect(`/${locale}/dashboard/organizations`)');
   });
 });
