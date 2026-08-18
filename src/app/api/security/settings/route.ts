@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       organizationId: organization.id,
       permission: 'manage_settings',
+      minimumPlan: 'starter',
     });
 
     const mutationDenied = await requireTrustedMutation(request, {
