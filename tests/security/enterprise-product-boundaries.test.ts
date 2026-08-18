@@ -59,8 +59,10 @@ describe('enterprise product information architecture', () => {
     expect(dashboardLayout).toContain('organizationName={organization.name}');
     expect(dashboardLayout).toContain('userDisplayName={userDisplayName}');
     expect(dashboardLayout).toContain("role={membership?.role ?? 'unknown'}");
-    expect(dashboardLayout).toContain('selectedPlan={authority?.licensed ? authority.plan : null}');
-    expect(dashboardLayout).toContain('if (!authority?.licensed)');
+    expect(dashboardLayout).toContain('selectedPlan={authority.plan}');
+    expect(dashboardLayout).toContain('if (!authority.licensed)');
+    expect(dashboardLayout).toContain('if (billingRecoveryRoute)');
+    expect(dashboardLayout).toContain('return runtimeChildren;');
 
     expect(organizationLayout).not.toContain('DashboardCommandNavigation');
     expect(organizationLayout).toContain('return children;');
