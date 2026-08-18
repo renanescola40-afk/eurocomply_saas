@@ -56,6 +56,7 @@ jobs:
       TARGET_SHA: ${{ github.sha }}
       RELEASE_SHA: ${{ github.sha }}
       RECOVERY_REQUIRED_EXERCISE: backup-restore
+      RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
     steps:
       - name: Checkout exact main SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -72,6 +73,15 @@ jobs:
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           git ls-remote origin refs/heads/main | grep -q "^${TARGET_SHA}"
 
+      - name: Validate protected read-only source configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${RECOVERY_SOURCE_DATABASE_URL:-}" || {
+            echo 'Missing protected SUPABASE_DB_POOLER_URL recovery source.' >&2
+            exit 1
+          }
+
       - name: Setup Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
@@ -86,31 +96,20 @@ jobs:
         with:
           version: 2.101.0
 
-      - name: Verify runner PostgreSQL client without network installation
-        run: node scripts/recovery/verify-postgresql-client.mjs
-
-      - name: Validate protected read-only source configuration
-        env:
-          RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+      - name: Install PostgreSQL client
         shell: bash
         run: |
           set -euo pipefail
-          test -n "${RECOVERY_SOURCE_DATABASE_URL:-}" || {
-            echo 'Missing protected SUPABASE_DB_POOLER_URL recovery source.' >&2
-            exit 1
-          }
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
 
       - name: Start disposable isolated Supabase restore target
         run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start
 
       - name: Preflight protected backup restore proof
-        env:
-          RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
         run: node scripts/security/preflight-protected-proof.mjs recovery
 
       - name: Execute supported logical backup and isolated restore
-        env:
-          RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
         run: node scripts/recovery/run-backup-restore-exercise.mjs
 
       - name: Validate canonical backup restore evidence
