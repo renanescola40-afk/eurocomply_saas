@@ -8,7 +8,8 @@ import InventoryDateI18nRuntime from '@/components/InventoryDateI18nRuntime';
 import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell';
 import { getOrganizationBillingAuthority } from '@/server/queries/subscription';
 import { getCurrentUser } from '@/server/queries/auth';
-import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
+import { getUserOrganizationMemberships } from '@/server/queries/current-organization';
+import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 
 export const metadata: Metadata = {
   robots: {
@@ -42,17 +43,15 @@ export default async function DashboardLayout({
   const billingRecoveryRoute = isBillingRecoveryRoute(pathname, locale);
   const user = await getCurrentUser();
   const organization = user ? await getCurrentOrganizationForUser(user.id) : null;
+  const authority = organization?.id ? await getOrganizationBillingAuthority(organization.id) : null;
 
-  // Billing recovery surfaces preserve their existing accessibility semantics so an
-  // authenticated organization can purchase, retry or inspect billing without
-  // already holding a paid license. Every other dashboard surface requires durable
-  // commercial authority before the enterprise shell is rendered.
+  // Preserve the pre-redesign commercial boundary exactly: billing recovery remains
+  // reachable without an existing paid licence, while every other dashboard surface
+  // requires the same durable authority used before the enterprise shell existed.
   if (!billingRecoveryRoute) {
     if (!user) redirect(`/${locale}/login`);
     if (!organization?.id) redirect(`/${locale}/onboarding`);
-
-    const authority = await getOrganizationBillingAuthority(organization.id);
-    if (!authority.licensed) {
+    if (!authority?.licensed) {
       redirect(`/${locale}/pricing?billing=subscription_required`);
     }
   }
@@ -72,6 +71,8 @@ export default async function DashboardLayout({
     return runtimeChildren;
   }
 
+  const memberships = await getUserOrganizationMemberships(user.id);
+  const membership = memberships.find((candidate) => candidate.id === organization.id) ?? null;
   const userDisplayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'RISCK COMPLY user';
 
   return (
@@ -79,8 +80,8 @@ export default async function DashboardLayout({
       locale={locale}
       organizationName={organization.name}
       userDisplayName={userDisplayName}
-      role={organization.role}
-      selectedPlan={organization.selected_plan}
+      role={membership?.role ?? 'unknown'}
+      selectedPlan={authority?.licensed ? authority.plan : null}
     >
       {runtimeChildren}
     </EnterpriseDashboardShell>
