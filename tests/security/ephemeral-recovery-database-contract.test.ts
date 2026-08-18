@@ -9,6 +9,7 @@ import {
   RECOVERY_DYNAMIC_PORT_SPAN,
   RECOVERY_EXPECTED_SERVER_PREFIX,
   RECOVERY_POSTGRES_MAJOR_VERSION,
+  RECOVERY_SUPABASE_POSTGRES_IMAGE_VERSION,
   buildProjectId,
   buildRecoveryDbUrl,
   classifyPublishedBinding,
@@ -16,9 +17,12 @@ import {
   configureRecoveryDatabase,
   databaseUrlUsesPort,
   isLoopbackDatabaseUrl,
+  normalizeSupabasePostgresImageVersion,
   parseLocalDbUrl,
+  parseSupabasePostgresImageVersion,
   readConfiguredDatabasePort,
   readConfiguredPostgresMajorVersion,
+  recoveryPostgresVersionPinPath,
   selectRecoveryHostPort,
 } from '../../scripts/recovery/manage-ephemeral-recovery-database.mjs';
 
@@ -28,9 +32,10 @@ const finalTechnical = fs.readFileSync('.github/workflows/final-technical-contro
 const recovery = fs.readFileSync('.github/workflows/recovery-resilience-proof.yml', 'utf8');
 
 describe('ephemeral Supabase recovery database contract', () => {
-  it('pins PostgreSQL 17 while allowing an isolated per-run host port', () => {
+  it('pins the exact production Supabase Postgres image plus PostgreSQL 17 and an isolated per-run host port', () => {
     expect(RECOVERY_POSTGRES_MAJOR_VERSION).toBe(17);
     expect(RECOVERY_EXPECTED_SERVER_PREFIX).toBe('17.6');
+    expect(RECOVERY_SUPABASE_POSTGRES_IMAGE_VERSION).toBe('17.6.1.127');
     expect(DEFAULT_RECOVERY_DB_PORT).toBe(54322);
     expect(DEFAULT_RECOVERY_DB_URL).toBe('postgresql://postgres:postgres@127.0.0.1:54322/postgres');
 
@@ -42,6 +47,26 @@ describe('ephemeral Supabase recovery database contract', () => {
     expect(() => configurePostgresMajorVersion('[db]\nport = 54322\n')).toThrow('db.major_version');
     expect(() => configureRecoveryDatabase('[db]\nmajor_version = 17\n', 31873)).toThrow('db.port');
     expect(manager).toContain('observedServerVersion.startsWith(RECOVERY_EXPECTED_SERVER_PREFIX)');
+  });
+
+  it('writes and verifies the full Supabase image version instead of trusting the CLI default image', () => {
+    expect(normalizeSupabasePostgresImageVersion('17.6.1.127')).toBe('17.6.1.127');
+    expect(() => normalizeSupabasePostgresImageVersion('17.6')).toThrow('full x.y.z.build format');
+    expect(() => normalizeSupabasePostgresImageVersion('16.4.1.127')).toThrow('must remain on 17.6.x');
+    expect(recoveryPostgresVersionPinPath('/tmp/recovery')).toBe('/tmp/recovery/supabase/.temp/postgres-version');
+
+    expect(parseSupabasePostgresImageVersion('public.ecr.aws/supabase/postgres:17.6.1.127')).toBe('17.6.1.127');
+    expect(parseSupabasePostgresImageVersion('ghcr.io/supabase/postgres:17.6.1.127')).toBe('17.6.1.127');
+    expect(parseSupabasePostgresImageVersion('supabase/postgres:17.6.1.127')).toBe('17.6.1.127');
+    expect(parseSupabasePostgresImageVersion('supabase/postgres:latest')).toBeNull();
+
+    expect(manager).toContain("writeFileSync(recoveryPostgresVersionPinPath(workDir), `${normalized}\\n`, { mode: 0o600 })");
+    expect(manager).toContain("run('supabase', ['--workdir', workDir, 'init', '--force'])");
+    expect(manager.indexOf('writeRecoveryPostgresImagePin(workDir)'))
+      .toBeLessThan(manager.indexOf("run('supabase', ['--workdir', workDir, 'db', 'start'])"));
+    expect(manager).toContain("run('docker', ['inspect', '--format', '{{.Config.Image}}', containerName]");
+    expect(manager).toContain('observedPostgresImageVersion !== expectedPostgresImageVersion');
+    expect(manager).toContain("appendGithubEnv('RECOVERY_SUPABASE_POSTGRES_VERSION', expectedPostgresImageVersion)");
   });
 
   it('selects a bounded deterministic free port and skips occupied candidates', () => {
@@ -88,7 +113,7 @@ describe('ephemeral Supabase recovery database contract', () => {
     expect(manager.indexOf('hardenWildcardBindings(containerName, projectId, hostPort)'))
       .toBeLessThan(manager.indexOf('testLocalConnection(dbUrl)'));
     expect(manager).toContain('cleanupPersistedFirewallRules');
-    expect(manager).toContain("process.env.RECOVERY_LOCAL_DB_HOST_PORT");
+    expect(manager).toContain('process.env.RECOVERY_LOCAL_DB_HOST_PORT');
     expect(manager).toContain("appendGithubEnv('RECOVERY_LOCAL_DB_HOST_PORT', String(hostPort))");
   });
 

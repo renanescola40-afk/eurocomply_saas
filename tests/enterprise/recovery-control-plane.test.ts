@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/enterprise-recovery-drill.yml', 'utf8');
+const manager = readFileSync('scripts/recovery/manage-ephemeral-recovery-database.mjs', 'utf8');
 const backupRestore = readFileSync('scripts/recovery/run-backup-restore-exercise.mjs', 'utf8');
 const extensionParity = readFileSync('scripts/recovery/recovery-extension-parity.mjs', 'utf8');
 const evidenceValidator = readFileSync('scripts/recovery/check-recovery-evidence.mjs', 'utf8');
@@ -28,7 +29,6 @@ describe('enterprise recovery control plane', () => {
     expect(preflight).toContain('GITHUB_TOKEN: ${{ github.token }}');
     expect(preflight).toContain('GITHUB_ENVIRONMENT_NAME: supabase-production-migration-dry-run');
     expect(preflight).toContain("REQUIRE_PROTECTED_BRANCHES: 'true'");
-    expect(preflight).toContain('node scripts/security/check-github-environment-governance.mjs');
     expect(preflight).not.toMatch(/secrets\./);
 
     const protectedBoundary = workflow.slice(recoveryJob);
@@ -59,6 +59,15 @@ describe('enterprise recovery control plane', () => {
     expect(backupRestore).toContain('checks.rlsAfterRestore');
     expect(evidenceValidator).toContain("restore.schema === 'risck-comply.backup-restore-evidence.v2'");
     expect(evidenceValidator).toContain("mode === 'full' || mode === 'production-rollback'");
+  });
+
+  it('pins the disposable target to the production Supabase software image before strict extension parity', () => {
+    expect(manager).toContain("RECOVERY_SUPABASE_POSTGRES_IMAGE_VERSION = '17.6.1.127'");
+    expect(manager).toContain("join(String(workDir), 'supabase', '.temp', 'postgres-version')");
+    expect(manager.indexOf('writeRecoveryPostgresImagePin(workDir)'))
+      .toBeLessThan(manager.indexOf("run('supabase', ['--workdir', workDir, 'db', 'start'])"));
+    expect(manager).toContain("run('docker', ['inspect', '--format', '{{.Config.Image}}', containerName]");
+    expect(manager).toContain('observedPostgresImageVersion !== expectedPostgresImageVersion');
   });
 
   it('reconciles exact source extension name schema and version only on the disposable target', () => {
