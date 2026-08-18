@@ -49,6 +49,29 @@ test.describe('FRIA six-locale presentation', () => {
   ] as const;
   const legacyAssessmentId = '00000000-0000-4000-8000-000000000001';
 
+  test('legacy deep link selects the requested assessment from the authenticated tenant snapshot', async ({ page }) => {
+    await page.goto('/en/dashboard/fria', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'FRIA workspace' })).toBeVisible();
+
+    const assessmentIds = await page.evaluate(async () => {
+      const response = await fetch('/api/ai-governance/fria', { cache: 'no-store', credentials: 'same-origin' });
+      if (!response.ok) return [] as string[];
+      const payload = await response.json() as { assessments?: Array<{ id?: string }> };
+      return (payload.assessments ?? [])
+        .map((assessment) => assessment.id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0);
+    });
+
+    test.skip(assessmentIds.length === 0, 'The disposable paid-owner fixture has no tenant-scoped FRIA assessment to deep-link.');
+    const targetAssessmentId = assessmentIds.at(-1)!;
+
+    await page.goto(`/en/dashboard/assessments/${encodeURIComponent(targetAssessmentId)}/fria`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'FRIA workspace' })).toBeVisible();
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/en/dashboard/fria');
+    expect(new URL(page.url()).searchParams.get('assessment')).toBe(targetAssessmentId);
+    await expect(page.locator(`[data-assessment-id="${targetAssessmentId}"]`)).toHaveAttribute('aria-pressed', 'true');
+  });
+
   for (const [locale, title] of locales) {
     test(`${locale} renders localized FRIA application chrome`, async ({ page }) => {
       await page.goto(`/${locale}/dashboard/fria`, { waitUntil: 'domcontentloaded' });
