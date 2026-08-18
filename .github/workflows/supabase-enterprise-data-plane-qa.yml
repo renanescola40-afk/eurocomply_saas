@@ -10,11 +10,13 @@ on:
       - 'scripts/database/reconcile-supabase-enterprise-forward.mjs'
       - 'scripts/database/prove-enterprise-evidence-tenant-isolation.mjs'
       - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs'
+      - 'scripts/recovery/verify-postgresql-client.mjs'
       - 'src/lib/evidence/storage.ts'
       - 'src/app/[locale]/dashboard/evidence/page.tsx'
       - 'supabase/migrations/**'
       - 'tests/security/enterprise-evidence-vault-data-plane.test.ts'
       - 'tests/security/compliance-metric-snapshot-tenant-boundary.test.ts'
+      - 'tests/security/recovery-postgresql-client.test.mjs'
   push:
     branches: [main]
     paths:
@@ -23,11 +25,13 @@ on:
       - 'scripts/database/reconcile-supabase-enterprise-forward.mjs'
       - 'scripts/database/prove-enterprise-evidence-tenant-isolation.mjs'
       - 'scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs'
+      - 'scripts/recovery/verify-postgresql-client.mjs'
       - 'src/lib/evidence/storage.ts'
       - 'src/app/[locale]/dashboard/evidence/page.tsx'
       - 'supabase/migrations/**'
       - 'tests/security/enterprise-evidence-vault-data-plane.test.ts'
       - 'tests/security/compliance-metric-snapshot-tenant-boundary.test.ts'
+      - 'tests/security/recovery-postgresql-client.test.mjs'
 
 permissions:
   contents: read
@@ -81,18 +85,15 @@ jobs:
           npx vitest run
           tests/security/enterprise-evidence-vault-data-plane.test.ts
           tests/security/compliance-metric-snapshot-tenant-boundary.test.ts
+          tests/security/recovery-postgresql-client.test.mjs
 
       - name: Set up pinned Supabase CLI
         uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
         with:
           version: 2.101.0
 
-      - name: Install PostgreSQL client
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --yes postgresql-client
+      - name: Verify runner PostgreSQL client without network installation
+        run: node scripts/recovery/verify-postgresql-client.mjs
 
       - name: Start reviewed exact-SHA disposable database
         shell: bash
