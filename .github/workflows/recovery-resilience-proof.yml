@@ -144,13 +144,9 @@ jobs:
         with:
           version: 2.101.0
 
-      - name: Install PostgreSQL client
+      - name: Verify runner PostgreSQL client without network installation
         if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --yes postgresql-client
+        run: node scripts/recovery/verify-postgresql-client.mjs
 
       - name: Start disposable Supabase recovery database
         if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
