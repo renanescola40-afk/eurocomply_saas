@@ -75,7 +75,7 @@ test('closeout workflow never creates commercial lifecycle objects for evidence'
 
 test('production control-plane proof requires the signing-secret binding and canonical lifecycle webhook', () => {
   assert.match(controlPlaneProof, /STRIPE_WEBHOOK_SECRET/);
-  assert.match(controlPlaneProof, /https:\/\/www\.risckcomply\.com\/api\/stripe\/webhook/);
+  assert.match(controlPlaneProof, /(?:^|[\s'"`])https:\/\/www\.risckcomply\.com\/api\/stripe\/webhook(?:$|[\s'"`])/);
   for (const event of [
     'checkout.session.completed',
     'customer.subscription.created',
