@@ -1,3 +1,4 @@
+import { getBillingAddOn, isAddOnAvailableForPlan } from '@/lib/billing/add-ons';
 import { getBillingPlan, type BillingLimit } from '@/lib/billing/plans';
 import type { CanonicalSubscriptionPlan } from '@/server/queries/subscription';
 
@@ -86,7 +87,14 @@ export function canAccessFeature(feature: LicensedFeature, context: LicenseConte
 
   if (!rule.addOnSlugs?.length) return false;
   const active = new Set(context.activeAddOns ?? []);
-  return rule.addOnSlugs.some((slug) => active.has(slug));
+  return rule.addOnSlugs.some((slug) => {
+    if (!active.has(slug)) return false;
+    const addOn = getBillingAddOn(slug);
+    // A persisted/client-supplied slug is never enough by itself. The canonical
+    // commercial catalog must explicitly mark the add-on active and eligible for
+    // the caller's plan before it can elevate a feature.
+    return Boolean(addOn && isAddOnAvailableForPlan(addOn, context.plan));
+  });
 }
 
 export function requireLicensedFeature(feature: LicensedFeature, context: LicenseContext) {

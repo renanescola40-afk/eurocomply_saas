@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { ArrowUpRight, CheckCircle2, Crown, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { BILLING_ADD_ONS, type BillingAddOn } from '@/lib/billing/add-ons';
+import { BILLING_ADD_ONS, isBillingAddOnCommerciallyActive, type BillingAddOn } from '@/lib/billing/add-ons';
 import { getPlanDisplayName } from '@/lib/billing/addons';
 import { getBillingPlan } from '@/lib/billing/plans';
 import { getAddOnsCopy } from '@/lib/i18n/add-ons-copy';
@@ -24,9 +24,10 @@ type PageProps = {
   searchParams?: Promise<{ plan?: string; addon?: string }>;
 };
 
-type UpgradeStatus = 'included' | 'active' | 'available' | 'blocked';
+type UpgradeStatus = 'included' | 'active' | 'available' | 'blocked' | 'preview';
 
 function getUpgradeStatus(plan: CanonicalSubscriptionPlan, addOn: BillingAddOn, activeAddOnIds: Set<string>): UpgradeStatus {
+  if (!isBillingAddOnCommerciallyActive(addOn)) return 'preview';
   if (plan === 'enterprise') return 'included';
   if (activeAddOnIds.has(addOn.slug)) return 'active';
   return addOn.availableOn.includes(plan) ? 'available' : 'blocked';
@@ -35,11 +36,12 @@ function getUpgradeStatus(plan: CanonicalSubscriptionPlan, addOn: BillingAddOn, 
 function statusTone(status: UpgradeStatus) {
   if (status === 'included' || status === 'active') return 'border-emerald-400/25 bg-emerald-400/10 text-emerald-100';
   if (status === 'available') return 'border-blue-400/25 bg-blue-400/10 text-blue-100';
+  if (status === 'preview') return 'border-amber-400/20 bg-amber-400/[0.07] text-amber-100';
   return 'border-white/10 bg-white/[0.035] text-white/60';
 }
 
 function getStatusIcon(status: UpgradeStatus) {
-  return status === 'blocked' ? LockKeyhole : status === 'available' ? Sparkles : CheckCircle2;
+  return status === 'blocked' || status === 'preview' ? LockKeyhole : status === 'available' ? Sparkles : CheckCircle2;
 }
 
 function planList(addOn: BillingAddOn) {
@@ -177,7 +179,9 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
                   </dl>
 
                   <div className="mt-auto pt-6">
-                    {status === 'included' ? (
+                    {status === 'preview' ? (
+                      <p className="text-sm leading-6 text-amber-100/75">{copy.noDirectPurchaseBody}</p>
+                    ) : status === 'included' ? (
                       <p className="text-sm font-semibold text-emerald-200">{copy.includedWithEnterprise}</p>
                     ) : (
                       <div className="flex items-end justify-between gap-4">

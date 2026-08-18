@@ -21,6 +21,13 @@ export type BillingAddOn = {
 const allPaidPlans: CanonicalSubscriptionPlan[] = ['starter', 'professional', 'business', 'enterprise'];
 const proAndUp: CanonicalSubscriptionPlan[] = ['professional', 'business', 'enterprise'];
 
+// Add-on lifecycle primitives already exist, but provider-backed add-on authority is
+// not yet materialized from signed Stripe subscription-item events into the canonical
+// organization entitlement plane. Keep every add-on in private preview until that
+// authority chain is proven end-to-end. This prevents a customer from being charged
+// for an item that a protected API would still deny or a quota calculator would ignore.
+const ADD_ON_COMMERCIAL_STATUS: AddOnStatus = 'private_preview';
+
 function addOn<const TSlug extends string>(
   slug: TSlug,
   name: string,
@@ -41,7 +48,7 @@ function addOn<const TSlug extends string>(
     category,
     availableOn,
     dependencies,
-    status: 'active' as const,
+    status: ADD_ON_COMMERCIAL_STATUS,
     stripePriceEnvKeyMonthly: `STRIPE_ADDON_${envSlug}_MONTHLY`,
     stripePriceEnvKeyAnnual: `STRIPE_ADDON_${envSlug}_ANNUAL`,
   };
@@ -70,6 +77,10 @@ export function getBillingAddOn(slug: string | null | undefined) {
   return BILLING_ADD_ONS.find((candidate) => candidate.slug === normalized);
 }
 
+export function isBillingAddOnCommerciallyActive(candidate: BillingAddOn) {
+  return candidate.status === 'active';
+}
+
 export function isAddOnAvailableForPlan(candidate: BillingAddOn, plan: CanonicalSubscriptionPlan) {
-  return candidate.status === 'active' && candidate.availableOn.includes(plan);
+  return isBillingAddOnCommerciallyActive(candidate) && candidate.availableOn.includes(plan);
 }
