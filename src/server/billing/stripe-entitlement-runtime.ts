@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { z } from 'zod';
 
+import { buildProviderTruthStripeSubscriptionEvent } from '@/server/billing/stripe-subscription-provider-truth';
 import { reconcileEntitlementSnapshot } from '@/server/enterprise/entitlement-reconciliation';
 
 const SUPPORTED_ENTITLEMENT_EVENTS = new Set([
@@ -46,6 +47,7 @@ type InvoiceLineCandidate = {
 };
 
 type EntitlementEventObject = {
+  status?: string | null;
   metadata?: StripeMetadata | null;
   current_period_end?: number | null;
   items?: {
@@ -145,7 +147,10 @@ export function normalizeStripeEntitlementEvent(event: Stripe.Event, now = new D
   const metadata = canonicalMetadataFromEvent(event);
   if (!metadata) return { outcome: 'metadata_missing' as const };
 
-  const cancelled = event.type === 'customer.subscription.deleted';
+  const object = event.data.object as EntitlementEventObject;
+  const invoiceEvent = event.type === 'invoice.paid' || event.type === 'invoice.payment_failed';
+  const cancelled = event.type === 'customer.subscription.deleted'
+    || (!invoiceEvent && object.status === 'canceled');
   const delinquent = event.type === 'invoice.payment_failed';
   const paid = event.type === 'invoice.paid';
   const periodEndSeconds = cancelled ? null : stripeEntitlementPeriodEnd(event);
@@ -165,8 +170,8 @@ export function normalizeStripeEntitlementEvent(event: Stripe.Event, now = new D
 
   // Stripe emits customer.subscription.deleted when the subscription is actually
   // terminated, including cancel-at-period-end subscriptions reaching period end.
-  // The canonical seat-policy store has one current row, so scheduling a future
-  // zero-seat policy would make the current policy unavailable before that time.
+  // Provider-current status is also authoritative when an older created/updated
+  // event is delivered after that cancellation. Either form must zero access.
   const limits = cancelled
     ? { full: 0, participant: 0, viewer: 0 }
     : {
@@ -196,6 +201,7 @@ export function normalizeStripeEntitlementEvent(event: Stripe.Event, now = new D
         billing_provider: 'stripe',
         stripe_event_type: event.type,
         stripe_livemode: event.livemode,
+        stripe_subscription_status: object.status ?? null,
         billing_delinquent: delinquent,
         billing_recovered: paid,
         subscription_terminated: cancelled,
@@ -209,7 +215,8 @@ export function normalizeStripeEntitlementEvent(event: Stripe.Event, now = new D
 }
 
 export async function reconcileStripeEntitlementEvent(event: Stripe.Event) {
-  const normalized = normalizeStripeEntitlementEvent(event);
+  const providerTruthEvent = await buildProviderTruthStripeSubscriptionEvent(event);
+  const normalized = normalizeStripeEntitlementEvent(providerTruthEvent);
   if (normalized.outcome === 'billing_period_missing') {
     throw new Error('stripe_entitlement_billing_period_missing');
   }
