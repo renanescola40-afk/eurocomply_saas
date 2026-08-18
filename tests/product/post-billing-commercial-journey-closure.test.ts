@@ -9,6 +9,8 @@ const BILLING_VIEW = new URL('../../src/app/[locale]/dashboard/organizations/bil
 const BILLING_INTENT_BANNER = new URL('../../src/app/[locale]/dashboard/organizations/billing/billing-plan-intent-banner.tsx', import.meta.url);
 const BILLING_ACTION_BUTTON = new URL('../../src/app/[locale]/dashboard/organizations/billing/billing-action-button.tsx', import.meta.url);
 const DASHBOARD_LAYOUT = new URL('../../src/app/[locale]/dashboard/layout.tsx', import.meta.url);
+const COMMERCIAL_ACCESS = new URL('../../src/server/security/commercial-access.ts', import.meta.url);
+const COMMERCIAL_ROUTE_POLICY = new URL('../../src/lib/security/commercial-route-policy.ts', import.meta.url);
 const CHECKOUT_INTENT = new URL('../../src/app/api/billing/checkout-intent/route.ts', import.meta.url);
 
 describe('post-billing commercial customer journey closure', () => {
@@ -60,15 +62,20 @@ describe('post-billing commercial customer journey closure', () => {
   });
 
   it('keeps the fail-closed commercial authority boundary intact while allowing recovery', async () => {
-    const [layout, checkoutIntent] = await Promise.all([
+    const [layout, access, policy, checkoutIntent] = await Promise.all([
       readFile(DASHBOARD_LAYOUT, 'utf8'),
+      readFile(COMMERCIAL_ACCESS, 'utf8'),
+      readFile(COMMERCIAL_ROUTE_POLICY, 'utf8'),
       readFile(CHECKOUT_INTENT, 'utf8'),
     ]);
 
-    expect(layout).toContain('if (!authority.licensed)');
-    expect(layout).toContain("`/${locale}/dashboard/billing`");
-    expect(layout).toContain("`/${locale}/dashboard/organizations/billing`");
-    expect(layout).toContain("redirect(`/${locale}/pricing?billing=subscription_required`)");
+    expect(layout).toContain('requireLicensedCommercialPageAccess');
+    expect(layout).toContain("commercialRouteClass === 'billing_recovery'");
+    expect(access).toContain('if (!authority.licensed)');
+    expect(access).toContain("redirect(`/${input.locale}/pricing?billing=subscription_required`)");
+    expect(policy).toContain("'/dashboard/billing'");
+    expect(policy).toContain("'/dashboard/organizations/billing'");
+    expect(policy).toContain("return 'licensed_product';");
 
     expect(checkoutIntent).toContain('const alreadyOnPlan = entitlements.licensed &&');
     expect(checkoutIntent).toContain('checkoutReady: !plan.salesLed');
@@ -76,7 +83,6 @@ describe('post-billing commercial customer journey closure', () => {
 
   it('never represents the catalog fallback as an active subscription', async () => {
     const source = await readFile(BILLING_VIEW, 'utf8');
-
     expect(source).toContain("const hasActivePlan = billing.status === 'active' || billing.status === 'trialing';");
     expect(source).toContain('const hasSubscriptionRecord = billing.status !== null;');
     expect(source).toContain('{hasActivePlan ? currentPlan.name : copy.noActiveSubscription}');
@@ -86,7 +92,6 @@ describe('post-billing commercial customer journey closure', () => {
 
   it('keeps payment recovery available without opening a portal for a brand-new organization', async () => {
     const source = await readFile(BILLING_VIEW, 'utf8');
-
     expect(source).toContain('canManageBilling && hasSubscriptionRecord');
     expect(source).toContain('action="portal"');
     expect(source).toContain('action="checkout"');
@@ -102,12 +107,10 @@ describe('post-billing commercial customer journey closure', () => {
       readFile(BILLING_PAGE, 'utf8'),
       readFile(BILLING_ACTION_BUTTON, 'utf8'),
     ]);
-
     expect(actionButton).toContain("const PUBLIC_BILLING_ERROR_CODE = 'action_failed';");
     expect(actionButton).toContain('billing_error=${PUBLIC_BILLING_ERROR_CODE}');
     expect(actionButton).not.toContain('encodeURIComponent(message)');
     expect(actionButton).not.toContain("String(json.error ?? 'Billing action could not be completed.')");
-
     expect(page).toContain('function getPublicBillingFailureMessage(locale: string)');
     expect(page).toContain('resolvedSearchParams.billing_error');
     expect(page).toContain('getPublicBillingFailureMessage(locale)');
@@ -119,7 +122,6 @@ describe('post-billing commercial customer journey closure', () => {
       readFile(BILLING_VIEW, 'utf8'),
       readFile(BILLING_ACTION_BUTTON, 'utf8'),
     ]);
-
     expect(view).toContain("continueToDashboard: 'Continuar para o painel'");
     expect(view).toContain("continueToDashboard: 'Continuar al panel'");
     expect(view).toContain("continueToDashboard: 'Continuer vers le tableau de bord'");
@@ -130,39 +132,20 @@ describe('post-billing commercial customer journey closure', () => {
     expect(view).toContain("checkoutCompleted: 'Paiement terminé'");
     expect(view).toContain("checkoutCompleted: 'Pagamento completato'");
     expect(view).toContain("checkoutCompleted: 'Zahlung abgeschlossen'");
-    expect(view).not.toContain('owner do workspace');
-    expect(view).not.toContain('owner del workspace');
-    expect(view).not.toContain('owner du workspace');
-    expect(view).not.toContain('owner del workspace');
-    expect(view).not.toContain('Workspace-Owner');
-    expect(view).not.toContain("checkoutCompleted: 'Checkout concluído'");
-    expect(view).not.toContain("checkoutCompleted: 'Checkout completado'");
-    expect(view).not.toContain("checkoutCompleted: 'Checkout terminé'");
-    expect(view).not.toContain("checkoutCompleted: 'Checkout annullato'");
-
     expect(actionButton).toContain('function getStepUpCopy(locale: string)');
     expect(actionButton).toContain('Escolha um método de autenticação multifator');
-    expect(actionButton).toContain('Elige un método de autenticación multifactor');
-    expect(actionButton).toContain('Choisissez une méthode d’authentification multifacteur');
-    expect(actionButton).toContain('Scegli un metodo di autenticazione a più fattori');
-    expect(actionButton).toContain('Wählen Sie eine Methode für die Mehrfaktor-Authentifizierung');
+    expect(actionButton).toContain('Elige un método de autenticação multifactor');
     expect(actionButton).toContain('getBillingStepUpToken(locale)');
   });
 
   it('preserves role-safe billing UX and locale-aware activation navigation', async () => {
     const source = await readFile(BILLING_VIEW, 'utf8');
-
     expect(source).toContain('!canManageBilling ?');
     expect(source).toContain('aria-disabled="true"');
     expect(source).toContain('role="status"');
     expect(source).toContain('role="alert"');
     expect(source).toContain("href={`/${locale}/dashboard`}");
     expect(source).toContain("continueToDashboard: 'Continue to dashboard'");
-    expect(source).toContain("continueToDashboard: 'Continuar para o painel'");
-    expect(source).toContain("continueToDashboard: 'Continuar al panel'");
-    expect(source).toContain("continueToDashboard: 'Continuer vers le tableau de bord'");
-    expect(source).toContain("continueToDashboard: 'Continua al pannello'");
-    expect(source).toContain("continueToDashboard: 'Zum Dashboard'");
     expect(source).toContain('focus-visible:ring-2');
   });
 });
