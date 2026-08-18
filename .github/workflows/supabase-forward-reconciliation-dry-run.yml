@@ -11,6 +11,7 @@ on:
       - 'scripts/security/validate-enterprise-integrations-runtime.sql'
       - 'scripts/security/validate-enterprise-billing-runtime.sql'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
+      - 'scripts/recovery/verify-postgresql-client.mjs'
       - 'supabase/migrations/**'
       - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
       - '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
@@ -100,7 +101,6 @@ jobs:
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
       REHEARSAL_RUN_ID: ${{ inputs.rehearsal_run_id }}
-      SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
       CURRENT_MANIFEST: artifacts/supabase-forward-reconciliation/current-manifest.json
       REMOTE_VERSIONS: artifacts/supabase-forward-reconciliation/remote-before.json
       VERSION_ORDER_PROOF: artifacts/supabase-forward-reconciliation/version-order-proof.json
@@ -110,6 +110,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
         run: |
           set -euo pipefail
           [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
@@ -154,12 +155,8 @@ jobs:
         with:
           version: 2.114.0
 
-      - name: Install PostgreSQL client
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --yes postgresql-client
+      - name: Verify runner PostgreSQL client without network installation
+        run: node scripts/recovery/verify-postgresql-client.mjs
 
       - name: Recompile and validate exact rehearsal selection
         shell: bash
@@ -179,6 +176,8 @@ jobs:
           cp "${ATTESTATIONS[0]}" artifacts/supabase-forward-reconciliation/source-rehearsal-attestation.json
 
       - name: Build filtered workdir from remote migration history
+        env:
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
         shell: bash
         run: |
           set -euo pipefail
@@ -231,6 +230,8 @@ jobs:
           jq -e '.status == "PASS" and .checks.pendingSetEqualsSelectedSet == true and .checks.unauthorizedPendingMigrations == false' "$FILTERED_SET_PROOF" >/dev/null
 
       - name: Execute filtered Supabase migration dry run only
+        env:
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
         shell: bash
         run: |
           set -euo pipefail
