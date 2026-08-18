@@ -9,9 +9,11 @@ import {
   Bell,
   Bot,
   CircleGauge,
+  ClipboardCheck,
   CreditCard,
   FileCheck2,
   FileText,
+  GraduationCap,
   LayoutDashboard,
   Menu,
   Newspaper,
@@ -55,6 +57,7 @@ type ShellCopy = {
   overview: string;
   command: string;
   aiSystems: string;
+  fria: string;
   tasks: string;
   risks: string;
   evidence: string;
@@ -62,6 +65,7 @@ type ShellCopy = {
   reports: string;
   controlTower: string;
   regulatory: string;
+  aiLiteracy: string;
   team: string;
   addOns: string;
   billing: string;
@@ -78,27 +82,27 @@ type ShellCopy = {
 const copy: Record<string, ShellCopy> = {
   en: {
     commandCenter: 'Command center', intelligence: 'AI & risk', governance: 'Evidence & governance', workspace: 'Workspace',
-    overview: 'Overview', command: 'Control center', aiSystems: 'AI systems', tasks: 'Tasks', risks: 'Risks', evidence: 'Evidence vault', documents: 'Documents', reports: 'Reports', controlTower: 'Regulatory control tower', regulatory: 'EU AI Act intelligence', team: 'Team & access', addOns: 'Add-ons', billing: 'Billing', settings: 'Organization settings', profile: 'Profile', notifications: 'Notifications', protected: 'Protected workspace', navigation: 'Enterprise dashboard navigation', mobileNavigation: 'Mobile dashboard navigation', menu: 'Open dashboard menu', tagline: 'AI governance, operational evidence and regulatory readiness in one workspace.',
+    overview: 'Overview', command: 'Control center', aiSystems: 'AI systems', fria: 'FRIA', tasks: 'Tasks', risks: 'Risks', evidence: 'Evidence vault', documents: 'Documents', reports: 'Reports', controlTower: 'Regulatory control tower', regulatory: 'EU AI Act intelligence', aiLiteracy: 'AI literacy', team: 'Team & access', addOns: 'Add-ons', billing: 'Billing', settings: 'Organization settings', profile: 'Profile', notifications: 'Notifications', protected: 'Protected workspace', navigation: 'Enterprise dashboard navigation', mobileNavigation: 'Mobile dashboard navigation', menu: 'Open dashboard menu', tagline: 'AI governance, operational evidence and regulatory readiness in one workspace.',
   },
   pt: {
     commandCenter: 'Centro de comando', intelligence: 'IA e risco', governance: 'Evidências e governança', workspace: 'Workspace',
-    overview: 'Visão geral', command: 'Control center', aiSystems: 'Sistemas de IA', tasks: 'Tarefas', risks: 'Riscos', evidence: 'Cofre de evidências', documents: 'Documentos', reports: 'Relatórios', controlTower: 'Control tower regulatório', regulatory: 'Inteligência EU AI Act', team: 'Equipa e acessos', addOns: 'Add-ons', billing: 'Faturação', settings: 'Definições da organização', profile: 'Perfil', notifications: 'Notificações', protected: 'Workspace protegido', navigation: 'Navegação enterprise da dashboard', mobileNavigation: 'Navegação móvel da dashboard', menu: 'Abrir menu da dashboard', tagline: 'Governança de IA, evidência operacional e prontidão regulatória num único workspace.',
+    overview: 'Visão geral', command: 'Control center', aiSystems: 'Sistemas de IA', fria: 'FRIA', tasks: 'Tarefas', risks: 'Riscos', evidence: 'Cofre de evidências', documents: 'Documentos', reports: 'Relatórios', controlTower: 'Control tower regulatório', regulatory: 'Inteligência EU AI Act', aiLiteracy: 'Literacia em IA', team: 'Equipa e acessos', addOns: 'Add-ons', billing: 'Faturação', settings: 'Definições da organização', profile: 'Perfil', notifications: 'Notificações', protected: 'Workspace protegido', navigation: 'Navegação enterprise da dashboard', mobileNavigation: 'Navegação móvel da dashboard', menu: 'Abrir menu da dashboard', tagline: 'Governança de IA, evidência operacional e prontidão regulatória num único workspace.',
   },
   es: {
     commandCenter: 'Centro de mando', intelligence: 'IA y riesgo', governance: 'Evidencias y gobernanza', workspace: 'Workspace',
-    overview: 'Resumen', command: 'Centro de control', aiSystems: 'Sistemas de IA', tasks: 'Tareas', risks: 'Riesgos', evidence: 'Bóveda de evidencias', documents: 'Documentos', reports: 'Informes', controlTower: 'Torre de control regulatoria', regulatory: 'Inteligencia EU AI Act', team: 'Equipo y accesos', addOns: 'Add-ons', billing: 'Facturación', settings: 'Configuración de organización', profile: 'Perfil', notifications: 'Notificaciones', protected: 'Workspace protegido', navigation: 'Navegación enterprise del dashboard', mobileNavigation: 'Navegación móvil del dashboard', menu: 'Abrir menú del dashboard', tagline: 'Gobernanza de IA, evidencia operativa y preparación regulatoria en un único workspace.',
+    overview: 'Resumen', command: 'Centro de control', aiSystems: 'Sistemas de IA', fria: 'FRIA', tasks: 'Tareas', risks: 'Riesgos', evidence: 'Bóveda de evidencias', documents: 'Documentos', reports: 'Informes', controlTower: 'Torre de control regulatoria', regulatory: 'Inteligencia EU AI Act', aiLiteracy: 'Alfabetización en IA', team: 'Equipo y accesos', addOns: 'Add-ons', billing: 'Facturación', settings: 'Configuración de organización', profile: 'Perfil', notifications: 'Notificaciones', protected: 'Workspace protegido', navigation: 'Navegación enterprise del dashboard', mobileNavigation: 'Navegación móvil del dashboard', menu: 'Abrir menú del dashboard', tagline: 'Gobernanza de IA, evidencia operativa y preparación regulatoria en un único workspace.',
   },
   fr: {
     commandCenter: 'Centre de commande', intelligence: 'IA et risques', governance: 'Preuves et gouvernance', workspace: 'Workspace',
-    overview: 'Vue générale', command: 'Centre de contrôle', aiSystems: 'Systèmes IA', tasks: 'Tâches', risks: 'Risques', evidence: 'Coffre de preuves', documents: 'Documents', reports: 'Rapports', controlTower: 'Tour de contrôle réglementaire', regulatory: 'Intelligence EU AI Act', team: 'Équipe et accès', addOns: 'Modules', billing: 'Facturation', settings: 'Paramètres organisation', profile: 'Profil', notifications: 'Notifications', protected: 'Workspace protégé', navigation: 'Navigation enterprise du dashboard', mobileNavigation: 'Navigation mobile du dashboard', menu: 'Ouvrir le menu du dashboard', tagline: 'Gouvernance de l’IA, preuves opérationnelles et préparation réglementaire dans un seul workspace.',
+    overview: 'Vue générale', command: 'Centre de contrôle', aiSystems: 'Systèmes IA', fria: 'FRIA', tasks: 'Tâches', risks: 'Risques', evidence: 'Coffre de preuves', documents: 'Documents', reports: 'Rapports', controlTower: 'Tour de contrôle réglementaire', regulatory: 'Intelligence EU AI Act', aiLiteracy: 'Culture IA', team: 'Équipe et accès', addOns: 'Modules', billing: 'Facturation', settings: 'Paramètres organisation', profile: 'Profil', notifications: 'Notifications', protected: 'Workspace protégé', navigation: 'Navigation enterprise du dashboard', mobileNavigation: 'Navigation mobile du dashboard', menu: 'Ouvrir le menu du dashboard', tagline: 'Gouvernance de l’IA, preuves opérationnelles et préparation réglementaire dans un seul workspace.',
   },
   it: {
     commandCenter: 'Centro di comando', intelligence: 'IA e rischio', governance: 'Evidenze e governance', workspace: 'Workspace',
-    overview: 'Panoramica', command: 'Centro di controllo', aiSystems: 'Sistemi IA', tasks: 'Attività', risks: 'Rischi', evidence: 'Archivio evidenze', documents: 'Documenti', reports: 'Report', controlTower: 'Torre di controllo normativa', regulatory: 'Intelligence EU AI Act', team: 'Team e accessi', addOns: 'Add-on', billing: 'Fatturazione', settings: 'Impostazioni organizzazione', profile: 'Profilo', notifications: 'Notifiche', protected: 'Workspace protetto', navigation: 'Navigazione enterprise della dashboard', mobileNavigation: 'Navigazione mobile della dashboard', menu: 'Apri menu dashboard', tagline: 'Governance IA, evidenze operative e readiness normativa in un unico workspace.',
+    overview: 'Panoramica', command: 'Centro di controllo', aiSystems: 'Sistemi IA', fria: 'FRIA', tasks: 'Attività', risks: 'Rischi', evidence: 'Archivio evidenze', documents: 'Documenti', reports: 'Report', controlTower: 'Torre di controllo normativa', regulatory: 'Intelligence EU AI Act', aiLiteracy: 'AI literacy', team: 'Team e accessi', addOns: 'Add-on', billing: 'Fatturazione', settings: 'Impostazioni organizzazione', profile: 'Profilo', notifications: 'Notifiche', protected: 'Workspace protetto', navigation: 'Navigazione enterprise della dashboard', mobileNavigation: 'Navigazione mobile della dashboard', menu: 'Apri menu dashboard', tagline: 'Governance IA, evidenze operative e readiness normativa in un unico workspace.',
   },
   de: {
     commandCenter: 'Kommandozentrale', intelligence: 'KI und Risiko', governance: 'Nachweise und Governance', workspace: 'Workspace',
-    overview: 'Übersicht', command: 'Kontrollzentrum', aiSystems: 'KI-Systeme', tasks: 'Aufgaben', risks: 'Risiken', evidence: 'Nachweis-Tresor', documents: 'Dokumente', reports: 'Berichte', controlTower: 'Regulatorischer Kontrollturm', regulatory: 'EU AI Act Intelligence', team: 'Team & Zugriff', addOns: 'Add-ons', billing: 'Abrechnung', settings: 'Organisationseinstellungen', profile: 'Profil', notifications: 'Benachrichtigungen', protected: 'Geschützter Workspace', navigation: 'Enterprise-Dashboard-Navigation', mobileNavigation: 'Mobile Dashboard-Navigation', menu: 'Dashboard-Menü öffnen', tagline: 'KI-Governance, operative Nachweise und regulatorische Bereitschaft in einem Workspace.',
+    overview: 'Übersicht', command: 'Kontrollzentrum', aiSystems: 'KI-Systeme', fria: 'FRIA', tasks: 'Aufgaben', risks: 'Risiken', evidence: 'Nachweis-Tresor', documents: 'Dokumente', reports: 'Berichte', controlTower: 'Regulatorischer Kontrollturm', regulatory: 'EU AI Act Intelligence', aiLiteracy: 'KI-Kompetenz', team: 'Team & Zugriff', addOns: 'Add-ons', billing: 'Abrechnung', settings: 'Organisationseinstellungen', profile: 'Profil', notifications: 'Benachrichtigungen', protected: 'Geschützter Workspace', navigation: 'Enterprise-Dashboard-Navigation', mobileNavigation: 'Mobile Dashboard-Navigation', menu: 'Dashboard-Menü öffnen', tagline: 'KI-Governance, operative Nachweise und regulatorische Bereitschaft in einem Workspace.',
   },
 };
 
@@ -146,6 +150,7 @@ export function EnterpriseDashboardShell({
       label: text.intelligence,
       items: [
         { label: text.aiSystems, href: localized(locale, '/ai-systems'), icon: Bot },
+        { label: text.fria, href: localized(locale, '/dashboard/fria'), icon: ClipboardCheck },
         { label: text.tasks, href: localized(locale, '/dashboard/organizations/tasks'), icon: FileCheck2 },
         { label: text.risks, href: localized(locale, '/dashboard/organizations/risks'), icon: Radar },
       ],
@@ -158,6 +163,7 @@ export function EnterpriseDashboardShell({
         { label: text.reports, href: localized(locale, '/dashboard/organizations/reports-governance'), icon: ShieldCheck },
         { label: text.controlTower, href: localized(locale, '/dashboard/organizations/regulatory-control-tower'), icon: Scale },
         { label: text.regulatory, href: localized(locale, '/dashboard/organizations/reports-governance/news'), icon: Newspaper },
+        { label: text.aiLiteracy, href: localized(locale, '/dashboard/organizations/ai-literacy'), icon: GraduationCap },
       ],
     },
     {
