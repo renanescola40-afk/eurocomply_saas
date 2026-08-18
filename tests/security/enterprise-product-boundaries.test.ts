@@ -54,10 +54,13 @@ describe('enterprise product information architecture', () => {
     const shell = read('src/components/dashboard/enterprise-dashboard-shell.tsx');
 
     expect(dashboardLayout).toContain("import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell'");
+    expect(dashboardLayout).toContain("import { getCurrentOrganizationForUser } from '@/server/queries/organizations'");
     expect(dashboardLayout).toContain('<EnterpriseDashboardShell');
     expect(dashboardLayout).toContain('organizationName={organization.name}');
-    expect(dashboardLayout).toContain('role={organization.role}');
-    expect(dashboardLayout).toContain('selectedPlan={organization.selected_plan}');
+    expect(dashboardLayout).toContain('userDisplayName={userDisplayName}');
+    expect(dashboardLayout).toContain("role={membership?.role ?? 'unknown'}");
+    expect(dashboardLayout).toContain('selectedPlan={authority?.licensed ? authority.plan : null}');
+    expect(dashboardLayout).toContain('if (!authority?.licensed)');
 
     expect(organizationLayout).not.toContain('DashboardCommandNavigation');
     expect(organizationLayout).toContain('return children;');
@@ -69,5 +72,10 @@ describe('enterprise product information architecture', () => {
     expect(shell).toContain('sticky top-[72px]');
     expect(shell).toContain('Enterprise AI Governance');
     expect(shell).toContain('aria-current={active ? \'page\' : undefined}');
+    expect(shell).toContain('es: {');
+    expect(shell).toContain('fr: {');
+    expect(shell).toContain('it: {');
+    expect(shell).toContain('de: {');
+    expect(shell).not.toContain('<main className=');
   });
 });
