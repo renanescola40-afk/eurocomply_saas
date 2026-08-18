@@ -17,6 +17,8 @@ describe('enterprise dashboard template consistency', () => {
     expect(shell).toContain('Enterprise dashboard navigation');
     expect(shell).toContain('RISCK COMPLY — Dashboard');
     expect(shell).toContain('sticky top-[72px]');
+    expect(shell).toContain("localized(locale, '/dashboard/fria')");
+    expect(shell).toContain("localized(locale, '/dashboard/organizations/ai-literacy')");
   });
 
   it('keeps AI Systems inside the same enterprise shell instead of restoring the legacy navbar', async () => {
