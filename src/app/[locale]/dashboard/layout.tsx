@@ -8,8 +8,7 @@ import InventoryDateI18nRuntime from '@/components/InventoryDateI18nRuntime';
 import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell';
 import { getOrganizationBillingAuthority } from '@/server/queries/subscription';
 import { getCurrentUser } from '@/server/queries/auth';
-import { getUserOrganizationMemberships } from '@/server/queries/current-organization';
-import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
 export const metadata: Metadata = {
   robots: {
@@ -61,6 +60,9 @@ export default async function DashboardLayout({
   const user = await getCurrentUser();
   if (!user) redirect(`/${locale}/login`);
 
+  // Resolve the organization and membership role through one canonical lookup so
+  // shell presentation cannot drift from the tenant membership used by the rest of
+  // the authenticated product. Billing authority remains the only license gate.
   const organization = await getCurrentOrganizationForUser(user.id);
   if (!organization?.id) redirect(`/${locale}/onboarding`);
 
@@ -69,11 +71,6 @@ export default async function DashboardLayout({
     redirect(`/${locale}/pricing?billing=subscription_required`);
   }
 
-  // Membership data is presentation-only here. It cannot grant access or alter the
-  // licensed plan; those decisions remain bound to the existing organization and
-  // durable billing authority above.
-  const memberships = await getUserOrganizationMemberships(user.id);
-  const membership = memberships.find((candidate) => candidate.id === organization.id) ?? null;
   const userDisplayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'RISCK COMPLY user';
 
   return (
@@ -81,7 +78,7 @@ export default async function DashboardLayout({
       locale={locale}
       organizationName={organization.name}
       userDisplayName={userDisplayName}
-      role={membership?.role ?? 'unknown'}
+      role={organization.role}
       selectedPlan={authority.plan}
     >
       {runtimeChildren}
