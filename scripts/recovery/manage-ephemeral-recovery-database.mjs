@@ -15,6 +15,7 @@ import { basename, join } from 'node:path';
 
 export const RECOVERY_POSTGRES_MAJOR_VERSION = 17;
 export const RECOVERY_EXPECTED_SERVER_PREFIX = '17.6';
+export const RECOVERY_SUPABASE_POSTGRES_IMAGE_VERSION = '17.6.1.127';
 export const DEFAULT_RECOVERY_DB_PORT = 54322;
 export const DEFAULT_RECOVERY_DB_URL = `postgresql://postgres:postgres@127.0.0.1:${DEFAULT_RECOVERY_DB_PORT}/postgres`;
 export const RECOVERY_DYNAMIC_PORT_MIN = 20000;
@@ -119,6 +120,29 @@ export function configureRecoveryDatabase(configText, hostPort, majorVersion = R
     throw new Error('Supabase config is missing db.port');
   }
   return withMajor.replace(pattern, `$1port = ${port}`);
+}
+
+export function normalizeSupabasePostgresImageVersion(value = RECOVERY_SUPABASE_POSTGRES_IMAGE_VERSION) {
+  const version = String(value ?? '').trim();
+  if (!/^\d+\.\d+\.\d+\.\d+$/.test(version)) {
+    throw new Error('Recovery Supabase Postgres image version must use the full x.y.z.build format');
+  }
+  if (!version.startsWith(`${RECOVERY_EXPECTED_SERVER_PREFIX}.`)) {
+    throw new Error(`Recovery Supabase Postgres image version must remain on ${RECOVERY_EXPECTED_SERVER_PREFIX}.x`);
+  }
+  return version;
+}
+
+export function recoveryPostgresVersionPinPath(workDir) {
+  return join(String(workDir), 'supabase', '.temp', 'postgres-version');
+}
+
+export function writeRecoveryPostgresImagePin(workDir, version = RECOVERY_SUPABASE_POSTGRES_IMAGE_VERSION) {
+  const normalized = normalizeSupabasePostgresImageVersion(version);
+  const tempDir = join(String(workDir), 'supabase', '.temp');
+  mkdirSync(tempDir, { recursive: true });
+  writeFileSync(recoveryPostgresVersionPinPath(workDir), `${normalized}\n`, { mode: 0o600 });
+  return normalized;
 }
 
 export function classifyPublishedBinding(line, hostPort = DEFAULT_RECOVERY_DB_PORT) {
@@ -286,6 +310,15 @@ function serverVersion(containerName) {
   ], { capture: true })).trim();
 }
 
+function containerImage(containerName) {
+  return String(run('docker', ['inspect', '--format', '{{.Config.Image}}', containerName], { capture: true })).trim();
+}
+
+export function parseSupabasePostgresImageVersion(image) {
+  const match = String(image ?? '').trim().match(/(?:^|\/)postgres:(\d+\.\d+\.\d+\.\d+)$/);
+  return match?.[1] ?? null;
+}
+
 function copyExactShaProjectMigrations(workDir) {
   const sourceDir = join(process.cwd(), 'supabase', 'migrations');
   const targetDir = join(workDir, 'supabase', 'migrations');
@@ -347,6 +380,7 @@ function start(mode = 'restore-target') {
 
   try {
     run('supabase', ['--workdir', workDir, 'init', '--force']);
+    const expectedPostgresImageVersion = writeRecoveryPostgresImagePin(workDir);
     const configPath = join(workDir, 'supabase', 'config.toml');
     const configured = configureRecoveryDatabase(readFileSync(configPath, 'utf8'), hostPort);
     writeFileSync(configPath, configured, { mode: 0o600 });
@@ -368,6 +402,12 @@ function start(mode = 'restore-target') {
     }
 
     let containerName = findDatabaseContainer(projectId);
+    const observedPostgresImageVersion = parseSupabasePostgresImageVersion(containerImage(containerName));
+    if (observedPostgresImageVersion !== expectedPostgresImageVersion) {
+      throw new Error(
+        `Unexpected Supabase Postgres image version: ${observedPostgresImageVersion || 'unknown'}; expected ${expectedPostgresImageVersion}`,
+      );
+    }
     firewall = hardenWildcardBindings(containerName, projectId, hostPort);
     testLocalConnection(dbUrl);
 
@@ -392,14 +432,15 @@ function start(mode = 'restore-target') {
     appendGithubEnv('RECOVERY_EPHEMERAL_WORKDIR', workDir);
     appendGithubEnv('RECOVERY_LOCAL_DB_CONTAINER', containerName);
     appendGithubEnv('RECOVERY_LOCAL_DB_HOST_PORT', String(hostPort));
-    appendGithubEnv('RECOVERY_SUPABASE_POSTGRES_VERSION', observedServerVersion);
+    appendGithubEnv('RECOVERY_SUPABASE_POSTGRES_VERSION', expectedPostgresImageVersion);
+    appendGithubEnv('RECOVERY_POSTGRES_SERVER_VERSION', observedServerVersion);
     appendGithubEnv('RECOVERY_EPHEMERAL_MIGRATION_COUNT', String(migrationCount));
     appendGithubEnv('RECOVERY_FIREWALL_COMMENT', firewall.comment);
     appendGithubEnv('RECOVERY_FIREWALL_IPV4', firewall.classes.includes('wildcard-v4') ? 'true' : 'false');
     appendGithubEnv('RECOVERY_FIREWALL_IPV6', firewall.classes.includes('wildcard-v6') ? 'true' : 'false');
 
     const schemaSummary = mode === 'project-schema' ? ` with ${migrationCount} exact-SHA project migrations` : '';
-    process.stdout.write(`Ephemeral Supabase database ready using PostgreSQL ${observedServerVersion}${schemaSummary}; published bindings are restricted before proof execution.\n`);
+    process.stdout.write(`Ephemeral Supabase database ready using Supabase Postgres ${expectedPostgresImageVersion} / PostgreSQL ${observedServerVersion}${schemaSummary}; published bindings are restricted before proof execution.\n`);
   } catch (error) {
     if (firewall?.rules) {
       for (const [binary, args] of [...firewall.rules].reverse()) removeRule(binary, args);
