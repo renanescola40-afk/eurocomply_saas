@@ -6,6 +6,10 @@ const workflow = readFileSync(
   join(process.cwd(), '.github/workflows/product-fria-ephemeral-qa.yml'),
   'utf8',
 );
+const fixture = readFileSync(
+  join(process.cwd(), 'scripts/product/create-fria-ephemeral-fixtures.mjs'),
+  'utf8',
+);
 
 describe('Product runtime acceptance reliability contracts', () => {
   it('fails early when the assessed Next process exits before readiness', () => {
@@ -29,5 +33,16 @@ describe('Product runtime acceptance reliability contracts', () => {
     expect(workflow).not.toContain('Product QA sanitized failure diagnostic: $E2E_FRIA_OWNER_EMAIL');
     expect(workflow).not.toContain('Product QA sanitized failure diagnostic: $E2E_FRIA_OWNER_PASSWORD');
     expect(workflow).not.toContain('Product QA sanitized failure diagnostic: $SUPABASE_SERVICE_ROLE_KEY');
+  });
+
+  it('proves disposable owner and approver password grants before browser acceptance', () => {
+    expect(fixture).toContain("const anonKey = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');");
+    expect(fixture).toContain('await authClient.auth.signInWithPassword({');
+    expect(fixture).toContain("await verifyPasswordGrant(url, anonKey, owner, 'owner');");
+    expect(fixture).toContain("await verifyPasswordGrant(url, anonKey, approver, 'approver');");
+    expect(fixture).toContain('!data.session?.access_token');
+    expect(fixture).toContain('data.user?.id !== identity.id');
+    expect(fixture).not.toContain('console.log(data.session');
+    expect(fixture).not.toContain('console.log(identity.password');
   });
 });
