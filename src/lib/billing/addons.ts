@@ -1,6 +1,7 @@
 import {
   BILLING_ADD_ONS,
   type AddOnCategory,
+  type AddOnStatus,
   type BillingAddOnSlug,
 } from '@/lib/billing/add-ons';
 import type { SubscriptionPlan } from '@/server/queries/subscription';
@@ -15,6 +16,7 @@ export type AddOnCatalogItem = {
   includedFromPlan?: SubscriptionPlan;
   availableFromPlan: SubscriptionPlan;
   category: AddOnCategory;
+  status: AddOnStatus;
 };
 
 const PLAN_RANK: Record<SubscriptionPlan, number> = {
@@ -37,6 +39,7 @@ export const ADD_ON_CATALOG: AddOnCatalogItem[] = BILLING_ADD_ONS.map((addOn) =>
   includedFromPlan: 'enterprise',
   availableFromPlan: addOn.availableOn[0] ?? 'enterprise',
   category: addOn.category,
+  status: addOn.status,
 }));
 
 export const CREDIT_PACKS = [
@@ -58,6 +61,10 @@ export function getPlanDisplayName(plan: SubscriptionPlan) {
 }
 
 export function getAddOnStatus(plan: SubscriptionPlan, addOn: AddOnCatalogItem, activeAddOnIds: AddOnId[] = []) {
+  if (addOn.status !== 'active') {
+    return 'preview' as const;
+  }
+
   if (addOn.includedFromPlan && billingPlanAtLeast(plan, addOn.includedFromPlan)) {
     return 'included' as const;
   }
