@@ -11,10 +11,6 @@ function env(name) {
   return String(process.env[name] ?? '').trim();
 }
 
-function componentPassed(name) {
-  return env(name) === 'success';
-}
-
 function readLifecycleEvidence(path = LIFECYCLE_EVIDENCE) {
   if (!existsSync(path)) return null;
   try {
