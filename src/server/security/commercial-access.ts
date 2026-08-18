@@ -32,6 +32,14 @@ export type CommercialAccessResolution =
     }
   | { status: 'commercial_authority_unavailable' };
 
+/**
+ * Canonical server-side commercial access resolver.
+ *
+ * Authentication, tenant membership and commercial authority are independent
+ * controls. A user/session/role/local subscription row never grants paid access
+ * by itself. React cache keeps nested server layouts on the same request from
+ * repeating the authority lookup without introducing cross-request stale state.
+ */
 export const resolveCommercialProductAccess = cache(async (): Promise<CommercialAccessResolution> => {
   try {
     const user = await getCurrentUser();
@@ -57,6 +65,8 @@ export const resolveCommercialProductAccess = cache(async (): Promise<Commercial
       authority: authority as OrganizationBillingAuthority & { licensed: true },
     };
   } catch {
+    // Fail closed. Provider/database/auth resolution failures are availability
+    // incidents, never an implicit free tier or commercial authorization.
     console.warn('[commercial-access] authority_resolution_failed');
     return { status: 'commercial_authority_unavailable' };
   }
