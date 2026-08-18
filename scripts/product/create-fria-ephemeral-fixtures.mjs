@@ -138,14 +138,31 @@ async function main() {
     throw new Error('fria_commercial_authority_verification_failed');
   }
 
+  // The final Product proof must fail before browser execution if a migration
+  // removed or renamed the organization-scoped Evidence Vault contract. This
+  // intentionally exercises the current schema through PostgREST instead of
+  // assuming that a prior migration proof still represents the assessed SHA.
+  const { error: evidenceSchemaError } = await admin
+    .from('evidence_items')
+    .select('id,organization_id,user_id,title,evidence_type,status,article_refs,storage_bucket,deleted_at')
+    .eq('organization_id', organization.id)
+    .limit(1);
+  if (evidenceSchemaError) {
+    throw new Error('fria_evidence_vault_schema_verification_failed');
+  }
+
   exportEnv('E2E_FRIA_OWNER_EMAIL', owner.email);
   exportEnv('E2E_FRIA_OWNER_PASSWORD', owner.password);
   exportEnv('E2E_FRIA_REVIEWER_EMAIL', reviewer.email);
   exportEnv('E2E_FRIA_APPROVER_EMAIL', approver.email);
   exportEnv('E2E_FRIA_APPROVER_PASSWORD', approver.password);
-  appendFileSync(process.env.GITHUB_ENV, 'E2E_ALLOW_SYNTHETIC_APP_WRITES=true\n', 'utf8');
+  appendFileSync(
+    process.env.GITHUB_ENV,
+    'E2E_ALLOW_SYNTHETIC_APP_WRITES=true\nE2E_FRIA_COMMERCIAL_AUTHORITY_VERIFIED=true\nE2E_FRIA_EVIDENCE_VAULT_SCHEMA_VERIFIED=true\n',
+    'utf8',
+  );
 
-  process.stdout.write('Disposable FRIA identities, tenant and Professional signed-contract authority created on loopback Supabase.\n');
+  process.stdout.write('Disposable FRIA identities, tenant, Professional signed-contract authority and Evidence Vault schema verified on loopback Supabase.\n');
 }
 
 main().catch((error) => {
