@@ -1,8 +1,9 @@
 'use client';
 
-import type { ComponentType, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { LucideIcon } from 'lucide-react';
 import {
   Archive,
   Bell,
@@ -37,7 +38,7 @@ type EnterpriseDashboardShellProps = {
 type NavItem = {
   label: string;
   href: string;
-  icon: ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+  icon: LucideIcon;
   exact?: boolean;
 };
 
