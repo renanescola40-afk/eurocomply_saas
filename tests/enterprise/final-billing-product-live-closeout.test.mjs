@@ -84,7 +84,7 @@ test('production control-plane proof requires the signing-secret binding and can
     'invoice.payment_failed',
     'invoice.paid',
   ]) {
-    assert.match(controlPlaneProof, new RegExp(event.replaceAll('.', '\\.')));
+    assert.equal(controlPlaneProof.includes(`'${event}'`), true);
   }
   assert.match(controlPlaneProof, /decrypt=false/);
 });
