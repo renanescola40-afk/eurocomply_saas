@@ -51,7 +51,14 @@ function fixture() {
       releaseSha: subjectSha,
       plans: { pendingDeployment: pending },
     },
-    pendingDeploymentPlan: pending,
+    pendingDeploymentPlan: {
+      schema: 'risck-comply.supabase-migration-pending-deployment-plan.v1',
+      releaseSha: subjectSha,
+      decisionStatus: 'RECONCILIATION_ACCEPTED_FOR_STAGING',
+      productionWriteAuthorized: false,
+      itemCount: pending.length,
+      items: pending,
+    },
   };
 }
 
@@ -114,6 +121,28 @@ test('rejects non-accepted decision gate output and self-authorizing decision ar
     decisionRunId: '12345',
     evidenceCommitSha: targetSha,
   }), /must not itself authorize deployment/);
+});
+
+test('rejects malformed or self-authorizing pending deployment artifacts', () => {
+  const wrongSchema = fixture();
+  wrongSchema.pendingDeploymentPlan.schema = 'wrong';
+  assert.throws(() => verifyForwardHumanApproval({
+    ...wrongSchema,
+    targetSha,
+    decisionSubjectSha: subjectSha,
+    decisionRunId: '12345',
+    evidenceCommitSha: targetSha,
+  }), /artifact schema is invalid/);
+
+  const selfAuthorizing = fixture();
+  selfAuthorizing.pendingDeploymentPlan.productionWriteAuthorized = true;
+  assert.throws(() => verifyForwardHumanApproval({
+    ...selfAuthorizing,
+    targetSha,
+    decisionSubjectSha: subjectSha,
+    decisionRunId: '12345',
+    evidenceCommitSha: targetSha,
+  }), /must not authorize production/);
 });
 
 test('rejects subject, evidence and run provenance shape mismatches', () => {
