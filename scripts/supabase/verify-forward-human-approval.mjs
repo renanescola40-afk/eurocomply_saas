@@ -8,6 +8,7 @@ const FULL_SHA = /^[a-f0-9]{40}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const MANIFEST_SCHEMA = 'risck-comply.supabase-forward-reconciliation-manifest.v1';
 const DECISION_RESULT_SCHEMA = 'risck-comply.supabase-migration-reconciliation-decision-result.v1';
+const PENDING_PLAN_SCHEMA = 'risck-comply.supabase-migration-pending-deployment-plan.v1';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -50,7 +51,12 @@ export function verifyForwardHumanApproval({
   assert(decisionResult?.deploymentAuthorization === 'NOT_AUTHORIZED', 'decision gate must not itself authorize deployment');
   assert(String(decisionResult?.releaseSha ?? '').toLowerCase() === normalizedSubject, 'decision result subject SHA mismatch');
   assert(Array.isArray(decisionResult?.plans?.pendingDeployment), 'decision result pending deployment plan is missing');
-  assert(Array.isArray(pendingDeploymentPlan), 'pending deployment artifact must be an array');
+
+  assert(pendingDeploymentPlan?.schema === PENDING_PLAN_SCHEMA, 'pending deployment artifact schema is invalid');
+  assert(String(pendingDeploymentPlan?.releaseSha ?? '').toLowerCase() === normalizedSubject, 'pending deployment artifact subject SHA mismatch');
+  assert(pendingDeploymentPlan?.decisionStatus === 'RECONCILIATION_ACCEPTED_FOR_STAGING', 'pending deployment artifact decision status is invalid');
+  assert(pendingDeploymentPlan?.productionWriteAuthorized === false, 'pending deployment artifact must not authorize production');
+  assert(Array.isArray(pendingDeploymentPlan?.items), 'pending deployment artifact items are missing');
 
   const pendingFromResult = new Map();
   for (const item of decisionResult.plans.pendingDeployment) {
@@ -62,9 +68,10 @@ export function verifyForwardHumanApproval({
   }
 
   const pendingArtifact = new Map();
-  for (const item of pendingDeploymentPlan) {
+  for (const item of pendingDeploymentPlan.items) {
     const key = keyFor(item?.filename, item?.sha256);
     assert(item?.classification === 'PENDING_DEPLOYMENT', `pending artifact item is not PENDING_DEPLOYMENT: ${item?.filename ?? 'unknown'}`);
+    assert(SHA256.test(normalizeDigest(item?.sha256)), `pending artifact item digest is invalid: ${item?.filename ?? 'unknown'}`);
     assert(!pendingArtifact.has(key), `duplicate pending artifact item: ${item?.filename ?? 'unknown'}`);
     pendingArtifact.set(key, item);
   }
