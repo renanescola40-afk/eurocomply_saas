@@ -39,9 +39,17 @@ function expectedShaFailures(evidence, expectedSha) {
   ];
 }
 
+function lifecycleFailures(evidence) {
+  return [
+    ...(evidence?.status === 'Complete' ? [] : ['observability_status_not_complete']),
+    ...(evidence?.outcome === 'passed' ? [] : ['observability_outcome_not_passed']),
+  ];
+}
+
 function validate(evidence, expectedSha) {
   if (!evidence) return ['observability_source_evidence_missing_or_invalid'];
   return [
+    ...lifecycleFailures(evidence),
     ...validateObservabilityRuntimeEvidence(evidence),
     ...expectedShaFailures(evidence, expectedSha),
   ];
@@ -142,8 +150,8 @@ let failures = validate(source, expectedSha);
 let runnerResult = null;
 
 // Public Production Final already emits the canonical authenticated smoke. Reuse
-// it when it is exact-SHA valid so this closeout does not generate duplicate
-// Sentry events. Only regenerate when the source is absent, stale or invalid.
+// it only when it is Complete/passed and exact-SHA valid so this closeout does
+// not generate duplicate Sentry events. Otherwise regenerate exactly once.
 if (failures.length > 0) {
   runnerResult = runSourceValidator();
   source = readEvidence();
