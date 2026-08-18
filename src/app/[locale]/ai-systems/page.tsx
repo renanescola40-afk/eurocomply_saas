@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+
+import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell';
 import { roleHasPermission } from '@/lib/security/permissions';
 import { buildAiGovernanceReadiness } from '@/server/ai-governance/readiness';
+import { getOrganizationBillingAuthority } from '@/server/queries/subscription';
 import { getCurrentUser } from '@/server/queries/auth';
 import { listAiIncidents } from '@/server/queries/ai-incidents';
 import { listAiSystems } from '@/server/queries/ai-systems';
@@ -18,20 +20,40 @@ export default async function AiSystemsPage({ params }: { params: Promise<{ loca
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
-  const [systems, incidents] = organization
-    ? await Promise.all([listAiSystems(organization.id), listAiIncidents(organization.id)])
-    : [[], []];
+  const [systems, incidents, authority] = organization
+    ? await Promise.all([
+        listAiSystems(organization.id),
+        listAiIncidents(organization.id),
+        getOrganizationBillingAuthority(organization.id),
+      ])
+    : [[], [], null];
   const readiness = buildAiGovernanceReadiness({ locale, systems, incidents });
   const canManageAiGovernance = organization ? roleHasPermission(organization.role, 'manage_ai_governance') : false;
+  const userDisplayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'RISCK COMPLY user';
 
-  return (
+  const content = (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
-      <DashboardCommandNavigation locale={locale} activePage="AI Governance" />
       {canManageAiGovernance ? (
         <AiSystemsClient locale={locale} initialSystems={systems} organizationName={organization?.name} readiness={readiness} />
       ) : (
         <AiSystemsReadonlyView locale={locale} systems={systems} organizationName={organization?.name} readiness={readiness} />
       )}
     </main>
+  );
+
+  if (!organization) {
+    return content;
+  }
+
+  return (
+    <EnterpriseDashboardShell
+      locale={locale}
+      organizationName={organization.name}
+      userDisplayName={userDisplayName}
+      role={organization.role}
+      selectedPlan={authority?.plan}
+    >
+      {content}
+    </EnterpriseDashboardShell>
   );
 }

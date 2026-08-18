@@ -135,6 +135,16 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
       await loginWithDisposableCredentials(page, ownerEmail!, ownerPassword!);
     }
 
+    // The authenticated product must enter through the final enterprise dashboard
+    // shell before the same user continues into AI governance and FRIA workflows.
+    await page.goto('/en/dashboard/organizations', { waitUntil: 'domcontentloaded' });
+    await expectHealthyAuthenticatedPage(page, 'enterprise dashboard shell');
+    await expect(page.getByRole('link', { name: 'RISCK COMPLY — Dashboard', exact: true })).toBeVisible();
+    const shellNavigation = page.getByRole('navigation', { name: 'Enterprise dashboard navigation', exact: true });
+    await expect(shellNavigation).toBeVisible();
+    await expect(shellNavigation.getByRole('link', { name: 'Overview', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(shellNavigation.getByRole('link', { name: 'Evidence vault', exact: true })).toBeVisible();
+
     await page.goto('/en/ai-systems', { waitUntil: 'domcontentloaded' });
     await expectHealthyAuthenticatedPage(page, 'AI inventory prerequisite');
     const aiSystemForm = page.locator('form:visible').filter({
