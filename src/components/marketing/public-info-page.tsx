@@ -17,6 +17,9 @@ type PublicInfoContent = {
   sections: PageSection[];
 };
 
+const SECURITY_EMAIL = 'security@risckcomply.com';
+const COMMERCIAL_EMAIL = 'comercial@risckcomply.com';
+
 const commonSections = {
   evidence: {
     title: 'Evidence-first assurance',
@@ -100,8 +103,8 @@ const pageContent = {
     primaryCta: 'Email contact',
     secondaryCta: 'View trust center',
     sections: [
-      { title: 'Security reviews', body: 'Send questionnaires, evidence requests and procurement questions for review before relying on any claim.' },
-      { title: 'Responsible disclosure', body: 'Security vulnerabilities should be reported privately to renansilva2002@gmail.com.' },
+      { title: 'Security reviews', body: `Security questionnaires and vulnerability reports can be sent privately to ${SECURITY_EMAIL}.` },
+      { title: 'Responsible disclosure', body: `Security vulnerabilities should be reported privately to ${SECURITY_EMAIL}.` },
       { title: 'Support', body: 'Operational support expectations depend on the signed plan and any customer-specific agreement.' },
     ],
   },
@@ -148,7 +151,7 @@ const pageContent = {
   status: {
     eyebrow: 'Status',
     title: 'Operational status and readiness.',
-    summary: 'Status information remains public and localizable so buyers and workspace users can find it without a dead route. 24/7 staffed monitoring is not currently claimed.',
+    summary: 'Status information remains public and localizable so buyers and workspace users can find the verified incident-communication authority. 24/7 staffed monitoring is not currently claimed.',
     primaryCta: 'Trust center',
     secondaryCta: 'Contact team',
     sections: [commonSections.operations, commonSections.security, commonSections.evidence],
@@ -167,7 +170,7 @@ const ctaHref: Record<string, string> = {
   'Start free': '/signup',
   'View pricing': '/pricing',
   'Explore trust': '/trust',
-  'Email contact': 'mailto:renansilva2002@gmail.com',
+  'Email contact': `mailto:${COMMERCIAL_EMAIL}`,
   'Check status': '/status',
   'Data processing': '/data-processing',
   Subprocessors: '/subprocessors',

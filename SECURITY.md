@@ -10,13 +10,15 @@ The production deployment on the `main` branch is currently supported.
 
 Please do not create a public GitHub issue for private security reports.
 
-Send a private report to `renansilva2002@gmail.com` with:
+Send a private report to `security@risckcomply.com` with:
 
 - affected URL, endpoint, or component;
 - steps to reproduce;
 - expected impact;
 - screenshots or logs when safe to share;
 - whether customer data, authentication, billing, storage, or organization isolation may be affected.
+
+The dedicated corporate security channel has verified external delivery and is monitored by an authorized RISCK COMPLY owner. Do not publish vulnerability details through public issues or public status updates.
 
 ## Response targets
 

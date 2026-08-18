@@ -29,4 +29,8 @@ Use `designed to support` for planned or evidence-dependent capabilities. Do not
 
 ## Responsible disclosure
 
-Security reports should be sent privately to renansilva2002@gmail.com until a dedicated security mailbox is provisioned.
+Security reports should be sent privately to `security@risckcomply.com`. The dedicated corporate security channel has verified external delivery and authorized-owner monitoring.
+
+## Public incident communication
+
+The canonical public incident-communication authority is `https://risckcomplystatus1.statuspage.io/`. This public status channel is separate from private security disclosure and does not itself constitute a contractual uptime SLA.

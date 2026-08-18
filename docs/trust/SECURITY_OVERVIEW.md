@@ -45,4 +45,6 @@ Do not use: "SOC 2 compliant", "ISO 27001 certified", "pentested", "end-to-end e
 
 ## Responsible disclosure
 
-Security reports should be sent privately to `renansilva2002@gmail.com` until a dedicated security mailbox is provisioned. Reports should include affected component, reproduction steps, impact, and whether authentication, organization isolation, billing, storage, or customer data may be affected.
+Security reports should be sent privately to `security@risckcomply.com`. This dedicated corporate security channel has verified external delivery and authorized-owner monitoring. Reports should include affected component, reproduction steps, impact, and whether authentication, organization isolation, billing, storage, or customer data may be affected.
+
+Public incident communication is available through the verified status authority at `https://risckcomplystatus1.statuspage.io/`.

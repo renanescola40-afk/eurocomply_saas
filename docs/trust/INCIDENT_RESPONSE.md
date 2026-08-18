@@ -4,7 +4,7 @@ Status: enterprise review note. This is an operational readiness document, not a
 
 ## Intake
 
-Security reports and urgent trust issues should be sent privately to `renansilva2002@gmail.com` until a dedicated security mailbox is provisioned. Do not create public GitHub issues for private security reports.
+Security reports and urgent trust issues should be sent privately to `security@risckcomply.com`. The dedicated corporate security channel has verified external delivery and is monitored by an authorized RISCK COMPLY owner. Do not create public GitHub issues for private security reports.
 
 Reports should include affected component, reproduction steps, expected impact, screenshots or logs when safe to share, and whether authentication, organization isolation, billing, storage, audit logs, or customer data may be affected.
 
@@ -32,6 +32,8 @@ These are operational targets, not contractual SLAs unless separately agreed in 
 ## Customer communication
 
 Customer communication should be based on verified impact. Avoid premature public claims. Communication records should identify affected customers, data categories, timeline, containment status, corrective actions, and whether regulatory or contractual notice is required.
+
+Public incident communication is published through the verified RISCK COMPLY Statuspage authority at `https://risckcomplystatus1.statuspage.io/`. Public updates must not expose sensitive customer, session, credential, exploit, or investigative details.
 
 ## Evidence boundaries
 
