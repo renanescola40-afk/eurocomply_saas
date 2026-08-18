@@ -14,4 +14,4 @@ Sensitive configuration is intended to be managed through deployment-provider se
 
 Provider evidence must be attached before stronger claims are made.
 
-Responsible contact: renansilva2002@gmail.com
+Responsible security contact: `security@risckcomply.com`

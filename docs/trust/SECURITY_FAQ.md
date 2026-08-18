@@ -36,7 +36,11 @@ Retention commitments are agreement-dependent until a formal policy is approved.
 
 ## What is your responsible disclosure contact?
 
-Security reports should be sent privately to renansilva2002@gmail.com until a dedicated security mailbox is provisioned.
+Security reports should be sent privately to `security@risckcomply.com`. The dedicated corporate channel has verified external delivery and is monitored by an authorized RISCK COMPLY owner.
+
+## Where are public incident updates published?
+
+The canonical public incident-communication authority is `https://risckcomplystatus1.statuspage.io/`. Public incident updates are separated from private vulnerability reports and must not expose sensitive customer or investigative details.
 
 ## What should sales say?
 
