@@ -26,6 +26,7 @@ test('final closeout is manual, Production-protected and exact-SHA bounded', () 
   assert.match(workflow, /^on:\n  workflow_dispatch:/m);
   assert.doesNotMatch(workflow, /^  push:/m);
   assert.doesNotMatch(workflow, /^  pull_request:/m);
+  assert.doesNotMatch(workflow, /continue-on-error\s*:\s*true/i);
   assert.match(workflow, /environment: Production/);
   assert.match(workflow, /release_sha:/);
   assert.match(workflow, /CLOSE_BILLING_PRODUCT_LIVE/);
@@ -93,6 +94,12 @@ test('default Portal authority remains fail-closed to one live default policy ma
   assert.match(controlPlaneProof, /configuration\?\.is_default === true/);
   assert.match(controlPlaneProof, /defaults\.length === 1/);
   assert.match(controlPlaneProof, /requireManagementMetadata: true/);
+});
+
+test('explicit Portal contract IDs are compared in memory and never shape provider request URLs', () => {
+  assert.match(controlPlaneProof, /billing_portal\/configurations\?active=true&limit=100/);
+  assert.match(controlPlaneProof, /active\.find\(\(candidate\) => candidate\?\.id === explicitId\)/);
+  assert.doesNotMatch(controlPlaneProof, /billing_portal\/configurations\/\$\{/);
 });
 
 test('final decision passes only when every component and durable lifecycle evidence pass', () => {
