@@ -83,7 +83,7 @@ describe('global commercial access boundary', () => {
     expect(source).toContain("status: 'commercial_authority_unavailable'");
     expect(source).toContain("redirect(`/${input.locale}/pricing?billing=subscription_required`)");
     expect(source).toContain("redirect(`/${input.locale}/pricing?billing=billing_authority_unavailable`)");
-    expect(source).toContain('cache(async ()');
+    expect(source).toContain('resolveCommercialProductAccess = cache(async');
   });
 
   it('uses the same canonical guard inside the dashboard while preserving recovery access', async () => {
