@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowLeft, CheckCircle2, FileHeart, RefreshCw, Save, ShieldCheck } from 'lucide-react';
 
@@ -159,7 +159,9 @@ function candidateLabel(candidate: AssigneeCandidate) {
 
 export default function FriaPage() {
   const params = useParams<{ locale?: string }>();
+  const searchParams = useSearchParams();
   const locale = (locales.includes(params.locale as Locale) ? params.locale : 'en') as Locale;
+  const assessmentHint = searchParams.get('assessment');
   const text = useMemo(() => getFriaWorkflowCopy(locale), [locale]);
   const controlCopy = CONTROL_COPY[locale];
 
@@ -228,13 +230,17 @@ export default function FriaPage() {
       setSnapshot(fria);
       setSystems(inventorySystems);
       setAiSystemId((value) => value || inventorySystems[0]?.id || '');
-      setSelected((value) => value || fria.assessments[0]?.id || '');
+      setSelected((value) => {
+        if (value && fria.assessments.some((assessment) => assessment.id === value)) return value;
+        if (assessmentHint && fria.assessments.some((assessment) => assessment.id === assessmentHint)) return assessmentHint;
+        return fria.assessments[0]?.id || '';
+      });
     } catch {
       setNotice(text.loadError);
     } finally {
       setBusy(false);
     }
-  }, [text.loadError]);
+  }, [assessmentHint, text.loadError]);
 
   useEffect(() => {
     void load();
@@ -474,6 +480,7 @@ export default function FriaPage() {
                 <button
                   key={item.id}
                   type="button"
+                  data-assessment-id={item.id}
                   onClick={() => setSelected(item.id)}
                   aria-pressed={selected === item.id}
                   className={`w-full rounded-xl border p-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-violet-300 ${selected === item.id ? 'border-violet-400/40 bg-violet-400/10' : 'border-white/10 bg-black/20'}`}

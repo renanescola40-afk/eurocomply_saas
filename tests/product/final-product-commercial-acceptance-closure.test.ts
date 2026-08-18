@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 
 const LEGACY_FRIA_ROUTE = new URL('../../src/app/[locale]/dashboard/assessments/[id]/fria/page.tsx', import.meta.url);
+const FRIA_PAGE = new URL('../../src/app/[locale]/dashboard/fria/page.tsx', import.meta.url);
 const FRIA_PRODUCT_E2E = new URL('../e2e/fria-product-acceptance.spec.ts', import.meta.url);
 const FRIA_ROLE_LOCALE_E2E = new URL('../e2e/fria-role-locale-acceptance.spec.ts', import.meta.url);
 const AUTHENTICATED_RESPONSIVE_E2E = new URL('../e2e/authenticated-responsive-accessibility.spec.ts', import.meta.url);
@@ -18,6 +19,18 @@ describe('final Product + Commercial acceptance closure', () => {
     expect(source).toContain("locales.includes(params.locale as Locale)");
     expect(source).toContain("new URLSearchParams({ assessment: params.id })");
     expect(source).toContain("redirect(`/${locale}/dashboard/fria?${query.toString()}`);");
+  });
+
+  it('selects a legacy assessment hint only when it exists in the tenant-scoped FRIA snapshot', async () => {
+    const source = await readFile(FRIA_PAGE, 'utf8');
+
+    expect(source).toContain('useSearchParams');
+    expect(source).toContain("const assessmentHint = searchParams.get('assessment');");
+    expect(source).toContain('fria.assessments.some((assessment) => assessment.id === value)');
+    expect(source).toContain('fria.assessments.some((assessment) => assessment.id === assessmentHint)');
+    expect(source).toContain('if (assessmentHint &&');
+    expect(source).toContain("return fria.assessments[0]?.id || '';");
+    expect(source).toContain('data-assessment-id={item.id}');
   });
 
   it('keeps the active FRIA product contract on the consolidated workspace instead of the removed per-assessment page', async () => {
