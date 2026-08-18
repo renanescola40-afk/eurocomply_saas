@@ -1,4 +1,4 @@
-import { TrustCenterPage } from '@/components/marketing/trust-center-page';
+import { VerifiedStatusPage } from '@/components/marketing/verified-status-page';
 
 export const revalidate = 300;
 export const dynamic = 'force-static';
@@ -10,5 +10,5 @@ type PageProps = {
 export default async function StatusPage({ params }: PageProps) {
   const { locale } = await params;
 
-  return <TrustCenterPage locale={locale} kind="status" />;
+  return <VerifiedStatusPage locale={locale} />;
 }
