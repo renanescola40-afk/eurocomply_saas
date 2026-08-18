@@ -10,6 +10,7 @@ on:
       - 'scripts/security/validate-enterprise-billing-runtime.sql'
       - 'scripts/security/validate-live-rls-inventory-helper-boundary.sql'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
+      - 'scripts/recovery/verify-postgresql-client.mjs'
       - 'supabase/migrations/**'
       - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
       - '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
@@ -97,7 +98,6 @@ jobs:
       TARGET_SHA: ${{ inputs.release_sha }}
       RELEASE_SHA: ${{ inputs.release_sha }}
       RECOVERY_REQUIRED_EXERCISE: backup-restore
-      RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
       MANIFEST_PATH: artifacts/supabase-forward-reconciliation/manifest.json
       ATTESTATION_PATH: artifacts/supabase-forward-reconciliation/rehearsal-attestation.json
     steps:
@@ -105,6 +105,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
         run: |
           set -euo pipefail
           [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
@@ -140,12 +141,8 @@ jobs:
         with:
           version: 2.114.0
 
-      - name: Install PostgreSQL client
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --yes postgresql-client
+      - name: Verify runner PostgreSQL client without network installation
+        run: node scripts/recovery/verify-postgresql-client.mjs
 
       - name: Compile immutable selected migration manifest
         shell: bash
@@ -161,9 +158,13 @@ jobs:
         run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start
 
       - name: Preflight protected backup restore proof
+        env:
+          RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
         run: node scripts/security/preflight-protected-proof.mjs recovery
 
       - name: Restore current production snapshot into isolated target
+        env:
+          RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
         run: node scripts/recovery/run-backup-restore-exercise.mjs
 
       - name: Apply only selected exact-byte migrations to isolated target
