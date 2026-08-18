@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
@@ -11,6 +12,11 @@ import { Toaster } from '@/components/ui/sonner';
 import GlobalClientEffectsGate from '@/components/GlobalClientEffectsGate';
 import GapAnalysisShortcut from '@/components/GapAnalysisShortcut';
 import { routing, type Locale } from '@/lib/i18n/routing';
+import {
+  classifyLocalizedCommercialRoute,
+  INTERNAL_PATHNAME_HEADER,
+} from '@/lib/security/commercial-route-policy';
+import { requireLicensedCommercialPageAccess } from '@/server/security/commercial-access';
 import '../globals.css';
 
 const geistSans = Geist({
@@ -69,6 +75,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
   const safeLocale = (routing.locales.includes(locale as Locale) ? locale : 'en') as Locale;
+  const requestHeaders = await headers();
+  const pathname = requestHeaders.get(INTERNAL_PATHNAME_HEADER) ?? '';
+  const commercialRouteClass = classifyLocalizedCommercialRoute(pathname, safeLocale);
+
+  // The locale layout is the shared server boundary for every localized product
+  // route, including legacy top-level surfaces that live outside /dashboard.
+  // Public, onboarding/profile, billing recovery and privileged control-plane
+  // routes are explicit exceptions; everything else is licensed by default.
+  if (commercialRouteClass === 'licensed_product') {
+    await requireLicensedCommercialPageAccess({
+      locale: safeLocale,
+      pathname,
+    });
+  }
 
   setRequestLocale(safeLocale);
   const messages = await getMessages();
