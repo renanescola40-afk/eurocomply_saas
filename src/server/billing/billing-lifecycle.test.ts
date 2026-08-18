@@ -16,9 +16,7 @@ describe('enterprise billing lifecycle catalog', () => {
       'STRIPE_PRICE_GROWTH_ANNUAL',
       'STRIPE_PRICE_BUSINESS_MONTHLY',
       'STRIPE_PRICE_BUSINESS_ANNUAL',
-    ]) {
-      delete process.env[key];
-    }
+    ]) delete process.env[key];
   });
 
   it('keeps annual pricing equal to ten monthly payments', () => {
@@ -64,15 +62,16 @@ describe('enterprise billing lifecycle catalog', () => {
     expect(normalizeBillingInterval('monthly')).toBe('month');
   });
 
-  it('deduplicates add-ons and rejects missing dependencies', () => {
-    expect(normalizeAddOnSelections([{ slug: 'extra-user', quantity: 3 }, { slug: 'extra-user', quantity: 5 }], 'starter'))
-      .toEqual([{ slug: 'extra-user', quantity: 5 }]);
-    expect(() => normalizeAddOnSelections([{ slug: 'procurement-pack', quantity: 1 }], 'professional'))
-      .toThrow('missing_add_on_dependency_vendor-assurance');
+  it('keeps empty add-on replacement valid while the catalog is private preview', () => {
+    expect(normalizeAddOnSelections([], 'starter')).toEqual([]);
   });
 
-  it('rejects add-ons unavailable for the selected plan', () => {
-    expect(() => normalizeAddOnSelections([{ slug: 'white-label', quantity: 1 }], 'starter'))
+  it('rejects private-preview add-ons before provider requests are built', () => {
+    expect(() => normalizeAddOnSelections([{ slug: 'extra-user', quantity: 5 }], 'starter'))
+      .toThrow('invalid_billing_add_on_extra-user');
+    expect(() => normalizeAddOnSelections([{ slug: 'procurement-pack', quantity: 1 }], 'professional'))
+      .toThrow('invalid_billing_add_on_procurement-pack');
+    expect(() => normalizeAddOnSelections([{ slug: 'white-label', quantity: 1 }], 'business'))
       .toThrow('invalid_billing_add_on_white-label');
   });
 });
