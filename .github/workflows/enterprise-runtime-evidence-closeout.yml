@@ -85,31 +85,16 @@ jobs:
       RELEASE_BUILD_SHA: ${{ inputs.release_sha }}
       RELEASE_RUN_OBSERVABILITY_SMOKE: 'true'
 
-      # The protected closeout environment historically stores a compact set of
-      # aliases. Translate them into the canonical names consumed by the release
-      # validators instead of forcing operators to duplicate secret values.
+      # Safe production coordinates may be admitted at job scope. Protected
+      # secret values are deliberately scoped to the consuming steps below,
+      # after the post-approval exact-main revalidation has succeeded.
       PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
       RELEASE_PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
       RELEASE_DEPLOYMENT_URL: ${{ vars.PRODUCTION_URL }}
       NEXT_PUBLIC_APP_URL: ${{ vars.PRODUCTION_URL }}
       NEXT_PUBLIC_SITE_URL: ${{ vars.PRODUCTION_URL }}
-      READINESS_TOKEN: ${{ secrets.READINESS_TOKEN }}
-      HEALTHCHECK_TOKEN: ${{ secrets.READINESS_TOKEN }}
-
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-
-      TEST_USER_A_EMAIL: ${{ secrets.TEST_USER_A_EMAIL }}
-      TEST_USER_A_PASSWORD: ${{ secrets.TEST_USER_A_PASSWORD }}
-      TEST_USER_B_EMAIL: ${{ secrets.TEST_USER_B_EMAIL }}
-      TEST_USER_B_PASSWORD: ${{ secrets.TEST_USER_B_PASSWORD }}
-
-      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+
       STRIPE_PRICE_STARTER_MONTHLY: ${{ vars.STRIPE_PRICE_STARTER_MONTHLY }}
       STRIPE_PRICE_GROWTH_MONTHLY: ${{ vars.STRIPE_PRICE_GROWTH_MONTHLY }}
       STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ vars.STRIPE_PRICE_ENTERPRISE_MONTHLY }}
@@ -118,12 +103,6 @@ jobs:
       STRIPE_PRICE_BUSINESS_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_MONTHLY }}
       STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY }}
 
-      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-      NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
       SENTRY_ORG: ${{ vars.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
 
@@ -135,7 +114,7 @@ jobs:
       LAST_KNOWN_GOOD_COMMIT_SHA: ${{ vars.LAST_KNOWN_GOOD_COMMIT_SHA }}
       RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ vars.RELEASE_ROLLBACK_TARGET_VALIDATED }}
     steps:
-      - name: Validate exact current main
+      - name: Revalidate exact current main after environment approval
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -158,12 +137,34 @@ jobs:
       - run: npm ci
 
       - name: Run public production final validation
+        env:
+          HEALTHCHECK_TOKEN: ${{ secrets.READINESS_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
         run: npm run release:production-final
 
       - name: Run authenticated production journey smoke
+        env:
+          HEALTHCHECK_TOKEN: ${{ secrets.READINESS_TOKEN }}
+          TEST_USER_A_EMAIL: ${{ secrets.TEST_USER_A_EMAIL }}
+          TEST_USER_A_PASSWORD: ${{ secrets.TEST_USER_A_PASSWORD }}
+          TEST_USER_B_EMAIL: ${{ secrets.TEST_USER_B_EMAIL }}
+          TEST_USER_B_PASSWORD: ${{ secrets.TEST_USER_B_PASSWORD }}
         run: node scripts/release/run-authenticated-production-smoke.mjs
 
       - name: Promote canonical production observability evidence
+        env:
+          HEALTHCHECK_TOKEN: ${{ secrets.READINESS_TOKEN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
         run: node scripts/release/run-production-observability-validation.mjs
 
       - name: Stamp workflow provenance
