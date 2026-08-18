@@ -25,16 +25,24 @@ export function stripeSubscriptionIdFromLifecycleEvent(event: Stripe.Event) {
 }
 
 /**
- * Stripe does not guarantee webhook delivery order. Never apply a subscription
- * lifecycle payload as current commercial truth merely because that event arrived
- * last. After signature/mode validation and the durable event claim, retrieve the
- * subscription by ID from Stripe and use the provider's current object for local
- * billing and entitlement decisions.
+ * Stripe does not guarantee webhook delivery order. Never apply a live
+ * subscription lifecycle payload as current commercial truth merely because that
+ * event arrived last. After signature/mode validation and the durable event claim,
+ * retrieve the subscription by ID from Stripe and use provider-current state for
+ * local billing and entitlement decisions.
+ *
+ * Test-mode events can never satisfy RISCK COMPLY's live commercial authority
+ * contract, so they remain deterministic and use the signed event object directly.
  */
 export async function retrieveCurrentStripeSubscriptionForEvent(event: Stripe.Event) {
   const subscriptionId = stripeSubscriptionIdFromLifecycleEvent(event);
   if (!subscriptionId) {
     throw new Error('stripe_subscription_lifecycle_id_missing');
+  }
+
+  const eventSubscription = event.data.object as Stripe.Subscription;
+  if (!event.livemode) {
+    return eventSubscription;
   }
 
   const current = await getStripeClient().subscriptions.retrieve(subscriptionId);
@@ -65,4 +73,5 @@ export async function buildProviderTruthStripeSubscriptionEvent(event: Stripe.Ev
 
 export const stripeSubscriptionProviderTruthContract = {
   lifecycleEventTypes: [...STRIPE_SUBSCRIPTION_LIFECYCLE_EVENTS],
+  liveCommercialAuthorityOnly: true,
 } as const;
