@@ -5,6 +5,11 @@ on:
     paths:
       - 'scripts/release/validate-enterprise-runtime-closeout.mjs'
       - 'scripts/release/validate-enterprise-runtime-closeout.test.mjs'
+      - 'scripts/release/run-authenticated-production-smoke.mjs'
+      - 'scripts/release/run-production-observability-validation.mjs'
+      - 'scripts/release/run-observability-smoke-validation.mjs'
+      - 'scripts/release/validate-observability-runtime-evidence.mjs'
+      - 'tests/release/enterprise-runtime-closeout-wiring.test.mjs'
       - '.github/workflows/enterprise-runtime-evidence-closeout.yml'
       - 'docs/security/runbooks/ENTERPRISE_RUNTIME_EVIDENCE_CLOSEOUT.md'
   workflow_dispatch:
@@ -31,7 +36,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node --check scripts/release/validate-enterprise-runtime-closeout.mjs
+      - run: node --check scripts/release/run-authenticated-production-smoke.mjs
+      - run: node --check scripts/release/run-production-observability-validation.mjs
       - run: node --test scripts/release/validate-enterprise-runtime-closeout.test.mjs
+      - run: node --test tests/release/enterprise-runtime-closeout-wiring.test.mjs
 
   environment-governance:
     name: Verify closeout environment governance before protected secrets
@@ -72,18 +80,60 @@ jobs:
     environment: enterprise-production-closeout
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
+      RELEASE_TARGET: production
+      RELEASE_COMMIT_SHA: ${{ inputs.release_sha }}
+      RELEASE_BUILD_SHA: ${{ inputs.release_sha }}
+      RELEASE_RUN_OBSERVABILITY_SMOKE: 'true'
+
+      # The protected closeout environment historically stores a compact set of
+      # aliases. Translate them into the canonical names consumed by the release
+      # validators instead of forcing operators to duplicate secret values.
       PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+      RELEASE_PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+      RELEASE_DEPLOYMENT_URL: ${{ vars.PRODUCTION_URL }}
+      NEXT_PUBLIC_APP_URL: ${{ vars.PRODUCTION_URL }}
+      NEXT_PUBLIC_SITE_URL: ${{ vars.PRODUCTION_URL }}
       READINESS_TOKEN: ${{ secrets.READINESS_TOKEN }}
+      HEALTHCHECK_TOKEN: ${{ secrets.READINESS_TOKEN }}
+
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
       TEST_USER_A_EMAIL: ${{ secrets.TEST_USER_A_EMAIL }}
       TEST_USER_A_PASSWORD: ${{ secrets.TEST_USER_A_PASSWORD }}
       TEST_USER_B_EMAIL: ${{ secrets.TEST_USER_B_EMAIL }}
       TEST_USER_B_PASSWORD: ${{ secrets.TEST_USER_B_PASSWORD }}
+
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+      STRIPE_PRICE_STARTER_MONTHLY: ${{ vars.STRIPE_PRICE_STARTER_MONTHLY }}
+      STRIPE_PRICE_GROWTH_MONTHLY: ${{ vars.STRIPE_PRICE_GROWTH_MONTHLY }}
+      STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ vars.STRIPE_PRICE_ENTERPRISE_MONTHLY }}
+      STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ vars.STRIPE_PRICE_ESSENTIAL_MONTHLY }}
+      STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ vars.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}
+      STRIPE_PRICE_BUSINESS_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_MONTHLY }}
+      STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY }}
+
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
       SENTRY_ORG: ${{ vars.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+
+      RELEASE_ROLLBACK_TARGET: ${{ vars.RELEASE_ROLLBACK_TARGET }}
+      RELEASE_ROLLBACK_TARGET_URL: ${{ vars.RELEASE_ROLLBACK_TARGET_URL }}
+      LAST_KNOWN_GOOD_DEPLOYMENT_URL: ${{ vars.LAST_KNOWN_GOOD_DEPLOYMENT_URL }}
+      RELEASE_ROLLBACK_TARGET_SHA: ${{ vars.RELEASE_ROLLBACK_TARGET_SHA }}
+      RELEASE_ROLLBACK_TARGET_COMMIT_SHA: ${{ vars.RELEASE_ROLLBACK_TARGET_SHA }}
+      LAST_KNOWN_GOOD_COMMIT_SHA: ${{ vars.LAST_KNOWN_GOOD_COMMIT_SHA }}
+      RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ vars.RELEASE_ROLLBACK_TARGET_VALIDATED }}
     steps:
       - name: Validate exact current main
         shell: bash
@@ -93,7 +143,7 @@ jobs:
           set -euo pipefail
           [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
           test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "${TARGET_SHA,,}"
-          test -n "$PRODUCTION_URL"
+          test -n "$RELEASE_PRODUCTION_URL"
 
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
@@ -110,14 +160,11 @@ jobs:
       - name: Run public production final validation
         run: npm run release:production-final
 
-      - name: Run live Supabase tenant isolation
-        run: node scripts/security/run-supabase-live-rls-validation.mjs
+      - name: Run authenticated production journey smoke
+        run: node scripts/release/run-authenticated-production-smoke.mjs
 
-      - name: Run authenticated production smoke
-        run: npm run smoke:authenticated
-
-      - name: Validate production observability
-        run: npm run observability:production:validate
+      - name: Promote canonical production observability evidence
+        run: node scripts/release/run-production-observability-validation.mjs
 
       - name: Stamp workflow provenance
         shell: bash
