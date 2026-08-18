@@ -13,6 +13,14 @@ function executableDbPushLines(text: string) {
     .filter((line) => line.startsWith('supabase ') && line.includes(' db push '));
 }
 
+function jobHeader(text: string, jobName: string) {
+  const jobIndex = text.indexOf(`  ${jobName}:`);
+  expect(jobIndex).toBeGreaterThanOrEqual(0);
+  const stepsIndex = text.indexOf('    steps:', jobIndex);
+  expect(stepsIndex).toBeGreaterThan(jobIndex);
+  return text.slice(jobIndex, stepsIndex);
+}
+
 describe('bounded Supabase production promotion workflow', () => {
   it('requires exact-SHA source proofs, deliberate confirmation and protected Production governance', () => {
     expect(workflow).toContain('rehearsal_run_id:');
@@ -24,6 +32,17 @@ describe('bounded Supabase production promotion workflow', () => {
     expect(workflow).toContain('environment: Production');
     expect(workflow).toContain(".github/workflows/supabase-forward-reconciliation-rehearsal.yml");
     expect(workflow).toContain(".github/workflows/supabase-forward-reconciliation-dry-run.yml");
+  });
+
+  it('verifies the hosted PostgreSQL client without a package-network dependency before any protected DB secret is used', () => {
+    const verifierIndex = workflow.indexOf('Verify runner PostgreSQL client without network installation');
+    const secretValidationIndex = workflow.indexOf('Revalidate exact current main and protected database secret');
+    expect(verifierIndex).toBeGreaterThanOrEqual(0);
+    expect(secretValidationIndex).toBeGreaterThan(verifierIndex);
+    expect(workflow).toContain('node scripts/recovery/verify-postgresql-client.mjs');
+    expect(workflow).not.toMatch(/apt-get|apt install|Install PostgreSQL client/);
+    expect(jobHeader(workflow, 'promote')).not.toContain('SUPABASE_DB_POOLER_URL');
+    expect((workflow.match(/secrets\.SUPABASE_DB_POOLER_URL/g) ?? []).length).toBe(6);
   });
 
   it('rebuilds the filtered set from current remote history and applies exactly once', () => {

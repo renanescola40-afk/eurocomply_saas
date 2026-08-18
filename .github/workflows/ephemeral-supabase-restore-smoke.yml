@@ -7,10 +7,12 @@ on:
       - 'scripts/recovery/manage-ephemeral-recovery-database.mjs'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
       - 'scripts/recovery/run-ephemeral-restore-smoke.mjs'
+      - 'scripts/recovery/verify-postgresql-client.mjs'
       - '.github/workflows/recovery-resilience-proof.yml'
       - '.github/workflows/ephemeral-supabase-restore-smoke.yml'
       - 'tests/security/ephemeral-recovery-database-contract.test.ts'
       - 'tests/security/ephemeral-supabase-restore-smoke-workflow.test.ts'
+      - 'tests/security/recovery-postgresql-client.test.mjs'
 
 permissions:
   contents: read
@@ -46,12 +48,8 @@ jobs:
         with:
           version: 2.101.0
 
-      - name: Install PostgreSQL client
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --yes postgresql-client
+      - name: Verify runner PostgreSQL client without network installation
+        run: node scripts/recovery/verify-postgresql-client.mjs
 
       - name: Start clean disposable synthetic source
         run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start

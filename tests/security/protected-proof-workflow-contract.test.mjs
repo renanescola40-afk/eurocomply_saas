@@ -16,16 +16,17 @@ function before(source, first, second) {
   assert.ok(firstIndex < secondIndex, `${first} must run before ${second}`);
 }
 
-test('final technical proof provisions exact-SHA project isolation before preflight and always removes it after proof', () => {
+test('final technical proof provisions exact-SHA project isolation after hermetic client verification and always removes it after proof', () => {
   const projectStart = 'Start exact-SHA disposable Supabase project database';
   before(finalTechnical, 'Set up pinned Supabase CLI', projectStart);
-  before(finalTechnical, 'Install PostgreSQL client', projectStart);
+  before(finalTechnical, 'Verify runner PostgreSQL client without network installation', projectStart);
   before(finalTechnical, projectStart, 'Preflight protected final technical proof');
   before(finalTechnical, 'Preflight protected final technical proof', 'Execute protected final technical proof');
   before(finalTechnical, 'Execute protected final technical proof', 'Remove disposable recovery database');
   assert.match(finalTechnical, /final-technical-controls-preflight\.json/);
   assert.match(finalTechnical, /Remove disposable recovery database[\s\S]*?if: always\(\)/);
   assert.doesNotMatch(finalTechnical, /secrets\.RECOVERY_ISOLATED_DATABASE_URL/);
+  assert.doesNotMatch(finalTechnical, /apt-get|apt install|Install PostgreSQL client/);
 });
 
 test('recovery proof provisions an empty restore target before preflight and keeps rollback independently protected', () => {

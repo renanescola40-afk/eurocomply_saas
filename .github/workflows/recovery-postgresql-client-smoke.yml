@@ -1,0 +1,83 @@
+name: Supabase PostgreSQL Client Smoke
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/recovery/verify-postgresql-client.mjs'
+      - '.github/workflows/ephemeral-supabase-project-smoke.yml'
+      - '.github/workflows/ephemeral-supabase-restore-smoke.yml'
+      - '.github/workflows/final-technical-controls-proof.yml'
+      - '.github/workflows/supabase-enterprise-data-plane-qa.yml'
+      - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
+      - '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
+      - '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
+      - '.github/workflows/recovery-postgresql-client-smoke.yml'
+      - 'tests/security/recovery-postgresql-client.test.mjs'
+      - 'tests/security/hermetic-supabase-smoke-workflows.test.mjs'
+      - 'tests/security/hermetic-forward-reconciliation-workflows.test.mjs'
+      - 'tests/security/protected-proof-workflow-contract.test.mjs'
+      - 'tests/security/supabase-forward-promotion-workflow.test.ts'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/recovery/verify-postgresql-client.mjs'
+      - '.github/workflows/ephemeral-supabase-project-smoke.yml'
+      - '.github/workflows/ephemeral-supabase-restore-smoke.yml'
+      - '.github/workflows/final-technical-controls-proof.yml'
+      - '.github/workflows/supabase-enterprise-data-plane-qa.yml'
+      - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
+      - '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
+      - '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
+      - '.github/workflows/recovery-postgresql-client-smoke.yml'
+      - 'tests/security/recovery-postgresql-client.test.mjs'
+      - 'tests/security/hermetic-supabase-smoke-workflows.test.mjs'
+      - 'tests/security/hermetic-forward-reconciliation-workflows.test.mjs'
+      - 'tests/security/protected-proof-workflow-contract.test.mjs'
+      - 'tests/security/supabase-forward-promotion-workflow.test.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-postgresql-client-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  postgresql-client:
+    name: Hermetic PostgreSQL client preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout exact assessed SHA without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Verify exact assessed SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+
+      - name: Verify preinstalled PostgreSQL client without network installation
+        run: node scripts/recovery/verify-postgresql-client.mjs
+
+      - name: Enforce bounded PostgreSQL client result
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RECOVERY_PSQL_CLIENT_PREFLIGHT" = 'true'
+          case "$RECOVERY_PSQL_CLIENT_MAJOR" in
+            16|17) ;;
+            *) echo 'Unexpected PostgreSQL client major' >&2; exit 1 ;;
+          esac
