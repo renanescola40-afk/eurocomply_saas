@@ -125,13 +125,17 @@ test('public production final remains the canonical producer for prerequisite ru
   );
 });
 
-test('authenticated production evidence contract is fail-closed and secret-minimizing', () => {
+test('authenticated production evidence contract is fail-closed, form-scoped and secret-minimizing', () => {
   const authenticated = read(authenticatedSmokePath);
   assert.match(authenticated, /\/api\/ready\/release/);
   assert.match(authenticated, /evaluateRuntimeReleaseSha/);
   assert.match(authenticated, /TEST_USER_A_EMAIL/);
   assert.match(authenticated, /TEST_USER_B_EMAIL/);
-  assert.match(authenticated, /getByLabel\(\/email\/i\)/);
+  assert.match(authenticated, /const passwordForm = page\.locator\('form'\)\.filter/);
+  assert.match(authenticated, /passwordForm\.getByLabel\(\/email\/i\)/);
+  assert.match(authenticated, /passwordForm[\s\S]*getByRole\('button'/);
+  assert.match(authenticated, /canonicalDashboardPath/);
+  assert.match(authenticated, /dashboard\/organizations/);
   assert.match(authenticated, /dashboardStatus === 200/);
   assert.match(authenticated, /credentialsStored: false/);
   assert.match(authenticated, /cookiesStored: false/);
