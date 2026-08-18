@@ -1,3 +1,4 @@
+import { getBillingAddOn, isBillingAddOnCommerciallyActive } from '@/lib/billing/add-ons';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ADD_ON_CATALOG, type AddOnId } from '@/lib/billing/addons';
 
@@ -12,6 +13,11 @@ type OrganizationAddOnRow = {
 
 export function isActiveAddOnRow(row: OrganizationAddOnRow, now: Date) {
   if (!row.add_on_id || !VALID_ADD_ON_IDS.has(row.add_on_id as AddOnId)) {
+    return false;
+  }
+
+  const catalogAddOn = getBillingAddOn(row.add_on_id);
+  if (!catalogAddOn || !isBillingAddOnCommerciallyActive(catalogAddOn)) {
     return false;
   }
 

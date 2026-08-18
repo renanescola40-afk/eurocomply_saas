@@ -6,17 +6,22 @@ const now = new Date('2026-08-13T12:00:00.000Z');
 const canonicalAddOnId = 'regulatory-monitoring-pro';
 
 describe('organization add-on entitlement state', () => {
-  it('accepts an active canonical catalog add-on without an expiry', () => {
-    expect(isActiveAddOnRow({ add_on_id: canonicalAddOnId, status: 'active', current_period_end: null }, now)).toBe(true);
+  it('rejects an active database row while the canonical add-on is private preview', () => {
+    expect(
+      isActiveAddOnRow(
+        { add_on_id: canonicalAddOnId, status: 'active', current_period_end: null },
+        now,
+      ),
+    ).toBe(false);
   });
 
-  it('accepts a trialing canonical add-on only while its period is in the future', () => {
+  it('rejects a trialing database row while the canonical add-on is private preview', () => {
     expect(
       isActiveAddOnRow(
         { add_on_id: canonicalAddOnId, status: 'trialing', current_period_end: '2026-08-14T12:00:00.000Z' },
         now,
       ),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       isActiveAddOnRow(
         { add_on_id: canonicalAddOnId, status: 'trialing', current_period_end: '2026-08-12T12:00:00.000Z' },

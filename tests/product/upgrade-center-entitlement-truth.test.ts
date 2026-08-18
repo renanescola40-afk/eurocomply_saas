@@ -44,14 +44,24 @@ describe('upgrade center entitlement truth', () => {
     expect(card).toContain('Access changes only after billing confirms the entitlement.');
   });
 
-  it('honors an active advanced-reporting add-on instead of checking only the plan tier', () => {
-    const reports = read('src/app/[locale]/dashboard/organizations/reports-governance/page.tsx');
+  it('renders private-preview add-ons as unavailable and without a billing purchase CTA', () => {
+    const page = read('src/app/[locale]/dashboard/organizations/add-ons/page.tsx');
+    const catalog = read('src/lib/billing/add-ons.ts');
 
-    expect(reports).toContain("canAccessFeature('advanced_reporting'");
-    expect(reports).toContain('listActiveOrganizationAddOns');
-    expect(reports).toContain('activeAddOns,');
-    expect(reports).toContain('addOnSlug="advanced-reporting"');
-    expect(reports).not.toContain("isPlanAtLeast(entitlements.plan, 'business')");
+    expect(catalog).toContain("const ADD_ON_COMMERCIAL_STATUS: AddOnStatus = 'private_preview'");
+    expect(page).toContain("if (!isBillingAddOnCommerciallyActive(addOn)) return 'preview'");
+    expect(page).toContain("status === 'preview'");
+    expect(page).toContain('copy.noDirectPurchaseBody');
+    expect(page).not.toMatch(/status === 'preview'[\s\S]{0,400}dashboard\/organizations\/billing/);
+  });
+
+  it('keeps feature add-on slugs fail-closed while the commercial catalog is private preview', () => {
+    const featureGates = read('src/lib/billing/feature-gates.ts');
+    const organizationAddOns = read('src/server/billing/addons.ts');
+
+    expect(featureGates).toContain('isAddOnAvailableForPlan(addOn, context.plan)');
+    expect(featureGates).toContain('A persisted/client-supplied slug is never enough by itself.');
+    expect(organizationAddOns).toContain('isBillingAddOnCommerciallyActive(catalogAddOn)');
   });
 
   it('localizes the Upgrade Center chrome across every configured product language', () => {

@@ -5,6 +5,7 @@ import { BILLING_ADD_ONS, getBillingAddOn, isAddOnAvailableForPlan } from '@/lib
 import { canAccessFeature, getPlanLimit, isWithinLimit } from '@/lib/billing/feature-gates';
 import { BILLING_PLANS, getBillingPlan, normalizeBillingCatalogPlanId } from '@/lib/billing/plans';
 import { BILLING_PLANS as SERVER_BILLING_PLANS } from '@/server/billing/plans';
+import { isActiveAddOnRow } from '@/server/billing/addons';
 import { isPlanAtLeast, normalizePlan } from '@/server/queries/subscription';
 
 const commercialCatalog = JSON.parse(readFileSync('config/billing-commercial-catalog.json', 'utf8')) as {
@@ -89,27 +90,33 @@ describe('enterprise pricing catalog', () => {
 });
 
 describe('add-on catalog', () => {
-  it('contains all required independent add-ons', () => {
+  it('retains the complete future catalog while keeping every add-on private preview', () => {
     expect(BILLING_ADD_ONS).toHaveLength(13);
     expect(getBillingAddOn('extra-user')?.priceMonthly).toBe(8);
     expect(getBillingAddOn('white-label')?.priceMonthly).toBe(299);
     expect(getBillingAddOn('extra-storage-100gb')?.priceAnnual).toBe(190);
+    expect(BILLING_ADD_ONS.every((addOn) => addOn.status === 'private_preview')).toBe(true);
   });
 
-  it('enforces plan availability and dependencies', () => {
+  it('fails closed for add-on purchase availability until provider authority is activated', () => {
     const procurement = getBillingAddOn('procurement-pack');
     expect(procurement).toBeDefined();
     expect(procurement && isAddOnAvailableForPlan(procurement, 'starter')).toBe(false);
-    expect(procurement && isAddOnAvailableForPlan(procurement, 'professional')).toBe(true);
+    expect(procurement && isAddOnAvailableForPlan(procurement, 'professional')).toBe(false);
     expect(procurement?.dependencies).toContain('vendor-assurance');
+  });
+
+  it('does not revive a private-preview add-on from a stale active database row', () => {
+    expect(isActiveAddOnRow({ add_on_id: 'fria-workspace', status: 'active', current_period_end: null }, new Date())).toBe(false);
   });
 });
 
 describe('central feature gates and limits', () => {
-  it('licenses features through plan rank or an eligible add-on', () => {
+  it('licenses features through plan rank but never through a private-preview add-on slug', () => {
     expect(canAccessFeature('tasks', { plan: 'starter' })).toBe(false);
     expect(canAccessFeature('tasks', { plan: 'professional' })).toBe(true);
-    expect(canAccessFeature('fria', { plan: 'starter', activeAddOns: ['fria-workspace'] })).toBe(true);
+    expect(canAccessFeature('fria', { plan: 'starter', activeAddOns: ['fria-workspace'] })).toBe(false);
+    expect(canAccessFeature('fria', { plan: 'professional', activeAddOns: ['fria-workspace'] })).toBe(true);
     expect(canAccessFeature('sso', { plan: 'business' })).toBe(false);
     expect(canAccessFeature('sso', { plan: 'enterprise' })).toBe(true);
   });
