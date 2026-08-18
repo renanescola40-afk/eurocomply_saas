@@ -90,7 +90,7 @@ test('production control-plane proof requires the signing-secret binding and can
 });
 
 test('default Portal authority remains fail-closed to one live default policy match', () => {
-  assert.match(controlPlaneProof, /configuration\.is_default === true/);
+  assert.match(controlPlaneProof, /configuration\?\.is_default === true/);
   assert.match(controlPlaneProof, /defaults\.length === 1/);
   assert.match(controlPlaneProof, /requireManagementMetadata: true/);
 });
