@@ -72,10 +72,13 @@ export default async function DashboardLayout({
     return runtimeChildren;
   }
 
+  const userDisplayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'RISCK COMPLY user';
+
   return (
     <EnterpriseDashboardShell
       locale={locale}
       organizationName={organization.name}
+      userDisplayName={userDisplayName}
       role={organization.role}
       selectedPlan={organization.selected_plan}
     >
