@@ -47,8 +47,14 @@ const PUBLIC_PREFIXES = ['/features/', '/auth/', '/api/auth/'] as const;
 const AUTH_ONLY_ROUTES = ['/onboarding', '/profile'] as const;
 const AUTH_ONLY_PREFIXES = ['/invite/'] as const;
 
+// These routes have their own elevated staff/platform authorization. Customer
+// subscription state must not become an accidental prerequisite for operating
+// the internal control plane.
 const PRIVILEGED_CONTROL_PLANE_ROUTES = ['/admin', '/platform'] as const;
 
+// An authenticated but unlicensed customer must retain a narrow path to buy,
+// confirm, retry, update or recover billing. Nothing in this class grants paid
+// product authority.
 const BILLING_RECOVERY_ROUTES = [
   '/billing',
   '/checkout/complete',
@@ -69,13 +75,22 @@ function matchesRouteOrDescendant(path: string, route: string) {
 
 export function classifyLocalizedCommercialRoute(pathname: string, locale: string): CommercialRouteClass {
   const path = stripLocale(pathname, locale);
+
+  // Missing trusted route context is never interpreted as a public/recovery
+  // route. This keeps the commercial boundary fail closed if middleware/header
+  // propagation regresses.
   if (!path) return 'licensed_product';
 
-  if (PUBLIC_ROUTES.has(path) || PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix))) {
+  if (
+    PUBLIC_ROUTES.has(path) ||
+    PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix))
+  ) {
     return 'public';
   }
 
-  if (BILLING_RECOVERY_ROUTES.some((route) => matchesRouteOrDescendant(path, route))) {
+  if (
+    BILLING_RECOVERY_ROUTES.some((route) => matchesRouteOrDescendant(path, route))
+  ) {
     return 'billing_recovery';
   }
 
@@ -86,10 +101,15 @@ export function classifyLocalizedCommercialRoute(pathname: string, locale: strin
     return 'auth_only';
   }
 
-  if (PRIVILEGED_CONTROL_PLANE_ROUTES.some((route) => matchesRouteOrDescendant(path, route))) {
+  if (
+    PRIVILEGED_CONTROL_PLANE_ROUTES.some((route) => matchesRouteOrDescendant(path, route))
+  ) {
     return 'privileged_control_plane';
   }
 
+  // Security and revenue-protection invariant: every localized route that is
+  // not deliberately classified above is paid product by default. New private
+  // surfaces therefore cannot silently ship outside the commercial boundary.
   return 'licensed_product';
 }
 
