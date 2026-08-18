@@ -8,6 +8,7 @@ import {
 } from '../../src/lib/security/commercial-route-policy';
 
 const LOCALE_LAYOUT = new URL('../../src/app/[locale]/layout.tsx', import.meta.url);
+const HOME_PAGE = new URL('../../src/app/[locale]/page.tsx', import.meta.url);
 const DASHBOARD_LAYOUT = new URL('../../src/app/[locale]/dashboard/layout.tsx', import.meta.url);
 const COMMERCIAL_ACCESS = new URL('../../src/server/security/commercial-access.ts', import.meta.url);
 
@@ -61,6 +62,13 @@ describe('global commercial access boundary', () => {
     expect(classifyLocalizedCommercialRoute('/pt/future-enterprise-feature', 'pt')).toBe('licensed_product');
     expect(classifyLocalizedCommercialRoute('/pt/future-enterprise-feature/deep-link', 'pt')).toBe('licensed_product');
     expect(classifyLocalizedCommercialRoute('', 'pt')).toBe('licensed_product');
+  });
+
+  it('keeps the public landing request-aware so force-static cannot blank the trusted pathname header', async () => {
+    const source = await readFile(HOME_PAGE, 'utf8');
+
+    expect(source).not.toContain("dynamic = 'force-static'");
+    expect(source).toContain('export const revalidate = 300;');
   });
 
   it('enforces paid authority from the shared locale server layout before product pages render', async () => {
