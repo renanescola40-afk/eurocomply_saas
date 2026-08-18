@@ -37,9 +37,11 @@ describe('verified public assurance authorities', () => {
     const route = read('src/app/[locale]/status/page.tsx');
     const statusPage = read('src/components/marketing/verified-status-page.tsx');
     const trustContent = read('src/lib/trust-center/content.ts');
+    const authority = read('src/lib/trust-center/verified-authority.ts');
 
     expect(route).toContain('VerifiedStatusPage');
-    expect(statusPage).toContain(STATUS_URL);
+    expect(statusPage).toContain('VERIFIED_STATUS_PAGE_URL');
+    expect(authority).toContain(STATUS_URL);
     expect(trustContent).toContain(STATUS_URL);
     expect(statusPage).not.toContain('Live monitoring integration pending');
     expect(trustContent).not.toContain('Static status page. Live monitoring integration pending.');
