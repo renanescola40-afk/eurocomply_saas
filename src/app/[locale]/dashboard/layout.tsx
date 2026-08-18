@@ -5,9 +5,10 @@ import { redirect } from 'next/navigation';
 import DashboardChildI18nRuntime from '@/components/DashboardChildI18nRuntime';
 import InventoryCsvExportRuntime from '@/components/InventoryCsvExportRuntime';
 import InventoryDateI18nRuntime from '@/components/InventoryDateI18nRuntime';
+import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell';
 import { getOrganizationBillingAuthority } from '@/server/queries/subscription';
 import { getCurrentUser } from '@/server/queries/auth';
-import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
 export const metadata: Metadata = {
   robots: {
@@ -38,15 +39,16 @@ export default async function DashboardLayout({
   const { locale } = await params;
   const requestHeaders = await headers();
   const pathname = requestHeaders.get(INTERNAL_PATHNAME_HEADER) ?? '';
+  const billingRecoveryRoute = isBillingRecoveryRoute(pathname, locale);
+  const user = await getCurrentUser();
+  const organization = user ? await getCurrentOrganizationForUser(user.id) : null;
 
-  // Billing recovery surfaces remain reachable so an authenticated organization
-  // can purchase, retry or inspect billing without already holding a paid license.
-  // Every other dashboard surface requires durable commercial authority.
-  if (!isBillingRecoveryRoute(pathname, locale)) {
-    const user = await getCurrentUser();
+  // Billing recovery surfaces preserve their existing accessibility semantics so an
+  // authenticated organization can purchase, retry or inspect billing without
+  // already holding a paid license. Every other dashboard surface requires durable
+  // commercial authority before the enterprise shell is rendered.
+  if (!billingRecoveryRoute) {
     if (!user) redirect(`/${locale}/login`);
-
-    const organization = await getCurrentOrganizationForUser(user.id);
     if (!organization?.id) redirect(`/${locale}/onboarding`);
 
     const authority = await getOrganizationBillingAuthority(organization.id);
@@ -55,12 +57,29 @@ export default async function DashboardLayout({
     }
   }
 
-  return (
+  const runtimeChildren = (
     <>
       <DashboardChildI18nRuntime />
       <InventoryDateI18nRuntime />
       <InventoryCsvExportRuntime />
       {children}
     </>
+  );
+
+  // Do not invent workspace identity on recovery routes if the downstream billing
+  // page has not authenticated/resolved its organization yet.
+  if (!user || !organization) {
+    return runtimeChildren;
+  }
+
+  return (
+    <EnterpriseDashboardShell
+      locale={locale}
+      organizationName={organization.name}
+      role={organization.role}
+      selectedPlan={organization.selected_plan}
+    >
+      {runtimeChildren}
+    </EnterpriseDashboardShell>
   );
 }
