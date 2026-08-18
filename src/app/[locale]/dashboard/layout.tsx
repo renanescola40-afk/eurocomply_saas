@@ -41,20 +41,6 @@ export default async function DashboardLayout({
   const requestHeaders = await headers();
   const pathname = requestHeaders.get(INTERNAL_PATHNAME_HEADER) ?? '';
   const billingRecoveryRoute = isBillingRecoveryRoute(pathname, locale);
-  const user = await getCurrentUser();
-  const organization = user ? await getCurrentOrganizationForUser(user.id) : null;
-  const authority = organization?.id ? await getOrganizationBillingAuthority(organization.id) : null;
-
-  // Preserve the pre-redesign commercial boundary exactly: billing recovery remains
-  // reachable without an existing paid licence, while every other dashboard surface
-  // requires the same durable authority used before the enterprise shell existed.
-  if (!billingRecoveryRoute) {
-    if (!user) redirect(`/${locale}/login`);
-    if (!organization?.id) redirect(`/${locale}/onboarding`);
-    if (!authority?.licensed) {
-      redirect(`/${locale}/pricing?billing=subscription_required`);
-    }
-  }
 
   const runtimeChildren = (
     <>
@@ -65,12 +51,27 @@ export default async function DashboardLayout({
     </>
   );
 
-  // Do not invent workspace identity on recovery routes if the downstream billing
-  // page has not authenticated/resolved its organization yet.
-  if (!user || !organization) {
+  // Preserve the pre-redesign billing recovery boundary exactly. These routes are
+  // intentionally allowed to resolve their own auth/purchase/retry state and must
+  // not acquire a new shell-level subscription dependency.
+  if (billingRecoveryRoute) {
     return runtimeChildren;
   }
 
+  const user = await getCurrentUser();
+  if (!user) redirect(`/${locale}/login`);
+
+  const organization = await getCurrentOrganizationForUser(user.id);
+  if (!organization?.id) redirect(`/${locale}/onboarding`);
+
+  const authority = await getOrganizationBillingAuthority(organization.id);
+  if (!authority.licensed) {
+    redirect(`/${locale}/pricing?billing=subscription_required`);
+  }
+
+  // Membership data is presentation-only here. It cannot grant access or alter the
+  // licensed plan; those decisions remain bound to the existing organization and
+  // durable billing authority above.
   const memberships = await getUserOrganizationMemberships(user.id);
   const membership = memberships.find((candidate) => candidate.id === organization.id) ?? null;
   const userDisplayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'RISCK COMPLY user';
@@ -81,7 +82,7 @@ export default async function DashboardLayout({
       organizationName={organization.name}
       userDisplayName={userDisplayName}
       role={membership?.role ?? 'unknown'}
-      selectedPlan={authority?.licensed ? authority.plan : null}
+      selectedPlan={authority.plan}
     >
       {runtimeChildren}
     </EnterpriseDashboardShell>
