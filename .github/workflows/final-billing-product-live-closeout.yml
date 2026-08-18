@@ -146,9 +146,15 @@ jobs:
           set -euo pipefail
           node scripts/release/verify-runtime-release-sha.mjs
           rm -f docs/security/evidence/runtime/runtime-release-sha-validation.json
-          git restore --worktree -- \
+          for path in \
             docs/security/evidence/runtime/production-final-validation.json \
-            docs/security/evidence/runtime/final-validation-runner.json 2>/dev/null || true
+            docs/security/evidence/runtime/final-validation-runner.json; do
+            if git ls-files --error-unmatch "$path" >/dev/null 2>&1; then
+              git restore --worktree -- "$path"
+            else
+              rm -f "$path"
+            fi
+          done
 
       - name: Verify hosted PostgreSQL client availability
         id: postgres_client
