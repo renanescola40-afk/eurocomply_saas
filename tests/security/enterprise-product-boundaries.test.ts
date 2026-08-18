@@ -47,4 +47,27 @@ describe('enterprise product information architecture', () => {
     expect(navigation).toContain('href: `${dashboardRoot}/regulatory-control-tower`');
     expect(navigation).toContain('href: `${dashboardRoot}/reports-governance/news`');
   });
+
+  it('uses one root enterprise dashboard shell instead of a nested legacy template', () => {
+    const dashboardLayout = read('src/app/[locale]/dashboard/layout.tsx');
+    const organizationLayout = read('src/app/[locale]/dashboard/organizations/layout.tsx');
+    const shell = read('src/components/dashboard/enterprise-dashboard-shell.tsx');
+
+    expect(dashboardLayout).toContain("import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell'");
+    expect(dashboardLayout).toContain('<EnterpriseDashboardShell');
+    expect(dashboardLayout).toContain('organizationName={organization.name}');
+    expect(dashboardLayout).toContain('role={organization.role}');
+    expect(dashboardLayout).toContain('selectedPlan={organization.selected_plan}');
+
+    expect(organizationLayout).not.toContain('DashboardCommandNavigation');
+    expect(organizationLayout).toContain('return children;');
+
+    expect(shell).toContain("localized(locale, '/dashboard/evidence')");
+    expect(shell).toContain("localized(locale, '/dashboard/organizations/tasks')");
+    expect(shell).toContain("localized(locale, '/dashboard/organizations/risks')");
+    expect(shell).toContain("localized(locale, '/dashboard/organizations/billing')");
+    expect(shell).toContain('sticky top-[72px]');
+    expect(shell).toContain('Enterprise AI Governance');
+    expect(shell).toContain('aria-current={active ? \'page\' : undefined}');
+  });
 });
