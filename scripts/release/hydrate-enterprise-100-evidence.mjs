@@ -50,11 +50,14 @@ const EXPLICIT_SOURCE_ALIASES = Object.freeze({
 
 // When multiple explicitly equivalent documents are emitted by one reviewed producer,
 // prefer the narrower semantic view instead of treating the expected pair as ambiguous.
-// The raw GitHub checks document remains a backwards-compatible fallback: it receives
-// credit only when the purpose-built repository compatibility document is absent.
+// The broader/raw alias remains a backwards-compatible fallback only when the
+// purpose-built authoritative document is absent.
 const AUTHORITATIVE_ALIAS_SOURCES = Object.freeze({
   'release-validation/repository-quality.json': Object.freeze([
     'artifacts/enterprise-readiness/github-checks-repository-compatibility.json',
+  ]),
+  'release-validation/observability-runtime.json': Object.freeze([
+    'docs/security/evidence/runtime/observability-production-validation.json',
   ]),
 });
 
