@@ -1,24 +1,32 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
+import {
+  buildPinnedPsqlInvocation,
+  expectedRecoveryContainerName,
+} from '../../scripts/recovery/run-pinned-recovery-psql.mjs';
+
 const workflow = readFileSync('.github/workflows/enterprise-recovery-drill.yml', 'utf8');
+const resilienceWorkflow = readFileSync('.github/workflows/recovery-resilience-proof.yml', 'utf8');
 const manager = readFileSync('scripts/recovery/manage-ephemeral-recovery-database.mjs', 'utf8');
 const backupRestore = readFileSync('scripts/recovery/run-backup-restore-exercise.mjs', 'utf8');
 const extensionParity = readFileSync('scripts/recovery/recovery-extension-parity.mjs', 'utf8');
 const evidenceValidator = readFileSync('scripts/recovery/check-recovery-evidence.mjs', 'utf8');
+const pinnedPsql = readFileSync('scripts/recovery/run-pinned-recovery-psql.mjs', 'utf8');
 
 describe('enterprise recovery control plane', () => {
   it('runs only for exact protected main with read-only repository permissions', () => {
     expect(workflow).toContain('branches: [main]');
     expect(workflow).toContain('workflow_dispatch:');
-    expect(workflow).toMatch(/recovery:[\s\S]*?environment:\s*\n\s+name: supabase-production-migration-dry-run/);
+    expect(workflow).toMatch(/recovery:[\s\S]*?environment:\s*\n\s+name: production-recovery/);
     expect(workflow).toContain('contents: read');
+    expect(workflow).toContain('actions: read');
     expect(workflow).toContain('persist-credentials: false');
     expect(workflow).toContain('test "$GITHUB_REF_NAME" = \'main\'');
     expect(workflow).toContain('git ls-remote origin refs/heads/main');
   });
 
-  it('verifies live environment governance before the job can load the protected source secret', () => {
+  it('uses the dedicated recovery authority and does not admit database secrets before post-approval validation', () => {
     const governanceJob = workflow.indexOf('  environment-governance:');
     const recoveryJob = workflow.indexOf('  recovery:');
     expect(governanceJob).toBeGreaterThan(-1);
@@ -27,23 +35,114 @@ describe('enterprise recovery control plane', () => {
     const preflight = workflow.slice(governanceJob, recoveryJob);
     expect(preflight).toContain('Verify recovery environment governance before protected secrets');
     expect(preflight).toContain('GITHUB_TOKEN: ${{ github.token }}');
-    expect(preflight).toContain('GITHUB_ENVIRONMENT_NAME: supabase-production-migration-dry-run');
+    expect(preflight).toContain('GITHUB_ENVIRONMENT_NAME: production-recovery');
     expect(preflight).toContain("REQUIRE_PROTECTED_BRANCHES: 'true'");
     expect(preflight).not.toMatch(/secrets\./);
 
-    const protectedBoundary = workflow.slice(recoveryJob);
-    expect(protectedBoundary).toContain('needs: environment-governance');
-    expect(protectedBoundary).toContain('name: supabase-production-migration-dry-run');
-    expect(protectedBoundary).toContain('RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}');
+    const stepsIndex = workflow.indexOf('    steps:', recoveryJob);
+    const protectedJobHeader = workflow.slice(recoveryJob, stepsIndex);
+    expect(protectedJobHeader).toContain('name: production-recovery');
+    expect(protectedJobHeader).not.toMatch(/secrets\./);
+    expect(protectedJobHeader).not.toContain('RECOVERY_SOURCE_DATABASE_URL');
+    expect(workflow).not.toContain('SUPABASE_DB_POOLER_URL');
   });
 
-  it('reuses the protected Supabase source and provisions a disposable isolated target', () => {
-    expect(workflow).toContain('RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}');
+  it('revalidates exact main and environment governance immediately before the first recovery secret consumer', () => {
+    const producerBoundary = workflow.indexOf('- name: Revalidate protected recovery producer boundary');
+    const firstSecret = workflow.indexOf('${{ secrets.');
+    const preflight = workflow.indexOf('- name: Preflight protected backup restore proof');
+    const execute = workflow.indexOf('- name: Execute supported logical backup and isolated restore');
+
+    expect(producerBoundary).toBeGreaterThan(-1);
+    expect(firstSecret).toBeGreaterThan(producerBoundary);
+    expect(preflight).toBeGreaterThan(producerBoundary);
+    expect(execute).toBeGreaterThan(preflight);
+
+    const boundaryBlock = workflow.slice(producerBoundary, preflight);
+    expect(boundaryBlock).toContain('git fetch --no-tags --depth=1 origin main');
+    expect(boundaryBlock).toContain('test "$(git rev-parse origin/main)" = "$TARGET_SHA"');
+    expect(boundaryBlock).toContain('https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main');
+    expect(boundaryBlock).toContain('GITHUB_ENVIRONMENT_NAME: production-recovery');
+    expect(boundaryBlock).toContain('check-github-environment-governance.mjs');
+    expect(boundaryBlock).not.toMatch(/secrets\./);
+
+    expect(workflow.slice(preflight, execute)).toContain(
+      'RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.RECOVERY_SOURCE_DATABASE_URL }}',
+    );
+    expect(workflow.slice(execute)).toContain(
+      'RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.RECOVERY_SOURCE_DATABASE_URL }}',
+    );
+  });
+
+  it('eliminates network apt client installation from both protected recovery paths', () => {
+    for (const recoveryWorkflow of [workflow, resilienceWorkflow]) {
+      expect(recoveryWorkflow).not.toContain('apt-get update');
+      expect(recoveryWorkflow).not.toContain('apt-get install');
+      expect(recoveryWorkflow).not.toContain('postgresql-client');
+      expect(recoveryWorkflow).toContain('Install pinned recovery psql shim');
+      expect(recoveryWorkflow).toContain('run-pinned-recovery-psql.mjs');
+      expect(recoveryWorkflow).toContain('echo "$shim_dir" >> "$GITHUB_PATH"');
+    }
+  });
+
+  it('routes controlled psql calls through the exact per-run Supabase Postgres container', () => {
+    const runId = '12345';
+    const runAttempt = '2';
+    const expectedContainer = expectedRecoveryContainerName(runId, runAttempt);
+    expect(expectedContainer).toBe('supabase_db_risck-recovery-12345-2');
+
+    const remote = buildPinnedPsqlInvocation({
+      args: [
+        'postgresql://user:secret@aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require',
+        '--no-psqlrc',
+        '--command',
+        'select 1;',
+      ],
+      runId,
+      runAttempt,
+      configuredContainer: expectedContainer,
+    });
+    expect(remote.command).toBe('docker');
+    expect(remote.localTarget).toBe(false);
+    expect(remote.args.slice(0, 3)).toEqual(['exec', expectedContainer, 'psql']);
+    expect(remote.args[3]).toContain('pooler.supabase.com');
+    expect(remote.args).toContain('--no-psqlrc');
+
+    const local = buildPinnedPsqlInvocation({
+      args: ['postgresql://postgres:postgres@127.0.0.1:31873/postgres', '-At', '-c', 'select 1;'],
+      runId,
+      runAttempt,
+      configuredContainer: expectedContainer,
+    });
+    expect(local.localTarget).toBe(true);
+    expect(local.args).toEqual([
+      'exec', expectedContainer, 'psql', '-U', 'postgres', '-d', 'postgres', '-At', '-c', 'select 1;',
+    ]);
+    expect(() => buildPinnedPsqlInvocation({
+      args: ['postgresql://postgres:postgres@127.0.0.1:31873/postgres'],
+      runId,
+      runAttempt,
+      configuredContainer: 'supabase_db_wrong-project',
+    })).toThrow('recovery_psql_container_identity_mismatch');
+  });
+
+  it('keeps the pinned psql proxy shell-free, time-bounded and secret-minimizing', () => {
+    expect(pinnedPsql).toContain("command: 'docker'");
+    expect(pinnedPsql).toContain("'exec'");
+    expect(pinnedPsql).toContain("'psql'");
+    expect(pinnedPsql).toContain('shell: false');
+    expect(pinnedPsql).toContain('timeout: 15 * 60_000');
+    expect(pinnedPsql).toContain("console.error('recovery_pinned_psql_failed')");
+    expect(pinnedPsql).not.toContain('console.log(databaseUrl');
+    expect(pinnedPsql).not.toContain('console.error(error');
+  });
+
+  it('reuses the protected recovery source and provisions a disposable isolated target', () => {
+    expect(workflow).toContain('RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.RECOVERY_SOURCE_DATABASE_URL }}');
     expect(workflow).toContain('RECOVERY_REQUIRED_EXERCISE: backup-restore');
     expect(workflow).toContain('manage-ephemeral-recovery-database.mjs start');
     expect(workflow).toContain('manage-ephemeral-recovery-database.mjs stop');
     expect(workflow).not.toContain('secrets.RECOVERY_ISOLATED_DATABASE_URL');
-    expect(workflow).not.toContain('secrets.RECOVERY_SOURCE_DATABASE_URL');
   });
 
   it('uses the supported logical backup path and canonical evidence validator', () => {
