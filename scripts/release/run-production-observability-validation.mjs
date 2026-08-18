@@ -158,7 +158,7 @@ if (failures.length > 0) {
   failures = [
     ...validate(source, expectedSha),
     ...(runnerResult?.error ? [runnerResult.error] : []),
-    ...(runnerResult && runnerResult.status !== 0 ? ['observability_source_runner_failed'] : []),
+    ...(runnerResult?.status !== 0 ? ['observability_source_runner_failed'] : []),
   ];
 }
 
