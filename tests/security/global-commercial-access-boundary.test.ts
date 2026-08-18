@@ -65,6 +65,7 @@ describe('global commercial access boundary', () => {
 
   it('enforces paid authority from the shared locale server layout before product pages render', async () => {
     const source = await readFile(LOCALE_LAYOUT, 'utf8');
+
     expect(source).toContain('INTERNAL_PATHNAME_HEADER');
     expect(source).toContain('classifyLocalizedCommercialRoute(pathname, safeLocale)');
     expect(source).toContain("commercialRouteClass === 'licensed_product'");
@@ -73,6 +74,7 @@ describe('global commercial access boundary', () => {
 
   it('resolves authentication, organization membership and billing authority in one fail-closed server guard', async () => {
     const source = await readFile(COMMERCIAL_ACCESS, 'utf8');
+
     expect(source).toContain('getCurrentUser()');
     expect(source).toContain('getCurrentOrganizationForUser(user.id)');
     expect(source).toContain('getOrganizationBillingAuthority(organization.id)');
@@ -86,6 +88,7 @@ describe('global commercial access boundary', () => {
 
   it('uses the same canonical guard inside the dashboard while preserving recovery access', async () => {
     const source = await readFile(DASHBOARD_LAYOUT, 'utf8');
+
     expect(source).toContain('requireLicensedCommercialPageAccess');
     expect(source).toContain("commercialRouteClass === 'billing_recovery'");
     expect(source).toContain('selectedPlan={authority.plan}');
