@@ -10,6 +10,8 @@ const reviewerEmail = process.env.E2E_FRIA_REVIEWER_EMAIL?.trim().toLowerCase();
 const approverEmail = process.env.E2E_FRIA_APPROVER_EMAIL?.trim().toLowerCase();
 const approverPassword = process.env.E2E_FRIA_APPROVER_PASSWORD;
 const allowSyntheticWrites = process.env.E2E_ALLOW_SYNTHETIC_APP_WRITES === 'true';
+const commercialAuthorityVerified = process.env.E2E_FRIA_COMMERCIAL_AUTHORITY_VERIFIED === 'true';
+const evidenceVaultSchemaVerified = process.env.E2E_FRIA_EVIDENCE_VAULT_SCHEMA_VERIFIED === 'true';
 const baseURL = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:3000';
 const evidencePath = process.env.E2E_FRIA_RUNTIME_EVIDENCE_PATH?.trim();
 const ownerSessionConfigured = Boolean(ownerStorageState || (ownerEmail && ownerPassword));
@@ -22,12 +24,16 @@ function escapeRegex(value: string) {
 function writeRuntimeEvidence() {
   if (!evidencePath) return;
   const evidence = {
-    schema: 'risck-comply.product-fria-runtime-acceptance.v1',
+    schema: 'risck-comply.product-fria-runtime-acceptance.v2',
     outcome: 'passed',
     generatedAt: new Date().toISOString(),
     targetSha: process.env.EXPECTED_HEAD_SHA ?? process.env.GITHUB_SHA ?? null,
     environment: process.env.GITHUB_ACTIONS === 'true' ? 'github-actions-disposable-qa' : 'disposable-qa',
     checks: {
+      publicPricingRendered: true,
+      professionalPlanCtaRendered: true,
+      commercialAuthorityVerified,
+      evidenceVaultSchemaVerified,
       ownerAuthenticated: true,
       aiSystemCreated: true,
       assessmentCreated: true,
@@ -36,6 +42,8 @@ function writeRuntimeEvidence() {
       legalReviewCompleted: true,
       fria01EvidenceSubmitted: true,
       fria15EvidenceSubmitted: true,
+      evidenceVaultRendered: true,
+      evidenceVaultItemCreated: true,
       approverAuthenticatedSeparately: true,
       approvalPersisted: true,
       approvedStateImmutable: true,
@@ -53,12 +61,19 @@ function writeRuntimeEvidence() {
   writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
 }
 
-async function expectHealthyAuthenticatedPage(page: Page, label: string) {
+async function expectHealthyPublicPage(page: Page, label: string) {
   await expect(page.locator('body'), `${label} body should render`).toBeVisible();
   await expect(page.locator('body'), `${label} should not expose runtime errors`).not.toContainText(
     /Unhandled Runtime Error|Application error|ReferenceError:|TypeError:|SyntaxError:|Stack trace/i,
   );
+  expect(page.url(), `${label} should not navigate to undefined`).not.toContain('/undefined');
+}
+
+async function expectHealthyAuthenticatedPage(page: Page, label: string) {
+  await expectHealthyPublicPage(page, label);
   expect(page.url(), `${label} should not fall back to login`).not.toContain('/login');
+  expect(page.url(), `${label} should not fall back to pricing`).not.toContain('/pricing');
+  expect(page.url(), `${label} should not fall back to checkout`).not.toContain('/checkout');
 }
 
 async function loginWithDisposableCredentials(page: Page, email: string, password: string) {
@@ -99,11 +114,22 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
     'FRIA reviewer and approver must be distinct identities.',
   );
   test.skip(!allowSyntheticWrites, 'Synthetic FRIA writes require E2E_ALLOW_SYNTHETIC_APP_WRITES=true on disposable QA.');
+  test.skip(!commercialAuthorityVerified, 'Disposable QA must verify a durable Professional commercial authority before browser acceptance.');
+  test.skip(!evidenceVaultSchemaVerified, 'Disposable QA must verify the organization-scoped Evidence Vault schema before browser acceptance.');
 
   if (ownerStorageState) test.use({ storageState: ownerStorageState });
 
-  test('owner creates and evidences a FRIA; assigned approver independently approves it', async ({ page, browser }) => {
+  test('visitor reaches pricing; owner creates AI governance evidence; assigned approver independently approves the FRIA', async ({ page, browser }) => {
     const systemName = `QA FRIA system ${Date.now()}`;
+    const evidenceVaultTitle = `QA Evidence Vault ${Date.now()}`;
+
+    // Prove the customer-facing commercial entry point on the same exact SHA
+    // before any authenticated fixture is used.
+    await page.goto('/en/pricing', { waitUntil: 'domcontentloaded' });
+    await expectHealthyPublicPage(page, 'public pricing');
+    await expect(page).toHaveURL(/\/en\/pricing(?:\?|$)/);
+    await expect(page.getByRole('heading', { name: 'Professional', exact: true })).toBeVisible();
+    await expect(page.locator('a[href="/en/signup?plan=professional"]').first()).toBeVisible();
 
     if (!ownerStorageState) {
       await loginWithDisposableCredentials(page, ownerEmail!, ownerPassword!);
@@ -177,6 +203,19 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
     await submitEvidence('FRIA-01', 'a');
     await submitEvidence('FRIA-15', 'b');
     await expect(page.getByText('2 evidence records', { exact: true })).toBeVisible();
+
+    // Close the wider Product evidence loop against the same tenant and exact
+    // disposable database. This catches Evidence Vault UI/RLS regressions that
+    // FRIA-specific evidence records alone cannot detect.
+    await page.goto('/en/dashboard/evidence', { waitUntil: 'domcontentloaded' });
+    await expectHealthyAuthenticatedPage(page, 'Evidence Vault owner workspace');
+    await expect(page).toHaveURL(/\/en\/dashboard\/evidence(?:\?|$)/);
+    await expect(page.getByRole('heading', { name: 'Audit evidence center', exact: true })).toBeVisible();
+    await page.getByPlaceholder('Evidence title', { exact: true }).fill(evidenceVaultTitle);
+    await page.getByPlaceholder('Owner or team', { exact: true }).fill('Product Runtime QA');
+    await page.getByPlaceholder(/Articles, e\.g\./i).fill('Article 9, Article 14');
+    await page.getByRole('button', { name: 'Add evidence', exact: true }).click();
+    await expect(page.getByText(evidenceVaultTitle, { exact: true })).toBeVisible();
 
     const approverContext = await browser.newContext({
       ...(approverStorageState ? { storageState: approverStorageState } : {}),
