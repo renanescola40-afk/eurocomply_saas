@@ -1,6 +1,5 @@
 import { unstable_noStore as noStore } from 'next/cache';
 
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { routing, type Locale } from '@/lib/i18n/routing';
 import { getOrganizationDashboardRedirect } from '@/server/queries/organization-dashboard-access';
 
@@ -21,12 +20,5 @@ export default async function OrganizationDashboardLayout({ children, params }: 
     navigation.redirect(redirectTarget);
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="print:hidden">
-        <DashboardCommandNavigation locale={safeLocale} activePage="RISCK COMPLY" />
-      </div>
-      {children}
-    </div>
-  );
+  return children;
 }
