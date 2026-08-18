@@ -200,6 +200,38 @@ async function runIdentity(browser, baseUrl, label, credentials) {
   return result;
 }
 
+function toPersistedRuntimeReleaseBinding(binding) {
+  return {
+    passed: binding.passed === true,
+    endpointAccepted: binding.endpointStatus === 200,
+    noStore: binding.noStore === true,
+    metadataAvailable: binding.metadataAvailable === true,
+    provenanceAccepted: binding.provenance === 'vercel' || binding.provenance === 'build-env',
+    observedCommitShaMatchedExpected: binding.observedCommitShaMatchedExpected === true,
+  };
+}
+
+function toPersistedIdentity(identity) {
+  return {
+    label: identity.label === 'test-user-a'
+      ? 'test-user-a'
+      : identity.label === 'test-user-b'
+        ? 'test-user-b'
+        : 'unknown',
+    passed: identity.passed === true,
+    loginPageAccepted: Boolean(identity.loginPageStatus && identity.loginPageStatus < 500),
+    leftLoginRoute: identity.leftLoginRoute === true,
+    dashboardPageAccepted: identity.dashboardStatus === 200,
+    dashboardRouteReached: identity.dashboardRouteReached === true,
+    dashboardMainVisible: identity.dashboardMainVisible === true,
+    failureCategory: identity.failureCategory === 'authenticated_journey_assertion_failed'
+      ? 'authenticated_journey_assertion_failed'
+      : identity.failureCategory === 'authenticated_journey_probe_failed'
+        ? 'authenticated_journey_probe_failed'
+        : null,
+  };
+}
+
 function writeEvidence(evidence, sensitiveMarkers) {
   const serialized = JSON.stringify(evidence, null, 2);
   if (sensitiveMarkers.some((marker) => marker && serialized.includes(marker))) {
@@ -267,18 +299,24 @@ async function main() {
     }
   }
 
-  const identityFailures = identities.filter((identity) => !identity.passed).map((identity) => `${identity.label}:journey_failed`);
+  // Never persist raw values sourced from production HTTP/browser responses.
+  // Only fixed labels and boolean assertions cross the evidence write boundary.
+  const persistedRuntimeReleaseBinding = toPersistedRuntimeReleaseBinding(runtimeReleaseBinding);
+  const persistedIdentities = identities.map(toPersistedIdentity);
+  const identityFailures = persistedIdentities
+    .filter((identity) => !identity.passed)
+    .map((identity) => `${identity.label}:journey_failed`);
   const failures = [
     ...configurationFailures,
-    ...runtimeReleaseBinding.failures,
+    ...(persistedRuntimeReleaseBinding.passed ? [] : ['runtime_release_binding_failed']),
     ...(browserFailure ? [browserFailure] : []),
-    ...(identities.length === 2 ? [] : ['two_isolated_authenticated_journeys_not_completed']),
+    ...(persistedIdentities.length === 2 ? [] : ['two_isolated_authenticated_journeys_not_completed']),
     ...identityFailures,
-  ].filter((failure) => failure !== 'configuration_incomplete' || configurationFailures.length > 0);
+  ];
   const passed = failures.length === 0
-    && runtimeReleaseBinding.passed
-    && identities.length === 2
-    && identities.every((identity) => identity.passed);
+    && persistedRuntimeReleaseBinding.passed
+    && persistedIdentities.length === 2
+    && persistedIdentities.every((identity) => identity.passed);
 
   const evidence = {
     schema: 'risck-comply.authenticated-production-smoke.v1',
@@ -298,8 +336,8 @@ async function main() {
       rawUrlStored: false,
     },
     requiredConfiguration,
-    runtimeReleaseBinding,
-    identities,
+    runtimeReleaseBinding: persistedRuntimeReleaseBinding,
+    identities: persistedIdentities,
     failures: [...new Set(failures)],
     summary: passed
       ? 'Two isolated production users completed the real login-to-canonical-dashboard journey after the protected runtime metadata endpoint proved the exact expected release SHA.'
@@ -322,6 +360,7 @@ async function main() {
       rawPageContentStored: false,
       screenshotsStored: false,
       rawRuntimeResponseStored: false,
+      rawNetworkResponseMetadataStored: false,
       mismatchedObservedShaStored: false,
     },
   };
