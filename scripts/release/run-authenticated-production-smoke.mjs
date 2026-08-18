@@ -122,8 +122,12 @@ function loginPath() {
   return `/${locale}/login`;
 }
 
-function dashboardPath() {
+function dashboardEntryPath() {
   return `/${locale}/dashboard`;
+}
+
+function canonicalDashboardPath() {
+  return `/${locale}/dashboard/organizations`;
 }
 
 async function runIdentity(browser, baseUrl, label, credentials) {
@@ -147,11 +151,17 @@ async function runIdentity(browser, baseUrl, label, credentials) {
     });
     result.loginPageStatus = loginResponse?.status() ?? null;
 
-    await page.getByLabel(/email/i).fill(credentials.email, { timeout: timeoutMs });
-    await page
+    // The page also contains Enterprise SSO controls with overlapping accessible
+    // names. Scope every password-login locator to the form that owns the
+    // current-password input so Playwright strict mode cannot select the SSO form.
+    const passwordForm = page.locator('form').filter({
+      has: page.locator('input[type="password"][autocomplete="current-password"]'),
+    });
+    await passwordForm.getByLabel(/email/i).fill(credentials.email, { timeout: timeoutMs });
+    await passwordForm
       .getByLabel(/password|palavra-passe|senha|contraseña|mot de passe|passwort/i)
       .fill(credentials.password, { timeout: timeoutMs });
-    await page
+    await passwordForm
       .getByRole('button', { name: /sign in|entrar|connexion|accedi|anmelden/i })
       .click({ timeout: timeoutMs });
 
@@ -161,12 +171,14 @@ async function runIdentity(browser, baseUrl, label, credentials) {
     );
     result.leftLoginRoute = true;
 
-    const dashboardResponse = await page.goto(new URL(dashboardPath(), `${baseUrl}/`).toString(), {
+    const dashboardResponse = await page.goto(new URL(dashboardEntryPath(), `${baseUrl}/`).toString(), {
       waitUntil: 'domcontentloaded',
       timeout: timeoutMs,
     });
     result.dashboardStatus = dashboardResponse?.status() ?? null;
-    result.dashboardRouteReached = new URL(page.url()).pathname === dashboardPath();
+    const finalDashboardPath = new URL(page.url()).pathname;
+    result.dashboardRouteReached = finalDashboardPath === canonicalDashboardPath()
+      || finalDashboardPath.startsWith(`${canonicalDashboardPath()}/`);
     await page.getByRole('main').waitFor({ state: 'visible', timeout: timeoutMs });
     result.dashboardMainVisible = true;
 
@@ -290,13 +302,15 @@ async function main() {
     identities,
     failures: [...new Set(failures)],
     summary: passed
-      ? 'Two isolated production users completed the real login-to-dashboard journey after the protected runtime metadata endpoint proved the exact expected release SHA.'
+      ? 'Two isolated production users completed the real login-to-canonical-dashboard journey after the protected runtime metadata endpoint proved the exact expected release SHA.'
       : 'Authenticated production smoke is incomplete or failed; enterprise runtime closeout remains blocked.',
     evidenceLocations: [
       'scripts/release/run-authenticated-production-smoke.mjs',
       'src/app/api/ready/release/route.ts',
+      'src/app/[locale]/login/page.tsx',
+      'src/app/[locale]/dashboard/page.tsx',
       `/${locale}/login`,
-      `/${locale}/dashboard`,
+      canonicalDashboardPath(),
       evidencePath,
     ],
     evidenceIntegrity: {
