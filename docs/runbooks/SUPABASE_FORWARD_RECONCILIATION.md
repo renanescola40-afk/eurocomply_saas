@@ -4,7 +4,7 @@
 
 This lane rehearses, dry-runs and — only after explicit protected approval — promotes a small reviewed, forward-only reconciliation set without reclassifying, repairing or accidentally deploying the repository's unresolved historical migration backlog.
 
-It remains intentionally separate from the global migration-reconciliation gate. The global gate is still authoritative for historical lineage repair and historical migration classification.
+It remains intentionally separate from the global migration-reconciliation gate. The global gate is still authoritative for historical lineage repair and historical migration classification. **Production promotion in this lane nevertheless requires a successful protected human migration Decision Gate whose accepted decisions cover every selected migration byte as `PENDING_DEPLOYMENT`.** The bounded lane may narrow execution scope, but it may not bypass human classification.
 
 ## Authoritative selected set
 
@@ -63,7 +63,9 @@ Before Stage 3 production promotion, `Production` must also have:
 1. administrator bypass disabled;
 2. at least one required deployment reviewer;
 3. protected-branches-only deployment policy;
-4. the canonical rotated `SUPABASE_DB_POOLER_URL` secret.
+4. the canonical rotated `SUPABASE_DB_POOLER_URL` secret;
+5. a successful protected `Supabase Migration Reconciliation Decision Gate` run whose `head_sha` is the exact release/evidence commit being promoted;
+6. an accepted human decision artifact whose immutable subject SHA is supplied to promotion and whose reviewed `PENDING_DEPLOYMENT` items cover every selected filename and SHA-256 byte digest.
 
 The Stage 3 workflow performs an unprotected read-only governance preflight before its protected job can load `Production` secrets. A name containing `production` is never accepted as protection evidence by itself.
 
@@ -108,22 +110,27 @@ Dispatch requires:
 - exact current `main` SHA;
 - successful exact-SHA Stage 1 run ID;
 - successful exact-SHA Stage 2 run ID;
-- explicit confirmation `PROMOTE <release_sha> USING DRY-RUN <dry_run_run_id>`;
+- successful protected human migration Decision Gate run ID;
+- exact human decision subject SHA reviewed by that gate;
+- explicit confirmation `PROMOTE <release_sha> USING DRY-RUN <dry_run_run_id> AND DECISION <decision_run_id>`;
 - successful `Production` environment governance preflight;
 - protected human deployment approval before secrets become available.
+
+The Decision Gate is a separate human-evidence boundary, not a production authorization shortcut. Its successful run must be a `workflow_dispatch` of `.github/workflows/supabase-migration-reconciliation-decision-gate.yml`, have `head_sha` equal to the exact release/evidence commit, and produce accepted decision artifacts. `scripts/supabase/verify-forward-human-approval.mjs` then proves every migration in the forward manifest is present with the same SHA-256 bytes in the accepted `PENDING_DEPLOYMENT` plan and has reviewer, schema-evidence and rollback provenance. The generated promotion artifact intentionally stores none of the human names or approval-reference strings.
 
 Immediately before the write the workflow:
 
 1. verifies current `main` still equals the release SHA;
-2. verifies both source run paths, SHAs, events and conclusions;
+2. verifies rehearsal, dry-run and Decision Gate paths, SHAs/events and conclusions;
 3. downloads source evidence without exposing credentials;
 4. recompiles the selected manifest and matches the exact selection digest to Stage 1 and Stage 2;
-5. fetches the current production migration history into a fresh temporary workdir;
-6. verifies every selected source file SHA-256;
-7. reruns the forward-version-order and exact-pending-set proofs against current remote state;
-8. executes one final filtered dry-run;
-9. rechecks current `main` immediately before the production write;
-10. executes exactly one filtered `supabase db push` with no `--include-all` and no migration-history repair.
+5. validates every selected migration byte against the accepted human `PENDING_DEPLOYMENT` artifacts and emits a redacted `human-approval-proof.json`;
+6. fetches the current production migration history into a fresh temporary workdir;
+7. verifies every selected source file SHA-256;
+8. reruns the forward-version-order and exact-pending-set proofs against current remote state;
+9. executes one final filtered dry-run;
+10. rechecks both current `main` and the redacted human-approval proof immediately before the production write;
+11. executes exactly one filtered `supabase db push` with no `--include-all` and no migration-history repair.
 
 After the write it:
 
@@ -132,9 +139,9 @@ After the write it:
 3. rejects any unauthorized extra migration, missing historical version or partial selected set;
 4. runs the canonical live read-only schema/security postconditions;
 5. fails the release evidence if `main` moved while the controlled promotion was executing;
-6. uploads only redacted manifests/proofs/ledger-version evidence and never stores database URLs, credentials or row data.
+6. uploads only redacted manifests/proofs/ledger-version evidence and never stores database URLs, credentials, row data, human reviewer names or approval-reference values.
 
-A successful Stage 3 proves the selected forward set was promoted safely. It does not classify or repair any historical migration outside that set.
+A successful Stage 3 proves the selected forward set was human-reviewed and promoted safely. It does not classify or repair any historical migration outside that set.
 
 ## Prohibited shortcuts
 
@@ -146,7 +153,7 @@ Do not replace any stage with:
 - manual insertion into `supabase_migrations.schema_migrations`;
 - filename-only or catalog-only equivalence;
 - automatic classification of historical migrations;
-- a production write without successful exact-SHA rehearsal and filtered dry-run provenance.
+- a production write without successful exact-SHA rehearsal, filtered dry-run and accepted protected human Decision Gate provenance.
 
 ## Rollback boundary
 
@@ -156,4 +163,4 @@ The selected migrations are forward-only. Rollback never means deleting migratio
 
 This lane does not close or alter the unresolved historical migration-reconciliation program. Fingerprint-backed provenance still requires remaining human owner decisions and independent approval before the global historical gate can open.
 
-The lane's narrower purpose is to move a specifically reviewed active runtime set through isolated rehearsal, filtered remote dry-run and a deliberate protected production promotion without exposing production to the unresolved historical backlog.
+The lane's narrower purpose is to move a specifically reviewed active runtime set through isolated rehearsal, filtered remote dry-run, accepted human selected-set classification and a deliberate protected production promotion without exposing production to the unresolved historical backlog.
