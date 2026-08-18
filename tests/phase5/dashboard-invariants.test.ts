@@ -14,7 +14,7 @@ describe('Phase 5 dashboard invariants', () => {
     expect(middleware).toContain('new URL(`/${detected}${pathname}`, req.url)');
     expect(localeLayout).toContain('setRequestLocale(safeLocale)');
     expect(localeLayout).toContain('<html lang={safeLocale}');
-    expect(home).toContain('force-static');
+    expect(home).not.toContain("dynamic = 'force-static'");
     expect(home).toContain('revalidate = 300');
     expect(home).toContain('EnterpriseHome');
   });
