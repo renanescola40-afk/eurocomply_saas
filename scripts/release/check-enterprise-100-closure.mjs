@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 import { resolveEvidenceShaBinding } from './evidence-sha-binding.mjs';
+import { validateExternalSecurityReviewEvidence } from './validate-external-security-review-evidence.mjs';
 
 const root = process.cwd();
 const configPath = join(root, 'config/enterprise-100-closure.json');
@@ -193,6 +194,13 @@ export function evaluateEnterpriseClosure({
     const selected = exact[0];
     const acceptedStatuses = (control.acceptedStatuses ?? []).map(normalise);
     const statusAccepted = selected.status !== null && acceptedStatuses.includes(selected.status);
+    const semanticFailures = control.id === 'external-security-assurance'
+      ? validateExternalSecurityReviewEvidence(selected.value, {
+          expectedCommitSha: expectedSha,
+          now: new Date(),
+        })
+      : [];
+    const accepted = statusAccepted && semanticFailures.length === 0;
 
     return {
       id: control.id,
@@ -204,8 +212,13 @@ export function evaluateEnterpriseClosure({
       sha: selected.sha,
       shaSource: selected.shaSource,
       shaMatches: true,
-      accepted: statusAccepted,
-      reason: statusAccepted ? null : 'status_not_accepted',
+      accepted,
+      reason: accepted
+        ? null
+        : semanticFailures.length > 0
+          ? 'semantic_evidence_contract_failed'
+          : 'status_not_accepted',
+      validationFailures: semanticFailures,
       equivalentCandidateCount: exact.length,
     };
   });
@@ -228,7 +241,7 @@ export function evaluateEnterpriseClosure({
     totalControls: controls.length,
     blockers,
     controls,
-    truthBoundary: 'Closure credit requires an accepted status and an exact, non-conflicting promoted SHA. Known nested provenance bindings such as runtimeContext.commitSha are recognized, but conflicting SHA bindings remain blocked. Configured evidence roots only make retained proof discoverable; they do not create or upgrade evidence.',
+    truthBoundary: 'Closure credit requires an accepted status, an exact non-conflicting promoted SHA, and any registered semantic evidence validator. External security assurance is independently validated against its exact-SHA assessor/authorization/report/findings/retest contract. Configured evidence roots only make retained proof discoverable; they do not create or upgrade evidence.',
   };
 }
 
