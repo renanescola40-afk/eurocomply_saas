@@ -30,11 +30,12 @@ function assert(condition, message) {
 }
 
 function run(command, args, options = {}) {
+  const { capture = false, timeout = 60_000, ...execOptions } = options;
   return execFileSync(command, args, {
-    stdio: options.capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
-    timeout: options.timeout ?? 60_000,
+    stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
+    timeout,
     shell: false,
-    ...options,
+    ...execOptions,
   });
 }
 
