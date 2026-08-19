@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 import { createHash } from 'node:crypto';
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import {
   buildStripeBillingPortalCreateBody,
-  findManagedStripeBillingPortalConfigurations,
   loadStripeBillingPortalPolicy,
   stripeBillingPortalConfigurationMatchesPolicy,
 } from '../security/stripe-billing-portal-policy.mjs';
@@ -13,11 +13,20 @@ import {
 const MAX_PROVIDER_RESPONSE_BYTES = 64 * 1024;
 const CONFIGURATION_ID_PATTERN = /^bpc_[A-Za-z0-9]+$/;
 const REQUIRED_CONFIRMATION = 'PROVISION_STRIPE_BILLING_PORTAL_CONFIGURATION';
+const PORTAL_CONTRACT_PATH = resolve('config/stripe-billing-portal-contract.json');
 
 function requiredEnv(name) {
   const value = String(process.env[name] ?? '').trim();
   if (!value) throw new Error(`Missing required environment: ${name}`);
   return value;
+}
+
+function loadPortalContract() {
+  const contract = JSON.parse(readFileSync(PORTAL_CONTRACT_PATH, 'utf8'));
+  if (contract?.schema !== 'risck-comply.stripe-billing-portal-contract.v1') {
+    throw new Error('invalid_stripe_billing_portal_contract_schema');
+  }
+  return contract;
 }
 
 async function readBoundedJsonResponse(response) {
@@ -73,7 +82,7 @@ async function stripeRequest(path, { method = 'GET', body, idempotencyKey } = {}
   return readBoundedJsonResponse(response);
 }
 
-function emitResult(configuration, disposition) {
+function emitResult(configuration, disposition, contractSource) {
   const configurationId = String(configuration?.id ?? '');
   if (!CONFIGURATION_ID_PATTERN.test(configurationId)) {
     throw new Error('Stripe returned an invalid Billing Portal configuration identifier');
@@ -81,10 +90,47 @@ function emitResult(configuration, disposition) {
 
   const githubOutput = String(process.env.GITHUB_OUTPUT ?? '').trim();
   if (githubOutput) {
-    appendFileSync(githubOutput, `configuration_id=${configurationId}\ndisposition=${disposition}\n`, 'utf8');
+    appendFileSync(
+      githubOutput,
+      `configuration_id=${configurationId}\ndisposition=${disposition}\ncontract_source=${contractSource}\n`,
+      'utf8',
+    );
   }
 
-  process.stdout.write(`Stripe Billing Portal configuration ${disposition}: ${configurationId}\n`);
+  process.stdout.write(`Stripe Billing Portal configuration ${disposition} for ${contractSource} contract authority: ${configurationId}\n`);
+}
+
+function validateSelectedConfiguration(configuration, policy, { requireDefault }) {
+  return configuration?.active === true
+    && configuration?.livemode === true
+    && (!requireDefault || configuration?.is_default === true)
+    && stripeBillingPortalConfigurationMatchesPolicy(configuration, policy, { requireManagementMetadata: true });
+}
+
+async function selectContractAuthority(contract) {
+  if (contract.configurationId === null || contract.configurationId === undefined) {
+    const list = await stripeRequest('/billing_portal/configurations?active=true&is_default=true&limit=2');
+    const defaults = Array.isArray(list?.data)
+      ? list.data.filter((configuration) => configuration?.active === true && configuration?.is_default === true)
+      : [];
+    if (defaults.length === 0) {
+      throw new Error('account_default_portal_configuration_missing');
+    }
+    if (defaults.length !== 1) {
+      throw new Error('account_default_portal_configuration_ambiguous');
+    }
+    return { configuration: defaults[0], contractSource: 'default', requireDefault: true };
+  }
+
+  const configurationId = String(contract.configurationId ?? '').trim();
+  if (!CONFIGURATION_ID_PATTERN.test(configurationId)) {
+    throw new Error('invalid_explicit_portal_configuration_id');
+  }
+  const configuration = await stripeRequest(`/billing_portal/configurations/${encodeURIComponent(configurationId)}`);
+  if (configuration?.id !== configurationId) {
+    throw new Error('explicit_portal_configuration_not_found');
+  }
+  return { configuration, contractSource: 'explicit', requireDefault: false };
 }
 
 const stripeSecretKey = requiredEnv('STRIPE_SECRET_KEY');
@@ -95,49 +141,42 @@ if (!/^(?:sk|rk)_live_/.test(stripeSecretKey)) {
 }
 
 const policy = loadStripeBillingPortalPolicy();
-const list = await stripeRequest('/billing_portal/configurations?active=true&limit=100');
-const managed = findManagedStripeBillingPortalConfigurations(list?.data, policy);
+const contract = loadPortalContract();
+const selected = await selectContractAuthority(contract);
 
-if (managed.length > 1) {
-  throw new Error('Multiple active RISCK COMPLY managed Billing Portal configurations exist');
-}
-
-if (managed.length === 1) {
-  const configuration = managed[0];
-  if (
-    configuration?.livemode !== true
-    || !stripeBillingPortalConfigurationMatchesPolicy(configuration, policy, { requireManagementMetadata: true })
-  ) {
-    throw new Error('Existing managed Stripe Billing Portal configuration drifted from the reviewed policy');
-  }
-  emitResult(configuration, 'reused');
+if (validateSelectedConfiguration(selected.configuration, policy, { requireDefault: selected.requireDefault })) {
+  emitResult(selected.configuration, 'reused', selected.contractSource);
   process.exit(0);
 }
 
+if (selected.configuration?.active !== true || selected.configuration?.livemode !== true) {
+  throw new Error('contract_selected_portal_configuration_not_active_live');
+}
+if (selected.requireDefault && selected.configuration?.is_default !== true) {
+  throw new Error('contract_selected_portal_configuration_not_account_default');
+}
+
 const policyDigest = createHash('sha256').update(JSON.stringify(policy)).digest('hex');
-const created = await stripeRequest('/billing_portal/configurations', {
+const configurationId = String(selected.configuration.id);
+const updated = await stripeRequest(`/billing_portal/configurations/${encodeURIComponent(configurationId)}`, {
   method: 'POST',
   body: buildStripeBillingPortalCreateBody(policy).toString(),
-  idempotencyKey: `risck-portal-bootstrap-${policyDigest.slice(0, 40)}`,
+  idempotencyKey: `risck-portal-align-${configurationId}-${policyDigest.slice(0, 24)}`,
 });
 
 if (
-  created?.active !== true
-  || created?.livemode !== true
-  || !CONFIGURATION_ID_PATTERN.test(String(created?.id ?? ''))
-  || !stripeBillingPortalConfigurationMatchesPolicy(created, policy, { requireManagementMetadata: true })
+  updated?.id !== configurationId
+  || !validateSelectedConfiguration(updated, policy, { requireDefault: selected.requireDefault })
 ) {
-  throw new Error('Created Stripe Billing Portal configuration failed policy validation');
+  throw new Error('Stripe Billing Portal configuration failed reviewed policy alignment');
 }
 
-const verified = await stripeRequest(`/billing_portal/configurations/${encodeURIComponent(created.id)}`);
+const verified = await stripeRequest(`/billing_portal/configurations/${encodeURIComponent(configurationId)}`);
 if (
-  verified?.active !== true
-  || verified?.livemode !== true
-  || verified?.id !== created.id
-  || !stripeBillingPortalConfigurationMatchesPolicy(verified, policy, { requireManagementMetadata: true })
+  verified?.id !== configurationId
+  || !validateSelectedConfiguration(verified, policy, { requireDefault: selected.requireDefault })
 ) {
-  throw new Error('Stripe Billing Portal configuration could not be verified after creation');
+  throw new Error('Stripe Billing Portal configuration could not be verified after policy alignment');
 }
 
-emitResult(verified, 'created');
+emitResult(verified, 'aligned', selected.contractSource);

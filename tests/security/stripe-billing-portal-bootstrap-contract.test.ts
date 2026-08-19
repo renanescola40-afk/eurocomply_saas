@@ -28,10 +28,21 @@ describe('Stripe Billing Portal bootstrap contract', () => {
     expect(provisioner).not.toContain('sk_live_');
   });
 
-  it('creates only the reviewed portal resource and never mutates customers or subscriptions', () => {
-    expect(provisioner).toContain("'/billing_portal/configurations?active=true&limit=100'");
-    expect(provisioner).toContain("'/billing_portal/configurations'");
+  it('treats the versioned contract as the only provider authority and never creates a replacement configuration', () => {
+    expect(provisioner).toContain("PORTAL_CONTRACT_PATH = resolve('config/stripe-billing-portal-contract.json')");
+    expect(provisioner).toContain("contract.configurationId === null || contract.configurationId === undefined");
+    expect(provisioner).toContain("'/billing_portal/configurations?active=true&is_default=true&limit=2'");
+    expect(provisioner).toContain("throw new Error('account_default_portal_configuration_missing')");
+    expect(provisioner).toContain("contractSource: 'default'");
+    expect(provisioner).toContain("contractSource: 'explicit'");
+    expect(provisioner).not.toContain("stripeRequest('/billing_portal/configurations', {");
+    expect(workflow).not.toContain('Pin the reviewed ID in config/stripe-billing-portal-contract.json');
+  });
+
+  it('aligns only the contract-selected provider object and never mutates customers or subscriptions', () => {
     expect(provisioner).toContain("method: 'POST'");
+    expect(provisioner).toContain('risck-portal-align-');
+    expect(provisioner).toContain('could not be verified after policy alignment');
     expect(provisioner).not.toContain('/customers');
     expect(provisioner).not.toContain('/subscriptions');
     expect(provisioner).not.toContain('/checkout/sessions');
@@ -40,15 +51,20 @@ describe('Stripe Billing Portal bootstrap contract', () => {
     expect(policyModule).toContain("body.set('features[subscription_update][enabled]'" );
   });
 
-  it('is idempotent and fails closed on managed-provider drift or duplicates', () => {
-    expect(provisioner).toContain('findManagedStripeBillingPortalConfigurations');
-    expect(provisioner).toContain('managed.length > 1');
-    expect(provisioner).toContain('Multiple active RISCK COMPLY managed Billing Portal configurations exist');
-    expect(provisioner).toContain('Existing managed Stripe Billing Portal configuration drifted from the reviewed policy');
+  it('preserves account-default semantics instead of silently pinning an API-created non-default object', () => {
+    expect(provisioner).toContain('configuration?.is_default === true');
+    expect(provisioner).toContain('selected.requireDefault && selected.configuration?.is_default !== true');
+    expect(provisioner).toContain('contract_selected_portal_configuration_not_account_default');
+    expect(workflow).toContain('No application contract was changed by this workflow.');
+    expect(workflow).toContain('The provider object selected by config/stripe-billing-portal-contract.json was reused or aligned to the reviewed policy.');
+  });
+
+  it('is idempotent and fails closed on missing or ambiguous default provider authority', () => {
     expect(provisioner).toContain("createHash('sha256')");
     expect(provisioner).toContain('Idempotency-Key');
-    expect(provisioner).toContain('risck-portal-bootstrap-');
-    expect(provisioner).toContain('could not be verified after creation');
+    expect(provisioner).toContain('account_default_portal_configuration_missing');
+    expect(provisioner).toContain('account_default_portal_configuration_ambiguous');
+    expect(provisioner).toContain('Stripe Billing Portal configuration failed reviewed policy alignment');
   });
 
   it('does not auto-commit, auto-merge, retain provider payloads, or claim runtime completion', () => {
@@ -57,9 +73,7 @@ describe('Stripe Billing Portal bootstrap contract', () => {
     expect(workflow).not.toContain('git push');
     expect(workflow).not.toContain('gh pr create');
     expect(workflow).not.toContain('auto-merge');
-    expect(workflow).toContain('Pin the reviewed ID in config/stripe-billing-portal-contract.json through a normal pull request');
     expect(provisioner).not.toContain('writeFileSync');
-    expect(provisioner).not.toContain('stripe-billing-portal-contract.json');
   });
 
   it('bounds provider responses and rejects redirects', () => {

@@ -26,7 +26,9 @@ const REQUIRED_WEBHOOK_EVENTS = [
   'invoice.payment_failed',
   'invoice.paid',
 ];
-const CANONICAL_SELF_SERVE_ENV_KEYS = [
+const REQUIRED_PRODUCTION_BILLING_ENV_KEYS = [
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
   'STRIPE_PRICE_ESSENTIAL_MONTHLY',
   'STRIPE_PRICE_ESSENTIAL_ANNUAL',
   'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
@@ -202,58 +204,16 @@ function sameStringSet(actual, expected) {
   return a.every((value, index) => value === b[index]);
 }
 
-async function inspectPortal(secret, contract, policy, runtimeConfigurationId) {
-  const reviewedConfigurationId = String(contract?.configurationId ?? '').trim();
-  const configurationId = String(runtimeConfigurationId ?? '').trim();
-  const pinned = PORTAL_CONFIGURATION_ID.test(reviewedConfigurationId)
-    && PORTAL_CONFIGURATION_ID.test(configurationId)
-    && configurationId === reviewedConfigurationId;
-  if (!secret || !pinned) {
-    return {
-      pinned,
-      reachable: false,
-      active: false,
-      returnUrlMatches: false,
-      managementMetadataMatches: false,
-      customerUpdateMatches: false,
-      invoiceHistoryMatches: false,
-      paymentMethodUpdateMatches: false,
-      subscriptionCancelDisabled: false,
-      subscriptionUpdateDisabled: false,
-      passed: false,
-    };
-  }
-
-  const response = await request(
-    `https://api.stripe.com/v1/billing_portal/configurations/${encodeURIComponent(configurationId)}`,
-    { headers: { Authorization: `Bearer ${secret}` } },
-  );
-  if (response?.status !== 200) {
-    await response?.body?.cancel().catch(() => undefined);
-    return {
-      pinned: true,
-      reachable: false,
-      active: false,
-      returnUrlMatches: false,
-      managementMetadataMatches: false,
-      customerUpdateMatches: false,
-      invoiceHistoryMatches: false,
-      paymentMethodUpdateMatches: false,
-      subscriptionCancelDisabled: false,
-      subscriptionUpdateDisabled: false,
-      passed: false,
-    };
-  }
-
-  const body = await jsonBounded(response);
-  const features = body?.features ?? {};
+function inspectPortalConfiguration(configuration, policy, { requireDefault = false } = {}) {
+  const features = configuration?.features ?? {};
   const checks = {
-    pinned: true,
-    reachable: Boolean(body),
-    active: body?.active === true,
-    returnUrlMatches: body?.default_return_url === policy.defaultReturnUrl,
+    reachable: Boolean(configuration),
+    liveMode: configuration?.livemode === true,
+    active: configuration?.active === true,
+    defaultAuthorityMatches: !requireDefault || configuration?.is_default === true,
+    returnUrlMatches: configuration?.default_return_url === policy.defaultReturnUrl,
     managementMetadataMatches: Object.entries(policy.managementMetadata ?? {})
-      .every(([key, value]) => body?.metadata?.[key] === value),
+      .every(([key, value]) => configuration?.metadata?.[key] === value),
     customerUpdateMatches: features?.customer_update?.enabled === policy.features.customerUpdate.enabled
       && sameStringSet(features?.customer_update?.allowed_updates, policy.features.customerUpdate.allowedUpdates),
     invoiceHistoryMatches: features?.invoice_history?.enabled === policy.features.invoiceHistory.enabled,
@@ -264,6 +224,76 @@ async function inspectPortal(secret, contract, policy, runtimeConfigurationId) {
       && policy.features.subscriptionUpdate.enabled === false,
   };
   return { ...checks, passed: Object.values(checks).every(Boolean) };
+}
+
+function emptyPortalResult(contractSource) {
+  return {
+    contractSource,
+    configurationCount: 0,
+    defaultConfigurationConfirmed: false,
+    reachable: false,
+    active: false,
+    policyMatched: false,
+    passed: false,
+  };
+}
+
+async function inspectPortal(secret, contract, policy) {
+  const explicitId = contract?.configurationId;
+  const contractSource = explicitId === null || explicitId === undefined ? 'default' : 'explicit';
+  if (!secret) return emptyPortalResult(contractSource);
+
+  const headers = { Authorization: `Bearer ${secret}` };
+  if (contractSource === 'explicit') {
+    const configurationId = String(explicitId ?? '').trim();
+    if (!PORTAL_CONFIGURATION_ID.test(configurationId)) return emptyPortalResult('invalid');
+
+    const response = await request(
+      `https://api.stripe.com/v1/billing_portal/configurations/${encodeURIComponent(configurationId)}`,
+      { headers },
+    );
+    if (response?.status !== 200) {
+      await response?.body?.cancel().catch(() => undefined);
+      return emptyPortalResult('explicit');
+    }
+    const configuration = await jsonBounded(response);
+    const checks = inspectPortalConfiguration(configuration, policy, { requireDefault: false });
+    return {
+      contractSource: 'explicit',
+      configurationCount: configuration ? 1 : 0,
+      defaultConfigurationConfirmed: configuration?.is_default === true,
+      reachable: checks.reachable,
+      active: checks.active,
+      policyMatched: checks.passed,
+      passed: checks.passed,
+    };
+  }
+
+  const response = await request(
+    'https://api.stripe.com/v1/billing_portal/configurations?active=true&limit=100',
+    { headers },
+  );
+  if (response?.status !== 200) {
+    await response?.body?.cancel().catch(() => undefined);
+    return emptyPortalResult('default');
+  }
+  const body = await jsonBounded(response);
+  const active = Array.isArray(body?.data) ? body.data : [];
+  const matches = active.filter((configuration) => (
+    configuration?.is_default === true
+    && inspectPortalConfiguration(configuration, policy, { requireDefault: true }).passed
+  ));
+  const configuration = matches.length === 1 ? matches[0] : null;
+  const checks = inspectPortalConfiguration(configuration, policy, { requireDefault: true });
+  return {
+    contractSource: 'default',
+    configurationCount: active.length,
+    defaultConfigurationConfirmed: matches.length === 1,
+    reachable: Boolean(body),
+    active: checks.active,
+    policyMatched: matches.length === 1,
+    passed: matches.length === 1,
+  };
 }
 
 async function inspectWebhook(secret) {
@@ -304,14 +334,14 @@ async function inspectVercelBindingPresence(targets) {
       tokenConfigured: Boolean(token),
       targetBound: validTarget,
       productionEnvironmentEnumerated: false,
-      canonicalSelfServeBindingKeysPresent: false,
-      requiredKeyCount: CANONICAL_SELF_SERVE_ENV_KEYS.length,
+      requiredBillingBindingKeysPresent: false,
+      webhookSigningSecretBindingPresent: false,
+      requiredKeyCount: REQUIRED_PRODUCTION_BILLING_ENV_KEYS.length,
       presentKeyCount: 0,
       passed: false,
     };
   }
 
-  // The versioned target file is verified above, but file data is never copied into the outbound request.
   const response = await request(
     `https://api.vercel.com/v10/projects/${CANONICAL_VERCEL_TARGET.projectId}/env?target=production&decrypt=false&teamId=${CANONICAL_VERCEL_TARGET.teamId}`,
     { headers: { Authorization: `Bearer ${token}` } },
@@ -322,8 +352,9 @@ async function inspectVercelBindingPresence(targets) {
       tokenConfigured: true,
       targetBound: true,
       productionEnvironmentEnumerated: false,
-      canonicalSelfServeBindingKeysPresent: false,
-      requiredKeyCount: CANONICAL_SELF_SERVE_ENV_KEYS.length,
+      requiredBillingBindingKeysPresent: false,
+      webhookSigningSecretBindingPresent: false,
+      requiredKeyCount: REQUIRED_PRODUCTION_BILLING_ENV_KEYS.length,
       presentKeyCount: 0,
       passed: false,
     };
@@ -335,16 +366,17 @@ async function inspectVercelBindingPresence(targets) {
     .filter((entry) => Array.isArray(entry?.target) ? entry.target.includes('production') : true)
     .map((entry) => String(entry?.key ?? ''))
     .filter(Boolean));
-  const presentKeyCount = CANONICAL_SELF_SERVE_ENV_KEYS.filter((key) => keys.has(key)).length;
+  const presentKeyCount = REQUIRED_PRODUCTION_BILLING_ENV_KEYS.filter((key) => keys.has(key)).length;
   const checks = {
     tokenConfigured: true,
     targetBound: true,
     productionEnvironmentEnumerated: true,
-    canonicalSelfServeBindingKeysPresent: presentKeyCount === CANONICAL_SELF_SERVE_ENV_KEYS.length,
+    requiredBillingBindingKeysPresent: presentKeyCount === REQUIRED_PRODUCTION_BILLING_ENV_KEYS.length,
+    webhookSigningSecretBindingPresent: keys.has('STRIPE_WEBHOOK_SECRET'),
   };
   return {
     ...checks,
-    requiredKeyCount: CANONICAL_SELF_SERVE_ENV_KEYS.length,
+    requiredKeyCount: REQUIRED_PRODUCTION_BILLING_ENV_KEYS.length,
     presentKeyCount,
     passed: Object.values(checks).every(Boolean),
   };
@@ -353,7 +385,6 @@ async function inspectVercelBindingPresence(targets) {
 export async function buildStripeLiveBillingProviderProof({
   targetSha = env('TARGET_SHA').toLowerCase(),
   secret = env('STRIPE_SECRET_KEY'),
-  portalConfigurationId = env('STRIPE_BILLING_PORTAL_CONFIGURATION_ID'),
   catalog = loadCatalog(),
   portalContract = loadPortalContract(),
   portalPolicy = loadPortalPolicy(),
@@ -383,7 +414,7 @@ export async function buildStripeLiveBillingProviderProof({
       expectedAmountCents: binding.expectedAmountCents,
       checks: await inspectPrice(secret, binding),
     }))),
-    inspectPortal(secret, portalContract, portalPolicy, portalConfigurationId),
+    inspectPortal(secret, portalContract, portalPolicy),
     inspectWebhook(secret),
     inspectVercelBindingPresence(providerTargets),
   ]);
@@ -398,8 +429,9 @@ export async function buildStripeLiveBillingProviderProof({
     fourCanonicalSelfServeBindingsConfigured: fourCanonicalBindingsConfigured,
     fourCanonicalSelfServeBindingsDistinct: fourCanonicalBindingsDistinct,
     allCanonicalSelfServePricesMatchLiveCatalog: inspectedPrices.every((entry) => entry.checks.passed),
-    productionRuntimeBindingKeysPresent: vercelBindings.passed,
-    billingPortalConfigurationPinnedAndPolicyMatched: portal.passed,
+    productionBillingBindingKeysPresent: vercelBindings.passed,
+    productionWebhookSigningSecretBindingPresent: vercelBindings.webhookSigningSecretBindingPresent,
+    billingPortalContractResolvedAndPolicyMatched: portal.passed,
     canonicalLifecycleWebhookLive: webhook.passed,
   };
   const passed = Object.values(checks).every(Boolean);
@@ -418,12 +450,15 @@ export async function buildStripeLiveBillingProviderProof({
       requiredKeyCount: vercelBindings.requiredKeyCount,
       presentKeyCount: vercelBindings.presentKeyCount,
       productionEnvironmentEnumerated: vercelBindings.productionEnvironmentEnumerated,
+      webhookSigningSecretBindingPresent: vercelBindings.webhookSigningSecretBindingPresent,
     },
     portal: {
-      pinned: portal.pinned,
+      contractSource: portal.contractSource,
+      configurationCount: portal.configurationCount,
+      defaultConfigurationConfirmed: portal.defaultConfigurationConfirmed,
       reachable: portal.reachable,
       active: portal.active,
-      policyMatched: portal.passed,
+      policyMatched: portal.policyMatched,
     },
     webhook: {
       matchingEndpointCount: webhook.matchingEndpointCount,
@@ -440,7 +475,7 @@ export async function buildStripeLiveBillingProviderProof({
       customerDataStored: false,
       decryptedVercelValuesStored: false,
     },
-    truthBoundary: 'This proof is read-only. It validates exact-SHA production control-plane bindings, four canonical Essential/Professional live Stripe Prices, the pinned reviewed Billing Portal configuration and the canonical lifecycle webhook. It does not create customers, Checkout Sessions, subscriptions, invoices or charges, and it does not substitute for a legitimate live billing lifecycle acceptance run.',
+    truthBoundary: 'This proof is read-only. It validates exact-SHA production control-plane bindings, all six required Production Billing binding keys, four canonical Essential/Professional live Stripe Prices, the versioned Billing Portal contract in default or explicit mode, and the canonical lifecycle webhook. It does not create customers, Checkout Sessions, subscriptions, invoices or charges, and it does not substitute for a legitimate live billing lifecycle acceptance run.',
   };
 }
 

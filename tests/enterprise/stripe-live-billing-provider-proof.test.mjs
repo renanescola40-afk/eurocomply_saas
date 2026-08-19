@@ -10,11 +10,14 @@ const originalEnv = { ...process.env };
 const catalog = JSON.parse(readFileSync('config/billing-commercial-catalog.json', 'utf8'));
 const portalPolicy = JSON.parse(readFileSync('config/stripe-billing-portal-policy.json', 'utf8'));
 const providerTargets = JSON.parse(readFileSync('config/production-provider-targets.json', 'utf8'));
-const portalContract = {
+const defaultPortalContract = {
+  schema: 'risck-comply.stripe-billing-portal-contract.v1',
+  configurationId: null,
+};
+const explicitPortalContract = {
   schema: 'risck-comply.stripe-billing-portal-contract.v1',
   configurationId: 'bpc_reviewed',
 };
-const portalConfigurationId = 'bpc_reviewed';
 
 function jsonResponse(value, status = 200) {
   return new Response(JSON.stringify(value), {
@@ -31,8 +34,6 @@ beforeEach(() => {
   process.env.STRIPE_PRICE_ESSENTIAL_ANNUAL = 'price_essential_annual';
   process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY = 'price_professional_monthly';
   process.env.STRIPE_PRICE_PROFESSIONAL_ANNUAL = 'price_professional_annual';
-  process.env.STRIPE_PRICE_STARTER_MONTHLY = 'price_legacy_starter';
-  process.env.STRIPE_PRICE_GROWTH_MONTHLY = 'price_legacy_growth';
 });
 
 afterEach(() => {
@@ -43,7 +44,28 @@ afterEach(() => {
   for (const [key, value] of Object.entries(originalEnv)) process.env[key] = value;
 });
 
-function installProviderMock({ portalActive = true, webhookEvents = null } = {}) {
+function portalConfiguration({ isDefault = true, active = true } = {}) {
+  return {
+    id: isDefault ? 'bpc_default' : 'bpc_reviewed',
+    active,
+    livemode: true,
+    is_default: isDefault,
+    default_return_url: portalPolicy.defaultReturnUrl,
+    metadata: portalPolicy.managementMetadata,
+    features: {
+      customer_update: {
+        enabled: true,
+        allowed_updates: ['tax_id', 'address'],
+      },
+      invoice_history: { enabled: true },
+      payment_method_update: { enabled: true },
+      subscription_cancel: { enabled: false },
+      subscription_update: { enabled: false },
+    },
+  };
+}
+
+function installProviderMock({ defaultPortalPresent = true, explicitPortalActive = true, webhookEvents = null } = {}) {
   const prices = new Map([
     ['price_essential_monthly', { amount: 4900, interval: 'month', plan: 'essential' }],
     ['price_essential_annual', { amount: 49000, interval: 'year', plan: 'essential' }],
@@ -82,22 +104,11 @@ function installProviderMock({ portalActive = true, webhookEvents = null } = {})
         },
       });
     }
+    if (value === 'https://api.stripe.com/v1/billing_portal/configurations?active=true&limit=100') {
+      return jsonResponse({ data: defaultPortalPresent ? [portalConfiguration()] : [] });
+    }
     if (value.includes('/v1/billing_portal/configurations/')) {
-      return jsonResponse({
-        active: portalActive,
-        default_return_url: portalPolicy.defaultReturnUrl,
-        metadata: portalPolicy.managementMetadata,
-        features: {
-          customer_update: {
-            enabled: true,
-            allowed_updates: ['tax_id', 'address'],
-          },
-          invoice_history: { enabled: true },
-          payment_method_update: { enabled: true },
-          subscription_cancel: { enabled: false },
-          subscription_update: { enabled: false },
-        },
-      });
+      return jsonResponse(portalConfiguration({ isDefault: false, active: explicitPortalActive }));
     }
     if (value === 'https://api.stripe.com/v1/webhook_endpoints?limit=100') {
       return jsonResponse({
@@ -113,6 +124,8 @@ function installProviderMock({ portalActive = true, webhookEvents = null } = {})
     if (value.includes('api.vercel.com/v10/projects/') && value.includes('/env?')) {
       return jsonResponse({
         envs: [
+          'STRIPE_SECRET_KEY',
+          'STRIPE_WEBHOOK_SECRET',
           'STRIPE_PRICE_ESSENTIAL_MONTHLY',
           'STRIPE_PRICE_ESSENTIAL_ANNUAL',
           'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
@@ -124,14 +137,13 @@ function installProviderMock({ portalActive = true, webhookEvents = null } = {})
   };
 }
 
-test('passes only with canonical monthly+annual prices, production bindings, reviewed Portal and canonical webhook', async () => {
+test('passes with account-default Portal authority, canonical prices, six Production Billing bindings and canonical webhook', async () => {
   installProviderMock();
   const proof = await buildStripeLiveBillingProviderProof({
     targetSha: TARGET_SHA,
     secret: 'sk_live_redacted',
-    portalConfigurationId,
     catalog,
-    portalContract,
+    portalContract: defaultPortalContract,
     portalPolicy,
     providerTargets,
   });
@@ -140,9 +152,12 @@ test('passes only with canonical monthly+annual prices, production bindings, rev
   assert.equal(proof.outcome, 'passed');
   assert.equal(proof.checks.fourCanonicalSelfServeBindingsConfigured, true);
   assert.equal(proof.checks.allCanonicalSelfServePricesMatchLiveCatalog, true);
-  assert.equal(proof.checks.productionRuntimeBindingKeysPresent, true);
-  assert.equal(proof.checks.billingPortalConfigurationPinnedAndPolicyMatched, true);
-  assert.equal(proof.checks.canonicalLifecycleWebhookLive, true);
+  assert.equal(proof.checks.productionBillingBindingKeysPresent, true);
+  assert.equal(proof.checks.productionWebhookSigningSecretBindingPresent, true);
+  assert.equal(proof.checks.billingPortalContractResolvedAndPolicyMatched, true);
+  assert.equal(proof.portal.contractSource, 'default');
+  assert.equal(proof.portal.defaultConfigurationConfirmed, true);
+  assert.equal(proof.runtimeBindings.requiredKeyCount, 6);
   assert.deepEqual(proof.selfServePrices.map((price) => [price.publicId, price.cadence]), [
     ['essential', 'monthly'],
     ['essential', 'annual'],
@@ -152,8 +167,43 @@ test('passes only with canonical monthly+annual prices, production bindings, rev
   const serialized = JSON.stringify(proof);
   assert.equal(serialized.includes('price_essential_monthly'), false);
   assert.equal(serialized.includes('sk_live_redacted'), false);
-  assert.equal(serialized.includes('bpc_reviewed'), false);
+  assert.equal(serialized.includes('bpc_default'), false);
   assert.equal(serialized.includes('we_redacted'), false);
+});
+
+test('passes with an explicitly versioned Portal configuration without an environment-variable selector', async () => {
+  installProviderMock();
+  process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID = 'bpc_wrong_env_override';
+  const proof = await buildStripeLiveBillingProviderProof({
+    targetSha: TARGET_SHA,
+    secret: 'sk_live_redacted',
+    catalog,
+    portalContract: explicitPortalContract,
+    portalPolicy,
+    providerTargets,
+  });
+
+  assert.equal(proof.status, 'Complete');
+  assert.equal(proof.portal.contractSource, 'explicit');
+  assert.equal(proof.checks.billingPortalContractResolvedAndPolicyMatched, true);
+  assert.equal(JSON.stringify(proof).includes('bpc_wrong_env_override'), false);
+});
+
+test('fails closed when default authority is selected but no matching live default Portal exists', async () => {
+  installProviderMock({ defaultPortalPresent: false });
+  const proof = await buildStripeLiveBillingProviderProof({
+    targetSha: TARGET_SHA,
+    secret: 'sk_live_redacted',
+    catalog,
+    portalContract: defaultPortalContract,
+    portalPolicy,
+    providerTargets,
+  });
+
+  assert.equal(proof.status, 'Open');
+  assert.equal(proof.portal.contractSource, 'default');
+  assert.equal(proof.portal.defaultConfigurationConfirmed, false);
+  assert.equal(proof.checks.billingPortalContractResolvedAndPolicyMatched, false);
 });
 
 test('fails closed when an annual canonical binding is absent even if legacy aliases exist', async () => {
@@ -162,9 +212,8 @@ test('fails closed when an annual canonical binding is absent even if legacy ali
   const proof = await buildStripeLiveBillingProviderProof({
     targetSha: TARGET_SHA,
     secret: 'sk_live_redacted',
-    portalConfigurationId,
     catalog,
-    portalContract,
+    portalContract: defaultPortalContract,
     portalPolicy,
     providerTargets,
   });
@@ -174,55 +223,13 @@ test('fails closed when an annual canonical binding is absent even if legacy ali
   assert.equal(proof.checks.transitionPolicyRejectsLegacy, true);
 });
 
-test('fails closed until the reviewed Billing Portal configuration is pinned', async () => {
-  installProviderMock();
-  const proof = await buildStripeLiveBillingProviderProof({
-    targetSha: TARGET_SHA,
-    secret: 'sk_live_redacted',
-    portalConfigurationId,
-    catalog,
-    portalContract: { ...portalContract, configurationId: null },
-    portalPolicy,
-    providerTargets,
-  });
-
-  assert.equal(proof.status, 'Open');
-  assert.equal(proof.portal.pinned, false);
-  assert.equal(proof.checks.billingPortalConfigurationPinnedAndPolicyMatched, false);
-});
-
-test('fails closed when runtime Portal id differs from the reviewed contract without sending file data outbound', async () => {
-  installProviderMock();
-  const providerFetch = globalThis.fetch;
-  const outbound = [];
-  globalThis.fetch = async (url, init) => {
-    outbound.push(String(url));
-    return providerFetch(url, init);
-  };
-
-  const proof = await buildStripeLiveBillingProviderProof({
-    targetSha: TARGET_SHA,
-    secret: 'sk_live_redacted',
-    portalConfigurationId: 'bpc_runtimeDifferent',
-    catalog,
-    portalContract,
-    portalPolicy,
-    providerTargets,
-  });
-
-  assert.equal(proof.status, 'Open');
-  assert.equal(proof.portal.pinned, false);
-  assert.equal(outbound.some((url) => url.includes('/v1/billing_portal/configurations/')), false);
-});
-
 test('fails closed when the lifecycle webhook is missing a required event', async () => {
   installProviderMock({ webhookEvents: ['invoice.paid'] });
   const proof = await buildStripeLiveBillingProviderProof({
     targetSha: TARGET_SHA,
     secret: 'sk_live_redacted',
-    portalConfigurationId,
     catalog,
-    portalContract,
+    portalContract: defaultPortalContract,
     portalPolicy,
     providerTargets,
   });
@@ -237,9 +244,8 @@ test('fails closed outside exact production context', async () => {
   const proof = await buildStripeLiveBillingProviderProof({
     targetSha: TARGET_SHA,
     secret: 'sk_live_redacted',
-    portalConfigurationId,
     catalog,
-    portalContract,
+    portalContract: defaultPortalContract,
     portalPolicy,
     providerTargets,
   });
@@ -267,15 +273,14 @@ test('fails closed without sending repository-controlled Vercel target data outb
   const proof = await buildStripeLiveBillingProviderProof({
     targetSha: TARGET_SHA,
     secret: 'sk_live_redacted',
-    portalConfigurationId,
     catalog,
-    portalContract,
+    portalContract: defaultPortalContract,
     portalPolicy,
     providerTargets: tamperedTargets,
   });
 
   assert.equal(proof.status, 'Open');
-  assert.equal(proof.checks.productionRuntimeBindingKeysPresent, false);
+  assert.equal(proof.checks.productionBillingBindingKeysPresent, false);
   assert.equal(outbound.some((url) => url.includes('prj_untrustedRepositoryValue')), false);
   assert.equal(outbound.some((url) => {
     try {
