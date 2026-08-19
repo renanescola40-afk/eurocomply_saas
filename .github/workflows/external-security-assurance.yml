@@ -31,6 +31,7 @@ jobs:
       RELEASE_SHA: ${{ inputs.release_sha }}
       EVIDENCE_COMMIT_SHA: ${{ inputs.evidence_commit_sha }}
       CANONICAL_EVIDENCE_PATH: docs/security/evidence/runtime/external-security-review-or-pentest.json
+      EVIDENCE_SOURCE_DIR: .external-assurance-evidence-source
 
     steps:
       - name: Validate immutable SHA inputs
@@ -48,22 +49,32 @@ jobs:
           persist-credentials: false
 
       - name: Verify exact current main
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          git fetch --no-tags origin main
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+          main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
+          test "$main_sha" = "$RELEASE_SHA"
 
-      - name: Load redacted evidence from immutable evidence commit
+      - name: Checkout immutable redacted evidence commit in isolation
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.evidence_commit_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: ${{ env.EVIDENCE_SOURCE_DIR }}
+
+      - name: Load redacted evidence from immutable evidence checkout
         shell: bash
         run: |
           set -euo pipefail
-          git fetch --no-tags --depth=1 origin "$EVIDENCE_COMMIT_SHA"
-          test "$(git rev-parse FETCH_HEAD)" = "$EVIDENCE_COMMIT_SHA"
-          git cat-file -e "${EVIDENCE_COMMIT_SHA}^{commit}"
+          test "$(git -C "$EVIDENCE_SOURCE_DIR" rev-parse HEAD)" = "$EVIDENCE_COMMIT_SHA"
+          source_file="$EVIDENCE_SOURCE_DIR/$CANONICAL_EVIDENCE_PATH"
+          test -s "$source_file"
           evidence_file="$RUNNER_TEMP/external-security-review-or-pentest.json"
-          git show "${EVIDENCE_COMMIT_SHA}:${CANONICAL_EVIDENCE_PATH}" > "$evidence_file"
+          cp "$source_file" "$evidence_file"
           test -s "$evidence_file"
           echo "EXTERNAL_ASSURANCE_INPUT=$evidence_file" >> "$GITHUB_ENV"
 
