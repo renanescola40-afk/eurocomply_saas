@@ -1,12 +1,12 @@
 name: Stripe Billing Portal Bootstrap
 
-run-name: Stripe Billing Portal bootstrap for ${{ inputs.release_sha }}
+run-name: Stripe Billing Portal authority alignment for ${{ inputs.release_sha }}
 
 on:
   workflow_dispatch:
     inputs:
       release_sha:
-        description: Exact current main SHA whose reviewed Portal policy will be provisioned
+        description: Exact current main SHA whose reviewed Portal contract and policy will be aligned
         required: true
         type: string
       confirmation:
@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   provision:
-    name: Provision reviewed live Billing Portal configuration
+    name: Align reviewed live Billing Portal authority
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
@@ -61,7 +61,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Provision or reuse managed Stripe Billing Portal configuration
+      - name: Align or reuse contract-selected Stripe Billing Portal configuration
         id: portal
         env:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
@@ -73,16 +73,19 @@ jobs:
         env:
           CONFIGURATION_ID: ${{ steps.portal.outputs.configuration_id }}
           DISPOSITION: ${{ steps.portal.outputs.disposition }}
+          CONTRACT_SOURCE: ${{ steps.portal.outputs.contract_source }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
           [[ "$CONFIGURATION_ID" =~ ^bpc_[A-Za-z0-9]+$ ]]
+          test "$CONTRACT_SOURCE" = "default" -o "$CONTRACT_SOURCE" = "explicit"
           {
-            echo '## Stripe Billing Portal bootstrap'
+            echo '## Stripe Billing Portal authority alignment'
             echo
             echo "- Source SHA: ${RELEASE_SHA,,}"
+            echo "- Contract authority: $CONTRACT_SOURCE"
             echo "- Provider result: $DISPOSITION"
-            echo "- Configuration to review and pin: $CONFIGURATION_ID"
+            echo "- Verified configuration: $CONFIGURATION_ID"
             echo
-            echo 'No application contract was changed by this workflow. Pin the reviewed ID in config/stripe-billing-portal-contract.json through a normal pull request, deploy that exact merged SHA, then run Stripe Provider Proof.'
+            echo 'No application contract was changed by this workflow. The provider object selected by config/stripe-billing-portal-contract.json was reused or aligned to the reviewed policy. Run the exact-SHA Stripe/provider proof next.'
           } >> "$GITHUB_STEP_SUMMARY"
