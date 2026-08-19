@@ -36,6 +36,8 @@ const UNRESOLVED_FOUNDER_FACT_VALUES = new Set([
   'N/A',
   'NA',
   'NULL',
+  'NOT_APPLICABLE',
+  'NOT_REQUIRED',
 ]);
 
 const FOUNDER_FACT_REQUIRED_PATHS = Object.freeze([
@@ -44,13 +46,16 @@ const FOUNDER_FACT_REQUIRED_PATHS = Object.freeze([
   'legalEntity.vatNumber',
   'legalEntity.registeredAddress',
   'legalEntity.country',
+  'legalEntity.governingLawPreference',
   'legalEntity.legalContact',
   'legalEntity.privacyContact',
   'legalEntity.securityContact',
   'legalEntity.billingContact',
   'legalEntity.supportContact',
   'legalEntity.dpoOrRepresentative',
+  'commercial.productionProductName',
   'commercial.productionDomains',
+  'commercial.customerTypesAndExcludedUses',
   'commercial.plansAndBilling',
   'commercial.trialRenewalCancellation',
   'commercial.refundSuspensionTermination',
@@ -75,6 +80,7 @@ const FOUNDER_FACT_REQUIRED_PATHS = Object.freeze([
   'securityOperations.incidentCommunication',
   'securityOperations.backupRestoreCommitment',
   'securityOperations.certificationsAuditsPentests',
+  'securityOperations.vulnerabilityDisclosureProcess',
   'aiLegalPositioning.serviceBoundaryConfirmed',
   'aiLegalPositioning.customerContentAiProcessing',
   'aiLegalPositioning.excludedUses',
