@@ -37,8 +37,16 @@ test('promotion validator emits only redacted canonical metadata and decision pr
   assert.doesNotMatch(promotionValidator, /console\.log\(evidence\)/);
 });
 
-test('workflow uses protected isolated checkouts for release and evidence commits', () => {
+test('workflow fails closed unless the dedicated environment has required human reviewers', () => {
   assert.match(workflow, /environment: external-security-assurance/);
+  assert.match(workflow, /deployments: read/);
+  assert.match(workflow, /environments\/external-security-assurance/);
+  assert.match(workflow, /select\(\.type == "required_reviewers"\)/);
+  assert.match(workflow, /\.reviewers\[\]\?/);
+  assert.match(workflow, /length > 0/);
+});
+
+test('workflow uses isolated immutable checkouts for release and evidence commits', () => {
   assert.match(workflow, /evidence_commit_sha:/);
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /Checkout immutable redacted evidence commit in isolation/);
