@@ -59,7 +59,10 @@ test('protected acceptance workflow separates release SHA from immutable evidenc
   assert.match(acceptanceWorkflow, /release_sha:/);
   assert.match(acceptanceWorkflow, /evidence_commit_sha:/);
   assert.match(acceptanceWorkflow, /environment: external-security-assurance/);
-  assert.match(acceptanceWorkflow, /test "\$\(git rev-parse origin\/main\)" = "\$RELEASE_SHA"/);
+  assert.match(acceptanceWorkflow, /commits\/main/);
+  assert.match(acceptanceWorkflow, /Checkout immutable redacted evidence commit in isolation/);
+  assert.match(acceptanceWorkflow, /path: \$\{\{ env\.EVIDENCE_SOURCE_DIR \}\}/);
+  assert.match(acceptanceWorkflow, /git -C "\$EVIDENCE_SOURCE_DIR" rev-parse HEAD/);
   assert.match(acceptanceWorkflow, /external-security-assurance-accepted-/);
   assert.match(acceptanceWorkflow, /external-security-assurance-rejected-/);
 });
