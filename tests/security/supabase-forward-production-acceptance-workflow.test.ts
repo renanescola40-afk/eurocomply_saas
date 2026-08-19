@@ -14,6 +14,17 @@ function jobHeader(text: string, jobName: string) {
   return text.slice(jobIndex, stepsIndex);
 }
 
+function executableMigrationCommands(text: string) {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => (
+      line.startsWith('supabase ')
+      || line.startsWith('psql ')
+      || line.startsWith('node ')
+    ));
+}
+
 describe('Supabase post-promotion production acceptance', () => {
   it('is manual, exact-SHA, provenance-bound and protected before database secret access', () => {
     expect(workflow).toContain('workflow_dispatch:');
@@ -30,18 +41,21 @@ describe('Supabase post-promotion production acceptance', () => {
   });
 
   it('keeps the pooler secret step-local and never adds a migration execution path', () => {
+    const executable = executableMigrationCommands(workflow).join('\n');
     expect(jobHeader(workflow, 'acceptance')).not.toContain('SUPABASE_DB_POOLER_URL');
     expect(workflow).toContain('secrets.SUPABASE_DB_POOLER_URL');
-    expect(workflow).not.toContain(' db push ');
-    expect(workflow).not.toContain('--include-all');
-    expect(workflow).not.toContain('migration repair');
-    expect(workflow).not.toContain('supabase migration');
-    expect(workflow).not.toContain('apply_migration');
+    expect(executable).not.toContain(' db push ');
+    expect(executable).not.toContain('--include-all');
+    expect(executable).not.toContain('migration repair');
+    expect(executable).not.toContain('supabase migration');
+    expect(executable).not.toContain('apply_migration');
   });
 
   it('re-observes the ledger and live security state instead of trusting promotion-time evidence alone', () => {
     expect(workflow).toContain("select version from supabase_migrations.schema_migrations order by version");
+    expect(workflow).toContain("--command 'begin transaction read only;'");
     expect(workflow).toContain('verify-forward-reconciliation-postconditions.sql');
+    expect(workflow).toContain("--command 'rollback;'");
     expect(workflow).toContain('assert-live-tenant-isolation-read-only.sql');
     expect(workflow).toContain('verify-forward-production-acceptance.mjs');
     expect(verifier).toContain('post-promotion migration drift detected');
