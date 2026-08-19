@@ -7,7 +7,9 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/supabase-forward-production-acceptance.yml'
+      - '.github/workflows/recovery-resilience-proof.yml'
       - 'config/supabase-forward-reconciliation.json'
+      - 'scripts/recovery/bind-backup-restore-migration-ledger.mjs'
       - 'scripts/supabase/forward-reconciliation-control-plane.mjs'
       - 'scripts/supabase/verify-forward-production-acceptance.mjs'
       - 'scripts/supabase/verify-forward-production-acceptance.test.mjs'
@@ -26,7 +28,7 @@ on:
         required: true
         type: string
       recovery_run_id:
-        description: Successful exact-SHA Recovery Resilience Proof run containing backup-restore evidence
+        description: Successful post-promotion exact-SHA Recovery Resilience Proof run containing ledger-bound backup-restore evidence
         required: true
         type: string
       confirmation:
@@ -63,6 +65,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node --check scripts/recovery/bind-backup-restore-migration-ledger.mjs
           node --check scripts/supabase/verify-forward-production-acceptance.mjs
           node --test scripts/supabase/verify-forward-production-acceptance.test.mjs
           npx vitest run tests/security/supabase-forward-production-acceptance-workflow.test.ts
@@ -157,7 +160,7 @@ jobs:
           case "$SUPABASE_DB_POOLER_URL" in
             *$'\n'*|*$'\r'*) echo 'SUPABASE_DB_POOLER_URL contains a control character' >&2; exit 1 ;;
           esac
-      - name: Verify source promotion and recovery workflow provenance
+      - name: Verify source promotion and post-promotion recovery provenance
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -174,6 +177,18 @@ jobs:
           test "$(jq -r '.path' <<<"$RECOVERY_JSON")" = '.github/workflows/recovery-resilience-proof.yml'
           test "$(jq -r '.event' <<<"$RECOVERY_JSON")" = 'workflow_dispatch'
           test "$(jq -r '.conclusion' <<<"$RECOVERY_JSON")" = 'success'
+
+          PROMOTION_FINISHED_AT="$(jq -r '.updated_at // empty' <<<"$PROMOTION_JSON")"
+          RECOVERY_STARTED_AT="$(jq -r '.run_started_at // empty' <<<"$RECOVERY_JSON")"
+          test -n "$PROMOTION_FINISHED_AT"
+          test -n "$RECOVERY_STARTED_AT"
+          node -e '
+            const promotionFinished = Date.parse(process.argv[1]);
+            const recoveryStarted = Date.parse(process.argv[2]);
+            if (!Number.isFinite(promotionFinished) || !Number.isFinite(recoveryStarted) || recoveryStarted <= promotionFinished) {
+              process.exit(1);
+            }
+          ' "$PROMOTION_FINISHED_AT" "$RECOVERY_STARTED_AT"
       - name: Download exact source promotion and recovery evidence
         shell: bash
         env:
@@ -340,6 +355,7 @@ jobs:
             and .checks.liveSchemaSecurityPostconditionsPassed == true
             and .checks.liveTenantIsolationPassed == true
             and .checks.backupRestoreExactShaPassed == true
+            and .checks.backupRestoreSourceLedgerMatchesPromotion == true
             and .checks.providerCredentialRevocationClaimed == false
           ' "$ACCEPTANCE_EVIDENCE" >/dev/null
       - name: Revalidate current main after all live observations
@@ -375,6 +391,7 @@ jobs:
               echo "- Selected migration count: $(jq -r '.selectedMigrationCount' "$ACCEPTANCE_EVIDENCE")"
               echo "- Live tenant isolation: $(jq -r '.checks.liveTenantIsolationPassed' "$ACCEPTANCE_EVIDENCE")"
               echo "- Post-promotion drift absent: $(jq -r '.checks.postPromotionMigrationDriftAbsent' "$ACCEPTANCE_EVIDENCE")"
+              echo "- Recovery source ledger matches promotion: $(jq -r '.checks.backupRestoreSourceLedgerMatchesPromotion' "$ACCEPTANCE_EVIDENCE")"
               echo "- Exact-SHA backup/restore: $(jq -r '.checks.backupRestoreExactShaPassed' "$ACCEPTANCE_EVIDENCE")"
               echo "- Provider credential revocation claimed: $(jq -r '.checks.providerCredentialRevocationClaimed' "$ACCEPTANCE_EVIDENCE")"
             else
