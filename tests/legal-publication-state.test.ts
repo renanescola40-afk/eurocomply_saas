@@ -69,6 +69,7 @@ function founderFacts(productSha = expectedSha): LegalPublicationArtifact {
       vatNumber: notApplicable('No VAT number exists in this test fixture operating model.'),
       registeredAddress: notApplicable('No registered office exists in this test fixture operating model.'),
       country: 'Portugal',
+      governingLawPreference: 'Portuguese law preference recorded for qualified counsel review.',
       legalContact: 'legal@example.test',
       privacyContact: 'privacy@example.test',
       securityContact: 'security@example.test',
@@ -77,7 +78,9 @@ function founderFacts(productSha = expectedSha): LegalPublicationArtifact {
       dpoOrRepresentative: notApplicable('No DPO or representative is appointed in this test fixture.'),
     },
     commercial: {
+      productionProductName: 'Risck Comply',
       productionDomains: ['https://example.test'],
+      customerTypesAndExcludedUses: 'B2B customers; prohibited and unsupported uses are excluded.',
       plansAndBilling: 'Resolved plan and billing terms.',
       trialRenewalCancellation: 'Resolved trial, renewal and cancellation terms.',
       refundSuspensionTermination: 'Resolved refund, suspension and termination terms.',
@@ -108,6 +111,7 @@ function founderFacts(productSha = expectedSha): LegalPublicationArtifact {
       incidentCommunication: 'Resolved incident communication process.',
       backupRestoreCommitment: 'Resolved backup and restore commitment.',
       certificationsAuditsPentests: notApplicable('No external certification or pentest is claimed in this test fixture.'),
+      vulnerabilityDisclosureProcess: 'Security reports are handled through the designated disclosure process.',
     },
     aiLegalPositioning: {
       serviceBoundaryConfirmed: true,
@@ -213,6 +217,25 @@ describe('legal publication state', () => {
     });
 
     expect(state.status).toBe('FOUNDER_FACT_REQUIRED');
+    expect(state.accepted).toBe(false);
+    expect(state.founderFactsAccepted).toBe(false);
+    expect(state.blockers).toContain('founder_facts_not_accepted');
+  });
+
+  it('rejects plain NOT_APPLICABLE strings without a structured rationale', () => {
+    const founder = founderFacts();
+    const document = founder.document as Record<string, unknown>;
+    const legalEntity = document.legalEntity as Record<string, unknown>;
+    legalEntity.registeredName = 'NOT_APPLICABLE';
+
+    const state = evaluateLegalPublicationState({
+      expectedSha,
+      now,
+      founderFacts: founder,
+      qualifiedReviews: QUALIFIED_REVIEW_DECISION_PATHS.map((path) => qualifiedReview(path)),
+      masterDecision: masterDecision(),
+    });
+
     expect(state.accepted).toBe(false);
     expect(state.founderFactsAccepted).toBe(false);
     expect(state.blockers).toContain('founder_facts_not_accepted');
