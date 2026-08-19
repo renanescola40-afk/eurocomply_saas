@@ -71,16 +71,23 @@ describe('Supabase post-promotion production acceptance', () => {
     expect(verifier).toContain('liveTenantIsolationPassed: true');
     expect(verifier).toContain('backupRestoreExactShaPassed: true');
     expect(verifier).toContain('backupRestoreSourceLedgerMatchesPromotion: true');
+    expect(verifier).toContain('restoredForwardPostconditionsPassed: true');
   });
 
-  it('binds backup/restore to the post-promotion production source migration ledger without retaining versions', () => {
+  it('binds backup/restore to the post-promotion source ledger and proves restored forward postconditions', () => {
     expect(recoveryWorkflow).toContain('Bind backup restore evidence to production source migration ledger');
     expect(recoveryWorkflow).toContain('node scripts/recovery/bind-backup-restore-migration-ledger.mjs');
     expect(recoveryBinder).toContain('begin transaction read only; select version from supabase_migrations.schema_migrations order by version; rollback;');
     expect(recoveryBinder).toContain('sourceMigrationLedgerCaptured: true');
     expect(recoveryBinder).toContain('migrationVersionsStored: false');
     expect(recoveryBinder).toContain('sourceMigrationLedgerDigestStored: true');
+    expect(recoveryBinder).toContain('verify-forward-reconciliation-postconditions.sql');
+    expect(recoveryBinder).toContain("'begin transaction read only;'");
+    expect(recoveryBinder).toContain('restoredPostconditionsExecuted');
+    expect(recoveryBinder).toContain('restoredPostconditionsPassed');
+    expect(recoveryBinder).toContain('restoredPostconditionOutputStored: false');
     expect(verifier).toContain('source migration ledger digest differs from promoted ledger');
+    expect(verifier).toContain('backup/restore restored forward postconditions did not pass');
   });
 
   it('executes live two-tenant behavior only inside a read-only transaction with existing actors', () => {
@@ -114,5 +121,6 @@ describe('Supabase post-promotion production acceptance', () => {
     expect(verifier).toContain('credentialsStored: false');
     expect(verifier).toContain('databaseUrlsStored: false');
     expect(verifier).toContain('rowDataStored: false');
+    expect(verifier).toContain('restoredPostconditionOutputStored: false');
   });
 });
