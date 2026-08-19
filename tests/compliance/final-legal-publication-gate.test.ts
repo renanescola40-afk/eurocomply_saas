@@ -41,6 +41,7 @@ function completeFounderFacts(): Record<string, unknown> {
       vatNumber: notApplicable('No VAT number exists in this release-gate test fixture.'),
       registeredAddress: notApplicable('No registered office exists in this release-gate test fixture.'),
       country: 'Portugal',
+      governingLawPreference: 'Portuguese law preference recorded for qualified counsel review.',
       legalContact: 'legal@example.test',
       privacyContact: 'privacy@example.test',
       securityContact: 'security@example.test',
@@ -49,7 +50,9 @@ function completeFounderFacts(): Record<string, unknown> {
       dpoOrRepresentative: notApplicable('No DPO or representative is appointed in this release-gate test fixture.'),
     },
     commercial: {
+      productionProductName: 'Risck Comply',
       productionDomains: ['https://example.test'],
+      customerTypesAndExcludedUses: 'B2B customers; prohibited and unsupported uses are excluded.',
       plansAndBilling: 'Resolved plan and billing terms.',
       trialRenewalCancellation: 'Resolved trial, renewal and cancellation terms.',
       refundSuspensionTermination: 'Resolved refund, suspension and termination terms.',
@@ -80,6 +83,7 @@ function completeFounderFacts(): Record<string, unknown> {
       incidentCommunication: 'Resolved incident communication process.',
       backupRestoreCommitment: 'Resolved backup and restore commitment.',
       certificationsAuditsPentests: notApplicable('No external certification or pentest is claimed in this release-gate test fixture.'),
+      vulnerabilityDisclosureProcess: 'Security reports are handled through the designated disclosure process.',
     },
     aiLegalPositioning: {
       serviceBoundaryConfirmed: true,
@@ -209,24 +213,30 @@ describe('final legal publication gate', () => {
     expect(validation.accepted).toBe(false);
     expect(validation.officerComplete).toBe(true);
     expect(validation.unresolvedFields).toContain('legalEntity.registeredName');
+    expect(validation.unresolvedFields).toContain('commercial.productionProductName');
     expect(validation.unresolvedFields).toContain('providers.aiProviders');
+    expect(validation.unresolvedFields).toContain('securityOperations.vulnerabilityDisclosureProcess');
   });
 
-  it('accepts a structurally complete founder-facts record and explicit N/A only with rationale', () => {
+  it('accepts a structurally complete founder-facts record and rejects unstructured N/A', () => {
     const complete = completeFounderFacts();
     const accepted = validateFounderFactsDocument(complete, expectedSha, now);
     expect(accepted.accepted).toBe(true);
     expect(accepted.unresolvedFields).toEqual([]);
 
     const legalEntity = complete.legalEntity as Record<string, unknown>;
+    legalEntity.registeredName = 'NOT_APPLICABLE';
+    const unstructured = validateFounderFactsDocument(complete, expectedSha, now);
+    expect(unstructured.accepted).toBe(false);
+    expect(unstructured.unresolvedFields).toContain('legalEntity.registeredName');
+
     legalEntity.registeredName = {
       status: 'NOT_APPLICABLE',
       rationale: 'short',
     };
-
-    const rejected = validateFounderFactsDocument(complete, expectedSha, now);
-    expect(rejected.accepted).toBe(false);
-    expect(rejected.unresolvedFields).toContain('legalEntity.registeredName');
+    const shortRationale = validateFounderFactsDocument(complete, expectedSha, now);
+    expect(shortRationale.accepted).toBe(false);
+    expect(shortRationale.unresolvedFields).toContain('legalEntity.registeredName');
   });
 
   it('requires exact qualified-review identity, final acceptance and immutable digests', () => {
