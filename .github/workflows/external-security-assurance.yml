@@ -101,6 +101,11 @@ jobs:
           EXTERNAL_ASSURANCE_MAX_AGE_DAYS: '180'
         run: node scripts/security/validate-external-security-assurance.mjs
 
+      - name: Scan promoted metadata for concrete secret values
+        env:
+          STRICT_PUBLIC_SECRET_SCAN: '1'
+        run: node scripts/security/check-public-secrets.mjs
+
       - name: Upload accepted exact-SHA assurance evidence
         if: success()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
