@@ -3,12 +3,28 @@ import { describe, expect, it } from 'vitest';
 import {
   evaluateFinalLegalPublicationGate,
   validateFounderFactsDocument,
+  validateMasterDecisionDocument,
+  validateQualifiedReviewDocument,
 } from '../../scripts/compliance/check-final-legal-publication-gate.mjs';
 import { generateLegalCounselHandoffBundle } from '../../scripts/compliance/generate-legal-counsel-handoff-bundle.mjs';
 
 const expectedSha = 'd'.repeat(40);
 const digest = `sha256:${'e'.repeat(64)}`;
 const now = new Date('2026-07-30T18:00:00.000Z');
+const reviewIds = [
+  'legal-rules',
+  'prohibited-practices',
+  'article-50-copy',
+  'fria-methodology',
+  'deployer-obligations',
+  'high-risk-provider',
+  'conformity',
+  'gpai',
+];
+const reviewRequirement = {
+  id: 'legal-rules',
+  path: 'docs/compliance/evidence/accepted/legal-rules-qualified-review.json',
+};
 
 function notApplicable(rationale: string): Record<string, string> {
   return { status: 'NOT_APPLICABLE', rationale };
@@ -82,6 +98,74 @@ function completeFounderFacts(): Record<string, unknown> {
   };
 }
 
+function completeQualifiedReview(): Record<string, unknown> {
+  return {
+    schema: 'risck-comply.qualified-review-decision.v1',
+    status: 'COUNSEL_ACCEPTED',
+    reviewPackageId: reviewRequirement.id,
+    reviewerName: 'Qualified Reviewer',
+    professionalRegistration: 'PT-12345',
+    jurisdiction: 'Portugal',
+    qualificationScope: 'EU AI Act and technology law',
+    conflictAssessment: 'No disqualifying conflict identified for the stated scope.',
+    independenceDeclaration: 'Independent professional judgment was exercised.',
+    reviewScope: 'Versioned legal-rules workstream and bound evidence package.',
+    productSha: expectedSha,
+    evidencePackageDigest: digest,
+    decision: 'ACCEPTED',
+    validityStart: '2026-07-01T00:00:00.000Z',
+    validityEnd: '2027-07-01T00:00:00.000Z',
+    signedArtifactReference: 'confidential://signed/legal-rules.pdf',
+    decisionDigest: digest,
+    timestamp: '2026-07-30T12:00:00.000Z',
+  };
+}
+
+function completeMasterDecision(): Record<string, unknown> {
+  return {
+    schema: 'risck-comply.master-legal-decision-sheet.v1',
+    decision: 'COUNSEL_ACCEPTED',
+    reviewer: {
+      name: 'Qualified Reviewer',
+      professionalRegistration: 'PT-12345',
+      jurisdiction: 'Portugal',
+      qualificationScope: 'EU AI Act, privacy and technology law',
+      conflictAssessment: 'No disqualifying conflict identified for the stated scope.',
+      independenceDeclaration: 'Independent professional judgment was exercised.',
+    },
+    reviewBinding: {
+      productSha: expectedSha,
+      evidencePackageDigest: digest,
+      signedOpinionReference: 'confidential://signed/master-opinion.pdf',
+      decisionDigest: digest,
+      reviewedAt: '2026-07-30T12:00:00.000Z',
+      validityStart: '2026-07-01T00:00:00.000Z',
+      validityEnd: '2027-07-01T00:00:00.000Z',
+      changeTriggers: ['Material product, provider, contract or legal-source change requires re-review.'],
+    },
+    globalDecisions: {
+      intendedPurpose: 'COUNSEL_ACCEPTED',
+      productRole: 'COUNSEL_ACCEPTED',
+      launchPosition: 'COUNSEL_ACCEPTED',
+      contractPack: 'COUNSEL_ACCEPTED',
+      privacyAndDpa: 'COUNSEL_ACCEPTED',
+      claims: 'COUNSEL_ACCEPTED',
+      partnerCounselModel: 'COUNSEL_ACCEPTED',
+    },
+    workstreamDecisions: reviewIds.map((id) => ({
+      id,
+      decision: 'COUNSEL_ACCEPTED',
+      findings: [],
+      conditions: [],
+    })),
+    externalDependencies: [],
+    blockingChanges: [],
+    nonBlockingRecommendations: [],
+    permittedReliance: 'Reliance is limited to the exact reviewed release, scope and validity period.',
+    limitations: ['Customer-specific advice and formal conformity assessment remain outside the stated scope.'],
+  };
+}
+
 describe('final legal publication gate', () => {
   it('passes repository preparation while truthfully blocking final publication', () => {
     const report = evaluateFinalLegalPublicationGate({
@@ -143,6 +227,49 @@ describe('final legal publication gate', () => {
     const rejected = validateFounderFactsDocument(complete, expectedSha, now);
     expect(rejected.accepted).toBe(false);
     expect(rejected.unresolvedFields).toContain('legalEntity.registeredName');
+  });
+
+  it('requires exact qualified-review identity, final acceptance and immutable digests', () => {
+    const complete = completeQualifiedReview();
+    expect(validateQualifiedReviewDocument(complete, reviewRequirement, expectedSha, now).accepted).toBe(true);
+
+    const conditional = { ...complete, decision: 'ACCEPTED_WITH_CHANGES' };
+    const conditionalResult = validateQualifiedReviewDocument(
+      conditional,
+      reviewRequirement,
+      expectedSha,
+      now,
+    );
+    expect(conditionalResult.accepted).toBe(false);
+    expect(conditionalResult.failures).toContain('decision_not_accepted');
+
+    const wrongPackage = { ...complete, reviewPackageId: 'gpai' };
+    expect(
+      validateQualifiedReviewDocument(wrongPackage, reviewRequirement, expectedSha, now).failures,
+    ).toContain('review_package_id_mismatch');
+  });
+
+  it('requires unique canonical workstreams and zero blocking changes in the master decision', () => {
+    const complete = completeMasterDecision();
+    expect(validateMasterDecisionDocument(complete, expectedSha, now).accepted).toBe(true);
+
+    const duplicateWorkstreams = {
+      ...complete,
+      workstreamDecisions: reviewIds.map(() => ({
+        id: 'legal-rules',
+        decision: 'COUNSEL_ACCEPTED',
+        findings: [],
+        conditions: [],
+      })),
+    };
+    const duplicateResult = validateMasterDecisionDocument(duplicateWorkstreams, expectedSha, now);
+    expect(duplicateResult.accepted).toBe(false);
+    expect(duplicateResult.failures).toContain('workstream_ids_invalid');
+
+    const blocked = { ...complete, blockingChanges: ['Required contract remediation remains open.'] };
+    const blockedResult = validateMasterDecisionDocument(blocked, expectedSha, now);
+    expect(blockedResult.accepted).toBe(false);
+    expect(blockedResult.failures).toContain('blocking_changes_present');
   });
 
   it('generates a deterministic counsel bundle without embedding signed decisions', () => {
