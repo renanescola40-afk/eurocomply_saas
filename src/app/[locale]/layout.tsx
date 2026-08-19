@@ -19,6 +19,12 @@ import {
 import { requireLicensedCommercialPageAccess } from '@/server/security/commercial-access';
 import '../globals.css';
 
+// Commercial authorization for localized surfaces depends on the trusted
+// request pathname injected by middleware. Keep this boundary request-time so
+// static prerendering can never evaluate an empty pathname and accidentally
+// fail-close an explicitly public or billing-recovery page.
+export const dynamic = 'force-dynamic';
+
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
