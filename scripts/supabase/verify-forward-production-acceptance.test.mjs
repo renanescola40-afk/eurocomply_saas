@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 
 import { verifyForwardProductionAcceptance } from './verify-forward-production-acceptance.mjs';
@@ -9,6 +10,10 @@ const migrationDigestA = '1'.repeat(64);
 const migrationDigestB = '2'.repeat(64);
 const promotionRunId = '12345';
 const recoveryRunId = '67890';
+
+function ledgerDigest(versions) {
+  return `sha256:${createHash('sha256').update(JSON.stringify(versions)).digest('hex')}`;
+}
 
 function fixture() {
   const selected = [
@@ -147,13 +152,23 @@ function fixture() {
         distinctDatabases: true,
         protectedMainExecution: true,
         exactShaBound: true,
+        sourceMigrationLedgerCaptured: true,
       },
       metrics: { rpoSeconds: 8, rtoSeconds: 40 },
+      integrity: {
+        sourceMigrationLedger: {
+          count: remoteAfter.length,
+          head: remoteAfter.at(-1),
+          sha256: ledgerDigest(remoteAfter),
+        },
+      },
       evidenceIntegrity: {
         containsSensitiveValues: false,
         databaseUrlsStored: false,
         dumpStored: false,
         rowDataStored: false,
+        migrationVersionsStored: false,
+        sourceMigrationLedgerDigestStored: true,
       },
       failures: [],
     },
@@ -173,6 +188,7 @@ test('accepts only one exact-SHA chain across human review, promotion, live tena
   assert.equal(result.checks.liveTenantIsolationPassed, true);
   assert.equal(result.checks.postPromotionMigrationDriftAbsent, true);
   assert.equal(result.checks.backupRestoreExactShaPassed, true);
+  assert.equal(result.checks.backupRestoreSourceLedgerMatchesPromotion, true);
   assert.equal(result.checks.providerCredentialRevocationClaimed, false);
   assert.equal(result.recoveryBoundary.providerCredentialRevocationClaimed, false);
 });
@@ -187,6 +203,12 @@ test('rejects any post-promotion migration ledger drift', () => {
   const input = fixture();
   input.liveRemoteVersions.push('20260818000000');
   assert.throws(() => verifyForwardProductionAcceptance(input), /post-promotion migration drift detected/);
+});
+
+test('rejects recovery evidence captured from a different migration ledger', () => {
+  const input = fixture();
+  input.backupRestore.integrity.sourceMigrationLedger.sha256 = `sha256:${'f'.repeat(64)}`;
+  assert.throws(() => verifyForwardProductionAcceptance(input), /source migration ledger digest differs from promoted ledger/);
 });
 
 test('rejects writable or failed live tenant evidence', () => {
