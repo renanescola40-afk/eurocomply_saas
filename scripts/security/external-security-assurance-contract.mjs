@@ -260,6 +260,10 @@ function validateCompleteEvidence(evidence, expectedSha, now, failures) {
   }
 }
 
+/**
+ * @param {unknown} evidence
+ * @param {{ enterprise?: boolean, expectedSha?: string | null, now?: Date }} [options]
+ */
 export function validateExternalSecurityAssurance(
   evidence,
   { enterprise = true, expectedSha = null, now = new Date() } = {},
