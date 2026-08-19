@@ -17,6 +17,10 @@ function artifact(path: string, document: Record<string, unknown>): LegalPublica
   return { path, document };
 }
 
+function notApplicable(rationale: string): Record<string, string> {
+  return { status: 'NOT_APPLICABLE', rationale };
+}
+
 function qualifiedReview(path: string, productSha = expectedSha): LegalPublicationArtifact {
   return artifact(path, {
     status: 'COUNSEL_ACCEPTED',
@@ -37,8 +41,62 @@ function qualifiedReview(path: string, productSha = expectedSha): LegalPublicati
 
 function founderFacts(productSha = expectedSha): LegalPublicationArtifact {
   return artifact('docs/compliance/evidence/accepted/founder-facts.json', {
+    schema: 'risck-comply.founder-facts.v1',
     status: 'FOUNDER_FACTS_CONFIRMED',
     productSha,
+    legalEntity: {
+      registeredName: notApplicable('No registered entity exists in this test fixture operating model.'),
+      companyNumber: notApplicable('No company number exists in this test fixture operating model.'),
+      vatNumber: notApplicable('No VAT number exists in this test fixture operating model.'),
+      registeredAddress: notApplicable('No registered office exists in this test fixture operating model.'),
+      country: 'Portugal',
+      legalContact: 'legal@example.test',
+      privacyContact: 'privacy@example.test',
+      securityContact: 'security@example.test',
+      billingContact: 'billing@example.test',
+      supportContact: 'support@example.test',
+      dpoOrRepresentative: notApplicable('No DPO or representative is appointed in this test fixture.'),
+    },
+    commercial: {
+      productionDomains: ['https://example.test'],
+      plansAndBilling: 'Resolved plan and billing terms.',
+      trialRenewalCancellation: 'Resolved trial, renewal and cancellation terms.',
+      refundSuspensionTermination: 'Resolved refund, suspension and termination terms.',
+      enterpriseOrderForm: notApplicable('No negotiated enterprise order form applies in this test fixture.'),
+      slaCommitments: notApplicable('No contractual SLA applies in this test fixture.'),
+    },
+    dataProcessing: {
+      productionDataCategories: ['account metadata', 'customer content'],
+      roleAllocation: 'Resolved controller and processor allocation.',
+      hostingRegions: ['EU'],
+      retentionSchedule: 'Resolved retention schedule.',
+      transferMechanisms: 'Resolved provider transfer treatment.',
+      dataSubjectRequestOwner: 'privacy@example.test',
+    },
+    providers: {
+      hosting: 'Resolved hosting provider facts.',
+      databaseAndAuth: 'Resolved database and auth provider facts.',
+      billing: 'Resolved billing provider facts.',
+      observability: 'Resolved observability provider facts.',
+      analytics: 'Resolved analytics provider facts.',
+      email: 'Resolved email provider facts.',
+      support: 'Resolved support provider facts.',
+      aiProviders: notApplicable('No AI provider processes customer content in this test fixture.'),
+    },
+    securityOperations: {
+      availabilityCommitment: 'Resolved availability commitment.',
+      supportCommitment: 'Resolved support commitment.',
+      incidentCommunication: 'Resolved incident communication process.',
+      backupRestoreCommitment: 'Resolved backup and restore commitment.',
+      certificationsAuditsPentests: notApplicable('No external certification or pentest is claimed in this test fixture.'),
+    },
+    aiLegalPositioning: {
+      serviceBoundaryConfirmed: true,
+      customerContentAiProcessing: false,
+      excludedUses: ['prohibited uses'],
+      partnerCounselModel: notApplicable('No partner-counsel referral model applies in this test fixture.'),
+      approvedClaims: ['compliance operations support'],
+    },
     authorisedOfficer: {
       name: 'Authorised Officer',
       role: 'Director',
@@ -95,6 +153,32 @@ describe('legal publication state', () => {
     expect(state.qualifiedReviewsAccepted).toBe(0);
     expect(state.masterDecisionAccepted).toBe(false);
     expect(state.notice).toContain('informational review drafts');
+  });
+
+  it('rejects a signed envelope when required founder facts remain unresolved', () => {
+    const state = evaluateLegalPublicationState({
+      expectedSha,
+      now,
+      founderFacts: artifact('docs/compliance/evidence/accepted/founder-facts.json', {
+        schema: 'risck-comply.founder-facts.v1',
+        status: 'FOUNDER_FACTS_CONFIRMED',
+        productSha: expectedSha,
+        authorisedOfficer: {
+          name: 'Authorised Officer',
+          role: 'Director',
+          confirmedAt: '2026-07-30T12:00:00.000Z',
+          signedArtifactReference: 'confidential://signed/founder-facts.pdf',
+          factsDigest: digest,
+        },
+      }),
+      qualifiedReviews: QUALIFIED_REVIEW_DECISION_PATHS.map((path) => qualifiedReview(path)),
+      masterDecision: masterDecision(),
+    });
+
+    expect(state.status).toBe('FOUNDER_FACT_REQUIRED');
+    expect(state.accepted).toBe(false);
+    expect(state.founderFactsAccepted).toBe(false);
+    expect(state.blockers).toContain('founder_facts_not_accepted');
   });
 
   it('accepts only complete evidence bound to the exact SHA', () => {
