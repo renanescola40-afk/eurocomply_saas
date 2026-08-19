@@ -4,7 +4,7 @@
 
 This is **Stage 4** of the bounded Supabase forward-reconciliation lane. It does not deploy migrations. It accepts an already successful protected production promotion only after fresh live evidence proves that the promoted state still matches the reviewed release.
 
-A successful Stage 3 promotion is necessary but not sufficient for final database acceptance. Stage 4 binds the same exact release SHA and selection digest across human review, production ledger transition, fresh live schema/security postconditions, live tenant isolation, migration drift and a **post-promotion** protected backup/restore exercise whose source migration-ledger fingerprint matches the promoted state.
+A successful Stage 3 promotion is necessary but not sufficient for final database acceptance. Stage 4 binds the same exact release SHA and selection digest across human review, production ledger transition, fresh live schema/security postconditions, live tenant isolation, migration drift and a **post-promotion** protected backup/restore exercise whose source migration-ledger fingerprint matches the promoted state and whose disposable restored database passes the canonical forward-reconciliation postconditions.
 
 ## Required inputs
 
@@ -70,7 +70,7 @@ It:
 
 If production does not contain a safe mutually foreign pair of existing actors, Stage 4 fails closed rather than creating synthetic production fixtures.
 
-### 6. Post-promotion database recovery evidence bound to the promoted ledger
+### 6. Post-promotion database recovery evidence bound to the promoted ledger and restored state
 
 The source Recovery run must execute **after** the successful Stage 3 promotion and contain `backup-restore-tested.json` with schema `risck-comply.backup-restore-evidence.v2`, exact target/observed SHA, the same Recovery workflow run ID and all REC-05 through REC-10 checks passing.
 
@@ -82,7 +82,15 @@ After the isolated backup/restore succeeds, `scripts/recovery/bind-backup-restor
 
 The version list itself is not retained. Stage 4 requires this count/head/digest to match the exact `remote-after.json` produced by Stage 3. This proves that the backup/restore exercise observed the **promoted database state**, not merely a repository commit with the same SHA.
 
-This proves the protected backup/restore boundary for the promoted release. It does **not** prove provider-side revocation of a previously exposed database credential.
+When the production source contains the complete selected forward set, the binder also executes `scripts/supabase/verify-forward-reconciliation-postconditions.sql` against the **disposable restored database**. The validator files are copied only into a temporary directory inside the isolated recovery container, run under `BEGIN TRANSACTION READ ONLY`, and deleted immediately afterward. No validator output, row data or migration-version list is retained.
+
+Stage 4 refuses recovery credit unless the recovery artifact proves all three conditions:
+
+- the complete selected forward set was present in the production source;
+- restored forward postconditions were actually executed;
+- those postconditions passed on the disposable restored database.
+
+This proves both the protected backup/restore boundary and the functional forward-reconciliation state of the restored database for the promoted release. It does **not** prove provider-side revocation of a previously exposed database credential.
 
 ## Final artifact
 
@@ -111,6 +119,8 @@ The source Recovery artifact is consumed for verification but is not copied into
 - live authenticated two-tenant SELECT isolation passes in both directions using existing actors only;
 - a protected backup/restore run executed after promotion;
 - that recovery run's production-source migration-ledger count/head/digest exactly match the promoted ledger;
+- the complete selected forward set was present in that recovery source;
+- the disposable restored database passed the same canonical forward-reconciliation postconditions in an explicitly read-only transaction;
 - acceptance itself performed no production data/schema mutation.
 
 ## Explicit non-claims
@@ -125,7 +135,7 @@ Stage 4 **does not**:
 - close #1620 solely from repository/workflow evidence;
 - claim global Enterprise 100% or unrelated Billing/Product/provider acceptance.
 
-The previously exposed database credential tracked by **#1620** still requires genuine provider-side evidence that the old credential was rotated/revoked and all authorized consumers were rebound. A passing post-promotion backup/restore run proves the current protected recovery path and promoted source state work; it **does not prove** that the old provider credential can no longer authenticate.
+The previously exposed database credential tracked by **#1620** still requires genuine provider-side evidence that the old credential was rotated/revoked and all authorized consumers were rebound. A passing post-promotion backup/restore run proves the current protected recovery path, promoted source state and restored forward postconditions work; it **does not prove** that the old provider credential can no longer authenticate.
 
 ## Required sequence after this code is merged
 
@@ -135,8 +145,8 @@ For the new exact current `main` SHA:
 2. run the filtered production dry-run;
 3. complete the protected human migration Decision Gate for the exact selected bytes;
 4. run the human-approved bounded production promotion;
-5. **after promotion succeeds**, run protected Recovery Resilience Proof in `backup-restore` mode for that same exact current `main` SHA;
+5. **after promotion succeeds**, run protected Recovery Resilience Proof in `backup-restore` mode for that same exact current `main` SHA; the recovery must observe the promoted ledger and the disposable restored database must pass the canonical forward postconditions;
 6. run this Stage 4 production acceptance with the successful promotion and post-promotion recovery run IDs;
 7. retain #1620 as a provider-side blocker until rotation/revocation evidence exists.
 
-Any movement of `main`, migration byte change, selection change, production ledger change, pre-promotion Recovery evidence or failed live postcondition invalidates acceptance and requires a new exact-SHA evidence chain.
+Any movement of `main`, migration byte change, selection change, production ledger change, pre-promotion Recovery evidence, restored-postcondition failure or failed live postcondition invalidates acceptance and requires a new exact-SHA evidence chain.
