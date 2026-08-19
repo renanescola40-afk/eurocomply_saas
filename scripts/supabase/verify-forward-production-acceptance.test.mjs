@@ -162,6 +162,12 @@ function fixture() {
           sha256: ledgerDigest(remoteAfter),
         },
       },
+      forwardReconciliation: {
+        selectedForwardMigrationCount: selected.length,
+        selectedForwardSetPresentInSource: true,
+        restoredPostconditionsExecuted: true,
+        restoredPostconditionsPassed: true,
+      },
       evidenceIntegrity: {
         containsSensitiveValues: false,
         databaseUrlsStored: false,
@@ -169,6 +175,7 @@ function fixture() {
         rowDataStored: false,
         migrationVersionsStored: false,
         sourceMigrationLedgerDigestStored: true,
+        restoredPostconditionOutputStored: false,
       },
       failures: [],
     },
@@ -189,7 +196,9 @@ test('accepts only one exact-SHA chain across human review, promotion, live tena
   assert.equal(result.checks.postPromotionMigrationDriftAbsent, true);
   assert.equal(result.checks.backupRestoreExactShaPassed, true);
   assert.equal(result.checks.backupRestoreSourceLedgerMatchesPromotion, true);
+  assert.equal(result.checks.restoredForwardPostconditionsPassed, true);
   assert.equal(result.checks.providerCredentialRevocationClaimed, false);
+  assert.equal(result.recoveryBoundary.restoredForwardPostconditionsProven, true);
   assert.equal(result.recoveryBoundary.providerCredentialRevocationClaimed, false);
 });
 
@@ -209,6 +218,12 @@ test('rejects recovery evidence captured from a different migration ledger', () 
   const input = fixture();
   input.backupRestore.integrity.sourceMigrationLedger.sha256 = `sha256:${'f'.repeat(64)}`;
   assert.throws(() => verifyForwardProductionAcceptance(input), /source migration ledger digest differs from promoted ledger/);
+});
+
+test('rejects recovery whose restored database did not prove forward postconditions', () => {
+  const input = fixture();
+  input.backupRestore.forwardReconciliation.restoredPostconditionsPassed = false;
+  assert.throws(() => verifyForwardProductionAcceptance(input), /restored forward postconditions did not pass/);
 });
 
 test('rejects writable or failed live tenant evidence', () => {
