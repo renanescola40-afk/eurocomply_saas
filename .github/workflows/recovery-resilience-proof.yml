@@ -200,6 +200,12 @@ jobs:
           RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.RECOVERY_SOURCE_DATABASE_URL }}
         run: node scripts/recovery/run-backup-restore-exercise.mjs
 
+      - name: Bind backup restore evidence to production source migration ledger
+        if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
+        env:
+          RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.RECOVERY_SOURCE_DATABASE_URL }}
+        run: node scripts/recovery/bind-backup-restore-migration-ledger.mjs
+
       - name: Revalidate rollback producer boundary
         if: inputs.exercise == 'full' || inputs.exercise == 'production-rollback'
         shell: bash
