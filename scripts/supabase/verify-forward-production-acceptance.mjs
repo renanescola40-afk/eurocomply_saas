@@ -154,7 +154,7 @@ function validateLiveTenantProof(proof, targetSha, selectionDigest) {
   assert(proof?.evidenceIntegrity?.databaseUrlsStored === false, 'live tenant proof stores database URLs');
 }
 
-function validateBackupRestore(proof, targetSha, recoveryRunId, promotedRemote) {
+function validateBackupRestore(proof, targetSha, recoveryRunId, promotedRemote, selectedMigrationCount) {
   assert(proof?.schema === 'risck-comply.backup-restore-evidence.v2', 'backup/restore evidence schema is invalid');
   assert(proof?.evidenceItem === 'backup-restore-tested', 'backup/restore evidenceItem is invalid');
   assert(proof?.status === 'Complete' && proof?.outcome === 'passed', 'backup/restore evidence is not Complete/passed');
@@ -185,12 +185,20 @@ function validateBackupRestore(proof, targetSha, recoveryRunId, promotedRemote) 
   assert(sourceLedger.head === promotedRemote.at(-1), 'backup/restore source migration ledger head differs from promoted ledger');
   assert(sourceLedger.sha256 === canonicalLedgerDigest(promotedRemote), 'backup/restore source migration ledger digest differs from promoted ledger');
 
+  const forward = proof?.forwardReconciliation;
+  assert(forward && typeof forward === 'object' && !Array.isArray(forward), 'backup/restore forward reconciliation evidence is missing');
+  assert(forward.selectedForwardMigrationCount === selectedMigrationCount, 'backup/restore selected forward migration count mismatch');
+  assert(forward.selectedForwardSetPresentInSource === true, 'backup/restore source did not contain the complete selected forward set');
+  assert(forward.restoredPostconditionsExecuted === true, 'backup/restore did not execute restored forward postconditions');
+  assert(forward.restoredPostconditionsPassed === true, 'backup/restore restored forward postconditions did not pass');
+
   assert(proof?.evidenceIntegrity?.containsSensitiveValues === false, 'backup/restore sensitive-value assertion is missing');
   assert(proof?.evidenceIntegrity?.databaseUrlsStored === false, 'backup/restore evidence stores database URLs');
   assert(proof?.evidenceIntegrity?.dumpStored === false, 'backup/restore evidence stores database dumps');
   assert(proof?.evidenceIntegrity?.rowDataStored === false, 'backup/restore evidence stores row data');
   assert(proof?.evidenceIntegrity?.migrationVersionsStored === false, 'backup/restore evidence must not store migration version lists');
   assert(proof?.evidenceIntegrity?.sourceMigrationLedgerDigestStored === true, 'backup/restore source migration ledger digest assertion is missing');
+  assert(proof?.evidenceIntegrity?.restoredPostconditionOutputStored === false, 'backup/restore must not retain restored postcondition output');
   assert(Array.isArray(proof?.failures) && proof.failures.length === 0, 'backup/restore evidence contains failures');
 }
 
@@ -220,7 +228,7 @@ export function verifyForwardProductionAcceptance({
   validatePromotionTransition(promotionTransition, targetSha, manifestIdentity);
   validateLivePostconditions(livePostconditions, targetSha, manifestIdentity.selectionDigest);
   validateLiveTenantProof(liveTenantProof, targetSha, manifestIdentity.selectionDigest);
-  validateBackupRestore(backupRestore, targetSha, recoveryRunId, promotedRemote);
+  validateBackupRestore(backupRestore, targetSha, recoveryRunId, promotedRemote, manifestIdentity.count);
 
   assert(JSON.stringify(liveRemote) === JSON.stringify(promotedRemote), 'post-promotion migration drift detected');
   for (const selected of manifestIdentity.versions) {
@@ -253,13 +261,15 @@ export function verifyForwardProductionAcceptance({
       liveTenantProofReadOnly: true,
       backupRestoreExactShaPassed: true,
       backupRestoreSourceLedgerMatchesPromotion: true,
+      restoredForwardPostconditionsPassed: true,
       providerCredentialRevocationClaimed: false,
     },
     recoveryBoundary: {
       backupRestoreProven: true,
       sourceMigrationLedgerBoundToPromotion: true,
+      restoredForwardPostconditionsProven: true,
       providerCredentialRevocationClaimed: false,
-      note: 'Protected backup/restore is exact-SHA and its production-source migration-ledger digest matches the successful promotion ledger. Rotation/revocation of any previously exposed provider credential remains a separate provider-side evidence requirement.',
+      note: 'Protected backup/restore is exact-SHA, its production-source migration-ledger digest matches the successful promotion ledger, and the canonical selected-set postconditions pass on the disposable restored database. Rotation/revocation of any previously exposed provider credential remains a separate provider-side evidence requirement.',
     },
     evidenceIntegrity: {
       containsSensitiveValues: false,
@@ -271,8 +281,9 @@ export function verifyForwardProductionAcceptance({
       humanNamesStored: false,
       approvalReferenceStored: false,
       migrationVersionsStoredFromRecovery: false,
+      restoredPostconditionOutputStored: false,
     },
-    truthBoundary: 'Complete proves that the exact human-reviewed bounded forward migration bytes were the exact bytes added to the production ledger, remain present without post-promotion migration drift, satisfy fresh read-only live schema/security postconditions, enforce live two-tenant authenticated SELECT isolation using existing actors only, and have protected backup/restore evidence whose production-source migration-ledger digest equals the promoted ledger. It does not classify or repair the historical migration backlog and does not claim provider-side revocation of a previously exposed database credential.',
+    truthBoundary: 'Complete proves that the exact human-reviewed bounded forward migration bytes were the exact bytes added to the production ledger, remain present without post-promotion migration drift, satisfy fresh read-only live schema/security postconditions, enforce live two-tenant authenticated SELECT isolation using existing actors only, and have protected backup/restore evidence whose production-source migration-ledger digest equals the promoted ledger and whose disposable restored database passes the canonical selected-set postconditions. It does not classify or repair the historical migration backlog and does not claim provider-side revocation of a previously exposed database credential.',
   };
 }
 
