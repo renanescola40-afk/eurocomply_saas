@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { validateExternalSecurityAssurance } from '../../scripts/security/external-security-assurance-contract.mjs';
 
+const validateExternalSecurityAssuranceForTest = validateExternalSecurityAssurance as unknown as (
+  evidence: unknown,
+  options?: { enterprise?: boolean; expectedSha?: string | null; now?: Date },
+) => { accepted: boolean; failures: string[] };
+
 const expectedSha = 'a'.repeat(40);
 const digest = `sha256:${'b'.repeat(64)}`;
 const now = new Date('2026-08-19T18:00:00.000Z');
@@ -113,7 +118,7 @@ function completeEvidence(): Record<string, any> {
 
 describe('external security assurance contract', () => {
   it('keeps Open evidence at zero enterprise credit', () => {
-    const result = validateExternalSecurityAssurance(
+    const result = validateExternalSecurityAssuranceForTest(
       {
         evidenceItem: 'external-security-review-or-pentest',
         status: 'Open',
@@ -131,7 +136,7 @@ describe('external security assurance contract', () => {
   });
 
   it('accepts only complete attributable exact-SHA external assurance evidence', () => {
-    const result = validateExternalSecurityAssurance(completeEvidence(), {
+    const result = validateExternalSecurityAssuranceForTest(completeEvidence(), {
       enterprise: true,
       expectedSha,
       now,
@@ -145,7 +150,7 @@ describe('external security assurance contract', () => {
     const evidence = completeEvidence();
     evidence.redactionConfirmation = 'redacted';
 
-    const result = validateExternalSecurityAssurance(evidence, {
+    const result = validateExternalSecurityAssuranceForTest(evidence, {
       enterprise: true,
       expectedSha,
       now,
@@ -159,7 +164,7 @@ describe('external security assurance contract', () => {
     const evidence = completeEvidence();
     evidence.testBinding.productSha = 'c'.repeat(40);
 
-    const result = validateExternalSecurityAssurance(evidence, {
+    const result = validateExternalSecurityAssuranceForTest(evidence, {
       enterprise: true,
       expectedSha,
       now,
@@ -174,7 +179,7 @@ describe('external security assurance contract', () => {
     evidence.assessor.accreditationReference = '';
     evidence.report.reportDigest = 'not-a-sha256-digest';
 
-    const result = validateExternalSecurityAssurance(evidence, {
+    const result = validateExternalSecurityAssuranceForTest(evidence, {
       enterprise: true,
       expectedSha,
       now,
@@ -189,7 +194,7 @@ describe('external security assurance contract', () => {
     const evidence = completeEvidence();
     evidence.retests = [];
 
-    const result = validateExternalSecurityAssurance(evidence, {
+    const result = validateExternalSecurityAssuranceForTest(evidence, {
       enterprise: true,
       expectedSha,
       now,
@@ -214,7 +219,7 @@ describe('external security assurance contract', () => {
     };
     evidence.retests[0].retestStatus = 'not_required_formally_accepted';
 
-    const result = validateExternalSecurityAssurance(evidence, {
+    const result = validateExternalSecurityAssuranceForTest(evidence, {
       enterprise: true,
       expectedSha,
       now,
