@@ -88,7 +88,7 @@ A `Complete` record requires:
 - durable executive-summary reference;
 - independent review metadata and review timestamp.
 
-Do not commit confidential report bodies, exploit payloads, credentials, customer data or sensitive topology. Retain only safe references/digests and redacted summary metadata in the repository.
+Do not commit confidential report bodies, exploit payloads, credentials, customer data or sensitive topology. Retain only safe references/digests and redacted summary metadata in Git/GitHub evidence.
 
 ## Finding and retest rules
 
@@ -105,9 +105,15 @@ A resolved High/Critical requires `passed` retest. A documented false positive m
 
 Finding summary counts must exactly match the canonical `findings` array. Duplicated finding IDs or silent High/Critical omissions fail closed.
 
-## Fill the JSON evidence file
+## Prepare canonical redacted metadata
 
-For preparation, the repository may keep `docs/security/evidence/runtime/external-security-review-or-pentest.json` as an `Open` placeholder. That placeholder is intentionally not proof of completion.
+The repository `main` may keep:
+
+```text
+docs/security/evidence/runtime/external-security-review-or-pentest.json
+```
+
+as an `Open` placeholder. That placeholder is intentionally not proof of completion.
 
 After a real review exists, start from:
 
@@ -115,15 +121,55 @@ After a real review exists, start from:
 docs/security/evidence/templates/external-security-review-or-pentest.template.json
 ```
 
-and replace every placeholder with genuine reviewed evidence. Keep the final runtime evidence at:
+and replace every placeholder with genuine reviewed **redacted metadata only**. The private pentest report itself remains in approved private evidence storage and is referenced by durable location/reference + SHA-256 digest.
 
-```text
-docs/security/evidence/runtime/external-security-review-or-pentest.json
-```
+Do **not** commit the completed metadata directly onto the release branch merely to close the gate. Doing so changes `main` and creates a different release SHA than the SHA the assessor tested.
 
-The file is only enterprise-valid when both external-review checkers accept the same canonical contract.
+## Exact-SHA promotion procedure
 
-## Required commands
+The canonical closure path separates the immutable tested release from the immutable evidence metadata commit.
+
+1. Freeze the exact current `main` SHA that the independent assessor tests. This is `release_sha`.
+2. Complete the real independent review/pentest and any required remediation/retest against the release that will actually be promoted.
+3. Create a **separate Git commit/ref** containing the completed redacted canonical metadata at:
+
+   ```text
+   docs/security/evidence/runtime/external-security-review-or-pentest.json
+   ```
+
+   Record its full 40-character SHA as `evidence_commit_sha`. The private report body must not be added to that commit.
+4. In GitHub Actions, manually dispatch **External Security Assurance Acceptance** with:
+   - `release_sha` = the exact current `main` SHA tested by the assessor;
+   - `evidence_commit_sha` = the immutable commit containing the completed redacted metadata.
+5. The workflow runs under the protected `external-security-assurance` environment and must prove:
+   - both inputs are full immutable SHAs;
+   - `release_sha` still equals current `main`;
+   - the canonical metadata is read from the exact `evidence_commit_sha`;
+   - schema v2, freshness, scope, assessor independence/qualification, ROE/NDA, report integrity, findings/retests, exact tested SHA and secret-bearing-key checks all pass.
+6. Only a successful validation emits:
+
+   ```text
+   external-security-assurance-accepted-<release_sha>
+   ```
+
+   containing the bounded acceptance decision and the canonical redacted metadata. A failed attempt emits only `external-security-assurance-rejected-<release_sha>` diagnostics; rejected artifacts are not eligible for Enterprise closure collection.
+7. The accepted workflow completion retriggers **Enterprise 100 Closure**. Its exact-SHA collector authorizes only the exact acceptance workflow path and the `accepted-*` artifact family. The hydrator and semantic validator re-check the evidence before closure credit.
+
+This design avoids the exact-SHA paradox: evidence may be recorded after testing without modifying the release commit that was tested.
+
+### Promotion invariants
+
+- `release_sha` must remain exact current `main`; if `main` advances, the old evidence does not silently follow it.
+- `evidence_commit_sha` is provenance for redacted metadata only; it is not the tested release SHA.
+- A provider quote, scope email or draft report cannot be promoted.
+- Internal security automation cannot substitute for the independent assessor.
+- A rejected workflow artifact cannot become Enterprise closure input.
+- A private report body, credential, token, cookie, private key or access-granting secret must never be promoted into the retained GitHub artifact.
+- If remediation changes the release, retest and acceptance must bind the resulting current release SHA before Enterprise credit.
+
+## Local/pre-promotion validation commands
+
+Before dispatching the protected promotion workflow, validate the completed metadata against the intended release SHA in a controlled checkout/environment.
 
 Run the state-aware P0 checker:
 
