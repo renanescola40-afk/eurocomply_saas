@@ -54,7 +54,10 @@ function readEvidence(path) {
 }
 
 function basePass(evidence) {
-  return evidence.present && evidence.parseable && evidence.status === 'Complete' && ['passed', 'Go', 'GO'].includes(evidence.outcome);
+  return evidence.present
+    && evidence.parseable
+    && evidence.status === 'Complete'
+    && ['passed', 'passed_with_formal_acceptance', 'Go', 'GO'].includes(evidence.outcome);
 }
 
 function releaseShaResolution(evidence) {
@@ -120,7 +123,7 @@ const blockers = [];
 for (const [key, , required, commitBound] of requiredEvidence) {
   if (!required) continue;
   const item = evidence[key];
-  if (!basePass(item)) blockers.push(`${item.path} must be Complete/passed; current status=${item.status}, outcome=${item.outcome}`);
+  if (!basePass(item)) blockers.push(`${item.path} must be Complete with an accepted passing outcome; current status=${item.status}, outcome=${item.outcome}`);
   if (commitBound && !matchesReleaseCommit(item)) {
     const resolution = releaseShaResolution(item);
     if (resolution.conflict) {
@@ -142,7 +145,7 @@ const p0Blockers = blockers.map((blocker, index) => ({
   id: `P0-ENTERPRISE-${String(index + 1).padStart(3, '0')}`,
   blocker,
   owner: '@renansilva2002 / renanescola40-afk',
-  requiredClosureEvidence: 'Regenerate the referenced runtime evidence with status Complete and outcome passed for the exact promoted commit and enterprise target.',
+  requiredClosureEvidence: 'Regenerate the referenced runtime evidence with status Complete, an accepted passing outcome, and exact promoted commit binding.',
 }));
 
 const outcome = p0Blockers.length === 0 ? 'passed' : 'failed';
