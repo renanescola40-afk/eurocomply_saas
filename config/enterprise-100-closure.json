@@ -1,5 +1,5 @@
 {
-  "schema": "risck-comply.enterprise-100-closure.v1",
+  "schema": "risck-comply.enterprise-100-closure.v2",
   "requiredDecision": "GO",
   "controls": [
     {
@@ -21,6 +21,18 @@
       "acceptedStatuses": ["PASS", "SUCCESS"]
     },
     {
+      "id": "enterprise-runtime-closeout",
+      "owner": "release",
+      "evidence": "enterprise-runtime-closeout.json",
+      "acceptedStatuses": ["ENTERPRISE_RUNTIME_EVIDENCE_ACCEPTED"]
+    },
+    {
+      "id": "production-provider-runtime",
+      "owner": "platform",
+      "evidence": "production-secrets-provider-stores.json",
+      "acceptedStatuses": ["PASS"]
+    },
+    {
       "id": "supabase-rls-reconciliation",
       "owner": "security",
       "evidence": "release-validation/supabase-rls-reconciliation.json",
@@ -31,6 +43,12 @@
       "owner": "security",
       "evidence": "release-validation/tenant-isolation-live.json",
       "acceptedStatuses": ["PASS", "SUCCESS"]
+    },
+    {
+      "id": "supabase-production-acceptance",
+      "owner": "database",
+      "evidence": "production-acceptance.json",
+      "acceptedStatuses": ["PASS"]
     },
     {
       "id": "backup-restore",
@@ -51,16 +69,28 @@
       "acceptedStatuses": ["PASS", "SUCCESS"]
     },
     {
-      "id": "billing-runtime",
+      "id": "billing-product-live-closure",
+      "owner": "billing",
+      "evidence": "final-billing-product-live-closeout.json",
+      "acceptedStatuses": ["BILLING_PRODUCT_EU_AI_ACT:_PASS"]
+    },
+    {
+      "id": "product-commercial-qa",
       "owner": "product",
-      "evidence": "release-validation/billing-runtime.json",
-      "acceptedStatuses": ["PASS", "SUCCESS"]
+      "evidence": "fria-runtime-evidence.json",
+      "acceptedStatuses": ["PASSED"]
     },
     {
       "id": "legal-publication",
       "owner": "legal",
       "evidence": "artifacts/legal-review/final-legal-publication-gate.json",
       "acceptedStatuses": ["COUNSEL_ACCEPTED"]
+    },
+    {
+      "id": "external-security-assurance",
+      "owner": "external-assurance",
+      "evidence": "external-security-assurance-decision.json",
+      "acceptedStatuses": ["ACCEPTED_FOR_ENTERPRISE_PROMOTION"]
     },
     {
       "id": "final-go-no-go",

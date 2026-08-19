@@ -1,0 +1,205 @@
+name: Enterprise 100 Final Authority
+
+run-name: Enterprise final authority for ${{ github.event.workflow_run.head_sha || github.sha }}
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/enterprise-100-final-authority.yml'
+      - '.github/workflows/enterprise-conversation-runtime-closeout.yml'
+      - 'config/enterprise-100-closure.json'
+      - 'scripts/enterprise/fetch-enterprise-final-authority-evidence.mjs'
+      - 'scripts/release/write-enterprise-final-authority.mjs'
+      - 'tests/enterprise/enterprise-final-authority-contract.test.mjs'
+  push:
+    branches: [main]
+  workflow_run:
+    workflows:
+      - 'Product FRIA Ephemeral Runtime QA'
+      - 'Final Billing + Product Live Closeout'
+      - 'Supabase Forward Production Acceptance'
+      - 'Production Provider Runtime Proof'
+      - 'Enterprise Runtime Evidence Closeout'
+      - 'Final Legal Publication Gate'
+      - 'External Security Assurance Acceptance'
+      - 'Enterprise Production Gate'
+      - 'Recovery Resilience Proof'
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  statuses: read
+  deployments: read
+
+concurrency:
+  group: enterprise-100-final-authority-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+env:
+  TARGET_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+  RETAINED_ARTIFACT_ROOT: artifacts/enterprise-final-authority-retained
+  FINAL_AUTHORITY_SOURCE_ROOT: artifacts/enterprise-final-authority-source
+  HYDRATED_CLOSURE_ROOT: artifacts/enterprise-final-authority-evidence-root
+
+jobs:
+  contract:
+    name: Final authority contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout assessed SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+      - name: Validate final authority contracts
+        run: |
+          node --check scripts/enterprise/fetch-enterprise-final-authority-evidence.mjs
+          node --check scripts/release/write-enterprise-final-authority.mjs
+          node --test tests/enterprise/enterprise-final-authority-contract.test.mjs
+
+  production-governance:
+    name: Verify Production governance before final authority
+    if: >-
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+      - name: Prove exact current main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$TARGET_SHA"
+      - name: Verify Production environment governance
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: Production
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
+  final-authority:
+    name: Enforce exact-SHA Enterprise 100 + Production GO
+    if: >-
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    needs: [contract, production-governance]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: Production
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      ENTERPRISE_CLOSURE_EXPECTED_SHA: ${{ env.TARGET_SHA }}
+      ENTERPRISE_CLOSURE_EVIDENCE_ROOTS: ${{ env.HYDRATED_CLOSURE_ROOT }}
+    steps:
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+      - name: Revalidate exact current main after protected approval
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')" = "$TARGET_SHA"
+      - name: Collect canonical retained Enterprise evidence
+        run: |
+          set -euo pipefail
+          rm -rf "$RETAINED_ARTIFACT_ROOT" "$FINAL_AUTHORITY_SOURCE_ROOT" "$HYDRATED_CLOSURE_ROOT"
+          node scripts/enterprise/collect-github-exact-sha-artifacts.mjs \
+            enterprise-100 \
+            "$TARGET_SHA" \
+            "$RETAINED_ARTIFACT_ROOT"
+      - name: Collect direct domain authority artifacts
+        run: node scripts/enterprise/fetch-enterprise-final-authority-evidence.mjs
+      - name: Merge direct authority sources into retained evidence root
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RETAINED_ARTIFACT_ROOT/direct-final-authority"
+          cp -R "$FINAL_AUTHORITY_SOURCE_ROOT"/. "$RETAINED_ARTIFACT_ROOT/direct-final-authority/"
+      - name: Hydrate exact-SHA final closure evidence
+        run: |
+          node scripts/release/hydrate-enterprise-100-evidence.mjs \
+            "$RETAINED_ARTIFACT_ROOT" \
+            "$HYDRATED_CLOSURE_ROOT" \
+            "$TARGET_SHA"
+      - name: Enforce all Enterprise controls
+        run: node scripts/release/check-enterprise-100-closure.mjs
+      - name: Emit sole final Enterprise authority decision
+        run: node scripts/release/write-enterprise-final-authority.mjs
+      - name: Publish final authority summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## RISCK COMPLY Enterprise 100 Final Authority'
+            echo
+            if [ -f release-validation/enterprise-final-authority.json ]; then
+              jq -r '"- Decision: \(.decision)\n- Production: \(.productionDecision)\n- Technical release: \(.technicalReleaseClosure)\n- Release SHA: `\(.releaseSha)`\n- Accepted controls: \(.acceptedControls)/\(.totalControls)"' \
+                release-validation/enterprise-final-authority.json
+            else
+              echo '- Decision: NO_PASS_YET'
+              echo "- Release SHA: \`$TARGET_SHA\`"
+            fi
+            if [ -f "$FINAL_AUTHORITY_SOURCE_ROOT/enterprise-final-authority-source.json" ]; then
+              jq -r '"- Direct domain sources: \(.collectedProducerCount)/\(.requiredProducerCount)\n- Missing direct sources: \(.missingProducerIds | join(\", \"))"' \
+                "$FINAL_AUTHORITY_SOURCE_ROOT/enterprise-final-authority-source.json"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload final authority evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: enterprise-100-final-authority-${{ env.TARGET_SHA }}
+          path: |
+            release-validation/enterprise-100-closure.json
+            release-validation/enterprise-final-authority.json
+            artifacts/enterprise-final-authority-source/enterprise-final-authority-source.json
+            artifacts/enterprise-final-authority-evidence-root/enterprise-100-evidence-hydration.json
+          if-no-files-found: error
+          retention-days: 365
