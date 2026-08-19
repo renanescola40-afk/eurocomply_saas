@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/supabase-forward-production-acceptance.yml', 'utf8');
+const recoveryWorkflow = readFileSync('.github/workflows/recovery-resilience-proof.yml', 'utf8');
+const recoveryBinder = readFileSync('scripts/recovery/bind-backup-restore-migration-ledger.mjs', 'utf8');
 const tenantProof = readFileSync('scripts/supabase/assert-live-tenant-isolation-read-only.sql', 'utf8');
 const verifier = readFileSync('scripts/supabase/verify-forward-production-acceptance.mjs', 'utf8');
 const runbook = readFileSync('docs/runbooks/SUPABASE_FORWARD_PRODUCTION_ACCEPTANCE.md', 'utf8');
@@ -40,6 +42,13 @@ describe('Supabase post-promotion production acceptance', () => {
     expect(workflow).toContain("'.conclusion' <<<\"$RECOVERY_JSON\"");
   });
 
+  it('requires the recovery exercise to start only after the successful production promotion finished', () => {
+    expect(workflow).toContain('PROMOTION_FINISHED_AT=');
+    expect(workflow).toContain('RECOVERY_STARTED_AT=');
+    expect(workflow).toContain('recoveryStarted <= promotionFinished');
+    expect(workflow).toContain('post-promotion exact-SHA Recovery Resilience Proof');
+  });
+
   it('keeps the pooler secret step-local and never adds a migration execution path', () => {
     const executable = executableMigrationCommands(workflow).join('\n');
     expect(jobHeader(workflow, 'acceptance')).not.toContain('SUPABASE_DB_POOLER_URL');
@@ -61,6 +70,17 @@ describe('Supabase post-promotion production acceptance', () => {
     expect(verifier).toContain('post-promotion migration drift detected');
     expect(verifier).toContain('liveTenantIsolationPassed: true');
     expect(verifier).toContain('backupRestoreExactShaPassed: true');
+    expect(verifier).toContain('backupRestoreSourceLedgerMatchesPromotion: true');
+  });
+
+  it('binds backup/restore to the post-promotion production source migration ledger without retaining versions', () => {
+    expect(recoveryWorkflow).toContain('Bind backup restore evidence to production source migration ledger');
+    expect(recoveryWorkflow).toContain('node scripts/recovery/bind-backup-restore-migration-ledger.mjs');
+    expect(recoveryBinder).toContain('begin transaction read only; select version from supabase_migrations.schema_migrations order by version; rollback;');
+    expect(recoveryBinder).toContain('sourceMigrationLedgerCaptured: true');
+    expect(recoveryBinder).toContain('migrationVersionsStored: false');
+    expect(recoveryBinder).toContain('sourceMigrationLedgerDigestStored: true');
+    expect(verifier).toContain('source migration ledger digest differs from promoted ledger');
   });
 
   it('executes live two-tenant behavior only inside a read-only transaction with existing actors', () => {
