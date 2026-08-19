@@ -13,6 +13,7 @@ const promotedEvidencePath = process.env.EXTERNAL_ASSURANCE_CANONICAL_OUTPUT || 
 const expectedSha = String(process.env.RELEASE_SHA || '').trim().toLowerCase();
 const evidenceCommitSha = String(process.env.EXTERNAL_ASSURANCE_EVIDENCE_COMMIT_SHA || '').trim().toLowerCase() || null;
 const maximumAgeDays = Number(process.env.EXTERNAL_ASSURANCE_MAX_AGE_DAYS || 180);
+const sensitiveKeyPattern = /(?:^|[_-])(?:token|password|cookie|api[_-]?key|access[_-]?key|client[_-]?secret|service[_-]?role|private[_-]?key|authorization[_-]?header|secret[_-]?value|dsn)(?:$|[_-])/i;
 
 if (!/^[a-f0-9]{40}$/.test(expectedSha)) {
   throw new Error('RELEASE_SHA must be a full lowercase 40-character SHA');
@@ -31,6 +32,21 @@ const blockers = validateExternalSecurityReviewEvidence(evidence, {
   now: new Date(),
   maxAgeDays: maximumAgeDays,
 });
+
+function scanSensitiveKeys(value, keyPath = '') {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => scanSensitiveKeys(item, `${keyPath}[${index}]`));
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+  for (const [key, child] of Object.entries(value)) {
+    const childPath = keyPath ? `${keyPath}.${key}` : key;
+    if (sensitiveKeyPattern.test(key)) blockers.push(`sensitive_key:${childPath}`);
+    scanSensitiveKeys(child, childPath);
+  }
+}
+scanSensitiveKeys(evidence);
+
 const uniqueBlockers = [...new Set(blockers)].sort();
 const decision = uniqueBlockers.length === 0 ? 'ACCEPTED_FOR_ENTERPRISE_PROMOTION' : 'NO_GO';
 
@@ -54,6 +70,7 @@ const result = {
     rawReportStored: false,
     canonicalMetadataOnly: true,
     exactShaBound: true,
+    sensitiveKeyScanPassed: uniqueBlockers.every((blocker) => !blocker.startsWith('sensitive_key:')),
   },
   truthBoundary: decision === 'ACCEPTED_FOR_ENTERPRISE_PROMOTION'
     ? 'This decision accepts only the canonical redacted external-assurance metadata for the exact release SHA. The private pentest report remains outside the repository and is referenced by immutable private evidence metadata.'
