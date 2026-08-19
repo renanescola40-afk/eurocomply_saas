@@ -19,6 +19,65 @@ export const MASTER_LEGAL_DECISION_PATH =
 
 const ACCEPTED_DECISIONS = new Set(['ACCEPTED', 'COUNSEL_ACCEPTED']);
 const SHA256_PATTERN = /^(?:sha256:)?[a-f0-9]{64}$/i;
+const FOUNDER_FACTS_SCHEMA = 'risck-comply.founder-facts.v1';
+const NOT_APPLICABLE_STATUSES = new Set(['NOT_APPLICABLE', 'NOT_REQUIRED']);
+const UNRESOLVED_FOUNDER_FACT_VALUES = new Set([
+  '',
+  'UNKNOWN',
+  'TBD',
+  'TODO',
+  'PENDING',
+  'UNDECIDED',
+  'NOT_DECIDED',
+  'NOT_SET',
+  'N/A',
+  'NA',
+  'NULL',
+]);
+
+const FOUNDER_FACT_REQUIRED_PATHS = Object.freeze([
+  'legalEntity.registeredName',
+  'legalEntity.companyNumber',
+  'legalEntity.vatNumber',
+  'legalEntity.registeredAddress',
+  'legalEntity.country',
+  'legalEntity.legalContact',
+  'legalEntity.privacyContact',
+  'legalEntity.securityContact',
+  'legalEntity.billingContact',
+  'legalEntity.supportContact',
+  'legalEntity.dpoOrRepresentative',
+  'commercial.productionDomains',
+  'commercial.plansAndBilling',
+  'commercial.trialRenewalCancellation',
+  'commercial.refundSuspensionTermination',
+  'commercial.enterpriseOrderForm',
+  'commercial.slaCommitments',
+  'dataProcessing.productionDataCategories',
+  'dataProcessing.roleAllocation',
+  'dataProcessing.hostingRegions',
+  'dataProcessing.retentionSchedule',
+  'dataProcessing.transferMechanisms',
+  'dataProcessing.dataSubjectRequestOwner',
+  'providers.hosting',
+  'providers.databaseAndAuth',
+  'providers.billing',
+  'providers.observability',
+  'providers.analytics',
+  'providers.email',
+  'providers.support',
+  'providers.aiProviders',
+  'securityOperations.availabilityCommitment',
+  'securityOperations.supportCommitment',
+  'securityOperations.incidentCommunication',
+  'securityOperations.backupRestoreCommitment',
+  'securityOperations.certificationsAuditsPentests',
+  'aiLegalPositioning.serviceBoundaryConfirmed',
+  'aiLegalPositioning.customerContentAiProcessing',
+  'aiLegalPositioning.excludedUses',
+  'aiLegalPositioning.partnerCounselModel',
+  'aiLegalPositioning.approvedClaims',
+]);
 
 export type LegalPublicationStatus =
   | 'REVIEW_DRAFT'
@@ -82,6 +141,12 @@ function validDateRange(document: Record<string, unknown>, now: Date): boolean {
   );
 }
 
+function validPastOrPresentDate(value: string, now: Date): boolean {
+  if (!value) return false;
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime()) && date <= now;
+}
+
 function exactSha(document: Record<string, unknown>, expectedSha: string): boolean {
   return (
     firstString(document, [
@@ -92,6 +157,50 @@ function exactSha(document: Record<string, unknown>, expectedSha: string): boole
       'targetSha',
       'target_sha',
     ]) === expectedSha
+  );
+}
+
+function nestedValue(document: Record<string, unknown>, path: string): unknown {
+  let current: unknown = document;
+  for (const segment of path.split('.')) {
+    if (!current || typeof current !== 'object' || Array.isArray(current)) return undefined;
+    current = (current as Record<string, unknown>)[segment];
+  }
+  return current;
+}
+
+function resolvedFounderFact(value: unknown): boolean {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return Boolean(trimmed) && !UNRESOLVED_FOUNDER_FACT_VALUES.has(normalise(trimmed));
+  }
+
+  if (typeof value === 'boolean') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+
+  if (Array.isArray(value)) {
+    return value.length > 0 && value.every((item) => resolvedFounderFact(item));
+  }
+
+  if (!value || typeof value !== 'object') return false;
+
+  const document = value as Record<string, unknown>;
+  const disposition = normalise(document.status ?? document.state ?? document.disposition);
+  if (NOT_APPLICABLE_STATUSES.has(disposition)) {
+    const rationale = firstString(document, ['rationale', 'reason']);
+    return (
+      rationale.length >= 10 &&
+      !UNRESOLVED_FOUNDER_FACT_VALUES.has(normalise(rationale))
+    );
+  }
+
+  const entries = Object.entries(document);
+  return entries.length > 0 && entries.every(([, item]) => resolvedFounderFact(item));
+}
+
+function unresolvedFounderFactPaths(document: Record<string, unknown>): string[] {
+  return FOUNDER_FACT_REQUIRED_PATHS.filter(
+    (path) => !resolvedFounderFact(nestedValue(document, path)),
   );
 }
 
@@ -149,6 +258,7 @@ function acceptedQualifiedReview(
 function acceptedFounderFacts(
   artifact: LegalPublicationArtifact,
   expectedSha: string,
+  now: Date,
 ): boolean {
   const document = artifact.document;
   if (!document || artifact.error) return false;
@@ -157,14 +267,17 @@ function acceptedFounderFacts(
   const officer = document.authorisedOfficer;
   if (!officer || typeof officer !== 'object' || Array.isArray(officer)) return false;
   const officerDocument = officer as Record<string, unknown>;
+  const confirmedAt = firstString(officerDocument, ['confirmedAt']);
 
   return (
+    document.schema === FOUNDER_FACTS_SCHEMA &&
     status === 'FOUNDER_FACTS_CONFIRMED' &&
     exactSha(document, expectedSha) &&
-    Boolean(firstString(officerDocument, ['name'])) &&
-    Boolean(firstString(officerDocument, ['role'])) &&
-    Boolean(firstString(officerDocument, ['confirmedAt'])) &&
-    Boolean(firstString(officerDocument, ['signedArtifactReference'])) &&
+    unresolvedFounderFactPaths(document).length === 0 &&
+    resolvedFounderFact(firstString(officerDocument, ['name'])) &&
+    resolvedFounderFact(firstString(officerDocument, ['role'])) &&
+    validPastOrPresentDate(confirmedAt, now) &&
+    resolvedFounderFact(firstString(officerDocument, ['signedArtifactReference'])) &&
     SHA256_PATTERN.test(firstString(officerDocument, ['factsDigest']))
   );
 }
@@ -236,7 +349,7 @@ export function evaluateLegalPublicationState({
   if (!resolvedSha) blockers.push('exact_product_sha_unavailable');
 
   const founderAccepted = resolvedSha
-    ? acceptedFounderFacts(founderFacts, resolvedSha)
+    ? acceptedFounderFacts(founderFacts, resolvedSha, now)
     : false;
   if (!founderAccepted) blockers.push('founder_facts_not_accepted');
 
@@ -268,7 +381,7 @@ export function evaluateLegalPublicationState({
     label: accepted ? 'Counsel accepted' : 'Legal review draft',
     notice: accepted
       ? 'The published legal materials are bound to the current product SHA and a valid signed legal decision.'
-      : 'Public legal materials are informational review drafts until signed founder facts and qualified counsel decisions pass the exact-SHA publication gate.',
+      : 'Public legal materials are informational review drafts until complete signed founder facts and qualified counsel decisions pass the exact-SHA publication gate.',
     expectedSha: resolvedSha,
     founderFactsAccepted: founderAccepted,
     qualifiedReviewsAccepted: acceptedReviews,
