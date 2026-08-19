@@ -120,8 +120,8 @@ jobs:
     environment: Production
     env:
       GITHUB_TOKEN: ${{ github.token }}
-      ENTERPRISE_CLOSURE_EXPECTED_SHA: ${{ env.TARGET_SHA }}
-      ENTERPRISE_CLOSURE_EVIDENCE_ROOTS: ${{ env.HYDRATED_CLOSURE_ROOT }}
+      ENTERPRISE_CLOSURE_EXPECTED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      ENTERPRISE_CLOSURE_EVIDENCE_ROOTS: artifacts/enterprise-final-authority-evidence-root
     steps:
       - name: Checkout exact release SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
