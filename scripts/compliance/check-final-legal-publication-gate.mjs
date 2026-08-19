@@ -15,6 +15,64 @@ const MASTER_DECISION_PATH = 'docs/compliance/evidence/accepted/master-legal-dec
 const OUTPUT_PATH = 'artifacts/legal-review/final-legal-publication-gate.json';
 const SHA256_PATTERN = /^(?:sha256:)?[a-f0-9]{64}$/i;
 const ACCEPTED = new Set(['ACCEPTED', 'COUNSEL_ACCEPTED']);
+const FOUNDER_FACTS_SCHEMA = 'risck-comply.founder-facts.v1';
+const NOT_APPLICABLE_STATUSES = new Set(['NOT_APPLICABLE', 'NOT_REQUIRED']);
+const UNRESOLVED_FOUNDER_FACT_VALUES = new Set([
+  '',
+  'UNKNOWN',
+  'TBD',
+  'TODO',
+  'PENDING',
+  'UNDECIDED',
+  'NOT_DECIDED',
+  'NOT_SET',
+  'N/A',
+  'NA',
+  'NULL',
+]);
+const FOUNDER_FACT_REQUIRED_PATHS = Object.freeze([
+  'legalEntity.registeredName',
+  'legalEntity.companyNumber',
+  'legalEntity.vatNumber',
+  'legalEntity.registeredAddress',
+  'legalEntity.country',
+  'legalEntity.legalContact',
+  'legalEntity.privacyContact',
+  'legalEntity.securityContact',
+  'legalEntity.billingContact',
+  'legalEntity.supportContact',
+  'legalEntity.dpoOrRepresentative',
+  'commercial.productionDomains',
+  'commercial.plansAndBilling',
+  'commercial.trialRenewalCancellation',
+  'commercial.refundSuspensionTermination',
+  'commercial.enterpriseOrderForm',
+  'commercial.slaCommitments',
+  'dataProcessing.productionDataCategories',
+  'dataProcessing.roleAllocation',
+  'dataProcessing.hostingRegions',
+  'dataProcessing.retentionSchedule',
+  'dataProcessing.transferMechanisms',
+  'dataProcessing.dataSubjectRequestOwner',
+  'providers.hosting',
+  'providers.databaseAndAuth',
+  'providers.billing',
+  'providers.observability',
+  'providers.analytics',
+  'providers.email',
+  'providers.support',
+  'providers.aiProviders',
+  'securityOperations.availabilityCommitment',
+  'securityOperations.supportCommitment',
+  'securityOperations.incidentCommunication',
+  'securityOperations.backupRestoreCommitment',
+  'securityOperations.certificationsAuditsPentests',
+  'aiLegalPositioning.serviceBoundaryConfirmed',
+  'aiLegalPositioning.customerContentAiProcessing',
+  'aiLegalPositioning.excludedUses',
+  'aiLegalPositioning.partnerCounselModel',
+  'aiLegalPositioning.approvedClaims',
+]);
 
 function normalise(value) {
   return String(value ?? '').trim().toUpperCase().replace(/[\s-]+/g, '_');
@@ -60,20 +118,99 @@ function validDateRange(document, now) {
   return !Number.isNaN(startsAt.getTime()) && !Number.isNaN(endsAt.getTime()) && startsAt <= now && endsAt >= now;
 }
 
-function acceptedFounderFacts(artifact, expectedSha) {
-  const document = artifact.document;
-  if (!document || artifact.error || !expectedSha) return false;
-  const officer = document.authorisedOfficer;
-  if (!officer || typeof officer !== 'object' || Array.isArray(officer)) return false;
-  return (
-    normalise(document.status) === 'FOUNDER_FACTS_CONFIRMED' &&
-    firstString(document, ['productSha', 'product_sha', 'sourceSha', 'source_sha']) === expectedSha &&
-    Boolean(firstString(officer, ['name'])) &&
-    Boolean(firstString(officer, ['role'])) &&
-    Boolean(firstString(officer, ['confirmedAt'])) &&
-    Boolean(firstString(officer, ['signedArtifactReference'])) &&
-    SHA256_PATTERN.test(firstString(officer, ['factsDigest']))
+function validPastOrPresentDate(value, now) {
+  if (!value) return false;
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime()) && date <= now;
+}
+
+function nestedValue(document, path) {
+  let current = document;
+  for (const segment of path.split('.')) {
+    if (!current || typeof current !== 'object' || Array.isArray(current)) return undefined;
+    current = current[segment];
+  }
+  return current;
+}
+
+function resolvedFounderFact(value) {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return Boolean(trimmed) && !UNRESOLVED_FOUNDER_FACT_VALUES.has(normalise(trimmed));
+  }
+
+  if (typeof value === 'boolean') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+
+  if (Array.isArray(value)) {
+    return value.length > 0 && value.every((item) => resolvedFounderFact(item));
+  }
+
+  if (!value || typeof value !== 'object') return false;
+
+  const disposition = normalise(value.status ?? value.state ?? value.disposition);
+  if (NOT_APPLICABLE_STATUSES.has(disposition)) {
+    const rationale = firstString(value, ['rationale', 'reason']);
+    return rationale.length >= 10 && !UNRESOLVED_FOUNDER_FACT_VALUES.has(normalise(rationale));
+  }
+
+  const entries = Object.entries(value);
+  return entries.length > 0 && entries.every(([, item]) => resolvedFounderFact(item));
+}
+
+function unresolvedFounderFactPaths(document) {
+  return FOUNDER_FACT_REQUIRED_PATHS.filter(
+    (path) => !resolvedFounderFact(nestedValue(document, path)),
   );
+}
+
+export function validateFounderFactsDocument(document, expectedSha, now = new Date()) {
+  const unresolvedFields = document && typeof document === 'object'
+    ? unresolvedFounderFactPaths(document)
+    : [...FOUNDER_FACT_REQUIRED_PATHS];
+  const officer = document?.authorisedOfficer;
+  const officerDocument = officer && typeof officer === 'object' && !Array.isArray(officer) ? officer : null;
+  const confirmedAt = firstString(officerDocument, ['confirmedAt']);
+
+  const schemaValid = document?.schema === FOUNDER_FACTS_SCHEMA;
+  const statusValid = normalise(document?.status) === 'FOUNDER_FACTS_CONFIRMED';
+  const productShaValid = firstString(document, ['productSha', 'product_sha', 'sourceSha', 'source_sha']) === expectedSha;
+  const officerComplete = Boolean(
+    officerDocument &&
+    resolvedFounderFact(firstString(officerDocument, ['name'])) &&
+    resolvedFounderFact(firstString(officerDocument, ['role'])) &&
+    validPastOrPresentDate(confirmedAt, now) &&
+    resolvedFounderFact(firstString(officerDocument, ['signedArtifactReference'])) &&
+    SHA256_PATTERN.test(firstString(officerDocument, ['factsDigest'])),
+  );
+
+  return {
+    accepted:
+      Boolean(document) &&
+      schemaValid &&
+      statusValid &&
+      productShaValid &&
+      unresolvedFields.length === 0 &&
+      officerComplete,
+    schemaValid,
+    statusValid,
+    productShaValid,
+    officerComplete,
+    unresolvedFields,
+  };
+}
+
+function acceptedFounderFacts(artifact, expectedSha, now) {
+  const document = artifact.document;
+  if (!document || artifact.error || !expectedSha) {
+    return {
+      accepted: false,
+      unresolvedFields: document && typeof document === 'object'
+        ? unresolvedFounderFactPaths(document)
+        : [...FOUNDER_FACT_REQUIRED_PATHS],
+    };
+  }
+  return validateFounderFactsDocument(document, expectedSha, now);
 }
 
 function acceptedMasterDecision(artifact, expectedSha, now) {
@@ -140,7 +277,8 @@ export function evaluateFinalLegalPublicationGate({
 
   const founderArtifact = readJson(root, FOUNDER_FACTS_PATH);
   const masterArtifact = readJson(root, MASTER_DECISION_PATH);
-  const founderFactsAccepted = acceptedFounderFacts(founderArtifact, expectedSha);
+  const founderValidation = acceptedFounderFacts(founderArtifact, expectedSha, now);
+  const founderFactsAccepted = founderValidation.accepted;
   const acceptedReviewCount = legalTruth?.truth?.acceptedReviewFilesValid ?? 0;
   const expectedReviewCount = legalTruth?.truth?.acceptedReviewFilesExpected ?? 8;
   const allQualifiedReviewsAccepted = expectedReviewCount === 8 && acceptedReviewCount === expectedReviewCount;
@@ -178,6 +316,7 @@ export function evaluateFinalLegalPublicationGate({
       founderFactsPath: FOUNDER_FACTS_PATH,
       founderFactsAccepted,
       founderFactsDigest: artifactDigest(root, FOUNDER_FACTS_PATH),
+      founderFactsUnresolvedFields: founderValidation.unresolvedFields,
       qualifiedReviewAcceptedCount: acceptedReviewCount,
       qualifiedReviewRequiredCount: expectedReviewCount,
       allQualifiedReviewsAccepted,
