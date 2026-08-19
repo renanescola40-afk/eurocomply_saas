@@ -1,42 +1,53 @@
-# Stripe Billing Portal bootstrap
+# Stripe Billing Portal authority alignment
 
 ## Purpose
 
-Provision one live RISCK COMPLY-managed Stripe Billing Portal configuration from a reviewed repository policy without using a console-only, undocumented feature state.
+Align the live Stripe Billing Portal object selected by the reviewed repository contract with the reviewed RISCK COMPLY Portal policy, without changing application authority.
 
-This operation does **not** create customers, subscriptions, Checkout Sessions, invoices, payments or entitlement authority. It does **not** update the application binding contract and it does **not** prove end-to-end Billing runtime behavior.
+This operation does **not** create customers, subscriptions, Checkout Sessions, invoices, payments or entitlement authority. It does **not** rewrite `config/stripe-billing-portal-contract.json`, and it does **not** prove end-to-end Billing runtime behavior.
 
 ## Authority files
 
-- Runtime binding: `config/stripe-billing-portal-contract.json`
+- Runtime authority: `config/stripe-billing-portal-contract.json`
 - Provider feature policy: `config/stripe-billing-portal-policy.json`
-- Provider bootstrap: `scripts/ops/provision-stripe-billing-portal-config.mjs`
+- Provider alignment: `scripts/ops/provision-stripe-billing-portal-config.mjs`
 - Protected workflow: `.github/workflows/stripe-billing-portal-bootstrap.yml`
 - Provider verification: `.github/workflows/stripe-provider-proof.yml`
 - Decision: `docs/decisions/ADR-0092-versioned-stripe-billing-portal-authority.md`
 
+## Contract semantics
+
+`configurationId` is the only application selector.
+
+- `configurationId: null` means the active live **account-default** Stripe Billing Portal configuration is authoritative. The alignment workflow must reuse that default object and may update that exact object to the reviewed policy. It must never create a non-default configuration and then ask operators to pin its ID merely to make provider proof pass.
+- `configurationId: "bpc_..."` means that exact reviewed configuration is authoritative. The alignment workflow retrieves and, when necessary, updates only that exact object. It does not replace the contract with a different generated ID.
+
+Stripe's API-created Portal configurations are non-default. Therefore, when the versioned contract is `null` and no live account-default Portal exists, the workflow fails closed with `account_default_portal_configuration_missing`. An operator must first enable/save the account-default Customer Portal in the Stripe Dashboard in live mode. After the default exists, this workflow can align the selected object to repository policy and verify it.
+
 ## Reviewed feature policy
 
-The managed Portal configuration intentionally allows only customer-controlled billing maintenance that does not bypass RISCK COMPLY subscription lifecycle authority:
+The Portal intentionally allows only customer-controlled billing maintenance that does not bypass RISCK COMPLY subscription lifecycle authority:
 
 - billing address and tax-ID updates: enabled;
 - invoice history: enabled;
 - payment-method update: enabled;
 - direct Stripe Portal subscription cancellation: disabled;
-- direct Stripe Portal subscription update: disabled.
+- direct Stripe Portal subscription update: disabled;
+- default return URL: `https://www.risckcomply.com/pt/dashboard/organizations/billing`.
 
 Upgrade, scheduled downgrade, cancel and reactivate remain application-controlled so tenant RBAC, billing step-up, idempotency, durable lifecycle records and audit evidence remain authoritative.
 
 ## Preconditions
 
-1. The bootstrap/policy implementation is merged to protected `main`.
+1. The alignment/policy implementation is merged to protected `main`.
 2. The SHA supplied to the workflow is the **exact current main SHA**, not merely an ancestor.
 3. The GitHub `production` environment enforces its normal protection/review requirements.
-4. `STRIPE_SECRET_KEY` exists in that environment and is a live-mode secret or restricted key with permission to list/retrieve/create Billing Portal configurations.
-5. `config/stripe-billing-portal-policy.json` has passed repository review and CI.
-6. No parallel provider change is intentionally creating another RISCK COMPLY-managed Portal configuration.
+4. `STRIPE_SECRET_KEY` exists in that environment and is a live-mode secret or restricted key with permission to list, retrieve and update Billing Portal configurations.
+5. `config/stripe-billing-portal-policy.json` and `config/stripe-billing-portal-contract.json` have passed repository review and CI.
+6. For a `null` contract, one active live account-default Portal configuration already exists in Stripe. Creating that account-default object is a Stripe Dashboard control-plane step; the repository workflow intentionally does not manufacture a non-default substitute.
+7. No parallel provider change is intentionally modifying the selected Portal configuration.
 
-## Execute phase 1 — provider bootstrap
+## Execute — provider alignment
 
 Open **Actions → Stripe Billing Portal Bootstrap → Run workflow** and provide:
 
@@ -49,75 +60,57 @@ The workflow then:
 2. requires `release_sha` to equal the current remote `main` SHA;
 3. runs only in the protected `production` environment;
 4. validates a live Stripe credential without printing it;
-5. lists active Billing Portal configurations;
-6. identifies managed configurations only by the reviewed metadata marker;
-7. fails if more than one active managed configuration exists;
-8. reuses one managed configuration only when the complete reviewed policy matches;
-9. otherwise creates one configuration with an idempotency key derived from the reviewed policy;
-10. retrieves the resulting object again and validates live mode, active state, ID, feature policy and management metadata;
-11. writes the resulting `bpc_...` only to the workflow operator summary/output.
+5. reads the versioned Portal contract;
+6. resolves either the account-default configuration (`null`) or the exact explicit `bpc_...` configuration;
+7. fails closed if the contract-selected object does not exist, is ambiguous, inactive or non-live;
+8. reuses the object when it already matches the complete reviewed policy;
+9. otherwise updates only that contract-selected object using an idempotent provider request;
+10. retrieves the same object again and validates live mode, active/default authority where required, feature policy and management metadata;
+11. writes only the non-secret verified configuration ID, disposition and contract-source label to the workflow output/summary.
 
-No artifact containing the provider payload is retained.
-
-## Execute phase 2 — bind the reviewed ID
-
-The bootstrap result does not change runtime behavior by itself.
-
-1. Copy the returned non-secret `bpc_...` identifier from the workflow summary.
-2. Verify the object is the expected managed live configuration.
-3. Create a normal branch from current `main`.
-4. Change only `config/stripe-billing-portal-contract.json` from `configurationId: null` (or the prior reviewed ID) to the new exact `bpc_...` value, plus any directly required evidence/documentation updates.
-5. Run all Billing/provider contract tests and normal required repository checks.
-6. Obtain independent review and resolve every P0/P1 review thread.
-7. Human-merge only when branch protection accepts the exact final head.
-8. Deploy the exact merged SHA through the governed release process.
-9. Run **Stripe Provider Proof** for the exact deployed SHA.
-10. Require `billingPortalConfigurationPresent`, `billingPortalConfigurationBindingValid`, and `billingPortalConfigurationPolicyMatches` to pass.
+No provider payload artifact is retained, and no contract PR is generated by the workflow.
 
 ## Failure handling
 
+### `account_default_portal_configuration_missing`
+
+The repository contract is intentionally using account-default authority, but Stripe has no active live default Portal configuration. Do not create a non-default API configuration and pin it as a shortcut. In Stripe Dashboard live mode, enable/save the Customer Portal so Stripe creates/manages the account-default configuration, then rerun this exact-SHA alignment workflow.
+
+### `account_default_portal_configuration_ambiguous`
+
+Stop and inspect provider state. Automation must not choose among ambiguous default candidates.
+
 ### Confirmation mismatch
 
-Do not retry with altered code. Re-run with the exact required confirmation only after confirming the intended current-main policy.
+Do not retry with altered code. Re-run with the exact required confirmation only after confirming the intended current-main contract and policy.
 
 ### Non-live or missing Stripe key
 
 Do not put a key in repository files or workflow inputs. Correct the protected `production` environment credential through the provider/secret owner.
 
-### More than one managed configuration
+### Contract-selected configuration drift
 
-Stop. Do not let automation pick one and do not automatically deactivate either object. Inspect provider history and determine which configuration, if any, is safe to retain.
-
-### Existing managed configuration drift
-
-Stop. The bootstrap intentionally does not patch a live object that may already be in use. Review the policy difference and choose either a deliberate provider update or a new reviewed configuration path.
+The workflow is authorized to update only the object already selected by the versioned contract. If the update cannot produce the reviewed policy or the follow-up retrieval does not match, stop and investigate provider state; do not rewrite the contract to a different object merely to obtain green evidence.
 
 ### Stripe API timeout, redirect, oversized or malformed response
 
-Treat the operation as unverified. Re-run only after checking Stripe/provider health. The script is idempotent: if creation succeeded but the response path failed, a later run should discover the managed object by metadata rather than intentionally creating another one.
+Treat the operation as unverified. Re-run only after checking Stripe/provider health. Provider requests are bounded and idempotent where mutation occurs.
 
-### Provider Proof fails after binding
+### Provider proof fails after alignment
 
-Do not edit retained evidence. Reconcile the actual Stripe object, the versioned binding, the feature policy and the deployed SHA, then execute a new exact-SHA proof.
+Do not edit retained evidence. Reconcile the actual Stripe object, the versioned contract, the feature policy, Production bindings and the deployed SHA, then execute a new exact-SHA proof.
 
 ## Rollback
 
-If the provider object was created but never pinned, application runtime selection is unchanged.
+Because the workflow never changes application authority, rollback is a provider-policy operation on the same contract-selected object.
 
-If an explicit configuration was pinned and must be rolled back:
-
-1. submit a reviewed contract change to the previously accepted configuration or `configurationId: null`;
-2. human-merge through normal checks;
-3. deploy that exact SHA;
-4. rerun Stripe Provider Proof.
-
-Do not deactivate/delete a provider configuration while any deployed release can still reference it.
+If an explicit configuration contract itself must change, use a separate reviewed contract PR, human-merge through normal checks, deploy that exact SHA and rerun provider proof. Do not deactivate/delete a provider configuration while any deployed release can still reference it.
 
 ## Evidence boundary
 
-A successful bootstrap proves only that one live provider configuration was created/reused and matched the reviewed feature policy at that operation.
+A successful alignment proves only that the live provider object selected by the versioned contract existed and matched the reviewed Portal policy at that exact operation.
 
-A successful Stripe Provider Proof after binding proves that the exact deployed source contract selects an active live configuration matching the reviewed policy.
+A successful Stripe Provider Proof additionally proves that the exact deployed source contract still selects an active live configuration matching the reviewed policy.
 
 Neither result proves:
 

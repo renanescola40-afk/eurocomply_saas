@@ -114,13 +114,31 @@ describe('protected production provider runtime proof', () => {
     expect(billingProducer).toContain('fourCanonicalSelfServeBindingsDistinct');
   });
 
-  it('gates provider completion on Portal policy, canonical webhook and production runtime binding presence', () => {
+  it('uses the versioned Portal contract as the only Portal selector', () => {
+    expect(workflow).not.toContain('STRIPE_BILLING_PORTAL_CONFIGURATION_ID');
+    expect(billingProducer).not.toContain("env('STRIPE_BILLING_PORTAL_CONFIGURATION_ID')");
+    expect(billingProducer).toContain("contractSource = explicitId === null || explicitId === undefined ? 'default' : 'explicit'");
+    expect(billingProducer).toContain('configuration?.is_default === true');
+  });
+
+  it('gates provider completion on Portal policy, canonical webhook and all six Production Billing bindings', () => {
     expect(workflow).toContain('node --check scripts/security/run-stripe-live-billing-provider-proof.mjs');
     expect(workflow).toContain('node --test tests/enterprise/stripe-live-billing-provider-proof.test.mjs');
     expect(workflow).toContain('run: node scripts/security/run-stripe-live-billing-provider-proof.mjs');
-    expect(billingProducer).toContain('billingPortalConfigurationPinnedAndPolicyMatched');
+    expect(billingProducer).toContain('billingPortalContractResolvedAndPolicyMatched');
     expect(billingProducer).toContain('canonicalLifecycleWebhookLive');
-    expect(billingProducer).toContain('productionRuntimeBindingKeysPresent');
+    expect(billingProducer).toContain('productionBillingBindingKeysPresent');
+    expect(billingProducer).toContain('productionWebhookSigningSecretBindingPresent');
+    for (const key of [
+      'STRIPE_SECRET_KEY',
+      'STRIPE_WEBHOOK_SECRET',
+      'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+      'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+      'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+      'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
+    ]) {
+      expect(billingProducer).toContain(`'${key}'`);
+    }
     expect(billingProducer).toContain('decrypt=false');
     expect(billingProducer).toContain('providerResponseBodiesStored: false');
     expect(billingProducer).toContain('stripePriceIdsStored: false');
