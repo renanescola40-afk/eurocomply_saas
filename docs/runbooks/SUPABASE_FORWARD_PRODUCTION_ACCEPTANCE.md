@@ -4,7 +4,7 @@
 
 This is **Stage 4** of the bounded Supabase forward-reconciliation lane. It does not deploy migrations. It accepts an already successful protected production promotion only after fresh live evidence proves that the promoted state still matches the reviewed release.
 
-A successful Stage 3 promotion is necessary but not sufficient for final database acceptance. Stage 4 binds the same exact release SHA and selection digest across human review, production ledger transition, fresh live schema/security postconditions, live tenant isolation, migration drift and protected backup/restore evidence.
+A successful Stage 3 promotion is necessary but not sufficient for final database acceptance. Stage 4 binds the same exact release SHA and selection digest across human review, production ledger transition, fresh live schema/security postconditions, live tenant isolation, migration drift and a **post-promotion** protected backup/restore exercise whose source migration-ledger fingerprint matches the promoted state.
 
 ## Required inputs
 
@@ -12,14 +12,14 @@ Dispatch `Supabase Forward Production Acceptance` with:
 
 1. `release_sha` — exact current `main` SHA;
 2. `promotion_run_id` — successful `Supabase Forward Reconciliation Production Promotion` workflow-dispatch run for that SHA;
-3. `recovery_run_id` — successful `Recovery Resilience Proof` workflow-dispatch run for that SHA that contains `backup-restore-tested.json` (the `backup-restore` or `full` exercise satisfies this requirement);
+3. `recovery_run_id` — successful **post-promotion** `Recovery Resilience Proof` workflow-dispatch run for that SHA that contains ledger-bound `backup-restore-tested.json` (use the `backup-restore` exercise for this closure path);
 4. exact confirmation `ACCEPT <release_sha> AFTER PROMOTION <promotion_run_id> AND RECOVERY <recovery_run_id>`.
 
 The workflow is admitted through the protected `Production` environment before the database pooler secret is available.
 
 ## What Stage 4 proves
 
-### 1. Exact source provenance
+### 1. Exact source provenance and temporal ordering
 
 The workflow requires both source runs to:
 
@@ -27,6 +27,8 @@ The workflow requires both source runs to:
 - have `head_sha` equal to the supplied exact current `main` SHA;
 - come from the canonical promotion/recovery workflows;
 - have conclusion `success`.
+
+It additionally requires the Recovery run's `run_started_at` to be strictly later than the successful promotion run's completion timestamp. A recovery exercise performed before the database promotion is therefore ineligible even when both runs happen to share the same Git SHA.
 
 It downloads the exact source artifacts by run ID and artifact name. Filename coincidence or evidence from another commit is not accepted.
 
@@ -46,9 +48,9 @@ Any additional migration, missing migration, malformed version or mismatch fails
 
 ### 4. Fresh live schema/security postconditions
 
-The canonical `scripts/supabase/verify-forward-reconciliation-postconditions.sql` is executed again against production. It is used only as a read-only postcondition assertion and must succeed before an exact-SHA live-postcondition artifact is emitted.
+The canonical `scripts/supabase/verify-forward-reconciliation-postconditions.sql` is executed again against production inside an explicit `BEGIN TRANSACTION READ ONLY` / `ROLLBACK` boundary. PostgreSQL itself therefore rejects a write if one is ever accidentally added to this proof path.
 
-This prevents Stage 4 from relying solely on the observation made inside the earlier promotion run.
+The validator must succeed before an exact-SHA live-postcondition artifact is emitted. This prevents Stage 4 from relying solely on the observation made inside the earlier promotion run.
 
 ### 5. Live tenant A/B RLS behavior without synthetic production data
 
@@ -68,11 +70,19 @@ It:
 
 If production does not contain a safe mutually foreign pair of existing actors, Stage 4 fails closed rather than creating synthetic production fixtures.
 
-### 6. Exact-SHA database recovery evidence
+### 6. Post-promotion database recovery evidence bound to the promoted ledger
 
-The successful source Recovery run must contain `backup-restore-tested.json` with schema `risck-comply.backup-restore-evidence.v2`, exact target/observed SHA, the same Recovery workflow run ID and all REC-05 through REC-10 checks passing.
+The source Recovery run must execute **after** the successful Stage 3 promotion and contain `backup-restore-tested.json` with schema `risck-comply.backup-restore-evidence.v2`, exact target/observed SHA, the same Recovery workflow run ID and all REC-05 through REC-10 checks passing.
 
-This proves the protected backup/restore boundary for the exact release. It does **not** prove provider-side revocation of a previously exposed database credential.
+After the isolated backup/restore succeeds, `scripts/recovery/bind-backup-restore-migration-ledger.mjs` reads the production source migration ledger inside a read-only transaction and adds only a sanitized fingerprint to the recovery evidence:
+
+- migration count;
+- migration head;
+- SHA-256 of the canonical ordered version list.
+
+The version list itself is not retained. Stage 4 requires this count/head/digest to match the exact `remote-after.json` produced by Stage 3. This proves that the backup/restore exercise observed the **promoted database state**, not merely a repository commit with the same SHA.
+
+This proves the protected backup/restore boundary for the promoted release. It does **not** prove provider-side revocation of a previously exposed database credential.
 
 ## Final artifact
 
@@ -88,7 +98,7 @@ The retained artifact contains only:
 - sanitized live tenant-isolation proof;
 - final production-acceptance proof.
 
-The workflow scans retained evidence and fails if it finds a database URL, Supabase pooler endpoint, JWT-like value, UUID-shaped tenant/user identifier or similar forbidden value.
+The source Recovery artifact is consumed for verification but is not copied into the Stage 4 retained artifact. The workflow scans retained evidence and fails if it finds a database URL, Supabase pooler endpoint, JWT-like value, UUID-shaped tenant/user identifier or similar forbidden value.
 
 ## What `Complete/passed` means
 
@@ -97,9 +107,10 @@ The workflow scans retained evidence and fails if it finds a database URL, Supab
 - the selected forward migration bytes were independently human reviewed;
 - those exact selected versions were the versions promoted;
 - the production migration ledger has not drifted since the captured promotion state;
-- fresh live schema/security postconditions pass;
+- fresh live schema/security postconditions pass in an explicitly read-only transaction;
 - live authenticated two-tenant SELECT isolation passes in both directions using existing actors only;
-- exact-SHA protected backup/restore evidence passes;
+- a protected backup/restore run executed after promotion;
+- that recovery run's production-source migration-ledger count/head/digest exactly match the promoted ledger;
 - acceptance itself performed no production data/schema mutation.
 
 ## Explicit non-claims
@@ -114,18 +125,18 @@ Stage 4 **does not**:
 - close #1620 solely from repository/workflow evidence;
 - claim global Enterprise 100% or unrelated Billing/Product/provider acceptance.
 
-The previously exposed database credential tracked by **#1620** still requires genuine provider-side evidence that the old credential was rotated/revoked and all authorized consumers were rebound. A passing backup/restore run proves the current protected recovery path works; it **does not prove** that the old provider credential can no longer authenticate.
+The previously exposed database credential tracked by **#1620** still requires genuine provider-side evidence that the old credential was rotated/revoked and all authorized consumers were rebound. A passing post-promotion backup/restore run proves the current protected recovery path and promoted source state work; it **does not prove** that the old provider credential can no longer authenticate.
 
 ## Required sequence after this code is merged
 
 For the new exact current `main` SHA:
 
-1. run protected Recovery Resilience Proof in `backup-restore` mode;
-2. run the bounded isolated reconciliation rehearsal;
-3. run the filtered production dry-run;
-4. complete the protected human migration Decision Gate for the exact selected bytes;
-5. run the human-approved bounded production promotion;
-6. run this Stage 4 production acceptance with the successful promotion and recovery run IDs;
+1. run the bounded isolated reconciliation rehearsal;
+2. run the filtered production dry-run;
+3. complete the protected human migration Decision Gate for the exact selected bytes;
+4. run the human-approved bounded production promotion;
+5. **after promotion succeeds**, run protected Recovery Resilience Proof in `backup-restore` mode for that same exact current `main` SHA;
+6. run this Stage 4 production acceptance with the successful promotion and post-promotion recovery run IDs;
 7. retain #1620 as a provider-side blocker until rotation/revocation evidence exists.
 
-Any movement of `main`, migration byte change, selection change, production ledger change or failed live postcondition invalidates acceptance and requires a new exact-SHA evidence chain.
+Any movement of `main`, migration byte change, selection change, production ledger change, pre-promotion Recovery evidence or failed live postcondition invalidates acceptance and requires a new exact-SHA evidence chain.
