@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  deployments: read
 
 concurrency:
   group: external-security-assurance-${{ inputs.release_sha }}
@@ -57,6 +58,22 @@ jobs:
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
           test "$main_sha" = "$RELEASE_SHA"
+
+      - name: Verify assurance environment requires human reviewers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          environment_json="$RUNNER_TEMP/external-assurance-environment.json"
+          gh api "repos/${GITHUB_REPOSITORY}/environments/external-security-assurance" > "$environment_json"
+          jq -e '
+            [.protection_rules[]?
+              | select(.type == "required_reviewers")
+              | .reviewers[]?]
+            | length > 0
+          ' "$environment_json" >/dev/null
+          jq -e '.deployment_branch_policy != null' "$environment_json" >/dev/null
 
       - name: Checkout immutable redacted evidence commit in isolation
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
