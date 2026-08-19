@@ -1,6 +1,7 @@
 {
   "schema": "risck-comply.founder-facts.v1",
   "status": "FOUNDER_FACT_REQUIRED",
+  "productSha": null,
   "legalEntity": {
     "registeredName": null,
     "companyNumber": null,
@@ -60,6 +61,13 @@
     "confirmedAt": null,
     "signedArtifactReference": null,
     "factsDigest": null
+  },
+  "completionContract": {
+    "rule": "Every required fact must contain a concrete resolved value or an explicit NOT_APPLICABLE object with a substantive rationale. Plain N/A, unknown, TBD, TODO, pending and null values are not accepted.",
+    "notApplicableExample": {
+      "status": "NOT_APPLICABLE",
+      "rationale": "Explain why this fact genuinely does not apply to the current operating model."
+    }
   },
   "nonCreditingNotice": "This is an unresolved facts template and is not a signed factual record or legal approval."
 }
