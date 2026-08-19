@@ -27,7 +27,6 @@ function normalise(value) {
 }
 
 function findStatus(document) {
-  // Strong, explicit release/human decisions take precedence over generic status fields.
   const decisionCandidates = [
     document?.publicationStatus,
     document?.finalDecision,
@@ -212,7 +211,7 @@ export function evaluateEnterpriseClosure({
       sha: selected.sha,
       shaSource: selected.shaSource,
       shaMatches: true,
-      accepted,
+      accepted: statusAccepted && semanticFailures.length === 0,
       reason: accepted
         ? null
         : semanticFailures.length > 0
