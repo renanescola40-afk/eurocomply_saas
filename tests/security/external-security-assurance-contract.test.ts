@@ -99,6 +99,7 @@ function completeEvidence(): Record<string, any> {
       reviewedBy: 'Authorized Security Owner',
       reviewedAt: '2026-08-14T10:00:00.000Z',
     },
+    redactionConfirmation: 'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
     evidenceIntegrity: {
       placeholderOnly: false,
       realExternalReportAttached: true,
@@ -138,6 +139,20 @@ describe('external security assurance contract', () => {
 
     expect(result.accepted).toBe(true);
     expect(result.failures).toEqual([]);
+  });
+
+  it('rejects Complete evidence without the canonical redaction confirmation', () => {
+    const evidence = completeEvidence();
+    evidence.redactionConfirmation = 'redacted';
+
+    const result = validateExternalSecurityAssurance(evidence, {
+      enterprise: true,
+      expectedSha,
+      now,
+    });
+
+    expect(result.accepted).toBe(false);
+    expect(result.failures).toContain('redaction_confirmation_invalid');
   });
 
   it('rejects a report for a different release SHA', () => {
