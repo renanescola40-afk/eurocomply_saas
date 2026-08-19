@@ -71,9 +71,10 @@ describe('global commercial access boundary', () => {
     expect(source).toContain('export const revalidate = 300;');
   });
 
-  it('enforces paid authority from the shared locale server layout before product pages render', async () => {
+  it('enforces paid authority from a request-time shared locale server layout before product pages render', async () => {
     const source = await readFile(LOCALE_LAYOUT, 'utf8');
 
+    expect(source).toContain("export const dynamic = 'force-dynamic'");
     expect(source).toContain('INTERNAL_PATHNAME_HEADER');
     expect(source).toContain('classifyLocalizedCommercialRoute(pathname, safeLocale)');
     expect(source).toContain("commercialRouteClass === 'licensed_product'");
