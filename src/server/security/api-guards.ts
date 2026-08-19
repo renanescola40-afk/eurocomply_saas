@@ -15,10 +15,12 @@ import {
   type JsonRequestOptions,
 } from '@/lib/security/validate';
 import { getCurrentUser } from '@/server/queries/auth';
+import type { SubscriptionPlan } from '@/server/queries/subscription';
 import {
   isProviderFailureError,
   providerFailureContext,
 } from '@/server/providers/failure';
+import { resolveApiCommercialMinimumPlan } from '@/server/security/api-commercial-policy';
 import { noStoreJson, noStoreDownload, applyNoStoreHeaders } from '@/server/security/no-store';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import {
@@ -49,6 +51,7 @@ export type RequireOrganizationMembershipOptions = RequireOrganizationAccessOpti
 
 export type RequirePermissionOptions = RequireOrganizationAccessOptions & {
   permission: OrganizationPermission;
+  minimumPlan?: SubscriptionPlan;
 };
 
 export type TrustedMutationOptions = {
@@ -174,10 +177,12 @@ export async function requireOrganizationMembership(options: RequireOrganization
 
 export async function requirePermission(options: RequirePermissionOptions): Promise<PermissionCheckResult> {
   const organizationId = sanitizeOrganizationId(options.organizationId);
+  const minimumPlan = resolveApiCommercialMinimumPlan(options.permission, options.minimumPlan);
   const result = await assertOrganizationPermission({
     userId: options.userId,
     organizationId,
     permission: options.permission,
+    minimumPlan,
   });
 
   if (!result.ok) {
