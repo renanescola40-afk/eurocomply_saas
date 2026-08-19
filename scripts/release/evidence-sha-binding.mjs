@@ -14,6 +14,7 @@ const SHA_BINDINGS = Object.freeze([
   ['source_sha', (document) => document?.source_sha],
   ['productSha', (document) => document?.productSha],
   ['product_sha', (document) => document?.product_sha],
+  ['testBinding.productSha', (document) => document?.testBinding?.productSha],
   ['buildSha', (document) => document?.buildSha],
   ['build_sha', (document) => document?.build_sha],
   ['sha', (document) => document?.sha],
