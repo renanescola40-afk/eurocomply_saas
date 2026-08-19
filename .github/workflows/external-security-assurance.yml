@@ -9,6 +9,10 @@ on:
         description: Full 40-character current main SHA reviewed by the independent assessor
         required: true
         type: string
+      evidence_commit_sha:
+        description: Full 40-character commit containing the completed redacted canonical external-assurance metadata
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -21,22 +25,26 @@ jobs:
   validate:
     name: Validate independent security assurance evidence
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     environment: external-security-assurance
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
+      EVIDENCE_COMMIT_SHA: ${{ inputs.evidence_commit_sha }}
+      CANONICAL_EVIDENCE_PATH: docs/security/evidence/runtime/external-security-review-or-pentest.json
 
     steps:
-      - name: Validate exact SHA format
+      - name: Validate immutable SHA inputs
         shell: bash
         run: |
           set -euo pipefail
           [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$EVIDENCE_COMMIT_SHA" =~ ^[a-f0-9]{40}$ ]]
 
       - name: Checkout exact reviewed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
           persist-credentials: false
 
       - name: Verify exact current main
@@ -47,17 +55,57 @@ jobs:
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
 
-      - name: Validate contract tests
-        run: node --test tests/security/external-security-assurance-contract.test.mjs
+      - name: Load redacted evidence from immutable evidence commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "$EVIDENCE_COMMIT_SHA"
+          test "$(git rev-parse FETCH_HEAD)" = "$EVIDENCE_COMMIT_SHA"
+          git cat-file -e "${EVIDENCE_COMMIT_SHA}^{commit}"
+          evidence_file="$RUNNER_TEMP/external-security-review-or-pentest.json"
+          git show "${EVIDENCE_COMMIT_SHA}:${CANONICAL_EVIDENCE_PATH}" > "$evidence_file"
+          test -s "$evidence_file"
+          echo "EXTERNAL_ASSURANCE_INPUT=$evidence_file" >> "$GITHUB_ENV"
 
-      - name: Validate supplied independent evidence
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Validate canonical external-assurance contracts
+        run: |
+          node --check scripts/security/validate-external-security-assurance.mjs
+          node --test tests/security/external-security-assurance-contract.test.mjs
+          npx vitest run tests/security/external-security-assurance-contract.test.ts
+
+      - name: Validate and promote supplied independent evidence
+        env:
+          EXTERNAL_ASSURANCE_EVIDENCE_COMMIT_SHA: ${{ inputs.evidence_commit_sha }}
+          EXTERNAL_ASSURANCE_OUTPUT: artifacts/external-security-assurance-decision.json
+          EXTERNAL_ASSURANCE_CANONICAL_OUTPUT: docs/security/evidence/runtime/external-security-review-or-pentest.json
+          EXTERNAL_ASSURANCE_MAX_AGE_DAYS: '180'
         run: node scripts/security/validate-external-security-assurance.mjs
 
-      - name: Upload bounded acceptance decision
-        if: always()
+      - name: Upload accepted exact-SHA assurance evidence
+        if: success()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: external-security-assurance-${{ inputs.release_sha }}
-          path: artifacts/external-security-assurance-decision.json
+          name: external-security-assurance-accepted-${{ inputs.release_sha }}
+          path: |
+            artifacts/external-security-assurance-decision.json
+            docs/security/evidence/runtime/external-security-review-or-pentest.json
           if-no-files-found: error
           retention-days: 365
+
+      - name: Upload rejected assurance diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: external-security-assurance-rejected-${{ inputs.release_sha }}
+          path: artifacts/external-security-assurance-decision.json
+          if-no-files-found: ignore
+          retention-days: 90
