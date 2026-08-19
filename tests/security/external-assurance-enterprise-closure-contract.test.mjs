@@ -8,6 +8,9 @@ const bundle = readFileSync('scripts/release/verify-enterprise-evidence-bundle.m
 const runtimeWriter = readFileSync('scripts/release/write-enterprise-runtime-evidence.mjs', 'utf8');
 const shaBinding = readFileSync('scripts/release/evidence-sha-binding.mjs', 'utf8');
 const externalValidator = readFileSync('scripts/release/validate-external-security-review-evidence.mjs', 'utf8');
+const collector = readFileSync('scripts/enterprise/collect-github-exact-sha-artifacts.mjs', 'utf8');
+const acceptanceWorkflow = readFileSync('.github/workflows/external-security-assurance.yml', 'utf8');
+const closureWorkflow = readFileSync('.github/workflows/enterprise-100-closure.yml', 'utf8');
 
 const externalControl = config.controls.find((control) => control.id === 'external-security-assurance');
 
@@ -43,4 +46,26 @@ test('release validator delegates to the canonical external assurance contract a
   assert.match(externalValidator, /validateExternalSecurityAssurance/);
   assert.match(externalValidator, /resolveExternalAssuranceExpectedSha/);
   assert.match(externalValidator, /external review is older than \$\{maxAgeDays\} days/);
+});
+
+test('accepted external assurance has an authorized exact-SHA producer in Enterprise 100 collection', () => {
+  assert.match(collector, /workflow: 'external-security-assurance\.yml'/);
+  assert.match(collector, /workflowPath: '\.github\/workflows\/external-security-assurance\.yml'/);
+  assert.match(collector, /external-security-assurance-accepted-\*/);
+  assert.doesNotMatch(collector, /external-security-assurance-rejected-\*/);
+});
+
+test('protected acceptance workflow separates release SHA from immutable evidence commit SHA', () => {
+  assert.match(acceptanceWorkflow, /release_sha:/);
+  assert.match(acceptanceWorkflow, /evidence_commit_sha:/);
+  assert.match(acceptanceWorkflow, /environment: external-security-assurance/);
+  assert.match(acceptanceWorkflow, /test "\$\(git rev-parse origin\/main\)" = "\$RELEASE_SHA"/);
+  assert.match(acceptanceWorkflow, /external-security-assurance-accepted-/);
+  assert.match(acceptanceWorkflow, /external-security-assurance-rejected-/);
+});
+
+test('external assurance completion retriggers same-SHA Enterprise 100 closure', () => {
+  assert.match(closureWorkflow, /- 'External Security Assurance Acceptance'/);
+  assert.match(closureWorkflow, /github\.event\.workflow_run\.head_sha/);
+  assert.match(closureWorkflow, /cancel-in-progress: true/);
 });
