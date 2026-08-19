@@ -8,6 +8,7 @@
     "vatNumber": null,
     "registeredAddress": null,
     "country": null,
+    "governingLawPreference": null,
     "legalContact": null,
     "privacyContact": null,
     "securityContact": null,
@@ -16,7 +17,9 @@
     "dpoOrRepresentative": null
   },
   "commercial": {
+    "productionProductName": null,
     "productionDomains": null,
+    "customerTypesAndExcludedUses": null,
     "plansAndBilling": null,
     "trialRenewalCancellation": null,
     "refundSuspensionTermination": null,
@@ -46,7 +49,8 @@
     "supportCommitment": null,
     "incidentCommunication": null,
     "backupRestoreCommitment": null,
-    "certificationsAuditsPentests": null
+    "certificationsAuditsPentests": null,
+    "vulnerabilityDisclosureProcess": null
   },
   "aiLegalPositioning": {
     "serviceBoundaryConfirmed": null,
@@ -63,7 +67,7 @@
     "factsDigest": null
   },
   "completionContract": {
-    "rule": "Every required fact must contain a concrete resolved value or an explicit NOT_APPLICABLE object with a substantive rationale. Plain N/A, unknown, TBD, TODO, pending and null values are not accepted.",
+    "rule": "Every required fact must contain a concrete resolved value or an explicit NOT_APPLICABLE object with a substantive rationale. Plain N/A, NOT_APPLICABLE, NOT_REQUIRED, unknown, TBD, TODO, pending and null values are not accepted.",
     "notApplicableExample": {
       "status": "NOT_APPLICABLE",
       "rationale": "Explain why this fact genuinely does not apply to the current operating model."
