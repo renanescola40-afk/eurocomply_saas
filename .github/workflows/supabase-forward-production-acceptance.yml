@@ -218,11 +218,13 @@ jobs:
           test "$(jq -r '.targetSha' "${PROMOTION_PROOFS[0]}")" = "$TARGET_SHA"
           test "$(jq -r '.selectionDigest' "${PROMOTION_PROOFS[0]}")" = "$CURRENT_DIGEST"
 
-          echo "human_proof=${HUMAN_PROOFS[0]}" >> "$GITHUB_OUTPUT"
-          echo "promotion_proof=${PROMOTION_PROOFS[0]}" >> "$GITHUB_OUTPUT"
-          echo "promoted_remote=${PROMOTED_REMOTE[0]}" >> "$GITHUB_OUTPUT"
-          echo "backup_restore=${BACKUP_RESTORE[0]}" >> "$GITHUB_OUTPUT"
-          echo "selection_digest=$CURRENT_DIGEST" >> "$GITHUB_OUTPUT"
+          {
+            echo "human_proof=${HUMAN_PROOFS[0]}"
+            echo "promotion_proof=${PROMOTION_PROOFS[0]}"
+            echo "promoted_remote=${PROMOTED_REMOTE[0]}"
+            echo "backup_restore=${BACKUP_RESTORE[0]}"
+            echo "selection_digest=$CURRENT_DIGEST"
+          } >> "$GITHUB_OUTPUT"
       - name: Capture fresh live migration ledger read-only
         shell: bash
         env:
@@ -244,7 +246,9 @@ jobs:
           set -euo pipefail
           psql "$SUPABASE_DB_POOLER_URL" \
             --no-psqlrc --set ON_ERROR_STOP=1 \
+            --command 'begin transaction read only;' \
             --file scripts/supabase/verify-forward-reconciliation-postconditions.sql \
+            --command 'rollback;' \
             >/dev/null
           jq -n \
             --arg sha "$TARGET_SHA" \
