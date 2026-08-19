@@ -25,6 +25,10 @@ const PLACEHOLDER_PATTERN = /(?:REPLACE_|YYYY-MM-DD|TODO|TBD|placeholder|pending
 const CLOSED_FINDING_STATUSES = new Set(['resolved', 'formally_accepted', 'false_positive']);
 const PASSING_RETEST_STATUSES = new Set(['passed', 'not_required_formally_accepted', 'not_required_false_positive']);
 const SEVERITIES = new Set(['critical', 'high', 'medium', 'low', 'informational']);
+const ALLOWED_REDACTION_CONFIRMATIONS = new Set([
+  'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
+  'Redaction confirmed for runtime evidence.',
+]);
 
 function normalize(value) {
   return String(value ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
@@ -132,6 +136,9 @@ function validateCompleteEvidence(evidence, expectedSha, now, failures) {
     failures.push('outcome_not_final_pass');
   }
   if (containsPlaceholder(evidence)) failures.push('complete_evidence_contains_placeholder');
+  if (!ALLOWED_REDACTION_CONFIRMATIONS.has(String(evidence.redactionConfirmation ?? ''))) {
+    failures.push('redaction_confirmation_invalid');
+  }
 
   const assessor = evidence.assessor;
   if (!assessor || typeof assessor !== 'object' || Array.isArray(assessor)) {
