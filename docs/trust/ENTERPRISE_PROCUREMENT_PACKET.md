@@ -6,13 +6,13 @@ Status: buyer-facing checklist and answer bank for enterprise review. This packe
 
 See `docs/trust/PROCUREMENT_CHECKLIST.md` for the current working checklist. Confirm public Trust Center routes, footer links, landing links, pricing links, release evidence, subprocessors, data retention boundaries, incident response workflow, backup evidence, and responsible disclosure contact before sharing enterprise answers.
 
-Provider/configuration facts and unresolved account-level DPA/region/retention fields are tracked separately in `docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md` so draft provider rows are not accidentally presented as approved contractual disclosures.
+Provider/configuration facts and unresolved account-level DPA/region/retention fields are tracked separately in the internal supporting assurance evidence at `docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md` so draft provider rows are not accidentally presented as approved contractual disclosures.
 
 ## Approved positioning
 
 Risck comply is designed to support enterprise security review through authenticated workspaces, organization-scoped access, tenant-isolation controls, audit events, controlled documentation, managed-provider safeguards, subprocessor review, and release evidence gates.
 
-## Core materials
+## Core buyer-facing materials
 
 - `docs/trust/SECURITY_OVERVIEW.md`
 - `docs/trust/ARCHITECTURE_OVERVIEW.md`
@@ -22,9 +22,12 @@ Risck comply is designed to support enterprise security review through authentic
 - `docs/trust/INCIDENT_RESPONSE.md`
 - `docs/trust/BACKUP_AND_RECOVERY.md`
 - `docs/trust/SUBPROCESSORS.md`
-- `docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md`
 - `docs/trust/SECURITY_FAQ.md`
 - `docs/trust/PROCUREMENT_CHECKLIST.md`
+
+## Internal supporting assurance evidence
+
+`docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md` is an internal evidence-working register, not a buyer-facing core artifact. It exists to support factual reconciliation and prevent draft provider/account facts from being promoted into customer disclosures before the applicable account evidence and legal review are complete.
 
 ## External assurance boundary
 
