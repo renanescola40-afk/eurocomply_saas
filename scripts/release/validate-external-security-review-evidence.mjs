@@ -1,4 +1,5 @@
 import {
+  resolveExternalAssuranceExpectedSha,
   validateExternalSecurityAssurance,
 } from '../security/external-security-assurance-contract.mjs';
 
@@ -16,9 +17,10 @@ export function validateExternalSecurityReviewEvidence(evidence, {
   const nowMs = now instanceof Date ? now.getTime() : Date.parse(String(now));
   if (!Number.isFinite(nowMs)) return ['validation clock must be a valid timestamp'];
 
+  const expectedSha = expectedCommitSha || resolveExternalAssuranceExpectedSha(process.cwd());
   const canonical = validateExternalSecurityAssurance(evidence, {
     enterprise: true,
-    expectedSha: expectedCommitSha,
+    expectedSha,
     now: now instanceof Date ? now : new Date(nowMs),
   });
   failures.push(...canonical.failures);
