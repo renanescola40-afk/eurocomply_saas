@@ -128,7 +128,7 @@ async function loginUnlicensedWithDisposableCredentials(page: Page, email: strin
 
 async function expectCommercialRecovery(page: Page, label: string) {
   await expectHealthyPublicPage(page, label);
-  await expect(page).toHaveURL(/\/en\/(?:checkout\?plan=|contact\?intent=sales&plan=)/);
+  await expect(page).toHaveURL(/\/en\/pricing\?billing=subscription_required(?:&|$)/);
   expect(page.url(), `${label} should remain outside paid product content`).not.toContain('/dashboard/organizations?');
 }
 
