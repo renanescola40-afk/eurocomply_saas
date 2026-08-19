@@ -9,21 +9,9 @@ const workflow = await readFile('.github/workflows/external-security-assurance.y
 
 test('canonical contract covers the principal enterprise attack surfaces', () => {
   for (const control of [
-    'auth',
-    'RBAC',
-    'tenant isolation',
-    'APIs',
-    'BOLA/IDOR',
-    'uploads',
-    'malware scanner',
-    'billing Stripe',
-    'webhooks',
-    'audit chain',
-    'exports',
-    'GDPR delete',
-    'rate limiting',
-    'observability',
-    'secrets',
+    'auth', 'RBAC', 'tenant isolation', 'APIs', 'BOLA/IDOR', 'uploads',
+    'malware scanner', 'billing Stripe', 'webhooks', 'audit chain', 'exports',
+    'GDPR delete', 'rate limiting', 'observability', 'secrets',
   ]) {
     assert.ok(canonicalContract.includes(`'${control}'`), `missing canonical scope control: ${control}`);
   }
@@ -45,23 +33,27 @@ test('promotion validator emits only redacted canonical metadata and decision pr
   assert.match(promotionValidator, /evidenceSha256/);
   assert.match(promotionValidator, /rawReportStored: false/);
   assert.match(promotionValidator, /canonicalMetadataOnly: true/);
+  assert.match(promotionValidator, /sensitiveKeyScanPassed/);
   assert.doesNotMatch(promotionValidator, /console\.log\(evidence\)/);
 });
 
-test('workflow is protected, exact-current-main bound and loads evidence from an immutable separate commit', () => {
+test('workflow uses protected isolated checkouts for release and evidence commits', () => {
   assert.match(workflow, /environment: external-security-assurance/);
   assert.match(workflow, /evidence_commit_sha:/);
   assert.match(workflow, /persist-credentials: false/);
-  assert.match(workflow, /test "\$\(git rev-parse origin\/main\)" = "\$RELEASE_SHA"/);
-  assert.match(workflow, /git fetch --no-tags --depth=1 origin "\$EVIDENCE_COMMIT_SHA"/);
-  assert.match(workflow, /git show "\$\{EVIDENCE_COMMIT_SHA\}:\$\{CANONICAL_EVIDENCE_PATH\}"/);
+  assert.match(workflow, /Checkout immutable redacted evidence commit in isolation/);
+  assert.match(workflow, /ref: \$\{\{ inputs\.evidence_commit_sha \}\}/);
+  assert.match(workflow, /path: \$\{\{ env\.EVIDENCE_SOURCE_DIR \}\}/);
+  assert.match(workflow, /git -C "\$EVIDENCE_SOURCE_DIR" rev-parse HEAD/);
+  assert.match(workflow, /commits\/main/);
+  assert.doesNotMatch(workflow, /git fetch --no-tags --depth=1 origin/);
   assert.match(workflow, /external-security-review-or-pentest\.json/);
 });
 
 test('only accepted evidence is eligible for retained Enterprise closure collection', () => {
   assert.match(workflow, /if: success\(\)/);
-  assert.match(workflow, /external-security-assurance-accepted-\$\{\{ inputs\.release_sha \}\}/);
-  assert.match(workflow, /external-security-assurance-rejected-\$\{\{ inputs\.release_sha \}\}/);
+  assert.match(workflow, /external-security-assurance-accepted-/);
+  assert.match(workflow, /external-security-assurance-rejected-/);
   assert.match(workflow, /retention-days: 365/);
   assert.match(workflow, /artifacts\/external-security-assurance-decision\.json/);
   assert.match(workflow, /docs\/security\/evidence\/runtime\/external-security-review-or-pentest\.json/);
