@@ -17,6 +17,7 @@ const SHA256_PATTERN = /^(?:sha256:)?[a-f0-9]{64}$/i;
 const PLACEHOLDER_PATTERN = /(?:^|\b)(?:placeholder|example|sample|todo|tbd|replace[ _-]?me|dummy|fake|unknown)(?:\b|$)/i;
 const ACCEPTED = new Set(['ACCEPTED', 'COUNSEL_ACCEPTED']);
 const FOUNDER_FACTS_SCHEMA = 'risck-comply.founder-facts.v1';
+const QUALIFIED_REVIEW_SCHEMA = 'risck-comply.qualified-review-decision.v1';
 const MASTER_DECISION_SCHEMA = 'risck-comply.master-legal-decision-sheet.v1';
 const NOT_APPLICABLE_STATUSES = new Set(['NOT_APPLICABLE', 'NOT_REQUIRED']);
 const UNRESOLVED_FOUNDER_FACT_VALUES = new Set([
@@ -75,16 +76,17 @@ const FOUNDER_FACT_REQUIRED_PATHS = Object.freeze([
   'aiLegalPositioning.partnerCounselModel',
   'aiLegalPositioning.approvedClaims',
 ]);
-const QUALIFIED_REVIEW_IDS = Object.freeze([
-  'legal-rules',
-  'prohibited-practices',
-  'article-50-copy',
-  'fria-methodology',
-  'deployer-obligations',
-  'high-risk-provider',
-  'conformity',
-  'gpai',
+const QUALIFIED_REVIEW_REQUIREMENTS = Object.freeze([
+  { id: 'legal-rules', path: 'docs/compliance/evidence/accepted/legal-rules-qualified-review.json' },
+  { id: 'prohibited-practices', path: 'docs/compliance/evidence/accepted/prohibited-practices-legal-review.json' },
+  { id: 'article-50-copy', path: 'docs/compliance/evidence/accepted/article-50-copy-review.json' },
+  { id: 'fria-methodology', path: 'docs/compliance/evidence/accepted/fria-methodology-review.json' },
+  { id: 'deployer-obligations', path: 'docs/compliance/evidence/accepted/deployer-obligations-legal-review.json' },
+  { id: 'high-risk-provider', path: 'docs/compliance/evidence/accepted/high-risk-provider-methodology-review.json' },
+  { id: 'conformity', path: 'docs/compliance/evidence/accepted/conformity-qualified-review.json' },
+  { id: 'gpai', path: 'docs/compliance/evidence/accepted/gpai-legal-review.json' },
 ]);
+const QUALIFIED_REVIEW_IDS = Object.freeze(QUALIFIED_REVIEW_REQUIREMENTS.map((item) => item.id));
 const MASTER_GLOBAL_DECISION_KEYS = Object.freeze([
   'intendedPurpose',
   'productRole',
@@ -255,6 +257,41 @@ function acceptedFounderFacts(artifact, expectedSha, now) {
   return validateFounderFactsDocument(document, expectedSha, now);
 }
 
+export function validateQualifiedReviewDocument(document, requirement, expectedSha, now = new Date()) {
+  const failures = [];
+  if (!document || typeof document !== 'object' || Array.isArray(document)) {
+    return { accepted: false, failures: ['document_missing_or_invalid'] };
+  }
+
+  if (document.schema !== QUALIFIED_REVIEW_SCHEMA) failures.push('schema_invalid');
+  if (firstString(document, ['reviewPackageId', 'review_package_id']) !== requirement.id) failures.push('review_package_id_mismatch');
+  if (!ACCEPTED.has(normalise(document.decision ?? document.status))) failures.push('decision_not_accepted');
+  if (containsPlaceholder(document)) failures.push('document_contains_placeholder');
+
+  const requiredStrings = [
+    ['reviewerName', 'reviewer_name'],
+    ['professionalRegistration', 'professional_registration'],
+    ['jurisdiction'],
+    ['qualificationScope', 'qualification_scope'],
+    ['conflictAssessment', 'conflict_assessment'],
+    ['independenceDeclaration', 'independence_declaration'],
+    ['reviewScope', 'review_scope'],
+    ['signedArtifactReference', 'signed_artifact_reference'],
+  ];
+  if (!requiredStrings.every((keys) => meaningfulString(firstString(document, keys)))) failures.push('review_fields_incomplete');
+
+  if (firstString(document, ['productSha', 'product_sha', 'sourceSha', 'source_sha']) !== expectedSha) failures.push('product_sha_mismatch');
+  if (!SHA256_PATTERN.test(firstString(document, ['evidencePackageDigest', 'evidence_package_digest']))) failures.push('evidence_package_digest_invalid');
+  if (!SHA256_PATTERN.test(firstString(document, ['decisionDigest', 'decision_digest']))) failures.push('decision_digest_invalid');
+  if (!validPastOrPresentDate(firstString(document, ['timestamp', 'reviewedAt', 'reviewed_at']), now)) failures.push('timestamp_invalid');
+  if (!validDateRange(document, now)) failures.push('validity_invalid');
+
+  return {
+    accepted: failures.length === 0,
+    failures: [...new Set(failures)].sort(),
+  };
+}
+
 export function validateMasterDecisionDocument(document, expectedSha, now = new Date()) {
   const failures = [];
   if (!document || typeof document !== 'object' || Array.isArray(document)) {
@@ -365,9 +402,23 @@ export function evaluateFinalLegalPublicationGate({
   const masterArtifact = readJson(root, MASTER_DECISION_PATH);
   const founderValidation = acceptedFounderFacts(founderArtifact, expectedSha, now);
   const founderFactsAccepted = founderValidation.accepted;
-  const acceptedReviewCount = legalTruth?.truth?.acceptedReviewFilesValid ?? 0;
-  const expectedReviewCount = legalTruth?.truth?.acceptedReviewFilesExpected ?? 8;
-  const allQualifiedReviewsAccepted = expectedReviewCount === 8 && acceptedReviewCount === expectedReviewCount;
+
+  const qualifiedReviewValidations = QUALIFIED_REVIEW_REQUIREMENTS.map((requirement) => {
+    const artifact = readJson(root, requirement.path);
+    const validation = artifact.document && !artifact.error && expectedSha
+      ? validateQualifiedReviewDocument(artifact.document, requirement, expectedSha, now)
+      : { accepted: false, failures: [artifact.error ?? 'exact_product_sha_unavailable'] };
+    return {
+      id: requirement.id,
+      path: requirement.path,
+      accepted: validation.accepted,
+      failures: validation.failures,
+    };
+  });
+  const acceptedReviewCount = qualifiedReviewValidations.filter((item) => item.accepted).length;
+  const expectedReviewCount = QUALIFIED_REVIEW_REQUIREMENTS.length;
+  const allQualifiedReviewsAccepted = acceptedReviewCount === expectedReviewCount;
+
   const masterValidation = acceptedMasterDecision(masterArtifact, expectedSha, now);
   const masterDecisionAccepted = masterValidation.accepted;
 
@@ -407,6 +458,7 @@ export function evaluateFinalLegalPublicationGate({
       qualifiedReviewAcceptedCount: acceptedReviewCount,
       qualifiedReviewRequiredCount: expectedReviewCount,
       allQualifiedReviewsAccepted,
+      qualifiedReviews: qualifiedReviewValidations,
       masterDecisionPath: MASTER_DECISION_PATH,
       masterDecisionAccepted,
       masterDecisionFailures: masterValidation.failures,
