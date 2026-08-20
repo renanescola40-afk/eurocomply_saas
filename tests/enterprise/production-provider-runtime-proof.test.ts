@@ -10,6 +10,9 @@ const targets = JSON.parse(readFileSync('config/production-provider-targets.json
   schema: string;
   vercel: { teamId: string; projectId: string; projectName: string };
 };
+const billingCatalog = JSON.parse(readFileSync('config/billing-commercial-catalog.json', 'utf8')) as {
+  plans: Record<string, { monthlyPriceEnvKey: string; annualPriceEnvKey: string }>;
+};
 
 describe('protected production provider runtime proof', () => {
   it('runs on exact main with the protected Production environment and read-only permissions', () => {
@@ -98,18 +101,25 @@ describe('protected production provider runtime proof', () => {
   });
 
   it('uses actual Vercel Production Stripe Price bindings as authority and rejects parallel GitHub variable truth', () => {
-    expect(workflow).toContain('Load canonical Stripe Price bindings from Vercel Production');
-    expect(workflow).toContain('run: node scripts/security/load-vercel-stripe-price-bindings.mjs');
-    expect(priceBindingLoader).toContain('target=production&decrypt=true');
-    expect(priceBindingLoader).toContain('GITHUB_ENV');
-    for (const key of [
+    const canonicalSelfServeKeys = ['essential', 'professional'].flatMap((planId) => [
+      billingCatalog.plans[planId].monthlyPriceEnvKey,
+      billingCatalog.plans[planId].annualPriceEnvKey,
+    ]);
+    expect(canonicalSelfServeKeys).toEqual([
       'STRIPE_PRICE_ESSENTIAL_MONTHLY',
       'STRIPE_PRICE_ESSENTIAL_ANNUAL',
       'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
       'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
-    ]) {
+    ]);
+    expect(workflow).toContain('Load canonical Stripe Price bindings from Vercel Production');
+    expect(workflow).toContain('run: node scripts/security/load-vercel-stripe-price-bindings.mjs');
+    expect(priceBindingLoader).toContain('target=production&decrypt=true');
+    expect(priceBindingLoader).toContain('GITHUB_ENV');
+    expect(priceBindingLoader).toContain("for (const publicId of ['essential', 'professional'])");
+    expect(priceBindingLoader).toContain('plan.monthlyPriceEnvKey');
+    expect(priceBindingLoader).toContain('plan.annualPriceEnvKey');
+    for (const key of canonicalSelfServeKeys) {
       expect(workflow).not.toContain(`${key}: ` + '${{ vars.' + key + ' }}');
-      expect(priceBindingLoader).toContain(`'${key}'`);
       expect(billingProducer).toContain(`'${key}'`);
     }
     expect(workflow).not.toContain('STRIPE_PRICE_STARTER_MONTHLY: ${{ vars.STRIPE_PRICE_STARTER_MONTHLY }}');
