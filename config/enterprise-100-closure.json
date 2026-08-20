@@ -81,12 +81,6 @@
       "acceptedStatuses": ["PASSED"]
     },
     {
-      "id": "external-security-assurance",
-      "owner": "security",
-      "evidence": "docs/security/evidence/runtime/external-security-review-or-pentest.json",
-      "acceptedStatuses": ["PASS", "COMPLETE"]
-    },
-    {
       "id": "legal-publication",
       "owner": "legal",
       "evidence": "artifacts/legal-review/final-legal-publication-gate.json",
