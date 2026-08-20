@@ -10,7 +10,8 @@ declare
   anon_privilege_count integer;
   personal_task_policy_count integer;
   permanent_mutation_guard_count integer;
-  evidence_policy_count integer;
+  evidence_items_policy_count integer;
+  compliance_evidence_policy_count integer;
   storage_policy_count integer;
 begin
   foreach required_table in array array[
@@ -219,29 +220,65 @@ begin
     raise exception 'direct compliance_tasks mutation policy unexpectedly remains active';
   end if;
 
+  -- Evidence Vault metadata is intentionally organization-scoped after the
+  -- forward reconciliation. Hard DELETE remains service-role/backend-only.
   select count(*)
-    into evidence_policy_count
+    into evidence_items_policy_count
   from pg_policies
   where schemaname = 'public'
+    and tablename = 'evidence_items'
+    and roles = array['authenticated']::name[]
     and (
-      (tablename = 'evidence_items' and policyname in (
-        'rls_evidence_items_select_owner',
-        'rls_evidence_items_insert_owner',
-        'rls_evidence_items_update_owner',
-        'rls_evidence_items_delete_owner'
-      ))
-      or
-      (tablename = 'compliance_evidence' and policyname in (
-        'rls_compliance_evidence_select_owner',
-        'rls_compliance_evidence_insert_owner',
-        'rls_compliance_evidence_update_owner',
-        'rls_compliance_evidence_delete_owner'
-      ))
+      (policyname = 'rls_evidence_items_select_organization' and cmd = 'SELECT')
+      or (policyname = 'rls_evidence_items_insert_organization' and cmd = 'INSERT')
+      or (policyname = 'rls_evidence_items_update_organization' and cmd = 'UPDATE')
+    );
+
+  if evidence_items_policy_count <> 3 then
+    raise exception 'canonical Evidence Vault organization RLS policy set is incomplete';
+  end if;
+
+  if exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'evidence_items'
+      and policyname not in (
+        'rls_evidence_items_select_organization',
+        'rls_evidence_items_insert_organization',
+        'rls_evidence_items_update_organization'
+      )
+  ) then
+    raise exception 'stale or unexpected Evidence Vault metadata policy remains active';
+  end if;
+
+  if not has_table_privilege('authenticated', 'public.evidence_items', 'SELECT')
+     or not has_table_privilege('authenticated', 'public.evidence_items', 'INSERT')
+     or not has_table_privilege('authenticated', 'public.evidence_items', 'UPDATE') then
+    raise exception 'authenticated Evidence Vault metadata read/write privileges are incomplete';
+  end if;
+
+  if has_table_privilege('authenticated', 'public.evidence_items', 'DELETE') then
+    raise exception 'authenticated must not have hard DELETE privilege on Evidence Vault metadata';
+  end if;
+
+  -- compliance_evidence remains on its established owner-scoped compatibility
+  -- contract; it is intentionally validated separately from evidence_items.
+  select count(*)
+    into compliance_evidence_policy_count
+  from pg_policies
+  where schemaname = 'public'
+    and tablename = 'compliance_evidence'
+    and policyname in (
+      'rls_compliance_evidence_select_owner',
+      'rls_compliance_evidence_insert_owner',
+      'rls_compliance_evidence_update_owner',
+      'rls_compliance_evidence_delete_owner'
     )
     and roles = array['authenticated']::name[];
 
-  if evidence_policy_count <> 8 then
-    raise exception 'evidence ownership RLS policy set is incomplete';
+  if compliance_evidence_policy_count <> 4 then
+    raise exception 'compliance_evidence owner RLS policy set is incomplete';
   end if;
 
   select count(*)
@@ -271,21 +308,38 @@ begin
     raise exception 'compliance-evidence storage bucket is missing or public';
   end if;
 
+  -- The canonical Evidence Vault permits authenticated SELECT/INSERT only;
+  -- object UPDATE/DELETE is deliberately absent and remains fail-closed.
   select count(*)
     into storage_policy_count
   from pg_policies
   where schemaname = 'storage'
     and tablename = 'objects'
-    and policyname in (
-      'rls_compliance_evidence_objects_insert_owner',
-      'rls_compliance_evidence_objects_select_owner',
-      'rls_compliance_evidence_objects_update_owner',
-      'rls_compliance_evidence_objects_delete_owner'
-    )
-    and roles = array['authenticated']::name[];
+    and roles = array['authenticated']::name[]
+    and (
+      (policyname = 'rls_compliance_evidence_objects_select_organization' and cmd = 'SELECT')
+      or (policyname = 'rls_compliance_evidence_objects_insert_organization' and cmd = 'INSERT')
+    );
 
-  if storage_policy_count <> 4 then
-    raise exception 'compliance-evidence storage ownership policy set is incomplete';
+  if storage_policy_count <> 2 then
+    raise exception 'canonical compliance-evidence organization storage policy set is incomplete';
+  end if;
+
+  if exists (
+    select 1
+    from pg_policies
+    where schemaname = 'storage'
+      and tablename = 'objects'
+      and policyname in (
+        'users can update own compliance evidence files',
+        'users can delete own compliance evidence files',
+        'rls_compliance_evidence_objects_update_owner',
+        'rls_compliance_evidence_objects_delete_owner',
+        'rls_compliance_evidence_objects_update_organization',
+        'rls_compliance_evidence_objects_delete_organization'
+      )
+  ) then
+    raise exception 'authenticated Evidence Vault storage UPDATE/DELETE policy remains active';
   end if;
 end
 $verify$;
