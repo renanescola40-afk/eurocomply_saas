@@ -2,13 +2,13 @@
 
 | Scope | Branch / PR | Mode | Status |
 | --- | --- | --- | --- |
-| Billing lifecycle and add-ons | #1377 | External PR lock | Green; human review required |
-| Governance foundations and migration | #1376 | External PR lock | Green; human review required |
-| Secure access export issuance | #1375 | External PR lock | Green; human review required |
-| Qualified-review evidence package | #1374 | External PR lock | Green; human review required |
-| Break-glass governance | #1365 | External PR lock | Green; reviewer requested |
-| Premium public landing | #1369 | External PR lock | Vercel rate-limit blocker |
-| Persistent scorecard/execution-state truth | `agent/enterprise-state-truth-reconciliation` | Write | Active |
+| Enterprise 100 final evidence authority and provenance closure | `agent/enterprise-final-evidence-authority-closure-20260819` / #1730 | Write | Active; exact-head checks/reviews pending |
+| Canonical Enterprise final authority | #1730 | Protected authority transition | Do not create competing final authority or manual run-ID fan-in |
+| Enterprise closure contract | #1730 | Shared contract | 16 unique controls; direct producer evidence must remain exact-SHA and fail-closed |
+| Production evidence producers | protected post-merge workflows | Runtime / human | No repository-only substitution; execute only for exact current main |
 
-Do not modify locked migrations or domain files from another branch. Read-only
-audit is permitted. Final merge remains a human action.
+Do not modify the authority/closure files from another branch while #1730 is
+active unless the change is deliberately coordinated into this work package.
+Read-only audit is permitted. No lock authorizes bypassing required checks,
+branch protection, environment approval, evidence provenance, or security gates.
+Final merge remains a human action.

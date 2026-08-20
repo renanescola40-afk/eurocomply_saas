@@ -14,11 +14,11 @@ const closureWorkflow = readFileSync('.github/workflows/enterprise-100-closure.y
 
 const externalControl = config.controls.find((control) => control.id === 'external-security-assurance');
 
-test('Enterprise 100 closure contains an explicit external assurance control', () => {
+test('Enterprise 100 closure contains the canonical external assurance authority control', () => {
   assert.ok(externalControl, 'external-security-assurance control is required');
-  assert.equal(externalControl.evidence, 'docs/security/evidence/runtime/external-security-review-or-pentest.json');
-  assert.ok(externalControl.acceptedStatuses.includes('PASS'));
-  assert.ok(externalControl.acceptedStatuses.includes('COMPLETE'));
+  assert.equal(externalControl.owner, 'external-assurance');
+  assert.equal(externalControl.evidence, 'external-security-assurance-decision.json');
+  assert.deepEqual(externalControl.acceptedStatuses, ['ACCEPTED_FOR_ENTERPRISE_PROMOTION']);
 });
 
 test('Enterprise 100 closure semantically validates external assurance instead of trusting status alone', () => {

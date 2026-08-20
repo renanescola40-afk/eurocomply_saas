@@ -5,6 +5,7 @@ on:
     paths:
       - 'config/enterprise-100-closure.json'
       - 'scripts/enterprise/collect-github-exact-sha-artifacts.mjs'
+      - 'scripts/enterprise/fetch-enterprise-final-authority-evidence.mjs'
       - 'scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs'
       - 'scripts/release/check-enterprise-100-closure.mjs'
       - 'scripts/release/hydrate-enterprise-100-evidence.mjs'
@@ -16,6 +17,7 @@ on:
       - 'scripts/supabase/write-rls-reconciliation-closure-evidence.test.mjs'
       - 'tests/enterprise-100-closure.test.ts'
       - 'tests/enterprise/enterprise-100-evidence-hydration.test.mjs'
+      - 'tests/enterprise/enterprise-final-authority-contract.test.mjs'
       - 'tests/enterprise/github-exact-sha-artifact-collector.test.mjs'
       - 'tests/enterprise/production-deployment-github-vercel-proof.test.ts'
       - 'tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts'
@@ -36,6 +38,9 @@ on:
       - 'Enterprise Recovery Drill'
       - 'Recovery Resilience Proof'
       - 'Production Provider Runtime Proof'
+      - 'Product FRIA Ephemeral Runtime QA'
+      - 'Final Billing + Product Live Closeout'
+      - 'Supabase Forward Production Acceptance'
       - 'Enterprise Safe Runtime Bootstrap'
       - 'Enterprise Runtime Evidence Closeout'
       - 'Enterprise Readiness Scorecard'
@@ -89,6 +94,7 @@ jobs:
       - name: Test closure verifier hydration and artifact collection contracts
         run: |
           node --check scripts/enterprise/collect-github-exact-sha-artifacts.mjs
+          node --check scripts/enterprise/fetch-enterprise-final-authority-evidence.mjs
           node --check scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs
           node --check scripts/release/check-enterprise-100-closure.mjs
           node --check scripts/release/hydrate-enterprise-100-evidence.mjs
@@ -102,6 +108,7 @@ jobs:
           node --test \
             scripts/supabase/write-rls-reconciliation-closure-evidence.test.mjs \
             tests/enterprise/enterprise-100-evidence-hydration.test.mjs \
+            tests/enterprise/enterprise-final-authority-contract.test.mjs \
             tests/enterprise/github-exact-sha-artifact-collector.test.mjs \
             tests/security/enterprise-100-closure-workflow.test.mjs \
             tests/security/enterprise-100-stale-workflow-run-guard.test.mjs \
@@ -111,15 +118,20 @@ jobs:
       - name: Validate repository contract
         if: github.event_name == 'pull_request'
         run: |
-          node -e "const c=require('./config/enterprise-100-closure.json'); if(!Array.isArray(c.controls)||c.controls.length<10) process.exit(1)"
+          node -e "const c=require('./config/enterprise-100-closure.json'); if(!Array.isArray(c.controls)||c.controls.length!==16||new Set(c.controls.map(x=>x.id)).size!==16) process.exit(1)"
           grep -Fq 'ENTERPRISE_CLOSURE_EVIDENCE_ROOTS' scripts/release/check-enterprise-100-closure.mjs
           grep -Fq 'enterprise-100-evidence-hydration.v1' scripts/release/hydrate-enterprise-100-evidence.mjs
           grep -Fq 'github-exact-sha-artifact-collection.v1' scripts/enterprise/collect-github-exact-sha-artifacts.mjs
+          grep -Fq 'fetch-enterprise-final-authority-evidence.mjs' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'write-github-vercel-production-deployment-evidence.mjs' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'direct-production-deployment/release-validation/production-deployment.json' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Enterprise Production Gate' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Production Runtime Proof' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Recovery Resilience Proof' .github/workflows/enterprise-100-closure.yml
+          grep -Fq 'Production Provider Runtime Proof' .github/workflows/enterprise-100-closure.yml
+          grep -Fq 'Product FRIA Ephemeral Runtime QA' .github/workflows/enterprise-100-closure.yml
+          grep -Fq 'Final Billing + Product Live Closeout' .github/workflows/enterprise-100-closure.yml
+          grep -Fq 'Supabase Forward Production Acceptance' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Enterprise Safe Runtime Bootstrap' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Stripe Runtime Evidence Promotion' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Supabase Production RLS Reconciliation' .github/workflows/enterprise-100-closure.yml
@@ -152,6 +164,14 @@ jobs:
             enterprise-100 \
             "$ENTERPRISE_CLOSURE_EXPECTED_SHA" \
             "$RETAINED_ARTIFACT_ROOT"
+
+      - name: Collect direct domain authority artifacts
+        if: github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ENTERPRISE_CLOSURE_EXPECTED_SHA }}
+          FINAL_AUTHORITY_SOURCE_ROOT: artifacts/enterprise-100-retained-artifacts/direct-final-authority
+        run: node scripts/enterprise/fetch-enterprise-final-authority-evidence.mjs
 
       - name: Generate direct exact-SHA production deployment evidence
         if: github.event_name != 'pull_request'
@@ -253,6 +273,7 @@ jobs:
           path: |
             release-validation/enterprise-100-closure.json
             artifacts/enterprise-100-retained-artifacts/github-exact-sha-artifact-collection.json
+            artifacts/enterprise-100-retained-artifacts/direct-final-authority/enterprise-final-authority-source.json
             artifacts/enterprise-100-evidence-root/enterprise-100-evidence-hydration.json
           if-no-files-found: error
           retention-days: 90

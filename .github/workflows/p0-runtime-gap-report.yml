@@ -146,10 +146,8 @@ jobs:
           if-no-files-found: error
           retention-days: 365
 
-      - name: Strict report for release-ready branches
-        if: >-
-          contains(github.head_ref || github.ref_name, 'final-evidence') ||
-          contains(github.head_ref || github.ref_name, 'release-ready')
+      - name: Strict report for exact main release evidence
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           node scripts/security/report-p0-runtime-evidence-gap.mjs --strict
           node scripts/security/generate-p0-runtime-evidence-register.mjs \
