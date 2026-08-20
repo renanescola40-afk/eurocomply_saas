@@ -87,9 +87,6 @@ jobs:
           NEXT_PUBLIC_POSTHOG_HOST: https://analytics-ci.invalid
 
       - name: Required production-like Playwright E2E gate
-        # TEMPORARY 2026-08-20: keep the runtime signal visible while unblocking
-        # merges. Restore fail-closed behavior after the shared Playwright/FRIA
-        # runtime regression is corrected.
         shell: bash
         env:
           RUN_E2E: ${{ vars.RUN_E2E }}
@@ -124,11 +121,11 @@ jobs:
           fi
           npx playwright install --with-deps chromium
           if ! npm run test:e2e -- --reporter=line > playwright-e2e.log 2>&1; then
-            echo "::warning title=Playwright E2E temporarily quarantined::The complete E2E suite still ran and failed; merge is temporarily allowed while the shared runtime regression is corrected."
+            echo "::error title=Playwright E2E failed::The production-like E2E suite failed. Merge and release remain blocked."
             tail -n 250 playwright-e2e.log
-          else
-            tail -n 20 playwright-e2e.log
+            exit 1
           fi
+          tail -n 20 playwright-e2e.log
 
       - name: npm audit policy gate for dependency changes and release events
         if: steps.manifests.outputs.changed == 'true' || github.event_name != 'pull_request'
