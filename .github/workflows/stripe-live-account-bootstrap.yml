@@ -89,8 +89,8 @@ jobs:
             echo '### Remaining controlled cutover'
             echo
             echo '- Vercel environment changes apply to a new deployment; redeploy the exact current main SHA before runtime proof.'
-            echo '- The account-default Stripe Customer Portal remains Dashboard-managed; create/configure the default, then run `Stripe Billing Portal Bootstrap`.'
-            echo '- Run `Production Provider Runtime Proof` only after the new deployment and Portal alignment.'
+            echo '- The account-default Stripe Customer Portal remains Dashboard-managed; create/configure the default, then run Stripe Billing Portal Bootstrap.'
+            echo '- Run Production Provider Runtime Proof only after the new deployment and Portal alignment.'
             echo '- Do not create synthetic customers, Checkout Sessions, subscriptions, invoices, payments or charges for evidence.'
             echo '- No Billing/Product PASS is emitted by this bootstrap.'
           } >> "$GITHUB_STEP_SUMMARY"
