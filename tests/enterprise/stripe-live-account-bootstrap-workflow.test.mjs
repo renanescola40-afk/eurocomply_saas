@@ -23,9 +23,9 @@ test('protected bootstrap consumes secrets without echoing their values', () => 
 });
 
 test('bootstrap verifies Vercel binding safety before provider mutation and re-reads bindings afterwards', () => {
-  const preflight = workflow.indexOf('check-vercel-stripe-binding-types.mjs');
-  const provision = workflow.indexOf('provision-stripe-live-account.mjs');
-  const reload = workflow.indexOf('load-vercel-stripe-price-bindings.mjs', provision + 1);
+  const preflight = workflow.indexOf('run: node scripts/security/check-vercel-stripe-binding-types.mjs');
+  const provision = workflow.indexOf('run: node scripts/ops/provision-stripe-live-account.mjs');
+  const reload = workflow.indexOf('run: node scripts/security/load-vercel-stripe-price-bindings.mjs');
   assert.ok(preflight >= 0 && provision > preflight && reload > provision);
 });
 
