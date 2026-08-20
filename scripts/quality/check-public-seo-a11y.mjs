@@ -47,7 +47,7 @@ assert(pricing.includes('application/ld+json'), 'Pricing must include structured
 assert(pricing.includes('scope="row"'), 'Pricing comparison table must expose row headers.');
 
 const trustRoute = read('src/app/[locale]/[trustPage]/page.tsx');
-assert(trustRoute.includes("dynamic = 'force-static'"), 'Trust routes should stay statically optimized.');
+assert(!trustRoute.includes("dynamic = 'force-static'"), 'Trust routes must inherit the request-aware localized commercial boundary.');
 assert(trustRoute.includes('generateStaticParams'), 'Trust routes must keep locale/static params.');
 assert(trustRoute.includes('makePublicMetadata'), 'Trust routes must use shared public metadata helper.');
 
@@ -60,6 +60,7 @@ assert(waitlistPage.includes('aria-labelledby="landing-title"'), 'Landing hero s
 const localeLayout = read('src/app/[locale]/layout.tsx');
 const authProviderGate = read('src/components/auth/AuthProviderGate.tsx');
 const globalEffectsGate = read('src/components/GlobalClientEffectsGate.tsx');
+assert(localeLayout.includes("export const dynamic = 'force-dynamic'"), 'Locale layout must remain request-aware for the commercial access boundary.');
 assert(localeLayout.includes('AuthProviderGate'), 'Locale layout must gate the auth provider away from public SEO routes.');
 assert(!localeLayout.includes('import { AuthProvider }'), 'Locale layout must not import AuthProvider directly.');
 assert(authProviderGate.includes('AUTH_PROVIDER_SEGMENTS'), 'AuthProviderGate must explicitly document auth/private route segments.');
