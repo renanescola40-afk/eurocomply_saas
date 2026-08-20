@@ -5,6 +5,9 @@ import { readFileSync } from 'node:fs';
 const MAX_RESPONSE_BYTES = 256 * 1024;
 const CATALOG_PATH = 'config/billing-commercial-catalog.json';
 const PROVIDER_TARGETS_PATH = 'config/production-provider-targets.json';
+const VERCEL_PROJECT_ID = /^prj_[A-Za-z0-9]+$/;
+const VERCEL_TEAM_ID = /^team_[A-Za-z0-9]+$/;
+const VERCEL_PROJECT_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 
 function env(name) {
   return String(process.env[name] ?? '').trim();
@@ -74,12 +77,32 @@ export function validateExistingPriceBindingTypes(rows, keys) {
   return true;
 }
 
+export function runtimeVercelTargetFromEnv(source = process.env) {
+  const target = {
+    projectId: String(source.VERCEL_PROJECT_ID ?? '').trim(),
+    teamId: String(source.VERCEL_TEAM_ID ?? '').trim(),
+    projectName: String(source.VERCEL_PROJECT_NAME ?? '').trim(),
+  };
+  if (!VERCEL_PROJECT_ID.test(target.projectId)) throw new Error('invalid_runtime_vercel_project_id');
+  if (!VERCEL_TEAM_ID.test(target.teamId)) throw new Error('invalid_runtime_vercel_team_id');
+  if (!VERCEL_PROJECT_NAME.test(target.projectName)) throw new Error('invalid_runtime_vercel_project_name');
+  return target;
+}
+
+export function assertRuntimeVercelTargetAuthority(authority, runtimeTarget) {
+  if (!authority?.projectId || !authority?.teamId || !authority?.projectName) throw new Error('invalid_vercel_target_authority');
+  for (const key of ['projectId', 'teamId', 'projectName']) {
+    if (runtimeTarget?.[key] !== authority[key]) throw new Error(`vercel_target_authority_mismatch:${key}`);
+  }
+  return true;
+}
+
 async function main() {
   const catalog = loadJson(CATALOG_PATH, 'risck-comply.billing-commercial-catalog.v1');
   const targets = loadJson(PROVIDER_TARGETS_PATH, 'risck-comply.production-provider-targets.v1');
   const token = requiredEnv('VERCEL_TOKEN');
-  const target = targets.vercel;
-  if (!target?.projectId || !target?.teamId) throw new Error('invalid_vercel_target');
+  const target = runtimeVercelTargetFromEnv();
+  assertRuntimeVercelTargetAuthority(targets.vercel, target);
   const url = `https://api.vercel.com/v10/projects/${encodeURIComponent(target.projectId)}/env?target=production&decrypt=false&teamId=${encodeURIComponent(target.teamId)}`;
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
