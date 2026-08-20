@@ -14,7 +14,94 @@ const FOUNDER_FACTS_PATH = 'docs/compliance/evidence/accepted/founder-facts.json
 const MASTER_DECISION_PATH = 'docs/compliance/evidence/accepted/master-legal-decision.json';
 const OUTPUT_PATH = 'artifacts/legal-review/final-legal-publication-gate.json';
 const SHA256_PATTERN = /^(?:sha256:)?[a-f0-9]{64}$/i;
+const PLACEHOLDER_PATTERN = /(?:^|\b)(?:placeholder|example|sample|todo|tbd|replace[ _-]?me|dummy|fake|unknown)(?:\b|$)/i;
 const ACCEPTED = new Set(['ACCEPTED', 'COUNSEL_ACCEPTED']);
+const FOUNDER_FACTS_SCHEMA = 'risck-comply.founder-facts.v1';
+const QUALIFIED_REVIEW_SCHEMA = 'risck-comply.qualified-review-decision.v1';
+const MASTER_DECISION_SCHEMA = 'risck-comply.master-legal-decision-sheet.v1';
+const NOT_APPLICABLE_STATUSES = new Set(['NOT_APPLICABLE', 'NOT_REQUIRED']);
+const UNRESOLVED_FOUNDER_FACT_VALUES = new Set([
+  '',
+  'UNKNOWN',
+  'TBD',
+  'TODO',
+  'PENDING',
+  'UNDECIDED',
+  'NOT_DECIDED',
+  'NOT_SET',
+  'N/A',
+  'NA',
+  'NULL',
+  'NOT_APPLICABLE',
+  'NOT_REQUIRED',
+]);
+const FOUNDER_FACT_REQUIRED_PATHS = Object.freeze([
+  'legalEntity.registeredName',
+  'legalEntity.companyNumber',
+  'legalEntity.vatNumber',
+  'legalEntity.registeredAddress',
+  'legalEntity.country',
+  'legalEntity.governingLawPreference',
+  'legalEntity.legalContact',
+  'legalEntity.privacyContact',
+  'legalEntity.securityContact',
+  'legalEntity.billingContact',
+  'legalEntity.supportContact',
+  'legalEntity.dpoOrRepresentative',
+  'commercial.productionProductName',
+  'commercial.productionDomains',
+  'commercial.customerTypesAndExcludedUses',
+  'commercial.plansAndBilling',
+  'commercial.trialRenewalCancellation',
+  'commercial.refundSuspensionTermination',
+  'commercial.enterpriseOrderForm',
+  'commercial.slaCommitments',
+  'dataProcessing.productionDataCategories',
+  'dataProcessing.roleAllocation',
+  'dataProcessing.hostingRegions',
+  'dataProcessing.retentionSchedule',
+  'dataProcessing.transferMechanisms',
+  'dataProcessing.dataSubjectRequestOwner',
+  'providers.hosting',
+  'providers.databaseAndAuth',
+  'providers.billing',
+  'providers.observability',
+  'providers.analytics',
+  'providers.email',
+  'providers.support',
+  'providers.aiProviders',
+  'securityOperations.availabilityCommitment',
+  'securityOperations.supportCommitment',
+  'securityOperations.incidentCommunication',
+  'securityOperations.backupRestoreCommitment',
+  'securityOperations.certificationsAuditsPentests',
+  'securityOperations.vulnerabilityDisclosureProcess',
+  'aiLegalPositioning.serviceBoundaryConfirmed',
+  'aiLegalPositioning.customerContentAiProcessing',
+  'aiLegalPositioning.excludedUses',
+  'aiLegalPositioning.partnerCounselModel',
+  'aiLegalPositioning.approvedClaims',
+]);
+const QUALIFIED_REVIEW_REQUIREMENTS = Object.freeze([
+  { id: 'legal-rules', path: 'docs/compliance/evidence/accepted/legal-rules-qualified-review.json' },
+  { id: 'prohibited-practices', path: 'docs/compliance/evidence/accepted/prohibited-practices-legal-review.json' },
+  { id: 'article-50-copy', path: 'docs/compliance/evidence/accepted/article-50-copy-review.json' },
+  { id: 'fria-methodology', path: 'docs/compliance/evidence/accepted/fria-methodology-review.json' },
+  { id: 'deployer-obligations', path: 'docs/compliance/evidence/accepted/deployer-obligations-legal-review.json' },
+  { id: 'high-risk-provider', path: 'docs/compliance/evidence/accepted/high-risk-provider-methodology-review.json' },
+  { id: 'conformity', path: 'docs/compliance/evidence/accepted/conformity-qualified-review.json' },
+  { id: 'gpai', path: 'docs/compliance/evidence/accepted/gpai-legal-review.json' },
+]);
+const QUALIFIED_REVIEW_IDS = Object.freeze(QUALIFIED_REVIEW_REQUIREMENTS.map((item) => item.id));
+const MASTER_GLOBAL_DECISION_KEYS = Object.freeze([
+  'intendedPurpose',
+  'productRole',
+  'launchPosition',
+  'contractPack',
+  'privacyAndDpa',
+  'claims',
+  'partnerCounselModel',
+]);
 
 function normalise(value) {
   return String(value ?? '').trim().toUpperCase().replace(/[\s-]+/g, '_');
@@ -26,6 +113,27 @@ function firstString(document, keys) {
     if (typeof value === 'string' && value.trim()) return value.trim();
   }
   return '';
+}
+
+function meaningfulString(value) {
+  return typeof value === 'string' && Boolean(value.trim()) && !PLACEHOLDER_PATTERN.test(value.trim());
+}
+
+function containsPlaceholder(value) {
+  if (typeof value === 'string') return PLACEHOLDER_PATTERN.test(value.trim());
+  if (Array.isArray(value)) return value.some((item) => containsPlaceholder(item));
+  if (value && typeof value === 'object') return Object.values(value).some((item) => containsPlaceholder(item));
+  return false;
+}
+
+function resolvedDecisionContent(value) {
+  if (typeof value === 'string') return meaningfulString(value);
+  if (typeof value === 'boolean') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (Array.isArray(value)) return value.length > 0 && value.every((item) => resolvedDecisionContent(item));
+  if (!value || typeof value !== 'object') return false;
+  const entries = Object.entries(value);
+  return entries.length > 0 && entries.every(([, item]) => resolvedDecisionContent(item));
 }
 
 function readJson(root, path) {
@@ -60,57 +168,215 @@ function validDateRange(document, now) {
   return !Number.isNaN(startsAt.getTime()) && !Number.isNaN(endsAt.getTime()) && startsAt <= now && endsAt >= now;
 }
 
-function acceptedFounderFacts(artifact, expectedSha) {
-  const document = artifact.document;
-  if (!document || artifact.error || !expectedSha) return false;
-  const officer = document.authorisedOfficer;
-  if (!officer || typeof officer !== 'object' || Array.isArray(officer)) return false;
-  return (
-    normalise(document.status) === 'FOUNDER_FACTS_CONFIRMED' &&
-    firstString(document, ['productSha', 'product_sha', 'sourceSha', 'source_sha']) === expectedSha &&
-    Boolean(firstString(officer, ['name'])) &&
-    Boolean(firstString(officer, ['role'])) &&
-    Boolean(firstString(officer, ['confirmedAt'])) &&
-    Boolean(firstString(officer, ['signedArtifactReference'])) &&
-    SHA256_PATTERN.test(firstString(officer, ['factsDigest']))
+function validPastOrPresentDate(value, now) {
+  if (!value) return false;
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime()) && date <= now;
+}
+
+function nestedValue(document, path) {
+  let current = document;
+  for (const segment of path.split('.')) {
+    if (!current || typeof current !== 'object' || Array.isArray(current)) return undefined;
+    current = current[segment];
+  }
+  return current;
+}
+
+function resolvedFounderFact(value) {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return Boolean(trimmed) && !UNRESOLVED_FOUNDER_FACT_VALUES.has(normalise(trimmed));
+  }
+
+  if (typeof value === 'boolean') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+
+  if (Array.isArray(value)) {
+    return value.length > 0 && value.every((item) => resolvedFounderFact(item));
+  }
+
+  if (!value || typeof value !== 'object') return false;
+
+  const disposition = normalise(value.status ?? value.state ?? value.disposition);
+  if (NOT_APPLICABLE_STATUSES.has(disposition)) {
+    const rationale = firstString(value, ['rationale', 'reason']);
+    return rationale.length >= 10 && !UNRESOLVED_FOUNDER_FACT_VALUES.has(normalise(rationale));
+  }
+
+  const entries = Object.entries(value);
+  return entries.length > 0 && entries.every(([, item]) => resolvedFounderFact(item));
+}
+
+function unresolvedFounderFactPaths(document) {
+  return FOUNDER_FACT_REQUIRED_PATHS.filter(
+    (path) => !resolvedFounderFact(nestedValue(document, path)),
   );
+}
+
+export function validateFounderFactsDocument(document, expectedSha, now = new Date()) {
+  const unresolvedFields = document && typeof document === 'object'
+    ? unresolvedFounderFactPaths(document)
+    : [...FOUNDER_FACT_REQUIRED_PATHS];
+  const officer = document?.authorisedOfficer;
+  const officerDocument = officer && typeof officer === 'object' && !Array.isArray(officer) ? officer : null;
+  const confirmedAt = firstString(officerDocument, ['confirmedAt']);
+
+  const schemaValid = document?.schema === FOUNDER_FACTS_SCHEMA;
+  const statusValid = normalise(document?.status) === 'FOUNDER_FACTS_CONFIRMED';
+  const productShaValid = firstString(document, ['productSha', 'product_sha', 'sourceSha', 'source_sha']) === expectedSha;
+  const officerComplete = Boolean(
+    officerDocument &&
+    resolvedFounderFact(firstString(officerDocument, ['name'])) &&
+    resolvedFounderFact(firstString(officerDocument, ['role'])) &&
+    validPastOrPresentDate(confirmedAt, now) &&
+    resolvedFounderFact(firstString(officerDocument, ['signedArtifactReference'])) &&
+    SHA256_PATTERN.test(firstString(officerDocument, ['factsDigest'])),
+  );
+
+  return {
+    accepted:
+      Boolean(document) &&
+      schemaValid &&
+      statusValid &&
+      productShaValid &&
+      unresolvedFields.length === 0 &&
+      officerComplete,
+    schemaValid,
+    statusValid,
+    productShaValid,
+    officerComplete,
+    unresolvedFields,
+  };
+}
+
+function acceptedFounderFacts(artifact, expectedSha, now) {
+  const document = artifact.document;
+  if (!document || artifact.error || !expectedSha) {
+    return {
+      accepted: false,
+      unresolvedFields: document && typeof document === 'object'
+        ? unresolvedFounderFactPaths(document)
+        : [...FOUNDER_FACT_REQUIRED_PATHS],
+    };
+  }
+  return validateFounderFactsDocument(document, expectedSha, now);
+}
+
+export function validateQualifiedReviewDocument(document, requirement, expectedSha, now = new Date()) {
+  const failures = [];
+  if (!document || typeof document !== 'object' || Array.isArray(document)) {
+    return { accepted: false, failures: ['document_missing_or_invalid'] };
+  }
+
+  if (document.schema !== QUALIFIED_REVIEW_SCHEMA) failures.push('schema_invalid');
+  if (firstString(document, ['reviewPackageId', 'review_package_id']) !== requirement.id) failures.push('review_package_id_mismatch');
+  if (!ACCEPTED.has(normalise(document.decision ?? document.status))) failures.push('decision_not_accepted');
+  if (containsPlaceholder(document)) failures.push('document_contains_placeholder');
+
+  const requiredStrings = [
+    ['reviewerName', 'reviewer_name'],
+    ['professionalRegistration', 'professional_registration'],
+    ['jurisdiction'],
+    ['qualificationScope', 'qualification_scope'],
+    ['conflictAssessment', 'conflict_assessment'],
+    ['independenceDeclaration', 'independence_declaration'],
+    ['reviewScope', 'review_scope'],
+    ['signedArtifactReference', 'signed_artifact_reference'],
+  ];
+  if (!requiredStrings.every((keys) => meaningfulString(firstString(document, keys)))) failures.push('review_fields_incomplete');
+
+  if (firstString(document, ['productSha', 'product_sha', 'sourceSha', 'source_sha']) !== expectedSha) failures.push('product_sha_mismatch');
+  if (!SHA256_PATTERN.test(firstString(document, ['evidencePackageDigest', 'evidence_package_digest']))) failures.push('evidence_package_digest_invalid');
+  if (!SHA256_PATTERN.test(firstString(document, ['decisionDigest', 'decision_digest']))) failures.push('decision_digest_invalid');
+  if (!validPastOrPresentDate(firstString(document, ['timestamp', 'reviewedAt', 'reviewed_at']), now)) failures.push('timestamp_invalid');
+  if (!validDateRange(document, now)) failures.push('validity_invalid');
+
+  return {
+    accepted: failures.length === 0,
+    failures: [...new Set(failures)].sort(),
+  };
+}
+
+export function validateMasterDecisionDocument(document, expectedSha, now = new Date()) {
+  const failures = [];
+  if (!document || typeof document !== 'object' || Array.isArray(document)) {
+    return { accepted: false, failures: ['document_missing_or_invalid'] };
+  }
+
+  if (document.schema !== MASTER_DECISION_SCHEMA) failures.push('schema_invalid');
+  if (!ACCEPTED.has(normalise(document.decision ?? document.status))) failures.push('decision_not_accepted');
+  if (containsPlaceholder(document)) failures.push('document_contains_placeholder');
+
+  const reviewer = document.reviewer;
+  const binding = document.reviewBinding;
+  const globalDecisions = document.globalDecisions;
+  const workstreams = document.workstreamDecisions;
+  const limitations = document.limitations;
+  const blockingChanges = document.blockingChanges;
+
+  if (!reviewer || typeof reviewer !== 'object' || Array.isArray(reviewer)) {
+    failures.push('reviewer_invalid');
+  } else {
+    const reviewerComplete = [
+      'name',
+      'professionalRegistration',
+      'jurisdiction',
+      'qualificationScope',
+      'conflictAssessment',
+      'independenceDeclaration',
+    ].every((key) => meaningfulString(firstString(reviewer, [key])));
+    if (!reviewerComplete) failures.push('reviewer_incomplete');
+  }
+
+  if (!binding || typeof binding !== 'object' || Array.isArray(binding)) {
+    failures.push('review_binding_invalid');
+  } else {
+    if (firstString(binding, ['productSha']) !== expectedSha) failures.push('product_sha_mismatch');
+    if (!SHA256_PATTERN.test(firstString(binding, ['evidencePackageDigest']))) failures.push('evidence_package_digest_invalid');
+    if (!meaningfulString(firstString(binding, ['signedOpinionReference']))) failures.push('signed_opinion_reference_invalid');
+    if (!SHA256_PATTERN.test(firstString(binding, ['decisionDigest']))) failures.push('decision_digest_invalid');
+    if (!validPastOrPresentDate(firstString(binding, ['reviewedAt']), now)) failures.push('reviewed_at_invalid');
+    if (!validDateRange({ validityStart: binding.validityStart, validityEnd: binding.validityEnd }, now)) failures.push('validity_invalid');
+    if (!resolvedDecisionContent(binding.changeTriggers)) failures.push('change_triggers_incomplete');
+  }
+
+  if (!globalDecisions || typeof globalDecisions !== 'object' || Array.isArray(globalDecisions)) {
+    failures.push('global_decisions_invalid');
+  } else if (!MASTER_GLOBAL_DECISION_KEYS.every((key) => ACCEPTED.has(normalise(globalDecisions[key])))) {
+    failures.push('global_decisions_incomplete');
+  }
+
+  if (!Array.isArray(workstreams) || workstreams.length !== QUALIFIED_REVIEW_IDS.length) {
+    failures.push('workstream_decisions_invalid');
+  } else {
+    const ids = workstreams.map((item) => item && typeof item === 'object' && !Array.isArray(item) ? firstString(item, ['id']) : '');
+    const uniqueIds = new Set(ids);
+    if (uniqueIds.size !== QUALIFIED_REVIEW_IDS.length || !QUALIFIED_REVIEW_IDS.every((id) => uniqueIds.has(id))) {
+      failures.push('workstream_ids_invalid');
+    }
+    if (!workstreams.every((item) => item && typeof item === 'object' && !Array.isArray(item) && ACCEPTED.has(normalise(item.decision)))) {
+      failures.push('workstream_decisions_incomplete');
+    }
+  }
+
+  if (!meaningfulString(document.permittedReliance)) failures.push('permitted_reliance_incomplete');
+  if (!Array.isArray(limitations) || !resolvedDecisionContent(limitations)) failures.push('limitations_incomplete');
+  if (!Array.isArray(blockingChanges)) failures.push('blocking_changes_invalid');
+  else if (blockingChanges.length > 0) failures.push('blocking_changes_present');
+
+  return {
+    accepted: failures.length === 0,
+    failures: [...new Set(failures)].sort(),
+  };
 }
 
 function acceptedMasterDecision(artifact, expectedSha, now) {
   const document = artifact.document;
-  if (!document || artifact.error || !expectedSha) return false;
-  const reviewer = document.reviewer;
-  const binding = document.reviewBinding;
-  const workstreams = document.workstreamDecisions;
-  if (!reviewer || typeof reviewer !== 'object' || Array.isArray(reviewer)) return false;
-  if (!binding || typeof binding !== 'object' || Array.isArray(binding)) return false;
-  if (!Array.isArray(workstreams) || workstreams.length !== 8) return false;
-
-  const reviewerComplete = [
-    'name',
-    'professionalRegistration',
-    'jurisdiction',
-    'qualificationScope',
-    'conflictAssessment',
-    'independenceDeclaration',
-  ].every((key) => Boolean(firstString(reviewer, [key])));
-
-  const bindingDocument = {
-    validityStart: binding.validityStart,
-    validityEnd: binding.validityEnd,
-  };
-
-  return (
-    ACCEPTED.has(normalise(document.decision ?? document.status)) &&
-    reviewerComplete &&
-    firstString(binding, ['productSha']) === expectedSha &&
-    SHA256_PATTERN.test(firstString(binding, ['evidencePackageDigest'])) &&
-    Boolean(firstString(binding, ['signedOpinionReference'])) &&
-    SHA256_PATTERN.test(firstString(binding, ['decisionDigest'])) &&
-    Boolean(firstString(binding, ['reviewedAt'])) &&
-    validDateRange(bindingDocument, now) &&
-    workstreams.every((item) => item && typeof item === 'object' && ACCEPTED.has(normalise(item.decision)))
-  );
+  if (!document || artifact.error || !expectedSha) {
+    return { accepted: false, failures: [artifact.error ?? 'not_accepted'] };
+  }
+  return validateMasterDecisionDocument(document, expectedSha, now);
 }
 
 function artifactDigest(root, path) {
@@ -140,11 +406,27 @@ export function evaluateFinalLegalPublicationGate({
 
   const founderArtifact = readJson(root, FOUNDER_FACTS_PATH);
   const masterArtifact = readJson(root, MASTER_DECISION_PATH);
-  const founderFactsAccepted = acceptedFounderFacts(founderArtifact, expectedSha);
-  const acceptedReviewCount = legalTruth?.truth?.acceptedReviewFilesValid ?? 0;
-  const expectedReviewCount = legalTruth?.truth?.acceptedReviewFilesExpected ?? 8;
-  const allQualifiedReviewsAccepted = expectedReviewCount === 8 && acceptedReviewCount === expectedReviewCount;
-  const masterDecisionAccepted = acceptedMasterDecision(masterArtifact, expectedSha, now);
+  const founderValidation = acceptedFounderFacts(founderArtifact, expectedSha, now);
+  const founderFactsAccepted = founderValidation.accepted;
+
+  const qualifiedReviewValidations = QUALIFIED_REVIEW_REQUIREMENTS.map((requirement) => {
+    const artifact = readJson(root, requirement.path);
+    const validation = artifact.document && !artifact.error && expectedSha
+      ? validateQualifiedReviewDocument(artifact.document, requirement, expectedSha, now)
+      : { accepted: false, failures: [artifact.error ?? 'exact_product_sha_unavailable'] };
+    return {
+      id: requirement.id,
+      path: requirement.path,
+      accepted: validation.accepted,
+      failures: validation.failures,
+    };
+  });
+  const acceptedReviewCount = qualifiedReviewValidations.filter((item) => item.accepted).length;
+  const expectedReviewCount = QUALIFIED_REVIEW_REQUIREMENTS.length;
+  const allQualifiedReviewsAccepted = acceptedReviewCount === expectedReviewCount;
+
+  const masterValidation = acceptedMasterDecision(masterArtifact, expectedSha, now);
+  const masterDecisionAccepted = masterValidation.accepted;
 
   const blockers = [];
   if (!expectedSha) blockers.push('exact_product_sha_unavailable');
@@ -178,11 +460,14 @@ export function evaluateFinalLegalPublicationGate({
       founderFactsPath: FOUNDER_FACTS_PATH,
       founderFactsAccepted,
       founderFactsDigest: artifactDigest(root, FOUNDER_FACTS_PATH),
+      founderFactsUnresolvedFields: founderValidation.unresolvedFields,
       qualifiedReviewAcceptedCount: acceptedReviewCount,
       qualifiedReviewRequiredCount: expectedReviewCount,
       allQualifiedReviewsAccepted,
+      qualifiedReviews: qualifiedReviewValidations,
       masterDecisionPath: MASTER_DECISION_PATH,
       masterDecisionAccepted,
+      masterDecisionFailures: masterValidation.failures,
       masterDecisionDigest: artifactDigest(root, MASTER_DECISION_PATH),
     },
     blockers,

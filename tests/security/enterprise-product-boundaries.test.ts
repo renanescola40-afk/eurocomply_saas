@@ -54,16 +54,17 @@ describe('enterprise product information architecture', () => {
     const shell = read('src/components/dashboard/enterprise-dashboard-shell.tsx');
 
     expect(dashboardLayout).toContain("import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell'");
-    expect(dashboardLayout).toContain("import { getCurrentOrganizationForUser } from '@/server/queries/current-organization'");
+    expect(dashboardLayout).toContain("import { requireLicensedCommercialPageAccess } from '@/server/security/commercial-access'");
     expect(dashboardLayout).not.toContain('getUserOrganizationMemberships');
     expect(dashboardLayout).not.toContain("@/server/queries/organizations");
+    expect(dashboardLayout).not.toContain("@/server/queries/current-organization");
     expect(dashboardLayout).toContain('<EnterpriseDashboardShell');
     expect(dashboardLayout).toContain('organizationName={organization.name}');
     expect(dashboardLayout).toContain('userDisplayName={userDisplayName}');
     expect(dashboardLayout).toContain('role={organization.role}');
     expect(dashboardLayout).toContain('selectedPlan={authority.plan}');
-    expect(dashboardLayout).toContain('if (!authority.licensed)');
-    expect(dashboardLayout).toContain('if (billingRecoveryRoute)');
+    expect(dashboardLayout).toContain("commercialRouteClass === 'billing_recovery'");
+    expect(dashboardLayout).toContain('requireLicensedCommercialPageAccess');
     expect(dashboardLayout).toContain('return runtimeChildren;');
 
     expect(organizationLayout).not.toContain('DashboardCommandNavigation');
