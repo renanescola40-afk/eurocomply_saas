@@ -43,12 +43,15 @@ describe('gap/remediation reconciliation runtime postconditions', () => {
     expect(gapRuntime).toContain('direct compliance_tasks mutation policy unexpectedly remains active');
   });
 
-  it('proves browser denial and private evidence storage ownership boundaries', () => {
+  it('proves browser denial and private Evidence Vault organization boundaries', () => {
     expect(gapRuntime).toContain("grantee = 'anon'");
     expect(gapRuntime).toContain('anon unexpectedly retains gap/remediation table privileges');
     expect(gapRuntime).toContain("id = 'compliance-evidence'");
     expect(gapRuntime).toContain('and public = false');
-    expect(gapRuntime).toContain('compliance-evidence storage ownership policy set is incomplete');
+    expect(gapRuntime).toContain('canonical Evidence Vault organization RLS policy set is incomplete');
+    expect(gapRuntime).toContain('canonical compliance-evidence organization storage policy set is incomplete');
+    expect(gapRuntime).toContain('authenticated must not have hard DELETE privilege on Evidence Vault metadata');
+    expect(gapRuntime).toContain('authenticated Evidence Vault storage UPDATE/DELETE policy remains active');
     expect(gapRuntime).toContain("select 'gap_remediation_runtime_validation_passed' as status");
   });
 });
