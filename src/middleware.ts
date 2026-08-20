@@ -142,18 +142,30 @@ function requestWithRequestId(req: NextRequest, requestId: string) {
 }
 
 function preserveTrustedRequestOverrides(response: NextResponse, req: NextRequest, requestId: string) {
-  // next-intl returns its own NextResponse (often a rewrite). Passing a cloned
-  // NextRequest to it does not, by itself, serialize Next.js request-header
-  // overrides onto that response. Re-apply the trusted request override metadata
-  // explicitly so Server Components receive the canonical pathname and request id.
+  // next-intl may already serialize its own request-header overrides (for example
+  // locale metadata) on the response. Preserve those names and append only our
+  // trusted server-owned headers; replacing the entire override list would drop
+  // next-intl metadata and can break localized runtime navigation.
   const overrideCarrier = NextResponse.next({
     request: { headers: trustedRequestHeaders(req, requestId) },
   });
+  const overrideNames = new Set(
+    (response.headers.get('x-middleware-override-headers') ?? '')
+      .split(',')
+      .map((name) => name.trim())
+      .filter(Boolean)
+  );
 
-  for (const [key, value] of overrideCarrier.headers.entries()) {
-    if (key === 'x-middleware-override-headers' || key.startsWith('x-middleware-request-')) {
-      response.headers.set(key, value);
+  for (const name of [INTERNAL_PATHNAME_HEADER, 'x-request-id']) {
+    const value = overrideCarrier.headers.get(`x-middleware-request-${name}`);
+    if (value !== null) {
+      response.headers.set(`x-middleware-request-${name}`, value);
+      overrideNames.add(name);
     }
+  }
+
+  if (overrideNames.size > 0) {
+    response.headers.set('x-middleware-override-headers', Array.from(overrideNames).join(','));
   }
 
   return response;
