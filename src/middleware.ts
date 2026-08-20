@@ -141,6 +141,24 @@ function requestWithRequestId(req: NextRequest, requestId: string) {
   });
 }
 
+function preserveTrustedRequestOverrides(response: NextResponse, req: NextRequest, requestId: string) {
+  // next-intl returns its own NextResponse (often a rewrite). Passing a cloned
+  // NextRequest to it does not, by itself, serialize Next.js request-header
+  // overrides onto that response. Re-apply the trusted request override metadata
+  // explicitly so Server Components receive the canonical pathname and request id.
+  const overrideCarrier = NextResponse.next({
+    request: { headers: trustedRequestHeaders(req, requestId) },
+  });
+
+  for (const [key, value] of overrideCarrier.headers.entries()) {
+    if (key === 'x-middleware-override-headers' || key.startsWith('x-middleware-request-')) {
+      response.headers.set(key, value);
+    }
+  }
+
+  return response;
+}
+
 type SupabaseSessionCheck = {
   isAuthenticated: boolean;
   response: NextResponse;
@@ -342,6 +360,7 @@ export default async function middleware(req: NextRequest) {
     }
 
     const response = intlMiddleware(requestWithRequestId(req, requestId));
+    preserveTrustedRequestOverrides(response, req, requestId);
 
     response.cookies.set(LOCALE_COOKIE, locale, {
       maxAge: 60 * 60 * 24 * 365,
