@@ -72,20 +72,6 @@ async function requestJson(url, token) {
   return response.json();
 }
 
-async function requestBytes(url, token) {
-  const response = await fetch(url, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${token}`,
-      'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'risck-comply-enterprise-final-authority',
-    },
-    redirect: 'follow',
-  });
-  if (!response.ok) throw new Error(`github_artifact_download_${response.status}`);
-  return Buffer.from(await response.arrayBuffer());
-}
-
 async function walk(directory) {
   const files = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -105,6 +91,22 @@ function validateRun(run, spec, targetSha) {
     && spec.allowedEvents.includes(run?.event);
 }
 
+async function downloadValidatedArtifact({ repository, runId, artifactName, destination, token }) {
+  if (!Number.isInteger(runId) || runId <= 0) throw new Error('invalid_authoritative_run_id');
+  if (!/^[A-Za-z0-9._-]+$/.test(artifactName)) throw new Error('invalid_authoritative_artifact_name');
+  await execFile(
+    'gh',
+    ['run', 'download', String(runId), '--repo', repository, '--name', artifactName, '--dir', destination],
+    {
+      env: {
+        ...process.env,
+        GH_TOKEN: token,
+      },
+      maxBuffer: 16 * 1024 * 1024,
+    },
+  );
+}
+
 async function collectProducer({ spec, repository, targetSha, token, root }) {
   const workflowId = encodeURIComponent(spec.workflow);
   const runs = await requestJson(`${API_URL}/repos/${repository}/actions/workflows/${workflowId}/runs?status=completed&head_sha=${targetSha}&per_page=100`, token);
@@ -121,13 +123,13 @@ async function collectProducer({ spec, repository, targetSha, token, root }) {
     const destination = path.join(root, spec.id);
     await rm(destination, { recursive: true, force: true });
     await mkdir(destination, { recursive: true });
-    const zipPath = path.join(root, `${spec.id}.zip`);
-    await writeFile(zipPath, await requestBytes(`${API_URL}/repos/${repository}/actions/artifacts/${matches[0].id}/zip`, token));
-    try {
-      await execFile('unzip', ['-oq', zipPath, '-d', destination]);
-    } finally {
-      await rm(zipPath, { force: true });
-    }
+    await downloadValidatedArtifact({
+      repository,
+      runId: run.id,
+      artifactName,
+      destination,
+      token,
+    });
 
     const files = await walk(destination);
     const evidenceMatches = files.filter((file) => path.basename(file) === spec.evidenceBasename);
