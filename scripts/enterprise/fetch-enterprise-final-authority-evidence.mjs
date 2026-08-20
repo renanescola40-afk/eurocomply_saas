@@ -49,7 +49,7 @@ export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
     id: 'external-security-assurance',
     workflow: 'external-security-assurance.yml',
     workflowPath: '.github/workflows/external-security-assurance.yml',
-    artifact: (sha) => `external-security-assurance-${sha}`,
+    artifact: (sha) => `external-security-assurance-accepted-${sha}`,
     evidenceBasename: 'external-security-assurance-decision.json',
     allowedEvents: Object.freeze(['workflow_dispatch']),
   }),
