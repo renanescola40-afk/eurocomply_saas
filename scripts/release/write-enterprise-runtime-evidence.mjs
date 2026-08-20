@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 import { resolveEvidenceShaBinding } from './evidence-sha-binding.mjs';
+import { validateExternalSecurityReviewEvidence } from './validate-external-security-review-evidence.mjs';
 
 const runtimeDir = 'docs/security/evidence/runtime';
 const enterpriseEvidencePath = `${runtimeDir}/enterprise-runtime-evidence.json`;
@@ -29,7 +30,7 @@ const requiredEvidence = [
   ['authRbacFinalValidation', `${runtimeDir}/auth-rbac-final-validation.json`, true, true],
   ['stepUpMfaValidation', `${runtimeDir}/step-up-mfa-validation.json`, true, true],
   ['auditChainLiveValidation', `${runtimeDir}/audit-chain-live-validation.json`, true, true],
-  ['externalSecurityReviewOrPentest', `${runtimeDir}/external-security-review-or-pentest.json`, true, false],
+  ['externalSecurityReviewOrPentest', `${runtimeDir}/external-security-review-or-pentest.json`, true, true],
 ];
 
 function readEvidence(path) {
@@ -53,7 +54,10 @@ function readEvidence(path) {
 }
 
 function basePass(evidence) {
-  return evidence.present && evidence.parseable && evidence.status === 'Complete' && ['passed', 'Go', 'GO'].includes(evidence.outcome);
+  return evidence.present
+    && evidence.parseable
+    && evidence.status === 'Complete'
+    && ['passed', 'passed_with_formal_acceptance', 'Go', 'GO'].includes(evidence.outcome);
 }
 
 function releaseShaResolution(evidence) {
@@ -106,11 +110,11 @@ function authRbacIsCustomerFacingRuntimeProof(evidence) {
 }
 
 function externalReviewIsReal(evidence) {
-  if (!basePass(evidence)) return false;
-  const raw = evidence.raw || {};
-  return raw.evidenceIntegrity?.realExternalReportAttached === true
-    && raw.evidenceIntegrity?.placeholderOnly === false
-    && Boolean(String(raw.reportReference || '').trim());
+  if (!evidence?.present || !evidence?.parseable || !evidence?.raw) return false;
+  return validateExternalSecurityReviewEvidence(evidence.raw, {
+    expectedCommitSha: commitSha,
+    now: new Date(generatedAt),
+  }).length === 0;
 }
 
 const evidence = Object.fromEntries(requiredEvidence.map(([key, path]) => [key, readEvidence(path)]));
@@ -119,7 +123,7 @@ const blockers = [];
 for (const [key, , required, commitBound] of requiredEvidence) {
   if (!required) continue;
   const item = evidence[key];
-  if (!basePass(item)) blockers.push(`${item.path} must be Complete/passed; current status=${item.status}, outcome=${item.outcome}`);
+  if (!basePass(item)) blockers.push(`${item.path} must be Complete with an accepted passing outcome; current status=${item.status}, outcome=${item.outcome}`);
   if (commitBound && !matchesReleaseCommit(item)) {
     const resolution = releaseShaResolution(item);
     if (resolution.conflict) {
@@ -133,7 +137,7 @@ for (const [key, , required, commitBound] of requiredEvidence) {
 if (!targetHasPassedDeploymentSmoke(evidence.deploymentSmoke)) blockers.push('Deployment smoke must prove at least one target passed and zero smoke targets failed.');
 if (!rollbackHasNonDestructiveDryRun(evidence.rollbackDryRun)) blockers.push('Rollback dry-run must prove mutatesProduction=false and targetValidation.passed=true.');
 if (!authRbacIsCustomerFacingRuntimeProof(evidence.authRbacFinalValidation)) blockers.push('Auth/RBAC runtime proof must be real, customer-facing, target-environment evidence before enterprise Go.');
-if (!externalReviewIsReal(evidence.externalSecurityReviewOrPentest)) blockers.push('External security review/pentest evidence must reference a real report before enterprise Go.');
+if (!externalReviewIsReal(evidence.externalSecurityReviewOrPentest)) blockers.push('External security review/pentest evidence must satisfy the canonical independent-assurance contract, including exact-SHA binding, report integrity and required High/Critical retest closure, before enterprise Go.');
 if (!commitSha) blockers.push('Release commit SHA is missing.');
 if (!buildSha) blockers.push('Build SHA is missing.');
 
@@ -141,7 +145,7 @@ const p0Blockers = blockers.map((blocker, index) => ({
   id: `P0-ENTERPRISE-${String(index + 1).padStart(3, '0')}`,
   blocker,
   owner: '@renansilva2002 / renanescola40-afk',
-  requiredClosureEvidence: 'Regenerate the referenced runtime evidence with status Complete and outcome passed for the exact promoted commit and enterprise target.',
+  requiredClosureEvidence: 'Regenerate the referenced runtime evidence with status Complete, an accepted passing outcome, and exact promoted commit binding.',
 }));
 
 const outcome = p0Blockers.length === 0 ? 'passed' : 'failed';

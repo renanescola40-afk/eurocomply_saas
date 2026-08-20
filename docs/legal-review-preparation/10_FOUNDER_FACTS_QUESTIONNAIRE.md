@@ -3,7 +3,16 @@
 **Status:** `FOUNDER_FACT_REQUIRED`  
 **Purpose:** collect facts that code and repository evidence cannot establish, so counsel reviews decisions instead of discovering missing business information.
 
-Do not guess. Use `unknown` where a fact is not yet decided and assign an owner/date.
+Do not guess. A fact is complete only when it contains a concrete current value or an explicit structured non-applicability decision with rationale:
+
+```json
+{
+  "status": "NOT_APPLICABLE",
+  "rationale": "Explain why this fact genuinely does not apply to the current operating model."
+}
+```
+
+Plain `N/A`, `unknown`, `TBD`, `TODO`, `pending`, empty values and `null` are unresolved and must not receive founder-facts credit. The accepted record must also bind the exact final product SHA in `productSha`.
 
 ## 1. Contracting entity
 
@@ -12,6 +21,8 @@ Do not guess. Use `unknown` where a fact is not yet decided and assign an owner/
 3. Country of establishment and governing-law preference.
 4. Legal, privacy, security, billing and support email addresses.
 5. Whether an EU representative or DPO is appointed and on what basis.
+
+If no registered legal entity currently exists, do not invent identifiers. Record the affected entity fields as `NOT_APPLICABLE` only with a truthful rationale describing the current operating state; this factual treatment does not itself decide whether that operating model is legally sufficient.
 
 ## 2. Product and commercial model
 
@@ -43,6 +54,8 @@ For Vercel, Supabase, Stripe, Sentry, PostHog, email, support and any AI provide
 - deletion/retention information;
 - customer notification requirement.
 
+Provider-public legal pages or repository configuration may support due diligence, but they do not prove that the RISCK COMPLY account is covered by a specific agreement, DPA, region or retention setting. Account-level claims require attributable evidence.
+
 ## 5. Security and operations
 
 1. Supported availability and support commitments.
@@ -62,3 +75,5 @@ For Vercel, Supabase, Stripe, Sentry, PostHog, email, support and any AI provide
 ## Required sign-off
 
 The founder/authorised officer must sign the completed facts record with name, role, date and confirmation that the information is accurate to the best of their knowledge. The signed record is factual input, not legal approval.
+
+Before promoting a record to `docs/compliance/evidence/accepted/founder-facts.json`, verify all required sections are resolved, `status` is genuinely `FOUNDER_FACTS_CONFIRMED`, `productSha` equals the exact frozen release SHA, the confidential signed artifact reference exists, and `factsDigest` is the SHA-256 digest of that signed source record. Do not place an unsigned draft, template, AI completion or fabricated signature at the accepted path.

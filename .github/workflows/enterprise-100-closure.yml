@@ -8,7 +8,10 @@ on:
       - 'scripts/enterprise/fetch-stripe-promoted-runtime-evidence.mjs'
       - 'scripts/release/check-enterprise-100-closure.mjs'
       - 'scripts/release/hydrate-enterprise-100-evidence.mjs'
+      - 'scripts/release/validate-external-security-review-evidence.mjs'
       - 'scripts/release/write-github-vercel-production-deployment-evidence.mjs'
+      - 'scripts/security/external-security-assurance-contract.mjs'
+      - 'scripts/security/validate-external-security-assurance.mjs'
       - 'scripts/supabase/write-rls-reconciliation-closure-evidence.mjs'
       - 'scripts/supabase/write-rls-reconciliation-closure-evidence.test.mjs'
       - 'tests/enterprise-100-closure.test.ts'
@@ -18,7 +21,11 @@ on:
       - 'tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts'
       - 'tests/security/enterprise-100-closure-workflow.test.mjs'
       - 'tests/security/enterprise-100-stale-workflow-run-guard.test.mjs'
+      - 'tests/security/external-assurance-enterprise-closure-contract.test.mjs'
+      - 'tests/security/external-security-assurance-contract.test.mjs'
+      - 'tests/security/external-security-assurance-contract.test.ts'
       - '.github/workflows/enterprise-100-closure.yml'
+      - '.github/workflows/external-security-assurance.yml'
       - '.github/workflows/supabase-production-rls-reconciliation.yml'
   push:
     branches: [main]
@@ -35,6 +42,7 @@ on:
       - 'Stripe Runtime Evidence Promotion'
       - 'Supabase Production Migration Dry Run'
       - 'Supabase Production RLS Reconciliation'
+      - 'External Security Assurance Acceptance'
       - 'Final Legal Publication Gate'
       - 'Enterprise Conversation Runtime Closeout'
     types: [completed]
@@ -89,13 +97,16 @@ jobs:
           npx vitest run \
             tests/enterprise-100-closure.test.ts \
             tests/enterprise/production-deployment-github-vercel-proof.test.ts \
-            tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts
+            tests/enterprise/stripe-promoted-runtime-evidence-fetch.test.ts \
+            tests/security/external-security-assurance-contract.test.ts
           node --test \
             scripts/supabase/write-rls-reconciliation-closure-evidence.test.mjs \
             tests/enterprise/enterprise-100-evidence-hydration.test.mjs \
             tests/enterprise/github-exact-sha-artifact-collector.test.mjs \
             tests/security/enterprise-100-closure-workflow.test.mjs \
-            tests/security/enterprise-100-stale-workflow-run-guard.test.mjs
+            tests/security/enterprise-100-stale-workflow-run-guard.test.mjs \
+            tests/security/external-assurance-enterprise-closure-contract.test.mjs \
+            tests/security/external-security-assurance-contract.test.mjs
 
       - name: Validate repository contract
         if: github.event_name == 'pull_request'
@@ -112,6 +123,7 @@ jobs:
           grep -Fq 'Enterprise Safe Runtime Bootstrap' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Stripe Runtime Evidence Promotion' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Supabase Production RLS Reconciliation' .github/workflows/enterprise-100-closure.yml
+          grep -Fq 'External Security Assurance Acceptance' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Final Legal Publication Gate' .github/workflows/enterprise-100-closure.yml
           grep -Fq 'Enterprise Conversation Runtime Closeout' .github/workflows/enterprise-100-closure.yml
           grep -Fq "test \"\$main_sha\" = \"\$ENTERPRISE_CLOSURE_EXPECTED_SHA\"" .github/workflows/enterprise-100-closure.yml

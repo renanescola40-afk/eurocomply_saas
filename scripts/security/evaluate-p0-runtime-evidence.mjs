@@ -82,8 +82,12 @@ function readRuntimeEvidence({ root, runtimeDir, entry, context }) {
     const placeholderOnly = evidence.placeholderOnly === true
       || evidence.evidenceIntegrity?.placeholderOnly === true;
     const validatorFailures = validatorFailuresFor(entry.validator, evidence, context);
+    const acceptedOutcomes = Array.isArray(entry.acceptedOutcomes) && entry.acceptedOutcomes.length > 0
+      ? new Set(entry.acceptedOutcomes.map((value) => String(value)))
+      : new Set(['passed']);
+    const outcomeSatisfied = evidence.outcome === undefined || acceptedOutcomes.has(evidenceOutcome);
     const evidenceSatisfied = evidenceStatus === 'Complete'
-      && (evidence.outcome === undefined || evidenceOutcome === 'passed')
+      && outcomeSatisfied
       && !placeholderOnly
       && validatorFailures.length === 0;
 
