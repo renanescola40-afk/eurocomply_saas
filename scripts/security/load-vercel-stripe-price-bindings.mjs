@@ -4,6 +4,9 @@ import { appendFileSync, readFileSync } from 'node:fs';
 
 const MAX_RESPONSE_BYTES = 256 * 1024;
 const PRICE_ID = /^price_[A-Za-z0-9]+$/;
+const VERCEL_PROJECT_ID = /^prj_[A-Za-z0-9]+$/;
+const VERCEL_TEAM_ID = /^team_[A-Za-z0-9]+$/;
+const VERCEL_PROJECT_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 const PROVIDER_TARGETS_PATH = 'config/production-provider-targets.json';
 const CATALOG_PATH = 'config/billing-commercial-catalog.json';
 
@@ -81,6 +84,26 @@ export function extractVercelStripePriceBindings(rows, requiredKeys) {
   return bindings;
 }
 
+export function runtimeVercelTargetFromEnv(source = process.env) {
+  const target = {
+    projectId: String(source.VERCEL_PROJECT_ID ?? '').trim(),
+    teamId: String(source.VERCEL_TEAM_ID ?? '').trim(),
+    projectName: String(source.VERCEL_PROJECT_NAME ?? '').trim(),
+  };
+  if (!VERCEL_PROJECT_ID.test(target.projectId)) throw new Error('invalid_runtime_vercel_project_id');
+  if (!VERCEL_TEAM_ID.test(target.teamId)) throw new Error('invalid_runtime_vercel_team_id');
+  if (!VERCEL_PROJECT_NAME.test(target.projectName)) throw new Error('invalid_runtime_vercel_project_name');
+  return target;
+}
+
+export function assertRuntimeVercelTargetAuthority(authority, runtimeTarget) {
+  if (!authority?.projectId || !authority?.teamId || !authority?.projectName) throw new Error('invalid_vercel_target_authority');
+  for (const key of ['projectId', 'teamId', 'projectName']) {
+    if (runtimeTarget?.[key] !== authority[key]) throw new Error(`vercel_target_authority_mismatch:${key}`);
+  }
+  return true;
+}
+
 export async function loadVercelStripePriceBindings({ fetchImpl = fetch, token, target, catalog } = {}) {
   if (!token) throw new Error('missing_vercel_token');
   if (!target?.projectId || !target?.teamId || !target?.projectName) throw new Error('invalid_vercel_target');
@@ -112,9 +135,11 @@ function appendBindingsToGitHubEnv(bindings) {
 async function main() {
   const catalog = loadJson(CATALOG_PATH, 'risck-comply.billing-commercial-catalog.v1');
   const providerTargets = loadJson(PROVIDER_TARGETS_PATH, 'risck-comply.production-provider-targets.v1');
+  const target = runtimeVercelTargetFromEnv();
+  assertRuntimeVercelTargetAuthority(providerTargets.vercel, target);
   const bindings = await loadVercelStripePriceBindings({
     token: requiredEnv('VERCEL_TOKEN'),
-    target: providerTargets.vercel,
+    target,
     catalog,
   });
   appendBindingsToGitHubEnv(bindings);
