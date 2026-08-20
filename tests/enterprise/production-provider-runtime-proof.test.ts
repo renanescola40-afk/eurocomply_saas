@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 const workflow = readFileSync('.github/workflows/production-provider-runtime-proof.yml', 'utf8');
 const producer = readFileSync('scripts/security/run-production-provider-runtime-proof.mjs', 'utf8');
 const billingProducer = readFileSync('scripts/security/run-stripe-live-billing-provider-proof.mjs', 'utf8');
+const priceBindingLoader = readFileSync('scripts/security/load-vercel-stripe-price-bindings.mjs', 'utf8');
 const diagnostics = readFileSync('scripts/security/diagnose-production-provider-blockers.mjs', 'utf8');
 const targets = JSON.parse(readFileSync('config/production-provider-targets.json', 'utf8')) as {
   schema: string;
@@ -96,14 +97,19 @@ describe('protected production provider runtime proof', () => {
     }
   });
 
-  it('uses canonical Stripe bindings as authority and rejects legacy provider-variable truth', () => {
+  it('uses actual Vercel Production Stripe Price bindings as authority and rejects parallel GitHub variable truth', () => {
+    expect(workflow).toContain('Load canonical Stripe Price bindings from Vercel Production');
+    expect(workflow).toContain('run: node scripts/security/load-vercel-stripe-price-bindings.mjs');
+    expect(priceBindingLoader).toContain('target=production&decrypt=true');
+    expect(priceBindingLoader).toContain('GITHUB_ENV');
     for (const key of [
       'STRIPE_PRICE_ESSENTIAL_MONTHLY',
       'STRIPE_PRICE_ESSENTIAL_ANNUAL',
       'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
       'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
     ]) {
-      expect(workflow).toContain(`${key}: ` + '${{ vars.' + key + ' }}');
+      expect(workflow).not.toContain(`${key}: ` + '${{ vars.' + key + ' }}');
+      expect(priceBindingLoader).toContain(`'${key}'`);
       expect(billingProducer).toContain(`'${key}'`);
     }
     expect(workflow).not.toContain('STRIPE_PRICE_STARTER_MONTHLY: ${{ vars.STRIPE_PRICE_STARTER_MONTHLY }}');
