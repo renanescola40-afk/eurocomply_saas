@@ -19,5 +19,9 @@
   "signedArtifactReference": null,
   "decisionDigest": null,
   "timestamp": null,
+  "completionContract": {
+    "finalCreditDecisionValues": ["ACCEPTED", "COUNSEL_ACCEPTED"],
+    "rule": "Final publication credit requires this schema, the canonical reviewPackageId for the accepted-path workstream, attributable reviewer identity/registration/jurisdiction/qualification/conflict/independence, a substantive reviewScope, exact productSha, SHA-256 evidencePackageDigest and decisionDigest, current validity, a non-future timestamp and a signed artifact reference. ACCEPTED_WITH_CHANGES is not final credit until the specified changes are verified and qualified counsel issues a final accepted record bound to the resulting SHA."
+  },
   "nonCreditingNotice": "This template is not evidence and must never be counted as an accepted legal review."
 }

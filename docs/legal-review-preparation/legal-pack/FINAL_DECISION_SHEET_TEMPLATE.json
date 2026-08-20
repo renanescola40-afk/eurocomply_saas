@@ -43,5 +43,19 @@
   "nonBlockingRecommendations": [],
   "permittedReliance": null,
   "limitations": [],
+  "completionContract": {
+    "finalCreditDecisionValues": ["ACCEPTED", "COUNSEL_ACCEPTED"],
+    "requiredUniqueWorkstreamIds": [
+      "legal-rules",
+      "prohibited-practices",
+      "article-50-copy",
+      "fria-methodology",
+      "deployer-obligations",
+      "high-risk-provider",
+      "conformity",
+      "gpai"
+    ],
+    "rule": "Final publication credit requires all seven global decisions and all eight unique canonical workstream decisions to be finally accepted, exact-SHA/digest binding, current validity, non-empty change triggers, permitted reliance and limitations, and zero blockingChanges. ACCEPTED_WITH_CHANGES is not final credit until changes are verified and counsel issues a final accepted record bound to the resulting SHA."
+  },
   "nonCreditingNotice": "This uncompleted template is not a legal decision and cannot be used as accepted evidence."
 }

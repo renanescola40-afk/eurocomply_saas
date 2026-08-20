@@ -67,6 +67,7 @@ export const p0EvidenceCatalog = Object.freeze([
     kind: 'runtime',
     file: 'external-security-review-or-pentest.json',
     validator: runtimeValidator(validateExternalSecurityReviewEvidence),
+    acceptedOutcomes: ['passed', 'passed_with_formal_acceptance'],
   },
   {
     item: 'Deterministic npm lockfile committed',

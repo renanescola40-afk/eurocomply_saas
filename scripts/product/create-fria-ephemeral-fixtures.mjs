@@ -77,12 +77,14 @@ async function main() {
   const owner = await createUser(admin, 'owner', suffix);
   const reviewer = await createUser(admin, 'reviewer', suffix);
   const approver = await createUser(admin, 'approver', suffix);
+  const unlicensedOwner = await createUser(admin, 'unlicensed-owner', suffix);
 
   // Prove that the exact disposable browser credentials are accepted by the same
   // loopback GoTrue instance before Product UI acceptance starts. This intentionally
   // stores or prints neither credentials nor token/provider payloads.
   await verifyPasswordGrant(url, anonKey, owner, 'owner');
   await verifyPasswordGrant(url, anonKey, approver, 'approver');
+  await verifyPasswordGrant(url, anonKey, unlicensedOwner, 'unlicensed_owner');
 
   const organization = await insertOne(admin, 'organizations', {
     name: `FRIA Disposable QA ${suffix}`,
@@ -97,6 +99,23 @@ async function main() {
       role,
     }, `fria_${role}_membership`);
   }
+
+  // Final customer-journey acceptance also needs a real authenticated organization
+  // with membership but deliberately no commercial authority. This tenant is used
+  // only to prove that the shared commercial page boundary fails closed while
+  // billing recovery remains reachable. No subscription, entitlement source or
+  // provider event is created for it.
+  const unlicensedOrganization = await insertOne(admin, 'organizations', {
+    name: `Unlicensed Disposable QA ${suffix}`,
+    slug: `unlicensed-qa-${suffix}`,
+    created_by: unlicensedOwner.id,
+  }, 'unlicensed_organization');
+
+  await insertOne(admin, 'organization_members', {
+    organization_id: unlicensedOrganization.id,
+    user_id: unlicensedOwner.id,
+    role: 'owner',
+  }, 'unlicensed_owner_membership');
 
   // Commercial Product acceptance must exercise the same durable authority used
   // by the runtime. This is deliberately NOT a seeded subscriptions row or fake
@@ -158,6 +177,25 @@ async function main() {
     throw new Error('fria_commercial_authority_verification_failed');
   }
 
+  const { count: unlicensedSourceCount, error: unlicensedSourceError } = await admin
+    .from('enterprise_entitlement_sources')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', unlicensedOrganization.id)
+    .eq('active', true);
+  const { count: unlicensedSnapshotCount, error: unlicensedSnapshotError } = await admin
+    .from('enterprise_entitlement_snapshots')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', unlicensedOrganization.id)
+    .eq('status', 'applied');
+  if (
+    unlicensedSourceError
+    || unlicensedSnapshotError
+    || unlicensedSourceCount !== 0
+    || unlicensedSnapshotCount !== 0
+  ) {
+    throw new Error('fria_unlicensed_authority_absence_verification_failed');
+  }
+
   // The final Product proof must fail before browser execution if a migration
   // removed or renamed the organization-scoped Evidence Vault contract. This
   // intentionally exercises the current schema through PostgREST instead of
@@ -176,13 +214,15 @@ async function main() {
   exportEnv('E2E_FRIA_REVIEWER_EMAIL', reviewer.email);
   exportEnv('E2E_FRIA_APPROVER_EMAIL', approver.email);
   exportEnv('E2E_FRIA_APPROVER_PASSWORD', approver.password);
+  exportEnv('E2E_UNLICENSED_OWNER_EMAIL', unlicensedOwner.email);
+  exportEnv('E2E_UNLICENSED_OWNER_PASSWORD', unlicensedOwner.password);
   appendFileSync(
     process.env.GITHUB_ENV,
-    'E2E_ALLOW_SYNTHETIC_APP_WRITES=true\nE2E_FRIA_COMMERCIAL_AUTHORITY_VERIFIED=true\nE2E_FRIA_EVIDENCE_VAULT_SCHEMA_VERIFIED=true\n',
+    'E2E_ALLOW_SYNTHETIC_APP_WRITES=true\nE2E_FRIA_COMMERCIAL_AUTHORITY_VERIFIED=true\nE2E_FRIA_EVIDENCE_VAULT_SCHEMA_VERIFIED=true\nE2E_FRIA_UNLICENSED_AUTHORITY_VERIFIED=true\n',
     'utf8',
   );
 
-  process.stdout.write('Disposable FRIA identities, password grants, tenant, Professional signed-contract authority and Evidence Vault schema verified on loopback Supabase.\n');
+  process.stdout.write('Disposable licensed and unlicensed Product identities, password grants, tenant authority boundaries and Evidence Vault schema verified on loopback Supabase.\n');
 }
 
 main().catch((error) => {
