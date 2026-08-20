@@ -162,7 +162,7 @@ export async function provisionStripeLiveAccount({
   webhookSecret,
   fetchImpl = fetch,
 } = {}) {
-  if (confirmation !== REQUIRED_CONFIRMATION) throw new Error('operator_confirmation_mismatch');
+  if (confirmation !== REQUIRED_CONFIRMIRMATION) throw new Error('operator_confirmation_mismatch');
   if (!/^(?:sk|rk)_live_/.test(String(stripeSecretKey ?? ''))) throw new Error('live_stripe_key_required');
   if (!ACCOUNT_ID.test(String(expectedAccountId ?? ''))) throw new Error('invalid_expected_stripe_account_id');
   if (!/^whsec_[A-Za-z0-9]+$/.test(String(webhookSecret ?? ''))) throw new Error('canonical_webhook_secret_required');
@@ -329,9 +329,10 @@ export async function syncVercelBillingBindings({
 } = {}) {
   if (!token) throw new Error('missing_vercel_token');
   if (!target?.projectId || !target?.teamId) throw new Error('invalid_vercel_target');
-  const base = `https://api.vercel.com/v10/projects/${encodeURIComponent(target.projectId)}/env`;
+  const createBase = `https://api.vercel.com/v10/projects/${encodeURIComponent(target.projectId)}/env`;
+  const updateBase = `https://api.vercel.com/v9/projects/${encodeURIComponent(target.projectId)}/env`;
   const teamQuery = `teamId=${encodeURIComponent(target.teamId)}`;
-  const existing = await vercelJson(fetchImpl, `${base}?target=production&decrypt=false&${teamQuery}`, { token });
+  const existing = await vercelJson(fetchImpl, `${createBase}?target=production&decrypt=false&${teamQuery}`, { token });
   const rows = Array.isArray(existing?.envs) ? existing.envs : [];
   const desired = new Map();
   desired.set('STRIPE_SECRET_KEY', { value: stripeSecretKey, type: 'sensitive' });
@@ -347,14 +348,14 @@ export async function syncVercelBillingBindings({
     const candidates = rows.filter((row) => row?.key === key && (!Array.isArray(row?.target) || row.target.includes('production')));
     if (candidates.length > 1) throw new Error(`vercel_env_ambiguous:${key}`);
     if (candidates.length === 1) {
-      await vercelJson(fetchImpl, `${base}/${encodeURIComponent(candidates[0].id)}?${teamQuery}`, {
+      await vercelJson(fetchImpl, `${updateBase}/${encodeURIComponent(candidates[0].id)}?${teamQuery}`, {
         method: 'PATCH',
         token,
         body: { value: spec.value, target: ['production'] },
       });
       changed.push({ key, disposition: 'updated' });
     } else {
-      await vercelJson(fetchImpl, `${base}?${teamQuery}`, {
+      await vercelJson(fetchImpl, `${createBase}?${teamQuery}`, {
         method: 'POST',
         token,
         body: { key, value: spec.value, target: ['production'], type: spec.type },
@@ -387,7 +388,7 @@ function appendSafeOutputs(result, vercelChanges) {
       `- Canonical webhook created/reused: ${result.created.webhook}/${result.reused.webhook}`,
       `- Vercel Production bindings written: ${vercelChanges.length}`,
       '',
-      '### Safe Price IDs for GitHub Environment variables',
+      '### Safe Price IDs written to Vercel Production',
       '',
       '| Variable | Price ID |',
       '|---|---|',
