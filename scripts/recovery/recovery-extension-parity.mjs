@@ -139,11 +139,14 @@ export function planExtensionParity(sourceInventory, targetInventory, availableI
 export function extensionParitySatisfied(sourceInventory, targetInventory) {
   const source = normalizeInstalledExtensions(sourceInventory);
   const target = normalizeInstalledExtensions(targetInventory);
-  if (source.length !== target.length) return false;
-  return source.every((entry, index) => {
-    const observed = target[index];
-    return observed?.name === entry.name
-      && observed.schema === entry.schema
-      && observed.version === entry.version;
+  const targetByName = new Map(target.map((entry) => [entry.name, entry]));
+
+  // Recovery parity is directional. A pinned Supabase restore target can preload
+  // provider-managed extensions that are not currently enabled in production.
+  // Those target-only extensions are harmless to source fidelity; every source
+  // extension must still exist with the exact same schema and version.
+  return source.every((entry) => {
+    const observed = targetByName.get(entry.name);
+    return observed?.schema === entry.schema && observed.version === entry.version;
   });
 }
