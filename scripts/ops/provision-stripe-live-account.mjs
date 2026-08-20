@@ -162,7 +162,7 @@ export async function provisionStripeLiveAccount({
   webhookSecret,
   fetchImpl = fetch,
 } = {}) {
-  if (confirmation !== REQUIRED_CONFIRMIRMATION) throw new Error('operator_confirmation_mismatch');
+  if (confirmation !== REQUIRED_CONFIRMATION) throw new Error('operator_confirmation_mismatch');
   if (!/^(?:sk|rk)_live_/.test(String(stripeSecretKey ?? ''))) throw new Error('live_stripe_key_required');
   if (!ACCOUNT_ID.test(String(expectedAccountId ?? ''))) throw new Error('invalid_expected_stripe_account_id');
   if (!/^whsec_[A-Za-z0-9]+$/.test(String(webhookSecret ?? ''))) throw new Error('canonical_webhook_secret_required');
