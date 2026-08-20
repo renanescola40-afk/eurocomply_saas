@@ -67,16 +67,6 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-      STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ vars.STRIPE_PRICE_ESSENTIAL_MONTHLY }}
-      STRIPE_PRICE_ESSENTIAL_ANNUAL: ${{ vars.STRIPE_PRICE_ESSENTIAL_ANNUAL }}
-      STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ vars.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}
-      STRIPE_PRICE_PROFESSIONAL_ANNUAL: ${{ vars.STRIPE_PRICE_PROFESSIONAL_ANNUAL }}
-      STRIPE_PRICE_BUSINESS_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_MONTHLY }}
-      # Compatibility inputs for the older broad provider probe are deliberately
-      # sourced from canonical bindings. Legacy repository variables are not authority.
-      STRIPE_PRICE_STARTER_MONTHLY: ${{ vars.STRIPE_PRICE_ESSENTIAL_MONTHLY }}
-      STRIPE_PRICE_GROWTH_MONTHLY: ${{ vars.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}
-      STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ vars.STRIPE_PRICE_BUSINESS_MONTHLY }}
       SENTRY_ORG: ${{ vars.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -111,10 +101,36 @@ jobs:
       - name: Install deterministic dependencies
         run: npm ci --ignore-scripts
 
+      - name: Load reviewed Vercel target authority into runtime environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const doc = JSON.parse(fs.readFileSync(process.env.PROVIDER_TARGETS_PATH, 'utf8'));
+          const target = doc?.vercel;
+          if (
+            doc?.schema !== 'risck-comply.production-provider-targets.v1'
+            || !/^prj_[A-Za-z0-9]+$/.test(String(target?.projectId ?? ''))
+            || !/^team_[A-Za-z0-9]+$/.test(String(target?.teamId ?? ''))
+            || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(String(target?.projectName ?? ''))
+          ) process.exit(1);
+          fs.appendFileSync(process.env.GITHUB_ENV, [
+            `VERCEL_PROJECT_ID=${target.projectId}`,
+            `VERCEL_TEAM_ID=${target.teamId}`,
+            `VERCEL_PROJECT_NAME=${target.projectName}`,
+            '',
+          ].join('\n'));
+          NODE
+
+      - name: Load canonical Stripe Price bindings from Vercel Production
+        run: node scripts/security/load-vercel-stripe-price-bindings.mjs
+
       - name: Validate provider proof contracts
         run: |
           node --check scripts/security/run-production-provider-runtime-proof.mjs
           node --check scripts/security/run-stripe-live-billing-provider-proof.mjs
+          node --check scripts/security/load-vercel-stripe-price-bindings.mjs
           node --check scripts/security/diagnose-production-provider-blockers.mjs
           node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync(process.env.PROVIDER_TARGETS_PATH,'utf8')); if(p.schema!=='risck-comply.production-provider-targets.v1') process.exit(1)"
           npx vitest run \
@@ -122,6 +138,7 @@ jobs:
             tests/enterprise/production-provider-runtime-proof.test.ts \
             tests/enterprise/production-provider-blocker-diagnostics.test.ts
           node --test tests/enterprise/stripe-live-billing-provider-proof.test.mjs
+          node --test tests/enterprise/vercel-stripe-price-bindings.test.mjs
 
       - name: Execute strict live billing provider proof
         run: node scripts/security/run-stripe-live-billing-provider-proof.mjs

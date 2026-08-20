@@ -1,0 +1,7 @@
+{
+  "schema": "risck-comply.stripe-live-account-authority.v1",
+  "accountId": "acct_1U6IuJGt3cgjPOtq",
+  "displayName": "RISCK COMPLY SAAS",
+  "mode": "live",
+  "truthBoundary": "This file binds reviewed production Stripe provider operations to the intended account identifier. It contains no API key and does not prove that the account is activated, charges_enabled, correctly configured, or serving the production runtime. Changing the Stripe production account requires a reviewed repository change and fresh provider/runtime evidence."
+}

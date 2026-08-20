@@ -1,0 +1,138 @@
+name: Stripe Live Account Bootstrap
+
+run-name: Stripe live account bootstrap for ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA whose reviewed Stripe contracts will be provisioned
+        required: true
+        type: string
+      confirmation:
+        description: Type PROVISION_NEW_STRIPE_LIVE_ACCOUNT
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stripe-live-account-bootstrap-production
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    name: Provision reviewed Stripe live provider authority
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: Production
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      STRIPE_ACCOUNT_BOOTSTRAP_CONFIRMATION: ${{ inputs.confirmation }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out trusted current main
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Require exact current main and reviewed operator confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
+          test "$STRIPE_ACCOUNT_BOOTSTRAP_CONFIRMATION" = "PROVISION_NEW_STRIPE_LIVE_ACCOUNT"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+
+      - name: Load reviewed Stripe account authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_STRIPE_ACCOUNT_ID="$(node -e "const fs=require('node:fs');const a=JSON.parse(fs.readFileSync('config/stripe-live-account-authority.json','utf8'));if(a.schema!=='risck-comply.stripe-live-account-authority.v1'||a.mode!=='live'||!/^acct_[A-Za-z0-9]+$/.test(a.accountId))process.exit(1);process.stdout.write(a.accountId)")"
+          echo "EXPECTED_STRIPE_ACCOUNT_ID=$EXPECTED_STRIPE_ACCOUNT_ID" >> "$GITHUB_ENV"
+
+      - name: Load reviewed Vercel target authority into runtime environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const doc = JSON.parse(fs.readFileSync('config/production-provider-targets.json', 'utf8'));
+          const target = doc?.vercel;
+          if (
+            doc?.schema !== 'risck-comply.production-provider-targets.v1'
+            || !/^prj_[A-Za-z0-9]+$/.test(String(target?.projectId ?? ''))
+            || !/^team_[A-Za-z0-9]+$/.test(String(target?.teamId ?? ''))
+            || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(String(target?.projectName ?? ''))
+          ) process.exit(1);
+          fs.appendFileSync(process.env.GITHUB_ENV, [
+            `VERCEL_PROJECT_ID=${target.projectId}`,
+            `VERCEL_TEAM_ID=${target.teamId}`,
+            `VERCEL_PROJECT_NAME=${target.projectName}`,
+            '',
+          ].join('\n'));
+          NODE
+
+      - name: Validate bootstrap contracts and focused regressions
+        run: |
+          node --check scripts/ops/provision-stripe-live-account.mjs
+          node --check scripts/security/check-stripe-live-account-bootstrap-preflight.mjs
+          node --check scripts/security/check-vercel-stripe-binding-types.mjs
+          node --check scripts/security/load-vercel-stripe-price-bindings.mjs
+          node --test tests/enterprise/stripe-live-account-bootstrap.test.mjs
+          node --test tests/enterprise/stripe-live-account-bootstrap-preflight.test.mjs
+          node --test tests/enterprise/stripe-live-account-bootstrap-workflow.test.mjs
+          node --test tests/enterprise/vercel-stripe-price-bindings.test.mjs
+          node --test tests/enterprise/vercel-stripe-binding-types.test.mjs
+          node --test tests/enterprise/vercel-stripe-env-api-contract.test.mjs
+
+      - name: Fail closed on incompatible existing Vercel Price binding types
+        run: node scripts/security/check-vercel-stripe-binding-types.mjs
+
+      - name: Verify reviewed LIVE account and canonical webhook before any provider mutation
+        run: node scripts/security/check-stripe-live-account-bootstrap-preflight.mjs
+
+      - name: Revalidate exact current remote main immediately before provider mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "${RELEASE_SHA,,}"
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
+
+      - name: Provision or reuse canonical live Products and Prices, align webhook events, and bind Vercel Production
+        id: stripe
+        run: node scripts/ops/provision-stripe-live-account.mjs
+
+      - name: Re-read canonical Price bindings from Vercel Production
+        run: node scripts/security/load-vercel-stripe-price-bindings.mjs
+
+      - name: Publish cutover boundary
+        shell: bash
+        run: |
+          {
+            echo
+            echo '### Remaining controlled cutover'
+            echo
+            echo '- Vercel environment changes apply to a new deployment; redeploy the exact current main SHA before runtime proof.'
+            echo '- The account-default Stripe Customer Portal remains Dashboard-managed; create/configure the default, then run Stripe Billing Portal Bootstrap.'
+            echo '- Run Production Provider Runtime Proof only after the new deployment and Portal alignment.'
+            echo '- Do not create synthetic customers, Checkout Sessions, subscriptions, invoices, payments or charges for evidence.'
+            echo '- No Billing/Product PASS is emitted by this bootstrap.'
+          } >> "$GITHUB_STEP_SUMMARY"
