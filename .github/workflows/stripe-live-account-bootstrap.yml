@@ -97,7 +97,7 @@ jobs:
           node --test tests/enterprise/vercel-stripe-binding-types.test.mjs
           node --test tests/enterprise/vercel-stripe-env-api-contract.test.mjs
 
-      - name: Fail closed on incompatible existing Vercel Price binding types
+      - name: Fail closed on incompatible existing Vercel Stripe binding types
         run: node scripts/security/check-vercel-stripe-binding-types.mjs
 
       - name: Verify reviewed LIVE account and canonical webhook before any provider mutation

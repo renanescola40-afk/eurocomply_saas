@@ -8,6 +8,7 @@ const PROVIDER_TARGETS_PATH = 'config/production-provider-targets.json';
 const VERCEL_PROJECT_ID = /^prj_[A-Za-z0-9]+$/;
 const VERCEL_TEAM_ID = /^team_[A-Za-z0-9]+$/;
 const VERCEL_PROJECT_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
+const STRIPE_SECRET_BINDING_KEYS = ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET'];
 
 function env(name) {
   return String(process.env[name] ?? '').trim();
@@ -64,14 +65,36 @@ export function canonicalPriceKeys(catalog) {
   return keys;
 }
 
+export function canonicalStripeSecretKeys() {
+  return [...STRIPE_SECRET_BINDING_KEYS];
+}
+
+function productionMatches(rows, key) {
+  return (Array.isArray(rows) ? rows : []).filter((row) => (
+    row?.key === key && (!Array.isArray(row?.target) || row.target.includes('production'))
+  ));
+}
+
 export function validateExistingPriceBindingTypes(rows, keys) {
   for (const key of keys) {
-    const matches = (Array.isArray(rows) ? rows : []).filter((row) => (
-      row?.key === key && (!Array.isArray(row?.target) || row.target.includes('production'))
-    ));
+    const matches = productionMatches(rows, key);
     if (matches.length > 1) throw new Error(`vercel_env_ambiguous:${key}`);
     if (matches.length === 1 && String(matches[0]?.type ?? '').toLowerCase() === 'sensitive') {
       throw new Error(`vercel_price_binding_sensitive_type_requires_manual_recreate:${key}`);
+    }
+  }
+  return true;
+}
+
+export function validateExistingSecretBindingTypes(rows, keys = STRIPE_SECRET_BINDING_KEYS) {
+  for (const key of keys) {
+    const matches = productionMatches(rows, key);
+    if (matches.length > 1) throw new Error(`vercel_env_ambiguous:${key}`);
+    if (matches.length === 1) {
+      const type = String(matches[0]?.type ?? '').toLowerCase();
+      if (type !== 'sensitive') {
+        throw new Error(`vercel_secret_binding_not_sensitive_requires_manual_recreate:${key}:${type || 'missing'}`);
+      }
     }
   }
   return true;
@@ -111,9 +134,16 @@ async function main() {
   });
   if (!response.ok) throw new Error(`vercel_env_read_failed:${response.status}`);
   const body = await boundedJson(response);
-  const keys = canonicalPriceKeys(catalog);
-  validateExistingPriceBindingTypes(body?.envs, keys);
-  process.stdout.write(`${JSON.stringify({ checkedProductionPriceKeys: keys.length, compatible: true, valuesPrinted: false })}\n`);
+  const priceKeys = canonicalPriceKeys(catalog);
+  const secretKeys = canonicalStripeSecretKeys();
+  validateExistingPriceBindingTypes(body?.envs, priceKeys);
+  validateExistingSecretBindingTypes(body?.envs, secretKeys);
+  process.stdout.write(`${JSON.stringify({
+    checkedProductionPriceKeys: priceKeys.length,
+    checkedProductionSecretKeys: secretKeys.length,
+    compatible: true,
+    valuesPrinted: false,
+  })}\n`);
 }
 
 if (process.argv[1] === new URL(import.meta.url).pathname) {

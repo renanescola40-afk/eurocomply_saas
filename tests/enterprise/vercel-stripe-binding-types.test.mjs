@@ -4,8 +4,10 @@ import test from 'node:test';
 import {
   assertRuntimeVercelTargetAuthority,
   canonicalPriceKeys,
+  canonicalStripeSecretKeys,
   runtimeVercelTargetFromEnv,
   validateExistingPriceBindingTypes,
+  validateExistingSecretBindingTypes,
 } from '../../scripts/security/check-vercel-stripe-binding-types.mjs';
 
 const catalog = {
@@ -50,6 +52,26 @@ test('rejects a sensitive Price ID binding because provider proof must re-read i
   assert.throws(() => validateExistingPriceBindingTypes([
     { key: keys[0], type: 'sensitive', target: ['production'] },
   ], keys), /vercel_price_binding_sensitive_type_requires_manual_recreate/);
+});
+
+test('requires existing Stripe secret bindings to remain Vercel sensitive values', () => {
+  const keys = canonicalStripeSecretKeys();
+  assert.deepEqual(keys, ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET']);
+  assert.equal(validateExistingSecretBindingTypes([], keys), true);
+  assert.equal(validateExistingSecretBindingTypes([
+    { key: 'STRIPE_SECRET_KEY', type: 'sensitive', target: ['production'] },
+    { key: 'STRIPE_WEBHOOK_SECRET', type: 'sensitive', target: ['production'] },
+  ], keys), true);
+  assert.throws(() => validateExistingSecretBindingTypes([
+    { key: 'STRIPE_SECRET_KEY', type: 'encrypted', target: ['production'] },
+  ], keys), /vercel_secret_binding_not_sensitive_requires_manual_recreate:STRIPE_SECRET_KEY:encrypted/);
+  assert.throws(() => validateExistingSecretBindingTypes([
+    { key: 'STRIPE_WEBHOOK_SECRET', type: 'plain', target: ['production'] },
+  ], keys), /vercel_secret_binding_not_sensitive_requires_manual_recreate:STRIPE_WEBHOOK_SECRET:plain/);
+  assert.throws(() => validateExistingSecretBindingTypes([
+    { key: 'STRIPE_SECRET_KEY', type: 'sensitive', target: ['production'] },
+    { key: 'STRIPE_SECRET_KEY', type: 'sensitive', target: ['production'] },
+  ], keys), /vercel_env_ambiguous:STRIPE_SECRET_KEY/);
 });
 
 test('runtime Vercel target is strictly shaped and must exactly match reviewed authority', () => {
