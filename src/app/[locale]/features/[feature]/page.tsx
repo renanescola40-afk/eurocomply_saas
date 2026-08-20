@@ -14,7 +14,6 @@ import {
 } from '@/lib/seo/feature-pages';
 import { getSafeLocale, getSiteUrl, makePublicMetadata } from '@/lib/seo/public-metadata';
 
-export const dynamic = 'force-static';
 export const revalidate = 3600;
 
 type PageProps = {
