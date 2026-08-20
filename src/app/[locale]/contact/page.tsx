@@ -3,9 +3,6 @@ import { ArrowRight, CalendarDays, CheckCircle2, Mail, ShieldCheck } from 'lucid
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 
-export const revalidate = 300;
-export const dynamic = 'force-static';
-
 const contactMailbox = ['comercial', 'risckcomply.com'].join('@');
 
 type ContactSearchParams = {

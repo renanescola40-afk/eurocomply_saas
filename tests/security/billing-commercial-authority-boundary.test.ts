@@ -52,14 +52,13 @@ describe('billing commercial authority boundary', () => {
     expect(canAccessFeature('ai_inventory', { plan: 'starter', licensed: true })).toBe(true);
   });
 
-  it('gates dashboard product surfaces while retaining billing recovery routes', async () => {
+  it('gates dashboard product surfaces through the canonical guard while retaining billing recovery routes', async () => {
     const source = await readFile(DASHBOARD_LAYOUT, 'utf8');
 
-    expect(source).toContain('getOrganizationBillingAuthority');
-    expect(source).toContain('if (!authority.licensed)');
-    expect(source).toContain("`/${locale}/dashboard/billing`");
-    expect(source).toContain("`/${locale}/dashboard/organizations/billing`");
-    expect(source).toContain("redirect(`/${locale}/pricing?billing=subscription_required`)");
+    expect(source).toContain('classifyLocalizedCommercialRoute');
+    expect(source).toContain("commercialRouteClass === 'billing_recovery'");
+    expect(source).toContain('requireLicensedCommercialPageAccess');
+    expect(source).toContain('selectedPlan={authority.plan}');
   });
 
   it('strips the historical premium query override before product rendering', async () => {
