@@ -83,7 +83,7 @@ describe('isolated recovery extension parity', () => {
     ]);
   });
 
-  it('requires exact bidirectional extension name schema and version parity after target preparation', () => {
+  it('requires exact source extension schema and version parity while tolerating pinned target-only extensions', () => {
     const source = [
       { name: 'pgcrypto', schema: 'extensions', version: '1.3' },
       { name: 'supabase_vault', schema: 'vault', version: '0.3.1' },
@@ -100,7 +100,7 @@ describe('isolated recovery extension parity', () => {
     expect(extensionParitySatisfied(source, [
       ...source,
       { name: 'target_only_extension', schema: 'extensions', version: '1.0' },
-    ])).toBe(false);
+    ])).toBe(true);
     expect(extensionParitySatisfied([
       ...source,
       { name: 'source_only_extension', schema: 'extensions', version: '1.0' },
