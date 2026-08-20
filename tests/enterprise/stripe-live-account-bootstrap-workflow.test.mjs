@@ -22,15 +22,27 @@ test('protected bootstrap consumes secrets without echoing their values', () => 
   assert.doesNotMatch(workflow, /upload-artifact/);
 });
 
-test('bootstrap verifies Vercel and Stripe provider readiness before mutation and re-reads bindings afterwards', () => {
+test('bootstrap verifies Vercel and Stripe readiness, revalidates remote main, then mutates', () => {
   const vercelPreflight = workflow.indexOf('run: node scripts/security/check-vercel-stripe-binding-types.mjs');
   const stripePreflight = workflow.indexOf('run: node scripts/security/check-stripe-live-account-bootstrap-preflight.mjs');
-  const provision = workflow.indexOf('run: node scripts/ops/provision-stripe-live-account.mjs');
-  const reload = workflow.indexOf('run: node scripts/security/load-vercel-stripe-price-bindings.mjs');
+  const remoteMain = workflow.indexOf('Revalidate exact current remote main immediately before provider mutation');
+  const provision = workflow.indexOf('run: node scripts/ops/provision-stripe-live-account.mjs', remoteMain);
+  const reload = workflow.indexOf('run: node scripts/security/load-vercel-stripe-price-bindings.mjs', provision);
   assert.ok(vercelPreflight >= 0);
   assert.ok(stripePreflight > vercelPreflight);
-  assert.ok(provision > stripePreflight);
+  assert.ok(remoteMain > stripePreflight);
+  assert.ok(provision > remoteMain);
   assert.ok(reload > provision);
+  assert.match(workflow.slice(remoteMain, provision), /commits\/main/);
+  assert.match(workflow.slice(remoteMain, provision), /test "\$main_sha" = "\$\{RELEASE_SHA,,\}"/);
+});
+
+test('Vercel target authority is loaded from reviewed config before provider network calls', () => {
+  assert.match(workflow, /Load reviewed Vercel target authority into runtime environment/);
+  assert.match(workflow, /VERCEL_PROJECT_ID=/);
+  assert.match(workflow, /VERCEL_TEAM_ID=/);
+  assert.match(workflow, /VERCEL_PROJECT_NAME=/);
+  assert.match(providerProof, /Load reviewed Vercel target authority into runtime environment/);
 });
 
 test('production provider proof no longer consumes parallel GitHub Stripe Price variables', () => {
