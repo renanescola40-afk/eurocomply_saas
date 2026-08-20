@@ -64,15 +64,20 @@ jobs:
       - name: Validate bootstrap contracts and focused regressions
         run: |
           node --check scripts/ops/provision-stripe-live-account.mjs
+          node --check scripts/security/check-stripe-live-account-bootstrap-preflight.mjs
           node --check scripts/security/check-vercel-stripe-binding-types.mjs
           node --check scripts/security/load-vercel-stripe-price-bindings.mjs
           node --test tests/enterprise/stripe-live-account-bootstrap.test.mjs
+          node --test tests/enterprise/stripe-live-account-bootstrap-preflight.test.mjs
           node --test tests/enterprise/vercel-stripe-price-bindings.test.mjs
           node --test tests/enterprise/vercel-stripe-binding-types.test.mjs
           node --test tests/enterprise/vercel-stripe-env-api-contract.test.mjs
 
       - name: Fail closed on incompatible existing Vercel Price binding types
         run: node scripts/security/check-vercel-stripe-binding-types.mjs
+
+      - name: Verify reviewed LIVE account and canonical webhook before any provider mutation
+        run: node scripts/security/check-stripe-live-account-bootstrap-preflight.mjs
 
       - name: Provision or reuse canonical live Products and Prices, align webhook events, and bind Vercel Production
         id: stripe
