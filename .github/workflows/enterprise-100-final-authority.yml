@@ -171,6 +171,7 @@ jobs:
       - name: Enforce all Enterprise controls
         run: node scripts/release/check-enterprise-100-closure.mjs
       - name: Emit sole final Enterprise authority decision
+        if: always()
         run: node scripts/release/write-enterprise-final-authority.mjs
       - name: Publish final authority summary
         if: always()
