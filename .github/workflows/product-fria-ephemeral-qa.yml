@@ -298,7 +298,7 @@ jobs:
             if curl --fail --silent --show-error "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/health" >/dev/null; then
               auth_healthy=true
             fi
-            echo "::warning title=FRIA runtime acceptance temporarily quarantined::Product QA diagnostic: app_healthy=$app_healthy auth_healthy=$auth_healthy"
+            echo "::warning title=FRIA runtime acceptance temporarily quarantined::Product QA sanitized failure diagnostic: app_healthy=$app_healthy auth_healthy=$auth_healthy"
           fi
 
       - name: Require executed sanitized final Product evidence
