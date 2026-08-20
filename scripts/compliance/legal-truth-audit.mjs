@@ -19,8 +19,10 @@ const OUTPUT_PATHS = Object.freeze({
 });
 
 const PLACEHOLDER_PATTERN = /(?:^|\b)(?:placeholder|example|sample|todo|tbd|replace[ _-]?me|dummy|fake|unknown)(?:\b|$)/i;
+const SHA256_PATTERN = /^(?:sha256:)?[a-f0-9]{64}$/i;
+const QUALIFIED_REVIEW_SCHEMA = 'risck-comply.qualified-review-decision.v1';
 const PASS_VALUES = new Set(['PASS', 'PASSED', 'SUCCESS', 'ACCEPTED', 'COUNSEL_ACCEPTED']);
-const ACCEPTED_DECISIONS = new Set(['ACCEPTED', 'ACCEPTED_WITH_CHANGES', 'COUNSEL_ACCEPTED']);
+const ACCEPTED_DECISIONS = new Set(['ACCEPTED', 'COUNSEL_ACCEPTED']);
 
 function readJson(root, repositoryPath) {
   const absolutePath = join(root, repositoryPath);
@@ -168,6 +170,11 @@ function inspectHumanReview(root, requirement, expectedSha, now) {
   };
 
   const failures = [];
+  if (document?.schema !== QUALIFIED_REVIEW_SCHEMA) failures.push('schema_invalid');
+  if (String(firstValue(document, ['reviewPackageId', 'review_package_id']) ?? '').trim() !== requirement.id) {
+    failures.push('review_package_id_mismatch');
+  }
+
   for (const [label, keys] of Object.entries(requiredFields)) {
     const value = firstValue(document, keys);
     if (value === null) failures.push(`missing_${label}`);
@@ -180,12 +187,21 @@ function inspectHumanReview(root, requirement, expectedSha, now) {
   const decision = normaliseStatus(firstValue(document, requiredFields.decision));
   if (!ACCEPTED_DECISIONS.has(decision)) failures.push('decision_not_accepted');
 
+  const evidencePackageDigest = String(firstValue(document, requiredFields.evidencePackageDigest) ?? '').trim();
+  if (!SHA256_PATTERN.test(evidencePackageDigest)) failures.push('evidence_package_digest_invalid');
+  const decisionDigest = String(firstValue(document, requiredFields.decisionDigest) ?? '').trim();
+  if (!SHA256_PATTERN.test(decisionDigest)) failures.push('decision_digest_invalid');
+
   const validFromRaw = firstValue(document, requiredFields.validityStart);
   const validUntilRaw = firstValue(document, requiredFields.validityEnd);
   const validFrom = validFromRaw ? new Date(String(validFromRaw)) : null;
   const validUntil = validUntilRaw ? new Date(String(validUntilRaw)) : null;
   if (!validFrom || Number.isNaN(validFrom.getTime()) || validFrom > now) failures.push('validity_not_started');
   if (!validUntil || Number.isNaN(validUntil.getTime()) || validUntil < now) failures.push('review_expired');
+
+  const timestampRaw = firstValue(document, requiredFields.timestamp);
+  const timestamp = timestampRaw ? new Date(String(timestampRaw)) : null;
+  if (!timestamp || Number.isNaN(timestamp.getTime()) || timestamp > now) failures.push('timestamp_invalid');
 
   if (containsPlaceholder(document)) failures.push('document_contains_placeholder');
 
@@ -360,6 +376,7 @@ export function renderMarkdown(report) {
     `- Technical evidence is not legal acceptance.\n` +
     `- A registry path is not evidence.\n` +
     `- Missing or invalid qualified review remains \`HUMAN_REVIEW_REQUIRED\`.\n` +
+    `- \`ACCEPTED_WITH_CHANGES\` is remediation-required and is not final legal credit until the resulting exact SHA is re-accepted.\n` +
     `- Customer-specific compliance and formal conformity are not assessed by this report.\n`;
 }
 

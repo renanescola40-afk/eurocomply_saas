@@ -3,6 +3,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { validateExternalSecurityReviewEvidence } from './validate-external-security-review-evidence.mjs';
+
 const evidenceDir = path.resolve('docs/security/evidence/runtime');
 const outputPath = path.join(evidenceDir, 'enterprise-evidence-bundle-verification.json');
 const expectedSha = (process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || '').trim();
@@ -22,7 +24,7 @@ const required = [
   { file: 'auth-rbac-final-validation.json', commitBound: true },
   { file: 'step-up-mfa-validation.json', commitBound: true },
   { file: 'audit-chain-live-validation.json', commitBound: true },
-  { file: 'external-security-review-or-pentest.json', commitBound: false },
+  { file: 'external-security-review-or-pentest.json', commitBound: true, validator: 'external-assurance' },
 ];
 
 const successTokens = new Set(['complete', 'completed', 'passed', 'pass', 'success', 'successful', 'go', 'approved']);
@@ -65,11 +67,20 @@ async function inspect(entry) {
     const shaMatches = !entry.commitBound || containsExpectedSha(document);
     const reasons = [];
 
-    if (!hasSuccess) reasons.push('no explicit successful status/outcome found');
-    if (hasFailure) reasons.push('blocking or failed status/outcome found');
-    if (entry.requiresGo && !hasGo) reasons.push('final Go decision not found');
-    if (entry.commitBound && !expectedSha) reasons.push('RELEASE_COMMIT_SHA/GITHUB_SHA is missing');
-    if (entry.commitBound && expectedSha && !shaMatches) reasons.push('evidence is not tied to the promoted commit SHA');
+    if (entry.validator === 'external-assurance') {
+      const validationFailures = validateExternalSecurityReviewEvidence(document, {
+        expectedCommitSha: expectedSha || null,
+        now: new Date(),
+      });
+      reasons.push(...validationFailures.map((failure) => `external assurance: ${failure}`));
+      if (!expectedSha) reasons.push('RELEASE_COMMIT_SHA/GITHUB_SHA is missing');
+    } else {
+      if (!hasSuccess) reasons.push('no explicit successful status/outcome found');
+      if (hasFailure) reasons.push('blocking or failed status/outcome found');
+      if (entry.requiresGo && !hasGo) reasons.push('final Go decision not found');
+      if (entry.commitBound && !expectedSha) reasons.push('RELEASE_COMMIT_SHA/GITHUB_SHA is missing');
+      if (entry.commitBound && expectedSha && !shaMatches) reasons.push('evidence is not tied to the promoted commit SHA');
+    }
 
     return {
       file: entry.file,
@@ -77,7 +88,7 @@ async function inspect(entry) {
       commitBound: entry.commitBound,
       shaMatches,
       decisions: [...new Set(decisions)].slice(0, 20),
-      reasons,
+      reasons: [...new Set(reasons)],
     };
   } catch (error) {
     return {

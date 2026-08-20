@@ -9,9 +9,14 @@ on:
         description: Full 40-character current main SHA reviewed by the independent assessor
         required: true
         type: string
+      evidence_commit_sha:
+        description: Full 40-character commit containing the completed redacted canonical external-assurance metadata
+        required: true
+        type: string
 
 permissions:
   contents: read
+  deployments: read
 
 concurrency:
   group: external-security-assurance-${{ inputs.release_sha }}
@@ -21,43 +26,119 @@ jobs:
   validate:
     name: Validate independent security assurance evidence
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     environment: external-security-assurance
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
+      EVIDENCE_COMMIT_SHA: ${{ inputs.evidence_commit_sha }}
+      CANONICAL_EVIDENCE_PATH: docs/security/evidence/runtime/external-security-review-or-pentest.json
+      EVIDENCE_SOURCE_DIR: .external-assurance-evidence-source
 
     steps:
-      - name: Validate exact SHA format
+      - name: Validate immutable SHA inputs
         shell: bash
         run: |
           set -euo pipefail
           [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$EVIDENCE_COMMIT_SHA" =~ ^[a-f0-9]{40}$ ]]
 
       - name: Checkout exact reviewed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
           persist-credentials: false
 
       - name: Verify exact current main
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          git fetch --no-tags origin main
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+          main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
+          test "$main_sha" = "$RELEASE_SHA"
 
-      - name: Validate contract tests
-        run: node --test tests/security/external-security-assurance-contract.test.mjs
+      - name: Verify assurance environment requires human reviewers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          environment_json="$RUNNER_TEMP/external-assurance-environment.json"
+          gh api "repos/${GITHUB_REPOSITORY}/environments/external-security-assurance" > "$environment_json"
+          jq -e '
+            [.protection_rules[]?
+              | select(.type == "required_reviewers")
+              | .reviewers[]?]
+            | length > 0
+          ' "$environment_json" >/dev/null
+          jq -e '.deployment_branch_policy != null' "$environment_json" >/dev/null
 
-      - name: Validate supplied independent evidence
+      - name: Checkout immutable redacted evidence commit in isolation
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.evidence_commit_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: ${{ env.EVIDENCE_SOURCE_DIR }}
+
+      - name: Load redacted evidence from immutable evidence checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C "$EVIDENCE_SOURCE_DIR" rev-parse HEAD)" = "$EVIDENCE_COMMIT_SHA"
+          source_file="$EVIDENCE_SOURCE_DIR/$CANONICAL_EVIDENCE_PATH"
+          test -s "$source_file"
+          evidence_file="$RUNNER_TEMP/external-security-review-or-pentest.json"
+          cp "$source_file" "$evidence_file"
+          test -s "$evidence_file"
+          echo "EXTERNAL_ASSURANCE_INPUT=$evidence_file" >> "$GITHUB_ENV"
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Validate canonical external-assurance contracts
+        run: |
+          node --check scripts/security/validate-external-security-assurance.mjs
+          node --test tests/security/external-security-assurance-contract.test.mjs
+          npx vitest run tests/security/external-security-assurance-contract.test.ts
+
+      - name: Validate and promote supplied independent evidence
+        env:
+          EXTERNAL_ASSURANCE_EVIDENCE_COMMIT_SHA: ${{ inputs.evidence_commit_sha }}
+          EXTERNAL_ASSURANCE_OUTPUT: artifacts/external-security-assurance-decision.json
+          EXTERNAL_ASSURANCE_CANONICAL_OUTPUT: docs/security/evidence/runtime/external-security-review-or-pentest.json
+          EXTERNAL_ASSURANCE_MAX_AGE_DAYS: '180'
         run: node scripts/security/validate-external-security-assurance.mjs
 
-      - name: Upload bounded acceptance decision
-        if: always()
+      - name: Scan promoted metadata for concrete secret values
+        env:
+          STRICT_PUBLIC_SECRET_SCAN: '1'
+        run: node scripts/security/check-public-secrets.mjs
+
+      - name: Upload accepted exact-SHA assurance evidence
+        if: success()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: external-security-assurance-${{ inputs.release_sha }}
-          path: artifacts/external-security-assurance-decision.json
+          name: external-security-assurance-accepted-${{ inputs.release_sha }}
+          path: |
+            artifacts/external-security-assurance-decision.json
+            docs/security/evidence/runtime/external-security-review-or-pentest.json
           if-no-files-found: error
           retention-days: 365
+
+      - name: Upload rejected assurance diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: external-security-assurance-rejected-${{ inputs.release_sha }}
+          path: artifacts/external-security-assurance-decision.json
+          if-no-files-found: ignore
+          retention-days: 90

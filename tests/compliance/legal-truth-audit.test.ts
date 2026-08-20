@@ -20,9 +20,11 @@ function writeText(root: string, path: string, value = 'evidence'): void {
 function createFixture({
   includeAcceptedReview = false,
   reviewSha = 'sha-main',
+  reviewOverrides = {},
 }: {
   includeAcceptedReview?: boolean;
   reviewSha?: string;
+  reviewOverrides?: Record<string, unknown>;
 } = {}): string {
   const root = mkdtempSync(join(tmpdir(), 'risck-legal-truth-'));
   const implementationPath = 'src/feature.ts';
@@ -78,6 +80,9 @@ function createFixture({
 
   if (includeAcceptedReview) {
     writeJson(root, acceptedPath, {
+      schema: 'risck-comply.qualified-review-decision.v1',
+      status: 'COUNSEL_ACCEPTED',
+      reviewPackageId: 'legal-rules',
       reviewerName: 'Qualified Reviewer',
       professionalRegistration: 'PT-12345',
       jurisdiction: 'Portugal',
@@ -93,6 +98,7 @@ function createFixture({
       signedArtifactReference: 'private://signed/legal-rules.pdf',
       decisionDigest: `sha256:${'b'.repeat(64)}`,
       timestamp: '2026-07-30T10:00:00.000Z',
+      ...reviewOverrides,
     });
   }
 
@@ -142,6 +148,55 @@ describe('legal truth audit', () => {
 
     expect(report.totals.humanReviewAcceptedWeight).toBe(0);
     expect(report.humanReviews[0].failures).toContain('exact_sha_mismatch');
+  });
+
+  it('rejects ACCEPTED_WITH_CHANGES until remediation is re-reviewed on the resulting SHA', () => {
+    const report = auditLegalTruth({
+      root: createFixture({
+        includeAcceptedReview: true,
+        reviewOverrides: { decision: 'ACCEPTED_WITH_CHANGES' },
+      }),
+      sourceSha: 'sha-main',
+      now: new Date('2026-07-30T12:00:00.000Z'),
+    });
+
+    expect(report.totals.humanReviewAcceptedWeight).toBe(0);
+    expect(report.truth.counselAccepted).toBe(false);
+    expect(report.humanReviews[0].failures).toContain('decision_not_accepted');
+  });
+
+  it('rejects a mismatched review package id and malformed immutable digests', () => {
+    const report = auditLegalTruth({
+      root: createFixture({
+        includeAcceptedReview: true,
+        reviewOverrides: {
+          reviewPackageId: 'gpai',
+          evidencePackageDigest: 'not-a-digest',
+          decisionDigest: 'also-not-a-digest',
+        },
+      }),
+      sourceSha: 'sha-main',
+      now: new Date('2026-07-30T12:00:00.000Z'),
+    });
+
+    expect(report.totals.humanReviewAcceptedWeight).toBe(0);
+    expect(report.humanReviews[0].failures).toContain('review_package_id_mismatch');
+    expect(report.humanReviews[0].failures).toContain('evidence_package_digest_invalid');
+    expect(report.humanReviews[0].failures).toContain('decision_digest_invalid');
+  });
+
+  it('rejects a future review timestamp even when the validity window has started', () => {
+    const report = auditLegalTruth({
+      root: createFixture({
+        includeAcceptedReview: true,
+        reviewOverrides: { timestamp: '2026-08-01T10:00:00.000Z' },
+      }),
+      sourceSha: 'sha-main',
+      now: new Date('2026-07-30T12:00:00.000Z'),
+    });
+
+    expect(report.totals.humanReviewAcceptedWeight).toBe(0);
+    expect(report.humanReviews[0].failures).toContain('timestamp_invalid');
   });
 
   it('flags a row that grants legal acceptance while review evidence is required', () => {
