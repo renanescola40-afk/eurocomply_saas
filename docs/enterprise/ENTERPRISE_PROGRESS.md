@@ -1,13 +1,12 @@
 # Enterprise progress
 
-Observed main at audit start: `a6633e6c9ee9fab957b2d91333c4743b8f5e25f7`
+Observed current main: `36206e0b268b31cefb5ff80567dad0887799ba8e`
 
-Decision: **NO_GO**
+Decision: **NO_GO / CURRENT-MAIN SCORE UNKNOWN**
 
 ## Evidence status
 
-The current-main score is **unknown**. The last accepted score is retained only
-as historical evidence:
+The last accepted score remains historical evidence only:
 
 - historical completion: **45%** (**45 PASS**, **1 BLOCKED**, **54 NOT_VERIFIED**);
 - assessed SHA: `c413288eb8453b55c4d049c758dc0cd063aa70b9`;
@@ -15,22 +14,38 @@ as historical evidence:
 - freshness: **STALE**;
 - current Enterprise publication recommendation: **DO_NOT_PUBLISH_AS_ENTERPRISE**.
 
-No merged code, green repository check or open PR increases this value until the
-canonical scorecard consumes accepted evidence for the exact current main SHA.
+No PR, repository-only test or green CI result raises that score. A new percentage
+or `ENTERPRISE_100: PASS` is valid only after the canonical exact-current-main
+authority accepts all required protected runtime and human evidence.
 
-## Current queue
+## Current authority work package
 
-| PR | Domain | Mergeable | Visible checks | Constraint |
-| --- | --- | --- | --- | --- |
-| #1377 | Billing lifecycle and add-ons | Yes | Green | Human review and merge required |
-| #1376 | Governance foundations | Yes | Green | Human review and migration review required |
-| #1375 | Secure access exports | Yes | Green | Human review and live Supabase proof remain |
-| #1374 | Qualified-review evidence handoff | Yes | Green | Human review; qualified reviewers remain external |
-| #1365 | Break-glass governance | Yes | Green | Requested reviewer; provider/runtime proof remains |
-| #1369 | Premium landing | Yes | Repository green | Vercel build-rate-limit failure; production not verified |
+PR #1730 — `MEGA PR — ENTERPRISE 100 FINAL EVIDENCE AUTHORITY + PROVENANCE CLOSURE`
+— is the active authority reconciliation package. At synchronization its branch
+was ahead of current `main` and not behind, with GitHub reporting it mergeable.
+
+The package establishes 16 unique Enterprise closure controls, a fail-closed
+`Enterprise 100 Final Authority`, exact workflow/artifact/SHA provenance for five
+direct domain producers, and deprecates the user-supplied-run-ID conversation
+fan-in as an authority source.
+
+## Mandatory direct authorities after merge
+
+The final authority must remain `NO_GO` until the same exact current-main SHA has
+accepted evidence from:
+
+1. Product FRIA Ephemeral Runtime QA;
+2. Final Billing + Product Live Closeout;
+3. Supabase Forward Production Acceptance;
+4. Production Provider Runtime Proof;
+5. External Security Assurance Acceptance.
+
+Legal publication, recovery, deployment/smoke, runtime closeout and final Go/No-Go
+controls remain independently required by the shared closure contract.
 
 ## Immediate P0
 
-Run the canonical Enterprise Readiness Scorecard against the exact current main
-SHA and retain its artifact. Do not promote `GO`, 100%, or any newer percentage
-until that run succeeds and its evidence is accepted.
+Make PR #1730 exact-head checks and reviews green without weakening any guardrail,
+merge only through branch protection, then execute/approve the protected producer
+workflows for the resulting exact current `main` SHA. Do not promote 100%, GO or a
+new completion percentage before the retained canonical authority proves it.
