@@ -9,7 +9,6 @@ type PageProps = {
 };
 
 export const revalidate = 300;
-export const dynamic = 'force-static';
 
 const metadataByLocale: Record<Locale, { title: string; description: string }> = {
   en: {
