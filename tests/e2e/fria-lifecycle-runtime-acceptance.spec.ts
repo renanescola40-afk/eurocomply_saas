@@ -166,6 +166,7 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
   if (ownerStorageState) test.use({ storageState: ownerStorageState });
 
   test('visitor and unlicensed customer respect the commercial boundary; licensed owner completes the enterprise FRIA journey', async ({ page, browser }) => {
+    test.setTimeout(180_000);
     const systemName = `QA FRIA system ${Date.now()}`;
     const evidenceVaultTitle = `QA Evidence Vault ${Date.now()}`;
 

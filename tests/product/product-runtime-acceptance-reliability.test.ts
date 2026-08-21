@@ -14,6 +14,10 @@ const sanitizer = readFileSync(
   join(process.cwd(), 'scripts/product/sanitize-fria-playwright-report.mjs'),
   'utf8',
 );
+const runtimeAcceptance = readFileSync(
+  join(process.cwd(), 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'),
+  'utf8',
+);
 
 describe('Product runtime acceptance reliability contracts', () => {
   it('fails early when the assessed Next process exits before readiness', () => {
@@ -28,6 +32,8 @@ describe('Product runtime acceptance reliability contracts', () => {
     expect(workflow).toContain('--project=chromium --reporter=line,github,json --retries=1');
     expect(workflow).not.toContain('--retries=2');
     expect(workflow).not.toContain('--retries=3');
+    expect(runtimeAcceptance).toContain('test.setTimeout(180_000)');
+    expect(runtimeAcceptance).not.toContain('test.setTimeout(300_000)');
   });
 
   it('emits only coarse app and Auth health state after a persistent browser failure', () => {
