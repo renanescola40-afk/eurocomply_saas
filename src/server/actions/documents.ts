@@ -564,6 +564,23 @@ export async function deleteDocument(documentId: string, organizationId: string)
     throw actionError('Document not found');
   }
 
+  const authorizationAudit = await logAuditEvent({
+    organizationId,
+    actorUserId: userId,
+    action: 'document.delete_authorized',
+    entityType: 'document',
+    entityId: documentId,
+    metadata: {
+      category: document.category,
+      hasStorageObject: Boolean(document.storage_path),
+    },
+  });
+
+  if (!authorizationAudit.persisted) {
+    reportError(new Error('Document deletion authorization audit persistence failed'), context);
+    throw actionError('Document deletion audit is temporarily unavailable.');
+  }
+
   if (document.storage_path) {
     assertTenantStoragePathInOrganization(document.storage_path, organizationId);
     const { error: storageError } = await supabase.storage.from(DOCUMENT_BUCKET).remove([document.storage_path]);
@@ -587,7 +604,7 @@ export async function deleteDocument(documentId: string, organizationId: string)
     throw actionError('Unable to delete document.');
   }
 
-  await logAuditEvent({
+  const completionAudit = await logAuditEvent({
     organizationId,
     actorUserId: userId,
     action: 'document.deleted',
@@ -595,6 +612,11 @@ export async function deleteDocument(documentId: string, organizationId: string)
     entityId: documentId,
     metadata: { category: deletedDocument.category },
   });
+
+  if (!completionAudit.persisted) {
+    reportError(new Error('Document deletion completion audit persistence failed'), context);
+    throw actionError('Document deletion audit is temporarily unavailable.');
+  }
 
   return deletedDocument;
 }
