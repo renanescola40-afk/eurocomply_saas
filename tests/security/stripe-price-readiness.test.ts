@@ -7,6 +7,25 @@ import {
   type StripeReadinessBinding,
 } from '../../src/app/api/ready/route';
 
+function makeProduct(
+  binding: StripeReadinessBinding,
+  overrides: {
+    active?: boolean;
+    billingPlanId?: string;
+    catalogStatus?: string;
+  } = {},
+): Stripe.Product {
+  return {
+    id: 'prod_test',
+    object: 'product',
+    active: overrides.active ?? true,
+    metadata: {
+      billing_plan_id: overrides.billingPlanId ?? binding.publicPlanId,
+      catalog_status: overrides.catalogStatus ?? 'canonical_live',
+    },
+  } as unknown as Stripe.Product;
+}
+
 function makePrice(
   binding: StripeReadinessBinding,
   overrides: Partial<Stripe.Price> = {},
@@ -23,15 +42,7 @@ function makePrice(
     lookup_key: null,
     metadata: {},
     nickname: null,
-    product: {
-      id: 'prod_test',
-      object: 'product',
-      active: true,
-      metadata: {
-        billing_plan_id: binding.publicPlanId,
-        catalog_status: 'canonical_live',
-      },
-    } as Stripe.Product,
+    product: makeProduct(binding),
     recurring: {
       aggregate_usage: null,
       interval: binding.interval,
@@ -86,15 +97,10 @@ describe('Stripe billing readiness', () => {
     const binding = CANONICAL_STRIPE_READINESS_BINDINGS[0];
 
     expect(isCanonicalStripePriceForReadiness(makePrice(binding, {
-      product: {
-        id: 'prod_test',
-        object: 'product',
-        active: false,
-        metadata: { billing_plan_id: 'essential', catalog_status: 'canonical_live' },
-      } as Stripe.Product,
+      product: makeProduct(binding, { active: false }),
     }), binding)).toBe(false);
     expect(isCanonicalStripePriceForReadiness(makePrice(binding, {
-      product: { id: 'prod_test', object: 'product', deleted: true } as Stripe.DeletedProduct,
+      product: { id: 'prod_test', object: 'product', deleted: true } as unknown as Stripe.DeletedProduct,
     }), binding)).toBe(false);
     expect(isCanonicalStripePriceForReadiness(makePrice(binding, { product: 'prod_test' }), binding)).toBe(false);
   });
@@ -103,20 +109,10 @@ describe('Stripe billing readiness', () => {
     const binding = CANONICAL_STRIPE_READINESS_BINDINGS[0];
 
     expect(isCanonicalStripePriceForReadiness(makePrice(binding, {
-      product: {
-        id: 'prod_test',
-        object: 'product',
-        active: true,
-        metadata: { billing_plan_id: 'professional', catalog_status: 'canonical_live' },
-      } as Stripe.Product,
+      product: makeProduct(binding, { billingPlanId: 'professional' }),
     }), binding)).toBe(false);
     expect(isCanonicalStripePriceForReadiness(makePrice(binding, {
-      product: {
-        id: 'prod_test',
-        object: 'product',
-        active: true,
-        metadata: { billing_plan_id: 'essential', catalog_status: 'legacy' },
-      } as Stripe.Product,
+      product: makeProduct(binding, { catalogStatus: 'legacy' }),
     }), binding)).toBe(false);
   });
 });
