@@ -13,7 +13,14 @@ function evidence() {
     github: { repositoryReachable: true, repositoryBound: true, currentMainShaBound: true, protectedProductionEnvironment: true, githubActionsRunBound: true, exactContext: true },
     vercel: { apiTokenConfigured: true, targetConfigurationBound: true, projectReachable: true, projectIdentityMatched: true, productionEnvironmentEnumerated: true, requiredEnvironmentKeysPresent: true },
     supabase: { urlConfigured: true, serviceRoleConfigured: true, projectReachable: true, serviceRoleAuthorized: true },
-    stripe: { secretConfigured: true, apiReachable: true, threePriceIdsConfigured: true, priceLookup: true },
+    stripe: {
+      secretConfigured: true,
+      apiReachable: true,
+      transitionPolicyRejectsLegacy: true,
+      legacyAliasesRejected: true,
+      fourCanonicalSelfServeBindingsConfigured: true,
+      fourCanonicalSelfServePricesVerified: true,
+    },
     sentry: { organizationConfigured: true, projectConfigured: true, buildAuthTokenConfigured: true, projectReachable: true, clientKeyInventoryReachable: true, activeClientKeyPresent: true },
   };
   const providers = ['github', 'vercel', 'supabase', 'stripe', 'sentry'] as const;
@@ -64,6 +71,12 @@ describe('production provider exact-SHA evidence handoff', () => {
     if (!vercel) throw new Error('Vercel provider fixture missing');
     (vercel.checks as Record<string, boolean>).projectIdentityMatched = false;
     expect(validateDownloadedEvidence(wrongVercel, { targetSha: sha, repository }).passed).toBe(false);
+
+    const legacyStripe = evidence();
+    const stripe = legacyStripe.providersReviewed.find((entry) => entry.provider === 'stripe');
+    if (!stripe) throw new Error('Stripe provider fixture missing');
+    (stripe.checks as Record<string, boolean>).legacyAliasesRejected = false;
+    expect(validateDownloadedEvidence(legacyStripe, { targetSha: sha, repository }).passed).toBe(false);
 
     const missing = evidence();
     missing.providersReviewed = missing.providersReviewed.filter((entry) => entry.provider !== 'stripe');
