@@ -7,6 +7,7 @@ const PRICE_ID = /^price_[A-Za-z0-9]+$/;
 const VERCEL_PROJECT_ID = /^prj_[A-Za-z0-9]+$/;
 const VERCEL_TEAM_ID = /^team_[A-Za-z0-9]+$/;
 const VERCEL_PROJECT_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
+const VERCEL_ENV_ID = /^[A-Za-z0-9_-]+$/;
 const PROVIDER_TARGETS_PATH = 'config/production-provider-targets.json';
 const CATALOG_PATH = 'config/billing-commercial-catalog.json';
 
@@ -75,13 +76,17 @@ export function requiredStripePriceKeys(catalog) {
   return keys;
 }
 
+function matchingProductionRows(rows, key) {
+  return (Array.isArray(rows) ? rows : []).filter((row) => (
+    row?.key === key
+    && (!Array.isArray(row?.target) || row.target.includes('production'))
+  ));
+}
+
 export function extractVercelStripePriceBindings(rows, requiredKeys) {
   const bindings = {};
   for (const key of requiredKeys) {
-    const candidates = (Array.isArray(rows) ? rows : []).filter((row) => (
-      row?.key === key
-      && (!Array.isArray(row?.target) || row.target.includes('production'))
-    ));
+    const candidates = matchingProductionRows(rows, key);
     if (candidates.length !== 1) throw new Error(`vercel_price_binding_count:${key}:${candidates.length}`);
     const value = String(candidates[0]?.value ?? '').trim();
     if (!PRICE_ID.test(value)) throw new Error(`vercel_price_binding_invalid:${key}`);
@@ -110,10 +115,27 @@ export function assertRuntimeVercelTargetAuthority(authority, runtimeTarget) {
   return true;
 }
 
+async function readProjectEnvironmentValue({ fetchImpl, token, target, row, key }) {
+  const envId = String(row?.id ?? '').trim();
+  if (!VERCEL_ENV_ID.test(envId)) throw new Error(`vercel_price_binding_unreadable:${key}`);
+  const url = `https://api.vercel.com/v1/projects/${encodeURIComponent(target.projectId)}/env/${encodeURIComponent(envId)}?teamId=${encodeURIComponent(target.teamId)}`;
+  const response = await fetchImpl(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    redirect: 'error',
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error(`vercel_env_value_read_failed:${response.status}`);
+  const body = await boundedJson(response);
+  if (body?.key && body.key !== key) throw new Error(`vercel_env_key_mismatch:${key}`);
+  return String(body?.value ?? '').trim();
+}
+
 export async function loadVercelStripePriceBindings({ fetchImpl = fetch, token, target, catalog } = {}) {
   if (!token) throw new Error('missing_vercel_token');
   if (!target?.projectId || !target?.teamId || !target?.projectName) throw new Error('invalid_vercel_target');
-  const url = `https://api.vercel.com/v10/projects/${encodeURIComponent(target.projectId)}/env?target=production&decrypt=true&teamId=${encodeURIComponent(target.teamId)}`;
+  const requiredKeys = requiredStripePriceKeys(catalog);
+  const source = encodeURIComponent('github-actions:stripe-price-binding-proof');
+  const url = `https://api.vercel.com/v10/projects/${encodeURIComponent(target.projectId)}/env?target=production&decrypt=true&source=${source}&teamId=${encodeURIComponent(target.teamId)}`;
   const response = await fetchImpl(url, {
     headers: { Authorization: `Bearer ${token}` },
     redirect: 'error',
@@ -121,7 +143,20 @@ export async function loadVercelStripePriceBindings({ fetchImpl = fetch, token, 
   });
   if (!response.ok) throw new Error(`vercel_env_read_failed:${response.status}`);
   const body = await boundedJson(response);
-  return extractVercelStripePriceBindings(body?.envs, requiredStripePriceKeys(catalog));
+  const rows = Array.isArray(body?.envs) ? body.envs : [];
+
+  const bindings = {};
+  for (const key of requiredKeys) {
+    const candidates = matchingProductionRows(rows, key);
+    if (candidates.length !== 1) throw new Error(`vercel_price_binding_count:${key}:${candidates.length}`);
+    const listedValue = String(candidates[0]?.value ?? '').trim();
+    const value = PRICE_ID.test(listedValue)
+      ? listedValue
+      : await readProjectEnvironmentValue({ fetchImpl, token, target, row: candidates[0], key });
+    if (!PRICE_ID.test(value)) throw new Error(`vercel_price_binding_invalid:${key}`);
+    bindings[key] = value;
+  }
+  return bindings;
 }
 
 function appendBindingsToGitHubEnv(bindings) {
