@@ -81,9 +81,13 @@ describe('commercial surface locale continuity', () => {
   });
 
   it('keeps analytics consent fail-closed and localizes the consent decision', () => {
+    expect(posthogClient).toContain(
+      "return process.env.NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT !== 'false';",
+    );
     expect(posthogClient).toContain("window.localStorage.getItem(CONSENT_STORAGE_KEY) === 'granted'");
     expect(posthogClient).toContain('!hasAnalyticsConsent()');
-    expect(posthogClient).toContain('opt_out_capturing_by_default: requiresConsent()');
+    expect(posthogClient).toContain('opt_out_capturing_by_default: isAnalyticsConsentRequired()');
+    expect(consentBanner).toContain('isAnalyticsConsentRequired()');
     expect(consentBanner).toContain('getCommercialSurfaceCopy(localeFromPath(pathname)).consent');
     expect(consentBanner).toContain('{copy.decline}');
     expect(consentBanner).toContain('{copy.allow}');
