@@ -10,6 +10,10 @@ const fixture = readFileSync(
   join(process.cwd(), 'scripts/product/create-fria-ephemeral-fixtures.mjs'),
   'utf8',
 );
+const sanitizer = readFileSync(
+  join(process.cwd(), 'scripts/product/sanitize-fria-playwright-report.mjs'),
+  'utf8',
+);
 
 describe('Product runtime acceptance reliability contracts', () => {
   it('fails early when the assessed Next process exits before readiness', () => {
@@ -21,7 +25,7 @@ describe('Product runtime acceptance reliability contracts', () => {
   });
 
   it('keeps browser retry bounded while activating the existing first-retry Playwright trace contract', () => {
-    expect(workflow).toContain('--project=chromium --reporter=line,github --retries=1');
+    expect(workflow).toContain('--project=chromium --reporter=line,github,json --retries=1');
     expect(workflow).not.toContain('--retries=2');
     expect(workflow).not.toContain('--retries=3');
   });
@@ -35,11 +39,24 @@ describe('Product runtime acceptance reliability contracts', () => {
     expect(workflow).not.toContain('Product QA sanitized failure diagnostic: $SUPABASE_SERVICE_ROLE_KEY');
   });
 
+  it('publishes only sanitized bounded Playwright diagnostics after browser failure', () => {
+    expect(workflow).toContain(
+      'PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/fria-playwright-raw.json',
+    );
+    expect(workflow).toContain('scripts/product/sanitize-fria-playwright-report.mjs');
+    expect(workflow).toContain('if: failure()');
+    expect(sanitizer).toContain('credentialsStored: false');
+    expect(sanitizer).toContain('tokensStored: false');
+    expect(sanitizer).toContain('cookiesStored: false');
+    expect(sanitizer).toContain('rawTraceStored: false');
+    expect(sanitizer).toContain('rmSync(rawPath)');
+  });
+
   it('proves disposable owner and approver password grants before browser acceptance', () => {
     expect(fixture).toContain("const anonKey = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');");
     expect(fixture).toContain('await authClient.auth.signInWithPassword({');
-    expect(fixture).toContain("await verifyPasswordGrant(url, anonKey, owner, 'owner');");
-    expect(fixture).toContain("await verifyPasswordGrant(url, anonKey, approver, 'approver');");
+    expect(fixture).toContain("await verifyPasswordGrant(url, anoKey, owner, 'owner');");
+    expect(fixture).toContain("await verifyPasswordGrant(url, anoKey, approver, 'approver');");
     expect(fixture).toContain('!data.session?.access_token');
     expect(fixture).toContain('data.user?.id !== identity.id');
     expect(fixture).not.toContain('console.log(data.session');
