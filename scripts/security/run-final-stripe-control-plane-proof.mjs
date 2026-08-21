@@ -12,6 +12,7 @@ const OUTPUT = resolve('release-validation/final-stripe-control-plane-proof.json
 const PORTAL_CONTRACT_PATH = resolve('config/stripe-billing-portal-contract.json');
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const PORTAL_ID = /^bpc_[A-Za-z0-9]+$/;
+const STRIPE_PRICE_ID = /^price_[A-Za-z0-9]+$/;
 const MAX_RESPONSE_BYTES = 1024 * 1024;
 const API_TIMEOUT_MS = 10_000;
 const CANONICAL_WEBHOOK_URL = 'https://www.risckcomply.com/api/stripe/webhook';
@@ -28,13 +29,16 @@ const REQUIRED_WEBHOOK_EVENTS = Object.freeze([
   'invoice.payment_failed',
   'invoice.paid',
 ]);
-const REQUIRED_PRODUCTION_BINDINGS = Object.freeze([
-  'STRIPE_SECRET_KEY',
-  'STRIPE_WEBHOOK_SECRET',
+const REQUIRED_CANONICAL_PRICE_BINDINGS = Object.freeze([
   'STRIPE_PRICE_ESSENTIAL_MONTHLY',
   'STRIPE_PRICE_ESSENTIAL_ANNUAL',
   'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
   'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
+]);
+const REQUIRED_PRODUCTION_BINDINGS = Object.freeze([
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
+  ...REQUIRED_CANONICAL_PRICE_BINDINGS,
 ]);
 
 function env(name) {
@@ -187,6 +191,32 @@ async function inspectWebhook(secret) {
   return { matchingEndpointCount: matching.length, passed };
 }
 
+function productionRows(entries, key) {
+  return entries.filter((entry) => (
+    String(entry?.key ?? '') === key
+    && Array.isArray(entry?.target)
+    && entry.target.includes('production')
+  ));
+}
+
+async function readCanonicalVercelPriceValue(token, row, expectedKey) {
+  const envId = String(row?.id ?? '').trim();
+  if (!envId || String(row?.key ?? '') !== expectedKey) return null;
+
+  const detail = await requestJson(
+    `https://api.vercel.com/v1/projects/${CANONICAL_VERCEL_TARGET.projectId}/env/${encodeURIComponent(envId)}?teamId=${CANONICAL_VERCEL_TARGET.teamId}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (
+    !detail
+    || detail.decrypted !== true
+    || String(detail.key ?? '') !== expectedKey
+    || typeof detail.value !== 'string'
+  ) return null;
+
+  return detail.value.trim();
+}
+
 async function inspectRuntimeBindings() {
   const token = env('VERCEL_TOKEN');
   if (!token) {
@@ -194,31 +224,67 @@ async function inspectRuntimeBindings() {
       productionEnvironmentEnumerated: false,
       requiredKeyCount: REQUIRED_PRODUCTION_BINDINGS.length,
       presentKeyCount: 0,
+      uniqueKeyCount: 0,
       webhookSigningSecretBindingPresent: false,
+      expectedCanonicalPriceCount: REQUIRED_CANONICAL_PRICE_BINDINGS.length,
+      canonicalPriceValueReadCount: 0,
+      canonicalPriceValueMatchCount: 0,
+      canonicalPriceBindingsMatch: false,
+      valuesComparedInMemory: false,
+      sensitiveValuesRetrieved: false,
       passed: false,
     };
   }
 
+  // Enumerate metadata without decrypting values. Only the four non-secret
+  // canonical Stripe Price bindings are then fetched individually by env ID.
+  // Stripe API/webhook secrets are never requested in decrypted form.
   const body = await requestJson(
-    `https://api.vercel.com/v10/projects/${CANONICAL_VERCEL_TARGET.projectId}/env?target=production&decrypt=false&teamId=${CANONICAL_VERCEL_TARGET.teamId}`,
+    `https://api.vercel.com/v10/projects/${CANONICAL_VERCEL_TARGET.projectId}/env?teamId=${CANONICAL_VERCEL_TARGET.teamId}`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
   const entries = Array.isArray(body?.envs) ? body.envs : [];
-  const keys = new Set(entries
-    .filter((entry) => Array.isArray(entry?.target) ? entry.target.includes('production') : true)
-    .map((entry) => String(entry?.key ?? ''))
-    .filter(Boolean));
-  const presentKeyCount = REQUIRED_PRODUCTION_BINDINGS.filter((key) => keys.has(key)).length;
   const productionEnvironmentEnumerated = Boolean(body);
-  const webhookSigningSecretBindingPresent = keys.has('STRIPE_WEBHOOK_SECRET');
+  const presentKeyCount = REQUIRED_PRODUCTION_BINDINGS.filter((key) => productionRows(entries, key).length > 0).length;
+  const uniqueKeyCount = REQUIRED_PRODUCTION_BINDINGS.filter((key) => productionRows(entries, key).length === 1).length;
+  const webhookSigningSecretBindingPresent = productionRows(entries, 'STRIPE_WEBHOOK_SECRET').length === 1;
+  const expectedCanonicalPriceValuesConfigured = REQUIRED_CANONICAL_PRICE_BINDINGS.every((key) => STRIPE_PRICE_ID.test(env(key)));
+
+  let canonicalPriceValueReadCount = 0;
+  let canonicalPriceValueMatchCount = 0;
+  if (productionEnvironmentEnumerated && expectedCanonicalPriceValuesConfigured) {
+    const comparisons = await Promise.all(REQUIRED_CANONICAL_PRICE_BINDINGS.map(async (key) => {
+      const rows = productionRows(entries, key);
+      if (rows.length !== 1) return { read: false, match: false };
+      const value = await readCanonicalVercelPriceValue(token, rows[0], key);
+      if (value === null) return { read: false, match: false };
+      return { read: true, match: value === env(key) };
+    }));
+    canonicalPriceValueReadCount = comparisons.filter((comparison) => comparison.read).length;
+    canonicalPriceValueMatchCount = comparisons.filter((comparison) => comparison.match).length;
+  }
+
+  const canonicalPriceBindingsMatch = canonicalPriceValueMatchCount === REQUIRED_CANONICAL_PRICE_BINDINGS.length;
+  const valuesComparedInMemory = canonicalPriceValueReadCount === REQUIRED_CANONICAL_PRICE_BINDINGS.length;
+  const sensitiveValuesRetrieved = false;
   const passed = productionEnvironmentEnumerated
     && presentKeyCount === REQUIRED_PRODUCTION_BINDINGS.length
-    && webhookSigningSecretBindingPresent;
+    && uniqueKeyCount === REQUIRED_PRODUCTION_BINDINGS.length
+    && webhookSigningSecretBindingPresent
+    && canonicalPriceBindingsMatch;
+
   return {
     productionEnvironmentEnumerated,
     requiredKeyCount: REQUIRED_PRODUCTION_BINDINGS.length,
     presentKeyCount,
+    uniqueKeyCount,
     webhookSigningSecretBindingPresent,
+    expectedCanonicalPriceCount: REQUIRED_CANONICAL_PRICE_BINDINGS.length,
+    canonicalPriceValueReadCount,
+    canonicalPriceValueMatchCount,
+    canonicalPriceBindingsMatch,
+    valuesComparedInMemory,
+    sensitiveValuesRetrieved,
     passed,
   };
 }
@@ -256,10 +322,12 @@ export async function buildFinalStripeControlPlaneProof({
     stripeAccountReachable,
     billingPortalContractResolved: portal.passed,
     canonicalLifecycleWebhookLive: webhook.passed,
-    productionBillingBindingsPresent: runtimeBindings.passed,
+    productionBillingBindingsPresent: runtimeBindings.presentKeyCount === runtimeBindings.requiredKeyCount,
+    productionBillingBindingsUnique: runtimeBindings.uniqueKeyCount === runtimeBindings.requiredKeyCount,
+    productionCanonicalStripePriceBindingsMatch: runtimeBindings.canonicalPriceBindingsMatch,
     productionWebhookSigningSecretBindingPresent: runtimeBindings.webhookSigningSecretBindingPresent,
   };
-  const passed = Object.values(checks).every(Boolean);
+  const passed = Object.values(checks).every(Boolean) && runtimeBindings.passed;
 
   return {
     schema: 'risck-comply.final-stripe-control-plane-proof.v1',
@@ -285,10 +353,12 @@ export async function buildFinalStripeControlPlaneProof({
       providerIdsStored: false,
       stripeSecretsStored: false,
       webhookSigningSecretStored: false,
-      vercelValuesDecrypted: false,
+      vercelNonSensitivePriceValuesComparedInMemory: runtimeBindings.valuesComparedInMemory,
+      vercelSensitiveValuesRetrieved: runtimeBindings.sensitiveValuesRetrieved,
+      vercelValuesStored: false,
       customerDataStored: false,
     },
-    truthBoundary: 'This read-only proof validates the exact production context, the reviewed/default Billing Portal policy, the singular canonical live webhook, and presence of required production billing binding keys. It never creates customers, Checkout Sessions, subscriptions, invoices, payment intents or charges. A legitimate signed live lifecycle observation remains required for final billing acceptance.',
+    truthBoundary: 'This read-only proof validates the exact production context, the reviewed/default Billing Portal policy, the singular canonical live webhook, unique required Vercel Production billing keys, and exact in-memory equality of the four non-secret canonical Stripe Price bindings. Vercel metadata is enumerated without decryption, only those four Price bindings are fetched decrypted by env ID, and Stripe API/webhook secret values are never requested from Vercel. No Vercel values are retained. The proof never creates customers, Checkout Sessions, subscriptions, invoices, payment intents or charges. A legitimate signed live lifecycle observation remains required for final billing acceptance.',
   };
 }
 

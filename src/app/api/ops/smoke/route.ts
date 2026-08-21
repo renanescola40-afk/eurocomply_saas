@@ -1,22 +1,24 @@
+import billingCommercialCatalog from '../../../../../config/billing-commercial-catalog.json';
 import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireEnterpriseRateLimit } from '@/server/security/api-guards';
 import { validateBearerToken } from '@/server/security/bearer-token';
 import { noStoreJson } from '@/server/security/no-store';
 
+const STRIPE_PRICE_ENV = [
+  billingCommercialCatalog.plans.essential.monthlyPriceEnvKey,
+  billingCommercialCatalog.plans.essential.annualPriceEnvKey,
+  billingCommercialCatalog.plans.professional.monthlyPriceEnvKey,
+  billingCommercialCatalog.plans.professional.annualPriceEnvKey,
+] as const;
+
 const REQUIRED_ENV_GROUPS = {
   supabase: ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY'],
   stripe: [
     'STRIPE_SECRET_KEY',
     'STRIPE_WEBHOOK_SECRET',
-    'STRIPE_PRICE_ESSENTIAL_MONTHLY',
-    'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+    ...STRIPE_PRICE_ENV,
   ],
-} as const;
-
-const LEGACY_STRIPE_PRICE_FALLBACKS = {
-  STRIPE_PRICE_ESSENTIAL_MONTHLY: ['STRIPE_PRICE_STARTER_MONTHLY'],
-  STRIPE_PRICE_PROFESSIONAL_MONTHLY: ['STRIPE_PRICE_GROWTH_MONTHLY'],
 } as const;
 
 const OPS_SMOKE_DEPENDENCY_TIMEOUT_MS = 1_500;
@@ -37,9 +39,7 @@ function hasBearerToken(request: Request) {
 }
 
 function hasRequiredEnv(variable: string) {
-  if (process.env[variable]) return true;
-  const fallbacks = LEGACY_STRIPE_PRICE_FALLBACKS[variable as keyof typeof LEGACY_STRIPE_PRICE_FALLBACKS] ?? [];
-  return fallbacks.some((fallback) => Boolean(process.env[fallback]));
+  return Boolean(process.env[variable]?.trim());
 }
 
 export function envGroupCheck() {

@@ -40,9 +40,13 @@ function stubReadyEnvironment() {
   vi.stubEnv('STRIPE_SECRET_KEY', 'configured');
   vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'configured');
   vi.stubEnv('STRIPE_PRICE_ESSENTIAL_MONTHLY', 'configured');
+  vi.stubEnv('STRIPE_PRICE_ESSENTIAL_ANNUAL', 'configured');
   vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_MONTHLY', 'configured');
+  vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_ANNUAL', 'configured');
   vi.stubEnv('STRIPE_PRICE_STARTER_MONTHLY', '');
+  vi.stubEnv('STRIPE_PRICE_STARTER_ANNUAL', '');
   vi.stubEnv('STRIPE_PRICE_GROWTH_MONTHLY', '');
+  vi.stubEnv('STRIPE_PRICE_GROWTH_ANNUAL', '');
   vi.stubEnv('STRIPE_PRICE_ENTERPRISE_MONTHLY', '');
   vi.stubEnv('STRIPE_PRICE_BUSINESS_MONTHLY', '');
   vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://redis.example');
@@ -156,19 +160,23 @@ describe('ready endpoint hardening', () => {
     ]));
   });
 
-  it('accepts Starter and Growth only as backwards-compatible self-serve fallbacks', () => {
+  it('rejects Starter and Growth legacy price fallbacks for canonical production readiness', () => {
     vi.stubEnv('STRIPE_SECRET_KEY', 'configured');
     vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'configured');
     vi.stubEnv('STRIPE_PRICE_ESSENTIAL_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_ESSENTIAL_ANNUAL', '');
     vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_ANNUAL', '');
     vi.stubEnv('STRIPE_PRICE_STARTER_MONTHLY', 'configured');
+    vi.stubEnv('STRIPE_PRICE_STARTER_ANNUAL', 'configured');
     vi.stubEnv('STRIPE_PRICE_GROWTH_MONTHLY', 'configured');
+    vi.stubEnv('STRIPE_PRICE_GROWTH_ANNUAL', 'configured');
 
     expect(readyEnvironmentCheck()).toEqual(expect.arrayContaining([
       {
         name: 'stripe',
-        configured: true,
-        missingCount: 0,
+        configured: false,
+        missingCount: 4,
       },
     ]));
   });
@@ -239,7 +247,7 @@ describe('ready endpoint hardening', () => {
       configured: true,
       apiReachable: true,
       priceLookup: true,
-      pricesChecked: 2,
+      pricesChecked: 4,
       detail: 'ok',
     });
     expect(body.enterpriseStepUp).toEqual({
@@ -259,9 +267,9 @@ describe('ready endpoint hardening', () => {
     expect(body.sentryReleaseUploads.sourceMapsUploadRequiresAuthToken).toBe(true);
   });
 
-  it('requires both self-serve Stripe prices to be present', async () => {
+  it('requires all four canonical self-serve Stripe prices to be present', async () => {
     stubReadyEnvironment();
-    vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_ANNUAL', '');
 
     const response = await GET(makeRequest('expected-token'));
     const body = await response.json();
@@ -272,7 +280,7 @@ describe('ready endpoint hardening', () => {
       configured: false,
       apiReachable: false,
       priceLookup: false,
-      pricesChecked: 1,
+      pricesChecked: 3,
       detail: 'not_configured',
     });
     expect(body.checks.stripeApiReachable).toBe(false);
@@ -438,9 +446,13 @@ describe('ready endpoint hardening', () => {
     vi.stubEnv('STRIPE_SECRET_KEY', '');
     vi.stubEnv('STRIPE_WEBHOOK_SECRET', '');
     vi.stubEnv('STRIPE_PRICE_ESSENTIAL_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_ESSENTIAL_ANNUAL', '');
     vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_ANNUAL', '');
     vi.stubEnv('STRIPE_PRICE_STARTER_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_STARTER_ANNUAL', '');
     vi.stubEnv('STRIPE_PRICE_GROWTH_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_GROWTH_ANNUAL', '');
     vi.stubEnv('STRIPE_PRICE_ENTERPRISE_MONTHLY', '');
     vi.stubEnv('UPSTASH_REDIS_REST_URL', '');
     vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', '');
@@ -460,7 +472,7 @@ describe('ready endpoint hardening', () => {
       {
         name: 'stripe',
         configured: false,
-        missingCount: 4,
+        missingCount: 6,
       },
       {
         name: 'redis',

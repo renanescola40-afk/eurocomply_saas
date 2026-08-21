@@ -74,7 +74,7 @@ test('closeout workflow never creates commercial lifecycle objects for evidence'
   assert.match(workflow, /default_transaction_read_only=on/);
 });
 
-test('production control-plane proof requires the signing-secret binding and canonical lifecycle webhook', () => {
+test('production control-plane proof requires exact canonical Vercel price bindings and lifecycle webhook', () => {
   assert.match(controlPlaneProof, /STRIPE_WEBHOOK_SECRET/);
   assert.match(controlPlaneProof, /(?:^|[\s'"`])https:\/\/www\.risckcomply\.com\/api\/stripe\/webhook(?:$|[\s'"`])/);
   for (const event of [
@@ -87,7 +87,25 @@ test('production control-plane proof requires the signing-secret binding and can
   ]) {
     assert.equal(controlPlaneProof.includes(`'${event}'`), true);
   }
-  assert.match(controlPlaneProof, /decrypt=false/);
+  for (const priceBinding of [
+    'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+    'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+    'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+    'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
+  ]) {
+    assert.equal(controlPlaneProof.includes(`'${priceBinding}'`), true);
+  }
+  assert.match(controlPlaneProof, /canonicalPriceValueReadCount/);
+  assert.match(controlPlaneProof, /canonicalPriceValueMatchCount/);
+  assert.match(controlPlaneProof, /productionCanonicalStripePriceBindingsMatch/);
+  assert.match(controlPlaneProof, /vercelNonSensitivePriceValuesComparedInMemory/);
+  assert.match(controlPlaneProof, /vercelSensitiveValuesRetrieved/);
+  assert.match(controlPlaneProof, /vercelValuesStored:\s*false/);
+  assert.match(controlPlaneProof, /v1\/projects\/\$\{CANONICAL_VERCEL_TARGET\.projectId\}\/env\/\$\{encodeURIComponent\(envId\)\}/);
+  assert.match(controlPlaneProof, /detail\.decrypted !== true/);
+  assert.doesNotMatch(controlPlaneProof, /v10\/projects\/\$\{CANONICAL_VERCEL_TARGET\.projectId\}\/env\?[^`]*decrypt=true/);
+  assert.doesNotMatch(controlPlaneProof, /readCanonicalVercelPriceValue\(token,\s*productionRows\(entries,\s*'STRIPE_(?:SECRET_KEY|WEBHOOK_SECRET)'/);
+  assert.doesNotMatch(controlPlaneProof, /console\.log\([^\n]*\.value/);
 });
 
 test('default Portal authority remains fail-closed to one live default policy match', () => {
