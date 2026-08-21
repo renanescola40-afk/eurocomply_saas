@@ -43,7 +43,7 @@ The procurement packet may reference completed, attributable external evidence w
 
 Before describing external assurance as complete, verify the canonical External Assurance trackers and accepted source artifacts. At this snapshot:
 
-- founder facts are not yet an accepted signed record and the legal entity is not registered;
+- founder facts and the attributable legal-identity/corporate factual record are not yet accepted as a signed release-bound artifact;
 - qualified legal review has not reached 8/8 decisions or a master legal decision;
 - independent penetration testing has not been completed;
 - Privacy/GDPR/subprocessor factual and legal closure remains in review.
