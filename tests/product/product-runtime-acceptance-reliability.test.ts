@@ -62,4 +62,16 @@ describe('Product runtime acceptance reliability contracts', () => {
     expect(fixture).not.toContain('console.log(data.session');
     expect(fixture).not.toContain('console.log(identity.password');
   });
+
+  it('keeps onboarding readiness separate from durable commercial authority', () => {
+    expect(fixture).toContain("onboarding_status: 'completed'");
+    expect(fixture).toContain("onboarding_step: 'completed'");
+    expect(fixture).toContain('onboarding_completed_at: onboardingCompletedAt');
+    expect(fixture).toContain("selected_plan: 'professional'");
+    expect(fixture).toContain('fria_licensed_onboarding_state_verification_failed');
+    expect(fixture).toContain('fria_unlicensed_onboarding_state_verification_failed');
+    expect(fixture).toContain(".from('enterprise_entitlement_sources')");
+    expect(fixture).toContain('unlicensedSourceCount !== 0');
+    expect(fixture).toContain('unlicensedSnapshotCount !== 0');
+  });
 });

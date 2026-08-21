@@ -86,11 +86,23 @@ async function main() {
   await verifyPasswordGrant(url, anonKey, approver, 'approver');
   await verifyPasswordGrant(url, anonKey, unlicensedOwner, 'unlicensed_owner');
 
+  const onboardingCompletedAt = new Date(Date.now() - 60_000).toISOString();
   const organization = await insertOne(admin, 'organizations', {
     name: `FRIA Disposable QA ${suffix}`,
     slug: `fria-qa-${suffix}`,
     created_by: owner.id,
+    onboarding_status: 'completed',
+    onboarding_step: 'completed',
+    onboarding_completed_at: onboardingCompletedAt,
+    selected_plan: 'professional',
   }, 'fria_organization');
+  if (
+    organization.onboarding_status !== 'completed'
+    || !organization.onboarding_completed_at
+    || organization.selected_plan !== 'professional'
+  ) {
+    throw new Error('fria_licensed_onboarding_state_verification_failed');
+  }
 
   for (const [identity, role] of [[owner, 'owner'], [reviewer, 'admin'], [approver, 'admin']]) {
     await insertOne(admin, 'organization_members', {
@@ -109,7 +121,18 @@ async function main() {
     name: `Unlicensed Disposable QA ${suffix}`,
     slug: `unlicensed-qa-${suffix}`,
     created_by: unlicensedOwner.id,
+    onboarding_status: 'completed',
+    onboarding_step: 'completed',
+    onboarding_completed_at: onboardingCompletedAt,
+    selected_plan: 'professional',
   }, 'unlicensed_organization');
+  if (
+    unlicensedOrganization.onboarding_status !== 'completed'
+    || !unlicensedOrganization.onboarding_completed_at
+    || unlicensedOrganization.selected_plan !== 'professional'
+  ) {
+    throw new Error('fria_unlicensed_onboarding_state_verification_failed');
+  }
 
   await insertOne(admin, 'organization_members', {
     organization_id: unlicensedOrganization.id,
@@ -122,7 +145,7 @@ async function main() {
   // Stripe event: the disposable tenant receives a current signed-contract source
   // with an applied Professional entitlement snapshot, which satisfies both the
   // dashboard license boundary and the FRIA Professional+ API gate.
-  const effectiveFrom = new Date(Date.now() - 60_000).toISOString();
+  const effectiveFrom = onboardingCompletedAt;
   const commercialPayload = JSON.stringify({
     purpose: 'fria-ephemeral-product-acceptance',
     organizationId: organization.id,
