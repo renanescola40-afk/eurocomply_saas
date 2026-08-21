@@ -3,6 +3,7 @@ import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
+import { assertResourceQuota, verifyResourceQuotaAfterCreate } from '@/server/billing/entitlements';
 import { requireCurrentUser } from '@/server/queries/auth';
 import { logAuditEvent } from './audit';
 
@@ -67,6 +68,12 @@ async function enforceVendorActionRateLimit(input: {
   if (!result.allowed) throw providerActionError('Too many vendor changes. Please try again later.');
 }
 
+async function enforceVendorQuota(organizationId: string) {
+  const quota = await assertResourceQuota(organizationId, 'vendors');
+  if (!quota.ok) throw providerActionError(quota.message);
+  return quota;
+}
+
 function vendorRecord(payload: z.infer<typeof vendorSchema>, actorUserId: string, includeCreator: boolean) {
   const approved = payload.reviewStatus === 'approved';
   return {
@@ -95,10 +102,36 @@ export async function createVendor(input: unknown) {
   const context = { area: 'vendor_create_action', organizationId: payload.organizationId, userId: user.id };
   await assertCurrentUserCan(payload.organizationId, user.id, 'vendors:write');
   await enforceVendorActionRateLimit({ action: 'vendor.create', organizationId: payload.organizationId, userId: user.id });
+  const quota = await enforceVendorQuota(payload.organizationId);
 
   const supabase = createAdminClient();
   const { data, error } = await supabase.from('vendors').insert(vendorRecord(payload, user.id, true)).select(vendorColumns).single();
   if (error) failVendorAction(error, context, 'criar');
+
+  const postQuota = await verifyResourceQuotaAfterCreate(payload.organizationId, 'vendors', quota.maxAllowed);
+  if (!postQuota.ok) {
+    reportError(new Error(postQuota.error), {
+      ...context,
+      area: 'vendor_create_quota_postcheck',
+      vendorId: data.id,
+      currentCount: postQuota.currentCount,
+      maxAllowed: postQuota.maxAllowed,
+    });
+    const { error: rollbackError } = await supabase
+      .from('vendors')
+      .delete()
+      .eq('id', data.id)
+      .eq('organization_id', payload.organizationId)
+      .eq('created_by', user.id);
+    if (rollbackError) {
+      reportError(new Error('vendor_create_quota_compensation_failed'), {
+        ...context,
+        vendorId: data.id,
+        providerCode: rollbackError.code ?? 'unknown',
+      });
+    }
+    throw providerActionError(postQuota.message);
+  }
 
   const audit = await logAuditEvent({ organizationId: payload.organizationId, actorUserId: user.id, action: 'vendor.create', entityType: 'vendor', entityId: data.id, metadata: { riskLevel: payload.riskLevel, reviewStatus: payload.reviewStatus } });
   if (!audit.persisted) {
