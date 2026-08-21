@@ -30,6 +30,8 @@ document were in scope.
 
 ## Consequences
 
+### Risks and trade-offs
+
 - Audit availability becomes a dependency of controlled-document deletion.
 - A completion-audit outage after provider/database mutation can make a retry
   observe `not found`, but it cannot leave the deletion wholly unaudited.
