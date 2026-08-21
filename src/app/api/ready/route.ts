@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import billingCommercialCatalog from '../../../../config/billing-commercial-catalog.json';
 import { reportError } from '@/lib/observability/report-error';
 import { DOCUMENT_BUCKET } from '@/lib/documents/upload';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
@@ -17,15 +18,47 @@ import { logSecurityEvent, requestIdFromHeaders } from '@/server/observability/l
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const STRIPE_PRICE_ENV = [
-  'STRIPE_PRICE_ESSENTIAL_MONTHLY',
-  'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
-] as const;
+type StripeReadinessPlanId = 'essential' | 'professional';
+type StripeReadinessInterval = 'month' | 'year';
 
-const LEGACY_STRIPE_PRICE_FALLBACKS = {
-  STRIPE_PRICE_ESSENTIAL_MONTHLY: ['STRIPE_PRICE_STARTER_MONTHLY'],
-  STRIPE_PRICE_PROFESSIONAL_MONTHLY: ['STRIPE_PRICE_GROWTH_MONTHLY'],
-} as const;
+export type StripeReadinessBinding = {
+  envKey: string;
+  publicPlanId: StripeReadinessPlanId;
+  interval: StripeReadinessInterval;
+  expectedAmountCents: number;
+};
+
+const essentialCatalog = billingCommercialCatalog.plans.essential;
+const professionalCatalog = billingCommercialCatalog.plans.professional;
+
+export const CANONICAL_STRIPE_READINESS_BINDINGS: readonly StripeReadinessBinding[] = [
+  {
+    envKey: essentialCatalog.monthlyPriceEnvKey,
+    publicPlanId: 'essential',
+    interval: 'month',
+    expectedAmountCents: essentialCatalog.monthlyPriceCents,
+  },
+  {
+    envKey: essentialCatalog.annualPriceEnvKey,
+    publicPlanId: 'essential',
+    interval: 'year',
+    expectedAmountCents: essentialCatalog.annualPriceCents,
+  },
+  {
+    envKey: professionalCatalog.monthlyPriceEnvKey,
+    publicPlanId: 'professional',
+    interval: 'month',
+    expectedAmountCents: professionalCatalog.monthlyPriceCents,
+  },
+  {
+    envKey: professionalCatalog.annualPriceEnvKey,
+    publicPlanId: 'professional',
+    interval: 'year',
+    expectedAmountCents: professionalCatalog.annualPriceCents,
+  },
+];
+
+const STRIPE_PRICE_ENV = CANONICAL_STRIPE_READINESS_BINDINGS.map((binding) => binding.envKey);
 
 const REQUIRED_ENV_GROUPS = {
   supabase: ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY'],
@@ -96,6 +129,10 @@ type ReadyStripeCheck = {
   detail: 'ok' | 'not_ready' | 'not_configured';
 };
 
+type ConfiguredStripeReadinessBinding = StripeReadinessBinding & {
+  priceId: string;
+};
+
 function hasHealthcheckToken(request: Request) {
   return validateBearerToken(request, process.env.HEALTHCHECK_TOKEN, {
     allowMissingTokenOutsideProduction: false,
@@ -103,16 +140,7 @@ function hasHealthcheckToken(request: Request) {
 }
 
 function configuredEnvValue(name: string) {
-  const primary = process.env[name]?.trim();
-  if (primary) return primary;
-
-  const fallbacks = LEGACY_STRIPE_PRICE_FALLBACKS[name as keyof typeof LEGACY_STRIPE_PRICE_FALLBACKS] ?? [];
-  for (const fallback of fallbacks) {
-    const fallbackValue = process.env[fallback]?.trim();
-    if (fallbackValue) return fallbackValue;
-  }
-
-  return '';
+  return process.env[name]?.trim() ?? '';
 }
 
 function hasConfiguredEnvValue(name: string) {
@@ -127,30 +155,43 @@ function hasValidTcpPortEnv(name: string) {
   return Number.isInteger(port) && port >= MIN_TCP_PORT && port <= MAX_TCP_PORT;
 }
 
-function configuredStripePriceIds() {
-  return STRIPE_PRICE_ENV
-    .map((variable) => configuredEnvValue(variable))
-    .filter(Boolean);
+function configuredStripePriceBindings(): ConfiguredStripeReadinessBinding[] {
+  return CANONICAL_STRIPE_READINESS_BINDINGS
+    .map((binding) => ({
+      ...binding,
+      priceId: configuredEnvValue(binding.envKey),
+    }))
+    .filter((binding) => Boolean(binding.priceId));
 }
 
-function shouldUseMockStripeReadiness(secretKey: string, priceIds: string[]) {
+function shouldUseMockStripeReadiness(secretKey: string, bindings: ConfiguredStripeReadinessBinding[]) {
   return process.env.NODE_ENV === 'test'
     && secretKey === TEST_PLACEHOLDER_VALUE
-    && priceIds.length === STRIPE_PRICE_ENV.length
-    && priceIds.every((priceId) => priceId === TEST_PLACEHOLDER_VALUE);
+    && bindings.length === CANONICAL_STRIPE_READINESS_BINDINGS.length
+    && bindings.every((binding) => binding.priceId === TEST_PLACEHOLDER_VALUE);
 }
 
-export function isBillableMonthlyStripePrice(price: Stripe.Price) {
+export function isCanonicalStripePriceForReadiness(
+  price: Stripe.Price,
+  binding: StripeReadinessBinding,
+) {
   const product = price.product;
-  const productActive = typeof product === 'object'
+  const expandedProduct = typeof product === 'object'
     && product !== null
     && !('deleted' in product)
-    && product.active;
+    ? product
+    : null;
 
-  return price.active
+  return price.livemode === true
+    && price.active === true
     && price.type === 'recurring'
-    && price.recurring?.interval === 'month'
-    && productActive;
+    && price.recurring?.interval === binding.interval
+    && price.recurring?.interval_count === 1
+    && String(price.currency ?? '').toLowerCase() === String(billingCommercialCatalog.currency).toLowerCase()
+    && price.unit_amount === binding.expectedAmountCents
+    && expandedProduct?.active === true
+    && expandedProduct.metadata?.billing_plan_id === binding.publicPlanId
+    && expandedProduct.metadata?.catalog_status === 'canonical_live';
 }
 
 export async function withReadinessDependencyTimeout<T>(operation: PromiseLike<T>): Promise<T> {
@@ -276,24 +317,24 @@ async function retrieveStripePriceForReadiness(stripe: Stripe, priceId: string) 
 
 async function checkStripeConnectivity(stripeConfigured: boolean): Promise<ReadyStripeCheck> {
   const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
-  const priceIds = configuredStripePriceIds();
+  const bindings = configuredStripePriceBindings();
 
-  if (!stripeConfigured || !secretKey || priceIds.length !== STRIPE_PRICE_ENV.length) {
+  if (!stripeConfigured || !secretKey || bindings.length !== CANONICAL_STRIPE_READINESS_BINDINGS.length) {
     return {
       configured: stripeConfigured,
       apiReachable: false,
       priceLookup: false,
-      pricesChecked: priceIds.length,
+      pricesChecked: bindings.length,
       detail: 'not_configured',
     };
   }
 
-  if (shouldUseMockStripeReadiness(secretKey, priceIds)) {
+  if (shouldUseMockStripeReadiness(secretKey, bindings)) {
     return {
       configured: true,
       apiReachable: true,
       priceLookup: true,
-      pricesChecked: priceIds.length,
+      pricesChecked: bindings.length,
       detail: 'ok',
     };
   }
@@ -303,8 +344,12 @@ async function checkStripeConnectivity(stripeConfigured: boolean): Promise<Ready
       maxNetworkRetries: 0,
       timeout: STRIPE_READINESS_TIMEOUT_MS,
     });
-    const prices = await Promise.all(priceIds.map((priceId) => retrieveStripePriceForReadiness(stripe, priceId)));
-    const priceLookup = prices.length === STRIPE_PRICE_ENV.length && prices.every(isBillableMonthlyStripePrice);
+    const prices = await Promise.all(bindings.map(async (binding) => ({
+      binding,
+      price: await retrieveStripePriceForReadiness(stripe, binding.priceId),
+    })));
+    const priceLookup = prices.length === CANONICAL_STRIPE_READINESS_BINDINGS.length
+      && prices.every(({ price, binding }) => isCanonicalStripePriceForReadiness(price, binding));
 
     return {
       configured: stripeConfigured,
@@ -320,7 +365,7 @@ async function checkStripeConnectivity(stripeConfigured: boolean): Promise<Ready
       configured: stripeConfigured,
       apiReachable: false,
       priceLookup: false,
-      pricesChecked: priceIds.length,
+      pricesChecked: bindings.length,
       detail: 'not_ready',
     };
   }
