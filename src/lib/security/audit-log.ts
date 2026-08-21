@@ -103,18 +103,26 @@ async function getRequestContext() {
   }
 }
 
+export async function buildServerAuditMetadata(metadata?: Record<string, unknown>) {
+  const { requestId, ipPseudonym, userAgentPseudonym } = await getRequestContext();
+
+  return {
+    requestId,
+    metadata: sanitizeAuditMetadata({
+      ...(metadata ?? {}),
+      requestContext: {
+        requestId,
+        ipAddressPseudonym: ipPseudonym,
+        userAgentPseudonym,
+      },
+    }),
+  };
+}
+
 export async function writeAuditLog(input: AuditLogInput) {
   const supabase = tryCreateAdminClient();
   const actorUserId = input.actorUserId ?? input.userId ?? null;
-  const { requestId, ipPseudonym, userAgentPseudonym } = await getRequestContext();
-  const metadata = sanitizeAuditMetadata({
-    ...(input.metadata ?? {}),
-    requestContext: {
-      requestId,
-      ipAddressPseudonym: ipPseudonym,
-      userAgentPseudonym,
-    },
-  });
+  const { requestId, metadata } = await buildServerAuditMetadata(input.metadata);
   let legacyPersisted = false;
 
   if (supabase) {
