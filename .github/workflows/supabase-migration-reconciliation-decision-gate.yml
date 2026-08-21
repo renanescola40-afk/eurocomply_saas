@@ -3,6 +3,8 @@ name: Supabase Migration Reconciliation Decision Gate
 on:
   pull_request:
     paths:
+      - 'scripts/supabase/build-bounded-migration-reconciliation-inventory.mjs'
+      - 'scripts/supabase/build-bounded-migration-reconciliation-inventory.test.mjs'
       - 'scripts/supabase/generate-migration-reconciliation-decision-template.mjs'
       - 'scripts/supabase/seal-migration-reconciliation-decisions.mjs'
       - 'scripts/supabase/validate-migration-reconciliation-decisions.mjs'
@@ -16,6 +18,7 @@ on:
   push:
     branches: [main]
     paths:
+      - 'scripts/supabase/build-bounded-migration-reconciliation-inventory.mjs'
       - 'scripts/supabase/generate-migration-reconciliation-decision-template.mjs'
       - 'scripts/supabase/seal-migration-reconciliation-decisions.mjs'
       - 'scripts/supabase/validate-migration-reconciliation-decisions.mjs'
@@ -33,6 +36,14 @@ on:
       source_run_id:
         description: Workflow run ID of Supabase Production Migration Dry Run for the subject SHA
         required: true
+        type: string
+      forward_dry_run_run_id:
+        description: Optional successful Supabase Forward Reconciliation Dry Run ID; enables exact bounded forward-decision mode
+        required: false
+        type: string
+      decision_payload_b64:
+        description: Optional base64 reviewed decision JSON for exact-SHA bounded mode; omit on the first template-only run
+        required: false
         type: string
 
 permissions:
@@ -59,6 +70,7 @@ jobs:
       - run: npm ci
       - name: Validate script syntax
         run: |
+          node --check scripts/supabase/build-bounded-migration-reconciliation-inventory.mjs
           node --check scripts/supabase/generate-migration-reconciliation-decision-template.mjs
           node --check scripts/supabase/seal-migration-reconciliation-decisions.mjs
           node --check scripts/supabase/validate-migration-reconciliation-decisions.mjs
@@ -66,6 +78,7 @@ jobs:
           node --check scripts/supabase/validate-migration-evidence-lineage.mjs
       - name: Test fail-closed decision contracts
         run: |
+          node --test scripts/supabase/build-bounded-migration-reconciliation-inventory.test.mjs
           node --test scripts/supabase/validate-migration-reconciliation-decisions.test.mjs
           node --test scripts/supabase/validate-migration-classification-decisions.test.mjs
           node --test scripts/supabase/validate-migration-evidence-lineage.test.mjs
@@ -75,21 +88,34 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     needs: contract
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     environment: supabase-production-migration-review
     env:
       SUBJECT_SHA: ${{ inputs.release_sha }}
       SOURCE_RUN_ID: ${{ inputs.source_run_id }}
-      DECISIONS_PATH: docs/security/evidence/runtime/supabase-migration-reconciliation-decisions.json
+      FORWARD_DRY_RUN_ID: ${{ inputs.forward_dry_run_run_id }}
+      DECISION_PAYLOAD_B64: ${{ inputs.decision_payload_b64 }}
+      REPOSITORY_DECISIONS_PATH: docs/security/evidence/runtime/supabase-migration-reconciliation-decisions.json
       OUTPUT_DIR: artifacts/supabase-migration-reconciliation-decisions
     steps:
-      - name: Validate inputs
+      - name: Validate inputs and select review scope
         shell: bash
         run: |
           set -euo pipefail
           [[ "$SUBJECT_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
           [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
           echo "SUBJECT_SHA=${SUBJECT_SHA,,}" >> "$GITHUB_ENV"
+
+          if [ -n "${FORWARD_DRY_RUN_ID:-}" ]; then
+            [[ "$FORWARD_DRY_RUN_ID" =~ ^[0-9]+$ ]]
+            echo 'BOUNDED_FORWARD=true' >> "$GITHUB_ENV"
+          else
+            if [ -n "${DECISION_PAYLOAD_B64:-}" ]; then
+              echo 'decision_payload_b64 is allowed only with forward_dry_run_run_id bounded mode' >&2
+              exit 1
+            fi
+            echo 'BOUNDED_FORWARD=false' >> "$GITHUB_ENV"
+          fi
 
       - name: Checkout current main evidence commit
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -98,7 +124,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify subject ancestry and current main
+      - name: Verify immutable subject and current main
         id: lineage
         shell: bash
         env:
@@ -109,7 +135,15 @@ jobs:
           MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
           test "$CURRENT_SHA" = "$MAIN_SHA"
           git cat-file -e "$SUBJECT_SHA^{commit}"
-          git merge-base --is-ancestor "$SUBJECT_SHA" "$CURRENT_SHA"
+
+          if [ "$BOUNDED_FORWARD" = 'true' ]; then
+            # Fresh forward human decisions are bound to the exact current main.
+            # Byte equivalence with an older subject never transfers human credit.
+            test "$CURRENT_SHA" = "$SUBJECT_SHA"
+          else
+            git merge-base --is-ancestor "$SUBJECT_SHA" "$CURRENT_SHA"
+          fi
+
           echo "CURRENT_SHA=$CURRENT_SHA" >> "$GITHUB_ENV"
           echo "current_sha=$CURRENT_SHA" >> "$GITHUB_OUTPUT"
 
@@ -123,6 +157,15 @@ jobs:
           test "$(jq -r '.head_sha' <<<"$RUN_JSON")" = "$SUBJECT_SHA"
           test "$(jq -r '.path' <<<"$RUN_JSON")" = '.github/workflows/supabase-production-migration-dry-run.yml'
           test "$(jq -r '.event' <<<"$RUN_JSON")" = 'workflow_dispatch'
+          echo "PRODUCTION_DRY_RUN_CONCLUSION=$(jq -r '.conclusion // "unknown"' <<<"$RUN_JSON")" >> "$GITHUB_ENV"
+
+          if [ "$BOUNDED_FORWARD" = 'true' ]; then
+            FORWARD_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${FORWARD_DRY_RUN_ID}")"
+            test "$(jq -r '.head_sha' <<<"$FORWARD_JSON")" = "$SUBJECT_SHA"
+            test "$(jq -r '.path' <<<"$FORWARD_JSON")" = '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
+            test "$(jq -r '.event' <<<"$FORWARD_JSON")" = 'workflow_dispatch'
+            test "$(jq -r '.conclusion' <<<"$FORWARD_JSON")" = 'success'
+          fi
 
       - name: Download exact migration inventory artifact
         uses: actions/download-artifact@v8.0.1
@@ -132,21 +175,49 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.source_run_id }}
 
-      - name: Resolve and retain exact inventory
+      - name: Download exact bounded forward dry-run artifact
+        if: env.BOUNDED_FORWARD == 'true'
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: supabase-forward-reconciliation-dry-run-${{ inputs.release_sha }}
+          path: forward-source-artifact
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.forward_dry_run_run_id }}
+
+      - name: Resolve and bind decision inventory
         id: inventory
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$OUTPUT_DIR"
-          INVENTORY_PATH="$(find source-artifact -type f -path '*/drift/migration-reconciliation-inventory.json' -print -quit)"
-          test -n "$INVENTORY_PATH"
-          cp "$INVENTORY_PATH" "$OUTPUT_DIR/source-migration-reconciliation-inventory.json"
+          SOURCE_INVENTORY="$(find source-artifact -type f -path '*/drift/migration-reconciliation-inventory.json' -print -quit)"
+          test -n "$SOURCE_INVENTORY"
+          cp "$SOURCE_INVENTORY" "$OUTPUT_DIR/source-migration-reconciliation-inventory.json"
+
+          if [ "$BOUNDED_FORWARD" = 'true' ]; then
+            mapfile -t FORWARD_MANIFESTS < <(find forward-source-artifact -type f -name 'current-manifest.json' -print)
+            test "${#FORWARD_MANIFESTS[@]}" -eq 1
+            BOUNDED_INVENTORY="$OUTPUT_DIR/bounded-migration-reconciliation-inventory.json"
+            node scripts/supabase/build-bounded-migration-reconciliation-inventory.mjs \
+              "$SOURCE_INVENTORY" \
+              "${FORWARD_MANIFESTS[0]}" \
+              "$BOUNDED_INVENTORY" \
+              --expected-sha="$SUBJECT_SHA"
+            test "$(jq '.items | length' "$BOUNDED_INVENTORY")" -ge 1
+            test "$(jq '.items | length' "$BOUNDED_INVENTORY")" -le 25
+            jq -e --arg sha "$SUBJECT_SHA" \
+              '.boundedSelection.targetSha == $sha and .boundedSelection.exactFilenameAndSha256Bound == true and .boundedSelection.automaticClassificationPerformed == false and .boundedSelection.productionWriteAuthorized == false' \
+              "$BOUNDED_INVENTORY" >/dev/null
+            INVENTORY_PATH="$BOUNDED_INVENTORY"
+          else
+            INVENTORY_PATH="$SOURCE_INVENTORY"
+          fi
+
+          echo "INVENTORY_PATH=$INVENTORY_PATH" >> "$GITHUB_ENV"
           echo "path=$INVENTORY_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Generate subject-SHA non-crediting decision template
         shell: bash
-        env:
-          INVENTORY_PATH: ${{ steps.inventory.outputs.path }}
         run: |
           set -euo pipefail
           node scripts/supabase/generate-migration-reconciliation-decision-template.mjs \
@@ -159,11 +230,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ -f "$DECISIONS_PATH" ]; then
+          if [ "$BOUNDED_FORWARD" = 'true' ]; then
+            if [ -n "${DECISION_PAYLOAD_B64:-}" ]; then
+              DECISIONS_RUNTIME_PATH="$OUTPUT_DIR/submitted-decisions.json"
+              printf '%s' "$DECISION_PAYLOAD_B64" | base64 --decode > "$DECISIONS_RUNTIME_PATH"
+              jq -e . "$DECISIONS_RUNTIME_PATH" >/dev/null
+              echo "DECISIONS_RUNTIME_PATH=$DECISIONS_RUNTIME_PATH" >> "$GITHUB_ENV"
+              echo 'exists=true' >> "$GITHUB_OUTPUT"
+            else
+              cp "$OUTPUT_DIR/decision-template.json" "$OUTPUT_DIR/missing-decisions-template.json"
+              echo 'exists=false' >> "$GITHUB_OUTPUT"
+            fi
+          elif [ -f "$REPOSITORY_DECISIONS_PATH" ]; then
+            echo "DECISIONS_RUNTIME_PATH=$REPOSITORY_DECISIONS_PATH" >> "$GITHUB_ENV"
             echo 'exists=true' >> "$GITHUB_OUTPUT"
           else
-            echo 'exists=false' >> "$GITHUB_OUTPUT"
             cp "$OUTPUT_DIR/decision-template.json" "$OUTPUT_DIR/missing-decisions-template.json"
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
           fi
 
       - name: Enforce immutable subject/evidence lineage
@@ -172,32 +255,49 @@ jobs:
           DECISIONS_EXIST: ${{ steps.decisions.outputs.exists }}
         run: |
           set -euo pipefail
-          mapfile -t CHANGED < <(git diff --name-only "$SUBJECT_SHA".."$CURRENT_SHA")
-          if [ "$DECISIONS_EXIST" = 'true' ]; then
-            node scripts/supabase/validate-migration-evidence-lineage.mjs "$SUBJECT_SHA" "$CURRENT_SHA" decision "${CHANGED[@]}"
+          if [ "$BOUNDED_FORWARD" = 'true' ]; then
+            # Exact-SHA equality above is the bounded lineage boundary. A payload
+            # supplied after that SHA exists avoids self-referential Git evidence
+            # and cannot inherit an older human approval by byte equivalence.
+            test "$CURRENT_SHA" = "$SUBJECT_SHA"
           else
-            node scripts/supabase/validate-migration-evidence-lineage.mjs "$SUBJECT_SHA" "$CURRENT_SHA" template "${CHANGED[@]}"
+            mapfile -t CHANGED < <(git diff --name-only "$SUBJECT_SHA".."$CURRENT_SHA")
+            if [ "$DECISIONS_EXIST" = 'true' ]; then
+              node scripts/supabase/validate-migration-evidence-lineage.mjs "$SUBJECT_SHA" "$CURRENT_SHA" decision "${CHANGED[@]}"
+            else
+              node scripts/supabase/validate-migration-evidence-lineage.mjs "$SUBJECT_SHA" "$CURRENT_SHA" template "${CHANGED[@]}"
+            fi
           fi
 
       - name: Validate and compile submitted classifications
         if: steps.decisions.outputs.exists == 'true'
         shell: bash
-        env:
-          INVENTORY_PATH: ${{ steps.inventory.outputs.path }}
         run: |
           set -euo pipefail
           node scripts/supabase/validate-migration-classification-decisions.mjs \
             "$INVENTORY_PATH" \
-            "$DECISIONS_PATH" \
+            "$DECISIONS_RUNTIME_PATH" \
             "$OUTPUT_DIR" \
             --expected-sha="$SUBJECT_SHA"
+
+          if [ "$BOUNDED_FORWARD" = 'true' ]; then
+            SELECTED_COUNT="$(jq '.items | length' "$INVENTORY_PATH")"
+            jq -e --argjson count "$SELECTED_COUNT" \
+              '.accepted == true and .decisionStatus == "RECONCILIATION_ACCEPTED_FOR_STAGING" and .deploymentAuthorization == "NOT_AUTHORIZED" and .counts.inventoryItems == $count and .counts.PENDING_DEPLOYMENT == $count' \
+              "$OUTPUT_DIR/decision-result.json" >/dev/null
+          fi
 
       - name: Enforce presence of reviewed decisions
         if: steps.decisions.outputs.exists != 'true'
         shell: bash
         run: |
-          echo "No reviewed decision document exists at $DECISIONS_PATH." >&2
-          echo 'Use the generated subject-SHA template; do not infer or auto-fill human approvals.' >&2
+          if [ "$BOUNDED_FORWARD" = 'true' ]; then
+            echo 'No exact-SHA bounded human decision payload was supplied.' >&2
+            echo 'Download decision-template.json from this run, complete it as a real human review, seal its decision/approval digests, base64-encode the reviewed JSON, and dispatch this gate again on the same unchanged main SHA.' >&2
+          else
+            echo "No reviewed decision document exists at $REPOSITORY_DECISIONS_PATH." >&2
+            echo 'Use the generated subject-SHA template; do not infer or auto-fill human approvals.' >&2
+          fi
           exit 2
 
       - name: Publish safety summary
@@ -209,12 +309,17 @@ jobs:
             echo
             echo "- Subject release SHA: \`$SUBJECT_SHA\`"
             echo "- Evidence commit SHA: \`${CURRENT_SHA:-unresolved}\`"
-            echo "- Source workflow run: \`$SOURCE_RUN_ID\`"
+            echo "- Source production dry-run: \`$SOURCE_RUN_ID\`"
+            echo "- Bounded forward mode: \`${BOUNDED_FORWARD:-false}\`"
+            if [ "${BOUNDED_FORWARD:-false}" = 'true' ]; then
+              echo "- Source forward dry-run: \`$FORWARD_DRY_RUN_ID\`"
+              echo "- Bounded decision items: \`$(jq '.items | length' "$INVENTORY_PATH" 2>/dev/null || echo unresolved)\`"
+            fi
             echo '- SQL executed: no'
             echo '- Migration history modified: no'
             echo '- Staging execution performed: no'
             echo '- Production write authorized: no'
-            echo '- Pending classifications require protected staging rehearsal before production'
+            echo '- Pending classifications require separate protected Production authorization before promotion'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload decision and plan artifacts
