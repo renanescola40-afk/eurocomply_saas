@@ -5,7 +5,6 @@ import type { Locale } from '@/lib/i18n/routing';
 import { getSafeLocale, makePublicMetadata } from '@/lib/seo/public-metadata';
 
 export const revalidate = 300;
-export const dynamic = 'force-static';
 
 type PageProps = {
   params: Promise<{ locale: string }>;

@@ -8,7 +8,6 @@ import { getLocalizedTrustCenterPage } from '@/lib/trust-center/localized-conten
 import { isTrustCenterSlug, TRUST_CENTER_ROUTES } from '@/lib/trust-center/routes';
 import { applyVerifiedTrustAuthority } from '@/lib/trust-center/verified-authority';
 
-export const dynamic = 'force-static';
 export const revalidate = 300;
 
 type PageProps = {

@@ -41,7 +41,7 @@ describe('auth and onboarding redirect invariants', () => {
     expect(observability).toContain('`/${safeLocale}/dashboard/observability`');
   });
 
-  it('blocks every organization dashboard route until onboarding is completed from the shared layout', () => {
+  it('blocks organization product routes until onboarding while preserving billing recovery', () => {
     const dashboard = readRepoFile('src/app/[locale]/dashboard/organizations/page.tsx');
     const dashboardLayout = readRepoFile('src/app/[locale]/dashboard/organizations/layout.tsx');
     const dashboardAccess = readRepoFile('src/server/queries/organization-dashboard-access.ts');
@@ -49,6 +49,8 @@ describe('auth and onboarding redirect invariants', () => {
 
     expect(dashboard).not.toContain('getCurrentOrganizationForUser(user.id)');
     expect(dashboardLayout).toContain('getOrganizationDashboardRedirect(safeLocale)');
+    expect(dashboardLayout).toContain('classifyLocalizedCommercialRoute(pathname, safeLocale)');
+    expect(dashboardLayout).toContain("commercialRouteClass === 'billing_recovery'");
     expect(dashboardLayout).toContain("await import('next/navigation')");
     expect(dashboardLayout).toContain('navigation.redirect(redirectTarget)');
     expect(dashboardAccess).toContain('getCurrentOrganizationForUser(user.id)');

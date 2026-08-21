@@ -8,6 +8,7 @@ on:
       - '.github/workflows/product-fria-ephemeral-qa.yml'
       - 'next.config.ts'
       - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
+      - 'scripts/product/sanitize-fria-playwright-report.mjs'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
       - 'src/middleware.ts'
       - 'src/hooks/useAuth.ts'
@@ -44,6 +45,7 @@ on:
       - '.github/workflows/product-fria-ephemeral-qa.yml'
       - 'next.config.ts'
       - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
+      - 'scripts/product/sanitize-fria-playwright-report.mjs'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
       - 'src/middleware.ts'
       - 'src/hooks/useAuth.ts'
@@ -272,9 +274,9 @@ jobs:
           fi
 
       - name: Execute final customer journey and FRIA lifecycle acceptance
-        # TEMPORARY 2026-08-20: preserve diagnostics but do not block merges while
-        # the shared Playwright/FRIA runtime regression is being corrected.
         shell: bash
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/fria-playwright-raw.json
         run: |
           set -euo pipefail
           test -n "${E2E_FRIA_OWNER_EMAIL:-}"
@@ -289,7 +291,7 @@ jobs:
           test "${E2E_FRIA_UNLICENSED_AUTHORITY_VERIFIED:-}" = 'true'
           test "${E2E_FRIA_EVIDENCE_VAULT_SCHEMA_VERIFIED:-}" = 'true'
           rm -f "$E2E_FRIA_RUNTIME_EVIDENCE_PATH"
-          if ! npx playwright test tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts --project=chromium --reporter=line,github --retries=1; then
+          if ! npx playwright test tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts --project=chromium --reporter=line,github,json --retries=1; then
             app_healthy=false
             auth_healthy=false
             if curl --fail --silent --show-error "$E2E_BASE_URL/en/login" >/dev/null; then
@@ -298,18 +300,33 @@ jobs:
             if curl --fail --silent --show-error "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/health" >/dev/null; then
               auth_healthy=true
             fi
-            echo "::warning title=FRIA runtime acceptance temporarily quarantined::Product QA sanitized failure diagnostic: app_healthy=$app_healthy auth_healthy=$auth_healthy"
+            RAW="$PLAYWRIGHT_JSON_OUTPUT_NAME" \
+              OUTPUT="$RUNNER_TEMP/fria-playwright-diagnostics.json" \
+              APP_HEALTHY="$app_healthy" \
+              AUTH_HEALTHY="$auth_healthy" \
+              node scripts/product/sanitize-fria-playwright-report.mjs
+            echo "::error title=FRIA runtime acceptance failed::Product QA sanitized failure diagnostic: app_healthy=$app_healthy auth_healthy=$auth_healthy"
+            exit 1
           fi
+          rm -f "$PLAYWRIGHT_JSON_OUTPUT_NAME"
+
+      - name: Upload sanitized FRIA failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: product-fria-failure-${{ env.EXPECTED_HEAD_SHA }}
+          path: ${{ runner.temp }}/fria-playwright-diagnostics.json
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Require executed sanitized final Product evidence
         shell: bash
         run: |
-          set -uo pipefail
+          set -euo pipefail
           if [ ! -s "$E2E_FRIA_RUNTIME_EVIDENCE_PATH" ]; then
-            echo "::warning title=FRIA runtime evidence temporarily quarantined::No sanitized evidence file was emitted because the runtime acceptance is under temporary quarantine."
-            exit 0
+            echo "::error title=Missing FRIA runtime evidence::The runtime acceptance did not emit the required sanitized evidence file."
+            exit 1
           fi
-          set +e
           EVIDENCE="$E2E_FRIA_RUNTIME_EVIDENCE_PATH" EXPECTED="$EXPECTED_HEAD_SHA" node - <<'NODE'
           const fs = require('node:fs');
           const evidence = JSON.parse(fs.readFileSync(process.env.EVIDENCE, 'utf8'));
@@ -355,19 +372,13 @@ jobs:
             if (evidence.evidenceIntegrity?.[key] !== false) throw new Error(`unsafe_evidence_${key}`);
           }
           NODE
-          evidence_status=$?
-          set -e
-          if [ "$evidence_status" -ne 0 ]; then
-            echo "::warning title=FRIA runtime evidence validation temporarily quarantined::Sanitized evidence was emitted but did not satisfy the current runtime contract."
-          fi
-          exit 0
 
       - name: Upload sanitized final Product runtime evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: product-fria-runtime-${{ env.EXPECTED_HEAD_SHA }}
           path: ${{ runner.temp }}/fria-runtime-evidence.json
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
 
       - name: Stop disposable runtime

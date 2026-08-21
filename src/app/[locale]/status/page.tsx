@@ -1,7 +1,6 @@
 import { VerifiedStatusPage } from '@/components/marketing/verified-status-page';
 
 export const revalidate = 300;
-export const dynamic = 'force-static';
 
 type PageProps = {
   params: Promise<{ locale: string }>;

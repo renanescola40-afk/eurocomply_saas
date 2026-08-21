@@ -9,7 +9,6 @@ import { procurementControls, procurementDocuments, procurementProviders, PROCUR
 import { getSafeLocale, makePublicMetadata } from '@/lib/seo/public-metadata';
 
 export const revalidate = 300;
-export const dynamic = 'force-static';
 
 type PageProps = { params: Promise<{ locale: string }> };
 

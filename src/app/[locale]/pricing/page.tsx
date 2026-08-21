@@ -12,7 +12,6 @@ import { getCanonicalUrl, getSafeLocale, makePublicMetadata, SITE_NAME } from '@
 type Props = { params: Promise<{ locale: string }> };
 
 export const revalidate = 300;
-export const dynamic = 'force-static';
 
 type PublicPlanSlug = 'essential' | 'professional' | 'business' | 'enterprise';
 
@@ -133,7 +132,7 @@ function PricingStructuredData({ locale }: { locale: Locale }) {
     })),
   };
 
-  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, '\\u003c') }} />;
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, '\u003c') }} />;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
