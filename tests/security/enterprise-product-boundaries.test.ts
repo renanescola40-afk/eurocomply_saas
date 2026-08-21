@@ -68,6 +68,8 @@ describe('enterprise product information architecture', () => {
     expect(dashboardLayout).toContain('return runtimeChildren;');
 
     expect(organizationLayout).not.toContain('DashboardCommandNavigation');
+    expect(organizationLayout).toContain("commercialRouteClass === 'billing_recovery'");
+    expect(organizationLayout).toContain('getOrganizationDashboardRedirect(safeLocale)');
     expect(organizationLayout).toContain('return children;');
 
     expect(shell).toContain("localized(locale, '/dashboard/evidence')");

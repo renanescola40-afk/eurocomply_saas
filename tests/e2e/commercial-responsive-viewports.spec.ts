@@ -53,13 +53,13 @@ for (const viewport of [
 
     test('login and signup retain visible labels and keyboard-focusable controls', async ({ page }) => {
       await page.goto('/pt/login', { waitUntil: 'domcontentloaded' });
-      const email = page.getByLabel(/email profissional/i).first();
+      const email = page.getByRole('textbox', { name: /^email profissional$/i });
       await expect(email).toBeVisible();
       await email.focus();
       await expect(email).toBeFocused();
 
       await page.goto('/pt/signup?plan=professional', { waitUntil: 'domcontentloaded' });
-      const signupEmail = page.getByLabel(/email profissional/i).first();
+      const signupEmail = page.getByRole('textbox', { name: /^email profissional$/i });
       await expect(signupEmail).toBeVisible();
       await signupEmail.focus();
       await expect(signupEmail).toBeFocused();

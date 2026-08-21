@@ -69,6 +69,8 @@ describe('Phase 5 dashboard invariants', () => {
     const currentOrganization = read('src/server/queries/current-organization.ts');
 
     expect(layout).toContain('getOrganizationDashboardRedirect(safeLocale)');
+    expect(layout).toContain('classifyLocalizedCommercialRoute(pathname, safeLocale)');
+    expect(layout).toContain("commercialRouteClass === 'billing_recovery'");
     expect(access).toContain('getCurrentUser');
     expect(access).toContain('getCurrentOrganizationForUser(user.id)');
     expect(access).toContain('!currentOrganization || !currentOrganization.is_onboarding_completed');

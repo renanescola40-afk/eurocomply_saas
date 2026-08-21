@@ -9,6 +9,7 @@ const BILLING_VIEW = new URL('../../src/app/[locale]/dashboard/organizations/bil
 const BILLING_INTENT_BANNER = new URL('../../src/app/[locale]/dashboard/organizations/billing/billing-plan-intent-banner.tsx', import.meta.url);
 const BILLING_ACTION_BUTTON = new URL('../../src/app/[locale]/dashboard/organizations/billing/billing-action-button.tsx', import.meta.url);
 const DASHBOARD_LAYOUT = new URL('../../src/app/[locale]/dashboard/layout.tsx', import.meta.url);
+const ORGANIZATION_DASHBOARD_LAYOUT = new URL('../../src/app/[locale]/dashboard/organizations/layout.tsx', import.meta.url);
 const COMMERCIAL_ACCESS = new URL('../../src/server/security/commercial-access.ts', import.meta.url);
 const COMMERCIAL_ROUTE_POLICY = new URL('../../src/lib/security/commercial-route-policy.ts', import.meta.url);
 const CHECKOUT_INTENT = new URL('../../src/app/api/billing/checkout-intent/route.ts', import.meta.url);
@@ -62,8 +63,9 @@ describe('post-billing commercial customer journey closure', () => {
   });
 
   it('keeps the fail-closed commercial authority boundary intact while allowing recovery', async () => {
-    const [layout, access, policy, checkoutIntent] = await Promise.all([
+    const [layout, organizationLayout, access, policy, checkoutIntent] = await Promise.all([
       readFile(DASHBOARD_LAYOUT, 'utf8'),
+      readFile(ORGANIZATION_DASHBOARD_LAYOUT, 'utf8'),
       readFile(COMMERCIAL_ACCESS, 'utf8'),
       readFile(COMMERCIAL_ROUTE_POLICY, 'utf8'),
       readFile(CHECKOUT_INTENT, 'utf8'),
@@ -71,6 +73,8 @@ describe('post-billing commercial customer journey closure', () => {
 
     expect(layout).toContain('requireLicensedCommercialPageAccess');
     expect(layout).toContain("commercialRouteClass === 'billing_recovery'");
+    expect(organizationLayout).toContain('classifyLocalizedCommercialRoute(pathname, safeLocale)');
+    expect(organizationLayout).toContain("commercialRouteClass === 'billing_recovery'");
     expect(access).toContain('if (!authority.licensed)');
     expect(access).toContain("redirect(`/${input.locale}/pricing?billing=subscription_required`)");
     expect(policy).toContain("'/dashboard/billing'");
