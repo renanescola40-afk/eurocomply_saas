@@ -27,10 +27,19 @@ type SupabaseClaimsApi = {
 
 function getLocaleFromRequest(request: NextRequest): Locale {
   const requestUrl = new URL(request.url);
+  const queryLocale = requestUrl.searchParams.get('locale');
+
+  // OAuth begins at the unlocalized callback URL. Locale middleware may add a
+  // detected path prefix before this handler runs, so the explicit allowlisted
+  // locale emitted by our own OAuth initiation flow must win over that prefix.
+  if (queryLocale && locales.includes(queryLocale as Locale)) {
+    return queryLocale as Locale;
+  }
+
   const firstPathSegment = requestUrl.pathname.split('/').filter(Boolean)[0];
   const rawLocale = locales.includes(firstPathSegment as Locale)
     ? firstPathSegment
-    : requestUrl.searchParams.get('locale') ?? request.cookies.get(LOCALE_COOKIE)?.value;
+    : request.cookies.get(LOCALE_COOKIE)?.value;
 
   return rawLocale && locales.includes(rawLocale as Locale) ? rawLocale as Locale : defaultLocale;
 }
