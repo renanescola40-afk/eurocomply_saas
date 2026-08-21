@@ -3,6 +3,7 @@ import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
+import { assertResourceQuota, verifyResourceQuotaAfterCreate } from '@/server/billing/entitlements';
 import { requireCurrentUser } from '@/server/queries/auth';
 import { logAuditEvent } from './audit';
 
@@ -86,6 +87,12 @@ async function enforceRiskRateLimit(params: {
   }
 }
 
+async function enforceRiskQuota(organizationId: string) {
+  const quota = await assertResourceQuota(organizationId, 'risks');
+  if (!quota.ok) throw actionError(quota.message);
+  return quota;
+}
+
 export async function createRisk(input: unknown) {
   const user = await requireRiskActionUser();
   const payload = riskSchema.parse(input);
@@ -93,6 +100,7 @@ export async function createRisk(input: unknown) {
 
   await assertCurrentUserCan(payload.organizationId, user.id, 'risks:write');
   await enforceRiskRateLimit({ action: 'create', organizationId: payload.organizationId, userId: user.id });
+  const quota = await enforceRiskQuota(payload.organizationId);
 
   try {
     const supabase = createAdminClient();
@@ -118,6 +126,33 @@ export async function createRisk(input: unknown) {
     if (error) {
       reportError(error, context);
       throw actionError('Unable to create risk');
+    }
+
+    const postQuota = await verifyResourceQuotaAfterCreate(payload.organizationId, 'risks', quota.maxAllowed);
+    if (!postQuota.ok) {
+      reportError(new Error(postQuota.error), {
+        ...context,
+        area: 'risk_create_quota_postcheck',
+        riskId: data.id,
+        currentCount: postQuota.currentCount,
+        maxAllowed: postQuota.maxAllowed,
+      });
+      const { error: rollbackError } = await supabase
+        .from('risks')
+        .delete()
+        .eq('id', data.id)
+        .eq('organization_id', payload.organizationId)
+        .eq('created_by', user.id);
+
+      if (rollbackError) {
+        reportError(rollbackError, {
+          ...context,
+          area: 'risk_create_quota_compensation_failed',
+          riskId: data.id,
+        });
+      }
+
+      throw actionError(postQuota.message);
     }
 
     const audit = await logAuditEvent({
@@ -150,8 +185,11 @@ export async function createRisk(input: unknown) {
 
     return data;
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unable to create risk') {
-      throw actionError('Unable to create risk');
+    if (
+      error instanceof Error &&
+      (error.message === 'Unable to create risk' || error.message.includes('quota'))
+    ) {
+      throw actionError(error.message);
     }
 
     reportError(error, context);
@@ -290,14 +328,7 @@ export async function deleteRisk(riskId: string, organizationId: string) {
       throw actionError('Unable to delete risk');
     }
 
-    const audit = await logAuditEvent({
-      organizationId: payload.organizationId,
-      actorUserId: user.id,
-      action: 'risk.delete',
-      entityType: 'risk',
-      entityId: payload.riskId,
-      metadata: { title: data.title, likelihood: data.likelihood, impact: data.impact },
-    });
+    const audit = await logAuditEvent({ organizationId: payload.organizationId, actorUserId: user.id, action: 'risk.delete', entityType: 'risk', entityId: payload.riskId, metadata: { title: data.title, likelihood: data.likelihood, impact: data.impact } });
 
     if (!audit.persisted) {
       const { error: rollbackError } = await supabase.from('risks').insert(data);
