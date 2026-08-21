@@ -55,8 +55,8 @@ describe('Product runtime acceptance reliability contracts', () => {
   it('proves disposable owner and approver password grants before browser acceptance', () => {
     expect(fixture).toContain("const anonKey = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');");
     expect(fixture).toContain('await authClient.auth.signInWithPassword({');
-    expect(fixture).toContain("await verifyPasswordGrant(url, anoKey, owner, 'owner');");
-    expect(fixture).toContain("await verifyPasswordGrant(url, anoKey, approver, 'approver');");
+    expect(fixture).toContain("await verifyPasswordGrant(url, anonKey, owner, 'owner');");
+    expect(fixture).toContain("await verifyPasswordGrant(url, anonKey, approver, 'approver');");
     expect(fixture).toContain('!data.session?.access_token');
     expect(fixture).toContain('data.user?.id !== identity.id');
     expect(fixture).not.toContain('console.log(data.session');
