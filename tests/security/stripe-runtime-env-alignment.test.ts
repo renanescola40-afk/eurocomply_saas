@@ -22,21 +22,27 @@ describe('Stripe runtime env alignment', () => {
     expect(envExample).toContain('RISCK_COMPLY_PAID_BILLING_REQUIRED=false');
   });
 
-  it('requires only self-serve Essential and Professional prices in global runtime validation', () => {
+  it('requires all canonical self-serve Essential and Professional prices in global runtime validation', () => {
     expect(runtimeEnv).toContain("envName('STRIPE', 'PRICE', 'ESSENTIAL', 'MONTHLY')");
+    expect(runtimeEnv).toContain("envName('STRIPE', 'PRICE', 'ESSENTIAL', 'ANNUAL')");
     expect(runtimeEnv).toContain("envName('STRIPE', 'PRICE', 'PROFESSIONAL', 'MONTHLY')");
-    expect(runtimeEnv).toContain('process.env.STRIPE_PRICE_STARTER_MONTHLY');
-    expect(runtimeEnv).toContain('process.env.STRIPE_PRICE_GROWTH_MONTHLY');
+    expect(runtimeEnv).toContain("envName('STRIPE', 'PRICE', 'PROFESSIONAL', 'ANNUAL')");
+    expect(runtimeEnv).not.toContain('process.env.STRIPE_PRICE_STARTER_MONTHLY');
+    expect(runtimeEnv).not.toContain('process.env.STRIPE_PRICE_STARTER_ANNUAL');
+    expect(runtimeEnv).not.toContain('process.env.STRIPE_PRICE_GROWTH_MONTHLY');
+    expect(runtimeEnv).not.toContain('process.env.STRIPE_PRICE_GROWTH_ANNUAL');
     expect(runtimeEnv).not.toContain("envName('STRIPE', 'PRICE', 'ENTERPRISE', 'MONTHLY')");
     expect(runtimeEnv).not.toContain('process.env.STRIPE_PRICE_BUSINESS_MONTHLY ||');
   });
 
-  it('uses the same self-serve requirement in protected ops smoke', () => {
-    expect(opsSmoke).toContain("'STRIPE_PRICE_ESSENTIAL_MONTHLY'");
-    expect(opsSmoke).toContain("'STRIPE_PRICE_PROFESSIONAL_MONTHLY'");
-    expect(opsSmoke).toContain('LEGACY_STRIPE_PRICE_FALLBACKS');
-    expect(opsSmoke).toContain("STRIPE_PRICE_ESSENTIAL_MONTHLY: ['STRIPE_PRICE_STARTER_MONTHLY']");
-    expect(opsSmoke).toContain("STRIPE_PRICE_PROFESSIONAL_MONTHLY: ['STRIPE_PRICE_GROWTH_MONTHLY']");
+  it('uses the same canonical self-serve requirement in protected ops smoke', () => {
+    expect(opsSmoke).toContain('billingCommercialCatalog.plans.essential.monthlyPriceEnvKey');
+    expect(opsSmoke).toContain('billingCommercialCatalog.plans.essential.annualPriceEnvKey');
+    expect(opsSmoke).toContain('billingCommercialCatalog.plans.professional.monthlyPriceEnvKey');
+    expect(opsSmoke).toContain('billingCommercialCatalog.plans.professional.annualPriceEnvKey');
+    expect(opsSmoke).not.toContain('LEGACY_STRIPE_PRICE_FALLBACKS');
+    expect(opsSmoke).not.toContain('STRIPE_PRICE_STARTER_MONTHLY');
+    expect(opsSmoke).not.toContain('STRIPE_PRICE_GROWTH_MONTHLY');
     expect(opsSmoke).not.toContain("'STRIPE_PRICE_ENTERPRISE_MONTHLY'");
     expect(opsSmoke).not.toContain("'STRIPE_PRICE_BUSINESS_MONTHLY'");
   });
