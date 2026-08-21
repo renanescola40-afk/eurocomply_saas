@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
@@ -12,6 +13,15 @@ const CONSENT_STORAGE_KEY = 'risckcomply.analytics.consent';
 const CONSENT_TITLE_ID = 'analytics-consent-title';
 const CONSENT_DESCRIPTION_ID = 'analytics-consent-description';
 
+const policyLabel: Record<Locale, string> = {
+  en: 'Cookie Policy and settings',
+  pt: 'Política de Cookies e definições',
+  es: 'Política de Cookies y ajustes',
+  fr: 'Politique relative aux cookies et réglages',
+  it: 'Cookie Policy e impostazioni',
+  de: 'Cookie-Richtlinie und Einstellungen',
+};
+
 function consentIsRequired() {
   return process.env.NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT === 'true';
 }
@@ -23,7 +33,8 @@ function localeFromPath(pathname: string): Locale {
 
 export function AnalyticsConsentBanner() {
   const pathname = usePathname() || '/';
-  const copy = getCommercialSurfaceCopy(localeFromPath(pathname)).consent;
+  const locale = localeFromPath(pathname);
+  const copy = getCommercialSurfaceCopy(locale).consent;
   const [visible, setVisible] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -54,6 +65,9 @@ export function AnalyticsConsentBanner() {
         <div>
           <p id={CONSENT_TITLE_ID} className="text-sm font-semibold">{copy.title}</p>
           <p id={CONSENT_DESCRIPTION_ID} className="mt-1 text-xs leading-5 text-muted-foreground">{copy.body}</p>
+          <Link href={`/${locale}/cookie-policy`} className="mt-2 inline-flex rounded-sm text-xs font-semibold text-cyan-300 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+            {policyLabel[locale]}
+          </Link>
         </div>
         <div className="flex shrink-0 gap-2">
           <Button
