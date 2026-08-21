@@ -57,7 +57,7 @@ describe('Vercel production deployment authority', () => {
       'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
       'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
     ]) {
-      expect(workflow).toContain(`${key}: ${{ vars.${key} }}`);
+      expect(workflow).toContain(`${key}: \${{ vars.${key} }}`);
     }
 
     const enterpriseReadiness = workflow.indexOf('Run enterprise readiness gate');
