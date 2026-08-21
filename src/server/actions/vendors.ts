@@ -105,6 +105,7 @@ export async function createVendor(input: unknown) {
   await assertCurrentUserCan(payload.organizationId, user.id, 'vendors:write');
   await enforceVendorActionRateLimit({ action: 'vendor.create', organizationId: payload.organizationId, userId: user.id });
   const quota = await enforceVendorQuota(payload.organizationId);
+  const quotaExceededMessage = `Vendor quota exceeded for the ${quota.entitlements.plan} plan.`;
   const vendorId = randomUUID();
 
   try {
@@ -119,14 +120,14 @@ export async function createVendor(input: unknown) {
       auditMetadata: { riskLevel: payload.riskLevel, reviewStatus: payload.reviewStatus },
     });
 
-    if (result.outcome === 'quota_exceeded') throw providerActionError(quota.message);
+    if (result.outcome === 'quota_exceeded') throw providerActionError(quotaExceededMessage);
     if (result.outcome !== 'created' || !result.resource_record) {
       throw new Error(`vendor_atomic_create_${result.outcome}`);
     }
 
     return result.resource_record;
   } catch (error) {
-    if (error instanceof Error && error.message === quota.message) throw error;
+    if (error instanceof Error && error.message === quotaExceededMessage) throw error;
     failVendorAction(error, { ...context, vendorId }, 'criar');
   }
 }
