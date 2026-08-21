@@ -10,7 +10,14 @@ const providerRequiredChecks = Object.freeze({
   github: ['repositoryReachable', 'repositoryBound', 'currentMainShaBound', 'protectedProductionEnvironment', 'githubActionsRunBound', 'exactContext'],
   vercel: ['apiTokenConfigured', 'targetConfigurationBound', 'projectReachable', 'projectIdentityMatched', 'productionEnvironmentEnumerated', 'requiredEnvironmentKeysPresent'],
   supabase: ['urlConfigured', 'serviceRoleConfigured', 'projectReachable', 'serviceRoleAuthorized'],
-  stripe: ['secretConfigured', 'apiReachable', 'threePriceIdsConfigured', 'priceLookup'],
+  stripe: [
+    'secretConfigured',
+    'apiReachable',
+    'transitionPolicyRejectsLegacy',
+    'legacyAliasesRejected',
+    'fourCanonicalSelfServeBindingsConfigured',
+    'fourCanonicalSelfServePricesVerified',
+  ],
   sentry: ['organizationConfigured', 'projectConfigured', 'buildAuthTokenConfigured', 'projectReachable', 'clientKeyInventoryReachable', 'activeClientKeyPresent'],
 });
 
