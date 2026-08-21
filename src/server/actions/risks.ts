@@ -103,6 +103,7 @@ export async function createRisk(input: unknown) {
   await assertCurrentUserCan(payload.organizationId, user.id, 'risks:write');
   await enforceRiskRateLimit({ action: 'create', organizationId: payload.organizationId, userId: user.id });
   const quota = await enforceRiskQuota(payload.organizationId);
+  const quotaExceededMessage = `Risk quota exceeded for the ${quota.entitlements.plan} plan.`;
   const riskId = randomUUID();
 
   try {
@@ -127,14 +128,14 @@ export async function createRisk(input: unknown) {
       auditMetadata: { title: payload.title, likelihood: payload.likelihood, impact: payload.impact },
     });
 
-    if (result.outcome === 'quota_exceeded') throw actionError(quota.message);
+    if (result.outcome === 'quota_exceeded') throw actionError(quotaExceededMessage);
     if (result.outcome !== 'created' || !result.resource_record) {
       throw new Error(`risk_atomic_create_${result.outcome}`);
     }
 
     return result.resource_record;
   } catch (error) {
-    if (error instanceof Error && error.message === quota.message) throw error;
+    if (error instanceof Error && error.message === quotaExceededMessage) throw error;
     reportError(error, { ...context, riskId });
     throw actionError('Unable to create risk');
   }
