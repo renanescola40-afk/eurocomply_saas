@@ -8,6 +8,14 @@ See `docs/trust/PROCUREMENT_CHECKLIST.md` for the current working checklist. Con
 
 Provider/configuration facts and unresolved account-level DPA/region/retention fields are tracked separately in the internal supporting assurance evidence at `docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md` so draft provider rows are not accidentally presented as approved contractual disclosures.
 
+## Current technical public-surface evidence
+
+The most recent External Assurance connector observation is recorded in `docs/trust/evidence/2026-08-21-external-assurance-runtime-provider-revalidation.md`.
+
+For production release subject `b54afdfd6370442e7c7924f31d6210841621cf38`, connected Vercel evidence observed the target-production deployment as `READY`; `/pt/trust`, `/pt/security`, and `/pt/status` returned HTTP `200`, and the served HTML exposed Sentry production release binding to the same SHA. Connected Supabase evidence also revalidated production project `tganhbbhfxcpblmgqprg` as `ACTIVE_HEALTHY` in `eu-west-1`.
+
+This resolves the former technical public-route defect tracked in `#1739` for the observed release only. Revalidate before describing a newer release as current. This evidence does **not** complete founder facts, qualified legal review, GDPR legal assurance, independent penetration testing, provider contracts/DPAs, or final subprocessor approval.
+
 ## Approved positioning
 
 Risck comply is designed to support enterprise security review through authenticated workspaces, organization-scoped access, tenant-isolation controls, audit events, controlled documentation, managed-provider safeguards, subprocessor review, and release evidence gates.
@@ -27,7 +35,7 @@ Risck comply is designed to support enterprise security review through authentic
 
 ## Internal supporting assurance evidence
 
-`docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md` is an internal evidence-working register, not a buyer-facing core artifact. It exists to support factual reconciliation and prevent draft provider/account facts from being promoted into customer disclosures before the applicable account evidence and legal review are complete.
+`docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md` and `docs/trust/evidence/2026-08-21-external-assurance-runtime-provider-revalidation.md` are internal evidence-working artifacts, not buyer-facing core artifacts. They exist to support factual reconciliation and prevent draft provider/account facts from being promoted into customer disclosures before the applicable account evidence and legal review are complete.
 
 ## External assurance boundary
 
@@ -35,7 +43,7 @@ The procurement packet may reference completed, attributable external evidence w
 
 Before describing external assurance as complete, verify the canonical External Assurance trackers and accepted source artifacts. At this snapshot:
 
-- founder facts are not yet an accepted signed record;
+- founder facts are not yet an accepted signed record and the legal entity is not registered;
 - qualified legal review has not reached 8/8 decisions or a master legal decision;
 - independent penetration testing has not been completed;
 - Privacy/GDPR/subprocessor factual and legal closure remains in review.
