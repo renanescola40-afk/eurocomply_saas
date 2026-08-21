@@ -8,6 +8,7 @@ on:
       - '.github/workflows/product-fria-ephemeral-qa.yml'
       - 'next.config.ts'
       - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
+      - 'scripts/product/sanitize-fria-playwright-report.mjs'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
       - 'src/middleware.ts'
       - 'src/hooks/useAuth.ts'
@@ -44,6 +45,7 @@ on:
       - '.github/workflows/product-fria-ephemeral-qa.yml'
       - 'next.config.ts'
       - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
+      - 'scripts/product/sanitize-fria-playwright-report.mjs'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
       - 'src/middleware.ts'
       - 'src/hooks/useAuth.ts'
@@ -302,83 +304,7 @@ jobs:
               OUTPUT="$RUNNER_TEMP/fria-playwright-diagnostics.json" \
               APP_HEALTHY="$app_healthy" \
               AUTH_HEALTHY="$auth_healthy" \
-              node - <<'NODE'
-            const fs = require('node:fs');
-
-            const sensitiveValues = [
-              'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-              'SUPABASE_ANON_KEY',
-              'SUPABASE_SERVICE_ROLE_KEY',
-              'E2E_FRIA_OWNER_EMAIL',
-              'E2E_FRIA_OWNER_PASSWORD',
-              'E2E_FRIA_REVIEWER_EMAIL',
-              'E2E_FRIA_APPROVER_EMAIL',
-              'E2E_FRIA_APPROVER_PASSWORD',
-              'E2E_UNLICENSED_OWNER_EMAIL',
-              'E2E_UNLICENSED_OWNER_PASSWORD',
-            ].map((key) => process.env[key]).filter(Boolean).sort((a, b) => b.length - a.length);
-
-            function sanitize(value) {
-              let safe = String(value ?? '');
-              for (const secret of sensitiveValues) safe = safe.split(secret).join('[redacted]');
-              return safe
-                .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[redacted-email]')
-                .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, '[redacted-token]')
-                .replace(/([?&](?:access_token|refresh_token|token|code|password)=)[^&\s]+/gi, '$1[redacted]')
-                .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, '[redacted-identifier]')
-                .replace(/\b(?:authorization|cookie|set-cookie)\s*[:=]\s*[^\s,;]+/gi, '[redacted-header]');
-            }
-
-            function collectFailures(suites, failures = []) {
-              for (const suite of suites ?? []) {
-                for (const spec of suite.specs ?? []) {
-                  for (const test of spec.tests ?? []) {
-                    for (const result of test.results ?? []) {
-                      if (result.status === 'passed' || result.status === 'skipped') continue;
-                      failures.push({
-                        title: sanitize(spec.title),
-                        projectName: sanitize(test.projectName),
-                        status: sanitize(result.status),
-                        retry: result.retry ?? 0,
-                        errors: (result.errors ?? []).map((error) => ({
-                          message: sanitize(error.message),
-                          stack: sanitize(error.stack),
-                        })),
-                      });
-                    }
-                  }
-                }
-                collectFailures(suite.suites, failures);
-              }
-              return failures;
-            }
-
-            let report = { suites: [] };
-            try {
-              report = JSON.parse(fs.readFileSync(process.env.RAW, 'utf8'));
-            } catch {
-              // The structured health record remains useful if reporter output
-              // itself was interrupted; absence never changes the failed gate.
-            }
-
-            const diagnostics = {
-              schema: 'risck-comply.fria-playwright-failure.v1',
-              outcome: 'failed',
-              targetSha: process.env.EXPECTED_HEAD_SHA ?? null,
-              appHealthy: process.env.APP_HEALTHY === 'true',
-              authHealthy: process.env.AUTH_HEALTHY === 'true',
-              failures: collectFailures(report.suites),
-              evidenceIntegrity: {
-                credentialsStored: false,
-                emailsStored: false,
-                tokensStored: false,
-                cookiesStored: false,
-                rawTraceStored: false,
-              },
-            };
-            fs.writeFileSync(process.env.OUTPUT, `${JSON.stringify(diagnostics, null, 2)}\n`, { mode: 0o600 });
-            try { fs.rmSync(process.env.RAW); } catch {}
-            NODE
+              node scripts/product/sanitize-fria-playwright-report.mjs
             echo "::error title=FRIA runtime acceptance failed::Product QA sanitized failure diagnostic: app_healthy=$app_healthy auth_healthy=$auth_healthy"
             exit 1
           fi
