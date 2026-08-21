@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { AnalyticsConsentControls } from '@/components/analytics/AnalyticsConsentControls';
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { isSupportedLocale, type Locale } from '@/lib/i18n/locales';
 
@@ -56,7 +57,7 @@ export function PublicLegalReviewPage({ locale: rawLocale, eyebrow, title, summa
           <p className="sm:col-span-2 leading-6 text-amber-100/75">{labels.notice}</p>
         </section>
 
-        {actions}
+        {documentId === 'cookie-policy' ? <AnalyticsConsentControls locale={locale} /> : actions}
 
         <div className="mt-10 space-y-5">
           {sections.map((section) => (
