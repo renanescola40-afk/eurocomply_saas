@@ -4,7 +4,7 @@ import test from 'node:test';
 import { verifyForwardHumanApproval } from './verify-forward-human-approval.mjs';
 
 const targetSha = 'a'.repeat(40);
-const subjectSha = 'b'.repeat(40);
+const subjectSha = targetSha;
 const digestA = '1'.repeat(64);
 const digestB = '2'.repeat(64);
 
@@ -62,103 +62,72 @@ function fixture() {
   };
 }
 
-test('accepts exact selected bytes only when human decision coverage is complete', () => {
-  const proof = verifyForwardHumanApproval({
-    ...fixture(),
+function verify(input = fixture(), overrides = {}) {
+  return verifyForwardHumanApproval({
+    ...input,
     targetSha,
     decisionSubjectSha: subjectSha,
     decisionRunId: '12345',
     evidenceCommitSha: targetSha,
+    ...overrides,
   });
+}
+
+test('accepts exact selected bytes only when human decision coverage is complete on the exact target SHA', () => {
+  const proof = verify();
   assert.equal(proof.status, 'Complete');
   assert.equal(proof.outcome, 'passed');
   assert.equal(proof.selectedMigrationCount, 2);
+  assert.equal(proof.checks.decisionSubjectEqualsTargetSha, true);
   assert.equal(proof.checks.productionWriteAuthorizedByDecisionGate, false);
   assert.equal(proof.evidenceIntegrity.humanNamesStored, false);
+});
+
+test('rejects byte-equivalent approval carry-forward from another subject SHA', () => {
+  const oldSubject = 'b'.repeat(40);
+  const input = fixture();
+  input.decisionResult.releaseSha = oldSubject;
+  input.pendingDeploymentPlan.releaseSha = oldSubject;
+  assert.throws(
+    () => verify(input, { decisionSubjectSha: oldSubject }),
+    /must equal target SHA; byte equivalence cannot transfer human approval/,
+  );
 });
 
 test('rejects a selected migration that lacks human PENDING_DEPLOYMENT classification', () => {
   const input = fixture();
   input.decisionResult.plans.pendingDeployment = input.decisionResult.plans.pendingDeployment.slice(0, 1);
-  assert.throws(() => verifyForwardHumanApproval({
-    ...input,
-    targetSha,
-    decisionSubjectSha: subjectSha,
-    decisionRunId: '12345',
-    evidenceCommitSha: targetSha,
-  }), /lacks accepted PENDING_DEPLOYMENT human decision/);
+  assert.throws(() => verify(input), /lacks accepted PENDING_DEPLOYMENT human decision/);
 });
 
 test('rejects byte drift between human decision and selected manifest', () => {
   const input = fixture();
   input.manifest.migrations[0].sha256 = '4'.repeat(64);
-  assert.throws(() => verifyForwardHumanApproval({
-    ...input,
-    targetSha,
-    decisionSubjectSha: subjectSha,
-    decisionRunId: '12345',
-    evidenceCommitSha: targetSha,
-  }), /lacks accepted PENDING_DEPLOYMENT human decision/);
+  assert.throws(() => verify(input), /lacks accepted PENDING_DEPLOYMENT human decision/);
 });
 
 test('rejects non-accepted decision gate output and self-authorizing decision artifacts', () => {
   const rejected = fixture();
   rejected.decisionResult.accepted = false;
-  assert.throws(() => verifyForwardHumanApproval({
-    ...rejected,
-    targetSha,
-    decisionSubjectSha: subjectSha,
-    decisionRunId: '12345',
-    evidenceCommitSha: targetSha,
-  }), /not accepted/);
+  assert.throws(() => verify(rejected), /not accepted/);
 
   const selfAuthorizing = fixture();
   selfAuthorizing.decisionResult.deploymentAuthorization = 'AUTHORIZED';
-  assert.throws(() => verifyForwardHumanApproval({
-    ...selfAuthorizing,
-    targetSha,
-    decisionSubjectSha: subjectSha,
-    decisionRunId: '12345',
-    evidenceCommitSha: targetSha,
-  }), /must not itself authorize deployment/);
+  assert.throws(() => verify(selfAuthorizing), /must not itself authorize deployment/);
 });
 
 test('rejects malformed or self-authorizing pending deployment artifacts', () => {
   const wrongSchema = fixture();
   wrongSchema.pendingDeploymentPlan.schema = 'wrong';
-  assert.throws(() => verifyForwardHumanApproval({
-    ...wrongSchema,
-    targetSha,
-    decisionSubjectSha: subjectSha,
-    decisionRunId: '12345',
-    evidenceCommitSha: targetSha,
-  }), /artifact schema is invalid/);
+  assert.throws(() => verify(wrongSchema), /artifact schema is invalid/);
 
   const selfAuthorizing = fixture();
   selfAuthorizing.pendingDeploymentPlan.productionWriteAuthorized = true;
-  assert.throws(() => verifyForwardHumanApproval({
-    ...selfAuthorizing,
-    targetSha,
-    decisionSubjectSha: subjectSha,
-    decisionRunId: '12345',
-    evidenceCommitSha: targetSha,
-  }), /must not authorize production/);
+  assert.throws(() => verify(selfAuthorizing), /must not authorize production/);
 });
 
 test('rejects subject, evidence and run provenance shape mismatches', () => {
-  assert.throws(() => verifyForwardHumanApproval({
-    ...fixture(),
-    targetSha,
-    decisionSubjectSha: 'bad',
-    decisionRunId: '12345',
-    evidenceCommitSha: targetSha,
-  }), /subject SHA is invalid/);
-
-  assert.throws(() => verifyForwardHumanApproval({
-    ...fixture(),
-    targetSha,
-    decisionSubjectSha: subjectSha,
-    decisionRunId: 'not-a-run',
-    evidenceCommitSha: targetSha,
-  }), /decision run ID is invalid/);
+  assert.throws(() => verify(fixture(), { decisionSubjectSha: 'bad' }), /subject SHA is invalid/);
+  assert.throws(() => verify(fixture(), { decisionRunId: 'not-a-run' }), /decision run ID is invalid/);
+  assert.throws(() => verify(fixture(), { evidenceCommitSha: 'b'.repeat(40) }), /evidence commit SHA must equal target SHA/);
 });
