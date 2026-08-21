@@ -42,6 +42,8 @@ describe('billing entitlements response hardening', () => {
       plan: 'pro',
       maxDocuments: Infinity,
       maxUsers: 25,
+      maxVendors: Infinity,
+      maxRisks: 75,
       maxFiscalCountries: Number.NaN,
     });
     mocks.requireEnterpriseRateLimit.mockResolvedValue(null);
@@ -82,6 +84,8 @@ describe('billing entitlements response hardening', () => {
         plan: 'pro',
         maxDocuments: null,
         maxUsers: 25,
+        maxVendors: null,
+        maxRisks: 75,
         maxFiscalCountries: null,
       },
     });
