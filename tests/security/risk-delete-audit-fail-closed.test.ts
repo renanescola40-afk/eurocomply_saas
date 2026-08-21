@@ -2,42 +2,44 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const actionPath = 'src/server/actions/risks.ts';
+const migrationPath = 'supabase/migrations/20260822001000_atomic_vendor_risk_quota_mutations.sql';
 
 describe('risk deletion audit persistence', () => {
-  it('requires durable audit evidence before returning deletion success', () => {
+  it('routes deletion through the atomic commercial mutation RPC', () => {
     const source = readFileSync(actionPath, 'utf8');
+    const deleteSource = source.slice(source.indexOf('export async function deleteRisk'));
 
-    expect(source).toContain("action: 'risk.delete'");
-    expect(source).toContain('const audit = await logAuditEvent({');
-    expect(source).toContain('if (!audit.persisted)');
-
-    const auditGuardIndex = source.indexOf('if (!audit.persisted)');
-    const successIndex = source.indexOf('return data;', auditGuardIndex);
-
-    expect(auditGuardIndex).toBeGreaterThan(-1);
-    expect(successIndex).toBeGreaterThan(auditGuardIndex);
+    expect(deleteSource).toContain('mutateCommercialResourceAtomic({');
+    expect(deleteSource).toContain("resource: 'risk'");
+    expect(deleteSource).toContain("operation: 'delete'");
+    expect(deleteSource).not.toContain(".from('risks').delete");
   });
 
-  it('captures and restores the exact tenant-scoped row when auditing fails', () => {
+  it('makes risk deletion and both audit streams one database transaction', () => {
     const source = readFileSync(actionPath, 'utf8');
-    const deleteStart = source.indexOf('export async function deleteRisk');
-    const deleteSource = source.slice(deleteStart);
+    const deleteSource = source.slice(source.indexOf('export async function deleteRisk'));
+    const migration = readFileSync(migrationPath, 'utf8');
 
-    expect(deleteSource).toContain(".from('risks')");
-    expect(deleteSource).toContain('.delete()');
-    expect(deleteSource).toContain(".eq('id', payload.riskId)");
-    expect(deleteSource).toContain(".eq('organization_id', payload.organizationId)");
-    expect(deleteSource).toContain('.select(RISK_MUTATION_SELECT)');
-    expect(deleteSource).not.toContain(".select('*')");
-    expect(deleteSource).toContain("await supabase.from('risks').insert(data)");
-    expect(deleteSource).toContain("area: 'risk_delete_audit_rollback'");
-    expect(deleteSource).toContain("throw actionError('Unable to delete risk')");
+    expect(migration).toContain("p_operation = 'delete' and p_resource_type = 'risk'");
+    expect(migration).toContain('delete from public.risks');
+    expect(migration).toContain('insert into public.audit_logs');
+    expect(migration).toContain('insert into public.audit_events');
+    expect(deleteSource).not.toContain('const audit = await logAuditEvent');
+    expect(deleteSource).not.toContain("supabase.from('risks').insert");
+    expect(deleteSource).not.toContain('risk_delete_audit_rollback');
+  });
+
+  it('keeps deletion tenant-scoped and fails closed when no row is deleted', () => {
+    const migration = readFileSync(migrationPath, 'utf8');
+
+    expect(migration).toContain('where id = p_entity_id');
+    expect(migration).toContain('and organization_id = p_organization_id');
+    expect(migration).toContain("return query select 'not_found_or_conflict'::text");
   });
 
   it('preserves authorization and fail-closed distributed rate limiting', () => {
     const source = readFileSync(actionPath, 'utf8');
-    const deleteStart = source.indexOf('export async function deleteRisk');
-    const deleteSource = source.slice(deleteStart);
+    const deleteSource = source.slice(source.indexOf('export async function deleteRisk'));
 
     expect(deleteSource).toContain("assertCurrentUserCan(payload.organizationId, user.id, 'risks:delete')");
     expect(source).toContain("policy: 'general-api'");
