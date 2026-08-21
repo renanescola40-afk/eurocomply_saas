@@ -22,15 +22,13 @@ function group(name, passed, detail, remediation) {
   return { name, required: true, passed: Boolean(passed), detail, remediation };
 }
 
-const stripePricePrimary = ['STRIPE_PRICE_STARTER_MONTHLY', 'STRIPE_PRICE_GROWTH_MONTHLY', 'STRIPE_PRICE_ENTERPRISE_MONTHLY'];
-const stripePriceLegacyGroups = [
-  ['STRIPE_PRICE_ESSENTIAL_MONTHLY'],
-  ['STRIPE_PRICE_PROFESSIONAL_MONTHLY', 'STRIPE_PRICE_BUSINESS_MONTHLY'],
-  ['STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY'],
+const stripePriceCanonical = [
+  'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+  'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+  'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+  'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
 ];
-const stripePricesReady = stripePricePrimary.every(
-  (name, index) => Boolean(String(process.env[name] || '').trim()) || hasAny(stripePriceLegacyGroups[index]),
-);
+const stripePricesReady = hasAll(stripePriceCanonical);
 const explicitProductionUrlSources = ['RELEASE_DEPLOYMENT_URL', 'RELEASE_PRODUCTION_URL', 'NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL'];
 
 const checks = [
@@ -46,8 +44,9 @@ const checks = [
   group('stripeConfigured', hasAll(['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET']) && stripePricesReady, {
     requiresSecretKey: true,
     requiresWebhookSecret: true,
-    requiresStarterGrowthEnterprisePricesOrLegacyFallbacks: true,
-  }, 'Set the Stripe secret key, webhook secret, and monthly price identifiers used by the production pricing model.'),
+    requiresCanonicalSelfServePrices: stripePriceCanonical,
+    legacyAliasesAcceptedForReadiness: false,
+  }, 'Set the Stripe secret key, webhook secret, and all four canonical Essential/Professional monthly+annual production Price bindings. Legacy Starter/Growth aliases do not authorize release readiness.'),
   group('redisConfigured', hasAll(['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN']), { requiredCount: 2 }, 'Set the distributed rate-limit Redis URL and token.'),
   group('sentryConfigured', hasAny(['NEXT_PUBLIC_SENTRY_DSN', 'SENTRY_DSN']), { requiresDsn: true }, 'Set a Sentry DSN for production error reporting. Enterprise source-map upload credentials are not required by this public profile.'),
   group('rollbackTargetConfigured', hasAny(['RELEASE_ROLLBACK_TARGET', 'RELEASE_ROLLBACK_TARGET_URL', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL']), {

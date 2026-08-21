@@ -4,6 +4,19 @@ import { describe, expect, it } from 'vitest';
 const workflow = readFileSync('.github/workflows/enterprise-production-gate.yml', 'utf8');
 const preflight = readFileSync('scripts/release/check-enterprise-release-env.mjs', 'utf8');
 
+const canonicalSelfServeStripePrices = [
+  'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+  'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+  'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+  'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
+];
+
+const legacyReadinessStripeAliases = [
+  'STRIPE_PRICE_STARTER_MONTHLY',
+  'STRIPE_PRICE_GROWTH_MONTHLY',
+  'STRIPE_PRICE_ENTERPRISE_MONTHLY',
+];
+
 function productionValidationEnvBlock() {
   const jobStart = workflow.indexOf('  production-release-validation:');
   expect(jobStart).toBeGreaterThanOrEqual(0);
@@ -42,9 +55,7 @@ describe('enterprise production provider environment wiring', () => {
       'SUPABASE_SERVICE_ROLE_KEY',
       'STRIPE_SECRET_KEY',
       'STRIPE_WEBHOOK_SECRET',
-      'STRIPE_PRICE_STARTER_MONTHLY',
-      'STRIPE_PRICE_GROWTH_MONTHLY',
-      'STRIPE_PRICE_ENTERPRISE_MONTHLY',
+      ...canonicalSelfServeStripePrices,
       'UPSTASH_REDIS_REST_URL',
       'UPSTASH_REDIS_REST_TOKEN',
       'NEXT_PUBLIC_SENTRY_DSN',
@@ -71,6 +82,12 @@ describe('enterprise production provider environment wiring', () => {
       );
       expect(preflight, `${name} must remain part of the release preflight contract`).toContain(name);
     }
+
+    for (const name of legacyReadinessStripeAliases) {
+      expect(job).not.toMatch(new RegExp(`^\\s+${name}:`, 'm'));
+      expect(preflight).not.toContain(name);
+    }
+    expect(preflight).toContain('legacyAliasesAcceptedForReadiness: false');
   });
 
   it('keeps provider credentials in GitHub secrets while allowing documented non-secret variable fallbacks', () => {
@@ -90,7 +107,10 @@ describe('enterprise production provider environment wiring', () => {
     }
 
     for (const binding of [
-      'STRIPE_PRICE_STARTER_MONTHLY: ${{ vars.STRIPE_PRICE_STARTER_MONTHLY || secrets.STRIPE_PRICE_STARTER_MONTHLY }}',
+      'STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ vars.STRIPE_PRICE_ESSENTIAL_MONTHLY || secrets.STRIPE_PRICE_ESSENTIAL_MONTHLY }}',
+      'STRIPE_PRICE_ESSENTIAL_ANNUAL: ${{ vars.STRIPE_PRICE_ESSENTIAL_ANNUAL || secrets.STRIPE_PRICE_ESSENTIAL_ANNUAL }}',
+      'STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ vars.STRIPE_PRICE_PROFESSIONAL_MONTHLY || secrets.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}',
+      'STRIPE_PRICE_PROFESSIONAL_ANNUAL: ${{ vars.STRIPE_PRICE_PROFESSIONAL_ANNUAL || secrets.STRIPE_PRICE_PROFESSIONAL_ANNUAL }}',
       'SENTRY_ORG: ${{ vars.SENTRY_ORG || secrets.SENTRY_ORG }}',
       'RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ vars.RELEASE_ROLLBACK_TARGET_VALIDATED || secrets.RELEASE_ROLLBACK_TARGET_VALIDATED }}',
       'MALWARE_SCANNER_PROVIDER: ${{ vars.MALWARE_SCANNER_PROVIDER || secrets.MALWARE_SCANNER_PROVIDER }}',

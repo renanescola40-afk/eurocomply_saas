@@ -38,9 +38,10 @@ test('runtime closeout keeps only non-secret release coordinates at job scope', 
     'NEXT_PUBLIC_APP_URL',
     'NEXT_PUBLIC_SITE_URL',
     'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
-    'STRIPE_PRICE_STARTER_MONTHLY',
-    'STRIPE_PRICE_GROWTH_MONTHLY',
-    'STRIPE_PRICE_ENTERPRISE_MONTHLY',
+    'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+    'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+    'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+    'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
     'SENTRY_ORG',
     'SENTRY_PROJECT',
     'RELEASE_ROLLBACK_TARGET',
@@ -75,6 +76,33 @@ test('runtime closeout keeps only non-secret release coordinates at job scope', 
       workflow,
       new RegExp(`^\\s{6}${key}:`, 'm'),
       `${key} must not be materialized at protected job scope`,
+    );
+  }
+});
+
+test('runtime closeout supplies only the canonical self-serve Stripe prices required by Public Production Final', () => {
+  for (const key of [
+    'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+    'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+    'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+    'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
+  ]) {
+    assert.match(
+      workflow,
+      new RegExp(`^\\s{6}${key}: \\$\\{\\{ vars\\.${key} \\}\\}$`, 'm'),
+      `${key} must be available to release:production-final`,
+    );
+  }
+
+  for (const key of [
+    'STRIPE_PRICE_STARTER_MONTHLY',
+    'STRIPE_PRICE_GROWTH_MONTHLY',
+    'STRIPE_PRICE_ENTERPRISE_MONTHLY',
+  ]) {
+    assert.doesNotMatch(
+      workflow,
+      new RegExp(`^\\s{6}${key}:`, 'm'),
+      `${key} must not remain a final release readiness authority`,
     );
   }
 });

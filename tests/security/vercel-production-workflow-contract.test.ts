@@ -50,6 +50,28 @@ describe('Vercel production deployment authority', () => {
     expect(preflight).not.toMatch(/secrets\./);
   });
 
+  it('wires every canonical self-serve Stripe price required by enterprise readiness', () => {
+    for (const key of [
+      'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+      'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+      'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+      'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
+    ]) {
+      expect(workflow).toContain(`${key}: \${{ vars.${key} }}`);
+    }
+
+    const enterpriseReadiness = workflow.indexOf('Run enterprise readiness gate');
+    expect(enterpriseReadiness).toBeGreaterThan(-1);
+    for (const key of [
+      'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+      'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+      'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+      'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
+    ]) {
+      expect(workflow.indexOf(`${key}:`)).toBeLessThan(enterpriseReadiness);
+    }
+  });
+
   it('synchronizes dedicated Step-Up runtime configuration before the production build', () => {
     expect(workflow).toContain('STEP_UP_PROVIDER_MODE: supabase_mfa');
     expect(workflow).toContain(

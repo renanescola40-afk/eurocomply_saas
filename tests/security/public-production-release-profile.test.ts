@@ -3,6 +3,19 @@ import { describe, expect, it } from 'vitest';
 
 const read = (path: string) => readFileSync(path, 'utf8');
 
+const canonicalSelfServeStripePrices = [
+  'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+  'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+  'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+  'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
+];
+
+const legacyReadinessStripeAliases = [
+  'STRIPE_PRICE_STARTER_MONTHLY',
+  'STRIPE_PRICE_GROWTH_MONTHLY',
+  'STRIPE_PRICE_ENTERPRISE_MONTHLY',
+];
+
 describe('production release profiles', () => {
   it('dispatches public and enterprise releases to different preflights and runners', () => {
     const dispatcher = read('scripts/release/run-public-production-release.mjs');
@@ -32,6 +45,18 @@ describe('production release profiles', () => {
     expect(publicRunner).toContain('requiresExternalReviewEvidence: false');
   });
 
+  it('requires the canonical four self-serve Stripe price bindings in the public preflight', () => {
+    const publicPreflight = read('scripts/release/check-public-production-release-env.mjs');
+
+    for (const name of canonicalSelfServeStripePrices) {
+      expect(publicPreflight).toContain(name);
+    }
+    for (const name of legacyReadinessStripeAliases) {
+      expect(publicPreflight).not.toContain(name);
+    }
+    expect(publicPreflight).toContain('legacyAliasesAcceptedForReadiness: false');
+  });
+
   it('does not require enterprise-only provider credentials in the public preflight', () => {
     const publicPreflight = read('scripts/release/check-public-production-release-env.mjs');
 
@@ -41,7 +66,7 @@ describe('production release profiles', () => {
     expect(publicPreflight).toContain('enterpriseOnlyControlsExcluded');
   });
 
-  it('keeps the public workflow scoped to public artifacts and credentials', () => {
+  it('keeps the public workflow scoped to public artifacts and canonical Stripe credentials', () => {
     const workflow = read('.github/workflows/public-production-final.yml');
 
     expect(workflow).toContain('RELEASE_TARGET: public-production');
@@ -56,6 +81,13 @@ describe('production release profiles', () => {
     expect(workflow).not.toContain('enterprise-runtime-evidence.json');
     expect(workflow).not.toContain('SENTRY_AUTH_TOKEN:');
     expect(workflow).not.toContain('RISCK_COMPLY_ENTERPRISE_RELEASE:');
+
+    for (const name of canonicalSelfServeStripePrices) {
+      expect(workflow).toMatch(new RegExp(`^\\s+${name}:`, 'm'));
+    }
+    for (const name of legacyReadinessStripeAliases) {
+      expect(workflow).not.toMatch(new RegExp(`^\\s+${name}:`, 'm'));
+    }
   });
 
   it('preserves the enterprise runner as an explicit enterprise profile', () => {
