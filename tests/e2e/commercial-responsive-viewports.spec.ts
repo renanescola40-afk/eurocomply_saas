@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+const CONSENT_STORAGE_KEY = 'risckcomply.analytics.consent';
+
 async function expectHealthyResponsiveSurface(page: Page, route: string, width: number) {
   await page.goto(route, { waitUntil: 'domcontentloaded' });
   await expect(page.locator('body')).toBeVisible();
@@ -32,6 +34,11 @@ for (const viewport of [
   test.describe(`${viewport.name} commercial acceptance`, () => {
     test.beforeEach(async ({ page }) => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      // Consent focus management has its own runtime acceptance suite. Keep this
+      // suite scoped to the commercial form controls after a persisted decision.
+      await page.addInitScript((storageKey) => {
+        window.localStorage.setItem(storageKey, 'denied');
+      }, CONSENT_STORAGE_KEY);
     });
 
     for (const route of publicCommercialRoutes) {
