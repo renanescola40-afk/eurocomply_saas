@@ -40,6 +40,9 @@ describe('global commercial access boundary', () => {
   it('keeps public, account, billing recovery and privileged control-plane surfaces explicit', () => {
     expect(classifyLocalizedCommercialRoute('/pt/pricing', 'pt')).toBe('public');
     expect(classifyLocalizedCommercialRoute('/pt/checkout', 'pt')).toBe('public');
+    expect(classifyLocalizedCommercialRoute('/pt/cookie-policy', 'pt')).toBe('public');
+    expect(classifyLocalizedCommercialRoute('/pt/acceptable-use', 'pt')).toBe('public');
+    expect(classifyLocalizedCommercialRoute('/pt/transfers', 'pt')).toBe('public');
     expect(classifyLocalizedCommercialRoute('/pt/checkout/complete', 'pt')).toBe('billing_recovery');
     expect(classifyLocalizedCommercialRoute('/pt/billing', 'pt')).toBe('billing_recovery');
     expect(classifyLocalizedCommercialRoute('/pt/dashboard/billing', 'pt')).toBe('billing_recovery');

@@ -117,6 +117,15 @@ const footerCopy: Record<Locale, FooterCopy> = {
   },
 };
 
+const legalLinkLabels: Record<Locale, { cookies: string; acceptableUse: string; transfers: string }> = {
+  en: { cookies: 'Cookie Policy', acceptableUse: 'Acceptable Use', transfers: 'International Transfers' },
+  pt: { cookies: 'Política de Cookies', acceptableUse: 'Utilização Aceitável', transfers: 'Transferências Internacionais' },
+  es: { cookies: 'Política de Cookies', acceptableUse: 'Uso Aceptable', transfers: 'Transferencias Internacionales' },
+  fr: { cookies: 'Politique relative aux cookies', acceptableUse: 'Utilisation acceptable', transfers: 'Transferts internationaux' },
+  it: { cookies: 'Cookie Policy', acceptableUse: 'Uso Accettabile', transfers: 'Trasferimenti Internazionali' },
+  de: { cookies: 'Cookie-Richtlinie', acceptableUse: 'Zulässige Nutzung', transfers: 'Internationale Datentransfers' },
+};
+
 function getActiveLocale(locale: string): Locale {
   return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
 }
@@ -144,10 +153,16 @@ export function PublicFooter({ locale }: { locale: string }) {
     label: localizeFeatureLabel(activeLocale, page.navLabel),
     href: `/${activeLocale}/features/${page.slug}`,
   }));
-  const trustLinks = getLocalizedTrustCenterPages(activeLocale).map((page) => ({
-    label: page.navLabel,
-    href: `/${page.slug}`,
-  }));
+  const legalLabels = legalLinkLabels[activeLocale];
+  const trustLinks = [
+    ...getLocalizedTrustCenterPages(activeLocale).map((page) => ({
+      label: page.navLabel,
+      href: `/${page.slug}`,
+    })),
+    { label: legalLabels.cookies, href: '/cookie-policy' },
+    { label: legalLabels.acceptableUse, href: '/acceptable-use' },
+    { label: legalLabels.transfers, href: '/transfers' },
+  ];
 
   return (
     <footer className="border-t border-white/10 bg-[#050505] px-6 py-12 text-sm text-white/55">
