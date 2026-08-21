@@ -137,11 +137,15 @@ describe('protected production provider runtime proof', () => {
     expect(producer).toContain("for (const publicId of ['essential', 'professional'])");
     expect(producer).toContain("for (const cadence of ['monthly', 'annual'])");
     expect(producer).toContain('transitionPolicyRejectsLegacy');
+    expect(producer).toContain('legacyMonthlyPriceEnvKeys');
+    expect(producer).toContain('legacyAnnualPriceEnvKeys');
+    expect(producer).toContain('legacyPriceKeys.every((key) => !env(key))');
     expect(producer).toContain('legacyAliasesRejected');
     expect(producer).toContain('fourCanonicalSelfServeBindingsConfigured');
     expect(producer).toContain('fourCanonicalSelfServePricesVerified');
     expect(producer).toContain("body?.livemode === true");
     expect(producer).toContain("body?.product?.metadata?.catalog_status === 'canonical_live'");
+    expect(producer).not.toContain('LEGACY_STRIPE_PRICE_KEYS');
     expect(producer).not.toContain("env('STRIPE_PRICE_STARTER_MONTHLY') ||");
     expect(producer).not.toContain("env('STRIPE_PRICE_GROWTH_MONTHLY') ||");
     expect(producer).not.toContain("env('STRIPE_PRICE_ENTERPRISE_MONTHLY') ||");
