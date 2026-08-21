@@ -7,10 +7,12 @@ const subject = 'a'.repeat(40);
 const digestA = '1'.repeat(64);
 const digestB = '2'.repeat(64);
 const digestOther = '3'.repeat(64);
+const sourceGeneratedAt = '2026-08-21T00:00:00.000Z';
 
 function fixture() {
   const sourceInventory = {
     schema: 'risck-comply.supabase-migration-reconciliation-inventory.v1',
+    generatedAt: sourceGeneratedAt,
     allowedClassifications: [
       'ALREADY_PRESENT_IN_SCHEMA',
       'PENDING_DEPLOYMENT',
@@ -65,8 +67,9 @@ function fixture() {
 
 test('builds only the exact manifest identities in manifest order without classifying them', () => {
   const value = fixture();
-  const bounded = buildBoundedMigrationInventory({ ...value, expectedSha: subject, generatedAt: '2026-08-21T00:00:00.000Z' });
+  const bounded = buildBoundedMigrationInventory({ ...value, expectedSha: subject });
 
+  assert.equal(bounded.generatedAt, sourceGeneratedAt);
   assert.equal(bounded.boundedSelection.selectedCount, 2);
   assert.equal(bounded.boundedSelection.targetSha, subject);
   assert.equal(bounded.boundedSelection.automaticClassificationPerformed, false);
@@ -78,6 +81,24 @@ test('builds only the exact manifest identities in manifest order without classi
   assert.deepEqual(bounded.items.map((item) => item.boundedOrder), [1, 2]);
   assert.deepEqual(bounded.items.map((item) => item.forwardPurpose), ['second purpose', 'first purpose']);
   assert.equal(bounded.items.some((item) => item.filename === '20260601000000_historical.sql'), false);
+});
+
+test('is byte-stable across Decision Gate reruns and ignores caller wall-clock metadata', () => {
+  const value = fixture();
+  const first = buildBoundedMigrationInventory({
+    ...value,
+    expectedSha: subject,
+    generatedAt: '2026-08-21T01:00:00.000Z',
+  });
+  const second = buildBoundedMigrationInventory({
+    ...value,
+    expectedSha: subject,
+    generatedAt: '2026-08-21T02:00:00.000Z',
+  });
+
+  assert.equal(first.generatedAt, sourceGeneratedAt);
+  assert.equal(second.generatedAt, sourceGeneratedAt);
+  assert.equal(`${JSON.stringify(first, null, 2)}\n`, `${JSON.stringify(second, null, 2)}\n`);
 });
 
 test('fails closed when a selected SHA-256 does not exist in the source inventory', () => {
