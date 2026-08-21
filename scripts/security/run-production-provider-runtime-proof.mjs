@@ -14,12 +14,6 @@ const VERCEL_TEAM_ID = /^team_[A-Za-z0-9]+$/;
 const VERCEL_PROJECT_ID = /^prj_[A-Za-z0-9]+$/;
 const API_TIMEOUT_MS = 8_000;
 const CANONICAL_REDACTION_CONFIRMATION = 'Only grouped configuration presence and accepted source labels are recorded. No secret values, tokens, URLs, DSNs, cookies, Authorization headers or customer data are stored.';
-const LEGACY_STRIPE_PRICE_KEYS = [
-  'STRIPE_PRICE_STARTER_MONTHLY',
-  'STRIPE_PRICE_GROWTH_MONTHLY',
-  'STRIPE_PRICE_ENTERPRISE_MONTHLY',
-  'STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY',
-];
 
 const REQUIRED_VERCEL_KEYS = [
   'NEXT_PUBLIC_SUPABASE_URL',
@@ -83,6 +77,12 @@ function loadCanonicalStripeBindings() {
   if (catalog?.schema !== BILLING_CATALOG_SCHEMA) throw new Error('invalid_billing_catalog');
 
   const transitionPolicyRejectsLegacy = catalog?.transitionPolicy?.legacyStripePriceFallbackAllowed === false;
+  const legacyPriceKeys = Array.from(new Set(
+    Object.values(catalog?.plans ?? {}).flatMap((plan) => [
+      ...(Array.isArray(plan?.legacyMonthlyPriceEnvKeys) ? plan.legacyMonthlyPriceEnvKeys : []),
+      ...(Array.isArray(plan?.legacyAnnualPriceEnvKeys) ? plan.legacyAnnualPriceEnvKeys : []),
+    ]).filter((key) => typeof key === 'string' && key.trim()),
+  ));
   const bindings = [];
   for (const publicId of ['essential', 'professional']) {
     const plan = catalog?.plans?.[publicId];
@@ -103,7 +103,7 @@ function loadCanonicalStripeBindings() {
     }
   }
 
-  return { bindings, transitionPolicyRejectsLegacy };
+  return { bindings, transitionPolicyRejectsLegacy, legacyPriceKeys };
 }
 
 async function request(url, init = {}) {
@@ -295,8 +295,8 @@ async function supabaseProof() {
 
 async function stripeProof() {
   const secret = env('STRIPE_SECRET_KEY');
-  const { bindings, transitionPolicyRejectsLegacy } = loadCanonicalStripeBindings();
-  const legacyAliasesRejected = LEGACY_STRIPE_PRICE_KEYS.every((key) => !env(key));
+  const { bindings, transitionPolicyRejectsLegacy, legacyPriceKeys } = loadCanonicalStripeBindings();
+  const legacyAliasesRejected = legacyPriceKeys.every((key) => !env(key));
   const configured = bindings.every((binding) => PRICE_ID.test(binding.priceId));
   let apiReachable = false;
   let verifiedCanonicalPrices = 0;
@@ -343,6 +343,7 @@ async function stripeProof() {
     metrics: {
       canonicalSelfServePriceBindings: bindings.length,
       canonicalSelfServePricesVerified: verifiedCanonicalPrices,
+      legacyPriceKeysChecked: legacyPriceKeys.length,
     },
     passed: Object.values(checks).every(Boolean),
   };
