@@ -1,11 +1,13 @@
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
-import { assertResourceQuota, verifyResourceQuotaAfterCreate } from '@/server/billing/entitlements';
+import { assertResourceQuota } from '@/server/billing/entitlements';
 import { requireCurrentUser } from '@/server/queries/auth';
 import { logAuditEvent } from './audit';
+import { mutateCommercialResourceAtomic } from './commercial-resource-atomic';
 
 const RISK_MUTATION_SELECT =
   'id, organization_id, created_by, owner_user_id, title, description, category, likelihood, impact, risk_score, status, mitigation, due_date, created_at, updated_at';
@@ -101,14 +103,16 @@ export async function createRisk(input: unknown) {
   await assertCurrentUserCan(payload.organizationId, user.id, 'risks:write');
   await enforceRiskRateLimit({ action: 'create', organizationId: payload.organizationId, userId: user.id });
   const quota = await enforceRiskQuota(payload.organizationId);
+  const riskId = randomUUID();
 
   try {
-    const supabase = createAdminClient();
-
-    const { data, error } = await supabase
-      .from('risks')
-      .insert({
-        organization_id: payload.organizationId,
+    const result = await mutateCommercialResourceAtomic({
+      resource: 'risk',
+      operation: 'create',
+      organizationId: payload.organizationId,
+      actorUserId: user.id,
+      entityId: riskId,
+      payload: {
         title: payload.title,
         description: payload.description,
         category: payload.category,
@@ -118,81 +122,20 @@ export async function createRisk(input: unknown) {
         status: payload.status,
         owner_user_id: payload.ownerUserId,
         due_date: payload.dueDate,
-        created_by: user.id,
-      })
-      .select(RISK_MUTATION_SELECT)
-      .single();
-
-    if (error) {
-      reportError(error, context);
-      throw actionError('Unable to create risk');
-    }
-
-    const postQuota = await verifyResourceQuotaAfterCreate(payload.organizationId, 'risks', quota.maxAllowed);
-    if (!postQuota.ok) {
-      reportError(new Error(postQuota.error), {
-        ...context,
-        area: 'risk_create_quota_postcheck',
-        riskId: data.id,
-        currentCount: postQuota.currentCount,
-        maxAllowed: postQuota.maxAllowed,
-      });
-      const { error: rollbackError } = await supabase
-        .from('risks')
-        .delete()
-        .eq('id', data.id)
-        .eq('organization_id', payload.organizationId)
-        .eq('created_by', user.id);
-
-      if (rollbackError) {
-        reportError(rollbackError, {
-          ...context,
-          area: 'risk_create_quota_compensation_failed',
-          riskId: data.id,
-        });
-      }
-
-      throw actionError(postQuota.message);
-    }
-
-    const audit = await logAuditEvent({
-      organizationId: payload.organizationId,
-      actorUserId: user.id,
-      action: 'risk.create',
-      entityType: 'risk',
-      entityId: data.id,
-      metadata: { title: payload.title, likelihood: payload.likelihood, impact: payload.impact },
+      },
+      maxCount: quota.maxAllowed,
+      auditMetadata: { title: payload.title, likelihood: payload.likelihood, impact: payload.impact },
     });
 
-    if (!audit.persisted) {
-      const { error: rollbackError } = await supabase
-        .from('risks')
-        .delete()
-        .eq('id', data.id)
-        .eq('organization_id', payload.organizationId)
-        .eq('created_by', user.id);
-
-      if (rollbackError) {
-        reportError(rollbackError, {
-          ...context,
-          area: 'risk_create_audit_rollback',
-          riskId: data.id,
-        });
-      }
-
-      throw actionError('Unable to create risk');
+    if (result.outcome === 'quota_exceeded') throw actionError(quota.message);
+    if (result.outcome !== 'created' || !result.resource_record) {
+      throw new Error(`risk_atomic_create_${result.outcome}`);
     }
 
-    return data;
+    return result.resource_record;
   } catch (error) {
-    if (
-      error instanceof Error &&
-      (error.message === 'Unable to create risk' || error.message.includes('quota'))
-    ) {
-      throw actionError(error.message);
-    }
-
-    reportError(error, context);
+    if (error instanceof Error && error.message === quota.message) throw error;
+    reportError(error, { ...context, riskId });
     throw actionError('Unable to create risk');
   }
 }
@@ -314,41 +257,23 @@ export async function deleteRisk(riskId: string, organizationId: string) {
   await enforceRiskRateLimit({ action: 'delete', organizationId: payload.organizationId, userId: user.id });
 
   try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from('risks')
-      .delete()
-      .eq('id', payload.riskId)
-      .eq('organization_id', payload.organizationId)
-      .select(RISK_MUTATION_SELECT)
-      .single();
+    const result = await mutateCommercialResourceAtomic({
+      resource: 'risk',
+      operation: 'delete',
+      organizationId: payload.organizationId,
+      actorUserId: user.id,
+      entityId: payload.riskId,
+      auditMetadata: { riskId: payload.riskId },
+    });
 
-    if (error) {
-      reportError(error, context);
-      throw actionError('Unable to delete risk');
+    if (result.outcome === 'not_found_or_conflict') throw actionError('Unable to delete risk');
+    if (result.outcome !== 'deleted' || !result.resource_record) {
+      throw new Error(`risk_atomic_delete_${result.outcome}`);
     }
 
-    const audit = await logAuditEvent({ organizationId: payload.organizationId, actorUserId: user.id, action: 'risk.delete', entityType: 'risk', entityId: payload.riskId, metadata: { title: data.title, likelihood: data.likelihood, impact: data.impact } });
-
-    if (!audit.persisted) {
-      const { error: rollbackError } = await supabase.from('risks').insert(data);
-
-      if (rollbackError) {
-        reportError(rollbackError, {
-          ...context,
-          area: 'risk_delete_audit_rollback',
-        });
-      }
-
-      throw actionError('Unable to delete risk');
-    }
-
-    return data;
+    return result.resource_record;
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unable to delete risk') {
-      throw actionError('Unable to delete risk');
-    }
-
+    if (error instanceof Error && error.message === 'Unable to delete risk') throw error;
     reportError(error, context);
     throw actionError('Unable to delete risk');
   }
