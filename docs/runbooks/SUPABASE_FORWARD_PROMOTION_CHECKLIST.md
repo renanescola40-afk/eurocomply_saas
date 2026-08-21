@@ -10,8 +10,9 @@ Use this checklist only after the bounded reconciliation implementation has been
 - `SUPABASE_DB_POOLER_URL` has been rotated/corrected after the tracked credential incident and is available only as a protected environment secret.
 - Exact-SHA `Supabase Forward Reconciliation Rehearsal` completed successfully and its protected isolated-production-restore job actually ran.
 - Exact-SHA `Supabase Forward Reconciliation Dry Run` completed successfully and its protected remote dry-run job actually ran.
-- The authoritative selected set in `config/supabase-forward-reconciliation.json` remains byte-for-byte unchanged since both source proofs.
-- The manifest migration count, ordered filenames, versions and selection digest match across current `main`, Stage 1 evidence and Stage 2 evidence. Never rely on a hard-coded migration count in a runbook.
+- Exact-SHA `Supabase Migration Reconciliation Decision Gate` completed successfully for the same immutable selected migration bytes and produced an accepted human-review artifact.
+- The authoritative selected set in `config/supabase-forward-reconciliation.json` remains byte-for-byte unchanged since rehearsal, dry-run and decision-gate evidence.
+- The manifest migration count, ordered filenames, versions and selection digest match across current `main`, Stage 1 evidence, Stage 2 evidence and the accepted decision-gate evidence. Never rely on a hard-coded migration count in a runbook.
 - Every selected version is still strictly later than the current production migration head and no selected version is already recorded remotely.
 - Current human migration review covers the exact current selected manifest and release SHA; historical approval from an older SHA is non-crediting.
 - Backup/recovery readiness and rollback/LKG prerequisites for the same release window are satisfied before any production write.
@@ -23,15 +24,18 @@ Run `Supabase Forward Reconciliation Production Promotion` with:
 - `release_sha`: exact current `main` SHA;
 - `rehearsal_run_id`: successful exact-SHA Stage 1 run;
 - `dry_run_run_id`: successful exact-SHA Stage 2 run;
-- `confirmation`: `PROMOTE <release_sha> USING DRY-RUN <dry_run_run_id>`.
+- `decision_run_id`: successful exact-SHA `Supabase Migration Reconciliation Decision Gate` run;
+- `decision_subject_sha`: immutable subject SHA reviewed by that successful decision-gate run;
+- `confirmation`: `PROMOTE <release_sha> USING DRY-RUN <dry_run_run_id> AND DECISION <decision_run_id>`.
 
-Approve the protected `Production` deployment only after reviewing the source-run provenance, current manifest digest, current migration ledger and current change window.
+Approve the protected `Production` deployment only after reviewing the rehearsal, dry-run and decision-gate provenance, current manifest digest, current migration ledger and current change window.
 
 ## Required successful outputs
 
 - exact current-main checks before and immediately before write;
-- exact rehearsal and dry-run workflow provenance;
-- identical immutable selection digest across current manifest and both source proofs;
+- exact rehearsal, dry-run and decision-gate workflow provenance;
+- identical immutable selection digest across current manifest and all source proofs;
+- accepted human-decision proof bound to the exact selected bytes and release SHA;
 - current remote migration history + exactly the selected set in the temporary workdir;
 - every selected migration strictly after the remote head and currently unapplied;
 - final filtered dry-run PASS;
@@ -50,7 +54,7 @@ When the current manifest contains the Gap Analysis/remediation closure, this or
 2. `20260816104500_reconcile_gap_remediation_persistence.sql` — materialize the missing persistence/runtime schema;
 3. `20260816110000_harden_gap_personal_task_write_boundary.sql` — restore the steady-state backend-only organization mutation boundary and release only owner-bound personal task creation.
 
-If any of these files, their order, or their bytes differ from the reviewed manifest, invalidate prior rehearsal/dry-run evidence and start again from Stage 1.
+If any of these files, their order, or their bytes differ from the reviewed manifest, invalidate prior rehearsal/dry-run/decision evidence and start again from Stage 1.
 
 ## After promotion
 
