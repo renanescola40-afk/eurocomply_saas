@@ -18,6 +18,7 @@ type PublicLegalReviewPageProps = {
   version: string;
   lastUpdated: string;
   sections: LegalSection[];
+  actions?: React.ReactNode;
 };
 
 const copy: Record<Locale, { home: string; status: string; statusValue: string; version: string; updated: string; effective: string; effectiveValue: string; notice: string }> = {
@@ -29,7 +30,7 @@ const copy: Record<Locale, { home: string; status: string; statusValue: string; 
   de: { home: 'RISCK COMPLY', status: 'Veröffentlichungsstatus', statusValue: 'REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED', version: 'Version', updated: 'Zuletzt aktualisiert', effective: 'Gültig ab', effectiveValue: 'Ausstehende qualifizierte rechtliche Freigabe', notice: 'Dieser öffentliche Entwurf ist eine technische Offenlegungsfläche. Er ist weder eine unterzeichnete Vereinbarung noch eine qualifizierte Rechtsberatung.' },
 };
 
-export function PublicLegalReviewPage({ locale: rawLocale, eyebrow, title, summary, documentId, version, lastUpdated, sections }: PublicLegalReviewPageProps) {
+export function PublicLegalReviewPage({ locale: rawLocale, eyebrow, title, summary, documentId, version, lastUpdated, sections, actions }: PublicLegalReviewPageProps) {
   const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : 'en';
   const labels = copy[locale];
 
@@ -54,6 +55,8 @@ export function PublicLegalReviewPage({ locale: rawLocale, eyebrow, title, summa
           <p className="sm:col-span-2"><span className="font-semibold text-white">{labels.status}:</span> {labels.statusValue}</p>
           <p className="sm:col-span-2 leading-6 text-amber-100/75">{labels.notice}</p>
         </section>
+
+        {actions}
 
         <div className="mt-10 space-y-5">
           {sections.map((section) => (
