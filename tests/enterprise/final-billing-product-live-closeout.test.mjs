@@ -74,7 +74,7 @@ test('closeout workflow never creates commercial lifecycle objects for evidence'
   assert.match(workflow, /default_transaction_read_only=on/);
 });
 
-test('production control-plane proof requires the signing-secret binding and canonical lifecycle webhook', () => {
+test('production control-plane proof requires exact canonical Vercel price bindings and lifecycle webhook', () => {
   assert.match(controlPlaneProof, /STRIPE_WEBHOOK_SECRET/);
   assert.match(controlPlaneProof, /(?:^|[\s'"`])https:\/\/www\.risckcomply\.com\/api\/stripe\/webhook(?:$|[\s'"`])/);
   for (const event of [
@@ -87,7 +87,20 @@ test('production control-plane proof requires the signing-secret binding and can
   ]) {
     assert.equal(controlPlaneProof.includes(`'${event}'`), true);
   }
-  assert.match(controlPlaneProof, /decrypt=false/);
+  for (const priceBinding of [
+    'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+    'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+    'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+    'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
+  ]) {
+    assert.equal(controlPlaneProof.includes(`'${priceBinding}'`), true);
+  }
+  assert.match(controlPlaneProof, /decrypt=true/);
+  assert.match(controlPlaneProof, /canonicalPriceValueMatchCount/);
+  assert.match(controlPlaneProof, /productionCanonicalStripePriceBindingsMatch/);
+  assert.match(controlPlaneProof, /vercelNonSensitivePriceValuesComparedInMemory/);
+  assert.match(controlPlaneProof, /vercelValuesStored:\s*false/);
+  assert.doesNotMatch(controlPlaneProof, /console\.log\([^\n]*rows\[0\]\?\.value/);
 });
 
 test('default Portal authority remains fail-closed to one live default policy match', () => {
