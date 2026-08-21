@@ -1,7 +1,11 @@
 # Owner action required
 
-The next unavoidable owner actions for
-`main@1bce2fd1f4eb33bbe277a1958af5750b54809b75` are:
+This handoff was synchronized from
+`main@14618ac687eac03c95b7b6573ccec50498631b38`. Before any action, resolve the
+current 40-character `main` SHA again; do not assume this versioned baseline is
+still the default-branch head.
+
+The next unavoidable owner actions are:
 
 1. complete the qualified independent decisions for the exact bounded Supabase
    V17 migration inventory tracked by issue #1631;
