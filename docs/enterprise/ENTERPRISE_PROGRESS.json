@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-08-20T12:10:00Z",
-  "observed_main_sha": "36206e0b268b31cefb5ff80567dad0887799ba8e",
+  "timestamp": "2026-08-21T13:20:10Z",
+  "observed_main_sha": "14618ac687eac03c95b7b6573ccec50498631b38",
   "last_verified_score_sha": "c413288eb8453b55c4d049c758dc0cd063aa70b9",
   "official_completion_percent": 45,
   "official_remaining_percent": 55,
@@ -18,8 +18,8 @@
   "current_decision": "NO_GO",
   "classification": "UNVERIFIED_CURRENT_MAIN",
   "publish_recommendation": "DO_NOT_PUBLISH_AS_ENTERPRISE",
-  "active_authority_pr": 1730,
-  "active_authority_branch": "agent/enterprise-final-evidence-authority-closure-20260819",
+  "active_authority_pr": null,
+  "active_authority_branch": null,
   "canonical_authority": "Enterprise 100 Final Authority",
   "closure_contract_control_count": 16,
   "required_direct_authorities": [
@@ -29,7 +29,7 @@
     "Production Provider Runtime Proof",
     "External Security Assurance Acceptance"
   ],
-  "next_priority": "Make PR #1730 exact-head checks and reviews green without weakening guardrails; merge through branch protection; then execute the protected direct-authority producers for the resulting exact current main SHA and retain the canonical final authority artifact.",
+  "next_priority": "Resolve the current main SHA at execution time; complete the bounded Supabase V17 decision and promotion lane; then execute the protected direct-authority producers for that same exact SHA and retain the canonical final authority artifact.",
   "evidence_freshness": {
     "status": "STALE",
     "last_verified_sha": "c413288eb8453b55c4d049c758dc0cd063aa70b9",
@@ -38,7 +38,7 @@
     "scorecard_artifact_digest": "sha256:d7ae394485b7760d53788743b072bb60bd784edc6febf36d5d7d421d53a98572",
     "source_scorecard_schema": "risck-comply.enterprise-readiness-scorecard.v1",
     "source_scorecard_sha256": "e2f50fcea5cfbb398b781d4a8948a1a9e898fe18eb1a441cb603d7a7e5d15d9a",
-    "reason": "The last accepted 45% score predates current main. PR #1730 changes authority/provenance wiring but does not itself constitute protected runtime or human evidence and therefore does not raise the official score."
+    "reason": "The last accepted 45% score predates the synchronized baseline. Merged repository authority/provenance wiring does not itself constitute protected runtime or human evidence and therefore does not raise the official score."
   },
-  "calculation_method": "Historical result from the canonical 100-control exact-SHA scorecard. Current-main completion remains unknown until a successful exact-current-main authority accepts all required retained evidence."
+  "calculation_method": "Historical result from the canonical 100-control exact-SHA scorecard. Current completion remains unknown until a successful exact-current-main authority accepts all required retained evidence. This versioned JSON is a pre-change handoff snapshot; generated workflow artifacts provide exact-SHA authority."
 }
