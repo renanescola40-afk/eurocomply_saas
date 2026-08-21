@@ -34,7 +34,7 @@ function localeFromPath(pathname: string): Locale {
 export function AnalyticsConsentBanner() {
   const pathname = usePathname() || '/';
   const locale = localeFromPath(pathname);
-  const copy = getCommercialSurfaceCopy(locale).consent;
+  const copy = getCommercialSurfaceCopy(localeFromPath(pathname)).consent;
   const [visible, setVisible] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
 
