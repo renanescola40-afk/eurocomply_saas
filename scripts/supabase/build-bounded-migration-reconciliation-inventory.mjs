@@ -1,0 +1,141 @@
+#!/usr/bin/env node
+
+import { createHash } from 'node:crypto';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+import {
+  INVENTORY_SCHEMA,
+  validateInventory,
+} from './validate-migration-reconciliation-decisions.mjs';
+
+const FULL_SHA = /^[a-f0-9]{40}$/;
+const SHA256 = /^[a-f0-9]{64}$/;
+const FORWARD_MANIFEST_SCHEMA = 'risck-comply.supabase-forward-reconciliation-manifest.v1';
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+function normalizedDigest(value) {
+  return String(value ?? '').replace(/^sha256:/i, '').toLowerCase();
+}
+
+function keyFor(filename, digest) {
+  return `${String(filename ?? '')}:${normalizedDigest(digest)}`;
+}
+
+function sha256(bytes) {
+  return createHash('sha256').update(bytes).digest('hex');
+}
+
+export function buildBoundedMigrationInventory({
+  sourceInventory,
+  sourceInventoryBytes,
+  forwardManifest,
+  expectedSha,
+  generatedAt = new Date().toISOString(),
+}) {
+  const subjectSha = String(expectedSha ?? '').trim().toLowerCase();
+  assert(FULL_SHA.test(subjectSha), 'expected SHA must be a lowercase 40-character Git SHA');
+
+  const inventoryFailures = validateInventory(sourceInventory);
+  assert(inventoryFailures.length === 0, `source migration inventory is invalid: ${inventoryFailures.join('; ')}`);
+  assert(sourceInventory?.schema === INVENTORY_SCHEMA, 'source migration inventory schema is invalid');
+  assert(Buffer.isBuffer(sourceInventoryBytes) || sourceInventoryBytes instanceof Uint8Array, 'source inventory bytes are required');
+
+  assert(forwardManifest?.schema === FORWARD_MANIFEST_SCHEMA, 'forward reconciliation manifest schema is invalid');
+  assert(forwardManifest?.targetSha === subjectSha, 'forward reconciliation manifest target SHA mismatch');
+  assert(typeof forwardManifest?.selectionDigest === 'string' && /^sha256:[a-f0-9]{64}$/.test(forwardManifest.selectionDigest), 'forward reconciliation selection digest is invalid');
+  assert(Array.isArray(forwardManifest?.migrations), 'forward reconciliation migrations are missing');
+  assert(forwardManifest.migrations.length > 0 && forwardManifest.migrations.length <= 25, 'forward reconciliation must contain 1-25 migrations');
+
+  const inventoryByKey = new Map();
+  for (const item of sourceInventory.items) {
+    const key = keyFor(item.filename, item.sha256);
+    assert(!inventoryByKey.has(key), `duplicate source inventory identity: ${item.filename}`);
+    inventoryByKey.set(key, item);
+  }
+
+  const seen = new Set();
+  const items = forwardManifest.migrations.map((migration, index) => {
+    const digest = normalizedDigest(migration?.sha256);
+    assert(typeof migration?.filename === 'string' && migration.filename.length > 0, `selected migration filename is missing at position ${index + 1}`);
+    assert(SHA256.test(digest), `selected migration SHA-256 is invalid: ${migration?.filename ?? 'unknown'}`);
+    const key = keyFor(migration.filename, digest);
+    assert(!seen.has(key), `duplicate selected migration identity: ${migration.filename}`);
+    seen.add(key);
+
+    const sourceItem = inventoryByKey.get(key);
+    assert(sourceItem, `selected migration is absent from production dry-run inventory: ${migration.filename}`);
+    return {
+      ...sourceItem,
+      filename: migration.filename,
+      sha256: digest,
+      version: migration.version,
+      boundedOrder: index + 1,
+      forwardPurpose: migration.purpose ?? null,
+    };
+  });
+
+  assert(items.length === forwardManifest.migrations.length, 'bounded inventory count mismatch');
+
+  return {
+    schema: INVENTORY_SCHEMA,
+    generatedAt,
+    sourceInventorySha256: sha256(sourceInventoryBytes),
+    boundedSelection: {
+      schema: 'risck-comply.supabase-forward-reconciliation-decision-scope.v1',
+      targetSha: subjectSha,
+      selectionDigest: forwardManifest.selectionDigest,
+      changeSet: forwardManifest.changeSet ?? null,
+      selectedCount: items.length,
+      exactFilenameAndSha256Bound: true,
+      sourceInventorySubsetOnly: true,
+      automaticClassificationPerformed: false,
+      productionWriteAuthorized: false,
+    },
+    allowedClassifications: sourceInventory.allowedClassifications,
+    items,
+    truthBoundary: 'This inventory is an exact filename + SHA-256 subset of the production migration dry-run inventory, ordered by the exact forward reconciliation manifest. It performs no classification, migration-history repair, SQL execution, or production authorization.',
+  };
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const positional = args.filter((value) => !value.startsWith('--'));
+  const [sourceInventoryPath, forwardManifestPath, outputPath] = positional;
+  const expectedSha = args.find((value) => value.startsWith('--expected-sha='))?.slice('--expected-sha='.length);
+  if (!sourceInventoryPath || !forwardManifestPath || !outputPath || !expectedSha) {
+    throw new Error('usage: source-inventory.json forward-manifest.json output.json --expected-sha=<sha>');
+  }
+
+  const [sourceInventoryBytes, forwardManifestBytes] = await Promise.all([
+    readFile(sourceInventoryPath),
+    readFile(forwardManifestPath),
+  ]);
+  const sourceInventory = JSON.parse(sourceInventoryBytes.toString('utf8'));
+  const forwardManifest = JSON.parse(forwardManifestBytes.toString('utf8'));
+  const bounded = buildBoundedMigrationInventory({
+    sourceInventory,
+    sourceInventoryBytes,
+    forwardManifest,
+    expectedSha,
+  });
+  await mkdir(dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, `${JSON.stringify(bounded, null, 2)}\n`, { mode: 0o600 });
+  process.stdout.write(`${JSON.stringify({
+    status: 'PASS',
+    targetSha: bounded.boundedSelection.targetSha,
+    selectedCount: bounded.boundedSelection.selectedCount,
+    selectionDigest: bounded.boundedSelection.selectionDigest,
+  })}\n`);
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });
+}
