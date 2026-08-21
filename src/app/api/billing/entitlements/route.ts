@@ -36,6 +36,8 @@ export async function GET(request: Request) {
       ...entitlements,
       maxDocuments: Number.isFinite(entitlements.maxDocuments) ? entitlements.maxDocuments : null,
       maxUsers: Number.isFinite(entitlements.maxUsers) ? entitlements.maxUsers : null,
+      maxVendors: Number.isFinite(entitlements.maxVendors) ? entitlements.maxVendors : null,
+      maxRisks: Number.isFinite(entitlements.maxRisks) ? entitlements.maxRisks : null,
       maxFiscalCountries: Number.isFinite(entitlements.maxFiscalCountries) ? entitlements.maxFiscalCountries : null,
     },
   });
