@@ -1,11 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { headers } from 'next/headers';
 
-import { trustedRequestIdFromHeaders } from '@/lib/observability/request-correlation';
+import { buildServerAuditMetadata } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { sanitizeAuditMetadata } from '@/server/queries/audit-events';
 import { buildAuditChainRecord } from '@/server/security/audit-chain';
-import { hashRateLimitIp, hashRateLimitUserAgent } from '@/server/security/rate-limit';
 
 const ATOMIC_COMMERCIAL_RESOURCE_RPC = 'mutate_commercial_resource_with_audit_atomic';
 const MAX_ATOMIC_MUTATION_ATTEMPTS = 4;
@@ -70,37 +67,9 @@ async function getPreviousAuditHash(organizationId: string) {
   return typeof eventHash === 'string' ? eventHash : null;
 }
 
-function pseudonymizedHeaderValue(value: string | null, kind: 'ip' | 'user-agent') {
-  const normalized = value?.split(',')[0]?.trim() ?? '';
-  if (!normalized) return null;
-  return `sha256:${kind === 'ip' ? hashRateLimitIp(normalized) : hashRateLimitUserAgent(normalized.slice(0, 512))}`;
-}
-
-async function buildMutationAuditMetadata(metadata?: Record<string, unknown>) {
-  try {
-    const requestHeaders = await headers();
-    return sanitizeAuditMetadata({
-      ...(metadata ?? {}),
-      requestContext: {
-        requestId: trustedRequestIdFromHeaders(requestHeaders),
-        ipAddressPseudonym: pseudonymizedHeaderValue(
-          requestHeaders.get('x-forwarded-for') ?? requestHeaders.get('x-real-ip'),
-          'ip',
-        ),
-        userAgentPseudonym: pseudonymizedHeaderValue(requestHeaders.get('user-agent'), 'user-agent'),
-      },
-    });
-  } catch {
-    return sanitizeAuditMetadata({
-      ...(metadata ?? {}),
-      requestContext: { requestId: 'req_unavailable' },
-    });
-  }
-}
-
 export async function mutateCommercialResourceAtomic(input: AtomicMutationInput): Promise<AtomicMutationRow> {
   const supabase = createAdminClient();
-  const auditMetadata = await buildMutationAuditMetadata(input.auditMetadata);
+  const { metadata: auditMetadata } = await buildServerAuditMetadata(input.auditMetadata);
   const maxCount = input.maxCount == null || !Number.isFinite(input.maxCount) ? null : Math.max(0, Math.trunc(input.maxCount));
 
   for (let attempt = 1; attempt <= MAX_ATOMIC_MUTATION_ATTEMPTS; attempt += 1) {
