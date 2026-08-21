@@ -57,15 +57,21 @@ async function boundedJson(response) {
 
 export function requiredStripePriceKeys(catalog) {
   if (catalog?.schema !== 'risck-comply.billing-commercial-catalog.v1') throw new Error('invalid_billing_catalog');
+  if (catalog?.transitionPolicy?.legacyStripePriceFallbackAllowed !== false) {
+    throw new Error('legacy_stripe_price_fallback_must_be_disabled');
+  }
+
   const keys = [];
   for (const publicId of ['essential', 'professional']) {
     const plan = catalog.plans?.[publicId];
-    if (!plan?.monthlyPriceEnvKey || !plan?.annualPriceEnvKey) throw new Error(`missing_price_env_contract:${publicId}`);
+    if (plan?.selfServe !== true || plan?.salesLed !== false) {
+      throw new Error(`invalid_self_serve_policy:${publicId}`);
+    }
+    if (!plan?.monthlyPriceEnvKey || !plan?.annualPriceEnvKey) {
+      throw new Error(`missing_price_env_contract:${publicId}`);
+    }
     keys.push(plan.monthlyPriceEnvKey, plan.annualPriceEnvKey);
   }
-  const business = catalog.plans?.business;
-  if (!business?.monthlyPriceEnvKey) throw new Error('missing_price_env_contract:business');
-  keys.push(business.monthlyPriceEnvKey);
   return keys;
 }
 
@@ -121,14 +127,6 @@ export async function loadVercelStripePriceBindings({ fetchImpl = fetch, token, 
 function appendBindingsToGitHubEnv(bindings) {
   const githubEnv = requiredEnv('GITHUB_ENV');
   const lines = Object.entries(bindings).map(([key, value]) => `${key}=${value}`);
-  const compatibility = {
-    STRIPE_PRICE_STARTER_MONTHLY: bindings.STRIPE_PRICE_ESSENTIAL_MONTHLY,
-    STRIPE_PRICE_GROWTH_MONTHLY: bindings.STRIPE_PRICE_PROFESSIONAL_MONTHLY,
-    STRIPE_PRICE_ENTERPRISE_MONTHLY: bindings.STRIPE_PRICE_BUSINESS_MONTHLY,
-  };
-  for (const [key, value] of Object.entries(compatibility)) {
-    if (value) lines.push(`${key}=${value}`);
-  }
   appendFileSync(githubEnv, `${lines.join('\n')}\n`, 'utf8');
 }
 

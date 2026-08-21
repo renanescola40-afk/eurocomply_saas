@@ -5,8 +5,11 @@ import { dirname, resolve } from 'node:path';
 
 const OUTPUT = resolve('docs/security/evidence/runtime/production-secrets-provider-stores.json');
 const DEFAULT_PROVIDER_TARGETS_PATH = 'config/production-provider-targets.json';
+const BILLING_CATALOG_PATH = 'config/billing-commercial-catalog.json';
 const PROVIDER_TARGETS_SCHEMA = 'risck-comply.production-provider-targets.v1';
+const BILLING_CATALOG_SCHEMA = 'risck-comply.billing-commercial-catalog.v1';
 const FULL_SHA = /^[a-f0-9]{40}$/;
+const PRICE_ID = /^price_[A-Za-z0-9]+$/;
 const VERCEL_TEAM_ID = /^team_[A-Za-z0-9]+$/;
 const VERCEL_PROJECT_ID = /^prj_[A-Za-z0-9]+$/;
 const API_TIMEOUT_MS = 8_000;
@@ -67,6 +70,40 @@ function loadProviderTargets() {
   } catch {
     return { valid: false, vercel: null };
   }
+}
+
+function loadCanonicalStripeBindings() {
+  const catalog = JSON.parse(readFileSync(resolve(BILLING_CATALOG_PATH), 'utf8'));
+  if (catalog?.schema !== BILLING_CATALOG_SCHEMA) throw new Error('invalid_billing_catalog');
+
+  const transitionPolicyRejectsLegacy = catalog?.transitionPolicy?.legacyStripePriceFallbackAllowed === false;
+  const legacyPriceKeys = Array.from(new Set(
+    Object.values(catalog?.plans ?? {}).flatMap((plan) => [
+      ...(Array.isArray(plan?.legacyMonthlyPriceEnvKeys) ? plan.legacyMonthlyPriceEnvKeys : []),
+      ...(Array.isArray(plan?.legacyAnnualPriceEnvKeys) ? plan.legacyAnnualPriceEnvKeys : []),
+    ]).filter((key) => typeof key === 'string' && key.trim()),
+  ));
+  const bindings = [];
+  for (const publicId of ['essential', 'professional']) {
+    const plan = catalog?.plans?.[publicId];
+    if (plan?.selfServe !== true || plan?.salesLed !== false) {
+      throw new Error(`invalid_self_serve_policy:${publicId}`);
+    }
+    for (const cadence of ['monthly', 'annual']) {
+      const envKey = plan?.[`${cadence}PriceEnvKey`];
+      if (typeof envKey !== 'string' || !envKey.trim()) {
+        throw new Error(`missing_price_env_contract:${publicId}:${cadence}`);
+      }
+      bindings.push({
+        publicId,
+        envKey,
+        interval: cadence === 'monthly' ? 'month' : 'year',
+        priceId: env(envKey),
+      });
+    }
+  }
+
+  return { bindings, transitionPolicyRejectsLegacy, legacyPriceKeys };
 }
 
 async function request(url, init = {}) {
@@ -256,20 +293,13 @@ async function supabaseProof() {
   return { checks, passed: Object.values(checks).every(Boolean) };
 }
 
-function stripePriceIds() {
-  return [
-    env('STRIPE_PRICE_STARTER_MONTHLY') || env('STRIPE_PRICE_ESSENTIAL_MONTHLY'),
-    env('STRIPE_PRICE_GROWTH_MONTHLY') || env('STRIPE_PRICE_PROFESSIONAL_MONTHLY') || env('STRIPE_PRICE_BUSINESS_MONTHLY'),
-    env('STRIPE_PRICE_ENTERPRISE_MONTHLY') || env('STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY'),
-  ].filter(Boolean);
-}
-
 async function stripeProof() {
   const secret = env('STRIPE_SECRET_KEY');
-  const prices = stripePriceIds();
+  const { bindings, transitionPolicyRejectsLegacy, legacyPriceKeys } = loadCanonicalStripeBindings();
+  const legacyAliasesRejected = legacyPriceKeys.every((key) => !env(key));
+  const configured = bindings.every((binding) => PRICE_ID.test(binding.priceId));
   let apiReachable = false;
-  let priceLookup = false;
-  let billableMonthlyPrices = 0;
+  let verifiedCanonicalPrices = 0;
 
   if (secret) {
     const account = await request('https://api.stripe.com/v1/account', {
@@ -279,9 +309,9 @@ async function stripeProof() {
     await account?.body?.cancel().catch(() => undefined);
   }
 
-  if (secret && prices.length === 3) {
-    const results = await Promise.all(prices.map(async (priceId) => {
-      const response = await request(`https://api.stripe.com/v1/prices/${encodeURIComponent(priceId)}?expand[]=product`, {
+  if (secret && configured && transitionPolicyRejectsLegacy && legacyAliasesRejected) {
+    const results = await Promise.all(bindings.map(async (binding) => {
+      const response = await request(`https://api.stripe.com/v1/prices/${encodeURIComponent(binding.priceId)}?expand[]=product`, {
         headers: { Authorization: `Bearer ${secret}` },
       });
       if (response?.status !== 200) {
@@ -289,22 +319,34 @@ async function stripeProof() {
         return false;
       }
       const body = await jsonBounded(response);
-      return body?.active === true
+      return body?.livemode === true
+        && body?.active === true
         && body?.type === 'recurring'
-        && body?.recurring?.interval === 'month'
-        && body?.product?.active === true;
+        && body?.recurring?.interval === binding.interval
+        && body?.product?.active === true
+        && body?.product?.metadata?.billing_plan_id === binding.publicId
+        && body?.product?.metadata?.catalog_status === 'canonical_live';
     }));
-    billableMonthlyPrices = results.filter(Boolean).length;
-    priceLookup = billableMonthlyPrices === 3;
+    verifiedCanonicalPrices = results.filter(Boolean).length;
   }
 
   const checks = {
     secretConfigured: Boolean(secret),
     apiReachable,
-    threePriceIdsConfigured: prices.length === 3,
-    priceLookup,
+    transitionPolicyRejectsLegacy,
+    legacyAliasesRejected,
+    fourCanonicalSelfServeBindingsConfigured: configured && bindings.length === 4,
+    fourCanonicalSelfServePricesVerified: verifiedCanonicalPrices === 4,
   };
-  return { checks, metrics: { billableMonthlyPrices }, passed: Object.values(checks).every(Boolean) };
+  return {
+    checks,
+    metrics: {
+      canonicalSelfServePriceBindings: bindings.length,
+      canonicalSelfServePricesVerified: verifiedCanonicalPrices,
+      legacyPriceKeysChecked: legacyPriceKeys.length,
+    },
+    passed: Object.values(checks).every(Boolean),
+  };
 }
 
 function sentryEntryHasActiveHttpsDsn(entry) {
@@ -388,7 +430,7 @@ async function main() {
     providerEntry('github', github, '.github/workflows/production-provider-runtime-proof.yml'),
     providerEntry('vercel', vercel, 'Vercel API project identity and production environment metadata (values never decrypted or stored)'),
     providerEntry('supabase', supabase, 'Supabase REST connectivity using protected service-role credential (credential not stored)'),
-    providerEntry('stripe', stripe, 'Stripe account and recurring price metadata probes (responses not stored)'),
+    providerEntry('stripe', stripe, 'Stripe account and canonical self-serve recurring Price metadata probes (responses and Price IDs not stored)'),
     providerEntry('sentry', sentry, 'Sentry project and active client-key metadata probes using CI-only auth token (DSN and token not stored)'),
   ];
   const allPassed = FULL_SHA.test(targetSha) && providersReviewed.every((entry) => entry.status === 'reviewed');
@@ -423,6 +465,7 @@ async function main() {
     evidenceLocations: [
       '.github/workflows/production-provider-runtime-proof.yml',
       'config/production-provider-targets.json',
+      'config/billing-commercial-catalog.json',
       'scripts/security/run-production-provider-runtime-proof.mjs',
       'scripts/release/validate-production-secrets-runtime-evidence.mjs',
       'docs/security/evidence/runtime/production-secrets-provider-stores.json',
