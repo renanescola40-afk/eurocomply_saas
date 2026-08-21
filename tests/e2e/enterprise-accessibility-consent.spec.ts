@@ -18,6 +18,13 @@ async function startWithAnalyticsDenied(page: Page) {
   await page.addInitScript((key) => window.localStorage.setItem(key, 'denied'), CONSENT_STORAGE_KEY);
 }
 
+async function focusConsentPolicyLink(page: Page) {
+  await page.keyboard.press('Tab');
+  const policyLink = page.getByRole('link', { name: 'Cookie Policy and settings' });
+  await expect(policyLink).toBeFocused();
+  await expect(policyLink).toHaveAttribute('href', '/en/cookie-policy');
+}
+
 async function semanticAudit(page: Page) {
   return page.evaluate(() => {
     const isVisible = (element: Element) => {
@@ -168,6 +175,7 @@ test.describe('enterprise accessibility and analytics consent acceptance', () =>
       await expect(page.locator(`#${LEGACY_POSTHOG_SCRIPT_ID}`)).toHaveCount(0);
       expect(analyticsRequests).toBe(0);
 
+      await focusConsentPolicyLink(page);
       await page.keyboard.press('Tab');
       const decline = page.getByRole('button', { name: 'Decline' });
       await expect(decline).toBeFocused();
@@ -196,7 +204,10 @@ test.describe('enterprise accessibility and analytics consent acceptance', () =>
       await expect(page.locator(`#${POSTHOG_SCRIPT_ID}`)).toHaveCount(0);
       await expect(page.locator(`#${LEGACY_POSTHOG_SCRIPT_ID}`)).toHaveCount(0);
 
+      await focusConsentPolicyLink(page);
       await page.keyboard.press('Tab');
+      const decline = page.getByRole('button', { name: 'Decline' });
+      await expect(decline).toBeFocused();
       await page.keyboard.press('Tab');
       const allow = page.getByRole('button', { name: 'Allow' });
       await expect(allow).toBeFocused();
