@@ -46,14 +46,13 @@ function githubRuntimeContext() {
   };
 }
 
-const stripePricePrimary = ['STRIPE_PRICE_STARTER_MONTHLY', 'STRIPE_PRICE_GROWTH_MONTHLY', 'STRIPE_PRICE_ENTERPRISE_MONTHLY'];
-const stripePriceLegacyGroups = [
-  ['STRIPE_PRICE_ESSENTIAL_MONTHLY'],
-  ['STRIPE_PRICE_PROFESSIONAL_MONTHLY', 'STRIPE_PRICE_BUSINESS_MONTHLY'],
-  ['STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY'],
+const stripePriceCanonical = [
+  'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+  'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+  'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+  'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
 ];
-
-const stripePricesReady = stripePricePrimary.every((name, index) => Boolean(String(process.env[name] || '').trim()) || hasAny(stripePriceLegacyGroups[index]));
+const stripePricesReady = hasAll(stripePriceCanonical);
 const httpScannerReady = hasAny(['MALWARE_SCANNER_ENDPOINT', 'MALWARE_SCANNER_URL']) && hasAny(['MALWARE_SCANNER_ALLOWED_HOSTS']);
 const clamavScannerReady = hasAny(['MALWARE_SCANNER_CLAMAV_HOST']) && hasAny(['MALWARE_SCANNER_CLAMAV_PORT']);
 const scannerProvider = String(process.env.MALWARE_SCANNER_PROVIDER || '').trim().toLowerCase();
@@ -79,8 +78,9 @@ const checks = [
   group('stripeConfigured', true, hasAll(['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET']) && stripePricesReady, {
     requiresSecretKey: true,
     requiresWebhookSecret: true,
-    requiresStarterGrowthEnterprisePricesOrLegacyFallbacks: true,
-  }, 'Set Stripe secret key, webhook secret and monthly price IDs for the configured pricing model.'),
+    requiresCanonicalSelfServePrices: stripePriceCanonical,
+    legacyAliasesAcceptedForReadiness: false,
+  }, 'Set Stripe secret key, webhook secret and all four canonical Essential/Professional monthly+annual production Price bindings. Legacy Starter/Growth aliases do not authorize enterprise release readiness.'),
   group('redisConfigured', true, hasAll(['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN']), { requiredCount: 2 }, 'Set Upstash Redis REST URL and token for rate-limit/session runtime checks.'),
   group('sentryConfigured', true, hasAny(['NEXT_PUBLIC_SENTRY_DSN', 'SENTRY_DSN']), { requiresDsn: true }, 'Set at least one Sentry DSN source for runtime observability.'),
   group('sentrySourceMapUploadConfigured', sentrySourceMapUploadRequired, hasAll(['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN']), {
