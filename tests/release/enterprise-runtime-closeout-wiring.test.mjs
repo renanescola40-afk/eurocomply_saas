@@ -41,6 +41,10 @@ test('runtime closeout keeps only non-secret release coordinates at job scope', 
     'STRIPE_PRICE_STARTER_MONTHLY',
     'STRIPE_PRICE_GROWTH_MONTHLY',
     'STRIPE_PRICE_ENTERPRISE_MONTHLY',
+    'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+    'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+    'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+    'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
     'SENTRY_ORG',
     'SENTRY_PROJECT',
     'RELEASE_ROLLBACK_TARGET',
@@ -75,6 +79,21 @@ test('runtime closeout keeps only non-secret release coordinates at job scope', 
       workflow,
       new RegExp(`^\\s{6}${key}:`, 'm'),
       `${key} must not be materialized at protected job scope`,
+    );
+  }
+});
+
+test('runtime closeout supplies every canonical self-serve Stripe price required by Public Production Final', () => {
+  for (const key of [
+    'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+    'STRIPE_PRICE_ESSENTIAL_ANNUAL',
+    'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+    'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
+  ]) {
+    assert.match(
+      workflow,
+      new RegExp(`^\\s{6}${key}: \\$\\{\\{ vars\\.${key} \\}\\}$`, 'm'),
+      `${key} must be available to release:production-final`,
     );
   }
 });
