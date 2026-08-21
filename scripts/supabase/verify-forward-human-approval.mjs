@@ -39,6 +39,8 @@ export function verifyForwardHumanApproval({
   assert(FULL_SHA.test(normalizedSubject), 'decision subject SHA is invalid');
   assert(FULL_SHA.test(normalizedEvidence), 'decision evidence commit SHA is invalid');
   assert(/^\d+$/.test(String(decisionRunId ?? '')), 'decision run ID is invalid');
+  assert(normalizedSubject === normalizedTarget, 'decision subject SHA must equal target SHA; byte equivalence cannot transfer human approval');
+  assert(normalizedEvidence === normalizedTarget, 'decision evidence commit SHA must equal target SHA');
 
   assert(manifest?.schema === MANIFEST_SCHEMA, 'forward reconciliation manifest schema is invalid');
   assert(manifest?.targetSha === normalizedTarget, 'forward reconciliation manifest target SHA mismatch');
@@ -113,6 +115,7 @@ export function verifyForwardHumanApproval({
     selectedMigrationCount: approved.length,
     checks: {
       acceptedHumanDecisionGate: true,
+      decisionSubjectEqualsTargetSha: true,
       everySelectedMigrationPendingDeployment: true,
       exactSelectedBytesCovered: true,
       reviewerProvenancePresent: true,
@@ -129,7 +132,7 @@ export function verifyForwardHumanApproval({
       humanNamesStored: false,
       approvalReferenceStored: false,
     },
-    truthBoundary: 'This proof establishes that every selected forward migration byte is covered by an accepted human PENDING_DEPLOYMENT classification from the protected migration decision gate. It does not create human review, authorize production by itself, repair migration history, or permit migrations outside the selected manifest.',
+    truthBoundary: 'This proof establishes that every selected forward migration byte is covered by an accepted human PENDING_DEPLOYMENT classification bound to the exact production target SHA. Byte equivalence never transfers human approval. It does not authorize production by itself, repair migration history, or permit migrations outside the selected manifest.',
   };
 }
 
