@@ -29,9 +29,15 @@ function stubBaseEnvironment() {
   vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'service-role');
   vi.stubEnv('STRIPE_SECRET_KEY', 'configured');
   vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'configured');
-  vi.stubEnv('STRIPE_PRICE_STARTER_MONTHLY', 'configured');
-  vi.stubEnv('STRIPE_PRICE_GROWTH_MONTHLY', 'configured');
-  vi.stubEnv('STRIPE_PRICE_ENTERPRISE_MONTHLY', 'configured');
+  vi.stubEnv('STRIPE_PRICE_ESSENTIAL_MONTHLY', 'configured');
+  vi.stubEnv('STRIPE_PRICE_ESSENTIAL_ANNUAL', 'configured');
+  vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_MONTHLY', 'configured');
+  vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_ANNUAL', 'configured');
+  vi.stubEnv('STRIPE_PRICE_STARTER_MONTHLY', '');
+  vi.stubEnv('STRIPE_PRICE_STARTER_ANNUAL', '');
+  vi.stubEnv('STRIPE_PRICE_GROWTH_MONTHLY', '');
+  vi.stubEnv('STRIPE_PRICE_GROWTH_ANNUAL', '');
+  vi.stubEnv('STRIPE_PRICE_ENTERPRISE_MONTHLY', '');
   vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://redis.example');
   vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'configured');
   vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', 'https://public@example.ingest.sentry.io/1');
