@@ -118,6 +118,9 @@ describe('protected production provider runtime proof', () => {
     expect(priceBindingLoader).toContain("for (const publicId of ['essential', 'professional'])");
     expect(priceBindingLoader).toContain('plan.monthlyPriceEnvKey');
     expect(priceBindingLoader).toContain('plan.annualPriceEnvKey');
+    expect(priceBindingLoader).toContain('legacyStripePriceFallbackAllowed !== false');
+    expect(priceBindingLoader).not.toContain('const compatibility =');
+    expect(priceBindingLoader).not.toContain('const business = catalog.plans?.business');
     for (const key of canonicalSelfServeKeys) {
       expect(workflow).not.toContain(`${key}: ` + '${{ vars.' + key + ' }}');
       expect(billingProducer).toContain(`'${key}'`);
@@ -128,6 +131,22 @@ describe('protected production provider runtime proof', () => {
     expect(billingProducer).toContain('transitionPolicyRejectsLegacy');
     expect(billingProducer).toContain('fourCanonicalSelfServeBindingsConfigured');
     expect(billingProducer).toContain('fourCanonicalSelfServeBindingsDistinct');
+  });
+
+  it('keeps the broad provider Stripe probe on the same four canonical self-serve prices', () => {
+    expect(producer).toContain("for (const publicId of ['essential', 'professional'])");
+    expect(producer).toContain("for (const cadence of ['monthly', 'annual'])");
+    expect(producer).toContain('transitionPolicyRejectsLegacy');
+    expect(producer).toContain('legacyAliasesRejected');
+    expect(producer).toContain('fourCanonicalSelfServeBindingsConfigured');
+    expect(producer).toContain('fourCanonicalSelfServePricesVerified');
+    expect(producer).toContain("body?.livemode === true");
+    expect(producer).toContain("body?.product?.metadata?.catalog_status === 'canonical_live'");
+    expect(producer).not.toContain("env('STRIPE_PRICE_STARTER_MONTHLY') ||");
+    expect(producer).not.toContain("env('STRIPE_PRICE_GROWTH_MONTHLY') ||");
+    expect(producer).not.toContain("env('STRIPE_PRICE_ENTERPRISE_MONTHLY') ||");
+    expect(producer).not.toContain('threePriceIdsConfigured');
+    expect(producer).not.toContain('billableMonthlyPrices');
   });
 
   it('uses the versioned Portal contract as the only Portal selector', () => {
