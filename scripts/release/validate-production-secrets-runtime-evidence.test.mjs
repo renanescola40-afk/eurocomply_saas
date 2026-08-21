@@ -32,8 +32,10 @@ const checks = {
   stripe: {
     secretConfigured: true,
     apiReachable: true,
-    threePriceIdsConfigured: true,
-    priceLookup: true,
+    transitionPolicyRejectsLegacy: true,
+    legacyAliasesRejected: true,
+    fourCanonicalSelfServeBindingsConfigured: true,
+    fourCanonicalSelfServePricesVerified: true,
   },
   sentry: {
     organizationConfigured: true,
@@ -138,6 +140,16 @@ describe('validateProductionSecretsRuntimeEvidence', () => {
     expect(validateProductionSecretsRuntimeEvidence(evidence, { now })).toContain(
       'vercel.requiredEnvironmentKeysPresent must be true',
     );
+  });
+
+  it('rejects Stripe proof that falls back to legacy aliases or misses a canonical self-serve Price', () => {
+    const evidence = completeEvidence();
+    const stripe = evidence.providersReviewed.find((entry) => entry.provider === 'stripe');
+    stripe.checks.legacyAliasesRejected = false;
+    stripe.checks.fourCanonicalSelfServePricesVerified = false;
+    const failures = validateProductionSecretsRuntimeEvidence(evidence, { now });
+    expect(failures).toContain('stripe.legacyAliasesRejected must be true');
+    expect(failures).toContain('stripe.fourCanonicalSelfServePricesVerified must be true');
   });
 
   it('rejects Sentry when the active client-key inventory cannot prove a DSN', () => {
