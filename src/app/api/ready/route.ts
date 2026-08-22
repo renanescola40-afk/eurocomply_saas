@@ -120,6 +120,7 @@ type ReadyDatabaseCheck = {
   adminClient: boolean;
   subscriptionsReadable: boolean;
   commercialMutationsReady: boolean;
+  maintenanceDataPlaneReady: boolean;
   detail: 'ok' | 'not_ready';
 };
 
@@ -294,6 +295,7 @@ async function checkSupabaseConnectivity(): Promise<ReadyDatabaseCheck> {
     adminClient: false,
     subscriptionsReadable: false,
     commercialMutationsReady: false,
+    maintenanceDataPlaneReady: false,
     detail: 'not_ready',
   };
 
@@ -303,6 +305,9 @@ async function checkSupabaseConnectivity(): Promise<ReadyDatabaseCheck> {
 
     if (supabase) {
       const subscriptionsQuery = supabase.from('subscriptions').select('id').limit(1);
+      const intelligenceItemsQuery = supabase.from('intelligence_items').select('id').limit(1);
+      const notificationEventsQuery = supabase.from('email_notification_events').select('id').limit(1);
+      const vendorMaintenanceQuery = supabase.from('vendors').select('id,next_review_at').limit(1);
       const commercialMutationProbe = supabase.rpc(COMMERCIAL_RESOURCE_ATOMIC_RPC, {
         p_resource_type: 'vendor',
         p_operation: 'create',
@@ -319,17 +324,24 @@ async function checkSupabaseConnectivity(): Promise<ReadyDatabaseCheck> {
         p_event_hash: 'invalid-readiness-probe',
         p_hash_signature: null,
       });
-      const [subscriptions, commercialMutation] = await Promise.all([
+      const [subscriptions, intelligenceItems, notificationEvents, vendorMaintenance, commercialMutation] = await Promise.all([
         withReadinessDependencyTimeout(subscriptionsQuery),
+        withReadinessDependencyTimeout(intelligenceItemsQuery),
+        withReadinessDependencyTimeout(notificationEventsQuery),
+        withReadinessDependencyTimeout(vendorMaintenanceQuery),
         withReadinessDependencyTimeout(commercialMutationProbe),
       ]);
       const subscriptionsReadable = !subscriptions.error;
+      const maintenanceDataPlaneReady = !intelligenceItems.error
+        && !notificationEvents.error
+        && !vendorMaintenance.error;
       const commercialMutationsReady = !commercialMutation.error && isCommercialMutationProbeReady(commercialMutation.data);
       database = {
         adminClient: true,
         subscriptionsReadable,
         commercialMutationsReady,
-        detail: subscriptionsReadable && commercialMutationsReady ? 'ok' : 'not_ready',
+        maintenanceDataPlaneReady,
+        detail: subscriptionsReadable && commercialMutationsReady && maintenanceDataPlaneReady ? 'ok' : 'not_ready',
       };
     }
   } catch (error) {
@@ -338,6 +350,7 @@ async function checkSupabaseConnectivity(): Promise<ReadyDatabaseCheck> {
       adminClient: false,
       subscriptionsReadable: false,
       commercialMutationsReady: false,
+      maintenanceDataPlaneReady: false,
       detail: 'not_ready',
     };
   }
@@ -439,7 +452,10 @@ export async function GET(request: Request) {
   const sentryConfigured = checkConfigured(environment, 'sentry');
   const stripe = await checkStripeConnectivity(stripeConfigured);
   const commercialMutationsReady = database.commercialMutationsReady;
-  const databaseReachable = database.adminClient && database.subscriptionsReadable && commercialMutationsReady;
+  const databaseReachable = database.adminClient
+    && database.subscriptionsReadable
+    && commercialMutationsReady
+    && database.maintenanceDataPlaneReady;
   const stripeApiReachable = stripe.apiReachable && stripe.priceLookup;
   const enterpriseStepUpConfigured = enterpriseStepUp.configured;
   const enterpriseStorageScannerConfigured = enterpriseStorageScanner.configured;
