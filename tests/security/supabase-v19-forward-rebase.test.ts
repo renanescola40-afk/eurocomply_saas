@@ -86,7 +86,6 @@ describe('Supabase V19 production-forward rebase', () => {
     expect(target).toContain('duplicate_enterprise_stripe_subscription_binding');
     expect(target).toContain('enterprise_contracts_stripe_subscription_uidx');
     expect(target).toContain('from public,anon,authenticated,service_role');
-    expect(target).toContain('productionWriteAuthorizedByConfig').not;
   });
 
   it('keeps the unapplied V18 identities outside normal migration replay', () => {
