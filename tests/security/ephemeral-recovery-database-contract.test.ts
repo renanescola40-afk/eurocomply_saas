@@ -156,9 +156,13 @@ describe('ephemeral Supabase recovery database contract', () => {
     expect(exercise).toContain("'--role-only', '--file', rolesDumpPath");
     expect(exercise).toContain("run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath], {}, 'recovery_schema_dump_failed')");
     expect(exercise).toContain("'--data-only', '--use-copy'");
-    expect(exercise).toContain("SUPABASE_MANAGED_DATA_EXCLUDE = 'storage.*'");
+    expect(exercise).toContain('function readManagedStorageRelations(connection)');
+    expect(exercise).toContain("relations.includes('storage.buckets')");
+    expect(exercise).toContain("relations.includes('storage.objects')");
+    expect(exercise).toContain("const managedStorageDataExclude = readManagedStorageRelations(source).join(',')");
+    expect(exercise).not.toContain("SUPABASE_MANAGED_DATA_EXCLUDE = 'storage.*'");
     expect(exercise.match(/'--exclude'/g)).toHaveLength(1);
-    expect(exercise).toContain("'--exclude', SUPABASE_MANAGED_DATA_EXCLUDE");
+    expect(exercise).toContain("'--exclude', managedStorageDataExclude");
     expect(exercise).toContain("failurePhase = 'data_dump_storage_exclusion_validation'");
     expect(exercise).toContain('assertManagedStorageRowsExcluded(dataDumpPath)');
     expect(exercise).toContain('checks.managedStorageRowsExcluded = true');
