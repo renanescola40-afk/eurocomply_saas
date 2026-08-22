@@ -10,7 +10,7 @@ const config = readFileSync('config/supabase-forward-reconciliation.json', 'utf8
 
 describe('compliance metric snapshot tenant boundary', () => {
   it('keeps the live tenant-scoped snapshot table backend-only in the selected forward package', () => {
-    expect(config).toContain('2026-08-17-enterprise-data-plane-closure-v17');
+    expect(config).toContain('2026-08-22-enterprise-data-plane-closure-v18');
     expect(config).toContain('20260816110000_harden_gap_personal_task_write_boundary.sql');
 
     expect(migration).toContain("if to_regclass('public.compliance_metric_snapshots') is null");

@@ -11,7 +11,7 @@ const CONFIG_SCHEMA = 'risck-comply.supabase-forward-reconciliation-config.v1';
 const MANIFEST_SCHEMA = 'risck-comply.supabase-forward-reconciliation-manifest.v1';
 const REHEARSAL_SCHEMA = 'risck-comply.supabase-forward-reconciliation-rehearsal.v1';
 const SET_PROOF_SCHEMA = 'risck-comply.supabase-forward-reconciliation-set-proof.v1';
-const MAX_MIGRATIONS = 25;
+const MAX_MIGRATIONS = 32;
 const MAX_SQL_BYTES = 2 * 1024 * 1024;
 
 function sha256(bytes) {
@@ -44,7 +44,7 @@ function immutableSelectionPayload({ targetSha, changeSet, migrations }) {
 function validateConfig(config) {
   assert(config?.schema === CONFIG_SCHEMA, 'forward reconciliation config schema is invalid');
   assert(typeof config?.changeSet === 'string' && /^[a-z0-9][a-z0-9._-]{3,127}$/i.test(config.changeSet), 'changeSet is invalid');
-  assert(Array.isArray(config?.migrations) && config.migrations.length > 0 && config.migrations.length <= MAX_MIGRATIONS, 'config migrations must contain 1-25 items');
+  assert(Array.isArray(config?.migrations) && config.migrations.length > 0 && config.migrations.length <= MAX_MIGRATIONS, `config migrations must contain 1-${MAX_MIGRATIONS} items`);
   assert(config?.truthBoundary?.automaticClassification === false, 'config must forbid automatic classification');
   assert(config?.truthBoundary?.productionWriteAuthorizedByConfig === false, 'config must not authorize production writes');
   assert(config?.truthBoundary?.migrationHistoryRepairAllowed === false, 'config must forbid migration history repair');

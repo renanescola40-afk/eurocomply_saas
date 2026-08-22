@@ -55,11 +55,15 @@ const hardenedOnboarding = readFileSync(
   'supabase/migrations/20260815143000_harden_active_onboarding_enterprise_boundaries.sql',
   'utf8',
 );
+const commercialQuotaMutation = readFileSync(
+  'supabase/migrations/20260822001000_atomic_vendor_risk_quota_mutations.sql',
+  'utf8',
+);
 
 const selected = config.migrations.map((migration) => migration.filename);
 
 describe('bounded Supabase forward reconciliation contract', () => {
-  it('selects exactly the twenty-five bounded forward-only reconciliation identities in version order', () => {
+  it('selects exactly the twenty-six bounded forward-only reconciliation identities in version order', () => {
     expect(selected).toEqual([
       '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
       '20260813194500_reconcile_step_up_challenges_runtime.sql',
@@ -86,6 +90,7 @@ describe('bounded Supabase forward reconciliation contract', () => {
       '20260816104500_reconcile_gap_remediation_persistence.sql',
       '20260816110000_harden_gap_personal_task_write_boundary.sql',
       '20260817001500_reconcile_enterprise_evidence_vault.sql',
+      '20260822001000_atomic_vendor_risk_quota_mutations.sql',
     ]);
     for (const historical of [
       '20260730204500_repair_live_rls_validation_inventory.sql',
@@ -108,6 +113,20 @@ describe('bounded Supabase forward reconciliation contract', () => {
       unrestrictedDbPushAllowed: false,
       onlyListedForwardMigrationsMayBeRehearsedOrRequested: true,
     });
+  });
+
+  it('binds the current readiness-required commercial mutation RPC into the bounded production lane', () => {
+    expect(selected.at(-1)).toBe('20260822001000_atomic_vendor_risk_quota_mutations.sql');
+    expect(commercialQuotaMutation.trimStart()).toMatch(/^begin;/i);
+    expect(commercialQuotaMutation).toContain('create or replace function public.mutate_commercial_resource_with_audit_atomic');
+    expect(commercialQuotaMutation).toContain('security definer');
+    expect(commercialQuotaMutation).toContain('set search_path = pg_catalog, public');
+    expect(commercialQuotaMutation).toContain('pg_advisory_xact_lock(hashtext(p_organization_id::text))');
+    expect(commercialQuotaMutation).toContain('revoke all on function public.mutate_commercial_resource_with_audit_atomic');
+    expect(commercialQuotaMutation).toContain('from public, anon, authenticated');
+    expect(commercialQuotaMutation).toContain('grant execute on function public.mutate_commercial_resource_with_audit_atomic');
+    expect(commercialQuotaMutation).toContain('to service_role');
+    expect(commercialQuotaMutation.trimEnd()).toMatch(/commit;$/i);
   });
 
   it('reconciles the live RLS inventory helper to a service-role-only boundary', () => {
