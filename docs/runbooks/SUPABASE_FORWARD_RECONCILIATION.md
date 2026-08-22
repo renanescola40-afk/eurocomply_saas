@@ -2,15 +2,15 @@
 
 ## Purpose
 
-This lane rehearses, dry-runs and — only after explicit protected approval — promotes a small reviewed, forward-only reconciliation set without reclassifying, repairing or accidentally deploying the repository's unresolved historical migration backlog.
+This lane rehearses, dry-runs, human-reviews and — only after explicit protected authorization — promotes the exact forward reconciliation set without deploying the repository's unresolved historical migration backlog.
 
-It remains intentionally separate from the global migration-reconciliation gate. The global gate is still authoritative for historical lineage repair and historical migration classification. **Production promotion in this lane nevertheless requires a successful protected human migration Decision Gate whose accepted decisions cover every selected migration byte as `PENDING_DEPLOYMENT`.** The bounded lane may narrow execution scope, but it may not bypass human classification.
+The global migration-reconciliation program remains authoritative for historical lineage repair/classification. This bounded lane never repairs history, never uses `--include-all`, never inserts migration-ledger rows manually and never treats a human Decision Gate as Production authorization.
 
 ## Authoritative selected set
 
-`config/supabase-forward-reconciliation.json` is the **only authoritative source** for the currently selected forward migrations. Do not duplicate the full list or a fixed migration count in this runbook: the set evolves as reviewed forward identities are added, and stale prose must never be accepted as promotion evidence.
+`config/supabase-forward-reconciliation.json` is the only authoritative source for the selected forward migrations.
 
-For every rehearsal, dry-run and production promotion, compile the manifest from the exact current release SHA and require the same:
+Every stage recompiles the manifest from the exact release SHA and binds:
 
 - ordered filenames and versions;
 - source-byte SHA-256 values;
@@ -18,92 +18,110 @@ For every rehearsal, dry-run and production promotion, compile the manifest from
 - immutable selection digest;
 - exact release SHA.
 
-All selected execution identities must remain strictly later than the remote migration head observed immediately before promotion. No selected version may already be recorded remotely. The lane never requires `--include-all`, migration-history repair or manual ledger insertion.
-
-### Current Gap Analysis/remediation closure ordering
-
-When present in the authoritative manifest, the following three migrations form one ordered security boundary and must remain contiguous/in this order:
-
-1. `20260816104000_guard_compliance_task_browser_mutations.sql` — installs RESTRICTIVE fail-closed authenticated INSERT/UPDATE/DELETE guards before any compatibility widening;
-2. `20260816104500_reconcile_gap_remediation_persistence.sql` — forward-reconciles the unapplied `20260605_*` Gap Analysis/remediation/evidence schema effects without recreating `public.workspaces`;
-3. `20260816110000_harden_gap_personal_task_write_boundary.sql` — restores the steady-state backend-only organization mutation boundary and releases only authenticated, owner-bound personal task creation.
-
-This ordering protects partial rollout: if execution stops after the guard or compatibility step, authenticated task mutations remain fail-closed. Any byte or ordering change invalidates prior Stage 1/Stage 2 evidence.
-
-### Active core runtime reconciliation
-
-The historical `20260809135000_enterprise_core_runtime_schema_reconciliation.sql` remains byte-for-byte immutable and unapplied. It is not selected because its version precedes the current production migration ledger.
-
-`20260814101500_reconcile_enterprise_core_active_runtime.sql` is the forward execution identity for the already-reviewed reconciliation intent. Read-only production inspection has shown concrete application/schema drift including absent Intelligence and notification-dedupe runtime objects plus the missing vendor review date contract. The selected forward identity reconciles those runtime objects while restoring the canonical RLS/runtime boundary and atomic organization bootstrap contract.
-
-### Break-Glass and enterprise control plane
-
-`20260813234000_reconcile_enterprise_break_glass_governance.sql` is the forward-only reconciliation for the unapplied historical Break-Glass migration. The selected enterprise licensing, integrations/SCIM, billing-lifecycle and contract-control migrations likewise remain bound to their exact current bytes rather than being substituted with history repair.
-
-### Live-RLS helper privilege reconciliation
-
-`20260815083000_reconcile_live_rls_validation_inventory_privileges.sql` reissues the required service-role-only helper privilege boundary under a version later than the current production head. It preserves `SECURITY INVOKER`, a fixed search path and removes browser-role execution.
-
-The control plane compiles the exact Git SHA, filenames, versions, byte sizes and SHA-256 digests into one immutable selection digest. Changing any selected SQL byte, filename, order or release SHA changes that digest and invalidates prior rehearsal/dry-run evidence.
+All selected execution identities must remain strictly later than the current remote migration head and none may already be recorded remotely. Any selected filename, order, SQL-byte or release-SHA change invalidates prior exact-SHA evidence.
 
 ## Administrative prerequisites
 
-Production evidence is valid only when the live GitHub provider configuration satisfies the same fail-closed boundary enforced by the workflows.
+Before Stages 1-4:
 
-Before Stage 1 or Stage 2:
+1. `supabase-production-migration-dry-run` has administrator bypass disabled;
+2. at least one required deployment reviewer is configured;
+3. deployments are restricted to protected branches;
+4. the canonical rotated `SUPABASE_DB_POOLER_URL` exists only as a protected secret;
+5. connection material contains no embedded control characters and is never written to artifacts.
 
-1. harden `supabase-production-migration-dry-run` so administrator bypass is disabled;
-2. configure at least one required deployment reviewer;
-3. restrict deployments to protected branches only;
-4. rotate/correct `SUPABASE_DB_POOLER_URL` after the credential incident tracked by #1620;
-5. verify the replacement contains no embedded CR/LF/control characters and update every authorized dependent location without publishing it.
-
-Before Stage 3 production promotion, `Production` must also have:
-
-1. administrator bypass disabled;
-2. at least one required deployment reviewer;
-3. protected-branches-only deployment policy;
-4. the canonical rotated `SUPABASE_DB_POOLER_URL` secret;
-5. a successful protected `Supabase Migration Reconciliation Decision Gate` run whose `head_sha` is the exact release/evidence commit being promoted;
-6. an accepted human decision artifact whose immutable subject SHA is supplied to promotion and whose reviewed `PENDING_DEPLOYMENT` items cover every selected filename and SHA-256 byte digest.
-
-The Stage 3 workflow performs an unprotected read-only governance preflight before its protected job can load `Production` secrets. A name containing `production` is never accepted as protection evidence by itself.
+Before Stage 5 Production promotion, `Production` must additionally have administrator bypass disabled, at least one required reviewer, protected-branches-only policy and the canonical protected pooler secret.
 
 ## Stage 1 — isolated production-restore rehearsal
 
-Run `Supabase Forward Reconciliation Rehearsal` manually from the exact current `main` SHA after the Stage 1 administrative prerequisites are satisfied.
+Run `Supabase Forward Reconciliation Rehearsal` on the exact current `main` SHA.
 
-The workflow:
+It must:
 
-1. proves the supplied SHA is exact current `main`;
-2. compiles the immutable selected manifest;
-3. reads production through the protected pooler credential;
-4. restores production into a disposable runner-local database;
-5. verifies every selected SHA-256 before application;
-6. applies only the selected files to the isolated target, in manifest order;
-7. runs `scripts/supabase/verify-forward-reconciliation-postconditions.sql`;
-8. requires active-core, Step-Up, controlled-storage, Break-Glass, enterprise-control and any current manifest-specific postconditions;
-9. emits redacted exact-SHA attestation evidence;
-10. destroys the disposable database.
+1. prove the supplied SHA equals current `main`;
+2. compile the exact selected manifest;
+3. restore current Production into an isolated disposable target;
+4. verify every selected SHA-256;
+5. apply only selected files in manifest order to the isolated target;
+6. run the canonical schema/RLS/runtime postconditions;
+7. emit a redacted exact-SHA rehearsal attestation;
+8. destroy the disposable target.
 
-A Stage 1 PASS does not authorize production deployment. A PR-event rehearsal job that only validates the manifest/contract is not a substitute for the protected isolated-production-restore job.
+A PR contract job is non-crediting. A Stage 1 PASS authorizes no Production write.
 
-## Stage 2 — filtered remote dry-run
+## Stage 2 — filtered forward dry-run
 
-Run `Supabase Forward Reconciliation Dry Run` with the same exact current `main` SHA and the successful Stage 1 run ID.
+Run `Supabase Forward Reconciliation Dry Run` with the same exact SHA and successful Stage 1 run ID.
 
-It revalidates source workflow/SHA/conclusion and attestation provenance, then creates a temporary workdir containing exactly:
+It builds a temporary workdir containing exactly:
 
 - every version currently recorded in remote migration history; plus
 - the exact selected forward set from the immutable manifest.
 
-It proves the selected versions remain after the remote head, no selected migration is already remote, the pending set equals the selected set, and no unauthorized pending migration exists. Only then does it execute a filtered `supabase db push --dry-run` against production.
+It then proves:
 
-Stage 2 performs no production write. A PR-event contract job is non-crediting for the protected remote dry-run.
+- every selected version remains after the remote head;
+- no selected migration is already remote;
+- pending set equals selected set;
+- no unauthorized pending migration exists;
+- Stage 1 target SHA and selection digest equal the current manifest.
 
-## Stage 3 — human-approved bounded production promotion
+Only then does it execute the filtered command:
 
-`Supabase Forward Reconciliation Production Promotion` is the only executor for this bounded lane. It is manual and fail-closed; merging repository code does not run it.
+`supabase --workdir "$WORKDIR" db push --dry-run --db-url "$SUPABASE_DB_POOLER_URL"`
+
+Stage 2 performs no Production write.
+
+## Stage 3 — bounded Production dry-run for Decision Gate
+
+Run `Supabase Production Migration Dry Run` in bounded mode with:
+
+- `release_sha`: exact current `main` SHA;
+- `confirmation`: `DRY_RUN_ONLY`;
+- `rehearsal_run_id`: successful exact-SHA Stage 1 run ID;
+- `forward_dry_run_run_id`: successful exact-SHA Stage 2 run ID.
+
+Both source run IDs must be supplied together. When they are present the workflow enters `BOUNDED_FORWARD_DECISION` mode and fails closed unless both source workflows are exact-SHA `workflow_dispatch` runs with `conclusion=success`.
+
+The bounded Stage 3 performs two separate read-only responsibilities:
+
+1. captures the full repository-vs-Production migration reconciliation inventory as human-review input without allowing historical local-only backlog to authorize a general deployment;
+2. independently rebuilds a fresh temporary workdir from current remote history plus only the exact selected forward manifest and executes a second filtered `db push --dry-run`.
+
+Unknown remote-only migration drift remains a hard failure in every mode.
+
+Bounded Stage 3 must revalidate Stage 1, Stage 2, exact selection digest, current remote history, version ordering and exact pending set. It seals `bounded-production-dry-run-attestation.json` with:
+
+- schema `risck-comply.supabase-forward-bounded-production-dry-run.v1`;
+- `mode=BOUNDED_FORWARD_DECISION`;
+- exact target SHA and selection digest;
+- exact Stage 1/Stage 2 provenance;
+- `filteredDbPushDryRunOnly=true`;
+- `includeAllUsed=false`;
+- `migrationHistoryRepairUsed=false`;
+- `productionWriteAuthorized=false`;
+- `productionWritePerformed=false`.
+
+The general historical mode of `Supabase Production Migration Dry Run` remains separate and is non-crediting for this bounded forward lane.
+
+## Stage 4 — exact human Decision Gate
+
+Run `Supabase Migration Reconciliation Decision Gate` with:
+
+- `release_sha`: exact unchanged current `main` SHA;
+- `source_run_id`: successful bounded Stage 3 `Supabase Production Migration Dry Run` run ID;
+- `forward_dry_run_run_id`: successful exact-SHA Stage 2 run ID;
+- `decision_payload_b64`: omit on the first template-only run; supply only after real human review on the second run.
+
+In bounded mode the Decision Gate must require the Stage 3 source run itself to have `conclusion=success`, download its artifact and validate `bounded-production-dry-run-attestation.json` against the exact Stage 2 manifest digest before generating the human decision scope.
+
+The Decision Gate then builds an exact filename + SHA-256 subset from the Production reconciliation inventory. It does not infer classifications. A successful reviewed bounded decision requires every selected item to be explicitly classified `PENDING_DEPLOYMENT` with the required human evidence and produces `deploymentAuthorization=NOT_AUTHORIZED`.
+
+A successful Stage 4 proves exact selected-byte human review. It still does not authorize a Production write.
+
+## Stage 5 — human-approved bounded production promotion
+
+`Supabase Forward Reconciliation Production Promotion` is the only Production executor for this lane.
 
 Dispatch requires:
 
@@ -111,56 +129,67 @@ Dispatch requires:
 - successful exact-SHA Stage 1 run ID;
 - successful exact-SHA Stage 2 run ID;
 - successful protected human migration Decision Gate run ID;
-- exact human decision subject SHA reviewed by that gate;
-- explicit confirmation `PROMOTE <release_sha> USING DRY-RUN <dry_run_run_id> AND DECISION <decision_run_id>`;
+- exact human decision subject SHA;
+- confirmation `PROMOTE <release_sha> USING DRY-RUN <dry_run_run_id> AND DECISION <decision_run_id>`;
 - successful `Production` environment governance preflight;
-- protected human deployment approval before secrets become available.
+- protected human deployment approval.
 
-The Decision Gate is a separate human-evidence boundary, not a production authorization shortcut. Its successful run must be a `workflow_dispatch` of `.github/workflows/supabase-migration-reconciliation-decision-gate.yml`, have `head_sha` equal to the exact release/evidence commit, and produce accepted decision artifacts. `scripts/supabase/verify-forward-human-approval.mjs` then proves every migration in the forward manifest is present with the same SHA-256 bytes in the accepted `PENDING_DEPLOYMENT` plan and has reviewer, schema-evidence and rollback provenance. The generated promotion artifact intentionally stores none of the human names or approval-reference strings.
+The successful Decision Gate artifact must carry the validated Stage 3 bounded Production dry-run attestation. Stage 5 revalidates that attestation against current target SHA, selection digest and Stage 2 run ID before any Production write and rechecks it again immediately before the write.
 
-Immediately before the write the workflow:
+Immediately before the write Stage 5:
 
-1. verifies current `main` still equals the release SHA;
-2. verifies rehearsal, dry-run and Decision Gate paths, SHAs/events and conclusions;
-3. downloads source evidence without exposing credentials;
-4. recompiles the selected manifest and matches the exact selection digest to Stage 1 and Stage 2;
-5. validates every selected migration byte against the accepted human `PENDING_DEPLOYMENT` artifacts and emits a redacted `human-approval-proof.json`;
-6. fetches the current production migration history into a fresh temporary workdir;
-7. verifies every selected source file SHA-256;
-8. reruns the forward-version-order and exact-pending-set proofs against current remote state;
-9. executes one final filtered dry-run;
-10. rechecks both current `main` and the redacted human-approval proof immediately before the production write;
-11. executes exactly one filtered `supabase db push` with no `--include-all` and no migration-history repair.
+1. proves current `main` still equals the target SHA;
+2. verifies Stage 1, Stage 2 and Decision Gate workflow provenance;
+3. recompiles the selected manifest;
+4. validates Stage 1/Stage 2 selection digests;
+5. validates the bounded Stage 3 attestation;
+6. validates exact selected-byte human `PENDING_DEPLOYMENT` coverage;
+7. fetches current Production migration history into a fresh temporary workdir;
+8. verifies each selected source SHA-256;
+9. re-proves version order and exact pending set;
+10. executes one final filtered dry-run;
+11. revalidates current `main`, bounded Stage 3 and human approval;
+12. executes exactly one filtered Production `db push`.
 
-After the write it:
+After the write Stage 5:
 
 1. captures the remote migration ledger again;
-2. requires `remote-after = remote-before + exactly selected set` using `scripts/supabase/verify-forward-promotion-transition.mjs`;
-3. rejects any unauthorized extra migration, missing historical version or partial selected set;
-4. runs the canonical live read-only schema/security postconditions;
-5. fails the release evidence if `main` moved while the controlled promotion was executing;
-6. uploads only redacted manifests/proofs/ledger-version evidence and never stores database URLs, credentials, row data, human reviewer names or approval-reference values.
-
-A successful Stage 3 proves the selected forward set was human-reviewed and promoted safely. It does not classify or repair any historical migration outside that set.
+2. requires `remote-after = remote-before + exactly selected set`;
+3. rejects unauthorized or partial migration application;
+4. runs canonical live read-only schema/security postconditions;
+5. fails release evidence if `main` moved during the promotion window;
+6. uploads only redacted exact-SHA evidence.
 
 ## Prohibited shortcuts
 
-Do not replace any stage with:
+Never replace these stages with:
 
-- ad-hoc direct production SQL;
+- ad-hoc direct Production SQL;
 - `db push --include-all`;
+- unrestricted general `db push` as bounded-lane evidence;
 - migration-history repair;
 - manual insertion into `supabase_migrations.schema_migrations`;
 - filename-only or catalog-only equivalence;
-- automatic classification of historical migrations;
-- a production write without successful exact-SHA rehearsal, filtered dry-run and accepted protected human Decision Gate provenance.
+- automatic historical classification;
+- inherited human approval from an older SHA;
+- a Production write without successful exact-SHA Stage 1, Stage 2, bounded Stage 3, Stage 4 and protected Stage 5 authorization.
 
 ## Rollback boundary
 
-The selected migrations are forward-only. Rollback never means deleting migration-ledger history. If a schema-level correction is required after promotion, it must be a new reviewed forward change compatible with the application rollback/LKG strategy. Deployment rollback, database restore and incident recovery remain governed by their separate protected workflows and runbooks.
+The selected migrations are forward-only. Rollback never means deleting migration history or running migration repair. Use application LKG/rollback for application rollback, governed restore for data recovery and a new reviewed forward migration for schema correction.
 
-## Historical backlog remains separate
+## Post-promotion acceptance
 
-This lane does not close or alter the unresolved historical migration-reconciliation program. Fingerprint-backed provenance still requires remaining human owner decisions and independent approval before the global historical gate can open.
+After Stage 5, regenerate rather than hand-edit the canonical exact-SHA runtime evidence:
 
-The lane's narrower purpose is to move a specifically reviewed active runtime set through isolated rehearsal, filtered remote dry-run, accepted human selected-set classification and a deliberate protected production promotion without exposing production to the unresolved historical backlog.
+- migration ledger transition acceptance;
+- live RLS/tenant isolation;
+- Step-Up/runtime readiness;
+- SCIM/integration runtime;
+- billing runtime;
+- controlled Storage boundary;
+- recovery/restore drill;
+- Production Runtime Proof and authenticated `/api/ready` smoke;
+- Enterprise Production Gate and readiness scorecard.
+
+The historical migration backlog remains a separate program. This bounded lane closes only the exact selected forward set through isolated rehearsal, filtered Stage 2 dry-run, bounded Stage 3 Production dry-run, exact human Stage 4 decision and protected Stage 5 promotion.
