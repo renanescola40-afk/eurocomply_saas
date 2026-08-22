@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     }
 
     const client = createAdminClient() as unknown as RpcClient;
-    const { data, error } = await client.rpc('configure_enterprise_contract_billing_atomic', {
+    const { data, error } = await client.rpc('configure_enterprise_contract_billing_v2_atomic', {
       p_contract_id: parsed.data.contractId,
       p_payment_method: parsed.data.paymentMethod,
       p_billing_status: parsed.data.billingStatus,
