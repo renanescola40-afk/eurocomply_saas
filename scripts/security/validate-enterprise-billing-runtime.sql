@@ -2,7 +2,9 @@
 
 do $proof$
 declare
-  billing_rpc oid:=to_regprocedure('public.sync_enterprise_contract_billing_v2_atomic(text,text,uuid,uuid,text,text,text,text,text,boolean,timestamptz,text)');
+  billing_impl_v2 oid:=to_regprocedure('public.sync_enterprise_contract_billing_v2_atomic(text,text,uuid,uuid,text,text,text,text,text,boolean,timestamptz,text)');
+  billing_rpc oid:=to_regprocedure('public.sync_enterprise_contract_billing_v3_atomic(text,text,uuid,uuid,text,text,text,text,text,boolean,timestamptz,text)');
+  configure_rpc oid:=to_regprocedure('public.configure_enterprise_contract_billing_v2_atomic(uuid,text,text,text,text,text,text,timestamptz,uuid,text)');
   lifecycle_rpc oid:=to_regprocedure('public.process_enterprise_contract_lifecycle_v2_atomic(integer)');
   transition_helper oid:=to_regprocedure('public.is_valid_enterprise_contract_transition(text,text)');
   provision_rpc oid:=to_regprocedure('public.provision_enterprise_contract_atomic(uuid,text,text,bigint,timestamptz,timestamptz,timestamptz,integer,integer,integer,integer,integer,integer,integer,integer,integer,bigint,integer,boolean,boolean,boolean,boolean,boolean,boolean,boolean,uuid)');
@@ -81,12 +83,27 @@ begin
     raise exception 'Compatibility contracts unexpectedly enable Enterprise integrations';
   end if;
 
-  if billing_rpc is null or lifecycle_rpc is null or transition_helper is null
+  if billing_impl_v2 is null or billing_rpc is null or configure_rpc is null
+     or lifecycle_rpc is null or transition_helper is null
      or provision_rpc is null or entitlement_rpc is null or status_rpc is null then
     raise exception 'Enterprise contract control/billing RPC set incomplete';
   end if;
 
-  foreach rpc in array array[billing_rpc,lifecycle_rpc,provision_rpc,entitlement_rpc,status_rpc] loop
+  if has_function_privilege('anon',billing_impl_v2,'EXECUTE')
+     or has_function_privilege('authenticated',billing_impl_v2,'EXECUTE')
+     or has_function_privilege('service_role',billing_impl_v2,'EXECUTE') then
+    raise exception 'Enterprise billing v2 implementation remains directly executable';
+  end if;
+
+  if not exists (
+    select 1 from pg_proc p
+    cross join lateral unnest(coalesce(p.proconfig,array[]::text[])) setting
+    where p.oid=billing_impl_v2 and p.prosecdef and setting='search_path=pg_catalog'
+  ) then
+    raise exception 'Enterprise billing v2 implementation search_path hardening incomplete';
+  end if;
+
+  foreach rpc in array array[billing_rpc,configure_rpc,lifecycle_rpc,provision_rpc,entitlement_rpc,status_rpc] loop
     if has_function_privilege('anon',rpc,'EXECUTE')
        or has_function_privilege('authenticated',rpc,'EXECUTE')
        or not has_function_privilege('service_role',rpc,'EXECUTE') then
