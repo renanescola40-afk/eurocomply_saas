@@ -81,8 +81,10 @@ export function derivePersistentExecutionState({
     is_current_main: isCurrentMain,
     observed_main_sha: normalizedObservedMainSha,
     last_verified_score_sha: normalizedSha,
-    official_completion_percent: completion,
-    official_remaining_percent: remaining,
+    official_completion_percent: isCurrentMain ? completion : null,
+    official_remaining_percent: isCurrentMain ? remaining : null,
+    diagnostic_completion_percent: isCurrentMain ? null : completion,
+    diagnostic_remaining_percent: isCurrentMain ? null : remaining,
     technical_repository_percent: null,
     runtime_evidence_percent: null,
     owner_action_percent: null,
@@ -120,7 +122,9 @@ export function derivePersistentExecutionState({
         ? 'Derived automatically from the canonical 100-control scorecard generated for this exact protected-main SHA.'
         : 'Derived automatically from a canonical exact-SHA pull-request diagnostic. It is fresh for the assessed PR SHA but is not protected-main release authority.',
     },
-    calculation_method: 'Automatically derived from the canonical exact-SHA 100-control scorecard artifact. PASS receives full credit, PARTIAL half credit, and NOT_APPLICABLE is excluded from the denominator.',
+    calculation_method: isCurrentMain
+      ? 'Official protected-main readiness derived automatically from the canonical exact-SHA 100-control scorecard. PASS receives full credit, PARTIAL half credit, and NOT_APPLICABLE is excluded from the denominator.'
+      : 'Diagnostic pull-request readiness derived automatically from the canonical exact-SHA 100-control scorecard. Diagnostic percentages never update official protected-main completion.',
   };
   const failures = validatePersistentExecutionState(state, normalizedSha);
   if (failures.length > 0) fail(failures.join(', '));
@@ -136,10 +140,7 @@ export function resolveAssessmentContext({
   const normalizedAssessedSha = normalizeSha(assessedSha, 'assessed SHA');
 
   if (!eventName) {
-    return {
-      assessmentScope: 'main',
-      observedMainSha: normalizedAssessedSha,
-    };
+    fail('GITHUB_EVENT_NAME is required to establish Enterprise assessment scope');
   }
 
   if (eventName === 'pull_request') {
@@ -185,7 +186,10 @@ function main() {
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, `${JSON.stringify(state, null, 2)}\n`);
   console.log(`Persistent Enterprise state artifact: ${outputPath}`);
-  console.log(`Exact-SHA readiness: ${state.official_completion_percent}% (${state.current_decision}/${state.assessment_scope})`);
+  const completion = state.is_current_main
+    ? state.official_completion_percent
+    : state.diagnostic_completion_percent;
+  console.log(`Exact-SHA readiness: ${completion}% (${state.current_decision}/${state.assessment_scope})`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
