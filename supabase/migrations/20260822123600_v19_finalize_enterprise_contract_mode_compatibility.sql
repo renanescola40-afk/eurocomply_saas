@@ -39,9 +39,10 @@ create unique index if not exists enterprise_contracts_stripe_subscription_uidx
 -- V19 billing synchronization is intentionally split into an internal mutation
 -- implementation (v2) and a service-role entrypoint (v3). The entrypoint must
 -- never create a new Enterprise Stripe binding from organization_id alone:
--- self-service Checkout also carries organization metadata. A negotiated
--- contract is selected only by an explicit contract id or by an already-bound
--- Stripe subscription id, then v2 receives that exact contract identity.
+-- self-service Checkout also carries organization metadata. An explicit contract
+-- marker is authoritative and may never fall back to a different subscription
+-- binding. Subscription lookup is therefore allowed only when p_contract_id is
+-- absent, then v2 receives the exact selected contract identity.
 create or replace function public.sync_enterprise_contract_billing_v3_atomic(
   p_event_id text,
   p_event_type text,
@@ -108,7 +109,8 @@ begin
         and (p_organization_id is null or contract.organization_id=p_organization_id)
       )
       or (
-        p_stripe_subscription_id is not null
+        p_contract_id is null
+        and p_stripe_subscription_id is not null
         and contract.stripe_subscription_id=p_stripe_subscription_id
       )
     )
