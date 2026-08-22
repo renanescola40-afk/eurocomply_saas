@@ -29,10 +29,18 @@ export function isExpectedMissingSupabaseRelation(error: unknown): boolean {
 }
 
 /**
- * Use only for governed compatibility probes that intentionally span both a
- * not-yet-promoted relation and a not-yet-promoted selected column.
+ * Backward-compatible relation-only classifier for runtime dependencies whose
+ * pre-promotion state is the absence of the relation itself.
  */
 export function isExpectedMissingSupabaseSchema(error: unknown): boolean {
+  return isExpectedMissingSupabaseRelation(error);
+}
+
+/**
+ * Use only for governed maintenance probes that intentionally span both a
+ * not-yet-promoted relation and a not-yet-promoted selected column.
+ */
+export function isExpectedMissingSupabaseMaintenanceSchema(error: unknown): boolean {
   const code = getSchemaErrorCode(error);
   return code !== null
     && (EXPECTED_MISSING_RELATION_CODES.has(code) || EXPECTED_MISSING_COLUMN_CODES.has(code));
