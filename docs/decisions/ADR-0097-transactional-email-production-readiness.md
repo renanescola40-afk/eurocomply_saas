@@ -55,7 +55,7 @@ No customer data, email body, recipient address or delivery event is generated b
 - The policy depends on the protected Production workflow being the canonical deployment authority. Direct or ad-hoc deployment paths must not be used to claim Enterprise readiness.
 - Provider-account, privacy and contractual facts remain separate External Assurance evidence and are not inferred from this technical binding.
 
-## Incident handling and rollback
+## Rollback
 
 The normal recovery for a missing binding is:
 
