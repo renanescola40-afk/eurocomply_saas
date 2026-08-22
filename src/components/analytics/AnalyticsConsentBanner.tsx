@@ -5,7 +5,12 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
-import { denyAnalyticsConsent, grantAnalyticsConsent, initPostHog } from '@/lib/analytics/posthog-client';
+import {
+  denyAnalyticsConsent,
+  grantAnalyticsConsent,
+  initPostHog,
+  isAnalyticsConsentRequired,
+} from '@/lib/analytics/posthog-client';
 import { getCommercialSurfaceCopy } from '@/lib/i18n/commercial-surface-copy';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
@@ -22,10 +27,6 @@ const policyLabel: Record<Locale, string> = {
   de: 'Cookie-Richtlinie und Einstellungen',
 };
 
-function consentIsRequired() {
-  return process.env.NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT === 'true';
-}
-
 function localeFromPath(pathname: string): Locale {
   const candidate = pathname.split('/').filter(Boolean)[0];
   return (locales.includes(candidate as Locale) ? candidate : 'en') as Locale;
@@ -39,7 +40,7 @@ export function AnalyticsConsentBanner() {
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!consentIsRequired()) return;
+    if (!isAnalyticsConsentRequired()) return;
     const existingConsent = window.localStorage.getItem(CONSENT_STORAGE_KEY);
     setVisible(existingConsent !== 'granted' && existingConsent !== 'denied');
   }, []);
