@@ -11,8 +11,8 @@ describe('bounded Supabase migration human decision gate', () => {
     expect(workflow).toContain('forward_dry_run_run_id:');
     expect(workflow).toContain(".github/workflows/supabase-production-migration-dry-run.yml");
     expect(workflow).toContain(".github/workflows/supabase-forward-reconciliation-dry-run.yml");
-    expect(workflow).toContain('test "$(jq -r \' .conclusion\' <<<"$RUN_JSON")" = \'success\''.replace("' .conclusion", "'.conclusion"));
-    expect(workflow).toContain('test "$(jq -r \' .conclusion\' <<<"$FORWARD_JSON")" = \'success\''.replace("' .conclusion", "'.conclusion"));
+    expect(workflow).toContain(`test "$(jq -r '.conclusion' <<<"$RUN_JSON")" = 'success'`);
+    expect(workflow).toContain(`test "$(jq -r '.conclusion' <<<"$FORWARD_JSON")" = 'success'`);
     expect(workflow).toContain('bounded-production-dry-run-attestation.json');
     expect(workflow).toContain('.mode == "BOUNDED_FORWARD_DECISION"');
     expect(workflow).toContain('.checks.filteredDbPushDryRunOnly == true');
