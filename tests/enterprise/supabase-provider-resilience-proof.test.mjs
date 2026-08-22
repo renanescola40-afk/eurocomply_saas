@@ -17,7 +17,7 @@ const project = {
   status: 'ACTIVE_HEALTHY',
 };
 
-function evaluate({ plan = 'pro', walg = true, pitr = false, backups = [] } = {}) {
+function evaluate({ plan = 'pro', walg = true, pitr = false, backups = [], hibp = true, authConfig = undefined } = {}) {
   return evaluateSupabaseProviderResilience({
     projectRef,
     projects: [project],
@@ -27,6 +27,7 @@ function evaluate({ plan = 'pro', walg = true, pitr = false, backups = [] } = {}
       pitr_enabled: pitr,
       backups,
     },
+    authConfig: authConfig ?? { password_hibp_enabled: hibp },
   });
 }
 
@@ -45,11 +46,13 @@ test('blocks a free Supabase organization even when the project and backup endpo
   assert.ok(result.blockerCodes.includes('supabase_plan_not_production_eligible'));
 });
 
-test('accepts a production-eligible plan with provider-managed backup capability', () => {
-  const result = evaluate({ plan: 'pro', walg: true, pitr: false });
+test('accepts a production-eligible plan with provider-managed backup capability and leaked-password protection enabled', () => {
+  const result = evaluate({ plan: 'pro', walg: true, pitr: false, hibp: true });
   assert.equal(result.checks.productionEligiblePlan, true);
   assert.equal(result.checks.managedBackupObserved, true);
   assert.equal(result.checks.pitrStateObserved, true);
+  assert.equal(result.checks.leakedPasswordProtectionStateObserved, true);
+  assert.equal(result.checks.leakedPasswordProtectionEnabled, true);
   assert.equal(result.metrics.pitrEnabled, false);
   assert.deepEqual(result.blockerCodes, []);
 });
@@ -72,6 +75,22 @@ test('blocks a paid plan when no provider-managed backup is observed', () => {
   assert.ok(result.blockerCodes.includes('supabase_managed_backup_not_observed'));
 });
 
+test('blocks a production-eligible plan when leaked-password protection is disabled', () => {
+  const result = evaluate({ plan: 'pro', walg: true, hibp: false });
+  assert.equal(result.checks.productionEligiblePlan, true);
+  assert.equal(result.checks.leakedPasswordProtectionStateObserved, true);
+  assert.equal(result.checks.leakedPasswordProtectionEnabled, false);
+  assert.ok(result.blockerCodes.includes('supabase_leaked_password_protection_disabled'));
+});
+
+test('fails closed when the Management API does not expose leaked-password protection state', () => {
+  const result = evaluate({ plan: 'enterprise', walg: true, authConfig: {} });
+  assert.equal(result.checks.leakedPasswordProtectionStateObserved, false);
+  assert.equal(result.checks.leakedPasswordProtectionEnabled, false);
+  assert.ok(result.blockerCodes.includes('supabase_leaked_password_protection_state_missing'));
+  assert.ok(!result.blockerCodes.includes('supabase_leaked_password_protection_disabled'));
+});
+
 test('production provider workflow binds the strict Supabase resilience proof to the protected secret only', () => {
   assert.match(workflow, /Execute strict Supabase provider resilience proof/);
   assert.match(workflow, /SUPABASE_ACCESS_TOKEN: \$\{\{ secrets\.SUPABASE_ACCESS_TOKEN \}\}/);
@@ -80,15 +99,19 @@ test('production provider workflow binds the strict Supabase resilience proof to
   assert.doesNotMatch(workflow, /SUPABASE_ACCESS_TOKEN:[^\n]*vars\./);
 });
 
-test('strict proof uses Management API plan and backup authority without persisting provider identities', () => {
+test('strict proof uses Management API plan, backup and Auth security authority without persisting provider identities', () => {
   assert.match(producer, /\/v1\/projects/);
   assert.match(producer, /\/v1\/organizations\//);
   assert.match(producer, /\/database\/backups/);
+  assert.match(producer, /\/config\/auth/);
+  assert.match(producer, /password_hibp_enabled/);
   assert.match(producer, /PRODUCTION_ELIGIBLE_PLANS/);
   assert.match(producer, /supabase_plan_not_production_eligible/);
   assert.match(producer, /supabase_managed_backup_not_observed/);
+  assert.match(producer, /supabase_leaked_password_protection_disabled/);
   assert.match(producer, /projectRefStored: false/);
   assert.match(producer, /organizationSlugStored: false/);
   assert.match(producer, /organizationPlanStored: false/);
+  assert.match(producer, /authConfigStored: false/);
   assert.match(producer, /providerResponseBodiesStored: false/);
 });
