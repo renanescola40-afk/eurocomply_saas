@@ -130,6 +130,7 @@ jobs:
         run: |
           node --check scripts/security/run-production-provider-runtime-proof.mjs
           node --check scripts/security/run-stripe-live-billing-provider-proof.mjs
+          node --check scripts/security/check-supabase-provider-resilience.mjs
           node --check scripts/security/load-vercel-stripe-price-bindings.mjs
           node --check scripts/security/diagnose-production-provider-blockers.mjs
           node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync(process.env.PROVIDER_TARGETS_PATH,'utf8')); if(p.schema!=='risck-comply.production-provider-targets.v1') process.exit(1)"
@@ -139,9 +140,16 @@ jobs:
             tests/enterprise/production-provider-blocker-diagnostics.test.ts
           node --test tests/enterprise/stripe-live-billing-provider-proof.test.mjs
           node --test tests/enterprise/vercel-stripe-price-bindings.test.mjs
+          node --test tests/enterprise/supabase-provider-resilience-proof.test.mjs
 
       - name: Execute strict live billing provider proof
         run: node scripts/security/run-stripe-live-billing-provider-proof.mjs
+
+      - name: Execute strict Supabase provider resilience proof
+        if: always()
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: node scripts/security/check-supabase-provider-resilience.mjs
 
       - name: Execute broad live provider proof
         if: always()
@@ -170,15 +178,22 @@ jobs:
         if: always()
         shell: bash
         run: |
+          resilience=release-validation/supabase-provider-resilience.json
           diagnostic=release-validation/provider-blocker-diagnostics.json
-          if [ -f "$diagnostic" ]; then
-            {
-              echo '## Production provider blocker diagnostics'
-              echo
-              jq -r '"- Provider proof: \(.providerProofStatus)/\(.providerProofOutcome)\n- Blocked providers: \(.blockedProviderCount)\n- Blocker codes: \(.blockerCount)"' "$diagnostic"
+          {
+            echo '## Production provider blocker diagnostics'
+            echo
+            if [ -f "$resilience" ]; then
+              jq -r '"- Supabase resilience: \(.status)/\(.outcome)\n- Managed backup observed: \(.checks.managedBackupObserved)\n- Production-eligible plan: \(.checks.productionEligiblePlan)\n- PITR enabled: \(.metrics.pitrEnabled)"' "$resilience"
+              jq -r '.blockerCodes[]? | "- `\(.)`"' "$resilience"
+            else
+              echo '- Supabase resilience: NOT_PRODUCED'
+            fi
+            if [ -f "$diagnostic" ]; then
+              jq -r '"- Broad provider proof: \(.providerProofStatus)/\(.providerProofOutcome)\n- Blocked providers: \(.blockedProviderCount)\n- Broad blocker codes: \(.blockerCount)"' "$diagnostic"
               jq -r '.blockerCodes[]? | "- `\(.)`"' "$diagnostic"
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload redacted provider evidence
         if: always()
@@ -188,6 +203,7 @@ jobs:
           path: |
             docs/security/evidence/runtime/production-secrets-provider-stores.json
             release-validation/stripe-live-billing-provider-proof.json
+            release-validation/supabase-provider-resilience.json
             release-validation/provider-blocker-diagnostics.json
           if-no-files-found: error
           retention-days: 90
