@@ -168,10 +168,7 @@ export async function buildSupabaseProviderResilienceEvidence({
     }),
   };
   const uniqueBlockers = [...new Set(blockerCodes)];
-  const passed = Object.entries(checks)
-    .filter(([name]) => name !== 'pitrStateObserved')
-    .every(([, value]) => value === true)
-    && uniqueBlockers.every((code) => code !== 'supabase_plan_not_production_eligible' && code !== 'supabase_managed_backup_not_observed');
+  const passed = Object.values(checks).every((value) => value === true);
 
   return {
     schema: 'risck-comply.supabase-provider-resilience.v1',
