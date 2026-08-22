@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const migrationPath =
-  'supabase/migrations/20260813175000_optimize_organization_add_ons_rls_initplan.sql';
+  'supabase/migrations/20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql';
 
 describe('organization add-ons live RLS promotion', () => {
   it('keeps the merged migration tenant-scoped and initplan-optimized', () => {
