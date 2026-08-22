@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const migrationPath = 'supabase/migrations/20260816104500_reconcile_gap_remediation_persistence.sql';
+const migrationPath = 'supabase/migrations/20260822123622_v19_reconcile_gap_remediation_persistence.sql';
 const migration = readFileSync(migrationPath, 'utf8');
 const replay = readFileSync('scripts/recovery/run-ephemeral-project-schema-replay.mjs', 'utf8');
 
