@@ -6,7 +6,7 @@ const CATALOG = new URL('../../src/lib/billing/plans.ts', import.meta.url);
 const ENTITLEMENTS = new URL('../../src/server/billing/entitlements.ts', import.meta.url);
 const VENDORS = new URL('../../src/server/actions/vendors.ts', import.meta.url);
 const RISKS = new URL('../../src/server/actions/risks.ts', import.meta.url);
-const ATOMIC_CLIENT = new URL('../../src/server/actions/commercial-resource-atomic.ts', import.meta.url);
+const ATOMIC_CLIENT = new URL('../../src/server/billing/commercial-resource-atomic.ts', import.meta.url);
 const ATOMIC_MIGRATION = new URL('../../supabase/migrations/20260822001000_atomic_vendor_risk_quota_mutations.sql', import.meta.url);
 const RBAC = new URL('../../src/server/security/rbac.ts', import.meta.url);
 
@@ -114,5 +114,12 @@ describe('vendor and risk commercial quota boundary', () => {
     expect(source).toContain("error.code === '40001'");
     expect(source).toContain('attempt < MAX_ATOMIC_MUTATION_ATTEMPTS');
     expect(source).not.toContain('ALLOW_NON_TRANSACTIONAL');
+  });
+
+  it('keeps the atomic helper out of the server-action scanner boundary', async () => {
+    const [vendorSource, riskSource] = await Promise.all([readFile(VENDORS, 'utf8'), readFile(RISKS, 'utf8')]);
+
+    expect(vendorSource).toContain("from '@/server/billing/commercial-resource-atomic'");
+    expect(riskSource).toContain("from '@/server/billing/commercial-resource-atomic'");
   });
 });
