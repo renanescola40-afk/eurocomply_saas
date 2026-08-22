@@ -18,7 +18,9 @@ const DEFAULT_REPORT_PATH = join(
 );
 
 const EXPECTED_SCHEMA = 'risck-comply.supabase-forward-reconciliation-config.v1';
-const EXPECTED_CHANGE_SET = '2026-08-17-enterprise-data-plane-closure-v17';
+const EXPECTED_CHANGE_SET = '2026-08-22-enterprise-data-plane-closure-v18';
+const EVIDENCE_VAULT_MIGRATION = '20260817001500_reconcile_enterprise_evidence_vault.sql';
+const COMMERCIAL_QUOTA_MIGRATION = '20260822001000_atomic_vendor_risk_quota_mutations.sql';
 const EXPECTED_SELECTED = [
   '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
   '20260813194500_reconcile_step_up_challenges_runtime.sql',
@@ -44,7 +46,8 @@ const EXPECTED_SELECTED = [
   '20260816104000_guard_compliance_task_browser_mutations.sql',
   '20260816104500_reconcile_gap_remediation_persistence.sql',
   '20260816110000_harden_gap_personal_task_write_boundary.sql',
-  '20260817001500_reconcile_enterprise_evidence_vault.sql',
+  EVIDENCE_VAULT_MIGRATION,
+  COMMERCIAL_QUOTA_MIGRATION,
 ];
 
 const TRUTH_BOUNDARY = {
@@ -112,7 +115,7 @@ function validateMigrationFilename(filename) {
   return match[1];
 }
 
-function validateEvidenceTail(source) {
+function validateEvidenceVaultMigration(source) {
   const requiredMarkers = [
     'alter column organization_id set not null',
     'alter table public.evidence_items force row level security',
@@ -126,14 +129,41 @@ function validateEvidenceTail(source) {
     'Evidence Vault records are append-audited and must be soft-deleted',
   ];
   for (const marker of requiredMarkers) {
-    if (!source.includes(marker)) fail(`Evidence Vault tail lost required marker: ${marker}`);
+    if (!source.includes(marker)) fail(`Evidence Vault migration lost required marker: ${marker}`);
   }
   for (const forbiddenMarker of [
     'create policy "rls_compliance_evidence_objects_update_organization"',
     'create policy "rls_compliance_evidence_objects_delete_organization"',
     'grant select, insert, update, delete on table public.evidence_items to authenticated',
   ]) {
-    if (source.includes(forbiddenMarker)) fail(`Evidence Vault tail reopened forbidden browser boundary: ${forbiddenMarker}`);
+    if (source.includes(forbiddenMarker)) fail(`Evidence Vault migration reopened forbidden browser boundary: ${forbiddenMarker}`);
+  }
+}
+
+function validateCommercialQuotaMutation(source) {
+  const requiredMarkers = [
+    'create or replace function public.mutate_commercial_resource_with_audit_atomic(',
+    'security definer',
+    'set search_path = pg_catalog, public',
+    'pg_advisory_xact_lock(hashtext(p_organization_id::text))',
+    "p_resource_type not in ('vendor', 'risk')",
+    "p_operation not in ('create', 'delete')",
+    "return query select 'quota_exceeded'::text",
+    'insert into public.audit_logs',
+    'insert into public.audit_events',
+    'revoke all on function public.mutate_commercial_resource_with_audit_atomic(',
+    'from public, anon, authenticated',
+    'grant execute on function public.mutate_commercial_resource_with_audit_atomic(',
+    'to service_role',
+  ];
+  for (const marker of requiredMarkers) {
+    if (!source.includes(marker)) fail(`Commercial quota migration lost required marker: ${marker}`);
+  }
+  for (const forbiddenMarker of [
+    'grant execute on function public.mutate_commercial_resource_with_audit_atomic(\n  text, text, uuid, uuid, uuid, jsonb, integer, integer, uuid, jsonb,\n  timestamptz, text, text, text\n) to authenticated',
+    'grant execute on function public.mutate_commercial_resource_with_audit_atomic(\n  text, text, uuid, uuid, uuid, jsonb, integer, integer, uuid, jsonb,\n  timestamptz, text, text, text\n) to anon',
+  ]) {
+    if (source.includes(forbiddenMarker)) fail(`Commercial quota migration reopened forbidden browser execution: ${forbiddenMarker}`);
   }
 }
 
@@ -160,7 +190,8 @@ function main() {
     if (!existsSync(path)) fail(`Selected migration is missing: ${filename}`);
     const bytes = readFileSync(path);
     const source = bytes.toString('utf8');
-    if (index === selected.length - 1) validateEvidenceTail(source);
+    if (filename === EVIDENCE_VAULT_MIGRATION) validateEvidenceVaultMigration(source);
+    if (filename === COMMERCIAL_QUOTA_MIGRATION) validateCommercialQuotaMutation(source);
 
     return {
       position: index + 1,
@@ -217,7 +248,7 @@ function main() {
 
   process.stdout.write(`Bounded Supabase forward reconciliation verified: ${records.length} migrations\n`);
   process.stdout.write(`Selected-set SHA-256: ${selectedSetSha256}\n`);
-  process.stdout.write(`Production write authorization: false\n`);
+  process.stdout.write('Production write authorization: false\n');
 }
 
 try {
