@@ -18,7 +18,7 @@ const legacyStepUp = fs.readFileSync(
   'utf8',
 );
 const canonicalStepUp = fs.readFileSync(
-  'supabase/migrations/20260813194500_reconcile_step_up_challenges_runtime.sql',
+  'supabase/migrations/20260822123540_v19_reconcile_step_up_challenges_runtime.sql',
   'utf8',
 );
 const iDup07 = fs.readFileSync(
@@ -26,7 +26,7 @@ const iDup07 = fs.readFileSync(
   'utf8',
 );
 const subscriptionDefaults = fs.readFileSync(
-  'supabase/migrations/20260813200000_reconcile_subscription_schema_defaults.sql',
+  'supabase/migrations/20260822123542_v19_reconcile_subscription_schema_defaults.sql',
   'utf8',
 );
 const billingPlans = fs.readFileSync('src/lib/billing/plans.ts', 'utf8');
