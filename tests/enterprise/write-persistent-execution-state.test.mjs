@@ -1,8 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { derivePersistentExecutionState } from '../../scripts/enterprise/write-persistent-execution-state.mjs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import {
+  derivePersistentExecutionState,
+  resolveAssessmentContext,
+} from '../../scripts/enterprise/write-persistent-execution-state.mjs';
 
 const SHA = 'a'.repeat(40);
+const MAIN_SHA = 'c'.repeat(40);
 const SCORECARD_SHA256 = 'b'.repeat(64);
 
 function scorecard({ pass = 45, partial = 0, blocked = 1, fail = 0, notApplicable = 0 } = {}) {
@@ -30,17 +37,121 @@ function scorecard({ pass = 45, partial = 0, blocked = 1, fail = 0, notApplicabl
   };
 }
 
-test('derives a fresh exact-SHA NO_GO state without manual percentages', () => {
+test('derives a fresh exact-SHA current-main NO_GO state without manual percentages', () => {
   const state = derivePersistentExecutionState({ scorecard: scorecard(), assessedSha: SHA, runId: 12345, sourceScorecardSha256: SCORECARD_SHA256, generatedAt: '2026-07-29T00:00:00.000Z' });
   assert.equal(state.official_completion_percent, 45);
   assert.equal(state.official_remaining_percent, 55);
+  assert.equal(state.diagnostic_completion_percent, null);
+  assert.equal(state.diagnostic_remaining_percent, null);
+  assert.equal(state.assessment_scope, 'main');
+  assert.equal(state.is_current_main, true);
+  assert.equal(state.observed_main_sha, SHA);
   assert.equal(state.current_decision, 'NO_GO');
+  assert.equal(state.scorecard_decision, 'NO_GO');
   assert.equal(state.classification, 'VERIFIED_CURRENT_MAIN_NO_GO');
   assert.equal(state.evidence_freshness.status, 'FRESH_EXACT_SHA');
   assert.equal(state.last_verified_score_sha, SHA);
 });
 
-test('preserves canonical partial and not-applicable scoring', () => {
+test('derives pull-request diagnostics without publishing official percentages', () => {
+  const state = derivePersistentExecutionState({
+    scorecard: scorecard(),
+    assessedSha: SHA,
+    observedMainSha: MAIN_SHA,
+    assessmentScope: 'pull_request',
+    runId: 12345,
+    sourceScorecardSha256: SCORECARD_SHA256,
+  });
+
+  assert.equal(state.assessment_scope, 'pull_request');
+  assert.equal(state.is_current_main, false);
+  assert.equal(state.observed_main_sha, MAIN_SHA);
+  assert.equal(state.last_verified_score_sha, SHA);
+  assert.equal(state.official_completion_percent, null);
+  assert.equal(state.official_remaining_percent, null);
+  assert.equal(state.diagnostic_completion_percent, 45);
+  assert.equal(state.diagnostic_remaining_percent, 55);
+  assert.equal(state.classification, 'VERIFIED_EXACT_SHA_DIAGNOSTIC');
+  assert.equal(state.current_decision, 'NO_GO');
+  assert.equal(state.scorecard_decision, 'NO_GO');
+  assert.equal(state.publish_recommendation, 'DO_NOT_PUBLISH_AS_ENTERPRISE');
+  assert.match(state.evidence_freshness.reason, /not protected-main release authority/);
+});
+
+test('never converts a 100% pull-request diagnostic into Enterprise GO or official completion', () => {
+  const state = derivePersistentExecutionState({
+    scorecard: scorecard({ pass: 100, blocked: 0 }),
+    assessedSha: SHA,
+    observedMainSha: MAIN_SHA,
+    assessmentScope: 'pull_request',
+    runId: 12345,
+    sourceScorecardSha256: SCORECARD_SHA256,
+  });
+
+  assert.equal(state.scorecard_decision, 'GO');
+  assert.equal(state.current_decision, 'NO_GO');
+  assert.equal(state.classification, 'VERIFIED_EXACT_SHA_DIAGNOSTIC');
+  assert.equal(state.is_current_main, false);
+  assert.equal(state.official_completion_percent, null);
+  assert.equal(state.official_remaining_percent, null);
+  assert.equal(state.diagnostic_completion_percent, 100);
+  assert.equal(state.diagnostic_remaining_percent, 0);
+  assert.equal(state.publish_recommendation, 'DO_NOT_PUBLISH_AS_ENTERPRISE');
+});
+
+test('resolves pull-request scope from the GitHub event base SHA', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'risck-scorecard-event-'));
+  const eventPath = join(directory, 'event.json');
+  writeFileSync(eventPath, JSON.stringify({ pull_request: { base: { sha: MAIN_SHA } } }));
+
+  try {
+    assert.deepEqual(resolveAssessmentContext({
+      eventName: 'pull_request',
+      eventPath,
+      ref: 'refs/pull/1784/merge',
+      assessedSha: SHA,
+    }), {
+      assessmentScope: 'pull_request',
+      observedMainSha: MAIN_SHA,
+    });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('fails closed when GitHub event context is absent', () => {
+  assert.throws(
+    () => resolveAssessmentContext({
+      eventName: '',
+      eventPath: '',
+      ref: '',
+      assessedSha: SHA,
+    }),
+    /GITHUB_EVENT_NAME is required/,
+  );
+});
+
+test('allows authoritative assessment only on protected main for GitHub workflow events', () => {
+  assert.deepEqual(resolveAssessmentContext({
+    eventName: 'push',
+    ref: 'refs/heads/main',
+    assessedSha: SHA,
+  }), {
+    assessmentScope: 'main',
+    observedMainSha: SHA,
+  });
+
+  assert.throws(
+    () => resolveAssessmentContext({
+      eventName: 'workflow_dispatch',
+      ref: 'refs/heads/feature',
+      assessedSha: SHA,
+    }),
+    /cannot claim protected-main Enterprise authority/,
+  );
+});
+
+test('preserves canonical partial and not-applicable scoring on current main', () => {
   const state = derivePersistentExecutionState({
     scorecard: scorecard({ pass: 45, partial: 1, blocked: 1, notApplicable: 1 }),
     assessedSha: SHA,
@@ -64,9 +175,11 @@ test('rejects a scorecard whose percentage was manually inflated', () => {
   );
 });
 
-test('derives GO only when every control passes', () => {
+test('derives GO only when every control passes on current main', () => {
   const state = derivePersistentExecutionState({ scorecard: scorecard({ pass: 100, blocked: 0 }), assessedSha: SHA, runId: 12345, sourceScorecardSha256: SCORECARD_SHA256 });
   assert.equal(state.current_decision, 'GO');
+  assert.equal(state.scorecard_decision, 'GO');
+  assert.equal(state.official_completion_percent, 100);
   assert.equal(state.classification, 'ENTERPRISE_READY');
   assert.equal(state.publish_recommendation, 'PUBLISH_AS_ENTERPRISE');
 });
@@ -80,7 +193,7 @@ test('rejects duplicate controls and inconsistent release decisions', () => {
   assert.throws(() => derivePersistentExecutionState({ scorecard: inconsistent, assessedSha: SHA, runId: 12345, sourceScorecardSha256: SCORECARD_SHA256 }), /release decision is inconsistent/);
 });
 
-test('rejects missing scorecard digest and invalid workflow attempt', () => {
+test('rejects missing scorecard digest, invalid workflow attempt and invalid scope', () => {
   assert.throws(
     () => derivePersistentExecutionState({ scorecard: scorecard(), assessedSha: SHA, runId: 12345 }),
     /SHA-256 is invalid/,
@@ -88,5 +201,16 @@ test('rejects missing scorecard digest and invalid workflow attempt', () => {
   assert.throws(
     () => derivePersistentExecutionState({ scorecard: scorecard(), assessedSha: SHA, runId: 12345, runAttempt: 0, sourceScorecardSha256: SCORECARD_SHA256 }),
     /run attempt/,
+  );
+  assert.throws(
+    () => derivePersistentExecutionState({
+      scorecard: scorecard(),
+      assessedSha: SHA,
+      observedMainSha: MAIN_SHA,
+      assessmentScope: 'preview',
+      runId: 12345,
+      sourceScorecardSha256: SCORECARD_SHA256,
+    }),
+    /assessment scope/,
   );
 });
