@@ -52,13 +52,13 @@ function getPostHogAssetHost() {
   return process.env.NEXT_PUBLIC_POSTHOG_ASSET_HOST?.trim() || DEFAULT_POSTHOG_ASSET_HOST;
 }
 
-function requiresConsent() {
-  return process.env.NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT === 'true';
+export function isAnalyticsConsentRequired() {
+  return process.env.NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT !== 'false';
 }
 
 function hasAnalyticsConsent() {
   if (typeof window === 'undefined') return false;
-  if (!requiresConsent()) return true;
+  if (!isAnalyticsConsentRequired()) return true;
   return window.localStorage.getItem(CONSENT_STORAGE_KEY) === 'granted';
 }
 
@@ -134,7 +134,7 @@ export function initPostHog(pathname?: string) {
     mask_all_element_attributes: true,
     respect_dnt: true,
     persistence: 'localStorage+cookie',
-    opt_out_capturing_by_default: requiresConsent(),
+    opt_out_capturing_by_default: isAnalyticsConsentRequired(),
     loaded: (loadedPostHog: PostHogBrowser) => {
       if (pathname && isSensitiveAnalyticsPath(pathname)) {
         loadedPostHog.stopSessionRecording?.();
