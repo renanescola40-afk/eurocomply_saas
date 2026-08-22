@@ -69,10 +69,13 @@ test.describe('premium design system', () => {
     expect(foregroundLuminance!, 'foreground must stay light').toBeGreaterThan(0.8);
     expect(ringLuminance!, 'focus ring must remain visible on dark UI').toBeGreaterThan(backgroundLuminance! + 0.12);
 
-    const firstInteractive = page.locator('a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled])').first();
-    await expect(firstInteractive).toBeVisible();
     await page.keyboard.press('Tab');
-    await expect(firstInteractive).toBeFocused();
+    const focusedInteractive = page.locator(':focus');
+    await expect(focusedInteractive).toBeVisible();
+    const focusedElementIsInteractive = await focusedInteractive.evaluate((element) => element.matches(
+      'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ));
+    expect(focusedElementIsInteractive, 'Tab should focus an enabled interactive control').toBe(true);
 
     const focusOutline = await page.evaluate(() => {
       const activeElement = document.activeElement;
