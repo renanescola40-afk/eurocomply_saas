@@ -10,6 +10,22 @@ function getLocale(rawLocale: string | null | undefined): Locale {
   return rawLocale && locales.includes(rawLocale as Locale) ? rawLocale as Locale : defaultLocale;
 }
 
+function getLocaleFromRequest(request: NextRequest): Locale {
+  const requestUrl = new URL(request.url);
+  const queryLocale = requestUrl.searchParams.get('locale');
+
+  if (queryLocale && locales.includes(queryLocale as Locale)) {
+    return queryLocale as Locale;
+  }
+
+  const firstPathSegment = requestUrl.pathname.split('/').filter(Boolean)[0];
+  const rawLocale = locales.includes(firstPathSegment as Locale)
+    ? firstPathSegment
+    : request.cookies.get(LOCALE_COOKIE)?.value;
+
+  return getLocale(rawLocale);
+}
+
 function getSafeNextPath(rawNext: string | null, locale: Locale) {
   const fallback = `/${locale}${DASHBOARD_PATH}`;
 
@@ -29,9 +45,7 @@ export async function GET(request: NextRequest) {
     return noStoreJson({ error: 'auth_app_url_unavailable' }, { status: 503 });
   }
 
-  const locale = getLocale(
-    requestUrl.searchParams.get('locale') ?? request.cookies.get(LOCALE_COOKIE)?.value,
-  );
+  const locale = getLocaleFromRequest(request);
   const next = getSafeNextPath(requestUrl.searchParams.get('next'), locale);
   const loginUrl = new URL(`/${locale}/login`, appBaseUrl);
 

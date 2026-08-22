@@ -4,9 +4,11 @@ This runbook documents the production and preview configuration required for Goo
 
 ## Architecture
 
-RISCK COMPLY starts Google OAuth from the server route `GET /auth/google`. The route resolves the configured application base URL, builds an exact `/auth/callback` redirect URL, and starts Supabase Auth with provider `google`.
+RISCK COMPLY starts the current Google OAuth flow in the browser through `supabase.auth.signInWithOAuth({ provider: 'google' })`. The client supplies an exact application continuation at `/auth/callback` with an allowlisted locale and optional safe `next` path.
 
-Supabase redirects back to `GET /auth/callback`, where the server exchanges the OAuth code for a Supabase session. Browser code must not exchange OAuth codes directly; the client entrypoint only navigates to `/auth/google`.
+Supabase sends the browser through the configured Google provider and then redirects the application code back to `GET /auth/callback`, where the server exchanges the authorization code for a Supabase session. A localized compatibility route at `/<locale>/auth/callback` re-exports the same hardened callback handler because locale middleware may prefix unlocalized application routes.
+
+`GET /auth/google` is retained only as a hardened legacy compatibility surface. It does not own the current provider initiation flow; it safely redirects to the localized login page, preserves only an allowlisted same-locale continuation, marks the redirect with `notice=legacy_google_route`, uses the configured application base URL, and fails closed when that base URL is unavailable. Because middleware localizes unprefixed application routes, `/<locale>/auth/google` must re-export the same root handler.
 
 ## Google Cloud Console
 
@@ -63,8 +65,8 @@ Do not add wildcard redirect URIs. Do not add broad path prefixes. Do not add ar
 In Supabase Dashboard > Authentication > Providers > Google:
 
 1. Enable Google.
-2. Paste `GOOGLE_CLIENT_ID`.
-3. Paste `GOOGLE_CLIENT_SECRET` only into Supabase/provider secret storage.
+2. Paste the Google OAuth web client ID.
+3. Paste the Google OAuth client secret only into Supabase/provider secret storage.
 4. Confirm the provider callback URL displayed by Supabase matches the Google Authorized redirect URI exactly.
 
 In Supabase Dashboard > Authentication > URL Configuration:
@@ -92,41 +94,32 @@ Preview deployments must use exact redirect URLs whenever possible. If the deplo
 
 ## Application environment
 
-Server/provider secret store only:
+The Google OAuth client ID and client secret belong to the Supabase Google provider configuration. The application does not need those provider secrets in browser-visible environment variables and must not duplicate the Google client secret into `NEXT_PUBLIC_*` configuration.
 
-```text
-GOOGLE_CLIENT_ID=<google-web-client-id>
-GOOGLE_CLIENT_SECRET=<google-web-client-secret>
-```
-
-Public runtime values:
+Application runtime values include:
 
 ```text
 NEXT_PUBLIC_APP_URL=https://<production-host>
 NEXT_PUBLIC_SITE_URL=https://<production-host>
 NEXT_PUBLIC_SUPABASE_URL=https://<supabase-project-ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<supabase-anon-key>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<supabase-publishable-or-compatible-anon-key>
 ```
 
-Google client secrets must never use `NEXT_PUBLIC_` and must never be logged, returned to the browser or committed.
+Provider secrets must never be logged, returned to the browser or committed.
 
 ## Redirect and open redirect policy
 
-Accepted post-login `next` values are local dashboard paths only:
+The current auth flow accepts only explicit product continuations for the selected locale. Depending on the entry flow, the allowlist includes onboarding, checkout, the organization dashboard and the observability dashboard.
 
-```text
-/<locale>/dashboard...
-```
-
-The auth callback rejects or normalizes:
+The auth flow rejects or normalizes:
 
 - absolute URLs such as `https://evil.example/path`;
 - protocol-relative URLs such as `//evil.example/path`;
-- root-only `/`;
-- non-dashboard paths;
-- paths for unsupported locales.
+- paths for unsupported locales;
+- destinations outside the explicit callback/signup allowlists;
+- excessively long continuation values.
 
-The middleware redirects unauthenticated private routes to the localized login page and preserves the requested local path in `next`. Authenticated users visiting localized login/signup or localized marketing home are redirected to the organization dashboard.
+The middleware redirects unauthenticated private routes to the localized login page and preserves the requested local path in `next`. Authenticated users visiting localized login/signup or localized marketing home are redirected through the current authenticated onboarding path.
 
 ## Session control
 
@@ -138,7 +131,6 @@ Sensitive endpoints must require step-up tokens through `requireStepUpForRequest
 
 Google OAuth readiness is a Go only after production and preview login are tested with exact redirect URIs and token/cookie redaction is verified in logs.
 
-Enterprise auth remains No-Go when either of these is true:
+A source/build contract is not a substitute for a legitimate browser login proof on the exact accepted release. The retained proof must cover provider initiation, consent/provider redirect, application callback/code exchange, session establishment, protected-route access, logout and subsequent denial without exposing tokens or provider secrets.
 
-- Supabase MFA or enterprise IdP reauthentication is not configured.
-- Live step-up runtime proof is missing for the target environment.
+Enterprise auth remains No-Go when required exact-release runtime evidence, MFA/enterprise IdP controls or live step-up proof for the target environment are still missing.
