@@ -11,12 +11,20 @@ describe('database-only recovery storage boundary', () => {
     expect(exercise.indexOf("failurePhase = 'managed_storage_schema_prime'"))
       .toBeLessThan(exercise.indexOf("failurePhase = 'roles_dump'"));
     expect(exercise).toContain('checks.managedStorageSchemaPrimed = true');
-    expect(exercise).toContain("'storage.buckets_vectors'");
-    expect(exercise).toContain("'storage.vector_indexes'");
-    expect(exercise).toContain("'storage.*'");
-    expect(exercise).toContain("'--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[2]");
+    expect(exercise).toContain("SUPABASE_MANAGED_DATA_EXCLUDE = 'storage.*'");
+    expect(exercise.match(/'--exclude'/g)).toHaveLength(1);
+    expect(exercise).toContain("'--exclude', SUPABASE_MANAGED_DATA_EXCLUDE");
+    expect(exercise).toContain("failurePhase = 'data_dump_storage_exclusion_validation'");
+    expect(exercise).toContain('assertManagedStorageRowsExcluded(dataDumpPath)');
+    expect(exercise).toContain('checks.managedStorageRowsExcluded = true');
     expect(exercise).toContain('all API services were stopped before any Production snapshot restore');
     expect(exercise).toContain('selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory');
+  });
+
+  it('fails closed if a Supabase CLI regression leaves Storage COPY rows in the data dump', () => {
+    expect(exercise).toContain('function assertManagedStorageRowsExcluded(path)');
+    expect(exercise).toContain('/^COPY\\s+"?storage"?\\./mi');
+    expect(exercise).toContain("throw new Error('recovery_storage_rows_present_in_data_dump')");
   });
 
   it('uses Supabase managed migrations only while the target is empty, then returns to DB-only mode', () => {
