@@ -2,10 +2,12 @@ import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { enforceInternalAuthenticationRateLimit } from '@/server/security/internal-auth-rate-limit';
 import { noStoreJson } from '@/server/security/no-store';
+import { isExpectedMissingSupabaseSchema } from '@/server/supabase/schema-compatibility';
 
 export const runtime = 'nodejs';
 
 const METHOD_NOT_ALLOWED_HEADERS = { Allow: 'POST' };
+const PRE_V19_DEFER_REASON = 'maintenance_data_plane_not_promoted';
 
 type IntelligenceRefreshPayload = {
   external_id: string;
@@ -79,11 +81,21 @@ export async function POST(request: Request) {
     .select('external_id,title,updated_at');
 
   if (error) {
+    if (isExpectedMissingSupabaseSchema(error)) {
+      return noStoreJson({
+        ok: true,
+        status: 'deferred',
+        reason: PRE_V19_DEFER_REASON,
+        processed: 0,
+        items: [],
+      });
+    }
+
     console.error('[intelligence:refresh] upsert failed', { code: error.code ?? 'unknown' });
     return noStoreJson({ ok: false, error: 'Unable to refresh intelligence items' }, { status: 500 });
   }
 
-  return noStoreJson({ ok: true, processed: data?.length ?? 0, items: data ?? [] });
+  return noStoreJson({ ok: true, status: 'completed', processed: data?.length ?? 0, items: data ?? [] });
 }
 
 export async function GET() {
