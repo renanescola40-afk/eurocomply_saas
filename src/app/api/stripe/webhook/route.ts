@@ -9,6 +9,7 @@ import { validateStripeWebhookEventMode } from '@/server/billing/stripe-event-mo
 import { syncStripeSubscriptionForInvoiceEvent } from '@/server/billing/stripe-invoice-subscription-sync';
 import { handleStripeWebhookEventWithRecovery } from '@/server/billing/stripe-webhook-recovery';
 import { getStripeEventAuditContext } from '@/server/billing/stripe-webhooks';
+import { syncEnterpriseContractBillingEvent } from '@/server/enterprise/billing';
 import { noStoreJson } from '@/server/security/no-store';
 import { readBoundedRequestBody } from '@/server/security/read-bounded-request-body';
 
@@ -125,6 +126,32 @@ export async function POST(request: Request) {
       { error: misconfigured ? 'webhook_mode_not_configured' : 'webhook_mode_mismatch' },
       { status: misconfigured ? 500 : 400 },
     );
+  }
+
+  try {
+    // Negotiated Enterprise contracts share the canonical LIVE Stripe endpoint.
+    // Route those events before any self-service synchronization so an explicitly
+    // bound Enterprise subscription never mutates the self-service subscription
+    // authority. The Enterprise RPC is itself idempotent by Stripe event id.
+    const enterprise = await syncEnterpriseContractBillingEvent(event);
+    if (enterprise.matched) {
+      await recordWebhookRouteAudit({ action: 'webhook_received', event });
+      const duplicate = enterprise.outcome === 'duplicate';
+      return noStoreJson({
+        received: true,
+        enterprise: true,
+        skipped: duplicate,
+        duplicate,
+        unsupported: false,
+        contractId: enterprise.contractId,
+        contractStatus: enterprise.appliedStatus,
+        billingStatus: enterprise.billingStatus,
+      });
+    }
+  } catch (enterpriseSyncError) {
+    await recordWebhookRouteAudit({ action: 'webhook_rejected', event, reason: 'enterprise_billing_sync_failed' });
+    reportError(enterpriseSyncError, { area: 'stripe_enterprise_billing_sync_failed', stripeEventId: event.id });
+    return noStoreJson({ error: 'webhook_processing_failed' }, { status: 500 });
   }
 
   try {
