@@ -13,7 +13,7 @@ const billing = readFileSync('src/server/enterprise/billing.ts', 'utf8');
 const selfServiceCheckout = readFileSync('src/app/api/billing/checkout/route.ts', 'utf8');
 
 describe('Enterprise Stripe binding boundary', () => {
-  it('preserves the reviewed explicit-contract-or-existing-subscription selector in V19', () => {
+  it('preserves explicit-contract-or-existing-subscription selection while making explicit metadata authoritative in V19', () => {
     for (const migration of [historicalBoundary, v19Boundary]) {
       expect(migration).toContain('p_contract_id is not null');
       expect(migration).toContain('p_stripe_subscription_id is not null');
@@ -23,10 +23,11 @@ describe('Enterprise Stripe binding boundary', () => {
     expect(historicalBoundary).toContain('contract.stripe_subscription_id = p_stripe_subscription_id');
     expect(v19Boundary).toContain("contract.contract_mode='negotiated'");
     expect(v19Boundary).toContain('contract.id=p_contract_id');
+    expect(v19Boundary).toContain('p_contract_id is null');
     expect(v19Boundary).toContain('contract.stripe_subscription_id=p_stripe_subscription_id');
   });
 
-  it('does not use organization-only matching for a new Stripe binding', () => {
+  it('does not use organization-only matching or subscription fallback when an explicit contract marker exists', () => {
     const historicalSelection = historicalBoundary.slice(
       historicalBoundary.indexOf('select contract.* into v_contract'),
       historicalBoundary.indexOf("return query select 'not_enterprise'::text"),
@@ -45,6 +46,9 @@ describe('Enterprise Stripe binding boundary', () => {
       "p_organization_id is not null\n        and contract.organization_id=p_organization_id",
     );
     expect(v19Selection).not.toContain('contract.stripe_customer_id is null');
+    expect(v19Selection).toContain(
+      'p_contract_id is null\n        and p_stripe_subscription_id is not null',
+    );
   });
 
   it('enforces one authoritative Enterprise contract per Stripe subscription binding', () => {
@@ -76,10 +80,12 @@ describe('Enterprise Stripe binding boundary', () => {
     expect(billing).toContain('&& isKnownSelfServiceEvent');
   });
 
-  it('fails retryably instead of acknowledging Enterprise binding conflicts or invalid transitions', () => {
+  it('fails retryably instead of acknowledging Enterprise conflicts, invalid transitions, or unmatched explicit markers', () => {
     expect(billing).toContain("row.outcome === 'binding_conflict'");
     expect(billing).toContain("row.outcome === 'invalid_transition'");
     expect(billing).toContain('throw new Error(`enterprise_billing_${row.outcome}`)');
+    expect(billing).toContain('contractId && row.matched !== true');
+    expect(billing).toContain("throw new Error('enterprise_billing_explicit_contract_unmatched')");
   });
 
   it('keeps duplicate Enterprise events idempotent before new binding selection', () => {
