@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowRight, CheckCircle2, FileText, ShieldCheck } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/i18n/language-switcher';
 import { PublicFooter } from '@/components/marketing/public-footer';
+import { ProviderRuntimeDisclosure } from '@/components/trust/provider-runtime-disclosure';
 import { type Locale } from '@/lib/i18n/routing';
 import { getLocalizedTrustCenterPages, getTrustCenterUi } from '@/lib/trust-center/localized-content';
 import { type TrustPage } from '@/lib/trust-center/content';
@@ -88,6 +89,8 @@ export function TrustCenterPage({ locale, page }: { locale: Locale; page: TrustP
           ))}
         </div>
       </section>
+
+      <ProviderRuntimeDisclosure locale={locale} slug={page.slug} />
 
       <PublicFooter locale={locale} />
     </main>
