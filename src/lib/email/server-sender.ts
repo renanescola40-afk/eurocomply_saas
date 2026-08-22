@@ -12,6 +12,7 @@ import {
   type ProviderFailureError,
   type ProviderFailureSummary,
 } from '@/server/providers/failure';
+import { isExpectedMissingSupabaseSchema } from '@/server/supabase/schema-compatibility';
 
 export type SendEmailInput = {
   to: string;
@@ -27,12 +28,19 @@ export type SendEmailInput = {
   metadata?: Record<string, string | number | boolean | null | undefined>;
 };
 
+export type EmailDeliveryAuditStatus =
+  | 'persisted'
+  | 'schema_unavailable'
+  | 'admin_unavailable'
+  | 'write_failed';
+
 export type SendEmailResult = {
   sent: boolean;
   provider: 'resend' | 'console';
   id?: string;
   status: 'sent' | 'skipped' | 'failed';
   attempts: number;
+  audit: EmailDeliveryAuditStatus;
   failure?: ProviderFailureSummary;
 };
 
@@ -254,9 +262,9 @@ async function writeEmailLog(input: {
   providerId?: string | null;
   attempts: number;
   error?: string | null;
-}) {
+}): Promise<EmailDeliveryAuditStatus> {
   const supabase = tryCreateAdminClient();
-  if (!supabase) return;
+  if (!supabase) return 'admin_unavailable';
 
   const payload = buildEmailLogPayload(input);
 
@@ -267,12 +275,19 @@ async function writeEmailLog(input: {
   const { error } = await operation;
 
   if (error) {
+    if (isExpectedMissingSupabaseSchema(error)) {
+      return 'schema_unavailable';
+    }
+
     reportError(error, {
       area: 'email_delivery_log_write',
       template: payload.template,
       status: input.status,
     });
+    return 'write_failed';
   }
+
+  return 'persisted';
 }
 
 async function sendWithResend(input: SendEmailInput, apiKey: string, from: string) {
@@ -333,7 +348,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
       ...providerFailureContext(configurationFailure),
     });
 
-    await writeEmailLog({
+    const audit = await writeEmailLog({
       email: deliveryInput,
       status: 'skipped',
       provider: 'console',
@@ -346,6 +361,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
       provider: 'console',
       status: 'skipped',
       attempts: 0,
+      audit,
       failure: configurationFailure.toSafeSummary(),
     };
   }
@@ -358,14 +374,14 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     try {
       const providerId = await sendWithResend(deliveryInput, apiKey, from);
 
-      await writeEmailLog({
+      const audit = await writeEmailLog({
         email: deliveryInput,
         status: 'sent',
         provider: 'resend',
         providerId,
         attempts: attempt,
       });
-      return { sent: true, provider: 'resend', id: providerId, status: 'sent', attempts: attempt };
+      return { sent: true, provider: 'resend', id: providerId, status: 'sent', attempts: attempt, audit };
     } catch (error) {
       const providerFailure = classifyProviderFailure('resend', 'send_email', error);
       lastFailure = providerFailure;
