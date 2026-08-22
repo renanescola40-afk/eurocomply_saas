@@ -19,7 +19,8 @@ const batchHPath = join(root, 'docs', 'security', 'evidence', 'human-review', 's
 const batchNPath = join(root, 'docs', 'security', 'evidence', 'human-review', 'supabase-migration-mega-batch-n.md');
 const breakGlassDecisionPath = join(root, 'docs', 'security', 'decisions', '2026-08-13-enterprise-break-glass-unapplied-history.md');
 const breakGlassHistoricalName = '20260727160000_enterprise_break_glass_governance.sql';
-const breakGlassForwardName = '20260813234000_reconcile_enterprise_break_glass_governance.sql';
+const breakGlassForwardSourceName = '20260813234000_reconcile_enterprise_break_glass_governance.sql';
+const breakGlassForwardName = '20260822123548_v19_reconcile_enterprise_break_glass_governance.sql';
 const breakGlassHistoricalPath = join(root, 'supabase', 'migrations', breakGlassHistoricalName);
 const breakGlassHeldPath = `${breakGlassHistoricalPath}.unapplied-history-held`;
 const breakGlassForwardPath = join(root, 'supabase', 'migrations', breakGlassForwardName);
@@ -178,7 +179,7 @@ function validateBreakGlassReplayBoundary() {
   const decision = readFileSync(breakGlassDecisionPath, 'utf8');
   for (const marker of [
     breakGlassHistoricalName,
-    breakGlassForwardName,
+    breakGlassForwardSourceName,
     'unapplied historical schema-effect source',
     'RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL=false',
   ]) {
