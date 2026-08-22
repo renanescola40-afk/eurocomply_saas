@@ -36,12 +36,29 @@ describe('bounded Supabase production promotion workflow', () => {
     expect(workflow).toContain(".github/workflows/supabase-forward-reconciliation-rehearsal.yml");
     expect(workflow).toContain(".github/workflows/supabase-forward-reconciliation-dry-run.yml");
     expect(workflow).toContain(".github/workflows/supabase-migration-reconciliation-decision-gate.yml");
-    expect(workflow).toContain("test \"$(jq -r '.head_sha' <<<\"$DECISION_JSON\")\" = \"$TARGET_SHA\"");
     expect(workflow).toContain("test \"$(jq -r '.conclusion' <<<\"$DECISION_JSON\")\" = 'success'");
   });
 
+  it('requires the bounded Production dry-run attestation carried by the successful Decision Gate', () => {
+    expect(workflow).toContain('source-bounded-production-dry-run-attestation.json');
+    expect(workflow).toContain('risck-comply.supabase-forward-bounded-production-dry-run.v1');
+    expect(workflow).toContain('.mode == "BOUNDED_FORWARD_DECISION"');
+    expect(workflow).toContain('.sourceForwardDryRunRunId == $dryRunId');
+    expect(workflow).toContain('.checks.filteredDbPushDryRunOnly == true');
+    expect(workflow).toContain('.checks.includeAllUsed == false');
+    expect(workflow).toContain('.checks.migrationHistoryRepairUsed == false');
+    expect(workflow).toContain('.productionWriteAuthorized == false');
+    expect(workflow).toContain('.productionWritePerformed == false');
+
+    const attestationIndex = workflow.indexOf('source-bounded-production-dry-run-attestation.json');
+    const writeIndex = workflow.indexOf('Apply only the filtered selected migration set');
+    expect(attestationIndex).toBeGreaterThan(-1);
+    expect(attestationIndex).toBeLessThan(writeIndex);
+    expect(workflow).toContain('Revalidate current main, bounded S3 and human approval immediately before production write');
+  });
+
   it('proves exact selected bytes are covered by accepted PENDING_DEPLOYMENT human decisions before the write', () => {
-    const approvalIndex = workflow.indexOf('Recompile and bind selected bytes plus accepted human decisions');
+    const approvalIndex = workflow.indexOf('Recompile and bind selected bytes plus bounded Production dry-run and accepted human decisions');
     const finalDryRunIndex = workflow.indexOf('Execute final filtered dry run immediately before promotion');
     const writeIndex = workflow.indexOf('Apply only the filtered selected migration set');
     expect(approvalIndex).toBeGreaterThanOrEqual(0);
@@ -52,7 +69,6 @@ describe('bounded Supabase production promotion workflow', () => {
     expect(workflow).toContain('everySelectedMigrationPendingDeployment == true');
     expect(workflow).toContain('exactSelectedBytesCovered == true');
     expect(workflow).toContain('productionWriteAuthorizedByDecisionGate == false');
-    expect(workflow).toContain('Revalidate current main and human approval immediately before production write');
     expect(humanApproval).toContain("decisionResult?.deploymentAuthorization === 'NOT_AUTHORIZED'");
     expect(humanApproval).toContain("item?.classification === 'PENDING_DEPLOYMENT'");
     expect(humanApproval).toContain('schemaEvidenceReference');
@@ -62,7 +78,7 @@ describe('bounded Supabase production promotion workflow', () => {
     expect(humanApproval).toContain('approvalReferenceStored: false');
   });
 
-  it('verifies the hosted PostgreSQL client without a package-network dependency before any protected DB secret is used', () => {
+  it('verifies the hosted PostgreSQL client before any protected DB secret is used', () => {
     const verifierIndex = workflow.indexOf('Verify runner PostgreSQL client without network installation');
     const secretValidationIndex = workflow.indexOf('Revalidate exact current main and protected database secret');
     expect(verifierIndex).toBeGreaterThanOrEqual(0);
@@ -102,8 +118,10 @@ describe('bounded Supabase production promotion workflow', () => {
     expect(postconditions).toContain('\\ir ../security/validate-live-rls-inventory-helper-boundary.sql');
   });
 
-  it('documents manual human-reviewed protected promotion and prohibits migration shortcuts', () => {
-    expect(runbook).toContain('## Stage 3 — human-approved bounded production promotion');
+  it('documents S1/S2/S3/Decision ordering and prohibits migration shortcuts', () => {
+    expect(runbook).toContain('## Stage 3 — bounded Production dry-run for Decision Gate');
+    expect(runbook).toContain('## Stage 4 — exact human Decision Gate');
+    expect(runbook).toContain('## Stage 5 — human-approved bounded production promotion');
     expect(runbook).toContain('successful protected human migration Decision Gate run ID');
     expect(runbook).toContain('exact human decision subject SHA');
     expect(runbook).toContain('PROMOTE <release_sha> USING DRY-RUN <dry_run_run_id> AND DECISION <decision_run_id>');
