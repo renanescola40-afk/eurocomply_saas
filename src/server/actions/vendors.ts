@@ -5,9 +5,9 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
 import { assertResourceQuota } from '@/server/billing/entitlements';
+import { mutateCommercialResourceAtomic } from '@/server/billing/commercial-resource-atomic';
 import { requireCurrentUser } from '@/server/queries/auth';
 import { logAuditEvent } from './audit';
-import { mutateCommercialResourceAtomic } from './commercial-resource-atomic';
 
 const vendorSchema = z.object({
   organizationId: z.string().uuid(),
@@ -127,7 +127,9 @@ export async function createVendor(input: unknown) {
 
     return result.resource_record;
   } catch (error) {
-    if (error instanceof Error && error.message === quotaExceededMessage) throw error;
+    if (error instanceof Error && error.message === quotaExceededMessage) {
+      throw providerActionError(quotaExceededMessage);
+    }
     failVendorAction(error, { ...context, vendorId }, 'criar');
   }
 }
