@@ -15,6 +15,7 @@ describe('pre-V19 Production runtime compatibility', () => {
 
     expect(complianceAlerts).toContain("supabase.from('email_notification_events').select('id').limit(1)");
     expect(complianceAlerts).toContain("supabase.from('vendors').select('id,next_review_at').limit(1)");
+    expect(complianceAlerts).toContain('!isExpectedMissingSupabaseMaintenanceSchema(error)');
     expect(complianceAlerts).toContain("reason: PRE_V19_DEFER_REASON");
     expect(complianceAlerts).toContain("status: 'deferred'");
     expect(probeIndex).toBeGreaterThan(-1);
@@ -22,18 +23,18 @@ describe('pre-V19 Production runtime compatibility', () => {
   });
 
   it('does not downgrade unexpected compliance-alert database failures', () => {
-    expect(complianceAlerts).toContain('!isExpectedMissingSupabaseSchema(error)');
     expect(complianceAlerts).toContain("area: 'compliance_alert_data_plane_probe'");
     expect(complianceAlerts).toContain('throw unexpectedError;');
   });
 
-  it('treats only known missing intelligence schema as deferred', () => {
-    const compatibilityIndex = intelligenceRefresh.indexOf('if (isExpectedMissingSupabaseSchema(error))');
+  it('defers intelligence only while its relation is absent and keeps column drift fatal', () => {
+    const compatibilityIndex = intelligenceRefresh.indexOf('if (isExpectedMissingSupabaseRelation(error))');
     const errorIndex = intelligenceRefresh.indexOf("console.error('[intelligence:refresh] upsert failed'");
 
     expect(intelligenceRefresh).toContain(".from('intelligence_items')");
     expect(intelligenceRefresh).toContain("status: 'deferred'");
     expect(intelligenceRefresh).toContain("reason: PRE_V19_DEFER_REASON");
+    expect(intelligenceRefresh).not.toContain('isExpectedMissingSupabaseSchema(error)');
     expect(compatibilityIndex).toBeGreaterThan(-1);
     expect(errorIndex).toBeGreaterThan(compatibilityIndex);
     expect(intelligenceRefresh).toContain("{ status: 500 }");
