@@ -30,7 +30,7 @@ function normalizePlan(value) {
   return String(value ?? '').trim().toLowerCase();
 }
 
-export function evaluateSupabaseProviderResilience({ projectRef, projects, organization, backups }) {
+export function evaluateSupabaseProviderResilience({ projectRef, projects, organization, backups, authConfig }) {
   const projectList = Array.isArray(projects) ? projects : [];
   const project = projectList.find((entry) => String(entry?.ref ?? '').toLowerCase() === String(projectRef ?? '').toLowerCase());
   const organizationSlug = String(project?.organization_slug ?? '').trim();
@@ -48,6 +48,8 @@ export function evaluateSupabaseProviderResilience({ projectRef, projects, organ
     backupCapabilityObserved: typeof backups?.walg_enabled === 'boolean',
     managedBackupObserved,
     pitrStateObserved: typeof backups?.pitr_enabled === 'boolean',
+    leakedPasswordProtectionStateObserved: typeof authConfig?.password_hibp_enabled === 'boolean',
+    leakedPasswordProtectionEnabled: authConfig?.password_hibp_enabled === true,
   };
 
   const blockerCodes = [];
@@ -59,6 +61,10 @@ export function evaluateSupabaseProviderResilience({ projectRef, projects, organ
   if (!checks.backupCapabilityObserved) blockerCodes.push('supabase_backup_capability_state_missing');
   if (!checks.managedBackupObserved) blockerCodes.push('supabase_managed_backup_not_observed');
   if (!checks.pitrStateObserved) blockerCodes.push('supabase_pitr_state_missing');
+  if (!checks.leakedPasswordProtectionStateObserved) blockerCodes.push('supabase_leaked_password_protection_state_missing');
+  if (checks.leakedPasswordProtectionStateObserved && !checks.leakedPasswordProtectionEnabled) {
+    blockerCodes.push('supabase_leaked_password_protection_disabled');
+  }
 
   return {
     checks,
@@ -116,6 +122,7 @@ export async function buildSupabaseProviderResilienceEvidence({
   let projectsResult = { reachable: false, body: null };
   let organizationResult = { reachable: false, body: null };
   let backupsResult = { reachable: false, body: null };
+  let authConfigResult = { reachable: false, body: null };
   let evaluation = null;
 
   if (tokenConfigured && projectRefDerived) {
@@ -133,18 +140,27 @@ export async function buildSupabaseProviderResilienceEvidence({
 
       backupsResult = await requestJson(`/v1/projects/${encodeURIComponent(projectRef)}/database/backups`, accessToken);
       if (!backupsResult.reachable) blockerCodes.push('supabase_backup_inventory_unreachable');
+
+      authConfigResult = await requestJson(`/v1/projects/${encodeURIComponent(projectRef)}/config/auth`, accessToken);
+      if (!authConfigResult.reachable) blockerCodes.push('supabase_auth_config_unreachable');
     } else if (projectsResult.reachable && !project) {
       blockerCodes.push('supabase_project_identity_mismatch');
     } else if (projectsResult.reachable && project && !organizationSlug) {
       blockerCodes.push('supabase_organization_binding_missing');
     }
 
-    if (projectsResult.reachable && organizationResult.reachable && backupsResult.reachable) {
+    if (
+      projectsResult.reachable
+      && organizationResult.reachable
+      && backupsResult.reachable
+      && authConfigResult.reachable
+    ) {
       evaluation = evaluateSupabaseProviderResilience({
         projectRef,
         projects: projectsResult.body,
         organization: organizationResult.body,
         backups: backupsResult.body,
+        authConfig: authConfigResult.body,
       });
       blockerCodes.push(...evaluation.blockerCodes);
     }
@@ -156,6 +172,7 @@ export async function buildSupabaseProviderResilienceEvidence({
     projectInventoryReachable: projectsResult.reachable === true,
     organizationControlPlaneReachable: organizationResult.reachable === true,
     backupInventoryReachable: backupsResult.reachable === true,
+    authConfigReachable: authConfigResult.reachable === true,
     ...(evaluation?.checks ?? {
       projectIdentityMatched: false,
       projectHealthy: false,
@@ -165,6 +182,8 @@ export async function buildSupabaseProviderResilienceEvidence({
       backupCapabilityObserved: false,
       managedBackupObserved: false,
       pitrStateObserved: false,
+      leakedPasswordProtectionStateObserved: false,
+      leakedPasswordProtectionEnabled: false,
     }),
   };
   const uniqueBlockers = [...new Set(blockerCodes)];
@@ -190,11 +209,12 @@ export async function buildSupabaseProviderResilienceEvidence({
       projectRefStored: false,
       organizationSlugStored: false,
       organizationPlanStored: false,
+      authConfigStored: false,
       providerResponseBodiesStored: false,
       backupIdentifiersStored: false,
       rowDataStored: false,
     },
-    evidenceBoundary: 'Records only booleans, a completed-backup count, PITR enabled state, exact-SHA binding and redacted blocker codes. It does not store the Management API token, project URL/ref, organization identity/plan value, backup identifiers or provider response bodies.',
+    evidenceBoundary: 'Records only provider-security booleans, a completed-backup count, PITR enabled state, exact-SHA binding and redacted blocker codes. It does not store the Management API token, project URL/ref, organization identity/plan value, Auth configuration body, backup identifiers or provider response bodies.',
   };
 }
 
