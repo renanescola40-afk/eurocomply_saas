@@ -152,14 +152,17 @@ describe('ephemeral Supabase recovery database contract', () => {
     expect(recovery).toContain('Start disposable Supabase recovery database');
   });
 
-  it('uses supported roles schema data dumps, excludes managed vector storage data and restores transactionally', () => {
+  it('uses supported roles schema data dumps, excludes all managed Storage rows fail-closed and restores transactionally', () => {
     expect(exercise).toContain("'--role-only', '--file', rolesDumpPath");
     expect(exercise).toContain("run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath], {}, 'recovery_schema_dump_failed')");
     expect(exercise).toContain("'--data-only', '--use-copy'");
-    expect(exercise).toContain("'--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[0]");
-    expect(exercise).toContain("'--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[1]");
-    expect(exercise).toContain("'storage.buckets_vectors'");
-    expect(exercise).toContain("'storage.vector_indexes'");
+    expect(exercise).toContain("SUPABASE_MANAGED_DATA_EXCLUDE = 'storage.*'");
+    expect(exercise.match(/'--exclude'/g)).toHaveLength(1);
+    expect(exercise).toContain("'--exclude', SUPABASE_MANAGED_DATA_EXCLUDE");
+    expect(exercise).toContain("failurePhase = 'data_dump_storage_exclusion_validation'");
+    expect(exercise).toContain('assertManagedStorageRowsExcluded(dataDumpPath)');
+    expect(exercise).toContain('checks.managedStorageRowsExcluded = true');
+    expect(exercise).toContain('recovery_storage_rows_present_in_data_dump');
     expect(exercise).not.toContain("'--schema', 'public,app_private'");
     expect(exercise).toContain("run('docker', ['cp', path, `${container}:${containerPath}`], {}, 'recovery_copy_dump_to_isolated_target_failed')");
     expect(exercise).toContain("'--single-transaction', '--set', 'ON_ERROR_STOP=1'");
