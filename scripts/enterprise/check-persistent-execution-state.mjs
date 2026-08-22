@@ -42,6 +42,12 @@ export function validatePersistentExecutionState(state, checkedOutSha) {
   const freshness = state?.evidence_freshness?.status;
   const assessmentScope = assessmentScopeFor(state);
   const isCurrentMain = isCurrentMainFor(state, assessmentScope);
+  const completion = assessmentScope === 'pull_request'
+    ? state?.diagnostic_completion_percent
+    : state?.official_completion_percent;
+  const remaining = assessmentScope === 'pull_request'
+    ? state?.diagnostic_remaining_percent
+    : state?.official_remaining_percent;
 
   if (!Number.isFinite(Date.parse(state?.timestamp))) failures.push('timestamp_invalid');
   if (!SHA_PATTERN.test(checkedOutSha)) failures.push('checked_out_sha_invalid');
@@ -51,6 +57,22 @@ export function validatePersistentExecutionState(state, checkedOutSha) {
   if (!VALID_ASSESSMENT_SCOPES.has(assessmentScope)) failures.push('assessment_scope_invalid');
   if (assessmentScope === 'main' && isCurrentMain !== true) failures.push('main_scope_requires_current_main');
   if (assessmentScope === 'pull_request' && isCurrentMain !== false) failures.push('pull_request_scope_cannot_be_current_main');
+  if (assessmentScope === 'pull_request') {
+    if (state?.official_completion_percent !== null || state?.official_remaining_percent !== null) {
+      failures.push('pull_request_cannot_publish_official_percentages');
+    }
+    if (!isNumberInRange(state?.diagnostic_completion_percent, 0, 100)) failures.push('diagnostic_completion_percent_invalid');
+    if (!isNumberInRange(state?.diagnostic_remaining_percent, 0, 100)) failures.push('diagnostic_remaining_percent_invalid');
+  } else {
+    if (!isNumberInRange(state?.official_completion_percent, 0, 100)) failures.push('official_completion_percent_invalid');
+    if (!isNumberInRange(state?.official_remaining_percent, 0, 100)) failures.push('official_remaining_percent_invalid');
+    if (state?.diagnostic_completion_percent !== undefined && state.diagnostic_completion_percent !== null) {
+      failures.push('main_scope_cannot_publish_diagnostic_percentages');
+    }
+    if (state?.diagnostic_remaining_percent !== undefined && state.diagnostic_remaining_percent !== null) {
+      failures.push('main_scope_cannot_publish_diagnostic_percentages');
+    }
+  }
   if (!Number.isSafeInteger(state?.evidence_freshness?.scorecard_run_id) || state.evidence_freshness.scorecard_run_id <= 0) {
     failures.push('scorecard_run_id_invalid');
   }
@@ -103,8 +125,6 @@ export function validatePersistentExecutionState(state, checkedOutSha) {
       failures.push(`${field}_invalid`);
     }
   }
-  if (!isNumberInRange(state?.official_completion_percent, 0, 100)) failures.push('official_completion_percent_invalid');
-  if (!isNumberInRange(state?.official_remaining_percent, 0, 100)) failures.push('official_remaining_percent_invalid');
   const counts = [
     state?.controls_pass,
     state?.controls_partial,
@@ -123,21 +143,32 @@ export function validatePersistentExecutionState(state, checkedOutSha) {
   const expectedCompletion = applicableControls > 0
     ? roundOne(((state?.controls_pass + (state?.controls_partial * 0.5)) / applicableControls) * 100)
     : 0;
+  const expectedRemaining = roundOne(100 - expectedCompletion);
   if (
-    isNumberInRange(state?.official_completion_percent, 0, 100)
+    isNumberInRange(completion, 0, 100)
     && Number.isInteger(state?.controls_pass)
     && Number.isInteger(state?.controls_partial)
     && Number.isInteger(state?.controls_not_applicable)
-    && state.official_completion_percent !== expectedCompletion
+    && completion !== expectedCompletion
   ) {
     failures.push('completion_percent_must_match_weighted_counts');
   }
   if (
-    isNumberInRange(state?.official_completion_percent, 0, 100)
-    && isNumberInRange(state?.official_remaining_percent, 0, 100)
-    && roundOne(state.official_completion_percent + state.official_remaining_percent) !== 100
+    isNumberInRange(completion, 0, 100)
+    && isNumberInRange(remaining, 0, 100)
+    && roundOne(completion + remaining) !== 100
   ) {
     failures.push('completion_and_remaining_must_equal_100');
+  }
+  if (isNumberInRange(remaining, 0, 100) && remaining !== expectedRemaining) {
+    failures.push('remaining_percent_must_match_weighted_counts');
+  }
+  const expectedScorecardDecision = expectedCompletion === 100 && state?.critical_controls_open === 0 ? 'GO' : 'NO_GO';
+  if (state?.scorecard_decision !== undefined && state.scorecard_decision !== expectedScorecardDecision) {
+    failures.push('scorecard_decision_must_match_weighted_counts');
+  }
+  if (assessmentScope === 'main' && state?.scorecard_decision !== undefined && state.current_decision !== state.scorecard_decision) {
+    failures.push('main_decision_must_match_scorecard_decision');
   }
   if (!['FRESH_EXACT_SHA', 'STALE', 'UNKNOWN'].includes(freshness)) {
     failures.push('evidence_freshness_status_invalid');
