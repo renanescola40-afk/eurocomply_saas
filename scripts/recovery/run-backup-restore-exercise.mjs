@@ -24,6 +24,13 @@ let failureDiagnostic = null;
 const SUPABASE_MANAGED_DATA_EXCLUDES = [
   'storage.buckets_vectors',
   'storage.vector_indexes',
+  // The protected rehearsal intentionally provisions only the database service.
+  // Supabase-managed Storage relations are created by the Storage service, not
+  // by the database-only target. Restoring those rows into that target therefore
+  // produces a false relation-missing failure before any application migration
+  // can be rehearsed. Storage runtime/tenant boundaries are validated separately
+  // by the selected-migration postconditions and Enterprise data-plane QA.
+  'storage.*',
 ];
 
 function required(name) {
@@ -225,6 +232,7 @@ try {
       '--data-only', '--use-copy',
       '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[0],
       '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[1],
+      '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[2],
       '--file', dataDumpPath,
     ], {}, 'recovery_data_dump_failed');
     backupCompletedAt = new Date().toISOString();
@@ -311,7 +319,7 @@ const evidence = {
   failureDiagnostic: passed ? null : failureDiagnostic,
   evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, extensionNamesStored: false, extensionVersionsStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
   evidenceBoundary: ephemeralMode
-    ? 'Supabase-compatible logical roles, schema, and application/auth data backups were restored transactionally into a disposable isolated Supabase Postgres database after aggregate-only exact extension name/schema/version parity was verified; target-managed vector storage tables were excluded from the data dump. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
+    ? 'Supabase-compatible logical roles, schema, and application/auth data backups were restored transactionally into a disposable isolated Supabase Postgres database after aggregate-only exact extension name/schema/version parity was verified. Supabase-managed Storage rows are excluded from this database-only recovery target because the Storage service schema is not materialized there; Storage schema, bucket and tenant-boundary behavior remains a separate selected-migration/runtime acceptance control. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
     : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated digest; connection strings, raw command arguments, raw process errors and the dump are not retained.',
 };
 mkdirSync(dirname(output), { recursive: true });
