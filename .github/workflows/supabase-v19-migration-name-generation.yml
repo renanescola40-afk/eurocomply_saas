@@ -1,0 +1,70 @@
+name: Supabase V19 Migration Name Generation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate V19 migration identities with pinned Supabase CLI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.114.0
+      - name: Generate forward-only V19 identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          names=(
+            v19_optimize_organization_add_ons_rls_initplan
+            v19_reconcile_step_up_challenges_runtime
+            v19_reconcile_subscription_schema_defaults
+            v19_reconcile_controlled_document_storage
+            v19_force_tasks_rls
+            v19_reconcile_enterprise_break_glass_governance
+            v19_reconcile_enterprise_licensing_control_plane
+            v19_reconcile_enterprise_integrations_scim
+            v19_harden_scim_identity_connection_delete_boundary
+            v19_bridge_enterprise_contract_mode_compatibility
+            v19_reconcile_enterprise_billing_lifecycle
+            v19_finalize_enterprise_contract_mode_compatibility
+            v19_reconcile_enterprise_contract_control_rpcs
+            v19_reconcile_enterprise_core_active_runtime
+            v19_reconcile_live_rls_validation_inventory_privileges
+            v19_reconcile_new_organization_compatibility_envelope
+            v19_reconcile_enterprise_invitation_seat_authority
+            v19_harden_enterprise_invitation_actor_boundary
+            v19_preserve_completed_onboarding_state
+            v19_reconcile_active_onboarding_runtime
+            v19_harden_active_onboarding_enterprise_boundaries
+            v19_guard_compliance_task_browser_mutations
+            v19_reconcile_gap_remediation_persistence
+            v19_harden_gap_personal_task_write_boundary
+            v19_reconcile_enterprise_evidence_vault
+          )
+          for name in "${names[@]}"; do
+            supabase migration new "$name"
+            sleep 1
+          done
+          mapfile -t generated < <(find supabase/migrations -maxdepth 1 -type f -name '*_v19_*.sql' -printf '%f\n' | sort)
+          test "${#generated[@]}" -eq 25
+          printf '%s\n' "${generated[@]}"
+          for file in "${generated[@]}"; do
+            version="${file%%_*}"
+            [[ "$version" =~ ^[0-9]{14}$ ]]
+            test "$version" -gt 20260822120617
+          done
+          test "$(printf '%s\n' "${generated[@]}" | cut -d_ -f1 | sort -u | wc -l)" -eq 25
+          echo 'Generated 25 unique CLI-issued V19 identities strictly after production head 20260822120617.'
