@@ -58,10 +58,11 @@ describe('Enterprise Stripe binding boundary', () => {
     expect(v19Boundary).toContain("to_regclass('public.enterprise_contracts_stripe_subscription_uidx')");
   });
 
-  it('passes Enterprise metadata and modern Invoice subscription references to the v3 RPC', () => {
+  it('passes Enterprise metadata across Acacia and current Invoice subscription shapes to the v3 RPC', () => {
     expect(billing).toContain('metadataValueFromEventObject(');
     expect(billing).toContain("'enterprise_contract_id'");
     expect(billing).toContain("'organization_id'");
+    expect(billing).toContain('invoice.subscription_details?.metadata');
     expect(billing).toContain('parent?.subscription_details?.metadata');
     expect(billing).toContain('parent?.subscription_details?.subscription');
     expect(billing).toContain("'sync_enterprise_contract_billing_v3_atomic'");
