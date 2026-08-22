@@ -72,7 +72,7 @@ describe('Vercel production deployment authority', () => {
     }
   });
 
-  it('synchronizes dedicated Step-Up runtime configuration before the production build', () => {
+  it('synchronizes every provider-proof runtime binding before the production build', () => {
     expect(workflow).toContain('STEP_UP_PROVIDER_MODE: supabase_mfa');
     expect(workflow).toContain(
       "STEP_UP_SIGNING_SECRET: ${{ secrets['STEP_UP_ASSERTION_SIGNING_SECRET'] || secrets['STEP_UP_SIGNING_SECRET'] }}",
@@ -83,8 +83,8 @@ describe('Vercel production deployment authority', () => {
 
     const initialPull = workflow.indexOf('Link and pull current Vercel production environment');
     const mutationReverify = workflow.indexOf('Reverify current main immediately before production environment mutation');
-    const synchronization = workflow.indexOf('Synchronize Enterprise Step-Up runtime configuration to Vercel production');
-    const refresh = workflow.indexOf('Refresh Vercel production environment after Step-Up synchronization');
+    const synchronization = workflow.indexOf('Synchronize provider-proof runtime bindings to Vercel production');
+    const refresh = workflow.indexOf('Refresh Vercel production environment after provider synchronization');
     const build = workflow.indexOf('Build Vercel production artifact');
 
     expect(initialPull).toBeGreaterThan(-1);
@@ -99,10 +99,31 @@ describe('Vercel production deployment authority', () => {
     expect(mutationBoundary).toContain('test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"');
 
     const syncBoundary = workflow.slice(synchronization, refresh);
-    expect(syncBoundary).toContain('env add STEP_UP_SIGNING_SECRET production --force --sensitive');
-    expect(syncBoundary).toContain('env add STEP_UP_PROVIDER_MODE production --force --no-sensitive');
-    expect(syncBoundary).toContain('printf \'%s\' "$STEP_UP_SIGNING_SECRET"');
-    expect(syncBoundary).toContain('printf \'%s\' "$STEP_UP_PROVIDER_MODE"');
+    for (const key of [
+      'NEXT_PUBLIC_SUPABASE_URL',
+      'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+      'SUPABASE_SERVICE_ROLE_KEY',
+      'STRIPE_SECRET_KEY',
+      'STRIPE_WEBHOOK_SECRET',
+      'UPSTASH_REDIS_REST_URL',
+      'UPSTASH_REDIS_REST_TOKEN',
+      'HEALTHCHECK_TOKEN',
+      'NEXT_PUBLIC_SENTRY_DSN',
+      'SENTRY_ORG',
+      'SENTRY_PROJECT',
+      'SENTRY_AUTH_TOKEN',
+      'STEP_UP_SIGNING_SECRET',
+      'STEP_UP_PROVIDER_MODE',
+      'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
+      'MALWARE_SCANNER_PROVIDER',
+    ]) {
+      expect(syncBoundary).toContain(key);
+    }
+    expect(syncBoundary).toContain('if [ -z "${!key:-}" ]');
+    expect(syncBoundary).toContain('exit 1');
+    expect(syncBoundary).toContain('env add "$key" production --force --sensitive');
+    expect(syncBoundary).toContain('env add "$key" production --force --no-sensitive');
+    expect(syncBoundary).toContain('printf \'%s\' "${!key}"');
     expect(syncBoundary).not.toContain('echo "$STEP_UP_SIGNING_SECRET"');
   });
 

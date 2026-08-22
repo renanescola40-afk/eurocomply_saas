@@ -199,16 +199,80 @@ jobs:
           git fetch --no-tags origin main
           test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
 
-      - name: Synchronize Enterprise Step-Up runtime configuration to Vercel production
+      - name: Synchronize provider-proof runtime bindings to Vercel production
         shell: bash
         run: |
           set -euo pipefail
-          printf '%s' "$STEP_UP_SIGNING_SECRET" \
-            | npx --yes "vercel@${VERCEL_CLI_VERSION}" env add STEP_UP_SIGNING_SECRET production --force --sensitive --token="$VERCEL_TOKEN" >/dev/null
-          printf '%s' "$STEP_UP_PROVIDER_MODE" \
-            | npx --yes "vercel@${VERCEL_CLI_VERSION}" env add STEP_UP_PROVIDER_MODE production --force --no-sensitive --token="$VERCEL_TOKEN" >/dev/null
 
-      - name: Refresh Vercel production environment after Step-Up synchronization
+          required=(
+            NEXT_PUBLIC_SUPABASE_URL
+            NEXT_PUBLIC_SUPABASE_ANON_KEY
+            SUPABASE_SERVICE_ROLE_KEY
+            STRIPE_SECRET_KEY
+            STRIPE_WEBHOOK_SECRET
+            UPSTASH_REDIS_REST_URL
+            UPSTASH_REDIS_REST_TOKEN
+            HEALTHCHECK_TOKEN
+            NEXT_PUBLIC_SENTRY_DSN
+            SENTRY_ORG
+            SENTRY_PROJECT
+            SENTRY_AUTH_TOKEN
+            STEP_UP_SIGNING_SECRET
+            STEP_UP_PROVIDER_MODE
+            REQUIRE_MALWARE_SCAN_FOR_UPLOADS
+            MALWARE_SCANNER_PROVIDER
+          )
+          missing=()
+          for key in "${required[@]}"; do
+            if [ -z "${!key:-}" ]; then
+              missing+=("$key")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf '::error title=Missing protected provider binding source::%s\n' "${missing[*]}"
+            exit 1
+          fi
+
+          sync_sensitive() {
+            local key="$1"
+            printf '%s' "${!key}" \
+              | npx --yes "vercel@${VERCEL_CLI_VERSION}" env add "$key" production --force --sensitive --token="$VERCEL_TOKEN" >/dev/null
+          }
+          sync_public() {
+            local key="$1"
+            printf '%s' "${!key}" \
+              | npx --yes "vercel@${VERCEL_CLI_VERSION}" env add "$key" production --force --no-sensitive --token="$VERCEL_TOKEN" >/dev/null
+          }
+
+          for key in \
+            SUPABASE_SERVICE_ROLE_KEY \
+            STRIPE_SECRET_KEY \
+            STRIPE_WEBHOOK_SECRET \
+            UPSTASH_REDIS_REST_URL \
+            UPSTASH_REDIS_REST_TOKEN \
+            HEALTHCHECK_TOKEN \
+            SENTRY_AUTH_TOKEN \
+            STEP_UP_SIGNING_SECRET
+          do
+            sync_sensitive "$key"
+          done
+
+          for key in \
+            NEXT_PUBLIC_SUPABASE_URL \
+            NEXT_PUBLIC_SUPABASE_ANON_KEY \
+            NEXT_PUBLIC_SENTRY_DSN \
+            SENTRY_ORG \
+            SENTRY_PROJECT \
+            STEP_UP_PROVIDER_MODE \
+            REQUIRE_MALWARE_SCAN_FOR_UPLOADS \
+            MALWARE_SCANNER_PROVIDER
+          do
+            sync_public "$key"
+          done
+
+          echo 'Provider-proof runtime binding names synchronized to Vercel Production; values were not printed.'
+
+      - name: Refresh Vercel production environment after provider synchronization
         run: npx --yes "vercel@${VERCEL_CLI_VERSION}" pull --yes --environment=production --token="$VERCEL_TOKEN"
 
       - name: Build Vercel production artifact
