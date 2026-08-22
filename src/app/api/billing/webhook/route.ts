@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
-import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/lib/security/rate-limit';
+import { checkDistributedRateLimit, getClientIpFromRequest } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { getStripeClient } from '@/server/billing/stripe';
 import { validateStripeWebhookEventMode } from '@/server/billing/stripe-event-mode';
@@ -72,7 +72,6 @@ export async function POST(request: Request) {
   const rateLimit = await checkDistributedRateLimit({
     policy: 'webhook',
     ip: getClientIpFromRequest(request),
-    userAgent: getUserAgentFromRequest(request),
     action: 'billing_webhook',
     route: '/api/billing/webhook',
   });
