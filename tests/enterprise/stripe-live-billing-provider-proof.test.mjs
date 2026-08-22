@@ -30,10 +30,10 @@ beforeEach(() => {
   process.env.GITHUB_REF_NAME = 'main';
   process.env.PROVIDER_PROOF_ENVIRONMENT = 'production';
   process.env.VERCEL_TOKEN = 'vercel_redacted';
-  process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY = 'price_essential_monthly';
-  process.env.STRIPE_PRICE_ESSENTIAL_ANNUAL = 'price_essential_annual';
-  process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY = 'price_professional_monthly';
-  process.env.STRIPE_PRICE_PROFESSIONAL_ANNUAL = 'price_professional_annual';
+  process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY = 'price_essentialmonthly';
+  process.env.STRIPE_PRICE_ESSENTIAL_ANNUAL = 'price_essentialannual';
+  process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY = 'price_professionalmonthly';
+  process.env.STRIPE_PRICE_PROFESSIONAL_ANNUAL = 'price_professionalannual';
 });
 
 afterEach(() => {
@@ -67,10 +67,10 @@ function portalConfiguration({ isDefault = true, active = true } = {}) {
 
 function installProviderMock({ defaultPortalPresent = true, explicitPortalActive = true, webhookEvents = null } = {}) {
   const prices = new Map([
-    ['price_essential_monthly', { amount: 4900, interval: 'month', plan: 'essential' }],
-    ['price_essential_annual', { amount: 49000, interval: 'year', plan: 'essential' }],
-    ['price_professional_monthly', { amount: 14900, interval: 'month', plan: 'professional' }],
-    ['price_professional_annual', { amount: 149000, interval: 'year', plan: 'professional' }],
+    ['price_essentialmonthly', { amount: 4900, interval: 'month', plan: 'essential' }],
+    ['price_essentialannual', { amount: 49000, interval: 'year', plan: 'essential' }],
+    ['price_professionalmonthly', { amount: 14900, interval: 'month', plan: 'professional' }],
+    ['price_professionalannual', { amount: 149000, interval: 'year', plan: 'professional' }],
   ]);
   const events = webhookEvents ?? [
     'checkout.session.completed',
@@ -165,7 +165,7 @@ test('passes with account-default Portal authority, canonical prices, six Produc
     ['professional', 'annual'],
   ]);
   const serialized = JSON.stringify(proof);
-  assert.equal(serialized.includes('price_essential_monthly'), false);
+  assert.equal(serialized.includes('price_essentialmonthly'), false);
   assert.equal(serialized.includes('sk_live_redacted'), false);
   assert.equal(serialized.includes('bpc_default'), false);
   assert.equal(serialized.includes('we_redacted'), false);
