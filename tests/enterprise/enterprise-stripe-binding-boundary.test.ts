@@ -10,6 +10,7 @@ const v19Boundary = readFileSync(
   'utf8',
 );
 const billing = readFileSync('src/server/enterprise/billing.ts', 'utf8');
+const selfServiceCheckout = readFileSync('src/app/api/billing/checkout/route.ts', 'utf8');
 
 describe('Enterprise Stripe binding boundary', () => {
   it('preserves the reviewed explicit-contract-or-existing-subscription selector in V19', () => {
@@ -47,12 +48,20 @@ describe('Enterprise Stripe binding boundary', () => {
   });
 
   it('passes Enterprise metadata and modern Invoice subscription references to the v3 RPC', () => {
-    expect(billing).toContain("metadataValueFromEventObject(");
+    expect(billing).toContain('metadataValueFromEventObject(');
     expect(billing).toContain("'enterprise_contract_id'");
     expect(billing).toContain("'organization_id'");
     expect(billing).toContain('parent?.subscription_details?.metadata');
     expect(billing).toContain('parent?.subscription_details?.subscription');
     expect(billing).toContain("'sync_enterprise_contract_billing_v3_atomic'");
+  });
+
+  it('permits pre-V19 fallthrough only for the canonical self-service billing_flow marker', () => {
+    expect(selfServiceCheckout).toContain("billing_flow: 'initial_subscription'");
+    expect(selfServiceCheckout).toContain('subscription_data: { metadata }');
+    expect(billing).toContain("metadataValueFromEventObject(object, 'billing_flow')");
+    expect(billing).toContain("billingFlow === 'initial_subscription'");
+    expect(billing).toContain('&& isKnownSelfServiceEvent');
   });
 
   it('keeps duplicate Enterprise events idempotent before new binding selection', () => {
