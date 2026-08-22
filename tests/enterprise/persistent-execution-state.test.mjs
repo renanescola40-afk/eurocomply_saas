@@ -4,6 +4,7 @@ import { validatePersistentExecutionState } from '../../scripts/enterprise/check
 
 const HEAD = 'a'.repeat(40);
 const OLD = 'b'.repeat(40);
+const MAIN = 'c'.repeat(40);
 
 function state(overrides = {}) {
   return {
@@ -34,7 +35,7 @@ function state(overrides = {}) {
   };
 }
 
-test('accepts an explicitly stale historical score', () => {
+test('accepts an explicitly stale historical score without new scope fields', () => {
   assert.deepEqual(validatePersistentExecutionState(state(), HEAD), []);
 });
 
@@ -48,6 +49,98 @@ test('rejects a historical score represented as fresh', () => {
       source_scorecard_sha256: 'c'.repeat(64),
     },
   }), HEAD).includes('fresh_score_must_match_checked_out_sha'));
+});
+
+test('accepts fresh exact-SHA pull-request diagnostics against a distinct main base', () => {
+  const diagnostic = state({
+    assessment_scope: 'pull_request',
+    is_current_main: false,
+    observed_main_sha: MAIN,
+    last_verified_score_sha: HEAD,
+    classification: 'VERIFIED_EXACT_SHA_DIAGNOSTIC',
+    scorecard_decision: 'NO_GO',
+    evidence_freshness: {
+      status: 'FRESH_EXACT_SHA',
+      last_verified_sha: HEAD,
+      scorecard_run_id: 12345,
+      source_scorecard_schema: 'risck-comply.enterprise-readiness-scorecard.v1',
+      source_scorecard_sha256: 'c'.repeat(64),
+    },
+  });
+
+  assert.deepEqual(validatePersistentExecutionState(diagnostic, HEAD), []);
+});
+
+test('rejects a pull-request diagnostic that claims current-main classification', () => {
+  const failures = validatePersistentExecutionState(state({
+    assessment_scope: 'pull_request',
+    is_current_main: false,
+    observed_main_sha: MAIN,
+    last_verified_score_sha: HEAD,
+    classification: 'VERIFIED_CURRENT_MAIN_NO_GO',
+    evidence_freshness: {
+      status: 'FRESH_EXACT_SHA',
+      last_verified_sha: HEAD,
+      scorecard_run_id: 12345,
+      source_scorecard_schema: 'risck-comply.enterprise-readiness-scorecard.v1',
+      source_scorecard_sha256: 'c'.repeat(64),
+    },
+  }), HEAD);
+
+  assert.ok(failures.includes('pull_request_requires_diagnostic_classification'));
+});
+
+test('rejects Enterprise GO or publication authority in pull-request scope', () => {
+  const failures = validatePersistentExecutionState(state({
+    assessment_scope: 'pull_request',
+    is_current_main: false,
+    observed_main_sha: MAIN,
+    last_verified_score_sha: HEAD,
+    official_completion_percent: 100,
+    official_remaining_percent: 0,
+    controls_pass: 100,
+    controls_partial: 0,
+    controls_fail: 0,
+    controls_blocked: 0,
+    controls_not_verified: 0,
+    controls_not_applicable: 0,
+    critical_controls_open: 0,
+    scorecard_decision: 'GO',
+    current_decision: 'GO',
+    classification: 'ENTERPRISE_READY',
+    publish_recommendation: 'PUBLISH_AS_ENTERPRISE',
+    evidence_freshness: {
+      status: 'FRESH_EXACT_SHA',
+      last_verified_sha: HEAD,
+      scorecard_run_id: 12345,
+      source_scorecard_schema: 'risck-comply.enterprise-readiness-scorecard.v1',
+      source_scorecard_sha256: 'c'.repeat(64),
+    },
+  }), HEAD);
+
+  assert.ok(failures.includes('go_requires_current_main_scope'));
+  assert.ok(failures.includes('pull_request_cannot_publish_as_enterprise'));
+  assert.ok(failures.includes('pull_request_requires_diagnostic_classification'));
+  assert.ok(failures.includes('enterprise_ready_requires_current_main_scope'));
+});
+
+test('rejects a diagnostic classification in current-main scope', () => {
+  const failures = validatePersistentExecutionState(state({
+    assessment_scope: 'main',
+    is_current_main: true,
+    observed_main_sha: HEAD,
+    last_verified_score_sha: HEAD,
+    classification: 'VERIFIED_EXACT_SHA_DIAGNOSTIC',
+    evidence_freshness: {
+      status: 'FRESH_EXACT_SHA',
+      last_verified_sha: HEAD,
+      scorecard_run_id: 12345,
+      source_scorecard_schema: 'risck-comply.enterprise-readiness-scorecard.v1',
+      source_scorecard_sha256: 'c'.repeat(64),
+    },
+  }), HEAD);
+
+  assert.ok(failures.includes('main_scope_cannot_be_diagnostic'));
 });
 
 test('rejects GO without an exact-SHA score', () => {
@@ -73,8 +166,10 @@ test('rejects Enterprise publication without GO', () => {
   }), HEAD).includes('enterprise_publication_requires_go'));
 });
 
-test('accepts GO only for a fresh exact-SHA 100-control result', () => {
+test('accepts GO only for a fresh exact-SHA 100-control current-main result', () => {
   const ready = state({
+    assessment_scope: 'main',
+    is_current_main: true,
     observed_main_sha: HEAD,
     last_verified_score_sha: HEAD,
     official_completion_percent: 100,
@@ -86,6 +181,7 @@ test('accepts GO only for a fresh exact-SHA 100-control result', () => {
     controls_not_verified: 0,
     controls_not_applicable: 0,
     current_decision: 'GO',
+    scorecard_decision: 'GO',
     classification: 'ENTERPRISE_READY',
     publish_recommendation: 'PUBLISH_AS_ENTERPRISE',
     critical_controls_open: 0,
@@ -103,6 +199,9 @@ test('accepts GO only for a fresh exact-SHA 100-control result', () => {
 
 test('rejects a partial result represented as GO', () => {
   const failures = validatePersistentExecutionState(state({
+    assessment_scope: 'main',
+    is_current_main: true,
+    observed_main_sha: HEAD,
     last_verified_score_sha: HEAD,
     current_decision: 'GO',
     classification: 'ENTERPRISE_READY',
@@ -153,6 +252,9 @@ test('rejects broken provenance metadata', () => {
 
 test('rejects GO while any critical control remains open', () => {
   const ready = state({
+    assessment_scope: 'main',
+    is_current_main: true,
+    observed_main_sha: HEAD,
     last_verified_score_sha: HEAD,
     official_completion_percent: 100,
     official_remaining_percent: 0,
