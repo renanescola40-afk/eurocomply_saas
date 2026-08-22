@@ -5,9 +5,9 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
 import { assertResourceQuota } from '@/server/billing/entitlements';
+import { mutateCommercialResourceAtomic } from '@/server/billing/commercial-resource-atomic';
 import { requireCurrentUser } from '@/server/queries/auth';
 import { logAuditEvent } from './audit';
-import { mutateCommercialResourceAtomic } from './commercial-resource-atomic';
 
 const RISK_MUTATION_SELECT =
   'id, organization_id, created_by, owner_user_id, title, description, category, likelihood, impact, risk_score, status, mitigation, due_date, created_at, updated_at';
@@ -135,7 +135,9 @@ export async function createRisk(input: unknown) {
 
     return result.resource_record;
   } catch (error) {
-    if (error instanceof Error && error.message === quotaExceededMessage) throw error;
+    if (error instanceof Error && error.message === quotaExceededMessage) {
+      throw actionError(quotaExceededMessage);
+    }
     reportError(error, { ...context, riskId });
     throw actionError('Unable to create risk');
   }
@@ -237,11 +239,11 @@ export async function updateRisk(input: unknown) {
 
     return data;
   } catch (error) {
-    if (
-      error instanceof Error &&
-      (error.message === 'Unable to update risk' || error.message === 'Risk changed or no longer exists')
-    ) {
-      throw actionError(error.message);
+    if (error instanceof Error && error.message === 'Risk changed or no longer exists') {
+      throw actionError('Risk changed or no longer exists');
+    }
+    if (error instanceof Error && error.message === 'Unable to update risk') {
+      throw actionError('Unable to update risk');
     }
 
     reportError(error, context);
@@ -274,7 +276,9 @@ export async function deleteRisk(riskId: string, organizationId: string) {
 
     return result.resource_record;
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unable to delete risk') throw error;
+    if (error instanceof Error && error.message === 'Unable to delete risk') {
+      throw actionError('Unable to delete risk');
+    }
     reportError(error, context);
     throw actionError('Unable to delete risk');
   }
