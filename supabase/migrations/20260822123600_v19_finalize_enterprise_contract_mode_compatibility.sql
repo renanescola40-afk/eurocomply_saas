@@ -15,6 +15,27 @@ alter table public.enterprise_contracts
   add constraint enterprise_contracts_mode_check
   check (contract_mode in ('compatibility','negotiated'));
 
+-- A Stripe subscription is a globally unique provider identity and is an
+-- authoritative selector for negotiated Enterprise billing. Fail closed before
+-- installing the unique boundary if a legacy restore contains duplicate binds.
+do $stripe_binding_guard$
+begin
+  if exists (
+    select contract.stripe_subscription_id
+    from public.enterprise_contracts contract
+    where contract.stripe_subscription_id is not null
+    group by contract.stripe_subscription_id
+    having count(*) > 1
+  ) then
+    raise exception 'duplicate_enterprise_stripe_subscription_binding';
+  end if;
+end
+$stripe_binding_guard$;
+
+create unique index if not exists enterprise_contracts_stripe_subscription_uidx
+  on public.enterprise_contracts(stripe_subscription_id)
+  where stripe_subscription_id is not null;
+
 -- V19 billing synchronization is intentionally split into an internal mutation
 -- implementation (v2) and a service-role entrypoint (v3). The entrypoint must
 -- never create a new Enterprise Stripe binding from organization_id alone:
@@ -329,6 +350,7 @@ declare
   configure_v2 oid:=to_regprocedure(
     'public.configure_enterprise_contract_billing_v2_atomic(uuid,text,text,text,text,text,text,timestamptz,uuid,text)'
   );
+  subscription_binding_index oid:=to_regclass('public.enterprise_contracts_stripe_subscription_uidx');
   rpc oid;
 begin
   if exists (
@@ -344,6 +366,17 @@ begin
       and contract_mode<>'compatibility'
   ) then
     raise exception 'Legacy compatibility contracts are not canonicalized';
+  end if;
+
+  if subscription_binding_index is null
+     or not exists (
+       select 1
+       from pg_index idx
+       where idx.indexrelid=subscription_binding_index
+         and idx.indisunique
+         and pg_get_expr(idx.indpred,idx.indrelid) like '%stripe_subscription_id IS NOT NULL%'
+     ) then
+    raise exception 'Enterprise Stripe subscription binding uniqueness is not canonical';
   end if;
 
   if sync_v2 is null or sync_v3 is null or configure_v2 is null then
