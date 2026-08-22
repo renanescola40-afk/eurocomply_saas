@@ -22,12 +22,6 @@ const failures = [];
 let failurePhase = null;
 let failureDiagnostic = null;
 
-// Use exactly one Supabase CLI --exclude value. A historical CLI bug can ignore
-// later entries when multiple exclusions are supplied, which previously allowed
-// storage.buckets rows into the DB-only recovery dump. The schema wildcard also
-// covers the vector-storage tables that Supabase excludes from logical data dumps.
-const SUPABASE_MANAGED_DATA_EXCLUDE = 'storage.*';
-
 function required(name) {
   const value = env(name);
   if (!value) failures.push(`missing_${name.toLowerCase()}`);
@@ -97,6 +91,23 @@ function parseInventoryJson(value, failureCode) {
   } catch {
     throw new Error(failureCode);
   }
+}
+
+function readManagedStorageRelations(connection) {
+  const failureCode = 'recovery_source_storage_relation_inventory_failed';
+  const payload = sql(
+    connection,
+    `select coalesce(json_agg((n.nspname || '.' || c.relname) order by c.relname)::text, '[]') from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'storage' and c.relkind in ('r','p','f','S','m');`,
+    failureCode,
+  );
+  const relations = parseInventoryJson(payload, failureCode).map((value) => String(value ?? '').trim());
+  if (!relations.includes('storage.buckets') || !relations.includes('storage.objects')) {
+    throw new Error('recovery_source_storage_relation_inventory_incomplete');
+  }
+  if (relations.some((value) => !/^storage\.[a-z0-9_]+$/.test(value))) {
+    throw new Error('recovery_source_storage_relation_inventory_unsafe');
+  }
+  return [...new Set(relations)].sort();
 }
 
 function readInstalledExtensions(connection, failureCode) {
@@ -233,6 +244,10 @@ try {
     );
     checks.managedStorageSchemaPrimed = true;
 
+    failurePhase = 'managed_storage_relation_inventory';
+    const managedStorageDataExclude = readManagedStorageRelations(source).join(',');
+    checks.managedStorageRelationInventory = true;
+
     failurePhase = 'roles_dump';
     run('supabase', ['db', 'dump', '--db-url', source, '--role-only', '--file', rolesDumpPath], {}, 'recovery_roles_dump_failed');
     failurePhase = 'schema_dump';
@@ -241,7 +256,7 @@ try {
     run('supabase', [
       'db', 'dump', '--db-url', source,
       '--data-only', '--use-copy',
-      '--exclude', SUPABASE_MANAGED_DATA_EXCLUDE,
+      '--exclude', managedStorageDataExclude,
       '--file', dataDumpPath,
     ], {}, 'recovery_data_dump_failed');
     failurePhase = 'data_dump_storage_exclusion_validation';

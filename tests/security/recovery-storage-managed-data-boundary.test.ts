@@ -5,20 +5,34 @@ const exercise = fs.readFileSync('scripts/recovery/run-backup-restore-exercise.m
 const primer = fs.readFileSync('scripts/recovery/prime-ephemeral-managed-storage-schema.mjs', 'utf8');
 
 describe('database-only recovery storage boundary', () => {
-  it('primes managed Storage relations before Production restore and excludes Storage row data', () => {
+  it('primes managed Storage relations before Production restore and excludes exact current Storage relations', () => {
     expect(exercise).toContain("managedStoragePrimer = 'scripts/recovery/prime-ephemeral-managed-storage-schema.mjs'");
     expect(exercise).toContain("RECOVERY_MANAGED_SCHEMA_PRIME_PHASE: 'pre-production-restore'");
     expect(exercise.indexOf("failurePhase = 'managed_storage_schema_prime'"))
       .toBeLessThan(exercise.indexOf("failurePhase = 'roles_dump'"));
     expect(exercise).toContain('checks.managedStorageSchemaPrimed = true');
-    expect(exercise).toContain("SUPABASE_MANAGED_DATA_EXCLUDE = 'storage.*'");
+    expect(exercise).toContain('function readManagedStorageRelations(connection)');
+    expect(exercise).toContain("n.nspname = 'storage'");
+    expect(exercise).toContain("c.relkind in ('r','p','f','S','m')");
+    expect(exercise).toContain("relations.includes('storage.buckets')");
+    expect(exercise).toContain("relations.includes('storage.objects')");
+    expect(exercise).toContain("/^storage\\.[a-z0-9_]+$/.test(value)");
+    expect(exercise).toContain("failurePhase = 'managed_storage_relation_inventory'");
+    expect(exercise).toContain("const managedStorageDataExclude = readManagedStorageRelations(source).join(',')");
+    expect(exercise).toContain('checks.managedStorageRelationInventory = true');
+    expect(exercise).not.toContain("SUPABASE_MANAGED_DATA_EXCLUDE = 'storage.*'");
     expect(exercise.match(/'--exclude'/g)).toHaveLength(1);
-    expect(exercise).toContain("'--exclude', SUPABASE_MANAGED_DATA_EXCLUDE");
+    expect(exercise).toContain("'--exclude', managedStorageDataExclude");
     expect(exercise).toContain("failurePhase = 'data_dump_storage_exclusion_validation'");
     expect(exercise).toContain('assertManagedStorageRowsExcluded(dataDumpPath)');
     expect(exercise).toContain('checks.managedStorageRowsExcluded = true');
     expect(exercise).toContain('all API services were stopped before any Production snapshot restore');
     expect(exercise).toContain('selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory');
+  });
+
+  it('fails closed if Storage inventory is incomplete or contains an unsafe relation name', () => {
+    expect(exercise).toContain("throw new Error('recovery_source_storage_relation_inventory_incomplete')");
+    expect(exercise).toContain("throw new Error('recovery_source_storage_relation_inventory_unsafe')");
   });
 
   it('fails closed if a Supabase CLI regression leaves Storage COPY rows in the data dump', () => {
