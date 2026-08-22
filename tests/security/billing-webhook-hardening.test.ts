@@ -25,6 +25,15 @@ describe('billing webhook hardening invariants', () => {
     }
   });
 
+  it('keeps webhook flood buckets invariant under attacker-controlled User-Agent rotation', () => {
+    for (const route of webhookRoutes) {
+      expect(route).toContain("policy: 'webhook'");
+      expect(route).toContain('ip: getClientIpFromRequest(request)');
+      expect(route).not.toContain('getUserAgentFromRequest');
+      expect(route).not.toContain('userAgent:');
+    }
+  });
+
   it('keeps byte counting and cancellation inside the audited shared reader', () => {
     const countIndex = boundedBodyReader.indexOf('totalBytes += value.byteLength');
     const limitIndex = boundedBodyReader.indexOf('totalBytes > maxBytes');

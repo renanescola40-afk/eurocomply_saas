@@ -149,6 +149,40 @@ describe('enterprise rate limiting', () => {
     expect(orgBFirst.remaining).toBe(1);
   });
 
+  it('honors policies that omit user-agent material even when callers supply it', () => {
+    const common = {
+      userId: null,
+      organizationId: null,
+      ip: '203.0.113.10',
+      action: 'stripe_webhook',
+      route: '/api/stripe/webhook',
+    };
+    const firstWebhookKey = buildRateLimitKey('webhook', {
+      ...common,
+      userAgent: 'Attacker UA 1',
+    });
+    const rotatedWebhookKey = buildRateLimitKey('webhook', {
+      ...common,
+      userAgent: 'Attacker UA 2',
+    });
+    const firstAuthKey = buildRateLimitKey('auth', {
+      ...common,
+      action: 'login',
+      route: '/api/auth/login',
+      userAgent: 'Browser A',
+    });
+    const secondAuthKey = buildRateLimitKey('auth', {
+      ...common,
+      action: 'login',
+      route: '/api/auth/login',
+      userAgent: 'Browser B',
+    });
+
+    expect(firstWebhookKey).toBe(rotatedWebhookKey);
+    expect(firstWebhookKey).toContain('ua:omitted');
+    expect(firstAuthKey).not.toBe(secondAuthKey);
+  });
+
   it('uses hashed IP and user-agent material in keys and emits standard rate limit headers', async () => {
     const key = buildRateLimitKey('password-reset', {
       userId: null,
