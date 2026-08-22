@@ -16,14 +16,17 @@ on:
       - 'scripts/recovery/verify-postgresql-client.mjs'
       - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
       - '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
+      - '.github/workflows/supabase-production-migration-dry-run.yml'
       - '.github/workflows/supabase-migration-reconciliation-decision-gate.yml'
       - '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
+      - 'tests/security/supabase-production-migration-dry-run-workflow.test.ts'
+      - 'tests/security/supabase-bounded-migration-decision-gate.test.ts'
       - 'tests/security/supabase-forward-promotion-workflow.test.ts'
       - 'tests/security/recovery-postgresql-client.test.mjs'
   workflow_dispatch:
     inputs:
       release_sha:
-        description: Exact current main SHA whose selected reconciliation set passed rehearsal, filtered dry-run and human decision coverage
+        description: Exact current main SHA whose selected reconciliation set passed rehearsal, bounded dry-runs and human decision coverage
         required: true
         type: string
       rehearsal_run_id:
@@ -80,7 +83,7 @@ jobs:
           node --check scripts/supabase/verify-forward-human-approval.mjs
           node --test scripts/supabase/verify-forward-promotion-transition.test.mjs
           node --test scripts/supabase/verify-forward-human-approval.test.mjs
-          npx vitest run tests/security/supabase-forward-promotion-workflow.test.ts tests/security/recovery-postgresql-client.test.mjs
+          npx vitest run tests/security/supabase-production-migration-dry-run-workflow.test.ts tests/security/supabase-bounded-migration-decision-gate.test.ts tests/security/supabase-forward-promotion-workflow.test.ts tests/security/recovery-postgresql-client.test.mjs
 
   governance:
     name: Verify Production governance before protected secrets
@@ -123,7 +126,7 @@ jobs:
         run: node scripts/security/check-github-environment-governance.mjs
 
   promote:
-    name: Promote exactly the rehearsed, dry-run and human-reviewed migration set
+    name: Promote exactly the rehearsed, bounded-dry-run and human-reviewed migration set
     if: github.event_name == 'workflow_dispatch'
     needs: [contract, governance]
     runs-on: ubuntu-24.04
@@ -223,7 +226,7 @@ jobs:
           gh run download "$DECISION_RUN_ID" \
             --repo "$GITHUB_REPOSITORY" \
             --dir source-decision
-      - name: Recompile and bind selected bytes plus accepted human decisions
+      - name: Recompile and bind selected bytes plus bounded Production dry-run and accepted human decisions
         shell: bash
         run: |
           set -euo pipefail
@@ -236,12 +239,14 @@ jobs:
           mapfile -t DRY_MANIFESTS < <(find source-dry-run -type f -name 'current-manifest.json' -print)
           mapfile -t DRY_VERSION_PROOFS < <(find source-dry-run -type f -name 'version-order-proof.json' -print)
           mapfile -t DRY_SET_PROOFS < <(find source-dry-run -type f -name 'filtered-set-proof.json' -print)
+          mapfile -t BOUNDED_PRODUCTION_DRY_ATTESTATIONS < <(find source-decision -type f -name 'source-bounded-production-dry-run-attestation.json' -print)
           mapfile -t DECISION_RESULTS < <(find source-decision -type f -name 'decision-result.json' -print)
           mapfile -t PENDING_PLANS < <(find source-decision -type f -name 'pending-deployment-plan.json' -print)
           test "${#REHEARSAL_ATTESTATIONS[@]}" -eq 1
           test "${#DRY_MANIFESTS[@]}" -eq 1
           test "${#DRY_VERSION_PROOFS[@]}" -eq 1
           test "${#DRY_SET_PROOFS[@]}" -eq 1
+          test "${#BOUNDED_PRODUCTION_DRY_ATTESTATIONS[@]}" -eq 1
           test "${#DECISION_RESULTS[@]}" -eq 1
           test "${#PENDING_PLANS[@]}" -eq 1
 
@@ -260,6 +265,33 @@ jobs:
             '.status == "PASS" and .targetSha == $sha and .selectionDigest == $digest and .checks.pendingSetEqualsSelectedSet == true and .checks.unauthorizedPendingMigrations == false' \
             "${DRY_SET_PROOFS[0]}" >/dev/null
 
+          jq -e \
+            --arg sha "$TARGET_SHA" \
+            --arg digest "$CURRENT_DIGEST" \
+            --arg dryRunId "$DRY_RUN_ID" \
+            '.schema == "risck-comply.supabase-forward-bounded-production-dry-run.v1" and
+             .status == "Complete" and
+             .outcome == "passed" and
+             .mode == "BOUNDED_FORWARD_DECISION" and
+             .targetSha == $sha and
+             .selectionDigest == $digest and
+             .sourceForwardDryRunRunId == $dryRunId and
+             .checks.exactMain == true and
+             .checks.rehearsalProvenance == true and
+             .checks.forwardDryRunProvenance == true and
+             .checks.sourceSelectionDigestMatched == true and
+             .checks.productionInventoryCaptured == true and
+             .checks.freshRemoteHistoryCaptured == true and
+             .checks.allSelectedVersionsAfterRemoteHead == true and
+             .checks.pendingSetEqualsSelectedSet == true and
+             .checks.unauthorizedPendingMigrations == false and
+             .checks.filteredDbPushDryRunOnly == true and
+             .checks.includeAllUsed == false and
+             .checks.migrationHistoryRepairUsed == false and
+             .productionWriteAuthorized == false and
+             .productionWritePerformed == false' \
+            "${BOUNDED_PRODUCTION_DRY_ATTESTATIONS[0]}" >/dev/null
+
           node scripts/supabase/verify-forward-human-approval.mjs \
             "$CURRENT_MANIFEST" \
             "${DECISION_RESULTS[0]}" \
@@ -277,6 +309,7 @@ jobs:
           cp "${DRY_MANIFESTS[0]}" "$EVIDENCE_DIR/source-dry-run-manifest.json"
           cp "${DRY_VERSION_PROOFS[0]}" "$EVIDENCE_DIR/source-dry-run-version-order-proof.json"
           cp "${DRY_SET_PROOFS[0]}" "$EVIDENCE_DIR/source-dry-run-filtered-set-proof.json"
+          cp "${BOUNDED_PRODUCTION_DRY_ATTESTATIONS[0]}" "$EVIDENCE_DIR/source-bounded-production-dry-run-attestation.json"
       - name: Build a fresh filtered workdir from current production history
         shell: bash
         env:
@@ -323,13 +356,15 @@ jobs:
         run: |
           set -euo pipefail
           supabase --workdir "$WORKDIR" db push --dry-run --db-url "$SUPABASE_DB_POOLER_URL"
-      - name: Revalidate current main and human approval immediately before production write
+      - name: Revalidate current main, bounded S3 and human approval immediately before production write
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+          test -f "$EVIDENCE_DIR/source-bounded-production-dry-run-attestation.json"
+          jq -e --arg sha "$TARGET_SHA" '.status == "Complete" and .outcome == "passed" and .targetSha == $sha and .checks.filteredDbPushDryRunOnly == true and .productionWriteAuthorized == false and .productionWritePerformed == false' "$EVIDENCE_DIR/source-bounded-production-dry-run-attestation.json" >/dev/null
           test -f "$HUMAN_APPROVAL_PROOF"
           jq -e --arg sha "$TARGET_SHA" '.status == "Complete" and .outcome == "passed" and .targetSha == $sha and .checks.acceptedHumanDecisionGate == true and .checks.everySelectedMigrationPendingDeployment == true and .checks.exactSelectedBytesCovered == true' "$HUMAN_APPROVAL_PROOF" >/dev/null
       - name: Apply only the filtered selected migration set
@@ -391,6 +426,11 @@ jobs:
             echo "- Human decision subject SHA: $DECISION_SUBJECT_SHA"
             echo "- Migration-history repair: false"
             echo "- Unrestricted db push / include-all: false"
+            if [ -f "$EVIDENCE_DIR/source-bounded-production-dry-run-attestation.json" ]; then
+              echo "- Bounded Production dry-run: $(jq -r '.status' "$EVIDENCE_DIR/source-bounded-production-dry-run-attestation.json")"
+            else
+              echo "- Bounded Production dry-run: NOT_PRODUCED"
+            fi
             if [ -f "$HUMAN_APPROVAL_PROOF" ]; then
               echo "- Human selected-set approval coverage: $(jq -r '.status' "$HUMAN_APPROVAL_PROOF")"
               echo "- Human-reviewed selected migration count: $(jq -r '.selectedMigrationCount' "$HUMAN_APPROVAL_PROOF")"
