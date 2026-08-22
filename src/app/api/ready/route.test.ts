@@ -5,6 +5,7 @@ const supabaseMock = vi.hoisted(() => ({
   from: vi.fn(),
   select: vi.fn(),
   limit: vi.fn(),
+  rpc: vi.fn(),
 }));
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -96,7 +97,11 @@ describe('ready endpoint hardening', () => {
     supabaseMock.limit.mockResolvedValue({ error: null });
     supabaseMock.select.mockReturnValue({ limit: supabaseMock.limit });
     supabaseMock.from.mockReturnValue({ select: supabaseMock.select });
-    supabaseMock.tryCreateAdminClient.mockReturnValue({ from: supabaseMock.from });
+    supabaseMock.rpc.mockResolvedValue({
+      data: [{ outcome: 'invalid_input', resource_record: null, current_count: 0, max_count: 0 }],
+      error: null,
+    });
+    supabaseMock.tryCreateAdminClient.mockReturnValue({ from: supabaseMock.from, rpc: supabaseMock.rpc });
   });
 
   afterEach(() => {
@@ -106,6 +111,7 @@ describe('ready endpoint hardening', () => {
     supabaseMock.from.mockReset();
     supabaseMock.select.mockReset();
     supabaseMock.limit.mockReset();
+    supabaseMock.rpc.mockReset();
   });
 
   it('groups environment readiness without exposing individual variable names', () => {
@@ -231,9 +237,16 @@ describe('ready endpoint hardening', () => {
     expect(response.status).toBe(200);
     expect(body.status).toBe('ready');
     expect(body.requestId).toBe('req_ready_test');
+    expect(body.database).toMatchObject({
+      adminClient: true,
+      subscriptionsReadable: true,
+      commercialMutationsReady: true,
+      detail: 'ok',
+    });
     expect(body.checks).toEqual({
       supabaseConfigured: true,
       databaseReachable: true,
+      commercialMutationsReady: true,
       stripeConfigured: true,
       stripeApiReachable: true,
       redisConfigured: true,
@@ -265,6 +278,37 @@ describe('ready endpoint hardening', () => {
       scannerTransportConfigured: false,
     });
     expect(body.sentryReleaseUploads.sourceMapsUploadRequiresAuthToken).toBe(true);
+  });
+
+  it('fails closed when the atomic commercial mutation RPC is unavailable', async () => {
+    stubReadyEnvironment();
+    supabaseMock.rpc.mockResolvedValue({
+      data: null,
+      error: { code: 'PGRST202', message: 'Could not find the function' },
+    });
+
+    const response = await GET(makeRequest('expected-token'));
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.status).toBe('not_ready');
+    expect(body.database).toMatchObject({
+      adminClient: true,
+      subscriptionsReadable: true,
+      commercialMutationsReady: false,
+      detail: 'not_ready',
+    });
+    expect(body.checks.databaseReachable).toBe(false);
+    expect(body.checks.commercialMutationsReady).toBe(false);
+    expect(supabaseMock.rpc).toHaveBeenCalledWith(
+      'mutate_commercial_resource_with_audit_atomic',
+      expect.objectContaining({
+        p_resource_type: 'vendor',
+        p_operation: 'create',
+        p_organization_id: null,
+        p_actor_user_id: null,
+      }),
+    );
   });
 
   it('requires all four canonical self-serve Stripe prices to be present', async () => {
@@ -431,6 +475,7 @@ describe('ready endpoint hardening', () => {
     expect(body.status).toBe('ready');
     expect(body.checks.enterpriseStepUpConfigured).toBe(true);
     expect(body.checks.enterpriseStorageScannerConfigured).toBe(true);
+    expect(body.checks.commercialMutationsReady).toBe(true);
     expect(body.enterpriseStepUp.configured).toBe(true);
     expect(body.enterpriseStorageScanner.configured).toBe(true);
     expect(JSON.stringify(body)).not.toContain('configured-step-up-secret');
