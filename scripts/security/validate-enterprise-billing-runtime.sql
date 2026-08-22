@@ -10,6 +10,7 @@ declare
   provision_rpc oid:=to_regprocedure('public.provision_enterprise_contract_atomic(uuid,text,text,bigint,timestamptz,timestamptz,timestamptz,integer,integer,integer,integer,integer,integer,integer,integer,integer,bigint,integer,boolean,boolean,boolean,boolean,boolean,boolean,boolean,uuid)');
   entitlement_rpc oid:=to_regprocedure('public.update_enterprise_contract_entitlements_atomic(uuid,integer,integer,integer,integer,integer,integer,integer,integer,bigint,integer,boolean,boolean,boolean,boolean,boolean,boolean,boolean,uuid,text)');
   status_rpc oid:=to_regprocedure('public.transition_enterprise_contract_status_atomic(uuid,text,text,uuid,text)');
+  subscription_binding_index oid:=to_regclass('public.enterprise_contracts_stripe_subscription_uidx');
   rpc oid;
   billing_columns integer;
 begin
@@ -57,6 +58,17 @@ begin
       and conname='enterprise_contracts_billing_status_check' and convalidated
   ) then
     raise exception 'Enterprise billing contract constraints incomplete';
+  end if;
+
+  if subscription_binding_index is null
+     or not exists (
+       select 1
+       from pg_index idx
+       where idx.indexrelid=subscription_binding_index
+         and idx.indisunique
+         and pg_get_expr(idx.indpred,idx.indrelid) like '%stripe_subscription_id IS NOT NULL%'
+     ) then
+    raise exception 'Enterprise Stripe subscription binding uniqueness is not canonical';
   end if;
 
   if exists (
