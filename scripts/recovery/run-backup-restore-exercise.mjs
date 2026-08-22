@@ -22,16 +22,11 @@ const failures = [];
 let failurePhase = null;
 let failureDiagnostic = null;
 
-const SUPABASE_MANAGED_DATA_EXCLUDES = [
-  'storage.buckets_vectors',
-  'storage.vector_indexes',
-  // The restore target primes Supabase-managed Storage schema while it is still
-  // empty, then returns to DB-only mode before any Production snapshot is read.
-  // Storage row data is intentionally not copied into this recovery proof; the
-  // selected migrations and later runtime acceptance validate bucket/object
-  // policy behavior against the materialized managed relations.
-  'storage.*',
-];
+// Use exactly one Supabase CLI --exclude value. A historical CLI bug can ignore
+// later entries when multiple exclusions are supplied, which previously allowed
+// storage.buckets rows into the DB-only recovery dump. The schema wildcard also
+// covers the vector-storage tables that Supabase excludes from logical data dumps.
+const SUPABASE_MANAGED_DATA_EXCLUDE = 'storage.*';
 
 function required(name) {
   const value = env(name);
@@ -153,6 +148,13 @@ function inspectLogicalBackup(paths) {
   return { exists, digest, bytes: inspected.reduce((sum, entry) => sum + entry.bytes, 0) };
 }
 
+function assertManagedStorageRowsExcluded(path) {
+  const dump = readFileSync(path, 'utf8');
+  if (/^COPY\s+"?storage"?\./mi.test(dump)) {
+    throw new Error('recovery_storage_rows_present_in_data_dump');
+  }
+}
+
 function copySqlToContainer(container, path) {
   const containerPath = `/tmp/${basename(path)}`;
   run('docker', ['cp', path, `${container}:${containerPath}`], {}, 'recovery_copy_dump_to_isolated_target_failed');
@@ -239,11 +241,12 @@ try {
     run('supabase', [
       'db', 'dump', '--db-url', source,
       '--data-only', '--use-copy',
-      '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[0],
-      '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[1],
-      '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[2],
+      '--exclude', SUPABASE_MANAGED_DATA_EXCLUDE,
       '--file', dataDumpPath,
     ], {}, 'recovery_data_dump_failed');
+    failurePhase = 'data_dump_storage_exclusion_validation';
+    assertManagedStorageRowsExcluded(dataDumpPath);
+    checks.managedStorageRowsExcluded = true;
     backupCompletedAt = new Date().toISOString();
     failurePhase = 'backup_inspection';
     const inspectedDump = inspectLogicalBackup([rolesDumpPath, schemaDumpPath, dataDumpPath]);
