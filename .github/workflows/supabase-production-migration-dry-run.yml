@@ -109,9 +109,11 @@ jobs:
             exit 1
           fi
 
-          echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
-          echo "BOUNDED_FORWARD=$BOUNDED_FORWARD" >> "$GITHUB_ENV"
-          echo "SUPABASE_DB_URL_FILE=$RUNNER_TEMP/supabase-production-db-url" >> "$GITHUB_ENV"
+          {
+            echo "TARGET_SHA=${TARGET_SHA,,}"
+            echo "BOUNDED_FORWARD=$BOUNDED_FORWARD"
+            echo "SUPABASE_DB_URL_FILE=$RUNNER_TEMP/supabase-production-db-url"
+          } >> "$GITHUB_ENV"
 
       - name: Check out exact release SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -369,8 +371,10 @@ jobs:
           AUDIT_EXIT="${PIPELINE_STATUS[0]}"
           TEE_EXIT="${PIPELINE_STATUS[1]}"
           set -e
-          echo "exit_code=$AUDIT_EXIT" >> "$GITHUB_OUTPUT"
-          echo "tee_exit_code=$TEE_EXIT" >> "$GITHUB_OUTPUT"
+          {
+            echo "exit_code=$AUDIT_EXIT"
+            echo "tee_exit_code=$TEE_EXIT"
+          } >> "$GITHUB_OUTPUT"
           if [ "$TEE_EXIT" -ne 0 ]; then
             echo "Could not retain the migration deployability evidence (tee exit $TEE_EXIT)." >&2
             exit "$TEE_EXIT"
