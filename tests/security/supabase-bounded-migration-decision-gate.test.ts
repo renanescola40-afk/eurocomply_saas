@@ -6,10 +6,23 @@ const builder = readFileSync('scripts/supabase/build-bounded-migration-reconcili
 const verifier = readFileSync('scripts/supabase/verify-forward-human-approval.mjs', 'utf8');
 
 describe('bounded Supabase migration human decision gate', () => {
-  it('binds the general production inventory to the exact successful forward dry-run manifest', () => {
+  it('requires successful exact-SHA bounded S3 plus successful S2 provenance', () => {
+    expect(workflow).toContain('source_run_id:');
     expect(workflow).toContain('forward_dry_run_run_id:');
+    expect(workflow).toContain(".github/workflows/supabase-production-migration-dry-run.yml");
     expect(workflow).toContain(".github/workflows/supabase-forward-reconciliation-dry-run.yml");
-    expect(workflow).toContain("test \"$(jq -r '.conclusion' <<<\"$FORWARD_JSON\")\" = 'success'");
+    expect(workflow).toContain('test "$(jq -r \' .conclusion\' <<<"$RUN_JSON")" = \'success\''.replace("' .conclusion", "'.conclusion"));
+    expect(workflow).toContain('test "$(jq -r \' .conclusion\' <<<"$FORWARD_JSON")" = \'success\''.replace("' .conclusion", "'.conclusion"));
+    expect(workflow).toContain('bounded-production-dry-run-attestation.json');
+    expect(workflow).toContain('.mode == "BOUNDED_FORWARD_DECISION"');
+    expect(workflow).toContain('.checks.filteredDbPushDryRunOnly == true');
+    expect(workflow).toContain('.checks.pendingSetEqualsSelectedSet == true');
+    expect(workflow).toContain('.checks.unauthorizedPendingMigrations == false');
+    expect(workflow).toContain('.productionWriteAuthorized == false');
+    expect(workflow).toContain('.productionWritePerformed == false');
+  });
+
+  it('binds the production inventory to the exact successful forward manifest', () => {
     expect(workflow).toContain('build-bounded-migration-reconciliation-inventory.mjs');
     expect(workflow).toContain('bounded-migration-reconciliation-inventory.json');
     expect(builder).toContain('selected migration is absent from production dry-run inventory');
@@ -30,7 +43,7 @@ describe('bounded Supabase migration human decision gate', () => {
   it('accepts only a fully reviewed bounded PENDING_DEPLOYMENT set and never authorizes production', () => {
     expect(workflow).toContain('.counts.PENDING_DEPLOYMENT == $count');
     expect(workflow).toContain('.deploymentAuthorization == "NOT_AUTHORIZED"');
-    expect(workflow).toContain("environment: supabase-production-migration-review");
+    expect(workflow).toContain('environment: supabase-production-migration-review');
     expect(workflow).toContain("echo '- Production write authorized: no'");
     expect(workflow).not.toContain('--include-all');
     expect(workflow).not.toContain('migration repair --');
