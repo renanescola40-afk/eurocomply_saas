@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const actionPath = 'src/server/actions/risks.ts';
-const migrationPath = 'supabase/migrations/20260822001000_atomic_vendor_risk_quota_mutations.sql';
+const migrationPath = 'supabase/migrations/20260822120617_atomic_vendor_risk_quota_mutations.sql';
 
 describe('risk deletion audit persistence', () => {
   it('routes deletion through the atomic commercial mutation RPC', () => {
