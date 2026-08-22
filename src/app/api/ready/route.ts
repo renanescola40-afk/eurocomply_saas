@@ -73,6 +73,7 @@ const REQUIRED_ENV_GROUPS = {
 const READINESS_DEPENDENCY_TIMEOUT_MS = 5_000;
 const STRIPE_READINESS_TIMEOUT_MS = READINESS_DEPENDENCY_TIMEOUT_MS;
 const TEST_PLACEHOLDER_VALUE = 'configured';
+const COMMERCIAL_RESOURCE_ATOMIC_RPC = 'mutate_commercial_resource_with_audit_atomic';
 // SENTRY_ORG, SENTRY_PROJECT and SENTRY_AUTH_TOKEN are build/control-plane
 // inputs for release/source-map uploads. They stay informational here because
 // runtime health is proven by NEXT_PUBLIC_SENTRY_DSN; the protected provider
@@ -118,6 +119,7 @@ type EnterpriseStepUpReadinessCheck = {
 type ReadyDatabaseCheck = {
   adminClient: boolean;
   subscriptionsReadable: boolean;
+  commercialMutationsReady: boolean;
   detail: 'ok' | 'not_ready';
 };
 
@@ -131,6 +133,10 @@ type ReadyStripeCheck = {
 
 type ConfiguredStripeReadinessBinding = StripeReadinessBinding & {
   priceId: string;
+};
+
+type CommercialMutationProbeRow = {
+  outcome?: unknown;
 };
 
 function hasHealthcheckToken(request: Request) {
@@ -277,10 +283,17 @@ function checkConfigured(environment: ReadyEnvironmentGroup[], name: EnvGroupNam
   return environment.find((item) => item.name === name)?.configured ?? false;
 }
 
+function isCommercialMutationProbeReady(data: unknown) {
+  if (!Array.isArray(data) || data.length !== 1) return false;
+  const row = data[0] as CommercialMutationProbeRow | null;
+  return Boolean(row && typeof row === 'object' && row.outcome === 'invalid_input');
+}
+
 async function checkSupabaseConnectivity(): Promise<ReadyDatabaseCheck> {
   let database: ReadyDatabaseCheck = {
     adminClient: false,
     subscriptionsReadable: false,
+    commercialMutationsReady: false,
     detail: 'not_ready',
   };
 
@@ -289,12 +302,34 @@ async function checkSupabaseConnectivity(): Promise<ReadyDatabaseCheck> {
     database.adminClient = Boolean(supabase);
 
     if (supabase) {
-      const query = supabase.from('subscriptions').select('id').limit(1);
-      const { error } = await withReadinessDependencyTimeout(query);
+      const subscriptionsQuery = supabase.from('subscriptions').select('id').limit(1);
+      const commercialMutationProbe = supabase.rpc(COMMERCIAL_RESOURCE_ATOMIC_RPC, {
+        p_resource_type: 'vendor',
+        p_operation: 'create',
+        p_organization_id: null,
+        p_actor_user_id: null,
+        p_entity_id: null,
+        p_payload: null,
+        p_max_count: 0,
+        p_expected_review_version: null,
+        p_audit_id: null,
+        p_audit_metadata: {},
+        p_audit_created_at: null,
+        p_previous_hash: null,
+        p_event_hash: 'invalid-readiness-probe',
+        p_hash_signature: null,
+      });
+      const [subscriptions, commercialMutation] = await Promise.all([
+        withReadinessDependencyTimeout(subscriptionsQuery),
+        withReadinessDependencyTimeout(commercialMutationProbe),
+      ]);
+      const subscriptionsReadable = !subscriptions.error;
+      const commercialMutationsReady = !commercialMutation.error && isCommercialMutationProbeReady(commercialMutation.data);
       database = {
         adminClient: true,
-        subscriptionsReadable: !error,
-        detail: error ? 'not_ready' : 'ok',
+        subscriptionsReadable,
+        commercialMutationsReady,
+        detail: subscriptionsReadable && commercialMutationsReady ? 'ok' : 'not_ready',
       };
     }
   } catch (error) {
@@ -302,6 +337,7 @@ async function checkSupabaseConnectivity(): Promise<ReadyDatabaseCheck> {
     database = {
       adminClient: false,
       subscriptionsReadable: false,
+      commercialMutationsReady: false,
       detail: 'not_ready',
     };
   }
@@ -402,7 +438,8 @@ export async function GET(request: Request) {
   const redisConfigured = checkConfigured(environment, 'redis');
   const sentryConfigured = checkConfigured(environment, 'sentry');
   const stripe = await checkStripeConnectivity(stripeConfigured);
-  const databaseReachable = database.adminClient && database.subscriptionsReadable;
+  const commercialMutationsReady = database.commercialMutationsReady;
+  const databaseReachable = database.adminClient && database.subscriptionsReadable && commercialMutationsReady;
   const stripeApiReachable = stripe.apiReachable && stripe.priceLookup;
   const enterpriseStepUpConfigured = enterpriseStepUp.configured;
   const enterpriseStorageScannerConfigured = enterpriseStorageScanner.configured;
@@ -429,6 +466,7 @@ export async function GET(request: Request) {
       checks: {
         supabaseConfigured,
         databaseReachable,
+        commercialMutationsReady,
         stripeConfigured,
         stripeApiReachable,
         redisConfigured,
