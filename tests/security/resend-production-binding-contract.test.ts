@@ -8,12 +8,12 @@ function read(path: string) {
   return readFileSync(join(root, path), 'utf8');
 }
 
-function sliceBetween(source: string, start: string, end: string) {
-  const startIndex = source.indexOf(start);
+function sliceBetween(source: string, start: string, end: string, fromIndex = 0) {
+  const startIndex = source.indexOf(start, fromIndex);
   const endIndex = source.indexOf(end, startIndex + start.length);
   expect(startIndex, `missing start marker: ${start}`).toBeGreaterThanOrEqual(0);
   expect(endIndex, `missing end marker: ${end}`).toBeGreaterThan(startIndex);
-  return source.slice(startIndex, endIndex);
+  return { value: source.slice(startIndex, endIndex), endIndex };
 }
 
 describe('Resend Production binding contract', () => {
@@ -26,16 +26,18 @@ describe('Resend Production binding contract', () => {
     expect(workflow).toContain('EMAIL_FROM: ${{ vars.EMAIL_FROM }}');
     expect(workflow).toContain("REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY: 'true'");
 
-    const requiredBlock = sliceBetween(workflow, 'required=(', 'missing=()');
-    const sensitiveBlock = sliceBetween(workflow, 'for key in \\\n            SUPABASE_SERVICE_ROLE_KEY', 'do\n            sync_sensitive');
-    const publicBlock = sliceBetween(workflow, 'for key in \\\n            NEXT_PUBLIC_SUPABASE_URL', 'do\n            sync_public');
+    const requiredBlock = sliceBetween(workflow, 'required=(', 'missing=()').value;
+    const syncFunctionsEnd = workflow.indexOf('for key in', workflow.indexOf('sync_public()'));
+    expect(syncFunctionsEnd).toBeGreaterThanOrEqual(0);
+    const sensitiveLoop = sliceBetween(workflow, 'for key in', 'sync_sensitive "$key"', syncFunctionsEnd);
+    const publicLoop = sliceBetween(workflow, 'for key in', 'sync_public "$key"', sensitiveLoop.endIndex);
 
     expect(requiredBlock).toContain('RESEND_API_KEY');
     expect(requiredBlock).toContain('EMAIL_FROM');
     expect(requiredBlock).toContain('REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY');
-    expect(sensitiveBlock).toContain('RESEND_API_KEY');
-    expect(publicBlock).toContain('EMAIL_FROM');
-    expect(publicBlock).toContain('REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY');
+    expect(sensitiveLoop.value).toContain('RESEND_API_KEY');
+    expect(publicLoop.value).toContain('EMAIL_FROM');
+    expect(publicLoop.value).toContain('REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY');
   });
 
   it('requires the same provider pair in runtime readiness without exposing values', () => {
