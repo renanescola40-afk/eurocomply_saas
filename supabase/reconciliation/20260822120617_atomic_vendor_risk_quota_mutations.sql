@@ -1,0 +1,17 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed read-only:
+--   version: 20260822120617
+--   name: atomic_vendor_risk_quota_mutations
+--
+-- Production already exposes public.mutate_commercial_resource_with_audit_atomic(...)
+-- as SECURITY DEFINER with search_path=pg_catalog, public and service_role-only
+-- EXECUTE. The remote migration ledger statement is not asserted byte-identical
+-- to the repository migration source with the same logical purpose; in particular,
+-- repository-only comments differ from the statement recorded by Production.
+--
+-- This marker exists only so migration-drift tooling can classify the remote
+-- identity as intentionally reconciled while the remaining 25 effects are
+-- re-issued under V19 forward-only identities strictly after the live head.
+--
+-- No DDL. No migration-history mutation. No production-write authorization.
