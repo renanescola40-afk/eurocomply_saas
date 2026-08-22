@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/recovery/manage-ephemeral-recovery-database.mjs'
+      - 'scripts/recovery/prime-ephemeral-managed-storage-schema.mjs'
       - 'scripts/recovery/run-backup-restore-exercise.mjs'
       - 'scripts/recovery/run-ephemeral-restore-smoke.mjs'
       - 'scripts/recovery/verify-postgresql-client.mjs'
@@ -12,6 +13,7 @@ on:
       - '.github/workflows/ephemeral-supabase-restore-smoke.yml'
       - 'tests/security/ephemeral-recovery-database-contract.test.ts'
       - 'tests/security/ephemeral-supabase-restore-smoke-workflow.test.ts'
+      - 'tests/security/recovery-storage-managed-data-boundary.test.ts'
       - 'tests/security/recovery-postgresql-client.test.mjs'
 
 permissions:
@@ -62,6 +64,20 @@ jobs:
 
       - name: Start clean disposable restore target
         run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start
+
+      - name: Prime Supabase-managed Storage schema while target is empty
+        env:
+          RECOVERY_MANAGED_SCHEMA_PRIME_PHASE: pre-production-restore
+        run: node scripts/recovery/prime-ephemeral-managed-storage-schema.mjs
+
+      - name: Verify managed Storage priming returned to DB-only target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${RECOVERY_MANAGED_STORAGE_SCHEMA_PRIMED:-}" = 'true'
+          psql "$RECOVERY_ISOLATED_DATABASE_URL" --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1 \
+            --command "select (to_regclass('storage.buckets') is not null and to_regclass('storage.objects') is not null)::text;" \
+            | grep -qx true
 
       - name: Restore synthetic logical backup and validate integrity
         run: node scripts/recovery/run-ephemeral-restore-smoke.mjs restore
