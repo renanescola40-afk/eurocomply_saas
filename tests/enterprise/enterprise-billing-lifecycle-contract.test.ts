@@ -9,11 +9,21 @@ const billingHardening = readFileSync(
   'supabase/migrations/20260721214100_enterprise_billing_lifecycle_hardening.sql',
   'utf8',
 );
+const v19Billing = readFileSync(
+  'supabase/migrations/20260822123558_v19_reconcile_enterprise_billing_lifecycle.sql',
+  'utf8',
+);
+const v19FinalBillingBoundary = readFileSync(
+  'supabase/migrations/20260822123600_v19_finalize_enterprise_contract_mode_compatibility.sql',
+  'utf8',
+);
 const alertMigration = readFileSync(
   'supabase/migrations/20260721214500_enterprise_usage_threshold_alerts.sql',
   'utf8',
 );
-const webhook = readFileSync('src/app/api/billing/webhook/route.ts', 'utf8');
+const canonicalWebhook = readFileSync('src/app/api/stripe/webhook/route.ts', 'utf8');
+const legacyWebhook = readFileSync('src/app/api/billing/webhook/route.ts', 'utf8');
+const platformBillingRoute = readFileSync('src/app/api/platform/contracts/billing/route.ts', 'utf8');
 const billingService = readFileSync('src/server/enterprise/billing.ts', 'utf8');
 const lifecycleRoute = readFileSync(
   'src/app/api/internal/enterprise-contract-lifecycle/route.ts',
@@ -33,21 +43,58 @@ describe('enterprise negotiated billing lifecycle', () => {
     expect(billingMigration).toContain('alter table public.enterprise_contract_billing_events force row level security');
   });
 
-  it('uses a v2 idempotent Stripe sync and disables the superseded RPC', () => {
+  it('preserves the idempotent v2 implementation behind a strict V19 v3 binding boundary', () => {
     expect(billingHardening).toContain('create or replace function public.sync_enterprise_contract_billing_v2_atomic');
     expect(billingHardening).toContain('where billing_event.stripe_event_id = p_event_id');
     expect(billingHardening).toContain("'duplicate'::text");
-    expect(billingHardening).toContain('v_previous_status := v_contract.status');
-    expect(billingHardening).toContain('revoke all on function public.sync_enterprise_contract_billing_atomic');
-    expect(billingService).toContain("'sync_enterprise_contract_billing_v2_atomic'");
+    expect(v19Billing).toContain('create or replace function public.sync_enterprise_contract_billing_v2_atomic');
+    expect(v19FinalBillingBoundary).toContain('create or replace function public.sync_enterprise_contract_billing_v3_atomic');
+    expect(billingService).toContain("'sync_enterprise_contract_billing_v3_atomic'");
+
+    const v3Start = v19FinalBillingBoundary.indexOf(
+      'create or replace function public.sync_enterprise_contract_billing_v3_atomic',
+    );
+    const configureStart = v19FinalBillingBoundary.indexOf(
+      'create or replace function public.configure_enterprise_contract_billing_v2_atomic',
+    );
+    const v3Definition = v19FinalBillingBoundary.slice(v3Start, configureStart);
+
+    expect(v3Definition).toContain('p_contract_id is not null');
+    expect(v3Definition).toContain('contract.stripe_subscription_id=p_stripe_subscription_id');
+    expect(v3Definition).not.toContain(
+      "p_organization_id is not null\n        and contract.organization_id=p_organization_id",
+    );
+    expect(v19FinalBillingBoundary).toContain(
+      'from public,anon,authenticated,service_role',
+    );
+    expect(v19FinalBillingBoundary).toContain(
+      'grant execute on function public.sync_enterprise_contract_billing_v3_atomic',
+    );
   });
 
-  it('routes Enterprise Stripe events before the self-service plan handler', () => {
-    const enterpriseIndex = webhook.indexOf('await syncEnterpriseContractBillingEvent(event)');
-    const selfServiceIndex = webhook.indexOf('await handleStripeWebhookEventWithRecovery(event)');
+  it('routes Enterprise Stripe events first on the canonical LIVE webhook', () => {
+    const enterpriseIndex = canonicalWebhook.indexOf('await syncEnterpriseContractBillingEvent(event)');
+    const invoiceSyncIndex = canonicalWebhook.indexOf('await syncStripeSubscriptionForInvoiceEvent(event)');
+    const selfServiceIndex = canonicalWebhook.indexOf('await handleStripeWebhookEventWithRecovery(event)');
+
     expect(enterpriseIndex).toBeGreaterThan(-1);
-    expect(selfServiceIndex).toBeGreaterThan(enterpriseIndex);
-    expect(webhook).toContain('if (enterprise.matched)');
+    expect(invoiceSyncIndex).toBeGreaterThan(enterpriseIndex);
+    expect(selfServiceIndex).toBeGreaterThan(invoiceSyncIndex);
+    expect(canonicalWebhook).toContain('if (enterprise.matched)');
+    expect(canonicalWebhook).toContain("reason: 'enterprise_billing_sync_failed'");
+    expect(legacyWebhook).toContain('await syncEnterpriseContractBillingEvent(event)');
+  });
+
+  it('materializes and consumes the negotiated-only Platform billing configuration RPC', () => {
+    expect(v19FinalBillingBoundary).toContain(
+      'create or replace function public.configure_enterprise_contract_billing_v2_atomic',
+    );
+    expect(v19FinalBillingBoundary).toContain("contract.contract_mode='negotiated'");
+    expect(v19FinalBillingBoundary).toContain(
+      'grant execute on function public.configure_enterprise_contract_billing_v2_atomic',
+    );
+    expect(platformBillingRoute).toContain("client.rpc('configure_enterprise_contract_billing_v2_atomic'");
+    expect(platformBillingRoute).not.toContain("client.rpc('configure_enterprise_contract_billing_atomic'");
   });
 
   it('advances due contracts through grace, read-only and expiry under row locks', () => {
