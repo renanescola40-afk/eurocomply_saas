@@ -41,6 +41,8 @@ test('derives a fresh exact-SHA current-main NO_GO state without manual percenta
   const state = derivePersistentExecutionState({ scorecard: scorecard(), assessedSha: SHA, runId: 12345, sourceScorecardSha256: SCORECARD_SHA256, generatedAt: '2026-07-29T00:00:00.000Z' });
   assert.equal(state.official_completion_percent, 45);
   assert.equal(state.official_remaining_percent, 55);
+  assert.equal(state.diagnostic_completion_percent, null);
+  assert.equal(state.diagnostic_remaining_percent, null);
   assert.equal(state.assessment_scope, 'main');
   assert.equal(state.is_current_main, true);
   assert.equal(state.observed_main_sha, SHA);
@@ -51,7 +53,7 @@ test('derives a fresh exact-SHA current-main NO_GO state without manual percenta
   assert.equal(state.last_verified_score_sha, SHA);
 });
 
-test('derives pull-request diagnostics without claiming current-main authority', () => {
+test('derives pull-request diagnostics without publishing official percentages', () => {
   const state = derivePersistentExecutionState({
     scorecard: scorecard(),
     assessedSha: SHA,
@@ -65,6 +67,10 @@ test('derives pull-request diagnostics without claiming current-main authority',
   assert.equal(state.is_current_main, false);
   assert.equal(state.observed_main_sha, MAIN_SHA);
   assert.equal(state.last_verified_score_sha, SHA);
+  assert.equal(state.official_completion_percent, null);
+  assert.equal(state.official_remaining_percent, null);
+  assert.equal(state.diagnostic_completion_percent, 45);
+  assert.equal(state.diagnostic_remaining_percent, 55);
   assert.equal(state.classification, 'VERIFIED_EXACT_SHA_DIAGNOSTIC');
   assert.equal(state.current_decision, 'NO_GO');
   assert.equal(state.scorecard_decision, 'NO_GO');
@@ -72,7 +78,7 @@ test('derives pull-request diagnostics without claiming current-main authority',
   assert.match(state.evidence_freshness.reason, /not protected-main release authority/);
 });
 
-test('never converts a 100% pull-request diagnostic into Enterprise GO', () => {
+test('never converts a 100% pull-request diagnostic into Enterprise GO or official completion', () => {
   const state = derivePersistentExecutionState({
     scorecard: scorecard({ pass: 100, blocked: 0 }),
     assessedSha: SHA,
@@ -86,6 +92,10 @@ test('never converts a 100% pull-request diagnostic into Enterprise GO', () => {
   assert.equal(state.current_decision, 'NO_GO');
   assert.equal(state.classification, 'VERIFIED_EXACT_SHA_DIAGNOSTIC');
   assert.equal(state.is_current_main, false);
+  assert.equal(state.official_completion_percent, null);
+  assert.equal(state.official_remaining_percent, null);
+  assert.equal(state.diagnostic_completion_percent, 100);
+  assert.equal(state.diagnostic_remaining_percent, 0);
   assert.equal(state.publish_recommendation, 'DO_NOT_PUBLISH_AS_ENTERPRISE');
 });
 
@@ -109,6 +119,18 @@ test('resolves pull-request scope from the GitHub event base SHA', () => {
   }
 });
 
+test('fails closed when GitHub event context is absent', () => {
+  assert.throws(
+    () => resolveAssessmentContext({
+      eventName: '',
+      eventPath: '',
+      ref: '',
+      assessedSha: SHA,
+    }),
+    /GITHUB_EVENT_NAME is required/,
+  );
+});
+
 test('allows authoritative assessment only on protected main for GitHub workflow events', () => {
   assert.deepEqual(resolveAssessmentContext({
     eventName: 'push',
@@ -129,7 +151,7 @@ test('allows authoritative assessment only on protected main for GitHub workflow
   );
 });
 
-test('preserves canonical partial and not-applicable scoring', () => {
+test('preserves canonical partial and not-applicable scoring on current main', () => {
   const state = derivePersistentExecutionState({
     scorecard: scorecard({ pass: 45, partial: 1, blocked: 1, notApplicable: 1 }),
     assessedSha: SHA,
@@ -157,6 +179,7 @@ test('derives GO only when every control passes on current main', () => {
   const state = derivePersistentExecutionState({ scorecard: scorecard({ pass: 100, blocked: 0 }), assessedSha: SHA, runId: 12345, sourceScorecardSha256: SCORECARD_SHA256 });
   assert.equal(state.current_decision, 'GO');
   assert.equal(state.scorecard_decision, 'GO');
+  assert.equal(state.official_completion_percent, 100);
   assert.equal(state.classification, 'ENTERPRISE_READY');
   assert.equal(state.publish_recommendation, 'PUBLISH_AS_ENTERPRISE');
 });
