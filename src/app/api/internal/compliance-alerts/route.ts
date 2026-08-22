@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { buildNotificationIdempotencyKey } from '@/server/jobs/notification-idempotency';
 import { enforceInternalAuthenticationRateLimit } from '@/server/security/internal-auth-rate-limit';
 import { noStoreJson } from '@/server/security/no-store';
+import { isExpectedMissingSupabaseSchema } from '@/server/supabase/schema-compatibility';
 import { getUserEmailContextById } from '@/server/users/email';
 
 export const runtime = 'nodejs';
@@ -13,6 +14,7 @@ export const runtime = 'nodejs';
 const DOCUMENT_EXPIRY_LOOKAHEAD_DAYS = 30;
 const COMPLIANCE_ALERTS_ROUTE = '/api/internal/compliance-alerts';
 const COMPLIANCE_ALERTS_AUTH_ACTION = 'authenticate_compliance_alerts';
+const PRE_V19_DEFER_REASON = 'maintenance_data_plane_not_promoted';
 
 type NotificationDedupe = {
   organizationId: string;
@@ -34,6 +36,25 @@ function addDays(days: number) {
 
 async function getOrganizationOwnerContact(userId: string) {
   return getUserEmailContextById(userId, 'compliance_alert_owner_lookup');
+}
+
+async function getComplianceAlertDataPlaneStatus() {
+  const supabase = createAdminClient();
+  const [notificationEvents, vendorMaintenance] = await Promise.all([
+    supabase.from('email_notification_events').select('id').limit(1),
+    supabase.from('vendors').select('id,next_review_at').limit(1),
+  ]);
+
+  const errors = [notificationEvents.error, vendorMaintenance.error].filter(Boolean);
+  if (errors.length === 0) return { ready: true as const };
+
+  const unexpectedError = errors.find((error) => !isExpectedMissingSupabaseSchema(error));
+  if (unexpectedError) {
+    reportError(unexpectedError, { area: 'compliance_alert_data_plane_probe' });
+    throw unexpectedError;
+  }
+
+  return { ready: false as const, reason: PRE_V19_DEFER_REASON };
 }
 
 async function hasNotificationBeenSent(input: NotificationDedupe) {
@@ -273,6 +294,18 @@ export async function POST(request: Request) {
   }
 
   try {
+    const dataPlane = await getComplianceAlertDataPlaneStatus();
+    if (!dataPlane.ready) {
+      const deferred = { sent: 0, skipped: 0, failed: 0 };
+      return noStoreJson({
+        ok: true,
+        status: 'deferred',
+        reason: dataPlane.reason,
+        documentAlerts: deferred,
+        vendorAlerts: deferred,
+      });
+    }
+
     const [documentAlerts, vendorAlerts] = await Promise.all([
       sendDocumentExpiryAlerts(),
       sendVendorReviewAlerts(),
@@ -285,7 +318,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return noStoreJson({ ok: true, documentAlerts, vendorAlerts });
+    return noStoreJson({ ok: true, status: 'completed', documentAlerts, vendorAlerts });
   } catch (error) {
     reportError(error, { area: 'compliance_alert_job' });
     return noStoreJson({ error: 'Unable to send compliance alerts' }, { status: 500 });
