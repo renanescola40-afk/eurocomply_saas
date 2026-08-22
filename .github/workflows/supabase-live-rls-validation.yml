@@ -117,7 +117,7 @@ jobs:
             supabase/migrations/20260701150000_supabase_production_rls_proof_hardening.sql \
             supabase/migrations/20260702112000_apply_invitations_live_rls_validation.sql \
             supabase/migrations/20260812230911_tighten_monitoring_preferences_horizontal_read_isolation.sql \
-            supabase/migrations/20260813175000_optimize_organization_add_ons_rls_initplan.sql
+            supabase/migrations/20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql
           do
             psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction --file="$migration"
           done

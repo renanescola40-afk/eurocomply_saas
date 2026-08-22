@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const migrationPath = 'supabase/migrations/20260813194500_reconcile_step_up_challenges_runtime.sql';
+const migrationPath = 'supabase/migrations/20260822123540_v19_reconcile_step_up_challenges_runtime.sql';
 const migration = fs.readFileSync(migrationPath, 'utf8');
 
 describe('step-up challenge runtime reconciliation', () => {

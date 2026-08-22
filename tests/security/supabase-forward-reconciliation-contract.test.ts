@@ -12,15 +12,15 @@ const postconditions = readFileSync('scripts/supabase/verify-forward-reconciliat
 const integrationsRuntime = readFileSync('scripts/security/validate-enterprise-integrations-runtime.sql', 'utf8');
 const billingRuntime = readFileSync('scripts/security/validate-enterprise-billing-runtime.sql', 'utf8');
 const liveRlsInventoryRepair = readFileSync(
-  'supabase/migrations/20260815083000_reconcile_live_rls_validation_inventory_privileges.sql',
+  'supabase/migrations/20260822123606_v19_reconcile_live_rls_validation_inventory_privileges.sql',
   'utf8',
 );
 const gapTaskRolloutGuard = readFileSync(
-  'supabase/migrations/20260816104000_guard_compliance_task_browser_mutations.sql',
+  'supabase/migrations/20260822123620_v19_guard_compliance_task_browser_mutations.sql',
   'utf8',
 );
 const gapTaskWriteHardening = readFileSync(
-  'supabase/migrations/20260816110000_harden_gap_personal_task_write_boundary.sql',
+  'supabase/migrations/20260822123624_v19_harden_gap_personal_task_write_boundary.sql',
   'utf8',
 );
 const historicalCore = readFileSync(
@@ -32,65 +32,68 @@ const historicalVendorIntegrity = readFileSync(
   'utf8',
 );
 const forwardCore = readFileSync(
-  'supabase/migrations/20260814101500_reconcile_enterprise_core_active_runtime.sql',
+  'supabase/migrations/20260822123604_v19_reconcile_enterprise_core_active_runtime.sql',
   'utf8',
 );
 const forwardInvitationSeatAuthority = readFileSync(
-  'supabase/migrations/20260815141000_reconcile_enterprise_invitation_seat_authority.sql',
+  'supabase/migrations/20260822123610_v19_reconcile_enterprise_invitation_seat_authority.sql',
   'utf8',
 );
 const forwardInvitationActorHardening = readFileSync(
-  'supabase/migrations/20260815141500_harden_enterprise_invitation_actor_boundary.sql',
+  'supabase/migrations/20260822123612_v19_harden_enterprise_invitation_actor_boundary.sql',
   'utf8',
 );
 const onboardingStatePreservation = readFileSync(
-  'supabase/migrations/20260815142000_preserve_completed_onboarding_state.sql',
+  'supabase/migrations/20260822123614_v19_preserve_completed_onboarding_state.sql',
   'utf8',
 );
 const forwardOnboarding = readFileSync(
-  'supabase/migrations/20260815142500_reconcile_active_onboarding_runtime.sql',
+  'supabase/migrations/20260822123616_v19_reconcile_active_onboarding_runtime.sql',
   'utf8',
 );
 const hardenedOnboarding = readFileSync(
-  'supabase/migrations/20260815143000_harden_active_onboarding_enterprise_boundaries.sql',
+  'supabase/migrations/20260822123618_v19_harden_active_onboarding_enterprise_boundaries.sql',
   'utf8',
 );
 const commercialQuotaMutation = readFileSync(
   'supabase/migrations/20260822120617_atomic_vendor_risk_quota_mutations.sql',
   'utf8',
 );
+const commercialQuotaReconciliation = readFileSync(
+  'supabase/reconciliation/20260822120617_atomic_vendor_risk_quota_mutations.sql',
+  'utf8',
+);
 
 const selected = config.migrations.map((migration) => migration.filename);
 
 describe('bounded Supabase forward reconciliation contract', () => {
-  it('selects exactly the twenty-six bounded forward-only reconciliation identities in version order', () => {
+  it('selects exactly the twenty-five CLI-issued V19 forward reconciliation identities in version order', () => {
     expect(selected).toEqual([
-      '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
-      '20260813194500_reconcile_step_up_challenges_runtime.sql',
-      '20260813200000_reconcile_subscription_schema_defaults.sql',
-      '20260813201500_reconcile_controlled_document_storage.sql',
-      '20260813201600_force_tasks_rls.sql',
-      '20260813234000_reconcile_enterprise_break_glass_governance.sql',
-      '20260814090000_reconcile_enterprise_licensing_control_plane.sql',
-      '20260814091000_reconcile_enterprise_integrations_scim.sql',
-      '20260814091100_harden_scim_identity_connection_delete_boundary.sql',
-      '20260814091900_bridge_enterprise_contract_mode_compatibility.sql',
-      '20260814092000_reconcile_enterprise_billing_lifecycle.sql',
-      '20260814092100_finalize_enterprise_contract_mode_compatibility.sql',
-      '20260814093000_reconcile_enterprise_contract_control_rpcs.sql',
-      '20260814101500_reconcile_enterprise_core_active_runtime.sql',
-      '20260815083000_reconcile_live_rls_validation_inventory_privileges.sql',
-      '20260815140500_reconcile_new_organization_compatibility_envelope.sql',
-      '20260815141000_reconcile_enterprise_invitation_seat_authority.sql',
-      '20260815141500_harden_enterprise_invitation_actor_boundary.sql',
-      '20260815142000_preserve_completed_onboarding_state.sql',
-      '20260815142500_reconcile_active_onboarding_runtime.sql',
-      '20260815143000_harden_active_onboarding_enterprise_boundaries.sql',
-      '20260816104000_guard_compliance_task_browser_mutations.sql',
-      '20260816104500_reconcile_gap_remediation_persistence.sql',
-      '20260816110000_harden_gap_personal_task_write_boundary.sql',
-      '20260817001500_reconcile_enterprise_evidence_vault.sql',
-      '20260822120617_atomic_vendor_risk_quota_mutations.sql',
+      '20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql',
+      '20260822123540_v19_reconcile_step_up_challenges_runtime.sql',
+      '20260822123542_v19_reconcile_subscription_schema_defaults.sql',
+      '20260822123544_v19_reconcile_controlled_document_storage.sql',
+      '20260822123546_v19_force_tasks_rls.sql',
+      '20260822123548_v19_reconcile_enterprise_break_glass_governance.sql',
+      '20260822123550_v19_reconcile_enterprise_licensing_control_plane.sql',
+      '20260822123552_v19_reconcile_enterprise_integrations_scim.sql',
+      '20260822123554_v19_harden_scim_identity_connection_delete_boundary.sql',
+      '20260822123556_v19_bridge_enterprise_contract_mode_compatibility.sql',
+      '20260822123558_v19_reconcile_enterprise_billing_lifecycle.sql',
+      '20260822123600_v19_finalize_enterprise_contract_mode_compatibility.sql',
+      '20260822123602_v19_reconcile_enterprise_contract_control_rpcs.sql',
+      '20260822123604_v19_reconcile_enterprise_core_active_runtime.sql',
+      '20260822123606_v19_reconcile_live_rls_validation_inventory_privileges.sql',
+      '20260822123608_v19_reconcile_new_organization_compatibility_envelope.sql',
+      '20260822123610_v19_reconcile_enterprise_invitation_seat_authority.sql',
+      '20260822123612_v19_harden_enterprise_invitation_actor_boundary.sql',
+      '20260822123614_v19_preserve_completed_onboarding_state.sql',
+      '20260822123616_v19_reconcile_active_onboarding_runtime.sql',
+      '20260822123618_v19_harden_active_onboarding_enterprise_boundaries.sql',
+      '20260822123620_v19_guard_compliance_task_browser_mutations.sql',
+      '20260822123622_v19_reconcile_gap_remediation_persistence.sql',
+      '20260822123624_v19_harden_gap_personal_task_write_boundary.sql',
+      '20260822123626_v19_reconcile_enterprise_evidence_vault.sql',
     ]);
     for (const historical of [
       '20260730204500_repair_live_rls_validation_inventory.sql',
@@ -100,11 +103,13 @@ describe('bounded Supabase forward reconciliation contract', () => {
       '20260721193000_enterprise_tenant_licensing_core.sql',
       '20260721195000_transactional_enterprise_invitations.sql',
       '20260721200500_invitation_lock_order_hardening.sql',
+      '20260822120617_atomic_vendor_risk_quota_mutations.sql',
     ]) {
       expect(selected).not.toContain(historical);
     }
     for (const filename of selected) {
       expect(existsSync(`supabase/migrations/${filename}`)).toBe(true);
+      expect(Number(filename.slice(0, 14))).toBeGreaterThan(20260822120617);
     }
     expect(config.truthBoundary).toMatchObject({
       automaticClassification: false,
@@ -115,8 +120,9 @@ describe('bounded Supabase forward reconciliation contract', () => {
     });
   });
 
-  it('binds the current readiness-required commercial mutation RPC into the bounded production lane', () => {
-    expect(selected.at(-1)).toBe('20260822120617_atomic_vendor_risk_quota_mutations.sql');
+  it('does not replay the already-present commercial identity and preserves its fail-closed source contract', () => {
+    expect(selected).not.toContain('20260822120617_atomic_vendor_risk_quota_mutations.sql');
+    expect(selected.at(-1)).toBe('20260822123626_v19_reconcile_enterprise_evidence_vault.sql');
     expect(commercialQuotaMutation.trimStart()).toMatch(/^begin;/i);
     expect(commercialQuotaMutation).toContain('create or replace function public.mutate_commercial_resource_with_audit_atomic');
     expect(commercialQuotaMutation).toContain('security definer');
@@ -127,6 +133,9 @@ describe('bounded Supabase forward reconciliation contract', () => {
     expect(commercialQuotaMutation).toContain('grant execute on function public.mutate_commercial_resource_with_audit_atomic');
     expect(commercialQuotaMutation).toContain('to service_role');
     expect(commercialQuotaMutation.trimEnd()).toMatch(/commit;$/i);
+    expect(commercialQuotaReconciliation).toContain('RECONCILIATION RECORD ONLY');
+    expect(commercialQuotaReconciliation).toContain('not asserted byte-identical');
+    expect(commercialQuotaReconciliation).toContain('No DDL. No migration-history mutation. No production-write authorization.');
   });
 
   it('reconciles the live RLS inventory helper to a service-role-only boundary', () => {

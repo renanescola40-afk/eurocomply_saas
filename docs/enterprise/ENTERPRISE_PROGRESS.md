@@ -1,7 +1,7 @@
 # Enterprise progress
 
 Last synchronized main baseline (pre-change):
-`14618ac687eac03c95b7b6573ccec50498631b38`
+`2b83d371bd6913f378fd6b995a787e1848b57e93`
 
 Decision: **NO_GO / CURRENT-MAIN SCORE UNKNOWN**
 
@@ -15,16 +15,29 @@ The last accepted score remains historical evidence only:
 - freshness: **STALE**;
 - current Enterprise publication recommendation: **DO_NOT_PUBLISH_AS_ENTERPRISE**.
 
-No PR, repository-only test or green CI result raises that score. A new percentage
-or `ENTERPRISE_100: PASS` is valid only after the canonical exact-current-main
-authority accepts all required protected runtime and human evidence.
+No PR, repository-only test, disposable database replay or green CI result raises
+that score. A new percentage or `ENTERPRISE_100: PASS` is valid only after the
+canonical exact-current-main authority accepts all required protected runtime
+and human evidence.
 
 ## Current authority state
 
-PR #1730 is merged and no pull request was open at synchronization. The
-repository contains 16 unique Enterprise closure controls and the fail-closed
-`Enterprise 100 Final Authority`, but protected direct-authority evidence is
-still required.
+PR #1767 is merged on the synchronized baseline. PR #1768 is the active P0 for
+Supabase migration lineage closure after read-only Production evidence observed
+remote ledger head `20260822120617_atomic_vendor_risk_quota_mutations`.
+
+The previous V18 bounded package is superseded for Production promotion. #1768
+selects exactly 25 Supabase-CLI-issued V19 forward identities strictly after the
+observed remote head, preserves the reviewed SQL bytes for the still-unapplied
+effects, archives the superseded unapplied V18 identities outside normal replay,
+and records the already-present commercial migration as reconciliation lineage
+without replaying it in V19.
+
+On pre-documentation-sync head
+`1df6f56f0e037bde02f514254d7f1508687a3535`, the full disposable Supabase Data
+Plane QA succeeded. That is repository/disposable evidence only, and all
+exact-head checks must rerun after this handoff synchronization. No Production
+write, protected Production promotion or Production acceptance is claimed.
 
 ## Mandatory direct authorities
 
@@ -42,11 +55,12 @@ controls remain independently required by the shared closure contract.
 
 ## Immediate P0
 
-Resolve the current `main` SHA at execution time, complete the bounded Supabase
-V17 decision and promotion lane, and execute the protected direct-authority
-producers for that same SHA. Do not promote 100%, GO or a new completion
-percentage before the retained canonical authority proves it.
+Complete #1768 under exact-head branch protection and human merge. After merge,
+resolve the new current `main` SHA and execute the protected V19/25 rehearsal,
+filtered Production dry run, qualified Decision Gate, bounded Production
+promotion and post-promotion acceptance for that same exact lineage. Do not
+reuse V17/V18 decisions or PR-event contract jobs as Production authority.
 
-This versioned file is an immutable handoff snapshot, not an exact-current-main
+This versioned file is a pre-change handoff snapshot, not an exact-current-main
 runtime authority. The generated persistent execution-state workflow artifact is
 the canonical exact-SHA state.

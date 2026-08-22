@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const validator = readFileSync('scripts/security/validate-gap-remediation-runtime.sql', 'utf8');
 const evidenceVaultMigration = readFileSync(
-  'supabase/migrations/20260817001500_reconcile_enterprise_evidence_vault.sql',
+  'supabase/migrations/20260822123626_v19_reconcile_enterprise_evidence_vault.sql',
   'utf8',
 );
 
