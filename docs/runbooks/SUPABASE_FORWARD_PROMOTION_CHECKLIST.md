@@ -75,7 +75,7 @@ Approve the protected `Production` deployment only after reviewing Stage 1, Stag
 
 Regenerate canonical exact-SHA evidence rather than editing evidence manually:
 
-- Supabase live RLS/tenant validation;
+- Supabase live RLS validation and tenant isolation;
 - Step-Up/runtime readiness;
 - SCIM/integration and billing runtime validation;
 - controlled Storage validation;
