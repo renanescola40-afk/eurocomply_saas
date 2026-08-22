@@ -14,6 +14,7 @@ const legacyDumpPath = `${workDir}/production-backup.dump`;
 const rolesDumpPath = `${workDir}/production-roles.sql`;
 const schemaDumpPath = `${workDir}/production-schema.sql`;
 const dataDumpPath = `${workDir}/production-data.sql`;
+const managedStoragePrimer = 'scripts/recovery/prime-ephemeral-managed-storage-schema.mjs';
 const env = (name) => String(process.env[name] ?? '').trim();
 const startedAt = Date.now();
 const checks = {};
@@ -24,6 +25,12 @@ let failureDiagnostic = null;
 const SUPABASE_MANAGED_DATA_EXCLUDES = [
   'storage.buckets_vectors',
   'storage.vector_indexes',
+  // The restore target primes Supabase-managed Storage schema while it is still
+  // empty, then returns to DB-only mode before any Production snapshot is read.
+  // Storage row data is intentionally not copied into this recovery proof; the
+  // selected migrations and later runtime acceptance validate bucket/object
+  // policy behavior against the materialized managed relations.
+  'storage.*',
 ];
 
 function required(name) {
@@ -215,6 +222,15 @@ try {
   if (failures.length) throw new Error('recovery_preconditions_failed');
 
   if (ephemeralMode) {
+    failurePhase = 'managed_storage_schema_prime';
+    run(
+      process.execPath,
+      [managedStoragePrimer],
+      { RECOVERY_MANAGED_SCHEMA_PRIME_PHASE: 'pre-production-restore' },
+      'recovery_managed_storage_schema_prime_failed',
+    );
+    checks.managedStorageSchemaPrimed = true;
+
     failurePhase = 'roles_dump';
     run('supabase', ['db', 'dump', '--db-url', source, '--role-only', '--file', rolesDumpPath], {}, 'recovery_roles_dump_failed');
     failurePhase = 'schema_dump';
@@ -225,6 +241,7 @@ try {
       '--data-only', '--use-copy',
       '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[0],
       '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[1],
+      '--exclude', SUPABASE_MANAGED_DATA_EXCLUDES[2],
       '--file', dataDumpPath,
     ], {}, 'recovery_data_dump_failed');
     backupCompletedAt = new Date().toISOString();
@@ -311,7 +328,7 @@ const evidence = {
   failureDiagnostic: passed ? null : failureDiagnostic,
   evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, extensionNamesStored: false, extensionVersionsStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
   evidenceBoundary: ephemeralMode
-    ? 'Supabase-compatible logical roles, schema, and application/auth data backups were restored transactionally into a disposable isolated Supabase Postgres database after aggregate-only exact extension name/schema/version parity was verified; target-managed vector storage tables were excluded from the data dump. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
+    ? 'Supabase-managed Auth/REST/Storage relations were primed on the empty isolated target by the local Supabase runtime and all API services were stopped before any Production snapshot restore. Supabase-compatible logical roles, application schema and application/auth data were then restored transactionally into the DB-only target after aggregate-only exact extension name/schema/version parity was verified. Storage row data is excluded from this backup/restore proof; selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
     : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated digest; connection strings, raw command arguments, raw process errors and the dump are not retained.',
 };
 mkdirSync(dirname(output), { recursive: true });
