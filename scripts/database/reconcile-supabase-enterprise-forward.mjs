@@ -20,7 +20,7 @@ const DEFAULT_REPORT_PATH = join(
 const EXPECTED_SCHEMA = 'risck-comply.supabase-forward-reconciliation-config.v1';
 const EXPECTED_CHANGE_SET = '2026-08-22-enterprise-data-plane-closure-v18';
 const EVIDENCE_VAULT_MIGRATION = '20260817001500_reconcile_enterprise_evidence_vault.sql';
-const COMMERCIAL_QUOTA_MIGRATION = '20260822001000_atomic_vendor_risk_quota_mutations.sql';
+const COMMERCIAL_QUOTA_MIGRATION = '20260822120617_atomic_vendor_risk_quota_mutations.sql';
 const EXPECTED_SELECTED = [
   '20260813175000_optimize_organization_add_ons_rls_initplan.sql',
   '20260813194500_reconcile_step_up_challenges_runtime.sql',

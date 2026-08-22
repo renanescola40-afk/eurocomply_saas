@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const actionPath = 'src/server/actions/risks.ts';
 const atomicHelperPath = 'src/server/billing/commercial-resource-atomic.ts';
-const migrationPath = 'supabase/migrations/20260822001000_atomic_vendor_risk_quota_mutations.sql';
+const migrationPath = 'supabase/migrations/20260822120617_atomic_vendor_risk_quota_mutations.sql';
 const source = readFileSync(actionPath, 'utf8');
 const createSource = source.slice(source.indexOf('export async function createRisk'), source.indexOf('export async function updateRisk'));
 const atomicHelper = readFileSync(atomicHelperPath, 'utf8');

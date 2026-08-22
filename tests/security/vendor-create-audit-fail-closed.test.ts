@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const actionPath = 'src/server/actions/vendors.ts';
-const migrationPath = 'supabase/migrations/20260822001000_atomic_vendor_risk_quota_mutations.sql';
+const migrationPath = 'supabase/migrations/20260822120617_atomic_vendor_risk_quota_mutations.sql';
 const source = readFileSync(actionPath, 'utf8');
 const createSource = source.slice(source.indexOf('export async function createVendor'), source.indexOf('export async function updateVendor'));
 const migration = readFileSync(migrationPath, 'utf8');
