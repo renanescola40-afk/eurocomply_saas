@@ -6,6 +6,7 @@ const rootDir = process.cwd();
 
 const disclosurePaths = [
   'src/lib/trust-center/content.ts',
+  'src/components/trust/provider-runtime-disclosure.tsx',
   'src/app/[locale]/transfers/page.tsx',
   'docs/trust/SUBPROCESSORS.md',
   'docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md',
@@ -25,6 +26,20 @@ describe('security-critical provider disclosure consistency', () => {
 
     for (const relativePath of disclosurePaths) {
       expect(read(relativePath), `${relativePath} must disclose the Upstash integration`).toMatch(/\bUpstash\b/i);
+    }
+  });
+
+  it('renders the runtime-evidence boundary on translated public subprocessors pages', () => {
+    const trustPage = read('src/components/trust/trust-page.tsx');
+    const disclosure = read('src/components/trust/provider-runtime-disclosure.tsx');
+
+    expect(trustPage).toContain('<ProviderRuntimeDisclosure locale={locale} slug={page.slug} />');
+    expect(disclosure).toContain("slug !== 'subprocessors'");
+    expect(disclosure).toContain('Upstash');
+    expect(disclosure).toContain('PostHog');
+
+    for (const locale of ['en', 'pt', 'es', 'fr', 'it', 'de']) {
+      expect(disclosure, `provider runtime disclosure must define ${locale}`).toMatch(new RegExp(`\\b${locale}: \\{`));
     }
   });
 
