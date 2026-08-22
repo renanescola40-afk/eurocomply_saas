@@ -126,6 +126,9 @@ export async function POST(request: Request) {
 
     if (error) {
       console.warn('[enterprise-billing] configuration_failed', { code: error.code ?? 'unknown' });
+      if (error.code === '23505') {
+        return noStoreJson({ error: 'enterprise_billing_binding_conflict' }, { status: 409 });
+      }
       return noStoreJson({ error: 'enterprise_billing_configuration_unavailable' }, { status: 503 });
     }
 
