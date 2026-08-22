@@ -37,7 +37,7 @@ export const TRUST_PROHIBITED_CLAIMS = [
   'Automatic EU AI Act compliance or replacement for lawyers, DPOs or compliance officers.',
 ] as const;
 
-const updated = '2026-08-18';
+const updated = '2026-08-22';
 const contact = 'security@risckcomply.com';
 const statusPage = 'https://risckcomplystatus1.statuspage.io/';
 const disclosureSlug = TRUST_CENTER_ROUTES[9];
@@ -105,11 +105,11 @@ const pageCopy: Record<string, Omit<TrustPage, 'slug' | 'updated'>> = {
     navLabel: 'Subprocessors',
     title: 'Subprocessors',
     subtitle: 'Providers used to deliver, secure, host, bill and operate the service.',
-    status: 'Public register. Verify production configuration before signature.',
+    status: 'Public review register. Runtime facts are separated from final contractual/legal approval.',
     sections: [
-      { title: 'Core categories', body: 'RISCK COMPLY may use managed providers for hosting, database, authentication, storage, payments, email, analytics, monitoring, customer support and error reporting.' },
-      { title: 'Expected providers', body: 'The implementation references managed services such as Vercel, Supabase, Stripe, Sentry, PostHog and email/support providers where configured. Actual customer-facing use depends on environment configuration.' },
-      { title: 'Customer review', body: 'Enterprise customers may request the active subprocessor list before signature. Changes should be communicated according to the applicable DPA or enterprise agreement.' },
+      { title: 'Core categories', body: 'RISCK COMPLY may use managed providers for hosting, database, authentication, storage, payments, email, analytics, monitoring, distributed rate limiting/security controls, customer support and error reporting.' },
+      { title: 'Current provider and evidence boundary', body: 'Current attributable evidence covers Vercel hosting, Supabase data/auth/storage, Stripe billing account infrastructure, Sentry diagnostics, a Production PostHog analytics binding and Upstash Redis for distributed rate limiting/security-control state. The connected PostHog assurance project does not match the Production project, while Resend/email and malware-scanner current account bindings remain under verification. Technical runtime presence does not prove a provider DPA, contracting entity, processing region, retention period or transfer mechanism; Upstash account facts and the actual PostHog Production account remain open for account-specific verification and qualified legal review.' },
+      { title: 'Customer review', body: 'Enterprise customers may request the evidence-backed provider register before signature. Final subprocessor role allocation, notice periods, objection rights and transfer wording must follow the applicable approved DPA or enterprise agreement.' },
     ],
   },
   sla: {
