@@ -74,18 +74,18 @@ function metadataValueFromEventObject(
 ) {
   const invoice = object as InvoiceWithSubscription;
 
-  // The production Stripe SDK remains compatible with Acacia invoices where
-  // subscription metadata is snapshotted on invoice.subscription_details.
-  // Prefer the subscription-scoped snapshot over invoice-level metadata so an
-  // unrelated invoice metadata key cannot override the authoritative contract
-  // binding. Newer Stripe shapes move the same snapshot under parent.
+  // Subscription-scoped snapshots are authoritative for Invoice lifecycle
+  // events. Acacia exposes them on invoice.subscription_details while newer
+  // Stripe shapes move the same snapshot under parent.subscription_details.
+  // Evaluate both before invoice-level metadata so unrelated invoice keys can
+  // never override the subscription-to-contract authority binding.
   const legacySubscription = metadataValue(invoice.subscription_details?.metadata, ...keys);
   if (legacySubscription) return legacySubscription;
 
-  const direct = metadataValue(object.metadata, ...keys);
-  if (direct) return direct;
+  const parentSubscription = metadataValue(invoice.parent?.subscription_details?.metadata, ...keys);
+  if (parentSubscription) return parentSubscription;
 
-  return metadataValue(invoice.parent?.subscription_details?.metadata, ...keys);
+  return metadataValue(object.metadata, ...keys);
 }
 
 function objectId(value: string | { id?: string | null } | null | undefined) {
