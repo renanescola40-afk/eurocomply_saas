@@ -7,7 +7,7 @@ const ENTITLEMENTS = new URL('../../src/server/billing/entitlements.ts', import.
 const VENDORS = new URL('../../src/server/actions/vendors.ts', import.meta.url);
 const RISKS = new URL('../../src/server/actions/risks.ts', import.meta.url);
 const ATOMIC_CLIENT = new URL('../../src/server/billing/commercial-resource-atomic.ts', import.meta.url);
-const ATOMIC_MIGRATION = new URL('../../supabase/migrations/20260822001000_atomic_vendor_risk_quota_mutations.sql', import.meta.url);
+const ATOMIC_MIGRATION = new URL('../../supabase/migrations/20260822120617_atomic_vendor_risk_quota_mutations.sql', import.meta.url);
 const RBAC = new URL('../../src/server/security/rbac.ts', import.meta.url);
 
 describe('vendor and risk commercial quota boundary', () => {

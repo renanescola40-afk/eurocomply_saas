@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const source = readFileSync('src/server/actions/vendors.ts', 'utf8');
 const deleteVendorSource = source.slice(source.indexOf('export async function deleteVendor'));
-const migration = readFileSync('supabase/migrations/20260822001000_atomic_vendor_risk_quota_mutations.sql', 'utf8');
+const migration = readFileSync('supabase/migrations/20260822120617_atomic_vendor_risk_quota_mutations.sql', 'utf8');
 
 describe('vendor deletion audit persistence boundary', () => {
   it('routes deletion through the atomic commercial mutation RPC', () => {
