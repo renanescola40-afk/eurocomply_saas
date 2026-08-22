@@ -8,6 +8,14 @@ function read(path: string) {
   return readFileSync(join(root, path), 'utf8');
 }
 
+function sliceBetween(source: string, start: string, end: string) {
+  const startIndex = source.indexOf(start);
+  const endIndex = source.indexOf(end, startIndex + start.length);
+  expect(startIndex, `missing start marker: ${start}`).toBeGreaterThanOrEqual(0);
+  expect(endIndex, `missing end marker: ${end}`).toBeGreaterThan(startIndex);
+  return source.slice(startIndex, endIndex);
+}
+
 describe('Resend Production binding contract', () => {
   const workflow = read('.github/workflows/vercel-production.yml');
   const readyRoute = read('src/app/api/ready/route.ts');
@@ -18,9 +26,16 @@ describe('Resend Production binding contract', () => {
     expect(workflow).toContain('EMAIL_FROM: ${{ vars.EMAIL_FROM }}');
     expect(workflow).toContain("REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY: 'true'");
 
-    expect(workflow).toMatch(/required=\([\s\S]*\bRESEND_API_KEY\b[\s\S]*\bEMAIL_FROM\b[\s\S]*\bREQUIRE_TRANSACTIONAL_EMAIL_DELIVERY\b[\s\S]*\)/);
-    expect(workflow).toMatch(/for key in \\\n[\s\S]*\bRESEND_API_KEY \\\n[\s\S]*do\n\s*sync_sensitive/);
-    expect(workflow).toMatch(/for key in \\\n[\s\S]*\bEMAIL_FROM \\\n[\s\S]*\bREQUIRE_TRANSACTIONAL_EMAIL_DELIVERY \\\n[\s\S]*do\n\s*sync_public/);
+    const requiredBlock = sliceBetween(workflow, 'required=(', 'missing=()');
+    const sensitiveBlock = sliceBetween(workflow, 'for key in \\\n            SUPABASE_SERVICE_ROLE_KEY', 'do\n            sync_sensitive');
+    const publicBlock = sliceBetween(workflow, 'for key in \\\n            NEXT_PUBLIC_SUPABASE_URL', 'do\n            sync_public');
+
+    expect(requiredBlock).toContain('RESEND_API_KEY');
+    expect(requiredBlock).toContain('EMAIL_FROM');
+    expect(requiredBlock).toContain('REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY');
+    expect(sensitiveBlock).toContain('RESEND_API_KEY');
+    expect(publicBlock).toContain('EMAIL_FROM');
+    expect(publicBlock).toContain('REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY');
   });
 
   it('requires the same provider pair in runtime readiness without exposing values', () => {
