@@ -257,6 +257,13 @@ export async function syncEnterpriseContractBillingEvent(
     throw new Error(`enterprise_billing_${row.outcome}`);
   }
 
+  // An explicit Enterprise contract marker is an authority claim. If the
+  // negotiated v3 selector cannot confirm that exact contract, never degrade
+  // the event into the self-service billing handler and acknowledge it there.
+  if (contractId && row.matched !== true) {
+    throw new Error('enterprise_billing_explicit_contract_unmatched');
+  }
+
   return {
     outcome: row.outcome,
     matched: row.matched === true,
