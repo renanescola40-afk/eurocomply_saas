@@ -13,9 +13,18 @@ on:
         description: Type DRY_RUN_ONLY to confirm that no production write is authorised
         required: true
         type: string
+      rehearsal_run_id:
+        description: Optional successful exact-SHA Forward Reconciliation Rehearsal run ID; required with forward_dry_run_run_id for bounded V19 mode
+        required: false
+        type: string
+      forward_dry_run_run_id:
+        description: Optional successful exact-SHA Forward Reconciliation Dry Run run ID; required with rehearsal_run_id for bounded V19 mode
+        required: false
+        type: string
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: supabase-production-migration-dry-run-${{ inputs.release_sha }}
@@ -25,15 +34,22 @@ jobs:
   production-migration-dry-run:
     name: Authorize and execute read-only migration dry-run
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 45
     environment: supabase-production-migration-dry-run
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
-      SUPABASE_CLI_VERSION: '2.101.0'
+      REHEARSAL_RUN_ID: ${{ inputs.rehearsal_run_id }}
+      FORWARD_DRY_RUN_ID: ${{ inputs.forward_dry_run_run_id }}
+      SUPABASE_CLI_VERSION: '2.114.0'
       MIGRATION_DRY_RUN_ARTIFACT_DIR: artifacts/supabase-production-migration-dry-run
+      CURRENT_MANIFEST: artifacts/supabase-production-migration-dry-run/current-manifest.json
+      REMOTE_VERSIONS: artifacts/supabase-production-migration-dry-run/remote-before.json
+      VERSION_ORDER_PROOF: artifacts/supabase-production-migration-dry-run/version-order-proof.json
+      FILTERED_SET_PROOF: artifacts/supabase-production-migration-dry-run/filtered-set-proof.json
+      BOUNDED_ATTESTATION: artifacts/supabase-production-migration-dry-run/bounded-production-dry-run-attestation.json
 
     steps:
-      - name: Validate exact confirmation and release SHA
+      - name: Validate exact confirmation, release SHA and execution mode
         shell: bash
         env:
           CONFIRMATION: ${{ inputs.confirmation }}
@@ -43,12 +59,24 @@ jobs:
 
           STATUS='accepted'
           REASON='Input confirmation and release SHA format are valid.'
+          BOUNDED_FORWARD='false'
           if [ "$CONFIRMATION" != 'DRY_RUN_ONLY' ]; then
             STATUS='blocked'
             REASON='confirmation must equal DRY_RUN_ONLY'
           elif [[ ! "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
             STATUS='blocked'
             REASON='release_sha must be a full 40-character Git SHA'
+          elif { [ -n "${REHEARSAL_RUN_ID:-}" ] && [ -z "${FORWARD_DRY_RUN_ID:-}" ]; } || { [ -z "${REHEARSAL_RUN_ID:-}" ] && [ -n "${FORWARD_DRY_RUN_ID:-}" ]; }; then
+            STATUS='blocked'
+            REASON='rehearsal_run_id and forward_dry_run_run_id must be supplied together'
+          elif [ -n "${REHEARSAL_RUN_ID:-}" ]; then
+            if [[ ! "$REHEARSAL_RUN_ID" =~ ^[0-9]+$ ]] || [[ ! "$FORWARD_DRY_RUN_ID" =~ ^[0-9]+$ ]]; then
+              STATUS='blocked'
+              REASON='bounded source run IDs must be numeric'
+            else
+              BOUNDED_FORWARD='true'
+              REASON='Exact-SHA bounded forward Production dry-run mode selected.'
+            fi
           fi
 
           jq -n \
@@ -57,6 +85,9 @@ jobs:
             --arg requestedSha "${TARGET_SHA,,}" \
             --arg runId "$GITHUB_RUN_ID" \
             --arg repository "$GITHUB_REPOSITORY" \
+            --arg mode "$BOUNDED_FORWARD" \
+            --arg rehearsalRunId "${REHEARSAL_RUN_ID:-}" \
+            --arg forwardDryRunId "${FORWARD_DRY_RUN_ID:-}" \
             --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             '{
               evidenceItem: "supabase-production-migration-dry-run-request",
@@ -65,6 +96,9 @@ jobs:
               requestedSha: $requestedSha,
               runId: $runId,
               repository: $repository,
+              boundedForward: ($mode == "true"),
+              sourceRehearsalRunId: (if $rehearsalRunId == "" then null else $rehearsalRunId end),
+              sourceForwardDryRunRunId: (if $forwardDryRunId == "" then null else $forwardDryRunId end),
               generatedAt: $generatedAt,
               productionWriteAuthorized: false,
               productionWritePerformed: false
@@ -75,8 +109,11 @@ jobs:
             exit 1
           fi
 
-          echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
-          echo "SUPABASE_DB_URL_FILE=$RUNNER_TEMP/supabase-production-db-url" >> "$GITHUB_ENV"
+          {
+            echo "TARGET_SHA=${TARGET_SHA,,}"
+            echo "BOUNDED_FORWARD=$BOUNDED_FORWARD"
+            echo "SUPABASE_DB_URL_FILE=$RUNNER_TEMP/supabase-production-db-url"
+          } >> "$GITHUB_ENV"
 
       - name: Check out exact release SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -121,30 +158,13 @@ jobs:
           set -euo pipefail
           ARTIFACT_PATH="$MIGRATION_DRY_RUN_ARTIFACT_DIR/exact-main-sha-validation.json"
           OBSERVED_SHA="$(git rev-parse HEAD)"
-          MAIN_RESPONSE_FILE="$(mktemp)"
-          CURL_EXIT=0
-
-          curl --fail --silent --show-error \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" \
-            --output "$MAIN_RESPONSE_FILE" || CURL_EXIT=$?
-
-          MAIN_SHA=''
-          if [ "$CURL_EXIT" -eq 0 ]; then
-            MAIN_SHA="$(jq -r '.sha // empty' "$MAIN_RESPONSE_FILE")"
-          fi
-          rm -f "$MAIN_RESPONSE_FILE"
+          MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
 
           STATUS='passed'
           REASON='Requested SHA is the exact current main SHA.'
           if [ "$OBSERVED_SHA" != "$TARGET_SHA" ]; then
             STATUS='blocked'
             REASON='checked-out SHA does not match the requested release SHA'
-          elif [ "$CURL_EXIT" -ne 0 ]; then
-            STATUS='blocked'
-            REASON="could not query the current main SHA from GitHub (curl exit $CURL_EXIT)"
           elif [[ ! "$MAIN_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
             STATUS='blocked'
             REASON='GitHub returned an invalid current main SHA'
@@ -168,23 +188,13 @@ jobs:
               reason: $reason,
               requestedSha: $requestedSha,
               observedCheckoutSha: $observedSha,
-              currentMainSha: (if $currentMainSha == "" then null else $currentMainSha end),
+              currentMainSha: $currentMainSha,
               runId: $runId,
               repository: $repository,
               generatedAt: $generatedAt,
               productionWriteAuthorized: false,
               productionWritePerformed: false
             }' > "$ARTIFACT_PATH"
-
-          {
-            echo '## Exact current main SHA validation'
-            echo
-            echo "- Status: \`$STATUS\`"
-            echo "- Requested SHA: \`$TARGET_SHA\`"
-            echo "- Checked-out SHA: \`$OBSERVED_SHA\`"
-            echo "- Current main SHA: \`${MAIN_SHA:-unavailable}\`"
-            echo "- Reason: $REASON"
-          } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$STATUS" != 'passed' ]; then
             echo "$REASON" >&2
@@ -194,8 +204,44 @@ jobs:
             exit 1
           fi
 
+      - name: Verify bounded source workflow provenance
+        if: env.BOUNDED_FORWARD == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REHEARSAL_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${REHEARSAL_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$REHEARSAL_JSON")" = "$TARGET_SHA"
+          test "$(jq -r '.path' <<<"$REHEARSAL_JSON")" = '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
+          test "$(jq -r '.event' <<<"$REHEARSAL_JSON")" = 'workflow_dispatch'
+          test "$(jq -r '.conclusion' <<<"$REHEARSAL_JSON")" = 'success'
+
+          FORWARD_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${FORWARD_DRY_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$FORWARD_JSON")" = "$TARGET_SHA"
+          test "$(jq -r '.path' <<<"$FORWARD_JSON")" = '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
+          test "$(jq -r '.event' <<<"$FORWARD_JSON")" = 'workflow_dispatch'
+          test "$(jq -r '.conclusion' <<<"$FORWARD_JSON")" = 'success'
+
+      - name: Download exact-SHA bounded source evidence
+        if: env.BOUNDED_FORWARD == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p source-rehearsal source-forward-dry-run
+          gh run download "$REHEARSAL_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "supabase-forward-reconciliation-rehearsal-${TARGET_SHA}" \
+            --dir source-rehearsal
+          gh run download "$FORWARD_DRY_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "supabase-forward-reconciliation-dry-run-${TARGET_SHA}" \
+            --dir source-forward-dry-run
+
       - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: 22
           cache: npm
@@ -240,11 +286,51 @@ jobs:
         with:
           version: ${{ env.SUPABASE_CLI_VERSION }}
 
-      - name: Verify pinned Supabase CLI version
+      - name: Verify pinned Supabase CLI and PostgreSQL client
         shell: bash
         run: |
           set -euo pipefail
           test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          node scripts/recovery/verify-postgresql-client.mjs
+
+      - name: Recompile and validate bounded source selection
+        if: env.BOUNDED_FORWARD == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/supabase/forward-reconciliation-control-plane.mjs compile \
+            config/supabase-forward-reconciliation.json \
+            "$CURRENT_MANIFEST" \
+            --expected-sha="$TARGET_SHA"
+
+          mapfile -t REHEARSAL_ATTESTATIONS < <(find source-rehearsal -type f -name 'rehearsal-attestation.json' -print)
+          mapfile -t FORWARD_MANIFESTS < <(find source-forward-dry-run -type f -name 'current-manifest.json' -print)
+          mapfile -t FORWARD_VERSION_PROOFS < <(find source-forward-dry-run -type f -name 'version-order-proof.json' -print)
+          mapfile -t FORWARD_SET_PROOFS < <(find source-forward-dry-run -type f -name 'filtered-set-proof.json' -print)
+          test "${#REHEARSAL_ATTESTATIONS[@]}" -eq 1
+          test "${#FORWARD_MANIFESTS[@]}" -eq 1
+          test "${#FORWARD_VERSION_PROOFS[@]}" -eq 1
+          test "${#FORWARD_SET_PROOFS[@]}" -eq 1
+
+          node scripts/supabase/forward-reconciliation-control-plane.mjs validate-rehearsal \
+            "$CURRENT_MANIFEST" \
+            "${REHEARSAL_ATTESTATIONS[0]}" \
+            --expected-sha="$TARGET_SHA"
+
+          CURRENT_DIGEST="$(jq -r '.selectionDigest' "$CURRENT_MANIFEST")"
+          test "$(jq -r '.targetSha' "${FORWARD_MANIFESTS[0]}")" = "$TARGET_SHA"
+          test "$(jq -r '.selectionDigest' "${FORWARD_MANIFESTS[0]}")" = "$CURRENT_DIGEST"
+          jq -e --arg sha "$TARGET_SHA" --arg digest "$CURRENT_DIGEST" \
+            '.status == "PASS" and .targetSha == $sha and .selectionDigest == $digest and .checks.allSelectedVersionsAfterRemoteHead == true and .checks.includeAllRequired == false' \
+            "${FORWARD_VERSION_PROOFS[0]}" >/dev/null
+          jq -e --arg sha "$TARGET_SHA" --arg digest "$CURRENT_DIGEST" \
+            '.status == "PASS" and .targetSha == $sha and .selectionDigest == $digest and .checks.pendingSetEqualsSelectedSet == true and .checks.unauthorizedPendingMigrations == false' \
+            "${FORWARD_SET_PROOFS[0]}" >/dev/null
+
+          cp "${REHEARSAL_ATTESTATIONS[0]}" "$MIGRATION_DRY_RUN_ARTIFACT_DIR/source-rehearsal-attestation.json"
+          cp "${FORWARD_MANIFESTS[0]}" "$MIGRATION_DRY_RUN_ARTIFACT_DIR/source-forward-dry-run-manifest.json"
+          cp "${FORWARD_VERSION_PROOFS[0]}" "$MIGRATION_DRY_RUN_ARTIFACT_DIR/source-forward-version-order-proof.json"
+          cp "${FORWARD_SET_PROOFS[0]}" "$MIGRATION_DRY_RUN_ARTIFACT_DIR/source-forward-filtered-set-proof.json"
 
       - name: Capture remote migration history
         shell: bash
@@ -255,32 +341,40 @@ jobs:
             | tee migration-state-remote.txt \
             | tee "$MIGRATION_DRY_RUN_ARTIFACT_DIR/migration-state-remote.txt"
 
-      - name: Test migration deployability and review-package contracts
+      - name: Test migration deployability and bounded contracts
         run: >-
           npx vitest run
           scripts/supabase/audit-migration-drift.test.mjs
           scripts/supabase/generate-migration-reconciliation-review-packages.test.mjs
           scripts/supabase/prepare-production-db-connection.test.mjs
           tests/security/supabase-production-migration-dry-run-workflow.test.ts
+          tests/security/supabase-bounded-migration-decision-gate.test.ts
+          tests/security/recovery-postgresql-client.test.mjs
 
-      - name: Evaluate migration deployability and retain blocker status
+      - name: Evaluate migration drift and retain classification inventory
         id: deployability
         shell: bash
         run: |
           set -uo pipefail
           set +e
+          AUDIT_ARGS=()
+          if [ "$BOUNDED_FORWARD" != 'true' ]; then
+            AUDIT_ARGS+=(--require-deployable)
+          fi
           node scripts/supabase/audit-migration-drift.mjs \
             supabase/migrations \
             migration-state-remote.txt \
             "$MIGRATION_DRY_RUN_ARTIFACT_DIR/drift" \
-            --require-deployable \
+            "${AUDIT_ARGS[@]}" \
             | tee "$MIGRATION_DRY_RUN_ARTIFACT_DIR/deployability-summary.md"
           PIPELINE_STATUS=("${PIPESTATUS[@]}")
           AUDIT_EXIT="${PIPELINE_STATUS[0]}"
           TEE_EXIT="${PIPELINE_STATUS[1]}"
           set -e
-          echo "exit_code=$AUDIT_EXIT" >> "$GITHUB_OUTPUT"
-          echo "tee_exit_code=$TEE_EXIT" >> "$GITHUB_OUTPUT"
+          {
+            echo "exit_code=$AUDIT_EXIT"
+            echo "tee_exit_code=$TEE_EXIT"
+          } >> "$GITHUB_OUTPUT"
           if [ "$TEE_EXIT" -ne 0 ]; then
             echo "Could not retain the migration deployability evidence (tee exit $TEE_EXIT)." >&2
             exit "$TEE_EXIT"
@@ -298,7 +392,7 @@ jobs:
             --batch-size=25 \
             | tee "$MIGRATION_DRY_RUN_ARTIFACT_DIR/reconciliation-review-summary.json"
 
-      - name: Enforce migration deployability before dry-run
+      - name: Enforce migration drift safety before dry-run
         shell: bash
         env:
           DEPLOYABILITY_EXIT_CODE: ${{ steps.deployability.outputs.exit_code }}
@@ -306,9 +400,17 @@ jobs:
           set -euo pipefail
           case "$DEPLOYABILITY_EXIT_CODE" in
             0) ;;
-            2|3)
-              echo "Migration deployability is blocked; review packages were retained." >&2
-              exit "$DEPLOYABILITY_EXIT_CODE"
+            2)
+              echo "Unknown remote-only migration drift blocks every dry-run mode." >&2
+              exit 2
+              ;;
+            3)
+              if [ "$BOUNDED_FORWARD" = 'true' ]; then
+                echo 'bounded mode must not receive the general deployability exit code' >&2
+                exit 1
+              fi
+              echo "General migration deployability is blocked; review packages were retained." >&2
+              exit 3
               ;;
             *)
               echo "Unexpected deployability audit exit code: $DEPLOYABILITY_EXIT_CODE" >&2
@@ -316,13 +418,135 @@ jobs:
               ;;
           esac
 
-      - name: Execute Supabase migration dry-run only
+      - name: Build fresh bounded workdir from current production history
+        if: env.BOUNDED_FORWARD == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_URL="$(cat "$SUPABASE_DB_URL_FILE")"
+          WORKDIR="$RUNNER_TEMP/risck-bounded-production-dry-run"
+          echo "WORKDIR=$WORKDIR" >> "$GITHUB_ENV"
+          mkdir -p "$WORKDIR"
+          supabase --workdir "$WORKDIR" init --force
+          rm -rf "$WORKDIR/supabase/migrations"
+          mkdir -p "$WORKDIR/supabase/migrations"
+          supabase --workdir "$WORKDIR" migration fetch --db-url "$DB_URL"
+
+          psql "$DB_URL" \
+            --no-psqlrc \
+            --tuples-only \
+            --no-align \
+            --set ON_ERROR_STOP=1 \
+            --command 'select version from supabase_migrations.schema_migrations order by version;' \
+            | sed '/^[[:space:]]*$/d' \
+            | jq -R -s 'split("\n") | map(select(length > 0))' > "$REMOTE_VERSIONS"
+
+          while IFS=$'\t' read -r filename expected_digest; do
+            [[ "$filename" =~ ^[0-9]{14}_[a-z0-9_]+\.sql$ ]]
+            source_path="supabase/migrations/$filename"
+            observed_digest="$(sha256sum "$source_path" | awk '{print $1}')"
+            test "$observed_digest" = "$expected_digest"
+            cp "$source_path" "$WORKDIR/supabase/migrations/$filename"
+          done < <(jq -r '.migrations[] | [.filename, .sha256] | @tsv' "$CURRENT_MANIFEST")
+
+      - name: Prove fresh bounded pending set
+        if: env.BOUNDED_FORWARD == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/supabase/verify-forward-version-order.mjs \
+            "$CURRENT_MANIFEST" \
+            "$REMOTE_VERSIONS" \
+            "$VERSION_ORDER_PROOF" \
+            "$TARGET_SHA"
+          jq -e '.status == "PASS" and .checks.allSelectedVersionsAfterRemoteHead == true and .checks.includeAllRequired == false' "$VERSION_ORDER_PROOF" >/dev/null
+
+          node scripts/supabase/forward-reconciliation-control-plane.mjs verify-set \
+            "$CURRENT_MANIFEST" \
+            "$REMOTE_VERSIONS" \
+            "$WORKDIR/supabase/migrations" \
+            "$FILTERED_SET_PROOF" \
+            --expected-sha="$TARGET_SHA"
+          jq -e '.status == "PASS" and .checks.pendingSetEqualsSelectedSet == true and .checks.unauthorizedPendingMigrations == false' "$FILTERED_SET_PROOF" >/dev/null
+
+      - name: Execute bounded Supabase migration dry-run only
+        if: env.BOUNDED_FORWARD == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_URL="$(cat "$SUPABASE_DB_URL_FILE")"
+          supabase --workdir "$WORKDIR" db push --db-url "$DB_URL" --dry-run \
+            | tee "$MIGRATION_DRY_RUN_ARTIFACT_DIR/db-push-dry-run.txt"
+
+      - name: Execute general Supabase migration dry-run only
+        if: env.BOUNDED_FORWARD != 'true'
         shell: bash
         run: |
           set -euo pipefail
           DB_URL="$(cat "$SUPABASE_DB_URL_FILE")"
           supabase db push --db-url "$DB_URL" --dry-run \
             | tee "$MIGRATION_DRY_RUN_ARTIFACT_DIR/db-push-dry-run.txt"
+
+      - name: Seal bounded Production dry-run attestation
+        if: env.BOUNDED_FORWARD == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+          CURRENT_DIGEST="$(jq -r '.selectionDigest' "$CURRENT_MANIFEST")"
+          SELECTED_COUNT="$(jq '.migrations | length' "$CURRENT_MANIFEST")"
+
+          jq -n \
+            --arg schema 'risck-comply.supabase-forward-bounded-production-dry-run.v1' \
+            --arg status 'Complete' \
+            --arg outcome 'passed' \
+            --arg mode 'BOUNDED_FORWARD_DECISION' \
+            --arg targetSha "$TARGET_SHA" \
+            --arg selectionDigest "$CURRENT_DIGEST" \
+            --argjson selectedCount "$SELECTED_COUNT" \
+            --arg sourceRehearsalRunId "$REHEARSAL_RUN_ID" \
+            --arg sourceForwardDryRunRunId "$FORWARD_DRY_RUN_ID" \
+            --arg runId "$GITHUB_RUN_ID" \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{
+              schema: $schema,
+              status: $status,
+              outcome: $outcome,
+              mode: $mode,
+              targetSha: $targetSha,
+              selectionDigest: $selectionDigest,
+              selectedCount: $selectedCount,
+              sourceRehearsalRunId: $sourceRehearsalRunId,
+              sourceForwardDryRunRunId: $sourceForwardDryRunRunId,
+              runId: $runId,
+              generatedAt: $generatedAt,
+              checks: {
+                exactMain: true,
+                rehearsalProvenance: true,
+                forwardDryRunProvenance: true,
+                sourceSelectionDigestMatched: true,
+                productionInventoryCaptured: true,
+                freshRemoteHistoryCaptured: true,
+                allSelectedVersionsAfterRemoteHead: true,
+                pendingSetEqualsSelectedSet: true,
+                unauthorizedPendingMigrations: false,
+                filteredDbPushDryRunOnly: true,
+                includeAllUsed: false,
+                migrationHistoryRepairUsed: false
+              },
+              productionWriteAuthorized: false,
+              productionWritePerformed: false
+            }' > "$BOUNDED_ATTESTATION"
+
+      - name: Revalidate current main after remote observation
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
 
       - name: Publish dry-run summary
         if: always()
@@ -333,12 +557,19 @@ jobs:
             echo
             echo "- Assessed SHA: \`$TARGET_SHA\`"
             echo "- Supabase CLI: \`$SUPABASE_CLI_VERSION\`"
+            echo "- Bounded forward mode: \`${BOUNDED_FORWARD:-false}\`"
+            if [ "${BOUNDED_FORWARD:-false}" = 'true' ]; then
+              echo "- Source rehearsal run: \`$REHEARSAL_RUN_ID\`"
+              echo "- Source forward dry-run run: \`$FORWARD_DRY_RUN_ID\`"
+              echo '- Execution scope: current remote migration history + exact selected forward manifest only'
+            else
+              echo '- Execution scope: general repository migration deployability'
+            fi
             echo '- Database endpoint and credential: canonical protected SUPABASE_DB_POOLER_URL'
             echo '- Operation: dry-run only'
-            echo '- Reconciliation review packages: generated when the audit produced an inventory'
+            echo '- Reconciliation review packages: generated as non-crediting human-review input'
             echo '- Package status: HUMAN_REVIEW_REQUIRED; accepted decisions remain zero'
             echo '- Production writes: not authorised and not executed by this workflow'
-            echo '- General migration deployment remains subject to independent approval'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove temporary database connection material
