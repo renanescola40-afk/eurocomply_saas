@@ -35,7 +35,7 @@ describe('transactional email readiness', () => {
 
   it('fails closed when protected transactional delivery is required but the sender is missing', () => {
     vi.stubEnv('REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY', 'true');
-    vi.stubEnv('RESEND_API_KEY', 're_test_value_must_never_be_returned');
+    vi.stubEnv('RESEND_API_KEY', 'configured-provider-key');
     vi.stubEnv('EMAIL_FROM', '');
 
     expect(transactionalEmailReadinessCheck()).toEqual({
@@ -47,7 +47,7 @@ describe('transactional email readiness', () => {
   });
 
   it('reports only booleans when the protected Resend binding is complete', () => {
-    const apiKey = 're_test_value_must_never_be_returned';
+    const apiKey = 'configured-provider-key';
     const sender = 'RISCK COMPLY <no-reply@risckcomply.app>';
     vi.stubEnv('REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY', 'true');
     vi.stubEnv('RESEND_API_KEY', apiKey);
