@@ -6,7 +6,8 @@ const readyRouteSource = readFileSync('src/app/api/ready/route.ts', 'utf8');
 describe('readiness dependency timeout contract', () => {
   it('bounds provider readiness probes with a production-tolerant window and fails through the existing not-ready path', () => {
     expect(readyRouteSource).toContain('const READINESS_DEPENDENCY_TIMEOUT_MS = 5_000;');
-    expect(readyRouteSource).toContain('withReadinessDependencyTimeout(query)');
+    expect(readyRouteSource).toContain('withReadinessDependencyTimeout(subscriptionsQuery)');
+    expect(readyRouteSource).toContain('withReadinessDependencyTimeout(commercialMutationProbe)');
     expect(readyRouteSource).toContain('timeout: STRIPE_READINESS_TIMEOUT_MS');
     expect(readyRouteSource).toContain("new ReadinessDependencyTimeoutError()");
     expect(readyRouteSource).toContain("reportError(error, { area: 'ready_supabase_check' })");
