@@ -74,6 +74,7 @@ const READINESS_DEPENDENCY_TIMEOUT_MS = 5_000;
 const STRIPE_READINESS_TIMEOUT_MS = READINESS_DEPENDENCY_TIMEOUT_MS;
 const TEST_PLACEHOLDER_VALUE = 'configured';
 const COMMERCIAL_RESOURCE_ATOMIC_RPC = 'mutate_commercial_resource_with_audit_atomic';
+const REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY_ENV = 'REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY';
 // SENTRY_ORG, SENTRY_PROJECT and SENTRY_AUTH_TOKEN are build/control-plane
 // inputs for release/source-map uploads. They stay informational here because
 // runtime health is proven by NEXT_PUBLIC_SENTRY_DSN; the protected provider
@@ -114,6 +115,13 @@ type EnterpriseStepUpReadinessCheck = {
   configured: boolean;
   dedicatedSigningSecretConfigured: boolean;
   runtimeConfigurationConfigured: boolean;
+};
+
+type TransactionalEmailReadinessCheck = {
+  required: boolean;
+  configured: boolean;
+  apiKeyConfigured: boolean;
+  senderConfigured: boolean;
 };
 
 type ReadyDatabaseCheck = {
@@ -231,6 +239,19 @@ export function readyEnvironmentCheck(): ReadyEnvironmentGroup[] {
       missingCount,
     };
   });
+}
+
+export function transactionalEmailReadinessCheck(): TransactionalEmailReadinessCheck {
+  const required = process.env[REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY_ENV] === 'true';
+  const apiKeyConfigured = hasConfiguredEnvValue('RESEND_API_KEY');
+  const senderConfigured = hasConfiguredEnvValue('EMAIL_FROM');
+
+  return {
+    required,
+    configured: !required || (apiKeyConfigured && senderConfigured),
+    apiKeyConfigured,
+    senderConfigured,
+  };
 }
 
 export function sentryReleaseUploadCheck() {
@@ -445,6 +466,7 @@ export async function GET(request: Request) {
   const sentryReleaseUploads = sentryReleaseUploadCheck();
   const enterpriseStepUp = enterpriseStepUpReadinessCheck();
   const enterpriseStorageScanner = enterpriseStorageScannerCheck();
+  const transactionalEmail = transactionalEmailReadinessCheck();
 
   const supabaseConfigured = checkConfigured(environment, 'supabase');
   const stripeConfigured = checkConfigured(environment, 'stripe');
@@ -459,6 +481,7 @@ export async function GET(request: Request) {
   const stripeApiReachable = stripe.apiReachable && stripe.priceLookup;
   const enterpriseStepUpConfigured = enterpriseStepUp.configured;
   const enterpriseStorageScannerConfigured = enterpriseStorageScanner.configured;
+  const transactionalEmailConfigured = transactionalEmail.configured;
   const ok = supabaseConfigured
     && stripeConfigured
     && redisConfigured
@@ -466,7 +489,8 @@ export async function GET(request: Request) {
     && databaseReachable
     && stripeApiReachable
     && enterpriseStepUpConfigured
-    && enterpriseStorageScannerConfigured;
+    && enterpriseStorageScannerConfigured
+    && transactionalEmailConfigured;
 
   return noStoreJson(
     {
@@ -479,6 +503,7 @@ export async function GET(request: Request) {
       sentryReleaseUploads,
       enterpriseStepUp,
       enterpriseStorageScanner,
+      transactionalEmail,
       checks: {
         supabaseConfigured,
         databaseReachable,
