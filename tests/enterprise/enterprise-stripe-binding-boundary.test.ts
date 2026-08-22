@@ -11,6 +11,7 @@ const v19Boundary = readFileSync(
 );
 const billing = readFileSync('src/server/enterprise/billing.ts', 'utf8');
 const selfServiceCheckout = readFileSync('src/app/api/billing/checkout/route.ts', 'utf8');
+const platformBillingRoute = readFileSync('src/app/api/platform/contracts/billing/route.ts', 'utf8');
 
 describe('Enterprise Stripe binding boundary', () => {
   it('preserves explicit-contract-or-existing-subscription selection while making explicit metadata authoritative in V19', () => {
@@ -60,6 +61,12 @@ describe('Enterprise Stripe binding boundary', () => {
     expect(v19Boundary).toContain('on public.enterprise_contracts(stripe_subscription_id)');
     expect(v19Boundary).toContain('where stripe_subscription_id is not null');
     expect(v19Boundary).toContain("to_regclass('public.enterprise_contracts_stripe_subscription_uidx')");
+  });
+
+  it('surfaces the atomic Stripe binding uniqueness conflict as a deterministic Platform 409', () => {
+    expect(platformBillingRoute).toContain("error.code === '23505'");
+    expect(platformBillingRoute).toContain("{ error: 'enterprise_billing_binding_conflict' }");
+    expect(platformBillingRoute).toContain('{ status: 409 }');
   });
 
   it('passes Enterprise metadata across Acacia and current Invoice subscription shapes to the v3 RPC', () => {
