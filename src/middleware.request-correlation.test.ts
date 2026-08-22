@@ -28,7 +28,7 @@ describe('request correlation wiring', () => {
     );
     expect(source).toContain('const requestId = trustedRequestIdFromHeaders(requestHeaders);');
     expect(source).not.toContain('requestIdFromHeaders(requestHeaders)');
-    expect(source).toContain('requestContext: {\n      requestId,');
+    expect(source).toMatch(/requestContext:\s*\{\s*requestId,/);
     expect(source).toContain("area: 'audit_log_write'");
     expect(source).toContain("area: 'audit_chain_write'");
     expect(source.match(/requestId,/g)?.length ?? 0).toBeGreaterThanOrEqual(4);

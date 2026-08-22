@@ -20,6 +20,11 @@ const evidencePath = process.env.E2E_FRIA_RUNTIME_EVIDENCE_PATH?.trim();
 const ownerSessionConfigured = Boolean(ownerStorageState || (ownerEmail && ownerPassword));
 const approverSessionConfigured = Boolean(approverStorageState || (approverEmail && approverPassword));
 const unlicensedSessionConfigured = Boolean(unlicensedOwnerEmail && unlicensedOwnerPassword);
+const analyticsConsentStorageKey = 'risckcomply.analytics.consent';
+
+async function startWithAnalyticsDenied(page: Page) {
+  await page.addInitScript((storageKey) => window.localStorage.setItem(storageKey, 'denied'), analyticsConsentStorageKey);
+}
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -169,6 +174,7 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
     test.setTimeout(180_000);
     const systemName = `QA FRIA system ${Date.now()}`;
     const evidenceVaultTitle = `QA Evidence Vault ${Date.now()}`;
+    await startWithAnalyticsDenied(page);
 
     // Public acquisition, i18n and Trust surfaces must remain reachable outside
     // the paid-product boundary on the exact assessed SHA.
@@ -197,6 +203,7 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
     const unlicensedContext = await browser.newContext({ baseURL });
     try {
       const unlicensedPage = await unlicensedContext.newPage();
+      await startWithAnalyticsDenied(unlicensedPage);
       await loginUnlicensedWithDisposableCredentials(unlicensedPage, unlicensedOwnerEmail!, unlicensedOwnerPassword!);
 
       await unlicensedPage.goto('/en/dashboard/organizations', { waitUntil: 'domcontentloaded' });
@@ -337,6 +344,7 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
 
     try {
       const approverPage = await approverContext.newPage();
+      await startWithAnalyticsDenied(approverPage);
       if (!approverStorageState) {
         await loginWithDisposableCredentials(approverPage, approverEmail!, approverPassword!);
       }
