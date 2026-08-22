@@ -15,8 +15,12 @@ const EXPECTED_MISSING_SCHEMA_CODES = new Set([
  * currently promoted schema. Callers must still know that the queried object
  * is an explicitly governed compatibility dependency before treating this as
  * a deferred state.
+ *
+ * This intentionally returns a plain boolean rather than a type predicate:
+ * PostgREST errors already expose `code`, so narrowing them to this structural
+ * shape would incorrectly make the non-matching branch `never` in callers.
  */
-export function isExpectedMissingSupabaseSchema(error: unknown): error is SupabaseSchemaErrorLike {
+export function isExpectedMissingSupabaseSchema(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
 
   const code = 'code' in error ? (error as SupabaseSchemaErrorLike).code : null;
