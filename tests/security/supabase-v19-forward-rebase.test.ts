@@ -62,12 +62,19 @@ describe('Supabase V19 production-forward rebase', () => {
     });
   });
 
-  it('preserves every reviewed SQL byte while changing only the production-forward identity', () => {
+  it('preserves every reviewed SQL byte while changing only the active production-forward identity', () => {
     for (const [source, target] of pairs) {
-      const sourceBytes = readFileSync(`supabase/migrations/${source}`);
+      const sourceBytes = readFileSync(`supabase/reconciliation/v18-unapplied/${source}`);
       const targetBytes = readFileSync(`supabase/migrations/${target}`);
       expect(sha256(targetBytes), target).toBe(sha256(sourceBytes));
       expect(targetBytes.equals(sourceBytes), target).toBe(true);
+    }
+  });
+
+  it('keeps the unapplied V18 identities outside normal migration replay', () => {
+    for (const [source] of pairs) {
+      expect(() => readFileSync(`supabase/reconciliation/v18-unapplied/${source}`)).not.toThrow();
+      expect(() => readFileSync(`supabase/migrations/${source}`)).toThrow();
     }
   });
 
