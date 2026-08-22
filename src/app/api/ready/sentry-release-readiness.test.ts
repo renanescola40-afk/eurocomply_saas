@@ -5,6 +5,7 @@ const supabaseMock = vi.hoisted(() => ({
   from: vi.fn(),
   select: vi.fn(),
   limit: vi.fn(),
+  rpc: vi.fn(),
 }));
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -75,7 +76,8 @@ describe('enterprise Sentry release upload readiness', () => {
     supabaseMock.limit.mockResolvedValue({ error: null });
     supabaseMock.select.mockReturnValue({ limit: supabaseMock.limit });
     supabaseMock.from.mockReturnValue({ select: supabaseMock.select });
-    supabaseMock.tryCreateAdminClient.mockReturnValue({ from: supabaseMock.from });
+    supabaseMock.rpc.mockResolvedValue({ data: [{ outcome: 'invalid_input' }], error: null });
+    supabaseMock.tryCreateAdminClient.mockReturnValue({ from: supabaseMock.from, rpc: supabaseMock.rpc });
   });
 
   afterEach(() => {
@@ -85,6 +87,7 @@ describe('enterprise Sentry release upload readiness', () => {
     supabaseMock.from.mockReset();
     supabaseMock.select.mockReset();
     supabaseMock.limit.mockReset();
+    supabaseMock.rpc.mockReset();
   });
 
   it('reports build metadata gaps without blocking ordinary runtime readiness', async () => {
