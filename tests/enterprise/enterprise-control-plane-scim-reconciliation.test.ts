@@ -160,9 +160,10 @@ describe('Enterprise Control Plane + SCIM forward reconciliation', () => {
     expect(contractControl).not.toContain('audit_logs(organization_id,actor_user_id');
   });
 
-  it('materializes Enterprise billing and lifecycle RPCs consumed by the app', () => {
-    expect(billingRuntime).toContain('sync_enterprise_contract_billing_v2_atomic');
+  it('materializes Enterprise billing lifecycle implementation plus hardened app entrypoint', () => {
     expect(billing).toContain('public.sync_enterprise_contract_billing_v2_atomic');
+    expect(contractModeFinal).toContain('public.sync_enterprise_contract_billing_v3_atomic');
+    expect(billingRuntime).toContain('sync_enterprise_contract_billing_v3_atomic');
     expect(lifecycleRuntime).toContain('process_enterprise_contract_lifecycle_v2_atomic');
     expect(billing).toContain('public.process_enterprise_contract_lifecycle_v2_atomic');
     expect(billing).toContain('alter table public.enterprise_contract_billing_events force row level security');
@@ -176,18 +177,31 @@ describe('Enterprise Control Plane + SCIM forward reconciliation', () => {
     expect(contractModeFinal).toContain('Legacy compatibility contracts are not canonicalized');
   });
 
-  it('never binds ordinary Stripe events to compatibility envelopes', () => {
+  it('never binds ordinary Stripe events to compatibility envelopes or organization metadata alone', () => {
     expect(billing).toContain("contract.contract_mode='negotiated'");
-    expect(billing).toContain("where contract.contract_mode='negotiated'");
+    expect(contractModeFinal).toContain("contract.contract_mode='negotiated'");
     expect(contractModeFinal).toContain("contract_mode='compatibility'");
+
+    const v3Start = contractModeFinal.indexOf(
+      'create or replace function public.sync_enterprise_contract_billing_v3_atomic',
+    );
+    const configureStart = contractModeFinal.indexOf(
+      'create or replace function public.configure_enterprise_contract_billing_v2_atomic',
+    );
+    const v3Definition = contractModeFinal.slice(v3Start, configureStart);
+    expect(v3Definition).not.toContain(
+      "p_organization_id is not null\n        and contract.organization_id=p_organization_id",
+    );
   });
 
-  it('hardens billing SECURITY DEFINER RPCs and keeps browser execution denied', () => {
+  it('hardens billing SECURITY DEFINER RPCs and keeps the v2 implementation private', () => {
     expect(billing).toContain('set search_path=pg_catalog');
-    expect(billing).toContain('enterprise billing lifecycle RPC privileges are not canonical');
-    expect(billing).toContain('enterprise billing lifecycle RPC security configuration is not fixed');
-    expect(billing).toContain('grant execute on function public.sync_enterprise_contract_billing_v2_atomic');
-    expect(billing).toContain('grant execute on function public.process_enterprise_contract_lifecycle_v2_atomic');
+    expect(contractModeFinal).toContain('set search_path=pg_catalog');
+    expect(contractModeFinal).toContain('Enterprise billing hardened RPC privileges are not canonical');
+    expect(contractModeFinal).toContain('Enterprise billing hardened RPC security configuration is not fixed');
+    expect(contractModeFinal).toContain('grant execute on function public.sync_enterprise_contract_billing_v3_atomic');
+    expect(contractModeFinal).toContain('grant execute on function public.configure_enterprise_contract_billing_v2_atomic');
+    expect(contractModeFinal).toContain('from public,anon,authenticated,service_role');
   });
 
   it('materializes the exact platform Control Center contract RPCs', () => {

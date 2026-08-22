@@ -2,12 +2,15 @@
 
 do $proof$
 declare
-  billing_rpc oid:=to_regprocedure('public.sync_enterprise_contract_billing_v2_atomic(text,text,uuid,uuid,text,text,text,text,text,boolean,timestamptz,text)');
+  billing_impl_v2 oid:=to_regprocedure('public.sync_enterprise_contract_billing_v2_atomic(text,text,uuid,uuid,text,text,text,text,text,boolean,timestamptz,text)');
+  billing_rpc oid:=to_regprocedure('public.sync_enterprise_contract_billing_v3_atomic(text,text,uuid,uuid,text,text,text,text,text,boolean,timestamptz,text)');
+  configure_rpc oid:=to_regprocedure('public.configure_enterprise_contract_billing_v2_atomic(uuid,text,text,text,text,text,text,timestamptz,uuid,text)');
   lifecycle_rpc oid:=to_regprocedure('public.process_enterprise_contract_lifecycle_v2_atomic(integer)');
   transition_helper oid:=to_regprocedure('public.is_valid_enterprise_contract_transition(text,text)');
   provision_rpc oid:=to_regprocedure('public.provision_enterprise_contract_atomic(uuid,text,text,bigint,timestamptz,timestamptz,timestamptz,integer,integer,integer,integer,integer,integer,integer,integer,integer,bigint,integer,boolean,boolean,boolean,boolean,boolean,boolean,boolean,uuid)');
   entitlement_rpc oid:=to_regprocedure('public.update_enterprise_contract_entitlements_atomic(uuid,integer,integer,integer,integer,integer,integer,integer,integer,bigint,integer,boolean,boolean,boolean,boolean,boolean,boolean,boolean,uuid,text)');
   status_rpc oid:=to_regprocedure('public.transition_enterprise_contract_status_atomic(uuid,text,text,uuid,text)');
+  subscription_binding_index oid:=to_regclass('public.enterprise_contracts_stripe_subscription_uidx');
   rpc oid;
   billing_columns integer;
 begin
@@ -57,6 +60,17 @@ begin
     raise exception 'Enterprise billing contract constraints incomplete';
   end if;
 
+  if subscription_binding_index is null
+     or not exists (
+       select 1
+       from pg_index idx
+       where idx.indexrelid=subscription_binding_index
+         and idx.indisunique
+         and pg_get_expr(idx.indpred,idx.indrelid) like '%stripe_subscription_id IS NOT NULL%'
+     ) then
+    raise exception 'Enterprise Stripe subscription binding uniqueness is not canonical';
+  end if;
+
   if exists (
     select 1 from public.enterprise_contracts contract
     where contract.contract_mode not in ('compatibility','negotiated')
@@ -81,12 +95,27 @@ begin
     raise exception 'Compatibility contracts unexpectedly enable Enterprise integrations';
   end if;
 
-  if billing_rpc is null or lifecycle_rpc is null or transition_helper is null
+  if billing_impl_v2 is null or billing_rpc is null or configure_rpc is null
+     or lifecycle_rpc is null or transition_helper is null
      or provision_rpc is null or entitlement_rpc is null or status_rpc is null then
     raise exception 'Enterprise contract control/billing RPC set incomplete';
   end if;
 
-  foreach rpc in array array[billing_rpc,lifecycle_rpc,provision_rpc,entitlement_rpc,status_rpc] loop
+  if has_function_privilege('anon',billing_impl_v2,'EXECUTE')
+     or has_function_privilege('authenticated',billing_impl_v2,'EXECUTE')
+     or has_function_privilege('service_role',billing_impl_v2,'EXECUTE') then
+    raise exception 'Enterprise billing v2 implementation remains directly executable';
+  end if;
+
+  if not exists (
+    select 1 from pg_proc p
+    cross join lateral unnest(coalesce(p.proconfig,array[]::text[])) setting
+    where p.oid=billing_impl_v2 and p.prosecdef and setting='search_path=pg_catalog'
+  ) then
+    raise exception 'Enterprise billing v2 implementation search_path hardening incomplete';
+  end if;
+
+  foreach rpc in array array[billing_rpc,configure_rpc,lifecycle_rpc,provision_rpc,entitlement_rpc,status_rpc] loop
     if has_function_privilege('anon',rpc,'EXECUTE')
        or has_function_privilege('authenticated',rpc,'EXECUTE')
        or not has_function_privilege('service_role',rpc,'EXECUTE') then

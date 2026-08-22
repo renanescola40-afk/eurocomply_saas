@@ -4,13 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   constructEvent: vi.fn(),
-  handleStripeWebhookEvent: vi.fn(),
+  handleStripeWebhookEventWithRecovery: vi.fn(),
+  syncStripeSubscriptionForInvoiceEvent: vi.fn(),
+  syncEnterpriseContractBillingEvent: vi.fn(),
   getStripeEventAuditContext: vi.fn(() => ({ organizationId: 'org_a', actorUserId: 'user_admin', objectId: 'sub_123' })),
   reportError: vi.fn(),
   writeAuditLog: vi.fn(),
   checkDistributedRateLimit: vi.fn(),
   getClientIpFromRequest: vi.fn(() => '203.0.113.10'),
-  getUserAgentFromRequest: vi.fn(() => 'Vitest'),
 }));
 
 vi.mock('@/lib/billing/stripe', () => ({
@@ -21,8 +22,19 @@ vi.mock('@/lib/billing/stripe', () => ({
   }),
 }));
 
+vi.mock('@/server/billing/stripe-webhook-recovery', () => ({
+  handleStripeWebhookEventWithRecovery: mocks.handleStripeWebhookEventWithRecovery,
+}));
+
+vi.mock('@/server/billing/stripe-invoice-subscription-sync', () => ({
+  syncStripeSubscriptionForInvoiceEvent: mocks.syncStripeSubscriptionForInvoiceEvent,
+}));
+
+vi.mock('@/server/enterprise/billing', () => ({
+  syncEnterpriseContractBillingEvent: mocks.syncEnterpriseContractBillingEvent,
+}));
+
 vi.mock('@/server/billing/stripe-webhooks', () => ({
-  handleStripeWebhookEvent: mocks.handleStripeWebhookEvent,
   getStripeEventAuditContext: mocks.getStripeEventAuditContext,
 }));
 
@@ -37,7 +49,6 @@ vi.mock('@/lib/security/audit-log', () => ({
 vi.mock('@/lib/security/rate-limit', () => ({
   checkDistributedRateLimit: mocks.checkDistributedRateLimit,
   getClientIpFromRequest: mocks.getClientIpFromRequest,
-  getUserAgentFromRequest: mocks.getUserAgentFromRequest,
 }));
 
 vi.mock('@/lib/security/rate-limit-response', () => ({
@@ -108,16 +119,28 @@ describe('Stripe webhook body hardening', () => {
   });
 });
 
-describe('Stripe webhook route signature validation', () => {
+describe('Stripe webhook route signature validation and dispatch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.STRIPE_WEBHOOK_SECRET = TEST_STRIPE_WEBHOOK_SECRET;
+    process.env.STRIPE_SECRET_KEY = 'sk_test_unit';
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
-    mocks.writeAuditLog.mockResolvedValue(undefined);
+    mocks.writeAuditLog.mockResolvedValue({ persisted: true });
     mocks.constructEvent.mockImplementation(() => {
       throw new Error('No signatures found matching the expected signature for payload');
     });
-    mocks.handleStripeWebhookEvent.mockResolvedValue({ skipped: false });
+    mocks.syncEnterpriseContractBillingEvent.mockResolvedValue({
+      outcome: 'not_enterprise',
+      matched: false,
+      contractId: null,
+      organizationId: 'org_a',
+      previousStatus: null,
+      appliedStatus: null,
+      billingStatus: null,
+      version: null,
+    });
+    mocks.syncStripeSubscriptionForInvoiceEvent.mockResolvedValue({ synced: false, reason: 'not_invoice_lifecycle_event' });
+    mocks.handleStripeWebhookEventWithRecovery.mockResolvedValue({ skipped: false, duplicate: false, unsupported: false });
   });
 
   it('always rejects invalid Stripe signatures and does not process the event', async () => {
@@ -126,7 +149,9 @@ describe('Stripe webhook route signature validation', () => {
 
     expect(response.status).toBe(400);
     expect(body).toEqual({ error: 'invalid_webhook' });
-    expect(mocks.handleStripeWebhookEvent).not.toHaveBeenCalled();
+    expect(mocks.syncEnterpriseContractBillingEvent).not.toHaveBeenCalled();
+    expect(mocks.syncStripeSubscriptionForInvoiceEvent).not.toHaveBeenCalled();
+    expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
     expect(mocks.constructEvent).toHaveBeenCalledWith(
       expect.any(String),
       't=1800000000,v1=bad',
@@ -160,7 +185,8 @@ describe('Stripe webhook route signature validation', () => {
     expect(response.status).toBe(400);
     expect(body).toEqual({ error: 'missing_signature' });
     expect(mocks.constructEvent).not.toHaveBeenCalled();
-    expect(mocks.handleStripeWebhookEvent).not.toHaveBeenCalled();
+    expect(mocks.syncEnterpriseContractBillingEvent).not.toHaveBeenCalled();
+    expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
     expect(mocks.writeAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'webhook_rejected',
@@ -169,7 +195,86 @@ describe('Stripe webhook route signature validation', () => {
     );
   });
 
-  it('audits valid Stripe webhook receipt before dispatching the idempotent handler', async () => {
+  it('routes a matched Enterprise event before every self-service side effect', async () => {
+    const event = makeStripeEvent();
+    mocks.constructEvent.mockReturnValue(event);
+    mocks.syncEnterpriseContractBillingEvent.mockResolvedValue({
+      outcome: 'synced',
+      matched: true,
+      contractId: '11111111-1111-4111-8111-111111111111',
+      organizationId: 'org_a',
+      previousStatus: 'pending_activation',
+      appliedStatus: 'active',
+      billingStatus: 'active',
+      version: 2,
+    });
+
+    const response = await POST(makePostRequest('t=1800000000,v1=good'));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      received: true,
+      enterprise: true,
+      skipped: false,
+      duplicate: false,
+      unsupported: false,
+      contractId: '11111111-1111-4111-8111-111111111111',
+      contractStatus: 'active',
+      billingStatus: 'active',
+    });
+    expect(mocks.syncEnterpriseContractBillingEvent).toHaveBeenCalledWith(event);
+    expect(mocks.syncStripeSubscriptionForInvoiceEvent).not.toHaveBeenCalled();
+    expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'webhook_received', entityId: 'evt_valid' }),
+    );
+  });
+
+  it('treats duplicate Enterprise events as successful idempotent no-ops', async () => {
+    const event = makeStripeEvent();
+    mocks.constructEvent.mockReturnValue(event);
+    mocks.syncEnterpriseContractBillingEvent.mockResolvedValue({
+      outcome: 'duplicate',
+      matched: true,
+      contractId: '11111111-1111-4111-8111-111111111111',
+      organizationId: 'org_a',
+      previousStatus: 'active',
+      appliedStatus: 'active',
+      billingStatus: 'active',
+      version: 2,
+    });
+
+    const response = await POST(makePostRequest('t=1800000000,v1=good'));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(expect.objectContaining({
+      enterprise: true,
+      skipped: true,
+      duplicate: true,
+    }));
+    expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+  });
+
+  it('returns retryable 500 and does not fall through when Enterprise reconciliation fails', async () => {
+    const event = makeStripeEvent();
+    mocks.constructEvent.mockReturnValue(event);
+    mocks.syncEnterpriseContractBillingEvent.mockRejectedValue(new Error('enterprise_billing_sync_unavailable'));
+
+    const response = await POST(makePostRequest('t=1800000000,v1=good'));
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: 'webhook_processing_failed' });
+    expect(mocks.syncStripeSubscriptionForInvoiceEvent).not.toHaveBeenCalled();
+    expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'webhook_rejected',
+        entityId: 'evt_valid',
+        metadata: expect.objectContaining({ reason: 'enterprise_billing_sync_failed' }),
+      }),
+    );
+  });
+
+  it('audits unmatched events and dispatches self-service only after Enterprise routing', async () => {
     const event = makeStripeEvent();
     mocks.constructEvent.mockReturnValue(event);
 
@@ -178,7 +283,15 @@ describe('Stripe webhook route signature validation', () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ received: true, skipped: false, duplicate: false, unsupported: false });
-    expect(mocks.handleStripeWebhookEvent).toHaveBeenCalledWith(event);
+    expect(mocks.syncEnterpriseContractBillingEvent).toHaveBeenCalledWith(event);
+    expect(mocks.syncStripeSubscriptionForInvoiceEvent).toHaveBeenCalledWith(event);
+    expect(mocks.handleStripeWebhookEventWithRecovery).toHaveBeenCalledWith(event);
+    expect(mocks.syncEnterpriseContractBillingEvent.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.syncStripeSubscriptionForInvoiceEvent.mock.invocationCallOrder[0],
+    );
+    expect(mocks.syncStripeSubscriptionForInvoiceEvent.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.handleStripeWebhookEventWithRecovery.mock.invocationCallOrder[0],
+    );
     expect(mocks.writeAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'webhook_received',
@@ -190,10 +303,10 @@ describe('Stripe webhook route signature validation', () => {
     );
   });
 
-  it('returns retryable server errors for verified webhook processing failures', async () => {
+  it('returns retryable server errors for verified self-service processing failures', async () => {
     const event = makeStripeEvent();
     mocks.constructEvent.mockReturnValue(event);
-    mocks.handleStripeWebhookEvent.mockRejectedValue(new Error('database temporarily unavailable'));
+    mocks.handleStripeWebhookEventWithRecovery.mockRejectedValue(new Error('database temporarily unavailable'));
 
     const response = await POST(makePostRequest('t=1800000000,v1=good'));
     const body = await response.json();

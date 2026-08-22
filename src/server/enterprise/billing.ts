@@ -13,11 +13,15 @@ export type EnterpriseBillingSyncResult = {
   version: number | null;
 };
 
+type RpcError = {
+  code?: string;
+};
+
 type RpcClient = {
   rpc: (
     name: string,
     args: Record<string, unknown>,
-  ) => Promise<{ data: unknown; error: { code?: string } | null }>;
+  ) => Promise<{ data: unknown; error: RpcError | null }>;
 };
 
 type BillingRow = {
@@ -37,6 +41,15 @@ type SubscriptionWithItems = Stripe.Subscription & {
 
 type InvoiceWithSubscription = Stripe.Invoice & {
   subscription?: string | Stripe.Subscription | null;
+  subscription_details?: {
+    metadata?: Stripe.Metadata | null;
+  } | null;
+  parent?: {
+    subscription_details?: {
+      subscription?: string | Stripe.Subscription | null;
+      metadata?: Stripe.Metadata | null;
+    } | null;
+  } | null;
   due_date?: number | null;
   number?: string | null;
   paid?: boolean;
@@ -53,6 +66,26 @@ function metadataValue(metadata: Stripe.Metadata | null | undefined, ...keys: st
     if (typeof value === 'string' && value.trim()) return value.trim();
   }
   return null;
+}
+
+function metadataValueFromEventObject(
+  object: Stripe.Subscription | Stripe.Invoice,
+  ...keys: string[]
+) {
+  const invoice = object as InvoiceWithSubscription;
+
+  // Subscription-scoped snapshots are authoritative for Invoice lifecycle
+  // events. Acacia exposes them on invoice.subscription_details while newer
+  // Stripe shapes move the same snapshot under parent.subscription_details.
+  // Evaluate both before invoice-level metadata so unrelated invoice keys can
+  // never override the subscription-to-contract authority binding.
+  const legacySubscription = metadataValue(invoice.subscription_details?.metadata, ...keys);
+  if (legacySubscription) return legacySubscription;
+
+  const parentSubscription = metadataValue(invoice.parent?.subscription_details?.metadata, ...keys);
+  if (parentSubscription) return parentSubscription;
+
+  return metadataValue(object.metadata, ...keys);
 }
 
 function objectId(value: string | { id?: string | null } | null | undefined) {
@@ -72,8 +105,12 @@ function integerOrNull(value: unknown) {
 }
 
 function invoiceSubscriptionId(invoice: Stripe.Invoice) {
-  const subscription = (invoice as InvoiceWithSubscription).subscription;
-  return typeof subscription === 'string' ? subscription : subscription?.id ?? null;
+  const compatible = invoice as InvoiceWithSubscription;
+  return objectId(
+    compatible.subscription
+      ?? compatible.parent?.subscription_details?.subscription
+      ?? null,
+  );
 }
 
 function subscriptionPriceId(subscription: Stripe.Subscription) {
@@ -99,6 +136,23 @@ function isRelevantEnterpriseBillingEvent(eventType: string) {
   ].includes(eventType);
 }
 
+function isEnterpriseBillingRuntimeMissing(error: RpcError | null) {
+  return error?.code === 'PGRST202' || error?.code === '42883';
+}
+
+function unmatchedRuntimeResult(organizationId: string | null): EnterpriseBillingSyncResult {
+  return {
+    outcome: 'runtime_unavailable_unmatched',
+    matched: false,
+    contractId: null,
+    organizationId,
+    previousStatus: null,
+    appliedStatus: null,
+    billingStatus: null,
+    version: null,
+  };
+}
+
 export async function syncEnterpriseContractBillingEvent(
   event: Stripe.Event,
 ): Promise<EnterpriseBillingSyncResult> {
@@ -116,9 +170,15 @@ export async function syncEnterpriseContractBillingEvent(
   }
 
   const object = event.data.object as Stripe.Subscription | Stripe.Invoice;
-  const metadata = object.metadata;
-  const contractId = metadataValue(metadata, 'enterprise_contract_id', 'enterpriseContractId', 'contract_id');
-  const organizationId = metadataValue(metadata, 'organization_id', 'organizationId');
+  const contractId = metadataValueFromEventObject(
+    object,
+    'enterprise_contract_id',
+    'enterpriseContractId',
+    'contract_id',
+  );
+  const organizationId = metadataValueFromEventObject(object, 'organization_id', 'organizationId');
+  const billingFlow = metadataValueFromEventObject(object, 'billing_flow');
+  const isKnownSelfServiceEvent = billingFlow === 'initial_subscription';
 
   let customerId: string | null = null;
   let subscriptionId: string | null = null;
@@ -147,7 +207,7 @@ export async function syncEnterpriseContractBillingEvent(
   }
 
   const client = createAdminClient() as unknown as RpcClient;
-  const { data, error } = await client.rpc('sync_enterprise_contract_billing_v2_atomic', {
+  const { data, error } = await client.rpc('sync_enterprise_contract_billing_v3_atomic', {
     p_event_id: event.id,
     p_event_type: event.type,
     p_contract_id: contractId,
@@ -163,6 +223,24 @@ export async function syncEnterpriseContractBillingEvent(
   });
 
   if (error) {
+    // The bounded V19 Enterprise data plane may legitimately be absent before its
+    // protected Production promotion. Only events carrying the canonical
+    // self-service billing_flow marker may bypass a missing Enterprise RPC during
+    // that transition. Unmarked or explicitly Enterprise events stay fail-closed
+    // and return retryable 5xx at the webhook boundary rather than being
+    // acknowledged into the wrong billing authority.
+    if (
+      isEnterpriseBillingRuntimeMissing(error)
+      && !contractId
+      && isKnownSelfServiceEvent
+    ) {
+      console.warn('[enterprise-billing] stripe_sync_runtime_not_promoted', {
+        code: error.code ?? 'unknown',
+        eventType: event.type,
+      });
+      return unmatchedRuntimeResult(organizationId);
+    }
+
     console.warn('[enterprise-billing] stripe_sync_failed', {
       code: error.code ?? 'unknown',
       eventType: event.type,
@@ -177,6 +255,13 @@ export async function syncEnterpriseContractBillingEvent(
 
   if (row.outcome === 'binding_conflict' || row.outcome === 'invalid_transition') {
     throw new Error(`enterprise_billing_${row.outcome}`);
+  }
+
+  // An explicit Enterprise contract marker is an authority claim. If the
+  // negotiated v3 selector cannot confirm that exact contract, never degrade
+  // the event into the self-service billing handler and acknowledge it there.
+  if (contractId && row.matched !== true) {
+    throw new Error('enterprise_billing_explicit_contract_unmatched');
   }
 
   return {

@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 const REMOTE_HEAD = '20260822120617';
+const HARDENED_BILLING_TARGET = '20260822123600_v19_finalize_enterprise_contract_mode_compatibility.sql';
 const pairs = [
   ['20260813175000_optimize_organization_add_ons_rls_initplan.sql', '20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql'],
   ['20260813194500_reconcile_step_up_challenges_runtime.sql', '20260822123540_v19_reconcile_step_up_challenges_runtime.sql'],
@@ -15,7 +16,7 @@ const pairs = [
   ['20260814091100_harden_scim_identity_connection_delete_boundary.sql', '20260822123554_v19_harden_scim_identity_connection_delete_boundary.sql'],
   ['20260814091900_bridge_enterprise_contract_mode_compatibility.sql', '20260822123556_v19_bridge_enterprise_contract_mode_compatibility.sql'],
   ['20260814092000_reconcile_enterprise_billing_lifecycle.sql', '20260822123558_v19_reconcile_enterprise_billing_lifecycle.sql'],
-  ['20260814092100_finalize_enterprise_contract_mode_compatibility.sql', '20260822123600_v19_finalize_enterprise_contract_mode_compatibility.sql'],
+  ['20260814092100_finalize_enterprise_contract_mode_compatibility.sql', HARDENED_BILLING_TARGET],
   ['20260814093000_reconcile_enterprise_contract_control_rpcs.sql', '20260822123602_v19_reconcile_enterprise_contract_control_rpcs.sql'],
   ['20260814101500_reconcile_enterprise_core_active_runtime.sql', '20260822123604_v19_reconcile_enterprise_core_active_runtime.sql'],
   ['20260815083000_reconcile_live_rls_validation_inventory_privileges.sql', '20260822123606_v19_reconcile_live_rls_validation_inventory_privileges.sql'],
@@ -36,7 +37,7 @@ function sha256(bytes: Buffer) {
 }
 
 describe('Supabase V19 production-forward rebase', () => {
-  it('reissues exactly the remaining 25 effects under CLI-issued versions after the live head', () => {
+  it('reissues exactly the bounded 25 effects under CLI-issued versions after the live head', () => {
     const config = JSON.parse(readFileSync('config/supabase-forward-reconciliation.json', 'utf8')) as {
       changeSet: string;
       migrations: Array<{ filename: string }>;
@@ -62,13 +63,29 @@ describe('Supabase V19 production-forward rebase', () => {
     });
   });
 
-  it('preserves every reviewed SQL byte while changing only the active production-forward identity', () => {
+  it('preserves reviewed SQL bytes for every untouched V18 effect', () => {
     for (const [source, target] of pairs) {
+      if (target === HARDENED_BILLING_TARGET) continue;
       const sourceBytes = readFileSync(`supabase/reconciliation/v18-unapplied/${source}`);
       const targetBytes = readFileSync(`supabase/migrations/${target}`);
       expect(sha256(targetBytes), target).toBe(sha256(sourceBytes));
       expect(targetBytes.equals(sourceBytes), target).toBe(true);
     }
+  });
+
+  it('records the deliberate pre-rehearsal billing hardening inside the existing V19 identity', () => {
+    const sourceBytes = readFileSync(
+      'supabase/reconciliation/v18-unapplied/20260814092100_finalize_enterprise_contract_mode_compatibility.sql',
+    );
+    const targetBytes = readFileSync(`supabase/migrations/${HARDENED_BILLING_TARGET}`);
+    const target = targetBytes.toString('utf8');
+
+    expect(sha256(targetBytes)).not.toBe(sha256(sourceBytes));
+    expect(target).toContain('sync_enterprise_contract_billing_v3_atomic');
+    expect(target).toContain('configure_enterprise_contract_billing_v2_atomic');
+    expect(target).toContain('duplicate_enterprise_stripe_subscription_binding');
+    expect(target).toContain('enterprise_contracts_stripe_subscription_uidx');
+    expect(target).toContain('from public,anon,authenticated,service_role');
   });
 
   it('keeps the unapplied V18 identities outside normal migration replay', () => {
