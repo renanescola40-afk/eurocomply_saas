@@ -14,10 +14,11 @@ const reconciliation = JSON.parse(readFileSync('config/supabase-forward-reconcil
 const selected = reconciliation.migrations.map((migrationRecord) => migrationRecord.filename);
 
 describe('Enterprise Evidence Vault data plane', () => {
-  it('adds exactly one proved Evidence Vault tail to the bounded forward set', () => {
-    expect(reconciliation.changeSet).toBe('2026-08-17-enterprise-data-plane-closure-v17');
-    expect(selected).toHaveLength(25);
-    expect(selected.at(-1)).toBe('20260817001500_reconcile_enterprise_evidence_vault.sql');
+  it('keeps the proved Evidence Vault migration ordered inside the V18 bounded forward set', () => {
+    expect(reconciliation.changeSet).toBe('2026-08-22-enterprise-data-plane-closure-v18');
+    expect(selected).toHaveLength(26);
+    expect(selected).toContain('20260817001500_reconcile_enterprise_evidence_vault.sql');
+    expect(selected.at(-1)).toBe('20260822001000_atomic_vendor_risk_quota_mutations.sql');
 
     expect(selected.indexOf('20260813234000_reconcile_enterprise_break_glass_governance.sql')).toBeLessThan(
       selected.indexOf('20260814090000_reconcile_enterprise_licensing_control_plane.sql'),
@@ -27,6 +28,9 @@ describe('Enterprise Evidence Vault data plane', () => {
     );
     expect(selected.indexOf('20260816104500_reconcile_gap_remediation_persistence.sql')).toBeLessThan(
       selected.indexOf('20260817001500_reconcile_enterprise_evidence_vault.sql'),
+    );
+    expect(selected.indexOf('20260817001500_reconcile_enterprise_evidence_vault.sql')).toBeLessThan(
+      selected.indexOf('20260822001000_atomic_vendor_risk_quota_mutations.sql'),
     );
 
     expect(reconciliation.truthBoundary.automaticClassification).toBe(false);
