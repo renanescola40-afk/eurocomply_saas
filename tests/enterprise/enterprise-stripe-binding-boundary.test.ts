@@ -9,10 +9,6 @@ const v19Boundary = readFileSync(
   'supabase/migrations/20260822123600_v19_finalize_enterprise_contract_mode_compatibility.sql',
   'utf8',
 );
-const v19BindingUniqueness = readFileSync(
-  'supabase/migrations/20260822123601_v19_enforce_enterprise_stripe_subscription_binding_uniqueness.sql',
-  'utf8',
-);
 const billing = readFileSync('src/server/enterprise/billing.ts', 'utf8');
 const selfServiceCheckout = readFileSync('src/app/api/billing/checkout/route.ts', 'utf8');
 
@@ -52,13 +48,14 @@ describe('Enterprise Stripe binding boundary', () => {
   });
 
   it('enforces one authoritative Enterprise contract per Stripe subscription binding', () => {
-    expect(v19BindingUniqueness).toContain('having count(*) > 1');
-    expect(v19BindingUniqueness).toContain("raise exception 'duplicate_enterprise_stripe_subscription_binding'");
-    expect(v19BindingUniqueness).toContain(
+    expect(v19Boundary).toContain('having count(*) > 1');
+    expect(v19Boundary).toContain("raise exception 'duplicate_enterprise_stripe_subscription_binding'");
+    expect(v19Boundary).toContain(
       'create unique index if not exists enterprise_contracts_stripe_subscription_uidx',
     );
-    expect(v19BindingUniqueness).toContain('on public.enterprise_contracts(stripe_subscription_id)');
-    expect(v19BindingUniqueness).toContain('where stripe_subscription_id is not null');
+    expect(v19Boundary).toContain('on public.enterprise_contracts(stripe_subscription_id)');
+    expect(v19Boundary).toContain('where stripe_subscription_id is not null');
+    expect(v19Boundary).toContain("to_regclass('public.enterprise_contracts_stripe_subscription_uidx')");
   });
 
   it('passes Enterprise metadata and modern Invoice subscription references to the v3 RPC', () => {
