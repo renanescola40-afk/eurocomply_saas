@@ -2,7 +2,7 @@ import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { enforceInternalAuthenticationRateLimit } from '@/server/security/internal-auth-rate-limit';
 import { noStoreJson } from '@/server/security/no-store';
-import { isExpectedMissingSupabaseSchema } from '@/server/supabase/schema-compatibility';
+import { isExpectedMissingSupabaseRelation } from '@/server/supabase/schema-compatibility';
 
 export const runtime = 'nodejs';
 
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     .select('external_id,title,updated_at');
 
   if (error) {
-    if (isExpectedMissingSupabaseSchema(error)) {
+    if (isExpectedMissingSupabaseRelation(error)) {
       return noStoreJson({
         ok: true,
         status: 'deferred',
