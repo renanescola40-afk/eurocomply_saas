@@ -221,7 +221,7 @@ function resolvePolicy(options: RateLimitOptions) {
 
 export function buildRateLimitKey(policyOrCategory: RateLimitPolicyId | RateLimitCategory, subject: RateLimitSubject) {
   const policy = POLICIES[resolvePolicyId(policyOrCategory)];
-  const userAgentPart = policy.includeUserAgent || subject.userAgent ? `ua:${hashRateLimitUserAgent(subject.userAgent)}` : 'ua:omitted';
+  const userAgentPart = policy.includeUserAgent ? `ua:${hashRateLimitUserAgent(subject.userAgent)}` : 'ua:omitted';
   return [
     `policy:${policy.id}`,
     `route:${safeToken(subject.route, 'unknown')}`,
