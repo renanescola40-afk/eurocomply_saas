@@ -12,6 +12,9 @@ vi.mock('@/lib/supabase/admin', () => ({
 
 import { syncEnterpriseContractBillingEvent } from './billing';
 
+const CONTRACT_ID = '11111111-1111-4111-8111-111111111111';
+const ORGANIZATION_ID = '22222222-2222-4222-8222-222222222222';
+
 function subscriptionEvent(metadata: Record<string, string> = {}) {
   return {
     id: 'evt_sub',
@@ -31,7 +34,7 @@ function subscriptionEvent(metadata: Record<string, string> = {}) {
   };
 }
 
-function invoiceEvent() {
+function currentInvoiceEvent() {
   return {
     id: 'evt_invoice',
     object: 'event',
@@ -50,13 +53,58 @@ function invoiceEvent() {
           subscription_details: {
             subscription: 'sub_enterprise',
             metadata: {
-              enterprise_contract_id: '11111111-1111-4111-8111-111111111111',
-              organization_id: '22222222-2222-4222-8222-222222222222',
+              enterprise_contract_id: CONTRACT_ID,
+              organization_id: ORGANIZATION_ID,
             },
           },
         },
       },
     },
+  };
+}
+
+function acaciaInvoiceEvent() {
+  return {
+    id: 'evt_invoice_acacia',
+    object: 'event',
+    type: 'invoice.payment_failed',
+    livemode: true,
+    created: 1_800_000_002,
+    data: {
+      object: {
+        id: 'in_acacia',
+        customer: 'cus_acacia',
+        subscription: 'sub_acacia_enterprise',
+        status: 'open',
+        paid: false,
+        // Deliberately conflicting invoice metadata proves the subscription
+        // snapshot wins for the Enterprise binding.
+        metadata: { organization_id: '33333333-3333-4333-8333-333333333333' },
+        subscription_details: {
+          metadata: {
+            enterprise_contract_id: CONTRACT_ID,
+            organization_id: ORGANIZATION_ID,
+          },
+        },
+      },
+    },
+  };
+}
+
+function successfulEnterpriseRpc(overrides: Record<string, unknown> = {}) {
+  return {
+    data: [{
+      outcome: 'synced',
+      matched: true,
+      contract_id: CONTRACT_ID,
+      organization_id: ORGANIZATION_ID,
+      previous_status: 'pending_activation',
+      applied_status: 'active',
+      billing_status: 'paid',
+      version: 2,
+      ...overrides,
+    }],
+    error: null,
   };
 }
 
@@ -70,7 +118,7 @@ describe('Enterprise Stripe billing synchronization', () => {
 
     const result = await syncEnterpriseContractBillingEvent(
       subscriptionEvent({
-        organization_id: '22222222-2222-4222-8222-222222222222',
+        organization_id: ORGANIZATION_ID,
         billing_flow: 'initial_subscription',
       }),
     );
@@ -78,13 +126,13 @@ describe('Enterprise Stripe billing synchronization', () => {
     expect(result).toEqual(expect.objectContaining({
       outcome: 'runtime_unavailable_unmatched',
       matched: false,
-      organizationId: '22222222-2222-4222-8222-222222222222',
+      organizationId: ORGANIZATION_ID,
     }));
     expect(mocks.rpc).toHaveBeenCalledWith(
       'sync_enterprise_contract_billing_v3_atomic',
       expect.objectContaining({
         p_contract_id: null,
-        p_organization_id: '22222222-2222-4222-8222-222222222222',
+        p_organization_id: ORGANIZATION_ID,
         p_stripe_subscription_id: 'sub_123',
       }),
     );
@@ -94,7 +142,7 @@ describe('Enterprise Stripe billing synchronization', () => {
     mocks.rpc.mockResolvedValue({ data: null, error: { code: 'PGRST202' } });
 
     await expect(syncEnterpriseContractBillingEvent(subscriptionEvent({
-      organization_id: '22222222-2222-4222-8222-222222222222',
+      organization_id: ORGANIZATION_ID,
     }))).rejects.toThrow('enterprise_billing_sync_unavailable');
   });
 
@@ -102,33 +150,21 @@ describe('Enterprise Stripe billing synchronization', () => {
     mocks.rpc.mockResolvedValue({ data: null, error: { code: 'PGRST202' } });
 
     await expect(syncEnterpriseContractBillingEvent(subscriptionEvent({
-      enterprise_contract_id: '11111111-1111-4111-8111-111111111111',
-      organization_id: '22222222-2222-4222-8222-222222222222',
+      enterprise_contract_id: CONTRACT_ID,
+      organization_id: ORGANIZATION_ID,
     }))).rejects.toThrow('enterprise_billing_sync_unavailable');
   });
 
   it('reads current Invoice parent subscription metadata and dispatches the strict v3 binding RPC', async () => {
-    mocks.rpc.mockResolvedValue({
-      data: [{
-        outcome: 'synced',
-        matched: true,
-        contract_id: '11111111-1111-4111-8111-111111111111',
-        organization_id: '22222222-2222-4222-8222-222222222222',
-        previous_status: 'pending_activation',
-        applied_status: 'active',
-        billing_status: 'paid',
-        version: 2,
-      }],
-      error: null,
-    });
+    mocks.rpc.mockResolvedValue(successfulEnterpriseRpc());
 
-    const result = await syncEnterpriseContractBillingEvent(invoiceEvent());
+    const result = await syncEnterpriseContractBillingEvent(currentInvoiceEvent());
 
     expect(result).toEqual({
       outcome: 'synced',
       matched: true,
-      contractId: '11111111-1111-4111-8111-111111111111',
-      organizationId: '22222222-2222-4222-8222-222222222222',
+      contractId: CONTRACT_ID,
+      organizationId: ORGANIZATION_ID,
       previousStatus: 'pending_activation',
       appliedStatus: 'active',
       billingStatus: 'paid',
@@ -137,13 +173,41 @@ describe('Enterprise Stripe billing synchronization', () => {
     expect(mocks.rpc).toHaveBeenCalledWith(
       'sync_enterprise_contract_billing_v3_atomic',
       expect.objectContaining({
-        p_contract_id: '11111111-1111-4111-8111-111111111111',
-        p_organization_id: '22222222-2222-4222-8222-222222222222',
+        p_contract_id: CONTRACT_ID,
+        p_organization_id: ORGANIZATION_ID,
         p_stripe_customer_id: 'cus_123',
         p_stripe_subscription_id: 'sub_enterprise',
         p_stripe_invoice_id: 'in_123',
         p_invoice_paid: true,
         p_external_reference: 'INV-123',
+      }),
+    );
+  });
+
+  it('preserves Acacia invoice.subscription_details metadata ahead of invoice-level metadata', async () => {
+    mocks.rpc.mockResolvedValue(successfulEnterpriseRpc({
+      applied_status: 'past_due',
+      billing_status: 'past_due',
+    }));
+
+    const result = await syncEnterpriseContractBillingEvent(acaciaInvoiceEvent());
+
+    expect(result).toEqual(expect.objectContaining({
+      matched: true,
+      contractId: CONTRACT_ID,
+      organizationId: ORGANIZATION_ID,
+      appliedStatus: 'past_due',
+      billingStatus: 'past_due',
+    }));
+    expect(mocks.rpc).toHaveBeenCalledWith(
+      'sync_enterprise_contract_billing_v3_atomic',
+      expect.objectContaining({
+        p_contract_id: CONTRACT_ID,
+        p_organization_id: ORGANIZATION_ID,
+        p_stripe_customer_id: 'cus_acacia',
+        p_stripe_subscription_id: 'sub_acacia_enterprise',
+        p_stripe_invoice_id: 'in_acacia',
+        p_invoice_paid: false,
       }),
     );
   });
@@ -154,7 +218,7 @@ describe('Enterprise Stripe billing synchronization', () => {
       object: 'event',
       type: 'checkout.session.completed',
       livemode: true,
-      created: 1_800_000_002,
+      created: 1_800_000_003,
       data: { object: { id: 'cs_123', metadata: {} } },
     };
 
