@@ -155,6 +155,27 @@ describe('Enterprise Stripe billing synchronization', () => {
     }))).rejects.toThrow('enterprise_billing_sync_unavailable');
   });
 
+  it('fails retryably when an explicit Enterprise contract marker is not matched by the promoted v3 runtime', async () => {
+    mocks.rpc.mockResolvedValue({
+      data: [{
+        outcome: 'not_enterprise',
+        matched: false,
+        contract_id: null,
+        organization_id: ORGANIZATION_ID,
+        previous_status: null,
+        applied_status: null,
+        billing_status: null,
+        version: null,
+      }],
+      error: null,
+    });
+
+    await expect(syncEnterpriseContractBillingEvent(subscriptionEvent({
+      enterprise_contract_id: CONTRACT_ID,
+      organization_id: ORGANIZATION_ID,
+    }))).rejects.toThrow('enterprise_billing_explicit_contract_unmatched');
+  });
+
   it('reads current Invoice parent subscription metadata and dispatches the strict v3 binding RPC', async () => {
     mocks.rpc.mockResolvedValue(successfulEnterpriseRpc());
 
