@@ -14,7 +14,10 @@ on:
       - 'scripts/supabase/validate-migration-evidence-lineage.test.mjs'
       - 'docs/security/evidence/runtime/supabase-migration-reconciliation-decisions.json'
       - 'docs/security/runbooks/SUPABASE_MIGRATION_DECISION_GATE.md'
+      - '.github/workflows/supabase-production-migration-dry-run.yml'
       - '.github/workflows/supabase-migration-reconciliation-decision-gate.yml'
+      - 'tests/security/supabase-production-migration-dry-run-workflow.test.ts'
+      - 'tests/security/supabase-bounded-migration-decision-gate.test.ts'
   push:
     branches: [main]
     paths:
@@ -26,7 +29,10 @@ on:
       - 'scripts/supabase/validate-migration-evidence-lineage.mjs'
       - 'docs/security/evidence/runtime/supabase-migration-reconciliation-decisions.json'
       - 'docs/security/runbooks/SUPABASE_MIGRATION_DECISION_GATE.md'
+      - '.github/workflows/supabase-production-migration-dry-run.yml'
       - '.github/workflows/supabase-migration-reconciliation-decision-gate.yml'
+      - 'tests/security/supabase-production-migration-dry-run-workflow.test.ts'
+      - 'tests/security/supabase-bounded-migration-decision-gate.test.ts'
   workflow_dispatch:
     inputs:
       release_sha:
@@ -82,6 +88,7 @@ jobs:
           node --test scripts/supabase/validate-migration-reconciliation-decisions.test.mjs
           node --test scripts/supabase/validate-migration-classification-decisions.test.mjs
           node --test scripts/supabase/validate-migration-evidence-lineage.test.mjs
+          npx vitest run tests/security/supabase-production-migration-dry-run-workflow.test.ts tests/security/supabase-bounded-migration-decision-gate.test.ts
 
   decision-gate:
     name: Validate subject-SHA human migration decisions
@@ -137,8 +144,6 @@ jobs:
           git cat-file -e "$SUBJECT_SHA^{commit}"
 
           if [ "$BOUNDED_FORWARD" = 'true' ]; then
-            # Fresh forward human decisions are bound to the exact current main.
-            # Byte equivalence with an older subject never transfers human credit.
             test "$CURRENT_SHA" = "$SUBJECT_SHA"
           else
             git merge-base --is-ancestor "$SUBJECT_SHA" "$CURRENT_SHA"
@@ -160,6 +165,7 @@ jobs:
           echo "PRODUCTION_DRY_RUN_CONCLUSION=$(jq -r '.conclusion // "unknown"' <<<"$RUN_JSON")" >> "$GITHUB_ENV"
 
           if [ "$BOUNDED_FORWARD" = 'true' ]; then
+            test "$(jq -r '.conclusion' <<<"$RUN_JSON")" = 'success'
             FORWARD_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${FORWARD_DRY_RUN_ID}")"
             test "$(jq -r '.head_sha' <<<"$FORWARD_JSON")" = "$SUBJECT_SHA"
             test "$(jq -r '.path' <<<"$FORWARD_JSON")" = '.github/workflows/supabase-forward-reconciliation-dry-run.yml'
@@ -195,8 +201,40 @@ jobs:
           cp "$SOURCE_INVENTORY" "$OUTPUT_DIR/source-migration-reconciliation-inventory.json"
 
           if [ "$BOUNDED_FORWARD" = 'true' ]; then
+            mapfile -t BOUNDED_ATTESTATIONS < <(find source-artifact -type f -name 'bounded-production-dry-run-attestation.json' -print)
             mapfile -t FORWARD_MANIFESTS < <(find forward-source-artifact -type f -name 'current-manifest.json' -print)
+            test "${#BOUNDED_ATTESTATIONS[@]}" -eq 1
             test "${#FORWARD_MANIFESTS[@]}" -eq 1
+
+            FORWARD_DIGEST="$(jq -r '.selectionDigest' "${FORWARD_MANIFESTS[0]}")"
+            jq -e \
+              --arg sha "$SUBJECT_SHA" \
+              --arg digest "$FORWARD_DIGEST" \
+              --arg forwardRunId "$FORWARD_DRY_RUN_ID" \
+              '.schema == "risck-comply.supabase-forward-bounded-production-dry-run.v1" and
+               .status == "Complete" and
+               .outcome == "passed" and
+               .mode == "BOUNDED_FORWARD_DECISION" and
+               .targetSha == $sha and
+               .selectionDigest == $digest and
+               .sourceForwardDryRunRunId == $forwardRunId and
+               .checks.exactMain == true and
+               .checks.rehearsalProvenance == true and
+               .checks.forwardDryRunProvenance == true and
+               .checks.sourceSelectionDigestMatched == true and
+               .checks.productionInventoryCaptured == true and
+               .checks.freshRemoteHistoryCaptured == true and
+               .checks.allSelectedVersionsAfterRemoteHead == true and
+               .checks.pendingSetEqualsSelectedSet == true and
+               .checks.unauthorizedPendingMigrations == false and
+               .checks.filteredDbPushDryRunOnly == true and
+               .checks.includeAllUsed == false and
+               .checks.migrationHistoryRepairUsed == false and
+               .productionWriteAuthorized == false and
+               .productionWritePerformed == false' \
+              "${BOUNDED_ATTESTATIONS[0]}" >/dev/null
+
+            cp "${BOUNDED_ATTESTATIONS[0]}" "$OUTPUT_DIR/source-bounded-production-dry-run-attestation.json"
             BOUNDED_INVENTORY="$OUTPUT_DIR/bounded-migration-reconciliation-inventory.json"
             node scripts/supabase/build-bounded-migration-reconciliation-inventory.mjs \
               "$SOURCE_INVENTORY" \
@@ -256,9 +294,6 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$BOUNDED_FORWARD" = 'true' ]; then
-            # Exact-SHA equality above is the bounded lineage boundary. A payload
-            # supplied after that SHA exists avoids self-referential Git evidence
-            # and cannot inherit an older human approval by byte equivalence.
             test "$CURRENT_SHA" = "$SUBJECT_SHA"
           else
             mapfile -t CHANGED < <(git diff --name-only "$SUBJECT_SHA".."$CURRENT_SHA")
@@ -313,11 +348,11 @@ jobs:
             echo "- Bounded forward mode: \`${BOUNDED_FORWARD:-false}\`"
             if [ "${BOUNDED_FORWARD:-false}" = 'true' ]; then
               echo "- Source forward dry-run: \`$FORWARD_DRY_RUN_ID\`"
+              echo '- Bounded Production dry-run attestation: required and validated'
               echo "- Bounded decision items: \`$(jq '.items | length' "$INVENTORY_PATH" 2>/dev/null || echo unresolved)\`"
             fi
-            echo '- SQL executed: no'
+            echo '- SQL executed by this Decision Gate: no'
             echo '- Migration history modified: no'
-            echo '- Staging execution performed: no'
             echo '- Production write authorized: no'
             echo '- Pending classifications require separate protected Production authorization before promotion'
           } >> "$GITHUB_STEP_SUMMARY"
