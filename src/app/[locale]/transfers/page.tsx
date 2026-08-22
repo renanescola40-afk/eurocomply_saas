@@ -61,5 +61,5 @@ export default async function TransfersPage({ params }: { params: Promise<{ loca
   const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : 'en';
   const page = copy[locale];
 
-  return <PublicLegalReviewPage locale={locale} eyebrow={page.eyebrow} title={page.title} summary={page.summary} documentId="international-data-transfers" version="0.2-review" lastUpdated={LAST_UPDATED} sections={page.sections} />;
+  return <PublicLegalReviewPage locale={locale} eyebrow={page.eyebrow} title={page.title} summary={page.summary} documentId="international-data-transfers" version="0.1-review" lastUpdated={LAST_UPDATED} sections={page.sections} />;
 }
