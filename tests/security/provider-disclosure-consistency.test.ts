@@ -29,6 +29,15 @@ describe('security-critical provider disclosure consistency', () => {
     }
   });
 
+  it('routes the explicit public subprocessors page through the localized evidence authority', () => {
+    const route = read('src/app/[locale]/subprocessors/page.tsx');
+
+    expect(route).toContain("import { TrustCenterPage } from '@/components/trust/trust-page'");
+    expect(route).toContain("getLocalizedTrustCenterPage('subprocessors', locale)");
+    expect(route).toContain('applyVerifiedTrustAuthority');
+    expect(route).not.toContain("@/components/marketing/trust-center-page");
+  });
+
   it('renders the runtime-evidence boundary on translated public subprocessors pages', () => {
     const trustPage = read('src/components/trust/trust-page.tsx');
     const disclosure = read('src/components/trust/provider-runtime-disclosure.tsx');
