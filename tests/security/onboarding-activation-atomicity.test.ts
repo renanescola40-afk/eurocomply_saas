@@ -3,15 +3,15 @@ import { describe, expect, it } from 'vitest';
 
 const actionSource = fs.readFileSync('src/server/actions/onboarding.ts', 'utf8');
 const reconciliationSource = fs.readFileSync(
-  'supabase/migrations/20260815142500_reconcile_active_onboarding_runtime.sql',
+  'supabase/migrations/20260822123616_v19_reconcile_active_onboarding_runtime.sql',
   'utf8',
 );
 const seatAuthoritySource = fs.readFileSync(
-  'supabase/migrations/20260815141000_reconcile_enterprise_invitation_seat_authority.sql',
+  'supabase/migrations/20260822123610_v19_reconcile_enterprise_invitation_seat_authority.sql',
   'utf8',
 );
 const hardeningSource = fs.readFileSync(
-  'supabase/migrations/20260815143000_harden_active_onboarding_enterprise_boundaries.sql',
+  'supabase/migrations/20260822123618_v19_harden_active_onboarding_enterprise_boundaries.sql',
   'utf8',
 );
 const completionSource = actionSource.slice(
