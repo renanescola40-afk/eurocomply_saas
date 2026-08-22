@@ -65,11 +65,14 @@ describe('Enterprise Stripe billing synchronization', () => {
     vi.clearAllMocks();
   });
 
-  it('keeps ordinary self-service events available while the bounded V19 RPC is not promoted', async () => {
+  it('keeps canonically marked self-service events available while the bounded V19 RPC is not promoted', async () => {
     mocks.rpc.mockResolvedValue({ data: null, error: { code: 'PGRST202' } });
 
     const result = await syncEnterpriseContractBillingEvent(
-      subscriptionEvent({ organization_id: '22222222-2222-4222-8222-222222222222' }),
+      subscriptionEvent({
+        organization_id: '22222222-2222-4222-8222-222222222222',
+        billing_flow: 'initial_subscription',
+      }),
     );
 
     expect(result).toEqual(expect.objectContaining({
@@ -85,6 +88,14 @@ describe('Enterprise Stripe billing synchronization', () => {
         p_stripe_subscription_id: 'sub_123',
       }),
     );
+  });
+
+  it('fails retryably for an ambiguous unmarked event while the V19 RPC is absent', async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: 'PGRST202' } });
+
+    await expect(syncEnterpriseContractBillingEvent(subscriptionEvent({
+      organization_id: '22222222-2222-4222-8222-222222222222',
+    }))).rejects.toThrow('enterprise_billing_sync_unavailable');
   });
 
   it('fails retryably instead of acknowledging an explicitly Enterprise event when the V19 RPC is absent', async () => {
