@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { buildNotificationIdempotencyKey } from '@/server/jobs/notification-idempotency';
 import { enforceInternalAuthenticationRateLimit } from '@/server/security/internal-auth-rate-limit';
 import { noStoreJson } from '@/server/security/no-store';
-import { isExpectedMissingSupabaseSchema } from '@/server/supabase/schema-compatibility';
+import { isExpectedMissingSupabaseMaintenanceSchema } from '@/server/supabase/schema-compatibility';
 import { getUserEmailContextById } from '@/server/users/email';
 
 export const runtime = 'nodejs';
@@ -48,7 +48,7 @@ async function getComplianceAlertDataPlaneStatus() {
   const errors = [notificationEvents.error, vendorMaintenance.error].filter(Boolean);
   if (errors.length === 0) return { ready: true as const };
 
-  const unexpectedError = errors.find((error) => !isExpectedMissingSupabaseSchema(error));
+  const unexpectedError = errors.find((error) => !isExpectedMissingSupabaseMaintenanceSchema(error));
   if (unexpectedError) {
     reportError(unexpectedError, { area: 'compliance_alert_data_plane_probe' });
     throw unexpectedError;
