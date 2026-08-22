@@ -1,8 +1,11 @@
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
+import { assertResourceQuota } from '@/server/billing/entitlements';
+import { mutateCommercialResourceAtomic } from '@/server/billing/commercial-resource-atomic';
 import { requireCurrentUser } from '@/server/queries/auth';
 import { logAuditEvent } from './audit';
 
@@ -37,7 +40,7 @@ function providerActionError(message: string) {
 
 function toVendorErrorMessage(error: unknown, action: 'criar' | 'atualizar' | 'remover') {
   const message = error instanceof Error ? error.message.toLowerCase() : '';
-  if (message.includes('review_version') || message.includes('0 rows')) return 'O fornecedor foi alterado por outra pessoa. Atualize a página e tente novamente.';
+  if (message.includes('review_version') || message.includes('0 rows') || message.includes('not_found_or_conflict')) return 'O fornecedor foi alterado por outra pessoa. Atualize a página e tente novamente.';
   if (message.includes('check constraint') || message.includes('23514')) return 'Os dados do fornecedor não cumprem as regras de revisão e aprovação.';
   if (message.includes('permission') || message.includes('not authorized')) return `Sem permissão para ${action} fornecedores nesta organização.`;
   return `Não foi possível ${action} o fornecedor agora.`;
@@ -65,6 +68,12 @@ async function enforceVendorActionRateLimit(input: {
     failureMode: 'fail-closed',
   });
   if (!result.allowed) throw providerActionError('Too many vendor changes. Please try again later.');
+}
+
+async function enforceVendorQuota(organizationId: string) {
+  const quota = await assertResourceQuota(organizationId, 'vendors');
+  if (!quota.ok) throw providerActionError(quota.message);
+  return quota;
 }
 
 function vendorRecord(payload: z.infer<typeof vendorSchema>, actorUserId: string, includeCreator: boolean) {
@@ -95,24 +104,34 @@ export async function createVendor(input: unknown) {
   const context = { area: 'vendor_create_action', organizationId: payload.organizationId, userId: user.id };
   await assertCurrentUserCan(payload.organizationId, user.id, 'vendors:write');
   await enforceVendorActionRateLimit({ action: 'vendor.create', organizationId: payload.organizationId, userId: user.id });
+  const quota = await enforceVendorQuota(payload.organizationId);
+  const quotaExceededMessage = `Vendor quota exceeded for the ${quota.entitlements.plan} plan.`;
+  const vendorId = randomUUID();
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.from('vendors').insert(vendorRecord(payload, user.id, true)).select(vendorColumns).single();
-  if (error) failVendorAction(error, context, 'criar');
+  try {
+    const result = await mutateCommercialResourceAtomic({
+      resource: 'vendor',
+      operation: 'create',
+      organizationId: payload.organizationId,
+      actorUserId: user.id,
+      entityId: vendorId,
+      payload: vendorRecord(payload, user.id, true),
+      maxCount: quota.maxAllowed,
+      auditMetadata: { riskLevel: payload.riskLevel, reviewStatus: payload.reviewStatus },
+    });
 
-  const audit = await logAuditEvent({ organizationId: payload.organizationId, actorUserId: user.id, action: 'vendor.create', entityType: 'vendor', entityId: data.id, metadata: { riskLevel: payload.riskLevel, reviewStatus: payload.reviewStatus } });
-  if (!audit.persisted) {
-    const { error: rollbackError } = await supabase.from('vendors').delete().eq('id', data.id).eq('organization_id', payload.organizationId);
-    if (rollbackError) {
-      reportError(new Error('vendor_create_audit_compensation_failed'), {
-        ...context,
-        vendorId: data.id,
-        providerCode: rollbackError.code ?? 'unknown',
-      });
+    if (result.outcome === 'quota_exceeded') throw providerActionError(quotaExceededMessage);
+    if (result.outcome !== 'created' || !result.resource_record) {
+      throw new Error(`vendor_atomic_create_${result.outcome}`);
     }
-    throw providerActionError('Não foi possível criar o fornecedor agora.');
+
+    return result.resource_record;
+  } catch (error) {
+    if (error instanceof Error && error.message === quotaExceededMessage) {
+      throw providerActionError(quotaExceededMessage);
+    }
+    failVendorAction(error, { ...context, vendorId }, 'criar');
   }
-  return data;
 }
 
 export async function updateVendor(input: unknown) {
@@ -177,22 +196,24 @@ export async function deleteVendor(vendorId: string, organizationId: string, exp
   await assertCurrentUserCan(payload.organizationId, user.id, 'vendors:delete');
   await enforceVendorActionRateLimit({ action: 'vendor.delete', organizationId: payload.organizationId, userId: user.id });
 
-  const supabase = createAdminClient();
-  let query = supabase.from('vendors').delete().eq('id', payload.vendorId).eq('organization_id', payload.organizationId);
-  if (payload.expectedReviewVersion) query = query.eq('review_version', payload.expectedReviewVersion);
-  const { data, error } = await query.select(vendorColumns).single();
-  if (error) failVendorAction(error, context, 'remover');
+  try {
+    const result = await mutateCommercialResourceAtomic({
+      resource: 'vendor',
+      operation: 'delete',
+      organizationId: payload.organizationId,
+      actorUserId: user.id,
+      entityId: payload.vendorId,
+      expectedReviewVersion: payload.expectedReviewVersion,
+      auditMetadata: { expectedReviewVersion: payload.expectedReviewVersion ?? null },
+    });
 
-  const audit = await logAuditEvent({ organizationId: payload.organizationId, actorUserId: user.id, action: 'vendor.delete', entityType: 'vendor', entityId: payload.vendorId, metadata: { riskLevel: data.risk_level, reviewVersion: data.review_version } });
-  if (!audit.persisted) {
-    const { error: rollbackError } = await supabase.from('vendors').insert(data);
-    if (rollbackError) {
-      reportError(new Error('vendor_delete_audit_compensation_failed'), {
-        ...context,
-        providerCode: rollbackError.code ?? 'unknown',
-      });
+    if (result.outcome === 'not_found_or_conflict') throw new Error('not_found_or_conflict');
+    if (result.outcome !== 'deleted' || !result.resource_record) {
+      throw new Error(`vendor_atomic_delete_${result.outcome}`);
     }
-    throw providerActionError('Não foi possível remover o fornecedor agora.');
+
+    return result.resource_record;
+  } catch (error) {
+    failVendorAction(error, context, 'remover');
   }
-  return data;
 }

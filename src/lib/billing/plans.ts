@@ -69,7 +69,7 @@ export const BILLING_PLANS: BillingPlanCatalog = [
     stripePriceEnvKeyAnnual: 'STRIPE_PRICE_ESSENTIAL_ANNUAL',
     legacyStripePriceEnvKeysMonthly: ['STRIPE_PRICE_STARTER_MONTHLY'],
     legacyStripePriceEnvKeysAnnual: ['STRIPE_PRICE_STARTER_ANNUAL'],
-    limits: { users: 3, documents: 100, vendors: 5, risks: 25, organizations: 1, aiSystems: 25, storageGb: 10, apiRequestsMonthly: 0, webhooks: 0, exportsMonthly: 25, auditLogsDays: 30 },
+    limits: { users: 3, documents: 100, vendors: 0, risks: 0, organizations: 1, aiSystems: 25, storageGb: 10, apiRequestsMonthly: 0, webhooks: 0, exportsMonthly: 25, auditLogsDays: 30 },
     features: ['AI Inventory', 'Risk Classification', 'Dashboard', 'PDF Export', 'Basic audit', 'Email support'],
   },
   {

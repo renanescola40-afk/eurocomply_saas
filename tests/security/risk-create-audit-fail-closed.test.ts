@@ -2,36 +2,37 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const actionPath = 'src/server/actions/risks.ts';
+const atomicHelperPath = 'src/server/billing/commercial-resource-atomic.ts';
+const migrationPath = 'supabase/migrations/20260822001000_atomic_vendor_risk_quota_mutations.sql';
+const source = readFileSync(actionPath, 'utf8');
+const createSource = source.slice(source.indexOf('export async function createRisk'), source.indexOf('export async function updateRisk'));
+const atomicHelper = readFileSync(atomicHelperPath, 'utf8');
+const migration = readFileSync(migrationPath, 'utf8');
 
 describe('risk creation audit persistence', () => {
-  it('does not return a created risk when durable audit persistence fails', () => {
-    const source = readFileSync(actionPath, 'utf8');
-
-    expect(source).toContain('const audit = await logAuditEvent({');
-    expect(source).toContain('if (!audit.persisted)');
-
-    const auditGuardIndex = source.indexOf('if (!audit.persisted)');
-    const successIndex = source.indexOf('return data;');
-
-    expect(auditGuardIndex).toBeGreaterThan(-1);
-    expect(successIndex).toBeGreaterThan(auditGuardIndex);
+  it('routes creation through the atomic quota and audit authority', () => {
+    expect(createSource).toContain('mutateCommercialResourceAtomic({');
+    expect(createSource).toContain("resource: 'risk'");
+    expect(createSource).toContain("operation: 'create'");
+    expect(createSource).toContain('maxCount: quota.maxAllowed');
+    expect(createSource).toContain('return result.resource_record;');
+    expect(createSource).not.toContain('logAuditEvent({');
+    expect(createSource).not.toContain(".from('risks').insert");
   });
 
-  it('attempts an exact tenant-scoped rollback of the newly inserted risk', () => {
-    const source = readFileSync(actionPath, 'utf8');
-
-    expect(source).toContain("area: 'risk_create_audit_rollback'");
-    expect(source).toContain(".from('risks')\n        .delete()");
-    expect(source).toContain(".eq('id', data.id)");
-    expect(source).toContain(".eq('organization_id', payload.organizationId)");
-    expect(source).toContain(".eq('created_by', user.id)");
+  it('commits the risk and both audit streams in one database transaction', () => {
+    expect(migration).toContain("p_operation = 'create' and p_resource_type = 'risk'");
+    expect(migration).toContain('insert into public.risks');
+    expect(migration).toContain('insert into public.audit_logs');
+    expect(migration).toContain('insert into public.audit_events');
+    expect(createSource).not.toContain('risk_create_audit_rollback');
+    expect(createSource).not.toContain(".from('risks').delete");
   });
 
   it('preserves authorization and fail-closed distributed rate limiting', () => {
-    const source = readFileSync(actionPath, 'utf8');
-
     expect(source).toContain("await assertCurrentUserCan(payload.organizationId, user.id, 'risks:write')");
     expect(source).toContain("failureMode: 'fail-closed'");
-    expect(source).toContain("action: 'risk.create'");
+    expect(createSource).toContain("action: 'create'");
+    expect(atomicHelper).toContain('action: `${input.resource}.${input.operation}`');
   });
 });

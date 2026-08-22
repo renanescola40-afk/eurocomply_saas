@@ -8,6 +8,8 @@ describe('billing entitlements', () => {
 
     expect(entitlements.maxDocuments).toBe(100);
     expect(entitlements.maxUsers).toBe(3);
+    expect(entitlements.maxVendors).toBe(0);
+    expect(entitlements.maxRisks).toBe(0);
     expect(entitlements.maxFiscalCountries).toBe(1);
     expect(entitlements.aiCalendar).toBe('basic');
     expect(entitlements.aiNews).toBe('basic');
@@ -25,6 +27,8 @@ describe('billing entitlements', () => {
 
     expect(entitlements.maxDocuments).toBe(1000);
     expect(entitlements.maxUsers).toBe(15);
+    expect(entitlements.maxVendors).toBe(30);
+    expect(entitlements.maxRisks).toBe(75);
     expect(entitlements.maxFiscalCountries).toBe(2);
     expect(entitlements.aiCalendar).toBe('advanced');
     expect(entitlements.aiNews).toBe('standard');
@@ -41,6 +45,8 @@ describe('billing entitlements', () => {
 
     expect(entitlements.maxDocuments).toBe(10000);
     expect(entitlements.maxUsers).toBe(75);
+    expect(entitlements.maxVendors).toBe(150);
+    expect(entitlements.maxRisks).toBe(300);
     expect(entitlements.maxFiscalCountries).toBe(5);
     expect(entitlements.employeeInvites).toBe(true);
     expect(entitlements.approvalWorkflows).toBe(true);
@@ -53,6 +59,8 @@ describe('billing entitlements', () => {
 
     expect(entitlements.maxDocuments).toBe(Number.POSITIVE_INFINITY);
     expect(entitlements.maxUsers).toBe(Number.POSITIVE_INFINITY);
+    expect(entitlements.maxVendors).toBe(Number.POSITIVE_INFINITY);
+    expect(entitlements.maxRisks).toBe(Number.POSITIVE_INFINITY);
     expect(entitlements.maxFiscalCountries).toBe(Number.POSITIVE_INFINITY);
     expect(entitlements.employeeInvites).toBe(true);
     expect(entitlements.approvalWorkflows).toBe(true);

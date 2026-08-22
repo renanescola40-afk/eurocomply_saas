@@ -12,6 +12,8 @@ export type PlanEntitlements = {
   plan: SubscriptionPlan;
   maxDocuments: number;
   maxUsers: number;
+  maxVendors: number;
+  maxRisks: number;
   maxFiscalCountries: number;
   aiCalendar: 'basic' | 'advanced';
   aiNews: 'basic' | 'standard' | 'advanced';
@@ -30,10 +32,14 @@ export type OrganizationEntitlements = PlanEntitlements & {
   authoritySource: BillingAuthoritySource;
 };
 
+export type ResourceQuota = 'vendors' | 'risks';
+
 const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
   essential: {
     maxDocuments: 10,
     maxUsers: 1,
+    maxVendors: 0,
+    maxRisks: 0,
     maxFiscalCountries: 1,
     aiCalendar: 'basic',
     aiNews: 'basic',
@@ -49,6 +55,8 @@ const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
   starter: {
     maxDocuments: 40,
     maxUsers: 3,
+    maxVendors: 0,
+    maxRisks: 0,
     maxFiscalCountries: 1,
     aiCalendar: 'basic',
     aiNews: 'basic',
@@ -64,6 +72,8 @@ const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
   professional: {
     maxDocuments: 100,
     maxUsers: 3,
+    maxVendors: 30,
+    maxRisks: 75,
     maxFiscalCountries: 2,
     aiCalendar: 'advanced',
     aiNews: 'standard',
@@ -79,6 +89,8 @@ const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
   growth: {
     maxDocuments: 250,
     maxUsers: 15,
+    maxVendors: 30,
+    maxRisks: 75,
     maxFiscalCountries: 5,
     aiCalendar: 'advanced',
     aiNews: 'advanced',
@@ -94,6 +106,8 @@ const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
   business: {
     maxDocuments: 500,
     maxUsers: 10,
+    maxVendors: 150,
+    maxRisks: 300,
     maxFiscalCountries: 5,
     aiCalendar: 'advanced',
     aiNews: 'advanced',
@@ -109,6 +123,8 @@ const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
   enterprise: {
     maxDocuments: Number.POSITIVE_INFINITY,
     maxUsers: Number.POSITIVE_INFINITY,
+    maxVendors: Number.POSITIVE_INFINITY,
+    maxRisks: Number.POSITIVE_INFINITY,
     maxFiscalCountries: Number.POSITIVE_INFINITY,
     aiCalendar: 'advanced',
     aiNews: 'advanced',
@@ -126,6 +142,8 @@ const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
 const UNLICENSED_ENTITLEMENTS: Omit<PlanEntitlements, 'plan'> = {
   maxDocuments: 0,
   maxUsers: 0,
+  maxVendors: 0,
+  maxRisks: 0,
   maxFiscalCountries: 0,
   aiCalendar: 'basic',
   aiNews: 'basic',
@@ -153,6 +171,8 @@ export function getPlanEntitlements(plan: SubscriptionPlan): PlanEntitlements {
     ...ENTITLEMENTS[plan],
     maxDocuments: unlimited ? Number.POSITIVE_INFINITY : canonicalLimits.documents,
     maxUsers: unlimited ? Number.POSITIVE_INFINITY : canonicalLimits.users,
+    maxVendors: unlimited ? Number.POSITIVE_INFINITY : canonicalLimits.vendors,
+    maxRisks: unlimited ? Number.POSITIVE_INFINITY : canonicalLimits.risks,
   };
 }
 
@@ -270,4 +290,142 @@ export async function assertDocumentQuota(organizationId: string) {
   }
 
   return { ok: true as const, entitlements, currentCount };
+}
+
+function resourceQuotaLimit(entitlements: OrganizationEntitlements, resource: ResourceQuota) {
+  return resource === 'vendors' ? entitlements.maxVendors : entitlements.maxRisks;
+}
+
+function resourceQuotaLabel(resource: ResourceQuota) {
+  return resource === 'vendors' ? 'Vendor' : 'Risk';
+}
+
+async function countResourceRows(organizationId: string, resource: ResourceQuota) {
+  const supabase = createAdminClient();
+  const { count, error } = await supabase
+    .from(resource)
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', organizationId);
+
+  if (error) {
+    console.warn('[billing] resource_quota_count_failed', {
+      resource,
+      code: error.code ?? 'unknown',
+    });
+    return { ok: false as const, currentCount: 0 };
+  }
+
+  return { ok: true as const, currentCount: count ?? 0 };
+}
+
+export async function assertResourceQuota(organizationId: string, resource: ResourceQuota) {
+  const entitlements = await getOrganizationEntitlements(organizationId);
+
+  if (!entitlements.licensed) {
+    return {
+      ok: false as const,
+      status: 402,
+      error: 'subscription_required',
+      message: 'An active paid subscription or signed contract is required.',
+      entitlements,
+      currentCount: 0,
+      maxAllowed: 0,
+    };
+  }
+
+  const maxAllowed = resourceQuotaLimit(entitlements, resource);
+  const label = resourceQuotaLabel(resource);
+
+  if (maxAllowed <= 0) {
+    return {
+      ok: false as const,
+      status: 402,
+      error: 'upgrade_required',
+      message: `${label} management is not included in the ${entitlements.plan} plan.`,
+      entitlements,
+      currentCount: 0,
+      maxAllowed,
+    };
+  }
+
+  if (!Number.isFinite(maxAllowed)) {
+    return {
+      ok: true as const,
+      entitlements,
+      currentCount: 0,
+      maxAllowed,
+    };
+  }
+
+  const countResult = await countResourceRows(organizationId, resource);
+  if (!countResult.ok) {
+    return {
+      ok: false as const,
+      status: 503,
+      error: 'quota_unavailable',
+      message: `${label} quota could not be verified. Please try again.`,
+      entitlements,
+      currentCount: 0,
+      maxAllowed,
+    };
+  }
+
+  if (countResult.currentCount >= maxAllowed) {
+    return {
+      ok: false as const,
+      status: 402,
+      error: `${resource}_quota_exceeded`,
+      message: `${label} quota exceeded for the ${entitlements.plan} plan.`,
+      entitlements,
+      currentCount: countResult.currentCount,
+      maxAllowed,
+    };
+  }
+
+  return {
+    ok: true as const,
+    entitlements,
+    currentCount: countResult.currentCount,
+    maxAllowed,
+  };
+}
+
+export async function verifyResourceQuotaAfterCreate(
+  organizationId: string,
+  resource: ResourceQuota,
+  maxAllowed: number,
+) {
+  if (!Number.isFinite(maxAllowed)) {
+    return { ok: true as const, currentCount: 0, maxAllowed };
+  }
+
+  const label = resourceQuotaLabel(resource);
+  const countResult = await countResourceRows(organizationId, resource);
+  if (!countResult.ok) {
+    return {
+      ok: false as const,
+      status: 503,
+      error: 'quota_unavailable',
+      message: `${label} quota could not be verified after creation.`,
+      currentCount: 0,
+      maxAllowed,
+    };
+  }
+
+  if (countResult.currentCount > maxAllowed) {
+    return {
+      ok: false as const,
+      status: 402,
+      error: `${resource}_quota_exceeded`,
+      message: `${label} quota exceeded. The new record was not kept.`,
+      currentCount: countResult.currentCount,
+      maxAllowed,
+    };
+  }
+
+  return {
+    ok: true as const,
+    currentCount: countResult.currentCount,
+    maxAllowed,
+  };
 }
