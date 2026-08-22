@@ -2,31 +2,31 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const licensing = readFileSync(
-  'supabase/migrations/20260814090000_reconcile_enterprise_licensing_control_plane.sql',
+  'supabase/migrations/20260822123550_v19_reconcile_enterprise_licensing_control_plane.sql',
   'utf8',
 );
 const integrations = readFileSync(
-  'supabase/migrations/20260814091000_reconcile_enterprise_integrations_scim.sql',
+  'supabase/migrations/20260822123552_v19_reconcile_enterprise_integrations_scim.sql',
   'utf8',
 );
 const scimDeleteBoundary = readFileSync(
-  'supabase/migrations/20260814091100_harden_scim_identity_connection_delete_boundary.sql',
+  'supabase/migrations/20260822123554_v19_harden_scim_identity_connection_delete_boundary.sql',
   'utf8',
 );
 const contractModeBridge = readFileSync(
-  'supabase/migrations/20260814091900_bridge_enterprise_contract_mode_compatibility.sql',
+  'supabase/migrations/20260822123556_v19_bridge_enterprise_contract_mode_compatibility.sql',
   'utf8',
 );
 const billing = readFileSync(
-  'supabase/migrations/20260814092000_reconcile_enterprise_billing_lifecycle.sql',
+  'supabase/migrations/20260822123558_v19_reconcile_enterprise_billing_lifecycle.sql',
   'utf8',
 );
 const contractModeFinal = readFileSync(
-  'supabase/migrations/20260814092100_finalize_enterprise_contract_mode_compatibility.sql',
+  'supabase/migrations/20260822123600_v19_finalize_enterprise_contract_mode_compatibility.sql',
   'utf8',
 );
 const contractControl = readFileSync(
-  'supabase/migrations/20260814093000_reconcile_enterprise_contract_control_rpcs.sql',
+  'supabase/migrations/20260822123602_v19_reconcile_enterprise_contract_control_rpcs.sql',
   'utf8',
 );
 const licensingRuntime = readFileSync('src/server/enterprise/licensing.ts', 'utf8');
