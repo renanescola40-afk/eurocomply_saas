@@ -18,7 +18,7 @@ describe('Enterprise Evidence Vault data plane', () => {
     expect(reconciliation.changeSet).toBe('2026-08-22-enterprise-data-plane-closure-v18');
     expect(selected).toHaveLength(26);
     expect(selected).toContain('20260817001500_reconcile_enterprise_evidence_vault.sql');
-    expect(selected.at(-1)).toBe('20260822001000_atomic_vendor_risk_quota_mutations.sql');
+    expect(selected.at(-1)).toBe('20260822120617_atomic_vendor_risk_quota_mutations.sql');
 
     expect(selected.indexOf('20260813234000_reconcile_enterprise_break_glass_governance.sql')).toBeLessThan(
       selected.indexOf('20260814090000_reconcile_enterprise_licensing_control_plane.sql'),
@@ -30,7 +30,7 @@ describe('Enterprise Evidence Vault data plane', () => {
       selected.indexOf('20260817001500_reconcile_enterprise_evidence_vault.sql'),
     );
     expect(selected.indexOf('20260817001500_reconcile_enterprise_evidence_vault.sql')).toBeLessThan(
-      selected.indexOf('20260822001000_atomic_vendor_risk_quota_mutations.sql'),
+      selected.indexOf('20260822120617_atomic_vendor_risk_quota_mutations.sql'),
     );
 
     expect(reconciliation.truthBoundary.automaticClassification).toBe(false);
