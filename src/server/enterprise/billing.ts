@@ -165,6 +165,8 @@ export async function syncEnterpriseContractBillingEvent(
     'contract_id',
   );
   const organizationId = metadataValueFromEventObject(object, 'organization_id', 'organizationId');
+  const billingFlow = metadataValueFromEventObject(object, 'billing_flow');
+  const isKnownSelfServiceEvent = billingFlow === 'initial_subscription';
 
   let customerId: string | null = null;
   let subscriptionId: string | null = null;
@@ -210,11 +212,16 @@ export async function syncEnterpriseContractBillingEvent(
 
   if (error) {
     // The bounded V19 Enterprise data plane may legitimately be absent before its
-    // protected Production promotion. Ordinary self-service events have no
-    // explicit Enterprise contract marker and must continue through the existing
-    // self-service webhook path during that transition. An explicitly Enterprise
-    // event must fail retryably instead of being acknowledged and lost.
-    if (isEnterpriseBillingRuntimeMissing(error) && !contractId) {
+    // protected Production promotion. Only events carrying the canonical
+    // self-service billing_flow marker may bypass a missing Enterprise RPC during
+    // that transition. Unmarked or explicitly Enterprise events stay fail-closed
+    // and return retryable 5xx at the webhook boundary rather than being
+    // acknowledged into the wrong billing authority.
+    if (
+      isEnterpriseBillingRuntimeMissing(error)
+      && !contractId
+      && isKnownSelfServiceEvent
+    ) {
       console.warn('[enterprise-billing] stripe_sync_runtime_not_promoted', {
         code: error.code ?? 'unknown',
         eventType: event.type,
