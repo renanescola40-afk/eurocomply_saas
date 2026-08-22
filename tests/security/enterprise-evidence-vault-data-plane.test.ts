@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const migrationPath = 'supabase/migrations/20260817001500_reconcile_enterprise_evidence_vault.sql';
+const migrationPath = 'supabase/migrations/20260822123626_v19_reconcile_enterprise_evidence_vault.sql';
 const migration = readFileSync(migrationPath, 'utf8');
 const evidenceRuntime = readFileSync('src/lib/evidence/storage.ts', 'utf8');
 const evidencePage = readFileSync('src/app/[locale]/dashboard/evidence/page.tsx', 'utf8');
@@ -14,24 +14,22 @@ const reconciliation = JSON.parse(readFileSync('config/supabase-forward-reconcil
 const selected = reconciliation.migrations.map((migrationRecord) => migrationRecord.filename);
 
 describe('Enterprise Evidence Vault data plane', () => {
-  it('keeps the proved Evidence Vault migration ordered inside the V18 bounded forward set', () => {
-    expect(reconciliation.changeSet).toBe('2026-08-22-enterprise-data-plane-closure-v18');
-    expect(selected).toHaveLength(26);
-    expect(selected).toContain('20260817001500_reconcile_enterprise_evidence_vault.sql');
-    expect(selected.at(-1)).toBe('20260822120617_atomic_vendor_risk_quota_mutations.sql');
+  it('keeps the proved Evidence Vault migration ordered inside the V19 bounded forward set', () => {
+    expect(reconciliation.changeSet).toBe('2026-08-22-enterprise-data-plane-closure-v19');
+    expect(selected).toHaveLength(25);
+    expect(selected).toContain('20260822123626_v19_reconcile_enterprise_evidence_vault.sql');
+    expect(selected).not.toContain('20260822120617_atomic_vendor_risk_quota_mutations.sql');
 
-    expect(selected.indexOf('20260813234000_reconcile_enterprise_break_glass_governance.sql')).toBeLessThan(
-      selected.indexOf('20260814090000_reconcile_enterprise_licensing_control_plane.sql'),
+    expect(selected.indexOf('20260822123548_v19_reconcile_enterprise_break_glass_governance.sql')).toBeLessThan(
+      selected.indexOf('20260822123550_v19_reconcile_enterprise_licensing_control_plane.sql'),
     );
-    expect(selected.indexOf('20260814090000_reconcile_enterprise_licensing_control_plane.sql')).toBeLessThan(
-      selected.indexOf('20260814091000_reconcile_enterprise_integrations_scim.sql'),
+    expect(selected.indexOf('20260822123550_v19_reconcile_enterprise_licensing_control_plane.sql')).toBeLessThan(
+      selected.indexOf('20260822123552_v19_reconcile_enterprise_integrations_scim.sql'),
     );
-    expect(selected.indexOf('20260816104500_reconcile_gap_remediation_persistence.sql')).toBeLessThan(
-      selected.indexOf('20260817001500_reconcile_enterprise_evidence_vault.sql'),
+    expect(selected.indexOf('20260822123622_v19_reconcile_gap_remediation_persistence.sql')).toBeLessThan(
+      selected.indexOf('20260822123626_v19_reconcile_enterprise_evidence_vault.sql'),
     );
-    expect(selected.indexOf('20260817001500_reconcile_enterprise_evidence_vault.sql')).toBeLessThan(
-      selected.indexOf('20260822120617_atomic_vendor_risk_quota_mutations.sql'),
-    );
+    expect(selected.at(-1)).toBe('20260822123626_v19_reconcile_enterprise_evidence_vault.sql');
 
     expect(reconciliation.truthBoundary.automaticClassification).toBe(false);
     expect(reconciliation.truthBoundary.productionWriteAuthorizedByConfig).toBe(false);
