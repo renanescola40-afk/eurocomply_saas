@@ -123,6 +123,10 @@ jobs:
       SENTRY_ORG: ${{ vars.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
       SENTRY_AUTH_TOKEN: ${{ secrets['SENTRY_AUTH_TOKEN'] }}
+      NEXT_PUBLIC_POSTHOG_KEY: ${{ vars.NEXT_PUBLIC_POSTHOG_KEY }}
+      NEXT_PUBLIC_POSTHOG_HOST: https://eu.i.posthog.com
+      NEXT_PUBLIC_POSTHOG_ASSET_HOST: https://eu-assets.i.posthog.com
+      NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT: 'true'
       VERCEL_TOKEN: ${{ secrets['VERCEL_TOKEN'] }}
       VERCEL_ORG_ID: ${{ secrets['VERCEL_ORG_ID'] }}
       VERCEL_PROJECT_ID: ${{ secrets['VERCEL_PROJECT_ID'] }}
@@ -175,6 +179,18 @@ jobs:
           fi
           if [ "$RELEASE_TARGET" = 'enterprise' ] && [ "$REQUIRE_MALWARE_SCAN_FOR_UPLOADS" != 'true' ]; then
             echo '::error title=Enterprise upload scanning disabled::Enterprise Production requires malware scanning to be enabled.'
+            exit 1
+          fi
+          if [ -z "${NEXT_PUBLIC_POSTHOG_KEY:-}" ]; then
+            echo '::error title=Missing PostHog Production project binding::Configure NEXT_PUBLIC_POSTHOG_KEY in the protected Production environment from the approved PostHog EU project.'
+            exit 1
+          fi
+          if [ "$NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT" != 'true' ]; then
+            echo '::error title=Analytics consent policy drift::Production analytics must remain explicitly consent-gated.'
+            exit 1
+          fi
+          if [ "$NEXT_PUBLIC_POSTHOG_HOST" != 'https://eu.i.posthog.com' ] || [ "$NEXT_PUBLIC_POSTHOG_ASSET_HOST" != 'https://eu-assets.i.posthog.com' ]; then
+            echo '::error title=PostHog region policy drift::Production analytics must use the approved PostHog EU ingestion and asset hosts.'
             exit 1
           fi
 
@@ -267,6 +283,10 @@ jobs:
             SENTRY_ORG
             SENTRY_PROJECT
             SENTRY_AUTH_TOKEN
+            NEXT_PUBLIC_POSTHOG_KEY
+            NEXT_PUBLIC_POSTHOG_HOST
+            NEXT_PUBLIC_POSTHOG_ASSET_HOST
+            NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT
             STEP_UP_SIGNING_SECRET
             STEP_UP_PROVIDER_MODE
             REQUIRE_MALWARE_SCAN_FOR_UPLOADS
@@ -329,6 +349,10 @@ jobs:
             NEXT_PUBLIC_SENTRY_DSN \
             SENTRY_ORG \
             SENTRY_PROJECT \
+            NEXT_PUBLIC_POSTHOG_KEY \
+            NEXT_PUBLIC_POSTHOG_HOST \
+            NEXT_PUBLIC_POSTHOG_ASSET_HOST \
+            NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT \
             STEP_UP_PROVIDER_MODE \
             REQUIRE_MALWARE_SCAN_FOR_UPLOADS \
             MALWARE_SCANNER_PROVIDER
