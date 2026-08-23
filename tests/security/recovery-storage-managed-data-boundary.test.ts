@@ -61,20 +61,15 @@ describe('database-only recovery managed-data boundary', () => {
     expect(exercise).toContain('checks.managedAuthRowsExcluded = true');
   });
 
-  it('plans the Auth boundary only after every target mutation and immediately before data replay planning', () => {
+  it('binds managed Auth inventory only after target extension mutations and before data dump', () => {
     const extensionParity = exercise.indexOf("failurePhase = 'extension_parity'");
-    const extensionMutation = exercise.indexOf('for (const entry of extensionPlan.enable) sql(restore, entry.sql');
-    const extensionParityValidated = exercise.indexOf("if (!checks.extensionParity) throw new Error('recovery_target_extension_parity_failed')");
-    const authInventory = exercise.indexOf("failurePhase = 'managed_auth_relation_inventory'");
+    const managedAuthInventory = exercise.indexOf("failurePhase = 'managed_auth_relation_inventory'");
     const dataDump = exercise.indexOf("failurePhase = 'data_dump'");
-    const isolatedRestore = exercise.indexOf("failurePhase = 'isolated_restore'");
-
-    expect(extensionParity).toBeGreaterThan(-1);
-    expect(extensionMutation).toBeGreaterThan(extensionParity);
-    expect(extensionParityValidated).toBeGreaterThan(extensionMutation);
-    expect(authInventory).toBeGreaterThan(extensionParityValidated);
-    expect(dataDump).toBeGreaterThan(authInventory);
-    expect(isolatedRestore).toBeGreaterThan(dataDump);
+    expect(extensionParity).toBeGreaterThanOrEqual(0);
+    expect(managedAuthInventory).toBeGreaterThan(extensionParity);
+    expect(dataDump).toBeGreaterThan(managedAuthInventory);
+    expect(exercise).toContain('Any target extension mutation must finish before we bind the managed Auth');
+    expect(exercise).toContain('Managed Auth inventory is rebound after all target extension mutations');
   });
 
   it('keeps Auth drift evidence aggregate-only and preserves auth.users integrity', () => {

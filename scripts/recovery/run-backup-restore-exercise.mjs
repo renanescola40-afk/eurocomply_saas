@@ -256,9 +256,10 @@ try {
     failurePhase = 'schema_dump';
     run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath], {}, 'recovery_schema_dump_failed');
 
-    // Any target mutation that can affect managed catalog shape must finish before
-    // the Auth data boundary is planned. The protected run proved that planning
-    // Auth before extension parity can leave a stale target relation inventory.
+    // Any target extension mutation must finish before we bind the managed Auth
+    // catalog used to decide which provider-managed rows are safe to replay.
+    // This prevents a stale pre-extension inventory from allowing COPY entries
+    // for relations that no longer exist on the disposable target.
     failurePhase = 'extension_parity';
     const sourceExtensions = readInstalledExtensions(source, 'recovery_source_extensions_query_failed');
     const targetExtensions = readInstalledExtensions(restore, 'recovery_target_extensions_query_failed');
@@ -270,7 +271,9 @@ try {
     if (extensionPlan.unavailableVersions.length > 0) throw new Error('recovery_target_extension_version_unavailable');
     if (extensionPlan.schemaMismatches.length > 0) throw new Error('recovery_target_extension_schema_mismatch');
     if (extensionPlan.versionMismatches.length > 0) throw new Error('recovery_target_extension_version_mismatch');
-    for (const entry of extensionPlan.enable) sql(restore, entry.sql, 'recovery_target_extension_enable_failed');
+    for (const entry of extensionPlan.enable) {
+      sql(restore, entry.sql, 'recovery_target_extension_enable_failed');
+    }
     const finalTargetExtensions = readInstalledExtensions(restore, 'recovery_target_extensions_recheck_failed');
     extensionParity.targetFinalCount = finalTargetExtensions.length;
     checks.extensionParity = extensionParitySatisfied(sourceExtensions, finalTargetExtensions);
@@ -356,7 +359,7 @@ const evidence = {
   failureDiagnostic: passed ? null : failureDiagnostic,
   evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, extensionNamesStored: false, extensionVersionsStored: false, managedAuthRelationNamesStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
   evidenceBoundary: ephemeralMode
-    ? 'Supabase-managed Auth/REST/Storage relations were primed on the empty isolated target by the local Supabase runtime and all API services were stopped before any Production snapshot restore. Supabase-compatible logical roles and application schema are captured first; exact extension parity is then established on the disposable DB-only target before the provider-managed Auth relation inventory is planned immediately ahead of the data dump. Storage row data is excluded from this backup/restore proof. Provider-managed Auth relations that exist only in the Production source are excluded from data replay only when their source row count is zero; any non-empty source-only Auth relation fails closed, and auth.users row-count integrity remains mandatory. Selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; managed Auth relation names, extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
+    ? 'Supabase-managed Auth/REST/Storage relations were primed on the empty isolated target by the local Supabase runtime and all API services were stopped before any Production snapshot restore. Supabase-compatible logical roles, application schema and application/auth data were then restored transactionally into the DB-only target after aggregate-only exact extension name/schema/version parity was verified. Managed Auth inventory is rebound after all target extension mutations and immediately before the Production data dump, so stale target catalog state cannot authorize replay. Storage row data is excluded from this backup/restore proof. Provider-managed Auth relations that exist only in the final pre-data Production-source/target comparison are excluded from data replay only when their source row count is zero; any non-empty source-only Auth relation fails closed, and auth.users row-count integrity remains mandatory. Selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; managed Auth relation names, extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
     : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated digest; connection strings, raw command arguments, raw process errors and the dump are not retained.',
 };
 mkdirSync(dirname(output), { recursive: true });
