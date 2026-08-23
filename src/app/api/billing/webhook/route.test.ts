@@ -43,7 +43,6 @@ vi.mock('@/lib/security/rate-limit-response', () => ({
 
 import { BILLING_WEBHOOK_TOLERANCE_SECONDS, POST, getBillingWebhookContentLength, readBoundedBillingWebhookBody } from './route';
 
-const TEST_STRIPE_SECRET_KEY = 'sk_test_webhook_route';
 const TEST_STRIPE_WEBHOOK_SECRET = 'test_webhook_signing_secret';
 const originalStripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
@@ -69,7 +68,7 @@ function makeStripeEvent(type = 'customer.subscription.updated') {
 describe('legacy billing webhook route hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.STRIPE_SECRET_KEY = TEST_STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_SECRET_KEY;
     delete process.env.STRIPE_WEBHOOK_SECRET;
     process.env.STRIPE_WEBHOOK_SEC_RET = TEST_STRIPE_WEBHOOK_SECRET;
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
