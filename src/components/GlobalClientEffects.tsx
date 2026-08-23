@@ -2,13 +2,56 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { analyticsEvents, captureAnalyticsEvent } from "@/lib/analytics/posthog-client";
+import {
+  ANALYTICS_CONSENT_GRANTED_EVENT,
+  analyticsEvents,
+  captureAnalyticsEvent,
+} from "@/lib/analytics/posthog-client";
+import {
+  classifyPublicMarketingPage,
+  getMarketingAttributionProperties,
+  persistMarketingAttribution,
+} from "@/lib/analytics/marketing-attribution";
 import { useZoerIframe } from "@/hooks/useZoerIframe";
+
+const CONSENT_STORAGE_KEY = "risckcomply.analytics.consent";
+
+function isMarketingCaptureAllowed() {
+  if (process.env.NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT === "false") return true;
+  return window.localStorage.getItem(CONSENT_STORAGE_KEY) === "granted";
+}
 
 export default function GlobalClientEffects() {
   const pathname = usePathname() || "/";
 
   useZoerIframe();
+
+  useEffect(() => {
+    persistMarketingAttribution();
+
+    const capturePublicPageView = () => {
+      const page = classifyPublicMarketingPage(pathname);
+      if (!page || !isMarketingCaptureAllowed()) return;
+
+      const key = `risckcomply.analytics.public_page.${page.event}.${pathname}.${window.location.search}`;
+      if (window.sessionStorage.getItem(key)) return;
+
+      captureAnalyticsEvent(page.event, {
+        path: pathname,
+        page_type: page.pageType,
+        funnel_stage: page.funnelStage,
+        ...getMarketingAttributionProperties("last_touch"),
+      });
+      window.sessionStorage.setItem(key, "1");
+    };
+
+    capturePublicPageView();
+    window.addEventListener(ANALYTICS_CONSENT_GRANTED_EVENT, capturePublicPageView);
+
+    return () => {
+      window.removeEventListener(ANALYTICS_CONSENT_GRANTED_EVENT, capturePublicPageView);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -23,6 +66,8 @@ export default function GlobalClientEffects() {
     captureAnalyticsEvent(analyticsEvents.checkoutCompleted, {
       path: pathname,
       source: "return_url",
+      funnel_stage: "commercial",
+      ...getMarketingAttributionProperties("last_touch"),
     });
 
     searchParams.delete("checkout");
