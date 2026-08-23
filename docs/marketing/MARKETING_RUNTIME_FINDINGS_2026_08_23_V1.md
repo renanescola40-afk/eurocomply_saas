@@ -113,6 +113,60 @@ No DNS verification token belongs in GitHub.
 
 ---
 
+# SEO-002 — Locale-less public aliases + competing hreflang authority
+
+Severity: P0/P1 international SEO consolidation
+Status: `ROOT_CAUSE_PROVEN / REMEDIATION_PRESTAGED / PREVIEW_READY / RELEASE_DEPENDENT`
+
+## Search/runtime evidence
+
+Fresh public search evidence exposes locale-less assurance URLs such as `/trust`, `/dpa` and `/data-processing` as search-result URLs alongside locale-prefixed surfaces.
+
+Current protected-main routing already intends explicit locale prefixes (`localePrefix: 'always'`). However, locale-less non-API requests fall through custom locale detection and use `NextResponse.redirect` to a target selected from cookie/country/Accept-Language. This is a temporary/dynamic entry-point behavior rather than a permanent canonical migration signal.
+
+Fresh resolution of locale-less assurance URLs showed that the final locale can vary with requester context.
+
+Separately, HTML metadata + sitemap already emit canonical/hreflang relationships, while `next-intl` also emitted response-header alternate links by default. Runtime inspection showed the header-level x-default could use the unprefixed path while HTML metadata intentionally uses the default English locale URL.
+
+```text
+EXPLICIT_LOCALE_ARCHITECTURE=PRESENT
+LOCALELESS_PUBLIC_REDIRECT=TEMPORARY_DYNAMIC_BEFORE_FIX
+SEARCH_LOCALELESS_ALIASES=OBSERVED
+HTML_HREFLANG=PRESENT
+SITEMAP_HREFLANG=PRESENT
+NEXT_INTL_HTTP_HREFLANG=COMPETING_BEFORE_FIX
+X_DEFAULT_AUTHORITY=CONFLICTING_BEFORE_FIX
+```
+
+## Remediation prestaged on marketing branch
+
+```text
+e25cd546cebf942655c6367b85aa1ecd6fb1d049  disable competing next-intl alternate Link header
+202f191680a6d2176bffea92687b33432b20c0b6  permanent fixed public alias canonicalization
+4cdca44ab0173e79aad26bc755e0b51ff40a5be8  international SEO regression contract
+705e23afa8a94356e462bb632465220ecd9d987b  canonical evidence packet
+```
+
+The runtime commit `202f191...` completed a Vercel Preview deployment in `READY` state.
+
+The remediation:
+
+- keeps explicit locale-prefixed public URLs;
+- makes HTML metadata + sitemap the single hreflang authority (`alternateLinks: false`);
+- permanently redirects fixed-slug locale-less public aliases to `/en/...` through `next.config` before middleware;
+- keeps auth/private locale negotiation unchanged;
+- deliberately does not force generic `/features/*` aliases to English because feature slugs are localized.
+
+Direct preview 308 observation is not claimed because the Preview is protected by Vercel SSO in the available HTTP connector. Production HTTP proof remains required after release activation.
+
+Canonical evidence: `INTERNATIONAL_SEO_CANONICALIZATION_EVIDENCE_V1.md`.
+
+## Route
+
+Preserve the remediation inside future **SEO Authority + Brand Entity Mega PR** rather than creating a separate SEO PR.
+
+---
+
 # ANALYTICS-001 — Production PostHog binding drift + missing acquisition attribution
 
 Severity: P0 acquisition measurement
@@ -145,7 +199,7 @@ The browser bundle proves:
 
 - PostHog runtime code is present;
 - consent UX is present;
-- the approved EU PostHog network hosts are present;
+- approved EU PostHog network hosts are present;
 - a non-empty browser Project API Key is present.
 
 A private equality comparison, without printing or storing either value, proved:
@@ -189,11 +243,8 @@ Branch-only commits:
 
 ```text
 873f2c489618b6f4ebd2c720e1fed3100f860611  govern PostHog Production binding
-
 e1bd05bab2af06f2fa257b0af9f4ad1d9cbcfdfe  lock deployment regression contract
-
 f6d65b8f04c2644c321c30111e0f3e2a1125c2e2  document governed Production mapping
-
 8a48a893d30c8683542a894e325c1aeae8a5da1b  record canonical root-cause evidence
 ```
 
@@ -230,6 +281,7 @@ Canonical evidence: `POSTHOG_LIVE_READINESS_EVIDENCE_V1.md`.
 Include:
 
 - BRAND-002;
+- SEO-002 already-prestaged locale canonicalization/hreflang remediation;
 - flagship Article 50 / Provider-vs-Deployer / Inventory / Evidence/resource surfaces;
 - canonical Organization entity cleanup;
 - verified `sameAs`;
@@ -246,7 +298,7 @@ Include:
 - AI-system-count qualification;
 - stable CTA IDs;
 - intent routing;
-- **already-prestaged PostHog Production binding-governance remediation**;
+- already-prestaged PostHog Production binding-governance remediation;
 - public acquisition event taxonomy;
 - bounded first/last-touch attribution;
 - lead attribution persistence;
@@ -269,6 +321,10 @@ CRO_001_DEMO_TRIAL_MISMATCH=PROVEN
 BRAND_001_LINKEDIN_MISMATCH=PROVEN_OWNER_ACTION
 BRAND_002_STRUCTURED_ENTITY_VARIANT=PROVEN_RUNTIME
 SEO_001_SEARCH_CONSOLE=OWNER_ACTION_NOT_CODE_DEFECT
+SEO_002_LOCALELESS_ALIAS_ROOT_CAUSE=PROVEN
+SEO_002_HREFLANG_CONFLICT=PROVEN
+SEO_002_REMEDIATION=PRESTAGED_BRANCH_ONLY
+SEO_002_RUNTIME_PREVIEW=READY
 ANALYTICS_001_POSTHOG_FOUNDATION=PRESENT
 ANALYTICS_001_PRODUCTION_PUBLIC_KEY=PRESENT
 ANALYTICS_001_PRODUCTION_KEY_MATCH=FAIL
