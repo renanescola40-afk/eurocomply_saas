@@ -16,141 +16,130 @@ MAIN_CHANGED_BY_MARKETING=NO
 PAID_SCALE=BLOCKED
 ```
 
-The Enterprise Control Tower still requires `NO_NEW_PR` for release-changing work. Marketing remains isolated from main.
+Enterprise authority still requires `NO_NEW_PR` for release-changing work. Marketing remains isolated from main.
 
 ---
 
 ## 2. Readiness scorecard
 
-Internal readiness estimates only — not claims of market performance.
+Internal readiness estimates only — not claims of traffic, pipeline, authority or revenue.
 
 ```text
-MARKETING_READINESS=90
-SEO_READINESS=86
+MARKETING_READINESS=91
+SEO_READINESS=87
 CONTENT_ENGINE=93
 BRAND_AUTHORITY=27
 SOCIAL_ENGINE=84
 CRO_READINESS=81
-ANALYTICS_READINESS=33
+ANALYTICS_READINESS=41
 PAID_READINESS=24
 EUROPE_EXPANSION=84
 SALES_ENABLEMENT_READINESS=97
-MARKETING_OPERATIONS_READINESS=97
+MARKETING_OPERATIONS_READINESS=98
 ABM_OUTBOUND_READINESS=98
 PARTNER_ECOSYSTEM_READINESS=92
 
-OVERALL_PREPARED=90
-OVERALL_REMAINING=10
+OVERALL_PREPARED=91
+OVERALL_REMAINING=9
 ```
 
 Why readiness moved:
 
-- Week 4 AI Inventory demand capture is complete;
-- the lead magnet exists as editable XLSX plus Quick Start PDF;
-- FR/DE/ES ecosystem canvases exist as shareable one-pagers;
-- Brand SERP/entity closure now has a current-evidence owner packet;
-- Search Console now has a precise Domain-property/DNS/sitemap/indexing/performance handoff;
-- a current-main demo/pricing contradiction is proven and staged for the future CRO Mega PR;
-- runtime findings are consolidated into two high-density future Mega PR packages rather than issue/task spam.
+- connected PostHog live state is now characterized rather than assumed;
+- current runtime proves analytics components and EU PostHog CSP paths are present;
+- missing acquisition instrumentation is explicitly bounded;
+- the future measurement implementation has exact events, privacy properties and production proof criteria;
+- the two future Marketing Mega PRs now have a release-triggered activation contract;
+- current Production structured data has been inspected and a concrete brand-entity variant was proven.
 
-Why Brand Authority, Analytics and Paid remain low:
+Why readiness did **not** move further:
 
-- LinkedIn has not yet been normalized externally;
-- indexed brand variants still exist;
-- Search Console ownership/query data are not evidenced;
-- PostHog production marketing-event ingestion is not proven;
-- no real Cohort 1 or ecosystem response exists;
-- paid remains gated on Production GO, measurement and real market signal.
+- PostHog still has no observed event ingestion;
+- Search Console ownership/query data remain unverified;
+- LinkedIn remains externally inconsistent;
+- no Cohort 1 or ecosystem message has been sent;
+- no buyer/partner response or opportunity exists;
+- paid remains gated on Production GO + legal/billing + measurement + market signal.
 
 ---
 
 ## 3. Prepared demand system
 
-### Content / category
+### Positioning / search / content
 
-- Operational AI Governance positioning
+- category: Operational AI Governance
 - Search Authority Cluster
-- Germany / France / Spain offensives
+- Germany / France / Spain market offensives
 - Week 1 — category / inventory
 - Week 2 — Article 50 / provider-deployer
 - Week 3 — evidence governance
 - Week 4 — AI Inventory + lead magnet demand capture
 - Public Content Derivative Engine
+- flagship search URLs specified
 
-### Conversion / resource
+### Lead magnet
 
 - AI System Inventory Template — Operational Edition XLSX
 - Quick Start PDF
 - field dictionary
 - fictional example
-- safe dropdown/review states
+- localized Operational AI Governance Canvas FR/DE/ES
 - no automatic legal classification
 - no compliance score
-- landing-page contract for `/en/resources/ai-system-inventory-template`
-- nurture sequence
-- sparse capture contract
-- UTM/attribution contract
+- resource landing/nurture/UTM contract ready
 
-### Sales / ABM
+### CRO / measurement
+
+- demo pricing contradiction proven;
+- intent-routing architecture ready;
+- AI-governance demo qualification contract ready;
+- PostHog privacy-first foundation verified in code;
+- current runtime analytics components verified present;
+- connected PostHog zero-ingestion state verified;
+- public marketing event contract ready;
+- first/last-touch attribution contract ready;
+- Production proof definition ready.
+
+### Sales / ABM / ecosystem
 
 - 16 researched account hypotheses
 - Cohort 1 = 5 accounts
-- public-signal dossiers 5/5
-- personalised Touch 1 5/5
-- institutional channels 5/5
-- send cards 5/5
-- Gmail drafts 5/5
-- four governance assets + mapped delivery matrix
-
-### Ecosystem
-
+- personalized Touch 1 = 5/5
+- institutional channels = 5/5
+- Gmail drafts = 5/5, none sent
 - Hub France IA contribution = submission-ready
 - KI Bundesverband contribution = submission-ready
 - Adigital contribution = submission-ready
-- Hub draft saved / not sent
-- KI draft saved / not sent
-- Adigital official contact-form copy ready / not submitted
-- localized Operational AI Governance Canvas FR/DE/ES ready
+- Hub/KI drafts saved, none sent
+- Adigital form copy ready, not submitted
 
 ---
 
-## 4. Week 4 — AI Inventory + Demand Capture
+## 4. Live PostHog truth
 
-Execution window: 2026-09-14 to 2026-09-18.
-
-Primary thesis:
-
-> An AI inventory that only lists tool names is a discovery list. Governance starts when systems/use cases are connected to owners, provider context, rationale, evidence and review.
-
-Core model:
-
-`SYSTEM -> USE CASE -> OWNER -> PROVIDER / ROLE CONTEXT -> EVIDENCE -> REVIEW`
-
-Ready:
-
-- founder inventory-vs-vendor-list post;
-- company post on five missing fields;
-- spreadsheet-breakpoint founder post;
-- DE/FR/ES derivatives;
-- lead-magnet launch copy;
-- nurture sequence;
-- ABM reuse rule;
-- capture + attribution contract.
-
-Artifact verification:
+Canonical evidence: `POSTHOG_LIVE_READINESS_EVIDENCE_V1.md`.
 
 ```text
-XLSX_WORKBOOK=READY_VERIFIED
-QUICK_START_PDF=READY_VISUALLY_VERIFIED
-LOCALIZED_CANVAS_FR=READY_PDF
-LOCALIZED_CANVAS_DE=READY_PDF
-LOCALIZED_CANVAS_ES=READY_PDF
-FORMULA_ERROR_SCAN=PASS
-AUTOMATIC_LEGAL_CLASSIFICATION=NO
-COMPLIANCE_SCORE=NO
+POSTHOG_PROJECT_CONNECTED=YES
+POSTHOG_PRIVACY_BASELINE=PRESENT
+POSTHOG_PRODUCTION_COMPONENTS_PRESENT=YES
+POSTHOG_CSP_EU_HOSTS=PASS
+POSTHOG_INGESTED_EVENT=false
+POSTHOG_RECENT_EVENTS=NONE_OBSERVED
+POSTHOG_ACTIONS=0
+POSTHOG_CONVERSION_GOALS=0
+POSTHOG_DASHBOARD=1_STARTER_ONLY
+POSTHOG_SAVED_INSIGHTS=8_STARTER_ONLY
+POSTHOG_PUBLIC_KEY_BINDING=NOT_PROVEN
+PUBLIC_ACQUISITION_EVENT_TAXONOMY=NOT_IMPLEMENTED
+LIVE_ATTRIBUTION=NO
 ```
 
-Landing-page implementation remains release-dependent.
+Important boundary: `NONE_OBSERVED` means the connected project contains no observed event evidence in the checked period; it does not prove there are no product visitors/users.
+
+Current implementation already preserves a strong privacy baseline: explicit consent, manual capture, `autocapture=false`, `capture_pageview=false`, session replay disabled, text/attribute masking, DNT respect, sensitive-path controls and sanitized properties.
+
+The missing work is acquisition instrumentation + attributable funnel + real ingestion proof, not a rewrite of the privacy architecture.
 
 ---
 
@@ -165,52 +154,29 @@ TAGLINE=Operational AI Governance for European Teams
 CANONICAL_URL=https://www.risckcomply.com
 ```
 
-Fresh external evidence shows the official LinkedIn page still exposes `Risck Comply`, a desktop-software category, the old `European AI Compliance Platform` tagline and `Risk Comply` in About copy. Search discovery also exposes some owned public surfaces/wordmark text with non-canonical casing.
+Current external LinkedIn remains inconsistent and requires owner action.
 
-`BRAND_SERP_AUTHORITY_CLOSURE_PACKET_V2.md` now defines:
+Fresh current-production evidence additionally proves the owned JSON-LD graph already emits canonical `name = RISCK COMPLY`, but Organization, WebSite and SoftwareApplication also emit:
 
-- exact LinkedIn replacement fields/copy;
-- safe historical-post cleanup rules;
-- future owned-site brand normalization;
-- Organization structured-data contract;
-- `sameAs` eligibility rules;
-- SERP ownership checks.
+`alternateName = Risck Comply`
 
-Current truth:
+and currently emit no `sameAs`.
+
+Therefore:
 
 ```text
-LINKEDIN_MISMATCH=PROVEN
+CANONICAL_ENTITY_GRAPH=PRESENT
+NONCANONICAL_ALTERNATENAME=PROVEN_RUNTIME
+SAMEAS=ABSENT_CURRENT_RUNTIME
 LINKEDIN_NORMALIZED=NO
-INDEXED_BRAND_VARIANTS=PROVEN
-ORGANIZATION_SAMEAS=NOT_YET_ELIGIBLE
 BRAND_AUTHORITY_LIVE=EARLY
-OWNER_ACTION_REQUIRED=YES
 ```
 
-Brand Authority score does not increase until external identity actually changes and authority signals improve.
+Brand Authority score stays at 27 until the external entity actually changes and third-party authority improves.
 
 ---
 
-## 6. Search Console / SEO measurement
-
-Current-main repository evidence:
-
-- `src/app/sitemap.ts` exists;
-- `src/app/robots.ts` exists;
-- public search discovery currently surfaces core RISCK COMPLY pages.
-
-Owner handoff V2 specifies:
-
-- Domain property `risckcomply.com`;
-- DNS verification only;
-- no public storage of verification token;
-- canonical sitemap submission after runtime confirmation;
-- initial URL Inspection set;
-- Page Indexing baseline;
-- branded/non-brand Performance baseline;
-- T+0 / T+7 / T+14 / T+30 checkpoints.
-
-Current limitations:
+## 6. Search Console / organic measurement
 
 ```text
 SITEMAP_CODE=PASS
@@ -223,78 +189,72 @@ SEARCH_CONSOLE_INDEXING_BASELINE=NO_EVIDENCE
 SEARCH_CONSOLE_QUERY_BASELINE=NO_DATA
 ```
 
-Do not interpret a new/empty Search Console property as zero demand; wait for actual data.
+Owner handoff defines Domain property `risckcomply.com`, DNS verification, sitemap, URL Inspection, Page Indexing and Performance baselines. DNS verification tokens must never be placed in GitHub/public artifacts.
 
 ---
 
-## 7. Proven CRO / marketing runtime findings
+## 7. Canonical marketing findings
 
-Canonical register:
+`MARKETING_RUNTIME_FINDINGS_2026_08_23_V1.md` now consolidates:
 
-`MARKETING_RUNTIME_FINDINGS_2026_08_23_V1.md`
+```text
+CRO_001_DEMO_TRIAL_MISMATCH=PROVEN
+BRAND_001_LINKEDIN_MISMATCH=PROVEN_OWNER_ACTION
+BRAND_002_STRUCTURED_ENTITY_VARIANT=PROVEN_RUNTIME
+SEO_001_SEARCH_CONSOLE=OWNER_ACTION_NOT_CODE_DEFECT
+ANALYTICS_001_POSTHOG_FOUNDATION=PRESENT
+ANALYTICS_001_POSTHOG_LIVE_INGESTION=NO
+ANALYTICS_001_PUBLIC_ACQUISITION_TAXONOMY=MISSING
+ANALYTICS_001_ACTIONS=0
+ANALYTICS_001_CONVERSION_GOALS=0
+```
 
-### CRO-001 — PROVEN
-
-Current demo agenda says:
-
-`pricing motion: trial, Business pilot or Enterprise review`
-
-Canonical pricing truth says no free trial is offered; Essential/Professional are monthly self-service and Business/Enterprise are assisted/demo motions.
-
-Staged future correction:
-
-`commercial fit: self-service checkout, Business-assisted motion or Enterprise review`
-
-Do not change billing authority. Fold this into the future CRO + Acquisition + Attribution Mega PR.
-
-### BRAND-001 — PROVEN / OWNER ACTION
-
-LinkedIn canonical identity mismatch.
-
-### BRAND-002 — PROVEN / STAGED
-
-Indexed owned-surface casing/entity mismatch.
-
-### SEO-001 — OWNER ACTION / NOT CODE DEFECT
-
-Search Console ownership and organic baseline are not evidenced.
-
-### ANALYTICS-001 — OPEN / RELEASE DEPENDENT
-
-PostHog production marketing-event ingestion and end-to-end attribution are not proven.
+No issue spam was created from these sub-gaps.
 
 ---
 
-## 8. Future Mega PR packing
+## 8. Release-triggered Mega PR activation
 
-Do not open while Enterprise authority requires `NO_NEW_PR`.
+Canonical activation contract: `MEGA_PR_ACTIVATION_PACK_V1.md`.
 
-### SEO AUTHORITY + BRAND ENTITY MEGA PR
+### First priority when release authority permits
 
-- flagship Article 50 / Provider-vs-Deployer / Inventory / Evidence pages;
-- brand-variant cleanup on crawlable surfaces;
-- canonical Organization structured data;
-- verified `sameAs` only after profile normalization/ownership;
-- verified footer social/resource links;
-- internal linking/sitemap checks;
-- brand-variant regression guard.
+**CRO + ACQUISITION + ATTRIBUTION MEGA PR**
 
-### CRO + ACQUISITION + ATTRIBUTION MEGA PR
-
-- CRO-001 demo pricing truth;
-- AI-governance-specific demo taxonomy;
+- demo commercial truth;
+- AI-governance qualification;
 - AI-system-count field;
-- intent routing / Trust / Enterprise routing;
+- intent routing;
 - stable CTA IDs;
-- localized CTA copy;
-- UTM persistence;
-- first/last touch;
-- public consent-safe PostHog marketing events;
-- demo/signup/checkout attribution;
-- production event-ingestion proof;
-- consent/privacy tests.
+- public marketing events;
+- first/last-touch UTM persistence;
+- lead/demo/signup/checkout attribution;
+- PostHog Production binding and real ingestion proof;
+- consent + no-PII tests.
 
-Prefer these two high-density packages over overlapping small PRs.
+### Second priority
+
+**SEO AUTHORITY + BRAND ENTITY MEGA PR**
+
+- Article 50 / Provider-vs-Deployer / Inventory / Evidence cluster;
+- Inventory lead-magnet landing;
+- brand variant cleanup;
+- structured-data alternateName review;
+- verified `sameAs` only after profile normalization;
+- verified social links;
+- sitemap/internal linking/schema regression.
+
+Activation gate:
+
+```text
+CONTROL_TOWER_REVALIDATED=YES
+DEFAULT_PR_ACTION!=NO_NEW_PR
+RELEASE_FREEZE_ALLOWS_MARKETING_CHANGE=YES
+CURRENT_MAIN_SHA_REBOUND=YES
+CURRENT_RUNTIME_REVALIDATED=YES
+```
+
+Current state: `PR_OPEN_NOW=NO`.
 
 ---
 
@@ -313,7 +273,7 @@ ENDORSEMENTS_CONFIRMED=0
 
 LINKEDIN_NORMALIZED=NO
 SEARCH_CONSOLE_LIVE=NO_EVIDENCE
-POSTHOG_LIVE_INGESTION=NOT_PROVEN
+POSTHOG_LIVE_INGESTION=NO
 ATTRIBUTION_LIVE=NO
 CRM_CONNECTED=NO_EVIDENCE
 REPEATABLE_PIPELINE=NOT_VERIFIED
@@ -330,7 +290,7 @@ Prepared is not Live. Live is not Validated. Validated is not Scaled.
 
 - `PRODUCTION_GO=NO_GO`
 - V19 Production remains `0/25`
-- final current-SHA Enterprise PASS not published
+- current exact-main Enterprise PASS is not published
 
 ### External / human
 
@@ -339,11 +299,11 @@ Prepared is not Live. Live is not Validated. Validated is not Scaled.
 - independent pentest/retest
 - legitimate Stripe LIVE lifecycle
 
-### Marketing infrastructure / market evidence
+### Marketing reality
 
-- LinkedIn entity normalization not executed
-- Search Console owner verification not evidenced
-- PostHog production ingestion not proven
+- LinkedIn normalization not executed
+- Search Console verification not evidenced
+- PostHog real ingestion absent
 - attribution not live
 - CRM not connected/verified
 - Cohort 1 not sent
@@ -361,28 +321,26 @@ STRIPE_LIVE_LIFECYCLE=ACCEPTED
 POSTHOG_PRODUCTION_INGESTION=VERIFIED
 ATTRIBUTION=VERIFIED
 CONSENT=VERIFIED
+SEARCH_CONSOLE=VERIFIED
 LANDING_PRICING_DEMO_TRUTH=REVALIDATED
 INITIAL_ICP_WEDGE_SIGNAL=OBSERVED
 ```
 
-Only then begin small high-intent paid tests.
+Only then begin bounded high-intent paid tests.
 
 ---
 
 ## 12. Next transition rule
 
-If the next request is `continue` while `PRODUCTION_GO=NO_GO`:
+While `PRODUCTION_GO=NO_GO` and external sends remain unauthorized:
 
-1. do not send Cohort 1 or ecosystem drafts without explicit instruction to send;
-2. do not create Week 5 merely to increase content volume;
-3. avoid more internal strategy unless it closes a new execution gap;
-4. prioritize owner-executable brand/Search Console handoff and external publication readiness;
-5. inspect PostHog/measurement only where connected evidence can materially close a live-readiness gap;
-6. do not expand the account cohort before first-cohort learning or a major new public trigger;
-7. create no marketing issue/task spam;
-8. keep release-dependent implementation in the two consolidated future Mega PRs.
-
-If `PRODUCTION_GO=PASS`, revalidate runtime/legal/billing/analytics before acquisition scale changes.
+1. do not create Week 5 for cosmetic score growth;
+2. do not expand Cohort 1 before learning;
+3. do not create new issue/task spam;
+4. do not open either Mega PR while `NO_NEW_PR` remains authoritative;
+5. re-read Control Tower on every new `continue`;
+6. if release authority changes, activate the prepared Mega PR pack immediately rather than producing more strategy;
+7. otherwise only execute genuinely new live evidence or owner-action preparation.
 
 ---
 
@@ -392,17 +350,14 @@ If `PRODUCTION_GO=PASS`, revalidate runtime/legal/billing/analytics before acqui
 POSITIONING=READY
 EUROPE_SEARCH_STRATEGY=READY
 CONTENT_SYSTEM=READY
-WEEK_1_EXECUTION=READY
-WEEK_2_REGULATORY_EXECUTION=READY
-WEEK_3_EVIDENCE_EXECUTION=READY
-WEEK_4_INVENTORY_DEMAND_CAPTURE=READY
-PUBLIC_DERIVATIVE_ENGINE=READY
+WEEKS_1_TO_4=READY
 AI_INVENTORY_LEAD_MAGNET=READY_ARTIFACT
 LOCALIZED_ECOSYSTEM_CANVASES=READY_3_OF_3
 BRAND_SERP_CLOSURE_PACKET=READY_OWNER_ACTION
 SEARCH_CONSOLE_HANDOFF_V2=READY_OWNER_ACTION
-SEO_RUNTIME_DISCOVERY_EVIDENCE=READY
-CRO_001_DEMO_TRIAL_MISMATCH=PROVEN_STAGED_FOR_MEGA_PR
+POSTHOG_LIVE_READINESS=CHARACTERIZED
+MEGA_PR_ACTIVATION_PACK=READY
+CRO_001_DEMO_TRIAL_MISMATCH=PROVEN_STAGED
 SALES_ENABLEMENT=READY
 ABM_ENGINE=READY
 COHORT_1_GMAIL_DRAFTS=READY_5_OF_5
@@ -414,11 +369,12 @@ LIVE_ECOSYSTEM_SUBMISSIONS=0
 LIVE_PARTNER_RESPONSE=0
 LINKEDIN_NORMALIZED=NO
 LIVE_SEARCH_CONSOLE=NO_EVIDENCE
+LIVE_POSTHOG_INGESTION=NO
 LIVE_ATTRIBUTION=NO
 LIVE_REPEATABLE_PIPELINE=NOT_VERIFIED
 LIVE_PAID_SCALE=NO
 
-MARKETING_PREPARED=90%
-MARKETING_REMAINING=10%
+MARKETING_PREPARED=91%
+MARKETING_REMAINING=9%
 MAIN_CHANGED_BY_MARKETING=NO
 ```
