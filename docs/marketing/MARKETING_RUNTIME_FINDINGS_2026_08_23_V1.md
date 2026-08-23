@@ -1,50 +1,67 @@
 # RISCK COMPLY — MARKETING RUNTIME FINDINGS — 2026-08-23 V1
 
-Status: FINDINGS_PROVEN_AND_ROUTED / NO_RELEASE_PR_OPENED
+Status: FINDINGS_PROVEN_AND_ROUTED / CURRENT_MAIN_AWARE / NO_RELEASE_PR_OPENED
 Checked: 2026-08-23
-Current protected main: `baf9ad40795c13df15f1120ee4a8ce025c07a7a2`
+Current protected main: `29b40870b25e2d34a9eda921b820047b8020cfb6`
 Release freeze: `STABLE`
 
 ## Purpose
 
-Consolidate only attributable marketing/CRO/SEO/measurement findings that deserve owner action or inclusion in a future high-density Mega PR.
+Consolidate only attributable CRO, SEO, brand, measurement and activation-safety findings that belong in owner actions or the two future Marketing Mega PRs.
 
-This file is not a task dump. Related findings are deliberately packed into two future Mega PRs.
+This is not a task dump.
 
 ---
 
-# CRO-001 — Demo implies a trial that pricing truth explicitly denies
+# COMMERCIAL-001 — Payment-first is now canonical product truth
 
-Severity: P0 marketing truth / P1 release engineering priority depending release gate
-Status: `PROVEN`
+Severity: P0 commercial semantics
+Status: `MERGED_CURRENT_MAIN / MUST_PRESERVE`
 
-## Evidence
+#1794 established:
 
-Current main `src/app/[locale]/book-demo/page.tsx` contains:
+```text
+AUTHENTICATED != LICENSED
+ORGANIZATION_SHELL != LICENSED
+ONBOARDING_STATE != LICENSED
+LOCAL_SUBSCRIPTION_ROW != LICENSED
+```
 
-`5 min — pricing motion: trial, Business pilot or Enterprise review`
+Marketing/analytics consequences:
 
-Canonical `src/lib/i18n/pricing-commercial-truth.ts` states in all six locales that no free trial is currently offered. English truth:
+```text
+user_signed_up      = account / qualified conversion, NOT paid customer
+checkout_started    = commercial intent
+checkout_completed  = checkout-flow conversion, NOT standalone product authority
+subscription_active = strongest self-service commercial activation signal
+```
 
-`No free trial is currently offered. Essential and Professional use self-serve monthly checkout. Business and Enterprise start with assisted sales or a demo.`
+Valid signed-contract authority also remains a legitimate Enterprise/assisted licensing source.
 
-## Route
+Route: every future CRO/analytics change must preserve canonical billing/entitlement authority and must never grant product access from analytics state.
 
-Future CRO + Acquisition + Attribution Mega PR.
+---
 
-Recommended line:
+# CRO-001 — Demo implies a trial that canonical pricing denies
 
-`5 min — commercial fit: self-service checkout, Business-assisted motion or Enterprise review`
+Severity: P0 marketing truth
+Status: `PROVEN / REVALIDATE_ON_CURRENT_MAIN_BEFORE_FIX`
 
-Also replace generic GRC demo drivers with the approved AI-governance taxonomy and add AI-system-count qualification in the same package.
+Previously proven demo wording included:
 
-## Acceptance
+`pricing motion: trial, Business pilot or Enterprise review`
 
-- no public demo copy offers/implies a free trial;
-- Essential/Professional remain self-service monthly checkout;
-- Business/Enterprise remain assisted/demo motions;
-- six locales preserve the same commercial truth;
-- billing entitlement authority does not change.
+Canonical pricing truth states no free trial is offered.
+
+Route: future **CRO + Acquisition + Attribution Mega PR** after fresh current-main revalidation.
+
+Acceptance:
+
+```text
+DEMO_FREE_TRIAL_IMPLICATION=0
+PAYMENT_FIRST_REGRESSION=0
+BILLING_AUTHORITY_CHANGED=NO
+```
 
 ---
 
@@ -53,45 +70,32 @@ Also replace generic GRC demo drivers with the approved AI-governance taxonomy a
 Severity: P0 brand authority
 Status: `PROVEN_EXTERNAL / OWNER_ACTION`
 
-Current public LinkedIn still exposes non-canonical name/tagline/category/About variants.
+Public LinkedIn previously exposed non-canonical product naming/tagline/category/About variants.
 
-Route: `BRAND_SERP_AUTHORITY_CLOSURE_PACKET_V2.md`.
+Route: owner normalization to:
 
-No repository PR can change LinkedIn.
+```text
+NAME=RISCK COMPLY
+TAGLINE=Operational AI Governance for European Teams
+```
+
+No repository PR can perform the LinkedIn owner action.
 
 ---
 
-# BRAND-002 — Owned/indexed entity signals still reinforce non-canonical casing
+# BRAND-002 — Owned entity graph reinforces non-canonical casing
 
-Severity: P1 brand/entity SEO
-Status: `PROVEN_RUNTIME_AND_EXTERNAL / RELEASE_CHANGE_STAGED`
+Severity: P1 entity SEO
+Status: `PROVEN_RUNTIME / RELEASE_CHANGE_STAGED`
 
-## Fresh runtime evidence
+Production entity graph already uses canonical `name = RISCK COMPLY` but also emitted:
 
-A current-production fetch of `https://www.risckcomply.com/en` shows the canonical entity graph already exists and uses:
+```text
+alternateName=Risck Comply
+sameAs=ABSENT
+```
 
-- Organization `name = RISCK COMPLY`;
-- WebSite `name = RISCK COMPLY`;
-- SoftwareApplication `name = RISCK COMPLY`.
-
-However, all three currently also emit:
-
-`alternateName = Risck Comply`
-
-The same production graph currently has no `sameAs`.
-
-This is stronger evidence than search-result casing alone: the owned structured-data source itself is reinforcing a non-canonical casing variant.
-
-## Route
-
-Future SEO Authority + Brand Entity Mega PR:
-
-- normalize unintended user-visible product references;
-- review/remove non-canonical `alternateName` where it weakens one-entity consistency;
-- preserve one canonical Organization/WebSite/SoftwareApplication graph;
-- add `sameAs` only after official profile ownership and normalization are verified;
-- add only verified official social links;
-- preserve stable URLs/slugs unless redirect/migration is justified.
+Route: future **SEO Authority + Brand Entity Mega PR**. Add `sameAs` only after target profiles are verified, owner-controlled and normalized.
 
 ---
 
@@ -100,136 +104,84 @@ Future SEO Authority + Brand Entity Mega PR:
 Severity: P0 measurement readiness
 Status: `OWNER_ACTION / NOT_A_CODE_DEFECT`
 
-Evidence boundary:
+```text
+SITEMAP_CODE=PASS
+ROBOTS_CODE=PASS
+PUBLIC_DISCOVERY=PARTIAL_PASS
+SEARCH_CONSOLE_VERIFIED=NO_EVIDENCE
+SEARCH_CONSOLE_INDEXING_BASELINE=NO_EVIDENCE
+SEARCH_CONSOLE_QUERY_BASELINE=NO_DATA
+```
 
-- sitemap implementation exists;
-- robots implementation exists;
-- public discovery exists;
-- no connected evidence proves Search Console Domain-property ownership, sitemap-read state, indexing baseline or query baseline.
+Route: `SEARCH_CONSOLE_OWNER_EXECUTION_HANDOFF_V2.md`.
 
-Route: execute `SEARCH_CONSOLE_OWNER_EXECUTION_HANDOFF_V2.md`.
-
-No DNS verification token belongs in GitHub.
+Never place DNS verification tokens in repository artifacts.
 
 ---
 
-# SEO-002 — Locale-less public aliases + competing hreflang authority
+# SEO-002 — Locale-less aliases + competing hreflang authority
 
-Severity: P0/P1 international SEO consolidation
-Status: `ROOT_CAUSE_PROVEN / REMEDIATION_PRESTAGED / PREVIEW_READY / RELEASE_DEPENDENT`
+Severity: P0/P1 international SEO
+Status: `ROOT_CAUSE_PROVEN / REMEDIATION_PRESTAGED / PREVIEW_READY / REINTEGRATION_REQUIRED`
 
-## Search/runtime evidence
-
-Fresh public search evidence exposes locale-less assurance URLs such as `/trust`, `/dpa` and `/data-processing` as search-result URLs alongside locale-prefixed surfaces.
-
-Current protected-main routing already intends explicit locale prefixes (`localePrefix: 'always'`). However, locale-less non-API requests fall through custom locale detection and use `NextResponse.redirect` to a target selected from cookie/country/Accept-Language. This is a temporary/dynamic entry-point behavior rather than a permanent canonical migration signal.
-
-Fresh resolution of locale-less assurance URLs showed that the final locale can vary with requester context.
-
-Separately, HTML metadata + sitemap already emit canonical/hreflang relationships, while `next-intl` also emitted response-header alternate links by default. Runtime inspection showed the header-level x-default could use the unprefixed path while HTML metadata intentionally uses the default English locale URL.
+Proven before-fix state:
 
 ```text
 EXPLICIT_LOCALE_ARCHITECTURE=PRESENT
-LOCALELESS_PUBLIC_REDIRECT=TEMPORARY_DYNAMIC_BEFORE_FIX
+LOCALELESS_PUBLIC_REDIRECT=TEMPORARY_DYNAMIC
 SEARCH_LOCALELESS_ALIASES=OBSERVED
 HTML_HREFLANG=PRESENT
 SITEMAP_HREFLANG=PRESENT
-NEXT_INTL_HTTP_HREFLANG=COMPETING_BEFORE_FIX
-X_DEFAULT_AUTHORITY=CONFLICTING_BEFORE_FIX
+NEXT_INTL_HTTP_HREFLANG=COMPETING
+X_DEFAULT_AUTHORITY=CONFLICTING
 ```
 
-## Remediation prestaged on marketing branch
+Validated prestaged commits:
 
 ```text
-e25cd546cebf942655c6367b85aa1ecd6fb1d049  disable competing next-intl alternate Link header
+e25cd546cebf942655c6367b85aa1ecd6fb1d049  one hreflang authority
 202f191680a6d2176bffea92687b33432b20c0b6  permanent fixed public alias canonicalization
 4cdca44ab0173e79aad26bc755e0b51ff40a5be8  international SEO regression contract
-705e23afa8a94356e462bb632465220ecd9d987b  canonical evidence packet
 ```
 
-The runtime commit `202f191...` completed a Vercel Preview deployment in `READY` state.
+Vercel Preview reached `READY`. Direct preview 308 remains uncredited due SSO protection.
 
-The remediation:
+Current-main compatibility note: `next.config.ts` on the marketing branch was explicitly compared with current `main@29b40870...`; it retains current main configuration plus the bounded locale-less public alias redirects. The overall branch is still stale and must not be opened directly.
 
-- keeps explicit locale-prefixed public URLs;
-- makes HTML metadata + sitemap the single hreflang authority (`alternateLinks: false`);
-- permanently redirects fixed-slug locale-less public aliases to `/en/...` through `next.config` before middleware;
-- keeps auth/private locale negotiation unchanged;
-- deliberately does not force generic `/features/*` aliases to English because feature slugs are localized.
-
-Direct preview 308 observation is not claimed because the Preview is protected by Vercel SSO in the available HTTP connector. Production HTTP proof remains required after release activation.
-
-Canonical evidence: `INTERNATIONAL_SEO_CANONICALIZATION_EVIDENCE_V1.md`.
-
-## Route
-
-Preserve the remediation inside future **SEO Authority + Brand Entity Mega PR** rather than creating a separate SEO PR.
+Route: reintegrate onto a fresh current-main branch inside future Mega PR A.
 
 ---
 
-# ANALYTICS-001 — Production PostHog binding drift + missing acquisition attribution
+# ANALYTICS-001 — PostHog Production binding drift
 
 Severity: P0 acquisition measurement
-Status: `ROOT_CAUSE_PROVEN / REMEDIATION_PRESTAGED / RELEASE_DEPENDENT`
+Status: `ROOT_CAUSE_PROVEN / REMEDIATION_PRESTAGED / REINTEGRATION_REQUIRED`
 
-## Connected PostHog truth
-
-The connected PostHog control plane currently exposes one accessible EU project. That project has:
+Connected-project truth:
 
 ```text
 POSTHOG_PROJECT_CONNECTED=YES
 POSTHOG_CONNECTED_PROJECT_COUNT=1
-ANONYMIZE_IPS=true
-SESSION_RECORDING=false
 INGESTED_EVENT=false
-RECENT_EVENTS=NONE_OBSERVED
-ACTIONS=0
-MARKETING_CONVERSION_GOALS=0
-DASHBOARDS=1_STARTER_ONLY
-SAVED_INSIGHTS=8_STARTER_ONLY
-ATTRIBUTION_WINDOW_DAYS=90
-ATTRIBUTION_MODE=last_touch
+RECENT_REAL_EVENTS=NONE_OBSERVED
+POSTHOG_ACTIONS=14
+POSTHOG_CONVERSION_GOALS=0
+MARKETING_DASHBOARD=DEFER_UNTIL_REAL_DATA
 ```
 
-`NONE_OBSERVED` does not mean the product has no users. It means this connected analytics project has no observed event evidence for the checked period.
-
-## Current Production runtime truth
-
-The browser bundle proves:
-
-- PostHog runtime code is present;
-- consent UX is present;
-- approved EU PostHog network hosts are present;
-- a non-empty browser Project API Key is present.
-
-A private equality comparison, without printing or storing either value, proved:
+Production runtime previously proved:
 
 ```text
-PRODUCTION_POSTHOG_KEY == CONNECTED_PROJECT_KEY -> FALSE
+POSTHOG_RUNTIME=PRESENT
+CONSENT_UI=PRESENT
+EU_HOSTS=PRESENT
+PRODUCTION_PUBLIC_KEY=PRESENT
+PRODUCTION_KEY == CONNECTED_PROJECT_KEY -> FALSE
 ```
 
-Therefore:
+No key values were printed or stored.
 
-```text
-POSTHOG_PRODUCTION_PUBLIC_KEY=PRESENT
-POSTHOG_PRODUCTION_KEY_MATCH=FAIL_CURRENTLY
-POSTHOG_BINDING_DRIFT=PROVEN
-```
-
-## Root cause
-
-Current protected `main` deployment workflow synchronizes many provider bindings into Vercel before Production build, but does not govern:
-
-```text
-NEXT_PUBLIC_POSTHOG_KEY
-NEXT_PUBLIC_POSTHOG_HOST
-NEXT_PUBLIC_POSTHOG_ASSET_HOST
-NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT
-```
-
-That gap allows Vercel Production to retain a PostHog project binding independently of the protected GitHub Production environment and the project audited by this workstream.
-
-Root-cause classification:
+Root cause:
 
 ```text
 ANALYTICS_ROOT_CAUSE=PROVIDER_BINDING_GOVERNANCE_DRIFT
@@ -237,104 +189,146 @@ CODE_CLIENT_INITIALIZATION_DEFECT=NO_EVIDENCE
 POSTHOG_SERVICE_OUTAGE=NO_EVIDENCE
 ```
 
-## Remediation already prestaged on marketing branch
-
-Branch-only commits:
+Prestaged remediation:
 
 ```text
-873f2c489618b6f4ebd2c720e1fed3100f860611  govern PostHog Production binding
-e1bd05bab2af06f2fa257b0af9f4ad1d9cbcfdfe  lock deployment regression contract
-f6d65b8f04c2644c321c30111e0f3e2a1125c2e2  document governed Production mapping
-8a48a893d30c8683542a894e325c1aeae8a5da1b  record canonical root-cause evidence
+873f2c489618b6f4ebd2c720e1fed3100f860611  Production binding governance
+e1bd05bab2af06f2fa257b0af9f4ad1d9cbcfdfe  regression contract
+f6d65b8f04c2644c321c30111e0f3e2a1125c2e2  environment mapping
 ```
 
-The prestaged workflow:
-
-- sources the approved PostHog Project API Key from the protected GitHub Production variable contract;
-- locks EU ingestion and asset hosts;
-- forces explicit analytics consent in Production;
-- fails closed on missing key, region drift or consent-policy drift;
-- synchronizes all four analytics bindings to Vercel before the Production build.
-
-No value is stored in repository artifacts.
-
-## Acquisition instrumentation remains missing
-
-Binding correction alone does not create attribution. Mega PR B still must implement:
-
-- public page-intent events;
-- stable CTA IDs/capture;
-- demo start/submit events;
-- bounded first/last-touch UTM persistence;
-- lead/demo/signup/checkout attribution;
-- no-PII PostHog contract;
-- real connected-project ingestion proof.
-
-Canonical evidence: `POSTHOG_LIVE_READINESS_EVIDENCE_V1.md`.
+Route: selectively reintegrate on fresh current main inside Mega PR B.
 
 ---
 
-## Future Mega PR packing
+# ANALYTICS-002 — Provider funnel definitions are complete; runtime attribution is not
 
-### Package A — SEO AUTHORITY + BRAND ENTITY
+Severity: P0/P1 measurement readiness
+Status: `PROVIDER_READY_14_OF_14 / RUNTIME_MISSING`
 
-Include:
+The connected PostHog project now contains canonical Actions for:
+
+```text
+landing_view
+pricing_view
+feature_view
+trust_view
+resource_view
+cta_clicked
+demo_started
+demo_submitted
+document_downloaded
+newsletter_subscribed
+user_signed_up
+checkout_started
+checkout_completed
+subscription_active
+```
+
+These are definitions only. They do not prove any traffic, lead, signup, payment, subscription or customer.
+
+Still missing:
+
+```text
+PUBLIC_EVENT_EMITTERS
+STABLE_CTA_IDS
+FIRST_TOUCH_UTM
+LAST_TOUCH_UTM
+LEAD_ATTRIBUTION
+DEMO_ATTRIBUTION
+SIGNUP_ATTRIBUTION
+CHECKOUT_ATTRIBUTION
+SUBSCRIPTION_ATTRIBUTION
+REAL_CONNECTED_PROJECT_INGESTION
+```
+
+Route: Mega PR B.
+
+---
+
+# ACTIVATION-001 — Marketing branch is materially diverged from current main
+
+Severity: P0 merge/release safety
+Status: `PROVEN / ACTIVATION_RULE_CHANGED`
+
+Fresh compare:
+
+```text
+CURRENT_MAIN=29b40870b25e2d34a9eda921b820047b8020cfb6
+MARKETING_BRANCH_STATUS=DIVERGED
+AHEAD_BY=76
+BEHIND_BY=51
+MERGE_BASE=9c0801d46090f63b05fc0b7d8087e0e9313a525b
+```
+
+Therefore:
+
+```text
+DO_NOT_OPEN_MARKETING_BRANCH_DIRECTLY
+DO_NOT_FORCE_BRANCH_ONTO_MAIN
+```
+
+When release authority opens:
+
+1. create a fresh integration branch from current protected main;
+2. selectively reapply/cherry-pick validated marketing code changes;
+3. preserve payment-first, billing, security and release engineering changes;
+4. run current gates;
+5. only then open Mega PR B/A.
+
+This finding prevents a future marketing PR from silently reverting release work.
+
+---
+
+## Mega PR packing
+
+### Mega PR B — CRO + Acquisition + Attribution
+
+Pack:
+
+- COMMERCIAL-001 preservation;
+- CRO-001;
+- ANALYTICS-001 binding remediation;
+- ANALYTICS-002 runtime instrumentation;
+- payment-first attribution semantics;
+- privacy/consent/no-PII tests;
+- real connected-project ingestion proof.
+
+### Mega PR A — SEO Authority + Brand Entity
+
+Pack:
 
 - BRAND-002;
-- SEO-002 already-prestaged locale canonicalization/hreflang remediation;
-- flagship Article 50 / Provider-vs-Deployer / Inventory / Evidence/resource surfaces;
-- canonical Organization entity cleanup;
-- verified `sameAs`;
-- verified footer social/resource links;
-- sitemap/internal-link validation;
-- brand-variant regression guard.
+- SEO-002;
+- flagship search authority cluster;
+- lead-magnet public landing;
+- canonical entity normalization;
+- verified-only socials/sameAs;
+- sitemap/internal linking;
+- Production canonical/hreflang proof.
 
-### Package B — CRO + ACQUISITION + ATTRIBUTION
-
-Include:
-
-- CRO-001 demo commercial truth;
-- AI-governance demo taxonomy;
-- AI-system-count qualification;
-- stable CTA IDs;
-- intent routing;
-- already-prestaged PostHog Production binding-governance remediation;
-- public acquisition event taxonomy;
-- bounded first/last-touch attribution;
-- lead attribution persistence;
-- demo/signup/checkout attribution;
-- connected PostHog Production ingestion proof;
-- consent/PII regression tests.
-
-Before activating Mega PR B, the protected GitHub `production` environment must contain the approved connected PostHog EU Project API Key under `NEXT_PUBLIC_POSTHOG_KEY`. Never record the value in GitHub files/issues/comments.
-
-Canonical activation contract: `MEGA_PR_ACTIVATION_PACK_V1.md`.
-
-Open neither package while Enterprise authority requires `NO_NEW_PR` unless release authority explicitly changes.
+Both must respect ACTIVATION-001.
 
 ---
 
 ## Current finding state
 
 ```text
-CRO_001_DEMO_TRIAL_MISMATCH=PROVEN
+COMMERCIAL_001_PAYMENT_FIRST=MERGED_MUST_PRESERVE
+CRO_001_DEMO_TRIAL_MISMATCH=PROVEN_REVALIDATE_CURRENT_MAIN
 BRAND_001_LINKEDIN_MISMATCH=PROVEN_OWNER_ACTION
 BRAND_002_STRUCTURED_ENTITY_VARIANT=PROVEN_RUNTIME
 SEO_001_SEARCH_CONSOLE=OWNER_ACTION_NOT_CODE_DEFECT
-SEO_002_LOCALELESS_ALIAS_ROOT_CAUSE=PROVEN
-SEO_002_HREFLANG_CONFLICT=PROVEN
-SEO_002_REMEDIATION=PRESTAGED_BRANCH_ONLY
+SEO_002_ROOT_CAUSE=PROVEN
+SEO_002_REMEDIATION=PRESTAGED_REINTEGRATION_REQUIRED
 SEO_002_RUNTIME_PREVIEW=READY
-ANALYTICS_001_POSTHOG_FOUNDATION=PRESENT
-ANALYTICS_001_PRODUCTION_PUBLIC_KEY=PRESENT
-ANALYTICS_001_PRODUCTION_KEY_MATCH=FAIL
-ANALYTICS_001_BINDING_DRIFT=ROOT_CAUSE_PROVEN
-ANALYTICS_001_BINDING_REMEDIATION=PRESTAGED_BRANCH_ONLY
-ANALYTICS_001_POSTHOG_LIVE_INGESTION_CONNECTED_PROJECT=NO
-ANALYTICS_001_PUBLIC_ACQUISITION_TAXONOMY=MISSING
-ANALYTICS_001_ACTIONS=0
-ANALYTICS_001_CONVERSION_GOALS=0
-LIVE_ATTRIBUTION=NO
+ANALYTICS_001_POSTHOG_BINDING_DRIFT=ROOT_CAUSE_PROVEN
+ANALYTICS_001_BINDING_REMEDIATION=PRESTAGED_REINTEGRATION_REQUIRED
+ANALYTICS_002_PROVIDER_ACTIONS=READY_14_OF_14
+ANALYTICS_002_LIVE_INGESTION=NO
+ANALYTICS_002_LIVE_ATTRIBUTION=NO
+ACTIVATION_001_BRANCH_DIVERGENCE=PROVEN
+MARKETING_BRANCH_DIRECT_PR=FORBIDDEN
 NEW_RELEASE_PR_OPENED=NO
 NEW_MARKETING_ISSUE_CREATED=NO
 MAIN_CHANGED_BY_MARKETING=NO
