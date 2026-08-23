@@ -63,15 +63,18 @@ describe('database-only recovery managed-data boundary', () => {
 
   it('plans the Auth boundary only after every target mutation and immediately before data replay planning', () => {
     const extensionParity = exercise.indexOf("failurePhase = 'extension_parity'");
+    const extensionMutation = exercise.indexOf('for (const entry of extensionPlan.enable) sql(restore, entry.sql');
+    const extensionParityValidated = exercise.indexOf("if (!checks.extensionParity) throw new Error('recovery_target_extension_parity_failed')");
     const authInventory = exercise.indexOf("failurePhase = 'managed_auth_relation_inventory'");
     const dataDump = exercise.indexOf("failurePhase = 'data_dump'");
     const isolatedRestore = exercise.indexOf("failurePhase = 'isolated_restore'");
 
     expect(extensionParity).toBeGreaterThan(-1);
-    expect(authInventory).toBeGreaterThan(extensionParity);
+    expect(extensionMutation).toBeGreaterThan(extensionParity);
+    expect(extensionParityValidated).toBeGreaterThan(extensionMutation);
+    expect(authInventory).toBeGreaterThan(extensionParityValidated);
     expect(dataDump).toBeGreaterThan(authInventory);
     expect(isolatedRestore).toBeGreaterThan(dataDump);
-    expect(exercise).toContain('planning Auth before extension parity can leave a stale target relation inventory');
   });
 
   it('keeps Auth drift evidence aggregate-only and preserves auth.users integrity', () => {
