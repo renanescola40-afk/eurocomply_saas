@@ -123,7 +123,8 @@ describe('final commercial UX closure contracts', () => {
   });
 
   it('keeps checkout completion browser UX subordinate to processed live Stripe authority', () => {
-    expect(activationRoute).toContain("const ACTIVATED_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing'])");
+    expect(activationRoute).toContain("const ACTIVATED_SUBSCRIPTION_STATUSES = new Set(['active']);");
+    expect(activationRoute).not.toContain("new Set(['active', 'trialing'])");
     expect(activationRoute).toContain('hasProcessedLiveStripeSubscriptionAuthority');
     expect(activationRoute).toContain('stripe_customer_id');
     expect(activationRoute).toContain('stripe_subscription_id');
