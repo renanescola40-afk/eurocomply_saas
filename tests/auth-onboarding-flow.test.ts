@@ -41,7 +41,7 @@ describe('auth and onboarding redirect invariants', () => {
     expect(observability).toContain('`/${safeLocale}/dashboard/observability`');
   });
 
-  it('blocks organization product routes until onboarding while preserving billing recovery', () => {
+  it('requires canonical commercial authority before organization product onboarding while preserving billing recovery', () => {
     const dashboard = readRepoFile('src/app/[locale]/dashboard/organizations/page.tsx');
     const dashboardLayout = readRepoFile('src/app/[locale]/dashboard/organizations/layout.tsx');
     const dashboardAccess = readRepoFile('src/server/queries/organization-dashboard-access.ts');
@@ -54,7 +54,12 @@ describe('auth and onboarding redirect invariants', () => {
     expect(dashboardLayout).toContain("await import('next/navigation')");
     expect(dashboardLayout).toContain('navigation.redirect(redirectTarget)');
     expect(dashboardAccess).toContain('getCurrentOrganizationForUser(user.id)');
-    expect(dashboardAccess).toContain('!currentOrganization || !currentOrganization.is_onboarding_completed');
+    expect(dashboardAccess).toContain('getOrganizationBillingAuthority(currentOrganization.id)');
+    expect(dashboardAccess).toContain('if (!authority.licensed)');
+    expect(dashboardAccess).toContain('if (!currentOrganization.is_onboarding_completed)');
+    expect(dashboardAccess.indexOf('if (!authority.licensed)')).toBeLessThan(
+      dashboardAccess.indexOf('if (!currentOrganization.is_onboarding_completed)'),
+    );
     expect(dashboardAccess).toContain('`/${locale}/onboarding`');
     expect(currentOrganization).toContain('onboarding_status');
     expect(currentOrganization).toContain('onboarding_completed_at');
