@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 const exercise = fs.readFileSync('scripts/recovery/run-backup-restore-exercise.mjs', 'utf8');
 const primer = fs.readFileSync('scripts/recovery/prime-ephemeral-managed-storage-schema.mjs', 'utf8');
 
-describe('database-only recovery storage boundary', () => {
+describe('database-only recovery managed-data boundary', () => {
   it('primes managed Storage relations before Production restore and excludes exact current Storage relations', () => {
     expect(exercise).toContain("managedStoragePrimer = 'scripts/recovery/prime-ephemeral-managed-storage-schema.mjs'");
     expect(exercise).toContain("RECOVERY_MANAGED_SCHEMA_PRIME_PHASE: 'pre-production-restore'");
@@ -22,12 +22,12 @@ describe('database-only recovery storage boundary', () => {
     expect(exercise).toContain('checks.managedStorageRelationInventory = true');
     expect(exercise).not.toContain("SUPABASE_MANAGED_DATA_EXCLUDE = 'storage.*'");
     expect(exercise.match(/'--exclude'/g)).toHaveLength(1);
-    expect(exercise).toContain("'--exclude', managedStorageDataExclude");
-    expect(exercise).toContain("failurePhase = 'data_dump_storage_exclusion_validation'");
+    expect(exercise).toContain("'--exclude', managedDataExclude");
+    expect(exercise).toContain("failurePhase = 'data_dump_managed_exclusion_validation'");
     expect(exercise).toContain('assertManagedStorageRowsExcluded(dataDumpPath)');
     expect(exercise).toContain('checks.managedStorageRowsExcluded = true');
     expect(exercise).toContain('all API services were stopped before any Production snapshot restore');
-    expect(exercise).toContain('selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory');
+    expect(exercise).toContain('Selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory');
   });
 
   it('fails closed if Storage inventory is incomplete or contains an unsafe relation name', () => {
@@ -39,6 +39,38 @@ describe('database-only recovery storage boundary', () => {
     expect(exercise).toContain('function assertManagedStorageRowsExcluded(path)');
     expect(exercise).toContain('/^COPY\\s+"?storage"?\\./mi');
     expect(exercise).toContain("throw new Error('recovery_storage_rows_present_in_data_dump')");
+  });
+
+  it('handles provider-managed Auth schema drift without replaying unsupported managed DDL', () => {
+    expect(exercise).toContain('function readManagedAuthTables(connection, boundary)');
+    expect(exercise).toContain("n.nspname = 'auth'");
+    expect(exercise).toContain("c.relkind in ('r','p','f')");
+    expect(exercise).toContain("relations.includes('auth.users')");
+    expect(exercise).toContain("/^auth\\.[a-z0-9_]+$/.test(value)");
+    expect(exercise).toContain('function planManagedAuthDataBoundary(sourceConnection, targetConnection)');
+    expect(exercise).toContain("readManagedAuthTables(sourceConnection, 'source')");
+    expect(exercise).toContain("readManagedAuthTables(targetConnection, 'target')");
+    expect(exercise).toContain('if (targetSet.has(relation)) continue');
+    expect(exercise).toContain('`select count(*) from ${relation};`');
+    expect(exercise).toContain("throw new Error('recovery_target_managed_auth_relation_missing_with_data')");
+    expect(exercise).toContain("failurePhase = 'managed_auth_relation_inventory'");
+    expect(exercise).toContain("const managedAuthDataExclude = managedAuthPlan.sourceOnlyEmptyRelations.join(',')");
+    expect(exercise).toContain('const managedDataExclude = [managedStorageDataExclude, managedAuthDataExclude].filter(Boolean).join(\',\')');
+    expect(exercise).toContain('assertManagedAuthRowsExcluded(dataDumpPath, managedAuthPlan.sourceOnlyEmptyRelations)');
+    expect(exercise).toContain('checks.managedAuthSchemaDriftSafe = true');
+    expect(exercise).toContain('checks.managedAuthRowsExcluded = true');
+  });
+
+  it('keeps Auth drift evidence aggregate-only and preserves auth.users integrity', () => {
+    expect(exercise).toContain('managedAuthBoundary.sourceRelationCount = managedAuthPlan.sourceRelationCount');
+    expect(exercise).toContain('managedAuthBoundary.targetRelationCount = managedAuthPlan.targetRelationCount');
+    expect(exercise).toContain('managedAuthBoundary.sourceOnlyEmptyRelationCount = managedAuthPlan.sourceOnlyEmptyRelationCount');
+    expect(exercise).toContain('sourceAuthUsers = Number(sql(source, \'select count(*) from auth.users;\'');
+    expect(exercise).toContain('restoredAuthUsers = Number(sql(restore, \'select count(*) from auth.users;\'');
+    expect(exercise).toContain('checks.authUsersIntegrity = sourceAuthUsers === restoredAuthUsers');
+    expect(exercise).toContain('managedAuthRelationNamesStored: false');
+    expect(exercise).toContain('any non-empty source-only Auth relation fails closed');
+    expect(exercise).toContain('auth.users row-count integrity remains mandatory');
   });
 
   it('uses Supabase managed migrations only while the target is empty, then returns to DB-only mode', () => {
