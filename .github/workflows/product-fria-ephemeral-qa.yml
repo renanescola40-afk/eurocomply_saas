@@ -7,9 +7,11 @@ on:
     paths:
       - '.github/workflows/product-fria-ephemeral-qa.yml'
       - 'next.config.ts'
+      - 'playwright.config.ts'
       - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
       - 'scripts/product/sanitize-fria-playwright-report.mjs'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
+      - 'tests/e2e/payment-first-runtime-global-setup.ts'
       - 'src/middleware.ts'
       - 'src/hooks/useAuth.ts'
       - 'src/integrations/supabase/**'
@@ -44,9 +46,11 @@ on:
     paths:
       - '.github/workflows/product-fria-ephemeral-qa.yml'
       - 'next.config.ts'
+      - 'playwright.config.ts'
       - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
       - 'scripts/product/sanitize-fria-playwright-report.mjs'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
+      - 'tests/e2e/payment-first-runtime-global-setup.ts'
       - 'src/middleware.ts'
       - 'src/hooks/useAuth.ts'
       - 'src/integrations/supabase/**'
