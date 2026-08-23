@@ -1,5 +1,3 @@
-import { supabase } from '@/integrations/supabase/client';
-
 export type FindingSeverity = 'critical' | 'high' | 'medium' | 'low';
 export type TaskPriority = 'critical' | 'high' | 'medium' | 'low';
 
@@ -8,13 +6,6 @@ export type ComplianceActionInput = {
   title?: string;
   recommendation: string;
   severity: 'critical' | 'medium';
-};
-
-type InsertedFinding = {
-  id: string;
-  article: string | null;
-  recommendation: string | null;
-  severity: ComplianceActionInput['severity'] | null;
 };
 
 export type CreateRemediationInput = {
@@ -27,6 +18,27 @@ export type CreateRemediationInput = {
 export type RemediationResult =
   | { ok: true; findingsCreated: number; tasksCreated: number }
   | { ok: false; error: string; recoverable: boolean };
+
+type ComplianceWork = {
+  findings: Array<{
+    id: string;
+    article: string | null;
+    title: string;
+    severity: string;
+    status: string;
+    due_date?: string | null;
+    created_at?: string | null;
+  }>;
+  tasks: Array<{
+    id: string;
+    finding_id?: string | null;
+    title: string;
+    priority: string;
+    status: string;
+    due_date?: string | null;
+    created_at?: string | null;
+  }>;
+};
 
 function normalizeError(error: unknown) {
   if (error instanceof Error) return error.message;
@@ -41,7 +53,9 @@ function isRecoverableError(message: string) {
     lower.includes('compliance_tasks') ||
     lower.includes('does not exist') ||
     lower.includes('schema cache') ||
-    lower.includes('permission denied')
+    lower.includes('permission') ||
+    lower.includes('commercial') ||
+    lower.includes('payment')
   );
 }
 
@@ -66,64 +80,46 @@ export function buildTaskTitle(action: ComplianceActionInput) {
     : `Improve control: ${action.article}`;
 }
 
-export async function createFindingsAndTasks(input: CreateRemediationInput) {
-  const actions = input.actions.filter((action) => action.recommendation.trim().length > 0);
-
-  if (actions.length === 0) {
-    return { findingsCreated: 0, tasksCreated: 0 };
-  }
-
-  const findingRows = actions.map((action) => ({
-    workspace_id: input.workspaceId || null,
-    assessment_id: input.assessmentId || null,
-    user_id: input.userId,
-    article: action.article,
-    title: buildFindingTitle(action),
-    description: action.recommendation,
-    recommendation: action.recommendation,
-    severity: action.severity,
-    status: 'open',
-    source: 'gap_analysis',
-    due_date: dueDateForSeverity(action.severity),
-    metadata: { generated_from: 'gap_analysis' },
-  }));
-
-  const { data: findings, error: findingsError } = await supabase
-    .from('compliance_findings')
-    .insert(findingRows)
-    .select('id, article, recommendation, severity');
-
-  if (findingsError) throw findingsError;
-
-  const insertedFindings = (findings || []) as InsertedFinding[];
-
-  const taskRows = insertedFindings.map((finding, index) => {
-    const action = actions[index];
-    return {
-      workspace_id: input.workspaceId || null,
-      finding_id: finding.id,
-      user_id: input.userId,
-      title: buildTaskTitle(action),
-      description: finding.recommendation || action.recommendation,
-      priority: priorityFromSeverity(action.severity),
-      status: 'open',
-      due_date: dueDateForSeverity(action.severity),
-      metadata: {
-        generated_from: 'gap_analysis',
-        article: finding.article,
-      },
-    };
+async function remediationApi<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, {
+    cache: 'no-store',
+    ...init,
+    headers: {
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init?.headers ?? {}),
+    },
   });
 
-  if (taskRows.length > 0) {
-    const { error: tasksError } = await supabase
-      .from('compliance_tasks')
-      .insert(taskRows);
-
-    if (tasksError) throw tasksError;
+  if (!response.ok) {
+    let error = `Compliance remediation request failed (${response.status})`;
+    try {
+      const body = await response.json() as { error?: string };
+      if (body.error) error = body.error;
+    } catch {
+      // Keep the generic fail-closed error without exposing response bytes.
+    }
+    throw new Error(error);
   }
 
-  return { findingsCreated: insertedFindings.length, tasksCreated: taskRows.length };
+  return await response.json() as T;
+}
+
+/**
+ * Remediation creation is intentionally server-mediated. Identity and tenant are
+ * derived from the authenticated request; caller supplied user/workspace values
+ * are compatibility metadata and never authorization inputs.
+ */
+export async function createFindingsAndTasks(input: CreateRemediationInput) {
+  if (!input.assessmentId) throw new Error('A persisted assessment is required for remediation.');
+  if (input.actions.length === 0) return { findingsCreated: 0, tasksCreated: 0 };
+
+  return await remediationApi<{ findingsCreated: number; tasksCreated: number }>(
+    '/api/gap-analysis?operation=remediation',
+    {
+      method: 'POST',
+      body: JSON.stringify({ assessmentId: input.assessmentId, actions: input.actions }),
+    },
+  );
 }
 
 export async function tryCreateFindingsAndTasks(input: CreateRemediationInput): Promise<RemediationResult> {
@@ -140,41 +136,18 @@ export async function tryCreateFindingsAndTasks(input: CreateRemediationInput): 
   }
 }
 
-export async function loadOpenComplianceWork(params: { workspaceId?: string | null; userId?: string | null }) {
-  let findingsQuery = supabase
-    .from('compliance_findings')
-    .select('id, article, title, severity, status, due_date, created_at')
-    .in('status', ['open', 'in_progress'])
-    .order('created_at', { ascending: false });
-
-  let tasksQuery = supabase
-    .from('compliance_tasks')
-    .select('id, finding_id, title, priority, status, due_date, created_at')
-    .in('status', ['open', 'in_progress'])
-    .order('created_at', { ascending: false });
-
-  if (params.workspaceId) {
-    findingsQuery = findingsQuery.eq('workspace_id', params.workspaceId);
-    tasksQuery = tasksQuery.eq('workspace_id', params.workspaceId);
-  }
-
-  if (params.userId) {
-    findingsQuery = findingsQuery.eq('user_id', params.userId);
-    tasksQuery = tasksQuery.eq('user_id', params.userId);
-  }
-
-  const [{ data: findings, error: findingsError }, { data: tasks, error: tasksError }] = await Promise.all([
-    findingsQuery,
-    tasksQuery,
-  ]);
-
-  if (findingsError) throw findingsError;
-  if (tasksError) throw tasksError;
-
-  return {
-    findings: findings || [],
-    tasks: tasks || [],
-  };
+export async function loadOpenComplianceWork(_params: { workspaceId?: string | null; userId?: string | null }) {
+  return await remediationApi<ComplianceWork>('/api/gap-analysis?view=work');
 }
 
-export const tryLoadOpenComplianceWork = loadOpenComplianceWork;
+export async function tryLoadOpenComplianceWork(params: { workspaceId?: string | null; userId?: string | null }) {
+  try {
+    return await loadOpenComplianceWork(params);
+  } catch {
+    return { findings: [], tasks: [] } as ComplianceWork;
+  }
+}
+
+// Retain these pure helpers for report/tests that rely on deterministic labels.
+export const remediationPriorityFromSeverity = priorityFromSeverity;
+export const remediationDueDateForSeverity = dueDateForSeverity;
