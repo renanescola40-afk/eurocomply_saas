@@ -64,11 +64,7 @@ function run(command, args, extraEnv = {}, failureCode = `command_${command}_fai
     }).toString('utf8');
   } catch (error) {
     if (!failureDiagnostic) {
-      failureDiagnostic = buildRecoveryCommandDiagnostic({
-        error,
-        phase: failurePhase,
-        command,
-      });
+      failureDiagnostic = buildRecoveryCommandDiagnostic({ error, phase: failurePhase, command });
     }
     throw new Error(failureCode);
   }
@@ -101,12 +97,8 @@ function readManagedStorageRelations(connection) {
     failureCode,
   );
   const relations = parseInventoryJson(payload, failureCode).map((value) => String(value ?? '').trim());
-  if (!relations.includes('storage.buckets') || !relations.includes('storage.objects')) {
-    throw new Error('recovery_source_storage_relation_inventory_incomplete');
-  }
-  if (relations.some((value) => !/^storage\.[a-z0-9_]+$/.test(value))) {
-    throw new Error('recovery_source_storage_relation_inventory_unsafe');
-  }
+  if (!relations.includes('storage.buckets') || !relations.includes('storage.objects')) throw new Error('recovery_source_storage_relation_inventory_incomplete');
+  if (relations.some((value) => !/^storage\.[a-z0-9_]+$/.test(value))) throw new Error('recovery_source_storage_relation_inventory_unsafe');
   return [...new Set(relations)].sort();
 }
 
@@ -118,12 +110,8 @@ function readManagedAuthTables(connection, boundary) {
     failureCode,
   );
   const relations = parseInventoryJson(payload, failureCode).map((value) => String(value ?? '').trim());
-  if (!relations.includes('auth.users')) {
-    throw new Error(`recovery_${boundary}_auth_relation_inventory_incomplete`);
-  }
-  if (relations.some((value) => !/^auth\.[a-z0-9_]+$/.test(value))) {
-    throw new Error(`recovery_${boundary}_auth_relation_inventory_unsafe`);
-  }
+  if (!relations.includes('auth.users')) throw new Error(`recovery_${boundary}_auth_relation_inventory_incomplete`);
+  if (relations.some((value) => !/^auth\.[a-z0-9_]+$/.test(value))) throw new Error(`recovery_${boundary}_auth_relation_inventory_unsafe`);
   return [...new Set(relations)].sort();
 }
 
@@ -135,17 +123,9 @@ function planManagedAuthDataBoundary(sourceConnection, targetConnection) {
 
   for (const relation of sourceRelations) {
     if (targetSet.has(relation)) continue;
-    const rowCount = Number(sql(
-      sourceConnection,
-      `select count(*) from ${relation};`,
-      'recovery_source_auth_relation_count_failed',
-    ));
-    if (!Number.isSafeInteger(rowCount) || rowCount < 0) {
-      throw new Error('recovery_source_auth_relation_count_invalid');
-    }
-    if (rowCount > 0) {
-      throw new Error('recovery_target_managed_auth_relation_missing_with_data');
-    }
+    const rowCount = Number(sql(sourceConnection, `select count(*) from ${relation};`, 'recovery_source_auth_relation_count_failed'));
+    if (!Number.isSafeInteger(rowCount) || rowCount < 0) throw new Error('recovery_source_auth_relation_count_invalid');
+    if (rowCount > 0) throw new Error('recovery_target_managed_auth_relation_missing_with_data');
     sourceOnlyEmptyRelations.push(relation);
   }
 
@@ -158,20 +138,12 @@ function planManagedAuthDataBoundary(sourceConnection, targetConnection) {
 }
 
 function readInstalledExtensions(connection, failureCode) {
-  const payload = sql(
-    connection,
-    `select coalesce(json_agg(json_build_object('name', e.extname, 'schema', n.nspname, 'version', e.extversion) order by e.extname)::text, '[]') from pg_extension e join pg_namespace n on n.oid = e.extnamespace;`,
-    failureCode,
-  );
+  const payload = sql(connection, `select coalesce(json_agg(json_build_object('name', e.extname, 'schema', n.nspname, 'version', e.extversion) order by e.extname)::text, '[]') from pg_extension e join pg_namespace n on n.oid = e.extnamespace;`, failureCode);
   return parseInventoryJson(payload, failureCode);
 }
 
 function readAvailableExtensions(connection) {
-  const payload = sql(
-    connection,
-    `select coalesce(json_agg(json_build_object('name', v.name, 'version', v.version, 'relocatable', v.relocatable, 'schema', v.schema) order by v.name, v.version)::text, '[]') from pg_available_extension_versions v;`,
-    'recovery_target_available_extensions_query_failed',
-  );
+  const payload = sql(connection, `select coalesce(json_agg(json_build_object('name', v.name, 'version', v.version, 'relocatable', v.relocatable, 'schema', v.schema) order by v.name, v.version)::text, '[]') from pg_available_extension_versions v;`, 'recovery_target_available_extensions_query_failed');
   return parseInventoryJson(payload, 'recovery_target_available_extensions_invalid');
 }
 
@@ -187,11 +159,7 @@ function inspectFile(path) {
     const metadata = fstatSync(descriptor);
     if (!metadata.isFile() || metadata.size <= 0) return { exists: false, digest: null, bytes: 0 };
     const bytes = readFileSync(descriptor);
-    return {
-      exists: bytes.length === metadata.size && bytes.length > 0,
-      digest: createHash('sha256').update(bytes).digest('hex'),
-      bytes: metadata.size,
-    };
+    return { exists: bytes.length === metadata.size && bytes.length > 0, digest: createHash('sha256').update(bytes).digest('hex'), bytes: metadata.size };
   } finally {
     closeSync(descriptor);
   }
@@ -200,17 +168,13 @@ function inspectFile(path) {
 function inspectLogicalBackup(paths) {
   const inspected = paths.map(inspectFile);
   const exists = inspected.every((entry) => entry.exists && entry.digest);
-  const digest = exists
-    ? createHash('sha256').update(inspected.map((entry) => entry.digest).join(':')).digest('hex')
-    : null;
+  const digest = exists ? createHash('sha256').update(inspected.map((entry) => entry.digest).join(':')).digest('hex') : null;
   return { exists, digest, bytes: inspected.reduce((sum, entry) => sum + entry.bytes, 0) };
 }
 
 function assertManagedStorageRowsExcluded(path) {
   const dump = readFileSync(path, 'utf8');
-  if (/^COPY\s+"?storage"?\./mi.test(dump)) {
-    throw new Error('recovery_storage_rows_present_in_data_dump');
-  }
+  if (/^COPY\s+"?storage"?\./mi.test(dump)) throw new Error('recovery_storage_rows_present_in_data_dump');
 }
 
 function assertManagedAuthRowsExcluded(path, relations) {
@@ -218,9 +182,7 @@ function assertManagedAuthRowsExcluded(path, relations) {
   for (const relation of relations) {
     const [, table] = relation.split('.');
     const copyPattern = new RegExp(`^COPY\\s+"?auth"?\\."?${table}"?(?:\\s|\\()`, 'mi');
-    if (copyPattern.test(dump)) {
-      throw new Error('recovery_managed_auth_rows_present_in_data_dump');
-    }
+    if (copyPattern.test(dump)) throw new Error('recovery_managed_auth_rows_present_in_data_dump');
   }
 }
 
@@ -231,11 +193,7 @@ function copySqlToContainer(container, path) {
 }
 
 function restoreIntoEphemeralSupabase(container) {
-  const containerPaths = [
-    copySqlToContainer(container, rolesDumpPath),
-    copySqlToContainer(container, schemaDumpPath),
-    copySqlToContainer(container, dataDumpPath),
-  ];
+  const containerPaths = [copySqlToContainer(container, rolesDumpPath), copySqlToContainer(container, schemaDumpPath), copySqlToContainer(container, dataDumpPath)];
   try {
     run('docker', [
       'exec', container, 'psql', '-U', 'postgres', '-d', 'postgres', '--no-psqlrc',
@@ -263,11 +221,7 @@ checks.protectedMainExecution = env('GITHUB_ACTIONS') === 'true' && env('GITHUB_
 checks.distinctDatabases = Boolean(source && restore && source !== restore);
 checks.exactShaBound = /^[a-f0-9]{40}$/.test(targetSha) && observedSha === targetSha;
 checks.isolatedTarget = ephemeralMode
-  ? Number.isInteger(localHostPort)
-    && localHostPort > 0
-    && localHostPort <= 65535
-    && isLoopbackDatabaseUrl(restore)
-    && databaseUrlUsesPort(restore, localHostPort)
+  ? Number.isInteger(localHostPort) && localHostPort > 0 && localHostPort <= 65535 && isLoopbackDatabaseUrl(restore) && databaseUrlUsesPort(restore, localHostPort)
   : Boolean(restore);
 checks.connectionStringsSanitized = Boolean(source && restore);
 if (!Object.values(checks).every(Boolean)) failures.push('preconditions_failed');
@@ -282,72 +236,29 @@ const restoredCounts = {};
 const criticalTables = ['organizations', 'organization_members', 'audit_logs'];
 let sourceAuthUsers = null;
 let restoredAuthUsers = null;
-const managedAuthBoundary = {
-  sourceRelationCount: null,
-  targetRelationCount: null,
-  sourceOnlyEmptyRelationCount: null,
-};
-const extensionParity = {
-  sourceCount: null,
-  targetInitialCount: null,
-  enabledCount: null,
-  targetFinalCount: null,
-};
+const managedAuthBoundary = { sourceRelationCount: null, targetRelationCount: null, sourceOnlyEmptyRelationCount: null };
+const extensionParity = { sourceCount: null, targetInitialCount: null, enabledCount: null, targetFinalCount: null };
 
 try {
   if (failures.length) throw new Error('recovery_preconditions_failed');
 
   if (ephemeralMode) {
     failurePhase = 'managed_storage_schema_prime';
-    run(
-      process.execPath,
-      [managedStoragePrimer],
-      { RECOVERY_MANAGED_SCHEMA_PRIME_PHASE: 'pre-production-restore' },
-      'recovery_managed_storage_schema_prime_failed',
-    );
+    run(process.execPath, [managedStoragePrimer], { RECOVERY_MANAGED_SCHEMA_PRIME_PHASE: 'pre-production-restore' }, 'recovery_managed_storage_schema_prime_failed');
     checks.managedStorageSchemaPrimed = true;
 
     failurePhase = 'managed_storage_relation_inventory';
     const managedStorageDataExclude = readManagedStorageRelations(source).join(',');
     checks.managedStorageRelationInventory = true;
 
-    failurePhase = 'managed_auth_relation_inventory';
-    const managedAuthPlan = planManagedAuthDataBoundary(source, restore);
-    managedAuthBoundary.sourceRelationCount = managedAuthPlan.sourceRelationCount;
-    managedAuthBoundary.targetRelationCount = managedAuthPlan.targetRelationCount;
-    managedAuthBoundary.sourceOnlyEmptyRelationCount = managedAuthPlan.sourceOnlyEmptyRelationCount;
-    checks.managedAuthRelationInventory = true;
-    checks.managedAuthSchemaDriftSafe = true;
-    const managedAuthDataExclude = managedAuthPlan.sourceOnlyEmptyRelations.join(',');
-    const managedDataExclude = [managedStorageDataExclude, managedAuthDataExclude].filter(Boolean).join(',');
-
     failurePhase = 'roles_dump';
     run('supabase', ['db', 'dump', '--db-url', source, '--role-only', '--file', rolesDumpPath], {}, 'recovery_roles_dump_failed');
     failurePhase = 'schema_dump';
     run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath], {}, 'recovery_schema_dump_failed');
-    failurePhase = 'data_dump';
-    run('supabase', [
-      'db', 'dump', '--db-url', source,
-      '--data-only', '--use-copy',
-      '--exclude', managedDataExclude,
-      '--file', dataDumpPath,
-    ], {}, 'recovery_data_dump_failed');
-    failurePhase = 'data_dump_managed_exclusion_validation';
-    assertManagedStorageRowsExcluded(dataDumpPath);
-    assertManagedAuthRowsExcluded(dataDumpPath, managedAuthPlan.sourceOnlyEmptyRelations);
-    checks.managedStorageRowsExcluded = true;
-    checks.managedAuthRowsExcluded = true;
-    backupCompletedAt = new Date().toISOString();
-    failurePhase = 'backup_inspection';
-    const inspectedDump = inspectLogicalBackup([rolesDumpPath, schemaDumpPath, dataDumpPath]);
-    checks.backupExists = inspectedDump.exists;
-    digest = inspectedDump.digest;
-    backupBytes = inspectedDump.bytes;
-    if (!checks.backupExists || !digest) throw new Error('backup_dump_invalid');
 
-    // The isolated target must reproduce the source extension implementation,
-    // not merely the extension names. The source stays read-only; any CREATE
-    // statements are restricted to the disposable loopback target.
+    // Any target mutation that can affect managed catalog shape must finish before
+    // the Auth data boundary is planned. The protected run proved that planning
+    // Auth before extension parity can leave a stale target relation inventory.
     failurePhase = 'extension_parity';
     const sourceExtensions = readInstalledExtensions(source, 'recovery_source_extensions_query_failed');
     const targetExtensions = readInstalledExtensions(restore, 'recovery_target_extensions_query_failed');
@@ -359,13 +270,37 @@ try {
     if (extensionPlan.unavailableVersions.length > 0) throw new Error('recovery_target_extension_version_unavailable');
     if (extensionPlan.schemaMismatches.length > 0) throw new Error('recovery_target_extension_schema_mismatch');
     if (extensionPlan.versionMismatches.length > 0) throw new Error('recovery_target_extension_version_mismatch');
-    for (const entry of extensionPlan.enable) {
-      sql(restore, entry.sql, 'recovery_target_extension_enable_failed');
-    }
+    for (const entry of extensionPlan.enable) sql(restore, entry.sql, 'recovery_target_extension_enable_failed');
     const finalTargetExtensions = readInstalledExtensions(restore, 'recovery_target_extensions_recheck_failed');
     extensionParity.targetFinalCount = finalTargetExtensions.length;
     checks.extensionParity = extensionParitySatisfied(sourceExtensions, finalTargetExtensions);
     if (!checks.extensionParity) throw new Error('recovery_target_extension_parity_failed');
+
+    failurePhase = 'managed_auth_relation_inventory';
+    const managedAuthPlan = planManagedAuthDataBoundary(source, restore);
+    managedAuthBoundary.sourceRelationCount = managedAuthPlan.sourceRelationCount;
+    managedAuthBoundary.targetRelationCount = managedAuthPlan.targetRelationCount;
+    managedAuthBoundary.sourceOnlyEmptyRelationCount = managedAuthPlan.sourceOnlyEmptyRelationCount;
+    checks.managedAuthRelationInventory = true;
+    checks.managedAuthSchemaDriftSafe = true;
+    const managedAuthDataExclude = managedAuthPlan.sourceOnlyEmptyRelations.join(',');
+    const managedDataExclude = [managedStorageDataExclude, managedAuthDataExclude].filter(Boolean).join(',');
+
+    failurePhase = 'data_dump';
+    run('supabase', ['db', 'dump', '--db-url', source, '--data-only', '--use-copy', '--exclude', managedDataExclude, '--file', dataDumpPath], {}, 'recovery_data_dump_failed');
+    failurePhase = 'data_dump_managed_exclusion_validation';
+    assertManagedStorageRowsExcluded(dataDumpPath);
+    assertManagedAuthRowsExcluded(dataDumpPath, managedAuthPlan.sourceOnlyEmptyRelations);
+    checks.managedStorageRowsExcluded = true;
+    checks.managedAuthRowsExcluded = true;
+    backupCompletedAt = new Date().toISOString();
+
+    failurePhase = 'backup_inspection';
+    const inspectedDump = inspectLogicalBackup([rolesDumpPath, schemaDumpPath, dataDumpPath]);
+    checks.backupExists = inspectedDump.exists;
+    digest = inspectedDump.digest;
+    backupBytes = inspectedDump.bytes;
+    if (!checks.backupExists || !digest) throw new Error('backup_dump_invalid');
 
     failurePhase = 'isolated_restore';
     restoreIntoEphemeralSupabase(localContainer);
@@ -421,16 +356,12 @@ const evidence = {
   failureDiagnostic: passed ? null : failureDiagnostic,
   evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, extensionNamesStored: false, extensionVersionsStored: false, managedAuthRelationNamesStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
   evidenceBoundary: ephemeralMode
-    ? 'Supabase-managed Auth/REST/Storage relations were primed on the empty isolated target by the local Supabase runtime and all API services were stopped before any Production snapshot restore. Supabase-compatible logical roles, application schema and application/auth data were then restored transactionally into the DB-only target after aggregate-only exact extension name/schema/version parity was verified. Storage row data is excluded from this backup/restore proof. Provider-managed Auth relations that exist only in the Production source are excluded from data replay only when their source row count is zero; any non-empty source-only Auth relation fails closed, and auth.users row-count integrity remains mandatory. Selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; managed Auth relation names, extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
+    ? 'Supabase-managed Auth/REST/Storage relations were primed on the empty isolated target by the local Supabase runtime and all API services were stopped before any Production snapshot restore. Supabase-compatible logical roles and application schema are captured first; exact extension parity is then established on the disposable DB-only target before the provider-managed Auth relation inventory is planned immediately ahead of the data dump. Storage row data is excluded from this backup/restore proof. Provider-managed Auth relations that exist only in the Production source are excluded from data replay only when their source row count is zero; any non-empty source-only Auth relation fails closed, and auth.users row-count integrity remains mandatory. Selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; managed Auth relation names, extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
     : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated digest; connection strings, raw command arguments, raw process errors and the dump are not retained.',
 };
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
 if (!passed) {
-  console.error(JSON.stringify({
-    outcome: evidence.outcome,
-    failureDiagnostic: evidence.failureDiagnostic,
-    failures: evidence.failures,
-  }, null, 2));
+  console.error(JSON.stringify({ outcome: evidence.outcome, failureDiagnostic: evidence.failureDiagnostic, failures: evidence.failures }, null, 2));
   process.exit(1);
 }
