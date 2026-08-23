@@ -9,7 +9,7 @@ import {
   checkDistributedRateLimit,
 } from '@/server/security/rate-limit';
 
-const ACTIVATED_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing']);
+const ACTIVATED_SUBSCRIPTION_STATUSES = new Set(['active']);
 const ACTIVATION_POLL_ROUTE = '/api/billing/checkout/activation';
 const ACTIVATION_POLL_LIMIT = 60;
 const ACTIVATION_POLL_WINDOW_MS = 60_000;
