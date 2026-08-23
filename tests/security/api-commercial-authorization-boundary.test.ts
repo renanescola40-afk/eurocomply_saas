@@ -47,11 +47,16 @@ describe('API commercial authorization boundary', () => {
     expect(source).not.toContain("minimumPlan: 'starter'");
   });
 
-  it('preserves narrow pre-payment onboarding bootstrap while paid APIs remain licensed', async () => {
+  it('keeps only the narrow purchase-context draft pre-payment and gates operational onboarding before product writes', async () => {
     const source = await readFile(ONBOARDING, 'utf8');
+    const activation = source.slice(source.indexOf('export async function completeOnboardingActivation'));
+    const commercialGuard = activation.indexOf('await requireLicensedOnboardingAuthority(organizationId)');
 
     expect(source).toContain("assertCurrentUserCan(organizationId, user.id, 'organization:update')");
-    expect(source).toContain("assertCurrentUserCan(organizationId, user.id, 'team:invite')");
+    expect(commercialGuard).toBeGreaterThanOrEqual(0);
+    expect(activation.indexOf("assertCurrentUserCan(organizationId, user.id, 'team:invite')")).toBeGreaterThan(commercialGuard);
+    expect(activation.indexOf('const classification = classifyAiSystem')).toBeGreaterThan(commercialGuard);
+    expect(activation.indexOf('supabase.rpc(ATOMIC_ONBOARDING_ACTIVATION_RPC')).toBeGreaterThan(commercialGuard);
     expect(source).not.toContain('requirePermission({');
   });
 });
