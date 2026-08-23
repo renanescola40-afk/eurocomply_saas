@@ -11,27 +11,28 @@ MARKETING_MODE=PRELAUNCH_CONTROLLED
 CURRENT_MAIN_SHA=baf9ad40795c13df15f1120ee4a8ce025c07a7a2
 PRODUCTION_GO=NO_GO
 RELEASE_FREEZE=STABLE
+DEFAULT_PR_ACTION=NO_NEW_PR
 OPEN_RELEASE_CHANGING_PRS=0
 MAIN_CHANGED_BY_MARKETING=NO
 PAID_SCALE=BLOCKED
 ```
 
-Enterprise authority still requires `NO_NEW_PR` for release-changing work. Marketing remains isolated from main.
+Enterprise authority still blocks release-changing marketing PRs. Marketing remains isolated from main.
 
 ---
 
 ## 2. Readiness scorecard
 
-Internal readiness estimates only — not claims of traffic, pipeline, authority or revenue.
+Internal readiness estimates only — not claims of traffic, authority, pipeline or revenue.
 
 ```text
-MARKETING_READINESS=91
+MARKETING_READINESS=92
 SEO_READINESS=87
 CONTENT_ENGINE=93
 BRAND_AUTHORITY=27
 SOCIAL_ENGINE=84
 CRO_READINESS=81
-ANALYTICS_READINESS=41
+ANALYTICS_READINESS=52
 PAID_READINESS=24
 EUROPE_EXPANSION=84
 SALES_ENABLEMENT_READINESS=97
@@ -39,27 +40,29 @@ MARKETING_OPERATIONS_READINESS=98
 ABM_OUTBOUND_READINESS=98
 PARTNER_ECOSYSTEM_READINESS=92
 
-OVERALL_PREPARED=91
-OVERALL_REMAINING=9
+OVERALL_PREPARED=92
+OVERALL_REMAINING=8
 ```
 
 Why readiness moved:
 
-- connected PostHog live state is now characterized rather than assumed;
-- current runtime proves analytics components and EU PostHog CSP paths are present;
-- missing acquisition instrumentation is explicitly bounded;
-- the future measurement implementation has exact events, privacy properties and production proof criteria;
-- the two future Marketing Mega PRs now have a release-triggered activation contract;
-- current Production structured data has been inspected and a concrete brand-entity variant was proven.
+- Production PostHog project binding is no longer an unknown;
+- a private runtime comparison proved Production is compiled against a different PostHog Project API Key than the only connected project being audited;
+- root cause is bounded to deployment/provider-binding governance drift;
+- a fail-closed workflow remediation is already prestaged on the marketing branch;
+- regression coverage and environment mapping are already prestaged;
+- Mega PR B now explicitly preserves this remediation and requires one approved governed PostHog project.
 
 Why readiness did **not** move further:
 
-- PostHog still has no observed event ingestion;
+- the remediation is branch-only and not live;
+- connected PostHog still has no observed Production ingestion;
+- public acquisition events/UTM attribution remain unimplemented;
 - Search Console ownership/query data remain unverified;
 - LinkedIn remains externally inconsistent;
-- no Cohort 1 or ecosystem message has been sent;
-- no buyer/partner response or opportunity exists;
-- paid remains gated on Production GO + legal/billing + measurement + market signal.
+- no Cohort 1/ecosystem outreach has been sent;
+- no real buyer/partner signal exists;
+- paid remains blocked.
 
 ---
 
@@ -73,7 +76,7 @@ Why readiness did **not** move further:
 - Week 1 — category / inventory
 - Week 2 — Article 50 / provider-deployer
 - Week 3 — evidence governance
-- Week 4 — AI Inventory + lead magnet demand capture
+- Week 4 — AI Inventory + lead-magnet demand capture
 - Public Content Derivative Engine
 - flagship search URLs specified
 
@@ -86,16 +89,17 @@ Why readiness did **not** move further:
 - localized Operational AI Governance Canvas FR/DE/ES
 - no automatic legal classification
 - no compliance score
-- resource landing/nurture/UTM contract ready
 
 ### CRO / measurement
 
 - demo pricing contradiction proven;
 - intent-routing architecture ready;
 - AI-governance demo qualification contract ready;
-- PostHog privacy-first foundation verified in code;
-- current runtime analytics components verified present;
-- connected PostHog zero-ingestion state verified;
+- PostHog privacy-first client baseline verified;
+- Production runtime components verified;
+- Production PostHog project-key mismatch proven;
+- deployment-governance root cause proven;
+- branch-only fail-closed binding remediation prestaged;
 - public marketing event contract ready;
 - first/last-touch attribution contract ready;
 - Production proof definition ready.
@@ -107,11 +111,8 @@ Why readiness did **not** move further:
 - personalized Touch 1 = 5/5
 - institutional channels = 5/5
 - Gmail drafts = 5/5, none sent
-- Hub France IA contribution = submission-ready
-- KI Bundesverband contribution = submission-ready
-- Adigital contribution = submission-ready
-- Hub/KI drafts saved, none sent
-- Adigital form copy ready, not submitted
+- Hub France IA / KI Bundesverband / Adigital contributions = submission-ready
+- none submitted
 
 ---
 
@@ -121,25 +122,51 @@ Canonical evidence: `POSTHOG_LIVE_READINESS_EVIDENCE_V1.md`.
 
 ```text
 POSTHOG_PROJECT_CONNECTED=YES
+POSTHOG_CONNECTED_PROJECT_COUNT=1
 POSTHOG_PRIVACY_BASELINE=PRESENT
 POSTHOG_PRODUCTION_COMPONENTS_PRESENT=YES
 POSTHOG_CSP_EU_HOSTS=PASS
-POSTHOG_INGESTED_EVENT=false
-POSTHOG_RECENT_EVENTS=NONE_OBSERVED
+POSTHOG_PRODUCTION_PUBLIC_KEY=PRESENT
+POSTHOG_PRODUCTION_KEY_MATCH=FAIL_CURRENTLY
+POSTHOG_BINDING_DRIFT=ROOT_CAUSE_PROVEN
+POSTHOG_BINDING_REMEDIATION=PRESTAGED_BRANCH_ONLY
+POSTHOG_CONNECTED_PROJECT_INGESTED_EVENT=false
+POSTHOG_CONNECTED_PROJECT_RECENT_EVENTS=NONE_OBSERVED
 POSTHOG_ACTIONS=0
 POSTHOG_CONVERSION_GOALS=0
-POSTHOG_DASHBOARD=1_STARTER_ONLY
-POSTHOG_SAVED_INSIGHTS=8_STARTER_ONLY
-POSTHOG_PUBLIC_KEY_BINDING=NOT_PROVEN
 PUBLIC_ACQUISITION_EVENT_TAXONOMY=NOT_IMPLEMENTED
 LIVE_ATTRIBUTION=NO
 ```
 
-Important boundary: `NONE_OBSERVED` means the connected project contains no observed event evidence in the checked period; it does not prove there are no product visitors/users.
+The key values were never printed or persisted in repository artifacts.
 
-Current implementation already preserves a strong privacy baseline: explicit consent, manual capture, `autocapture=false`, `capture_pageview=false`, session replay disabled, text/attribute masking, DNT respect, sensitive-path controls and sanitized properties.
+### Root cause
 
-The missing work is acquisition instrumentation + attributable funnel + real ingestion proof, not a rewrite of the privacy architecture.
+Current protected main deploy governs many provider bindings but not the PostHog Project API Key, EU hosts or analytics-consent policy. That permits independent Vercel drift.
+
+```text
+ANALYTICS_ROOT_CAUSE=PROVIDER_BINDING_GOVERNANCE_DRIFT
+CODE_CLIENT_INITIALIZATION_DEFECT=NO_EVIDENCE
+POSTHOG_SERVICE_OUTAGE=NO_EVIDENCE
+```
+
+### Prestaged remediation
+
+```text
+873f2c489618b6f4ebd2c720e1fed3100f860611  workflow governance
+
+e1bd05bab2af06f2fa257b0af9f4ad1d9cbcfdfe  regression contract
+
+f6d65b8f04c2644c321c30111e0f3e2a1125c2e2  environment mapping
+
+8a48a893d30c8683542a894e325c1aeae8a5da1b  root-cause evidence
+
+c46f7286eb2d7052f1b3ddb1e8d4c3763c194f42  runtime finding promotion
+
+2f8ec25ca49835d9826fa411de10ee40aaea6dce  Mega PR activation binding
+```
+
+The workflow remediation fails closed on missing PostHog project binding, locks the EU hosts, forces explicit Production analytics consent and synchronizes the governed bindings into Vercel before build.
 
 ---
 
@@ -154,15 +181,7 @@ TAGLINE=Operational AI Governance for European Teams
 CANONICAL_URL=https://www.risckcomply.com
 ```
 
-Current external LinkedIn remains inconsistent and requires owner action.
-
-Fresh current-production evidence additionally proves the owned JSON-LD graph already emits canonical `name = RISCK COMPLY`, but Organization, WebSite and SoftwareApplication also emit:
-
-`alternateName = Risck Comply`
-
-and currently emit no `sameAs`.
-
-Therefore:
+Current Production entity graph already uses canonical `name = RISCK COMPLY`, but also emits non-canonical `alternateName = Risck Comply` and no `sameAs`.
 
 ```text
 CANONICAL_ENTITY_GRAPH=PRESENT
@@ -172,7 +191,7 @@ LINKEDIN_NORMALIZED=NO
 BRAND_AUTHORITY_LIVE=EARLY
 ```
 
-Brand Authority score stays at 27 until the external entity actually changes and third-party authority improves.
+Brand Authority remains 27 until external identity and authority signals actually improve.
 
 ---
 
@@ -189,7 +208,7 @@ SEARCH_CONSOLE_INDEXING_BASELINE=NO_EVIDENCE
 SEARCH_CONSOLE_QUERY_BASELINE=NO_DATA
 ```
 
-Owner handoff defines Domain property `risckcomply.com`, DNS verification, sitemap, URL Inspection, Page Indexing and Performance baselines. DNS verification tokens must never be placed in GitHub/public artifacts.
+DNS verification tokens must never be placed in GitHub/public artifacts.
 
 ---
 
@@ -203,13 +222,17 @@ BRAND_001_LINKEDIN_MISMATCH=PROVEN_OWNER_ACTION
 BRAND_002_STRUCTURED_ENTITY_VARIANT=PROVEN_RUNTIME
 SEO_001_SEARCH_CONSOLE=OWNER_ACTION_NOT_CODE_DEFECT
 ANALYTICS_001_POSTHOG_FOUNDATION=PRESENT
-ANALYTICS_001_POSTHOG_LIVE_INGESTION=NO
+ANALYTICS_001_PRODUCTION_PUBLIC_KEY=PRESENT
+ANALYTICS_001_PRODUCTION_KEY_MATCH=FAIL
+ANALYTICS_001_BINDING_DRIFT=ROOT_CAUSE_PROVEN
+ANALYTICS_001_BINDING_REMEDIATION=PRESTAGED_BRANCH_ONLY
+ANALYTICS_001_LIVE_INGESTION_CONNECTED_PROJECT=NO
 ANALYTICS_001_PUBLIC_ACQUISITION_TAXONOMY=MISSING
 ANALYTICS_001_ACTIONS=0
 ANALYTICS_001_CONVERSION_GOALS=0
 ```
 
-No issue spam was created from these sub-gaps.
+No marketing issue/task spam was created.
 
 ---
 
@@ -221,6 +244,8 @@ Canonical activation contract: `MEGA_PR_ACTIVATION_PACK_V1.md`.
 
 **CRO + ACQUISITION + ATTRIBUTION MEGA PR**
 
+Preserve the already-prestaged PostHog deployment-governance remediation and add:
+
 - demo commercial truth;
 - AI-governance qualification;
 - AI-system-count field;
@@ -229,8 +254,18 @@ Canonical activation contract: `MEGA_PR_ACTIVATION_PACK_V1.md`.
 - public marketing events;
 - first/last-touch UTM persistence;
 - lead/demo/signup/checkout attribution;
-- PostHog Production binding and real ingestion proof;
+- Production bundle-to-approved-project match proof;
+- connected PostHog ingestion proof;
 - consent + no-PII tests.
+
+Required provider state before Production activation:
+
+```text
+APPROVED_POSTHOG_PROJECT_IDENTIFIED=YES
+PROTECTED_GITHUB_PRODUCTION_POSTHOG_VARIABLE=READY
+```
+
+The value must not be stored in repository artifacts.
 
 ### Second priority
 
@@ -238,21 +273,10 @@ Canonical activation contract: `MEGA_PR_ACTIVATION_PACK_V1.md`.
 
 - Article 50 / Provider-vs-Deployer / Inventory / Evidence cluster;
 - Inventory lead-magnet landing;
-- brand variant cleanup;
-- structured-data alternateName review;
+- brand/entity normalization;
 - verified `sameAs` only after profile normalization;
 - verified social links;
 - sitemap/internal linking/schema regression.
-
-Activation gate:
-
-```text
-CONTROL_TOWER_REVALIDATED=YES
-DEFAULT_PR_ACTION!=NO_NEW_PR
-RELEASE_FREEZE_ALLOWS_MARKETING_CHANGE=YES
-CURRENT_MAIN_SHA_REBOUND=YES
-CURRENT_RUNTIME_REVALIDATED=YES
-```
 
 Current state: `PR_OPEN_NOW=NO`.
 
@@ -273,7 +297,7 @@ ENDORSEMENTS_CONFIRMED=0
 
 LINKEDIN_NORMALIZED=NO
 SEARCH_CONSOLE_LIVE=NO_EVIDENCE
-POSTHOG_LIVE_INGESTION=NO
+POSTHOG_LIVE_INGESTION_CONNECTED_PROJECT=NO
 ATTRIBUTION_LIVE=NO
 CRM_CONNECTED=NO_EVIDENCE
 REPEATABLE_PIPELINE=NOT_VERIFIED
@@ -291,6 +315,7 @@ Prepared is not Live. Live is not Validated. Validated is not Scaled.
 - `PRODUCTION_GO=NO_GO`
 - V19 Production remains `0/25`
 - current exact-main Enterprise PASS is not published
+- `DEFAULT_PR_ACTION=NO_NEW_PR`
 
 ### External / human
 
@@ -301,11 +326,11 @@ Prepared is not Live. Live is not Validated. Validated is not Scaled.
 
 ### Marketing reality
 
+- approved PostHog project binding not yet live through governed deploy
+- PostHog connected-project ingestion absent
+- public acquisition attribution not live
 - LinkedIn normalization not executed
 - Search Console verification not evidenced
-- PostHog real ingestion absent
-- attribution not live
-- CRM not connected/verified
 - Cohort 1 not sent
 - ecosystem contributions not submitted
 - no repeatable pipeline
@@ -332,15 +357,13 @@ Only then begin bounded high-intent paid tests.
 
 ## 12. Next transition rule
 
-While `PRODUCTION_GO=NO_GO` and external sends remain unauthorized:
+On every `continue`:
 
-1. do not create Week 5 for cosmetic score growth;
-2. do not expand Cohort 1 before learning;
-3. do not create new issue/task spam;
-4. do not open either Mega PR while `NO_NEW_PR` remains authoritative;
-5. re-read Control Tower on every new `continue`;
-6. if release authority changes, activate the prepared Mega PR pack immediately rather than producing more strategy;
-7. otherwise only execute genuinely new live evidence or owner-action preparation.
+1. re-read Enterprise Control Tower #1032;
+2. if `NO_NEW_PR` is removed and marketing changes are permitted, activate Mega PR B immediately with the prestaged PostHog remediation;
+3. if the gate remains closed, do not create Week 5 or issue spam;
+4. only execute genuinely new runtime/provider/owner-action evidence;
+5. do not increase live scores from branch implementation alone.
 
 ---
 
@@ -355,9 +378,9 @@ AI_INVENTORY_LEAD_MAGNET=READY_ARTIFACT
 LOCALIZED_ECOSYSTEM_CANVASES=READY_3_OF_3
 BRAND_SERP_CLOSURE_PACKET=READY_OWNER_ACTION
 SEARCH_CONSOLE_HANDOFF_V2=READY_OWNER_ACTION
-POSTHOG_LIVE_READINESS=CHARACTERIZED
+POSTHOG_ROOT_CAUSE=PROVEN
+POSTHOG_BINDING_REMEDIATION=PRESTAGED_BRANCH_ONLY
 MEGA_PR_ACTIVATION_PACK=READY
-CRO_001_DEMO_TRIAL_MISMATCH=PROVEN_STAGED
 SALES_ENABLEMENT=READY
 ABM_ENGINE=READY
 COHORT_1_GMAIL_DRAFTS=READY_5_OF_5
@@ -369,12 +392,12 @@ LIVE_ECOSYSTEM_SUBMISSIONS=0
 LIVE_PARTNER_RESPONSE=0
 LINKEDIN_NORMALIZED=NO
 LIVE_SEARCH_CONSOLE=NO_EVIDENCE
-LIVE_POSTHOG_INGESTION=NO
+LIVE_POSTHOG_INGESTION_CONNECTED_PROJECT=NO
 LIVE_ATTRIBUTION=NO
 LIVE_REPEATABLE_PIPELINE=NOT_VERIFIED
 LIVE_PAID_SCALE=NO
 
-MARKETING_PREPARED=91%
-MARKETING_REMAINING=9%
+MARKETING_PREPARED=92%
+MARKETING_REMAINING=8%
 MAIN_CHANGED_BY_MARKETING=NO
 ```
