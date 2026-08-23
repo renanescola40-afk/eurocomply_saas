@@ -32,12 +32,14 @@ describe('public launch auth and billing access flow', () => {
     expect(onboardingState).toContain('selectedPlan: membership.selected_plan');
   });
 
-  it('requires authoritative active or trialing billing before organization dashboard access', () => {
+  it('requires canonical licensed billing authority before organization dashboard access', () => {
     const dashboardAccess = readRepoFile('src/server/queries/organization-dashboard-access.ts');
     const billingContext = readRepoFile('src/server/queries/billing.ts');
 
-    expect(dashboardAccess).toContain('getOrganizationBillingContext');
-    expect(dashboardAccess).toContain("new Set(['active', 'trialing'])");
+    expect(dashboardAccess).toContain('getOrganizationBillingAuthority(currentOrganization.id)');
+    expect(dashboardAccess).toContain('if (!authority.licensed)');
+    expect(dashboardAccess).not.toContain('getOrganizationBillingContext');
+    expect(dashboardAccess).not.toContain("new Set(['active', 'trialing'])");
     expect(dashboardAccess).toContain('checkout=required');
     expect(dashboardAccess).toContain('currentOrganization.selected_plan');
     expect(billingContext).toContain('getAuthoritativeSignedContractPlan');
@@ -60,7 +62,8 @@ describe('public launch auth and billing access flow', () => {
     expect(checkoutRoute).not.toContain('/dashboard/organizations?checkout=success');
 
     expect(activationRoute).toContain('getCurrentOrganizationForUser(user.id)');
-    expect(activationRoute).toContain("new Set(['active', 'trialing'])");
+    expect(activationRoute).toContain("new Set(['active'])");
+    expect(activationRoute).not.toContain("new Set(['active', 'trialing'])");
     expect(activationRoute).toContain('hasProcessedLiveStripeSubscriptionAuthority');
     expect(activationRoute).toContain('stripe_customer_id');
     expect(activationRoute).toContain('stripe_subscription_id');
