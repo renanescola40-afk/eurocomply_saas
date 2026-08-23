@@ -8,7 +8,22 @@ const requiredEnvironments = ['production'];
 
 const providerRequiredChecks = Object.freeze({
   github: ['repositoryReachable', 'repositoryBound', 'currentMainShaBound', 'protectedProductionEnvironment', 'githubActionsRunBound', 'exactContext'],
-  vercel: ['apiTokenConfigured', 'targetConfigurationBound', 'projectReachable', 'projectIdentityMatched', 'productionEnvironmentEnumerated', 'requiredEnvironmentKeysPresent'],
+  vercel: [
+    'apiTokenConfigured',
+    'targetConfigurationBound',
+    'projectReachable',
+    'projectIdentityMatched',
+    'productionEnvironmentEnumerated',
+    'requiredEnvironmentKeysPresent',
+    'transactionalEmailBindingsPresent',
+    'transactionalEmailGuardEnabled',
+    'malwareScanningGuardEnabled',
+    'malwareScannerProviderSupported',
+    'malwareScannerTransportBindingPresent',
+    'metricSnapshotPolicyBindingPresent',
+    'metricSnapshotWritesDisabled',
+    'selectedNonSecretControlsResolved',
+  ],
   supabase: ['urlConfigured', 'serviceRoleConfigured', 'projectReachable', 'serviceRoleAuthorized'],
   stripe: [
     'secretConfigured',
@@ -73,6 +88,9 @@ export function validateProductionSecretsRuntimeEvidence(
   }
   if (evidence?.evidenceIntegrity?.decryptedProviderEnvironmentValuesStored !== false) {
     failures.push('evidenceIntegrity.decryptedProviderEnvironmentValuesStored must be false');
+  }
+  if (evidence?.evidenceIntegrity?.selectedNonSecretControlValuesStored !== false) {
+    failures.push('evidenceIntegrity.selectedNonSecretControlValuesStored must be false');
   }
   if (evidence?.evidenceIntegrity?.exactShaBound !== true) {
     failures.push('evidenceIntegrity.exactShaBound must be true');
