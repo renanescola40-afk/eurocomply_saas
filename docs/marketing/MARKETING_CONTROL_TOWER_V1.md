@@ -26,26 +26,30 @@ Marketing therefore executes external/organic/commercial work while staging rele
 These scores are internal readiness estimates, not claims of market performance.
 
 ```text
-MARKETING_READINESS=77
+MARKETING_READINESS=80
 SEO_READINESS=80
-CONTENT_ENGINE=78
+CONTENT_ENGINE=81
 BRAND_AUTHORITY=27
-SOCIAL_ENGINE=72
+SOCIAL_ENGINE=74
 CRO_READINESS=77
 ANALYTICS_READINESS=33
 PAID_READINESS=24
-EUROPE_EXPANSION=67
-SALES_ENABLEMENT_READINESS=88
-MARKETING_OPERATIONS_READINESS=86
+EUROPE_EXPANSION=74
+SALES_ENABLEMENT_READINESS=91
+MARKETING_OPERATIONS_READINESS=91
+ABM_OUTBOUND_READINESS=84
+PARTNER_ECOSYSTEM_READINESS=69
 
-OVERALL_PREPARED=77
-OVERALL_REMAINING=23
+OVERALL_PREPARED=80
+OVERALL_REMAINING=20
 ```
 
 Interpretation:
 
 - strategy/system readiness is high;
-- live authority, analytics and paid readiness remain substantially behind;
+- weekly external execution is now packaged rather than only planned;
+- a first controlled target-account cohort exists;
+- live authority, analytics, attributed pipeline and paid readiness remain substantially behind;
 - brand authority cannot be manufactured by internal documents;
 - production-grade attribution is not live;
 - paid scale remains blocked.
@@ -80,6 +84,7 @@ Interpretation:
 - Europe 4-Week Distribution Calendar
 - Founder-Led Demand Engine
 - Week 1 Demand Execution Packet
+- Week 2 Regulatory Demand Execution Packet
 
 ### Conversion / demand capture
 
@@ -102,6 +107,24 @@ Interpretation:
 - Competitive Sales Battlecard
 - CRM & Revenue Data Contract
 
+### ABM / market development
+
+- Target Account + Outbound ABM Engine Europe
+- 100-point account scoring model
+- controlled 21-day outreach sequence
+- 16 researched European account hypotheses
+- first five-account cohort defined
+- prospect / partner / competitor / watch separation
+
+### Partnerships / ecosystem
+
+- Partner & Ecosystem Engine Europe
+- Germany: KI Bundesverband / Bitkom routes
+- France: Hub France IA route
+- Spain: Adigital / OdiseIA routes
+- consultancy partner profile
+- contribution-first relationship sequence
+
 ### Operations
 
 - Marketing Operating System
@@ -113,17 +136,49 @@ Interpretation:
 
 ## 4. Execute now
 
-No release change required:
+No release change required.
 
-### P0 — Founder-led category creation
+### P0 — Week 1 founder-led category creation
 
-Start Week 1 on 2026-08-24:
+Execution window: 2026-08-24 to 2026-08-28.
 
 - Monday: Policy ≠ Operational Governance
 - Tuesday: Company AI Inventory post
 - Wednesday: Inventory ≠ Tool List
 - Thursday: DE/FR/ES inventory derivatives
 - Friday: Spreadsheet Breakpoint
+
+### P0 — Prepare/execute Week 2 regulatory demand
+
+Execution window: 2026-08-31 to 2026-09-04.
+
+- Article 50 is not one transparency rule
+- Article 50 decision map
+- Provider vs Deployer as a system/use-case record
+- localized DE/FR/ES adaptations
+- evidence/review-history post
+
+All regulatory copy is bounded to official Commission / EUR-Lex / AI Act Service Desk facts.
+
+### P0 — Controlled ABM cohort 1
+
+Do not contact all researched accounts at once.
+
+First research/outreach cohort:
+
+1. Seedext — France — enterprise evidence / Article 50
+2. Jimini AI — France — legal AI trust / governance evidence
+3. Genow — Germany — enterprise marketplace / procurement evidence
+4. Substrate AI — Spain — portfolio AI governance
+5. Timbal AI — Spain — agent/use-case inventory
+
+Goal:
+
+- test buyer vocabulary;
+- validate pains;
+- identify responsive roles;
+- collect objections;
+- generate real market evidence before scaling outbound.
 
 ### P0 — Brand normalization external
 
@@ -142,13 +197,40 @@ Start Week 1 on 2026-08-24:
 - use objection/battlecard framework
 - record lost/deferred reasons
 
-### P1 — Partner hypothesis
+### P1 — Ecosystem relationships
 
-Begin limited conversations with relevant consultancies/advisers to validate workspace/channel fit.
+Contribution-first priority:
+
+1. Hub France IA
+2. KI Bundesverband
+3. Adigital
+4. Bitkom as authority/long-horizon relationship
+5. OdiseIA4Good
+
+Do not claim partnership, membership or endorsement before it exists.
 
 ---
 
-## 5. Release-dependent mega package
+## 5. Current account-development snapshot
+
+```text
+RESEARCHED_ACCOUNT_HYPOTHESES=16
+TIER_A_OR_STRATEGIC=11
+FIRST_CONTROLLED_COHORT=5
+CONFIRMED_BUYING_INTENT=0
+CONFIRMED_OPPORTUNITIES=0
+PARTNERSHIPS_CONFIRMED=0
+ENDORSEMENTS_CONFIRMED=0
+PERSONAL_CONTACT_SCRAPING=NO
+```
+
+This is a research queue, not pipeline.
+
+An account becomes an opportunity only after a real two-way commercial signal.
+
+---
+
+## 6. Release-dependent mega package
 
 Do not open while Control Tower requires zero release-changing PRs.
 
@@ -198,7 +280,7 @@ Avoid opening three overlapping release-changing PRs if one high-quality Mega PR
 
 ---
 
-## 6. Current hard blockers
+## 7. Current hard blockers
 
 ### Release / product
 
@@ -227,10 +309,12 @@ Avoid opening three overlapping release-changing PRs if one high-quality Mega PR
 - early social audience
 - limited third-party authority/backlinks
 - no invented customers/testimonials allowed
+- no validated outbound response rate yet
+- no confirmed partner relationships yet
 
 ---
 
-## 7. Paid activation gate
+## 8. Paid activation gate
 
 Paid remains `BLOCKED` until at minimum:
 
@@ -249,7 +333,7 @@ Then start controlled high-intent tests rather than broad spend.
 
 ---
 
-## 8. Marketing success hierarchy
+## 9. Marketing success hierarchy
 
 Do not confuse preparation with results.
 
@@ -261,12 +345,15 @@ Do not confuse preparation with results.
 - campaign systems
 - sales playbooks
 - operating cadence
+- ABM targets and sequences
+- partner relationship model
 
 ### Live
 
 - published assets
 - indexed pages
 - actual audience
+- actual account conversations
 - actual events
 - actual leads
 
@@ -276,6 +363,7 @@ Do not confuse preparation with results.
 - pipeline movement
 - win/loss insight
 - market/ICP evidence
+- repeated account-level engagement
 
 ### Scaled
 
@@ -284,19 +372,22 @@ Do not confuse preparation with results.
 - repeatable revenue
 - acceptable economics
 
-RISCK COMPLY marketing is currently strong in **Prepared**, early in **Live**, and not yet entitled to claim **Validated** or **Scaled**.
+RISCK COMPLY marketing is currently strong in **Prepared**, entering **Live**, and not yet entitled to claim **Validated** or **Scaled**.
 
 ---
 
-## 9. Next transition rules
+## 10. Next transition rules
 
 If user says `continue` while release freeze remains:
 
 1. execute the next highest-impact external/branch-only demand asset;
-2. prefer campaigns that can produce real market learning;
-3. avoid creating additional planning layers unless they close a real operating gap;
-4. prepare release-dependent work as one Mega PR package, not task spam;
-5. update readiness only when capability actually improves.
+2. prioritize real market evidence over additional planning;
+3. work the first five-account ABM cohort manually and carefully;
+4. produce account-specific research/outreach only from public facts;
+5. prepare relationship contributions for Hub France IA / KI Bundesverband / Adigital;
+6. avoid creating additional planning layers unless they close a real operating gap;
+7. prepare release-dependent work as one Mega PR package, not task spam;
+8. update readiness only when capability actually improves.
 
 If Control Tower changes to Production GO PASS:
 
@@ -309,7 +400,7 @@ If Control Tower changes to Production GO PASS:
 
 ---
 
-## 10. Current verdict
+## 11. Current verdict
 
 ```text
 POSITIONING: READY
@@ -317,9 +408,13 @@ EUROPE_SEARCH_STRATEGY: READY
 CONTENT_SYSTEM: READY
 FOUNDER_DEMAND_SYSTEM: READY
 WEEK_1_EXECUTION: READY
+WEEK_2_REGULATORY_EXECUTION: READY
 CRO_ARCHITECTURE: READY
 SALES_ENABLEMENT: READY
 PIPELINE_MODEL: READY
+ABM_ENGINE: READY
+INITIAL_ACCOUNT_COHORT: READY
+PARTNER_ECOSYSTEM_ENGINE: READY
 MARKETING_OPERATING_SYSTEM: READY
 90_DAY_GTM: READY
 
@@ -327,8 +422,9 @@ LIVE_BRAND_AUTHORITY: EARLY
 LIVE_ATTRIBUTION: NO
 LIVE_PAID_SCALE: NO
 LIVE_REPEATABLE_PIPELINE: NOT_VERIFIED
+LIVE_ABM_RESPONSE: NOT_YET_MEASURED
 
-MARKETING_PREPARED=77%
-MARKETING_REMAINING=23%
+MARKETING_PREPARED=80%
+MARKETING_REMAINING=20%
 MAIN_CHANGED=NO
 ```
