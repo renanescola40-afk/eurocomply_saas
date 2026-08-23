@@ -34,7 +34,7 @@ function getPlanQuery(planId?: string) {
 }
 
 function getBillingRecoveryPath(locale: Locale, planId?: string) {
-  const query = new URLSearchParams({ onboarding: 'completed' });
+  const query = new URLSearchParams({ onboarding: 'payment_required' });
   const plan = getBillingPlan(planId);
 
   if (plan) {
@@ -42,6 +42,26 @@ function getBillingRecoveryPath(locale: Locale, planId?: string) {
   }
 
   return `/${locale}/dashboard/organizations/billing?${query.toString()}`;
+}
+
+async function requireLicensedOnboardingPageAccess(input: {
+  organizationId: string;
+  locale: Locale;
+  planId?: string;
+}) {
+  let authority: Awaited<ReturnType<typeof getOrganizationBillingAuthority>>;
+
+  try {
+    authority = await getOrganizationBillingAuthority(input.organizationId);
+  } catch {
+    redirect(`/${input.locale}/pricing?billing=billing_authority_unavailable`);
+  }
+
+  if (!authority.licensed) {
+    redirect(getBillingRecoveryPath(input.locale, input.planId));
+  }
+
+  return authority;
 }
 
 export default async function OnboardingPage({ params, searchParams }: OnboardingPageProps) {
@@ -63,17 +83,20 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
 
   const initialState = await getOnboardingActivationState(user.id);
 
-  if (initialState.organization?.isOnboardingCompleted) {
-    // Reuse the Billing authority as read-only routing truth. A returning
-    // licensed subscriber should re-enter the product directly after login,
-    // while an unlicensed organization must stay in the recovery lane that is
-    // explicitly reachable through the dashboard fail-close boundary.
-    const authority = await getOrganizationBillingAuthority(initialState.organization.id);
-    if (authority.licensed) {
-      redirect(`/${safeLocale}/dashboard`);
-    }
+  // The first onboarding screen may create only a minimal organization purchase
+  // context because checkout is organization-bound. Once that shell exists,
+  // operational onboarding is payment-first: no AI system, documents, tasks,
+  // invitations or readiness activation may render/execute until licensed=true.
+  if (initialState.organization?.id) {
+    await requireLicensedOnboardingPageAccess({
+      organizationId: initialState.organization.id,
+      locale: safeLocale,
+      planId: resolvedSearchParams.plan,
+    });
+  }
 
-    redirect(getBillingRecoveryPath(safeLocale, resolvedSearchParams.plan));
+  if (initialState.organization?.isOnboardingCompleted) {
+    redirect(`/${safeLocale}/dashboard`);
   }
 
   async function saveDraftFromOnboarding(input: OnboardingDraftInput): Promise<OnboardingMutationResult> {
@@ -85,12 +108,22 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
       redirect(`/${safeLocale}/login?next=${encodeURIComponent(`/${safeLocale}/onboarding${planQuery}`)}`);
     }
 
+    let result: Awaited<ReturnType<typeof saveOnboardingDraft>>;
     try {
-      const result = await saveOnboardingDraft(input);
-      return { ok: true, ...result };
+      result = await saveOnboardingDraft(input);
     } catch (error) {
       return toOnboardingMutationFailure(error, safeLocale, 'save');
     }
+
+    // A successful pre-license draft creates/updates purchase context only. Do
+    // not let the same browser request continue deeper into operational steps.
+    await requireLicensedOnboardingPageAccess({
+      organizationId: result.organizationId,
+      locale: safeLocale,
+      planId: input.selectedPlan,
+    });
+
+    return { ok: true, ...result };
   }
 
   async function completeActivationFromOnboarding(input: OnboardingActivationInput): Promise<OnboardingMutationResult> {
