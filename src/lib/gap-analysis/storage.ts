@@ -1,5 +1,3 @@
-import { supabase } from '@/integrations/supabase/client';
-
 export type GapAnswerValue = 'yes' | 'partial' | 'no';
 
 export type GapAnswerInput = {
@@ -24,6 +22,15 @@ export type GapPersistenceResult =
   | { ok: true; assessmentId: string }
   | { ok: false; error: string; recoverable: boolean };
 
+type LatestGapAssessment = {
+  id: string;
+  score: number;
+  status: string;
+  locale: string;
+  summary: Record<string, unknown>;
+  created_at: string;
+};
+
 function normalizePersistenceError(error: unknown) {
   if (error instanceof Error) return error.message;
   if (typeof error === 'string') return error;
@@ -37,42 +44,54 @@ function isRecoverablePersistenceError(message: string) {
     lower.includes('gap_answers') ||
     lower.includes('does not exist') ||
     lower.includes('schema cache') ||
-    lower.includes('permission denied')
+    lower.includes('permission') ||
+    lower.includes('commercial') ||
+    lower.includes('payment')
   );
 }
 
-export async function saveGapAssessment(input: GapAssessmentInput) {
-  const { data: assessment, error: assessmentError } = await supabase
-    .from('gap_assessments')
-    .insert({
-      workspace_id: input.workspaceId || null,
-      user_id: input.userId,
-      locale: input.locale,
-      score: input.score,
-      status: 'completed',
-      summary: input.summary,
-    })
-    .select('id')
-    .single();
+async function gapApi<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, {
+    cache: 'no-store',
+    ...init,
+    headers: {
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init?.headers ?? {}),
+    },
+  });
 
-  if (assessmentError) throw assessmentError;
-  if (!assessment?.id) throw new Error('Gap assessment was not created');
-
-  if (input.answers.length > 0) {
-    const { error: answersError } = await supabase
-      .from('gap_answers')
-      .insert(
-        input.answers.map((answer) => ({
-          assessment_id: assessment.id,
-          workspace_id: input.workspaceId || null,
-          ...answer,
-        }))
-      );
-
-    if (answersError) throw answersError;
+  if (!response.ok) {
+    let error = `Gap Analysis request failed (${response.status})`;
+    try {
+      const body = await response.json() as { error?: string };
+      if (body.error) error = body.error;
+    } catch {
+      // Keep the generic fail-closed error without leaking response bytes.
+    }
+    throw new Error(error);
   }
 
-  return assessment.id as string;
+  return await response.json() as T;
+}
+
+/**
+ * Persist through the authenticated commercial API only. userId/workspaceId are
+ * retained in the public type for compatibility but are never tenant authority;
+ * the server derives identity and organization from the session.
+ */
+export async function saveGapAssessment(input: GapAssessmentInput) {
+  const result = await gapApi<{ assessmentId?: string }>('/api/gap-analysis?operation=assessment', {
+    method: 'POST',
+    body: JSON.stringify({
+      locale: input.locale,
+      score: input.score,
+      summary: input.summary,
+      answers: input.answers,
+    }),
+  });
+
+  if (!result.assessmentId) throw new Error('Gap assessment was not created');
+  return result.assessmentId;
 }
 
 export async function trySaveGapAssessment(input: GapAssessmentInput): Promise<GapPersistenceResult> {
@@ -89,25 +108,9 @@ export async function trySaveGapAssessment(input: GapAssessmentInput): Promise<G
   }
 }
 
-export async function loadLatestGapAssessment(params: { workspaceId?: string | null; userId?: string | null }) {
-  let query = supabase
-    .from('gap_assessments')
-    .select('id, score, status, locale, summary, created_at')
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  if (params.workspaceId) {
-    query = query.eq('workspace_id', params.workspaceId);
-  } else if (params.userId) {
-    query = query.eq('user_id', params.userId);
-  } else {
-    return null;
-  }
-
-  const { data, error } = await query.maybeSingle();
-
-  if (error) throw error;
-  return data;
+export async function loadLatestGapAssessment(_params: { workspaceId?: string | null; userId?: string | null }) {
+  const result = await gapApi<{ assessment: LatestGapAssessment | null }>('/api/gap-analysis?view=latest');
+  return result.assessment;
 }
 
 export async function tryLoadLatestGapAssessment(params: { workspaceId?: string | null; userId?: string | null }) {
@@ -119,24 +122,9 @@ export async function tryLoadLatestGapAssessment(params: { workspaceId?: string 
 }
 
 export async function loadGapAssessmentHistory(params: { workspaceId?: string | null; userId?: string | null; limit?: number }) {
-  let query = supabase
-    .from('gap_assessments')
-    .select('id, score, status, locale, summary, created_at')
-    .order('created_at', { ascending: false })
-    .limit(params.limit ?? 10);
-
-  if (params.workspaceId) {
-    query = query.eq('workspace_id', params.workspaceId);
-  } else if (params.userId) {
-    query = query.eq('user_id', params.userId);
-  } else {
-    return [];
-  }
-
-  const { data, error } = await query;
-
-  if (error) throw error;
-  return data || [];
+  const limit = Math.max(1, Math.min(50, params.limit ?? 10));
+  const result = await gapApi<{ assessments: LatestGapAssessment[] }>(`/api/gap-analysis?view=history&limit=${limit}`);
+  return result.assessments;
 }
 
 export async function tryLoadGapAssessmentHistory(params: { workspaceId?: string | null; userId?: string | null; limit?: number }) {
