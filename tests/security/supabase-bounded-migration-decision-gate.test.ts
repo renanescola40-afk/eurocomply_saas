@@ -30,7 +30,7 @@ describe('bounded Supabase migration human decision gate', () => {
     expect(builder).toContain('exactFilenameAndSha256Bound: true');
     expect(builder).toContain('automaticClassificationPerformed: false');
     expect(builder).toContain('productionWriteAuthorized: false');
-    expect(workflow).toContain(`SELECTED_COUNT="$(jq '.migrations | length' "${FORWARD_MANIFESTS[0]}")"`);
+    expect(workflow).toContain(`SELECTED_COUNT="$(jq '.migrations | length' "\${FORWARD_MANIFESTS[0]}")"`);
     expect(workflow).toContain(`test "$(jq '.items | length' "$BOUNDED_INVENTORY")" -eq "$SELECTED_COUNT"`);
     expect(workflow).toContain('test "$SELECTED_COUNT" -le 32');
     expect(workflow).not.toContain(`test "$(jq '.items | length' "$BOUNDED_INVENTORY")" -le 25`);
