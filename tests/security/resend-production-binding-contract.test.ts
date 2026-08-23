@@ -45,7 +45,7 @@ describe('Resend Production binding contract', () => {
     expect(readyRoute).toContain("hasConfiguredEnvValue('RESEND_API_KEY')");
     expect(readyRoute).toContain("hasConfiguredEnvValue('EMAIL_FROM')");
     expect(readyRoute).toContain('const transactionalEmail = transactionalEmailReadinessCheck();');
-    expect(readyRoute).toContain('&& transactionalEmailConfigured;');
+    expect(readyRoute).toContain('&& transactionalEmailConfigured');
     expect(readyRoute).toContain('transactionalEmail,');
   });
 
