@@ -110,6 +110,53 @@ function readManagedStorageRelations(connection) {
   return [...new Set(relations)].sort();
 }
 
+function readManagedAuthTables(connection, boundary) {
+  const failureCode = `recovery_${boundary}_auth_relation_inventory_failed`;
+  const payload = sql(
+    connection,
+    `select coalesce(json_agg((n.nspname || '.' || c.relname) order by c.relname)::text, '[]') from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'auth' and c.relkind in ('r','p','f');`,
+    failureCode,
+  );
+  const relations = parseInventoryJson(payload, failureCode).map((value) => String(value ?? '').trim());
+  if (!relations.includes('auth.users')) {
+    throw new Error(`recovery_${boundary}_auth_relation_inventory_incomplete`);
+  }
+  if (relations.some((value) => !/^auth\.[a-z0-9_]+$/.test(value))) {
+    throw new Error(`recovery_${boundary}_auth_relation_inventory_unsafe`);
+  }
+  return [...new Set(relations)].sort();
+}
+
+function planManagedAuthDataBoundary(sourceConnection, targetConnection) {
+  const sourceRelations = readManagedAuthTables(sourceConnection, 'source');
+  const targetRelations = readManagedAuthTables(targetConnection, 'target');
+  const targetSet = new Set(targetRelations);
+  const sourceOnlyEmptyRelations = [];
+
+  for (const relation of sourceRelations) {
+    if (targetSet.has(relation)) continue;
+    const rowCount = Number(sql(
+      sourceConnection,
+      `select count(*) from ${relation};`,
+      'recovery_source_auth_relation_count_failed',
+    ));
+    if (!Number.isSafeInteger(rowCount) || rowCount < 0) {
+      throw new Error('recovery_source_auth_relation_count_invalid');
+    }
+    if (rowCount > 0) {
+      throw new Error('recovery_target_managed_auth_relation_missing_with_data');
+    }
+    sourceOnlyEmptyRelations.push(relation);
+  }
+
+  return {
+    sourceRelationCount: sourceRelations.length,
+    targetRelationCount: targetRelations.length,
+    sourceOnlyEmptyRelationCount: sourceOnlyEmptyRelations.length,
+    sourceOnlyEmptyRelations,
+  };
+}
+
 function readInstalledExtensions(connection, failureCode) {
   const payload = sql(
     connection,
@@ -163,6 +210,17 @@ function assertManagedStorageRowsExcluded(path) {
   const dump = readFileSync(path, 'utf8');
   if (/^COPY\s+"?storage"?\./mi.test(dump)) {
     throw new Error('recovery_storage_rows_present_in_data_dump');
+  }
+}
+
+function assertManagedAuthRowsExcluded(path, relations) {
+  const dump = readFileSync(path, 'utf8');
+  for (const relation of relations) {
+    const [, table] = relation.split('.');
+    const copyPattern = new RegExp(`^COPY\\s+"?auth"?\\."?${table}"?(?:\\s|\\()`, 'mi');
+    if (copyPattern.test(dump)) {
+      throw new Error('recovery_managed_auth_rows_present_in_data_dump');
+    }
   }
 }
 
@@ -224,6 +282,11 @@ const restoredCounts = {};
 const criticalTables = ['organizations', 'organization_members', 'audit_logs'];
 let sourceAuthUsers = null;
 let restoredAuthUsers = null;
+const managedAuthBoundary = {
+  sourceRelationCount: null,
+  targetRelationCount: null,
+  sourceOnlyEmptyRelationCount: null,
+};
 const extensionParity = {
   sourceCount: null,
   targetInitialCount: null,
@@ -248,6 +311,16 @@ try {
     const managedStorageDataExclude = readManagedStorageRelations(source).join(',');
     checks.managedStorageRelationInventory = true;
 
+    failurePhase = 'managed_auth_relation_inventory';
+    const managedAuthPlan = planManagedAuthDataBoundary(source, restore);
+    managedAuthBoundary.sourceRelationCount = managedAuthPlan.sourceRelationCount;
+    managedAuthBoundary.targetRelationCount = managedAuthPlan.targetRelationCount;
+    managedAuthBoundary.sourceOnlyEmptyRelationCount = managedAuthPlan.sourceOnlyEmptyRelationCount;
+    checks.managedAuthRelationInventory = true;
+    checks.managedAuthSchemaDriftSafe = true;
+    const managedAuthDataExclude = managedAuthPlan.sourceOnlyEmptyRelations.join(',');
+    const managedDataExclude = [managedStorageDataExclude, managedAuthDataExclude].filter(Boolean).join(',');
+
     failurePhase = 'roles_dump';
     run('supabase', ['db', 'dump', '--db-url', source, '--role-only', '--file', rolesDumpPath], {}, 'recovery_roles_dump_failed');
     failurePhase = 'schema_dump';
@@ -256,12 +329,14 @@ try {
     run('supabase', [
       'db', 'dump', '--db-url', source,
       '--data-only', '--use-copy',
-      '--exclude', managedStorageDataExclude,
+      '--exclude', managedDataExclude,
       '--file', dataDumpPath,
     ], {}, 'recovery_data_dump_failed');
-    failurePhase = 'data_dump_storage_exclusion_validation';
+    failurePhase = 'data_dump_managed_exclusion_validation';
     assertManagedStorageRowsExcluded(dataDumpPath);
+    assertManagedAuthRowsExcluded(dataDumpPath, managedAuthPlan.sourceOnlyEmptyRelations);
     checks.managedStorageRowsExcluded = true;
+    checks.managedAuthRowsExcluded = true;
     backupCompletedAt = new Date().toISOString();
     failurePhase = 'backup_inspection';
     const inspectedDump = inspectLogicalBackup([rolesDumpPath, schemaDumpPath, dataDumpPath]);
@@ -342,11 +417,11 @@ const evidence = {
   generatedAt: new Date().toISOString(), repository: env('GITHUB_REPOSITORY'), branch: env('GITHUB_REF_NAME'), targetSha: targetSha || null, observedSha: observedSha || null,
   runId: env('GITHUB_RUN_ID') || null, controlsVerified: ['REC-05', 'REC-06', 'REC-07', 'REC-08', 'REC-09', 'REC-10'], checks,
   metrics: { rpoSeconds: backupCompletedAt ? Math.max(0, Math.round((Date.now() - Date.parse(backupCompletedAt)) / 1000)) : null, rtoSeconds: restoreCompletedAt ? Math.round((Date.parse(restoreCompletedAt) - startedAt) / 1000) : null, totalExerciseSeconds: Math.round((finishedAt - startedAt) / 1000), backupBytes },
-  integrity: { criticalTables, sourceCounts, restoredCounts, sourceAuthUsers, restoredAuthUsers, extensionParity, backupSha256Prefix: digest ? `${digest.slice(0, 16)}…` : null, recoveryMode: ephemeralMode ? 'ephemeral-supabase-postgres' : 'external-isolated-database' }, failures: [...new Set(failures)], failurePhase: passed ? null : failurePhase,
+  integrity: { criticalTables, sourceCounts, restoredCounts, sourceAuthUsers, restoredAuthUsers, managedAuthBoundary, extensionParity, backupSha256Prefix: digest ? `${digest.slice(0, 16)}…` : null, recoveryMode: ephemeralMode ? 'ephemeral-supabase-postgres' : 'external-isolated-database' }, failures: [...new Set(failures)], failurePhase: passed ? null : failurePhase,
   failureDiagnostic: passed ? null : failureDiagnostic,
-  evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, extensionNamesStored: false, extensionVersionsStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
+  evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, extensionNamesStored: false, extensionVersionsStored: false, managedAuthRelationNamesStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
   evidenceBoundary: ephemeralMode
-    ? 'Supabase-managed Auth/REST/Storage relations were primed on the empty isolated target by the local Supabase runtime and all API services were stopped before any Production snapshot restore. Supabase-compatible logical roles, application schema and application/auth data were then restored transactionally into the DB-only target after aggregate-only exact extension name/schema/version parity was verified. Storage row data is excluded from this backup/restore proof; selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
+    ? 'Supabase-managed Auth/REST/Storage relations were primed on the empty isolated target by the local Supabase runtime and all API services were stopped before any Production snapshot restore. Supabase-compatible logical roles, application schema and application/auth data were then restored transactionally into the DB-only target after aggregate-only exact extension name/schema/version parity was verified. Storage row data is excluded from this backup/restore proof. Provider-managed Auth relations that exist only in the Production source are excluded from data replay only when their source row count is zero; any non-empty source-only Auth relation fails closed, and auth.users row-count integrity remains mandatory. Selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; managed Auth relation names, extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
     : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated digest; connection strings, raw command arguments, raw process errors and the dump are not retained.',
 };
 mkdirSync(dirname(output), { recursive: true });
