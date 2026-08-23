@@ -311,6 +311,34 @@ try {
     const managedStorageDataExclude = readManagedStorageRelations(source).join(',');
     checks.managedStorageRelationInventory = true;
 
+    failurePhase = 'roles_dump';
+    run('supabase', ['db', 'dump', '--db-url', source, '--role-only', '--file', rolesDumpPath], {}, 'recovery_roles_dump_failed');
+    failurePhase = 'schema_dump';
+    run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath], {}, 'recovery_schema_dump_failed');
+
+    // Any target extension mutation must finish before we bind the managed Auth
+    // catalog used to decide which provider-managed rows are safe to replay.
+    // This prevents a stale pre-extension inventory from allowing COPY entries
+    // for relations that no longer exist on the disposable target.
+    failurePhase = 'extension_parity';
+    const sourceExtensions = readInstalledExtensions(source, 'recovery_source_extensions_query_failed');
+    const targetExtensions = readInstalledExtensions(restore, 'recovery_target_extensions_query_failed');
+    const availableExtensions = readAvailableExtensions(restore);
+    const extensionPlan = planExtensionParity(sourceExtensions, targetExtensions, availableExtensions);
+    extensionParity.sourceCount = extensionPlan.source.length;
+    extensionParity.targetInitialCount = extensionPlan.target.length;
+    extensionParity.enabledCount = extensionPlan.enable.length;
+    if (extensionPlan.unavailableVersions.length > 0) throw new Error('recovery_target_extension_version_unavailable');
+    if (extensionPlan.schemaMismatches.length > 0) throw new Error('recovery_target_extension_schema_mismatch');
+    if (extensionPlan.versionMismatches.length > 0) throw new Error('recovery_target_extension_version_mismatch');
+    for (const entry of extensionPlan.enable) {
+      sql(restore, entry.sql, 'recovery_target_extension_enable_failed');
+    }
+    const finalTargetExtensions = readInstalledExtensions(restore, 'recovery_target_extensions_recheck_failed');
+    extensionParity.targetFinalCount = finalTargetExtensions.length;
+    checks.extensionParity = extensionParitySatisfied(sourceExtensions, finalTargetExtensions);
+    if (!checks.extensionParity) throw new Error('recovery_target_extension_parity_failed');
+
     failurePhase = 'managed_auth_relation_inventory';
     const managedAuthPlan = planManagedAuthDataBoundary(source, restore);
     managedAuthBoundary.sourceRelationCount = managedAuthPlan.sourceRelationCount;
@@ -321,10 +349,6 @@ try {
     const managedAuthDataExclude = managedAuthPlan.sourceOnlyEmptyRelations.join(',');
     const managedDataExclude = [managedStorageDataExclude, managedAuthDataExclude].filter(Boolean).join(',');
 
-    failurePhase = 'roles_dump';
-    run('supabase', ['db', 'dump', '--db-url', source, '--role-only', '--file', rolesDumpPath], {}, 'recovery_roles_dump_failed');
-    failurePhase = 'schema_dump';
-    run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath], {}, 'recovery_schema_dump_failed');
     failurePhase = 'data_dump';
     run('supabase', [
       'db', 'dump', '--db-url', source,
@@ -344,28 +368,6 @@ try {
     digest = inspectedDump.digest;
     backupBytes = inspectedDump.bytes;
     if (!checks.backupExists || !digest) throw new Error('backup_dump_invalid');
-
-    // The isolated target must reproduce the source extension implementation,
-    // not merely the extension names. The source stays read-only; any CREATE
-    // statements are restricted to the disposable loopback target.
-    failurePhase = 'extension_parity';
-    const sourceExtensions = readInstalledExtensions(source, 'recovery_source_extensions_query_failed');
-    const targetExtensions = readInstalledExtensions(restore, 'recovery_target_extensions_query_failed');
-    const availableExtensions = readAvailableExtensions(restore);
-    const extensionPlan = planExtensionParity(sourceExtensions, targetExtensions, availableExtensions);
-    extensionParity.sourceCount = extensionPlan.source.length;
-    extensionParity.targetInitialCount = extensionPlan.target.length;
-    extensionParity.enabledCount = extensionPlan.enable.length;
-    if (extensionPlan.unavailableVersions.length > 0) throw new Error('recovery_target_extension_version_unavailable');
-    if (extensionPlan.schemaMismatches.length > 0) throw new Error('recovery_target_extension_schema_mismatch');
-    if (extensionPlan.versionMismatches.length > 0) throw new Error('recovery_target_extension_version_mismatch');
-    for (const entry of extensionPlan.enable) {
-      sql(restore, entry.sql, 'recovery_target_extension_enable_failed');
-    }
-    const finalTargetExtensions = readInstalledExtensions(restore, 'recovery_target_extensions_recheck_failed');
-    extensionParity.targetFinalCount = finalTargetExtensions.length;
-    checks.extensionParity = extensionParitySatisfied(sourceExtensions, finalTargetExtensions);
-    if (!checks.extensionParity) throw new Error('recovery_target_extension_parity_failed');
 
     failurePhase = 'isolated_restore';
     restoreIntoEphemeralSupabase(localContainer);
@@ -421,7 +423,7 @@ const evidence = {
   failureDiagnostic: passed ? null : failureDiagnostic,
   evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, extensionNamesStored: false, extensionVersionsStored: false, managedAuthRelationNamesStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
   evidenceBoundary: ephemeralMode
-    ? 'Supabase-managed Auth/REST/Storage relations were primed on the empty isolated target by the local Supabase runtime and all API services were stopped before any Production snapshot restore. Supabase-compatible logical roles, application schema and application/auth data were then restored transactionally into the DB-only target after aggregate-only exact extension name/schema/version parity was verified. Storage row data is excluded from this backup/restore proof. Provider-managed Auth relations that exist only in the Production source are excluded from data replay only when their source row count is zero; any non-empty source-only Auth relation fails closed, and auth.users row-count integrity remains mandatory. Selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; managed Auth relation names, extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
+    ? 'Supabase-managed Auth/REST/Storage relations were primed on the empty isolated target by the local Supabase runtime and all API services were stopped before any Production snapshot restore. Supabase-compatible logical roles, application schema and application/auth data were then restored transactionally into the DB-only target after aggregate-only exact extension name/schema/version parity was verified. Managed Auth inventory is rebound after all target extension mutations and immediately before the Production data dump, so stale target catalog state cannot authorize replay. Storage row data is excluded from this backup/restore proof. Provider-managed Auth relations that exist only in the final pre-data Production-source/target comparison are excluded from data replay only when their source row count is zero; any non-empty source-only Auth relation fails closed, and auth.users row-count integrity remains mandatory. Selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; managed Auth relation names, extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
     : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated digest; connection strings, raw command arguments, raw process errors and the dump are not retained.',
 };
 mkdirSync(dirname(output), { recursive: true });
