@@ -4,6 +4,10 @@ import { describe, expect, it } from 'vitest';
 
 const REMOTE_HEAD = '20260822120617';
 const HARDENED_BILLING_TARGET = '20260822123600_v19_finalize_enterprise_contract_mode_compatibility.sql';
+const PAYMENT_FIRST_TARGETS = [
+  '20260823123000_payment_first_commercial_data_plane.sql',
+  '20260823131500_payment_first_gap_analysis_and_storage.sql',
+] as const;
 const pairs = [
   ['20260813175000_optimize_organization_add_ons_rls_initplan.sql', '20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql'],
   ['20260813194500_reconcile_step_up_challenges_runtime.sql', '20260822123540_v19_reconcile_step_up_challenges_runtime.sql'],
@@ -36,20 +40,24 @@ function sha256(bytes: Buffer) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-describe('Supabase V19 production-forward rebase', () => {
-  it('reissues exactly the bounded 25 effects under CLI-issued versions after the live head', () => {
+describe('Supabase V20 production-forward closure', () => {
+  it('preserves the bounded 25 V19 effects and appends exactly two payment-first identities', () => {
     const config = JSON.parse(readFileSync('config/supabase-forward-reconciliation.json', 'utf8')) as {
       changeSet: string;
       migrations: Array<{ filename: string }>;
       truthBoundary: Record<string, boolean>;
     };
 
-    expect(config.changeSet).toBe('2026-08-22-enterprise-data-plane-closure-v19');
-    expect(config.migrations).toHaveLength(25);
-    expect(config.migrations.map((item) => item.filename)).toEqual(pairs.map(([, target]) => target));
-    for (const [, target] of pairs) {
-      expect(target.slice(0, 14)).toMatch(/^\d{14}$/);
-      expect(Number(target.slice(0, 14))).toBeGreaterThan(Number(REMOTE_HEAD));
+    const v19Targets = pairs.map(([, target]) => target);
+    expect(config.changeSet).toBe('2026-08-23-enterprise-data-plane-payment-first-closure-v20');
+    expect(config.migrations).toHaveLength(27);
+    expect(config.migrations.map((item) => item.filename)).toEqual([...v19Targets, ...PAYMENT_FIRST_TARGETS]);
+    expect(config.migrations.slice(0, 25).map((item) => item.filename)).toEqual(v19Targets);
+    expect(config.migrations.slice(-2).map((item) => item.filename)).toEqual(PAYMENT_FIRST_TARGETS);
+
+    for (const filename of config.migrations.map((item) => item.filename)) {
+      expect(filename.slice(0, 14)).toMatch(/^\d{14}$/);
+      expect(Number(filename.slice(0, 14))).toBeGreaterThan(Number(REMOTE_HEAD));
     }
     expect(config.migrations.map((item) => item.filename)).not.toContain(
       '20260822120617_atomic_vendor_risk_quota_mutations.sql',
@@ -95,7 +103,18 @@ describe('Supabase V19 production-forward rebase', () => {
     }
   });
 
-  it('records the already-present commercial migration as non-authorizing remote lineage', () => {
+  it('keeps payment-first migrations as their existing exact forward identities', () => {
+    const core = readFileSync(`supabase/migrations/${PAYMENT_FIRST_TARGETS[0]}`, 'utf8');
+    const gapStorage = readFileSync(`supabase/migrations/${PAYMENT_FIRST_TARGETS[1]}`, 'utf8');
+
+    expect(core).toContain('app_private.has_commercial_authority');
+    expect(core).toContain('as restrictive for all to authenticated');
+    expect(core).toContain('revoke all on table public.regulatory_updates from public, anon, authenticated');
+    expect(gapStorage).toContain('payment_first_gap_assessments_authority');
+    expect(gapStorage).toContain('app_private.has_commercial_authority(e.organization_id)');
+  });
+
+  it('records the already-present commercial quota migration as non-authorizing remote lineage', () => {
     const marker = readFileSync(
       'supabase/reconciliation/20260822120617_atomic_vendor_risk_quota_mutations.sql',
       'utf8',
