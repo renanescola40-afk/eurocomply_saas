@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
   createOrganization: vi.fn(),
   getCurrentOrganizationForUser: vi.fn(),
+  getOrganizationBillingAuthority: vi.fn(),
   invitationEmail: vi.fn(),
   reportError: vi.fn(),
   requireCurrentUser: vi.fn(),
@@ -23,6 +24,9 @@ vi.mock('@/server/auth/permissions', () => ({ assertCurrentUserCan: mocks.assert
 vi.mock('@/server/queries/auth', () => ({ requireCurrentUser: mocks.requireCurrentUser }));
 vi.mock('@/server/queries/current-organization', () => ({
   getCurrentOrganizationForUser: mocks.getCurrentOrganizationForUser,
+}));
+vi.mock('@/server/queries/subscription', () => ({
+  getOrganizationBillingAuthority: mocks.getOrganizationBillingAuthority,
 }));
 
 import {
@@ -94,6 +98,11 @@ describe('atomic onboarding activation', () => {
     vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://app.eurocomply.test');
     mocks.requireCurrentUser.mockResolvedValue({ id: actorUserId, email: 'owner@example.test' });
     mocks.getCurrentOrganizationForUser.mockResolvedValue({ organization_id: organizationId });
+    mocks.getOrganizationBillingAuthority.mockResolvedValue({
+      licensed: true,
+      plan: 'professional',
+      source: 'live_stripe',
+    });
     mocks.assertCurrentUserCan.mockResolvedValue('owner');
     mocks.invitationEmail.mockReturnValue({
       subject: 'Join Acme Corp',
@@ -105,12 +114,13 @@ describe('atomic onboarding activation', () => {
     installSupabaseMock();
   });
 
-  it('authorizes both capabilities before delegating every database write to one RPC', async () => {
+  it('requires durable commercial authority before delegating any product write to the activation RPC', async () => {
     const { rpc } = installSupabaseMock();
 
     const result = await completeOnboardingActivation(baseInput, 'pt');
 
     expect(mocks.assertCurrentUserCan).toHaveBeenNthCalledWith(1, organizationId, actorUserId, 'organization:update');
+    expect(mocks.getOrganizationBillingAuthority).toHaveBeenCalledWith(organizationId);
     expect(mocks.assertCurrentUserCan).toHaveBeenNthCalledWith(2, organizationId, actorUserId, 'team:invite');
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledWith(
@@ -128,8 +138,11 @@ describe('atomic onboarding activation', () => {
         }),
       }),
     );
+    expect(mocks.getOrganizationBillingAuthority.mock.invocationCallOrder[0]).toBeGreaterThan(
+      mocks.assertCurrentUserCan.mock.invocationCallOrder[0],
+    );
     expect(rpc.mock.invocationCallOrder[0]).toBeGreaterThan(
-      mocks.assertCurrentUserCan.mock.invocationCallOrder[1],
+      mocks.getOrganizationBillingAuthority.mock.invocationCallOrder[0],
     );
     expect(result).toMatchObject({
       status: 'completed',
@@ -139,6 +152,39 @@ describe('atomic onboarding activation', () => {
       invitationsDelivered: 1,
       dashboardPath: '/pt/dashboard/organizations?plan=professional',
     });
+  });
+
+  it('denies an authenticated but unlicensed organization before RPC writes, team invitations or email delivery', async () => {
+    const { rpc } = installSupabaseMock();
+    mocks.getOrganizationBillingAuthority.mockResolvedValue({
+      licensed: false,
+      plan: 'starter',
+      source: 'none',
+    });
+
+    await expect(completeOnboardingActivation(baseInput, 'en')).rejects.toThrow(
+      'An active paid subscription or signed contract is required before product onboarding can be activated.',
+    );
+
+    expect(mocks.assertCurrentUserCan).toHaveBeenCalledTimes(1);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when billing authority cannot be resolved and performs no product write', async () => {
+    const { rpc } = installSupabaseMock();
+    mocks.getOrganizationBillingAuthority.mockRejectedValue(new Error('billing provider unavailable'));
+
+    await expect(completeOnboardingActivation(baseInput, 'en')).rejects.toThrow(
+      'Commercial activation is temporarily unavailable. Please retry billing verification.',
+    );
+
+    expect(mocks.reportError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'billing provider unavailable' }),
+      expect.objectContaining({ area: 'onboarding_commercial_authority', organizationId }),
+    );
+    expect(rpc).not.toHaveBeenCalled();
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 
   it('uses a stable key for semantically identical normalized invitation lists', () => {
@@ -200,6 +246,7 @@ describe('atomic onboarding activation', () => {
     const result = await completeOnboardingActivation({ ...baseInput, inviteEmails: [] }, 'unknown');
 
     expect(mocks.assertCurrentUserCan).toHaveBeenCalledTimes(1);
+    expect(mocks.getOrganizationBillingAuthority).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(mocks.sendEmail).not.toHaveBeenCalled();
     expect(result.dashboardPath).toBe('/en/dashboard/organizations?plan=professional');
