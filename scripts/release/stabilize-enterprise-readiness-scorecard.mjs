@@ -28,6 +28,7 @@ export const PRODUCER_WORKFLOW_NAMES = Object.freeze([
   'Public Production Final',
   'Final Technical Controls Proof',
   'Recovery Resilience Proof',
+  'Enterprise Recovery Drill',
 ]);
 
 export const ENTERPRISE_PRODUCTION_GATE_NAME = 'Enterprise Production Gate';

@@ -31,6 +31,7 @@ const expectedCompletionTriggers = [
   'Public Production Final',
   'Final Technical Controls Proof',
   'Recovery Resilience Proof',
+  'Enterprise Recovery Drill',
 ];
 
 function stabilizerProducers() {
@@ -47,6 +48,7 @@ describe('enterprise readiness scorecard orchestration', () => {
     expect(stabilizerProducers()).not.toContain('Enterprise Readiness Scorecard');
     expect(stabilizerProducers()).toContain('Enterprise Production Gate');
     expect(stabilizerProducers()).toContain('Public Production Final');
+    expect(stabilizerProducers()).toContain('Enterprise Recovery Drill');
     expect(stabilizerWorkflow).toContain("github.event.workflow_run.name != 'Enterprise Production Gate'");
     expect(stabilizerWorkflow).toContain("github.event.workflow_run.event != 'workflow_dispatch'");
 

@@ -13,7 +13,7 @@ const workflow = readFileSync(workflowPath, 'utf8');
 const script = readFileSync(scriptPath, 'utf8');
 
 const producerNames = [
-  'CI','CodeQL','Semgrep','Secret Scanning','Scan repository for accidental secret exposure','Dependency Review','Actionlint','Public Claims Guard','Full Security Suite','Enterprise Production Gate','RISCK COMPLY Security CI','RISCK COMPLY Upload Security CI','Enterprise DAST','Dependency Vulnerability Proof','Distributed Rate Limit Runtime Proof','Auth RBAC Tenant Proof','Supabase Live RLS Validation','Production Runtime Proof','Audit Chain Runtime Proof','Production Provider Runtime Proof','Branch Protection Runtime Proof','Step-Up Runtime Proof','Stripe Runtime Evidence Promotion','Public Production Final','Final Technical Controls Proof','Recovery Resilience Proof',
+  'CI','CodeQL','Semgrep','Secret Scanning','Scan repository for accidental secret exposure','Dependency Review','Actionlint','Public Claims Guard','Full Security Suite','Enterprise Production Gate','RISCK COMPLY Security CI','RISCK COMPLY Upload Security CI','Enterprise DAST','Dependency Vulnerability Proof','Distributed Rate Limit Runtime Proof','Auth RBAC Tenant Proof','Supabase Live RLS Validation','Production Runtime Proof','Audit Chain Runtime Proof','Production Provider Runtime Proof','Branch Protection Runtime Proof','Step-Up Runtime Proof','Stripe Runtime Evidence Promotion','Public Production Final','Final Technical Controls Proof','Recovery Resilience Proof','Enterprise Recovery Drill',
 ];
 const retainedFanInNames = ['Auth RBAC Tenant Proof','Supabase Live RLS Validation','RISCK COMPLY Upload Security CI','Audit Chain Runtime Proof','Production Runtime Proof','Production Provider Runtime Proof','Branch Protection Runtime Proof','Step-Up Runtime Proof','Stripe Runtime Evidence Promotion','Public Production Final'];
 
@@ -27,7 +27,7 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
       expect(workflow).toContain(`      - ${producer}`);
       expect(script).toContain(`  '${producer}',`);
     }
-    expect(new Set(producerNames).size).toBe(26);
+    expect(new Set(producerNames).size).toBe(27);
     expect(workflow).toContain("github.event.workflow_run.name != 'Enterprise Production Gate'");
     expect(workflow).toContain("github.event.workflow_run.event != 'workflow_dispatch'");
     expect(workflow).toMatch(/workflow_run:[\s\S]*?branches: \[main\][\s\S]*?types: \[completed\]/);
@@ -42,6 +42,12 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
       expect(script).toContain(`  '${producer}',`);
     }
     expect(new Set(retainedFanInNames).size).toBe(10);
+  });
+
+  it('treats the isolated recovery drill as a material score producer without adding it to retained Production Gate evidence', () => {
+    expect(workflow).toContain('      - Enterprise Recovery Drill');
+    expect(script).toContain("  'Enterprise Recovery Drill',");
+    expect(retainedFanInNames).not.toContain('Enterprise Recovery Drill');
   });
 
   it('debounces the producer storm before checkout or GitHub API access', () => {
