@@ -30,6 +30,15 @@ async function responseJson<T>(response: Response, label: string): Promise<T> {
   return await response.json() as T;
 }
 
+function assertDeniedWrite(response: Response, label: string) {
+  if (response.ok) {
+    throw new Error(`${label}_unexpectedly_allowed_${response.status}`);
+  }
+  if (![401, 403].includes(response.status)) {
+    throw new Error(`${label}_unexpected_status_${response.status}`);
+  }
+}
+
 async function proveSupabaseDataPlaneDenied(input: {
   supabaseUrl: string;
   anonKey: string;
@@ -69,6 +78,11 @@ async function proveSupabaseDataPlaneDenied(input: {
   }
 
   const organizationId = organizationIds[0];
+  const serviceHeaders = {
+    apikey: input.serviceRoleKey,
+    Authorization: `Bearer ${input.serviceRoleKey}`,
+  };
+
   const attemptedName = `PAYMENT_FIRST_DENIED_${Date.now()}`;
   const attemptedWrite = await fetch(`${input.supabaseUrl}/rest/v1/ai_systems`, {
     method: 'POST',
@@ -88,27 +102,49 @@ async function proveSupabaseDataPlaneDenied(input: {
       created_by: userId,
     }),
   });
-  if (attemptedWrite.ok) {
-    throw new Error(`payment_first_supabase_write_unexpectedly_allowed_${attemptedWrite.status}`);
-  }
-  if (![401, 403].includes(attemptedWrite.status)) {
-    throw new Error(`payment_first_supabase_write_unexpected_status_${attemptedWrite.status}`);
-  }
+  assertDeniedWrite(attemptedWrite, 'payment_first_supabase_ai_system_write');
 
   // The rejection itself is not enough: prove with privileged disposable-QA
   // inspection that no commercial row survived the attempted direct write.
   const verification = await fetch(
     `${input.supabaseUrl}/rest/v1/ai_systems?select=id&organization_id=eq.${encodeURIComponent(organizationId)}&name=eq.${encodeURIComponent(attemptedName)}`,
-    {
-      headers: {
-        apikey: input.serviceRoleKey,
-        Authorization: `Bearer ${input.serviceRoleKey}`,
-      },
-    },
+    { headers: serviceHeaders },
   );
   const survivingRows = await responseJson<Array<{ id?: string }>>(verification, 'payment_first_write_verification');
   if (survivingRows.length !== 0) {
     throw new Error('payment_first_supabase_write_survived_denial');
+  }
+
+  // Prove that the reconciled legacy Gap Analysis data plane cannot be used as a
+  // second product key. It is deliberately tested through PostgREST with the
+  // unlicensed user's real JWT, not through the Next.js route.
+  const attemptedGapTitle = `PAYMENT_FIRST_GAP_DENIED_${Date.now()}`;
+  const gapWrite = await fetch(`${input.supabaseUrl}/rest/v1/gap_assessments`, {
+    method: 'POST',
+    headers: {
+      ...authenticatedHeaders,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({
+      organization_id: organizationId,
+      user_id: userId,
+      title: attemptedGapTitle,
+      score: 0,
+      status: 'completed',
+      locale: 'en',
+      summary: { proof: 'unlicensed_gap_write_must_fail' },
+    }),
+  });
+  assertDeniedWrite(gapWrite, 'payment_first_supabase_gap_write');
+
+  const gapVerification = await fetch(
+    `${input.supabaseUrl}/rest/v1/gap_assessments?select=id&organization_id=eq.${encodeURIComponent(organizationId)}&title=eq.${encodeURIComponent(attemptedGapTitle)}`,
+    { headers: serviceHeaders },
+  );
+  const survivingGapRows = await responseJson<Array<{ id?: string }>>(gapVerification, 'payment_first_gap_write_verification');
+  if (survivingGapRows.length !== 0) {
+    throw new Error('payment_first_supabase_gap_write_survived_denial');
   }
 }
 
@@ -163,6 +199,21 @@ export default async function paymentFirstRuntimeGlobalSetup(config: FullConfig)
     });
     if (apiPost.status() !== 403) {
       throw new Error(`payment_first_unlicensed_api_post_status_${apiPost.status()}`);
+    }
+
+    const gapApiPost = await context.request.post('/api/gap-analysis?operation=assessment', {
+      headers: {
+        Origin: new URL(baseURL).origin,
+      },
+      data: {
+        locale: 'en',
+        score: 0,
+        summary: { proof: 'unlicensed_gap_api_write_must_fail' },
+        answers: [],
+      },
+    });
+    if (gapApiPost.status() !== 403) {
+      throw new Error(`payment_first_unlicensed_gap_api_post_status_${gapApiPost.status()}`);
     }
 
     await page.goto('/en/onboarding', { waitUntil: 'domcontentloaded' });
