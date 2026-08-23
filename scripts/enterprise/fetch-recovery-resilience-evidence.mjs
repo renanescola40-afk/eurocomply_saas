@@ -9,6 +9,9 @@ const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const WORKFLOW_FILE = 'recovery-resilience-proof.yml';
 const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`;
 const WORKFLOW_NAME = 'Recovery Resilience Proof';
+const DRILL_WORKFLOW_FILE = 'enterprise-recovery-drill.yml';
+const DRILL_WORKFLOW_PATH = `.github/workflows/${DRILL_WORKFLOW_FILE}`;
+const DRILL_WORKFLOW_NAME = 'Enterprise Recovery Drill';
 const ROLLBACK_SOURCE = 'rollback-validation.json';
 const RESTORE_SOURCE = 'backup-restore-tested.json';
 const ROLLBACK_OUTPUT = 'docs/security/evidence/runtime/rollback-validation.json';
@@ -89,17 +92,54 @@ export function selectExactShaRecoveryRun(runs, targetSha, sourceRunId = '') {
       - Date.parse(left?.updated_at || left?.created_at || 0))[0] ?? null;
 }
 
+export function selectExactShaRecoveryDrillRun(runs, targetSha, sourceRunId = '') {
+  const requested = String(sourceRunId || '').trim();
+  return (Array.isArray(runs) ? runs : [])
+    .filter((run) => run?.path === DRILL_WORKFLOW_PATH)
+    .filter((run) => String(run?.head_sha || '').toLowerCase() === targetSha)
+    .filter((run) => run?.head_branch === 'main')
+    .filter((run) => run?.event === 'push' || run?.event === 'workflow_dispatch')
+    .filter((run) => run?.status === 'completed' && run?.conclusion === 'success')
+    .filter((run) => !requested || String(run?.id) === requested)
+    .sort((left, right) => Date.parse(right?.updated_at || right?.created_at || 0)
+      - Date.parse(left?.updated_at || left?.created_at || 0))[0] ?? null;
+}
+
 function sameArray(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
+}
+
+export function validateBackupRestoreSource(restore, { targetSha, runId }) {
+  const failures = [];
+  if (restore?.schema !== 'risck-comply.backup-restore-evidence.v2') failures.push('restore_schema_invalid');
+  if (restore?.evidenceItem !== 'backup-restore-tested') failures.push('restore_evidence_item_invalid');
+  if (restore?.status !== 'Complete' || restore?.outcome !== 'passed') failures.push('restore_not_complete');
+  if (restore?.repository !== REPOSITORY || restore?.branch !== 'main') failures.push('restore_provenance_invalid');
+  if (restore?.targetSha !== targetSha || restore?.observedSha !== targetSha) failures.push('restore_sha_mismatch');
+  if (String(restore?.runId || '') !== String(runId)) failures.push('restore_run_mismatch');
+  if (!restore?.generatedAt || !Number.isFinite(Date.parse(restore.generatedAt))) failures.push('restore_generated_at_invalid');
+  if (!Array.isArray(restore?.failures) || restore.failures.length !== 0) failures.push('restore_failures_present');
+  if (!sameArray(restore?.controlsVerified, RESTORE_CONTROLS)) failures.push('restore_controls_invalid');
+  for (const check of [
+    'backupExists', 'restoreExecuted', 'dataIntegrity', 'rlsAfterRestore', 'rlsPoliciesPresent',
+    'rpoMeasured', 'rtoMeasured', 'distinctDatabases', 'protectedMainExecution', 'exactShaBound',
+  ]) if (restore?.checks?.[check] !== true) failures.push(`restore_check_failed:${check}`);
+  if (!Number.isFinite(restore?.metrics?.rpoSeconds)) failures.push('rpo_metric_invalid');
+  if (!Number.isFinite(restore?.metrics?.rtoSeconds)) failures.push('rto_metric_invalid');
+  if (restore?.evidenceIntegrity?.containsSensitiveValues !== false) failures.push('restore_sensitive_integrity_invalid');
+  if (restore?.evidenceIntegrity?.credentialsStored !== false) failures.push('restore_credentials_integrity_invalid');
+  if (restore?.evidenceIntegrity?.exactShaBound !== true) failures.push('restore_sha_integrity_invalid');
+  if (restore?.evidenceIntegrity?.databaseUrlsStored !== false) failures.push('restore_urls_integrity_invalid');
+  if (restore?.evidenceIntegrity?.dumpStored !== false) failures.push('restore_dump_integrity_invalid');
+  if (restore?.evidenceIntegrity?.rowDataStored !== false) failures.push('restore_rows_integrity_invalid');
+  return [...new Set(failures)];
 }
 
 export function validateRecoverySources(rollback, restore, { targetSha, runId }) {
   const failures = [];
   if (rollback?.schema !== 'risck-comply.rollback-validation.v4') failures.push('rollback_schema_invalid');
   if (rollback?.evidenceItem !== 'rollback-validation') failures.push('rollback_evidence_item_invalid');
-  if (restore?.schema !== 'risck-comply.backup-restore-evidence.v2') failures.push('restore_schema_invalid');
-  if (restore?.evidenceItem !== 'backup-restore-tested') failures.push('restore_evidence_item_invalid');
-  for (const [name, source] of [['rollback', rollback], ['restore', restore]]) {
+  for (const [name, source] of [['rollback', rollback]]) {
     if (source?.status !== 'Complete' || source?.outcome !== 'passed') failures.push(`${name}_not_complete`);
     if (source?.repository !== REPOSITORY || source?.branch !== 'main') failures.push(`${name}_provenance_invalid`);
     if (source?.targetSha !== targetSha || source?.observedSha !== targetSha) failures.push(`${name}_sha_mismatch`);
@@ -110,23 +150,14 @@ export function validateRecoverySources(rollback, restore, { targetSha, runId })
     if (source?.evidenceIntegrity?.credentialsStored !== false) failures.push(`${name}_credentials_integrity_invalid`);
     if (source?.evidenceIntegrity?.exactShaBound !== true) failures.push(`${name}_sha_integrity_invalid`);
   }
+  failures.push(...validateBackupRestoreSource(restore, { targetSha, runId }));
   if (!sameArray(rollback?.controlsVerified, ROLLBACK_CONTROLS)) failures.push('rollback_controls_invalid');
-  if (!sameArray(restore?.controlsVerified, RESTORE_CONTROLS)) failures.push('restore_controls_invalid');
   for (const check of [
     'explicitConfirmation', 'rollbackTargetConfigured', 'rollbackTargetDistinct', 'rollbackShaDistinct',
     'rollbackExecuted', 'rollbackStatusChecked', 'postRollbackHealth', 'postRollbackNoStore',
     'protectedEnvironment', 'exactShaBound',
   ]) if (rollback?.checks?.[check] !== true) failures.push(`rollback_check_failed:${check}`);
-  for (const check of [
-    'backupExists', 'restoreExecuted', 'dataIntegrity', 'rlsAfterRestore', 'rlsPoliciesPresent',
-    'rpoMeasured', 'rtoMeasured', 'distinctDatabases', 'protectedMainExecution', 'exactShaBound',
-  ]) if (restore?.checks?.[check] !== true) failures.push(`restore_check_failed:${check}`);
-  if (!Number.isFinite(restore?.metrics?.rpoSeconds)) failures.push('rpo_metric_invalid');
-  if (!Number.isFinite(restore?.metrics?.rtoSeconds)) failures.push('rto_metric_invalid');
   if (rollback?.evidenceIntegrity?.deploymentUrlsStored !== false) failures.push('rollback_urls_integrity_invalid');
-  if (restore?.evidenceIntegrity?.databaseUrlsStored !== false) failures.push('restore_urls_integrity_invalid');
-  if (restore?.evidenceIntegrity?.dumpStored !== false) failures.push('restore_dump_integrity_invalid');
-  if (restore?.evidenceIntegrity?.rowDataStored !== false) failures.push('restore_rows_integrity_invalid');
   return [...new Set(failures)];
 }
 
@@ -134,22 +165,18 @@ function canonicalCheck(name, passed = true) {
   return { name, passed };
 }
 
-export function buildCanonicalRecoveryEvidence(rollback, restore, { targetSha, runId }) {
-  const failures = validateRecoverySources(rollback, restore, { targetSha, runId });
-  if (failures.length) throw new Error(`recovery_evidence_invalid:${failures.join(',')}`);
-  const common = {
-    status: 'Complete',
-    outcome: 'passed',
+function canonicalCommon({ targetSha, runId, workflowName, workflowPath, artifactName }) {
+  return {
     repository: REPOSITORY,
     branch: 'main',
     targetSha,
     observedSha: targetSha,
     runId: String(runId),
     sourceWorkflow: {
-      name: WORKFLOW_NAME,
-      file: WORKFLOW_PATH,
+      name: workflowName,
+      file: workflowPath,
       runId: String(runId),
-      artifact: `recovery-resilience-proof-${targetSha}`,
+      artifact: artifactName,
       exactShaBound: true,
     },
     evidenceIntegrity: {
@@ -159,10 +186,50 @@ export function buildCanonicalRecoveryEvidence(rollback, restore, { targetSha, r
       sourceRunBound: true,
     },
   };
+}
+
+function buildCanonicalRestore(restore, common) {
+  return {
+    schema: 'risck-comply.backup-restore-scorecard-evidence.v1',
+    evidenceItem: 'backup-restore-tested',
+    status: 'Complete',
+    outcome: 'passed',
+    ...common,
+    generatedAt: restore.generatedAt,
+    controlsVerified: RESTORE_CONTROLS,
+    checks: [
+      canonicalCheck('backupExists'),
+      canonicalCheck('restoreExecuted'),
+      canonicalCheck('dataIntegrity'),
+      canonicalCheck('rlsAfterRestore'),
+      canonicalCheck('rpoMeasured'),
+      canonicalCheck('rtoMeasured'),
+    ],
+    metrics: {
+      rpoSeconds: restore.metrics.rpoSeconds,
+      rtoSeconds: restore.metrics.rtoSeconds,
+      totalExerciseSeconds: restore.metrics?.totalExerciseSeconds ?? null,
+    },
+    evidenceBoundary: 'Protected exact-main-SHA logical backup and isolated restore proof with integrity, RLS, RPO and RTO checks. Database URLs, dumps and row data are not stored.',
+  };
+}
+
+export function buildCanonicalRecoveryEvidence(rollback, restore, { targetSha, runId }) {
+  const failures = validateRecoverySources(rollback, restore, { targetSha, runId });
+  if (failures.length) throw new Error(`recovery_evidence_invalid:${failures.join(',')}`);
+  const common = canonicalCommon({
+    targetSha,
+    runId,
+    workflowName: WORKFLOW_NAME,
+    workflowPath: WORKFLOW_PATH,
+    artifactName: `recovery-resilience-proof-${targetSha}`,
+  });
   return {
     rollback: {
       schema: 'risck-comply.rollback-scorecard-evidence.v1',
       evidenceItem: 'rollback-validation',
+      status: 'Complete',
+      outcome: 'passed',
       ...common,
       generatedAt: rollback.generatedAt,
       controlsVerified: ROLLBACK_CONTROLS,
@@ -175,27 +242,39 @@ export function buildCanonicalRecoveryEvidence(rollback, restore, { targetSha, r
       metrics: { recoveryTimeSeconds: rollback.metrics?.recoveryTimeSeconds ?? null },
       evidenceBoundary: 'Protected exact-main-SHA proof of an explicitly confirmed Vercel rollback and post-rollback health validation. Deployment URLs, credentials and response bodies are not stored.',
     },
-    restore: {
-      schema: 'risck-comply.backup-restore-scorecard-evidence.v1',
-      evidenceItem: 'backup-restore-tested',
+    restore: buildCanonicalRestore(restore, common),
+  };
+}
+
+export function buildCanonicalRecoveryDrillEvidence(restore, { targetSha, runId }) {
+  const failures = validateBackupRestoreSource(restore, { targetSha, runId });
+  if (failures.length) throw new Error(`recovery_drill_evidence_invalid:${failures.join(',')}`);
+  const common = canonicalCommon({
+    targetSha,
+    runId,
+    workflowName: DRILL_WORKFLOW_NAME,
+    workflowPath: DRILL_WORKFLOW_PATH,
+    artifactName: `enterprise-recovery-${targetSha}`,
+  });
+  return {
+    rollback: {
+      schema: 'risck-comply.rollback-scorecard-evidence.v1',
+      evidenceItem: 'rollback-validation',
+      status: 'Open',
+      outcome: 'not_executed',
       ...common,
       generatedAt: restore.generatedAt,
-      controlsVerified: RESTORE_CONTROLS,
+      controlsVerified: ROLLBACK_CONTROLS,
       checks: [
-        canonicalCheck('backupExists'),
-        canonicalCheck('restoreExecuted'),
-        canonicalCheck('dataIntegrity'),
-        canonicalCheck('rlsAfterRestore'),
-        canonicalCheck('rpoMeasured'),
-        canonicalCheck('rtoMeasured'),
+        canonicalCheck('rollbackTargetConfigured', false),
+        canonicalCheck('distinctDeployment', false),
+        canonicalCheck('rollbackExecuted', false),
+        canonicalCheck('postRollbackHealth', false),
       ],
-      metrics: {
-        rpoSeconds: restore.metrics.rpoSeconds,
-        rtoSeconds: restore.metrics.rtoSeconds,
-        totalExerciseSeconds: restore.metrics?.totalExerciseSeconds ?? null,
-      },
-      evidenceBoundary: 'Protected exact-main-SHA logical backup and isolated restore proof with integrity, RLS, RPO and RTO checks. Database URLs, dumps and row data are not stored.',
+      metrics: { recoveryTimeSeconds: null },
+      evidenceBoundary: 'No Production rollback executed. This exact-SHA artifact exists only to preserve truthful non-credit for REC-01 through REC-04 while independently promoting the isolated backup/restore controls REC-05 through REC-10.',
     },
+    restore: buildCanonicalRestore(restore, common),
   };
 }
 
@@ -233,29 +312,49 @@ function isSafeZipEntry(entry) {
   return entry.split('/').every((segment) => segment && segment !== '.' && segment !== '..');
 }
 
-export function selectRecoveryEvidenceEntries(entries) {
+function normalizedZipEntries(entries) {
   const normalized = (Array.isArray(entries) ? entries : []).map((entry) => String(entry || '').trim()).filter(Boolean);
   if (!normalized.length) throw new Error('artifact_zip_empty');
   if (normalized.length > MAX_ZIP_ENTRIES) throw new Error('artifact_zip_entry_limit_exceeded');
   if (normalized.some((entry) => !isSafeZipEntry(entry.endsWith('/') ? entry.slice(0, -1) : entry))) throw new Error('artifact_zip_unsafe_entry');
-  const select = (filename) => {
-    const matches = normalized.filter((entry) => !entry.endsWith('/') && (entry === filename || entry.endsWith(`/${filename}`)));
-    if (matches.length !== 1) throw new Error(`${filename.replace(/\.json$/, '').replaceAll('-', '_')}_source_not_unique`);
-    return matches[0];
+  return normalized;
+}
+
+function selectUniqueEntry(normalized, filename) {
+  const matches = normalized.filter((entry) => !entry.endsWith('/') && (entry === filename || entry.endsWith(`/${filename}`)));
+  if (matches.length !== 1) throw new Error(`${filename.replace(/\.json$/, '').replaceAll('-', '_')}_source_not_unique`);
+  return matches[0];
+}
+
+export function selectRecoveryEvidenceEntries(entries) {
+  const normalized = normalizedZipEntries(entries);
+  return {
+    rollback: selectUniqueEntry(normalized, ROLLBACK_SOURCE),
+    restore: selectUniqueEntry(normalized, RESTORE_SOURCE),
   };
-  return { rollback: select(ROLLBACK_SOURCE), restore: select(RESTORE_SOURCE) };
+}
+
+export function selectRecoveryDrillEvidenceEntry(entries) {
+  return selectUniqueEntry(normalizedZipEntries(entries), RESTORE_SOURCE);
+}
+
+function readZipJson(zipPath, entry) {
+  const content = execFileSync('unzip', ['-p', zipPath, entry], { encoding: 'utf8', maxBuffer: MAX_EVIDENCE_BYTES });
+  if (Buffer.byteLength(content, 'utf8') > MAX_EVIDENCE_BYTES) throw new Error('recovery_evidence_too_large');
+  return JSON.parse(content);
 }
 
 function extractSources(zipPath) {
   const entries = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8', maxBuffer: 256 * 1024 })
     .split('\n').map((entry) => entry.trim()).filter(Boolean);
   const selected = selectRecoveryEvidenceEntries(entries);
-  const read = (entry) => {
-    const content = execFileSync('unzip', ['-p', zipPath, entry], { encoding: 'utf8', maxBuffer: MAX_EVIDENCE_BYTES });
-    if (Buffer.byteLength(content, 'utf8') > MAX_EVIDENCE_BYTES) throw new Error('recovery_evidence_too_large');
-    return JSON.parse(content);
-  };
-  return { rollback: read(selected.rollback), restore: read(selected.restore) };
+  return { rollback: readZipJson(zipPath, selected.rollback), restore: readZipJson(zipPath, selected.restore) };
+}
+
+function extractDrillRestore(zipPath) {
+  const entries = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8', maxBuffer: 256 * 1024 })
+    .split('\n').map((entry) => entry.trim()).filter(Boolean);
+  return readZipJson(zipPath, selectRecoveryDrillEvidenceEntry(entries));
 }
 
 export function removeStaleRecoveryEvidence(root) {
@@ -263,48 +362,86 @@ export function removeStaleRecoveryEvidence(root) {
   rmSync(join(root, RESTORE_OUTPUT), { force: true });
 }
 
-export async function fetchRecoveryResilienceEvidence({ root, repository, token, targetSha, sourceRunId = '', required = false }) {
-  removeStaleRecoveryEvidence(root);
-  if (repository !== REPOSITORY) throw new Error('repository_not_canonical');
-  if (!token) throw new Error('github_token_missing');
-  if (!FULL_SHA.test(targetSha)) throw new Error('target_sha_invalid');
-  const runs = sourceRunId
-    ? [await githubJson(`https://api.github.com/repos/${repository}/actions/runs/${sourceRunId}`, token)]
-    : (await githubJson(`https://api.github.com/repos/${repository}/actions/workflows/${WORKFLOW_FILE}/runs?head_sha=${encodeURIComponent(targetSha)}&status=success&branch=main&per_page=20`, token)).workflow_runs;
-  const run = selectExactShaRecoveryRun(runs, targetSha, sourceRunId);
-  if (!run) {
-    if (required) throw new Error('exact_sha_recovery_run_missing');
-    console.log(`Recovery evidence remains NOT_VERIFIED for ${targetSha}.`);
-    return { found: false, targetSha };
+function writeCanonicalEvidence(root, evidence) {
+  for (const [relativePath, document] of [[ROLLBACK_OUTPUT, evidence.rollback], [RESTORE_OUTPUT, evidence.restore]]) {
+    const output = join(root, relativePath);
+    mkdirSync(dirname(output), { recursive: true });
+    writeFileSync(output, `${JSON.stringify(document, null, 2)}\n`, { mode: 0o600 });
   }
-  if (run.path !== WORKFLOW_PATH) throw new Error('recovery_workflow_path_invalid');
-  const runId = String(run.id || '').trim();
-  if (!NUMERIC.test(runId)) throw new Error('run_id_invalid');
-  const artifactName = `recovery-resilience-proof-${targetSha}`;
+}
+
+async function exactArtifactForRun({ repository, token, runId, artifactName }) {
   const listing = await githubJson(`https://api.github.com/repos/${repository}/actions/runs/${runId}/artifacts?per_page=20`, token);
   const matches = (listing.artifacts || []).filter((artifact) => artifact?.name === artifactName && artifact?.expired !== true);
   if (matches.length !== 1) throw new Error('exact_sha_recovery_artifact_not_unique');
   const artifact = matches[0];
   const size = Number(artifact?.size_in_bytes || 0);
   if (!Number.isFinite(size) || size <= 0 || size > MAX_ARTIFACT_BYTES) throw new Error('artifact_size_invalid');
+  return artifact;
+}
+
+async function downloadAndBuild({ root, token, runId, artifact, mode, targetSha }) {
   const zipPath = join(root, 'artifacts', 'enterprise-readiness', `recovery-${runId}.zip`);
   mkdirSync(dirname(zipPath), { recursive: true });
   try {
     await downloadArtifact(token, artifact.id, zipPath);
     const downloadedSize = statSync(zipPath).size;
     if (downloadedSize <= 0 || downloadedSize > MAX_ARTIFACT_BYTES) throw new Error('downloaded_artifact_size_invalid');
-    const source = extractSources(zipPath);
-    const evidence = buildCanonicalRecoveryEvidence(source.rollback, source.restore, { targetSha, runId });
-    for (const [relativePath, document] of [[ROLLBACK_OUTPUT, evidence.rollback], [RESTORE_OUTPUT, evidence.restore]]) {
-      const output = join(root, relativePath);
-      mkdirSync(dirname(output), { recursive: true });
-      writeFileSync(output, `${JSON.stringify(document, null, 2)}\n`, { mode: 0o600 });
-    }
-    console.log(`Retrieved exact-SHA recovery evidence from workflow run ${runId}.`);
-    return { found: true, targetSha, runId, artifactId: String(artifact.id) };
+    const evidence = mode === 'full'
+      ? (() => {
+          const source = extractSources(zipPath);
+          return buildCanonicalRecoveryEvidence(source.rollback, source.restore, { targetSha, runId });
+        })()
+      : buildCanonicalRecoveryDrillEvidence(extractDrillRestore(zipPath), { targetSha, runId });
+    writeCanonicalEvidence(root, evidence);
+    return evidence;
   } finally {
     rmSync(zipPath, { force: true });
   }
+}
+
+export async function fetchRecoveryResilienceEvidence({ root, repository, token, targetSha, sourceRunId = '', required = false }) {
+  removeStaleRecoveryEvidence(root);
+  if (repository !== REPOSITORY) throw new Error('repository_not_canonical');
+  if (!token) throw new Error('github_token_missing');
+  if (!FULL_SHA.test(targetSha)) throw new Error('target_sha_invalid');
+
+  const directRun = sourceRunId
+    ? await githubJson(`https://api.github.com/repos/${repository}/actions/runs/${sourceRunId}`, token)
+    : null;
+  const fullRuns = directRun
+    ? [directRun]
+    : (await githubJson(`https://api.github.com/repos/${repository}/actions/workflows/${WORKFLOW_FILE}/runs?head_sha=${encodeURIComponent(targetSha)}&status=success&branch=main&per_page=20`, token)).workflow_runs;
+  const fullRun = selectExactShaRecoveryRun(fullRuns, targetSha, sourceRunId);
+
+  if (fullRun) {
+    const runId = String(fullRun.id || '').trim();
+    if (!NUMERIC.test(runId)) throw new Error('run_id_invalid');
+    const artifactName = `recovery-resilience-proof-${targetSha}`;
+    const artifact = await exactArtifactForRun({ repository, token, runId, artifactName });
+    await downloadAndBuild({ root, token, runId, artifact, mode: 'full', targetSha });
+    console.log(`Retrieved exact-SHA full recovery evidence from workflow run ${runId}.`);
+    return { found: true, mode: 'full', targetSha, runId, artifactId: String(artifact.id) };
+  }
+
+  const drillRuns = directRun
+    ? [directRun]
+    : (await githubJson(`https://api.github.com/repos/${repository}/actions/workflows/${DRILL_WORKFLOW_FILE}/runs?head_sha=${encodeURIComponent(targetSha)}&status=success&branch=main&per_page=20`, token)).workflow_runs;
+  const drillRun = selectExactShaRecoveryDrillRun(drillRuns, targetSha, sourceRunId);
+
+  if (!drillRun) {
+    if (required) throw new Error('exact_sha_recovery_run_missing');
+    console.log(`Recovery evidence remains NOT_VERIFIED for ${targetSha}.`);
+    return { found: false, targetSha };
+  }
+
+  const runId = String(drillRun.id || '').trim();
+  if (!NUMERIC.test(runId)) throw new Error('run_id_invalid');
+  const artifactName = `enterprise-recovery-${targetSha}`;
+  const artifact = await exactArtifactForRun({ repository, token, runId, artifactName });
+  await downloadAndBuild({ root, token, runId, artifact, mode: 'restore-only', targetSha });
+  console.log(`Retrieved exact-SHA restore-only recovery evidence from Enterprise Recovery Drill run ${runId}.`);
+  return { found: true, mode: 'restore-only', targetSha, runId, artifactId: String(artifact.id) };
 }
 
 async function main() {
