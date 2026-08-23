@@ -162,8 +162,8 @@ describe('ephemeral Supabase recovery database contract', () => {
     expect(exercise).toContain("const managedStorageDataExclude = readManagedStorageRelations(source).join(',')");
     expect(exercise).not.toContain("SUPABASE_MANAGED_DATA_EXCLUDE = 'storage.*'");
     expect(exercise.match(/'--exclude'/g)).toHaveLength(1);
-    expect(exercise).toContain("'--exclude', managedStorageDataExclude");
-    expect(exercise).toContain("failurePhase = 'data_dump_storage_exclusion_validation'");
+    expect(exercise).toContain("'--exclude', managedDataExclude");
+    expect(exercise).toContain("failurePhase = 'data_dump_managed_exclusion_validation'");
     expect(exercise).toContain('assertManagedStorageRowsExcluded(dataDumpPath)');
     expect(exercise).toContain('checks.managedStorageRowsExcluded = true');
     expect(exercise).toContain('recovery_storage_rows_present_in_data_dump');
