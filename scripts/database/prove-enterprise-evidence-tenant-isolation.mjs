@@ -58,6 +58,45 @@ async function insertOne(admin, table, row, label) {
   return data;
 }
 
+async function grantDisposableSignedContractAuthority(admin, organizationId, label) {
+  const observedAt = new Date();
+  const validFrom = new Date(observedAt.getTime() - 60_000).toISOString();
+  const validUntil = new Date(observedAt.getTime() + 60 * 60_000).toISOString();
+  const externalReference = `disposable-evidence-${label}-${randomUUID()}`;
+  const source = await insertOne(admin, 'enterprise_entitlement_sources', {
+    organization_id: organizationId,
+    source_kind: 'signed_contract',
+    external_reference: externalReference,
+    priority: 1000,
+    active: true,
+    version: 1,
+    effective_from: validFrom,
+    effective_until: validUntil,
+  }, `${label}_commercial_source`);
+
+  const payloadSha256 = createHash('sha256')
+    .update(`${organizationId}:${source.id}:${externalReference}`)
+    .digest('hex');
+
+  await insertOne(admin, 'enterprise_entitlement_snapshots', {
+    organization_id: organizationId,
+    source_id: source.id,
+    idempotency_key: `evidence-vault-${label}-${randomUUID()}`,
+    source_version: 1,
+    plan_code: 'starter',
+    full_seat_limit: 10,
+    participant_seat_limit: 10,
+    viewer_seat_limit: 10,
+    entitlements: {},
+    source_payload_sha256: payloadSha256,
+    observed_at: observedAt.toISOString(),
+    valid_from: validFrom,
+    valid_until: validUntil,
+    status: 'applied',
+    applied_policy_version: 1,
+  }, `${label}_commercial_snapshot`);
+}
+
 async function expectError(operation, label) {
   const result = await operation();
   if (!result?.error) throw new Error(`${label}_unexpectedly_succeeded`);
@@ -119,6 +158,14 @@ async function main() {
     }, label);
   }
 
+  // Payment-first RLS is part of the exact-SHA tenant-isolation surface. Seed a
+  // bounded signed-contract authority only in this loopback disposable database
+  // so same-tenant Evidence Vault operations can reach the tenant/immutability
+  // policies. The secondary A organization is also licensed so the rebind test
+  // reaches the immutable-tenant trigger rather than failing earlier on billing.
+  await grantDisposableSignedContractAuthority(admin, orgA.id, 'tenant-a');
+  await grantDisposableSignedContractAuthority(admin, orgASecondary.id, 'tenant-a-secondary');
+
   const tenantA = await signIn(url, anonKey, actorA, 'tenant_a');
   const tenantB = await signIn(url, anonKey, actorB, 'tenant_b');
 
@@ -164,7 +211,7 @@ async function main() {
 
   // Rebinding is forbidden even when the actor is legitimately a member of both
   // source and destination organizations. This proves the invariant trigger,
-  // not merely the RLS membership predicate.
+  // not merely the RLS membership or commercial-authority predicates.
   await expectError(
     () => tenantA.from('evidence_items')
       .update({ organization_id: orgASecondary.id })
