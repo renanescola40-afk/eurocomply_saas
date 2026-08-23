@@ -18,8 +18,10 @@ const DEFAULT_REPORT_PATH = join(
 );
 
 const EXPECTED_SCHEMA = 'risck-comply.supabase-forward-reconciliation-config.v1';
-const EXPECTED_CHANGE_SET = '2026-08-22-enterprise-data-plane-closure-v19';
+const EXPECTED_CHANGE_SET = '2026-08-23-enterprise-data-plane-payment-first-closure-v20';
 const EVIDENCE_VAULT_MIGRATION = '20260822123626_v19_reconcile_enterprise_evidence_vault.sql';
+const PAYMENT_FIRST_CORE_MIGRATION = '20260823123000_payment_first_commercial_data_plane.sql';
+const PAYMENT_FIRST_GAP_STORAGE_MIGRATION = '20260823131500_payment_first_gap_analysis_and_storage.sql';
 const COMMERCIAL_QUOTA_MIGRATION = '20260822120617_atomic_vendor_risk_quota_mutations.sql';
 const EXPECTED_SELECTED = [
   '20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql',
@@ -47,6 +49,8 @@ const EXPECTED_SELECTED = [
   '20260822123622_v19_reconcile_gap_remediation_persistence.sql',
   '20260822123624_v19_harden_gap_personal_task_write_boundary.sql',
   EVIDENCE_VAULT_MIGRATION,
+  PAYMENT_FIRST_CORE_MIGRATION,
+  PAYMENT_FIRST_GAP_STORAGE_MIGRATION,
 ];
 
 const TRUTH_BOUNDARY = {
@@ -114,8 +118,20 @@ function validateMigrationFilename(filename) {
   return match[1];
 }
 
+function requireMarkers(source, markers, label) {
+  for (const marker of markers) {
+    if (!source.includes(marker)) fail(`${label} lost required marker: ${marker}`);
+  }
+}
+
+function forbidMarkers(source, markers, label) {
+  for (const marker of markers) {
+    if (source.includes(marker)) fail(`${label} reopened forbidden boundary: ${marker}`);
+  }
+}
+
 function validateEvidenceVaultMigration(source) {
-  const requiredMarkers = [
+  requireMarkers(source, [
     'alter column organization_id set not null',
     'alter table public.evidence_items force row level security',
     'alter table public.evidence_item_audit_events force row level security',
@@ -126,17 +142,46 @@ function validateEvidenceVaultMigration(source) {
     'rls_compliance_evidence_objects_select_organization',
     'rls_compliance_evidence_objects_insert_organization',
     'Evidence Vault records are append-audited and must be soft-deleted',
-  ];
-  for (const marker of requiredMarkers) {
-    if (!source.includes(marker)) fail(`Evidence Vault migration lost required marker: ${marker}`);
-  }
-  for (const forbiddenMarker of [
+  ], 'Evidence Vault migration');
+  forbidMarkers(source, [
     'create policy "rls_compliance_evidence_objects_update_organization"',
     'create policy "rls_compliance_evidence_objects_delete_organization"',
     'grant select, insert, update, delete on table public.evidence_items to authenticated',
-  ]) {
-    if (source.includes(forbiddenMarker)) fail(`Evidence Vault migration reopened forbidden browser boundary: ${forbiddenMarker}`);
-  }
+  ], 'Evidence Vault migration');
+}
+
+function validatePaymentFirstCoreMigration(source) {
+  requireMarkers(source, [
+    'app_private.has_commercial_authority',
+    "source.source_kind = 'signed_contract'",
+    'event.livemode = true',
+    "event.status = 'processed'",
+    "lower(coalesce(subscription.status, '')) = 'active'",
+    'as restrictive for all to authenticated',
+    'using (app_private.has_commercial_authority(organization_id))',
+    "array['ai_tools', 'compliance_documents']",
+    'revoke all on table public.regulatory_updates from public, anon, authenticated',
+    'legacy/global paid-product client grants survived',
+  ], 'Payment-first commercial authority migration');
+  forbidMarkers(source, [
+    "in ('active','trialing')",
+    "source_kind = 'manual_override'",
+  ], 'Payment-first commercial authority migration');
+}
+
+function validatePaymentFirstGapStorageMigration(source) {
+  requireMarkers(source, [
+    'payment_first_gap_assessments_authority',
+    'payment_first_gap_answers_authority',
+    'payment_first_compliance_findings_authority',
+    'app_private.has_commercial_authority(organization_id)',
+    'app_private.has_commercial_authority(ga.organization_id)',
+    'revoke all on table public.compliance_evidence from public, anon, authenticated',
+    'rls_compliance_evidence_objects_select_organization',
+    'rls_compliance_evidence_objects_insert_organization',
+    'app_private.has_commercial_authority(e.organization_id)',
+    'Evidence Vault Storage policies are not payment-first',
+  ], 'Payment-first Gap/Storage migration');
 }
 
 function validateCommercialQuotaMutation(source) {
@@ -190,6 +235,8 @@ function main() {
     const bytes = readFileSync(path);
     const source = bytes.toString('utf8');
     if (filename === EVIDENCE_VAULT_MIGRATION) validateEvidenceVaultMigration(source);
+    if (filename === PAYMENT_FIRST_CORE_MIGRATION) validatePaymentFirstCoreMigration(source);
+    if (filename === PAYMENT_FIRST_GAP_STORAGE_MIGRATION) validatePaymentFirstGapStorageMigration(source);
     if (filename === COMMERCIAL_QUOTA_MIGRATION) validateCommercialQuotaMutation(source);
 
     return {
