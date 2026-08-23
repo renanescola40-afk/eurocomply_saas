@@ -7,18 +7,19 @@ Current Enterprise rule: `DEFAULT_PR_ACTION=NO_NEW_PR`
 
 ## 1. Mission
 
-When the Enterprise release authority permits release-changing marketing work, execute two coherent packages instead of reopening discovery or creating small PRs.
+When Enterprise release authority permits release-changing marketing work, execute two coherent packages instead of reopening discovery or creating small PRs.
 
 ```text
 GATE OPENS
    -> REVALIDATE CURRENT MAIN + RUNTIME
+   -> CONFIRM APPROVED POSTHOG PRODUCTION PROJECT BINDING
    -> MEGA PR B: CRO + ACQUISITION + ATTRIBUTION
-   -> PROVE MEASUREMENT
+   -> PROVE REAL CONNECTED-PROJECT MEASUREMENT
    -> MEGA PR A: SEO AUTHORITY + BRAND ENTITY
    -> REVALIDATE INDEXABILITY / ENTITY / CONVERSION
 ```
 
-The order prioritizes truthful conversion and measurement before larger-scale distribution. If release authority explicitly prefers a single combined marketing PR and engineering risk remains bounded, both packages may be consolidated without weakening acceptance criteria.
+The order prioritizes truthful conversion and measurement before larger-scale distribution.
 
 ---
 
@@ -30,7 +31,51 @@ Suggested title:
 
 ## MARKETING REQUIREMENT
 
-Every high-intent public journey must tell commercial truth, route by buyer intent and produce privacy-safe source-to-conversion evidence.
+Every high-intent public journey must tell commercial truth, route by buyer intent and produce privacy-safe source-to-conversion evidence in one governed analytics project.
+
+## PRESTAGED IMPLEMENTATION ALREADY ON MARKETING BRANCH
+
+A current Production runtime investigation proved that the browser is compiled with a PostHog Project API Key that does not match the only connected PostHog project being audited.
+
+No key values are recorded.
+
+Root cause:
+
+```text
+ANALYTICS_ROOT_CAUSE=PROVIDER_BINDING_GOVERNANCE_DRIFT
+```
+
+Current protected main deploy does not synchronize the PostHog project key/hosts/consent policy into Vercel. The marketing branch already contains a fail-closed remediation:
+
+```text
+873f2c489618b6f4ebd2c720e1fed3100f860611  workflow governance
+
+e1bd05bab2af06f2fa257b0af9f4ad1d9cbcfdfe  workflow regression contract
+
+f6d65b8f04c2644c321c30111e0f3e2a1125c2e2  environment mapping
+
+8a48a893d30c8683542a894e325c1aeae8a5da1b  root-cause evidence
+```
+
+When this Mega PR is activated, preserve this implementation rather than rediscovering/rebuilding it.
+
+### Required protected-provider state before Production activation
+
+The protected GitHub `production` environment must contain:
+
+```text
+NEXT_PUBLIC_POSTHOG_KEY=<approved connected PostHog EU Project API Key>
+```
+
+Never place the value in source, issues, PR comments, screenshots or logs.
+
+The prestaged deploy contract also locks:
+
+```text
+NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
+NEXT_PUBLIC_POSTHOG_ASSET_HOST=https://eu-assets.i.posthog.com
+NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT=true
+```
 
 ## ENGINEERING BRIEF
 
@@ -49,8 +94,6 @@ Recommended English agenda line:
 
 ### Intent routing
 
-Stable high-intent surfaces should route to the most appropriate action:
-
 - self-service eligible buyer -> signup/checkout path;
 - Business/Enterprise intent -> demo/sales path;
 - trust/procurement intent -> Trust / Enterprise assurance path;
@@ -60,8 +103,11 @@ Do not force every user into demo.
 
 ### Measurement
 
-Implement the contract in `POSTHOG_LIVE_READINESS_EVIDENCE_V1.md` and `MEASUREMENT_ATTRIBUTION_FOUNDATION_V1.md`:
+Implement/preserve the contracts in `POSTHOG_LIVE_READINESS_EVIDENCE_V1.md` and `MEASUREMENT_ATTRIBUTION_FOUNDATION_V1.md`:
 
+- governed PostHog Production project binding;
+- fixed EU PostHog hosts;
+- explicit Production consent requirement;
 - public page-intent events;
 - stable CTA IDs;
 - CTA capture;
@@ -69,7 +115,8 @@ Implement the contract in `POSTHOG_LIVE_READINESS_EVIDENCE_V1.md` and `MEASUREME
 - first/last-touch UTM persistence;
 - bounded lead attribution;
 - signup/checkout attribution bridge;
-- Production PostHog binding/ingestion proof;
+- Production bundle-to-project match proof;
+- real connected-project ingestion proof;
 - no marketing PII in PostHog.
 
 ## ACCEPTANCE CRITERIA
@@ -80,6 +127,10 @@ DEMO_AI_GOVERNANCE_TAXONOMY=PASS
 AI_SYSTEM_COUNT_QUALIFICATION=PASS
 STABLE_CTA_IDS=PASS
 INTENT_ROUTING=PASS
+POSTHOG_APPROVED_PROJECT_BINDING=PASS
+POSTHOG_PRODUCTION_KEY_MATCH=PASS_WITHOUT_DISCLOSURE
+POSTHOG_EU_HOST_POLICY=PASS
+ANALYTICS_CONSENT_REQUIRED=PASS
 PUBLIC_FUNNEL_EVENTS=PASS
 CONSENT_GRANTED_EVENT_FLOW=PASS
 CONSENT_DECLINED_EVENT_FLOW=PASS_NO_EVENT
@@ -88,13 +139,14 @@ UTM_LAST_TOUCH=PASS
 DEMO_ATTRIBUTION=PASS
 SIGNUP_ATTRIBUTION=PASS
 CHECKOUT_ATTRIBUTION=PASS
-POSTHOG_REAL_INGESTION=PASS
+POSTHOG_REAL_CONNECTED_PROJECT_INGESTION=PASS
 PII_IN_POSTHOG=NO
 BILLING_AUTHORITY_CHANGED=NO
 ```
 
 ## TEST
 
+- protected workflow contract tests;
 - pricing/demo truth-contract tests;
 - six-locale render tests;
 - lead payload schema tests;
@@ -104,15 +156,13 @@ BILLING_AUTHORITY_CHANGED=NO
 - duplicate-event tests;
 - source/campaign persistence tests;
 - controlled Production browser proof;
+- bundle fingerprint/project-key equality check without printing key;
 - connected PostHog verification after deployment;
 - public demo/signup/checkout smoke without synthetic LIVE billing claims.
 
 ## EXPECTED BUSINESS IMPACT
 
-- less commercial confusion;
-- higher trust at high-intent conversion points;
-- attributable organic/outbound demand;
-- a credible measurement layer before paid acquisition.
+`TRUTHFUL JOURNEY -> ONE GOVERNED ANALYTICS PROJECT -> ATTRIBUTABLE DEMAND -> ATTRIBUTABLE PIPELINE`
 
 ---
 
@@ -138,7 +188,7 @@ Implement the already-specified flagship cluster:
 - `/en/guides/ai-governance-evidence`
 - `/en/resources/ai-system-inventory-template`
 
-Use official regulatory sources for time-sensitive legal/regulatory facts and maintain the product's non-legal-advice boundary.
+Use official regulatory sources for time-sensitive legal/regulatory facts and maintain the non-legal-advice boundary.
 
 ### Entity normalization
 
@@ -147,17 +197,17 @@ Use official regulatory sources for time-sensitive legal/regulatory facts and ma
 - canonical URL: `https://www.risckcomply.com`;
 - normalize accidental user-visible brand casing variants;
 - normalize image alt/wordmark labels where appropriate;
-- review current structured-data `alternateName` values that reinforce non-canonical casing;
+- review current structured-data `alternateName` values reinforcing non-canonical casing;
 - keep one canonical Organization/WebSite/SoftwareApplication entity graph;
-- add `sameAs` only after the target profile is verified, owner-controlled and normalized;
-- add only verified official social links to footer/entity surfaces.
+- add `sameAs` only after target profile is verified, owner-controlled and normalized;
+- add only verified official social links.
 
 ### SEO infrastructure
 
 - preserve canonical URLs;
-- preserve correct locale alternates/hreflang;
+- preserve locale alternates/hreflang;
 - include new public resources in sitemap;
-- connect internal links between regulatory -> inventory -> evidence -> product intent;
+- connect regulatory -> inventory -> evidence -> product intent internal links;
 - preserve robots/private-route protections;
 - add regression coverage against accidental product-name variants.
 
@@ -178,30 +228,11 @@ ROBOTS_PRIVATE_BOUNDARY=PASS
 UNSUPPORTED_LEGAL_CLAIMS=0
 ```
 
-## TEST
-
-- build/type/lint/security normal release gates;
-- grep/regression test for public product-name variants;
-- render all new pages in required locale strategy;
-- canonical/hreflang checks;
-- sitemap/robots checks;
-- JSON-LD validation;
-- internal-link crawl;
-- Production HTTP/indexability smoke;
-- Search Console URL Inspection after owner property verification.
-
-## EXPECTED BUSINESS IMPACT
-
-- stronger branded entity disambiguation;
-- higher topical authority around operational AI governance;
-- more qualified high-intent organic entry points;
-- stronger bridge from regulatory research to product evaluation.
-
 ---
 
 ## 4. Activation gate
 
-Do not open either PR until the current Enterprise authority is re-read.
+Do not open either PR until current Enterprise authority is re-read.
 
 Minimum activation state:
 
@@ -211,6 +242,8 @@ DEFAULT_PR_ACTION!=NO_NEW_PR
 RELEASE_FREEZE_ALLOWS_MARKETING_CHANGE=YES
 CURRENT_MAIN_SHA_REBOUND=YES
 CURRENT_RUNTIME_REVALIDATED=YES
+APPROVED_POSTHOG_PROJECT_IDENTIFIED=YES
+PROTECTED_POSTHOG_VARIABLE_READY=YES
 ```
 
 Paid scale has a separate and stricter gate and is **not** automatically enabled when these PRs merge.
@@ -240,10 +273,11 @@ Only after this should paid high-intent tests begin at bounded spend.
 When activation becomes possible:
 
 - do not write a new strategy document first;
+- do not rebuild the already-prestaged PostHog governance fix from scratch;
 - do not split either package into cosmetic PRs;
 - do not create issue spam;
 - do not carry stale current-main assumptions forward;
-- do not claim Search Console/PostHog/market PASS from implementation alone;
+- do not claim PostHog PASS until Production bundle and connected project match and ingestion is observed;
 - do not add `sameAs` to unverified profiles;
 - do not publish unsupported legal, certification, customer or ROI claims.
 
@@ -253,6 +287,7 @@ When activation becomes possible:
 
 ```text
 MEGA_PR_B_SCOPE=READY
+MEGA_PR_B_POSTHOG_GOVERNANCE_FIX=PRESTAGED_BRANCH_ONLY
 MEGA_PR_A_SCOPE=READY
 MEGA_PR_SEQUENCE=READY
 RELEASE_ACTIVATION_GATE=READY
