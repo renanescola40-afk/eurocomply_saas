@@ -26,8 +26,8 @@ Enterprise authority still blocks release-changing marketing PRs. Marketing rema
 Internal readiness estimates only — not claims of traffic, authority, pipeline or revenue.
 
 ```text
-MARKETING_READINESS=92
-SEO_READINESS=87
+MARKETING_READINESS=93
+SEO_READINESS=91
 CONTENT_ENGINE=93
 BRAND_AUTHORITY=27
 SOCIAL_ENGINE=84
@@ -40,25 +40,27 @@ MARKETING_OPERATIONS_READINESS=98
 ABM_OUTBOUND_READINESS=98
 PARTNER_ECOSYSTEM_READINESS=92
 
-OVERALL_PREPARED=92
-OVERALL_REMAINING=8
+OVERALL_PREPARED=93
+OVERALL_REMAINING=7
 ```
 
 Why readiness moved:
 
-- Production PostHog project binding is no longer an unknown;
-- a private runtime comparison proved Production is compiled against a different PostHog Project API Key than the only connected project being audited;
-- root cause is bounded to deployment/provider-binding governance drift;
-- a fail-closed workflow remediation is already prestaged on the marketing branch;
-- regression coverage and environment mapping are already prestaged;
-- Mega PR B now explicitly preserves this remediation and requires one approved governed PostHog project.
+- International SEO root cause is no longer ambiguous: fixed public locale-less aliases were using temporary/dynamic locale negotiation while explicit locale-prefixed URLs are the intended canonical architecture;
+- public search evidence confirms locale-less assurance aliases still surface as result URLs;
+- competing hreflang/x-default authority was proven between custom HTML/sitemap metadata and `next-intl` automatic HTTP alternate links;
+- a bounded remediation is already prestaged on the marketing branch: one hreflang authority plus permanent canonicalization for fixed public aliases;
+- the runtime redirect/configuration commit completed a Vercel Preview deployment in `READY` state;
+- regression coverage deliberately protects localized feature slugs and auth/private locale negotiation;
+- Mega PR A now preserves the already-built SEO-002 remediation instead of reopening discovery.
 
 Why readiness did **not** move further:
 
-- the remediation is branch-only and not live;
-- connected PostHog still has no observed Production ingestion;
+- SEO-002 is branch-only and not live in Production;
+- direct Preview 308 observation is uncredited because the Preview is protected by Vercel SSO in the available connector;
+- Search Console canonical/indexing consolidation remains unmeasured;
+- PostHog binding remediation is branch-only and connected-project ingestion remains absent;
 - public acquisition events/UTM attribution remain unimplemented;
-- Search Console ownership/query data remain unverified;
 - LinkedIn remains externally inconsistent;
 - no Cohort 1/ecosystem outreach has been sent;
 - no real buyer/partner signal exists;
@@ -79,6 +81,11 @@ Why readiness did **not** move further:
 - Week 4 — AI Inventory + lead-magnet demand capture
 - Public Content Derivative Engine
 - flagship search URLs specified
+- international canonicalization root cause proven
+- one-hreflang-authority remediation prestaged
+- fixed public locale-less alias 308 contract prestaged
+- international SEO regression contract prestaged
+- runtime redirect/configuration Preview = READY
 
 ### Lead magnet
 
@@ -154,15 +161,10 @@ POSTHOG_SERVICE_OUTAGE=NO_EVIDENCE
 
 ```text
 873f2c489618b6f4ebd2c720e1fed3100f860611  workflow governance
-
 e1bd05bab2af06f2fa257b0af9f4ad1d9cbcfdfe  regression contract
-
 f6d65b8f04c2644c321c30111e0f3e2a1125c2e2  environment mapping
-
 8a48a893d30c8683542a894e325c1aeae8a5da1b  root-cause evidence
-
 c46f7286eb2d7052f1b3ddb1e8d4c3763c194f42  runtime finding promotion
-
 2f8ec25ca49835d9826fa411de10ee40aaea6dce  Mega PR activation binding
 ```
 
@@ -195,7 +197,33 @@ Brand Authority remains 27 until external identity and authority signals actuall
 
 ---
 
-## 6. Search Console / organic measurement
+## 6. International SEO + Search Console truth
+
+Canonical SEO-002 evidence: `INTERNATIONAL_SEO_CANONICALIZATION_EVIDENCE_V1.md`.
+
+```text
+EXPLICIT_LOCALE_URL_ARCHITECTURE=PRESENT
+HTML_CANONICALS=PRESENT
+HTML_HREFLANG=PRESENT
+SITEMAP_HREFLANG=PRESENT
+SEO_002_LOCALELESS_ALIAS_ROOT_CAUSE=PROVEN
+SEO_002_HREFLANG_CONFLICT=PROVEN
+SEO_002_REMEDIATION=PRESTAGED_BRANCH_ONLY
+SEO_002_RUNTIME_COMMIT_PREVIEW=READY
+SEO_002_DIRECT_PREVIEW_308_OBSERVED=NO_SSO_BLOCKED
+SEO_002_PRODUCTION_FIX=NOT_LIVE
+```
+
+Prestaged implementation:
+
+```text
+e25cd546cebf942655c6367b85aa1ecd6fb1d049  HTML/sitemap become sole hreflang authority
+202f191680a6d2176bffea92687b33432b20c0b6  fixed locale-less public aliases permanently canonicalized
+4cdca44ab0173e79aad26bc755e0b51ff40a5be8  international SEO regression contract
+705e23afa8a94356e462bb632465220ecd9d987b  SEO-002 evidence
+```
+
+Search Console remains an owner-action measurement boundary:
 
 ```text
 SITEMAP_CODE=PASS
@@ -206,6 +234,7 @@ SEARCH_CONSOLE_VERIFIED=NO_EVIDENCE
 SEARCH_CONSOLE_SITEMAP_STATUS=NO_EVIDENCE
 SEARCH_CONSOLE_INDEXING_BASELINE=NO_EVIDENCE
 SEARCH_CONSOLE_QUERY_BASELINE=NO_DATA
+SEARCH_CONSOLE_CANONICAL_CONSOLIDATION=NO_DATA
 ```
 
 DNS verification tokens must never be placed in GitHub/public artifacts.
@@ -221,6 +250,10 @@ CRO_001_DEMO_TRIAL_MISMATCH=PROVEN
 BRAND_001_LINKEDIN_MISMATCH=PROVEN_OWNER_ACTION
 BRAND_002_STRUCTURED_ENTITY_VARIANT=PROVEN_RUNTIME
 SEO_001_SEARCH_CONSOLE=OWNER_ACTION_NOT_CODE_DEFECT
+SEO_002_LOCALELESS_ALIAS_ROOT_CAUSE=PROVEN
+SEO_002_HREFLANG_CONFLICT=PROVEN
+SEO_002_REMEDIATION=PRESTAGED_BRANCH_ONLY
+SEO_002_RUNTIME_PREVIEW=READY
 ANALYTICS_001_POSTHOG_FOUNDATION=PRESENT
 ANALYTICS_001_PRODUCTION_PUBLIC_KEY=PRESENT
 ANALYTICS_001_PRODUCTION_KEY_MATCH=FAIL
@@ -271,12 +304,16 @@ The value must not be stored in repository artifacts.
 
 **SEO AUTHORITY + BRAND ENTITY MEGA PR**
 
+Preserve the already-prestaged SEO-002 remediation and add:
+
 - Article 50 / Provider-vs-Deployer / Inventory / Evidence cluster;
 - Inventory lead-magnet landing;
 - brand/entity normalization;
 - verified `sameAs` only after profile normalization;
 - verified social links;
-- sitemap/internal linking/schema regression.
+- sitemap/internal linking/schema regression;
+- Production 308/canonical/hreflang proof;
+- Search Console canonical/indexing follow-up after owner verification.
 
 Current state: `PR_OPEN_NOW=NO`.
 
@@ -297,6 +334,7 @@ ENDORSEMENTS_CONFIRMED=0
 
 LINKEDIN_NORMALIZED=NO
 SEARCH_CONSOLE_LIVE=NO_EVIDENCE
+SEO_002_PRODUCTION_FIX=NOT_LIVE
 POSTHOG_LIVE_INGESTION_CONNECTED_PROJECT=NO
 ATTRIBUTION_LIVE=NO
 CRM_CONNECTED=NO_EVIDENCE
@@ -326,14 +364,15 @@ Prepared is not Live. Live is not Validated. Validated is not Scaled.
 
 ### Marketing reality
 
-- approved PostHog project binding not yet live through governed deploy
-- PostHog connected-project ingestion absent
-- public acquisition attribution not live
-- LinkedIn normalization not executed
-- Search Console verification not evidenced
-- Cohort 1 not sent
-- ecosystem contributions not submitted
-- no repeatable pipeline
+- SEO-002 remediation is not live in Production;
+- Search Console verification/canonical selection is not evidenced;
+- approved PostHog project binding is not yet live through governed deploy;
+- PostHog connected-project ingestion absent;
+- public acquisition attribution not live;
+- LinkedIn normalization not executed;
+- Cohort 1 not sent;
+- ecosystem contributions not submitted;
+- no repeatable pipeline.
 
 ---
 
@@ -361,9 +400,10 @@ On every `continue`:
 
 1. re-read Enterprise Control Tower #1032;
 2. if `NO_NEW_PR` is removed and marketing changes are permitted, activate Mega PR B immediately with the prestaged PostHog remediation;
-3. if the gate remains closed, do not create Week 5 or issue spam;
-4. only execute genuinely new runtime/provider/owner-action evidence;
-5. do not increase live scores from branch implementation alone.
+3. after measurement is proven, activate Mega PR A preserving the already-prestaged SEO-002 remediation;
+4. if the gate remains closed, do not create Week 5 or issue spam;
+5. only execute genuinely new runtime/provider/owner-action evidence;
+6. do not increase live scores from branch implementation alone.
 
 ---
 
@@ -378,6 +418,9 @@ AI_INVENTORY_LEAD_MAGNET=READY_ARTIFACT
 LOCALIZED_ECOSYSTEM_CANVASES=READY_3_OF_3
 BRAND_SERP_CLOSURE_PACKET=READY_OWNER_ACTION
 SEARCH_CONSOLE_HANDOFF_V2=READY_OWNER_ACTION
+SEO_002_ROOT_CAUSE=PROVEN
+SEO_002_REMEDIATION=PRESTAGED_BRANCH_ONLY
+SEO_002_RUNTIME_PREVIEW=READY
 POSTHOG_ROOT_CAUSE=PROVEN
 POSTHOG_BINDING_REMEDIATION=PRESTAGED_BRANCH_ONLY
 MEGA_PR_ACTIVATION_PACK=READY
@@ -392,12 +435,13 @@ LIVE_ECOSYSTEM_SUBMISSIONS=0
 LIVE_PARTNER_RESPONSE=0
 LINKEDIN_NORMALIZED=NO
 LIVE_SEARCH_CONSOLE=NO_EVIDENCE
+LIVE_SEO_002_PRODUCTION=NO
 LIVE_POSTHOG_INGESTION_CONNECTED_PROJECT=NO
 LIVE_ATTRIBUTION=NO
 LIVE_REPEATABLE_PIPELINE=NOT_VERIFIED
 LIVE_PAID_SCALE=NO
 
-MARKETING_PREPARED=92%
-MARKETING_REMAINING=8%
+MARKETING_PREPARED=93%
+MARKETING_REMAINING=7%
 MAIN_CHANGED_BY_MARKETING=NO
 ```
