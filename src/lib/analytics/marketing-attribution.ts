@@ -6,6 +6,7 @@ const CONSENT_STORAGE_KEY = 'risckcomply.analytics.consent';
 const FIRST_TOUCH_STORAGE_KEY = 'risckcomply.analytics.first_touch';
 const LAST_TOUCH_STORAGE_KEY = 'risckcomply.analytics.last_touch';
 const MAX_ATTRIBUTION_VALUE_LENGTH = 160;
+const SAFE_CAMPAIGN_VALUE = /^[A-Za-z0-9][A-Za-z0-9._~%+:-]{0,159}$/;
 
 export type MarketingAttributionModel = 'first_touch' | 'last_touch';
 
@@ -30,6 +31,11 @@ function normalizeAttributionValue(value: string | null | undefined, maxLength =
   return normalized || undefined;
 }
 
+function normalizeCampaignValue(value: string | null | undefined) {
+  const normalized = normalizeAttributionValue(value);
+  return normalized && SAFE_CAMPAIGN_VALUE.test(normalized) ? normalized : undefined;
+}
+
 function isAttributionStorageAllowed() {
   if (typeof window === 'undefined') return false;
   if (process.env.NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT === 'false') return true;
@@ -52,11 +58,11 @@ function buildCurrentTouch(): MarketingTouch {
   const searchParams = new URLSearchParams(window.location.search);
 
   return {
-    utm_source: normalizeAttributionValue(searchParams.get('utm_source')),
-    utm_medium: normalizeAttributionValue(searchParams.get('utm_medium')),
-    utm_campaign: normalizeAttributionValue(searchParams.get('utm_campaign')),
-    utm_content: normalizeAttributionValue(searchParams.get('utm_content')),
-    utm_term: normalizeAttributionValue(searchParams.get('utm_term')),
+    utm_source: normalizeCampaignValue(searchParams.get('utm_source')),
+    utm_medium: normalizeCampaignValue(searchParams.get('utm_medium')),
+    utm_campaign: normalizeCampaignValue(searchParams.get('utm_campaign')),
+    utm_content: normalizeCampaignValue(searchParams.get('utm_content')),
+    utm_term: normalizeCampaignValue(searchParams.get('utm_term')),
     referrer_domain: getExternalReferrerDomain(),
     landing_path: normalizeAttributionValue(window.location.pathname, 240) || '/',
   };
@@ -98,50 +104,6 @@ function writeStoredTouch(key: string, touch: MarketingTouch) {
   }
 }
 
-export function persistMarketingAttribution() {
-  if (typeof window === 'undefined' || !isAttributionStorageAllowed()) {
-    return { firstTouch: null, lastTouch: null };
-  }
-
-  const current = buildCurrentTouch();
-  let firstTouch = readStoredTouch(FIRST_TOUCH_STORAGE_KEY);
-  let lastTouch = readStoredTouch(LAST_TOUCH_STORAGE_KEY);
-
-  if (!firstTouch) {
-    firstTouch = current;
-    writeStoredTouch(FIRST_TOUCH_STORAGE_KEY, current);
-  }
-
-  if (!lastTouch || hasAcquisitionSignal(current)) {
-    lastTouch = current;
-    writeStoredTouch(LAST_TOUCH_STORAGE_KEY, current);
-  }
-
-  return { firstTouch, lastTouch };
-}
-
-export function getMarketingAttributionProperties(
-  model: MarketingAttributionModel = 'last_touch',
-): AnalyticsProperties {
-  if (typeof window === 'undefined') return { attribution_model: model };
-
-  const { firstTouch, lastTouch } = persistMarketingAttribution();
-  const selected = model === 'first_touch' ? firstTouch : lastTouch;
-
-  if (!selected) return { attribution_model: model };
-
-  return {
-    ...(selected.utm_source ? { utm_source: selected.utm_source } : {}),
-    ...(selected.utm_medium ? { utm_medium: selected.utm_medium } : {}),
-    ...(selected.utm_campaign ? { utm_campaign: selected.utm_campaign } : {}),
-    ...(selected.utm_content ? { utm_content: selected.utm_content } : {}),
-    ...(selected.utm_term ? { utm_term: selected.utm_term } : {}),
-    ...(selected.referrer_domain ? { referrer_domain: selected.referrer_domain } : {}),
-    landing_path: selected.landing_path,
-    attribution_model: model,
-  };
-}
-
 function stripLocale(pathname: string) {
   return pathname.replace(/^\/(?:en|pt|es|fr|it|de)(?=\/|$)/, '') || '/';
 }
@@ -180,6 +142,58 @@ export function classifyPublicMarketingPage(pathname: string): PublicMarketingPa
   }
 
   return null;
+}
+
+export function persistMarketingAttribution() {
+  if (typeof window === 'undefined' || !isAttributionStorageAllowed()) {
+    return { firstTouch: null, lastTouch: null };
+  }
+
+  const storedFirstTouch = readStoredTouch(FIRST_TOUCH_STORAGE_KEY);
+  const storedLastTouch = readStoredTouch(LAST_TOUCH_STORAGE_KEY);
+
+  // Never derive or persist acquisition metadata from authenticated/private routes.
+  if (!classifyPublicMarketingPage(window.location.pathname)) {
+    return { firstTouch: storedFirstTouch, lastTouch: storedLastTouch };
+  }
+
+  const current = buildCurrentTouch();
+  let firstTouch = storedFirstTouch;
+  let lastTouch = storedLastTouch;
+
+  if (!firstTouch) {
+    firstTouch = current;
+    writeStoredTouch(FIRST_TOUCH_STORAGE_KEY, current);
+  }
+
+  if (!lastTouch || hasAcquisitionSignal(current)) {
+    lastTouch = current;
+    writeStoredTouch(LAST_TOUCH_STORAGE_KEY, current);
+  }
+
+  return { firstTouch, lastTouch };
+}
+
+export function getMarketingAttributionProperties(
+  model: MarketingAttributionModel = 'last_touch',
+): AnalyticsProperties {
+  if (typeof window === 'undefined') return { attribution_model: model };
+
+  const { firstTouch, lastTouch } = persistMarketingAttribution();
+  const selected = model === 'first_touch' ? firstTouch : lastTouch;
+
+  if (!selected) return { attribution_model: model };
+
+  return {
+    ...(selected.utm_source ? { utm_source: selected.utm_source } : {}),
+    ...(selected.utm_medium ? { utm_medium: selected.utm_medium } : {}),
+    ...(selected.utm_campaign ? { utm_campaign: selected.utm_campaign } : {}),
+    ...(selected.utm_content ? { utm_content: selected.utm_content } : {}),
+    ...(selected.utm_term ? { utm_term: selected.utm_term } : {}),
+    ...(selected.referrer_domain ? { referrer_domain: selected.referrer_domain } : {}),
+    landing_path: selected.landing_path,
+    attribution_model: model,
+  };
 }
 
 export const marketingAttributionStorageKeys = {
