@@ -45,12 +45,15 @@ describe('Product runtime acceptance reliability contracts', () => {
     expect(workflow).not.toContain('Product QA sanitized failure diagnostic: $SUPABASE_SERVICE_ROLE_KEY');
   });
 
-  it('publishes only sanitized bounded Playwright diagnostics after browser failure', () => {
+  it('publishes only sanitized bounded Playwright diagnostics after browser or global setup failure', () => {
     expect(workflow).toContain(
       'PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/fria-playwright-raw.json',
     );
     expect(workflow).toContain('scripts/product/sanitize-fria-playwright-report.mjs');
     expect(workflow).toContain('if: failure()');
+    expect(sanitizer).toContain("schema: 'risck-comply.fria-playwright-failure.v2'");
+    expect(sanitizer).toContain('globalErrors: (report.errors ?? []).slice(0, 5).map(sanitizeError)');
+    expect(sanitizer).toContain('function sanitizeError(error)');
     expect(sanitizer).toContain('credentialsStored: false');
     expect(sanitizer).toContain('tokensStored: false');
     expect(sanitizer).toContain('cookiesStored: false');
