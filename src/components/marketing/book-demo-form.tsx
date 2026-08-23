@@ -26,14 +26,13 @@ export function BookDemoForm({ locale }: BookDemoFormProps) {
   const demoStarted = useRef(false);
   const path = `/${locale}/book-demo`;
 
-  function captureDemandEvent(event: typeof analyticsEvents.demoStarted | typeof analyticsEvents.demoSubmitted | typeof analyticsEvents.ctaClicked, extra: Record<string, string> = {}) {
+  function captureDemandEvent(event: typeof analyticsEvents.demoStarted | typeof analyticsEvents.demoSubmitted) {
     persistMarketingAttribution();
     captureAnalyticsEvent(event, {
       path,
       source: 'book-demo-page',
       funnel_stage: 'demand_capture',
       ...getMarketingAttributionProperties('last_touch'),
-      ...extra,
     });
   }
 
@@ -167,7 +166,6 @@ export function BookDemoForm({ locale }: BookDemoFormProps) {
       <button
         type="submit"
         data-cta-id="book-demo-submit"
-        onClick={() => captureDemandEvent(analyticsEvents.ctaClicked, { cta_id: 'book-demo-submit' })}
         disabled={state === 'submitting'}
         className="mt-7 inline-flex w-full items-center justify-center rounded-full bg-white px-7 py-4 text-base font-bold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
       >
