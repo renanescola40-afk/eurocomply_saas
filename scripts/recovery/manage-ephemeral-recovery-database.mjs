@@ -207,8 +207,32 @@ function firewallArgs(chain, port, comment) {
   return [chain, '!', '-i', 'lo', '-p', 'tcp', '--dport', String(port), '-m', 'comment', '--comment', comment, '-j', 'DROP'];
 }
 
-function dockerUserArgs(port, comment) {
-  return ['DOCKER-USER', '-p', 'tcp', '--dport', String(port), '-m', 'comment', '--comment', comment, '-j', 'DROP'];
+// Regression signature from the former overbroad rule:
+// dockerUserArgs(DB_CONTAINER_PORT, comment)
+// It must never be executable again because it blocks unrelated container egress to port 5432.
+export function dockerUserArgs(hostPort, containerPort, comment) {
+  const publishedPort = Number(hostPort);
+  const targetPort = Number(containerPort);
+  if (!Number.isInteger(publishedPort) || publishedPort <= 0 || publishedPort > 65535) {
+    throw new Error('Recovery Docker firewall host port is invalid');
+  }
+  if (!Number.isInteger(targetPort) || targetPort <= 0 || targetPort > 65535) {
+    throw new Error('Recovery Docker firewall container port is invalid');
+  }
+
+  // Match only packets that were originally addressed to the published recovery
+  // host port before Docker DNAT. This preserves the isolation boundary without
+  // blocking unrelated container egress such as the Supabase session pooler on 5432.
+  return [
+    'DOCKER-USER',
+    '-p', 'tcp',
+    '-m', 'conntrack',
+    '--ctdir', 'ORIGINAL',
+    '--ctorigdstport', String(publishedPort),
+    '--dport', String(targetPort),
+    '-m', 'comment', '--comment', comment,
+    '-j', 'DROP',
+  ];
 }
 
 function ruleExists(binary, args) {
@@ -256,7 +280,7 @@ function hardenWildcardBindings(containerName, projectId, hostPort) {
     if (classes.includes('wildcard-v4')) {
       ensureDockerUserChain('iptables');
       const input = firewallArgs('INPUT', hostPort, comment);
-      const dockerUser = dockerUserArgs(DB_CONTAINER_PORT, comment);
+      const dockerUser = dockerUserArgs(hostPort, DB_CONTAINER_PORT, comment);
       if (installRule('iptables', input)) rules.push(['iptables', input]);
       if (installRule('iptables', dockerUser)) rules.push(['iptables', dockerUser]);
     }
@@ -266,7 +290,7 @@ function hardenWildcardBindings(containerName, projectId, hostPort) {
       if (installRule('ip6tables', input6)) rules.push(['ip6tables', input6]);
       try {
         ensureDockerUserChain('ip6tables');
-        const dockerUser6 = dockerUserArgs(DB_CONTAINER_PORT, comment);
+        const dockerUser6 = dockerUserArgs(hostPort, DB_CONTAINER_PORT, comment);
         if (installRule('ip6tables', dockerUser6)) rules.push(['ip6tables', dockerUser6]);
       } catch {
         const globalIpv6 = String(run('ip', ['-6', '-o', 'addr', 'show', 'scope', 'global'], { capture: true })).trim();
@@ -461,11 +485,11 @@ function cleanupPersistedFirewallRules() {
     throw new Error('Persisted recovery database host port is invalid');
   }
   if (process.env.RECOVERY_FIREWALL_IPV4 === 'true') {
-    removeRule('iptables', dockerUserArgs(DB_CONTAINER_PORT, comment));
+    removeRule('iptables', dockerUserArgs(hostPort, DB_CONTAINER_PORT, comment));
     removeRule('iptables', firewallArgs('INPUT', hostPort, comment));
   }
   if (process.env.RECOVERY_FIREWALL_IPV6 === 'true') {
-    removeRule('ip6tables', dockerUserArgs(DB_CONTAINER_PORT, comment));
+    removeRule('ip6tables', dockerUserArgs(hostPort, DB_CONTAINER_PORT, comment));
     removeRule('ip6tables', firewallArgs('INPUT', hostPort, comment));
   }
 }
