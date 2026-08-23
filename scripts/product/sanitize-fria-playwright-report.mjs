@@ -35,6 +35,13 @@ function sanitize(value) {
     .replace(/\b(?:authorization|cookie|set-cookie)\s*[:=]\s*[^\s,;]+/gi, '[redacted-header]');
 }
 
+function sanitizeError(error) {
+  return {
+    message: sanitize(error?.message),
+    stack: sanitize(error?.stack),
+  };
+}
+
 function collectFailures(suites, failures = []) {
   for (const suite of suites ?? []) {
     for (const spec of suite.specs ?? []) {
@@ -46,10 +53,7 @@ function collectFailures(suites, failures = []) {
             projectName: sanitize(test.projectName),
             status: sanitize(result.status),
             retry: result.retry ?? 0,
-            errors: (result.errors ?? []).map((error) => ({
-              message: sanitize(error.message),
-              stack: sanitize(error.stack),
-            })),
+            errors: (result.errors ?? []).map(sanitizeError),
           });
         }
       }
@@ -59,7 +63,7 @@ function collectFailures(suites, failures = []) {
   return failures;
 }
 
-let report = { suites: [] };
+let report = { suites: [], errors: [] };
 try {
   report = JSON.parse(readFileSync(rawPath, 'utf8'));
 } catch {
@@ -67,11 +71,15 @@ try {
 }
 
 const diagnostics = {
-  schema: 'risck-comply.fria-playwright-failure.v1',
+  schema: 'risck-comply.fria-playwright-failure.v2',
   outcome: 'failed',
   targetSha: process.env.EXPECTED_HEAD_SHA ?? null,
   appHealthy: process.env.APP_HEALTHY === 'true',
   authHealthy: process.env.AUTH_HEALTHY === 'true',
+  // Playwright reports globalSetup/globalTeardown failures at the report root,
+  // not beneath a test result. Preserve only their redacted message/stack so a
+  // fail-closed runtime gate remains diagnosable without publishing secrets.
+  globalErrors: (report.errors ?? []).slice(0, 5).map(sanitizeError),
   failures: collectFailures(report.suites),
   evidenceIntegrity: {
     credentialsStored: false,

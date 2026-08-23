@@ -10,6 +10,7 @@ import { getOnboardingPlanIntent } from '@/lib/onboarding/plan-intent';
 import { completeOnboardingActivation, saveOnboardingDraft } from '@/server/actions/onboarding';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOnboardingActivationState } from '@/server/queries/onboarding';
+import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { getOrganizationBillingAuthority } from '@/server/queries/subscription';
 
 type OnboardingSearchParams = {
@@ -81,19 +82,21 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
     redirect(`/${safeLocale}/login?next=${encodeURIComponent(`/${safeLocale}/onboarding${planQuery}`)}`);
   }
 
-  const initialState = await getOnboardingActivationState(user.id);
-
-  // The first onboarding screen may create only a minimal organization purchase
-  // context because checkout is organization-bound. Once that shell exists,
-  // operational onboarding is payment-first: no AI system, documents, tasks,
-  // invitations or readiness activation may render/execute until licensed=true.
-  if (initialState.organization?.id) {
+  // Commercial authority is a door guard, not an onboarding-state attribute.
+  // Resolve the tenant with the same canonical organization resolver used by
+  // product APIs and enforce payment before loading any operational onboarding
+  // state. This prevents a degraded/partial onboarding projection from being
+  // interpreted as "no organization" and accidentally rendering product setup.
+  const organization = await getCurrentOrganizationForUser(user.id);
+  if (organization?.id) {
     await requireLicensedOnboardingPageAccess({
-      organizationId: initialState.organization.id,
+      organizationId: organization.id,
       locale: safeLocale,
       planId: resolvedSearchParams.plan,
     });
   }
+
+  const initialState = await getOnboardingActivationState(user.id);
 
   if (initialState.organization?.isOnboardingCompleted) {
     redirect(`/${safeLocale}/dashboard`);
