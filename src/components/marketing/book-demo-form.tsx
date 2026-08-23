@@ -30,6 +30,7 @@ export function BookDemoForm({ locale }: BookDemoFormProps) {
     persistMarketingAttribution();
     captureAnalyticsEvent(event, {
       path,
+      locale,
       source: 'book-demo-page',
       funnel_stage: 'demand_capture',
       ...getMarketingAttributionProperties('last_touch'),
