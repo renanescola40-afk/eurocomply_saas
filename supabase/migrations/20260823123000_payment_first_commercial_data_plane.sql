@@ -58,7 +58,9 @@ as $$
       subscription.stripe_subscription_id
     from public.subscriptions subscription
     where subscription.organization_id = target_organization_id
-      and lower(coalesce(subscription.status, '')) in ('active','trialing')
+      -- RISCK COMPLY has no public free-trial product access. `trialing` may be
+      -- represented in billing UX but cannot satisfy the commercial key.
+      and lower(coalesce(subscription.status, '')) = 'active'
     order by subscription.created_at desc
     limit 1
   ),
@@ -129,7 +131,7 @@ revoke all on function app_private.has_commercial_authority(uuid) from public, a
 grant execute on function app_private.has_commercial_authority(uuid) to authenticated, service_role;
 
 comment on function app_private.has_commercial_authority(uuid) is
-  'Fail-closed paid-product RLS authority: valid signed-contract entitlement or exact processed Stripe LIVE subscription authority only.';
+  'Fail-closed paid-product RLS authority: valid signed-contract entitlement or exact processed Stripe LIVE active subscription authority only.';
 
 -- Existing tenant/role policies remain responsible for horizontal authorization.
 -- This RESTRICTIVE policy is an additional AND-condition: even an owner/admin of
