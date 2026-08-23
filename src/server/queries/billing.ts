@@ -99,7 +99,7 @@ export async function getOrganizationBillingContext(
       : SAFE_DEFAULT_PLAN;
   const status = signedContractPlan
     ? 'active'
-    : livePaidStatus
+    : liveStripeAuthority
       ? subscription?.status ?? null
       : null;
 
