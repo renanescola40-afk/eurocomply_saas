@@ -88,7 +88,7 @@ for (const contract of documents) {
 
 if (restoreOnly) {
   if (restore?.status !== 'Complete' || restore?.outcome !== 'passed') failures.push('restore-only recovery evidence must contain a Complete/passed restore');
-  if (rollback?.evidenceBoundary?.includes('rollback executed') === true) failures.push('restore-only rollback boundary must not claim execution');
+  if (rollback?.metrics?.recoveryTimeSeconds !== null) failures.push('restore-only rollback metrics must remain null');
 }
 
 if (failures.length) {
