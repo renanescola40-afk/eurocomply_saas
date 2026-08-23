@@ -4,7 +4,7 @@ Status: ACTIVE_MARKETING_AUTHORITY
 Checked: 2026-08-23
 Branch: `marketing/august-2026-authority-engine`
 
-## 1. Current release-aware state
+## 1. Release-aware state
 
 ```text
 MARKETING_MODE=PRELAUNCH_CONTROLLED
@@ -16,9 +16,7 @@ MAIN_CHANGED_BY_MARKETING=NO
 PAID_SCALE=BLOCKED
 ```
 
-The canonical Enterprise Control Tower protects current main and keeps the default release-changing action at `NO_NEW_PR`.
-
-Marketing therefore continues only through organic/external/commercial preparation and the isolated marketing branch until release gates change.
+The Enterprise Control Tower still requires `NO_NEW_PR` for release-changing work. Marketing remains isolated from main.
 
 ---
 
@@ -27,302 +25,191 @@ Marketing therefore continues only through organic/external/commercial preparati
 Internal readiness estimates only — not claims of market performance.
 
 ```text
-MARKETING_READINESS=87
-SEO_READINESS=80
-CONTENT_ENGINE=89
+MARKETING_READINESS=89
+SEO_READINESS=84
+CONTENT_ENGINE=93
 BRAND_AUTHORITY=27
-SOCIAL_ENGINE=81
-CRO_READINESS=77
+SOCIAL_ENGINE=84
+CRO_READINESS=79
 ANALYTICS_READINESS=33
 PAID_READINESS=24
-EUROPE_EXPANSION=80
-SALES_ENABLEMENT_READINESS=96
-MARKETING_OPERATIONS_READINESS=95
+EUROPE_EXPANSION=84
+SALES_ENABLEMENT_READINESS=97
+MARKETING_OPERATIONS_READINESS=96
 ABM_OUTBOUND_READINESS=98
-PARTNER_ECOSYSTEM_READINESS=88
+PARTNER_ECOSYSTEM_READINESS=92
 
-OVERALL_PREPARED=87
-OVERALL_REMAINING=13
+OVERALL_PREPARED=89
+OVERALL_REMAINING=11
 ```
 
-Interpretation:
+Why the score moved:
 
-- strategy, content, sales-enablement and ABM execution readiness are high;
-- Weeks 1, 2 and 3 are packaged for external execution;
-- Cohort 1 has account dossiers, personalised copy, core assets, institutional channels and saved Gmail drafts;
-- public derivative paths exist for all four core governance assets;
-- Hub France IA / KI Bundesverband / Adigital now have contribution-ready abstracts and outreach copy;
-- no Cohort 1 draft or ecosystem draft has been sent automatically;
-- no response, opportunity, partnership, authority growth, pipeline or paid performance is claimed before external evidence exists;
-- analytics/attribution and market validation remain the largest gaps.
+- Week 4 AI Inventory demand capture is complete;
+- the lead magnet now exists as an editable XLSX plus one-page Quick Start PDF;
+- FR/DE/ES ecosystem canvases exist as shareable one-pagers;
+- Brand SERP/Search Console owner handoff is documented;
+- current-main sitemap/robots implementation has been verified in code;
+- public search discovery exists for important RISCK COMPLY pages.
 
-Brand Authority, Analytics and Paid scores are intentionally unchanged because internal preparation cannot substitute for external authority, live measurement or validated acquisition.
+Why some scores did **not** move materially:
+
+- Brand Authority still requires consistent external identity and third-party authority;
+- Analytics requires live PostHog/Search Console evidence;
+- Paid requires Production GO plus measurement and market-signal gates;
+- pipeline requires real two-way buyer response.
 
 ---
 
-## 3. Completed systems
+## 3. Prepared demand system
 
-### Positioning / search
+### Content / category
 
-- Operational AI Governance category contract
-- EU AI Act readiness safe-claims language
+- Operational AI Governance positioning
 - Search Authority Cluster
-- Article 50 / Provider-vs-Deployer / AI Inventory / Evidence clusters
-- Germany / France / Spain market offensives
-- European Commercial Search Map
-
-### Content / social
-
-- Founder-Led Demand Engine
-- Social Authority Pack
-- Europe 4-Week Distribution Calendar
-- Week 1 Demand Execution Packet
-- Week 2 Regulatory Demand Execution Packet
-- Week 3 Evidence Demand Execution Packet
+- Germany / France / Spain offensives
+- Week 1 — category / inventory
+- Week 2 — Article 50 / provider-deployer
+- Week 3 — evidence governance
+- Week 4 — AI Inventory + lead magnet demand capture
 - Public Content Derivative Engine
 
-### Conversion / measurement
+### Conversion / resource
 
-- CRO & Commercial Conversion Architecture
-- Commercial Surface CRO Matrix
-- AI System Inventory Lead Magnet
-- B2B Lead Qualification Model
-- Measurement & Attribution Foundation
-- canonical event and UTM contracts
+- AI System Inventory Template — Operational Edition XLSX
+- Quick Start PDF
+- field dictionary
+- fictional example
+- safe dropdown/review states
+- no automatic legal classification
+- no compliance score
+- landing-page contract for `/en/resources/ai-system-inventory-template`
+- nurture sequence
+- sparse capture contract
+- UTM/attribution contract
 
-### Sales / pipeline
+### Sales / ABM
 
-- B2B Sales & Demo Playbook
-- Nurture, Objection & Pipeline Engine
-- Competitive Sales Battlecard
-- CRM & Revenue Data Contract
+- 16 researched account hypotheses
+- Cohort 1 = 5 accounts
+- public-signal dossiers 5/5
+- personalised Touch 1 5/5
+- institutional channels 5/5
+- send cards 5/5
+- Gmail drafts 5/5
+- four governance assets + mapped delivery matrix
 
-### Cohort 1 ABM
+### Ecosystem
 
-- 16 researched European account hypotheses
-- first controlled cohort: 5 accounts
-- refreshed public-signal dossiers: 5/5
-- personalised Touch 1: 5/5
-- institutional contact route verified: 5/5
-- final send cards: 5/5
-- response-code taxonomy
-- Cohort 1 Asset Delivery Matrix
-
-### Tangible cohort assets
-
-- AI Governance Evidence Model V1
-- AI Portfolio Governance Map V1
-- Technical vs Operational AI Governance Map V1
-- Article 50 Evidence Operating Map V1
-- one-page PDF delivery versions created for all four assets
-
-### Gmail execution preparation — Cohort 1
-
-Saved drafts exist for:
-
-1. Seedext — `contact@seedext.com`
-2. Jimini AI — `contact@jimini.ai`
-3. Genow — `hey@genow.ai`
-4. Substrate AI — `info@substrate.ai`
-5. Timbal AI — `hello@timbal.ai`
-
-Draft status means `PREPARED_FOR_REVIEW`; it does not mean sent, delivered, opened, replied or qualified.
-
-### Ecosystem / partnerships
-
-- Partner & Ecosystem Engine Europe
-- Europe Ecosystem Contribution Assets V1
-- Europe Ecosystem Contribution Packet V2
-- Hub France IA submission-ready abstract + session outline + institutional outreach copy
-- KI Bundesverband submission-ready abstract + session outline + institutional outreach copy
-- Adigital submission-ready abstract + session outline + official-contact-form copy
-- reusable 20-minute ecosystem deck outline
-- reusable Operational AI Governance Canvas
-
-### Gmail execution preparation — ecosystem
-
-Saved institutional drafts exist for:
-
-1. Hub France IA — `contact@hub-franceia.fr`
-2. KI Bundesverband — `info@ki-verband.de`
-
-Adigital uses its official general contact form; no press inbox or unrelated address is used as a shortcut.
-
-No ecosystem outreach has been sent.
+- Hub France IA contribution = submission-ready
+- KI Bundesverband contribution = submission-ready
+- Adigital contribution = submission-ready
+- Hub draft saved / not sent
+- KI draft saved / not sent
+- Adigital official contact-form copy ready / not submitted
+- localized Operational AI Governance Canvas FR/DE/ES ready
 
 ---
 
-## 4. Week 3 — Evidence Demand
+## 4. Week 4 — AI Inventory + Demand Capture
 
-Execution window: 2026-09-07 to 2026-09-11.
+Execution window: 2026-09-14 to 2026-09-18.
 
 Primary thesis:
 
-> AI governance evidence is not a folder full of documents. It is a traceable chain from system facts and decisions to implementation, ownership and review history.
+> An AI inventory that only lists tool names is a discovery list. Governance starts when systems/use cases are connected to owners, provider context, rationale, evidence and review.
 
-Core chain:
+Core model:
 
-`FACT -> DECISION -> OWNER -> IMPLEMENTATION -> EVIDENCE -> REVIEW -> HISTORY`
+`SYSTEM -> USE CASE -> OWNER -> PROVIDER / ROLE CONTEXT -> EVIDENCE -> REVIEW`
 
-Ready assets:
+Ready:
 
-- Monday founder post — evidence != files;
-- Tuesday company post — six evidence-quality tests;
-- Wednesday founder post — stale evidence;
-- Thursday DE/FR/ES derivatives;
-- Friday customer/procurement reconstruction problem;
-- seven-slide carousel;
-- newsletter edition;
-- sales-use excerpt;
-- UTM contract;
-- qualitative learning signals.
+- founder inventory-vs-vendor-list post;
+- company post on five missing fields;
+- spreadsheet-breakpoint founder post;
+- DE/FR/ES derivatives;
+- lead-magnet launch copy;
+- nurture sequence;
+- ABM reuse rule;
+- capture + attribution contract.
 
-Do not describe evidence quality as certification or proof of legal compliance.
-
----
-
-## 5. Public derivative system
-
-Each of the four core frameworks can now produce:
+Artifact verification:
 
 ```text
-CORE FRAMEWORK
--> FOUNDER THESIS
--> COMPANY EDUCATION POST
--> CAROUSEL
--> NEWSLETTER
--> SALES EXCERPT
--> DE / FR / ES DERIVATIVE
+XLSX_WORKBOOK=READY_VERIFIED
+QUICK_START_PDF=READY_VISUALLY_VERIFIED
+LOCALIZED_CANVAS_FR=READY_PDF
+LOCALIZED_CANVAS_DE=READY_PDF
+LOCALIZED_CANVAS_ES=READY_PDF
+FORMULA_ERROR_SCAN=PASS
+AUTOMATIC_LEGAL_CLASSIFICATION=NO
+COMPLIANCE_SCORE=NO
 ```
 
-Core frameworks:
-
-1. AI Governance Evidence Model
-2. AI Portfolio Governance Map
-3. Technical vs Operational AI Governance
-4. Article 50 Evidence Operating Map
-
-Distribution should repeat the message across formats over time rather than publish near-duplicate assets at once.
+Landing-page implementation remains release-dependent.
 
 ---
 
-## 6. Ecosystem contribution truth
+## 5. SEO / Brand SERP truth
 
-### Hub France IA
+Current-main repository evidence:
 
-Current public fit includes active `Veille réglementaire` and `Boussole AI Act` working groups; the latter is explicitly focused on producing operational AI Act implementation deliverables.
+- `src/app/sitemap.ts` exists and emits localized acquisition, assurance and feature URLs with language alternates;
+- `src/app/robots.ts` exists, allows public crawling, blocks private route families and declares `${appUrl}/sitemap.xml`;
+- public search/web discovery currently surfaces `/en`, Trust Center, pricing and other public pages.
 
-Contribution title:
-
-`De l’inventaire IA à la preuve : construire un dossier de gouvernance opérationnelle qui reste traçable dans le temps`
-
-Institutional draft: SAVED / NOT_SENT.
-
-### KI Bundesverband
-
-Current public fit includes `Politik & Regulierung` and `Tax & Legal` working groups focused on regulatory and practical AI use questions.
-
-Contribution title:
-
-`Vom KI-Inventar zum belastbaren Governance-Nachweis: ein operatives Modell für Verantwortlichkeit, Evidenz und Reviews`
-
-Institutional draft: SAVED / NOT_SENT.
-
-### Adigital
-
-Current public fit includes its July 2026 work bringing the Spanish AI sandbox experience to EU-level discussions.
-
-Contribution title:
-
-`Del sandbox al sistema operativo: cómo mantener inventario, evidencia y revisión después de la evaluación inicial`
-
-Official contact-form copy: READY / NOT_SUBMITTED.
-
-No partnership, membership, endorsement or official-authority claim exists.
-
----
-
-## 7. Cohort 1 exact execution state
+Current limitations:
 
 ```text
-COHORT_1_ACCOUNTS=5
-PUBLIC_SIGNAL_REFRESH=5_OF_5
-PERSONALIZED_TOUCH_1=5_OF_5
-CORE_ASSETS_READY=4_OF_4
-ASSET_MAPPING=5_OF_5
-INSTITUTIONAL_CHANNEL_VERIFIED=5_OF_5
-FINAL_SEND_CARDS=5_OF_5
-GMAIL_DRAFTS_CREATED=5_OF_5
-EMAILS_SENT=0_OF_5
-RESPONSES_RECEIVED=0
+SITEMAP_CODE=PASS
+ROBOTS_CODE=PASS
+PUBLIC_DISCOVERY=PASS_PARTIAL
+SITEMAP_RUNTIME_DIRECT_FETCH=NOT_PROVEN_IN_THIS_CHECK
+SEARCH_CONSOLE_DOMAIN_PROPERTY=NOT_VERIFIED_BY_CONNECTED_EVIDENCE
+SEARCH_CONSOLE_SITEMAP_STATUS=NO_EVIDENCE
+SEARCH_CONSOLE_INDEXING_BASELINE=NO_EVIDENCE
+SEARCH_CONSOLE_QUERY_BASELINE=NO_DATA
+```
+
+A product-brand inconsistency remains externally visible: some indexed/public surfaces render `Risck comply` while canonical product brand is `RISCK COMPLY`.
+
+Preferred Search Console property:
+
+`risckcomply.com` as a Domain property, verified via DNS.
+
+Do not expose the Google DNS verification token publicly.
+
+`sameAs` remains gated on verified official profile ownership and normalized identity.
+
+---
+
+## 6. Exact live-market state
+
+```text
+COHORT_1_EMAILS_SENT=0_OF_5
+COHORT_1_RESPONSES=0
 CONFIRMED_BUYING_INTENT=0
 CONFIRMED_OPPORTUNITIES=0
-PERSONAL_EMAIL_SCRAPING=NO
-AUTOMATED_OUTREACH=NO
-```
 
-The cohort is **draft-ready**, not live pipeline.
-
----
-
-## 8. Ecosystem exact execution state
-
-```text
-HUB_FRANCE_IA_CONTRIBUTION=SUBMISSION_READY
-KI_BUNDESVERBAND_CONTRIBUTION=SUBMISSION_READY
-ADIGITAL_CONTRIBUTION=SUBMISSION_READY
-HUB_GMAIL_DRAFT=READY_NOT_SENT
-KI_GMAIL_DRAFT=READY_NOT_SENT
-ADIGITAL_CONTACT_FORM=READY_NOT_SUBMITTED
+ECOSYSTEM_SUBMISSIONS_SENT=0
+ECOSYSTEM_RESPONSES=0
 PARTNERSHIPS_CONFIRMED=0
 ENDORSEMENTS_CONFIRMED=0
-ECOSYSTEM_RESPONSES=0
+
+SEARCH_CONSOLE_LIVE=NO_EVIDENCE
+POSTHOG_LIVE_INGESTION=NOT_PROVEN
+ATTRIBUTION_LIVE=NO
+CRM_CONNECTED=NO_EVIDENCE
+REPEATABLE_PIPELINE=NOT_VERIFIED
+PAID_MARKET_VALIDATION=NONE
 ```
 
----
-
-## 9. Response / relationship gates
-
-### PREPARED
-
-- research complete
-- channel verified
-- copy ready
-- asset ready
-- draft or form copy saved
-
-### LIVE
-
-Requires actual send/submission through the legitimate channel.
-
-### ENGAGED
-
-Requires real substantive response or interaction.
-
-### OPPORTUNITY / PARTNER CONVERSATION
-
-Requires a real two-way commercial or relationship signal.
-
-Never convert an email send, social follow, connection accepted or generic acknowledgement into an opportunity/partnership.
+Prepared is not Live. Live is not Validated. Validated is not Scaled.
 
 ---
 
-## 10. Article 50 truth boundary
-
-As of 2026-08-23:
-
-- Article 50 applies from 2 August 2026;
-- final Commission transparency guidelines were published 20 July 2026;
-- obligations vary by system, use case and provider/deployer context;
-- Article 50 is not `label all AI`;
-- the 2 December 2026 transition is not a general extension for every Article 50 duty;
-- transparency Code of Practice adherence is not conclusive evidence of compliance.
-
-Re-check current official Commission/EUR-Lex sources before publication or legal reliance.
-
----
-
-## 11. Current hard blockers
+## 7. Hard blockers
 
 ### Release / product
 
@@ -337,27 +224,20 @@ Re-check current official Commission/EUR-Lex sources before publication or legal
 - independent pentest/retest
 - legitimate Stripe LIVE lifecycle
 
-### Marketing infrastructure
+### Marketing infrastructure / market evidence
 
+- Search Console owner verification not evidenced
 - PostHog production ingestion not proven
 - attribution not live
-- Search Console not verified through connected tooling
 - CRM not connected/verified
-- non-LinkedIn official social ownership not fully verified
-
-### Market evidence
-
-- brand authority still early
-- Cohort 1 emails sent: 0
-- Cohort 1 account responses: 0
-- ecosystem submissions sent: 0
-- ecosystem responses: 0
-- repeatable pipeline: not verified
-- paid-market validation: none
+- public brand normalization incomplete
+- Cohort 1 not sent
+- ecosystem contributions not submitted
+- no repeatable pipeline
 
 ---
 
-## 12. Paid activation gate
+## 8. Paid activation gate
 
 ```text
 PRODUCTION_GO=PASS
@@ -374,23 +254,23 @@ Only then begin small high-intent paid tests.
 
 ---
 
-## 13. Next transition rule
+## 9. Next transition rule
 
 If the next request is `continue` while `PRODUCTION_GO=NO_GO`:
 
-1. do not send Cohort 1 or ecosystem drafts without explicit user instruction to send;
-2. prioritize publication-ready Week 4 / lead-magnet distribution only if it adds new demand capture capability;
-3. prepare localized one-page contribution canvases where useful for Hub/KI/Adigital;
-4. improve external brand/entity readiness and legitimate Search Console verification handoff;
-5. do not expand the account cohort before first-cohort market learning or a major new public trigger;
-6. create no marketing issues/task spam;
-7. keep release-dependent implementation consolidated into future Mega PR packages.
+1. do not send Cohort 1 or ecosystem drafts without explicit instruction to send;
+2. prioritize brand/entity normalization handoff and owner-action Search Console verification;
+3. do not create Week 5 merely to increase content volume;
+4. only create new content if it closes a new distribution, nurture or buyer-objection gap;
+5. do not expand the target-account cohort before first-cohort learning or a major public trigger;
+6. create no marketing issue/task spam;
+7. keep all release-dependent implementation consolidated into future Mega PR packages.
 
-If `PRODUCTION_GO=PASS`, revalidate runtime/legal/billing/analytics before any acquisition-scale change.
+If `PRODUCTION_GO=PASS`, revalidate runtime/legal/billing/analytics before acquisition scale changes.
 
 ---
 
-## 14. Current verdict
+## 10. Current verdict
 
 ```text
 POSITIONING=READY
@@ -399,30 +279,27 @@ CONTENT_SYSTEM=READY
 WEEK_1_EXECUTION=READY
 WEEK_2_REGULATORY_EXECUTION=READY
 WEEK_3_EVIDENCE_EXECUTION=READY
+WEEK_4_INVENTORY_DEMAND_CAPTURE=READY
 PUBLIC_DERIVATIVE_ENGINE=READY
-CRO_ARCHITECTURE=READY
+AI_INVENTORY_LEAD_MAGNET=READY_ARTIFACT
+LOCALIZED_ECOSYSTEM_CANVASES=READY_3_OF_3
+SEARCH_CONSOLE_HANDOFF=READY_OWNER_ACTION
+SEO_RUNTIME_DISCOVERY_EVIDENCE=READY
 SALES_ENABLEMENT=READY
 ABM_ENGINE=READY
-COHORT_1_DOSSIERS=READY
-COHORT_1_PERSONALIZED_OUTREACH=READY
-COHORT_1_CORE_ASSETS=READY_4_OF_4
-COHORT_1_INSTITUTIONAL_CHANNELS=VERIFIED_5_OF_5
-COHORT_1_FINAL_SEND_CARDS=READY_5_OF_5
 COHORT_1_GMAIL_DRAFTS=READY_5_OF_5
-ECOSYSTEM_CONTRIBUTION_PACKET_V2=READY
-HUB_GMAIL_DRAFT=READY_NOT_SENT
-KI_GMAIL_DRAFT=READY_NOT_SENT
-ADIGITAL_FORM_COPY=READY_NOT_SUBMITTED
+ECOSYSTEM_CONTRIBUTION_PACKET=READY
 
 LIVE_EMAIL_SENDS=0
 LIVE_ABM_RESPONSE=0
 LIVE_ECOSYSTEM_SUBMISSIONS=0
 LIVE_PARTNER_RESPONSE=0
+LIVE_SEARCH_CONSOLE=NO_EVIDENCE
 LIVE_ATTRIBUTION=NO
 LIVE_REPEATABLE_PIPELINE=NOT_VERIFIED
 LIVE_PAID_SCALE=NO
 
-MARKETING_PREPARED=87%
-MARKETING_REMAINING=13%
+MARKETING_PREPARED=89%
+MARKETING_REMAINING=11%
 MAIN_CHANGED_BY_MARKETING=NO
 ```
