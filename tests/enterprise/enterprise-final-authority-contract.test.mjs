@@ -2,10 +2,23 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { FINAL_AUTHORITY_PRODUCERS } from '../../scripts/enterprise/fetch-enterprise-final-authority-evidence.mjs';
+import {
+  FINAL_AUTHORITY_PRODUCERS,
+  validateAuthoritativeEvidenceDocument,
+} from '../../scripts/enterprise/fetch-enterprise-final-authority-evidence.mjs';
 import { buildEnterpriseFinalAuthority } from '../../scripts/release/write-enterprise-final-authority.mjs';
 
 const SHA = 'a'.repeat(40);
+
+function validDocumentFor(producer) {
+  const expected = producer.evidenceContract;
+  const document = {};
+  for (const field of ['schema', 'evidenceItem', 'status', 'outcome', 'decision']) {
+    if (Object.hasOwn(expected, field)) document[field] = expected[field];
+  }
+  for (const field of expected.emptyArrayFields || []) document[field] = [];
+  return document;
+}
 
 test('final authority producers require the five direct domain proofs and no raw test-mode Stripe authority', () => {
   const ids = FINAL_AUTHORITY_PRODUCERS.map((producer) => producer.id);
@@ -30,10 +43,64 @@ test('final authority producers require the five direct domain proofs and no raw
     assert.ok(producer.workflowPath.startsWith('.github/workflows/'));
     assert.ok(producer.artifact(SHA).includes(SHA));
     assert.ok(producer.allowedEvents.length > 0);
+    assert.equal(typeof producer.evidenceContract?.schema, 'string');
   }
 
   const external = FINAL_AUTHORITY_PRODUCERS.find((producer) => producer.id === 'external-security-assurance');
   assert.equal(external?.artifact(SHA), `external-security-assurance-accepted-${SHA}`);
+});
+
+test('final authority validates the producer-specific positive evidence contract before collection', () => {
+  for (const producer of FINAL_AUTHORITY_PRODUCERS) {
+    const document = validDocumentFor(producer);
+    const result = validateAuthoritativeEvidenceDocument(producer, document);
+    assert.deepEqual(result, { valid: true, failures: [] }, producer.id);
+  }
+});
+
+test('a successful workflow run cannot promote blocked or semantically wrong evidence', () => {
+  for (const producer of FINAL_AUTHORITY_PRODUCERS) {
+    const expected = producer.evidenceContract;
+    const document = validDocumentFor(producer);
+
+    if (Object.hasOwn(expected, 'status')) document.status = 'Open';
+    else if (Object.hasOwn(expected, 'outcome')) document.outcome = 'blocked';
+    else document.decision = 'NO_GO';
+
+    const result = validateAuthoritativeEvidenceDocument(producer, document);
+    assert.equal(result.valid, false, producer.id);
+    assert.ok(result.failures.some((failure) => /(?:status|outcome|decision)_mismatch/.test(failure)), producer.id);
+  }
+});
+
+test('final authority rejects schema substitution and explicit producer blocker arrays', () => {
+  for (const producer of FINAL_AUTHORITY_PRODUCERS) {
+    const wrongSchema = validDocumentFor(producer);
+    wrongSchema.schema = 'risck-comply.unrelated-evidence.v1';
+    const schemaResult = validateAuthoritativeEvidenceDocument(producer, wrongSchema);
+    assert.equal(schemaResult.valid, false, producer.id);
+    assert.ok(schemaResult.failures.includes('schema_mismatch'), producer.id);
+
+    for (const field of producer.evidenceContract.emptyArrayFields || []) {
+      const blocked = validDocumentFor(producer);
+      blocked[field] = ['unresolved-control'];
+      const blockedResult = validateAuthoritativeEvidenceDocument(producer, blocked);
+      assert.equal(blockedResult.valid, false, `${producer.id}:${field}`);
+      assert.ok(blockedResult.failures.includes(`${field}_not_empty`), `${producer.id}:${field}`);
+    }
+  }
+});
+
+test('FRIA and external assurance keep their real heterogeneous contracts instead of fake Complete/passed normalization', () => {
+  const fria = FINAL_AUTHORITY_PRODUCERS.find((producer) => producer.id === 'product-commercial-qa');
+  const external = FINAL_AUTHORITY_PRODUCERS.find((producer) => producer.id === 'external-security-assurance');
+
+  assert.deepEqual(fria?.evidenceContract, {
+    schema: 'risck-comply.product-fria-runtime-acceptance.v2',
+    outcome: 'passed',
+  });
+  assert.equal(external?.evidenceContract?.decision, 'ACCEPTED_FOR_ENTERPRISE_PROMOTION');
+  assert.deepEqual(external?.evidenceContract?.emptyArrayFields, ['blockers']);
 });
 
 test('writer emits Enterprise 100 and Production GO only when closure and source manifest are exact and complete', () => {
