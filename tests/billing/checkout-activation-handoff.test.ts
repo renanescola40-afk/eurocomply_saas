@@ -11,9 +11,10 @@ describe('post-checkout activation handoff', () => {
     expect(checkoutRoute).not.toContain('dashboard/organizations?checkout=success');
   });
 
-  it('requires persisted status, exact Stripe ids and processed live Stripe authority before activation', () => {
+  it('requires active persisted status, exact Stripe ids and processed live Stripe authority before activation', () => {
     expect(activationRoute).toContain(".from('subscriptions')");
-    expect(activationRoute).toContain("new Set(['active', 'trialing'])");
+    expect(activationRoute).toContain("new Set(['active'])");
+    expect(activationRoute).not.toContain("new Set(['active', 'trialing'])");
     expect(activationRoute).toContain('stripe_customer_id');
     expect(activationRoute).toContain('stripe_subscription_id');
     expect(activationRoute).toContain('hasProcessedLiveStripeSubscriptionAuthority');

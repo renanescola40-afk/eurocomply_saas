@@ -163,7 +163,7 @@ describe('recipient locale authority', () => {
 
   it('uses recipient locale for Product-owned organization and compliance email callers', () => {
     expect(organizationAction).toContain('locale: user.locale');
-    expect(organizationAction).toContain('`${getAppUrl()}/${user.locale}/dashboard/organizations`');
+    expect(organizationAction).toContain('`${getAppUrl()}/${user.locale}/dashboard/organizations/billing?onboarding=payment_required`');
 
     expect(complianceAlerts).toContain('getUserEmailContextById');
     expect(complianceAlerts).toContain('locale: recipient.locale');

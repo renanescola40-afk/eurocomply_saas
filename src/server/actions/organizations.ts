@@ -93,6 +93,9 @@ export async function createOrganization(input: CreateOrganizationInput) {
       throw organizationActionError('Unable to create organization');
     }
 
+    // Before payment this is a purchase-context shell only. Product activation
+    // is separately blocked by canonical commercial authority in onboarding,
+    // page/API/Server Action guards and the Supabase RLS data plane.
     const organization = {
       id: creation.organization_id,
       name: creation.organization_name,
@@ -131,7 +134,9 @@ export async function createOrganization(input: CreateOrganizationInput) {
     }
 
     if (user.email) {
-      const dashboardUrl = `${getAppUrl()}/${user.locale}/dashboard/organizations`;
+      // Do not tell a newly-created but unlicensed tenant to enter the product.
+      // The narrow billing recovery lane is deliberately reachable pre-license.
+      const dashboardUrl = `${getAppUrl()}/${user.locale}/dashboard/organizations/billing?onboarding=payment_required`;
       const email = onboardingEmail({
         organizationName: organization.name,
         dashboardUrl,

@@ -33,7 +33,9 @@ const expectations = [
     [
       'getCurrentUser',
       'getCurrentOrganizationForUser(user.id)',
-      '!currentOrganization || !currentOrganization.is_onboarding_completed',
+      'getOrganizationBillingAuthority(currentOrganization.id)',
+      'if (!authority.licensed)',
+      'if (!currentOrganization.is_onboarding_completed)',
       'encodeURIComponent',
       '`/${locale}/onboarding`',
     ],

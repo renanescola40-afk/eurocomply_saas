@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { ADD_ON_CATALOG, type AddOnId } from '@/lib/billing/addons';
 
 const VALID_ADD_ON_IDS = new Set<AddOnId>(ADD_ON_CATALOG.map((addOn) => addOn.id));
-const ACTIVE_ADD_ON_STATUSES = ['active', 'trialing'] as const;
+const ACTIVE_ADD_ON_STATUSES = ['active'] as const;
 
 type OrganizationAddOnRow = {
   add_on_id?: string | null;

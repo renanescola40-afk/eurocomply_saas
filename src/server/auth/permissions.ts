@@ -52,6 +52,15 @@ const LEGACY_PERMISSION_MAP: Record<LegacyOrganizationPermission, OrganizationPe
   'audit:read': 'read_audit',
 };
 
+// Server Actions are callable independently from page/layout routing. Keep the
+// narrow purchase bootstrap (`manage_settings` for onboarding draft metadata and
+// `manage_billing` for checkout/recovery) reachable before payment, but require
+// durable commercial authority for team administration. All other product
+// permissions are already covered by the canonical commercial set in RBAC.
+const SERVER_ACTION_MINIMUM_PLAN_BY_PERMISSION: Partial<Record<OrganizationPermission, 'starter'>> = {
+  manage_team: 'starter',
+};
+
 export type ServerActionPermission = OrganizationPermission | LegacyOrganizationPermission;
 
 function normalizeServerActionPermission(permission: ServerActionPermission): OrganizationPermission {
@@ -74,6 +83,7 @@ export async function assertCurrentUserCan(organizationId: string, userId: strin
     userId,
     organizationId,
     permission: requiredPermission,
+    minimumPlan: SERVER_ACTION_MINIMUM_PLAN_BY_PERMISSION[requiredPermission],
   });
 
   if (!result.ok) {

@@ -70,7 +70,9 @@ async function getLatestSubscriptionRow(organizationId: string, select: string):
     .from('subscriptions')
     .select(select)
     .eq('organization_id', organizationId)
-    .in('status', ['active', 'trialing'])
+    // RISCK COMPLY has no public free-trial access. A Stripe `trialing` row may
+    // be displayed/recovered by billing UX, but it is not a commercial key.
+    .eq('status', 'active')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle<OrganizationSubscriptionRow>();
@@ -106,7 +108,7 @@ function requireAuthoritativePlan(value: string | null | undefined, source: Excl
 /**
  * Resolve commercial authority independently from the compatibility plan label.
  * A local subscriptions row, status flag, checkout redirect, client flag, seeded
- * record or test-mode Stripe identifier cannot set licensed=true.
+ * record, trialing status or test-mode Stripe identifier cannot set licensed=true.
  */
 export async function getOrganizationBillingAuthority(
   organizationId: string,

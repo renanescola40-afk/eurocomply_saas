@@ -80,7 +80,8 @@ describe('post-checkout activation UX', () => {
     expect(client).not.toContain('session_id');
 
     expect(route).toContain('getCurrentOrganizationForUser(user.id)');
-    expect(route).toContain("new Set(['active', 'trialing'])");
+    expect(route).toContain("new Set(['active'])");
+    expect(route).not.toContain("new Set(['active', 'trialing'])");
     expect(route).toContain('hasProcessedLiveStripeSubscriptionAuthority');
     expect(route).toContain('stripeCustomerId: subscription?.stripe_customer_id');
     expect(route).toContain('stripeSubscriptionId: subscription?.stripe_subscription_id');

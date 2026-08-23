@@ -62,7 +62,7 @@ describe('Phase 5 dashboard invariants', () => {
     expect(callback).toContain('auth_exchange_failed');
   });
 
-  it('keeps dashboard/organizations protected by the shared onboarding gate', () => {
+  it('keeps dashboard/organizations protected by canonical commercial authority before product onboarding', () => {
     const layout = read('src/app/[locale]/dashboard/organizations/layout.tsx');
     const access = read('src/server/queries/organization-dashboard-access.ts');
     const dashboard = read('src/app/[locale]/dashboard/organizations/page.tsx');
@@ -73,7 +73,10 @@ describe('Phase 5 dashboard invariants', () => {
     expect(layout).toContain("commercialRouteClass === 'billing_recovery'");
     expect(access).toContain('getCurrentUser');
     expect(access).toContain('getCurrentOrganizationForUser(user.id)');
-    expect(access).toContain('!currentOrganization || !currentOrganization.is_onboarding_completed');
+    expect(access).toContain('getOrganizationBillingAuthority(currentOrganization.id)');
+    expect(access).toContain('if (!authority.licensed)');
+    expect(access).toContain('if (!currentOrganization.is_onboarding_completed)');
+    expect(access.indexOf('if (!authority.licensed)')).toBeLessThan(access.indexOf('if (!currentOrganization.is_onboarding_completed)'));
     expect(access).toContain('`/${locale}/onboarding`');
     expect(dashboard).toContain('getLoginPath(safeLocale, dashboardPath)');
     expect(dashboard).toContain('getOrganizationDashboardData');

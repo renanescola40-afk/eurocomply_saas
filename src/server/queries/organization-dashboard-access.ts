@@ -1,9 +1,7 @@
 import { getBillingPlan } from '@/lib/billing/plans';
 import { getCurrentUser } from '@/server/queries/auth';
-import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
-
-const PAID_ACCESS_STATUSES = new Set(['active', 'trialing']);
+import { getOrganizationBillingAuthority } from '@/server/queries/subscription';
 
 function getPaymentRequiredPath(locale: string, selectedPlanId: string | null) {
   const selectedPlan = getBillingPlan(selectedPlanId) ?? getBillingPlan('starter');
@@ -25,21 +23,34 @@ export async function getOrganizationDashboardRedirect(locale: string) {
 
   const currentOrganization = await getCurrentOrganizationForUser(user.id);
 
-  if (!currentOrganization || !currentOrganization.is_onboarding_completed) {
+  // No tenant exists yet: the narrow onboarding entry may create the single
+  // purchase-context organization shell required to bind checkout.
+  if (!currentOrganization) {
     return `/${locale}/onboarding`;
   }
 
   try {
-    const billing = await getOrganizationBillingContext(currentOrganization.id);
-    if (billing.status && PAID_ACCESS_STATUSES.has(billing.status)) {
-      return null;
-    }
-  } catch (error) {
-    console.warn('[dashboard-access] billing_entitlement_lookup_failed', {
-      organizationId: currentOrganization.id,
-      message: error instanceof Error ? error.message : 'unknown',
-    });
-  }
+    const authority = await getOrganizationBillingAuthority(currentOrganization.id);
 
-  return getPaymentRequiredPath(locale, currentOrganization.selected_plan);
+    if (!authority.licensed) {
+      return getPaymentRequiredPath(locale, currentOrganization.selected_plan);
+    }
+
+    // Product onboarding is post-license. A paid tenant that has not completed
+    // activation goes to onboarding; an unlicensed tenant never reaches it.
+    if (!currentOrganization.is_onboarding_completed) {
+      return `/${locale}/onboarding`;
+    }
+
+    return null;
+  } catch (error) {
+    console.warn('[dashboard-access] commercial_authority_lookup_failed', {
+      organizationId: currentOrganization.id,
+      errorName: error instanceof Error ? error.name : 'unknown',
+    });
+
+    // Fail closed without inventing a free tier. Purchase/recovery surfaces are
+    // intentionally outside the paid product boundary.
+    return getPaymentRequiredPath(locale, currentOrganization.selected_plan);
+  }
 }

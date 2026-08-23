@@ -8,6 +8,7 @@ const isProductionLikeGate = process.env.PLAYWRIGHT_USE_PRODUCTION_SERVER === 't
 
 export default defineConfig({
   testDir: './tests/e2e',
+  globalSetup: './tests/e2e/payment-first-runtime-global-setup.ts',
   // The FRIA lifecycle acceptance requires the disposable Supabase runtime
   // provisioned by product-fria-ephemeral-qa.yml. Keep the production-like
   // gate fail-closed for every E2E it can execute against the built app while
