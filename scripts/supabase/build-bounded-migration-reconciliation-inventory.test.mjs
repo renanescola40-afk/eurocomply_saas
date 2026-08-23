@@ -65,6 +65,47 @@ function fixture() {
   return { sourceInventory, sourceInventoryBytes, forwardManifest };
 }
 
+function twentySevenFixture() {
+  const allowedClassifications = [
+    'ALREADY_PRESENT_IN_SCHEMA',
+    'PENDING_DEPLOYMENT',
+    'SUPERSEDED',
+    'ARCHIVE_LEGACY',
+    'REQUIRES_SPLIT_REVIEW',
+  ];
+  const items = Array.from({ length: 27 }, (_, index) => {
+    const version = `20260823${String(index + 1).padStart(6, '0')}`;
+    const filename = `${version}_selected_${String(index + 1).padStart(2, '0')}.sql`;
+    const sha256 = ((index % 15) + 1).toString(16).repeat(64);
+    return {
+      filename,
+      version,
+      sha256,
+      classificationReasons: ['LOCAL_ONLY_VERSION'],
+    };
+  });
+  const sourceInventory = {
+    schema: 'risck-comply.supabase-migration-reconciliation-inventory.v1',
+    generatedAt: sourceGeneratedAt,
+    allowedClassifications,
+    items,
+  };
+  const sourceInventoryBytes = Buffer.from(`${JSON.stringify(sourceInventory, null, 2)}\n`);
+  const forwardManifest = {
+    schema: 'risck-comply.supabase-forward-reconciliation-manifest.v1',
+    targetSha: subject,
+    selectionDigest: `sha256:${'e'.repeat(64)}`,
+    changeSet: 'v20-payment-first-test',
+    migrations: items.map((item) => ({
+      version: item.version,
+      filename: item.filename,
+      sha256: item.sha256,
+      purpose: 'bounded V20 fixture',
+    })),
+  };
+  return { sourceInventory, sourceInventoryBytes, forwardManifest };
+}
+
 test('builds only the exact manifest identities in manifest order without classifying them', () => {
   const value = fixture();
   const bounded = buildBoundedMigrationInventory({ ...value, expectedSha: subject });
@@ -81,6 +122,20 @@ test('builds only the exact manifest identities in manifest order without classi
   assert.deepEqual(bounded.items.map((item) => item.boundedOrder), [1, 2]);
   assert.deepEqual(bounded.items.map((item) => item.forwardPurpose), ['second purpose', 'first purpose']);
   assert.equal(bounded.items.some((item) => item.filename === '20260601000000_historical.sql'), false);
+});
+
+test('accepts the 27-item V20 scope while preserving exact identity binding', () => {
+  const value = twentySevenFixture();
+  const bounded = buildBoundedMigrationInventory({ ...value, expectedSha: subject });
+
+  assert.equal(bounded.boundedSelection.selectedCount, 27);
+  assert.equal(bounded.items.length, 27);
+  assert.deepEqual(
+    bounded.items.map((item) => `${item.filename}:${item.sha256}`),
+    value.forwardManifest.migrations.map((item) => `${item.filename}:${item.sha256}`),
+  );
+  assert.equal(bounded.boundedSelection.exactFilenameAndSha256Bound, true);
+  assert.equal(bounded.boundedSelection.productionWriteAuthorized, false);
 });
 
 test('is byte-stable across Decision Gate reruns and ignores caller wall-clock metadata', () => {
