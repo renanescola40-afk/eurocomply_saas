@@ -6,6 +6,11 @@ const root = process.cwd();
 const read = (file: string) => fs.readFileSync(path.join(root, file), 'utf8');
 const migration = read('supabase/migrations/20260823123000_payment_first_commercial_data_plane.sql');
 const gapMigration = read('supabase/migrations/20260823131500_payment_first_gap_analysis_and_storage.sql');
+const reconciliation = JSON.parse(read('config/supabase-forward-reconciliation.json')) as {
+  changeSet: string;
+  migrations: Array<{ filename: string }>;
+};
+const billingRuntimeValidator = read('scripts/security/validate-enterprise-billing-runtime.sql');
 const gapApi = read('src/app/api/gap-analysis/route.ts');
 const gapStorage = read('src/lib/gap-analysis/storage.ts');
 const remediationStorage = read('src/lib/compliance/remediation.ts');
@@ -25,6 +30,29 @@ const legacyInventory = [
 ].map(read);
 
 describe('payment-first commercial closure', () => {
+  it('binds both payment-first migrations into the only governed Production promotion set', () => {
+    const selected = reconciliation.migrations.map((item) => item.filename);
+    expect(reconciliation.changeSet).toBe('2026-08-23-enterprise-data-plane-payment-first-closure-v20');
+    expect(selected).toHaveLength(27);
+    expect(selected.slice(-2)).toEqual([
+      '20260823123000_payment_first_commercial_data_plane.sql',
+      '20260823131500_payment_first_gap_analysis_and_storage.sql',
+    ]);
+    expect(selected.indexOf('20260822123626_v19_reconcile_enterprise_evidence_vault.sql')).toBeLessThan(
+      selected.indexOf('20260823123000_payment_first_commercial_data_plane.sql'),
+    );
+  });
+
+  it('makes canonical rehearsal/live/recovery billing postconditions fail closed without payment-first authority', () => {
+    expect(billingRuntimeValidator).toContain("to_regprocedure('app_private.has_commercial_authority(uuid)')");
+    expect(billingRuntimeValidator).toContain("policy.policyname='payment_first_commercial_authority'");
+    expect(billingRuntimeValidator).toContain("'payment_first_gap_assessments_authority'");
+    expect(billingRuntimeValidator).toContain("'payment_first_gap_answers_authority'");
+    expect(billingRuntimeValidator).toContain("'payment_first_compliance_findings_authority'");
+    expect(billingRuntimeValidator).toContain("table_name in ('ai_tools','compliance_documents','regulatory_updates','compliance_evidence')");
+    expect(billingRuntimeValidator).toContain("not like '%has_commercial_authority%'");
+  });
+
   it('mirrors the canonical durable commercial sources in a private fail-closed RLS helper', () => {
     expect(migration).toContain('app_private.has_commercial_authority');
     expect(migration).toContain("source.source_kind = 'signed_contract'");

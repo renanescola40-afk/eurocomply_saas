@@ -13,6 +13,7 @@ import {
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const FORWARD_MANIFEST_SCHEMA = 'risck-comply.supabase-forward-reconciliation-manifest.v1';
+const MAX_BOUNDED_MIGRATIONS = 32;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -48,7 +49,10 @@ export function buildBoundedMigrationInventory({
   assert(forwardManifest?.targetSha === subjectSha, 'forward reconciliation manifest target SHA mismatch');
   assert(typeof forwardManifest?.selectionDigest === 'string' && /^sha256:[a-f0-9]{64}$/.test(forwardManifest.selectionDigest), 'forward reconciliation selection digest is invalid');
   assert(Array.isArray(forwardManifest?.migrations), 'forward reconciliation migrations are missing');
-  assert(forwardManifest.migrations.length > 0 && forwardManifest.migrations.length <= 25, 'forward reconciliation must contain 1-25 migrations');
+  assert(
+    forwardManifest.migrations.length > 0 && forwardManifest.migrations.length <= MAX_BOUNDED_MIGRATIONS,
+    `forward reconciliation must contain 1-${MAX_BOUNDED_MIGRATIONS} migrations`,
+  );
 
   const inventoryByKey = new Map();
   for (const item of sourceInventory.items) {
