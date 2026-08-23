@@ -26,7 +26,7 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = pg_catalog, public, app_private
+set search_path = ''
 as $$
   with contract_candidate as (
     select snapshot.plan_code
