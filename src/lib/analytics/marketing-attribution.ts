@@ -7,8 +7,10 @@ const FIRST_TOUCH_STORAGE_KEY = 'risckcomply.analytics.first_touch';
 const LAST_TOUCH_STORAGE_KEY = 'risckcomply.analytics.last_touch';
 const MAX_ATTRIBUTION_VALUE_LENGTH = 160;
 const SAFE_CAMPAIGN_VALUE = /^[A-Za-z0-9][A-Za-z0-9._~%+:-]{0,159}$/;
+const MARKETING_LOCALE_PATTERN = /^\/(en|pt|es|fr|it|de)(?=\/|$)/;
 
 export type MarketingAttributionModel = 'first_touch' | 'last_touch';
+export type MarketingLocale = 'en' | 'pt' | 'es' | 'fr' | 'it' | 'de';
 
 type MarketingTouch = {
   utm_source?: string;
@@ -104,8 +106,13 @@ function writeStoredTouch(key: string, touch: MarketingTouch) {
   }
 }
 
+export function getMarketingLocale(pathname: string): MarketingLocale | null {
+  const match = pathname.match(MARKETING_LOCALE_PATTERN);
+  return (match?.[1] as MarketingLocale | undefined) || null;
+}
+
 function stripLocale(pathname: string) {
-  return pathname.replace(/^\/(?:en|pt|es|fr|it|de)(?=\/|$)/, '') || '/';
+  return pathname.replace(MARKETING_LOCALE_PATTERN, '') || '/';
 }
 
 export function classifyPublicMarketingPage(pathname: string): PublicMarketingPage | null {
