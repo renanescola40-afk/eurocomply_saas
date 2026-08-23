@@ -16,7 +16,17 @@ describe('marketing attribution', () => {
   beforeEach(() => {
     window.localStorage.clear();
     window.sessionStorage.clear();
+    window.localStorage.setItem('risckcomply.analytics.consent', 'granted');
     window.history.replaceState({}, '', '/en');
+  });
+
+  it('does not create attribution storage before analytics consent', () => {
+    window.localStorage.removeItem('risckcomply.analytics.consent');
+    window.history.replaceState({}, '', '/en/pricing?utm_source=google&utm_medium=cpc');
+
+    expect(persistMarketingAttribution()).toEqual({ firstTouch: null, lastTouch: null });
+    expect(window.localStorage.getItem(marketingAttributionStorageKeys.firstTouch)).toBeNull();
+    expect(window.localStorage.getItem(marketingAttributionStorageKeys.lastTouch)).toBeNull();
   });
 
   it('preserves first touch while updating last touch on a new acquisition signal', () => {
