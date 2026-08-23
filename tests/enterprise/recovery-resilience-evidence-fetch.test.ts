@@ -4,10 +4,14 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  buildCanonicalRecoveryDrillEvidence,
   buildCanonicalRecoveryEvidence,
   removeStaleRecoveryEvidence,
+  selectExactShaRecoveryDrillRun,
   selectExactShaRecoveryRun,
+  selectRecoveryDrillEvidenceEntry,
   selectRecoveryEvidenceEntries,
+  validateBackupRestoreSource,
   validateRecoverySources,
 } from '../../scripts/enterprise/fetch-recovery-resilience-evidence.mjs';
 import { evaluateEvidenceDocument } from '../../scripts/enterprise/generate-readiness-scorecard.mjs';
@@ -15,6 +19,7 @@ import { evaluateEvidenceDocument } from '../../scripts/enterprise/generate-read
 const targetSha = 'a'.repeat(40);
 const runId = '123456';
 const workflowPath = '.github/workflows/recovery-resilience-proof.yml';
+const drillWorkflowPath = '.github/workflows/enterprise-recovery-drill.yml';
 const roots: string[] = [];
 const workflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
 const stabilizerWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard-stabilizer.yml', 'utf8');
@@ -61,6 +66,7 @@ afterEach(() => {
 describe('recovery resilience scorecard promotion', () => {
   it('is orchestrated by the stabilizer and fetched before scorecard generation', () => {
     expect(stabilizerWorkflow).toContain('- Recovery Resilience Proof');
+    expect(stabilizerWorkflow).toContain('- Enterprise Recovery Drill');
     expect(workflow).not.toContain('- Recovery Resilience Proof');
     expect(workflow).not.toContain("github.event.workflow_run.name == 'Recovery Resilience Proof'");
     expect(workflow).not.toContain('github.event.workflow_run');
@@ -72,7 +78,7 @@ describe('recovery resilience scorecard promotion', () => {
     expect(workflow).toContain('docs/security/evidence/p1/backup-restore-tested.json');
   });
 
-  it('selects only the canonical successful workflow-dispatch run on exact main SHA despite dynamic run-name', () => {
+  it('selects only the canonical successful full workflow-dispatch run on exact main SHA despite dynamic run-name', () => {
     const accepted = {
       id: Number(runId),
       name: `Recovery resilience proof for ${targetSha} (full)`,
@@ -94,6 +100,27 @@ describe('recovery resilience scorecard promotion', () => {
     expect(selectExactShaRecoveryRun([{ ...accepted, path: '.github/workflows/not-recovery.yml' }], targetSha)).toBeNull();
   });
 
+  it('selects an exact-main isolated recovery drill without requiring rollback confirmation', () => {
+    const accepted = {
+      id: Number(runId),
+      name: 'Enterprise Recovery Drill',
+      path: drillWorkflowPath,
+      head_sha: targetSha,
+      head_branch: 'main',
+      event: 'push',
+      status: 'completed',
+      conclusion: 'success',
+      updated_at: '2026-08-07T10:03:00.000Z',
+    };
+    expect(selectExactShaRecoveryDrillRun([
+      { ...accepted, id: 8, conclusion: 'failure' },
+      { ...accepted, id: 9, head_branch: 'agent/unsafe' },
+      accepted,
+    ], targetSha)?.id).toBe(Number(runId));
+    expect(selectExactShaRecoveryDrillRun([{ ...accepted, head_sha: 'b'.repeat(40) }], targetSha)).toBeNull();
+    expect(selectExactShaRecoveryDrillRun([{ ...accepted, path: workflowPath }], targetSha)).toBeNull();
+  });
+
   it('fails closed on mismatched SHA, run, controls, checks and sensitive evidence', () => {
     const rollback = rollbackSource();
     const restore = restoreSource();
@@ -110,7 +137,18 @@ describe('recovery resilience scorecard promotion', () => {
       .toThrow('recovery_evidence_invalid');
   });
 
-  it('promotes exactly REC-01 through REC-10 using scorecard-compatible checks', () => {
+  it('validates the isolated restore source independently from rollback evidence', () => {
+    expect(validateBackupRestoreSource(restoreSource(), { targetSha, runId })).toEqual([]);
+    const restore = restoreSource();
+    restore.checks.rlsAfterRestore = false;
+    restore.evidenceIntegrity.rowDataStored = true;
+    expect(validateBackupRestoreSource(restore, { targetSha, runId })).toEqual(expect.arrayContaining([
+      'restore_check_failed:rlsAfterRestore',
+      'restore_rows_integrity_invalid',
+    ]));
+  });
+
+  it('promotes exactly REC-01 through REC-10 for the fully proven recovery workflow', () => {
     const evidence = buildCanonicalRecoveryEvidence(rollbackSource(), restoreSource(), { targetSha, runId });
     for (const check of ['rollbackTargetConfigured', 'distinctDeployment', 'rollbackExecuted', 'postRollbackHealth']) {
       expect(evaluateEvidenceDocument(evidence.rollback, check)).toBe('PASS');
@@ -124,7 +162,30 @@ describe('recovery resilience scorecard promotion', () => {
     expect(JSON.stringify(evidence)).not.toContain('databaseUrl');
   });
 
-  it('requires one bounded safe entry for each source document', () => {
+  it('promotes REC-05 through REC-10 from the isolated drill while preserving zero rollback credit', () => {
+    const evidence = buildCanonicalRecoveryDrillEvidence(restoreSource(), { targetSha, runId });
+    expect(evidence.rollback.status).toBe('Open');
+    expect(evidence.rollback.outcome).toBe('not_executed');
+    expect(evidence.rollback.sourceWorkflow.name).toBe('Enterprise Recovery Drill');
+    expect(evidence.rollback.sourceWorkflow.file).toBe(drillWorkflowPath);
+    for (const check of ['rollbackTargetConfigured', 'distinctDeployment', 'rollbackExecuted', 'postRollbackHealth']) {
+      expect(evaluateEvidenceDocument(evidence.rollback, check)).toBe('FAIL');
+    }
+    expect(evidence.rollback.checks.every((check) => check.passed === false)).toBe(true);
+    expect(evidence.rollback.metrics.recoveryTimeSeconds).toBeNull();
+
+    expect(evidence.restore.status).toBe('Complete');
+    expect(evidence.restore.outcome).toBe('passed');
+    expect(evidence.restore.sourceWorkflow.name).toBe('Enterprise Recovery Drill');
+    expect(evidence.restore.sourceWorkflow.file).toBe(drillWorkflowPath);
+    for (const check of ['backupExists', 'restoreExecuted', 'dataIntegrity', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured']) {
+      expect(evaluateEvidenceDocument(evidence.restore, check)).toBe('PASS');
+    }
+    expect(evidence.restore.controlsVerified).toEqual(['REC-05', 'REC-06', 'REC-07', 'REC-08', 'REC-09', 'REC-10']);
+    expect(JSON.stringify(evidence)).not.toContain('databaseUrl');
+  });
+
+  it('requires one bounded safe entry for each full source document', () => {
     expect(selectRecoveryEvidenceEntries([
       'runtime/rollback-validation.json', 'p1/backup-restore-tested.json',
     ])).toEqual({ rollback: 'runtime/rollback-validation.json', restore: 'p1/backup-restore-tested.json' });
@@ -134,6 +195,17 @@ describe('recovery resilience scorecard promotion', () => {
     expect(() => selectRecoveryEvidenceEntries([
       'rollback-validation.json', 'copy/rollback-validation.json', 'backup-restore-tested.json',
     ])).toThrow('rollback_validation_source_not_unique');
+  });
+
+  it('accepts exactly one bounded restore entry from the isolated drill artifact', () => {
+    expect(selectRecoveryDrillEvidenceEntry([
+      'docs/security/evidence/p1/backup-restore-tested.json',
+      'other/diagnostic.json',
+    ])).toBe('docs/security/evidence/p1/backup-restore-tested.json');
+    expect(() => selectRecoveryDrillEvidenceEntry([
+      'backup-restore-tested.json',
+      'copy/backup-restore-tested.json',
+    ])).toThrow('backup_restore_tested_source_not_unique');
   });
 
   it('removes both stale recovery documents before every lookup', () => {
