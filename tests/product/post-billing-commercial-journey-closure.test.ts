@@ -23,7 +23,7 @@ describe('post-billing commercial customer journey closure', () => {
 
     expect(page).toContain("new URLSearchParams({ onboarding: 'payment_required' })");
     expect(page).toContain("return `/${locale}/dashboard/organizations/billing?${query.toString()}`;");
-    expect(page).toContain('redirect(getBillingRecoveryPath(safeLocale, resolvedSearchParams.plan));');
+    expect(page).toContain('redirect(getBillingRecoveryPath(input.locale, input.planId));');
     expect(page).not.toContain('redirect(`/${safeLocale}/dashboard/organizations${planQuery}`);');
 
     expect(boundary).toContain("onboarding: 'completed'");
