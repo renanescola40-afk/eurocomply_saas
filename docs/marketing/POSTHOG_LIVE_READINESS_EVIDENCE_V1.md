@@ -1,31 +1,36 @@
 # RISCK COMPLY — POSTHOG LIVE READINESS EVIDENCE V1
 
-Status: LIVE_STATE_CHARACTERIZED / IMPLEMENTATION_STAGED / NO_RELEASE_PR_OPENED
+Status: ROOT_CAUSE_PROVEN / REMEDIATION_PRESTAGED / NO_RELEASE_PR_OPENED
 Checked: 2026-08-23
 Protected main: `baf9ad40795c13df15f1120ee4a8ce025c07a7a2`
 Marketing branch: `marketing/august-2026-authority-engine`
 
 ## 1. Executive verdict
 
-The PostHog foundation exists and the application contains a privacy-first client boundary, but acquisition measurement is **not live**.
+The privacy-first PostHog foundation exists, but Production is currently compiled with a PostHog Project API Key that does **not** match the only PostHog project connected to this marketing control plane.
+
+No key value is recorded in this artifact.
 
 ```text
 POSTHOG_PROJECT_CONNECTED=YES
+POSTHOG_CONNECTED_PROJECT_COUNT=1
 POSTHOG_PRIVACY_BASELINE=PRESENT
 POSTHOG_PRODUCTION_COMPONENTS_PRESENT=YES
 POSTHOG_CSP_EU_HOSTS=PASS
-POSTHOG_INGESTED_EVENT=false
-POSTHOG_RECENT_EVENTS=NONE_OBSERVED
+POSTHOG_PRODUCTION_PUBLIC_KEY_PRESENT=YES
+POSTHOG_PRODUCTION_KEY_MATCHES_CONNECTED_PROJECT=NO
+POSTHOG_BINDING_DRIFT=PROVEN
+POSTHOG_INGESTED_EVENT_CONNECTED_PROJECT=false
+POSTHOG_RECENT_EVENTS_CONNECTED_PROJECT=NONE_OBSERVED
 POSTHOG_ACTIONS=0
 POSTHOG_CONVERSION_GOALS=0
 POSTHOG_DASHBOARD=STARTER_ONLY
 PUBLIC_ACQUISITION_EVENT_TAXONOMY=NOT_IMPLEMENTED
-POSTHOG_PUBLIC_KEY_BINDING=NOT_PROVEN_BY_THIS_EVIDENCE
 LIVE_ATTRIBUTION=NO
 PAID_MEASUREMENT=BLOCKED
 ```
 
-`NONE_OBSERVED` is an analytics evidence statement, not a statement that the product has no users.
+`NONE_OBSERVED` is an analytics evidence statement, not a statement that the product has no visitors or users.
 
 ---
 
@@ -33,90 +38,156 @@ PAID_MEASUREMENT=BLOCKED
 
 Fresh connected project read confirms:
 
-- project exists and is not demo data;
-- IP anonymization is enabled;
-- session recording is disabled;
-- snippet onboarding is incomplete;
+- one accessible project in the connected PostHog organization;
+- project is not demo data;
+- IP anonymization enabled;
+- session recording disabled;
+- snippet onboarding incomplete;
 - `ingested_event=false`;
-- marketing attribution window is 90 days;
-- configured marketing attribution mode is `last_touch`;
-- marketing conversion goals are empty;
-- customer analytics signup/subscription/payment event mappings are unset.
+- marketing attribution window = 90 days;
+- marketing attribution mode = `last_touch`;
+- marketing conversion goals empty;
+- customer analytics signup/subscription/payment mappings unset;
+- Actions = 0;
+- one starter dashboard with starter insights only.
 
-Fresh event-schema read shows no event seen in the last 30 days, including `$pageview`.
-
-Fresh action read: `ACTIONS=0`.
-
-Fresh reporting read:
-
-- one dashboard exists: the default starter dashboard;
-- eight saved insights exist and are default starter insights created with the project;
-- these starter objects receive no conversion/readiness credit because no real event ingestion exists.
-
-No token, secret or customer data belongs in this evidence file.
+No token/key value belongs in this document.
 
 ---
 
 ## 3. Current-main implementation truth
 
-### Consent and client initialization
+`src/lib/analytics/posthog-client.ts` already provides a strong baseline:
 
-`src/lib/analytics/posthog-client.ts` currently:
+- consent storage key `risckcomply.analytics.consent`;
+- analytics required unless explicitly configured otherwise;
+- no client initialization when the public key is absent;
+- EU PostHog hosts by default;
+- `autocapture: false`;
+- `capture_pageview: false`;
+- session recording disabled by default;
+- text/attribute masking;
+- DNT respect;
+- sensitive-route protection;
+- sanitized event properties.
 
-- uses `risckcomply.analytics.consent`;
-- requires consent unless explicitly configured otherwise;
-- does not initialize when the public key is absent;
-- uses EU PostHog hosts by default;
-- sets `autocapture: false`;
-- sets `capture_pageview: false`;
-- disables session recording by default;
-- masks text and element attributes;
-- respects Do Not Track;
-- protects sensitive application paths;
-- sanitizes analytics properties before capture.
+`AnalyticsConsentBanner` supports allow/decline. `PostHogAnalyticsProvider` is present and currently focuses its explicit page event on authenticated dashboard activity.
 
-### Consent UX
-
-`AnalyticsConsentBanner` presents allow/decline choices when no decision exists; decline opts out; allow stores consent and initializes PostHog.
-
-### Provider
-
-`PostHogAnalyticsProvider` is present and initializes on path changes, but its explicit page-level event is currently focused on authenticated dashboard activity (`dashboard_opened`).
-
-### Event catalog
-
-The canonical event map is mainly product/activation/billing oriented, including `user_signed_up`, `user_signed_in`, `organization_created`, `dashboard_opened`, `document_uploaded`, `risk_created`, `vendor_created`, `checkout_started`, `checkout_completed`, `subscription_active` and `subscription_cancelled`.
-
-It does not yet define the public acquisition events needed to attribute marketing demand.
+The existing canonical event catalog is primarily product/auth/onboarding/billing, including `user_signed_up`, `dashboard_opened`, `checkout_started`, `checkout_completed` and `subscription_active`.
 
 ---
 
 ## 4. Production runtime evidence
 
-The exact current Production deployment is READY on the protected main SHA.
+Current Production is READY on exact protected main.
 
-A fresh fetch of `https://www.risckcomply.com/en` confirms that the production client bundle includes `PostHogAnalyticsProvider` and `AnalyticsConsentBanner`. Current production CSP allows the intended EU PostHog asset and ingestion hosts.
+A current-production bundle fetch proves:
 
-This proves the client components and network policy are deployable in the current runtime. It does **not** prove the public PostHog key is bound, consent has been granted by a visitor, an event has been delivered, attribution is persisted or conversion reporting works.
+- `PostHogAnalyticsProvider` is compiled;
+- `AnalyticsConsentBanner` is compiled;
+- PostHog EU asset and ingestion hosts are compiled/allowed;
+- a non-empty public PostHog Project API Key is compiled into the browser bundle.
+
+A private equality comparison between that compiled public key and the connected project's Project API Key returned:
+
+```text
+PRODUCTION_KEY == CONNECTED_PROJECT_KEY -> FALSE
+```
+
+The values were deliberately not printed or stored.
+
+This explains why reading the connected project cannot prove current Production ingestion even though the application contains PostHog runtime code.
 
 ---
 
-## 5. Root measurement gap
+## 5. Root cause in deployment governance
+
+Current protected `main` workflow `.github/workflows/vercel-production.yml` synchronizes critical provider bindings such as Supabase, Stripe, Resend and Sentry before the Production build.
+
+Before this remediation was prestaged, it did **not** source or synchronize:
 
 ```text
-DISCOVERY
-  -> PUBLIC PAGE INTENT
-  -> CTA
-  -> DEMO / LEAD / SIGNUP
-  -> CHECKOUT
-  -> ACTIVE CUSTOMER
+NEXT_PUBLIC_POSTHOG_KEY
+NEXT_PUBLIC_POSTHOG_HOST
+NEXT_PUBLIC_POSTHOG_ASSET_HOST
+NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT
 ```
 
-Current product events cover parts of the lower funnel. Missing pieces are mainly the public/top-of-funnel bridge and attribution persistence.
+Therefore an existing/stale Vercel Production PostHog key could survive independently of the protected GitHub Production environment and independently of the PostHog project being audited.
 
-### Missing public events
+Root-cause classification:
 
-After release authority permits implementation:
+```text
+ANALYTICS_ROOT_CAUSE=PROVIDER_BINDING_GOVERNANCE_DRIFT
+CODE_CLIENT_INITIALIZATION_DEFECT=NO_EVIDENCE
+POSTHOG_SERVICE_OUTAGE=NO_EVIDENCE
+CONNECTED_PROJECT_INGESTION=NO
+```
+
+---
+
+## 6. Remediation prestaged on marketing branch
+
+The marketing branch now contains a release-dependent implementation that does **not** touch `main` or open a PR.
+
+### Workflow remediation
+
+Protected Production deploy now prestages:
+
+- `NEXT_PUBLIC_POSTHOG_KEY` from protected GitHub Production variables;
+- fixed PostHog EU ingestion host;
+- fixed PostHog EU asset host;
+- explicit `NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT=true`;
+- fail-closed validation for missing Project API Key;
+- fail-closed validation for consent-policy drift;
+- fail-closed validation for PostHog region drift;
+- synchronization of all four public analytics bindings into Vercel before Production build.
+
+### Contract test
+
+`tests/security/vercel-production-workflow-contract.test.ts` now prestages regression coverage proving:
+
+- PostHog public key comes from the protected Production variable contract;
+- EU hosts are locked;
+- consent requirement is locked;
+- all four bindings occur inside the protected synchronization boundary;
+- Project API Key is treated as a public browser binding rather than a server secret.
+
+### Environment contract
+
+`.env.example` now prestages the same Production mapping and post-deploy verification rule.
+
+Prestaged commits:
+
+```text
+873f2c489618b6f4ebd2c720e1fed3100f860611  workflow governance
+
+e1bd05bab2af06f2fa257b0af9f4ad1d9cbcfdfe  regression contract
+
+f6d65b8f04c2644c321c30111e0f3e2a1125c2e2  environment mapping
+```
+
+---
+
+## 7. Required owner/provider binding before activation
+
+The protected GitHub `production` environment must contain:
+
+```text
+NEXT_PUBLIC_POSTHOG_KEY=<Project API Key of the approved connected PostHog EU project>
+```
+
+Do not place the actual value in repository files, issues, comments or screenshots.
+
+Once the release authority permits the marketing Mega PR and the workflow change is merged, the exact-SHA Production deploy will synchronize this approved value into Vercel before build.
+
+---
+
+## 8. Public acquisition instrumentation still missing
+
+Fixing the project binding alone does not create acquisition attribution.
+
+Future Mega PR B still needs:
 
 ```text
 landing_view
@@ -131,13 +202,22 @@ document_downloaded
 newsletter_subscribed
 ```
 
-Reuse existing lower-funnel events instead of creating aliases: `user_signed_up`, `checkout_started`, `checkout_completed`, `subscription_active`.
+Reuse existing lower-funnel events:
+
+```text
+user_signed_up
+checkout_started
+checkout_completed
+subscription_active
+```
+
+Also implement bounded first/last-touch attribution and stable CTA IDs.
 
 ---
 
-## 6. Required bounded properties
+## 9. Required bounded properties
 
-Proposed non-sensitive marketing properties:
+Approved design remains:
 
 ```text
 locale
@@ -157,55 +237,44 @@ attribution_model
 schema_version
 ```
 
-The existing sanitizer must remain fail-closed and its allowlist must be deliberately extended for approved properties.
-
-Never send full name, email, company name, message/free text, document names/content, risk descriptions, vendor names, address/tax/VAT/payment data, credentials, tokens or secrets to PostHog.
-
-Lead PII remains in the lead system. Billing truth remains in Stripe/Supabase. Search query/impression truth remains in Search Console.
+Never send names, email, company name, free text, document content, risk descriptions, vendor names, addresses, tax/VAT/payment data, credentials, tokens or secrets to PostHog.
 
 ---
 
-## 7. Attribution contract
+## 10. Production proof after activation
 
-When implemented and approved, preserve bounded first-touch and last-touch source / medium / campaign / content / term plus landing path and referrer domain.
+A real analytics PASS requires:
 
-Contact consent and analytics consent must remain separate.
-
-The project currently has a 90-day `last_touch` marketing configuration, but that setting alone creates no attribution evidence without real events and persisted campaign context.
-
----
-
-## 8. Production proof required after implementation
-
-Definition of real measurement PASS:
-
-1. controlled browser visit with analytics consent granted emits expected public events;
-2. controlled visit with analytics consent declined emits no client marketing event;
-3. no PII appears in event payloads;
-4. UTM context persists through the approved funnel boundary;
-5. successful demo submission can be tied to source/campaign without copying lead PII into PostHog;
-6. signup and checkout preserve attribution context where approved;
-7. expected events appear in the connected EU PostHog project;
-8. only then create conversion Actions/goals and the Marketing Acquisition OS dashboard;
-9. compare Search Console organic clicks with privacy-safe onsite outcomes when Search Console is live;
-10. paid conversion measurement stays blocked until the full gate passes.
+1. protected Production variable points to the approved connected PostHog EU project;
+2. exact-SHA deploy synchronizes it into Vercel without printing the value;
+3. current browser bundle fingerprint matches the approved connected project key;
+4. consent-granted controlled visit emits expected acquisition event;
+5. consent-declined controlled visit emits no client marketing event;
+6. connected PostHog project observes the expected event;
+7. no PII appears in payloads;
+8. UTM context persists through approved funnel boundaries;
+9. demo/signup/checkout attribution is proven;
+10. only then create Actions/conversion goals and Marketing Acquisition OS reporting.
 
 ---
 
-## 9. Engineering handoff
+## 11. Engineering handoff
 
 ### MARKETING REQUIREMENT
 
-Make qualified demand attributable from first public interaction to commercial outcome without weakening consent/privacy boundaries.
+Make qualified demand attributable to the **same governed PostHog project** that marketing and release evidence audits.
 
 ### ENGINEERING BRIEF
 
-Fold the full implementation into the future **CRO + ACQUISITION + ATTRIBUTION MEGA PR**: public event taxonomy, sanitizer extensions, consent-gated page-intent events, stable CTA IDs/capture, demo start/submit, first/last-touch UTM persistence, lead attribution persistence, signup/checkout attribution bridge, Production PostHog binding/ingestion proof, conversion definitions after ingestion, and consent/PII tests.
+Preserve the prestaged deployment-governance fix inside future **CRO + ACQUISITION + ATTRIBUTION MEGA PR**, then implement public events, attribution persistence and Production proof.
 
 ### ACCEPTANCE CRITERIA
 
 ```text
-POSTHOG_PRODUCTION_KEY_BINDING=PROVEN_WITHOUT_SECRET_DISCLOSURE
+POSTHOG_APPROVED_PROJECT_BINDING=PASS
+POSTHOG_PRODUCTION_KEY_MATCH=PASS_WITHOUT_DISCLOSURE
+POSTHOG_EU_HOST_POLICY=PASS
+ANALYTICS_CONSENT_REQUIRED=PASS
 CONSENT_GRANTED_CAPTURE=PASS
 CONSENT_DECLINED_CAPTURE=PASS_NO_EVENT
 PUBLIC_FUNNEL_EVENTS=PASS
@@ -215,28 +284,26 @@ DEMO_ATTRIBUTION=PASS
 SIGNUP_ATTRIBUTION=PASS
 CHECKOUT_ATTRIBUTION=PASS
 PII_IN_POSTHOG=NO
-REAL_POSTHOG_INGESTION=PASS
+REAL_CONNECTED_POSTHOG_INGESTION=PASS
 ```
-
-### TEST
-
-Unit sanitizer/allowlist tests; consent-state tests; duplicate page-event prevention; six-locale route tests; demo success/failure instrumentation; controlled Production browser proof; connected PostHog read after the proof event.
 
 ### EXPECTED BUSINESS IMPACT
 
-`CONTENT -> ATTRIBUTABLE LEADS -> ATTRIBUTABLE PIPELINE -> CONTROLLED ACQUISITION LEARNING`
+`ONE GOVERNED ANALYTICS PROJECT -> TRUSTED ATTRIBUTION -> ATTRIBUTABLE PIPELINE -> CONTROLLED ACQUISITION LEARNING`
 
 ---
 
-## 10. Truth boundary
+## 12. Truth boundary
 
 ```text
 POSTHOG_FOUNDATION=READY
 POSTHOG_RUNTIME_COMPONENTS=PROVEN_PRESENT
-POSTHOG_PRIVACY_DESIGN=STRONG_BASELINE
-POSTHOG_LIVE_INGESTION=NO
+POSTHOG_PRODUCTION_PUBLIC_KEY=PRESENT
+POSTHOG_PRODUCTION_KEY_MATCH=FAIL_CURRENTLY
+POSTHOG_BINDING_DRIFT=ROOT_CAUSE_PROVEN
+POSTHOG_BINDING_REMEDIATION=PRESTAGED_BRANCH_ONLY
+POSTHOG_LIVE_INGESTION_CONNECTED_PROJECT=NO
 POSTHOG_LIVE_ATTRIBUTION=NO
-POSTHOG_REAL_MARKETING_DASHBOARD=NO
 POSTHOG_CUSTOM_ACTIONS=0
 PAID_SCALE=BLOCKED
 RELEASE_PR_OPENED=NO
