@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   constructEvent: vi.fn(),
@@ -43,7 +43,9 @@ vi.mock('@/lib/security/rate-limit-response', () => ({
 
 import { BILLING_WEBHOOK_TOLERANCE_SECONDS, POST, getBillingWebhookContentLength, readBoundedBillingWebhookBody } from './route';
 
+const TEST_STRIPE_SECRET_KEY = 'sk_test_webhook_route';
 const TEST_STRIPE_WEBHOOK_SECRET = 'test_webhook_signing_secret';
+const originalStripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
 function makeWebhookRequest(body: string, headers: HeadersInit = {}) {
   return new Request('https://app.eurocomply.test/api/billing/webhook', {
@@ -67,12 +69,18 @@ function makeStripeEvent(type = 'customer.subscription.updated') {
 describe('legacy billing webhook route hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.STRIPE_SECRET_KEY = TEST_STRIPE_SECRET_KEY;
     delete process.env.STRIPE_WEBHOOK_SECRET;
     process.env.STRIPE_WEBHOOK_SEC_RET = TEST_STRIPE_WEBHOOK_SECRET;
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
     mocks.syncEnterpriseContractBillingEvent.mockResolvedValue({ matched: false });
     mocks.handleStripeWebhookEventWithRecovery.mockResolvedValue({ skipped: false, duplicate: false, unsupported: false });
     mocks.writeAuditLog.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    if (originalStripeSecretKey === undefined) delete process.env.STRIPE_SECRET_KEY;
+    else process.env.STRIPE_SECRET_KEY = originalStripeSecretKey;
   });
 
   it('parses safe finite content lengths only', () => {
