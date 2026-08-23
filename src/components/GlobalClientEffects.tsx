@@ -8,6 +8,10 @@ import {
   captureAnalyticsEvent,
 } from "@/lib/analytics/posthog-client";
 import {
+  buildCommercialCtaProperties,
+  resolveCommercialCtaId,
+} from "@/lib/analytics/commercial-cta";
+import {
   classifyPublicMarketingPage,
   getMarketingAttributionProperties,
   persistMarketingAttribution,
@@ -51,6 +55,35 @@ export default function GlobalClientEffects() {
     return () => {
       window.removeEventListener(ANALYTICS_CONSENT_GRANTED_EVENT, capturePublicPageView);
     };
+  }, [pathname]);
+
+  useEffect(() => {
+    const captureCommercialCta = (event: MouseEvent) => {
+      if (!isMarketingCaptureAllowed()) return;
+      if (!(event.target instanceof Element)) return;
+
+      const target = event.target.closest<HTMLElement>("[data-cta-id],a[href]");
+      if (!target) return;
+
+      const ctaId = resolveCommercialCtaId({
+        pathname,
+        explicitId: target.dataset.ctaId,
+        href: target instanceof HTMLAnchorElement ? target.getAttribute("href") : null,
+      });
+      if (!ctaId) return;
+
+      const properties = buildCommercialCtaProperties(pathname, ctaId);
+      if (!properties.cta_id) return;
+
+      persistMarketingAttribution();
+      captureAnalyticsEvent(analyticsEvents.ctaClicked, {
+        ...properties,
+        ...getMarketingAttributionProperties("last_touch"),
+      });
+    };
+
+    document.addEventListener("click", captureCommercialCta);
+    return () => document.removeEventListener("click", captureCommercialCta);
   }, [pathname]);
 
   useEffect(() => {
