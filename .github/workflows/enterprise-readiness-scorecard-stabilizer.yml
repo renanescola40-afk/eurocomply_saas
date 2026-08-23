@@ -35,6 +35,7 @@ on:
       - Public Production Final
       - Final Technical Controls Proof
       - Recovery Resilience Proof
+      - Enterprise Recovery Drill
     branches: [main]
     types: [completed]
 
