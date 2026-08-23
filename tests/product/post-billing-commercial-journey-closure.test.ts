@@ -15,13 +15,13 @@ const COMMERCIAL_ROUTE_POLICY = new URL('../../src/lib/security/commercial-route
 const CHECKOUT_INTENT = new URL('../../src/app/api/billing/checkout-intent/route.ts', import.meta.url);
 
 describe('post-billing commercial customer journey closure', () => {
-  it('hands fresh completed onboarding to the billing recovery lane instead of a gated product route', async () => {
+  it('hands pre-license onboarding to the billing recovery lane instead of a gated product route', async () => {
     const [page, boundary] = await Promise.all([
       readFile(ONBOARDING_PAGE, 'utf8'),
       readFile(ONBOARDING_BOUNDARY, 'utf8'),
     ]);
 
-    expect(page).toContain("new URLSearchParams({ onboarding: 'completed' })");
+    expect(page).toContain("new URLSearchParams({ onboarding: 'payment_required' })");
     expect(page).toContain("return `/${locale}/dashboard/organizations/billing?${query.toString()}`;");
     expect(page).toContain('redirect(getBillingRecoveryPath(safeLocale, resolvedSearchParams.plan));');
     expect(page).not.toContain('redirect(`/${safeLocale}/dashboard/organizations${planQuery}`);');
@@ -35,10 +35,12 @@ describe('post-billing commercial customer journey closure', () => {
     const page = await readFile(ONBOARDING_PAGE, 'utf8');
 
     expect(page).toContain("import { getOrganizationBillingAuthority } from '@/server/queries/subscription';");
-    expect(page).toContain('const authority = await getOrganizationBillingAuthority(initialState.organization.id);');
-    expect(page).toContain('if (authority.licensed)');
+    expect(page).toContain('async function requireLicensedOnboardingPageAccess');
+    expect(page).toContain('authority = await getOrganizationBillingAuthority(input.organizationId);');
+    expect(page).toContain('if (!authority.licensed)');
+    expect(page).toContain('await requireLicensedOnboardingPageAccess({');
     expect(page).toContain('redirect(`/${safeLocale}/dashboard`);');
-    expect(page).toContain('redirect(getBillingRecoveryPath(safeLocale, resolvedSearchParams.plan));');
+    expect(page).toContain('redirect(getBillingRecoveryPath(input.locale, input.planId));');
   });
 
   it('consumes the selected onboarding plan without treating query intent as commercial authority', async () => {
