@@ -75,6 +75,21 @@ const STRIPE_READINESS_TIMEOUT_MS = READINESS_DEPENDENCY_TIMEOUT_MS;
 const TEST_PLACEHOLDER_VALUE = 'configured';
 const COMMERCIAL_RESOURCE_ATOMIC_RPC = 'mutate_commercial_resource_with_audit_atomic';
 const REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY_ENV = 'REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY';
+const ENABLE_DASHBOARD_METRIC_SNAPSHOTS_ENV = 'ENABLE_DASHBOARD_METRIC_SNAPSHOTS';
+const DASHBOARD_METRIC_SNAPSHOT_REQUIRED_COLUMNS = [
+  'organization_id',
+  'created_at',
+  'compliance_score',
+  'open_tasks',
+  'open_risks',
+  'critical_risks',
+  'high_risk_vendors',
+  'missing_documents',
+  'total_tasks',
+  'total_risks',
+  'total_vendors',
+  'total_documents',
+].join(',');
 // SENTRY_ORG, SENTRY_PROJECT and SENTRY_AUTH_TOKEN are build/control-plane
 // inputs for release/source-map uploads. They stay informational here because
 // runtime health is proven by NEXT_PUBLIC_SENTRY_DSN; the protected provider
@@ -122,6 +137,12 @@ type TransactionalEmailReadinessCheck = {
   configured: boolean;
   apiKeyConfigured: boolean;
   senderConfigured: boolean;
+};
+
+type DashboardMetricSnapshotsReadinessCheck = {
+  enabled: boolean;
+  configured: boolean;
+  schemaReady: boolean;
 };
 
 type ReadyDatabaseCheck = {
@@ -252,6 +273,49 @@ export function transactionalEmailReadinessCheck(): TransactionalEmailReadinessC
     apiKeyConfigured,
     senderConfigured,
   };
+}
+
+export async function dashboardMetricSnapshotsReadinessCheck(): Promise<DashboardMetricSnapshotsReadinessCheck> {
+  const enabled = process.env[ENABLE_DASHBOARD_METRIC_SNAPSHOTS_ENV] === 'true';
+  if (!enabled) {
+    return {
+      enabled: false,
+      configured: true,
+      schemaReady: true,
+    };
+  }
+
+  try {
+    const supabase = tryCreateAdminClient();
+    if (!supabase) {
+      return {
+        enabled: true,
+        configured: false,
+        schemaReady: false,
+      };
+    }
+
+    const result = await withReadinessDependencyTimeout(
+      supabase
+        .from('compliance_metric_snapshots')
+        .select(DASHBOARD_METRIC_SNAPSHOT_REQUIRED_COLUMNS)
+        .limit(1),
+    );
+    const schemaReady = !result.error;
+
+    return {
+      enabled: true,
+      configured: schemaReady,
+      schemaReady,
+    };
+  } catch (error) {
+    reportError(error, { area: 'ready_dashboard_metric_snapshots_check' });
+    return {
+      enabled: true,
+      configured: false,
+      schemaReady: false,
+    };
+  }
 }
 
 export function sentryReleaseUploadCheck() {
@@ -467,6 +531,7 @@ export async function GET(request: Request) {
   const enterpriseStepUp = enterpriseStepUpReadinessCheck();
   const enterpriseStorageScanner = enterpriseStorageScannerCheck();
   const transactionalEmail = transactionalEmailReadinessCheck();
+  const dashboardMetricSnapshots = await dashboardMetricSnapshotsReadinessCheck();
 
   const supabaseConfigured = checkConfigured(environment, 'supabase');
   const stripeConfigured = checkConfigured(environment, 'stripe');
@@ -482,6 +547,7 @@ export async function GET(request: Request) {
   const enterpriseStepUpConfigured = enterpriseStepUp.configured;
   const enterpriseStorageScannerConfigured = enterpriseStorageScanner.configured;
   const transactionalEmailConfigured = transactionalEmail.configured;
+  const dashboardMetricSnapshotsConfigured = dashboardMetricSnapshots.configured;
   const ok = supabaseConfigured
     && stripeConfigured
     && redisConfigured
@@ -490,7 +556,8 @@ export async function GET(request: Request) {
     && stripeApiReachable
     && enterpriseStepUpConfigured
     && enterpriseStorageScannerConfigured
-    && transactionalEmailConfigured;
+    && transactionalEmailConfigured
+    && dashboardMetricSnapshotsConfigured;
 
   return noStoreJson(
     {
@@ -504,6 +571,7 @@ export async function GET(request: Request) {
       enterpriseStepUp,
       enterpriseStorageScanner,
       transactionalEmail,
+      dashboardMetricSnapshots,
       checks: {
         supabaseConfigured,
         databaseReachable,
