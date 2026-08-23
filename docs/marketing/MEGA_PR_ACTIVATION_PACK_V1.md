@@ -16,6 +16,7 @@ GATE OPENS
    -> MEGA PR B: CRO + ACQUISITION + ATTRIBUTION
    -> PROVE REAL CONNECTED-PROJECT MEASUREMENT
    -> MEGA PR A: SEO AUTHORITY + BRAND ENTITY
+   -> PROVE PERMANENT LOCALE CANONICALIZATION + ONE HREFLANG AUTHORITY
    -> REVALIDATE INDEXABILITY / ENTITY / CONVERSION
 ```
 
@@ -49,11 +50,8 @@ Current protected main deploy does not synchronize the PostHog project key/hosts
 
 ```text
 873f2c489618b6f4ebd2c720e1fed3100f860611  workflow governance
-
 e1bd05bab2af06f2fa257b0af9f4ad1d9cbcfdfe  workflow regression contract
-
 f6d65b8f04c2644c321c30111e0f3e2a1125c2e2  environment mapping
-
 8a48a893d30c8683542a894e325c1aeae8a5da1b  root-cause evidence
 ```
 
@@ -174,7 +172,35 @@ Suggested title:
 
 ## MARKETING REQUIREMENT
 
-Own the RISCK COMPLY entity and high-intent Operational AI Governance search surface with evidence-bound content and one canonical brand identity.
+Own the RISCK COMPLY entity and high-intent Operational AI Governance search surface with evidence-bound content, one canonical brand identity, and one unambiguous international-SEO canonical/hreflang authority.
+
+## PRESTAGED IMPLEMENTATION ALREADY ON MARKETING BRANCH
+
+Fresh search/runtime investigation proved that fixed public locale-less aliases remain visible in search while the application intends explicit locale-prefixed canonical URLs. It also proved competing hreflang authorities: HTML metadata + sitemap already express canonical locale alternates while `next-intl` emitted its own HTTP alternate Link header with a competing x-default path.
+
+Canonical evidence: `INTERNATIONAL_SEO_CANONICALIZATION_EVIDENCE_V1.md`.
+
+Preserve these already-prestaged commits:
+
+```text
+e25cd546cebf942655c6367b85aa1ecd6fb1d049  make HTML metadata + sitemap the hreflang authority
+202f191680a6d2176bffea92687b33432b20c0b6  permanently canonicalize fixed locale-less public aliases
+4cdca44ab0173e79aad26bc755e0b51ff40a5be8  lock international SEO regression contract
+705e23afa8a94356e462bb632465220ecd9d987b  canonical SEO-002 evidence
+```
+
+The runtime commit `202f191...` has a Vercel Preview deployment in `READY` state. Direct preview 308 observation is still uncredited because the preview is protected by Vercel SSO in the available connector.
+
+### International SEO remediation contract
+
+- explicit locale-prefixed URLs remain canonical (`/en`, `/pt`, `/es`, `/fr`, `/it`, `/de`);
+- HTML metadata + sitemap remain the single hreflang/x-default authority;
+- `next-intl` automatic response alternate links stay disabled;
+- fixed-slug public locale-less aliases permanently converge on `/en/...` before middleware;
+- auth/checkout/private route locale negotiation remains unchanged;
+- generic `/features/* -> /en/features/*` redirect remains forbidden because feature slugs are localized;
+- Production must prove actual 308 behavior after activation;
+- Search Console canonical/index consolidation is measured only after owner verification and recrawl.
 
 ## ENGINEERING BRIEF
 
@@ -197,19 +223,21 @@ Use official regulatory sources for time-sensitive legal/regulatory facts and ma
 - canonical URL: `https://www.risckcomply.com`;
 - normalize accidental user-visible brand casing variants;
 - normalize image alt/wordmark labels where appropriate;
-- review current structured-data `alternateName` values reinforcing non-canonical casing;
+- review/remove structured-data `alternateName` values reinforcing non-canonical casing unless deliberately justified;
 - keep one canonical Organization/WebSite/SoftwareApplication entity graph;
 - add `sameAs` only after target profile is verified, owner-controlled and normalized;
 - add only verified official social links.
 
 ### SEO infrastructure
 
-- preserve canonical URLs;
-- preserve locale alternates/hreflang;
+- preserve self-referential canonical URLs on locale-prefixed public pages;
+- preserve the prestaged fixed alias permanent-redirect contract;
+- preserve one hreflang/x-default authority;
 - include new public resources in sitemap;
 - connect regulatory -> inventory -> evidence -> product intent internal links;
 - preserve robots/private-route protections;
-- add regression coverage against accidental product-name variants.
+- add regression coverage against accidental product-name variants;
+- preserve regression coverage against unsafe localized-feature redirect behavior.
 
 ## ACCEPTANCE CRITERIA
 
@@ -221,12 +249,34 @@ ORGANIZATION_ENTITY=ONE_CANONICAL_IDENTITY
 NONCANONICAL_ALTERNATENAME_REVIEWED=YES
 SAMEAS=VERIFIED_ONLY
 FOOTER_SOCIAL_LINKS=VERIFIED_ONLY
+FIXED_PUBLIC_LOCALELESS_ALIASES=308_TO_ENGLISH_CANONICAL
+HREFLANG_AUTHORITY=ONE
+NEXT_INTL_HTTP_ALTERNATE_LINKS=DISABLED
+X_DEFAULT_CONFLICT=0
+LOCALIZED_FEATURE_REDIRECT_REGRESSION=0
 CANONICALS=PASS
 HREFLANG=PASS
 SITEMAP=PASS
 ROBOTS_PRIVATE_BOUNDARY=PASS
 UNSUPPORTED_LEGAL_CLAIMS=0
 ```
+
+## TEST
+
+- international SEO regression contract;
+- full production build/type/lint/security normal gates;
+- Production HTTP smoke for `/trust`, `/dpa`, `/data-processing`, `/pricing`, `/book-demo` -> 308 `/en/...`;
+- locale-prefixed 200/self-canonical smoke;
+- HTML canonical/hreflang extraction;
+- absence of competing `next-intl` alternate Link header;
+- sitemap/robots checks;
+- JSON-LD validation;
+- internal-link crawl;
+- Search Console canonical/indexing follow-up after owner property verification.
+
+## EXPECTED BUSINESS IMPACT
+
+`FEWER COMPETING URL/ENTITY SIGNALS -> CLEANER INTERNATIONAL CANONICAL CONSOLIDATION -> STRONGER SEARCH AUTHORITY -> MORE QUALIFIED ORGANIC DEMAND`
 
 ---
 
@@ -273,11 +323,12 @@ Only after this should paid high-intent tests begin at bounded spend.
 When activation becomes possible:
 
 - do not write a new strategy document first;
-- do not rebuild the already-prestaged PostHog governance fix from scratch;
+- do not rebuild either already-prestaged PostHog or SEO-002 remediation from scratch;
 - do not split either package into cosmetic PRs;
 - do not create issue spam;
 - do not carry stale current-main assumptions forward;
 - do not claim PostHog PASS until Production bundle and connected project match and ingestion is observed;
+- do not claim SEO-002 Production PASS from Preview READY alone;
 - do not add `sameAs` to unverified profiles;
 - do not publish unsupported legal, certification, customer or ROI claims.
 
@@ -289,6 +340,8 @@ When activation becomes possible:
 MEGA_PR_B_SCOPE=READY
 MEGA_PR_B_POSTHOG_GOVERNANCE_FIX=PRESTAGED_BRANCH_ONLY
 MEGA_PR_A_SCOPE=READY
+MEGA_PR_A_SEO_002_CANONICALIZATION_FIX=PRESTAGED_BRANCH_ONLY
+MEGA_PR_A_SEO_002_RUNTIME_PREVIEW=READY
 MEGA_PR_SEQUENCE=READY
 RELEASE_ACTIVATION_GATE=READY
 PR_OPEN_NOW=NO
