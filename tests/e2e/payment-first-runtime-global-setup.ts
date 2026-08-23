@@ -1,4 +1,4 @@
-import { chromium, type FullConfig } from '@playwright/test';
+import { chromium, type APIResponse, type FullConfig } from '@playwright/test';
 
 const analyticsConsentStorageKey = 'risckcomply.analytics.consent';
 
@@ -9,6 +9,10 @@ type PasswordGrantResponse = {
 
 type MembershipRow = {
   organization_id?: string | null;
+};
+
+type ApiErrorPayload = {
+  error?: string;
 };
 
 function requiredEnvironment(name: string) {
@@ -28,6 +32,26 @@ async function responseJson<T>(response: Response, label: string): Promise<T> {
     throw new Error(`${label}_failed_status_${response.status}`);
   }
   return await response.json() as T;
+}
+
+async function assertCommercialApiDenied(response: APIResponse, label: string) {
+  if (response.status() !== 403) {
+    throw new Error(`${label}_unexpected_status_${response.status()}`);
+  }
+
+  let payload: ApiErrorPayload | null = null;
+  try {
+    payload = await response.json() as ApiErrorPayload;
+  } catch {
+    throw new Error(`${label}_invalid_json_denial`);
+  }
+
+  // A generic 403 is not sufficient evidence. The application must have found
+  // the authenticated tenant/membership and denied specifically because durable
+  // commercial authority is absent.
+  if (payload?.error !== 'subscription_required') {
+    throw new Error(`${label}_wrong_denial_${payload?.error ?? 'missing_error'}`);
+  }
 }
 
 function assertDeniedWrite(response: Response, label: string) {
@@ -104,8 +128,6 @@ async function proveSupabaseDataPlaneDenied(input: {
   });
   assertDeniedWrite(attemptedWrite, 'payment_first_supabase_ai_system_write');
 
-  // The rejection itself is not enough: prove with privileged disposable-QA
-  // inspection that no commercial row survived the attempted direct write.
   const verification = await fetch(
     `${input.supabaseUrl}/rest/v1/ai_systems?select=id&organization_id=eq.${encodeURIComponent(organizationId)}&name=eq.${encodeURIComponent(attemptedName)}`,
     { headers: serviceHeaders },
@@ -115,9 +137,6 @@ async function proveSupabaseDataPlaneDenied(input: {
     throw new Error('payment_first_supabase_write_survived_denial');
   }
 
-  // Prove that the reconciled legacy Gap Analysis data plane cannot be used as a
-  // second product key. It is deliberately tested through PostgREST with the
-  // unlicensed user's real JWT, not through the Next.js route.
   const attemptedGapTitle = `PAYMENT_FIRST_GAP_DENIED_${Date.now()}`;
   const gapWrite = await fetch(`${input.supabaseUrl}/rest/v1/gap_assessments`, {
     method: 'POST',
@@ -177,12 +196,13 @@ export default async function paymentFirstRuntimeGlobalSetup(config: FullConfig)
     await credentialEmail.fill(email);
     await credentialForm.getByLabel('Password', { exact: true }).fill(password);
     await credentialForm.locator('button[type="submit"]').click();
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000 });
+    await page.waitForURL((url) => !url.pathname.includes('/login'), {
+      timeout: 30_000,
+      waitUntil: 'domcontentloaded',
+    });
 
     const apiGet = await context.request.get('/api/ai-systems');
-    if (apiGet.status() !== 403) {
-      throw new Error(`payment_first_unlicensed_api_get_status_${apiGet.status()}`);
-    }
+    await assertCommercialApiDenied(apiGet, 'payment_first_unlicensed_api_get');
 
     const apiPost = await context.request.post('/api/ai-systems', {
       headers: {
@@ -197,9 +217,7 @@ export default async function paymentFirstRuntimeGlobalSetup(config: FullConfig)
         riskDomain: 'general_productivity',
       },
     });
-    if (apiPost.status() !== 403) {
-      throw new Error(`payment_first_unlicensed_api_post_status_${apiPost.status()}`);
-    }
+    await assertCommercialApiDenied(apiPost, 'payment_first_unlicensed_api_post');
 
     const gapApiPost = await context.request.post('/api/gap-analysis?operation=assessment', {
       headers: {
@@ -212,9 +230,19 @@ export default async function paymentFirstRuntimeGlobalSetup(config: FullConfig)
         answers: [],
       },
     });
-    if (gapApiPost.status() !== 403) {
-      throw new Error(`payment_first_unlicensed_gap_api_post_status_${gapApiPost.status()}`);
-    }
+    await assertCommercialApiDenied(gapApiPost, 'payment_first_unlicensed_gap_api_post');
+
+    // Prove the real disposable identity has exactly one tenant and that direct
+    // PostgREST product writes are denied before checking the page redirect.
+    // This prevents a generic organization/session 403 from masquerading as a
+    // successful payment-first commercial denial.
+    await proveSupabaseDataPlaneDenied({
+      supabaseUrl,
+      anonKey,
+      serviceRoleKey,
+      email,
+      password,
+    });
 
     await page.goto('/en/onboarding', { waitUntil: 'domcontentloaded' });
     const onboardingUrl = new URL(page.url());
@@ -224,14 +252,6 @@ export default async function paymentFirstRuntimeGlobalSetup(config: FullConfig)
     if (onboardingUrl.searchParams.get('onboarding') !== 'payment_required') {
       throw new Error('payment_first_unlicensed_onboarding_missing_payment_required');
     }
-
-    await proveSupabaseDataPlaneDenied({
-      supabaseUrl,
-      anonKey,
-      serviceRoleKey,
-      email,
-      password,
-    });
   } finally {
     await context.close();
     await browser.close();
