@@ -61,6 +61,19 @@ describe('database-only recovery managed-data boundary', () => {
     expect(exercise).toContain('checks.managedAuthRowsExcluded = true');
   });
 
+  it('plans the Auth boundary only after every target mutation and immediately before data replay planning', () => {
+    const extensionParity = exercise.indexOf("failurePhase = 'extension_parity'");
+    const authInventory = exercise.indexOf("failurePhase = 'managed_auth_relation_inventory'");
+    const dataDump = exercise.indexOf("failurePhase = 'data_dump'");
+    const isolatedRestore = exercise.indexOf("failurePhase = 'isolated_restore'");
+
+    expect(extensionParity).toBeGreaterThan(-1);
+    expect(authInventory).toBeGreaterThan(extensionParity);
+    expect(dataDump).toBeGreaterThan(authInventory);
+    expect(isolatedRestore).toBeGreaterThan(dataDump);
+    expect(exercise).toContain('planning Auth before extension parity can leave a stale target relation inventory');
+  });
+
   it('keeps Auth drift evidence aggregate-only and preserves auth.users integrity', () => {
     expect(exercise).toContain('managedAuthBoundary.sourceRelationCount = managedAuthPlan.sourceRelationCount');
     expect(exercise).toContain('managedAuthBoundary.targetRelationCount = managedAuthPlan.targetRelationCount');
