@@ -29,6 +29,14 @@ describe('marketing attribution', () => {
     expect(window.localStorage.getItem(marketingAttributionStorageKeys.lastTouch)).toBeNull();
   });
 
+  it('never derives acquisition storage from private product routes', () => {
+    window.history.replaceState({}, '', '/en/dashboard/acme?utm_source=internal&utm_campaign=secret');
+
+    expect(persistMarketingAttribution()).toEqual({ firstTouch: null, lastTouch: null });
+    expect(window.localStorage.getItem(marketingAttributionStorageKeys.firstTouch)).toBeNull();
+    expect(window.localStorage.getItem(marketingAttributionStorageKeys.lastTouch)).toBeNull();
+  });
+
   it('preserves first touch while updating last touch on a new acquisition signal', () => {
     window.history.replaceState(
       {},
@@ -72,6 +80,23 @@ describe('marketing attribution', () => {
       landing_path: '/en/book-demo',
       attribution_model: 'last_touch',
     });
+  });
+
+  it('drops campaign values that are not bounded campaign tokens', () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/en/pricing?utm_source=person%40example.com&utm_medium=paid-social&utm_campaign=ai%20governance',
+    );
+    persistMarketingAttribution();
+
+    const touch = JSON.parse(
+      window.localStorage.getItem(marketingAttributionStorageKeys.firstTouch) || '{}',
+    ) as Record<string, string>;
+
+    expect(touch).not.toHaveProperty('utm_source');
+    expect(touch.utm_medium).toBe('paid-social');
+    expect(touch).not.toHaveProperty('utm_campaign');
   });
 
   it('maps only canonical public acquisition surfaces to the provider event taxonomy', () => {
