@@ -14,6 +14,7 @@ import {
 import {
   classifyPublicMarketingPage,
   getMarketingAttributionProperties,
+  getMarketingLocale,
   persistMarketingAttribution,
 } from "@/lib/analytics/marketing-attribution";
 import { useZoerIframe } from "@/hooks/useZoerIframe";
@@ -27,6 +28,7 @@ function isMarketingCaptureAllowed() {
 
 export default function GlobalClientEffects() {
   const pathname = usePathname() || "/";
+  const locale = getMarketingLocale(pathname);
 
   useZoerIframe();
 
@@ -42,6 +44,7 @@ export default function GlobalClientEffects() {
 
       captureAnalyticsEvent(page.event, {
         path: pathname,
+        ...(locale ? { locale } : {}),
         page_type: page.pageType,
         funnel_stage: page.funnelStage,
         ...getMarketingAttributionProperties("last_touch"),
@@ -55,7 +58,7 @@ export default function GlobalClientEffects() {
     return () => {
       window.removeEventListener(ANALYTICS_CONSENT_GRANTED_EVENT, capturePublicPageView);
     };
-  }, [pathname]);
+  }, [locale, pathname]);
 
   useEffect(() => {
     const captureCommercialCta = (event: MouseEvent) => {
@@ -78,13 +81,14 @@ export default function GlobalClientEffects() {
       persistMarketingAttribution();
       captureAnalyticsEvent(analyticsEvents.ctaClicked, {
         ...properties,
+        ...(locale ? { locale } : {}),
         ...getMarketingAttributionProperties("last_touch"),
       });
     };
 
     document.addEventListener("click", captureCommercialCta);
     return () => document.removeEventListener("click", captureCommercialCta);
-  }, [pathname]);
+  }, [locale, pathname]);
 
   useEffect(() => {
     const captureCheckoutSuccess = () => {
@@ -98,6 +102,7 @@ export default function GlobalClientEffects() {
 
       captureAnalyticsEvent(analyticsEvents.checkoutCompleted, {
         path: pathname,
+        ...(locale ? { locale } : {}),
         source: "return_url",
         funnel_stage: "commercial",
         ...getMarketingAttributionProperties("last_touch"),
@@ -116,7 +121,7 @@ export default function GlobalClientEffects() {
     return () => {
       window.removeEventListener(ANALYTICS_CONSENT_GRANTED_EVENT, captureCheckoutSuccess);
     };
-  }, [pathname]);
+  }, [locale, pathname]);
 
   return null;
 }
