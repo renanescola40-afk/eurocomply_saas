@@ -195,8 +195,7 @@ describe('checkout activation live authority', () => {
     });
   });
 
-  it.each(['active', 'trialing'])('activates %s only after exact processed live Stripe authority is proven', async (status) => {
-    setSubscription(activeSubscription({ status }));
+  it('activates active only after exact processed live Stripe authority is proven', async () => {
     mocks.hasProcessedLiveStripeSubscriptionAuthority.mockResolvedValue(true);
 
     const response = await GET(request());
@@ -205,13 +204,31 @@ describe('checkout activation live authority', () => {
     expect(response.status).toBe(200);
     expect(body).toEqual({
       state: 'activated',
-      subscriptionStatus: status,
+      subscriptionStatus: 'active',
       plan: 'professional',
       updatedAt: '2026-08-15T12:00:00.000Z',
       liveStripeAuthority: true,
       next: '/dashboard/organizations',
       authority: 'processed_live_stripe_subscription_event',
     });
+  });
+
+  it('keeps trialing pending even when Stripe ids exist because public trials are not product authority', async () => {
+    setSubscription(activeSubscription({ status: 'trialing' }));
+    mocks.hasProcessedLiveStripeSubscriptionAuthority.mockResolvedValue(true);
+
+    const response = await GET(request());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      state: 'pending',
+      subscriptionStatus: 'trialing',
+      plan: 'professional',
+      liveStripeAuthority: false,
+    });
+    expect(body).not.toHaveProperty('next');
+    expect(mocks.hasProcessedLiveStripeSubscriptionAuthority).not.toHaveBeenCalled();
   });
 
   it.each(['past_due', 'unpaid', 'incomplete', 'canceled'])('keeps %s pending even when Stripe ids are persisted', async (status) => {
