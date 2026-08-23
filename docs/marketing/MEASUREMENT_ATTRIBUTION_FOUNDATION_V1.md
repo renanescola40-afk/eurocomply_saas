@@ -1,21 +1,39 @@
 # RISCK COMPLY — MEASUREMENT & ATTRIBUTION FOUNDATION V1
 
-Status: READY_FOR_ENGINEERING_HANDOFF / DO_NOT_MERGE_DURING_RELEASE_FREEZE
+Status: PROVIDER_ACTION_LAYER_READY / READY_FOR_ENGINEERING_HANDOFF / DO_NOT_MERGE_DURING_RELEASE_FREEZE
 Checked: 2026-08-23
+Protected main: `29b40870b25e2d34a9eda921b820047b8020cfb6`
 
 ## 1. Objective
 
-Make RISCK COMPLY acquisition measurable from first visit through CTA, demo, signup and checkout without weakening the existing privacy-first analytics boundary.
+Make RISCK COMPLY acquisition measurable from first discovery through licensed commercial activation without weakening the privacy-first analytics boundary or confusing authentication with payment authority.
 
-The operating chain is:
+Canonical chain:
 
-`SOURCE -> CAMPAIGN -> LANDING -> CTA -> DEMO/SIGNUP -> CHECKOUT -> CUSTOMER`
+```text
+SOURCE
+-> CAMPAIGN
+-> LANDING
+-> CTA
+-> DEMO / SIGNUP
+-> CHECKOUT
+-> SUBSCRIPTION_ACTIVE / CONTRACT_AUTHORITY
+-> LICENSED PRODUCT
+```
 
-This document defines the marketing measurement contract. It does not authorize a release-changing merge while Enterprise exact-SHA evidence is frozen.
+#1794 makes the commercial boundary explicit:
+
+```text
+AUTHENTICATED != LICENSED
+ORGANIZATION_SHELL != LICENSED
+ONBOARDING_STATE != LICENSED
+```
+
+Marketing reporting must never label a signup or organization shell as a paid customer.
 
 ---
 
-## 2. Verified current state
+## 2. Verified foundation
 
 The repository already contains a privacy-first PostHog implementation with:
 
@@ -24,61 +42,29 @@ The repository already contains a privacy-first PostHog implementation with:
 - `autocapture: false`;
 - `capture_pageview: false`;
 - session replay disabled by default;
-- text and element masking;
-- DNT respect;
+- masking and DNT respect;
 - sensitive-route protection;
-- client and server capture helpers;
+- client/server capture helpers;
 - sanitized event properties.
 
-The current production-oriented event catalog is primarily product/activation focused:
-
-- `user_signed_up`
-- `user_signed_in`
-- `organization_created`
-- `dashboard_opened`
-- `document_uploaded`
-- `risk_created`
-- `vendor_created`
-- `checkout_started`
-- `checkout_completed`
-- `subscription_active`
-- `subscription_cancelled`
-- onboarding and upgrade events
-
-The connected PostHog project currently has **no ingested events** and no custom actions. Therefore live attribution is not yet proven.
-
-The current PostHog documentation in the repository also contains stale Clerk references while the live analytics provider now emits a Supabase auth-provider marker. Treat the code as current authority and reconcile the documentation in the future analytics PR.
-
----
-
-## 3. P0 measurement gap
-
-The current analytics architecture is useful for product activation, but the public acquisition funnel is not attributable because:
-
-- public page views are not manually captured;
-- `capture_pageview` is intentionally disabled;
-- no canonical public events exist for landing/pricing/features/trust;
-- no canonical `cta_clicked` event exists;
-- the demo form does not emit `demo_started` or `demo_submitted`;
-- the lead record does not retain UTM/referrer/landing attribution;
-- no live events currently reach the connected PostHog project;
-- the default PostHog dashboard cannot represent a real funnel without actual events.
-
-Result:
+The connected PostHog EU project currently has:
 
 ```text
-MARKETING_ATTRIBUTION: NOT_LIVE
-PAID_MEASUREMENT: NOT_READY
-PAID_SCALE: BLOCKED
+POSTHOG_ACTIONS=14
+POSTHOG_PROVIDER_FUNNEL_ACTIONS=READY_14_OF_14
+POSTHOG_INGESTED_EVENT=false
+POSTHOG_RECENT_REAL_EVENTS=NONE_OBSERVED
+POSTHOG_CONVERSION_GOALS=0
+MARKETING_DASHBOARD=DEFER_UNTIL_REAL_DATA
 ```
+
+The Action layer is provider configuration only. It is not evidence of traffic or conversion.
 
 ---
 
-## 4. Canonical marketing event contract
+## 3. Canonical event contract
 
-Preserve existing product events. Add the following public/acquisition events rather than renaming the established product catalog.
-
-### Page-intent events
+### Page intent
 
 - `landing_view`
 - `pricing_view`
@@ -86,7 +72,7 @@ Preserve existing product events. Add the following public/acquisition events ra
 - `trust_view`
 - `resource_view`
 
-### Engagement events
+### Engagement / demand capture
 
 - `cta_clicked`
 - `demo_started`
@@ -94,332 +80,282 @@ Preserve existing product events. Add the following public/acquisition events ra
 - `document_downloaded`
 - `newsletter_subscribed`
 
-### Funnel events
-
-Reuse existing events where they already exist:
+### Existing lower funnel
 
 - `user_signed_up`
 - `checkout_started`
 - `checkout_completed`
 - `subscription_active`
 
-Do not create aliases such as `signup_completed` if `user_signed_up` is already the canonical product event unless an explicit migration plan justifies it.
+Do not create aliases where an established canonical event exists.
+
+All fourteen events now have reusable PostHog Actions prepared in the connected project. Runtime emitters for the public acquisition events are still missing.
 
 ---
 
-## 5. Allowed marketing properties
+## 4. Payment-first funnel semantics
+
+Use these meanings consistently in analytics, dashboards and attribution:
+
+```text
+user_signed_up
+= account created / qualified conversion
+!= paid customer
+!= licensed product authority
+
+checkout_started
+= commercial intent
+
+checkout_completed
+= checkout-flow conversion
+!= standalone proof of licensed product authority
+
+subscription_active
+= strongest canonical self-service marketing signal of commercial activation
+```
+
+For contractual Enterprise/assisted motions, a valid signed-contract entitlement can establish product authority without a self-service `subscription_active` event.
+
+Therefore Stripe/Supabase/commercial-authority state remains the commercial source of truth. PostHog is the behavioral and attribution layer, not the entitlement authority.
+
+---
+
+## 5. Current measurement gap
+
+Live attribution remains blocked because:
+
+- Production is bound to a different PostHog project key than the connected governed project;
+- the binding fix is branch-only;
+- public page-intent emitters are not live;
+- CTA/demo/download/newsletter emitters are not live;
+- bounded UTM/referrer/landing persistence is not live;
+- lead records do not yet carry the complete attribution bridge;
+- no real events have been observed in the connected project.
+
+```text
+MARKETING_ATTRIBUTION=NOT_LIVE
+PAID_MEASUREMENT=NOT_READY
+PAID_SCALE=BLOCKED
+```
+
+---
+
+## 6. Allowed marketing properties
 
 Recommended non-sensitive properties:
 
-- `locale`
-- `path`
-- `page_type`
-- `funnel_stage`
-- `cta_id`
-- `plan`
-- `utm_source`
-- `utm_medium`
-- `utm_campaign`
-- `utm_content`
-- `utm_term`
-- `referrer_domain`
-- `landing_path`
-- `attribution_model`
-- `schema_version`
+```text
+locale
+path
+page_type
+funnel_stage
+cta_id
+plan
+utm_source
+utm_medium
+utm_campaign
+utm_content
+utm_term
+referrer_domain
+landing_path
+attribution_model
+schema_version
+```
 
 Do not send to PostHog:
 
-- names;
-- email addresses;
+- names or email addresses;
 - company names;
 - free-text demo messages;
 - document names/content;
 - risk descriptions;
 - vendor names;
 - addresses;
-- tax/VAT identifiers;
-- raw IP addresses;
-- secrets or tokens.
+- tax/VAT/payment details;
+- raw credentials, secrets or tokens.
 
-The existing sanitizer should remain the fail-closed boundary. Adding a new property requires explicit review of the allowlist.
-
----
-
-## 6. UTM governance
-
-Canonical fields:
-
-```text
-utm_source
-utm_medium
-utm_campaign
-utm_content
-utm_term
-```
-
-Naming rules:
-
-- lowercase;
-- snake_case for campaign/content names;
-- no spaces;
-- stable market/language identifiers;
-- one naming standard across LinkedIn, Instagram, email and future paid media.
-
-Examples:
-
-```text
-utm_source=linkedin
-utm_medium=organic-social
-utm_campaign=eu_ai_act_august_2026_en
-utm_content=article50_carousel_01
-```
-
-```text
-utm_source=linkedin
-utm_medium=organic-social
-utm_campaign=ai_inventory_en
-utm_content=inventory_template_01
-```
-
-First-touch/last-touch persistence must respect the analytics consent model. Do not silently convert contact consent into analytics consent.
+The sanitizer remains fail-closed.
 
 ---
 
 ## 7. Attribution model
 
-Store two attribution contexts when technically/legal-approved:
+Persist two bounded contexts where technically and legally approved.
 
 ### First touch
 
-- first source
-- first medium
-- first campaign
-- first content
-- first term
-- first landing path
-- first referrer domain
+- source / medium / campaign / content / term;
+- landing path;
+- referrer domain.
 
 ### Last touch
 
-- last source
-- last medium
-- last campaign
-- last content
-- last term
-- last landing path
-- last referrer domain
+- source / medium / campaign / content / term;
+- landing path;
+- referrer domain.
 
-Recommended reporting:
+Reporting rule:
 
-- first touch for demand creation;
-- last touch for conversion assistance;
-- Search Console as organic search source of truth;
-- Stripe/Supabase as commercial outcome source of truth.
+```text
+FIRST_TOUCH = demand creation
+LAST_TOUCH = conversion assistance
+SEARCH_CONSOLE = Google organic discovery truth
+POSTHOG = consented behavior + attribution
+STRIPE / SUPABASE / COMMERCIAL_AUTHORITY = billing/licensing truth
+```
 
-Do not infer ROI from PostHog alone when a verified billing/revenue source exists.
+Do not calculate revenue truth from PostHog alone.
 
 ---
 
 ## 8. Demo funnel contract
 
-Current `/book-demo` submits to `/api/leads` and stores the lead in Supabase and/or sends a webhook.
+`/book-demo` submits to `/api/leads`.
 
-Required after the release freeze:
+After release authority opens:
 
-### Client
-
-Capture `demo_started` only after meaningful first form interaction, not merely page load.
-
-Capture `demo_submitted` only after the API returns a successful response.
-
-Properties:
-
-```text
-locale
-path
-utm_source
-utm_medium
-utm_campaign
-utm_content
-utm_term
-landing_path
-schema_version
-```
-
-Never attach demo form PII to the analytics event.
-
-### Lead persistence
-
-Extend the sales lead attribution model with bounded non-sensitive fields such as:
-
-- `utm_source`
-- `utm_medium`
-- `utm_campaign`
-- `utm_content`
-- `utm_term`
-- `landing_path`
-- `referrer_domain`
-
-Keep PII in the lead system, not in PostHog.
-
-Contact consent and analytics consent remain separate concepts.
+- emit `demo_started` after meaningful first interaction;
+- emit `demo_submitted` only after successful API response;
+- persist bounded UTM/referrer/landing context in the lead system;
+- keep PII in the lead system, not PostHog;
+- keep contact consent and analytics consent separate.
 
 ---
 
 ## 9. Public page capture
 
-Because automatic pageview capture is intentionally disabled, capture explicit high-value public page events from the marketing surface.
-
-Suggested mapping:
+Automatic pageview capture remains intentionally disabled. Emit one explicit high-value event per meaningful route view:
 
 ```text
-/{locale}                         -> landing_view
-/{locale}/pricing                 -> pricing_view
-/{locale}/features/*              -> feature_view
-/{locale}/trust or trust pages    -> trust_view
-/{locale}/resources/*             -> resource_view
+/{locale}                      -> landing_view
+/{locale}/pricing              -> pricing_view
+/{locale}/features/*           -> feature_view
+/{locale}/trust*               -> trust_view
+/{locale}/resources/*          -> resource_view
 ```
 
-Avoid firing duplicate events during client navigation. One canonical page-intent event per meaningful route view is sufficient.
+Avoid duplicate events on client navigation.
 
 ---
 
-## 10. Conversion definitions
+## 10. Conversion tiers
 
-### Micro conversions
+### Micro
 
-- CTA click from regulatory/feature page
-- pricing view
-- AI inventory resource view
-- resource download
+- pricing/feature/trust/resource view;
+- CTA click;
+- resource download;
+- newsletter subscription.
 
-### Qualified conversions
+### Qualified
 
-- demo submitted
-- user signed up
-- checkout started
+- demo submitted;
+- user signed up;
+- checkout started.
 
-### Commercial conversions
+### Commercial
 
-- checkout completed
-- subscription active
+- checkout completed;
+- subscription active;
+- valid signed-contract authority in the commercial source of truth.
 
-Primary marketing reporting must separate micro activity from qualified/commercial outcomes.
+A commercial analytics signal is not itself authorization to enter paid product operations.
 
 ---
 
 ## 11. PostHog reporting design
 
-Do not build a production marketing dashboard until real events are ingested.
+Do **not** create `RISCK COMPLY — Marketing Acquisition OS` until real connected-project ingestion exists.
 
-After ingestion is verified, create:
+Once ingestion is proven, the dashboard should include:
 
-### `RISCK COMPLY — Marketing Acquisition OS`
-
-Recommended views:
-
-1. Landing -> CTA -> Demo
+1. Landing -> CTA -> Demo Submitted
 2. Landing -> Signup -> Checkout -> Subscription Active
-3. Organic source/campaign breakdown
-4. Content-assisted conversions
-5. Feature page -> signup/demo conversion
-6. Country/locale acquisition
-7. First-touch vs last-touch source
-8. Demo submit rate
-9. Checkout completion rate
-
-Default period: last 30 days once data volume is meaningful.
-
----
-
-## 12. Search Console foundation
-
-Search Console should remain the source of truth for organic Google discovery.
-
-Required configuration:
-
-- verify the canonical domain property for `risckcomply.com`;
-- submit the canonical sitemap;
-- confirm indexed pages and crawl errors;
-- monitor branded and non-branded queries;
-- segment by page, country and device;
-- use URL inspection after major SEO launches;
-- compare Search Console clicks with privacy-safe onsite conversion data.
-
-Do not substitute PostHog for Search Console query/impression data.
+3. source/campaign breakdown
+4. content-assisted qualified conversions
+5. feature/trust/resource assisted conversion
+6. locale acquisition
+7. first-touch vs last-touch
+8. demo submit rate
+9. checkout completion rate
+10. subscription-active rate separated from signup rate
 
 ---
 
-## 13. Paid measurement readiness
+## 12. Search Console boundary
 
-Before Google Ads / remarketing:
+Search Console remains the source of truth for Google query/impression/click data.
+
+Required owner work remains:
+
+- verify Domain Property `risckcomply.com` via DNS;
+- submit canonical sitemap;
+- inspect indexing/canonical selection;
+- establish branded and non-branded baselines;
+- reconcile Google clicks with privacy-safe onsite conversion data.
+
+---
+
+## 13. Paid gate
+
+Do not scale paid until:
 
 ```text
-POSTHOG_INGESTION_VERIFIED = YES
-PUBLIC_FUNNEL_EVENTS = YES
-DEMO_ATTRIBUTION = YES
-SIGNUP_ATTRIBUTION = YES
-CHECKOUT_ATTRIBUTION = YES
-CONSENT_BOUNDARY_VALIDATED = YES
-SEARCH_CONSOLE_VERIFIED = YES
-PAID_CONVERSION_TAGS_VALIDATED = YES
+PRODUCTION_GO=PASS
+POSTHOG_APPROVED_PROJECT_BINDING=PASS
+POSTHOG_REAL_INGESTION=PASS
+PUBLIC_FUNNEL_EVENTS=PASS
+DEMO_ATTRIBUTION=PASS
+SIGNUP_ATTRIBUTION=PASS
+CHECKOUT_ATTRIBUTION=PASS
+SUBSCRIPTION_ATTRIBUTION=PASS_OR_COMMERCIAL_TRUTH_BRIDGE
+CONSENT_BOUNDARY=PASS
+SEARCH_CONSOLE=VERIFIED
+PAID_CONVERSION_MEASUREMENT=VALIDATED
 ```
-
-For EEA Google advertising, implement the current required consent signals and Consent Mode configuration before using ad personalization/remarketing or measurement that requires them.
-
-Until then:
-
-`PAID_SCALE: BLOCKED`
 
 ---
 
-## 14. Engineering mega-PR after release freeze
+## 14. Future Mega PR B
 
 Working title:
 
-**[Marketing P0] Acquisition analytics + attribution foundation**
+**[Marketing P0] Close acquisition routing, CRO truth and attribution foundation**
 
 Scope:
 
-1. extend canonical analytics event map;
-2. extend sanitizer allowlist with bounded attribution properties;
-3. add consent-gated public page-intent capture;
-4. add CTA instrumentation;
-5. add demo-start/demo-submit instrumentation;
-6. persist bounded UTM attribution into sales leads;
-7. connect signup and checkout to attribution context;
-8. update stale PostHog documentation from Clerk to current auth reality;
-9. add tests proving declined consent emits no client analytics;
-10. add tests proving no PII enters PostHog payloads;
-11. validate real EU PostHog ingestion in production after deployment;
-12. create Marketing Acquisition OS only after events exist.
+1. reintegrate on a fresh branch based on current protected `main`;
+2. preserve the prestaged governed PostHog binding remediation;
+3. extend canonical analytics event map;
+4. implement consent-gated public page-intent events;
+5. instrument stable CTAs and demo start/submit;
+6. implement first/last-touch attribution;
+7. persist bounded attribution into leads;
+8. connect signup/checkout/subscription reporting without weakening payment-first authority;
+9. prove declined consent emits no marketing event;
+10. prove no PII enters PostHog;
+11. prove the Production bundle points to the approved connected PostHog project;
+12. verify real connected-project ingestion;
+13. create the Marketing Acquisition OS only after real events exist.
 
-Expected impact:
-
-`CONTENT -> ATTRIBUTABLE_LEADS -> ATTRIBUTABLE_PIPELINE`
+Because the current marketing branch is behind the protected release, **do not open it directly as the future Mega PR**. Reintegrate validated changes onto current main first.
 
 ---
 
-## 15. Acceptance criteria
+## 15. Current acceptance state
 
 ```text
-POSTHOG_PROJECT_EXISTS: PASS
-POSTHOG_REAL_EVENT_INGESTION: FAIL_CURRENTLY
-PRIVACY_FIRST_CLIENT_IMPLEMENTATION: PRESENT
-PUBLIC_ACQUISITION_EVENTS: MISSING
-UTM_PERSISTENCE: MISSING
-DEMO_ATTRIBUTION: MISSING
-MARKETING_DASHBOARD: DEFER_UNTIL_DATA
-PAID_MEASUREMENT: BLOCKED
+POSTHOG_PROJECT_EXISTS=PASS
+POSTHOG_PROVIDER_ACTIONS=PASS_14_OF_14
+POSTHOG_REAL_EVENT_INGESTION=FAIL_CURRENTLY
+PRIVACY_FIRST_CLIENT_IMPLEMENTATION=PRESENT
+PUBLIC_ACQUISITION_RUNTIME_EVENTS=MISSING
+UTM_PERSISTENCE=MISSING
+DEMO_ATTRIBUTION=MISSING
+SIGNUP_ATTRIBUTION=MISSING
+CHECKOUT_ATTRIBUTION=MISSING
+SUBSCRIPTION_ATTRIBUTION=MISSING
+PAYMENT_FIRST_ANALYTICS_SEMANTICS=DEFINED
+MARKETING_DASHBOARD=DEFER_UNTIL_DATA
+PAID_MEASUREMENT=BLOCKED
 ```
-
-Definition of done after implementation:
-
-- allowed-consent test visit produces expected events;
-- declined-consent test visit produces no client PostHog event;
-- no PII appears in event properties;
-- UTM values survive to demo/signup/checkout attribution where approved;
-- successful demo submission can be attributed to source/campaign;
-- successful checkout can be attributed to source/campaign;
-- Search Console and onsite conversion reporting can be reconciled;
-- paid conversion measurement is validated before budget scale.
