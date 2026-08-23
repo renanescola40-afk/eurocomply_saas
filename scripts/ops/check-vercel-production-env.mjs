@@ -3,6 +3,8 @@ import { readFileSync, existsSync } from 'node:fs';
 const failures = [];
 const envExamplePath = '.env.example';
 const productionWorkflowPath = '.github/workflows/vercel-production.yml';
+const HTTP_SCANNER_PROVIDERS = new Set(['http', 'generic-http', 'webhook']);
+const CLAMAV_SCANNER_PROVIDERS = new Set(['clamav', 'clamd']);
 
 function read(path) {
   return existsSync(path) ? readFileSync(path, 'utf8') : '';
@@ -38,8 +40,15 @@ function validateDocumentation(envNames, workflow) {
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
     'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
     'GOOGLE_CLIENT_ID',
+    'RESEND_API_KEY',
+    'EMAIL_FROM',
+    'REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY',
+    'ENABLE_DASHBOARD_METRIC_SNAPSHOTS',
     'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
     'MALWARE_SCANNER_PROVIDER',
+    'MALWARE_SCANNER_ALLOWED_HOSTS',
+    'MALWARE_SCANNER_CLAMAV_HOST',
+    'MALWARE_SCANNER_CLAMAV_PORT',
     'NEXT_PUBLIC_SENTRY_DSN',
   ];
 
@@ -58,6 +67,11 @@ function validateDocumentation(envNames, workflow) {
     'npm run ops:vercel-readiness',
     'npm run release:readiness',
     'npm run release:enterprise-readiness',
+    'REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY',
+    'ENABLE_DASHBOARD_METRIC_SNAPSHOTS',
+    'MALWARE_SCANNER_ALLOWED_HOSTS',
+    'MALWARE_SCANNER_CLAMAV_HOST',
+    'MALWARE_SCANNER_CLAMAV_PORT',
     '"vercel@${VERCEL_CLI_VERSION}" deploy --prebuilt --prod',
   ]) {
     requireWorkflowToken(workflow, token);
@@ -92,12 +106,37 @@ function validateRuntime() {
     }
   }
 
+  if (process.env.REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY === 'true') {
+    if (!hasRuntimeValue('RESEND_API_KEY')) failures.push('transactional email: RESEND_API_KEY is required when delivery is required.');
+    if (!hasRuntimeValue('EMAIL_FROM')) failures.push('transactional email: EMAIL_FROM is required when delivery is required.');
+  }
+
+  if (process.env.ENABLE_DASHBOARD_METRIC_SNAPSHOTS !== 'false') {
+    failures.push('dashboard metric snapshots: Production must remain false until the V19 snapshot schema is proven compatible.');
+  }
+
   if (process.env.REQUIRE_MALWARE_SCAN_FOR_UPLOADS === 'true') {
     const provider = String(process.env.MALWARE_SCANNER_PROVIDER ?? '').trim().toLowerCase();
     const hasHttp = hasRuntimeValue('MALWARE_SCANNER_ENDPOINT') || hasRuntimeValue('MALWARE_SCANNER_URL');
-    const hasClamAv = hasRuntimeValue('MALWARE_SCANNER_CLAMAV_HOST');
+    const hasAllowedHosts = hasRuntimeValue('MALWARE_SCANNER_ALLOWED_HOSTS');
+    const hasClamAvHost = hasRuntimeValue('MALWARE_SCANNER_CLAMAV_HOST');
+    const rawClamAvPort = String(process.env.MALWARE_SCANNER_CLAMAV_PORT ?? '').trim();
+    const clamAvPort = Number(rawClamAvPort);
+    const hasValidClamAvPort = /^\d+$/.test(rawClamAvPort)
+      && Number.isInteger(clamAvPort)
+      && clamAvPort >= 1
+      && clamAvPort <= 65_535;
+
     if (!provider) failures.push('malware scanner: provider is required when upload scanning is required.');
-    if (!hasHttp && !hasClamAv) failures.push('malware scanner: configure either an HTTP scanner target or a ClamAV host.');
+    else if (HTTP_SCANNER_PROVIDERS.has(provider)) {
+      if (!hasHttp) failures.push('malware scanner: HTTP provider requires MALWARE_SCANNER_ENDPOINT or MALWARE_SCANNER_URL.');
+      if (!hasAllowedHosts) failures.push('malware scanner: HTTP provider requires MALWARE_SCANNER_ALLOWED_HOSTS.');
+    } else if (CLAMAV_SCANNER_PROVIDERS.has(provider)) {
+      if (!hasClamAvHost) failures.push('malware scanner: ClamAV provider requires MALWARE_SCANNER_CLAMAV_HOST.');
+      if (!hasValidClamAvPort) failures.push('malware scanner: ClamAV provider requires a valid MALWARE_SCANNER_CLAMAV_PORT.');
+    } else {
+      failures.push('malware scanner: configure a supported real provider (http, generic-http, webhook, clamav, or clamd).');
+    }
   }
 }
 

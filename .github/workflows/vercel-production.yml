@@ -99,6 +99,7 @@ jobs:
       RESEND_API_KEY: ${{ secrets['RESEND_API_KEY'] }}
       EMAIL_FROM: ${{ vars.EMAIL_FROM }}
       REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY: 'true'
+      ENABLE_DASHBOARD_METRIC_SNAPSHOTS: 'false'
       HEALTHCHECK_TOKEN: ${{ secrets['HEALTHCHECK_TOKEN'] }}
       EVIDENCE_PACK_SIGNING_SECRET: ${{ secrets['EVIDENCE_PACK_SIGNING_SECRET'] }}
       AUDIT_CHAIN_SIGNING_SECRET: ${{ secrets['AUDIT_CHAIN_SIGNING_SECRET'] }}
@@ -113,6 +114,7 @@ jobs:
       MALWARE_SCANNER_ENDPOINT: ${{ secrets['MALWARE_SCANNER_ENDPOINT'] }}
       MALWARE_SCANNER_URL: ${{ secrets['MALWARE_SCANNER_URL'] }}
       MALWARE_SCANNER_API_KEY: ${{ secrets['MALWARE_SCANNER_API_KEY'] }}
+      MALWARE_SCANNER_ALLOWED_HOSTS: ${{ vars.MALWARE_SCANNER_ALLOWED_HOSTS }}
       MALWARE_SCANNER_CLAMAV_HOST: ${{ secrets['MALWARE_SCANNER_CLAMAV_HOST'] }}
       MALWARE_SCANNER_CLAMAV_PORT: ${{ vars.MALWARE_SCANNER_CLAMAV_PORT }}
       MALWARE_SCANNER_TIMEOUT_MS: ${{ vars.MALWARE_SCANNER_TIMEOUT_MS }}
@@ -162,6 +164,48 @@ jobs:
             echo '::error title=Enterprise Step-Up key separation required::The Step-Up signing secret must be distinct from the audit-chain signing secret.'
             exit 1
           fi
+
+      - name: Validate governed runtime feature inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$ENABLE_DASHBOARD_METRIC_SNAPSHOTS" != 'false' ]; then
+            echo '::error title=Metric snapshot policy drift::Production snapshots must remain disabled until the V19 snapshot schema is proven compatible.'
+            exit 1
+          fi
+          if [ "$RELEASE_TARGET" = 'enterprise' ] && [ "$REQUIRE_MALWARE_SCAN_FOR_UPLOADS" != 'true' ]; then
+            echo '::error title=Enterprise upload scanning disabled::Enterprise Production requires malware scanning to be enabled.'
+            exit 1
+          fi
+
+          case "${MALWARE_SCANNER_PROVIDER,,}" in
+            http|generic-http|webhook)
+              if [ -z "${MALWARE_SCANNER_ALLOWED_HOSTS:-}" ]; then
+                echo '::error title=Missing scanner allowlist::HTTP malware scanning requires MALWARE_SCANNER_ALLOWED_HOSTS.'
+                exit 1
+              fi
+              if [ -z "${MALWARE_SCANNER_ENDPOINT:-}" ] && [ -z "${MALWARE_SCANNER_URL:-}" ]; then
+                echo '::error title=Missing scanner transport::HTTP malware scanning requires MALWARE_SCANNER_ENDPOINT or MALWARE_SCANNER_URL.'
+                exit 1
+              fi
+              ;;
+            clamav|clamd)
+              if [ -z "${MALWARE_SCANNER_CLAMAV_HOST:-}" ] || [ -z "${MALWARE_SCANNER_CLAMAV_PORT:-}" ]; then
+                echo '::error title=Missing ClamAV transport::ClamAV requires host and port.'
+                exit 1
+              fi
+              if [[ ! "$MALWARE_SCANNER_CLAMAV_PORT" =~ ^[0-9]+$ ]] || (( MALWARE_SCANNER_CLAMAV_PORT < 1 || MALWARE_SCANNER_CLAMAV_PORT > 65535 )); then
+                echo '::error title=Invalid ClamAV port::MALWARE_SCANNER_CLAMAV_PORT must be 1-65535.'
+                exit 1
+              fi
+              ;;
+            *)
+              if [ "$RELEASE_TARGET" = 'enterprise' ]; then
+                echo '::error title=Unsupported malware scanner::Enterprise Production requires http, generic-http, webhook, clamav, or clamd.'
+                exit 1
+              fi
+              ;;
+          esac
 
       - name: Run lint gate
         run: npm run lint
@@ -215,6 +259,7 @@ jobs:
             RESEND_API_KEY
             EMAIL_FROM
             REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY
+            ENABLE_DASHBOARD_METRIC_SNAPSHOTS
             UPSTASH_REDIS_REST_URL
             UPSTASH_REDIS_REST_TOKEN
             HEALTHCHECK_TOKEN
@@ -248,6 +293,18 @@ jobs:
             printf '%s' "${!key}" \
               | npx --yes "vercel@${VERCEL_CLI_VERSION}" env add "$key" production --force --no-sensitive --token="$VERCEL_TOKEN" >/dev/null
           }
+          sync_sensitive_if_present() {
+            local key="$1"
+            if [ -n "${!key:-}" ]; then
+              sync_sensitive "$key"
+            fi
+          }
+          sync_public_if_present() {
+            local key="$1"
+            if [ -n "${!key:-}" ]; then
+              sync_public "$key"
+            fi
+          }
 
           for key in \
             SUPABASE_SERVICE_ROLE_KEY \
@@ -268,6 +325,7 @@ jobs:
             NEXT_PUBLIC_SUPABASE_ANON_KEY \
             EMAIL_FROM \
             REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY \
+            ENABLE_DASHBOARD_METRIC_SNAPSHOTS \
             NEXT_PUBLIC_SENTRY_DSN \
             SENTRY_ORG \
             SENTRY_PROJECT \
@@ -276,6 +334,23 @@ jobs:
             MALWARE_SCANNER_PROVIDER
           do
             sync_public "$key"
+          done
+
+          for key in \
+            MALWARE_SCANNER_ENDPOINT \
+            MALWARE_SCANNER_URL \
+            MALWARE_SCANNER_API_KEY \
+            MALWARE_SCANNER_CLAMAV_HOST
+          do
+            sync_sensitive_if_present "$key"
+          done
+
+          for key in \
+            MALWARE_SCANNER_ALLOWED_HOSTS \
+            MALWARE_SCANNER_CLAMAV_PORT \
+            MALWARE_SCANNER_TIMEOUT_MS
+          do
+            sync_public_if_present "$key"
           done
 
           echo 'Provider-proof runtime binding names synchronized to Vercel Production; values were not printed.'

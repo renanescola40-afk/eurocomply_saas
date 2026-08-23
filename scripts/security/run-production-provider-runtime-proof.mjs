@@ -13,7 +13,7 @@ const PRICE_ID = /^price_[A-Za-z0-9]+$/;
 const VERCEL_TEAM_ID = /^team_[A-Za-z0-9]+$/;
 const VERCEL_PROJECT_ID = /^prj_[A-Za-z0-9]+$/;
 const API_TIMEOUT_MS = 8_000;
-const CANONICAL_REDACTION_CONFIRMATION = 'Only grouped configuration presence and accepted source labels are recorded. No secret values, tokens, URLs, DSNs, cookies, Authorization headers or customer data are stored.';
+const CANONICAL_REDACTION_CONFIRMATION = 'Only grouped configuration presence, derived booleans and accepted source labels are recorded. No secret values, tokens, URLs, DSNs, cookies, Authorization headers or customer data are stored.';
 
 const REQUIRED_VERCEL_KEYS = [
   'NEXT_PUBLIC_SUPABASE_URL',
@@ -21,6 +21,10 @@ const REQUIRED_VERCEL_KEYS = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
+  'RESEND_API_KEY',
+  'EMAIL_FROM',
+  'REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY',
+  'ENABLE_DASHBOARD_METRIC_SNAPSHOTS',
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
   'HEALTHCHECK_TOKEN',
@@ -32,6 +36,18 @@ const REQUIRED_VERCEL_KEYS = [
   'STEP_UP_PROVIDER_MODE',
   'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
   'MALWARE_SCANNER_PROVIDER',
+];
+const HTTP_MALWARE_SCANNER_PROVIDERS = new Set(['http', 'generic-http', 'webhook']);
+const CLAMAV_MALWARE_SCANNER_PROVIDERS = new Set(['clamav', 'clamd']);
+const SUPPORTED_MALWARE_SCANNER_PROVIDERS = new Set([
+  ...HTTP_MALWARE_SCANNER_PROVIDERS,
+  ...CLAMAV_MALWARE_SCANNER_PROVIDERS,
+]);
+const NON_SECRET_VERCEL_CONTROLS = [
+  'REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY',
+  'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
+  'MALWARE_SCANNER_PROVIDER',
+  'ENABLE_DASHBOARD_METRIC_SNAPSHOTS',
 ];
 
 function env(name) {
@@ -201,6 +217,23 @@ async function githubProof(targetSha) {
   return { checks, passed: Object.values(checks).every(Boolean) };
 }
 
+async function readNonSecretVercelControl(token, target, entry) {
+  if (!entry?.id || !NON_SECRET_VERCEL_CONTROLS.includes(String(entry?.key ?? ''))) return null;
+
+  const response = await request(
+    `https://api.vercel.com/v1/projects/${encodeURIComponent(target.projectId)}/env/${encodeURIComponent(String(entry.id))}?teamId=${encodeURIComponent(target.teamId)}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (response?.status !== 200) {
+    await response?.body?.cancel().catch(() => undefined);
+    return null;
+  }
+
+  const body = await jsonBounded(response, 64 * 1024);
+  if (String(body?.key ?? '') !== String(entry.key ?? '')) return null;
+  return String(body?.value ?? '').trim();
+}
+
 async function vercelProof() {
   const token = env('VERCEL_TOKEN');
   const targets = loadProviderTargets();
@@ -210,6 +243,15 @@ async function vercelProof() {
   let productionEnvironmentEnumerated = false;
   let requiredEnvironmentKeysPresent = false;
   let requiredEnvironmentKeyCount = 0;
+  let transactionalEmailBindingsPresent = false;
+  let transactionalEmailGuardEnabled = false;
+  let malwareScanningGuardEnabled = false;
+  let malwareScannerProviderSupported = false;
+  let malwareScannerTransportBindingPresent = false;
+  let metricSnapshotPolicyBindingPresent = false;
+  let metricSnapshotWritesDisabled = false;
+  let selectedNonSecretControlsResolved = false;
+  let scannerTransportBindingModesPresent = 0;
 
   if (token && target) {
     const projectResponse = await request(
@@ -233,15 +275,55 @@ async function vercelProof() {
     if (envResponse?.status === 200) {
       const body = await jsonBounded(envResponse);
       const entries = Array.isArray(body?.envs) ? body.envs : [];
+      const productionEntries = entries.filter((entry) => Array.isArray(entry?.target) ? entry.target.includes('production') : true);
       const productionKeys = new Set(
-        entries
-          .filter((entry) => Array.isArray(entry?.target) ? entry.target.includes('production') : true)
+        productionEntries
           .map((entry) => String(entry?.key ?? ''))
           .filter(Boolean),
       );
+      const entryByKey = new Map(
+        productionEntries
+          .filter((entry) => typeof entry?.key === 'string' && entry.key)
+          .map((entry) => [String(entry.key), entry]),
+      );
+
       productionEnvironmentEnumerated = true;
       requiredEnvironmentKeyCount = REQUIRED_VERCEL_KEYS.filter((key) => productionKeys.has(key)).length;
       requiredEnvironmentKeysPresent = requiredEnvironmentKeyCount === REQUIRED_VERCEL_KEYS.length;
+      transactionalEmailBindingsPresent = [
+        'RESEND_API_KEY',
+        'EMAIL_FROM',
+        'REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY',
+      ].every((key) => productionKeys.has(key));
+      metricSnapshotPolicyBindingPresent = productionKeys.has('ENABLE_DASHBOARD_METRIC_SNAPSHOTS');
+
+      const httpTransportBindingPresent = productionKeys.has('MALWARE_SCANNER_ALLOWED_HOSTS')
+        && (productionKeys.has('MALWARE_SCANNER_ENDPOINT') || productionKeys.has('MALWARE_SCANNER_URL'));
+      const clamavTransportBindingPresent = productionKeys.has('MALWARE_SCANNER_CLAMAV_HOST')
+        && productionKeys.has('MALWARE_SCANNER_CLAMAV_PORT');
+      scannerTransportBindingModesPresent = Number(httpTransportBindingPresent) + Number(clamavTransportBindingPresent);
+
+      const [transactionalEmailGuard, malwareScanningGuard, malwareScannerProvider, metricSnapshotPolicy] = await Promise.all([
+        readNonSecretVercelControl(token, target, entryByKey.get('REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY')),
+        readNonSecretVercelControl(token, target, entryByKey.get('REQUIRE_MALWARE_SCAN_FOR_UPLOADS')),
+        readNonSecretVercelControl(token, target, entryByKey.get('MALWARE_SCANNER_PROVIDER')),
+        readNonSecretVercelControl(token, target, entryByKey.get('ENABLE_DASHBOARD_METRIC_SNAPSHOTS')),
+      ]);
+
+      selectedNonSecretControlsResolved = [
+        transactionalEmailGuard,
+        malwareScanningGuard,
+        malwareScannerProvider,
+        metricSnapshotPolicy,
+      ].every((value) => value !== null);
+      transactionalEmailGuardEnabled = transactionalEmailGuard === 'true';
+      malwareScanningGuardEnabled = malwareScanningGuard === 'true';
+      const normalizedScannerProvider = String(malwareScannerProvider ?? '').toLowerCase();
+      malwareScannerProviderSupported = SUPPORTED_MALWARE_SCANNER_PROVIDERS.has(normalizedScannerProvider);
+      malwareScannerTransportBindingPresent = HTTP_MALWARE_SCANNER_PROVIDERS.has(normalizedScannerProvider)
+        ? httpTransportBindingPresent
+        : CLAMAV_MALWARE_SCANNER_PROVIDERS.has(normalizedScannerProvider) && clamavTransportBindingPresent;
+      metricSnapshotWritesDisabled = metricSnapshotPolicy === 'false';
     } else {
       await envResponse?.body?.cancel().catch(() => undefined);
     }
@@ -254,12 +336,22 @@ async function vercelProof() {
     projectIdentityMatched,
     productionEnvironmentEnumerated,
     requiredEnvironmentKeysPresent,
+    transactionalEmailBindingsPresent,
+    transactionalEmailGuardEnabled,
+    malwareScanningGuardEnabled,
+    malwareScannerProviderSupported,
+    malwareScannerTransportBindingPresent,
+    metricSnapshotPolicyBindingPresent,
+    metricSnapshotWritesDisabled,
+    selectedNonSecretControlsResolved,
   };
   return {
     checks,
     metrics: {
       requiredEnvironmentKeys: REQUIRED_VERCEL_KEYS.length,
       requiredEnvironmentKeysPresent: requiredEnvironmentKeyCount,
+      scannerTransportBindingModesPresent,
+      selectedNonSecretControlsChecked: NON_SECRET_VERCEL_CONTROLS.length,
     },
     passed: Object.values(checks).every(Boolean),
   };
@@ -428,7 +520,7 @@ async function main() {
 
   const providersReviewed = [
     providerEntry('github', github, '.github/workflows/production-provider-runtime-proof.yml'),
-    providerEntry('vercel', vercel, 'Vercel API project identity and production environment metadata (values never decrypted or stored)'),
+    providerEntry('vercel', vercel, 'Vercel API project identity, Production environment metadata, and selected non-secret control values; secret values are never decrypted or stored'),
     providerEntry('supabase', supabase, 'Supabase REST connectivity using protected service-role credential (credential not stored)'),
     providerEntry('stripe', stripe, 'Stripe account and canonical self-serve recurring Price metadata probes (responses and Price IDs not stored)'),
     providerEntry('sentry', sentry, 'Sentry project and active client-key metadata probes using CI-only auth token (DSN and token not stored)'),
@@ -444,7 +536,7 @@ async function main() {
     reviewedAt: generatedAt,
     reviewer: 'RISCK COMPLY protected production provider proof',
     summary: allPassed
-      ? 'Protected exact-SHA provider probes verified production GitHub, Vercel, Supabase, Stripe and Sentry configuration without storing provider values.'
+      ? 'Protected exact-SHA provider probes verified Production GitHub, Vercel, Supabase, Stripe and Sentry configuration, including transactional-email, malware-scanner and metric-snapshot runtime controls, without storing provider values.'
       : 'One or more protected production provider probes did not meet the fail-closed acceptance criteria.',
     valuesRedacted: true,
     runtimeContext: {
@@ -464,6 +556,7 @@ async function main() {
       .map((entry) => `${entry.provider} production provider configuration verified by protected runtime probe.`),
     evidenceLocations: [
       '.github/workflows/production-provider-runtime-proof.yml',
+      '.github/workflows/vercel-production.yml',
       'config/production-provider-targets.json',
       'config/billing-commercial-catalog.json',
       'scripts/security/run-production-provider-runtime-proof.mjs',
@@ -477,6 +570,7 @@ async function main() {
       credentialsStored: false,
       providerResponseBodiesStored: false,
       decryptedProviderEnvironmentValuesStored: false,
+      selectedNonSecretControlValuesStored: false,
       exactShaBound: FULL_SHA.test(targetSha),
     },
   };

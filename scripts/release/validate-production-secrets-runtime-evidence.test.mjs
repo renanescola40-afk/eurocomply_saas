@@ -22,6 +22,14 @@ const checks = {
     projectIdentityMatched: true,
     productionEnvironmentEnumerated: true,
     requiredEnvironmentKeysPresent: true,
+    transactionalEmailBindingsPresent: true,
+    transactionalEmailGuardEnabled: true,
+    malwareScanningGuardEnabled: true,
+    malwareScannerProviderSupported: true,
+    malwareScannerTransportBindingPresent: true,
+    metricSnapshotPolicyBindingPresent: true,
+    metricSnapshotWritesDisabled: true,
+    selectedNonSecretControlsResolved: true,
   },
   supabase: {
     urlConfigured: true,
@@ -57,7 +65,7 @@ function completeEvidence(overrides = {}) {
     generatedAt: '2026-08-10T19:50:00Z',
     reviewedAt: '2026-08-10T19:50:00Z',
     reviewer: 'RISCK COMPLY protected production provider proof',
-    summary: 'Five production providers were verified.',
+    summary: 'Five production providers and their required runtime bindings were verified.',
     valuesRedacted: true,
     runtimeContext: {
       repository,
@@ -72,7 +80,7 @@ function completeEvidence(overrides = {}) {
       environment: 'production',
       status: 'reviewed',
       evidenceLocation: `protected:${provider}`,
-      checks: checks[provider],
+      checks: { ...checks[provider] },
     })),
     rotationOwner: 'Platform and Security release owners',
     nextReviewDue: '2026-08-17T19:50:00Z',
@@ -90,6 +98,7 @@ function completeEvidence(overrides = {}) {
       credentialsStored: false,
       providerResponseBodiesStored: false,
       decryptedProviderEnvironmentValuesStored: false,
+      selectedNonSecretControlValuesStored: false,
       exactShaBound: true,
     },
     ...overrides,
@@ -97,7 +106,7 @@ function completeEvidence(overrides = {}) {
 }
 
 describe('validateProductionSecretsRuntimeEvidence', () => {
-  it('accepts fresh redacted exact-SHA proof for all five production providers', () => {
+  it('accepts fresh redacted exact-SHA proof for all five production providers and runtime controls', () => {
     expect(validateProductionSecretsRuntimeEvidence(completeEvidence(), { now, expectedCommitSha: sha })).toEqual([]);
   });
 
@@ -142,6 +151,33 @@ describe('validateProductionSecretsRuntimeEvidence', () => {
     );
   });
 
+  it('rejects Vercel evidence when transactional email is present but not required in Production', () => {
+    const evidence = completeEvidence();
+    const vercel = evidence.providersReviewed.find((entry) => entry.provider === 'vercel');
+    vercel.checks.transactionalEmailGuardEnabled = false;
+    expect(validateProductionSecretsRuntimeEvidence(evidence, { now })).toContain(
+      'vercel.transactionalEmailGuardEnabled must be true',
+    );
+  });
+
+  it('rejects Vercel evidence without a supported malware-scanner transport binding', () => {
+    const evidence = completeEvidence();
+    const vercel = evidence.providersReviewed.find((entry) => entry.provider === 'vercel');
+    vercel.checks.malwareScannerTransportBindingPresent = false;
+    expect(validateProductionSecretsRuntimeEvidence(evidence, { now })).toContain(
+      'vercel.malwareScannerTransportBindingPresent must be true',
+    );
+  });
+
+  it('rejects Vercel evidence when the incompatible metric-snapshot writer is enabled', () => {
+    const evidence = completeEvidence();
+    const vercel = evidence.providersReviewed.find((entry) => entry.provider === 'vercel');
+    vercel.checks.metricSnapshotWritesDisabled = false;
+    expect(validateProductionSecretsRuntimeEvidence(evidence, { now })).toContain(
+      'vercel.metricSnapshotWritesDisabled must be true',
+    );
+  });
+
   it('rejects Stripe proof that falls back to legacy aliases or misses a canonical self-serve Price', () => {
     const evidence = completeEvidence();
     const stripe = evidence.providersReviewed.find((entry) => entry.provider === 'stripe');
@@ -164,9 +200,10 @@ describe('validateProductionSecretsRuntimeEvidence', () => {
   it('rejects runtime evidence containing provider values or credentials', () => {
     const evidence = completeEvidence();
     evidence.evidenceIntegrity.decryptedProviderEnvironmentValuesStored = true;
-    expect(validateProductionSecretsRuntimeEvidence(evidence, { now })).toContain(
-      'evidenceIntegrity.decryptedProviderEnvironmentValuesStored must be false',
-    );
+    evidence.evidenceIntegrity.selectedNonSecretControlValuesStored = true;
+    const failures = validateProductionSecretsRuntimeEvidence(evidence, { now });
+    expect(failures).toContain('evidenceIntegrity.decryptedProviderEnvironmentValuesStored must be false');
+    expect(failures).toContain('evidenceIntegrity.selectedNonSecretControlValuesStored must be false');
   });
 
   it('rejects wrong repository or branch provenance', () => {

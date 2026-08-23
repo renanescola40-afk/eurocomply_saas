@@ -137,6 +137,7 @@ jobs:
           npx vitest run \
             scripts/release/validate-production-secrets-runtime-evidence.test.mjs \
             tests/enterprise/production-provider-runtime-proof.test.ts \
+            tests/enterprise/production-runtime-truth-contract.test.ts \
             tests/enterprise/production-provider-blocker-diagnostics.test.ts
           node --test tests/enterprise/stripe-live-billing-provider-proof.test.mjs
           node --test tests/enterprise/vercel-stripe-price-bindings.test.mjs
