@@ -2,6 +2,7 @@
 
 import { analyticsEvents, type AnalyticsEventName, type AnalyticsProperties } from './events';
 
+const CONSENT_STORAGE_KEY = 'risckcomply.analytics.consent';
 const FIRST_TOUCH_STORAGE_KEY = 'risckcomply.analytics.first_touch';
 const LAST_TOUCH_STORAGE_KEY = 'risckcomply.analytics.last_touch';
 const MAX_ATTRIBUTION_VALUE_LENGTH = 160;
@@ -27,6 +28,12 @@ export type PublicMarketingPage = {
 function normalizeAttributionValue(value: string | null | undefined, maxLength = MAX_ATTRIBUTION_VALUE_LENGTH) {
   const normalized = value?.trim().replace(/[\u0000-\u001f\u007f]/g, '').slice(0, maxLength);
   return normalized || undefined;
+}
+
+function isAttributionStorageAllowed() {
+  if (typeof window === 'undefined') return false;
+  if (process.env.NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT === 'false') return true;
+  return window.localStorage.getItem(CONSENT_STORAGE_KEY) === 'granted';
 }
 
 function getExternalReferrerDomain() {
@@ -92,7 +99,9 @@ function writeStoredTouch(key: string, touch: MarketingTouch) {
 }
 
 export function persistMarketingAttribution() {
-  if (typeof window === 'undefined') return { firstTouch: null, lastTouch: null };
+  if (typeof window === 'undefined' || !isAttributionStorageAllowed()) {
+    return { firstTouch: null, lastTouch: null };
+  }
 
   const current = buildCurrentTouch();
   let firstTouch = readStoredTouch(FIRST_TOUCH_STORAGE_KEY);
