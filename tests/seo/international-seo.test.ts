@@ -26,6 +26,27 @@ describe('international SEO acquisition architecture', () => {
     expect(nextConfig).toContain("destination: 'https://www.risckcomply.com/:path*'");
   });
 
+  it('uses HTML/sitemap as the single hreflang authority and permanently collapses fixed locale-less public aliases', () => {
+    const routing = read('src/lib/i18n/routing.ts');
+    const metadata = read('src/lib/seo/public-metadata.ts');
+    const nextConfig = read('next.config.ts');
+
+    expect(routing).toContain("localePrefix: 'always'");
+    expect(routing).toContain('alternateLinks: false');
+    expect(metadata).toContain("'x-default': `${appUrl}/${defaultLocale}${normalizedPath}`");
+
+    expect(nextConfig).toContain('localeLessPublicCanonicalRedirects');
+    expect(nextConfig).toContain("source: '/:path(pricing|enterprise|resources|faq|about|contact|book-demo|trust|security|compliance|data-processing|sla|privacy|terms|cookie-policy|acceptable-use|transfers|dpa|subprocessors|status|vulnerability-disclosure)'");
+    expect(nextConfig).toContain("destination: '/en/:path'");
+    expect(nextConfig).toContain("source: '/trust/:path*'");
+    expect(nextConfig).toContain("destination: '/en/trust/:path*'");
+    expect(nextConfig).toContain('permanent: true');
+
+    // Feature slugs are localized, so a generic /features/* -> /en/features/*
+    // redirect would be unsafe for Spanish/French/German localized slugs.
+    expect(nextConfig).not.toContain("destination: '/en/features/:path*'");
+  });
+
   it('ships eight fully authored feature intents in every supported locale', () => {
     for (const locale of localeFiles) {
       const path = `src/lib/seo/feature-pages/${locale}.ts`;
