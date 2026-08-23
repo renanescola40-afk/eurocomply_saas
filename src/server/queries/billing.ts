@@ -30,7 +30,7 @@ type SubscriptionRow = {
   stripe_subscription_id: string | null;
 };
 
-const ACTIVE_BILLING_STATUSES = ['active', 'trialing'] as const;
+const ACTIVE_BILLING_STATUSES = ['active'] as const;
 const SAFE_DEFAULT_PLAN = 'starter';
 const BILLING_CONTEXT_UNAVAILABLE = 'billing_context_unavailable';
 
@@ -99,7 +99,7 @@ export async function getOrganizationBillingContext(
       : SAFE_DEFAULT_PLAN;
   const status = signedContractPlan
     ? 'active'
-    : liveStripeAuthority
+    : livePaidStatus
       ? subscription?.status ?? null
       : null;
 
