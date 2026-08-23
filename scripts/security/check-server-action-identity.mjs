@@ -182,6 +182,69 @@ if (existsSync(permissionBridgePath)) {
   }
 }
 
+// Historical Gap Analysis used a user-scoped browser Supabase data plane. That is
+// no longer allowed: all current persistence must traverse /api/gap-analysis,
+// where the authenticated organization and paid permission are re-derived.
+const gapApiPath = path.join(root, 'src', 'app', 'api', 'gap-analysis', 'route.ts');
+const gapStoragePath = path.join(root, 'src', 'lib', 'gap-analysis', 'storage.ts');
+const remediationStoragePath = path.join(root, 'src', 'lib', 'compliance', 'remediation.ts');
+const gapPaymentMigrationPath = path.join(root, 'supabase', 'migrations', '20260823131500_payment_first_gap_analysis_and_storage.sql');
+
+if (!existsSync(gapApiPath)) {
+  failures.push('src/app/api/gap-analysis/route.ts: paid Gap Analysis server boundary is missing');
+} else {
+  const source = readFileSync(gapApiPath, 'utf8');
+  for (const token of [
+    "requireGapOrganizationPermission(user.id, 'manage_ai_governance')",
+    "requireGapOrganizationPermission(user.id, 'read_ai_governance')",
+    "failureMode: 'fail-closed'",
+    'organization_id: organizationId',
+  ]) {
+    if (!source.includes(token)) {
+      failures.push(`src/app/api/gap-analysis/route.ts: missing payment-first token ${token}`);
+    }
+  }
+}
+
+for (const [filePath, label, requiredEndpoint, forbiddenTables] of [
+  [gapStoragePath, 'src/lib/gap-analysis/storage.ts', '/api/gap-analysis?operation=assessment', [".from('gap_assessments')", ".from('gap_answers')"]],
+  [remediationStoragePath, 'src/lib/compliance/remediation.ts', '/api/gap-analysis?operation=remediation', [".from('compliance_findings')", ".from('compliance_tasks')"]],
+]) {
+  if (!existsSync(filePath)) {
+    failures.push(`${label}: payment-first client module is missing`);
+    continue;
+  }
+  const source = readFileSync(filePath, 'utf8');
+  if (!source.includes(requiredEndpoint)) {
+    failures.push(`${label}: must use ${requiredEndpoint}`);
+  }
+  if (source.includes('integrations/supabase/client')) {
+    failures.push(`${label}: direct Supabase browser client is forbidden for paid Gap/remediation persistence`);
+  }
+  for (const forbidden of forbiddenTables) {
+    if (source.includes(forbidden)) {
+      failures.push(`${label}: direct paid data-plane operation survived (${forbidden})`);
+    }
+  }
+}
+
+if (!existsSync(gapPaymentMigrationPath)) {
+  failures.push('supabase payment-first Gap/Storage migration is missing');
+} else {
+  const source = readFileSync(gapPaymentMigrationPath, 'utf8');
+  for (const token of [
+    'payment_first_gap_assessments_authority',
+    'payment_first_gap_answers_authority',
+    'payment_first_compliance_findings_authority',
+    'app_private.has_commercial_authority(e.organization_id)',
+    'revoke all on table public.compliance_evidence from public, anon, authenticated',
+  ]) {
+    if (!source.includes(token)) {
+      failures.push(`payment-first Gap/Storage migration: missing ${token}`);
+    }
+  }
+}
+
 if (failures.length > 0) {
   console.error('Server action identity checks failed:');
   for (const failure of failures) {
