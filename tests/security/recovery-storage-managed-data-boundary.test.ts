@@ -61,6 +61,17 @@ describe('database-only recovery managed-data boundary', () => {
     expect(exercise).toContain('checks.managedAuthRowsExcluded = true');
   });
 
+  it('binds managed Auth inventory only after target extension mutations and before data dump', () => {
+    const extensionParity = exercise.indexOf("failurePhase = 'extension_parity'");
+    const managedAuthInventory = exercise.indexOf("failurePhase = 'managed_auth_relation_inventory'");
+    const dataDump = exercise.indexOf("failurePhase = 'data_dump'");
+    expect(extensionParity).toBeGreaterThanOrEqual(0);
+    expect(managedAuthInventory).toBeGreaterThan(extensionParity);
+    expect(dataDump).toBeGreaterThan(managedAuthInventory);
+    expect(exercise).toContain('Any target extension mutation must finish before we bind the managed Auth');
+    expect(exercise).toContain('Managed Auth inventory is rebound after all target extension mutations');
+  });
+
   it('keeps Auth drift evidence aggregate-only and preserves auth.users integrity', () => {
     expect(exercise).toContain('managedAuthBoundary.sourceRelationCount = managedAuthPlan.sourceRelationCount');
     expect(exercise).toContain('managedAuthBoundary.targetRelationCount = managedAuthPlan.targetRelationCount');
