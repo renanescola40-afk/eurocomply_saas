@@ -245,6 +245,19 @@ export default async function paymentFirstRuntimeGlobalSetup(config: FullConfig)
     });
 
     await page.goto('/en/onboarding', { waitUntil: 'domcontentloaded' });
+    try {
+      // App Router server redirects can finish as an RSC navigation after the
+      // first document reaches DOMContentLoaded. Await the exact commercial
+      // destination instead of sampling page.url() during that transition.
+      await page.waitForURL((url) => url.pathname.endsWith('/dashboard/organizations/billing'), {
+        timeout: 30_000,
+        waitUntil: 'domcontentloaded',
+      });
+    } catch {
+      const currentUrl = new URL(page.url());
+      throw new Error(`payment_first_unlicensed_onboarding_redirect_timeout_${currentUrl.pathname}`);
+    }
+
     const onboardingUrl = new URL(page.url());
     if (!onboardingUrl.pathname.endsWith('/dashboard/organizations/billing')) {
       throw new Error(`payment_first_unlicensed_onboarding_path_${onboardingUrl.pathname}`);
