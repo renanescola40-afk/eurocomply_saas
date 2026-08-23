@@ -11,7 +11,22 @@ const workflowPath = '.github/workflows/production-provider-runtime-proof.yml';
 function evidence() {
   const providerChecks = {
     github: { repositoryReachable: true, repositoryBound: true, currentMainShaBound: true, protectedProductionEnvironment: true, githubActionsRunBound: true, exactContext: true },
-    vercel: { apiTokenConfigured: true, targetConfigurationBound: true, projectReachable: true, projectIdentityMatched: true, productionEnvironmentEnumerated: true, requiredEnvironmentKeysPresent: true },
+    vercel: {
+      apiTokenConfigured: true,
+      targetConfigurationBound: true,
+      projectReachable: true,
+      projectIdentityMatched: true,
+      productionEnvironmentEnumerated: true,
+      requiredEnvironmentKeysPresent: true,
+      transactionalEmailBindingsPresent: true,
+      transactionalEmailGuardEnabled: true,
+      malwareScanningGuardEnabled: true,
+      malwareScannerProviderSupported: true,
+      malwareScannerTransportBindingPresent: true,
+      metricSnapshotPolicyBindingPresent: true,
+      metricSnapshotWritesDisabled: true,
+      selectedNonSecretControlsResolved: true,
+    },
     supabase: { urlConfigured: true, serviceRoleConfigured: true, projectReachable: true, serviceRoleAuthorized: true },
     stripe: {
       secretConfigured: true,
@@ -41,7 +56,15 @@ function evidence() {
     controlsVerified: providers.map((provider) => `${provider} verified`),
     evidenceLocations: [workflowPath, 'config/production-provider-targets.json', 'scripts/security/run-production-provider-runtime-proof.mjs', 'scripts/release/validate-production-secrets-runtime-evidence.mjs'],
     redactionConfirmation: 'No values stored.',
-    evidenceIntegrity: { containsSensitiveValues: false, rawValuesStored: false, credentialsStored: false, providerResponseBodiesStored: false, decryptedProviderEnvironmentValuesStored: false, exactShaBound: true },
+    evidenceIntegrity: {
+      containsSensitiveValues: false,
+      rawValuesStored: false,
+      credentialsStored: false,
+      providerResponseBodiesStored: false,
+      decryptedProviderEnvironmentValuesStored: false,
+      selectedNonSecretControlValuesStored: false,
+      exactShaBound: true,
+    },
   };
 }
 
