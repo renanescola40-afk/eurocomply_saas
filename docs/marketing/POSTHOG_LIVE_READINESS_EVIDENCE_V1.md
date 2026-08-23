@@ -20,7 +20,7 @@ POSTHOG_ACTIONS=0
 POSTHOG_CONVERSION_GOALS=0
 POSTHOG_DASHBOARD=STARTER_ONLY
 PUBLIC_ACQUISITION_EVENT_TAXONOMY=NOT_IMPLEMENTED
-POSTHOG_PUBLIC_KEY_BINDING=NOT_PROVEN_BY_THIS EVIDENCE
+POSTHOG_PUBLIC_KEY_BINDING=NOT_PROVEN_BY_THIS_EVIDENCE
 LIVE_ATTRIBUTION=NO
 PAID_MEASUREMENT=BLOCKED
 ```
@@ -45,9 +45,7 @@ Fresh connected project read confirms:
 
 Fresh event-schema read shows no event seen in the last 30 days, including `$pageview`.
 
-Fresh action read:
-
-`ACTIONS=0`
+Fresh action read: `ACTIONS=0`.
 
 Fresh reporting read:
 
@@ -79,11 +77,7 @@ No token, secret or customer data belongs in this evidence file.
 
 ### Consent UX
 
-`AnalyticsConsentBanner`:
-
-- presents allow/decline choices when no decision exists;
-- decline opts out;
-- allow stores consent and then initializes PostHog.
+`AnalyticsConsentBanner` presents allow/decline choices when no decision exists; decline opts out; allow stores consent and initializes PostHog.
 
 ### Provider
 
@@ -91,19 +85,7 @@ No token, secret or customer data belongs in this evidence file.
 
 ### Event catalog
 
-The canonical event map is mainly product/activation/billing oriented, including:
-
-- `user_signed_up`
-- `user_signed_in`
-- `organization_created`
-- `dashboard_opened`
-- `document_uploaded`
-- `risk_created`
-- `vendor_created`
-- `checkout_started`
-- `checkout_completed`
-- `subscription_active`
-- `subscription_cancelled`
+The canonical event map is mainly product/activation/billing oriented, including `user_signed_up`, `user_signed_in`, `organization_created`, `dashboard_opened`, `document_uploaded`, `risk_created`, `vendor_created`, `checkout_started`, `checkout_completed`, `subscription_active` and `subscription_cancelled`.
 
 It does not yet define the public acquisition events needed to attribute marketing demand.
 
@@ -113,26 +95,13 @@ It does not yet define the public acquisition events needed to attribute marketi
 
 The exact current Production deployment is READY on the protected main SHA.
 
-A fresh fetch of `https://www.risckcomply.com/en` confirms that the production client bundle includes:
+A fresh fetch of `https://www.risckcomply.com/en` confirms that the production client bundle includes `PostHogAnalyticsProvider` and `AnalyticsConsentBanner`. Current production CSP allows the intended EU PostHog asset and ingestion hosts.
 
-- `PostHogAnalyticsProvider`;
-- `AnalyticsConsentBanner`.
-
-Current production CSP allows the intended EU PostHog asset and ingestion hosts.
-
-This proves the client components and network policy are deployable in the current runtime. It does **not** prove:
-
-- the public PostHog key is bound in Production;
-- a visitor has granted analytics consent;
-- a PostHog event has been delivered;
-- source/campaign attribution is persisted;
-- conversion reporting is working.
+This proves the client components and network policy are deployable in the current runtime. It does **not** prove the public PostHog key is bound, consent has been granted by a visitor, an event has been delivered, attribution is persisted or conversion reporting works.
 
 ---
 
 ## 5. Root measurement gap
-
-The architecture currently has a deliberate privacy-first design but lacks an attributable public acquisition chain.
 
 ```text
 DISCOVERY
@@ -147,7 +116,7 @@ Current product events cover parts of the lower funnel. Missing pieces are mainl
 
 ### Missing public events
 
-Add, after release authority permits implementation:
+After release authority permits implementation:
 
 ```text
 landing_view
@@ -162,14 +131,7 @@ document_downloaded
 newsletter_subscribed
 ```
 
-Reuse existing lower-funnel events instead of creating aliases:
-
-```text
-user_signed_up
-checkout_started
-checkout_completed
-subscription_active
-```
+Reuse existing lower-funnel events instead of creating aliases: `user_signed_up`, `checkout_started`, `checkout_completed`, `subscription_active`.
 
 ---
 
@@ -197,17 +159,7 @@ schema_version
 
 The existing sanitizer must remain fail-closed and its allowlist must be deliberately extended for approved properties.
 
-Never send to PostHog:
-
-- full name;
-- email;
-- company name;
-- message/free text;
-- document names or contents;
-- risk descriptions;
-- vendor names;
-- address/tax/VAT/payment data;
-- credentials/tokens/secrets.
+Never send full name, email, company name, message/free text, document names/content, risk descriptions, vendor names, address/tax/VAT/payment data, credentials, tokens or secrets to PostHog.
 
 Lead PII remains in the lead system. Billing truth remains in Stripe/Supabase. Search query/impression truth remains in Search Console.
 
@@ -215,23 +167,11 @@ Lead PII remains in the lead system. Billing truth remains in Stripe/Supabase. S
 
 ## 7. Attribution contract
 
-When implemented and approved, preserve both bounded contexts:
-
-### First touch
-
-- source / medium / campaign / content / term;
-- landing path;
-- referrer domain.
-
-### Last touch
-
-- source / medium / campaign / content / term;
-- landing path;
-- referrer domain.
+When implemented and approved, preserve bounded first-touch and last-touch source / medium / campaign / content / term plus landing path and referrer domain.
 
 Contact consent and analytics consent must remain separate.
 
-The PostHog project currently has a 90-day `last_touch` marketing configuration, but that setting alone creates no attribution evidence without real events and persisted campaign context.
+The project currently has a 90-day `last_touch` marketing configuration, but that setting alone creates no attribution evidence without real events and persisted campaign context.
 
 ---
 
@@ -239,16 +179,16 @@ The PostHog project currently has a 90-day `last_touch` marketing configuration,
 
 Definition of real measurement PASS:
 
-1. a controlled browser visit with analytics consent granted emits expected public events;
-2. a controlled browser visit with analytics consent declined emits no client marketing event;
+1. controlled browser visit with analytics consent granted emits expected public events;
+2. controlled visit with analytics consent declined emits no client marketing event;
 3. no PII appears in event payloads;
 4. UTM context persists through the approved funnel boundary;
-5. a successful demo submission can be tied to campaign/source without copying lead PII into PostHog;
-6. signup and checkout preserve attribution context where technically and legally approved;
+5. successful demo submission can be tied to source/campaign without copying lead PII into PostHog;
+6. signup and checkout preserve attribution context where approved;
 7. expected events appear in the connected EU PostHog project;
 8. only then create conversion Actions/goals and the Marketing Acquisition OS dashboard;
 9. compare Search Console organic clicks with privacy-safe onsite outcomes when Search Console is live;
-10. paid conversion measurement remains blocked until the full gate passes.
+10. paid conversion measurement stays blocked until the full gate passes.
 
 ---
 
@@ -260,19 +200,7 @@ Make qualified demand attributable from first public interaction to commercial o
 
 ### ENGINEERING BRIEF
 
-Fold this entire implementation into the future **CRO + ACQUISITION + ATTRIBUTION MEGA PR**:
-
-- public event taxonomy;
-- sanitizer extensions;
-- consent-gated page intent events;
-- stable CTA IDs and CTA capture;
-- demo start/submit events;
-- first/last-touch UTM persistence;
-- lead attribution persistence;
-- signup/checkout attribution bridge;
-- PostHog Production binding and ingestion proof;
-- conversion definitions after ingestion;
-- consent/PII regression tests.
+Fold the full implementation into the future **CRO + ACQUISITION + ATTRIBUTION MEGA PR**: public event taxonomy, sanitizer extensions, consent-gated page-intent events, stable CTA IDs/capture, demo start/submit, first/last-touch UTM persistence, lead attribution persistence, signup/checkout attribution bridge, Production PostHog binding/ingestion proof, conversion definitions after ingestion, and consent/PII tests.
 
 ### ACCEPTANCE CRITERIA
 
@@ -292,13 +220,7 @@ REAL_POSTHOG_INGESTION=PASS
 
 ### TEST
 
-- unit test sanitizer/allowlist;
-- consent-state tests;
-- duplicate page-event prevention;
-- six-locale route tests;
-- demo API success/failure instrumentation tests;
-- controlled Production browser proof after deploy;
-- connected PostHog event read after proof event.
+Unit sanitizer/allowlist tests; consent-state tests; duplicate page-event prevention; six-locale route tests; demo success/failure instrumentation; controlled Production browser proof; connected PostHog read after the proof event.
 
 ### EXPECTED BUSINESS IMPACT
 
