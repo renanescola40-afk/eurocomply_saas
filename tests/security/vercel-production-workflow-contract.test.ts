@@ -112,6 +112,10 @@ describe('Vercel production deployment authority', () => {
       'SENTRY_ORG',
       'SENTRY_PROJECT',
       'SENTRY_AUTH_TOKEN',
+      'NEXT_PUBLIC_POSTHOG_KEY',
+      'NEXT_PUBLIC_POSTHOG_HOST',
+      'NEXT_PUBLIC_POSTHOG_ASSET_HOST',
+      'NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT',
       'STEP_UP_SIGNING_SECRET',
       'STEP_UP_PROVIDER_MODE',
       'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
@@ -125,6 +129,31 @@ describe('Vercel production deployment authority', () => {
     expect(syncBoundary).toContain('env add "$key" production --force --no-sensitive');
     expect(syncBoundary).toContain('printf \'%s\' "${!key}"');
     expect(syncBoundary).not.toContain('echo "$STEP_UP_SIGNING_SECRET"');
+  });
+
+  it('governs PostHog Production from the protected environment and locks the EU consent boundary', () => {
+    expect(workflow).toContain('NEXT_PUBLIC_POSTHOG_KEY: ${{ vars.NEXT_PUBLIC_POSTHOG_KEY }}');
+    expect(workflow).toContain('NEXT_PUBLIC_POSTHOG_HOST: https://eu.i.posthog.com');
+    expect(workflow).toContain('NEXT_PUBLIC_POSTHOG_ASSET_HOST: https://eu-assets.i.posthog.com');
+    expect(workflow).toContain("NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT: 'true'");
+    expect(workflow).toContain('Missing PostHog Production project binding');
+    expect(workflow).toContain('Analytics consent policy drift');
+    expect(workflow).toContain('PostHog region policy drift');
+
+    const synchronization = workflow.indexOf('Synchronize provider-proof runtime bindings to Vercel production');
+    const refresh = workflow.indexOf('Refresh Vercel production environment after provider synchronization');
+    const syncBoundary = workflow.slice(synchronization, refresh);
+
+    for (const key of [
+      'NEXT_PUBLIC_POSTHOG_KEY',
+      'NEXT_PUBLIC_POSTHOG_HOST',
+      'NEXT_PUBLIC_POSTHOG_ASSET_HOST',
+      'NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT',
+    ]) {
+      expect(syncBoundary).toContain(key);
+    }
+
+    expect(workflow).not.toContain("NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets['NEXT_PUBLIC_POSTHOG_KEY'] }}");
   });
 
   it('uses protected production approval and immutable tool references', () => {
