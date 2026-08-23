@@ -14,8 +14,11 @@ describe('organization source integrity', () => {
     expect(exports).toHaveLength(1);
   });
 
-  it('keeps localized marketing content bound before render', () => {
-    expect(marketingSource).toContain('const copy = TRUST_COPY[locale];');
+  it('keeps localized Trust Center authority bound before render', () => {
+    expect(marketingSource).toContain("getLocalizedTrustCenterPage('trust', locale)");
+    expect(marketingSource).toContain('applyVerifiedTrustAuthority(');
+    expect(marketingSource).toContain('<TrustCenterPage locale={locale} page={page} />');
+    expect(marketingSource).not.toContain('TRUST_COPY[locale]');
     expect(marketingSource).not.toContain('const page = copy[locale];');
   });
 });
