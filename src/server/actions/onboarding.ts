@@ -19,6 +19,7 @@ import { classifyAiSystem, normalizeAiRiskDomain, normalizeAiSystemRole, normali
 import { assertCurrentUserCan } from '@/server/auth/permissions';
 import { requireCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
+import { getOrganizationBillingAuthority } from '@/server/queries/subscription';
 
 type CurrentUserForOnboarding = {
   id: string;
@@ -53,7 +54,7 @@ function onboardingActionError(message: string) {
 }
 
 function getDashboardPath(locale: string, plan?: string | null) {
-  const query = plan && plan !== 'trial' ? `?plan=${encodeURIComponent(plan)}` : '?onboarding=completed';
+  const query = plan ? `?plan=${encodeURIComponent(plan)}` : '?onboarding=completed';
   return `/${locale}/dashboard/organizations${query}`;
 }
 
@@ -67,6 +68,26 @@ function getSafeLocale(locale: string) {
 
 function normalizeInviteEmails(emails: string[]) {
   return [...new Set(emails.map((email) => email.trim().toLowerCase()))].sort();
+}
+
+async function requireLicensedOnboardingAuthority(organizationId: string) {
+  let authority: Awaited<ReturnType<typeof getOrganizationBillingAuthority>>;
+
+  try {
+    authority = await getOrganizationBillingAuthority(organizationId);
+  } catch (error) {
+    reportError(error, {
+      area: 'onboarding_commercial_authority',
+      organizationId,
+    });
+    throw onboardingActionError('Commercial activation is temporarily unavailable. Please retry billing verification.');
+  }
+
+  if (!authority.licensed) {
+    throw onboardingActionError('An active paid subscription or signed contract is required before product onboarding can be activated.');
+  }
+
+  return authority;
 }
 
 export function createOnboardingActivationIdempotencyKey(input: {
@@ -192,6 +213,9 @@ async function resolveOrganizationId(input: { organizationId?: string; organizat
     return currentOrganization.organization_id;
   }
 
+  // A single organization shell is allowed before payment because Stripe
+  // checkout is organization-bound. This function creates only purchase context;
+  // every operational onboarding write below remains blocked until licensed=true.
   const organization = await createOrganization({ name: input.organizationName, slug: input.slug });
   return organization.id as string;
 }
@@ -207,7 +231,7 @@ async function updateOrganizationOnboardingProfile(
   const metadata = {
     onboarding: {
       aiUsage: input.aiUsage ?? null,
-      selectedPlan: input.selectedPlan ?? 'trial',
+      selectedPlan: input.selectedPlan ?? 'professional',
       updatedAt: new Date().toISOString(),
     },
   };
@@ -221,7 +245,7 @@ async function updateOrganizationOnboardingProfile(
     ai_usage_summary: input.aiUsageSummary ?? '',
     onboarding_status: input.status,
     onboarding_step: input.onboardingStep ?? (input.status === 'completed' ? 'completed' : 'company-profile'),
-    selected_plan: input.selectedPlan ?? 'trial',
+    selected_plan: input.selectedPlan ?? 'professional',
     metadata,
   };
 
@@ -231,9 +255,6 @@ async function updateOrganizationOnboardingProfile(
 
   if (input.status === 'completed') {
     updatePayload.onboarding_completed_at = new Date().toISOString();
-    if ((input.selectedPlan ?? 'trial') === 'trial') {
-      updatePayload.trial_started_at = new Date().toISOString();
-    }
   }
 
   const { error } = await supabase
@@ -252,6 +273,9 @@ export async function saveOnboardingDraft(input: OnboardingDraftInput): Promise<
 
   await assertCurrentUserCan(organizationId, user.id, 'organization:update');
 
+  // Pre-license draft persistence is deliberately restricted to organization
+  // purchase/profile metadata. It never creates AI systems, documents, tasks,
+  // invitations, readiness runs or any other paid-product state.
   await updateOrganizationOnboardingProfile(supabase, organizationId, {
     ...payload,
     status: 'in_progress',
@@ -273,6 +297,8 @@ export async function completeOnboardingActivation(
   const organizationId = await resolveOrganizationId(payload, user);
 
   await assertCurrentUserCan(organizationId, user.id, 'organization:update');
+  await requireLicensedOnboardingAuthority(organizationId);
+
   if (payload.inviteEmails.length > 0) {
     await assertCurrentUserCan(organizationId, user.id, 'team:invite');
   }
