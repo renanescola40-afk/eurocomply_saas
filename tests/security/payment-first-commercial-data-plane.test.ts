@@ -5,6 +5,11 @@ import { describe, expect, it } from 'vitest';
 const root = process.cwd();
 const read = (file: string) => fs.readFileSync(path.join(root, file), 'utf8');
 const migration = read('supabase/migrations/20260823123000_payment_first_commercial_data_plane.sql');
+const gapMigration = read('supabase/migrations/20260823131500_payment_first_gap_analysis_and_storage.sql');
+const gapApi = read('src/app/api/gap-analysis/route.ts');
+const gapStorage = read('src/lib/gap-analysis/storage.ts');
+const remediationStorage = read('src/lib/compliance/remediation.ts');
+const paymentRuntime = read('tests/e2e/payment-first-runtime-global-setup.ts');
 const onboardingAction = read('src/server/actions/onboarding.ts');
 const onboardingPage = read('src/app/[locale]/onboarding/page.tsx');
 const permissionBridge = read('src/server/auth/permissions.ts');
@@ -76,6 +81,47 @@ describe('payment-first commercial closure', () => {
     ]) {
       expect(migration).toContain(`'${table}'`);
     }
+  });
+
+  it('promotes historical Gap/Findings rows into organization authority and adds restrictive paid RLS', () => {
+    expect(gapMigration).toContain('add column if not exists organization_id uuid');
+    expect(gapMigration).toContain('payment_first_gap_assessments_authority');
+    expect(gapMigration).toContain('payment_first_gap_answers_authority');
+    expect(gapMigration).toContain('payment_first_compliance_findings_authority');
+    expect(gapMigration).toContain('as restrictive');
+    expect(gapMigration).toContain('app_private.has_commercial_authority(organization_id)');
+    expect(gapMigration).toContain('app_private.has_commercial_authority(ga.organization_id)');
+  });
+
+  it('requires paid authority for Evidence Vault Storage bytes and removes legacy personal evidence grants', () => {
+    expect(gapMigration).toContain('rls_compliance_evidence_objects_select_organization');
+    expect(gapMigration).toContain('rls_compliance_evidence_objects_insert_organization');
+    expect(gapMigration).toContain('app_private.has_commercial_authority(e.organization_id)');
+    expect(gapMigration).toContain('revoke all on table public.compliance_evidence from public, anon, authenticated');
+    expect(gapMigration).toContain('Evidence Vault Storage policies are not payment-first');
+  });
+
+  it('routes Gap Analysis and remediation writes through a commercial server boundary', () => {
+    expect(gapApi).toContain("requireGapOrganizationPermission(user.id, 'manage_ai_governance')");
+    expect(gapApi).toContain("requireGapOrganizationPermission(user.id, 'read_ai_governance')");
+    expect(gapApi).toContain('organization_id: organizationId');
+    expect(gapApi).toContain("action: 'gap_analysis.saved'");
+    expect(gapApi).toContain("action: 'gap_analysis.remediation_created'");
+    expect(gapApi).toContain("failureMode: 'fail-closed'");
+
+    expect(gapStorage).toContain('/api/gap-analysis?operation=assessment');
+    expect(remediationStorage).toContain('/api/gap-analysis?operation=remediation');
+    expect(gapStorage).not.toContain('integrations/supabase/client');
+    expect(remediationStorage).not.toContain('integrations/supabase/client');
+    expect(gapStorage).not.toContain(".from('gap_assessments')");
+    expect(remediationStorage).not.toContain(".from('compliance_findings')");
+  });
+
+  it('proves unlicensed direct and API Gap writes are denied in disposable runtime QA', () => {
+    expect(paymentRuntime).toContain("/api/gap-analysis?operation=assessment");
+    expect(paymentRuntime).toContain('/rest/v1/gap_assessments');
+    expect(paymentRuntime).toContain('payment_first_supabase_gap_write');
+    expect(paymentRuntime).toContain('payment_first_supabase_gap_write_survived_denial');
   });
 
   it('removes billing-unaware legacy/global direct product grants', () => {
