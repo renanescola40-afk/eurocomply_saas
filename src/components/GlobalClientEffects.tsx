@@ -54,26 +54,35 @@ export default function GlobalClientEffects() {
   }, [pathname]);
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const checkoutStatus = searchParams.get("checkout");
+    const captureCheckoutSuccess = () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const checkoutStatus = searchParams.get("checkout");
 
-    if (checkoutStatus !== "success") return;
+      if (checkoutStatus !== "success" || !isMarketingCaptureAllowed()) return;
 
-    const key = `risckcomply.analytics.checkout_success.${pathname}.${window.location.search}`;
-    if (window.sessionStorage.getItem(key)) return;
+      const key = `risckcomply.analytics.checkout_success.${pathname}.${window.location.search}`;
+      if (window.sessionStorage.getItem(key)) return;
 
-    window.sessionStorage.setItem(key, "1");
-    captureAnalyticsEvent(analyticsEvents.checkoutCompleted, {
-      path: pathname,
-      source: "return_url",
-      funnel_stage: "commercial",
-      ...getMarketingAttributionProperties("last_touch"),
-    });
+      captureAnalyticsEvent(analyticsEvents.checkoutCompleted, {
+        path: pathname,
+        source: "return_url",
+        funnel_stage: "commercial",
+        ...getMarketingAttributionProperties("last_touch"),
+      });
+      window.sessionStorage.setItem(key, "1");
 
-    searchParams.delete("checkout");
-    const nextSearch = searchParams.toString();
-    const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
-    window.history.replaceState(window.history.state, "", nextUrl);
+      searchParams.delete("checkout");
+      const nextSearch = searchParams.toString();
+      const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+      window.history.replaceState(window.history.state, "", nextUrl);
+    };
+
+    captureCheckoutSuccess();
+    window.addEventListener(ANALYTICS_CONSENT_GRANTED_EVENT, captureCheckoutSuccess);
+
+    return () => {
+      window.removeEventListener(ANALYTICS_CONSENT_GRANTED_EVENT, captureCheckoutSuccess);
+    };
   }, [pathname]);
 
   return null;
