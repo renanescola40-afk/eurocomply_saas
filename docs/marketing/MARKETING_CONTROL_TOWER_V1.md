@@ -16,46 +16,42 @@ MAIN_CHANGED_BY_MARKETING=NO
 PAID_SCALE=BLOCKED
 ```
 
-Canonical Enterprise authority advanced to `main@baf9ad40795c13df15f1120ee4a8ce025c07a7a2` through #1792. Marketing did not create or merge that change.
+Canonical Enterprise authority currently protects `main@baf9ad40795c13df15f1120ee4a8ce025c07a7a2` through #1792. Marketing did not create or merge that release change.
 
-The release freeze remains stable and the default repository action remains `NO_NEW_PR` for release-changing work.
-
-Marketing therefore continues external/organic/commercial execution while staging release-dependent SEO, CRO and attribution work only on the isolated marketing branch.
+The default release action remains `NO_NEW_PR`; marketing therefore continues organic, sales-enablement, ABM and ecosystem work on the isolated marketing branch.
 
 ---
 
 ## 2. Readiness scorecard
 
-These are internal readiness estimates, not claims of market performance.
+Internal readiness estimates only — not claims of market performance.
 
 ```text
-MARKETING_READINESS=82
+MARKETING_READINESS=84
 SEO_READINESS=80
-CONTENT_ENGINE=82
+CONTENT_ENGINE=84
 BRAND_AUTHORITY=27
 SOCIAL_ENGINE=75
 CRO_READINESS=77
 ANALYTICS_READINESS=33
 PAID_READINESS=24
-EUROPE_EXPANSION=76
-SALES_ENABLEMENT_READINESS=92
-MARKETING_OPERATIONS_READINESS=92
-ABM_OUTBOUND_READINESS=92
+EUROPE_EXPANSION=77
+SALES_ENABLEMENT_READINESS=95
+MARKETING_OPERATIONS_READINESS=93
+ABM_OUTBOUND_READINESS=96
 PARTNER_ECOSYSTEM_READINESS=78
 
-OVERALL_PREPARED=82
-OVERALL_REMAINING=18
+OVERALL_PREPARED=84
+OVERALL_REMAINING=16
 ```
 
 Interpretation:
 
-- strategy/system readiness is now high;
-- two weeks of demand execution are packaged;
-- five ABM accounts have refreshed public-signal dossiers and personalized first-touch copy;
-- ecosystem contribution assets exist for France, Germany and Spain;
-- live authority, analytics, attributed pipeline and paid readiness remain materially behind;
-- brand authority cannot be manufactured by internal documents;
-- no outbound success rate or partner success is claimed before real external execution.
+- strategy and send-ready sales/ABM assets are now strong;
+- the first five account dossiers, personalised messages and promised educational assets are ready;
+- two weeks of founder/company demand execution are packaged;
+- no outbound response, partner relationship, authority growth, pipeline or paid performance is claimed before external evidence exists;
+- analytics and paid remain the weakest readiness layers.
 
 ---
 
@@ -113,13 +109,21 @@ Interpretation:
 ### ABM / account development
 
 - Target Account + Outbound ABM Engine Europe
-- 100-point account scoring
-- controlled 21-day sequence
 - 16 researched European account hypotheses
 - first five-account cohort
-- current public-signal dossiers for all five cohort accounts
-- personalized Touch 1 + diagnostic follow-up for all five
+- current public-signal dossiers for all five
+- personalised Touch 1 + diagnostic follow-up for all five
 - response-code taxonomy
+- Cohort 1 Asset Delivery Matrix
+
+### Tangible cohort assets
+
+- AI Governance Evidence Model V1
+- AI Portfolio Governance Map V1
+- Technical vs Operational AI Governance Map V1
+- Article 50 Evidence Operating Map V1
+
+These assets are educational operating frameworks. They are not legal opinions, certifications or compliance guarantees.
 
 ### Ecosystem
 
@@ -155,33 +159,49 @@ Window: 2026-08-24 to 2026-08-28.
 
 ### P0 — Cohort 1 human outreach
 
-Use human review before send.
+1. Seedext — FR
+   - Touch 1: personalised FR message
+   - Asset: Article 50 Evidence Operating Map
+   - Wedge: enterprise evidence + use-case governance
 
-1. Seedext — FR — Article 50 + evidence operating map
-2. Jimini AI — FR — AI governance evidence model
-3. Genow — DE — enterprise deployment inventory model
-4. Substrate AI — ES — AI portfolio governance map
-5. Timbal AI — ES/EN — technical vs operational governance boundary map
+2. Jimini AI — FR
+   - Touch 1: personalised FR message
+   - Asset: AI Governance Evidence Model
+   - Wedge: mature trust posture + AI-specific rationale/evidence/history
 
-Rules:
+3. Genow — DE
+   - Touch 1: personalised DE message
+   - Asset: AI Portfolio Governance Map adapted to enterprise deployments
+   - Wedge: customer-cloud deployment inventory + assurance evidence
 
-- one real public signal;
-- one explicit hypothesis;
-- one useful asset;
+4. Substrate AI — ES
+   - Touch 1: personalised ES message
+   - Asset: AI Portfolio Governance Map
+   - Wedge: multi-product portfolio governance
+
+5. Timbal AI — EN/ES
+   - Touch 1: personalised EN message
+   - Asset: Technical vs Operational AI Governance Map
+   - Wedge: runtime governance -> cross-functional governance handoff
+
+Human-send rules:
+
+- re-check the public signal before send;
+- use a legitimate business channel;
 - no scraped personal email;
 - no fake urgency;
-- no claim of non-compliance;
-- no opportunity status until two-way commercial signal exists.
+- no non-compliance claim;
+- offer one useful asset;
+- ask one diagnostic question;
+- create no opportunity until a real two-way signal exists.
 
 ### P0 — Ecosystem contribution outreach
 
-Contribution-first sequence:
-
 1. Hub France IA — operational inventory / Article 50 workflow
-2. KI Bundesverband — KI-Inventar / Article 50 operational framework
+2. KI Bundesverband — KI-Inventar / Article 50 operating framework
 3. Adigital — Reglamento de IA -> operational process
 
-No partnership/membership/endorsement claim until explicit evidence exists.
+No partnership, membership or endorsement claim until it exists.
 
 ### P0 — Week 2 regulatory demand
 
@@ -189,7 +209,7 @@ Window: 2026-08-31 to 2026-09-04.
 
 - Article 50 is not one transparency rule
 - Article 50 decision map
-- Provider vs Deployer as a system/use-case record
+- Provider vs Deployer as system/use-case record
 - DE/FR/ES adaptations
 - evidence/review-history post
 
@@ -197,10 +217,9 @@ Window: 2026-08-31 to 2026-09-04.
 
 - LinkedIn company name -> RISCK COMPLY
 - tagline -> Operational AI Governance for European Teams
-- About cleanup
-- category cleanup
+- About/category cleanup
 - historical claim cleanup where appropriate
-- verify official social profiles
+- verify official social profiles before `sameAs`
 
 ---
 
@@ -212,6 +231,8 @@ TIER_A_OR_STRATEGIC=11
 FIRST_CONTROLLED_COHORT=5
 COHORT_1_PUBLIC_SIGNAL_REFRESH=5_OF_5
 COHORT_1_PERSONALIZED_TOUCH_1=5_OF_5
+COHORT_1_CORE_ASSETS_READY=4_OF_4
+COHORT_1_ASSET_MAPPING=5_OF_5
 CONFIRMED_BUYING_INTENT=0
 CONFIRMED_OPPORTUNITIES=0
 PARTNERSHIPS_CONFIRMED=0
@@ -219,32 +240,42 @@ ENDORSEMENTS_CONFIRMED=0
 PERSONAL_CONTACT_SCRAPING=NO
 ```
 
-This is a research/outreach-ready queue, not pipeline.
-
-An account becomes an opportunity only after a real two-way commercial signal.
+The cohort is **send-ready**, not validated pipeline.
 
 ---
 
-## 6. Release-dependent mega package
+## 6. Article 50 truth boundary
 
-Do not open while the Enterprise Control Tower requires zero release-changing PRs.
+As of 2026-08-23:
 
-### SEO AUTHORITY + BRAND ENTITY MEGA PR
+- Article 50 applies from 2 August 2026;
+- final Commission transparency guidelines were published 20 July 2026;
+- obligations vary by system, use case and provider/deployer context;
+- Article 50 is not `label all AI`;
+- the transition to 2 December 2026 is not a general extension for all Article 50 obligations;
+- adherence to the voluntary transparency Code of Practice is not conclusive evidence of compliance.
+
+Re-check current official Commission/EUR-Lex sources before publication or legal reliance.
+
+---
+
+## 7. Release-dependent Mega PR
+
+Do not open while Enterprise Control Tower requires zero release-changing PRs.
+
+Preferred future consolidated package:
+
+### SEO AUTHORITY + BRAND ENTITY
 
 - flagship guides
-- Article 50
-- Provider vs Deployer
-- AI Inventory guide
-- Evidence guide
+- Article 50 / Provider-vs-Deployer / Inventory / Evidence guides
 - internal linking
 - sitemap
 - eligible structured data
 - verified `sameAs`
 - footer social/resource links
 
-### CRO + ACQUISITION + ATTRIBUTION MEGA PR
-
-Prefer one consolidated package if engineering risk remains manageable:
+### CRO + ACQUISITION + ATTRIBUTION
 
 - homepage intent routing
 - stable CTA IDs
@@ -257,16 +288,18 @@ Prefer one consolidated package if engineering risk remains manageable:
 - public PostHog marketing events
 - demo/signup/checkout attribution
 - consent/privacy tests
-- production event-ingestion proof
+- production ingestion proof
+
+Prefer one high-density package over overlapping task spam where engineering risk allows.
 
 ---
 
-## 7. Hard blockers
+## 8. Hard blockers
 
 ### Release / product
 
 - `PRODUCTION_GO=NO_GO`
-- governed V19 remains unpromoted
+- V19 Production remains 0/25 applied
 - exact current protected scorecard not final PASS
 
 ### External/human
@@ -286,15 +319,15 @@ Prefer one consolidated package if engineering risk remains manageable:
 
 ### Market evidence
 
-- branded authority early
-- no measured ABM response yet
-- no confirmed partner contribution yet
+- brand authority early
+- no measured Cohort 1 response yet
+- no confirmed ecosystem contribution yet
 - no attributed repeatable pipeline yet
 - no paid-market validation
 
 ---
 
-## 8. Paid activation gate
+## 9. Paid activation gate
 
 ```text
 PRODUCTION_GO=PASS
@@ -307,63 +340,63 @@ LANDING_PRICING_DEMO_TRUTH=REVALIDATED
 INITIAL_ICP_WEDGE_SIGNAL=OBSERVED
 ```
 
-Only then begin small high-intent paid tests.
+Only then begin small, high-intent paid tests.
 
 ---
 
-## 9. Success hierarchy
+## 10. Success hierarchy
 
 ### Prepared
 
-Strategy, content, positioning, campaigns, sales playbooks, ABM dossiers, ecosystem assets and operating cadence.
+Strategy, assets, positioning, campaigns, sales playbooks, ABM dossiers, send-ready outreach and ecosystem contribution materials.
 
 ### Live
 
-Published assets, indexed pages, real account conversations, real ecosystem responses, real events and leads.
+Published content, indexed pages, real account messages, real responses, real events and leads.
 
 ### Validated
 
-Repeated qualified buyer response, pipeline progression, market-language evidence, win/loss insight and repeatable account-level engagement.
+Repeated qualified response, market-language evidence, opportunity progression, win/loss learning and partner/ICP evidence.
 
 ### Scaled
 
 Attributed qualified pipeline, repeatable acquisition, repeatable revenue and acceptable economics.
 
-RISCK COMPLY is strong in **Prepared**, entering **Live**, and is not yet entitled to claim **Validated** or **Scaled**.
+RISCK COMPLY is strong in **Prepared**, ready to enter **Live**, and not yet entitled to claim **Validated** or **Scaled**.
 
 ---
 
-## 10. Next transition rule
+## 11. Next transition rule
 
-If the next request is `continue` and `PRODUCTION_GO` remains NO_GO:
+If the next request is `continue` while `PRODUCTION_GO=NO_GO`:
 
-1. prioritize execution evidence over new strategy layers;
-2. turn the cohort assets into company/function-specific send-ready actions;
-3. prepare contribution-ready one-pagers/checklists where a relationship needs a tangible asset;
-4. expand the target-account queue only after first-cohort learning or a strong new public trigger;
-5. update Week 3 only after Week 1/2 execution surfaces are sufficiently prepared;
+1. prioritize external-execution readiness and market evidence;
+2. re-check each Cohort 1 public signal and legitimate company contact route;
+3. prepare final channel-specific send cards (LinkedIn/company contact) without scraping personal data;
+4. prepare asset excerpts/one-page delivery format only where needed for actual sharing;
+5. do not expand the target cohort until the first cohort is externally executed or a major new signal justifies replacement;
 6. do not create marketing issues/task spam;
 7. keep release-dependent work consolidated into future Mega PRs.
 
-If Production GO becomes PASS, revalidate runtime/legal/billing/analytics before any acquisition scale change.
+If Production GO becomes PASS, revalidate runtime/legal/billing/analytics before acquisition scale changes.
 
 ---
 
-## 11. Current verdict
+## 12. Current verdict
 
 ```text
 POSITIONING=READY
 EUROPE_SEARCH_STRATEGY=READY
 CONTENT_SYSTEM=READY
-FOUNDER_DEMAND_SYSTEM=READY
 WEEK_1_EXECUTION=READY
 WEEK_2_REGULATORY_EXECUTION=READY
 CRO_ARCHITECTURE=READY
 SALES_ENABLEMENT=READY
-PIPELINE_MODEL=READY
 ABM_ENGINE=READY
 COHORT_1_DOSSIERS=READY
 COHORT_1_PERSONALIZED_OUTREACH=READY
+COHORT_1_CORE_ASSETS=READY_4_OF_4
+COHORT_1_ASSET_MAPPING=READY_5_OF_5
 ECOSYSTEM_CONTRIBUTION_ASSETS=READY
 MARKETING_OPERATING_SYSTEM=READY
 90_DAY_GTM=READY
@@ -375,7 +408,7 @@ LIVE_PARTNER_RESPONSE=NOT_MEASURED
 LIVE_REPEATABLE_PIPELINE=NOT_VERIFIED
 LIVE_PAID_SCALE=NO
 
-MARKETING_PREPARED=82%
-MARKETING_REMAINING=18%
+MARKETING_PREPARED=84%
+MARKETING_REMAINING=16%
 MAIN_CHANGED_BY_MARKETING=NO
 ```
