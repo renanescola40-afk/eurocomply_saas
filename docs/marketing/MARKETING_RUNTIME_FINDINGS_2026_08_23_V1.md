@@ -80,9 +80,7 @@ However, all three currently also emit:
 
 The same production graph currently has no `sameAs`.
 
-This is now stronger evidence than search-result casing alone: the owned structured-data source itself is intentionally reinforcing a non-canonical casing variant.
-
-Search discovery also exposes some owned surfaces with non-canonical casing.
+This is stronger evidence than search-result casing alone: the owned structured-data source itself is reinforcing a non-canonical casing variant.
 
 ## Route
 
@@ -93,16 +91,7 @@ Future SEO Authority + Brand Entity Mega PR:
 - preserve one canonical Organization/WebSite/SoftwareApplication graph;
 - add `sameAs` only after official profile ownership and normalization are verified;
 - add only verified official social links;
-- preserve stable URLs/slugs unless a redirect/migration is justified.
-
-## Acceptance
-
-```text
-CANONICAL_ENTITY_NAME=RISCK_COMPLY
-NONCANONICAL_ALTERNATENAME_REVIEWED=YES
-UNINTENDED_PUBLIC_BRAND_VARIANTS=0_OR_DOCUMENTED_INTENTIONAL
-SAMEAS=VERIFIED_ONLY
-```
+- preserve stable URLs/slugs unless redirect/migration is justified.
 
 ---
 
@@ -124,17 +113,18 @@ No DNS verification token belongs in GitHub.
 
 ---
 
-# ANALYTICS-001 — PostHog foundation exists, but live acquisition measurement is absent
+# ANALYTICS-001 — Production PostHog binding drift + missing acquisition attribution
 
 Severity: P0 acquisition measurement
-Status: `PROVEN_GAP / RELEASE_DEPENDENT`
+Status: `ROOT_CAUSE_PROVEN / REMEDIATION_PRESTAGED / RELEASE_DEPENDENT`
 
-## Fresh connected PostHog evidence
+## Connected PostHog truth
 
-Current project state:
+The connected PostHog control plane currently exposes one accessible EU project. That project has:
 
 ```text
 POSTHOG_PROJECT_CONNECTED=YES
+POSTHOG_CONNECTED_PROJECT_COUNT=1
 ANONYMIZE_IPS=true
 SESSION_RECORDING=false
 INGESTED_EVENT=false
@@ -147,45 +137,89 @@ ATTRIBUTION_WINDOW_DAYS=90
 ATTRIBUTION_MODE=last_touch
 ```
 
-`NONE_OBSERVED` does not mean there are no users. It means the connected analytics project has no observed event evidence for the checked period.
+`NONE_OBSERVED` does not mean the product has no users. It means this connected analytics project has no observed event evidence for the checked period.
 
-## Current-main implementation evidence
+## Current Production runtime truth
 
-The code already has a meaningful privacy boundary:
+The browser bundle proves:
 
-- explicit consent storage;
-- allow/decline banner;
-- manual capture;
-- `autocapture=false`;
-- `capture_pageview=false`;
-- EU PostHog hosts;
-- text/attribute masking;
-- DNT respect;
-- sensitive-path handling;
-- property sanitizer.
+- PostHog runtime code is present;
+- consent UX is present;
+- the approved EU PostHog network hosts are present;
+- a non-empty browser Project API Key is present.
 
-Current production also contains `PostHogAnalyticsProvider` and `AnalyticsConsentBanner`, and the CSP permits the intended EU PostHog hosts.
+A private equality comparison, without printing or storing either value, proved:
 
-But the existing event taxonomy is primarily product/auth/onboarding/billing. Public marketing page-intent, stable CTA, demo and resource events are not yet canonicalized/implemented across the acquisition surface.
+```text
+PRODUCTION_POSTHOG_KEY == CONNECTED_PROJECT_KEY -> FALSE
+```
 
-## Sub-gaps packed into ANALYTICS-001
+Therefore:
 
-Do not create separate issues for these:
+```text
+POSTHOG_PRODUCTION_PUBLIC_KEY=PRESENT
+POSTHOG_PRODUCTION_KEY_MATCH=FAIL_CURRENTLY
+POSTHOG_BINDING_DRIFT=PROVEN
+```
 
-1. live PostHog ingestion is not active/proven;
-2. Production public-key binding is not proven by current evidence;
-3. public acquisition event taxonomy is missing;
-4. stable CTA capture is missing;
-5. demo start/submit analytics is missing;
-6. first/last-touch UTM persistence is missing/not proven;
-7. PostHog Actions/conversion goals are zero;
-8. starter dashboard/insights are non-crediting until real events exist.
+## Root cause
 
-## Route
+Current protected `main` deployment workflow synchronizes many provider bindings into Vercel before Production build, but does not govern:
 
-Use `POSTHOG_LIVE_READINESS_EVIDENCE_V1.md` and fold the full implementation into the future CRO + Acquisition + Attribution Mega PR.
+```text
+NEXT_PUBLIC_POSTHOG_KEY
+NEXT_PUBLIC_POSTHOG_HOST
+NEXT_PUBLIC_POSTHOG_ASSET_HOST
+NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT
+```
 
-Do not activate paid scale before real ingestion, attribution and consent proof exist.
+That gap allows Vercel Production to retain a PostHog project binding independently of the protected GitHub Production environment and the project audited by this workstream.
+
+Root-cause classification:
+
+```text
+ANALYTICS_ROOT_CAUSE=PROVIDER_BINDING_GOVERNANCE_DRIFT
+CODE_CLIENT_INITIALIZATION_DEFECT=NO_EVIDENCE
+POSTHOG_SERVICE_OUTAGE=NO_EVIDENCE
+```
+
+## Remediation already prestaged on marketing branch
+
+Branch-only commits:
+
+```text
+873f2c489618b6f4ebd2c720e1fed3100f860611  govern PostHog Production binding
+
+e1bd05bab2af06f2fa257b0af9f4ad1d9cbcfdfe  lock deployment regression contract
+
+f6d65b8f04c2644c321c30111e0f3e2a1125c2e2  document governed Production mapping
+
+8a48a893d30c8683542a894e325c1aeae8a5da1b  record canonical root-cause evidence
+```
+
+The prestaged workflow:
+
+- sources the approved PostHog Project API Key from the protected GitHub Production variable contract;
+- locks EU ingestion and asset hosts;
+- forces explicit analytics consent in Production;
+- fails closed on missing key, region drift or consent-policy drift;
+- synchronizes all four analytics bindings to Vercel before the Production build.
+
+No value is stored in repository artifacts.
+
+## Acquisition instrumentation remains missing
+
+Binding correction alone does not create attribution. Mega PR B still must implement:
+
+- public page-intent events;
+- stable CTA IDs/capture;
+- demo start/submit events;
+- bounded first/last-touch UTM persistence;
+- lead/demo/signup/checkout attribution;
+- no-PII PostHog contract;
+- real connected-project ingestion proof.
+
+Canonical evidence: `POSTHOG_LIVE_READINESS_EVIDENCE_V1.md`.
 
 ---
 
@@ -212,16 +246,19 @@ Include:
 - AI-system-count qualification;
 - stable CTA IDs;
 - intent routing;
+- **already-prestaged PostHog Production binding-governance remediation**;
 - public acquisition event taxonomy;
 - bounded first/last-touch attribution;
 - lead attribution persistence;
 - demo/signup/checkout attribution;
-- ANALYTICS-001 Production ingestion proof;
+- connected PostHog Production ingestion proof;
 - consent/PII regression tests.
+
+Before activating Mega PR B, the protected GitHub `production` environment must contain the approved connected PostHog EU Project API Key under `NEXT_PUBLIC_POSTHOG_KEY`. Never record the value in GitHub files/issues/comments.
 
 Canonical activation contract: `MEGA_PR_ACTIVATION_PACK_V1.md`.
 
-Open neither while Enterprise authority requires `NO_NEW_PR` unless release authority explicitly changes.
+Open neither package while Enterprise authority requires `NO_NEW_PR` unless release authority explicitly changes.
 
 ---
 
@@ -233,7 +270,11 @@ BRAND_001_LINKEDIN_MISMATCH=PROVEN_OWNER_ACTION
 BRAND_002_STRUCTURED_ENTITY_VARIANT=PROVEN_RUNTIME
 SEO_001_SEARCH_CONSOLE=OWNER_ACTION_NOT_CODE_DEFECT
 ANALYTICS_001_POSTHOG_FOUNDATION=PRESENT
-ANALYTICS_001_POSTHOG_LIVE_INGESTION=NO
+ANALYTICS_001_PRODUCTION_PUBLIC_KEY=PRESENT
+ANALYTICS_001_PRODUCTION_KEY_MATCH=FAIL
+ANALYTICS_001_BINDING_DRIFT=ROOT_CAUSE_PROVEN
+ANALYTICS_001_BINDING_REMEDIATION=PRESTAGED_BRANCH_ONLY
+ANALYTICS_001_POSTHOG_LIVE_INGESTION_CONNECTED_PROJECT=NO
 ANALYTICS_001_PUBLIC_ACQUISITION_TAXONOMY=MISSING
 ANALYTICS_001_ACTIONS=0
 ANALYTICS_001_CONVERSION_GOALS=0
