@@ -207,6 +207,9 @@ function firewallArgs(chain, port, comment) {
   return [chain, '!', '-i', 'lo', '-p', 'tcp', '--dport', String(port), '-m', 'comment', '--comment', comment, '-j', 'DROP'];
 }
 
+// Regression signature from the former overbroad rule:
+// dockerUserArgs(DB_CONTAINER_PORT, comment)
+// It must never be executable again because it blocks unrelated container egress to port 5432.
 export function dockerUserArgs(hostPort, containerPort, comment) {
   const publishedPort = Number(hostPort);
   const targetPort = Number(containerPort);
