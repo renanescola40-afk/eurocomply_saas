@@ -78,12 +78,13 @@ describe('billing checkout authority contract', () => {
     expect(source).not.toContain('session_id={CHECKOUT_SESSION_ID}');
   });
 
-  it('derives activation authority only from current tenant, canonical Stripe ids and a processed live event', async () => {
+  it('derives activation authority only from current tenant, canonical Stripe ids and a processed live active event', async () => {
     const source = await readFile(ACTIVATION_ROUTE, 'utf8');
 
     expect(source).toContain('await requireApiUser()');
     expect(source).toContain('getCurrentOrganizationForUser(user.id)');
-    expect(source).toContain("new Set(['active', 'trialing'])");
+    expect(source).toContain("new Set(['active'])");
+    expect(source).not.toContain("new Set(['active', 'trialing'])");
     expect(source).toContain(".eq('organization_id', organizationId)");
     expect(source).toContain('stripe_customer_id');
     expect(source).toContain('stripe_subscription_id');
