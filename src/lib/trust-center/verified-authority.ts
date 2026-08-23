@@ -1,17 +1,26 @@
 import { type Locale } from '@/lib/i18n/routing';
 import { type TrustPage } from './content';
 
-export const VERIFIED_SECURITY_EMAIL = 'security@risckcomply.com';
+export const VERIFIED_SECURITY_EMAIL = 'comercial@risckcomply.com';
 export const VERIFIED_STATUS_PAGE_URL = 'https://risckcomplystatus1.statuspage.io/';
-export const VERIFIED_AUTHORITY_REVIEWED_AT = '2026-08-18';
+export const VERIFIED_AUTHORITY_REVIEWED_AT = '2026-08-23';
 
 const vulnerabilityContact: Record<Locale, string> = {
-  en: `Send security reports privately to ${VERIFIED_SECURITY_EMAIL}. This dedicated corporate security channel has verified external delivery and is monitored by an authorized RISCK COMPLY owner.`,
-  pt: `Envie relatórios de segurança em privado para ${VERIFIED_SECURITY_EMAIL}. Este canal corporativo dedicado tem entrega externa verificada e é monitorizado por um responsável autorizado da RISCK COMPLY.`,
-  es: `Envíe los informes de seguridad de forma privada a ${VERIFIED_SECURITY_EMAIL}. Este canal corporativo dedicado tiene entrega externa verificada y está supervisado por un responsable autorizado de RISCK COMPLY.`,
-  fr: `Envoyez les signalements de sécurité en privé à ${VERIFIED_SECURITY_EMAIL}. Ce canal de sécurité d’entreprise dédié dispose d’une livraison externe vérifiée et est surveillé par un responsable RISCK COMPLY autorisé.`,
-  it: `Inviare privatamente le segnalazioni di sicurezza a ${VERIFIED_SECURITY_EMAIL}. Questo canale aziendale dedicato ha la consegna esterna verificata ed è monitorato da un responsabile RISCK COMPLY autorizzato.`,
-  de: `Sicherheitsmeldungen sind vertraulich an ${VERIFIED_SECURITY_EMAIL} zu senden. Dieser dedizierte Unternehmenskanal verfügt über verifizierte externe Zustellung und wird von einem autorisierten RISCK-COMPLY-Verantwortlichen überwacht.`,
+  en: `Send security reports privately to ${VERIFIED_SECURITY_EMAIL}. Until a dedicated security alias is re-verified, this reachable corporate mailbox is the canonical private security intake path.`,
+  pt: `Envie relatórios de segurança em privado para ${VERIFIED_SECURITY_EMAIL}. Até um alias dedicado de segurança voltar a ser verificado, esta caixa corporativa acessível é o canal canónico de receção privada de segurança.`,
+  es: `Envíe los informes de seguridad de forma privada a ${VERIFIED_SECURITY_EMAIL}. Hasta que se vuelva a verificar un alias de seguridad dedicado, este buzón corporativo accesible es el canal canónico de recepción privada de seguridad.`,
+  fr: `Envoyez les signalements de sécurité en privé à ${VERIFIED_SECURITY_EMAIL}. Jusqu’à la nouvelle vérification d’un alias de sécurité dédié, cette boîte d’entreprise joignable est le canal privé de sécurité de référence.`,
+  it: `Inviare privatamente le segnalazioni di sicurezza a ${VERIFIED_SECURITY_EMAIL}. Finché non sarà nuovamente verificato un alias di sicurezza dedicato, questa casella aziendale raggiungibile è il canale privato di sicurezza canonico.`,
+  de: `Sicherheitsmeldungen sind vertraulich an ${VERIFIED_SECURITY_EMAIL} zu senden. Bis ein dedizierter Sicherheitsalias erneut verifiziert ist, ist dieses erreichbare Unternehmenspostfach der maßgebliche private Sicherheitskanal.`,
+};
+
+const securityIncidentContact: Record<Locale, string> = {
+  en: `Private security reports use ${VERIFIED_SECURITY_EMAIL}; public incident communication uses ${VERIFIED_STATUS_PAGE_URL}. The dedicated security alias is not claimed as active until external delivery is re-verified.`,
+  pt: `Os relatórios privados de segurança usam ${VERIFIED_SECURITY_EMAIL}; a comunicação pública de incidentes usa ${VERIFIED_STATUS_PAGE_URL}. Um alias dedicado de segurança não é apresentado como ativo até a entrega externa voltar a ser verificada.`,
+  es: `Los informes privados de seguridad usan ${VERIFIED_SECURITY_EMAIL}; la comunicación pública de incidentes usa ${VERIFIED_STATUS_PAGE_URL}. No se presenta un alias de seguridad dedicado como activo hasta volver a verificar la entrega externa.`,
+  fr: `Les signalements privés de sécurité utilisent ${VERIFIED_SECURITY_EMAIL}; la communication publique des incidents utilise ${VERIFIED_STATUS_PAGE_URL}. Aucun alias de sécurité dédié n’est présenté comme actif avant une nouvelle vérification de sa délivrabilité externe.`,
+  it: `Le segnalazioni private di sicurezza usano ${VERIFIED_SECURITY_EMAIL}; la comunicazione pubblica degli incidenti usa ${VERIFIED_STATUS_PAGE_URL}. Un alias di sicurezza dedicato non viene dichiarato attivo finché la consegna esterna non viene nuovamente verificata.`,
+  de: `Private Sicherheitsmeldungen nutzen ${VERIFIED_SECURITY_EMAIL}; öffentliche Vorfallkommunikation nutzt ${VERIFIED_STATUS_PAGE_URL}. Ein dedizierter Sicherheitsalias wird erst nach erneuter externer Zustellbarkeitsprüfung als aktiv ausgewiesen.`,
 };
 
 const statusAuthority: Record<Locale, string> = {
@@ -30,6 +39,16 @@ export function applyVerifiedTrustAuthority(page: TrustPage, locale: Locale): Tr
       updated: VERIFIED_AUTHORITY_REVIEWED_AT,
       sections: page.sections.map((section, index) =>
         index === 0 ? { ...section, body: vulnerabilityContact[locale] } : section,
+      ),
+    };
+  }
+
+  if (page.slug === 'security') {
+    return {
+      ...page,
+      updated: VERIFIED_AUTHORITY_REVIEWED_AT,
+      sections: page.sections.map((section, index) =>
+        index === page.sections.length - 1 ? { ...section, body: securityIncidentContact[locale] } : section,
       ),
     };
   }

@@ -5,8 +5,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const SECURITY_EMAIL = 'security@risckcomply.com';
-const PERSONAL_GMAIL = 'renansilva2002@gmail.com';
+const SECURITY_EMAIL = 'comercial@risckcomply.com';
+const UNVERIFIED_SECURITY_EMAIL = 'security@risckcomply.com';
+const PERSONAL_MAILBOX_PATTERN = /[A-Z0-9._%+-]+@gmail\.com/i;
 const STATUS_URL = 'https://risckcomplystatus1.statuspage.io/';
 
 const REQUIRED_FILES = [
@@ -24,6 +25,7 @@ const REQUIRED_FILES = [
   'src/app/[locale]/trust/page.tsx',
   'src/app/[locale]/security/page.tsx',
   'src/app/[locale]/status/page.tsx',
+  'src/app/[locale]/[trustPage]/page.tsx',
   'src/lib/trust-center/verified-authority.ts',
   'src/components/marketing/verified-status-page.tsx',
   'src/components/marketing/public-footer.tsx',
@@ -44,10 +46,11 @@ const REQUIRED_PHRASES = new Map([
   ['docs/trust/SUBPROCESSORS.md', ['Vercel', 'Supabase', 'Stripe']],
   ['docs/trust/SECURITY_FAQ.md', ['SOC 2', 'ISO 27001', SECURITY_EMAIL, STATUS_URL]],
   ['docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md', ['Procurement checklist', 'designed to support', SECURITY_EMAIL, STATUS_URL]],
-  ['docs/trust/PROCUREMENT_CHECKLIST.md', ['Enterprise procurement checklist', 'auth', 'RBAC', 'RLS', 'audit logs', 'data retention', 'responsible disclosure', SECURITY_EMAIL, STATUS_URL]],
-  ['src/app/[locale]/trust/page.tsx', ['Trust Center', 'SOC 2', 'ISO 27001', 'Procurement checklist']],
-  ['src/app/[locale]/security/page.tsx', ['TrustCenterPage', 'Security and Tenant Isolation']],
+  ['docs/trust/PROCUREMENT_CHECKLIST.md', ['Enterprise procurement checklist', 'Authentication', 'RBAC', 'RLS', 'Audit logs', 'Data retention', 'Responsible disclosure', SECURITY_EMAIL, STATUS_URL]],
+  ['src/app/[locale]/trust/page.tsx', ['TrustCenterPage', 'applyVerifiedTrustAuthority', "getLocalizedTrustCenterPage('trust'" ]],
+  ['src/app/[locale]/security/page.tsx', ['TrustCenterPage', 'applyVerifiedTrustAuthority', "getLocalizedTrustCenterPage('security'" ]],
   ['src/app/[locale]/status/page.tsx', ['VerifiedStatusPage']],
+  ['src/app/[locale]/[trustPage]/page.tsx', ['applyVerifiedTrustAuthority', 'getLocalizedTrustCenterPage']],
   ['src/lib/trust-center/verified-authority.ts', ['VERIFIED_SECURITY_EMAIL', SECURITY_EMAIL, 'VERIFIED_STATUS_PAGE_URL', STATUS_URL]],
   ['src/components/marketing/verified-status-page.tsx', ['VERIFIED_STATUS_PAGE_URL', 'Open live status']],
   ['src/components/marketing/public-footer.tsx', ['/trust', '/security']],
@@ -57,7 +60,7 @@ const REQUIRED_PHRASES = new Map([
   ['docs/RELEASE_EVIDENCE_CHECKLIST.md', ['Trust Center readiness']],
 ]);
 
-const PERSONAL_MAILBOX_FORBIDDEN_FILES = [
+const CANONICAL_SECURITY_AUTHORITY_FILES = [
   'SECURITY.md',
   'docs/trust/SECURITY_OVERVIEW.md',
   'docs/trust/ENCRYPTION.md',
@@ -65,10 +68,10 @@ const PERSONAL_MAILBOX_FORBIDDEN_FILES = [
   'docs/trust/SECURITY_FAQ.md',
   'docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md',
   'docs/trust/PROCUREMENT_CHECKLIST.md',
-  'src/lib/trust-center/content.ts',
+  'src/app/[locale]/trust/page.tsx',
+  'src/app/[locale]/security/page.tsx',
+  'src/app/[locale]/[trustPage]/page.tsx',
   'src/lib/trust-center/verified-authority.ts',
-  'src/components/marketing/public-info-page.tsx',
-  'src/components/marketing/verified-status-page.tsx',
 ];
 
 const FALSE_CLAIM_PATTERNS = [
@@ -94,10 +97,7 @@ function readRequiredFile(relativePath) {
 
   const content = fs.readFileSync(fullPath, 'utf8');
   contents.set(relativePath, content);
-  if (content.trim().length < 100) {
-    failures.push(`${relativePath}: artifact is unexpectedly short`);
-  }
-
+  if (content.trim().length < 100) failures.push(`${relativePath}: artifact is unexpectedly short`);
   return content;
 }
 
@@ -106,9 +106,7 @@ for (const relativePath of REQUIRED_FILES) {
   if (!content) continue;
 
   for (const phrase of REQUIRED_PHRASES.get(relativePath) ?? []) {
-    if (!content.includes(phrase)) {
-      failures.push(`${relativePath}: missing required phrase "${phrase}"`);
-    }
+    if (!content.includes(phrase)) failures.push(`${relativePath}: missing required phrase "${phrase}"`);
   }
 
   content.split('\n').forEach((line, index) => {
@@ -120,14 +118,18 @@ for (const relativePath of REQUIRED_FILES) {
   });
 }
 
-for (const relativePath of PERSONAL_MAILBOX_FORBIDDEN_FILES) {
+for (const relativePath of CANONICAL_SECURITY_AUTHORITY_FILES) {
   const content = contents.get(relativePath) ?? readRequiredFile(relativePath);
-  if (content?.includes(PERSONAL_GMAIL)) {
-    failures.push(`${relativePath}: personal Gmail must not be a current public security-reporting authority`);
+  if (!content) continue;
+  if (content.includes(UNVERIFIED_SECURITY_EMAIL)) {
+    failures.push(`${relativePath}: unverified dedicated security mailbox must not be a current authority`);
+  }
+  if (PERSONAL_MAILBOX_PATTERN.test(content)) {
+    failures.push(`${relativePath}: personal free-mail address must not be a current public security-reporting authority`);
   }
 }
 
-console.log('Risck comply enterprise Trust Center package check');
+console.log('RISCK COMPLY enterprise Trust Center package check');
 console.log('--------------------------------------------------');
 
 if (failures.length > 0) {

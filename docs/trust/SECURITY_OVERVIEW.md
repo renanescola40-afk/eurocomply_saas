@@ -4,7 +4,7 @@ Status: customer-safe security overview for enterprise evaluation. This document
 
 ## Current posture
 
-Risck comply is a Next.js application backed by Supabase for authentication, database, storage, and server-side administrative operations. Public trust and security routes are available through localized routes such as `/[locale]/trust` and `/[locale]/security`, with non-localized paths redirected by middleware to the detected locale.
+RISCK COMPLY is a Next.js application backed by Supabase for authentication, database, storage, and server-side administrative operations. Public trust and security routes are available through localized routes such as `/[locale]/trust` and `/[locale]/security`, with non-localized paths redirected by middleware to the detected locale.
 
 The product is designed to support enterprise security review through authenticated workspaces, organization-scoped authorization, role-based permissions, Supabase RLS migrations, audit events, controlled document workflows, public trust documentation, and release evidence gates. Several controls are implemented in code, while some enterprise assurance artifacts remain draft, planned, or pending runtime evidence.
 
@@ -35,16 +35,16 @@ Use these labels in procurement answers:
 
 ## Explicit non-claims
 
-Risck comply is not currently ISO 27001 certified. Risck comply does not currently have a SOC 2 Type I or Type II report. A third-party penetration test has not completed. Audit events include hash-chain integrity controls, but the product must not be described as WORM-backed or externally immutable unless separate storage and evidence exist. Formal backup restore and disaster recovery exercises have not yet been completed.
+RISCK COMPLY is not currently ISO 27001 certified. RISCK COMPLY does not currently have a SOC 2 Type I or Type II report. A third-party penetration test has not completed. Audit events include hash-chain integrity controls, but the product must not be described as WORM-backed or externally immutable unless separate storage and evidence exist. Formal backup restore and disaster recovery exercises have not yet been completed.
 
 ## Customer-safe language
 
-Use: "Risck comply is designed to support enterprise security review with authenticated workspaces, organization-scoped RBAC, Supabase RLS migrations, audit events, managed-provider safeguards, and release evidence gates. Current certifications and external assurance artifacts are disclosed separately."
+Use: "RISCK COMPLY is designed to support enterprise security review with authenticated workspaces, organization-scoped RBAC, Supabase RLS migrations, audit events, managed-provider safeguards, and release evidence gates. Current certifications and external assurance artifacts are disclosed separately."
 
 Do not use: "SOC 2 compliant", "ISO 27001 certified", "pentested", "end-to-end encrypted", "GDPR compliant", "immutable audit log", or "24/7 monitored" unless corresponding approved evidence is attached.
 
 ## Responsible disclosure
 
-Security reports should be sent privately to `security@risckcomply.com`. This dedicated corporate security channel has verified external delivery and authorized-owner monitoring. Reports should include affected component, reproduction steps, impact, and whether authentication, organization isolation, billing, storage, or customer data may be affected.
+Security reports should currently be sent privately to `comercial@risckcomply.com`. This is the reachable corporate intake path while a dedicated security alias is being re-verified for external delivery. Do not advertise a dedicated security mailbox as active until that verification succeeds.
 
 Public incident communication is available through the verified status authority at `https://risckcomplystatus1.statuspage.io/`.
