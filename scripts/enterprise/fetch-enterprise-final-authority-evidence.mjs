@@ -12,6 +12,10 @@ const execFile = promisify(execFileCallback);
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const API_URL = process.env.GITHUB_API_URL || 'https://api.github.com';
 
+function contract(spec) {
+  return Object.freeze(spec);
+}
+
 export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
   Object.freeze({
     id: 'product-commercial-qa',
@@ -20,6 +24,10 @@ export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
     artifact: (sha) => `product-fria-runtime-${sha}`,
     evidenceBasename: 'fria-runtime-evidence.json',
     allowedEvents: Object.freeze(['push', 'workflow_dispatch']),
+    evidenceContract: contract({
+      schema: 'risck-comply.product-fria-runtime-acceptance.v2',
+      outcome: 'passed',
+    }),
   }),
   Object.freeze({
     id: 'billing-product-live-closure',
@@ -28,6 +36,14 @@ export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
     artifact: (sha) => `final-billing-product-live-closeout-${sha}`,
     evidenceBasename: 'final-billing-product-live-closeout.json',
     allowedEvents: Object.freeze(['workflow_dispatch']),
+    evidenceContract: contract({
+      schema: 'risck-comply.final-billing-product-live-closeout.v1',
+      evidenceItem: 'final-billing-product-live-closeout',
+      status: 'Complete',
+      outcome: 'passed',
+      decision: 'BILLING_PRODUCT_EU_AI_ACT: PASS',
+      emptyArrayFields: Object.freeze(['blockerCodes']),
+    }),
   }),
   Object.freeze({
     id: 'supabase-production-acceptance',
@@ -36,6 +52,12 @@ export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
     artifact: (sha) => `supabase-forward-production-acceptance-${sha}`,
     evidenceBasename: 'production-acceptance.json',
     allowedEvents: Object.freeze(['workflow_dispatch']),
+    evidenceContract: contract({
+      schema: 'risck-comply.supabase-forward-production-acceptance.v1',
+      evidenceItem: 'supabase-forward-production-acceptance',
+      status: 'Complete',
+      outcome: 'passed',
+    }),
   }),
   Object.freeze({
     id: 'production-provider-runtime',
@@ -44,6 +66,12 @@ export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
     artifact: (sha) => `production-provider-runtime-proof-${sha}`,
     evidenceBasename: 'production-secrets-provider-stores.json',
     allowedEvents: Object.freeze(['push', 'workflow_dispatch']),
+    evidenceContract: contract({
+      schema: 'risck-comply.production-provider-runtime-evidence.v2',
+      evidenceItem: 'production-secrets-provider-stores',
+      status: 'Complete',
+      outcome: 'passed',
+    }),
   }),
   Object.freeze({
     id: 'external-security-assurance',
@@ -52,6 +80,11 @@ export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
     artifact: (sha) => `external-security-assurance-accepted-${sha}`,
     evidenceBasename: 'external-security-assurance-decision.json',
     allowedEvents: Object.freeze(['workflow_dispatch']),
+    evidenceContract: contract({
+      schema: 'risck-comply.external-security-assurance-acceptance.v2',
+      decision: 'ACCEPTED_FOR_ENTERPRISE_PROMOTION',
+      emptyArrayFields: Object.freeze(['blockers']),
+    }),
   }),
 ]);
 
@@ -89,6 +122,32 @@ function validateRun(run, spec, targetSha) {
     && run?.status === 'completed'
     && run?.path === spec.workflowPath
     && spec.allowedEvents.includes(run?.event);
+}
+
+export function validateAuthoritativeEvidenceDocument(spec, document) {
+  const expected = spec?.evidenceContract;
+  const failures = [];
+  if (!expected || typeof expected !== 'object') failures.push('missing_contract');
+  if (!document || typeof document !== 'object' || Array.isArray(document)) failures.push('invalid_document');
+
+  if (failures.length === 0) {
+    for (const field of ['schema', 'evidenceItem', 'status', 'outcome', 'decision']) {
+      if (Object.hasOwn(expected, field) && document?.[field] !== expected[field]) {
+        failures.push(`${field}_mismatch`);
+      }
+    }
+
+    for (const field of expected.emptyArrayFields || []) {
+      if (!Array.isArray(document?.[field]) || document[field].length !== 0) {
+        failures.push(`${field}_not_empty`);
+      }
+    }
+  }
+
+  return {
+    valid: failures.length === 0,
+    failures,
+  };
 }
 
 async function downloadValidatedArtifact({ repository, runId, artifactName, destination, token }) {
@@ -137,6 +196,12 @@ async function collectProducer({ spec, repository, targetSha, token, root }) {
     const document = JSON.parse(await readFile(evidenceMatches[0], 'utf8'));
     const binding = resolveEvidenceShaBinding(document);
     if (binding.conflict || binding.sha !== targetSha) throw new Error(`${spec.id}:evidence_sha_mismatch`);
+
+    const contractValidation = validateAuthoritativeEvidenceDocument(spec, document);
+    if (!contractValidation.valid) {
+      throw new Error(`${spec.id}:evidence_contract_invalid:${contractValidation.failures.join(',')}`);
+    }
+
     const serialized = JSON.stringify(document);
     if (/(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|postgres(?:ql)?:\/\//i.test(serialized)) {
       throw new Error(`${spec.id}:sensitive_value_detected`);
@@ -152,6 +217,7 @@ async function collectProducer({ spec, repository, targetSha, token, root }) {
       artifactName,
       evidenceFile: path.relative(root, evidenceMatches[0]).split(path.sep).join('/'),
       shaSource: binding.source,
+      evidenceContractValidated: true,
     };
   }
 
@@ -189,8 +255,10 @@ export async function collectFinalAuthorityEvidence({ repository, targetSha, tok
       exactShaRequired: true,
       exactWorkflowPathRequired: true,
       exactArtifactNameRequired: true,
+      producerEvidenceContractRequired: true,
       arbitraryRunIdsAccepted: false,
       firstJsonWinsAccepted: false,
+      blockedEvidenceAcceptedFromSuccessfulRun: false,
       sensitiveValuesAccepted: false,
     },
   };
