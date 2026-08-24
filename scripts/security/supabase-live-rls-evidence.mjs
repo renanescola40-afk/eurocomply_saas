@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 
 export const runner = 'scripts/security/run-supabase-live-tenant-isolation.mjs';
+export const V20_CHANGE_SET = '2026-08-23-enterprise-data-plane-payment-first-closure-v20';
+export const V20_EVIDENCE_SCHEMA = 'risck-comply.supabase-live-rls-validation.v20';
 
 export const customerTenantTables = [
   'organizations',
@@ -70,12 +72,16 @@ export const sameTenantWritableTables = [
   'monitoring_preferences',
 ];
 
+// V20 payment-first intentionally retires authenticated direct reads from the
+// global regulatory feed. The table is a paid product surface with no tenant key,
+// so browser/PostgREST access must remain backend-owned.
 export const requiredGlobalReferenceOperations = [
   'rls_enabled',
-  'authenticated_read_allowed',
+  'authenticated_read_denied',
   'authenticated_insert_denied',
   'authenticated_update_denied',
   'authenticated_delete_denied',
+  'service_role_read_allowed',
 ];
 
 export function commandUsed(argv = process.argv.slice(2)) {
@@ -160,7 +166,7 @@ export function tableCoverageFrom(testCases) {
         backendWritesDenied:
           !backendOwnedTables.includes(table) ||
           requiredBackendWriteDenyOperations.every((operation) => byOperation.get(operation) === true),
-        globalReferenceReadOnly:
+        globalProductBackendOnly:
           !globalReferenceTables.includes(table) ||
           requiredGlobalReferenceOperations.every((operation) => byOperation.get(operation) === true),
       },
@@ -216,6 +222,38 @@ function requireAnyPassedTest(tests, table, operations, errors) {
   }
 }
 
+function validateV20PromotionLineage(evidence, errors) {
+  if (evidence?.schema !== V20_EVIDENCE_SCHEMA) {
+    errors.push('V20 live RLS evidence schema is invalid');
+  }
+  const lineage = evidence?.promotionLineage;
+  if (!lineage || typeof lineage !== 'object' || Array.isArray(lineage)) {
+    errors.push('promotionLineage is required');
+    return;
+  }
+  if (!/^\d+$/.test(String(lineage.promotionRunId ?? ''))) {
+    errors.push('promotionLineage.promotionRunId must be numeric');
+  }
+  if (lineage.changeSet !== V20_CHANGE_SET) {
+    errors.push('promotionLineage.changeSet must be the governed V20 change set');
+  }
+  if (Number(lineage.selectedMigrationCount) !== 27) {
+    errors.push('promotionLineage.selectedMigrationCount must be 27');
+  }
+  if (!/^sha256:[a-f0-9]{64}$/.test(String(lineage.selectionDigest ?? ''))) {
+    errors.push('promotionLineage.selectionDigest must be a SHA-256 selection digest');
+  }
+  if (lineage.remoteAfterEqualsBeforePlusSelected !== true) {
+    errors.push('promotionLineage must prove the exact remote ledger transition');
+  }
+  if (lineage.unauthorizedMigrationApplied !== false) {
+    errors.push('promotionLineage must prove no unauthorized migration was applied');
+  }
+  if (lineage.productionPromotionVerified !== true) {
+    errors.push('promotionLineage.productionPromotionVerified must be true');
+  }
+}
+
 export function validatePassingEvidence(evidence) {
   const errors = [];
 
@@ -225,6 +263,8 @@ export function validatePassingEvidence(evidence) {
       errors: ['evidence must be an object'],
     };
   }
+
+  validateV20PromotionLineage(evidence, errors);
 
   if (evidence.evidenceItem !== 'supabase-live-rls-validation') {
     errors.push('unexpected evidence item');
@@ -352,8 +392,13 @@ export function buildEvidencePayload({
   extra = {},
 }) {
   const githubActions = githubActionsProvenanceFromEnv();
+  const promotionRunId = String(process.env.PROMOTION_RUN_ID ?? '').trim();
+  const selectionDigest = String(process.env.PROMOTION_SELECTION_DIGEST ?? '').trim();
+  const changeSet = String(process.env.PROMOTION_CHANGE_SET ?? V20_CHANGE_SET).trim();
+  const selectedMigrationCount = Number(process.env.PROMOTION_SELECTED_MIGRATION_COUNT ?? 0);
 
   return {
+    schema: V20_EVIDENCE_SCHEMA,
     evidenceItem: 'supabase-live-rls-validation',
     status,
     outcome,
@@ -364,12 +409,21 @@ export function buildEvidencePayload({
     reviewedAt: timestamp,
     commandUsed: command,
     commitSha,
+    promotionLineage: {
+      promotionRunId,
+      changeSet,
+      selectedMigrationCount,
+      selectionDigest,
+      remoteAfterEqualsBeforePlusSelected: process.env.PROMOTION_REMOTE_TRANSITION_VERIFIED === 'true',
+      unauthorizedMigrationApplied: process.env.PROMOTION_UNAUTHORIZED_MIGRATION_APPLIED === 'true',
+      productionPromotionVerified: process.env.PROMOTION_PRODUCTION_VERIFIED === 'true',
+    },
     supabaseProjectReference: redactProjectReferenceFromUrl(supabaseUrl),
     supabaseProjectReferenceRedacted: true,
     summary:
       status === 'Complete' && outcome === 'passed'
-        ? 'Live Supabase production/staging RLS validation passed for customer tenant tables, profiles, and global reference tables.'
-        : 'Live Supabase tenant-isolation RLS validation did not pass.',
+        ? 'Live Supabase post-V20 RLS validation passed for tenant tables, profiles, payment-first boundaries, and the backend-owned regulatory feed.'
+        : 'Live Supabase post-V20 tenant-isolation RLS validation did not pass.',
     redactionConfirmation:
       'Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.',
     evidenceLocations: [
@@ -382,14 +436,15 @@ export function buildEvidencePayload({
     controlsVerified:
       status === 'Complete' && outcome === 'passed'
         ? [
-            'RLS enabled on customer, profiles, and reference tables',
+            'RLS enabled on customer, profiles, and product tables',
             'Tenant A cannot read Tenant B rows',
             'Tenant A cannot insert Tenant B scoped rows',
             'Tenant A cannot update Tenant B rows',
             'Tenant A cannot delete Tenant B rows',
             'Owner/admin/member behavior verified',
             'Backend-owned tables are not client-writable',
-            'Regulatory updates are authenticated read-only',
+            'Regulatory updates are backend-only after payment-first V20',
+            'Evidence is bound to the successful exact-SHA 27/27 Production promotion',
           ]
         : [],
     customerTenantTables,
@@ -408,7 +463,7 @@ export function buildEvidencePayload({
     failures,
     serviceRolePaths,
     registerUpdated,
-    completionRule: `Only ${runner} may mark this evidence Complete after a successful live tenant-isolation RLS run against the target Supabase project.`,
+    completionRule: `Only ${runner} may mark this evidence Complete after a successful promotion-bound live tenant-isolation RLS run against the target Supabase project.`,
     nextReviewDue: null,
     ...(githubActions ? { githubActions } : {}),
     ...extra,
