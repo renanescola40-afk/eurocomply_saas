@@ -23,14 +23,14 @@ The **Legal Rules Runtime Validation** workflow listens for GitHub `deployment_s
 
 - deployment status is `success`;
 - the event sender is exactly `vercel[bot]`;
-- the deployment ref equals the repository default branch;
+- the deployment ref equals the repository default branch, or is empty when GitHub represents a deployment created from an exact commit SHA without a Git ref;
 - the deployment SHA is a full lowercase 40-character SHA;
 - the deployed SHA still equals the current remote default-branch SHA at execution time;
 - the environment URL uses HTTPS and an approved host;
 - the checked-out repository SHA equals the deployed SHA;
 - the internal cron secret exists.
 
-Events for previews on feature branches, failed deployments, stale main deployments, unknown senders or unapproved hosts are ignored or fail closed before the secret is sent to any endpoint.
+An empty deployment ref does **not** relax current-main binding. Before the secret is sent to the application, the workflow fetches the remote default branch and requires its SHA to equal the deployment SHA exactly. Events for previews on feature branches, failed deployments, stale main deployments, unknown senders or unapproved hosts are ignored or fail closed before the secret is sent to any endpoint.
 
 ## Controlled manual fallback
 
@@ -62,7 +62,7 @@ The deployment event is treated as untrusted until verified. The workflow must n
 
 1. trusted Vercel sender;
 2. successful status;
-3. default-branch ref;
+3. default-branch ref or an empty ref for a commit-SHA deployment;
 4. exact event SHA;
 5. current remote default-branch equality;
 6. approved HTTPS host;
@@ -115,7 +115,7 @@ The capture succeeds only when all of the following are true:
 
 ### Automatic event ignored
 
-Confirm the event was a successful deployment from `vercel[bot]` for the current default branch. Feature-branch previews and non-Vercel deployment senders are intentionally excluded.
+Confirm the event was a successful deployment from `vercel[bot]` for the current default-branch SHA. The deployment ref may be the default branch or empty for an exact commit-SHA deployment; in the empty-ref case, the separate remote-main SHA equality check remains mandatory. Feature-branch previews and non-Vercel deployment senders are intentionally excluded.
 
 ### Current-main mismatch
 
@@ -175,6 +175,12 @@ Do not change expected values merely to obtain PASS.
 
 Record `BLOCKED — external provider quota/rate limit`. Continue repository-side CI and PR review, but do not claim runtime verification or production readiness.
 
+## Exact-SHA closeout consumption
+
+The **EU AI Act Final Runtime Closeout** may consume the immutable Legal Rules runtime artifact directly as an evidence overlay. It must locate only the artifact named `legal-rules-runtime-<TARGET_SHA>`, require the source workflow to be **Legal Rules Runtime Validation**, require source conclusion `success`, require source `head_sha` and `head_branch` to match the exact current main, and accept only the controlled `deployment_status` or `workflow_dispatch` source events. The downloaded document is then revalidated with the same exact-SHA and integrity validator used by the coverage generator before it can add the reserved four runtime points.
+
+If no exact-SHA artifact exists, closeout continues to report the missing Legal Rules proof and strict mode remains fail-closed. A repository copy from an older SHA never substitutes for the immutable current-SHA artifact.
+
 ## Automatic promotion PR
 
 After a successful exact-main capture, the **Legal Rules Runtime Promotion** workflow receives the completed source run through `workflow_run` and performs a second trust-boundary validation:
@@ -213,11 +219,11 @@ GitHub repository Actions settings must allow workflows to create pull requests.
 ## Promotion procedure
 
 1. Confirm the runtime validation run completed successfully and retained `legal-rules-runtime-<exact-sha>`.
-2. Confirm the promotion workflow produced `legal-rules-runtime-promotion-<exact-sha>`.
-3. Review the draft promotion PR and verify it changes only the canonical legal-rules evidence file.
+2. Confirm the promotion workflow produced `legal-rules-runtime-promotion-<exact-sha>` when a repository copy is desired.
+3. Review any draft promotion PR and verify it changes only the canonical legal-rules evidence file.
 4. Confirm the PR artifact SHA-256, deployment SHA, source run ID and deployment origin match the immutable source artifact.
-5. Merge only after CI, security scanners and evidence schema checks pass.
-6. Regenerate EU AI Act product coverage and the technical scorecard from the merged exact SHA.
+5. Treat the immutable exact-SHA artifact, not a stale repository copy, as the authoritative closeout overlay for the currently assessed SHA.
+6. Regenerate EU AI Act product coverage and the technical scorecard from the exact assessed SHA.
 7. Preserve both source and promotion artifacts; do not rely only on the repository copy.
 8. Proceed to full deployment smoke, protected readiness, production providers, backup/restore and final closeout.
 

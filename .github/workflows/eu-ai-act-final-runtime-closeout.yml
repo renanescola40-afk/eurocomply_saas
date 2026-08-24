@@ -109,6 +109,80 @@ jobs:
           EU_AI_ACT_COVERAGE_MARKDOWN: artifacts/eu-ai-act-safe-runtime-promotion/eu-ai-act-product-coverage.md
         run: node scripts/compliance/generate-eu-ai-act-product-coverage.mjs
 
+      - name: Locate trusted exact-SHA Legal Rules runtime artifact
+        id: legal_rules
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          artifact_name="legal-rules-runtime-${TARGET_SHA}"
+          response="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=${artifact_name}&per_page=100")"
+          selection="$(printf '%s' "$response" | jq -r --arg name "$artifact_name" --arg sha "$TARGET_SHA" '
+            [.artifacts[] | select(.name == $name and .expired == false and .workflow_run.head_sha == $sha)]
+            | sort_by(.created_at)
+            | last // empty
+            | if type == "object" then "\(.id)\t\(.workflow_run.id)" else "" end
+          ')"
+          if [ -z "$selection" ]; then
+            echo 'found=false' >> "$GITHUB_OUTPUT"
+            echo "No immutable Legal Rules runtime artifact exists yet for exact SHA ${TARGET_SHA}."
+            exit 0
+          fi
+          IFS=$'\t' read -r artifact_id source_run_id <<< "$selection"
+          [[ "$artifact_id" =~ ^[0-9]+$ ]]
+          [[ "$source_run_id" =~ ^[0-9]+$ ]]
+          run_json="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${source_run_id}")"
+          test "$(printf '%s' "$run_json" | jq -r '.name')" = 'Legal Rules Runtime Validation'
+          test "$(printf '%s' "$run_json" | jq -r '.conclusion')" = 'success'
+          test "$(printf '%s' "$run_json" | jq -r '.head_sha')" = "$TARGET_SHA"
+          test "$(printf '%s' "$run_json" | jq -r '.head_branch // ""')" = 'main'
+          source_event="$(printf '%s' "$run_json" | jq -r '.event')"
+          case "$source_event" in
+            deployment_status|workflow_dispatch) ;;
+            *) echo "Untrusted Legal Rules source event: ${source_event}" >&2; exit 1 ;;
+          esac
+          {
+            echo 'found=true'
+            echo "artifact_name=${artifact_name}"
+            echo "artifact_id=${artifact_id}"
+            echo "source_run_id=${source_run_id}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Download trusted exact-SHA Legal Rules runtime artifact
+        if: steps.legal_rules.outputs.found == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: ${{ steps.legal_rules.outputs.artifact_name }}
+          path: ${{ env.RUNTIME_EVIDENCE_ROOT }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.legal_rules.outputs.source_run_id }}
+
+      - name: Validate trusted Legal Rules runtime overlay
+        if: steps.legal_rules.outputs.found == 'true'
+        env:
+          LEGAL_RULES_PATH: ${{ env.RUNTIME_EVIDENCE_ROOT }}/docs/security/evidence/runtime/legal-rules-validation.json
+        run: |
+          set -euo pipefail
+          test -f "$LEGAL_RULES_PATH"
+          test -z "$(find "$RUNTIME_EVIDENCE_ROOT" -type f ! -path "$LEGAL_RULES_PATH" -print -quit)"
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { validateLegalRulesRuntimeEvidenceDocument } from './scripts/compliance/generate-eu-ai-act-product-coverage.mjs';
+          const document = JSON.parse(readFileSync(process.env.LEGAL_RULES_PATH, 'utf8'));
+          if (!validateLegalRulesRuntimeEvidenceDocument(document, process.env.TARGET_SHA)) {
+            throw new Error('downloaded Legal Rules runtime evidence failed exact-SHA validation');
+          }
+          NODE
+
       - name: Validate provider failure behavior
         run: npx vitest run tests/enterprise/provider-failure-evidence.test.ts
 
