@@ -122,7 +122,7 @@ test('reports retained safe evidence without claiming a score or GO', () => {
   assert.equal(report.safe_evidence_retained, true);
   assert.equal(report.full_evidence_retained, false);
   assert.equal(report.score_claim.official_completion_percent, null);
-  assert.deepEqual(report.protected_boundaries.map((entry) => entry.id), ['RECOVERY', 'ASSURANCE']);
+  assert.deepEqual(report.protected_boundaries.map((entry) => entry.id), ['TEN-RLS', 'RECOVERY', 'ASSURANCE']);
 });
 
 test('requires every canonical lane, including SCIM, and the protected full closeout before reporting retained GO evidence', () => {
