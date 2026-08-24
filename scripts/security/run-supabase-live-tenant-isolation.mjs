@@ -2,7 +2,7 @@
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { assertProfileProof } from './check-supabase-live-profile-proof.mjs';
-import { main } from './run-supabase-live-tenant-isolation-v2.mjs';
+import { main } from './run-supabase-live-tenant-isolation-v4.mjs';
 export * from './supabase-live-rls-evidence.mjs';
 
 const isCli = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
@@ -19,17 +19,14 @@ function hasLiveRuntimeConfiguration() {
 
 if (isCli) {
   const advisory = process.argv.includes('--advisory');
-
   if (advisory && !hasLiveRuntimeConfiguration()) {
-    console.log('Supabase live tenant-isolation validation skipped in advisory CI: protected runtime credentials are not available.');
-    console.log('Static RLS policy and migration checks remain enforced; live proof runs in the protected Supabase workflow.');
+    console.log('Supabase post-V20 live tenant-isolation validation skipped in advisory CI: protected runtime credentials are unavailable.');
+    console.log('No runtime completion is claimed; the protected promotion-bound workflow is authoritative.');
     process.exit(0);
   }
 
   main()
-    .then(() => {
-      assertProfileProof({ advisory });
-    })
+    .then(() => assertProfileProof({ advisory }))
     .catch((error) => {
       console.error(error instanceof Error ? error.message : error);
       process.exitCode = 1;
