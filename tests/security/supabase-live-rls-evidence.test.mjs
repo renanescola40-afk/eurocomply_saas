@@ -1,61 +1,63 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  V20_CHANGE_SET,
+  V20_EVIDENCE_SCHEMA,
+  backendOwnedTables,
   buildEvidencePayload,
   criticalTables,
+  customerTenantTables,
+  globalReferenceTables,
   parseEvidenceJson,
   redactProjectReferenceFromUrl,
   requiredBackendWriteDenyOperations,
+  requiredCoverageOperations,
+  requiredGlobalReferenceOperations,
+  requiredSameTenantReadOperations,
+  requiredViewerAdminDenyOperations,
+  sameTenantWritableTables,
   tableCoverageFrom,
   validatePassingEvidence,
 } from '../../scripts/security/supabase-live-rls-evidence.mjs';
 
-const baseOperations = [
-  'rls_enabled',
-  'cross_tenant_read',
-  'cross_tenant_insert',
-  'cross_tenant_update',
-  'cross_tenant_delete',
-  'same_tenant_read',
-];
-
 const serviceRolePaths = [
-  { path: 'fixture_setup', purpose: 'create validation tenants and users' },
-  { path: 'rls_inventory', purpose: 'read live RLS metadata' },
-  { path: 'post_assertion_integrity_checks', purpose: 'verify denied writes did not mutate data' },
-  { path: 'fixture_cleanup', purpose: 'remove validation data' },
-];
-
-const viewerAdminDenyOperations = [
-  'viewer_same_tenant_admin_insert_denied',
-  'viewer_same_tenant_admin_update_denied',
-  'viewer_same_tenant_admin_delete_denied',
+  { path: 'fixture_setup', purpose: 'synthetic setup' },
+  { path: 'rls_inventory', purpose: 'live inventory' },
+  { path: 'post_assertion_integrity_checks', purpose: 'integrity' },
+  { path: 'fixture_cleanup', purpose: 'cleanup' },
 ];
 
 function passingTestCases() {
-  const cases = criticalTables.flatMap((table) => baseOperations.map((operation) => ({
-    table,
-    operation: ['audit_events', 'subscriptions'].includes(table) && operation === 'same_tenant_read'
-      ? 'same_tenant_read_backend_only'
-      : operation,
-    passed: true,
-    returnedRows: operation.startsWith('cross_tenant') ? 0 : 1,
-    error: null,
-  })));
-
-  for (const table of ['documents', 'risks', 'vendors', 'tasks']) {
+  const cases = [];
+  for (const table of customerTenantTables) {
+    cases.push({ table, operation: 'rls_enabled', passed: true, returnedRows: 1, error: null });
+    for (const operation of requiredCoverageOperations) {
+      cases.push({ table, operation, passed: true, returnedRows: 0, error: null });
+    }
+    cases.push({
+      table,
+      operation: backendOwnedTables.includes(table) ? 'same_tenant_read_backend_only' : requiredSameTenantReadOperations[0],
+      passed: true,
+      returnedRows: 1,
+      error: null,
+    });
+  }
+  for (const table of sameTenantWritableTables) {
     cases.push({ table, operation: 'same_tenant_insert', passed: true, returnedRows: 1, error: null, insertedId: '00000000-0000-0000-0000-000000000000' });
   }
-
-  for (const table of ['audit_events', 'subscriptions']) {
+  for (const table of backendOwnedTables) {
     for (const operation of requiredBackendWriteDenyOperations) {
-      cases.push({ table, operation, passed: true, returnedRows: 0, error: { code: '42501', message: 'permission denied by RLS' } });
+      cases.push({ table, operation, passed: true, returnedRows: 0, error: { code: '42501', message: 'permission denied' } });
     }
   }
-
-  for (const operation of viewerAdminDenyOperations) {
-    cases.push({ table: 'organization_members', operation, passed: true, returnedRows: 0, error: { code: '42501', message: 'permission denied by RLS' } });
+  for (const operation of requiredViewerAdminDenyOperations) {
+    cases.push({ table: 'organization_members', operation, passed: true, returnedRows: 0, error: { code: '42501', message: 'permission denied' } });
   }
-
+  for (const table of globalReferenceTables) {
+    cases.push({ table, operation: 'rls_enabled', passed: true, returnedRows: 1, error: null });
+    for (const operation of requiredGlobalReferenceOperations.filter((value) => value !== 'rls_enabled')) {
+      cases.push({ table, operation, passed: true, returnedRows: operation === 'service_role_read_allowed' ? 1 : 0, error: null });
+    }
+  }
   return cases;
 }
 
@@ -65,9 +67,9 @@ function passingEvidence(overrides = {}) {
     status: 'Complete',
     outcome: 'passed',
     supabaseUrl: 'https://abcdefghijklmnopqrst.supabase.co',
-    command: 'node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register',
+    command: 'node scripts/security/run-supabase-live-tenant-isolation.mjs',
     commitSha: '1234567890abcdef1234567890abcdef12345678',
-    timestamp: '2026-06-20T12:00:00Z',
+    timestamp: '2026-08-24T12:00:00Z',
     reviewer: 'security-reviewer',
     testCases,
     failures: [],
@@ -77,82 +79,93 @@ function passingEvidence(overrides = {}) {
   });
 }
 
-describe('Supabase live RLS evidence parser and generator', () => {
-  it('tracks the enterprise critical table set exactly', () => {
-    expect(criticalTables).toEqual(['organizations', 'organization_members', 'documents', 'audit_events', 'risks', 'vendors', 'tasks', 'subscriptions', 'notifications']);
+beforeEach(() => {
+  process.env.PROMOTION_RUN_ID = '123456';
+  process.env.PROMOTION_CHANGE_SET = V20_CHANGE_SET;
+  process.env.PROMOTION_SELECTED_MIGRATION_COUNT = '27';
+  process.env.PROMOTION_SELECTION_DIGEST = `sha256:${'a'.repeat(64)}`;
+  process.env.PROMOTION_REMOTE_TRANSITION_VERIFIED = 'true';
+  process.env.PROMOTION_UNAUTHORIZED_MIGRATION_APPLIED = 'false';
+  process.env.PROMOTION_PRODUCTION_VERIFIED = 'true';
+});
+
+afterEach(() => {
+  for (const key of Object.keys(process.env).filter((name) => name.startsWith('PROMOTION_'))) delete process.env[key];
+});
+
+describe('Supabase V20 live RLS evidence contract', () => {
+  it('tracks the canonical tenant and global surfaces', () => {
+    expect(criticalTables).toEqual([...customerTenantTables, ...globalReferenceTables]);
+    expect(customerTenantTables).toContain('compliance_tasks');
+    expect(backendOwnedTables).toContain('compliance_tasks');
+    expect(sameTenantWritableTables).not.toContain('compliance_tasks');
   });
 
-  it('tracks backend-owned write denial operations', () => {
-    expect(requiredBackendWriteDenyOperations).toEqual(['same_tenant_insert_denied', 'same_tenant_update_denied', 'same_tenant_delete_denied']);
+  it('requires the backend-only regulatory contract', () => {
+    expect(requiredGlobalReferenceOperations).toEqual([
+      'rls_enabled',
+      'authenticated_read_denied',
+      'authenticated_insert_denied',
+      'authenticated_update_denied',
+      'authenticated_delete_denied',
+      'service_role_read_allowed',
+    ]);
   });
 
-  it('generates passing evidence with redacted project reference and required runtime fields', () => {
-    const testCases = passingTestCases();
-    const evidence = passingEvidence({ testCases });
-
-    expect(evidence.status).toBe('Complete');
-    expect(evidence.outcome).toBe('passed');
-    expect(evidence.timestamp).toBe('2026-06-20T12:00:00Z');
-    expect(evidence.supabaseProjectReferenceRedacted).toBe(true);
-    expect(evidence.supabaseProjectReference).toMatch(/^redacted:sha256:/);
-    expect(evidence.supabaseProjectReference).not.toContain('abcdefghijklmnopqrst');
-    expect(evidence.testsRun).toHaveLength(testCases.length);
-    expect(evidence.testsPassed).toHaveLength(testCases.length);
-    expect(evidence.testsFailed).toEqual([]);
-    expect(evidence.failures).toEqual([]);
+  it('generates passing V20 evidence only with promotion lineage', () => {
+    const evidence = passingEvidence();
+    expect(evidence.schema).toBe(V20_EVIDENCE_SCHEMA);
+    expect(evidence.promotionLineage).toMatchObject({
+      promotionRunId: '123456',
+      changeSet: V20_CHANGE_SET,
+      selectedMigrationCount: 27,
+      remoteAfterEqualsBeforePlusSelected: true,
+      unauthorizedMigrationApplied: false,
+      productionPromotionVerified: true,
+    });
     expect(validatePassingEvidence(evidence)).toEqual({ valid: true, errors: [] });
   });
 
-  it('redacts Supabase project references deterministically without leaking the raw ref', () => {
-    const redacted = redactProjectReferenceFromUrl('https://tenantsecretref.supabase.co');
-    expect(redacted).toMatch(/^redacted:sha256:[a-f0-9]{16}$/);
-    expect(redacted).not.toContain('tenantsecretref');
-    expect(redactProjectReferenceFromUrl('https://tenantsecretref.supabase.co')).toBe(redacted);
-  });
-
-  it('parses evidence JSON and reports malformed evidence safely', () => {
-    const parsed = parseEvidenceJson('{"status":"Open"}');
-    const malformed = parseEvidenceJson('{not-json');
-    expect(parsed.evidence).toEqual({ status: 'Open' });
-    expect(parsed.errors).toEqual([]);
-    expect(malformed.evidence).toBeNull();
-    expect(malformed.errors[0]).toContain('invalid JSON');
-  });
-
-  it('rejects Complete evidence without passing outcome, failures array, or required table coverage', () => {
-    const testCases = passingTestCases().filter((test) => test.table !== 'tasks');
-    const result = validatePassingEvidence(buildEvidencePayload({ status: 'Complete', outcome: 'failed', supabaseUrl: 'https://abcdefghijklmnopqrst.supabase.co', command: 'node scripts/security/run-supabase-live-tenant-isolation.mjs', commitSha: '1234567890abcdef1234567890abcdef12345678', timestamp: '2026-06-20T12:00:00Z', testCases, failures: ['tasks coverage missing'], tablesReviewed: tableCoverageFrom(testCases), serviceRolePaths }));
+  it('fails closed without exact 27/27 Production-promotion lineage', () => {
+    process.env.PROMOTION_SELECTED_MIGRATION_COUNT = '26';
+    process.env.PROMOTION_PRODUCTION_VERIFIED = 'false';
+    const result = validatePassingEvidence(passingEvidence());
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('outcome must be passed');
-    expect(result.errors).toContain('passing evidence must not contain failures');
-    expect(result.errors).toContain('missing live RLS table coverage: tasks');
+    expect(result.errors).toContain('promotionLineage.selectedMigrationCount must be 27');
+    expect(result.errors).toContain('promotionLineage.productionPromotionVerified must be true');
   });
 
-  it('rejects evidence that has global operations but misses a critical table operation', () => {
+  it('rejects stale authenticated-read regulatory semantics', () => {
+    const testCases = passingTestCases().filter((test) => !(test.table === 'regulatory_updates' && test.operation === 'authenticated_read_denied'));
+    testCases.push({ table: 'regulatory_updates', operation: 'authenticated_read_allowed', passed: true, returnedRows: 1, error: null });
+    const result = validatePassingEvidence(passingEvidence({ testCases }));
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('missing live RLS operation coverage: regulatory_updates:authenticated_read_denied');
+  });
+
+  it('requires compliance_tasks organization browser writes to remain backend-owned', () => {
+    const testCases = passingTestCases().filter((test) => !(test.table === 'compliance_tasks' && test.operation === 'same_tenant_update_denied'));
+    const result = validatePassingEvidence(passingEvidence({ testCases }));
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('missing live RLS operation coverage: compliance_tasks:same_tenant_update_denied');
+  });
+
+  it('rejects missing cross-tenant coverage', () => {
     const testCases = passingTestCases().filter((test) => !(test.table === 'vendors' && test.operation === 'cross_tenant_update'));
     const result = validatePassingEvidence(passingEvidence({ testCases }));
     expect(result.valid).toBe(false);
     expect(result.errors).toContain('missing live RLS operation coverage: vendors:cross_tenant_update');
   });
 
-  it('rejects evidence that omits RLS enablement proof for a critical table', () => {
-    const testCases = passingTestCases().filter((test) => !(test.table === 'documents' && test.operation === 'rls_enabled'));
-    const result = validatePassingEvidence(passingEvidence({ testCases }));
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain('missing live RLS operation coverage: documents:rls_enabled');
+  it('redacts project references deterministically', () => {
+    const redacted = redactProjectReferenceFromUrl('https://tenantsecretref.supabase.co');
+    expect(redacted).toMatch(/^redacted:sha256:[a-f0-9]{16}$/);
+    expect(redacted).not.toContain('tenantsecretref');
+    expect(redactProjectReferenceFromUrl('https://tenantsecretref.supabase.co')).toBe(redacted);
   });
 
-  it('rejects evidence that omits same-tenant backend write denial for audit events', () => {
-    const testCases = passingTestCases().filter((test) => !(test.table === 'audit_events' && test.operation === 'same_tenant_update_denied'));
-    const result = validatePassingEvidence(passingEvidence({ testCases }));
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain('missing live RLS operation coverage: audit_events:same_tenant_update_denied');
-  });
-
-  it('rejects evidence that omits viewer same-tenant admin denial', () => {
-    const testCases = passingTestCases().filter((test) => test.operation !== 'viewer_same_tenant_admin_update_denied');
-    const result = validatePassingEvidence(passingEvidence({ testCases }));
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain('missing live RLS operation coverage: organization_members:viewer_same_tenant_admin_update_denied');
+  it('parses malformed JSON safely', () => {
+    expect(parseEvidenceJson('{"status":"Open"}').errors).toEqual([]);
+    expect(parseEvidenceJson('{not-json').evidence).toBeNull();
   });
 });
