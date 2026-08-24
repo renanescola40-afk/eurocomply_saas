@@ -150,10 +150,9 @@ async function deleteDenied(admin, supabase, table, id) {
   return { passed: Boolean(after.data?.id) && (denied(error) || (!error && noRows(data))), returnedRows: Array.isArray(data) ? data.length : 0, rowStillExists: Boolean(after.data?.id), error: safeError(error) };
 }
 
-async function setup(admin) {
+async function setup(admin, created) {
   const suffix = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
   const password = `Rls!${crypto.randomBytes(18).toString('base64url')}9aA`;
-  const created = { users: [], rows: [], organizations: [] };
   const user = {};
   for (const label of ['ownerA', 'viewerA', 'candidateA', 'ownerB', 'adminB', 'memberB', 'unlicensed']) {
     user[label] = await createUser(admin, label, suffix, password, created);
@@ -296,11 +295,12 @@ export async function main() {
   assert(/^\d+$/.test(String(process.env.PROMOTION_RUN_ID ?? '')), 'promotion_run_required');
   const admin = client(url, serviceKey), anon = client(url, anonKey);
   const clients = Object.fromEntries(['ownerA', 'viewerA', 'ownerB', 'adminB', 'memberB', 'unlicensed'].map((name) => [name, client(url, anonKey)]));
+  const created = { users: [], rows: [], organizations: [] };
   let c, failure, cleanupFailure, tests = [];
   try {
     const rows = await inventory(admin, [...new Set([...customerTenantTables, ...globalReferenceTables, 'ai_assessments', 'evidence_items'])]);
     tests.push(...customerTenantTables.map((table) => rlsTest(table, rows)), rlsTest('regulatory_updates', rows));
-    c = await setup(admin);
+    c = await setup(admin, created);
     for (const name of Object.keys(clients)) await signIn(clients[name], c.user[name], c.password, name);
 
     for (const table of customerTenantTables) {
@@ -312,7 +312,7 @@ export async function main() {
       tests.push({ table, operation: backendOwnedTables.includes(table) ? 'same_tenant_read_backend_only' : 'same_tenant_read', ...(await readAllowed(clients.ownerB, table, s.seed.id)) });
       if (sameTenantWritableTables.includes(table) && s.same) {
         const result = await insertAllowed(clients.ownerB, table, s.same); tests.push({ table, operation: 'same_tenant_insert', ...result });
-        if (result.insertedId) c.created.rows.push([table, result.insertedId]);
+        if (result.insertedId) created.rows.push([table, result.insertedId]);
       }
       if (backendOwnedTables.includes(table)) {
         const direct = s.sameDenied ?? s.insert;
@@ -346,10 +346,12 @@ export async function main() {
     const horizontalResult = validateHorizontalIsolationEvidence(evidence); if (!horizontalResult.valid) throw new Error(`horizontal_evidence_invalid:${horizontalResult.errors.join(';')}`);
     writeEvidence(evidence);
   } catch (error) { failure = error instanceof Error ? error : new Error(String(error)); }
-  if (c?.created) {
-    try { await cleanupV20SyntheticFixture(admin, c.created); }
-    catch (error) { cleanupFailure = error instanceof Error ? error : new Error(String(error)); }
-  }
+  try {
+    if (created.users.length || created.rows.length || created.organizations.length) {
+      const cleanup = await cleanupV20SyntheticFixture(admin, created);
+      if (cleanup?.cleanupPassed !== true) throw new Error('fixture_cleanup_not_confirmed');
+    }
+  } catch (error) { cleanupFailure = error instanceof Error ? error : new Error(String(error)); }
   if (failure || cleanupFailure) {
     const reason = [failure?.message, cleanupFailure?.message].filter(Boolean).join('; ');
     writeEvidence(buildEvidencePayload({ status: 'Open', outcome: 'failed', supabaseUrl: url, command: `node ${runner}`, commitSha: sha, testCases: tests, failures: [reason], tablesReviewed: tableCoverageFrom(tests), serviceRolePaths: [
