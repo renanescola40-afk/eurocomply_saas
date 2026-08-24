@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-08-22T13:37:52Z",
-  "observed_main_sha": "2b83d371bd6913f378fd6b995a787e1848b57e93",
+  "timestamp": "2026-08-24T11:05:00Z",
+  "observed_main_sha": "75151c463ea7bf54c74e4dc9e5cd3af995615eae",
   "last_verified_score_sha": "c413288eb8453b55c4d049c758dc0cd063aa70b9",
   "official_completion_percent": 45,
   "official_remaining_percent": 55,
@@ -16,11 +16,16 @@
   "controls_not_applicable": 0,
   "critical_controls_open": 49,
   "current_decision": "NO_GO",
-  "classification": "UNVERIFIED_CURRENT_MAIN",
+  "classification": "CURRENT_PRODUCTION_SERVING_BLOCKED",
   "publish_recommendation": "DO_NOT_PUBLISH_AS_ENTERPRISE",
-  "active_authority_pr": 1768,
-  "active_authority_branch": "agent/p0-supabase-v19-forward-rebase-final",
-  "canonical_authority": "Enterprise 100 Final Authority",
+  "active_authority_pr": null,
+  "active_authority_branch": null,
+  "active_p0_issue": 1814,
+  "active_p0": "Vercel Production serving blocked: READY deployment, project live=false, canonical health HTTP 402 DEPLOYMENT_DISABLED",
+  "current_evidence_pr": 1815,
+  "canonical_authority": "Enterprise 100 Final Authority #1032",
+  "supabase_protected_authority": "#1631",
+  "supabase_production_write_authorized": false,
   "closure_contract_control_count": 16,
   "required_direct_authorities": [
     "Product FRIA Ephemeral Runtime QA",
@@ -29,16 +34,16 @@
     "Production Provider Runtime Proof",
     "External Security Assurance Acceptance"
   ],
-  "next_priority": "Complete PR #1768 under exact-head branch protection and human merge; then resolve the new current main SHA and execute the protected V19/25 Supabase rehearsal, filtered Production dry run, qualified Decision Gate, bounded Production promotion and post-promotion acceptance for that exact lineage. Do not reuse V17/V18 decisions or PR-event contract jobs as Production authority.",
+  "next_priority": "Restore the existing Vercel project serving state through the documented zero-cost unpause/account-state path without changing plan or accepting spend. If any payment or upgrade is required, stop for owner decision. After canonical /api/health returns HTTP 200, resolve the exact serving main SHA and re-run protected runtime evidence. Supabase production promotion remains separately governed by #1631 and requires explicit Production-write authorization.",
   "evidence_freshness": {
-    "status": "STALE",
+    "status": "STALE_FOR_CURRENT_MAIN",
     "last_verified_sha": "c413288eb8453b55c4d049c758dc0cd063aa70b9",
     "scorecard_run_id": 29703295579,
     "scorecard_artifact_id": 8447248813,
     "scorecard_artifact_digest": "sha256:d7ae394485b7760d53788743b072bb60bd784edc6febf36d5d7d421d53a98572",
     "source_scorecard_schema": "risck-comply.enterprise-readiness-scorecard.v1",
     "source_scorecard_sha256": "e2f50fcea5cfbb398b781d4a8948a1a9e898fe18eb1a441cb603d7a7e5d15d9a",
-    "reason": "The last accepted 45% score predates the synchronized baseline. PR #1768 and its disposable/CI evidence do not themselves constitute protected Production runtime or human evidence and therefore do not raise the official score."
+    "reason": "The last accepted 45% score is historical and predates current main. PR #1768 is merged and is no longer active authority. Current protected main has a Vercel Production deployment that reached READY but is not serving because the project reports live=false and canonical health returns HTTP 402 DEPLOYMENT_DISABLED; #1814 is the active P0."
   },
-  "calculation_method": "Historical result from the canonical 100-control exact-SHA scorecard. Current completion remains unknown until a successful exact-current-main authority accepts all required retained evidence. This versioned JSON is a pre-change handoff snapshot; generated workflow artifacts provide exact-SHA authority."
+  "calculation_method": "Historical result from the canonical 100-control exact-SHA scorecard. No repository, PR, deployment-build or evidence-document update increases the official score until the required exact-current-serving-SHA runtime and human evidence is accepted."
 }
