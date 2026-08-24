@@ -13,6 +13,10 @@ const finalize = readFileSync(
   'supabase/migrations/20260824190100_finalize_enterprise_trusted_access_operation_contract.sql',
   'utf8',
 );
+const harden = readFileSync(
+  'supabase/migrations/20260824190200_harden_enterprise_trusted_access_runtime_contract.sql',
+  'utf8',
+);
 const runtimeService = readFileSync('src/server/enterprise/access-runtime-slo.ts', 'utf8');
 const contentionService = readFileSync('src/server/enterprise/seat-concurrency-alerting.ts', 'utf8');
 
@@ -29,6 +33,8 @@ describe('trusted access forward reconciliation', () => {
     expect(prepare).toContain('success_rate between 0 and 100');
     expect(prepare).toContain('oldest_pending_age_seconds');
     expect(prepare).toContain('dead_letter_count');
+    expect(prepare).toContain('alter column title drop not null');
+    expect(prepare).toContain('alter column summary drop not null');
     expect(runtimeService).toContain('oldest_pending_seconds');
     expect(runtimeService).toContain('operations_dead_letter');
     expect(runtimeService).toContain('members_compensated');
@@ -41,17 +47,38 @@ describe('trusted access forward reconciliation', () => {
     expect(reconcile).not.toContain('success_rate < 0.95');
   });
 
-  it('uses the governed V20 seat licensing authority instead of the legacy seat_limit contract', () => {
+  it('uses the governed seat licensing authority instead of the legacy seat_limit contract', () => {
     expect(reconcile).toContain('reserve_organization_seat_idempotent_atomic');
-    expect(reconcile).toContain("'seat-contention:'||v_corr::text");
     expect(reconcile).toContain("v_result.outcome in ('member_limit_reached','seat_limit_reached','admin_limit_reached')");
     expect(reconcile).not.toContain('v_contract.seat_limit');
+    expect(harden).toContain('reserve_organization_seat_idempotent_atomic');
+  });
+
+  it('binds seat contention idempotency to correlation, membership and seat type', () => {
+    expect(harden).toContain("'seat-contention:%s:%s:%s'");
+    expect(harden).toContain('p_membership_id::text');
+    expect(harden).toContain('p_requested_seat_type');
+    expect(harden).toContain("'idempotencyScope', 'correlation+membership+seat_type'");
+  });
+
+  it('keeps successful pagination separate from failure retry budget', () => {
+    expect(harden).toContain("when v_pending > 0 and v_failed = 0 then 'pending'");
+    expect(harden).toContain("v_operation.status in ('retry', 'processing')");
+    expect(harden).toContain('attempts >= max_attempts');
+    expect(harden).toContain("last_error_code = coalesce(last_error_code, 'lease_retry_budget_exhausted')");
+  });
+
+  it('keeps operation-detail compatibility columns available without group-policy authority', () => {
+    expect(harden).toContain('add column if not exists source_group_id uuid');
+    expect(harden).toContain('add column if not exists department_key text');
+    expect(finalize).toContain('deliberately non-authoritative');
   });
 
   it('keeps access control-plane tables forced-RLS and browser denied', () => {
     expect(reconcile.match(/force row level security/g)?.length).toBeGreaterThanOrEqual(10);
     expect(reconcile).toContain('browser roles retain trusted access control-plane privileges');
     expect(reconcile).toContain("has_function_privilege('authenticated',p.oid,'EXECUTE')");
+    expect(harden).toContain('browser execution survived Trusted Access hardening');
   });
 
   it('reconciles secure export storage and audited signed downloads', () => {
