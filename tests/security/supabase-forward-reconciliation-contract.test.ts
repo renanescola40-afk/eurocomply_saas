@@ -67,7 +67,7 @@ const commercialQuotaReconciliation = readFileSync(
 const selected = config.migrations.map((migration) => migration.filename);
 
 describe('bounded Supabase forward reconciliation contract', () => {
-  it('selects exactly the twenty-seven CLI-issued V20 forward reconciliation identities in version order', () => {
+  it('selects exactly the thirty-one CLI-issued V21 forward reconciliation identities in version order', () => {
     expect(selected).toEqual([
       '20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql',
       '20260822123540_v19_reconcile_step_up_challenges_runtime.sql',
@@ -96,6 +96,10 @@ describe('bounded Supabase forward reconciliation contract', () => {
       '20260822123626_v19_reconcile_enterprise_evidence_vault.sql',
       '20260823123000_payment_first_commercial_data_plane.sql',
       '20260823131500_payment_first_gap_analysis_and_storage.sql',
+      '20260824185900_prepare_enterprise_trusted_access_legacy_compatibility.sql',
+      '20260824190000_reconcile_enterprise_trusted_access_runtime.sql',
+      '20260824190100_finalize_enterprise_trusted_access_operation_contract.sql',
+      '20260824190200_harden_enterprise_trusted_access_runtime_contract.sql',
     ]);
     for (const historical of [
       '20260730204500_repair_live_rls_validation_inventory.sql',
@@ -124,9 +128,12 @@ describe('bounded Supabase forward reconciliation contract', () => {
 
   it('does not replay the already-present commercial identity and preserves its fail-closed source contract', () => {
     expect(selected).not.toContain('20260822120617_atomic_vendor_risk_quota_mutations.sql');
-    expect(selected.at(-3)).toBe('20260822123626_v19_reconcile_enterprise_evidence_vault.sql');
-    expect(selected.at(-2)).toBe('20260823123000_payment_first_commercial_data_plane.sql');
-    expect(selected.at(-1)).toBe('20260823131500_payment_first_gap_analysis_and_storage.sql');
+    const evidenceVaultIndex = selected.indexOf('20260822123626_v19_reconcile_enterprise_evidence_vault.sql');
+    const paymentFirstIndex = selected.indexOf('20260823123000_payment_first_commercial_data_plane.sql');
+    const paymentFirstStorageIndex = selected.indexOf('20260823131500_payment_first_gap_analysis_and_storage.sql');
+    expect(evidenceVaultIndex).toBeGreaterThanOrEqual(0);
+    expect(paymentFirstIndex).toBeGreaterThan(evidenceVaultIndex);
+    expect(paymentFirstStorageIndex).toBeGreaterThan(paymentFirstIndex);
     expect(commercialQuotaMutation.trimStart()).toMatch(/^begin;/i);
     expect(commercialQuotaMutation).toContain('create or replace function public.mutate_commercial_resource_with_audit_atomic');
     expect(commercialQuotaMutation).toContain('security definer');
