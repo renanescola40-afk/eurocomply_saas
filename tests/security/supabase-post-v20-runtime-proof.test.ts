@@ -18,11 +18,11 @@ describe('Supabase post-V20 Production runtime proof contract', () => {
     expect(workflow).toContain('release_sha:');
     expect(workflow).toContain('promotion_run_id:');
     expect(workflow).toContain('confirmation:');
-    expect(workflow).toContain("EXECUTE_POST_V20_RUNTIME_PROOF");
+    expect(workflow).toContain('EXECUTE_POST_V20_RUNTIME_PROOF');
     expect(workflow).toContain("test \"$GITHUB_REF_NAME\" = 'main'");
     expect(workflow).toContain('test "$GITHUB_SHA" = "$TARGET_SHA"');
     expect(workflow).toContain(
-      ".github/workflows/supabase-forward-reconciliation-production-promotion.yml",
+      '.github/workflows/supabase-forward-reconciliation-production-promotion.yml',
     );
     expect(workflow).toContain("test \"$(jq -r '.event' <<<\"$PROMOTION_JSON\")\" = 'workflow_dispatch'");
     expect(workflow).toContain("test \"$(jq -r '.conclusion' <<<\"$PROMOTION_JSON\")\" = 'success'");
@@ -39,10 +39,16 @@ describe('Supabase post-V20 Production runtime proof contract', () => {
     expect(workflow).toContain('.checks.remoteAfterEqualsBeforePlusSelected == true');
     expect(workflow).toContain('.checks.unauthorizedMigrationApplied == false');
     expect(workflow).toContain('.postconditions == "forward_reconciliation_postconditions_passed"');
+    expect(workflow).toContain('.schema == "risck-comply.supabase-forward-reconciliation-manifest.v1"');
+    expect(workflow).toContain('.targetSha == $sha');
+    expect(workflow).toContain('(.selectionDigest | test("^sha256:[a-f0-9]{64}$"))');
     expect(workflow).toContain('(.migrations | length) == 27');
-    expect(workflow).toContain('.truthBoundary.productionWriteAuthorizedByConfig == false');
-    expect(workflow).toContain('.truthBoundary.migrationHistoryRepairAllowed == false');
-    expect(workflow).toContain('.truthBoundary.unrestrictedDbPushAllowed == false');
+    expect(workflow).toContain('20260823123000_payment_first_commercial_data_plane.sql');
+    expect(workflow).toContain('20260823131500_payment_first_gap_analysis_and_storage.sql');
+    expect(workflow).toContain('.checks.exactShaBound == true');
+    expect(workflow).toContain('.checks.productionWriteAuthorized == false');
+    expect(workflow).toContain('.checks.migrationHistoryRepairAuthorized == false');
+    expect(workflow).toContain('.checks.unrestrictedDbPushAuthorized == false');
   });
 
   it('contains no migration, SQL or Production schema mutation path', () => {
@@ -66,7 +72,7 @@ describe('Supabase post-V20 Production runtime proof contract', () => {
     expect(runner).toContain('unlicensedSameTenantInsertDenied');
     expect(runner).toContain('paymentFirstLicensedAndUnlicensed: true');
     expect(runner).not.toContain("from('stripe_events_processed').insert");
-    expect(runner).not.toContain("from(\"stripe_events_processed\").insert");
+    expect(runner).not.toContain('from("stripe_events_processed").insert');
     expect(runner).toContain('providerEventsCreated: false');
     expect(runner).toContain('stripeLifecycleSynthesized: false');
   });
