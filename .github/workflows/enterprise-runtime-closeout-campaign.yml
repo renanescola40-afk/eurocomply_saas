@@ -10,7 +10,7 @@ on:
         required: true
         type: string
       supabase_promotion_run_id:
-        description: Successful exact-SHA V20 Supabase Production promotion run ID required by TEN-RLS
+        description: Successful exact-SHA V21/31 Supabase Production promotion run ID required by TEN-RLS
         required: true
         type: string
 
