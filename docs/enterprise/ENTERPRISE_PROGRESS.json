@@ -1,6 +1,8 @@
 {
-  "timestamp": "2026-08-22T13:37:52Z",
-  "observed_main_sha": "2b83d371bd6913f378fd6b995a787e1848b57e93",
+  "timestamp": "2026-08-24",
+  "observed_main_sha": "41cc6656de9a9d9df06b549dc1309d481498758b",
+  "observed_production_deployment": "dpl_FEUDn9oPpzetNwZcu3N5qJWmeAtZ",
+  "observed_production_state": "READY",
   "last_verified_score_sha": "c413288eb8453b55c4d049c758dc0cd063aa70b9",
   "official_completion_percent": 45,
   "official_remaining_percent": 55,
@@ -18,8 +20,8 @@
   "current_decision": "NO_GO",
   "classification": "UNVERIFIED_CURRENT_MAIN",
   "publish_recommendation": "DO_NOT_PUBLISH_AS_ENTERPRISE",
-  "active_authority_pr": 1768,
-  "active_authority_branch": "agent/p0-supabase-v19-forward-rebase-final",
+  "active_authority_pr": null,
+  "active_authority_branch": null,
   "canonical_authority": "Enterprise 100 Final Authority",
   "closure_contract_control_count": 16,
   "required_direct_authorities": [
@@ -29,7 +31,23 @@
     "Production Provider Runtime Proof",
     "External Security Assurance Acceptance"
   ],
-  "next_priority": "Complete PR #1768 under exact-head branch protection and human merge; then resolve the new current main SHA and execute the protected V19/25 Supabase rehearsal, filtered Production dry run, qualified Decision Gate, bounded Production promotion and post-promotion acceptance for that exact lineage. Do not reuse V17/V18 decisions or PR-event contract jobs as Production authority.",
+  "external_assurance": {
+    "provider": "Layer8",
+    "state": "READY_FOR_SCOPING",
+    "meeting_date": "2026-08-25",
+    "meeting_time": "10:00-11:00 Europe/Lisbon",
+    "meeting_platform": "Microsoft Teams",
+    "canonical_issue": 1692,
+    "handoff_pr": 1822,
+    "technical_preparation": "PASS",
+    "nda": "OPEN",
+    "rules_of_engagement": "OPEN",
+    "final_test_target_frozen": false,
+    "active_testing_authorized": false,
+    "independent_pentest": "NOT_STARTED",
+    "security_retest": "NOT_STARTED"
+  },
+  "next_priority": "Attend the confirmed Layer8 scoping meeting and close the external pentest prerequisites: contracting entity, applicable CREST accreditation, tester/independence handling, NDA, Rules of Engagement, exact release binding, synthetic test-account and private secret-sharing approach, methodology/severity, evidence retention, report/retest terms, price/duration and next execution window. In parallel, the Supabase Production promotion lane remains separately governed and requires exact-current-main evidence, independent approval and explicit owner Production-write authorization.",
   "evidence_freshness": {
     "status": "STALE",
     "last_verified_sha": "c413288eb8453b55c4d049c758dc0cd063aa70b9",
@@ -38,7 +56,7 @@
     "scorecard_artifact_digest": "sha256:d7ae394485b7760d53788743b072bb60bd784edc6febf36d5d7d421d53a98572",
     "source_scorecard_schema": "risck-comply.enterprise-readiness-scorecard.v1",
     "source_scorecard_sha256": "e2f50fcea5cfbb398b781d4a8948a1a9e898fe18eb1a441cb603d7a7e5d15d9a",
-    "reason": "The last accepted 45% score predates the synchronized baseline. PR #1768 and its disposable/CI evidence do not themselves constitute protected Production runtime or human evidence and therefore do not raise the official score."
+    "reason": "The last accepted 45% score predates the current protected main. Current repository/Production synchronization and Layer8 scoping preparation do not themselves satisfy the protected runtime or independent external-assurance evidence required to raise the official score."
   },
-  "calculation_method": "Historical result from the canonical 100-control exact-SHA scorecard. Current completion remains unknown until a successful exact-current-main authority accepts all required retained evidence. This versioned JSON is a pre-change handoff snapshot; generated workflow artifacts provide exact-SHA authority."
+  "calculation_method": "Historical result from the canonical 100-control exact-SHA scorecard. Current completion remains unknown until a successful exact-current-main authority accepts all required protected runtime and human evidence."
 }
