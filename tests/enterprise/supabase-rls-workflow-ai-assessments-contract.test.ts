@@ -19,7 +19,17 @@ describe('Supabase live RLS promotion-bound workflow', () => {
     expect(workflow).not.toContain('db push');
     expect(workflow).not.toContain('psql ');
     expect(workflow).not.toContain('SUPABASE_DB_URL');
-    expect(workflow).not.toContain('SUPABASE_DB_POOLER_URL');
+    expect(workflow).not.toContain('--include-all');
+    expect(workflow).not.toContain('migration repair');
+  });
+
+  it('binds the live API to the Production promotion project without exposing a database write path', () => {
+    expect(workflow).toContain('production-project-binding:');
+    expect(workflow).toContain('environment: Production');
+    expect(workflow).toContain('SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}');
+    expect(workflow).toContain('supabase-project-binding.mjs emit-pooler-digest');
+    expect(workflow).toContain('EXPECTED_SUPABASE_PROJECT_DIGEST: ${{ needs.production-project-binding.outputs.project_digest }}');
+    expect(workflow).toContain('supabase-project-binding.mjs verify-api-digest');
   });
 
   it('runs the integrated tenant proof under protected credentials and preserves read-only repository permissions', () => {
