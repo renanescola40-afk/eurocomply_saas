@@ -55,9 +55,7 @@ function stringOrNull(value: unknown): string | null {
 }
 
 function normalizeSnapshot(row: LooseRow) {
-  const legacyShape = 'operations_dead_letter' in row || 'members_processed' in row;
-  const rawRate = numberOrNull(row.success_rate);
-  const successRate = legacyShape && rawRate !== null ? rawRate * 100 : rawRate;
+  const successRate = numberOrNull(row.success_rate);
 
   return {
     ...row,
