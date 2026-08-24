@@ -89,6 +89,12 @@ export const procurementProviders: ProcurementProvider[] = [
     regionDisclosure: 'The connected LIVE account is based in Portugal; this is not presented as a single processing or storage region.',
   },
   {
+    name: 'Google OAuth / Google Identity',
+    purpose: 'Optional user authentication and identity federation',
+    status: 'optional',
+    regionDisclosure: 'Production usage is evidenced; final legal role, applicable contract or DPA, region, retention and transfer treatment remain under review.',
+  },
+  {
     name: 'GitHub Actions',
     purpose: 'Source delivery, CI/CD and protected recovery/security workflows',
     status: 'conditional',
