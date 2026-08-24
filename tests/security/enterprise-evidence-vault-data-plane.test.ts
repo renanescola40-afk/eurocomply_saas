@@ -14,9 +14,9 @@ const reconciliation = JSON.parse(readFileSync('config/supabase-forward-reconcil
 const selected = reconciliation.migrations.map((migrationRecord) => migrationRecord.filename);
 
 describe('Enterprise Evidence Vault data plane', () => {
-  it('keeps the proved Evidence Vault migration ordered inside the V19 bounded forward set', () => {
-    expect(reconciliation.changeSet).toBe('2026-08-22-enterprise-data-plane-closure-v19');
-    expect(selected).toHaveLength(25);
+  it('keeps the proved Evidence Vault migration ordered before the V20 payment-first Storage closure', () => {
+    expect(reconciliation.changeSet).toBe('2026-08-23-enterprise-data-plane-payment-first-closure-v20');
+    expect(selected).toHaveLength(27);
     expect(selected).toContain('20260822123626_v19_reconcile_enterprise_evidence_vault.sql');
     expect(selected).not.toContain('20260822120617_atomic_vendor_risk_quota_mutations.sql');
 
@@ -29,7 +29,13 @@ describe('Enterprise Evidence Vault data plane', () => {
     expect(selected.indexOf('20260822123622_v19_reconcile_gap_remediation_persistence.sql')).toBeLessThan(
       selected.indexOf('20260822123626_v19_reconcile_enterprise_evidence_vault.sql'),
     );
-    expect(selected.at(-1)).toBe('20260822123626_v19_reconcile_enterprise_evidence_vault.sql');
+    expect(selected.indexOf('20260822123626_v19_reconcile_enterprise_evidence_vault.sql')).toBeLessThan(
+      selected.indexOf('20260823123000_payment_first_commercial_data_plane.sql'),
+    );
+    expect(selected.indexOf('20260823123000_payment_first_commercial_data_plane.sql')).toBeLessThan(
+      selected.indexOf('20260823131500_payment_first_gap_analysis_and_storage.sql'),
+    );
+    expect(selected.at(-1)).toBe('20260823131500_payment_first_gap_analysis_and_storage.sql');
 
     expect(reconciliation.truthBoundary.automaticClassification).toBe(false);
     expect(reconciliation.truthBoundary.productionWriteAuthorizedByConfig).toBe(false);

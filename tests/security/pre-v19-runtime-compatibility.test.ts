@@ -8,7 +8,7 @@ const emailSender = readFileSync('src/lib/email/server-sender.ts', 'utf8');
 const dailyMaintenance = readFileSync('src/app/api/internal/daily-maintenance/route.ts', 'utf8');
 const manifest = readFileSync('config/supabase-forward-reconciliation.json', 'utf8');
 
-describe('pre-V19 Production runtime compatibility', () => {
+describe('pre-V20 Production runtime compatibility', () => {
   it('defers compliance alerts before any email path when the governed data plane is absent', () => {
     const probeIndex = complianceAlerts.indexOf('const dataPlane = await getComplianceAlertDataPlaneStatus()');
     const alertExecutionIndex = complianceAlerts.indexOf('const [documentAlerts, vendorAlerts] = await Promise.all');
@@ -53,11 +53,16 @@ describe('pre-V19 Production runtime compatibility', () => {
     expect(auditErrorReportIndex).toBeGreaterThan(schemaFallbackIndex);
   });
 
-  it('keeps daily maintenance scheduled and the governed V19 package unchanged in scope', () => {
+  it('keeps daily maintenance scheduled and expands the governed package only with payment-first closure', () => {
     expect(dailyMaintenance).toContain("'/api/internal/compliance-alerts'");
     expect(dailyMaintenance).toContain("'/api/intelligence/refresh'");
 
-    const parsed = JSON.parse(manifest) as { migrations?: unknown[] };
-    expect(parsed.migrations).toHaveLength(25);
+    const parsed = JSON.parse(manifest) as { changeSet?: string; migrations?: Array<{ filename?: string }> };
+    expect(parsed.changeSet).toBe('2026-08-23-enterprise-data-plane-payment-first-closure-v20');
+    expect(parsed.migrations).toHaveLength(27);
+    expect(parsed.migrations?.slice(-2).map((item) => item.filename)).toEqual([
+      '20260823123000_payment_first_commercial_data_plane.sql',
+      '20260823131500_payment_first_gap_analysis_and_storage.sql',
+    ]);
   });
 });

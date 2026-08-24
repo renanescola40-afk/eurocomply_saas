@@ -10,9 +10,15 @@ declare
   provision_rpc oid:=to_regprocedure('public.provision_enterprise_contract_atomic(uuid,text,text,bigint,timestamptz,timestamptz,timestamptz,integer,integer,integer,integer,integer,integer,integer,integer,integer,bigint,integer,boolean,boolean,boolean,boolean,boolean,boolean,boolean,uuid)');
   entitlement_rpc oid:=to_regprocedure('public.update_enterprise_contract_entitlements_atomic(uuid,integer,integer,integer,integer,integer,integer,integer,integer,bigint,integer,boolean,boolean,boolean,boolean,boolean,boolean,boolean,uuid,text)');
   status_rpc oid:=to_regprocedure('public.transition_enterprise_contract_status_atomic(uuid,text,text,uuid,text)');
+  payment_first_authority oid:=to_regprocedure('app_private.has_commercial_authority(uuid)');
   subscription_binding_index oid:=to_regclass('public.enterprise_contracts_stripe_subscription_uidx');
   rpc oid;
   billing_columns integer;
+  payment_first_missing_policy_count integer;
+  payment_first_gap_policy_count integer;
+  payment_first_forbidden_grant_count integer;
+  evidence_storage_select_qual text;
+  evidence_storage_insert_check text;
 begin
   if to_regclass('public.enterprise_contracts') is null
      or to_regclass('public.enterprise_contract_billing_events') is null then
@@ -142,6 +148,94 @@ begin
     where p.oid=transition_helper and not p.prosecdef and setting='search_path=pg_catalog'
   ) then
     raise exception 'Enterprise contract transition helper search_path hardening incomplete';
+  end if;
+
+  -- Payment-first is part of billing authority, not merely an application redirect.
+  -- The live/rehearsal/restore proof must fail if authenticated tenant membership can
+  -- still reach paid data without durable contract or processed Stripe LIVE authority.
+  if payment_first_authority is null then
+    raise exception 'Payment-first commercial authority helper is missing';
+  end if;
+
+  if has_function_privilege('anon',payment_first_authority,'EXECUTE')
+     or not has_function_privilege('authenticated',payment_first_authority,'EXECUTE')
+     or not has_function_privilege('service_role',payment_first_authority,'EXECUTE') then
+    raise exception 'Payment-first commercial authority helper privileges are not canonical';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_proc p
+    cross join lateral unnest(coalesce(p.proconfig,array[]::text[])) setting
+    where p.oid=payment_first_authority
+      and p.prosecdef
+      and setting like 'search_path=%'
+  ) then
+    raise exception 'Payment-first commercial authority helper security configuration is not fixed';
+  end if;
+
+  with targets(table_name) as (
+    values
+      ('ai_systems'),('ai_assessments'),('ai_incidents'),('documents'),('risks'),
+      ('vendors'),('tasks'),('compliance_tasks'),('evidence_items'),
+      ('onboarding_activation_runs'),('monitoring_preferences'),('notifications'),
+      ('audit_events'),('audit_logs'),('invitations')
+  )
+  select count(*) into payment_first_missing_policy_count
+  from targets target
+  where to_regclass(format('public.%I',target.table_name)) is not null
+    and not exists (
+      select 1
+      from pg_policies policy
+      where policy.schemaname='public'
+        and policy.tablename=target.table_name
+        and policy.policyname='payment_first_commercial_authority'
+        and policy.permissive='RESTRICTIVE'
+    );
+
+  if payment_first_missing_policy_count<>0 then
+    raise exception 'Payment-first paid-product restrictive policies missing: %',payment_first_missing_policy_count;
+  end if;
+
+  select count(*) into payment_first_gap_policy_count
+  from pg_policies
+  where schemaname='public'
+    and policyname in (
+      'payment_first_gap_assessments_authority',
+      'payment_first_gap_answers_authority',
+      'payment_first_compliance_findings_authority'
+    )
+    and permissive='RESTRICTIVE';
+
+  if payment_first_gap_policy_count<>3 then
+    raise exception 'Payment-first Gap/remediation restrictive policy set incomplete: %/3',payment_first_gap_policy_count;
+  end if;
+
+  select count(*) into payment_first_forbidden_grant_count
+  from information_schema.role_table_grants
+  where table_schema='public'
+    and table_name in ('ai_tools','compliance_documents','regulatory_updates','compliance_evidence')
+    and grantee in ('PUBLIC','anon','authenticated');
+
+  if payment_first_forbidden_grant_count<>0 then
+    raise exception 'Billing-unaware legacy/global paid-product browser grants survived: %',payment_first_forbidden_grant_count;
+  end if;
+
+  select qual into evidence_storage_select_qual
+  from pg_policies
+  where schemaname='storage'
+    and tablename='objects'
+    and policyname='rls_compliance_evidence_objects_select_organization';
+
+  select with_check into evidence_storage_insert_check
+  from pg_policies
+  where schemaname='storage'
+    and tablename='objects'
+    and policyname='rls_compliance_evidence_objects_insert_organization';
+
+  if coalesce(evidence_storage_select_qual,'') not like '%has_commercial_authority%'
+     or coalesce(evidence_storage_insert_check,'') not like '%has_commercial_authority%' then
+    raise exception 'Evidence Vault Storage policies are not bound to payment-first commercial authority';
   end if;
 end
 $proof$;
