@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  V20_CHANGE_SET,
+  GOVERNED_CHANGE_SET,
   backendOwnedTables,
   buildEvidencePayload,
   customerTenantTables,
@@ -30,8 +30,8 @@ type EvidenceCase = { table: string; operation: string; passed: boolean };
 
 beforeEach(() => {
   process.env.PROMOTION_RUN_ID = '777777';
-  process.env.PROMOTION_CHANGE_SET = V20_CHANGE_SET;
-  process.env.PROMOTION_SELECTED_MIGRATION_COUNT = '27';
+  process.env.PROMOTION_CHANGE_SET = GOVERNED_CHANGE_SET;
+  process.env.PROMOTION_SELECTED_MIGRATION_COUNT = '31';
   process.env.PROMOTION_SELECTION_DIGEST = `sha256:${'c'.repeat(64)}`;
   process.env.PROMOTION_REMOTE_TRANSITION_VERIFIED = 'true';
   process.env.PROMOTION_UNAUTHORIZED_MIGRATION_APPLIED = 'false';
@@ -106,7 +106,7 @@ function validSourceEvidence() {
   };
 }
 
-describe('Supabase V20 exact-SHA runtime evidence fetch', () => {
+describe('Supabase V21 exact-SHA runtime evidence fetch', () => {
   it('selects only a successful exact-main-SHA canonical workflow run', () => {
     const selected = selectExactShaRun([
       { id: 1, path: WORKFLOW_PATH, head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'failure', updated_at: '2026-08-24T12:00:00Z' },
@@ -136,7 +136,7 @@ describe('Supabase V20 exact-SHA runtime evidence fetch', () => {
       targetSha: SHA, repository: REPOSITORY, runId: RUN_ID, now: new Date('2026-09-10T13:00:00Z'),
     })).toThrow('release_runtime_evidence_invalid');
     const invalid = validSourceEvidence();
-    invalid.promotionLineage.selectedMigrationCount = 26;
+    invalid.promotionLineage.selectedMigrationCount = 30;
     expect(validateDownloadedEvidence(invalid, { targetSha: SHA, repository: REPOSITORY, runId: RUN_ID }).passed).toBe(false);
   });
 
@@ -146,15 +146,15 @@ describe('Supabase V20 exact-SHA runtime evidence fetch', () => {
     expect(entry?.validator?.(validSourceEvidence(), { expectedRepository: REPOSITORY, expectedBranch: 'main', expectedCommitSha: SHA })).toEqual([]);
   });
 
-  it('uses a dispatch-only promotion-bound workflow with no migration path', () => {
+  it('uses a dispatch-only V21/31 promotion-bound workflow with no migration path', () => {
     const workflow = readFileSync('.github/workflows/supabase-live-rls-validation.yml', 'utf8');
     const fetcher = readFileSync('scripts/enterprise/fetch-supabase-rls-evidence.mjs', 'utf8');
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).not.toMatch(/^\s{2}push:/m);
     expect(workflow).toContain('promotion_run_id:');
-    expect(workflow).toContain('EXECUTE_POST_V20_RUNTIME_PROOF');
+    expect(workflow).toContain('EXECUTE_POST_V21_RUNTIME_PROOF');
     expect(workflow).toContain('supabase-forward-production-promotion-${TARGET_SHA}');
-    expect(workflow).toContain('selectedMigrationCount == 27');
+    expect(workflow).toContain('selectedMigrationCount == 31');
     expect(workflow).toContain('environment: supabase-live-rls-validation');
     expect(workflow).toContain('contents: read');
     expect(workflow).not.toContain('contents: write');
