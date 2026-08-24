@@ -94,17 +94,19 @@ describe('same-tenant horizontal RLS evidence', () => {
     expect(migration).toContain("raise exception 'legacy member-wide monitoring preferences SELECT policy survived'");
   });
 
-  it('requires the workflow and final runtime checker to enforce the appended proof', () => {
+  it('requires the promotion-bound workflow and final checker to enforce the integrated horizontal proof', () => {
     const workflow = fs.readFileSync('.github/workflows/supabase-live-rls-validation.yml', 'utf8');
     const checker = fs.readFileSync('scripts/security/check-supabase-rls-runtime-evidence.mjs', 'utf8');
-    const appender = fs.readFileSync('scripts/security/append-supabase-live-horizontal-isolation.mjs', 'utf8');
+    const runner = fs.readFileSync('scripts/security/run-supabase-live-tenant-isolation-v4.mjs', 'utf8');
 
-    expect(workflow).toContain('Append same-tenant horizontal isolation proof');
-    expect(workflow).toContain('node scripts/security/append-supabase-live-horizontal-isolation.mjs');
+    expect(workflow).toContain('run: node scripts/security/run-supabase-live-tenant-isolation.mjs');
+    expect(workflow).toContain('validate-supabase-live-promotion-source.mjs');
     expect(checker).toContain('validateHorizontalIsolationEvidence(evidence)');
     expect(checker).toContain('horizontal:${error}');
-    expect(appender).toContain('horizontal_other_user_read_denied');
-    expect(appender).toContain('horizontal_authenticated_insert_denied');
-    expect(appender).toContain('horizontal_member_update_denied');
+    expect(runner).toContain('horizontal_other_user_read_denied');
+    expect(runner).toContain('horizontal_authenticated_insert_denied');
+    expect(runner).toContain('horizontal_member_update_denied');
+    expect(runner).toContain('sameTenantDistinctUsers: true');
+    expect(workflow).not.toContain('append-supabase-live-horizontal-isolation.mjs');
   });
 });
