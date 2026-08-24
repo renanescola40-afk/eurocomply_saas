@@ -26,13 +26,14 @@ function fail(message) { throw new Error(message); }
 
 export function resolveLaneInputs(inputs, { releaseSha, recoveryRollbackConfirmation, supabasePromotionRunId = '' }) {
   const resolved = {};
+  const promotionRunId = String(supabasePromotionRunId || process.env.SUPABASE_PROMOTION_RUN_ID || '').trim();
   for (const [key, value] of Object.entries(inputs ?? {})) {
     if (!/^[a-z][a-z0-9_]{0,63}$/.test(key)) fail(`invalid workflow input key: ${key}`);
     if (value === RELEASE_SHA_PLACEHOLDER) resolved[key] = releaseSha;
     else if (value === RECOVERY_CONFIRMATION_PLACEHOLDER) resolved[key] = recoveryRollbackConfirmation;
     else if (value === SUPABASE_PROMOTION_RUN_ID_PLACEHOLDER) {
-      if (!/^\d+$/.test(String(supabasePromotionRunId))) fail('SUPABASE_PROMOTION_RUN_ID must be a numeric successful V20 Production promotion run ID');
-      resolved[key] = String(supabasePromotionRunId);
+      if (!/^\d+$/.test(promotionRunId)) fail('SUPABASE_PROMOTION_RUN_ID must be a numeric successful V20 Production promotion run ID');
+      resolved[key] = promotionRunId;
     } else if (typeof value === 'string' || typeof value === 'boolean') resolved[key] = value;
     else fail(`unsupported workflow input value for ${key}`);
   }
