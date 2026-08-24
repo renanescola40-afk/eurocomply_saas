@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 const dispatcher = readFileSync('scripts/enterprise/dispatch-runtime-closeout-campaign.mjs', 'utf8');
 const workflow = readFileSync('.github/workflows/enterprise-runtime-closeout-campaign.yml', 'utf8');
 
-describe('enterprise runtime closeout campaign after V20', () => {
+describe('enterprise runtime closeout campaign after V21/31 promotion', () => {
   it('dispatches the critical protected proof workflows', () => {
     for (const file of [
       'auth-rbac-runtime-proof.yml',
@@ -22,13 +22,13 @@ describe('enterprise runtime closeout campaign after V20', () => {
     expect(workflow).toContain('test "$(git rev-parse HEAD)" = "$TARGET_SHA"');
   });
 
-  it('requires the exact successful V20 promotion run before TEN-RLS dispatch', () => {
+  it('requires the exact successful V21/31 promotion run before TEN-RLS dispatch', () => {
     expect(workflow).toContain('supabase_promotion_run_id:');
     expect(workflow).toContain('SUPABASE_PROMOTION_RUN_ID: ${{ inputs.supabase_promotion_run_id }}');
     expect(workflow).toContain('[[ "$SUPABASE_PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]');
     expect(dispatcher).toContain('SUPABASE_PROMOTION_RUN_ID');
     expect(dispatcher).toContain('promotion_run_id: supabasePromotionRunId');
-    expect(dispatcher).toContain("confirmation: 'EXECUTE_POST_V20_RUNTIME_PROOF'");
+    expect(dispatcher).toContain("confirmation: 'EXECUTE_POST_V21_RUNTIME_PROOF'");
   });
 
   it('removes every live-RLS migration application switch', () => {
