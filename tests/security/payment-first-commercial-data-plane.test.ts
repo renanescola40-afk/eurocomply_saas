@@ -30,13 +30,19 @@ const legacyInventory = [
 ].map(read);
 
 describe('payment-first commercial closure', () => {
-  it('binds both payment-first migrations into the only governed Production promotion set', () => {
+  it('keeps both payment-first migrations inside the only governed V21 Production promotion set', () => {
     const selected = reconciliation.migrations.map((item) => item.filename);
-    expect(reconciliation.changeSet).toBe('2026-08-23-enterprise-data-plane-payment-first-closure-v20');
-    expect(selected).toHaveLength(27);
-    expect(selected.slice(-2)).toEqual([
+    expect(reconciliation.changeSet).toBe('2026-08-24-enterprise-data-plane-payment-first-trusted-access-closure-v21');
+    expect(selected).toHaveLength(31);
+    expect(selected.slice(25, 27)).toEqual([
       '20260823123000_payment_first_commercial_data_plane.sql',
       '20260823131500_payment_first_gap_analysis_and_storage.sql',
+    ]);
+    expect(selected.slice(-4)).toEqual([
+      '20260824185900_prepare_enterprise_trusted_access_legacy_compatibility.sql',
+      '20260824190000_reconcile_enterprise_trusted_access_runtime.sql',
+      '20260824190100_finalize_enterprise_trusted_access_operation_contract.sql',
+      '20260824190200_harden_enterprise_trusted_access_runtime_contract.sql',
     ]);
     expect(selected.indexOf('20260822123626_v19_reconcile_enterprise_evidence_vault.sql')).toBeLessThan(
       selected.indexOf('20260823123000_payment_first_commercial_data_plane.sql'),
