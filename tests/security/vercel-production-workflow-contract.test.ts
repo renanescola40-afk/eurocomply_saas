@@ -50,6 +50,20 @@ describe('Vercel production deployment authority', () => {
     expect(preflight).not.toMatch(/secrets\./);
   });
 
+  it('isolates the unit-test gate from protected Production bindings', () => {
+    const testGate = workflow.slice(
+      workflow.indexOf('- name: Run test gate'),
+      workflow.indexOf('- name: Run build gate'),
+    );
+
+    expect(testGate).toContain('env -i');
+    expect(testGate).toContain('HOME="$HOME"');
+    expect(testGate).toContain('PATH="$PATH"');
+    expect(testGate).toContain('CI=true');
+    expect(testGate).toContain('NODE_ENV=test');
+    expect(testGate).toContain('npm run test');
+  });
+
   it('wires every canonical self-serve Stripe price required by enterprise readiness', () => {
     for (const key of [
       'STRIPE_PRICE_ESSENTIAL_MONTHLY',
