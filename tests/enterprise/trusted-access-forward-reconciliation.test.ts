@@ -20,12 +20,14 @@ const harden = readFileSync(
 const runtimeService = readFileSync('src/server/enterprise/access-runtime-slo.ts', 'utf8');
 const contentionService = readFileSync('src/server/enterprise/seat-concurrency-alerting.ts', 'utf8');
 
+const executableReconcile = reconcile.replace(/--.*$/gm, '');
+
 describe('trusted access forward reconciliation', () => {
   it('does not replay the obsolete access-operation-runs model', () => {
-    expect(reconcile).toContain('enterprise_access_operations');
-    expect(reconcile).not.toContain('enterprise_access_operation_runs');
-    expect(reconcile).toContain('enterprise_access_operation_items');
-    expect(reconcile).toContain('enterprise_access_operation_events');
+    expect(executableReconcile).toContain('enterprise_access_operations');
+    expect(executableReconcile).not.toContain('enterprise_access_operation_runs');
+    expect(executableReconcile).toContain('enterprise_access_operation_items');
+    expect(executableReconcile).toContain('enterprise_access_operation_events');
   });
 
   it('normalizes historical SLO rows to the UI percent and field contract', () => {
