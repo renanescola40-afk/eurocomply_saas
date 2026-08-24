@@ -74,7 +74,7 @@ export const procurementProviders: ProcurementProvider[] = [
     name: 'Vercel',
     purpose: 'Application hosting, deployment and edge delivery',
     status: 'core',
-    regionDisclosure: 'Runtime placement is deployment-specific; current evidence is maintained in the provider factual evidence register.',
+    regionDisclosure: 'Runtime placement is deployment-specific; retained Production evidence and current provider-account facts are maintained separately.',
   },
   {
     name: 'Supabase',
@@ -110,7 +110,7 @@ export const procurementProviders: ProcurementProvider[] = [
     name: 'Sentry',
     purpose: 'Monitoring and diagnostics',
     status: 'optional',
-    regionDisclosure: 'Current Production runtime binding is evidenced; the organization-specific storage region remains account-evidence dependent.',
+    regionDisclosure: 'Retained Production runtime binding is evidenced; the organization-specific storage region remains account-evidence dependent.',
   },
   {
     name: 'PostHog',
@@ -128,7 +128,7 @@ export const procurementProviders: ProcurementProvider[] = [
     name: 'Upstash',
     purpose: 'Distributed Redis-backed rate limiting and security-control state',
     status: 'core',
-    regionDisclosure: 'Current exact-release Production runtime binding is evidenced; account plan, region, retention and account-specific contractual facts remain evidence-required.',
+    regionDisclosure: 'Upstash is materially required by the fail-closed distributed rate-limit/security architecture and predecessor binding evidence exists. Retained exact-current runtime reproof is still evidence-required; account plan, region, retention and contractual facts remain open.',
   },
 ];
 
