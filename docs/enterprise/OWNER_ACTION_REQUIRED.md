@@ -1,45 +1,58 @@
 # Owner action required
 
-This handoff was synchronized from
-`main@2b83d371bd6913f378fd6b995a787e1848b57e93`. Before any action, resolve the
-current 40-character `main` SHA again; do not assume this versioned baseline is
-still the default-branch head.
+Current synchronized baseline before this evidence PR:
+`main@75151c463ea7bf54c74e4dc9e5cd3af995615eae`.
 
-The immediate protected owner sequence is:
+Resolve the current 40-character `main` SHA again immediately before any runtime
+action; never assume this versioned handoff remains the default-branch head.
 
-1. do **not** dispatch or approve the superseded V18 bounded migration package;
-2. review PR #1768 and merge it only after the exact current PR head has all
-   required checks successful, an eligible reviewer other than the latest pusher
-   has approved that current reviewable head, all conversations are resolved and
-   GitHub reports a clean merge state;
-3. after the human merge, resolve the new exact `main` SHA and generate fresh V19
-   evidence for the selected 25 migrations only;
-4. execute the protected real Supabase rehearsal and filtered Production dry run
-   for that exact current-main SHA; PR-event contract jobs do not satisfy this
-   runtime step;
-5. complete the qualified Decision Gate for the exact 25 filenames and SHA-256
-   inventory, with no approval or classification carry-forward from V17/V18 or
-   another SHA;
-6. separately authorize the bounded Production promotion only after rehearsal,
-   dry-run, Decision Gate, independent approval and recovery prerequisites are
-   accepted for the same exact package;
-7. retain post-promotion migration-ledger, schema-drift, RLS/tenant-isolation,
-   recovery, Break-Glass, SCIM/integrations and Enterprise Evidence Vault proof
-   for that same exact main lineage;
-8. execute the remaining protected direct-authority workflows and real-world
-   evidence producers for Product FRIA, Billing LIVE, production provider
-   runtime, public production/release acceptance, independent pentest and legal
-   acceptance before the canonical final authority may emit
-   `ENTERPRISE_100: PASS` or `PRODUCTION_GO: PASS`.
+## Next unavoidable owner action
 
-Latest read-only Production evidence used to prepare #1768 observed migration
-head `20260822120617_atomic_vendor_risk_quota_mutations`. The commercial RPC is
-already present under that remote identity; #1768 intentionally does not replay
-it in the V19 selected set. The remaining 25 effects require the governed
-forward-only path after merge.
+The immediate P0 is #1814. The existing Vercel Production deployment is `READY`
+and bound to current main, but the project reports `live=false` and
+`https://risckcomply.com/api/health` returns HTTP `402 DEPLOYMENT_DISABLED`.
 
-No owner action should bypass a required check, fabricate evidence, reuse a
-decision or artifact from another SHA, weaken branch/environment protection,
-repair migration history without schema proof, perform an unrestricted
-production database push, or infer Production success from a pull-request event.
-Repository policy in `AGENTS.md` reserves the final merge for a human owner.
+Vercel's documented zero-cost first remediation is to **unpause the existing
+project**. The connected Vercel tool surface available to this execution does not
+expose the authenticated `unpause` mutation or a generic REST write, so this is
+the next unavoidable account-level owner action.
+
+Owner sequence:
+
+1. open the existing `eurocomply-saas` project in the existing Vercel Pro team;
+2. use the project **Unpause / Restore** action if it is offered without a plan,
+   billing or commercial change;
+3. do **not** upgrade, purchase capacity, accept an invoice, change provider,
+   create a new account or create a new company as part of this action;
+4. if Vercel requires payment, plan change or another commercial commitment,
+   stop without accepting it and return the exact prompt/error for owner decision;
+5. after a zero-cost unpause succeeds, re-run canonical `/api/health` and require
+   HTTP `200` before any Production-health claim;
+6. rebind Production/runtime/provider evidence to the exact serving `main` SHA;
+7. only then continue the separately governed Supabase #1631 protected sequence
+   if and when explicit Production-write authorization exists.
+
+## Already superseded
+
+- PR #1768 is merged and is not an active owner merge task.
+- Issue #1778 is closed via merged #1780 and is not a current schema/runtime
+  compatibility blocker.
+- Vercel Hobby and Supabase Free plan mismatches are closed; the current Vercel
+  problem is serving state, not evidence that the connected team reverted to
+  Hobby.
+
+## Separate protected decisions still open
+
+Restoring Vercel availability does **not** authorize:
+
+- Supabase Production DDL or migration promotion;
+- migration-history repair or unrestricted `db push`;
+- provider/legal/DPA acceptance;
+- independent pentest execution;
+- paid legal or security engagement;
+- synthetic Stripe customer/payment evidence;
+- `ENTERPRISE_100: PASS` or `PRODUCTION_GO: PASS`.
+
+Repository policy in `AGENTS.md` reserves final PR merge for a human owner after
+exact-head checks, independent eligible approval, resolved conversations and a
+clean merge state.
