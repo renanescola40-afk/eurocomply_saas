@@ -1,80 +1,88 @@
 # Provider factual evidence register
 
 **Status:** `FACTUAL_EVIDENCE_IN_REVIEW`  
-**Evidence snapshot:** 2026-08-22  
-**Latest runtime evidence subject captured:** `3a3382e385eb54f8e706e31046c8b7d497057527`  
+**Evidence snapshot:** 2026-08-24  
+**Latest runtime evidence subject captured:** `b8b099b9018f0be0de8f419d4c7d4a8629700d42`  
 **Canonical tracker:** GitHub issue `#1727`  
-**Current connector-observation ledger:** `docs/trust/evidence/2026-08-22-external-assurance-runtime-provider-revalidation.md`
+**Current connector-observation ledger:** `docs/trust/evidence/2026-08-24-external-assurance-runtime-provider-revalidation.md`
 
 This register separates attributable provider/configuration facts from legal interpretation. It is not a DPA, legal opinion, GDPR-compliance statement, certification, independent pentest, regulator approval, or proof that every public provider term is contractually applicable to the RISCK COMPLY account.
 
 ## Evidence rules
 
-A provider row may be promoted from attributable runtime/account evidence only. Repository configuration alone does not prove that a service is enabled in Production. A public DPA alone does not prove that the RISCK COMPLY account accepted or is covered by it.
-
-A provider can be technically active while account/legal facts remain open. Conversely, an account connected for assurance is not Production evidence unless it is attributable to the Production integration.
-
-The **runtime evidence subject SHA** identifies the deployed application state actually observed. The Git commit that later contains this register may differ because committing or merging documentation creates a new repository commit. That difference alone does not invalidate previously observed provider/account facts. Release-bound facts must be revalidated when provider configuration, data flow, runtime behavior, deployment state, region, retention or service scope changes materially, or whenever this register makes a new claim about the latest live release.
-
-Do not retain API keys, tokens, passwords, connection strings, webhook secrets, private contracts, or exact public client project tokens when their value is unnecessary to prove state.
+- Runtime/configuration facts require attributable Production evidence.
+- Public legal documents support due diligence but do not prove account-specific acceptance where the provider exposes a separate account/legal action.
+- A provider can be technically active while account/legal facts remain open.
+- An assurance account is not Production evidence unless it can be attributed to the Production integration.
+- Do not retain API keys, tokens, passwords, connection strings, webhook secrets, private KYC records, private contracts, or exact public client project tokens when unnecessary.
 
 ## Factual reconciliation
 
-| Provider / service | Production/configuration fact supported by captured evidence | Region / location fact | Provider/legal material boundary | Current evidence state | Still required before contractual disclosure |
-| --- | --- | --- | --- | --- | --- |
-| Vercel | On 2026-08-22, target-production deployment `dpl_HNt5846gxC36eaEZbynqJTu69GFN` was observed as `READY`, bound to runtime subject `3a3382e385eb54f8e706e31046c8b7d497057527`; `/pt/trust` returned HTTP `200`. The connected team plan remains `hobby`. | Runtime delivery includes Vercel infrastructure; no RISCK COMPLY-specific legal processing/transfer region is established by deployment metadata alone. | Public Vercel DPA/terms are provider material only. The current Hobby account/plan mismatch with commercial B2B operation remains a separate owner/provider-contract blocker. | `RUNTIME_EVIDENCE_CAPTURED / HOBBY_PLAN_MISMATCH_OPEN / LEGAL_FACTS_INCOMPLETE` | Move Production to an applicable commercial plan/agreement when owner authorizes spend; retain account-specific contract/DPA evidence; confirm contracting entity, retention/deletion and transfer treatment. |
-| Supabase | Connected Production project `tganhbbhfxcpblmgqprg` remains active; the connected organization remains on plan `free`. Provider-confirmed DPA mechanics exist separately. | Project region is `eu-west-1` (Ireland). | Supabase provider-confirmed DPA incorporation, SCC/UK mechanisms where applicable and notice mechanics are factual provider evidence; qualified legal sufficiency and plan-specific resilience remain separate. | `PROJECT_REGION_PROVEN / DPA_FRAMEWORK_PROVEN / FREE_PLAN_RESILIENCE_OPEN / LEGAL_REVIEW_OPEN` | Qualified legal treatment; customer-accessible restore/recovery evidence; applicable backup/PITR/RPO/RTO commitments; any required paid capability. |
-| Stripe | Connected LIVE account identity is `RISCK COMPLY SAAS`; canonical LIVE Products/Prices and enabled LIVE webhook evidence exist. A genuine current customer subscription/checkout lifecycle has not been proven. | Connector evidence retained here does not expose account country or establish a processing/storage region. | Stripe public DPA/Services Agreement framework does not determine the applicable RISCK COMPLY contracting entity without account-country evidence. | `LIVE_CONTROL_PLANE_PROVEN / CUSTOMER_LIFECYCLE_OPEN / APPLICABLE_DPA_ENTITY_OPEN` | Account country, contracting/DPA entity, account-specific applicability, enabled-service data categories, retention/deletion and transfer/subprocessor treatment; genuine LIVE customer lifecycle evidence. |
-| GitHub | Repository `renanescola40-afk/eurocomply_saas` and CI/workflows are actively used. The repository is public and owned by a personal GitHub account. | No customer-data processing region specific to this account is established here. | Public GitHub legal material must not be projected into a Team/Enterprise contract that is not proven. | `REPOSITORY_USAGE_PROVEN / PUBLIC_REPO_PROVEN / PERSONAL_ACCOUNT_PROVEN / CONTRACT_APPLICABILITY_OPEN` | Determine relevant data categories and retention; confirm applicable account terms/DPA if required for the operating model. |
-| Sentry | Current Production `/pt/trust` for runtime subject `3a3382e385eb54f8e706e31046c8b7d497057527` exposes `sentry-environment=production` and exact current Sentry release metadata. Current client configuration disables default PII, removes request/user objects before send and keeps replay sampling disabled. | Sentry organization data-storage region is not established by the retained account evidence. | Provider public DPA/security material and support guidance do not establish account acceptance/region for this organization. | `RUNTIME_EVIDENCE_CAPTURED / PRIVACY_GUARDRAILS_PROVEN / ACCOUNT_LEGAL_FACTS_INCOMPLETE` | Organization/project ownership, region, legal entity, account DPA acceptance/applicability, retention, transfer/subprocessor terms and legal sufficiency. |
-| PostHog | The current Production client bundle contains a populated PostHog public project identifier and EU API/assets endpoints. The connected PostHog assurance account exposes only one **different** project, created on 2026-08-22, with no proven ingestion. Exact identifiers are intentionally omitted. | Production client targets EU service endpoints, but the actual Production project/account region and contractual account remain unattributed. | The newly connected no-ingestion project must not be used as Production account evidence. Public PostHog trust/DPA material is generic until the real Production project/account is identified. | `PRODUCTION_BINDING_PRESENT / CONNECTED_ASSURANCE_PROJECT_MISMATCH / ACCOUNT_FACTS_OPEN` | Identify/recover the actual Production project/account; confirm owner, plan, region, retention, DPA/account applicability, transfer/subprocessor terms, event categories and qualified consent/cookie treatment. |
-| Resend / transactional email | Repository runtime supports Resend-backed delivery and historical RISCK COMPLY deliveries are attributable. No new current exact-release Production send/account binding was established in the 2026-08-22 revalidation. | Current RISCK COMPLY account/runtime region is unproven. | Resend public DPA/subprocessor material is generic provider evidence and cannot prove current account use or acceptance. | `HISTORICAL_USE_PROVEN / CURRENT_PRODUCTION_BINDING_OPEN / PROVIDER_PUBLIC_MATERIAL_AVAILABLE` | Confirm current Production binding first; if active, establish account/legal entity, applicable agreement/DPA, message data, retention, transfer/subprocessor terms and customer-notice implications. |
-| Upstash / Redis | Production code uses Upstash Redis for distributed high-risk rate limiting/security-control state. On runtime subject `3a3382e385eb54f8e706e31046c8b7d497057527`, `/api/internal/metric-snapshots` returned normal HTTP `429 Too Many Requests` with rate-limit headers. The high-risk control is designed to fail closed with HTTP `503 security_control_unavailable` if Redis is missing or unavailable; the observed `429` therefore proves the distributed Redis backend was bound and responding for the request. | Exact Upstash account region(s) are not established by retained account-specific evidence. | Upstash public DPA/security/region material exists but does not prove RISCK COMPLY account plan, DPA applicability, retention or transfer treatment. | `RUNTIME_BINDING_PROVEN / ACCOUNT_LEGAL_FACTS_OPEN` | Exact account/plan, owner, primary/read region(s), retention/deletion behavior, DPA/Agreement applicability, transfer/subprocessor/change-notice treatment and qualified legal role. |
-| Malware/content scanning provider | Runtime policy requires provider-backed scanning for enabled enterprise uploads; historical ClamAV/scanner validation exists, but current exact-release provider identity/binding is not established here. | `UNKNOWN_CURRENT` | No current account-specific provider contract evidence retained. | `CONDITIONAL_UNVERIFIED` | Confirm actual active provider and scope, data/content categories, region, retention, DPA/transfer terms. |
-| OpenAI / ChatGPT — founder operational use outside SaaS runtime | Owner declaration identifies ChatGPT/OpenAI as an external AI service used operationally outside direct SaaS runtime. Current evidence does not establish a direct model-provider integration in the SaaS runtime. | Current RISCK COMPLY-specific processing/storage location for the personal operational workspace is not established here. | Business/Enterprise/API no-training-by-default commitments must not be projected onto an unproven personal-workspace arrangement. | `FOUNDER_FACT_CAPTURED / DIRECT_RUNTIME_INTEGRATION_NOT_IDENTIFIED / LEGAL_FACTS_INCOMPLETE` | Exact workspace terms, retention/deletion and training posture; qualified counsel decision on legal role and whether customer content may enter this workflow or must be excluded/upgraded. |
+| Provider / service | Current attributable fact | Region / location fact | Current evidence state | Still required before final contractual disclosure |
+| --- | --- | --- | --- | --- |
+| Vercel | Production deployment `dpl_Doqc3EAUXnV9M2oM3AFscyfbkCAE` was observed `READY`, bound to runtime subject `b8b099b9018f0be0de8f419d4c7d4a8629700d42`; `/api/health` returned `200`; canonical RISCK COMPLY aliases are active. Connected team plan is `pro`. | Deployment function metadata reports `iad1`; this does not by itself establish all provider legal processing/storage locations. | `RUNTIME_EVIDENCE_CAPTURED / PRO_PLAN_PROVEN / HOBBY_MISMATCH_RESOLVED` | Applicable account agreement/DPA treatment, retention/deletion and transfer interpretation where required. |
+| Supabase | Production project `tganhbbhfxcpblmgqprg` is `ACTIVE_HEALTHY`; connected organization plan is `pro`. Standard provider DPA/SCC mechanics have provider-confirmed/public support. | Project region `eu-west-1` (Ireland). | `PROJECT_REGION_PROVEN / PRO_PLAN_PROVEN / STANDARD_DPA_FRAMEWORK_PROVEN / LEGAL_REVIEW_OPEN` | Check whether any separate negotiated agreement supersedes standard terms; final legal role/transfer/retention interpretation. Production schema/readiness gap remains separately tracked in `#1778`. |
+| Stripe | Connected LIVE account is `RISCK COMPLY SAAS`, livemode. Prior attributable account read established country `PT`, account type `standard`, `business_type=individual`, charges/payouts enabled and details submitted. Sensitive KYC fields are intentionally excluded. | Account country is Portugal; provider storage/processing geography is not inferred from that field. | `LIVE_CONTROL_PLANE_PROVEN / ACCOUNT_COUNTRY_PROVEN / OPERATOR_ENTITY_ALIGNMENT_OPEN` | Align the LIVE account with the final existing-company operator decision if required; retain account-specific contractual/DPA applicability and enabled-service data-flow evidence. |
+| GitHub | Repository and CI/workflows are actively used. Repository is public and owned by a personal GitHub account. | No customer-data processing region specific to this account is established here. | `REPOSITORY_USAGE_PROVEN / PUBLIC_REPO_PROVEN / ACCOUNT_CONTRACT_FACTS_OPEN` | Determine applicable account terms/DPA treatment if required by the operating model. |
+| Sentry | Production response on the exact runtime subject contains `sentry-environment=production` and exact `sentry-release=b8b099...`; current-release binding is proven. Human support confirmed self-service assurance relies on public legal/security/trust materials, while individualized questionnaires are Enterprise-only. | Organization-specific storage region is not established by retained account evidence. | `CURRENT_RELEASE_BINDING_PROVEN / HUMAN_SUPPORT_BOUNDARY_PROVEN / ACCOUNT_DPA_REGION_OPEN` | Owner-visible organization region and DPA acceptance actor/timestamp; retention/transfer interpretation. |
+| PostHog | Production bundle targets EU PostHog API/assets endpoints. Connected assurance organization exposes only a different `Default project` created 2026-08-22 with no ingested event; it is not the Production project. Human provider support confirmed EU Cloud is Frankfurt and account-linked DPA generation occurs from the Legal page. | Production client uses EU endpoints; provider states EU Cloud is Frankfurt. Production account ownership remains unrecovered. | `PRODUCTION_EU_ENDPOINT_BINDING_PROVEN / CONNECTED_ASSURANCE_PROJECT_MISMATCH / PRODUCTION_ACCOUNT_RECOVERY_OPEN` | Recover actual Production account/project; generate/retrieve account-linked DPA; confirm plan, retention and account settings. |
+| Resend / transactional email | Historical RISCK COMPLY use and provider standard DPA/terms material exist. No attributable current exact-release send/runtime binding was observed in the latest scoped check. | Current account/runtime region unproven. | `HISTORICAL_USE_PROVEN / CURRENT_EXACT_RELEASE_BINDING_OPEN / PROVIDER_PUBLIC_MATERIAL_AVAILABLE` | Confirm current Production binding; if active, account/legal entity, DPA applicability, retention, transfers and notice treatment. |
+| Upstash / Redis | Historical predecessor-release runtime evidence proved distributed Redis binding. Current-release safe probing did not reach the backend and scoped logs did not provide attributable current-release execution. | Exact account region(s) remain unproven. | `HISTORICAL_RUNTIME_BINDING_PROVEN / CURRENT_EXACT_RELEASE_REPROOF_OPEN / ACCOUNT_FACTS_OPEN` | Current exact-release runtime reproof; account/plan/owner/region, retention/deletion, DPA and transfer/subprocessor facts. |
+| Malware/content scanner | Runtime policy requires provider-backed scanning for enabled enterprise uploads; historical scanner evidence exists, but current exact-release provider identity/binding is not established. | `UNKNOWN_CURRENT` | `CONDITIONAL_UNVERIFIED` | Confirm actual active provider/scope, data categories, region, retention and legal terms if the feature is enabled. |
+| OpenAI / ChatGPT — founder operational use outside SaaS runtime | Founder operational use exists outside direct SaaS runtime; no direct SaaS model-provider integration is established by current evidence. | Workspace-specific processing/storage posture is outside current provider-account evidence. | `FOUNDER_OPERATIONAL_USE_CAPTURED / DIRECT_RUNTIME_INTEGRATION_NOT_IDENTIFIED / LEGAL_FACTS_OPEN` | Final policy on customer-content use, workspace terms/retention/training posture and qualified legal role. |
+
+## Superseded provider blockers
+
+The following historical blockers are explicitly superseded and must not be reported as current:
+
+- `VERCEL_HOBBY_PLAN_MISMATCH` — **resolved**; connected Vercel team is Pro.
+- `SUPABASE_FREE_PLAN_MISMATCH` — **resolved**; connected Supabase organization is Pro.
+- `STRIPE_ACCOUNT_COUNTRY_OPEN` — **resolved**; attributable account country is Portugal.
+- `SENTRY_CURRENT_RELEASE_BINDING_OPEN` — **resolved** for runtime binding; organization region/DPA acceptance remain separate.
+- `POSTHOG_EU_ENDPOINT_BINDING_OPEN` — **resolved** for runtime endpoint configuration; Production account recovery/DPA remain separate.
 
 ## Current release compatibility observation
 
-PR `#1780` was merged into runtime subject `3a3382e385eb54f8e706e31046c8b7d497057527` to restore pre-V19 maintenance/email compatibility. Current Production deployment is `READY`. A scoped Vercel runtime-error query found no errors for `/api/intelligence/refresh` or `/api/internal/compliance-alerts` in the inspected post-deploy window. This is stability evidence only; it does not prove that both internal routes executed after deployment.
-
-## Stale evidence explicitly rejected as current provider proof
-
-Historical provider snapshots remain useful provenance for their capture dates but must not be used alone to claim current enablement, DPA status, region, retention or final-release coverage. In particular, old secret-store/runtime inventories and pre-`3a3382e...` deployment snapshots are not the current release subject.
+The observed runtime subject is healthy at the basic Vercel health endpoint. This does not close the separately reproduced Production maintenance/schema blocker in `#1778`, and provider factual reconciliation must not be used to promote `PRODUCTION_GO` while that technical gate or external gates remain open.
 
 ## Legal interpretation boundary
 
 The following remain `QUALIFIED_HUMAN_REQUIRED` where applicable:
 
 - controller/processor/subprocessor role allocation;
-- lawful-basis descriptions;
+- lawful basis descriptions;
 - Article 28 DPA sufficiency;
 - international-transfer treatment;
-- subprocessor authorisation, advance notice and objection model;
-- analytics/cookie/consent legal requirements and final notice wording;
+- subprocessor authorisation/notice/objection model;
+- analytics/cookie/consent legal requirements;
 - retention/legal-hold decisions;
-- final Privacy Policy, Terms and DPA language;
-- whether a technically active provider is legally a processor, subprocessor, independent controller or another role for a particular data flow.
+- final Privacy Policy, Terms and DPA language.
 
-Public provider terms may support factual due diligence, but they are not a substitute for confirming the actual account agreement and obtaining qualified legal review.
+Public provider terms reduce factual uncertainty but are not a substitute for confirming the actual account agreement and obtaining qualified legal review.
 
-## Exact-SHA / release treatment
+## Exact-SHA treatment
 
-There are two distinct SHAs:
-
-1. **runtime evidence subject SHA** — the deployed state actually observed and attributable to runtime evidence;
-2. **document-containing commit SHA** — the repository commit that stores this register.
-
-They are not required to be identical. A documentation-only commit or merge can change the second SHA without changing the runtime/provider fact previously observed. That does not create evidence that the new commit was deployed and does not automatically invalidate the prior runtime observation.
-
-For a statement that something is the **latest live release**, Production deployment state must be revalidated and a new runtime evidence subject recorded. Provider contract/DPA evidence has its own document/version/effective-date scope and does not become stale solely because application code changes; material changes in data flows, enabled providers, regions, retention or service scope require reconciliation.
+The runtime evidence subject SHA and the later documentation-containing commit SHA may differ. A documentation-only commit does not itself invalidate previously captured provider/account facts. Release-specific statements must be revalidated after material changes in runtime, provider configuration, data flows, regions, retention or service scope.
 
 ## Closure state
 
-`PROVIDER_FACTUAL_RECONCILIATION: IN_REVIEW`
+`PROVIDER_FACTUAL_RECONCILIATION: MATERIALLY_RECONCILED`
 
-`UPSTASH_RUNTIME_BINDING: PROVEN`
+`VERCEL_PLAN_BLOCKER: CLOSED`
 
-`POSTHOG_CONNECTED_ASSURANCE_PROJECT: NOT_PRODUCTION`
+`SUPABASE_PLAN_BLOCKER: CLOSED`
+
+`SENTRY_CURRENT_RELEASE_BINDING: PROVEN`
+
+`POSTHOG_CURRENT_RELEASE_EU_ENDPOINT_BINDING: PROVEN`
+
+`UPSTASH_CURRENT_EXACT_RELEASE_REPROOF: OPEN`
+
+`POSTHOG_PRODUCTION_ACCOUNT_RECOVERY: OPEN`
+
+`STRIPE_OPERATOR_ENTITY_ALIGNMENT: OPEN`
+
+`ACCOUNT_LEGAL_FACTS_OPEN: OPEN`
 
 `PRIVACY_GDPR_LEGAL_INTERPRETATION: WAITING_QUALIFIED_HUMAN`
 
