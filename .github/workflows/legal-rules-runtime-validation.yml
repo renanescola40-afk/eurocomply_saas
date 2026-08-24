@@ -71,7 +71,10 @@ jobs:
       github.event_name != 'deployment_status' ||
       (
         github.event.deployment_status.state == 'success' &&
-        github.event.deployment.ref == github.event.repository.default_branch &&
+        (
+          github.event.deployment.ref == github.event.repository.default_branch ||
+          github.event.deployment.ref == ''
+        ) &&
         github.event.sender.login == 'vercel[bot]'
       )
     runs-on: ubuntu-24.04
@@ -135,7 +138,10 @@ jobs:
       (
         github.event_name == 'deployment_status' &&
         github.event.deployment_status.state == 'success' &&
-        github.event.deployment.ref == github.event.repository.default_branch &&
+        (
+          github.event.deployment.ref == github.event.repository.default_branch ||
+          github.event.deployment.ref == ''
+        ) &&
         github.event.sender.login == 'vercel[bot]'
       )
     needs: contract
@@ -179,7 +185,8 @@ jobs:
           if (process.env.GITHUB_EVENT_NAME === 'deployment_status') {
             if (process.env.DEPLOYMENT_EVENT_STATE !== 'success') throw new Error('deployment status must be success');
             if (process.env.DEPLOYMENT_EVENT_SENDER !== 'vercel[bot]') throw new Error('deployment sender is not the trusted Vercel app');
-            if (process.env.DEPLOYMENT_EVENT_REF !== process.env.DEFAULT_BRANCH) throw new Error('deployment ref is not the default branch');
+            const deploymentRef = String(process.env.DEPLOYMENT_EVENT_REF || '');
+            if (deploymentRef && deploymentRef !== process.env.DEFAULT_BRANCH) throw new Error('deployment ref is neither the default branch nor an empty commit-SHA ref');
             if (String(process.env.DEPLOYMENT_EVENT_SHA || '').toLowerCase() !== expectedSha) throw new Error('deployment event SHA mismatch');
           }
           NODE

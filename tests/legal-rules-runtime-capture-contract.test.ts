@@ -50,12 +50,15 @@ describe('legal rules runtime capture contract', () => {
     expect(workflowSource).toContain('test "$(git rev-parse HEAD)" = "$EXPECTED_DEPLOYMENT_SHA"');
   });
 
-  it('automatically captures only trusted successful current-main Vercel deployments', () => {
+  it('automatically captures only trusted successful current-main Vercel deployments, including commit-SHA deployments with no ref', () => {
     expect(workflowSource).toContain('deployment_status:');
     expect(workflowSource).toContain("github.event.deployment_status.state == 'success'");
     expect(workflowSource).toContain('github.event.deployment.ref == github.event.repository.default_branch');
+    expect(workflowSource).toContain("github.event.deployment.ref == ''");
     expect(workflowSource).toContain("github.event.sender.login == 'vercel[bot]'");
     expect(workflowSource).toContain("process.env.DEPLOYMENT_EVENT_SENDER !== 'vercel[bot]'");
+    expect(workflowSource).toContain("const deploymentRef = String(process.env.DEPLOYMENT_EVENT_REF || '')");
+    expect(workflowSource).toContain('if (deploymentRef && deploymentRef !== process.env.DEFAULT_BRANCH)');
     expect(workflowSource).toContain("host.endsWith('.vercel.app')");
     expect(workflowSource).toContain("host === 'risckcomply.com'");
     expect(workflowSource).toContain('refs/remotes/origin/${DEFAULT_BRANCH}');

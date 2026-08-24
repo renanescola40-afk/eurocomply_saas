@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildBundle, validateInputs } from '../../scripts/compliance/generate-eu-ai-act-final-runtime-bundle.mjs';
 
 const sha = 'a'.repeat(40);
+const workflowSource = readFileSync(resolve('.github/workflows/eu-ai-act-final-runtime-closeout.yml'), 'utf8');
 const safeCoverage = {
   repository: 'renanescola40-afk/eurocomply_saas',
   targetSha: sha,
@@ -79,5 +82,17 @@ describe('EU AI Act final runtime closeout', () => {
       platformProof: { status: 'BLOCKED', targetSha: sha },
       strict: true,
     })).toThrow(/platform proof missing/);
+  });
+
+  it('consumes Legal Rules runtime proof only from a trusted immutable exact-SHA Actions artifact', () => {
+    expect(workflowSource).toContain('actions/artifacts?name=${artifact_name}&per_page=100');
+    expect(workflowSource).toContain('.workflow_run.head_sha == $sha');
+    expect(workflowSource).toContain("= 'Legal Rules Runtime Validation'");
+    expect(workflowSource).toContain("= 'success'");
+    expect(workflowSource).toContain('deployment_status|workflow_dispatch');
+    expect(workflowSource).toContain('actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c');
+    expect(workflowSource).toContain("validateLegalRulesRuntimeEvidenceDocument(document, process.env.TARGET_SHA)");
+    expect(workflowSource).toContain("steps.legal_rules.outputs.found == 'true'");
+    expect(workflowSource).toContain('${{ env.SAFE_EVIDENCE_ROOT }},${{ env.RUNTIME_EVIDENCE_ROOT }}');
   });
 });
