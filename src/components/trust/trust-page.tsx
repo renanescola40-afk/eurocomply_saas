@@ -6,10 +6,12 @@ import { ProviderRuntimeDisclosure } from '@/components/trust/provider-runtime-d
 import { type Locale } from '@/lib/i18n/routing';
 import { getLocalizedTrustCenterPages, getTrustCenterUi } from '@/lib/trust-center/localized-content';
 import { type TrustPage } from '@/lib/trust-center/content';
+import { getLegalPublicationState } from '@/server/legal/legal-publication-state';
 
 export function TrustCenterPage({ locale, page }: { locale: Locale; page: TrustPage }) {
   const pages = getLocalizedTrustCenterPages(locale);
   const ui = getTrustCenterUi(locale);
+  const legalPublication = getLegalPublicationState();
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#050505] text-white">
@@ -49,6 +51,10 @@ export function TrustCenterPage({ locale, page }: { locale: Locale; page: TrustP
                   {label}
                 </div>
               ))}
+            </div>
+            <div className="mt-6 rounded-2xl border border-amber-200/20 bg-amber-200/[0.06] p-4" lang="en">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/80">{legalPublication.label}</p>
+              <p className="mt-2 text-xs leading-6 text-white/52">{legalPublication.notice}</p>
             </div>
             <p className="mt-6 text-sm text-white/38">{ui.lastUpdated}: {page.updated}</p>
           </div>
