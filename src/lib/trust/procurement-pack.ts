@@ -95,6 +95,12 @@ export const procurementProviders: ProcurementProvider[] = [
     regionDisclosure: 'Production usage is evidenced; final legal role, applicable contract or DPA, region, retention and transfer treatment remain under review.',
   },
   {
+    name: 'Google Workspace',
+    purpose: 'Corporate support, security, procurement and legal email communications',
+    status: 'core',
+    regionDisclosure: 'Account-specific evidence proves Business Starter for risckcomply.com and Google Cloud EMEA Limited as the billed EMEA entity. Exact account CDPA incorporation, data-region, retention and transfer treatment remain evidence-required.',
+  },
+  {
     name: 'GitHub Actions',
     purpose: 'Source delivery, CI/CD and protected recovery/security workflows',
     status: 'conditional',
