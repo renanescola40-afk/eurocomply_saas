@@ -29,7 +29,7 @@ describe('organization add-ons governed forward promotion', () => {
     const postconditions = fs.readFileSync(
       'scripts/supabase/verify-forward-reconciliation-postconditions.sql',
       'utf8',
-    );
+    ).toLowerCase();
     const liveProof = fs.readFileSync('.github/workflows/supabase-live-rls-validation.yml', 'utf8');
 
     expect(config.migrations.map((item) => item.filename)).toContain(migrationFilename);
