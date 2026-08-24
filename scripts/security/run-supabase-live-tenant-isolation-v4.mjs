@@ -12,8 +12,6 @@ import {
   buildEvidencePayload,
   customerTenantTables,
   globalReferenceTables,
-  requiredBackendWriteDenyOperations,
-  requiredGlobalReferenceOperations,
   requiredViewerAdminDenyOperations,
   sameTenantWritableTables,
   tableCoverageFrom,
