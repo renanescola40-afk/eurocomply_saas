@@ -12,6 +12,10 @@ on:
         description: Optional full current main SHA; defaults to current main
         required: false
         type: string
+      supabase_promotion_run_id:
+        description: Optional successful exact-SHA V21/31 Supabase Production promotion run ID; required to dispatch TEN-RLS when no reusable exact-SHA proof exists
+        required: false
+        type: string
       confirmation:
         description: Type RUN_SAFE_RUNTIME_BOOTSTRAP for a manual run
         required: false
@@ -105,6 +109,7 @@ jobs:
     env:
       RELEASE_SHA: ${{ needs.safe-runtime-environment-governance.outputs.release_sha }}
       RELEASE_BRANCH: main
+      SUPABASE_PROMOTION_RUN_ID: ${{ inputs.supabase_promotion_run_id }}
       RUNTIME_CAMPAIGN_PROFILE: safe
       RUNTIME_CAMPAIGN_OUTPUT: artifacts/enterprise-safe-runtime-campaign.json
       RUNTIME_CAMPAIGN_ARTIFACTS_DIR: artifacts/safe-runtime-evidence
