@@ -4,7 +4,7 @@ Status: enterprise review note.
 
 ## Encryption in transit
 
-Risck comply is designed to use HTTPS/TLS through managed hosting and provider APIs.
+RISCK COMPLY is designed to use HTTPS/TLS through managed hosting and provider APIs.
 
 ## Deployment configuration
 
@@ -14,4 +14,4 @@ Sensitive configuration is intended to be managed through deployment-provider se
 
 Provider evidence must be attached before stronger claims are made.
 
-Responsible security contact: `security@risckcomply.com`
+Current responsible security contact: `comercial@risckcomply.com`. A dedicated security alias must not be presented as active until external delivery is re-verified.

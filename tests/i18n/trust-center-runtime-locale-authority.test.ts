@@ -5,11 +5,14 @@ import { describe, expect, it } from 'vitest';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { getLocalizedTrustCenterPage, getTrustCenterUi } from '@/lib/trust-center/localized-content';
 import { TRUST_CENTER_ROUTES } from '@/lib/trust-center/routes';
+import { applyVerifiedTrustAuthority } from '@/lib/trust-center/verified-authority';
 
 const runtimeRoute = readFileSync(join(process.cwd(), 'src/app/[locale]/[trustPage]/page.tsx'), 'utf8');
 const runtimeComponent = readFileSync(join(process.cwd(), 'src/components/trust/trust-page.tsx'), 'utf8');
 
 const nonEnglishLocales = ['pt', 'es', 'fr', 'it', 'de'] as const;
+const SECURITY_EMAIL = 'comercial@risckcomply.com';
+const UNVERIFIED_SECURITY_EMAIL = 'security@risckcomply.com';
 
 describe('runtime Trust Center locale authority', () => {
   it('routes metadata and rendering through the same localized authority used in production', () => {
@@ -58,16 +61,32 @@ describe('runtime Trust Center locale authority', () => {
     }
   });
 
-  it('keeps Portuguese procurement surfaces accented and does not publish a dedicated mailbox claim before proof', () => {
+  it('keeps Portuguese procurement surfaces accented and publishes only the verified runtime security authority', () => {
     const trust = getLocalizedTrustCenterPage('trust', 'pt');
     const security = getLocalizedTrustCenterPage('security', 'pt');
-    const disclosure = getLocalizedTrustCenterPage('vulnerability-disclosure', 'pt');
+    const disclosure = applyVerifiedTrustAuthority(
+      getLocalizedTrustCenterPage('vulnerability-disclosure', 'pt'),
+      'pt',
+    );
 
     expect(trust.title).toBe('Centro de Confiança');
     expect(trust.subtitle).toContain('Informação');
     expect(security.title).toBe('Segurança');
-    expect(disclosure.sections[0]?.body).toContain('renansilva2002@gmail.com');
-    expect(disclosure.sections[0]?.body).not.toContain('security@risckcomply.com');
+    expect(disclosure.sections[0]?.body).toContain(SECURITY_EMAIL);
+    expect(disclosure.sections[0]?.body).not.toContain(UNVERIFIED_SECURITY_EMAIL);
+    expect(disclosure.sections[0]?.body).not.toMatch(/@gmail\.com/i);
+  });
+
+  it('keeps the verified disclosure authority consistent across every runtime locale', () => {
+    for (const locale of locales as readonly Locale[]) {
+      const disclosure = applyVerifiedTrustAuthority(
+        getLocalizedTrustCenterPage('vulnerability-disclosure', locale),
+        locale,
+      );
+      expect(disclosure.sections[0]?.body).toContain(SECURITY_EMAIL);
+      expect(disclosure.sections[0]?.body).not.toContain(UNVERIFIED_SECURITY_EMAIL);
+      expect(disclosure.sections[0]?.body).not.toMatch(/@gmail\.com/i);
+    }
   });
 
   it('preserves keyboard focus treatment on the runtime procurement navigation', () => {

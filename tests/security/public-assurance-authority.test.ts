@@ -3,24 +3,29 @@ import { describe, expect, it } from 'vitest';
 
 const read = (path: string) => readFileSync(path, 'utf8');
 
-const SECURITY_EMAIL = 'security@risckcomply.com';
-const COMMERCIAL_EMAIL = 'comercial@risckcomply.com';
+const SECURITY_EMAIL = 'comercial@risckcomply.com';
+const UNVERIFIED_SECURITY_EMAIL = 'security@risckcomply.com';
 const STATUS_URL = 'https://risckcomplystatus1.statuspage.io/';
-const PERSONAL_GMAIL = 'renansilva2002@gmail.com';
 
 describe('verified public assurance authorities', () => {
-  it('publishes the dedicated corporate security mailbox on canonical public surfaces', () => {
+  it('publishes only the reachable corporate security contact on canonical public surfaces', () => {
     const securityPolicy = read('SECURITY.md');
-    const trustContent = read('src/lib/trust-center/content.ts');
-    const publicInfo = read('src/components/marketing/public-info-page.tsx');
     const verifiedAuthority = read('src/lib/trust-center/verified-authority.ts');
+    const trustRoute = read('src/app/[locale]/trust/page.tsx');
+    const securityRoute = read('src/app/[locale]/security/page.tsx');
 
-    for (const source of [securityPolicy, trustContent, publicInfo, verifiedAuthority]) {
-      expect(source).toContain(SECURITY_EMAIL);
-      expect(source).not.toContain(PERSONAL_GMAIL);
+    expect(securityPolicy).toContain(SECURITY_EMAIL);
+    expect(verifiedAuthority).toContain(SECURITY_EMAIL);
+    expect(securityPolicy).not.toContain(UNVERIFIED_SECURITY_EMAIL);
+    expect(verifiedAuthority).not.toContain(UNVERIFIED_SECURITY_EMAIL);
+    expect(securityPolicy).not.toMatch(/@gmail\.com/i);
+    expect(verifiedAuthority).not.toMatch(/@gmail\.com/i);
+
+    for (const route of [trustRoute, securityRoute]) {
+      expect(route).toContain('applyVerifiedTrustAuthority');
+      expect(route).toContain('getLocalizedTrustCenterPage');
+      expect(route).toContain("@/components/trust/trust-page");
     }
-
-    expect(publicInfo).toContain(COMMERCIAL_EMAIL);
   });
 
   it('forces localized vulnerability disclosure through the verified authority layer', () => {
