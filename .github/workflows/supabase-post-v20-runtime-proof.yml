@@ -161,12 +161,18 @@ jobs:
             and .postconditions == "forward_reconciliation_postconditions_passed"
           ' "$LIVE_POSTCONDITIONS" >/dev/null
 
-          jq -e '
-            .schema == "risck-comply.supabase-forward-reconciliation-config.v1"
+          jq -e --arg sha "$TARGET_SHA" '
+            .schema == "risck-comply.supabase-forward-reconciliation-manifest.v1"
+            and .targetSha == $sha
+            and (.selectionDigest | test("^sha256:[a-f0-9]{64}$"))
             and (.migrations | length) == 27
-            and .truthBoundary.productionWriteAuthorizedByConfig == false
-            and .truthBoundary.migrationHistoryRepairAllowed == false
-            and .truthBoundary.unrestrictedDbPushAllowed == false
+            and ([.migrations[].sha256 | test("^[a-f0-9]{64}$")] | all)
+            and ([.migrations[].filename] | index("20260823123000_payment_first_commercial_data_plane.sql") != null)
+            and ([.migrations[].filename] | index("20260823131500_payment_first_gap_analysis_and_storage.sql") != null)
+            and .checks.exactShaBound == true
+            and .checks.productionWriteAuthorized == false
+            and .checks.migrationHistoryRepairAuthorized == false
+            and .checks.unrestrictedDbPushAuthorized == false
           ' "$CURRENT_MANIFEST" >/dev/null
 
       - name: Execute bounded live post-V20 runtime proof
