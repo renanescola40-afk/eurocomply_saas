@@ -1,63 +1,39 @@
 # Autonomous execution state
 
-- Updated: 2026-08-22 13:37 UTC
-- Last synchronized main baseline (pre-change): `2b83d371bd6913f378fd6b995a787e1848b57e93`
-- Open pull requests at observation: **#1768**
-- Current-main score: **unknown**
-- Last accepted score: **45% / NO_GO**, assessed on
-  `c413288eb8453b55c4d049c758dc0cd063aa70b9`
-- Freshness: **STALE**
-- Active authority work package: Supabase V19 bounded production-forward rebase
-- Active P0: close `S0_MANIFEST_NOT_READY` on #1768, then execute the protected
-  exact-current-main Supabase production decision and promotion lane
-- Merge authority: human owner only, after exact-head checks, eligible review,
-  resolved conversations and clean merge state
+- Updated: 2026-08-24
+- Observed protected `main`: `41cc6656de9a9d9df06b549dc1309d481498758b`
+- Verified Vercel Production: `dpl_FEUDn9oPpzetNwZcu3N5qJWmeAtZ` — `READY / production`
+- Current-main official Enterprise score: **unknown**
+- Last accepted historical score: **45% / NO_GO**, assessed on `c413288eb8453b55c4d049c758dc0cd063aa70b9`
+- Score freshness: **STALE**
+- Active technical authority: governed Supabase forward-production acceptance; #1819 is merged and binds live RLS proof to the current governed forward-promotion artifact, but it does not authorize or perform a Production database write
+- Active external assurance: Layer8 independent pentest scoping meeting confirmed for 2026-08-25 10:00–11:00 Europe/Lisbon
+- Pentest handoff refresh: PR #1822
+- Merge authority: human owner only, after required exact-head checks, eligible review, resolved conversations and clean merge state
 
 ## Current transition
 
-PR #1767 is merged on the observed `main` baseline. A read-only Production
-migration audit then established that the remote ledger head is
-`20260822120617_atomic_vendor_risk_quota_mutations`, while the previously
-selected V18 identities were not the Production ledger lineage. The commercial
-mutation RPC already exists under that remote identity, but the remaining 25
-bounded Enterprise effects still require governed forward deployment.
+The historical #1768/V19 handoff is no longer the active repository state. The protected main has advanced through the governed Enterprise data-plane work and now includes #1819, which removes stale fixed migration-count authority from live RLS proof and requires post-promotion evidence to bind to the current canonical forward manifest.
 
-PR #1768 therefore re-issues those 25 reviewed effects under Supabase-CLI-issued
-V19 identities strictly after the observed Production head, preserves the
-reviewed SQL bytes, keeps the already-present commercial identity outside the V19
-selected set, and records its remote lineage separately without authorizing a
-write or migration-history repair. Superseded V18 identities that were not
-applied to Production are retained under reconciliation provenance instead of
-being replayed alongside V19 on fresh databases.
+No Supabase Production promotion is claimed here. A successful repository workflow, PR merge or dispatch-only proof does not authorize Production writes and cannot substitute for the governed promotion/recovery/approval path.
 
-On the pre-documentation-sync PR head
-`1df6f56f0e037bde02f514254d7f1508687a3535`, Supabase Enterprise Data Plane QA
-run `32576262411` passed a full disposable schema replay, Enterprise Evidence
-postconditions, Auth/REST/Storage startup and tenant A/B Evidence Vault proof.
-PR-event Rehearsal run `32576262329`, Dry Run run `32576262226`, drift audit run
-`32576262274`, CI run `32576262476`, Enterprise DAST run `32576262328` and
-Enterprise Evidence Tests run `32576262260` also passed. These results become
-historical as soon as the PR head changes; fresh exact-head CI is required after
-this state synchronization.
-
-No protected Production rehearsal, Production dry run, Decision Gate,
-Production promotion or post-promotion acceptance is claimed by those PR-event
-results.
+For external security assurance, canonical #1692 now reflects the current Layer8 state. The meeting is confirmed, the technical handoff package is prepared, the current Production release has been rebound for scoping, and the remaining pre-execution items are human/external: proposal/contracting entity, NDA, written Rules of Engagement, exact final target freeze, synthetic test-account private handoff, test window/contact/source-IP handling, evidence-retention terms, report/retest terms and explicit owner authorization.
 
 ## Evidence boundary
 
-This versioned handoff records a pre-change baseline; it is not a claim that the
-recorded SHA remains the current default-branch head after this file is merged.
-Every runtime, approval or promotion action must resolve GitHub `main` again and
-bind new evidence to that exact SHA. The canonical generated persistent
-execution-state workflow artifact remains the exact-SHA authority.
+- current `main` and Production deployment are a scoping/runtime reference, not an accepted independent pentest;
+- internal CI/SAST/DAST does not provide external-assurance credit;
+- no NDA or ROE is represented as signed;
+- no active pentest is authorized;
+- no repository-only change raises the stale historical Enterprise percentage;
+- no Production database write is authorized by this state file.
 
-Repository checks, disposable database replay, merge completion and deployment
-readiness do not prove live Billing lifecycle, Supabase production acceptance,
-Product FRIA production acceptance, production-provider runtime, independent
-external assurance, legal approval or final production Go/No-Go.
+## Next priorities
 
-`ENTERPRISE_100: PASS` and `PRODUCTION_GO: PASS` remain withheld until the
-canonical protected authority accepts all configured evidence for the same exact
-current main. The historical 45% score is retained only as stale historical
-evidence and is not a score for the synchronized baseline or any later main.
+### Technical authority
+Continue the governed exact-current-main Supabase Production decision/promotion/recovery path only when its independent approval and explicit owner Production-write authorization requirements are satisfied. Do not infer live RLS acceptance from pre-promotion evidence.
+
+### External assurance
+Use the 2026-08-25 Layer8 session to close scope, contracting entity, applicable CREST accreditation, independence/conflicts, NDA process, ROE, methodology/severity, exact release binding, synthetic-account approach, safety exclusions, report deliverables, Critical/High retest terms, price/duration and next execution window.
+
+`ENTERPRISE_100: PASS` and `PRODUCTION_GO: PASS` remain withheld until the canonical protected authority accepts all configured runtime and human evidence for the same exact release lineage.
