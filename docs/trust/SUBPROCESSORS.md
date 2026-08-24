@@ -12,7 +12,7 @@ This register lists providers and operational services that may process customer
 
 | Provider | Service category | Data category | Current attributable evidence | Current status |
 | --- | --- | --- | --- | --- |
-| Vercel | Application hosting, deployment and edge/runtime delivery | Application traffic, deployment metadata, logs | Current Production deployment is attributable to `75151c...`; health is live; connected team is Pro. Standard Pro DPA/SCC framework is provider-published and plan-matched. | Runtime active / Pro proven / account-custom agreement and legal interpretation open |
+| Vercel | Application hosting, deployment and edge/runtime delivery | Application traffic, deployment metadata, logs | Retained Production deployment evidence is attributable to runtime subject `75151c...`; health was live; connected team is Pro. Standard Pro DPA/SCC framework is provider-published and plan-matched. | Runtime evidence retained / Pro proven / account-custom agreement and legal interpretation open |
 | Supabase | Database, authentication, storage and RLS | Customer data, organization data, documents, auth metadata | Production project is `ACTIVE_HEALTHY` in `eu-west-1`; connected organization is Pro; standard DPA framework is provider-confirmed/published. | Runtime active / Ireland region proven / Pro proven / PITR and legal residuals open |
 | Stripe | Billing and subscription management | Billing metadata; payment details handled by Stripe | LIVE account is attributable; country is Portugal; account is standard and configured with `business_type=individual`; charges/payouts enabled. | LIVE control plane proven / operator-entity alignment open |
 | Google OAuth / Google Identity | Optional user authentication / identity federation | Authentication identifiers and provider-returned profile metadata | Production Auth contains non-zero Google-provider identities from an aggregate non-PII query; application source uses Supabase Google OAuth. | Production use proven / final legal role, DPA, region, retention and transfer treatment open |
@@ -21,7 +21,7 @@ This register lists providers and operational services that may process customer
 | Sentry | Error monitoring and diagnostics | Error context and diagnostic metadata | Direct Production fetch exposes environment `production` and exact release `75151c...`; runtime binding is freshly proven. | Current release binding proven / organization region, retention and DPA acceptance open |
 | PostHog | Product analytics | Analytics events and identifiers when consent/configuration allows capture | Production client targets EU endpoints. Connected assurance project has no ingested event and is not the Production project. Human provider support states EU Cloud is Frankfurt. | EU endpoint binding proven / Production account recovery & DPA open |
 | Resend / email provider | Transactional and support email | Email address, message metadata and content | Historical real delivery is independently evidenced; provider standard DPA/SCC/subprocessor/deletion framework is established. No attributable exact-current-release send is retained. | Historical use proven / current exact-release binding and account acceptance open |
-| Upstash | Distributed Redis rate limiting and security-control state | Operational request/control metadata and identifiers | Current exact-release binding on `75151c...` is proven through a fail-closed distributed rate-limit path; provider DPA/transfer/subprocessor framework is established generally. | Current runtime proven / account plan, region, retention and account-specific acceptance open |
+| Upstash | Distributed Redis rate limiting and security-control state | Operational request/control metadata and identifiers | Distributed Redis is materially required by the fail-closed rate-limit/security architecture and predecessor binding evidence exists. The retained exact-current observation did not reach the Redis-backed path, so exact-current runtime reproof remains open. Provider DPA/transfer/subprocessor framework is established generally. | Material security provider / historical binding proven / exact-current runtime reproof open / account facts open |
 | Malware/content scanner | Enterprise upload scanning if enabled | Uploaded content and scan metadata | Runtime policy supports/requires provider-backed scanning when the feature is enabled; exact-current provider identity/binding is not established. | Conditional / current provider binding unverified |
 | OpenAI / ChatGPT — founder operational use outside SaaS runtime | Founder-operated external AI assistance | Founder-submitted prompts and outputs | Operational use exists outside direct SaaS runtime; no direct SaaS model-provider integration is established by current evidence. | Founder operational fact captured / customer-content use and legal role open |
 
@@ -34,9 +34,10 @@ Do not report these historical states as current:
 - Stripe account country unknown — superseded by attributable Portugal account evidence.
 - Sentry current-release binding unknown — superseded by exact `75151c...` Production tracing evidence.
 - PostHog EU endpoint binding unknown — superseded by current Production client evidence.
-- Upstash predecessor-only runtime evidence — superseded by exact-current runtime proof on `75151c...`.
 - Google OAuth merely configured/unproven — superseded by non-zero aggregate Production identity evidence.
 - Google Workspace operational use unknown — superseded by account-specific Business Starter billing evidence and active corporate-mail use.
+
+Upstash exact-current runtime reproof remains open until a retained redacted observation reaches the Redis-backed path; historical/predecessor evidence must not be promoted to current proof by wording alone.
 
 ## Factual provider-material boundary
 
@@ -46,7 +47,7 @@ Google OAuth is intentionally described as an identity provider rather than auto
 
 The PostHog row remains explicit: Production integration is technically attributable while the connected assurance account is not the Production account.
 
-For Resend and the malware scanner, current exact-release/account evidence must not be inferred from repository configuration or historical evidence alone.
+For Resend, Upstash exact-current runtime and the malware scanner, current exact-release/account evidence must not be inferred from repository configuration or historical evidence alone.
 
 ## Customer notice draft
 
