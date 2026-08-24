@@ -3,8 +3,9 @@ function parseTimestamp(value) {
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 
-const V20_SCHEMA = 'risck-comply.supabase-live-rls-validation.v20';
-const V20_CHANGE_SET = '2026-08-23-enterprise-data-plane-payment-first-closure-v20';
+const LIVE_RLS_SCHEMA = 'risck-comply.supabase-live-rls-validation.v21';
+const GOVERNED_CHANGE_SET = '2026-08-24-enterprise-data-plane-payment-first-trusted-access-closure-v21';
+const GOVERNED_MIGRATION_COUNT = 31;
 const REQUIRED_TABLES = [
   'organizations', 'organization_members', 'ai_systems', 'compliance_tasks',
   'documents', 'risks', 'vendors', 'subscriptions', 'audit_logs', 'invitations',
@@ -29,7 +30,7 @@ export function validateSupabaseRlsRuntimeEvidence(
   const nowMs = now instanceof Date ? now.getTime() : Date.parse(String(now));
   if (!Number.isFinite(nowMs)) return ['validation clock must be a valid timestamp'];
 
-  if (evidence?.schema !== V20_SCHEMA) failures.push(`schema must be ${V20_SCHEMA}`);
+  if (evidence?.schema !== LIVE_RLS_SCHEMA) failures.push(`schema must be ${LIVE_RLS_SCHEMA}`);
   if (evidence?.evidenceItem !== 'supabase-live-rls-validation') failures.push('evidenceItem must be supabase-live-rls-validation');
 
   const generatedAt = parseTimestamp(evidence?.generatedAt ?? evidence?.reviewedAt ?? evidence?.timestamp);
@@ -50,8 +51,8 @@ export function validateSupabaseRlsRuntimeEvidence(
 
   const lineage = evidence?.promotionLineage ?? {};
   if (!/^\d+$/.test(String(lineage.promotionRunId ?? ''))) failures.push('promotionLineage.promotionRunId must be numeric');
-  if (lineage.changeSet !== V20_CHANGE_SET) failures.push(`promotionLineage.changeSet must be ${V20_CHANGE_SET}`);
-  if (Number(lineage.selectedMigrationCount) !== 27) failures.push('promotionLineage.selectedMigrationCount must be 27');
+  if (lineage.changeSet !== GOVERNED_CHANGE_SET) failures.push(`promotionLineage.changeSet must be ${GOVERNED_CHANGE_SET}`);
+  if (Number(lineage.selectedMigrationCount) !== GOVERNED_MIGRATION_COUNT) failures.push(`promotionLineage.selectedMigrationCount must be ${GOVERNED_MIGRATION_COUNT}`);
   if (!/^sha256:[a-f0-9]{64}$/.test(String(lineage.selectionDigest ?? ''))) failures.push('promotionLineage.selectionDigest must be a SHA-256 digest');
   if (lineage.remoteAfterEqualsBeforePlusSelected !== true) failures.push('promotionLineage exact remote ledger transition must be true');
   if (lineage.unauthorizedMigrationApplied !== false) failures.push('promotionLineage unauthorizedMigrationApplied must be false');
@@ -80,7 +81,7 @@ export function validateSupabaseRlsRuntimeEvidence(
     if (entry.rlsEnabled !== true) failures.push(`${table} RLS must be enabled`);
 
     if (table === 'regulatory_updates') {
-      if (entry.operations?.globalProductBackendOnly !== true) failures.push('regulatory_updates must be backend-only after V20');
+      if (entry.operations?.globalProductBackendOnly !== true) failures.push('regulatory_updates must be backend-only after governed promotion');
       continue;
     }
 
