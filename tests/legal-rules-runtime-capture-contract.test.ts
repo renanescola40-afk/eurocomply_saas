@@ -50,7 +50,7 @@ describe('legal rules runtime capture contract', () => {
     expect(workflowSource).toContain('test "$(git rev-parse HEAD)" = "$EXPECTED_DEPLOYMENT_SHA"');
   });
 
-  it('automatically captures only trusted successful current-main Vercel deployments, including commit-SHA deployments with no ref', () => {
+  it('automatically captures only trusted successful current-main Vercel deployments through the canonical production origin', () => {
     expect(workflowSource).toContain('deployment_status:');
     expect(workflowSource).toContain("github.event.deployment_status.state == 'success'");
     expect(workflowSource).toContain('github.event.deployment.ref == github.event.repository.default_branch');
@@ -59,16 +59,17 @@ describe('legal rules runtime capture contract', () => {
     expect(workflowSource).toContain("process.env.DEPLOYMENT_EVENT_SENDER !== 'vercel[bot]'");
     expect(workflowSource).toContain("const deploymentRef = String(process.env.DEPLOYMENT_EVENT_REF || '')");
     expect(workflowSource).toContain('if (deploymentRef && deploymentRef !== process.env.DEFAULT_BRANCH)');
-    expect(workflowSource).toContain("host.endsWith('.vercel.app')");
-    expect(workflowSource).toContain("host === 'risckcomply.com'");
+    expect(workflowSource).toContain("DEPLOYMENT_URL: ${{ github.event_name == 'deployment_status' && 'https://www.risckcomply.com' || inputs.deployment_url }}");
+    expect(workflowSource).toContain("if (url.origin !== 'https://www.risckcomply.com') throw new Error('automatic production proof must use the canonical production origin')");
     expect(workflowSource).toContain('refs/remotes/origin/${DEFAULT_BRANCH}');
-    expect(workflowSource).toContain('github.event.deployment_status.environment_url');
+    expect(workflowSource).not.toContain('DEPLOYMENT_URL: ${{ inputs.deployment_url || github.event.deployment_status.environment_url }}');
   });
 
-  it('keeps manual dispatch as a controlled fallback', () => {
+  it('keeps manual dispatch as a controlled HTTPS fallback', () => {
     expect(workflowSource).toContain('workflow_dispatch:');
     expect(workflowSource).toContain("github.event_name == 'workflow_dispatch'");
-    expect(workflowSource).toContain("DEPLOYMENT_URL: ${{ inputs.deployment_url || github.event.deployment_status.environment_url }}");
+    expect(workflowSource).toContain("DEPLOYMENT_URL: ${{ github.event_name == 'deployment_status' && 'https://www.risckcomply.com' || inputs.deployment_url }}");
     expect(workflowSource).toContain("EXPECTED_DEPLOYMENT_SHA: ${{ inputs.expected_sha || github.event.deployment.sha }}");
+    expect(workflowSource).toContain("host.endsWith('.vercel.app')");
   });
 });
