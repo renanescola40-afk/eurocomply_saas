@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  V20_CHANGE_SET,
+  GOVERNED_CHANGE_SET,
   backendOwnedTables,
   buildEvidencePayload,
   customerTenantTables,
@@ -41,8 +41,8 @@ type RuntimeEvidence = Record<string, unknown> & {
 
 beforeEach(() => {
   process.env.PROMOTION_RUN_ID = '987654';
-  process.env.PROMOTION_CHANGE_SET = V20_CHANGE_SET;
-  process.env.PROMOTION_SELECTED_MIGRATION_COUNT = '27';
+  process.env.PROMOTION_CHANGE_SET = GOVERNED_CHANGE_SET;
+  process.env.PROMOTION_SELECTED_MIGRATION_COUNT = '31';
   process.env.PROMOTION_SELECTION_DIGEST = `sha256:${'b'.repeat(64)}`;
   process.env.PROMOTION_REMOTE_TRANSITION_VERIFIED = 'true';
   process.env.PROMOTION_UNAUTHORIZED_MIGRATION_APPLIED = 'false';
@@ -125,7 +125,7 @@ function validSourceEvidence(): RuntimeEvidence {
   };
 }
 
-describe('Supabase RLS scorecard evidence after V20', () => {
+describe('Supabase RLS scorecard evidence after V21/31 promotion', () => {
   it('promotes exactly the five live tenant-isolation controls', () => {
     const evidence = buildSupabaseRlsScorecardEvidence(validSourceEvidence(), {
       expectedSha: SHA,
