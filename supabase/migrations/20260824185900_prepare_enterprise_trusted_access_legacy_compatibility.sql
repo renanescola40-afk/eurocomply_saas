@@ -88,6 +88,20 @@ begin
         set alert_type=coalesce(nullif(alert_type,''),title,alert_key),
             details=case when details='{}'::jsonb then coalesce(evidence,'{}'::jsonb) else details end
       $sql$;
+
+      -- The historical SLO shape required title/summary on every insert. The
+      -- canonical V21 shape stores the display label in alert_type and the
+      -- structured payload in details, so legacy columns become compatibility
+      -- projections rather than write requirements.
+      alter table public.enterprise_access_runtime_alerts
+        alter column title drop not null;
+      if exists (
+        select 1 from information_schema.columns
+        where table_schema='public' and table_name='enterprise_access_runtime_alerts' and column_name='summary'
+      ) then
+        alter table public.enterprise_access_runtime_alerts
+          alter column summary drop not null;
+      end if;
     else
       update public.enterprise_access_runtime_alerts
       set alert_type=coalesce(nullif(alert_type,''),alert_key);
