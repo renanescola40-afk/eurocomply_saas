@@ -5,7 +5,7 @@ import path from 'node:path';
 const workflowPath = path.join('.github', 'workflows', 'p1-sbom-attestation.yml');
 const pinnedActions = [
   'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
-  'actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38',
+  'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
   'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
   'actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8',
 ];
@@ -48,7 +48,6 @@ if (forbiddenCredentialContext.test(workflow)) {
   fail('workflow must not reference credential contexts');
 }
 
-// Reject tag-based action references even when an older merge-base validator expected them.
 const floatingAction = /^\s*uses:\s+[^\s#]+@v\d+(?:\.\d+){0,2}\s*(?:#.*)?$/m;
 if (floatingAction.test(workflow)) {
   fail('workflow actions must be pinned to immutable commit SHAs');

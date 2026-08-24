@@ -44,7 +44,7 @@ describe('legal rules runtime capture contract', () => {
 
   it('uses pinned actions and retains exact-SHA runtime artifacts', () => {
     expect(workflowSource).toContain('actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0');
-    expect(workflowSource).toContain('actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38');
+    expect(workflowSource).toContain('actions/setup-node@820762786026740c76f36085b0efc47a31fe5020');
     expect(workflowSource).toContain('actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a');
     expect(workflowSource).toContain('retention-days: 365');
     expect(workflowSource).toContain('test "$(git rev-parse HEAD)" = "$EXPECTED_DEPLOYMENT_SHA"');
