@@ -1,18 +1,22 @@
 # Active work locks
 
-| Scope | Branch / PR | Mode | Status |
+| Scope | Branch / PR / issue | Mode | Status |
 | --- | --- | --- | --- |
-| Supabase V19 bounded forward rebase | `agent/p0-supabase-v19-forward-rebase-final` / #1768 | Write | Active P0; owns `config/supabase-forward-reconciliation.json`, V19 migration identities, reconciliation provenance and directly coupled Supabase tests/workflows until human merge or closure |
-| Supabase Production decision and promotion | #1631 / protected post-merge workflows | Runtime / human | Blocked until #1768 is human-merged and a fresh exact-current-main V19/25 package is rehearsed, dry-run, reviewed and authorized |
-| Enterprise 100 final evidence authority | #1032 / protected final authority | Protected authority transition | Do not create a competing final authority or substitute repository-only evidence for direct runtime/human producers |
-| Production evidence producers | protected post-merge workflows and external providers | Runtime / human | No repository-only substitution; execute only for exact current main and retain exact-lineage evidence |
+| Vercel Production serving outage | #1814 | Account state / runtime | **Active P0**; current Production deployment is `READY` but project is `live=false` and canonical health is HTTP `402 DEPLOYMENT_DISABLED`. Zero-cost project unpause is the first documented remediation. No plan/payment change is authorized. |
+| Production outage evidence synchronization | `agent/p0-vercel-disabled-evidence-rebind` / #1815 | Evidence / governance write | Active until review findings are corrected and exact-head checks complete. Owns only the provider/trust/persistent execution-state reconciliation for #1814; no runtime/billing/database mutation authority. |
+| Supabase Production decision and promotion | #1631 / protected workflows | Runtime / human | Separate protected authority. `PRODUCTION_WRITE_AUTHORIZED=false`; no direct SQL/DDL, migration repair, unrestricted `db push` or stale approval carry-forward. Resume only on an exact serving release and after required protected prerequisites/authorization. |
+| Enterprise 100 final evidence authority | #1032 / protected final authority | Protected authority transition | Do not create a competing final authority or substitute repository-only evidence, deployment `READY` metadata, or stale scorecard results for direct runtime/human producers. |
+| External assurance producers | qualified counsel, independent pentest, provider/account evidence, real procurement counterparty | External / human | No repository-only substitution; no paid engagement or active Production pentest is authorized from this lane. |
 
-PR #1730 is merged and no longer holds an active repository write lock. PR #1767
-is also merged on the synchronized baseline. Any new work that touches the V19
-manifest, archived V18 provenance, production migration reconciliation, Decision
-Gate or production promotion contract must coordinate with #1768/#1631 rather
-than opening a competing authority lane.
+## Superseded locks
+
+- PR #1768 is merged and **no longer holds an active repository write lock**.
+- PR #1767 is merged and no longer holds an active repository write lock.
+- Issue #1778 is closed via merged #1780 and is not an active compatibility lock.
+
+Any future work on Supabase governed promotion coordinates with #1631; it must not
+revive #1768 as an active branch authority.
 
 No lock authorizes bypassing required checks, branch protection, environment
-approval, evidence provenance, security gates or qualified human decisions. No
-V17/V18 approval carries forward into V19. Final merge remains a human action.
+approval, evidence provenance, security gates or qualified human decisions.
+Final PR merge remains a human action under `AGENTS.md`.
