@@ -15,7 +15,7 @@ function completeEvidence() {
     'cross_tenant_update', 'cross_tenant_delete', 'same_tenant_read',
   ];
   return {
-    schema: 'risck-comply.supabase-live-rls-validation.v20',
+    schema: 'risck-comply.supabase-live-rls-validation.v21',
     evidenceItem: 'supabase-live-rls-validation',
     status: 'Complete',
     outcome: 'passed',
@@ -23,8 +23,8 @@ function completeEvidence() {
     commitSha: 'a'.repeat(40),
     promotionLineage: {
       promotionRunId: '33123456789',
-      changeSet: '2026-08-23-enterprise-data-plane-payment-first-closure-v20',
-      selectedMigrationCount: 27,
+      changeSet: '2026-08-24-enterprise-data-plane-payment-first-trusted-access-closure-v21',
+      selectedMigrationCount: 31,
       selectionDigest: `sha256:${'b'.repeat(64)}`,
       remoteAfterEqualsBeforePlusSelected: true,
       unauthorizedMigrationApplied: false,
@@ -66,7 +66,7 @@ function completeEvidence() {
   };
 }
 
-describe('validateSupabaseRlsRuntimeEvidence V20', () => {
+describe('validateSupabaseRlsRuntimeEvidence V21', () => {
   it('accepts fresh promotion-bound live RLS proof for main', () => {
     expect(validateSupabaseRlsRuntimeEvidence(completeEvidence(), { now })).toEqual([]);
   });
@@ -83,19 +83,19 @@ describe('validateSupabaseRlsRuntimeEvidence V20', () => {
     expect(validateSupabaseRlsRuntimeEvidence(evidence, { now })).toContain('runtimeContext.branch must be main');
   });
 
-  it('rejects incomplete or non-V20 promotion lineage', () => {
+  it('rejects incomplete or non-V21 promotion lineage', () => {
     const evidence = completeEvidence();
-    evidence.promotionLineage.selectedMigrationCount = 26;
+    evidence.promotionLineage.selectedMigrationCount = 30;
     evidence.promotionLineage.productionPromotionVerified = false;
     const failures = validateSupabaseRlsRuntimeEvidence(evidence, { now });
-    expect(failures).toContain('promotionLineage.selectedMigrationCount must be 27');
+    expect(failures).toContain('promotionLineage.selectedMigrationCount must be 31');
     expect(failures).toContain('promotionLineage.productionPromotionVerified must be true');
   });
 
   it('rejects stale authenticated regulatory-read semantics', () => {
     const evidence = completeEvidence();
     evidence.tablesReviewed.find((entry) => entry.table === 'regulatory_updates').operations = { globalReferenceReadOnly: true };
-    expect(validateSupabaseRlsRuntimeEvidence(evidence, { now })).toContain('regulatory_updates must be backend-only after V20');
+    expect(validateSupabaseRlsRuntimeEvidence(evidence, { now })).toContain('regulatory_updates must be backend-only after governed promotion');
   });
 
   it('rejects organization compliance task browser writes', () => {
