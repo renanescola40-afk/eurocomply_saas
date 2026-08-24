@@ -30,6 +30,8 @@ type QueryClient = {
   };
 };
 
+type LooseRow = Record<string, unknown>;
+
 function client() {
   return createAdminClient() as unknown as RpcClient & QueryClient;
 }
@@ -37,6 +39,77 @@ function client() {
 function first<T>(data: unknown): T | null {
   if (Array.isArray(data)) return (data[0] as T | undefined) ?? null;
   return data && typeof data === 'object' ? data as T : null;
+}
+
+function numberOrNull(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function stringOrNull(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function normalizeSnapshot(row: LooseRow) {
+  const legacyShape = 'operations_dead_letter' in row || 'members_processed' in row;
+  const rawRate = numberOrNull(row.success_rate);
+  const successRate = legacyShape && rawRate !== null ? rawRate * 100 : rawRate;
+
+  return {
+    ...row,
+    id: String(row.id ?? ''),
+    operations_total: numberOrNull(row.operations_total) ?? 0,
+    success_rate: successRate,
+    p50_duration_ms: numberOrNull(row.p50_duration_ms),
+    p95_duration_ms: numberOrNull(row.p95_duration_ms),
+    oldest_pending_age_seconds:
+      numberOrNull(row.oldest_pending_age_seconds)
+      ?? numberOrNull(row.oldest_pending_seconds)
+      ?? 0,
+    dead_letter_count:
+      numberOrNull(row.dead_letter_count)
+      ?? numberOrNull(row.operations_dead_letter)
+      ?? 0,
+    processed_members:
+      numberOrNull(row.processed_members)
+      ?? numberOrNull(row.members_processed)
+      ?? 0,
+    failed_members:
+      numberOrNull(row.failed_members)
+      ?? numberOrNull(row.members_failed)
+      ?? 0,
+    compensated_members:
+      numberOrNull(row.compensated_members)
+      ?? numberOrNull(row.members_compensated)
+      ?? 0,
+    window_ended_at: stringOrNull(row.window_ended_at),
+  };
+}
+
+function normalizeAlert(row: LooseRow) {
+  return {
+    ...row,
+    id: String(row.id ?? ''),
+    alert_type:
+      stringOrNull(row.alert_type)
+      ?? stringOrNull(row.title)
+      ?? stringOrNull(row.alert_key)
+      ?? 'Access runtime alert',
+    severity: stringOrNull(row.severity),
+    status: stringOrNull(row.status),
+    first_seen_at: stringOrNull(row.first_seen_at),
+    last_seen_at: stringOrNull(row.last_seen_at),
+    details:
+      row.details && typeof row.details === 'object'
+        ? row.details
+        : row.evidence && typeof row.evidence === 'object'
+          ? row.evidence
+          : {},
+  };
 }
 
 export async function captureAccessRuntimeForOrganization(organizationId: string, windowMinutes = 60) {
@@ -64,7 +137,7 @@ export async function getAccessRuntimeDashboard(organizationId: string, cursor?:
   const boundedLimit = Math.min(Math.max(limit, 1), 100);
   const db = createAdminClient();
 
-  let snapshotsQuery = db
+  const snapshotsQuery = db
     .from('enterprise_access_runtime_snapshots')
     .select('*')
     .eq('organization_id', id)
@@ -97,8 +170,8 @@ export async function getAccessRuntimeDashboard(organizationId: string, cursor?:
   const nextCursor = hasMore ? visible.at(-1)?.created_at ?? null : null;
 
   return {
-    snapshots: snapshots.data ?? [],
-    alerts: alerts.data ?? [],
+    snapshots: (snapshots.data ?? []).map((row) => normalizeSnapshot(row as LooseRow)),
+    alerts: (alerts.data ?? []).map((row) => normalizeAlert(row as LooseRow)),
     exports: visible,
     nextCursor,
   };
