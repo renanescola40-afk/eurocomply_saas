@@ -1,63 +1,67 @@
 # Autonomous execution state
 
-- Updated: 2026-08-22 13:37 UTC
-- Last synchronized main baseline (pre-change): `2b83d371bd6913f378fd6b995a787e1848b57e93`
-- Open pull requests at observation: **#1768**
-- Current-main score: **unknown**
-- Last accepted score: **45% / NO_GO**, assessed on
-  `c413288eb8453b55c4d049c758dc0cd063aa70b9`
-- Freshness: **STALE**
-- Active authority work package: Supabase V19 bounded production-forward rebase
-- Active P0: close `S0_MANIFEST_NOT_READY` on #1768, then execute the protected
-  exact-current-main Supabase production decision and promotion lane
-- Merge authority: human owner only, after exact-head checks, eligible review,
-  resolved conversations and clean merge state
+- Updated: 2026-08-24
+- Last synchronized main baseline before this evidence PR: `75151c463ea7bf54c74e4dc9e5cd3af995615eae`
+- Current evidence PR: **#1815**
+- Current-main score: **not re-accepted**
+- Last accepted score: **45% / NO_GO**, assessed on `c413288eb8453b55c4d049c758dc0cd063aa70b9`
+- Freshness: **STALE FOR CURRENT MAIN**
+- Active P0: **#1814 — Vercel Production serving blocked with `live=false` + HTTP 402 `DEPLOYMENT_DISABLED`**
+- Superseded work package: **#1768 merged; no longer active**
+- Pre-V19 compatibility: **#1778 closed via #1780**
+- Supabase protected Production authority: **#1631; `PRODUCTION_WRITE_AUTHORIZED=false`**
+- Final authority: **#1032**
+- Merge authority: human owner only, after exact-head checks, eligible independent review, resolved conversations and clean merge state
 
 ## Current transition
 
-PR #1767 is merged on the observed `main` baseline. A read-only Production
-migration audit then established that the remote ledger head is
-`20260822120617_atomic_vendor_risk_quota_mutations`, while the previously
-selected V18 identities were not the Production ledger lineage. The commercial
-mutation RPC already exists under that remote identity, but the remaining 25
-bounded Enterprise effects still require governed forward deployment.
+PR #1813 merged provider/evidence reconciliation to
+`main@75151c463ea7bf54c74e4dc9e5cd3af995615eae`. Vercel then built Production
+deployment `dpl_AR5ZwbDCHxT1kmps5xJVm5gmaBRx` successfully and marked it
+`READY`, but project metadata reports `live=false`. Both the exact deployment
+health URL and canonical `risckcomply.com/api/health` return HTTP
+`402 DEPLOYMENT_DISABLED`.
 
-PR #1768 therefore re-issues those 25 reviewed effects under Supabase-CLI-issued
-V19 identities strictly after the observed Production head, preserves the
-reviewed SQL bytes, keeps the already-present commercial identity outside the V19
-selected set, and records its remote lineage separately without authorizing a
-write or migration-history repair. Superseded V18 identities that were not
-applied to Production are retained under reconciliation provenance instead of
-being replayed alongside V19 on fresh databases.
+The connected Vercel team remains Pro, the build completed successfully, and no
+application build defect is currently evidenced. #1814 is therefore the active
+Production-serving P0. Vercel documents a project `unpause` operation as the
+zero-cost first remediation. The connected Vercel tool surface available to this
+execution cannot invoke that mutation, and no bearer token may be fabricated or
+exposed.
 
-On the pre-documentation-sync PR head
-`1df6f56f0e037bde02f514254d7f1508687a3535`, Supabase Enterprise Data Plane QA
-run `32576262411` passed a full disposable schema replay, Enterprise Evidence
-postconditions, Auth/REST/Storage startup and tenant A/B Evidence Vault proof.
-PR-event Rehearsal run `32576262329`, Dry Run run `32576262226`, drift audit run
-`32576262274`, CI run `32576262476`, Enterprise DAST run `32576262328` and
-Enterprise Evidence Tests run `32576262260` also passed. These results become
-historical as soon as the PR head changes; fresh exact-head CI is required after
-this state synchronization.
+PR #1815 synchronizes only factual evidence and persistent execution state. It
+does not authorize billing changes, provider migration, Production database
+writes, legal acceptance, pentest execution or final Go.
 
-No protected Production rehearsal, Production dry run, Decision Gate,
-Production promotion or post-promotion acceptance is claimed by those PR-event
-results.
+## Autonomous work allowed now
+
+- keep provider/trust/execution-state evidence truthful;
+- run repository-side CI/security/evidence gates on the current PR head;
+- resolve technical review findings by correcting the same trusted branch;
+- revalidate Vercel state read-only;
+- after an owner-performed zero-cost unpause, re-run canonical health and exact-SHA
+  runtime/provider evidence;
+- continue external-assurance outreach/evidence collection within the no-spend
+  boundary.
+
+## Actions not autonomously authorized
+
+- accepting a Vercel plan/payment/upgrade change;
+- direct Supabase Production SQL/DDL, migration repair or unrestricted `db push`;
+- independent pentest active testing;
+- paid counsel or security engagement;
+- provider contract/DPA acceptance or signature;
+- synthetic LIVE Stripe commercial events;
+- automatic PR merge or approval fabrication.
 
 ## Evidence boundary
 
-This versioned handoff records a pre-change baseline; it is not a claim that the
-recorded SHA remains the current default-branch head after this file is merged.
-Every runtime, approval or promotion action must resolve GitHub `main` again and
-bind new evidence to that exact SHA. The canonical generated persistent
-execution-state workflow artifact remains the exact-SHA authority.
-
 Repository checks, disposable database replay, merge completion and deployment
-readiness do not prove live Billing lifecycle, Supabase production acceptance,
-Product FRIA production acceptance, production-provider runtime, independent
-external assurance, legal approval or final production Go/No-Go.
+`READY` state do not prove that the current application is serving. The current
+serving state is explicitly blocked by #1814.
 
-`ENTERPRISE_100: PASS` and `PRODUCTION_GO: PASS` remain withheld until the
-canonical protected authority accepts all configured evidence for the same exact
-current main. The historical 45% score is retained only as stale historical
-evidence and is not a score for the synchronized baseline or any later main.
+The historical 45% score is retained only as stale historical evidence. A new
+percentage requires canonical exact-current-serving-SHA evidence and human/runtime
+acceptance under the shared closure contract.
+
+`ENTERPRISE_100: PASS` and `PRODUCTION_GO: PASS` remain withheld.
