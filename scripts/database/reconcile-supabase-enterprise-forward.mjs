@@ -18,10 +18,13 @@ const DEFAULT_REPORT_PATH = join(
 );
 
 const EXPECTED_SCHEMA = 'risck-comply.supabase-forward-reconciliation-config.v1';
-const EXPECTED_CHANGE_SET = '2026-08-23-enterprise-data-plane-payment-first-closure-v20';
+const EXPECTED_CHANGE_SET = '2026-08-24-enterprise-data-plane-payment-first-trusted-access-closure-v21';
 const EVIDENCE_VAULT_MIGRATION = '20260822123626_v19_reconcile_enterprise_evidence_vault.sql';
 const PAYMENT_FIRST_CORE_MIGRATION = '20260823123000_payment_first_commercial_data_plane.sql';
 const PAYMENT_FIRST_GAP_STORAGE_MIGRATION = '20260823131500_payment_first_gap_analysis_and_storage.sql';
+const TRUSTED_ACCESS_PREPARE_MIGRATION = '20260824185900_prepare_enterprise_trusted_access_legacy_compatibility.sql';
+const TRUSTED_ACCESS_RUNTIME_MIGRATION = '20260824190000_reconcile_enterprise_trusted_access_runtime.sql';
+const TRUSTED_ACCESS_FINALIZE_MIGRATION = '20260824190100_finalize_enterprise_trusted_access_operation_contract.sql';
 const COMMERCIAL_QUOTA_MIGRATION = '20260822120617_atomic_vendor_risk_quota_mutations.sql';
 const EXPECTED_SELECTED = [
   '20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql',
@@ -51,6 +54,9 @@ const EXPECTED_SELECTED = [
   EVIDENCE_VAULT_MIGRATION,
   PAYMENT_FIRST_CORE_MIGRATION,
   PAYMENT_FIRST_GAP_STORAGE_MIGRATION,
+  TRUSTED_ACCESS_PREPARE_MIGRATION,
+  TRUSTED_ACCESS_RUNTIME_MIGRATION,
+  TRUSTED_ACCESS_FINALIZE_MIGRATION,
 ];
 
 const TRUTH_BOUNDARY = {
@@ -184,6 +190,41 @@ function validatePaymentFirstGapStorageMigration(source) {
   ], 'Payment-first Gap/Storage migration');
 }
 
+function validateTrustedAccessPrepareMigration(source) {
+  requireMarkers(source, [
+    'success_rate*100',
+    'oldest_pending_age_seconds',
+    'dead_letter_count',
+    'drop policy if exists enterprise_access_operations_authenticated_select_deny',
+  ], 'Trusted Access compatibility migration');
+}
+
+function validateTrustedAccessRuntimeMigration(source) {
+  requireMarkers(source, [
+    'enterprise_access_operations',
+    'enterprise_access_runtime_snapshots',
+    'enterprise_access_runtime_alerts',
+    'enterprise_access_export_jobs',
+    "'enterprise-access-exports'",
+    'reserve_organization_seat_idempotent_atomic',
+    'enterprise_seat_contention_events',
+    'browser roles retain trusted access control-plane privileges',
+  ], 'Trusted Access runtime migration');
+  forbidMarkers(source, [
+    'enterprise_access_operation_runs',
+    'v_contract.seat_limit',
+  ], 'Trusted Access runtime migration');
+}
+
+function validateTrustedAccessFinalizeMigration(source) {
+  requireMarkers(source, [
+    'persist_enterprise_group_access_reconciliation',
+    'membership_tenant_mismatch',
+    'public.digest',
+    'deliberately non-authoritative',
+  ], 'Trusted Access finalization migration');
+}
+
 function validateCommercialQuotaMutation(source) {
   const requiredMarkers = [
     'create or replace function public.mutate_commercial_resource_with_audit_atomic(',
@@ -237,6 +278,9 @@ function main() {
     if (filename === EVIDENCE_VAULT_MIGRATION) validateEvidenceVaultMigration(source);
     if (filename === PAYMENT_FIRST_CORE_MIGRATION) validatePaymentFirstCoreMigration(source);
     if (filename === PAYMENT_FIRST_GAP_STORAGE_MIGRATION) validatePaymentFirstGapStorageMigration(source);
+    if (filename === TRUSTED_ACCESS_PREPARE_MIGRATION) validateTrustedAccessPrepareMigration(source);
+    if (filename === TRUSTED_ACCESS_RUNTIME_MIGRATION) validateTrustedAccessRuntimeMigration(source);
+    if (filename === TRUSTED_ACCESS_FINALIZE_MIGRATION) validateTrustedAccessFinalizeMigration(source);
     if (filename === COMMERCIAL_QUOTA_MIGRATION) validateCommercialQuotaMutation(source);
 
     return {
