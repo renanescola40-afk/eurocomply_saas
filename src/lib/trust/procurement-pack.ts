@@ -74,19 +74,19 @@ export const procurementProviders: ProcurementProvider[] = [
     name: 'Vercel',
     purpose: 'Application hosting, deployment and edge delivery',
     status: 'core',
-    regionDisclosure: 'Runtime placement is deployment-specific; retained Production evidence and current provider-account facts are maintained separately.',
+    regionDisclosure: 'Current direct Production deployment binding is proven on the current release; protected provider producer acceptance and account/legal facts are maintained separately.',
   },
   {
     name: 'Supabase',
     purpose: 'Database, authentication, storage and Row Level Security',
     status: 'core',
-    regionDisclosure: 'The current Production project is evidenced in eu-west-1 (Ireland).',
+    regionDisclosure: 'The Production project is evidenced in eu-west-1 (Ireland); governed V21 Production promotion remains separate and currently unapplied.',
   },
   {
     name: 'Stripe',
     purpose: 'Subscription billing, checkout and webhook processing',
     status: 'conditional',
-    regionDisclosure: 'The connected LIVE account is based in Portugal; this is not presented as a single processing or storage region.',
+    regionDisclosure: 'The connected LIVE account is based in Portugal; this is not presented as a single processing or storage region, and a genuine customer lifecycle remains separate evidence.',
   },
   {
     name: 'Google OAuth / Google Identity',
@@ -98,19 +98,19 @@ export const procurementProviders: ProcurementProvider[] = [
     name: 'Google Workspace',
     purpose: 'Corporate support, security, procurement and legal email communications',
     status: 'core',
-    regionDisclosure: 'Account-specific evidence proves Business Starter for risckcomply.com and Google Cloud EMEA Limited as the billed EMEA entity. Exact account CDPA incorporation, data-region, retention and transfer treatment remain evidence-required.',
+    regionDisclosure: 'Account-specific evidence proves Business Starter for risckcomply.com and Google Cloud EMEA Limited as billed EMEA entity. Exact account CDPA incorporation, data-region, retention and transfer treatment remain evidence-required.',
   },
   {
     name: 'GitHub Actions',
     purpose: 'Source delivery, CI/CD and protected recovery/security workflows',
     status: 'conditional',
-    regionDisclosure: 'Protected recovery workflows can transiently process Production database data on GitHub-hosted runners; the current repository is owned by a Personal User account and company-specific DPA applicability remains unproven.',
+    regionDisclosure: 'Protected recovery workflows can transiently process Production database data on GitHub-hosted runners; company-specific DPA applicability and final legal role remain under review.',
   },
   {
     name: 'Sentry',
     purpose: 'Monitoring and diagnostics',
     status: 'optional',
-    regionDisclosure: 'Retained Production runtime binding is evidenced; the organization-specific storage region remains account-evidence dependent.',
+    regionDisclosure: 'Fresh current public Production release binding is evidenced; protected release/source-map producer acceptance plus organization-specific region, retention and DPA facts remain evidence-required.',
   },
   {
     name: 'PostHog',
@@ -128,7 +128,7 @@ export const procurementProviders: ProcurementProvider[] = [
     name: 'Upstash',
     purpose: 'Distributed Redis-backed rate limiting and security-control state',
     status: 'core',
-    regionDisclosure: 'Upstash is materially required by the fail-closed distributed rate-limit/security architecture and predecessor binding evidence exists. Retained exact-current runtime reproof is still evidence-required; account plan, region, retention and contractual facts remain open.',
+    regionDisclosure: 'Fresh current direct Production revalidation proves the fail-closed Redis-backed catalogue path; protected provider producer acceptance plus account plan, region, retention and contractual facts remain open.',
   },
 ];
 

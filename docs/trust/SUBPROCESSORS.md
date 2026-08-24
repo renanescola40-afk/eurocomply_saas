@@ -12,23 +12,26 @@ This register lists providers and operational services that may process customer
 
 | Provider | Service category | Data category | Current attributable evidence | Current status |
 | --- | --- | --- | --- | --- |
-| Vercel | Application hosting, deployment and edge/runtime delivery | Application traffic, deployment metadata, logs | Current retained Production deployment `dpl_HjY8HsY874YjSDzUs9m1z9yxqWpC` is `READY` on `main@7c5f344d...`; connected team is Pro. Standard Pro DPA/SCC framework is provider-published and plan-matched. | Current runtime proven / Pro proven / account-custom agreement and legal interpretation open |
-| Supabase | Database, authentication, storage and RLS | Customer data, organization data, documents, auth metadata | Production project is `ACTIVE_HEALTHY` in `eu-west-1`; connected organization is Pro; standard DPA framework is provider-confirmed/published. | Runtime active / Ireland region proven / Pro proven / PITR and legal residuals open |
-| Stripe | Billing and subscription management | Billing metadata; payment details handled by Stripe | LIVE account is attributable; country is Portugal; account is standard and configured with `business_type=individual`; charges/payouts enabled. | LIVE control plane proven / operator-entity alignment open |
+| Vercel | Application hosting, deployment and edge/runtime delivery | Application traffic, deployment metadata, logs | Current Production deployment `dpl_FEUDn9oPpzetNwZcu3N5qJWmeAtZ` is `READY` on `main@41cc6656...`; connected team is Pro. Standard Pro DPA/SCC framework is provider-published and plan-matched. | Current direct runtime proven / Pro proven / protected provider producer, account-custom agreement and legal interpretation open |
+| Supabase | Database, authentication, storage and RLS | Customer data, organization data, documents, auth metadata | Production project is `ACTIVE_HEALTHY` in `eu-west-1`; connected organization is Pro; governed V21 Production package remains 0/31 by fresh read-only ledger inspection. | Runtime active / Ireland region proven / Pro proven / protected V21 promotion and legal residuals open |
+| Stripe | Billing and subscription management | Billing metadata; payment details handled by Stripe | LIVE account is attributable; country is Portugal; account is standard and configured with `business_type=individual`; charges/payouts enabled. | LIVE control plane proven / operator-entity alignment and genuine lifecycle open |
 | Google OAuth / Google Identity | Optional user authentication / identity federation | Authentication identifiers and provider-returned profile metadata | Production Auth contains non-zero Google-provider identities from an aggregate non-PII query; application source uses Supabase Google OAuth. | Production use proven / final legal role, DPA, region, retention and transfer treatment open |
-| Google Workspace | Corporate email and business communications | Corporate/support contacts, message metadata, message content and attachments where used | `risckcomply.com` has account-specific Google Workspace Business Starter billing evidence with 2 licenses; billed EMEA provider entity is Google Cloud EMEA Limited; corporate mailboxes are used for support, security, procurement and legal communications. | Account service/entity/plan proven / Workspace CDPA-SCC framework general / exact account incorporation, region, retention and legal role open |
-| GitHub / GitHub Actions | Source delivery, CI/CD and protected recovery/security workflows | Source/workflow metadata, security artifacts and transient Production data during protected recovery | Repository/CI use proven; protected recovery jobs can transiently process Production database data on hosted runners while only redacted evidence JSON is intentionally retained as artifact. Repository is owned by a Personal User account. | Material operational provider / company-account DPA applicability and legal role open |
-| Sentry | Error monitoring and diagnostics | Error context and diagnostic metadata | Retained exact-current Production proof shows `sentry-environment=production` and `sentry-release=7c5f344d...` on deployment `dpl_HjY8...`. | Exact-current runtime proven / retained evidence / organization region, retention and DPA acceptance open |
+| Google Workspace | Corporate email and business communications | Corporate/support contacts, message metadata, message content and attachments where used | `risckcomply.com` has account-specific Google Workspace Business Starter billing evidence with 2 licenses; billed EMEA provider entity is Google Cloud EMEA Limited; corporate mailboxes are used for support, security, procurement and legal communications. | Account service/entity/plan proven / exact account CDPA incorporation, region, retention and legal role open |
+| GitHub / GitHub Actions | Source delivery, CI/CD and protected recovery/security workflows | Source/workflow metadata, security artifacts and transient Production data during protected recovery | Repository/CI use proven; protected recovery jobs can transiently process Production database data on hosted runners while only redacted evidence is intentionally retained. | Material operational provider / company-account DPA applicability and legal role open |
+| Sentry | Error monitoring and diagnostics | Error context and diagnostic metadata | Current direct Production evidence on `dpl_FEUD...` shows `sentry-environment=production` and `sentry-release=41cc6656...`. Automatic build lacked protected Sentry auth-token producer authority. | Current public runtime binding proven / protected Sentry producer, organization region, retention and DPA acceptance open |
 | PostHog | Product analytics | Analytics events and identifiers when consent/configuration allows capture | Production client targets EU endpoints. Connected assurance project has no ingested event and is not the Production project. Human provider support states EU Cloud is Frankfurt. | EU endpoint binding proven / Production account recovery & DPA open |
-| Resend / email provider | Transactional and support email | Email address, message metadata and content | Historical real delivery is independently evidenced; provider standard DPA/SCC/subprocessor/deletion framework is established. No attributable exact-current-release send is retained. | Historical use proven / current exact-release binding and account acceptance open |
-| Upstash | Distributed Redis rate limiting and security-control state | Operational request/control metadata and identifiers | Retained exact-current Production proof shows canonical `/api/billing/catalog` returned 200 on `dpl_HjY8...` / `7c5f344d...`; that route traverses the fail-closed billing Redis limiter before the normal response. | Exact-current runtime proven / retained evidence / account plan, region, retention and account-specific acceptance open |
+| Resend / email provider | Transactional and support email | Email address, message metadata and content | Historical real delivery is independently evidenced; provider standard DPA/SCC/subprocessor/deletion framework is established. No attributable current exact-release send is retained. | Historical use proven / current exact-release binding and account acceptance open |
+| Upstash | Distributed Redis rate limiting and security-control state | Operational request/control metadata and identifiers | Fresh current Production revalidation shows canonical `/api/billing/catalog` returned HTTP 200 on `dpl_FEUD...` / `41cc6656...`; that route traverses the fail-closed billing Redis limiter before normal response. | Current direct runtime proven / protected provider producer, account plan, region, retention and account-specific acceptance open |
 | Malware/content scanner | Enterprise upload scanning if enabled | Uploaded content and scan metadata | Runtime policy supports/requires provider-backed scanning when the feature is enabled; exact-current provider identity/binding is not established. | Conditional / current provider binding unverified |
 | OpenAI / ChatGPT — founder operational use outside SaaS runtime | Founder-operated external AI assistance | Founder-submitted prompts and outputs | Operational use exists outside direct SaaS runtime; no direct SaaS model-provider integration is established by current evidence. | Founder operational fact captured / customer-content use and legal role open |
 
-## Retained exact-current evidence
+## Current and predecessor evidence
 
-- Upstash: `docs/trust/evidence/2026-08-24-upstash-exact-current-runtime-reproof.md`
-- Sentry: `docs/trust/evidence/2026-08-24-sentry-exact-current-runtime-reproof.md`
+- current direct provider runtime revalidation: `docs/trust/evidence/2026-08-24-current-runtime-provider-revalidation-41cc6656.md`
+- predecessor Upstash proof: `docs/trust/evidence/2026-08-24-upstash-exact-current-runtime-reproof.md`
+- predecessor Sentry proof: `docs/trust/evidence/2026-08-24-sentry-exact-current-runtime-reproof.md`
+
+Predecessor files retain their original exact-SHA provenance and are not treated as current protected acceptance.
 
 ## Superseded factual statements
 
@@ -37,9 +40,9 @@ Do not report these historical states as current:
 - Vercel `hobby` — superseded by connected Pro evidence.
 - Supabase `free` — superseded by connected Pro evidence.
 - Stripe account country unknown — superseded by attributable Portugal account evidence.
-- Sentry predecessor-release binding — superseded by retained exact-current `7c5f344d...` Production evidence.
+- Sentry current-release-binding-open at the direct-runtime layer — superseded by current `41cc6656...` public metadata; protected Sentry producer/account facts remain open.
 - PostHog EU endpoint binding unknown — superseded by current Production client evidence.
-- Upstash predecessor-only/current-reproof-open wording — superseded by retained exact-current `/api/billing/catalog` proof on `7c5f344d...`.
+- Upstash current-runtime-reproof-open at the direct-runtime layer — superseded by retained current `41cc6656...` catalogue-path revalidation; protected producer/account facts remain open.
 - Google OAuth merely configured/unproven — superseded by non-zero aggregate Production identity evidence.
 - Google Workspace operational use unknown — superseded by account-specific Business Starter billing evidence and active corporate-mail use.
 
@@ -47,7 +50,7 @@ Do not report these historical states as current:
 
 Provider-public legal/security materials reduce factual uncertainty but do not automatically prove the exact account agreement, DPA acceptance actor/timestamp, retention setting, transfer treatment or final legal role. Account-specific evidence and qualified legal conclusions remain separate requirements.
 
-Google OAuth is intentionally described as an identity provider rather than automatically labelled a subprocessor. Google Workspace is intentionally listed as a separate operational communications provider because real corporate mailboxes process support/security/procurement/legal communications. GitHub Actions is intentionally described as a material operational provider because protected recovery workflows can process Production data transiently. Counsel must determine the final contractual/privacy role allocation.
+Google OAuth is intentionally described as an identity provider rather than automatically labelled a subprocessor. Google Workspace is intentionally listed as a separate operational communications provider because real corporate mailboxes process support/security/procurement/legal communications. GitHub Actions is intentionally described as a material operational provider because protected recovery workflows can process Production data transiently. Counsel must determine final role allocation.
 
 The PostHog row remains explicit: Production integration is technically attributable while the connected assurance account is not the Production account.
 
@@ -60,7 +63,7 @@ Customers should receive notice before adding a material provider/subprocessor t
 ## Guardrail
 
 1. Confirm active providers before each enterprise disclosure.
-2. Separate runtime/configuration proof from account/legal approval.
+2. Separate direct runtime/configuration proof from protected producer and account/legal approval.
 3. Confirm provider legal entity, purpose, data categories, region/location and retention/deletion behavior where applicable.
 4. Confirm account-specific DPA/SCC/transfer and provider-notice status where applicable.
 5. Obtain qualified legal role allocation before labelling ambiguous providers as controller, processor or subprocessor.
@@ -69,7 +72,7 @@ Customers should receive notice before adding a material provider/subprocessor t
 
 ## Customer-safe answer
 
-"RISCK COMPLY maintains an evidence-backed provider review register. Technical Production facts are reconciled separately from legal interpretation. Final contractual commitments depend on the services actually enabled, account-specific provider agreements/DPAs where applicable, approved transfer and retention treatment, qualified legal review and the signed customer agreement."
+"RISCK COMPLY maintains an evidence-backed provider review register. Technical Production facts are reconciled separately from protected producer acceptance and legal interpretation. Final contractual commitments depend on the services actually enabled, account-specific provider agreements/DPAs where applicable, approved transfer and retention treatment, qualified legal review and the signed customer agreement."
 
 ## Final boundary
 
