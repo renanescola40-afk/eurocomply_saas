@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: one-shot-vercel-production-unpause
@@ -23,42 +24,63 @@ jobs:
       VERCEL_PROJECT_ID: prj_APpXAyQFy1Gie50xfbO45zjkyUSm
       VERCEL_TEAM_ID: team_wu3LZI6ReFxO16xipv73GLwG
       HEALTH_URL: https://risckcomply.com/api/health
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Require existing Vercel credential
+      - name: Attempt zero-cost unpause and report bounded result
         shell: bash
         run: |
-          set -euo pipefail
-          if [ -z "${VERCEL_TOKEN:-}" ]; then
-            echo "VERCEL_TOKEN is not available in the production environment."
-            exit 2
-          fi
+          set -uo pipefail
 
-      - name: Unpause existing project
-        shell: bash
-        run: |
-          set -euo pipefail
-          status="$(curl --silent --show-error --output /tmp/unpause-response.txt --write-out '%{http_code}' \
-            --request POST \
-            --url "https://api.vercel.com/v1/projects/${VERCEL_PROJECT_ID}/unpause?teamId=${VERCEL_TEAM_ID}" \
-            --header "Authorization: Bearer ${VERCEL_TOKEN}")"
-          echo "Vercel unpause HTTP status: ${status}"
-          if [ "${status}" != "200" ]; then
-            echo "Unpause did not return HTTP 200. No billing or plan-change endpoint was called."
-            exit 3
-          fi
+          result="TOKEN_UNAVAILABLE"
+          unpause_status="not_attempted"
+          health_status="not_attempted"
 
-      - name: Verify canonical Production health
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in 1 2 3 4 5 6; do
-            status="$(curl --silent --show-error --output /tmp/health-response.txt --write-out '%{http_code}' "${HEALTH_URL}" || true)"
-            echo "Health attempt ${attempt}: HTTP ${status}"
-            if [ "${status}" = "200" ]; then
-              cat /tmp/health-response.txt
-              exit 0
+          if [ -n "${VERCEL_TOKEN:-}" ]; then
+            unpause_status="$(curl --silent --show-error --output /tmp/unpause-response.txt --write-out '%{http_code}' \
+              --request POST \
+              --url "https://api.vercel.com/v1/projects/${VERCEL_PROJECT_ID}/unpause?teamId=${VERCEL_TEAM_ID}" \
+              --header "Authorization: Bearer ${VERCEL_TOKEN}" || printf 'curl_error')"
+
+            if [ "${unpause_status}" = "200" ]; then
+              result="UNPAUSE_ACCEPTED_HEALTH_PENDING"
+              for attempt in 1 2 3 4 5 6; do
+                health_status="$(curl --silent --show-error --output /tmp/health-response.txt --write-out '%{http_code}' "${HEALTH_URL}" || printf 'curl_error')"
+                if [ "${health_status}" = "200" ]; then
+                  result="UNPAUSE_ACCEPTED_HEALTH_200"
+                  break
+                fi
+                sleep 5
+              done
+            else
+              result="UNPAUSE_REJECTED"
             fi
-            sleep 5
-          done
-          echo "Canonical Production health did not return HTTP 200 after successful unpause."
-          exit 4
+          fi
+
+          body=$(cat <<EOF
+          ## Automated zero-cost unpause attempt
+
+          - result: \`${result}\`
+          - Vercel unpause HTTP status: \`${unpause_status}\`
+          - canonical health status after accepted unpause: \`${health_status}\`
+          - project: existing RISCK COMPLY Vercel project only
+          - billing/upgrade endpoints called: \`NO\`
+          - secrets/tokens disclosed: \`NO\`
+
+          This one-shot job uses the existing GitHub Production-environment \`VERCEL_TOKEN\` only if it is already configured. It never prints the token or the Vercel response body. A non-200 unpause result remains fail-closed and requires account-state review; it does not authorize spend.
+          EOF
+          )
+
+          jq -n --arg body "$body" '{body:$body}' >/tmp/comment.json
+          comment_status="$(curl --silent --show-error --output /tmp/github-comment-response.txt --write-out '%{http_code}' \
+            --request POST \
+            --url "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/1814/comments" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            --header "Content-Type: application/json" \
+            --data-binary @/tmp/comment.json || printf 'curl_error')"
+          echo "Tracker comment HTTP status: ${comment_status}"
+
+          if [ "${result}" != "UNPAUSE_ACCEPTED_HEALTH_200" ]; then
+            exit 1
+          fi
