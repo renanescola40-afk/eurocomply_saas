@@ -74,25 +74,43 @@ export const procurementProviders: ProcurementProvider[] = [
     name: 'Vercel',
     purpose: 'Application hosting, deployment and edge delivery',
     status: 'core',
-    regionDisclosure: 'Runtime placement is deployment-specific; current evidence is maintained in the provider factual evidence register.',
+    regionDisclosure: 'Current direct Production deployment binding is proven on the current release; protected provider producer acceptance and account/legal facts are maintained separately.',
   },
   {
     name: 'Supabase',
     purpose: 'Database, authentication, storage and Row Level Security',
     status: 'core',
-    regionDisclosure: 'The current Production project is evidenced in eu-west-1 (Ireland).',
+    regionDisclosure: 'The Production project is evidenced in eu-west-1 (Ireland); governed V21 Production promotion remains separate and currently unapplied.',
   },
   {
     name: 'Stripe',
     purpose: 'Subscription billing, checkout and webhook processing',
     status: 'conditional',
-    regionDisclosure: 'The connected LIVE account is based in Portugal; this is not presented as a single processing or storage region.',
+    regionDisclosure: 'The connected LIVE account is based in Portugal; this is not presented as a single processing or storage region, and a genuine customer lifecycle remains separate evidence.',
+  },
+  {
+    name: 'Google OAuth / Google Identity',
+    purpose: 'Optional user authentication and identity federation',
+    status: 'optional',
+    regionDisclosure: 'Production usage is evidenced; final legal role, applicable contract or DPA, region, retention and transfer treatment remain under review.',
+  },
+  {
+    name: 'Google Workspace',
+    purpose: 'Corporate support, security, procurement and legal email communications',
+    status: 'core',
+    regionDisclosure: 'Account-specific evidence proves Business Starter for risckcomply.com and Google Cloud EMEA Limited as billed EMEA entity. Exact account CDPA incorporation, data-region, retention and transfer treatment remain evidence-required.',
+  },
+  {
+    name: 'GitHub Actions',
+    purpose: 'Source delivery, CI/CD and protected recovery/security workflows',
+    status: 'conditional',
+    regionDisclosure: 'Protected recovery workflows can transiently process Production database data on GitHub-hosted runners; company-specific DPA applicability and final legal role remain under review.',
   },
   {
     name: 'Sentry',
     purpose: 'Monitoring and diagnostics',
     status: 'optional',
-    regionDisclosure: 'Current Production runtime binding is evidenced; the organization-specific storage region remains account-evidence dependent.',
+    regionDisclosure: 'Fresh current public Production release binding is evidenced; protected release/source-map producer acceptance plus organization-specific region, retention and DPA facts remain evidence-required.',
   },
   {
     name: 'PostHog',
@@ -108,9 +126,9 @@ export const procurementProviders: ProcurementProvider[] = [
   },
   {
     name: 'Upstash',
-    purpose: 'Distributed Redis-backed rate limiting and security-control state when enabled',
-    status: 'conditional',
-    regionDisclosure: 'Historical runtime binding is evidenced; current exact-release reproof and account-region facts remain evidence-required.',
+    purpose: 'Distributed Redis-backed rate limiting and security-control state',
+    status: 'core',
+    regionDisclosure: 'Fresh current direct Production revalidation proves the fail-closed Redis-backed catalogue path; protected provider producer acceptance plus account plan, region, retention and contractual facts remain open.',
   },
 ];
 
