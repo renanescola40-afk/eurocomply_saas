@@ -1,93 +1,109 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const migrationPath =
+const historicalMigrationPath =
   'supabase/migrations/20260730204500_repair_live_rls_validation_inventory.sql';
-const migration = readFileSync(migrationPath, 'utf8').toLowerCase();
+const forwardMigrationPath =
+  'supabase/migrations/20260822123606_v19_reconcile_live_rls_validation_inventory_privileges.sql';
+const historicalMigration = readFileSync(historicalMigrationPath, 'utf8').toLowerCase();
+const forwardMigration = readFileSync(forwardMigrationPath, 'utf8').toLowerCase();
 const workflow = readFileSync(
   '.github/workflows/supabase-live-rls-validation.yml',
   'utf8',
 ).toLowerCase();
+const runner = readFileSync(
+  'scripts/security/run-supabase-live-tenant-isolation-v4.mjs',
+  'utf8',
+).toLowerCase();
+const forwardConfig = JSON.parse(
+  readFileSync('config/supabase-forward-reconciliation.json', 'utf8'),
+) as { migrations: Array<{ filename: string }> };
+const selectedForwardMigrations = forwardConfig.migrations.map((item) => item.filename);
 
 describe('live RLS inventory repair migration', () => {
   it('recreates the exact RPC signature required by the live proof runner', () => {
-    expect(migration).toContain(
+    expect(historicalMigration).toContain(
       'create or replace function public.eurocomply_live_rls_inventory(table_names text[])',
     );
-    expect(migration).toContain('returns table (');
-    expect(migration).toContain('rls_enabled boolean');
-    expect(migration).toContain('force_rls boolean');
-    expect(migration).toContain('policy_count integer');
+    expect(historicalMigration).toContain('returns table (');
+    expect(historicalMigration).toContain('rls_enabled boolean');
+    expect(historicalMigration).toContain('force_rls boolean');
+    expect(historicalMigration).toContain('policy_count integer');
   });
 
   it('uses invoker rights and a fixed search path', () => {
-    expect(migration).toContain('security invoker');
-    expect(migration).toContain('set search_path = public, pg_catalog');
-    expect(migration).not.toContain('security definer');
+    expect(historicalMigration).toContain('security invoker');
+    expect(historicalMigration).toContain('set search_path = public, pg_catalog');
+    expect(historicalMigration).not.toContain('security definer');
   });
 
   it('removes public application access and grants only service-role execution', () => {
-    expect(migration).toContain(
+    expect(historicalMigration).toContain(
       'revoke all on function public.eurocomply_live_rls_inventory(text[]) from public;',
     );
-    expect(migration).toContain(
+    expect(historicalMigration).toContain(
       'revoke execute on function public.eurocomply_live_rls_inventory(text[]) from anon;',
     );
-    expect(migration).toContain(
+    expect(historicalMigration).toContain(
       'revoke execute on function public.eurocomply_live_rls_inventory(text[]) from authenticated;',
     );
-    expect(migration).toContain(
+    expect(historicalMigration).toContain(
       'grant execute on function public.eurocomply_live_rls_inventory(text[]) to service_role;',
     );
   });
 
   it('documents the controlled purpose and reloads the PostgREST schema', () => {
-    expect(migration).toContain(
+    expect(historicalMigration).toContain(
       'controlled service-role helper for exact-target live rls validation',
     );
-    expect(migration).toContain("notify pgrst, 'reload schema';");
+    expect(historicalMigration).toContain("notify pgrst, 'reload schema';");
   });
 
-  it('uses only the repaired helper in the controlled live proof allowlist', () => {
-    expect(workflow).toContain(
-      'supabase/migrations/20260730204500_repair_live_rls_validation_inventory.sql',
+  it('reconciles the helper only through the governed forward promotion package', () => {
+    expect(selectedForwardMigrations).toContain(
+      '20260822123606_v19_reconcile_live_rls_validation_inventory_privileges.sql',
     );
-    expect(workflow).not.toContain(
-      'supabase/migrations/20260623120000_live_rls_validation_inventory.sql',
+    expect(selectedForwardMigrations).not.toContain(
+      '20260730204500_repair_live_rls_validation_inventory.sql',
     );
-    expect(workflow).toContain('--single-transaction --file="$migration"');
+    expect(workflow).not.toContain('apply allowlisted live rls proof migrations');
+    expect(workflow).not.toContain('--single-transaction --file="$migration"');
+    expect(workflow).not.toContain('psql ');
   });
 
-  it('runs this contract before any optional target migration application', () => {
-    expect(workflow).toContain(
-      'tests/security/live-rls-inventory-migration.test.ts',
-    );
-    expect(workflow.indexOf('validate supabase rls proof contracts')).toBeLessThan(
-      workflow.indexOf('apply allowlisted live rls proof migrations'),
+  it('requires exact successful promotion evidence before the tenant proof executes', () => {
+    expect(workflow).toContain('download exact governed production promotion evidence');
+    expect(workflow).toContain('validate-supabase-live-promotion-source.mjs');
+    expect(workflow).toContain('execute canonical live tenant-isolation proof');
+    expect(workflow.indexOf('download exact governed production promotion evidence')).toBeLessThan(
+      workflow.indexOf('execute canonical live tenant-isolation proof'),
     );
   });
 
-  it('verifies the effective privilege boundary in the live database', () => {
-    expect(workflow).toContain('verify live inventory helper privilege boundary');
-    expect(workflow).toContain("to_regprocedure('public.eurocomply_live_rls_inventory(text[])')");
-    expect(workflow).toContain("has_function_privilege('anon', function_oid, 'execute')");
-    expect(workflow).toContain(
-      "has_function_privilege('authenticated', function_oid, 'execute')",
+  it('preserves the helper privilege boundary in the forward reconciliation identity and proves authenticated denial at runtime', () => {
+    expect(forwardMigration).toContain('security invoker');
+    expect(forwardMigration).toContain('set search_path = public, pg_catalog');
+    expect(forwardMigration).toContain(
+      'revoke all on function public.eurocomply_live_rls_inventory(text[]) from public',
     );
-    expect(workflow).toContain(
-      "not has_function_privilege('service_role', function_oid, 'execute')",
+    expect(forwardMigration).toContain(
+      'revoke execute on function public.eurocomply_live_rls_inventory(text[]) from anon',
     );
-    expect(workflow).toContain("acl.grantee = 0");
-    expect(workflow).toContain('live rls inventory helper must remain security invoker');
-    expect(workflow).toContain("setting = 'search_path=public, pg_catalog'");
+    expect(forwardMigration).toContain(
+      'revoke execute on function public.eurocomply_live_rls_inventory(text[]) from authenticated',
+    );
+    expect(forwardMigration).toContain(
+      'grant execute on function public.eurocomply_live_rls_inventory(text[]) to service_role',
+    );
+    expect(runner).toContain("admin.rpc('eurocomply_live_rls_inventory'");
+    expect(runner).toContain("clients.ownerb.rpc('eurocomply_live_rls_inventory'");
+    expect(runner).toContain("operation: 'authenticated_execute_denied'");
   });
 
-  it('checks live privileges after migration application and before tenant proof', () => {
-    expect(workflow.indexOf('apply allowlisted live rls proof migrations')).toBeLessThan(
-      workflow.indexOf('verify live inventory helper privilege boundary'),
-    );
-    expect(workflow.indexOf('verify live inventory helper privilege boundary')).toBeLessThan(
-      workflow.indexOf('run strict supabase tenant isolation validator'),
-    );
+  it('keeps the live proof read-only with respect to migration execution', () => {
+    expect(workflow).toContain('run: node scripts/security/run-supabase-live-tenant-isolation.mjs');
+    expect(workflow).not.toContain('supabase db push');
+    expect(workflow).not.toContain('migration repair');
+    expect(workflow).not.toContain('--include-all');
   });
 });
