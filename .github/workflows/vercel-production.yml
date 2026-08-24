@@ -214,7 +214,15 @@ jobs:
         run: npm run typecheck
 
       - name: Run test gate
-        run: npm run test
+        shell: bash
+        run: |
+          set -euo pipefail
+          env -i \
+            HOME="$HOME" \
+            PATH="$PATH" \
+            CI=true \
+            NODE_ENV=test \
+            npm run test
 
       - name: Run build gate
         run: npm run build
