@@ -20,8 +20,8 @@ function hasLiveRuntimeConfiguration() {
 if (isCli) {
   const advisory = process.argv.includes('--advisory');
   if (advisory && !hasLiveRuntimeConfiguration()) {
-    console.log('Supabase post-V20 live tenant-isolation validation skipped in advisory CI: protected runtime credentials are unavailable.');
-    console.log('No runtime completion is claimed; the protected promotion-bound workflow is authoritative.');
+    console.log('Supabase post-V21 live tenant-isolation validation skipped in advisory CI: protected runtime credentials are unavailable.');
+    console.log('No runtime completion is claimed; the protected V21/31 promotion-bound workflow is authoritative.');
     process.exit(0);
   }
 
