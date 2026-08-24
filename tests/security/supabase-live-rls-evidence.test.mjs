@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
-  V20_CHANGE_SET,
-  V20_EVIDENCE_SCHEMA,
+  GOVERNED_CHANGE_SET,
+  LIVE_RLS_EVIDENCE_SCHEMA,
   backendOwnedTables,
   buildEvidencePayload,
   criticalTables,
@@ -81,8 +81,8 @@ function passingEvidence(overrides = {}) {
 
 beforeEach(() => {
   process.env.PROMOTION_RUN_ID = '123456';
-  process.env.PROMOTION_CHANGE_SET = V20_CHANGE_SET;
-  process.env.PROMOTION_SELECTED_MIGRATION_COUNT = '27';
+  process.env.PROMOTION_CHANGE_SET = GOVERNED_CHANGE_SET;
+  process.env.PROMOTION_SELECTED_MIGRATION_COUNT = '31';
   process.env.PROMOTION_SELECTION_DIGEST = `sha256:${'a'.repeat(64)}`;
   process.env.PROMOTION_REMOTE_TRANSITION_VERIFIED = 'true';
   process.env.PROMOTION_UNAUTHORIZED_MIGRATION_APPLIED = 'false';
@@ -93,7 +93,7 @@ afterEach(() => {
   for (const key of Object.keys(process.env).filter((name) => name.startsWith('PROMOTION_'))) delete process.env[key];
 });
 
-describe('Supabase V20 live RLS evidence contract', () => {
+describe('Supabase V21/31 live RLS evidence contract', () => {
   it('tracks the canonical tenant and global surfaces', () => {
     expect(criticalTables).toEqual([...customerTenantTables, ...globalReferenceTables]);
     expect(customerTenantTables).toContain('compliance_tasks');
@@ -112,13 +112,13 @@ describe('Supabase V20 live RLS evidence contract', () => {
     ]);
   });
 
-  it('generates passing V20 evidence only with promotion lineage', () => {
+  it('generates passing V21 evidence only with promotion lineage', () => {
     const evidence = passingEvidence();
-    expect(evidence.schema).toBe(V20_EVIDENCE_SCHEMA);
+    expect(evidence.schema).toBe(LIVE_RLS_EVIDENCE_SCHEMA);
     expect(evidence.promotionLineage).toMatchObject({
       promotionRunId: '123456',
-      changeSet: V20_CHANGE_SET,
-      selectedMigrationCount: 27,
+      changeSet: GOVERNED_CHANGE_SET,
+      selectedMigrationCount: 31,
       remoteAfterEqualsBeforePlusSelected: true,
       unauthorizedMigrationApplied: false,
       productionPromotionVerified: true,
@@ -126,12 +126,12 @@ describe('Supabase V20 live RLS evidence contract', () => {
     expect(validatePassingEvidence(evidence)).toEqual({ valid: true, errors: [] });
   });
 
-  it('fails closed without exact 27/27 Production-promotion lineage', () => {
-    process.env.PROMOTION_SELECTED_MIGRATION_COUNT = '26';
+  it('fails closed without exact 31/31 Production-promotion lineage', () => {
+    process.env.PROMOTION_SELECTED_MIGRATION_COUNT = '30';
     process.env.PROMOTION_PRODUCTION_VERIFIED = 'false';
     const result = validatePassingEvidence(passingEvidence());
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('promotionLineage.selectedMigrationCount must be 27');
+    expect(result.errors).toContain('promotionLineage.selectedMigrationCount must be 31');
     expect(result.errors).toContain('promotionLineage.productionPromotionVerified must be true');
   });
 
