@@ -1,70 +1,161 @@
 name: Supabase Live RLS Validation
 
-run-name: Supabase live RLS proof for ${{ inputs.release_sha || github.sha }}
+run-name: Supabase promotion-bound live RLS proof for ${{ inputs.release_sha }}
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       release_sha:
-        description: Optional full 40-character current main SHA; defaults to the triggering SHA
-        required: false
-        type: string
-      apply_migrations:
-        description: Apply the committed allowlisted RLS validation migrations before the proof
+        description: Exact current main SHA successfully promoted by the governed forward chain
         required: true
-        type: boolean
-        default: false
+        type: string
+      promotion_run_id:
+        description: Successful Supabase Forward Reconciliation Production Promotion run ID for this exact SHA
+        required: true
+        type: string
+      confirmation:
+        description: Type EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF
+        required: true
+        type: string
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
-  group: supabase-live-rls-validation-${{ inputs.release_sha || github.sha }}
+  group: supabase-live-rls-validation-${{ inputs.release_sha }}
   cancel-in-progress: false
 
 jobs:
-  live-rls-validation:
-    name: Run live tenant isolation proof
+  governance:
+    name: Verify exact promotion authority before protected secrets
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
-    environment: supabase-live-rls-validation
+    timeout-minutes: 10
     env:
-      TARGET_SHA: ${{ inputs.release_sha || github.sha }}
-
+      TARGET_SHA: ${{ inputs.release_sha }}
+      PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
+      INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+      GITHUB_ENVIRONMENT_NAME: supabase-live-rls-validation
+      REQUIRE_PROTECTED_BRANCHES: 'true'
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
-      - name: Validate requested release SHA
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ ! "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
-            echo "release_sha must be a full 40-character Git SHA" >&2
-            exit 1
-          fi
-          echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
-
-      - name: Check out exact release SHA
+      - name: Check out exact current main without credentials
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: ${{ inputs.release_sha || github.sha }}
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
           persist-credentials: false
 
-      - name: Verify exact current main checkout
+      - name: Set up Node.js for governance validation
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+
+      - name: Validate exact-SHA promotion authority
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          OBSERVED_SHA="$(git rev-parse HEAD)"
-          test "$OBSERVED_SHA" = "$TARGET_SHA"
+          [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]
+          test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF'
+          test "$GITHUB_REF_NAME" = 'main'
           test "$GITHUB_SHA" = "$TARGET_SHA"
-          MAIN_SHA="$(curl --fail --silent --show-error \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
-          test "$MAIN_SHA" = "$TARGET_SHA"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+          promotion_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PROMOTION_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$promotion_json")" = "$TARGET_SHA"
+          test "$(jq -r '.path' <<<"$promotion_json")" = '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
+          test "$(jq -r '.event' <<<"$promotion_json")" = 'workflow_dispatch'
+          test "$(jq -r '.conclusion' <<<"$promotion_json")" = 'success'
+
+      - name: Verify protected environment governance before secrets
+        run: node scripts/security/check-github-environment-governance.mjs
+
+  production-project-binding:
+    name: Bind proof to Production Supabase project
+    needs: governance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: Production
+    outputs:
+      project_digest: ${{ steps.binding.outputs.project_digest }}
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      GITHUB_ENVIRONMENT_NAME: Production
+      REQUIRE_PROTECTED_BRANCHES: 'true'
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out exact promoted release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+
+      - name: Revalidate exact current main and Production environment governance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+          node scripts/security/check-github-environment-governance.mjs
+
+      - name: Emit redacted Production Supabase project digest
+        id: binding
+        env:
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+        run: node scripts/security/supabase-project-binding.mjs emit-pooler-digest
+
+  live-proof:
+    name: Run exact governed promotion-bound tenant proof
+    needs: [governance, production-project-binding]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: supabase-live-rls-validation
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
+      INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+      EXPECTED_SUPABASE_PROJECT_DIGEST: ${{ needs.production-project-binding.outputs.project_digest }}
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_ENVIRONMENT_NAME: supabase-live-rls-validation
+      REQUIRE_PROTECTED_BRANCHES: 'true'
+    steps:
+      - name: Check out exact promoted release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Revalidate exact current main and promotion after approval
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF'
+          test "$GITHUB_REF_NAME" = 'main'
+          test "$GITHUB_SHA" = "$TARGET_SHA"
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(git rev-parse origin/main)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+          promotion_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PROMOTION_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$promotion_json")" = "$TARGET_SHA"
+          test "$(jq -r '.path' <<<"$promotion_json")" = '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
+          test "$(jq -r '.event' <<<"$promotion_json")" = 'workflow_dispatch'
+          test "$(jq -r '.conclusion' <<<"$promotion_json")" = 'success'
+          [[ "$EXPECTED_SUPABASE_PROJECT_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]
+
+      - name: Revalidate protected environment governance after admission
+        run: node scripts/security/check-github-environment-governance.mjs
 
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -75,211 +166,73 @@ jobs:
       - name: Install dependencies deterministically
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Validate Supabase RLS proof contracts
-        run: |
-          node --check scripts/security/run-supabase-live-ai-assessments-rls.mjs
-          node --check scripts/security/append-supabase-live-horizontal-isolation.mjs
-          node --check scripts/security/supabase-horizontal-rls-evidence.mjs
-          npx vitest run \
-            tests/enterprise/supabase-rls-runtime-evidence-fetch.test.ts \
-            tests/enterprise/supabase-rls-workflow-ai-assessments-contract.test.ts \
-            tests/security/supabase-rls-scorecard-evidence.test.ts \
-            tests/security/supabase-horizontal-rls-evidence.test.ts \
-            tests/security/live-rls-inventory-migration.test.ts \
-            tests/security/organization-add-ons-live-rls-promotion.test.ts
-
-      - name: Apply allowlisted live RLS proof migrations
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations }}
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      - name: Validate live-proof code contracts
         shell: bash
         run: |
           set -euo pipefail
-          if [ -z "${SUPABASE_DB_URL:-}" ]; then
-            echo "SUPABASE_DB_URL is required when apply_migrations=true." >&2
-            exit 1
-          fi
-          if printf '%s' "$SUPABASE_DB_URL" | grep -Eq '@db\.[^.]+\.supabase\.co:5432/'; then
-            echo "Use the Supabase IPv4 transaction pooler URI rather than the direct IPv6-only endpoint." >&2
-            exit 1
-          fi
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-          for migration in \
-            supabase/migrations/20260730204500_repair_live_rls_validation_inventory.sql \
-            supabase/migrations/20260624220000_live_rls_validation_missing_tables.sql \
-            supabase/migrations/20260624223000_live_rls_audit_entity_id_text.sql \
-            supabase/migrations/20260624170400_live_rls_validation_drop_apply_helpers.sql \
-            supabase/migrations/20260624170500_live_rls_validation_policy_patch.sql \
-            supabase/migrations/20260625193000_clerk_organization_identity_mapping.sql \
-            supabase/migrations/20260626120000_clerk_uuid_safe_rls_helpers.sql \
-            supabase/migrations/20260629110000_enterprise_tenant_rls_cleanup_indexes.sql \
-            supabase/migrations/20260701150000_supabase_production_rls_proof_hardening.sql \
-            supabase/migrations/20260702112000_apply_invitations_live_rls_validation.sql \
-            supabase/migrations/20260812230911_tighten_monitoring_preferences_horizontal_read_isolation.sql \
-            supabase/migrations/20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql
-          do
-            psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction --file="$migration"
-          done
+          node --check scripts/security/supabase-forward-manifest-contract.mjs
+          node --check scripts/security/validate-supabase-live-promotion-source.mjs
+          node --check scripts/security/supabase-project-binding.mjs
+          node --check scripts/security/supabase-v20-live-fixtures.mjs
+          node --check scripts/security/run-supabase-live-tenant-isolation-v4.mjs
+          node --check scripts/security/run-supabase-live-tenant-isolation.mjs
+          node --check scripts/security/supabase-live-rls-evidence.mjs
+          node --check scripts/release/validate-supabase-rls-runtime-evidence.mjs
+          node --test tests/security/supabase-project-binding.test.mjs
 
-      - name: Verify live inventory helper privilege boundary
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations }}
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      - name: Verify live inventory helper privilege boundary contract
         shell: bash
         run: |
           set -euo pipefail
-          psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 <<'SQL'
-          do $validation$
-          declare
-            function_oid oid := to_regprocedure('public.eurocomply_live_rls_inventory(text[])');
-          begin
-            if function_oid is null then
-              raise exception 'live RLS inventory helper is missing after migration application';
-            end if;
+          validator='scripts/security/validate-live-rls-inventory-helper-boundary.sql'
+          test -f "$validator"
+          grep -F "to_regprocedure('public.eurocomply_live_rls_inventory(text[])')" "$validator" >/dev/null
+          grep -F "has_function_privilege('anon', function_oid, 'EXECUTE')" "$validator" >/dev/null
+          grep -F "has_function_privilege('authenticated', function_oid, 'EXECUTE')" "$validator" >/dev/null
+          grep -F "not has_function_privilege('service_role', function_oid, 'EXECUTE')" "$validator" >/dev/null
+          grep -F "acl.grantee = 0" "$validator" >/dev/null
+          grep -F "live RLS inventory helper must remain SECURITY INVOKER" "$validator" >/dev/null
+          grep -F "setting = 'search_path=public, pg_catalog'" "$validator" >/dev/null
 
-            if exists (
-              select 1
-              from pg_proc p
-              cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
-              where p.oid = function_oid
-                and acl.grantee = 0
-                and acl.privilege_type = 'EXECUTE'
-            ) then
-              raise exception 'PUBLIC retains EXECUTE on the live RLS inventory helper';
-            end if;
-
-            if has_function_privilege('anon', function_oid, 'EXECUTE') then
-              raise exception 'anon retains EXECUTE on the live RLS inventory helper';
-            end if;
-
-            if has_function_privilege('authenticated', function_oid, 'EXECUTE') then
-              raise exception 'authenticated retains EXECUTE on the live RLS inventory helper';
-            end if;
-
-            if not has_function_privilege('service_role', function_oid, 'EXECUTE') then
-              raise exception 'service_role lacks EXECUTE on the live RLS inventory helper';
-            end if;
-
-            if (select p.prosecdef from pg_proc p where p.oid = function_oid) then
-              raise exception 'live RLS inventory helper must remain SECURITY INVOKER';
-            end if;
-
-            if not exists (
-              select 1
-              from pg_proc p
-              cross join lateral unnest(coalesce(p.proconfig, array[]::text[])) setting
-              where p.oid = function_oid
-                and setting = 'search_path=public, pg_catalog'
-            ) then
-              raise exception 'live RLS inventory helper search_path is not fixed';
-            end if;
-          end
-          $validation$;
-          SQL
-
-      - name: Verify organization add-ons RLS performance boundary
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations }}
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      - name: Download exact governed Production promotion evidence
         shell: bash
         run: |
           set -euo pipefail
-          psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 <<'SQL'
-          do $validation$
-          declare
-            policy_qual text;
-          begin
-            if not exists (
-              select 1
-              from pg_class c
-              join pg_namespace n on n.oid = c.relnamespace
-              where n.nspname = 'public'
-                and c.relname = 'organization_add_ons'
-                and c.relrowsecurity
-                and c.relforcerowsecurity
-            ) then
-              raise exception 'organization_add_ons must keep RLS + FORCE RLS';
-            end if;
+          rm -rf source-promotion
+          mkdir -p source-promotion
+          gh run download "$PROMOTION_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "supabase-forward-production-promotion-${TARGET_SHA}" \
+            --dir source-promotion
+          promotion_transition="$(find source-promotion -type f -name 'promotion-transition.json' -print -quit)"
+          live_postconditions="$(find source-promotion -type f -name 'live-postconditions.json' -print -quit)"
+          current_manifest="$(find source-promotion -type f -name 'current-manifest.json' -print -quit)"
+          test -n "$promotion_transition"
+          test -n "$live_postconditions"
+          test -n "$current_manifest"
+          PROMOTION_TRANSITION_PATH="$promotion_transition" \
+          LIVE_POSTCONDITIONS_PATH="$live_postconditions" \
+          PROMOTION_MANIFEST_PATH="$current_manifest" \
+            node scripts/security/validate-supabase-live-promotion-source.mjs
 
-            if not exists (
-              select 1
-              from pg_policies
-              where schemaname = 'public'
-                and tablename = 'organization_add_ons'
-                and policyname = 'organization members can read add-ons'
-                and cmd = 'SELECT'
-                and 'authenticated' = any(roles)
-                and cardinality(roles) = 1
-            ) then
-              raise exception 'organization add-ons SELECT policy role boundary drifted';
-            end if;
+      - name: Verify live API project matches the Production promotion project
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+        run: node scripts/security/supabase-project-binding.mjs verify-api-digest
 
-            select pg_get_expr(p.polqual, p.polrelid)
-              into policy_qual
-            from pg_policy p
-            join pg_class c on c.oid = p.polrelid
-            join pg_namespace n on n.oid = c.relnamespace
-            where n.nspname = 'public'
-              and c.relname = 'organization_add_ons'
-              and p.polname = 'organization members can read add-ons';
-
-            if policy_qual is null then
-              raise exception 'organization add-ons SELECT policy expression is missing';
-            end if;
-
-            if position('SELECT auth.uid()' in policy_qual) = 0 then
-              raise exception 'organization add-ons policy is not using statement-level auth.uid() initplan';
-            end if;
-
-            if position('members.organization_id = organization_add_ons.organization_id' in policy_qual) = 0 then
-              raise exception 'organization add-ons tenant membership predicate drifted';
-            end if;
-
-            if has_table_privilege('anon', 'public.organization_add_ons', 'SELECT') then
-              raise exception 'anon unexpectedly gained organization_add_ons SELECT';
-            end if;
-
-            if not has_table_privilege('authenticated', 'public.organization_add_ons', 'SELECT') then
-              raise exception 'authenticated lost organization_add_ons SELECT';
-            end if;
-
-            if has_table_privilege('authenticated', 'public.organization_add_ons', 'INSERT')
-               or has_table_privilege('authenticated', 'public.organization_add_ons', 'UPDATE')
-               or has_table_privilege('authenticated', 'public.organization_add_ons', 'DELETE') then
-              raise exception 'authenticated unexpectedly gained organization_add_ons mutation privileges';
-            end if;
-          end
-          $validation$;
-          SQL
-
-      - name: Run strict Supabase tenant isolation validator
+      - name: Execute canonical live tenant-isolation proof
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RLS_LIVE_UPDATE_REGISTER: '0'
+          RLS_LIVE_KEEP_FIXTURES: '0'
         run: node scripts/security/run-supabase-live-tenant-isolation.mjs
 
-      - name: Append same-tenant horizontal isolation proof
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: node scripts/security/append-supabase-live-horizontal-isolation.mjs
-
-      - name: Append live ai_assessments RLS proof
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          RLS_LIVE_KEEP_FIXTURES: '0'
-        run: node scripts/security/run-supabase-live-ai-assessments-rls.mjs
-
-      - name: Stamp GitHub Actions provenance
+      - name: Stamp canonical GitHub Actions provenance
         run: node scripts/security/stamp-supabase-live-rls-provenance.mjs
 
-      - name: Validate redacted source runtime evidence
+      - name: Validate redacted exact-SHA source evidence
         env:
           ENTERPRISE_EXPECTED_SHA: ${{ env.TARGET_SHA }}
           SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ github.run_id }}
@@ -295,13 +248,22 @@ jobs:
           ENTERPRISE_EXPECTED_SHA: ${{ env.TARGET_SHA }}
         run: node scripts/security/check-supabase-rls-scorecard-evidence.mjs
 
-      - name: Upload redacted runtime and scorecard evidence
-        if: always()
+      - name: Generate immutable evidence checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/supabase-live-rls-runtime-proof
+          sha256sum \
+            docs/security/evidence/runtime/supabase-live-rls-validation.json \
+            docs/security/evidence/runtime/supabase-rls-validation.json \
+            > artifacts/supabase-live-rls-runtime-proof/SHA256SUMS
+          cp docs/security/evidence/runtime/supabase-live-rls-validation.json artifacts/supabase-live-rls-runtime-proof/
+          cp docs/security/evidence/runtime/supabase-rls-validation.json artifacts/supabase-live-rls-runtime-proof/
+
+      - name: Upload canonical promotion-bound runtime and scorecard evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: supabase-live-rls-runtime-proof-${{ env.TARGET_SHA }}
-          path: |
-            docs/security/evidence/runtime/supabase-live-rls-validation.json
-            docs/security/evidence/runtime/supabase-rls-validation.json
+          path: artifacts/supabase-live-rls-runtime-proof
           if-no-files-found: error
           retention-days: 90

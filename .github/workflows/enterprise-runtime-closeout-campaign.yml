@@ -9,11 +9,10 @@ on:
         description: Full 40-character current main SHA
         required: true
         type: string
-      apply_rls_migrations:
-        description: Apply committed Supabase validation migrations before live RLS proof
+      supabase_promotion_run_id:
+        description: Successful exact-SHA governed Supabase Production promotion run ID required by TEN-RLS
         required: true
-        type: boolean
-        default: false
+        type: string
 
 permissions:
   actions: write
@@ -31,7 +30,7 @@ jobs:
     environment: enterprise-release-approval
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
-      APPLY_MIGRATIONS: ${{ inputs.apply_rls_migrations }}
+      SUPABASE_PROMOTION_RUN_ID: ${{ inputs.supabase_promotion_run_id }}
 
     steps:
       - name: Checkout exact release SHA
@@ -40,11 +39,12 @@ jobs:
           ref: ${{ inputs.release_sha }}
           persist-credentials: false
 
-      - name: Verify exact checkout
+      - name: Verify exact checkout and promotion-run input shape
         shell: bash
         run: |
           set -euo pipefail
           [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$SUPABASE_PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]
           TARGET_SHA="${TARGET_SHA,,}"
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           echo "TARGET_SHA=$TARGET_SHA" >> "$GITHUB_ENV"
@@ -73,4 +73,5 @@ jobs:
       - name: Record truthful campaign boundary
         run: |
           echo 'Runtime proofs were dispatched for the exact current main SHA.'
+          echo 'TEN-RLS is promotion-bound and this workflow cannot apply migrations.'
           echo 'This workflow does not promote controls by itself; the canonical scorecard remains authoritative.'
