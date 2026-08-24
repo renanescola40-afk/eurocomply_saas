@@ -10,15 +10,13 @@ Provider/configuration facts and unresolved account-level DPA/region/retention f
 
 ## Current technical public-surface evidence
 
-The most recent External Assurance connector observation is recorded in `docs/trust/evidence/2026-08-21-external-assurance-runtime-provider-revalidation.md`.
+Current release coordination is bound to protected `main` at `93e4672b7c0144f1b018599bb8fb4bb9cdcf0fab`. Connected Vercel evidence observed the Production deployment as READY on that exact SHA; `/api/health` returned HTTP 200 and anonymous `/api/ready` failed closed with HTTP 401. This exact release remains subject to the external legal, pentest, provider-account, Supabase Production-promotion and genuine Stripe LIVE lifecycle blockers tracked in the canonical Enterprise issues.
 
-For production release subject `b54afdfd6370442e7c7924f31d6210841621cf38`, connected Vercel evidence observed the target-production deployment as `READY`; `/pt/trust`, `/pt/security`, and `/pt/status` returned HTTP `200`, and the served HTML exposed Sentry production release binding to the same SHA. Connected Supabase evidence also revalidated production project `tganhbbhfxcpblmgqprg` as `ACTIVE_HEALTHY` in `eu-west-1`.
-
-This resolves the former technical public-route defect tracked in `#1739` for the observed release only. Revalidate before describing a newer release as current. This evidence does **not** complete founder facts, qualified legal review, GDPR legal assurance, independent penetration testing, provider contracts/DPAs, or final subprocessor approval.
+This evidence does **not** complete founder facts, qualified legal review, GDPR legal assurance, independent penetration testing, provider contracts/DPAs, Supabase V19 Production promotion or final subprocessor approval.
 
 ## Approved positioning
 
-Risck comply is designed to support enterprise security review through authenticated workspaces, organization-scoped access, tenant-isolation controls, audit events, controlled documentation, managed-provider safeguards, subprocessor review, and release evidence gates.
+RISCK COMPLY is designed to support enterprise security review through authenticated workspaces, organization-scoped access, tenant-isolation controls, audit events, controlled documentation, managed-provider safeguards, subprocessor review, and release evidence gates.
 
 ## Core buyer-facing materials
 
@@ -35,7 +33,7 @@ Risck comply is designed to support enterprise security review through authentic
 
 ## Internal supporting assurance evidence
 
-`docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md` and `docs/trust/evidence/2026-08-21-external-assurance-runtime-provider-revalidation.md` are internal evidence-working artifacts, not buyer-facing core artifacts. They exist to support factual reconciliation and prevent draft provider/account facts from being promoted into customer disclosures before the applicable account evidence and legal review are complete.
+`docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md` and the canonical External Assurance trackers are internal evidence-working artifacts, not buyer-facing core artifacts. They exist to support factual reconciliation and prevent draft provider/account facts from being promoted into customer disclosures before the applicable account evidence and legal review are complete.
 
 ## External assurance boundary
 
@@ -46,7 +44,9 @@ Before describing external assurance as complete, verify the canonical External 
 - founder facts and the attributable legal-identity/corporate factual record are not yet accepted as a signed release-bound artifact;
 - qualified legal review has not reached 8/8 decisions or a master legal decision;
 - independent penetration testing has not been completed;
-- Privacy/GDPR/subprocessor factual and legal closure remains in review.
+- Privacy/GDPR/subprocessor factual and legal closure remains in review;
+- Supabase governed V19 Production promotion remains separately protected;
+- the genuine Stripe LIVE customer lifecycle has not yet occurred.
 
 These blockers do not invalidate truthful technical/product evidence, but they prohibit claims that qualified legal assurance, independent pentesting, final GDPR legal assurance, or full external procurement assurance is already complete.
 
@@ -58,7 +58,7 @@ Provider certifications or compliance attestations belong to the provider's own 
 
 ## Responsible disclosure
 
-Security reports should be sent privately to `security@risckcomply.com`. The dedicated corporate security channel has verified external delivery and authorized-owner monitoring.
+Security reports should currently be sent privately to `comercial@risckcomply.com`. This is the reachable corporate intake path while a dedicated security alias is re-verified for external delivery.
 
 ## Public incident communication
 

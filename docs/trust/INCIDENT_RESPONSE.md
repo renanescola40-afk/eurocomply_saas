@@ -4,9 +4,9 @@ Status: enterprise review note. This is an operational readiness document, not a
 
 ## Intake
 
-Security reports and urgent trust issues should be sent privately to `security@risckcomply.com`. The dedicated corporate security channel has verified external delivery and is monitored by an authorized RISCK COMPLY owner. Do not create public GitHub issues for private security reports.
+Security reports and urgent trust issues should currently be sent privately to `comercial@risckcomply.com`. This reachable corporate mailbox is the canonical private intake path while a dedicated security alias is re-verified for external delivery. Do not create public GitHub issues for private security reports.
 
-Reports should include affected component, reproduction steps, expected impact, screenshots or logs when safe to share, and whether authentication, organization isolation, billing, storage, audit logs, or customer data may be affected.
+Reports should identify the affected component, expected impact, relevant context or evidence, and whether authentication, organization isolation, billing, storage, audit logs, or customer data may be affected.
 
 ## Current workflow
 
@@ -37,8 +37,8 @@ Public incident communication is published through the verified RISCK COMPLY Sta
 
 ## Evidence boundaries
 
-Risck comply does not currently claim 24/7 staffed monitoring, external incident-response retainer, completed tabletop exercise, or contractual notification timing unless a signed customer agreement says otherwise.
+RISCK COMPLY does not currently claim 24/7 staffed monitoring, external incident-response retainer, completed tabletop exercise, or contractual notification timing unless a signed customer agreement says otherwise.
 
 ## Customer-safe answer
 
-Risck comply maintains a documented incident response workflow designed to support intake, triage, containment, evidence preservation, customer communication, and post-incident review. Program maturity evidence should be reviewed during procurement.
+RISCK COMPLY maintains a documented incident response workflow designed to support intake, triage, containment, evidence preservation, customer communication, and post-incident review. Program maturity evidence should be reviewed during procurement.

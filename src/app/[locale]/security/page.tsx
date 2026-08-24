@@ -1,58 +1,35 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 
-import { TrustCenterPage } from '@/components/marketing/trust-center-page';
-import type { Locale } from '@/lib/i18n/routing';
+import { TrustCenterPage } from '@/components/trust/trust-page';
+import { locales, type Locale } from '@/lib/i18n/routing';
 import { getSafeLocale, makePublicMetadata } from '@/lib/seo/public-metadata';
-
-type PageProps = {
-  params: Promise<{ locale: string }>;
-};
+import { getLocalizedTrustCenterPage } from '@/lib/trust-center/localized-content';
+import { applyVerifiedTrustAuthority } from '@/lib/trust-center/verified-authority';
 
 export const revalidate = 300;
 
-const metadataByLocale: Record<Locale, { title: string; description: string }> = {
-  en: {
-    title: 'Security and Tenant Isolation | RISCK COMPLY Trust Center',
-    description: 'Review RISCK COMPLY security posture, tenant isolation, managed infrastructure, auditability and evidence-bound claims for B2B procurement.',
-  },
-  pt: {
-    title: 'Segurança e isolamento de tenants | RISCK COMPLY',
-    description: 'Consulte a postura de segurança, isolamento entre organizações, infraestrutura gerida, auditabilidade e limites de evidência da RISCK COMPLY.',
-  },
-  es: {
-    title: 'Seguridad y aislamiento de tenants | RISCK COMPLY',
-    description: 'Consulta la postura de seguridad, aislamiento entre organizaciones, infraestructura gestionada, auditabilidad y límites de evidencia de RISCK COMPLY.',
-  },
-  fr: {
-    title: 'Sécurité et isolation des tenants | RISCK COMPLY',
-    description: 'Consultez la posture de sécurité, l’isolation entre organisations, l’infrastructure gérée, l’auditabilité et les limites de preuve de RISCK COMPLY.',
-  },
-  it: {
-    title: 'Sicurezza e isolamento dei tenant | RISCK COMPLY',
-    description: 'Consulta postura di sicurezza, isolamento tra organizzazioni, infrastruttura gestita, auditabilità e limiti delle evidenze di RISCK COMPLY.',
-  },
-  de: {
-    title: 'Sicherheit und Tenant-Isolation | RISCK COMPLY',
-    description: 'Prüfen Sie Sicherheitslage, Organisationstrennung, verwaltete Infrastruktur, Auditierbarkeit und nachweisgebundene Aussagen von RISCK COMPLY.',
-  },
-};
+type PageProps = { params: Promise<{ locale: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale: requestedLocale } = await params;
   const locale = getSafeLocale(requestedLocale);
-  const copy = metadataByLocale[locale];
+  const page = applyVerifiedTrustAuthority(getLocalizedTrustCenterPage('security', locale), locale);
 
   return makePublicMetadata({
     locale,
     path: '/security',
-    title: copy.title,
-    description: copy.description,
+    title: `${page.title} - RISCK COMPLY`,
+    description: page.subtitle,
     noIndex: locale !== 'en',
   });
 }
 
-export default async function PublicPage({ params }: PageProps) {
-  const { locale } = await params;
+export default async function SecurityPage({ params }: PageProps) {
+  const { locale: requestedLocale } = await params;
+  if (!locales.includes(requestedLocale as Locale)) notFound();
 
-  return <TrustCenterPage locale={locale} kind="security" />;
+  const locale = requestedLocale as Locale;
+  const page = applyVerifiedTrustAuthority(getLocalizedTrustCenterPage('security', locale), locale);
+  return <TrustCenterPage locale={locale} page={page} />;
 }
