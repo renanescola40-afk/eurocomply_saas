@@ -59,15 +59,16 @@ describe('pre-V21 Production runtime compatibility', () => {
 
     const parsed = JSON.parse(manifest) as { changeSet?: string; migrations?: Array<{ filename?: string }> };
     expect(parsed.changeSet).toBe('2026-08-24-enterprise-data-plane-payment-first-trusted-access-closure-v21');
-    expect(parsed.migrations).toHaveLength(30);
+    expect(parsed.migrations).toHaveLength(31);
     expect(parsed.migrations?.slice(25, 27).map((item) => item.filename)).toEqual([
       '20260823123000_payment_first_commercial_data_plane.sql',
       '20260823131500_payment_first_gap_analysis_and_storage.sql',
     ]);
-    expect(parsed.migrations?.slice(-3).map((item) => item.filename)).toEqual([
+    expect(parsed.migrations?.slice(-4).map((item) => item.filename)).toEqual([
       '20260824185900_prepare_enterprise_trusted_access_legacy_compatibility.sql',
       '20260824190000_reconcile_enterprise_trusted_access_runtime.sql',
       '20260824190100_finalize_enterprise_trusted_access_operation_contract.sql',
+      '20260824190200_harden_enterprise_trusted_access_runtime_contract.sql',
     ]);
   });
 });
