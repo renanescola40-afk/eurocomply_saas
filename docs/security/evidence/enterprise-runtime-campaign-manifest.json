@@ -7,7 +7,7 @@
     {"id":"IAM-LIFECYCLE","workflow":"identity-access-lifecycle-proof.yml","artifact_prefix":"identity-access-lifecycle-proof-","required":true,"inputs":{"release_sha":"${RELEASE_SHA}","confirmation":"EXECUTE_IDENTITY_LIFECYCLE_PROOF"}},
     {"id":"IAM-SCIM","workflow":"scim-runtime-proof.yml","artifact_prefix":"scim-runtime-proof-","required":true,"inputs":{"release_sha":"${RELEASE_SHA}","confirmation":"EXECUTE_SCIM_RUNTIME_PROOF"}},
     {"id":"IAM-SAML","workflow":"saml-sso-runtime-proof.yml","artifact_prefix":"saml-sso-runtime-proof-","required":true,"inputs":{"release_sha":"${RELEASE_SHA}","confirmation":"EXECUTE_SAML_SSO_RUNTIME_PROOF"}},
-    {"id":"TEN-RLS","workflow":"supabase-live-rls-validation.yml","artifact_prefix":"supabase-live-rls-runtime-proof-","required":true,"inputs":{"release_sha":"${RELEASE_SHA}","apply_migrations":false}},
+    {"id":"TEN-RLS","workflow":"supabase-live-rls-validation.yml","artifact_prefix":"supabase-live-rls-runtime-proof-","required":true,"inputs":{"release_sha":"${RELEASE_SHA}","promotion_run_id":"${SUPABASE_PROMOTION_RUN_ID}","confirmation":"EXECUTE_POST_V20_RUNTIME_PROOF"}},
     {"id":"FINAL-TECHNICAL","workflow":"final-technical-controls-proof.yml","artifact_prefix":"final-technical-controls-proof-","required":true,"inputs":{"release_sha":"${RELEASE_SHA}","confirmation":"EXECUTE_FINAL_TECHNICAL_PROOF"}},
     {"id":"PLATFORM","workflow":"platform-providers-runtime-proof.yml","artifact_prefix":"platform-providers-runtime-proof-","required":true,"inputs":{"release_sha":"${RELEASE_SHA}"}},
     {"id":"DATA","workflow":"data-governance-runtime-proof.yml","artifact_prefix":"data-governance-runtime-proof-","required":true,"inputs":{"release_sha":"${RELEASE_SHA}","confirmation":"EXECUTE_DATA_GOVERNANCE_PROOF"}},
