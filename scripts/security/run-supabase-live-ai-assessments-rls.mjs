@@ -38,7 +38,23 @@ function commandUsed(argv = process.argv.slice(2)) {
   return `node ${runner}${argv.length > 0 ? ` ${argv.join(' ')}` : ''}`;
 }
 
+function hasPromotionRunBinding() {
+  return /^\d+$/.test(String(process.env.PROMOTION_RUN_ID ?? '').trim());
+}
+
 function buildClients() {
+  if (advisoryMode && !hasPromotionRunBinding()) {
+    console.log(JSON.stringify({
+      status: 'advisory',
+      runner,
+      checkedAt: now(),
+      message: 'Skipping live ai_assessments RLS validation because PROMOTION_RUN_ID is not bound to this advisory run. No runtime evidence was generated.',
+      promotionRunRequired: true,
+      evidenceGenerated: false,
+    }, null, 2));
+    return null;
+  }
+
   const missing = requiredEnv.filter((name) => !process.env[name]);
   if (missing.length > 0) {
     const report = { status: 'advisory', runner, checkedAt: now(), message: 'Skipping live ai_assessments RLS validation because real Supabase environment variables are not configured. No runtime evidence was generated.', missingEnvironmentVariables: missing, evidenceGenerated: false };
