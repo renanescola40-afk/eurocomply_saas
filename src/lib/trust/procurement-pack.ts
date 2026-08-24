@@ -1,4 +1,4 @@
-export const PROCUREMENT_PACK_VERSION = '2026-07-30';
+export const PROCUREMENT_PACK_VERSION = '2026-08-24';
 
 export type ProcurementControlStatus = 'implemented' | 'configured' | 'evidence-required' | 'not-claimed';
 
@@ -70,11 +70,48 @@ export const procurementControls: ProcurementControl[] = [
 ];
 
 export const procurementProviders: ProcurementProvider[] = [
-  { name: 'Vercel', purpose: 'Application hosting, deployment and edge delivery', status: 'core', regionDisclosure: 'Runtime region depends on project configuration.' },
-  { name: 'Supabase', purpose: 'Database, authentication, storage and Row Level Security', status: 'core', regionDisclosure: 'The exact project region must be confirmed in the customer security pack.' },
-  { name: 'Stripe', purpose: 'Subscription billing, checkout and webhook processing', status: 'conditional', regionDisclosure: 'Global payments infrastructure; enabled only when billing is configured.' },
-  { name: 'Sentry', purpose: 'Monitoring and diagnostics', status: 'optional', regionDisclosure: 'Depends on the configured account and project region.' },
-  { name: 'PostHog', purpose: 'Product analytics and usage insights', status: 'optional', regionDisclosure: 'Enabled only where configured and appropriate.' },
+  {
+    name: 'Vercel',
+    purpose: 'Application hosting, deployment and edge delivery',
+    status: 'core',
+    regionDisclosure: 'Runtime placement is deployment-specific; current evidence is maintained in the provider factual evidence register.',
+  },
+  {
+    name: 'Supabase',
+    purpose: 'Database, authentication, storage and Row Level Security',
+    status: 'core',
+    regionDisclosure: 'The current Production project is evidenced in eu-west-1 (Ireland).',
+  },
+  {
+    name: 'Stripe',
+    purpose: 'Subscription billing, checkout and webhook processing',
+    status: 'conditional',
+    regionDisclosure: 'The connected LIVE account is based in Portugal; this is not presented as a single processing or storage region.',
+  },
+  {
+    name: 'Sentry',
+    purpose: 'Monitoring and diagnostics',
+    status: 'optional',
+    regionDisclosure: 'Current Production runtime binding is evidenced; the organization-specific storage region remains account-evidence dependent.',
+  },
+  {
+    name: 'PostHog',
+    purpose: 'Product analytics and usage insights',
+    status: 'optional',
+    regionDisclosure: 'The Production client targets EU service endpoints; Production account recovery and account-linked DPA evidence remain open.',
+  },
+  {
+    name: 'Resend',
+    purpose: 'Transactional email delivery when enabled',
+    status: 'conditional',
+    regionDisclosure: 'Historical use is evidenced; current exact-release Production binding remains evidence-required.',
+  },
+  {
+    name: 'Upstash',
+    purpose: 'Distributed Redis-backed rate limiting and security-control state when enabled',
+    status: 'conditional',
+    regionDisclosure: 'Historical runtime binding is evidenced; current exact-release reproof and account-region facts remain evidence-required.',
+  },
 ];
 
 export const procurementDocuments = [
