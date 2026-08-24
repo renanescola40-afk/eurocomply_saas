@@ -9,6 +9,10 @@ on:
         description: Full 40-character current main SHA
         required: true
         type: string
+      supabase_promotion_run_id:
+        description: Successful exact-SHA V21/31 Supabase Production promotion run ID required by TEN-RLS
+        required: true
+        type: string
       confirmation:
         description: Type RUN_ENTERPRISE_RUNTIME_CLOSEOUT
         required: true
@@ -36,6 +40,7 @@ jobs:
       RELEASE_SHA: ${{ inputs.release_sha }}
       RELEASE_BRANCH: main
       TARGET_SHA: ${{ inputs.release_sha }}
+      SUPABASE_PROMOTION_RUN_ID: ${{ inputs.supabase_promotion_run_id }}
       RECOVERY_ROLLBACK_CONFIRMATION: ${{ inputs.recovery_rollback_confirmation }}
       GITHUB_TOKEN: ${{ github.token }}
       GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
@@ -53,6 +58,7 @@ jobs:
           test "$CONFIRMATION" = "RUN_ENTERPRISE_RUNTIME_CLOSEOUT"
           test "$RECOVERY_ROLLBACK_CONFIRMATION" = "EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK"
           [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$SUPABASE_PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]
 
       - name: Check out exact release SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
