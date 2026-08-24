@@ -1,0 +1,64 @@
+name: One-shot Vercel Production Unpause
+
+on:
+  push:
+    branches:
+      - agent/vercel-unpause-zero-cost
+
+permissions:
+  contents: read
+
+concurrency:
+  group: one-shot-vercel-production-unpause
+  cancel-in-progress: false
+
+jobs:
+  unpause:
+    name: Unpause existing Vercel project and verify health
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: production
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_PROJECT_ID: prj_APpXAyQFy1Gie50xfbO45zjkyUSm
+      VERCEL_TEAM_ID: team_wu3LZI6ReFxO16xipv73GLwG
+      HEALTH_URL: https://risckcomply.com/api/health
+    steps:
+      - name: Require existing Vercel credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "VERCEL_TOKEN is not available in the production environment."
+            exit 2
+          fi
+
+      - name: Unpause existing project
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --output /tmp/unpause-response.txt --write-out '%{http_code}' \
+            --request POST \
+            --url "https://api.vercel.com/v1/projects/${VERCEL_PROJECT_ID}/unpause?teamId=${VERCEL_TEAM_ID}" \
+            --header "Authorization: Bearer ${VERCEL_TOKEN}")"
+          echo "Vercel unpause HTTP status: ${status}"
+          if [ "${status}" != "200" ]; then
+            echo "Unpause did not return HTTP 200. No billing or plan-change endpoint was called."
+            exit 3
+          fi
+
+      - name: Verify canonical Production health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            status="$(curl --silent --show-error --output /tmp/health-response.txt --write-out '%{http_code}' "${HEALTH_URL}" || true)"
+            echo "Health attempt ${attempt}: HTTP ${status}"
+            if [ "${status}" = "200" ]; then
+              cat /tmp/health-response.txt
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Canonical Production health did not return HTTP 200 after successful unpause."
+          exit 4
