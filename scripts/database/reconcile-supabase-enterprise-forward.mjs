@@ -25,6 +25,7 @@ const PAYMENT_FIRST_GAP_STORAGE_MIGRATION = '20260823131500_payment_first_gap_an
 const TRUSTED_ACCESS_PREPARE_MIGRATION = '20260824185900_prepare_enterprise_trusted_access_legacy_compatibility.sql';
 const TRUSTED_ACCESS_RUNTIME_MIGRATION = '20260824190000_reconcile_enterprise_trusted_access_runtime.sql';
 const TRUSTED_ACCESS_FINALIZE_MIGRATION = '20260824190100_finalize_enterprise_trusted_access_operation_contract.sql';
+const TRUSTED_ACCESS_HARDEN_MIGRATION = '20260824190200_harden_enterprise_trusted_access_runtime_contract.sql';
 const COMMERCIAL_QUOTA_MIGRATION = '20260822120617_atomic_vendor_risk_quota_mutations.sql';
 const EXPECTED_SELECTED = [
   '20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql',
@@ -57,6 +58,7 @@ const EXPECTED_SELECTED = [
   TRUSTED_ACCESS_PREPARE_MIGRATION,
   TRUSTED_ACCESS_RUNTIME_MIGRATION,
   TRUSTED_ACCESS_FINALIZE_MIGRATION,
+  TRUSTED_ACCESS_HARDEN_MIGRATION,
 ];
 
 const TRUTH_BOUNDARY = {
@@ -195,6 +197,7 @@ function validateTrustedAccessPrepareMigration(source) {
     'success_rate*100',
     'oldest_pending_age_seconds',
     'dead_letter_count',
+    'alter column title drop not null',
     'drop policy if exists enterprise_access_operations_authenticated_select_deny',
   ], 'Trusted Access compatibility migration');
 }
@@ -223,6 +226,18 @@ function validateTrustedAccessFinalizeMigration(source) {
     'public.digest',
     'deliberately non-authoritative',
   ], 'Trusted Access finalization migration');
+}
+
+function validateTrustedAccessHardenMigration(source) {
+  requireMarkers(source, [
+    'add column if not exists source_group_id uuid',
+    'add column if not exists department_key text',
+    "when v_pending > 0 and v_failed = 0 then 'pending'",
+    "v_operation.status in ('retry', 'processing')",
+    "'seat-contention:%s:%s:%s'",
+    "'idempotencyScope', 'correlation+membership+seat_type'",
+    'browser execution survived Trusted Access hardening',
+  ], 'Trusted Access hardening migration');
 }
 
 function validateCommercialQuotaMutation(source) {
@@ -281,6 +296,7 @@ function main() {
     if (filename === TRUSTED_ACCESS_PREPARE_MIGRATION) validateTrustedAccessPrepareMigration(source);
     if (filename === TRUSTED_ACCESS_RUNTIME_MIGRATION) validateTrustedAccessRuntimeMigration(source);
     if (filename === TRUSTED_ACCESS_FINALIZE_MIGRATION) validateTrustedAccessFinalizeMigration(source);
+    if (filename === TRUSTED_ACCESS_HARDEN_MIGRATION) validateTrustedAccessHardenMigration(source);
     if (filename === COMMERCIAL_QUOTA_MIGRATION) validateCommercialQuotaMutation(source);
 
     return {
