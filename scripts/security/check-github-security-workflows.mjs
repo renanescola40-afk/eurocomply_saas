@@ -34,7 +34,7 @@ const required = [
       'node scripts/preflight-ci.mjs',
       'npm run security:github-workflows',
       'npm run security:ci',
-      'actions/setup-node@v6',
+      'actions/setup-node@v7',
       'node-version: 22',
     ],
   },

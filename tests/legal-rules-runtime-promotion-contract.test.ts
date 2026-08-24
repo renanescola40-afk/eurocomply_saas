@@ -78,7 +78,7 @@ describe('legal rules runtime promotion contract', () => {
 
   it('uses pinned artifact actions and retains an immutable receipt', () => {
     expect(workflowSource).toContain('actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0');
-    expect(workflowSource).toContain('actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38');
+    expect(workflowSource).toContain('actions/setup-node@820762786026740c76f36085b0efc47a31fe5020');
     expect(workflowSource).toContain('actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c');
     expect(workflowSource).toContain('actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a');
     expect(workflowSource).toContain('retention-days: 365');

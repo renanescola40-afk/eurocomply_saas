@@ -33,7 +33,7 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ inputs.target_sha || github.sha }}
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
       - name: Contract tests

@@ -162,7 +162,7 @@ describe('Vercel production deployment authority', () => {
       'actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0',
     );
     expect(workflow).toContain(
-      'actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38',
+      'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
     );
     expect(workflow).toContain("VERCEL_CLI_VERSION: '56.3.2'");
     expect(workflow).toContain('"vercel@${VERCEL_CLI_VERSION}" deploy --prebuilt --prod');

@@ -4,7 +4,7 @@ Status: procurement-safe FAQ. Answers must stay aligned with implementation and 
 
 ## What is your SOC 2 status?
 
-Not currently available. Risck comply must not claim SOC 2 Type I or Type II until an approved report exists.
+Not currently available. RISCK COMPLY must not claim SOC 2 Type I or Type II until an approved report exists.
 
 ## What is your ISO 27001 status?
 
@@ -16,7 +16,7 @@ Not currently claimed as complete. Any future review should be referenced only w
 
 ## How is authentication handled?
 
-Risck comply uses Supabase Auth and server-side session checks. Private workspace routes require an authenticated session.
+RISCK COMPLY uses Supabase Auth and server-side session checks. Private workspace routes require an authenticated session.
 
 ## How is authorization handled?
 
@@ -28,7 +28,7 @@ The application includes audit event code paths and release evidence checks. Str
 
 ## How do you handle encryption in transit?
 
-Risck comply is designed to use HTTPS/TLS through managed hosting and provider APIs. Deployment and provider evidence should be attached before stronger contractual commitments are made.
+RISCK COMPLY is designed to use HTTPS/TLS through managed hosting and provider APIs. Deployment and provider evidence should be attached before stronger contractual commitments are made.
 
 ## How do you handle data retention?
 
@@ -36,12 +36,12 @@ Retention commitments are agreement-dependent until a formal policy is approved.
 
 ## What is your responsible disclosure contact?
 
-Security reports should be sent privately to `security@risckcomply.com`. The dedicated corporate channel has verified external delivery and is monitored by an authorized RISCK COMPLY owner.
+Security reports should currently be sent privately to `comercial@risckcomply.com`. This is the reachable corporate intake path while a dedicated security alias is being re-verified for external delivery.
 
 ## Where are public incident updates published?
 
-The canonical public incident-communication authority is `https://risckcomplystatus1.statuspage.io/`. Public incident updates are separated from private vulnerability reports and must not expose sensitive customer or investigative details.
+The canonical public incident-communication authority is `https://risckcomplystatus1.statuspage.io/`. Public incident updates are separated from private security reports and must not expose sensitive customer or investigative details.
 
 ## What should sales say?
 
-Use bounded language: Risck comply is designed to support enterprise security review with authenticated workspaces, role-based access, tenant-isolation controls, audit events, trust documentation and release evidence gates.
+Use bounded language: RISCK COMPLY is designed to support enterprise security review with authenticated workspaces, role-based access, tenant-isolation controls, audit events, trust documentation and release evidence gates.

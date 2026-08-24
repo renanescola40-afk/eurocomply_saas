@@ -1,24 +1,18 @@
 # Security Policy
 
-Risck comply is a European B2B compliance SaaS. Security reports are taken seriously and should be handled privately.
+RISCK COMPLY handles security reports privately.
 
 ## Supported versions
 
 The production deployment on the `main` branch is currently supported.
 
-## Reporting a security issue
+## Private security contact
 
-Please do not create a public GitHub issue for private security reports.
+Do not use public GitHub issues for private security reports.
 
-Send a private report to `security@risckcomply.com` with:
+Until a dedicated security alias is re-verified for external delivery, use `comercial@risckcomply.com` as the canonical private corporate contact path.
 
-- affected URL, endpoint, or component;
-- steps to reproduce;
-- expected impact;
-- screenshots or logs when safe to share;
-- whether customer data, authentication, billing, storage, or organization isolation may be affected.
-
-The dedicated corporate security channel has verified external delivery and is monitored by an authorized RISCK COMPLY owner. Do not publish vulnerability details through public issues or public status updates.
+A dedicated security mailbox must not be advertised as active until external delivery is re-verified. Public incident communication remains separate from private security contact.
 
 ## Response targets
 
@@ -29,19 +23,9 @@ Initial triage targets are operational goals, not contractual SLAs unless agreed
 - Medium: 5 business days
 - Low: next planned maintenance window
 
-These are operational targets, not a contractual SLA unless separately agreed in writing.
-
 ## Security scope
 
-In scope:
-
-- authentication and session handling;
-- organization isolation and authorization;
-- Supabase RLS/storage policies;
-- Stripe billing and webhooks;
-- GDPR export/delete workflows;
-- document upload and controlled document storage;
-- audit logs and notification integrity.
+The supported security scope includes authentication, organization isolation, authorization, Supabase RLS/storage policies, billing webhooks, data export/delete workflows, controlled document storage, audit logs and notification integrity.
 
 ## Claims guardrail
 
