@@ -1,9 +1,9 @@
 # Enterprise progress
 
-Last synchronized main baseline (pre-change):
-`2b83d371bd6913f378fd6b995a787e1848b57e93`
+Current synchronized main baseline before this evidence PR:
+`75151c463ea7bf54c74e4dc9e5cd3af995615eae`
 
-Decision: **NO_GO / CURRENT-MAIN SCORE UNKNOWN**
+Decision: **NO_GO / CURRENT-MAIN SCORE NOT RE-ACCEPTED**
 
 ## Evidence status
 
@@ -12,37 +12,40 @@ The last accepted score remains historical evidence only:
 - historical completion: **45%** (**45 PASS**, **1 BLOCKED**, **54 NOT_VERIFIED**);
 - assessed SHA: `c413288eb8453b55c4d049c758dc0cd063aa70b9`;
 - scorecard run: `29703295579`;
-- freshness: **STALE**;
+- freshness: **STALE FOR CURRENT MAIN**;
 - current Enterprise publication recommendation: **DO_NOT_PUBLISH_AS_ENTERPRISE**.
 
-No PR, repository-only test, disposable database replay or green CI result raises
-that score. A new percentage or `ENTERPRISE_100: PASS` is valid only after the
-canonical exact-current-main authority accepts all required protected runtime
-and human evidence.
+No PR, repository-only test, disposable database replay, green CI result or `READY`
+deployment build raises that score. A new percentage or `ENTERPRISE_100: PASS` is
+valid only after the canonical exact-current-serving-main authority accepts all
+required protected runtime and human evidence.
 
 ## Current authority state
 
-PR #1767 is merged on the synchronized baseline. PR #1768 is the active P0 for
-Supabase migration lineage closure after read-only Production evidence observed
-remote ledger head `20260822120617_atomic_vendor_risk_quota_mutations`.
+PR #1768 is **merged** and is no longer an active repository work package. The
+pre-V19 application/schema compatibility issue #1778 is also **closed** by merged
+#1780 without Production DDL.
 
-The previous V18 bounded package is superseded for Production promotion. #1768
-selects exactly 25 Supabase-CLI-issued V19 forward identities strictly after the
-observed remote head, preserves the reviewed SQL bytes for the still-unapplied
-effects, archives the superseded unapplied V18 identities outside normal replay,
-and records the already-present commercial migration as reconciliation lineage
-without replaying it in V19.
+The active P0 is now **#1814**: current Vercel Production deployment
+`dpl_AR5ZwbDCHxT1kmps5xJVm5gmaBRx` reached `READY` and is bound to
+`main@75151c463ea7bf54c74e4dc9e5cd3af995615eae`, but the project reports
+`live=false` and the canonical `/api/health` returns HTTP
+`402 DEPLOYMENT_DISABLED`. The connected Vercel team remains Pro and the build
+completed successfully, so build readiness must not be promoted to serving
+availability.
 
-On pre-documentation-sync head
-`1df6f56f0e037bde02f514254d7f1508687a3535`, the full disposable Supabase Data
-Plane QA succeeded. That is repository/disposable evidence only, and all
-exact-head checks must rerun after this handoff synchronization. No Production
-write, protected Production promotion or Production acceptance is claimed.
+PR #1815 is the current evidence-only synchronization for this superseding state.
+It does not change application runtime, billing, database schema, provider plan,
+legal acceptance or external assurance.
+
+Supabase Production promotion remains separately governed by #1631. No direct
+Production SQL/DDL, migration repair, unrestricted `db push`, stale approval
+carry-forward or Production write is authorized from this handoff.
 
 ## Mandatory direct authorities
 
-The final authority must remain `NO_GO` until the same exact current-main SHA has
-accepted evidence from:
+The final authority must remain `NO_GO` until the same exact current serving SHA
+has accepted evidence from:
 
 1. Product FRIA Ephemeral Runtime QA;
 2. Final Billing + Product Live Closeout;
@@ -55,12 +58,14 @@ controls remain independently required by the shared closure contract.
 
 ## Immediate P0
 
-Complete #1768 under exact-head branch protection and human merge. After merge,
-resolve the new current `main` SHA and execute the protected V19/25 rehearsal,
-filtered Production dry run, qualified Decision Gate, bounded Production
-promotion and post-promotion acceptance for that same exact lineage. Do not
-reuse V17/V18 decisions or PR-event contract jobs as Production authority.
+Restore the **existing** Vercel project serving state through the documented
+zero-cost project-unpause/account-state path. Do not create a new account or
+company, change plan, accept an invoice, purchase an upgrade or authorize spend.
+If Vercel requires payment or a commercial change, stop for owner decision.
 
-This versioned file is a pre-change handoff snapshot, not an exact-current-main
-runtime authority. The generated persistent execution-state workflow artifact is
-the canonical exact-SHA state.
+After canonical `/api/health` returns HTTP `200`, resolve the new exact serving
+`main` SHA and re-run the protected Production runtime/provider evidence before
+resuming any downstream final-authority sequence.
+
+The official historical 45% score remains stale until a current exact-SHA
+scorecard and its required evidence are accepted.
