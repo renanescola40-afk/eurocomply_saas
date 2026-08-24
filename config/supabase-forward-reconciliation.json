@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-08-23-enterprise-data-plane-payment-first-closure-v20",
+  "changeSet": "2026-08-24-enterprise-data-plane-payment-first-trusted-access-closure-v21",
   "migrations": [
     { "filename": "20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql", "purpose": "evaluate organization add-on membership auth once per statement while preserving tenant scope" },
     { "filename": "20260822123540_v19_reconcile_step_up_challenges_runtime.sql", "purpose": "materialize backend-only enterprise step-up challenge storage" },
@@ -28,7 +28,11 @@
     { "filename": "20260822123624_v19_harden_gap_personal_task_write_boundary.sql", "purpose": "preserve backend-only organization task mutations, allow only authenticated personal Gap Analysis task creation, and close the live backend-only compliance metric snapshot tenant-isolation boundary" },
     { "filename": "20260822123626_v19_reconcile_enterprise_evidence_vault.sql", "purpose": "close the Enterprise Evidence Vault data plane with canonical organization binding, private tenant-prefixed Storage, metadata RLS/FORCE RLS, append-only audit, hash metadata, soft-delete safety and dependency-spine postconditions" },
     { "filename": "20260823123000_payment_first_commercial_data_plane.sql", "purpose": "bind authenticated paid-product table access to durable signed-contract or processed Stripe LIVE active commercial authority and retire billing-unaware legacy/global browser surfaces" },
-    { "filename": "20260823131500_payment_first_gap_analysis_and_storage.sql", "purpose": "extend payment-first commercial authority to Gap Analysis, remediation and Evidence Vault Storage while revoking the legacy personal evidence browser surface" }
+    { "filename": "20260823131500_payment_first_gap_analysis_and_storage.sql", "purpose": "extend payment-first commercial authority to Gap Analysis, remediation and Evidence Vault Storage while revoking the legacy personal evidence browser surface" },
+    { "filename": "20260824185900_prepare_enterprise_trusted_access_legacy_compatibility.sql", "purpose": "normalize historical trusted-access runtime shapes without replaying unsafe legacy migration identities and preserve full-history/staging convergence" },
+    { "filename": "20260824190000_reconcile_enterprise_trusted_access_runtime.sql", "purpose": "materialize the backend-only Enterprise trusted-access operations, SLO, export, seat-contention and escalation control plane on the current licensing and SCIM authority" },
+    { "filename": "20260824190100_finalize_enterprise_trusted_access_operation_contract.sql", "purpose": "finalize the current access-operation worker contract against V21 tenant and licensing authority without reintroducing ungoverned group-policy writes" },
+    { "filename": "20260824190200_harden_enterprise_trusted_access_runtime_contract.sql", "purpose": "harden operation-detail compatibility, separate successful pagination from failure retry budgets, and bind seat-contention idempotency to the exact membership and seat mutation" }
   ],
   "truthBoundary": {
     "automaticClassification": false,

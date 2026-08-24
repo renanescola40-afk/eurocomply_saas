@@ -97,12 +97,24 @@ export async function getSeatContentionSummary(organizationId: string) {
     .order('created_at', { ascending: false })
     .limit(200);
   if (error) throw new Error('enterprise_seat_contention_summary_failed');
+
   const events = Array.isArray(data) ? data : [];
-  return {
+  const totals = {
     total: events.length,
-    capacityExhausted: events.filter((event) => event.outcome === 'capacity_exhausted').length,
-    versionConflicts: events.filter((event) => event.outcome === 'version_conflict').length,
+    capacity_exhausted: events.filter((event) => event.outcome === 'capacity_exhausted').length,
+    version_conflicts: events.filter((event) => event.outcome === 'version_conflict').length,
     reservations: events.filter((event) => event.outcome === 'reserved').length,
+  };
+
+  return {
+    totals,
+    recent: events.slice(0, 20),
+    // Compatibility aliases for existing internal consumers while the UI uses
+    // the stable totals/recent contract above.
+    total: totals.total,
+    capacityExhausted: totals.capacity_exhausted,
+    versionConflicts: totals.version_conflicts,
+    reservations: totals.reservations,
     latest: events.slice(0, 20),
   };
 }
