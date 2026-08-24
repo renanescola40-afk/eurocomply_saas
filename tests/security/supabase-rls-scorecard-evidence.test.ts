@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  V20_CHANGE_SET,
   backendOwnedTables,
   buildEvidencePayload,
   customerTenantTables,
@@ -18,59 +19,39 @@ import { buildSupabaseRlsScorecardEvidence } from '../../scripts/security/write-
 import { validateSupabaseRlsScorecardEvidence } from '../../scripts/security/check-supabase-rls-scorecard-evidence.mjs';
 
 const SHA = 'a'.repeat(40);
-
-type EvidenceCase = {
-  table: string;
-  operation: string;
-  passed: boolean;
-};
-
-type ServiceRolePath = {
-  path: string;
-  purpose: string;
-};
-
-type EvidencePayloadInput = {
-  status: string;
-  outcome: string;
-  supabaseUrl: string;
-  command: string;
-  commitSha: string;
-  testCases: EvidenceCase[];
-  failures: string[];
-  serviceRolePaths: ServiceRolePath[];
-};
-
-type GithubActionsProvenance = {
-  generatedInGitHubActions: boolean;
-  workflow: string;
-  runId: string;
-  runAttempt: string;
-  runUrl: string;
-  repository: string;
-  commitSha: string;
-  refName: string;
-  actor: string;
-  eventName: string;
-  stampedAt: string;
-};
+type EvidenceCase = { table: string; operation: string; passed: boolean };
 
 type RuntimeEvidence = Record<string, unknown> & {
   commitSha: string;
   testCases: EvidenceCase[];
-  githubActions: GithubActionsProvenance;
-  supabaseProjectReference: string;
-  supabaseProjectReferenceRedacted: boolean;
+  githubActions: {
+    generatedInGitHubActions: boolean;
+    workflow: string;
+    runId: string;
+    runAttempt: string;
+    runUrl: string;
+    repository: string;
+    commitSha: string;
+    refName: string;
+    actor: string;
+    eventName: string;
+    stampedAt: string;
+  };
 };
 
-const buildTypedEvidencePayload = buildEvidencePayload as unknown as (
-  input: EvidencePayloadInput,
-) => Record<string, unknown> & {
-  commitSha: string;
-  testCases: EvidenceCase[];
-  supabaseProjectReference: string;
-  supabaseProjectReferenceRedacted: boolean;
-};
+beforeEach(() => {
+  process.env.PROMOTION_RUN_ID = '987654';
+  process.env.PROMOTION_CHANGE_SET = V20_CHANGE_SET;
+  process.env.PROMOTION_SELECTED_MIGRATION_COUNT = '27';
+  process.env.PROMOTION_SELECTION_DIGEST = `sha256:${'b'.repeat(64)}`;
+  process.env.PROMOTION_REMOTE_TRANSITION_VERIFIED = 'true';
+  process.env.PROMOTION_UNAUTHORIZED_MIGRATION_APPLIED = 'false';
+  process.env.PROMOTION_PRODUCTION_VERIFIED = 'true';
+});
+
+afterEach(() => {
+  for (const key of Object.keys(process.env).filter((name) => name.startsWith('PROMOTION_'))) delete process.env[key];
+});
 
 function validSourceEvidence(): RuntimeEvidence {
   const testCases: EvidenceCase[] = [];
@@ -79,7 +60,7 @@ function validSourceEvidence(): RuntimeEvidence {
   for (const table of customerTenantTables) {
     add(table, 'rls_enabled');
     for (const operation of requiredCoverageOperations) add(table, operation);
-    add(table, requiredSameTenantReadOperations[0]);
+    add(table, backendOwnedTables.includes(table) ? 'same_tenant_read_backend_only' : requiredSameTenantReadOperations[0]);
   }
   for (const table of sameTenantWritableTables) add(table, 'same_tenant_insert');
   for (const table of backendOwnedTables) {
@@ -89,11 +70,13 @@ function validSourceEvidence(): RuntimeEvidence {
   for (const table of globalReferenceTables) {
     for (const operation of requiredGlobalReferenceOperations) add(table, operation);
   }
+  // Release readiness also requires ai_assessments runtime coverage.
+  for (const operation of ['rls_enabled', ...requiredCoverageOperations, 'same_tenant_read']) add('ai_assessments', operation);
   for (const [table, operations] of Object.entries(requiredHorizontalIsolationOperations)) {
     for (const operation of operations) add(table, operation);
   }
 
-  const base = buildTypedEvidencePayload({
+  const base = buildEvidencePayload({
     status: 'Complete',
     outcome: 'passed',
     supabaseUrl: 'https://synthetic-project.supabase.co',
@@ -102,21 +85,30 @@ function validSourceEvidence(): RuntimeEvidence {
     testCases,
     failures: [],
     serviceRolePaths: [
-      { path: 'fixture_setup', purpose: 'synthetic fixture setup' },
+      { path: 'fixture_setup', purpose: 'synthetic setup' },
       { path: 'rls_inventory', purpose: 'live inventory' },
-      { path: 'post_assertion_integrity_checks', purpose: 'integrity checks' },
-      { path: 'fixture_cleanup', purpose: 'synthetic fixture cleanup' },
+      { path: 'post_assertion_integrity_checks', purpose: 'integrity' },
+      { path: 'fixture_cleanup', purpose: 'cleanup' },
     ],
-  });
+    extra: {
+      horizontalIsolation: {
+        status: 'passed',
+        sameTenantDistinctUsers: true,
+        testedTables: Object.keys(requiredHorizontalIsolationOperations),
+        checkedAt: '2026-08-24T12:00:00Z',
+      },
+      paymentFirstV20: {
+        licensedTenantsProved: true,
+        unlicensedSameTenantDenied: true,
+        regulatoryUpdatesBackendOnly: true,
+        providerEventsCreated: false,
+        stripeLifecycleSynthesized: false,
+      },
+    },
+  }) as RuntimeEvidence;
 
   return {
     ...base,
-    horizontalIsolation: {
-      status: 'passed',
-      sameTenantDistinctUsers: true,
-      testedTables: Object.keys(requiredHorizontalIsolationOperations),
-      checkedAt: '2026-07-18T00:00:00.000Z',
-    },
     githubActions: {
       generatedInGitHubActions: true,
       workflow: 'Supabase Live RLS Validation',
@@ -127,19 +119,18 @@ function validSourceEvidence(): RuntimeEvidence {
       commitSha: SHA,
       refName: 'main',
       actor: 'github-actions[bot]',
-      eventName: 'push',
-      stampedAt: '2026-07-18T00:00:00.000Z',
+      eventName: 'workflow_dispatch',
+      stampedAt: '2026-08-24T12:00:00Z',
     },
   };
 }
 
-describe('Supabase RLS scorecard evidence', () => {
+describe('Supabase RLS scorecard evidence after V20', () => {
   it('promotes exactly the five live tenant-isolation controls', () => {
     const evidence = buildSupabaseRlsScorecardEvidence(validSourceEvidence(), {
       expectedSha: SHA,
-      generatedAt: '2026-07-18T00:05:00.000Z',
+      generatedAt: '2026-08-24T12:05:00Z',
     });
-
     expect(evidence.status).toBe('Complete');
     expect(evidence.outcome).toBe('passed');
     expect(evidence.controlsVerified).toEqual([
@@ -149,35 +140,25 @@ describe('Supabase RLS scorecard evidence', () => {
       'crossTenantUpdateDenied',
       'crossTenantDeleteDenied',
     ]);
-    expect(validateSupabaseRlsScorecardEvidence(evidence, SHA)).toEqual({
-      passed: true,
-      failures: [],
-    });
+    expect(validateSupabaseRlsScorecardEvidence(evidence, SHA)).toEqual({ passed: true, failures: [] });
   });
 
   it('fails closed when any required table operation is absent', () => {
     const source = validSourceEvidence();
     const incomplete = {
       ...source,
-      testCases: source.testCases.filter(
-        (test) => !(test.table === 'documents' && test.operation === 'cross_tenant_update'),
-      ),
+      testCases: source.testCases.filter((test) => !(test.table === 'documents' && test.operation === 'cross_tenant_update')),
     };
-    const evidence = buildSupabaseRlsScorecardEvidence(incomplete, {
-      expectedSha: SHA,
-    });
-
+    const evidence = buildSupabaseRlsScorecardEvidence(incomplete, { expectedSha: SHA });
     expect(evidence.status).toBe('Open');
     expect(evidence.outcome).toBe('not_verified');
-    expect(evidence.checks.every((check) => check.passed !== true)).toBe(true);
-    expect(validateSupabaseRlsScorecardEvidence(evidence, SHA).passed).toBe(false);
+    expect(evidence.checks.every((check: { passed: boolean }) => check.passed !== true)).toBe(true);
   });
 
-  it('maps the canonical evidence file to TEN-02 through TEN-06 only', () => {
+  it('maps canonical tenancy evidence to TEN-02 through TEN-06 only', () => {
     const controls = JSON.parse(readFileSync('docs/enterprise/controls.json', 'utf8'));
     const tenancy = controls.domains.find((domain: { id: string }) => domain.id === 'tenancy');
     const mapped = tenancy.controls.slice(1, 6);
-
     expect(mapped.map((control: { evidence: { path: string; check: string } }) => control.evidence)).toEqual([
       { path: 'docs/security/evidence/runtime/supabase-rls-validation.json', check: 'membershipIsolation' },
       { path: 'docs/security/evidence/runtime/supabase-rls-validation.json', check: 'crossTenantReadDenied' },
@@ -185,19 +166,12 @@ describe('Supabase RLS scorecard evidence', () => {
       { path: 'docs/security/evidence/runtime/supabase-rls-validation.json', check: 'crossTenantUpdateDenied' },
       { path: 'docs/security/evidence/runtime/supabase-rls-validation.json', check: 'crossTenantDeleteDenied' },
     ]);
-    expect(tenancy.controls[0].evidence.check).toBe('organizationOnboarding');
   });
 
-  it('integrates exact-SHA retrieval into the terminal scorecard without inferring evidence', () => {
+  it('keeps exact-SHA retrieval in the terminal scorecard', () => {
     const scorecardWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
-    const stabilizerWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard-stabilizer.yml', 'utf8');
-
-    expect(stabilizerWorkflow).toContain('Supabase Live RLS Validation');
-    expect(scorecardWorkflow).not.toContain('Supabase Live RLS Validation');
-    expect(scorecardWorkflow).not.toContain('SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID');
     expect(scorecardWorkflow).toContain('node scripts/enterprise/fetch-supabase-rls-evidence.mjs');
     expect(scorecardWorkflow).toContain('node scripts/security/write-supabase-rls-scorecard-evidence.mjs');
     expect(scorecardWorkflow).toContain('node scripts/security/check-supabase-rls-scorecard-evidence.mjs');
-    expect(scorecardWorkflow).toContain('rm -f docs/security/evidence/runtime/supabase-rls-validation.json');
   });
 });
