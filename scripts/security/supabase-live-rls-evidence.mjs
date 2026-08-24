@@ -1,8 +1,13 @@
 import crypto from 'node:crypto';
 
 export const runner = 'scripts/security/run-supabase-live-tenant-isolation.mjs';
-export const V20_CHANGE_SET = '2026-08-23-enterprise-data-plane-payment-first-closure-v20';
-export const V20_EVIDENCE_SCHEMA = 'risck-comply.supabase-live-rls-validation.v20';
+export const GOVERNED_CHANGE_SET = '2026-08-24-enterprise-data-plane-payment-first-trusted-access-closure-v21';
+export const LIVE_RLS_EVIDENCE_SCHEMA = 'risck-comply.supabase-live-rls-validation.v21';
+export const GOVERNED_MIGRATION_COUNT = 31;
+// Backward-compatible export names for callers that still import the historical
+// symbols. Their values intentionally resolve to the current V21/31 authority.
+export const V20_CHANGE_SET = GOVERNED_CHANGE_SET;
+export const V20_EVIDENCE_SCHEMA = LIVE_RLS_EVIDENCE_SCHEMA;
 
 export const customerTenantTables = [
   'organizations',
@@ -68,7 +73,7 @@ export const sameTenantWritableTables = [
 ];
 
 // regulatory_updates is a paid global product feed with no organization_id, so
-// V20 correctly retires direct authenticated access and keeps it backend-owned.
+// payment-first V20 correctly retires direct authenticated access and keeps it backend-owned.
 export const requiredGlobalReferenceOperations = [
   'rls_enabled',
   'authenticated_read_denied',
@@ -169,15 +174,15 @@ function requireAnyPassedTest(tests, table, operations, errors) {
 }
 
 function validatePromotionLineage(evidence, errors) {
-  if (evidence?.schema !== V20_EVIDENCE_SCHEMA) errors.push('V20 live RLS evidence schema is invalid');
+  if (evidence?.schema !== LIVE_RLS_EVIDENCE_SCHEMA) errors.push('V21 live RLS evidence schema is invalid');
   const lineage = evidence?.promotionLineage;
   if (!lineage || typeof lineage !== 'object' || Array.isArray(lineage)) {
     errors.push('promotionLineage is required');
     return;
   }
   if (!/^\d+$/.test(String(lineage.promotionRunId ?? ''))) errors.push('promotionLineage.promotionRunId must be numeric');
-  if (lineage.changeSet !== V20_CHANGE_SET) errors.push('promotionLineage.changeSet must equal the governed V20 change set');
-  if (Number(lineage.selectedMigrationCount) !== 27) errors.push('promotionLineage.selectedMigrationCount must be 27');
+  if (lineage.changeSet !== GOVERNED_CHANGE_SET) errors.push('promotionLineage.changeSet must equal the governed V21 change set');
+  if (Number(lineage.selectedMigrationCount) !== GOVERNED_MIGRATION_COUNT) errors.push(`promotionLineage.selectedMigrationCount must be ${GOVERNED_MIGRATION_COUNT}`);
   if (!/^sha256:[a-f0-9]{64}$/.test(String(lineage.selectionDigest ?? ''))) errors.push('promotionLineage.selectionDigest is invalid');
   if (lineage.remoteAfterEqualsBeforePlusSelected !== true) errors.push('promotionLineage exact remote transition is not proven');
   if (lineage.unauthorizedMigrationApplied !== false) errors.push('promotionLineage reports an unauthorized migration');
@@ -252,7 +257,7 @@ export function buildEvidencePayload({
   const githubActions = githubActionsProvenanceFromEnv();
   const passing = status === 'Complete' && outcome === 'passed';
   return {
-    schema: V20_EVIDENCE_SCHEMA,
+    schema: LIVE_RLS_EVIDENCE_SCHEMA,
     evidenceItem: 'supabase-live-rls-validation',
     status,
     outcome,
@@ -265,7 +270,7 @@ export function buildEvidencePayload({
     commitSha,
     promotionLineage: {
       promotionRunId: String(process.env.PROMOTION_RUN_ID ?? '').trim(),
-      changeSet: String(process.env.PROMOTION_CHANGE_SET ?? V20_CHANGE_SET).trim(),
+      changeSet: String(process.env.PROMOTION_CHANGE_SET ?? GOVERNED_CHANGE_SET).trim(),
       selectedMigrationCount: Number(process.env.PROMOTION_SELECTED_MIGRATION_COUNT ?? 0),
       selectionDigest: String(process.env.PROMOTION_SELECTION_DIGEST ?? '').trim(),
       remoteAfterEqualsBeforePlusSelected: process.env.PROMOTION_REMOTE_TRANSITION_VERIFIED === 'true',
@@ -275,8 +280,8 @@ export function buildEvidencePayload({
     supabaseProjectReference: redactProjectReferenceFromUrl(supabaseUrl),
     supabaseProjectReferenceRedacted: true,
     summary: passing
-      ? 'Live post-V20 Supabase RLS validation passed with payment-first authority, tenant isolation, backend-only product boundaries and exact promotion lineage.'
-      : 'Live post-V20 Supabase RLS validation did not pass.',
+      ? 'Live post-V21 Supabase RLS validation passed with payment-first authority, tenant isolation, backend-only product boundaries and exact V21/31 promotion lineage.'
+      : 'Live post-V21 Supabase RLS validation did not pass.',
     redactionConfirmation: 'Supabase project reference, credentials, tokens, secrets, connection strings and access-granting values are redacted.',
     evidenceLocations: ['docs/security/evidence/runtime/supabase-live-rls-validation.json'],
     productionGate: passing ? 'eligible only if every other P0 runtime gate passes' : 'blocked',
@@ -289,7 +294,7 @@ export function buildEvidencePayload({
       'Regulatory updates are backend-only',
       'Live inventory helper remains service-role-only',
       'Evidence Vault browser and Storage bypass boundaries are fail-closed',
-      'Evidence is bound to the successful exact-SHA V20 27/27 Production promotion',
+      'Evidence is bound to the successful exact-SHA V21/31 Production promotion',
     ] : [],
     customerTenantTables,
     globalReferenceTables,
