@@ -31,7 +31,8 @@
     { "filename": "20260823131500_payment_first_gap_analysis_and_storage.sql", "purpose": "extend payment-first commercial authority to Gap Analysis, remediation and Evidence Vault Storage while revoking the legacy personal evidence browser surface" },
     { "filename": "20260824185900_prepare_enterprise_trusted_access_legacy_compatibility.sql", "purpose": "normalize historical trusted-access runtime shapes without replaying unsafe legacy migration identities and preserve full-history/staging convergence" },
     { "filename": "20260824190000_reconcile_enterprise_trusted_access_runtime.sql", "purpose": "materialize the backend-only Enterprise trusted-access operations, SLO, export, seat-contention and escalation control plane on the current licensing and SCIM authority" },
-    { "filename": "20260824190100_finalize_enterprise_trusted_access_operation_contract.sql", "purpose": "finalize the current access-operation worker contract against V21 tenant and licensing authority without reintroducing ungoverned group-policy writes" }
+    { "filename": "20260824190100_finalize_enterprise_trusted_access_operation_contract.sql", "purpose": "finalize the current access-operation worker contract against V21 tenant and licensing authority without reintroducing ungoverned group-policy writes" },
+    { "filename": "20260824190200_harden_enterprise_trusted_access_runtime_contract.sql", "purpose": "harden operation-detail compatibility, separate successful pagination from failure retry budgets, and bind seat-contention idempotency to the exact membership and seat mutation" }
   ],
   "truthBoundary": {
     "automaticClassification": false,
