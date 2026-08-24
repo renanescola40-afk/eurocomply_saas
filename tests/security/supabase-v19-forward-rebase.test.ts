@@ -8,6 +8,11 @@ const PAYMENT_FIRST_TARGETS = [
   '20260823123000_payment_first_commercial_data_plane.sql',
   '20260823131500_payment_first_gap_analysis_and_storage.sql',
 ] as const;
+const TRUSTED_ACCESS_TARGETS = [
+  '20260824185900_prepare_enterprise_trusted_access_legacy_compatibility.sql',
+  '20260824190000_reconcile_enterprise_trusted_access_runtime.sql',
+  '20260824190100_finalize_enterprise_trusted_access_operation_contract.sql',
+] as const;
 const pairs = [
   ['20260813175000_optimize_organization_add_ons_rls_initplan.sql', '20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql'],
   ['20260813194500_reconcile_step_up_challenges_runtime.sql', '20260822123540_v19_reconcile_step_up_challenges_runtime.sql'],
@@ -40,8 +45,8 @@ function sha256(bytes: Buffer) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-describe('Supabase V20 production-forward closure', () => {
-  it('preserves the bounded 25 V19 effects and appends exactly two payment-first identities', () => {
+describe('Supabase V21 production-forward closure', () => {
+  it('preserves V20 payment-first closure and appends exactly three trusted-access identities', () => {
     const config = JSON.parse(readFileSync('config/supabase-forward-reconciliation.json', 'utf8')) as {
       changeSet: string;
       migrations: Array<{ filename: string }>;
@@ -49,11 +54,16 @@ describe('Supabase V20 production-forward closure', () => {
     };
 
     const v19Targets = pairs.map(([, target]) => target);
-    expect(config.changeSet).toBe('2026-08-23-enterprise-data-plane-payment-first-closure-v20');
-    expect(config.migrations).toHaveLength(27);
-    expect(config.migrations.map((item) => item.filename)).toEqual([...v19Targets, ...PAYMENT_FIRST_TARGETS]);
+    expect(config.changeSet).toBe('2026-08-24-enterprise-data-plane-payment-first-trusted-access-closure-v21');
+    expect(config.migrations).toHaveLength(30);
+    expect(config.migrations.map((item) => item.filename)).toEqual([
+      ...v19Targets,
+      ...PAYMENT_FIRST_TARGETS,
+      ...TRUSTED_ACCESS_TARGETS,
+    ]);
     expect(config.migrations.slice(0, 25).map((item) => item.filename)).toEqual(v19Targets);
-    expect(config.migrations.slice(-2).map((item) => item.filename)).toEqual(PAYMENT_FIRST_TARGETS);
+    expect(config.migrations.slice(25, 27).map((item) => item.filename)).toEqual(PAYMENT_FIRST_TARGETS);
+    expect(config.migrations.slice(-3).map((item) => item.filename)).toEqual(TRUSTED_ACCESS_TARGETS);
 
     for (const filename of config.migrations.map((item) => item.filename)) {
       expect(filename.slice(0, 14)).toMatch(/^\d{14}$/);
