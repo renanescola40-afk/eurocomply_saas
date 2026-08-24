@@ -103,7 +103,7 @@ describe('automatic Stripe runtime evidence promotion', () => {
 
   it('uses exact immutable GitHub actions and no artifact-download action dependency', () => {
     expect(workflow).toContain('actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0');
-    expect(workflow).toContain('actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38');
+    expect(workflow).toContain('actions/setup-node@820762786026740c76f36085b0efc47a31fe5020');
     expect(workflow).toContain('actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a');
     expect(workflow).not.toContain('actions/download-artifact@');
     expect(workflow).not.toMatch(/actions\/(checkout|setup-node|upload-artifact)@v\d/);

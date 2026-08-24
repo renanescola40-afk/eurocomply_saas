@@ -178,7 +178,7 @@ if (securityCi) {
   const requiredTokens = [
     'npm ci --ignore-scripts',
     'npm run security:ci',
-    'actions/setup-node@v6',
+    'actions/setup-node@v7',
     'node-version: 22',
     'final-security-readiness.json',
   ];
