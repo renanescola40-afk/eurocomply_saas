@@ -3,8 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 const migrationPath =
   'supabase/migrations/20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql';
+const migrationFilename = migrationPath.replace('supabase/migrations/', '');
 
-describe('organization add-ons live RLS promotion', () => {
+describe('organization add-ons governed forward promotion', () => {
   it('keeps the merged migration tenant-scoped and initplan-optimized', () => {
     const migration = fs.readFileSync(migrationPath, 'utf8');
 
@@ -17,18 +18,30 @@ describe('organization add-ons live RLS promotion', () => {
     expect(migration).not.toContain('members.user_id = auth.uid()');
   });
 
-  it('promotes only through the protected allowlisted live-RLS path', () => {
-    const workflow = fs.readFileSync('.github/workflows/supabase-live-rls-validation.yml', 'utf8');
+  it('promotes through the canonical bounded forward chain and proves the live policy read-only afterward', () => {
+    const config = JSON.parse(
+      fs.readFileSync('config/supabase-forward-reconciliation.json', 'utf8'),
+    ) as { migrations: Array<{ filename: string }> };
+    const promotion = fs.readFileSync(
+      '.github/workflows/supabase-forward-reconciliation-production-promotion.yml',
+      'utf8',
+    );
+    const postconditions = fs.readFileSync(
+      'scripts/supabase/verify-forward-reconciliation-postconditions.sql',
+      'utf8',
+    );
+    const liveProof = fs.readFileSync('.github/workflows/supabase-live-rls-validation.yml', 'utf8');
 
-    expect(workflow).toContain('environment: supabase-live-rls-validation');
-    expect(workflow).toContain('Apply allowlisted live RLS proof migrations');
-    expect(workflow).toContain(migrationPath);
-    expect(workflow).toContain('Verify organization add-ons RLS performance boundary');
-    expect(workflow).toContain("position('SELECT auth.uid()' in policy_qual) = 0");
-    expect(workflow).toContain("has_table_privilege('authenticated', 'public.organization_add_ons', 'SELECT')");
-    expect(workflow).toContain("has_table_privilege('anon', 'public.organization_add_ons', 'SELECT')");
-    expect(workflow).not.toContain('supabase db push');
-    expect(workflow).not.toContain('migration repair');
-    expect(workflow).not.toContain('--include-all');
+    expect(config.migrations.map((item) => item.filename)).toContain(migrationFilename);
+    expect(promotion).toContain('Supabase Forward Reconciliation Production Promotion');
+    expect(promotion).toContain('verify-forward-reconciliation-postconditions.sql');
+    expect(postconditions).toContain("policy.polrelid = 'public.organization_add_ons'::regclass");
+    expect(postconditions).toContain("policy.polname = 'organization members can read add-ons'");
+    expect(postconditions).toContain('statement-scoped auth initplan');
+    expect(liveProof).toContain('validate-supabase-live-promotion-source.mjs');
+    expect(liveProof).not.toContain(migrationPath);
+    expect(liveProof).not.toContain('db push');
+    expect(liveProof).not.toContain('psql ');
+    expect(liveProof).not.toContain('--include-all');
   });
 });
