@@ -1,0 +1,226 @@
+name: Supabase Post-V20 Runtime Proof
+
+run-name: Post-V20 Production runtime proof for ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA successfully promoted by the governed V20 chain
+        required: true
+        type: string
+      promotion_run_id:
+        description: Successful Supabase Forward Reconciliation Production Promotion run ID for this exact SHA
+        required: true
+        type: string
+      confirmation:
+        description: Type EXECUTE_POST_V20_RUNTIME_PROOF
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: supabase-post-v20-runtime-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  governance:
+    name: Verify post-V20 proof authority before protected runtime credentials
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
+      INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+      GITHUB_ENVIRONMENT_NAME: supabase-live-rls-validation
+      REQUIRE_PROTECTED_BRANCHES: 'true'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout exact current main without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate explicit exact-SHA post-promotion authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]
+          test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_V20_RUNTIME_PROOF'
+          test "$GITHUB_REF_NAME" = 'main'
+          test "$GITHUB_SHA" = "$TARGET_SHA"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+
+          PROMOTION_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PROMOTION_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$PROMOTION_JSON")" = "$TARGET_SHA"
+          test "$(jq -r '.path' <<<"$PROMOTION_JSON")" = '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
+          test "$(jq -r '.event' <<<"$PROMOTION_JSON")" = 'workflow_dispatch'
+          test "$(jq -r '.conclusion' <<<"$PROMOTION_JSON")" = 'success'
+
+      - name: Verify protected runtime environment governance
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/security/check-github-environment-governance.mjs
+
+  prove:
+    name: Prove V20 payment-first, tenant isolation and live Evidence Vault boundaries
+    needs: governance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: supabase-live-rls-validation
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
+      INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+      POST_V20_RUNTIME_OUTPUT: artifacts/supabase-post-v20-runtime-proof/supabase-post-v20-runtime-validation.json
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout exact promoted release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Revalidate current-main and promotion provenance after environment approval
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_V20_RUNTIME_PROOF'
+          test "$GITHUB_REF_NAME" = 'main'
+          test "$GITHUB_SHA" = "$TARGET_SHA"
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(git rev-parse origin/main)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+
+          PROMOTION_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PROMOTION_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$PROMOTION_JSON")" = "$TARGET_SHA"
+          test "$(jq -r '.path' <<<"$PROMOTION_JSON")" = '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
+          test "$(jq -r '.event' <<<"$PROMOTION_JSON")" = 'workflow_dispatch'
+          test "$(jq -r '.conclusion' <<<"$PROMOTION_JSON")" = 'success'
+
+      - name: Revalidate protected environment governance after admission
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: supabase-live-rls-validation
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Validate post-V20 producer contracts
+        run: |
+          node --check scripts/security/run-supabase-post-v20-runtime-proof.mjs
+          npx vitest run tests/security/supabase-post-v20-runtime-proof.test.ts
+
+      - name: Download exact governed Production promotion artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf source-promotion
+          mkdir -p source-promotion
+          gh run download "$PROMOTION_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "supabase-forward-production-promotion-${TARGET_SHA}" \
+            --dir source-promotion
+
+          PROMOTION_JSON="$(find source-promotion -type f -name promotion-transition.json -print -quit)"
+          LIVE_POSTCONDITIONS="$(find source-promotion -type f -name live-postconditions.json -print -quit)"
+          CURRENT_MANIFEST="$(find source-promotion -type f -name current-manifest.json -print -quit)"
+          test -n "$PROMOTION_JSON"
+          test -n "$LIVE_POSTCONDITIONS"
+          test -n "$CURRENT_MANIFEST"
+
+          jq -e --arg sha "$TARGET_SHA" '
+            .status == "Complete"
+            and .outcome == "passed"
+            and .targetSha == $sha
+            and .selectedMigrationCount == 27
+            and .checks.remoteAfterEqualsBeforePlusSelected == true
+            and .checks.unauthorizedMigrationApplied == false
+          ' "$PROMOTION_JSON" >/dev/null
+
+          jq -e '
+            .status == "PASS"
+            and .readOnly == true
+            and .postconditions == "forward_reconciliation_postconditions_passed"
+          ' "$LIVE_POSTCONDITIONS" >/dev/null
+
+          jq -e '
+            .schema == "risck-comply.supabase-forward-reconciliation-config.v1"
+            and (.migrations | length) == 27
+            and .truthBoundary.productionWriteAuthorizedByConfig == false
+            and .truthBoundary.migrationHistoryRepairAllowed == false
+            and .truthBoundary.unrestrictedDbPushAllowed == false
+          ' "$CURRENT_MANIFEST" >/dev/null
+
+      - name: Execute bounded live post-V20 runtime proof
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/security/run-supabase-post-v20-runtime-proof.mjs
+
+      - name: Validate redacted post-V20 evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$POST_V20_RUNTIME_OUTPUT"
+          jq -e --arg sha "$TARGET_SHA" --arg run "$PROMOTION_RUN_ID" '
+            .schema == "risck-comply.supabase-post-v20-runtime-proof.v1"
+            and .status == "Complete"
+            and .outcome == "passed"
+            and .targetSha == $sha
+            and .promotionRunId == $run
+            and .supabaseProjectReferenceRedacted == true
+            and .checks.requiredCommercialTablesForceRls == true
+            and .checks.licensedSameTenantRead == true
+            and .checks.licensedSameTenantInsert == true
+            and .checks.crossTenantReadDenied == true
+            and .checks.crossTenantInsertDenied == true
+            and .checks.crossTenantUpdateDenied == true
+            and .checks.crossTenantDeleteDenied == true
+            and .checks.unlicensedSameTenantReadDenied == true
+            and .checks.unlicensedSameTenantInsertDenied == true
+            and .checks.regulatoryUpdatesBackendOnly == true
+            and .checks.inventoryHelperServiceRoleOnly == true
+            and .checks.legacyEvidenceBrowserSurfaceRevoked == true
+            and .checks.evidenceVaultPaymentFirstInsertDenied == true
+            and .checks.evidenceVaultBucketPrivate == true
+            and .checks.evidenceStorageRequiresCanonicalMetadata == true
+            and .checks.fixtureCleanup == true
+            and .fixturePolicy.providerEventsCreated == false
+            and .fixturePolicy.stripeLifecycleSynthesized == false
+          ' "$POST_V20_RUNTIME_OUTPUT" >/dev/null
+
+      - name: Generate immutable evidence checksum
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum "$POST_V20_RUNTIME_OUTPUT" > artifacts/supabase-post-v20-runtime-proof/SHA256SUMS
+
+      - name: Upload exact-SHA post-V20 runtime evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: supabase-post-v20-runtime-proof-${{ inputs.release_sha }}
+          path: artifacts/supabase-post-v20-runtime-proof
+          if-no-files-found: error
+          retention-days: 90
