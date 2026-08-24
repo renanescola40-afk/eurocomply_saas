@@ -484,7 +484,7 @@ create table if not exists public.enterprise_access_runtime_alerts (
   resolution_reason text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (organization_id,alert_key,status) nulls not distinct
+  unique (organization_id,alert_key,status)
 );
 create index if not exists enterprise_access_runtime_alerts_open_idx
   on public.enterprise_access_runtime_alerts(organization_id,severity,last_seen_at desc)
