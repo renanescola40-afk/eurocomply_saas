@@ -1,12 +1,12 @@
 name: Supabase Live RLS Validation
 
-run-name: Supabase post-V20 live RLS proof for ${{ inputs.release_sha }}
+run-name: Supabase post-V21 live RLS proof for ${{ inputs.release_sha }}
 
 on:
   workflow_dispatch:
     inputs:
       release_sha:
-        description: Exact current main SHA successfully promoted by the governed V20 chain
+        description: Exact current main SHA successfully promoted by the governed V21/31 chain
         required: true
         type: string
       promotion_run_id:
@@ -14,7 +14,7 @@ on:
         required: true
         type: string
       confirmation:
-        description: Type EXECUTE_POST_V20_RUNTIME_PROOF
+        description: Type EXECUTE_POST_V21_RUNTIME_PROOF
         required: true
         type: string
 
@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   governance:
-    name: Verify exact post-V20 proof authority before protected secrets
+    name: Verify exact post-V21 proof authority before protected secrets
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
@@ -58,7 +58,7 @@ jobs:
           set -euo pipefail
           [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
           [[ "$PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]
-          test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_V20_RUNTIME_PROOF'
+          test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_V21_RUNTIME_PROOF'
           test "$GITHUB_REF_NAME" = 'main'
           test "$GITHUB_SHA" = "$TARGET_SHA"
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
@@ -74,7 +74,7 @@ jobs:
         run: node scripts/security/check-github-environment-governance.mjs
 
   live-proof:
-    name: Run promotion-bound V20 tenant and payment-first proof
+    name: Run promotion-bound V21 tenant and payment-first proof
     needs: governance
     runs-on: ubuntu-24.04
     timeout-minutes: 35
@@ -99,7 +99,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_V20_RUNTIME_PROOF'
+          test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_V21_RUNTIME_PROOF'
           test "$GITHUB_REF_NAME" = 'main'
           test "$GITHUB_SHA" = "$TARGET_SHA"
           git fetch --no-tags --depth=1 origin main
@@ -125,7 +125,7 @@ jobs:
       - name: Install dependencies deterministically
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Validate V20 live-proof code contracts
+      - name: Validate V21 live-proof code contracts
         shell: bash
         run: |
           set -euo pipefail
@@ -158,7 +158,7 @@ jobs:
             and .status == "Complete"
             and .outcome == "passed"
             and .targetSha == $sha
-            and .selectedMigrationCount == 27
+            and .selectedMigrationCount == 31
             and .checks.remoteAfterEqualsBeforePlusSelected == true
             and .checks.unauthorizedMigrationApplied == false
             and .checks.migrationHistoryRepairPerformed == false
@@ -174,12 +174,16 @@ jobs:
           jq -e --arg sha "$TARGET_SHA" '
             .schema == "risck-comply.supabase-forward-reconciliation-manifest.v1"
             and .targetSha == $sha
-            and .changeSet == "2026-08-23-enterprise-data-plane-payment-first-closure-v20"
-            and (.migrations | length) == 27
+            and .changeSet == "2026-08-24-enterprise-data-plane-payment-first-trusted-access-closure-v21"
+            and (.migrations | length) == 31
             and (.selectionDigest | test("^sha256:[a-f0-9]{64}$"))
             and (.migrations | all(.sha256 | test("^[a-f0-9]{64}$")))
             and (.migrations | map(.filename) | index("20260823123000_payment_first_commercial_data_plane.sql") != null)
             and (.migrations | map(.filename) | index("20260823131500_payment_first_gap_analysis_and_storage.sql") != null)
+            and (.migrations | map(.filename) | index("20260824185900_prepare_enterprise_trusted_access_legacy_compatibility.sql") != null)
+            and (.migrations | map(.filename) | index("20260824190000_reconcile_enterprise_trusted_access_runtime.sql") != null)
+            and (.migrations | map(.filename) | index("20260824190100_finalize_enterprise_trusted_access_operation_contract.sql") != null)
+            and (.migrations | map(.filename) | index("20260824190200_harden_enterprise_trusted_access_runtime_contract.sql") != null)
             and .checks.productionWriteAuthorized == false
             and .checks.migrationHistoryRepairAuthorized == false
             and .checks.unrestrictedDbPushAuthorized == false
@@ -194,7 +198,7 @@ jobs:
             echo 'PROMOTION_PRODUCTION_VERIFIED=true'
           } >> "$GITHUB_ENV"
 
-      - name: Execute canonical post-V20 live tenant-isolation proof
+      - name: Execute canonical post-V21 live tenant-isolation proof
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -222,18 +226,18 @@ jobs:
           ENTERPRISE_EXPECTED_SHA: ${{ env.TARGET_SHA }}
         run: node scripts/security/check-supabase-rls-scorecard-evidence.mjs
 
-      - name: Verify V20 payment-first and Evidence Vault evidence flags
+      - name: Verify V21 promotion, payment-first and Evidence Vault evidence flags
         shell: bash
         run: |
           set -euo pipefail
           source_evidence='docs/security/evidence/runtime/supabase-live-rls-validation.json'
           jq -e --arg sha "$TARGET_SHA" --arg promotion "$PROMOTION_RUN_ID" '
-            .schema == "risck-comply.supabase-live-rls-validation.v20"
+            .schema == "risck-comply.supabase-live-rls-validation.v21"
             and .status == "Complete"
             and .outcome == "passed"
             and .commitSha == $sha
             and .promotionLineage.promotionRunId == $promotion
-            and .promotionLineage.selectedMigrationCount == 27
+            and .promotionLineage.selectedMigrationCount == 31
             and .promotionLineage.remoteAfterEqualsBeforePlusSelected == true
             and .promotionLineage.unauthorizedMigrationApplied == false
             and .promotionLineage.productionPromotionVerified == true
@@ -259,7 +263,7 @@ jobs:
           cp docs/security/evidence/runtime/supabase-live-rls-validation.json artifacts/supabase-live-rls-runtime-proof/
           cp docs/security/evidence/runtime/supabase-rls-validation.json artifacts/supabase-live-rls-runtime-proof/
 
-      - name: Upload canonical post-V20 runtime and scorecard evidence
+      - name: Upload canonical post-V21 runtime and scorecard evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: supabase-live-rls-runtime-proof-${{ env.TARGET_SHA }}
