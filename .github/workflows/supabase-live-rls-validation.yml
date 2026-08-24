@@ -180,6 +180,20 @@ jobs:
           node --check scripts/release/validate-supabase-rls-runtime-evidence.mjs
           node --test tests/security/supabase-project-binding.test.mjs
 
+      - name: Verify live inventory helper privilege boundary contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          validator='scripts/security/validate-live-rls-inventory-helper-boundary.sql'
+          test -f "$validator"
+          grep -F "to_regprocedure('public.eurocomply_live_rls_inventory(text[])')" "$validator" >/dev/null
+          grep -F "has_function_privilege('anon', function_oid, 'EXECUTE')" "$validator" >/dev/null
+          grep -F "has_function_privilege('authenticated', function_oid, 'EXECUTE')" "$validator" >/dev/null
+          grep -F "not has_function_privilege('service_role', function_oid, 'EXECUTE')" "$validator" >/dev/null
+          grep -F "acl.grantee = 0" "$validator" >/dev/null
+          grep -F "live RLS inventory helper must remain SECURITY INVOKER" "$validator" >/dev/null
+          grep -F "setting = 'search_path=public, pg_catalog'" "$validator" >/dev/null
+
       - name: Download exact governed Production promotion evidence
         shell: bash
         run: |
