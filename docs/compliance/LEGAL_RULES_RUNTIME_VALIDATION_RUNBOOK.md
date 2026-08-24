@@ -13,9 +13,10 @@ This runbook does not replace the full production smoke, qualified legal review 
 - `INTERNAL_CRON_SECRET` or `CRON_SECRET` is configured on the deployment.
 - The matching `INTERNAL_CRON_SECRET` is available to GitHub Actions.
 - Runtime release metadata returns the full 40-character deployed Git SHA.
-- The deployment URL is an HTTPS origin without credentials, query parameters or fragments.
+- Automatic Production capture uses the canonical HTTPS origin `https://www.risckcomply.com` without credentials, query parameters or fragments.
+- Manual fallback may use an explicitly supplied approved HTTPS origin without credentials, query parameters or fragments.
 - Automatic capture targets only the current default-branch SHA emitted by the trusted Vercel GitHub App.
-- The deployment host is `risckcomply.com`, `www.risckcomply.com` or a `*.vercel.app` origin.
+- Manual fallback hosts are limited to `risckcomply.com`, `www.risckcomply.com` or an approved `*.vercel.app` origin.
 
 ## Canonical automatic execution
 
@@ -26,17 +27,19 @@ The **Legal Rules Runtime Validation** workflow listens for GitHub `deployment_s
 - the deployment ref equals the repository default branch, or is empty when GitHub represents a deployment created from an exact commit SHA without a Git ref;
 - the deployment SHA is a full lowercase 40-character SHA;
 - the deployed SHA still equals the current remote default-branch SHA at execution time;
-- the environment URL uses HTTPS and an approved host;
+- the capture target is the canonical Production origin `https://www.risckcomply.com`;
 - the checked-out repository SHA equals the deployed SHA;
 - the internal cron secret exists.
 
-An empty deployment ref does **not** relax current-main binding. Before the secret is sent to the application, the workflow fetches the remote default branch and requires its SHA to equal the deployment SHA exactly. Events for previews on feature branches, failed deployments, stale main deployments, unknown senders or unapproved hosts are ignored or fail closed before the secret is sent to any endpoint.
+The Vercel deployment event supplies deployment authority and the expected SHA; its deployment-specific `environment_url` is not used as the automatic capture target. This avoids confusing deployment-protection responses on `*.vercel.app` URLs with application responses. Exact release binding is preserved because the protected endpoint must return the same full deployment SHA emitted by the trusted Vercel event, and the workflow separately requires that SHA to still equal current `main`.
+
+An empty deployment ref does **not** relax current-main binding. Before the secret is sent to the application, the workflow fetches the remote default branch and requires its SHA to equal the deployment SHA exactly. If the canonical Production alias has not yet converged to that SHA, capture fails closed on the runtime deployment-SHA mismatch. Events for previews on feature branches, failed deployments, stale main deployments or unknown senders are ignored or fail closed before the secret is sent to any endpoint.
 
 ## Controlled manual fallback
 
 Use `workflow_dispatch` only when automatic deployment-status delivery is unavailable or an approved preview must be assessed. Provide:
 
-- `deployment_url`: exact deployment origin;
+- `deployment_url`: exact approved HTTPS deployment origin;
 - `expected_sha`: full deployed SHA;
 - `environment`: `preview` or `production`.
 
@@ -47,7 +50,7 @@ Equivalent local operator command:
 ```bash
 install -d -m 700 docs/security/evidence/runtime
 umask 077
-DEPLOYMENT_URL="https://eurocomply-saas.vercel.app" \
+DEPLOYMENT_URL="https://www.risckcomply.com" \
 EXPECTED_DEPLOYMENT_SHA="<40-character-sha>" \
 INTERNAL_CRON_SECRET="<runtime-secret>" \
 node scripts/compliance/capture-legal-rules-runtime-evidence.mjs \
@@ -65,7 +68,7 @@ The deployment event is treated as untrusted until verified. The workflow must n
 3. default-branch ref or an empty ref for a commit-SHA deployment;
 4. exact event SHA;
 5. current remote default-branch equality;
-6. approved HTTPS host;
+6. canonical automatic Production origin `https://www.risckcomply.com`;
 7. exact local checkout;
 8. secret presence.
 
@@ -121,12 +124,30 @@ Confirm the event was a successful deployment from `vercel[bot]` for the current
 
 The deployment became stale before evidence capture. Stop promotion and wait for or initiate an approved deployment of the current default-branch SHA. Never credit the older deployment to the newer SHA.
 
+### Canonical Production alias not converged
+
+Automatic capture deliberately calls `https://www.risckcomply.com`, not the Vercel deployment-specific `environment_url`. If the alias still serves an older release, the endpoint's runtime release metadata will not match the trusted deployment event SHA and capture fails closed.
+
+- Confirm the Vercel Production deployment for the event SHA is `READY`.
+- Confirm `www.risckcomply.com` is assigned to that Production deployment.
+- Re-run only after the canonical alias serves the expected SHA.
+- Never weaken the deployment-SHA equality check or relabel evidence from the prior alias target.
+
 ### Host boundary rejection
 
-- Confirm the event contains the deployable application origin, not a Vercel dashboard URL.
-- Confirm the host is an approved `*.vercel.app` origin or official Risck Comply domain.
+For automatic runs, the target must be exactly `https://www.risckcomply.com`. For manual fallback, confirm the supplied host is an approved `*.vercel.app` origin or official Risck Comply domain.
+
 - Add a new domain only through reviewed code, contract tests and documentation.
 - Never send the internal secret to an arbitrary host.
+
+### Deployment-specific URL returns cookies before the app
+
+A Vercel deployment-specific URL can be intercepted by Deployment Protection before the request reaches `/api/ops/legal-rules-validation`. A protection-layer response may set cookies, and the runtime validator correctly rejects any `Set-Cookie` response.
+
+- Do not disable the cookie rejection.
+- Do not treat a protected-edge response as application evidence.
+- For automatic Production capture, use the canonical Production origin and retain exact event-SHA/runtime-SHA equality.
+- For a manual preview proof, resolve the approved access path rather than bypassing evidence controls.
 
 ### HTTP 401
 
@@ -148,7 +169,7 @@ The endpoint failed closed. Inspect the returned test cases without logging secr
 - deployment SHA environment variable is absent or malformed;
 - legal-rules validation failed;
 - the deployed code does not match the expected branch;
-- the deployment URL is not the actual origin.
+- the validated origin is not serving the expected release.
 
 Do not change expected values merely to obtain PASS.
 
@@ -156,6 +177,7 @@ Do not change expected values merely to obtain PASS.
 
 - Stop promotion.
 - Confirm the Vercel/GitHub deployment commit.
+- Confirm the canonical Production alias serves the intended SHA.
 - Redeploy the intended SHA or assess the actual deployed SHA.
 - Never relabel an artifact from another SHA.
 

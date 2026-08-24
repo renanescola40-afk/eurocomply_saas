@@ -148,7 +148,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      DEPLOYMENT_URL: ${{ inputs.deployment_url || github.event.deployment_status.environment_url }}
+      DEPLOYMENT_URL: ${{ github.event_name == 'deployment_status' && 'https://www.risckcomply.com' || inputs.deployment_url }}
       EXPECTED_DEPLOYMENT_SHA: ${{ inputs.expected_sha || github.event.deployment.sha }}
       DEPLOYMENT_EVENT_STATE: ${{ github.event.deployment_status.state }}
       DEPLOYMENT_EVENT_REF: ${{ github.event.deployment.ref }}
@@ -188,6 +188,7 @@ jobs:
             const deploymentRef = String(process.env.DEPLOYMENT_EVENT_REF || '');
             if (deploymentRef && deploymentRef !== process.env.DEFAULT_BRANCH) throw new Error('deployment ref is neither the default branch nor an empty commit-SHA ref');
             if (String(process.env.DEPLOYMENT_EVENT_SHA || '').toLowerCase() !== expectedSha) throw new Error('deployment event SHA mismatch');
+            if (url.origin !== 'https://www.risckcomply.com') throw new Error('automatic production proof must use the canonical production origin');
           }
           NODE
           if [ "$GITHUB_EVENT_NAME" = 'deployment_status' ]; then
