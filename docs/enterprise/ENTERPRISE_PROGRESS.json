@@ -16,7 +16,7 @@
   "controls_not_applicable": 0,
   "critical_controls_open": 49,
   "current_decision": "NO_GO",
-  "classification": "CURRENT_PRODUCTION_SERVING_BLOCKED",
+  "classification": "UNVERIFIED_CURRENT_MAIN",
   "publish_recommendation": "DO_NOT_PUBLISH_AS_ENTERPRISE",
   "active_authority_pr": null,
   "active_authority_branch": null,
@@ -36,7 +36,7 @@
   ],
   "next_priority": "Restore the existing Vercel project serving state through the documented zero-cost unpause/account-state path without changing plan or accepting spend. If any payment or upgrade is required, stop for owner decision. After canonical /api/health returns HTTP 200, resolve the exact serving main SHA and re-run protected runtime evidence. Supabase production promotion remains separately governed by #1631 and requires explicit Production-write authorization.",
   "evidence_freshness": {
-    "status": "STALE_FOR_CURRENT_MAIN",
+    "status": "STALE",
     "last_verified_sha": "c413288eb8453b55c4d049c758dc0cd063aa70b9",
     "scorecard_run_id": 29703295579,
     "scorecard_artifact_id": 8447248813,
