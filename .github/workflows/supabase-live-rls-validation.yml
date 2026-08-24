@@ -72,9 +72,50 @@ jobs:
       - name: Verify protected environment governance before secrets
         run: node scripts/security/check-github-environment-governance.mjs
 
+  production-project-binding:
+    name: Bind proof to Production Supabase project
+    needs: governance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: Production
+    outputs:
+      project_digest: ${{ steps.binding.outputs.project_digest }}
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      GITHUB_ENVIRONMENT_NAME: Production
+      REQUIRE_PROTECTED_BRANCHES: 'true'
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out exact promoted release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+
+      - name: Revalidate exact current main and Production environment governance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+          node scripts/security/check-github-environment-governance.mjs
+
+      - name: Emit redacted Production Supabase project digest
+        id: binding
+        env:
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+        run: node scripts/security/supabase-project-binding.mjs emit-pooler-digest
+
   live-proof:
     name: Run exact governed promotion-bound tenant proof
-    needs: governance
+    needs: [governance, production-project-binding]
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     environment: supabase-live-rls-validation
@@ -82,6 +123,7 @@ jobs:
       TARGET_SHA: ${{ inputs.release_sha }}
       PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
       INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+      EXPECTED_SUPABASE_PROJECT_DIGEST: ${{ needs.production-project-binding.outputs.project_digest }}
       GH_TOKEN: ${{ github.token }}
       GITHUB_TOKEN: ${{ github.token }}
       GITHUB_ENVIRONMENT_NAME: supabase-live-rls-validation
@@ -110,6 +152,7 @@ jobs:
           test "$(jq -r '.path' <<<"$promotion_json")" = '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
           test "$(jq -r '.event' <<<"$promotion_json")" = 'workflow_dispatch'
           test "$(jq -r '.conclusion' <<<"$promotion_json")" = 'success'
+          [[ "$EXPECTED_SUPABASE_PROJECT_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]
 
       - name: Revalidate protected environment governance after admission
         run: node scripts/security/check-github-environment-governance.mjs
@@ -129,11 +172,13 @@ jobs:
           set -euo pipefail
           node --check scripts/security/supabase-forward-manifest-contract.mjs
           node --check scripts/security/validate-supabase-live-promotion-source.mjs
+          node --check scripts/security/supabase-project-binding.mjs
           node --check scripts/security/supabase-v20-live-fixtures.mjs
           node --check scripts/security/run-supabase-live-tenant-isolation-v4.mjs
           node --check scripts/security/run-supabase-live-tenant-isolation.mjs
           node --check scripts/security/supabase-live-rls-evidence.mjs
           node --check scripts/release/validate-supabase-rls-runtime-evidence.mjs
+          node --test tests/security/supabase-project-binding.test.mjs
 
       - name: Download exact governed Production promotion evidence
         shell: bash
@@ -155,6 +200,11 @@ jobs:
           LIVE_POSTCONDITIONS_PATH="$live_postconditions" \
           PROMOTION_MANIFEST_PATH="$current_manifest" \
             node scripts/security/validate-supabase-live-promotion-source.mjs
+
+      - name: Verify live API project matches the Production promotion project
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+        run: node scripts/security/supabase-project-binding.mjs verify-api-digest
 
       - name: Execute canonical live tenant-isolation proof
         env:
