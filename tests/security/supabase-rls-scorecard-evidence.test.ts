@@ -105,7 +105,7 @@ function validSourceEvidence(): RuntimeEvidence {
         stripeLifecycleSynthesized: false,
       },
     },
-  }) as RuntimeEvidence;
+  } as any) as RuntimeEvidence;
 
   return {
     ...base,
@@ -152,7 +152,7 @@ describe('Supabase RLS scorecard evidence after V20', () => {
     const evidence = buildSupabaseRlsScorecardEvidence(incomplete, { expectedSha: SHA });
     expect(evidence.status).toBe('Open');
     expect(evidence.outcome).toBe('not_verified');
-    expect(evidence.checks.every((check: { passed: boolean }) => check.passed !== true)).toBe(true);
+    expect(evidence.checks.every((check) => check.passed !== true)).toBe(true);
   });
 
   it('maps canonical tenancy evidence to TEN-02 through TEN-06 only', () => {
