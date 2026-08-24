@@ -138,6 +138,12 @@ function forbidMarkers(source, markers, label) {
   }
 }
 
+function stripSqlComments(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/--[^\r\n]*/g, '');
+}
+
 function validateEvidenceVaultMigration(source) {
   requireMarkers(source, [
     'alter column organization_id set not null',
@@ -213,7 +219,7 @@ function validateTrustedAccessRuntimeMigration(source) {
     'enterprise_seat_contention_events',
     'browser roles retain trusted access control-plane privileges',
   ], 'Trusted Access runtime migration');
-  forbidMarkers(source, [
+  forbidMarkers(stripSqlComments(source), [
     'enterprise_access_operation_runs',
     'v_contract.seat_limit',
   ], 'Trusted Access runtime migration');
