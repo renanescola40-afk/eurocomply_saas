@@ -86,7 +86,7 @@ function validSourceEvidence() {
       paymentFirstV20: { licensedTenantsProved: true, unlicensedSameTenantDenied: true, regulatoryUpdatesBackendOnly: true, providerEventsCreated: false, stripeLifecycleSynthesized: false },
       evidenceVaultV20: { unlicensedMetadataInsertDenied: true, privateBucketProved: true, orphanStorageInsertDenied: true },
     },
-  });
+  } as any);
 
   return {
     ...base,
