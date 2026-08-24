@@ -89,6 +89,24 @@ export const procurementProviders: ProcurementProvider[] = [
     regionDisclosure: 'The connected LIVE account is based in Portugal; this is not presented as a single processing or storage region.',
   },
   {
+    name: 'Google OAuth / Google Identity',
+    purpose: 'Optional user authentication and identity federation',
+    status: 'optional',
+    regionDisclosure: 'Production usage is evidenced; final legal role, applicable contract or DPA, region, retention and transfer treatment remain under review.',
+  },
+  {
+    name: 'Google Workspace',
+    purpose: 'Corporate support, security, procurement and legal email communications',
+    status: 'core',
+    regionDisclosure: 'Account-specific evidence proves Business Starter for risckcomply.com and Google Cloud EMEA Limited as the billed EMEA entity. Exact account CDPA incorporation, data-region, retention and transfer treatment remain evidence-required.',
+  },
+  {
+    name: 'GitHub Actions',
+    purpose: 'Source delivery, CI/CD and protected recovery/security workflows',
+    status: 'conditional',
+    regionDisclosure: 'Protected recovery workflows can transiently process Production database data on GitHub-hosted runners; the current repository is owned by a Personal User account and company-specific DPA applicability remains unproven.',
+  },
+  {
     name: 'Sentry',
     purpose: 'Monitoring and diagnostics',
     status: 'optional',
@@ -108,9 +126,9 @@ export const procurementProviders: ProcurementProvider[] = [
   },
   {
     name: 'Upstash',
-    purpose: 'Distributed Redis-backed rate limiting and security-control state when enabled',
-    status: 'conditional',
-    regionDisclosure: 'Historical runtime binding is evidenced; current exact-release reproof and account-region facts remain evidence-required.',
+    purpose: 'Distributed Redis-backed rate limiting and security-control state',
+    status: 'core',
+    regionDisclosure: 'Current exact-release Production runtime binding is evidenced; account plan, region, retention and account-specific contractual facts remain evidence-required.',
   },
 ];
 
