@@ -14,9 +14,9 @@ const reconciliation = JSON.parse(readFileSync('config/supabase-forward-reconcil
 const selected = reconciliation.migrations.map((migrationRecord) => migrationRecord.filename);
 
 describe('Enterprise Evidence Vault data plane', () => {
-  it('keeps the proved Evidence Vault migration ordered before payment-first and Trusted Access closure', () => {
-    expect(reconciliation.changeSet).toBe('2026-08-24-enterprise-data-plane-payment-first-trusted-access-closure-v21');
-    expect(selected).toHaveLength(31);
+  it('keeps the proved Evidence Vault migration ordered before payment-first, Trusted Access and document-quota closure', () => {
+    expect(reconciliation.changeSet).toBe('2026-08-25-enterprise-data-plane-payment-first-trusted-access-document-quota-closure-v22');
+    expect(selected).toHaveLength(32);
     expect(selected).toContain('20260822123626_v19_reconcile_enterprise_evidence_vault.sql');
     expect(selected).not.toContain('20260822120617_atomic_vendor_risk_quota_mutations.sql');
 
@@ -38,7 +38,10 @@ describe('Enterprise Evidence Vault data plane', () => {
     expect(selected.indexOf('20260823131500_payment_first_gap_analysis_and_storage.sql')).toBeLessThan(
       selected.indexOf('20260824185900_prepare_enterprise_trusted_access_legacy_compatibility.sql'),
     );
-    expect(selected.at(-1)).toBe('20260824190200_harden_enterprise_trusted_access_runtime_contract.sql');
+    expect(selected.indexOf('20260824190200_harden_enterprise_trusted_access_runtime_contract.sql')).toBeLessThan(
+      selected.indexOf('20260825092500_atomic_document_commercial_quota.sql'),
+    );
+    expect(selected.at(-1)).toBe('20260825092500_atomic_document_commercial_quota.sql');
 
     expect(reconciliation.truthBoundary.automaticClassification).toBe(false);
     expect(reconciliation.truthBoundary.productionWriteAuthorizedByConfig).toBe(false);

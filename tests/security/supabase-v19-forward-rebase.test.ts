@@ -14,6 +14,7 @@ const TRUSTED_ACCESS_TARGETS = [
   '20260824190100_finalize_enterprise_trusted_access_operation_contract.sql',
   '20260824190200_harden_enterprise_trusted_access_runtime_contract.sql',
 ] as const;
+const DOCUMENT_COMMERCIAL_QUOTA_TARGET = '20260825092500_atomic_document_commercial_quota.sql';
 const pairs = [
   ['20260813175000_optimize_organization_add_ons_rls_initplan.sql', '20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql'],
   ['20260813194500_reconcile_step_up_challenges_runtime.sql', '20260822123540_v19_reconcile_step_up_challenges_runtime.sql'],
@@ -46,8 +47,8 @@ function sha256(bytes: Buffer) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-describe('Supabase V21 production-forward closure', () => {
-  it('preserves V20 payment-first closure and appends exactly four trusted-access identities', () => {
+describe('Supabase V22 production-forward closure', () => {
+  it('preserves V21 closure and appends exactly one document commercial-quota identity', () => {
     const config = JSON.parse(readFileSync('config/supabase-forward-reconciliation.json', 'utf8')) as {
       changeSet: string;
       migrations: Array<{ filename: string }>;
@@ -55,16 +56,18 @@ describe('Supabase V21 production-forward closure', () => {
     };
 
     const v19Targets = pairs.map(([, target]) => target);
-    expect(config.changeSet).toBe('2026-08-24-enterprise-data-plane-payment-first-trusted-access-closure-v21');
-    expect(config.migrations).toHaveLength(31);
+    expect(config.changeSet).toBe('2026-08-25-enterprise-data-plane-payment-first-trusted-access-document-quota-closure-v22');
+    expect(config.migrations).toHaveLength(32);
     expect(config.migrations.map((item) => item.filename)).toEqual([
       ...v19Targets,
       ...PAYMENT_FIRST_TARGETS,
       ...TRUSTED_ACCESS_TARGETS,
+      DOCUMENT_COMMERCIAL_QUOTA_TARGET,
     ]);
     expect(config.migrations.slice(0, 25).map((item) => item.filename)).toEqual(v19Targets);
     expect(config.migrations.slice(25, 27).map((item) => item.filename)).toEqual(PAYMENT_FIRST_TARGETS);
-    expect(config.migrations.slice(-4).map((item) => item.filename)).toEqual(TRUSTED_ACCESS_TARGETS);
+    expect(config.migrations.slice(-5, -1).map((item) => item.filename)).toEqual(TRUSTED_ACCESS_TARGETS);
+    expect(config.migrations.at(-1)?.filename).toBe(DOCUMENT_COMMERCIAL_QUOTA_TARGET);
 
     for (const filename of config.migrations.map((item) => item.filename)) {
       expect(filename.slice(0, 14)).toMatch(/^\d{14}$/);

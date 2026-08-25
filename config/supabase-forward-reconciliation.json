@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-08-24-enterprise-data-plane-payment-first-trusted-access-closure-v21",
+  "changeSet": "2026-08-25-enterprise-data-plane-payment-first-trusted-access-document-quota-closure-v22",
   "migrations": [
     { "filename": "20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql", "purpose": "evaluate organization add-on membership auth once per statement while preserving tenant scope" },
     { "filename": "20260822123540_v19_reconcile_step_up_challenges_runtime.sql", "purpose": "materialize backend-only enterprise step-up challenge storage" },
@@ -32,7 +32,8 @@
     { "filename": "20260824185900_prepare_enterprise_trusted_access_legacy_compatibility.sql", "purpose": "normalize historical trusted-access runtime shapes without replaying unsafe legacy migration identities and preserve full-history/staging convergence" },
     { "filename": "20260824190000_reconcile_enterprise_trusted_access_runtime.sql", "purpose": "materialize the backend-only Enterprise trusted-access operations, SLO, export, seat-contention and escalation control plane on the current licensing and SCIM authority" },
     { "filename": "20260824190100_finalize_enterprise_trusted_access_operation_contract.sql", "purpose": "finalize the current access-operation worker contract against V21 tenant and licensing authority without reintroducing ungoverned group-policy writes" },
-    { "filename": "20260824190200_harden_enterprise_trusted_access_runtime_contract.sql", "purpose": "harden operation-detail compatibility, separate successful pagination from failure retry budgets, and bind seat-contention idempotency to the exact membership and seat mutation" }
+    { "filename": "20260824190200_harden_enterprise_trusted_access_runtime_contract.sql", "purpose": "harden operation-detail compatibility, separate successful pagination from failure retry budgets, and bind seat-contention idempotency to the exact membership and seat mutation" },
+    { "filename": "20260825092500_atomic_document_commercial_quota.sql", "purpose": "make durable commercial authority and canonical document-plan quotas a serialized database invariant so concurrent service-role or future document inserts cannot exceed licensed capacity" }
   ],
   "truthBoundary": {
     "automaticClassification": false,
