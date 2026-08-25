@@ -11,7 +11,7 @@ const CONFIG_SCHEMA = 'risck-comply.supabase-forward-reconciliation-config.v1';
 const MANIFEST_SCHEMA = 'risck-comply.supabase-forward-reconciliation-manifest.v1';
 const REHEARSAL_SCHEMA = 'risck-comply.supabase-forward-reconciliation-rehearsal.v1';
 const SET_PROOF_SCHEMA = 'risck-comply.supabase-forward-reconciliation-set-proof.v1';
-const MAX_MIGRATIONS = 32;
+const MAX_MIGRATIONS = 33;
 const MAX_SQL_BYTES = 2 * 1024 * 1024;
 
 function sha256(bytes) {

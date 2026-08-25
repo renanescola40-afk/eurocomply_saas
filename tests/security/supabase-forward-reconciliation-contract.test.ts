@@ -67,7 +67,7 @@ const commercialQuotaReconciliation = readFileSync(
 const selected = config.migrations.map((migration) => migration.filename);
 
 describe('bounded Supabase forward reconciliation contract', () => {
-  it('selects exactly the thirty-two CLI-issued V22 forward reconciliation identities in version order', () => {
+  it('selects exactly the thirty-three CLI-issued V23 forward reconciliation identities in version order', () => {
     expect(selected).toEqual([
       '20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql',
       '20260822123540_v19_reconcile_step_up_challenges_runtime.sql',
@@ -101,6 +101,7 @@ describe('bounded Supabase forward reconciliation contract', () => {
       '20260824190100_finalize_enterprise_trusted_access_operation_contract.sql',
       '20260824190200_harden_enterprise_trusted_access_runtime_contract.sql',
       '20260825092500_atomic_document_commercial_quota.sql',
+      '20260825171500_harden_active_membership_rls_authority.sql',
     ]);
     for (const historical of [
       '20260730204500_repair_live_rls_validation_inventory.sql',

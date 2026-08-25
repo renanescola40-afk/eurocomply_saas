@@ -243,7 +243,7 @@ jobs:
               --expected-sha="$SUBJECT_SHA"
             SELECTED_COUNT="$(jq '.migrations | length' "${FORWARD_MANIFESTS[0]}")"
             test "$SELECTED_COUNT" -ge 1
-            test "$SELECTED_COUNT" -le 32
+            test "$SELECTED_COUNT" -le 33
             test "$(jq '.items | length' "$BOUNDED_INVENTORY")" -eq "$SELECTED_COUNT"
             jq -e --arg sha "$SUBJECT_SHA" \
               '.boundedSelection.targetSha == $sha and .boundedSelection.exactFilenameAndSha256Bound == true and .boundedSelection.automaticClassificationPerformed == false and .boundedSelection.productionWriteAuthorized == false' \

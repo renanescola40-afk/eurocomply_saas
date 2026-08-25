@@ -18,7 +18,7 @@ const DEFAULT_REPORT_PATH = join(
 );
 
 const EXPECTED_SCHEMA = 'risck-comply.supabase-forward-reconciliation-config.v1';
-const EXPECTED_CHANGE_SET = '2026-08-25-enterprise-data-plane-payment-first-trusted-access-document-quota-closure-v22';
+const EXPECTED_CHANGE_SET = '2026-08-25-enterprise-data-plane-active-membership-rls-closure-v23';
 const EVIDENCE_VAULT_MIGRATION = '20260822123626_v19_reconcile_enterprise_evidence_vault.sql';
 const PAYMENT_FIRST_CORE_MIGRATION = '20260823123000_payment_first_commercial_data_plane.sql';
 const PAYMENT_FIRST_GAP_STORAGE_MIGRATION = '20260823131500_payment_first_gap_analysis_and_storage.sql';
@@ -27,6 +27,7 @@ const TRUSTED_ACCESS_RUNTIME_MIGRATION = '20260824190000_reconcile_enterprise_tr
 const TRUSTED_ACCESS_FINALIZE_MIGRATION = '20260824190100_finalize_enterprise_trusted_access_operation_contract.sql';
 const TRUSTED_ACCESS_HARDEN_MIGRATION = '20260824190200_harden_enterprise_trusted_access_runtime_contract.sql';
 const DOCUMENT_COMMERCIAL_QUOTA_MIGRATION = '20260825092500_atomic_document_commercial_quota.sql';
+const ACTIVE_MEMBERSHIP_RLS_MIGRATION = '20260825171500_harden_active_membership_rls_authority.sql';
 const COMMERCIAL_QUOTA_MIGRATION = '20260822120617_atomic_vendor_risk_quota_mutations.sql';
 const EXPECTED_SELECTED = [
   '20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql',
@@ -61,6 +62,7 @@ const EXPECTED_SELECTED = [
   TRUSTED_ACCESS_FINALIZE_MIGRATION,
   TRUSTED_ACCESS_HARDEN_MIGRATION,
   DOCUMENT_COMMERCIAL_QUOTA_MIGRATION,
+  ACTIVE_MEMBERSHIP_RLS_MIGRATION,
 ];
 
 const TRUTH_BOUNDARY = {
@@ -301,6 +303,36 @@ function validateDocumentCommercialQuotaMigration(source) {
   ], 'Document commercial quota migration');
 }
 
+function validateActiveMembershipRlsMigration(source) {
+  requireMarkers(source, [
+    'create or replace function app_private.is_org_member',
+    'create or replace function app_private.has_org_role',
+    "lower(coalesce(om.status, '')) = 'active'",
+    'public.current_legacy_user_id()',
+    'public.current_clerk_user_id()',
+    'lower(om.role) = any(allowed_roles)',
+    'organization_members_status_check',
+    'canonical private RLS helpers are not active-membership aware',
+    'revoke all on function app_private.is_org_member(uuid) from public, anon',
+    'grant execute on function app_private.is_org_member(uuid) to authenticated, service_role',
+  ], 'Active membership RLS migration');
+
+  const canonicalSource = stripSqlComments(source);
+  for (const helperName of ['app_private.is_org_member', 'app_private.has_org_role']) {
+    const startMarker = `create or replace function ${helperName}`;
+    const start = canonicalSource.indexOf(startMarker);
+    const bodyStart = canonicalSource.indexOf('as $$', start);
+    const end = canonicalSource.indexOf('$$;', bodyStart + 5);
+    if (start < 0 || bodyStart < 0 || end < 0) {
+      fail(`Active membership RLS migration cannot isolate canonical helper: ${helperName}`);
+    }
+    const helperSource = canonicalSource.slice(start, end + 3);
+    if (!helperSource.includes("lower(coalesce(om.status, '')) = 'active'")) {
+      fail(`Active membership RLS migration must bind ${helperName} to active membership status`);
+    }
+  }
+}
+
 function main() {
   if (!existsSync(CONFIG_PATH)) fail(`Missing bounded reconciliation config: ${CONFIG_PATH}`);
   const config = readJson(CONFIG_PATH);
@@ -333,6 +365,7 @@ function main() {
     if (filename === TRUSTED_ACCESS_HARDEN_MIGRATION) validateTrustedAccessHardenMigration(source);
     if (filename === COMMERCIAL_QUOTA_MIGRATION) validateCommercialQuotaMutation(source);
     if (filename === DOCUMENT_COMMERCIAL_QUOTA_MIGRATION) validateDocumentCommercialQuotaMigration(source);
+    if (filename === ACTIVE_MEMBERSHIP_RLS_MIGRATION) validateActiveMembershipRlsMigration(source);
 
     return {
       position: index + 1,
