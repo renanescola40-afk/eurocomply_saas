@@ -65,6 +65,12 @@ describe('legal rules runtime capture contract', () => {
     expect(workflowSource).not.toContain('DEPLOYMENT_URL: ${{ inputs.deployment_url || github.event.deployment_status.environment_url }}');
   });
 
+  it('isolates deployment-status concurrency so noise cannot cancel trusted evidence capture', () => {
+    expect(workflowSource).toContain("github.event_name == 'deployment_status' && github.run_id");
+    expect(workflowSource).toContain('cancel-in-progress: true');
+    expect(workflowSource).not.toContain('group: legal-rules-runtime-validation-${{ github.event.pull_request.head.sha || inputs.expected_sha || github.event.deployment.sha || github.sha }}');
+  });
+
   it('keeps manual dispatch as a controlled HTTPS fallback', () => {
     expect(workflowSource).toContain('workflow_dispatch:');
     expect(workflowSource).toContain("github.event_name == 'workflow_dispatch'");
