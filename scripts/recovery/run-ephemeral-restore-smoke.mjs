@@ -9,6 +9,7 @@ const rolesPath = join(workDir, 'roles.sql');
 const schemaPath = join(workDir, 'schema.sql');
 const dataPath = join(workDir, 'data.sql');
 const marker = 'risck-ephemeral-restore-smoke-v1';
+const isolatedRestoreRole = 'supabase_admin';
 const SUPABASE_MANAGED_DATA_EXCLUDES = [
   'storage.buckets_vectors',
   'storage.vector_indexes',
@@ -139,6 +140,17 @@ function copyToContainer(container, path) {
   return target;
 }
 
+function assertIsolatedRestoreRoleBoundary(container) {
+  const status = String(run('docker', [
+    'exec', container,
+    'psql', '-U', 'postgres', '-d', 'postgres',
+    '--no-psqlrc',
+    '--tuples-only', '--no-align', '--set', 'ON_ERROR_STOP=1',
+    '--command', `select case when target.rolcanlogin and target.rolsuper and not source.rolsuper then 'ok' else 'invalid' end from pg_roles target cross join pg_roles source where target.rolname = '${isolatedRestoreRole}' and source.rolname = 'postgres';`,
+  ], { capture: true })).trim();
+  if (status !== 'ok') throw new Error('Disposable Supabase restore privilege boundary is invalid');
+}
+
 function restore() {
   assertGithubActions();
   const { url, container } = requireLocalDatabase();
@@ -158,6 +170,15 @@ function restore() {
       '--set', 'ON_ERROR_STOP=1',
       '--file', targets[0],
       '--file', targets[1],
+    ]);
+
+    assertIsolatedRestoreRoleBoundary(container);
+    run('docker', [
+      'exec', container,
+      'psql', '-U', isolatedRestoreRole, '-d', 'postgres',
+      '--no-psqlrc',
+      '--single-transaction',
+      '--set', 'ON_ERROR_STOP=1',
       '--command', 'SET session_replication_role = replica;',
       '--file', targets[2],
     ]);
