@@ -13,7 +13,7 @@ import {
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const FORWARD_MANIFEST_SCHEMA = 'risck-comply.supabase-forward-reconciliation-manifest.v1';
-const MAX_BOUNDED_MIGRATIONS = 32;
+const MAX_BOUNDED_MIGRATIONS = 33;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
