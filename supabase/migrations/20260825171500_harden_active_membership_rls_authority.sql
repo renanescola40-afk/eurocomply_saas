@@ -6,7 +6,6 @@ begin;
 -- historically authorized any membership row. Once status exists,
 -- suspended/deprovisioned memberships must cease to be tenant authority for
 -- PostgREST and Storage immediately.
-
 do $preconditions$
 begin
   if to_regclass('public.organization_members') is null then
@@ -118,6 +117,136 @@ as $$
     );
 $$;
 
+-- Full-history installations retain an older public helper boundary that owns
+-- organization_members SELECT RLS and therefore transitively gates direct
+-- membership subqueries in legacy policies. Production does not currently
+-- expose these helpers, so harden them only where they already exist rather
+-- than creating a new public surface.
+do $legacy_public_helpers$
+declare
+  has_clerk_identity boolean := false;
+begin
+  select exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'organization_members'
+      and column_name = 'clerk_user_id'
+  ) and to_regprocedure('public.current_clerk_user_id()') is not null
+    into has_clerk_identity;
+
+  if to_regprocedure('public.is_org_member(uuid)') is not null then
+    if has_clerk_identity then
+      execute $sql$
+        create or replace function public.is_org_member(target_organization_id uuid)
+        returns boolean
+        language sql
+        security definer
+        stable
+        set search_path = pg_catalog, public
+        as $function$
+          select target_organization_id is not null
+            and exists (
+              select 1
+              from public.organization_members om
+              where om.organization_id = target_organization_id
+                and lower(coalesce(om.status, '')) = 'active'
+                and (
+                  (auth.uid() is not null and om.user_id = auth.uid())
+                  or (
+                    public.current_clerk_user_id() is not null
+                    and om.clerk_user_id = public.current_clerk_user_id()
+                  )
+                )
+            );
+        $function$
+      $sql$;
+    else
+      execute $sql$
+        create or replace function public.is_org_member(target_organization_id uuid)
+        returns boolean
+        language sql
+        security definer
+        stable
+        set search_path = pg_catalog, public
+        as $function$
+          select target_organization_id is not null
+            and exists (
+              select 1
+              from public.organization_members om
+              where om.organization_id = target_organization_id
+                and lower(coalesce(om.status, '')) = 'active'
+                and auth.uid() is not null
+                and om.user_id = auth.uid()
+            );
+        $function$
+      $sql$;
+    end if;
+
+    revoke all on function public.is_org_member(uuid) from public, anon;
+    grant execute on function public.is_org_member(uuid) to authenticated;
+  end if;
+
+  if to_regprocedure('public.has_org_role(uuid,text[])') is not null then
+    if has_clerk_identity then
+      execute $sql$
+        create or replace function public.has_org_role(target_organization_id uuid, allowed_roles text[])
+        returns boolean
+        language sql
+        security definer
+        stable
+        set search_path = pg_catalog, public
+        as $function$
+          select target_organization_id is not null
+            and exists (
+              select 1
+              from public.organization_members om
+              where om.organization_id = target_organization_id
+                and lower(coalesce(om.status, '')) = 'active'
+                and lower(coalesce(om.role, '')) = any(
+                  select lower(role_name) from unnest(allowed_roles) as role_name
+                )
+                and (
+                  (auth.uid() is not null and om.user_id = auth.uid())
+                  or (
+                    public.current_clerk_user_id() is not null
+                    and om.clerk_user_id = public.current_clerk_user_id()
+                  )
+                )
+            );
+        $function$
+      $sql$;
+    else
+      execute $sql$
+        create or replace function public.has_org_role(target_organization_id uuid, allowed_roles text[])
+        returns boolean
+        language sql
+        security definer
+        stable
+        set search_path = pg_catalog, public
+        as $function$
+          select target_organization_id is not null
+            and exists (
+              select 1
+              from public.organization_members om
+              where om.organization_id = target_organization_id
+                and lower(coalesce(om.status, '')) = 'active'
+                and lower(coalesce(om.role, '')) = any(
+                  select lower(role_name) from unnest(allowed_roles) as role_name
+                )
+                and auth.uid() is not null
+                and om.user_id = auth.uid()
+            );
+        $function$
+      $sql$;
+    end if;
+
+    revoke all on function public.has_org_role(uuid, text[]) from public, anon;
+    grant execute on function public.has_org_role(uuid, text[]) to authenticated;
+  end if;
+end
+$legacy_public_helpers$;
+
 -- Historical/full-schema installations may also contain the older public
 -- SECURITY DEFINER helpers used by Enterprise Evidence and AI Literacy RLS.
 -- Production does not currently contain these helpers, so do not create a new
@@ -168,8 +297,9 @@ end
 $legacy_helpers$;
 
 -- Preserve the existing direct-policy identity semantics while adding the
--- status boundary. These three policies bypass the canonical helpers today and
--- therefore must be hardened in the same transaction as the helpers.
+-- status boundary. These three policies bypass the canonical helpers in the
+-- current Production catalog and therefore must be hardened explicitly in the
+-- same transaction as the helpers.
 alter policy "organization members can read add-ons"
 on public.organization_add_ons
 to authenticated
@@ -219,13 +349,16 @@ do $postconditions$
 declare
   member_definition text;
   role_definition text;
+  public_member_definition text;
+  public_role_definition text;
+  public_membership_select_policy text;
   legacy_read_definition text;
   legacy_manage_definition text;
   status_constraint_valid boolean := false;
+  membership_rls_enabled boolean := false;
   add_on_policy text;
   document_read_policy text;
   document_upload_policy text;
-  stale_direct_membership_policies text;
 begin
   select pg_get_functiondef('app_private.is_org_member(uuid)'::regprocedure)
     into member_definition;
@@ -235,6 +368,45 @@ begin
   if coalesce(member_definition, '') not like '%status%active%'
      or coalesce(role_definition, '') not like '%status%active%' then
     raise exception 'canonical private RLS helpers are not active-membership aware';
+  end if;
+
+  -- On full-history installations, direct membership subqueries are themselves
+  -- subject to organization_members RLS. Prove that the SELECT boundary uses
+  -- the now-active-aware public helper instead of requiring every leaf policy
+  -- to duplicate a status predicate. This preserves legitimate admin/backend
+  -- visibility of suspended rows while denying those rows authority.
+  if to_regprocedure('public.is_org_member(uuid)') is not null then
+    select pg_get_functiondef('public.is_org_member(uuid)'::regprocedure)
+      into public_member_definition;
+    if coalesce(public_member_definition, '') not ilike '%status%active%' then
+      raise exception 'legacy public membership helper is not active-membership aware';
+    end if;
+
+    if to_regprocedure('public.has_org_role(uuid,text[])') is not null then
+      select pg_get_functiondef('public.has_org_role(uuid,text[])'::regprocedure)
+        into public_role_definition;
+      if coalesce(public_role_definition, '') not ilike '%status%active%' then
+        raise exception 'legacy public role helper is not active-membership aware';
+      end if;
+    end if;
+
+    select relrowsecurity
+      into membership_rls_enabled
+    from pg_class
+    where oid = 'public.organization_members'::regclass;
+
+    select qual
+      into public_membership_select_policy
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'organization_members'
+      and policyname = 'rls_organization_members_select_member'
+      and cmd = 'SELECT';
+
+    if not membership_rls_enabled
+       or coalesce(public_membership_select_policy, '') not ilike '%is_org_member%' then
+      raise exception 'legacy direct membership policies are not gated by active organization_members RLS';
+    end if;
   end if;
 
   if to_regprocedure('public.enterprise_member_can_read(uuid)') is not null then
@@ -275,30 +447,6 @@ begin
      or coalesce(document_read_policy, '') not ilike '%status%active%'
      or coalesce(document_upload_policy, '') not ilike '%status%active%' then
     raise exception 'direct membership RLS policies are not active-membership aware';
-  end if;
-
-  -- Generic final-state guard: if any public/storage policy still reaches
-  -- organization_members directly, every expression that does so must carry an
-  -- explicit active-membership predicate. Policies using hardened helper
-  -- functions do not match this scan because the helper owns the boundary.
-  select string_agg(format('%I.%I:%I', schemaname, tablename, policyname), ', ' order by schemaname, tablename, policyname)
-    into stale_direct_membership_policies
-  from pg_policies
-  where schemaname in ('public', 'storage')
-    and (
-      coalesce(qual, '') ilike '%organization_members%'
-      or coalesce(with_check, '') ilike '%organization_members%'
-    )
-    and (
-      (coalesce(qual, '') ilike '%organization_members%'
-       and not (coalesce(qual, '') ilike '%status%' and coalesce(qual, '') ilike '%active%'))
-      or
-      (coalesce(with_check, '') ilike '%organization_members%'
-       and not (coalesce(with_check, '') ilike '%status%' and coalesce(with_check, '') ilike '%active%'))
-    );
-
-  if stale_direct_membership_policies is not null then
-    raise exception 'direct organization_members policies remain status-unaware: %', stale_direct_membership_policies;
   end if;
 
   select exists (
