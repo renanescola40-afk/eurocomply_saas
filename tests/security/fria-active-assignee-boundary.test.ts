@@ -41,14 +41,42 @@ describe('FRIA active assignee boundary', () => {
     );
   });
 
-  it('allows the pre-V22 status-less compatibility query only for a missing status column', async () => {
+  it('allows the pre-V22 status-less compatibility query only after Postgres proves status is absent', async () => {
     const source = await readFile(ASSIGNEES_FILE, 'utf8');
 
     expect(source).toContain('function isMissingMembershipStatusColumn(error: QueryError)');
     expect(source).toContain("error?.code === '42703'");
     expect(source).toContain("error?.code === 'PGRST204'");
+    expect(source).toContain('async function proveMembershipStatusColumnAbsent(');
+    expect(source).toContain("supabase.rpc('live_rls_validation_has_column'");
+    expect(source).toContain("table_name: 'organization_members'");
+    expect(source).toContain("column_name: 'status'");
+    expect(source).toContain('statusCapability.error || statusCapability.data !== false');
+    expect(source).toContain("membership_status_capability_probe_failed_closed");
     expect(source.match(/if \(error && isMissingMembershipStatusColumn\(error\)\)/g)).toHaveLength(2);
+    expect(source.match(/await proveMembershipStatusColumnAbsent\(supabase\);/g)).toHaveLength(2);
     expect(source.match(/\.eq\('status', 'active'\)/g)).toHaveLength(2);
+  });
+
+  it('proves schema capability before either legacy status-less membership query', async () => {
+    const source = await readFile(ASSIGNEES_FILE, 'utf8');
+    const candidateRead = source.slice(
+      source.indexOf('async function listAssignableMembershipRows'),
+      source.indexOf('async function loadAssignedMembershipRows'),
+    );
+    const validationRead = source.slice(
+      source.indexOf('async function loadAssignedMembershipRows'),
+      source.indexOf('export async function listFriaAssigneeCandidates'),
+    );
+
+    for (const read of [candidateRead, validationRead]) {
+      const missingStatusGuard = read.indexOf('if (error && isMissingMembershipStatusColumn(error))');
+      const capabilityProof = read.indexOf('await proveMembershipStatusColumnAbsent(supabase);');
+      const legacyQuery = read.indexOf(".select('user_id,role')", capabilityProof + 1);
+      expect(missingStatusGuard).toBeGreaterThan(-1);
+      expect(capabilityProof).toBeGreaterThan(missingStatusGuard);
+      expect(legacyQuery).toBeGreaterThan(capabilityProof);
+    }
   });
 
   it('keeps candidate and validation callers bound to the status-aware compatibility helpers', async () => {
