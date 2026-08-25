@@ -1,22 +1,17 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { getUserOrganizationMemberships } from '@/server/queries/current-organization';
 
 export async function listUserOrganizations(userId: string) {
-  const supabase = createAdminClient();
+  const memberships = await getUserOrganizationMemberships(userId);
 
-  const { data, error } = await supabase
-    .from('organization_members')
-    .select('role, organization_id, organizations(id, name, slug, created_at)')
-    .eq('user_id', userId)
-    .eq('status', 'active')
-    .not('organization_id', 'is', null)
-    .order('created_at', { ascending: true });
-
-  if (error) {
-    console.warn('[organizations] list_for_user_failed', { code: error.code ?? 'unknown' });
-    throw new Error('Unable to load organizations.');
-  }
-
-  return data ?? [];
+  return memberships.map((membership) => ({
+    role: membership.role,
+    organization_id: membership.organization_id,
+    organizations: {
+      id: membership.organization.id,
+      name: membership.organization.name,
+      slug: membership.organization.slug,
+    },
+  }));
 }
 
 export async function getCurrentOrganizationForUser(userId: string) {
