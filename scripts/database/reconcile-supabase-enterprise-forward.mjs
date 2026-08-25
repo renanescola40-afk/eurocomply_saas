@@ -317,9 +317,19 @@ function validateActiveMembershipRlsMigration(source) {
     'grant execute on function app_private.is_org_member(uuid) to authenticated, service_role',
   ], 'Active membership RLS migration');
 
-  const activePredicates = source.match(/lower\(coalesce\(om\.status, ''\)\) = 'active'/g) ?? [];
-  if (activePredicates.length !== 2) {
-    fail(`Active membership RLS migration must bind both canonical helpers to active status; observed ${activePredicates.length}/2`);
+  const canonicalSource = stripSqlComments(source);
+  for (const helperName of ['app_private.is_org_member', 'app_private.has_org_role']) {
+    const startMarker = `create or replace function ${helperName}`;
+    const start = canonicalSource.indexOf(startMarker);
+    const bodyStart = canonicalSource.indexOf('as $$', start);
+    const end = canonicalSource.indexOf('$$;', bodyStart + 5);
+    if (start < 0 || bodyStart < 0 || end < 0) {
+      fail(`Active membership RLS migration cannot isolate canonical helper: ${helperName}`);
+    }
+    const helperSource = canonicalSource.slice(start, end + 3);
+    if (!helperSource.includes("lower(coalesce(om.status, '')) = 'active'")) {
+      fail(`Active membership RLS migration must bind ${helperName} to active membership status`);
+    }
   }
 }
 
