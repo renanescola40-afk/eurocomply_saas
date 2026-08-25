@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ArrowUpRight } from 'lucide-react';
 
 type TimelineTask = {
   id: string;
@@ -44,7 +45,9 @@ type TimelineItem = {
 
 function formatDate(value?: string | null) {
   if (!value) return 'No date';
-  return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(value));
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'No date';
+  return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(parsed);
 }
 
 function getDaysUntil(value?: string | null) {
@@ -52,6 +55,7 @@ function getDaysUntil(value?: string | null) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const target = new Date(value);
+  if (Number.isNaN(target.getTime())) return null;
   target.setHours(0, 0, 0, 0);
   return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
@@ -69,13 +73,13 @@ function getRelativeDate(value?: string | null) {
 function getPriorityTone(priority: TimelineItem['priority']) {
   switch (priority) {
     case 'Critical':
-      return 'border-rose-500/30 bg-rose-500/10 text-rose-200';
+      return 'border-rose-400/20 bg-rose-400/[0.08] text-rose-100';
     case 'High':
-      return 'border-amber-500/30 bg-amber-500/10 text-amber-200';
+      return 'border-amber-300/20 bg-amber-300/[0.08] text-amber-100';
     case 'Medium':
-      return 'border-sky-500/30 bg-sky-500/10 text-sky-200';
+      return 'border-sky-300/20 bg-sky-300/[0.07] text-sky-100';
     default:
-      return 'border-white/10 bg-white/[0.04] text-slate-300';
+      return 'border-white/[0.08] bg-white/[0.025] text-white/48';
   }
 }
 
@@ -126,40 +130,54 @@ export function ComplianceTimeline(props: ComplianceTimelineProps) {
   const items = buildTimeline(props);
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-slate-950 p-5 text-white shadow-xl md:p-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+      <div className="flex flex-col gap-2 border-b border-white/[0.065] px-5 py-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.24em] text-primary/80">Compliance calendar</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight">Upcoming deadlines and reviews</h2>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/34">Compliance calendar</p>
+          <h2 className="mt-1.5 text-lg font-semibold tracking-[-0.02em] text-white/86">Upcoming deadlines and reviews</h2>
         </div>
-        <p className="max-w-xl text-sm text-slate-400">
-          A single view of operational work, vendor reviews and evidence deadlines.
+        <p className="max-w-xl text-xs leading-5 text-white/34">
+          Operational work, vendor reviews and evidence deadlines in one queue.
         </p>
       </div>
 
       {items.length === 0 ? (
-        <div className="mt-5 rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-6 text-sm text-slate-400">
+        <div className="m-5 rounded-lg border border-dashed border-white/[0.09] bg-white/[0.018] px-4 py-6 text-sm text-white/38">
           No upcoming deadlines found. Add due dates, document expiry dates and vendor review dates to build your compliance calendar.
         </div>
       ) : (
-        <div className="mt-6 grid gap-3 lg:grid-cols-2">
+        <div className="divide-y divide-white/[0.055]">
+          <div className="hidden grid-cols-[130px_minmax(0,1fr)_180px_110px_36px] gap-4 px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/24 lg:grid">
+            <span>Type</span>
+            <span>Item</span>
+            <span>Due</span>
+            <span>Priority</span>
+            <span aria-hidden="true" />
+          </div>
+
           {items.map((item) => (
-            <Link key={item.id} href={item.href} className="group rounded-3xl border border-white/10 bg-white/[0.04] p-4 transition hover:-translate-y-0.5 hover:border-primary/50 hover:bg-white/[0.07]">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{item.type}</p>
-                  <h3 className="mt-2 font-semibold leading-tight text-white">{item.title}</h3>
-                  <p className="mt-2 text-sm text-slate-400">{item.detail}</p>
-                </div>
-                <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${getPriorityTone(item.priority)}`}>
+            <Link
+              key={item.id}
+              href={item.href}
+              className="group grid gap-3 px-5 py-4 transition-colors duration-200 hover:bg-white/[0.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/60 lg:grid-cols-[130px_minmax(0,1fr)_180px_110px_36px] lg:items-center lg:gap-4"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.11em] text-white/30">{item.type}</p>
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-medium text-white/76">{item.title}</h3>
+                <p className="mt-1 truncate text-xs text-white/30">{item.detail}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 lg:block">
+                <span className="text-xs font-medium text-white/58">{formatDate(item.date)}</span>
+                <span className="text-xs text-white/30 lg:mt-1 lg:block">{getRelativeDate(item.date)}</span>
+              </div>
+              <div>
+                <span className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${getPriorityTone(item.priority)}`}>
                   {item.priority}
                 </span>
               </div>
-
-              <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-3 text-sm">
-                <span className="text-slate-300">{formatDate(item.date)}</span>
-                <span className="text-primary/90 transition group-hover:text-primary">{getRelativeDate(item.date)} →</span>
-              </div>
+              <span className="hidden h-8 w-8 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.02] text-white/25 transition group-hover:border-white/[0.1] group-hover:text-white/65 lg:flex" aria-hidden="true">
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </span>
             </Link>
           ))}
         </div>
