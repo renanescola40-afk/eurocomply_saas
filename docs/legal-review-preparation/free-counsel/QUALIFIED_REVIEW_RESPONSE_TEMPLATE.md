@@ -21,12 +21,15 @@ A reviewer may complete only the sections/workstreams within their professional 
 - Independence / relationship to RISCK COMPLY:
 - Contact / attributable professional email:
 
-## B. Review binding
+## B. Review binding and substantive review scope
 
 - Product: RISCK COMPLY
 - Repository: `renanescola40-afk/eurocomply_saas`
 - Exact product SHA reviewed:
 - Evidence-package / bundle digest reviewed:
+- **Substantive review scope actually performed (product/features/evidence/workstreams):**
+- **Repository materials / evidence actually reviewed:**
+- Workstream IDs actually reviewed:
 - Review start date:
 - Decision date:
 - Valid from:
@@ -35,7 +38,9 @@ A reviewer may complete only the sections/workstreams within their professional 
   -
   -
 
-If the reviewer did not inspect source code directly, state which repository documents/evidence were relied upon.
+The substantive review-scope field above is a required human assertion. It must describe what was actually reviewed; RISCK COMPLY must not infer it from the reviewer's qualifications, job title, the package sent, or silence.
+
+If the reviewer did not inspect source code directly, identify the repository documents/evidence relied upon and state that limitation explicitly.
 
 ## C. Decision vocabulary
 
@@ -52,6 +57,8 @@ Use one of these values for each item:
 ---
 
 # D. Eight canonical workstream decisions
+
+For every workstream receiving a substantive decision, the reviewer should ensure that Section B's review scope expressly covers that workstream and the evidence relied upon.
 
 ## 1. Legal rules / applicability
 
@@ -266,7 +273,7 @@ If none, write `NONE`.
 
 ## I. Final reviewer statement
 
-> I confirm that the decisions above reflect my review within the stated professional scope, assumptions and limitations, and are bound to the product/evidence identified in Section B. I have identified any matters requiring another specialist or further evidence as `OUTSIDE_SCOPE` rather than treating them as accepted.
+> I confirm that the decisions above reflect the substantive review scope I personally performed as stated in Section B, within my stated professional scope, assumptions and limitations, and are bound to the product/evidence identified there. I have identified any matters requiring another specialist or further evidence as `OUTSIDE_SCOPE` rather than treating them as accepted.
 
 - Reviewer name:
 - Date:
@@ -281,10 +288,11 @@ On receipt, RISCK COMPLY must:
 1. verify reviewer identity/qualification as far as reasonably possible;
 2. retain the original attributable artifact privately;
 3. verify exact SHA/digest binding;
-4. route all required changes;
-5. re-submit changed items where final confirmation is required;
-6. record only genuinely accepted canonical workstreams;
-7. never infer acceptance from silence or informal conversation.
+4. preserve the reviewer's own substantive `reviewScope` assertion for each accepted workstream rather than infer scope internally;
+5. route all required changes;
+6. re-submit changed items where final confirmation is required;
+7. record only genuinely accepted canonical workstreams;
+8. never infer acceptance from silence or informal conversation.
 
 ```text
 BLANK_TEMPLATE=NON_CREDITING
