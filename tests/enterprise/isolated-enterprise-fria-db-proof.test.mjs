@@ -13,6 +13,15 @@ test('isolated proof is exact-SHA, local-only and sanitized', () => {
   assert.doesNotMatch(source, /process\.env\.(SUPABASE_SERVICE_ROLE_KEY|DATABASE_PASSWORD)/);
 });
 
+test('isolated proof requires the reviewed schema replay to remain noncanonical for migration history', () => {
+  assert.match(source, /RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL/);
+  assert.match(source, /migrationHistoryCanonical !== 'false'/);
+  assert.match(source, /schemaEffectsReplayed: true/);
+  assert.match(source, /migrationHistoryCanonical: false/);
+  assert.match(source, /does not prove production migration completion, migration-history reconciliation/);
+  assert.doesNotMatch(source, /migrationsApplied: true/);
+});
+
 test('isolated proof covers enterprise licensing and FRIA boundaries', () => {
   for (const table of [
     'enterprise_contracts',
