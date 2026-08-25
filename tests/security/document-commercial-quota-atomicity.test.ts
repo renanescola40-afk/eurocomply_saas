@@ -23,11 +23,16 @@ describe('document commercial quota atomicity', () => {
     expect(sql).toContain("message = 'document_quota_exceeded'");
   });
 
-  it('revalidates durable commercial authority inside the service-role write boundary', async () => {
+  it('makes database commercial precedence exactly match the canonical server resolver', async () => {
     const sql = await readFile(MIGRATION, 'utf8');
 
-    expect(sql).toContain('app_private.has_commercial_authority(new.organization_id)');
-    expect(sql).toContain('app_private.resolve_commercial_plan(new.organization_id)');
+    expect(sql).toContain('selected_contract_source as (');
+    expect(sql).toContain('order by source.priority desc');
+    expect(sql).toContain('when exists (select 1 from selected_contract_source) then');
+    expect(sql).toContain('(select plan_code from contract_candidate limit 1)');
+    expect(sql).toContain('create or replace function app_private.has_commercial_authority');
+    expect(sql).toContain('select app_private.resolve_commercial_plan(target_organization_id) is not null;');
+    expect(sql).toContain('v_plan := app_private.resolve_commercial_plan(new.organization_id);');
     expect(sql).toContain("lower(coalesce(subscription.status, '')) = 'active'");
     expect(sql).toContain('event.livemode = true');
     expect(sql).toContain("event.status = 'processed'");
@@ -50,13 +55,15 @@ describe('document commercial quota atomicity', () => {
     expect(sql).toContain("when 'enterprise' then null");
   });
 
-  it('keeps quota helpers inaccessible to browser roles', async () => {
+  it('keeps private resolver/quota helpers inaccessible while preserving authenticated RLS authority execution', async () => {
     const sql = await readFile(MIGRATION, 'utf8');
 
     expect(sql).toContain('revoke all on function app_private.resolve_commercial_plan(uuid) from public, anon, authenticated;');
     expect(sql).toContain('revoke all on function app_private.enforce_document_commercial_quota() from public, anon, authenticated;');
     expect(sql).toContain('grant execute on function app_private.resolve_commercial_plan(uuid) to service_role;');
     expect(sql).toContain('grant execute on function app_private.enforce_document_commercial_quota() to service_role;');
+    expect(sql).toContain('revoke all on function app_private.has_commercial_authority(uuid) from public, anon;');
+    expect(sql).toContain('grant execute on function app_private.has_commercial_authority(uuid) to authenticated, service_role;');
   });
 
   it('appends the quota invariant to the bounded governed forward package without enabling writes by config', async () => {
