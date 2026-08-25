@@ -19,7 +19,12 @@ describe('legacy Enterprise active membership boundary', () => {
   it('preserves the legacy manager role contract while adding active status', () => {
     expect(sql).toContain("lower(coalesce(om.role, 'viewer')) in ('owner', 'admin', 'editor', 'compliance_manager')");
     const canonicalActivePredicates = sql.match(/lower\(coalesce\(om\.status, ''\)\) = 'active'/g) ?? [];
-    const legacyActivePredicates = sql.match(/om\.status = 'active'/g) ?? [];
+    const legacyStart = sql.indexOf('do $legacy_helpers$');
+    const legacyEnd = sql.indexOf('$legacy_helpers$;', legacyStart);
+    expect(legacyStart).toBeGreaterThanOrEqual(0);
+    expect(legacyEnd).toBeGreaterThan(legacyStart);
+    const legacyEnterpriseBlock = sql.slice(legacyStart, legacyEnd + '$legacy_helpers$;'.length);
+    const legacyActivePredicates = legacyEnterpriseBlock.match(/om\.status = 'active'/g) ?? [];
     expect(canonicalActivePredicates).toHaveLength(2);
     expect(legacyActivePredicates).toHaveLength(2);
   });

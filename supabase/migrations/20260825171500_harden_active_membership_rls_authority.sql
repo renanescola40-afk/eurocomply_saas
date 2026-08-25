@@ -150,7 +150,7 @@ begin
               select 1
               from public.organization_members om
               where om.organization_id = target_organization_id
-                and lower(coalesce(om.status, '')) = 'active'
+                and om.status = 'active'
                 and (
                   (auth.uid() is not null and om.user_id = auth.uid())
                   or (
@@ -175,7 +175,7 @@ begin
               select 1
               from public.organization_members om
               where om.organization_id = target_organization_id
-                and lower(coalesce(om.status, '')) = 'active'
+                and om.status = 'active'
                 and auth.uid() is not null
                 and om.user_id = auth.uid()
             );
@@ -202,7 +202,7 @@ begin
               select 1
               from public.organization_members om
               where om.organization_id = target_organization_id
-                and lower(coalesce(om.status, '')) = 'active'
+                and om.status = 'active'
                 and lower(coalesce(om.role, '')) = any(
                   select lower(role_name) from unnest(allowed_roles) as role_name
                 )
@@ -230,7 +230,7 @@ begin
               select 1
               from public.organization_members om
               where om.organization_id = target_organization_id
-                and lower(coalesce(om.status, '')) = 'active'
+                and om.status = 'active'
                 and lower(coalesce(om.role, '')) = any(
                   select lower(role_name) from unnest(allowed_roles) as role_name
                 )

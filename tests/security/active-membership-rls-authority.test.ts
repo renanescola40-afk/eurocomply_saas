@@ -32,12 +32,16 @@ describe('active membership RLS authority', () => {
     expect(migration).toContain('direct membership RLS policies are not active-membership aware');
   });
 
-  it('fails closed if any final public/storage policy still reaches organization_members without active status', () => {
-    expect(migration).toContain("coalesce(qual, '') ilike '%organization_members%'");
-    expect(migration).toContain("coalesce(with_check, '') ilike '%organization_members%'");
-    expect(migration).toContain("not (coalesce(qual, '') ilike '%status%' and coalesce(qual, '') ilike '%active%')");
-    expect(migration).toContain("not (coalesce(with_check, '') ilike '%status%' and coalesce(with_check, '') ilike '%active%')");
-    expect(migration).toContain('direct organization_members policies remain status-unaware');
+  it('fails closed when legacy direct membership authority is not transitively gated by active organization_members RLS', () => {
+    expect(migration).toContain("to_regprocedure('public.is_org_member(uuid)') is not null");
+    expect(migration).toContain("to_regprocedure('public.has_org_role(uuid,text[])') is not null");
+    expect(migration).toContain('membership_rls_enabled');
+    expect(migration).toContain("policyname = 'rls_organization_members_select_member'");
+    expect(migration).toContain("coalesce(public_membership_select_policy, '') not ilike '%is_org_member%'");
+    expect(migration).toContain('legacy direct membership policies are not gated by active organization_members RLS');
+    expect(migration).toContain("coalesce(add_on_policy, '') not ilike '%status%active%'");
+    expect(migration).toContain("coalesce(document_read_policy, '') not ilike '%status%active%'");
+    expect(migration).toContain("coalesce(document_upload_policy, '') not ilike '%status%active%'");
   });
 
   it('fails closed on missing status/helper/policy contracts and rechecks canonical status values', () => {
