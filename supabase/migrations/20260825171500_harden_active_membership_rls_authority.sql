@@ -2,7 +2,7 @@ begin;
 
 -- P0 tenant-authorization closure.
 -- The governed licensing identity adds organization_members.status, but the
--- canonical private RLS helpers and several legacy direct-membership policies
+-- canonical private RLS helpers and several legacy membership authorities
 -- historically authorized any membership row. Once status exists,
 -- suspended/deprovisioned memberships must cease to be tenant authority for
 -- PostgREST and Storage immediately.
@@ -118,6 +118,55 @@ as $$
     );
 $$;
 
+-- Historical/full-schema installations may also contain the older public
+-- SECURITY DEFINER helpers used by Enterprise Evidence and AI Literacy RLS.
+-- Production does not currently contain these helpers, so do not create a new
+-- surface there. Harden them only when they already exist.
+do $legacy_helpers$
+begin
+  if to_regprocedure('public.enterprise_member_can_read(uuid)') is not null then
+    execute $sql$
+      create or replace function public.enterprise_member_can_read(p_organization_id uuid)
+      returns boolean
+      language sql
+      stable
+      security definer
+      set search_path = pg_catalog
+      as $function$
+        select exists (
+          select 1
+          from public.organization_members om
+          where om.organization_id = p_organization_id
+            and lower(coalesce(om.status, '')) = 'active'
+            and om.user_id = auth.uid()
+        );
+      $function$
+    $sql$;
+  end if;
+
+  if to_regprocedure('public.enterprise_member_can_manage(uuid)') is not null then
+    execute $sql$
+      create or replace function public.enterprise_member_can_manage(p_organization_id uuid)
+      returns boolean
+      language sql
+      stable
+      security definer
+      set search_path = pg_catalog
+      as $function$
+        select exists (
+          select 1
+          from public.organization_members om
+          where om.organization_id = p_organization_id
+            and lower(coalesce(om.status, '')) = 'active'
+            and om.user_id = auth.uid()
+            and lower(coalesce(om.role, 'viewer')) in ('owner', 'admin', 'editor', 'compliance_manager')
+        );
+      $function$
+    $sql$;
+  end if;
+end
+$legacy_helpers$;
+
 -- Preserve the existing direct-policy identity semantics while adding the
 -- status boundary. These three policies bypass the canonical helpers today and
 -- therefore must be hardened in the same transaction as the helpers.
@@ -170,6 +219,8 @@ do $postconditions$
 declare
   member_definition text;
   role_definition text;
+  legacy_read_definition text;
+  legacy_manage_definition text;
   status_constraint_valid boolean := false;
   add_on_policy text;
   document_read_policy text;
@@ -184,6 +235,22 @@ begin
   if coalesce(member_definition, '') not like '%status%active%'
      or coalesce(role_definition, '') not like '%status%active%' then
     raise exception 'canonical private RLS helpers are not active-membership aware';
+  end if;
+
+  if to_regprocedure('public.enterprise_member_can_read(uuid)') is not null then
+    select pg_get_functiondef('public.enterprise_member_can_read(uuid)'::regprocedure)
+      into legacy_read_definition;
+    if coalesce(legacy_read_definition, '') not ilike '%status%active%' then
+      raise exception 'legacy enterprise read membership helper is not active-membership aware';
+    end if;
+  end if;
+
+  if to_regprocedure('public.enterprise_member_can_manage(uuid)') is not null then
+    select pg_get_functiondef('public.enterprise_member_can_manage(uuid)'::regprocedure)
+      into legacy_manage_definition;
+    if coalesce(legacy_manage_definition, '') not ilike '%status%active%' then
+      raise exception 'legacy enterprise manage membership helper is not active-membership aware';
+    end if;
   end if;
 
   select qual into add_on_policy
@@ -212,8 +279,8 @@ begin
 
   -- Generic final-state guard: if any public/storage policy still reaches
   -- organization_members directly, every expression that does so must carry an
-  -- explicit active-membership predicate. Policies using app_private helpers do
-  -- not match this scan because the helper owns the status boundary itself.
+  -- explicit active-membership predicate. Policies using hardened helper
+  -- functions do not match this scan because the helper owns the boundary.
   select string_agg(format('%I.%I:%I', schemaname, tablename, policyname), ', ' order by schemaname, tablename, policyname)
     into stale_direct_membership_policies
   from pg_policies
