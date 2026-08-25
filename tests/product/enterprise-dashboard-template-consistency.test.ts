@@ -17,7 +17,8 @@ describe('enterprise dashboard template consistency', () => {
     expect(layout).toContain('<EnterpriseDashboardShell');
     expect(shell).toContain('Enterprise dashboard navigation');
     expect(shell).toContain('RISCK COMPLY — Dashboard');
-    expect(shell).toContain('sticky top-[72px]');
+    expect(shell).toContain('sticky top-0');
+    expect(shell).toContain('w-[88px]');
     expect(shell).toContain("localized(locale, '/dashboard/fria')");
     expect(shell).toContain("localized(locale, '/dashboard/organizations/ai-literacy')");
   });
