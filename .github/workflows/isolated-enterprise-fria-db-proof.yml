@@ -26,7 +26,7 @@ concurrency:
 
 jobs:
   prove:
-    name: Apply migrations and validate isolated database boundaries
+    name: Apply reviewed schema effects and validate isolated database boundaries
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
@@ -77,8 +77,16 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.101.0
+
       - name: Install deterministic dependencies
         run: npm ci --ignore-scripts
+
+      - name: Verify runner PostgreSQL client without network installation
+        run: node scripts/recovery/verify-postgresql-client.mjs
 
       - name: Validate proof contracts
         run: |
@@ -86,19 +94,14 @@ jobs:
           node --test tests/enterprise/isolated-enterprise-fria-db-proof.test.mjs
           node --test tests/security/isolated-enterprise-fria-db-workflow.test.mjs
 
-      - name: Start ephemeral Supabase and apply all migrations
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes supabase@2.39.2 start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
-          npx --yes supabase@2.39.2 db reset --local --no-seed
-          npx --yes supabase@2.39.2 status -o env > artifacts-supabase.env
-          DATABASE_URL="$(sed -n 's/^DB_URL="\(.*\)"$/\1/p' artifacts-supabase.env)"
-          test -n "$DATABASE_URL"
-          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
-          rm -f artifacts-supabase.env
+      - name: Start exact-SHA reviewed disposable schema-effect replay
+        env:
+          RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLAY: 'true'
+        run: node scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs
 
       - name: Execute isolated database proof
+        env:
+          DATABASE_URL: ${{ env.RECOVERY_ISOLATED_DATABASE_URL }}
         run: node scripts/enterprise/verify-isolated-enterprise-fria-db.mjs
 
       - name: Upload sanitized exact-SHA proof
@@ -112,5 +115,4 @@ jobs:
 
       - name: Stop and remove ephemeral Supabase
         if: always()
-        shell: bash
-        run: npx --yes supabase@2.39.2 stop --no-backup || true
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop

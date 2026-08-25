@@ -23,6 +23,10 @@ export const RECOVERY_DYNAMIC_PORT_SPAN = 20000;
 export const RECOVERY_DYNAMIC_PORT_ATTEMPTS = 64;
 const DB_CONTAINER_PORT = '5432';
 
+function isReviewedSchemaEffectReplay() {
+  return process.env.RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLAY === 'true';
+}
+
 function safeToken(value) {
   return String(value ?? '')
     .replace(/[^A-Za-z0-9_-]/g, '-')
@@ -347,7 +351,12 @@ function copyExactShaProjectMigrations(workDir) {
   const sourceDir = join(process.cwd(), 'supabase', 'migrations');
   const targetDir = join(workDir, 'supabase', 'migrations');
   const expectedVersions = listProjectMigrationVersions(sourceDir);
-  if (expectedVersions.length === 0) throw new Error('No project migrations were found in the exact-SHA checkout');
+  if (expectedVersions.length === 0) {
+    if (isReviewedSchemaEffectReplay()) {
+      throw new Error('No reviewed schema-effect replay identities were found in the staged disposable tree');
+    }
+    throw new Error('No project migrations were found in the exact-SHA checkout');
+  }
   rmSync(targetDir, { recursive: true, force: true });
   cpSync(sourceDir, targetDir, { recursive: true, force: true });
   return expectedVersions;
@@ -368,6 +377,9 @@ function verifyExactShaMigrations(dbUrl, expectedVersions) {
   const observed = new Set(rows);
   const missing = expectedVersions.filter((version) => !observed.has(version));
   if (missing.length > 0) {
+    if (isReviewedSchemaEffectReplay()) {
+      throw new Error(`Reviewed schema effects were not fully replayed into the disposable database; missing ${missing.length} staged identities, first ${missing[0]}; migration history remains noncanonical`);
+    }
     throw new Error(`Exact-SHA project migrations were not fully applied; missing ${missing.length}, first ${missing[0]}`);
   }
 }
@@ -463,7 +475,11 @@ function start(mode = 'restore-target') {
     appendGithubEnv('RECOVERY_FIREWALL_IPV4', firewall.classes.includes('wildcard-v4') ? 'true' : 'false');
     appendGithubEnv('RECOVERY_FIREWALL_IPV6', firewall.classes.includes('wildcard-v6') ? 'true' : 'false');
 
-    const schemaSummary = mode === 'project-schema' ? ` with ${migrationCount} exact-SHA project migrations` : '';
+    const schemaSummary = mode === 'project-schema'
+      ? isReviewedSchemaEffectReplay()
+        ? ` with ${migrationCount} reviewed schema-effect replay identities; migration history remains noncanonical`
+        : ` with ${migrationCount} exact-SHA project migrations`
+      : '';
     process.stdout.write(`Ephemeral Supabase database ready using Supabase Postgres ${expectedPostgresImageVersion} / PostgreSQL ${observedServerVersion}${schemaSummary}; published bindings are restricted before proof execution.\n`);
   } catch (error) {
     if (firewall?.rules) {
