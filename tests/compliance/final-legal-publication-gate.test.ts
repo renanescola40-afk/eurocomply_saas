@@ -297,5 +297,21 @@ describe('final legal publication gate', () => {
     expect(bundle.externalDecisionStatus).toHaveLength(10);
     expect(bundle.externalDecisionStatus.every((item) => item.includedInBundle === false)).toBe(true);
     expect(bundle.files.some((file) => file.path.includes('/evidence/accepted/'))).toBe(false);
+
+    const bundledPaths = new Set(bundle.files.map((file) => file.path));
+    expect(bundledPaths).toContain(
+      'docs/legal-review-preparation/free-counsel/FREE_COUNSEL_REVIEW_PACK.md',
+    );
+    expect(bundledPaths).toContain(
+      'docs/legal-review-preparation/free-counsel/AI_OFFICE_8_QUESTION_SUBMISSION.md',
+    );
+    expect(bundledPaths).toContain(
+      'docs/legal-review-preparation/free-counsel/QUALIFIED_REVIEW_RESPONSE_TEMPLATE.md',
+    );
+    expect(
+      bundle.files
+        .filter((file) => file.path.includes('/free-counsel/'))
+        .every((file) => file.class === 'FREE_COUNSEL_REVIEW_HANDOFF'),
+    ).toBe(true);
   });
 });
