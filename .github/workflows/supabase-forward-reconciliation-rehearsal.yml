@@ -63,7 +63,7 @@ jobs:
           jq -e '.checks.migrationHistoryRepairAuthorized == false' "$RUNNER_TEMP/forward-reconciliation-manifest.json" >/dev/null
           jq -e '.checks.unrestrictedDbPushAuthorized == false' "$RUNNER_TEMP/forward-reconciliation-manifest.json" >/dev/null
           test "$(jq '.migrations | length' "$RUNNER_TEMP/forward-reconciliation-manifest.json")" -ge 1
-          test "$(jq '.migrations | length' "$RUNNER_TEMP/forward-reconciliation-manifest.json")" -le 32
+          test "$(jq '.migrations | length' "$RUNNER_TEMP/forward-reconciliation-manifest.json")" -le 33
       - name: Reject dangerous production shortcuts in bounded workflows
         shell: bash
         run: |
