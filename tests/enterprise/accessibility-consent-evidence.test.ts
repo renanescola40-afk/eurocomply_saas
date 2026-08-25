@@ -70,13 +70,20 @@ const githubChecks = {
   ],
 };
 
-function coverage() {
+function coverage(overrides: Partial<{
+  specSource: string;
+  bannerSource: string;
+  analyticsSource: string;
+  layoutSource: string;
+  workflowSource: string;
+}> = {}) {
   return evaluateAccessibilityConsentCoverage({
     specSource: completeSpec,
     bannerSource: completeBanner,
     analyticsSource: completeAnalytics,
     layoutSource: completeLayout,
     workflowSource: completeWorkflow,
+    ...overrides,
   });
 }
 
@@ -145,11 +152,12 @@ describe('accessibility and analytics consent evidence', () => {
       { name: 'keyboard', passed: true },
       { name: 'screenReader', passed: true },
     ]);
+    expect(evidence.analytics.checks).toEqual([{ name: 'analyticsConsent', passed: true }]);
     expect(evidence.analytics.controlsVerified).toEqual(['Analytics consent validated']);
     expect(JSON.stringify(evidence)).not.toContain(completeSpec);
   });
 
-  it('fails closed when execution evidence or consent coverage is incomplete', () => {
+  it('reports structurally valid accessibility as NOT_VERIFIED when execution evidence is incomplete', () => {
     const incompleteChecks = buildAccessibilityConsentEvidence({
       coverage: coverage(),
       exactChecks: evaluateExactShaChecks({ ...githubChecks, status: 'Open' }, SHA),
@@ -163,31 +171,44 @@ describe('accessibility and analytics consent evidence', () => {
     });
     expect(incompleteChecks.accessibility.status).toBe('Open');
     expect(incompleteChecks.analytics.status).toBe('Open');
+    expect(incompleteChecks.accessibility.checks).toEqual([
+      { name: 'keyboard', status: 'NOT_VERIFIED' },
+      { name: 'screenReader', status: 'NOT_VERIFIED' },
+    ]);
+    expect(incompleteChecks.analytics.checks).toEqual([
+      { name: 'analyticsConsent', status: 'NOT_VERIFIED' },
+    ]);
+  });
 
-    const missingConsentGuard = evaluateAccessibilityConsentCoverage({
-      specSource: completeSpec,
-      bannerSource: completeBanner,
+  it('keeps genuine accessibility and consent source regressions as FAIL evidence', () => {
+    const missingKeyboard = coverage({
+      specSource: completeSpec.replace('keyboard-only navigation reaches critical controls', 'removed keyboard acceptance'),
+    });
+    expect(missingKeyboard.keyboardCoverage).toBe(false);
+    const keyboardEvidence = build({ coverage: missingKeyboard });
+    expect(keyboardEvidence.accessibility.checks.find((check) => check.name === 'keyboard')).toEqual({
+      name: 'keyboard',
+      passed: false,
+    });
+
+    const missingConsentGuard = coverage({
       analyticsSource: completeAnalytics.replace('if (!hasAnalyticsConsent())', 'if (false)'),
-      layoutSource: completeLayout,
-      workflowSource: completeWorkflow,
     });
     expect(missingConsentGuard.analyticsConsentCoverage).toBe(false);
+    const consentEvidence = build({ coverage: missingConsentGuard });
+    expect(consentEvidence.analytics.checks).toEqual([{ name: 'analyticsConsent', passed: false }]);
 
-    const duplicateLoader = evaluateAccessibilityConsentCoverage({
-      specSource: completeSpec,
-      bannerSource: completeBanner,
-      analyticsSource: completeAnalytics,
-      layoutSource: `${completeLayout}<PostHogScript />`,
-      workflowSource: completeWorkflow,
-    });
+    const duplicateLoader = coverage({ layoutSource: `${completeLayout}<PostHogScript />` });
     expect(duplicateLoader.analyticsConsentCoverage).toBe(false);
     expect(duplicateLoader.checks.singleConsentGatedLoader).toBe(false);
   });
 
-  it('fails closed on SHA mismatch', () => {
+  it('fails closed on SHA mismatch without fabricating a structural failure', () => {
     const evidence = build({ observedSha: 'b'.repeat(40) });
     expect(evidence.accessibility.status).toBe('Open');
     expect(evidence.analytics.status).toBe('Open');
     expect(evidence.accessibility.failures).toContain('checked-out SHA must equal targetSha');
+    expect(evidence.accessibility.checks.every((check) => check.status === 'NOT_VERIFIED')).toBe(true);
+    expect(evidence.analytics.checks).toEqual([{ name: 'analyticsConsent', status: 'NOT_VERIFIED' }]);
   });
 });
