@@ -61,15 +61,26 @@ describe('database-only recovery managed-data boundary', () => {
     expect(exercise).toContain('checks.managedAuthRowsExcluded = true');
   });
 
-  it('binds managed Auth inventory only after target extension mutations and before data dump', () => {
+  it('binds managed Auth inventory only after extension parity and application schema replay, before data dump', () => {
     const extensionParity = exercise.indexOf("failurePhase = 'extension_parity'");
+    const preSchemaSnapshot = exercise.indexOf("failurePhase = 'managed_auth_pre_schema_snapshot'");
+    const applicationSchemaRestore = exercise.indexOf("failurePhase = 'application_schema_restore'");
+    const postSchemaRebind = exercise.indexOf("failurePhase = 'managed_auth_post_schema_rebind'");
     const managedAuthInventory = exercise.indexOf("failurePhase = 'managed_auth_relation_inventory'");
     const dataDump = exercise.indexOf("failurePhase = 'data_dump'");
+
     expect(extensionParity).toBeGreaterThanOrEqual(0);
-    expect(managedAuthInventory).toBeGreaterThan(extensionParity);
+    expect(preSchemaSnapshot).toBeGreaterThan(extensionParity);
+    expect(applicationSchemaRestore).toBeGreaterThan(preSchemaSnapshot);
+    expect(postSchemaRebind).toBeGreaterThan(applicationSchemaRestore);
+    expect(managedAuthInventory).toBeGreaterThan(postSchemaRebind);
     expect(dataDump).toBeGreaterThan(managedAuthInventory);
+
     expect(exercise).toContain('Any target extension mutation must finish before we bind the managed Auth');
-    expect(exercise).toContain('Managed Auth inventory is rebound after all target extension mutations');
+    expect(exercise).toContain("const managedAuthBeforeSchema = readManagedAuthTables(restore, 'target_pre_schema')");
+    expect(exercise).toContain("const managedAuthAfterSchema = readManagedAuthTables(restore, 'target_post_schema')");
+    expect(exercise).toContain('checks.managedAuthSchemaPreserved = sameRelationInventory(managedAuthBeforeSchema, managedAuthAfterSchema)');
+    expect(exercise).toContain("throw new Error('recovery_target_managed_auth_schema_mutated_by_application_restore')");
   });
 
   it('keeps Auth drift evidence aggregate-only and preserves auth.users integrity', () => {
