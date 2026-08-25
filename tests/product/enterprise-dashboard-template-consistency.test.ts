@@ -7,7 +7,7 @@ const LEGACY_HOME_PAGE = new URL('../../src/app/[locale]/risck-comply-home/page.
 const SHELL = new URL('../../src/components/dashboard/enterprise-dashboard-shell.tsx', import.meta.url);
 
 describe('enterprise dashboard template consistency', () => {
-  it('uses the enterprise shell as the authenticated dashboard chrome', async () => {
+  it('uses the TailAdmin-inspired enterprise shell as the authenticated dashboard chrome', async () => {
     const [layout, shell] = await Promise.all([
       readFile(DASHBOARD_LAYOUT, 'utf8'),
       readFile(SHELL, 'utf8'),
@@ -18,7 +18,10 @@ describe('enterprise dashboard template consistency', () => {
     expect(shell).toContain('Enterprise dashboard navigation');
     expect(shell).toContain('RISCK COMPLY — Dashboard');
     expect(shell).toContain('sticky top-0');
-    expect(shell).toContain('w-[88px]');
+    expect(shell).toContain("sidebarOpen ? 'lg:w-[290px]' : 'lg:w-[90px]'");
+    expect(shell).toContain('transition-all duration-300 ease-in-out');
+    expect(shell).toContain("event.key.toLowerCase() === 'k'");
+    expect(shell).toContain('Search or type a command...');
     expect(shell).toContain("localized(locale, '/dashboard/fria')");
     expect(shell).toContain("localized(locale, '/dashboard/organizations/ai-literacy')");
   });
