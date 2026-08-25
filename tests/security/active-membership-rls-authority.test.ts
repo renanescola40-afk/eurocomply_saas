@@ -23,9 +23,20 @@ describe('active membership RLS authority', () => {
     expect(migration).toContain('lower(om.role) = any(allowed_roles)');
   });
 
-  it('fails closed on missing status/helper contracts and rechecks canonical status values', () => {
+  it('closes every verified direct membership policy bypass in the same migration', () => {
+    expect(migration).toContain('alter policy "organization members can read add-ons"');
+    expect(migration).toContain('alter policy "Members can read organization document objects"');
+    expect(migration).toContain('alter policy "Members can upload organization document objects"');
+    expect(migration).toContain("lower(coalesce(members.status, '')) = 'active'");
+    expect(migration.match(/lower\(coalesce\(status, ''\)\) = 'active'/g)).toHaveLength(2);
+    expect(migration).toContain('direct membership RLS policies are not active-membership aware');
+  });
+
+  it('fails closed on missing status/helper/policy contracts and rechecks canonical status values', () => {
     expect(migration).toContain("raise exception 'organization_members.status is missing or nullable'");
     expect(migration).toContain("raise exception 'canonical private organization authorization helpers are missing'");
+    expect(migration).toContain("raise exception 'organization add-ons membership policy is missing'");
+    expect(migration).toContain("raise exception 'compliance-documents membership policies are missing'");
     expect(migration).toContain('organization_members_status_check');
     expect(migration).toContain("like '%active%'");
     expect(migration).toContain("like '%suspended%'");
