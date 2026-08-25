@@ -41,8 +41,15 @@ describe('enterprise auth, RBAC and tenant-isolation invariants', () => {
       expect(source).not.toContain('getOrganizationByClerkOrgId');
     }
 
-    expect(readRepoFile('src/server/security/rbac.ts')).toContain(".eq('user_id', userId)");
-    expect(readRepoFile('src/server/queries/organizations.ts')).toContain(".eq('user_id', userId)");
+    const rbacSource = readRepoFile('src/server/security/rbac.ts');
+    const canonicalMembershipQuery = readRepoFile('src/server/queries/current-organization.ts');
+    const organizationQuery = readRepoFile('src/server/queries/organizations.ts');
+
+    expect(rbacSource).toContain(".eq('user_id', userId)");
+    expect(canonicalMembershipQuery).toContain(".eq('user_id', userId)");
+    expect(canonicalMembershipQuery).toContain(".eq('status', 'active')");
+    expect(organizationQuery).toContain('getUserOrganizationMemberships(userId)');
+    expect(organizationQuery).not.toContain(".from('organization_members')");
     const organizationAction = readRepoFile('src/server/actions/organizations.ts');
     const organizationCreationMigration = readRepoFile(
       'supabase/migrations/20260716180000_atomic_organization_creation.sql',
