@@ -1,5 +1,23 @@
 # Legal Rules Runtime Changelog
 
+## 2026-08-25 — exact-SHA retention without repository mutation
+
+### Convergence correction
+
+- Replaced repository-writing Legal Rules evidence promotion with read-only immutable artifact retention.
+- Preserved the exact source-run, current-main, SHA, bundle, redaction, PASS-state and SHA-256 validation boundary.
+- Retains the exact legal-rules evidence plus a sanitized receipt for 365 days as `retained-legal-rules-runtime-<sha>-<source-run-id>`.
+- Removed `contents: write`, `pull-requests: write`, branch creation, `git push` and automatic PR creation from the retention workflow.
+- Manual recovery confirmation is now `RETAIN_LEGAL_RULES_EVIDENCE`.
+
+### Decision boundary
+
+- The immutable exact-SHA GitHub Actions artifact is authoritative for current-SHA closeout.
+- `docs/security/evidence/runtime/legal-rules-validation.json` may remain historical repository evidence but is not rewritten merely to mirror current runtime proof.
+- This avoids a self-referential loop where committing evidence for SHA X creates SHA Y, immediately making the new repository snapshot stale and triggering another evidence-only PR.
+- The 100-control Enterprise scorecard and its evidence overrides do not depend on the repository-resident legal-rules snapshot.
+- No legal, Production, provider or release approval is granted by retention.
+
 ## 2026-07-30 — automatic human-reviewed promotion
 
 ### Evidence promotion
