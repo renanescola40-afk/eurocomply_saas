@@ -7,6 +7,7 @@ export async function listUserOrganizations(userId: string) {
     .from('organization_members')
     .select('role, organization_id, organizations(id, name, slug, created_at)')
     .eq('user_id', userId)
+    .eq('status', 'active')
     .not('organization_id', 'is', null)
     .order('created_at', { ascending: true });
 
