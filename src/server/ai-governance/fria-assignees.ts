@@ -49,6 +49,22 @@ function isMissingMembershipStatusColumn(error: QueryError) {
   return error?.code === '42703' || error?.code === 'PGRST204';
 }
 
+async function proveMembershipStatusColumnAbsent(
+  supabase: ReturnType<typeof createAdminClient>,
+) {
+  const statusCapability = await supabase.rpc('live_rls_validation_has_column', {
+    table_name: 'organization_members',
+    column_name: 'status',
+  });
+
+  if (statusCapability.error || statusCapability.data !== false) {
+    console.warn('[fria-assignees] membership_status_capability_probe_failed_closed', {
+      code: statusCapability.error?.code ?? 'status_column_present',
+    });
+    throw new Error('fria_assignee_directory_unavailable');
+  }
+}
+
 export function isFriaAssignmentRoleEligible(role: string | null | undefined) {
   return roleHasPermission(role, 'manage_ai_governance');
 }
@@ -137,6 +153,7 @@ async function listAssignableMembershipRows(organizationId: string) {
     .limit(MAX_FRIA_ASSIGNEE_CANDIDATES);
 
   if (error && isMissingMembershipStatusColumn(error)) {
+    await proveMembershipStatusColumnAbsent(supabase);
     const legacy = await supabase
       .from('organization_members')
       .select('user_id,role')
@@ -165,6 +182,7 @@ async function loadAssignedMembershipRows(organizationId: string, assignedIds: s
     .in('user_id', assignedIds);
 
   if (error && isMissingMembershipStatusColumn(error)) {
+    await proveMembershipStatusColumnAbsent(supabase);
     const legacy = await supabase
       .from('organization_members')
       .select('user_id,role')
