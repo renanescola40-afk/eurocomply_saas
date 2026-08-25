@@ -95,6 +95,8 @@ jobs:
           node --test tests/security/isolated-enterprise-fria-db-workflow.test.mjs
 
       - name: Start exact-SHA reviewed disposable schema-effect replay
+        env:
+          RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLAY: 'true'
         run: node scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs
 
       - name: Execute isolated database proof
