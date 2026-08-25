@@ -46,6 +46,28 @@ describe('production environment governance boundaries', () => {
     expect(protectedBoundary).toContain('environment: production');
   });
 
+  it('passes all protected Enterprise readiness bindings into the governed Vercel job', () => {
+    const protectedJob = vercelProductionWorkflow.indexOf('  deploy-production:');
+    expect(protectedJob).toBeGreaterThan(-1);
+
+    const protectedBoundary = vercelProductionWorkflow.slice(protectedJob);
+    expect(protectedBoundary).toContain(
+      'RELEASE_ROLLBACK_TARGET_URL: ${{ vars.RELEASE_ROLLBACK_TARGET_URL }}',
+    );
+    expect(protectedBoundary).toContain(
+      'RELEASE_ROLLBACK_TARGET_SHA: ${{ vars.RELEASE_ROLLBACK_TARGET_SHA }}',
+    );
+    expect(protectedBoundary).toContain(
+      'RELEASE_ROLLBACK_VALIDATED: ${{ vars.RELEASE_ROLLBACK_VALIDATED }}',
+    );
+    expect(protectedBoundary).toContain(
+      "SUPABASE_DB_POOLER_URL: ${{ secrets['SUPABASE_DB_POOLER_URL'] }}",
+    );
+
+    expect(protectedBoundary).not.toMatch(/RELEASE_ROLLBACK_TARGET_URL:\s*https?:\/\//);
+    expect(protectedBoundary).not.toMatch(/RELEASE_ROLLBACK_TARGET_SHA:\s*[0-9a-f]{40}/i);
+  });
+
   it('fails closed on closeout governance before the runtime evidence job can load protected secrets', () => {
     const governanceJob = runtimeCloseoutWorkflow.indexOf('  environment-governance:');
     const protectedJob = runtimeCloseoutWorkflow.indexOf('  closeout:');
