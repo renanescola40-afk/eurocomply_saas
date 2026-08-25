@@ -152,10 +152,25 @@ export async function getUserOrganizationMemberships(userId: string, options: { 
       return normalizeMemberships(statusAwareFallback.data);
     }
 
-    // Legacy compatibility is permitted only when the membership status column
-    // itself is unavailable. Any other provider/query failure remains closed.
+    // A PostgREST schema-cache miss is not proof that the underlying column is
+    // absent. The legacy status-less read is allowed only after the pre-existing
+    // database introspection RPC proves directly from information_schema that
+    // organization_members.status does not exist. Probe failure or a true result
+    // remains fail-closed.
     if (!isMissingMembershipStatusColumn(statusAwareFallback.error)) {
       console.warn('[organization] memberships_status_aware_fallback_failed', { code: statusAwareFallback.error.code ?? 'unknown' });
+      throw new Error('organization_memberships_unavailable');
+    }
+
+    const statusCapability = await supabase.rpc('live_rls_validation_has_column', {
+      table_name: 'organization_members',
+      column_name: 'status',
+    });
+
+    if (statusCapability.error || statusCapability.data !== false) {
+      console.warn('[organization] membership_status_capability_probe_failed_closed', {
+        code: statusCapability.error?.code ?? 'status_column_present',
+      });
       throw new Error('organization_memberships_unavailable');
     }
 
