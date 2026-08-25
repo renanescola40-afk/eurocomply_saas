@@ -32,6 +32,14 @@ describe('active membership RLS authority', () => {
     expect(migration).toContain('direct membership RLS policies are not active-membership aware');
   });
 
+  it('fails closed if any final public/storage policy still reaches organization_members without active status', () => {
+    expect(migration).toContain("coalesce(qual, '') ilike '%organization_members%'");
+    expect(migration).toContain("coalesce(with_check, '') ilike '%organization_members%'");
+    expect(migration).toContain("not (coalesce(qual, '') ilike '%status%' and coalesce(qual, '') ilike '%active%')");
+    expect(migration).toContain("not (coalesce(with_check, '') ilike '%status%' and coalesce(with_check, '') ilike '%active%')");
+    expect(migration).toContain('direct organization_members policies remain status-unaware');
+  });
+
   it('fails closed on missing status/helper/policy contracts and rechecks canonical status values', () => {
     expect(migration).toContain("raise exception 'organization_members.status is missing or nullable'");
     expect(migration).toContain("raise exception 'canonical private organization authorization helpers are missing'");
