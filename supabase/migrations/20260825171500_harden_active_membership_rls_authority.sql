@@ -137,7 +137,7 @@ begin
           select 1
           from public.organization_members om
           where om.organization_id = p_organization_id
-            and lower(coalesce(om.status, '')) = 'active'
+            and om.status = 'active'
             and om.user_id = auth.uid()
         );
       $function$
@@ -157,7 +157,7 @@ begin
           select 1
           from public.organization_members om
           where om.organization_id = p_organization_id
-            and lower(coalesce(om.status, '')) = 'active'
+            and om.status = 'active'
             and om.user_id = auth.uid()
             and lower(coalesce(om.role, 'viewer')) in ('owner', 'admin', 'editor', 'compliance_manager')
         );
