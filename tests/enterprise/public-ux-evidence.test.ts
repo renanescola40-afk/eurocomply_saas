@@ -115,6 +115,7 @@ describe('product UX evidence', () => {
       { name: 'onboarding', passed: true },
       { name: 'dashboard', passed: true },
     ]);
+    expect(evidence.localization.checks).toEqual([{ name: 'supportedLocales', passed: true }]);
     expect(evidence.ux.controlsVerified).toContain('Onboarding UX acceptance validated');
     expect(evidence.ux.controlsVerified).toContain('Dashboard UX acceptance validated');
     expect(evidence.localization.controlsVerified).toEqual(['Supported locales validated']);
@@ -128,7 +129,7 @@ describe('product UX evidence', () => {
     expect(evidence.ux.evidenceBoundary).toContain('does not');
   });
 
-  it('fails closed when required execution evidence is incomplete', () => {
+  it('reports structurally valid UX as NOT_VERIFIED when exact execution evidence is incomplete', () => {
     const evidence = buildPublicUxEvidence({
       coverage: repositoryCoverage(),
       exactChecks: evaluateExactShaChecks({ ...githubChecks, status: 'Open' }, SHA),
@@ -142,11 +143,21 @@ describe('product UX evidence', () => {
     });
 
     expect(evidence.ux.status).toBe('Open');
+    expect(evidence.ux.outcome).toBe('not_verified');
     expect(evidence.localization.status).toBe('Open');
-    expect(evidence.ux.checks.every((check) => check.passed === false)).toBe(true);
+    expect(evidence.ux.checks).toEqual([
+      { name: 'landing', status: 'NOT_VERIFIED' },
+      { name: 'pricing', status: 'NOT_VERIFIED' },
+      { name: 'login', status: 'NOT_VERIFIED' },
+      { name: 'mobile', status: 'NOT_VERIFIED' },
+      { name: 'onboarding', status: 'NOT_VERIFIED' },
+      { name: 'dashboard', status: 'NOT_VERIFIED' },
+    ]);
+    expect(evidence.localization.checks).toEqual([{ name: 'supportedLocales', status: 'NOT_VERIFIED' }]);
+    expect(evidence.ux.checks.some((check) => 'passed' in check && check.passed === false)).toBe(false);
   });
 
-  it('fails closed when onboarding or dashboard acceptance coverage regresses', () => {
+  it('keeps genuine onboarding and dashboard source regressions as FAIL evidence', () => {
     const withoutOnboarding = repositoryCoverage({
       authenticatedProductTest: repositorySources().authenticatedProductTest.replace(
         "describe('authenticated onboarding UX acceptance'",
@@ -167,6 +178,14 @@ describe('product UX evidence', () => {
     const dashboardEvidence = build({ coverage: withoutDashboard });
     expect(onboardingEvidence.ux.status).toBe('Open');
     expect(dashboardEvidence.ux.status).toBe('Open');
+    expect(onboardingEvidence.ux.checks.find((check) => check.name === 'onboarding')).toEqual({
+      name: 'onboarding',
+      passed: false,
+    });
+    expect(dashboardEvidence.ux.checks.find((check) => check.name === 'dashboard')).toEqual({
+      name: 'dashboard',
+      passed: false,
+    });
   });
 
   it('fails closed when a supported locale or exact-SHA provenance is missing', () => {
@@ -176,9 +195,13 @@ describe('product UX evidence', () => {
     });
     expect(incompleteCoverage.localizationCoverage).toBe(false);
 
+    const localeEvidence = build({ coverage: incompleteCoverage });
+    expect(localeEvidence.localization.checks).toEqual([{ name: 'supportedLocales', passed: false }]);
+
     const evidence = build({ observedSha: 'b'.repeat(40) });
     expect(evidence.ux.status).toBe('Open');
     expect(evidence.localization.status).toBe('Open');
     expect(evidence.ux.failures).toContain('checked-out SHA must equal targetSha');
+    expect(evidence.ux.checks.every((check) => check.status === 'NOT_VERIFIED')).toBe(true);
   });
 });

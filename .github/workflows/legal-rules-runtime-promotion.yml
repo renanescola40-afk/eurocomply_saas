@@ -1,6 +1,6 @@
 name: Legal Rules Runtime Promotion
 
-run-name: Promote legal rules runtime evidence for ${{ inputs.release_sha || github.event.workflow_run.head_sha }}
+run-name: Retain legal rules runtime evidence for ${{ inputs.release_sha || github.event.workflow_run.head_sha }}
 
 on:
   workflow_run:
@@ -17,7 +17,7 @@ on:
         required: true
         type: string
       confirmation:
-        description: 'Type PROMOTE_LEGAL_RULES_EVIDENCE'
+        description: 'Type RETAIN_LEGAL_RULES_EVIDENCE'
         required: true
         type: string
 
@@ -31,7 +31,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Validate trusted source artifact read-only
+    name: Validate and retain trusted source artifact read-only
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (
@@ -56,10 +56,7 @@ jobs:
       ISOLATED_ROOT: artifacts/legal-rules-runtime-promotion/isolated
       EVIDENCE_PATH: artifacts/legal-rules-runtime-promotion/source/docs/security/evidence/runtime/legal-rules-validation.json
       CANONICAL_PATH: docs/security/evidence/runtime/legal-rules-validation.json
-    outputs:
-      assessed_sha: ${{ steps.validated.outputs.assessed_sha }}
-      source_run_id: ${{ steps.validated.outputs.source_run_id }}
-      artifact_sha256: ${{ steps.validated.outputs.artifact_sha256 }}
+      RECEIPT_PATH: artifacts/legal-rules-runtime-promotion/retention-receipt.json
 
     steps:
       - name: Validate trusted source run and exact current main
@@ -71,7 +68,7 @@ jobs:
           [[ "$ASSESSED_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
           if [ "$GITHUB_EVENT_NAME" = 'workflow_dispatch' ]; then
-            test "$MANUAL_CONFIRMATION" = 'PROMOTE_LEGAL_RULES_EVIDENCE'
+            test "$MANUAL_CONFIRMATION" = 'RETAIN_LEGAL_RULES_EVIDENCE'
           else
             test "$SOURCE_EVENT" = 'deployment_status'
             test "$SOURCE_CONCLUSION" = 'success'
@@ -112,7 +109,7 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ env.SOURCE_RUN_ID }}
 
-      - name: Validate isolated artifact and promotion contracts
+      - name: Validate isolated exact-SHA artifact
         id: validated
         run: |
           set -euo pipefail
@@ -124,171 +121,61 @@ jobs:
             cd "$ISOLATED_ROOT"
             node "$GITHUB_WORKSPACE/scripts/security/check-p0-runtime-evidence-files.mjs"
           )
-          node --input-type=module <<'NODE' > "$RUNNER_TEMP/legal-rules-promotion-output"
+          node --input-type=module <<'NODE' > "$RUNNER_TEMP/legal-rules-retention-output"
           import { readFileSync } from 'node:fs';
           const evidence = JSON.parse(readFileSync(process.env.EVIDENCE_PATH, 'utf8'));
-          if (evidence.status !== 'PASS') throw new Error('promotion requires PASS legal-rules evidence');
-          if (evidence.deploymentSha !== process.env.ASSESSED_SHA) throw new Error('promotion evidence SHA mismatch');
-          if (evidence.countsForRuntimeCoverage !== true) throw new Error('promotion evidence must count for runtime coverage');
-          if (evidence.evidenceIntegrity?.placeholderOnly !== false) throw new Error('promotion evidence cannot be a placeholder');
-          if (!/^[a-f0-9]{64}$/.test(String(evidence.artifactSha256 || ''))) throw new Error('promotion evidence digest is malformed');
+          if (evidence.status !== 'PASS') throw new Error('retention requires PASS legal-rules evidence');
+          if (evidence.deploymentSha !== process.env.ASSESSED_SHA) throw new Error('retention evidence SHA mismatch');
+          if (evidence.countsForRuntimeCoverage !== true) throw new Error('retention evidence must count for runtime coverage');
+          if (evidence.evidenceIntegrity?.placeholderOnly !== false) throw new Error('retention evidence cannot be a placeholder');
+          if (!/^[a-f0-9]{64}$/.test(String(evidence.artifactSha256 || ''))) throw new Error('retention evidence digest is malformed');
           process.stdout.write(`artifact_sha256=${evidence.artifactSha256}\n`);
           NODE
           npx vitest run tests/legal-rules-runtime-promotion-contract.test.ts
-          {
-            printf 'assessed_sha=%s\n' "$ASSESSED_SHA"
-            printf 'source_run_id=%s\n' "$SOURCE_RUN_ID"
-            cat "$RUNNER_TEMP/legal-rules-promotion-output"
-          } >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/legal-rules-retention-output" >> "$GITHUB_OUTPUT"
 
-      - name: Retain validated promotion input
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: validated-legal-rules-runtime-${{ env.ASSESSED_SHA }}-${{ env.SOURCE_RUN_ID }}
-          path: ${{ env.BUNDLE_ROOT }}
-          retention-days: 7
-          if-no-files-found: error
-
-  open-pr:
-    name: Open human-reviewed evidence promotion PR
-    needs: validate
-    permissions:
-      actions: read
-      contents: write
-      pull-requests: write
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    env:
-      ASSESSED_SHA: ${{ needs.validate.outputs.assessed_sha }}
-      SOURCE_RUN_ID: ${{ needs.validate.outputs.source_run_id }}
-      ARTIFACT_SHA256: ${{ needs.validate.outputs.artifact_sha256 }}
-      VALIDATED_ROOT: artifacts/legal-rules-runtime-promotion/validated
-      ISOLATED_ROOT: artifacts/legal-rules-runtime-promotion/revalidated
-      EVIDENCE_PATH: artifacts/legal-rules-runtime-promotion/validated/docs/security/evidence/runtime/legal-rules-validation.json
-      CANONICAL_PATH: docs/security/evidence/runtime/legal-rules-validation.json
-      RECEIPT_PATH: artifacts/legal-rules-runtime-promotion/promotion-receipt.json
-
-    steps:
-      - name: Checkout exact validated SHA
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-        with:
-          ref: ${{ env.ASSESSED_SHA }}
-          persist-credentials: false
-          fetch-depth: 0
-
-      - name: Verify exact validated checkout
-        run: test "$(git rev-parse HEAD)" = "$ASSESSED_SHA"
-
-      - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: 22
-
-      - name: Download validated promotion input
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          name: validated-legal-rules-runtime-${{ env.ASSESSED_SHA }}-${{ env.SOURCE_RUN_ID }}
-          path: ${{ env.VALIDATED_ROOT }}
-
-      - name: Revalidate and publish single-file promotion branch
-        id: published
+      - name: Write immutable retention receipt
         env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          test -f "$EVIDENCE_PATH"
-          test -z "$(find "$VALIDATED_ROOT" -type f ! -path "$EVIDENCE_PATH" -print -quit)"
-          install -d -m 700 "$ISOLATED_ROOT/docs/security/evidence/runtime"
-          install -m 600 "$EVIDENCE_PATH" "$ISOLATED_ROOT/$CANONICAL_PATH"
-          (
-            cd "$ISOLATED_ROOT"
-            node "$GITHUB_WORKSPACE/scripts/security/check-p0-runtime-evidence-files.mjs"
-          )
-          verified_digest="$(node --input-type=module <<'NODE'
-          import { readFileSync } from 'node:fs';
-          const evidence = JSON.parse(readFileSync(process.env.EVIDENCE_PATH, 'utf8'));
-          if (evidence.status !== 'PASS' || evidence.deploymentSha !== process.env.ASSESSED_SHA) process.exit(1);
-          process.stdout.write(String(evidence.artifactSha256 || ''));
-          NODE
-          )"
-          test "$verified_digest" = "$ARTIFACT_SHA256"
-          [[ "$verified_digest" =~ ^[a-f0-9]{64}$ ]]
-
-          promotion_branch="automation/legal-rules-runtime-${ASSESSED_SHA:0:12}-${SOURCE_RUN_ID}"
-          [[ "$promotion_branch" =~ ^automation/legal-rules-runtime-[a-f0-9]{12}-[1-9][0-9]*$ ]]
-          remote_url="https://github.com/${GITHUB_REPOSITORY}.git"
-          askpass="$RUNNER_TEMP/legal-rules-git-askpass.sh"
-          cat > "$askpass" <<'ASKPASS'
-          #!/bin/sh
-          case "$1" in
-            *Username*) printf '%s\n' 'x-access-token' ;;
-            *Password*) printf '%s\n' "$GITHUB_TOKEN" ;;
-            *) exit 1 ;;
-          esac
-          ASKPASS
-          chmod 700 "$askpass"
-          export GIT_ASKPASS="$askpass"
-          export GIT_TERMINAL_PROMPT=0
-          trap 'rm -f "$askpass"' EXIT
-
-          existing_sha="$(git ls-remote "$remote_url" "refs/heads/${promotion_branch}" | awk 'NR == 1 {print $1}')"
-          if [ -n "$existing_sha" ]; then
-            [[ "$existing_sha" =~ ^[a-f0-9]{40}$ ]]
-            git fetch --no-tags "$remote_url" "$existing_sha"
-            test "$(git merge-base "$ASSESSED_SHA" "$existing_sha")" = "$ASSESSED_SHA"
-            test "$(git rev-list --count "${ASSESSED_SHA}..${existing_sha}")" = '1'
-            changed_paths="$(git diff --name-only "$ASSESSED_SHA" "$existing_sha")"
-            test "$changed_paths" = "$CANONICAL_PATH"
-            git show "${existing_sha}:${CANONICAL_PATH}" > "$RUNNER_TEMP/existing-legal-rules-evidence.json"
-            cmp --silent "$EVIDENCE_PATH" "$RUNNER_TEMP/existing-legal-rules-evidence.json"
-            promotion_commit_sha="$existing_sha"
-          else
-            git switch --create "$promotion_branch" "$ASSESSED_SHA"
-            install -m 600 "$EVIDENCE_PATH" "$CANONICAL_PATH"
-            changed_paths="$(git diff --name-only)"
-            test "$changed_paths" = "$CANONICAL_PATH"
-            git config user.name 'risck-comply-evidence-bot'
-            git config user.email 'actions@users.noreply.github.com'
-            git add -- "$CANONICAL_PATH"
-            git diff --cached --quiet && exit 1
-            git commit -m "chore(compliance): promote legal rules runtime evidence ${ASSESSED_SHA:0:12}"
-            promotion_commit_sha="$(git rev-parse HEAD)"
-            [[ "$promotion_commit_sha" =~ ^[a-f0-9]{40}$ ]]
-            test "$(git rev-list --count "${ASSESSED_SHA}..${promotion_commit_sha}")" = '1'
-            test "$(git diff --name-only "$ASSESSED_SHA" "$promotion_commit_sha")" = "$CANONICAL_PATH"
-            git push "$remote_url" "HEAD:refs/heads/${promotion_branch}"
-          fi
-
-          {
-            printf 'promotion_branch=%s\n' "$promotion_branch"
-            printf 'promotion_commit_sha=%s\n' "$promotion_commit_sha"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Open or reuse draft evidence promotion PR
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          PROMOTION_BRANCH: ${{ steps.published.outputs.promotion_branch }}
-          PROMOTION_COMMIT_SHA: ${{ steps.published.outputs.promotion_commit_sha }}
+          ARTIFACT_SHA256: ${{ steps.validated.outputs.artifact_sha256 }}
         run: |
           set -euo pipefail
           install -d -m 700 "$(dirname "$RECEIPT_PATH")"
           umask 077
-          node scripts/compliance/create-legal-rules-runtime-promotion-pr.mjs > "$RECEIPT_PATH"
-
-      - name: Publish promotion summary
-        run: |
-          node --input-type=module <<'NODE' | tee -a "$GITHUB_STEP_SUMMARY"
-          import { readFileSync } from 'node:fs';
-          const receipt = JSON.parse(readFileSync(process.env.RECEIPT_PATH, 'utf8'));
-          const pull = receipt.pullRequestNumber ? `#${receipt.pullRequestNumber}` : 'already present on main';
-          const branch = receipt.branch ? `\`${receipt.branch}\`` : 'not applicable';
-          process.stdout.write(`### Legal rules runtime promotion\n\n- Status: ${receipt.status}\n- SHA: \`${receipt.assessedSha}\`\n- Source run: ${receipt.sourceRunId}\n- Draft PR: ${pull}\n- Branch: ${branch}\n`);
+          node --input-type=module <<'NODE' > "$RECEIPT_PATH"
+          const receipt = {
+            schema: 'risck-comply.legal-rules-runtime-retention.v1',
+            status: 'RETAINED_READ_ONLY',
+            repository: process.env.GITHUB_REPOSITORY,
+            assessedSha: process.env.ASSESSED_SHA,
+            sourceRunId: Number(process.env.SOURCE_RUN_ID),
+            artifactSha256: process.env.ARTIFACT_SHA256,
+            authority: 'immutable-github-actions-artifact',
+            repositoryWritePerformed: false,
+            pullRequestCreated: false,
+          };
+          process.stdout.write(`${JSON.stringify(receipt, null, 2)}\n`);
           NODE
 
-      - name: Upload immutable promotion receipt
+      - name: Publish retention summary
+        run: |
+          {
+            echo '### Legal rules exact-SHA evidence retained'
+            echo
+            echo "- SHA: \`$ASSESSED_SHA\`"
+            echo "- Source run: \`$SOURCE_RUN_ID\`"
+            echo '- Authority: immutable GitHub Actions artifact'
+            echo '- Repository write: no'
+            echo '- Evidence promotion PR: no'
+            echo
+            echo 'Repository-resident runtime snapshots are intentionally not rewritten because a commit cannot contain runtime evidence for its own not-yet-existing SHA.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Retain exact-SHA evidence and receipt immutably
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: legal-rules-runtime-promotion-${{ env.ASSESSED_SHA }}
-          path: ${{ env.RECEIPT_PATH }}
+          name: retained-legal-rules-runtime-${{ env.ASSESSED_SHA }}-${{ env.SOURCE_RUN_ID }}
+          path: |
+            ${{ env.EVIDENCE_PATH }}
+            ${{ env.RECEIPT_PATH }}
           retention-days: 365
           if-no-files-found: error

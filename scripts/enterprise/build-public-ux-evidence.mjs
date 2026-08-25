@@ -26,6 +26,12 @@ function containsEvery(source, values) {
   return values.every((value) => source.includes(value));
 }
 
+function scorecardCheck(name, sourcePassed, executionProven, exactShaProvenance) {
+  if (!sourcePassed) return { name, passed: false };
+  if (!executionProven || !exactShaProvenance) return { name, status: 'NOT_VERIFIED' };
+  return { name, passed: true };
+}
+
 export function evaluatePublicUxCoverage(
   specSource,
   {
@@ -229,12 +235,12 @@ export function buildPublicUxEvidence({
       outcome: uxPassed ? 'passed' : 'not_verified',
       ...common,
       checks: [
-        { name: 'landing', passed: coverage.checks.landing && executionProven && exactShaProvenance },
-        { name: 'pricing', passed: coverage.checks.pricing && executionProven && exactShaProvenance },
-        { name: 'login', passed: coverage.checks.login && executionProven && exactShaProvenance },
-        { name: 'mobile', passed: coverage.checks.mobile && executionProven && exactShaProvenance },
-        { name: 'onboarding', passed: coverage.onboardingCoverage && executionProven && exactShaProvenance },
-        { name: 'dashboard', passed: coverage.dashboardCoverage && executionProven && exactShaProvenance },
+        scorecardCheck('landing', coverage.checks.landing, executionProven, exactShaProvenance),
+        scorecardCheck('pricing', coverage.checks.pricing, executionProven, exactShaProvenance),
+        scorecardCheck('login', coverage.checks.login, executionProven, exactShaProvenance),
+        scorecardCheck('mobile', coverage.checks.mobile, executionProven, exactShaProvenance),
+        scorecardCheck('onboarding', coverage.onboardingCoverage, executionProven, exactShaProvenance),
+        scorecardCheck('dashboard', coverage.dashboardCoverage, executionProven, exactShaProvenance),
       ],
       checkResults: {
         ...coverage.checks,
@@ -275,7 +281,7 @@ export function buildPublicUxEvidence({
       outcome: localizationPassed ? 'passed' : 'not_verified',
       ...common,
       checks: [
-        { name: 'supportedLocales', passed: localizationPassed },
+        scorecardCheck('supportedLocales', coverage.localizationCoverage, executionProven, exactShaProvenance),
       ],
       checkResults: {
         supportedLocales: coverage.checks.supportedLocales,

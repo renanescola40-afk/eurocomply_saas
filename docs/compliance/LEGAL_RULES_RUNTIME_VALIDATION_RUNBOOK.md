@@ -122,7 +122,7 @@ Confirm the event was a successful deployment from `vercel[bot]` for the current
 
 ### Current-main mismatch
 
-The deployment became stale before evidence capture. Stop promotion and wait for or initiate an approved deployment of the current default-branch SHA. Never credit the older deployment to the newer SHA.
+The deployment became stale before evidence capture. Stop retention and wait for or initiate an approved deployment of the current default-branch SHA. Never credit the older deployment to the newer SHA.
 
 ### Canonical Production alias not converged
 
@@ -175,7 +175,7 @@ Do not change expected values merely to obtain PASS.
 
 ### SHA mismatch
 
-- Stop promotion.
+- Stop retention.
 - Confirm the Vercel/GitHub deployment commit.
 - Confirm the canonical Production alias serves the intended SHA.
 - Redeploy the intended SHA or assess the actual deployed SHA.
@@ -203,57 +203,53 @@ The **EU AI Act Final Runtime Closeout** may consume the immutable Legal Rules r
 
 If no exact-SHA artifact exists, closeout continues to report the missing Legal Rules proof and strict mode remains fail-closed. A repository copy from an older SHA never substitutes for the immutable current-SHA artifact.
 
-## Automatic promotion PR
+## Immutable read-only retention
 
-After a successful exact-main capture, the **Legal Rules Runtime Promotion** workflow receives the completed source run through `workflow_run` and performs a second trust-boundary validation:
+After a successful exact-main capture, the **Legal Rules Runtime Promotion** workflow acts only as a read-only retention bridge. The historical workflow name is retained for compatibility, but it no longer promotes evidence into the repository or creates a pull request.
 
-1. source workflow conclusion is `success`;
-2. source workflow event is `deployment_status`;
-3. source head branch is `main`;
-4. source head SHA equals the artifact SHA;
-5. the SHA is still the current `main` commit;
-6. the artifact is downloaded by exact source run ID and exact SHA-bound artifact name;
-7. the downloaded bundle contains only the expected legal-rules evidence file;
-8. the evidence is validated in an isolated evidence root;
-9. repository binding, PASS state, deployment SHA, redaction, runtime-coverage eligibility and SHA-256 integrity are rechecked.
+For automatic `workflow_run` delivery it requires:
 
-Only after these checks may the workflow use `contents: write` and `pull-requests: write`. It creates an ephemeral `automation/legal-rules-runtime-*` branch and opens a **draft PR** replacing only `docs/security/evidence/runtime/legal-rules-validation.json`.
+1. source workflow conclusion `success`;
+2. source workflow event `deployment_status`;
+3. source head branch `main`;
+4. source head SHA equal to the artifact SHA;
+5. the assessed SHA still equal to current `main`;
+6. download by exact source run ID and exact `legal-rules-runtime-<SHA>` artifact name;
+7. a bundle containing only the expected legal-rules evidence file;
+8. isolated revalidation of repository binding, PASS state, deployment SHA, redaction, runtime-coverage eligibility and SHA-256 integrity;
+9. retention of the exact evidence plus a sanitized receipt as an immutable GitHub Actions artifact for 365 days.
 
-The promotion workflow must never:
+The retained artifact is named `retained-legal-rules-runtime-<exact-sha>-<source-run-id>`. Its receipt records the assessed SHA, source run ID and artifact SHA-256 and explicitly records `repositoryWritePerformed: false` and `pullRequestCreated: false`.
 
-- push directly to `main`;
-- approve or merge its own PR;
-- enable auto-merge;
-- modify code, workflows, migrations or unrelated evidence;
-- replace conflicting PASS evidence for the same SHA;
-- claim legal or production approval.
+The retention workflow has only `actions: read` and `contents: read`. It must never request repository-write or pull-request-write authority, create a branch, push a commit, open a PR, approve/merge a PR, or claim legal or Production approval.
 
-A sanitized promotion receipt is retained for 365 days. The source runtime artifact remains immutable and authoritative.
+This boundary is intentional: a repository commit cannot contain exact runtime evidence for its own not-yet-existing commit SHA. Rewriting `docs/security/evidence/runtime/legal-rules-validation.json` for current `main` would create a new SHA and immediately make that repository snapshot historical. The immutable exact-SHA Actions artifact is therefore authoritative for current-SHA closeout; a repository-resident copy may remain as historical evidence only.
 
-### Manual promotion replay
+### Manual retention replay
 
-Use the promotion workflow's `workflow_dispatch` fallback only when the automatic `workflow_run` delivery is unavailable. Provide the exact current-main SHA, the successful source run ID and confirmation `PROMOTE_LEGAL_RULES_EVIDENCE`. Manual replay does not relax any artifact, SHA or current-main validation.
+Use the retention workflow's `workflow_dispatch` fallback only when automatic `workflow_run` delivery is unavailable. Provide the exact current-main SHA, the successful **Legal Rules Runtime Validation** source run ID and confirmation `RETAIN_LEGAL_RULES_EVIDENCE`.
 
-### Pull-request creation permission failure
+Manual replay does not relax source-run, exact-SHA, current-main, bundle, integrity or redaction validation. It does not create a branch or PR.
 
-GitHub repository Actions settings must allow workflows to create pull requests. If that setting is disabled, the promotion workflow fails after validating the artifact. Do not grant broader administrator permissions or bypass branch protection; enable only the repository-level ability for Actions to create pull requests, then replay the exact source run.
+### Repository permission boundary
 
-## Promotion procedure
+No GitHub setting that permits Actions to create pull requests is required for legal-rules retention. Do not grant `contents: write`, `pull-requests: write`, administrator rights or a branch-protection bypass for this workflow. A permissions failure must be solved by restoring the documented read-only permissions, not by broadening them.
+
+## Retention procedure
 
 1. Confirm the runtime validation run completed successfully and retained `legal-rules-runtime-<exact-sha>`.
-2. Confirm the promotion workflow produced `legal-rules-runtime-promotion-<exact-sha>` when a repository copy is desired.
-3. Review any draft promotion PR and verify it changes only the canonical legal-rules evidence file.
-4. Confirm the PR artifact SHA-256, deployment SHA, source run ID and deployment origin match the immutable source artifact.
-5. Treat the immutable exact-SHA artifact, not a stale repository copy, as the authoritative closeout overlay for the currently assessed SHA.
-6. Regenerate EU AI Act product coverage and the technical scorecard from the exact assessed SHA.
-7. Preserve both source and promotion artifacts; do not rely only on the repository copy.
-8. Proceed to full deployment smoke, protected readiness, production providers, backup/restore and final closeout.
+2. Confirm the read-only retention workflow validated the exact source run and retained `retained-legal-rules-runtime-<exact-sha>-<source-run-id>`.
+3. Verify the retention receipt SHA, source run ID and artifact SHA-256 match the immutable source evidence.
+4. Treat the immutable exact-SHA source/retention artifacts, not a stale repository copy, as the authoritative closeout overlay for the assessed SHA.
+5. Regenerate EU AI Act product coverage and the technical scorecard from the exact assessed SHA.
+6. Preserve source and retention artifacts; do not create an evidence-only commit merely to mirror current runtime proof into the repository.
+7. Proceed to full deployment smoke, protected readiness, production providers, backup/restore and final closeout.
 
 ## Rollback
 
 Follow `docs/compliance/LEGAL_RULES_RUNTIME_ROLLBACK_PLAN.md`. Runtime evidence is append-only: a rollback creates new evidence for the rollback SHA and never mutates proof for a prior SHA.
 
-Disable the `deployment_status` trigger first if an event-routing incident is suspected. Disable the promotion workflow separately if branch or PR creation behaves unexpectedly. The protected endpoint and manual capture remain fail-closed while automation is investigated.
+Disable the `deployment_status` validation trigger first if an event-routing incident is suspected. Disable the read-only retention workflow separately if source-run routing or artifact retention behaves unexpectedly. Neither action authorizes repository writes. The protected endpoint and manual capture remain fail-closed while automation is investigated.
 
 ## Escalation
 
