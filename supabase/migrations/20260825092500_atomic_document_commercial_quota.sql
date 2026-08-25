@@ -1,16 +1,18 @@
 begin;
 
--- P0 business-logic / revenue-protection invariant.
+-- P0 business-logic / revenue-protection invariants.
 --
--- The application performs a fail-closed preflight document count for UX, but a
--- count-then-insert sequence is not a concurrency authority: two requests can
--- both observe N-1 and race past the plan limit. This trigger makes the database
--- the final serialized quota authority for every prospective document INSERT,
--- including service-role application writes and any future write path.
+-- 1. The canonical server chooses the highest-priority active signed-contract
+--    source first and only then resolves its latest valid applied snapshot. A
+--    lower-priority contract must never become authority merely because the
+--    selected higher-priority source has no valid snapshot.
+-- 2. The application performs a fail-closed document quota preflight, but a
+--    count-then-insert sequence is not a concurrency authority. PostgreSQL must
+--    serialize the final commercial document capacity decision.
 --
--- This migration is intentionally ordered after the payment-first data plane and
--- controlled-document reconciliation in the governed forward package. It does
--- not grant browser write access and it does not weaken existing RLS.
+-- This forward identity is ordered after the existing payment-first data plane.
+-- It tightens that already-governed authority without modifying its historical
+-- migration bytes, then adds the final serialized document INSERT invariant.
 
 do $prerequisites$
 begin
@@ -19,17 +21,17 @@ begin
      or to_regclass('public.stripe_events_processed') is null
      or to_regclass('public.enterprise_entitlement_sources') is null
      or to_regclass('public.enterprise_entitlement_snapshots') is null
+     or to_regnamespace('app_private') is null
      or to_regprocedure('app_private.has_commercial_authority(uuid)') is null then
-    raise exception 'atomic document quota prerequisites are missing';
+    raise exception 'commercial authority/document quota prerequisites are missing';
   end if;
 end
 $prerequisites$;
 
--- Resolve the same durable commercial plan precedence used by the server:
--- signed contract first; otherwise the latest active subscription only when an
--- exact processed Stripe LIVE subscription event proves customer/subscription
--- correlation. Invalid authoritative contract plans fail closed and never fall
--- through to Stripe.
+-- Exact database mirror of src/server/billing/subscription-authority.ts plus
+-- src/server/queries/subscription.ts plan normalization. The selected contract
+-- source is resolved BEFORE its snapshot. If that selected source has no valid
+-- applied snapshot, the result is NULL and Stripe is deliberately not consulted.
 create or replace function app_private.resolve_commercial_plan(target_organization_id uuid)
 returns text
 language sql
@@ -37,26 +39,27 @@ stable
 security definer
 set search_path = ''
 as $$
-  with contract_candidate as (
-    select snapshot.plan_code
+  with selected_contract_source as (
+    select source.id
     from public.enterprise_entitlement_sources source
-    join lateral (
-      select candidate.plan_code
-      from public.enterprise_entitlement_snapshots candidate
-      where candidate.organization_id = source.organization_id
-        and candidate.source_id = source.id
-        and candidate.status = 'applied'
-        and candidate.valid_from <= now()
-        and (candidate.valid_until is null or candidate.valid_until > now())
-      order by candidate.created_at desc
-      limit 1
-    ) snapshot on true
     where source.organization_id = target_organization_id
       and source.source_kind = 'signed_contract'
       and source.active = true
       and source.effective_from <= now()
       and (source.effective_until is null or source.effective_until > now())
     order by source.priority desc
+    limit 1
+  ),
+  contract_candidate as (
+    select snapshot.plan_code
+    from public.enterprise_entitlement_snapshots snapshot
+    join selected_contract_source source
+      on source.id = snapshot.source_id
+    where snapshot.organization_id = target_organization_id
+      and snapshot.status = 'applied'
+      and snapshot.valid_from <= now()
+      and (snapshot.valid_until is null or snapshot.valid_until > now())
+    order by snapshot.created_at desc
     limit 1
   ),
   primary_subscription as (
@@ -96,7 +99,9 @@ as $$
   raw_authority as (
     select case
       when target_organization_id is null then null::text
-      when exists (select 1 from contract_candidate) then
+      -- Server parity: presence of the selected signed-contract source blocks
+      -- Stripe fallback even when the source has no valid snapshot.
+      when exists (select 1 from selected_contract_source) then
         (select plan_code from contract_candidate limit 1)
       when exists (
         select 1
@@ -131,7 +136,26 @@ revoke all on function app_private.resolve_commercial_plan(uuid) from public, an
 grant execute on function app_private.resolve_commercial_plan(uuid) to service_role;
 
 comment on function app_private.resolve_commercial_plan(uuid) is
-  'Canonical fail-closed commercial plan resolver for database-enforced quota invariants; signed contract precedes exact processed Stripe LIVE authority.';
+  'Exact fail-closed commercial plan resolver: highest-priority signed-contract source first, then its valid applied snapshot; otherwise exact processed Stripe LIVE active authority.';
+
+-- Tighten the existing payment-first RLS authority to the exact same resolver.
+-- Authenticated needs EXECUTE because restrictive RLS policies call this helper;
+-- anon and PUBLIC remain unable to invoke it directly.
+create or replace function app_private.has_commercial_authority(target_organization_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select app_private.resolve_commercial_plan(target_organization_id) is not null;
+$$;
+
+revoke all on function app_private.has_commercial_authority(uuid) from public, anon;
+grant execute on function app_private.has_commercial_authority(uuid) to authenticated, service_role;
+
+comment on function app_private.has_commercial_authority(uuid) is
+  'Fail-closed payment-first authority with exact server precedence; usable by authenticated restrictive RLS and trusted service-role backend only.';
 
 create or replace function app_private.enforce_document_commercial_quota()
 returns trigger
@@ -150,20 +174,14 @@ begin
       message = 'document organization is required';
   end if;
 
-  -- Service-role application writes bypass RLS, so the trigger independently
-  -- preserves the payment-first invariant instead of trusting the caller.
-  if not app_private.has_commercial_authority(new.organization_id) then
-    raise exception using
-      errcode = '42501',
-      message = 'document_subscription_required';
-  end if;
-
+  -- Service-role application writes bypass RLS, so resolve durable authority
+  -- again inside the database write boundary instead of trusting the caller.
   v_plan := app_private.resolve_commercial_plan(new.organization_id);
 
   if v_plan is null then
     raise exception using
       errcode = '42501',
-      message = 'document_commercial_plan_unavailable';
+      message = 'document_subscription_required';
   end if;
 
   -- Exact canonical catalog document limits in src/lib/billing/plans.ts.
@@ -180,8 +198,8 @@ begin
   end if;
 
   -- Use the same organization-scoped advisory key as the existing atomic
-  -- commercial mutation/audit authority. All quota-changing writes for a tenant
-  -- therefore serialize on one transaction-level lock.
+  -- vendor/risk mutation and audit-chain authorities. All quota-changing writes
+  -- for a tenant serialize on one transaction-level lock.
   perform pg_advisory_xact_lock(hashtext(new.organization_id::text));
 
   select count(*)::bigint
@@ -215,23 +233,30 @@ comment on function app_private.enforce_document_commercial_quota() is
 -- Migration-level fail-closed proof.
 do $verify$
 declare
+  authority_oid oid := to_regprocedure('app_private.has_commercial_authority(uuid)');
   resolver_oid oid := to_regprocedure('app_private.resolve_commercial_plan(uuid)');
   quota_oid oid := to_regprocedure('app_private.enforce_document_commercial_quota()');
 begin
-  if resolver_oid is null or quota_oid is null then
-    raise exception 'document commercial quota functions are missing';
+  if authority_oid is null or resolver_oid is null or quota_oid is null then
+    raise exception 'commercial authority/document quota functions are missing';
+  end if;
+
+  if has_function_privilege('anon', authority_oid, 'EXECUTE')
+     or not has_function_privilege('authenticated', authority_oid, 'EXECUTE')
+     or not has_function_privilege('service_role', authority_oid, 'EXECUTE') then
+    raise exception 'payment-first authority execution privileges are not canonical';
   end if;
 
   if has_function_privilege('anon', resolver_oid, 'EXECUTE')
      or has_function_privilege('authenticated', resolver_oid, 'EXECUTE')
      or has_function_privilege('anon', quota_oid, 'EXECUTE')
      or has_function_privilege('authenticated', quota_oid, 'EXECUTE') then
-    raise exception 'document commercial quota functions expose browser execution';
+    raise exception 'private commercial resolver/quota functions expose browser execution';
   end if;
 
   if not has_function_privilege('service_role', resolver_oid, 'EXECUTE')
      or not has_function_privilege('service_role', quota_oid, 'EXECUTE') then
-    raise exception 'document commercial quota service-role execution is missing';
+    raise exception 'commercial resolver/quota service-role execution is missing';
   end if;
 
   if not exists (
