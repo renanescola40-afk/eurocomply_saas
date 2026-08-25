@@ -127,6 +127,27 @@ function readManagedAuthTables(connection, boundary) {
   return [...new Set(relations)].sort();
 }
 
+function readApplicationSchemas(connection) {
+  const failureCode = 'recovery_source_application_schema_inventory_failed';
+  const payload = sql(
+    connection,
+    `select coalesce(json_agg(n.nspname order by n.nspname)::text, '[]') from pg_namespace n where n.nspname not like 'pg_%' and n.nspname <> 'information_schema' and n.nspname not in ('auth','extensions','graphql','graphql_public','realtime','storage','supabase_migrations','vault') and pg_get_userbyid(n.nspowner) not like 'supabase_%' and not exists (select 1 from pg_extension e where e.extnamespace = n.oid);`,
+    failureCode,
+  );
+  const schemas = parseInventoryJson(payload, failureCode).map((value) => String(value ?? '').trim());
+  if (!schemas.includes('public')) {
+    throw new Error('recovery_source_application_schema_inventory_incomplete');
+  }
+  if (schemas.some((value) => !/^[a-z_][a-z0-9_]*$/.test(value))) {
+    throw new Error('recovery_source_application_schema_inventory_unsafe');
+  }
+  return [...new Set(schemas)].sort();
+}
+
+function sameRelationInventory(left, right) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
 function planManagedAuthDataBoundary(sourceConnection, targetConnection) {
   const sourceRelations = readManagedAuthTables(sourceConnection, 'source');
   const targetRelations = readManagedAuthTables(targetConnection, 'target');
@@ -230,25 +251,30 @@ function copySqlToContainer(container, path) {
   return containerPath;
 }
 
-function restoreIntoEphemeralSupabase(container) {
-  const containerPaths = [
-    copySqlToContainer(container, rolesDumpPath),
-    copySqlToContainer(container, schemaDumpPath),
-    copySqlToContainer(container, dataDumpPath),
-  ];
+function restoreApplicationSchemaIntoEphemeralSupabase(container) {
+  const containerPath = copySqlToContainer(container, schemaDumpPath);
   try {
     run('docker', [
       'exec', container, 'psql', '-U', 'postgres', '-d', 'postgres', '--no-psqlrc',
       '--single-transaction', '--set', 'ON_ERROR_STOP=1',
-      '--file', containerPaths[0],
-      '--file', containerPaths[1],
+      '--file', containerPath,
+    ], {}, 'recovery_application_schema_restore_failed');
+  } finally {
+    try { run('docker', ['exec', container, 'rm', '-f', containerPath], {}, 'recovery_isolated_cleanup_failed'); } catch {}
+  }
+}
+
+function restoreDataIntoEphemeralSupabase(container) {
+  const containerPath = copySqlToContainer(container, dataDumpPath);
+  try {
+    run('docker', [
+      'exec', container, 'psql', '-U', 'postgres', '-d', 'postgres', '--no-psqlrc',
+      '--single-transaction', '--set', 'ON_ERROR_STOP=1',
       '--command', 'SET session_replication_role = replica;',
-      '--file', containerPaths[2],
+      '--file', containerPath,
     ], {}, 'recovery_isolated_restore_failed');
   } finally {
-    for (const path of containerPaths) {
-      try { run('docker', ['exec', container, 'rm', '-f', path], {}, 'recovery_isolated_cleanup_failed'); } catch {}
-    }
+    try { run('docker', ['exec', container, 'rm', '-f', containerPath], {}, 'recovery_isolated_cleanup_failed'); } catch {}
   }
 }
 
@@ -286,6 +312,9 @@ const managedAuthBoundary = {
   sourceRelationCount: null,
   targetRelationCount: null,
   sourceOnlyEmptyRelationCount: null,
+  preSchemaTargetRelationCount: null,
+  postSchemaTargetRelationCount: null,
+  postDataTargetRelationCount: null,
 };
 const extensionParity = {
   sourceCount: null,
@@ -311,10 +340,15 @@ try {
     const managedStorageDataExclude = readManagedStorageRelations(source).join(',');
     checks.managedStorageRelationInventory = true;
 
+    failurePhase = 'application_schema_inventory';
+    const applicationSchemas = readApplicationSchemas(source);
+    const applicationSchemaCsv = applicationSchemas.join(',');
+    checks.applicationSchemaInventory = true;
+
     failurePhase = 'roles_dump';
     run('supabase', ['db', 'dump', '--db-url', source, '--role-only', '--file', rolesDumpPath], {}, 'recovery_roles_dump_failed');
     failurePhase = 'schema_dump';
-    run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath], {}, 'recovery_schema_dump_failed');
+    run('supabase', ['db', 'dump', '--db-url', source, '--schema', applicationSchemaCsv, '--file', schemaDumpPath], {}, 'recovery_schema_dump_failed');
 
     // Any target extension mutation must finish before we bind the managed Auth
     // catalog used to decide which provider-managed rows are safe to replay.
@@ -338,6 +372,23 @@ try {
     extensionParity.targetFinalCount = finalTargetExtensions.length;
     checks.extensionParity = extensionParitySatisfied(sourceExtensions, finalTargetExtensions);
     if (!checks.extensionParity) throw new Error('recovery_target_extension_parity_failed');
+
+    failurePhase = 'managed_auth_pre_schema_snapshot';
+    const managedAuthBeforeSchema = readManagedAuthTables(restore, 'target_pre_schema');
+    managedAuthBoundary.preSchemaTargetRelationCount = managedAuthBeforeSchema.length;
+    checks.managedAuthPreSchemaSnapshot = true;
+
+    failurePhase = 'application_schema_restore';
+    restoreApplicationSchemaIntoEphemeralSupabase(localContainer);
+    checks.applicationSchemaRestoreExecuted = true;
+
+    failurePhase = 'managed_auth_post_schema_rebind';
+    const managedAuthAfterSchema = readManagedAuthTables(restore, 'target_post_schema');
+    managedAuthBoundary.postSchemaTargetRelationCount = managedAuthAfterSchema.length;
+    checks.managedAuthSchemaPreserved = sameRelationInventory(managedAuthBeforeSchema, managedAuthAfterSchema);
+    if (!checks.managedAuthSchemaPreserved) {
+      throw new Error('recovery_target_managed_auth_schema_mutated_by_application_restore');
+    }
 
     failurePhase = 'managed_auth_relation_inventory';
     const managedAuthPlan = planManagedAuthDataBoundary(source, restore);
@@ -370,7 +421,15 @@ try {
     if (!checks.backupExists || !digest) throw new Error('backup_dump_invalid');
 
     failurePhase = 'isolated_restore';
-    restoreIntoEphemeralSupabase(localContainer);
+    restoreDataIntoEphemeralSupabase(localContainer);
+
+    failurePhase = 'managed_auth_post_data_rebind';
+    const managedAuthAfterData = readManagedAuthTables(restore, 'target_post_data');
+    managedAuthBoundary.postDataTargetRelationCount = managedAuthAfterData.length;
+    checks.managedAuthSchemaStableAfterData = sameRelationInventory(managedAuthAfterSchema, managedAuthAfterData);
+    if (!checks.managedAuthSchemaStableAfterData) {
+      throw new Error('recovery_target_managed_auth_schema_mutated_by_data_restore');
+    }
   } else {
     failurePhase = 'legacy_dump';
     run('pg_dump', [source, '--format=custom', '--no-owner', '--no-privileges', '--file', legacyDumpPath], {}, 'recovery_legacy_dump_failed');
@@ -421,9 +480,9 @@ const evidence = {
   metrics: { rpoSeconds: backupCompletedAt ? Math.max(0, Math.round((Date.now() - Date.parse(backupCompletedAt)) / 1000)) : null, rtoSeconds: restoreCompletedAt ? Math.round((Date.parse(restoreCompletedAt) - startedAt) / 1000) : null, totalExerciseSeconds: Math.round((finishedAt - startedAt) / 1000), backupBytes },
   integrity: { criticalTables, sourceCounts, restoredCounts, sourceAuthUsers, restoredAuthUsers, managedAuthBoundary, extensionParity, backupSha256Prefix: digest ? `${digest.slice(0, 16)}…` : null, recoveryMode: ephemeralMode ? 'ephemeral-supabase-postgres' : 'external-isolated-database' }, failures: [...new Set(failures)], failurePhase: passed ? null : failurePhase,
   failureDiagnostic: passed ? null : failureDiagnostic,
-  evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, extensionNamesStored: false, extensionVersionsStored: false, managedAuthRelationNamesStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
+  evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, extensionNamesStored: false, extensionVersionsStored: false, managedAuthRelationNamesStored: false, applicationSchemaNamesStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
   evidenceBoundary: ephemeralMode
-    ? 'Supabase-managed Auth/REST/Storage relations were primed on the empty isolated target by the local Supabase runtime and all API services were stopped before any Production snapshot restore. Supabase-compatible logical roles, application schema and application/auth data were then restored transactionally into the DB-only target after aggregate-only exact extension name/schema/version parity was verified. Managed Auth inventory is rebound after all target extension mutations and immediately before the Production data dump, so stale target catalog state cannot authorize replay. Storage row data is excluded from this backup/restore proof. Provider-managed Auth relations that exist only in the final pre-data Production-source/target comparison are excluded from data replay only when their source row count is zero; any non-empty source-only Auth relation fails closed, and auth.users row-count integrity remains mandatory. Selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; managed Auth relation names, extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
+    ? 'Supabase-managed Auth/REST/Storage relations were primed on the empty isolated target by the local Supabase runtime and all API services were stopped before any Production snapshot restore. A role dump is captured as part of the immutable logical backup, but provider-managed roles are not replayed into the already-primed Supabase target. Only dynamically inventoried application-owned schemas are restored before data replay; provider-managed and extension-owned schemas are excluded from application schema restore. Managed Auth inventory is snapshotted before application schema restore, rebound immediately afterward, and must remain exactly unchanged before any Production data is replayed. Storage row data is excluded from this backup/restore proof. Provider-managed Auth relations absent from the post-schema target are excluded from data replay only when their source row count is zero; any non-empty source-only Auth relation fails closed. Managed Auth inventory must also remain unchanged after data restore, and auth.users row-count integrity remains mandatory. Selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; managed Auth relation names, application schema names, extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
     : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated digest; connection strings, raw command arguments, raw process errors and the dump are not retained.',
 };
 mkdirSync(dirname(output), { recursive: true });
