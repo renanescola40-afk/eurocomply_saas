@@ -28,6 +28,8 @@ type ProfileRow = {
   full_name: string | null;
 };
 
+type QueryError = { code?: string } | null;
+
 export type FriaAssignmentSelection = {
   ownerId: string;
   reviewerId?: string | null;
@@ -42,6 +44,10 @@ export type FriaAssignmentValidation =
       error: 'fria_assignee_not_eligible' | 'fria_assignment_separation_required';
       field: FriaAssignmentKind;
     };
+
+function isMissingMembershipStatusColumn(error: QueryError) {
+  return error?.code === '42703' || error?.code === 'PGRST204';
+}
 
 export function isFriaAssignmentRoleEligible(role: string | null | undefined) {
   return roleHasPermission(role, 'manage_ai_governance');
@@ -120,25 +126,68 @@ async function loadTenantMemberEmails(userIds: string[]) {
   return emails;
 }
 
-export async function listFriaAssigneeCandidates(input: {
-  organizationId: string;
-  ownerId: string;
-}): Promise<FriaAssigneeCandidate[]> {
+async function listAssignableMembershipRows(organizationId: string) {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('organization_members')
     .select('user_id,role')
-    .eq('organization_id', input.organizationId)
+    .eq('organization_id', organizationId)
     .eq('status', 'active')
     .not('user_id', 'is', null)
     .limit(MAX_FRIA_ASSIGNEE_CANDIDATES);
+
+  if (error && isMissingMembershipStatusColumn(error)) {
+    const legacy = await supabase
+      .from('organization_members')
+      .select('user_id,role')
+      .eq('organization_id', organizationId)
+      .not('user_id', 'is', null)
+      .limit(MAX_FRIA_ASSIGNEE_CANDIDATES);
+    data = legacy.data;
+    error = legacy.error;
+  }
 
   if (error) {
     console.warn('[fria-assignees] membership_lookup_failed', { code: error.code ?? 'unknown' });
     throw new Error('fria_assignee_directory_unavailable');
   }
 
-  const eligibleMemberships = ((data ?? []) as unknown as MembershipRow[])
+  return (data ?? []) as unknown as MembershipRow[];
+}
+
+async function loadAssignedMembershipRows(organizationId: string, assignedIds: string[]) {
+  const supabase = createAdminClient();
+  let { data, error } = await supabase
+    .from('organization_members')
+    .select('user_id,role')
+    .eq('organization_id', organizationId)
+    .eq('status', 'active')
+    .in('user_id', assignedIds);
+
+  if (error && isMissingMembershipStatusColumn(error)) {
+    const legacy = await supabase
+      .from('organization_members')
+      .select('user_id,role')
+      .eq('organization_id', organizationId)
+      .in('user_id', assignedIds);
+    data = legacy.data;
+    error = legacy.error;
+  }
+
+  if (error) {
+    console.warn('[fria-assignees] assignment_validation_failed', { code: error.code ?? 'unknown' });
+    throw new Error('fria_assignee_directory_unavailable');
+  }
+
+  return (data ?? []) as unknown as MembershipRow[];
+}
+
+export async function listFriaAssigneeCandidates(input: {
+  organizationId: string;
+  ownerId: string;
+}): Promise<FriaAssigneeCandidate[]> {
+  const memberships = await listAssignableMembershipRows(input.organizationId);
+  const eligibleMemberships = memberships
     .filter((membership): membership is MembershipRow & { user_id: string } => {
       return Boolean(
         membership.user_id
@@ -194,21 +243,9 @@ export async function validateFriaAssignmentMembers(input: {
   ));
   if (assignedIds.length === 0) return { ok: true };
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('organization_members')
-    .select('user_id,role')
-    .eq('organization_id', input.organizationId)
-    .eq('status', 'active')
-    .in('user_id', assignedIds);
-
-  if (error) {
-    console.warn('[fria-assignees] assignment_validation_failed', { code: error.code ?? 'unknown' });
-    throw new Error('fria_assignee_directory_unavailable');
-  }
-
+  const memberships = await loadAssignedMembershipRows(input.organizationId, assignedIds);
   const membershipByUser = new Map(
-    ((data ?? []) as unknown as MembershipRow[])
+    memberships
       .filter((membership): membership is MembershipRow & { user_id: string } => Boolean(membership.user_id))
       .map((membership) => [membership.user_id, membership] as const),
   );
