@@ -80,16 +80,17 @@ describe('document commercial quota atomicity', () => {
     expect(sql).toContain('grant execute on function app_private.has_commercial_authority(uuid) to authenticated, service_role;');
   });
 
-  it('appends the quota invariant to the bounded governed forward package without enabling writes by config', async () => {
+  it('preserves the quota invariant as identity 32 and appends active-membership RLS closure as identity 33', async () => {
     const manifest = JSON.parse(await readFile(MANIFEST, 'utf8')) as {
       changeSet: string;
       migrations: Array<{ filename: string }>;
       truthBoundary: Record<string, boolean>;
     };
 
-    expect(manifest.changeSet).toBe('2026-08-25-enterprise-data-plane-payment-first-trusted-access-document-quota-closure-v22');
-    expect(manifest.migrations).toHaveLength(32);
-    expect(manifest.migrations.at(-1)?.filename).toBe('20260825092500_atomic_document_commercial_quota.sql');
+    expect(manifest.changeSet).toBe('2026-08-25-enterprise-data-plane-active-membership-rls-closure-v23');
+    expect(manifest.migrations).toHaveLength(33);
+    expect(manifest.migrations.at(-2)?.filename).toBe('20260825092500_atomic_document_commercial_quota.sql');
+    expect(manifest.migrations.at(-1)?.filename).toBe('20260825171500_harden_active_membership_rls_authority.sql');
     expect(manifest.truthBoundary.productionWriteAuthorizedByConfig).toBe(false);
     expect(manifest.truthBoundary.migrationHistoryRepairAllowed).toBe(false);
     expect(manifest.truthBoundary.unrestrictedDbPushAllowed).toBe(false);
