@@ -31,7 +31,8 @@ $prerequisites$;
 -- Exact database mirror of src/server/billing/subscription-authority.ts plus
 -- src/server/queries/subscription.ts plan normalization. The selected contract
 -- source is resolved BEFORE its snapshot. If that selected source has no valid
--- applied snapshot, the result is NULL and Stripe is deliberately not consulted.
+-- applied snapshot, no lower-priority contract is consulted and the canonical
+-- server flow may fall back to exact processed Stripe LIVE authority.
 create or replace function app_private.resolve_commercial_plan(target_organization_id uuid)
 returns text
 language sql
@@ -99,9 +100,11 @@ as $$
   raw_authority as (
     select case
       when target_organization_id is null then null::text
-      -- Server parity: presence of the selected signed-contract source blocks
-      -- Stripe fallback even when the source has no valid snapshot.
-      when exists (select 1 from selected_contract_source) then
+      -- Server parity: only a valid applied snapshot on the selected highest-
+      -- priority contract source becomes contract authority. A selected source
+      -- without such a snapshot returns no contract candidate, so the server's
+      -- exact processed Stripe LIVE fallback remains available.
+      when exists (select 1 from contract_candidate) then
         (select plan_code from contract_candidate limit 1)
       when exists (
         select 1
@@ -136,7 +139,7 @@ revoke all on function app_private.resolve_commercial_plan(uuid) from public, an
 grant execute on function app_private.resolve_commercial_plan(uuid) to service_role;
 
 comment on function app_private.resolve_commercial_plan(uuid) is
-  'Exact fail-closed commercial plan resolver: highest-priority signed-contract source first, then its valid applied snapshot; otherwise exact processed Stripe LIVE active authority.';
+  'Exact fail-closed commercial plan resolver: highest-priority signed-contract source with a valid applied snapshot first; otherwise exact processed Stripe LIVE active authority.';
 
 -- Tighten the existing payment-first RLS authority to the exact same resolver.
 -- Authenticated needs EXECUTE because restrictive RLS policies call this helper;
