@@ -26,13 +26,13 @@ describe('bounded Supabase migration human decision gate', () => {
     expect(workflow).toContain('build-bounded-migration-reconciliation-inventory.mjs');
     expect(workflow).toContain('bounded-migration-reconciliation-inventory.json');
     expect(builder).toContain('selected migration is absent from production dry-run inventory');
-    expect(builder).toContain('MAX_BOUNDED_MIGRATIONS = 32');
+    expect(builder).toContain('MAX_BOUNDED_MIGRATIONS = 33');
     expect(builder).toContain('exactFilenameAndSha256Bound: true');
     expect(builder).toContain('automaticClassificationPerformed: false');
     expect(builder).toContain('productionWriteAuthorized: false');
     expect(workflow).toContain(`SELECTED_COUNT="$(jq '.migrations | length' "\${FORWARD_MANIFESTS[0]}")"`);
     expect(workflow).toContain(`test "$(jq '.items | length' "$BOUNDED_INVENTORY")" -eq "$SELECTED_COUNT"`);
-    expect(workflow).toContain('test "$SELECTED_COUNT" -le 32');
+    expect(workflow).toContain('test "$SELECTED_COUNT" -le 33');
     expect(workflow).not.toContain(`test "$(jq '.items | length' "$BOUNDED_INVENTORY")" -le 25`);
   });
 
