@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { provisionEnterpriseIdentity } from '@/server/enterprise/provisioning';
+import { extractTrustedSamlProviderId } from '@/server/security/enterprise-sso-access';
 
 const uuidSchema = z.string().uuid();
 const roleSchema = z.enum(['admin', 'editor', 'viewer']);
@@ -37,20 +38,7 @@ function operationKey(providerId: string, userId: string, role: string, seatType
   return `sso:${providerId}:${userId}:${role}:${seatType}`.slice(0, 160);
 }
 
-export function extractSupabaseSsoProviderId(claims: Record<string, unknown> | null | undefined) {
-  const amr = claims?.amr;
-  if (!Array.isArray(amr)) return null;
-
-  for (const value of amr) {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
-    const entry = value as Record<string, unknown>;
-    const method = typeof entry.method === 'string' ? entry.method : '';
-    const provider = uuidSchema.safeParse(entry.provider);
-    if (method === 'sso/saml' && provider.success) return provider.data;
-  }
-
-  return null;
-}
+export const extractSupabaseSsoProviderId = extractTrustedSamlProviderId;
 
 export function isSamlSsoUser(user: {
   app_metadata?: Record<string, unknown> | null;
