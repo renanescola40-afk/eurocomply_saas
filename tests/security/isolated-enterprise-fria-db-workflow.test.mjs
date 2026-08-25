@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const workflow = await readFile('.github/workflows/isolated-enterprise-fria-db-proof.yml', 'utf8');
+const manager = await readFile('scripts/recovery/manage-ephemeral-recovery-database.mjs', 'utf8');
 
 test('workflow executes only for successful main or explicit manual confirmation', () => {
   assert.match(workflow, /workflows: \[Full Security Suite\]/);
@@ -21,6 +22,14 @@ test('workflow is read-only and uses the reviewed disposable schema boundary', (
   assert.match(workflow, /manage-ephemeral-recovery-database\.mjs stop/);
   assert.doesNotMatch(workflow, /supabase@2\.39\.2|db reset --local --no-seed|run-ephemeral-project-schema-replay\.mjs/);
   assert.match(workflow, /persist-credentials: false/);
+});
+
+test('workflow and recovery manager preserve the noncanonical schema-effect evidence boundary', () => {
+  assert.match(workflow, /RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLAY: 'true'/);
+  assert.match(manager, /RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLAY === 'true'/);
+  assert.match(manager, /Reviewed schema effects were not fully replayed into the disposable database/);
+  assert.match(manager, /reviewed schema-effect replay identities; migration history remains noncanonical/);
+  assert.match(manager, /Exact-SHA project migrations were not fully applied/);
 });
 
 test('workflow binds the proof to the reviewed loopback database without retaining credentials', () => {
