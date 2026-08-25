@@ -61,7 +61,11 @@ env:
   TARGET_SHA: ${{ github.event.pull_request.head.sha || inputs.expected_sha || github.event.deployment.sha || github.sha }}
 
 concurrency:
-  group: legal-rules-runtime-validation-${{ github.event.pull_request.head.sha || inputs.expected_sha || github.event.deployment.sha || github.sha }}
+  # Deployment-status events are noisy: Vercel/GitHub can emit several status
+  # records for the same SHA. A skipped/untrusted sibling must never cancel the
+  # one trusted successful vercel[bot] run that is capturing immutable evidence.
+  # PR/push/manual runs still coalesce by exact SHA as before.
+  group: legal-rules-runtime-validation-${{ github.event_name == 'deployment_status' && github.run_id || github.event.pull_request.head.sha || inputs.expected_sha || github.event.deployment.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
