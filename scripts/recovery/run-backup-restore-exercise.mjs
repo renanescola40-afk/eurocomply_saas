@@ -131,7 +131,7 @@ function readApplicationSchemas(connection) {
   const failureCode = 'recovery_source_application_schema_inventory_failed';
   const payload = sql(
     connection,
-    `select coalesce(json_agg(n.nspname order by n.nspname)::text, '[]') from pg_namespace n where n.nspname not like 'pg_%' and n.nspname <> 'information_schema' and n.nspname not in ('auth','extensions','graphql','graphql_public','realtime','storage','supabase_migrations','vault') and pg_get_userbyid(n.nspowner) not like 'supabase_%' and not exists (select 1 from pg_extension e where e.extnamespace = n.oid);`,
+    `select coalesce(json_agg(n.nspname order by n.nspname)::text, '[]') from pg_namespace n where n.nspname not like 'pg_%' and n.nspname <> 'information_schema' and n.nspname not in ('auth','extensions','graphql','graphql_public','realtime','storage','supabase_migrations','vault') and pg_get_userbyid(n.nspowner) not like 'supabase_%';`,
     failureCode,
   );
   const schemas = parseInventoryJson(payload, failureCode).map((value) => String(value ?? '').trim());
@@ -152,7 +152,12 @@ function planManagedAuthDataBoundary(sourceConnection, targetConnection) {
   const sourceRelations = readManagedAuthTables(sourceConnection, 'source');
   const targetRelations = readManagedAuthTables(targetConnection, 'target');
   const targetSet = new Set(targetRelations);
+  const sharedRelations = sourceRelations.filter((relation) => targetSet.has(relation));
   const sourceOnlyEmptyRelations = [];
+
+  if (!sharedRelations.includes('auth.users')) {
+    throw new Error('recovery_target_auth_users_relation_missing');
+  }
 
   for (const relation of sourceRelations) {
     if (targetSet.has(relation)) continue;
@@ -173,9 +178,25 @@ function planManagedAuthDataBoundary(sourceConnection, targetConnection) {
   return {
     sourceRelationCount: sourceRelations.length,
     targetRelationCount: targetRelations.length,
+    sharedRelationCount: sharedRelations.length,
     sourceOnlyEmptyRelationCount: sourceOnlyEmptyRelations.length,
+    sharedRelations,
     sourceOnlyEmptyRelations,
   };
+}
+
+function buildManagedAuthCleanupSql(relations) {
+  if (!Array.isArray(relations) || !relations.includes('auth.users')) {
+    throw new Error('recovery_managed_auth_cleanup_inventory_incomplete');
+  }
+
+  return relations.map((relation) => {
+    if (!/^auth\.[a-z0-9_]+$/.test(relation)) {
+      throw new Error('recovery_managed_auth_cleanup_inventory_unsafe');
+    }
+    const [, table] = relation.split('.');
+    return `delete from "auth"."${table}";`;
+  }).join(' ');
 }
 
 function readInstalledExtensions(connection, failureCode) {
@@ -264,13 +285,18 @@ function restoreApplicationSchemaIntoEphemeralSupabase(container) {
   }
 }
 
-function restoreDataIntoEphemeralSupabase(container) {
+function restoreDataIntoEphemeralSupabase(container, managedAuthCleanupSql) {
+  if (!managedAuthCleanupSql) {
+    throw new Error('recovery_managed_auth_cleanup_sql_missing');
+  }
+
   const containerPath = copySqlToContainer(container, dataDumpPath);
   try {
     run('docker', [
       'exec', container, 'psql', '-U', 'postgres', '-d', 'postgres', '--no-psqlrc',
       '--single-transaction', '--set', 'ON_ERROR_STOP=1',
       '--command', 'SET session_replication_role = replica;',
+      '--command', managedAuthCleanupSql,
       '--file', containerPath,
     ], {}, 'recovery_isolated_restore_failed');
   } finally {
@@ -311,6 +337,7 @@ let restoredAuthUsers = null;
 const managedAuthBoundary = {
   sourceRelationCount: null,
   targetRelationCount: null,
+  sharedRelationCount: null,
   sourceOnlyEmptyRelationCount: null,
   preSchemaTargetRelationCount: null,
   postSchemaTargetRelationCount: null,
@@ -394,9 +421,12 @@ try {
     const managedAuthPlan = planManagedAuthDataBoundary(source, restore);
     managedAuthBoundary.sourceRelationCount = managedAuthPlan.sourceRelationCount;
     managedAuthBoundary.targetRelationCount = managedAuthPlan.targetRelationCount;
+    managedAuthBoundary.sharedRelationCount = managedAuthPlan.sharedRelationCount;
     managedAuthBoundary.sourceOnlyEmptyRelationCount = managedAuthPlan.sourceOnlyEmptyRelationCount;
     checks.managedAuthRelationInventory = true;
     checks.managedAuthSchemaDriftSafe = true;
+    const managedAuthCleanupSql = buildManagedAuthCleanupSql(managedAuthPlan.sharedRelations);
+    checks.managedAuthCleanupPlanned = true;
     const managedAuthDataExclude = managedAuthPlan.sourceOnlyEmptyRelations.join(',');
     const managedDataExclude = [managedStorageDataExclude, managedAuthDataExclude].filter(Boolean).join(',');
 
@@ -421,7 +451,8 @@ try {
     if (!checks.backupExists || !digest) throw new Error('backup_dump_invalid');
 
     failurePhase = 'isolated_restore';
-    restoreDataIntoEphemeralSupabase(localContainer);
+    restoreDataIntoEphemeralSupabase(localContainer, managedAuthCleanupSql);
+    checks.managedAuthPrimedDataReconciled = true;
 
     failurePhase = 'managed_auth_post_data_rebind';
     const managedAuthAfterData = readManagedAuthTables(restore, 'target_post_data');
@@ -482,7 +513,7 @@ const evidence = {
   failureDiagnostic: passed ? null : failureDiagnostic,
   evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, extensionNamesStored: false, extensionVersionsStored: false, managedAuthRelationNamesStored: false, applicationSchemaNamesStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
   evidenceBoundary: ephemeralMode
-    ? 'Supabase-managed Auth/REST/Storage relations were primed on the empty isolated target by the local Supabase runtime and all API services were stopped before any Production snapshot restore. A role dump is captured as part of the immutable logical backup, but provider-managed roles are not replayed into the already-primed Supabase target. Only dynamically inventoried application-owned schemas are restored before data replay; provider-managed and extension-owned schemas are excluded from application schema restore. Managed Auth inventory is snapshotted before application schema restore, rebound immediately afterward, and must remain exactly unchanged before any Production data is replayed. Storage row data is excluded from this backup/restore proof. Provider-managed Auth relations absent from the post-schema target are excluded from data replay only when their source row count is zero; any non-empty source-only Auth relation fails closed. Managed Auth inventory must also remain unchanged after data restore, and auth.users row-count integrity remains mandatory. Selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; managed Auth relation names, application schema names, extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
+    ? 'Supabase-managed Auth/REST/Storage relations were primed on the empty isolated target by the local Supabase runtime and all API services were stopped before any Production snapshot restore. A role dump is captured as part of the immutable logical backup, but provider-managed roles are not replayed into the already-primed Supabase target. Dynamically inventoried application-owned schemas are restored before data replay; mixed application schemas remain recoverable even when they host extension objects, while provider-managed schemas remain excluded. Managed Auth inventory is snapshotted before application schema restore, rebound immediately afterward, and must remain exactly unchanged before any Production data is replayed. Storage row data is excluded from this backup/restore proof. Provider-managed Auth relations absent from the post-schema target are excluded from data replay only when their source row count is zero; any non-empty source-only Auth relation fails closed. For managed Auth relations present in both source and the disposable target, primed target rows are deleted only on that isolated target inside the same transaction immediately before Production data replay, preserving provider-created Auth DDL and preventing duplicate-key collisions. Managed Auth inventory must remain unchanged after data restore, and auth.users row-count integrity remains mandatory. Selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; managed Auth relation names, application schema names, extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
     : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated digest; connection strings, raw command arguments, raw process errors and the dump are not retained.',
 };
 mkdirSync(dirname(output), { recursive: true });
