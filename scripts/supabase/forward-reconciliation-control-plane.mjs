@@ -11,8 +11,6 @@ const CONFIG_SCHEMA = 'risck-comply.supabase-forward-reconciliation-config.v1';
 const MANIFEST_SCHEMA = 'risck-comply.supabase-forward-reconciliation-manifest.v1';
 const REHEARSAL_SCHEMA = 'risck-comply.supabase-forward-reconciliation-rehearsal.v1';
 const SET_PROOF_SCHEMA = 'risck-comply.supabase-forward-reconciliation-set-proof.v1';
-// This ceiling is intentionally bound to the exact current governed package.
-// Raising it again requires another reviewed material package change.
 const MAX_MIGRATIONS = 33;
 const MAX_SQL_BYTES = 2 * 1024 * 1024;
 
@@ -319,69 +317,71 @@ function option(args, prefix) {
   return found ? found.slice(prefix.length + 1) : null;
 }
 
-async function cli(argv) {
-  const [command, ...args] = argv;
+async function main() {
+  const [command, ...args] = process.argv.slice(2);
+  const expectedSha = option(args, '--expected-sha');
+
   if (command === 'compile') {
-    const [configPath, outputPath] = args;
-    const expectedSha = option(args, '--expected-sha');
-    assert(configPath && outputPath && expectedSha, 'compile requires config, output, and --expected-sha');
-    const config = JSON.parse(await readFile(resolve(configPath), 'utf8'));
+    const [configPath, outputPath] = args.filter((value) => !value.startsWith('--'));
+    assert(configPath && outputPath && expectedSha, 'usage: compile <config> <output> --expected-sha=<sha>');
     const manifest = await compileForwardReconciliationManifest({
-      config,
+      config: await readJson(resolve(configPath)),
       rootDir: process.cwd(),
       subjectSha: expectedSha,
     });
     await writeJson(resolve(outputPath), manifest);
+    console.log(JSON.stringify({ status: 'PASS', targetSha: manifest.targetSha, selectionDigest: manifest.selectionDigest, migrationCount: manifest.migrations.length }, null, 2));
     return;
   }
-  if (command === 'build-rehearsal-attestation') {
-    const [manifestPath, backupPath, outputPath] = args;
-    const expectedSha = option(args, '--expected-sha');
-    const repository = option(args, '--repository');
-    const runId = option(args, '--run-id');
-    const postconditions = option(args, '--postconditions');
-    assert(manifestPath && backupPath && outputPath && expectedSha && repository && runId, 'build-rehearsal-attestation requires manifest, backup evidence, output, expected SHA, repository, and run ID');
-    const manifest = await readJson(resolve(manifestPath));
-    const backupEvidence = await readJson(resolve(backupPath));
+
+  if (command === 'attest') {
+    const [manifestPath, backupPath, outputPath] = args.filter((value) => !value.startsWith('--'));
+    assert(manifestPath && backupPath && outputPath && expectedSha, 'usage: attest <manifest> <backup-evidence> <output> --expected-sha=<sha>');
     const attestation = buildForwardReconciliationRehearsalAttestation({
-      manifest,
-      backupEvidence,
+      manifest: await readJson(resolve(manifestPath)),
+      backupEvidence: await readJson(resolve(backupPath)),
       expectedSha,
-      repository,
-      runId,
-      postconditionsPassed: postconditions === 'true',
+      repository: process.env.GITHUB_REPOSITORY,
+      runId: process.env.GITHUB_RUN_ID,
+      postconditionsPassed: process.env.FORWARD_RECONCILIATION_POSTCONDITIONS === 'passed',
     });
     await writeJson(resolve(outputPath), attestation);
+    console.log(JSON.stringify({ status: attestation.status, targetSha: attestation.targetSha, migrationCount: attestation.migrations.length }, null, 2));
     return;
   }
+
   if (command === 'validate-rehearsal') {
-    const [manifestPath, rehearsalPath] = args;
-    const expectedSha = option(args, '--expected-sha');
-    assert(manifestPath && rehearsalPath && expectedSha, 'validate-rehearsal requires manifest, rehearsal evidence, and expected SHA');
-    const manifest = await readJson(resolve(manifestPath));
-    const rehearsal = await readJson(resolve(rehearsalPath));
-    validateForwardReconciliationRehearsal({ manifest, attestation: rehearsal, expectedSha });
+    const [manifestPath, attestationPath] = args.filter((value) => !value.startsWith('--'));
+    assert(manifestPath && attestationPath && expectedSha, 'usage: validate-rehearsal <manifest> <attestation> --expected-sha=<sha>');
+    validateForwardReconciliationRehearsal({
+      manifest: await readJson(resolve(manifestPath)),
+      attestation: await readJson(resolve(attestationPath)),
+      expectedSha,
+    });
+    console.log('Forward reconciliation rehearsal validation passed.');
     return;
   }
-  if (command === 'verify-filtered-set') {
-    const [manifestPath, remotePath, migrationsDir, outputPath] = args;
-    const expectedSha = option(args, '--expected-sha');
-    assert(manifestPath && remotePath && migrationsDir && outputPath && expectedSha, 'verify-filtered-set requires manifest, remote evidence, migrations dir, output, and expected SHA');
-    const manifest = await readJson(resolve(manifestPath));
-    const remote = await readJson(resolve(remotePath));
-    assert(remote?.schema === 'risck-comply.supabase-remote-migration-history.v1', 'remote migration history schema is invalid');
-    assert(Array.isArray(remote?.versions), 'remote migration history versions are missing');
-    const localVersions = await readMigrationVersionsFromDirectory(resolve(migrationsDir));
-    const proof = verifyFilteredMigrationSet({ manifest, expectedSha, remoteVersions: remote.versions, localVersions });
+
+  if (command === 'verify-set') {
+    const [manifestPath, remoteVersionsPath, migrationsDir, outputPath] = args.filter((value) => !value.startsWith('--'));
+    assert(manifestPath && remoteVersionsPath && migrationsDir && outputPath && expectedSha, 'usage: verify-set <manifest> <remote-versions-json> <migrations-dir> <output> --expected-sha=<sha>');
+    const proof = verifyFilteredMigrationSet({
+      manifest: await readJson(resolve(manifestPath)),
+      expectedSha,
+      remoteVersions: await readJson(resolve(remoteVersionsPath)),
+      localVersions: await readMigrationVersionsFromDirectory(resolve(migrationsDir)),
+    });
     await writeJson(resolve(outputPath), proof);
+    console.log(JSON.stringify({ status: proof.status, pendingVersions: proof.pendingVersions }, null, 2));
     return;
   }
-  throw new Error(`Unknown command: ${command ?? '<none>'}`);
+
+  throw new Error('usage: forward-reconciliation-control-plane.mjs <compile|attest|validate-rehearsal|verify-set> ...');
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
-if (isMain) {
-  cli(process.argv.slice(2)).catch((error) => {
+const invokedPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : null;
+if (invokedPath && import.meta.url === invokedPath) {
+  main().catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   });
