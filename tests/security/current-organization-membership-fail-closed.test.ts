@@ -49,6 +49,7 @@ describe('current organization membership read failure contract', () => {
 
     expect(membershipRead).toContain("console.warn('[organization] memberships_lookup_failed'");
     expect(membershipRead).toContain("console.warn('[organization] memberships_status_aware_fallback_failed'");
+    expect(membershipRead).toContain("console.warn('[organization] membership_status_capability_probe_failed_closed'");
     expect(membershipRead).toContain("console.warn('[organization] memberships_fallback_lookup_failed'");
     expect(membershipRead).toContain("throw new Error('organization_memberships_unavailable');");
     expect(membershipRead).not.toContain('if (!supabase) return [];');
@@ -69,12 +70,16 @@ describe('current organization membership read failure contract', () => {
     expect(membershipRead).toContain('const statusAwareFallback = await supabase');
     expect(membershipRead).toContain('if (!statusAwareFallback.error)');
     expect(membershipRead).toContain('if (!isMissingMembershipStatusColumn(statusAwareFallback.error))');
+    expect(membershipRead).toContain("supabase.rpc('live_rls_validation_has_column'");
+    expect(membershipRead).toContain("table_name: 'organization_members'");
+    expect(membershipRead).toContain("column_name: 'status'");
+    expect(membershipRead).toContain('statusCapability.error || statusCapability.data !== false');
     expect(membershipRead).toContain(".select('organization_id, role, organizations(id, name, slug)')");
     expect(membershipRead).toContain("console.warn('[organization] membership_onboarding_columns_unavailable'");
     expect(membershipRead).not.toContain('createServerSupabaseClient');
   });
 
-  it('permits the status-less compatibility read only when the status column itself is unavailable', async () => {
+  it('permits the status-less compatibility read only after Postgres proves the status column is absent', async () => {
     const source = await readFile(QUERY_FILE, 'utf8');
     const membershipRead = source.slice(
       source.indexOf('export async function getUserOrganizationMemberships'),
@@ -82,9 +87,13 @@ describe('current organization membership read failure contract', () => {
     );
 
     const statusFailureGuard = membershipRead.indexOf('if (!isMissingMembershipStatusColumn(statusAwareFallback.error))');
+    const capabilityProbe = membershipRead.indexOf("supabase.rpc('live_rls_validation_has_column'");
+    const capabilityGate = membershipRead.indexOf('statusCapability.error || statusCapability.data !== false');
     const legacyQuery = membershipRead.indexOf(".select('organization_id, role, organizations(id, name, slug)')");
     expect(statusFailureGuard).toBeGreaterThan(-1);
-    expect(legacyQuery).toBeGreaterThan(statusFailureGuard);
+    expect(capabilityProbe).toBeGreaterThan(statusFailureGuard);
+    expect(capabilityGate).toBeGreaterThan(capabilityProbe);
+    expect(legacyQuery).toBeGreaterThan(capabilityGate);
   });
 
   it('preserves user scoping, deterministic ordering, and bounded reads on every compatibility query', async () => {
