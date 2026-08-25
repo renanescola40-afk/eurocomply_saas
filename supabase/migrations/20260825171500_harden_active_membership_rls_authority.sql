@@ -2,9 +2,10 @@ begin;
 
 -- P0 tenant-authorization closure.
 -- The governed licensing identity adds organization_members.status, but the
--- canonical private RLS helpers historically authorized any membership row.
--- Once status exists, suspended/deprovisioned memberships must cease to be
--- tenant authority for PostgREST and Storage immediately.
+-- canonical private RLS helpers and several legacy direct-membership policies
+-- historically authorized any membership row. Once status exists,
+-- suspended/deprovisioned memberships must cease to be tenant authority for
+-- PostgREST and Storage immediately.
 
 do $preconditions$
 begin
@@ -26,6 +27,37 @@ begin
   if to_regprocedure('app_private.is_org_member(uuid)') is null
      or to_regprocedure('app_private.has_org_role(uuid,text[])') is null then
     raise exception 'canonical private organization authorization helpers are missing';
+  end if;
+
+  if to_regclass('public.organization_add_ons') is null
+     or to_regclass('storage.objects') is null then
+    raise exception 'direct membership RLS policy relations are missing';
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'organization_add_ons'
+      and policyname = 'organization members can read add-ons'
+      and cmd = 'SELECT'
+  ) then
+    raise exception 'organization add-ons membership policy is missing';
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'storage'
+      and tablename = 'objects'
+      and policyname = 'Members can read organization document objects'
+      and cmd = 'SELECT'
+  ) or not exists (
+    select 1 from pg_policies
+    where schemaname = 'storage'
+      and tablename = 'objects'
+      and policyname = 'Members can upload organization document objects'
+      and cmd = 'INSERT'
+  ) then
+    raise exception 'compliance-documents membership policies are missing';
   end if;
 end
 $preconditions$;
@@ -86,6 +118,48 @@ as $$
     );
 $$;
 
+-- Preserve the existing direct-policy identity semantics while adding the
+-- status boundary. These three policies bypass the canonical helpers today and
+-- therefore must be hardened in the same transaction as the helpers.
+alter policy "organization members can read add-ons"
+on public.organization_add_ons
+to authenticated
+using (
+  exists (
+    select 1
+    from public.organization_members as members
+    where members.organization_id = organization_add_ons.organization_id
+      and lower(coalesce(members.status, '')) = 'active'
+      and members.user_id = (select auth.uid())
+  )
+);
+
+alter policy "Members can read organization document objects"
+on storage.objects
+to authenticated
+using (
+  bucket_id = 'compliance-documents'
+  and split_part(name, '/', 1)::uuid in (
+    select organization_id
+    from public.organization_members
+    where lower(coalesce(status, '')) = 'active'
+      and user_id = (select auth.uid())
+  )
+);
+
+alter policy "Members can upload organization document objects"
+on storage.objects
+to authenticated
+with check (
+  bucket_id = 'compliance-documents'
+  and split_part(name, '/', 1)::uuid in (
+    select organization_id
+    from public.organization_members
+    where lower(coalesce(status, '')) = 'active'
+      and user_id = (select auth.uid())
+  )
+);
+
 -- Preserve the existing private-helper execution model used by RLS policies.
 revoke all on function app_private.is_org_member(uuid) from public, anon;
 revoke all on function app_private.has_org_role(uuid, text[]) from public, anon;
@@ -97,6 +171,9 @@ declare
   member_definition text;
   role_definition text;
   status_constraint_valid boolean := false;
+  add_on_policy text;
+  document_read_policy text;
+  document_upload_policy text;
 begin
   select pg_get_functiondef('app_private.is_org_member(uuid)'::regprocedure)
     into member_definition;
@@ -106,6 +183,30 @@ begin
   if coalesce(member_definition, '') not like '%status%active%'
      or coalesce(role_definition, '') not like '%status%active%' then
     raise exception 'canonical private RLS helpers are not active-membership aware';
+  end if;
+
+  select qual into add_on_policy
+  from pg_policies
+  where schemaname = 'public'
+    and tablename = 'organization_add_ons'
+    and policyname = 'organization members can read add-ons';
+
+  select qual into document_read_policy
+  from pg_policies
+  where schemaname = 'storage'
+    and tablename = 'objects'
+    and policyname = 'Members can read organization document objects';
+
+  select with_check into document_upload_policy
+  from pg_policies
+  where schemaname = 'storage'
+    and tablename = 'objects'
+    and policyname = 'Members can upload organization document objects';
+
+  if coalesce(add_on_policy, '') not ilike '%status%active%'
+     or coalesce(document_read_policy, '') not ilike '%status%active%'
+     or coalesce(document_upload_policy, '') not ilike '%status%active%' then
+    raise exception 'direct membership RLS policies are not active-membership aware';
   end if;
 
   select exists (
