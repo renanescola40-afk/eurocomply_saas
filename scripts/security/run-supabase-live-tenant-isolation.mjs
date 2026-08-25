@@ -17,10 +17,17 @@ function hasLiveRuntimeConfiguration() {
   return hasUrl && hasPrivilegedKey;
 }
 
+function hasPromotionRunBinding() {
+  return /^\d+$/.test(String(process.env.PROMOTION_RUN_ID ?? '').trim());
+}
+
 if (isCli) {
   const advisory = process.argv.includes('--advisory');
-  if (advisory && !hasLiveRuntimeConfiguration()) {
-    console.log('Supabase post-V20 live tenant-isolation validation skipped in advisory CI: protected runtime credentials are unavailable.');
+  if (advisory && (!hasLiveRuntimeConfiguration() || !hasPromotionRunBinding())) {
+    const reason = hasLiveRuntimeConfiguration()
+      ? 'PROMOTION_RUN_ID is not bound to this advisory run'
+      : 'protected runtime credentials are unavailable';
+    console.log(`Supabase live tenant-isolation validation skipped in advisory CI: ${reason}.`);
     console.log('No runtime completion is claimed; the protected promotion-bound workflow is authoritative.');
     process.exit(0);
   }
