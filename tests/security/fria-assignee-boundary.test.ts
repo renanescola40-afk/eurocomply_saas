@@ -72,11 +72,13 @@ describe('FRIA assignment directory security contract', () => {
     expect(source).toContain('noStoreJson');
   });
 
-  it('enumerates only current-tenant memberships and never globally lists auth users', async () => {
+  it('enumerates only current-tenant active memberships and never globally lists auth users', async () => {
     const source = await readFile(DIRECTORY_SERVICE, 'utf8');
 
     expect(source).toContain(".from('organization_members')");
-    expect(source).toContain(".eq('organization_id', input.organizationId)");
+    expect(source).toContain(".eq('organization_id', organizationId)");
+    expect(source).toContain(".eq('status', 'active')");
+    expect(source).toContain('listAssignableMembershipRows(input.organizationId)');
     expect(source).toContain(".not('user_id', 'is', null)");
     expect(source).toContain("supabase.auth.admin.getUserById(userId)");
     expect(source).not.toContain('auth.admin.listUsers');
