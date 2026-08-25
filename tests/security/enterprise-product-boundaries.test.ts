@@ -77,8 +77,8 @@ describe('enterprise product information architecture', () => {
     expect(shell).toContain("localized(locale, '/dashboard/organizations/risks')");
     expect(shell).toContain("localized(locale, '/dashboard/organizations/regulatory-control-tower')");
     expect(shell).toContain("localized(locale, '/dashboard/organizations/billing')");
-    expect(shell).toContain('sticky top-[72px]');
-    expect(shell).toContain('Enterprise AI Governance');
+    expect(shell).toContain('fixed inset-y-0 left-0');
+    expect(shell).toContain('Enterprise governance');
     expect(shell).toContain('aria-current={active ? \'page\' : undefined}');
     expect(shell).toContain('print:hidden');
     expect(shell).toContain('print:max-w-none print:p-0');

@@ -67,7 +67,7 @@ function DashboardHomeOverviewSkeleton() {
     <div className="space-y-6" aria-label="Loading dashboard overview" role="status" aria-live="polite">
       <div className="grid gap-4 md:grid-cols-2">
         {Array.from({ length: 2 }).map((_, index) => (
-          <div key={index} className="premium-card rounded-[1.5rem] p-5">
+          <div key={index} className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5">
             <div className="skeleton-pulse h-4 w-24 rounded-full bg-white/[0.055]" />
             <div className="skeleton-pulse mt-4 h-8 w-40 rounded-xl bg-white/[0.055]" />
             <div className="skeleton-pulse mt-3 h-4 w-full rounded-full bg-white/[0.055]" />
@@ -131,20 +131,19 @@ export default async function OrganizationDashboardPage({ params, searchParams }
   ].join(' · ');
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.18),_transparent_34rem),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.09),_transparent_30rem),linear-gradient(180deg,#050505_0%,#080b12_46%,#050505_100%)]">
-      <div className="pointer-events-none fixed inset-0 tech-grid opacity-25" />
-      <div className="relative mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 md:py-10 lg:px-8">
+    <main className="min-h-0 bg-transparent">
+      <div className="space-y-6 lg:space-y-8">
         {shouldShowPlanContinuation && requestedPlan ? (
-          <section className="rounded-[1.5rem] border border-blue-300/20 bg-blue-400/10 p-5 text-blue-50 shadow-sm" aria-label="Selected plan continuation">
+          <section className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[0.055] p-5 text-white" aria-label="Selected plan continuation">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100/70">Selected plan</p>
-                <h2 className="mt-2 text-xl font-semibold tracking-tight">Review {requestedPlan.name} for this workspace</h2>
-                <p className="mt-2 text-sm leading-6 text-blue-50/72">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/65">Selected plan</p>
+                <h2 className="mt-2 text-lg font-semibold tracking-tight text-white">Review {requestedPlan.name} for this workspace</h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-white/52">
                   This workspace is currently on {planName}. Continue to billing to review the selected plan, or ask an admin if you do not manage billing.
                 </p>
               </div>
-              <Link href={planContinuationHref} className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-blue-50">
+              <Link href={planContinuationHref} className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl bg-emerald-300 px-4 py-2 text-sm font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b100f]">
                 {data.canManageBilling ? 'Review billing' : 'Ask an admin'}
               </Link>
             </div>
