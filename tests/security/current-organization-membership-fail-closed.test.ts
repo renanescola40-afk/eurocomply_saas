@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 
 const QUERY_FILE = new URL('../../src/server/queries/current-organization.ts', import.meta.url);
+const LEGACY_QUERY_FILE = new URL('../../src/server/queries/organizations.ts', import.meta.url);
 
 describe('current organization membership read failure contract', () => {
   it('requires the privileged client for tenant-context membership reads', async () => {
@@ -18,6 +19,7 @@ describe('current organization membership read failure contract', () => {
 
   it('treats active membership status as mandatory tenant read authority', async () => {
     const source = await readFile(QUERY_FILE, 'utf8');
+    const legacySource = await readFile(LEGACY_QUERY_FILE, 'utf8');
     const membershipRead = source.slice(
       source.indexOf('export async function getUserOrganizationMemberships'),
       source.indexOf('export async function getCurrentOrganizationForUser'),
@@ -28,6 +30,16 @@ describe('current organization membership read failure contract', () => {
     expect(membershipRead).toContain(".select('organization_id, role, status, organizations(id, name, slug, onboarding_status, onboarding_completed_at, selected_plan)')");
     expect(membershipRead).toContain(".select('organization_id, role, status, organizations(id, name, slug)')");
     expect(membershipRead.match(/\.eq\('status', 'active'\)/g)).toHaveLength(2);
+
+    const legacyMembershipRead = legacySource.slice(
+      legacySource.indexOf('export async function listUserOrganizations'),
+      legacySource.indexOf('export async function getCurrentOrganizationForUser'),
+    );
+    expect(legacyMembershipRead).toContain(".eq('user_id', userId)");
+    expect(legacyMembershipRead).toContain(".eq('status', 'active')");
+    expect(legacyMembershipRead.indexOf(".eq('status', 'active')")).toBeGreaterThan(
+      legacyMembershipRead.indexOf(".eq('user_id', userId)"),
+    );
   });
 
   it('does not convert membership lookup failures into a no-organization state', async () => {
