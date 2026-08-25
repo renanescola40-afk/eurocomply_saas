@@ -78,7 +78,7 @@ function CompactActivationProgress({ state, locale }: { state: OnboardingState; 
   const nextMilestone = requiredMilestones.find((milestone) => !milestone.complete);
 
   return (
-    <Card className="border-white/10 bg-white/[0.025] text-white shadow-none">
+    <Card className="overflow-hidden rounded-xl border-white/[0.075] bg-[#101715] text-white shadow-none">
       <OnboardingTelemetry
         progress={percentage}
         hasOrganization={state.hasOrganization}
@@ -88,33 +88,38 @@ function CompactActivationProgress({ state, locale }: { state: OnboardingState; 
         hasVendors={Boolean(state.hasFirstAiSystem ?? state.hasVendors)}
         hasDashboardOpened={Boolean(state.hasReadinessScore ?? state.hasDashboardOpened)}
       />
-      <CardContent className="p-5 md:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <CardContent className="p-0">
+        <div className="flex flex-col gap-4 border-b border-white/[0.065] px-5 py-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
-            <Badge variant="outline" className="rounded-full border-white/10 bg-white/[0.035] text-white/55">{copy.eyebrow}</Badge>
-            <CardTitle className="mt-3 text-xl text-white md:text-2xl">{copy.title}</CardTitle>
-            <p className="mt-2 text-sm leading-6 text-white/48">{copy.body}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/34">{copy.eyebrow}</p>
+            <CardTitle className="mt-1.5 text-lg font-semibold tracking-[-0.02em] text-white/86">{copy.title}</CardTitle>
+            <p className="mt-1.5 text-xs leading-5 text-white/34">{copy.body}</p>
           </div>
-          <div className="min-w-48 lg:text-right">
-            <p className="text-3xl font-semibold text-white">{percentage}%</p>
-            <p className="text-xs text-white/38">{completed}/{requiredMilestones.length} {copy.complete}</p>
+          <div className="min-w-44 lg:text-right">
+            <p className="text-2xl font-semibold tracking-[-0.03em] text-white">{percentage}%</p>
+            <p className="mt-0.5 text-xs text-white/30">{completed}/{requiredMilestones.length} {copy.complete}</p>
           </div>
         </div>
 
-        <Progress value={percentage} className="mt-5 h-1.5 bg-white/10" />
+        <div className="px-5 py-4">
+          <Progress value={percentage} className="h-1 bg-white/[0.07]" />
 
-        <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          {milestones.map((milestone) => (
-            <div key={milestone.id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm">
-              {milestone.complete ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" /> : <Circle className="h-4 w-4 shrink-0 text-white/30" />}
-              <span className={milestone.complete ? 'text-white/72' : 'text-white/45'}>{milestone.label}</span>
-            </div>
-          ))}
+          <div className="mt-4 grid overflow-hidden rounded-lg border border-white/[0.065] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            {milestones.map((milestone, index) => (
+              <div
+                key={milestone.id}
+                className={`flex min-w-0 items-center gap-2.5 px-3 py-3 ${index > 0 ? 'border-t border-white/[0.055] sm:border-l sm:border-t-0' : ''}`}
+              >
+                {milestone.complete ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-300" /> : <Circle className="h-4 w-4 shrink-0 text-white/24" />}
+                <span className={`truncate text-xs ${milestone.complete ? 'text-white/64' : 'text-white/34'}`}>{milestone.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <p className="mt-3 text-xs text-white/34">
+            {nextMilestone ? <>{copy.next}: <span className="font-medium text-white/66">{nextMilestone.label}</span></> : copy.ready}
+          </p>
         </div>
-
-        <p className="mt-4 text-sm text-white/46">
-          {nextMilestone ? <>{copy.next}: <span className="font-medium text-white/78">{nextMilestone.label}</span></> : copy.ready}
-        </p>
       </CardContent>
     </Card>
   );
