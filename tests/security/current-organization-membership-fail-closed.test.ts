@@ -17,9 +17,8 @@ describe('current organization membership read failure contract', () => {
     expect(membershipRead).toContain('const supabase = createAdminClient();');
   });
 
-  it('treats active membership status as mandatory tenant read authority', async () => {
+  it('treats active membership status as mandatory tenant read authority when the status column exists', async () => {
     const source = await readFile(QUERY_FILE, 'utf8');
-    const legacySource = await readFile(LEGACY_QUERY_FILE, 'utf8');
     const membershipRead = source.slice(
       source.indexOf('export async function getUserOrganizationMemberships'),
       source.indexOf('export async function getCurrentOrganizationForUser'),
@@ -30,16 +29,15 @@ describe('current organization membership read failure contract', () => {
     expect(membershipRead).toContain(".select('organization_id, role, status, organizations(id, name, slug, onboarding_status, onboarding_completed_at, selected_plan)')");
     expect(membershipRead).toContain(".select('organization_id, role, status, organizations(id, name, slug)')");
     expect(membershipRead.match(/\.eq\('status', 'active'\)/g)).toHaveLength(2);
+  });
 
-    const legacyMembershipRead = legacySource.slice(
-      legacySource.indexOf('export async function listUserOrganizations'),
-      legacySource.indexOf('export async function getCurrentOrganizationForUser'),
-    );
-    expect(legacyMembershipRead).toContain(".eq('user_id', userId)");
-    expect(legacyMembershipRead).toContain(".eq('status', 'active')");
-    expect(legacyMembershipRead.indexOf(".eq('status', 'active')")).toBeGreaterThan(
-      legacyMembershipRead.indexOf(".eq('user_id', userId)"),
-    );
+  it('consolidates the legacy organization helper onto the canonical membership boundary', async () => {
+    const legacySource = await readFile(LEGACY_QUERY_FILE, 'utf8');
+
+    expect(legacySource).toContain("import { getUserOrganizationMemberships } from '@/server/queries/current-organization';");
+    expect(legacySource).toContain('const memberships = await getUserOrganizationMemberships(userId);');
+    expect(legacySource).not.toContain(".from('organization_members')");
+    expect(legacySource).not.toContain('createAdminClient');
   });
 
   it('does not convert membership lookup failures into a no-organization state', async () => {
@@ -74,6 +72,19 @@ describe('current organization membership read failure contract', () => {
     expect(membershipRead).toContain(".select('organization_id, role, organizations(id, name, slug)')");
     expect(membershipRead).toContain("console.warn('[organization] membership_onboarding_columns_unavailable'");
     expect(membershipRead).not.toContain('createServerSupabaseClient');
+  });
+
+  it('permits the status-less compatibility read only when the status column itself is unavailable', async () => {
+    const source = await readFile(QUERY_FILE, 'utf8');
+    const membershipRead = source.slice(
+      source.indexOf('export async function getUserOrganizationMemberships'),
+      source.indexOf('export async function getCurrentOrganizationForUser'),
+    );
+
+    const statusFailureGuard = membershipRead.indexOf('if (!isMissingMembershipStatusColumn(statusAwareFallback.error))');
+    const legacyQuery = membershipRead.indexOf(".select('organization_id, role, organizations(id, name, slug)')");
+    expect(statusFailureGuard).toBeGreaterThan(-1);
+    expect(legacyQuery).toBeGreaterThan(statusFailureGuard);
   });
 
   it('preserves user scoping, deterministic ordering, and bounded reads on every compatibility query', async () => {
