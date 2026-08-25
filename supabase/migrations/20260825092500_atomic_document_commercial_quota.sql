@@ -174,14 +174,21 @@ begin
       message = 'document organization is required';
   end if;
 
-  -- Service-role application writes bypass RLS, so resolve durable authority
-  -- again inside the database write boundary instead of trusting the caller.
+  -- Service-role application writes bypass RLS. Reassert the canonical boolean
+  -- payment-first authority inside the database write boundary, then resolve the
+  -- exact authoritative plan for the capacity decision.
+  if not app_private.has_commercial_authority(new.organization_id) then
+    raise exception using
+      errcode = '42501',
+      message = 'document_subscription_required';
+  end if;
+
   v_plan := app_private.resolve_commercial_plan(new.organization_id);
 
   if v_plan is null then
     raise exception using
       errcode = '42501',
-      message = 'document_subscription_required';
+      message = 'document_commercial_plan_unavailable';
   end if;
 
   -- Exact canonical catalog document limits in src/lib/billing/plans.ts.
