@@ -46,6 +46,7 @@ const PACKAGE_DIRECTORIES = Object.freeze([
   'docs/legal-review-preparation/review-packages',
   'docs/legal-review-preparation/legal-pack',
   'docs/legal-review-preparation/counsel-efficiency',
+  'docs/legal-review-preparation/free-counsel',
 ]);
 
 const REQUIRED_EXTERNAL_DECISIONS = Object.freeze([
@@ -95,6 +96,7 @@ function contentClass(path) {
   if (path.includes('/review-packages/')) return 'QUALIFIED_REVIEW_PACKAGE';
   if (path.includes('/legal-pack/')) return 'CONTRACT_AND_COUNSEL_DRAFT';
   if (path.includes('/counsel-efficiency/')) return 'COUNSEL_REVIEW_EFFICIENCY';
+  if (path.includes('/free-counsel/')) return 'FREE_COUNSEL_REVIEW_HANDOFF';
   if (path.includes('/evidence/')) return 'EVIDENCE_REGISTRY';
   if (path.endsWith('.json')) return 'STRUCTURED_LEGAL_PREPARATION';
   return 'COUNSEL_BRIEFING';
@@ -160,6 +162,7 @@ export function generateLegalCounselHandoffBundle({
     externalDecisionStatus,
     instructions: [
       'Start with the counsel review cockpit and generated exact-SHA delta.',
+      'Use the free-counsel handoff files when the reviewer is operating under a pro bono, clinic or zero-cost limited-scope route.',
       'Counsel must review source materials rather than rely only on generated summaries.',
       'Bind every decision to sourceSha and packageDigest.',
       'Store signed confidential artifacts outside the public repository and reference immutable digests.',
