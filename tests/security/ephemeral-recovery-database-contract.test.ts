@@ -154,7 +154,11 @@ describe('ephemeral Supabase recovery database contract', () => {
 
   it('uses supported roles schema data dumps, excludes all managed Storage rows fail-closed and restores transactionally', () => {
     expect(exercise).toContain("'--role-only', '--file', rolesDumpPath");
-    expect(exercise).toContain("run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath], {}, 'recovery_schema_dump_failed')");
+    expect(exercise).toContain("failurePhase = 'application_schema_inventory'");
+    expect(exercise).toContain('const applicationSchemas = readApplicationSchemas(source)');
+    expect(exercise).toContain("const applicationSchemaCsv = applicationSchemas.join(',')");
+    expect(exercise).toContain("run('supabase', ['db', 'dump', '--db-url', source, '--schema', applicationSchemaCsv, '--file', schemaDumpPath], {}, 'recovery_schema_dump_failed')");
+    expect(exercise).not.toContain("run('supabase', ['db', 'dump', '--db-url', source, '--file', schemaDumpPath], {}, 'recovery_schema_dump_failed')");
     expect(exercise).toContain("'--data-only', '--use-copy'");
     expect(exercise).toContain('function readManagedStorageRelations(connection)');
     expect(exercise).toContain("relations.includes('storage.buckets')");
