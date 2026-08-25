@@ -15,6 +15,7 @@ const rolesDumpPath = `${workDir}/production-roles.sql`;
 const schemaDumpPath = `${workDir}/production-schema.sql`;
 const dataDumpPath = `${workDir}/production-data.sql`;
 const managedStoragePrimer = 'scripts/recovery/prime-ephemeral-managed-storage-schema.mjs';
+const isolatedRestoreRole = 'supabase_admin';
 const env = (name) => String(process.env[name] ?? '').trim();
 const startedAt = Date.now();
 const checks = {};
@@ -285,15 +286,28 @@ function restoreApplicationSchemaIntoEphemeralSupabase(container) {
   }
 }
 
+function assertIsolatedRestoreRoleBoundary(container) {
+  const status = run('docker', [
+    'exec', container, 'psql', '-U', 'postgres', '-d', 'postgres', '--no-psqlrc',
+    '--tuples-only', '--no-align', '--set', 'ON_ERROR_STOP=1',
+    '--command', `select case when target.rolcanlogin and target.rolsuper and not source.rolsuper then 'ok' else 'invalid' end from pg_roles target cross join pg_roles source where target.rolname = '${isolatedRestoreRole}' and source.rolname = 'postgres';`,
+  ], {}, 'recovery_isolated_restore_role_boundary_query_failed').trim();
+  if (status !== 'ok') {
+    throw new Error('recovery_isolated_restore_role_boundary_invalid');
+  }
+}
+
 function restoreDataIntoEphemeralSupabase(container, managedAuthCleanupSql) {
   if (!managedAuthCleanupSql) {
     throw new Error('recovery_managed_auth_cleanup_sql_missing');
   }
 
+  assertIsolatedRestoreRoleBoundary(container);
+  checks.isolatedRestorePrivilegeBoundary = true;
   const containerPath = copySqlToContainer(container, dataDumpPath);
   try {
     run('docker', [
-      'exec', container, 'psql', '-U', 'postgres', '-d', 'postgres', '--no-psqlrc',
+      'exec', container, 'psql', '-U', isolatedRestoreRole, '-d', 'postgres', '--no-psqlrc',
       '--single-transaction', '--set', 'ON_ERROR_STOP=1',
       '--command', 'SET session_replication_role = replica;',
       '--command', managedAuthCleanupSql,
@@ -513,7 +527,7 @@ const evidence = {
   failureDiagnostic: passed ? null : failureDiagnostic,
   evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, extensionNamesStored: false, extensionVersionsStored: false, managedAuthRelationNamesStored: false, applicationSchemaNamesStored: false, connectionStringsNormalizedBeforeUse: checks.connectionStringsSanitized === true, singleDescriptorInspection: !ephemeralMode, logicalBackupFilesDeleted: true },
   evidenceBoundary: ephemeralMode
-    ? 'Supabase-managed Auth/REST/Storage relations were primed on the empty isolated target by the local Supabase runtime and all API services were stopped before any Production snapshot restore. A role dump is captured as part of the immutable logical backup, but provider-managed roles are not replayed into the already-primed Supabase target. Dynamically inventoried application-owned schemas are restored before data replay; mixed application schemas remain recoverable even when they host extension objects, while provider-managed schemas remain excluded. Managed Auth inventory is snapshotted before application schema restore, rebound immediately afterward, and must remain exactly unchanged before any Production data is replayed. Storage row data is excluded from this backup/restore proof. Provider-managed Auth relations absent from the post-schema target are excluded from data replay only when their source row count is zero; any non-empty source-only Auth relation fails closed. For managed Auth relations present in both source and the disposable target, primed target rows are deleted only on that isolated target inside the same transaction immediately before Production data replay, preserving provider-created Auth DDL and preventing duplicate-key collisions. Managed Auth inventory must remain unchanged after data restore, and auth.users row-count integrity remains mandatory. Selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; managed Auth relation names, application schema names, extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
+    ? 'Supabase-managed Auth/REST/Storage relations were primed on the empty isolated target by the local Supabase runtime and all API services were stopped before any Production snapshot restore. A role dump is captured as part of the immutable logical backup, but provider-managed roles are not replayed into the already-primed Supabase target. Dynamically inventoried application-owned schemas are restored before data replay; mixed application schemas remain recoverable even when they host extension objects, while provider-managed schemas remain excluded. Managed Auth inventory is snapshotted before application schema restore, rebound immediately afterward, and must remain exactly unchanged before any Production data is replayed. Storage row data is excluded from this backup/restore proof. Provider-managed Auth relations absent from the post-schema target are excluded from data replay only when their source row count is zero; any non-empty source-only Auth relation fails closed. For managed Auth relations present in both source and the disposable target, primed target rows are deleted only on that isolated target inside the same transaction immediately before Production data replay, preserving provider-created Auth DDL and preventing duplicate-key collisions. The disposable data replay first verifies the expected Supabase local privilege model and uses the bootstrap superuser only for the transaction that requires session_replication_role; application schema restore remains on postgres and Production is never mutated by this exercise. Managed Auth inventory must remain unchanged after data restore, and auth.users row-count integrity remains mandatory. Selected migration postconditions and later Storage runtime/tenant acceptance remain mandatory. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated combined digest; managed Auth relation names, application schema names, extension names/versions, connection strings, raw command arguments, raw process errors, backup files and local database volumes are not retained.'
     : 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts, safe failure codes, a redacted process-failure classification and a truncated digest; connection strings, raw command arguments, raw process errors and the dump are not retained.',
 };
 mkdirSync(dirname(output), { recursive: true });
