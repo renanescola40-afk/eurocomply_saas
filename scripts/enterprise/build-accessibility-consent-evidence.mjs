@@ -17,6 +17,12 @@ function digest(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 
+function scorecardCheck(name, sourcePassed, executionProven, exactShaProvenance) {
+  if (!sourcePassed) return { name, passed: false };
+  if (!executionProven || !exactShaProvenance) return { name, status: 'NOT_VERIFIED' };
+  return { name, passed: true };
+}
+
 export function evaluateAccessibilityConsentCoverage({
   specSource,
   bannerSource,
@@ -143,8 +149,8 @@ export function buildAccessibilityConsentEvidence({
       outcome: accessibilityPassed ? 'passed' : 'not_verified',
       ...common,
       checks: [
-        { name: 'keyboard', passed: keyboardPassed },
-        { name: 'screenReader', passed: screenReaderPassed },
+        scorecardCheck('keyboard', coverage.keyboardCoverage, executionProven, exactShaProvenance),
+        scorecardCheck('screenReader', coverage.screenReaderCoverage, executionProven, exactShaProvenance),
       ],
       checkResults: {
         ...coverage.checks,
@@ -168,7 +174,7 @@ export function buildAccessibilityConsentEvidence({
       outcome: analyticsPassed ? 'passed' : 'not_verified',
       ...common,
       checks: [
-        { name: 'analyticsConsent', passed: analyticsPassed },
+        scorecardCheck('analyticsConsent', coverage.analyticsConsentCoverage, executionProven, exactShaProvenance),
       ],
       checkResults: {
         preConsentBlocking: coverage.checks.preConsentBlocking,
