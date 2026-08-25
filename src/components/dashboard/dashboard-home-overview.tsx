@@ -25,7 +25,7 @@ export function DashboardHomeOverview({
   const openTasks = tasks.filter((task) => task.status !== 'done').slice(0, 5);
 
   return (
-    <div className="space-y-6 scroll-smooth">
+    <div className="space-y-4 scroll-smooth md:space-y-5">
       <section id="recommended-focus" className="scroll-mt-28">
         <NextBestActions summary={summary} basePath={basePath} workflowReadiness={workflowReadiness} />
       </section>

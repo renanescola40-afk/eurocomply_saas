@@ -7,12 +7,9 @@ import {
   Gauge,
   ShieldAlert,
   ShieldCheck,
-  Sparkles,
   UsersRound,
 } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import type { Locale } from '@/lib/i18n/routing';
 import type { DashboardSummary } from '@/server/queries/dashboard';
 import type {
@@ -287,15 +284,22 @@ function localizedRoute(locale: Locale, path: string) {
 }
 
 function statusTone(status?: OrganizationWorkflowReadiness['status']) {
-  if (status === 'blocked') return 'border-rose-400/25 bg-rose-400/10 text-rose-100';
-  if (status === 'attention') return 'border-amber-300/25 bg-amber-300/10 text-amber-100';
-  return 'border-emerald-300/25 bg-emerald-300/10 text-emerald-100';
+  if (status === 'blocked') return 'border-rose-400/20 bg-rose-400/[0.08] text-rose-100';
+  if (status === 'attention') return 'border-amber-300/20 bg-amber-300/[0.08] text-amber-100';
+  return 'border-emerald-300/20 bg-emerald-300/[0.08] text-emerald-100';
 }
 
 function statusLabel(copy: CommandCopy, status?: OrganizationWorkflowReadiness['status']) {
   if (status === 'blocked') return copy.blocked;
   if (status === 'attention') return copy.attention;
   return copy.ready;
+}
+
+function priorityTone(priority: string) {
+  if (priority === 'P0') return 'border-rose-400/20 bg-rose-400/[0.08] text-rose-100';
+  if (priority === 'P1') return 'border-amber-300/20 bg-amber-300/[0.08] text-amber-100';
+  if (priority === 'Ready') return 'border-emerald-300/20 bg-emerald-300/[0.08] text-emerald-100';
+  return 'border-white/[0.08] bg-white/[0.035] text-white/60';
 }
 
 function progressTone(value: number | null) {
@@ -401,7 +405,7 @@ export function EnterpriseComplianceCommandCenter({
   tasks,
   topRisks,
   vendorsRequiringReview,
-  documentsExpiringSoon,
+  documentsExpiringSoon: _documentsExpiringSoon,
   aiSystemSummary,
   auditEvents,
   workflowReadiness,
@@ -481,140 +485,150 @@ export function EnterpriseComplianceCommandCenter({
   ];
 
   return (
-    <section className="premium-card rounded-[2rem] p-5 text-white md:p-8" aria-labelledby="enterprise-command-center-title">
+    <section className="space-y-5 text-white" aria-labelledby="enterprise-command-center-title">
       <span className="sr-only">{safeSectionLabels.join(' · ')}</span>
 
-      <div className="grid gap-5 xl:grid-cols-[1.18fr_0.82fr]">
-        <div className="rounded-[1.75rem] border border-white/10 bg-black/20 p-5 md:p-7">
-          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-            <div className="max-w-3xl">
-              <Badge variant="outline" className={`rounded-full px-3 py-1 text-xs uppercase tracking-[0.2em] ${statusTone(workflowReadiness?.status)}`}>
-                {statusLabel(copy, workflowReadiness?.status)}
-              </Badge>
-              <p className="mt-5 text-xs font-semibold uppercase tracking-[0.24em] text-white/42">{copy.eyebrow}</p>
-              <h2 id="enterprise-command-center-title" className="mt-2 text-3xl font-semibold tracking-[-0.045em] text-white md:text-5xl">
-                {copy.title}
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/58 md:text-base">{copy.body}</p>
-            </div>
-
-            <div className="flex flex-wrap gap-2 text-xs text-white/52">
-              <span className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-1">{copy.role}: {currentUserRole}</span>
-              <span className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-1">{copy.plan}: {planName}</span>
-            </div>
-          </div>
-
-          <div className="mt-7 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5">
-            <div className="flex items-start gap-3">
-              <span className="rounded-2xl border border-primary/20 bg-primary/10 p-2.5 text-primary" aria-hidden="true">
-                <Sparkles className="h-5 w-5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/42">{copy.nextAction}</p>
-                  <span className="rounded-full border border-white/10 bg-black/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/60">{nextAction.priority}</span>
-                </div>
-                <h3 className="mt-2 text-xl font-semibold tracking-tight text-white md:text-2xl">{nextAction.title}</h3>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/54">{nextAction.description}</p>
-              </div>
-            </div>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Button asChild className="rounded-full bg-white text-black hover:bg-white/90">
-                <Link href={nextAction.href}>{copy.openAction} <ArrowRight className="h-4 w-4" /></Link>
-              </Button>
-              {canManageWorkspace ? (
-                <Button asChild variant="outline" className="rounded-full border-white/15 bg-white/[0.04] text-white hover:bg-white/10">
-                  <Link href={tasksPath}>{copy.reviewTasks}</Link>
-                </Button>
-              ) : null}
-              {canManageBilling ? (
-                <Button asChild variant="outline" className="rounded-full border-white/15 bg-white/[0.04] text-white hover:bg-white/10">
-                  <Link href={`${basePath}/billing`}>{copy.openBilling}</Link>
-                </Button>
-              ) : null}
-            </div>
-          </div>
+      <header className="flex flex-col gap-4 border-b border-white/[0.07] pb-5 xl:flex-row xl:items-end xl:justify-between">
+        <div className="max-w-3xl">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/36">{copy.eyebrow}</p>
+          <h2 id="enterprise-command-center-title" className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white md:text-[30px]">
+            {copy.title}
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/48">{copy.body}</p>
         </div>
 
-        <aside className="rounded-[1.75rem] border border-white/10 bg-white/[0.025] p-5 md:p-6" aria-label={copy.recentActivity}>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/42">{copy.recentActivity}</p>
-              <p className="mt-2 text-sm leading-6 text-white/50">{copy.recentActivityBody}</p>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 ${statusTone(workflowReadiness?.status)}`}>
+            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" aria-hidden="true" />
+            {statusLabel(copy, workflowReadiness?.status)}
+          </span>
+          <span className="rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-2 text-white/48">{copy.role}: {currentUserRole}</span>
+          <span className="rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-2 text-white/48">{copy.plan}: {planName}</span>
+        </div>
+      </header>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        {cards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <Link
+              key={card.title}
+              href={card.href}
+              className="group min-w-0 rounded-xl border border-white/[0.075] bg-[#101715] p-4 transition-colors duration-200 hover:border-white/[0.14] hover:bg-[#131c19] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.025] text-white/52" aria-hidden="true">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <ArrowRight className="h-3.5 w-3.5 text-white/20 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-white/55" aria-hidden="true" />
+              </div>
+              <p className="mt-5 truncate text-2xl font-semibold tracking-[-0.03em] text-white">{card.value}</p>
+              <h3 className="mt-1 text-sm font-medium text-white/72">{card.label}</h3>
+              <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/36">{card.detail}</p>
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+        <section className="rounded-xl border border-white/[0.075] bg-[#101715] p-5 md:p-6" aria-labelledby="next-best-action-title">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/36">{copy.nextAction}</p>
+                <span className={`rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] ${priorityTone(nextAction.priority)}`}>
+                  {nextAction.priority}
+                </span>
+              </div>
+              <h3 id="next-best-action-title" className="mt-3 text-lg font-semibold tracking-[-0.02em] text-white md:text-xl">{nextAction.title}</h3>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/44">{nextAction.description}</p>
             </div>
-            <Activity className="h-5 w-5 text-white/35" aria-hidden="true" />
+            <Link
+              href={nextAction.href}
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-emerald-300 px-4 text-sm font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101715]"
+            >
+              {copy.openAction} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
           </div>
 
-          <div className="mt-5 space-y-2">
+          {(canManageWorkspace || canManageBilling) ? (
+            <div className="mt-5 flex flex-wrap gap-2 border-t border-white/[0.065] pt-4">
+              {canManageWorkspace ? (
+                <Link href={tasksPath} className="inline-flex h-9 items-center rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 text-xs font-medium text-white/58 transition hover:bg-white/[0.055] hover:text-white">
+                  {copy.reviewTasks}
+                </Link>
+              ) : null}
+              {canManageBilling ? (
+                <Link href={`${basePath}/billing`} className="inline-flex h-9 items-center rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 text-xs font-medium text-white/58 transition hover:bg-white/[0.055] hover:text-white">
+                  {copy.openBilling}
+                </Link>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+
+        <aside className="rounded-xl border border-white/[0.075] bg-[#101715]" aria-label={copy.recentActivity}>
+          <div className="flex items-start justify-between gap-4 border-b border-white/[0.065] px-5 py-4">
+            <div>
+              <h3 className="text-sm font-semibold text-white/82">{copy.recentActivity}</h3>
+              <p className="mt-1 text-xs leading-5 text-white/36">{copy.recentActivityBody}</p>
+            </div>
+            <Activity className="mt-0.5 h-4 w-4 shrink-0 text-white/30" aria-hidden="true" />
+          </div>
+
+          <div className="divide-y divide-white/[0.055] px-5">
             {recentAuditEvents.length > 0 ? recentAuditEvents.map((event) => {
               const action = formatAuditAction(event.action) || copy.eventRecorded;
               const entity = formatAuditAction(event.entity_type);
               const when = formatAuditDate(locale, event.created_at);
               return (
-                <div key={event.id} className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                  <p className="text-sm font-medium capitalize text-white/84">{action}</p>
-                  <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-white/38">
+                <div key={event.id} className="py-3.5">
+                  <p className="truncate text-sm font-medium capitalize text-white/74">{action}</p>
+                  <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-white/32">
                     {entity ? <span className="capitalize">{entity}</span> : null}
                     {when ? <span>{when}</span> : null}
                   </div>
                 </div>
               );
             }) : (
-              <div className="rounded-2xl border border-dashed border-white/10 bg-black/15 p-5 text-sm text-white/45">
-                {copy.noActivity}
-              </div>
+              <p className="py-5 text-sm text-white/40">{copy.noActivity}</p>
             )}
           </div>
 
-          <Link href={localizedRoute(locale, '/auditoria')} className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-white/58 transition hover:text-white">
-            {copy.viewAuditLog} <ArrowRight className="h-4 w-4" />
-          </Link>
+          <div className="border-t border-white/[0.065] px-5 py-3">
+            <Link href={localizedRoute(locale, '/auditoria')} className="inline-flex items-center gap-2 text-xs font-medium text-white/48 transition hover:text-white/80">
+              {copy.viewAuditLog} <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          </div>
         </aside>
       </div>
 
-      <div className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.025] p-5 md:p-6">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <section className="rounded-xl border border-white/[0.075] bg-[#101715]" aria-labelledby="operational-progress-title">
+        <div className="flex flex-col gap-2 border-b border-white/[0.065] px-5 py-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/42">{copy.workspaceProgress}</p>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/50">{copy.workspaceProgressBody}</p>
+            <h3 id="operational-progress-title" className="text-sm font-semibold text-white/82">{copy.workspaceProgress}</h3>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-white/36">{copy.workspaceProgressBody}</p>
           </div>
-          <span className="text-xs text-white/32">{limitsSummary}</span>
+          <span className="text-xs text-white/28">{limitsSummary}</span>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid divide-y divide-white/[0.055] md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
           {progressItems.map((item) => (
-            <div key={item.label} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <div key={item.label} className="min-w-0 p-5 md:[&:nth-child(3)]:border-t md:[&:nth-child(4)]:border-t md:[&:nth-child(3)]:border-white/[0.055] md:[&:nth-child(4)]:border-white/[0.055] xl:[&:nth-child(3)]:border-t-0 xl:[&:nth-child(4)]:border-t-0">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-white/72">{item.label}</p>
-                <span className="text-sm font-semibold text-white">{item.value === null ? '—' : `${item.value}%`}</span>
+                <p className="truncate text-sm font-medium text-white/66">{item.label}</p>
+                <span className="text-sm font-semibold text-white/82">{item.value === null ? '—' : `${item.value}%`}</span>
               </div>
-              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10" aria-label={`${item.label}: ${item.value ?? 0}%`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.value ?? 0}>
+              <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/[0.07]" aria-label={`${item.label}: ${item.value ?? 0}%`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.value ?? 0}>
                 <div className={`h-full rounded-full ${progressTone(item.value)}`} style={{ width: `${item.value ?? 0}%` }} />
               </div>
-              <p className="mt-2 text-xs leading-5 text-white/38">{item.detail}</p>
+              <p className="mt-2 truncate text-xs text-white/30">{item.detail}</p>
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-        {cards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Link key={card.title} href={card.href} className="group rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-white/20 hover:bg-white/[0.055] focus:outline-none focus:ring-2 focus:ring-primary/70">
-              <div className="flex items-start justify-between gap-3">
-                <span className="rounded-xl bg-white/[0.07] p-2 text-white/70" aria-hidden="true"><Icon className="h-4 w-4" /></span>
-                <ArrowRight className="h-3.5 w-3.5 text-white/25 transition group-hover:translate-x-0.5 group-hover:text-white" />
-              </div>
-              <p className="mt-4 text-2xl font-semibold tracking-tight text-white">{card.value}</p>
-              <h3 className="mt-1 text-sm font-semibold text-white/78">{card.label}</h3>
-              <p className="mt-2 text-xs leading-5 text-white/42">{card.detail}</p>
-            </Link>
-          );
-        })}
-      </div>
-
-      <p className="mt-5 text-xs leading-5 text-white/32">
+      <p className="text-xs leading-5 text-white/26">
         Data shown here is scoped to this workspace and uses recorded operational signals. Progress indicators support governance work and do not constitute legal advice or a guarantee of compliance.
       </p>
     </section>
