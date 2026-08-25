@@ -129,6 +129,7 @@ export async function listFriaAssigneeCandidates(input: {
     .from('organization_members')
     .select('user_id,role')
     .eq('organization_id', input.organizationId)
+    .eq('status', 'active')
     .not('user_id', 'is', null)
     .limit(MAX_FRIA_ASSIGNEE_CANDIDATES);
 
@@ -198,6 +199,7 @@ export async function validateFriaAssignmentMembers(input: {
     .from('organization_members')
     .select('user_id,role')
     .eq('organization_id', input.organizationId)
+    .eq('status', 'active')
     .in('user_id', assignedIds);
 
   if (error) {
