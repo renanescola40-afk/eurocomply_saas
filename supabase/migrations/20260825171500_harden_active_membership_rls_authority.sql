@@ -174,6 +174,7 @@ declare
   add_on_policy text;
   document_read_policy text;
   document_upload_policy text;
+  stale_direct_membership_policies text;
 begin
   select pg_get_functiondef('app_private.is_org_member(uuid)'::regprocedure)
     into member_definition;
@@ -207,6 +208,30 @@ begin
      or coalesce(document_read_policy, '') not ilike '%status%active%'
      or coalesce(document_upload_policy, '') not ilike '%status%active%' then
     raise exception 'direct membership RLS policies are not active-membership aware';
+  end if;
+
+  -- Generic final-state guard: if any public/storage policy still reaches
+  -- organization_members directly, every expression that does so must carry an
+  -- explicit active-membership predicate. Policies using app_private helpers do
+  -- not match this scan because the helper owns the status boundary itself.
+  select string_agg(format('%I.%I:%I', schemaname, tablename, policyname), ', ' order by schemaname, tablename, policyname)
+    into stale_direct_membership_policies
+  from pg_policies
+  where schemaname in ('public', 'storage')
+    and (
+      coalesce(qual, '') ilike '%organization_members%'
+      or coalesce(with_check, '') ilike '%organization_members%'
+    )
+    and (
+      (coalesce(qual, '') ilike '%organization_members%'
+       and not (coalesce(qual, '') ilike '%status%' and coalesce(qual, '') ilike '%active%'))
+      or
+      (coalesce(with_check, '') ilike '%organization_members%'
+       and not (coalesce(with_check, '') ilike '%status%' and coalesce(with_check, '') ilike '%active%'))
+    );
+
+  if stale_direct_membership_policies is not null then
+    raise exception 'direct organization_members policies remain status-unaware: %', stale_direct_membership_policies;
   end if;
 
   select exists (
