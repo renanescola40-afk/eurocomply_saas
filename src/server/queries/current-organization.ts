@@ -25,6 +25,7 @@ type OrganizationSummary = {
 type RawOrganizationMembership = {
   organization_id: string;
   role: string;
+  status?: string | null;
   organizations:
     | {
         id: string;
@@ -69,7 +70,18 @@ function isExpectedSchemaFallback(error: QueryError) {
     || error?.code === 'PGRST205';
 }
 
+function isMissingMembershipStatusColumn(error: QueryError) {
+  return error?.code === '42703' || error?.code === 'PGRST204';
+}
+
 function normalizeMembership(membership: RawOrganizationMembership): CurrentOrganizationMembership | null {
+  // Status-aware queries already filter at the provider boundary, but keep a
+  // second fail-closed check here so suspended/deprovisioned memberships can
+  // never become tenant context if a provider/query regression drops the filter.
+  if (membership.status != null && membership.status.trim().toLowerCase() !== 'active') {
+    return null;
+  }
+
   const organization = Array.isArray(membership.organizations) ? membership.organizations[0] : membership.organizations;
   if (!organization) return null;
 
@@ -112,8 +124,9 @@ export async function getUserOrganizationMemberships(userId: string, options: { 
 
   const { data, error } = await supabase
     .from('organization_members')
-    .select('organization_id, role, organizations(id, name, slug, onboarding_status, onboarding_completed_at, selected_plan)')
+    .select('organization_id, role, status, organizations(id, name, slug, onboarding_status, onboarding_completed_at, selected_plan)')
     .eq('user_id', userId)
+    .eq('status', 'active')
     .order('created_at', { ascending: true })
     .range(0, safeLimit - 1);
 
@@ -124,18 +137,40 @@ export async function getUserOrganizationMemberships(userId: string, options: { 
   if (isExpectedSchemaFallback(error)) {
     console.warn('[organization] membership_onboarding_columns_unavailable', { code: error.code ?? 'unknown' });
 
-    const fallback = await supabase
+    // Keep active membership authority even when optional onboarding columns are
+    // unavailable. This fallback deliberately retains the status projection and
+    // filter so a suspended row cannot regain read access through schema drift.
+    const statusAwareFallback = await supabase
+      .from('organization_members')
+      .select('organization_id, role, status, organizations(id, name, slug)')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: true })
+      .range(0, safeLimit - 1);
+
+    if (!statusAwareFallback.error) {
+      return normalizeMemberships(statusAwareFallback.data);
+    }
+
+    // Legacy compatibility is permitted only when the membership status column
+    // itself is unavailable. Any other provider/query failure remains closed.
+    if (!isMissingMembershipStatusColumn(statusAwareFallback.error)) {
+      console.warn('[organization] memberships_status_aware_fallback_failed', { code: statusAwareFallback.error.code ?? 'unknown' });
+      throw new Error('organization_memberships_unavailable');
+    }
+
+    const legacy = await supabase
       .from('organization_members')
       .select('organization_id, role, organizations(id, name, slug)')
       .eq('user_id', userId)
       .order('created_at', { ascending: true })
       .range(0, safeLimit - 1);
 
-    if (!fallback.error) {
-      return normalizeMemberships(fallback.data);
+    if (!legacy.error) {
+      return normalizeMemberships(legacy.data);
     }
 
-    console.warn('[organization] memberships_fallback_lookup_failed', { code: fallback.error.code ?? 'unknown' });
+    console.warn('[organization] memberships_fallback_lookup_failed', { code: legacy.error.code ?? 'unknown' });
     throw new Error('organization_memberships_unavailable');
   }
 
