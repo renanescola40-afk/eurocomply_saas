@@ -8,7 +8,7 @@ const emailSender = readFileSync('src/lib/email/server-sender.ts', 'utf8');
 const dailyMaintenance = readFileSync('src/app/api/internal/daily-maintenance/route.ts', 'utf8');
 const manifest = readFileSync('config/supabase-forward-reconciliation.json', 'utf8');
 
-describe('pre-V22 Production runtime compatibility', () => {
+describe('pre-V23 Production runtime compatibility', () => {
   it('defers compliance alerts before any email path when the governed data plane is absent', () => {
     const probeIndex = complianceAlerts.indexOf('const dataPlane = await getComplianceAlertDataPlaneStatus()');
     const alertExecutionIndex = complianceAlerts.indexOf('const [documentAlerts, vendorAlerts] = await Promise.all');
@@ -53,23 +53,24 @@ describe('pre-V22 Production runtime compatibility', () => {
     expect(auditErrorReportIndex).toBeGreaterThan(schemaFallbackIndex);
   });
 
-  it('keeps daily maintenance scheduled and expands the governed package with payment-first, trusted-access and document-quota closure', () => {
+  it('keeps daily maintenance scheduled and expands the governed package through active-membership RLS closure', () => {
     expect(dailyMaintenance).toContain("'/api/internal/compliance-alerts'");
     expect(dailyMaintenance).toContain("'/api/intelligence/refresh'");
 
     const parsed = JSON.parse(manifest) as { changeSet?: string; migrations?: Array<{ filename?: string }> };
-    expect(parsed.changeSet).toBe('2026-08-25-enterprise-data-plane-payment-first-trusted-access-document-quota-closure-v22');
-    expect(parsed.migrations).toHaveLength(32);
+    expect(parsed.changeSet).toBe('2026-08-25-enterprise-data-plane-active-membership-rls-closure-v23');
+    expect(parsed.migrations).toHaveLength(33);
     expect(parsed.migrations?.slice(25, 27).map((item) => item.filename)).toEqual([
       '20260823123000_payment_first_commercial_data_plane.sql',
       '20260823131500_payment_first_gap_analysis_and_storage.sql',
     ]);
-    expect(parsed.migrations?.slice(-5, -1).map((item) => item.filename)).toEqual([
+    expect(parsed.migrations?.slice(27, 31).map((item) => item.filename)).toEqual([
       '20260824185900_prepare_enterprise_trusted_access_legacy_compatibility.sql',
       '20260824190000_reconcile_enterprise_trusted_access_runtime.sql',
       '20260824190100_finalize_enterprise_trusted_access_operation_contract.sql',
       '20260824190200_harden_enterprise_trusted_access_runtime_contract.sql',
     ]);
-    expect(parsed.migrations?.at(-1)?.filename).toBe('20260825092500_atomic_document_commercial_quota.sql');
+    expect(parsed.migrations?.at(-2)?.filename).toBe('20260825092500_atomic_document_commercial_quota.sql');
+    expect(parsed.migrations?.at(-1)?.filename).toBe('20260825171500_harden_active_membership_rls_authority.sql');
   });
 });
