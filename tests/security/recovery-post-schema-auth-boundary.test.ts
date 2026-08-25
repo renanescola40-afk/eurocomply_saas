@@ -4,11 +4,11 @@ import { describe, expect, it } from 'vitest';
 const exercise = readFileSync('scripts/recovery/run-backup-restore-exercise.mjs', 'utf8');
 
 describe('recovery post-schema managed Auth boundary', () => {
-  it('restores only dynamically inventoried application schemas', () => {
+  it('restores dynamically inventoried application schemas without dropping mixed extension hosts', () => {
     expect(exercise).toContain('function readApplicationSchemas(connection)');
     expect(exercise).toContain("n.nspname not in ('auth','extensions','graphql','graphql_public','realtime','storage','supabase_migrations','vault')");
     expect(exercise).toContain("pg_get_userbyid(n.nspowner) not like 'supabase_%'");
-    expect(exercise).toContain('not exists (select 1 from pg_extension e where e.extnamespace = n.oid)');
+    expect(exercise).not.toContain('not exists (select 1 from pg_extension e where e.extnamespace = n.oid)');
     expect(exercise).toContain("schemas.includes('public')");
     expect(exercise).toContain('const applicationSchemaCsv = applicationSchemas.join(\',\')');
     expect(exercise).toContain("'--schema', applicationSchemaCsv");
@@ -26,7 +26,7 @@ describe('recovery post-schema managed Auth boundary', () => {
     expect(dataDump).toBeGreaterThan(authRebind);
     expect(dataRestore).toBeGreaterThan(dataDump);
     expect(exercise).toContain('restoreApplicationSchemaIntoEphemeralSupabase(localContainer)');
-    expect(exercise).toContain('restoreDataIntoEphemeralSupabase(localContainer)');
+    expect(exercise).toContain('restoreDataIntoEphemeralSupabase(localContainer, managedAuthCleanupSql)');
   });
 
   it('fails closed if application schema replay mutates provider-managed Auth', () => {
@@ -36,6 +36,25 @@ describe('recovery post-schema managed Auth boundary', () => {
     expect(exercise).toContain("throw new Error('recovery_target_managed_auth_schema_mutated_by_application_restore')");
     expect(exercise).toContain('const managedAuthPlan = planManagedAuthDataBoundary(source, restore)');
     expect(exercise).toContain("throw new Error('recovery_target_managed_auth_relation_missing_with_data')");
+  });
+
+  it('reconciles primed managed Auth rows on the disposable target before replay', () => {
+    expect(exercise).toContain('const sharedRelations = sourceRelations.filter((relation) => targetSet.has(relation))');
+    expect(exercise).toContain("sharedRelations.includes('auth.users')");
+    expect(exercise).toContain('function buildManagedAuthCleanupSql(relations)');
+    expect(exercise).toContain('return `delete from "auth"."${table}";`');
+    expect(exercise).toContain('const managedAuthCleanupSql = buildManagedAuthCleanupSql(managedAuthPlan.sharedRelations)');
+    expect(exercise).toContain("'--command', 'SET session_replication_role = replica;'");
+    expect(exercise).toContain("'--command', managedAuthCleanupSql");
+
+    const replicaMode = exercise.indexOf("'--command', 'SET session_replication_role = replica;'");
+    const cleanup = exercise.indexOf("'--command', managedAuthCleanupSql");
+    const replay = exercise.indexOf("'--file', containerPath", cleanup);
+    expect(replicaMode).toBeGreaterThan(-1);
+    expect(cleanup).toBeGreaterThan(replicaMode);
+    expect(replay).toBeGreaterThan(cleanup);
+    expect(exercise).toContain("'--single-transaction', '--set', 'ON_ERROR_STOP=1'");
+    expect(exercise).toContain('checks.managedAuthPrimedDataReconciled = true');
   });
 
   it('requires the managed Auth catalog to remain stable after data restore too', () => {
