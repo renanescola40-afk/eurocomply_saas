@@ -55,6 +55,9 @@ describe('production environment governance boundaries', () => {
       'RELEASE_ROLLBACK_TARGET_URL: ${{ vars.RELEASE_ROLLBACK_TARGET_URL }}',
     );
     expect(protectedBoundary).toContain(
+      'RELEASE_ROLLBACK_TARGET: ${{ vars.RELEASE_ROLLBACK_TARGET_URL }}',
+    );
+    expect(protectedBoundary).toContain(
       'RELEASE_ROLLBACK_TARGET_SHA: ${{ vars.RELEASE_ROLLBACK_TARGET_SHA }}',
     );
     expect(protectedBoundary).toContain(
@@ -62,6 +65,7 @@ describe('production environment governance boundaries', () => {
     );
 
     expect(protectedBoundary).not.toMatch(/RELEASE_ROLLBACK_TARGET_URL:\s*https?:\/\//);
+    expect(protectedBoundary).not.toMatch(/RELEASE_ROLLBACK_TARGET:\s*https?:\/\//);
     expect(protectedBoundary).not.toMatch(/RELEASE_ROLLBACK_TARGET_SHA:\s*[0-9a-f]{40}/i);
     expect(protectedBoundary).not.toContain('RELEASE_ROLLBACK_TARGET_VALIDATED: true');
   });
