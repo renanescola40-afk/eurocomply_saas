@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ArrowUpRight } from 'lucide-react';
 import type { OrganizationWorkflowReadiness } from '@/server/queries/organization-dashboard';
 import type { DashboardSummary } from '@/server/queries/dashboard';
 
@@ -19,13 +20,13 @@ type ActionItem = {
 function getPriorityTone(priority: ActionItem['priority']) {
   switch (priority) {
     case 'Critical':
-      return 'border-rose-500/30 bg-rose-500/10 text-rose-200';
+      return 'border-rose-400/20 bg-rose-400/[0.08] text-rose-100';
     case 'High':
-      return 'border-amber-500/30 bg-amber-500/10 text-amber-200';
+      return 'border-amber-300/20 bg-amber-300/[0.08] text-amber-100';
     case 'Medium':
-      return 'border-sky-500/30 bg-sky-500/10 text-sky-200';
+      return 'border-sky-300/20 bg-sky-300/[0.07] text-sky-100';
     default:
-      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200';
+      return 'border-emerald-300/20 bg-emerald-300/[0.07] text-emerald-100';
   }
 }
 
@@ -128,29 +129,37 @@ export function NextBestActions({ summary, basePath, workflowReadiness }: NextBe
   const actions = buildActions(summary, basePath, workflowReadiness);
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-slate-950 p-5 text-white shadow-xl md:p-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+      <div className="flex flex-col gap-2 border-b border-white/[0.065] px-5 py-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.24em] text-primary/80">Recommended focus</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight">Next best actions</h2>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/34">Recommended focus</p>
+          <h2 className="mt-1.5 text-lg font-semibold tracking-[-0.02em] text-white/86">Next best actions</h2>
         </div>
-        <p className="max-w-xl text-sm text-slate-400">
+        <p className="max-w-xl text-xs leading-5 text-white/34">
           Prioritized from your current workflow readiness, risk, vendor, document and task posture.
         </p>
       </div>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-4">
+      <div className="divide-y divide-white/[0.055]">
         {actions.map((action) => (
-          <Link key={action.title} href={action.href} className="group flex min-h-56 flex-col rounded-3xl border border-white/10 bg-white/[0.04] p-4 transition hover:-translate-y-0.5 hover:border-primary/50 hover:bg-white/[0.07]">
-            <div className="flex items-start justify-between gap-3">
-              <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getPriorityTone(action.priority)}`}>
+          <Link
+            key={action.title}
+            href={action.href}
+            className="group grid gap-3 px-5 py-4 transition-colors duration-200 hover:bg-white/[0.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/60 lg:grid-cols-[110px_minmax(0,1.2fr)_minmax(220px,0.8fr)_36px] lg:items-center"
+          >
+            <div>
+              <span className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${getPriorityTone(action.priority)}`}>
                 {action.priority}
               </span>
-              <span className="text-xs text-slate-500 transition group-hover:text-primary">Open →</span>
             </div>
-            <h3 className="mt-4 text-lg font-semibold leading-tight">{action.title}</h3>
-            <p className="mt-3 text-sm leading-6 text-slate-400">{action.description}</p>
-            <p className="mt-auto pt-5 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">{action.impact}</p>
+            <div className="min-w-0">
+              <h3 className="truncate text-sm font-semibold text-white/78">{action.title}</h3>
+              <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/36">{action.description}</p>
+            </div>
+            <p className="text-xs leading-5 text-white/30">{action.impact}</p>
+            <span className="hidden h-8 w-8 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.02] text-white/28 transition group-hover:border-white/[0.1] group-hover:text-white/65 lg:flex" aria-hidden="true">
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </span>
           </Link>
         ))}
       </div>
