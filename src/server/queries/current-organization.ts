@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { enforceMandatoryEnterpriseSsoAccess } from '@/server/security/enterprise-sso-access';
 
 export type NormalizedOnboardingStatus = 'not_started' | 'in_progress' | 'completed';
 
@@ -118,6 +119,10 @@ function normalizeMemberships(data: unknown) {
     .filter((membership): membership is CurrentOrganizationMembership => Boolean(membership));
 }
 
+async function finalizeTenantMemberships(data: unknown) {
+  return enforceMandatoryEnterpriseSsoAccess(normalizeMemberships(data));
+}
+
 export async function getUserOrganizationMemberships(userId: string, options: { limit?: number } = {}) {
   const supabase = createAdminClient();
   const safeLimit = Math.max(1, Math.min(options.limit ?? 25, 100));
@@ -131,7 +136,7 @@ export async function getUserOrganizationMemberships(userId: string, options: { 
     .range(0, safeLimit - 1);
 
   if (!error) {
-    return normalizeMemberships(data);
+    return finalizeTenantMemberships(data);
   }
 
   if (isExpectedSchemaFallback(error)) {
@@ -149,7 +154,7 @@ export async function getUserOrganizationMemberships(userId: string, options: { 
       .range(0, safeLimit - 1);
 
     if (!statusAwareFallback.error) {
-      return normalizeMemberships(statusAwareFallback.data);
+      return finalizeTenantMemberships(statusAwareFallback.data);
     }
 
     // A PostgREST schema-cache miss is not proof that the underlying column is
@@ -182,7 +187,7 @@ export async function getUserOrganizationMemberships(userId: string, options: { 
       .range(0, safeLimit - 1);
 
     if (!legacy.error) {
-      return normalizeMemberships(legacy.data);
+      return finalizeTenantMemberships(legacy.data);
     }
 
     console.warn('[organization] memberships_fallback_lookup_failed', { code: legacy.error.code ?? 'unknown' });
