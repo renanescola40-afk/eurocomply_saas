@@ -9,6 +9,7 @@ const FULL_SHA = /^[a-f0-9]{40}$/;
 const repository = process.env.GITHUB_REPOSITORY || '';
 const targetSha = String(process.env.TARGET_SHA || '').toLowerCase();
 const databaseUrl = process.env.DATABASE_URL || '';
+const migrationHistoryCanonical = String(process.env.RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL || '').toLowerCase();
 const output = resolve(process.env.ENTERPRISE_DB_PROOF_OUTPUT || 'artifacts/enterprise-db-proof/isolated-enterprise-fria-db-proof.json');
 const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 
@@ -20,6 +21,9 @@ if (repository !== CANONICAL_REPOSITORY) fail('repository must be canonical');
 if (!FULL_SHA.test(targetSha)) fail('TARGET_SHA must be a lowercase full Git SHA');
 if (!/^postgres(?:ql)?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?\//.test(databaseUrl)) {
   fail('DATABASE_URL must point to an isolated local PostgreSQL instance');
+}
+if (migrationHistoryCanonical !== 'false') {
+  fail('RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL must be false for the reviewed disposable schema-effect proof');
 }
 
 const requiredTables = [
@@ -127,7 +131,8 @@ const reportBase = {
   outcome: failures.length === 0 ? 'passed' : 'failed',
   decision: failures.length === 0 ? 'ISOLATED_DB_PROOF_COMPLETE' : 'NO_GO',
   checks: {
-    migrationsApplied: true,
+    schemaEffectsReplayed: true,
+    migrationHistoryCanonical: false,
     isolatedLocalDatabase: true,
     requiredTablesPresent: !failures.some((item) => item.endsWith(':missing')),
     forcedRlsPresent: !failures.some((item) => item.includes('rls_disabled')),
@@ -150,7 +155,7 @@ const reportBase = {
     productionDataAccessed: false,
     exactShaBound: true,
   },
-  evidenceBoundary: 'This proof validates migration application, schema authority, forced RLS, function hardening and direct-grant boundaries in an ephemeral local Supabase database. It does not prove production capacity, external IdP conformance, Stripe behavior, legal review or customer evidence truth.',
+  evidenceBoundary: 'This proof validates reviewed schema-effect replay, schema authority, forced RLS, function hardening and direct-grant boundaries in an ephemeral local Supabase database. The disposable replay is explicitly noncanonical for migration history and does not prove production migration completion, migration-history reconciliation, production capacity, external IdP conformance, Stripe behavior, legal review or customer evidence truth.',
 };
 const integrity = createHash('sha256').update(JSON.stringify(reportBase)).digest('hex');
 const report = { ...reportBase, integrity: { sha256: integrity } };
