@@ -4,7 +4,7 @@
   "repository": "renanescola40-afk/eurocomply_saas",
   "environment": "production",
   "deploymentUrl": "https://www.risckcomply.com",
-  "deploymentSha": "9a53cda28a4f3afd59c343dc554ba6b06e3307b7",
+  "deploymentSha": "28c86a86b8f89d944075bc30c1ceadc9f2eb1937",
   "legalRulesVersion": "2026-07-30.1",
   "sourceRegulations": [
     "Regulation (EU) 2024/1689",
@@ -86,9 +86,9 @@
     }
   ],
   "status": "PASS",
-  "timestamp": "2026-08-25T00:29:51.798Z",
+  "timestamp": "2026-08-25T07:40:24.394Z",
   "reviewer": "RISCK COMPLY runtime validation automation",
-  "reviewedAt": "2026-08-25T00:29:51.798Z",
+  "reviewedAt": "2026-08-25T07:40:24.394Z",
   "summary": "Exact-SHA deployed legal-rules validation completed with every deterministic runtime case passing.",
   "evidenceLocations": [
     "src/server/ai-governance/legal-rules.ts",
@@ -98,7 +98,7 @@
     "docs/security/evidence/runtime/legal-rules-validation.json"
   ],
   "requestIds": [
-    "req_37d119a1-26f1-4ba9-a766-87d11e79890c"
+    "req_ccbdbea4-1f21-4735-b2c0-e4b8aaa27ed3"
   ],
   "redactionConfirmation": "Redaction confirmed for runtime evidence.",
   "countsForRuntimeCoverage": true,
@@ -109,5 +109,5 @@
     "containsSensitiveValues": false
   },
   "evidenceBoundary": "This proves deterministic runtime behaviour for the deployed code and exact deployment SHA. It does not replace qualified legal review or customer-specific factual assessment.",
-  "artifactSha256": "7bd5b2d7e3735fcfed3dffa9a9f2a4c1a30612aeeba1587450d1b8e0f8d8a6aa"
+  "artifactSha256": "9c2368d9884f29b75fd912ee2cb083ffd551482d6dd84fc2b7eb5d2dd3d36785"
 }
