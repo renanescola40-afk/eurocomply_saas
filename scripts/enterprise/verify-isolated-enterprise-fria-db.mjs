@@ -155,7 +155,7 @@ const reportBase = {
     productionDataAccessed: false,
     exactShaBound: true,
   },
-  evidenceBoundary: 'This proof validates reviewed schema-effect replay, schema authority, forced RLS, function hardening and direct-grant boundaries in an ephemeral local Supabase database. The disposable replay is explicitly noncanonical for migration history and does not prove production migration completion, migration-history reconciliation, production capacity, external IdP conformance, Stripe behavior, legal review or customer evidence truth.',
+  evidenceBoundary: 'This proof validates reviewed schema-effect replay, schema authority, forced RLS, function hardening and direct-grant boundaries in an ephemeral local Supabase database. The disposable replay is explicitly noncanonical for migration history and does not prove production migration completion, migration-history reconciliation. It does not prove production capacity, external IdP conformance, Stripe behavior, legal review or customer evidence truth.',
 };
 const integrity = createHash('sha256').update(JSON.stringify(reportBase)).digest('hex');
 const report = { ...reportBase, integrity: { sha256: integrity } };
