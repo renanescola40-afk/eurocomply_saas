@@ -109,19 +109,19 @@ describe('current organization membership read failure contract', () => {
     expect(membershipRead).toContain('Math.max(1, Math.min(options.limit ?? 25, 100))');
   });
 
-  it('returns an empty list only after a successful bounded query', async () => {
+  it('routes every successful membership read through mandatory Enterprise SSO enforcement', async () => {
     const source = await readFile(QUERY_FILE, 'utf8');
     const membershipRead = source.slice(
       source.indexOf('export async function getUserOrganizationMemberships'),
       source.indexOf('export async function getCurrentOrganizationForUser'),
     );
 
-    expect(source).toContain('function normalizeMemberships(data: unknown)');
-    expect(membershipRead).toContain('if (!error)');
-    expect(membershipRead).toContain('return normalizeMemberships(data);');
-    expect(membershipRead).toContain('if (!statusAwareFallback.error)');
-    expect(membershipRead).toContain('return normalizeMemberships(statusAwareFallback.data);');
-    expect(membershipRead).toContain('if (!legacy.error)');
-    expect(membershipRead).toContain('return normalizeMemberships(legacy.data);');
+    expect(source).toContain("import { enforceMandatoryEnterpriseSsoAccess } from '@/server/security/enterprise-sso-access';");
+    expect(source).toContain('async function finalizeTenantMemberships(data: unknown)');
+    expect(source).toContain('return enforceMandatoryEnterpriseSsoAccess(normalizeMemberships(data));');
+    expect(membershipRead.match(/return finalizeTenantMemberships\(/g)).toHaveLength(3);
+    expect(membershipRead).not.toContain('return normalizeMemberships(data);');
+    expect(membershipRead).not.toContain('return normalizeMemberships(statusAwareFallback.data);');
+    expect(membershipRead).not.toContain('return normalizeMemberships(legacy.data);');
   });
 });
