@@ -10,12 +10,13 @@ const config = readFileSync('config/supabase-forward-reconciliation.json', 'utf8
 
 describe('compliance metric snapshot tenant boundary', () => {
   it('keeps the live tenant-scoped snapshot table backend-only in the selected forward package', () => {
-    expect(config).toContain('2026-08-25-enterprise-data-plane-payment-first-trusted-access-document-quota-closure-v22');
+    expect(config).toContain('2026-08-25-enterprise-data-plane-active-membership-rls-closure-v23');
     expect(config).toContain('20260822123624_v19_harden_gap_personal_task_write_boundary.sql');
     expect(config).toContain('20260823123000_payment_first_commercial_data_plane.sql');
     expect(config).toContain('20260823131500_payment_first_gap_analysis_and_storage.sql');
     expect(config).toContain('20260824190000_reconcile_enterprise_trusted_access_runtime.sql');
     expect(config).toContain('20260825092500_atomic_document_commercial_quota.sql');
+    expect(config).toContain('20260825171500_harden_active_membership_rls_authority.sql');
 
     expect(migration).toContain("if to_regclass('public.compliance_metric_snapshots') is null");
     expect(migration).toContain('where organization_id is null');
