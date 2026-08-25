@@ -6,6 +6,8 @@ const MIGRATION = new URL('../../supabase/migrations/20260825092500_atomic_docum
 const MANIFEST = new URL('../../config/supabase-forward-reconciliation.json', import.meta.url);
 const CATALOG = new URL('../../src/lib/billing/plans.ts', import.meta.url);
 const DOCUMENT_ACTIONS = new URL('../../src/server/actions/documents.ts', import.meta.url);
+const SUBSCRIPTION_AUTHORITY = new URL('../../src/server/billing/subscription-authority.ts', import.meta.url);
+const SUBSCRIPTION_QUERY = new URL('../../src/server/queries/subscription.ts', import.meta.url);
 
 describe('document commercial quota atomicity', () => {
   it('keeps application preflight fail-closed but makes PostgreSQL the final serialized quota authority', async () => {
@@ -24,11 +26,23 @@ describe('document commercial quota atomicity', () => {
   });
 
   it('makes database commercial precedence exactly match the canonical server resolver', async () => {
-    const sql = await readFile(MIGRATION, 'utf8');
+    const [sql, authority, subscription] = await Promise.all([
+      readFile(MIGRATION, 'utf8'),
+      readFile(SUBSCRIPTION_AUTHORITY, 'utf8'),
+      readFile(SUBSCRIPTION_QUERY, 'utf8'),
+    ]);
+
+    expect(authority).toContain(".eq('source_kind', 'signed_contract')");
+    expect(authority).toContain(".order('priority', { ascending: false })");
+    expect(authority).toContain('return planCode || null;');
+    expect(subscription).toContain('const signedContractPlan = await getAuthoritativeSignedContractPlan(organizationId);');
+    expect(subscription).toContain('if (signedContractPlan) {');
+    expect(subscription).toContain('hasProcessedLiveStripeSubscriptionAuthority');
 
     expect(sql).toContain('selected_contract_source as (');
     expect(sql).toContain('order by source.priority desc');
-    expect(sql).toContain('when exists (select 1 from selected_contract_source) then');
+    expect(sql).toContain('when exists (select 1 from contract_candidate) then');
+    expect(sql).not.toContain('when exists (select 1 from selected_contract_source) then');
     expect(sql).toContain('(select plan_code from contract_candidate limit 1)');
     expect(sql).toContain('create or replace function app_private.has_commercial_authority');
     expect(sql).toContain('select app_private.resolve_commercial_plan(target_organization_id) is not null;');
