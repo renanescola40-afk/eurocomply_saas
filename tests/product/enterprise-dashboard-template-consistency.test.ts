@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 
 const AI_SYSTEMS_PAGE = new URL('../../src/app/[locale]/ai-systems/page.tsx', import.meta.url);
+const DASHBOARD_HOME_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/page.tsx', import.meta.url);
 const DASHBOARD_LAYOUT = new URL('../../src/app/[locale]/dashboard/layout.tsx', import.meta.url);
 const LEGACY_HOME_PAGE = new URL('../../src/app/[locale]/risck-comply-home/page.tsx', import.meta.url);
 const SHELL = new URL('../../src/components/dashboard/enterprise-dashboard-shell.tsx', import.meta.url);
@@ -24,6 +25,16 @@ describe('enterprise dashboard template consistency', () => {
     expect(shell).toContain('Search or type a command...');
     expect(shell).toContain("localized(locale, '/dashboard/fria')");
     expect(shell).toContain("localized(locale, '/dashboard/organizations/ai-literacy')");
+  });
+
+  it('keeps the canonical dashboard overview on the clean application canvas', async () => {
+    const source = await readFile(DASHBOARD_HOME_PAGE, 'utf8');
+
+    expect(source).toContain('<main className="min-h-0 bg-transparent">');
+    expect(source).toContain('border-emerald-300/15 bg-emerald-300/[0.055]');
+    expect(source).not.toContain('tech-grid');
+    expect(source).not.toContain('radial-gradient');
+    expect(source).not.toContain('linear-gradient(180deg');
   });
 
   it('keeps AI Systems inside the same enterprise shell instead of restoring the legacy navbar', async () => {
