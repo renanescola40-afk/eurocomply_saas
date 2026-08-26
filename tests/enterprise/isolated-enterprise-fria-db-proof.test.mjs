@@ -4,13 +4,17 @@ import test from 'node:test';
 
 const source = await readFile('scripts/enterprise/verify-isolated-enterprise-fria-db.mjs', 'utf8');
 
-test('isolated proof is exact-SHA, local-only and sanitized', () => {
+test('isolated proof is exact-SHA, managed-loopback-only and sanitized', () => {
   assert.match(source, /FULL_SHA/);
   assert.match(source, /CANONICAL_REPOSITORY/);
-  assert.match(source, /localhost\|127\\\.0\\\.0\\\.1/);
+  assert.match(source, /isLoopbackDatabaseUrl/);
+  assert.match(source, /databaseUrlUsesPort/);
+  assert.match(source, /RECOVERY_LOCAL_DB_HOST_PORT/);
+  assert.match(source, /managed isolated loopback PostgreSQL port/);
   assert.match(source, /productionDataAccessed: false/);
   assert.match(source, /databaseUrlStored: false/);
   assert.doesNotMatch(source, /process\.env\.(SUPABASE_SERVICE_ROLE_KEY|DATABASE_PASSWORD)/);
+  assert.doesNotMatch(source, /\^postgres\(\?:ql\)/);
 });
 
 test('isolated proof requires the reviewed schema replay to remain noncanonical for migration history', () => {
