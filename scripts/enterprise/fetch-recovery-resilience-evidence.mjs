@@ -197,6 +197,64 @@ function canonicalCommon({ targetSha, runId, workflowName, workflowPath, artifac
   };
 }
 
+function canonicalMissing({ targetSha, schema, item, controls, checks, workflowName, workflowPath, metrics }) {
+  return {
+    schema,
+    evidenceItem: item,
+    status: 'Open',
+    outcome: 'not_executed',
+    repository: REPOSITORY,
+    branch: 'main',
+    targetSha,
+    observedSha: targetSha,
+    runId: null,
+    sourceWorkflow: {
+      name: workflowName,
+      file: workflowPath,
+      runId: null,
+      artifact: null,
+      exactShaBound: true,
+    },
+    generatedAt: new Date().toISOString(),
+    controlsVerified: controls,
+    checks: checks.map((name) => canonicalCheck(name, false)),
+    metrics,
+    evidenceIntegrity: {
+      containsSensitiveValues: false,
+      credentialsStored: false,
+      exactShaBound: true,
+      sourceRunBound: false,
+    },
+    evidenceBoundary: 'Non-crediting exact-SHA placeholder. This document records only that the independent recovery proof has not been executed; it cannot satisfy a recovery control.',
+  };
+}
+
+function missingRollback(targetSha) {
+  return canonicalMissing({
+    targetSha,
+    schema: 'risck-comply.rollback-scorecard-evidence.v1',
+    item: 'rollback-validation',
+    controls: ROLLBACK_CONTROLS,
+    checks: ['rollbackTargetConfigured', 'distinctDeployment', 'rollbackExecuted', 'postRollbackHealth'],
+    workflowName: WORKFLOW_NAME,
+    workflowPath: WORKFLOW_PATH,
+    metrics: { recoveryTimeSeconds: null },
+  });
+}
+
+function missingRestore(targetSha) {
+  return canonicalMissing({
+    targetSha,
+    schema: 'risck-comply.backup-restore-scorecard-evidence.v1',
+    item: 'backup-restore-tested',
+    controls: RESTORE_CONTROLS,
+    checks: ['backupExists', 'restoreExecuted', 'dataIntegrity', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured'],
+    workflowName: RESTORE_WORKFLOW_NAME,
+    workflowPath: RESTORE_WORKFLOW_PATH,
+    metrics: { rpoSeconds: null, rtoSeconds: null, totalExerciseSeconds: null },
+  });
+}
+
 function buildCanonicalRollback(rollback, common) {
   return {
     schema: 'risck-comply.rollback-scorecard-evidence.v1',
@@ -283,7 +341,7 @@ export function buildCanonicalRecoveryDrillEvidence(restore, { targetSha, runId 
     workflowPath: RESTORE_WORKFLOW_PATH,
     artifactName: `supabase-forward-reconciliation-rehearsal-${targetSha}`,
   });
-  return { rollback: null, restore: buildCanonicalRestore(restore, common) };
+  return { rollback: missingRollback(targetSha), restore: buildCanonicalRestore(restore, common) };
 }
 
 export function buildCanonicalRollbackOnlyEvidence(rollback, { targetSha, runId }) {
@@ -296,7 +354,7 @@ export function buildCanonicalRollbackOnlyEvidence(rollback, { targetSha, runId 
     workflowPath: WORKFLOW_PATH,
     artifactName: `recovery-resilience-proof-${targetSha}`,
   });
-  return { rollback: buildCanonicalRollback(rollback, common), restore: null };
+  return { rollback: buildCanonicalRollback(rollback, common), restore: missingRestore(targetSha) };
 }
 
 function isAllowedArtifactRedirect(url) {
