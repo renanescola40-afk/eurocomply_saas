@@ -233,6 +233,32 @@ jobs:
             return 1
           }
 
+          find_reusable_successful_run() {
+            local workflow="$1"
+            local artifact_name="$2"
+            local run_id=''
+
+            if ! run_id="$( 
+              gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?event=workflow_dispatch&branch=main&per_page=100" \
+                --jq ".workflow_runs | map(select(.head_sha == \"${TARGET_SHA}\" and .event == \"workflow_dispatch\" and .status == \"completed\" and .conclusion == \"success\")) | sort_by(.updated_at) | reverse | .[0].id // empty"
+            )"; then
+              echo "Failed to inspect reusable successful workflow runs for ${workflow}" >&2
+              return 1
+            fi
+
+            if [ -z "$run_id" ]; then
+              return 1
+            fi
+            if [[ ! "$run_id" =~ ^[0-9]+$ ]]; then
+              echo "Invalid reusable workflow run id for ${workflow}: ${run_id}" >&2
+              return 1
+            fi
+            if ! require_artifact "$run_id" "$artifact_name"; then
+              echo "Reusable successful workflow run ${run_id} is missing expected artifact ${artifact_name}" >&2
+              return 1
+            fi
+            printf '%s\n' "$run_id"
+          }
           require_artifact() {
             local run_id="$1"
             local artifact_name="$2"
@@ -282,7 +308,12 @@ jobs:
 
           DRIFT_WORKFLOW='supabase-migration-drift-audit.yml'
           DRIFT_ARTIFACT="supabase-migration-drift-${TARGET_SHA}"
-          DRIFT_RUN_ID="$(dispatch_workflow "$DRIFT_WORKFLOW")"
+          DRIFT_RUN_ID="$(find_reusable_successful_run "$DRIFT_WORKFLOW" "$DRIFT_ARTIFACT" || true)"
+          if [ -z "$DRIFT_RUN_ID" ]; then
+            DRIFT_RUN_ID="$(dispatch_workflow "$DRIFT_WORKFLOW")"
+          else
+            echo "Reusing successful exact-SHA drift audit run ${DRIFT_RUN_ID}."
+          fi
           [[ "$DRIFT_RUN_ID" =~ ^[0-9]+$ ]]
           DRIFT_CONCLUSION="$(wait_for_run "$DRIFT_RUN_ID")"
           require_artifact "$DRIFT_RUN_ID" "$DRIFT_ARTIFACT"
