@@ -15,17 +15,11 @@ const approvedValidators = new Set([
   'scripts/security/validate-enterprise-integrations-runtime.sql',
   'scripts/security/validate-enterprise-billing-runtime.sql',
   'scripts/security/validate-live-rls-inventory-helper-boundary.sql',
+  'scripts/security/validate-gap-remediation-runtime.sql',
 ]);
 
-function env(name) {
-  return String(process.env[name] ?? '').trim();
-}
-
-function required(name) {
-  const value = env(name);
-  if (!value) throw new Error(`missing_${name.toLowerCase()}`);
-  return value;
-}
+function env(name) { return String(process.env[name] ?? '').trim(); }
+function required(name) { const value = env(name); if (!value) throw new Error(`missing_${name.toLowerCase()}`); return value; }
 
 export function projectRefFromApiUrl(value) {
   const url = new URL(String(value));
@@ -34,31 +28,19 @@ export function projectRefFromApiUrl(value) {
   return match[1];
 }
 
-function safeIso(value, code) {
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp)) throw new Error(code);
-  return timestamp;
-}
+function safeIso(value, code) { const timestamp = Date.parse(value); if (!Number.isFinite(timestamp)) throw new Error(code); return timestamp; }
 
 async function request(path, { method = 'GET', body, readOnly = false } = {}) {
   const token = required('SUPABASE_ACCESS_TOKEN');
   const response = await fetch(`${API}${path}`, {
     method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/json',
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
-    },
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await response.text();
   if (!response.ok) throw new Error(`supabase_management_api_${readOnly ? 'read_only_' : ''}${response.status}`);
   if (!text) return null;
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error('supabase_management_api_invalid_json');
-  }
+  try { return JSON.parse(text); } catch { throw new Error('supabase_management_api_invalid_json'); }
 }
 
 function valuesDeep(value) {
@@ -68,16 +50,8 @@ function valuesDeep(value) {
   return [String(value)];
 }
 
-export function backupResponseContainsIdentifier(payload, identifier) {
-  return valuesDeep(payload).some((value) => value === identifier);
-}
-
-function unwrapRows(payload) {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.result)) return payload.result;
-  if (Array.isArray(payload?.data)) return payload.data;
-  throw new Error('supabase_query_response_shape_invalid');
-}
+export function backupResponseContainsIdentifier(payload, identifier) { return valuesDeep(payload).some((value) => value === identifier); }
+function unwrapRows(payload) { if (Array.isArray(payload)) return payload; if (Array.isArray(payload?.result)) return payload.result; if (Array.isArray(payload?.data)) return payload.data; throw new Error('supabase_query_response_shape_invalid'); }
 
 function snapshotQuery() {
   return `select json_build_object(
@@ -94,217 +68,103 @@ function snapshotQuery() {
 }
 
 async function readSnapshot(ref) {
-  const payload = await request(`/projects/${ref}/database/query/read-only`, {
-    method: 'POST',
-    readOnly: true,
-    body: { query: snapshotQuery() },
-  });
+  const payload = await request(`/projects/${ref}/database/query/read-only`, { method: 'POST', readOnly: true, body: { query: snapshotQuery() } });
   const rows = unwrapRows(payload);
   const snapshot = rows[0]?.snapshot ?? rows[0]?.json_build_object ?? rows[0]?.jsonb_build_object;
   if (!snapshot || typeof snapshot !== 'object') throw new Error('snapshot_aggregate_missing');
   return snapshot;
 }
 
-function integer(value) {
-  return Number.isInteger(Number(value)) && Number(value) >= 0 ? Number(value) : null;
-}
+function integer(value) { return Number.isInteger(Number(value)) && Number(value) >= 0 ? Number(value) : null; }
 
 export function validateProviderManagedSnapshot({ source, restore }) {
-  const sourceCounts = {};
-  const restoredCounts = {};
+  const sourceCounts = {}; const restoredCounts = {};
   for (const table of criticalTables) {
-    sourceCounts[table] = integer(source?.[table]);
-    restoredCounts[table] = integer(restore?.[table]);
+    sourceCounts[table] = integer(source?.[table]); restoredCounts[table] = integer(restore?.[table]);
     if (sourceCounts[table] == null || restoredCounts[table] == null) throw new Error(`invalid_${table}_count`);
     if (restoredCounts[table] > sourceCounts[table]) throw new Error(`provider_restore_${table}_count_ahead_of_source`);
   }
-  const sourceAuthUsers = integer(source?.auth_users);
-  const restoredAuthUsers = integer(restore?.auth_users);
+  const sourceAuthUsers = integer(source?.auth_users); const restoredAuthUsers = integer(restore?.auth_users);
   if (sourceAuthUsers == null || restoredAuthUsers == null) throw new Error('invalid_auth_users_count');
   if (restoredAuthUsers > sourceAuthUsers) throw new Error('provider_restore_auth_users_count_ahead_of_source');
-
   const sourceVersions = Array.isArray(source?.migration_versions) ? source.migration_versions.map(String) : null;
   const restoreVersions = Array.isArray(restore?.migration_versions) ? restore.migration_versions.map(String) : null;
   if (!sourceVersions || !restoreVersions || sourceVersions.length === 0 || restoreVersions.length === 0) throw new Error('migration_history_missing');
   if (JSON.stringify(sourceVersions) !== JSON.stringify(restoreVersions)) throw new Error('provider_restore_migration_history_mismatch');
-
-  const rlsTables = integer(restore?.rls_tables);
-  const policyCount = integer(restore?.policy_count);
+  const rlsTables = integer(restore?.rls_tables); const policyCount = integer(restore?.policy_count);
   if (rlsTables !== criticalTables.length) throw new Error('provider_restore_rls_incomplete');
   if (policyCount == null || policyCount < criticalTables.length) throw new Error('provider_restore_policies_incomplete');
-
-  const foreignServers = integer(restore?.foreign_servers);
-  const foreignTables = integer(restore?.foreign_tables);
+  const foreignServers = integer(restore?.foreign_servers); const foreignTables = integer(restore?.foreign_tables);
   if (foreignServers == null || foreignTables == null) throw new Error('provider_restore_external_binding_inventory_invalid');
   if (foreignServers !== 0 || foreignTables !== 0) throw new Error('provider_restore_external_binding_present');
-
   return { sourceCounts, restoredCounts, sourceAuthUsers, restoredAuthUsers, sourceVersions, restoreVersions, rlsTables, policyCount };
 }
 
 export function normalizeSqlForManagementApi(sql) {
-  const normalized = String(sql)
-    .split(/\r?\n/)
-    .filter((line) => !line.trimStart().startsWith('\\'))
-    .join('\n')
-    .trim();
+  const normalized = String(sql).split(/\r?\n/).filter((line) => !line.trimStart().startsWith('\\')).join('\n').trim();
   if (!normalized) throw new Error('rehearsal_sql_empty_after_psql_normalization');
   return `${normalized}\n`;
 }
 
-function projectField(project, ...names) {
-  for (const name of names) if (project?.[name] != null) return String(project[name]);
-  return '';
-}
-
-function sha256(text) {
-  return createHash('sha256').update(text).digest('hex');
-}
+function projectField(project, ...names) { for (const name of names) if (project?.[name] != null) return String(project[name]); return ''; }
+function sha256(text) { return createHash('sha256').update(text).digest('hex'); }
 
 function allowedSqlPath(path, query) {
-  const root = resolve('.');
-  const absolute = resolve(path);
-  const rel = relative(root, absolute).split(sep).join('/');
+  const root = resolve('.'); const absolute = resolve(path); const rel = relative(root, absolute).split(sep).join('/');
   if (rel.startsWith('../') || rel === '..') throw new Error('rehearsal_sql_path_not_allowed');
   if (approvedValidators.has(rel)) return rel;
   if (!/^supabase\/migrations\/[0-9]{14}_[a-z0-9_]+\.sql$/.test(rel)) throw new Error('rehearsal_sql_path_not_allowed');
-
-  const manifestPath = required('MANIFEST_PATH');
-  const manifest = JSON.parse(readFileSync(resolve(manifestPath), 'utf8'));
+  const manifest = JSON.parse(readFileSync(resolve(required('MANIFEST_PATH')), 'utf8'));
   const filename = rel.split('/').at(-1);
-  const selected = Array.isArray(manifest?.migrations)
-    ? manifest.migrations.find((item) => item?.filename === filename)
-    : null;
+  const selected = Array.isArray(manifest?.migrations) ? manifest.migrations.find((item) => item?.filename === filename) : null;
   if (!selected || !/^[a-f0-9]{64}$/.test(String(selected.sha256 ?? ''))) throw new Error('rehearsal_migration_not_selected');
   if (sha256(query) !== selected.sha256) throw new Error('rehearsal_migration_digest_mismatch');
   return rel;
 }
 
 async function verify() {
-  const targetSha = required('RELEASE_SHA').toLowerCase();
-  const observedSha = required('GITHUB_SHA').toLowerCase();
+  const targetSha = required('RELEASE_SHA').toLowerCase(); const observedSha = required('GITHUB_SHA').toLowerCase();
   if (!FULL_SHA.test(targetSha) || observedSha !== targetSha) throw new Error('exact_sha_binding_invalid');
   if (env('GITHUB_ACTIONS') !== 'true' || env('GITHUB_REF_NAME') !== 'main') throw new Error('protected_main_execution_required');
-
-  const sourceRef = projectRefFromApiUrl(required('NEXT_PUBLIC_SUPABASE_URL'));
-  const restoreRef = required('RECOVERY_PROVIDER_RESTORE_PROJECT_REF');
+  const sourceRef = projectRefFromApiUrl(required('NEXT_PUBLIC_SUPABASE_URL')); const restoreRef = required('RECOVERY_PROVIDER_RESTORE_PROJECT_REF');
   if (!PROJECT_REF.test(restoreRef) || restoreRef === sourceRef) throw new Error('restore_project_ref_invalid_or_not_distinct');
   if (required('RECOVERY_PROVIDER_RESTORE_ATTESTATION') !== 'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED') throw new Error('provider_restore_attestation_missing');
-
   const backupId = required('RECOVERY_PROVIDER_BACKUP_ID');
   if (!/^[A-Za-z0-9._:-]{3,160}$/.test(backupId)) throw new Error('provider_backup_id_invalid');
   const backupCreatedMs = safeIso(required('RECOVERY_PROVIDER_BACKUP_CREATED_AT'), 'provider_backup_created_at_invalid');
   const restoreStartedMs = safeIso(required('RECOVERY_PROVIDER_RESTORE_STARTED_AT'), 'provider_restore_started_at_invalid');
   const restoreCompletedMs = safeIso(required('RECOVERY_PROVIDER_RESTORE_COMPLETED_AT'), 'provider_restore_completed_at_invalid');
   if (backupCreatedMs > restoreStartedMs || restoreStartedMs > restoreCompletedMs) throw new Error('provider_restore_timeline_invalid');
-
   const [sourceProject, restoreProject, backups, sourceSnapshot, restoreSnapshot] = await Promise.all([
-    request(`/projects/${sourceRef}`),
-    request(`/projects/${restoreRef}`),
-    request(`/projects/${sourceRef}/database/backups`),
-    readSnapshot(sourceRef),
-    readSnapshot(restoreRef),
+    request(`/projects/${sourceRef}`), request(`/projects/${restoreRef}`), request(`/projects/${sourceRef}/database/backups`), readSnapshot(sourceRef), readSnapshot(restoreRef),
   ]);
-
   if (!backupResponseContainsIdentifier(backups, backupId)) throw new Error('provider_backup_not_observed_on_source');
-  const sourceRegion = projectField(sourceProject, 'region');
-  const restoreRegion = projectField(restoreProject, 'region');
-  const sourceOrg = projectField(sourceProject, 'organization_id', 'organization_slug');
-  const restoreOrg = projectField(restoreProject, 'organization_id', 'organization_slug');
-  const sourceStatus = projectField(sourceProject, 'status');
-  const restoreStatus = projectField(restoreProject, 'status');
+  const sourceRegion = projectField(sourceProject, 'region'); const restoreRegion = projectField(restoreProject, 'region');
+  const sourceOrg = projectField(sourceProject, 'organization_id', 'organization_slug'); const restoreOrg = projectField(restoreProject, 'organization_id', 'organization_slug');
+  const sourceStatus = projectField(sourceProject, 'status'); const restoreStatus = projectField(restoreProject, 'status');
   if (!sourceRegion || sourceRegion !== restoreRegion) throw new Error('provider_restore_region_mismatch');
   if (!sourceOrg || sourceOrg !== restoreOrg) throw new Error('provider_restore_organization_mismatch');
   if (sourceStatus !== 'ACTIVE_HEALTHY' || restoreStatus !== 'ACTIVE_HEALTHY') throw new Error('provider_restore_project_not_healthy');
-
   const snapshot = validateProviderManagedSnapshot({ source: sourceSnapshot, restore: restoreSnapshot });
-  const checks = {
-    protectedMainExecution: true,
-    distinctDatabases: true,
-    exactShaBound: true,
-    backupExists: true,
-    restoreExecuted: true,
-    dataIntegrity: true,
-    authUsersIntegrity: true,
-    rlsAfterRestore: true,
-    rlsPoliciesPresent: true,
-    rpoMeasured: true,
-    rtoMeasured: true,
-    providerManagedRestore: true,
-    providerBackupObserved: true,
-    sameOrganization: true,
-    sameRegion: true,
-    snapshotCountsNotAheadOfSource: true,
-    migrationHistoryMatchesSource: true,
-    noExternalDatabaseBindings: true,
-    noProductionDumpOnRunner: true,
-    productionObservationReadOnly: true,
-  };
-
+  const checks = { protectedMainExecution: true, distinctDatabases: true, exactShaBound: true, backupExists: true, restoreExecuted: true, dataIntegrity: true, authUsersIntegrity: true, rlsAfterRestore: true, rlsPoliciesPresent: true, rpoMeasured: true, rtoMeasured: true, providerManagedRestore: true, providerBackupObserved: true, sameOrganization: true, sameRegion: true, snapshotCountsNotAheadOfSource: true, migrationHistoryMatchesSource: true, noExternalDatabaseBindings: true, noProductionDumpOnRunner: true, productionObservationReadOnly: true };
   const evidence = {
-    schema: 'risck-comply.backup-restore-evidence.v2',
-    evidenceItem: 'backup-restore-tested',
-    status: 'Complete',
-    outcome: 'passed',
-    generatedAt: new Date().toISOString(),
-    repository: env('GITHUB_REPOSITORY'),
-    branch: env('GITHUB_REF_NAME'),
-    targetSha,
-    observedSha,
-    runId: env('GITHUB_RUN_ID') || null,
-    controlsVerified: ['REC-05', 'REC-06', 'REC-07', 'REC-08', 'REC-09', 'REC-10'],
-    checks,
-    metrics: {
-      rpoSeconds: Math.max(0, Math.round((restoreStartedMs - backupCreatedMs) / 1000)),
-      rtoSeconds: Math.max(0, Math.round((restoreCompletedMs - restoreStartedMs) / 1000)),
-      backupBytes: null,
-    },
-    integrity: {
-      criticalTableCount: criticalTables.length,
-      criticalCountsObserved: true,
-      authUserCountObserved: true,
-      countRelationshipValidated: true,
-      migrationVersionCount: snapshot.sourceVersions.length,
-      recoveryMode: 'supabase-provider-managed-physical-backup-clone',
-      backupIdentifierStored: false,
-      projectReferencesStored: false,
-      exactAggregateCountsStored: false,
-    },
-    failures: [],
-    failurePhase: null,
-    failureDiagnostic: null,
-    evidenceIntegrity: {
-      containsSensitiveValues: false,
-      exactShaBound: true,
-      databaseUrlsStored: false,
-      dumpStored: false,
-      rowDataStored: false,
-      aggregateCountsStored: false,
-      credentialsStored: false,
-      commandArgumentsStored: false,
-      rawErrorMessagesStored: false,
-      logicalBackupFilesDeleted: true,
-      productionDumpCreatedOnGithubRunner: false,
-      providerBackupIdentifierStored: false,
-      providerProjectReferencesStored: false,
-    },
+    schema: 'risck-comply.backup-restore-evidence.v2', evidenceItem: 'backup-restore-tested', status: 'Complete', outcome: 'passed', generatedAt: new Date().toISOString(), repository: env('GITHUB_REPOSITORY'), branch: env('GITHUB_REF_NAME'), targetSha, observedSha, runId: env('GITHUB_RUN_ID') || null,
+    controlsVerified: ['REC-05', 'REC-06', 'REC-07', 'REC-08', 'REC-09', 'REC-10'], checks,
+    metrics: { rpoSeconds: Math.max(0, Math.round((restoreStartedMs - backupCreatedMs) / 1000)), rtoSeconds: Math.max(0, Math.round((restoreCompletedMs - restoreStartedMs) / 1000)), backupBytes: null },
+    integrity: { criticalTableCount: criticalTables.length, criticalCountsObserved: true, authUserCountObserved: true, countRelationshipValidated: true, migrationVersionCount: snapshot.sourceVersions.length, recoveryMode: 'supabase-provider-managed-physical-backup-clone', backupIdentifierStored: false, projectReferencesStored: false, exactAggregateCountsStored: false },
+    failures: [], failurePhase: null, failureDiagnostic: null,
+    evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, aggregateCountsStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, logicalBackupFilesDeleted: true, productionDumpCreatedOnGithubRunner: false, providerBackupIdentifierStored: false, providerProjectReferencesStored: false },
     evidenceBoundary: 'Supabase Restore to a New Project is used as the Production-snapshot transport boundary. GitHub Actions never creates, downloads, stores, or replays a Production data dump. Production observation uses the Supabase Management API read-only SQL endpoint with fixed aggregate-only SQL. The workflow validates the selected backup exists on the source project, the isolated restore project is distinct, healthy, in the same Supabase organization and region, migration history matches the source before rehearsal changes, restored critical/Auth aggregate counts are valid and cannot exceed live source counts, RLS/policies are present, and no foreign-server/table binding exists. Exact aggregate counts are used transiently and are not retained. Only timing metrics, booleans and redacted provenance are stored; no row data, counts, project refs, backup identifiers, database URLs or credentials are retained in evidence.',
   };
-
-  mkdirSync(dirname(output), { recursive: true });
-  writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
-  return evidence;
+  mkdirSync(dirname(output), { recursive: true }); writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 }); return evidence;
 }
 
 async function applyFile(path) {
-  const sourceRef = projectRefFromApiUrl(required('NEXT_PUBLIC_SUPABASE_URL'));
-  const restoreRef = required('RECOVERY_PROVIDER_RESTORE_PROJECT_REF');
+  const sourceRef = projectRefFromApiUrl(required('NEXT_PUBLIC_SUPABASE_URL')); const restoreRef = required('RECOVERY_PROVIDER_RESTORE_PROJECT_REF');
   if (!PROJECT_REF.test(restoreRef) || restoreRef === sourceRef) throw new Error('restore_project_ref_invalid_or_not_distinct');
   if (required('RECOVERY_PROVIDER_RESTORE_ATTESTATION') !== 'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED') throw new Error('provider_restore_attestation_missing');
-
-  const rawQuery = readFileSync(resolve(path), 'utf8');
-  allowedSqlPath(path, rawQuery);
-  const query = normalizeSqlForManagementApi(rawQuery);
-  await request(`/projects/${restoreRef}/database/query`, { method: 'POST', body: { query } });
+  const rawQuery = readFileSync(resolve(path), 'utf8'); allowedSqlPath(path, rawQuery);
+  await request(`/projects/${restoreRef}/database/query`, { method: 'POST', body: { query: normalizeSqlForManagementApi(rawQuery) } });
 }
 
 export async function main(argv = process.argv.slice(2)) {
@@ -315,9 +175,4 @@ export async function main(argv = process.argv.slice(2)) {
 }
 
 const invokedDirectly = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (invokedDirectly) {
-  main().catch((error) => {
-    console.error(JSON.stringify({ outcome: 'failed', failure: error instanceof Error ? error.message : 'unknown_failure' }));
-    process.exit(1);
-  });
-}
+if (invokedDirectly) main().catch((error) => { console.error(JSON.stringify({ outcome: 'failed', failure: error instanceof Error ? error.message : 'unknown_failure' })); process.exit(1); });
