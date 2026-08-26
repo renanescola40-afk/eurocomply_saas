@@ -5,6 +5,7 @@ const workflow = readFileSync('.github/workflows/platform-providers-runtime-proo
 const runner = readFileSync('scripts/platform/run-platform-providers-runtime-validation.mjs', 'utf8');
 const validator = readFileSync('scripts/platform/check-platform-providers-evidence.mjs', 'utf8');
 const classifier = readFileSync('scripts/platform/provider-failure-classifier.mjs', 'utf8');
+const enterpriseApiChecker = readFileSync('scripts/security/check-enterprise-api-security.mjs', 'utf8');
 const boundary = readFileSync('src/server/security/platform-proof.ts', 'utf8');
 const checkoutRoute = readFileSync('src/app/api/internal/platform-proof/stripe-checkout/route.ts', 'utf8');
 const subscriptionsRoute = readFileSync('src/app/api/internal/platform-proof/stripe-subscriptions/route.ts', 'utf8');
@@ -43,6 +44,12 @@ describe('platform providers revenue megapack', () => {
       expect(source).toContain("export const runtime = 'nodejs'");
       expect(source).toContain("export const dynamic = 'force-dynamic'");
     }
+  });
+
+  it('recognizes the bounded proof helper as internal auth without route whitelisting', () => {
+    expect(enterpriseApiChecker).toContain("internalAuth: ['isAuthorizedInternalCronRequest', 'authorizePlatformProofRequest'");
+    expect(enterpriseApiChecker).not.toContain('/src\\/app\\/api\\/internal\\/platform-proof\\/');
+    expect(enterpriseApiChecker).toContain("assertGuard(failures, source, path, 'internalAuth', 'internal cron/ops authentication')");
   });
 
   it('keeps Stripe probes read-only and the synthetic webhook non-billable', () => {
