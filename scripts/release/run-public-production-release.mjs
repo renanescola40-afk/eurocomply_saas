@@ -47,12 +47,15 @@ async function finalizeSecurityResponseEvidence() {
 }
 
 if (enterpriseRequested) {
-  // The preflight is the only enterprise parent-process consumer of protected
-  // configuration. Enterprise final validation consumes retained exact-SHA
-  // runtime evidence, so nested install/static/evidence subprocesses must not
-  // inherit provider credentials.
+  // The preflight is the only enterprise parent-process consumer of provider
+  // configuration. Preserve only the readiness credential after scrubbing so
+  // the nested runner can explicitly allowlist it for live smoke subprocesses.
+  // Supabase, Stripe, Redis, Sentry and other provider credentials remain
+  // unavailable to install/static/evidence children.
   await import('./check-enterprise-release-env.mjs');
+  const readinessToken = process.env.HEALTHCHECK_TOKEN;
   stripProtectedReleaseEnv(process.env);
+  if (readinessToken !== undefined) process.env.HEALTHCHECK_TOKEN = readinessToken;
   await import('./run-public-production-release-v2.mjs');
   runNodeScript('scripts/release/write-enterprise-runtime-evidence.mjs', {
     FINAL_VALIDATION_IN_PROGRESS: 'false',
