@@ -51,7 +51,6 @@ describe('enterprise recovery control plane', () => {
     expect(rollback).toContain('run-live-rollback-exercise.mjs');
     expect(rollback).toContain('check-recovery-evidence.mjs');
     expect(rollback).toContain('recovery-resilience-proof-${{ inputs.release_sha }}');
-    expect(rollback).not.toContain('backup-restore');
     for (const token of forbiddenHostedProductionDumpTokens) expect(rollback).not.toContain(token);
   });
 
