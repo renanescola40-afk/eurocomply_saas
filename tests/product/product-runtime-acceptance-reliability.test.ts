@@ -20,6 +20,15 @@ const runtimeAcceptance = readFileSync(
 );
 
 describe('Product runtime acceptance reliability contracts', () => {
+  it('reruns Product FRIA when its disposable recovery boundary changes and pins setup-node', () => {
+    const recoveryPathBindings = workflow.match(/- 'scripts\/recovery\/\*\*'/g) ?? [];
+    expect(recoveryPathBindings).toHaveLength(2);
+    expect(workflow).toContain(
+      'uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
+    );
+    expect(workflow).not.toContain('uses: actions/setup-node@v7');
+  });
+
   it('fails early when the assessed Next process exits before readiness', () => {
     expect(workflow).toContain('next_pid=$!');
     expect(workflow).toContain('if ! kill -0 "$next_pid" 2>/dev/null; then');
