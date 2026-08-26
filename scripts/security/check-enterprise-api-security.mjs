@@ -17,7 +17,7 @@ const guardGroups = {
   origin: ['assertTrustedOrigin', 'verifyTrustedOrigin', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
   noStore: ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'no-store'],
   rateLimit: ['checkDistributedRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'isRateLimited', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
-  internalAuth: ['isAuthorizedInternalCronRequest', 'HEALTHCHECK_' + 'TOKEN', 'CRON_' + 'SECRET', 'INTERNAL_CRON_' + 'SECRET'],
+  internalAuth: ['isAuthorizedInternalCronRequest', 'authorizePlatformProofRequest', 'HEALTHCHECK_' + 'TOKEN', 'CRON_' + 'SECRET', 'INTERNAL_CRON_' + 'SECRET'],
   tenant: ['organization.id', 'organizationId', 'organization_id', 'resourceOrganizationId', 'requireEnterpriseApiAccess', 'getReviewerSession'],
   webhookAuth: ['constructEvent', 'STRIPE_WEBHOOK_' + 'SECRET', 'stripe-signature'],
 };
