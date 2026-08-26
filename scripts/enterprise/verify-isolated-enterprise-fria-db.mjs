@@ -44,7 +44,6 @@ const requiredTables = [
 ];
 
 const sql = String.raw`
-\set ON_ERROR_STOP on
 WITH required(name) AS (
   SELECT unnest(ARRAY[
     'enterprise_contracts',
