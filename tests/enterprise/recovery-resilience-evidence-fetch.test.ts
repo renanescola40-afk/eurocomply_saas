@@ -128,9 +128,16 @@ describe('recovery resilience scorecard promotion', () => {
     expect(JSON.stringify(evidence)).not.toContain('databaseUrl');
   });
 
-  it('credits restore independently while leaving rollback absent until explicitly executed', () => {
+  it('credits restore independently while retaining a non-crediting rollback placeholder', () => {
     const evidence = buildCanonicalRecoveryDrillEvidence(restoreSource(), { targetSha, runId: restoreRunId });
-    expect(evidence.rollback).toBeNull();
+    expect(evidence.rollback.status).toBe('Open');
+    expect(evidence.rollback.outcome).toBe('not_executed');
+    expect(evidence.rollback.runId).toBeNull();
+    expect(evidence.rollback.sourceWorkflow.file).toBe(workflowPath);
+    expect(evidence.rollback.evidenceIntegrity.sourceRunBound).toBe(false);
+    for (const check of ['rollbackTargetConfigured', 'distinctDeployment', 'rollbackExecuted', 'postRollbackHealth']) {
+      expect(evaluateEvidenceDocument(evidence.rollback, check)).not.toBe('PASS');
+    }
     expect(evidence.restore.status).toBe('Complete');
     expect(evidence.restore.sourceWorkflow.file).toBe(restoreWorkflowPath);
     for (const check of ['backupExists', 'restoreExecuted', 'dataIntegrity', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured']) {
@@ -138,9 +145,16 @@ describe('recovery resilience scorecard promotion', () => {
     }
   });
 
-  it('credits rollback independently while leaving restore absent until Stage 1 succeeds', () => {
+  it('credits rollback independently while retaining a non-crediting restore placeholder', () => {
     const evidence = buildCanonicalRollbackOnlyEvidence(rollbackSource(), { targetSha, runId: rollbackRunId });
-    expect(evidence.restore).toBeNull();
+    expect(evidence.restore.status).toBe('Open');
+    expect(evidence.restore.outcome).toBe('not_executed');
+    expect(evidence.restore.runId).toBeNull();
+    expect(evidence.restore.sourceWorkflow.file).toBe(restoreWorkflowPath);
+    expect(evidence.restore.evidenceIntegrity.sourceRunBound).toBe(false);
+    for (const check of ['backupExists', 'restoreExecuted', 'dataIntegrity', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured']) {
+      expect(evaluateEvidenceDocument(evidence.restore, check)).not.toBe('PASS');
+    }
     expect(evidence.rollback.status).toBe('Complete');
     expect(evidence.rollback.sourceWorkflow.file).toBe(workflowPath);
     for (const check of ['rollbackTargetConfigured', 'distinctDeployment', 'rollbackExecuted', 'postRollbackHealth']) {
