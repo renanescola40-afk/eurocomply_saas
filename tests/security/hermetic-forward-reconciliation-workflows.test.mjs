@@ -22,13 +22,16 @@ function jobHeader(source, jobName) {
   return source.slice(jobIndex, stepsIndex);
 }
 
-test('isolated forward rehearsal uses the hermetic client before restore and scopes the production source secret to producer steps', () => {
-  before(rehearsal, 'Verify runner PostgreSQL client without network installation', 'Start disposable isolated Supabase restore target');
-  before(rehearsal, 'Start disposable isolated Supabase restore target', 'Preflight protected backup restore proof');
-  assert.doesNotMatch(rehearsal, /apt-get|apt install|Install PostgreSQL client/);
-  assert.doesNotMatch(jobHeader(rehearsal, 'rehearse'), /secrets\.SUPABASE_DB_POOLER_URL|RECOVERY_SOURCE_DATABASE_URL/);
-  assert.equal((rehearsal.match(/secrets\.SUPABASE_DB_POOLER_URL/g) ?? []).length, 3);
-  assert.match(rehearsal, /verify-postgresql-client\.mjs/);
+test('forward rehearsal keeps Production row data inside Supabase provider boundary', () => {
+  before(rehearsal, 'Compile immutable selected migration manifest', 'Verify Supabase provider-managed Production restore without exporting row data');
+  before(rehearsal, 'Verify Supabase provider-managed Production restore without exporting row data', 'Apply only selected exact-byte migrations to isolated Supabase restore project');
+  assert.doesNotMatch(rehearsal, /SUPABASE_DB_POOLER_URL/);
+  assert.doesNotMatch(rehearsal, /run-backup-restore-exercise\.mjs/);
+  assert.doesNotMatch(rehearsal, /supabase db dump|pg_dump|production-data\.sql|production-backup\.dump/);
+  assert.match(rehearsal, /verify-supabase-provider-managed-restore\.mjs/);
+  assert.match(rehearsal, /SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED/);
+  assert.match(rehearsal, /SUPABASE_ACCESS_TOKEN/);
+  assert.doesNotMatch(jobHeader(rehearsal, 'rehearse'), /SUPABASE_ACCESS_TOKEN|NEXT_PUBLIC_SUPABASE_URL/);
 });
 
 test('bounded production dry-run uses the hermetic client and limits the pooler secret to remote-observation steps', () => {
