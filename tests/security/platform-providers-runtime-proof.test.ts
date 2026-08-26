@@ -69,7 +69,7 @@ describe('platform providers revenue megapack', () => {
     expect(sentryRoute).toContain('Sentry.flush');
     expect(sentryRoute).toContain('eventId');
     for (const secret of ['SENTRY_AUTH_TOKEN', 'SENTRY_ORG', 'SENTRY_PROJECT']) {
-      expect(workflow).toContain(`${secret}: \${{ secrets.${secret} }}`);
+      expect(workflow).toContain(secret + ': ${{ secrets.' + secret + ' }}');
       expect(runner).toContain(`required('${secret}')`);
     }
     expect(runner).toContain('/events/${encodeURIComponent(eventId)}/');
