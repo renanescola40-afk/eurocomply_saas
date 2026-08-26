@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const rehearsal = readFileSync('.github/workflows/supabase-forward-reconciliation-rehearsal.yml', 'utf8');
+const destroyRestore = readFileSync('scripts/recovery/destroy-supabase-provider-managed-restore.mjs', 'utf8');
 const dryRun = readFileSync('.github/workflows/supabase-forward-reconciliation-dry-run.yml', 'utf8');
 const dataPlane = readFileSync('.github/workflows/supabase-enterprise-data-plane-qa.yml', 'utf8');
 
@@ -22,13 +23,30 @@ function jobHeader(source, jobName) {
   return source.slice(jobIndex, stepsIndex);
 }
 
-test('isolated forward rehearsal uses the hermetic client before restore and scopes the production source secret to producer steps', () => {
-  before(rehearsal, 'Verify runner PostgreSQL client without network installation', 'Start disposable isolated Supabase restore target');
-  before(rehearsal, 'Start disposable isolated Supabase restore target', 'Preflight protected backup restore proof');
-  assert.doesNotMatch(rehearsal, /apt-get|apt install|Install PostgreSQL client/);
-  assert.doesNotMatch(jobHeader(rehearsal, 'rehearse'), /secrets\.SUPABASE_DB_POOLER_URL|RECOVERY_SOURCE_DATABASE_URL/);
-  assert.equal((rehearsal.match(/secrets\.SUPABASE_DB_POOLER_URL/g) ?? []).length, 3);
-  assert.match(rehearsal, /verify-postgresql-client\.mjs/);
+test('forward rehearsal keeps Production row data inside Supabase provider boundary', () => {
+  before(rehearsal, 'Compile immutable selected migration manifest', 'Verify Supabase provider-managed Production restore without exporting row data');
+  before(rehearsal, 'Verify Supabase provider-managed Production restore without exporting row data', 'Apply only selected exact-byte migrations to isolated Supabase restore project');
+  assert.doesNotMatch(rehearsal, /secrets\.SUPABASE_DB_POOLER_URL/);
+  assert.doesNotMatch(rehearsal, /node\s+scripts\/recovery\/run-backup-restore-exercise\.mjs/);
+  assert.doesNotMatch(rehearsal, /supabase\s+db\s+dump\s+--|pg_dump\s+/);
+  assert.match(rehearsal, /verify-supabase-provider-managed-restore\.mjs/);
+  assert.match(rehearsal, /SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED/);
+  assert.match(rehearsal, /SUPABASE_ACCESS_TOKEN/);
+  assert.doesNotMatch(jobHeader(rehearsal, 'rehearse'), /SUPABASE_ACCESS_TOKEN|NEXT_PUBLIC_SUPABASE_URL/);
+});
+
+test('provider restore teardown is always-run, explicitly confirmed and source-protected', () => {
+  before(rehearsal, '- name: Upload redacted immutable rehearsal evidence', '- name: Destroy isolated Supabase restore project');
+  assert.match(rehearsal, /destroy_confirmation:/);
+  assert.match(rehearsal, /RECOVERY_PROVIDER_DESTROY_CONFIRMATION: \$\{\{ inputs\.destroy_confirmation \}\}/);
+  assert.match(rehearsal, /DELETE \$\{RECOVERY_PROVIDER_RESTORE_PROJECT_REF\} AFTER REHEARSAL/);
+  assert.match(rehearsal, /- name: Destroy isolated Supabase restore project\n\s+if: always\(\)/);
+  assert.match(rehearsal, /node scripts\/recovery\/destroy-supabase-provider-managed-restore\.mjs/);
+  assert.match(destroyRestore, /restoreRef === sourceRef/);
+  assert.match(destroyRestore, /DELETE \$\{restoreRef\} AFTER REHEARSAL/);
+  assert.match(destroyRestore, /restore_cleanup_organization_mismatch/);
+  assert.match(destroyRestore, /restore_cleanup_region_mismatch/);
+  assert.match(destroyRestore, /api\(`\/projects\/\$\{restoreRef\}`, 'DELETE'\)/);
 });
 
 test('bounded production dry-run uses the hermetic client and limits the pooler secret to remote-observation steps', () => {
