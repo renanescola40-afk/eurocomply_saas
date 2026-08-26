@@ -92,10 +92,12 @@ describe('Supabase migration evidence bootstrap workflow', () => {
     expect(workflow).toContain('.head_sha == \\"${TARGET_SHA}\\"');
     expect(workflow).toContain('.status == \\"completed\\" and .conclusion == \\"success\\"');
     expect(workflow).toContain('require_artifact "$run_id" "$artifact_name"');
-    expect(workflow).toContain('DRIFT_RUN_ID="$(find_reusable_successful_run "$DRIFT_WORKFLOW" "$DRIFT_ARTIFACT" || true)"');
+    expect(workflow).toContain('DRIFT_RUN_ID="$(find_reusable_successful_run "$DRIFT_WORKFLOW" "$DRIFT_ARTIFACT")"');
     expect(workflow).toContain('Reusing successful exact-SHA drift audit run');
-    expect(workflow).toContain('if [ -z "$DRIFT_RUN_ID" ]; then');
+    expect(workflow).toContain('REUSE_STATUS=$?');
+    expect(workflow).toContain('2)');
     expect(workflow).toContain('DRIFT_RUN_ID="$(dispatch_workflow "$DRIFT_WORKFLOW")"');
+    expect(workflow).toContain('refusing fallback dispatch');
   });
   it('tolerates short artifact-index propagation without weakening evidence checks', () => {
     expect(workflow).toContain('for _ in $(seq 1 30); do');
