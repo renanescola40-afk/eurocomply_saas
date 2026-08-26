@@ -27,15 +27,21 @@ Creation of the restore project is intentionally outside CI because it can creat
 
 ## Validator behavior
 
-Management API SQL does not implement `psql` meta-commands. Top-level validators therefore have meta-directives stripped before execution, while validator dependencies referenced by `\\ir` are explicitly enumerated and executed as independent approved validators. A successful attestation is not allowed until all enumerated validators pass.
+Management API SQL does not implement `psql` meta-commands. The rehearsal therefore fails closed on every unreviewed meta-command. The exact `\\set ON_ERROR_STOP on` directive may be removed because Management API execution already fails the request on SQL error. The one current `\\ir validate-gap-remediation-runtime.sql` dependency is explicitly allowlisted and its target is executed separately as an approved validator in the same fail-closed workflow. Any new `\\ir`, `\\copy`, or other `psql` directive requires explicit review before S1 can pass.
+
+SQL file paths are allowlisted before file contents are read. Selected migrations additionally must match the immutable manifest digest before their contents can be submitted to the isolated restore project.
 
 ## Failure and cleanup
 
-The evidence upload and restore-project cleanup both use `if: always()`. Cleanup is fail-closed and project-bound. A failed cleanup makes the workflow fail and requires operator intervention; the restore ref must not be persisted in public evidence. No logical Production dump is created on the runner.
+The evidence upload and restore-project cleanup both use `if: always()`. Cleanup is fail-closed and project-bound. The dispatch must include the exact destructive confirmation `DELETE <restore_project_ref> AFTER REHEARSAL`; the teardown script also revalidates source != restore, organization and region immediately before deletion. A failed cleanup makes the workflow fail and requires operator intervention; the restore ref must not be persisted in public evidence. No logical Production dump is created on the runner.
+
+Cleanup ownership belongs to S1 once a pre-created restore project is handed to the workflow. The workflow is not authorized to create the clone, change Production, or delete any project other than the exact confirmed restore target.
 
 ## Rollback
 
 Rollback of this architecture is to disable the provider-managed S1 dispatch and leave Production unchanged. Do not restore the GitHub-hosted Production dump path. If the Management API path becomes unavailable, S1 remains blocked until an equivalent provider-contained or approved isolated recovery boundary exists.
+
+If teardown fails, do not rerun migrations or widen permissions. Quarantine the restore target, delete it through the same verified provider boundary, record the cleanup failure, and repeat S1 from a new approved restore only after cleanup is confirmed.
 
 ## Consequences
 
