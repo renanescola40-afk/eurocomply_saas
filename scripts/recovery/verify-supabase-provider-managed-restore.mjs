@@ -17,6 +17,9 @@ const approvedValidators = new Set([
   'scripts/security/validate-live-rls-inventory-helper-boundary.sql',
   'scripts/security/validate-gap-remediation-runtime.sql',
 ]);
+const approvedIncludes = new Map([
+  ['scripts/security/validate-live-rls-inventory-helper-boundary.sql', new Set(['validate-gap-remediation-runtime.sql'])],
+]);
 
 function env(name) { return String(process.env[name] ?? '').trim(); }
 function required(name) { const value = env(name); if (!value) throw new Error(`missing_${name.toLowerCase()}`); return value; }
@@ -100,26 +103,39 @@ export function validateProviderManagedSnapshot({ source, restore }) {
   return { sourceCounts, restoredCounts, sourceAuthUsers, restoredAuthUsers, sourceVersions, restoreVersions, rlsTables, policyCount };
 }
 
-export function normalizeSqlForManagementApi(sql) {
-  const normalized = String(sql).split(/\r?\n/).filter((line) => !line.trimStart().startsWith('\\')).join('\n').trim();
-  if (!normalized) throw new Error('rehearsal_sql_empty_after_psql_normalization');
-  return `${normalized}\n`;
-}
-
 function projectField(project, ...names) { for (const name of names) if (project?.[name] != null) return String(project[name]); return ''; }
 function sha256(text) { return createHash('sha256').update(text).digest('hex'); }
 
-function allowedSqlPath(path, query) {
-  const root = resolve('.'); const absolute = resolve(path); const rel = relative(root, absolute).split(sep).join('/');
+function describeSqlPath(path) {
+  const root = resolve('.');
+  const absolute = resolve(path);
+  const rel = relative(root, absolute).split(sep).join('/');
   if (rel.startsWith('../') || rel === '..') throw new Error('rehearsal_sql_path_not_allowed');
-  if (approvedValidators.has(rel)) return rel;
+  if (approvedValidators.has(rel)) return { absolute, rel, kind: 'validator', expectedDigest: null };
   if (!/^supabase\/migrations\/[0-9]{14}_[a-z0-9_]+\.sql$/.test(rel)) throw new Error('rehearsal_sql_path_not_allowed');
   const manifest = JSON.parse(readFileSync(resolve(required('MANIFEST_PATH')), 'utf8'));
   const filename = rel.split('/').at(-1);
   const selected = Array.isArray(manifest?.migrations) ? manifest.migrations.find((item) => item?.filename === filename) : null;
   if (!selected || !/^[a-f0-9]{64}$/.test(String(selected.sha256 ?? ''))) throw new Error('rehearsal_migration_not_selected');
-  if (sha256(query) !== selected.sha256) throw new Error('rehearsal_migration_digest_mismatch');
-  return rel;
+  return { absolute, rel, kind: 'migration', expectedDigest: String(selected.sha256) };
+}
+
+export function normalizeSqlForManagementApi(sql, rel = '') {
+  const lines = [];
+  for (const line of String(sql).split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed === '\\set ON_ERROR_STOP on') continue;
+    if (trimmed.startsWith('\\ir')) {
+      const include = trimmed.match(/^\\ir\s+([^\s]+)\s*$/)?.[1];
+      if (!include || !approvedIncludes.get(rel)?.has(include)) throw new Error('rehearsal_validator_include_not_allowed');
+      continue;
+    }
+    if (trimmed.startsWith('\\')) throw new Error('rehearsal_psql_meta_command_not_allowed');
+    lines.push(line);
+  }
+  const normalized = lines.join('\n').trim();
+  if (!normalized) throw new Error('rehearsal_sql_empty_after_psql_normalization');
+  return `${normalized}\n`;
 }
 
 async function verify() {
@@ -154,7 +170,7 @@ async function verify() {
     integrity: { criticalTableCount: criticalTables.length, criticalCountsObserved: true, authUserCountObserved: true, countRelationshipValidated: true, migrationVersionCount: snapshot.sourceVersions.length, recoveryMode: 'supabase-provider-managed-physical-backup-clone', backupIdentifierStored: false, projectReferencesStored: false, exactAggregateCountsStored: false },
     failures: [], failurePhase: null, failureDiagnostic: null,
     evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, aggregateCountsStored: false, credentialsStored: false, commandArgumentsStored: false, rawErrorMessagesStored: false, logicalBackupFilesDeleted: true, productionDumpCreatedOnGithubRunner: false, providerBackupIdentifierStored: false, providerProjectReferencesStored: false },
-    evidenceBoundary: 'Supabase Restore to a New Project is used as the Production-snapshot transport boundary. GitHub Actions never creates, downloads, stores, or replays a Production data dump. Production observation uses the Supabase Management API read-only SQL endpoint with fixed aggregate-only SQL. The workflow validates the selected backup exists on the source project, the isolated restore project is distinct, healthy, in the same Supabase organization and region, migration history matches the source before rehearsal changes, restored critical/Auth aggregate counts are valid and cannot exceed live source counts, RLS/policies are present, and no foreign-server/table binding exists. Exact aggregate counts are used transiently and are not retained. Only timing metrics, booleans and redacted provenance are stored; no row data, counts, project refs, backup identifiers, database URLs or credentials are retained in evidence.',
+    evidenceBoundary: 'Supabase Restore to a New Project is used as the Production-snapshot transport boundary. GitHub Actions never creates, downloads, stores, or replays a Production data dump. Production observation uses the Supabase Management API read-only SQL endpoint with fixed aggregate-only SQL. Validator includes are accepted only from an explicit allowlist and each included validator is executed separately by the workflow. Exact aggregate counts are transient and are not retained. Only timing metrics, booleans and redacted provenance are stored.',
   };
   mkdirSync(dirname(output), { recursive: true }); writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 }); return evidence;
 }
@@ -163,8 +179,12 @@ async function applyFile(path) {
   const sourceRef = projectRefFromApiUrl(required('NEXT_PUBLIC_SUPABASE_URL')); const restoreRef = required('RECOVERY_PROVIDER_RESTORE_PROJECT_REF');
   if (!PROJECT_REF.test(restoreRef) || restoreRef === sourceRef) throw new Error('restore_project_ref_invalid_or_not_distinct');
   if (required('RECOVERY_PROVIDER_RESTORE_ATTESTATION') !== 'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED') throw new Error('provider_restore_attestation_missing');
-  const rawQuery = readFileSync(resolve(path), 'utf8'); allowedSqlPath(path, rawQuery);
-  await request(`/projects/${restoreRef}/database/query`, { method: 'POST', body: { query: normalizeSqlForManagementApi(rawQuery) } });
+  const descriptor = describeSqlPath(path);
+  const rawQuery = readFileSync(descriptor.absolute, 'utf8');
+  if (descriptor.kind === 'migration' && sha256(rawQuery) !== descriptor.expectedDigest) throw new Error('rehearsal_migration_digest_mismatch');
+  const query = normalizeSqlForManagementApi(rawQuery, descriptor.rel);
+  // codeql[js/file-access-to-http] -- exact-main, path-allowlisted and digest-bound SQL is intentionally sent only to the isolated Supabase restore project.
+  await request(`/projects/${restoreRef}/database/query`, { method: 'POST', body: { query } });
 }
 
 export async function main(argv = process.argv.slice(2)) {
