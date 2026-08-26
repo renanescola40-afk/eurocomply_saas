@@ -252,7 +252,7 @@ jobs:
             esac
 
             require_artifact "$run_id" "$artifact_name"
-            download_artifact "$run_id" "$artifact_name" "$destination"
+            download_artifact "$run_id" "$artifact_name" "$destination" >/dev/null
 
             local inventory report
             inventory="$(find "$destination" -type f -name 'migration-reconciliation-inventory.json' -print -quit)"
