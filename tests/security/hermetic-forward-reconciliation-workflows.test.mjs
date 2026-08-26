@@ -36,7 +36,7 @@ test('forward rehearsal keeps Production row data inside Supabase provider bound
 });
 
 test('provider restore teardown is always-run, explicitly confirmed and source-protected', () => {
-  before(rehearsal, 'Upload redacted immutable rehearsal evidence', 'Destroy isolated Supabase restore project');
+  before(rehearsal, '- name: Upload redacted immutable rehearsal evidence', '- name: Destroy isolated Supabase restore project');
   assert.match(rehearsal, /destroy_confirmation:/);
   assert.match(rehearsal, /RECOVERY_PROVIDER_DESTROY_CONFIRMATION: \$\{\{ inputs\.destroy_confirmation \}\}/);
   assert.match(rehearsal, /DELETE \$\{RECOVERY_PROVIDER_RESTORE_PROJECT_REF\} AFTER REHEARSAL/);
