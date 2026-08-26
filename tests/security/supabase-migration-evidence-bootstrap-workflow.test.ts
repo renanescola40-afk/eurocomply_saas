@@ -87,16 +87,23 @@ describe('Supabase migration evidence bootstrap workflow', () => {
     expect(workflow).toContain('productionWritePerformed: false');
   });
 
-  it('reuses only successful exact-SHA drift evidence with the expected artifact', () => {
-    expect(workflow).toContain('find_reusable_successful_run()');
+  it('reuses completed exact-SHA drift evidence only after artifact-content validation', () => {
+    expect(workflow).toContain('find_reusable_completed_drift_run()');
+    expect(workflow).toContain('validate_reusable_drift_artifact()');
     expect(workflow).toContain('.head_sha == \\"${TARGET_SHA}\\"');
-    expect(workflow).toContain('.status == \\"completed\\" and .conclusion == \\"success\\"');
-    expect(workflow).toContain('require_artifact "$run_id" "$artifact_name"');
-    expect(workflow).toContain('DRIFT_RUN_ID="$(find_reusable_successful_run "$DRIFT_WORKFLOW" "$DRIFT_ARTIFACT")"');
-    expect(workflow).toContain('Reusing successful exact-SHA drift audit run');
+    expect(workflow).toContain('.status == \\"completed\\"');
+    expect(workflow).toContain('(.conclusion == \\"success\\" or .conclusion == \\"failure\\")');
+    expect(workflow).toContain("migration-reconciliation-inventory.json");
+    expect(workflow).toContain("migration-drift.json");
+    expect(workflow).toContain('.classificationPolicy.automaticClassificationAllowed == false');
+    expect(workflow).toContain('.safety.databaseModified == false');
+    expect(workflow).toContain('.safety.migrationHistoryModified == false');
+    expect(workflow).toContain('.safety.includeAllUsed == false');
+    expect(workflow).toContain("jq -e '.status == \"CRITICAL_DRIFT\"' \"$report\" >/dev/null");
+    expect(workflow).toContain("jq -e '.status != \"CRITICAL_DRIFT\"' \"$report\" >/dev/null");
+    expect(workflow).toContain('DRIFT_RUN_ID="$(find_reusable_completed_drift_run "$DRIFT_WORKFLOW" "$DRIFT_ARTIFACT")"');
+    expect(workflow).toContain('Reusing completed exact-SHA drift audit run');
     expect(workflow).toContain('REUSE_STATUS=$?');
-    expect(workflow).toContain('2)');
-    expect(workflow).toContain('DRIFT_RUN_ID="$(dispatch_workflow "$DRIFT_WORKFLOW")"');
     expect(workflow).toContain('refusing fallback dispatch');
   });
   it('tolerates short artifact-index propagation without weakening evidence checks', () => {
