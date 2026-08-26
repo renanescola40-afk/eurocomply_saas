@@ -21,11 +21,45 @@ async function request(url, options = {}) {
   return response;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function readJson(response) {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+async function waitForSentryEvent({ org, project, eventId, token }) {
+  const url = `https://sentry.io/api/0/projects/${encodeURIComponent(org)}/${encodeURIComponent(project)}/events/${encodeURIComponent(eventId)}/`;
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const response = await request(url, { headers: { authorization: `Bearer ${token}`, accept: 'application/json' } });
+    if (response.status === 200) return readJson(response);
+    if (![404, 429].includes(response.status)) return null;
+    await sleep(1_500);
+  }
+  return null;
+}
+
+function sentryEventRelease(payload) {
+  if (!payload || typeof payload !== 'object') return '';
+  const release = payload.release;
+  if (typeof release === 'string') return release;
+  if (release && typeof release === 'object' && typeof release.version === 'string') return release.version;
+  return '';
+}
+
 const baseUrl = required('PRODUCTION_URL').replace(/\/$/, '');
 const internalToken = required('PLATFORM_PROOF_TOKEN');
 const stripeSecret = required('STRIPE_SECRET_KEY');
 const webhookSecret = required('STRIPE_WEBHOOK_SECRET');
 required('SENTRY_DSN');
+const sentryAuthToken = required('SENTRY_AUTH_TOKEN');
+const sentryOrg = required('SENTRY_ORG');
+const sentryProject = required('SENTRY_PROJECT');
 const sha = required('GITHUB_SHA');
 checks.protectedMainExecution = env('GITHUB_ACTIONS') === 'true' && env('GITHUB_REF_NAME') === 'main';
 checks.exactShaBound = /^[a-f0-9]{40}$/i.test(sha);
@@ -78,8 +112,25 @@ try {
   checks.emailDelivery = email.status === 200;
 
   const sentry = await request(`${baseUrl}/api/internal/platform-proof/sentry`, { method: 'POST', headers: proofHeaders, body: JSON.stringify({ release: sha }) });
-  checks.sentryEventIngestion = sentry.status === 200;
-  checks.sentryReleaseAndSourceMaps = sentry.headers.get('x-sentry-release') === sha;
+  const sentryProof = sentry.status === 200 ? await readJson(sentry) : null;
+  const sentryEventId = typeof sentryProof?.eventId === 'string' && /^[a-f0-9]{32}$/i.test(sentryProof.eventId)
+    ? sentryProof.eventId
+    : '';
+  const providerEvent = sentryEventId
+    ? await waitForSentryEvent({ org: sentryOrg, project: sentryProject, eventId: sentryEventId, token: sentryAuthToken })
+    : null;
+  checks.sentryEventIngestion = Boolean(
+    providerEvent
+    && String(providerEvent.eventID ?? providerEvent.id ?? '').toLowerCase() === sentryEventId.toLowerCase(),
+  );
+
+  const sentryRelease = sentryEventRelease(providerEvent);
+  const releaseFilesUrl = `https://sentry.io/api/0/projects/${encodeURIComponent(sentryOrg)}/${encodeURIComponent(sentryProject)}/releases/${encodeURIComponent(sha)}/files/`;
+  const releaseFilesResponse = await request(releaseFilesUrl, {
+    headers: { authorization: `Bearer ${sentryAuthToken}`, accept: 'application/json' },
+  });
+  const releaseFiles = releaseFilesResponse.status === 200 ? await readJson(releaseFilesResponse) : null;
+  checks.sentryReleaseAndSourceMaps = sentryRelease === sha && Array.isArray(releaseFiles) && releaseFiles.length > 0;
 
   const rateLimitRequests = await Promise.all(Array.from({ length: 12 }, () => request(`${baseUrl}/api/internal/platform-proof/rate-limit`, { headers: proofHeaders })));
   checks.distributedRateLimit = rateLimitRequests.some((response) => response.status === 429);
@@ -112,7 +163,7 @@ const evidence = {
     customerDataStored: false,
     providerUrlsStored: false,
   },
-  boundary: 'Protected exact-main validation records only canonical booleans. The synthetic Stripe webhook uses a non-subscription Checkout Session so signature and replay handling are exercised without creating customer, subscription, invoice or charge state. No credentials, response bodies, customer identifiers, email addresses, provider payloads or raw URLs are persisted.',
+  boundary: 'Protected exact-main validation records only canonical booleans. Sentry success requires a flushed synthetic event to be retrieved back from the Sentry Events API with the exact release SHA plus provider-visible release files for that SHA. The synthetic Stripe webhook uses a non-subscription Checkout Session so signature and replay handling are exercised without creating customer, subscription, invoice or charge state. No credentials, response bodies, customer identifiers, email addresses, provider payloads or raw URLs are persisted.',
 };
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
