@@ -48,6 +48,10 @@ on:
         description: Type SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED after verifying the target came from the selected source backup
         required: true
         type: string
+      destroy_confirmation:
+        description: Type DELETE <restore_project_ref> AFTER REHEARSAL to authorize teardown of only the isolated restore project
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -116,7 +120,14 @@ jobs:
           for token in forbidden:
               if token in text:
                   raise SystemExit(f'Production row-data path still present: {token}')
-          for token in ['verify-supabase-provider-managed-restore.mjs', 'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED', 'validate-gap-remediation-runtime.sql', 'Destroy isolated Supabase restore project']:
+          for token in [
+              'verify-supabase-provider-managed-restore.mjs',
+              'destroy-supabase-provider-managed-restore.mjs',
+              'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED',
+              'RECOVERY_PROVIDER_DESTROY_CONFIRMATION',
+              'validate-gap-remediation-runtime.sql',
+              'Destroy isolated Supabase restore project',
+          ]:
               if token not in text:
                   raise SystemExit(f'provider-managed recovery guard missing: {token}')
           PY
@@ -152,6 +163,7 @@ jobs:
       RECOVERY_PROVIDER_RESTORE_STARTED_AT: ${{ inputs.restore_started_at }}
       RECOVERY_PROVIDER_RESTORE_COMPLETED_AT: ${{ inputs.restore_completed_at }}
       RECOVERY_PROVIDER_RESTORE_ATTESTATION: ${{ inputs.restore_attestation }}
+      RECOVERY_PROVIDER_DESTROY_CONFIRMATION: ${{ inputs.destroy_confirmation }}
       MANIFEST_PATH: artifacts/supabase-forward-reconciliation/manifest.json
       ATTESTATION_PATH: artifacts/supabase-forward-reconciliation/rehearsal-attestation.json
     steps:
@@ -167,6 +179,7 @@ jobs:
           main_sha="$(curl --fail --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
           test "$main_sha" = "$TARGET_SHA"
           test "$RECOVERY_PROVIDER_RESTORE_ATTESTATION" = 'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED'
+          test "$RECOVERY_PROVIDER_DESTROY_CONFIRMATION" = "DELETE ${RECOVERY_PROVIDER_RESTORE_PROJECT_REF} AFTER REHEARSAL"
       - name: Checkout exact current main SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
@@ -243,24 +256,7 @@ jobs:
           retention-days: 90
       - name: Destroy isolated Supabase restore project
         if: always()
-        shell: bash
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-        run: |
-          set -euo pipefail
-          test "$RECOVERY_PROVIDER_RESTORE_ATTESTATION" = 'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED'
-          source_ref="$(printf '%s' "$NEXT_PUBLIC_SUPABASE_URL" | sed -nE 's#^https://([a-z0-9]{20})\.supabase\.co/?$#\1#p')"
-          restore_ref="$RECOVERY_PROVIDER_RESTORE_PROJECT_REF"
-          [[ "$source_ref" =~ ^[a-z0-9]{20}$ ]]
-          [[ "$restore_ref" =~ ^[a-z0-9]{20}$ ]]
-          test "$source_ref" != "$restore_ref"
-          source_json="$(curl --fail --silent --show-error -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Accept: application/json' "https://api.supabase.com/v1/projects/$source_ref")"
-          restore_json="$(curl --fail --silent --show-error -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Accept: application/json' "https://api.supabase.com/v1/projects/$restore_ref")"
-          source_org="$(jq -r '.organization_id // .organization_slug // empty' <<<"$source_json")"
-          restore_org="$(jq -r '.organization_id // .organization_slug // empty' <<<"$restore_json")"
-          source_region="$(jq -r '.region // empty' <<<"$source_json")"
-          restore_region="$(jq -r '.region // empty' <<<"$restore_json")"
-          test -n "$source_org" && test "$source_org" = "$restore_org"
-          test -n "$source_region" && test "$source_region" = "$restore_region"
-          curl --fail --silent --show-error -X DELETE -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Accept: application/json' "https://api.supabase.com/v1/projects/$restore_ref" >/dev/null
+        run: node scripts/recovery/destroy-supabase-provider-managed-restore.mjs
