@@ -71,6 +71,11 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Set up pinned Supabase CLI contract baseline
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.114.0
+
       - name: Install dependencies deterministically without lifecycle scripts
         run: npm ci --ignore-scripts
 
