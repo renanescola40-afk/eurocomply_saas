@@ -104,7 +104,7 @@ SELECT json_build_object(
 )::text;
 `;
 
-const stdout = execFileSync('psql', [databaseUrl, '--no-psqlrc', '--tuples-only', '--no-align', '--quiet', '-c', sql], {
+const stdout = execFileSync('psql', [databaseUrl, '--no-psqlrc', '--set=ON_ERROR_STOP=on', '--tuples-only', '--no-align', '--quiet', '-c', sql], {
   encoding: 'utf8',
   stdio: ['ignore', 'pipe', 'pipe'],
   maxBuffer: 4 * 1024 * 1024,
