@@ -2,6 +2,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
+import { buildReleaseSubprocessEnv } from './release-subprocess-env.mjs';
 
 const outputDir = process.env.RELEASE_VALIDATION_DIR || 'release-validation/enterprise-production';
 const logDir = join(outputDir, 'logs');
@@ -61,6 +62,12 @@ const commands = [
   ['25-p0-runtime-gap-strict', 'npm run security:p0-runtime-gap:strict', 'npm', ['run', 'security:p0-runtime-gap:strict']],
 ].map(([slug, label, command, args]) => ({ slug, label, command, args, critical: true }));
 
+const protectedKeysByStep = new Map([
+  ['09-release-deployment-smoke', ['HEALTHCHECK_TOKEN']],
+  ['10-release-observability-smoke', ['HEALTHCHECK_TOKEN']],
+  ['11-release-rollback-dry-run', ['HEALTHCHECK_TOKEN']],
+]);
+
 mkdirSync(logDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
 
@@ -108,7 +115,7 @@ function buildStepEnv(step) {
   const isUnitTestStep = step.slug === '03-test';
   const isStaticSecurityCiStep = step.slug === '07-security-ci';
   const env = {
-    ...process.env,
+    ...buildReleaseSubprocessEnv(process.env, protectedKeysByStep.get(step.slug) || []),
     CI: 'true',
     NEXT_TELEMETRY_DISABLED: process.env.NEXT_TELEMETRY_DISABLED || '1',
     RELEASE_TARGET: releaseTarget,
@@ -124,6 +131,13 @@ function buildStepEnv(step) {
     env.EUROCOMPLY_ENTERPRISE_RELEASE = '';
     env.PUBLIC_PRODUCTION_RELEASE_IN_PROGRESS = '';
     env.FINAL_VALIDATION_IN_PROGRESS = '';
+  }
+
+  // Unit tests must be deterministic and must not inherit an intentionally empty
+  // Production URL binding. This preserves the application's documented local
+  // fallback without affecting live smoke targets, which use RELEASE_* URLs.
+  if (isUnitTestStep && !env.NEXT_PUBLIC_APP_URL) {
+    env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
   }
 
   if (isStaticSecurityCiStep) {
