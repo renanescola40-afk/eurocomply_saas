@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   backupResponseContainsIdentifier,
+  normalizeSqlForManagementApi,
   projectRefFromApiUrl,
   validateProviderManagedSnapshot,
 } from '../../scripts/recovery/verify-supabase-provider-managed-restore.mjs';
@@ -57,4 +58,26 @@ test('fails closed when RLS or policy coverage is incomplete', () => {
 test('fails closed if the restored project has external database bindings', () => {
   assert.throws(() => validateProviderManagedSnapshot({ source: snapshot(), restore: snapshot({ foreign_servers: 1 }) }), /external_binding_present/);
   assert.throws(() => validateProviderManagedSnapshot({ source: snapshot(), restore: snapshot({ foreign_tables: 1 }) }), /external_binding_present/);
+});
+
+test('normalizes only the reviewed psql directives for approved validators', () => {
+  assert.equal(
+    normalizeSqlForManagementApi('\\set ON_ERROR_STOP on\nselect 1;\n'),
+    'select 1;\n',
+  );
+  assert.equal(
+    normalizeSqlForManagementApi(
+      'select 1;\n\\ir validate-gap-remediation-runtime.sql\n',
+      'scripts/security/validate-live-rls-inventory-helper-boundary.sql',
+    ),
+    'select 1;\n',
+  );
+});
+
+test('rejects unreviewed includes and all other psql meta commands', () => {
+  assert.throws(
+    () => normalizeSqlForManagementApi('\\ir arbitrary.sql\nselect 1;\n', 'scripts/security/validate-live-rls-inventory-helper-boundary.sql'),
+    /include_not_allowed/,
+  );
+  assert.throws(() => normalizeSqlForManagementApi('\\copy public.users to stdout\n'), /meta_command_not_allowed/);
 });
