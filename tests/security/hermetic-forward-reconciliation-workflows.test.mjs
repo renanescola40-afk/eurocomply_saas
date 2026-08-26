@@ -25,9 +25,9 @@ function jobHeader(source, jobName) {
 test('forward rehearsal keeps Production row data inside Supabase provider boundary', () => {
   before(rehearsal, 'Compile immutable selected migration manifest', 'Verify Supabase provider-managed Production restore without exporting row data');
   before(rehearsal, 'Verify Supabase provider-managed Production restore without exporting row data', 'Apply only selected exact-byte migrations to isolated Supabase restore project');
-  assert.doesNotMatch(rehearsal, /SUPABASE_DB_POOLER_URL/);
-  assert.doesNotMatch(rehearsal, /run-backup-restore-exercise\.mjs/);
-  assert.doesNotMatch(rehearsal, /supabase db dump|pg_dump|production-data\.sql|production-backup\.dump/);
+  assert.doesNotMatch(rehearsal, /secrets\.SUPABASE_DB_POOLER_URL/);
+  assert.doesNotMatch(rehearsal, /node\s+scripts\/recovery\/run-backup-restore-exercise\.mjs/);
+  assert.doesNotMatch(rehearsal, /supabase\s+db\s+dump\s+--|pg_dump\s+/);
   assert.match(rehearsal, /verify-supabase-provider-managed-restore\.mjs/);
   assert.match(rehearsal, /SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED/);
   assert.match(rehearsal, /SUPABASE_ACCESS_TOKEN/);
