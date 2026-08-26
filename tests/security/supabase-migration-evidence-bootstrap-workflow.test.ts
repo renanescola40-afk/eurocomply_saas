@@ -106,6 +106,16 @@ describe('Supabase migration evidence bootstrap workflow', () => {
     expect(workflow).toContain('REUSE_STATUS=$?');
     expect(workflow).toContain('refusing fallback dispatch');
   });
+  it('fails closed on every reusable drift artifact validation step', () => {
+    expect(workflow).toContain('if ! require_artifact "$run_id" "$artifact_name"; then');
+    expect(workflow).toContain('if ! download_artifact "$run_id" "$artifact_name" "$destination" >/dev/null; then');
+    expect(workflow).toContain('is missing a non-empty migration reconciliation inventory');
+    expect(workflow).toContain('is missing a non-empty migration drift report');
+    expect(workflow).toContain('has an invalid migration reconciliation inventory');
+    expect(workflow).toContain('has an invalid or unsafe migration drift report');
+    expect(workflow).toContain('does not prove CRITICAL_DRIFT');
+    expect(workflow).toContain('cannot claim CRITICAL_DRIFT');
+  });
   it('tolerates short artifact-index propagation without weakening evidence checks', () => {
     expect(workflow).toContain('for _ in $(seq 1 30); do');
     expect(workflow).toContain('Missing expected artifact ${artifact_name} for workflow run ${run_id}');
