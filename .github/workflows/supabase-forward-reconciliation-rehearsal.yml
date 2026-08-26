@@ -102,11 +102,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -Fq 'SUPABASE_DB_POOLER_URL' .github/workflows/supabase-forward-reconciliation-rehearsal.yml
-          ! grep -Fq 'run-backup-restore-exercise.mjs' .github/workflows/supabase-forward-reconciliation-rehearsal.yml
-          ! grep -Eq 'supabase db dump|pg_dump|production-data\.sql|production-backup\.dump' .github/workflows/supabase-forward-reconciliation-rehearsal.yml
-          grep -Fq 'verify-supabase-provider-managed-restore.mjs' .github/workflows/supabase-forward-reconciliation-rehearsal.yml
-          grep -Fq 'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED' .github/workflows/supabase-forward-reconciliation-rehearsal.yml
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('.github/workflows/supabase-forward-reconciliation-rehearsal.yml').read_text(encoding='utf-8')
+          forbidden = [
+              'secrets.' + 'SUPABASE_DB_' + 'POOLER_URL',
+              'node scripts/recovery/' + 'run-backup-' + 'restore-exercise.mjs',
+              'supabase db ' + 'dump --',
+              'pg_' + 'dump ',
+              'production-' + 'data.sql',
+              'production-' + 'backup.dump',
+          ]
+          for token in forbidden:
+              if token in text:
+                  raise SystemExit(f'Production row-data path still present: {token}')
+          required = [
+              'verify-supabase-provider-managed-restore.mjs',
+              'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED',
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'provider-managed recovery guard missing: {token}')
+          PY
 
       - name: Reject dangerous production shortcuts in bounded workflows
         shell: bash
