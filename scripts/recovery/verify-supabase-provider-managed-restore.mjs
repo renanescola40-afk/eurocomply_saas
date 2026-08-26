@@ -87,7 +87,9 @@ function snapshotQuery() {
 }
 
 async function readSnapshot(ref) {
-  const payload = await request(`/projects/${ref}/database/query/read-only`, {
+  // This query is fixed aggregate-only SQL. The privileged query endpoint is
+  // used so Auth and migration metadata are visible without exporting rows.
+  const payload = await request(`/projects/${ref}/database/query`, {
     method: 'POST',
     readOnly: true,
     body: { query: snapshotQuery() },
@@ -109,10 +111,12 @@ export function validateProviderManagedSnapshot({ source, restore }) {
     sourceCounts[table] = integer(source?.[table]);
     restoredCounts[table] = integer(restore?.[table]);
     if (sourceCounts[table] == null || restoredCounts[table] == null) throw new Error(`invalid_${table}_count`);
+    if (restoredCounts[table] > sourceCounts[table]) throw new Error(`provider_restore_${table}_count_ahead_of_source`);
   }
   const sourceAuthUsers = integer(source?.auth_users);
   const restoredAuthUsers = integer(restore?.auth_users);
   if (sourceAuthUsers == null || restoredAuthUsers == null) throw new Error('invalid_auth_users_count');
+  if (restoredAuthUsers > sourceAuthUsers) throw new Error('provider_restore_auth_users_count_ahead_of_source');
 
   const sourceVersions = Array.isArray(source?.migration_versions) ? source.migration_versions.map(String) : null;
   const restoreVersions = Array.isArray(restore?.migration_versions) ? restore.migration_versions.map(String) : null;
@@ -130,6 +134,16 @@ export function validateProviderManagedSnapshot({ source, restore }) {
   if (foreignServers !== 0 || foreignTables !== 0) throw new Error('provider_restore_external_binding_present');
 
   return { sourceCounts, restoredCounts, sourceAuthUsers, restoredAuthUsers, sourceVersions, restoreVersions, rlsTables, policyCount };
+}
+
+export function normalizeSqlForManagementApi(sql) {
+  const normalized = String(sql)
+    .split(/\r?\n/)
+    .filter((line) => !line.trimStart().startsWith('\\'))
+    .join('\n')
+    .trim();
+  if (!normalized) throw new Error('rehearsal_sql_empty_after_psql_normalization');
+  return `${normalized}\n`;
 }
 
 function projectField(project, ...names) {
@@ -191,6 +205,8 @@ async function verify() {
     providerBackupObserved: true,
     sameOrganization: true,
     sameRegion: true,
+    snapshotCountsNotAheadOfSource: true,
+    migrationHistoryMatchesSource: true,
     noExternalDatabaseBindings: true,
     noProductionDumpOnRunner: true,
   };
@@ -241,7 +257,7 @@ async function verify() {
       providerBackupIdentifierStored: false,
       providerProjectReferencesStored: false,
     },
-    evidenceBoundary: 'Supabase Restore to a New Project is used as the Production-snapshot transport boundary. GitHub Actions never creates, downloads, stores, or replays a Production data dump. The workflow validates the selected backup exists on the source project, the isolated restore project is distinct, healthy, in the same Supabase organization and region, migration history matches the source before rehearsal changes, critical aggregate counts and Auth counts are readable, RLS/policies are present, and no foreign-server/table binding exists. Only aggregate counts, timing metrics and redacted provenance are retained; no row data, project refs, backup identifiers, database URLs or credentials are stored in evidence.',
+    evidenceBoundary: 'Supabase Restore to a New Project is used as the Production-snapshot transport boundary. GitHub Actions never creates, downloads, stores, or replays a Production data dump. The workflow validates the selected backup exists on the source project, the isolated restore project is distinct, healthy, in the same Supabase organization and region, migration history matches the source before rehearsal changes, restored critical/Auth aggregate counts are valid and cannot exceed the live source counts, RLS/policies are present, and no foreign-server/table binding exists. The Supabase-managed physical-backup restore is the data-copy mechanism; aggregate live-source counts are used only as an additional fail-closed plausibility check because the selected backup can predate current Production activity. Only aggregate counts, timing metrics and redacted provenance are retained; no row data, project refs, backup identifiers, database URLs or credentials are stored in evidence.',
   };
 
   mkdirSync(dirname(output), { recursive: true });
@@ -258,8 +274,7 @@ async function applyFile(path) {
   const absolute = resolve(path);
   const root = resolve('.');
   if (!absolute.startsWith(`${root}/supabase/migrations/`) && !absolute.startsWith(`${root}/scripts/`)) throw new Error('rehearsal_sql_path_not_allowed');
-  const query = readFileSync(absolute, 'utf8');
-  if (!query.trim()) throw new Error('rehearsal_sql_empty');
+  const query = normalizeSqlForManagementApi(readFileSync(absolute, 'utf8'));
   await request(`/projects/${restoreRef}/database/query`, { method: 'POST', body: { query } });
 }
 
