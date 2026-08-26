@@ -247,7 +247,7 @@ jobs:
             fi
 
             if [ -z "$run_id" ]; then
-              return 1
+              return 2
             fi
             if [[ ! "$run_id" =~ ^[0-9]+$ ]]; then
               echo "Invalid reusable workflow run id for ${workflow}: ${run_id}" >&2
@@ -308,12 +308,23 @@ jobs:
 
           DRIFT_WORKFLOW='supabase-migration-drift-audit.yml'
           DRIFT_ARTIFACT="supabase-migration-drift-${TARGET_SHA}"
-          DRIFT_RUN_ID="$(find_reusable_successful_run "$DRIFT_WORKFLOW" "$DRIFT_ARTIFACT" || true)"
-          if [ -z "$DRIFT_RUN_ID" ]; then
-            DRIFT_RUN_ID="$(dispatch_workflow "$DRIFT_WORKFLOW")"
-          else
-            echo "Reusing successful exact-SHA drift audit run ${DRIFT_RUN_ID}."
-          fi
+          DRIFT_RUN_ID=''
+          set +e
+          DRIFT_RUN_ID="$(find_reusable_successful_run "$DRIFT_WORKFLOW" "$DRIFT_ARTIFACT")"
+          REUSE_STATUS=$?
+          set -e
+          case "$REUSE_STATUS" in
+            0)
+              echo "Reusing successful exact-SHA drift audit run ${DRIFT_RUN_ID}."
+              ;;
+            2)
+              DRIFT_RUN_ID="$(dispatch_workflow "$DRIFT_WORKFLOW")"
+              ;;
+            *)
+              echo "Failed to inspect reusable exact-SHA drift evidence; refusing fallback dispatch." >&2
+              exit "$REUSE_STATUS"
+              ;;
+          esac
           [[ "$DRIFT_RUN_ID" =~ ^[0-9]+$ ]]
           DRIFT_CONCLUSION="$(wait_for_run "$DRIFT_RUN_ID")"
           require_artifact "$DRIFT_RUN_ID" "$DRIFT_ARTIFACT"
