@@ -17,6 +17,11 @@ test('isolated proof is exact-SHA, managed-loopback-only and sanitized', () => {
   assert.doesNotMatch(source, /\^postgres\(\?:ql\)/);
 });
 
+test('psql fail-closed mode is passed as a client option, not embedded SQL', () => {
+  assert.match(source, /--set=ON_ERROR_STOP=on/);
+  assert.doesNotMatch(source, /\\set ON_ERROR_STOP on/);
+});
+
 test('isolated proof requires the reviewed schema replay to remain noncanonical for migration history', () => {
   assert.match(source, /RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL/);
   assert.match(source, /migrationHistoryCanonical !== 'false'/);
