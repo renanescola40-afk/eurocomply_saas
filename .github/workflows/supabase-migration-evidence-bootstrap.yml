@@ -233,31 +233,94 @@ jobs:
             return 1
           }
 
-          find_reusable_successful_run() {
+          validate_reusable_drift_artifact() {
+            local run_id="$1"
+            local conclusion="$2"
+            local artifact_name="$3"
+            local destination="$TMP_ROOT/reusable-drift-${run_id}"
+
+            if [[ ! "$run_id" =~ ^[0-9]+$ ]]; then
+              echo "Invalid reusable drift run id: ${run_id}" >&2
+              return 1
+            fi
+            case "$conclusion" in
+              success|failure) ;;
+              *)
+                echo "Unsupported reusable drift conclusion for ${run_id}: ${conclusion}" >&2
+                return 1
+                ;;
+            esac
+
+            require_artifact "$run_id" "$artifact_name"
+            download_artifact "$run_id" "$artifact_name" "$destination"
+
+            local inventory report
+            inventory="$(find "$destination" -type f -name 'migration-reconciliation-inventory.json' -print -quit)"
+            report="$(find "$destination" -type f -name 'migration-drift.json' -print -quit)"
+            test -n "$inventory"
+            test -s "$inventory"
+            test -n "$report"
+            test -s "$report"
+
+            jq -e '
+              .schema == "risck-comply.supabase-migration-reconciliation-inventory.v1"
+              and .classificationPolicy.automaticClassificationAllowed == false
+              and (.remoteVersions | type == "array")
+              and (.localInventory | type == "array")
+              and (.items | type == "array")
+              and (.counts.unclassified | type == "number")
+            ' "$inventory" >/dev/null
+
+            jq -e '
+              (.status == "ALIGNED" or .status == "PENDING_LOCAL_MIGRATIONS" or .status == "CRITICAL_DRIFT")
+              and .reconciliationInventoryArtifact == "migration-reconciliation-inventory.json"
+              and .safety.databaseModified == false
+              and .safety.migrationHistoryModified == false
+              and .safety.includeAllUsed == false
+            ' "$report" >/dev/null
+
+            if [ "$conclusion" = "failure" ]; then
+              jq -e '.status == "CRITICAL_DRIFT"' "$report" >/dev/null
+            else
+              jq -e '.status != "CRITICAL_DRIFT"' "$report" >/dev/null
+            fi
+          }
+
+          find_reusable_completed_drift_run() {
             local workflow="$1"
             local artifact_name="$2"
-            local run_id=''
+            local candidates_json
 
-            if ! run_id="$( 
+            if ! candidates_json="$( 
               gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?event=workflow_dispatch&branch=main&per_page=100" \
-                --jq ".workflow_runs | map(select(.head_sha == \"${TARGET_SHA}\" and .event == \"workflow_dispatch\" and .status == \"completed\" and .conclusion == \"success\")) | sort_by(.updated_at) | reverse | .[0].id // empty"
+                --jq ".workflow_runs | map(select(.head_sha == \"${TARGET_SHA}\" and .event == \"workflow_dispatch\" and .status == \"completed\" and (.conclusion == \"success\" or .conclusion == \"failure\"))) | sort_by(.updated_at) | reverse | map({id, conclusion})"
             )"; then
-              echo "Failed to inspect reusable successful workflow runs for ${workflow}" >&2
+              echo "Failed to inspect reusable completed workflow runs for ${workflow}" >&2
               return 1
             fi
 
-            if [ -z "$run_id" ]; then
+            local candidate_count
+            candidate_count="$(jq 'length' <<<"$candidates_json")"
+            if [ "$candidate_count" -eq 0 ]; then
               return 2
             fi
-            if [[ ! "$run_id" =~ ^[0-9]+$ ]]; then
-              echo "Invalid reusable workflow run id for ${workflow}: ${run_id}" >&2
-              return 1
-            fi
-            if ! require_artifact "$run_id" "$artifact_name"; then
-              echo "Reusable successful workflow run ${run_id} is missing expected artifact ${artifact_name}" >&2
-              return 1
-            fi
-            printf '%s\n' "$run_id"
+
+            local index run_id conclusion
+            for index in $(seq 0 $((candidate_count - 1))); do
+              run_id="$(jq -r ".[$index].id" <<<"$candidates_json")"
+              conclusion="$(jq -r ".[$index].conclusion" <<<"$candidates_json")"
+              if [[ ! "$run_id" =~ ^[0-9]+$ ]]; then
+                echo "Invalid reusable workflow run id for ${workflow}: ${run_id}" >&2
+                return 1
+              fi
+              if validate_reusable_drift_artifact "$run_id" "$conclusion" "$artifact_name"; then
+                printf '%s\n' "$run_id"
+                return 0
+              fi
+            done
+
+            echo "Completed exact-SHA drift runs exist but none contain valid reusable evidence." >&2
+            return 1
           }
           require_artifact() {
             local run_id="$1"
@@ -310,18 +373,18 @@ jobs:
           DRIFT_ARTIFACT="supabase-migration-drift-${TARGET_SHA}"
           DRIFT_RUN_ID=''
           set +e
-          DRIFT_RUN_ID="$(find_reusable_successful_run "$DRIFT_WORKFLOW" "$DRIFT_ARTIFACT")"
+          DRIFT_RUN_ID="$(find_reusable_completed_drift_run "$DRIFT_WORKFLOW" "$DRIFT_ARTIFACT")"
           REUSE_STATUS=$?
           set -e
           case "$REUSE_STATUS" in
             0)
-              echo "Reusing successful exact-SHA drift audit run ${DRIFT_RUN_ID}."
+              echo "Reusing completed exact-SHA drift audit run ${DRIFT_RUN_ID} with validated evidence."
               ;;
             2)
               DRIFT_RUN_ID="$(dispatch_workflow "$DRIFT_WORKFLOW")"
               ;;
             *)
-              echo "Failed to inspect reusable exact-SHA drift evidence; refusing fallback dispatch." >&2
+              echo "Failed to validate reusable exact-SHA drift evidence; refusing fallback dispatch." >&2
               exit "$REUSE_STATUS"
               ;;
           esac
@@ -329,7 +392,6 @@ jobs:
           DRIFT_CONCLUSION="$(wait_for_run "$DRIFT_RUN_ID")"
           require_artifact "$DRIFT_RUN_ID" "$DRIFT_ARTIFACT"
           update_stage 'driftAudit' "$DRIFT_WORKFLOW" "$DRIFT_RUN_ID" "$DRIFT_CONCLUSION" "$DRIFT_ARTIFACT"
-
           DRY_WORKFLOW='supabase-production-migration-dry-run.yml'
           DRY_ARTIFACT="supabase-production-migration-dry-run-${TARGET_SHA}"
           DRY_RUN_ID="$(dispatch_workflow "$DRY_WORKFLOW" -f "release_sha=${TARGET_SHA}" -f 'confirmation=DRY_RUN_ONLY')"
