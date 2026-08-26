@@ -9,6 +9,7 @@ const routeRoots = [
 const inventoryPaths = [
   join(root, 'docs', 'security', 'API_ROUTE_INVENTORY.md'),
   join(root, 'docs', 'security', 'API_ROUTE_INVENTORY.billing.md'),
+  join(root, 'docs', 'security', 'API_ROUTE_INVENTORY.platform-proof.md'),
 ];
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
 
