@@ -186,7 +186,10 @@ export function buildCanonicalEvidence(source, { targetSha, runId }) {
       },
     }],
     failures: validation.failures,
-    redactionConfirmation: 'No token, raw GitHub API payload, repository secret, user data or customer data is stored in this canonical evidence.',
+    controlsVerified: passed && Array.isArray(source?.controlsVerified)
+      ? [...source.controlsVerified]
+      : [],
+    redactionConfirmation: 'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
     evidenceLocations: [
       '.github/workflows/branch-protection-runtime-proof.yml',
       'scripts/enterprise/build-platform-controls-runtime-evidence.mjs',
