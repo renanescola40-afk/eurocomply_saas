@@ -16,8 +16,9 @@ describe('API endpoint hardening trusted platform-proof boundary', () => {
   it('only credits the canonical helper when the route consumes it fail closed', () => {
     const scanner = read('scripts/security/check-api-endpoint-hardening.mjs');
 
+    expect(scanner).toContain('const platformProofImportPattern =');
     expect(scanner).toContain('function hasTrustedPlatformProofBoundary(source)');
-    expect(scanner).toContain("@/server/security/platform-proof");
+    expect(scanner).toContain('platformProofImportPattern.test(source)');
     expect(scanner).toContain('await\\s+authorizePlatformProofRequest');
     expect(scanner).toContain('failClosedPattern');
     expect(scanner).toContain('const trustedPlatformProofBoundary = hasTrustedPlatformProofBoundary(source)');
