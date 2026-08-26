@@ -87,6 +87,14 @@ describe('Supabase migration evidence bootstrap workflow', () => {
     expect(workflow).toContain('productionWritePerformed: false');
   });
 
+  it('reuses only successful exact-SHA drift evidence with the expected artifact', () => {
+    expect(workflow).toContain('find_reusable_successful_run()');
+    expect(workflow).toContain('.head_sha == \\"${TARGET_SHA}\\"');
+    expect(workflow).toContain('.status == \\"completed\\" and .conclusion == \\"success\\"');
+    expect(workflow).toContain('require_artifact "$run_id" "$artifact_name"');
+    expect(workflow).toContain('DRIFT_RUN_ID="$(find_reusable_successful_run "$DRIFT_WORKFLOW" "$DRIFT_ARTIFACT" || true)"');
+    expect(workflow).toContain('Reusing successful exact-SHA drift audit run');
+  });
   it('tolerates short artifact-index propagation without weakening evidence checks', () => {
     expect(workflow).toContain('for _ in $(seq 1 30); do');
     expect(workflow).toContain('Missing expected artifact ${artifact_name} for workflow run ${run_id}');
