@@ -87,6 +87,35 @@ describe('Supabase migration evidence bootstrap workflow', () => {
     expect(workflow).toContain('productionWritePerformed: false');
   });
 
+  it('reuses completed exact-SHA drift evidence only after artifact-content validation', () => {
+    expect(workflow).toContain('find_reusable_completed_drift_run()');
+    expect(workflow).toContain('validate_reusable_drift_artifact()');
+    expect(workflow).toContain('.head_sha == \\"${TARGET_SHA}\\"');
+    expect(workflow).toContain('.status == \\"completed\\"');
+    expect(workflow).toContain('(.conclusion == \\"success\\" or .conclusion == \\"failure\\")');
+    expect(workflow).toContain("migration-reconciliation-inventory.json");
+    expect(workflow).toContain("migration-drift.json");
+    expect(workflow).toContain('.classificationPolicy.automaticClassificationAllowed == false');
+    expect(workflow).toContain('.safety.databaseModified == false');
+    expect(workflow).toContain('.safety.migrationHistoryModified == false');
+    expect(workflow).toContain('.safety.includeAllUsed == false');
+    expect(workflow).toContain("jq -e '.status == \"CRITICAL_DRIFT\"' \"$report\" >/dev/null");
+    expect(workflow).toContain("jq -e '.status != \"CRITICAL_DRIFT\"' \"$report\" >/dev/null");
+    expect(workflow).toContain('DRIFT_RUN_ID="$(find_reusable_completed_drift_run "$DRIFT_WORKFLOW" "$DRIFT_ARTIFACT")"');
+    expect(workflow).toContain('Reusing completed exact-SHA drift audit run');
+    expect(workflow).toContain('REUSE_STATUS=$?');
+    expect(workflow).toContain('refusing fallback dispatch');
+  });
+  it('fails closed on every reusable drift artifact validation step', () => {
+    expect(workflow).toContain('if ! require_artifact "$run_id" "$artifact_name"; then');
+    expect(workflow).toContain('if ! download_artifact "$run_id" "$artifact_name" "$destination" >/dev/null; then');
+    expect(workflow).toContain('is missing a non-empty migration reconciliation inventory');
+    expect(workflow).toContain('is missing a non-empty migration drift report');
+    expect(workflow).toContain('has an invalid migration reconciliation inventory');
+    expect(workflow).toContain('has an invalid or unsafe migration drift report');
+    expect(workflow).toContain('does not prove CRITICAL_DRIFT');
+    expect(workflow).toContain('cannot claim CRITICAL_DRIFT');
+  });
   it('tolerates short artifact-index propagation without weakening evidence checks', () => {
     expect(workflow).toContain('for _ in $(seq 1 30); do');
     expect(workflow).toContain('Missing expected artifact ${artifact_name} for workflow run ${run_id}');
