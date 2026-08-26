@@ -86,9 +86,9 @@ function snapshotQuery() {
     'audit_logs', (select count(*)::int from public.audit_logs),
     'auth_users', (select count(*)::int from auth.users),
     'migration_versions', (select coalesce(json_agg(version order by version), '[]'::json) from supabase_migrations.schema_migrations),
-    'rls_tables', (select count(*)::int from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('organizations','organization_members','audit_logs') and c.relrowsecurity=true),
-    'policy_count', (select count(*)::int from pg_policies where schemaname='public' and tablename in ('organizations','organization_members','audit_logs')),
-    'foreign_servers', (select count(*)::int from pg_foreign_server),
+    'rls_tables', (select count(*)::int from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('organizations','organization_members','audit_logs') and c.relrowsecurity=true),
+    'policy_count', (select count(*)::int from pg_catalog.pg_policies where schemaname='public' and tablename in ('organizations','organization_members','audit_logs')),
+    'foreign_servers', (select count(*)::int from pg_catalog.pg_foreign_server),
     'foreign_tables', (select count(*)::int from information_schema.foreign_tables)
   ) as snapshot;`;
 }
