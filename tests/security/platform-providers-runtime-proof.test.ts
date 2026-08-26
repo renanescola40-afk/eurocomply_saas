@@ -5,6 +5,13 @@ const workflow = readFileSync('.github/workflows/platform-providers-runtime-proo
 const runner = readFileSync('scripts/platform/run-platform-providers-runtime-validation.mjs', 'utf8');
 const validator = readFileSync('scripts/platform/check-platform-providers-evidence.mjs', 'utf8');
 const classifier = readFileSync('scripts/platform/provider-failure-classifier.mjs', 'utf8');
+const enterpriseApiChecker = readFileSync('scripts/security/check-enterprise-api-security.mjs', 'utf8');
+const boundary = readFileSync('src/server/security/platform-proof.ts', 'utf8');
+const checkoutRoute = readFileSync('src/app/api/internal/platform-proof/stripe-checkout/route.ts', 'utf8');
+const subscriptionsRoute = readFileSync('src/app/api/internal/platform-proof/stripe-subscriptions/route.ts', 'utf8');
+const emailRoute = readFileSync('src/app/api/internal/platform-proof/email/route.ts', 'utf8');
+const sentryRoute = readFileSync('src/app/api/internal/platform-proof/sentry/route.ts', 'utf8');
+const rateLimitRoute = readFileSync('src/app/api/internal/platform-proof/rate-limit/route.ts', 'utf8');
 
 describe('platform providers revenue megapack', () => {
   it('runs only through a protected manual exact-main workflow', () => {
@@ -23,6 +30,61 @@ describe('platform providers revenue megapack', () => {
     expect(runner).toContain('credentialsStored: false');
     expect(runner).toContain('responseBodiesStored: false');
     expect(runner).not.toContain('await response.text()');
+  });
+
+  it('binds every internal proof route to a dedicated token and exact deployed SHA', () => {
+    expect(boundary).toContain("process.env.PLATFORM_PROOF_TOKEN");
+    expect(boundary).toContain('validateBearerToken');
+    expect(boundary).toContain('runtimeReleaseMetadata()');
+    expect(boundary).toContain("request.headers.get('x-release-sha')");
+    expect(boundary).toContain("error: 'release_sha_mismatch'");
+
+    for (const source of [checkoutRoute, subscriptionsRoute, emailRoute, sentryRoute, rateLimitRoute]) {
+      expect(source).toContain('authorizePlatformProofRequest');
+      expect(source).toContain("export const runtime = 'nodejs'");
+      expect(source).toContain("export const dynamic = 'force-dynamic'");
+    }
+  });
+
+  it('recognizes the bounded proof helper as internal auth without route whitelisting', () => {
+    expect(enterpriseApiChecker).toContain("internalAuth: ['isAuthorizedInternalCronRequest', 'authorizePlatformProofRequest'");
+    expect(enterpriseApiChecker).not.toContain('/src\\/app\\/api\\/internal\\/platform-proof\\/');
+    expect(enterpriseApiChecker).toContain("assertGuard(failures, source, path, 'internalAuth', 'internal cron/ops authentication')");
+  });
+
+  it('keeps Stripe probes read-only and the synthetic webhook non-billable', () => {
+    expect(checkoutRoute).toContain('checkout.sessions.list({ limit: 1 })');
+    expect(subscriptionsRoute).toContain("subscriptions.list({ limit: 1, status: 'all' })");
+    for (const source of [checkoutRoute, subscriptionsRoute]) {
+      expect(source).not.toMatch(/\.create\(/);
+      expect(source).not.toMatch(/\.update\(/);
+      expect(source).not.toMatch(/\.del\(/);
+    }
+
+    expect(runner).toContain("type: 'checkout.session.completed'");
+    expect(runner).toContain("mode: 'payment'");
+    expect(runner).toContain('livemode,');
+    expect(runner).not.toContain("type: 'customer.subscription.updated'");
+  });
+
+  it('uses bounded provider-specific synthetic probes', () => {
+    expect(emailRoute).toContain("const RESEND_DELIVERY_TEST_RECIPIENT = 'delivered@resend.dev'");
+    expect(emailRoute).not.toContain('request.json()');
+    expect(emailRoute).toContain("provider !== 'resend'");
+
+    expect(sentryRoute).toContain('Sentry.captureEvent');
+    expect(sentryRoute).toContain('Sentry.flush');
+    expect(sentryRoute).toContain('eventId');
+    for (const secret of ['SENTRY_AUTH_TOKEN', 'SENTRY_ORG', 'SENTRY_PROJECT']) {
+      expect(workflow).toContain(secret + ': ${{ secrets.' + secret + ' }}');
+      expect(runner).toContain(`required('${secret}')`);
+    }
+    expect(runner).toContain('/events/${encodeURIComponent(eventId)}/');
+    expect(runner).toContain('/releases/${encodeURIComponent(sha)}/files/');
+
+    expect(rateLimitRoute).toContain('checkDistributedRateLimit');
+    expect(rateLimitRoute).toContain('limit: 5');
+    expect(rateLimitRoute).toContain("failureMode: 'fail-closed'");
   });
 
   it('classifies authentication, rate limit, unavailable and rejected provider failures', () => {
