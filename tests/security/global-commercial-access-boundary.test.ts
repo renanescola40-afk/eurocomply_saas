@@ -11,6 +11,7 @@ const LOCALE_LAYOUT = new URL('../../src/app/[locale]/layout.tsx', import.meta.u
 const HOME_PAGE = new URL('../../src/app/[locale]/page.tsx', import.meta.url);
 const DASHBOARD_LAYOUT = new URL('../../src/app/[locale]/dashboard/layout.tsx', import.meta.url);
 const ONBOARDING_PAGE = new URL('../../src/app/[locale]/onboarding/page.tsx', import.meta.url);
+const ONBOARDING_ACTIONS = new URL('../../src/server/actions/onboarding.ts', import.meta.url);
 const COMMERCIAL_ACCESS = new URL('../../src/server/security/commercial-access.ts', import.meta.url);
 
 const KNOWN_LICENSED_PRODUCT_ROUTES = [
@@ -123,5 +124,21 @@ describe('global commercial access boundary', () => {
     expect(source).toContain('await requireLicensedOnboardingPageAccess({');
     expect(source).toContain('if (!authority.licensed)');
     expect(source).toContain('Creating an account does not unlock any paid functionality.');
+  });
+
+  it('requires licensed=true inside onboarding draft and activation server actions', async () => {
+    const source = await readFile(ONBOARDING_ACTIONS, 'utf8');
+    const draftStart = source.indexOf('export async function saveOnboardingDraft');
+    const activationStart = source.indexOf('export async function completeOnboardingActivation');
+    const draftSource = source.slice(draftStart, activationStart);
+    const activationSource = source.slice(activationStart);
+
+    expect(draftStart).toBeGreaterThan(-1);
+    expect(activationStart).toBeGreaterThan(draftStart);
+    expect(draftSource).toContain("await assertCurrentUserCan(organizationId, user.id, 'organization:update');");
+    expect(draftSource).toContain('await requireLicensedOnboardingAuthority(organizationId);');
+    expect(activationSource).toContain('await requireLicensedOnboardingAuthority(organizationId);');
+    expect(source).toContain('if (!authority.licensed)');
+    expect(source).toContain('An active paid subscription or signed contract is required before product onboarding can be activated.');
   });
 });
