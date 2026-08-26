@@ -92,6 +92,9 @@ const unsafeCorsPatterns = [
   /cors\([^)]*origin\s*:\s*['"]\*['"]/,
 ];
 
+const platformProofImportPattern =
+  /import\s*\{\s*authorizePlatformProofRequest\s*\}\s*from\s*['"]@\/server\/security\/platform-proof['"]\s*;?/;
+
 function stripComments(source) {
   let output = '';
   let state = 'code';
@@ -238,6 +241,21 @@ function isCriticalEndpoint(path) {
   return criticalEndpointPatterns.some((pattern) => pattern.test(path));
 }
 
+function hasTrustedPlatformProofBoundary(source) {
+  if (!platformProofImportPattern.test(source)) return false;
+
+  const assignment = source.match(
+    /const\s+([A-Za-z_$][\w$]*)\s*=\s*await\s+authorizePlatformProofRequest\s*\(\s*request\s*,[\s\S]*?\)\s*;/,
+  );
+  if (!assignment) return false;
+
+  const escapedVariable = assignment[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const failClosedPattern = new RegExp(
+    `if\\s*\\(\\s*!${escapedVariable}\\.ok\\s*\\)\\s*return\\s+${escapedVariable}\\.response\\s*;`,
+  );
+  return failClosedPattern.test(source);
+}
+
 const changedRoutes = changedApiRoutes();
 const allRoutes = apiRoots.flatMap((apiRoot) => walk(apiRoot));
 const routes = Array.isArray(changedRoutes)
@@ -251,10 +269,11 @@ for (const route of routes) {
   const source = stripComments(readFileSync(route, 'utf8'));
   const methods = exportedMethods(source);
   const publicReason = allowlistReason(normalized);
-  const authenticated = hasAny(source, authTokens);
+  const trustedPlatformProofBoundary = hasTrustedPlatformProofBoundary(source);
+  const authenticated = hasAny(source, authTokens) || trustedPlatformProofBoundary;
   const receivesClientInput = hasClientInput(source);
   const validatesSchema = hasAny(source, schemaValidationTokens);
-  const rateLimited = hasAny(source, rateLimitTokens);
+  const rateLimited = hasAny(source, rateLimitTokens) || trustedPlatformProofBoundary;
   const critical = isCriticalEndpoint(normalized) || receivesClientInput || methods.some((method) => ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method));
   const hasUnsafeCors = unsafeCorsPatterns.some((pattern) => pattern.test(source));
 
@@ -268,6 +287,7 @@ for (const route of routes) {
     validatesSchema,
     rateLimited,
     critical,
+    trustedPlatformProofBoundary,
   });
 
   if (!publicReason && !authenticated) {
