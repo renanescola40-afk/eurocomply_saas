@@ -41,8 +41,28 @@ try {
   checks.subscriptions = subscriptions.status === 200;
 
   const eventId = `evt_platform_proof_${randomUUID().replaceAll('-', '')}`;
-  const payload = JSON.stringify({ id: eventId, object: 'event', type: 'customer.subscription.updated', data: { object: { id: 'sub_platform_proof' } } });
   const timestamp = Math.floor(Date.now() / 1000);
+  const livemode = stripeSecret.startsWith('sk_live_') || stripeSecret.startsWith('rk_live_');
+  const payload = JSON.stringify({
+    id: eventId,
+    object: 'event',
+    api_version: '2025-02-24.acacia',
+    created: timestamp,
+    livemode,
+    pending_webhooks: 1,
+    request: null,
+    type: 'checkout.session.completed',
+    data: {
+      object: {
+        id: `cs_platform_proof_${randomUUID().replaceAll('-', '')}`,
+        object: 'checkout.session',
+        mode: 'payment',
+        customer: null,
+        subscription: null,
+        metadata: {},
+      },
+    },
+  });
   const signature = createHmac('sha256', webhookSecret).update(`${timestamp}.${payload}`).digest('hex');
   const signatureHeader = `t=${timestamp},v1=${signature}`;
   const webhookUrl = `${baseUrl}/api/stripe/webhook`;
@@ -92,7 +112,7 @@ const evidence = {
     customerDataStored: false,
     providerUrlsStored: false,
   },
-  boundary: 'Protected exact-main validation records only canonical booleans. No credentials, response bodies, customer identifiers, email addresses, provider payloads or raw URLs are persisted.',
+  boundary: 'Protected exact-main validation records only canonical booleans. The synthetic Stripe webhook uses a non-subscription Checkout Session so signature and replay handling are exercised without creating customer, subscription, invoice or charge state. No credentials, response bodies, customer identifiers, email addresses, provider payloads or raw URLs are persisted.',
 };
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
