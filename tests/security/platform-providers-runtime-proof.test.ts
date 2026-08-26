@@ -65,8 +65,15 @@ describe('platform providers revenue megapack', () => {
     expect(emailRoute).not.toContain('request.json()');
     expect(emailRoute).toContain("provider !== 'resend'");
 
-    expect(sentryRoute).toContain('reportError(new Error(PROOF_ERROR)');
-    expect(sentryRoute).toContain("'x-sentry-release': authorization.releaseSha");
+    expect(sentryRoute).toContain('Sentry.captureEvent');
+    expect(sentryRoute).toContain('Sentry.flush');
+    expect(sentryRoute).toContain('eventId');
+    for (const secret of ['SENTRY_AUTH_TOKEN', 'SENTRY_ORG', 'SENTRY_PROJECT']) {
+      expect(workflow).toContain(`${secret}: ${{ secrets.${secret} }}`);
+      expect(runner).toContain(`required('${secret}')`);
+    }
+    expect(runner).toContain('/events/${encodeURIComponent(eventId)}/');
+    expect(runner).toContain('/releases/${encodeURIComponent(sha)}/files/');
 
     expect(rateLimitRoute).toContain('checkDistributedRateLimit');
     expect(rateLimitRoute).toContain('limit: 5');
