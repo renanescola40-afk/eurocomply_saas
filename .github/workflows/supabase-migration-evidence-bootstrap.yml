@@ -251,41 +251,62 @@ jobs:
                 ;;
             esac
 
-            require_artifact "$run_id" "$artifact_name"
-            download_artifact "$run_id" "$artifact_name" "$destination" >/dev/null
+            if ! require_artifact "$run_id" "$artifact_name"; then
+              echo "Reusable drift run ${run_id} is missing the expected artifact ${artifact_name}." >&2
+              return 1
+            fi
+            if ! download_artifact "$run_id" "$artifact_name" "$destination" >/dev/null; then
+              echo "Failed to download reusable drift artifact ${artifact_name} from run ${run_id}." >&2
+              return 1
+            fi
 
             local inventory report
             inventory="$(find "$destination" -type f -name 'migration-reconciliation-inventory.json' -print -quit)"
             report="$(find "$destination" -type f -name 'migration-drift.json' -print -quit)"
-            test -n "$inventory"
-            test -s "$inventory"
-            test -n "$report"
-            test -s "$report"
+            if [ -z "$inventory" ] || [ ! -s "$inventory" ]; then
+              echo "Reusable drift run ${run_id} is missing a non-empty migration reconciliation inventory." >&2
+              return 1
+            fi
+            if [ -z "$report" ] || [ ! -s "$report" ]; then
+              echo "Reusable drift run ${run_id} is missing a non-empty migration drift report." >&2
+              return 1
+            fi
 
-            jq -e '
+            if ! jq -e '
               .schema == "risck-comply.supabase-migration-reconciliation-inventory.v1"
               and .classificationPolicy.automaticClassificationAllowed == false
               and (.remoteVersions | type == "array")
               and (.localInventory | type == "array")
               and (.items | type == "array")
               and (.counts.unclassified | type == "number")
-            ' "$inventory" >/dev/null
+            ' "$inventory" >/dev/null; then
+              echo "Reusable drift run ${run_id} has an invalid migration reconciliation inventory." >&2
+              return 1
+            fi
 
-            jq -e '
+            if ! jq -e '
               (.status == "ALIGNED" or .status == "PENDING_LOCAL_MIGRATIONS" or .status == "CRITICAL_DRIFT")
               and .reconciliationInventoryArtifact == "migration-reconciliation-inventory.json"
               and .safety.databaseModified == false
               and .safety.migrationHistoryModified == false
               and .safety.includeAllUsed == false
-            ' "$report" >/dev/null
+            ' "$report" >/dev/null; then
+              echo "Reusable drift run ${run_id} has an invalid or unsafe migration drift report." >&2
+              return 1
+            fi
 
             if [ "$conclusion" = "failure" ]; then
-              jq -e '.status == "CRITICAL_DRIFT"' "$report" >/dev/null
+              if ! jq -e '.status == "CRITICAL_DRIFT"' "$report" >/dev/null; then
+                echo "Failed reusable drift run ${run_id} does not prove CRITICAL_DRIFT." >&2
+                return 1
+              fi
             else
-              jq -e '.status != "CRITICAL_DRIFT"' "$report" >/dev/null
+              if ! jq -e '.status != "CRITICAL_DRIFT"' "$report" >/dev/null; then
+                echo "Successful reusable drift run ${run_id} cannot claim CRITICAL_DRIFT." >&2
+                return 1
+              fi
             fi
           }
-
           find_reusable_completed_drift_run() {
             local workflow="$1"
             local artifact_name="$2"
