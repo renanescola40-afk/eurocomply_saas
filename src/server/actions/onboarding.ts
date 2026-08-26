@@ -272,10 +272,10 @@ export async function saveOnboardingDraft(input: OnboardingDraftInput): Promise<
   const organizationId = await resolveOrganizationId(payload, user);
 
   await assertCurrentUserCan(organizationId, user.id, 'organization:update');
+  await requireLicensedOnboardingAuthority(organizationId);
 
-  // Pre-license draft persistence is deliberately restricted to organization
-  // purchase/profile metadata. It never creates AI systems, documents, tasks,
-  // invitations, readiness runs or any other paid-product state.
+  // Draft onboarding state is paid-product state. Purchase context is created by
+  // the dedicated payment-first boundary and never uses this action pre-license.
   await updateOrganizationOnboardingProfile(supabase, organizationId, {
     ...payload,
     status: 'in_progress',
