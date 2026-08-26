@@ -4,11 +4,16 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import {
+  databaseUrlUsesPort,
+  isLoopbackDatabaseUrl,
+} from '../recovery/manage-ephemeral-recovery-database.mjs';
 
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const repository = process.env.GITHUB_REPOSITORY || '';
 const targetSha = String(process.env.TARGET_SHA || '').toLowerCase();
 const databaseUrl = process.env.DATABASE_URL || '';
+const recoveryHostPort = Number(process.env.RECOVERY_LOCAL_DB_HOST_PORT || '');
 const migrationHistoryCanonical = String(process.env.RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL || '').toLowerCase();
 const output = resolve(process.env.ENTERPRISE_DB_PROOF_OUTPUT || 'artifacts/enterprise-db-proof/isolated-enterprise-fria-db-proof.json');
 const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
@@ -19,8 +24,11 @@ function fail(message) {
 
 if (repository !== CANONICAL_REPOSITORY) fail('repository must be canonical');
 if (!FULL_SHA.test(targetSha)) fail('TARGET_SHA must be a lowercase full Git SHA');
-if (!/^postgres(?:ql)?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?\//.test(databaseUrl)) {
-  fail('DATABASE_URL must point to an isolated local PostgreSQL instance');
+if (!Number.isInteger(recoveryHostPort) || recoveryHostPort <= 0 || recoveryHostPort > 65535) {
+  fail('RECOVERY_LOCAL_DB_HOST_PORT must be a valid isolated database port');
+}
+if (!isLoopbackDatabaseUrl(databaseUrl) || !databaseUrlUsesPort(databaseUrl, recoveryHostPort)) {
+  fail('DATABASE_URL must point to the managed isolated loopback PostgreSQL port');
 }
 if (migrationHistoryCanonical !== 'false') {
   fail('RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL must be false for the reviewed disposable schema-effect proof');

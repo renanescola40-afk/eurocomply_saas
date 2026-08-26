@@ -10,6 +10,7 @@ on:
       - 'playwright.config.ts'
       - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
       - 'scripts/product/sanitize-fria-playwright-report.mjs'
+      - 'scripts/recovery/**'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
       - 'tests/e2e/payment-first-runtime-global-setup.ts'
       - 'src/middleware.ts'
@@ -49,6 +50,7 @@ on:
       - 'playwright.config.ts'
       - 'scripts/product/create-fria-ephemeral-fixtures.mjs'
       - 'scripts/product/sanitize-fria-playwright-report.mjs'
+      - 'scripts/recovery/**'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
       - 'tests/e2e/payment-first-runtime-global-setup.ts'
       - 'src/middleware.ts'
@@ -114,7 +116,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
           cache: npm
