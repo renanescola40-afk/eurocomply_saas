@@ -194,9 +194,15 @@ jobs:
                 exit 1
               fi
               scanner_transport="${MALWARE_SCANNER_ENDPOINT:-${MALWARE_SCANNER_URL:-}}"
-              if [[ "$scanner_transport" == *"/api/internal/malware/cloudmersive"* ]] && [ -z "${CLOUDMERSIVE_API_KEY:-}" ]; then
-                echo '::error title=Missing Cloudmersive credential::The managed Cloudmersive scanner adapter requires CLOUDMERSIVE_API_KEY in the protected Production environment.'
-                exit 1
+              if [[ "$scanner_transport" == *"/api/internal/malware/cloudmersive"* ]]; then
+                if [ -z "${MALWARE_SCANNER_API_KEY:-}" ]; then
+                  echo '::error title=Missing internal scanner credential::The managed Cloudmersive adapter requires MALWARE_SCANNER_API_KEY for the same-host authenticated scanner call.'
+                  exit 1
+                fi
+                if [ -z "${CLOUDMERSIVE_API_KEY:-}" ]; then
+                  echo '::error title=Missing Cloudmersive credential::The managed Cloudmersive scanner adapter requires CLOUDMERSIVE_API_KEY in the protected Production environment.'
+                  exit 1
+                fi
               fi
               ;;
             clamav|clamd)
