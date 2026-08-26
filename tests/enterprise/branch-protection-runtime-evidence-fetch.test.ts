@@ -67,6 +67,8 @@ describe('branch protection exact-SHA runtime evidence', () => {
     expect(canonical.checks).toEqual([
       expect.objectContaining({ name: 'branchProtection', passed: true }),
     ]);
+    expect(canonical.controlsVerified).toEqual(source.controlsVerified);
+    expect(canonical.redactionConfirmation).toBe('All secrets, tokens, credentials, connection strings, and access-granting values are redacted.');
     expect(canonical.evidenceIntegrity).toEqual(expect.objectContaining({
       containsSensitiveValues: false,
       exactShaBound: true,
