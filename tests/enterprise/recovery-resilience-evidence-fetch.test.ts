@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -23,6 +24,7 @@ const rollbackRunId = '123456';
 const restoreRunId = '654321';
 const workflowPath = '.github/workflows/recovery-resilience-proof.yml';
 const restoreWorkflowPath = '.github/workflows/supabase-forward-reconciliation-rehearsal.yml';
+const validatorPath = join(process.cwd(), 'scripts/enterprise/check-recovery-scorecard-evidence.mjs');
 const roots: string[] = [];
 
 function rollbackSource() {
@@ -58,6 +60,22 @@ function restoreSource() {
       databaseUrlsStored: false, dumpStored: false, rowDataStored: false,
     },
   };
+}
+
+function validateCanonicalDocuments(evidence: { rollback: unknown; restore: unknown }) {
+  const root = mkdtempSync(join(tmpdir(), 'recovery-validator-'));
+  roots.push(root);
+  const rollbackPath = join(root, 'docs/security/evidence/runtime/rollback-validation.json');
+  const restorePath = join(root, 'docs/security/evidence/p1/backup-restore-tested.json');
+  mkdirSync(join(rollbackPath, '..'), { recursive: true });
+  mkdirSync(join(restorePath, '..'), { recursive: true });
+  writeFileSync(rollbackPath, `${JSON.stringify(evidence.rollback, null, 2)}\n`);
+  writeFileSync(restorePath, `${JSON.stringify(evidence.restore, null, 2)}\n`);
+  return spawnSync(process.execPath, [validatorPath], {
+    cwd: root,
+    env: { ...process.env, ENTERPRISE_EXPECTED_SHA: targetSha },
+    encoding: 'utf8',
+  });
 }
 
 afterEach(() => {
@@ -126,6 +144,7 @@ describe('recovery resilience scorecard promotion', () => {
     expect([...evidence.rollback.controlsVerified, ...evidence.restore.controlsVerified])
       .toEqual(Array.from({ length: 10 }, (_, index) => `REC-${String(index + 1).padStart(2, '0')}`));
     expect(JSON.stringify(evidence)).not.toContain('databaseUrl');
+    expect(validateCanonicalDocuments(evidence).status).toBe(0);
   });
 
   it('credits restore independently while retaining a non-crediting rollback placeholder', () => {
@@ -143,6 +162,7 @@ describe('recovery resilience scorecard promotion', () => {
     for (const check of ['backupExists', 'restoreExecuted', 'dataIntegrity', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured']) {
       expect(evaluateEvidenceDocument(evidence.restore, check)).toBe('PASS');
     }
+    expect(validateCanonicalDocuments(evidence).status).toBe(0);
   });
 
   it('credits rollback independently while retaining a non-crediting restore placeholder', () => {
@@ -160,6 +180,14 @@ describe('recovery resilience scorecard promotion', () => {
     for (const check of ['rollbackTargetConfigured', 'distinctDeployment', 'rollbackExecuted', 'postRollbackHealth']) {
       expect(evaluateEvidenceDocument(evidence.rollback, check)).toBe('PASS');
     }
+    expect(validateCanonicalDocuments(evidence).status).toBe(0);
+  });
+
+  it('rejects a missing-proof placeholder if it is relabeled as Complete', () => {
+    const evidence = buildCanonicalRecoveryDrillEvidence(restoreSource(), { targetSha, runId: restoreRunId });
+    evidence.rollback.status = 'Complete';
+    evidence.rollback.outcome = 'passed';
+    expect(validateCanonicalDocuments(evidence).status).not.toBe(0);
   });
 
   it('requires one bounded safe entry for each independent artifact', () => {
