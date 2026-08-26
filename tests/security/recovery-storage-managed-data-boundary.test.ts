@@ -41,7 +41,7 @@ describe('database-only recovery managed-data boundary', () => {
     expect(exercise).toContain("throw new Error('recovery_storage_rows_present_in_data_dump')");
   });
 
-  it('handles provider-managed Auth schema drift and excludes empty managed relations from data replay', () => {
+  it('handles provider-managed Auth schema drift and derives empty managed relations from the completed snapshot', () => {
     expect(exercise).toContain('function readManagedAuthTables(connection, boundary)');
     expect(exercise).toContain("n.nspname = 'auth'");
     expect(exercise).toContain("c.relkind in ('r','p','f')");
@@ -50,19 +50,23 @@ describe('database-only recovery managed-data boundary', () => {
     expect(exercise).toContain('function planManagedAuthDataBoundary(sourceConnection, targetConnection)');
     expect(exercise).toContain("readManagedAuthTables(sourceConnection, 'source')");
     expect(exercise).toContain("readManagedAuthTables(targetConnection, 'target')");
+    expect(exercise).toContain('function reconcileManagedAuthDataDump(path, sourceRelations, targetRelations)');
     expect(exercise).toContain('const sourceEmptyRelations = []');
-    expect(exercise).toContain('`select count(*) from ${relation};`');
-    expect(exercise).toContain('if (rowCount === 0)');
+    expect(exercise).toContain('const sourceOnlyEmptyRelations = []');
+    expect(exercise).toContain('let containsSnapshotRows = false');
+    expect(exercise).toContain('if (String(body).length > 0)');
+    expect(exercise).toContain('if (!containsSnapshotRows)');
     expect(exercise).toContain('sourceEmptyRelations.push(relation)');
     expect(exercise).toContain('if (!targetSet.has(relation)) sourceOnlyEmptyRelations.push(relation)');
     expect(exercise).toContain("throw new Error('recovery_target_managed_auth_relation_missing_with_data')");
     expect(exercise).toContain("failurePhase = 'managed_auth_relation_inventory'");
-    expect(exercise).toContain("const managedAuthDataExclude = managedAuthPlan.sourceEmptyRelations.join(',')");
-    expect(exercise).toContain('const managedDataExclude = [managedStorageDataExclude, managedAuthDataExclude].filter(Boolean).join(\',\')');
-    expect(exercise).toContain('assertManagedAuthRowsExcluded(dataDumpPath, managedAuthPlan.sourceEmptyRelations)');
+    expect(exercise).toContain('const managedDataExclude = managedStorageDataExclude');
+    expect(exercise).toContain('const managedAuthDumpPlan = reconcileManagedAuthDataDump(');
+    expect(exercise).toContain('assertManagedAuthRowsExcluded(dataDumpPath, managedAuthDumpPlan.sourceEmptyRelations)');
     expect(exercise).toContain('checks.managedAuthSchemaDriftSafe = true');
     expect(exercise).toContain('checks.managedAuthRowsExcluded = true');
-    expect(exercise).toContain('any non-empty source-only Auth relation still fails closed');
+    expect(exercise).toContain('any source-only Auth relation carrying snapshot data fails closed');
+    expect(exercise).toContain('This avoids a pre-dump row-count race');
   });
 
   it('binds managed Auth inventory only after extension parity and application schema replay, before data dump', () => {
@@ -90,8 +94,8 @@ describe('database-only recovery managed-data boundary', () => {
   it('keeps Auth drift evidence aggregate-only and preserves auth.users integrity', () => {
     expect(exercise).toContain('managedAuthBoundary.sourceRelationCount = managedAuthPlan.sourceRelationCount');
     expect(exercise).toContain('managedAuthBoundary.targetRelationCount = managedAuthPlan.targetRelationCount');
-    expect(exercise).toContain('managedAuthBoundary.sourceEmptyRelationCount = managedAuthPlan.sourceEmptyRelationCount');
-    expect(exercise).toContain('managedAuthBoundary.sourceOnlyEmptyRelationCount = managedAuthPlan.sourceOnlyEmptyRelationCount');
+    expect(exercise).toContain('managedAuthBoundary.sourceEmptyRelationCount = managedAuthDumpPlan.sourceEmptyRelationCount');
+    expect(exercise).toContain('managedAuthBoundary.sourceOnlyEmptyRelationCount = managedAuthDumpPlan.sourceOnlyEmptyRelationCount');
     expect(exercise).toContain('sourceAuthUsers = Number(sql(source, \'select count(*) from auth.users;\'');
     expect(exercise).toContain('restoredAuthUsers = Number(sql(restore, \'select count(*) from auth.users;\'');
     expect(exercise).toContain('checks.authUsersIntegrity = sourceAuthUsers === restoredAuthUsers');
