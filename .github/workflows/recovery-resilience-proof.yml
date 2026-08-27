@@ -22,6 +22,34 @@ on:
         description: Type EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK for rollback or full mode
         required: false
         type: string
+      restore_project_ref:
+        description: Supabase project ref created by Restore to a New Project from the selected Production backup
+        required: false
+        type: string
+      backup_id:
+        description: Selected source backup identifier as shown by Supabase
+        required: false
+        type: string
+      backup_created_at:
+        description: ISO-8601 creation timestamp of the selected source backup
+        required: false
+        type: string
+      restore_started_at:
+        description: ISO-8601 timestamp when Restore to a New Project was started
+        required: false
+        type: string
+      restore_completed_at:
+        description: ISO-8601 timestamp when the restored project became healthy
+        required: false
+        type: string
+      restore_attestation:
+        description: Type SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED for backup-restore or full mode
+        required: false
+        type: string
+      destroy_confirmation:
+        description: Type DELETE <restore_project_ref> AFTER RECOVERY PROOF to authorize teardown of only the isolated restore project
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -40,21 +68,29 @@ jobs:
       TARGET_SHA: ${{ inputs.release_sha }}
       RECOVERY_REQUIRED_EXERCISE: ${{ inputs.exercise }}
       RECOVERY_EXERCISE_CONFIRMATION: ${{ inputs.confirmation }}
+      RECOVERY_PROVIDER_RESTORE_PROJECT_REF: ${{ inputs.restore_project_ref }}
+      RECOVERY_PROVIDER_RESTORE_ATTESTATION: ${{ inputs.restore_attestation }}
+      RECOVERY_PROVIDER_DESTROY_CONFIRMATION: ${{ inputs.destroy_confirmation }}
     steps:
-      - name: Validate exact current main and explicit rollback authorization
+      - name: Validate exact current main and recovery authorization inputs
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
-          test "$GITHUB_REF_NAME" = "main"
+          test "$GITHUB_REF_NAME" = 'main'
           case "$RECOVERY_REQUIRED_EXERCISE" in
             full|backup-restore|production-rollback) ;;
             *) echo 'Unsupported recovery exercise' >&2; exit 1 ;;
           esac
-          if [ "$RECOVERY_REQUIRED_EXERCISE" = "full" ] || [ "$RECOVERY_REQUIRED_EXERCISE" = "production-rollback" ]; then
-            test "$RECOVERY_EXERCISE_CONFIRMATION" = "EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK"
+          if [ "$RECOVERY_REQUIRED_EXERCISE" = 'full' ] || [ "$RECOVERY_REQUIRED_EXERCISE" = 'production-rollback' ]; then
+            test "$RECOVERY_EXERCISE_CONFIRMATION" = 'EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK'
+          fi
+          if [ "$RECOVERY_REQUIRED_EXERCISE" = 'full' ] || [ "$RECOVERY_REQUIRED_EXERCISE" = 'backup-restore' ]; then
+            [[ "$RECOVERY_PROVIDER_RESTORE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+            test "$RECOVERY_PROVIDER_RESTORE_ATTESTATION" = 'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED'
+            test "$RECOVERY_PROVIDER_DESTROY_CONFIRMATION" = "DELETE ${RECOVERY_PROVIDER_RESTORE_PROJECT_REF} AFTER RECOVERY PROOF"
           fi
           main_sha="$(curl --fail --silent --show-error \
             -H "Authorization: Bearer $GH_TOKEN" \
@@ -62,15 +98,19 @@ jobs:
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
           test "$main_sha" = "$TARGET_SHA"
+
       - name: Check out exact trusted release SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ inputs.release_sha }}
           persist-credentials: false
+          fetch-depth: 1
+
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
+
       - name: Verify production-recovery environment governance before protected secrets
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -79,6 +119,7 @@ jobs:
         run: node scripts/security/check-github-environment-governance.mjs
 
   recovery-proof:
+    name: Execute provider-managed restore and/or controlled rollback proof
     needs: recovery-environment-governance
     runs-on: ubuntu-24.04
     timeout-minutes: 75
@@ -88,6 +129,13 @@ jobs:
       RELEASE_SHA: ${{ inputs.release_sha }}
       RECOVERY_REQUIRED_EXERCISE: ${{ inputs.exercise }}
       RECOVERY_EXERCISE_CONFIRMATION: ${{ inputs.confirmation }}
+      RECOVERY_PROVIDER_RESTORE_PROJECT_REF: ${{ inputs.restore_project_ref }}
+      RECOVERY_PROVIDER_BACKUP_ID: ${{ inputs.backup_id }}
+      RECOVERY_PROVIDER_BACKUP_CREATED_AT: ${{ inputs.backup_created_at }}
+      RECOVERY_PROVIDER_RESTORE_STARTED_AT: ${{ inputs.restore_started_at }}
+      RECOVERY_PROVIDER_RESTORE_COMPLETED_AT: ${{ inputs.restore_completed_at }}
+      RECOVERY_PROVIDER_RESTORE_ATTESTATION: ${{ inputs.restore_attestation }}
+      RECOVERY_PROVIDER_DESTROY_CONFIRMATION: ${{ inputs.destroy_confirmation }}
     steps:
       - name: Revalidate exact current main after environment approval
         shell: bash
@@ -100,8 +148,13 @@ jobs:
             full|backup-restore|production-rollback) ;;
             *) echo 'Unsupported recovery exercise' >&2; exit 1 ;;
           esac
-          if [ "$RECOVERY_REQUIRED_EXERCISE" = "full" ] || [ "$RECOVERY_REQUIRED_EXERCISE" = "production-rollback" ]; then
-            test "$RECOVERY_EXERCISE_CONFIRMATION" = "EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK"
+          if [ "$RECOVERY_REQUIRED_EXERCISE" = 'full' ] || [ "$RECOVERY_REQUIRED_EXERCISE" = 'production-rollback' ]; then
+            test "$RECOVERY_EXERCISE_CONFIRMATION" = 'EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK'
+          fi
+          if [ "$RECOVERY_REQUIRED_EXERCISE" = 'full' ] || [ "$RECOVERY_REQUIRED_EXERCISE" = 'backup-restore' ]; then
+            [[ "$RECOVERY_PROVIDER_RESTORE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+            test "$RECOVERY_PROVIDER_RESTORE_ATTESTATION" = 'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED'
+            test "$RECOVERY_PROVIDER_DESTROY_CONFIRMATION" = "DELETE ${RECOVERY_PROVIDER_RESTORE_PROJECT_REF} AFTER RECOVERY PROOF"
           fi
           main_sha="$(curl --fail --silent --show-error \
             -H "Authorization: Bearer $GH_TOKEN" \
@@ -115,16 +168,17 @@ jobs:
         with:
           ref: ${{ inputs.release_sha }}
           persist-credentials: false
+          fetch-depth: 1
 
       - name: Verify exact current main execution
         shell: bash
         run: |
           set -euo pipefail
-          git fetch --no-tags origin main
+          git fetch --no-tags --depth=1 origin main
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           test "$(git rev-parse origin/main)" = "$TARGET_SHA"
           test "$GITHUB_SHA" = "$TARGET_SHA"
-          test "$GITHUB_REF_NAME" = "main"
+          test "$GITHUB_REF_NAME" = 'main'
 
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -138,30 +192,22 @@ jobs:
           REQUIRE_PROTECTED_BRANCHES: 'true'
         run: node scripts/security/check-github-environment-governance.mjs
 
-      - name: Set up pinned Supabase CLI
-        if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
-        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
-        with:
-          version: 2.101.0
-
-      - name: Install pinned recovery psql shim
-        if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
+      - name: Remove stale evidence for selected exercise
         shell: bash
         run: |
           set -euo pipefail
-          shim_dir="$RUNNER_TEMP/risck-recovery-bin"
-          mkdir -p "$shim_dir"
-          cat > "$shim_dir/psql" <<'EOF'
-          #!/usr/bin/env bash
-          set -euo pipefail
-          exec node "$GITHUB_WORKSPACE/scripts/recovery/run-pinned-recovery-psql.mjs" "$@"
-          EOF
-          chmod 0700 "$shim_dir/psql"
-          echo "$shim_dir" >> "$GITHUB_PATH"
-
-      - name: Start disposable Supabase recovery database
-        if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
-        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start
+          case "$RECOVERY_REQUIRED_EXERCISE" in
+            full)
+              rm -f docs/security/evidence/runtime/rollback-validation.json
+              rm -f docs/security/evidence/p1/backup-restore-tested.json
+              ;;
+            backup-restore)
+              rm -f docs/security/evidence/p1/backup-restore-tested.json
+              ;;
+            production-rollback)
+              rm -f docs/security/evidence/runtime/rollback-validation.json
+              ;;
+          esac
 
       - name: Revalidate protected producer boundary
         shell: bash
@@ -183,9 +229,24 @@ jobs:
           test "$main_sha" = "$TARGET_SHA"
           node scripts/security/check-github-environment-governance.mjs
 
-      - name: Preflight protected recovery proof
+      - name: Verify provider-managed Production backup restore without exporting row data
+        if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
         env:
-          RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.RECOVERY_SOURCE_DATABASE_URL }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+        run: node scripts/recovery/verify-supabase-provider-managed-restore.mjs verify
+
+      - name: Bind provider-managed backup restore evidence to post-promotion source ledger
+        if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+        run: node scripts/recovery/bind-backup-restore-migration-ledger.mjs
+
+      - name: Preflight protected rollback proof
+        if: inputs.exercise == 'full' || inputs.exercise == 'production-rollback'
+        env:
+          RECOVERY_REQUIRED_EXERCISE: production-rollback
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -193,18 +254,6 @@ jobs:
           LAST_KNOWN_GOOD_COMMIT_SHA: ${{ secrets.LAST_KNOWN_GOOD_COMMIT_SHA }}
           PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
         run: node scripts/security/preflight-protected-proof.mjs recovery
-
-      - name: Execute isolated backup and restore
-        if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
-        env:
-          RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.RECOVERY_SOURCE_DATABASE_URL }}
-        run: node scripts/recovery/run-backup-restore-exercise.mjs
-
-      - name: Bind backup restore evidence to production source migration ledger
-        if: inputs.exercise == 'full' || inputs.exercise == 'backup-restore'
-        env:
-          RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.RECOVERY_SOURCE_DATABASE_URL }}
-        run: node scripts/recovery/bind-backup-restore-migration-ledger.mjs
 
       - name: Revalidate rollback producer boundary
         if: inputs.exercise == 'full' || inputs.exercise == 'production-rollback'
@@ -241,10 +290,6 @@ jobs:
       - name: Validate canonical recovery evidence
         run: node scripts/recovery/check-recovery-evidence.mjs
 
-      - name: Remove disposable recovery database
-        if: always() && (inputs.exercise == 'full' || inputs.exercise == 'backup-restore')
-        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
-
       - name: Upload redacted recovery evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -256,3 +301,10 @@ jobs:
             docs/security/evidence/p1/backup-restore-tested.json
           if-no-files-found: error
           retention-days: 90
+
+      - name: Destroy isolated Supabase restore project
+        if: always() && (inputs.exercise == 'full' || inputs.exercise == 'backup-restore')
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+        run: node scripts/recovery/destroy-supabase-provider-managed-restore.mjs
