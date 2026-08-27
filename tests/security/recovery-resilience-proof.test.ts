@@ -39,8 +39,8 @@ describe('recovery resilience promotion megapack', () => {
 
   it('keeps Production observation read-only while proving restored postconditions on the isolated provider clone', () => {
     expect(providerRestore).toContain('/database/query/read-only');
-    expect(providerRestore).toContain('productionObservationReadOnly:true');
-    expect(providerRestore).toContain('productionDumpCreatedOnGithubRunner:false');
+    expect(providerRestore).toContain('productionObservationReadOnly: true');
+    expect(providerRestore).toContain('productionDumpCreatedOnGithubRunner: false');
     expect(ledgerBinder).toContain('/database/query/read-only');
     expect(ledgerBinder).toContain('sourceMigrationLedgerCaptured: true');
     expect(ledgerBinder).toContain('selectedForwardSetPresentInSource');
@@ -62,13 +62,13 @@ describe('recovery resilience promotion megapack', () => {
     ]) expect(rollback).toContain(token);
 
     for (const token of [
-      "controlsVerified:['REC-05','REC-06','REC-07','REC-08','REC-09','REC-10']",
-      'providerManagedRestore:true',
-      'rpoMeasured:true',
-      'rtoMeasured:true',
-      'containsSensitiveValues:false',
-      'dumpStored:false',
-      'rowDataStored:false',
+      "controlsVerified: ['REC-05', 'REC-06', 'REC-07', 'REC-08', 'REC-09', 'REC-10']",
+      'providerManagedRestore: true',
+      'rpoMeasured: true',
+      'rtoMeasured: true',
+      'containsSensitiveValues: false',
+      'dumpStored: false',
+      'rowDataStored: false',
     ]) expect(providerRestore).toContain(token);
   });
 
