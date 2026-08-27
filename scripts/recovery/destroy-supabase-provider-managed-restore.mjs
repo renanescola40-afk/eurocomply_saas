@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
 const API = 'https://api.supabase.com/v1';
 const PROJECT_REF = /^[a-z0-9]{20}$/;
 
@@ -71,7 +74,8 @@ async function main() {
   process.stdout.write(`${JSON.stringify({ outcome: 'destroyed', sourceProtected: true, restoreProjectReferenceStored: false })}\n`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+const executedPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : '';
+if (import.meta.url === executedPath) {
   main().catch((error) => {
     console.error(JSON.stringify({ outcome: 'failed', failure: error instanceof Error ? error.message : 'unknown_failure' }));
     process.exit(1);
