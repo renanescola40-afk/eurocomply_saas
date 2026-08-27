@@ -176,9 +176,9 @@ export function EnterpriseDashboardShell({
         { label: text.evidence, href: localized(locale, '/dashboard/evidence'), icon: Archive },
         { label: text.documents, href: localized(locale, '/dashboard/organizations/documents'), icon: FileText },
         { label: text.reports, href: localized(locale, '/dashboard/organizations/reports-governance'), icon: ShieldCheck },
-        { label: text.controlTower, href: localized(locale, '/dashboard/organizations/regulatory-control-tower'), icon: Scale },
+        { label: text.controlTower, href: localized(locale, '/dashboard/regulatory-control-tower'), icon: Scale },
         { label: text.regulatory, href: localized(locale, '/dashboard/organizations/reports-governance/news'), icon: Newspaper },
-        { label: text.aiLiteracy, href: localized(locale, '/dashboard/organizations/ai-literacy'), icon: GraduationCap },
+        { label: text.aiLiteracy, href: localized(locale, '/dashboard/ai-literacy'), icon: GraduationCap },
       ],
     },
     {
