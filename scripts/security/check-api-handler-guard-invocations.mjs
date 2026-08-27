@@ -22,14 +22,15 @@ const BILLING_RECOVERY_AUTH_ONLY = new Set([
 const PUBLIC_CLASSES = new Set(['public safe', 'public mutation']);
 const MACHINE_AUTH_CLASSES = new Set(['integration', 'webhook', 'health/internal']);
 
+// Only repository-owned, semantically explicit session guards count here.
+// Generic names such as `auth()` or `getUser()` are intentionally excluded:
+// a future local helper with one of those names must never manufacture a
+// false-green authorization result.
 const SESSION_GUARDS = new Set([
   'requireApiUser',
   'getCurrentUser',
   'requireCurrentUser',
   'requireAuthenticatedUser',
-  'auth',
-  'getUser',
-  'supabase.auth.getUser',
 ]);
 
 const TENANT_CONTEXT = new Set([
