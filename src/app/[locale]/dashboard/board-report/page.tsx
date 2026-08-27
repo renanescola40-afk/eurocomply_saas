@@ -56,35 +56,34 @@ export default function BoardReportPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white">
+    <main className="space-y-6 text-white">
       <style>{printableReportStyles}</style>
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(37,99,235,0.24),transparent_34rem)]" />
-      <div data-print-root className="relative mx-auto max-w-7xl px-5 py-8 lg:px-8">
-        <Button data-print-hide variant="ghost" onClick={() => router.push(`/${locale}/dashboard`)} className="mb-6 text-white/70 hover:text-white">
+      <div data-print-root className="space-y-6">
+        <Button data-print-hide variant="ghost" onClick={() => router.push(`/${locale}/dashboard`)} className="h-9 px-2 text-white/50 hover:bg-white/[0.05] hover:text-white">
           <ArrowLeft className="mr-2 h-4 w-4" /> {t.back}
         </Button>
 
-        <section data-print-card className="mb-8 rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-7 shadow-2xl shadow-blue-950/20">
-          <Badge className="mb-4 border-white/10 bg-white/[0.06] text-white/70">{t.badge}</Badge>
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <header data-print-card className="border-b border-white/[0.07] pb-6">
+          <Badge className="mb-3 rounded-lg border-emerald-300/15 bg-emerald-300/[0.08] text-emerald-200">{t.badge}</Badge>
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h1 className="max-w-4xl text-4xl font-semibold tracking-tight md:text-6xl">{t.title}</h1>
-              <p data-print-muted className="mt-4 max-w-2xl text-lg leading-8 text-white/58">{t.subtitle}</p>
-              {data && <p data-print-muted className="mt-3 text-xs text-white/40">Generated: {new Date(data.generatedAt).toLocaleString()}</p>}
+              <h1 className="max-w-4xl text-3xl font-semibold tracking-tight md:text-4xl">{t.title}</h1>
+              <p data-print-muted className="mt-3 max-w-2xl text-sm leading-6 text-white/48 md:text-base">{t.subtitle}</p>
+              {data && <p data-print-muted className="mt-2 text-[11px] text-white/30">Generated: {new Date(data.generatedAt).toLocaleString()}</p>}
             </div>
-            <div data-print-hide className="flex flex-wrap gap-3">
-              <Button onClick={generateReport} disabled={loading} className="bg-white text-black hover:bg-white/90 disabled:opacity-60"><TrendingUp className="mr-2 h-4 w-4" /> {loading ? '...' : t.generate}</Button>
-              <Button onClick={exportTxt} disabled={!data} variant="outline" className="border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08] hover:text-white disabled:opacity-60"><Download className="mr-2 h-4 w-4" /> {t.txt}</Button>
-              <Button onClick={printCurrentPage} disabled={!data} variant="outline" className="border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08] hover:text-white disabled:opacity-60"><Printer className="mr-2 h-4 w-4" /> {t.pdf}</Button>
+            <div data-print-hide className="flex flex-wrap gap-2">
+              <Button onClick={generateReport} disabled={loading} className="bg-emerald-300 text-[#06100d] hover:bg-emerald-200 disabled:opacity-60"><TrendingUp className="mr-2 h-4 w-4" /> {loading ? '...' : t.generate}</Button>
+              <Button onClick={exportTxt} disabled={!data} variant="outline" className="border-white/[0.09] bg-white/[0.025] text-white/70 hover:bg-white/[0.06] hover:text-white disabled:opacity-60"><Download className="mr-2 h-4 w-4" /> {t.txt}</Button>
+              <Button onClick={printCurrentPage} disabled={!data} variant="outline" className="border-white/[0.09] bg-white/[0.025] text-white/70 hover:bg-white/[0.06] hover:text-white disabled:opacity-60"><Printer className="mr-2 h-4 w-4" /> {t.pdf}</Button>
             </div>
           </div>
-        </section>
+        </header>
 
         {!data ? (
-          <Card data-print-card className="border-white/10 bg-white/[0.045] text-white"><CardContent className="py-12 text-center text-white/48">{t.empty}</CardContent></Card>
+          <Card data-print-card className="rounded-xl border-white/[0.08] bg-white/[0.025] text-white"><CardContent className="py-12 text-center text-white/45">{t.empty}</CardContent></Card>
         ) : (
           <>
-            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+            <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
               <MetricCard label={t.status} value={data.boardStatus.toUpperCase()} badgeClass={statusTone(data.boardStatus)} />
               <MetricCard label={t.score} value={`${data.complianceScore}%`} progress={data.complianceScore} />
               <MetricCard label={t.readiness} value={`${data.auditReadiness}%`} progress={data.auditReadiness} />
@@ -92,8 +91,8 @@ export default function BoardReportPage() {
               <MetricCard label={t.findings} value={data.criticalFindings} />
               <MetricCard label={t.tasks} value={data.openTasks} />
             </div>
-            <Card data-print-card className="mt-6 border-white/10 bg-white/[0.045] text-white"><CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5" />{t.summary}</CardTitle></CardHeader><CardContent><p data-print-muted className="text-sm leading-7 text-white/65">{data.executiveSummary}</p></CardContent></Card>
-            <div className="mt-6 grid gap-6 lg:grid-cols-2"><ListCard title={t.risks} items={data.keyRisks} /><ListCard title={t.actions} items={data.nextActions} /></div>
+            <Card data-print-card className="rounded-xl border-white/[0.08] bg-white/[0.025] text-white"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-4 w-4 text-emerald-300" />{t.summary}</CardTitle></CardHeader><CardContent><p data-print-muted className="text-sm leading-7 text-white/58">{data.executiveSummary}</p></CardContent></Card>
+            <div className="grid gap-4 lg:grid-cols-2"><ListCard title={t.risks} items={data.keyRisks} /><ListCard title={t.actions} items={data.nextActions} /></div>
           </>
         )}
       </div>
@@ -102,9 +101,9 @@ export default function BoardReportPage() {
 }
 
 function MetricCard({ label, value, progress, badgeClass }: { label: string; value: string | number; progress?: number; badgeClass?: string }) {
-  return <Card data-print-card className="border-white/10 bg-white/[0.045] text-white"><CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-white/48">{label}</CardTitle></CardHeader><CardContent>{badgeClass ? <Badge className={`border ${badgeClass}`}>{value}</Badge> : <div className="text-2xl font-bold">{value}</div>}{typeof progress === 'number' && <Progress value={progress} className="mt-3 h-2" />}</CardContent></Card>;
+  return <Card data-print-card className="rounded-xl border-white/[0.08] bg-white/[0.025] text-white"><CardHeader className="pb-2"><CardTitle className="text-[11px] font-medium uppercase tracking-[0.12em] text-white/35">{label}</CardTitle></CardHeader><CardContent>{badgeClass ? <Badge className={`border ${badgeClass}`}>{value}</Badge> : <div className="text-2xl font-semibold text-white/88">{value}</div>}{typeof progress === 'number' && <Progress value={progress} className="mt-3 h-1.5" />}</CardContent></Card>;
 }
 
 function ListCard({ title, items }: { title: string; items: string[] }) {
-  return <Card data-print-card className="border-white/10 bg-white/[0.045] text-white"><CardHeader><CardTitle>{title}</CardTitle><CardDescription className="text-white/48">Leadership-level summary</CardDescription></CardHeader><CardContent className="space-y-3">{items.map((item, index) => <div key={`${item}-${index}`} className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/70">{item}</div>)}</CardContent></Card>;
+  return <Card data-print-card className="rounded-xl border-white/[0.08] bg-white/[0.025] text-white"><CardHeader className="pb-3"><CardTitle className="text-base">{title}</CardTitle><CardDescription className="text-white/38">Leadership-level summary</CardDescription></CardHeader><CardContent className="divide-y divide-white/[0.06] border-y border-white/[0.06] px-6">{items.map((item, index) => <div key={`${item}-${index}`} className="py-3 text-sm leading-6 text-white/58">{item}</div>)}</CardContent></Card>;
 }
