@@ -13,9 +13,9 @@ function getScoreLabel(score: number) {
 }
 
 function getScoreNarrative(score: number) {
-  if (score >= 85) return 'The program is ready for leadership review, customer security discussions and executive reporting.';
-  if (score >= 65) return 'The program is operational, with clear focus areas that should be closed before a formal review or customer review.';
-  return 'The program needs immediate attention across evidence, risk or vendor operations before external review.';
+  if (score >= 85) return 'The current workspace records stronger control coverage, with remaining work visible below for leadership review.';
+  if (score >= 65) return 'The current workspace is operational, with clear focus areas that should be reviewed before external assurance or customer review.';
+  return 'The current workspace records material open work across evidence, risk or vendor operations that should be prioritized before external review.';
 }
 
 function getScoreTone(score: number) {
@@ -48,7 +48,7 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
 
   const cards = [
     { label: 'Compliance score', value: `${summary.complianceScore}%`, detail: scoreLabel },
-    { label: 'Maturity', value: maturity.level, detail: 'Leadership readiness level' },
+    { label: 'Maturity', value: maturity.level, detail: 'Current maturity level' },
     { label: 'Open tasks', value: summary.openTasks, detail: `${summary.totals.tasks} total tasks` },
     { label: 'Open risks', value: summary.openRisks, detail: `${summary.criticalRisks} critical risks` },
     { label: 'High-risk vendors', value: summary.highRiskVendors, detail: `${summary.totals.vendors} total vendors` },
@@ -64,70 +64,68 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
   ];
 
   return (
-    <main className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-10">
-      <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-6 text-white shadow-2xl md:p-8">
-        <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
-        <div className="absolute bottom-0 left-10 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" />
-
-        <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-primary/80">Executive report</p>
-            <h1 className="mt-4 max-w-4xl text-4xl font-bold tracking-tight md:text-6xl">{organization.name}</h1>
-            <p className="mt-5 max-w-3xl text-base leading-7 text-slate-300">
+    <main className="space-y-6 text-white">
+      <header className="border-b border-white/[0.07] pb-6">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.17em] text-emerald-300/75">Executive report</p>
+        <div className="mt-3 grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-end">
+          <div className="min-w-0">
+            <h1 className="max-w-4xl text-3xl font-semibold tracking-tight md:text-4xl">{organization.name}</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-white/48 md:text-base">
               Snapshot generated on {reportDate}. {getScoreNarrative(summary.complianceScore)}
             </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href={`/${params.locale}/dashboard/organizations/reports/print`} className="inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100">Save PDF / print</Link>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href={`/${params.locale}/dashboard/organizations/reports/print`} className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-300 px-4 text-sm font-semibold text-[#06100d] transition-colors hover:bg-emerald-200">Save PDF / print</Link>
               {csvExports.map((item) => (
-                <StepUpCsvExportButton key={item.endpoint} endpoint={item.endpoint} filename={item.filename} label={item.label} className="inline-flex h-11 items-center justify-center rounded-full border border-white/15 px-5 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-60" />
+                <StepUpCsvExportButton key={item.endpoint} endpoint={item.endpoint} filename={item.filename} label={item.label} className="inline-flex h-10 items-center justify-center rounded-xl border border-white/[0.09] bg-white/[0.025] px-4 text-sm font-semibold text-white/62 transition-colors hover:bg-white/[0.06] hover:text-white disabled:opacity-60" />
               ))}
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-6 text-center shadow-xl backdrop-blur">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Overall readiness</p>
-            <p className={`mt-3 text-7xl font-bold tracking-tight ${getScoreTone(summary.complianceScore)}`}>{summary.complianceScore}%</p>
-            <p className="mt-3 text-lg font-semibold">{scoreLabel}</p>
-            <p className="mt-3 text-sm leading-6 text-slate-400">{maturity.level}: {maturity.description}</p>
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">Current score</p>
+            <div className="mt-2 flex items-end justify-between gap-3">
+              <p className={`text-4xl font-semibold tracking-tight ${getScoreTone(summary.complianceScore)}`}>{summary.complianceScore}%</p>
+              <p className="pb-1 text-sm font-medium text-white/55">{scoreLabel}</p>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-white/35">{maturity.level}: {maturity.description}</p>
           </div>
         </div>
-      </section>
+      </header>
 
-      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         {cards.map((card) => (
-          <article key={card.label} className="rounded-3xl border bg-card p-5 shadow-sm transition hover:border-primary/40">
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{card.label}</p>
-            <p className="mt-3 text-3xl font-bold">{card.value}</p>
-            <p className="mt-2 text-sm text-muted-foreground">{card.detail}</p>
+          <article key={card.label} className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-white/30">{card.label}</p>
+            <p className="mt-2 text-2xl font-semibold text-white/88">{card.value}</p>
+            <p className="mt-1.5 text-xs text-white/35">{card.detail}</p>
           </article>
         ))}
       </section>
 
-      <section className="rounded-3xl border bg-card p-6 shadow-sm">
+      <section className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-5">
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Narrative</p>
-            <h2 className="mt-2 text-2xl font-semibold">Leadership review commentary</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">Narrative</p>
+            <h2 className="mt-1.5 text-lg font-semibold text-white/85">Leadership review commentary</h2>
           </div>
-          <p className="max-w-xl text-sm text-muted-foreground">Use this section as the executive framing for leadership, customers or advisory review.</p>
+          <p className="max-w-xl text-xs leading-5 text-white/35">Derived from the current workspace summary; review against source registers before external use.</p>
         </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <article className="rounded-2xl border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">{commentary.posture}</article>
-          <article className="rounded-2xl border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">{commentary.exposure}</article>
-          <article className="rounded-2xl border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">{commentary.operatingFocus}</article>
+        <div className="mt-4 divide-y divide-white/[0.06] border-y border-white/[0.06]">
+          <article className="py-3 text-sm leading-6 text-white/52">{commentary.posture}</article>
+          <article className="py-3 text-sm leading-6 text-white/52">{commentary.exposure}</article>
+          <article className="py-3 text-sm leading-6 text-white/52">{commentary.operatingFocus}</article>
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {scorecards.map((scorecard) => (
-          <article key={scorecard.area} className="rounded-3xl border bg-card p-6 shadow-sm transition hover:border-primary/40">
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{scorecard.area}</p>
-            <p className="mt-3 text-5xl font-bold">{scorecard.score}%</p>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
-              <div className="h-full rounded-full bg-primary" style={{ width: `${scorecard.score}%` }} />
+          <article key={scorecard.area} className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-white/30">{scorecard.area}</p>
+            <p className="mt-2 text-3xl font-semibold text-white/88">{scorecard.score}%</p>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+              <div className="h-full rounded-full bg-emerald-300" style={{ width: `${scorecard.score}%` }} />
             </div>
-            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+            <ul className="mt-4 space-y-2 text-xs leading-5 text-white/38">
               {scorecard.metrics.map((metric) => (
                 <li key={metric}>• {metric}</li>
               ))}
@@ -136,28 +134,28 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
         ))}
       </section>
 
-      <section className="grid gap-6 md:grid-cols-3">
-        <article className="rounded-3xl border bg-card p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Maturity</p>
-          <h2 className="mt-2 text-lg font-semibold">Maturity score</h2>
-          <p className="mt-4 text-3xl font-bold">{maturity.level}</p>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">{maturity.description}</p>
+      <section className="grid gap-4 lg:grid-cols-3">
+        <article className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">Maturity</p>
+          <h2 className="mt-1.5 text-sm font-semibold text-white/70">Maturity score</h2>
+          <p className="mt-3 text-2xl font-semibold text-white/88">{maturity.level}</p>
+          <p className="mt-2 text-xs leading-5 text-white/38">{maturity.description}</p>
         </article>
-        <article className="rounded-3xl border bg-card p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Execution</p>
-          <h2 className="mt-2 text-lg font-semibold">Next best actions</h2>
-          <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
+        <article className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">Execution</p>
+          <h2 className="mt-1.5 text-sm font-semibold text-white/70">Next best actions</h2>
+          <ul className="mt-3 divide-y divide-white/[0.06] border-y border-white/[0.06] text-sm text-white/48">
             {nextBestActions.map((action) => (
-              <li key={action}>• {action}</li>
+              <li key={action} className="py-2.5">{action}</li>
             ))}
           </ul>
         </article>
-        <article className="rounded-3xl border bg-card p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Advisory</p>
-          <h2 className="mt-2 text-lg font-semibold">Recommendations</h2>
-          <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
+        <article className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">Advisory</p>
+          <h2 className="mt-1.5 text-sm font-semibold text-white/70">Recommendations</h2>
+          <ul className="mt-3 divide-y divide-white/[0.06] border-y border-white/[0.06] text-sm text-white/48">
             {recommendations.map((recommendation) => (
-              <li key={recommendation}>• {recommendation}</li>
+              <li key={recommendation} className="py-2.5">{recommendation}</li>
             ))}
           </ul>
         </article>
