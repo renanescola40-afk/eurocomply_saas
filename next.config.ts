@@ -107,7 +107,7 @@ const securityHeaders = [
         : `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com ${posthogScriptSrcPolicy}`,
       "style-src 'self' 'unsafe-inline'",
       imageSrcPolicy,
-      "media-src 'self' data: blob: https:",
+      "media-src 'self' data: blob:",
       "font-src 'self' data:",
       connectSrcPolicy,
       "frame-src https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com",
