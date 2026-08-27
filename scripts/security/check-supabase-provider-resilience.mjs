@@ -7,6 +7,8 @@ import { pathToFileURL } from 'node:url';
 const OUTPUT = resolve('release-validation/supabase-provider-resilience.json');
 const MANAGEMENT_API = 'https://api.supabase.com';
 const API_TIMEOUT_MS = 8_000;
+const API_MAX_ATTEMPTS = 3;
+const API_RETRY_BASE_DELAY_MS = 250;
 const PROJECT_REF = /^[a-z0-9]{20}$/;
 const PRODUCTION_ELIGIBLE_PLANS = new Set(['pro', 'team', 'enterprise']);
 
@@ -28,6 +30,10 @@ export function deriveSupabaseProjectRef(rawValue) {
 
 function normalizePlan(value) {
   return String(value ?? '').trim().toLowerCase();
+}
+
+export function isRetryableManagementApiStatus(status) {
+  return status === 408 || status === 429 || (Number.isInteger(status) && status >= 500 && status <= 599);
 }
 
 export function evaluateSupabaseProviderResilience({ projectRef, projects, organization, backups, authConfig }) {
@@ -77,32 +83,53 @@ export function evaluateSupabaseProviderResilience({ projectRef, projects, organ
   };
 }
 
+function sleep(ms) {
+  return new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
+}
+
 async function requestJson(pathname, token) {
-  let response;
-  try {
-    response = await fetch(`${MANAGEMENT_API}${pathname}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
-      },
-      redirect: 'error',
-      cache: 'no-store',
-      signal: AbortSignal.timeout(API_TIMEOUT_MS),
-    });
-  } catch {
-    return { reachable: false, status: null, body: null };
+  for (let attempt = 1; attempt <= API_MAX_ATTEMPTS; attempt += 1) {
+    let response;
+    try {
+      response = await fetch(`${MANAGEMENT_API}${pathname}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+        redirect: 'error',
+        cache: 'no-store',
+        signal: AbortSignal.timeout(API_TIMEOUT_MS),
+      });
+    } catch {
+      if (attempt < API_MAX_ATTEMPTS) {
+        await sleep(API_RETRY_BASE_DELAY_MS * attempt);
+        continue;
+      }
+      return { reachable: false, status: null, body: null };
+    }
+
+    if (!response.ok) {
+      const status = response.status;
+      await response.body?.cancel().catch(() => undefined);
+      if (attempt < API_MAX_ATTEMPTS && isRetryableManagementApiStatus(status)) {
+        await sleep(API_RETRY_BASE_DELAY_MS * attempt);
+        continue;
+      }
+      return { reachable: false, status, body: null };
+    }
+
+    try {
+      return { reachable: true, status: response.status, body: await response.json() };
+    } catch {
+      if (attempt < API_MAX_ATTEMPTS) {
+        await sleep(API_RETRY_BASE_DELAY_MS * attempt);
+        continue;
+      }
+      return { reachable: false, status: response.status, body: null };
+    }
   }
 
-  if (!response.ok) {
-    await response.body?.cancel().catch(() => undefined);
-    return { reachable: false, status: response.status, body: null };
-  }
-
-  try {
-    return { reachable: true, status: response.status, body: await response.json() };
-  } catch {
-    return { reachable: false, status: response.status, body: null };
-  }
+  return { reachable: false, status: null, body: null };
 }
 
 export async function buildSupabaseProviderResilienceEvidence({
