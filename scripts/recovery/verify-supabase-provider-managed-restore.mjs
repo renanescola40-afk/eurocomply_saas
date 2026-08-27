@@ -8,7 +8,6 @@ import { fileURLToPath } from 'node:url';
 const API = 'https://api.supabase.com/v1';
 const PROJECT_REF = /^[a-z0-9]{20}$/;
 const FULL_SHA = /^[a-f0-9]{40}$/;
-const AUTO_BACKUP_ID = 'AUTO_FROM_CREATED_AT';
 const output = 'docs/security/evidence/p1/backup-restore-tested.json';
 const criticalTables = ['organizations', 'organization_members', 'audit_logs'];
 const approvedValidators = new Set([
@@ -66,62 +65,42 @@ async function request(path, { method = 'GET', body, readOnly = false } = {}) {
   }
 }
 
-function valuesDeep(value) {
-  if (value == null) return [];
-  if (Array.isArray(value)) return value.flatMap(valuesDeep);
-  if (typeof value === 'object') return Object.values(value).flatMap(valuesDeep);
-  return [String(value)];
+function backupRows(payload) {
+  return Array.isArray(payload?.backups) ? payload.backups : [];
 }
 
-function objectsDeep(value) {
-  if (value == null) return [];
-  if (Array.isArray(value)) return value.flatMap(objectsDeep);
-  if (typeof value !== 'object') return [];
-  return [value, ...Object.values(value).flatMap(objectsDeep)];
-}
-
-function backupTimestampMs(value) {
-  if (!value || typeof value !== 'object') return null;
-  for (const key of ['inserted_at', 'created_at', 'createdAt', 'timestamp']) {
-    if (value[key] == null) continue;
-    const parsed = Date.parse(String(value[key]));
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return null;
-}
-
-function isProviderBackupRecord(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  const hasIdentifier = value.id != null || value.backup_id != null || value.backupId != null;
-  const hasBackupShape =
-    value.status != null ||
-    value.is_physical_backup != null ||
-    value.inserted_at != null ||
-    value.created_at != null ||
-    value.createdAt != null;
-  return hasIdentifier && hasBackupShape;
+function sameObservedSecond(a, b) {
+  return Number.isFinite(a) && Number.isFinite(b) && Math.floor(a / 1000) === Math.floor(b / 1000);
 }
 
 export function backupResponseContainsIdentifier(payload, identifier) {
-  return valuesDeep(payload).some((value) => value === identifier);
+  const wanted = String(identifier ?? '').trim();
+  if (!wanted) return false;
+  return backupRows(payload).some(
+    (backup) => backup && typeof backup === 'object' && backup.id != null && String(backup.id) === wanted,
+  );
 }
 
-export function resolveProviderBackupSelection(payload, identifier, createdAt) {
-  if (identifier !== AUTO_BACKUP_ID) {
-    return backupResponseContainsIdentifier(payload, identifier) ? { mode: 'identifier' } : null;
-  }
+export function findSelectedBackup(payload, identifier, createdAt) {
+  const wanted = String(identifier ?? '').trim();
+  const createdMs = Date.parse(String(createdAt ?? ''));
+  const identifierMs = Date.parse(wanted);
+  if (!wanted || !Number.isFinite(createdMs)) return null;
 
-  const targetMs = safeIso(createdAt, 'provider_backup_created_at_invalid');
-  const targetSecond = Math.floor(targetMs / 1000);
-  const records = [...new Set(objectsDeep(payload).filter(isProviderBackupRecord))];
-  const matches = records.filter((record) => {
-    const timestampMs = backupTimestampMs(record);
-    return timestampMs != null && Math.floor(timestampMs / 1000) === targetSecond;
+  const matches = backupRows(payload).filter((backup) => {
+    if (!backup || typeof backup !== 'object') return false;
+    if (backup.is_physical_backup !== true) return false;
+    if (String(backup.status ?? '').toUpperCase() !== 'COMPLETED') return false;
+
+    const insertedMs = Date.parse(String(backup.inserted_at ?? ''));
+    if (!sameObservedSecond(insertedMs, createdMs)) return false;
+
+    const idMatches = backup.id != null && String(backup.id) === wanted;
+    const dashboardTimestampMatches = sameObservedSecond(identifierMs, insertedMs);
+    return idMatches || dashboardTimestampMatches;
   });
 
-  if (matches.length === 0) return null;
-  if (matches.length !== 1) throw new Error('provider_backup_created_at_ambiguous');
-  return { mode: 'created_at' };
+  return matches.length === 1 ? matches[0] : null;
 }
 
 function unwrapRows(payload) {
@@ -213,6 +192,7 @@ function describeSqlPath(path) {
   if (rel.startsWith('../') || rel === '..') throw new Error('rehearsal_sql_path_not_allowed');
   if (approvedValidators.has(rel)) return { absolute, rel, kind: 'validator', expectedDigest: null };
   if (!/^supabase\/migrations\/[0-9]{14}_[a-z0-9_]+\.sql$/.test(rel)) throw new Error('rehearsal_sql_path_not_allowed');
+
   const manifest = JSON.parse(readFileSync(resolve(required('MANIFEST_PATH')), 'utf8'));
   const filename = rel.split('/').at(-1);
   const selected = Array.isArray(manifest?.migrations)
@@ -271,8 +251,7 @@ async function verify() {
     readSnapshot(restoreRef),
   ]);
 
-  const backupSelection = resolveProviderBackupSelection(backups, backupId, backupCreatedAt);
-  if (!backupSelection) throw new Error('provider_backup_not_observed_on_source');
+  if (!findSelectedBackup(backups, backupId, backupCreatedAt)) throw new Error('provider_backup_not_observed_on_source');
 
   const sourceRegion = projectField(sourceProject, 'region');
   const restoreRegion = projectField(restoreProject, 'region');
@@ -307,6 +286,7 @@ async function verify() {
     noProductionDumpOnRunner: true,
     productionObservationReadOnly: true,
   };
+
   const evidence = {
     schema: 'risck-comply.backup-restore-evidence.v2',
     evidenceItem: 'backup-restore-tested',
@@ -354,9 +334,9 @@ async function verify() {
       providerBackupIdentifierStored: false,
       providerProjectReferencesStored: false,
     },
-    evidenceBoundary:
-      'Supabase Restore to a New Project is used as the Production-snapshot transport boundary. GitHub Actions never creates, downloads, stores, or replays a Production data dump. Production observation uses the Supabase Management API read-only SQL endpoint with fixed aggregate-only SQL. Validator includes are accepted only from an explicit allowlist and each included validator is executed separately by the workflow. Exact aggregate counts are transient and are not retained. Only timing metrics, booleans and redacted provenance are stored.',
+    evidenceBoundary: 'Supabase Restore to a New Project is used as the Production-snapshot transport boundary. GitHub Actions never creates, downloads, stores, or replays a Production data dump. Production observation uses the Supabase Management API read-only SQL endpoint with fixed aggregate-only SQL. Validator includes are accepted only from an explicit allowlist and each included validator is executed separately by the workflow. Exact aggregate counts are transient and are not retained. Only timing metrics, booleans and redacted provenance are stored.',
   };
+
   mkdirSync(dirname(output), { recursive: true });
   writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
   return evidence;
@@ -373,6 +353,7 @@ async function applyFile(path) {
   if (required('RECOVERY_PROVIDER_RESTORE_ATTESTATION') !== 'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED') {
     throw new Error('provider_restore_attestation_missing');
   }
+
   const descriptor = describeSqlPath(path);
   const rawQuery = readFileSync(descriptor.absolute, 'utf8');
   if (descriptor.kind === 'migration' && sha256(rawQuery) !== descriptor.expectedDigest) {
