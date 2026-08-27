@@ -51,6 +51,6 @@ describe('Phase 6 readiness reporting surface', () => {
     expect(workspace).toContain('workflow-readiness');
     expect(summary).toContain('Read-only reporting snapshot');
     expect(summary).toContain('workflowReadiness?.reasons');
-    expect(summary).toContain('Readiness healthy');
+    expect(summary).toContain('Current workflow signals are healthy for the read-only reporting flow.');
   });
 });
