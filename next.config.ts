@@ -42,6 +42,18 @@ function getSupabaseImageHost() {
   }
 }
 
+function getConfiguredHttpsOrigin(value: string | undefined) {
+  const candidate = value?.trim();
+  if (!candidate) return null;
+
+  try {
+    const parsed = new URL(candidate);
+    return parsed.protocol === 'https:' ? parsed.origin : null;
+  } catch {
+    return null;
+  }
+}
+
 function getNonProductionLoopbackSupabaseOrigin() {
   if (isProduction) return null;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -71,15 +83,16 @@ const trustedImageHostnames = getTrustedImageHostnames();
 const imageSrcPolicy = ["img-src 'self' data: blob:", ...trustedImageHostnames.map((hostname) => `https://${hostname}`)].join(' ');
 const posthogScriptSrcPolicy = POSTHOG_SCRIPT_HOSTS.join(' ');
 const posthogConnectSrcPolicy = POSTHOG_CONNECT_HOSTS.join(' ');
+const supabaseConnectOrigin = getConfiguredHttpsOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL);
+const sentryConnectOrigin = getConfiguredHttpsOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN);
 const nonProductionLoopbackSupabaseOrigin = getNonProductionLoopbackSupabaseOrigin();
 const connectSrcPolicy = [
   "connect-src 'self'",
-  'https://*.supabase.co',
+  supabaseConnectOrigin,
   nonProductionLoopbackSupabaseOrigin,
   'https://api.stripe.com',
   'https://checkout.stripe.com',
-  'https://*.sentry.io',
-  'https://*.ingest.sentry.io',
+  sentryConnectOrigin,
   'https://vitals.vercel-insights.com',
   posthogConnectSrcPolicy,
 ].filter((value): value is string => Boolean(value)).join(' ');
@@ -90,8 +103,8 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       isProduction
-        ? `script-src 'self' 'unsafe-inline' https://js.stripe.com https://*.sentry.io https://*.ingest.sentry.io ${posthogScriptSrcPolicy}`
-        : `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.sentry.io https://*.ingest.sentry.io ${posthogScriptSrcPolicy}`,
+        ? `script-src 'self' 'unsafe-inline' https://js.stripe.com ${posthogScriptSrcPolicy}`
+        : `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com ${posthogScriptSrcPolicy}`,
       "style-src 'self' 'unsafe-inline'",
       imageSrcPolicy,
       "media-src 'self' data: blob: https:",
