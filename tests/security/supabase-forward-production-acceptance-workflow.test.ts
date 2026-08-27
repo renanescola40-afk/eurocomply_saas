@@ -20,11 +20,7 @@ function executableMigrationCommands(text: string) {
   return text
     .split('\n')
     .map((line) => line.trim())
-    .filter((line) => (
-      line.startsWith('supabase ')
-      || line.startsWith('psql ')
-      || line.startsWith('node ')
-    ));
+    .filter((line) => line.startsWith('supabase ') || line.startsWith('psql ') || line.startsWith('node '));
 }
 
 describe('Supabase post-promotion production acceptance', () => {
@@ -36,17 +32,21 @@ describe('Supabase post-promotion production acceptance', () => {
     expect(workflow).toContain('GITHUB_ENVIRONMENT_NAME: Production');
     expect(workflow).toContain("REQUIRE_PROTECTED_BRANCHES: 'true'");
     expect(workflow).toContain('environment: Production');
-    expect(workflow).toContain(".github/workflows/supabase-forward-reconciliation-production-promotion.yml");
-    expect(workflow).toContain(".github/workflows/recovery-resilience-proof.yml");
+    expect(workflow).toContain('.github/workflows/supabase-forward-reconciliation-production-promotion.yml');
+    expect(workflow).toContain('.github/workflows/recovery-resilience-proof.yml');
     expect(workflow).toContain("'.conclusion' <<<\"$PROMOTION_JSON\"");
     expect(workflow).toContain("'.conclusion' <<<\"$RECOVERY_JSON\"");
   });
 
-  it('requires the recovery exercise to start only after the successful production promotion finished', () => {
+  it('requires the provider-managed recovery exercise to start only after successful Production promotion', () => {
     expect(workflow).toContain('PROMOTION_FINISHED_AT=');
     expect(workflow).toContain('RECOVERY_STARTED_AT=');
     expect(workflow).toContain('recoveryStarted <= promotionFinished');
     expect(workflow).toContain('post-promotion exact-SHA Recovery Resilience Proof');
+    expect(recoveryWorkflow).toContain('verify-supabase-provider-managed-restore.mjs verify');
+    expect(recoveryWorkflow).toContain('bind-backup-restore-migration-ledger.mjs');
+    expect(recoveryWorkflow).not.toContain('RECOVERY_SOURCE_DATABASE_URL');
+    expect(recoveryWorkflow).not.toContain('run-backup-restore-exercise.mjs');
   });
 
   it('keeps the pooler secret step-local and never adds a migration execution path', () => {
@@ -61,7 +61,7 @@ describe('Supabase post-promotion production acceptance', () => {
   });
 
   it('re-observes the ledger and live security state instead of trusting promotion-time evidence alone', () => {
-    expect(workflow).toContain("select version from supabase_migrations.schema_migrations order by version");
+    expect(workflow).toContain('select version from supabase_migrations.schema_migrations order by version');
     expect(workflow).toContain("--command 'begin transaction read only;'");
     expect(workflow).toContain('verify-forward-reconciliation-postconditions.sql');
     expect(workflow).toContain("--command 'rollback;'");
@@ -74,18 +74,23 @@ describe('Supabase post-promotion production acceptance', () => {
     expect(verifier).toContain('restoredForwardPostconditionsPassed: true');
   });
 
-  it('binds backup/restore to the post-promotion source ledger and proves restored forward postconditions', () => {
-    expect(recoveryWorkflow).toContain('Bind backup restore evidence to production source migration ledger');
+  it('binds provider-managed backup/restore to the post-promotion source ledger and proves restored forward postconditions', () => {
+    expect(recoveryWorkflow).toContain('Bind provider-managed backup restore evidence to post-promotion source ledger');
     expect(recoveryWorkflow).toContain('node scripts/recovery/bind-backup-restore-migration-ledger.mjs');
-    expect(recoveryBinder).toContain('begin transaction read only; select version from supabase_migrations.schema_migrations order by version; rollback;');
+    expect(recoveryBinder).toContain('/database/query/read-only');
+    expect(recoveryBinder).toContain('select version from supabase_migrations.schema_migrations order by version;');
     expect(recoveryBinder).toContain('sourceMigrationLedgerCaptured: true');
     expect(recoveryBinder).toContain('migrationVersionsStored: false');
     expect(recoveryBinder).toContain('sourceMigrationLedgerDigestStored: true');
     expect(recoveryBinder).toContain('verify-forward-reconciliation-postconditions.sql');
-    expect(recoveryBinder).toContain("'begin transaction read only;'");
     expect(recoveryBinder).toContain('restoredPostconditionsExecuted');
     expect(recoveryBinder).toContain('restoredPostconditionsPassed');
     expect(recoveryBinder).toContain('restoredPostconditionOutputStored: false');
+    expect(recoveryBinder).toContain('productionObservationReadOnly: true');
+    expect(recoveryBinder).toContain('productionDumpCreatedOnGithubRunner: false');
+    expect(recoveryBinder).not.toContain('RECOVERY_SOURCE_DATABASE_URL');
+    expect(recoveryBinder).not.toContain('psql');
+    expect(recoveryBinder).not.toContain('docker');
     expect(verifier).toContain('source migration ledger digest differs from promoted ledger');
     expect(verifier).toContain('backup/restore restored forward postconditions did not pass');
   });
@@ -93,8 +98,8 @@ describe('Supabase post-promotion production acceptance', () => {
   it('executes live two-tenant behavior only inside a read-only transaction with existing actors', () => {
     expect(tenantProof).toContain('begin transaction read only;');
     expect(tenantProof).toContain('rollback;');
-    expect(tenantProof).toContain("set local role authenticated;");
-    expect(tenantProof).toContain("request.jwt.claim.sub");
+    expect(tenantProof).toContain('set local role authenticated;');
+    expect(tenantProof).toContain('request.jwt.claim.sub');
     expect(tenantProof).toContain('join auth.users auth_a');
     expect(tenantProof).toContain('join auth.users auth_b');
     expect(tenantProof).toContain('actor A can read a foreign organization');
@@ -105,7 +110,7 @@ describe('Supabase post-promotion production acceptance', () => {
   });
 
   it('requires exact-SHA backup/restore but explicitly refuses to credit provider credential revocation', () => {
-    expect(verifier).toContain("risck-comply.backup-restore-evidence.v2");
+    expect(verifier).toContain('risck-comply.backup-restore-evidence.v2');
     expect(verifier).toContain('REC-05');
     expect(verifier).toContain('REC-10');
     expect(verifier).toContain('providerCredentialRevocationClaimed: false');
