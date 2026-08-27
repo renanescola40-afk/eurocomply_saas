@@ -43,7 +43,7 @@ test('disposable FRIA ACL normalization is loopback-only and cannot weaken the f
   for (const table of ['ai_fria_assessments', 'ai_fria_evidence', 'ai_fria_decisions']) {
     assert.ok(
       friaAclNormalizer.includes(
-        `revoke insert, update, delete, truncate on table public.\${table} from anon, authenticated;`,
+        'revoke insert, update, delete, truncate on table public.' + table + ' from anon, authenticated;',
       ),
     );
   }
