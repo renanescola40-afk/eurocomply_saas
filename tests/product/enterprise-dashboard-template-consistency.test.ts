@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 const AI_SYSTEMS_PAGE = new URL('../../src/app/[locale]/ai-systems/page.tsx', import.meta.url);
 const DASHBOARD_HOME_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/page.tsx', import.meta.url);
 const DASHBOARD_LAYOUT = new URL('../../src/app/[locale]/dashboard/layout.tsx', import.meta.url);
+const COMMAND_CENTER_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/command-center/page.tsx', import.meta.url);
 const TASKS_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/tasks/page.tsx', import.meta.url);
 const RISKS_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/risks/page.tsx', import.meta.url);
 const DOCUMENTS_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/documents/page.tsx', import.meta.url);
@@ -49,6 +50,16 @@ describe('enterprise dashboard template consistency', () => {
     expect(source).not.toContain('tech-grid');
     expect(source).not.toContain('radial-gradient');
     expect(source).not.toContain('linear-gradient(180deg');
+  });
+
+  it('keeps the dedicated command center route on the shared application canvas', async () => {
+    const source = await readFile(COMMAND_CENTER_PAGE, 'utf8');
+
+    expect(source).toContain('<main className="min-h-0 bg-transparent text-white">');
+    expect(source).toContain('<CommandCenterPage');
+    expect(source).not.toContain('radial-gradient');
+    expect(source).not.toContain('max-w-7xl');
+    expect(source).not.toContain('min-h-screen');
   });
 
   it('uses a restrained operations layout for the command center instead of the legacy premium-card composition', async () => {
