@@ -17,12 +17,12 @@ function getCategoryStats() {
 
 function getCategoryTone(category: string) {
   const tones: Record<string, string> = {
-    gdpr: 'border-sky-500/30 bg-sky-500/10 text-sky-200',
-    risk: 'border-rose-500/30 bg-rose-500/10 text-rose-200',
-    vendor: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
-    security: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200',
-    incident: 'border-violet-500/30 bg-violet-500/10 text-violet-200',
-    general: 'border-slate-500/30 bg-slate-500/10 text-slate-200',
+    gdpr: 'border-sky-400/20 bg-sky-400/[0.08] text-sky-200',
+    risk: 'border-rose-400/20 bg-rose-400/[0.08] text-rose-200',
+    vendor: 'border-amber-400/20 bg-amber-400/[0.08] text-amber-200',
+    security: 'border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-200',
+    incident: 'border-orange-400/20 bg-orange-400/[0.08] text-orange-200',
+    general: 'border-white/[0.09] bg-white/[0.035] text-white/55',
   };
 
   return tones[category] ?? tones.general;
@@ -101,69 +101,63 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
   const totalSections = COMPLIANCE_TEMPLATES.reduce((sum, template) => sum + template.sections.length, 0);
 
   return (
-    <main className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-10">
-      <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-6 text-white shadow-2xl md:p-8">
-        <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
-        <div className="absolute bottom-0 left-10 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-primary/80">Template library</p>
-            <h1 className="mt-4 max-w-4xl text-4xl font-bold tracking-tight md:text-6xl">Launch compliance work in minutes</h1>
-            <p className="mt-5 max-w-3xl text-base leading-7 text-slate-300">
+    <main className="space-y-6 text-white">
+      <header className="border-b border-white/[0.07] pb-6">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.17em] text-emerald-300/75">Template library</p>
+        <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <h1 className="max-w-4xl text-3xl font-semibold tracking-tight md:text-4xl">Launch governed compliance work</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-white/48 md:text-base">
               Convert practical GDPR, risk, vendor, security and incident templates into tasks or evidence documents for {organization.name}.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-300">
-              <span className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2">{COMPLIANCE_TEMPLATES.length} templates</span>
-              <span className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2">{totalSections} evidence sections</span>
-              <span className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2">Task + document generation</span>
-            </div>
           </div>
-
-          <div className="grid gap-3 rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 backdrop-blur">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Coverage</p>
-            <div className="grid grid-cols-2 gap-3">
-              {categoryStats.map((item) => (
-                <div key={item.category} className="rounded-2xl border border-white/10 bg-black/20 p-3">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{item.category}</p>
-                  <p className="mt-1 text-2xl font-bold">{item.count}</p>
-                </div>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-2 text-xs text-white/42">
+            <span className="rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-2">{COMPLIANCE_TEMPLATES.length} templates</span>
+            <span className="rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-2">{totalSections} evidence sections</span>
           </div>
         </div>
+      </header>
+
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {categoryStats.map((item) => (
+          <article key={item.category} className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">{item.category}</p>
+            <p className="mt-2 text-2xl font-semibold text-white/88">{item.count}</p>
+          </article>
+        ))}
       </section>
 
-      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      <section className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
         {COMPLIANCE_TEMPLATES.map((template) => (
-          <article key={template.id} className="flex flex-col overflow-hidden rounded-3xl border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg">
-            <div className="border-b bg-muted/30 p-6">
+          <article key={template.id} className="flex flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.025]">
+            <div className="border-b border-white/[0.07] p-5">
               <div className="flex items-start justify-between gap-3">
-                <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${getCategoryTone(template.category)}`}>
+                <span className={`rounded-lg border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.13em] ${getCategoryTone(template.category)}`}>
                   {template.category}
                 </span>
-                <span className="rounded-full border px-3 py-1 text-xs text-muted-foreground">{template.sections.length} sections</span>
+                <span className="text-xs text-white/30">{template.sections.length} sections</span>
               </div>
-              <h2 className="mt-4 text-xl font-semibold leading-tight">{template.title}</h2>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">{template.description}</p>
+              <h2 className="mt-4 text-lg font-semibold leading-6 text-white/88">{template.title}</h2>
+              <p className="mt-2 text-sm leading-6 text-white/42">{template.description}</p>
             </div>
 
-            <div className="flex flex-1 flex-col p-6">
+            <div className="flex flex-1 flex-col p-5">
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border bg-background p-4">
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Owner</p>
-                  <p className="mt-2 text-sm font-semibold">{template.recommendedOwner}</p>
+                <div className="rounded-xl border border-white/[0.07] bg-black/15 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-white/28">Owner</p>
+                  <p className="mt-1.5 text-sm font-medium text-white/65">{template.recommendedOwner}</p>
                 </div>
-                <div className="rounded-2xl border bg-background p-4">
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Outputs</p>
-                  <p className="mt-2 text-sm font-semibold">Task + document</p>
+                <div className="rounded-xl border border-white/[0.07] bg-black/15 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-white/28">Outputs</p>
+                  <p className="mt-1.5 text-sm font-medium text-white/65">Task + document</p>
                 </div>
               </div>
 
-              <details className="mt-5 rounded-2xl border p-4 open:bg-muted/20">
-                <summary className="cursor-pointer text-sm font-medium">Preview generated content</summary>
-                <div className="mt-4 space-y-3 text-sm text-muted-foreground">
+              <details className="mt-4 rounded-xl border border-white/[0.07] bg-black/10 p-4 open:bg-black/20">
+                <summary className="cursor-pointer text-sm font-medium text-white/65">Preview generated content</summary>
+                <div className="mt-4 space-y-2 text-sm leading-6 text-white/40">
                   <p>The generated Markdown document includes:</p>
-                  <ul className="space-y-2">
+                  <ul className="space-y-1.5">
                     <li>• Document metadata and source template tracking</li>
                     <li>• Purpose, scope, approval and change history sections</li>
                     {template.sections.map((section) => (
@@ -173,52 +167,55 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
                 </div>
               </details>
 
-              <div className="mt-5">
-                <p className="text-sm font-medium">Included sections</p>
-                <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-4">
+                <p className="text-xs font-medium text-white/45">Included sections</p>
+                <div className="mt-2 flex flex-wrap gap-2">
                   {template.sections.slice(0, 5).map((section) => (
-                    <span key={section} className="rounded-full border bg-muted/30 px-3 py-1 text-xs text-muted-foreground">{section}</span>
+                    <span key={section} className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1 text-[11px] text-white/38">{section}</span>
                   ))}
                   {template.sections.length > 5 && (
-                    <span className="rounded-full border bg-muted/30 px-3 py-1 text-xs text-muted-foreground">+{template.sections.length - 5} more</span>
+                    <span className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1 text-[11px] text-white/38">+{template.sections.length - 5} more</span>
                   )}
                 </div>
               </div>
 
-              <div className="mt-6 grid gap-3">
+              <div className="mt-auto pt-5">
                 <form action={createTemplateTask}>
                   <input type="hidden" name="templateId" value={template.id} />
-                  <button type="submit" className="inline-flex h-11 w-full items-center justify-center rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90">
+                  <button type="submit" className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-emerald-300 px-4 text-sm font-semibold text-[#06100d] transition-colors hover:bg-emerald-200">
                     Create compliance task
                   </button>
                 </form>
 
-                <form action={createTemplateDocument} className="grid gap-3 rounded-2xl border bg-muted/20 p-4">
-                  <input type="hidden" name="templateId" value={template.id} />
-                  <label className="grid gap-1 text-sm">
-                    <span className="font-medium">Document title</span>
-                    <input name="title" defaultValue={template.title} className="h-10 rounded-md border bg-background px-3 text-sm" />
-                  </label>
-                  <label className="grid gap-1 text-sm">
-                    <span className="font-medium">Category</span>
-                    <select name="category" defaultValue={template.category} className="h-10 rounded-md border bg-background px-3 text-sm">
-                      {categoryOptions.map((category) => (
-                        <option key={category} value={category}>{category}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="grid gap-1 text-sm">
-                    <span className="font-medium">Owner</span>
-                    <input name="owner" defaultValue={template.recommendedOwner} className="h-10 rounded-md border bg-background px-3 text-sm" />
-                  </label>
-                  <label className="grid gap-1 text-sm">
-                    <span className="font-medium">Review / expiry date</span>
-                    <input name="expiresAt" type="date" className="h-10 rounded-md border bg-background px-3 text-sm" />
-                  </label>
-                  <button type="submit" className="inline-flex h-11 w-full items-center justify-center rounded-full border bg-background px-4 text-sm font-semibold transition hover:bg-muted">
-                    Generate evidence document
-                  </button>
-                </form>
+                <details className="mt-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+                  <summary className="cursor-pointer text-sm font-medium text-white/58">Generate evidence document</summary>
+                  <form action={createTemplateDocument} className="mt-4 grid gap-3">
+                    <input type="hidden" name="templateId" value={template.id} />
+                    <label className="grid gap-1.5 text-xs text-white/45">
+                      <span className="font-medium">Document title</span>
+                      <input name="title" defaultValue={template.title} className="h-10 rounded-xl border border-white/[0.08] bg-black/20 px-3 text-sm text-white/75 outline-none focus:border-emerald-300/30" />
+                    </label>
+                    <label className="grid gap-1.5 text-xs text-white/45">
+                      <span className="font-medium">Category</span>
+                      <select name="category" defaultValue={template.category} className="h-10 rounded-xl border border-white/[0.08] bg-[#0b100f] px-3 text-sm text-white/75 outline-none focus:border-emerald-300/30">
+                        {categoryOptions.map((category) => (
+                          <option key={category} value={category}>{category}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="grid gap-1.5 text-xs text-white/45">
+                      <span className="font-medium">Owner</span>
+                      <input name="owner" defaultValue={template.recommendedOwner} className="h-10 rounded-xl border border-white/[0.08] bg-black/20 px-3 text-sm text-white/75 outline-none focus:border-emerald-300/30" />
+                    </label>
+                    <label className="grid gap-1.5 text-xs text-white/45">
+                      <span className="font-medium">Review / expiry date</span>
+                      <input name="expiresAt" type="date" className="h-10 rounded-xl border border-white/[0.08] bg-black/20 px-3 text-sm text-white/75 outline-none focus:border-emerald-300/30" />
+                    </label>
+                    <button type="submit" className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-white/[0.09] bg-white/[0.035] px-4 text-sm font-semibold text-white/68 transition-colors hover:bg-white/[0.06] hover:text-white">
+                      Generate evidence document
+                    </button>
+                  </form>
+                </details>
               </div>
             </div>
           </article>
