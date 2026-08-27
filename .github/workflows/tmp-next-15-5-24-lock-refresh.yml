@@ -1,0 +1,54 @@
+name: Temporary Next 15.5.24 lock refresh
+
+on:
+  push:
+    branches:
+      - fix/next-15-5-24-critical-security
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tmp-next-15-5-24-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Upgrade only the patched Next.js maintenance release
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --ignore-scripts --save-exact next@15.5.24 eslint-config-next@15.5.24
+          test "$(node -p "require('./package.json').dependencies.next")" = "15.5.24"
+          test "$(node -p "require('./package.json').devDependencies['eslint-config-next']")" = "15.5.24"
+          test "$(node -p "require('./package-lock.json').packages['node_modules/next'].version")" = "15.5.24"
+          test "$(node -p "require('./package-lock.json').packages['node_modules/eslint-config-next'].version")" = "15.5.24"
+
+      - name: Commit deterministic manifest and lockfile update
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo "No lockfile change produced"
+            exit 1
+          fi
+          git commit -m "fix(security): upgrade Next.js to 15.5.24 [lock-refresh]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
