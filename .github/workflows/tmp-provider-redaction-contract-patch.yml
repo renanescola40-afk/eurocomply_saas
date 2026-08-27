@@ -1,0 +1,56 @@
+name: Temporary provider redaction contract patch
+
+on:
+  push:
+    branches:
+      - fix/provider-redaction-contract
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 1
+
+      - name: Patch checker and add regression contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          checker = Path('scripts/security/check-p0-runtime-evidence-files.mjs')
+          text = checker.read_text(encoding='utf-8')
+          old = "  'Only grouped configuration presence and accepted source labels are recorded. No secret values, tokens, URLs, DSNs, cookies, Authorization headers or customer data are stored.',\n"
+          new = "  'Only grouped configuration presence, derived booleans and accepted source labels are recorded. No secret values, tokens, URLs, DSNs, cookies, Authorization headers or customer data are stored.',\n"
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('expected legacy redaction text not found')
+              text = text.replace(old, old + new, 1)
+              checker.write_text(text, encoding='utf-8')
+
+          test = Path('tests/security/provider-redaction-contract-sync.test.mjs')
+          test.write_text("""import assert from 'node:assert/strict';\nimport { readFileSync } from 'node:fs';\nimport test from 'node:test';\n\nconst generator = readFileSync('scripts/security/run-production-provider-runtime-proof.mjs', 'utf8');\nconst checker = readFileSync('scripts/security/check-p0-runtime-evidence-files.mjs', 'utf8');\n\ntest('provider runtime canonical redaction confirmation is accepted by the P0 evidence checker', () => {\n  const match = generator.match(/const CANONICAL_REDACTION_CONFIRMATION = '([^']+)'/);\n  assert.ok(match, 'canonical provider redaction confirmation must be declared');\n  assert.ok(checker.includes(`'${match[1]}'`), 'checker allowlist must accept the canonical provider redaction confirmation');\n});\n""", encoding='utf-8')
+          PY
+
+      - name: Validate focused contract
+        shell: bash
+        run: node --test tests/security/provider-redaction-contract-sync.test.mjs
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/security/check-p0-runtime-evidence-files.mjs tests/security/provider-redaction-contract-sync.test.mjs
+          git diff --cached --quiet && { echo 'No patch produced'; exit 1; }
+          git commit -m "fix(security): align provider redaction evidence contract"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
