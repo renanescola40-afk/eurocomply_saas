@@ -4,10 +4,12 @@ import { describe, expect, it } from 'vitest';
 const source = readFileSync('next.config.ts', 'utf8');
 
 describe('production CSP provider origin hardening', () => {
-  it('does not authorize wildcard provider subdomains', () => {
+  it('does not authorize wildcard provider subdomains or broad remote media', () => {
     expect(source).not.toContain('https://*.supabase.co');
     expect(source).not.toContain('https://*.sentry.io');
     expect(source).not.toContain('https://*.ingest.sentry.io');
+    expect(source).toContain("media-src 'self' data: blob:");
+    expect(source).not.toContain("media-src 'self' data: blob: https:");
   });
 
   it('derives exact HTTPS origins from trusted provider configuration', () => {
