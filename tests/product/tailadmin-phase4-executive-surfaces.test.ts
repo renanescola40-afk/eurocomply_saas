@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 
 const OVERVIEW = new URL('../../src/components/dashboard/dashboard-overview.tsx', import.meta.url);
+const EXPERIENCE_MAP = new URL('../../src/components/dashboard/dashboard-experience-map.tsx', import.meta.url);
 const EXECUTIVE_HERO = new URL('../../src/components/dashboard/executive-dashboard-hero.tsx', import.meta.url);
 const EXECUTIVE_COMMAND_CENTER = new URL('../../src/components/dashboard/executive-command-center.tsx', import.meta.url);
 const EXECUTIVE_KPI = new URL('../../src/components/dashboard/sticky-executive-kpi-bar.tsx', import.meta.url);
@@ -22,6 +23,21 @@ describe('TailAdmin phase 4 executive surfaces', () => {
     expect(source).not.toContain("from '@/components/ui/card'");
     expect(source).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
     expect(source).toContain('divide-y divide-white/[0.055]');
+  });
+
+  it('uses real workspace routes instead of stale one-page experience anchors', async () => {
+    const source = await readFile(EXPERIENCE_MAP, 'utf8');
+
+    expect(source).toContain('Workspace map');
+    expect(source).toContain("href: `${basePath}/tasks`");
+    expect(source).toContain("href: `${basePath}/evidence-risk`");
+    expect(source).toContain("href: `${basePath}/reports-governance`");
+    expect(source).toContain("href: `${basePath}/team`");
+    expect(source).not.toContain("anchor: '#executive-cockpit'");
+    expect(source).not.toContain("anchor: '#evidence-graph'");
+    expect(source).not.toContain('Expand revenue');
+    expect(source).not.toContain('rounded-[2rem]');
+    expect(source).not.toContain('hover:-translate-y');
   });
 
   it('keeps executive overview surfaces restrained and inside the shared graphite language', async () => {
