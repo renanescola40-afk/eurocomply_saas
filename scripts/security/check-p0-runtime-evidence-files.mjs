@@ -42,6 +42,7 @@ const redactionTexts = new Set([
   'Redaction confirmed: no token, cookie, authorization header, secret value, or DSN is written to this evidence file.',
   'Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.',
   'Only grouped configuration presence and accepted source labels are recorded. No secret values, tokens, URLs, DSNs, cookies, Authorization headers or customer data are stored.',
+  'Only grouped configuration presence, derived booleans and accepted source labels are recorded. No secret values, tokens, URLs, DSNs, cookies, Authorization headers or customer data are stored.',
 ]);
 const failures = [];
 
