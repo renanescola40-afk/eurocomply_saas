@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
@@ -80,4 +81,15 @@ test('rejects unreviewed includes and all other psql meta commands', () => {
     /include_not_allowed/,
   );
   assert.throws(() => normalizeSqlForManagementApi('\\copy public.users to stdout\n'), /meta_command_not_allowed/);
+});
+
+test('keeps provider restore teardown confirmation aligned with recovery workflow', async () => {
+  const [destroyScript, recoveryWorkflow] = await Promise.all([
+    readFile(new URL('../../scripts/recovery/destroy-supabase-provider-managed-restore.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('../../.github/workflows/recovery-resilience-proof.yml', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(destroyScript, /DELETE \$\{restoreRef\} AFTER RECOVERY PROOF/);
+  assert.doesNotMatch(destroyScript, /DELETE \$\{restoreRef\} AFTER REHEARSAL/);
+  assert.match(recoveryWorkflow, /DELETE \$\{RECOVERY_PROVIDER_RESTORE_PROJECT_REF\} AFTER RECOVERY PROOF/);
 });
