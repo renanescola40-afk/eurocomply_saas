@@ -32,7 +32,7 @@ export default async function AiSystemsPage({ params }: { params: Promise<{ loca
   const userDisplayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'RISCK COMPLY user';
 
   const content = (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
+    <main className="min-h-0 bg-transparent text-white">
       {canManageAiGovernance ? (
         <AiSystemsClient locale={locale} initialSystems={systems} organizationName={organization?.name} readiness={readiness} />
       ) : (
@@ -42,7 +42,7 @@ export default async function AiSystemsPage({ params }: { params: Promise<{ loca
   );
 
   if (!organization) {
-    return content;
+    return <div className="min-h-screen bg-[#0b100f]">{content}</div>;
   }
 
   return (

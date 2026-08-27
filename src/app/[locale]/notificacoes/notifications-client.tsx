@@ -2,10 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, Bell, CheckCircle2, FileText, MailPlus, ShieldCheck, Sparkles } from 'lucide-react';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { AlertTriangle, Bell, CheckCircle2, FileText, MailPlus, ShieldCheck } from 'lucide-react';
 import type { NotificationItem } from '@/server/queries/compliance-activity';
 
 type NotificationType = 'convites' | 'documentos' | 'sistema' | 'alertas';
@@ -73,73 +70,83 @@ export function NotificationsClient({ locale, initialNotifications }: { locale: 
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.14),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
-      <DashboardCommandNavigation locale={locale} activePage="Notificações" />
-      <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 md:px-8 md:py-12">
-        <section className="overflow-hidden rounded-[2rem] border bg-background/88 p-6 shadow-xl shadow-primary/5 backdrop-blur md:p-9">
-          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div>
-              <Badge className="gap-2 rounded-full px-3 py-1 uppercase tracking-[0.18em]"><Bell className="h-3.5 w-3.5" /> Notificações premium</Badge>
-              <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] md:text-5xl">Feed de atividades da equipa.</h1>
-              <p className="mt-3 max-w-2xl text-muted-foreground">Histórico cronológico de convites, documentos, alertas e sinais do sistema para manter a operação explicável.</p>
-            </div>
-            <div className="rounded-3xl border bg-muted/30 p-4 text-center">
-              <p className="text-3xl font-semibold">{unreadCount}</p>
-              <p className="text-xs text-muted-foreground">não lidas</p>
-            </div>
+    <main className="min-h-0 bg-transparent text-white">
+      <div className="w-full space-y-6">
+        <header className="flex flex-col gap-4 border-b border-white/[0.065] pb-5 md:flex-row md:items-end md:justify-between">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">
+              <Bell className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" /> Notificações
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">Feed de atividades da equipa</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">Histórico cronológico de convites, documentos, alertas e sinais do sistema para manter a operação explicável.</p>
           </div>
-        </section>
-        <section className="rounded-[2rem] border bg-background/88 p-4 shadow-sm backdrop-blur">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap gap-2">
-              {filters.map((filter) => (
-                <button key={filter.value} type="button" onClick={() => setActiveFilter(filter.value)} className={`rounded-full border px-4 py-2 text-sm font-medium transition hover:-translate-y-0.5 ${activeFilter === filter.value ? 'border-primary bg-primary text-primary-foreground shadow-lg' : 'bg-background hover:bg-muted'}`}>
-                  {filter.label}
-                </button>
-              ))}
-            </div>
-            <Button type="button" onClick={markAllAsRead} className="rounded-full"><CheckCircle2 className="h-4 w-4" /> Marcar todas como lidas</Button>
+          <div className="rounded-xl border border-white/[0.075] bg-[#101715] px-4 py-3 text-right">
+            <p className="text-2xl font-semibold text-white/88">{unreadCount}</p>
+            <p className="text-[10px] uppercase tracking-[0.13em] text-white/34">não lidas</p>
           </div>
+        </header>
+
+        <section className="flex flex-col gap-3 rounded-xl border border-white/[0.075] bg-[#101715] p-3 lg:flex-row lg:items-center lg:justify-between" aria-label="Filtros de notificações">
+          <div className="flex flex-wrap gap-1.5">
+            {filters.map((filter) => (
+              <button
+                key={filter.value}
+                type="button"
+                aria-pressed={activeFilter === filter.value}
+                onClick={() => setActiveFilter(filter.value)}
+                className={`rounded-lg border px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 ${activeFilter === filter.value ? 'border-emerald-300/20 bg-emerald-300/[0.09] text-emerald-100' : 'border-transparent text-white/50 hover:bg-white/[0.04] hover:text-white'}`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={markAllAsRead} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 text-sm font-medium text-white/65 transition hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+            <CheckCircle2 className="h-4 w-4 text-emerald-300" aria-hidden="true" /> Marcar todas como lidas
+          </button>
         </section>
-        <section className="space-y-3">
-          {filteredNotifications.map((notification) => {
-            const Icon = iconMap[notification.type];
-            return (
-              <article key={notification.id} className="group rounded-[1.5rem] border bg-background/90 p-4 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg md:p-5">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div className="flex gap-4">
-                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${notification.unread ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-medium leading-6">{notification.message}</p>
-                        <Badge variant={notification.unread ? 'default' : 'outline'} className="rounded-full">{notification.unread ? 'não lida' : 'lida'}</Badge>
+
+        <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]" aria-label="Feed de notificações">
+          {filteredNotifications.length > 0 ? (
+            <div className="divide-y divide-white/[0.055]">
+              {filteredNotifications.map((notification) => {
+                const Icon = iconMap[notification.type];
+                return (
+                  <article key={notification.id} className="px-5 py-4 transition-colors hover:bg-white/[0.018]">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                      <div className="flex min-w-0 gap-3">
+                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${notification.unread ? 'border-emerald-300/20 bg-emerald-300/[0.09] text-emerald-300' : 'border-white/[0.07] bg-white/[0.025] text-white/38'}`}>
+                          <Icon className="h-4 w-4" aria-hidden="true" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-medium leading-6 text-white/82">{notification.message}</p>
+                            <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${notification.unread ? 'border-emerald-300/18 text-emerald-100/75' : 'border-white/[0.07] text-white/32'}`}>{notification.unread ? 'não lida' : 'lida'}</span>
+                          </div>
+                          <p className="mt-0.5 text-xs text-white/34">{notification.timestamp}</p>
+                        </div>
                       </div>
-                      <p className="mt-1 text-sm text-muted-foreground">{notification.timestamp}</p>
+                      <button type="button" onClick={() => toggleRead(notification.id)} className="shrink-0 rounded-lg border border-white/[0.07] px-3 py-2 text-xs font-medium text-white/48 transition hover:bg-white/[0.04] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+                        {notification.unread ? 'Marcar como lida' : 'Marcar como não lida'}
+                      </button>
                     </div>
-                  </div>
-                  <button type="button" onClick={() => toggleRead(notification.id)} className="rounded-full border px-3 py-2 text-sm text-muted-foreground transition hover:bg-primary/10 hover:text-primary">
-                    {notification.unread ? 'Marcar como lida' : 'Marcar como não lida'}
-                  </button>
-                </div>
-              </article>
-            );
-          })}
-          {filteredNotifications.length === 0 ? (
-            <div className="rounded-[2rem] border bg-background/88 p-8 text-center text-muted-foreground">
-              <Sparkles className="mx-auto h-8 w-8 text-primary" />
-              <p className="mt-3 font-medium">Nada neste filtro agora.</p>
-              <p className="mt-1 text-sm">Troque o filtro ou volte ao Command Center.</p>
+                  </article>
+                );
+              })}
             </div>
-          ) : null}
+          ) : (
+            <div className="p-6 text-sm text-white/42" role="status">
+              <p className="font-medium text-white/60">Nada neste filtro agora.</p>
+              <p className="mt-1">Troque o filtro ou volte ao Command Center.</p>
+            </div>
+          )}
         </section>
-        <section className="rounded-[2rem] border bg-foreground p-6 text-background shadow-xl shadow-primary/10 md:p-8">
-          <h2 className="text-2xl font-semibold tracking-tight">Enterprise mantém histórico para toda a equipa.</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-background/75">Faça upgrade e tenha histórico de notificações para toda equipe, convites colaborativos e trilha de decisões mais clara para auditoria.</p>
-          <Button asChild className="mt-5 rounded-full bg-background text-foreground hover:bg-background/90">
-            <Link href={`/${locale}/pricing`}>Comparar planos</Link>
-          </Button>
+
+        <section className="flex flex-col gap-3 rounded-xl border border-white/[0.075] bg-[#101715] p-5 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-white/82">Histórico de equipa e auditoria</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-white/42">Compare planos quando precisar de ampliar histórico, colaboração e controlos de auditoria.</p>
+          </div>
+          <Link href={`/${locale}/pricing`} className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 text-sm font-semibold text-white/65 transition hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">Comparar planos</Link>
         </section>
       </div>
     </main>

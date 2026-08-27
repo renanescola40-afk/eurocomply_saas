@@ -3,13 +3,14 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Bell, Building2, CreditCard, ShieldCheck, UserRound, UsersRound } from 'lucide-react';
 
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell';
 import { ProfilePersonalControls } from '@/components/profile/profile-personal-controls';
 import { roleHasPermission } from '@/lib/security/permissions';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { canManageDashboardBilling } from '@/server/queries/organization-dashboard';
+import { getOrganizationBillingAuthority } from '@/server/queries/subscription';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -62,68 +63,88 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
   if (!user) redirect(`/${safeLocale}/login?next=${encodeURIComponent(`/${safeLocale}/profile`)}`);
 
   const organization = await getCurrentOrganizationForUser(user.id);
+  const authority = organization ? await getOrganizationBillingAuthority(organization.id) : null;
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'RISCK COMPLY user';
   const canManageTeam = organization ? roleHasPermission(organization.role, 'manage_team') : false;
   const canManageSettings = organization ? roleHasPermission(organization.role, 'manage_settings') : false;
   const canManageBilling = organization ? canManageDashboardBilling(organization.role) : false;
   const localized = (path: string) => `/${safeLocale}${path}`;
 
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(37,99,235,0.14),_transparent_32rem),linear-gradient(180deg,#050505_0%,#080b12_48%,#050505_100%)] text-white">
-      <DashboardCommandNavigation locale={safeLocale} activePage="Profile" />
-      <div className="pointer-events-none fixed inset-0 tech-grid opacity-20" />
-
-      <div className="relative mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 md:py-12 lg:px-8">
-        <header className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 shadow-2xl shadow-black/20 md:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-200/70">{copy.eyebrow}</p>
-          <h1 className="mt-3 max-w-4xl text-3xl font-semibold tracking-[-0.04em] md:text-5xl">{copy.title}</h1>
-          <p className="mt-4 max-w-3xl text-sm leading-6 text-white/58 md:text-base">{copy.body}</p>
+  const content = (
+    <main className="min-h-0 bg-transparent text-white">
+      <div className="w-full space-y-6">
+        <header className="border-b border-white/[0.065] pb-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">{copy.eyebrow}</p>
+          <h1 className="mt-2 max-w-4xl text-3xl font-semibold tracking-[-0.035em] text-white">{copy.title}</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-white/50">{copy.body}</p>
         </header>
 
-        <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-          <article className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 md:p-8">
-            <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white text-lg font-black text-black shadow-lg">
+        <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+          <article className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+            <div className="flex items-center gap-4 border-b border-white/[0.06] px-5 py-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-300 text-sm font-black text-[#06100d]">
                 {initials(user.firstName, user.lastName, user.email)}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/42">{copy.personal}</p>
-                <h2 className="mt-1 truncate text-2xl font-semibold">{displayName}</h2>
-                <p className="mt-1 text-sm text-white/48">{copy.personalBody}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-white/34">{copy.personal}</p>
+                <h2 className="mt-1 truncate text-lg font-semibold text-white/88">{displayName}</h2>
+                <p className="mt-0.5 text-xs text-white/38">{copy.personalBody}</p>
               </div>
             </div>
 
-            <dl className="mt-8 divide-y divide-white/10 rounded-2xl border border-white/10 bg-black/20 px-5">
-              <div className="grid gap-1 py-4 sm:grid-cols-[9rem_1fr] sm:items-center"><dt className="text-sm text-white/45">{copy.name}</dt><dd className="text-sm font-medium text-white/88">{displayName}</dd></div>
-              <div className="grid gap-1 py-4 sm:grid-cols-[9rem_1fr] sm:items-center"><dt className="text-sm text-white/45">{copy.email}</dt><dd className="break-all text-sm font-medium text-white/88">{user.email ?? '—'}</dd></div>
+            <dl className="divide-y divide-white/[0.055] px-5">
+              <div className="grid gap-1 py-4 sm:grid-cols-[9rem_1fr] sm:items-center"><dt className="text-sm text-white/38">{copy.name}</dt><dd className="text-sm font-medium text-white/82">{displayName}</dd></div>
+              <div className="grid gap-1 py-4 sm:grid-cols-[9rem_1fr] sm:items-center"><dt className="text-sm text-white/38">{copy.email}</dt><dd className="break-all text-sm font-medium text-white/82">{user.email ?? '—'}</dd></div>
             </dl>
           </article>
 
-          <article className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 md:p-8">
-            <div className="flex items-center gap-3"><Building2 className="h-5 w-5 text-blue-200" aria-hidden="true" /><h2 className="text-xl font-semibold">{copy.workspace}</h2></div>
-            <p className="mt-2 text-sm leading-6 text-white/50">{copy.workspaceBody}</p>
-            <dl className="mt-6 space-y-3">
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4"><dt className="text-xs uppercase tracking-[0.18em] text-white/38">{copy.organization}</dt><dd className="mt-1 text-base font-semibold">{organization?.name ?? '—'}</dd></div>
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4"><dt className="text-xs uppercase tracking-[0.18em] text-white/38">{copy.role}</dt><dd className="mt-1 text-base font-semibold capitalize">{organization?.role ?? '—'}</dd></div>
+          <article className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+            <div className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4">
+              <Building2 className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+              <h2 className="text-sm font-semibold text-white/88">{copy.workspace}</h2>
+            </div>
+            <p className="px-5 pt-4 text-sm leading-6 text-white/44">{copy.workspaceBody}</p>
+            <dl className="mt-3 divide-y divide-white/[0.055] border-t border-white/[0.055] px-5">
+              <div className="grid gap-1 py-3.5 sm:grid-cols-[9rem_1fr]"><dt className="text-sm text-white/38">{copy.organization}</dt><dd className="text-sm font-medium text-white/82">{organization?.name ?? '—'}</dd></div>
+              <div className="grid gap-1 py-3.5 sm:grid-cols-[9rem_1fr]"><dt className="text-sm text-white/38">{copy.role}</dt><dd className="text-sm font-medium capitalize text-white/82">{organization?.role ?? '—'}</dd></div>
             </dl>
           </article>
         </section>
 
         <ProfilePersonalControls locale={safeLocale} />
 
-        <section className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 md:p-8">
-          <div className="flex items-center gap-3"><UserRound className="h-5 w-5 text-blue-200" aria-hidden="true" /><h2 className="text-xl font-semibold">{copy.accountControls}</h2></div>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Link href={localized('/notificacoes')} className="rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:border-blue-300/30 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"><Bell className="h-5 w-5 text-blue-200" aria-hidden="true" /><p className="mt-3 font-medium">{copy.notifications}</p></Link>
-            <Link href={localized('/dashboard/privacy')} className="rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:border-blue-300/30 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"><ShieldCheck className="h-5 w-5 text-blue-200" aria-hidden="true" /><p className="mt-3 font-medium">{copy.privacy}</p></Link>
-            {canManageSettings ? <Link href={localized('/settings/organization')} className="rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:border-blue-300/30 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"><Building2 className="h-5 w-5 text-blue-200" aria-hidden="true" /><p className="mt-3 font-medium">{copy.orgSettings}</p></Link> : null}
-            {canManageTeam ? <Link href={localized('/dashboard/organizations/team')} className="rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:border-blue-300/30 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"><UsersRound className="h-5 w-5 text-blue-200" aria-hidden="true" /><p className="mt-3 font-medium">{copy.team}</p></Link> : null}
-            {canManageBilling ? <Link href={localized('/dashboard/organizations/billing')} className="rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:border-blue-300/30 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"><CreditCard className="h-5 w-5 text-blue-200" aria-hidden="true" /><p className="mt-3 font-medium">{copy.billing}</p></Link> : null}
-            {canManageBilling ? <Link href={localized('/dashboard/organizations/add-ons')} className="rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:border-blue-300/30 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"><Building2 className="h-5 w-5 text-blue-200" aria-hidden="true" /><p className="mt-3 font-medium">{copy.addOns}</p></Link> : null}
+        <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+          <div className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4">
+            <UserRound className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+            <h2 className="text-sm font-semibold text-white/88">{copy.accountControls}</h2>
           </div>
-          {!canManageSettings && !canManageTeam && !canManageBilling ? <p className="mt-5 text-sm text-white/42">{copy.restricted}</p> : null}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3">
+            <Link href={localized('/notificacoes')} className="flex items-center gap-3 border-b border-white/[0.055] px-5 py-4 text-sm text-white/65 transition hover:bg-white/[0.025] hover:text-white sm:border-r"><Bell className="h-4 w-4 text-emerald-300" aria-hidden="true" /><span className="font-medium">{copy.notifications}</span></Link>
+            <Link href={localized('/dashboard/privacy')} className="flex items-center gap-3 border-b border-white/[0.055] px-5 py-4 text-sm text-white/65 transition hover:bg-white/[0.025] hover:text-white lg:border-r"><ShieldCheck className="h-4 w-4 text-emerald-300" aria-hidden="true" /><span className="font-medium">{copy.privacy}</span></Link>
+            {canManageSettings ? <Link href={localized('/settings/organization')} className="flex items-center gap-3 border-b border-white/[0.055] px-5 py-4 text-sm text-white/65 transition hover:bg-white/[0.025] hover:text-white"><Building2 className="h-4 w-4 text-emerald-300" aria-hidden="true" /><span className="font-medium">{copy.orgSettings}</span></Link> : null}
+            {canManageTeam ? <Link href={localized('/dashboard/organizations/team')} className="flex items-center gap-3 border-b border-white/[0.055] px-5 py-4 text-sm text-white/65 transition hover:bg-white/[0.025] hover:text-white sm:border-r lg:border-b-0"><UsersRound className="h-4 w-4 text-emerald-300" aria-hidden="true" /><span className="font-medium">{copy.team}</span></Link> : null}
+            {canManageBilling ? <Link href={localized('/dashboard/organizations/billing')} className="flex items-center gap-3 border-b border-white/[0.055] px-5 py-4 text-sm text-white/65 transition hover:bg-white/[0.025] hover:text-white lg:border-b-0 lg:border-r"><CreditCard className="h-4 w-4 text-emerald-300" aria-hidden="true" /><span className="font-medium">{copy.billing}</span></Link> : null}
+            {canManageBilling ? <Link href={localized('/dashboard/organizations/add-ons')} className="flex items-center gap-3 px-5 py-4 text-sm text-white/65 transition hover:bg-white/[0.025] hover:text-white"><Building2 className="h-4 w-4 text-emerald-300" aria-hidden="true" /><span className="font-medium">{copy.addOns}</span></Link> : null}
+          </div>
+          {!canManageSettings && !canManageTeam && !canManageBilling ? <p className="border-t border-white/[0.055] px-5 py-4 text-sm text-white/40">{copy.restricted}</p> : null}
         </section>
       </div>
     </main>
+  );
+
+  if (!organization) {
+    return <div className="min-h-screen bg-[#0b100f] p-4 md:p-6">{content}</div>;
+  }
+
+  return (
+    <EnterpriseDashboardShell
+      locale={safeLocale}
+      organizationName={organization.name}
+      userDisplayName={displayName}
+      role={organization.role}
+      selectedPlan={authority?.plan}
+    >
+      {content}
+    </EnterpriseDashboardShell>
   );
 }

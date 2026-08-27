@@ -79,29 +79,26 @@ export function BillingPlanIntentBanner({ locale, selectedPlan, canManageBilling
   const copy = copyByLocale[safeLocale(locale)];
 
   return (
-    <aside
-      aria-labelledby="selected-plan-title"
-      className="relative z-10 mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8"
-    >
-      <div className="rounded-[1.5rem] border border-cyan-200/20 bg-cyan-200/[0.06] p-5 text-white shadow-[0_18px_55px_rgba(0,0,0,.24)] backdrop-blur md:flex md:items-center md:justify-between md:gap-6">
-        <div className="max-w-3xl">
-          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-100/65">
-            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+    <aside aria-labelledby="selected-plan-title" className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.045] p-4 text-white">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0 max-w-3xl">
+          <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-emerald-100/55">
+            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
             {copy.eyebrow}
           </p>
-          <h2 id="selected-plan-title" className="mt-2 text-xl font-semibold tracking-[-0.025em]">
+          <h2 id="selected-plan-title" className="mt-1.5 text-base font-semibold tracking-[-0.015em] text-white/88">
             {copy.title(selectedPlan.name)}
           </h2>
-          <p className="mt-2 text-sm leading-6 text-white/58">{copy.body}</p>
+          <p className="mt-1 text-sm leading-6 text-white/46">{copy.body}</p>
         </div>
 
-        <div className="mt-4 shrink-0 md:mt-0">
+        <div className="shrink-0">
           {!canManageBilling ? (
             <button
               type="button"
               disabled
               aria-disabled="true"
-              className="inline-flex h-11 max-w-full items-center justify-center gap-2 rounded-full border border-white/10 px-5 text-sm font-semibold text-white/40 disabled:cursor-not-allowed"
+              className="inline-flex h-10 max-w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] px-4 text-sm font-semibold text-white/35 disabled:cursor-not-allowed"
             >
               <LockKeyhole className="h-4 w-4 shrink-0" aria-hidden="true" />
               {copy.ownerRequired}
@@ -109,7 +106,7 @@ export function BillingPlanIntentBanner({ locale, selectedPlan, canManageBilling
           ) : selectedPlan.salesLed ? (
             <Link
               href={`/${locale}/contact?intent=sales&plan=${selectedPlan.id}&source=onboarding`}
-              className="inline-flex h-11 max-w-full items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-black transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+              className="inline-flex h-10 max-w-full items-center justify-center gap-2 rounded-xl bg-emerald-300 px-4 text-sm font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60"
             >
               {copy.contactSales(selectedPlan.name)}
               <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -119,7 +116,7 @@ export function BillingPlanIntentBanner({ locale, selectedPlan, canManageBilling
               action="checkout"
               locale={locale}
               planId={selectedPlan.id}
-              className="h-11 max-w-full rounded-full px-5"
+              className="h-10 max-w-full rounded-xl bg-emerald-300 px-4 text-[#06100d] hover:bg-emerald-200"
             >
               {copy.continuePlan(selectedPlan.name)}
             </BillingActionButton>

@@ -43,8 +43,8 @@ export default async function OrganizationReportsGovernancePage({ params }: { pa
   const lockedCopy = getUpgradeCopy(locale);
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.16),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.34))]">
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 md:px-8 md:py-10">
+    <main className="min-h-0 bg-transparent text-white">
+      <div className="w-full space-y-6">
         {canViewExecutiveReports ? (
           <ReportsGovernanceWorkspace
             summary={data.summary}

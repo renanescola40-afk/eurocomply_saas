@@ -87,21 +87,21 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
   }
 
   return (
-    <main className="min-h-screen bg-[#050505] px-4 py-8 text-white sm:px-5 lg:px-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-white/40 sm:text-sm">{organization.name} · {copy.eyebrow}</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-5xl">{copy.title}</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55 sm:text-base">{copy.subtitle}</p>
+    <main className="min-h-0 bg-transparent text-white">
+      <div className="w-full space-y-6">
+        <header className="flex flex-col gap-4 border-b border-white/[0.065] pb-5 md:flex-row md:items-end md:justify-between">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">{organization.name} · {copy.eyebrow}</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em]">{copy.title}</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">{copy.subtitle}</p>
           </div>
-          <StepUpCsvExportButton endpoint="/api/reports/tasks.csv" filename="tasks-report.csv" className="inline-flex h-10 items-center justify-center rounded-md border border-white/15 px-4 text-sm font-medium hover:bg-white/10 focus-visible:ring-2 disabled:opacity-60" />
-        </div>
+          <StepUpCsvExportButton endpoint="/api/reports/tasks.csv" filename="tasks-report.csv" className="inline-flex h-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 text-sm font-medium text-white/70 transition hover:bg-white/[0.06] hover:text-white focus-visible:ring-2 disabled:opacity-60" />
+        </header>
 
         {canManageTasks ? (
           <CreateComplianceTaskForm locale={params.locale} onSubmit={handleCreateTask} />
         ) : (
-          <p className="rounded-xl border border-white/10 bg-white/[0.035] p-4 text-sm text-white/65" role="status">{readOnlyCopy[params.locale] ?? readOnlyCopy.en}</p>
+          <p className="rounded-xl border border-white/[0.075] bg-[#101715] p-4 text-sm text-white/62" role="status">{readOnlyCopy[params.locale] ?? readOnlyCopy.en}</p>
         )}
         <ComplianceTaskList
           locale={params.locale}
