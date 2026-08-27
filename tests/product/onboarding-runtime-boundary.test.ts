@@ -63,7 +63,7 @@ describe('onboarding runtime boundary', () => {
     expect(boundarySource).toContain('if (!result.ok)');
     expect(boundarySource).toContain('throw new Error(result.message)');
     expect(boundarySource).toContain('intent=enterprise&plan=enterprise&source=onboarding');
-    expect(boundarySource).toContain('Acesso Enterprise facilitado');
+    expect(boundarySource).toContain('Solicitar onboarding assistido para grandes empresas');
     expect(boundarySource).not.toContain('caught.message');
   });
 });
