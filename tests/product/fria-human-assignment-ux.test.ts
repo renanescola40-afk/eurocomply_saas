@@ -47,8 +47,9 @@ describe('FRIA human assignment UX', () => {
   it('keeps read-only roles out of mutation and assignee operations', () => {
     expect(page).toContain("roleHasPermission(snapshot?.role, 'manage_ai_governance')");
     expect(page).toContain('if (!selected || !canManage)');
-    expect(page).toContain('!canManage ? <Card');
-    expect(page).toContain('canManage && current.stage');
+    expect(page).toContain('snapshot && !canManage ? <section');
+    expect(page).toContain("canManage && current.stage !== 'approved'");
+    expect(page).not.toContain("from '@/components/ui/card'");
   });
 
   it('does not auto-assert regulatory control completion when saving an assessment', () => {

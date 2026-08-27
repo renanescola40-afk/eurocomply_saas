@@ -15,11 +15,6 @@ import {
   Users,
 } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-
 const locales = ['en', 'pt', 'es', 'fr', 'it', 'de'] as const;
 type Locale = (typeof locales)[number];
 
@@ -203,9 +198,31 @@ function formatDate(value: string | null, locale: Locale) {
 }
 
 function statusTone(status: string) {
-  if (['active', 'published', 'completed', 'approved', 'ready'].includes(status)) return 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200';
-  if (['expired', 'rejected', 'at_risk', 'revoked'].includes(status)) return 'border-rose-400/30 bg-rose-400/10 text-rose-200';
-  return 'border-amber-400/30 bg-amber-400/10 text-amber-200';
+  if (['active', 'published', 'completed', 'approved', 'ready'].includes(status)) return 'border-emerald-300/20 bg-emerald-300/[0.07] text-emerald-100';
+  if (['expired', 'rejected', 'at_risk', 'revoked'].includes(status)) return 'border-rose-300/20 bg-rose-300/[0.07] text-rose-100';
+  return 'border-amber-300/20 bg-amber-300/[0.07] text-amber-100';
+}
+
+const inputClass = 'min-h-10 w-full rounded-lg border border-white/[0.085] bg-black/20 px-3 py-2.5 text-sm text-white/82 outline-none transition placeholder:text-white/25 focus:border-emerald-300/30 focus-visible:ring-2 focus-visible:ring-emerald-300/55';
+const secondaryButton = 'inline-flex min-h-9 items-center justify-center rounded-lg border border-white/[0.085] bg-white/[0.025] px-3 text-xs font-semibold text-white/62 transition hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 disabled:cursor-not-allowed disabled:opacity-50';
+const primaryButton = 'inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-300 px-4 text-sm font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 disabled:cursor-not-allowed disabled:opacity-50';
+
+function ProgressLine({ value, label }: { value: number; label: string }) {
+  const normalized = Math.max(0, Math.min(100, value));
+  return (
+    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.07]" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={normalized}>
+      <div className="h-full rounded-full bg-emerald-300" style={{ width: `${normalized}%` }} />
+    </div>
+  );
+}
+
+function SectionHeader({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="border-b border-white/[0.055] px-5 py-4">
+      <h2 className="text-sm font-semibold text-white/88">{title}</h2>
+      <p className="mt-1 text-xs leading-5 text-white/36">{description}</p>
+    </div>
+  );
 }
 
 export default function AiLiteracyPage() {
@@ -303,146 +320,143 @@ export default function AiLiteracyPage() {
   const completedAssignments = snapshot?.assignments.filter((assignment) => assignment.status === 'completed') ?? [];
 
   if (loading && !snapshot) {
-    return <main className="min-h-screen bg-[#05070b] px-6 py-12 text-slate-100"><p className="mx-auto max-w-7xl">{text.loading}</p></main>;
+    return <main className="min-h-0 bg-transparent text-white"><section className="rounded-xl border border-white/[0.075] bg-[#101715] px-5 py-8 text-sm text-white/42" role="status">{text.loading}</section></main>;
   }
 
   return (
-    <main className="min-h-screen bg-[#05070b] px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Button asChild variant="ghost" className="text-slate-300 hover:text-white">
-            <Link href={`/${locale}/dashboard`}><ArrowLeft className="mr-2 h-4 w-4" />{text.back}</Link>
-          </Button>
-          <Button variant="outline" onClick={() => void load()} disabled={loading} className="border-white/15 bg-white/5">
-            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />{text.refresh}
-          </Button>
-        </div>
-
-        <section className="overflow-hidden rounded-[2rem] border border-violet-400/20 bg-gradient-to-br from-violet-500/15 via-slate-950 to-emerald-500/10 p-7 shadow-2xl">
-          <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
-            <div className="max-w-3xl">
-              <Badge className="border-violet-400/30 bg-violet-400/10 text-violet-100">{text.badge}</Badge>
-              <h1 className="mt-5 text-4xl font-black tracking-tight sm:text-5xl">{text.title}</h1>
-              <p className="mt-3 max-w-2xl text-base text-slate-300">{text.subtitle}</p>
-              <p className="mt-4 text-xs text-slate-500">{text.disclaimer}</p>
-            </div>
-            <div className="min-w-72 rounded-3xl border border-white/10 bg-black/30 p-5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">{text.coverage}</span>
-                <span className={`rounded-full border px-3 py-1 text-xs font-bold ${statusTone(coverage?.status ?? 'not_started')}`}>{coverage?.status ?? 'not_started'}</span>
-              </div>
-              <div className="mt-4 flex items-end justify-between"><span className="text-5xl font-black">{coverage?.score ?? '—'}{coverage?.score !== null && coverage?.score !== undefined ? '%' : ''}</span><ShieldCheck className="h-10 w-10 text-violet-300" /></div>
-              <Progress value={coverage?.score ?? 0} className="mt-4 h-2" />
-            </div>
+    <main className="min-h-0 bg-transparent text-white">
+      <div className="w-full space-y-5">
+        <header className="flex flex-col gap-4 border-b border-white/[0.065] pb-5 md:flex-row md:items-end md:justify-between">
+          <div className="min-w-0">
+            <Link href={`/${locale}/dashboard/organizations`} className="inline-flex items-center gap-2 text-xs font-medium text-white/42 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+              <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> {text.back}
+            </Link>
+            <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/65">{text.badge}</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">{text.title}</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/48">{text.subtitle}</p>
           </div>
+          <button type="button" onClick={() => void load()} disabled={loading} className={secondaryButton}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" /> {text.refresh}
+          </button>
+        </header>
+
+        <section className="flex gap-3 rounded-xl border border-amber-300/15 bg-amber-300/[0.045] px-4 py-3 text-sm leading-6 text-amber-100/82" aria-label="Article 4 boundary">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-200" aria-hidden="true" />
+          <p>{text.disclaimer}</p>
         </section>
 
-        {notice && (
-          <div className={`rounded-2xl border px-4 py-3 text-sm ${notice.type === 'success' ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100' : 'border-rose-400/30 bg-rose-400/10 text-rose-100'}`}>{notice.message}</div>
-        )}
+        {notice ? <div className={`rounded-xl border px-4 py-3 text-sm ${notice.type === 'success' ? 'border-emerald-300/20 bg-emerald-300/[0.055] text-emerald-100' : 'border-rose-300/20 bg-rose-300/[0.055] text-rose-100'}`} role="status">{notice.message}</div> : null}
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="grid overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] sm:grid-cols-2 xl:grid-cols-5" aria-label="AI literacy summary">
           {[
+            { label: text.coverage, value: coverage?.score === null || coverage?.score === undefined ? '—' : `${coverage.score}%`, icon: ShieldCheck },
             { label: text.programmes, value: snapshot?.programs.length ?? 0, icon: GraduationCap },
             { label: text.courses, value: snapshot?.courses.length ?? 0, icon: BookOpenCheck },
             { label: text.assignments, value: coverage?.totals.assignments ?? 0, icon: Users },
             { label: text.verified, value: coverage?.totals.ready ?? 0, icon: CheckCircle2 },
-          ].map(({ label, value, icon: Icon }) => (
-            <Card key={label} className="border-white/10 bg-white/[0.035] text-white">
-              <CardContent className="flex items-center justify-between p-5"><div><p className="text-xs uppercase tracking-[0.18em] text-slate-500">{label}</p><p className="mt-2 text-3xl font-black">{value}</p></div><Icon className="h-7 w-7 text-violet-300" /></CardContent>
-            </Card>
+          ].map(({ label, value, icon: Icon }, index) => (
+            <article key={label} className={`p-5 ${index > 0 ? 'border-t border-white/[0.055] sm:border-l sm:border-t-0' : ''}`}>
+              <div className="flex items-center justify-between gap-3"><p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/35">{label}</p><Icon className="h-4 w-4 text-emerald-200/65" aria-hidden="true" /></div>
+              <p className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">{value}</p>
+              {label === text.coverage ? <ProgressLine value={coverage?.score ?? 0} label={text.coverage} /> : null}
+            </article>
           ))}
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-2">
-          <Card className="border-white/10 bg-white/[0.035] text-white">
-            <CardHeader><CardTitle>{text.createProgramme}</CardTitle><CardDescription>Create the accountable Article 4 programme before publishing courses.</CardDescription></CardHeader>
-            <CardContent className="space-y-3">
-              <input aria-label="Programme title" value={programmeTitle} onChange={(event) => setProgrammeTitle(event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3" />
-              <textarea aria-label="Programme description" value={programmeDescription} onChange={(event) => setProgrammeDescription(event.target.value)} rows={3} className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3" />
-              <input aria-label="Review due date" type="date" value={reviewDueAt} onChange={(event) => setReviewDueAt(event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3" />
-              <Button disabled={busy !== null} onClick={() => void runWorkflow('program_create', { title: programmeTitle, description: programmeDescription, reviewDueAt: toIsoDate(reviewDueAt) })}>{text.createProgramme}</Button>
-              <div className="space-y-2 pt-2">
-                {(snapshot?.programs ?? []).map((program) => (
-                  <div key={program.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
-                    <div><p className="font-semibold">{program.title}</p><p className="text-xs text-slate-500">Review: {formatDate(program.review_due_at, locale)}</p></div>
-                    {program.status === 'draft' ? <Button size="sm" variant="outline" onClick={() => void runWorkflow('program_activate', { programId: program.id })}>{text.activate}</Button> : <Badge className={statusTone(program.status)}>{program.status}</Badge>}
-                  </div>
-                ))}
-                {snapshot?.programs.length === 0 && <p className="text-sm text-slate-500">{text.noRecords}</p>}
-              </div>
-            </CardContent>
-          </Card>
+        <section className="grid gap-4 xl:grid-cols-2">
+          <article className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+            <SectionHeader title={text.createProgramme} description="Create the accountable Article 4 programme before publishing courses." />
+            <div className="space-y-3 p-5">
+              <input aria-label="Programme title" value={programmeTitle} onChange={(event) => setProgrammeTitle(event.target.value)} className={inputClass} />
+              <textarea aria-label="Programme description" value={programmeDescription} onChange={(event) => setProgrammeDescription(event.target.value)} rows={3} className={inputClass} />
+              <input aria-label="Review due date" type="date" value={reviewDueAt} onChange={(event) => setReviewDueAt(event.target.value)} className={inputClass} />
+              <button type="button" disabled={busy !== null} onClick={() => void runWorkflow('program_create', { title: programmeTitle, description: programmeDescription, reviewDueAt: toIsoDate(reviewDueAt) })} className={primaryButton}>{text.createProgramme}</button>
+            </div>
+            <div className="divide-y divide-white/[0.055] border-t border-white/[0.055]">
+              {(snapshot?.programs ?? []).map((program) => (
+                <div key={program.id} className="flex items-center justify-between gap-4 px-5 py-4">
+                  <div className="min-w-0"><p className="truncate text-sm font-medium text-white/82">{program.title}</p><p className="mt-1 text-xs text-white/34">Review: {formatDate(program.review_due_at, locale)}</p></div>
+                  {program.status === 'draft' ? <button type="button" className={secondaryButton} onClick={() => void runWorkflow('program_activate', { programId: program.id })}>{text.activate}</button> : <span className={`rounded-lg border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${statusTone(program.status)}`}>{program.status}</span>}
+                </div>
+              ))}
+              {snapshot?.programs.length === 0 ? <p className="px-5 py-4 text-sm text-white/35">{text.noRecords}</p> : null}
+            </div>
+          </article>
 
-          <Card className="border-white/10 bg-white/[0.035] text-white">
-            <CardHeader><CardTitle>{text.createCourse}</CardTitle><CardDescription>Versioned training content can only be published under an active programme.</CardDescription></CardHeader>
-            <CardContent className="space-y-3">
-              <select aria-label="Programme" value={courseProgramId} onChange={(event) => setCourseProgramId(event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/80 px-4 py-3"><option value="">Select active programme</option>{activeProgrammes.map((program) => <option key={program.id} value={program.id}>{program.title}</option>)}</select>
-              <div className="grid gap-3 sm:grid-cols-[1fr_7rem]"><input aria-label="Course title" value={courseTitle} onChange={(event) => setCourseTitle(event.target.value)} className="rounded-xl border border-white/10 bg-black/30 px-4 py-3" /><input aria-label="Course version" value={courseVersion} onChange={(event) => setCourseVersion(event.target.value)} className="rounded-xl border border-white/10 bg-black/30 px-4 py-3" /></div>
-              <textarea aria-label="Course modules" value={courseModules} onChange={(event) => setCourseModules(event.target.value)} rows={4} className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3" />
-              <div className="grid gap-3 sm:grid-cols-2"><input aria-label="Passing score" type="number" min="0" max="100" value={passingScore} onChange={(event) => setPassingScore(event.target.value)} className="rounded-xl border border-white/10 bg-black/30 px-4 py-3" /><input aria-label="Validity days" type="number" min="1" max="3650" value={validityDays} onChange={(event) => setValidityDays(event.target.value)} className="rounded-xl border border-white/10 bg-black/30 px-4 py-3" /></div>
-              <Button disabled={busy !== null || !courseProgramId} onClick={() => void runWorkflow('course_create', {
+          <article className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+            <SectionHeader title={text.createCourse} description="Versioned training content can only be published under an active programme." />
+            <div className="space-y-3 p-5">
+              <select aria-label="Programme" value={courseProgramId} onChange={(event) => setCourseProgramId(event.target.value)} className={inputClass}><option value="">Select active programme</option>{activeProgrammes.map((program) => <option key={program.id} value={program.id}>{program.title}</option>)}</select>
+              <div className="grid gap-3 sm:grid-cols-[1fr_7rem]"><input aria-label="Course title" value={courseTitle} onChange={(event) => setCourseTitle(event.target.value)} className={inputClass} /><input aria-label="Course version" value={courseVersion} onChange={(event) => setCourseVersion(event.target.value)} className={inputClass} /></div>
+              <textarea aria-label="Course modules" value={courseModules} onChange={(event) => setCourseModules(event.target.value)} rows={4} className={inputClass} />
+              <div className="grid gap-3 sm:grid-cols-2"><input aria-label="Passing score" type="number" min="0" max="100" value={passingScore} onChange={(event) => setPassingScore(event.target.value)} className={inputClass} /><input aria-label="Validity days" type="number" min="1" max="3650" value={validityDays} onChange={(event) => setValidityDays(event.target.value)} className={inputClass} /></div>
+              <button type="button" disabled={busy !== null || !courseProgramId} onClick={() => void runWorkflow('course_create', {
                 programId: courseProgramId, title: courseTitle, version: courseVersion,
                 audienceRoles: ['employee', 'contractor'], riskLevels: ['all'], departments: [],
                 modules: courseModules.split('\n').map((line) => line.trim()).filter(Boolean).map((line, index) => ({ id: `module-${index + 1}`, title: line, content: line })),
                 passingScore: passingScore ? Number(passingScore) : null, validityDays: validityDays ? Number(validityDays) : null,
-              })}>{text.createCourse}</Button>
-              <div className="space-y-2 pt-2">
-                {(snapshot?.courses ?? []).map((course) => (
-                  <div key={course.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
-                    <div><p className="font-semibold">{course.title} <span className="text-xs text-slate-500">v{course.version}</span></p><p className="text-xs text-slate-500">{course.modules.length} modules · pass {course.passing_score ?? '—'}%</p></div>
-                    {course.status === 'draft' ? <Button size="sm" variant="outline" onClick={() => void runWorkflow('course_publish', { courseId: course.id })}>{text.publish}</Button> : <Badge className={statusTone(course.status)}>{course.status}</Badge>}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+              })} className={primaryButton}>{text.createCourse}</button>
+            </div>
+            <div className="divide-y divide-white/[0.055] border-t border-white/[0.055]">
+              {(snapshot?.courses ?? []).map((course) => (
+                <div key={course.id} className="flex items-center justify-between gap-4 px-5 py-4">
+                  <div className="min-w-0"><p className="truncate text-sm font-medium text-white/82">{course.title} <span className="text-white/32">v{course.version}</span></p><p className="mt-1 text-xs text-white/34">{course.modules.length} modules · pass {course.passing_score ?? '—'}%</p></div>
+                  {course.status === 'draft' ? <button type="button" className={secondaryButton} onClick={() => void runWorkflow('course_publish', { courseId: course.id })}>{text.publish}</button> : <span className={`rounded-lg border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${statusTone(course.status)}`}>{course.status}</span>}
+                </div>
+              ))}
+            </div>
+          </article>
 
-          <Card className="border-white/10 bg-white/[0.035] text-white">
-            <CardHeader><CardTitle>{text.assignTraining}</CardTitle><CardDescription>Assignments are scoped to published course versions and named people.</CardDescription></CardHeader>
-            <CardContent className="space-y-3">
-              <select aria-label="Published course" value={assignmentCourseId} onChange={(event) => setAssignmentCourseId(event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/80 px-4 py-3"><option value="">Select published course</option>{publishedCourses.map((course) => <option key={course.id} value={course.id}>{course.title} · v{course.version}</option>)}</select>
-              <input aria-label="Assignee email" type="email" value={assigneeEmail} onChange={(event) => setAssigneeEmail(event.target.value)} placeholder="person@company.com" className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3" />
-              <div className="grid gap-3 sm:grid-cols-2"><input aria-label="Role title" value={roleTitle} onChange={(event) => setRoleTitle(event.target.value)} placeholder="Role" className="rounded-xl border border-white/10 bg-black/30 px-4 py-3" /><input aria-label="Department" value={department} onChange={(event) => setDepartment(event.target.value)} placeholder="Department" className="rounded-xl border border-white/10 bg-black/30 px-4 py-3" /></div>
-              <input aria-label="Due date" type="date" value={dueAt} onChange={(event) => setDueAt(event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3" />
-              <Button disabled={busy !== null || !assignmentCourseId || !assigneeEmail} onClick={() => void runWorkflow('assignment_create', { courseId: assignmentCourseId, assigneeEmail, assigneeType: 'employee', roleTitle, department, dueAt: toIsoDate(dueAt) })}>{text.assignTraining}</Button>
-              <div className="space-y-2 pt-2">
-                {(snapshot?.assignments ?? []).slice(0, 8).map((assignment) => (
-                  <div key={assignment.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 p-3"><div><p className="font-semibold">{assignment.assignee_email ?? assignment.role_title ?? 'Assigned person'}</p><p className="text-xs text-slate-500">Due {formatDate(assignment.due_at, locale)} · score {assignment.score ?? '—'}</p></div><Badge className={statusTone(assignment.status)}>{assignment.status}</Badge></div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <article className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+            <SectionHeader title={text.assignTraining} description="Assignments are scoped to published course versions and named people." />
+            <div className="space-y-3 p-5">
+              <select aria-label="Published course" value={assignmentCourseId} onChange={(event) => setAssignmentCourseId(event.target.value)} className={inputClass}><option value="">Select published course</option>{publishedCourses.map((course) => <option key={course.id} value={course.id}>{course.title} · v{course.version}</option>)}</select>
+              <input aria-label="Assignee email" type="email" value={assigneeEmail} onChange={(event) => setAssigneeEmail(event.target.value)} placeholder="person@company.com" className={inputClass} />
+              <div className="grid gap-3 sm:grid-cols-2"><input aria-label="Role title" value={roleTitle} onChange={(event) => setRoleTitle(event.target.value)} placeholder="Role" className={inputClass} /><input aria-label="Department" value={department} onChange={(event) => setDepartment(event.target.value)} placeholder="Department" className={inputClass} /></div>
+              <input aria-label="Due date" type="date" value={dueAt} onChange={(event) => setDueAt(event.target.value)} className={inputClass} />
+              <button type="button" disabled={busy !== null || !assignmentCourseId || !assigneeEmail} onClick={() => void runWorkflow('assignment_create', { courseId: assignmentCourseId, assigneeEmail, assigneeType: 'employee', roleTitle, department, dueAt: toIsoDate(dueAt) })} className={primaryButton}>{text.assignTraining}</button>
+            </div>
+            <div className="divide-y divide-white/[0.055] border-t border-white/[0.055]">
+              {(snapshot?.assignments ?? []).slice(0, 8).map((assignment) => (
+                <div key={assignment.id} className="flex items-center justify-between gap-4 px-5 py-4">
+                  <div className="min-w-0"><p className="truncate text-sm font-medium text-white/82">{assignment.assignee_email ?? assignment.role_title ?? 'Assigned person'}</p><p className="mt-1 text-xs text-white/34">Due {formatDate(assignment.due_at, locale)} · score {assignment.score ?? '—'}</p></div>
+                  <span className={`rounded-lg border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${statusTone(assignment.status)}`}>{assignment.status}</span>
+                </div>
+              ))}
+            </div>
+          </article>
 
-          <Card className="border-white/10 bg-white/[0.035] text-white">
-            <CardHeader><CardTitle>{text.recordCompletion}</CardTitle><CardDescription>Completion is not readiness until valid evidence is independently approved.</CardDescription></CardHeader>
-            <CardContent className="space-y-3">
-              <select aria-label="Open assignment" value={completionAssignmentId} onChange={(event) => setCompletionAssignmentId(event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/80 px-4 py-3"><option value="">Select assignment</option>{openAssignments.map((assignment) => <option key={assignment.id} value={assignment.id}>{assignment.assignee_email ?? assignment.id}</option>)}</select>
-              <input aria-label="Completion score" type="number" min="0" max="100" value={completionScore} onChange={(event) => setCompletionScore(event.target.value)} placeholder="Assessment score" className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3" />
-              <Button disabled={busy !== null || !completionAssignmentId} onClick={() => void runWorkflow('assignment_complete', { assignmentId: completionAssignmentId, score: completionScore ? Number(completionScore) : null })}><CheckCircle2 className="mr-2 h-4 w-4" />{text.complete}</Button>
+          <article className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+            <SectionHeader title={text.recordCompletion} description="Completion is not readiness until valid evidence is independently approved." />
+            <div className="space-y-3 p-5">
+              <select aria-label="Open assignment" value={completionAssignmentId} onChange={(event) => setCompletionAssignmentId(event.target.value)} className={inputClass}><option value="">Select assignment</option>{openAssignments.map((assignment) => <option key={assignment.id} value={assignment.id}>{assignment.assignee_email ?? assignment.id}</option>)}</select>
+              <input aria-label="Completion score" type="number" min="0" max="100" value={completionScore} onChange={(event) => setCompletionScore(event.target.value)} placeholder="Assessment score" className={inputClass} />
+              <button type="button" disabled={busy !== null || !completionAssignmentId} onClick={() => void runWorkflow('assignment_complete', { assignmentId: completionAssignmentId, score: completionScore ? Number(completionScore) : null })} className={primaryButton}><CheckCircle2 className="mr-2 h-4 w-4" aria-hidden="true" />{text.complete}</button>
 
-              <div className="mt-6 border-t border-white/10 pt-5"><h3 className="font-bold">{text.submitEvidence}</h3></div>
-              <select aria-label="Completed assignment" value={evidenceAssignmentId} onChange={(event) => setEvidenceAssignmentId(event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/80 px-4 py-3"><option value="">Select completed assignment</option>{completedAssignments.map((assignment) => <option key={assignment.id} value={assignment.id}>{assignment.assignee_email ?? assignment.id}</option>)}</select>
-              <select aria-label="Evidence type" value={evidenceType} onChange={(event) => setEvidenceType(event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/80 px-4 py-3"><option value="completion_record">Completion record</option><option value="assessment_result">Assessment result</option><option value="attendance">Attendance</option><option value="acknowledgement">Acknowledgement</option><option value="certificate">Certificate</option><option value="other">Other</option></select>
-              <input aria-label="Evidence title" value={evidenceTitle} onChange={(event) => setEvidenceTitle(event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3" />
-              <input aria-label="HTTPS evidence URL" type="url" value={evidenceUrl} onChange={(event) => setEvidenceUrl(event.target.value)} placeholder="https://…" className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3" />
-              <Button disabled={busy !== null || !evidenceAssignmentId || !evidenceUrl} onClick={() => void runWorkflow('evidence_submit', { assignmentId: evidenceAssignmentId, evidenceType, title: evidenceTitle, externalUrl: evidenceUrl })}><FileCheck2 className="mr-2 h-4 w-4" />{text.submitEvidence}</Button>
-            </CardContent>
-          </Card>
+              <div className="border-t border-white/[0.055] pt-4"><h3 className="text-sm font-semibold text-white/82">{text.submitEvidence}</h3></div>
+              <select aria-label="Completed assignment" value={evidenceAssignmentId} onChange={(event) => setEvidenceAssignmentId(event.target.value)} className={inputClass}><option value="">Select completed assignment</option>{completedAssignments.map((assignment) => <option key={assignment.id} value={assignment.id}>{assignment.assignee_email ?? assignment.id}</option>)}</select>
+              <select aria-label="Evidence type" value={evidenceType} onChange={(event) => setEvidenceType(event.target.value)} className={inputClass}><option value="completion_record">Completion record</option><option value="assessment_result">Assessment result</option><option value="attendance">Attendance</option><option value="acknowledgement">Acknowledgement</option><option value="certificate">Certificate</option><option value="other">Other</option></select>
+              <input aria-label="Evidence title" value={evidenceTitle} onChange={(event) => setEvidenceTitle(event.target.value)} className={inputClass} />
+              <input aria-label="HTTPS evidence URL" type="url" value={evidenceUrl} onChange={(event) => setEvidenceUrl(event.target.value)} placeholder="https://…" className={inputClass} />
+              <button type="button" disabled={busy !== null || !evidenceAssignmentId || !evidenceUrl} onClick={() => void runWorkflow('evidence_submit', { assignmentId: evidenceAssignmentId, evidenceType, title: evidenceTitle, externalUrl: evidenceUrl })} className={primaryButton}><FileCheck2 className="mr-2 h-4 w-4" aria-hidden="true" />{text.submitEvidence}</button>
+            </div>
+          </article>
         </section>
 
-        <Card className="border-white/10 bg-white/[0.035] text-white">
-          <CardHeader><CardTitle>{text.evidence}</CardTitle><CardDescription>Submitted evidence requires a different reviewer before it contributes 100% coverage.</CardDescription></CardHeader>
-          <CardContent className="space-y-3">
-            {(snapshot?.evidence ?? []).map((item) => (
-              <div key={item.id} className="flex flex-col justify-between gap-4 rounded-2xl border border-white/10 bg-black/20 p-4 sm:flex-row sm:items-center">
-                <div className="flex items-start gap-3"><FileCheck2 className="mt-1 h-5 w-5 text-violet-300" /><div><p className="font-semibold">{item.title}</p><p className="text-xs text-slate-500">{item.evidence_type} · assignment {item.assignment_id.slice(0, 8)}</p></div></div>
-                <div className="flex items-center gap-2"><Badge className={statusTone(item.status)}>{item.status}</Badge>{['submitted', 'under_review'].includes(item.status) && <><Button size="sm" variant="outline" onClick={() => void runWorkflow('evidence_review', { evidenceId: item.id, decision: 'approved' })}>{text.approve}</Button><Button size="sm" variant="destructive" onClick={() => void runWorkflow('evidence_review', { evidenceId: item.id, decision: 'rejected' })}>{text.reject}</Button></>}</div>
-              </div>
-            ))}
-            {snapshot?.evidence.length === 0 && <div className="flex items-center gap-2 text-sm text-slate-500"><Clock3 className="h-4 w-4" />{text.noRecords}</div>}
-          </CardContent>
-        </Card>
+        <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]" aria-labelledby="literacy-evidence-title">
+          <SectionHeader title={text.evidence} description="Submitted evidence requires a different reviewer before it contributes 100% coverage." />
+          <div id="literacy-evidence-title" className="sr-only">{text.evidence}</div>
+          {(snapshot?.evidence ?? []).length ? (
+            <div className="divide-y divide-white/[0.055]">
+              {(snapshot?.evidence ?? []).map((item) => (
+                <article key={item.id} className="flex flex-col justify-between gap-4 px-5 py-4 sm:flex-row sm:items-center">
+                  <div className="flex min-w-0 items-start gap-3"><FileCheck2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-200/65" aria-hidden="true" /><div className="min-w-0"><p className="truncate text-sm font-medium text-white/84">{item.title}</p><p className="mt-1 text-xs text-white/34">{item.evidence_type} · assignment {item.assignment_id.slice(0, 8)}</p></div></div>
+                  <div className="flex flex-wrap items-center gap-2"><span className={`rounded-lg border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${statusTone(item.status)}`}>{item.status}</span>{['submitted', 'under_review'].includes(item.status) ? <><button type="button" className={secondaryButton} onClick={() => void runWorkflow('evidence_review', { evidenceId: item.id, decision: 'approved' })}>{text.approve}</button><button type="button" className="inline-flex min-h-9 items-center justify-center rounded-lg border border-rose-300/20 bg-rose-300/[0.055] px-3 text-xs font-semibold text-rose-100 transition hover:bg-rose-300/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/50" onClick={() => void runWorkflow('evidence_review', { evidenceId: item.id, decision: 'rejected' })}>{text.reject}</button></> : null}</div>
+                </article>
+              ))}
+            </div>
+          ) : <div className="flex items-center gap-2 px-5 py-6 text-sm text-white/35"><Clock3 className="h-4 w-4" aria-hidden="true" />{text.noRecords}</div>}
+        </section>
       </div>
     </main>
   );

@@ -2,12 +2,12 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const page = readFileSync('src/app/[locale]/dashboard/ai-literacy/page.tsx', 'utf8');
-const sidebar = readFileSync('src/components/dashboard/dashboard-workspace-sidebar.tsx', 'utf8');
+const shell = readFileSync('src/components/dashboard/enterprise-dashboard-shell.tsx', 'utf8');
 
 describe('AI literacy dashboard contract', () => {
-  it('is discoverable from the premium dashboard navigation', () => {
-    expect(sidebar).toContain("href: `${basePath}/ai-literacy`");
-    expect(sidebar).toContain("label: 'AI Literacy'");
+  it('is discoverable from the canonical enterprise dashboard navigation', () => {
+    expect(shell).toContain("href: localized(locale, '/dashboard/ai-literacy')");
+    expect(shell).toContain('aiLiteracy');
     expect(page).toContain("fetch('/api/ai-literacy'");
   });
 
@@ -35,5 +35,14 @@ describe('AI literacy dashboard contract', () => {
   it('keeps the legal boundary visible to users', () => {
     expect(page).toContain('not a certificate or legal-compliance guarantee');
     expect(page).toContain('Não é certificado nem garantia de conformidade jurídica');
+  });
+
+  it('uses the shared graphite enterprise canvas without legacy dashboard chrome', () => {
+    expect(page).toContain('<main className="min-h-0 bg-transparent text-white">');
+    expect(page).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
+    expect(page).not.toContain('min-h-screen bg-[#05070b]');
+    expect(page).not.toContain('rounded-[2rem]');
+    expect(page).not.toContain('violet-');
+    expect(page).not.toContain("from '@/components/ui/card'");
   });
 });
