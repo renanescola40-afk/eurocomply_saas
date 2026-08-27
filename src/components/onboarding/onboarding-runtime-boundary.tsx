@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowUpRight, Building2, Headphones } from 'lucide-react';
 
 import { B2BOnboardingFlow } from '@/components/onboarding/b2b-onboarding-flow';
+import styles from '@/components/onboarding/onboarding-tailadmin.module.css';
 import type {
   OnboardingActivationInitialState,
   OnboardingActivationInput,
@@ -69,7 +70,7 @@ export function OnboardingRuntimeBoundary({
   }
 
   return (
-    <>
+    <div className={styles.shell} data-risck-onboarding-shell="tailadmin-v2">
       <B2BOnboardingFlow
         locale={locale}
         requestedPlan={requestedPlan}
@@ -81,23 +82,23 @@ export function OnboardingRuntimeBoundary({
       <Link
         href={enterprisePath}
         aria-label={isPt ? 'Solicitar onboarding assistido para grandes empresas' : 'Request assisted onboarding for enterprise teams'}
-        className="group fixed bottom-4 right-4 z-[70] flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-2xl border border-emerald-200/20 bg-[#07120f]/95 px-4 py-3 text-left text-white shadow-[0_20px_60px_rgba(0,0,0,.45)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-emerald-200/40 hover:bg-[#0a1914] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/70 sm:bottom-6 sm:right-6"
+        className={`${styles.enterpriseAssist} group fixed z-[70] flex max-w-[calc(100vw-2rem)] items-center gap-3 border px-4 py-3 text-left text-white backdrop-blur-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/70`}
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-200/20 bg-emerald-200/[0.08] text-emerald-100">
-          {enterpriseSelected ? <Headphones className="h-5 w-5" /> : <Building2 className="h-5 w-5" />}
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-emerald-200/20 bg-emerald-200/[0.07] text-emerald-100">
+          {enterpriseSelected ? <Headphones className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
         </span>
         <span className="min-w-0">
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-100/60">
+          <span className="block text-[9px] font-semibold uppercase tracking-[0.16em] text-emerald-100/55">
             {isPt ? 'Grandes empresas' : 'Enterprise teams'}
           </span>
-          <span className="mt-0.5 block truncate text-sm font-semibold text-white">
+          <span className="mt-0.5 block truncate text-xs font-semibold text-white/90">
             {enterpriseSelected
-              ? (isPt ? 'Continuar com onboarding assistido' : 'Continue with assisted onboarding')
-              : (isPt ? 'Acesso Enterprise facilitado' : 'Enterprise fast-track access')}
+              ? (isPt ? 'Onboarding assistido' : 'Assisted onboarding')
+              : (isPt ? 'Acesso Enterprise' : 'Enterprise access')}
           </span>
         </span>
-        <ArrowUpRight className="h-4 w-4 shrink-0 text-emerald-100/70 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+        <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-emerald-100/60" />
       </Link>
-    </>
+    </div>
   );
 }
