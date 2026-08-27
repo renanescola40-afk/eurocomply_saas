@@ -23,7 +23,6 @@ import { RiskHeatmap } from '@/components/dashboard/risk-heatmap';
 import { ScenarioSimulator } from '@/components/dashboard/scenario-simulator';
 import { StickyExecutiveKpiBar } from '@/components/dashboard/sticky-executive-kpi-bar';
 import { WhiteLabelReportPreview } from '@/components/dashboard/white-label-report-preview';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { DashboardSummary, DashboardTrendComparison, DashboardTrendSnapshot } from '@/server/queries/dashboard';
 
 type DashboardOverviewProps = {
@@ -51,38 +50,9 @@ function getDashboardHref(basePath: string, target: 'dashboard' | 'tasks' | 'ris
 
 function getRiskTone(score?: number | string | null) {
   const value = Number(score ?? 0);
-  if (value >= 16) return 'text-red-400';
-  if (value >= 9) return 'text-amber-300';
-  return 'text-muted-foreground';
-}
-
-function EnterpriseMetricsPreview({ summary }: { summary: DashboardSummary }) {
-  const metrics = [
-    { label: 'Cross-country readiness', value: `${Math.min(100, summary.complianceScore + 12)}%` },
-    { label: 'Team collaboration index', value: summary.openTasks > 0 ? 'Active' : 'Ready' },
-    { label: 'Priority support signal', value: 'Preview' },
-  ];
-  return (
-    <section id="enterprise-preview" className="scroll-mt-28 rounded-[2rem] border border-amber-300/60 bg-gradient-to-br from-amber-50 to-background p-6 shadow-lg shadow-amber-500/10 dark:from-amber-950/30">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700 dark:text-amber-300">Enterprise only preview</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight">Métricas Avançadas (Preview)</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Widget visual aspiracional para clientes Enterprise. Mostra status e prioridade sem liberar funcionalidades gratuitas fora do plano.</p>
-        </div>
-        <span className="rounded-full bg-amber-400 px-3 py-1 text-xs font-semibold text-black">◆ Enterprise Diamond</span>
-      </div>
-      <div className="mt-5 grid gap-3 md:grid-cols-3">
-        {metrics.map((metric) => (
-          <div key={metric.label} className="rounded-2xl border bg-background/70 p-4">
-            <p className="text-sm text-muted-foreground">{metric.label}</p>
-            <p className="mt-2 text-2xl font-semibold">{metric.value}</p>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-amber-100"><div className="h-full w-2/3 animate-pulse rounded-full bg-amber-400" /></div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
+  if (value >= 16) return 'text-rose-200';
+  if (value >= 9) return 'text-amber-200';
+  return 'text-white/55';
 }
 
 function DashboardMetricsGrid({ summary, basePath }: { summary: DashboardSummary; basePath: string }) {
@@ -96,26 +66,97 @@ function DashboardMetricsGrid({ summary, basePath }: { summary: DashboardSummary
   ];
 
   return (
-    <section id="risk-radar" className="grid scroll-mt-28 gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {metricCards.map((metric) => (
-        <Link key={metric.label} href={metric.href} className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-primary">
-          <Card className="h-full transition hover:border-primary/50 hover:bg-muted/30">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{metric.label}</CardTitle></CardHeader>
-            <CardContent><p className="text-3xl font-bold">{metric.value}</p><p className="mt-3 text-xs text-muted-foreground">Open details</p></CardContent>
-          </Card>
-        </Link>
-      ))}
+    <section id="risk-radar" className="scroll-mt-28 overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+      <div className="grid md:grid-cols-2 xl:grid-cols-3">
+        {metricCards.map((metric, index) => (
+          <Link
+            key={metric.label}
+            href={metric.href}
+            className={`group px-5 py-5 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 ${index % 3 !== 0 ? 'xl:border-l xl:border-white/[0.055]' : ''} ${index >= 3 ? 'border-t border-white/[0.055]' : index >= 2 ? 'md:border-t md:border-white/[0.055] xl:border-t-0' : ''}`}
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/38">{metric.label}</p>
+            <p className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">{metric.value}</p>
+            <p className="mt-3 text-xs text-white/35 transition group-hover:text-emerald-100/70">Open details →</p>
+          </Link>
+        ))}
+      </div>
     </section>
+  );
+}
+
+function ExposureSection({
+  id,
+  title,
+  empty,
+  children,
+}: {
+  id: string;
+  title: string;
+  empty?: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <article id={id} className="scroll-mt-28 overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+      <div className="border-b border-white/[0.055] px-5 py-4">
+        <h3 className="text-sm font-semibold text-white/88">{title}</h3>
+      </div>
+      {children ? <div className="divide-y divide-white/[0.055]">{children}</div> : <p className="px-5 py-6 text-sm leading-6 text-white/42">{empty}</p>}
+    </article>
   );
 }
 
 function ExposureLists({ basePath, topRisks, vendorsRequiringReview, documentsExpiringSoon }: Pick<DashboardOverviewProps, 'basePath' | 'topRisks' | 'vendorsRequiringReview' | 'documentsExpiringSoon'>) {
   const safeBasePath = basePath ?? '/dashboard/organizations';
+  const risks = topRisks ?? [];
+  const vendors = vendorsRequiringReview ?? [];
+  const documents = documentsExpiringSoon ?? [];
+
   return (
-    <section className="grid gap-6 xl:grid-cols-3">
-      <Card id="risks" className="scroll-mt-28"><CardHeader><CardTitle>Top risks</CardTitle></CardHeader><CardContent>{(topRisks ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No open risks requiring executive attention.</p> : <div className="space-y-3">{(topRisks ?? []).map((risk) => <Link key={risk.id} href={getDashboardHref(safeBasePath, 'risks')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{risk.title ?? 'Untitled risk'}</p><p className="text-muted-foreground">{risk.category ?? 'General'} · {risk.status ?? 'open'}</p></div><p className={`font-semibold ${getRiskTone(risk.risk_score)}`}>{Number(risk.risk_score ?? 0)}</p></div></Link>)}</div>}</CardContent></Card>
-      <Card id="vendors" className="scroll-mt-28"><CardHeader><CardTitle>Vendors requiring review</CardTitle></CardHeader><CardContent>{(vendorsRequiringReview ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No vendor reviews currently require attention.</p> : <div className="space-y-3">{(vendorsRequiringReview ?? []).map((vendor) => <Link key={vendor.id} href={getDashboardHref(safeBasePath, 'vendors')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{vendor.name ?? 'Unnamed vendor'}</p><p className="text-muted-foreground">Review {formatShortDate(vendor.next_review_at)}</p></div><div className="text-right text-xs uppercase tracking-wide text-muted-foreground"><p>{vendor.risk_level ?? 'unknown'}</p><p>{vendor.review_status ?? 'pending'}</p></div></div></Link>)}</div>}</CardContent></Card>
-      <Card id="documents" className="scroll-mt-28"><CardHeader><CardTitle>Documents expiring soon</CardTitle></CardHeader><CardContent>{(documentsExpiringSoon ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No upcoming document expirations found.</p> : <div className="space-y-3">{(documentsExpiringSoon ?? []).map((document) => <Link key={document.id} href={getDashboardHref(safeBasePath, 'documents')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{document.title ?? document.name ?? 'Untitled document'}</p><p className="text-muted-foreground">{document.category ?? 'General'} · {document.status ?? 'draft'}</p></div><p className="text-right text-xs font-semibold uppercase tracking-wide text-amber-300">{formatShortDate(document.expires_at)}</p></div></Link>)}</div>}</CardContent></Card>
+    <section className="grid gap-4 xl:grid-cols-3">
+      <ExposureSection id="risks" title="Top risks" empty="No open risks requiring executive attention.">
+        {risks.length > 0 ? risks.map((risk) => (
+          <Link key={risk.id} href={getDashboardHref(safeBasePath, 'risks')} className="block px-5 py-4 text-sm transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="truncate font-medium text-white/88">{risk.title ?? 'Untitled risk'}</p>
+                <p className="mt-1 text-xs text-white/38">{risk.category ?? 'General'} · {risk.status ?? 'open'}</p>
+              </div>
+              <p className={`shrink-0 text-sm font-semibold ${getRiskTone(risk.risk_score)}`}>{Number(risk.risk_score ?? 0)}</p>
+            </div>
+          </Link>
+        )) : undefined}
+      </ExposureSection>
+
+      <ExposureSection id="vendors" title="Vendors requiring review" empty="No vendor reviews currently require attention.">
+        {vendors.length > 0 ? vendors.map((vendor) => (
+          <Link key={vendor.id} href={getDashboardHref(safeBasePath, 'vendors')} className="block px-5 py-4 text-sm transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="truncate font-medium text-white/88">{vendor.name ?? 'Unnamed vendor'}</p>
+                <p className="mt-1 text-xs text-white/38">Review {formatShortDate(vendor.next_review_at)}</p>
+              </div>
+              <div className="shrink-0 text-right text-[10px] font-semibold uppercase tracking-[0.14em] text-white/38">
+                <p>{vendor.risk_level ?? 'unknown'}</p>
+                <p className="mt-1">{vendor.review_status ?? 'pending'}</p>
+              </div>
+            </div>
+          </Link>
+        )) : undefined}
+      </ExposureSection>
+
+      <ExposureSection id="documents" title="Documents expiring soon" empty="No upcoming document expirations found.">
+        {documents.length > 0 ? documents.map((document) => (
+          <Link key={document.id} href={getDashboardHref(safeBasePath, 'documents')} className="block px-5 py-4 text-sm transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="truncate font-medium text-white/88">{document.title ?? document.name ?? 'Untitled document'}</p>
+                <p className="mt-1 text-xs text-white/38">{document.category ?? 'General'} · {document.status ?? 'draft'}</p>
+              </div>
+              <p className="shrink-0 text-right text-xs font-semibold text-amber-200">{formatShortDate(document.expires_at)}</p>
+            </div>
+          </Link>
+        )) : undefined}
+      </ExposureSection>
     </section>
   );
 }
@@ -127,7 +168,7 @@ export function HomeDashboardPage({ summary, tasks, trendComparison, basePath = 
 
 export function CommandCenterPage({ summary, tasks, trendComparison, basePath = '/dashboard/organizations', topRisks = [], vendorsRequiringReview = [], documentsExpiringSoon = [] }: DashboardOverviewProps) {
   const openTasks = tasks.filter((task) => task.status !== 'done').slice(0, 5);
-  return <div className="space-y-6 scroll-smooth"><section id="executive-summary" className="scroll-mt-28"><ExecutiveCommandCenter summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="kpi-strip" className="scroll-mt-28"><StickyExecutiveKpiBar summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="health-center" className="scroll-mt-28"><ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><EnterpriseMetricsPreview summary={summary} /><section id="ai-copilot" className="scroll-mt-28"><AiCopilotPanel summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="operational-feed" className="scroll-mt-28"><OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} /></section></div>;
+  return <div className="space-y-6 scroll-smooth"><section id="executive-summary" className="scroll-mt-28"><ExecutiveCommandCenter summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="kpi-strip" className="scroll-mt-28"><StickyExecutiveKpiBar summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="health-center" className="scroll-mt-28"><ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="ai-copilot" className="scroll-mt-28"><AiCopilotPanel summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="operational-feed" className="scroll-mt-28"><OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} /></section></div>;
 }
 
 export function EvidenceRiskPage({ summary, basePath = '/dashboard/organizations', topRisks = [], vendorsRequiringReview = [], documentsExpiringSoon = [] }: DashboardOverviewProps) {
