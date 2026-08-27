@@ -3,11 +3,13 @@ import { describe, expect, it } from 'vitest';
 
 const AI_SYSTEMS_PAGE = new URL('../../src/app/[locale]/ai-systems/page.tsx', import.meta.url);
 const DASHBOARD_HOME_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/page.tsx', import.meta.url);
+const DASHBOARD_LOADING = new URL('../../src/app/[locale]/dashboard/organizations/loading.tsx', import.meta.url);
 const DASHBOARD_LAYOUT = new URL('../../src/app/[locale]/dashboard/layout.tsx', import.meta.url);
 const COMMAND_CENTER_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/command-center/page.tsx', import.meta.url);
 const TASKS_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/tasks/page.tsx', import.meta.url);
 const RISKS_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/risks/page.tsx', import.meta.url);
 const DOCUMENTS_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/documents/page.tsx', import.meta.url);
+const DOCUMENTS_LOADING = new URL('../../src/app/[locale]/dashboard/organizations/documents/loading.tsx', import.meta.url);
 const TEAM_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/team/page.tsx', import.meta.url);
 const TEAM_SETTINGS = new URL('../../src/components/team/team-settings-section.tsx', import.meta.url);
 const TEAM_MANAGEMENT = new URL('../../src/components/team/team-management-card.tsx', import.meta.url);
@@ -15,6 +17,10 @@ const BILLING_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/bil
 const BILLING_VIEW = new URL('../../src/app/[locale]/dashboard/organizations/billing/billing-page-view.tsx', import.meta.url);
 const BILLING_INTENT = new URL('../../src/app/[locale]/dashboard/organizations/billing/billing-plan-intent-banner.tsx', import.meta.url);
 const ORGANIZATION_SETTINGS = new URL('../../src/app/[locale]/settings/organization/page.tsx', import.meta.url);
+const PROFILE_PAGE = new URL('../../src/app/[locale]/profile/page.tsx', import.meta.url);
+const PROFILE_CONTROLS = new URL('../../src/components/profile/profile-personal-controls.tsx', import.meta.url);
+const NOTIFICATIONS_PAGE = new URL('../../src/app/[locale]/notificacoes/page.tsx', import.meta.url);
+const NOTIFICATIONS_CLIENT = new URL('../../src/app/[locale]/notificacoes/notifications-client.tsx', import.meta.url);
 const LEGACY_HOME_PAGE = new URL('../../src/app/[locale]/risck-comply-home/page.tsx', import.meta.url);
 const SHELL = new URL('../../src/components/dashboard/enterprise-dashboard-shell.tsx', import.meta.url);
 const COMMAND_CENTER = new URL('../../src/components/dashboard/enterprise-compliance-command-center.tsx', import.meta.url);
@@ -50,6 +56,21 @@ describe('enterprise dashboard template consistency', () => {
     expect(source).not.toContain('tech-grid');
     expect(source).not.toContain('radial-gradient');
     expect(source).not.toContain('linear-gradient(180deg');
+  });
+
+  it('keeps route loading states inside the persistent dashboard chrome', async () => {
+    const [dashboardLoading, documentsLoading] = await Promise.all([
+      readFile(DASHBOARD_LOADING, 'utf8'),
+      readFile(DOCUMENTS_LOADING, 'utf8'),
+    ]);
+
+    for (const source of [dashboardLoading, documentsLoading]) {
+      expect(source).toContain('min-h-0 bg-transparent text-white');
+      expect(source).toContain('bg-[#101715]');
+      expect(source).not.toContain('radial-gradient');
+      expect(source).not.toContain('sticky top-0');
+      expect(source).not.toContain('rounded-[2rem]');
+    }
   });
 
   it('keeps the dedicated command center route on the shared application canvas', async () => {
@@ -146,6 +167,36 @@ describe('enterprise dashboard template consistency', () => {
     expect(source).not.toContain('tech-grid');
     expect(source).not.toContain('radial-gradient');
     expect(source).not.toContain('shadow-2xl');
+  });
+
+  it('keeps profile and notifications in the same enterprise application chrome', async () => {
+    const [profile, controls, notificationsPage, notificationsClient] = await Promise.all([
+      readFile(PROFILE_PAGE, 'utf8'),
+      readFile(PROFILE_CONTROLS, 'utf8'),
+      readFile(NOTIFICATIONS_PAGE, 'utf8'),
+      readFile(NOTIFICATIONS_CLIENT, 'utf8'),
+    ]);
+
+    for (const source of [profile, notificationsPage]) {
+      expect(source).toContain("EnterpriseDashboardShell");
+      expect(source).toContain('selectedPlan={authority?.plan}');
+      expect(source).not.toContain('DashboardCommandNavigation');
+    }
+
+    expect(profile).toContain('min-h-0 bg-transparent text-white');
+    expect(profile).not.toContain('tech-grid');
+    expect(profile).not.toContain('radial-gradient');
+    expect(profile).not.toContain('rounded-[2rem]');
+    expect(controls).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
+    expect(controls).not.toContain('rounded-[2rem]');
+    expect(controls).not.toContain('blue-');
+
+    expect(notificationsClient).toContain('<main className="min-h-0 bg-transparent text-white">');
+    expect(notificationsClient).toContain('divide-y divide-white/[0.055]');
+    expect(notificationsClient).not.toContain('DashboardCommandNavigation');
+    expect(notificationsClient).not.toContain('Sparkles');
+    expect(notificationsClient).not.toContain('radial-gradient');
+    expect(notificationsClient).not.toContain('hover:-translate-y-0.5');
   });
 
   it('keeps billing on the shared canvas without legacy premium-card or cyan dashboard chrome', async () => {
