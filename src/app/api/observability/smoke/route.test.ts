@@ -127,7 +127,23 @@ describe('/api/observability/smoke', () => {
     });
   });
 
-  it('keeps GET disabled and uncached', async () => {
+  it('requires the healthcheck gate before returning the disabled GET response', async () => {
+    mocks.validateBearerToken.mockReturnValue(false);
+
+    const deniedResponse = GET(buildRequest('GET', { 'x-request-id': 'req_get_denied' }));
+    const deniedBody = await deniedResponse.json();
+
+    expect(deniedResponse.status).toBe(401);
+    expect(deniedResponse.headers.get('cache-control')).toContain('no-store');
+    expect(deniedBody).toEqual({ status: 'unauthorized', requestId: 'req_get_denied' });
+    expect(mocks.logSecurityEvent).toHaveBeenCalledWith('security_denied', {
+      requestId: 'req_get_denied',
+      route: '/api/observability/smoke',
+      reason: 'missing_or_invalid_healthcheck_token',
+    });
+
+    mocks.validateBearerToken.mockReturnValue(true);
+
     const response = GET(buildRequest('GET', { 'x-request-id': 'req_get' }));
     const body = await response.json();
 
@@ -139,5 +155,6 @@ describe('/api/observability/smoke', () => {
       requestId: 'req_get',
       allowedMethods: ['POST'],
     });
+    expect(mocks.reportError).not.toHaveBeenCalled();
   });
 });

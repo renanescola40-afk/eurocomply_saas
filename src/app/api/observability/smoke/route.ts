@@ -82,6 +82,16 @@ export async function POST(request: Request) {
 export function GET(request: Request) {
   const requestId = requestIdFromHeaders(request.headers);
 
+  if (!hasHealthcheckToken(request)) {
+    logSecurityEvent('security_denied', {
+      requestId,
+      route: ROUTE,
+      reason: 'missing_or_invalid_healthcheck_token',
+    });
+
+    return noStoreJson({ status: 'unauthorized', requestId }, { status: 401 });
+  }
+
   return noStoreJson(
     {
       status: 'method_not_allowed',

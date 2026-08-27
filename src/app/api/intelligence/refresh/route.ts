@@ -98,7 +98,11 @@ export async function POST(request: Request) {
   return noStoreJson({ ok: true, status: 'completed', processed: data?.length ?? 0, items: data ?? [] });
 }
 
-export async function GET() {
+export function GET(request: Request) {
+  if (!isAuthorizedInternalCronRequest(request)) {
+    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   return noStoreJson(
     { error: 'method_not_allowed' },
     { status: 405, headers: METHOD_NOT_ALLOWED_HEADERS },
