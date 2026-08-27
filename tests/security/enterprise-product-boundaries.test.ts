@@ -75,7 +75,7 @@ describe('enterprise product information architecture', () => {
     expect(shell).toContain("localized(locale, '/dashboard/evidence')");
     expect(shell).toContain("localized(locale, '/dashboard/organizations/tasks')");
     expect(shell).toContain("localized(locale, '/dashboard/organizations/risks')");
-    expect(shell).toContain("localized(locale, '/dashboard/organizations/regulatory-control-tower')");
+    expect(shell).toContain("localized(locale, '/dashboard/regulatory-control-tower')");
     expect(shell).toContain("localized(locale, '/dashboard/organizations/billing')");
     expect(shell).toContain('fixed inset-y-0 left-0');
     expect(shell).toContain('Enterprise governance');
