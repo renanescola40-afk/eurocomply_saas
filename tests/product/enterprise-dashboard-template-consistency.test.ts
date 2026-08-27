@@ -10,6 +10,10 @@ const DOCUMENTS_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/d
 const TEAM_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/team/page.tsx', import.meta.url);
 const TEAM_SETTINGS = new URL('../../src/components/team/team-settings-section.tsx', import.meta.url);
 const TEAM_MANAGEMENT = new URL('../../src/components/team/team-management-card.tsx', import.meta.url);
+const BILLING_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/billing/page.tsx', import.meta.url);
+const BILLING_VIEW = new URL('../../src/app/[locale]/dashboard/organizations/billing/billing-page-view.tsx', import.meta.url);
+const BILLING_INTENT = new URL('../../src/app/[locale]/dashboard/organizations/billing/billing-plan-intent-banner.tsx', import.meta.url);
+const ORGANIZATION_SETTINGS = new URL('../../src/app/[locale]/settings/organization/page.tsx', import.meta.url);
 const LEGACY_HOME_PAGE = new URL('../../src/app/[locale]/risck-comply-home/page.tsx', import.meta.url);
 const SHELL = new URL('../../src/components/dashboard/enterprise-dashboard-shell.tsx', import.meta.url);
 const COMMAND_CENTER = new URL('../../src/components/dashboard/enterprise-compliance-command-center.tsx', import.meta.url);
@@ -118,6 +122,45 @@ describe('enterprise dashboard template consistency', () => {
     expect(teamSettings).toContain('border-b border-white/[0.055]');
     expect(teamManagement).toContain('lg:divide-x lg:divide-white/[0.055]');
     expect(teamManagement).not.toContain("from '@/components/ui/card'");
+  });
+
+  it('keeps organization settings inside the enterprise shell instead of restoring legacy navigation', async () => {
+    const source = await readFile(ORGANIZATION_SETTINGS, 'utf8');
+
+    expect(source).toContain("import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell'");
+    expect(source).toContain('<EnterpriseDashboardShell');
+    expect(source).toContain('selectedPlan={authority?.plan}');
+    expect(source).toContain('min-h-0 bg-transparent text-white');
+    expect(source).not.toContain('DashboardCommandNavigation');
+    expect(source).not.toContain('tech-grid');
+    expect(source).not.toContain('radial-gradient');
+    expect(source).not.toContain('shadow-2xl');
+  });
+
+  it('keeps billing on the shared canvas without legacy premium-card or cyan dashboard chrome', async () => {
+    const [page, view, intent] = await Promise.all([
+      readFile(BILLING_PAGE, 'utf8'),
+      readFile(BILLING_VIEW, 'utf8'),
+      readFile(BILLING_INTENT, 'utf8'),
+    ]);
+
+    expect(page).toContain('min-h-0 space-y-4 bg-transparent');
+    expect(page).not.toContain('min-h-screen bg-[#03070b]');
+
+    expect(view).toContain('<main className="min-h-0 bg-transparent text-white">');
+    expect(view).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
+    expect(view).toContain("action=\"portal\"");
+    expect(view).toContain("action=\"checkout\"");
+    expect(view).not.toContain('premium-card');
+    expect(view).not.toContain('tech-grid');
+    expect(view).not.toContain('radial-gradient');
+    expect(view).not.toContain('rounded-[2rem]');
+    expect(view).not.toContain("from '@/components/ui/card'");
+    expect(view).not.toContain('cyan-');
+
+    expect(intent).toContain('border-emerald-300/15 bg-emerald-300/[0.045]');
+    expect(intent).not.toContain('cyan-');
+    expect(intent).not.toContain('rounded-[1.5rem]');
   });
 
   it('retires the legacy authenticated home and forwards old bookmarks to the canonical enterprise dashboard', async () => {
