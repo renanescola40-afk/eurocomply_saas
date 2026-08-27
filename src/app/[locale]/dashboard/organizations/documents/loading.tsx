@@ -1,22 +1,30 @@
 function SkeletonBlock({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-2xl bg-muted ${className}`} />;
+  return <div className={`animate-pulse rounded-xl bg-white/[0.045] ${className}`} />;
 }
 
 export default function DocumentsLoading() {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 md:px-8 md:py-12" aria-label="Loading documents">
-        <section className="rounded-[2rem] border bg-background/90 p-6 shadow-xl shadow-primary/5 md:p-8">
-          <SkeletonBlock className="h-5 w-40 rounded-full" />
-          <SkeletonBlock className="mt-5 h-10 max-w-2xl" />
-          <SkeletonBlock className="mt-4 h-5 max-w-xl rounded-full" />
-        </section>
-        <SkeletonBlock className="h-20 rounded-[1.5rem]" />
-        <SkeletonBlock className="h-24 rounded-[2rem]" />
-        <section className="grid gap-4 md:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <SkeletonBlock key={index} className="h-40 rounded-[1.5rem]" />
-          ))}
+    <main className="min-h-0 bg-transparent text-white" role="status" aria-label="Loading documents">
+      <div className="w-full space-y-6">
+        <header className="border-b border-white/[0.065] pb-5">
+          <SkeletonBlock className="h-3 w-32" />
+          <SkeletonBlock className="mt-3 h-9 max-w-md" />
+          <SkeletonBlock className="mt-3 h-4 max-w-2xl" />
+        </header>
+        <SkeletonBlock className="h-24 w-full" />
+        <section className="overflow-hidden rounded-xl border border-white/[0.07] bg-[#101715]">
+          <div className="border-b border-white/[0.06] px-5 py-4"><SkeletonBlock className="h-4 w-36" /></div>
+          <div className="divide-y divide-white/[0.055]">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="flex items-center justify-between gap-4 px-5 py-4">
+                <div className="min-w-0 flex-1">
+                  <SkeletonBlock className="h-4 max-w-xs" />
+                  <SkeletonBlock className="mt-2 h-3 w-32" />
+                </div>
+                <SkeletonBlock className="h-9 w-24" />
+              </div>
+            ))}
+          </div>
         </section>
       </div>
     </main>
