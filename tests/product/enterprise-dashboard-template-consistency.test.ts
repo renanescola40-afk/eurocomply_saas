@@ -8,6 +8,8 @@ const TASKS_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/tasks
 const RISKS_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/risks/page.tsx', import.meta.url);
 const DOCUMENTS_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/documents/page.tsx', import.meta.url);
 const TEAM_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/team/page.tsx', import.meta.url);
+const TEAM_SETTINGS = new URL('../../src/components/team/team-settings-section.tsx', import.meta.url);
+const TEAM_MANAGEMENT = new URL('../../src/components/team/team-management-card.tsx', import.meta.url);
 const LEGACY_HOME_PAGE = new URL('../../src/app/[locale]/risck-comply-home/page.tsx', import.meta.url);
 const SHELL = new URL('../../src/components/dashboard/enterprise-dashboard-shell.tsx', import.meta.url);
 const COMMAND_CENTER = new URL('../../src/components/dashboard/enterprise-compliance-command-center.tsx', import.meta.url);
@@ -84,11 +86,13 @@ describe('enterprise dashboard template consistency', () => {
   });
 
   it('keeps core workflow modules on the shared enterprise canvas', async () => {
-    const [tasks, risks, documents, team] = await Promise.all([
+    const [tasks, risks, documents, team, teamSettings, teamManagement] = await Promise.all([
       readFile(TASKS_PAGE, 'utf8'),
       readFile(RISKS_PAGE, 'utf8'),
       readFile(DOCUMENTS_PAGE, 'utf8'),
       readFile(TEAM_PAGE, 'utf8'),
+      readFile(TEAM_SETTINGS, 'utf8'),
+      readFile(TEAM_MANAGEMENT, 'utf8'),
     ]);
 
     for (const source of [tasks, risks, documents, team]) {
@@ -111,6 +115,9 @@ describe('enterprise dashboard template consistency', () => {
 
     expect(team).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
     expect(team).not.toContain('shadow-2xl');
+    expect(teamSettings).toContain('border-b border-white/[0.055]');
+    expect(teamManagement).toContain('lg:divide-x lg:divide-white/[0.055]');
+    expect(teamManagement).not.toContain("from '@/components/ui/card'");
   });
 
   it('retires the legacy authenticated home and forwards old bookmarks to the canonical enterprise dashboard', async () => {
