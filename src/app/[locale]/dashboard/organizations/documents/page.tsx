@@ -82,12 +82,12 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
   }
 
   return (
-    <main className="min-h-screen bg-[#050505] px-4 py-8 text-white sm:px-5 lg:px-8">
-      <div className="mx-auto max-w-6xl space-y-8">
-        <header>
-          <p className="text-xs uppercase tracking-[0.3em] text-white/40 sm:text-sm">{copy.eyebrow}</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-5xl">{copy.title}</h1>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-white/58 sm:text-base">{copy.subtitle(currentOrganization.name)}</p>
+    <main className="min-h-0 bg-transparent text-white">
+      <div className="w-full space-y-6">
+        <header className="border-b border-white/[0.065] pb-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">{copy.eyebrow}</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em]">{copy.title}</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">{copy.subtitle(currentOrganization.name)}</p>
         </header>
 
         {canManageDocuments ? (
@@ -95,33 +95,35 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
             <CreateDocumentForm locale={params.locale} onSubmit={uploadDocumentAction} />
           </PlanGate>
         ) : (
-          <p className="rounded-xl border border-white/10 bg-white/[0.035] p-4 text-sm text-white/65" role="status">{readOnlyCopy[params.locale] ?? readOnlyCopy.en}</p>
+          <p className="rounded-xl border border-white/[0.075] bg-[#101715] p-4 text-sm text-white/62" role="status">{readOnlyCopy[params.locale] ?? readOnlyCopy.en}</p>
         )}
 
-        <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5" aria-labelledby="document-register-title">
-          <div className="mb-4">
-            <h2 id="document-register-title" className="text-lg font-semibold">{copy.registerTitle}</h2>
-            <p className="text-sm text-white/50">{copy.records(documents.length)}</p>
+        <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]" aria-labelledby="document-register-title">
+          <div className="flex items-center justify-between gap-4 border-b border-white/[0.06] px-5 py-4">
+            <div>
+              <h2 id="document-register-title" className="text-sm font-semibold text-white/88">{copy.registerTitle}</h2>
+              <p className="mt-1 text-xs text-white/38">{copy.records(documents.length)}</p>
+            </div>
           </div>
 
           {documents.length === 0 ? (
-            <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-black/20 p-7 text-center" role="status">
-              <h2 className="text-2xl font-semibold tracking-tight">{copy.emptyTitle}</h2>
-              <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-white/55">{copy.emptyBody}</p>
+            <div className="p-6" role="status">
+              <h2 className="text-base font-semibold text-white/80">{copy.emptyTitle}</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-white/45">{copy.emptyBody}</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="divide-y divide-white/[0.055]">
               {documents.map((document) => {
                 const title = document.title ?? copy.namePlaceholder;
                 const status = copy.status[documentStatusKey(document.status)];
                 return (
-                  <article key={document.id} className="rounded-xl border border-white/10 bg-black/20 p-4">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <article key={document.id} className="px-5 py-4 transition-colors hover:bg-white/[0.018]">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div className="min-w-0">
-                        <h3 className="break-words font-medium text-white">{title}</h3>
-                        <p className="mt-1 text-sm text-white/50">{copy.version} v{document.version ?? 1} · {status}</p>
+                        <h3 className="break-words font-medium text-white/88">{title}</h3>
+                        <p className="mt-1 text-xs text-white/40">{copy.version} v{document.version ?? 1} · {status}</p>
                       </div>
-                      <div className="flex flex-wrap gap-2 md:justify-end">
+                      <div className="flex shrink-0 flex-wrap gap-2 md:justify-end">
                         <DocumentDownloadButton locale={params.locale} documentId={document.id} onCreateSignedUrl={createDownloadUrlAction} />
                         {canManageDocuments ? <DocumentDeleteButton locale={params.locale} documentId={document.id} documentName={title} onDelete={deleteDocumentAction} /> : null}
                       </div>

@@ -3,11 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, FileText, Plus, ShieldCheck } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
 import {
   createEvidenceItem,
@@ -108,55 +103,96 @@ export default function EvidenceVaultPage() {
     }
   }
 
-  return (
-    <main className="min-h-screen bg-[#050505] text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(37,99,235,0.24),transparent_34rem)]" />
-      <div className="relative mx-auto max-w-7xl px-5 py-8 lg:px-8">
-        <Button variant="ghost" onClick={() => router.push(`/${locale}/dashboard`)} className="mb-6 text-white/70 hover:text-white">
-          <ArrowLeft className="mr-2 h-4 w-4" /> {t.back}
-        </Button>
+  const metrics = [
+    { label: t.coverage, value: `${summary.coverage}%`, progress: summary.coverage },
+    { label: t.valid, value: String(summary.valid) },
+    { label: t.review, value: String(summary.needsReview) },
+    { label: t.expired, value: String(summary.expired) },
+  ];
+  const inputClass = 'w-full rounded-xl border border-white/[0.09] bg-black/20 px-3 py-2.5 text-sm text-white/82 outline-none transition placeholder:text-white/25 focus:border-emerald-300/35 focus-visible:ring-2 focus-visible:ring-emerald-300/55';
 
-        <section className="mb-8 rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-7 shadow-2xl shadow-blue-950/20">
-          <Badge className="mb-4 border-white/10 bg-white/[0.06] text-white/70">{t.badge}</Badge>
-          <h1 className="max-w-4xl text-4xl font-semibold tracking-tight md:text-6xl">{t.title}</h1>
-          <p className="mt-4 max-w-2xl text-lg leading-8 text-white/58">{t.subtitle}</p>
-          {tenantError ? <p className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">{tenantError}</p> : null}
+  return (
+    <main className="min-h-0 bg-transparent text-white">
+      <div className="w-full space-y-6">
+        <header className="flex flex-col gap-4 border-b border-white/[0.065] pb-5 md:flex-row md:items-end md:justify-between">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">{t.badge}</p>
+            <h1 className="mt-2 max-w-4xl text-3xl font-semibold tracking-[-0.035em] text-white">{t.title}</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">{t.subtitle}</p>
+          </div>
+          <button type="button" onClick={() => router.push(`/${locale}/dashboard`)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 text-sm font-medium text-white/58 transition hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> {t.back}
+          </button>
+        </header>
+
+        {tenantError ? <p className="rounded-xl border border-amber-300/20 bg-amber-300/[0.055] px-4 py-3 text-sm text-amber-100" role="alert">{tenantError}</p> : null}
+
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={t.coverage}>
+          {metrics.map((metric) => (
+            <article key={metric.label} className="rounded-xl border border-white/[0.075] bg-[#101715] p-4">
+              <p className="text-xs font-medium text-white/40">{metric.label}</p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-white/88">{metric.value}</p>
+              {typeof metric.progress === 'number' ? (
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.07]" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={metric.progress} aria-label={metric.label}>
+                  <div className="h-full rounded-full bg-emerald-300" style={{ width: `${Math.max(0, Math.min(100, metric.progress))}%` }} />
+                </div>
+              ) : null}
+            </article>
+          ))}
         </section>
 
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card className="border-white/10 bg-white/[0.045] text-white"><CardHeader className="pb-2"><CardTitle className="text-sm text-white/50">{t.coverage}</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{summary.coverage}%</div><Progress value={summary.coverage} className="mt-3 h-2" /></CardContent></Card>
-          <Card className="border-white/10 bg-white/[0.045] text-white"><CardHeader className="pb-2"><CardTitle className="text-sm text-white/50">{t.valid}</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{summary.valid}</div></CardContent></Card>
-          <Card className="border-white/10 bg-white/[0.045] text-white"><CardHeader className="pb-2"><CardTitle className="text-sm text-white/50">{t.review}</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{summary.needsReview}</div></CardContent></Card>
-          <Card className="border-white/10 bg-white/[0.045] text-white"><CardHeader className="pb-2"><CardTitle className="text-sm text-white/50">{t.expired}</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{summary.expired}</div></CardContent></Card>
-        </div>
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-[420px_1fr]">
-          <Card className="border-white/10 bg-white/[0.045] text-white">
-            <CardHeader><CardTitle className="flex items-center gap-2"><Plus className="h-5 w-5" />{t.add}</CardTitle><CardDescription className="text-white/48">Assessment → Finding → Evidence → Audit Pack</CardDescription></CardHeader>
-            <CardContent className="space-y-3">
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t.titleInput} className="border-white/10 bg-black/30 text-white" />
-              <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder={t.ownerInput} className="border-white/10 bg-black/30 text-white" />
-              <Input value={articleRefs} onChange={(e) => setArticleRefs(e.target.value)} placeholder={t.articlesInput} className="border-white/10 bg-black/30 text-white" />
-              <select value={evidenceType} onChange={(e) => setEvidenceType(e.target.value as EvidenceType)} className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
-                <option value="policy">Policy</option><option value="procedure">Procedure</option><option value="risk_assessment">Risk assessment</option><option value="training">Training</option><option value="vendor_review">Vendor review</option><option value="technical_documentation">Technical documentation</option><option value="document">Document</option>
+        <div className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
+          <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]" aria-labelledby="add-evidence-title">
+            <div className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4">
+              <Plus className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+              <div>
+                <h2 id="add-evidence-title" className="text-sm font-semibold text-white/88">{t.add}</h2>
+                <p className="mt-0.5 text-xs text-white/34">Assessment → Finding → Evidence → Audit Pack</p>
+              </div>
+            </div>
+            <div className="space-y-3 p-5">
+              <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t.titleInput} className={inputClass} />
+              <input value={ownerName} onChange={(event) => setOwnerName(event.target.value)} placeholder={t.ownerInput} className={inputClass} />
+              <input value={articleRefs} onChange={(event) => setArticleRefs(event.target.value)} placeholder={t.articlesInput} className={inputClass} />
+              <select value={evidenceType} onChange={(event) => setEvidenceType(event.target.value as EvidenceType)} className={inputClass}>
+                <option value="policy">Policy</option>
+                <option value="procedure">Procedure</option>
+                <option value="risk_assessment">Risk assessment</option>
+                <option value="training">Training</option>
+                <option value="vendor_review">Vendor review</option>
+                <option value="technical_documentation">Technical documentation</option>
+                <option value="document">Document</option>
               </select>
-              <Button onClick={handleCreateEvidence} disabled={saving || !organizationId || !title.trim()} className="w-full bg-white text-black hover:bg-white/90 disabled:opacity-60"><ShieldCheck className="mr-2 h-4 w-4" /> {saving ? '...' : t.add}</Button>
-            </CardContent>
-          </Card>
+              <button type="button" onClick={handleCreateEvidence} disabled={saving || !organizationId || !title.trim()} className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-emerald-300 px-4 text-sm font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 disabled:cursor-not-allowed disabled:opacity-50">
+                <ShieldCheck className="h-4 w-4" aria-hidden="true" /> {saving ? '...' : t.add}
+              </button>
+            </div>
+          </section>
 
-          <Card className="border-white/10 bg-white/[0.045] text-white">
-            <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />{t.recent}</CardTitle></CardHeader>
-            <CardContent>
-              {items.length === 0 ? <p className="py-8 text-center text-sm text-white/48">{t.empty}</p> : (
-                <div className="space-y-3">{items.map((item) => (
-                  <div key={item.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-medium">{item.title}</p><p className="mt-1 text-xs text-white/45">{item.owner_name || '-'} • {item.evidence_type}</p></div><Badge className="border-blue-400/20 bg-blue-500/10 text-blue-200">{item.status}</Badge></div>
-                    <div className="mt-3 flex flex-wrap gap-2">{(item.article_refs || []).map((article) => <Badge key={article} className="border-white/10 bg-white/[0.06] text-white/60">{article}</Badge>)}</div>
-                  </div>
-                ))}</div>
-              )}
-            </CardContent>
-          </Card>
+          <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]" aria-labelledby="recent-evidence-title">
+            <div className="flex items-center justify-between gap-4 border-b border-white/[0.06] px-5 py-4">
+              <div className="flex items-center gap-3"><FileText className="h-4 w-4 text-emerald-300" aria-hidden="true" /><h2 id="recent-evidence-title" className="text-sm font-semibold text-white/88">{t.recent}</h2></div>
+              <span className="text-xs text-white/30">{items.length}</span>
+            </div>
+            {items.length === 0 ? (
+              <p className="p-6 text-sm text-white/42" role="status">{t.empty}</p>
+            ) : (
+              <div className="divide-y divide-white/[0.055]">
+                {items.map((item) => (
+                  <article key={item.id} className="px-5 py-4 transition-colors hover:bg-white/[0.018]">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="font-medium text-white/84">{item.title}</p>
+                        <p className="mt-1 text-xs text-white/36">{item.owner_name || '-'} · {item.evidence_type}</p>
+                        {(item.article_refs || []).length ? <p className="mt-2 text-xs text-white/42">{(item.article_refs || []).join(' · ')}</p> : null}
+                      </div>
+                      <span className="shrink-0 rounded-lg border border-white/[0.07] bg-white/[0.025] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-white/48">{item.status}</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       </div>
     </main>

@@ -171,31 +171,34 @@ export function ProfilePersonalControls({ locale }: ProfilePersonalControlsProps
 
   if (loading) {
     return (
-      <section className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 md:p-8" role="status" aria-live="polite">
-        <p className="text-sm text-white/55">{copy.loading}</p>
+      <section className="rounded-xl border border-white/[0.075] bg-[#101715] p-5" role="status" aria-live="polite">
+        <p className="text-sm text-white/48">{copy.loading}</p>
       </section>
     );
   }
 
   if (!user) {
     return (
-      <section className="rounded-[2rem] border border-amber-300/20 bg-amber-300/[0.06] p-6 md:p-8" role="alert">
-        <h2 className="text-lg font-semibold text-amber-50">{copy.unavailableTitle}</h2>
-        <p className="mt-2 text-sm text-amber-50/70">{copy.unavailableBody}</p>
+      <section className="rounded-xl border border-amber-300/20 bg-amber-300/[0.055] p-5" role="alert">
+        <h2 className="text-base font-semibold text-amber-50">{copy.unavailableTitle}</h2>
+        <p className="mt-1.5 text-sm text-amber-50/65">{copy.unavailableBody}</p>
       </section>
     );
   }
 
+  const inputClass = 'w-full rounded-xl border border-white/[0.09] bg-black/20 px-3 py-2.5 text-sm text-white/82 outline-none transition placeholder:text-white/25 focus:border-emerald-300/35 focus-visible:ring-2 focus-visible:ring-emerald-300/55';
+  const secondaryButton = 'inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 text-sm font-medium text-white/62 transition hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/55';
+
   return (
-    <section className="space-y-6" aria-label={copy.title}>
+    <section className="space-y-5" aria-label={copy.title}>
       {message ? (
         <div
-          className={`rounded-2xl border px-4 py-3 text-sm ${
+          className={`rounded-xl border px-4 py-3 text-sm ${
             message.tone === 'success'
-              ? 'border-emerald-300/20 bg-emerald-300/[0.08] text-emerald-50'
+              ? 'border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-50'
               : message.tone === 'error'
-                ? 'border-red-300/20 bg-red-300/[0.08] text-red-50'
-                : 'border-blue-300/20 bg-blue-300/[0.08] text-blue-50'
+                ? 'border-red-300/20 bg-red-300/[0.07] text-red-50'
+                : 'border-white/[0.08] bg-white/[0.035] text-white/70'
           }`}
           role={message.tone === 'error' ? 'alert' : 'status'}
           aria-live={message.tone === 'error' ? 'assertive' : 'polite'}
@@ -204,43 +207,27 @@ export function ProfilePersonalControls({ locale }: ProfilePersonalControlsProps
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <article className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 md:p-8">
-          <div className="flex items-center gap-3">
-            <UserRound className="h-5 w-5 text-blue-200" aria-hidden="true" />
-            <h2 className="text-xl font-semibold">{copy.personalTitle}</h2>
-          </div>
-          <p className="mt-2 text-sm leading-6 text-white/50">{copy.personalBody}</p>
-
-          <div className="mt-6 grid gap-5">
+      <div className="grid gap-5 xl:grid-cols-2">
+        <article className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+          <div className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4">
+            <UserRound className="h-4 w-4 text-emerald-300" aria-hidden="true" />
             <div>
-              <label htmlFor="profile-email" className="mb-2 block text-sm font-medium text-white/65">{copy.emailLabel}</label>
-              <input
-                id="profile-email"
-                type="email"
-                value={primaryEmail}
-                disabled
-                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-white/70 disabled:cursor-not-allowed"
-              />
+              <h2 className="text-sm font-semibold text-white/88">{copy.personalTitle}</h2>
+              <p className="mt-0.5 text-xs text-white/36">{copy.personalBody}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 p-5">
+            <div>
+              <label htmlFor="profile-email" className="mb-1.5 block text-xs font-medium text-white/48">{copy.emailLabel}</label>
+              <input id="profile-email" type="email" value={primaryEmail} disabled className={`${inputClass} disabled:cursor-not-allowed disabled:text-white/45`} />
             </div>
 
             <div>
-              <label htmlFor="profile-name" className="mb-2 block text-sm font-medium text-white/65">{copy.nameLabel}</label>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <input
-                  id="profile-name"
-                  type="text"
-                  value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                  className="min-w-0 flex-1 rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-white outline-none transition placeholder:text-white/25 focus:border-blue-300/60 focus-visible:ring-2 focus-visible:ring-blue-400"
-                  placeholder={copy.namePlaceholder}
-                />
-                <button
-                  type="button"
-                  onClick={updateName}
-                  disabled={savingName}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 font-semibold text-black transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50"
-                >
+              <label htmlFor="profile-name" className="mb-1.5 block text-xs font-medium text-white/48">{copy.nameLabel}</label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input id="profile-name" type="text" value={displayName} onChange={(event) => setDisplayName(event.target.value)} className={`min-w-0 flex-1 ${inputClass}`} placeholder={copy.namePlaceholder} />
+                <button type="button" onClick={updateName} disabled={savingName} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-300 px-4 text-sm font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 disabled:cursor-not-allowed disabled:opacity-50">
                   <Save className="h-4 w-4" aria-hidden="true" />
                   {savingName ? copy.saving : copy.save}
                 </button>
@@ -249,93 +236,66 @@ export function ProfilePersonalControls({ locale }: ProfilePersonalControlsProps
           </div>
         </article>
 
-        <article className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 md:p-8">
-          <div className="flex items-center gap-3">
-            <Languages className="h-5 w-5 text-blue-200" aria-hidden="true" />
-            <h2 className="text-xl font-semibold">{copy.languageTitle}</h2>
+        <article className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+          <div className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4">
+            <Languages className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+            <div>
+              <h2 className="text-sm font-semibold text-white/88">{copy.languageTitle}</h2>
+              <p className="mt-0.5 text-xs text-white/36">{copy.languageBody}</p>
+            </div>
           </div>
-          <p className="mt-2 text-sm leading-6 text-white/50">{copy.languageBody}</p>
 
-          <div className="mt-6">
-            <label htmlFor="preferred-language" className="mb-2 block text-sm font-medium text-white/65">{copy.languageLabel}</label>
-            <select
-              id="preferred-language"
-              value={selectedLanguage}
-              onChange={(event) => setSelectedLanguage(event.target.value as Locale)}
-              className="w-full rounded-xl border border-white/15 bg-[#0b0f17] px-3 py-2.5 text-white outline-none transition focus:border-blue-300/60 focus-visible:ring-2 focus-visible:ring-blue-400"
-            >
+          <div className="p-5">
+            <label htmlFor="preferred-language" className="mb-1.5 block text-xs font-medium text-white/48">{copy.languageLabel}</label>
+            <select id="preferred-language" value={selectedLanguage} onChange={(event) => setSelectedLanguage(event.target.value as Locale)} className={inputClass}>
               {locales.map((language) => (
-                <option key={language} value={language}>
-                  {LOCALE_META[language].nativeName}
-                </option>
+                <option key={language} value={language}>{LOCALE_META[language].nativeName}</option>
               ))}
             </select>
-            <button
-              type="button"
-              onClick={updateLanguage}
-              disabled={savingLanguage || selectedLanguage === savedLanguage}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-300/25 bg-blue-300/[0.10] px-4 py-2.5 font-semibold text-blue-50 transition hover:bg-blue-300/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto"
-            >
-              <Languages className="h-4 w-4" aria-hidden="true" />
+            <button type="button" onClick={updateLanguage} disabled={savingLanguage || selectedLanguage === savedLanguage} className={`${secondaryButton} mt-3 disabled:cursor-not-allowed disabled:opacity-40`}>
+              <Languages className="h-4 w-4 text-emerald-300" aria-hidden="true" />
               {savingLanguage ? copy.languageSaving : copy.languageSave}
             </button>
           </div>
         </article>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <article className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 md:p-8">
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="h-5 w-5 text-blue-200" aria-hidden="true" />
-            <h2 className="text-xl font-semibold">{copy.securityTitle}</h2>
+      <div className="grid gap-5 xl:grid-cols-2">
+        <article className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+          <div className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4">
+            <ShieldCheck className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+            <div>
+              <h2 className="text-sm font-semibold text-white/88">{copy.securityTitle}</h2>
+              <p className="mt-0.5 text-xs text-white/36">{copy.securityBody}</p>
+            </div>
           </div>
-          <p className="mt-2 text-sm leading-6 text-white/50">{copy.securityBody}</p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={handleResetPassword}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-black/25 px-4 py-2.5 font-medium text-white transition hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
-            >
-              <KeyRound className="h-4 w-4" aria-hidden="true" />
-              {copy.resetPassword}
-            </button>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-black/25 px-4 py-2.5 font-medium text-white transition hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
-            >
-              <LogOut className="h-4 w-4" aria-hidden="true" />
-              {copy.signOut}
-            </button>
+          <div className="flex flex-col gap-2 p-5 sm:flex-row">
+            <button type="button" onClick={handleResetPassword} className={secondaryButton}><KeyRound className="h-4 w-4 text-emerald-300" aria-hidden="true" />{copy.resetPassword}</button>
+            <button type="button" onClick={handleSignOut} className={secondaryButton}><LogOut className="h-4 w-4 text-emerald-300" aria-hidden="true" />{copy.signOut}</button>
           </div>
         </article>
 
-        <article className="rounded-[2rem] border border-blue-300/15 bg-blue-300/[0.05] p-6 md:p-8">
-          <div className="flex items-center gap-3">
-            <Download className="h-5 w-5 text-blue-200" aria-hidden="true" />
-            <h2 className="text-xl font-semibold">{copy.exportTitle}</h2>
+        <article className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+          <div className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4">
+            <Download className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+            <div>
+              <h2 className="text-sm font-semibold text-white/88">{copy.exportTitle}</h2>
+              <p className="mt-0.5 text-xs text-white/36">{copy.exportBody}</p>
+            </div>
           </div>
-          <p className="mt-2 text-sm leading-6 text-white/50">{copy.exportBody}</p>
-          <button
-            type="button"
-            onClick={exportData}
-            className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
-          >
-            <Download className="h-4 w-4" aria-hidden="true" />
-            {copy.exportAction}
-          </button>
+          <div className="p-5">
+            <button type="button" onClick={exportData} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-300 px-4 text-sm font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+              <Download className="h-4 w-4" aria-hidden="true" />
+              {copy.exportAction}
+            </button>
+          </div>
         </article>
       </div>
 
-      <article className="rounded-[2rem] border border-red-300/15 bg-red-300/[0.045] p-6 md:p-8">
-        <h2 className="text-xl font-semibold text-red-50">{copy.dangerTitle}</h2>
-        <p className="mt-2 text-sm leading-6 text-red-50/60">{copy.dangerBody}</p>
-        <Link
-          href={`/${locale}/support`}
-          className="mt-5 inline-flex rounded-xl border border-red-300/25 bg-red-300/[0.08] px-4 py-2.5 font-medium text-red-50 transition hover:bg-red-300/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
-        >
-          {copy.supportAction}
-        </Link>
+      <article className="rounded-xl border border-red-300/15 bg-red-300/[0.04] p-5">
+        <h2 className="text-sm font-semibold text-red-50/90">{copy.dangerTitle}</h2>
+        <p className="mt-1.5 max-w-3xl text-sm leading-6 text-red-50/55">{copy.dangerBody}</p>
+        <Link href={`/${locale}/support`} className="mt-3 inline-flex rounded-lg border border-red-300/20 px-3 py-2 text-xs font-medium text-red-50/75 transition hover:bg-red-300/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/50">{copy.supportAction}</Link>
       </article>
     </section>
   );
