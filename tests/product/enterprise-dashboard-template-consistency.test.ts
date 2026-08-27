@@ -4,6 +4,9 @@ import { describe, expect, it } from 'vitest';
 const AI_SYSTEMS_PAGE = new URL('../../src/app/[locale]/ai-systems/page.tsx', import.meta.url);
 const DASHBOARD_HOME_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/page.tsx', import.meta.url);
 const DASHBOARD_LAYOUT = new URL('../../src/app/[locale]/dashboard/layout.tsx', import.meta.url);
+const TASKS_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/tasks/page.tsx', import.meta.url);
+const RISKS_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/risks/page.tsx', import.meta.url);
+const DOCUMENTS_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/documents/page.tsx', import.meta.url);
 const LEGACY_HOME_PAGE = new URL('../../src/app/[locale]/risck-comply-home/page.tsx', import.meta.url);
 const SHELL = new URL('../../src/components/dashboard/enterprise-dashboard-shell.tsx', import.meta.url);
 const COMMAND_CENTER = new URL('../../src/components/dashboard/enterprise-compliance-command-center.tsx', import.meta.url);
@@ -66,7 +69,7 @@ describe('enterprise dashboard template consistency', () => {
     expect(onboardingProgress).toContain('Operational setup progress');
   });
 
-  it('keeps AI Systems inside the same enterprise shell instead of restoring the legacy navbar', async () => {
+  it('keeps AI Systems inside the same shell and removes the legacy page-level gradient canvas', async () => {
     const source = await readFile(AI_SYSTEMS_PAGE, 'utf8');
 
     expect(source).toContain("import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell'");
@@ -75,6 +78,29 @@ describe('enterprise dashboard template consistency', () => {
     expect(source).toContain('organizationName={organization.name}');
     expect(source).toContain('role={organization.role}');
     expect(source).toContain('selectedPlan={authority?.plan}');
+    expect(source).toContain('<main className="min-h-0 bg-transparent text-white">');
+    expect(source).not.toContain('radial-gradient');
+  });
+
+  it('keeps core workflow modules on the shared enterprise canvas', async () => {
+    const [tasks, risks, documents] = await Promise.all([
+      readFile(TASKS_PAGE, 'utf8'),
+      readFile(RISKS_PAGE, 'utf8'),
+      readFile(DOCUMENTS_PAGE, 'utf8'),
+    ]);
+
+    for (const source of [tasks, risks, documents]) {
+      expect(source).toContain('min-h-0 bg-transparent text-white');
+      expect(source).not.toContain('min-h-screen bg-[#050505]');
+      expect(source).not.toContain('max-w-6xl');
+    }
+
+    expect(risks).toContain('divide-y divide-white/[0.055]');
+    expect(risks).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
+    expect(risks).not.toContain("from '@/components/ui/card'");
+
+    expect(documents).toContain('divide-y divide-white/[0.055]');
+    expect(documents).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
   });
 
   it('retires the legacy authenticated home and forwards old bookmarks to the canonical enterprise dashboard', async () => {
