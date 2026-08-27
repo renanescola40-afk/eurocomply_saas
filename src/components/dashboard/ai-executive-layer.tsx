@@ -7,29 +7,21 @@ type AiExecutiveLayerProps = {
   basePath: string;
 };
 
-type PromptCard = {
+type LeadershipNote = {
   question: string;
   answer: string;
   href: string;
-  tone: 'emerald' | 'amber' | 'rose' | 'sky';
+  tone: 'emerald' | 'amber' | 'rose' | 'neutral';
 };
 
-function toneClasses(tone: PromptCard['tone']) {
+function toneClasses(tone: LeadershipNote['tone']) {
   const tones = {
-    emerald: 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200',
-    amber: 'border-amber-300/30 bg-amber-300/10 text-amber-200',
-    rose: 'border-rose-400/30 bg-rose-400/10 text-rose-200',
-    sky: 'border-sky-300/30 bg-sky-300/10 text-sky-200',
+    emerald: 'border-emerald-300/15 bg-emerald-300/[0.055] text-emerald-100/80',
+    amber: 'border-amber-300/15 bg-amber-300/[0.055] text-amber-100/80',
+    rose: 'border-rose-300/15 bg-rose-300/[0.055] text-rose-100/80',
+    neutral: 'border-white/[0.075] bg-white/[0.025] text-white/52',
   };
-
   return tones[tone];
-}
-
-function scorePosture(score: number) {
-  if (score >= 85) return 'ready for customer, leadership and investor review';
-  if (score >= 70) return 'operationally active with a few important gaps to close';
-  if (score >= 50) return 'not yet ready for leadership review and should be treated as an executive workstream';
-  return 'high risk and needs immediate leadership focus';
 }
 
 function getPrimaryExposure(summary: DashboardSummary) {
@@ -39,88 +31,76 @@ function getPrimaryExposure(summary: DashboardSummary) {
     { label: 'evidence gap', value: summary.missingDocuments, href: 'documents', detail: `${summary.missingDocuments} missing documents` },
     { label: 'execution backlog', value: summary.openTasks, href: 'tasks', detail: `${summary.openTasks} open tasks` },
   ].sort((a, b) => b.value - a.value);
-
   return exposures[0];
 }
 
-function buildPrompts(summary: DashboardSummary, basePath: string): PromptCard[] {
+function buildNotes(summary: DashboardSummary, basePath: string): LeadershipNote[] {
   const exposure = getPrimaryExposure(summary);
-
   return [
     {
-      question: 'Generate leadership summary',
-      answer: `Compliance score is ${summary.complianceScore}%, which is ${scorePosture(summary.complianceScore)}. Primary exposure: ${exposure.detail}.`,
-      href: `${basePath}/reports`,
-      tone: summary.complianceScore >= 80 ? 'emerald' : summary.complianceScore >= 60 ? 'amber' : 'rose',
+      question: 'What should leadership review first?',
+      answer: `The largest current workspace signal is ${exposure.detail}. Open that register before preparing the next governance summary.`,
+      href: `${basePath}/${exposure.href}`,
+      tone: summary.criticalRisks > 0 ? 'rose' : exposure.value > 0 ? 'amber' : 'emerald',
     },
     {
-      question: 'Show missing evidence',
-      answer: `${summary.missingDocuments} evidence items are missing across ${summary.totals.documents} tracked documents. Close this before external review.`,
+      question: 'What evidence is missing?',
+      answer: `${summary.missingDocuments} evidence items are missing across ${summary.totals.documents} tracked documents.`,
       href: `${basePath}/documents`,
       tone: summary.missingDocuments > 3 ? 'rose' : summary.missingDocuments > 0 ? 'amber' : 'emerald',
     },
     {
-      question: 'Which vendors are high risk?',
-      answer: `${summary.highRiskVendors} vendors are currently high risk out of ${summary.totals.vendors} tracked vendors. Review DPA, data access and next assessment dates.`,
+      question: 'What is the vendor posture?',
+      answer: `${summary.highRiskVendors} high-risk vendors are currently flagged out of ${summary.totals.vendors} tracked vendors.`,
       href: `${basePath}/vendors`,
       tone: summary.highRiskVendors > 3 ? 'rose' : summary.highRiskVendors > 0 ? 'amber' : 'emerald',
     },
     {
-      question: 'Prepare GDPR package',
-      answer: `Use documents, vendors, risks and reports to assemble the current GDPR evidence package. Score readiness: ${summary.complianceScore}%.`,
+      question: 'What belongs in the current report?',
+      answer: `Use the ${summary.complianceScore}% compliance score together with ${summary.openRisks} open risks, ${summary.openTasks} open actions and the current evidence and vendor registers.`,
       href: `${basePath}/reports`,
-      tone: 'sky',
+      tone: 'neutral',
     },
   ];
 }
 
 function getTrendNarrative(trendComparison?: DashboardTrendComparison) {
   const delta = trendComparison?.complianceScoreDelta;
-  if (delta === undefined || delta === null) return 'No previous trend snapshot is available yet. Start capturing daily posture to build a leadership trend line.';
-  if (delta > 0) return `Compliance posture improved by ${delta} points since the previous snapshot.`;
-  if (delta < 0) return `Compliance posture declined by ${Math.abs(delta)} points since the previous snapshot.`;
-  return 'Compliance posture is stable compared with the previous snapshot.';
+  if (delta === undefined || delta === null) return 'No previous trend snapshot is available yet.';
+  if (delta > 0) return `Compliance score improved by ${delta} points since the previous snapshot.`;
+  if (delta < 0) return `Compliance score declined by ${Math.abs(delta)} points since the previous snapshot.`;
+  return 'Compliance score is stable compared with the previous snapshot.';
 }
 
 export function AiExecutiveLayer({ summary, trendComparison, basePath }: AiExecutiveLayerProps) {
-  const prompts = buildPrompts(summary, basePath);
+  const notes = buildNotes(summary, basePath);
   const exposure = getPrimaryExposure(summary);
 
   return (
-    <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-5 text-white shadow-2xl md:p-6">
-      <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-violet-500/10 blur-3xl" />
-      <div className="absolute bottom-0 left-12 h-72 w-72 rounded-full bg-sky-500/10 blur-3xl" />
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+      <div className="grid xl:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="border-b border-white/[0.055] px-5 py-5 xl:border-b-0 xl:border-r">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Leadership notes</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Current posture in plain language</h2>
+          <p className="mt-3 text-sm leading-6 text-white/42">Deterministic notes derived from the current dashboard summary. This surface does not generate free-form AI claims.</p>
 
-      <div className="relative grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
-        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200/80">AI executive layer</p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight">Leadership answers, generated from live posture</h2>
-          <p className="mt-4 text-sm leading-6 text-slate-400">
-            This v1 layer is deterministic and safe: it converts dashboard metrics into executive-ready answers before connecting a full AI copilot.
-          </p>
-
-          <div className="mt-6 space-y-3">
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Top exposure</p>
-              <p className="mt-2 text-xl font-semibold">{exposure.detail}</p>
-              <p className="mt-2 text-sm text-slate-400">Focus area: {exposure.label}</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Trend readout</p>
-              <p className="mt-2 text-sm leading-6 text-slate-300">{getTrendNarrative(trendComparison)}</p>
-            </div>
-          </div>
+          <dl className="mt-6 divide-y divide-white/[0.055] border-y border-white/[0.055]">
+            <div className="py-3.5"><dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">Largest signal</dt><dd className="mt-1.5 text-lg font-semibold text-white/76">{exposure.detail}</dd></div>
+            <div className="py-3.5"><dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">Trend</dt><dd className="mt-1.5 text-sm leading-6 text-white/52">{getTrendNarrative(trendComparison)}</dd></div>
+          </dl>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {prompts.map((prompt) => (
-            <Link key={prompt.question} href={prompt.href} className="group rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-5 transition hover:-translate-y-1 hover:border-primary/50 hover:bg-white/[0.075]">
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="text-lg font-semibold">{prompt.question}</h3>
-                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${toneClasses(prompt.tone)}`}>Answer</span>
+        <div className="divide-y divide-white/[0.055]">
+          {notes.map((note) => (
+            <Link key={note.question} href={note.href} className="group block px-5 py-4 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 md:px-6">
+              <div className="grid gap-3 md:grid-cols-[240px_minmax(0,1fr)_auto] md:items-start">
+                <div className="flex items-start gap-2.5">
+                  <span className={`mt-0.5 rounded-md border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] ${toneClasses(note.tone)}`}>Current</span>
+                  <h3 className="text-sm font-semibold leading-5 text-white/82">{note.question}</h3>
+                </div>
+                <p className="text-sm leading-6 text-white/42">{note.answer}</p>
+                <span className="text-xs font-semibold text-emerald-100/55 transition group-hover:text-emerald-100">Open →</span>
               </div>
-              <p className="mt-4 text-sm leading-6 text-slate-400">{prompt.answer}</p>
-              <p className="mt-5 text-xs font-semibold text-primary/80 opacity-0 transition group-hover:opacity-100">Open related workstream →</p>
             </Link>
           ))}
         </div>

@@ -12,7 +12,7 @@ type RelationshipNode = {
   value: string | number;
   subtitle: string;
   href: string;
-  tone: 'emerald' | 'amber' | 'rose' | 'sky' | 'violet' | 'slate';
+  tone: 'emerald' | 'amber' | 'rose' | 'neutral';
 };
 
 const connectors = [
@@ -25,21 +25,12 @@ const connectors = [
 
 function toneClasses(tone: RelationshipNode['tone']) {
   const tones = {
-    emerald: 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100',
-    amber: 'border-amber-300/30 bg-amber-300/10 text-amber-100',
-    rose: 'border-rose-300/30 bg-rose-300/10 text-rose-100',
-    sky: 'border-sky-300/30 bg-sky-300/10 text-sky-100',
-    violet: 'border-violet-300/30 bg-violet-300/10 text-violet-100',
-    slate: 'border-white/10 bg-white/[0.045] text-slate-100',
+    emerald: 'border-emerald-300/15 bg-emerald-300/[0.045] text-emerald-100/80',
+    amber: 'border-amber-300/15 bg-amber-300/[0.045] text-amber-100/80',
+    rose: 'border-rose-300/15 bg-rose-300/[0.045] text-rose-100/80',
+    neutral: 'border-white/[0.075] bg-white/[0.02] text-white/64',
   };
-
   return tones[tone];
-}
-
-function nodeSize(value: number) {
-  if (value >= 20) return 'h-32 w-32';
-  if (value >= 10) return 'h-28 w-28';
-  return 'h-24 w-24';
 }
 
 export function RelationshipGraph({ summary, basePath }: RelationshipGraphProps) {
@@ -57,7 +48,7 @@ export function RelationshipGraph({ summary, basePath }: RelationshipGraphProps)
       id: 'controls',
       label: 'Controls',
       value: controlledDocuments,
-      subtitle: 'Mapped proof',
+      subtitle: 'Tracked proof',
       href: `${basePath}/documents`,
       tone: summary.missingDocuments > 3 ? 'amber' : 'emerald',
     },
@@ -83,78 +74,62 @@ export function RelationshipGraph({ summary, basePath }: RelationshipGraphProps)
       value: summary.openTasks,
       subtitle: 'Remediation',
       href: `${basePath}/tasks`,
-      tone: summary.openTasks > 10 ? 'amber' : 'sky',
+      tone: summary.openTasks > 10 ? 'amber' : 'neutral',
     },
     {
       id: 'reports',
       label: 'Reports',
       value: `${summary.complianceScore}%`,
-      subtitle: 'Board signal',
+      subtitle: 'Current score',
       href: `${basePath}/reports`,
       tone: summary.complianceScore >= 80 ? 'emerald' : summary.complianceScore >= 60 ? 'amber' : 'rose',
     },
   ];
 
   return (
-    <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-5 text-white shadow-2xl md:p-6">
-      <div className="absolute right-0 top-0 h-96 w-96 rounded-full bg-sky-500/10 blur-3xl" />
-      <div className="absolute bottom-0 left-0 h-96 w-96 rounded-full bg-violet-500/10 blur-3xl" />
-
-      <div className="relative flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+      <div className="flex flex-col gap-2 border-b border-white/[0.055] px-5 py-5 md:flex-row md:items-end md:justify-between md:px-6">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-200/80">Relationship graph</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">How exposure travels through the operating system</h2>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Traceability chain</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">From suppliers to executive output</h2>
         </div>
-        <p className="max-w-xl text-sm leading-6 text-slate-400">
-          Visualize how supplier risk, control evidence, remediation and executive reports connect as one compliance graph.
-        </p>
+        <p className="max-w-xl text-sm leading-6 text-white/38">Follow the live workspace path from vendor exposure through evidence, risk and remediation.</p>
       </div>
 
-      <div className="relative mt-8 overflow-x-auto pb-3">
-        <div className="flex min-w-[1080px] items-center gap-4">
-          {nodes.map((node, index) => {
-            const numericValue = typeof node.value === 'number' ? node.value : summary.complianceScore;
-            return (
-              <div key={node.id} className="flex flex-1 items-center gap-4">
-                <Link href={node.href} className="group flex flex-col items-center text-center">
-                  <div className={`flex ${nodeSize(numericValue)} items-center justify-center rounded-full border shadow-2xl transition group-hover:-translate-y-1 group-hover:border-primary/60 ${toneClasses(node.tone)}`}>
-                    <div>
-                      <p className="text-3xl font-bold tracking-tight">{node.value}</p>
-                      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] opacity-75">{node.label}</p>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-sm font-semibold">{node.subtitle}</p>
-                  <p className="mt-1 text-xs text-primary/80 opacity-0 transition group-hover:opacity-100">Open node →</p>
-                </Link>
+      <div className="overflow-x-auto px-4 py-5 md:px-5">
+        <div className="flex min-w-[1040px] items-stretch">
+          {nodes.map((node, index) => (
+            <div key={node.id} className="flex min-w-0 flex-1 items-center">
+              <Link href={node.href} className={`group flex min-h-32 min-w-36 flex-1 flex-col justify-between rounded-lg border p-4 transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/35 ${toneClasses(node.tone)}`}>
+                <div>
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.14em] opacity-55">{node.label}</p>
+                  <p className="mt-2 text-3xl font-semibold tracking-[-0.04em]">{node.value}</p>
+                </div>
+                <div>
+                  <p className="text-xs opacity-65">{node.subtitle}</p>
+                  <p className="mt-2 text-[10px] font-semibold text-emerald-100/0 transition group-hover:text-emerald-100/65">Open →</p>
+                </div>
+              </Link>
 
-                {index < nodes.length - 1 && (
-                  <div className="flex min-w-28 flex-col items-center gap-2 text-center">
-                    <div className="flex w-full items-center gap-2">
-                      <span className="h-px flex-1 bg-white/15" />
-                      <span className="rounded-full border border-white/10 bg-white/[0.045] px-2 py-1 text-xs text-slate-400">→</span>
-                      <span className="h-px flex-1 bg-white/15" />
-                    </div>
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">{connectors[index]}</p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              {index < nodes.length - 1 ? (
+                <div className="flex w-20 shrink-0 flex-col items-center justify-center gap-2 px-2 text-center">
+                  <div className="flex w-full items-center"><span className="h-px flex-1 bg-white/[0.09]" /><span className="px-1 text-xs text-white/28">→</span><span className="h-px flex-1 bg-white/[0.09]" /></div>
+                  <p className="text-[8px] uppercase tracking-[0.11em] text-white/24">{connectors[index]}</p>
+                </div>
+              ) : null}
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="relative mt-5 grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Traceability</p>
-          <p className="mt-2 text-sm text-slate-300">Every executive report should be traceable back to vendors, evidence, risks and tasks.</p>
+      <div className="grid border-t border-white/[0.055] md:grid-cols-2 md:divide-x md:divide-white/[0.055]">
+        <div className="px-5 py-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">Traceability</p>
+          <p className="mt-2 text-sm leading-6 text-white/45">Executive output can be traced back to the current vendor, evidence, risk and task registers shown above.</p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Board value</p>
-          <p className="mt-2 text-sm text-slate-300">Leadership sees not just numbers, but the chain of causes behind posture changes.</p>
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Product moat</p>
-          <p className="mt-2 text-sm text-slate-300">This graph prepares the foundation for future interactive dependency mapping.</p>
+        <div className="border-t border-white/[0.055] px-5 py-4 md:border-t-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">Current state</p>
+          <p className="mt-2 text-sm leading-6 text-white/45">The chain uses existing workspace counts and status signals; it does not add synthetic dependency data.</p>
         </div>
       </div>
     </section>

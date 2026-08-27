@@ -32,7 +32,7 @@ describe('Phase 9 readiness export preparation', () => {
     const workspace = read('src/components/dashboard/reports-governance-workspace.tsx');
 
     expect(exportPreparation).toContain('ReadinessExportPreparation');
-    expect(exportPreparation).toContain('Readiness export preparation');
+    expect(exportPreparation).toContain('Export preparation');
     expect(exportPreparation).toContain('Prepare from reports');
     expect(exportPreparation).toContain('workflowReadiness?.reasons.length');
     expect(workspace).toContain('ReadinessExportPreparation');

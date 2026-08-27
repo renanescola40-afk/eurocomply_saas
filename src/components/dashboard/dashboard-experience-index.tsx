@@ -17,17 +17,16 @@ type ExperienceSignal = {
 
 function statusClasses(status: ExperienceSignal['status']) {
   const tones = {
-    strong: 'border-emerald-300/30 bg-emerald-300/10 text-emerald-200',
-    active: 'border-sky-300/30 bg-sky-300/10 text-sky-200',
-    watch: 'border-amber-300/30 bg-amber-300/10 text-amber-200',
+    strong: 'border-emerald-300/15 bg-emerald-300/[0.055] text-emerald-100/80',
+    active: 'border-white/[0.075] bg-white/[0.025] text-white/55',
+    watch: 'border-amber-300/15 bg-amber-300/[0.055] text-amber-100/80',
   };
-
   return tones[status];
 }
 
 function getOperatingGrade(summary: DashboardSummary) {
-  if (summary.complianceScore >= 85 && summary.criticalRisks === 0 && summary.missingDocuments <= 2) return 'Enterprise review-ready';
-  if (summary.complianceScore >= 75) return 'Leadership review-ready';
+  if (summary.complianceScore >= 85 && summary.criticalRisks === 0 && summary.missingDocuments <= 2) return 'Strong operating posture';
+  if (summary.complianceScore >= 75) return 'Leadership review posture';
   if (summary.complianceScore >= 60) return 'Operational';
   return 'Needs focus';
 }
@@ -44,62 +43,57 @@ export function DashboardExperienceIndex({ summary, trendComparison, basePath }:
     {
       label: 'Health',
       value: `${summary.complianceScore}%`,
-      description: `${getOperatingGrade(summary)} posture with ${getDeltaText(trendComparison)} movement.`,
+      description: `${getOperatingGrade(summary)} with ${getDeltaText(trendComparison)} score movement.`,
       href: `${basePath}/reports`,
       status: summary.complianceScore >= 80 ? 'strong' : summary.complianceScore >= 60 ? 'active' : 'watch',
     },
     {
       label: 'Evidence',
       value: String(summary.missingDocuments),
-      description: 'Missing evidence items that may weaken customer or leadership confidence.',
+      description: 'Missing evidence items in the current document register.',
       href: `${basePath}/documents`,
       status: summary.missingDocuments === 0 ? 'strong' : summary.missingDocuments <= 3 ? 'active' : 'watch',
     },
     {
       label: 'Exposure',
       value: String(summary.criticalRisks + summary.highRiskVendors),
-      description: 'Critical risk and high-risk vendor items demanding executive attention.',
+      description: 'Critical risks and high-risk vendors in the current workspace posture.',
       href: `${basePath}/risks`,
       status: summary.criticalRisks + summary.highRiskVendors === 0 ? 'strong' : summary.criticalRisks + summary.highRiskVendors <= 3 ? 'active' : 'watch',
     },
     {
       label: 'Execution',
       value: String(summary.openTasks),
-      description: 'Open work items carrying the remediation and governance operating plan.',
+      description: 'Open work items carrying the remediation and governance plan.',
       href: `${basePath}/tasks`,
       status: summary.openTasks <= 3 ? 'strong' : summary.openTasks <= 10 ? 'active' : 'watch',
     },
   ];
 
   return (
-    <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-5 text-white shadow-2xl md:p-6">
-      <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/15 blur-3xl" />
-      <div className="absolute bottom-0 left-10 h-72 w-72 rounded-full bg-emerald-500/10 blur-3xl" />
-
-      <div className="relative grid gap-6 xl:grid-cols-[0.72fr_1.28fr]">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">Experience index</p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight">One view for the full compliance operating system</h2>
-          <p className="mt-4 text-sm leading-6 text-slate-400">
-            A compact index that turns the premium dashboard into one coherent executive narrative: health, evidence, exposure and execution.
-          </p>
-          <div className="mt-6 rounded-3xl border border-white/10 bg-white/[0.045] p-5">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Operating grade</p>
-            <p className="mt-2 text-3xl font-bold tracking-tight">{getOperatingGrade(summary)}</p>
-            <p className="mt-2 text-sm text-slate-400">Generated from compliance score, risks, vendors and evidence gaps.</p>
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+      <div className="grid xl:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="border-b border-white/[0.055] px-5 py-5 xl:border-b-0 xl:border-r">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Operating index</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Health, evidence, exposure and execution</h2>
+          <p className="mt-3 text-sm leading-6 text-white/42">A compact summary derived from the current workspace registers and compliance score.</p>
+          <div className="mt-6 border-y border-white/[0.055] py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">Operating grade</p>
+            <p className="mt-2 text-xl font-semibold text-white/80">{getOperatingGrade(summary)}</p>
+            <p className="mt-2 text-xs leading-5 text-white/34">Derived from score, critical risks and current evidence gaps.</p>
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {signals.map((signal) => (
-            <Link key={signal.label} href={signal.href} className="group rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-5 transition hover:-translate-y-1 hover:border-primary/50 hover:bg-white/[0.075]">
+        <div className="grid md:grid-cols-2 xl:grid-cols-4">
+          {signals.map((signal, index) => (
+            <Link key={signal.label} href={signal.href} className={`group min-h-44 px-5 py-5 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 ${index > 0 ? 'border-t border-white/[0.055] md:border-l md:border-t-0' : ''} ${index === 2 ? 'md:border-t md:border-white/[0.055] xl:border-t-0' : ''}`}>
               <div className="flex items-start justify-between gap-3">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{signal.label}</p>
-                <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${statusClasses(signal.status)}`}>{signal.status}</span>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/30">{signal.label}</p>
+                <span className={`rounded-md border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] ${statusClasses(signal.status)}`}>{signal.status}</span>
               </div>
-              <p className="mt-5 text-4xl font-bold tracking-tight">{signal.value}</p>
-              <p className="mt-4 min-h-16 text-sm leading-6 text-slate-400">{signal.description}</p>
-              <p className="mt-5 text-xs font-semibold text-primary/80 opacity-0 transition group-hover:opacity-100">Open signal →</p>
+              <p className="mt-5 text-3xl font-semibold tracking-[-0.04em]">{signal.value}</p>
+              <p className="mt-3 text-xs leading-5 text-white/38">{signal.description}</p>
+              <p className="mt-4 text-[10px] font-semibold text-emerald-100/0 transition group-hover:text-emerald-100/65">Open signal →</p>
             </Link>
           ))}
         </div>
