@@ -34,6 +34,14 @@ function field(project, ...names) {
   return '';
 }
 
+export function allowedDestroyConfirmations(restoreRef) {
+  if (!PROJECT_REF.test(String(restoreRef ?? ''))) return [];
+  return [
+    `DELETE ${restoreRef} AFTER REHEARSAL`,
+    `DELETE ${restoreRef} AFTER RECOVERY PROOF`,
+  ];
+}
+
 async function main() {
   if (required('RECOVERY_PROVIDER_RESTORE_ATTESTATION') !== 'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED') {
     throw new Error('provider_restore_attestation_missing');
@@ -43,8 +51,8 @@ async function main() {
   const restoreRef = required('RECOVERY_PROVIDER_RESTORE_PROJECT_REF');
   if (!PROJECT_REF.test(restoreRef) || restoreRef === sourceRef) throw new Error('restore_project_ref_invalid_or_not_distinct');
 
-  const expectedConfirmation = `DELETE ${restoreRef} AFTER RECOVERY PROOF`;
-  if (required('RECOVERY_PROVIDER_DESTROY_CONFIRMATION') !== expectedConfirmation) {
+  const confirmation = required('RECOVERY_PROVIDER_DESTROY_CONFIRMATION');
+  if (!allowedDestroyConfirmations(restoreRef).includes(confirmation)) {
     throw new Error('restore_cleanup_confirmation_mismatch');
   }
 
@@ -63,7 +71,9 @@ async function main() {
   process.stdout.write(`${JSON.stringify({ outcome: 'destroyed', sourceProtected: true, restoreProjectReferenceStored: false })}\n`);
 }
 
-main().catch((error) => {
-  console.error(JSON.stringify({ outcome: 'failed', failure: error instanceof Error ? error.message : 'unknown_failure' }));
-  process.exit(1);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((error) => {
+    console.error(JSON.stringify({ outcome: 'failed', failure: error instanceof Error ? error.message : 'unknown_failure' }));
+    process.exit(1);
+  });
+}
