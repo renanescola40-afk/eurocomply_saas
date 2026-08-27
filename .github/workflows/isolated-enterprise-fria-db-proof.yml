@@ -90,6 +90,7 @@ jobs:
 
       - name: Validate proof contracts
         run: |
+          node --check scripts/recovery/normalize-disposable-fria-acl.mjs
           node --check scripts/enterprise/verify-isolated-enterprise-fria-db.mjs
           node --test tests/enterprise/isolated-enterprise-fria-db-proof.test.mjs
           node --test tests/security/isolated-enterprise-fria-db-workflow.test.mjs
@@ -98,6 +99,12 @@ jobs:
         env:
           RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLAY: 'true'
         run: node scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs
+
+      - name: Normalize disposable FRIA ACL boundary
+        env:
+          DATABASE_URL: ${{ env.RECOVERY_ISOLATED_DATABASE_URL }}
+          RECOVERY_EPHEMERAL_SCHEMA_EFFECT_REPLAY: 'true'
+        run: node scripts/recovery/normalize-disposable-fria-acl.mjs
 
       - name: Execute isolated database proof
         env:
