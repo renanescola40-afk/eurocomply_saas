@@ -59,7 +59,7 @@ export default async function BillingPage({ params, searchParams }: BillingPageP
     : undefined;
 
   return (
-    <div className="min-h-screen bg-[#03070b]">
+    <div className="min-h-0 space-y-4 bg-transparent">
       {selectedPlan ? (
         <BillingPlanIntentBanner
           locale={locale}

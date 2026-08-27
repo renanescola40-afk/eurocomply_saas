@@ -1,9 +1,8 @@
 import { unstable_noStore as noStore } from 'next/cache';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowUpRight, CheckCircle2, Crown, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, Crown, LockKeyhole, ShieldCheck } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { BILLING_ADD_ONS, isBillingAddOnCommerciallyActive, type BillingAddOn } from '@/lib/billing/add-ons';
 import { getPlanDisplayName } from '@/lib/billing/addons';
 import { getBillingPlan } from '@/lib/billing/plans';
@@ -34,14 +33,14 @@ function getUpgradeStatus(plan: CanonicalSubscriptionPlan, addOn: BillingAddOn, 
 }
 
 function statusTone(status: UpgradeStatus) {
-  if (status === 'included' || status === 'active') return 'border-emerald-400/25 bg-emerald-400/10 text-emerald-100';
-  if (status === 'available') return 'border-blue-400/25 bg-blue-400/10 text-blue-100';
-  if (status === 'preview') return 'border-amber-400/20 bg-amber-400/[0.07] text-amber-100';
-  return 'border-white/10 bg-white/[0.035] text-white/60';
+  if (status === 'included' || status === 'active') return 'border-emerald-300/20 bg-emerald-300/[0.07] text-emerald-100';
+  if (status === 'available') return 'border-white/[0.09] bg-white/[0.035] text-white/70';
+  if (status === 'preview') return 'border-amber-300/18 bg-amber-300/[0.055] text-amber-100';
+  return 'border-white/[0.07] bg-white/[0.02] text-white/42';
 }
 
 function getStatusIcon(status: UpgradeStatus) {
-  return status === 'blocked' || status === 'preview' ? LockKeyhole : status === 'available' ? Sparkles : CheckCircle2;
+  return status === 'blocked' || status === 'preview' ? LockKeyhole : status === 'available' ? ArrowUpRight : CheckCircle2;
 }
 
 function planList(addOn: BillingAddOn) {
@@ -78,82 +77,79 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
   const activeCount = BILLING_ADD_ONS.filter((addOn) => getUpgradeStatus(canonicalPlan, addOn, activeAddOns) === 'active').length;
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.16),_transparent_34rem),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.08),_transparent_28rem),linear-gradient(180deg,#050505_0%,#080b12_48%,#050505_100%)] text-white">
-      <div className="pointer-events-none fixed inset-0 tech-grid opacity-20" />
-      <div className="relative mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 md:py-10 lg:px-8">
+    <main className="min-h-0 bg-transparent text-white">
+      <div className="w-full space-y-6">
         {query.plan && !selectedPlan ? (
-          <section className="rounded-[1.5rem] border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-50" role="status">
+          <section className="rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-sm text-amber-50" role="status">
             {copy.invalidPlan}
           </section>
         ) : null}
 
         {selectedPlanDiffers && selectedPlan ? (
-          <section className="rounded-[1.75rem] border border-blue-400/25 bg-blue-400/10 p-5 shadow-sm md:p-6" aria-labelledby="selected-plan-title">
-            <Badge variant="outline" className="rounded-full border-blue-300/25 bg-black/20 text-blue-100">{copy.selectedPlan}</Badge>
-            <div className="mt-4 grid gap-5 md:grid-cols-[1fr_auto] md:items-end">
-              <div>
-                <h2 id="selected-plan-title" className="text-2xl font-semibold tracking-tight">{selectedPlan.name}</h2>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-blue-50/75">{copy.selectedPlanBody}</p>
+          <section className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.045] p-5" aria-labelledby="selected-plan-title">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-emerald-100/55">{copy.selectedPlan}</p>
+                <h2 id="selected-plan-title" className="mt-1.5 text-lg font-semibold text-white/88">{selectedPlan.name}</h2>
+                <p className="mt-1.5 max-w-3xl text-sm leading-6 text-white/46">{copy.selectedPlanBody}</p>
               </div>
               {selectedPlanPrice !== null ? (
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-left md:text-right">
-                  <p className="text-xs uppercase tracking-[0.16em] text-white/50">{copy.selectedPlanPrice}</p>
-                  <p className="mt-1 text-3xl font-semibold">€{selectedPlanPrice}<span className="text-sm font-normal text-white/50">{copy.perMonth}</span></p>
+                <div className="shrink-0 text-left md:text-right">
+                  <p className="text-[10px] uppercase tracking-[0.13em] text-white/34">{copy.selectedPlanPrice}</p>
+                  <p className="mt-1 text-2xl font-semibold text-white/88">€{selectedPlanPrice}<span className="text-sm font-normal text-white/38">{copy.perMonth}</span></p>
                 </div>
               ) : null}
             </div>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Link href={`/${locale}/pricing`} className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/15 px-5 text-sm font-semibold transition hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">{copy.backToPricing}</Link>
-              <Link href={canManageBilling ? `/${locale}/dashboard/organizations/billing?plan=${selectedPlan.id}` : `/${locale}/dashboard/organizations/team`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-blue-500 px-5 text-sm font-semibold text-white transition hover:bg-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">{copy.continuePlanReview}<ArrowUpRight className="h-4 w-4" aria-hidden="true" /></Link>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href={`/${locale}/pricing`} className="inline-flex min-h-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 text-sm font-semibold text-white/62 transition hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">{copy.backToPricing}</Link>
+              <Link href={canManageBilling ? `/${locale}/dashboard/organizations/billing?plan=${selectedPlan.id}` : `/${locale}/dashboard/organizations/team`} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-300 px-4 text-sm font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">{copy.continuePlanReview}<ArrowUpRight className="h-4 w-4" aria-hidden="true" /></Link>
             </div>
           </section>
         ) : null}
 
-        <section className="enterprise-panel rounded-[2rem] p-6 md:p-9" aria-labelledby="upgrade-center-title">
-          <div className="grid gap-8 lg:grid-cols-[1.45fr_0.55fr] lg:items-end">
-            <div>
-              <p className="enterprise-kicker">{copy.eyebrow}</p>
-              <h1 id="upgrade-center-title" className="mt-3 max-w-4xl text-4xl font-semibold tracking-[-0.045em] md:text-6xl">{copy.title}</h1>
-              <p className="enterprise-muted mt-4 max-w-3xl text-sm leading-7 md:text-base">{copy.subtitle}</p>
-            </div>
-            <div className="rounded-[1.5rem] border border-white/10 bg-black/25 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">{copy.currentPlan}</p>
-              <div className="mt-2 flex items-center gap-2"><Crown className="h-5 w-5 text-blue-300" aria-hidden="true" /><p className="text-3xl font-semibold">{currentPlanName}</p></div>
-              <div className="mt-4 flex flex-wrap gap-2 text-xs text-white/60">
-                <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-emerald-100">{copy.planActive}</span>
-                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1">{copy.activeAddOns}: {activeCount + includedCount}</span>
-              </div>
+        <header className="grid gap-5 border-b border-white/[0.065] pb-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-end">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">{copy.eyebrow}</p>
+            <h1 id="upgrade-center-title" className="mt-2 max-w-4xl text-3xl font-semibold tracking-[-0.035em] text-white">{copy.title}</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/50">{copy.subtitle}</p>
+          </div>
+          <div className="rounded-xl border border-white/[0.075] bg-[#101715] p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-white/34">{copy.currentPlan}</p>
+            <div className="mt-1.5 flex items-center gap-2"><Crown className="h-4 w-4 text-emerald-300" aria-hidden="true" /><p className="text-lg font-semibold text-white/88">{currentPlanName}</p></div>
+            <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-white/42">
+              <span className="rounded-lg border border-emerald-300/15 bg-emerald-300/[0.055] px-2.5 py-1 text-emerald-100/75">{copy.planActive}</span>
+              <span className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1">{copy.activeAddOns}: {activeCount + includedCount}</span>
             </div>
           </div>
-        </section>
+        </header>
 
-        <section className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-          <article className="rounded-[1.75rem] border border-emerald-400/20 bg-emerald-400/[0.07] p-5 md:p-6">
-            <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 text-emerald-300" aria-hidden="true" /><div><h2 className="text-lg font-semibold">{copy.billingAuthority}</h2><p className="mt-2 text-sm leading-6 text-white/65">{copy.billingAuthorityBody}</p></div></div>
+        <section className="grid gap-3 lg:grid-cols-2">
+          <article className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.045] p-4">
+            <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-4 w-4 text-emerald-300" aria-hidden="true" /><div><h2 className="text-sm font-semibold text-white/82">{copy.billingAuthority}</h2><p className="mt-1.5 text-sm leading-6 text-white/45">{copy.billingAuthorityBody}</p></div></div>
           </article>
-          <article className="rounded-[1.75rem] border border-amber-400/20 bg-amber-400/[0.07] p-5 md:p-6">
-            <div className="flex items-start gap-3"><LockKeyhole className="mt-0.5 h-5 w-5 text-amber-300" aria-hidden="true" /><div><h2 className="text-lg font-semibold">{copy.noDirectPurchase}</h2><p className="mt-2 text-sm leading-6 text-white/65">{copy.noDirectPurchaseBody}</p></div></div>
+          <article className="rounded-xl border border-amber-300/15 bg-amber-300/[0.045] p-4">
+            <div className="flex items-start gap-3"><LockKeyhole className="mt-0.5 h-4 w-4 text-amber-300" aria-hidden="true" /><div><h2 className="text-sm font-semibold text-white/82">{copy.noDirectPurchase}</h2><p className="mt-1.5 text-sm leading-6 text-white/45">{copy.noDirectPurchaseBody}</p></div></div>
           </article>
         </section>
 
         {focusedAddOn ? (
-          <section className="rounded-[1.75rem] border border-blue-400/25 bg-blue-400/[0.08] p-5 md:p-6" aria-labelledby="focused-addon-title">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-200">{copy.focusLabel}</p>
-            <h2 id="focused-addon-title" className="mt-2 text-2xl font-semibold">{focusedAddOn.name}</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/65">{focusedAddOn.description}</p>
+          <section className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.045] p-4" aria-labelledby="focused-addon-title">
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-100/55">{copy.focusLabel}</p>
+            <h2 id="focused-addon-title" className="mt-1.5 text-base font-semibold text-white/85">{focusedAddOn.name}</h2>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-white/45">{focusedAddOn.description}</p>
           </section>
         ) : null}
 
-        <section className="space-y-5" aria-labelledby="addon-catalog-title">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <section className="space-y-4" aria-labelledby="addon-catalog-title">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <h2 id="addon-catalog-title" className="text-2xl font-semibold tracking-tight md:text-3xl">{copy.catalogTitle}</h2>
-              <p className="enterprise-muted mt-2 max-w-3xl text-sm leading-6">{copy.catalogSubtitle}</p>
+              <h2 id="addon-catalog-title" className="text-lg font-semibold tracking-tight text-white/86">{copy.catalogTitle}</h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-white/42">{copy.catalogSubtitle}</p>
             </div>
-            <Link href={`/${locale}/pricing`} className="inline-flex min-h-11 w-fit items-center justify-center gap-2 rounded-full border border-white/15 px-5 text-sm font-semibold transition hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">{copy.viewPlans}<ArrowUpRight className="h-4 w-4" aria-hidden="true" /></Link>
+            <Link href={`/${locale}/pricing`} className="inline-flex min-h-10 w-fit items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 text-sm font-semibold text-white/62 transition hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">{copy.viewPlans}<ArrowUpRight className="h-4 w-4" aria-hidden="true" /></Link>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {BILLING_ADD_ONS.map((addOn) => {
               const status = getUpgradeStatus(canonicalPlan, addOn, activeAddOns);
               const Icon = getStatusIcon(status);
@@ -162,36 +158,36 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
               const isFocused = focusedAddOn?.slug === addOn.slug;
 
               return (
-                <article key={addOn.slug} id={`addon-${addOn.slug}`} className={`flex min-h-[310px] flex-col rounded-[1.65rem] border p-5 transition ${isFocused ? 'border-blue-300/45 bg-blue-400/[0.08] shadow-[0_0_0_1px_rgba(147,197,253,0.08)]' : 'border-white/10 bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.04]'}`}>
+                <article key={addOn.slug} id={`addon-${addOn.slug}`} className={`flex flex-col rounded-xl border bg-[#101715] p-5 ${isFocused ? 'border-emerald-300/25' : 'border-white/[0.075]'}`}>
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">{copy.categories[addOn.category]}</p>
-                      <h3 className="mt-2 text-xl font-semibold tracking-tight">{addOn.name}</h3>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-white/32">{copy.categories[addOn.category]}</p>
+                      <h3 className="mt-1.5 text-base font-semibold tracking-tight text-white/86">{addOn.name}</h3>
                     </div>
-                    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusTone(status)}`}><Icon className="h-3.5 w-3.5" aria-hidden="true" />{statusLabel}</span>
+                    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${statusTone(status)}`}><Icon className="h-3.5 w-3.5" aria-hidden="true" />{statusLabel}</span>
                   </div>
 
-                  <p className="mt-4 text-sm leading-6 text-white/60">{addOn.description}</p>
+                  <p className="mt-3 text-sm leading-6 text-white/44">{addOn.description}</p>
 
-                  <dl className="mt-5 space-y-2 text-xs text-white/50">
-                    <div className="flex justify-between gap-4"><dt>{copy.availableOn}</dt><dd className="text-right text-white/70">{planList(addOn)}</dd></div>
-                    {dependencies.length ? <div className="flex justify-between gap-4"><dt>{copy.dependencies}</dt><dd className="text-right text-white/70">{dependencies.join(' · ')}</dd></div> : null}
+                  <dl className="mt-4 divide-y divide-white/[0.05] border-y border-white/[0.05] text-xs text-white/40">
+                    <div className="flex justify-between gap-4 py-2.5"><dt>{copy.availableOn}</dt><dd className="text-right text-white/62">{planList(addOn)}</dd></div>
+                    {dependencies.length ? <div className="flex justify-between gap-4 py-2.5"><dt>{copy.dependencies}</dt><dd className="text-right text-white/62">{dependencies.join(' · ')}</dd></div> : null}
                   </dl>
 
-                  <div className="mt-auto pt-6">
+                  <div className="mt-auto pt-4">
                     {status === 'preview' ? (
-                      <p className="text-sm leading-6 text-amber-100/75">{copy.noDirectPurchaseBody}</p>
+                      <p className="text-sm leading-6 text-amber-100/65">{copy.noDirectPurchaseBody}</p>
                     ) : status === 'included' ? (
-                      <p className="text-sm font-semibold text-emerald-200">{copy.includedWithEnterprise}</p>
+                      <p className="text-sm font-semibold text-emerald-200/80">{copy.includedWithEnterprise}</p>
                     ) : (
                       <div className="flex items-end justify-between gap-4">
-                        <div><p className="text-2xl font-semibold">€{addOn.priceMonthly}<span className="text-sm font-normal text-white/45">{copy.perMonth}</span></p><p className="mt-1 text-xs text-white/40">€{addOn.priceAnnual}{copy.perYear}</p></div>
-                        {status === 'available' && canManageBilling ? <Link href={`/${locale}/dashboard/organizations/billing`} className="inline-flex min-h-10 items-center justify-center rounded-full border border-blue-300/25 bg-blue-400/10 px-4 text-xs font-semibold text-blue-100 transition hover:bg-blue-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">{copy.reviewBilling}</Link> : null}
-                        {status === 'blocked' ? <Link href={`/${locale}/pricing`} className="inline-flex min-h-10 items-center justify-center rounded-full border border-white/15 px-4 text-xs font-semibold transition hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">{copy.viewPlans}</Link> : null}
+                        <div><p className="text-xl font-semibold text-white/86">€{addOn.priceMonthly}<span className="text-sm font-normal text-white/38">{copy.perMonth}</span></p><p className="mt-0.5 text-xs text-white/32">€{addOn.priceAnnual}{copy.perYear}</p></div>
+                        {status === 'available' && canManageBilling ? <Link href={`/${locale}/dashboard/organizations/billing`} className="inline-flex min-h-9 items-center justify-center rounded-lg bg-emerald-300 px-3 text-xs font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">{copy.reviewBilling}</Link> : null}
+                        {status === 'blocked' ? <Link href={`/${locale}/pricing`} className="inline-flex min-h-9 items-center justify-center rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-white/55 transition hover:bg-white/[0.04] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">{copy.viewPlans}</Link> : null}
                       </div>
                     )}
-                    {status === 'available' && !canManageBilling ? <p className="mt-3 text-xs leading-5 text-amber-100/75">{copy.contactBillingAdmin}</p> : null}
-                    {status === 'blocked' ? <p className="mt-3 text-xs leading-5 text-white/45">{copy.requiresPlan(getPlanDisplayName(addOn.availableOn[0]))}</p> : null}
+                    {status === 'available' && !canManageBilling ? <p className="mt-2 text-xs leading-5 text-amber-100/65">{copy.contactBillingAdmin}</p> : null}
+                    {status === 'blocked' ? <p className="mt-2 text-xs leading-5 text-white/38">{copy.requiresPlan(getPlanDisplayName(addOn.availableOn[0]))}</p> : null}
                   </div>
                 </article>
               );

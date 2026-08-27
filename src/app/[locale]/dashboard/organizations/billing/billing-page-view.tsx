@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { CheckCircle2, LockKeyhole } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
 import { getCommercialSurfaceCopy } from '@/lib/i18n/commercial-surface-copy';
 import { locales, type Locale } from '@/lib/i18n/routing';
@@ -98,12 +97,12 @@ function formatPlanPrice(plan: (typeof BILLING_PLANS)[number], copy: BillingCopy
 
 function ReadOnlyBillingNotice({ locale, copy }: { locale: string; copy: BillingCopy }) {
   return (
-    <div className="rounded-2xl border border-amber-200/20 bg-amber-200/[0.06] p-4 text-sm text-amber-50/90" role="status">
+    <div className="rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-sm text-amber-50/88" role="status">
       <div className="flex items-start gap-3">
         <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <div>
           <p className="font-semibold">{copy.readOnlyTitle}</p>
-          <p className="mt-1 leading-6 text-amber-50/70">{copy.readOnlyBody}</p>
+          <p className="mt-1 leading-6 text-amber-50/68">{copy.readOnlyBody}</p>
           <Link href={`/${locale}/dashboard/organizations/team`} className="mt-3 inline-flex rounded-md font-semibold text-amber-50 underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-100">{copy.viewTeam}</Link>
         </div>
       </div>
@@ -120,107 +119,119 @@ export function BillingPageView({ locale, billing, canManageBilling, checkout, b
   const hasSubscriptionRecord = billing.status !== null;
 
   return (
-    <main className="relative min-h-screen space-y-8 overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.18),_transparent_34rem),linear-gradient(180deg,#050505_0%,#080b12_50%,#050505_100%)] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="pointer-events-none fixed inset-0 tech-grid opacity-20" />
-      <div className="relative mx-auto max-w-7xl space-y-8">
-        <section className="premium-card rounded-[2rem] p-6 text-white md:p-8" aria-labelledby="billing-title">
-          <div className="grid gap-6 lg:grid-cols-[1.45fr_0.9fr] lg:items-stretch">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/45">{copy.eyebrow}</p>
-              <h1 id="billing-title" className="mt-3 max-w-3xl text-4xl font-semibold tracking-[-0.055em] md:text-5xl">{canManageBilling ? copy.manageTitle : copy.reviewTitle}</h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-white/58 md:text-base">{copy.subtitle}</p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {copy.signals.map((label) => (
-                  <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.035] px-3 py-1 text-xs font-medium text-white/55">
-                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> {label}
-                  </span>
-                ))}
+    <main className="min-h-0 bg-transparent text-white">
+      <div className="w-full space-y-6">
+        <header className="grid gap-5 border-b border-white/[0.065] pb-5 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-end">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">{copy.eyebrow}</p>
+            <h1 id="billing-title" className="mt-2 max-w-3xl text-3xl font-semibold tracking-[-0.035em]">{canManageBilling ? copy.manageTitle : copy.reviewTitle}</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">{copy.subtitle}</p>
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-white/40">
+              {copy.signals.map((label) => (
+                <span key={label} className="inline-flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300/70" aria-hidden="true" /> {label}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <section className="rounded-xl border border-white/[0.075] bg-[#101715] p-4" aria-label={copy.currentPlan}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-white/34">{copy.currentPlan}</p>
+                <h2 className="mt-1.5 truncate text-lg font-semibold text-white/88">{hasActivePlan ? currentPlan.name : copy.noActiveSubscription}</h2>
               </div>
-              {!canManageBilling ? <div className="mt-6"><ReadOnlyBillingNotice locale={locale} copy={copy} /></div> : null}
-              {billingError ? (
-                <div className="mt-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-rose-100" role="alert">
-                  <p className="font-semibold">{copy.actionFailed}</p>
-                  <p className="mt-1 text-sm opacity-85">{billingError}</p>
-                </div>
+              <span className="shrink-0 rounded-lg border border-emerald-300/15 bg-emerald-300/[0.055] px-2.5 py-1 text-xs font-semibold text-emerald-100/80">{formatStatus(billing.status, copy)}</span>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-white/43">{copy.currentPlanDescription}</p>
+            <p className="mt-2 text-xs leading-5 text-white/34">{copy.usageGuidance}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {canManageBilling && hasSubscriptionRecord ? (
+                <BillingActionButton action="portal" locale={locale} className="rounded-xl bg-emerald-300 text-[#06100d] hover:bg-emerald-200">{copy.openPortal}</BillingActionButton>
               ) : null}
-              {checkout === 'success' ? (
-                <div className="mt-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-100" role="status">
-                  <p className="font-semibold">{copy.checkoutCompleted}</p>
-                  <p className="mt-1 text-sm opacity-85">{copy.checkoutCompletedBody}</p>
-                </div>
+              {!canManageBilling ? (
+                <button type="button" disabled aria-disabled="true" className="rounded-xl border border-white/[0.08] px-4 py-2 text-sm font-semibold text-white/35 disabled:cursor-not-allowed">{copy.ownerAccessRequired}</button>
               ) : null}
-              {checkout === 'cancelled' ? (
-                <div className="mt-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-100" role="status">
-                  <p className="font-semibold">{copy.checkoutCancelled}</p>
-                  <p className="mt-1 text-sm opacity-85">{copy.checkoutCancelledBody}</p>
-                </div>
+              {hasActivePlan ? (
+                <Link href={`/${locale}/dashboard`} className="inline-flex h-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 text-sm font-semibold text-white/65 transition hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">{copy.continueToDashboard}</Link>
               ) : null}
             </div>
+          </section>
+        </header>
 
-            <Card className="border-white/10 bg-white/[0.055] text-white shadow-none backdrop-blur">
-              <CardHeader>
-                <CardTitle className="text-2xl tracking-tight">{copy.currentPlan}: {hasActivePlan ? currentPlan.name : copy.noActiveSubscription}</CardTitle>
-                <CardDescription className="text-white/55">{copy.currentPlanDescription}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <span className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-sm font-semibold text-white/70">{formatStatus(billing.status, copy)}</span>
-                <p className="text-sm leading-6 text-white/58">{copy.usageGuidance}</p>
-                <div className="flex flex-wrap gap-3">
-                  {canManageBilling && hasSubscriptionRecord ? (
-                    <BillingActionButton action="portal" locale={locale} className="rounded-full bg-white text-black hover:bg-white/90">{copy.openPortal}</BillingActionButton>
-                  ) : null}
-                  {!canManageBilling ? (
-                    <button type="button" disabled aria-disabled="true" className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white/35 disabled:cursor-not-allowed">{copy.ownerAccessRequired}</button>
-                  ) : null}
-                  {hasActivePlan ? (
-                    <Link href={`/${locale}/dashboard`} className="inline-flex h-10 items-center justify-center rounded-full border border-white/15 px-4 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">{copy.continueToDashboard}</Link>
-                  ) : null}
-                </div>
-              </CardContent>
-            </Card>
+        {!canManageBilling ? <ReadOnlyBillingNotice locale={locale} copy={copy} /> : null}
+
+        {billingError ? (
+          <div className="rounded-xl border border-rose-400/25 bg-rose-400/[0.08] p-4 text-rose-100" role="alert">
+            <p className="font-semibold">{copy.actionFailed}</p>
+            <p className="mt-1 text-sm opacity-80">{billingError}</p>
           </div>
-        </section>
+        ) : null}
+        {checkout === 'success' ? (
+          <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-4 text-emerald-100" role="status">
+            <p className="font-semibold">{copy.checkoutCompleted}</p>
+            <p className="mt-1 text-sm opacity-80">{copy.checkoutCompletedBody}</p>
+          </div>
+        ) : null}
+        {checkout === 'cancelled' ? (
+          <div className="rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-amber-100" role="status">
+            <p className="font-semibold">{copy.checkoutCancelled}</p>
+            <p className="mt-1 text-sm opacity-80">{copy.checkoutCancelledBody}</p>
+          </div>
+        ) : null}
 
-        <section className="grid gap-5 lg:grid-cols-3" aria-label={copy.availablePlans}>
-          {BILLING_PLANS.map((plan) => {
-            const isCurrent = hasActivePlan && plan.id === currentPlan.id;
-            const isSalesLed = plan.salesLed;
-            const description = `${pricingCopy.plan[plan.id].description} ${formatLimitValue(plan.limits.users, copy)} ${copy.users}, ${formatLimitValue(plan.limits.documents, copy)} ${copy.documents}, ${formatLimitValue(plan.limits.vendors, copy)} ${copy.vendors} ${copy.included}.`;
-            const limitRows = [
-              `${formatLimitValue(plan.limits.users, copy)} ${copy.users}`,
-              `${formatLimitValue(plan.limits.documents, copy)} ${copy.documents}`,
-              `${formatLimitValue(plan.limits.vendors, copy)} ${copy.vendors}`,
-              `${formatLimitValue(plan.limits.risks, copy)} ${copy.risks}`,
-            ];
+        <section className="space-y-3" aria-labelledby="available-plans-title">
+          <div className="flex items-center justify-between gap-4">
+            <h2 id="available-plans-title" className="text-sm font-semibold text-white/84">{copy.availablePlans}</h2>
+            <span className="text-xs text-white/30">{BILLING_PLANS.length}</span>
+          </div>
 
-            return (
-              <Card key={plan.id} className={`flex flex-col rounded-[1.75rem] border-white/10 bg-white/[0.035] text-white shadow-none ${isCurrent ? 'ring-1 ring-white/40' : ''}`}>
-                <CardHeader>
+          <div className="grid gap-3 xl:grid-cols-3">
+            {BILLING_PLANS.map((plan) => {
+              const isCurrent = hasActivePlan && plan.id === currentPlan.id;
+              const isSalesLed = plan.salesLed;
+              const description = `${pricingCopy.plan[plan.id].description} ${formatLimitValue(plan.limits.users, copy)} ${copy.users}, ${formatLimitValue(plan.limits.documents, copy)} ${copy.documents}, ${formatLimitValue(plan.limits.vendors, copy)} ${copy.vendors} ${copy.included}.`;
+              const limitRows = [
+                `${formatLimitValue(plan.limits.users, copy)} ${copy.users}`,
+                `${formatLimitValue(plan.limits.documents, copy)} ${copy.documents}`,
+                `${formatLimitValue(plan.limits.vendors, copy)} ${copy.vendors}`,
+                `${formatLimitValue(plan.limits.risks, copy)} ${copy.risks}`,
+              ];
+
+              return (
+                <article key={plan.id} className={`flex flex-col rounded-xl border bg-[#101715] p-5 ${isCurrent ? 'border-emerald-300/25' : 'border-white/[0.075]'}`}>
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <CardTitle>{plan.name}</CardTitle>
-                      <CardDescription className="mt-2 text-white/52">{description}</CardDescription>
+                    <div className="min-w-0">
+                      <h3 className="text-base font-semibold text-white/88">{plan.name}</h3>
+                      <p className="mt-1.5 text-sm leading-6 text-white/42">{description}</p>
                     </div>
-                    {isCurrent ? <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-black">{copy.current}</span> : null}
-                    {isSalesLed && !isCurrent ? <span className="rounded-full border border-cyan-200/30 px-3 py-1 text-xs font-bold text-cyan-100">{copy.salesLed}</span> : null}
+                    {isCurrent ? <span className="rounded-lg border border-emerald-300/20 bg-emerald-300/[0.08] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-100">{copy.current}</span> : null}
+                    {isSalesLed && !isCurrent ? <span className="rounded-lg border border-white/[0.08] bg-white/[0.025] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-white/48">{copy.salesLed}</span> : null}
                   </div>
-                </CardHeader>
-                <CardContent className="flex flex-1 flex-col gap-5">
-                  <p className="text-4xl font-semibold tracking-[-0.04em]">{formatPlanPrice(plan, copy)}</p>
-                  <ul className="space-y-2 text-sm text-white/58">
-                    {limitRows.map((highlight) => <li key={highlight} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-white" aria-hidden="true" /> {highlight}</li>)}
+
+                  <p className="mt-5 text-3xl font-semibold tracking-[-0.035em] text-white">{formatPlanPrice(plan, copy)}</p>
+                  <ul className="mt-5 divide-y divide-white/[0.05] border-y border-white/[0.05] text-sm text-white/50">
+                    {limitRows.map((highlight) => (
+                      <li key={highlight} className="flex gap-2 py-2.5">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300/75" aria-hidden="true" />
+                        {highlight}
+                      </li>
+                    ))}
                   </ul>
-                  {!canManageBilling ? (
-                    <button type="button" disabled aria-disabled="true" className="mt-auto h-10 w-full rounded-full border border-white/10 px-4 text-sm font-semibold text-white/35 disabled:cursor-not-allowed">{copy.ownerActionRequired}</button>
-                  ) : isSalesLed && !isCurrent ? (
-                    <Link href={`/${locale}/contact?intent=sales&plan=${plan.id}`} className="inline-flex h-10 w-full items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-black hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">{copy.talkToSales}</Link>
-                  ) : (
-                    <BillingActionButton action="checkout" locale={locale} planId={plan.id} className="w-full rounded-full" variant={isCurrent ? 'outline' : 'default'} disabled={isCurrent}>{isCurrent ? copy.currentPlan : copy.upgradePlan}</BillingActionButton>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+
+                  <div className="mt-auto pt-5">
+                    {!canManageBilling ? (
+                      <button type="button" disabled aria-disabled="true" className="h-10 w-full rounded-xl border border-white/[0.08] px-4 text-sm font-semibold text-white/35 disabled:cursor-not-allowed">{copy.ownerActionRequired}</button>
+                    ) : isSalesLed && !isCurrent ? (
+                      <Link href={`/${locale}/contact?intent=sales&plan=${plan.id}`} className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-emerald-300 px-4 text-sm font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">{copy.talkToSales}</Link>
+                    ) : (
+                      <BillingActionButton action="checkout" locale={locale} planId={plan.id} className={`w-full rounded-xl ${isCurrent ? '' : 'bg-emerald-300 text-[#06100d] hover:bg-emerald-200'}`} variant={isCurrent ? 'outline' : 'default'} disabled={isCurrent}>{isCurrent ? copy.currentPlan : copy.upgradePlan}</BillingActionButton>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         </section>
       </div>
     </main>

@@ -111,21 +111,21 @@ export function TeamSettingsSection({
   }, [copy.section.cancelled, pendingOperation]);
 
   return (
-    <section className="space-y-6">
-      <div>
-        <p className="text-sm font-medium text-muted-foreground">{copy.section.eyebrow}</p>
-        <h2 className="text-2xl font-semibold tracking-tight">{copy.section.title}</h2>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{copy.section.body}</p>
+    <section className="space-y-5">
+      <div className="flex flex-col gap-2 border-b border-white/[0.055] pb-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/34">{copy.section.eyebrow}</p>
+        <h2 className="text-xl font-semibold tracking-[-0.02em] text-white/88">{copy.section.title}</h2>
+        <p className="max-w-2xl text-sm leading-6 text-white/46">{copy.section.body}</p>
       </div>
 
       {!canManageTeam ? (
-        <p className="rounded-xl border bg-muted/35 p-4 text-sm text-muted-foreground" role="status">{readOnlyCopy[locale] ?? readOnlyCopy.en}</p>
+        <p className="rounded-xl border border-white/[0.075] bg-[#101715] p-4 text-sm text-white/60" role="status">{readOnlyCopy[locale] ?? readOnlyCopy.en}</p>
       ) : canInviteMembers ? (
         <InviteMemberForm locale={locale} canInviteAdmin={canInviteAdmin} onSubmit={handleInvite} />
       ) : (
-        <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100" role="status">
+        <div className="rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-sm text-amber-100/85" role="status">
           <p>{inviteBlockReason === 'capacity' ? blockedCopy.capacity : blockedCopy.plan}</p>
-          <Link href={`/${locale}/dashboard/organizations/billing`} className="mt-3 inline-flex rounded-full border border-current/20 px-4 py-2 font-semibold outline-none focus-visible:ring-2">{blockedCopy.action}</Link>
+          <Link href={`/${locale}/dashboard/organizations/billing`} className="mt-3 inline-flex rounded-lg border border-current/20 px-3 py-2 text-xs font-semibold outline-none transition hover:bg-amber-100/[0.06] focus-visible:ring-2">{blockedCopy.action}</Link>
         </div>
       )}
 

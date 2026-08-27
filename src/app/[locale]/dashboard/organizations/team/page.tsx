@@ -40,12 +40,12 @@ export default async function OrganizationTeamPage({ params }: TeamPageProps) {
   if (!canManageTeam) {
     const denied = deniedCopy[locale] ?? deniedCopy.en;
     return (
-      <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.16),_transparent_34rem),linear-gradient(180deg,#050505_0%,#080b12_46%,#050505_100%)] px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 text-white shadow-2xl shadow-black/20 md:p-8" role="status">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-200/70">{copy.eyebrow}</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight">{denied.title}</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60 md:text-base">{denied.body}</p>
-        </div>
+      <main className="min-h-0 bg-transparent text-white">
+        <section className="max-w-3xl rounded-xl border border-white/[0.075] bg-[#101715] p-5 md:p-6" role="status">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">{copy.eyebrow}</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-[-0.025em] text-white">{denied.title}</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">{denied.body}</p>
+        </section>
       </main>
     );
   }
@@ -62,19 +62,18 @@ export default async function OrganizationTeamPage({ params }: TeamPageProps) {
   const canInviteAdmin = isPlanAtLeast(entitlements.plan, 'enterprise');
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.16),_transparent_34rem),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.08),_transparent_30rem),linear-gradient(180deg,#050505_0%,#080b12_46%,#050505_100%)] px-4 py-8 sm:px-6 lg:px-8">
-      <div className="pointer-events-none fixed inset-0 tech-grid opacity-20" />
-      <div className="relative mx-auto max-w-7xl space-y-10">
-        <header className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 shadow-2xl shadow-black/20 md:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-200/70">{copy.eyebrow}</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white md:text-4xl">{copy.title}</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-white/60 md:text-base">{copy.body}</p>
-          <div className="mt-5 flex flex-wrap gap-2 text-xs text-white/55">
-            {copy.badges.map((badge) => <span key={badge} className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5">{badge}</span>)}
+    <main className="min-h-0 bg-transparent text-white">
+      <div className="w-full space-y-6">
+        <header className="border-b border-white/[0.065] pb-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">{copy.eyebrow}</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">{copy.title}</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-white/50">{copy.body}</p>
+          <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-white/46">
+            {copy.badges.map((badge) => <span key={badge} className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1">{badge}</span>)}
           </div>
         </header>
 
-        <div className="space-y-10">
+        <div className="space-y-6">
           <TeamSettingsSection
             locale={locale}
             members={members}
