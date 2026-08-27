@@ -6,147 +6,116 @@ type ScenarioSimulatorProps = {
   basePath: string;
 };
 
-type Scenario = {
+type RemediationLane = {
   title: string;
-  currentScore: number;
-  projectedScore: number;
-  lift: number;
+  count: number;
   description: string;
   actions: string[];
   href: string;
-  tone: 'emerald' | 'amber' | 'rose' | 'sky' | 'violet';
+  priority: 'critical' | 'high' | 'normal';
 };
 
-function clampScore(score: number) {
-  return Math.max(0, Math.min(100, Math.round(score)));
+function priorityTone(priority: RemediationLane['priority']) {
+  if (priority === 'critical') return 'border-rose-300/15 bg-rose-300/[0.055] text-rose-100/80';
+  if (priority === 'high') return 'border-amber-300/15 bg-amber-300/[0.055] text-amber-100/80';
+  return 'border-white/[0.075] bg-white/[0.025] text-white/52';
 }
 
-function toneClasses(tone: Scenario['tone']) {
-  const tones = {
-    emerald: 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100',
-    amber: 'border-amber-300/30 bg-amber-300/10 text-amber-100',
-    rose: 'border-rose-300/30 bg-rose-300/10 text-rose-100',
-    sky: 'border-sky-300/30 bg-sky-300/10 text-sky-100',
-    violet: 'border-violet-300/30 bg-violet-300/10 text-violet-100',
-  };
-
-  return tones[tone];
-}
-
-function buildScenario(summary: DashboardSummary, basePath: string): Scenario[] {
-  const closeCriticalLift = Math.min(14, summary.criticalRisks * 5);
-  const vendorLift = Math.min(12, summary.highRiskVendors * 3);
-  const evidenceLift = Math.min(16, summary.missingDocuments * 2);
-  const taskLift = Math.min(10, Math.ceil(summary.openTasks / 2));
-
+function buildLanes(summary: DashboardSummary, basePath: string): RemediationLane[] {
   return [
     {
-      title: 'Close critical risks',
-      currentScore: summary.complianceScore,
-      projectedScore: clampScore(summary.complianceScore + closeCriticalLift),
-      lift: closeCriticalLift,
-      description: 'Model the score impact of closing the most severe risk items first.',
-      actions: [`Resolve ${summary.criticalRisks} critical risks`, 'Attach remediation evidence', 'Update board narrative'],
+      title: 'Critical risk treatment',
+      count: summary.criticalRisks,
+      description: 'Resolve the highest-severity entries in the current risk register and attach treatment evidence.',
+      actions: ['Review critical risk owners', 'Record remediation evidence', 'Update risk status after treatment'],
       href: `${basePath}/risks`,
-      tone: summary.criticalRisks > 0 ? 'rose' : 'emerald',
+      priority: summary.criticalRisks > 0 ? 'critical' : 'normal',
     },
     {
-      title: 'Review high-risk vendors',
-      currentScore: summary.complianceScore,
-      projectedScore: clampScore(summary.complianceScore + vendorLift),
-      lift: vendorLift,
-      description: 'Estimate posture improvement after refreshing supplier reviews and data processing proof.',
-      actions: [`Review ${summary.highRiskVendors} high-risk vendors`, 'Refresh DPA status', 'Confirm next review dates'],
+      title: 'High-risk vendor review',
+      count: summary.highRiskVendors,
+      description: 'Refresh due diligence for vendors currently flagged as high risk in the workspace.',
+      actions: ['Review vendor records', 'Refresh processing evidence', 'Confirm review status and next review date'],
       href: `${basePath}/vendors`,
-      tone: summary.highRiskVendors > 0 ? 'amber' : 'emerald',
+      priority: summary.highRiskVendors > 0 ? 'high' : 'normal',
     },
     {
-      title: 'Complete missing evidence',
-      currentScore: summary.complianceScore,
-      projectedScore: clampScore(summary.complianceScore + evidenceLift),
-      lift: evidenceLift,
-      description: 'Show the likely impact of closing document and evidence gaps before external review.',
-      actions: [`Upload ${summary.missingDocuments} missing evidence items`, 'Link evidence to controls', 'Prepare audit appendix'],
+      title: 'Evidence completion',
+      count: summary.missingDocuments,
+      description: 'Close open evidence gaps before relying on the current register for external review.',
+      actions: ['Identify missing evidence', 'Upload or replace documents', 'Verify document status and ownership'],
       href: `${basePath}/documents`,
-      tone: summary.missingDocuments > 3 ? 'rose' : summary.missingDocuments > 0 ? 'amber' : 'emerald',
+      priority: summary.missingDocuments > 3 ? 'critical' : summary.missingDocuments > 0 ? 'high' : 'normal',
     },
     {
-      title: 'Execute remediation sprint',
-      currentScore: summary.complianceScore,
-      projectedScore: clampScore(summary.complianceScore + taskLift),
-      lift: taskLift,
-      description: 'Estimate the board-readiness lift from completing open actions and reducing execution drag.',
-      actions: [`Close ${summary.openTasks} open tasks`, 'Assign owners', 'Export progress report'],
+      title: 'Execution backlog',
+      count: summary.openTasks,
+      description: 'Work through the open compliance tasks that carry the current remediation plan.',
+      actions: ['Confirm task owners', 'Review due dates and priority', 'Close completed actions with evidence'],
       href: `${basePath}/tasks`,
-      tone: summary.openTasks > 10 ? 'amber' : 'sky',
+      priority: summary.openTasks > 10 ? 'high' : 'normal',
     },
   ];
 }
 
+function priorityRank(priority: RemediationLane['priority']) {
+  if (priority === 'critical') return 3;
+  if (priority === 'high') return 2;
+  return 1;
+}
+
 export function ScenarioSimulator({ summary, basePath }: ScenarioSimulatorProps) {
-  const scenarios = buildScenario(summary, basePath);
-  const bestScenario = [...scenarios].sort((a, b) => b.lift - a.lift)[0];
-  const combinedLift = Math.min(28, scenarios.reduce((sum, scenario) => sum + scenario.lift, 0));
-  const combinedScore = clampScore(summary.complianceScore + combinedLift);
+  const lanes = buildLanes(summary, basePath);
+  const orderedLanes = [...lanes].sort((a, b) => priorityRank(b.priority) - priorityRank(a.priority) || b.count - a.count);
+  const firstPriority = orderedLanes.find((lane) => lane.count > 0) ?? orderedLanes[0];
+  const openSignals = lanes.reduce((total, lane) => total + lane.count, 0);
 
   return (
-    <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-5 text-white shadow-2xl md:p-6">
-      <div className="absolute right-0 top-0 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl" />
-      <div className="absolute bottom-0 left-0 h-96 w-96 rounded-full bg-violet-500/10 blur-3xl" />
-
-      <div className="relative grid gap-6 xl:grid-cols-[0.75fr_1.25fr]">
-        <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-200/80">Scenario simulator</p>
-          <h2 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">What happens if we fix the right things first?</h2>
-          <p className="mt-4 text-sm leading-6 text-slate-400">
-            A board-friendly projection model that estimates compliance score lift from closing risks, vendors, evidence and execution gaps.
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+      <div className="grid xl:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="border-b border-white/[0.055] px-5 py-5 xl:border-b-0 xl:border-r">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Remediation planner</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Prioritize the work that is actually open</h2>
+          <p className="mt-3 text-sm leading-6 text-white/42">
+            This view ranks current workspace gaps. It does not predict future compliance scores or invent projected uplift.
           </p>
 
-          <div className="mt-6 rounded-3xl border border-white/10 bg-black/20 p-5">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Best next move</p>
-            <p className="mt-2 text-2xl font-semibold tracking-tight">{bestScenario.title}</p>
-            <div className="mt-5 flex items-end gap-4">
-              <div>
-                <p className="text-xs text-slate-500">Current</p>
-                <p className="text-4xl font-bold">{summary.complianceScore}%</p>
-              </div>
-              <p className="pb-2 text-2xl text-slate-500">→</p>
-              <div>
-                <p className="text-xs text-slate-500">Projected</p>
-                <p className="text-4xl font-bold text-emerald-200">{bestScenario.projectedScore}%</p>
-              </div>
+          <dl className="mt-6 divide-y divide-white/[0.055] border-y border-white/[0.055]">
+            <div className="py-3.5">
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">Current score</dt>
+              <dd className="mt-1.5 text-3xl font-semibold tracking-[-0.04em]">{summary.complianceScore}%</dd>
             </div>
-            <p className="mt-4 text-sm text-slate-400">Potential lift: +{bestScenario.lift} points.</p>
-          </div>
-
-          <div className="mt-5 rounded-3xl border border-white/10 bg-white/[0.045] p-5">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Combined sprint</p>
-            <p className="mt-2 text-sm text-slate-300">If all major gaps are reduced together, projected posture could reach <span className="font-bold text-emerald-200">{combinedScore}%</span>.</p>
-          </div>
+            <div className="py-3.5">
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">Open remediation signals</dt>
+              <dd className="mt-1.5 text-2xl font-semibold tracking-[-0.03em]">{openSignals}</dd>
+            </div>
+            <div className="py-3.5">
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">First priority</dt>
+              <dd className="mt-1.5 text-sm font-semibold leading-5 text-white/72">{firstPriority.title}</dd>
+            </div>
+          </dl>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {scenarios.map((scenario) => (
-            <Link key={scenario.title} href={scenario.href} className="group rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-5 transition hover:-translate-y-1 hover:border-primary/50 hover:bg-white/[0.075]">
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="text-lg font-semibold">{scenario.title}</h3>
-                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${toneClasses(scenario.tone)}`}>+{scenario.lift}</span>
+        <div className="divide-y divide-white/[0.055]">
+          {orderedLanes.map((lane) => (
+            <Link key={lane.title} href={lane.href} className="group block px-5 py-4 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 md:px-6">
+              <div className="grid gap-4 lg:grid-cols-[220px_90px_minmax(0,1fr)_auto] lg:items-start">
+                <div>
+                  <span className={`rounded-md border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] ${priorityTone(lane.priority)}`}>{lane.priority}</span>
+                  <h3 className="mt-2 text-sm font-semibold text-white/82">{lane.title}</h3>
+                </div>
+                <div>
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.13em] text-white/28">Open</p>
+                  <p className="mt-1 text-2xl font-semibold tracking-[-0.03em]">{lane.count}</p>
+                </div>
+                <div>
+                  <p className="text-sm leading-6 text-white/42">{lane.description}</p>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                    {lane.actions.map((action) => <span key={action} className="text-[10px] text-white/30">• {action}</span>)}
+                  </div>
+                </div>
+                <span className="text-xs font-semibold text-emerald-100/55 transition group-hover:text-emerald-100">Open →</span>
               </div>
-              <p className="mt-4 text-sm leading-6 text-slate-400">{scenario.description}</p>
-
-              <div className="mt-5 flex items-end gap-3">
-                <p className="text-3xl font-bold">{scenario.currentScore}%</p>
-                <p className="pb-1 text-slate-500">→</p>
-                <p className="text-3xl font-bold text-emerald-200">{scenario.projectedScore}%</p>
-              </div>
-
-              <div className="mt-5 space-y-2">
-                {scenario.actions.map((action) => (
-                  <p key={action} className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-400">{action}</p>
-                ))}
-              </div>
-
-              <p className="mt-5 text-xs font-semibold text-primary/80 opacity-0 transition group-hover:opacity-100">Open scenario workstream →</p>
             </Link>
           ))}
         </div>
