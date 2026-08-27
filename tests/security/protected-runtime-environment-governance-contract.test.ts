@@ -79,7 +79,7 @@ describe('protected runtime evidence environment governance', () => {
     expect(preflight).toContain("REQUIRE_PROTECTED_BRANCHES: 'true'");
     expect(preflight).toContain('node scripts/security/check-github-environment-governance.mjs');
     expect(preflight).toContain('EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK');
-    expect(preflight).toContain('test "$GITHUB_REF_NAME" = "main"');
+    expect(preflight).toMatch(/test "\$GITHUB_REF_NAME" = ['"]main['"]/);
     expect(preflight).not.toMatch(/secrets\./);
 
     const protectedJobText = workflow.slice(protectedBoundary);
