@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const OVERVIEW = new URL('../../src/components/dashboard/dashboard-overview.tsx', import.meta.url);
 const EXPERIENCE_MAP = new URL('../../src/components/dashboard/dashboard-experience-map.tsx', import.meta.url);
+const EXPERIENCE_INDEX = new URL('../../src/components/dashboard/dashboard-experience-index.tsx', import.meta.url);
 const EXECUTIVE_HERO = new URL('../../src/components/dashboard/executive-dashboard-hero.tsx', import.meta.url);
 const EXECUTIVE_COMMAND_CENTER = new URL('../../src/components/dashboard/executive-command-center.tsx', import.meta.url);
 const EXECUTIVE_KPI = new URL('../../src/components/dashboard/sticky-executive-kpi-bar.tsx', import.meta.url);
@@ -12,6 +13,8 @@ const ACTIVITY_FEED = new URL('../../src/components/dashboard/operational-activi
 const RISK_HEATMAP = new URL('../../src/components/dashboard/risk-heatmap.tsx', import.meta.url);
 const RELATIONSHIP_GRAPH = new URL('../../src/components/dashboard/relationship-graph.tsx', import.meta.url);
 const EVIDENCE_GRAPH = new URL('../../src/components/dashboard/evidence-graph.tsx', import.meta.url);
+const BOARD_MODE = new URL('../../src/components/dashboard/board-mode-preview.tsx', import.meta.url);
+const REMEDIATION_PLANNER = new URL('../../src/components/dashboard/scenario-simulator.tsx', import.meta.url);
 
 describe('TailAdmin phase 4 executive surfaces', () => {
   it('removes synthetic enterprise preview metrics from the dashboard overview', async () => {
@@ -36,6 +39,18 @@ describe('TailAdmin phase 4 executive surfaces', () => {
     expect(source).not.toContain("anchor: '#executive-cockpit'");
     expect(source).not.toContain("anchor: '#evidence-graph'");
     expect(source).not.toContain('Expand revenue');
+    expect(source).not.toContain('rounded-[2rem]');
+    expect(source).not.toContain('hover:-translate-y');
+  });
+
+  it('keeps the operating index factual and removes enterprise-readiness overclaims', async () => {
+    const source = await readFile(EXPERIENCE_INDEX, 'utf8');
+
+    expect(source).toContain('Operating index');
+    expect(source).toContain('Strong operating posture');
+    expect(source).not.toContain('Enterprise review-ready');
+    expect(source).not.toContain('blur-3xl');
+    expect(source).not.toContain('shadow-2xl');
     expect(source).not.toContain('rounded-[2rem]');
     expect(source).not.toContain('hover:-translate-y');
   });
@@ -107,5 +122,26 @@ describe('TailAdmin phase 4 executive surfaces', () => {
     expect(risk).toContain('Impact × probability');
     expect(relationship).toContain('it does not add synthetic dependency data');
     expect(evidence).toContain('rather than placeholder metrics');
+  });
+
+  it('replaces synthetic reporting projections with factual leadership and remediation views', async () => {
+    const [boardMode, planner] = await Promise.all([
+      readFile(BOARD_MODE, 'utf8'),
+      readFile(REMEDIATION_PLANNER, 'utf8'),
+    ]);
+
+    expect(boardMode).toContain('Leadership summary');
+    expect(boardMode).toContain('using only current score, risk, vendor, evidence and action data');
+    expect(boardMode).not.toContain('Ready for customer, investor and leadership review');
+    expect(boardMode).not.toContain('rounded-[2rem]');
+    expect(boardMode).not.toContain('blur-3xl');
+
+    expect(planner).toContain('Remediation planner');
+    expect(planner).toContain('It does not predict future compliance scores or invent projected uplift');
+    expect(planner).not.toContain('projectedScore');
+    expect(planner).not.toContain('Potential lift');
+    expect(planner).not.toContain('Combined sprint');
+    expect(planner).not.toContain('blur-3xl');
+    expect(planner).not.toContain('rounded-[2rem]');
   });
 });
