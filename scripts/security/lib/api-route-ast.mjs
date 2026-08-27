@@ -147,9 +147,9 @@ function collectReachableUsage(rootNode, callables, sourceFile) {
     if (!body) return;
     if (ts.isBlock(body)) {
       for (const statement of body.statements) visitStatement(statement);
-      return;
+    } else {
+      visitExpression(body);
     }
-    visitExpression(body);
   }
 
   function visitExpression(expression) {
@@ -173,19 +173,17 @@ function collectReachableUsage(rootNode, callables, sourceFile) {
       } else if (ts.isArrowFunction(expression.expression) || ts.isFunctionExpression(expression.expression)) {
         visitCallable(expression.expression);
       } else {
-        visitExpression(expression.expression);
+        visitNode(expression.expression);
       }
 
       for (const argument of expression.arguments) {
         if (ts.isArrowFunction(argument) || ts.isFunctionExpression(argument)) continue;
-        visitExpression(argument);
+        visitNode(argument);
       }
       return;
     }
 
-    if (ts.isArrowFunction(expression) || ts.isFunctionExpression(expression)) {
-      return;
-    }
+    if (ts.isArrowFunction(expression) || ts.isFunctionExpression(expression)) return;
 
     if (ts.isConditionalExpression(expression)) {
       visitExpression(expression.condition);
@@ -208,11 +206,7 @@ function collectReachableUsage(rootNode, callables, sourceFile) {
       return;
     }
 
-    ts.forEachChild(expression, (child) => {
-      if (ts.isArrowFunction(child) || ts.isFunctionExpression(child)) return;
-      if (ts.isExpression(child)) visitExpression(child);
-      else visitNode(child);
-    });
+    ts.forEachChild(expression, visitNode);
   }
 
   function visitStatement(statement) {
@@ -256,22 +250,39 @@ function collectReachableUsage(rootNode, callables, sourceFile) {
       return;
     }
 
-    visitNode(statement);
+    ts.forEachChild(statement, visitNode);
   }
 
   function visitNode(node) {
     recordIdentifier(node);
     if (isCallableNode(node) && node !== rootNode) return;
-    if (ts.isExpression(node)) {
+
+    if (
+      ts.isCallExpression(node)
+      || ts.isParenthesizedExpression(node)
+      || ts.isConditionalExpression(node)
+      || ts.isBinaryExpression(node)
+      || ts.isArrowFunction(node)
+      || ts.isFunctionExpression(node)
+    ) {
       visitExpression(node);
       return;
     }
-    ts.forEachChild(node, (child) => {
-      if (isCallableNode(child)) return;
-      if (ts.isStatement(child)) visitStatement(child);
-      else if (ts.isExpression(child)) visitExpression(child);
-      else visitNode(child);
-    });
+
+    if (
+      ts.isBlock(node)
+      || ts.isIfStatement(node)
+      || ts.isVariableStatement(node)
+      || ts.isExpressionStatement(node)
+      || ts.isReturnStatement(node)
+      || ts.isThrowStatement(node)
+      || ts.isFunctionDeclaration(node)
+    ) {
+      visitStatement(node);
+      return;
+    }
+
+    ts.forEachChild(node, visitNode);
   }
 
   if (isCallableNode(rootNode)) visitCallable(rootNode);
