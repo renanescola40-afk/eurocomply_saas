@@ -6,127 +6,86 @@ type EnterpriseValueLadderProps = {
   basePath: string;
 };
 
-type ValueStep = {
+type Workstream = {
   name: string;
-  priceSignal: string;
-  readiness: number;
+  status: string;
   description: string;
-  unlocks: string[];
+  signals: string[];
   href: string;
-  tone: 'emerald' | 'sky' | 'violet' | 'amber';
+  tone: 'emerald' | 'amber' | 'rose' | 'neutral';
 };
 
-function toneClasses(tone: ValueStep['tone']) {
+function toneClasses(tone: Workstream['tone']) {
   const tones = {
-    emerald: 'border-emerald-300/30 bg-emerald-300/10 text-emerald-200',
-    sky: 'border-sky-300/30 bg-sky-300/10 text-sky-200',
-    violet: 'border-violet-300/30 bg-violet-300/10 text-violet-200',
-    amber: 'border-amber-300/30 bg-amber-300/10 text-amber-200',
+    emerald: 'border-emerald-300/15 bg-emerald-300/[0.055] text-emerald-100/80',
+    amber: 'border-amber-300/15 bg-amber-300/[0.055] text-amber-100/80',
+    rose: 'border-rose-300/15 bg-rose-300/[0.055] text-rose-100/80',
+    neutral: 'border-white/[0.075] bg-white/[0.025] text-white/52',
   };
-
   return tones[tone];
 }
 
-function clamp(value: number) {
-  return Math.max(10, Math.min(100, Math.round(value)));
-}
-
 export function EnterpriseValueLadder({ summary, basePath }: EnterpriseValueLadderProps) {
-  const evidenceReadiness = summary.totals.documents === 0
-    ? 10
-    : ((summary.totals.documents - summary.missingDocuments) / summary.totals.documents) * 100;
-
-  const steps: ValueStep[] = [
+  const trackedEvidence = Math.max(0, summary.totals.documents - summary.missingDocuments);
+  const workstreams: Workstream[] = [
     {
-      name: 'Compliance OS',
-      priceSignal: 'Entry wedge',
-      readiness: clamp(summary.complianceScore),
-      description: 'The core workspace for tasks, vendors, risks, documents and executive visibility.',
-      unlocks: ['Executive cockpit', 'Risk radar', 'Evidence graph'],
+      name: 'Core governance',
+      status: summary.criticalRisks > 0 ? 'Attention' : 'Active',
+      description: 'The operating workspace for risk, evidence, vendor and remediation records.',
+      signals: [`${summary.openRisks} open risks`, `${summary.openTasks} open tasks`],
       href: basePath,
-      tone: 'emerald',
+      tone: summary.criticalRisks > 0 ? 'rose' : 'emerald',
     },
     {
-      name: 'Leadership Reporting',
-      priceSignal: 'Premium tier',
-      readiness: clamp(summary.complianceScore - summary.missingDocuments),
-      description: 'Client-facing reports, white-label previews and leadership review compliance narratives.',
-      unlocks: ['Leadership memo', 'White-label preview', 'Review pack'],
-      href: `${basePath}/reports`,
-      tone: 'sky',
+      name: 'Reporting',
+      status: summary.missingDocuments > 0 ? 'Review inputs' : 'Inputs tracked',
+      description: 'Executive and governance reporting based on the current tracked workspace posture.',
+      signals: [`${summary.complianceScore}% current score`, `${summary.missingDocuments} evidence gaps`],
+      href: `${basePath}/reports-governance`,
+      tone: summary.missingDocuments > 0 ? 'amber' : 'emerald',
     },
     {
-      name: 'Enterprise Governance',
-      priceSignal: 'Enterprise tier',
-      readiness: clamp(evidenceReadiness - summary.criticalRisks * 3),
-      description: 'Approvals, department ownership, activity timeline and accountability workflows.',
-      unlocks: ['Approvals', 'Departments', 'Activity timeline'],
-      href: `${basePath}/tasks`,
-      tone: 'violet',
+      name: 'Access governance',
+      status: 'Operational',
+      description: 'Workspace membership, role administration and access-operation evidence.',
+      signals: ['Role-based access', 'Team operations'],
+      href: `${basePath}/team`,
+      tone: 'neutral',
     },
     {
-      name: 'Framework Marketplace',
-      priceSignal: 'Expansion revenue',
-      readiness: clamp((summary.complianceScore + evidenceReadiness) / 2),
-      description: 'Package the same compliance foundation into GDPR, DORA, NIS2, ISO, SOC2 and AI Act modules.',
-      unlocks: ['GDPR', 'DORA/NIS2', 'ISO/SOC2/AI Act'],
-      href: `${basePath}/reports/print`,
-      tone: 'amber',
+      name: 'Evidence operations',
+      status: summary.missingDocuments > 3 ? 'Attention' : 'Active',
+      description: 'Document and evidence records used by governance, review and audit workflows.',
+      signals: [`${trackedEvidence} tracked evidence items`, `${summary.totals.documents} total documents`],
+      href: `${basePath}/documents`,
+      tone: summary.missingDocuments > 3 ? 'rose' : summary.missingDocuments > 0 ? 'amber' : 'emerald',
     },
   ];
 
   return (
-    <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-5 text-white shadow-2xl md:p-6">
-      <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-emerald-500/10 blur-3xl" />
-      <div className="absolute bottom-0 left-8 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl" />
-
-      <div className="relative flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+      <div className="flex flex-col gap-2 border-b border-white/[0.055] px-5 py-5 md:flex-row md:items-end md:justify-between md:px-6">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-200/80">Enterprise value ladder</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight">A pricing story buyers can understand</h2>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Governance workstreams</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Operational areas in the current workspace</h2>
         </div>
-        <p className="max-w-xl text-sm leading-6 text-slate-400">
-          Convert the product from a single compliance tool into a clear expansion path: operating system, reporting, governance and multi-framework modules.
-        </p>
+        <p className="max-w-xl text-sm leading-6 text-white/38">Product administration stays focused on the work the organization can perform now, not internal pricing strategy or future revenue concepts.</p>
       </div>
 
-      <div className="relative mt-7 grid gap-4 xl:grid-cols-4">
-        {steps.map((step, index) => (
-          <Link key={step.name} href={step.href} className="group rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-5 transition hover:-translate-y-1 hover:border-primary/50 hover:bg-white/[0.075]">
+      <div className="grid md:grid-cols-2 xl:grid-cols-4">
+        {workstreams.map((workstream, index) => (
+          <Link key={workstream.name} href={workstream.href} className={`group min-h-52 px-5 py-5 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 ${index > 0 ? 'border-t border-white/[0.055] md:border-l md:border-t-0' : ''} ${index === 2 ? 'md:border-t md:border-white/[0.055] xl:border-t-0' : ''}`}>
             <div className="flex items-start justify-between gap-3">
-              <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${toneClasses(step.tone)}`}>{step.priceSignal}</span>
-              <span className="text-xs text-slate-500">0{index + 1}</span>
+              <h3 className="text-base font-semibold text-white/84">{workstream.name}</h3>
+              <span className={`rounded-md border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] ${toneClasses(workstream.tone)}`}>{workstream.status}</span>
             </div>
-
-            <h3 className="mt-5 text-xl font-semibold tracking-tight">{step.name}</h3>
-            <p className="mt-3 min-h-20 text-sm leading-6 text-slate-400">{step.description}</p>
-
-            <div className="mt-5">
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>Readiness signal</span>
-                <span>{step.readiness}%</span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-primary" style={{ width: `${step.readiness}%` }} />
-              </div>
+            <p className="mt-4 text-sm leading-6 text-white/42">{workstream.description}</p>
+            <div className="mt-5 space-y-2 border-t border-white/[0.055] pt-3">
+              {workstream.signals.map((signal) => <p key={signal} className="text-xs text-white/38">• {signal}</p>)}
             </div>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              {step.unlocks.map((unlock) => (
-                <span key={unlock} className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-xs text-slate-400">{unlock}</span>
-              ))}
-            </div>
-
-            <p className="mt-5 text-xs font-semibold text-primary/80 opacity-0 transition group-hover:opacity-100">Open value stream →</p>
+            <p className="mt-4 text-[10px] font-semibold text-emerald-100/0 transition group-hover:text-emerald-100/65">Open workstream →</p>
           </Link>
         ))}
-      </div>
-
-      <div className="relative mt-5 rounded-3xl border border-white/10 bg-black/20 p-5">
-        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Commercial positioning</p>
-        <p className="mt-2 text-sm leading-6 text-slate-300">
-          Start with GDPR operations, then expand into leadership reporting, governance controls and paid framework modules. This creates a stronger pricing ladder than a flat checklist product.
-        </p>
       </div>
     </section>
   );
