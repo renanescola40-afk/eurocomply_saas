@@ -8,6 +8,7 @@ import {
   projectRefFromApiUrl,
   validateProviderManagedSnapshot,
 } from '../../scripts/recovery/verify-supabase-provider-managed-restore.mjs';
+import { allowedDestroyConfirmations } from '../../scripts/recovery/destroy-supabase-provider-managed-restore.mjs';
 
 const migrations = ['20260822120617', '20260822123538'];
 
@@ -83,13 +84,21 @@ test('rejects unreviewed includes and all other psql meta commands', () => {
   assert.throws(() => normalizeSqlForManagementApi('\\copy public.users to stdout\n'), /meta_command_not_allowed/);
 });
 
-test('keeps provider restore teardown confirmation aligned with recovery workflow', async () => {
-  const [destroyScript, recoveryWorkflow] = await Promise.all([
-    readFile(new URL('../../scripts/recovery/destroy-supabase-provider-managed-restore.mjs', import.meta.url), 'utf8'),
+test('accepts only the two bounded restore teardown confirmation contexts', () => {
+  const restoreRef = 'abcdefghijklmnopqrst';
+  assert.deepEqual(allowedDestroyConfirmations(restoreRef), [
+    `DELETE ${restoreRef} AFTER REHEARSAL`,
+    `DELETE ${restoreRef} AFTER RECOVERY PROOF`,
+  ]);
+  assert.deepEqual(allowedDestroyConfirmations('production'), []);
+});
+
+test('keeps both provider restore teardown workflows aligned with the teardown guard', async () => {
+  const [rehearsalWorkflow, recoveryWorkflow] = await Promise.all([
+    readFile(new URL('../../.github/workflows/supabase-forward-reconciliation-rehearsal.yml', import.meta.url), 'utf8'),
     readFile(new URL('../../.github/workflows/recovery-resilience-proof.yml', import.meta.url), 'utf8'),
   ]);
 
-  assert.match(destroyScript, /DELETE \$\{restoreRef\} AFTER RECOVERY PROOF/);
-  assert.doesNotMatch(destroyScript, /DELETE \$\{restoreRef\} AFTER REHEARSAL/);
+  assert.match(rehearsalWorkflow, /DELETE \$\{RECOVERY_PROVIDER_RESTORE_PROJECT_REF\} AFTER REHEARSAL/);
   assert.match(recoveryWorkflow, /DELETE \$\{RECOVERY_PROVIDER_RESTORE_PROJECT_REF\} AFTER RECOVERY PROOF/);
 });
