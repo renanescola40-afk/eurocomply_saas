@@ -3,151 +3,92 @@ name: Enterprise Recovery Drill
 on:
   push:
     branches: [main]
+  pull_request:
+    paths:
+      - '.github/workflows/enterprise-recovery-drill.yml'
+      - '.github/workflows/recovery-resilience-proof.yml'
+      - '.github/workflows/supabase-forward-reconciliation-rehearsal.yml'
+      - 'scripts/recovery/verify-supabase-provider-managed-restore.mjs'
+      - 'scripts/recovery/destroy-supabase-provider-managed-restore.mjs'
+      - 'tests/enterprise/recovery-control-plane.test.ts'
+      - 'tests/security/protected-proof-workflow-contract.test.mjs'
   workflow_dispatch:
 
 permissions:
   contents: read
-  actions: read
 
 concurrency:
-  group: enterprise-recovery-${{ github.ref }}
-  cancel-in-progress: false
+  group: enterprise-recovery-contract-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
 
 jobs:
-  environment-governance:
-    name: Verify recovery environment governance before protected secrets
+  contract:
+    name: Verify provider-managed recovery boundary
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    env:
-      TARGET_SHA: ${{ github.sha }}
     steps:
-      - name: Checkout exact assessed main SHA without credentials
+      - name: Checkout exact assessed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
           fetch-depth: 1
-
-      - name: Verify exact current main SHA before governance lookup
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$GITHUB_REF_NAME" = 'main'
-          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-          git ls-remote origin refs/heads/main | grep -q "^${TARGET_SHA}"
-
-      - name: Verify recovery environment governance before protected secrets
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_ENVIRONMENT_NAME: production-recovery
-          REQUIRE_PROTECTED_BRANCHES: 'true'
-        run: node scripts/security/check-github-environment-governance.mjs
-
-  recovery:
-    name: Exact-SHA isolated backup restore and RPO RTO proof
-    needs: environment-governance
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    environment:
-      name: production-recovery
-    permissions:
-      contents: read
-      actions: read
-    env:
-      TARGET_SHA: ${{ github.sha }}
-      RELEASE_SHA: ${{ github.sha }}
-      RECOVERY_REQUIRED_EXERCISE: backup-restore
-    steps:
-      - name: Checkout exact main SHA
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-          fetch-depth: 1
-
-      - name: Verify exact current main SHA after environment approval
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$GITHUB_REF_NAME" = 'main'
-          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-          git ls-remote origin refs/heads/main | grep -q "^${TARGET_SHA}"
 
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
-          cache: npm
 
-      - name: Install dependencies deterministically without lifecycle scripts
-        run: npm ci --ignore-scripts
+      - name: Validate provider-managed recovery scripts
+        run: |
+          node --check scripts/recovery/verify-supabase-provider-managed-restore.mjs
+          node --check scripts/recovery/destroy-supabase-provider-managed-restore.mjs
+          node --test tests/security/supabase-provider-managed-restore.test.mjs
 
-      - name: Set up pinned Supabase CLI
-        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
-        with:
-          version: 2.101.0
-
-      - name: Install pinned recovery psql shim
+      - name: Prove GitHub-hosted recovery workflows cannot export Production row data
         shell: bash
         run: |
           set -euo pipefail
-          shim_dir="$RUNNER_TEMP/risck-recovery-bin"
-          mkdir -p "$shim_dir"
-          cat > "$shim_dir/psql" <<'EOF'
-          #!/usr/bin/env bash
-          set -euo pipefail
-          exec node "$GITHUB_WORKSPACE/scripts/recovery/run-pinned-recovery-psql.mjs" "$@"
-          EOF
-          chmod 0700 "$shim_dir/psql"
-          echo "$shim_dir" >> "$GITHUB_PATH"
+          python - <<'PY'
+          from pathlib import Path
 
-      - name: Start disposable isolated Supabase restore target
-        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start
+          guarded = [
+              Path('.github/workflows/enterprise-recovery-drill.yml'),
+              Path('.github/workflows/recovery-resilience-proof.yml'),
+          ]
+          forbidden = [
+              'RECOVERY_' + 'SOURCE_DATABASE_URL',
+              'SUPABASE_DB_' + 'POOLER_URL',
+              'run-' + 'backup-restore-exercise.mjs',
+              'supabase db ' + 'dump',
+              'pg_' + 'dump',
+              'production-' + 'data.sql',
+              'production-' + 'backup.dump',
+          ]
+          for path in guarded:
+              text = path.read_text(encoding='utf-8')
+              for token in forbidden:
+                  if token in text:
+                      raise SystemExit(f'legacy Production row-data path present in {path}: {token}')
 
-      - name: Revalidate protected recovery producer boundary
+          rehearsal = Path('.github/workflows/supabase-forward-reconciliation-rehearsal.yml').read_text(encoding='utf-8')
+          for token in [
+              'verify-supabase-provider-managed-restore.mjs',
+              'destroy-supabase-provider-managed-restore.mjs',
+              'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED',
+          ]:
+              if token not in rehearsal:
+                  raise SystemExit(f'provider-managed recovery authority missing from Stage 1: {token}')
+          PY
+
+      - name: Publish non-crediting recovery boundary summary
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_ENVIRONMENT_NAME: production-recovery
-          REQUIRE_PROTECTED_BRANCHES: 'true'
         run: |
-          set -euo pipefail
-          git fetch --no-tags --depth=1 origin main
-          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-          test "$(git rev-parse origin/main)" = "$TARGET_SHA"
-          main_sha="$(curl --fail --silent --show-error \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
-          test "$main_sha" = "$TARGET_SHA"
-          node scripts/security/check-github-environment-governance.mjs
-
-      - name: Preflight protected backup restore proof
-        env:
-          RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.RECOVERY_SOURCE_DATABASE_URL }}
-        run: node scripts/security/preflight-protected-proof.mjs recovery
-
-      - name: Execute supported logical backup and isolated restore
-        env:
-          RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.RECOVERY_SOURCE_DATABASE_URL }}
-        run: node scripts/recovery/run-backup-restore-exercise.mjs
-
-      - name: Validate canonical backup restore evidence
-        run: node scripts/recovery/check-recovery-evidence.mjs
-
-      - name: Remove disposable recovery database
-        if: always()
-        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
-
-      - name: Upload immutable exact-SHA backup restore evidence
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: enterprise-recovery-${{ github.sha }}
-          path: |
-            docs/security/evidence/runtime/recovery-resilience-preflight.json
-            docs/security/evidence/p1/backup-restore-tested.json
-          if-no-files-found: error
-          retention-days: 90
+          {
+            echo '## Enterprise recovery boundary'
+            echo
+            echo '- This workflow is a contract guard only and receives no Production database secret.'
+            echo '- REC-05 through REC-10 are produced by Supabase Forward Reconciliation Rehearsal using a Supabase provider-managed Production restore.'
+            echo '- REC-01 through REC-04 remain a separate explicitly confirmed Vercel rollback proof.'
+            echo '- This guard does not execute, simulate, or claim recovery credit.'
+          } >> "$GITHUB_STEP_SUMMARY"

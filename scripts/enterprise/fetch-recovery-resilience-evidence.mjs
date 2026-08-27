@@ -9,9 +9,9 @@ const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const WORKFLOW_FILE = 'recovery-resilience-proof.yml';
 const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`;
 const WORKFLOW_NAME = 'Recovery Resilience Proof';
-const DRILL_WORKFLOW_FILE = 'enterprise-recovery-drill.yml';
-const DRILL_WORKFLOW_PATH = `.github/workflows/${DRILL_WORKFLOW_FILE}`;
-const DRILL_WORKFLOW_NAME = 'Enterprise Recovery Drill';
+const RESTORE_WORKFLOW_FILE = 'supabase-forward-reconciliation-rehearsal.yml';
+const RESTORE_WORKFLOW_PATH = `.github/workflows/${RESTORE_WORKFLOW_FILE}`;
+const RESTORE_WORKFLOW_NAME = 'Supabase Forward Reconciliation Rehearsal';
 const ROLLBACK_SOURCE = 'rollback-validation.json';
 const RESTORE_SOURCE = 'backup-restore-tested.json';
 const ROLLBACK_OUTPUT = 'docs/security/evidence/runtime/rollback-validation.json';
@@ -95,10 +95,10 @@ export function selectExactShaRecoveryRun(runs, targetSha, sourceRunId = '') {
 export function selectExactShaRecoveryDrillRun(runs, targetSha, sourceRunId = '') {
   const requested = String(sourceRunId || '').trim();
   return (Array.isArray(runs) ? runs : [])
-    .filter((run) => run?.path === DRILL_WORKFLOW_PATH)
+    .filter((run) => run?.path === RESTORE_WORKFLOW_PATH)
     .filter((run) => String(run?.head_sha || '').toLowerCase() === targetSha)
     .filter((run) => run?.head_branch === 'main')
-    .filter((run) => run?.event === 'push' || run?.event === 'workflow_dispatch')
+    .filter((run) => run?.event === 'workflow_dispatch')
     .filter((run) => run?.status === 'completed' && run?.conclusion === 'success')
     .filter((run) => !requested || String(run?.id) === requested)
     .sort((left, right) => Date.parse(right?.updated_at || right?.created_at || 0)
@@ -135,30 +135,39 @@ export function validateBackupRestoreSource(restore, { targetSha, runId }) {
   return [...new Set(failures)];
 }
 
-export function validateRecoverySources(rollback, restore, { targetSha, runId }) {
+export function validateRollbackSource(rollback, { targetSha, runId }) {
   const failures = [];
   if (rollback?.schema !== 'risck-comply.rollback-validation.v4') failures.push('rollback_schema_invalid');
   if (rollback?.evidenceItem !== 'rollback-validation') failures.push('rollback_evidence_item_invalid');
-  for (const [name, source] of [['rollback', rollback]]) {
-    if (source?.status !== 'Complete' || source?.outcome !== 'passed') failures.push(`${name}_not_complete`);
-    if (source?.repository !== REPOSITORY || source?.branch !== 'main') failures.push(`${name}_provenance_invalid`);
-    if (source?.targetSha !== targetSha || source?.observedSha !== targetSha) failures.push(`${name}_sha_mismatch`);
-    if (String(source?.runId || '') !== String(runId)) failures.push(`${name}_run_mismatch`);
-    if (!source?.generatedAt || !Number.isFinite(Date.parse(source.generatedAt))) failures.push(`${name}_generated_at_invalid`);
-    if (!Array.isArray(source?.failures) || source.failures.length !== 0) failures.push(`${name}_failures_present`);
-    if (source?.evidenceIntegrity?.containsSensitiveValues !== false) failures.push(`${name}_sensitive_integrity_invalid`);
-    if (source?.evidenceIntegrity?.credentialsStored !== false) failures.push(`${name}_credentials_integrity_invalid`);
-    if (source?.evidenceIntegrity?.exactShaBound !== true) failures.push(`${name}_sha_integrity_invalid`);
-  }
-  failures.push(...validateBackupRestoreSource(restore, { targetSha, runId }));
+  if (rollback?.status !== 'Complete' || rollback?.outcome !== 'passed') failures.push('rollback_not_complete');
+  if (rollback?.repository !== REPOSITORY || rollback?.branch !== 'main') failures.push('rollback_provenance_invalid');
+  if (rollback?.targetSha !== targetSha || rollback?.observedSha !== targetSha) failures.push('rollback_sha_mismatch');
+  if (String(rollback?.runId || '') !== String(runId)) failures.push('rollback_run_mismatch');
+  if (!rollback?.generatedAt || !Number.isFinite(Date.parse(rollback.generatedAt))) failures.push('rollback_generated_at_invalid');
+  if (!Array.isArray(rollback?.failures) || rollback.failures.length !== 0) failures.push('rollback_failures_present');
   if (!sameArray(rollback?.controlsVerified, ROLLBACK_CONTROLS)) failures.push('rollback_controls_invalid');
   for (const check of [
     'explicitConfirmation', 'rollbackTargetConfigured', 'rollbackTargetDistinct', 'rollbackShaDistinct',
     'rollbackExecuted', 'rollbackStatusChecked', 'postRollbackHealth', 'postRollbackNoStore',
     'protectedEnvironment', 'exactShaBound',
   ]) if (rollback?.checks?.[check] !== true) failures.push(`rollback_check_failed:${check}`);
+  if (rollback?.evidenceIntegrity?.containsSensitiveValues !== false) failures.push('rollback_sensitive_integrity_invalid');
+  if (rollback?.evidenceIntegrity?.credentialsStored !== false) failures.push('rollback_credentials_integrity_invalid');
+  if (rollback?.evidenceIntegrity?.exactShaBound !== true) failures.push('rollback_sha_integrity_invalid');
   if (rollback?.evidenceIntegrity?.deploymentUrlsStored !== false) failures.push('rollback_urls_integrity_invalid');
   return [...new Set(failures)];
+}
+
+export function validateRecoverySources(rollback, restore, {
+  targetSha,
+  runId = '',
+  rollbackRunId = runId,
+  restoreRunId = runId,
+}) {
+  return [...new Set([
+    ...validateRollbackSource(rollback, { targetSha, runId: rollbackRunId }),
+    ...validateBackupRestoreSource(restore, { targetSha, runId: restoreRunId }),
+  ])];
 }
 
 function canonicalCheck(name, passed = true) {
@@ -188,6 +197,84 @@ function canonicalCommon({ targetSha, runId, workflowName, workflowPath, artifac
   };
 }
 
+function canonicalMissing({ targetSha, schema, item, controls, checks, workflowName, workflowPath, metrics }) {
+  return {
+    schema,
+    evidenceItem: item,
+    status: 'Open',
+    outcome: 'not_executed',
+    repository: REPOSITORY,
+    branch: 'main',
+    targetSha,
+    observedSha: targetSha,
+    runId: null,
+    sourceWorkflow: {
+      name: workflowName,
+      file: workflowPath,
+      runId: null,
+      artifact: null,
+      exactShaBound: true,
+    },
+    generatedAt: new Date().toISOString(),
+    controlsVerified: controls,
+    checks: checks.map((name) => canonicalCheck(name, false)),
+    metrics,
+    evidenceIntegrity: {
+      containsSensitiveValues: false,
+      credentialsStored: false,
+      exactShaBound: true,
+      sourceRunBound: false,
+    },
+    evidenceBoundary: 'Non-crediting exact-SHA placeholder. This document records only that the independent recovery proof has not been executed; it cannot satisfy a recovery control.',
+  };
+}
+
+function missingRollback(targetSha) {
+  return canonicalMissing({
+    targetSha,
+    schema: 'risck-comply.rollback-scorecard-evidence.v1',
+    item: 'rollback-validation',
+    controls: ROLLBACK_CONTROLS,
+    checks: ['rollbackTargetConfigured', 'distinctDeployment', 'rollbackExecuted', 'postRollbackHealth'],
+    workflowName: WORKFLOW_NAME,
+    workflowPath: WORKFLOW_PATH,
+    metrics: { recoveryTimeSeconds: null },
+  });
+}
+
+function missingRestore(targetSha) {
+  return canonicalMissing({
+    targetSha,
+    schema: 'risck-comply.backup-restore-scorecard-evidence.v1',
+    item: 'backup-restore-tested',
+    controls: RESTORE_CONTROLS,
+    checks: ['backupExists', 'restoreExecuted', 'dataIntegrity', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured'],
+    workflowName: RESTORE_WORKFLOW_NAME,
+    workflowPath: RESTORE_WORKFLOW_PATH,
+    metrics: { rpoSeconds: null, rtoSeconds: null, totalExerciseSeconds: null },
+  });
+}
+
+function buildCanonicalRollback(rollback, common) {
+  return {
+    schema: 'risck-comply.rollback-scorecard-evidence.v1',
+    evidenceItem: 'rollback-validation',
+    status: 'Complete',
+    outcome: 'passed',
+    ...common,
+    generatedAt: rollback.generatedAt,
+    controlsVerified: ROLLBACK_CONTROLS,
+    checks: [
+      canonicalCheck('rollbackTargetConfigured'),
+      canonicalCheck('distinctDeployment', rollback.checks.rollbackTargetDistinct && rollback.checks.rollbackShaDistinct),
+      canonicalCheck('rollbackExecuted'),
+      canonicalCheck('postRollbackHealth'),
+    ],
+    metrics: { recoveryTimeSeconds: rollback.metrics?.recoveryTimeSeconds ?? null },
+    evidenceBoundary: 'Protected exact-main-SHA proof of an explicitly confirmed Vercel rollback and post-rollback health validation. Deployment URLs, credentials and response bodies are not stored.',
+  };
+}
+
 function buildCanonicalRestore(restore, common) {
   return {
     schema: 'risck-comply.backup-restore-scorecard-evidence.v1',
@@ -210,13 +297,56 @@ function buildCanonicalRestore(restore, common) {
       rtoSeconds: restore.metrics.rtoSeconds,
       totalExerciseSeconds: restore.metrics?.totalExerciseSeconds ?? null,
     },
-    evidenceBoundary: 'Protected exact-main-SHA logical backup and isolated restore proof with integrity, RLS, RPO and RTO checks. Database URLs, dumps and row data are not stored.',
+    evidenceBoundary: 'Exact-main-SHA Supabase provider-managed Production backup restore proof with integrity, RLS, RPO and RTO checks. GitHub Actions never creates or retains a Production data dump, row data, database URL, project reference or backup identifier.',
   };
 }
 
-export function buildCanonicalRecoveryEvidence(rollback, restore, { targetSha, runId }) {
-  const failures = validateRecoverySources(rollback, restore, { targetSha, runId });
+export function buildCanonicalRecoveryEvidence(rollback, restore, {
+  targetSha,
+  runId = '',
+  rollbackRunId = runId,
+  restoreRunId = runId,
+}) {
+  const failures = validateRecoverySources(rollback, restore, {
+    targetSha, rollbackRunId, restoreRunId,
+  });
   if (failures.length) throw new Error(`recovery_evidence_invalid:${failures.join(',')}`);
+  const rollbackCommon = canonicalCommon({
+    targetSha,
+    runId: rollbackRunId,
+    workflowName: WORKFLOW_NAME,
+    workflowPath: WORKFLOW_PATH,
+    artifactName: `recovery-resilience-proof-${targetSha}`,
+  });
+  const restoreCommon = canonicalCommon({
+    targetSha,
+    runId: restoreRunId,
+    workflowName: RESTORE_WORKFLOW_NAME,
+    workflowPath: RESTORE_WORKFLOW_PATH,
+    artifactName: `supabase-forward-reconciliation-rehearsal-${targetSha}`,
+  });
+  return {
+    rollback: buildCanonicalRollback(rollback, rollbackCommon),
+    restore: buildCanonicalRestore(restore, restoreCommon),
+  };
+}
+
+export function buildCanonicalRecoveryDrillEvidence(restore, { targetSha, runId }) {
+  const failures = validateBackupRestoreSource(restore, { targetSha, runId });
+  if (failures.length) throw new Error(`recovery_restore_evidence_invalid:${failures.join(',')}`);
+  const common = canonicalCommon({
+    targetSha,
+    runId,
+    workflowName: RESTORE_WORKFLOW_NAME,
+    workflowPath: RESTORE_WORKFLOW_PATH,
+    artifactName: `supabase-forward-reconciliation-rehearsal-${targetSha}`,
+  });
+  return { rollback: missingRollback(targetSha), restore: buildCanonicalRestore(restore, common) };
+}
+
+export function buildCanonicalRollbackOnlyEvidence(rollback, { targetSha, runId }) {
+  const failures = validateRollbackSource(rollback, { targetSha, runId });
+  if (failures.length) throw new Error(`recovery_rollback_evidence_invalid:${failures.join(',')}`);
   const common = canonicalCommon({
     targetSha,
     runId,
@@ -224,58 +354,7 @@ export function buildCanonicalRecoveryEvidence(rollback, restore, { targetSha, r
     workflowPath: WORKFLOW_PATH,
     artifactName: `recovery-resilience-proof-${targetSha}`,
   });
-  return {
-    rollback: {
-      schema: 'risck-comply.rollback-scorecard-evidence.v1',
-      evidenceItem: 'rollback-validation',
-      status: 'Complete',
-      outcome: 'passed',
-      ...common,
-      generatedAt: rollback.generatedAt,
-      controlsVerified: ROLLBACK_CONTROLS,
-      checks: [
-        canonicalCheck('rollbackTargetConfigured'),
-        canonicalCheck('distinctDeployment', rollback.checks.rollbackTargetDistinct && rollback.checks.rollbackShaDistinct),
-        canonicalCheck('rollbackExecuted'),
-        canonicalCheck('postRollbackHealth'),
-      ],
-      metrics: { recoveryTimeSeconds: rollback.metrics?.recoveryTimeSeconds ?? null },
-      evidenceBoundary: 'Protected exact-main-SHA proof of an explicitly confirmed Vercel rollback and post-rollback health validation. Deployment URLs, credentials and response bodies are not stored.',
-    },
-    restore: buildCanonicalRestore(restore, common),
-  };
-}
-
-export function buildCanonicalRecoveryDrillEvidence(restore, { targetSha, runId }) {
-  const failures = validateBackupRestoreSource(restore, { targetSha, runId });
-  if (failures.length) throw new Error(`recovery_drill_evidence_invalid:${failures.join(',')}`);
-  const common = canonicalCommon({
-    targetSha,
-    runId,
-    workflowName: DRILL_WORKFLOW_NAME,
-    workflowPath: DRILL_WORKFLOW_PATH,
-    artifactName: `enterprise-recovery-${targetSha}`,
-  });
-  return {
-    rollback: {
-      schema: 'risck-comply.rollback-scorecard-evidence.v1',
-      evidenceItem: 'rollback-validation',
-      status: 'Open',
-      outcome: 'not_executed',
-      ...common,
-      generatedAt: restore.generatedAt,
-      controlsVerified: ROLLBACK_CONTROLS,
-      checks: [
-        canonicalCheck('rollbackTargetConfigured', false),
-        canonicalCheck('distinctDeployment', false),
-        canonicalCheck('rollbackExecuted', false),
-        canonicalCheck('postRollbackHealth', false),
-      ],
-      metrics: { recoveryTimeSeconds: null },
-      evidenceBoundary: 'No Production rollback executed. This exact-SHA artifact exists only to preserve truthful non-credit for REC-01 through REC-04 while independently promoting the isolated backup/restore controls REC-05 through REC-10.',
-    },
-    restore: buildCanonicalRestore(restore, common),
-  };
+  return { rollback: buildCanonicalRollback(rollback, common), restore: missingRestore(targetSha) };
 }
 
 function isAllowedArtifactRedirect(url) {
@@ -338,23 +417,20 @@ export function selectRecoveryDrillEvidenceEntry(entries) {
   return selectUniqueEntry(normalizedZipEntries(entries), RESTORE_SOURCE);
 }
 
+export function selectRollbackEvidenceEntry(entries) {
+  return selectUniqueEntry(normalizedZipEntries(entries), ROLLBACK_SOURCE);
+}
+
 function readZipJson(zipPath, entry) {
   const content = execFileSync('unzip', ['-p', zipPath, entry], { encoding: 'utf8', maxBuffer: MAX_EVIDENCE_BYTES });
   if (Buffer.byteLength(content, 'utf8') > MAX_EVIDENCE_BYTES) throw new Error('recovery_evidence_too_large');
   return JSON.parse(content);
 }
 
-function extractSources(zipPath) {
+function readSingleEvidence(zipPath, selector) {
   const entries = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8', maxBuffer: 256 * 1024 })
     .split('\n').map((entry) => entry.trim()).filter(Boolean);
-  const selected = selectRecoveryEvidenceEntries(entries);
-  return { rollback: readZipJson(zipPath, selected.rollback), restore: readZipJson(zipPath, selected.restore) };
-}
-
-function extractDrillRestore(zipPath) {
-  const entries = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8', maxBuffer: 256 * 1024 })
-    .split('\n').map((entry) => entry.trim()).filter(Boolean);
-  return readZipJson(zipPath, selectRecoveryDrillEvidenceEntry(entries));
+  return readZipJson(zipPath, selector(entries));
 }
 
 export function removeStaleRecoveryEvidence(root) {
@@ -364,6 +440,7 @@ export function removeStaleRecoveryEvidence(root) {
 
 function writeCanonicalEvidence(root, evidence) {
   for (const [relativePath, document] of [[ROLLBACK_OUTPUT, evidence.rollback], [RESTORE_OUTPUT, evidence.restore]]) {
+    if (!document) continue;
     const output = join(root, relativePath);
     mkdirSync(dirname(output), { recursive: true });
     writeFileSync(output, `${JSON.stringify(document, null, 2)}\n`, { mode: 0o600 });
@@ -380,24 +457,26 @@ async function exactArtifactForRun({ repository, token, runId, artifactName }) {
   return artifact;
 }
 
-async function downloadAndBuild({ root, token, runId, artifact, mode, targetSha }) {
-  const zipPath = join(root, 'artifacts', 'enterprise-readiness', `recovery-${runId}.zip`);
+async function downloadEvidence({ root, token, runId, artifact, selector, label }) {
+  const zipPath = join(root, 'artifacts', 'enterprise-readiness', `recovery-${label}-${runId}.zip`);
   mkdirSync(dirname(zipPath), { recursive: true });
   try {
     await downloadArtifact(token, artifact.id, zipPath);
     const downloadedSize = statSync(zipPath).size;
     if (downloadedSize <= 0 || downloadedSize > MAX_ARTIFACT_BYTES) throw new Error('downloaded_artifact_size_invalid');
-    const evidence = mode === 'full'
-      ? (() => {
-          const source = extractSources(zipPath);
-          return buildCanonicalRecoveryEvidence(source.rollback, source.restore, { targetSha, runId });
-        })()
-      : buildCanonicalRecoveryDrillEvidence(extractDrillRestore(zipPath), { targetSha, runId });
-    writeCanonicalEvidence(root, evidence);
-    return evidence;
+    return readSingleEvidence(zipPath, selector);
   } finally {
     rmSync(zipPath, { force: true });
   }
+}
+
+async function listSuccessfulWorkflowRuns(repository, token, workflowFile, targetSha) {
+  const encodedSha = encodeURIComponent(targetSha);
+  const payload = await githubJson(
+    `https://api.github.com/repos/${repository}/actions/workflows/${workflowFile}/runs?head_sha=${encodedSha}&status=success&branch=main&per_page=20`,
+    token,
+  );
+  return payload.workflow_runs || [];
 }
 
 export async function fetchRecoveryResilienceEvidence({ root, repository, token, targetSha, sourceRunId = '', required = false }) {
@@ -406,42 +485,87 @@ export async function fetchRecoveryResilienceEvidence({ root, repository, token,
   if (!token) throw new Error('github_token_missing');
   if (!FULL_SHA.test(targetSha)) throw new Error('target_sha_invalid');
 
-  const directRun = sourceRunId
-    ? await githubJson(`https://api.github.com/repos/${repository}/actions/runs/${sourceRunId}`, token)
-    : null;
-  const fullRuns = directRun
-    ? [directRun]
-    : (await githubJson(`https://api.github.com/repos/${repository}/actions/workflows/${WORKFLOW_FILE}/runs?head_sha=${encodeURIComponent(targetSha)}&status=success&branch=main&per_page=20`, token)).workflow_runs;
-  const fullRun = selectExactShaRecoveryRun(fullRuns, targetSha, sourceRunId);
+  let rollbackRuns = await listSuccessfulWorkflowRuns(repository, token, WORKFLOW_FILE, targetSha);
+  let restoreRuns = await listSuccessfulWorkflowRuns(repository, token, RESTORE_WORKFLOW_FILE, targetSha);
 
-  if (fullRun) {
-    const runId = String(fullRun.id || '').trim();
-    if (!NUMERIC.test(runId)) throw new Error('run_id_invalid');
-    const artifactName = `recovery-resilience-proof-${targetSha}`;
-    const artifact = await exactArtifactForRun({ repository, token, runId, artifactName });
-    await downloadAndBuild({ root, token, runId, artifact, mode: 'full', targetSha });
-    console.log(`Retrieved exact-SHA full recovery evidence from workflow run ${runId}.`);
-    return { found: true, mode: 'full', targetSha, runId, artifactId: String(artifact.id) };
+  if (sourceRunId) {
+    if (!NUMERIC.test(String(sourceRunId))) throw new Error('source_run_id_invalid');
+    const directRun = await githubJson(`https://api.github.com/repos/${repository}/actions/runs/${sourceRunId}`, token);
+    if (directRun?.path === WORKFLOW_PATH) rollbackRuns = [directRun];
+    else if (directRun?.path === RESTORE_WORKFLOW_PATH) restoreRuns = [directRun];
+    else throw new Error('source_run_workflow_not_recovery_authority');
   }
 
-  const drillRuns = directRun
-    ? [directRun]
-    : (await githubJson(`https://api.github.com/repos/${repository}/actions/workflows/${DRILL_WORKFLOW_FILE}/runs?head_sha=${encodeURIComponent(targetSha)}&status=success&branch=main&per_page=20`, token)).workflow_runs;
-  const drillRun = selectExactShaRecoveryDrillRun(drillRuns, targetSha, sourceRunId);
+  const rollbackRun = selectExactShaRecoveryRun(rollbackRuns, targetSha,
+    sourceRunId && rollbackRuns.length === 1 ? sourceRunId : '');
+  const restoreRun = selectExactShaRecoveryDrillRun(restoreRuns, targetSha,
+    sourceRunId && restoreRuns.length === 1 ? sourceRunId : '');
 
-  if (!drillRun) {
+  if (!rollbackRun && !restoreRun) {
     if (required) throw new Error('exact_sha_recovery_run_missing');
     console.log(`Recovery evidence remains NOT_VERIFIED for ${targetSha}.`);
     return { found: false, targetSha };
   }
 
-  const runId = String(drillRun.id || '').trim();
-  if (!NUMERIC.test(runId)) throw new Error('run_id_invalid');
-  const artifactName = `enterprise-recovery-${targetSha}`;
-  const artifact = await exactArtifactForRun({ repository, token, runId, artifactName });
-  await downloadAndBuild({ root, token, runId, artifact, mode: 'restore-only', targetSha });
-  console.log(`Retrieved exact-SHA restore-only recovery evidence from Enterprise Recovery Drill run ${runId}.`);
-  return { found: true, mode: 'restore-only', targetSha, runId, artifactId: String(artifact.id) };
+  let rollback = null;
+  let restore = null;
+  let rollbackRunId = null;
+  let restoreRunId = null;
+  let rollbackArtifact = null;
+  let restoreArtifact = null;
+
+  if (rollbackRun) {
+    rollbackRunId = String(rollbackRun.id || '').trim();
+    if (!NUMERIC.test(rollbackRunId)) throw new Error('rollback_run_id_invalid');
+    rollbackArtifact = await exactArtifactForRun({
+      repository, token, runId: rollbackRunId,
+      artifactName: `recovery-resilience-proof-${targetSha}`,
+    });
+    rollback = await downloadEvidence({
+      root, token, runId: rollbackRunId, artifact: rollbackArtifact,
+      selector: selectRollbackEvidenceEntry, label: 'rollback',
+    });
+  }
+
+  if (restoreRun) {
+    restoreRunId = String(restoreRun.id || '').trim();
+    if (!NUMERIC.test(restoreRunId)) throw new Error('restore_run_id_invalid');
+    restoreArtifact = await exactArtifactForRun({
+      repository, token, runId: restoreRunId,
+      artifactName: `supabase-forward-reconciliation-rehearsal-${targetSha}`,
+    });
+    restore = await downloadEvidence({
+      root, token, runId: restoreRunId, artifact: restoreArtifact,
+      selector: selectRecoveryDrillEvidenceEntry, label: 'restore',
+    });
+  }
+
+  let evidence;
+  let mode;
+  if (rollback && restore) {
+    evidence = buildCanonicalRecoveryEvidence(rollback, restore, {
+      targetSha, rollbackRunId, restoreRunId,
+    });
+    mode = 'full';
+  } else if (restore) {
+    evidence = buildCanonicalRecoveryDrillEvidence(restore, { targetSha, runId: restoreRunId });
+    mode = 'restore-only';
+  } else {
+    evidence = buildCanonicalRollbackOnlyEvidence(rollback, { targetSha, runId: rollbackRunId });
+    mode = 'rollback-only';
+  }
+
+  writeCanonicalEvidence(root, evidence);
+  console.log(`Retrieved exact-SHA ${mode} recovery evidence for ${targetSha}.`);
+  return {
+    found: true,
+    mode,
+    targetSha,
+    rollbackRunId,
+    restoreRunId,
+    rollbackArtifactId: rollbackArtifact ? String(rollbackArtifact.id) : null,
+    restoreArtifactId: restoreArtifact ? String(restoreArtifact.id) : null,
+  };
 }
 
 async function main() {
