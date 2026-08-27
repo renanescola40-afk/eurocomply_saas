@@ -73,6 +73,7 @@ const MACHINE_AUTH_CLASSES = new Set(['integration', 'webhook', 'health/internal
 type HandlerAnalysis = {
   method: string;
   identifiers: Set<string>;
+  rejectionOnly: boolean;
 };
 
 type RouteAnalysis = {
@@ -214,6 +215,100 @@ function collectReachableIdentifiers(rootNode: ts.Node, callables: Map<string, t
   return identifiers;
 }
 
+function callableBody(node: ts.Node): ts.ConciseBody | undefined {
+  if (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node)) {
+    return node.body;
+  }
+  return undefined;
+}
+
+function propertyNameText(name: ts.PropertyName) {
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name)) {
+    return name.text;
+  }
+  return null;
+}
+
+function hasLiteralStatus405(node: ts.Node) {
+  let found = false;
+
+  function visit(current: ts.Node) {
+    if (found) return;
+    if (
+      ts.isPropertyAssignment(current)
+      && propertyNameText(current.name) === 'status'
+      && ts.isNumericLiteral(current.initializer)
+      && current.initializer.text === '405'
+    ) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(current, visit);
+  }
+
+  visit(node);
+  return found;
+}
+
+function isRequestMetadataExpression(expression: ts.Expression): boolean {
+  if (ts.isIdentifier(expression)) return true;
+  if (ts.isPropertyAccessExpression(expression)) {
+    return isRequestMetadataExpression(expression.expression);
+  }
+  return false;
+}
+
+function isSafeRequestMetadataInitializer(expression: ts.Expression) {
+  return ts.isCallExpression(expression)
+    && ts.isIdentifier(expression.expression)
+    && expression.expression.text === 'requestIdFromHeaders'
+    && expression.arguments.every(isRequestMetadataExpression);
+}
+
+function containsOnlyResponseConstructionCalls(node: ts.Node) {
+  let safe = true;
+
+  function visit(current: ts.Node) {
+    if (!safe) return;
+    if (ts.isCallExpression(current)) {
+      if (!ts.isIdentifier(current.expression) || current.expression.text !== 'noStoreJson') {
+        safe = false;
+        return;
+      }
+    }
+    ts.forEachChild(current, visit);
+  }
+
+  visit(node);
+  return safe;
+}
+
+function isMethodRejectionOnlyHandler(node: ts.Node) {
+  const body = callableBody(node);
+  if (!body || !ts.isBlock(body) || body.statements.length === 0) return false;
+
+  const statements = [...body.statements];
+  const finalStatement = statements.pop();
+  if (!finalStatement || !ts.isReturnStatement(finalStatement) || !finalStatement.expression) return false;
+  if (!ts.isCallExpression(finalStatement.expression)) return false;
+  if (!ts.isIdentifier(finalStatement.expression.expression)) return false;
+  if (finalStatement.expression.expression.text !== 'noStoreJson') return false;
+  if (!hasLiteralStatus405(finalStatement.expression)) return false;
+  if (!containsOnlyResponseConstructionCalls(finalStatement.expression)) return false;
+
+  for (const statement of statements) {
+    if (!ts.isVariableStatement(statement)) return false;
+    if ((statement.declarationList.flags & ts.NodeFlags.Const) === 0) return false;
+
+    for (const declaration of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(declaration.name) || !declaration.initializer) return false;
+      if (!isSafeRequestMetadataInitializer(declaration.initializer)) return false;
+    }
+  }
+
+  return true;
+}
+
 function analyzeHandlers(source: string, filePath: string): HandlerAnalysis[] {
   const sourceFile = ts.createSourceFile(
     filePath,
@@ -228,6 +323,7 @@ function analyzeHandlers(source: string, filePath: string): HandlerAnalysis[] {
   return [...handlers.entries()].map(([method, node]) => ({
     method,
     identifiers: collectReachableIdentifiers(node, callables),
+    rejectionOnly: isMethodRejectionOnlyHandler(node),
   }));
 }
 
@@ -283,6 +379,26 @@ describe('API entrypoint commercial closure', () => {
     )).not.toThrow();
   }, 30_000);
 
+  it('only exempts side-effect-free unconditional 405 handlers from authentication', () => {
+    const safeHandlers = analyzeHandlers(`
+      export function GET(request: Request) {
+        const requestId = requestIdFromHeaders(request.headers);
+        return noStoreJson({ requestId }, { status: 405 });
+      }
+    `, 'safe-method-rejection.ts');
+    expect(safeHandlers).toHaveLength(1);
+    expect(safeHandlers[0]?.rejectionOnly).toBe(true);
+
+    const unsafeHandlers = analyzeHandlers(`
+      export function GET() {
+        writeSensitiveState();
+        return noStoreJson({ error: 'method_not_allowed' }, { status: 405 });
+      }
+    `, 'unsafe-method-rejection.ts');
+    expect(unsafeHandlers).toHaveLength(1);
+    expect(unsafeHandlers[0]?.rejectionOnly).toBe(false);
+  });
+
   it('requires an entrypoint guard independently for every non-public exported handler', async () => {
     const [routes, inventory] = await Promise.all([routeSources(), routeInventory()]);
     const violations: string[] = [];
@@ -296,6 +412,8 @@ describe('API entrypoint commercial closure', () => {
       if (PUBLIC_CLASSES.has(routeClass)) continue;
 
       for (const handler of route.handlers) {
+        if (handler.rejectionOnly) continue;
+
         const hasSession = hasAnyIdentifier(handler.identifiers, SESSION_GUARDS);
         const hasAuthorization = hasAnyIdentifier(handler.identifiers, AUTHORIZATION_GUARDS);
         const hasMachineAuth = hasAnyIdentifier(handler.identifiers, MACHINE_AUTH_GUARDS);
