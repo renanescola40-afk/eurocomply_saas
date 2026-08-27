@@ -12,18 +12,16 @@ type CopilotAnswer = {
   answer: string;
   action: string;
   href: string;
-  tone: 'emerald' | 'amber' | 'rose' | 'violet' | 'sky';
+  tone: 'emerald' | 'amber' | 'rose' | 'neutral';
 };
 
 function toneClasses(tone: CopilotAnswer['tone']) {
   const tones = {
-    emerald: 'border-emerald-300/30 bg-emerald-300/10 text-emerald-200',
-    amber: 'border-amber-300/30 bg-amber-300/10 text-amber-200',
-    rose: 'border-rose-300/30 bg-rose-300/10 text-rose-200',
-    violet: 'border-violet-300/30 bg-violet-300/10 text-violet-200',
-    sky: 'border-sky-300/30 bg-sky-300/10 text-sky-200',
+    emerald: 'border-emerald-300/15 bg-emerald-300/[0.055] text-emerald-100/80',
+    amber: 'border-amber-300/15 bg-amber-300/[0.055] text-amber-100/80',
+    rose: 'border-rose-300/15 bg-rose-300/[0.055] text-rose-100/80',
+    neutral: 'border-white/[0.075] bg-white/[0.025] text-white/52',
   };
-
   return tones[tone];
 }
 
@@ -61,18 +59,18 @@ function buildAnswers(summary: DashboardSummary, trendComparison: DashboardTrend
       tone: summary.criticalRisks > 0 ? 'rose' : summary.highRiskVendors > 0 || summary.missingDocuments > 0 ? 'amber' : 'emerald',
     },
     {
-      question: 'Generate board summary',
+      question: 'What belongs in the board summary?',
       answer: `Compliance score is ${summary.complianceScore}%. The board narrative should cover ${summary.openRisks} open risks, ${summary.openTasks} open actions, ${summary.highRiskVendors} high-risk vendors and ${summary.missingDocuments} evidence gaps.`,
       action: 'Prepare board report',
       href: `${basePath}/reports`,
-      tone: 'violet',
+      tone: 'neutral',
     },
     {
-      question: 'Prepare audit package',
-      answer: `The audit package can use ${summary.totals.documents} tracked documents, the risk register and vendor review posture. Evidence gaps should be closed before external sharing.`,
-      action: 'Open printable package',
+      question: 'Is the evidence set ready to share?',
+      answer: `The workspace tracks ${summary.totals.documents} documents. Review missing evidence and open risk or vendor work before external sharing.`,
+      action: 'Review report package',
       href: `${basePath}/reports/print`,
-      tone: 'sky',
+      tone: summary.missingDocuments > 0 ? 'amber' : 'emerald',
     },
   ];
 }
@@ -81,36 +79,32 @@ export function AiCopilotPanel({ summary, trendComparison, basePath }: AiCopilot
   const answers = buildAnswers(summary, trendComparison, basePath);
 
   return (
-    <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-5 text-white shadow-2xl md:p-6">
-      <div className="absolute right-0 top-0 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl" />
-      <div className="absolute bottom-0 left-8 h-80 w-80 rounded-full bg-sky-500/10 blur-3xl" />
-
-      <div className="relative grid gap-6 xl:grid-cols-[0.7fr_1.3fr]">
-        <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/80">AI copilot</p>
-          <h2 className="mt-4 text-3xl font-semibold tracking-tight">Ask EuroComply anything about the current posture.</h2>
-          <p className="mt-4 text-sm leading-6 text-slate-400">
-            V1 is a safe deterministic copilot: it turns live dashboard data into executive answers before enabling full LLM chat.
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+      <div className="grid xl:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="border-b border-white/[0.055] px-5 py-5 xl:border-b-0 xl:border-r">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Governance assistant</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Explain the current posture</h2>
+          <p className="mt-3 text-sm leading-6 text-white/43">
+            Deterministic guidance derived from live RISCK COMPLY workspace data. No invented metrics and no free-form claims are added here.
           </p>
-
-          <div className="mt-6 rounded-3xl border border-white/10 bg-black/20 p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Suggested prompt</p>
-            <p className="mt-2 text-lg font-semibold">What should we fix before the next board report?</p>
-            <p className="mt-2 text-sm leading-6 text-slate-400">
-              Start with critical risks, high-risk vendors and missing evidence because these directly weaken external confidence.
-            </p>
+          <div className="mt-6 border-y border-white/[0.055] py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/28">Suggested question</p>
+            <p className="mt-2 text-sm font-semibold leading-6 text-white/78">What should we fix before the next board report?</p>
+            <p className="mt-2 text-xs leading-5 text-white/38">Start with critical risks, high-risk vendors and missing evidence shown by the current workspace.</p>
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="divide-y divide-white/[0.055]">
           {answers.map((item) => (
-            <Link key={item.question} href={item.href} className="group rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-5 transition hover:-translate-y-1 hover:border-primary/50 hover:bg-white/[0.075]">
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="text-lg font-semibold">{item.question}</h3>
-                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${toneClasses(item.tone)}`}>AI</span>
+            <Link key={item.question} href={item.href} className="group block px-5 py-4 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 md:px-6">
+              <div className="grid gap-3 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)_auto] md:items-start">
+                <div className="flex items-start gap-2.5">
+                  <span className={`mt-0.5 rounded-md border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] ${toneClasses(item.tone)}`}>Signal</span>
+                  <h3 className="text-sm font-semibold leading-5 text-white/82">{item.question}</h3>
+                </div>
+                <p className="text-sm leading-6 text-white/42">{item.answer}</p>
+                <p className="text-xs font-semibold text-emerald-100/60 transition group-hover:text-emerald-100 md:pt-1">{item.action} →</p>
               </div>
-              <p className="mt-4 min-h-24 text-sm leading-6 text-slate-400">{item.answer}</p>
-              <p className="mt-5 text-xs font-semibold text-primary/80 opacity-0 transition group-hover:opacity-100">{item.action} →</p>
             </Link>
           ))}
         </div>
