@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { Building2, CalendarDays, CheckCircle2, ExternalLink, FileText, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
+import { Building2, CalendarDays, CheckCircle2, ExternalLink, FileText, ShieldCheck, UserRound } from 'lucide-react';
 
 import { canAccessFeature } from '@/lib/billing/feature-gates';
 import { locales, type Locale } from '@/lib/i18n/routing';
@@ -49,10 +49,10 @@ function getCopy(locale: string) {
 }
 
 function getImpactTone(impact: IntelligenceImpact) {
-  if (impact === 'Crítico') return 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-200';
-  if (impact === 'Alto') return 'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-200';
-  if (impact === 'Médio') return 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200';
-  return 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-200';
+  if (impact === 'Crítico') return 'border-rose-300/20 bg-rose-300/[0.07] text-rose-100';
+  if (impact === 'Alto') return 'border-amber-300/20 bg-amber-300/[0.07] text-amber-100';
+  if (impact === 'Médio') return 'border-amber-200/15 bg-amber-200/[0.045] text-amber-100/80';
+  return 'border-white/[0.075] bg-white/[0.025] text-white/48';
 }
 
 function formatDate(date: string, locale: string) {
@@ -63,6 +63,8 @@ function buildCalendarSuggestionHref(locale: string, item: { title: string; juri
   const params = new URLSearchParams({ source: 'intelligence', title: item.title, country: item.jurisdiction, description: item.executiveSummary });
   return `/${locale}/calendario-compliance?${params.toString()}`;
 }
+
+const secondaryLink = 'inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-white/[0.085] bg-white/[0.025] px-3 text-xs font-semibold text-white/62 transition hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60';
 
 type PageProps = { params: Promise<{ locale: string; id: string }> };
 
@@ -90,70 +92,77 @@ export default async function IntelligenceDetailPage({ params }: PageProps) {
   const locked = item.premium && !canUsePremiumNews;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.14),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.42))] text-foreground">
-      <div className="mx-auto max-w-5xl space-y-8 px-4 py-8 md:px-8 md:py-12">
-        <Link href={`/${locale}/dashboard/organizations/reports-governance/news`} className="rounded-sm text-sm font-semibold text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">← {copy.back}</Link>
-
-        <article className="rounded-[2rem] border bg-background/92 p-6 shadow-xl shadow-primary/5 backdrop-blur md:p-9">
-          <div className="flex flex-wrap gap-2">
-            <span className="rounded-full border bg-muted/50 px-3 py-1 text-xs font-semibold">{item.persona.desk}</span>
-            <span className="rounded-full border bg-muted/50 px-3 py-1 text-xs font-semibold">{item.category}</span>
-            <span className="rounded-full border bg-muted/50 px-3 py-1 text-xs font-semibold">{item.jurisdiction}</span>
-            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getImpactTone(item.impact)}`}>{copy.impact}: {item.impact}</span>
-            {item.premium ? <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Premium</span> : null}
+    <main className="min-h-0 bg-transparent text-white">
+      <div className="w-full space-y-5">
+        <header className="border-b border-white/[0.065] pb-5">
+          <Link href={`/${locale}/dashboard/organizations/reports-governance/news`} className="text-xs font-medium text-white/42 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">← {copy.back}</Link>
+          <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-[0.08em]">
+            <span className="rounded-lg border border-white/[0.075] bg-white/[0.025] px-2.5 py-1 text-white/42">{item.persona.desk}</span>
+            <span className="rounded-lg border border-white/[0.075] bg-white/[0.025] px-2.5 py-1 text-white/42">{item.category}</span>
+            <span className="rounded-lg border border-white/[0.075] bg-white/[0.025] px-2.5 py-1 text-white/42">{item.jurisdiction}</span>
+            <span className={`rounded-lg border px-2.5 py-1 ${getImpactTone(item.impact)}`}>{copy.impact}: {item.impact}</span>
+            {item.premium ? <span className="rounded-lg border border-emerald-300/20 bg-emerald-300/[0.07] px-2.5 py-1 text-emerald-100">Premium</span> : null}
           </div>
+          <h1 className="mt-4 max-w-5xl text-3xl font-semibold tracking-[-0.035em] text-white md:text-4xl">{item.title}</h1>
+          <p className="mt-3 max-w-4xl text-base leading-7 text-white/48">{item.newspaperDeck}</p>
+        </header>
 
-          <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] md:text-6xl">{item.title}</h1>
-          <p className="mt-5 text-xl leading-9 text-muted-foreground md:text-2xl">{item.newspaperDeck}</p>
+        <section className="grid overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-sm sm:grid-cols-2" aria-label={copy.provenance}>
+          <p className="flex items-center gap-2 border-b border-white/[0.055] px-5 py-4 text-white/45 sm:border-r"><UserRound className="h-4 w-4 text-emerald-200/60" aria-hidden="true" /> {copy.by} {item.persona.name}, {item.persona.desk}</p>
+          <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="flex min-w-0 items-center gap-2 border-b border-white/[0.055] px-5 py-4 font-medium text-white/58 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/60"><ExternalLink className="h-4 w-4 shrink-0 text-emerald-200/60" aria-hidden="true" /><span className="truncate">{copy.source}: {item.referenceLabel}</span><span className="sr-only"> — {copy.verifiedSource}</span></a>
+          <p className="flex items-center gap-2 px-5 py-4 text-white/45 sm:border-r"><CalendarDays className="h-4 w-4 text-emerald-200/60" aria-hidden="true" /> {copy.date}: {formatDate(item.publishedAt, locale)}</p>
+          <p className="flex items-center gap-2 px-5 py-4 text-white/45"><ShieldCheck className="h-4 w-4 text-emerald-200/60" aria-hidden="true" /> {copy.reliability}: {item.reliability}</p>
+        </section>
 
-          <div className="mt-6 grid gap-3 rounded-[1.5rem] border bg-muted/25 p-5 text-sm text-muted-foreground sm:grid-cols-2">
-            <p className="flex items-center gap-2"><UserRound className="h-4 w-4" aria-hidden="true" /> {copy.by} {item.persona.name}, {item.persona.desk}</p>
-            <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><ExternalLink className="h-4 w-4" aria-hidden="true" /> {copy.source}: {item.referenceLabel}<span className="sr-only"> — {copy.verifiedSource}</span></a>
-            <p className="flex items-center gap-2"><CalendarDays className="h-4 w-4" aria-hidden="true" /> {copy.date}: {formatDate(item.publishedAt, locale)}</p>
-            <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" aria-hidden="true" /> {copy.reliability}: {item.reliability}</p>
-          </div>
+        {locked ? (
+          <section className="rounded-xl border border-amber-300/15 bg-amber-300/[0.045] px-5 py-5 text-amber-100" aria-labelledby="premium-preview-title">
+            <h2 id="premium-preview-title" className="text-sm font-semibold">{copy.lockedTitle}</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-amber-100/70">{copy.lockedBody}</p>
+            <Link href={`/${locale}/dashboard/organizations/add-ons?addon=regulatory-monitoring-pro`} className="mt-4 inline-flex min-h-9 items-center justify-center rounded-lg bg-emerald-300 px-3 text-xs font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">{copy.reviewAccess}</Link>
+          </section>
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
+            <article className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+              <div className="border-b border-white/[0.055] px-5 py-4"><p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-emerald-200/60">RISCK COMPLY Intelligence</p><p className="mt-1 text-xs text-white/34">{item.persona.tagline}</p></div>
+              <div className="space-y-5 px-5 py-5 text-sm leading-7 text-white/64 md:px-6">{item.articleParagraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>
+            </article>
 
-          {locked ? (
-            <section className="mt-8 rounded-[1.5rem] border border-amber-500/30 bg-amber-500/10 p-6 text-amber-800 dark:text-amber-100" aria-labelledby="premium-preview-title">
-              <h2 id="premium-preview-title" className="text-xl font-semibold">{copy.lockedTitle}</h2>
-              <p className="mt-2 text-sm leading-6">{copy.lockedBody}</p>
-              <Link href={`/${locale}/dashboard/organizations/add-ons?addon=regulatory-monitoring-pro`} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-bold text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <Sparkles className="h-4 w-4" aria-hidden="true" /> {copy.reviewAccess}
-              </Link>
-            </section>
-          ) : (
-            <div className="mt-8 space-y-8">
-              <section className="rounded-[1.5rem] border bg-background/70 p-6 md:p-8">
-                <div className="border-b pb-4"><p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">RISCK COMPLY Intelligence</p><p className="mt-2 text-sm text-muted-foreground">{item.persona.tagline}</p></div>
-                <div className="mt-6 space-y-6 text-base leading-8 text-foreground/88 md:text-lg md:leading-9">{item.articleParagraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>
+            <div className="space-y-4">
+              <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+                <div className="border-b border-white/[0.055] px-5 py-4"><h2 className="text-sm font-semibold text-white/88">{copy.analysis}</h2></div>
+                <p className="px-5 py-4 text-sm leading-6 text-white/58">{item.risckComplyAnalysis}</p>
+                <p className="border-t border-white/[0.055] px-5 py-3 text-xs leading-5 text-white/34">{copy.editorialNote}</p>
               </section>
 
-              <section className="rounded-[1.5rem] border bg-muted/20 p-6">
-                <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">{copy.analysis}</h2>
-                <p className="mt-3 text-sm leading-7 text-foreground/85 md:text-base">{item.risckComplyAnalysis}</p>
-                <p className="mt-4 rounded-2xl border bg-background/70 p-3 text-xs leading-5 text-muted-foreground">{copy.editorialNote}</p>
+              <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+                <div className="border-b border-white/[0.055] px-5 py-4"><h2 className="text-sm font-semibold text-white/88">{copy.calendar}</h2></div>
+                <p className="px-5 pt-4 text-sm leading-6 text-white/52">{item.calendarSuggestion}</p>
+                <div className="px-5 pb-5 pt-3"><Link href={buildCalendarSuggestionHref(locale, item)} className={secondaryLink}>{copy.addCalendar}</Link></div>
               </section>
 
-              <section className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-[1.5rem] border bg-muted/20 p-6"><h2 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">{copy.affected}</h2><div className="mt-4 flex flex-wrap gap-2">{item.affectedCompanies.map((company) => <span key={company} className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{company}</span>)}</div></div>
-                <div className="rounded-[1.5rem] border bg-muted/20 p-6"><h2 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">{copy.calendar}</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">{item.calendarSuggestion}</p><Link href={buildCalendarSuggestionHref(locale, item)} className="mt-4 inline-flex min-h-10 items-center rounded-full border px-4 py-2 text-sm font-bold transition hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{copy.addCalendar}</Link></div>
-              </section>
-
-              <section className="rounded-[1.5rem] border bg-muted/20 p-6"><h2 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">{copy.actions}</h2><ul className="mt-4 space-y-3 text-sm text-muted-foreground">{item.recommendedActions.map((action) => <li key={action} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" /> {action}</li>)}</ul></section>
-
-              <section className="rounded-[1.5rem] border bg-muted/20 p-6">
-                <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">{copy.provenance}</h2>
-                <div className="mt-4 grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
-                  <p className="flex items-center gap-2"><Building2 className="h-4 w-4" aria-hidden="true" /> {copy.jurisdiction}: {item.jurisdiction}</p>
-                  <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><ExternalLink className="h-4 w-4" aria-hidden="true" /> {copy.source}: {item.referenceLabel}</a>
-                  <p className="flex items-center gap-2"><UserRound className="h-4 w-4" aria-hidden="true" /> {copy.editor}: {item.persona.name}</p>
-                  <p className="flex items-center gap-2"><CalendarDays className="h-4 w-4" aria-hidden="true" /> {copy.published}: {formatDate(item.publishedAt, locale)}</p>
-                  <p className="flex items-center gap-2 md:col-span-2"><FileText className="h-4 w-4" aria-hidden="true" /> {copy.rights}: {item.contentRights}</p>
-                </div>
+              <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+                <div className="border-b border-white/[0.055] px-5 py-4"><h2 className="text-sm font-semibold text-white/88">{copy.affected}</h2></div>
+                <div className="flex flex-wrap gap-2 p-5">{item.affectedCompanies.map((company) => <span key={company} className="rounded-lg border border-white/[0.075] bg-white/[0.025] px-2.5 py-1 text-xs text-white/42">{company}</span>)}</div>
               </section>
             </div>
-          )}
-        </article>
+
+            <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] xl:col-span-2">
+              <div className="border-b border-white/[0.055] px-5 py-4"><h2 className="text-sm font-semibold text-white/88">{copy.actions}</h2></div>
+              <ul className="divide-y divide-white/[0.055]">{item.recommendedActions.map((action) => <li key={action} className="flex gap-3 px-5 py-4 text-sm leading-6 text-white/52"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-200/65" aria-hidden="true" /> {action}</li>)}</ul>
+            </section>
+
+            <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] xl:col-span-2">
+              <div className="border-b border-white/[0.055] px-5 py-4"><h2 className="text-sm font-semibold text-white/88">{copy.provenance}</h2></div>
+              <div className="grid text-sm text-white/45 md:grid-cols-2">
+                <p className="flex items-center gap-2 border-b border-white/[0.055] px-5 py-4 md:border-r"><Building2 className="h-4 w-4" aria-hidden="true" /> {copy.jurisdiction}: {item.jurisdiction}</p>
+                <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 border-b border-white/[0.055] px-5 py-4 font-medium text-white/58 transition hover:text-white"><ExternalLink className="h-4 w-4" aria-hidden="true" /> {copy.source}: {item.referenceLabel}</a>
+                <p className="flex items-center gap-2 border-b border-white/[0.055] px-5 py-4 md:border-b-0 md:border-r"><UserRound className="h-4 w-4" aria-hidden="true" /> {copy.editor}: {item.persona.name}</p>
+                <p className="flex items-center gap-2 border-b border-white/[0.055] px-5 py-4 md:border-b-0"><CalendarDays className="h-4 w-4" aria-hidden="true" /> {copy.published}: {formatDate(item.publishedAt, locale)}</p>
+                <p className="flex items-center gap-2 border-t border-white/[0.055] px-5 py-4 md:col-span-2"><FileText className="h-4 w-4" aria-hidden="true" /> {copy.rights}: {item.contentRights}</p>
+              </div>
+            </section>
+          </div>
+        )}
       </div>
     </main>
   );
