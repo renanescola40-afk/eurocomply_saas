@@ -38,8 +38,8 @@ describe('enterprise recovery control plane', () => {
     for (const token of forbiddenHostedProductionDumpTokens) expect(rehearsal).not.toContain(token);
 
     expect(providerRestore).toContain('supabase-provider-managed-physical-backup-clone');
-    expect(providerRestore).toContain("controlsVerified:['REC-05','REC-06','REC-07','REC-08','REC-09','REC-10']");
-    expect(providerRestore).toContain('productionDumpCreatedOnGithubRunner:false');
+    expect(providerRestore).toContain("controlsVerified: ['REC-05', 'REC-06', 'REC-07', 'REC-08', 'REC-09', 'REC-10']");
+    expect(providerRestore).toContain('productionDumpCreatedOnGithubRunner: false');
     expect(providerDestroy).toContain('DELETE');
     expect(providerDestroy).toContain('restore_project_ref_invalid_or_not_distinct');
   });
