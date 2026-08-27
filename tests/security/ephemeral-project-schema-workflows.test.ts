@@ -186,10 +186,14 @@ describe('exact-SHA disposable project schema workflows', () => {
     }
   });
 
-  it('keeps production backup restore on a clean target without project replay', () => {
-    expect(recovery).toContain('manage-ephemeral-recovery-database.mjs start');
+  it('keeps Production recovery on the provider-managed restore boundary without local project replay', () => {
+    expect(recovery).toContain('verify-supabase-provider-managed-restore.mjs verify');
+    expect(recovery).toContain('bind-backup-restore-migration-ledger.mjs');
+    expect(recovery).toContain('destroy-supabase-provider-managed-restore.mjs');
+    expect(recovery).not.toContain('manage-ephemeral-recovery-database.mjs start');
     expect(recovery).not.toContain('run-ephemeral-project-schema-replay.mjs');
     expect(recovery).not.toContain('secrets.RECOVERY_ISOLATED_DATABASE_URL');
+    expect(recovery).not.toContain('RECOVERY_SOURCE_DATABASE_URL');
     expect(ephemeralSmoke).toContain('RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL');
   });
 });
