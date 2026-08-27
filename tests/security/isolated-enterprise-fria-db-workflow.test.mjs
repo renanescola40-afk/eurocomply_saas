@@ -41,7 +41,11 @@ test('disposable FRIA ACL normalization is loopback-only and cannot weaken the f
   assert.match(friaAclNormalizer, /isLoopbackDatabaseUrl\(databaseUrl\)/);
   assert.match(friaAclNormalizer, /databaseUrlUsesPort\(databaseUrl, recoveryHostPort\)/);
   for (const table of ['ai_fria_assessments', 'ai_fria_evidence', 'ai_fria_decisions']) {
-    assert.match(friaAclNormalizer, new RegExp(`revoke insert, update, delete, truncate on table public\\.\\$\\{table\\}`.replace('\\$\\{table\\}', table)));
+    assert.ok(
+      friaAclNormalizer.includes(
+        `revoke insert, update, delete, truncate on table public.\${table} from anon, authenticated;`,
+      ),
+    );
   }
   assert.match(friaAclNormalizer, /privilege_type in \('INSERT', 'UPDATE', 'DELETE', 'TRUNCATE'\)/);
   assert.match(friaAclNormalizer, /remaining !== '0'/);
