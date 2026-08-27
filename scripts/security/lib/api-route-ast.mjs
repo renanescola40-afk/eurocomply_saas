@@ -24,6 +24,14 @@ function callableInitializer(node) {
   return null;
 }
 
+function isCallableNode(node) {
+  return ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node);
+}
+
+function callableBody(node) {
+  return isCallableNode(node) ? node.body : undefined;
+}
+
 function buildTopLevelCallables(sourceFile) {
   const callables = new Map();
 
@@ -101,46 +109,175 @@ function collectExportedHandlers(sourceFile, callables) {
   return handlers;
 }
 
-function referencedLocalCallableNames(node, callables) {
-  const names = new Set();
-
-  function visit(current) {
-    if (ts.isIdentifier(current) && callables.has(current.text)) {
-      names.add(current.text);
-    }
-    ts.forEachChild(current, visit);
+function staticBoolean(expression) {
+  if (!expression) return null;
+  if (expression.kind === ts.SyntaxKind.TrueKeyword) return true;
+  if (expression.kind === ts.SyntaxKind.FalseKeyword) return false;
+  if (ts.isParenthesizedExpression(expression)) return staticBoolean(expression.expression);
+  if (ts.isPrefixUnaryExpression(expression) && expression.operator === ts.SyntaxKind.ExclamationToken) {
+    const value = staticBoolean(expression.operand);
+    return value === null ? null : !value;
   }
-
-  visit(node);
-  return names;
+  return null;
 }
 
-function collectReachableIdentifiers(rootNode, callables) {
+function calleeNames(expression, sourceFile) {
+  if (ts.isIdentifier(expression)) return [expression.text];
+  if (ts.isPropertyAccessExpression(expression)) {
+    return [expression.name.text, expression.getText(sourceFile)];
+  }
+  return [];
+}
+
+function collectReachableUsage(rootNode, callables, sourceFile) {
   const identifiers = new Set();
+  const calls = new Set();
   const visitedCallables = new Set();
 
-  function visitNode(node) {
-    function visit(current) {
-      if (ts.isIdentifier(current)) identifiers.add(current.text);
-      if (ts.isPropertyAccessExpression(current)) {
-        identifiers.add(current.name.text);
-        identifiers.add(current.getText());
-      }
-      ts.forEachChild(current, visit);
-    }
-
-    visit(node);
-
-    for (const name of referencedLocalCallableNames(node, callables)) {
-      if (visitedCallables.has(name)) continue;
-      visitedCallables.add(name);
-      const callable = callables.get(name);
-      if (callable) visitNode(callable);
+  function recordIdentifier(node) {
+    if (ts.isIdentifier(node)) identifiers.add(node.text);
+    if (ts.isPropertyAccessExpression(node)) {
+      identifiers.add(node.name.text);
+      identifiers.add(node.getText(sourceFile));
     }
   }
 
-  visitNode(rootNode);
-  return identifiers;
+  function visitCallable(node) {
+    const body = callableBody(node);
+    if (!body) return;
+    if (ts.isBlock(body)) {
+      for (const statement of body.statements) visitStatement(statement);
+      return;
+    }
+    visitExpression(body);
+  }
+
+  function visitExpression(expression) {
+    if (!expression) return;
+    recordIdentifier(expression);
+
+    if (ts.isParenthesizedExpression(expression)) {
+      visitExpression(expression.expression);
+      return;
+    }
+
+    if (ts.isCallExpression(expression)) {
+      for (const name of calleeNames(expression.expression, sourceFile)) calls.add(name);
+
+      if (ts.isIdentifier(expression.expression)) {
+        const localCallable = callables.get(expression.expression.text);
+        if (localCallable && !visitedCallables.has(expression.expression.text)) {
+          visitedCallables.add(expression.expression.text);
+          visitCallable(localCallable);
+        }
+      } else if (ts.isArrowFunction(expression.expression) || ts.isFunctionExpression(expression.expression)) {
+        visitCallable(expression.expression);
+      } else {
+        visitExpression(expression.expression);
+      }
+
+      for (const argument of expression.arguments) {
+        if (ts.isArrowFunction(argument) || ts.isFunctionExpression(argument)) continue;
+        visitExpression(argument);
+      }
+      return;
+    }
+
+    if (ts.isArrowFunction(expression) || ts.isFunctionExpression(expression)) {
+      return;
+    }
+
+    if (ts.isConditionalExpression(expression)) {
+      visitExpression(expression.condition);
+      const value = staticBoolean(expression.condition);
+      if (value === true) visitExpression(expression.whenTrue);
+      else if (value === false) visitExpression(expression.whenFalse);
+      else {
+        visitExpression(expression.whenTrue);
+        visitExpression(expression.whenFalse);
+      }
+      return;
+    }
+
+    if (ts.isBinaryExpression(expression)) {
+      visitExpression(expression.left);
+      const leftValue = staticBoolean(expression.left);
+      if (expression.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken && leftValue === false) return;
+      if (expression.operatorToken.kind === ts.SyntaxKind.BarBarToken && leftValue === true) return;
+      visitExpression(expression.right);
+      return;
+    }
+
+    ts.forEachChild(expression, (child) => {
+      if (ts.isArrowFunction(child) || ts.isFunctionExpression(child)) return;
+      if (ts.isExpression(child)) visitExpression(child);
+      else visitNode(child);
+    });
+  }
+
+  function visitStatement(statement) {
+    if (ts.isFunctionDeclaration(statement)) return;
+
+    if (ts.isBlock(statement)) {
+      for (const nested of statement.statements) visitStatement(nested);
+      return;
+    }
+
+    if (ts.isIfStatement(statement)) {
+      visitExpression(statement.expression);
+      const value = staticBoolean(statement.expression);
+      if (value === true) visitStatement(statement.thenStatement);
+      else if (value === false) {
+        if (statement.elseStatement) visitStatement(statement.elseStatement);
+      } else {
+        visitStatement(statement.thenStatement);
+        if (statement.elseStatement) visitStatement(statement.elseStatement);
+      }
+      return;
+    }
+
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        recordIdentifier(declaration.name);
+        const initializer = declaration.initializer;
+        if (!initializer || ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer)) continue;
+        visitExpression(initializer);
+      }
+      return;
+    }
+
+    if (ts.isExpressionStatement(statement)) {
+      visitExpression(statement.expression);
+      return;
+    }
+
+    if (ts.isReturnStatement(statement) || ts.isThrowStatement(statement)) {
+      if (statement.expression) visitExpression(statement.expression);
+      return;
+    }
+
+    visitNode(statement);
+  }
+
+  function visitNode(node) {
+    recordIdentifier(node);
+    if (isCallableNode(node) && node !== rootNode) return;
+    if (ts.isExpression(node)) {
+      visitExpression(node);
+      return;
+    }
+    ts.forEachChild(node, (child) => {
+      if (isCallableNode(child)) return;
+      if (ts.isStatement(child)) visitStatement(child);
+      else if (ts.isExpression(child)) visitExpression(child);
+      else visitNode(child);
+    });
+  }
+
+  if (isCallableNode(rootNode)) visitCallable(rootNode);
+  else visitNode(rootNode);
+
+  return { identifiers, calls };
 }
 
 export function analyzeExportedRouteHandlers(source, fileName = 'route.ts') {
@@ -154,11 +291,15 @@ export function analyzeExportedRouteHandlers(source, fileName = 'route.ts') {
   const callables = buildTopLevelCallables(sourceFile);
   const handlers = collectExportedHandlers(sourceFile, callables);
 
-  return [...handlers.entries()].map(([method, node]) => ({
-    method,
-    identifiers: collectReachableIdentifiers(node, callables),
-    source: node.getText(sourceFile),
-  }));
+  return [...handlers.entries()].map(([method, node]) => {
+    const usage = collectReachableUsage(node, callables, sourceFile);
+    return {
+      method,
+      identifiers: usage.identifiers,
+      calls: usage.calls,
+      source: node.getText(sourceFile),
+    };
+  });
 }
 
 export function exportedRouteMethods(source, fileName = 'route.ts') {
