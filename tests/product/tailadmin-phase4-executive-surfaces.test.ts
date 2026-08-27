@@ -23,6 +23,12 @@ const REPORT_PREVIEW = new URL('../../src/components/dashboard/white-label-repor
 const REVIEW_INPUTS = new URL('../../src/components/dashboard/approval-workflow-preview.tsx', import.meta.url);
 const OWNERSHIP_ROUTING = new URL('../../src/components/dashboard/department-ownership-preview.tsx', import.meta.url);
 const AUDIT_ENTRY_POINTS = new URL('../../src/components/dashboard/audit-timeline-preview.tsx', import.meta.url);
+const WORKFLOW_READINESS = new URL('../../src/components/dashboard/workflow-readiness-summary.tsx', import.meta.url);
+const FOLLOW_UP_PLAN = new URL('../../src/components/dashboard/readiness-follow-up-plan.tsx', import.meta.url);
+const EXECUTIVE_PACKAGE = new URL('../../src/components/dashboard/executive-reporting-package.tsx', import.meta.url);
+const EXPORT_PREPARATION = new URL('../../src/components/dashboard/readiness-export-preparation.tsx', import.meta.url);
+const AUDIT_PACKAGE = new URL('../../src/components/dashboard/audit-package-review.tsx', import.meta.url);
+const EVIDENCE_HANDOFF = new URL('../../src/components/dashboard/evidence-handoff-review.tsx', import.meta.url);
 
 describe('TailAdmin phase 4 executive surfaces', () => {
   it('removes synthetic enterprise preview metrics from the dashboard overview', async () => {
@@ -157,5 +163,18 @@ describe('TailAdmin phase 4 executive surfaces', () => {
     expect(audit).not.toContain('Today · 09:40');
     expect(audit).not.toContain('EuroComply system');
     expect(audit).not.toContain('Audit pack ready for export');
+  });
+
+  it('uses the same compact graphite surface for readiness and reporting handoff modules', async () => {
+    const sources = await Promise.all([
+      readFile(WORKFLOW_READINESS, 'utf8'), readFile(FOLLOW_UP_PLAN, 'utf8'), readFile(EXECUTIVE_PACKAGE, 'utf8'), readFile(EXPORT_PREPARATION, 'utf8'), readFile(AUDIT_PACKAGE, 'utf8'), readFile(EVIDENCE_HANDOFF, 'utf8'),
+    ]);
+    for (const source of sources) {
+      expect(source).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
+      expect(source).not.toContain('rounded-3xl');
+      expect(source).not.toContain('shadow-xl');
+      expect(source).not.toContain('bg-white p-5 shadow-sm');
+    }
+    expect(FOLLOW_UP_PLAN).toBeDefined();
   });
 });
