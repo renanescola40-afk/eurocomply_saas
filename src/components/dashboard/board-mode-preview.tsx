@@ -12,17 +12,16 @@ type BoardDecision = {
   value: string;
   detail: string;
   href: string;
-  tone: 'emerald' | 'amber' | 'rose' | 'sky';
+  tone: 'emerald' | 'amber' | 'rose' | 'neutral';
 };
 
 function toneClasses(tone: BoardDecision['tone']) {
   const tones = {
-    emerald: 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100',
-    amber: 'border-amber-300/30 bg-amber-300/10 text-amber-100',
-    rose: 'border-rose-300/30 bg-rose-300/10 text-rose-100',
-    sky: 'border-sky-300/30 bg-sky-300/10 text-sky-100',
+    emerald: 'border-emerald-300/15 bg-emerald-300/[0.055] text-emerald-100/80',
+    amber: 'border-amber-300/15 bg-amber-300/[0.055] text-amber-100/80',
+    rose: 'border-rose-300/15 bg-rose-300/[0.055] text-rose-100/80',
+    neutral: 'border-white/[0.075] bg-white/[0.025] text-white/52',
   };
-
   return tones[tone];
 }
 
@@ -33,104 +32,93 @@ function getTrend(trendComparison?: DashboardTrendComparison) {
   return `${delta > 0 ? '+' : ''}${delta} pts`;
 }
 
-function getBoardReadout(summary: DashboardSummary) {
-  if (summary.complianceScore >= 85 && summary.criticalRisks === 0 && summary.missingDocuments <= 2) {
-    return 'Ready for customer, investor and leadership review.';
-  }
-
-  if (summary.complianceScore >= 70) {
-    return 'Leadership-reviewable with focused remediation required.';
-  }
-
-  return 'Not yet ready for leadership review. Executive remediation should be prioritized.';
+function getLeadershipReadout(summary: DashboardSummary) {
+  if (summary.criticalRisks > 0) return `${summary.criticalRisks} critical risks require leadership attention.`;
+  if (summary.highRiskVendors > 0) return `${summary.highRiskVendors} high-risk vendors remain in the review posture.`;
+  if (summary.missingDocuments > 0) return `${summary.missingDocuments} evidence items remain missing from the current register.`;
+  if (summary.openTasks > 0) return `${summary.openTasks} open actions remain in the remediation plan.`;
+  return 'No critical risk, high-risk vendor or missing-evidence signal is currently shown in this summary.';
 }
 
 function getPrimaryAsk(summary: DashboardSummary) {
-  if (summary.criticalRisks > 0) return 'Approve critical risk remediation plan.';
-  if (summary.highRiskVendors > 0) return 'Approve vendor review sprint.';
-  if (summary.missingDocuments > 0) return 'Approve evidence completion sprint.';
-  return 'Approve customer review compliance package.';
+  if (summary.criticalRisks > 0) return 'Review critical risk treatment';
+  if (summary.highRiskVendors > 0) return 'Review high-risk vendors';
+  if (summary.missingDocuments > 0) return 'Close evidence gaps';
+  if (summary.openTasks > 0) return 'Review open actions';
+  return 'Review current governance report';
 }
 
 export function BoardModePreview({ summary, trendComparison, basePath }: BoardModePreviewProps) {
   const decisions: BoardDecision[] = [
     {
-      label: 'Decision ask',
+      label: 'Leadership focus',
       value: getPrimaryAsk(summary),
-      detail: 'The single decision leadership should make from this posture.',
-      href: `${basePath}/reports`,
+      detail: 'The highest-priority workstream derived from the current workspace signals.',
+      href: summary.criticalRisks > 0 ? `${basePath}/risks` : summary.highRiskVendors > 0 ? `${basePath}/vendors` : summary.missingDocuments > 0 ? `${basePath}/documents` : summary.openTasks > 0 ? `${basePath}/tasks` : `${basePath}/reports`,
       tone: summary.criticalRisks > 0 ? 'rose' : summary.highRiskVendors > 0 || summary.missingDocuments > 0 ? 'amber' : 'emerald',
     },
     {
-      label: 'Business risk',
-      value: summary.criticalRisks > 0 ? 'Material' : summary.highRiskVendors > 0 ? 'Elevated' : 'Controlled',
-      detail: `${summary.criticalRisks} critical risks and ${summary.highRiskVendors} high-risk vendors currently visible.`,
+      label: 'Critical risks',
+      value: String(summary.criticalRisks),
+      detail: `${summary.openRisks} open risks are currently tracked in total.`,
       href: `${basePath}/risks`,
-      tone: summary.criticalRisks > 0 ? 'rose' : summary.highRiskVendors > 0 ? 'amber' : 'emerald',
+      tone: summary.criticalRisks > 0 ? 'rose' : summary.openRisks > 0 ? 'amber' : 'emerald',
     },
     {
-      label: 'Customer confidence',
-      value: summary.missingDocuments > 3 ? 'At risk' : summary.missingDocuments > 0 ? 'Needs proof' : 'Strong',
-      detail: `${summary.missingDocuments} missing evidence items could affect external reviews.`,
+      label: 'Evidence gap',
+      value: String(summary.missingDocuments),
+      detail: `${summary.totals.documents} documents are currently tracked by the workspace.`,
       href: `${basePath}/documents`,
       tone: summary.missingDocuments > 3 ? 'rose' : summary.missingDocuments > 0 ? 'amber' : 'emerald',
     },
     {
       label: 'Operating load',
       value: `${summary.openTasks} actions`,
-      detail: 'Open actions represent the work required to move posture forward.',
+      detail: 'Open actions in the current governance and remediation queue.',
       href: `${basePath}/tasks`,
-      tone: summary.openTasks > 10 ? 'amber' : 'sky',
+      tone: summary.openTasks > 10 ? 'amber' : 'neutral',
     },
   ];
 
   return (
-    <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-5 text-white shadow-2xl md:p-7">
-      <div className="absolute right-0 top-0 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl" />
-      <div className="absolute bottom-0 left-0 h-96 w-96 rounded-full bg-sky-500/10 blur-3xl" />
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+      <div className="grid xl:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="border-b border-white/[0.055] px-5 py-5 xl:border-b-0 xl:border-r">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Leadership summary</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Current governance posture</h2>
+          <p className="mt-3 text-sm leading-6 text-white/42">A compact readout for leadership using only current score, risk, vendor, evidence and action data.</p>
 
-      <div className="relative grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
-        <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-200/80">Leadership mode</p>
-          <h2 className="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">Executive view without operational noise.</h2>
-          <p className="mt-5 text-sm leading-6 text-slate-400">
-            A C-level summary designed for leadership meetings, investor updates and enterprise customer reviews.
-          </p>
-
-          <div className="mt-7 rounded-3xl border border-white/10 bg-black/20 p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Compliance posture</p>
-                <p className="mt-3 text-6xl font-bold tracking-tight">{summary.complianceScore}%</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-right">
-                <p className="text-xs text-slate-500">Trend</p>
-                <p className="mt-1 text-xl font-bold">{getTrend(trendComparison)}</p>
-              </div>
+          <dl className="mt-6 divide-y divide-white/[0.055] border-y border-white/[0.055]">
+            <div className="py-3.5">
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">Compliance score</dt>
+              <dd className="mt-1.5 text-3xl font-semibold tracking-[-0.04em]">{summary.complianceScore}%</dd>
             </div>
-            <p className="mt-5 text-sm leading-6 text-slate-300">{getBoardReadout(summary)}</p>
-          </div>
+            <div className="py-3.5">
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">Trend</dt>
+              <dd className="mt-1.5 text-lg font-semibold text-white/72">{getTrend(trendComparison)}</dd>
+            </div>
+            <div className="py-3.5">
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">Readout</dt>
+              <dd className="mt-1.5 text-sm leading-6 text-white/52">{getLeadershipReadout(summary)}</dd>
+            </div>
+          </dl>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <Link href={`${basePath}/reports`} className="rounded-2xl bg-white px-4 py-3 text-center text-sm font-bold text-slate-950 transition hover:bg-slate-100">
-              Open leadership report
-            </Link>
-            <Link href={`${basePath}/reports/print`} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-sm font-bold transition hover:border-primary/50 hover:bg-white/[0.08]">
-              Prepare review pack
-            </Link>
+          <div className="mt-5 flex flex-wrap gap-2.5">
+            <Link href={`${basePath}/reports`} className="inline-flex h-10 items-center justify-center rounded-lg bg-emerald-300 px-4 text-sm font-semibold text-[#07110d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/60">Open report</Link>
+            <Link href={`${basePath}/reports/print`} className="inline-flex h-10 items-center justify-center rounded-lg border border-white/[0.09] bg-white/[0.025] px-4 text-sm font-semibold text-white/70 transition hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/40">Review pack</Link>
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {decisions.map((decision) => (
-            <Link key={decision.label} href={decision.href} className="group rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-5 transition hover:-translate-y-1 hover:border-primary/50 hover:bg-white/[0.075]">
+        <div className="grid md:grid-cols-2">
+          {decisions.map((decision, index) => (
+            <Link key={decision.label} href={decision.href} className={`group min-h-44 px-5 py-5 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 ${index > 0 ? 'border-t border-white/[0.055] md:border-l md:border-t-0' : ''} ${index === 2 ? 'md:border-t md:border-white/[0.055]' : ''}`}>
               <div className="flex items-start justify-between gap-3">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{decision.label}</p>
-                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${toneClasses(decision.tone)}`}>Review</span>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/30">{decision.label}</p>
+                <span className={`rounded-md border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] ${toneClasses(decision.tone)}`}>Current</span>
               </div>
-              <p className="mt-5 text-2xl font-semibold tracking-tight">{decision.value}</p>
-              <p className="mt-4 min-h-12 text-sm leading-6 text-slate-400">{decision.detail}</p>
-              <p className="mt-5 text-xs font-semibold text-primary/80 opacity-0 transition group-hover:opacity-100">Open executive context →</p>
+              <p className="mt-5 text-xl font-semibold tracking-[-0.025em] text-white/84">{decision.value}</p>
+              <p className="mt-3 text-xs leading-5 text-white/38">{decision.detail}</p>
+              <p className="mt-4 text-[10px] font-semibold text-emerald-100/0 transition group-hover:text-emerald-100/65">Open context →</p>
             </Link>
           ))}
         </div>
