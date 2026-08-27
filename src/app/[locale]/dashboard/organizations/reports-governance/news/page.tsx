@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Building2, CalendarDays, CheckCircle2, ExternalLink, FileText, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
+import { Building2, CalendarDays, CheckCircle2, ExternalLink, FileText, ShieldCheck, UserRound } from 'lucide-react';
 
 import { UpgradeRequiredCard } from '@/components/billing/upgrade-required-card';
 import { canAccessFeature } from '@/lib/billing/feature-gates';
@@ -71,10 +71,10 @@ function getCopy(locale: string) {
 }
 
 function getImpactTone(impact: IntelligenceImpact) {
-  if (impact === 'Crítico') return 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-200';
-  if (impact === 'Alto') return 'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-200';
-  if (impact === 'Médio') return 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200';
-  return 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-200';
+  if (impact === 'Crítico') return 'border-rose-300/20 bg-rose-300/[0.07] text-rose-100';
+  if (impact === 'Alto') return 'border-amber-300/20 bg-amber-300/[0.07] text-amber-100';
+  if (impact === 'Médio') return 'border-amber-200/15 bg-amber-200/[0.045] text-amber-100/80';
+  return 'border-white/[0.075] bg-white/[0.025] text-white/48';
 }
 
 function formatDate(date: string, locale: string) {
@@ -85,6 +85,9 @@ function buildCalendarSuggestionHref(locale: string, item: { title: string; juri
   const params = new URLSearchParams({ source: 'intelligence', title: item.title, country: item.jurisdiction, description: item.executiveSummary });
   return `/${locale}/calendario-compliance?${params.toString()}`;
 }
+
+const controlClass = 'min-h-10 w-full rounded-lg border border-white/[0.085] bg-black/20 px-3 py-2.5 text-sm text-white/75 outline-none transition placeholder:text-white/28 focus:border-emerald-300/30 focus-visible:ring-2 focus-visible:ring-emerald-300/55';
+const secondaryLink = 'inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-white/[0.085] bg-white/[0.025] px-3 text-xs font-semibold text-white/62 transition hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60';
 
 export default async function ComplianceNewsPage({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams?: Promise<{ q?: string; jurisdiction?: string; category?: string; premium?: string }> }) {
   const { locale } = await params;
@@ -120,65 +123,107 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
   const categories = Array.from(new Set(intelligenceItems.map((item) => item.category)));
   const lockedCount = intelligenceItems.filter((item) => item.premium && !canUsePremiumNews).length;
 
+  const metrics = [
+    { label: copy.articles, value: intelligenceItems.length.toString(), icon: FileText },
+    { label: copy.highImpact, value: intelligenceItems.filter((item) => item.impact === 'Alto' || item.impact === 'Crítico').length.toString(), icon: ShieldCheck },
+    { label: copy.calendarMetric, value: intelligenceItems.length.toString(), icon: CalendarDays },
+    { label: copy.desks, value: new Set(intelligenceItems.map((item) => item.persona.desk)).size.toString(), icon: Building2 },
+  ];
+
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.14),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.42))] text-foreground">
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 md:px-8 md:py-12">
-        <Link href={`/${locale}/dashboard/organizations/reports-governance`} className="rounded-md text-sm font-semibold text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">← {copy.back}</Link>
-
-        <section className="rounded-[2rem] border bg-background/92 p-6 shadow-xl shadow-primary/5 backdrop-blur md:p-9" aria-labelledby="intelligence-journal-title">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-primary">RISCK COMPLY Intelligence</p>
-          <h1 id="intelligence-journal-title" className="mt-3 max-w-4xl text-4xl font-semibold tracking-[-0.045em] md:text-6xl">{copy.title}</h1>
-          <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">{copy.subtitle}</p>
-          <p className="mt-3 flex max-w-3xl items-center gap-2 text-xs leading-5 text-muted-foreground"><ShieldCheck className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />{copy.provenanceNote}</p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href={`/${locale}/dashboard/organizations/add-ons?addon=regulatory-monitoring-pro`} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Sparkles className="h-4 w-4" aria-hidden="true" /> {copy.monitoringAddon}</Link>
-            <Link href={`/${locale}/calendario-compliance`} className="inline-flex min-h-11 items-center gap-2 rounded-full border px-5 py-3 text-sm font-bold transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><CalendarDays className="h-4 w-4" aria-hidden="true" /> {copy.calendar}</Link>
-            <Link href={`/${locale}/dashboard/organizations/reports-governance/news/editorial`} className="inline-flex min-h-11 items-center gap-2 rounded-full border px-5 py-3 text-sm font-bold transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><ShieldCheck className="h-4 w-4" aria-hidden="true" /> {copy.editorial}</Link>
+    <main className="min-h-0 bg-transparent text-white">
+      <div className="w-full space-y-5">
+        <header className="flex flex-col gap-4 border-b border-white/[0.065] pb-5 xl:flex-row xl:items-end xl:justify-between">
+          <div className="min-w-0">
+            <Link href={`/${locale}/dashboard/organizations/reports-governance`} className="text-xs font-medium text-white/42 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">← {copy.back}</Link>
+            <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/65">RISCK COMPLY Intelligence</p>
+            <h1 className="mt-2 max-w-4xl text-3xl font-semibold tracking-[-0.035em] text-white">{copy.title}</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/48">{copy.subtitle}</p>
+            <p className="mt-3 flex max-w-3xl items-start gap-2 text-xs leading-5 text-white/34"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-200/65" aria-hidden="true" />{copy.provenanceNote}</p>
           </div>
-        </section>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/${locale}/dashboard/organizations/add-ons?addon=regulatory-monitoring-pro`} className="inline-flex min-h-9 items-center justify-center rounded-lg bg-emerald-300 px-3 text-xs font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">{copy.monitoringAddon}</Link>
+            <Link href={`/${locale}/calendario-compliance`} className={secondaryLink}><CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />{copy.calendar}</Link>
+            <Link href={`/${locale}/dashboard/organizations/reports-governance/news/editorial`} className={secondaryLink}><ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />{copy.editorial}</Link>
+          </div>
+        </header>
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Intelligence summary">
-          {[{ label: copy.articles, value: intelligenceItems.length.toString(), icon: FileText }, { label: copy.highImpact, value: intelligenceItems.filter((item) => item.impact === 'Alto' || item.impact === 'Crítico').length.toString(), icon: ShieldCheck }, { label: copy.calendarMetric, value: intelligenceItems.length.toString(), icon: CalendarDays }, { label: copy.desks, value: new Set(intelligenceItems.map((item) => item.persona.desk)).size.toString(), icon: Building2 }].map((metric) => {
+        <section className="grid overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] sm:grid-cols-2 lg:grid-cols-4" aria-label="Intelligence summary">
+          {metrics.map((metric, index) => {
             const Icon = metric.icon;
-            return <article key={metric.label} className="rounded-[1.5rem] border bg-background/90 p-5 shadow-sm"><div className="flex items-center justify-between"><p className="text-sm text-muted-foreground">{metric.label}</p><Icon className="h-4 w-4 text-primary" aria-hidden="true" /></div><p className="mt-2 text-3xl font-semibold">{metric.value}</p></article>;
+            return <article key={metric.label} className={`p-5 ${index > 0 ? 'border-t border-white/[0.055] sm:border-l sm:border-t-0' : ''}`}><div className="flex items-center justify-between gap-3"><p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/35">{metric.label}</p><Icon className="h-4 w-4 text-emerald-200/65" aria-hidden="true" /></div><p className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">{metric.value}</p></article>;
           })}
         </section>
 
         {wantsPremium && !canUsePremiumNews ? <UpgradeRequiredCard locale={locale} requiredPlan="Professional" addOnSlug="regulatory-monitoring-pro" title={copy.lockedTitle} description={copy.lockedBody(lockedCount)} ctaLabel={copy.addons} /> : null}
 
         {intelligenceItems.length > 0 ? (
-          <form className="grid gap-3 rounded-[1.5rem] border bg-background/90 p-5 shadow-sm md:grid-cols-4" action={`/${locale}/dashboard/organizations/reports-governance/news`} role="search">
-            <input name="q" defaultValue={query.q ?? ''} placeholder={copy.search} aria-label={copy.search} className="min-h-11 rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-ring" />
-            <select name="jurisdiction" defaultValue={jurisdiction} aria-label={copy.allRegions} className="min-h-11 rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-ring"><option value="all">{copy.allRegions}</option>{jurisdictions.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-            <select name="category" defaultValue={category} aria-label={copy.allDesks} className="min-h-11 rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-ring"><option value="all">{copy.allDesks}</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-            <button className="min-h-11 rounded-2xl bg-foreground px-4 py-3 text-sm font-bold text-background transition hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" type="submit">{copy.filter}</button>
+          <form className="grid gap-3 rounded-xl border border-white/[0.075] bg-[#101715] p-4 md:grid-cols-[minmax(0,1.5fr)_minmax(160px,0.7fr)_minmax(160px,0.7fr)_auto]" action={`/${locale}/dashboard/organizations/reports-governance/news`} role="search">
+            <input name="q" defaultValue={query.q ?? ''} placeholder={copy.search} aria-label={copy.search} className={controlClass} />
+            <select name="jurisdiction" defaultValue={jurisdiction} aria-label={copy.allRegions} className={controlClass}><option value="all">{copy.allRegions}</option>{jurisdictions.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+            <select name="category" defaultValue={category} aria-label={copy.allDesks} className={controlClass}><option value="all">{copy.allDesks}</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+            <button className="min-h-10 rounded-lg bg-emerald-300 px-4 text-sm font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60" type="submit">{copy.filter}</button>
             {wantsPremium ? <input type="hidden" name="premium" value="1" /> : null}
           </form>
         ) : null}
 
-        <section className="grid gap-5">
-          {filtered.map((item) => {
-            const locked = item.premium && !canUsePremiumNews;
-            const detailHref = `/${locale}/dashboard/organizations/reports-governance/news/${item.id}`;
-            return (
-              <article key={item.id} className="rounded-[2rem] border bg-background/92 p-6 shadow-sm md:p-8">
-                <div className="flex flex-wrap gap-2"><span className="rounded-full border bg-muted/50 px-3 py-1 text-xs font-semibold">{item.persona.desk}</span><span className="rounded-full border bg-muted/50 px-3 py-1 text-xs font-semibold">{item.category}</span><span className="rounded-full border bg-muted/50 px-3 py-1 text-xs font-semibold">{item.jurisdiction}</span><span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getImpactTone(item.impact)}`}>{copy.impact}: {item.impact}</span>{item.premium ? <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Premium</span> : null}</div>
-                <h2 className="mt-4 text-2xl font-semibold tracking-tight md:text-3xl"><Link href={detailHref} className="rounded-sm transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{item.title}</Link></h2>
-                <p className="mt-3 text-base leading-7 text-muted-foreground md:text-lg">{item.newspaperDeck}</p>
-                <div className="mt-5 grid gap-3 text-sm text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
-                  <p className="flex items-center gap-2"><UserRound className="h-4 w-4" aria-hidden="true" /> {item.persona.name}</p>
-                  <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><ExternalLink className="h-4 w-4" aria-hidden="true" /><span className="truncate">{item.source}</span><span className="sr-only"> — {copy.verifiedSource}</span></a>
-                  <p className="flex items-center gap-2"><CalendarDays className="h-4 w-4" aria-hidden="true" /> {formatDate(item.publishedAt, locale)}</p>
-                  <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" aria-hidden="true" /> {item.reliability}</p>
-                </div>
-                {locked ? <div className="mt-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-100" role="status">{copy.preview}</div> : <div className="mt-6 grid gap-4 lg:grid-cols-2"><section className="rounded-[1.5rem] border bg-muted/20 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">{copy.fullArticle}</h3><p className="mt-3 text-sm leading-7">{item.articleParagraphs[0]}</p><Link href={detailHref} className="mt-4 inline-flex min-h-10 items-center rounded-full bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{copy.readFull}</Link></section><section className="rounded-[1.5rem] border bg-muted/20 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">{copy.smartCalendar}</h3><p className="mt-3 text-sm leading-6">{item.calendarSuggestion}</p><Link href={buildCalendarSuggestionHref(locale, item)} className="mt-4 inline-flex min-h-10 items-center rounded-full border px-4 py-2 text-xs font-bold transition hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{copy.addCalendar}</Link></section></div>}
-                {!locked ? <div className="mt-5 grid gap-4 lg:grid-cols-2"><section><h3 className="text-sm font-semibold">{copy.affectedCompanies}</h3><div className="mt-3 flex flex-wrap gap-2">{item.affectedCompanies.map((company) => <span key={company} className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{company}</span>)}</div></section><section><h3 className="text-sm font-semibold">{copy.recommendedActions}</h3><ul className="mt-3 space-y-2 text-sm text-muted-foreground">{item.recommendedActions.map((action) => <li key={action} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" /> {action}</li>)}</ul></section></div> : null}
-              </article>
-            );
-          })}
-        </section>
+        {filtered.length > 0 ? (
+          <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]" aria-label={copy.articles}>
+            <div className="divide-y divide-white/[0.055]">
+              {filtered.map((item) => {
+                const locked = item.premium && !canUsePremiumNews;
+                const detailHref = `/${locale}/dashboard/organizations/reports-governance/news/${item.id}`;
+                return (
+                  <article key={item.id} className="px-5 py-5 md:px-6">
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em]">
+                      <span className="rounded-lg border border-white/[0.075] bg-white/[0.025] px-2.5 py-1 text-white/42">{item.persona.desk}</span>
+                      <span className="rounded-lg border border-white/[0.075] bg-white/[0.025] px-2.5 py-1 text-white/42">{item.category}</span>
+                      <span className="rounded-lg border border-white/[0.075] bg-white/[0.025] px-2.5 py-1 text-white/42">{item.jurisdiction}</span>
+                      <span className={`rounded-lg border px-2.5 py-1 ${getImpactTone(item.impact)}`}>{copy.impact}: {item.impact}</span>
+                      {item.premium ? <span className="rounded-lg border border-emerald-300/20 bg-emerald-300/[0.07] px-2.5 py-1 text-emerald-100">Premium</span> : null}
+                    </div>
 
-        {intelligenceItems.length === 0 ? <p className="rounded-[1.5rem] border border-dashed bg-background/80 p-8 text-center text-sm font-semibold leading-6 text-muted-foreground" role="status">{copy.noVerifiedItems}</p> : filtered.length === 0 ? <p className="rounded-[1.5rem] border border-dashed bg-background/80 p-8 text-center text-sm font-semibold text-muted-foreground" role="status">{copy.noMatches}</p> : null}
+                    <h2 className="mt-3 text-xl font-semibold tracking-[-0.02em] text-white md:text-2xl"><Link href={detailHref} className="transition hover:text-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">{item.title}</Link></h2>
+                    <p className="mt-2 max-w-5xl text-sm leading-6 text-white/48">{item.newspaperDeck}</p>
+
+                    <div className="mt-4 grid gap-2 text-xs text-white/34 sm:grid-cols-2 lg:grid-cols-4">
+                      <p className="flex items-center gap-2"><UserRound className="h-3.5 w-3.5" aria-hidden="true" /> {item.persona.name}</p>
+                      <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="flex min-w-0 items-center gap-2 font-medium text-white/55 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60"><ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{item.source}</span><span className="sr-only"> — {copy.verifiedSource}</span></a>
+                      <p className="flex items-center gap-2"><CalendarDays className="h-3.5 w-3.5" aria-hidden="true" /> {formatDate(item.publishedAt, locale)}</p>
+                      <p className="flex items-center gap-2"><ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" /> {item.reliability}</p>
+                    </div>
+
+                    {locked ? (
+                      <div className="mt-4 rounded-lg border border-amber-300/15 bg-amber-300/[0.045] px-4 py-3 text-sm leading-6 text-amber-100/75" role="status">{copy.preview}</div>
+                    ) : (
+                      <div className="mt-5 grid gap-4 border-t border-white/[0.055] pt-4 lg:grid-cols-[1.2fr_0.8fr]">
+                        <section>
+                          <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/32">{copy.fullArticle}</h3>
+                          <p className="mt-2 text-sm leading-6 text-white/55">{item.articleParagraphs[0]}</p>
+                          <Link href={detailHref} className={`${secondaryLink} mt-3`}>{copy.readFull}</Link>
+                        </section>
+                        <section className="border-t border-white/[0.055] pt-4 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+                          <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/32">{copy.smartCalendar}</h3>
+                          <p className="mt-2 text-sm leading-6 text-white/55">{item.calendarSuggestion}</p>
+                          <Link href={buildCalendarSuggestionHref(locale, item)} className={`${secondaryLink} mt-3`}>{copy.addCalendar}</Link>
+                        </section>
+                      </div>
+                    )}
+
+                    {!locked ? (
+                      <div className="mt-4 grid gap-4 border-t border-white/[0.055] pt-4 lg:grid-cols-2">
+                        <section><h3 className="text-xs font-semibold text-white/72">{copy.affectedCompanies}</h3><div className="mt-2 flex flex-wrap gap-2">{item.affectedCompanies.map((company) => <span key={company} className="rounded-lg border border-white/[0.075] bg-white/[0.025] px-2.5 py-1 text-xs text-white/42">{company}</span>)}</div></section>
+                        <section><h3 className="text-xs font-semibold text-white/72">{copy.recommendedActions}</h3><ul className="mt-2 space-y-2 text-xs leading-5 text-white/45">{item.recommendedActions.map((action) => <li key={action} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-200/65" aria-hidden="true" /> {action}</li>)}</ul></section>
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
+        {intelligenceItems.length === 0 ? <p className="rounded-xl border border-dashed border-white/[0.1] bg-[#101715] p-8 text-center text-sm font-medium leading-6 text-white/42" role="status">{copy.noVerifiedItems}</p> : filtered.length === 0 ? <p className="rounded-xl border border-dashed border-white/[0.1] bg-[#101715] p-8 text-center text-sm font-medium text-white/42" role="status">{copy.noMatches}</p> : null}
       </div>
     </main>
   );
