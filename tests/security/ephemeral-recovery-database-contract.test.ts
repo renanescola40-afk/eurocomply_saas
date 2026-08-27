@@ -139,17 +139,26 @@ describe('ephemeral Supabase recovery database contract', () => {
     expect(manager).toContain("'stop', '--no-backup'");
     expect(manager).toContain('local volumes, and temporary firewall rules removed');
     expect(finalTechnical).toMatch(/Remove disposable recovery database[\s\S]*?if: always\(\)/);
-    expect(recovery).toMatch(/Remove disposable recovery database[\s\S]*?if: always\(\) &&/);
+
+    expect(recovery).not.toContain('manage-ephemeral-recovery-database.mjs start');
+    expect(recovery).toContain('Destroy isolated Supabase restore project');
+    expect(recovery).toContain('destroy-supabase-provider-managed-restore.mjs');
+    expect(recovery).toContain("if: always() && (inputs.exercise == 'full' || inputs.exercise == 'backup-restore')");
   });
 
   it('removes the persistent isolated database secret from protected workflows', () => {
     for (const workflow of [finalTechnical, recovery]) {
       expect(workflow).not.toContain('secrets.RECOVERY_ISOLATED_DATABASE_URL');
-      expect(workflow).toContain('supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520');
-      expect(workflow).toContain('version: 2.101.0');
     }
+
+    expect(finalTechnical).toContain('supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520');
+    expect(finalTechnical).toContain('version: 2.101.0');
     expect(finalTechnical).toContain('Start exact-SHA disposable Supabase project database');
-    expect(recovery).toContain('Start disposable Supabase recovery database');
+
+    expect(recovery).not.toContain('RECOVERY_SOURCE_DATABASE_URL');
+    expect(recovery).not.toContain('manage-ephemeral-recovery-database.mjs start');
+    expect(recovery).toContain('verify-supabase-provider-managed-restore.mjs verify');
+    expect(recovery).toContain('destroy-supabase-provider-managed-restore.mjs');
   });
 
   it('uses supported roles schema data dumps, excludes all managed Storage rows fail-closed and restores transactionally', () => {
