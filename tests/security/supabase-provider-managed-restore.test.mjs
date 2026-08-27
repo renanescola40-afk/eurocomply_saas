@@ -6,6 +6,7 @@ import {
   backupResponseContainsIdentifier,
   normalizeSqlForManagementApi,
   projectRefFromApiUrl,
+  resolveProviderBackupSelection,
   validateProviderManagedSnapshot,
 } from '../../scripts/recovery/verify-supabase-provider-managed-restore.mjs';
 import { allowedDestroyConfirmations } from '../../scripts/recovery/destroy-supabase-provider-managed-restore.mjs';
@@ -36,6 +37,48 @@ test('finds the selected backup identifier without depending on provider respons
   const payload = { backups: [{ id: 'daily:2026-08-26', status: 'COMPLETED' }] };
   assert.equal(backupResponseContainsIdentifier(payload, 'daily:2026-08-26'), true);
   assert.equal(backupResponseContainsIdentifier(payload, 'other'), false);
+});
+
+test('keeps exact backup identifier selection backward compatible', () => {
+  const payload = { backups: [{ id: 'daily:2026-08-27', inserted_at: '2026-08-27T04:45:08Z', status: 'COMPLETED' }] };
+  assert.deepEqual(
+    resolveProviderBackupSelection(payload, 'daily:2026-08-27', '2026-08-27T04:45:08Z'),
+    { mode: 'identifier' },
+  );
+  assert.equal(resolveProviderBackupSelection(payload, 'missing', '2026-08-27T04:45:08Z'), null);
+});
+
+test('resolves one provider backup from the exact created-at second when requested', () => {
+  const payload = {
+    data: {
+      backups: [
+        { id: 'daily:2026-08-27', inserted_at: '2026-08-27T04:45:08.321Z', status: 'COMPLETED' },
+        { id: 'daily:2026-08-26', inserted_at: '2026-08-26T04:46:49Z', status: 'COMPLETED' },
+      ],
+    },
+  };
+  assert.deepEqual(
+    resolveProviderBackupSelection(payload, 'AUTO_FROM_CREATED_AT', '2026-08-27T04:45:08Z'),
+    { mode: 'created_at' },
+  );
+});
+
+test('fails closed when created-at backup resolution is missing or ambiguous', () => {
+  const uniquePayload = {
+    backups: [{ id: 'daily:2026-08-27', inserted_at: '2026-08-27T04:45:08Z', status: 'COMPLETED' }],
+  };
+  assert.equal(resolveProviderBackupSelection(uniquePayload, 'AUTO_FROM_CREATED_AT', '2026-08-25T04:45:08Z'), null);
+
+  const ambiguousPayload = {
+    backups: [
+      { id: 'one', inserted_at: '2026-08-27T04:45:08.100Z', status: 'COMPLETED' },
+      { id: 'two', inserted_at: '2026-08-27T04:45:08.900Z', status: 'COMPLETED' },
+    ],
+  };
+  assert.throws(
+    () => resolveProviderBackupSelection(ambiguousPayload, 'AUTO_FROM_CREATED_AT', '2026-08-27T04:45:08Z'),
+    /created_at_ambiguous/,
+  );
 });
 
 test('accepts aggregate-only provider restore evidence with identical migration history and RLS', () => {
