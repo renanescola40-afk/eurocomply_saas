@@ -4,6 +4,7 @@ import test from 'node:test';
 
 import {
   backupResponseContainsIdentifier,
+  findSelectedBackup,
   normalizeSqlForManagementApi,
   projectRefFromApiUrl,
   validateProviderManagedSnapshot,
@@ -32,10 +33,75 @@ test('derives the production project ref only from a canonical Supabase API URL'
   assert.throws(() => projectRefFromApiUrl('https://example.com'), /not_canonical/);
 });
 
-test('finds the selected backup identifier without depending on provider response nesting', () => {
-  const payload = { backups: [{ id: 'daily:2026-08-26', status: 'COMPLETED' }] };
-  assert.equal(backupResponseContainsIdentifier(payload, 'daily:2026-08-26'), true);
-  assert.equal(backupResponseContainsIdentifier(payload, 'other'), false);
+test('matches backup identifiers only against backup id fields', () => {
+  const payload = {
+    region: 'eu-west-1',
+    backups: [
+      {
+        id: 4242,
+        is_physical_backup: true,
+        status: 'COMPLETED',
+        inserted_at: '2026-08-27T04:45:08.731+00:00',
+      },
+    ],
+  };
+  assert.equal(backupResponseContainsIdentifier(payload, '4242'), true);
+  assert.equal(backupResponseContainsIdentifier(payload, 'eu-west-1'), false);
+  assert.equal(backupResponseContainsIdentifier(payload, 'COMPLETED'), false);
+});
+
+test('resolves the selected physical backup by real id plus observed creation time', () => {
+  const payload = {
+    backups: [
+      {
+        id: 4242,
+        is_physical_backup: true,
+        status: 'COMPLETED',
+        inserted_at: '2026-08-27T04:45:08.731+00:00',
+      },
+    ],
+  };
+  const selected = findSelectedBackup(payload, '4242', '2026-08-27T04:45:08Z');
+  assert.equal(selected?.id, 4242);
+});
+
+test('accepts the dashboard timestamp identifier when it uniquely identifies the same completed physical backup second', () => {
+  const payload = {
+    backups: [
+      {
+        id: 4242,
+        is_physical_backup: true,
+        status: 'COMPLETED',
+        inserted_at: '2026-08-27T04:45:08.731+00:00',
+      },
+    ],
+  };
+  const selected = findSelectedBackup(payload, '2026-08-27T04:45:08Z', '2026-08-27T04:45:08Z');
+  assert.equal(selected?.id, 4242);
+});
+
+test('fails closed on ambiguous, non-physical, failed, or unrelated backup provenance', () => {
+  const base = {
+    id: 4242,
+    is_physical_backup: true,
+    status: 'COMPLETED',
+    inserted_at: '2026-08-27T04:45:08.731+00:00',
+  };
+
+  assert.equal(
+    findSelectedBackup({ backups: [base, { ...base, id: 4243 }] }, '2026-08-27T04:45:08Z', '2026-08-27T04:45:08Z'),
+    null,
+  );
+  assert.equal(
+    findSelectedBackup({ backups: [{ ...base, is_physical_backup: false }] }, '4242', '2026-08-27T04:45:08Z'),
+    null,
+  );
+  assert.equal(
+    findSelectedBackup({ backups: [{ ...base, status: 'FAILED' }] }, '4242', '2026-08-27T04:45:08Z'),
+    null,
+  );
+  assert.equal(findSelectedBackup({ backups: [base] }, 'eu-west-1', '2026-08-27T04:45:08Z'), null);
+  assert.equal(findSelectedBackup({ backups: [base] }, '4242', '2026-08-26T04:45:08Z'), null);
 });
 
 test('accepts aggregate-only provider restore evidence with identical migration history and RLS', () => {
