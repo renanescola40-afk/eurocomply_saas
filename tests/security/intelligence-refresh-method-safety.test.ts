@@ -9,16 +9,17 @@ const source = fs.readFileSync(
 
 describe('intelligence refresh method safety', () => {
   it('does not delegate GET requests to the state-changing POST handler', () => {
-    expect(source).not.toContain('export async function GET(request: Request) {\n  return POST(request);\n}');
-    expect(source).not.toMatch(/export async function GET[\s\S]*return POST\(/);
+    expect(source).not.toMatch(/export\s+(?:async\s+)?function\s+GET[\s\S]*return\s+POST\(/);
   });
 
-  it('rejects GET with an explicit no-store 405 response and POST allow header', () => {
+  it('authenticates GET before returning the explicit no-store 405 response', () => {
     expect(source).toContain("const METHOD_NOT_ALLOWED_HEADERS = { Allow: 'POST' };");
     expect(source).toContain("{ error: 'method_not_allowed' }");
     expect(source).toContain('status: 405');
     expect(source).toContain('headers: METHOD_NOT_ALLOWED_HEADERS');
-    expect(source).toMatch(/export async function GET\(\) \{[\s\S]*noStoreJson/);
+    expect(source).toMatch(
+      /export function GET\(request: Request\) \{[\s\S]*!isAuthorizedInternalCronRequest\(request\)[\s\S]*status: 401[\s\S]*status: 405/,
+    );
   });
 
   it('keeps authentication and rate limiting on the POST mutation path', () => {
