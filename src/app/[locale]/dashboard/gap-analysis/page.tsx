@@ -242,107 +242,109 @@ export default function GapAnalysisPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(37,99,235,0.24),transparent_34rem)]" />
-      <div className="relative mx-auto max-w-7xl px-5 py-8 lg:px-8">
-        <Button variant="ghost" onClick={() => router.push(`/${locale}/dashboard`)} className="mb-6 text-white/70 hover:text-white">
-          <ArrowLeft className="mr-2 h-4 w-4" /> {t.back}
-        </Button>
+    <main className="space-y-6 text-white">
+      <Button variant="ghost" onClick={() => router.push(`/${locale}/dashboard`)} className="h-9 px-2 text-white/50 hover:bg-white/[0.05] hover:text-white">
+        <ArrowLeft className="mr-2 h-4 w-4" /> {t.back}
+      </Button>
 
-        <div className="mb-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <div>
-            <Badge className="mb-4 border-white/10 bg-white/[0.06] text-white/70">{t.badge}</Badge>
-            <h1 className="max-w-3xl text-4xl font-semibold tracking-tight md:text-6xl">{t.title}</h1>
-            <p className="mt-4 max-w-2xl text-lg leading-8 text-white/58">{t.subtitle}</p>
+      <header className="border-b border-white/[0.07] pb-6">
+        <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div className="min-w-0">
+            <Badge className="mb-3 rounded-lg border-emerald-300/15 bg-emerald-300/[0.08] text-emerald-200">{t.badge}</Badge>
+            <h1 className="max-w-3xl text-3xl font-semibold tracking-tight md:text-4xl">{t.title}</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48 md:text-base">{t.subtitle}</p>
           </div>
+          <div className="min-w-[220px] rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">{t.score}</span>
+              <Badge className={`border ${status.tone}`}><StatusIcon className="mr-1 h-3.5 w-3.5" />{status.label}</Badge>
+            </div>
+            <div className="mt-3 flex items-end justify-between gap-4">
+              <span className="text-3xl font-semibold text-white/90">{result.score}%</span>
+              <span className="text-xs text-white/35">{result.completed}/{result.total} {t.completed}</span>
+            </div>
+            <Progress value={result.score} className="mt-3 h-1.5" />
+          </div>
+        </div>
+      </header>
 
-          <Card className="border-white/10 bg-white/[0.045] text-white">
-            <CardHeader>
-              <CardDescription className="text-white/50">{t.score}</CardDescription>
-              <CardTitle className="flex items-end justify-between text-5xl">
-                <span>{result.score}%</span>
-                <Badge className={`border ${status.tone}`}><StatusIcon className="mr-1 h-3.5 w-3.5" />{status.label}</Badge>
-              </CardTitle>
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02]">
+          <div className="border-b border-white/[0.07] px-5 py-4">
+            <p className="text-sm font-semibold text-white/82">{t.questions}</p>
+            <p className="mt-1 text-xs text-white/35">{result.completed}/{result.total} {t.completed}</p>
+          </div>
+          <div className="divide-y divide-white/[0.06]">
+            {questions.map((q) => (
+              <div key={q.id} className="p-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className="rounded-lg border-emerald-300/15 bg-emerald-300/[0.06] text-emerald-200">{q.article}</Badge>
+                  <span className="text-xs text-white/35">{q.category[locale]}</span>
+                </div>
+                <h2 className="mt-3 text-base font-medium leading-6 text-white/82">{q.text[locale]}</h2>
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  {(['yes', 'partial', 'no'] as Answer[]).filter(Boolean).map((answer) => (
+                    <button
+                      key={answer}
+                      type="button"
+                      onClick={() => setAnswers((current) => ({ ...current, [q.id]: answer }))}
+                      className={`rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${answers[q.id] === answer ? 'border-emerald-300/35 bg-emerald-300 text-[#06100d]' : 'border-white/[0.08] bg-white/[0.025] text-white/58 hover:bg-white/[0.055] hover:text-white'}`}
+                    >
+                      {answer === 'yes' ? t.yes : answer === 'partial' ? t.partial : t.no}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <aside className="space-y-4">
+          <GapActionCenter actions={result.actions} score={result.score} locale={locale} />
+
+          <Card className="rounded-xl border-white/[0.08] bg-white/[0.025] text-white">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-4 w-4 text-emerald-300" />{t.articleBreakdown}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <Progress value={result.score} className="h-2" />
-              <p className="mt-4 text-sm text-white/48">{result.completed}/{result.total} {t.completed}</p>
+            <CardContent className="space-y-4">
+              {Object.entries(result.byArticle).map(([article, item]) => (
+                <div key={article}>
+                  <div className="mb-2 flex items-center justify-between text-xs">
+                    <span className="text-white/58">{article}</span>
+                    <span className="text-white/38">{item.total}%</span>
+                  </div>
+                  <Progress value={item.total} className="h-1.5" />
+                </div>
+              ))}
             </CardContent>
           </Card>
-        </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-          <section className="space-y-4">
-            {questions.map((q) => (
-              <Card key={q.id} className="border-white/10 bg-white/[0.045] text-white">
-                <CardHeader>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge className="border-blue-400/20 bg-blue-500/10 text-blue-200">{q.article}</Badge>
-                    <span className="text-sm text-white/48">{q.category[locale]}</span>
-                  </div>
-                  <CardTitle className="text-xl">{q.text[locale]}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    {(['yes', 'partial', 'no'] as Answer[]).filter(Boolean).map((answer) => (
-                      <button
-                        key={answer}
-                        type="button"
-                        onClick={() => setAnswers((current) => ({ ...current, [q.id]: answer }))}
-                        className={`rounded-xl border px-4 py-3 text-sm transition ${answers[q.id] === answer ? 'border-white bg-white text-black' : 'border-white/10 bg-white/[0.03] text-white/68 hover:bg-white/[0.08]'}`}
-                      >
-                        {answer === 'yes' ? t.yes : answer === 'partial' ? t.partial : t.no}
-                      </button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </section>
-
-          <aside className="space-y-6">
-            <GapActionCenter actions={result.actions} score={result.score} locale={locale} />
-
-            <Card className="border-white/10 bg-white/[0.045] text-white">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5" />{t.articleBreakdown}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {Object.entries(result.byArticle).map(([article, item]) => (
-                  <div key={article}>
-                    <div className="mb-2 flex items-center justify-between text-sm">
-                      <span>{article}</span>
-                      <span className="text-white/58">{item.total}%</span>
+          <Card className="rounded-xl border-white/[0.08] bg-white/[0.025] text-white">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base"><FileText className="h-4 w-4 text-emerald-300" />{t.actionPlan}</CardTitle>
+              <CardDescription className="text-white/38">{t.actionSubtitle}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {result.actions.length === 0 ? (
+                <p className="text-sm leading-6 text-white/45">{t.noActions}</p>
+              ) : (
+                <div className="divide-y divide-white/[0.06] border-y border-white/[0.06]">
+                  {result.actions.map((action, index) => (
+                    <div key={`${action.article}-${index}`} className="py-3 text-sm">
+                      <Badge className={action.severity === 'critical' ? 'mb-2 border-red-400/20 bg-red-500/10 text-red-200' : 'mb-2 border-amber-400/20 bg-amber-500/10 text-amber-200'}>{action.article}</Badge>
+                      <p className="leading-6 text-white/55">{action.recommendation}</p>
                     </div>
-                    <Progress value={item.total} className="h-2" />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card className="border-white/10 bg-white/[0.045] text-white">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />{t.actionPlan}</CardTitle>
-                <CardDescription className="text-white/48">{t.actionSubtitle}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {result.actions.length === 0 ? (
-                  <p className="text-sm text-white/55">{t.noActions}</p>
-                ) : result.actions.map((action, index) => (
-                  <div key={`${action.article}-${index}`} className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm">
-                    <Badge className={action.severity === 'critical' ? 'mb-2 border-red-400/20 bg-red-500/10 text-red-200' : 'mb-2 border-amber-400/20 bg-amber-500/10 text-amber-200'}>{action.article}</Badge>
-                    <p className="text-white/70">{action.recommendation}</p>
-                  </div>
-                ))}
-                <Button onClick={generateReport} disabled={saving} className="mt-4 w-full bg-white text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60">
-                  <Download className="mr-2 h-4 w-4" /> {saving ? t.saving : t.export}
-                </Button>
-                {saveMessage && <p className="text-xs text-white/60">{saveMessage}</p>}
-                <p className="text-xs text-white/38">{t.saveNote}</p>
-              </CardContent>
-            </Card>
-          </aside>
-        </div>
+                  ))}
+                </div>
+              )}
+              <Button onClick={generateReport} disabled={saving} className="mt-4 w-full bg-emerald-300 text-[#06100d] hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-60">
+                <Download className="mr-2 h-4 w-4" /> {saving ? t.saving : t.export}
+              </Button>
+              {saveMessage && <p className="mt-3 text-xs text-white/55">{saveMessage}</p>}
+              <p className="mt-2 text-[11px] leading-5 text-white/28">{t.saveNote}</p>
+            </CardContent>
+          </Card>
+        </aside>
       </div>
     </main>
   );
