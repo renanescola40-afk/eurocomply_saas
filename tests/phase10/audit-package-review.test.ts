@@ -21,7 +21,7 @@ describe('Phase 10 audit package review', () => {
     const followUp = read('src/components/dashboard/readiness-follow-up-plan.tsx');
     const workspace = read('src/components/dashboard/reports-governance-workspace.tsx');
 
-    expect(exportPreparation).toContain('Readiness export preparation');
+    expect(exportPreparation).toContain('Export preparation');
     expect(exportPreparation).toContain('Prepare from reports');
     expect(reportingPackage).toContain('Executive reporting package');
     expect(readiness).toContain('Read-only reporting snapshot');
