@@ -43,7 +43,7 @@ async function main() {
   const restoreRef = required('RECOVERY_PROVIDER_RESTORE_PROJECT_REF');
   if (!PROJECT_REF.test(restoreRef) || restoreRef === sourceRef) throw new Error('restore_project_ref_invalid_or_not_distinct');
 
-  const expectedConfirmation = `DELETE ${restoreRef} AFTER REHEARSAL`;
+  const expectedConfirmation = `DELETE ${restoreRef} AFTER RECOVERY PROOF`;
   if (required('RECOVERY_PROVIDER_DESTROY_CONFIRMATION') !== expectedConfirmation) {
     throw new Error('restore_cleanup_confirmation_mismatch');
   }
