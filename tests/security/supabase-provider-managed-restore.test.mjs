@@ -80,6 +80,44 @@ test('accepts the dashboard timestamp identifier when it uniquely identifies the
   assert.equal(selected?.id, 4242);
 });
 
+test('resolves a timestamp-only completed physical backup record without an opaque provider id', () => {
+  const payload = {
+    backups: [
+      {
+        is_physical_backup: true,
+        status: 'COMPLETED',
+        inserted_at: '2026-08-27T04:45:08.731+00:00',
+      },
+    ],
+  };
+
+  const selected = findSelectedBackup(payload, '2026-08-27T04:45:08Z', '2026-08-27T04:45:08Z');
+  assert.equal(selected?.inserted_at, '2026-08-27T04:45:08.731+00:00');
+});
+
+test('fails closed when timestamp-only backup provenance is ambiguous or unusable', () => {
+  const completedPhysical = {
+    is_physical_backup: true,
+    status: 'COMPLETED',
+    inserted_at: '2026-08-27T04:45:08.731+00:00',
+  };
+  const selector = '2026-08-27T04:45:08Z';
+
+  assert.equal(
+    findSelectedBackup(
+      { backups: [completedPhysical, { ...completedPhysical, inserted_at: '2026-08-27T04:45:08.999+00:00' }] },
+      selector,
+      selector,
+    ),
+    null,
+  );
+  assert.equal(findSelectedBackup({ backups: [{ ...completedPhysical, status: 'FAILED' }] }, selector, selector), null);
+  assert.equal(
+    findSelectedBackup({ backups: [{ ...completedPhysical, is_physical_backup: false }] }, selector, selector),
+    null,
+  );
+});
+
 test('fails closed on ambiguous, non-physical, failed, or unrelated backup provenance', () => {
   const base = {
     id: 4242,
