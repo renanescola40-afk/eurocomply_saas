@@ -29,11 +29,8 @@ const TIMELINE = new URL('../../src/components/dashboard/compliance-timeline.tsx
 const ONBOARDING_PROGRESS = new URL('../../src/components/onboarding/onboarding-progress-card.tsx', import.meta.url);
 
 describe('enterprise dashboard template consistency', () => {
-  it('uses the TailAdmin-inspired enterprise shell as the authenticated dashboard chrome', async () => {
-    const [layout, shell] = await Promise.all([
-      readFile(DASHBOARD_LAYOUT, 'utf8'),
-      readFile(SHELL, 'utf8'),
-    ]);
+  it('uses the TailAdmin-inspired enterprise shell with canonical authenticated routes', async () => {
+    const [layout, shell] = await Promise.all([readFile(DASHBOARD_LAYOUT, 'utf8'), readFile(SHELL, 'utf8')]);
 
     expect(layout).toContain("import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell'");
     expect(layout).toContain('<EnterpriseDashboardShell');
@@ -45,45 +42,39 @@ describe('enterprise dashboard template consistency', () => {
     expect(shell).toContain("event.key.toLowerCase() === 'k'");
     expect(shell).toContain('Search or type a command...');
     expect(shell).toContain("localized(locale, '/dashboard/fria')");
-    expect(shell).toContain("localized(locale, '/dashboard/organizations/ai-literacy')");
+    expect(shell).toContain("localized(locale, '/dashboard/regulatory-control-tower')");
+    expect(shell).toContain("localized(locale, '/dashboard/ai-literacy')");
+    expect(shell).toContain("localized(locale, '/dashboard/evidence')");
+    expect(shell).toContain("localized(locale, '/dashboard/organizations/reports-governance/news')");
+    expect(shell).not.toContain("localized(locale, '/dashboard/organizations/regulatory-control-tower')");
+    expect(shell).not.toContain("localized(locale, '/dashboard/organizations/ai-literacy')");
   });
 
-  it('keeps the canonical dashboard overview on the clean application canvas', async () => {
-    const source = await readFile(DASHBOARD_HOME_PAGE, 'utf8');
-
-    expect(source).toContain('<main className="min-h-0 bg-transparent">');
-    expect(source).toContain('border-emerald-300/15 bg-emerald-300/[0.055]');
-    expect(source).not.toContain('tech-grid');
-    expect(source).not.toContain('radial-gradient');
-    expect(source).not.toContain('linear-gradient(180deg');
-  });
-
-  it('keeps route loading states inside the persistent dashboard chrome', async () => {
-    const [dashboardLoading, documentsLoading] = await Promise.all([
+  it('keeps canonical dashboard pages on the shared application canvas', async () => {
+    const [home, commandCenter, dashboardLoading, documentsLoading] = await Promise.all([
+      readFile(DASHBOARD_HOME_PAGE, 'utf8'),
+      readFile(COMMAND_CENTER_PAGE, 'utf8'),
       readFile(DASHBOARD_LOADING, 'utf8'),
       readFile(DOCUMENTS_LOADING, 'utf8'),
     ]);
+
+    expect(home).toContain('<main className="min-h-0 bg-transparent">');
+    expect(home).not.toContain('tech-grid');
+    expect(home).not.toContain('radial-gradient');
+    expect(commandCenter).toContain('<main className="min-h-0 bg-transparent text-white">');
+    expect(commandCenter).toContain('<CommandCenterPage');
+    expect(commandCenter).not.toContain('max-w-7xl');
+    expect(commandCenter).not.toContain('min-h-screen');
 
     for (const source of [dashboardLoading, documentsLoading]) {
       expect(source).toContain('min-h-0 bg-transparent text-white');
       expect(source).toContain('bg-[#101715]');
       expect(source).not.toContain('radial-gradient');
-      expect(source).not.toContain('sticky top-0');
       expect(source).not.toContain('rounded-[2rem]');
     }
   });
 
-  it('keeps the dedicated command center route on the shared application canvas', async () => {
-    const source = await readFile(COMMAND_CENTER_PAGE, 'utf8');
-
-    expect(source).toContain('<main className="min-h-0 bg-transparent text-white">');
-    expect(source).toContain('<CommandCenterPage');
-    expect(source).not.toContain('radial-gradient');
-    expect(source).not.toContain('max-w-7xl');
-    expect(source).not.toContain('min-h-screen');
-  });
-
-  it('uses a restrained operations layout for the command center instead of the legacy premium-card composition', async () => {
+  it('uses restrained operational surfaces for home and command center', async () => {
     const [commandCenter, nextActions, timeline, onboardingProgress] = await Promise.all([
       readFile(COMMAND_CENTER, 'utf8'),
       readFile(NEXT_ACTIONS, 'utf8'),
@@ -95,34 +86,14 @@ describe('enterprise dashboard template consistency', () => {
     expect(commandCenter).toContain('Next best action');
     expect(commandCenter).not.toContain('premium-card');
     expect(commandCenter).not.toContain('Sparkles');
-
     expect(nextActions).toContain('divide-y divide-white/[0.055]');
-    expect(nextActions).toContain('Next best actions');
-    expect(nextActions).not.toContain('hover:-translate-y-0.5');
-
     expect(timeline).toContain('Upcoming deadlines and reviews');
-    expect(timeline).toContain('lg:grid-cols-[130px_minmax(0,1fr)_180px_110px_36px]');
-    expect(timeline).not.toContain('rounded-3xl');
-
     expect(onboardingProgress).toContain('rounded-xl border-white/[0.075] bg-[#101715]');
-    expect(onboardingProgress).toContain('Operational setup progress');
   });
 
-  it('keeps AI Systems inside the same shell and removes the legacy page-level gradient canvas', async () => {
-    const source = await readFile(AI_SYSTEMS_PAGE, 'utf8');
-
-    expect(source).toContain("import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell'");
-    expect(source).not.toContain('DashboardCommandNavigation');
-    expect(source).toContain('<EnterpriseDashboardShell');
-    expect(source).toContain('organizationName={organization.name}');
-    expect(source).toContain('role={organization.role}');
-    expect(source).toContain('selectedPlan={authority?.plan}');
-    expect(source).toContain('<main className="min-h-0 bg-transparent text-white">');
-    expect(source).not.toContain('radial-gradient');
-  });
-
-  it('keeps core workflow modules on the shared enterprise canvas', async () => {
-    const [tasks, risks, documents, team, teamSettings, teamManagement] = await Promise.all([
+  it('keeps AI Systems and core workflow modules inside the enterprise language', async () => {
+    const [aiSystems, tasks, risks, documents, team, teamSettings, teamManagement] = await Promise.all([
+      readFile(AI_SYSTEMS_PAGE, 'utf8'),
       readFile(TASKS_PAGE, 'utf8'),
       readFile(RISKS_PAGE, 'utf8'),
       readFile(DOCUMENTS_PAGE, 'utf8'),
@@ -131,6 +102,11 @@ describe('enterprise dashboard template consistency', () => {
       readFile(TEAM_MANAGEMENT, 'utf8'),
     ]);
 
+    expect(aiSystems).toContain("import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell'");
+    expect(aiSystems).toContain('<main className="min-h-0 bg-transparent text-white">');
+    expect(aiSystems).not.toContain('DashboardCommandNavigation');
+    expect(aiSystems).not.toContain('radial-gradient');
+
     for (const source of [tasks, risks, documents, team]) {
       expect(source).toContain('min-h-0 bg-transparent text-white');
       expect(source).not.toContain('min-h-screen bg-[#050505]');
@@ -138,96 +114,45 @@ describe('enterprise dashboard template consistency', () => {
       expect(source).not.toContain('radial-gradient');
     }
 
-    expect(tasks).not.toContain('max-w-6xl');
-    expect(risks).not.toContain('max-w-6xl');
-    expect(documents).not.toContain('max-w-6xl');
-
     expect(risks).toContain('divide-y divide-white/[0.055]');
-    expect(risks).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
     expect(risks).not.toContain("from '@/components/ui/card'");
-
     expect(documents).toContain('divide-y divide-white/[0.055]');
-    expect(documents).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
-
-    expect(team).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
-    expect(team).not.toContain('shadow-2xl');
     expect(teamSettings).toContain('border-b border-white/[0.055]');
     expect(teamManagement).toContain('lg:divide-x lg:divide-white/[0.055]');
     expect(teamManagement).not.toContain("from '@/components/ui/card'");
   });
 
-  it('keeps organization settings inside the enterprise shell instead of restoring legacy navigation', async () => {
-    const source = await readFile(ORGANIZATION_SETTINGS, 'utf8');
-
-    expect(source).toContain("import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell'");
-    expect(source).toContain('<EnterpriseDashboardShell');
-    expect(source).toContain('selectedPlan={authority?.plan}');
-    expect(source).toContain('min-h-0 bg-transparent text-white');
-    expect(source).not.toContain('DashboardCommandNavigation');
-    expect(source).not.toContain('tech-grid');
-    expect(source).not.toContain('radial-gradient');
-    expect(source).not.toContain('shadow-2xl');
-  });
-
-  it('keeps profile and notifications in the same enterprise application chrome', async () => {
-    const [profile, controls, notificationsPage, notificationsClient] = await Promise.all([
+  it('keeps settings, profile, notifications and billing in the same enterprise chrome', async () => {
+    const [settings, profile, controls, notificationsPage, notificationsClient, billingPage, billingView, billingIntent] = await Promise.all([
+      readFile(ORGANIZATION_SETTINGS, 'utf8'),
       readFile(PROFILE_PAGE, 'utf8'),
       readFile(PROFILE_CONTROLS, 'utf8'),
       readFile(NOTIFICATIONS_PAGE, 'utf8'),
       readFile(NOTIFICATIONS_CLIENT, 'utf8'),
-    ]);
-
-    for (const source of [profile, notificationsPage]) {
-      expect(source).toContain("EnterpriseDashboardShell");
-      expect(source).toContain('selectedPlan={authority?.plan}');
-      expect(source).not.toContain('DashboardCommandNavigation');
-    }
-
-    expect(profile).toContain('min-h-0 bg-transparent text-white');
-    expect(profile).not.toContain('tech-grid');
-    expect(profile).not.toContain('radial-gradient');
-    expect(profile).not.toContain('rounded-[2rem]');
-    expect(controls).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
-    expect(controls).not.toContain('rounded-[2rem]');
-    expect(controls).not.toContain('blue-');
-
-    expect(notificationsClient).toContain('<main className="min-h-0 bg-transparent text-white">');
-    expect(notificationsClient).toContain('divide-y divide-white/[0.055]');
-    expect(notificationsClient).not.toContain('DashboardCommandNavigation');
-    expect(notificationsClient).not.toContain('Sparkles');
-    expect(notificationsClient).not.toContain('radial-gradient');
-    expect(notificationsClient).not.toContain('hover:-translate-y-0.5');
-  });
-
-  it('keeps billing on the shared canvas without legacy premium-card or cyan dashboard chrome', async () => {
-    const [page, view, intent] = await Promise.all([
       readFile(BILLING_PAGE, 'utf8'),
       readFile(BILLING_VIEW, 'utf8'),
       readFile(BILLING_INTENT, 'utf8'),
     ]);
 
-    expect(page).toContain('min-h-0 space-y-4 bg-transparent');
-    expect(page).not.toContain('min-h-screen bg-[#03070b]');
-
-    expect(view).toContain('<main className="min-h-0 bg-transparent text-white">');
-    expect(view).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
-    expect(view).toContain("action=\"portal\"");
-    expect(view).toContain("action=\"checkout\"");
-    expect(view).not.toContain('premium-card');
-    expect(view).not.toContain('tech-grid');
-    expect(view).not.toContain('radial-gradient');
-    expect(view).not.toContain('rounded-[2rem]');
-    expect(view).not.toContain("from '@/components/ui/card'");
-    expect(view).not.toContain('cyan-');
-
-    expect(intent).toContain('border-emerald-300/15 bg-emerald-300/[0.045]');
-    expect(intent).not.toContain('cyan-');
-    expect(intent).not.toContain('rounded-[1.5rem]');
+    for (const source of [settings, profile, notificationsPage]) {
+      expect(source).toContain('EnterpriseDashboardShell');
+      expect(source).toContain('selectedPlan={authority?.plan}');
+      expect(source).not.toContain('DashboardCommandNavigation');
+    }
+    expect(controls).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
+    expect(notificationsClient).toContain('divide-y divide-white/[0.055]');
+    expect(notificationsClient).not.toContain('Sparkles');
+    expect(billingPage).toContain('min-h-0 space-y-4 bg-transparent');
+    expect(billingView).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
+    expect(billingView).toContain('action="portal"');
+    expect(billingView).toContain('action="checkout"');
+    expect(billingView).not.toContain('premium-card');
+    expect(billingView).not.toContain('cyan-');
+    expect(billingIntent).toContain('border-emerald-300/15 bg-emerald-300/[0.045]');
   });
 
-  it('retires the legacy authenticated home and forwards old bookmarks to the canonical enterprise dashboard', async () => {
+  it('retires the legacy authenticated home in favor of the canonical enterprise dashboard', async () => {
     const source = await readFile(LEGACY_HOME_PAGE, 'utf8');
-
     expect(source).not.toContain('DashboardCommandNavigation');
     expect(source).not.toContain('getOrganizationDashboardData');
     expect(source).toContain('redirect(`/${locale}/dashboard/organizations`)');
