@@ -4,7 +4,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ExecutiveComplianceSummary from '@/components/ExecutiveComplianceSummary';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -67,33 +66,40 @@ export default function ExecutiveDashboardPage() {
   const { user } = useAuth();
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(37,99,235,0.24),transparent_34rem)]" />
-      <div className="relative mx-auto max-w-7xl px-5 py-8 lg:px-8">
-        <Button variant="ghost" onClick={() => router.push(`/${locale}/dashboard`)} className="mb-6 text-white/70 hover:text-white">
-          <ArrowLeft className="mr-2 h-4 w-4" /> {t.back}
-        </Button>
+    <main className="space-y-6 text-white">
+      <Button
+        variant="ghost"
+        onClick={() => router.push(`/${locale}/dashboard`)}
+        className="h-9 px-2 text-white/50 hover:bg-white/[0.05] hover:text-white"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" /> {t.back}
+      </Button>
 
-        <section className="mb-8 overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-7 shadow-2xl shadow-blue-950/20">
-          <Badge className="mb-4 border-white/10 bg-white/[0.06] text-white/70">{t.badge}</Badge>
-          <h1 className="max-w-4xl text-4xl font-semibold tracking-tight md:text-6xl">{t.title}</h1>
-          <p className="mt-4 max-w-2xl text-lg leading-8 text-white/58">{t.subtitle}</p>
-        </section>
+      <header className="border-b border-white/[0.07] pb-6">
+        <Badge className="mb-3 rounded-lg border-emerald-300/15 bg-emerald-300/[0.08] text-emerald-200">{t.badge}</Badge>
+        <h1 className="max-w-4xl text-3xl font-semibold tracking-tight text-white md:text-4xl">{t.title}</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-white/48 md:text-base">{t.subtitle}</p>
+      </header>
 
-        <ExecutiveComplianceSummary userId={user?.id} fallbackScore={0} />
+      <ExecutiveComplianceSummary userId={user?.id} fallbackScore={0} />
 
-        <Card className="mt-6 border-white/10 bg-white/[0.045] text-white">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5" />{t.next}</CardTitle>
-            <CardDescription className="text-white/48">{t.nextBody}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => router.push(`/${locale}/dashboard/gap-analysis`)} className="bg-white text-black hover:bg-white/90">
-              Gap Analysis
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <section className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-white/88">
+              <ShieldCheck className="h-4 w-4 text-emerald-300" />
+              {t.next}
+            </h2>
+            <p className="mt-1.5 text-sm leading-6 text-white/45">{t.nextBody}</p>
+          </div>
+          <Button
+            onClick={() => router.push(`/${locale}/dashboard/gap-analysis`)}
+            className="shrink-0 bg-emerald-300 text-[#06100d] hover:bg-emerald-200"
+          >
+            Gap Analysis
+          </Button>
+        </div>
+      </section>
     </main>
   );
 }
