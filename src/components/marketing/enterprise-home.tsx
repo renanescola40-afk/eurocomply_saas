@@ -1,3 +1,4 @@
+import { PublicLandingSampleBadgeNormalizer } from '@/components/marketing/public-landing-sample-badge-normalizer';
 import { WaitlistPage } from '@/components/marketing/waitlist-page';
 
 // Invariant markers for prelaunch mode:
@@ -16,6 +17,7 @@ export function EnterpriseHome({ locale }: { locale: string }) {
 
   return (
     <div data-public-sample-preview="true">
+      <PublicLandingSampleBadgeNormalizer locale={locale} />
       <div
         role="note"
         aria-label={locale === 'pt' ? 'Aviso sobre dados de demonstração' : 'Demo data notice'}
