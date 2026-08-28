@@ -180,9 +180,29 @@ test('normalizes only the reviewed psql directives for approved validators', () 
   );
 });
 
+test('strips only the reviewed forward-reconciliation validator includes before separate workflow execution', () => {
+  const sql = [
+    '\\set ON_ERROR_STOP on',
+    'select 1;',
+    '\\ir ../security/validate-enterprise-integrations-runtime.sql',
+    '\\ir ../security/validate-enterprise-billing-runtime.sql',
+    '\\ir ../security/validate-live-rls-inventory-helper-boundary.sql',
+    '',
+  ].join('\n');
+
+  assert.equal(
+    normalizeSqlForManagementApi(sql, 'scripts/supabase/verify-forward-reconciliation-postconditions.sql'),
+    'select 1;\n',
+  );
+});
+
 test('rejects unreviewed includes and all other psql meta commands', () => {
   assert.throws(
     () => normalizeSqlForManagementApi('\\ir arbitrary.sql\nselect 1;\n', 'scripts/security/validate-live-rls-inventory-helper-boundary.sql'),
+    /include_not_allowed/,
+  );
+  assert.throws(
+    () => normalizeSqlForManagementApi('\\ir ../security/arbitrary.sql\nselect 1;\n', 'scripts/supabase/verify-forward-reconciliation-postconditions.sql'),
     /include_not_allowed/,
   );
   assert.throws(() => normalizeSqlForManagementApi('\\copy public.users to stdout\n'), /meta_command_not_allowed/);
