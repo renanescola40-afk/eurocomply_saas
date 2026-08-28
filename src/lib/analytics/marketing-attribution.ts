@@ -162,8 +162,9 @@ export function persistMarketingAttribution() {
 
   const storedFirstTouch = readStoredTouch(FIRST_TOUCH_STORAGE_KEY);
   const storedLastTouch = readStoredTouch(LAST_TOUCH_STORAGE_KEY);
+  const route = stripLocale(window.location.pathname).replace(/\/$/, '') || '/';
 
-  if (!classifyPublicMarketingPage(window.location.pathname)) {
+  if (!classifyPublicMarketingPage(window.location.pathname) && route !== '/book-demo') {
     return { firstTouch: storedFirstTouch, lastTouch: storedLastTouch };
   }
 
