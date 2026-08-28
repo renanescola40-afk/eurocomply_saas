@@ -24,7 +24,7 @@ type MarketingTouch = {
 
 export type PublicMarketingPage = {
   event: AnalyticsEventName;
-  pageType: 'landing' | 'pricing' | 'feature' | 'trust' | 'resource';
+  pageType: 'landing' | 'pricing' | 'feature' | 'trust' | 'resource' | 'tool';
   funnelStage: 'awareness' | 'consideration' | 'assurance';
 };
 
@@ -130,6 +130,10 @@ export function classifyPublicMarketingPage(pathname: string): PublicMarketingPa
     return { event: analyticsEvents.featureView, pageType: 'feature', funnelStage: 'consideration' };
   }
 
+  if (route === '/tools' || route.startsWith('/tools/')) {
+    return { event: analyticsEvents.resourceView, pageType: 'tool', funnelStage: 'consideration' };
+  }
+
   if (route === '/resources' || route.startsWith('/resources/')) {
     return { event: analyticsEvents.resourceView, pageType: 'resource', funnelStage: 'awareness' };
   }
@@ -159,7 +163,6 @@ export function persistMarketingAttribution() {
   const storedFirstTouch = readStoredTouch(FIRST_TOUCH_STORAGE_KEY);
   const storedLastTouch = readStoredTouch(LAST_TOUCH_STORAGE_KEY);
 
-  // Never derive or persist acquisition metadata from authenticated/private routes.
   if (!classifyPublicMarketingPage(window.location.pathname)) {
     return { firstTouch: storedFirstTouch, lastTouch: storedLastTouch };
   }
