@@ -30,6 +30,7 @@ const POSTHOG_SCRIPT_ID = 'posthog-js-sdk';
 const CONSENT_STORAGE_KEY = 'risckcomply.analytics.consent';
 const DEFAULT_POSTHOG_HOST = 'https://eu.i.posthog.com';
 const DEFAULT_POSTHOG_ASSET_HOST = 'https://eu-assets.i.posthog.com';
+export const ANALYTICS_CONSENT_GRANTED_EVENT = 'risckcomply:analytics-consent-granted';
 const SENSITIVE_PATH_PATTERNS = [
   /\/documents?(\/|$)/i,
   /\/risks?(\/|$)/i,
@@ -66,6 +67,7 @@ export function grantAnalyticsConsent() {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(CONSENT_STORAGE_KEY, 'granted');
   window.posthog?.opt_in_capturing?.();
+  window.dispatchEvent(new Event(ANALYTICS_CONSENT_GRANTED_EVENT));
 }
 
 export function denyAnalyticsConsent() {
