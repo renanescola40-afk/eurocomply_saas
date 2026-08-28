@@ -144,7 +144,7 @@ const provisionalLocaleNoIndexHeaders = [
 
 const localeLessPublicCanonicalRedirects = [
   {
-    source: '/:path(pricing|enterprise|resources|tools|faq|about|contact|book-demo|trust|security|compliance|data-processing|sla|privacy|terms|cookie-policy|acceptable-use|transfers|dpa|subprocessors|status|vulnerability-disclosure)',
+    source: '/:path(pricing|enterprise|resources|faq|about|contact|book-demo|trust|security|compliance|data-processing|sla|privacy|terms|cookie-policy|acceptable-use|transfers|dpa|subprocessors|status|vulnerability-disclosure)',
     destination: '/en/:path',
     permanent: true,
   },
