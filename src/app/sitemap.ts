@@ -6,12 +6,15 @@ import { getLocaleAlternates, getSiteUrl, localeLanguageTags } from '@/lib/seo/p
 
 const acquisitionPaths = ['', '/pricing'] as const;
 const englishAssurancePaths = ['/trust', '/security', '/compliance', '/data-processing', '/sla', '/privacy', '/terms', '/dpa', '/subprocessors'] as const;
+const englishGrowthPaths = ['/resources', '/tools', '/tools/ai-act-readiness'] as const;
 const stableLastModified = new Date('2026-08-01T00:00:00.000Z');
+const growthLastModified = new Date('2026-08-28T00:00:00.000Z');
 
 function priorityFor(path: string) {
   if (path === '') return 1;
-  if (path === '/pricing') return 0.9;
-  if (path === '/trust') return 0.85;
+  if (path === '/pricing' || path === '/tools/ai-act-readiness') return 0.9;
+  if (path === '/tools') return 0.86;
+  if (path === '/trust' || path === '/resources') return 0.85;
   if (path === '/security' || path === '/compliance' || path === '/data-processing' || path === '/sla') return 0.8;
   return 0.7;
 }
@@ -49,6 +52,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }));
   });
 
+  const growthEntries: MetadataRoute.Sitemap = englishGrowthPaths.map((path) => {
+    const url = localizedUrl(appUrl, 'en', path);
+    return {
+      url,
+      lastModified: growthLastModified,
+      changeFrequency: 'weekly',
+      priority: priorityFor(path),
+      alternates: { languages: { en: url, 'x-default': url } },
+    };
+  });
+
   const featureEntries: MetadataRoute.Sitemap = locales.flatMap((locale) =>
     getFeaturePages(locale).map((page) => ({
       url: `${appUrl}${getFeaturePath(locale, page.key)}`,
@@ -61,5 +75,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
   );
 
-  return [...coreEntries, ...featureEntries];
+  return [...coreEntries, ...growthEntries, ...featureEntries];
 }
