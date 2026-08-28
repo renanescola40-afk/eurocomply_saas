@@ -59,6 +59,10 @@ export const routing = defineRouting({
   // Always use explicit locale prefixes for predictable SaaS routing and SEO:
   // /en, /pt, /es, /fr, /it, /de
   localePrefix: 'always',
+  // HTML metadata + sitemap are the canonical hreflang authority. Disabling
+  // next-intl response Link alternates prevents a second x-default signal from
+  // being derived from an unprefixed request URL.
+  alternateLinks: false,
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
