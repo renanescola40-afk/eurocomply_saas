@@ -4,7 +4,7 @@ const LOCALE_PREFIX = /^\/(?:en|pt|es|fr|it|de)(?=\/|$)/;
 const SAFE_CTA_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 type CommercialCtaContext = {
-  pageType: 'landing' | 'pricing' | 'feature' | 'trust' | 'resource' | 'enterprise' | 'demo';
+  pageType: 'landing' | 'pricing' | 'feature' | 'trust' | 'resource' | 'tool' | 'enterprise' | 'demo';
   funnelStage: 'awareness' | 'consideration' | 'assurance' | 'commercial' | 'demand_capture';
 };
 
@@ -52,6 +52,7 @@ export function classifyCommercialCtaContext(pathname: string): CommercialCtaCon
   if (route === '/enterprise') return { pageType: 'enterprise', funnelStage: 'commercial' };
   if (route === '/book-demo') return { pageType: 'demo', funnelStage: 'demand_capture' };
   if (route.startsWith('/features/')) return { pageType: 'feature', funnelStage: 'consideration' };
+  if (route === '/tools' || route.startsWith('/tools/')) return { pageType: 'tool', funnelStage: 'consideration' };
   if (route === '/resources' || route.startsWith('/resources/')) return { pageType: 'resource', funnelStage: 'awareness' };
   if (
     route === '/trust'
@@ -113,9 +114,16 @@ export function resolveCommercialCtaId({ pathname, href, explicitId }: ResolveCo
     if (destination.route === '/pricing') return 'feature-pricing';
   }
 
+  if (currentRoute === '/tools' || currentRoute.startsWith('/tools/')) {
+    if (destination.route === '/signup') return 'tool-signup';
+    if (destination.route === '/book-demo') return 'tool-book-demo';
+    if (destination.route === '/resources') return 'tool-resources';
+  }
+
   if (currentRoute === '/resources' || currentRoute.startsWith('/resources/')) {
     if (destination.route === '/signup') return 'resource-signup';
     if (destination.route === '/book-demo') return 'resource-book-demo';
+    if (destination.route === '/tools' || destination.route.startsWith('/tools/')) return 'resource-free-tool';
   }
 
   if (context.pageType === 'trust') {
