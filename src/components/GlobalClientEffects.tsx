@@ -2,34 +2,126 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { analyticsEvents, captureAnalyticsEvent } from "@/lib/analytics/posthog-client";
+import {
+  ANALYTICS_CONSENT_GRANTED_EVENT,
+  analyticsEvents,
+  captureAnalyticsEvent,
+} from "@/lib/analytics/posthog-client";
+import {
+  buildCommercialCtaProperties,
+  resolveCommercialCtaId,
+} from "@/lib/analytics/commercial-cta";
+import {
+  classifyPublicMarketingPage,
+  getMarketingAttributionProperties,
+  getMarketingLocale,
+  persistMarketingAttribution,
+} from "@/lib/analytics/marketing-attribution";
 import { useZoerIframe } from "@/hooks/useZoerIframe";
+
+const CONSENT_STORAGE_KEY = "risckcomply.analytics.consent";
+
+function isMarketingCaptureAllowed() {
+  if (process.env.NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT === "false") return true;
+  return window.localStorage.getItem(CONSENT_STORAGE_KEY) === "granted";
+}
 
 export default function GlobalClientEffects() {
   const pathname = usePathname() || "/";
+  const locale = getMarketingLocale(pathname);
 
   useZoerIframe();
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const checkoutStatus = searchParams.get("checkout");
+    persistMarketingAttribution();
 
-    if (checkoutStatus !== "success") return;
+    const capturePublicPageView = () => {
+      const page = classifyPublicMarketingPage(pathname);
+      if (!page || !isMarketingCaptureAllowed()) return;
 
-    const key = `risckcomply.analytics.checkout_success.${pathname}.${window.location.search}`;
-    if (window.sessionStorage.getItem(key)) return;
+      const key = `risckcomply.analytics.public_page.${page.event}.${pathname}.${window.location.search}`;
+      if (window.sessionStorage.getItem(key)) return;
 
-    window.sessionStorage.setItem(key, "1");
-    captureAnalyticsEvent(analyticsEvents.checkoutCompleted, {
-      path: pathname,
-      source: "return_url",
-    });
+      captureAnalyticsEvent(page.event, {
+        path: pathname,
+        ...(locale ? { locale } : {}),
+        page_type: page.pageType,
+        funnel_stage: page.funnelStage,
+        ...getMarketingAttributionProperties("last_touch"),
+      });
+      window.sessionStorage.setItem(key, "1");
+    };
 
-    searchParams.delete("checkout");
-    const nextSearch = searchParams.toString();
-    const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
-    window.history.replaceState(window.history.state, "", nextUrl);
-  }, [pathname]);
+    capturePublicPageView();
+    window.addEventListener(ANALYTICS_CONSENT_GRANTED_EVENT, capturePublicPageView);
+
+    return () => {
+      window.removeEventListener(ANALYTICS_CONSENT_GRANTED_EVENT, capturePublicPageView);
+    };
+  }, [locale, pathname]);
+
+  useEffect(() => {
+    const captureCommercialCta = (event: MouseEvent) => {
+      if (!isMarketingCaptureAllowed()) return;
+      if (!(event.target instanceof Element)) return;
+
+      const target = event.target.closest<HTMLElement>("[data-cta-id],a[href]");
+      if (!target) return;
+
+      const ctaId = resolveCommercialCtaId({
+        pathname,
+        explicitId: target.dataset.ctaId,
+        href: target instanceof HTMLAnchorElement ? target.getAttribute("href") : null,
+      });
+      if (!ctaId) return;
+
+      const properties = buildCommercialCtaProperties(pathname, ctaId);
+      if (!properties.cta_id) return;
+
+      persistMarketingAttribution();
+      captureAnalyticsEvent(analyticsEvents.ctaClicked, {
+        ...properties,
+        ...(locale ? { locale } : {}),
+        ...getMarketingAttributionProperties("last_touch"),
+      });
+    };
+
+    document.addEventListener("click", captureCommercialCta);
+    return () => document.removeEventListener("click", captureCommercialCta);
+  }, [locale, pathname]);
+
+  useEffect(() => {
+    const captureCheckoutSuccess = () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const checkoutStatus = searchParams.get("checkout");
+
+      if (checkoutStatus !== "success" || !isMarketingCaptureAllowed()) return;
+
+      const key = `risckcomply.analytics.checkout_success.${pathname}.${window.location.search}`;
+      if (window.sessionStorage.getItem(key)) return;
+
+      captureAnalyticsEvent(analyticsEvents.checkoutCompleted, {
+        path: pathname,
+        ...(locale ? { locale } : {}),
+        source: "return_url",
+        funnel_stage: "commercial",
+        ...getMarketingAttributionProperties("last_touch"),
+      });
+      window.sessionStorage.setItem(key, "1");
+
+      searchParams.delete("checkout");
+      const nextSearch = searchParams.toString();
+      const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+      window.history.replaceState(window.history.state, "", nextUrl);
+    };
+
+    captureCheckoutSuccess();
+    window.addEventListener(ANALYTICS_CONSENT_GRANTED_EVENT, captureCheckoutSuccess);
+
+    return () => {
+      window.removeEventListener(ANALYTICS_CONSENT_GRANTED_EVENT, captureCheckoutSuccess);
+    };
+  }, [locale, pathname]);
 
   return null;
 }

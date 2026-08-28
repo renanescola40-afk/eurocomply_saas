@@ -142,6 +142,24 @@ const provisionalLocaleNoIndexHeaders = [
   ...publicCacheHeaders,
 ] as const;
 
+const localeLessPublicCanonicalRedirects = [
+  {
+    source: '/:path(pricing|enterprise|resources|faq|about|contact|book-demo|trust|security|compliance|data-processing|sla|privacy|terms|cookie-policy|acceptable-use|transfers|dpa|subprocessors|status|vulnerability-disclosure)',
+    destination: '/en/:path',
+    permanent: true,
+  },
+  {
+    source: '/trust/:path*',
+    destination: '/en/trust/:path*',
+    permanent: true,
+  },
+  {
+    source: '/tools/:path*',
+    destination: '/en/tools/:path*',
+    permanent: true,
+  },
+] as const;
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
@@ -165,6 +183,7 @@ const nextConfig: NextConfig = {
         destination: 'https://www.risckcomply.com/:path*',
         permanent: true,
       },
+      ...localeLessPublicCanonicalRedirects,
     ];
   },
   async rewrites() {
@@ -187,6 +206,10 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/:locale(en|pt|es|fr|it|de)/(pricing|resources|faq|about|contact|trust|security|compliance|privacy|terms|data-processing|sla|dpa|subprocessors|status|vulnerability-disclosure)',
+        headers: [...publicCacheHeaders],
+      },
+      {
+        source: '/en/tools/:path*',
         headers: [...publicCacheHeaders],
       },
       {
@@ -221,9 +244,6 @@ const sentryReleaseUploadConfig =
       }
     : {};
 
-// Keep the Sentry Next.js wrapper enabled in every environment so runtime
-// instrumentation and the tunnel route are registered. Source maps and release
-// artifacts are uploaded only when SENTRY_AUTH_TOKEN plus org/project are set.
 export default withSentryConfig(nextIntlConfig, {
   ...sentryReleaseUploadConfig,
   silent: !process.env.CI,
