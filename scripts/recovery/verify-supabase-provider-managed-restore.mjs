@@ -18,6 +18,14 @@ const approvedValidators = new Set([
   'scripts/security/validate-gap-remediation-runtime.sql',
 ]);
 const approvedIncludes = new Map([
+  [
+    'scripts/supabase/verify-forward-reconciliation-postconditions.sql',
+    new Set([
+      '../security/validate-enterprise-integrations-runtime.sql',
+      '../security/validate-enterprise-billing-runtime.sql',
+      '../security/validate-live-rls-inventory-helper-boundary.sql',
+    ]),
+  ],
   ['scripts/security/validate-live-rls-inventory-helper-boundary.sql', new Set(['validate-gap-remediation-runtime.sql'])],
 ]);
 
