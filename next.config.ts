@@ -142,6 +142,22 @@ const provisionalLocaleNoIndexHeaders = [
   ...publicCacheHeaders,
 ] as const;
 
+// Locale-prefixed URLs are the canonical public acquisition surface. These
+// fixed-slug aliases are discovery/legacy entry points only and must converge
+// permanently on English. Private/auth routes remain outside this list.
+const localeLessPublicCanonicalRedirects = [
+  {
+    source: '/:path(pricing|enterprise|resources|faq|about|contact|book-demo|trust|security|compliance|data-processing|sla|privacy|terms|cookie-policy|acceptable-use|transfers|dpa|subprocessors|status|vulnerability-disclosure)',
+    destination: '/en/:path',
+    permanent: true,
+  },
+  {
+    source: '/trust/:path*',
+    destination: '/en/trust/:path*',
+    permanent: true,
+  },
+] as const;
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
@@ -165,6 +181,7 @@ const nextConfig: NextConfig = {
         destination: 'https://www.risckcomply.com/:path*',
         permanent: true,
       },
+      ...localeLessPublicCanonicalRedirects,
     ];
   },
   async rewrites() {
