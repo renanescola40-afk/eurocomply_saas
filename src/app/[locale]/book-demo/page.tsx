@@ -21,7 +21,7 @@ const agenda = [
   '3 min — trigger: buyer review, board request, audit prep or AI policy rollout',
   '7 min — current AI workflow and evidence mapping',
   '12 min — RISCK COMPLY walkthrough: inventory, risk, policies and evidence',
-  '5 min — pricing motion: trial, Business pilot or Enterprise review',
+  '5 min — commercial fit: self-service checkout, Business-assisted motion or Enterprise review',
   '3 min — next step and procurement blockers',
 ];
 
