@@ -52,7 +52,34 @@ function safeIso(value, code) {
   return timestamp;
 }
 
-async function request(path, { method = 'GET', body, readOnly = false } = {}) {
+function validatorDiagnosticCode(value) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/%.*$/, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 120);
+}
+
+export function validatorFailureDiagnostic(responseText, validatorSql) {
+  const response = String(responseText ?? '').toLowerCase();
+  if (!response) return null;
+
+  const messages = [...String(validatorSql ?? '').matchAll(/raise\s+exception\s+'((?:''|[^'])+)'/gi)];
+  for (const match of messages) {
+    const reviewedMessage = String(match[1] ?? '').replace(/''/g, "'");
+    const staticPrefix = reviewedMessage.split('%', 1)[0].trim();
+    if (staticPrefix.length < 8) continue;
+    if (!response.includes(staticPrefix.toLowerCase())) continue;
+    const code = validatorDiagnosticCode(staticPrefix);
+    return code ? `validator_${code}` : null;
+  }
+
+  return null;
+}
+
+async function request(path, { method = 'GET', body, readOnly = false, failureDiagnostic = null } = {}) {
   const token = required('SUPABASE_ACCESS_TOKEN');
   const response = await fetch(`${API}${path}`, {
     method,
@@ -64,7 +91,12 @@ async function request(path, { method = 'GET', body, readOnly = false } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await response.text();
-  if (!response.ok) throw new Error(`supabase_management_api_${readOnly ? 'read_only_' : ''}${response.status}`);
+  if (!response.ok) {
+    const diagnostic = typeof failureDiagnostic === 'function' ? failureDiagnostic(text) : null;
+    throw new Error(
+      `supabase_management_api_${readOnly ? 'read_only_' : ''}${response.status}${diagnostic ? `_${diagnostic}` : ''}`,
+    );
+  }
   if (!text) return null;
   try {
     return JSON.parse(text);
@@ -350,8 +382,16 @@ async function verify() {
   return evidence;
 }
 
-async function sendReviewedSqlToRestore(restoreRef, query) {
-  return request(`/projects/${restoreRef}/database/query`, { method: 'POST', body: { query } });
+async function sendReviewedSqlToRestore(restoreRef, query, descriptor) {
+  const failureDiagnostic = descriptor.kind === 'validator'
+    ? (responseText) => validatorFailureDiagnostic(responseText, query)
+    : null;
+
+  return request(`/projects/${restoreRef}/database/query`, {
+    method: 'POST',
+    body: { query },
+    failureDiagnostic,
+  });
 }
 
 async function applyFile(path) {
@@ -368,7 +408,7 @@ async function applyFile(path) {
     throw new Error('rehearsal_migration_digest_mismatch');
   }
   const query = normalizeSqlForManagementApi(rawQuery, descriptor.rel);
-  await sendReviewedSqlToRestore(restoreRef, query);
+  await sendReviewedSqlToRestore(restoreRef, query, descriptor);
 }
 
 export async function main(argv = process.argv.slice(2)) {
