@@ -9,7 +9,7 @@ describe('enterprise dashboard command center', () => {
 
     expect(page).toContain('noStore()');
     expect(page).toContain("export const fetchCache = 'force-no-store'");
-    expect(page).toContain('EnterpriseComplianceCommandCenter');
+    expect(page).toContain('EnterpriseExecutiveOverviewV2');
     expect(page).toContain('aiSystemSummary={data.aiSystemSummary}');
     expect(page).toContain('auditEvents={data.auditEvents}');
     expect(page).toContain('currentUserRole={data.currentUserRole}');
