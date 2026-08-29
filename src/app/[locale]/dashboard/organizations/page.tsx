@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { DashboardHomeOverview } from '@/components/dashboard/dashboard-home-overview';
-import { EnterpriseComplianceCommandCenter } from '@/components/dashboard/enterprise-compliance-command-center';
+import { EnterpriseExecutiveOverviewV2 } from '@/components/dashboard/enterprise-executive-overview-v2';
 import { OnboardingProgressCard } from '@/components/onboarding/onboarding-progress-card';
 import { getBillingPlan } from '@/lib/billing/plans';
 import { locales, type Locale } from '@/lib/i18n/routing';
@@ -67,10 +67,10 @@ function DashboardHomeOverviewSkeleton() {
     <div className="space-y-6" aria-label="Loading dashboard overview" role="status" aria-live="polite">
       <div className="grid gap-4 md:grid-cols-2">
         {Array.from({ length: 2 }).map((_, index) => (
-          <div key={index} className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5">
-            <div className="skeleton-pulse h-4 w-24 rounded-full bg-white/[0.055]" />
-            <div className="skeleton-pulse mt-4 h-8 w-40 rounded-xl bg-white/[0.055]" />
-            <div className="skeleton-pulse mt-3 h-4 w-full rounded-full bg-white/[0.055]" />
+          <div key={index} className="rounded-xl border border-slate-800/80 bg-[#0d1420] p-5">
+            <div className="skeleton-pulse h-4 w-24 rounded bg-slate-800" />
+            <div className="skeleton-pulse mt-4 h-8 w-40 rounded bg-slate-800" />
+            <div className="skeleton-pulse mt-3 h-4 w-full rounded bg-slate-800" />
           </div>
         ))}
       </div>
@@ -134,23 +134,23 @@ export default async function OrganizationDashboardPage({ params, searchParams }
     <main className="min-h-0 bg-transparent">
       <div className="space-y-6 lg:space-y-8">
         {shouldShowPlanContinuation && requestedPlan ? (
-          <section className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[0.055] p-5 text-white" aria-label="Selected plan continuation">
+          <section className="rounded-xl border border-blue-400/20 bg-blue-500/[0.07] p-5 text-white" aria-label="Selected plan continuation">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/65">Selected plan</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-300">Selected plan</p>
                 <h2 className="mt-2 text-lg font-semibold tracking-tight text-white">Review {requestedPlan.name} for this workspace</h2>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-white/52">
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
                   This workspace is currently on {planName}. Continue to billing to review the selected plan, or ask an admin if you do not manage billing.
                 </p>
               </div>
-              <Link href={planContinuationHref} className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl bg-emerald-300 px-4 py-2 text-sm font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b100f]">
+              <Link href={planContinuationHref} className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070b12]">
                 {data.canManageBilling ? 'Review billing' : 'Ask an admin'}
               </Link>
             </div>
           </section>
         ) : null}
 
-        <EnterpriseComplianceCommandCenter
+        <EnterpriseExecutiveOverviewV2
           locale={safeLocale}
           summary={data.summary}
           tasks={data.tasks}

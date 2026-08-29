@@ -18,7 +18,7 @@ function repositorySources() {
     onboardingPage: readFileSync('src/app/[locale]/onboarding/page.tsx', 'utf8'),
     onboardingComponent: readFileSync('src/components/onboarding/b2b-onboarding-flow.tsx', 'utf8'),
     dashboardPage: readFileSync('src/app/[locale]/dashboard/organizations/page.tsx', 'utf8'),
-    dashboardComponent: readFileSync('src/components/dashboard/enterprise-compliance-command-center.tsx', 'utf8'),
+    dashboardComponent: readFileSync('src/components/dashboard/enterprise-executive-overview-v2.tsx', 'utf8'),
   };
 }
 
@@ -166,8 +166,8 @@ describe('product UX evidence', () => {
     });
     const withoutDashboard = repositoryCoverage({
       dashboardComponent: repositorySources().dashboardComponent.replace(
-        'aria-labelledby="enterprise-command-center-title"',
-        'aria-label="command center"',
+        'aria-labelledby="ui-v2-dashboard-title"',
+        'aria-label="executive dashboard"',
       ),
     });
 

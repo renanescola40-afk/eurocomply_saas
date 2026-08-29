@@ -49,7 +49,9 @@ describe('public trust and marketing claim safety', () => {
     const source = readRepoFile('src/components/marketing/enterprise-home.tsx');
 
     expect(source).toMatch(/does not provide legal advice, certification or a compliance guarantee/i);
-    expect(source).toMatch(/The live prelaunch UI is delegated to WaitlistPage/i);
+    expect(source).toContain('EnterpriseLandingV2');
+    expect(source).toMatch(/Illustrative previews|Pré-visualizações ilustrativas/i);
+    expect(source).toMatch(/not customer metrics or RISCK COMPLY production metrics/i);
     expect(source).not.toMatch(/\bguaranteed\s+(?:EU AI Act\s+)?compliance\b/i);
   });
 });

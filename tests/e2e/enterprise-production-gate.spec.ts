@@ -8,9 +8,9 @@ test.describe('enterprise production gate smoke', () => {
 
     const body = page.locator('body');
     await expect(body).toContainText(/RISCK COMPLY|governança|governance|compliance/i);
-    await expect(body).toContainText(/Criar conta|Create account|Entrar|Sign in/i);
+    await expect(body).toContainText(/Marcar Demo|Book a Demo|Entrar|Sign in/i);
 
-    await expect(page.locator('a[href="/pt/signup"]').first()).toBeVisible();
+    await expect(page.locator('a[href="/pt/book-demo"]').first()).toBeVisible();
     await expect(page.locator('a[href="/pt/login"]').first()).toBeVisible();
     await expect(page.locator('a[href="/pt/pricing"]').first()).toBeVisible();
 
