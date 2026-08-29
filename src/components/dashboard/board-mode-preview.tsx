@@ -81,10 +81,10 @@ export function BoardModePreview({ summary, trendComparison, basePath }: BoardMo
   ];
 
   return (
-    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522] text-white">
       <div className="grid xl:grid-cols-[300px_minmax(0,1fr)]">
         <div className="border-b border-white/[0.055] px-5 py-5 xl:border-b-0 xl:border-r">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Leadership summary</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-200/65">Leadership summary</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Current governance posture</h2>
           <p className="mt-3 text-sm leading-6 text-white/42">A compact readout for leadership using only current score, risk, vendor, evidence and action data.</p>
 
@@ -104,21 +104,21 @@ export function BoardModePreview({ summary, trendComparison, basePath }: BoardMo
           </dl>
 
           <div className="mt-5 flex flex-wrap gap-2.5">
-            <Link href={`${basePath}/reports`} className="inline-flex h-10 items-center justify-center rounded-lg bg-emerald-300 px-4 text-sm font-semibold text-[#07110d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/60">Open report</Link>
-            <Link href={`${basePath}/reports/print`} className="inline-flex h-10 items-center justify-center rounded-lg border border-white/[0.09] bg-white/[0.025] px-4 text-sm font-semibold text-white/70 transition hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/40">Review pack</Link>
+            <Link href={`${basePath}/reports`} className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60">Open report</Link>
+            <Link href={`${basePath}/reports/print`} className="inline-flex h-10 items-center justify-center rounded-lg border border-white/[0.09] bg-white/[0.025] px-4 text-sm font-semibold text-white/70 transition hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40">Review pack</Link>
           </div>
         </div>
 
         <div className="grid md:grid-cols-2">
           {decisions.map((decision, index) => (
-            <Link key={decision.label} href={decision.href} className={`group min-h-44 px-5 py-5 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 ${index > 0 ? 'border-t border-white/[0.055] md:border-l md:border-t-0' : ''} ${index === 2 ? 'md:border-t md:border-white/[0.055]' : ''}`}>
+            <Link key={decision.label} href={decision.href} className={`group min-h-44 px-5 py-5 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/40 ${index > 0 ? 'border-t border-white/[0.055] md:border-l md:border-t-0' : ''} ${index === 2 ? 'md:border-t md:border-white/[0.055]' : ''}`}>
               <div className="flex items-start justify-between gap-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/30">{decision.label}</p>
                 <span className={`rounded-md border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] ${toneClasses(decision.tone)}`}>Current</span>
               </div>
               <p className="mt-5 text-xl font-semibold tracking-[-0.025em] text-white/84">{decision.value}</p>
               <p className="mt-3 text-xs leading-5 text-white/38">{decision.detail}</p>
-              <p className="mt-4 text-[10px] font-semibold text-emerald-100/0 transition group-hover:text-emerald-100/65">Open context →</p>
+              <p className="mt-4 text-[10px] font-semibold text-blue-200/0 transition group-hover:text-blue-200/70">Open context →</p>
             </Link>
           ))}
         </div>
