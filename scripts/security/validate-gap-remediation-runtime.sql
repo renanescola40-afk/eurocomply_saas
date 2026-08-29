@@ -238,6 +238,31 @@ begin
     raise exception 'canonical Evidence Vault organization RLS policy set is incomplete';
   end if;
 
+  -- Payment-first is intentionally layered as a RESTRICTIVE AND-condition over
+  -- the three organization policies above. It is canonical V23 state, not a
+  -- stale Evidence Vault metadata policy. Compare the normalized predicates
+  -- exactly so a weakened expression such as `... OR true` cannot pass.
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'evidence_items'
+      and policyname = 'payment_first_commercial_authority'
+      and permissive = 'RESTRICTIVE'
+      and cmd = 'ALL'
+      and roles = array['authenticated']::name[]
+      and regexp_replace(coalesce(qual, ''), '\s+', '', 'g') in (
+        'app_private.has_commercial_authority(organization_id)',
+        '(app_private.has_commercial_authority(organization_id))'
+      )
+      and regexp_replace(coalesce(with_check, ''), '\s+', '', 'g') in (
+        'app_private.has_commercial_authority(organization_id)',
+        '(app_private.has_commercial_authority(organization_id))'
+      )
+  ) then
+    raise exception 'Evidence Vault payment-first restrictive policy is incomplete';
+  end if;
+
   if exists (
     select 1
     from pg_policies
@@ -246,7 +271,8 @@ begin
       and policyname not in (
         'rls_evidence_items_select_organization',
         'rls_evidence_items_insert_organization',
-        'rls_evidence_items_update_organization'
+        'rls_evidence_items_update_organization',
+        'payment_first_commercial_authority'
       )
   ) then
     raise exception 'stale or unexpected Evidence Vault metadata policy remains active';
