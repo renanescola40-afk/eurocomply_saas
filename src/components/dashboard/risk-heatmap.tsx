@@ -107,10 +107,10 @@ export function RiskHeatmap({ summary, basePath }: RiskHeatmapProps) {
   const posture = summary.criticalRisks > 0 || summary.highRiskVendors > 3 ? 'Executive attention' : totalExposure > 8 ? 'Active monitoring' : 'Controlled';
 
   return (
-    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522] text-white">
       <div className="grid xl:grid-cols-[300px_minmax(0,1fr)]">
         <div className="border-b border-white/[0.055] px-5 py-5 xl:border-b-0 xl:border-r">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Risk matrix</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-200/55">Risk matrix</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Impact × probability</h2>
           <p className="mt-3 text-sm leading-6 text-white/42">Workspace exposure grouped from current risk, vendor, evidence and execution signals.</p>
 
@@ -137,13 +137,13 @@ export function RiskHeatmap({ summary, basePath }: RiskHeatmapProps) {
                 {probabilityColumns.map((probability) => {
                   const cell = getCell(cells, impact, probability);
                   return (
-                    <Link key={`${impact}-${probability}`} href={cell.href} className={`group min-h-28 rounded-lg border px-4 py-3 transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/35 ${cellTone(cell.count, impact)}`}>
+                    <Link key={`${impact}-${probability}`} href={cell.href} className={`group min-h-28 rounded-lg border px-4 py-3 transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 ${cellTone(cell.count, impact)}`}>
                       <div className="flex items-start justify-between gap-3">
                         <p className="text-[9px] font-semibold uppercase tracking-[0.13em] opacity-65">{cell.label}</p>
                         <p className="text-2xl font-semibold tracking-[-0.03em]">{cell.count}</p>
                       </div>
                       <p className="mt-3 text-xs leading-5 opacity-70">{cell.detail}</p>
-                      <p className="mt-2 text-[10px] font-semibold text-emerald-100/0 transition group-hover:text-emerald-100/65">Open cluster →</p>
+                      <p className="mt-2 text-[10px] font-semibold text-blue-200/0 transition group-hover:text-blue-200/70">Open cluster →</p>
                     </Link>
                   );
                 })}
