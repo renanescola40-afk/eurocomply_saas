@@ -82,11 +82,11 @@ describe('enterprise product information architecture', () => {
     expect(shell).toContain('aria-label="Enterprise dashboard navigation"');
     expect(shell).toContain('aria-current={active ? \'page\' : undefined}');
     expect(shell).toContain('print:hidden');
-    expect(shell).toContain('print:max-w-none print:p-0');
+    expect(shell).toContain('print:bg-white print:text-black');
+    expect(shell).toContain('<main className="min-h-[calc(100vh-72px)]');
     expect(shell).toContain('es: en');
     expect(shell).toContain('fr: en');
     expect(shell).toContain('it: en');
     expect(shell).toContain('de: en');
-    expect(shell).not.toContain('<main className=');
   });
 });
