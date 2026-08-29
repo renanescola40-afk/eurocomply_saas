@@ -76,25 +76,25 @@ export default function ExecutiveDashboardPage() {
       </Button>
 
       <header className="border-b border-white/[0.07] pb-6">
-        <Badge className="mb-3 rounded-lg border-emerald-300/15 bg-emerald-300/[0.08] text-emerald-200">{t.badge}</Badge>
+        <Badge className="mb-3 rounded-lg border-blue-400/20 bg-blue-500/[0.09] text-blue-200">{t.badge}</Badge>
         <h1 className="max-w-4xl text-3xl font-semibold tracking-tight text-white md:text-4xl">{t.title}</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-white/48 md:text-base">{t.subtitle}</p>
       </header>
 
       <ExecutiveComplianceSummary userId={user?.id} fallbackScore={0} />
 
-      <section className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-5">
+      <section className="rounded-xl border border-white/[0.08] bg-[#0d1522] p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-white/88">
-              <ShieldCheck className="h-4 w-4 text-emerald-300" />
+              <ShieldCheck className="h-4 w-4 text-blue-300" />
               {t.next}
             </h2>
             <p className="mt-1.5 text-sm leading-6 text-white/45">{t.nextBody}</p>
           </div>
           <Button
             onClick={() => router.push(`/${locale}/dashboard/gap-analysis`)}
-            className="shrink-0 bg-emerald-300 text-[#06100d] hover:bg-emerald-200"
+            className="shrink-0 bg-blue-600 text-white hover:bg-blue-500"
           >
             Gap Analysis
           </Button>

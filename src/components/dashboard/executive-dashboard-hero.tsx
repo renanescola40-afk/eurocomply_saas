@@ -50,10 +50,10 @@ export function ExecutiveDashboardHero({ summary, trendComparison, reportsHref }
   const vendorExposure = summary.highRiskVendors;
 
   return (
-    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522] text-white">
       <div className="grid lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="px-5 py-6 md:px-7 md:py-7">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Executive overview</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-200/55">Executive overview</p>
           <h2 className="mt-2 max-w-3xl text-3xl font-semibold tracking-[-0.04em] md:text-4xl">
             {readiness} compliance posture
           </h2>
@@ -68,26 +68,26 @@ export function ExecutiveDashboardHero({ summary, trendComparison, reportsHref }
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2.5">
-            <Link href={reportsHref} className="inline-flex h-10 items-center justify-center rounded-lg bg-emerald-300 px-4 text-sm font-semibold text-[#07110d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/60">
+            <Link href={reportsHref} className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60">
               Open executive report
             </Link>
-            <Link href={reportsHref.replace('/reports', '/tasks')} className="inline-flex h-10 items-center justify-center rounded-lg border border-white/[0.09] bg-white/[0.025] px-4 text-sm font-semibold text-white/72 transition hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/40">
+            <Link href={reportsHref.replace('/reports', '/tasks')} className="inline-flex h-10 items-center justify-center rounded-lg border border-white/[0.09] bg-white/[0.025] px-4 text-sm font-semibold text-white/72 transition hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/45">
               Review open actions
             </Link>
           </div>
         </div>
 
-        <div className="border-t border-white/[0.055] bg-black/[0.12] px-5 py-6 lg:border-l lg:border-t-0 lg:px-6">
+        <div className="border-t border-white/[0.055] bg-[#08111d] px-5 py-6 lg:border-l lg:border-t-0 lg:px-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/34">Compliance score</p>
               <p className="mt-1 text-sm font-medium text-white/68">{readiness}</p>
             </div>
-            <span className="rounded-md border border-emerald-300/15 bg-emerald-300/[0.055] px-2.5 py-1 text-xs font-semibold text-emerald-100/80">Live</span>
+            <span className="rounded-md border border-blue-400/20 bg-blue-500/[0.08] px-2.5 py-1 text-xs font-semibold text-blue-200">Live</span>
           </div>
 
-          <div className="mx-auto mt-6 flex h-44 w-44 items-center justify-center rounded-full" style={{ background: `conic-gradient(rgb(110 231 183) ${score * 3.6}deg, rgba(255,255,255,0.08) 0deg)` }} aria-label={`Compliance score ${score}%`}>
-            <div className="flex h-32 w-32 flex-col items-center justify-center rounded-full border border-white/[0.06] bg-[#0a0f0d]">
+          <div className="mx-auto mt-6 flex h-44 w-44 items-center justify-center rounded-full" style={{ background: `conic-gradient(rgb(59 130 246) ${score * 3.6}deg, rgba(255,255,255,0.08) 0deg)` }} aria-label={`Compliance score ${score}%`}>
+            <div className="flex h-32 w-32 flex-col items-center justify-center rounded-full border border-white/[0.06] bg-[#07101a]">
               <p className="text-4xl font-semibold tracking-[-0.045em]">{score}%</p>
               <p className="mt-1 text-[10px] uppercase tracking-[0.15em] text-white/32">Current</p>
             </div>

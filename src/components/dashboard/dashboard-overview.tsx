@@ -66,17 +66,17 @@ function DashboardMetricsGrid({ summary, basePath }: { summary: DashboardSummary
   ];
 
   return (
-    <section id="risk-radar" className="scroll-mt-28 overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+    <section id="risk-radar" className="scroll-mt-28 overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522]">
       <div className="grid md:grid-cols-2 xl:grid-cols-3">
         {metricCards.map((metric, index) => (
           <Link
             key={metric.label}
             href={metric.href}
-            className={`group px-5 py-5 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 ${index % 3 !== 0 ? 'xl:border-l xl:border-white/[0.055]' : ''} ${index >= 3 ? 'border-t border-white/[0.055]' : index >= 2 ? 'md:border-t md:border-white/[0.055] xl:border-t-0' : ''}`}
+            className={`group px-5 py-5 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/40 ${index % 3 !== 0 ? 'xl:border-l xl:border-white/[0.055]' : ''} ${index >= 3 ? 'border-t border-white/[0.055]' : index >= 2 ? 'md:border-t md:border-white/[0.055] xl:border-t-0' : ''}`}
           >
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/38">{metric.label}</p>
             <p className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">{metric.value}</p>
-            <p className="mt-3 text-xs text-white/35 transition group-hover:text-emerald-100/70">Open details →</p>
+            <p className="mt-3 text-xs text-white/35 transition group-hover:text-blue-200/75">Open details →</p>
           </Link>
         ))}
       </div>
@@ -96,7 +96,7 @@ function ExposureSection({
   children?: React.ReactNode;
 }) {
   return (
-    <article id={id} className="scroll-mt-28 overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+    <article id={id} className="scroll-mt-28 overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522]">
       <div className="border-b border-white/[0.055] px-5 py-4">
         <h3 className="text-sm font-semibold text-white/88">{title}</h3>
       </div>
@@ -115,7 +115,7 @@ function ExposureLists({ basePath, topRisks, vendorsRequiringReview, documentsEx
     <section className="grid gap-4 xl:grid-cols-3">
       <ExposureSection id="risks" title="Top risks" empty="No open risks requiring executive attention.">
         {risks.length > 0 ? risks.map((risk) => (
-          <Link key={risk.id} href={getDashboardHref(safeBasePath, 'risks')} className="block px-5 py-4 text-sm transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35">
+          <Link key={risk.id} href={getDashboardHref(safeBasePath, 'risks')} className="block px-5 py-4 text-sm transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/40">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="truncate font-medium text-white/88">{risk.title ?? 'Untitled risk'}</p>
@@ -129,7 +129,7 @@ function ExposureLists({ basePath, topRisks, vendorsRequiringReview, documentsEx
 
       <ExposureSection id="vendors" title="Vendors requiring review" empty="No vendor reviews currently require attention.">
         {vendors.length > 0 ? vendors.map((vendor) => (
-          <Link key={vendor.id} href={getDashboardHref(safeBasePath, 'vendors')} className="block px-5 py-4 text-sm transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35">
+          <Link key={vendor.id} href={getDashboardHref(safeBasePath, 'vendors')} className="block px-5 py-4 text-sm transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/40">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="truncate font-medium text-white/88">{vendor.name ?? 'Unnamed vendor'}</p>
@@ -146,7 +146,7 @@ function ExposureLists({ basePath, topRisks, vendorsRequiringReview, documentsEx
 
       <ExposureSection id="documents" title="Documents expiring soon" empty="No upcoming document expirations found.">
         {documents.length > 0 ? documents.map((document) => (
-          <Link key={document.id} href={getDashboardHref(safeBasePath, 'documents')} className="block px-5 py-4 text-sm transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35">
+          <Link key={document.id} href={getDashboardHref(safeBasePath, 'documents')} className="block px-5 py-4 text-sm transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/40">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="truncate font-medium text-white/88">{document.title ?? document.name ?? 'Untitled document'}</p>

@@ -91,11 +91,11 @@ export function ExecutiveCommandCenter({ summary, trendComparison, basePath }: E
   ];
 
   return (
-    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522] text-white">
       <div className="border-b border-white/[0.055] px-5 py-5 md:px-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Executive command center</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-200/55">Executive command center</p>
             <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em] md:text-3xl">Live governance signals</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-white/45">Current health, exposure and evidence signals from the organization workspace.</p>
           </div>
@@ -112,7 +112,7 @@ export function ExecutiveCommandCenter({ summary, trendComparison, basePath }: E
           <Link
             key={signal.label}
             href={signal.href}
-            className={`group min-h-44 px-5 py-5 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 ${index > 0 ? 'border-t border-white/[0.055] md:border-l md:border-t-0' : ''} ${index === 2 || index === 4 ? 'md:border-t md:border-white/[0.055] xl:border-t-0' : ''}`}
+            className={`group min-h-44 px-5 py-5 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/40 ${index > 0 ? 'border-t border-white/[0.055] md:border-l md:border-t-0' : ''} ${index === 2 || index === 4 ? 'md:border-t md:border-white/[0.055] xl:border-t-0' : ''}`}
           >
             <div className="flex items-start justify-between gap-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/32">{signal.label}</p>
@@ -120,7 +120,7 @@ export function ExecutiveCommandCenter({ summary, trendComparison, basePath }: E
             </div>
             <p className="mt-5 text-3xl font-semibold tracking-[-0.04em] text-white">{signal.value}</p>
             <p className="mt-3 text-xs leading-5 text-white/40">{signal.detail}</p>
-            <p className="mt-4 text-xs font-semibold text-emerald-100/0 transition group-hover:text-emerald-100/70">Open signal →</p>
+            <p className="mt-4 text-xs font-semibold text-blue-200/0 transition group-hover:text-blue-200/75">Open signal →</p>
           </Link>
         ))}
       </div>

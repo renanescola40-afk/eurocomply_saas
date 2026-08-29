@@ -87,10 +87,10 @@ export function RelationshipGraph({ summary, basePath }: RelationshipGraphProps)
   ];
 
   return (
-    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522] text-white">
       <div className="flex flex-col gap-2 border-b border-white/[0.055] px-5 py-5 md:flex-row md:items-end md:justify-between md:px-6">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Traceability chain</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-200/55">Traceability chain</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">From suppliers to executive output</h2>
         </div>
         <p className="max-w-xl text-sm leading-6 text-white/38">Follow the live workspace path from vendor exposure through evidence, risk and remediation.</p>
@@ -100,14 +100,14 @@ export function RelationshipGraph({ summary, basePath }: RelationshipGraphProps)
         <div className="flex min-w-[1040px] items-stretch">
           {nodes.map((node, index) => (
             <div key={node.id} className="flex min-w-0 flex-1 items-center">
-              <Link href={node.href} className={`group flex min-h-32 min-w-36 flex-1 flex-col justify-between rounded-lg border p-4 transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/35 ${toneClasses(node.tone)}`}>
+              <Link href={node.href} className={`group flex min-h-32 min-w-36 flex-1 flex-col justify-between rounded-lg border p-4 transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 ${toneClasses(node.tone)}`}>
                 <div>
                   <p className="text-[9px] font-semibold uppercase tracking-[0.14em] opacity-55">{node.label}</p>
                   <p className="mt-2 text-3xl font-semibold tracking-[-0.04em]">{node.value}</p>
                 </div>
                 <div>
                   <p className="text-xs opacity-65">{node.subtitle}</p>
-                  <p className="mt-2 text-[10px] font-semibold text-emerald-100/0 transition group-hover:text-emerald-100/65">Open →</p>
+                  <p className="mt-2 text-[10px] font-semibold text-blue-200/0 transition group-hover:text-blue-200/70">Open →</p>
                 </div>
               </Link>
 

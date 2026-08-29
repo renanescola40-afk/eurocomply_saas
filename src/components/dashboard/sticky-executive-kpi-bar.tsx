@@ -31,10 +31,10 @@ export function StickyExecutiveKpiBar({ summary, trendComparison, basePath }: St
   ];
 
   return (
-    <div className="sticky top-[5.25rem] z-20 overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1311]/95 text-white backdrop-blur supports-[backdrop-filter]:bg-[#0d1311]/88">
+    <div className="sticky top-[5.25rem] z-20 overflow-hidden rounded-xl border border-white/[0.075] bg-[#08111d]/95 text-white backdrop-blur supports-[backdrop-filter]:bg-[#08111d]/88">
       <div className="flex min-w-max items-stretch overflow-x-auto">
         <div className="hidden shrink-0 border-r border-white/[0.055] px-4 py-3 md:block">
-          <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-emerald-100/48">Live posture</p>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-blue-200/55">Live posture</p>
           <p className="mt-1 text-xs text-white/34">Executive KPIs</p>
         </div>
 
@@ -42,7 +42,7 @@ export function StickyExecutiveKpiBar({ summary, trendComparison, basePath }: St
           <Link
             key={item.label}
             href={item.href}
-            className={`group min-w-28 px-4 py-3 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 ${index > 0 ? 'border-l border-white/[0.055]' : ''}`}
+            className={`group min-w-28 px-4 py-3 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/40 ${index > 0 ? 'border-l border-white/[0.055]' : ''}`}
           >
             <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-white/28 transition group-hover:text-white/45">{item.label}</p>
             <p className={`mt-1 text-lg font-semibold leading-none tracking-[-0.02em] ${item.valueClassName}`}>{item.value}</p>
