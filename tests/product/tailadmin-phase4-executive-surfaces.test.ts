@@ -30,14 +30,15 @@ const EXPORT_PREPARATION = new URL('../../src/components/dashboard/readiness-exp
 const AUDIT_PACKAGE = new URL('../../src/components/dashboard/audit-package-review.tsx', import.meta.url);
 const EVIDENCE_HANDOFF = new URL('../../src/components/dashboard/evidence-handoff-review.tsx', import.meta.url);
 
-describe('TailAdmin phase 4 executive surfaces', () => {
+describe('RISCK UI V2 executive surfaces', () => {
   it('removes synthetic enterprise preview metrics from the dashboard overview', async () => {
     const source = await readFile(OVERVIEW, 'utf8');
     expect(source).not.toContain('EnterpriseMetricsPreview');
     expect(source).not.toContain('Enterprise Diamond');
     expect(source).not.toContain('Priority support signal');
     expect(source).not.toContain("from '@/components/ui/card'");
-    expect(source).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
+    expect(source).toContain('rounded-xl border border-white/[0.075] bg-[#0d1522]');
+    expect(source).toContain('focus-visible:ring-blue-400/40');
   });
 
   it('uses real workspace routes instead of stale one-page experience anchors', async () => {
@@ -61,31 +62,37 @@ describe('TailAdmin phase 4 executive surfaces', () => {
     expect(source).not.toContain('shadow-2xl');
   });
 
-  it('keeps executive overview surfaces restrained and inside the shared graphite language', async () => {
+  it('uses cobalt as the executive product accent while keeping semantic status colors', async () => {
     const [hero, commandCenter, kpi, cockpit] = await Promise.all([
       readFile(EXECUTIVE_HERO, 'utf8'), readFile(EXECUTIVE_COMMAND_CENTER, 'utf8'), readFile(EXECUTIVE_KPI, 'utf8'), readFile(EXECUTIVE_COCKPIT, 'utf8'),
     ]);
     for (const source of [hero, commandCenter, kpi, cockpit]) {
       expect(source).toContain('rounded-xl');
+      expect(source).toContain('blue-');
       expect(source).not.toContain('rounded-[2rem]');
       expect(source).not.toContain('shadow-2xl');
       expect(source).not.toContain('blur-3xl');
       expect(source).not.toContain('hover:-translate-y');
     }
     expect(hero).toContain('Executive overview');
+    expect(hero).toContain('bg-blue-600');
+    expect(hero).toContain('text-emerald-200');
     expect(commandCenter).toContain('Live governance signals');
+    expect(commandCenter).toContain("tone: summary.complianceScore >= 80 ? 'emerald'");
     expect(kpi).toContain('Executive KPIs');
+    expect(kpi).toContain('bg-[#08111d]/95');
     expect(cockpit).not.toContain('Above early-stage B2B average');
     expect(cockpit).not.toContain('Benchmark');
   });
 
-  it('presents deterministic governance guidance without legacy AI-template branding', async () => {
+  it('presents deterministic governance guidance with a distinct AI violet accent', async () => {
     const source = await readFile(GOVERNANCE_ASSISTANT, 'utf8');
     expect(source).toContain('Governance assistant');
     expect(source).toContain('Deterministic guidance derived from live RISCK COMPLY workspace data');
+    expect(source).toContain('text-violet-200/65');
+    expect(source).toContain('focus-visible:ring-violet-400/40');
     expect(source).not.toContain('Ask EuroComply');
     expect(source).not.toContain('AI copilot');
-    expect(source).not.toContain('violet-');
     expect(source).not.toContain('blur-3xl');
   });
 
@@ -97,15 +104,17 @@ describe('TailAdmin phase 4 executive surfaces', () => {
     expect(source).not.toContain("type: 'report'");
   });
 
-  it('uses compact evidence and risk traceability surfaces instead of decorative graph cards', async () => {
+  it('uses compact cobalt interaction chrome for evidence and risk traceability surfaces', async () => {
     const [risk, relationship, evidence] = await Promise.all([readFile(RISK_HEATMAP, 'utf8'), readFile(RELATIONSHIP_GRAPH, 'utf8'), readFile(EVIDENCE_GRAPH, 'utf8')]);
     for (const source of [risk, relationship, evidence]) {
-      expect(source).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
+      expect(source).toContain('rounded-xl border border-white/[0.075] bg-[#0d1522]');
+      expect(source).toContain('focus-visible:ring-blue-400/40');
       expect(source).not.toContain('blur-3xl');
       expect(source).not.toContain('shadow-2xl');
       expect(source).not.toContain('hover:-translate-y');
     }
     expect(risk).toContain('Impact × probability');
+    expect(risk).toContain("return 'border-emerald-300/15 bg-emerald-300/[0.045] text-emerald-100/78'");
     expect(relationship).toContain('it does not add synthetic dependency data');
     expect(evidence).toContain('rather than placeholder metrics');
   });
