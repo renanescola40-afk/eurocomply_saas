@@ -79,10 +79,10 @@ export function AiCopilotPanel({ summary, trendComparison, basePath }: AiCopilot
   const answers = buildAnswers(summary, trendComparison, basePath);
 
   return (
-    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522] text-white">
       <div className="grid xl:grid-cols-[320px_minmax(0,1fr)]">
         <div className="border-b border-white/[0.055] px-5 py-5 xl:border-b-0 xl:border-r">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Governance assistant</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-200/65">Governance assistant</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Explain the current posture</h2>
           <p className="mt-3 text-sm leading-6 text-white/43">
             Deterministic guidance derived from live RISCK COMPLY workspace data. No invented metrics and no free-form claims are added here.
@@ -96,14 +96,14 @@ export function AiCopilotPanel({ summary, trendComparison, basePath }: AiCopilot
 
         <div className="divide-y divide-white/[0.055]">
           {answers.map((item) => (
-            <Link key={item.question} href={item.href} className="group block px-5 py-4 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 md:px-6">
+            <Link key={item.question} href={item.href} className="group block px-5 py-4 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-400/40 md:px-6">
               <div className="grid gap-3 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)_auto] md:items-start">
                 <div className="flex items-start gap-2.5">
                   <span className={`mt-0.5 rounded-md border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] ${toneClasses(item.tone)}`}>Signal</span>
                   <h3 className="text-sm font-semibold leading-5 text-white/82">{item.question}</h3>
                 </div>
                 <p className="text-sm leading-6 text-white/42">{item.answer}</p>
-                <p className="text-xs font-semibold text-emerald-100/60 transition group-hover:text-emerald-100 md:pt-1">{item.action} →</p>
+                <p className="text-xs font-semibold text-violet-200/65 transition group-hover:text-violet-100 md:pt-1">{item.action} →</p>
               </div>
             </Link>
           ))}
