@@ -10,6 +10,7 @@ import { listAiSystems } from '@/server/queries/ai-systems';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { AiSystemsClient } from './ai-systems-client';
 import { AiSystemsReadonlyView } from './ai-systems-readonly-view';
+import { AiSystemsRegistryV2 } from './ai-systems-registry-v2';
 
 export default async function AiSystemsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -33,6 +34,7 @@ export default async function AiSystemsPage({ params }: { params: Promise<{ loca
 
   const content = (
     <main className="min-h-0 bg-transparent text-white">
+      <AiSystemsRegistryV2 locale={locale} systems={systems} organizationName={organization?.name} />
       {canManageAiGovernance ? (
         <AiSystemsClient locale={locale} initialSystems={systems} organizationName={organization?.name} readiness={readiness} />
       ) : (

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { Clock3, ShieldCheck, UserPlus, Users } from 'lucide-react';
 
 import { EnterpriseAccessConsole } from '@/components/team/enterprise-access-console';
 import { TeamSettingsSection } from '@/components/team/team-settings-section';
@@ -41,10 +42,10 @@ export default async function OrganizationTeamPage({ params }: TeamPageProps) {
     const denied = deniedCopy[locale] ?? deniedCopy.en;
     return (
       <main className="min-h-0 bg-transparent text-white">
-        <section className="max-w-3xl rounded-xl border border-white/[0.075] bg-[#101715] p-5 md:p-6" role="status">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">{copy.eyebrow}</p>
+        <section className="max-w-3xl rounded-xl border border-slate-800 bg-[#0b121e] p-5 md:p-6" role="status">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-400">{copy.eyebrow}</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-[-0.025em] text-white">{denied.title}</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">{denied.body}</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">{denied.body}</p>
         </section>
       </main>
     );
@@ -60,18 +61,36 @@ export default async function OrganizationTeamPage({ params }: TeamPageProps) {
   const canInviteMembers = entitlements.employeeInvites && withinSeatCapacity;
   const inviteBlockReason = !entitlements.employeeInvites ? 'plan' as const : !withinSeatCapacity ? 'capacity' as const : null;
   const canInviteAdmin = isPlanAtLeast(entitlements.plan, 'enterprise');
+  const adminMembers = members.filter((member) => ['owner', 'admin'].includes(String(member.role).toLowerCase())).length;
 
   return (
     <main className="min-h-0 bg-transparent text-white">
       <div className="w-full space-y-6">
-        <header className="border-b border-white/[0.065] pb-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">{copy.eyebrow}</p>
+        <header className="border-b border-slate-800 pb-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-400">{copy.eyebrow}</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">{copy.title}</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-white/50">{copy.body}</p>
-          <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-white/46">
-            {copy.badges.map((badge) => <span key={badge} className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1">{badge}</span>)}
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{copy.body}</p>
+          <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-slate-500">
+            {copy.badges.map((badge) => <span key={badge} className="rounded-md border border-slate-800 bg-[#0d1624] px-2.5 py-1">{badge}</span>)}
           </div>
         </header>
+
+        <section className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-slate-800 bg-slate-800 lg:grid-cols-4" aria-label="Access and role metrics">
+          {[
+            { label: 'Members', value: members.length, icon: Users },
+            { label: 'Admins / owners', value: adminMembers, icon: ShieldCheck },
+            { label: 'Pending invites', value: invitations.length, icon: Clock3 },
+            { label: 'Invites enabled', value: canInviteMembers ? 'Yes' : 'No', icon: UserPlus },
+          ].map(({ label, value, icon: Icon }) => (
+            <div key={label} className="bg-[#0d1624] px-5 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-600">{label}</p>
+                <Icon className="h-4 w-4 text-blue-500/70" aria-hidden="true" />
+              </div>
+              <p className="mt-2 font-mono text-2xl font-semibold tabular-nums text-slate-100">{value}</p>
+            </div>
+          ))}
+        </section>
 
         <div className="space-y-6">
           <TeamSettingsSection
