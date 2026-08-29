@@ -123,6 +123,11 @@ describe('RISCK UI V2 executive surfaces', () => {
     const [boardMode, planner] = await Promise.all([readFile(BOARD_MODE, 'utf8'), readFile(REMEDIATION_PLANNER, 'utf8')]);
     expect(boardMode).toContain('Leadership summary');
     expect(boardMode).toContain('using only current score, risk, vendor, evidence and action data');
+    expect(boardMode).toContain('rounded-xl border border-white/[0.075] bg-[#0d1522]');
+    expect(boardMode).toContain('text-blue-200/65');
+    expect(boardMode).toContain('bg-blue-600');
+    expect(boardMode).toContain('focus-visible:ring-blue-400/40');
+    expect(boardMode).toContain('border-emerald-300/15 bg-emerald-300/[0.055]');
     expect(boardMode).not.toContain('Ready for customer, investor and leadership review');
     expect(planner).toContain('Remediation planner');
     expect(planner).toContain('It does not predict future compliance scores or invent projected uplift');
@@ -131,7 +136,7 @@ describe('RISCK UI V2 executive surfaces', () => {
     expect(planner).not.toContain('Combined sprint');
   });
 
-  it('removes invented report readiness and AI executive claims', async () => {
+  it('removes invented report readiness and AI executive claims while reserving violet for intelligence chrome', async () => {
     const [report, notes] = await Promise.all([readFile(BOARD_REPORT, 'utf8'), readFile(LEADERSHIP_NOTES, 'utf8')]);
     expect(report).toContain('Report package status');
     expect(report).toContain('without assigning an invented readiness percentage');
@@ -139,6 +144,10 @@ describe('RISCK UI V2 executive surfaces', () => {
     expect(report).not.toContain('Report readiness');
     expect(notes).toContain('Leadership notes');
     expect(notes).toContain('does not generate free-form AI claims');
+    expect(notes).toContain('rounded-xl border border-white/[0.075] bg-[#0d1522]');
+    expect(notes).toContain('text-violet-200/65');
+    expect(notes).toContain('focus-visible:ring-violet-400/40');
+    expect(notes).toContain('border-emerald-300/15 bg-emerald-300/[0.055]');
     expect(notes).not.toContain('AI executive layer');
     expect(notes).not.toContain('ready for customer, leadership and investor review');
   });
