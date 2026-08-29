@@ -240,7 +240,8 @@ begin
 
   -- Payment-first is intentionally layered as a RESTRICTIVE AND-condition over
   -- the three organization policies above. It is canonical V23 state, not a
-  -- stale Evidence Vault metadata policy.
+  -- stale Evidence Vault metadata policy. Compare the normalized predicates
+  -- exactly so a weakened expression such as `... OR true` cannot pass.
   if not exists (
     select 1
     from pg_policies
@@ -250,8 +251,14 @@ begin
       and permissive = 'RESTRICTIVE'
       and cmd = 'ALL'
       and roles = array['authenticated']::name[]
-      and coalesce(qual, '') like '%has_commercial_authority%'
-      and coalesce(with_check, '') like '%has_commercial_authority%'
+      and regexp_replace(coalesce(qual, ''), '\s+', '', 'g') in (
+        'app_private.has_commercial_authority(organization_id)',
+        '(app_private.has_commercial_authority(organization_id))'
+      )
+      and regexp_replace(coalesce(with_check, ''), '\s+', '', 'g') in (
+        'app_private.has_commercial_authority(organization_id)',
+        '(app_private.has_commercial_authority(organization_id))'
+      )
   ) then
     raise exception 'Evidence Vault payment-first restrictive policy is incomplete';
   end if;
