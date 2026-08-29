@@ -1,0 +1,47 @@
+.shell {
+  min-height: 100%;
+  color: #fff;
+}
+
+.shell :global(main) {
+  background: transparent !important;
+}
+
+.shell :global([class*="bg-[#101715]"]) {
+  background: #0d1522 !important;
+}
+
+.shell :global(button[class*='bg-emerald-300']),
+.shell :global(a[class*='bg-emerald-300']) {
+  background: rgb(37 99 235) !important;
+  color: #fff !important;
+}
+
+.shell :global(button[class*='bg-emerald-300']:hover),
+.shell :global(a[class*='bg-emerald-300']:hover) {
+  background: rgb(59 130 246) !important;
+}
+
+.shell :global(input[class*='focus:border-emerald']),
+.shell :global(textarea[class*='focus:border-emerald']),
+.shell :global(select[class*='focus:border-emerald']) {
+  border-color: rgba(96, 165, 250, 0.45) !important;
+}
+
+.shell :global(input[class*='ring-emerald']),
+.shell :global(textarea[class*='ring-emerald']),
+.shell :global(select[class*='ring-emerald']),
+.shell :global(button[class*='ring-emerald']),
+.shell :global(a[class*='ring-emerald']) {
+  --tw-ring-color: rgba(96, 165, 250, 0.55) !important;
+}
+
+.shell :global(header [class*='text-emerald-300']),
+.shell :global(h1 + p [class*='text-emerald-300']) {
+  color: rgb(147 197 253) !important;
+}
+
+.shell :global(section),
+.shell :global(article) {
+  box-shadow: none !important;
+}
