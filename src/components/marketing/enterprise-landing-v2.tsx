@@ -34,12 +34,12 @@ const en: LandingCopy = {
   primary: 'Book a Demo', secondary: 'See How It Works',
   trust: [
     { title: 'AI Act workflows', text: 'Structured governance operations for EU AI Act readiness.' },
-    { title: 'Enterprise security', text: 'Role-based access, protected sessions and organization isolation.' },
-    { title: 'End-to-end governance', text: 'From AI inventory to evidence, owners, actions and review.' },
+    { title: 'Controlled by design', text: 'Role-based access, protected sessions and organization isolation.' },
+    { title: 'From discovery to review', text: 'From AI inventory to evidence, owners, actions and review.' },
     { title: 'Audit ready', text: 'Traceable activity and evidence preparation for review.' },
   ],
   platformEyebrow: 'Enterprise governance control plane',
-  platformTitle: 'Decision-ready visibility instead of another dashboard full of noise.',
+  platformTitle: 'One operational source of truth for AI governance.',
   platformText: 'RISCK COMPLY brings inventory, risk, evidence, ownership and follow-up work into one controlled workspace for compliance, security, legal and procurement teams.',
   features: [
     { title: 'AI inventory', text: 'Map systems, providers, departments, owners, countries and lifecycle state.' },
@@ -156,6 +156,7 @@ export function EnterpriseLandingV2({ locale: requestedLocale }: { locale: strin
   const [mobileOpen, setMobileOpen] = useState(false);
   const demoHref = `/${locale}/book-demo`;
   const loginHref = `/${locale}/login`;
+  const signupHref = `/${locale}/signup`;
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#050913] text-white">
@@ -170,7 +171,7 @@ export function EnterpriseLandingV2({ locale: requestedLocale }: { locale: strin
         </div>
       </header>
 
-      {mobileOpen ? <div className="fixed inset-0 z-[100] bg-[#050913]/98 p-5 lg:hidden"><div className="flex items-center justify-between"><Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={200} height={42} className="h-8 w-auto" /><button type="button" onClick={() => setMobileOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800 text-slate-400"><X className="h-4 w-4" /></button></div><nav className="mt-10 grid gap-2 text-lg"><a href="#platform" onClick={() => setMobileOpen(false)} className="rounded-lg border border-slate-800 px-4 py-3">{text.nav.product}</a><a href="#solutions" onClick={() => setMobileOpen(false)} className="rounded-lg border border-slate-800 px-4 py-3">{text.nav.solutions}</a><Link href={`/${locale}/resources`} className="rounded-lg border border-slate-800 px-4 py-3">{text.nav.resources}</Link><Link href={`/${locale}/pricing`} className="rounded-lg border border-slate-800 px-4 py-3">{text.nav.pricing}</Link><Link href={loginHref} className="mt-3 rounded-lg border border-slate-800 px-4 py-3">{text.nav.login}</Link><Link href={demoHref} className="rounded-lg bg-blue-600 px-4 py-3 text-center font-semibold">{text.nav.demo}</Link></nav></div> : null}
+      {mobileOpen ? <div className="fixed inset-0 z-[100] bg-[#050913]/98 p-5 lg:hidden"><div className="flex items-center justify-between"><Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={200} height={42} className="h-8 w-auto" /><button type="button" onClick={() => setMobileOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800 text-slate-400"><X className="h-4 w-4" /></button></div><nav className="mt-10 grid gap-2 text-lg"><a href="#platform" onClick={() => setMobileOpen(false)} className="rounded-lg border border-slate-800 px-4 py-3">{text.nav.product}</a><a href="#solutions" onClick={() => setMobileOpen(false)} className="rounded-lg border border-slate-800 px-4 py-3">{text.nav.solutions}</a><Link href={`/${locale}/resources`} className="rounded-lg border border-slate-800 px-4 py-3">{text.nav.resources}</Link><Link href={`/${locale}/pricing`} className="rounded-lg border border-slate-800 px-4 py-3">{text.nav.pricing}</Link><Link href={loginHref} className="mt-3 rounded-lg border border-slate-800 px-4 py-3">{text.nav.login}</Link><Link href={signupHref} className="rounded-lg border border-blue-500/40 px-4 py-3 text-center font-semibold text-blue-200">{locale === 'pt' ? 'Começar' : 'Get Started'}</Link><Link href={demoHref} className="rounded-lg bg-blue-600 px-4 py-3 text-center font-semibold">{text.nav.demo}</Link></nav></div> : null}
 
       <main>
         <section className="relative overflow-hidden px-4 pb-20 pt-16 sm:px-6 lg:px-8 lg:pb-28 lg:pt-24">
@@ -180,8 +181,8 @@ export function EnterpriseLandingV2({ locale: requestedLocale }: { locale: strin
               <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/[0.08] px-3 py-1.5 text-[11px] font-semibold text-blue-300"><ShieldCheck className="h-3.5 w-3.5" />{text.badge}</div>
               <h1 className="mt-6 text-5xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-6xl xl:text-7xl">{text.titleA}<br /><span className="text-blue-500">{text.titleB}</span></h1>
               <p className="mt-6 max-w-2xl text-base leading-7 text-slate-400 sm:text-lg sm:leading-8">{text.subtitle}</p>
-              <div className="mt-8 flex flex-wrap gap-3"><Link href={demoHref} className="inline-flex h-12 items-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-[0_16px_44px_rgba(37,99,235,.25)] transition hover:bg-blue-500">{text.primary}<ArrowRight className="h-4 w-4" /></Link><a href="#platform" className="inline-flex h-12 items-center gap-2 rounded-lg border border-slate-700 bg-slate-950/30 px-5 text-sm font-semibold text-slate-200 transition hover:border-slate-600 hover:bg-slate-900/60">{text.secondary}<ArrowRight className="h-4 w-4" /></a></div>
-              <div className="mt-10 grid gap-4 sm:grid-cols-2"><div className="flex items-center gap-2 text-xs text-slate-500"><CheckCircle2 className="h-4 w-4 text-emerald-400" />Organization workspaces</div><div className="flex items-center gap-2 text-xs text-slate-500"><CheckCircle2 className="h-4 w-4 text-emerald-400" />Role-based access</div><div className="flex items-center gap-2 text-xs text-slate-500"><CheckCircle2 className="h-4 w-4 text-emerald-400" />Activity history</div><div className="flex items-center gap-2 text-xs text-slate-500"><CheckCircle2 className="h-4 w-4 text-emerald-400" />Evidence workflows</div></div>
+              <div className="mt-8 flex flex-wrap gap-3"><Link href={demoHref} className="inline-flex h-12 items-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-[0_16px_44px_rgba(37,99,235,.25)] transition hover:bg-blue-500">{text.primary}<ArrowRight className="h-4 w-4" /></Link><Link href={signupHref} className="inline-flex h-12 items-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/[0.08] px-5 text-sm font-semibold text-blue-100 transition hover:border-blue-400 hover:bg-blue-500/[0.14]">{locale === 'pt' ? 'Começar' : 'Get Started'}<ArrowRight className="h-4 w-4" /></Link><a href="#platform" className="inline-flex h-12 items-center gap-2 rounded-lg border border-slate-700 bg-slate-950/30 px-5 text-sm font-semibold text-slate-200 transition hover:border-slate-600 hover:bg-slate-900/60">{text.secondary}<ArrowRight className="h-4 w-4" /></a></div>
+              <div className="mt-10 grid gap-4 sm:grid-cols-2"><div className="flex items-center gap-2 text-xs text-slate-500"><CheckCircle2 className="h-4 w-4 text-emerald-400" />{locale === 'pt' ? 'Workspaces por organização' : 'Organization workspaces'}</div><div className="flex items-center gap-2 text-xs text-slate-500"><CheckCircle2 className="h-4 w-4 text-emerald-400" />{locale === 'pt' ? 'Acesso baseado em funções' : 'Role-based access'}</div><div className="flex items-center gap-2 text-xs text-slate-500"><CheckCircle2 className="h-4 w-4 text-emerald-400" />{locale === 'pt' ? 'Histórico de atividade' : 'Activity history'}</div><div className="flex items-center gap-2 text-xs text-slate-500"><CheckCircle2 className="h-4 w-4 text-emerald-400" />{locale === 'pt' ? 'Workflows de evidência' : 'Evidence workflows'}</div></div>
             </div>
             <DashboardPreview locale={locale} />
           </div>
