@@ -99,9 +99,9 @@ export default async function ObservabilityDashboardPage({ params }: PageProps) 
       <header className="border-b border-white/[0.07] pb-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/32">
+            <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-200/60">
               <span>RISCK COMPLY Ops</span>
-              <span className="h-1 w-1 rounded-full bg-white/20" />
+              <span className="h-1 w-1 rounded-full bg-blue-300/45" />
               <span>No-store runtime</span>
             </div>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Observability dashboard</h1>
@@ -111,12 +111,12 @@ export default async function ObservabilityDashboardPage({ params }: PageProps) 
           </div>
           <div className="flex flex-wrap gap-2">
             {sentryUrl ? (
-              <Link className="inline-flex h-10 items-center rounded-xl bg-emerald-300 px-4 text-sm font-semibold text-[#06100d] transition hover:bg-emerald-200" href={sentryUrl} target="_blank" rel="noreferrer">
+              <Link className="inline-flex h-10 items-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60" href={sentryUrl} target="_blank" rel="noreferrer">
                 Open Sentry
               </Link>
             ) : null}
             {vercelUrl ? (
-              <Link className="inline-flex h-10 items-center rounded-xl border border-white/[0.09] bg-white/[0.025] px-4 text-sm font-semibold text-white/72 transition hover:bg-white/[0.06] hover:text-white" href={vercelUrl} target="_blank" rel="noreferrer">
+              <Link className="inline-flex h-10 items-center rounded-xl border border-white/[0.09] bg-white/[0.025] px-4 text-sm font-semibold text-white/72 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40" href={vercelUrl} target="_blank" rel="noreferrer">
                 Open Vercel
               </Link>
             ) : null}
@@ -126,9 +126,9 @@ export default async function ObservabilityDashboardPage({ params }: PageProps) 
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {operatingSignals.map((signal) => (
-          <article key={signal.label} className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
+          <article key={signal.label} className="rounded-xl border border-white/[0.075] bg-[#0d1522] p-4">
             <div className="flex items-center justify-between gap-3">
-              <signal.icon className="h-4 w-4 text-emerald-300" />
+              <signal.icon className="h-4 w-4 text-blue-300" />
               <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">threshold</span>
             </div>
             <p className="mt-4 text-sm font-medium text-white/58">{signal.label}</p>
@@ -139,9 +139,9 @@ export default async function ObservabilityDashboardPage({ params }: PageProps) 
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
-        <article className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-5">
+        <article className="rounded-xl border border-white/[0.075] bg-[#0d1522] p-5">
           <div className="flex items-center gap-2">
-            <Gauge className="h-4 w-4 text-emerald-300" />
+            <Gauge className="h-4 w-4 text-blue-300" />
             <h2 className="text-sm font-semibold text-white/88">Production smoke test</h2>
           </div>
           <p className="mt-3 text-sm leading-6 text-white/48">
@@ -152,7 +152,7 @@ export default async function ObservabilityDashboardPage({ params }: PageProps) 
           </div>
         </article>
 
-        <article className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-5">
+        <article className="rounded-xl border border-white/[0.075] bg-[#0d1522] p-5">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-300" />
             <h2 className="text-sm font-semibold text-white/88">Alert coverage</h2>
@@ -160,7 +160,7 @@ export default async function ObservabilityDashboardPage({ params }: PageProps) 
           <div className="mt-4 divide-y divide-white/[0.06] border-y border-white/[0.06]">
             {alertChecks.map((check) => (
               <div key={check} className="flex items-center gap-3 py-3 text-sm text-white/58">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-300/80" />
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-300/70" />
                 {check}
               </div>
             ))}
