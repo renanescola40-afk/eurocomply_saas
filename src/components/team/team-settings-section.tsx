@@ -112,20 +112,22 @@ export function TeamSettingsSection({
 
   return (
     <section className="space-y-5">
-      <div className="flex flex-col gap-2 border-b border-white/[0.055] pb-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/34">{copy.section.eyebrow}</p>
-        <h2 className="text-xl font-semibold tracking-[-0.02em] text-white/88">{copy.section.title}</h2>
-        <p className="max-w-2xl text-sm leading-6 text-white/46">{copy.section.body}</p>
+      <div className="flex flex-col gap-2 border-b border-slate-800 pb-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-blue-400">{copy.section.eyebrow}</p>
+        <h2 className="text-xl font-semibold tracking-[-0.02em] text-slate-100">{copy.section.title}</h2>
+        <p className="max-w-2xl text-sm leading-6 text-slate-400">{copy.section.body}</p>
       </div>
 
       {!canManageTeam ? (
-        <p className="rounded-xl border border-white/[0.075] bg-[#101715] p-4 text-sm text-white/60" role="status">{readOnlyCopy[locale] ?? readOnlyCopy.en}</p>
+        <p className="rounded-xl border border-slate-800 bg-[#0b121e] p-4 text-sm text-slate-400" role="status">{readOnlyCopy[locale] ?? readOnlyCopy.en}</p>
       ) : canInviteMembers ? (
-        <InviteMemberForm locale={locale} canInviteAdmin={canInviteAdmin} onSubmit={handleInvite} />
+        <div className="rounded-xl border border-slate-800 bg-[#0b121e] p-5 sm:p-6">
+          <InviteMemberForm locale={locale} canInviteAdmin={canInviteAdmin} onSubmit={handleInvite} />
+        </div>
       ) : (
-        <div className="rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-sm text-amber-100/85" role="status">
+        <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.07] p-4 text-sm text-amber-200" role="status">
           <p>{inviteBlockReason === 'capacity' ? blockedCopy.capacity : blockedCopy.plan}</p>
-          <Link href={`/${locale}/dashboard/organizations/billing`} className="mt-3 inline-flex rounded-lg border border-current/20 px-3 py-2 text-xs font-semibold outline-none transition hover:bg-amber-100/[0.06] focus-visible:ring-2">{blockedCopy.action}</Link>
+          <Link href={`/${locale}/dashboard/organizations/billing`} className="mt-3 inline-flex rounded-lg border border-amber-400/20 px-3 py-2 text-xs font-semibold outline-none transition hover:bg-amber-400/[0.08] focus-visible:ring-2 focus-visible:ring-amber-400/40">{blockedCopy.action}</Link>
         </div>
       )}
 
