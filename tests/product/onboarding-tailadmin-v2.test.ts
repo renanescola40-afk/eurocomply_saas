@@ -4,11 +4,11 @@ import { describe, expect, it } from 'vitest';
 const RUNTIME = new URL('../../src/components/onboarding/onboarding-runtime-boundary.tsx', import.meta.url);
 const STYLES = new URL('../../src/components/onboarding/onboarding-tailadmin.module.css', import.meta.url);
 
-describe('RISCK COMPLY TailAdmin onboarding shell', () => {
+describe('RISCK COMPLY UI V2 onboarding shell', () => {
   it('wraps the licensed onboarding runtime in the shared enterprise visual contract without changing activation authority', async () => {
     const source = await readFile(RUNTIME, 'utf8');
 
-    expect(source).toContain('data-risck-onboarding-shell="tailadmin-v2"');
+    expect(source).toContain('data-risck-onboarding-shell="risck-ui-v2"');
     expect(source).toContain('<B2BOnboardingFlow');
     expect(source).toContain('onSaveDraft={saveDraft}');
     expect(source).toContain('onComplete={complete}');
@@ -22,7 +22,7 @@ describe('RISCK COMPLY TailAdmin onboarding shell', () => {
     expect(css).toContain('height: calc(100vh - 72px)');
     expect(css).toContain('aside:last-child');
     expect(css).toContain('display: none !important');
-    expect(css).toContain('background: #0b100f');
+    expect(css).toContain('background: #07101a');
   });
 
   it('flattens the decorative onboarding hero and preserves responsive setup navigation', async () => {

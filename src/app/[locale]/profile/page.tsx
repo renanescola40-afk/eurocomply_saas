@@ -1,7 +1,7 @@
 import { unstable_noStore as noStore } from 'next/cache';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Bell, Building2, CreditCard, ShieldCheck, UserRound, UsersRound } from 'lucide-react';
+import { ArrowUpRight, Bell, Building2, CreditCard, ShieldCheck, UserRound, UsersRound } from 'lucide-react';
 
 import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell';
 import { ProfilePersonalControls } from '@/components/profile/profile-personal-controls';
@@ -70,61 +70,74 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
   const canManageBilling = organization ? canManageDashboardBilling(organization.role) : false;
   const localized = (path: string) => `/${safeLocale}${path}`;
 
+  const accountLinks = [
+    { href: localized('/notificacoes'), label: copy.notifications, Icon: Bell },
+    { href: localized('/dashboard/privacy'), label: copy.privacy, Icon: ShieldCheck },
+    canManageSettings ? { href: localized('/settings/organization'), label: copy.orgSettings, Icon: Building2 } : null,
+    canManageTeam ? { href: localized('/dashboard/organizations/team'), label: copy.team, Icon: UsersRound } : null,
+    canManageBilling ? { href: localized('/dashboard/organizations/billing'), label: copy.billing, Icon: CreditCard } : null,
+    canManageBilling ? { href: localized('/dashboard/organizations/add-ons'), label: copy.addOns, Icon: Building2 } : null,
+  ].filter(Boolean) as Array<{ href: string; label: string; Icon: typeof Bell }>;
+
   const content = (
     <main className="min-h-0 bg-transparent text-white">
       <div className="w-full space-y-6">
-        <header className="border-b border-white/[0.065] pb-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">{copy.eyebrow}</p>
-          <h1 className="mt-2 max-w-4xl text-3xl font-semibold tracking-[-0.035em] text-white">{copy.title}</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-white/50">{copy.body}</p>
+        <header className="border-b border-white/[0.07] pb-6">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-300/70">{copy.eyebrow}</p>
+          <h1 className="mt-2 max-w-4xl text-3xl font-semibold tracking-[-0.04em] text-white">{copy.title}</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-white/48">{copy.body}</p>
         </header>
 
-        <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
-          <article className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
-            <div className="flex items-center gap-4 border-b border-white/[0.06] px-5 py-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-300 text-sm font-black text-[#06100d]">
+        <section className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+          <article className="overflow-hidden rounded-2xl border border-white/[0.075] bg-[#0d1522]">
+            <div className="flex items-center gap-4 border-b border-white/[0.06] px-5 py-5">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-blue-400/20 bg-blue-500/15 text-sm font-black text-blue-100">
                 {initials(user.firstName, user.lastName, user.email)}
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-white/34">{copy.personal}</p>
-                <h2 className="mt-1 truncate text-lg font-semibold text-white/88">{displayName}</h2>
-                <p className="mt-0.5 text-xs text-white/38">{copy.personalBody}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-300/60">{copy.personal}</p>
+                <h2 className="mt-1 truncate text-lg font-semibold text-white/90">{displayName}</h2>
+                <p className="mt-0.5 text-xs text-white/36">{copy.personalBody}</p>
               </div>
             </div>
-
             <dl className="divide-y divide-white/[0.055] px-5">
-              <div className="grid gap-1 py-4 sm:grid-cols-[9rem_1fr] sm:items-center"><dt className="text-sm text-white/38">{copy.name}</dt><dd className="text-sm font-medium text-white/82">{displayName}</dd></div>
-              <div className="grid gap-1 py-4 sm:grid-cols-[9rem_1fr] sm:items-center"><dt className="text-sm text-white/38">{copy.email}</dt><dd className="break-all text-sm font-medium text-white/82">{user.email ?? '—'}</dd></div>
+              <div className="grid gap-1 py-4 sm:grid-cols-[9rem_1fr] sm:items-center"><dt className="text-sm text-white/36">{copy.name}</dt><dd className="text-sm font-medium text-white/82">{displayName}</dd></div>
+              <div className="grid gap-1 py-4 sm:grid-cols-[9rem_1fr] sm:items-center"><dt className="text-sm text-white/36">{copy.email}</dt><dd className="break-all text-sm font-medium text-white/82">{user.email ?? '—'}</dd></div>
             </dl>
           </article>
 
-          <article className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+          <article className="overflow-hidden rounded-2xl border border-white/[0.075] bg-[#0d1522]">
             <div className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4">
-              <Building2 className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              <h2 className="text-sm font-semibold text-white/88">{copy.workspace}</h2>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-400/20 bg-blue-500/10 text-blue-300"><Building2 className="h-4 w-4" aria-hidden="true" /></div>
+              <div>
+                <h2 className="text-sm font-semibold text-white/88">{copy.workspace}</h2>
+                <p className="mt-0.5 text-xs text-white/34">{copy.workspaceBody}</p>
+              </div>
             </div>
-            <p className="px-5 pt-4 text-sm leading-6 text-white/44">{copy.workspaceBody}</p>
-            <dl className="mt-3 divide-y divide-white/[0.055] border-t border-white/[0.055] px-5">
-              <div className="grid gap-1 py-3.5 sm:grid-cols-[9rem_1fr]"><dt className="text-sm text-white/38">{copy.organization}</dt><dd className="text-sm font-medium text-white/82">{organization?.name ?? '—'}</dd></div>
-              <div className="grid gap-1 py-3.5 sm:grid-cols-[9rem_1fr]"><dt className="text-sm text-white/38">{copy.role}</dt><dd className="text-sm font-medium capitalize text-white/82">{organization?.role ?? '—'}</dd></div>
+            <dl className="divide-y divide-white/[0.055] px-5">
+              <div className="grid gap-1 py-4 sm:grid-cols-[9rem_1fr]"><dt className="text-sm text-white/36">{copy.organization}</dt><dd className="text-sm font-medium text-white/82">{organization?.name ?? '—'}</dd></div>
+              <div className="grid gap-1 py-4 sm:grid-cols-[9rem_1fr]"><dt className="text-sm text-white/36">{copy.role}</dt><dd className="text-sm font-medium capitalize text-blue-100/80">{organization?.role ?? '—'}</dd></div>
             </dl>
           </article>
         </section>
 
         <ProfilePersonalControls locale={safeLocale} />
 
-        <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715]">
+        <section className="overflow-hidden rounded-2xl border border-white/[0.075] bg-[#0d1522]" aria-labelledby="account-controls-title">
           <div className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4">
-            <UserRound className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-            <h2 className="text-sm font-semibold text-white/88">{copy.accountControls}</h2>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-400/20 bg-blue-500/10 text-blue-300"><UserRound className="h-4 w-4" aria-hidden="true" /></div>
+            <h2 id="account-controls-title" className="text-sm font-semibold text-white/88">{copy.accountControls}</h2>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3">
-            <Link href={localized('/notificacoes')} className="flex items-center gap-3 border-b border-white/[0.055] px-5 py-4 text-sm text-white/65 transition hover:bg-white/[0.025] hover:text-white sm:border-r"><Bell className="h-4 w-4 text-emerald-300" aria-hidden="true" /><span className="font-medium">{copy.notifications}</span></Link>
-            <Link href={localized('/dashboard/privacy')} className="flex items-center gap-3 border-b border-white/[0.055] px-5 py-4 text-sm text-white/65 transition hover:bg-white/[0.025] hover:text-white lg:border-r"><ShieldCheck className="h-4 w-4 text-emerald-300" aria-hidden="true" /><span className="font-medium">{copy.privacy}</span></Link>
-            {canManageSettings ? <Link href={localized('/settings/organization')} className="flex items-center gap-3 border-b border-white/[0.055] px-5 py-4 text-sm text-white/65 transition hover:bg-white/[0.025] hover:text-white"><Building2 className="h-4 w-4 text-emerald-300" aria-hidden="true" /><span className="font-medium">{copy.orgSettings}</span></Link> : null}
-            {canManageTeam ? <Link href={localized('/dashboard/organizations/team')} className="flex items-center gap-3 border-b border-white/[0.055] px-5 py-4 text-sm text-white/65 transition hover:bg-white/[0.025] hover:text-white sm:border-r lg:border-b-0"><UsersRound className="h-4 w-4 text-emerald-300" aria-hidden="true" /><span className="font-medium">{copy.team}</span></Link> : null}
-            {canManageBilling ? <Link href={localized('/dashboard/organizations/billing')} className="flex items-center gap-3 border-b border-white/[0.055] px-5 py-4 text-sm text-white/65 transition hover:bg-white/[0.025] hover:text-white lg:border-b-0 lg:border-r"><CreditCard className="h-4 w-4 text-emerald-300" aria-hidden="true" /><span className="font-medium">{copy.billing}</span></Link> : null}
-            {canManageBilling ? <Link href={localized('/dashboard/organizations/add-ons')} className="flex items-center gap-3 px-5 py-4 text-sm text-white/65 transition hover:bg-white/[0.025] hover:text-white"><Building2 className="h-4 w-4 text-emerald-300" aria-hidden="true" /><span className="font-medium">{copy.addOns}</span></Link> : null}
+          <div className="grid gap-px bg-white/[0.055] sm:grid-cols-2 lg:grid-cols-3">
+            {accountLinks.map(({ href, label, Icon }) => (
+              <Link key={href} href={href} className="group flex min-h-20 items-center justify-between gap-4 bg-[#0d1522] px-5 py-4 transition hover:bg-blue-500/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/60">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Icon className="h-4 w-4 shrink-0 text-blue-300/80" aria-hidden="true" />
+                  <span className="font-medium text-white/66 transition group-hover:text-white">{label}</span>
+                </div>
+                <ArrowUpRight className="h-4 w-4 shrink-0 text-white/22 transition group-hover:text-blue-300" aria-hidden="true" />
+              </Link>
+            ))}
           </div>
           {!canManageSettings && !canManageTeam && !canManageBilling ? <p className="border-t border-white/[0.055] px-5 py-4 text-sm text-white/40">{copy.restricted}</p> : null}
         </section>
@@ -133,7 +146,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
   );
 
   if (!organization) {
-    return <div className="min-h-screen bg-[#0b100f] p-4 md:p-6">{content}</div>;
+    return <div className="min-h-screen bg-[#07101a] p-4 md:p-6">{content}</div>;
   }
 
   return (
