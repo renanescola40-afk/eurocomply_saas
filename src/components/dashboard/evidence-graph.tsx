@@ -76,10 +76,10 @@ export function EvidenceGraph({ summary, basePath }: EvidenceGraphProps) {
   ];
 
   return (
-    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522] text-white">
       <div className="flex flex-col gap-2 border-b border-white/[0.055] px-5 py-5 md:flex-row md:items-end md:justify-between md:px-6">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Evidence flow</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-200/55">Evidence flow</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">How governance evidence connects</h2>
         </div>
         <p className="max-w-xl text-sm leading-6 text-white/38">Current workspace counts linked into a review path from vendors and evidence through risk, remediation and reporting.</p>
@@ -89,7 +89,7 @@ export function EvidenceGraph({ summary, basePath }: EvidenceGraphProps) {
         <div className="flex min-w-[900px] items-stretch">
           {nodes.map((node, index) => (
             <div key={node.id} className="flex min-w-0 flex-1 items-center">
-              <Link href={node.href} className={`group flex min-h-36 flex-1 flex-col justify-between rounded-lg border p-4 transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/35 ${getToneClasses(node.tone)}`}>
+              <Link href={node.href} className={`group flex min-h-36 flex-1 flex-col justify-between rounded-lg border p-4 transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 ${getToneClasses(node.tone)}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[9px] font-semibold uppercase tracking-[0.14em] opacity-55">{node.label}</p>
@@ -99,7 +99,7 @@ export function EvidenceGraph({ summary, basePath }: EvidenceGraphProps) {
                 </div>
                 <div>
                   <p className="text-xs leading-5 opacity-65">{node.description}</p>
-                  <p className="mt-2 text-[10px] font-semibold text-emerald-100/0 transition group-hover:text-emerald-100/65">Open {node.label.toLowerCase()} →</p>
+                  <p className="mt-2 text-[10px] font-semibold text-blue-200/0 transition group-hover:text-blue-200/70">Open {node.label.toLowerCase()} →</p>
                 </div>
               </Link>
 
