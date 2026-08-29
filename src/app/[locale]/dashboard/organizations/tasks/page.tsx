@@ -1,5 +1,6 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { CheckCircle2, CircleDot, ListChecks, ShieldAlert } from 'lucide-react';
 
 import { CreateComplianceTaskForm, type CreateComplianceTaskFormInput } from '@/components/compliance/create-compliance-task-form';
 import { ComplianceTaskList, type EditComplianceTaskInput } from '@/components/dashboard/compliance-task-list';
@@ -30,6 +31,9 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
   const copy = getCoreWorkflowCopy(params.locale).tasks;
   const tasks = await listComplianceTasks(organization.id);
   const canManageTasks = roleHasPermission(organization.role, 'manage_ai_governance');
+  const completedTasks = tasks.filter((task) => task.status === 'done').length;
+  const openTasks = tasks.length - completedTasks;
+  const criticalTasks = tasks.filter((task) => task.priority === 'critical' && task.status !== 'done').length;
 
   async function handleCreateTask(input: CreateComplianceTaskFormInput) {
     'use server';
@@ -89,20 +93,41 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
   return (
     <main className="min-h-0 bg-transparent text-white">
       <div className="w-full space-y-6">
-        <header className="flex flex-col gap-4 border-b border-white/[0.065] pb-5 md:flex-row md:items-end md:justify-between">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">{organization.name} · {copy.eyebrow}</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em]">{copy.title}</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">{copy.subtitle}</p>
+        <header className="flex flex-col gap-5 border-b border-slate-800 pb-5 xl:flex-row xl:items-end xl:justify-between">
+          <div className="min-w-0 max-w-3xl">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-400">{copy.eyebrow}</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">{copy.title}</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-400">{copy.subtitle}</p>
+            <p className="mt-3 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-600">Organization: {organization.name}</p>
           </div>
-          <StepUpCsvExportButton endpoint="/api/reports/tasks.csv" filename="tasks-report.csv" className="inline-flex h-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 text-sm font-medium text-white/70 transition hover:bg-white/[0.06] hover:text-white focus-visible:ring-2 disabled:opacity-60" />
+          <StepUpCsvExportButton endpoint="/api/reports/tasks.csv" filename="tasks-report.csv" className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-700 bg-[#0d1624] px-4 text-sm font-medium text-slate-300 transition hover:border-blue-500/50 hover:text-white focus-visible:ring-2 disabled:opacity-60" />
         </header>
 
+        <section className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-slate-800 bg-slate-800 lg:grid-cols-4" aria-label="Compliance task metrics">
+          {[
+            { label: 'Total tasks', value: tasks.length, icon: ListChecks },
+            { label: 'Open', value: openTasks, icon: CircleDot },
+            { label: 'Critical open', value: criticalTasks, icon: ShieldAlert },
+            { label: 'Completed', value: completedTasks, icon: CheckCircle2 },
+          ].map(({ label, value, icon: Icon }) => (
+            <div key={label} className="bg-[#0d1624] px-5 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-600">{label}</p>
+                <Icon className="h-4 w-4 text-blue-500/70" aria-hidden="true" />
+              </div>
+              <p className="mt-2 font-mono text-2xl font-semibold tabular-nums text-slate-100">{value}</p>
+            </div>
+          ))}
+        </section>
+
         {canManageTasks ? (
-          <CreateComplianceTaskForm locale={params.locale} onSubmit={handleCreateTask} />
+          <section className="rounded-xl border border-slate-800 bg-[#0b121e] p-5 sm:p-6" aria-label="Create compliance task">
+            <CreateComplianceTaskForm locale={params.locale} onSubmit={handleCreateTask} />
+          </section>
         ) : (
-          <p className="rounded-xl border border-white/[0.075] bg-[#101715] p-4 text-sm text-white/62" role="status">{readOnlyCopy[params.locale] ?? readOnlyCopy.en}</p>
+          <p className="rounded-xl border border-slate-800 bg-[#0b121e] p-4 text-sm text-slate-400" role="status">{readOnlyCopy[params.locale] ?? readOnlyCopy.en}</p>
         )}
+
         <ComplianceTaskList
           locale={params.locale}
           tasks={tasks}
