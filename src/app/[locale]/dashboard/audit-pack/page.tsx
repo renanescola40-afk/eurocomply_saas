@@ -153,22 +153,22 @@ export default function AuditPackPage() {
 
   return (
     <main className="space-y-6 text-white">
-      <Button variant="ghost" onClick={() => router.push(`/${locale}/dashboard`)} className="h-9 px-2 text-white/50 hover:bg-white/[0.05] hover:text-white">
+      <Button variant="ghost" onClick={() => router.push(`/${locale}/dashboard`)} className="h-9 px-2 text-white/50 hover:bg-white/[0.05] hover:text-white focus-visible:ring-blue-400/40">
         <ArrowLeft className="mr-2 h-4 w-4" /> {t.back}
       </Button>
 
       <header className="border-b border-white/[0.07] pb-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <Badge className="mb-3 rounded-lg border-emerald-300/15 bg-emerald-300/[0.08] text-emerald-200">{t.badge}</Badge>
+            <Badge className="mb-3 rounded-lg border-blue-300/15 bg-blue-300/[0.08] text-blue-200">{t.badge}</Badge>
             <h1 className="max-w-4xl text-3xl font-semibold tracking-tight md:text-4xl">{t.title}</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48 md:text-base">{t.subtitle}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={generatePack} disabled={loading} className="bg-emerald-300 text-[#06100d] hover:bg-emerald-200 disabled:opacity-60">
+            <Button onClick={generatePack} disabled={loading} className="bg-blue-600 text-white hover:bg-blue-500 focus-visible:ring-blue-400/60 disabled:opacity-60">
               <FileArchive className="mr-2 h-4 w-4" /> {loading ? '...' : t.generate}
             </Button>
-            <Button onClick={exportPack} disabled={!data} variant="outline" className="border-white/[0.09] bg-white/[0.025] text-white/70 hover:bg-white/[0.06] hover:text-white disabled:opacity-60">
+            <Button onClick={exportPack} disabled={!data} variant="outline" className="border-white/[0.09] bg-white/[0.025] text-white/70 hover:bg-white/[0.06] hover:text-white focus-visible:ring-blue-400/40 disabled:opacity-60">
               <Download className="mr-2 h-4 w-4" /> {t.export}
             </Button>
           </div>
@@ -182,9 +182,9 @@ export default function AuditPackPage() {
       </section>
 
       {!data ? (
-        <Card className="rounded-xl border-white/[0.08] bg-white/[0.025] text-white">
+        <Card className="rounded-xl border-white/[0.075] bg-[#0d1522] text-white">
           <CardContent className="py-14 text-center">
-            <FileArchive className="mx-auto h-8 w-8 text-white/25" />
+            <FileArchive className="mx-auto h-8 w-8 text-blue-300/45" />
             <p className="mt-4 text-sm text-white/45">{t.empty}</p>
           </CardContent>
         </Card>
@@ -203,13 +203,13 @@ export default function AuditPackPage() {
             <AuditList title={t.openTasks} items={data.tasks.map((task) => `${task.priority} • ${task.status} • ${task.title}`)} />
           </div>
 
-          <Card className="overflow-hidden rounded-xl border-white/[0.08] bg-white/[0.025] text-white">
+          <Card className="overflow-hidden rounded-xl border-white/[0.075] bg-[#0d1522] text-white">
             <CardHeader className="flex flex-col gap-3 border-b border-white/[0.07] md:flex-row md:items-center md:justify-between">
               <div>
                 <CardTitle className="text-base">{t.register}</CardTitle>
                 <CardDescription className="mt-1 text-white/38">{data.evidenceTotal} evidence items • {data.evidenceValid} valid</CardDescription>
               </div>
-              <Button onClick={exportPack} disabled={!data} className="bg-emerald-300 text-[#06100d] hover:bg-emerald-200 disabled:opacity-60">
+              <Button onClick={exportPack} disabled={!data} className="bg-blue-600 text-white hover:bg-blue-500 focus-visible:ring-blue-400/60 disabled:opacity-60">
                 <Download className="mr-2 h-4 w-4" /> {t.export}
               </Button>
             </CardHeader>
@@ -242,7 +242,7 @@ export default function AuditPackPage() {
 
 function MiniSignal({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
+    <div className="rounded-xl border border-white/[0.075] bg-[#0d1522] p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">{label}</p>
       <p className="mt-2 text-xl font-semibold text-white/88">{value}</p>
     </div>
@@ -251,14 +251,14 @@ function MiniSignal({ label, value }: { label: string; value: string }) {
 
 function MetricCard({ label, value, icon, progress, tone }: { label: string; value: string | number; icon: ReactNode; progress?: number; tone: MetricTone }) {
   const toneClass: Record<MetricTone, string> = {
-    neutral: 'text-white/55',
+    neutral: 'text-blue-300',
     emerald: 'text-emerald-300',
     red: 'text-red-300',
     amber: 'text-amber-300',
   };
 
   return (
-    <Card className="rounded-xl border-white/[0.08] bg-white/[0.025] text-white">
+    <Card className="rounded-xl border-white/[0.075] bg-[#0d1522] text-white">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-[11px] font-medium uppercase tracking-[0.1em] text-white/35">{label}</CardTitle>
         <span className={toneClass[tone]}>{icon}</span>
@@ -273,14 +273,14 @@ function MetricCard({ label, value, icon, progress, tone }: { label: string; val
 
 function AuditList({ title, items }: { title: string; items: string[] }) {
   return (
-    <Card className="rounded-xl border-white/[0.08] bg-white/[0.025] text-white">
+    <Card className="rounded-xl border-white/[0.075] bg-[#0d1522] text-white">
       <CardHeader className="pb-3"><CardTitle className="text-base">{title}</CardTitle></CardHeader>
       <CardContent className="divide-y divide-white/[0.06] border-y border-white/[0.06] px-6">
         {items.length === 0 ? (
           <p className="py-5 text-sm text-white/40">None</p>
         ) : items.map((item, index) => (
           <div key={`${item}-${index}`} className="flex items-start gap-3 py-3 text-sm leading-6 text-white/58">
-            <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-white/[0.08] bg-white/[0.03] text-[10px] text-white/40">{index + 1}</span>
+            <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-blue-300/15 bg-blue-300/[0.05] text-[10px] text-blue-200/65">{index + 1}</span>
             <span>{item}</span>
           </div>
         ))}
