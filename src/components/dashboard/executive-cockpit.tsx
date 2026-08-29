@@ -55,12 +55,12 @@ export function ExecutiveCockpit({ summary, trendComparison, basePath }: Executi
   ];
 
   return (
-    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522] text-white">
       <div className="grid xl:grid-cols-[0.88fr_1.12fr]">
         <div className="border-b border-white/[0.055] p-5 md:p-6 xl:border-b-0 xl:border-r">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Executive cockpit</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-200/55">Executive cockpit</p>
               <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Compliance health</h2>
             </div>
             <span className={`rounded-md border border-white/[0.075] bg-white/[0.025] px-2.5 py-1 text-xs font-semibold ${health.tone}`}>{health.label}</span>
@@ -68,7 +68,7 @@ export function ExecutiveCockpit({ summary, trendComparison, basePath }: Executi
 
           <div className="mt-6 grid gap-6 md:grid-cols-[180px_minmax(0,1fr)] md:items-center">
             <div className="mx-auto flex h-40 w-40 items-center justify-center rounded-full" style={{ background: `conic-gradient(${health.ring} ${ringDegrees}deg, rgba(255,255,255,0.08) 0deg)` }} aria-label={`Compliance score ${summary.complianceScore}%`}>
-              <div className="flex h-28 w-28 flex-col items-center justify-center rounded-full border border-white/[0.06] bg-[#0a0f0d]">
+              <div className="flex h-28 w-28 flex-col items-center justify-center rounded-full border border-white/[0.06] bg-[#07101a]">
                 <p className="text-4xl font-semibold tracking-[-0.045em]">{summary.complianceScore}%</p>
                 <p className={`mt-1 text-xs font-semibold ${health.tone}`}>{health.label}</p>
               </div>
@@ -95,10 +95,10 @@ export function ExecutiveCockpit({ summary, trendComparison, basePath }: Executi
           <div className="border-b border-white/[0.055] p-5 lg:border-b-0 lg:border-r">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30">Leadership focus</p>
             <div className="mt-4 divide-y divide-white/[0.055] border-y border-white/[0.055]">
-              <Link href={`${basePath}/${exposure.href}`} className="block py-4 transition hover:bg-white/[0.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35">
+              <Link href={`${basePath}/${exposure.href}`} className="block py-4 transition hover:bg-white/[0.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/40">
                 <p className="text-xs text-white/34">Biggest exposure</p>
                 <p className="mt-1.5 text-lg font-semibold text-white/86">{exposure.detail}</p>
-                <p className="mt-2 text-xs font-semibold text-emerald-100/65">Open workstream →</p>
+                <p className="mt-2 text-xs font-semibold text-blue-200/70">Open workstream →</p>
               </Link>
               <div className="py-4">
                 <p className="text-xs text-white/34">Trend</p>
@@ -117,7 +117,7 @@ export function ExecutiveCockpit({ summary, trendComparison, basePath }: Executi
               {radar.map((item) => {
                 const level = getRadarLevel(item.value);
                 return (
-                  <Link key={item.label} href={item.href} className="block py-3.5 transition hover:bg-white/[0.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35">
+                  <Link key={item.label} href={item.href} className="block py-3.5 transition hover:bg-white/[0.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/40">
                     <div className="flex items-center justify-between gap-3 text-sm">
                       <span className="font-medium text-white/78">{item.label}</span>
                       <span className="text-xs text-white/38">{level.label}</span>
@@ -135,7 +135,7 @@ export function ExecutiveCockpit({ summary, trendComparison, basePath }: Executi
 
       <div className="grid border-t border-white/[0.055] sm:grid-cols-2 lg:grid-cols-4">
         {quickActions.map((action, index) => (
-          <Link key={action.label} href={action.href} className={`px-4 py-3.5 text-center text-sm font-semibold text-white/62 transition hover:bg-white/[0.035] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 ${index > 0 ? 'border-t border-white/[0.055] sm:border-l sm:border-t-0' : ''} ${index === 2 ? 'sm:border-t sm:border-white/[0.055] lg:border-t-0' : ''}`}>
+          <Link key={action.label} href={action.href} className={`px-4 py-3.5 text-center text-sm font-semibold text-white/62 transition hover:bg-white/[0.035] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/40 ${index > 0 ? 'border-t border-white/[0.055] sm:border-l sm:border-t-0' : ''} ${index === 2 ? 'sm:border-t sm:border-white/[0.055] lg:border-t-0' : ''}`}>
             {action.label}
           </Link>
         ))}
