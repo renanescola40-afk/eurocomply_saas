@@ -1,15 +1,14 @@
 .shell {
   min-height: 100vh;
-  background: #0b100f;
+  background: #07101a;
   color: #fff;
 }
 
 .shell :global(.dark) {
   min-height: 100vh !important;
-  background: #0b100f !important;
+  background: #07101a !important;
 }
 
-/* Retire the previous onboarding-only glow/grid stack. */
 .shell :global(.dark > .pointer-events-none.fixed.inset-0) {
   display: none !important;
 }
@@ -17,7 +16,7 @@
 .shell :global(header) {
   min-height: 72px;
   border-color: rgba(255, 255, 255, 0.07) !important;
-  background: rgba(13, 20, 18, 0.96) !important;
+  background: rgba(8, 17, 29, 0.96) !important;
   backdrop-filter: blur(18px);
 }
 
@@ -28,7 +27,6 @@
   padding-bottom: 0 !important;
 }
 
-/* The onboarding shell now follows the same two-zone app-frame logic as the dashboard. */
 .shell :global(header + div) {
   max-width: none !important;
   padding: 0 !important;
@@ -44,7 +42,6 @@
   padding: 28px 30px 44px;
 }
 
-/* Page heading: plain product hierarchy instead of a decorative hero card. */
 .shell :global(section[aria-labelledby='onboarding-title'] > div:first-child) {
   overflow: visible !important;
   border: 0 !important;
@@ -70,15 +67,14 @@
   max-width: 720px !important;
   margin-top: 12px !important;
   line-height: 1.65 !important;
-  color: rgba(255, 255, 255, 0.52) !important;
+  color: rgba(255, 255, 255, 0.5) !important;
 }
 
-/* Active-stage workspace: compact TailAdmin-like operational surface. */
 .shell :global(section[aria-labelledby='onboarding-title'] > div:nth-child(2)) {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.075) !important;
-  border-radius: 14px !important;
-  background: #101715 !important;
+  border-radius: 16px !important;
+  background: #0d1522 !important;
   box-shadow: none !important;
 }
 
@@ -90,25 +86,24 @@
   padding: 22px !important;
 }
 
-/* The old feature-tile strip duplicated claims already visible in the product. */
 .shell :global(section[aria-labelledby='onboarding-title'] > div:last-child:not(:nth-child(2))) {
   display: none !important;
 }
 
-/* Reduce oversized generic card language inside the setup stage. */
 .shell :global(section[aria-labelledby='onboarding-title'] .rounded-3xl),
 .shell :global(section[aria-labelledby='onboarding-title'] .rounded-2xl) {
   border-radius: 12px !important;
 }
 
 .shell :global(section[aria-labelledby='onboarding-title'] [class*='bg-cyan-300']),
-.shell :global(section[aria-labelledby='onboarding-title'] [class*='text-cyan-200']) {
-  color: rgb(110 231 183) !important;
+.shell :global(section[aria-labelledby='onboarding-title'] [class*='text-cyan-200']),
+.shell :global(section[aria-labelledby='onboarding-title'] [class*='text-emerald-300']) {
+  color: rgb(147 197 253) !important;
 }
 
 .shell :global(section[aria-labelledby='onboarding-title'] [class*='focus-within:border-cyan']),
 .shell :global(section[aria-labelledby='onboarding-title'] [class*='focus-within:ring-cyan']) {
-  --tw-ring-color: rgba(110, 231, 183, 0.28) !important;
+  --tw-ring-color: rgba(96, 165, 250, 0.34) !important;
 }
 
 .shell :global(section[aria-labelledby='onboarding-title'] button),
@@ -117,18 +112,17 @@
   transition-duration: 180ms !important;
 }
 
-/* Remove gradient CTA styling so actions match the dashboard control language. */
 .shell :global(section[aria-labelledby='onboarding-title'] button[class*='linear-gradient']) {
-  background: rgb(110 231 183) !important;
-  color: #06100d !important;
+  background: rgb(37 99 235) !important;
+  color: #fff !important;
 }
 
 .enterpriseAssist {
   right: 20px !important;
   bottom: 20px !important;
   border-radius: 12px !important;
-  border-color: rgba(110, 231, 183, 0.16) !important;
-  background: rgba(7, 16, 14, 0.96) !important;
+  border-color: rgba(96, 165, 250, 0.18) !important;
+  background: rgba(8, 17, 29, 0.96) !important;
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32) !important;
   transform: none !important;
 }
@@ -145,14 +139,14 @@
     align-self: start !important;
     height: calc(100vh - 72px);
     border-right: 1px solid rgba(255, 255, 255, 0.07);
-    background: #07100e;
+    background: #08111d;
   }
 
   .shell :global(header + div > div > aside:first-child > div) {
     min-height: 100%;
     border: 0 !important;
     border-radius: 0 !important;
-    background: #07100e !important;
+    background: #08111d !important;
     box-shadow: none !important;
   }
 
@@ -161,7 +155,6 @@
     padding: 12px !important;
   }
 
-  /* Retire the duplicate right-side score/status rail. Stage context stays in the work area. */
   .shell :global(header + div > div > aside:last-child) {
     display: none !important;
   }
