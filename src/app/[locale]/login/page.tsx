@@ -47,7 +47,6 @@ function signUpHref(locale: string, planId: string | null, nextPath: string) {
 
 function recoveryLabel(locale: Locale, localizedLabel: string) {
   if (localizedLabel.trim()) return localizedLabel;
-  // Stable EN/PT fallbacks also preserve the account-recovery evidence anchors.
   return locale === 'pt' ? 'Esqueceu a senha?' : 'Forgot your password?';
 }
 
@@ -102,33 +101,41 @@ function LoginContent() {
     router.replace(afterSignInUrl);
   }
 
+  const inputClass = 'mt-2 w-full rounded-xl border border-white/[0.09] bg-black/20 px-4 py-3 text-white outline-none transition placeholder:text-white/28 focus:border-blue-400/45 focus-visible:ring-2 focus-visible:ring-blue-400/45';
+
   return (
-    <main className="min-h-screen overflow-hidden bg-[#050505] text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,.16),transparent_34rem),radial-gradient(circle_at_top_right,rgba(34,197,94,.1),transparent_30rem)]" />
+    <main className="min-h-screen overflow-hidden bg-[#07101a] text-white">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(37,99,235,.16),transparent_34rem),radial-gradient(circle_at_82%_76%,rgba(59,130,246,.08),transparent_30rem)]" />
       <div className="relative mx-auto flex min-h-screen max-w-6xl items-center justify-center px-4 py-10 sm:px-6 lg:px-8">
-        <section className="grid w-full gap-8 rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 shadow-2xl shadow-black/40 backdrop-blur md:grid-cols-[1fr_0.9fr] md:p-8" aria-labelledby="login-title">
-          <div className="flex flex-col justify-between rounded-[1.5rem] border border-white/10 bg-black/35 p-6">
+        <section className="grid w-full overflow-hidden rounded-[1.75rem] border border-white/[0.09] bg-[#0a1320]/92 shadow-2xl shadow-black/35 md:grid-cols-[1.04fr_0.96fr]" aria-labelledby="login-title">
+          <div className="flex min-h-[36rem] flex-col justify-between border-b border-white/[0.07] bg-[#0d1522] p-7 md:border-b-0 md:border-r md:p-9">
             <div>
-              <Link href={`/${locale}`} className="rounded-md text-sm font-semibold uppercase tracking-[0.28em] text-cyan-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">RISCK COMPLY</Link>
-              <div className="mt-10 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">{text.badge}</div>
-              <h1 id="login-title" className="mt-5 text-4xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">{text.title}</h1>
-              <p className="mt-4 max-w-md text-base leading-7 text-white/65">{text.subtitle}</p>
+              <Link href={`/${locale}`} className="inline-flex rounded-md text-sm font-semibold uppercase tracking-[0.24em] text-white/84 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">RISCK COMPLY</Link>
+              <div className="mt-14 inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-200">{text.badge}</div>
+              <h1 id="login-title" className="mt-5 max-w-lg text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl">{text.title}</h1>
+              <p className="mt-4 max-w-md text-base leading-7 text-white/58">{text.subtitle}</p>
             </div>
-            <div className="mt-10 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.07] p-4 text-sm leading-6 text-cyan-50/75">{text.accessNote}</div>
+            <div className="mt-10 border-t border-white/[0.07] pt-5 text-sm leading-6 text-white/42">{text.accessNote}</div>
           </div>
 
-          <div className="rounded-[1.5rem] border border-white/10 bg-[#080b12] p-6">
-            {error ? <div className="mb-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100" role="alert">{error}</div> : null}
-            <button type="button" onClick={handleProvider} disabled={busy || loading} className="w-full rounded-full border border-white/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.google}</button>
-            <EnterpriseSsoLogin locale={locale} next={afterSignInUrl} />
-            <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-white/35"><span className="h-px flex-1 bg-white/10" /> {text.divider} <span className="h-px flex-1 bg-white/10" /></div>
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <label className="block text-sm font-medium text-white/70">{text.email}<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-200/50 focus-visible:ring-2 focus-visible:ring-cyan-200/40" /></label>
-              <label className="block text-sm font-medium text-white/70">{text.password}<input value={secret} onChange={(event) => setSecret(event.target.value)} type="password" autoComplete="current-password" required className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-200/50 focus-visible:ring-2 focus-visible:ring-cyan-200/40" /></label>
-              <div className="flex justify-end"><Link href={`/${locale}/recuperar-senha`} className="rounded-md text-sm font-semibold text-cyan-200 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">{forgotLabel}</Link></div>
-              <button type="submit" disabled={busy || loading} className="w-full rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.submit}</button>
-            </form>
-            <p className="mt-6 text-center text-sm text-white/55">{text.createPrompt}{' '}<Link href={createAccountUrl} className="rounded-md font-semibold text-cyan-200 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">{text.create}</Link></p>
+          <div className="flex items-center bg-[#09111d] p-6 md:p-9">
+            <div className="w-full">
+              <div className="mb-6">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-300/60">Secure workspace access</p>
+                <p className="mt-2 text-sm leading-6 text-white/42">Use your organization identity or approved account credentials.</p>
+              </div>
+              {error ? <div className="mb-4 rounded-xl border border-red-400/20 bg-red-500/[0.08] px-4 py-3 text-sm text-red-100" role="alert">{error}</div> : null}
+              <button type="button" onClick={handleProvider} disabled={busy || loading} className="w-full rounded-xl border border-white/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.google}</button>
+              <EnterpriseSsoLogin locale={locale} next={afterSignInUrl} />
+              <div className="my-6 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/28"><span className="h-px flex-1 bg-white/[0.08]" /> {text.divider} <span className="h-px flex-1 bg-white/[0.08]" /></div>
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                <label className="block text-sm font-medium text-white/62">{text.email}<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required className={inputClass} /></label>
+                <label className="block text-sm font-medium text-white/62">{text.password}<input value={secret} onChange={(event) => setSecret(event.target.value)} type="password" autoComplete="current-password" required className={inputClass} /></label>
+                <div className="flex justify-end"><Link href={`/${locale}/recuperar-senha`} className="rounded-md text-sm font-semibold text-blue-300 hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{forgotLabel}</Link></div>
+                <button type="submit" disabled={busy || loading} className="w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.submit}</button>
+              </form>
+              <p className="mt-6 text-center text-sm text-white/46">{text.createPrompt}{' '}<Link href={createAccountUrl} className="rounded-md font-semibold text-blue-300 hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{text.create}</Link></p>
+            </div>
           </div>
         </section>
       </div>
@@ -138,7 +145,7 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen bg-[#050505]" aria-busy="true" />}>
+    <Suspense fallback={<main className="min-h-screen bg-[#07101a]" aria-busy="true" />}>
       <LoginContent />
     </Suspense>
   );
