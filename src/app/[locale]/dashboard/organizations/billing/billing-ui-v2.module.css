@@ -1,0 +1,42 @@
+.shell {
+  min-height: 100%;
+  color: #fff;
+}
+
+.shell :global(main) {
+  background: transparent !important;
+}
+
+.shell :global([class*="bg-[#101715]"]) {
+  background: #0d1522 !important;
+}
+
+.shell :global(button[class*='bg-emerald-300']),
+.shell :global(a[class*='bg-emerald-300']) {
+  background: rgb(37 99 235) !important;
+  color: #fff !important;
+}
+
+.shell :global(button[class*='bg-emerald-300']:hover),
+.shell :global(a[class*='bg-emerald-300']:hover) {
+  background: rgb(59 130 246) !important;
+}
+
+.shell :global(button[class*='ring-emerald']),
+.shell :global(a[class*='ring-emerald']) {
+  --tw-ring-color: rgba(96, 165, 250, 0.62) !important;
+}
+
+.shell :global(article[class*='border-emerald-300']) {
+  border-color: rgba(96, 165, 250, 0.28) !important;
+}
+
+.shell :global(article[class*='border-emerald-300'] > div span[class*='border-emerald-300']) {
+  border-color: rgba(96, 165, 250, 0.24) !important;
+  background: rgba(37, 99, 235, 0.1) !important;
+  color: rgb(191 219 254) !important;
+}
+
+.shell :global(section[aria-label] > div:first-child [class*='text-emerald-300']) {
+  color: rgb(147 197 253) !important;
+}
