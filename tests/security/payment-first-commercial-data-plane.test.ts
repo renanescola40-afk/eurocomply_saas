@@ -63,8 +63,12 @@ describe('payment-first commercial closure', () => {
 
   it('mirrors the canonical durable commercial sources in a private fail-closed RLS helper', () => {
     expect(migration).toContain('app_private.has_commercial_authority');
+    expect(migration).toContain('with selected_contract_source as (');
     expect(migration).toContain("source.source_kind = 'signed_contract'");
-    expect(migration).toContain("candidate.status = 'applied'");
+    expect(migration).toContain('order by source.priority desc');
+    expect(migration).toContain('join selected_contract_source source');
+    expect(migration).toContain('on source.id = snapshot.source_id');
+    expect(migration).toContain("snapshot.status = 'applied'");
     expect(migration).toContain("event.livemode = true");
     expect(migration).toContain("event.status = 'processed'");
     expect(migration).toContain("'customer.subscription.created', 'customer.subscription.updated'");
