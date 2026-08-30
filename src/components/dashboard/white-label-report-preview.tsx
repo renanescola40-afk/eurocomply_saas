@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { DashboardSummary, DashboardTrendComparison } from '@/server/queries/dashboard';
 
@@ -25,10 +26,10 @@ export function WhiteLabelReportPreview({ summary, trendComparison, basePath }: 
   const tone = getReportTone(summary.complianceScore);
 
   return (
-    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522] text-white">
       <div className="grid xl:grid-cols-[300px_minmax(0,1fr)]">
         <div className="border-b border-white/[0.055] px-5 py-5 xl:border-b-0 xl:border-r">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Report preview</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-200/65">Report preview</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Executive reporting layout</h2>
           <p className="mt-3 text-sm leading-6 text-white/42">Preview the current workspace metrics in a clean report format before opening the report or printable package.</p>
 
@@ -38,8 +39,8 @@ export function WhiteLabelReportPreview({ summary, trendComparison, basePath }: 
           </dl>
 
           <div className="mt-5 flex flex-wrap gap-2.5">
-            <Link href={`${basePath}/reports`} className="inline-flex h-10 items-center justify-center rounded-lg bg-emerald-300 px-4 text-sm font-semibold text-[#07110d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/60">Open report</Link>
-            <Link href={`${basePath}/reports/print`} className="inline-flex h-10 items-center justify-center rounded-lg border border-white/[0.09] bg-white/[0.025] px-4 text-sm font-semibold text-white/70 transition hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/40">Printable package</Link>
+            <Link href={`${basePath}/reports`} className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60">Open report</Link>
+            <Link href={`${basePath}/reports/print`} className="inline-flex h-10 items-center justify-center rounded-lg border border-white/[0.09] bg-white/[0.025] px-4 text-sm font-semibold text-white/70 transition hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40">Printable package</Link>
           </div>
         </div>
 
@@ -47,9 +48,9 @@ export function WhiteLabelReportPreview({ summary, trendComparison, basePath }: 
           <div className="mx-auto max-w-4xl rounded-lg border border-black/10 bg-white p-5 md:p-6">
             <div className="flex flex-col gap-4 border-b border-black/10 pb-5 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[#111714] text-xs font-bold text-white">RC</div>
-                  <div><p className="text-sm font-bold">RISCK COMPLY</p><p className="text-xs text-black/45">Governance report preview</p></div>
+                <div>
+                  <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={148} height={36} className="h-7 w-auto brightness-0" />
+                  <p className="mt-1 text-xs text-black/45">Governance report preview</p>
                 </div>
                 <h3 className="mt-5 text-2xl font-semibold tracking-[-0.03em]">Monthly Governance Summary</h3>
                 <p className="mt-1.5 text-xs text-black/45">{reportMonth} · Generated from current workspace data</p>
