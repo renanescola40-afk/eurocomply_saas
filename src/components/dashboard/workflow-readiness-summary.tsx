@@ -16,10 +16,10 @@ export function WorkflowReadinessSummary({ workflowReadiness }: WorkflowReadines
   const reasons = workflowReadiness?.reasons ?? [];
 
   return (
-    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522] text-white">
       <div className="flex flex-col gap-3 border-b border-white/[0.055] px-5 py-5 md:flex-row md:items-start md:justify-between md:px-6">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Workflow readiness</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-200/65">Workflow readiness</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Read-only reporting snapshot</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/42">{copy.description}</p>
         </div>
