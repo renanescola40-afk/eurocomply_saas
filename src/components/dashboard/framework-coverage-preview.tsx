@@ -62,10 +62,10 @@ export function FrameworkCoveragePreview({ summary, basePath }: FrameworkCoverag
   ];
 
   return (
-    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522] text-white">
       <div className="flex flex-col gap-2 border-b border-white/[0.055] px-5 py-5 md:flex-row md:items-end md:justify-between md:px-6">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Framework references</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-200/65">Framework references</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Reuse current workspace evidence carefully</h2>
         </div>
         <p className="max-w-xl text-sm leading-6 text-white/38">Reference links show where existing records may be relevant. They are not framework coverage scores, certifications or legal conclusions.</p>
@@ -73,7 +73,7 @@ export function FrameworkCoveragePreview({ summary, basePath }: FrameworkCoverag
 
       <div className="grid md:grid-cols-2 xl:grid-cols-3">
         {frameworks.map((framework, index) => (
-          <Link key={framework.name} href={framework.href} className={`group min-h-48 px-5 py-5 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 ${index > 0 ? 'border-t border-white/[0.055] md:border-l md:border-t-0' : ''} ${index >= 3 ? 'xl:border-t xl:border-white/[0.055]' : index === 2 ? 'md:border-t md:border-white/[0.055] xl:border-t-0' : ''}`}>
+          <Link key={framework.name} href={framework.href} className={`group min-h-48 px-5 py-5 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/35 ${index > 0 ? 'border-t border-white/[0.055] md:border-l md:border-t-0' : ''} ${index >= 3 ? 'xl:border-t xl:border-white/[0.055]' : index === 2 ? 'md:border-t md:border-white/[0.055] xl:border-t-0' : ''}`}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-lg font-semibold text-white/84">{framework.name}</h3>
@@ -86,7 +86,7 @@ export function FrameworkCoveragePreview({ summary, basePath }: FrameworkCoverag
               <p className="text-[9px] font-semibold uppercase tracking-[0.13em] text-white/26">Current workspace signal</p>
               <p className="mt-1.5 text-xs text-white/48">{framework.workspaceSignal}</p>
             </div>
-            <p className="mt-4 text-[10px] font-semibold text-emerald-100/0 transition group-hover:text-emerald-100/65">Open related records →</p>
+            <p className="mt-4 text-[10px] font-semibold text-blue-200/0 transition group-hover:text-blue-100/70">Open related records →</p>
           </Link>
         ))}
       </div>
