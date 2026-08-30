@@ -28,26 +28,30 @@ stable
 security definer
 set search_path = ''
 as $$
-  with contract_candidate as (
-    select snapshot.plan_code
+  with selected_contract_source as (
+    -- Match the canonical server precedence before looking for a snapshot. If
+    -- the highest-priority active signed-contract source has no valid applied
+    -- snapshot, a lower-priority source must not silently become authority.
+    select source.id
     from public.enterprise_entitlement_sources source
-    join lateral (
-      select candidate.plan_code
-      from public.enterprise_entitlement_snapshots candidate
-      where candidate.organization_id = source.organization_id
-        and candidate.source_id = source.id
-        and candidate.status = 'applied'
-        and candidate.valid_from <= now()
-        and (candidate.valid_until is null or candidate.valid_until > now())
-      order by candidate.created_at desc
-      limit 1
-    ) snapshot on true
     where source.organization_id = target_organization_id
       and source.source_kind = 'signed_contract'
       and source.active = true
       and source.effective_from <= now()
       and (source.effective_until is null or source.effective_until > now())
     order by source.priority desc
+    limit 1
+  ),
+  contract_candidate as (
+    select snapshot.plan_code
+    from public.enterprise_entitlement_snapshots snapshot
+    join selected_contract_source source
+      on source.id = snapshot.source_id
+    where snapshot.organization_id = target_organization_id
+      and snapshot.status = 'applied'
+      and snapshot.valid_from <= now()
+      and (snapshot.valid_until is null or snapshot.valid_until > now())
+    order by snapshot.created_at desc
     limit 1
   ),
   primary_subscription as (
@@ -88,9 +92,9 @@ as $$
   )
   select case
     when target_organization_id is null then false
-    -- Signed-contract authority has precedence in the server resolver. If a
-    -- current applied contract snapshot exists but carries an invalid plan, do
-    -- not fall through to Stripe and accidentally broaden server behavior.
+    -- Signed-contract authority has precedence in the server resolver. Only a
+    -- valid applied snapshot for the selected highest-priority source becomes
+    -- contract authority; otherwise exact processed Stripe LIVE may be used.
     when exists (select 1 from contract_candidate) then
       coalesce((
         select lower(trim(plan_code)) in (
@@ -131,7 +135,7 @@ revoke all on function app_private.has_commercial_authority(uuid) from public, a
 grant execute on function app_private.has_commercial_authority(uuid) to authenticated, service_role;
 
 comment on function app_private.has_commercial_authority(uuid) is
-  'Fail-closed paid-product RLS authority: valid signed-contract entitlement or exact processed Stripe LIVE active subscription authority only.';
+  'Fail-closed paid-product RLS authority: highest-priority valid signed-contract entitlement or exact processed Stripe LIVE active subscription authority only.';
 
 -- Existing tenant/role policies remain responsible for horizontal authorization.
 -- This RESTRICTIVE policy is an additional AND-condition: even an owner/admin of
@@ -218,6 +222,7 @@ do $verify$
 declare
   missing_policy_count integer;
   forbidden_grant_count integer;
+  authority_definition text;
 begin
   with targets(table_name) as (
     values
@@ -250,6 +255,14 @@ begin
 
   if forbidden_grant_count <> 0 then
     raise exception 'legacy/global paid-product client grants survived: %', forbidden_grant_count;
+  end if;
+
+  select pg_get_functiondef('app_private.has_commercial_authority(uuid)'::regprocedure)
+    into authority_definition;
+
+  if coalesce(authority_definition, '') not like '%selected_contract_source%'
+     or coalesce(authority_definition, '') not like '%order by source.priority desc%' then
+    raise exception 'payment-first signed-contract precedence is not source-first and fail-closed';
   end if;
 end
 $verify$;
