@@ -205,10 +205,10 @@ begin
   if exists (
     select 1
     from public.enterprise_contracts
-    where custom_features ->> 'post_rollout_bootstrap' = 'true'
+    where coalesce((custom_features ->> 'post_rollout_bootstrap')::boolean, false)
       and contract_mode <> 'compatibility'
   ) then
-    raise exception 'post-rollout compatibility envelope is not in compatibility contract mode';
+    raise exception 'runtime compatibility envelopes must use compatibility contract mode';
   end if;
 end
 $verify$;

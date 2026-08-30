@@ -66,10 +66,10 @@ export function BoardReportCenter({ summary, trendComparison, basePath }: BoardR
   const openSections = sections.filter((section) => section.status !== 'clear').length;
 
   return (
-    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522] text-white">
       <div className="grid xl:grid-cols-[300px_minmax(0,1fr)]">
         <div className="border-b border-white/[0.055] px-5 py-5 xl:border-b-0 xl:border-r">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Leadership report center</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-200/65">Leadership report center</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Report package status</h2>
           <p className="mt-3 text-sm leading-6 text-white/42">Review the current report inputs without assigning an invented readiness percentage.</p>
 
@@ -80,19 +80,19 @@ export function BoardReportCenter({ summary, trendComparison, basePath }: BoardR
           </dl>
 
           <div className="mt-5 flex flex-wrap gap-2.5">
-            <Link href={`${basePath}/reports`} className="inline-flex h-10 items-center justify-center rounded-lg bg-emerald-300 px-4 text-sm font-semibold text-[#07110d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/60">Open reports</Link>
-            <Link href={`${basePath}/reports/print`} className="inline-flex h-10 items-center justify-center rounded-lg border border-white/[0.09] bg-white/[0.025] px-4 text-sm font-semibold text-white/70 transition hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/40">Review pack</Link>
+            <Link href={`${basePath}/reports`} className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60">Open reports</Link>
+            <Link href={`${basePath}/reports/print`} className="inline-flex h-10 items-center justify-center rounded-lg border border-white/[0.09] bg-white/[0.025] px-4 text-sm font-semibold text-white/70 transition hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40">Review pack</Link>
           </div>
         </div>
 
         <div className="divide-y divide-white/[0.055]">
           {sections.map((section) => (
-            <Link key={section.title} href={section.href} className="group block px-5 py-4 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 md:px-6">
+            <Link key={section.title} href={section.href} className="group block px-5 py-4 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/35 md:px-6">
               <div className="grid gap-3 md:grid-cols-[190px_130px_minmax(0,1fr)_auto] md:items-start">
                 <h3 className="text-sm font-semibold text-white/82">{section.title}</h3>
                 <span className={`w-fit rounded-md border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] ${statusClasses(section.status)}`}>{statusLabel(section.status)}</span>
                 <p className="text-sm leading-6 text-white/42">{section.description}</p>
-                <span className="text-xs font-semibold text-emerald-100/55 transition group-hover:text-emerald-100">Review →</span>
+                <span className="text-xs font-semibold text-blue-200/60 transition group-hover:text-blue-100">Review →</span>
               </div>
             </Link>
           ))}
