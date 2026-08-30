@@ -57,6 +57,7 @@ begin
     insert into public.enterprise_contracts (
       organization_id,
       contract_code,
+      contract_mode,
       plan,
       starts_at,
       status,
@@ -70,6 +71,7 @@ begin
     ) values (
       new.organization_id,
       'runtime-compatibility-' || new.organization_id::text,
+      'compatibility',
       v_plan,
       now(),
       'active',
@@ -198,6 +200,15 @@ begin
       and not tgisinternal
   ) then
     raise exception 'new-organization compatibility envelope trigger is missing';
+  end if;
+
+  if exists (
+    select 1
+    from public.enterprise_contracts
+    where custom_features ->> 'post_rollout_bootstrap' = 'true'
+      and contract_mode <> 'compatibility'
+  ) then
+    raise exception 'post-rollout compatibility envelope is not in compatibility contract mode';
   end if;
 end
 $verify$;
