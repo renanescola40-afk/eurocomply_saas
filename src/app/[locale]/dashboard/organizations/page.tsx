@@ -131,7 +131,7 @@ export default async function OrganizationDashboardPage({ params, searchParams }
   ].join(' · ');
 
   return (
-    <main className="min-h-0 bg-transparent">
+    <div className="min-h-0 bg-transparent">
       <div className="space-y-6 lg:space-y-8">
         {shouldShowPlanContinuation && requestedPlan ? (
           <section className="rounded-xl border border-blue-400/20 bg-blue-500/[0.07] p-5 text-white" aria-label="Selected plan continuation">
@@ -182,6 +182,6 @@ export default async function OrganizationDashboardPage({ params, searchParams }
           />
         </Suspense>
       </div>
-    </main>
+    </div>
   );
 }
