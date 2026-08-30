@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 const REMOTE_HEAD = '20260822120617';
 const HARDENED_BILLING_TARGET = '20260822123600_v19_finalize_enterprise_contract_mode_compatibility.sql';
+const HARDENED_COMPATIBILITY_ENVELOPE_TARGET =
+  '20260822123608_v19_reconcile_new_organization_compatibility_envelope.sql';
 const PAYMENT_FIRST_TARGETS = [
   '20260823123000_payment_first_commercial_data_plane.sql',
   '20260823131500_payment_first_gap_analysis_and_storage.sql',
@@ -32,7 +34,7 @@ const pairs = [
   ['20260814093000_reconcile_enterprise_contract_control_rpcs.sql', '20260822123602_v19_reconcile_enterprise_contract_control_rpcs.sql'],
   ['20260814101500_reconcile_enterprise_core_active_runtime.sql', '20260822123604_v19_reconcile_enterprise_core_active_runtime.sql'],
   ['20260815083000_reconcile_live_rls_validation_inventory_privileges.sql', '20260822123606_v19_reconcile_live_rls_validation_inventory_privileges.sql'],
-  ['20260815140500_reconcile_new_organization_compatibility_envelope.sql', '20260822123608_v19_reconcile_new_organization_compatibility_envelope.sql'],
+  ['20260815140500_reconcile_new_organization_compatibility_envelope.sql', HARDENED_COMPATIBILITY_ENVELOPE_TARGET],
   ['20260815141000_reconcile_enterprise_invitation_seat_authority.sql', '20260822123610_v19_reconcile_enterprise_invitation_seat_authority.sql'],
   ['20260815141500_harden_enterprise_invitation_actor_boundary.sql', '20260822123612_v19_harden_enterprise_invitation_actor_boundary.sql'],
   ['20260815142000_preserve_completed_onboarding_state.sql', '20260822123614_v19_preserve_completed_onboarding_state.sql'],
@@ -90,7 +92,12 @@ describe('Supabase V23 production-forward closure', () => {
 
   it('preserves reviewed SQL bytes for every untouched V18 effect', () => {
     for (const [source, target] of pairs) {
-      if (target === HARDENED_BILLING_TARGET) continue;
+      if (
+        target === HARDENED_BILLING_TARGET ||
+        target === HARDENED_COMPATIBILITY_ENVELOPE_TARGET
+      ) {
+        continue;
+      }
       const sourceBytes = readFileSync(`supabase/reconciliation/v18-unapplied/${source}`);
       const targetBytes = readFileSync(`supabase/migrations/${target}`);
       expect(sha256(targetBytes), target).toBe(sha256(sourceBytes));
@@ -111,6 +118,27 @@ describe('Supabase V23 production-forward closure', () => {
     expect(target).toContain('duplicate_enterprise_stripe_subscription_binding');
     expect(target).toContain('enterprise_contracts_stripe_subscription_uidx');
     expect(target).toContain('from public,anon,authenticated,service_role');
+  });
+
+  it('records the deliberate pre-rehearsal compatibility-envelope hardening inside the existing V19 identity', () => {
+    const sourceBytes = readFileSync(
+      'supabase/reconciliation/v18-unapplied/20260815140500_reconcile_new_organization_compatibility_envelope.sql',
+    );
+    const targetBytes = readFileSync(`supabase/migrations/${HARDENED_COMPATIBILITY_ENVELOPE_TARGET}`);
+    const source = sourceBytes.toString('utf8');
+    const target = targetBytes.toString('utf8');
+
+    expect(sha256(targetBytes)).not.toBe(sha256(sourceBytes));
+    expect(source).not.toContain('      contract_mode,');
+    expect(target).toContain('      contract_mode,');
+    expect(target).toMatch(
+      /'runtime-compatibility-' \|\| new\.organization_id::text,\s*'compatibility',/,
+    );
+    expect(target).toContain("custom_features ->> 'post_rollout_bootstrap'");
+    expect(target).toContain("contract_mode <> 'compatibility'");
+    expect(target).toContain(
+      "raise exception 'runtime compatibility envelopes must use compatibility contract mode'",
+    );
   });
 
   it('keeps the unapplied V18 identities outside normal migration replay', () => {
