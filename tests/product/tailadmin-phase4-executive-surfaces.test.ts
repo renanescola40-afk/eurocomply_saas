@@ -183,16 +183,24 @@ describe('RISCK UI V2 executive surfaces', () => {
     expect(audit).not.toContain('Audit pack ready for export');
   });
 
-  it('uses the same compact graphite surface for readiness and reporting handoff modules', async () => {
-    const sources = await Promise.all([
+  it('uses graphite and cobalt for readiness/reporting chrome while preserving semantic states', async () => {
+    const [workflowReadiness, followUpPlan, executivePackage, exportPreparation, auditPackage, evidenceHandoff] = await Promise.all([
       readFile(WORKFLOW_READINESS, 'utf8'), readFile(FOLLOW_UP_PLAN, 'utf8'), readFile(EXECUTIVE_PACKAGE, 'utf8'), readFile(EXPORT_PREPARATION, 'utf8'), readFile(AUDIT_PACKAGE, 'utf8'), readFile(EVIDENCE_HANDOFF, 'utf8'),
     ]);
+    const sources = [workflowReadiness, followUpPlan, executivePackage, exportPreparation, auditPackage, evidenceHandoff];
     for (const source of sources) {
-      expect(source).toContain('rounded-xl border border-white/[0.075] bg-[#101715]');
+      expect(source).toContain('rounded-xl border border-white/[0.075] bg-[#0d1522]');
+      expect(source).toContain('text-blue-200/65');
+      expect(source).toContain('border-emerald-300/15 bg-emerald-300/[0.055]');
+      expect(source).not.toContain('bg-[#101715]');
       expect(source).not.toContain('rounded-3xl');
       expect(source).not.toContain('shadow-xl');
       expect(source).not.toContain('bg-white p-5 shadow-sm');
     }
-    expect(FOLLOW_UP_PLAN).toBeDefined();
+    for (const source of [followUpPlan, executivePackage, exportPreparation, auditPackage, evidenceHandoff]) {
+      expect(source).toContain('bg-blue-600');
+      expect(source).toContain('focus-visible:ring-blue-400/60');
+      expect(source).not.toContain('focus-visible:ring-emerald');
+    }
   });
 });
