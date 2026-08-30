@@ -63,10 +63,10 @@ export function EnterpriseValueLadder({ summary, basePath }: EnterpriseValueLadd
   ];
 
   return (
-    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#101715] text-white">
+    <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522] text-white">
       <div className="flex flex-col gap-2 border-b border-white/[0.055] px-5 py-5 md:flex-row md:items-end md:justify-between md:px-6">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-100/55">Governance workstreams</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-200/65">Governance workstreams</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Operational areas in the current workspace</h2>
         </div>
         <p className="max-w-xl text-sm leading-6 text-white/38">Product administration stays focused on the work the organization can perform now, not internal pricing strategy or future revenue concepts.</p>
@@ -74,7 +74,7 @@ export function EnterpriseValueLadder({ summary, basePath }: EnterpriseValueLadd
 
       <div className="grid md:grid-cols-2 xl:grid-cols-4">
         {workstreams.map((workstream, index) => (
-          <Link key={workstream.name} href={workstream.href} className={`group min-h-52 px-5 py-5 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300/35 ${index > 0 ? 'border-t border-white/[0.055] md:border-l md:border-t-0' : ''} ${index === 2 ? 'md:border-t md:border-white/[0.055] xl:border-t-0' : ''}`}>
+          <Link key={workstream.name} href={workstream.href} className={`group min-h-52 px-5 py-5 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/35 ${index > 0 ? 'border-t border-white/[0.055] md:border-l md:border-t-0' : ''} ${index === 2 ? 'md:border-t md:border-white/[0.055] xl:border-t-0' : ''}`}>
             <div className="flex items-start justify-between gap-3">
               <h3 className="text-base font-semibold text-white/84">{workstream.name}</h3>
               <span className={`rounded-md border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] ${toneClasses(workstream.tone)}`}>{workstream.status}</span>
@@ -83,7 +83,7 @@ export function EnterpriseValueLadder({ summary, basePath }: EnterpriseValueLadd
             <div className="mt-5 space-y-2 border-t border-white/[0.055] pt-3">
               {workstream.signals.map((signal) => <p key={signal} className="text-xs text-white/38">• {signal}</p>)}
             </div>
-            <p className="mt-4 text-[10px] font-semibold text-emerald-100/0 transition group-hover:text-emerald-100/65">Open workstream →</p>
+            <p className="mt-4 text-[10px] font-semibold text-blue-200/0 transition group-hover:text-blue-100/70">Open workstream →</p>
           </Link>
         ))}
       </div>
