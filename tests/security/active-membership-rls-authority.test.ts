@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const migrationPath = 'supabase/migrations/20260825171500_harden_active_membership_rls_authority.sql';
 const migration = readFileSync(migrationPath, 'utf8');
-const manifest = JSON.parse(readFileSync('config/supabase-forward-reconciliation.json', 'utf8')) as {
+const manifest = JSON.parse(readFileSync('config/supabase-forward-reconciliation-v23.json', 'utf8')) as {
   changeSet: string;
   migrations: Array<{ filename: string }>;
   truthBoundary: Record<string, boolean>;

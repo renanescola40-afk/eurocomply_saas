@@ -6,7 +6,7 @@ const complianceAlerts = readFileSync('src/app/api/internal/compliance-alerts/ro
 const intelligenceRefresh = readFileSync('src/app/api/intelligence/refresh/route.ts', 'utf8');
 const emailSender = readFileSync('src/lib/email/server-sender.ts', 'utf8');
 const dailyMaintenance = readFileSync('src/app/api/internal/daily-maintenance/route.ts', 'utf8');
-const manifest = readFileSync('config/supabase-forward-reconciliation.json', 'utf8');
+const manifest = readFileSync('config/supabase-forward-reconciliation-v23.json', 'utf8');
 
 describe('pre-V23 Production runtime compatibility', () => {
   it('defers compliance alerts before any email path when the governed data plane is absent', () => {

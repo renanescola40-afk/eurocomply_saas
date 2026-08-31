@@ -18,7 +18,9 @@ const DEFAULT_REPORT_PATH = join(
 );
 
 const EXPECTED_SCHEMA = 'risck-comply.supabase-forward-reconciliation-config.v1';
-const EXPECTED_CHANGE_SET = '2026-08-25-enterprise-data-plane-active-membership-rls-closure-v23';
+const EXPECTED_CHANGE_SET = '2026-08-31-deterministic-commercial-source-precedence-v24';
+const DETERMINISTIC_COMMERCIAL_SOURCE_MIGRATION =
+  '20260831100000_deterministic_commercial_contract_source_precedence.sql';
 const EVIDENCE_VAULT_MIGRATION = '20260822123626_v19_reconcile_enterprise_evidence_vault.sql';
 const PAYMENT_FIRST_CORE_MIGRATION = '20260823123000_payment_first_commercial_data_plane.sql';
 const PAYMENT_FIRST_GAP_STORAGE_MIGRATION = '20260823131500_payment_first_gap_analysis_and_storage.sql';
@@ -29,41 +31,7 @@ const TRUSTED_ACCESS_HARDEN_MIGRATION = '20260824190200_harden_enterprise_truste
 const DOCUMENT_COMMERCIAL_QUOTA_MIGRATION = '20260825092500_atomic_document_commercial_quota.sql';
 const ACTIVE_MEMBERSHIP_RLS_MIGRATION = '20260825171500_harden_active_membership_rls_authority.sql';
 const COMMERCIAL_QUOTA_MIGRATION = '20260822120617_atomic_vendor_risk_quota_mutations.sql';
-const EXPECTED_SELECTED = [
-  '20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql',
-  '20260822123540_v19_reconcile_step_up_challenges_runtime.sql',
-  '20260822123542_v19_reconcile_subscription_schema_defaults.sql',
-  '20260822123544_v19_reconcile_controlled_document_storage.sql',
-  '20260822123546_v19_force_tasks_rls.sql',
-  '20260822123548_v19_reconcile_enterprise_break_glass_governance.sql',
-  '20260822123550_v19_reconcile_enterprise_licensing_control_plane.sql',
-  '20260822123552_v19_reconcile_enterprise_integrations_scim.sql',
-  '20260822123554_v19_harden_scim_identity_connection_delete_boundary.sql',
-  '20260822123556_v19_bridge_enterprise_contract_mode_compatibility.sql',
-  '20260822123558_v19_reconcile_enterprise_billing_lifecycle.sql',
-  '20260822123600_v19_finalize_enterprise_contract_mode_compatibility.sql',
-  '20260822123602_v19_reconcile_enterprise_contract_control_rpcs.sql',
-  '20260822123604_v19_reconcile_enterprise_core_active_runtime.sql',
-  '20260822123606_v19_reconcile_live_rls_validation_inventory_privileges.sql',
-  '20260822123608_v19_reconcile_new_organization_compatibility_envelope.sql',
-  '20260822123610_v19_reconcile_enterprise_invitation_seat_authority.sql',
-  '20260822123612_v19_harden_enterprise_invitation_actor_boundary.sql',
-  '20260822123614_v19_preserve_completed_onboarding_state.sql',
-  '20260822123616_v19_reconcile_active_onboarding_runtime.sql',
-  '20260822123618_v19_harden_active_onboarding_enterprise_boundaries.sql',
-  '20260822123620_v19_guard_compliance_task_browser_mutations.sql',
-  '20260822123622_v19_reconcile_gap_remediation_persistence.sql',
-  '20260822123624_v19_harden_gap_personal_task_write_boundary.sql',
-  EVIDENCE_VAULT_MIGRATION,
-  PAYMENT_FIRST_CORE_MIGRATION,
-  PAYMENT_FIRST_GAP_STORAGE_MIGRATION,
-  TRUSTED_ACCESS_PREPARE_MIGRATION,
-  TRUSTED_ACCESS_RUNTIME_MIGRATION,
-  TRUSTED_ACCESS_FINALIZE_MIGRATION,
-  TRUSTED_ACCESS_HARDEN_MIGRATION,
-  DOCUMENT_COMMERCIAL_QUOTA_MIGRATION,
-  ACTIVE_MEMBERSHIP_RLS_MIGRATION,
-];
+const EXPECTED_SELECTED = [DETERMINISTIC_COMMERCIAL_SOURCE_MIGRATION];
 
 const TRUTH_BOUNDARY = {
   automaticClassification: false,
@@ -333,6 +301,26 @@ function validateActiveMembershipRlsMigration(source) {
   }
 }
 
+function validateDeterministicCommercialSourceMigration(source) {
+  requireMarkers(source, [
+    'create or replace function app_private.resolve_commercial_plan',
+    'order by source.priority desc, source.id asc',
+    "source.source_kind = 'signed_contract'",
+    "snapshot.status = 'applied'",
+    'event.livemode = true',
+    "event.status = 'processed'",
+    'revoke all on function app_private.resolve_commercial_plan(uuid) from public, anon, authenticated',
+    'grant execute on function app_private.resolve_commercial_plan(uuid) to service_role',
+    'commercial authority ordering is not deterministic',
+  ], 'Deterministic commercial source migration');
+  forbidMarkers(source, [
+    "in ('active','trialing')",
+    "source_kind = 'manual_override'",
+    'grant execute on function app_private.resolve_commercial_plan(uuid) to authenticated',
+    'grant execute on function app_private.resolve_commercial_plan(uuid) to anon',
+  ], 'Deterministic commercial source migration');
+}
+
 function main() {
   if (!existsSync(CONFIG_PATH)) fail(`Missing bounded reconciliation config: ${CONFIG_PATH}`);
   const config = readJson(CONFIG_PATH);
@@ -366,6 +354,9 @@ function main() {
     if (filename === COMMERCIAL_QUOTA_MIGRATION) validateCommercialQuotaMutation(source);
     if (filename === DOCUMENT_COMMERCIAL_QUOTA_MIGRATION) validateDocumentCommercialQuotaMigration(source);
     if (filename === ACTIVE_MEMBERSHIP_RLS_MIGRATION) validateActiveMembershipRlsMigration(source);
+    if (filename === DETERMINISTIC_COMMERCIAL_SOURCE_MIGRATION) {
+      validateDeterministicCommercialSourceMigration(source);
+    }
 
     return {
       position: index + 1,

@@ -3,11 +3,15 @@ import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 
 const MIGRATION = new URL('../../supabase/migrations/20260825092500_atomic_document_commercial_quota.sql', import.meta.url);
-const MANIFEST = new URL('../../config/supabase-forward-reconciliation.json', import.meta.url);
+const MANIFEST = new URL('../../config/supabase-forward-reconciliation-v23.json', import.meta.url);
 const CATALOG = new URL('../../src/lib/billing/plans.ts', import.meta.url);
 const DOCUMENT_ACTIONS = new URL('../../src/server/actions/documents.ts', import.meta.url);
 const SUBSCRIPTION_AUTHORITY = new URL('../../src/server/billing/subscription-authority.ts', import.meta.url);
 const SUBSCRIPTION_QUERY = new URL('../../src/server/queries/subscription.ts', import.meta.url);
+const DETERMINISTIC_PRECEDENCE = new URL(
+  '../../supabase/migrations/20260831100000_deterministic_commercial_contract_source_precedence.sql',
+  import.meta.url,
+);
 
 describe('document commercial quota atomicity', () => {
   it('keeps application preflight fail-closed but makes PostgreSQL the final serialized quota authority', async () => {
@@ -26,14 +30,16 @@ describe('document commercial quota atomicity', () => {
   });
 
   it('makes database commercial precedence exactly match the canonical server resolver', async () => {
-    const [sql, authority, subscription] = await Promise.all([
+    const [sql, authority, subscription, deterministicPrecedence] = await Promise.all([
       readFile(MIGRATION, 'utf8'),
       readFile(SUBSCRIPTION_AUTHORITY, 'utf8'),
       readFile(SUBSCRIPTION_QUERY, 'utf8'),
+      readFile(DETERMINISTIC_PRECEDENCE, 'utf8'),
     ]);
 
     expect(authority).toContain(".eq('source_kind', 'signed_contract')");
     expect(authority).toContain(".order('priority', { ascending: false })");
+    expect(authority).toContain(".order('id', { ascending: true })");
     expect(authority).toContain('return planCode || null;');
     expect(subscription).toContain('const signedContractPlan = await getAuthoritativeSignedContractPlan(organizationId);');
     expect(subscription).toContain('if (signedContractPlan) {');
@@ -52,6 +58,8 @@ describe('document commercial quota atomicity', () => {
     expect(sql).toContain("event.status = 'processed'");
     expect(sql).toContain("event.type in ('customer.subscription.created', 'customer.subscription.updated')");
     expect(sql).not.toContain("when 'free' then 'starter'");
+    expect(deterministicPrecedence).toContain('order by source.priority desc, source.id asc');
+    expect(deterministicPrecedence).toContain('commercial authority ordering is not deterministic');
   });
 
   it('matches the canonical catalog document capacities', async () => {

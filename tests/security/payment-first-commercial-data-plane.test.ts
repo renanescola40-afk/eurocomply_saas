@@ -6,7 +6,7 @@ const root = process.cwd();
 const read = (file: string) => fs.readFileSync(path.join(root, file), 'utf8');
 const migration = read('supabase/migrations/20260823123000_payment_first_commercial_data_plane.sql');
 const gapMigration = read('supabase/migrations/20260823131500_payment_first_gap_analysis_and_storage.sql');
-const reconciliation = JSON.parse(read('config/supabase-forward-reconciliation.json')) as {
+const reconciliation = JSON.parse(read('config/supabase-forward-reconciliation-v23.json')) as {
   changeSet: string;
   migrations: Array<{ filename: string }>;
 };
