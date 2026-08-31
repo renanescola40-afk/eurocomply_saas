@@ -1,3 +1,4 @@
+import { isReservedNonDeliverableEmail } from '@/lib/email/recipient-policy';
 import { getRecipientLocaleFromMetadata } from '@/lib/i18n/recipient-locale';
 import type { Locale } from '@/lib/i18n/routing';
 import { reportError } from '@/lib/observability/report-error';
@@ -18,8 +19,10 @@ async function getSupabaseUserEmailContext(userId: string, area: string): Promis
       return { email: null, locale: 'en' };
     }
 
+    const email = data.user?.email ?? null;
+
     return {
-      email: data.user?.email ?? null,
+      email: email && !isReservedNonDeliverableEmail(email) ? email : null,
       locale: getRecipientLocaleFromMetadata(data.user?.user_metadata),
     };
   } catch (error) {
