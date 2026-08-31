@@ -37,12 +37,16 @@ describe('RISCK COMPLY UI V2 onboarding shell', () => {
     expect(css).toContain('overflow-x: auto');
   });
 
-  it('maps legacy cyan decoration to cobalt while leaving semantic emerald status available', async () => {
+  it('maps legacy cyan decoration and selection chrome to cobalt while leaving semantic emerald status available', async () => {
     const css = await readFile(STYLES, 'utf8');
 
     expect(css).toContain("[class*='bg-cyan-300']");
     expect(css).toContain('background: rgba(37, 99, 235, 0.07) !important');
-    expect(css).toContain("[class*='text-cyan-200']");
+    expect(css).toContain("[class*='border-cyan-300']");
+    expect(css).toContain("[class*='focus:ring-emerald']");
+    expect(css).toContain("button[class*='border-emerald']");
+    expect(css).toContain("label[class*='border-emerald']");
+    expect(css).toContain("article > span[class*='bg-emerald']");
     expect(css).not.toContain("[class*='text-emerald-300']");
   });
 });
