@@ -1,10 +1,10 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-08-31-deterministic-commercial-source-precedence-v24",
+  "changeSet": "2026-08-31-deterministic-commercial-source-precedence-ledger-reconciliation-v25",
   "migrations": [
     {
-      "filename": "20260831100000_deterministic_commercial_contract_source_precedence.sql",
-      "purpose": "make equal-priority signed-contract and downstream commercial-authority selection deterministic across the canonical server and PostgreSQL resolver without rewriting promoted V23 migration bytes"
+      "filename": "20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+      "purpose": "re-assert deterministic signed-contract commercial-authority precedence under a canonical forward migration version strictly later than the observed Production migration head without repairing or rewriting migration history"
     }
   ],
   "truthBoundary": {
