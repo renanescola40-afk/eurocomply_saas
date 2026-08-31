@@ -5,7 +5,7 @@ const migrationPath = 'supabase/migrations/20260822123626_v19_reconcile_enterpri
 const migration = readFileSync(migrationPath, 'utf8');
 const evidenceRuntime = readFileSync('src/lib/evidence/storage.ts', 'utf8');
 const evidencePage = readFileSync('src/app/[locale]/dashboard/evidence/page.tsx', 'utf8');
-const reconciliation = JSON.parse(readFileSync('config/supabase-forward-reconciliation.json', 'utf8')) as {
+const reconciliation = JSON.parse(readFileSync('config/supabase-forward-reconciliation-v23.json', 'utf8')) as {
   changeSet: string;
   migrations: Array<{ filename: string; purpose: string }>;
   truthBoundary: Record<string, boolean>;

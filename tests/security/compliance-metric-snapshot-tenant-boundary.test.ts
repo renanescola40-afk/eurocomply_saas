@@ -6,7 +6,7 @@ const migration = readFileSync(
   'utf8',
 );
 const dashboardQueries = readFileSync('src/server/queries/dashboard.ts', 'utf8');
-const config = readFileSync('config/supabase-forward-reconciliation.json', 'utf8');
+const config = readFileSync('config/supabase-forward-reconciliation-v23.json', 'utf8');
 
 describe('compliance metric snapshot tenant boundary', () => {
   it('keeps the live tenant-scoped snapshot table backend-only in the selected forward package', () => {

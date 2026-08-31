@@ -54,7 +54,7 @@ jobs:
           persist-credentials: false
 
       - name: Download source artifacts
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           INTAKE_RUN_ID: ${{ inputs.evidence_intake_run_id }}
           DECISION_RUN_ID: ${{ inputs.final_decision_run_id }}

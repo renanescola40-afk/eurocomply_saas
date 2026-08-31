@@ -187,7 +187,7 @@ export function EnterpriseExecutiveOverviewV2({ locale, summary, tasks, topRisks
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
-        <article className="rounded-xl border border-slate-800/90 bg-[#0d1420] p-5">
+        <article className="min-w-0 rounded-xl border border-slate-800/90 bg-[#0d1420] p-5">
           <div className="flex items-center justify-between"><div><p className="text-sm font-semibold text-white">{text.priority}</p><p className="mt-1 text-xs text-slate-500">Highest-impact work currently visible</p></div><ShieldAlert className="h-4 w-4 text-amber-400" /></div>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[680px] text-left text-xs"><thead className="border-y border-slate-800/80 text-[10px] uppercase tracking-[0.1em] text-slate-600"><tr><th className="py-2.5 pr-4 font-semibold">Priority</th><th className="py-2.5 pr-4 font-semibold">Action</th><th className="py-2.5 pr-4 font-semibold">Source</th><th className="py-2.5 pr-4 font-semibold">Due</th><th className="py-2.5 font-semibold">Status</th></tr></thead><tbody className="divide-y divide-slate-800/65">

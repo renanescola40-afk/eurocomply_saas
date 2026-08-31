@@ -20,7 +20,7 @@ describe('organization add-ons governed forward promotion', () => {
 
   it('promotes through the canonical bounded forward chain and proves the live policy read-only afterward', () => {
     const config = JSON.parse(
-      fs.readFileSync('config/supabase-forward-reconciliation.json', 'utf8'),
+      fs.readFileSync('config/supabase-forward-reconciliation-v23.json', 'utf8'),
     ) as { migrations: Array<{ filename: string }> };
     const promotion = fs.readFileSync(
       '.github/workflows/supabase-forward-reconciliation-production-promotion.yml',
