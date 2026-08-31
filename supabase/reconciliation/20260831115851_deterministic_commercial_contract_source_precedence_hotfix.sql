@@ -1,0 +1,22 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed read-only:
+--   version: 20260831115851
+--   logical purpose: deterministic commercial contract source precedence
+--
+-- This remote identity was created when the already-reviewed deterministic
+-- commercial-plan resolver change was applied through the Supabase management
+-- path before the canonical forward-only V25 ledger identity was introduced.
+-- The live object state was subsequently verified to use:
+--   order by source.priority desc, source.id asc
+-- and to preserve the intended EXECUTE boundary (service_role only).
+--
+-- The repository does NOT assert byte-for-byte identity between the remote
+-- migration statement and any local migration source. The canonical forward-only
+-- migration remains 20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql.
+--
+-- This marker exists only to bind the observed remote ledger version to an
+-- explicit repository reconciliation record so read-only drift tooling no longer
+-- treats 20260831115851 as an unknown remote migration.
+--
+-- No DDL. No migration-history mutation. No production-write authorization.
