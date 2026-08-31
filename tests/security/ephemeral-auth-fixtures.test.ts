@@ -10,10 +10,53 @@ function fakeAdmin({ failOrganizationNumber = 0 } = {}) {
     users: new Set<string>(),
     organizations: new Set<string>(),
     memberships: new Set<string>(),
+    enterpriseContracts: new Map<string, string>(),
+    organizationEntitlements: new Map<string, string>(),
   };
   let userCounter = 0;
   let organizationCounter = 0;
   let membershipCounter = 0;
+  let contractCounter = 0;
+  let entitlementCounter = 0;
+
+  const idsForTable = (table: string, column: string, ids: string[]) => {
+    if (table === 'organizations' && column === 'id') {
+      return ids.filter((id) => state.organizations.has(id)).map((id) => ({ id }));
+    }
+    if (table === 'organization_members' && column === 'id') {
+      return ids.filter((id) => state.memberships.has(id)).map((id) => ({ id }));
+    }
+    if (table === 'enterprise_contracts' && column === 'organization_id') {
+      return [...state.enterpriseContracts.entries()]
+        .filter(([, organizationId]) => ids.includes(organizationId))
+        .map(([id]) => ({ id }));
+    }
+    if (table === 'organization_entitlements' && column === 'organization_id') {
+      return [...state.organizationEntitlements.entries()]
+        .filter(([, organizationId]) => ids.includes(organizationId))
+        .map(([id]) => ({ id }));
+    }
+    return [];
+  };
+
+  const deleteByOrganizationIds = (table: string, ids: string[]) => {
+    if (table === 'organization_entitlements') {
+      for (const [id, organizationId] of state.organizationEntitlements.entries()) {
+        if (ids.includes(organizationId)) state.organizationEntitlements.delete(id);
+      }
+      return { error: null };
+    }
+    if (table === 'enterprise_contracts') {
+      const blocked = [...state.organizationEntitlements.values()]
+        .some((organizationId) => ids.includes(organizationId));
+      if (blocked) return { error: { message: 'organization entitlement restricts contract deletion' } };
+      for (const [id, organizationId] of state.enterpriseContracts.entries()) {
+        if (ids.includes(organizationId)) state.enterpriseContracts.delete(id);
+      }
+      return { error: null };
+    }
+    return { error: { message: 'unexpected organization-scoped delete' } };
+  };
 
   const admin = {
     auth: {
@@ -43,6 +86,13 @@ function fakeAdmin({ failOrganizationNumber = 0 } = {}) {
               }
               const id = `org-${organizationCounter}`;
               state.organizations.add(id);
+
+              // Production provisions these records automatically for a new tenant.
+              const contractId = `contract-${++contractCounter}`;
+              const entitlementId = `entitlement-${++entitlementCounter}`;
+              state.enterpriseContracts.set(contractId, id);
+              state.organizationEntitlements.set(entitlementId, id);
+
               return { data: { id }, error: null };
             }
             if (table === 'organization_members') {
@@ -56,19 +106,21 @@ function fakeAdmin({ failOrganizationNumber = 0 } = {}) {
       }),
       delete: () => ({
         eq: async (_column: string, id: string) => {
-          if (table === 'organizations') state.organizations.delete(id);
+          if (table === 'organizations') {
+            const restricted = [...state.enterpriseContracts.values()].includes(id);
+            if (restricted) return { error: { message: 'enterprise contract restricts organization deletion' } };
+            state.organizations.delete(id);
+          }
           if (table === 'organization_members') state.memberships.delete(id);
           return { error: null };
         },
+        in: async (column: string, ids: string[]) => deleteByOrganizationIds(table, ids),
       }),
       select: () => ({
-        in: async (_column: string, ids: string[]) => {
-          const source = table === 'organizations' ? state.organizations : state.memberships;
-          return {
-            data: ids.filter((id) => source.has(id)).map((id) => ({ id })),
-            error: null,
-          };
-        },
+        in: async (column: string, ids: string[]) => ({
+          data: idsForTable(table, column, ids),
+          error: null,
+        }),
       }),
     }),
   };
@@ -87,12 +139,16 @@ describe('ephemeral Supabase Auth fixture lifecycle', () => {
     expect(state.users.size).toBe(3);
     expect(state.organizations.size).toBe(2);
     expect(state.memberships.size).toBe(3);
+    expect(state.enterpriseContracts.size).toBe(2);
+    expect(state.organizationEntitlements.size).toBe(2);
 
     const cleanup = await cleanupEphemeralAuthFixtures(admin, fixtures.created);
     expect(cleanup).toEqual({ verified: true, failures: [] });
     expect(state.users.size).toBe(0);
     expect(state.organizations.size).toBe(0);
     expect(state.memberships.size).toBe(0);
+    expect(state.enterpriseContracts.size).toBe(0);
+    expect(state.organizationEntitlements.size).toBe(0);
   });
 
   it('cleans partial setup when the second organization creation fails', async () => {
@@ -104,5 +160,7 @@ describe('ephemeral Supabase Auth fixture lifecycle', () => {
     expect(state.users.size).toBe(0);
     expect(state.organizations.size).toBe(0);
     expect(state.memberships.size).toBe(0);
+    expect(state.enterpriseContracts.size).toBe(0);
+    expect(state.organizationEntitlements.size).toBe(0);
   });
 });
