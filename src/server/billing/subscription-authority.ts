@@ -105,6 +105,7 @@ export async function getAuthoritativeSignedContractPlan(organizationId: string)
     .lte('effective_from', now)
     .or(`effective_until.is.null,effective_until.gt.${now}`)
     .order('priority', { ascending: false })
+    .order('id', { ascending: true })
     .limit(1)
     .maybeSingle<SignedContractSource>();
 

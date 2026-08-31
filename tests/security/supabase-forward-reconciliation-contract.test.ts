@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const config = JSON.parse(readFileSync('config/supabase-forward-reconciliation.json', 'utf8')) as {
+const config = JSON.parse(readFileSync('config/supabase-forward-reconciliation-v23.json', 'utf8')) as {
   migrations: Array<{ filename: string }>;
   truthBoundary: Record<string, boolean>;
 };
