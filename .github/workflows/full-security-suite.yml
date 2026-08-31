@@ -288,7 +288,7 @@ jobs:
           languages: javascript-typescript
       - uses: github/codeql-action/autobuild@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd
       - name: Analyze CodeQL
-        uses: github/codeql-action/analyze@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd
+        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938
         with:
           output: codeql-results
           # Keep CodeQL's supported upload path for PR merge refs. Disabling upload
