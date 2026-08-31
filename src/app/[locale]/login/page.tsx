@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useState, type FormEvent } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
@@ -110,7 +111,9 @@ function LoginContent() {
         <section className="grid w-full overflow-hidden rounded-[1.75rem] border border-white/[0.09] bg-[#0a1320]/92 shadow-2xl shadow-black/35 md:grid-cols-[1.04fr_0.96fr]" aria-labelledby="login-title">
           <div className="flex min-h-[36rem] flex-col justify-between border-b border-white/[0.07] bg-[#0d1522] p-7 md:border-b-0 md:border-r md:p-9">
             <div>
-              <Link href={`/${locale}`} className="inline-flex rounded-md text-sm font-semibold uppercase tracking-[0.24em] text-white/84 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">RISCK COMPLY</Link>
+              <Link href={`/${locale}`} aria-label="RISCK COMPLY" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70">
+                <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={164} height={32} priority className="h-6 w-auto" />
+              </Link>
               <div className="mt-14 inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-200">{text.badge}</div>
               <h1 id="login-title" className="mt-5 max-w-lg text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl">{text.title}</h1>
               <p className="mt-4 max-w-md text-base leading-7 text-white/58">{text.subtitle}</p>
