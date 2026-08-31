@@ -52,7 +52,7 @@ function sha256(bytes: Buffer) {
 
 describe('Supabase V23 production-forward closure', () => {
   it('preserves the exact V22 closure and appends exactly one active-membership RLS identity', () => {
-    const config = JSON.parse(readFileSync('config/supabase-forward-reconciliation.json', 'utf8')) as {
+    const config = JSON.parse(readFileSync('config/supabase-forward-reconciliation-v23.json', 'utf8')) as {
       changeSet: string;
       migrations: Array<{ filename: string }>;
       truthBoundary: Record<string, boolean>;

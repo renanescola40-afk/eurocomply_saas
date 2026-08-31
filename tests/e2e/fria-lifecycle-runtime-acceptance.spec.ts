@@ -113,8 +113,10 @@ async function loginWithDisposableCredentials(page: Page, email: string, passwor
   await expect(credentialForm, 'credential login form should be uniquely addressable beside Enterprise SSO').toHaveCount(1);
   await credentialEmail.fill(email);
   await credentialForm.getByLabel('Password', { exact: true }).fill(password);
-  await credentialForm.locator('button[type="submit"]').click();
-  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000 });
+  await Promise.all([
+    page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000, waitUntil: 'domcontentloaded' }),
+    credentialForm.locator('button[type="submit"]').click(),
+  ]);
   await expectHealthyAuthenticatedPage(page, 'disposable authenticated session');
 }
 
@@ -125,8 +127,10 @@ async function loginUnlicensedWithDisposableCredentials(page: Page, email: strin
   await expect(credentialForm, 'unlicensed credential login form should remain uniquely addressable').toHaveCount(1);
   await credentialEmail.fill(email);
   await credentialForm.getByLabel('Password', { exact: true }).fill(password);
-  await credentialForm.locator('button[type="submit"]').click();
-  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000 });
+  await Promise.all([
+    page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000, waitUntil: 'domcontentloaded' }),
+    credentialForm.locator('button[type="submit"]').click(),
+  ]);
   await expectHealthyPublicPage(page, 'unlicensed authenticated session');
   expect(page.url()).not.toContain('/login');
 }
@@ -249,7 +253,7 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await page.goto('/en/dashboard/organizations', { waitUntil: 'domcontentloaded' });
       await expectHealthyAuthenticatedPage(page, `${viewport.label} enterprise dashboard`);
-      await expect(page.locator('main')).toBeVisible();
+      await expect(page.getByRole('main').first()).toBeVisible();
       await expectNoHorizontalOverflow(page, `${viewport.label} enterprise dashboard`);
     }
 

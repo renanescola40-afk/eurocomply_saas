@@ -16,7 +16,7 @@ const runner = readFileSync(
   'utf8',
 ).toLowerCase();
 const forwardConfig = JSON.parse(
-  readFileSync('config/supabase-forward-reconciliation.json', 'utf8'),
+  readFileSync('config/supabase-forward-reconciliation-v23.json', 'utf8'),
 ) as { migrations: Array<{ filename: string }> };
 const selectedForwardMigrations = forwardConfig.migrations.map((item) => item.filename);
 
