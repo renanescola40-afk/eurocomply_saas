@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { BillingActionButton } from '@/app/[locale]/dashboard/organizations/billing/billing-action-button';
@@ -109,7 +110,13 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     <main className="min-h-screen bg-[#05060a] text-white">
       <header className="border-b border-white/10 bg-[#05060a]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5">
-          <Link href={`/${locale}`} className="shrink-0 rounded-md text-sm font-bold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 sm:text-lg">RISCK COMPLY</Link>
+          <Link
+            href={`/${locale}`}
+            className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05060a]"
+            aria-label="RISCK COMPLY home"
+          >
+            <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={220} height={46} priority className="h-8 w-auto sm:h-9" />
+          </Link>
           <nav className="flex min-w-0 items-center justify-end gap-1 text-xs sm:gap-2 sm:text-sm" aria-label={copy.navLabel}>
             <Link href={`/${locale}/pricing`} className="hidden rounded-full border border-white/15 px-3 py-2 font-medium text-slate-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 sm:inline-flex">{copy.plans}</Link>
             {user && needsPaymentRecovery ? (
@@ -127,7 +134,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
 
       <section className="relative overflow-hidden border-b border-white/10" aria-labelledby="checkout-title">
         <div className="pointer-events-none absolute left-1/2 top-0 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="pointer-events-none absolute right-0 top-20 h-[24rem] w-[24rem] rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute right-0 top-20 h-[24rem] w-[24rem] rounded-full bg-violet-500/10 blur-3xl" />
         <div className="relative mx-auto grid max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
           <div>
             <p className="inline-flex rounded-full border border-blue-300/30 bg-blue-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-blue-100">{copy.heroEyebrow}</p>
