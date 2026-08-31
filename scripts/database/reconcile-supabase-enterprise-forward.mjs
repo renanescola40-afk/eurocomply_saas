@@ -18,9 +18,9 @@ const DEFAULT_REPORT_PATH = join(
 );
 
 const EXPECTED_SCHEMA = 'risck-comply.supabase-forward-reconciliation-config.v1';
-const EXPECTED_CHANGE_SET = '2026-08-31-deterministic-commercial-source-precedence-v24';
+const EXPECTED_CHANGE_SET = '2026-08-31-deterministic-commercial-source-precedence-ledger-reconciliation-v25';
 const DETERMINISTIC_COMMERCIAL_SOURCE_MIGRATION =
-  '20260831100000_deterministic_commercial_contract_source_precedence.sql';
+  '20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql';
 const EVIDENCE_VAULT_MIGRATION = '20260822123626_v19_reconcile_enterprise_evidence_vault.sql';
 const PAYMENT_FIRST_CORE_MIGRATION = '20260823123000_payment_first_commercial_data_plane.sql';
 const PAYMENT_FIRST_GAP_STORAGE_MIGRATION = '20260823131500_payment_first_gap_analysis_and_storage.sql';
