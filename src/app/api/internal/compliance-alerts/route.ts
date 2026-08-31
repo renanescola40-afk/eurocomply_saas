@@ -15,6 +15,13 @@ const DOCUMENT_EXPIRY_LOOKAHEAD_DAYS = 30;
 const COMPLIANCE_ALERTS_ROUTE = '/api/internal/compliance-alerts';
 const COMPLIANCE_ALERTS_AUTH_ACTION = 'authenticate_compliance_alerts';
 const PRE_V19_DEFER_REASON = 'maintenance_data_plane_not_promoted';
+const RESERVED_SYNTHETIC_EMAIL_DOMAINS = new Set([
+  'example.com',
+  'example.net',
+  'example.org',
+  'invalid',
+  'localhost',
+]);
 
 type NotificationDedupe = {
   organizationId: string;
@@ -32,6 +39,11 @@ function addDays(days: number) {
   const date = new Date();
   date.setDate(date.getDate() + days);
   return date.toISOString().slice(0, 10);
+}
+
+function isReservedSyntheticRecipient(email: string) {
+  const domain = email.trim().toLowerCase().split('@').at(-1);
+  return Boolean(domain && RESERVED_SYNTHETIC_EMAIL_DOMAINS.has(domain));
 }
 
 async function getOrganizationOwnerContact(userId: string) {
@@ -130,7 +142,10 @@ async function sendDocumentExpiryAlerts() {
     if (!organization?.created_by || !document.expires_at) continue;
 
     const recipient = await getOrganizationOwnerContact(organization.created_by);
-    if (!recipient.email) continue;
+    if (!recipient.email || isReservedSyntheticRecipient(recipient.email)) {
+      skipped += 1;
+      continue;
+    }
 
     const dedupe: NotificationDedupe = {
       organizationId: document.organization_id,
@@ -217,7 +232,10 @@ async function sendVendorReviewAlerts() {
     if (!organization?.created_by) continue;
 
     const recipient = await getOrganizationOwnerContact(organization.created_by);
-    if (!recipient.email) continue;
+    if (!recipient.email || isReservedSyntheticRecipient(recipient.email)) {
+      skipped += 1;
+      continue;
+    }
 
     const dedupe: NotificationDedupe = {
       organizationId: vendor.organization_id,
