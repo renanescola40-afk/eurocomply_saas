@@ -1,7 +1,6 @@
 'use client';
 
 import { AlertTriangle, BadgeCheck, GitBranch, Scale, ShieldQuestion } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { evaluateAiGovernanceRole, type AiGovernanceRole, type RoleConfidence, type RoleNextStep, type RoleSignal, type RoleWizardInput } from '@/lib/ai-governance/role-wizard';
 
 type RoleWizardCardProps = {
@@ -84,16 +83,17 @@ function getCopy(locale: string) {
 }
 
 function roleTone(role: AiGovernanceRole) {
-  if (role === 'provider') return 'border-purple-500/30 bg-purple-500/10 text-purple-800 dark:text-purple-100';
-  if (role === 'deployer') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-100';
-  if (role === 'importer' || role === 'distributor') return 'border-blue-500/30 bg-blue-500/10 text-blue-800 dark:text-blue-100';
-  return 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-100';
+  if (role === 'provider') return 'border-violet-300/20 bg-violet-300/[0.07] text-violet-100/85';
+  if (role === 'deployer') return 'border-blue-300/20 bg-blue-300/[0.07] text-blue-100/85';
+  if (role === 'importer') return 'border-sky-300/20 bg-sky-300/[0.07] text-sky-100/85';
+  if (role === 'distributor') return 'border-indigo-300/20 bg-indigo-300/[0.07] text-indigo-100/85';
+  return 'border-amber-300/20 bg-amber-300/[0.07] text-amber-100/85';
 }
 
 function confidenceTone(confidence: RoleConfidence) {
-  if (confidence === 'high') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-100';
-  if (confidence === 'medium') return 'border-blue-500/30 bg-blue-500/10 text-blue-800 dark:text-blue-100';
-  return 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-100';
+  if (confidence === 'high') return 'border-emerald-300/20 bg-emerald-300/[0.07] text-emerald-100/85';
+  if (confidence === 'medium') return 'border-blue-300/20 bg-blue-300/[0.07] text-blue-100/85';
+  return 'border-amber-300/20 bg-amber-300/[0.07] text-amber-100/85';
 }
 
 export function RoleWizardCard({ locale, input }: RoleWizardCardProps) {
@@ -102,43 +102,52 @@ export function RoleWizardCard({ locale, input }: RoleWizardCardProps) {
   const assessment = evaluateAiGovernanceRole(input);
 
   return (
-    <aside className="mt-5 rounded-3xl border bg-background p-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <aside className="mt-5 overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522] text-white">
+      <div className="flex flex-col gap-4 border-b border-white/[0.055] px-5 py-5 lg:flex-row lg:items-start lg:justify-between md:px-6">
         <div className="max-w-3xl">
-          <Badge variant="outline" className="rounded-full"><GitBranch className="mr-1 h-3.5 w-3.5" />{t.title}</Badge>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">{t.subtitle}</p>
+          <div className="inline-flex items-center gap-2 rounded-md border border-violet-300/15 bg-violet-300/[0.055] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-100/75">
+            <GitBranch className="h-3.5 w-3.5" />
+            {t.title}
+          </div>
+          <p className="mt-3 text-sm leading-6 text-white/42">{t.subtitle}</p>
         </div>
         {assessment.needsLegalReview ? (
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-100">
+          <div className="rounded-lg border border-amber-300/20 bg-amber-300/[0.07] px-3 py-2.5 text-sm text-amber-100/80">
             <AlertTriangle className="mr-2 inline h-4 w-4" />{t.review}
           </div>
         ) : null}
       </div>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl border bg-muted/20 p-4">
-          <div className="flex items-center gap-2 text-sm font-medium"><Scale className="h-4 w-4" />{t.recommended}</div>
-          <span className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${roleTone(assessment.recommendedRole)}`}>
+      <div className="grid lg:grid-cols-3">
+        <div className="px-5 py-4 md:px-6">
+          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">
+            <Scale className="h-4 w-4 text-violet-200/70" />{t.recommended}
+          </div>
+          <span className={`mt-3 inline-flex rounded-md border px-2.5 py-1 text-xs font-semibold ${roleTone(assessment.recommendedRole)}`}>
             {t.role[assessment.recommendedRole]}
           </span>
         </div>
-        <div className="rounded-2xl border bg-muted/20 p-4">
-          <div className="flex items-center gap-2 text-sm font-medium"><BadgeCheck className="h-4 w-4" />{t.confidence}</div>
-          <span className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${confidenceTone(assessment.confidence)}`}>
+        <div className="border-t border-white/[0.055] px-5 py-4 lg:border-l lg:border-t-0 md:px-6">
+          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">
+            <BadgeCheck className="h-4 w-4 text-blue-200/70" />{t.confidence}
+          </div>
+          <span className={`mt-3 inline-flex rounded-md border px-2.5 py-1 text-xs font-semibold ${confidenceTone(assessment.confidence)}`}>
             {t.confidenceLabel[assessment.confidence]}
           </span>
         </div>
-        <div className="rounded-2xl border bg-muted/20 p-4">
-          <div className="flex items-center gap-2 text-sm font-medium"><ShieldQuestion className="h-4 w-4" />{t.signals}</div>
-          <ul className="mt-3 space-y-2 text-xs leading-5 text-muted-foreground">
+        <div className="border-t border-white/[0.055] px-5 py-4 lg:border-l lg:border-t-0 md:px-6">
+          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">
+            <ShieldQuestion className="h-4 w-4 text-blue-200/70" />{t.signals}
+          </div>
+          <ul className="mt-3 space-y-2 text-xs leading-5 text-white/42">
             {assessment.signals.slice(0, 4).map((signal) => <li key={signal}>• {signalCopy[signal][language]}</li>)}
           </ul>
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl border bg-muted/20 p-4">
-        <p className="text-sm font-semibold">{t.nextSteps}</p>
-        <ul className="mt-2 grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+      <div className="border-t border-white/[0.055] px-5 py-4 md:px-6">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/28">{t.nextSteps}</p>
+        <ul className="mt-3 grid gap-x-8 gap-y-2 text-sm leading-6 text-white/46 md:grid-cols-2">
           {assessment.nextSteps.slice(0, 6).map((step) => <li key={step}>• {stepCopy[step][language]}</li>)}
         </ul>
       </div>
