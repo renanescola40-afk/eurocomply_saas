@@ -46,8 +46,8 @@ export function EnterpriseSsoLogin({ locale, next }: { locale: string; next: str
   }
 
   return (
-    <div className="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.05] p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100/70">
+    <div className="mt-5 rounded-2xl border border-blue-400/15 bg-blue-500/[0.055] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-200/70">
         {locale === 'pt' ? 'Acesso Enterprise' : 'Enterprise access'}
       </p>
       <p className="mt-2 text-sm leading-6 text-white/55">
@@ -59,7 +59,7 @@ export function EnterpriseSsoLogin({ locale, next }: { locale: string; next: str
         <input
           aria-label={locale === 'pt' ? 'Email profissional para SSO' : 'Work email for SSO'}
           autoComplete="email"
-          className="min-w-0 flex-1 rounded-full border border-white/10 bg-black/35 px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-cyan-200/50"
+          className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/35 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-blue-300/50 focus-visible:ring-2 focus-visible:ring-blue-400/40"
           onChange={(event) => setEmail(event.target.value)}
           placeholder="name@company.com"
           required
@@ -67,7 +67,7 @@ export function EnterpriseSsoLogin({ locale, next }: { locale: string; next: str
           value={email}
         />
         <button
-          className="rounded-full border border-cyan-200/30 bg-cyan-300/10 px-5 py-3 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-300/15 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-xl border border-blue-300/25 bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 disabled:cursor-not-allowed disabled:opacity-50"
           disabled={busy}
           type="submit"
         >
