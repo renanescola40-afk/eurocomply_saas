@@ -131,7 +131,7 @@ export function EnterpriseExecutiveOverviewV2({ locale, summary, tasks, topRisks
   ];
 
   return (
-    <section className="min-w-0 space-y-5 text-slate-100" aria-labelledby="ui-v2-dashboard-title">
+    <section className="space-y-5 text-slate-100" aria-labelledby="ui-v2-dashboard-title">
       <header className="flex flex-col gap-4 border-b border-slate-800/80 pb-5 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-400">{text.eyebrow}</p>
@@ -186,10 +186,10 @@ export function EnterpriseExecutiveOverviewV2({ locale, summary, tasks, topRisks
         </article>
       </div>
 
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[1.25fr_0.75fr]">
-        <article className="min-w-0 rounded-xl border border-slate-800/90 bg-[#0d1420] p-5">
+      <div className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
+        <article className="rounded-xl border border-slate-800/90 bg-[#0d1420] p-5">
           <div className="flex items-center justify-between"><div><p className="text-sm font-semibold text-white">{text.priority}</p><p className="mt-1 text-xs text-slate-500">Highest-impact work currently visible</p></div><ShieldAlert className="h-4 w-4 text-amber-400" /></div>
-          <div className="mt-4 max-w-full overflow-x-auto">
+          <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[680px] text-left text-xs"><thead className="border-y border-slate-800/80 text-[10px] uppercase tracking-[0.1em] text-slate-600"><tr><th className="py-2.5 pr-4 font-semibold">Priority</th><th className="py-2.5 pr-4 font-semibold">Action</th><th className="py-2.5 pr-4 font-semibold">Source</th><th className="py-2.5 pr-4 font-semibold">Due</th><th className="py-2.5 font-semibold">Status</th></tr></thead><tbody className="divide-y divide-slate-800/65">
               {tasks.slice(0, 3).map((task) => <tr key={task.id}><td className="py-3 pr-4"><span className={`rounded-md border px-2 py-1 text-[9px] font-semibold uppercase ${priorityTone(task.priority)}`}>{task.priority || 'Open'}</span></td><td className="max-w-[300px] truncate py-3 pr-4 font-medium text-slate-300">{task.title || 'Governance action'}</td><td className="py-3 pr-4 text-slate-500">Task register</td><td className="py-3 pr-4 font-mono text-slate-500 tabular-nums">{formatDate(locale, task.due_date)}</td><td className="py-3 text-slate-500">{task.status || 'Open'}</td></tr>)}
               {!tasks.length && topRisks.slice(0, 3).map((risk) => <tr key={risk.id}><td className="py-3 pr-4"><span className="rounded-md border border-rose-400/20 bg-rose-400/[0.07] px-2 py-1 text-[9px] font-semibold uppercase text-rose-300">Risk</span></td><td className="max-w-[300px] truncate py-3 pr-4 font-medium text-slate-300">{risk.title || 'Risk review'}</td><td className="py-3 pr-4 text-slate-500">Risk register</td><td className="py-3 pr-4 text-slate-600">—</td><td className="py-3 text-slate-500">{risk.status || 'Open'}</td></tr>)}
