@@ -25,6 +25,42 @@ function userAbsenceWasProven(data, error) {
   return status === 404 || /not found/i.test(message);
 }
 
+async function cleanupOrganizationCommercialDependencies(admin, organizationIds, failures) {
+  if (organizationIds.length === 0) return;
+
+  const { error: entitlementError } = await admin
+    .from('organization_entitlements')
+    .delete()
+    .in('organization_id', organizationIds);
+  if (entitlementError) failures.push('organization_entitlement_cleanup_failed');
+
+  const { error: contractError } = await admin
+    .from('enterprise_contracts')
+    .delete()
+    .in('organization_id', organizationIds);
+  if (contractError) failures.push('enterprise_contract_cleanup_failed');
+}
+
+async function verifyOrganizationCommercialDependenciesRemoved(admin, organizationIds, failures) {
+  if (organizationIds.length === 0) return;
+
+  const { data: entitlements, error: entitlementError } = await admin
+    .from('organization_entitlements')
+    .select('id')
+    .in('organization_id', organizationIds);
+  if (entitlementError || (Array.isArray(entitlements) && entitlements.length > 0)) {
+    failures.push('organization_entitlement_cleanup_not_verified');
+  }
+
+  const { data: contracts, error: contractError } = await admin
+    .from('enterprise_contracts')
+    .select('id')
+    .in('organization_id', organizationIds);
+  if (contractError || (Array.isArray(contracts) && contracts.length > 0)) {
+    failures.push('enterprise_contract_cleanup_not_verified');
+  }
+}
+
 export async function cleanupEphemeralAuthFixtures(admin, created) {
   if (!created) return { verified: false, failures: ['fixture_tracker_missing'] };
   const failures = [];
@@ -33,6 +69,14 @@ export async function cleanupEphemeralAuthFixtures(admin, created) {
     const { error } = await admin.from('organization_members').delete().eq('id', id);
     if (error) failures.push('membership_cleanup_failed');
   }
+
+  // Production provisions an enterprise contract and organization entitlement when
+  // an organization is created. Both are intentional tenant records, but their
+  // foreign keys are RESTRICT to protect real commercial history. The protected
+  // runtime fixture must therefore remove only its own synthetic dependants before
+  // deleting the synthetic organization.
+  await cleanupOrganizationCommercialDependencies(admin, created.organizations, failures);
+
   for (const id of [...created.organizations].reverse()) {
     const { error } = await admin.from('organizations').delete().eq('id', id);
     if (error) failures.push('organization_cleanup_failed');
@@ -51,6 +95,9 @@ export async function cleanupEphemeralAuthFixtures(admin, created) {
       failures.push('membership_cleanup_not_verified');
     }
   }
+
+  await verifyOrganizationCommercialDependenciesRemoved(admin, created.organizations, failures);
+
   if (created.organizations.length > 0) {
     const { data, error } = await admin
       .from('organizations')
