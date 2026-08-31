@@ -32,9 +32,9 @@ function fakeAdmin({ failOrganizationNumber = 0 } = {}) {
         .map(([id]) => ({ id }));
     }
     if (table === 'organization_entitlements' && column === 'organization_id') {
-      return [...state.organizationEntitlements.entries()]
-        .filter(([, organizationId]) => ids.includes(organizationId))
-        .map(([id]) => ({ id }));
+      return [...state.organizationEntitlements.values()]
+        .filter((organizationId) => ids.includes(organizationId))
+        .map((organizationId) => ({ organization_id: organizationId }));
     }
     return [];
   };
@@ -116,11 +116,19 @@ function fakeAdmin({ failOrganizationNumber = 0 } = {}) {
         },
         in: async (column: string, ids: string[]) => deleteByOrganizationIds(table, ids),
       }),
-      select: () => ({
-        in: async (column: string, ids: string[]) => ({
-          data: idsForTable(table, column, ids),
-          error: null,
-        }),
+      select: (columns = '*') => ({
+        in: async (column: string, ids: string[]) => {
+          if (table === 'organization_entitlements' && columns.split(',').map((value) => value.trim()).includes('id')) {
+            return {
+              data: null,
+              error: { message: 'column organization_entitlements.id does not exist' },
+            };
+          }
+          return {
+            data: idsForTable(table, column, ids),
+            error: null,
+          };
+        },
       }),
     }),
   };
