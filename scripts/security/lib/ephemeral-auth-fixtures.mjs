@@ -46,7 +46,7 @@ async function verifyOrganizationCommercialDependenciesRemoved(admin, organizati
 
   const { data: entitlements, error: entitlementError } = await admin
     .from('organization_entitlements')
-    .select('id')
+    .select('organization_id')
     .in('organization_id', organizationIds);
   if (entitlementError || (Array.isArray(entitlements) && entitlements.length > 0)) {
     failures.push('organization_entitlement_cleanup_not_verified');
