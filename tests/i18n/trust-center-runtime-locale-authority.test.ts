@@ -91,7 +91,8 @@ describe('runtime Trust Center locale authority', () => {
 
   it('preserves keyboard focus treatment on the runtime procurement navigation', () => {
     expect(runtimeComponent).toContain('focus-visible:ring-2');
-    expect(runtimeComponent).toContain('focus-visible:ring-cyan-200');
+    expect(runtimeComponent).toContain('focus-visible:ring-blue-400');
+    expect(runtimeComponent).not.toContain('focus-visible:ring-cyan-200');
     expect(runtimeComponent).toContain('aria-label={ui.portal}');
   });
 });
