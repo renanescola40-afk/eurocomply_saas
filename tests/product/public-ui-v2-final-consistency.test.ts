@@ -5,6 +5,7 @@ const CONTACT = new URL('../../src/app/[locale]/contact/page.tsx', import.meta.u
 const CONSENT_BANNER = new URL('../../src/components/analytics/AnalyticsConsentBanner.tsx', import.meta.url);
 const CONSENT_CONTROLS = new URL('../../src/components/analytics/AnalyticsConsentControls.tsx', import.meta.url);
 const LEGAL_REVIEW = new URL('../../src/components/legal/public-legal-review-page.tsx', import.meta.url);
+const PROVIDER_DATA = new URL('../../src/app/[locale]/dashboard/provider-data/page.tsx', import.meta.url);
 
 describe('RISCK COMPLY UI V2 final public consistency', () => {
   it('uses the official wordmark and cobalt system on the contact surface', async () => {
@@ -48,5 +49,19 @@ describe('RISCK COMPLY UI V2 final public consistency', () => {
     expect(source).toContain("documentId === 'cookie-policy' ? <AnalyticsConsentControls");
     expect(source).not.toContain('cyan-');
     expect(source).not.toContain('rounded-3xl');
+  });
+
+  it('keeps provider-data runtime authority while removing the nested legacy canvas', async () => {
+    const source = await readFile(PROVIDER_DATA, 'utf8');
+
+    expect(source).toContain("fetch('/api/ai-governance/provider-data'");
+    expect(source).toContain("cache: 'no-store'");
+    expect(source).toContain('workflow=${workflow}');
+    expect(source).toContain("method: 'POST'");
+    expect(source).toContain('aria-labelledby="provider-data-title"');
+    expect(source).toContain('bg-blue-600');
+    expect(source).toContain('bg-[#0d1522]');
+    expect(source).not.toContain('cyan-');
+    expect(source).not.toContain('min-h-screen');
   });
 });
