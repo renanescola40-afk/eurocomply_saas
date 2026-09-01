@@ -11,6 +11,7 @@ const FEATURE_PAGE = new URL('../../src/app/[locale]/features/[feature]/page.tsx
 const PLATFORM_LAYOUT = new URL('../../src/app/[locale]/platform/layout.tsx', import.meta.url);
 const VERIFIED_STATUS = new URL('../../src/components/marketing/verified-status-page.tsx', import.meta.url);
 const PROCUREMENT_PACK = new URL('../../src/app/[locale]/trust/procurement-pack/page.tsx', import.meta.url);
+const WAITLIST_INTERACTIONS = new URL('../../src/components/marketing/waitlist-interactions.tsx', import.meta.url);
 
 describe('RISCK COMPLY UI V2 final public consistency', () => {
   it('uses the official wordmark and cobalt system on the contact surface', async () => {
@@ -125,5 +126,22 @@ describe('RISCK COMPLY UI V2 final public consistency', () => {
     expect(source).toContain('bg-blue-600');
     expect(source).not.toContain('cyan-');
     expect(source).not.toContain('radial-gradient');
+  });
+
+  it('preserves waitlist submission behavior and uses semantic feedback colors only for state', async () => {
+    const source = await readFile(WAITLIST_INTERACTIONS, 'utf8');
+    expect(source).toContain("fetch('/api/prelaunch'");
+    expect(source).toContain('resolveWaitlistSubmitFeedback');
+    expect(source).toContain('consentToContact: true');
+    expect(source).toContain("status === 'success'");
+    expect(source).toContain("status === 'warning'");
+    expect(source).toContain("status === 'error'");
+    expect(source).toContain('bg-blue-600');
+    expect(source).toContain('bg-violet-500/10');
+    expect(source).toContain('bg-emerald-300/10');
+    expect(source).toContain('bg-amber-400/10');
+    expect(source).toContain('bg-red-500/10');
+    expect(source).not.toContain('cyan-');
+    expect(source).not.toContain('rounded-[2rem]');
   });
 });
