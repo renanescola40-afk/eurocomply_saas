@@ -15,6 +15,9 @@ describe('RISCK COMPLY commercial UI V2 consistency', () => {
     expect(source).toContain('applyPricingCommercialTruth');
     expect(source).toContain('PricingStructuredData');
     expect(source).toContain('planHref(locale, plan)');
+    expect(source).toContain("if (plan.id === 'enterprise') return `/${locale}/enterprise`");
+    expect(source).toContain("if (plan.salesLed) return `/${locale}/book-demo?plan=${publicSlug}`");
+    expect(source).toContain("return `/${locale}/signup?plan=${publicSlug}`");
     expect(source).toContain('/brand/risck-comply-wordmark.svg');
     expect(source).toContain('bg-[#050913]');
     expect(source).toContain('bg-blue-600');
