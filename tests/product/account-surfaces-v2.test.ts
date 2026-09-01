@@ -9,7 +9,7 @@ const NOTIFICATIONS_CLIENT = new URL('../../src/app/[locale]/notificacoes/notifi
 const LOGIN = new URL('../../src/app/[locale]/login/page.tsx', import.meta.url);
 const ONBOARDING_PAGE = new URL('../../src/app/[locale]/onboarding/page.tsx', import.meta.url);
 const ONBOARDING_BOUNDARY = new URL('../../src/components/onboarding/onboarding-runtime-boundary.tsx', import.meta.url);
-const ONBOARDING_CSS = new URL('../../src/components/onboarding/onboarding-tailadmin.module.css', import.meta.url);
+const ONBOARDING_CSS = new URL('../../src/components/onboarding/onboarding-enterprise-v2.module.css', import.meta.url);
 
 describe('RISCK COMPLY UI V2 account surfaces', () => {
   it('keeps organization settings behind server-side administrative boundaries', async () => {

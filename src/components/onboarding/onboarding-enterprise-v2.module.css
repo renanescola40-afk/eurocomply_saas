@@ -95,15 +95,56 @@
   border-radius: 12px !important;
 }
 
-.shell :global(section[aria-labelledby='onboarding-title'] [class*='bg-cyan-300']),
-.shell :global(section[aria-labelledby='onboarding-title'] [class*='text-cyan-200']),
-.shell :global(section[aria-labelledby='onboarding-title'] [class*='text-emerald-300']) {
+.shell :global(section[aria-labelledby='onboarding-title'] [class*='bg-cyan-300']) {
+  background: rgba(37, 99, 235, 0.07) !important;
+}
+
+.shell :global(section[aria-labelledby='onboarding-title'] [class*='border-cyan-300']) {
+  border-color: rgba(96, 165, 250, 0.22) !important;
+}
+
+.shell :global(section[aria-labelledby='onboarding-title'] [class*='text-cyan-200']) {
   color: rgb(147 197 253) !important;
 }
 
-.shell :global(section[aria-labelledby='onboarding-title'] [class*='focus-within:border-cyan']),
+.shell :global(section[aria-labelledby='onboarding-title'] [class*='focus-within:border-cyan']) {
+  border-color: rgba(96, 165, 250, 0.5) !important;
+}
+
 .shell :global(section[aria-labelledby='onboarding-title'] [class*='focus-within:ring-cyan']) {
   --tw-ring-color: rgba(96, 165, 250, 0.34) !important;
+}
+
+.shell :global(section[aria-labelledby='onboarding-title'] [class*='focus-visible:ring-emerald']),
+.shell :global(section[aria-labelledby='onboarding-title'] [class*='focus:ring-emerald']) {
+  --tw-ring-color: rgba(96, 165, 250, 0.42) !important;
+}
+
+.shell :global(section[aria-labelledby='onboarding-title'] button[class*='border-emerald']),
+.shell :global(section[aria-labelledby='onboarding-title'] label[class*='border-emerald']) {
+  border-color: rgba(96, 165, 250, 0.42) !important;
+}
+
+.shell :global(section[aria-labelledby='onboarding-title'] button[class*='bg-emerald']),
+.shell :global(section[aria-labelledby='onboarding-title'] label[class*='bg-emerald']) {
+  background: rgba(37, 99, 235, 0.09) !important;
+}
+
+.shell :global(section[aria-labelledby='onboarding-title'] button [class*='text-emerald']),
+.shell :global(section[aria-labelledby='onboarding-title'] label [class*='text-emerald']) {
+  color: rgb(147 197 253) !important;
+}
+
+.shell :global(section[aria-labelledby='onboarding-title'] label [class*='bg-emerald']) {
+  border-color: rgb(96 165 250) !important;
+  background: rgb(96 165 250) !important;
+  color: #07101a !important;
+}
+
+.shell :global(section[aria-labelledby='onboarding-title'] article > span[class*='bg-emerald']) {
+  border-color: rgba(96, 165, 250, 0.2) !important;
+  background: rgba(37, 99, 235, 0.08) !important;
+  color: rgb(147 197 253) !important;
 }
 
 .shell :global(section[aria-labelledby='onboarding-title'] button),

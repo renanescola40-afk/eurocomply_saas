@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import styles from './onboarding-purchase-ui-v2.module.css';
+
 export const metadata: Metadata = {
   robots: {
     index: false,
@@ -17,5 +19,9 @@ export const metadata: Metadata = {
 };
 
 export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <div className={styles.route} data-risck-onboarding-route="risck-ui-v2">
+      {children}
+    </div>
+  );
 }
