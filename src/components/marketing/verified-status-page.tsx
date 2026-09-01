@@ -112,19 +112,19 @@ export function VerifiedStatusPage({ locale }: { locale: string }) {
   const copy = COPY[normalizedLocale] ?? COPY.en;
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white">
-      <section className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,.22),transparent_30rem),linear-gradient(180deg,#050505_0%,#071018_100%)] px-6 py-20">
+    <main className="min-h-screen bg-[#050913] text-white">
+      <section className="border-b border-white/10 px-6 py-20">
         <div className="mx-auto max-w-6xl">
-          <p className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/82">
+          <p className="inline-flex items-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-300/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-100">
             <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> {copy.eyebrow}
           </p>
           <h1 className="mt-7 max-w-4xl text-4xl font-semibold tracking-[-0.055em] sm:text-6xl">{copy.title}</h1>
           <p className="mt-6 max-w-3xl text-lg leading-8 text-white/62">{copy.subtitle}</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <a href={VERIFIED_STATUS_PAGE_URL} target="_blank" rel="noopener noreferrer" className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">
+            <a href={VERIFIED_STATUS_PAGE_URL} target="_blank" rel="noopener noreferrer" className="inline-flex h-12 items-center gap-2 rounded-xl bg-blue-600 px-6 text-sm font-bold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
               <Activity className="h-4 w-4" aria-hidden="true" /> {copy.openStatus} <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
             </a>
-            <Link href={`/${normalizedLocale}/trust`} className="inline-flex h-12 items-center justify-center rounded-full border border-white/15 px-6 text-sm font-bold hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">
+            <Link href={`/${normalizedLocale}/trust`} className="inline-flex h-12 items-center justify-center rounded-xl border border-white/15 px-6 text-sm font-bold transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
               {copy.trustCenter}
             </Link>
           </div>
@@ -133,19 +133,19 @@ export function VerifiedStatusPage({ locale }: { locale: string }) {
 
       <section className="px-6 py-16">
         <div className="mx-auto grid max-w-6xl gap-5 md:grid-cols-3">
-          <article className="rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-6">
-            <ShieldCheck className="h-5 w-5 text-cyan-100" aria-hidden="true" />
+          <article className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-6">
+            <ShieldCheck className="h-5 w-5 text-blue-300" aria-hidden="true" />
             <h2 className="mt-4 text-xl font-semibold">{copy.authority}</h2>
             <p className="mt-3 text-sm leading-7 text-white/58">{copy.authorityBody}</p>
-            <p className="mt-4 break-all text-sm font-medium text-cyan-100">{VERIFIED_STATUS_PAGE_URL}</p>
+            <p className="mt-4 break-all text-sm font-medium text-blue-300">{VERIFIED_STATUS_PAGE_URL}</p>
           </article>
-          <article className="rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-6">
-            <Activity className="h-5 w-5 text-cyan-100" aria-hidden="true" />
+          <article className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-6">
+            <Activity className="h-5 w-5 text-blue-300" aria-hidden="true" />
             <h2 className="mt-4 text-xl font-semibold">{copy.operations}</h2>
             <p className="mt-3 text-sm leading-7 text-white/58">{copy.operationsBody}</p>
           </article>
-          <article className="rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-6">
-            <CheckCircle2 className="h-5 w-5 text-cyan-100" aria-hidden="true" />
+          <article className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-6">
+            <CheckCircle2 className="h-5 w-5 text-blue-300" aria-hidden="true" />
             <h2 className="mt-4 text-xl font-semibold">{copy.incidents}</h2>
             <p className="mt-3 text-sm leading-7 text-white/58">{copy.incidentsBody}</p>
           </article>
