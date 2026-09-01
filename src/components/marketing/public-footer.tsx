@@ -144,7 +144,7 @@ function localizeFeatureLabel(locale: Locale, label: string) {
   return label;
 }
 
-const footerLinkClass = 'rounded-sm transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]';
+const footerLinkClass = 'rounded-sm transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050913]';
 
 export function PublicFooter({ locale }: { locale: string }) {
   const activeLocale = getActiveLocale(locale);
@@ -165,12 +165,12 @@ export function PublicFooter({ locale }: { locale: string }) {
   ];
 
   return (
-    <footer className="border-t border-white/10 bg-[#050505] px-6 py-12 text-sm text-white/55">
+    <footer className="border-t border-white/10 bg-[#050913] px-6 py-12 text-sm text-white/55">
       <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-2 xl:grid-cols-[1.35fr_1.25fr_.8fr_.9fr]">
         <div>
           <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={170} height={42} className="h-10 w-auto object-contain" />
           <p className="mt-4 max-w-md leading-7 text-white/58">{copy.tagline}</p>
-          <p className="mt-5 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.06] px-4 py-3 text-xs leading-5 text-cyan-50/72">{copy.assuranceNote}</p>
+          <p className="mt-5 rounded-xl border border-blue-400/15 bg-blue-500/[0.06] px-4 py-3 text-xs leading-5 text-blue-100/75">{copy.assuranceNote}</p>
         </div>
 
         <nav aria-label={copy.featureNavLabel}>
