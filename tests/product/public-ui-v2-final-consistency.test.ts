@@ -6,6 +6,8 @@ const CONSENT_BANNER = new URL('../../src/components/analytics/AnalyticsConsentB
 const CONSENT_CONTROLS = new URL('../../src/components/analytics/AnalyticsConsentControls.tsx', import.meta.url);
 const LEGAL_REVIEW = new URL('../../src/components/legal/public-legal-review-page.tsx', import.meta.url);
 const PROVIDER_DATA = new URL('../../src/app/[locale]/dashboard/provider-data/page.tsx', import.meta.url);
+const ANNEX_IV = new URL('../../src/app/[locale]/dashboard/annex-iv/page.tsx', import.meta.url);
+const EXECUTIVE_SUMMARY = new URL('../../src/components/ExecutiveComplianceSummary.tsx', import.meta.url);
 const INTERNATIONAL_HOME = new URL('../../src/components/marketing/international-home.tsx', import.meta.url);
 const FEATURE_PAGE = new URL('../../src/app/[locale]/features/[feature]/page.tsx', import.meta.url);
 const PLATFORM_LAYOUT = new URL('../../src/app/[locale]/platform/layout.tsx', import.meta.url);
@@ -61,6 +63,34 @@ describe('RISCK COMPLY UI V2 final public consistency', () => {
     expect(source).toContain('bg-[#0d1522]');
     expect(source).not.toContain('cyan-');
     expect(source).not.toContain('min-h-screen');
+  });
+
+  it('keeps Annex IV workflow authority while inheriting the enterprise dashboard shell', async () => {
+    const source = await readFile(ANNEX_IV, 'utf8');
+    expect(source).toContain("fetch('/api/ai-governance/annex-iv'");
+    expect(source).toContain("cache: 'no-store'");
+    expect(source).toContain('workflow=${workflow}');
+    expect(source).toContain("method: 'POST'");
+    expect(source).toContain('aria-labelledby="annex-iv-title"');
+    expect(source).toContain('bg-blue-600');
+    expect(source).toContain('bg-[#0d1522]');
+    expect(source).toContain('bg-amber-300/[0.06]');
+    expect(source).not.toContain('cyan-');
+    expect(source).not.toContain('min-h-screen');
+  });
+
+  it('keeps executive calculations while replacing decorative gradients with semantic compact cards', async () => {
+    const source = await readFile(EXECUTIVE_SUMMARY, 'utf8');
+    expect(source).toContain('tryLoadLatestGapAssessment');
+    expect(source).toContain('tryLoadOpenComplianceWork');
+    expect(source).toContain('score - criticalFindings * 8 - openTasks * 2');
+    expect(source).toContain('bg-blue-500/[0.06]');
+    expect(source).toContain('bg-red-500/[0.06]');
+    expect(source).toContain('bg-amber-500/[0.06]');
+    expect(source).toContain('bg-emerald-500/[0.06]');
+    expect(source).not.toContain('cyan-');
+    expect(source).not.toContain('bg-gradient-to-br');
+    expect(source).not.toContain('rounded-2xl');
   });
 
   it('keeps international landing copy and feature discovery while enforcing the V2 brand contract', async () => {
