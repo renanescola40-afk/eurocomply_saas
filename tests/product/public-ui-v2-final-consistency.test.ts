@@ -14,6 +14,8 @@ const PLATFORM_LAYOUT = new URL('../../src/app/[locale]/platform/layout.tsx', im
 const VERIFIED_STATUS = new URL('../../src/components/marketing/verified-status-page.tsx', import.meta.url);
 const PROCUREMENT_PACK = new URL('../../src/app/[locale]/trust/procurement-pack/page.tsx', import.meta.url);
 const WAITLIST_INTERACTIONS = new URL('../../src/components/marketing/waitlist-interactions.tsx', import.meta.url);
+const PUBLIC_FOOTER = new URL('../../src/components/marketing/public-footer.tsx', import.meta.url);
+const TRUST_CENTER = new URL('../../src/components/marketing/trust-center-page.tsx', import.meta.url);
 
 describe('RISCK COMPLY UI V2 final public consistency', () => {
   it('uses the official wordmark and cobalt system on the contact surface', async () => {
@@ -173,5 +175,34 @@ describe('RISCK COMPLY UI V2 final public consistency', () => {
     expect(source).toContain('bg-red-500/10');
     expect(source).not.toContain('cyan-');
     expect(source).not.toContain('rounded-[2rem]');
+  });
+
+  it('keeps footer routes and localization while enforcing the graphite/cobalt brand contract', async () => {
+    const source = await readFile(PUBLIC_FOOTER, 'utf8');
+    expect(source).toContain('getFeaturePages(activeLocale)');
+    expect(source).toContain('getLocalizedTrustCenterPages(activeLocale)');
+    expect(source).toContain('/brand/risck-comply-wordmark.svg');
+    expect(source).toContain('bg-[#050913]');
+    expect(source).toContain('focus-visible:ring-blue-400');
+    expect(source).toContain('bg-blue-500/[0.06]');
+    expect(source).not.toContain('cyan-');
+    expect(source).not.toContain('bg-[#050505]');
+  });
+
+  it('keeps Trust Center claims and legal publication authority while removing legacy marketing chrome', async () => {
+    const source = await readFile(TRUST_CENTER, 'utf8');
+    expect(source).toContain('getLegalPublicationState()');
+    expect(source).toContain('PAGE_CONTENT[kind] ?? PAGE_CONTENT.trust');
+    expect(source).toContain('content.providers.map');
+    expect(source).toContain('content.statusRows.map');
+    expect(source).toContain('/brand/risck-comply-wordmark.svg');
+    expect(source).toContain('bg-[#050913]');
+    expect(source).toContain('bg-[#0d1522]');
+    expect(source).toContain('bg-amber-200/[0.06]');
+    expect(source).toContain('focus-visible:ring-blue-400');
+    expect(source).not.toContain('cyan-');
+    expect(source).not.toContain('radial-gradient');
+    expect(source).not.toContain('rounded-[2rem]');
+    expect(source).not.toContain('rounded-[1.8rem]');
   });
 });
