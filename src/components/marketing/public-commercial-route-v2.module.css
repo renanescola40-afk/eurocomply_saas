@@ -1,0 +1,96 @@
+.frame {
+  min-height: 100vh;
+  background: #05070b;
+}
+
+.frame :global(main) {
+  background-color: #05070b !important;
+}
+
+.frame :global(main > div.pointer-events-none.fixed.inset-0:not(.tech-grid)) {
+  background:
+    radial-gradient(circle at 16% 10%, rgba(37, 99, 235, 0.2), transparent 31rem),
+    radial-gradient(circle at 84% 16%, rgba(124, 58, 237, 0.08), transparent 29rem),
+    linear-gradient(180deg, #05070b 0%, #08101b 52%, #05070b 100%) !important;
+}
+
+.frame :global(.tech-grid) {
+  display: none !important;
+}
+
+.frame[data-public-commercial-v2='pricing'] :global(section[aria-labelledby='pricing-title'] > div.pointer-events-none.absolute) {
+  background:
+    radial-gradient(circle at 20% 10%, rgba(37, 99, 235, 0.2), transparent 30rem),
+    radial-gradient(circle at 80% 15%, rgba(124, 58, 237, 0.08), transparent 28rem) !important;
+}
+
+.frame :global(a[class*='bg-white']),
+.frame :global(button[class*='bg-white']) {
+  background: rgb(37 99 235) !important;
+  color: #fff !important;
+}
+
+.frame :global(a[class*='bg-white']:hover),
+.frame :global(button[class*='bg-white']:hover) {
+  background: rgb(59 130 246) !important;
+}
+
+.frame :global([class*='text-cyan-']) {
+  color: rgb(147 197 253) !important;
+}
+
+.frame :global([class*='border-cyan-']) {
+  border-color: rgba(96, 165, 250, 0.28) !important;
+}
+
+.frame :global([class*='bg-cyan-']) {
+  background-color: rgba(37, 99, 235, 0.1) !important;
+}
+
+.frame[data-public-commercial-v2='pricing'] :global(article[class*='from-emerald']) {
+  border-color: rgba(96, 165, 250, 0.38) !important;
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.13), #020617) !important;
+}
+
+.frame[data-public-commercial-v2='enterprise'] :global(svg[class*='text-emerald']) {
+  color: rgb(147 197 253) !important;
+}
+
+.frame[data-public-commercial-v2='pricing'] :global(header a:first-child),
+.frame[data-public-commercial-v2='enterprise'] :global(header a:first-child),
+.frame[data-public-commercial-v2='book-demo'] :global(main section:first-of-type > div:first-child > a:first-child),
+.frame[data-public-commercial-v2='contact'] :global(main section:first-of-type > div > a:first-child) {
+  display: inline-block !important;
+  width: 164px;
+  height: 28px;
+  overflow: hidden;
+  background-image: url('/brand/risck-comply-wordmark.svg');
+  background-position: left center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+
+.frame[data-public-commercial-v2='contact'] :global(main section:first-of-type > div > a:first-child svg) {
+  display: none !important;
+}
+
+.frame :global(a:focus-visible),
+.frame :global(button:focus-visible),
+.frame :global(input:focus-visible),
+.frame :global(textarea:focus-visible),
+.frame :global(select:focus-visible) {
+  outline: 2px solid rgba(147, 197, 253, 0.9);
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .frame[data-public-commercial-v2='pricing'] :global(header a:first-child),
+  .frame[data-public-commercial-v2='enterprise'] :global(header a:first-child),
+  .frame[data-public-commercial-v2='book-demo'] :global(main section:first-of-type > div:first-child > a:first-child),
+  .frame[data-public-commercial-v2='contact'] :global(main section:first-of-type > div > a:first-child) {
+    width: 142px;
+    height: 24px;
+  }
+}
