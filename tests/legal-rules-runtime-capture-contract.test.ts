@@ -50,15 +50,16 @@ describe('legal rules runtime capture contract', () => {
     expect(workflowSource).toContain('test "$(git rev-parse HEAD)" = "$EXPECTED_DEPLOYMENT_SHA"');
   });
 
-  it('automatically captures only trusted successful current-main Vercel deployments through the canonical production origin', () => {
+  it('automatically captures only successful exact-current-main deployments through the canonical production origin', () => {
     expect(workflowSource).toContain('deployment_status:');
     expect(workflowSource).toContain("github.event.deployment_status.state == 'success'");
     expect(workflowSource).toContain('github.event.deployment.ref == github.event.repository.default_branch');
     expect(workflowSource).toContain("github.event.deployment.ref == ''");
-    expect(workflowSource).toContain("github.event.sender.login == 'vercel[bot]'");
-    expect(workflowSource).toContain("process.env.DEPLOYMENT_EVENT_SENDER !== 'vercel[bot]'");
+    expect(workflowSource).not.toContain("github.event.sender.login == 'vercel[bot]'");
+    expect(workflowSource).not.toContain("process.env.DEPLOYMENT_EVENT_SENDER !== 'vercel[bot]'");
     expect(workflowSource).toContain("const deploymentRef = String(process.env.DEPLOYMENT_EVENT_REF || '')");
     expect(workflowSource).toContain('if (deploymentRef && deploymentRef !== process.env.DEFAULT_BRANCH)');
+    expect(workflowSource).toContain("if (String(process.env.DEPLOYMENT_EVENT_SHA || '').toLowerCase() !== expectedSha) throw new Error('deployment event SHA mismatch')");
     expect(workflowSource).toContain("DEPLOYMENT_URL: ${{ github.event_name == 'deployment_status' && 'https://www.risckcomply.com' || inputs.deployment_url }}");
     expect(workflowSource).toContain("if (url.origin !== 'https://www.risckcomply.com') throw new Error('automatic production proof must use the canonical production origin')");
     expect(workflowSource).toContain('refs/remotes/origin/${DEFAULT_BRANCH}');

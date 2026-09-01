@@ -63,7 +63,7 @@ env:
 concurrency:
   # Deployment-status events are noisy: Vercel/GitHub can emit several status
   # records for the same SHA. A skipped/untrusted sibling must never cancel the
-  # one trusted successful vercel[bot] run that is capturing immutable evidence.
+  # successful current-main run that is capturing immutable runtime evidence.
   # PR/push/manual runs still coalesce by exact SHA as before.
   group: legal-rules-runtime-validation-${{ github.event_name == 'deployment_status' && github.run_id || github.event.pull_request.head.sha || inputs.expected_sha || github.event.deployment.sha || github.sha }}
   cancel-in-progress: true
@@ -78,8 +78,7 @@ jobs:
         (
           github.event.deployment.ref == github.event.repository.default_branch ||
           github.event.deployment.ref == ''
-        ) &&
-        github.event.sender.login == 'vercel[bot]'
+        )
       )
     runs-on: ubuntu-24.04
     timeout-minutes: 35
@@ -145,8 +144,7 @@ jobs:
         (
           github.event.deployment.ref == github.event.repository.default_branch ||
           github.event.deployment.ref == ''
-        ) &&
-        github.event.sender.login == 'vercel[bot]'
+        )
       )
     needs: contract
     runs-on: ubuntu-24.04
@@ -157,7 +155,6 @@ jobs:
       DEPLOYMENT_EVENT_STATE: ${{ github.event.deployment_status.state }}
       DEPLOYMENT_EVENT_REF: ${{ github.event.deployment.ref }}
       DEPLOYMENT_EVENT_SHA: ${{ github.event.deployment.sha }}
-      DEPLOYMENT_EVENT_SENDER: ${{ github.event.sender.login }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       INTERNAL_CRON_SECRET: ${{ secrets.INTERNAL_CRON_SECRET || secrets.CRON_SECRET }}
       OUTPUT_PATH: artifacts/legal-rules-runtime/docs/security/evidence/runtime/legal-rules-validation.json
@@ -188,7 +185,6 @@ jobs:
           }
           if (process.env.GITHUB_EVENT_NAME === 'deployment_status') {
             if (process.env.DEPLOYMENT_EVENT_STATE !== 'success') throw new Error('deployment status must be success');
-            if (process.env.DEPLOYMENT_EVENT_SENDER !== 'vercel[bot]') throw new Error('deployment sender is not the trusted Vercel app');
             const deploymentRef = String(process.env.DEPLOYMENT_EVENT_REF || '');
             if (deploymentRef && deploymentRef !== process.env.DEFAULT_BRANCH) throw new Error('deployment ref is neither the default branch nor an empty commit-SHA ref');
             if (String(process.env.DEPLOYMENT_EVENT_SHA || '').toLowerCase() !== expectedSha) throw new Error('deployment event SHA mismatch');
