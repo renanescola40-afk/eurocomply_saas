@@ -20,6 +20,8 @@ const complianceOptions = [
   'EU AI Act readiness and transparency duties',
 ];
 
+const fieldClassName = 'h-12 w-full rounded-lg border border-slate-700 bg-slate-950/35 px-4 text-white outline-none transition placeholder:text-white/30 focus:border-blue-400/60 focus-visible:ring-2 focus-visible:ring-blue-400/50';
+
 export function BookDemoForm({ locale }: BookDemoFormProps) {
   const [state, setState] = useState<SubmitState>('idle');
   const [message, setMessage] = useState<string | null>(null);
@@ -90,27 +92,27 @@ export function BookDemoForm({ locale }: BookDemoFormProps) {
   }
 
   return (
-    <form method="post" onSubmit={handleSubmit} onFocusCapture={handleDemoStarted} className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-2xl backdrop-blur md:p-8">
+    <form method="post" onSubmit={handleSubmit} onFocusCapture={handleDemoStarted} className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-6 md:p-8">
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2 text-sm font-medium text-white/80">
           Full name *
-          <input name="fullName" required className="h-12 w-full rounded-2xl border border-white/10 bg-black/35 px-4 text-white outline-none transition placeholder:text-white/30 focus:border-white/35" placeholder="Jane Smith" />
+          <input name="fullName" required className={fieldClassName} placeholder="Jane Smith" />
         </label>
         <label className="space-y-2 text-sm font-medium text-white/80">
           Work email *
-          <input name="workEmail" type="email" required className="h-12 w-full rounded-2xl border border-white/10 bg-black/35 px-4 text-white outline-none transition placeholder:text-white/30 focus:border-white/35" placeholder="jane@company.com" />
+          <input name="workEmail" type="email" required className={fieldClassName} placeholder="jane@company.com" />
         </label>
         <label className="space-y-2 text-sm font-medium text-white/80">
           Company *
-          <input name="companyName" required className="h-12 w-full rounded-2xl border border-white/10 bg-black/35 px-4 text-white outline-none transition placeholder:text-white/30 focus:border-white/35" placeholder="Acme Europe" />
+          <input name="companyName" required className={fieldClassName} placeholder="Acme Europe" />
         </label>
         <label className="space-y-2 text-sm font-medium text-white/80">
           Role
-          <input name="role" className="h-12 w-full rounded-2xl border border-white/10 bg-black/35 px-4 text-white outline-none transition placeholder:text-white/30 focus:border-white/35" placeholder="Compliance, Legal, Security, Head of AI" />
+          <input name="role" className={fieldClassName} placeholder="Compliance, Legal, Security, Head of AI" />
         </label>
         <label className="space-y-2 text-sm font-medium text-white/80">
           Company size
-          <select name="companySize" className="h-12 w-full rounded-2xl border border-white/10 bg-black/35 px-4 text-white outline-none transition focus:border-white/35">
+          <select name="companySize" className={fieldClassName}>
             <option value="">Select</option>
             <option>1-10</option>
             <option>11-50</option>
@@ -121,7 +123,7 @@ export function BookDemoForm({ locale }: BookDemoFormProps) {
         </label>
         <label className="space-y-2 text-sm font-medium text-white/80">
           Region / countries
-          <input name="region" className="h-12 w-full rounded-2xl border border-white/10 bg-black/35 px-4 text-white outline-none transition placeholder:text-white/30 focus:border-white/35" placeholder="Portugal, Spain, EU, UK..." />
+          <input name="region" className={fieldClassName} placeholder="Portugal, Spain, EU, UK..." />
         </label>
       </div>
 
@@ -129,8 +131,8 @@ export function BookDemoForm({ locale }: BookDemoFormProps) {
         <legend className="text-sm font-semibold text-white/80">What do you want to operationalize first?</legend>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           {complianceOptions.map((option) => (
-            <label key={option} className="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-sm text-white/65">
-              <input name="complianceDrivers" type="checkbox" value={option} className="mt-1" />
+            <label key={option} className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/20 p-3 text-sm text-white/65 transition hover:border-blue-400/25 hover:bg-blue-500/[0.04]">
+              <input name="complianceDrivers" type="checkbox" value={option} className="mt-1 accent-blue-600" />
               <span>{option}</span>
             </label>
           ))}
@@ -140,7 +142,7 @@ export function BookDemoForm({ locale }: BookDemoFormProps) {
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <label className="space-y-2 text-sm font-medium text-white/80">
           Timeline
-          <select name="timeline" className="h-12 w-full rounded-2xl border border-white/10 bg-black/35 px-4 text-white outline-none transition focus:border-white/35">
+          <select name="timeline" className={fieldClassName}>
             <option value="">Select</option>
             <option>This month</option>
             <option>1-3 months</option>
@@ -150,17 +152,17 @@ export function BookDemoForm({ locale }: BookDemoFormProps) {
         </label>
         <label className="space-y-2 text-sm font-medium text-white/80">
           Current process
-          <input name="currentProcess" className="h-12 w-full rounded-2xl border border-white/10 bg-black/35 px-4 text-white outline-none transition placeholder:text-white/30 focus:border-white/35" placeholder="Spreadsheets, Notion, Drive, GRC tool..." />
+          <input name="currentProcess" className={fieldClassName} placeholder="Spreadsheets, Notion, Drive, GRC tool..." />
         </label>
       </div>
 
       <label className="mt-4 block space-y-2 text-sm font-medium text-white/80">
         Message
-        <textarea name="message" rows={4} className="w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-white/35" placeholder="Tell us what you need to prepare for: AI inventory, risk review, policy rollout, vendor review or evidence readiness..." />
+        <textarea name="message" rows={4} className={`${fieldClassName} h-auto py-3`} placeholder="Tell us what you need to prepare for: AI inventory, risk review, policy rollout, vendor review or evidence readiness..." />
       </label>
 
-      <label className="mt-5 flex items-start gap-3 text-sm leading-6 text-white/60">
-        <input name="consentToContact" required type="checkbox" className="mt-1" />
+      <label className="mt-5 flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/20 p-3 text-sm leading-6 text-white/60">
+        <input name="consentToContact" required type="checkbox" className="mt-1 accent-blue-600" />
         <span>I agree to be contacted about RISCK COMPLY and understand this form is for sales/demo follow-up.</span>
       </label>
 
@@ -168,13 +170,13 @@ export function BookDemoForm({ locale }: BookDemoFormProps) {
         type="submit"
         data-cta-id="book-demo-submit"
         disabled={state === 'submitting'}
-        className="mt-7 inline-flex w-full items-center justify-center rounded-full bg-white px-7 py-4 text-base font-bold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
+        className="mt-7 inline-flex w-full items-center justify-center rounded-xl bg-blue-600 px-7 py-4 text-base font-bold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {state === 'submitting' ? 'Submitting...' : 'Book demo'}
       </button>
 
       {message ? (
-        <p className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${state === 'success' ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100' : 'border-red-400/30 bg-red-400/10 text-red-100'}`} aria-live="polite">
+        <p className={`mt-4 rounded-lg border px-4 py-3 text-sm ${state === 'success' ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100' : 'border-red-400/30 bg-red-400/10 text-red-100'}`} aria-live="polite">
           {message}
         </p>
       ) : null}
