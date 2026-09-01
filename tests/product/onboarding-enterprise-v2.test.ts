@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 
 const RUNTIME = new URL('../../src/components/onboarding/onboarding-runtime-boundary.tsx', import.meta.url);
-const STYLES = new URL('../../src/components/onboarding/onboarding-tailadmin.module.css', import.meta.url);
+const STYLES = new URL('../../src/components/onboarding/onboarding-enterprise-v2.module.css', import.meta.url);
 
 describe('RISCK COMPLY UI V2 onboarding shell', () => {
   it('wraps the licensed onboarding runtime in the shared enterprise visual contract without changing activation authority', async () => {
@@ -13,6 +13,8 @@ describe('RISCK COMPLY UI V2 onboarding shell', () => {
     expect(source).toContain('onSaveDraft={saveDraft}');
     expect(source).toContain('onComplete={complete}');
     expect(source).toContain('getBillingRecoveryPath(locale, input.selectedPlan)');
+    expect(source).toContain('onboarding-enterprise-v2.module.css');
+    expect(source).not.toContain('onboarding-tailadmin.module.css');
   });
 
   it('uses a two-zone 290px onboarding navigation frame and retires the old three-column status rail', async () => {
@@ -33,5 +35,18 @@ describe('RISCK COMPLY UI V2 onboarding shell', () => {
     expect(css).toContain('box-shadow: none !important');
     expect(css).toContain('@media (max-width: 1279px)');
     expect(css).toContain('overflow-x: auto');
+  });
+
+  it('maps legacy cyan decoration and selection chrome to cobalt while leaving semantic emerald status available', async () => {
+    const css = await readFile(STYLES, 'utf8');
+
+    expect(css).toContain("[class*='bg-cyan-300']");
+    expect(css).toContain('background: rgba(37, 99, 235, 0.07) !important');
+    expect(css).toContain("[class*='border-cyan-300']");
+    expect(css).toContain("[class*='focus:ring-emerald']");
+    expect(css).toContain("button[class*='border-emerald']");
+    expect(css).toContain("label[class*='border-emerald']");
+    expect(css).toContain("article > span[class*='bg-emerald']");
+    expect(css).not.toContain("[class*='text-emerald-300']");
   });
 });

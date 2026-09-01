@@ -1,0 +1,78 @@
+.route {
+  min-height: 100vh;
+  background: #07101a;
+}
+
+.route :global(main > section) {
+  position: relative;
+  z-index: 1;
+}
+
+.route :global(main) {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(37, 99, 235, 0.16), transparent 30rem),
+    radial-gradient(circle at 88% 16%, rgba(124, 58, 237, 0.08), transparent 28rem),
+    #07101a !important;
+}
+
+.route :global(main > section > div) {
+  border-color: rgba(255, 255, 255, 0.085) !important;
+  background: #0a1320 !important;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.34) !important;
+}
+
+.route :global(main > section > div::before) {
+  content: '';
+  display: block;
+  width: 164px;
+  height: 28px;
+  margin-bottom: 32px;
+  background-image: url('/brand/risck-comply-wordmark.svg');
+  background-position: left center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.route :global(main > section > div > div:first-child > p:first-child) {
+  color: rgb(253 230 138) !important;
+}
+
+.route :global(main input),
+.route :global(main select) {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: #08111d !important;
+}
+
+.route :global(main input:focus),
+.route :global(main select:focus) {
+  border-color: rgba(96, 165, 250, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+}
+
+.route :global(main button[type='submit']) {
+  background: rgb(37 99 235) !important;
+  color: #fff !important;
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.2);
+}
+
+.route :global(main button[type='submit']:hover) {
+  background: rgb(59 130 246) !important;
+}
+
+.route :global(main button[type='submit']:focus-visible) {
+  outline: 2px solid rgba(147, 197, 253, 0.9);
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .route :global(main) {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  .route :global(main > section > div) {
+    border-radius: 20px !important;
+  }
+}

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ArrowUpRight, Building2, Headphones } from 'lucide-react';
 
 import { B2BOnboardingFlow } from '@/components/onboarding/b2b-onboarding-flow';
-import styles from '@/components/onboarding/onboarding-tailadmin.module.css';
+import styles from '@/components/onboarding/onboarding-enterprise-v2.module.css';
 import type {
   OnboardingActivationInitialState,
   OnboardingActivationInput,
