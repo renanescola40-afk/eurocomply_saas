@@ -74,7 +74,7 @@ function rejected(outcome: string, status?: string | null) {
   return noStoreJson({ error: 'legal_assurance_operation_rejected', outcome, status }, { status: 409 });
 }
 
-async function resolveCounselMatter(userId: string, reviewId: string) {
+async function getReviewerSession(userId: string, reviewId: string) {
   const profile = await getCurrentCounselProfile(userId);
   if (!profile || !profile.active || profile.verification_status !== 'VERIFIED') return null;
   const review = await getAssignedCounselReview(profile.id, reviewId);
@@ -87,7 +87,7 @@ export async function GET(_request: Request, context: RouteContext) {
     if (!isLegalAssuranceEnabled()) return disabled();
     const { reviewId } = await context.params;
     const user = await requireApiUser();
-    const matter = await resolveCounselMatter(user.id, reviewId);
+    const matter = await getReviewerSession(user.id, reviewId);
     if (!matter) return counselDenied();
 
     return noStoreJson({
@@ -115,7 +115,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     const { reviewId } = await context.params;
     const user = await requireApiUser();
-    const matter = await resolveCounselMatter(user.id, reviewId);
+    const matter = await getReviewerSession(user.id, reviewId);
     if (!matter) return counselDenied();
 
     const body = await parseJsonBodyWithZod(request, { schema: actionSchema, maxBytes: MAX_BYTES });
