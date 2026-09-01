@@ -22,7 +22,11 @@ describe('RISCK COMPLY UI V2 payment-first onboarding purchase stage', () => {
 
     expect(layout).toContain("import styles from './onboarding-purchase-ui-v2.module.css'");
     expect(layout).toContain('data-risck-onboarding-route="risck-ui-v2"');
-    expect(layout).toContain('noindex: true');
+    expect(layout).toContain('robots: {');
+    expect(layout).toContain('index: false');
+    expect(layout).toContain('follow: false');
+    expect(layout).toContain('nocache: true');
+    expect(layout).toContain('noimageindex: true');
 
     expect(css).toContain("url('/brand/risck-comply-wordmark.svg')");
     expect(css).toContain('color: rgb(253 230 138) !important');
