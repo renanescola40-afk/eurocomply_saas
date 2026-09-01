@@ -45,9 +45,11 @@ jobs:
           node --input-type=module <<'NODE'
           import { readFileSync } from 'node:fs';
           const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
-          const browserslist = lock.packages?.['node_modules/browserslist']?.version;
-          if (!browserslist || !/^4\\.(2[89]|[3-9][0-9])\\./.test(browserslist)) {
-            throw new Error(`browserslist remediation did not produce a patched version: ${browserslist ?? 'missing'}`);
+          const browserslist = lock.packages?.['node_modules/browserslist']?.version ?? '';
+          const [major, minor, patch] = browserslist.split('.').map(Number);
+          const patched = major === 4 && minor > 28 || major === 4 && minor === 28 && patch >= 7;
+          if (!patched) {
+            throw new Error(`browserslist remediation did not produce a patched version: ${browserslist || 'missing'}`);
           }
           console.log(`browserslist=${browserslist}`);
           NODE
