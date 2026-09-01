@@ -32,12 +32,13 @@ export function AnalyticsConsentControls({ locale: rawLocale }: { locale: string
   const stateLabel = state === 'granted' ? labels.granted : state === 'denied' ? labels.denied : labels.unset;
 
   return (
-    <section className="mt-6 rounded-2xl border border-cyan-200/20 bg-cyan-300/[0.06] p-5">
-      <p className="text-sm font-semibold text-white">{labels.current}: <span className="text-cyan-100">{stateLabel}</span></p>
+    <section className="mt-6 rounded-xl border border-blue-400/15 bg-blue-500/[0.06] p-5">
+      <p className="text-sm font-semibold text-white">{labels.current}: <span className="text-blue-200">{stateLabel}</span></p>
       <p className="mt-2 text-sm leading-6 text-white/60">{labels.note}</p>
       <div className="mt-4 flex flex-wrap gap-3">
         <Button
           type="button"
+          className="rounded-xl bg-blue-600 text-white hover:bg-blue-500"
           onClick={() => {
             grantAnalyticsConsent();
             initPostHog(window.location.pathname);
@@ -49,6 +50,7 @@ export function AnalyticsConsentControls({ locale: rawLocale }: { locale: string
         <Button
           type="button"
           variant="outline"
+          className="rounded-xl border-white/15 bg-white/[0.03] text-white hover:bg-white/10 hover:text-white"
           onClick={() => {
             denyAnalyticsConsent();
             setState('denied');
