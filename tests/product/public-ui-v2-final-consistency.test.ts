@@ -8,6 +8,8 @@ const LEGAL_REVIEW = new URL('../../src/components/legal/public-legal-review-pag
 const PROVIDER_DATA = new URL('../../src/app/[locale]/dashboard/provider-data/page.tsx', import.meta.url);
 const INTERNATIONAL_HOME = new URL('../../src/components/marketing/international-home.tsx', import.meta.url);
 const FEATURE_PAGE = new URL('../../src/app/[locale]/features/[feature]/page.tsx', import.meta.url);
+const PLATFORM_LAYOUT = new URL('../../src/app/[locale]/platform/layout.tsx', import.meta.url);
+const VERIFIED_STATUS = new URL('../../src/components/marketing/verified-status-page.tsx', import.meta.url);
 
 describe('RISCK COMPLY UI V2 final public consistency', () => {
   it('uses the official wordmark and cobalt system on the contact surface', async () => {
@@ -95,5 +97,29 @@ describe('RISCK COMPLY UI V2 final public consistency', () => {
     expect(source).not.toContain('rounded-[2rem]');
     expect(source).not.toContain('rounded-[2.2rem]');
     expect(source).not.toContain('bg-[linear-gradient');
+  });
+
+  it('uses the official wordmark and cobalt navigation on the platform surface', async () => {
+    const source = await readFile(PLATFORM_LAYOUT, 'utf8');
+
+    expect(source).toContain('/brand/risck-comply-wordmark.svg');
+    expect(source).toContain('bg-[#050913]');
+    expect(source).toContain('focus-visible:ring-blue-400');
+    expect(source).toContain('/platform/organizations/new');
+    expect(source).not.toContain('cyan-');
+    expect(source).not.toContain('rounded-full');
+  });
+
+  it('preserves verified status authority while using semantic green only for healthy state', async () => {
+    const source = await readFile(VERIFIED_STATUS, 'utf8');
+
+    expect(source).toContain('VERIFIED_STATUS_PAGE_URL');
+    expect(source).toContain('target="_blank"');
+    expect(source).toContain('text-emerald-100');
+    expect(source).toContain('bg-blue-600');
+    expect(source).toContain('bg-[#0d1522]');
+    expect(source).not.toContain('cyan-');
+    expect(source).not.toContain('radial-gradient');
+    expect(source).not.toContain('rounded-[1.75rem]');
   });
 });
