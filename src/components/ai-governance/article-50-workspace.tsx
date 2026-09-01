@@ -139,6 +139,9 @@ async function readJson(response: Response) {
   return payload;
 }
 
+const fieldClassName = 'mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/35 px-3 py-2 text-white outline-none transition focus:border-blue-400/60 focus-visible:ring-2 focus-visible:ring-blue-400/50';
+const panelClassName = 'rounded-xl border border-slate-800/80 bg-[#0d1522] p-5';
+
 export function Article50Workspace({ locale }: { locale: string }) {
   const [workspace, setWorkspace] = useState<WorkspacePayload | null>(null);
   const [assessment, setAssessment] = useState<AssessmentForm>(emptyAssessment);
@@ -306,21 +309,21 @@ export function Article50Workspace({ locale }: { locale: string }) {
 
   if (!workspace) {
     return (
-      <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6 text-red-100">
+      <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-6 text-red-100">
         Não foi possível carregar o workspace. {error}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-16">
-      <header className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+    <section className="space-y-6 pb-16 text-slate-100" aria-labelledby="article-50-title">
+      <header className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">
               EU AI Act · Artigo 50
             </p>
-            <h1 className="mt-2 text-2xl font-semibold text-white">
+            <h1 id="article-50-title" className="mt-2 text-2xl font-semibold text-white">
               Transparência operacional
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">
@@ -330,7 +333,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
             </p>
           </div>
           <a
-            className="rounded-xl border border-white/15 px-4 py-2 text-sm text-white/80 hover:bg-white/5"
+            className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-white/80 transition hover:border-blue-400/35 hover:bg-blue-500/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
             href="https://digital-strategy.ec.europa.eu/en/library/guidelines-transparency-obligations-providers-and-deployers-ai-systems"
             target="_blank"
             rel="noreferrer"
@@ -338,7 +341,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
             Orientações oficiais da Comissão
           </a>
         </div>
-        <div className="mt-5 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-50/90">
+        <div className="mt-5 rounded-lg border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-50/90">
           {workspace.truthBoundary}
         </div>
       </header>
@@ -350,7 +353,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
           ['Revisão', workspace.portfolio.summary.needsReview],
           ['Bloqueados', workspace.portfolio.summary.blocked],
         ].map(([label, value]) => (
-          <div key={String(label)} className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
+          <div key={String(label)} className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-5">
             <p className="text-xs uppercase tracking-wide text-white/45">{label}</p>
             <p className="mt-2 text-3xl font-semibold text-white">{value}</p>
           </div>
@@ -369,14 +372,14 @@ export function Article50Workspace({ locale }: { locale: string }) {
       ) : null}
 
       <section className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
+        <div className={panelClassName}>
           <h2 className="text-base font-semibold text-white">Sistemas de IA</h2>
           <p className="mt-1 text-sm text-white/50">
             A organização e o tenant são derivados no servidor.
           </p>
           <div className="mt-4 space-y-2">
             {workspace.systems.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-white/15 p-4 text-sm text-white/50">
+              <p className="rounded-lg border border-dashed border-slate-700 p-4 text-sm text-white/50">
                 Adicione primeiro um sistema ao inventário de IA.
               </p>
             ) : workspace.systems.map((system) => {
@@ -386,20 +389,21 @@ export function Article50Workspace({ locale }: { locale: string }) {
                   key={system.id}
                   type="button"
                   onClick={() => selectSystem(system.id)}
-                  className={`w-full rounded-xl border p-4 text-left transition ${
+                  aria-pressed={assessment.systemId === system.id}
+                  className={`w-full rounded-lg border p-4 text-left transition ${
                     assessment.systemId === system.id
-                      ? 'border-cyan-400/40 bg-cyan-400/10'
-                      : 'border-white/10 hover:bg-white/5'
+                      ? 'border-blue-400/40 bg-blue-500/10'
+                      : 'border-slate-800 bg-slate-950/20 hover:bg-slate-900/70'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-medium text-white">{system.name}</span>
                     {latest ? (
-                      <span className={`rounded-full border px-2 py-1 text-[11px] ${statusClass(latest.status)}`}>
+                      <span className={`rounded-lg border px-2 py-1 text-[11px] ${statusClass(latest.status)}`}>
                         {latest.status}
                       </span>
                     ) : (
-                      <span className="rounded-full border border-white/10 px-2 py-1 text-[11px] text-white/45">
+                      <span className="rounded-lg border border-slate-700 px-2 py-1 text-[11px] text-white/45">
                         Sem avaliação
                       </span>
                     )}
@@ -413,7 +417,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
+        <div className={panelClassName}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-base font-semibold text-white">
@@ -424,7 +428,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
               </p>
             </div>
             {selectedLatest ? (
-              <span className={`rounded-full border px-3 py-1 text-xs ${statusClass(selectedLatest.status)}`}>
+              <span className={`rounded-lg border px-3 py-1 text-xs ${statusClass(selectedLatest.status)}`}>
                 v{selectedLatest.version} · {selectedLatest.status}
               </span>
             ) : null}
@@ -437,7 +441,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
                 type="date"
                 value={assessment.placedOnMarketAt}
                 onChange={(event) => setAssessment((current) => ({ ...current, placedOnMarketAt: event.target.value }))}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white"
+                className={fieldClassName}
               />
             </label>
             <label className="text-sm text-white/70">
@@ -446,7 +450,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
                 value={assessment.disclosureLanguage}
                 onChange={(event) => setAssessment((current) => ({ ...current, disclosureLanguage: event.target.value }))}
                 maxLength={32}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white"
+                className={fieldClassName}
               />
             </label>
             <label className="text-sm text-white/70">
@@ -454,7 +458,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
               <select
                 value={assessment.disclosureChannel}
                 onChange={(event) => setAssessment((current) => ({ ...current, disclosureChannel: event.target.value }))}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white"
+                className={fieldClassName}
               >
                 <option value="website">Website</option>
                 <option value="chat">Chat</option>
@@ -472,14 +476,14 @@ export function Article50Workspace({ locale }: { locale: string }) {
                 onChange={(event) => setAssessment((current) => ({ ...current, displayEvidenceReference: event.target.value }))}
                 placeholder="org-id/article50/screenshots/..."
                 maxLength={1024}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white"
+                className={fieldClassName}
               />
             </label>
           </div>
 
           <fieldset className="mt-5 space-y-3">
             <legend className="text-sm font-medium text-white">Controlos declarados</legend>
-            <label className="flex items-start gap-3 rounded-xl border border-white/10 p-3 text-sm text-white/70">
+            <label className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/20 p-3 text-sm text-white/70">
               <input
                 type="checkbox"
                 checked={assessment.providerMachineReadableMarking}
@@ -488,7 +492,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
               />
               <span>Provider: marcação machine-readable implementada e testada.</span>
             </label>
-            <label className="flex items-start gap-3 rounded-xl border border-white/10 p-3 text-sm text-white/70">
+            <label className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/20 p-3 text-sm text-white/70">
               <input
                 type="checkbox"
                 checked={assessment.deployerDisclosure}
@@ -497,7 +501,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
               />
               <span>Deployer: aviso human-readable efetivamente exibido às pessoas afetadas.</span>
             </label>
-            <label className="flex items-start gap-3 rounded-xl border border-white/10 p-3 text-sm text-white/70">
+            <label className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-950/20 p-3 text-sm text-white/70">
               <input
                 type="checkbox"
                 checked={assessment.finalAmendingActVerifiedInOfficialJournal}
@@ -515,7 +519,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
                 value={assessment.markingEvidenceReference}
                 onChange={(event) => setAssessment((current) => ({ ...current, markingEvidenceReference: event.target.value }))}
                 maxLength={1024}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white"
+                className={fieldClassName}
               />
             </label>
             <label className="text-sm text-white/70">
@@ -524,16 +528,16 @@ export function Article50Workspace({ locale }: { locale: string }) {
                 value={assessment.officialJournalEvidenceId}
                 onChange={(event) => setAssessment((current) => ({ ...current, officialJournalEvidenceId: event.target.value }))}
                 maxLength={512}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white"
+                className={fieldClassName}
               />
             </label>
           </div>
 
           <div className="mt-5">
             <div className="mb-2 flex flex-wrap gap-2">
-              <button type="button" onClick={() => setAssessment((current) => ({ ...current, disclosureCopy: disclosureTemplates.interaction }))} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/5">Interação</button>
-              <button type="button" onClick={() => setAssessment((current) => ({ ...current, disclosureCopy: disclosureTemplates.deepfake }))} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/5">Deepfake</button>
-              <button type="button" onClick={() => setAssessment((current) => ({ ...current, disclosureCopy: disclosureTemplates.publicInterest }))} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/5">Interesse público</button>
+              <button type="button" onClick={() => setAssessment((current) => ({ ...current, disclosureCopy: disclosureTemplates.interaction }))} className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-white/70 transition hover:border-blue-400/35 hover:bg-blue-500/[0.06]">Interação</button>
+              <button type="button" onClick={() => setAssessment((current) => ({ ...current, disclosureCopy: disclosureTemplates.deepfake }))} className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-white/70 transition hover:border-blue-400/35 hover:bg-blue-500/[0.06]">Deepfake</button>
+              <button type="button" onClick={() => setAssessment((current) => ({ ...current, disclosureCopy: disclosureTemplates.publicInterest }))} className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-white/70 transition hover:border-blue-400/35 hover:bg-blue-500/[0.06]">Interesse público</button>
             </div>
             <label className="text-sm text-white/70">
               Cópia exata do aviso
@@ -542,14 +546,14 @@ export function Article50Workspace({ locale }: { locale: string }) {
                 onChange={(event) => setAssessment((current) => ({ ...current, disclosureCopy: event.target.value }))}
                 rows={5}
                 maxLength={8000}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white"
+                className={fieldClassName}
               />
             </label>
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {[markingDeadline, disclosureDeadline].map((deadline) => (
-              <div key={deadline.obligation} className="rounded-xl border border-white/10 bg-black/20 p-4">
+              <div key={deadline.obligation} className="rounded-lg border border-slate-800 bg-slate-950/20 p-4">
                 <p className="text-xs font-medium uppercase tracking-wide text-white/40">
                   {deadline.obligation.includes('50_2') ? 'Provider · Art. 50(2)' : 'Deployer · Art. 50(4)'}
                 </p>
@@ -560,7 +564,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
           </div>
 
           {selectedLatest?.blockers?.length ? (
-            <div className="mt-5 rounded-xl border border-red-500/20 bg-red-500/10 p-4">
+            <div className="mt-5 rounded-lg border border-red-500/20 bg-red-500/10 p-4">
               <p className="text-sm font-medium text-red-100">Bloqueios da versão atual</p>
               <ul className="mt-2 space-y-1 text-sm text-red-100/80">
                 {selectedLatest.blockers.map((blocker) => <li key={blocker}>• {blocker}</li>)}
@@ -572,14 +576,14 @@ export function Article50Workspace({ locale }: { locale: string }) {
             type="button"
             disabled={!assessment.systemId || saving}
             onClick={() => void saveAssessment()}
-            className="mt-5 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-5 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? 'A guardar…' : 'Guardar nova versão'}
           </button>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
+      <section className={panelClassName}>
         <h2 className="text-base font-semibold text-white">Registar evidência</h2>
         <p className="mt-1 text-sm text-white/50">
           Uma evidência submetida permanece pendente até revisão. Não cole segredos, tokens ou dados pessoais no formulário.
@@ -590,7 +594,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
             <select
               value={evidence.assessmentId}
               onChange={(event) => setEvidence((current) => ({ ...current, assessmentId: event.target.value }))}
-              className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white"
+              className={fieldClassName}
             >
               <option value="">Selecione</option>
               {workspace.assessments.map((item) => (
@@ -605,7 +609,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
             <select
               value={evidence.evidenceType}
               onChange={(event) => setEvidence((current) => ({ ...current, evidenceType: event.target.value }))}
-              className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white"
+              className={fieldClassName}
             >
               <option value="placement_date">Data de colocação</option>
               <option value="machine_readable_marking">Marcação machine-readable</option>
@@ -621,7 +625,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
             <select
               value={evidence.environment}
               onChange={(event) => setEvidence((current) => ({ ...current, environment: event.target.value as EvidenceForm['environment'] }))}
-              className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white"
+              className={fieldClassName}
             >
               <option value="local">Local</option>
               <option value="ci">CI</option>
@@ -632,36 +636,36 @@ export function Article50Workspace({ locale }: { locale: string }) {
           </label>
           <label className="text-sm text-white/70">
             Referência de storage
-            <input value={evidence.storageReference} onChange={(event) => setEvidence((current) => ({ ...current, storageReference: event.target.value }))} className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white" />
+            <input value={evidence.storageReference} onChange={(event) => setEvidence((current) => ({ ...current, storageReference: event.target.value }))} className={fieldClassName} />
           </label>
           <label className="text-sm text-white/70">
             SHA-256
-            <input value={evidence.sha256Digest} onChange={(event) => setEvidence((current) => ({ ...current, sha256Digest: event.target.value.toLowerCase() }))} maxLength={64} className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 font-mono text-xs text-white" />
+            <input value={evidence.sha256Digest} onChange={(event) => setEvidence((current) => ({ ...current, sha256Digest: event.target.value.toLowerCase() }))} maxLength={64} className={`${fieldClassName} font-mono text-xs`} />
           </label>
           <label className="text-sm text-white/70">
             URL HTTPS da fonte
-            <input type="url" value={evidence.sourceUrl} onChange={(event) => setEvidence((current) => ({ ...current, sourceUrl: event.target.value }))} className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white" />
+            <input type="url" value={evidence.sourceUrl} onChange={(event) => setEvidence((current) => ({ ...current, sourceUrl: event.target.value }))} className={fieldClassName} />
           </label>
           <label className="text-sm text-white/70 md:col-span-2">
             Limitações, uma por linha
-            <textarea value={evidence.limitations} onChange={(event) => setEvidence((current) => ({ ...current, limitations: event.target.value }))} rows={3} className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white" />
+            <textarea value={evidence.limitations} onChange={(event) => setEvidence((current) => ({ ...current, limitations: event.target.value }))} rows={3} className={fieldClassName} />
           </label>
           <label className="text-sm text-white/70">
             Válida até
-            <input type="datetime-local" value={evidence.validUntil} onChange={(event) => setEvidence((current) => ({ ...current, validUntil: event.target.value }))} className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white" />
+            <input type="datetime-local" value={evidence.validUntil} onChange={(event) => setEvidence((current) => ({ ...current, validUntil: event.target.value }))} className={fieldClassName} />
           </label>
         </div>
         <button
           type="button"
           disabled={!evidence.assessmentId || submittingEvidence}
           onClick={() => void submitEvidence()}
-          className="mt-5 rounded-xl border border-white/15 px-5 py-2.5 text-sm font-medium text-white hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-5 rounded-xl border border-slate-700 px-5 py-2.5 text-sm font-medium text-white transition hover:border-blue-400/35 hover:bg-blue-500/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submittingEvidence ? 'A registar…' : 'Registar evidência'}
         </button>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
+      <section className={panelClassName}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-base font-semibold text-white">Histórico de evidência</h2>
@@ -669,9 +673,9 @@ export function Article50Workspace({ locale }: { locale: string }) {
           </div>
           <span className="text-xs text-white/40">Perfil: {workspace.role} · locale: {locale}</span>
         </div>
-        <div className="mt-4 overflow-x-auto">
+        <div className="mt-4 overflow-x-auto rounded-lg border border-slate-800">
           <table className="min-w-full text-left text-sm">
-            <thead className="text-xs uppercase tracking-wide text-white/35">
+            <thead className="bg-slate-950/35 text-xs uppercase tracking-wide text-white/35">
               <tr>
                 <th className="px-3 py-2">Tipo</th>
                 <th className="px-3 py-2">Ambiente</th>
@@ -684,7 +688,7 @@ export function Article50Workspace({ locale }: { locale: string }) {
               {workspace.evidence.length === 0 ? (
                 <tr><td colSpan={5} className="px-3 py-6 text-center text-white/45">Nenhuma evidência registada.</td></tr>
               ) : workspace.evidence.map((item) => (
-                <tr key={item.id} className="border-t border-white/5 text-white/65">
+                <tr key={item.id} className="border-t border-slate-800 text-white/65">
                   <td className="px-3 py-3">{item.evidence_type}</td>
                   <td className="px-3 py-3">{item.environment}</td>
                   <td className="px-3 py-3">{item.status}</td>
@@ -696,6 +700,6 @@ export function Article50Workspace({ locale }: { locale: string }) {
           </table>
         </div>
       </section>
-    </div>
+    </section>
   );
 }
