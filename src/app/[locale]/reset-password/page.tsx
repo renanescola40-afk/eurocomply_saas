@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
@@ -197,14 +198,14 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#050505] text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,.16),transparent_34rem),radial-gradient(circle_at_bottom_right,rgba(37,99,235,.12),transparent_30rem)]" />
+    <main className="min-h-screen overflow-hidden bg-[#07101a] text-white">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,.16),transparent_34rem),radial-gradient(circle_at_bottom_right,rgba(124,58,237,.10),transparent_30rem)]" />
       <div className="relative mx-auto flex min-h-screen max-w-lg items-center px-5 py-10">
-        <section className="w-full rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-7 shadow-2xl backdrop-blur-xl sm:p-8">
-          <Link href={`/${locale}`} className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-200/70">
-            RISCK COMPLY
+        <section className="w-full rounded-[1.75rem] border border-white/[0.09] bg-[#0a1320]/92 p-7 shadow-2xl shadow-black/35 backdrop-blur-xl sm:p-8">
+          <Link href={`/${locale}`} aria-label="RISCK COMPLY" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70">
+            <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={164} height={32} priority className="h-6 w-auto" />
           </Link>
-          <p className="mt-10 text-xs font-semibold uppercase tracking-[0.24em] text-white/40">{text.eyebrow}</p>
+          <p className="mt-10 text-xs font-semibold uppercase tracking-[0.24em] text-blue-300/60">{text.eyebrow}</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
             {state === 'success' ? text.successTitle : text.title}
           </h1>
@@ -223,7 +224,7 @@ export default function ResetPasswordPage() {
               <div className="rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm leading-6 text-amber-100" role="alert">
                 {text.invalid}
               </div>
-              <Link href={`/${locale}/recuperar-senha`} className="flex w-full items-center justify-center rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-200">
+              <Link href={`/${locale}/recuperar-senha`} className="flex w-full items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70">
                 {text.request}
               </Link>
             </div>
@@ -246,7 +247,7 @@ export default function ResetPasswordPage() {
                   minLength={8}
                   autoComplete="new-password"
                   disabled={busy}
-                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-white outline-none transition focus:border-cyan-200/50 focus-visible:ring-2 focus-visible:ring-cyan-300/40 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-black/35 px-4 py-3 text-white outline-none transition focus:border-blue-300/50 focus-visible:ring-2 focus-visible:ring-blue-400/40 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </label>
               <label className="block text-sm font-medium text-white/72">
@@ -259,17 +260,17 @@ export default function ResetPasswordPage() {
                   minLength={8}
                   autoComplete="new-password"
                   disabled={busy}
-                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-white outline-none transition focus:border-cyan-200/50 focus-visible:ring-2 focus-visible:ring-cyan-300/40 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-black/35 px-4 py-3 text-white outline-none transition focus:border-blue-300/50 focus-visible:ring-2 focus-visible:ring-blue-400/40 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </label>
-              <button type="submit" disabled={busy} className="w-full rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="submit" disabled={busy} className="w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 disabled:cursor-not-allowed disabled:opacity-60">
                 {busy ? text.submitting : text.submit}
               </button>
             </form>
           ) : null}
 
           {state === 'success' ? (
-            <Link href={`/${locale}/login`} className="mt-6 flex w-full items-center justify-center rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-200">
+            <Link href={`/${locale}/login`} className="mt-6 flex w-full items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70">
               {text.signIn}
             </Link>
           ) : null}
