@@ -16,7 +16,7 @@ const pollMs = Number(process.env.GITHUB_CHECKS_POLL_MS || 15_000);
 const githubRequestTimeoutMs = Number(process.env.GITHUB_CHECKS_REQUEST_TIMEOUT_MS || 15_000);
 const MAX_GITHUB_API_RESPONSE_BYTES = 1024 * 1024;
 const GITHUB_RUNS_PAGE_SIZE = 20;
-const MAX_GITHUB_RUNS_PAGES = 10;
+const MAX_GITHUB_RUNS_PAGES = 25;
 
 if (!token || !repository || !/^[0-9a-f]{40}$/i.test(targetSha || '')) {
   console.error('GITHUB_TOKEN, GITHUB_REPOSITORY and a full 40-character TARGET_SHA are required.');
