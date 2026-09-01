@@ -29,13 +29,20 @@ function counselDenied() {
   return noStoreJson({ error: 'verified_counsel_required' }, { status: 403 });
 }
 
+async function getReviewerSession(userId: string) {
+  const profile = await getCurrentCounselProfile(userId);
+  if (!profile || !profile.active || profile.verification_status !== 'VERIFIED') return null;
+  return { profile };
+}
+
 export async function GET() {
   try {
     if (!isLegalAssuranceEnabled()) return disabled();
 
     const user = await requireApiUser();
-    const profile = await getCurrentCounselProfile(user.id);
-    if (!profile || !profile.active || profile.verification_status !== 'VERIFIED') return counselDenied();
+    const reviewerSession = await getReviewerSession(user.id);
+    if (!reviewerSession) return counselDenied();
+    const { profile } = reviewerSession;
 
     return noStoreJson({
       reviews: await listAssignedCounselReviews(profile.id),
@@ -61,8 +68,9 @@ export async function POST(request: Request) {
     if (originDenied) return originDenied;
 
     const user = await requireApiUser();
-    const profile = await getCurrentCounselProfile(user.id);
-    if (!profile || !profile.active || profile.verification_status !== 'VERIFIED') return counselDenied();
+    const reviewerSession = await getReviewerSession(user.id);
+    if (!reviewerSession) return counselDenied();
+    const { profile } = reviewerSession;
 
     const body = await parseJsonBodyWithZod(request, { schema: gateSchema, maxBytes: MAX_BYTES });
     if (body.action === 'ENGAGEMENT_ACCEPT' && !body.engagementReference) {
