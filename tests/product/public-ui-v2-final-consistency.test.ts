@@ -6,6 +6,7 @@ const CONSENT_BANNER = new URL('../../src/components/analytics/AnalyticsConsentB
 const CONSENT_CONTROLS = new URL('../../src/components/analytics/AnalyticsConsentControls.tsx', import.meta.url);
 const LEGAL_REVIEW = new URL('../../src/components/legal/public-legal-review-page.tsx', import.meta.url);
 const PROVIDER_DATA = new URL('../../src/app/[locale]/dashboard/provider-data/page.tsx', import.meta.url);
+const INTERNATIONAL_HOME = new URL('../../src/components/marketing/international-home.tsx', import.meta.url);
 
 describe('RISCK COMPLY UI V2 final public consistency', () => {
   it('uses the official wordmark and cobalt system on the contact surface', async () => {
@@ -63,5 +64,19 @@ describe('RISCK COMPLY UI V2 final public consistency', () => {
     expect(source).toContain('bg-[#0d1522]');
     expect(source).not.toContain('cyan-');
     expect(source).not.toContain('min-h-screen');
+  });
+
+  it('keeps international landing copy and feature discovery while enforcing the V2 brand contract', async () => {
+    const source = await readFile(INTERNATIONAL_HOME, 'utf8');
+
+    expect(source).toContain('getFeaturePages(locale)');
+    expect(source).toContain('/brand/risck-comply-wordmark.svg');
+    expect(source).toContain('bg-[#050913]');
+    expect(source).toContain('bg-blue-600');
+    expect(source).toContain('text-emerald-300');
+    expect(source).not.toContain('cyan-');
+    expect(source).not.toContain('radial-gradient');
+    expect(source).not.toContain('rounded-[2rem]');
+    expect(source).not.toContain('ShieldCheck');
   });
 });
