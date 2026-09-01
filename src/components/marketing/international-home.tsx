@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, Globe2, Layers3, ShieldCheck, Workflow } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Globe2, Layers3, Workflow } from 'lucide-react';
 
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
@@ -137,48 +137,50 @@ export function InternationalHome({ locale }: { locale: InternationalLocale }) {
   const features = getFeaturePages(locale);
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#040707] text-white">
-      <header className="border-b border-white/10 bg-[#040707]/95">
+    <main className="min-h-screen overflow-x-hidden bg-[#050913] text-white">
+      <header className="border-b border-white/10 bg-[#050913]/95">
         <nav className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 lg:px-8" aria-label="Primary navigation">
-          <Link href={`/${locale}`} aria-label="RISCK COMPLY home">
+          <Link href={`/${locale}`} aria-label="RISCK COMPLY home" className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
             <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={180} height={44} className="h-10 w-auto" priority />
           </Link>
           <div className="hidden items-center gap-6 text-sm text-white/62 lg:flex">
             <a href="#platform" className="transition hover:text-white">{copy.navFeatures}</a>
             <Link href={`/${locale}/pricing`} className="transition hover:text-white">{copy.navPricing}</Link>
             <Link href={`/${locale}/login`} className="transition hover:text-white">{copy.navLogin}</Link>
-            <Link href={`/${locale}/signup`} className="rounded-full bg-white px-5 py-2.5 font-semibold text-black transition hover:bg-white/85">{copy.navSignup}</Link>
+            <Link href={`/${locale}/signup`} className="rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{copy.navSignup}</Link>
           </div>
         </nav>
       </header>
 
-      <section className="relative overflow-hidden border-b border-white/10 px-5 py-20 lg:px-8 lg:py-28">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(34,211,238,.16),transparent_34%),radial-gradient(circle_at_82%_20%,rgba(52,211,153,.12),transparent_28%)]" aria-hidden="true" />
-        <div className="relative mx-auto grid max-w-7xl gap-14 lg:grid-cols-[1.08fr_.92fr] lg:items-center">
+      <section className="border-b border-white/10 px-5 py-20 lg:px-8 lg:py-28">
+        <div className="mx-auto grid max-w-7xl gap-14 lg:grid-cols-[1.08fr_.92fr] lg:items-center">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-100/65">{copy.eyebrow}</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-300/70">{copy.eyebrow}</p>
             <h1 className="mt-6 text-5xl font-semibold tracking-[-0.055em] sm:text-6xl lg:text-7xl">{copy.title}</h1>
             <p className="mt-7 max-w-3xl text-lg leading-8 text-white/62 sm:text-xl">{copy.subtitle}</p>
             <div className="mt-10 flex flex-wrap gap-3">
-              <Link href={`/${locale}/signup`} className="group inline-flex items-center gap-2 rounded-full bg-[linear-gradient(180deg,#eafff5,#b9f6d5)] px-6 py-3.5 font-bold text-[#07110c] transition hover:-translate-y-0.5">
+              <Link href={`/${locale}/signup`} className="group inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 font-bold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
                 {copy.primaryCta}<ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden="true" />
               </Link>
-              <a href="#platform" className="rounded-full border border-white/15 bg-white/[0.04] px-6 py-3.5 font-semibold text-white/80 transition hover:bg-white/[0.08] hover:text-white">{copy.secondaryCta}</a>
+              <a href="#platform" className="rounded-xl border border-white/15 bg-white/[0.04] px-6 py-3.5 font-semibold text-white/80 transition hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{copy.secondaryCta}</a>
             </div>
             <ul className="mt-9 grid gap-3 text-sm text-white/55 sm:grid-cols-2">
               {copy.trustItems.map((item) => (
-                <li key={item} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-200/80" aria-hidden="true" />{item}</li>
+                <li key={item} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-300" aria-hidden="true" />{item}</li>
               ))}
             </ul>
           </div>
 
-          <div className="rounded-[2rem] border border-white/12 bg-[#071017]/90 p-5 shadow-[0_40px_120px_rgba(0,0,0,.55)]">
-            <div className="rounded-[1.5rem] border border-white/10 bg-black/25 p-6">
-              <div className="flex items-center justify-between"><span className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100/55">RISCK COMPLY</span><ShieldCheck className="h-5 w-5 text-emerald-200/75" aria-hidden="true" /></div>
+          <div className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-5">
+            <div className="rounded-lg border border-slate-800 bg-slate-950/25 p-6">
+              <div className="flex items-center justify-between gap-4">
+                <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={150} height={34} className="h-8 w-auto" />
+                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300/65">Governance workspace</span>
+              </div>
               <div className="mt-7 grid gap-3 sm:grid-cols-2">
                 {features.slice(0, 4).map((feature, index) => (
-                  <Link key={feature.key} href={`/${locale}/features/${feature.slug}`} className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 transition hover:border-cyan-100/30 hover:bg-cyan-200/[0.05]">
-                    <span className="text-xs font-semibold text-cyan-100/55">0{index + 1}</span>
+                  <Link key={feature.key} href={`/${locale}/features/${feature.slug}`} className="rounded-lg border border-slate-800 bg-slate-950/25 p-4 transition hover:border-blue-400/30 hover:bg-blue-500/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+                    <span className="text-xs font-semibold text-blue-300/65">0{index + 1}</span>
                     <p className="mt-3 font-semibold text-white/88">{feature.navLabel}</p>
                     <p className="mt-2 line-clamp-3 text-xs leading-5 text-white/42">{feature.description}</p>
                   </Link>
@@ -191,7 +193,7 @@ export function InternationalHome({ locale }: { locale: InternationalLocale }) {
 
       <section id="platform" className="scroll-mt-8 px-5 py-20 lg:px-8 lg:py-28">
         <div className="mx-auto max-w-7xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-100/55">{copy.platformEyebrow}</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-300/65">{copy.platformEyebrow}</p>
           <div className="mt-5 grid gap-8 lg:grid-cols-[.9fr_1.1fr]">
             <div>
               <h2 className="text-3xl font-semibold tracking-[-0.035em] sm:text-5xl">{copy.platformTitle}</h2>
@@ -199,8 +201,8 @@ export function InternationalHome({ locale }: { locale: InternationalLocale }) {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {features.map((feature) => (
-                <Link key={feature.key} href={`/${locale}/features/${feature.slug}`} className="group rounded-[1.5rem] border border-white/10 bg-white/[0.025] p-5 transition hover:-translate-y-0.5 hover:border-cyan-100/25 hover:bg-cyan-200/[0.045]">
-                  <div className="flex items-start justify-between gap-3"><Layers3 className="h-5 w-5 text-cyan-100/65" aria-hidden="true" /><ArrowRight className="h-4 w-4 text-white/25 transition group-hover:translate-x-0.5 group-hover:text-white/60" aria-hidden="true" /></div>
+                <Link key={feature.key} href={`/${locale}/features/${feature.slug}`} className="group rounded-xl border border-slate-800/80 bg-[#0d1522] p-5 transition hover:border-blue-400/30 hover:bg-blue-500/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+                  <div className="flex items-start justify-between gap-3"><Layers3 className="h-5 w-5 text-blue-300" aria-hidden="true" /><ArrowRight className="h-4 w-4 text-white/25 transition group-hover:translate-x-0.5 group-hover:text-white/60" aria-hidden="true" /></div>
                   <h3 className="mt-5 font-semibold text-white">{feature.navLabel}</h3>
                   <p className="mt-2 text-sm leading-6 text-white/48">{feature.description}</p>
                 </Link>
@@ -212,12 +214,12 @@ export function InternationalHome({ locale }: { locale: InternationalLocale }) {
 
       <section className="border-y border-white/10 bg-white/[0.02] px-5 py-20 lg:px-8 lg:py-28">
         <div className="mx-auto max-w-7xl">
-          <div className="flex items-center gap-3 text-cyan-100/60"><Workflow className="h-5 w-5" aria-hidden="true" /><span className="text-sm font-semibold uppercase tracking-[0.24em]">{copy.workflowEyebrow}</span></div>
+          <div className="flex items-center gap-3 text-blue-300/70"><Workflow className="h-5 w-5" aria-hidden="true" /><span className="text-sm font-semibold uppercase tracking-[0.24em]">{copy.workflowEyebrow}</span></div>
           <h2 className="mt-5 max-w-4xl text-3xl font-semibold tracking-[-0.035em] sm:text-5xl">{copy.workflowTitle}</h2>
           <p className="mt-5 max-w-3xl leading-7 text-white/55">{copy.workflowText}</p>
           <ol className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
             {copy.workflowSteps.map((step, index) => (
-              <li key={step} className="rounded-2xl border border-white/10 bg-[#071017] p-4"><span className="text-xs font-semibold text-cyan-100/45">{String(index + 1).padStart(2, '0')}</span><p className="mt-3 text-sm text-white/70">{step}</p></li>
+              <li key={step} className="rounded-lg border border-slate-800 bg-[#0d1522] p-4"><span className="text-xs font-semibold text-blue-300/60">{String(index + 1).padStart(2, '0')}</span><p className="mt-3 text-sm text-white/70">{step}</p></li>
             ))}
           </ol>
         </div>
@@ -225,22 +227,22 @@ export function InternationalHome({ locale }: { locale: InternationalLocale }) {
 
       <section className="px-5 py-20 lg:px-8 lg:py-28">
         <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-2">
-          <div className="rounded-[2rem] border border-cyan-100/15 bg-cyan-200/[0.04] p-8 sm:p-10">
-            <Globe2 className="h-7 w-7 text-cyan-100/65" aria-hidden="true" />
+          <div className="rounded-xl border border-blue-400/15 bg-blue-500/[0.05] p-8 sm:p-10">
+            <Globe2 className="h-7 w-7 text-blue-300" aria-hidden="true" />
             <h2 className="mt-6 text-3xl font-semibold tracking-tight">{copy.assuranceTitle}</h2>
             <p className="mt-5 leading-7 text-white/55">{copy.assuranceText}</p>
           </div>
-          <div className="rounded-[2rem] border border-emerald-100/15 bg-emerald-200/[0.045] p-8 sm:p-10">
+          <div className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-8 sm:p-10">
             <h2 className="text-3xl font-semibold tracking-tight">{copy.finalTitle}</h2>
             <p className="mt-5 leading-7 text-white/55">{copy.finalText}</p>
-            <Link href={`/${locale}/signup`} className="group mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 font-bold text-black transition hover:-translate-y-0.5">{copy.primaryCta}<ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden="true" /></Link>
+            <Link href={`/${locale}/signup`} className="group mt-8 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 font-bold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{copy.primaryCta}<ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden="true" /></Link>
           </div>
         </div>
       </section>
 
       <nav aria-label={copy.languageLabel} className="mx-auto flex max-w-7xl flex-wrap gap-2 px-5 pb-14 lg:px-8">
         {locales.map((language) => (
-          <Link key={language} href={`/${language}`} hrefLang={language} className={`rounded-full border px-4 py-2 text-xs transition ${language === locale ? 'border-cyan-100/35 bg-cyan-200/10 text-white' : 'border-white/10 text-white/48 hover:border-white/25 hover:text-white'}`}>
+          <Link key={language} href={`/${language}`} hrefLang={language} className={`rounded-lg border px-4 py-2 text-xs transition ${language === locale ? 'border-blue-400/35 bg-blue-500/10 text-white' : 'border-white/10 text-white/48 hover:border-white/25 hover:text-white'}`}>
             {LOCALE_META[language].nativeName}
           </Link>
         ))}
