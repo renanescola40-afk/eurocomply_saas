@@ -60,13 +60,13 @@ export function AnalyticsConsentBanner() {
       aria-labelledby={CONSENT_TITLE_ID}
       aria-describedby={CONSENT_DESCRIPTION_ID}
       tabIndex={-1}
-      className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-3xl rounded-2xl border bg-background/95 p-4 shadow-2xl backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2"
+      className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-3xl rounded-xl border border-white/10 bg-[#0d1522]/95 p-4 text-white shadow-xl backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050913]"
     >
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p id={CONSENT_TITLE_ID} className="text-sm font-semibold">{copy.title}</p>
-          <p id={CONSENT_DESCRIPTION_ID} className="mt-1 text-xs leading-5 text-muted-foreground">{copy.body}</p>
-          <Link href={`/${locale}/cookie-policy`} className="mt-2 inline-flex rounded-sm text-xs font-semibold text-cyan-300 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+          <p id={CONSENT_DESCRIPTION_ID} className="mt-1 text-xs leading-5 text-white/60">{copy.body}</p>
+          <Link href={`/${locale}/cookie-policy`} className="mt-2 inline-flex rounded-sm text-xs font-semibold text-blue-300 underline-offset-4 hover:text-blue-200 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
             {policyLabel[locale]}
           </Link>
         </div>
@@ -74,7 +74,7 @@ export function AnalyticsConsentBanner() {
           <Button
             type="button"
             variant="outline"
-            className="rounded-full"
+            className="rounded-xl border-white/15 bg-white/[0.03] text-white hover:bg-white/10 hover:text-white"
             onClick={() => {
               denyAnalyticsConsent();
               setVisible(false);
@@ -84,7 +84,7 @@ export function AnalyticsConsentBanner() {
           </Button>
           <Button
             type="button"
-            className="rounded-full"
+            className="rounded-xl bg-blue-600 text-white hover:bg-blue-500"
             onClick={() => {
               grantAnalyticsConsent();
               initPostHog(window.location.pathname);
