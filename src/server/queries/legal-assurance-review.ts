@@ -61,7 +61,10 @@ export async function getLegalReviewMatterData(reviewId: string): Promise<LegalR
     db.from('legal_review_decisions').select('*').eq('review_id', reviewId).order('issued_at', { ascending: true }),
     db.from('legal_review_remediation_items').select('*').eq('review_id', reviewId).order('created_at', { ascending: true }),
     db.from('legal_review_information_requests').select('*').eq('review_id', reviewId).order('created_at', { ascending: true }),
-    db.from('legal_review_artifacts').select('*').eq('review_id', reviewId).order('issued_at', { ascending: true }),
+    db.from('legal_review_artifacts')
+      .select('id,review_id,decision_id,artifact_reference,artifact_digest,artifact_type,issuer,issued_at,created_at,mime_type,size_bytes,original_filename,uploaded_by_counsel_id')
+      .eq('review_id', reviewId)
+      .order('issued_at', { ascending: true }),
   ]);
 
   for (const [area, result] of [
