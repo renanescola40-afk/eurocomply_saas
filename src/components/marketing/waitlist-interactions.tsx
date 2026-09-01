@@ -69,19 +69,19 @@ export function WaitlistCountdown({ copy, launchTargetIso }: { copy: WaitlistInt
   ];
 
   return (
-    <section className="rounded-[2rem] border border-white/10 bg-black/35 p-5 shadow-2xl backdrop-blur-xl" aria-label={copy.countdown.live}>
-      <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.22em] text-cyan-100/70">
+    <section className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-5" aria-label={copy.countdown.live}>
+      <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.22em] text-blue-300/70">
         <Clock3 className="h-4 w-4" aria-hidden="true" /> {copy.countdown.live}
       </div>
       <div className="mt-5 grid grid-cols-4 gap-2" aria-live="polite" aria-atomic="true">
         {units.map(([label, value]) => (
-          <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-center">
+          <div key={label} className="rounded-lg border border-slate-800 bg-slate-950/25 p-3 text-center">
             <p className="text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">{value}</p>
             <p className="mt-1 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</p>
           </div>
         ))}
       </div>
-      <p className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.08] px-4 py-3 text-sm font-medium text-emerald-50/80">
+      <p className="mt-4 rounded-lg border border-blue-400/20 bg-blue-500/[0.08] px-4 py-3 text-sm font-medium text-blue-100">
         {copy.launchLabel}
       </p>
     </section>
@@ -135,15 +135,17 @@ export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLo
     }
   }
 
+  const inputClassName = 'mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/35 px-4 py-3 text-white outline-none transition placeholder:text-white/28 focus:border-blue-400/70 focus-visible:ring-2 focus-visible:ring-blue-400/70';
+
   return (
-    <form onSubmit={handleSubmit} className="rounded-[2rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl backdrop-blur-xl" id="waitlist-form" aria-describedby={message ? feedbackId : undefined} aria-busy={status === 'submitting'}>
+    <form onSubmit={handleSubmit} className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-6" id="waitlist-form" aria-describedby={message ? feedbackId : undefined} aria-busy={status === 'submitting'}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-100/65">Early access</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300/70">Early access</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">{copy.form.title}</h2>
           <p className="mt-3 text-sm leading-6 text-white/55">{copy.form.subtitle}</p>
         </div>
-        <div className="rounded-2xl border border-cyan-200/20 bg-cyan-300/10 p-3 text-cyan-50">
+        <div className="rounded-lg border border-violet-400/20 bg-violet-500/10 p-3 text-violet-200">
           <Sparkles className="h-5 w-5" aria-hidden="true" />
         </div>
       </div>
@@ -151,15 +153,15 @@ export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLo
       <div className="mt-6 space-y-4">
         <label className="block text-sm font-medium text-white/70">
           {copy.form.company}
-          <input value={companyName} onChange={(event) => setCompanyName(event.target.value)} required minLength={2} maxLength={120} autoComplete="organization" className="mt-2 w-full rounded-2xl border border-white/10 bg-black/45 px-4 py-3 text-white outline-none transition placeholder:text-white/28 focus:border-cyan-200/70 focus-visible:ring-2 focus-visible:ring-cyan-200/70" placeholder="Acme Europe" />
+          <input value={companyName} onChange={(event) => setCompanyName(event.target.value)} required minLength={2} maxLength={120} autoComplete="organization" className={inputClassName} placeholder="Acme Europe" />
         </label>
         <label className="block text-sm font-medium text-white/70">
           {copy.form.email}
-          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required maxLength={254} autoComplete="email" className="mt-2 w-full rounded-2xl border border-white/10 bg-black/45 px-4 py-3 text-white outline-none transition placeholder:text-white/28 focus:border-cyan-200/70 focus-visible:ring-2 focus-visible:ring-cyan-200/70" placeholder="you@company.com" />
+          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required maxLength={254} autoComplete="email" className={inputClassName} placeholder="you@company.com" />
         </label>
         <label className="block text-sm font-medium text-white/70">
           {copy.form.role}
-          <input value={role} onChange={(event) => setRole(event.target.value)} required minLength={2} maxLength={90} autoComplete="organization-title" className="mt-2 w-full rounded-2xl border border-white/10 bg-black/45 px-4 py-3 text-white outline-none transition placeholder:text-white/28 focus:border-cyan-200/70 focus-visible:ring-2 focus-visible:ring-cyan-200/70" placeholder="Founder, CTO, Compliance Officer" />
+          <input value={role} onChange={(event) => setRole(event.target.value)} required minLength={2} maxLength={90} autoComplete="organization-title" className={inputClassName} placeholder="Founder, CTO, Compliance Officer" />
         </label>
         <div className="hidden" aria-hidden="true">
           <label htmlFor="waitlist-website">Website</label>
@@ -167,18 +169,18 @@ export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLo
         </div>
       </div>
 
-      {status === 'success' ? <p id={feedbackId} className="mt-5 rounded-2xl border border-emerald-300/25 bg-emerald-300/10 px-4 py-3 text-sm leading-6 text-emerald-50" role="status">{message || copy.form.success}</p> : null}
-      {status === 'warning' ? <p id={feedbackId} className="mt-5 rounded-2xl border border-amber-300/30 bg-amber-400/10 px-4 py-3 text-sm leading-6 text-amber-50" role="status">{message}</p> : null}
-      {status === 'error' ? <p id={feedbackId} className="mt-5 rounded-2xl border border-red-300/25 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-50" role="alert">{message || copy.form.error}</p> : null}
+      {status === 'success' ? <p id={feedbackId} className="mt-5 rounded-lg border border-emerald-300/25 bg-emerald-300/10 px-4 py-3 text-sm leading-6 text-emerald-50" role="status">{message || copy.form.success}</p> : null}
+      {status === 'warning' ? <p id={feedbackId} className="mt-5 rounded-lg border border-amber-300/30 bg-amber-400/10 px-4 py-3 text-sm leading-6 text-amber-50" role="status">{message}</p> : null}
+      {status === 'error' ? <p id={feedbackId} className="mt-5 rounded-lg border border-red-300/25 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-50" role="alert">{message || copy.form.error}</p> : null}
 
-      <button type="submit" disabled={status === 'submitting'} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-4 text-sm font-bold text-black transition hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-not-allowed disabled:opacity-60">
+      <button type="submit" disabled={status === 'submitting'} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-4 text-sm font-bold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1522] disabled:cursor-not-allowed disabled:opacity-60">
         {status === 'submitting' ? copy.form.submitting : copy.form.submit}
         <ArrowRight className="h-4 w-4" aria-hidden="true" />
       </button>
       <p className="mt-4 text-xs leading-5 text-white/38">{copy.form.privacy}</p>
-      <p className="mt-3 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.06] px-4 py-3 text-xs leading-5 text-cyan-50/78">
+      <p className="mt-3 rounded-lg border border-blue-400/15 bg-blue-500/[0.06] px-4 py-3 text-xs leading-5 text-blue-100/80">
         {copy.form.contact}{' '}
-        <a href={`mailto:${commercialEmail}`} className="font-semibold text-white underline decoration-cyan-200/40 underline-offset-4 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-black">
+        <a href={`mailto:${commercialEmail}`} className="font-semibold text-white underline decoration-blue-400/40 underline-offset-4 hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1522]">
           {commercialEmail}
         </a>
       </p>
