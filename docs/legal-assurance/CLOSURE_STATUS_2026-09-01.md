@@ -15,7 +15,7 @@ COUNSEL_HANDOFF_PREPARATION=PASS
 CANONICAL_REVIEW_PACKAGES=8/8_PRESENT
 CONTRACT_COUNSEL_DOCUMENTS=9/9_PREPARED
 COUNSEL_HANDOFF_STRUCTURAL_FAILURES=0
-FOUNDER_FACTS_UNRESOLVED=46
+FOUNDER_FACTS_UNRESOLVED=51
 PRODUCTION_DB_MIGRATION=NOT_APPLIED
 LEGAL_ASSURANCE_ENABLED=false
 LAW_FIRM_PARTNER=PENDING
@@ -78,13 +78,13 @@ This is not treated as a defect. Production migration/application remains an exp
 
 ## 5. Counsel handoff preparation — PASS
 
-The repository's dedicated `Contract and Counsel Pack Readiness` gate previously completed successfully with the machine-readable result:
+The repository's dedicated `Contract and Counsel Pack Readiness` gate was revalidated against the latest commit that changed the legal-pack before this closure (`9c3b3a02c4d07344799d7c33b32165f4eb5d5c9a`, 2026-08-24). The workflow completed successfully and produced:
 
 ```text
 status=READY_FOR_FOUNDER_AND_COUNSEL_HANDOFF
 preparedDocumentCount=9
 expectedDocumentCount=9
-founderFactsUnresolvedCount=46
+founderFactsUnresolvedCount=51
 founderFactsComplete=false
 counselAccepted=false
 legalAcceptanceStatus=HUMAN_REVIEW_REQUIRED
@@ -112,6 +112,7 @@ Accordingly:
 COUNSEL_HANDOFF_PREPARATION=PASS
 CANONICAL_REVIEW_PACKAGES=8/8_PRESENT
 CONTRACT_COUNSEL_DOCUMENTS=9/9_PREPARED
+COUNSEL_HANDOFF_STRUCTURAL_FAILURES=0
 ```
 
 This does not imply Counsel acceptance.
@@ -163,7 +164,7 @@ The following remain dependent on genuine qualified external evidence:
 
 ## 8. Founder factual inputs — human input required
 
-The strict Counsel-pack validator reports 46 unresolved founder facts. These are intentionally not invented from repository inference, synthetic fixtures, AI assumptions or private identity guesses.
+The latest strict Counsel-pack validator reports 51 unresolved founder facts. These are intentionally not invented from repository inference, synthetic fixtures, AI assumptions or private identity guesses.
 
 They include factual/operator decisions needed to finalise items such as entity/client identity, commercial commitments, contracting positions and other factual inputs reserved to the owner or future Counsel.
 
@@ -171,7 +172,7 @@ Until supplied and reconciled:
 
 ```text
 FOUNDER_FACTS_COMPLETE=false
-FOUNDER_FACTS_UNRESOLVED=46
+FOUNDER_FACTS_UNRESOLVED=51
 ```
 
 This is a human-input boundary, not remaining engineering implementation.
