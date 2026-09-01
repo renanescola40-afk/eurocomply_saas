@@ -59,15 +59,15 @@ export function ProviderRuntimeDisclosure({ locale, slug }: { locale: Locale; sl
 
   return (
     <section className="relative z-10 px-6 pb-16" aria-labelledby="provider-runtime-evidence-title">
-      <div className="mx-auto max-w-7xl rounded-[1.75rem] border border-cyan-200/15 bg-cyan-300/[0.055] p-6 shadow-xl backdrop-blur md:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100/65">{text.eyebrow}</p>
+      <div className="mx-auto max-w-7xl rounded-xl border border-blue-400/15 bg-blue-500/[0.055] p-6 md:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300/70">{text.eyebrow}</p>
         <h2 id="provider-runtime-evidence-title" className="mt-3 max-w-4xl text-2xl font-semibold tracking-[-0.03em] text-white">{text.title}</h2>
         <p className="mt-4 max-w-5xl leading-7 text-white/62">{text.body}</p>
         <ul className="mt-5 grid gap-3 text-sm text-white/62 md:grid-cols-2 xl:grid-cols-5">
-          {text.evidence.map((item) => <li key={item} className="rounded-2xl border border-white/10 bg-black/25 p-4">{item}</li>)}
+          {text.evidence.map((item) => <li key={item} className="rounded-lg border border-slate-800 bg-slate-950/25 p-4">{item}</li>)}
         </ul>
         <p className="mt-5 max-w-5xl text-sm leading-6 text-white/50">{text.open}</p>
-        <Link href={`/${locale}/transfers`} className="mt-5 inline-flex rounded-md text-sm font-semibold text-cyan-100 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200">{text.transfers}</Link>
+        <Link href={`/${locale}/transfers`} className="mt-5 inline-flex rounded-md text-sm font-semibold text-blue-300 underline-offset-4 hover:text-blue-200 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{text.transfers}</Link>
       </div>
     </section>
   );
