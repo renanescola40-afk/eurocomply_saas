@@ -18,9 +18,10 @@ describe('public footer locale authority', () => {
     expect(footer).not.toContain("tagline: 'Governança de IA, workflows de risco");
   });
 
-  it('preserves visible keyboard focus across footer navigation', () => {
-    expect(footer).toContain("focus-visible:ring-2");
-    expect(footer).toContain("focus-visible:ring-cyan-200");
+  it('preserves visible keyboard focus across footer navigation with the V2 cobalt system', () => {
+    expect(footer).toContain('focus-visible:ring-2');
+    expect(footer).toContain('focus-visible:ring-blue-400');
     expect(footer).toContain('className={footerLinkClass}');
+    expect(footer).not.toContain('focus-visible:ring-cyan-200');
   });
 });
