@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 const CONTACT = new URL('../../src/app/[locale]/contact/page.tsx', import.meta.url);
 const CONSENT_BANNER = new URL('../../src/components/analytics/AnalyticsConsentBanner.tsx', import.meta.url);
 const CONSENT_CONTROLS = new URL('../../src/components/analytics/AnalyticsConsentControls.tsx', import.meta.url);
+const LEGAL_REVIEW = new URL('../../src/components/legal/public-legal-review-page.tsx', import.meta.url);
 
 describe('RISCK COMPLY UI V2 final public consistency', () => {
   it('uses the official wordmark and cobalt system on the contact surface', async () => {
@@ -36,5 +37,16 @@ describe('RISCK COMPLY UI V2 final public consistency', () => {
     expect(controls).toContain('initPostHog');
     expect(controls).toContain('bg-blue-600');
     expect(controls).not.toContain('cyan-');
+  });
+
+  it('uses the official wordmark and graphite/cobalt system on public legal review pages', async () => {
+    const source = await readFile(LEGAL_REVIEW, 'utf8');
+
+    expect(source).toContain('/brand/risck-comply-wordmark.svg');
+    expect(source).toContain('bg-[#050913]');
+    expect(source).toContain('text-blue-300/75');
+    expect(source).toContain("documentId === 'cookie-policy' ? <AnalyticsConsentControls");
+    expect(source).not.toContain('cyan-');
+    expect(source).not.toContain('rounded-3xl');
   });
 });
