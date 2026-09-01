@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { AnalyticsConsentControls } from '@/components/analytics/AnalyticsConsentControls';
@@ -22,13 +23,13 @@ type PublicLegalReviewPageProps = {
   actions?: React.ReactNode;
 };
 
-const copy: Record<Locale, { home: string; status: string; statusValue: string; version: string; updated: string; effective: string; effectiveValue: string; notice: string }> = {
-  en: { home: 'RISCK COMPLY', status: 'Publication status', statusValue: 'REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED', version: 'Version', updated: 'Last updated', effective: 'Effective date', effectiveValue: 'Pending qualified legal approval', notice: 'This public review draft is a technical disclosure surface. It is not a signed agreement or qualified legal opinion.' },
-  pt: { home: 'RISCK COMPLY', status: 'Estado de publicação', statusValue: 'REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED', version: 'Versão', updated: 'Última atualização', effective: 'Data de vigência', effectiveValue: 'Pendente de aprovação jurídica qualificada', notice: 'Este rascunho público é uma superfície técnica de divulgação. Não é um acordo assinado nem uma opinião jurídica qualificada.' },
-  es: { home: 'RISCK COMPLY', status: 'Estado de publicación', statusValue: 'REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED', version: 'Versión', updated: 'Última actualización', effective: 'Fecha de vigencia', effectiveValue: 'Pendiente de aprobación jurídica cualificada', notice: 'Este borrador público es una superficie técnica de divulgación. No es un acuerdo firmado ni una opinión jurídica cualificada.' },
-  fr: { home: 'RISCK COMPLY', status: 'Statut de publication', statusValue: 'REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED', version: 'Version', updated: 'Dernière mise à jour', effective: "Date d’entrée en vigueur", effectiveValue: 'En attente de validation juridique qualifiée', notice: 'Ce projet public est une surface de divulgation technique. Il ne constitue ni un accord signé ni un avis juridique qualifié.' },
-  it: { home: 'RISCK COMPLY', status: 'Stato di pubblicazione', statusValue: 'REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED', version: 'Versione', updated: 'Ultimo aggiornamento', effective: 'Data di efficacia', effectiveValue: 'In attesa di approvazione legale qualificata', notice: 'Questa bozza pubblica è una superficie tecnica di divulgazione. Non è un accordo firmato né un parere legale qualificato.' },
-  de: { home: 'RISCK COMPLY', status: 'Veröffentlichungsstatus', statusValue: 'REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED', version: 'Version', updated: 'Zuletzt aktualisiert', effective: 'Gültig ab', effectiveValue: 'Ausstehende qualifizierte rechtliche Freigabe', notice: 'Dieser öffentliche Entwurf ist eine technische Offenlegungsfläche. Er ist weder eine unterzeichnete Vereinbarung noch eine qualifizierte Rechtsberatung.' },
+const copy: Record<Locale, { status: string; statusValue: string; version: string; updated: string; effective: string; effectiveValue: string; notice: string }> = {
+  en: { status: 'Publication status', statusValue: 'REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED', version: 'Version', updated: 'Last updated', effective: 'Effective date', effectiveValue: 'Pending qualified legal approval', notice: 'This public review draft is a technical disclosure surface. It is not a signed agreement or qualified legal opinion.' },
+  pt: { status: 'Estado de publicação', statusValue: 'REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED', version: 'Versão', updated: 'Última atualização', effective: 'Data de vigência', effectiveValue: 'Pendente de aprovação jurídica qualificada', notice: 'Este rascunho público é uma superfície técnica de divulgação. Não é um acordo assinado nem uma opinião jurídica qualificada.' },
+  es: { status: 'Estado de publicación', statusValue: 'REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED', version: 'Versión', updated: 'Última actualización', effective: 'Fecha de vigencia', effectiveValue: 'Pendiente de aprobación jurídica cualificada', notice: 'Este borrador público es una superficie técnica de divulgación. No es un acuerdo firmado ni una opinión jurídica cualificada.' },
+  fr: { status: 'Statut de publication', statusValue: 'REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED', version: 'Version', updated: 'Dernière mise à jour', effective: "Date d’entrée en vigueur", effectiveValue: 'En attente de validation juridique qualifiée', notice: 'Ce projet public est une surface de divulgation technique. Il ne constitue ni un accord signé ni un avis juridique qualifié.' },
+  it: { status: 'Stato di pubblicazione', statusValue: 'REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED', version: 'Versione', updated: 'Ultimo aggiornamento', effective: 'Data di efficacia', effectiveValue: 'In attesa di approvazione legale qualificata', notice: 'Questa bozza pubblica è una superficie tecnica di divulgazione. Non è un accordo firmato né un parere legale qualificato.' },
+  de: { status: 'Veröffentlichungsstatus', statusValue: 'REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED', version: 'Version', updated: 'Zuletzt aktualisiert', effective: 'Gültig ab', effectiveValue: 'Ausstehende qualifizierte rechtliche Freigabe', notice: 'Dieser öffentliche Entwurf ist eine technische Offenlegungsfläche. Er ist weder eine unterzeichnete Vereinbarung noch eine qualifizierte Rechtsberatung.' },
 };
 
 export function PublicLegalReviewPage({ locale: rawLocale, eyebrow, title, summary, documentId, version, lastUpdated, sections, actions }: PublicLegalReviewPageProps) {
@@ -36,19 +37,23 @@ export function PublicLegalReviewPage({ locale: rawLocale, eyebrow, title, summa
   const labels = copy[locale];
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white">
+    <main className="min-h-screen bg-[#050913] text-white">
       <div className="mx-auto max-w-5xl px-6 py-20">
-        <Link href={`/${locale}`} className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200/75 hover:text-cyan-100">
-          {labels.home}
+        <Link
+          href={`/${locale}`}
+          aria-label="RISCK COMPLY home"
+          className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050913]"
+        >
+          <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={178} height={32} priority />
         </Link>
 
         <header className="mt-10 space-y-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-200/70">{eyebrow}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-300/75">{eyebrow}</p>
           <h1 className="max-w-4xl text-4xl font-semibold tracking-tight sm:text-6xl">{title}</h1>
           <p className="max-w-3xl text-lg leading-8 text-white/65">{summary}</p>
         </header>
 
-        <section className="mt-10 grid gap-3 rounded-3xl border border-amber-300/20 bg-amber-200/[0.06] p-6 text-sm text-white/70 sm:grid-cols-2">
+        <section className="mt-10 grid gap-3 rounded-xl border border-amber-300/20 bg-amber-200/[0.06] p-6 text-sm text-white/70 sm:grid-cols-2">
           <p><span className="font-semibold text-white">document_id:</span> {documentId}</p>
           <p><span className="font-semibold text-white">{labels.version}:</span> {version}</p>
           <p><span className="font-semibold text-white">{labels.updated}:</span> {lastUpdated}</p>
@@ -61,7 +66,7 @@ export function PublicLegalReviewPage({ locale: rawLocale, eyebrow, title, summa
 
         <div className="mt-10 space-y-5">
           {sections.map((section) => (
-            <section key={section.title} className="rounded-3xl border border-white/10 bg-white/[0.03] p-7">
+            <section key={section.title} className="rounded-xl border border-white/10 bg-[#0d1522] p-7">
               <h2 className="text-2xl font-semibold">{section.title}</h2>
               {section.paragraphs?.map((paragraph) => (
                 <p key={paragraph} className="mt-4 leading-7 text-white/65">{paragraph}</p>
