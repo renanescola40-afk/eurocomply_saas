@@ -38,6 +38,14 @@ function scanBlockedStatus(status: string) {
   return status === 'not_configured' || status === 'unavailable' ? 503 : 422;
 }
 
+async function getReviewerSession(userId: string, reviewId: string) {
+  const profile = await getCurrentCounselProfile(userId);
+  if (!profile || !profile.active || profile.verification_status !== 'VERIFIED') return null;
+  const review = await getAssignedCounselReview(profile.id, reviewId);
+  if (!review) return null;
+  return { profile, review };
+}
+
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
     if (!isLegalAssuranceEnabled()) return disabled();
@@ -52,13 +60,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const { reviewId } = await context.params;
     const user = await requireApiUser();
-    const profile = await getCurrentCounselProfile(user.id);
-    if (!profile || !profile.active || profile.verification_status !== 'VERIFIED') {
-      return noStoreJson({ error: 'verified_counsel_required' }, { status: 403 });
-    }
+    const reviewerSession = await getReviewerSession(user.id, reviewId);
+    if (!reviewerSession) return noStoreJson({ error: 'counsel_not_authorized' }, { status: 403 });
+    const { profile, review } = reviewerSession;
 
-    const review = await getAssignedCounselReview(profile.id, reviewId);
-    if (!review) return noStoreJson({ error: 'counsel_not_authorized' }, { status: 403 });
     if (review.status !== 'IN_REVIEW') {
       return noStoreJson({ error: 'invalid_state', status: review.status }, { status: 409 });
     }
