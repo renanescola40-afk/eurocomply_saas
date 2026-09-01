@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useState, type FormEvent } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
@@ -72,11 +73,13 @@ function SignupChrome({ children, activeLocale }: { children: React.ReactNode; a
   const text = getCommercialSurfaceCopy(activeLocale).signup;
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#050505] text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.22),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.14),transparent_32%)]" />
+    <main className="min-h-screen overflow-hidden bg-[#07101a] text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.20),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(124,58,237,0.10),transparent_32%)]" />
       <div className="relative mx-auto grid min-h-screen w-full max-w-7xl grid-cols-1 gap-8 px-5 py-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-8">
         <section className="hidden lg:block">
-          <Link href={`/${activeLocale}`} className="inline-flex rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm font-semibold tracking-wide text-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">RISCK COMPLY</Link>
+          <Link href={`/${activeLocale}`} aria-label="RISCK COMPLY" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70">
+            <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={164} height={32} priority className="h-6 w-auto" />
+          </Link>
           <div className="mt-16 max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-[0.34em] text-blue-200/80">{text.sideEyebrow}</p>
             <h1 className="mt-5 text-5xl font-semibold tracking-[-0.05em] text-white xl:text-6xl">{text.sideTitle}</h1>
@@ -85,8 +88,10 @@ function SignupChrome({ children, activeLocale }: { children: React.ReactNode; a
         </section>
 
         <section className="flex items-center justify-center">
-          <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.06] p-6 shadow-2xl backdrop-blur-xl">
-            <Link href={`/${activeLocale}`} className="mb-6 block rounded-md text-center text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 lg:hidden">RISCK COMPLY</Link>
+          <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-[#0a1320]/88 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl">
+            <Link href={`/${activeLocale}`} aria-label="RISCK COMPLY" className="mb-6 flex justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 lg:hidden">
+              <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={164} height={32} priority className="h-6 w-auto" />
+            </Link>
             {children}
           </div>
         </section>
@@ -275,7 +280,7 @@ function SignupContent() {
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#050505]" aria-busy="true" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#07101a]" aria-busy="true" />}>
       <SignupContent />
     </Suspense>
   );
