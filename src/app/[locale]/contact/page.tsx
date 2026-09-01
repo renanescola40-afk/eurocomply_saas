@@ -1,5 +1,6 @@
+import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, CalendarDays, CheckCircle2, Mail, ShieldCheck } from 'lucide-react';
+import { ArrowRight, CalendarDays, CheckCircle2, Mail } from 'lucide-react';
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 
@@ -56,39 +57,48 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
   const mailto = `mailto:${contactMailbox}?subject=${encodeURIComponent(copy.subject)}`;
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#050505] px-4 py-10 text-white sm:px-6 lg:px-8">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_10%,rgba(14,165,233,.25),transparent_30rem),linear-gradient(180deg,#050505_0%,#071018_52%,#050505_100%)]" />
-      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-5rem)] max-w-5xl items-center">
-        <div className="w-full rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-2xl backdrop-blur md:p-10">
-          <Link href={`/${activeLocale}`} className="inline-flex items-center gap-3 text-sm font-semibold text-white/70 hover:text-white">
-            <ShieldCheck className="h-4 w-4" /> RISCK COMPLY
+    <main className="min-h-screen bg-[#050913] px-4 py-10 text-white sm:px-6 lg:px-8">
+      <section className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-5xl items-center">
+        <div className="w-full rounded-2xl border border-white/10 bg-[#0d1522] p-6 md:p-10">
+          <Link
+            href={`/${activeLocale}`}
+            aria-label="RISCK COMPLY home"
+            className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1522]"
+          >
+            <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={178} height={32} priority />
           </Link>
           <div className="mt-10 grid gap-8 lg:grid-cols-[.95fr_1.05fr] lg:items-center">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200/60">{copy.eyebrow}</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-300/70">{copy.eyebrow}</p>
               <h1 className="mt-4 text-4xl font-semibold tracking-[-0.05em] text-white sm:text-6xl">{copy.title}</h1>
-              <p className="mt-5 text-sm leading-7 text-white/58 md:text-base">{copy.subtitle}</p>
+              <p className="mt-5 text-sm leading-7 text-white/60 md:text-base">{copy.subtitle}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href={mailto} className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-black hover:bg-zinc-200">
+                <Link
+                  href={mailto}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1522]"
+                >
                   <Mail className="h-4 w-4" /> {copy.emailLabel}
                 </Link>
-                <Link href={`/${activeLocale}`} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-6 py-3 text-sm font-bold text-white hover:bg-white/10">
+                <Link
+                  href={`/${activeLocale}`}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-6 py-3 text-sm font-bold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1522]"
+                >
                   {copy.back} <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             </div>
-            <div className="rounded-[1.5rem] border border-white/10 bg-black/25 p-6">
+            <div className="rounded-xl border border-white/10 bg-[#08101c] p-6">
               <div className="flex items-center gap-3 border-b border-white/10 pb-5">
-                <CalendarDays className="h-5 w-5 text-cyan-100" />
+                <CalendarDays className="h-5 w-5 text-blue-300" />
                 <div>
                   <p className="text-sm font-semibold text-white">{copy.scope}</p>
-                  <p className="text-xs text-white/42">{copy.disclaimer}</p>
+                  <p className="text-xs text-white/45">{copy.disclaimer}</p>
                 </div>
               </div>
               <ul className="mt-6 space-y-3">
                 {copy.bullets.map((item) => (
-                  <li key={item} className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-sm leading-6 text-white/62">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-100" /> {item}
+                  <li key={item} className="flex gap-3 border-b border-white/8 py-3 text-sm leading-6 text-white/65 last:border-b-0">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" /> {item}
                   </li>
                 ))}
               </ul>
@@ -96,7 +106,7 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
           </div>
         </div>
       </section>
-      <div className="relative z-10"><PublicFooter locale={activeLocale} /></div>
+      <PublicFooter locale={activeLocale} />
     </main>
   );
 }
