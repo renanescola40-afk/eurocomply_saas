@@ -1,0 +1,68 @@
+name: Enterprise Security Dependency Remediation (Temporary)
+
+on:
+  push:
+    branches:
+      - security/fix-browserslist-20260901
+
+permissions:
+  contents: write
+
+concurrency:
+  group: enterprise-security-dependency-remediation-temp
+  cancel-in-progress: true
+
+jobs:
+  remediate:
+    if: ${{ !startsWith(github.event.head_commit.message, '[security-bot]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: security/fix-browserslist-20260901
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Deterministic install
+        run: npm ci --ignore-scripts
+
+      - name: Apply non-breaking npm audit lockfile remediation
+        run: npm audit fix --package-lock-only --ignore-scripts
+
+      - name: Verify manifest unchanged and vulnerable package is remediated
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- package.json
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+          const browserslist = lock.packages?.['node_modules/browserslist']?.version;
+          if (!browserslist || !/^4\\.(2[89]|[3-9][0-9])\\./.test(browserslist)) {
+            throw new Error(`browserslist remediation did not produce a patched version: ${browserslist ?? 'missing'}`);
+          }
+          console.log(`browserslist=${browserslist}`);
+          NODE
+
+      - name: Commit only the lockfile remediation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- package-lock.json; then
+            echo 'No package-lock change produced.'
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package-lock.json
+          git diff --cached --check
+          git commit -m '[security-bot] remediate dependency audit findings'
+          git push origin HEAD:security/fix-browserslist-20260901
