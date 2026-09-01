@@ -163,6 +163,11 @@ const localeLessPublicCanonicalRedirects = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '12mb',
+    },
+  },
   async redirects() {
     return [
       {
