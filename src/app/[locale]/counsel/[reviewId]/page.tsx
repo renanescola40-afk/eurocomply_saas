@@ -113,7 +113,7 @@ export default function CounselReviewCockpitPage() {
   async function downloadArtifact(artifactId: string) {
     setError(null);
     try {
-      const response = await fetch(`/api/legal-assurance/artifacts/${encodeURIComponent(artifactId)}/download`, { cache: 'no-store', credentials: 'same-origin' });
+      const response = await fetch(`/api/legal-assurance/${encodeURIComponent(reviewId)}/artifacts/${encodeURIComponent(artifactId)}/download`, { cache: 'no-store', credentials: 'same-origin' });
       const body = await response.json().catch(() => ({})) as { error?: string; signedUrl?: string };
       if (!response.ok || !body.signedUrl) throw new Error(body.error ?? 'signed_artifact_download_failed');
       window.open(body.signedUrl, '_blank', 'noopener,noreferrer');
