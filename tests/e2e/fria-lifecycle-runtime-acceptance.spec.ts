@@ -270,7 +270,7 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
       'Synthetic disposable QA system used only to prove the FRIA lifecycle and separation of functions.',
     );
     await aiSystemForm.getByRole('button', { name: /classify and save/i }).click();
-    await expect(page.getByText(systemName, { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: systemName, exact: true })).toBeVisible();
 
     await page.goto('/en/dashboard/fria', { waitUntil: 'domcontentloaded' });
     await expectHealthyAuthenticatedPage(page, 'FRIA owner workspace');
