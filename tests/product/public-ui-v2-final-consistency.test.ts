@@ -8,6 +8,7 @@ const LEGAL_REVIEW = new URL('../../src/components/legal/public-legal-review-pag
 const PROVIDER_DATA = new URL('../../src/app/[locale]/dashboard/provider-data/page.tsx', import.meta.url);
 const ANNEX_IV = new URL('../../src/app/[locale]/dashboard/annex-iv/page.tsx', import.meta.url);
 const EXECUTIVE_SUMMARY = new URL('../../src/components/ExecutiveComplianceSummary.tsx', import.meta.url);
+const ARTICLE_50 = new URL('../../src/components/ai-governance/article-50-workspace.tsx', import.meta.url);
 const INTERNATIONAL_HOME = new URL('../../src/components/marketing/international-home.tsx', import.meta.url);
 const FEATURE_PAGE = new URL('../../src/app/[locale]/features/[feature]/page.tsx', import.meta.url);
 const PLATFORM_LAYOUT = new URL('../../src/app/[locale]/platform/layout.tsx', import.meta.url);
@@ -93,6 +94,24 @@ describe('RISCK COMPLY UI V2 final public consistency', () => {
     expect(source).not.toContain('cyan-');
     expect(source).not.toContain('bg-gradient-to-br');
     expect(source).not.toContain('rounded-2xl');
+  });
+
+  it('keeps Article 50 runtime authority and legal deadline logic while using the enterprise shell', async () => {
+    const source = await readFile(ARTICLE_50, 'utf8');
+    expect(source).toContain("fetch('/api/ai-governance/article-50'");
+    expect(source).toContain("cache: 'no-store'");
+    expect(source).toContain('workflow=assessment_create');
+    expect(source).toContain('workflow=evidence_submit');
+    expect(source).toContain('getArticle50DeadlineView');
+    expect(source).toContain('digital-strategy.ec.europa.eu/en/library/guidelines-transparency-obligations-providers-and-deployers-ai-systems');
+    expect(source).toContain('aria-labelledby="article-50-title"');
+    expect(source).toContain('bg-blue-600');
+    expect(source).toContain('bg-[#0d1522]');
+    expect(source).toContain("status === 'READY'");
+    expect(source).toContain("status === 'NEEDS_REVIEW'");
+    expect(source).not.toContain('cyan-');
+    expect(source).not.toContain('rounded-3xl');
+    expect(source).not.toContain('bg-white/[0.025]');
   });
 
   it('keeps international landing copy and feature discovery while enforcing the V2 brand contract', async () => {
