@@ -30,7 +30,8 @@ describe('Legal Assurance private signed artifacts', () => {
   });
 
   it('uploads only scanned PDFs for active verified assigned Counsel', () => {
-    expect(upload).toContain('getCurrentCounselProfile(user.id)');
+    expect(upload).toContain('const reviewerSession = await getReviewerSession(user.id, reviewId)');
+    expect(upload).toContain('getCurrentCounselProfile(userId)');
     expect(upload).toContain("profile.verification_status !== 'VERIFIED'");
     expect(upload).toContain('getAssignedCounselReview(profile.id, reviewId)');
     expect(upload).toContain("review.status !== 'IN_REVIEW'");
