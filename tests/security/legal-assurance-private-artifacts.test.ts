@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
 const migration = read('supabase/migrations/20260901005000_legal_assurance_private_artifacts.sql');
 const storage = read('src/server/legal-assurance/artifacts.ts');
 const upload = read('src/app/api/counsel/legal-reviews/[reviewId]/artifacts/route.ts');
-const download = read('src/app/api/legal-assurance/artifacts/[artifactId]/download/route.ts');
+const download = read('src/app/api/legal-assurance/[reviewId]/artifacts/[artifactId]/download/route.ts');
 const matterQuery = read('src/server/queries/legal-assurance-review.ts');
 
 describe('Legal Assurance private signed artifacts', () => {
@@ -48,11 +48,17 @@ describe('Legal Assurance private signed artifacts', () => {
     expect(matterQuery).not.toContain("select('id,review_id,decision_id,artifact_reference,artifact_digest,artifact_type,issuer,issued_at,created_at,mime_type,size_bytes,original_filename,uploaded_by_counsel_id,storage_bucket,storage_path')");
   });
 
-  it('issues downloads only after server-side customer or Counsel authority and for 60 seconds', () => {
+  it('authorizes the matter before privileged artifact lookup and signs for 60 seconds', () => {
+    expect(download).toContain('const authority = await resolveMatterAuthority(user.id, reviewId)');
+    expect(download).toContain('const artifact = await getLegalArtifactForDownload(artifactId)');
+    expect(download.indexOf('resolveMatterAuthority(user.id, reviewId)')).toBeLessThan(download.indexOf('getLegalArtifactForDownload(artifactId)'));
+    expect(download).toContain('artifact.review_id !== reviewId');
     expect(download).toContain('getCurrentOrganizationForUser(userId)');
     expect(download).toContain("minimumPlan: 'enterprise'");
     expect(download).toContain('getCurrentCounselProfile(userId)');
     expect(download).toContain('getAssignedCounselReview(profile.id, reviewId)');
+    expect(download).toContain("policy: 'export'");
+    expect(download).toContain("failureMode: 'fail-closed'");
     expect(download).toContain('createLegalArtifactSignedDownload(artifact)');
     expect(storage).toContain('LEGAL_ASSURANCE_ARTIFACT_SIGNED_URL_SECONDS = 60');
     expect(storage).toContain('.createSignedUrl(artifact.storage_path, LEGAL_ASSURANCE_ARTIFACT_SIGNED_URL_SECONDS, { download: true })');
