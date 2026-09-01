@@ -155,6 +155,10 @@ const targetShaConfigured = shaPattern.test(targetSha);
 const targetDiffersFromCurrentRelease = currentShaConfigured && targetShaConfigured && currentSha !== targetSha;
 const rollbackRunbookPresent = existsSync('docs/operations/ROLLBACK_RUNBOOK.md');
 const targetValidationProof = process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true';
+const vercelProtectionBypassSecret = (process.env.VERCEL_AUTOMATION_BYPASS_SECRET || '').trim();
+const vercelProtectionHeaders = vercelProtectionBypassSecret
+  ? { 'x-vercel-protection-bypass': vercelProtectionBypassSecret }
+  : {};
 
 const checks = [
   createCheck('rollbackTargetUrlConfigured', Boolean(targetUrlConfig?.value), { source: targetUrlConfig?.name ?? null }),
@@ -183,7 +187,9 @@ const checks = [
 
 let rollbackHealth = null;
 if (targetUrl) {
-  rollbackHealth = await request(route(targetUrl, '/api/health'));
+  rollbackHealth = await request(route(targetUrl, '/api/health'), {
+    headers: vercelProtectionHeaders,
+  });
   checks.push(createCheck('rollbackTargetHealthOk', rollbackHealth.status === 200 && rollbackHealth.body?.status === 'ok', safeResponseSummary(rollbackHealth)));
   checks.push(createCheck('rollbackTargetHealthNoStore', hasNoStore(rollbackHealth.headers), safeResponseSummary(rollbackHealth)));
 } else {
@@ -196,7 +202,10 @@ const runReadyCheck = process.env.RELEASE_ROLLBACK_CHECK_READY === 'true';
 let rollbackReady = null;
 if (targetUrl && runReadyCheck && readinessToken) {
   rollbackReady = await request(route(targetUrl, '/api/ready'), {
-    headers: { Authorization: `Bearer ${readinessToken}` },
+    headers: {
+      Authorization: `Bearer ${readinessToken}`,
+      ...vercelProtectionHeaders,
+    },
   });
   checks.push(createCheck('rollbackTargetReadyOk', rollbackReady.status === 200 && rollbackReady.body?.status === 'ready', safeResponseSummary(rollbackReady)));
   checks.push(createCheck('rollbackTargetReadyNoStore', hasNoStore(rollbackReady.headers), safeResponseSummary(rollbackReady)));
@@ -244,7 +253,7 @@ const evidence = {
   summary: outcome === 'passed'
     ? 'Rollback dry-run verified previous known-good metadata, public health, no-store controls, and functional validation proof without mutating production.'
     : 'Rollback dry-run evidence is incomplete or the rollback target failed runtime validation; release remains blocked.',
-  redactionConfirmation: 'Redaction confirmed: no token, cookie, authorization header, secret value, or raw rollback URL is written to this evidence file.',
+  redactionConfirmation: 'Redaction confirmed: no token, cookie, authorization header, protection bypass secret, secret value, or raw rollback URL is written to this evidence file.',
   noSecretsStored: true,
   commandsExecuted: ['npm run release:rollback:dry-run'],
   evidenceLocations: [
@@ -263,6 +272,7 @@ const evidence = {
     shaSource: targetShaConfig?.name ?? null,
     shaPrefix: targetSha ? `${targetSha.slice(0, 12)}…` : null,
     shaFullRecordedPrivately: targetShaConfigured,
+    protectionBypassUsed: Boolean(vercelProtectionBypassSecret),
     health: rollbackHealth ? safeResponseSummary(rollbackHealth) : null,
     readinessChecked: Boolean(rollbackReady),
     readiness: rollbackReady ? safeResponseSummary(rollbackReady) : null,
@@ -283,6 +293,7 @@ const evidence = {
     readyCheckRequired: runReadyCheck,
     readyOk,
     readyNoStore,
+    protectionBypassUsed: Boolean(vercelProtectionBypassSecret),
     requiredEnv: 'RELEASE_ROLLBACK_TARGET_VALIDATED=true',
     note: 'This flag must only be set after manual functional validation of the previous known-good deployment.',
   },
@@ -303,6 +314,7 @@ const evidence = {
     containsSensitiveValues: false,
     valuesRedacted: true,
     authorizationHeaderStored: false,
+    protectionBypassSecretStored: false,
     cookiesStored: false,
     rollbackTargetStored: false,
     exactShaBound: runtimeContext.generatedByGithubActions && currentShaConfigured,
