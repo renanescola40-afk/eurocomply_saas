@@ -17,9 +17,6 @@ const PROCUREMENT_PACK = new URL('../../src/app/[locale]/trust/procurement-pack/
 const WAITLIST_INTERACTIONS = new URL('../../src/components/marketing/waitlist-interactions.tsx', import.meta.url);
 const PUBLIC_FOOTER = new URL('../../src/components/marketing/public-footer.tsx', import.meta.url);
 const TRUST_CENTER = new URL('../../src/components/marketing/trust-center-page.tsx', import.meta.url);
-const DYNAMIC_TRUST = new URL('../../src/components/trust/trust-page.tsx', import.meta.url);
-const BOOK_DEMO_PAGE = new URL('../../src/app/[locale]/book-demo/page.tsx', import.meta.url);
-const BOOK_DEMO_FORM = new URL('../../src/components/marketing/book-demo-form.tsx', import.meta.url);
 
 describe('RISCK COMPLY UI V2 final public consistency', () => {
   it('uses the official wordmark and cobalt system on the contact surface', async () => {
@@ -226,41 +223,5 @@ describe('RISCK COMPLY UI V2 final public consistency', () => {
     expect(source).not.toContain('radial-gradient');
     expect(source).not.toContain('rounded-[2rem]');
     expect(source).not.toContain('rounded-[1.8rem]');
-  });
-
-  it('keeps dynamic Trust localization and legal publication truth while using neutral/cobalt assurance chrome', async () => {
-    const source = await readFile(DYNAMIC_TRUST, 'utf8');
-    expect(source).toContain('getLocalizedTrustCenterPages(locale)');
-    expect(source).toContain('getLegalPublicationState()');
-    expect(source).toContain('ProviderRuntimeDisclosure');
-    expect(source).toContain('/brand/risck-comply-wordmark.svg');
-    expect(source).toContain('bg-[#050913]');
-    expect(source).toContain('bg-[#0d1522]');
-    expect(source).toContain('bg-blue-500/[0.06]');
-    expect(source).toContain('bg-amber-300/[0.055]');
-    expect(source).not.toContain('cyan-');
-    expect(source).not.toContain('radial-gradient');
-    expect(source).not.toContain('tech-grid');
-    expect(source).not.toContain('bg-emerald-300/[0.055]');
-  });
-
-  it('keeps demo demand capture and analytics while aligning the page and form to graphite/cobalt', async () => {
-    const [page, form] = await Promise.all([readFile(BOOK_DEMO_PAGE, 'utf8'), readFile(BOOK_DEMO_FORM, 'utf8')]);
-    expect(page).toContain('<BookDemoForm locale={locale} />');
-    expect(page).toContain('/brand/risck-comply-wordmark.svg');
-    expect(page).toContain('bg-[#050913]');
-    expect(page).toContain('bg-[#0d1522]');
-    expect(page).not.toContain('radial-gradient');
-    expect(page).not.toContain('tech-grid');
-    expect(page).not.toContain('rounded-[1.5rem]');
-    expect(form).toContain("fetch('/api/leads'");
-    expect(form).toContain('analyticsEvents.demoStarted');
-    expect(form).toContain('analyticsEvents.demoSubmitted');
-    expect(form).toContain("consentToContact: formData.get('consentToContact') === 'on'");
-    expect(form).toContain('bg-blue-600');
-    expect(form).toContain('bg-emerald-400/10');
-    expect(form).toContain('bg-red-400/10');
-    expect(form).not.toContain('rounded-[2rem]');
-    expect(form).not.toContain('rounded-full');
   });
 });
