@@ -8,6 +8,7 @@ on:
       - 'scripts/supabase/migration-object-evidence-core.mjs'
       - 'scripts/supabase/normalize-live-schema-catalog.mjs'
       - 'scripts/supabase/normalize-live-schema-catalog.test.mjs'
+      - 'scripts/supabase/prepare-production-db-connection.mjs'
       - 'scripts/supabase/production-schema-evidence.sql'
       - 'scripts/supabase/live-schema-evidence-workflow-contract.test.mjs'
       - '.github/workflows/supabase-live-schema-evidence.yml'
@@ -43,6 +44,7 @@ jobs:
           node --check scripts/supabase/build-migration-object-evidence.mjs
           node --check scripts/supabase/migration-object-evidence-core.mjs
           node --check scripts/supabase/normalize-live-schema-catalog.mjs
+          node --check scripts/supabase/prepare-production-db-connection.mjs
       - run: |
           node --test \
             scripts/supabase/build-migration-object-evidence.test.mjs \
@@ -96,20 +98,32 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.source_run_id }}
 
-      - name: Validate database configuration
+      - name: Prepare canonical production database connection
         shell: bash
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: test -n "$SUPABASE_DB_URL"
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          test -n "${SUPABASE_PROJECT_ID:-}"
+          mkdir -p "$OUTPUT_DIR"
+          DB_URL_FILE="$RUNNER_TEMP/supabase-live-schema-db-url"
+          node scripts/supabase/prepare-production-db-connection.mjs \
+            --write-file "$DB_URL_FILE" \
+            | tee "$OUTPUT_DIR/connection-diagnostics.json"
+          test -s "$DB_URL_FILE"
+          test "$(stat -c '%a' "$DB_URL_FILE")" = '600'
+          echo "SUPABASE_DB_URL_FILE=$DB_URL_FILE" >> "$GITHUB_ENV"
 
       - name: Capture read-only live catalog
         shell: bash
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
-          mkdir -p "$OUTPUT_DIR"
-          psql "$SUPABASE_DB_URL" \
+          test -n "${SUPABASE_DB_URL_FILE:-}"
+          test -s "$SUPABASE_DB_URL_FILE"
+          DB_URL="$(cat "$SUPABASE_DB_URL_FILE")"
+          psql "$DB_URL" \
             -X \
             -qAt \
             -v ON_ERROR_STOP=1 \

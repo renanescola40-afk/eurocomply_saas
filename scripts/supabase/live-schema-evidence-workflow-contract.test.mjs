@@ -23,6 +23,17 @@ test('live schema workflow passes all positional builder arguments in the correc
   assert.match(command, /--schema-evidence-run-id=\$GITHUB_RUN_ID/);
 });
 
+test('live schema workflow uses the canonical validated Supabase pooler binding', () => {
+  assert.match(workflow, /SUPABASE_DB_URL: \$\{\{ secrets\.SUPABASE_DB_POOLER_URL \}\}/);
+  assert.match(workflow, /SUPABASE_PROJECT_ID: \$\{\{ secrets\.SUPABASE_PROJECT_ID \}\}/);
+  assert.doesNotMatch(workflow, /secrets\.SUPABASE_DB_URL(?:\s|\}|$)/);
+  assert.match(workflow, /prepare-production-db-connection\.mjs/);
+  assert.match(workflow, /SUPABASE_DB_URL_FILE/);
+  assert.match(workflow, /stat -c '%a' "\$DB_URL_FILE"/);
+  assert.match(workflow, /= '600'/);
+  assert.match(workflow, /DB_URL="\$\(cat "\$SUPABASE_DB_URL_FILE"\)"/);
+});
+
 test('live schema capture remains read only', () => {
   const sql = readFileSync('scripts/supabase/production-schema-evidence.sql', 'utf8');
   assert.match(sql, /begin transaction read only;/i);
