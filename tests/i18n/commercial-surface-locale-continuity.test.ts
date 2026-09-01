@@ -75,7 +75,8 @@ describe('commercial surface locale continuity', () => {
 
   it('keeps the compact purchase headers usable on small screens', () => {
     expect(pricingPage).toContain('gap-3 px-4 py-4 sm:px-6 sm:py-5');
-    expect(pricingPage).toContain('hidden rounded-full border border-white/15 px-3 py-2');
+    expect(pricingPage).toContain('hidden rounded-lg border border-slate-700 px-3 py-2');
+    expect(pricingPage).toContain('focus-visible:ring-blue-400');
     expect(checkoutPage).toContain('gap-3 px-4 py-4 sm:px-6 sm:py-5');
     expect(checkoutPage).toContain('text-xs sm:gap-2 sm:text-sm');
   });
