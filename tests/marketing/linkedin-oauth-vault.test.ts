@@ -36,8 +36,8 @@ describe('LinkedIn OAuth Vault bridge', () => {
     expect(callbackRoute).toContain('linkedInOAuthStateMatches');
     expect(callbackRoute).toContain('inspectLinkedInAccessToken');
     expect(callbackRoute).toContain('inspection.hasRequiredScopes');
-    expect(callbackRoute.indexOf('linkedInOAuthStateMatches')).toBeLessThan(
-      callbackRoute.indexOf("searchParams.has('error')"),
+    expect(callbackRoute.indexOf('if (!linkedInOAuthStateMatches')).toBeLessThan(
+      callbackRoute.indexOf("if (request.nextUrl.searchParams.has('error'))"),
     );
   });
 
@@ -52,8 +52,13 @@ describe('LinkedIn OAuth Vault bridge', () => {
     expect(migration).toContain('vault.create_secret');
     expect(migration).toContain('vault.update_secret');
     expect(migration).toContain('DELETE FROM vault.secrets');
+    expect(migration).toContain("s.name = 'linkedin_marketing_access_token'");
+    expect(migration).toContain("s.name = 'linkedin_marketing_refresh_token'");
+    expect(migration).toContain('s.id <> v_access_id');
+    expect(migration).toContain('s.id <> v_refresh_id');
     expect(migration).toContain('SECURITY DEFINER');
-    expect(migration).toContain('SET search_path = pg_catalog, public, vault');
+    expect(migration).toContain('SET search_path = pg_catalog, vault');
+    expect(migration).not.toContain('SET search_path = pg_catalog, public, vault');
     expect(migration).toContain('GRANT EXECUTE ON FUNCTION public.read_linkedin_marketing_secret(text) TO service_role');
     expect(migration).toContain('GRANT EXECUTE ON FUNCTION public.store_linkedin_marketing_oauth_credentials(text, text, text, text) TO service_role');
     expect(migration).toContain('REVOKE ALL ON FUNCTION public.read_linkedin_marketing_secret(text) FROM anon');
