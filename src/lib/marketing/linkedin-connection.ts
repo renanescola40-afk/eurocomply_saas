@@ -1,5 +1,12 @@
 import 'server-only';
 
+import {
+  getLinkedInOrganizationVanityName,
+  isValidLinkedInOrganizationUrn,
+  resolveLinkedInOrganizationUrn,
+  type LinkedInOrganizationResolution,
+} from '@/lib/marketing/linkedin-organization';
+
 const LINKEDIN_INTROSPECTION_ENDPOINT = 'https://www.linkedin.com/oauth/v2/introspectToken';
 const LINKEDIN_POSTS_ENDPOINT = 'https://api.linkedin.com/rest/posts';
 
@@ -14,6 +21,7 @@ type LinkedInConnectionConfiguration = {
   clientSecretConfigured: boolean;
   organizationUrnConfigured: boolean;
   organizationUrnValid: boolean;
+  organizationVanityName: string;
   apiVersionConfigured: boolean;
   apiVersionValid: boolean;
 };
@@ -35,9 +43,14 @@ type LinkedInOrganizationReadProbe = {
   httpStatus: number | null;
 };
 
+type LinkedInOrganizationResolutionProbe = Omit<LinkedInOrganizationResolution, 'urn'> & {
+  resolved: boolean;
+};
+
 export type LinkedInMarketingConnectionInspection = {
   configuration: LinkedInConnectionConfiguration;
   token: LinkedInTokenInspection | null;
+  organizationResolution: LinkedInOrganizationResolutionProbe | null;
   organizationRead: LinkedInOrganizationReadProbe | null;
   requiredScopes: readonly string[];
   readyForControlledTest: boolean;
@@ -46,10 +59,6 @@ export type LinkedInMarketingConnectionInspection = {
 function optionalEnv(name: string) {
   const value = process.env[name]?.trim();
   return value || null;
-}
-
-function isValidOrganizationUrn(value: string | null) {
-  return Boolean(value && /^urn:li:organization:\d+$/.test(value));
 }
 
 function isValidApiVersion(value: string | null) {
@@ -93,7 +102,8 @@ function connectionConfiguration(): LinkedInConnectionConfiguration {
     clientIdConfigured: Boolean(clientId),
     clientSecretConfigured: Boolean(clientSecret),
     organizationUrnConfigured: Boolean(organizationUrn),
-    organizationUrnValid: isValidOrganizationUrn(organizationUrn),
+    organizationUrnValid: organizationUrn ? isValidLinkedInOrganizationUrn(organizationUrn) : false,
+    organizationVanityName: getLinkedInOrganizationVanityName(),
     apiVersionConfigured: Boolean(apiVersion),
     apiVersionValid: isValidApiVersion(apiVersion),
   };
@@ -193,6 +203,20 @@ async function probeOrganizationReadAccess(
   };
 }
 
+function redactOrganizationResolution(
+  resolution: LinkedInOrganizationResolution,
+): LinkedInOrganizationResolutionProbe {
+  return {
+    ok: resolution.ok,
+    resolved: Boolean(resolution.urn),
+    source: resolution.source,
+    vanityName: resolution.vanityName,
+    checked: resolution.checked,
+    httpStatus: resolution.httpStatus,
+    errorCode: resolution.errorCode,
+  };
+}
+
 export async function inspectLinkedInMarketingConnection(): Promise<LinkedInMarketingConnectionInspection> {
   const configuration = connectionConfiguration();
   const accessToken = optionalEnv('LINKEDIN_ACCESS_TOKEN');
@@ -205,6 +229,7 @@ export async function inspectLinkedInMarketingConnection(): Promise<LinkedInMark
     return {
       configuration,
       token: null,
+      organizationResolution: null,
       organizationRead: null,
       requiredScopes: LINKEDIN_MARKETING_REQUIRED_SCOPES,
       readyForControlledTest: false,
@@ -213,28 +238,44 @@ export async function inspectLinkedInMarketingConnection(): Promise<LinkedInMark
 
   const token = await inspectAccessToken(accessToken, clientId, clientSecret);
 
+  let organizationResolution: LinkedInOrganizationResolution | null = null;
   let organizationRead: LinkedInOrganizationReadProbe | null = null;
   if (
     token.active
     && token.hasRequiredScopes
-    && organizationUrn
-    && isValidOrganizationUrn(organizationUrn)
     && apiVersion
     && isValidApiVersion(apiVersion)
   ) {
-    organizationRead = await probeOrganizationReadAccess(accessToken, organizationUrn, apiVersion);
+    organizationResolution = await resolveLinkedInOrganizationUrn({
+      accessToken,
+      apiVersion,
+      configuredUrn: organizationUrn,
+      vanityName: process.env.LINKEDIN_ORGANIZATION_VANITY_NAME,
+    });
+
+    if (organizationResolution.ok && organizationResolution.urn) {
+      organizationRead = await probeOrganizationReadAccess(
+        accessToken,
+        organizationResolution.urn,
+        apiVersion,
+      );
+    }
   }
 
   return {
     configuration,
     token,
+    organizationResolution: organizationResolution
+      ? redactOrganizationResolution(organizationResolution)
+      : null,
     organizationRead,
     requiredScopes: LINKEDIN_MARKETING_REQUIRED_SCOPES,
     readyForControlledTest: Boolean(
       token.active
       && token.hasRequiredScopes
+      && organizationResolution?.ok
+      && organizationResolution?.urn
       && organizationRead?.ok
-      && configuration.organizationUrnValid
       && configuration.apiVersionValid,
     ),
   };
