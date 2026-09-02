@@ -6,6 +6,7 @@ import { EnterpriseContractBilling } from '@/components/platform/enterprise-cont
 import { EnterpriseControlCenter } from '@/components/platform/enterprise-control-center';
 import { EnterpriseScimToken } from '@/components/platform/enterprise-scim-token';
 import { EnterpriseSsoConnection } from '@/components/platform/enterprise-sso-connection';
+import { LinkedInMarketingConnection } from '@/components/platform/linkedin-marketing-connection';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { getCurrentUser } from '@/server/queries/auth';
 import {
@@ -19,6 +20,7 @@ export const fetchCache = 'force-no-store';
 
 type PageProps = {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ linkedin?: string | string[] }>;
 };
 
 function getSafeLocale(locale: string): Locale {
@@ -39,13 +41,14 @@ async function requireControlCenterAccess(locale: Locale) {
   }
 }
 
-export default async function PlatformControlCenterPage({ params }: PageProps) {
+export default async function PlatformControlCenterPage({ params, searchParams }: PageProps) {
   noStore();
-  const { locale } = await params;
+  const [{ locale }, query] = await Promise.all([params, searchParams ?? Promise.resolve({})]);
   const safeLocale = getSafeLocale(locale);
   const membership = await requireControlCenterAccess(safeLocale);
   const canManageBilling = platformRoleHasCapability(membership.role, 'billing');
   const canManageSecurity = platformRoleHasCapability(membership.role, 'security');
+  const linkedinOutcome = typeof query.linkedin === 'string' ? query.linkedin : null;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.18),_transparent_34rem),linear-gradient(180deg,#050505_0%,#080b12_48%,#050505_100%)] text-white">
@@ -65,6 +68,7 @@ export default async function PlatformControlCenterPage({ params }: PageProps) {
         <EnterpriseControlCenter platformRole={membership.role} />
         {canManageBilling ? <EnterpriseContractBilling /> : null}
         <EnterpriseBulkImport />
+        {canManageSecurity ? <LinkedInMarketingConnection oauthOutcome={linkedinOutcome} /> : null}
         {canManageSecurity ? <EnterpriseSsoConnection /> : null}
         {canManageSecurity ? <EnterpriseScimToken /> : null}
       </div>
