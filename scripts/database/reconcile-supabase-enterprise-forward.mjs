@@ -17,15 +17,10 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-02-enterprise-sso-production-runtime-reconciliation-v26';
-const DETERMINISTIC_COMMERCIAL_SOURCE_MIGRATION =
-  '20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql';
-const ENTERPRISE_SSO_RUNTIME_MIGRATION =
-  '20260902083000_reconcile_enterprise_sso_production_runtime.sql';
-const EXPECTED_SELECTED = [
-  DETERMINISTIC_COMMERCIAL_SOURCE_MIGRATION,
-  ENTERPRISE_SSO_RUNTIME_MIGRATION,
-];
+const EXPECTED_CHANGE_SET = '2026-09-02-provider-ledger-verification-reconciliation-v27';
+const V27_VERIFICATION_MIGRATION =
+  '20260902195000_verify_v27_provider_ledger_reconciliation.sql';
+const EXPECTED_SELECTED = [V27_VERIFICATION_MIGRATION];
 
 function fail(message) {
   throw new Error(message);
@@ -38,8 +33,9 @@ function requireMarkers(source, markers, label) {
 }
 
 function forbidMarkers(source, markers, label) {
+  const normalized = source.toLowerCase();
   for (const marker of markers) {
-    if (source.includes(marker)) fail(`${label} reopened forbidden boundary: ${marker}`);
+    if (normalized.includes(marker.toLowerCase())) fail(`${label} reopened forbidden boundary: ${marker}`);
   }
 }
 
@@ -55,50 +51,50 @@ function currentGitSha() {
   }
 }
 
-function validateDeterministicCommercialSourceMigration(source) {
+function validateV27VerificationMigration(source) {
   requireMarkers(source, [
-    'create or replace function app_private.resolve_commercial_plan',
+    '20260902193810',
+    '20260902193849',
+    "pg_get_functiondef('app_private.resolve_commercial_plan(uuid)'::regprocedure)",
     'order by source.priority desc, source.id asc',
-    "source.source_kind = 'signed_contract'",
-    "snapshot.status = 'applied'",
+    "source.source_kind = ''signed_contract''",
     'event.livemode = true',
-    "event.status = 'processed'",
-    'revoke all on function app_private.resolve_commercial_plan(uuid) from public, anon, authenticated',
-    'grant execute on function app_private.resolve_commercial_plan(uuid) to service_role',
-    'commercial authority ordering is not deterministic',
-  ], 'Deterministic commercial source migration');
-  forbidMarkers(source, [
-    "in ('active','trialing')",
-    "source_kind = 'manual_override'",
-    'grant execute on function app_private.resolve_commercial_plan(uuid) to authenticated',
-    'grant execute on function app_private.resolve_commercial_plan(uuid) to anon',
-  ], 'Deterministic commercial source migration');
-}
+    "event.status = ''processed''",
+    "has_function_privilege('public', 'app_private.resolve_commercial_plan(uuid)', 'EXECUTE')",
+    "has_function_privilege('service_role', 'app_private.resolve_commercial_plan(uuid)', 'EXECUTE')",
+    "'supabase_provider_id'",
+    "'default_role'",
+    "'default_seat_type'",
+    "'auto_provision'",
+    "'last_login_at'",
+    "conname = 'enterprise_identity_default_role_allowed'",
+    "conname = 'enterprise_identity_default_seat_allowed'",
+    "to_regclass('public.enterprise_identity_supabase_provider_unique')",
+    "to_regclass('public.enterprise_identity_domain_active_idx')",
+    "to_regprocedure('public.resolve_enterprise_sso_binding(uuid,text)')",
+    "to_regprocedure('public.record_enterprise_sso_login(uuid,uuid,text)')",
+    "to_regprocedure('public.upsert_enterprise_sso_connection_atomic(uuid,uuid,uuid,text,text,text,text,text,boolean,boolean,uuid)')",
+    "'search_path=pg_catalog, public'",
+    'p.prosecdef is not true',
+    'c.relrowsecurity, c.relforcerowsecurity',
+    'identity_rls is distinct from true',
+    'identity_force_rls is distinct from true',
+  ], 'V27 provider-ledger verification migration');
 
-function validateEnterpriseSsoRuntimeMigration(source) {
-  requireMarkers(source, [
-    'add column if not exists supabase_provider_id uuid',
-    'add column if not exists default_role text',
-    'add column if not exists default_seat_type text',
-    'add column if not exists auto_provision boolean',
-    'add column if not exists last_login_at timestamptz',
-    'create or replace function public.resolve_enterprise_sso_binding',
-    'create or replace function public.record_enterprise_sso_login',
-    'create or replace function public.upsert_enterprise_sso_connection_atomic',
-    'join public.organization_entitlements entitlement',
-    "contract.contract_mode = 'negotiated'",
-    "contract.status = 'active'",
-    'entitlement.sso_enabled = true',
-    'revoke all on function public.resolve_enterprise_sso_binding(uuid, text)',
-    'grant execute on function public.resolve_enterprise_sso_binding(uuid, text)',
-    'to service_role;',
-    'enterprise SSO binding resolver privilege boundary is invalid',
-  ], 'Enterprise SSO Production runtime migration');
   forbidMarkers(source, [
-    'resolve_organization_entitlements_v3',
-    'grant execute on function public.resolve_enterprise_sso_binding(uuid, text) to authenticated',
-    'grant execute on function public.resolve_enterprise_sso_binding(uuid, text) to anon',
-  ], 'Enterprise SSO Production runtime migration');
+    'alter table ',
+    'create or replace function',
+    'create policy ',
+    'alter policy ',
+    'drop policy ',
+    'grant execute',
+    'revoke all',
+    'insert into ',
+    'update public.',
+    'delete from ',
+    'truncate ',
+    'drop table ',
+  ], 'V27 provider-ledger verification migration');
 }
 
 async function main() {
@@ -131,18 +127,11 @@ async function main() {
     subjectSha: expectedHeadSha || gitSha,
   });
 
-  const sources = new Map(
-    selected.map((filename) => [
-      filename,
-      readFileSync(join(ROOT, 'supabase', 'migrations', filename), 'utf8'),
-    ]),
+  const source = readFileSync(
+    join(ROOT, 'supabase', 'migrations', V27_VERIFICATION_MIGRATION),
+    'utf8',
   );
-  validateDeterministicCommercialSourceMigration(
-    sources.get(DETERMINISTIC_COMMERCIAL_SOURCE_MIGRATION),
-  );
-  validateEnterpriseSsoRuntimeMigration(
-    sources.get(ENTERPRISE_SSO_RUNTIME_MIGRATION),
-  );
+  validateV27VerificationMigration(source);
 
   const records = manifest.migrations.map((migration, index) => ({
     position: index + 1,
