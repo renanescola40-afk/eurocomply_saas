@@ -25,6 +25,14 @@ function getOrganizationUrn(explicit?: string) {
   return value;
 }
 
+function getLinkedInApiVersion() {
+  const value = requireEnv('LINKEDIN_API_VERSION');
+  if (!/^\d{6}$/.test(value)) {
+    throw new Error('LINKEDIN_API_VERSION must use YYYYMM format');
+  }
+  return value;
+}
+
 export async function publishLinkedInOrganizationTextPost(
   input: LinkedInOrganizationPostInput,
 ): Promise<LinkedInOrganizationPostResult> {
@@ -33,7 +41,7 @@ export async function publishLinkedInOrganizationTextPost(
   if (commentary.length > 3000) throw new Error('LinkedIn post text exceeds the 3000 character limit');
 
   const accessToken = requireEnv('LINKEDIN_ACCESS_TOKEN');
-  const linkedinVersion = requireEnv('LINKEDIN_API_VERSION');
+  const linkedinVersion = getLinkedInApiVersion();
   const author = getOrganizationUrn(input.organizationUrn);
 
   const response = await fetch(LINKEDIN_POSTS_ENDPOINT, {
@@ -60,8 +68,7 @@ export async function publishLinkedInOrganizationTextPost(
   });
 
   if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`LinkedIn publish failed (${response.status}): ${detail.slice(0, 500)}`);
+    throw new Error(`LinkedIn publish failed with upstream status ${response.status}`);
   }
 
   return {
