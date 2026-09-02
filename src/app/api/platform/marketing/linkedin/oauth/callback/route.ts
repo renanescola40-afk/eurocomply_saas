@@ -72,14 +72,14 @@ export async function GET(request: NextRequest) {
 
     await requirePlatformCapability(user.id, 'security');
 
-    if (request.nextUrl.searchParams.has('error')) {
-      return oauthOutcomeRedirect(request, 'oauth_denied');
-    }
-
     const state = request.nextUrl.searchParams.get('state');
     const expectedState = request.cookies.get(LINKEDIN_OAUTH_STATE_COOKIE)?.value ?? null;
     if (!linkedInOAuthStateMatches(state, expectedState)) {
       return oauthOutcomeRedirect(request, 'oauth_state_invalid');
+    }
+
+    if (request.nextUrl.searchParams.has('error')) {
+      return oauthOutcomeRedirect(request, 'oauth_denied');
     }
 
     const code = request.nextUrl.searchParams.get('code');
