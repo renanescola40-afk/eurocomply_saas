@@ -17,15 +17,10 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-02-enterprise-sso-production-runtime-reconciliation-v26';
-const DETERMINISTIC_COMMERCIAL_SOURCE_MIGRATION =
-  '20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql';
-const ENTERPRISE_SSO_RUNTIME_MIGRATION =
-  '20260902083000_reconcile_enterprise_sso_production_runtime.sql';
-const EXPECTED_SELECTED = [
-  DETERMINISTIC_COMMERCIAL_SOURCE_MIGRATION,
-  ENTERPRISE_SSO_RUNTIME_MIGRATION,
-];
+const EXPECTED_CHANGE_SET = '2026-09-02-provider-applied-v26-canonical-forward-adoption-v27';
+const PROVIDER_APPLIED_ADOPTION_MIGRATION =
+  '20260902200000_adopt_provider_applied_v26_exact_bytes.sql';
+const EXPECTED_SELECTED = [PROVIDER_APPLIED_ADOPTION_MIGRATION];
 
 function fail(message) {
   throw new Error(message);
@@ -55,50 +50,39 @@ function currentGitSha() {
   }
 }
 
-function validateDeterministicCommercialSourceMigration(source) {
+function validateProviderAppliedAdoptionMigration(source) {
   requireMarkers(source, [
-    'create or replace function app_private.resolve_commercial_plan',
-    'order by source.priority desc, source.id asc',
-    "source.source_kind = 'signed_contract'",
-    "snapshot.status = 'applied'",
-    'event.livemode = true',
-    "event.status = 'processed'",
-    'revoke all on function app_private.resolve_commercial_plan(uuid) from public, anon, authenticated',
-    'grant execute on function app_private.resolve_commercial_plan(uuid) to service_role',
-    'commercial authority ordering is not deterministic',
-  ], 'Deterministic commercial source migration');
+    "m.name = 'reconcile_deterministic_commercial_contract_source_precedence'",
+    "894ca7297890ae01ab57986af20654e33b62e95fe732cad4b8336afeed6f0fac",
+    "m.name = 'reconcile_enterprise_sso_production_runtime'",
+    "494631c9521dc224cef5609cc975c4ebb9731ce14bfcced71ee026fb3cf35adb",
+    "to_regclass('supabase_migrations.schema_migrations')",
+    "extensions.digest(convert_to(m.statements[1], 'UTF8'), 'sha256')",
+    "'supabase_provider_id'",
+    "'default_role'",
+    "'default_seat_type'",
+    "'auto_provision'",
+    "'last_login_at'",
+    "public.resolve_enterprise_sso_binding(uuid,text)",
+    "public.record_enterprise_sso_login(uuid,uuid,text)",
+    "public.upsert_enterprise_sso_connection_atomic(uuid,uuid,uuid,text,text,text,text,text,boolean,boolean,uuid)",
+    "order by source.priority desc, source.id asc",
+    "source.source_kind = ''signed_contract''",
+    "event.livemode = true",
+    "event.status = ''processed''",
+    "has_function_privilege('authenticated', rpc_signature, 'EXECUTE')",
+    "not has_function_privilege('service_role', rpc_signature, 'EXECUTE')",
+    "notify pgrst, 'reload schema'",
+  ], 'Provider-applied V26 canonical adoption migration');
   forbidMarkers(source, [
-    "in ('active','trialing')",
-    "source_kind = 'manual_override'",
-    'grant execute on function app_private.resolve_commercial_plan(uuid) to authenticated',
-    'grant execute on function app_private.resolve_commercial_plan(uuid) to anon',
-  ], 'Deterministic commercial source migration');
-}
-
-function validateEnterpriseSsoRuntimeMigration(source) {
-  requireMarkers(source, [
-    'add column if not exists supabase_provider_id uuid',
-    'add column if not exists default_role text',
-    'add column if not exists default_seat_type text',
-    'add column if not exists auto_provision boolean',
-    'add column if not exists last_login_at timestamptz',
-    'create or replace function public.resolve_enterprise_sso_binding',
-    'create or replace function public.record_enterprise_sso_login',
-    'create or replace function public.upsert_enterprise_sso_connection_atomic',
-    'join public.organization_entitlements entitlement',
-    "contract.contract_mode = 'negotiated'",
-    "contract.status = 'active'",
-    'entitlement.sso_enabled = true',
-    'revoke all on function public.resolve_enterprise_sso_binding(uuid, text)',
-    'grant execute on function public.resolve_enterprise_sso_binding(uuid, text)',
-    'to service_role;',
-    'enterprise SSO binding resolver privilege boundary is invalid',
-  ], 'Enterprise SSO Production runtime migration');
-  forbidMarkers(source, [
-    'resolve_organization_entitlements_v3',
-    'grant execute on function public.resolve_enterprise_sso_binding(uuid, text) to authenticated',
-    'grant execute on function public.resolve_enterprise_sso_binding(uuid, text) to anon',
-  ], 'Enterprise SSO Production runtime migration');
+    'insert into supabase_migrations.schema_migrations',
+    'delete from supabase_migrations.schema_migrations',
+    'update supabase_migrations.schema_migrations',
+    'migration repair',
+    '--include-all',
+    "grant execute on function public.resolve_enterprise_sso_binding(uuid, text) to authenticated",
+    "grant execute on function public.resolve_enterprise_sso_binding(uuid, text) to anon",
+  ], 'Provider-applied V26 canonical adoption migration');
 }
 
 async function main() {
@@ -131,18 +115,11 @@ async function main() {
     subjectSha: expectedHeadSha || gitSha,
   });
 
-  const sources = new Map(
-    selected.map((filename) => [
-      filename,
-      readFileSync(join(ROOT, 'supabase', 'migrations', filename), 'utf8'),
-    ]),
+  const source = readFileSync(
+    join(ROOT, 'supabase', 'migrations', PROVIDER_APPLIED_ADOPTION_MIGRATION),
+    'utf8',
   );
-  validateDeterministicCommercialSourceMigration(
-    sources.get(DETERMINISTIC_COMMERCIAL_SOURCE_MIGRATION),
-  );
-  validateEnterpriseSsoRuntimeMigration(
-    sources.get(ENTERPRISE_SSO_RUNTIME_MIGRATION),
-  );
+  validateProviderAppliedAdoptionMigration(source);
 
   const records = manifest.migrations.map((migration, index) => ({
     position: index + 1,
