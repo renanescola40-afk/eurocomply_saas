@@ -59,9 +59,10 @@ describe('LinkedIn OAuth Vault bridge', () => {
     expect(migration).toContain('REVOKE ALL ON FUNCTION public.read_linkedin_marketing_secret(text) FROM authenticated');
   });
 
-  it('never serializes provider secrets into OAuth redirects or route inventory metadata', () => {
-    expect(callbackRoute).not.toContain('accessToken: exchange.accessToken');
-    expect(callbackRoute).not.toContain('refreshToken: exchange.refreshToken');
+  it('never serializes provider secrets into OAuth redirects or browser-visible parameters', () => {
+    expect(callbackRoute).not.toContain("target.searchParams.set('access_token'");
+    expect(callbackRoute).not.toContain("target.searchParams.set('refresh_token'");
+    expect(callbackRoute).not.toContain('NextResponse.json');
     expect(callbackRoute).toContain("target.searchParams.set('linkedin', outcome)");
     expect(callbackRoute).toContain("Referrer-Policy', 'no-referrer'");
     expect(inventory).toContain('src/app/api/platform/marketing/linkedin/oauth/start/route.ts');
