@@ -58,6 +58,10 @@ DECLARE
   v_access_description text;
   v_refresh_description text;
 BEGIN
+  -- Serialize only this credential rotation path so concurrent OAuth callbacks
+  -- cannot create competing canonical Vault rows before deduplication.
+  PERFORM pg_advisory_xact_lock(20260903, 110000);
+
   IF p_access_token IS NULL
      OR length(btrim(p_access_token)) < 16
      OR length(p_access_token) > 4096 THEN
