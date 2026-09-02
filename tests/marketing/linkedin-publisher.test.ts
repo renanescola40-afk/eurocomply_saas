@@ -2,18 +2,22 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const client = readFileSync('src/lib/marketing/linkedin.ts', 'utf8');
+const credentials = readFileSync('src/lib/marketing/linkedin-credentials.ts', 'utf8');
 const resolver = readFileSync('src/lib/marketing/linkedin-organization.ts', 'utf8');
 const queue = readFileSync('src/lib/marketing/linkedin-queue.ts', 'utf8');
 const route = readFileSync('src/app/api/internal/marketing/linkedin/publish/route.ts', 'utf8');
 const inventory = readFileSync('docs/security/API_ROUTE_INVENTORY.billing.md', 'utf8');
 
 describe('LinkedIn marketing publisher', () => {
-  it('keeps LinkedIn credentials server-side and environment-backed', () => {
+  it('keeps LinkedIn credentials server-side with environment-to-Vault fallback', () => {
     expect(client).toContain("import 'server-only'");
-    expect(client).toContain("requireEnv('LINKEDIN_ACCESS_TOKEN')");
+    expect(client).toContain('getLinkedInAccessTokenCredential');
+    expect(credentials).toContain("process.env.LINKEDIN_ACCESS_TOKEN");
+    expect(credentials).toContain("rpc('read_linkedin_marketing_secret'");
     expect(client).toContain("requireEnv('LINKEDIN_API_VERSION')");
     expect(client).toContain('resolveLinkedInOrganizationUrn');
     expect(client).not.toMatch(/LINKEDIN_ACCESS_TOKEN\s*=\s*['\"][^'\"]+/);
+    expect(credentials).not.toMatch(/LINKEDIN_ACCESS_TOKEN\s*=\s*['\"][^'\"]+/);
   });
 
   it('resolves the canonical RISCK COMPLY Page by vanity name when an explicit URN is absent', () => {
