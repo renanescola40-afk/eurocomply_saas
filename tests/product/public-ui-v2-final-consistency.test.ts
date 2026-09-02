@@ -179,11 +179,17 @@ describe('RISCK COMPLY UI V2 final public consistency', () => {
     expect(source).not.toContain('radial-gradient');
   });
 
-  it('preserves waitlist submission behavior and uses semantic feedback colors only for state', async () => {
+  it('preserves policy-backed waitlist submission behavior and uses semantic feedback colors only for state', async () => {
     const source = await readFile(WAITLIST_INTERACTIONS, 'utf8');
     expect(source).toContain("fetch('/api/prelaunch'");
     expect(source).toContain('resolveWaitlistSubmitFeedback');
-    expect(source).toContain('consentToContact: true');
+    expect(source).toContain('const [consentToContact, setConsentToContact] = useState(false)');
+    expect(source).toContain('body: JSON.stringify({ companyName, email, role, website, locale: activeLocale, consentToContact })');
+    expect(source).not.toContain('consentToContact: true');
+    expect(source).toContain('name="consentToContact"');
+    expect(source).toContain('required');
+    expect(source).toContain('checked={consentToContact}');
+    expect(source).toContain("pt: 'Autorizo o contacto sobre o lançamento do RISCK COMPLY.'");
     expect(source).toContain("status === 'success'");
     expect(source).toContain("status === 'warning'");
     expect(source).toContain("status === 'error'");
