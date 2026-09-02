@@ -1,0 +1,20 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed read-only:
+--   version: 20260902193810
+--   name: reconcile_deterministic_commercial_contract_source_precedence
+--   logical source: supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql
+--
+-- The bounded V25 SQL was applied through the Supabase management migration
+-- path and the provider recorded a later ledger timestamp than the repository
+-- source filename. Live read-only evidence subsequently confirmed the intended
+-- deterministic commercial-authority object state:
+--   order by source.priority desc, source.id asc
+-- with EXECUTE denied to public/anon/authenticated and retained only for
+-- service_role.
+--
+-- This file binds the observed remote version to an explicit repository record.
+-- It does not claim byte-for-byte identity for the provider-generated migration
+-- wrapper and it must never be executed as a migration.
+--
+-- No DDL. No migration-history repair. No database write authorization.

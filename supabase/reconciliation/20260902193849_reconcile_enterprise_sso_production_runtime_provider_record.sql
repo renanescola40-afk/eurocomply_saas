@@ -1,0 +1,18 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed read-only:
+--   version: 20260902193849
+--   name: reconcile_enterprise_sso_production_runtime
+--   logical source: supabase/migrations/20260902083000_reconcile_enterprise_sso_production_runtime.sql
+--
+-- The bounded V26 SQL was applied through the Supabase management migration
+-- path and the provider recorded a later ledger timestamp than the repository
+-- source filename. Live read-only evidence subsequently confirmed all five SSO
+-- columns, both constraints, both indexes, all three service-role-only RPCs and
+-- preserved RLS plus FORCE RLS on enterprise_identity_connections.
+--
+-- This file binds the observed remote version to an explicit repository record.
+-- It does not claim byte-for-byte identity for the provider-generated migration
+-- wrapper and it must never be executed as a migration.
+--
+-- No DDL. No migration-history repair. No database write authorization.
