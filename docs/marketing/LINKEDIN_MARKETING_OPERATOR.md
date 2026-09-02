@@ -12,6 +12,7 @@ Connect RISCK COMPLY to LinkedIn using the official LinkedIn Community Managemen
 - Recurring publishing goes through the persistent `linkedin_marketing_posts` queue and `/api/internal/marketing/linkedin/process`.
 - Connection readiness is inspected through `/api/platform/marketing/linkedin/status`.
 - The connection status endpoint requires an authenticated platform actor with the `security` capability and a current AAL2 MFA session.
+- The connection status route is protected by distributed fail-closed rate limiting before LinkedIn provider calls.
 - The status endpoint never returns access-token or client-secret values. It returns configuration booleans, token activity/expiry/scopes and a non-mutating organization read-probe result only.
 - Internal publishing routes use the existing internal authentication, fail-closed rate-limit and no-store controls.
 - The queue has RLS enabled and browser roles receive no direct table privileges.
@@ -39,6 +40,15 @@ The official Posts API is used at `https://api.linkedin.com/rest/posts` with:
 
 The connection verifier also uses LinkedIn's official OAuth token introspection endpoint and a read-only Posts API finder request for the configured organization.
 
+## Community Management access tiers
+
+RISCK COMPLY uses a conservative rollout aligned to LinkedIn's current program-tier description:
+
+- **Development Tier** — integration build/test only. Use it to complete OAuth, verify scopes, exercise the connection verifier and execute bounded test publishing within LinkedIn's restrictions.
+- **Standard Tier** — required by RISCK COMPLY before enabling recurring autonomous live production publishing. LinkedIn describes this tier as the live-production tier without Development restrictions.
+
+`MARKETING_OPERATOR_ACTIVE` must not be set merely because Development access works. Standard access is a separate production gate.
+
 ## Required production environment variables
 
 ```text
@@ -51,22 +61,24 @@ LINKEDIN_API_VERSION=<LinkedIn-supported YYYYMM version>
 
 `LINKEDIN_CLIENT_SECRET` and `LINKEDIN_ACCESS_TOKEN` are secrets. Store them only in the production deployment secret store. Never paste them into source code, GitHub issues/PR comments, logs, browser-visible variables, or chat messages.
 
-## First connection procedure
+## First connection and activation procedure
 
-1. Create or select the LinkedIn Developer application owned by the business/operator responsible for RISCK COMPLY.
-2. Associate/verify the RISCK COMPLY LinkedIn Page where required by LinkedIn.
-3. Request/enable Community Management API access.
-4. Confirm `r_organization_social` and `w_organization_social` are available to the application.
-5. Configure the exact production OAuth redirect URI in the LinkedIn application.
-6. Complete the LinkedIn 3-legged member authorization flow using an account with an eligible Page role.
-7. Store `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` and the resulting access token only in the deployment secret store.
-8. Resolve the RISCK COMPLY Page numeric organization id and configure `LINKEDIN_ORGANIZATION_URN`.
-9. Set a currently supported `LINKEDIN_API_VERSION`.
-10. Call `/api/platform/marketing/linkedin/status` from an AAL2 platform-security session and require `readyForControlledTest=true`.
-11. Execute one controlled test post through the protected one-off publisher.
-12. Record the returned LinkedIn post id and verify the Page rendering.
-13. Confirm the queue worker can claim and publish one intentionally scheduled test item.
-14. Enable recurring editorial scheduling only after the controlled post and worker evidence pass.
+1. Create a LinkedIn Developer application associated with the RISCK COMPLY LinkedIn Page.
+2. Apply for Community Management API Development Tier access.
+3. Confirm `r_organization_social` and `w_organization_social` are available to the application.
+4. Configure the exact OAuth redirect URI in the LinkedIn application.
+5. Complete the LinkedIn 3-legged member authorization flow using an account with an eligible Page role.
+6. Store `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` and the resulting access token only in the deployment secret store.
+7. Resolve the RISCK COMPLY Page numeric organization id and configure `LINKEDIN_ORGANIZATION_URN`.
+8. Set a currently supported `LINKEDIN_API_VERSION`.
+9. Call `/api/platform/marketing/linkedin/status` from an AAL2 platform-security session and require `readyForControlledTest=true`.
+10. Execute one controlled organization post permitted by the granted Development-tier conditions.
+11. Record the returned LinkedIn post id and verify Page rendering.
+12. Confirm the queue worker can claim and publish one intentionally scheduled integration-test item without duplicate behavior.
+13. Prepare the Community Management Standard Tier application/evidence required by LinkedIn, including a demonstration/screen recording if requested by the current access process.
+14. Obtain Standard Tier approval.
+15. Re-run connection verification and a bounded production acceptance test under the granted Standard access.
+16. Enable recurring editorial scheduling only after Standard access and the production acceptance gates pass.
 
 ## Connection verifier
 
@@ -81,6 +93,12 @@ LINKEDIN_API_VERSION=<LinkedIn-supported YYYYMM version>
 - `readyForControlledTest`, which is true only when the live connection gates above pass.
 
 The endpoint does not publish, modify or delete LinkedIn content.
+
+## Token lifecycle
+
+LinkedIn access tokens are time-limited. The verifier records provider `expires_at` metadata so expiry is an operational gate rather than a surprise failure.
+
+LinkedIn currently documents programmatic refresh tokens for approved Marketing Developer Platform partners. Do not assume the RISCK COMPLY app has refresh-token capability until the actual granted application response proves it. If refresh tokens are not available, re-trigger controlled 3-legged OAuth before access-token expiry. If refresh tokens are granted, add a separate secret-safe rotation path before claiming unattended long-term autonomy.
 
 ## Publishing request
 
@@ -122,7 +140,7 @@ The Vercel production cron calls the protected processor every 15 minutes. The p
 
 ## Operator policy
 
-Owner intent for this integration is **high marketing autonomy** after the connection gates below pass. The operator may create an editorial plan, draft final copy, schedule posts and publish scheduled content without per-post approval when the content remains inside this policy.
+Owner intent for this integration is **high marketing autonomy** after the connection and production-tier gates below pass. The operator may create an editorial plan, draft final copy, schedule posts and publish scheduled content without per-post approval when the content remains inside this policy.
 
 Factual assertions must remain evidence-backed. Never publish claims that RISCK COMPLY:
 
@@ -152,9 +170,11 @@ Email authorization remains a separate policy. LinkedIn publishing permission do
 
 - `CODE_READY`: publisher, queue, worker and scheduler code are merged and CI is green.
 - `QUEUE_READY`: queue migration is applied and worker access is validated. **Verified true in Production on 2026-09-02.**
-- `OAUTH_READY`: LinkedIn app/API access and required scopes are approved/configured.
+- `DEVELOPMENT_ACCESS_READY`: Community Management Development Tier is approved and required scopes are available.
 - `CONNECTED`: server-side credentials are configured and the protected connection verifier reports `readyForControlledTest=true`.
-- `TEST_POST_PASS`: controlled organization post succeeds and is manually verified.
+- `DEVELOPMENT_TEST_PASS`: controlled integration post and queue test succeed under the granted Development conditions.
+- `STANDARD_ACCESS_READY`: Community Management Standard Tier is approved for the live production use case.
+- `PRODUCTION_ACCEPTANCE_PASS`: the Standard-tier connection and bounded production test are verified.
 - `MARKETING_OPERATOR_ACTIVE`: recurring editorial scheduling under the high-autonomy policy is enabled.
 
-Do not mark `CONNECTED` or later states without live production evidence.
+Do not mark `MARKETING_OPERATOR_ACTIVE` without `STANDARD_ACCESS_READY` and `PRODUCTION_ACCEPTANCE_PASS`.
