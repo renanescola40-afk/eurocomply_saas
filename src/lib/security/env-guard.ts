@@ -8,6 +8,8 @@ const FORBIDDEN_PUBLIC_ENV_KEYS = [
   publicEnv('GITHUB_TOKEN'),
   publicEnv('VERCEL_TOKEN'),
   publicEnv('GOOGLE_CLIENT_SECRET'),
+  publicEnv('LINKEDIN_ACCESS_TOKEN'),
+  publicEnv('LINKEDIN_CLIENT_SECRET'),
 ] as const;
 
 const SECRET_VALUE_PATTERNS = [
@@ -64,7 +66,7 @@ export function assertSafeEnvironment() {
 export function getRedactedEnvironmentSnapshot() {
   return Object.fromEntries(
     Object.entries(process.env)
-      .filter(([key]) => key.includes('SUPABASE') || key.includes('STRIPE') || key.includes('OPENAI') || key.includes('RESEND') || key.includes('GITHUB') || key.includes('VERCEL'))
+      .filter(([key]) => key.includes('SUPABASE') || key.includes('STRIPE') || key.includes('OPENAI') || key.includes('RESEND') || key.includes('GITHUB') || key.includes('VERCEL') || key.includes('LINKEDIN'))
       .map(([key, value]) => [key, value ? maskKey(String(value)) : null]),
   );
 }
