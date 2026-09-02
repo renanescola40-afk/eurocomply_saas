@@ -14,6 +14,10 @@ const configurationMigration = readFileSync(
   'supabase/migrations/20260721213500_enterprise_sso_configuration.sql',
   'utf8',
 );
+const productionReconciliationMigration = readFileSync(
+  'supabase/migrations/20260902083000_reconcile_enterprise_sso_production_runtime.sql',
+  'utf8',
+);
 const callback = readFileSync('src/app/auth/callback/route.ts', 'utf8');
 const login = readFileSync('src/components/auth/enterprise-sso-login.tsx', 'utf8');
 const platformRoute = readFileSync(
@@ -55,6 +59,20 @@ describe('enterprise SAML SSO contracts', () => {
     expect(configurationMigration).toContain("lower(coalesce(conflicting.verified_domain, '')) = v_domain");
     expect(configurationMigration).toContain("'enterprise.sso_connection_configured'");
     expect(configurationMigration).toContain('v_snapshot.sso_enabled is distinct from true');
+  });
+
+  it('reconciles the live SSO schema against the current contract tables without legacy helpers', () => {
+    expect(productionReconciliationMigration).toContain('add column if not exists supabase_provider_id uuid');
+    expect(productionReconciliationMigration).toContain('add column if not exists default_role text');
+    expect(productionReconciliationMigration).toContain('create or replace function public.resolve_enterprise_sso_binding');
+    expect(productionReconciliationMigration).toContain('create or replace function public.record_enterprise_sso_login');
+    expect(productionReconciliationMigration).toContain('create or replace function public.upsert_enterprise_sso_connection_atomic');
+    expect(productionReconciliationMigration).toContain('join public.organization_entitlements entitlement');
+    expect(productionReconciliationMigration).toContain("contract.contract_mode = 'negotiated'");
+    expect(productionReconciliationMigration).toContain("contract.status = 'active'");
+    expect(productionReconciliationMigration).toContain('entitlement.sso_enabled = true');
+    expect(productionReconciliationMigration).not.toContain('resolve_organization_entitlements_v3');
+    expect(productionReconciliationMigration).toContain('to service_role;');
   });
 
   it('provisions the SAML session before redirect and signs out on failure', () => {

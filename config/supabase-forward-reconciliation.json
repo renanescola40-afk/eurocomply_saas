@@ -1,10 +1,14 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-08-31-deterministic-commercial-source-precedence-ledger-reconciliation-v25",
+  "changeSet": "2026-09-02-enterprise-sso-production-runtime-reconciliation-v26",
   "migrations": [
     {
       "filename": "20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
       "purpose": "re-assert deterministic signed-contract commercial-authority precedence under a canonical forward migration version strictly later than the observed Production migration head without repairing or rewriting migration history"
+    },
+    {
+      "filename": "20260902083000_reconcile_enterprise_sso_production_runtime.sql",
+      "purpose": "restore the additive Enterprise SSO provider-binding columns and service-role-only runtime RPCs required by the current application while preserving fail-closed negotiated-contract SSO entitlement enforcement"
     }
   ],
   "truthBoundary": {
