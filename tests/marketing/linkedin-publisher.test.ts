@@ -9,11 +9,14 @@ const route = readFileSync('src/app/api/internal/marketing/linkedin/publish/rout
 const inventory = readFileSync('docs/security/API_ROUTE_INVENTORY.billing.md', 'utf8');
 
 describe('LinkedIn marketing publisher', () => {
-  it('keeps LinkedIn credentials server-side with environment-to-Vault fallback', () => {
+  it('keeps LinkedIn credentials server-side with managed Vault first and environment fallback', () => {
     expect(client).toContain("import 'server-only'");
     expect(client).toContain('getLinkedInAccessTokenCredential');
     expect(credentials).toContain("process.env.LINKEDIN_ACCESS_TOKEN");
     expect(credentials).toContain("rpc('read_linkedin_marketing_secret'");
+    expect(credentials.indexOf('const vaultToken = await readVaultSecret')).toBeLessThan(
+      credentials.indexOf("const environmentToken = normalizeToken(process.env.LINKEDIN_ACCESS_TOKEN)"),
+    );
     expect(client).toContain("requireEnv('LINKEDIN_API_VERSION')");
     expect(client).toContain('resolveLinkedInOrganizationUrn');
     expect(client).not.toMatch(/LINKEDIN_ACCESS_TOKEN\s*=\s*['\"][^'\"]+/);
