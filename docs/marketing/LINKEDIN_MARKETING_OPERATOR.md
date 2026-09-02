@@ -13,11 +13,12 @@ Connect RISCK COMPLY to LinkedIn using the official LinkedIn Community Managemen
 - Connection readiness is inspected through `/api/platform/marketing/linkedin/status`.
 - The connection status endpoint requires an authenticated platform actor with the `security` capability and a current AAL2 MFA session.
 - The connection status route is protected by distributed fail-closed rate limiting before LinkedIn provider calls.
-- The status endpoint never returns access-token or client-secret values. It returns configuration booleans, token activity/expiry/scopes and a non-mutating organization read-probe result only.
+- The status endpoint never returns access-token, client-secret or resolved organization-URN values. It returns configuration booleans, token activity/expiry/scopes, organization-resolution state and a non-mutating organization read-probe result only.
 - Internal publishing routes use the existing internal authentication, fail-closed rate-limit and no-store controls.
 - The queue has RLS enabled and browser roles receive no direct table privileges.
 - Due posts are claimed atomically with `FOR UPDATE SKIP LOCKED` before provider publication.
-- A network-uncertain LinkedIn outcome is moved to `needs_review` and is never automatically retried, preventing accidental duplicate posts.
+- A network-uncertain LinkedIn **publish** outcome is moved to `needs_review` and is never automatically retried, preventing accidental duplicate posts.
+- Organization lookup failures occur before a publish request and are classified as deterministic `failed`, not as an uncertain publish outcome.
 - LinkedIn API failures are sanitized before returning to callers and sent to the existing observability path without provider response bodies.
 - `LINKEDIN_API_VERSION` is explicit configuration rather than a hardcoded permanently-valid API version.
 
@@ -38,7 +39,27 @@ The official Posts API is used at `https://api.linkedin.com/rest/posts` with:
 - `LinkedIn-Version: YYYYMM`
 - `X-Restli-Protocol-Version: 2.0.0`
 
-The connection verifier also uses LinkedIn's official OAuth token introspection endpoint and a read-only Posts API finder request for the configured organization.
+The connection verifier also uses LinkedIn's official OAuth token introspection endpoint, the Organization Lookup API and a read-only Posts API finder request.
+
+## Organization resolution
+
+RISCK COMPLY no longer requires a human to discover the numeric LinkedIn Organization ID before connection testing.
+
+Resolution order is fail-closed:
+
+1. an explicit organization URN supplied internally for a controlled call;
+2. optional server-side `LINKEDIN_ORGANIZATION_URN` override;
+3. official LinkedIn Organization Lookup by vanity name.
+
+The canonical default vanity name is `risck-comply`, matching the public Company Page URL. It may be overridden server-side with `LINKEDIN_ORGANIZATION_VANITY_NAME` if the Page vanity name changes.
+
+The lookup result is accepted only when:
+
+- the returned `vanityName` exactly matches the expected value after normalization;
+- the returned `id` is a positive safe integer;
+- the resulting author is constructed as `urn:li:organization:<id>`.
+
+If lookup is unavailable, rejected, malformed or mismatched, publishing is not attempted.
 
 ## Community Management access tiers
 
@@ -55,8 +76,14 @@ RISCK COMPLY uses a conservative rollout aligned to LinkedIn's current program-t
 LINKEDIN_CLIENT_ID=
 LINKEDIN_CLIENT_SECRET=
 LINKEDIN_ACCESS_TOKEN=
-LINKEDIN_ORGANIZATION_URN=urn:li:organization:<numeric-id>
 LINKEDIN_API_VERSION=<LinkedIn-supported YYYYMM version>
+```
+
+Optional organization overrides:
+
+```text
+LINKEDIN_ORGANIZATION_URN=urn:li:organization:<numeric-id>
+LINKEDIN_ORGANIZATION_VANITY_NAME=risck-comply
 ```
 
 `LINKEDIN_CLIENT_SECRET` and `LINKEDIN_ACCESS_TOKEN` are secrets. Store them only in the production deployment secret store. Never paste them into source code, GitHub issues/PR comments, logs, browser-visible variables, or chat messages.
@@ -69,8 +96,8 @@ LINKEDIN_API_VERSION=<LinkedIn-supported YYYYMM version>
 4. Configure the exact OAuth redirect URI in the LinkedIn application.
 5. Complete the LinkedIn 3-legged member authorization flow using an account with an eligible Page role.
 6. Store `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` and the resulting access token only in the deployment secret store.
-7. Resolve the RISCK COMPLY Page numeric organization id and configure `LINKEDIN_ORGANIZATION_URN`.
-8. Set a currently supported `LINKEDIN_API_VERSION`.
+7. Set a currently supported `LINKEDIN_API_VERSION`.
+8. Allow the verifier to resolve the canonical `risck-comply` organization automatically; configure `LINKEDIN_ORGANIZATION_URN` only as a deliberate override if needed.
 9. Call `/api/platform/marketing/linkedin/status` from an AAL2 platform-security session and require `readyForControlledTest=true`.
 10. Execute one controlled organization post permitted by the granted Development-tier conditions.
 11. Record the returned LinkedIn post id and verify Page rendering.
@@ -84,15 +111,17 @@ LINKEDIN_API_VERSION=<LinkedIn-supported YYYYMM version>
 
 `GET /api/platform/marketing/linkedin/status` is read-only and returns a structure containing:
 
-- whether each required environment item is configured;
-- whether the organization URN and API version formats are valid;
+- whether each secret/configuration item is configured;
+- the canonical organization vanity name;
+- whether an optional organization-URN override is configured and valid;
 - whether LinkedIn token introspection reports the token active;
 - token expiry metadata when LinkedIn supplies it;
 - granted scope names and whether both required organization-social scopes are present;
-- whether a non-mutating Posts API read for the configured organization succeeds;
+- whether organization resolution succeeds and whether it used a configured URN or vanity lookup;
+- whether a non-mutating Posts API read for the resolved organization succeeds;
 - `readyForControlledTest`, which is true only when the live connection gates above pass.
 
-The endpoint does not publish, modify or delete LinkedIn content.
+The endpoint does not publish, modify or delete LinkedIn content and does not return the resolved organization URN.
 
 ## Token lifecycle
 
@@ -171,7 +200,7 @@ Email authorization remains a separate policy. LinkedIn publishing permission do
 - `CODE_READY`: publisher, queue, worker and scheduler code are merged and CI is green.
 - `QUEUE_READY`: queue migration is applied and worker access is validated. **Verified true in Production on 2026-09-02.**
 - `DEVELOPMENT_ACCESS_READY`: Community Management Development Tier is approved and required scopes are available.
-- `CONNECTED`: server-side credentials are configured and the protected connection verifier reports `readyForControlledTest=true`.
+- `CONNECTED`: server-side credentials are configured, organization resolution succeeds and the protected connection verifier reports `readyForControlledTest=true`.
 - `DEVELOPMENT_TEST_PASS`: controlled integration post and queue test succeed under the granted Development conditions.
 - `STANDARD_ACCESS_READY`: Community Management Standard Tier is approved for the live production use case.
 - `PRODUCTION_ACCEPTANCE_PASS`: the Standard-tier connection and bounded production test are verified.

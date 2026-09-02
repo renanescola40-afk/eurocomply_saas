@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { resolveLinkedInOrganizationUrn } from '@/lib/marketing/linkedin-organization';
+
 const LINKEDIN_POSTS_ENDPOINT = 'https://api.linkedin.com/rest/posts';
 
 export type LinkedInOrganizationPostInput = {
@@ -13,6 +15,7 @@ export type LinkedInOrganizationPostResult = {
 
 export type LinkedInPublishFailureKind =
   | 'configuration'
+  | 'organization_resolution'
   | 'upstream_rejected'
   | 'network_uncertain';
 
@@ -32,17 +35,6 @@ function requireEnv(name: string) {
   const value = process.env[name]?.trim();
   if (!value) {
     throw new LinkedInPublishError('configuration', `${name} is not configured`);
-  }
-  return value;
-}
-
-function getOrganizationUrn(explicit?: string) {
-  const value = explicit?.trim() || requireEnv('LINKEDIN_ORGANIZATION_URN');
-  if (!/^urn:li:organization:\d+$/.test(value)) {
-    throw new LinkedInPublishError(
-      'configuration',
-      'LINKEDIN_ORGANIZATION_URN must be a LinkedIn organization URN',
-    );
   }
   return value;
 }
@@ -71,7 +63,21 @@ export async function publishLinkedInOrganizationTextPost(
 
   const accessToken = requireEnv('LINKEDIN_ACCESS_TOKEN');
   const linkedinVersion = getLinkedInApiVersion();
-  const author = getOrganizationUrn(input.organizationUrn);
+  const organization = await resolveLinkedInOrganizationUrn({
+    accessToken,
+    apiVersion: linkedinVersion,
+    explicitUrn: input.organizationUrn,
+    configuredUrn: process.env.LINKEDIN_ORGANIZATION_URN,
+    vanityName: process.env.LINKEDIN_ORGANIZATION_VANITY_NAME,
+  });
+
+  if (!organization.ok || !organization.urn) {
+    throw new LinkedInPublishError(
+      'organization_resolution',
+      `LinkedIn organization resolution failed (${organization.errorCode ?? 'unknown'})`,
+      organization.httpStatus,
+    );
+  }
 
   let response: Response;
   try {
@@ -84,7 +90,7 @@ export async function publishLinkedInOrganizationTextPost(
         'X-Restli-Protocol-Version': '2.0.0',
       },
       body: JSON.stringify({
-        author,
+        author: organization.urn,
         commentary,
         visibility: 'PUBLIC',
         distribution: {
