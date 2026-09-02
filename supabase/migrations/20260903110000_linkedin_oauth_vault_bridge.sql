@@ -21,7 +21,7 @@ CREATE OR REPLACE FUNCTION public.read_linkedin_marketing_secret(p_name text)
 RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = pg_catalog, public, vault
+SET search_path = pg_catalog, vault
 AS $$
 DECLARE
   v_secret text;
@@ -50,7 +50,7 @@ CREATE OR REPLACE FUNCTION public.store_linkedin_marketing_oauth_credentials(
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = pg_catalog, public, vault
+SET search_path = pg_catalog, vault
 AS $$
 DECLARE
   v_access_id uuid;
@@ -102,6 +102,10 @@ BEGIN
     );
   END IF;
 
+  DELETE FROM vault.secrets AS s
+  WHERE s.name = 'linkedin_marketing_access_token'
+    AND s.id <> v_access_id;
+
   SELECT s.id
   INTO v_refresh_id
   FROM vault.secrets AS s
@@ -127,6 +131,12 @@ BEGIN
       v_refresh_description,
       NULL
     );
+  END IF;
+
+  IF p_refresh_token IS NOT NULL THEN
+    DELETE FROM vault.secrets AS s
+    WHERE s.name = 'linkedin_marketing_refresh_token'
+      AND s.id <> v_refresh_id;
   END IF;
 END;
 $$;
