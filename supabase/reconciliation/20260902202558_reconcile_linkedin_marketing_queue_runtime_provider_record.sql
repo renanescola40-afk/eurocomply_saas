@@ -1,0 +1,20 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed read-only:
+--   version: 20260902202558
+--   name: reconcile_linkedin_marketing_queue_runtime
+--   logical source: supabase/migrations/20260902162000_linkedin_marketing_queue.sql
+--
+-- The LinkedIn marketing queue SQL was applied through a provider-managed
+-- migration path and the provider recorded a later ledger timestamp than the
+-- repository source filename. Read-only inspection of the Production ledger
+-- statements and live schema confirmed the canonical queue table, five
+-- validation constraints, due index, RLS boundary, service-role-only table
+-- access and service-role-only SECURITY DEFINER claim RPC with the expected
+-- search_path.
+--
+-- This file binds the observed remote version to an explicit repository record.
+-- It does not claim byte-for-byte identity for the provider-generated migration
+-- wrapper and it must never be executed as a migration.
+--
+-- No DDL. No migration-history repair. No database write authorization.
