@@ -67,7 +67,13 @@ function parseOrganizationLookup(payload: unknown, vanityName: string) {
         ? Number(row.id)
         : null;
 
-    if (candidateVanity !== normalizedVanity || !Number.isSafeInteger(id) || Number(id) <= 0) continue;
+    if (
+      candidateVanity !== normalizedVanity
+      || id === null
+      || !Number.isSafeInteger(id)
+      || id <= 0
+    ) continue;
+
     return `urn:li:organization:${id}`;
   }
 
