@@ -41,65 +41,93 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.store_linkedin_marketing_secret(
-  p_name text,
-  p_secret text,
-  p_description text DEFAULT NULL
+CREATE OR REPLACE FUNCTION public.store_linkedin_marketing_oauth_credentials(
+  p_access_token text,
+  p_access_description text,
+  p_refresh_token text DEFAULT NULL,
+  p_refresh_description text DEFAULT NULL
 )
-RETURNS uuid
+RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = pg_catalog, public, vault
 AS $$
 DECLARE
-  v_id uuid;
-  v_description text;
+  v_access_id uuid;
+  v_refresh_id uuid;
+  v_access_description text;
+  v_refresh_description text;
 BEGIN
-  IF p_name NOT IN ('linkedin_marketing_access_token', 'linkedin_marketing_refresh_token') THEN
-    RAISE EXCEPTION 'unsupported LinkedIn marketing secret name';
+  IF p_access_token IS NULL
+     OR length(btrim(p_access_token)) < 16
+     OR length(p_access_token) > 4096 THEN
+    RAISE EXCEPTION 'invalid LinkedIn access token length';
   END IF;
 
-  IF p_secret IS NULL OR length(btrim(p_secret)) < 16 OR length(p_secret) > 4096 THEN
-    RAISE EXCEPTION 'invalid LinkedIn marketing secret length';
+  IF p_refresh_token IS NOT NULL
+     AND (length(btrim(p_refresh_token)) < 16 OR length(p_refresh_token) > 4096) THEN
+    RAISE EXCEPTION 'invalid LinkedIn refresh token length';
   END IF;
 
-  v_description := left(COALESCE(NULLIF(btrim(p_description), ''), 'RISCK COMPLY LinkedIn OAuth credential'), 500);
+  v_access_description := left(
+    COALESCE(NULLIF(btrim(p_access_description), ''), 'RISCK COMPLY LinkedIn access token'),
+    500
+  );
+  v_refresh_description := left(
+    COALESCE(NULLIF(btrim(p_refresh_description), ''), 'RISCK COMPLY LinkedIn refresh token'),
+    500
+  );
 
   SELECT s.id
-  INTO v_id
+  INTO v_access_id
   FROM vault.secrets AS s
-  WHERE s.name = p_name
+  WHERE s.name = 'linkedin_marketing_access_token'
   ORDER BY s.updated_at DESC NULLS LAST, s.created_at DESC NULLS LAST
   LIMIT 1;
 
-  IF v_id IS NULL THEN
-    v_id := vault.create_secret(p_secret, p_name, v_description, NULL);
+  IF v_access_id IS NULL THEN
+    v_access_id := vault.create_secret(
+      p_access_token,
+      'linkedin_marketing_access_token',
+      v_access_description,
+      NULL
+    );
   ELSE
-    PERFORM vault.update_secret(v_id, p_secret, p_name, v_description, NULL);
+    PERFORM vault.update_secret(
+      v_access_id,
+      p_access_token,
+      'linkedin_marketing_access_token',
+      v_access_description,
+      NULL
+    );
   END IF;
 
-  RETURN v_id;
-END;
-$$;
+  SELECT s.id
+  INTO v_refresh_id
+  FROM vault.secrets AS s
+  WHERE s.name = 'linkedin_marketing_refresh_token'
+  ORDER BY s.updated_at DESC NULLS LAST, s.created_at DESC NULLS LAST
+  LIMIT 1;
 
-CREATE OR REPLACE FUNCTION public.delete_linkedin_marketing_secret(p_name text)
-RETURNS integer
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = pg_catalog, public, vault
-AS $$
-DECLARE
-  v_deleted integer;
-BEGIN
-  IF p_name NOT IN ('linkedin_marketing_access_token', 'linkedin_marketing_refresh_token') THEN
-    RAISE EXCEPTION 'unsupported LinkedIn marketing secret name';
+  IF p_refresh_token IS NULL THEN
+    DELETE FROM vault.secrets AS s
+    WHERE s.name = 'linkedin_marketing_refresh_token';
+  ELSIF v_refresh_id IS NULL THEN
+    v_refresh_id := vault.create_secret(
+      p_refresh_token,
+      'linkedin_marketing_refresh_token',
+      v_refresh_description,
+      NULL
+    );
+  ELSE
+    PERFORM vault.update_secret(
+      v_refresh_id,
+      p_refresh_token,
+      'linkedin_marketing_refresh_token',
+      v_refresh_description,
+      NULL
+    );
   END IF;
-
-  DELETE FROM vault.secrets AS s
-  WHERE s.name = p_name;
-
-  GET DIAGNOSTICS v_deleted = ROW_COUNT;
-  RETURN v_deleted;
 END;
 $$;
 
@@ -108,14 +136,9 @@ REVOKE ALL ON FUNCTION public.read_linkedin_marketing_secret(text) FROM anon;
 REVOKE ALL ON FUNCTION public.read_linkedin_marketing_secret(text) FROM authenticated;
 GRANT EXECUTE ON FUNCTION public.read_linkedin_marketing_secret(text) TO service_role;
 
-REVOKE ALL ON FUNCTION public.store_linkedin_marketing_secret(text, text, text) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.store_linkedin_marketing_secret(text, text, text) FROM anon;
-REVOKE ALL ON FUNCTION public.store_linkedin_marketing_secret(text, text, text) FROM authenticated;
-GRANT EXECUTE ON FUNCTION public.store_linkedin_marketing_secret(text, text, text) TO service_role;
-
-REVOKE ALL ON FUNCTION public.delete_linkedin_marketing_secret(text) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.delete_linkedin_marketing_secret(text) FROM anon;
-REVOKE ALL ON FUNCTION public.delete_linkedin_marketing_secret(text) FROM authenticated;
-GRANT EXECUTE ON FUNCTION public.delete_linkedin_marketing_secret(text) TO service_role;
+REVOKE ALL ON FUNCTION public.store_linkedin_marketing_oauth_credentials(text, text, text, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.store_linkedin_marketing_oauth_credentials(text, text, text, text) FROM anon;
+REVOKE ALL ON FUNCTION public.store_linkedin_marketing_oauth_credentials(text, text, text, text) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.store_linkedin_marketing_oauth_credentials(text, text, text, text) TO service_role;
 
 commit;
