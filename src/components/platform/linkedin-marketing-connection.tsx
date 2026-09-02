@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { type ReactNode, useState } from 'react';
 
 type ConnectionStatus = {
@@ -74,6 +73,10 @@ export function LinkedInMarketingConnection({ oauthOutcome }: Props) {
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function startOAuth() {
+    window.location.assign('/api/platform/marketing/linkedin/oauth/start');
+  }
+
   async function verifyConnection() {
     setChecking(true);
     setError(null);
@@ -121,13 +124,13 @@ export function LinkedInMarketingConnection({ oauthOutcome }: Props) {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Link
-            href="/api/platform/marketing/linkedin/oauth/start"
-            prefetch={false}
+          <button
+            type="button"
+            onClick={startOAuth}
             className="inline-flex min-h-10 items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90"
           >
             Connect LinkedIn
-          </Link>
+          </button>
           <button
             type="button"
             onClick={verifyConnection}
