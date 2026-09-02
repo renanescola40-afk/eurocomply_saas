@@ -1,10 +1,10 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-02-provider-ledger-verification-reconciliation-v27",
+  "changeSet": "2026-09-02-provider-ledger-verification-reconciliation-v28",
   "migrations": [
     {
-      "filename": "20260902195000_verify_v27_provider_ledger_reconciliation.sql",
-      "purpose": "record the next canonical forward version after observed Production ledger versions 20260902193810 and 20260902193849 while fail-closed verifying the already-live V25 deterministic commercial authority and V26 Enterprise SSO security postconditions without schema mutation or migration-history repair"
+      "filename": "20260903090000_verify_v28_provider_ledger_reconciliation.sql",
+      "purpose": "record a canonical forward verification identity strictly after current Production ledger head 20260902202558 while fail-closed verifying the already-live V25 deterministic commercial authority and V26 Enterprise SSO security postconditions without schema mutation or migration-history repair"
     }
   ],
   "truthBoundary": {
