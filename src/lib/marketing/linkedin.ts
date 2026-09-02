@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { getLinkedInAccessTokenCredential } from '@/lib/marketing/linkedin-credentials';
 import { resolveLinkedInOrganizationUrn } from '@/lib/marketing/linkedin-organization';
 
 const LINKEDIN_POSTS_ENDPOINT = 'https://api.linkedin.com/rest/posts';
@@ -61,7 +62,12 @@ export async function publishLinkedInOrganizationTextPost(
     );
   }
 
-  const accessToken = requireEnv('LINKEDIN_ACCESS_TOKEN');
+  const credential = await getLinkedInAccessTokenCredential();
+  if (!credential) {
+    throw new LinkedInPublishError('configuration', 'LinkedIn access token is not configured');
+  }
+
+  const accessToken = credential.token;
   const linkedinVersion = getLinkedInApiVersion();
   const organization = await resolveLinkedInOrganizationUrn({
     accessToken,
