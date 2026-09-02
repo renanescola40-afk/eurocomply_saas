@@ -17,10 +17,12 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-02-provider-ledger-verification-reconciliation-v28';
+const EXPECTED_CHANGE_SET = '2026-09-02-enterprise-step-up-runtime-reconciliation-v29';
 const V28_VERIFICATION_MIGRATION =
   '20260903090000_verify_v28_provider_ledger_reconciliation.sql';
-const EXPECTED_SELECTED = [V28_VERIFICATION_MIGRATION];
+const V29_STEP_UP_MIGRATION =
+  '20260903100000_reconcile_enterprise_step_up_runtime.sql';
+const EXPECTED_SELECTED = [V28_VERIFICATION_MIGRATION, V29_STEP_UP_MIGRATION];
 
 function fail(message) {
   throw new Error(message);
@@ -98,6 +100,51 @@ function validateV28VerificationMigration(source) {
   ], 'V28 provider-ledger verification migration');
 }
 
+function validateV29StepUpMigration(source) {
+  requireMarkers(source, [
+    "to_regclass('public.step_up_challenges')",
+    'challenge_force_rls is distinct from true',
+    "has_table_privilege('authenticated', 'public.step_up_challenges', 'SELECT')",
+    "has_table_privilege('service_role', 'public.step_up_challenges', 'INSERT')",
+    'create table if not exists public.step_up_tokens',
+    'constraint step_up_tokens_short_lived',
+    'create unique index if not exists step_up_tokens_active_nonce_idx',
+    'create index if not exists step_up_tokens_scope_idx',
+    'create index if not exists step_up_tokens_expiry_idx',
+    'create or replace function public.touch_step_up_tokens_updated_at()',
+    'set search_path = pg_catalog, public',
+    'alter table public.step_up_tokens enable row level security',
+    'alter table public.step_up_tokens force row level security',
+    'revoke all on public.step_up_tokens from public, anon, authenticated',
+    'grant all on public.step_up_tokens to service_role',
+    'create table if not exists public.organization_security_settings',
+    'constraint organization_security_settings_idp_policy_required',
+    'create or replace function public.touch_organization_security_settings_updated_at()',
+    'alter table public.organization_security_settings enable row level security',
+    'alter table public.organization_security_settings force row level security',
+    'revoke all on public.organization_security_settings from public, anon, authenticated',
+    'grant all on public.organization_security_settings to service_role',
+    "has_table_privilege('authenticated', 'public.step_up_tokens', 'SELECT')",
+    "has_table_privilege('service_role', 'public.step_up_tokens', 'INSERT')",
+    "has_table_privilege('authenticated', 'public.organization_security_settings', 'SELECT')",
+    "has_table_privilege('service_role', 'public.organization_security_settings', 'UPDATE')",
+    "select pg_notify('pgrst', 'reload schema')",
+  ], 'V29 Enterprise Step-Up runtime migration');
+
+  forbidMarkers(source, [
+    'supabase_migrations.schema_migrations',
+    'migration repair',
+    'db push --include-all',
+    'disable row level security',
+    'grant all on public.step_up_tokens to anon',
+    'grant all on public.step_up_tokens to authenticated',
+    'grant all on public.organization_security_settings to anon',
+    'grant all on public.organization_security_settings to authenticated',
+    'drop table ',
+    'truncate ',
+  ], 'V29 Enterprise Step-Up runtime migration');
+}
+
 async function main() {
   const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
   if (config.changeSet !== EXPECTED_CHANGE_SET) {
@@ -128,11 +175,17 @@ async function main() {
     subjectSha: expectedHeadSha || gitSha,
   });
 
-  const source = readFileSync(
+  const v28Source = readFileSync(
     join(ROOT, 'supabase', 'migrations', V28_VERIFICATION_MIGRATION),
     'utf8',
   );
-  validateV28VerificationMigration(source);
+  validateV28VerificationMigration(v28Source);
+
+  const v29Source = readFileSync(
+    join(ROOT, 'supabase', 'migrations', V29_STEP_UP_MIGRATION),
+    'utf8',
+  );
+  validateV29StepUpMigration(v29Source);
 
   const records = manifest.migrations.map((migration, index) => ({
     position: index + 1,
