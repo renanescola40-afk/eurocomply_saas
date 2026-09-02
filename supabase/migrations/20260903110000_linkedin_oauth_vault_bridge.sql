@@ -82,6 +82,27 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.delete_linkedin_marketing_secret(p_name text)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, vault
+AS $$
+DECLARE
+  v_deleted integer;
+BEGIN
+  IF p_name NOT IN ('linkedin_marketing_access_token', 'linkedin_marketing_refresh_token') THEN
+    RAISE EXCEPTION 'unsupported LinkedIn marketing secret name';
+  END IF;
+
+  DELETE FROM vault.secrets AS s
+  WHERE s.name = p_name;
+
+  GET DIAGNOSTICS v_deleted = ROW_COUNT;
+  RETURN v_deleted;
+END;
+$$;
+
 REVOKE ALL ON FUNCTION public.read_linkedin_marketing_secret(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.read_linkedin_marketing_secret(text) FROM anon;
 REVOKE ALL ON FUNCTION public.read_linkedin_marketing_secret(text) FROM authenticated;
@@ -91,5 +112,10 @@ REVOKE ALL ON FUNCTION public.store_linkedin_marketing_secret(text, text, text) 
 REVOKE ALL ON FUNCTION public.store_linkedin_marketing_secret(text, text, text) FROM anon;
 REVOKE ALL ON FUNCTION public.store_linkedin_marketing_secret(text, text, text) FROM authenticated;
 GRANT EXECUTE ON FUNCTION public.store_linkedin_marketing_secret(text, text, text) TO service_role;
+
+REVOKE ALL ON FUNCTION public.delete_linkedin_marketing_secret(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.delete_linkedin_marketing_secret(text) FROM anon;
+REVOKE ALL ON FUNCTION public.delete_linkedin_marketing_secret(text) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.delete_linkedin_marketing_secret(text) TO service_role;
 
 commit;
