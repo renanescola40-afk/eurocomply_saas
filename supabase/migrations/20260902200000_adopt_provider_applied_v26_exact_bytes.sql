@@ -3,47 +3,71 @@ begin;
 -- V27 canonical forward adoption after the exact V25/V26 migration bytes were
 -- applied through a provider operation that recorded provider-generated ledger
 -- versions. This migration does not repair, rewrite or delete migration history.
--- It proves the exact approved provider-applied bytes and the required live
--- commercial/Enterprise SSO postconditions before adding one new forward
--- repository-controlled execution identity strictly after the observed remote
--- head.
+--
+-- Two execution contexts are valid:
+-- 1. Production/provider reconciliation: the provider-generated V25/V26 ledger
+--    versions are present. In this context both rows MUST exist and their exact
+--    reviewed statement bytes MUST match the approved digests below.
+-- 2. Canonical repository replay: neither provider-generated version exists.
+--    The normal repository migration identities have already established the
+--    same live state, so exact provider-ledger byte adoption is not applicable.
+--
+-- A partial provider state is never accepted. Live commercial/Enterprise SSO
+-- postconditions are verified in both contexts before this migration completes.
 
 do $provider_bytes$
 declare
+  provider_row_count integer;
   commercial_statement_count integer;
   sso_statement_count integer;
   commercial_sha256 text;
   sso_sha256 text;
 begin
-  if to_regclass('supabase_migrations.schema_migrations') is null
-     or to_regprocedure('extensions.digest(bytea,text)') is null then
+  if to_regclass('supabase_migrations.schema_migrations') is null then
     raise exception 'provider migration byte verification prerequisites are missing';
   end if;
 
-  select cardinality(m.statements),
-         encode(extensions.digest(convert_to(m.statements[1], 'UTF8'), 'sha256'), 'hex')
-    into commercial_statement_count, commercial_sha256
+  select count(*)
+    into provider_row_count
   from supabase_migrations.schema_migrations m
-  where m.name = 'reconcile_deterministic_commercial_contract_source_precedence'
-  order by m.version desc
-  limit 1;
+  where m.version in ('20260902193810', '20260902193849');
 
-  if commercial_statement_count is distinct from 1
-     or commercial_sha256 is distinct from '894ca7297890ae01ab57986af20654e33b62e95fe732cad4b8336afeed6f0fac' then
-    raise exception 'provider-applied commercial reconciliation bytes do not match the reviewed V25 digest';
-  end if;
+  if provider_row_count = 0 then
+    -- Clean/canonical repository replay. There are no provider-generated ledger
+    -- identities to adopt; the live postconditions below remain mandatory.
+    null;
+  elsif provider_row_count <> 2 then
+    raise exception 'provider-applied V25/V26 migration ledger state is partial';
+  else
+    if to_regprocedure('extensions.digest(bytea,text)') is null then
+      raise exception 'provider migration byte digest prerequisite is missing';
+    end if;
 
-  select cardinality(m.statements),
-         encode(extensions.digest(convert_to(m.statements[1], 'UTF8'), 'sha256'), 'hex')
-    into sso_statement_count, sso_sha256
-  from supabase_migrations.schema_migrations m
-  where m.name = 'reconcile_enterprise_sso_production_runtime'
-  order by m.version desc
-  limit 1;
+    select cardinality(m.statements),
+           encode(extensions.digest(convert_to(m.statements[1], 'UTF8'), 'sha256'), 'hex')
+      into commercial_statement_count, commercial_sha256
+    from supabase_migrations.schema_migrations m
+    where m.version = '20260902193810'
+      and m.name = 'reconcile_deterministic_commercial_contract_source_precedence'
+    limit 1;
 
-  if sso_statement_count is distinct from 1
-     or sso_sha256 is distinct from '494631c9521dc224cef5609cc975c4ebb9731ce14bfcced71ee026fb3cf35adb' then
-    raise exception 'provider-applied Enterprise SSO reconciliation bytes do not match the reviewed V26 digest';
+    if commercial_statement_count is distinct from 1
+       or commercial_sha256 is distinct from '894ca7297890ae01ab57986af20654e33b62e95fe732cad4b8336afeed6f0fac' then
+      raise exception 'provider-applied commercial reconciliation bytes do not match the reviewed V25 digest';
+    end if;
+
+    select cardinality(m.statements),
+           encode(extensions.digest(convert_to(m.statements[1], 'UTF8'), 'sha256'), 'hex')
+      into sso_statement_count, sso_sha256
+    from supabase_migrations.schema_migrations m
+    where m.version = '20260902193849'
+      and m.name = 'reconcile_enterprise_sso_production_runtime'
+    limit 1;
+
+    if sso_statement_count is distinct from 1
+       or sso_sha256 is distinct from '494631c9521dc224cef5609cc975c4ebb9731ce14bfcced71ee026fb3cf35adb' then
+      raise exception 'provider-applied Enterprise SSO reconciliation bytes do not match the reviewed V26 digest';
+    end if;
   end if;
 end
 $provider_bytes$;
