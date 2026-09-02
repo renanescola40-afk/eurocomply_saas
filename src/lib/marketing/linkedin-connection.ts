@@ -1,6 +1,10 @@
 import 'server-only';
 
 import {
+  getLinkedInAccessTokenCredential,
+  type LinkedInCredentialSource,
+} from '@/lib/marketing/linkedin-credentials';
+import {
   getLinkedInOrganizationVanityName,
   isValidLinkedInOrganizationUrn,
   resolveLinkedInOrganizationUrn,
@@ -17,6 +21,7 @@ export const LINKEDIN_MARKETING_REQUIRED_SCOPES = [
 
 type LinkedInConnectionConfiguration = {
   accessTokenConfigured: boolean;
+  accessTokenSource: LinkedInCredentialSource | null;
   clientIdConfigured: boolean;
   clientSecretConfigured: boolean;
   organizationUrnConfigured: boolean;
@@ -26,7 +31,7 @@ type LinkedInConnectionConfiguration = {
   apiVersionValid: boolean;
 };
 
-type LinkedInTokenInspection = {
+export type LinkedInTokenInspection = {
   checked: boolean;
   active: boolean;
   status: string | null;
@@ -90,15 +95,18 @@ function requiredScopesPresent(scopes: string[]) {
   return LINKEDIN_MARKETING_REQUIRED_SCOPES.every((scope) => scopes.includes(scope));
 }
 
-function connectionConfiguration(): LinkedInConnectionConfiguration {
-  const accessToken = optionalEnv('LINKEDIN_ACCESS_TOKEN');
+function connectionConfiguration(
+  accessTokenConfigured: boolean,
+  accessTokenSource: LinkedInCredentialSource | null,
+): LinkedInConnectionConfiguration {
   const clientId = optionalEnv('LINKEDIN_CLIENT_ID');
   const clientSecret = optionalEnv('LINKEDIN_CLIENT_SECRET');
   const organizationUrn = optionalEnv('LINKEDIN_ORGANIZATION_URN');
   const apiVersion = optionalEnv('LINKEDIN_API_VERSION');
 
   return {
-    accessTokenConfigured: Boolean(accessToken),
+    accessTokenConfigured,
+    accessTokenSource,
     clientIdConfigured: Boolean(clientId),
     clientSecretConfigured: Boolean(clientSecret),
     organizationUrnConfigured: Boolean(organizationUrn),
@@ -109,7 +117,7 @@ function connectionConfiguration(): LinkedInConnectionConfiguration {
   };
 }
 
-async function inspectAccessToken(
+export async function inspectLinkedInAccessToken(
   accessToken: string,
   clientId: string,
   clientSecret: string,
@@ -218,14 +226,14 @@ function redactOrganizationResolution(
 }
 
 export async function inspectLinkedInMarketingConnection(): Promise<LinkedInMarketingConnectionInspection> {
-  const configuration = connectionConfiguration();
-  const accessToken = optionalEnv('LINKEDIN_ACCESS_TOKEN');
+  const credential = await getLinkedInAccessTokenCredential();
+  const configuration = connectionConfiguration(Boolean(credential), credential?.source ?? null);
   const clientId = optionalEnv('LINKEDIN_CLIENT_ID');
   const clientSecret = optionalEnv('LINKEDIN_CLIENT_SECRET');
   const organizationUrn = optionalEnv('LINKEDIN_ORGANIZATION_URN');
   const apiVersion = optionalEnv('LINKEDIN_API_VERSION');
 
-  if (!accessToken || !clientId || !clientSecret) {
+  if (!credential || !clientId || !clientSecret) {
     return {
       configuration,
       token: null,
@@ -236,7 +244,8 @@ export async function inspectLinkedInMarketingConnection(): Promise<LinkedInMark
     };
   }
 
-  const token = await inspectAccessToken(accessToken, clientId, clientSecret);
+  const accessToken = credential.token;
+  const token = await inspectLinkedInAccessToken(accessToken, clientId, clientSecret);
 
   let organizationResolution: LinkedInOrganizationResolution | null = null;
   let organizationRead: LinkedInOrganizationReadProbe | null = null;
