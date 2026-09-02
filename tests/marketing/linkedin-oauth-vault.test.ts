@@ -5,6 +5,8 @@ const oauth = readFileSync('src/lib/marketing/linkedin-oauth.ts', 'utf8');
 const credentials = readFileSync('src/lib/marketing/linkedin-credentials.ts', 'utf8');
 const startRoute = readFileSync('src/app/api/platform/marketing/linkedin/oauth/start/route.ts', 'utf8');
 const callbackRoute = readFileSync('src/app/api/platform/marketing/linkedin/oauth/callback/route.ts', 'utf8');
+const platformPage = readFileSync('src/app/[locale]/platform/page.tsx', 'utf8');
+const connectionPanel = readFileSync('src/components/platform/linkedin-marketing-connection.tsx', 'utf8');
 const migration = readFileSync('supabase/migrations/20260903110000_linkedin_oauth_vault_bridge.sql', 'utf8');
 const inventory = readFileSync('docs/security/API_ROUTE_INVENTORY.billing.md', 'utf8');
 
@@ -66,6 +68,17 @@ describe('LinkedIn OAuth Vault bridge', () => {
     expect(migration).toContain('REVOKE ALL ON FUNCTION public.read_linkedin_marketing_secret(text) FROM authenticated');
     expect(migration).toContain('REVOKE ALL ON FUNCTION public.store_linkedin_marketing_oauth_credentials(text, text, text, text) FROM anon');
     expect(migration).toContain('REVOKE ALL ON FUNCTION public.store_linkedin_marketing_oauth_credentials(text, text, text, text) FROM authenticated');
+  });
+
+  it('exposes only a security-capability-gated control panel for connection operations', () => {
+    expect(platformPage).toContain('LinkedInMarketingConnection');
+    expect(platformPage).toContain('canManageSecurity ? <LinkedInMarketingConnection');
+    expect(connectionPanel).toContain('href="/api/platform/marketing/linkedin/oauth/start"');
+    expect(connectionPanel).toContain("fetch('/api/platform/marketing/linkedin/status'");
+    expect(connectionPanel).toContain("cache: 'no-store'");
+    expect(connectionPanel).toContain('Status is loaded only on demand');
+    expect(connectionPanel).not.toContain('LINKEDIN_ACCESS_TOKEN');
+    expect(connectionPanel).not.toContain('LINKEDIN_CLIENT_SECRET');
   });
 
   it('never serializes provider secrets into OAuth redirects or browser-visible parameters', () => {
