@@ -29,6 +29,15 @@ type Remaining = { days: string; hours: string; minutes: string; seconds: string
 type WaitlistSubmitStatus = 'idle' | 'submitting' | 'success' | 'warning' | 'error';
 type WaitlistApiResponse = { emailed?: boolean; emailStatus?: string; error?: string };
 
+const consentLabels: Record<Locale, string> = {
+  en: 'I authorize contact about the RISCK COMPLY launch.',
+  pt: 'Autorizo o contacto sobre o lançamento do RISCK COMPLY.',
+  es: 'Autorizo el contacto sobre el lanzamiento de RISCK COMPLY.',
+  fr: 'J’autorise RISCK COMPLY à me contacter au sujet de son lancement.',
+  it: 'Autorizzo il contatto in merito al lancio di RISCK COMPLY.',
+  de: 'Ich stimme einer Kontaktaufnahme zum Start von RISCK COMPLY zu.',
+};
+
 function calculateRemaining(launchTargetIso: string): Remaining {
   const diff = Math.max(0, new Date(launchTargetIso).getTime() - Date.now());
   const totalSeconds = Math.floor(diff / 1000);
@@ -93,12 +102,18 @@ export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLo
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
   const [website, setWebsite] = useState('');
+  const [consentToContact, setConsentToContact] = useState(false);
   const [status, setStatus] = useState<WaitlistSubmitStatus>('idle');
   const [message, setMessage] = useState<string | null>(null);
   const feedbackId = 'waitlist-feedback';
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!consentToContact) {
+      return;
+    }
+
     setStatus('submitting');
     setMessage(null);
 
@@ -106,7 +121,7 @@ export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLo
       const response = await fetch('/api/prelaunch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyName, email, role, website, locale: activeLocale, consentToContact: true }),
+        body: JSON.stringify({ companyName, email, role, website, locale: activeLocale, consentToContact }),
       });
       const payload = (await response.json().catch(() => null)) as WaitlistApiResponse | null;
 
@@ -129,6 +144,7 @@ export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLo
       setEmail('');
       setRole('');
       setWebsite('');
+      setConsentToContact(false);
     } catch {
       setMessage(copy.form.error);
       setStatus('error');
@@ -167,6 +183,17 @@ export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLo
           <label htmlFor="waitlist-website">Website</label>
           <input id="waitlist-website" name="website" value={website} onChange={(event) => setWebsite(event.target.value)} autoComplete="off" tabIndex={-1} />
         </div>
+        <label className="flex items-start gap-3 rounded-lg border border-slate-700/80 bg-slate-950/25 p-4 text-sm leading-6 text-white/65">
+          <input
+            type="checkbox"
+            name="consentToContact"
+            required
+            checked={consentToContact}
+            onChange={(event) => setConsentToContact(event.target.checked)}
+            className="mt-1 h-4 w-4 shrink-0 rounded border-slate-600 bg-slate-950 text-blue-600 accent-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1522]"
+          />
+          <span>{consentLabels[activeLocale]}</span>
+        </label>
       </div>
 
       {status === 'success' ? <p id={feedbackId} className="mt-5 rounded-lg border border-emerald-300/25 bg-emerald-300/10 px-4 py-3 text-sm leading-6 text-emerald-50" role="status">{message || copy.form.success}</p> : null}
