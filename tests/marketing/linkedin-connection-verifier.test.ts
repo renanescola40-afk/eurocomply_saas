@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const verifier = readFileSync('src/lib/marketing/linkedin-connection.ts', 'utf8');
+const credentials = readFileSync('src/lib/marketing/linkedin-credentials.ts', 'utf8');
 const resolver = readFileSync('src/lib/marketing/linkedin-organization.ts', 'utf8');
 const route = readFileSync('src/app/api/platform/marketing/linkedin/status/route.ts', 'utf8');
 const envGuard = readFileSync('src/lib/security/env-guard.ts', 'utf8');
@@ -14,7 +15,9 @@ describe('LinkedIn marketing connection verifier', () => {
     expect(verifier).toContain("'w_organization_social'");
     expect(verifier).toContain("optionalEnv('LINKEDIN_CLIENT_ID')");
     expect(verifier).toContain("optionalEnv('LINKEDIN_CLIENT_SECRET')");
-    expect(verifier).toContain("optionalEnv('LINKEDIN_ACCESS_TOKEN')");
+    expect(verifier).toContain('getLinkedInAccessTokenCredential');
+    expect(credentials).toContain("process.env.LINKEDIN_ACCESS_TOKEN");
+    expect(credentials).toContain("source: 'vault'");
     expect(verifier).not.toMatch(/LINKEDIN_(?:ACCESS_TOKEN|CLIENT_SECRET)\s*=\s*['\"][^'\"]+/);
   });
 
@@ -43,6 +46,7 @@ describe('LinkedIn marketing connection verifier', () => {
     expect(verifier).not.toContain('return { clientSecret');
     expect(verifier).toContain("Omit<LinkedInOrganizationResolution, 'urn'>");
     expect(verifier).toContain('accessTokenConfigured');
+    expect(verifier).toContain('accessTokenSource');
     expect(verifier).toContain('clientSecretConfigured');
   });
 
