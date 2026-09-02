@@ -36,12 +36,14 @@ describe('LinkedIn OAuth Vault bridge', () => {
     expect(callbackRoute).toContain('linkedInOAuthStateMatches');
     expect(callbackRoute).toContain('inspectLinkedInAccessToken');
     expect(callbackRoute).toContain('inspection.hasRequiredScopes');
+    expect(callbackRoute.indexOf('linkedInOAuthStateMatches')).toBeLessThan(
+      callbackRoute.indexOf("searchParams.has('error')"),
+    );
   });
 
-  it('stores only approved provider tokens through service-role-only Vault RPCs', () => {
-    expect(credentials).toContain("rpc('store_linkedin_marketing_secret'");
+  it('rotates approved provider credentials atomically through a service-role-only Vault RPC', () => {
+    expect(credentials).toContain("rpc('store_linkedin_marketing_oauth_credentials'");
     expect(credentials).toContain("rpc('read_linkedin_marketing_secret'");
-    expect(credentials).toContain("rpc('delete_linkedin_marketing_secret'");
     expect(credentials).toContain('LINKEDIN_REFRESH_TOKEN_SECRET_NAME');
     expect(callbackRoute).toContain('storeLinkedInOAuthTokens');
 
@@ -53,10 +55,11 @@ describe('LinkedIn OAuth Vault bridge', () => {
     expect(migration).toContain('SECURITY DEFINER');
     expect(migration).toContain('SET search_path = pg_catalog, public, vault');
     expect(migration).toContain('GRANT EXECUTE ON FUNCTION public.read_linkedin_marketing_secret(text) TO service_role');
-    expect(migration).toContain('GRANT EXECUTE ON FUNCTION public.store_linkedin_marketing_secret(text, text, text) TO service_role');
-    expect(migration).toContain('GRANT EXECUTE ON FUNCTION public.delete_linkedin_marketing_secret(text) TO service_role');
+    expect(migration).toContain('GRANT EXECUTE ON FUNCTION public.store_linkedin_marketing_oauth_credentials(text, text, text, text) TO service_role');
     expect(migration).toContain('REVOKE ALL ON FUNCTION public.read_linkedin_marketing_secret(text) FROM anon');
     expect(migration).toContain('REVOKE ALL ON FUNCTION public.read_linkedin_marketing_secret(text) FROM authenticated');
+    expect(migration).toContain('REVOKE ALL ON FUNCTION public.store_linkedin_marketing_oauth_credentials(text, text, text, text) FROM anon');
+    expect(migration).toContain('REVOKE ALL ON FUNCTION public.store_linkedin_marketing_oauth_credentials(text, text, text, text) FROM authenticated');
   });
 
   it('never serializes provider secrets into OAuth redirects or browser-visible parameters', () => {
