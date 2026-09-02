@@ -107,6 +107,15 @@ function classifyPublishFailure(error: unknown) {
       };
     }
 
+    if (error.kind === 'organization_resolution') {
+      return {
+        status: 'failed' as const,
+        errorCode: error.status
+          ? `linkedin_organization_resolution_${error.status}`
+          : 'linkedin_organization_resolution',
+      };
+    }
+
     if (error.kind === 'configuration') {
       return {
         status: 'failed' as const,
