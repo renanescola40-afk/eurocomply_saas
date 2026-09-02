@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import Link from 'next/link';
+import { type ReactNode, useState } from 'react';
 
 type ConnectionStatus = {
   configuration?: {
@@ -53,7 +54,7 @@ function formatExpiry(epochSeconds: number | null | undefined) {
   return new Date(epochSeconds * 1000).toLocaleString();
 }
 
-function StatusPill({ ok, children }: { ok: boolean; children: React.ReactNode }) {
+function StatusPill({ ok, children }: { ok: boolean; children: ReactNode }) {
   return (
     <span
       className={[
@@ -120,12 +121,13 @@ export function LinkedInMarketingConnection({ oauthOutcome }: Props) {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <a
+          <Link
             href="/api/platform/marketing/linkedin/oauth/start"
+            prefetch={false}
             className="inline-flex min-h-10 items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90"
           >
             Connect LinkedIn
-          </a>
+          </Link>
           <button
             type="button"
             onClick={verifyConnection}
@@ -159,7 +161,7 @@ export function LinkedInMarketingConnection({ oauthOutcome }: Props) {
 
       {status ? (
         <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
             <dt className="text-white/40">Credential source</dt>
             <dd className="mt-1 font-medium text-white/80">
               {status.configuration?.accessTokenSource === 'vault'
@@ -169,17 +171,17 @@ export function LinkedInMarketingConnection({ oauthOutcome }: Props) {
                   : 'Not configured'}
             </dd>
           </div>
-          <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
             <dt className="text-white/40">Page vanity</dt>
             <dd className="mt-1 font-medium text-white/80">
               {status.configuration?.organizationVanityName || 'risck-comply'}
             </dd>
           </div>
-          <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
             <dt className="text-white/40">Token expiry</dt>
             <dd className="mt-1 font-medium text-white/80">{formatExpiry(status.token?.expiresAt)}</dd>
           </div>
-          <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
             <dt className="text-white/40">Granted scopes</dt>
             <dd className="mt-1 break-words font-medium text-white/80">
               {scopes.length > 0 ? scopes.join(', ') : 'Not verified'}
