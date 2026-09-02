@@ -34,8 +34,10 @@ describe('LinkedIn marketing connection verifier', () => {
     expect(verifier).toContain('clientSecretConfigured');
   });
 
-  it('restricts connection inspection to AAL2 platform security capability', () => {
+  it('restricts connection inspection to AAL2 platform security capability with fail-closed rate limiting', () => {
     expect(route).toContain('requireApiUser');
+    expect(route).toContain('checkDistributedRateLimit');
+    expect(route).toContain("failureMode: 'fail-closed'");
     expect(route).toContain("requirePlatformCapability(user.id, 'security')");
     expect(route).toContain('PlatformAdminError');
     expect(route).toContain('noStoreJson');
