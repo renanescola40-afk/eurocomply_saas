@@ -17,10 +17,10 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-02-provider-ledger-verification-reconciliation-v27';
-const V27_VERIFICATION_MIGRATION =
-  '20260902195000_verify_v27_provider_ledger_reconciliation.sql';
-const EXPECTED_SELECTED = [V27_VERIFICATION_MIGRATION];
+const EXPECTED_CHANGE_SET = '2026-09-02-provider-ledger-verification-reconciliation-v28';
+const V28_VERIFICATION_MIGRATION =
+  '20260903090000_verify_v28_provider_ledger_reconciliation.sql';
+const EXPECTED_SELECTED = [V28_VERIFICATION_MIGRATION];
 
 function fail(message) {
   throw new Error(message);
@@ -51,10 +51,11 @@ function currentGitSha() {
   }
 }
 
-function validateV27VerificationMigration(source) {
+function validateV28VerificationMigration(source) {
   requireMarkers(source, [
     '20260902193810',
     '20260902193849',
+    '20260902202558',
     "pg_get_functiondef('app_private.resolve_commercial_plan(uuid)'::regprocedure)",
     'order by source.priority desc, source.id asc',
     "source.source_kind = ''signed_contract''",
@@ -79,7 +80,7 @@ function validateV27VerificationMigration(source) {
     'c.relrowsecurity, c.relforcerowsecurity',
     'identity_rls is distinct from true',
     'identity_force_rls is distinct from true',
-  ], 'V27 provider-ledger verification migration');
+  ], 'V28 provider-ledger verification migration');
 
   forbidMarkers(source, [
     'alter table ',
@@ -94,7 +95,7 @@ function validateV27VerificationMigration(source) {
     'delete from ',
     'truncate ',
     'drop table ',
-  ], 'V27 provider-ledger verification migration');
+  ], 'V28 provider-ledger verification migration');
 }
 
 async function main() {
@@ -128,10 +129,10 @@ async function main() {
   });
 
   const source = readFileSync(
-    join(ROOT, 'supabase', 'migrations', V27_VERIFICATION_MIGRATION),
+    join(ROOT, 'supabase', 'migrations', V28_VERIFICATION_MIGRATION),
     'utf8',
   );
-  validateV27VerificationMigration(source);
+  validateV28VerificationMigration(source);
 
   const records = manifest.migrations.map((migration, index) => ({
     position: index + 1,
