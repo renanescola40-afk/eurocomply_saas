@@ -13,7 +13,7 @@ describe('Trust Center RISCK UI V2 brand contract', () => {
     expect(source).toContain('aria-label="RISCK COMPLY home"');
     expect(source).toContain('bg-[#050913]');
     expect(source).toContain('bg-[#0d1522]');
-    expect(source).toContain('text-blue-200/65');
+    expect(source).toContain('text-blue-300/65');
     expect(source).toContain('focus-visible:ring-blue-400');
     expect(source).not.toContain('ShieldCheck');
     expect(source).not.toContain('ring-cyan');
@@ -22,15 +22,16 @@ describe('Trust Center RISCK UI V2 brand contract', () => {
     expect(source).not.toContain('hover:border-cyan');
   });
 
-  it('keeps green and amber restricted to semantic trust and legal states', async () => {
+  it('keeps assurance informational while reserving amber for legal publication state', async () => {
     const source = await readFile(TRUST_PAGE, 'utf8');
 
-    expect(source).toContain('border-emerald-300/15 bg-emerald-300/[0.055]');
-    expect(source).toContain('text-emerald-100/70');
+    expect(source).toContain('border-blue-400/15 bg-blue-500/[0.06]');
+    expect(source).toContain('text-blue-100/80');
     expect(source).toContain('border-amber-300/15 bg-amber-300/[0.055]');
     expect(source).toContain('getLegalPublicationState()');
     expect(source).toContain('<ProviderRuntimeDisclosure locale={locale} slug={page.slug} />');
     expect(source).toContain('<PublicFooter locale={locale} />');
+    expect(source).not.toContain('border-emerald-300/15 bg-emerald-300/[0.055]');
     expect(source).not.toContain('rgba(16,185,129,.14)');
   });
 });

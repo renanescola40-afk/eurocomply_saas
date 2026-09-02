@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Building2, CalendarDays, FileText, ShieldCheck, Users } from 'lucide-react';
 import { BookDemoForm } from '@/components/marketing/book-demo-form';
@@ -34,36 +35,33 @@ export default async function BookDemoPage({ params }: PageProps) {
   const locale = resolveLocale(requestedLocale);
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#050505] text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(37,99,235,.22),transparent_30rem),radial-gradient(circle_at_80%_20%,rgba(16,185,129,.1),transparent_28rem),linear-gradient(180deg,#050505_0%,#080b12_52%,#050505_100%)]" />
-      <div className="pointer-events-none fixed inset-0 tech-grid opacity-20" />
-
-      <section className="relative z-10 mx-auto grid max-w-7xl gap-10 px-4 pb-20 pt-24 sm:px-6 lg:grid-cols-[.95fr_1.05fr] lg:px-8 lg:pt-32">
+    <main className="min-h-screen bg-[#050913] text-white">
+      <section className="mx-auto grid max-w-7xl gap-10 px-4 pb-20 pt-20 sm:px-6 lg:grid-cols-[.95fr_1.05fr] lg:px-8 lg:pt-24">
         <div>
-          <Link href={`/${locale}`} className="inline-flex items-center gap-2 text-sm font-semibold text-white/55 transition hover:text-white">
-            ← Back to RISCK COMPLY
+          <Link href={`/${locale}`} aria-label="RISCK COMPLY home" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+            <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={178} height={32} priority />
           </Link>
-          <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-medium text-white/76">
+          <div className="mt-8 inline-flex items-center gap-2 rounded-lg border border-blue-400/20 bg-blue-500/[0.07] px-4 py-2 text-sm font-medium text-blue-100">
             <Users className="h-4 w-4" /> Enterprise readiness mapping
           </div>
-          <h1 className="mt-7 max-w-4xl text-5xl font-semibold leading-[1.02] tracking-[-0.065em] text-white sm:text-6xl">
+          <h1 className="mt-7 max-w-4xl text-5xl font-semibold leading-[1.02] tracking-[-0.06em] text-white sm:text-6xl">
             Book a demo for AI inventory, risk, policy and evidence readiness.
           </h1>
           <p className="mt-6 max-w-3xl text-lg leading-8 text-white/62">
             In 30 minutes, we map your current AI governance workflow and show how RISCK COMPLY can centralize AI systems, owners, risk, policies, evidence and procurement answers.
           </p>
 
-          <div className="mt-8 grid gap-3">
+          <div className="mt-8 divide-y divide-slate-800 overflow-hidden rounded-xl border border-slate-800/80 bg-[#0d1522]">
             {agenda.map((item) => (
-              <div key={item} className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm leading-6 text-white/62">
-                <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-white" />
+              <div key={item} className="flex items-start gap-3 px-4 py-3 text-sm leading-6 text-white/62">
+                <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-blue-300" aria-hidden="true" />
                 {item}
               </div>
             ))}
           </div>
 
-          <div className="mt-8 rounded-[1.5rem] border border-white/10 bg-black/25 p-5">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/35">Bring to the demo</p>
+          <div className="mt-8 rounded-xl border border-slate-800/80 bg-[#0d1522] p-5">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-300/65">Bring to the demo</p>
             <p className="mt-3 text-sm leading-7 text-white/55">
               A current AI tools list, risk spreadsheet, policy draft, vendor list, customer security questions or board/audit request. Messy materials are useful because the goal is to map the real operating workflow.
             </p>
@@ -73,13 +71,13 @@ export default async function BookDemoPage({ params }: PageProps) {
         <BookDemoForm locale={locale} />
       </section>
 
-      <section className="relative z-10 border-y border-white/10 bg-white/[0.02] px-4 py-16 sm:px-6 lg:px-8">
+      <section className="border-y border-slate-800/80 bg-white/[0.02] px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-white/35">What you get</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-300/65">What you get</p>
           <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {outcomes.map(([title, text, Icon]) => (
-              <article key={title} className="rounded-[1.5rem] border border-white/10 bg-black/25 p-5">
-                <Icon className="h-5 w-5 text-white" />
+              <article key={title} className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-5">
+                <Icon className="h-5 w-5 text-blue-300" aria-hidden="true" />
                 <h2 className="mt-4 text-lg font-semibold text-white">{title}</h2>
                 <p className="mt-3 text-sm leading-6 text-white/50">{text}</p>
               </article>

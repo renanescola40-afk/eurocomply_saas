@@ -119,29 +119,28 @@ export default async function FeaturePage({ params }: PageProps) {
   };
 
   return (
-    <main className="min-h-screen bg-[#040707] text-white">
+    <main className="min-h-screen bg-[#050913] text-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }}
       />
 
-      <header className="border-b border-white/10 bg-[#040707]/95">
+      <header className="border-b border-white/10 bg-[#050913]/95">
         <nav className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-5 py-4 lg:px-8" aria-label="Primary navigation">
-          <Link href={`/${locale}`} aria-label="RISCK COMPLY home">
+          <Link href={`/${locale}`} aria-label="RISCK COMPLY home" className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
             <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={180} height={44} className="h-10 w-auto" priority />
           </Link>
           <div className="hidden items-center gap-6 text-sm text-white/65 md:flex">
             <Link href={`/${locale}/#platform`} className="transition hover:text-white">{ui.features}</Link>
             <Link href={`/${locale}/pricing`} className="transition hover:text-white">{ui.pricing}</Link>
             <Link href={`/${locale}/login`} className="transition hover:text-white">{ui.signIn}</Link>
-            <Link href={`/${locale}/signup`} className="rounded-full bg-white px-5 py-2.5 font-semibold text-black transition hover:bg-white/85">{ui.createAccount}</Link>
+            <Link href={`/${locale}/signup`} className="rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{ui.createAccount}</Link>
           </div>
         </nav>
       </header>
 
-      <section className="relative overflow-hidden border-b border-white/10 px-5 py-20 lg:px-8 lg:py-28">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(34,211,238,.12),transparent_34%),radial-gradient(circle_at_80%_20%,rgba(52,211,153,.10),transparent_30%)]" aria-hidden="true" />
-        <div className="relative mx-auto max-w-5xl">
+      <section className="border-b border-white/10 px-5 py-20 lg:px-8 lg:py-28">
+        <div className="mx-auto max-w-5xl">
           <nav aria-label="Breadcrumb" className="mb-8 flex flex-wrap items-center gap-2 text-sm text-white/45">
             <Link href={`/${locale}`} className="hover:text-white">{ui.home}</Link>
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -149,30 +148,30 @@ export default async function FeaturePage({ params }: PageProps) {
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
             <span className="text-white/75">{page.navLabel}</span>
           </nav>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-100/65">{page.eyebrow}</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-300/70">{page.eyebrow}</p>
           <h1 className="mt-6 max-w-4xl text-4xl font-semibold tracking-[-0.04em] text-white sm:text-6xl lg:text-7xl">{page.title}</h1>
           <p className="mt-7 max-w-3xl text-lg leading-8 text-white/62 sm:text-xl">{page.intro}</p>
           <div className="mt-10 flex flex-wrap gap-3">
-            <Link href={`/${locale}/signup`} className="group inline-flex items-center gap-2 rounded-full bg-[linear-gradient(180deg,#eafff5,#b9f6d5)] px-6 py-3.5 font-bold text-[#07110c] transition hover:-translate-y-0.5">
+            <Link href={`/${locale}/signup`} className="group inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 font-bold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
               {ui.createAccount}<ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden="true" />
             </Link>
-            <Link href={`/${locale}/pricing`} className="rounded-full border border-white/15 bg-white/[0.04] px-6 py-3.5 font-semibold text-white/80 transition hover:bg-white/[0.08] hover:text-white">{ui.pricing}</Link>
+            <Link href={`/${locale}/pricing`} className="rounded-xl border border-white/15 bg-white/[0.04] px-6 py-3.5 font-semibold text-white/80 transition hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{ui.pricing}</Link>
           </div>
         </div>
       </section>
 
       <section className="px-5 py-18 lg:px-8 lg:py-24">
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-7 sm:p-9">
+          <div className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-7 sm:p-9">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{page.problemTitle}</h2>
             <p className="mt-5 leading-7 text-white/58">{page.problem}</p>
           </div>
-          <div className="rounded-[2rem] border border-cyan-100/15 bg-cyan-300/[0.04] p-7 sm:p-9">
+          <div className="rounded-xl border border-blue-400/15 bg-blue-500/[0.05] p-7 sm:p-9">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{page.capabilitiesTitle}</h2>
             <ul className="mt-7 grid gap-4 sm:grid-cols-2">
               {page.capabilities.map((capability) => (
-                <li key={capability} className="flex gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-white/68">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-200/80" aria-hidden="true" />
+                <li key={capability} className="flex gap-3 rounded-lg border border-white/10 bg-slate-950/25 p-4 text-sm leading-6 text-white/68">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-blue-300" aria-hidden="true" />
                   <span>{capability}</span>
                 </li>
               ))}
@@ -186,8 +185,8 @@ export default async function FeaturePage({ params }: PageProps) {
           <h2 className="max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl">{page.workflowTitle}</h2>
           <ol className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {page.workflow.map((step, index) => (
-              <li key={step} className="rounded-[1.5rem] border border-white/10 bg-[#071017] p-6">
-                <span className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100/55">{String(index + 1).padStart(2, '0')}</span>
+              <li key={step} className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-6">
+                <span className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-300/65">{String(index + 1).padStart(2, '0')}</span>
                 <p className="mt-4 leading-7 text-white/75">{step}</p>
               </li>
             ))}
@@ -200,7 +199,7 @@ export default async function FeaturePage({ params }: PageProps) {
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">{page.faqTitle}</h2>
           <div className="mt-9 space-y-4">
             {page.faq.map((item) => (
-              <article key={item.question} className="rounded-[1.5rem] border border-white/10 bg-white/[0.025] p-6 sm:p-7">
+              <article key={item.question} className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-6 sm:p-7">
                 <h3 className="text-lg font-semibold text-white">{item.question}</h3>
                 <p className="mt-3 leading-7 text-white/58">{item.answer}</p>
               </article>
@@ -210,10 +209,11 @@ export default async function FeaturePage({ params }: PageProps) {
       </section>
 
       <section className="px-5 pb-10 lg:px-8 lg:pb-16">
-        <div className="mx-auto max-w-6xl rounded-[2.2rem] border border-emerald-100/15 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.13),transparent_35%),#07100d] p-8 sm:p-12">
-          <h2 className="max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">{page.ctaTitle}</h2>
+        <div className="mx-auto max-w-6xl rounded-xl border border-slate-800/80 bg-[#0d1522] p-8 sm:p-12">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-300/65">RISCK COMPLY</p>
+          <h2 className="mt-4 max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">{page.ctaTitle}</h2>
           <p className="mt-5 max-w-2xl leading-7 text-white/60">{page.ctaText}</p>
-          <Link href={`/${locale}/signup`} className="group mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 font-bold text-black transition hover:-translate-y-0.5">
+          <Link href={`/${locale}/signup`} className="group mt-8 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 font-bold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
             {ui.createAccount}<ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden="true" />
           </Link>
           <p className="mt-7 max-w-3xl text-xs leading-5 text-white/38">{ui.disclaimer}</p>
@@ -226,7 +226,7 @@ export default async function FeaturePage({ params }: PageProps) {
             key={language}
             href={getFeaturePath(language, page.key)}
             hrefLang={language}
-            className={`rounded-full border px-4 py-2 text-xs transition ${language === locale ? 'border-cyan-100/35 bg-cyan-200/10 text-white' : 'border-white/10 text-white/48 hover:border-white/25 hover:text-white'}`}
+            className={`rounded-lg border px-4 py-2 text-xs transition ${language === locale ? 'border-blue-400/35 bg-blue-500/10 text-white' : 'border-white/10 text-white/48 hover:border-white/25 hover:text-white'}`}
           >
             {LOCALE_META[language].nativeName}
           </Link>
