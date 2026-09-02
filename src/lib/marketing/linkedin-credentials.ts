@@ -46,13 +46,13 @@ async function readVaultSecret(name: string): Promise<string | null> {
 }
 
 export async function getLinkedInAccessTokenCredential(): Promise<LinkedInAccessTokenCredential | null> {
-  const environmentToken = normalizeToken(process.env.LINKEDIN_ACCESS_TOKEN);
-  if (environmentToken) {
-    return { token: environmentToken, source: 'environment' };
+  const vaultToken = await readVaultSecret(LINKEDIN_ACCESS_TOKEN_SECRET_NAME);
+  if (vaultToken) {
+    return { token: vaultToken, source: 'vault' };
   }
 
-  const vaultToken = await readVaultSecret(LINKEDIN_ACCESS_TOKEN_SECRET_NAME);
-  return vaultToken ? { token: vaultToken, source: 'vault' } : null;
+  const environmentToken = normalizeToken(process.env.LINKEDIN_ACCESS_TOKEN);
+  return environmentToken ? { token: environmentToken, source: 'environment' } : null;
 }
 
 export async function getLinkedInRefreshToken(): Promise<string | null> {
