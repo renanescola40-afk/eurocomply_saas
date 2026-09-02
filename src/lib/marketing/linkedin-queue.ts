@@ -1,6 +1,5 @@
 import 'server-only';
 
-import { supabaseAdmin } from '@/integrations/supabase/server';
 import {
   LinkedInPublishError,
   publishLinkedInOrganizationTextPost,
@@ -55,7 +54,13 @@ function normalizeClaimedPosts(value: unknown): ClaimedLinkedInPost[] {
   });
 }
 
+async function getSupabaseAdmin() {
+  const { supabaseAdmin } = await import('@/integrations/supabase/server');
+  return supabaseAdmin;
+}
+
 async function claimDuePosts(limit: number) {
+  const supabaseAdmin = await getSupabaseAdmin();
   const { data, error } = await supabaseAdmin.rpc('claim_linkedin_marketing_posts', {
     p_limit: normalizeBatchSize(limit),
   });
@@ -76,6 +81,7 @@ async function finalizeQueueItem(
     last_error_code?: string | null;
   },
 ) {
+  const supabaseAdmin = await getSupabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from('linkedin_marketing_posts')
     .update({
