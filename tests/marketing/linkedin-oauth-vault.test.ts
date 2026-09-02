@@ -41,7 +41,7 @@ describe('LinkedIn OAuth Vault bridge', () => {
     );
   });
 
-  it('rotates approved provider credentials atomically through a service-role-only Vault RPC', () => {
+  it('rotates approved provider credentials atomically through a serialized service-role-only Vault RPC', () => {
     expect(credentials).toContain("rpc('store_linkedin_marketing_oauth_credentials'");
     expect(credentials).toContain("rpc('read_linkedin_marketing_secret'");
     expect(credentials).toContain('LINKEDIN_REFRESH_TOKEN_SECRET_NAME');
@@ -51,6 +51,7 @@ describe('LinkedIn OAuth Vault bridge', () => {
     expect(migration).toContain('vault.decrypted_secrets');
     expect(migration).toContain('vault.create_secret');
     expect(migration).toContain('vault.update_secret');
+    expect(migration).toContain('pg_advisory_xact_lock(20260903, 110000)');
     expect(migration).toContain('DELETE FROM vault.secrets');
     expect(migration).toContain("s.name = 'linkedin_marketing_access_token'");
     expect(migration).toContain("s.name = 'linkedin_marketing_refresh_token'");
