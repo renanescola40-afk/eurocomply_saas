@@ -18,9 +18,13 @@ import {
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
+type PlatformSearchParams = {
+  linkedin?: string | string[];
+};
+
 type PageProps = {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ linkedin?: string | string[] }>;
+  searchParams?: Promise<PlatformSearchParams>;
 };
 
 function getSafeLocale(locale: string): Locale {
@@ -43,7 +47,8 @@ async function requireControlCenterAccess(locale: Locale) {
 
 export default async function PlatformControlCenterPage({ params, searchParams }: PageProps) {
   noStore();
-  const [{ locale }, query] = await Promise.all([params, searchParams ?? Promise.resolve({})]);
+  const { locale } = await params;
+  const query: PlatformSearchParams = searchParams ? await searchParams : {};
   const safeLocale = getSafeLocale(locale);
   const membership = await requireControlCenterAccess(safeLocale);
   const canManageBilling = platformRoleHasCapability(membership.role, 'billing');
