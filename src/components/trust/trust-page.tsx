@@ -25,7 +25,7 @@ export function TrustCenterPage({ locale, page }: { locale: Locale; page: TrustP
           >
             <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={220} height={46} priority className="h-8 w-auto sm:h-9" />
           </Link>
-          <nav className="hidden items-center gap-5 text-sm text-white/48 md:flex" aria-label={ui.portal}>
+          <nav className="hidden items-center gap-5 text-sm text-white/48 lg:flex" aria-label={ui.portal}>
             <Link href={`/${locale}/trust`} className="rounded-md transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{ui.trust}</Link>
             <Link href={`/${locale}/security`} className="rounded-md transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{ui.security}</Link>
             <Link href={`/${locale}/privacy`} className="rounded-md transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{ui.privacy}</Link>
