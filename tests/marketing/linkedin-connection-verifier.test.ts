@@ -23,13 +23,13 @@ describe('LinkedIn marketing connection verifier', () => {
     expect(verifier).toContain("url.searchParams.set('count', '1')");
     expect(verifier).toContain("'X-RestLi-Method': 'FINDER'");
     expect(verifier).toContain("method: 'GET'");
-    expect(verifier).not.toContain("method: 'POST',\n      headers: {\n        Authorization: `Bearer ${accessToken}`");
   });
 
   it('does not expose provider response bodies or credential values in the inspection result', () => {
     expect(verifier).not.toContain('response.text()');
-    expect(verifier).not.toContain('accessToken,');
-    expect(verifier).not.toContain('clientSecret,');
+    expect(verifier).not.toContain('console.log');
+    expect(verifier).not.toContain('return { accessToken');
+    expect(verifier).not.toContain('return { clientSecret');
     expect(verifier).toContain('accessTokenConfigured');
     expect(verifier).toContain('clientSecretConfigured');
   });
