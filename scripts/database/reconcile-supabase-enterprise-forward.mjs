@@ -17,10 +17,10 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-02-provider-applied-v26-canonical-forward-adoption-v27';
-const PROVIDER_APPLIED_ADOPTION_MIGRATION =
-  '20260902200000_adopt_provider_applied_v26_exact_bytes.sql';
-const EXPECTED_SELECTED = [PROVIDER_APPLIED_ADOPTION_MIGRATION];
+const EXPECTED_CHANGE_SET = '2026-09-02-provider-ledger-verification-reconciliation-v27';
+const V27_VERIFICATION_MIGRATION =
+  '20260902195000_verify_v27_provider_ledger_reconciliation.sql';
+const EXPECTED_SELECTED = [V27_VERIFICATION_MIGRATION];
 
 function fail(message) {
   throw new Error(message);
@@ -33,8 +33,9 @@ function requireMarkers(source, markers, label) {
 }
 
 function forbidMarkers(source, markers, label) {
+  const normalized = source.toLowerCase();
   for (const marker of markers) {
-    if (source.includes(marker)) fail(`${label} reopened forbidden boundary: ${marker}`);
+    if (normalized.includes(marker.toLowerCase())) fail(`${label} reopened forbidden boundary: ${marker}`);
   }
 }
 
@@ -50,39 +51,50 @@ function currentGitSha() {
   }
 }
 
-function validateProviderAppliedAdoptionMigration(source) {
+function validateV27VerificationMigration(source) {
   requireMarkers(source, [
-    "m.name = 'reconcile_deterministic_commercial_contract_source_precedence'",
-    "894ca7297890ae01ab57986af20654e33b62e95fe732cad4b8336afeed6f0fac",
-    "m.name = 'reconcile_enterprise_sso_production_runtime'",
-    "494631c9521dc224cef5609cc975c4ebb9731ce14bfcced71ee026fb3cf35adb",
-    "to_regclass('supabase_migrations.schema_migrations')",
-    "extensions.digest(convert_to(m.statements[1], 'UTF8'), 'sha256')",
+    '20260902193810',
+    '20260902193849',
+    "pg_get_functiondef('app_private.resolve_commercial_plan(uuid)'::regprocedure)",
+    'order by source.priority desc, source.id asc',
+    "source.source_kind = ''signed_contract''",
+    'event.livemode = true',
+    "event.status = ''processed''",
+    "has_function_privilege('public', 'app_private.resolve_commercial_plan(uuid)', 'EXECUTE')",
+    "has_function_privilege('service_role', 'app_private.resolve_commercial_plan(uuid)', 'EXECUTE')",
     "'supabase_provider_id'",
     "'default_role'",
     "'default_seat_type'",
     "'auto_provision'",
     "'last_login_at'",
-    "public.resolve_enterprise_sso_binding(uuid,text)",
-    "public.record_enterprise_sso_login(uuid,uuid,text)",
-    "public.upsert_enterprise_sso_connection_atomic(uuid,uuid,uuid,text,text,text,text,text,boolean,boolean,uuid)",
-    "order by source.priority desc, source.id asc",
-    "source.source_kind = ''signed_contract''",
-    "event.livemode = true",
-    "event.status = ''processed''",
-    "has_function_privilege('authenticated', rpc_signature, 'EXECUTE')",
-    "not has_function_privilege('service_role', rpc_signature, 'EXECUTE')",
-    "notify pgrst, 'reload schema'",
-  ], 'Provider-applied V26 canonical adoption migration');
+    "conname = 'enterprise_identity_default_role_allowed'",
+    "conname = 'enterprise_identity_default_seat_allowed'",
+    "to_regclass('public.enterprise_identity_supabase_provider_unique')",
+    "to_regclass('public.enterprise_identity_domain_active_idx')",
+    "to_regprocedure('public.resolve_enterprise_sso_binding(uuid,text)')",
+    "to_regprocedure('public.record_enterprise_sso_login(uuid,uuid,text)')",
+    "to_regprocedure('public.upsert_enterprise_sso_connection_atomic(uuid,uuid,uuid,text,text,text,text,text,boolean,boolean,uuid)')",
+    "'search_path=pg_catalog, public'",
+    'p.prosecdef is not true',
+    'c.relrowsecurity, c.relforcerowsecurity',
+    'identity_rls is distinct from true',
+    'identity_force_rls is distinct from true',
+  ], 'V27 provider-ledger verification migration');
+
   forbidMarkers(source, [
-    'insert into supabase_migrations.schema_migrations',
-    'delete from supabase_migrations.schema_migrations',
-    'update supabase_migrations.schema_migrations',
-    'migration repair',
-    '--include-all',
-    "grant execute on function public.resolve_enterprise_sso_binding(uuid, text) to authenticated",
-    "grant execute on function public.resolve_enterprise_sso_binding(uuid, text) to anon",
-  ], 'Provider-applied V26 canonical adoption migration');
+    'alter table ',
+    'create or replace function',
+    'create policy ',
+    'alter policy ',
+    'drop policy ',
+    'grant execute',
+    'revoke all',
+    'insert into ',
+    'update public.',
+    'delete from ',
+    'truncate ',
+    'drop table ',
+  ], 'V27 provider-ledger verification migration');
 }
 
 async function main() {
@@ -116,10 +128,10 @@ async function main() {
   });
 
   const source = readFileSync(
-    join(ROOT, 'supabase', 'migrations', PROVIDER_APPLIED_ADOPTION_MIGRATION),
+    join(ROOT, 'supabase', 'migrations', V27_VERIFICATION_MIGRATION),
     'utf8',
   );
-  validateProviderAppliedAdoptionMigration(source);
+  validateV27VerificationMigration(source);
 
   const records = manifest.migrations.map((migration, index) => ({
     position: index + 1,

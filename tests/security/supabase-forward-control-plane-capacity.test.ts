@@ -7,19 +7,19 @@ const rootDir = process.cwd();
 const subjectSha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 describe('Supabase forward reconciliation control-plane capacity', () => {
-  it('compiles the exact current V27 provider-applied adoption package', async () => {
+  it('compiles the exact current V27 provider-ledger verification package', async () => {
     const config = JSON.parse(await readFile('config/supabase-forward-reconciliation.json', 'utf8'));
 
     expect(config.migrations).toEqual([
       expect.objectContaining({
-        filename: '20260902200000_adopt_provider_applied_v26_exact_bytes.sql',
+        filename: '20260902195000_verify_v27_provider_ledger_reconciliation.sql',
       }),
     ]);
     const manifest = await compileForwardReconciliationManifest({ config, rootDir, subjectSha });
 
     expect(manifest.targetSha).toBe(subjectSha);
     expect(manifest.migrations).toHaveLength(1);
-    expect(manifest.changeSet).toBe('2026-09-02-provider-applied-v26-canonical-forward-adoption-v27');
+    expect(manifest.changeSet).toBe('2026-09-02-provider-ledger-verification-reconciliation-v27');
     expect(manifest.checks.productionWriteAuthorized).toBe(false);
     expect(manifest.checks.migrationHistoryRepairAuthorized).toBe(false);
     expect(manifest.checks.unrestrictedDbPushAuthorized).toBe(false);
