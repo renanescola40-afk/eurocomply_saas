@@ -59,6 +59,12 @@ async function writeVaultSecret(name: string, secret: string, description: strin
   if (error) throw new Error('LinkedIn Vault credential write failed');
 }
 
+async function deleteVaultSecret(name: string) {
+  const supabase = createAdminClient();
+  const { error } = await supabase.rpc('delete_linkedin_marketing_secret', { p_name: name });
+  if (error) throw new Error('LinkedIn Vault credential delete failed');
+}
+
 export async function getLinkedInAccessTokenCredential(): Promise<LinkedInAccessTokenCredential | null> {
   const environmentToken = normalizeToken(process.env.LINKEDIN_ACCESS_TOKEN);
   if (environmentToken) {
@@ -97,5 +103,8 @@ export async function storeLinkedInOAuthTokens(input: StoreLinkedInOAuthTokensIn
       refreshToken,
       `RISCK COMPLY LinkedIn refresh token; expires_at=${refreshExpiresAt}; scopes=${scopeSummary}`,
     );
+    return;
   }
+
+  await deleteVaultSecret(LINKEDIN_REFRESH_TOKEN_SECRET_NAME);
 }
