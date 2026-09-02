@@ -7,11 +7,13 @@ Connect RISCK COMPLY to LinkedIn using the official LinkedIn Community Managemen
 ## Security model
 
 - `LINKEDIN_CLIENT_ID` and `LINKEDIN_CLIENT_SECRET` remain server-only deployment configuration.
-- The runtime can use an existing `LINKEDIN_ACCESS_TOKEN` environment secret as a backward-compatible bootstrap/fallback.
+- The runtime can use an existing `LINKEDIN_ACCESS_TOKEN` environment secret only as a backward-compatible bootstrap/fallback.
 - The managed OAuth path stores rotating access/refresh tokens in Supabase Vault through service-role-only RPCs; browser roles have no execution grant on those RPCs.
+- Once a managed access token exists in Vault, it takes precedence over the environment bootstrap token automatically.
 - No LinkedIn token or client secret may be committed to Git, placed in GitHub comments, emitted in API responses or pasted into chat.
 - OAuth initiation is `/api/platform/marketing/linkedin/oauth/start` and requires an authenticated platform actor with `security` capability, AAL2 MFA and fail-closed rate limiting.
 - OAuth callback is `/api/platform/marketing/linkedin/oauth/callback`; it requires the same platform authority, constant-time state verification and required-scope introspection before any token is persisted.
+- OAuth `state` is verified before both success and provider-denial handling, preventing an unrelated request from cancelling an in-progress authorization.
 - OAuth state is a cryptographically random value stored only in a `__Host-` HttpOnly/Secure/SameSite=Lax cookie with a 10-minute lifetime.
 - Controlled one-off test publishing goes through `/api/internal/marketing/linkedin/publish`.
 - Recurring publishing goes through the persistent `linkedin_marketing_posts` queue and `/api/internal/marketing/linkedin/process`.
@@ -63,22 +65,23 @@ The connection verifier also uses LinkedIn's official OAuth token introspection 
 
 The managed OAuth path uses Supabase Vault rather than a plaintext application table.
 
-Migration `20260903110000_linkedin_oauth_vault_bridge.sql` creates only three bounded `public` RPC bridges:
+Migration `20260903110000_linkedin_oauth_vault_bridge.sql` creates only two bounded `public` RPC bridges:
 
-- `read_linkedin_marketing_secret(text)`;
-- `store_linkedin_marketing_secret(text,text,text)`;
-- `delete_linkedin_marketing_secret(text)`.
+- `read_linkedin_marketing_secret(text)` — reads one approved canonical secret name for server-side use;
+- `store_linkedin_marketing_oauth_credentials(text,text,text,text)` — rotates access + optional refresh credentials atomically in one PostgreSQL transaction.
 
-The RPCs are `SECURITY DEFINER`, use a bounded `search_path`, accept only the canonical LinkedIn access/refresh secret names, revoke execution from `PUBLIC`, `anon` and `authenticated`, and grant execution only to `service_role`.
+The RPCs are `SECURITY DEFINER`, use the minimized `search_path = pg_catalog, vault`, accept only the canonical LinkedIn access/refresh secret names, revoke execution from `PUBLIC`, `anon` and `authenticated`, and grant execution only to `service_role`.
+
+`vault.secrets` does not enforce uniqueness on `name`, so the atomic rotation also deletes duplicate rows for the two RISCK COMPLY canonical credential names. Successful rotation leaves exactly one canonical access token and either one canonical refresh token or none.
 
 Runtime precedence is:
 
-1. valid server-side `LINKEDIN_ACCESS_TOKEN` environment value, when deliberately configured;
-2. Vault secret `linkedin_marketing_access_token`.
+1. Vault secret `linkedin_marketing_access_token` when a managed OAuth credential exists;
+2. valid server-side `LINKEDIN_ACCESS_TOKEN` environment value as bootstrap/fallback.
 
-This preserves current production compatibility while allowing the OAuth-managed credential to take over after the Vault bridge is promoted. If the Vault RPC is not yet present, the credential reader treats the bridge as unavailable rather than crashing unrelated runtime paths. Other Vault/database failures remain fail-closed.
+This preserves current production compatibility while allowing the OAuth-managed credential to take over immediately after a successful callback. If the Vault RPC is not yet present, the credential reader treats that specific bridge-unavailable condition as “no managed token” and can use the environment fallback. Other Vault/database failures remain fail-closed.
 
-When LinkedIn returns a refresh token, it is stored separately as `linkedin_marketing_refresh_token`. When a later authorization does **not** return a refresh token, any stale refresh token is deleted. Automatic refresh is not enabled merely because a value exists; it remains a separate gate until LinkedIn actually grants refresh-token capability to the RISCK COMPLY application.
+When LinkedIn returns a refresh token, it is stored separately as `linkedin_marketing_refresh_token` in the same atomic rotation. When a later authorization does **not** return a refresh token, any stale refresh token is removed atomically with the access-token rotation. Automatic refresh is not enabled merely because a value exists; it remains a separate gate until LinkedIn actually grants refresh-token capability to the RISCK COMPLY application.
 
 ## Organization resolution
 
@@ -142,7 +145,7 @@ LINKEDIN_ORGANIZATION_VANITY_NAME=risck-comply
 8. From an authenticated RISCK COMPLY platform-security session with AAL2 MFA, open `/api/platform/marketing/linkedin/oauth/start`.
 9. Complete LinkedIn member consent using an account with an eligible RISCK COMPLY Page role.
 10. The callback exchanges the code server-side, verifies the state cookie, introspects the token and rejects the connection unless the required organization scopes are active.
-11. The callback stores the access token and, only when supplied by LinkedIn, the refresh token in Supabase Vault. It never returns either token to the browser.
+11. The callback atomically rotates the access token and, only when supplied by LinkedIn, the refresh token in Supabase Vault. It never returns either token to the browser. A successfully stored Vault access token automatically becomes the runtime credential source.
 12. Allow the verifier to resolve the canonical `risck-comply` organization automatically; configure `LINKEDIN_ORGANIZATION_URN` only as a deliberate override if needed.
 13. Call `/api/platform/marketing/linkedin/status` from an AAL2 platform-security session and require `readyForControlledTest=true`.
 14. Execute one controlled organization post permitted by the granted Development-tier conditions.
@@ -158,7 +161,7 @@ LINKEDIN_ORGANIZATION_VANITY_NAME=risck-comply
 `GET /api/platform/marketing/linkedin/status` is read-only and returns a structure containing:
 
 - whether each secret/configuration item is configured;
-- whether the access token came from the environment or Vault;
+- whether the active access token came from the environment or Vault;
 - the canonical organization vanity name;
 - whether an optional organization-URN override is configured and valid;
 - whether LinkedIn token introspection reports the token active;
@@ -259,4 +262,4 @@ Do not mark `MARKETING_OPERATOR_ACTIVE` without `STANDARD_ACCESS_READY` and `PRO
 
 ## Migration-order safety
 
-The OAuth Vault bridge is intentionally versioned `20260903110000`, after the currently prepared Enterprise Step-Up V29 migration lane. It must not be promoted ahead of an earlier pending production migration. The OAuth implementation PR should remain blocked/draft until the governed migration order is reconciled.
+The OAuth Vault bridge is intentionally versioned `20260903110000`, after Enterprise Step-Up V29 (`20260903090000` and `20260903100000`). PR #1935 has been merged into repository `main`, but the latest read-only Production ledger check still ends at `20260902202558`. Therefore V29 is not yet Production-promoted and the OAuth Vault migration must remain blocked from Production until that earlier sequence is applied through the governed forward-only lane.
