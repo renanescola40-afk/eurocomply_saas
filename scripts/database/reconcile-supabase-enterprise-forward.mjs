@@ -175,7 +175,7 @@ function validateV30OnboardingMigration(source) {
     'set search_path = pg_catalog, public',
     'revoke all on function public.complete_onboarding_activation_atomic_reconciled(uuid, uuid, text, jsonb)',
     'from public, anon, authenticated, service_role',
-    "select pg_notify('pgrst', 'reload schema')",
+    "notify pgrst, 'reload schema'",
   ], 'V30 onboarding atomic runtime reconciliation');
 
   forbidMarkers(source, [
