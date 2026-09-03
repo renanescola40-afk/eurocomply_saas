@@ -10,6 +10,10 @@ const hardeningSource = fs.readFileSync(
   'supabase/migrations/20260822123618_v19_harden_active_onboarding_enterprise_boundaries.sql',
   'utf8',
 );
+const canonicalInventorySource = fs.readFileSync(
+  'supabase/migrations/20260610_ai_governance_inventory.sql',
+  'utf8',
+);
 const innerFunctionStart = fixSource.indexOf(
   'create or replace function public.complete_onboarding_activation_atomic_reconciled(',
 );
@@ -18,33 +22,35 @@ const innerFunctionEnd = fixSource.indexOf(
 );
 const innerFunctionSource = fixSource.slice(innerFunctionStart, innerFunctionEnd);
 
-describe('onboarding atomic text[] production reconciliation', () => {
-  it('preserves the canonical ai_systems text[] schema instead of weakening it', () => {
+describe('onboarding atomic schema-adaptive production reconciliation', () => {
+  it('preserves both the canonical JSONB replay contract and the live text[] contract without altering columns', () => {
+    expect(canonicalInventorySource).toContain("obligations jsonb not null default '[]'::jsonb");
+    expect(canonicalInventorySource).toContain("next_actions jsonb not null default '[]'::jsonb");
     expect(fixSource).toContain("a.attname = 'obligations'");
     expect(fixSource).toContain("a.attname = 'next_actions'");
-    expect(fixSource).toContain("obligations_type is distinct from 'text[]'");
-    expect(fixSource).toContain("next_actions_type is distinct from 'text[]'");
+    expect(fixSource).toContain("obligations_type not in ('jsonb', 'text[]')");
+    expect(fixSource).toContain('obligations_type <> next_actions_type');
     expect(fixSource).not.toContain('alter table public.ai_systems');
   });
 
-  it('accepts missing or empty JSON arrays and converts them to empty PostgreSQL text arrays', () => {
-    expect(innerFunctionSource).toContain("coalesce(v_ai_system -> 'obligations', '[]'::jsonb)");
-    expect(innerFunctionSource).toContain("coalesce(v_ai_system -> 'nextActions', '[]'::jsonb)");
-    expect(innerFunctionSource).toContain("v_obligations text[] := '{}'::text[]");
-    expect(innerFunctionSource).toContain("v_next_actions text[] := '{}'::text[]");
-    expect(innerFunctionSource).toContain(
-      "coalesce(array_agg(element.value order by element.ordinality), '{}'::text[])",
-    );
+  it('binds converted values to the actual ai_systems column types at function compilation time', () => {
+    expect(innerFunctionSource).toContain('v_obligations public.ai_systems.obligations%type;');
+    expect(innerFunctionSource).toContain('v_next_actions public.ai_systems.next_actions%type;');
+    expect(innerFunctionSource).toContain('from jsonb_populate_record(');
+    expect(innerFunctionSource).toContain('null::public.ai_systems');
+    expect(innerFunctionSource).toContain("'obligations', coalesce(v_ai_system -> 'obligations', '[]'::jsonb)");
+    expect(innerFunctionSource).toContain("'next_actions', coalesce(v_ai_system -> 'nextActions', '[]'::jsonb)");
   });
 
-  it('converts multiple string obligations/actions while preserving order and duplicates', () => {
-    expect(innerFunctionSource.match(/jsonb_array_elements_text/g)?.length).toBe(2);
-    expect(
-      innerFunctionSource.match(/with ordinality as element\(value, ordinality\)/g)?.length,
-    ).toBe(2);
-    expect(
-      innerFunctionSource.match(/array_agg\(element\.value order by element\.ordinality\)/g)?.length,
-    ).toBe(2);
+  it('accepts missing or empty obligations/actions as arrays without inventing values', () => {
+    expect(innerFunctionSource).toContain(
+      "jsonb_typeof(coalesce(v_ai_system -> 'obligations', '[]'::jsonb)) <> 'array'",
+    );
+    expect(innerFunctionSource).toContain(
+      "jsonb_typeof(coalesce(v_ai_system -> 'nextActions', '[]'::jsonb)) <> 'array'",
+    );
+    expect(innerFunctionSource).toContain("coalesce(v_ai_system -> 'obligations', '[]'::jsonb)");
+    expect(innerFunctionSource).toContain("coalesce(v_ai_system -> 'nextActions', '[]'::jsonb)");
   });
 
   it('fails closed for non-array obligations and nextActions', () => {
@@ -62,7 +68,7 @@ describe('onboarding atomic text[] production reconciliation', () => {
     expect(innerFunctionSource).toContain("where jsonb_typeof(next_action.value) <> 'string'");
   });
 
-  it('uses converted text[] values on both existing-system UPDATE and new-system INSERT paths', () => {
+  it('uses schema-coerced values on both existing-system UPDATE and new-system INSERT paths', () => {
     expect(innerFunctionSource).toContain('obligations = v_obligations');
     expect(innerFunctionSource).toContain('next_actions = v_next_actions');
     expect(innerFunctionSource).toContain('v_obligations,\n      v_next_actions,\n      p_actor_user_id');
