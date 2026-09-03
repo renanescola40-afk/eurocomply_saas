@@ -17,12 +17,18 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-02-enterprise-step-up-runtime-reconciliation-v29';
+const EXPECTED_CHANGE_SET = '2026-09-03-enterprise-step-up-onboarding-runtime-reconciliation-v30';
 const V28_VERIFICATION_MIGRATION =
   '20260903090000_verify_v28_provider_ledger_reconciliation.sql';
 const V29_STEP_UP_MIGRATION =
   '20260903100000_reconcile_enterprise_step_up_runtime.sql';
-const EXPECTED_SELECTED = [V28_VERIFICATION_MIGRATION, V29_STEP_UP_MIGRATION];
+const V30_ONBOARDING_MIGRATION =
+  '20260903114500_reconcile_onboarding_atomic_text_arrays.sql';
+const EXPECTED_SELECTED = [
+  V28_VERIFICATION_MIGRATION,
+  V29_STEP_UP_MIGRATION,
+  V30_ONBOARDING_MIGRATION,
+];
 
 function fail(message) {
   throw new Error(message);
@@ -145,6 +151,47 @@ function validateV29StepUpMigration(source) {
   ], 'V29 Enterprise Step-Up runtime migration');
 }
 
+function validateV30OnboardingMigration(source) {
+  requireMarkers(source, [
+    "to_regprocedure('public.complete_onboarding_activation_atomic(uuid,uuid,text,jsonb)')",
+    "to_regprocedure('public.complete_onboarding_activation_atomic_reconciled(uuid,uuid,text,jsonb)')",
+    "obligations_type not in ('jsonb', 'text[]')",
+    'obligations_type <> next_actions_type',
+    'v_obligations public.ai_systems.obligations%type;',
+    'v_next_actions public.ai_systems.next_actions%type;',
+    'from jsonb_populate_record(',
+    'null::public.ai_systems',
+    "jsonb_typeof(coalesce(v_ai_system -> 'obligations', '[]'::jsonb)) <> 'array'",
+    "jsonb_typeof(coalesce(v_ai_system -> 'nextActions', '[]'::jsonb)) <> 'array'",
+    "where jsonb_typeof(obligation.value) <> 'string'",
+    "where jsonb_typeof(next_action.value) <> 'string'",
+    'obligations = v_obligations',
+    'next_actions = v_next_actions',
+    'where systems.organization_id = p_organization_id',
+    'where runs.organization_id = p_organization_id',
+    "v_actor_status is distinct from 'active'",
+    "coalesce(v_actor_role, '') not in ('owner', 'admin')",
+    'security definer',
+    'set search_path = pg_catalog, public',
+    'revoke all on function public.complete_onboarding_activation_atomic_reconciled(uuid, uuid, text, jsonb)',
+    'from public, anon, authenticated, service_role',
+    "select pg_notify('pgrst', 'reload schema')",
+  ], 'V30 onboarding atomic runtime reconciliation');
+
+  forbidMarkers(source, [
+    'supabase_migrations.schema_migrations',
+    'migration repair',
+    'db push --include-all',
+    'disable row level security',
+    'alter table public.ai_systems',
+    'grant execute on function public.complete_onboarding_activation_atomic_reconciled',
+    'grant all on public.ai_systems to anon',
+    'grant all on public.ai_systems to authenticated',
+    'drop table ',
+    'truncate ',
+  ], 'V30 onboarding atomic runtime reconciliation');
+}
+
 async function main() {
   const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
   if (config.changeSet !== EXPECTED_CHANGE_SET) {
@@ -186,6 +233,12 @@ async function main() {
     'utf8',
   );
   validateV29StepUpMigration(v29Source);
+
+  const v30Source = readFileSync(
+    join(ROOT, 'supabase', 'migrations', V30_ONBOARDING_MIGRATION),
+    'utf8',
+  );
+  validateV30OnboardingMigration(v30Source);
 
   const records = manifest.migrations.map((migration, index) => ({
     position: index + 1,
