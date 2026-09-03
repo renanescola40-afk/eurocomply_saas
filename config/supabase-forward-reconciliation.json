@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-02-enterprise-step-up-runtime-reconciliation-v29",
+  "changeSet": "2026-09-03-enterprise-step-up-onboarding-runtime-reconciliation-v30",
   "migrations": [
     {
       "filename": "20260903090000_verify_v28_provider_ledger_reconciliation.sql",
@@ -9,6 +9,10 @@
     {
       "filename": "20260903100000_reconcile_enterprise_step_up_runtime.sql",
       "purpose": "add only the missing Enterprise Step-Up token and organization security-settings runtime stores, preserve the already-live challenge-store boundary, enforce RLS and FORCE RLS, and keep browser roles revoked without migration-history repair"
+    },
+    {
+      "filename": "20260903114500_reconcile_onboarding_atomic_text_arrays.sql",
+      "purpose": "repair the active onboarding atomic RPC at the server boundary so validated JSON string arrays are coerced through the actual ai_systems column types, preserving both the live text[] contract and clean-replay jsonb contract without schema-history repair or browser authority expansion"
     }
   ],
   "truthBoundary": {
