@@ -1,9 +1,10 @@
 begin;
 
 -- Forward-only production fix for the active onboarding RPC.
--- The live ai_systems contract stores obligations/next_actions as text[] while
--- the reconciled onboarding function still assigns JSONB arrays. Preserve the
--- existing schema and convert validated JSON string arrays at the RPC boundary.
+-- Clean repository replay still has the original JSONB ai_systems contract,
+-- while live production currently exposes obligations/next_actions as text[].
+-- Preserve whichever reviewed schema is present and coerce validated JSON input
+-- through the actual ai_systems row type instead of changing column types.
 
 do $preflight$
 declare
@@ -12,7 +13,7 @@ declare
 begin
   if to_regprocedure('public.complete_onboarding_activation_atomic(uuid,uuid,text,jsonb)') is null
      or to_regprocedure('public.complete_onboarding_activation_atomic_reconciled(uuid,uuid,text,jsonb)') is null then
-    raise exception 'active onboarding RPC functions must exist before text-array reconciliation';
+    raise exception 'active onboarding RPC functions must exist before schema-adaptive reconciliation';
   end if;
 
   select format_type(a.atttypid, a.atttypmod)
@@ -31,9 +32,11 @@ begin
     and a.attnum > 0
     and not a.attisdropped;
 
-  if obligations_type is distinct from 'text[]'
-     or next_actions_type is distinct from 'text[]' then
-    raise exception 'ai_systems obligations/next_actions schema drifted from canonical text[] contract';
+  if obligations_type is null
+     or next_actions_type is null
+     or obligations_type <> next_actions_type
+     or obligations_type not in ('jsonb', 'text[]') then
+    raise exception 'ai_systems obligations/next_actions schema is outside the reviewed jsonb/text[] contracts';
   end if;
 end
 $preflight$;
@@ -69,8 +72,8 @@ declare
   v_suggested_tasks jsonb := coalesce(p_activation -> 'suggestedTasks', '[]'::jsonb);
   v_invite_emails jsonb := coalesce(p_activation -> 'inviteEmails', '[]'::jsonb);
   v_invite_email_array text[] := '{}'::text[];
-  v_obligations text[] := '{}'::text[];
-  v_next_actions text[] := '{}'::text[];
+  v_obligations public.ai_systems.obligations%type;
+  v_next_actions public.ai_systems.next_actions%type;
   v_readiness_score integer;
   v_ai_system_id uuid;
   v_activation_run_id uuid;
@@ -116,17 +119,15 @@ begin
     return;
   end if;
 
-  select coalesce(array_agg(element.value order by element.ordinality), '{}'::text[])
-  into v_obligations
-  from jsonb_array_elements_text(
-    coalesce(v_ai_system -> 'obligations', '[]'::jsonb)
-  ) with ordinality as element(value, ordinality);
-
-  select coalesce(array_agg(element.value order by element.ordinality), '{}'::text[])
-  into v_next_actions
-  from jsonb_array_elements_text(
-    coalesce(v_ai_system -> 'nextActions', '[]'::jsonb)
-  ) with ordinality as element(value, ordinality);
+  select populated.obligations, populated.next_actions
+  into v_obligations, v_next_actions
+  from jsonb_populate_record(
+    null::public.ai_systems,
+    jsonb_build_object(
+      'obligations', coalesce(v_ai_system -> 'obligations', '[]'::jsonb),
+      'next_actions', coalesce(v_ai_system -> 'nextActions', '[]'::jsonb)
+    )
+  ) as populated;
 
   v_readiness_score := (p_activation ->> 'readinessScore')::integer;
   if v_readiness_score < 0
@@ -504,7 +505,7 @@ revoke all on function public.complete_onboarding_activation_atomic_reconciled(u
   from public, anon, authenticated, service_role;
 
 comment on function public.complete_onboarding_activation_atomic_reconciled(uuid, uuid, text, jsonb)
-is 'Internal active onboarding transaction reconciled to canonical ai_systems text[] obligations and next_actions.';
+is 'Internal active onboarding transaction with schema-adaptive obligations/next_actions coercion for reviewed JSONB or text[] ai_systems contracts.';
 
 do $verify$
 declare
@@ -513,19 +514,17 @@ declare
   inner_source text;
 begin
   if wrapper_oid is null or inner_oid is null then
-    raise exception 'active onboarding wrapper/inner function missing after text-array reconciliation';
+    raise exception 'active onboarding wrapper/inner function missing after schema-adaptive reconciliation';
   end if;
 
   select pg_get_functiondef(inner_oid) into inner_source;
 
-  if position('v_obligations text[]' in inner_source) = 0
-     or position('v_next_actions text[]' in inner_source) = 0
-     or position('jsonb_array_elements_text' in inner_source) = 0
+  if position('jsonb_populate_record' in inner_source) = 0
      or position('obligations = v_obligations' in inner_source) = 0
      or position('next_actions = v_next_actions' in inner_source) = 0
      or position($stale$obligations = coalesce(v_ai_system -> 'obligations', '[]'::jsonb)$stale$ in inner_source) > 0
      or position($stale$next_actions = coalesce(v_ai_system -> 'nextActions', '[]'::jsonb)$stale$ in inner_source) > 0 then
-    raise exception 'active onboarding text-array reconciliation did not replace stale JSONB assignments';
+    raise exception 'active onboarding schema-adaptive reconciliation did not replace stale direct JSONB assignments';
   end if;
 
   if has_function_privilege('anon', wrapper_oid, 'EXECUTE')
