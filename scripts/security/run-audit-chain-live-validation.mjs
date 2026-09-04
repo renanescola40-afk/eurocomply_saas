@@ -23,6 +23,10 @@ const enterpriseReleaseEnv = env('RISCK', 'COMPLY', 'ENTERPRISE', 'RELEASE');
 const legacyEnterpriseReleaseEnv = env('EUROCOMPLY', 'ENTERPRISE', 'RELEASE');
 const rpcName = 'append_audit_event_chained';
 const syntheticAction = 'security.audit_chain_live_validation';
+const CONCURRENCY_LEVELS = Object.freeze([10, 25, 50, 100]);
+const LIVE_APPEND_MAX_ATTEMPTS = 32;
+const LIVE_RETRY_BASE_MS = 4;
+const LIVE_RETRY_CAP_MS = 80;
 
 const requiredFiles = [
   'src/server/security/audit-chain.ts',
@@ -62,7 +66,8 @@ const sourceTokens = {
   'src/server/queries/audit-events.ts': [
     rpcName,
     'buildAuditChainRecord',
-    'MAX_CHAIN_APPEND_ATTEMPTS = 4',
+    'MAX_CHAIN_APPEND_ATTEMPTS = 32',
+    'waitForAuditChainRetry',
     'transactional_append_unavailable',
     'AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK',
     'AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK',
@@ -251,6 +256,55 @@ async function appendViaRpc(supabase, payload) {
   return { data, error };
 }
 
+function isPreviousHashMismatch(error) {
+  return error?.code === '40001' || /previous hash mismatch/i.test(error?.message ?? '');
+}
+
+function waitForLiveRetry(attempt) {
+  const exponential = Math.min(
+    LIVE_RETRY_CAP_MS,
+    LIVE_RETRY_BASE_MS * (2 ** Math.min(Math.max(attempt - 1, 0), 4)),
+  );
+  const jitter = Math.floor(Math.random() * (LIVE_RETRY_BASE_MS + 1));
+  return new Promise((resolve) => setTimeout(resolve, exponential + jitter));
+}
+
+async function appendWithRetry(supabase, { organizationId, actorUserId, suffix }) {
+  const startedAt = Date.now();
+  let conflicts = 0;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= LIVE_APPEND_MAX_ATTEMPTS; attempt += 1) {
+    const previousHash = await getPreviousHash(supabase, organizationId);
+    const payload = buildChainPayload({ organizationId, actorUserId, previousHash, suffix });
+    const result = await appendViaRpc(supabase, payload);
+
+    if (!result.error) {
+      return {
+        ok: true,
+        eventId: payload.input.id,
+        eventHash: payload.eventHash,
+        conflicts,
+        attempts: attempt,
+        latencyMs: Date.now() - startedAt,
+      };
+    }
+
+    lastError = result.error;
+    if (!isPreviousHashMismatch(result.error) || attempt >= LIVE_APPEND_MAX_ATTEMPTS) break;
+    conflicts += 1;
+    await waitForLiveRetry(attempt);
+  }
+
+  return {
+    ok: false,
+    conflicts,
+    attempts: LIVE_APPEND_MAX_ATTEMPTS,
+    latencyMs: Date.now() - startedAt,
+    errorCode: lastError?.code ?? 'unknown',
+  };
+}
+
 function mapRowToRecord(row) {
   return {
     id: row.id,
@@ -367,22 +421,32 @@ async function runLiveValidation() {
     const normalAppend = await appendViaRpc(supabase, normalPayload);
     if (normalAppend.error) throw new Error(`normal_append_failed:${normalAppend.error.code ?? 'unknown'}`);
 
-    const concurrentBasePreviousHash = await getPreviousHash(supabase, organizationId);
-    const concurrentA = buildChainPayload({ organizationId, actorUserId, previousHash: concurrentBasePreviousHash, suffix: 'append-concurrent-a' });
-    const concurrentB = buildChainPayload({ organizationId, actorUserId, previousHash: concurrentBasePreviousHash, suffix: 'append-concurrent-b' });
-    createdAuditEventIds.push(concurrentA.input.id, concurrentB.input.id);
-    const concurrentResults = await Promise.all([appendViaRpc(supabase, concurrentA), appendViaRpc(supabase, concurrentB)]);
-    const concurrentSuccesses = concurrentResults.filter((result) => !result.error).length;
-    const concurrentMismatches = concurrentResults.filter((result) => /previous hash mismatch/i.test(result.error?.message ?? '') || result.error?.code === '40001').length;
-    const concurrentErrorCount = concurrentResults.filter((result) => result.error).length;
+    const concurrencyBatches = [];
+    for (const level of CONCURRENCY_LEVELS) {
+      const batchStartedAt = Date.now();
+      const results = await Promise.all(
+        Array.from({ length: level }, (_, index) => appendWithRetry(supabase, {
+          organizationId,
+          actorUserId,
+          suffix: `burst-${level}-${index + 1}`,
+        })),
+      );
+      const successful = results.filter((result) => result.ok);
+      createdAuditEventIds.push(...successful.map((result) => result.eventId));
+      concurrencyBatches.push({
+        requested: level,
+        persisted: successful.length,
+        lost: level - successful.length,
+        previousHashMismatches: results.reduce((sum, result) => sum + result.conflicts, 0),
+        maxAttemptsObserved: Math.max(...results.map((result) => result.attempts)),
+        maxWorkerLatencyMs: Math.max(...results.map((result) => result.latencyMs)),
+        latencyMs: Date.now() - batchStartedAt,
+        errorCodes: [...new Set(results.filter((result) => !result.ok).map((result) => result.errorCode))],
+      });
+    }
 
-    const retryPreviousHash = await getPreviousHash(supabase, organizationId);
-    const retryPayload = buildChainPayload({ organizationId, actorUserId, previousHash: retryPreviousHash, suffix: 'append-concurrent-retry' });
-    createdAuditEventIds.push(retryPayload.input.id);
-    const retryAppend = await appendViaRpc(supabase, retryPayload);
-    if (retryAppend.error) throw new Error(`retry_append_failed:${retryAppend.error.code ?? 'unknown'}`);
-
-    const concurrencySafe = concurrentSuccesses === 1 && !retryAppend.error;
+    const concurrencySafe = concurrencyBatches.every((batch) => batch.lost === 0 && batch.persisted === batch.requested);
+    const expectedSyntheticEvents = 1 + CONCURRENCY_LEVELS.reduce((sum, level) => sum + level, 0);
 
     const { data: rows, error: readbackError } = await supabase
       .from('audit_events')
@@ -392,7 +456,7 @@ async function runLiveValidation() {
       .not('event_hash', 'is', null)
       .order('created_at', { ascending: false })
       .order('id', { ascending: false })
-      .limit(8);
+      .limit(expectedSyntheticEvents + 5);
 
     if (readbackError) throw new Error(`readback_failed:${readbackError.code ?? 'unknown'}`);
 
@@ -400,6 +464,7 @@ async function runLiveValidation() {
     const records = chronologicalRows.map(mapRowToRecord);
     const anchorPreviousHash = records[0]?.previousHash ?? null;
     const verify = verifyAuditChain(records, anchorPreviousHash);
+    const allPersisted = records.length === expectedSyntheticEvents;
     const tampered = records.length > 0
       ? verifyAuditChain([{ ...records[0], metadata: { ...(records[0].metadata ?? {}), tampered: true } }, ...records.slice(1)], anchorPreviousHash)
       : { ok: true, failures: [] };
@@ -413,6 +478,7 @@ async function runLiveValidation() {
       schema.auditEventsTableReadable
         && schema.requiredColumnsReadable
         && concurrencySafe
+        && allPersisted
         && verify.ok
         && tamperDetected
         && missingPreviousDetected
@@ -426,12 +492,17 @@ async function runLiveValidation() {
       schema,
       appendNormal: { status: normalAppend.error ? 'Failed' : 'Complete', eventHashPrefix: normalPayload.eventHash.slice(0, 12) },
       appendConcurrent: {
-        status: concurrencySafe ? 'Complete' : 'Failed',
-        successes: concurrentSuccesses,
-        previousHashMismatches: concurrentMismatches,
-        errorCount: concurrentErrorCount,
-        retryStatus: retryAppend.error ? 'Failed' : 'Complete',
-        note: 'Concurrency is accepted when exactly one concurrent append wins and a retry using the fresh hash succeeds.',
+        status: concurrencySafe && allPersisted ? 'Complete' : 'Failed',
+        levels: [...CONCURRENCY_LEVELS],
+        batches: concurrencyBatches,
+        requested: CONCURRENCY_LEVELS.reduce((sum, level) => sum + level, 0),
+        persisted: concurrencyBatches.reduce((sum, batch) => sum + batch.persisted, 0),
+        lost: concurrencyBatches.reduce((sum, batch) => sum + batch.lost, 0),
+        previousHashMismatches: concurrencyBatches.reduce((sum, batch) => sum + batch.previousHashMismatches, 0),
+        errorCount: concurrencyBatches.reduce((sum, batch) => sum + batch.lost, 0),
+        retryStatus: concurrencySafe ? 'Complete' : 'Failed',
+        maxAttempts: LIVE_APPEND_MAX_ATTEMPTS,
+        note: 'Each worker retries only previous-hash conflicts after rereading the current chain head; PASS requires zero lost events at 10, 25, 50 and 100 parallel writes.',
       },
       tamperDetection: {
         status: tamperDetected ? 'Complete' : 'Failed',
@@ -442,8 +513,9 @@ async function runLiveValidation() {
         failureReasons: [...new Set(missingPrevious.failures.map((failure) => failure.reason))],
       },
       readbackVerification: {
-        status: verify.ok ? 'Complete' : 'Failed',
+        status: verify.ok && allPersisted ? 'Complete' : 'Failed',
         checked: verify.checked,
+        expected: expectedSyntheticEvents,
         failureCount: verify.failures.length,
         lastHashPrefix: verify.lastHash?.slice(0, 12) ?? null,
       },
