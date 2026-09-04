@@ -101,10 +101,10 @@ describe('Vercel ignored build rule', () => {
     ]);
   });
 
-  it('keeps main automatic deployment enabled while disabling agent slash branches', () => {
+  it('disables automatic Git deployments so the protected release workflow is the only production authority', () => {
     expect(vercelConfig.ignoreCommand).toBe('node scripts/vercel/ignore-build.mjs');
     expect(vercelConfig.git?.deploymentEnabled).toMatchObject({
-      main: true,
+      main: false,
       'agent/**': false,
       '*': false,
     });
