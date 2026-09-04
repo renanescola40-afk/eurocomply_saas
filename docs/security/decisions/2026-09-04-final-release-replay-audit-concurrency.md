@@ -12,7 +12,7 @@ The disposable schema-effect bridge therefore performs a temporary, marker-bound
 
 ## Audit-chain contention
 
-The Production audit append RPC already serializes organization-scoped writes with `pg_advisory_xact_lock`. The application now keeps the same transactional RPC and fail-closed fallback boundary while increasing bounded previous-hash conflict retries to 32 and introducing capped backoff with jitter between `40001` conflicts.
+The Production audit append RPC already serializes organization-scoped writes with `pg_advisory_xact_lock`. The application now keeps the same transactional RPC and fail-closed fallback boundary while increasing bounded previous-hash conflict retries to 128 and introducing capped backoff with jitter between `40001` conflicts. The ceiling is intentionally above the largest reviewed 100-way burst so an unlucky worker can survive a full contention generation while the operation remains finite and fail-closed.
 
 The protected live proof is extended to execute 10, 25, 50 and 100 parallel synthetic writes against one ephemeral tenant. PASS requires:
 
@@ -21,6 +21,7 @@ The protected live proof is extended to execute 10, 25, 50 and 100 parallel synt
 - the complete read-back chain verifies;
 - tamper and missing-previous-hash detection remain effective;
 - batch conflict counts and latency are recorded without raw tenant/user identifiers;
+- synthetic-row cleanup is chunked to avoid oversized REST filters;
 - all synthetic audit rows and ephemeral auth fixtures are removed and cleanup is verified.
 
 ## Release boundary
