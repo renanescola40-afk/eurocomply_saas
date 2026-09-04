@@ -1,5 +1,9 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 
+const EPHEMERAL_INSERT_MAX_ATTEMPTS = 3;
+const EPHEMERAL_INSERT_RETRY_BASE_MS = 250;
+const EPHEMERAL_INSERT_RETRY_CAP_MS = 1_500;
+
 function password() {
   return `Rc!${randomBytes(24).toString('base64url')}9a`;
 }
@@ -12,10 +16,60 @@ function safePurpose(value) {
     .slice(0, 48) || 'enterprise-runtime-proof';
 }
 
+function sleep(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function isAmbiguousTransportError(error) {
+  if (!error) return false;
+  const status = Number(error?.status || error?.statusCode || 0);
+  const code = String(error?.code || '').toUpperCase();
+  const message = String(error?.message || '');
+  return status >= 500
+    || ['57014', '57P01', '57P02', '57P03', '08000', '08001', '08003', '08004', '08006', '08007', '08P01'].includes(code)
+    || /timeout|timed out|gateway|upstream|connection|temporar|unavailable/i.test(message);
+}
+
+function retryDelay(attempt) {
+  return Math.min(
+    EPHEMERAL_INSERT_RETRY_CAP_MS,
+    EPHEMERAL_INSERT_RETRY_BASE_MS * (2 ** Math.max(0, attempt - 1)),
+  );
+}
+
+async function readOneById(admin, table, id) {
+  const { data, error } = await admin
+    .from(table)
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  return { data, error };
+}
+
 async function insertOne(admin, table, row) {
-  const { data, error } = await admin.from(table).insert(row).select('*').single();
-  if (error || !data?.id) throw new Error(`ephemeral_${table}_create_failed`);
-  return data;
+  if (!row?.id) throw new Error(`ephemeral_${table}_stable_id_required`);
+
+  let lastError = null;
+  for (let attempt = 1; attempt <= EPHEMERAL_INSERT_MAX_ATTEMPTS; attempt += 1) {
+    const { data, error } = await admin.from(table).insert(row).select('*').single();
+    if (!error && data?.id === row.id) return data;
+
+    lastError = error;
+
+    // A 5xx/timeout response is ambiguous: PostgREST may have committed the row
+    // even though the client never received the response. Always reconcile by the
+    // pre-generated stable id before deciding whether another insert is safe.
+    const readback = await readOneById(admin, table, row.id);
+    if (!readback.error && readback.data?.id === row.id) return readback.data;
+
+    if (!isAmbiguousTransportError(error) || attempt === EPHEMERAL_INSERT_MAX_ATTEMPTS) {
+      break;
+    }
+    await sleep(retryDelay(attempt));
+  }
+
+  const suffix = isAmbiguousTransportError(lastError) ? '_transport_exhausted' : '';
+  throw new Error(`ephemeral_${table}_create_failed${suffix}`);
 }
 
 function userAbsenceWasProven(data, error) {
@@ -25,20 +79,20 @@ function userAbsenceWasProven(data, error) {
   return status === 404 || /not found/i.test(message);
 }
 
-async function cleanupOrganizationCommercialDependencies(admin, organizationIds, failures) {
+async function cleanupOrganizationCommercialDependencies(admin, organizationIds) {
   if (organizationIds.length === 0) return;
 
-  const { error: entitlementError } = await admin
+  // Delete results can also be transport-ambiguous. Final cleanup acceptance is
+  // based on explicit readback below rather than on the HTTP response alone.
+  await admin
     .from('organization_entitlements')
     .delete()
     .in('organization_id', organizationIds);
-  if (entitlementError) failures.push('organization_entitlement_cleanup_failed');
 
-  const { error: contractError } = await admin
+  await admin
     .from('enterprise_contracts')
     .delete()
     .in('organization_id', organizationIds);
-  if (contractError) failures.push('enterprise_contract_cleanup_failed');
 }
 
 async function verifyOrganizationCommercialDependenciesRemoved(admin, organizationIds, failures) {
@@ -66,8 +120,7 @@ export async function cleanupEphemeralAuthFixtures(admin, created) {
   const failures = [];
 
   for (const id of [...created.memberships].reverse()) {
-    const { error } = await admin.from('organization_members').delete().eq('id', id);
-    if (error) failures.push('membership_cleanup_failed');
+    await admin.from('organization_members').delete().eq('id', id);
   }
 
   // Production provisions an enterprise contract and organization entitlement when
@@ -75,15 +128,13 @@ export async function cleanupEphemeralAuthFixtures(admin, created) {
   // foreign keys are RESTRICT to protect real commercial history. The protected
   // runtime fixture must therefore remove only its own synthetic dependants before
   // deleting the synthetic organization.
-  await cleanupOrganizationCommercialDependencies(admin, created.organizations, failures);
+  await cleanupOrganizationCommercialDependencies(admin, created.organizations);
 
   for (const id of [...created.organizations].reverse()) {
-    const { error } = await admin.from('organizations').delete().eq('id', id);
-    if (error) failures.push('organization_cleanup_failed');
+    await admin.from('organizations').delete().eq('id', id);
   }
   for (const id of [...created.users].reverse()) {
-    const { error } = await admin.auth.admin.deleteUser(id);
-    if (error) failures.push('user_cleanup_failed');
+    await admin.auth.admin.deleteUser(id);
   }
 
   if (created.memberships.length > 0) {
@@ -143,40 +194,50 @@ export async function createEphemeralAuthFixtures(
     const member = await createUser('member', `${normalizedPurpose}-member`);
     const outsider = await createUser('outsider', `${normalizedPurpose}-outsider`);
 
+    const organizationAId = randomUUID();
+    created.organizations.push(organizationAId);
     const organizationA = await insertOne(admin, 'organizations', {
+      id: organizationAId,
       name: `Enterprise Runtime A ${suffix}`,
       slug: `${normalizedPurpose}-a-${suffix}`,
       created_by: owner.id,
     });
-    created.organizations.push(organizationA.id);
 
+    const organizationBId = randomUUID();
+    created.organizations.push(organizationBId);
     const organizationB = await insertOne(admin, 'organizations', {
+      id: organizationBId,
       name: `Enterprise Runtime B ${suffix}`,
       slug: `${normalizedPurpose}-b-${suffix}`,
       created_by: outsider.id,
     });
-    created.organizations.push(organizationB.id);
 
+    const ownerMembershipId = randomUUID();
+    created.memberships.push(ownerMembershipId);
     const ownerMembership = await insertOne(admin, 'organization_members', {
+      id: ownerMembershipId,
       organization_id: organizationA.id,
       user_id: owner.id,
       role: 'owner',
     });
-    created.memberships.push(ownerMembership.id);
 
+    const memberMembershipId = randomUUID();
+    created.memberships.push(memberMembershipId);
     const memberMembership = await insertOne(admin, 'organization_members', {
+      id: memberMembershipId,
       organization_id: organizationA.id,
       user_id: member.id,
       role: 'member',
     });
-    created.memberships.push(memberMembership.id);
 
+    const outsiderMembershipId = randomUUID();
+    created.memberships.push(outsiderMembershipId);
     const outsiderMembership = await insertOne(admin, 'organization_members', {
+      id: outsiderMembershipId,
       organization_id: organizationB.id,
       user_id: outsider.id,
       role: 'owner',
     });
-    created.memberships.push(outsiderMembership.id);
 
     return {
       created,
@@ -185,6 +246,9 @@ export async function createEphemeralAuthFixtures(
       outsider,
       organizationA,
       organizationB,
+      ownerMembership,
+      memberMembership,
+      outsiderMembership,
     };
   } catch (error) {
     const cleanup = await cleanupEphemeralAuthFixtures(admin, created);
