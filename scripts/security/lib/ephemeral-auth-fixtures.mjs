@@ -20,14 +20,18 @@ function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-function isAmbiguousTransportError(error) {
-  if (!error) return false;
-  const status = Number(error?.status || error?.statusCode || 0);
+function isAmbiguousTransportFailure(error, responseStatus = 0) {
+  const status = Number(responseStatus || error?.status || error?.statusCode || 0);
   const code = String(error?.code || '').toUpperCase();
   const message = String(error?.message || '');
   return status >= 500
     || ['57014', '57P01', '57P02', '57P03', '08000', '08001', '08003', '08004', '08006', '08007', '08P01'].includes(code)
     || /timeout|timed out|gateway|upstream|connection|temporar|unavailable/i.test(message);
+}
+
+function isDuplicateKeyError(error) {
+  return String(error?.code || '').toUpperCase() === '23505'
+    || /duplicate key/i.test(String(error?.message || ''));
 }
 
 function retryDelay(attempt) {
@@ -38,37 +42,57 @@ function retryDelay(attempt) {
 }
 
 async function readOneById(admin, table, id) {
-  const { data, error } = await admin
+  const response = await admin
     .from(table)
     .select('*')
     .eq('id', id)
     .maybeSingle();
-  return { data, error };
+  return {
+    data: response?.data ?? null,
+    error: response?.error ?? null,
+    status: Number(response?.status || 0),
+  };
 }
 
 async function insertOne(admin, table, row) {
   if (!row?.id) throw new Error(`ephemeral_${table}_stable_id_required`);
 
-  let lastError = null;
+  let lastFailure = { error: null, status: 0 };
+  let sawAmbiguousWrite = false;
+
   for (let attempt = 1; attempt <= EPHEMERAL_INSERT_MAX_ATTEMPTS; attempt += 1) {
-    const { data, error } = await admin.from(table).insert(row).select('*').single();
+    const response = await admin.from(table).insert(row).select('*').single();
+    const data = response?.data ?? null;
+    const error = response?.error ?? null;
+    const status = Number(response?.status || 0);
     if (!error && data?.id === row.id) return data;
 
-    lastError = error;
+    const insertAmbiguous = isAmbiguousTransportFailure(error, status);
+    sawAmbiguousWrite ||= insertAmbiguous;
+    lastFailure = { error, status };
 
-    // A 5xx/timeout response is ambiguous: PostgREST may have committed the row
-    // even though the client never received the response. Always reconcile by the
-    // pre-generated stable id before deciding whether another insert is safe.
+    // A transport failure is ambiguous: PostgREST may have committed the row even
+    // though the client never received the response. Always reconcile by the exact
+    // pre-generated id before deciding whether another insert is safe.
     const readback = await readOneById(admin, table, row.id);
     if (!readback.error && readback.data?.id === row.id) return readback.data;
 
-    if (!isAmbiguousTransportError(error) || attempt === EPHEMERAL_INSERT_MAX_ATTEMPTS) {
+    const readbackAmbiguous = isAmbiguousTransportFailure(readback.error, readback.status);
+    const duplicateAfterAmbiguousWrite = sawAmbiguousWrite && isDuplicateKeyError(error);
+    const canContinueReconciliation = insertAmbiguous
+      || (sawAmbiguousWrite && readbackAmbiguous)
+      || duplicateAfterAmbiguousWrite;
+
+    if (!canContinueReconciliation || attempt === EPHEMERAL_INSERT_MAX_ATTEMPTS) {
       break;
     }
     await sleep(retryDelay(attempt));
   }
 
-  const suffix = isAmbiguousTransportError(lastError) ? '_transport_exhausted' : '';
+  const suffix = sawAmbiguousWrite
+    || isAmbiguousTransportFailure(lastFailure.error, lastFailure.status)
+    ? '_transport_exhausted'
+    : '';
   throw new Error(`ephemeral_${table}_create_failed${suffix}`);
 }
 
