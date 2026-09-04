@@ -52,7 +52,9 @@ type SupabaseError = { code?: string; message?: string };
 const AUDIT_EVENT_COLUMNS = 'id,organization_id,actor_user_id,action,entity_type,entity_id,metadata,created_at,previous_hash,event_hash,hash_algorithm,hash_signature';
 const LEGACY_AUDIT_EVENT_COLUMNS = 'id,organization_id,actor_user_id:actor_id,action,entity_type,entity_id,metadata,created_at';
 const CHAIN_APPEND_RPC = 'append_audit_event_chained';
-const MAX_CHAIN_APPEND_ATTEMPTS = 4;
+const MAX_CHAIN_APPEND_ATTEMPTS = 32;
+const CHAIN_APPEND_RETRY_BASE_MS = 4;
+const CHAIN_APPEND_RETRY_CAP_MS = 80;
 const NON_TRANSACTIONAL_FALLBACK_ENV = 'AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK';
 const LEGACY_FALLBACK_ENV = 'AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK';
 const MAX_METADATA_DEPTH = 6;
@@ -314,6 +316,15 @@ function buildAuditChainRpcParams(input: NormalizedAuditEventInput, chain: Retur
   };
 }
 
+function waitForAuditChainRetry(attempt: number) {
+  const exponential = Math.min(
+    CHAIN_APPEND_RETRY_CAP_MS,
+    CHAIN_APPEND_RETRY_BASE_MS * (2 ** Math.min(Math.max(attempt - 1, 0), 4)),
+  );
+  const jitter = Math.floor(Math.random() * (CHAIN_APPEND_RETRY_BASE_MS + 1));
+  return new Promise<void>((resolve) => setTimeout(resolve, exponential + jitter));
+}
+
 async function appendAuditEventWithRpc(supabase: SupabaseAdminClient, input: NormalizedAuditEventInput) {
   let lastError: SupabaseError | null = null;
 
@@ -330,6 +341,7 @@ async function appendAuditEventWithRpc(supabase: SupabaseAdminClient, input: Nor
     lastError = error;
 
     if (isPreviousHashMismatch(error) && attempt < MAX_CHAIN_APPEND_ATTEMPTS) {
+      await waitForAuditChainRetry(attempt);
       continue;
     }
 
