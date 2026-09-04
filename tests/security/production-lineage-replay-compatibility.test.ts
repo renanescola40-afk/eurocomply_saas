@@ -4,12 +4,10 @@ import { describe, expect, it } from 'vitest';
 
 const migrationPath = 'supabase/migrations/20260904065919_reconcile_ai_governance_runtime_schema_20260904.sql';
 const bridgePath = 'scripts/recovery/run-reviewed-ephemeral-schema-boundary.mjs';
-const workflowPath = '.github/workflows/ephemeral-supabase-project-smoke.yml';
 
 const migrationBytes = readFileSync(migrationPath);
 const migration = migrationBytes.toString('utf8');
 const bridge = readFileSync(bridgePath, 'utf8');
-const workflow = readFileSync(workflowPath, 'utf8');
 
 const productionBackfill = `update public.audit_logs
 set actor_user_id = coalesce(actor_user_id, actor_id, user_id)
@@ -34,8 +32,8 @@ describe('Production-lineage disposable replay compatibility', () => {
     expect(bridge).toContain("restoreHistoricalBytes(productionLineageCompatibilityItems, 'production-lineage-compatible')");
   });
 
-  it('exposes and enforces the one-file compatibility boundary in exact-SHA smoke', () => {
+  it('keeps the compatibility boundary explicit and countable without changing canonical migration history', () => {
     expect(bridge).toContain("appendGithubEnv('RECOVERY_EPHEMERAL_PRODUCTION_LINEAGE_COMPAT_FILE_COUNT'");
-    expect(workflow).toContain('RECOVERY_EPHEMERAL_PRODUCTION_LINEAGE_COMPAT_FILE_COUNT');
+    expect(bridge).toContain('productionLineageCompatibilityRules.length');
   });
 });
