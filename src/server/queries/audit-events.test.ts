@@ -117,6 +117,28 @@ describe('audit event persistence', () => {
     expect(queryBuilder.insert).not.toHaveBeenCalled();
   });
 
+  it('fails closed when reading the current audit-chain head fails', async () => {
+    const queryBuilder = createQueryBuilder([]);
+    queryBuilder.maybeSingle.mockResolvedValueOnce({
+      data: null,
+      error: { code: '57014', message: 'statement timeout while reading audit chain head' },
+    });
+    const rpc = vi.fn(async () => ({ error: null }));
+    const supabase = {
+      from: vi.fn(() => queryBuilder),
+      rpc,
+    };
+
+    tryCreateAdminClient.mockReturnValue(supabase);
+
+    const { createAuditEvent } = await import('./audit-events');
+    const result = await createAuditEvent(baseInput);
+
+    expect(result).toEqual({ persisted: false, reason: 'transactional_append_unavailable' });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
   it('fails closed instead of using non-transactional append when the RPC is unavailable by default', async () => {
     const queryBuilder = createQueryBuilder(['hash-a']);
     const rpc = vi.fn(async () => ({ error: { code: '42883', message: 'function append_audit_event_chained does not exist' } }));
