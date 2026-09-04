@@ -7,26 +7,20 @@ const rootDir = process.cwd();
 const subjectSha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 describe('Supabase forward reconciliation control-plane capacity', () => {
-  it('compiles the exact current V28 plus V29 plus onboarding V30 package', async () => {
+  it('compiles only the exact V31 final public-release hardening package', async () => {
     const config = JSON.parse(await readFile('config/supabase-forward-reconciliation.json', 'utf8'));
 
     expect(config.migrations).toEqual([
       expect.objectContaining({
-        filename: '20260903090000_verify_v28_provider_ledger_reconciliation.sql',
-      }),
-      expect.objectContaining({
-        filename: '20260903100000_reconcile_enterprise_step_up_runtime.sql',
-      }),
-      expect.objectContaining({
-        filename: '20260903114500_reconcile_onboarding_atomic_text_arrays.sql',
+        filename: '20260904113000_final_public_release_payment_storage_hardening.sql',
       }),
     ]);
     const manifest = await compileForwardReconciliationManifest({ config, rootDir, subjectSha });
 
     expect(manifest.targetSha).toBe(subjectSha);
-    expect(manifest.migrations).toHaveLength(3);
+    expect(manifest.migrations).toHaveLength(1);
     expect(manifest.changeSet).toBe(
-      '2026-09-03-enterprise-step-up-onboarding-runtime-reconciliation-v30',
+      '2026-09-04-final-public-release-payment-storage-hardening-v31',
     );
     expect(manifest.checks.productionWriteAuthorized).toBe(false);
     expect(manifest.checks.migrationHistoryRepairAuthorized).toBe(false);
