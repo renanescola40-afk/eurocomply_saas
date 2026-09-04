@@ -24,9 +24,10 @@ const legacyEnterpriseReleaseEnv = env('EUROCOMPLY', 'ENTERPRISE', 'RELEASE');
 const rpcName = 'append_audit_event_chained';
 const syntheticAction = 'security.audit_chain_live_validation';
 const CONCURRENCY_LEVELS = Object.freeze([10, 25, 50, 100]);
-const LIVE_APPEND_MAX_ATTEMPTS = 32;
-const LIVE_RETRY_BASE_MS = 4;
-const LIVE_RETRY_CAP_MS = 80;
+const LIVE_APPEND_MAX_ATTEMPTS = 128;
+const LIVE_RETRY_BASE_MS = 3;
+const LIVE_RETRY_CAP_MS = 50;
+const CLEANUP_CHUNK_SIZE = 50;
 
 const requiredFiles = [
   'src/server/security/audit-chain.ts',
@@ -66,7 +67,7 @@ const sourceTokens = {
   'src/server/queries/audit-events.ts': [
     rpcName,
     'buildAuditChainRecord',
-    'MAX_CHAIN_APPEND_ATTEMPTS = 32',
+    'MAX_CHAIN_APPEND_ATTEMPTS = 128',
     'waitForAuditChainRetry',
     'transactional_append_unavailable',
     'AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK',
@@ -362,18 +363,30 @@ async function validateSchema(supabase) {
   };
 }
 
+function chunkIds(ids) {
+  const chunks = [];
+  for (let index = 0; index < ids.length; index += CLEANUP_CHUNK_SIZE) {
+    chunks.push(ids.slice(index, index + CLEANUP_CHUNK_SIZE));
+  }
+  return chunks;
+}
+
 async function cleanupSyntheticAuditEvents(supabase, ids) {
   if (!Array.isArray(ids) || ids.length === 0) {
     return { verified: true, failureCodes: [] };
   }
 
   const failureCodes = [];
-  const { error: deleteError } = await supabase.from('audit_events').delete().in('id', ids);
-  if (deleteError) failureCodes.push('audit_event_cleanup_failed');
+  for (const chunk of chunkIds(ids)) {
+    const { error: deleteError } = await supabase.from('audit_events').delete().in('id', chunk);
+    if (deleteError) failureCodes.push('audit_event_cleanup_failed');
+  }
 
-  const { data, error: verifyError } = await supabase.from('audit_events').select('id').in('id', ids);
-  if (verifyError || (Array.isArray(data) && data.length > 0)) {
-    failureCodes.push('audit_event_cleanup_not_verified');
+  for (const chunk of chunkIds(ids)) {
+    const { data, error: verifyError } = await supabase.from('audit_events').select('id').in('id', chunk);
+    if (verifyError || (Array.isArray(data) && data.length > 0)) {
+      failureCodes.push('audit_event_cleanup_not_verified');
+    }
   }
 
   return { verified: failureCodes.length === 0, failureCodes: [...new Set(failureCodes)] };
