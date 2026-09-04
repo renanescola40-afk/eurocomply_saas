@@ -64,6 +64,20 @@ export type EvidenceInput = {
 };
 
 const EVIDENCE_BUCKET = 'compliance-evidence' as const;
+export const EVIDENCE_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+export const EVIDENCE_ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'text/plain',
+  'text/markdown',
+  'text/csv',
+  'application/json',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+] as const;
+
+const EVIDENCE_ALLOWED_MIME_TYPE_SET = new Set<string>(EVIDENCE_ALLOWED_MIME_TYPES);
 
 function normalizeError(error: unknown) {
   if (error instanceof Error) return error.message;
@@ -83,6 +97,19 @@ function hasLegacyAttachmentInput(input: EvidenceInput) {
       || input.fileSha256
       || input.fileSizeBytes !== undefined,
   );
+}
+
+function validateEvidenceUpload(file: File) {
+  if (!Number.isSafeInteger(file.size) || file.size < 0 || file.size > EVIDENCE_MAX_FILE_SIZE_BYTES) {
+    throw new Error('Evidence file exceeds the supported 10 MB limit.');
+  }
+
+  const mimeType = file.type.trim().toLowerCase();
+  if (!mimeType || !EVIDENCE_ALLOWED_MIME_TYPE_SET.has(mimeType)) {
+    throw new Error('Evidence file type is not supported.');
+  }
+
+  return mimeType;
 }
 
 /**
@@ -226,14 +253,14 @@ async function sha256Hex(file: File) {
 }
 
 /**
- * Reserve immutable attachment metadata, then insert bytes under the exact
- * <organization_id>/<evidence_id>/<filename> key. No browser UPDATE or DELETE
- * policy exists for the Storage object after insertion.
+ * Validate bytes before reserving immutable attachment metadata, then insert
+ * under the exact <organization_id>/<evidence_id>/<filename> key. Storage and
+ * database constraints independently enforce the same size/MIME boundary.
  */
 export async function uploadEvidenceFile(params: { organizationId: string; evidenceId: string; file: File }) {
+  const fileMimeType = validateEvidenceUpload(params.file);
   const fileName = sanitizeFileName(params.file.name);
   const objectPath = `${params.organizationId}/${params.evidenceId}/${fileName}`;
-  const fileMimeType = params.file.type || 'application/octet-stream';
   const fileSha256 = await sha256Hex(params.file);
   const fileSizeBytes = params.file.size;
 
