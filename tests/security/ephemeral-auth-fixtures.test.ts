@@ -9,12 +9,14 @@ type FakeOptions = {
   failOrganizationNumber?: number;
   ambiguousCommitOrganizationNumber?: number;
   transientOrganizationNumber?: number;
+  transientOrganizationReadbacks?: number;
 };
 
 function fakeAdmin({
   failOrganizationNumber = 0,
   ambiguousCommitOrganizationNumber = 0,
   transientOrganizationNumber = 0,
+  transientOrganizationReadbacks = 0,
 }: FakeOptions = {}) {
   const state = {
     users: new Set<string>(),
@@ -25,6 +27,7 @@ function fakeAdmin({
   };
   let userCounter = 0;
   let organizationInsertCounter = 0;
+  let organizationReadCounter = 0;
   let contractCounter = 0;
   let entitlementCounter = 0;
 
@@ -106,40 +109,42 @@ function fakeAdmin({
         select: () => ({
           single: async () => {
             const id = String(row.id || '');
-            if (!id) return { data: null, error: { message: 'stable id required' } };
+            if (!id) return { data: null, error: { message: 'stable id required' }, status: 400 };
 
             if (table === 'organizations') {
               organizationInsertCounter += 1;
               if (failOrganizationNumber === organizationInsertCounter) {
-                return { data: null, error: { message: 'synthetic failure' } };
+                return { data: null, error: { message: 'synthetic failure' }, status: 400 };
               }
               if (transientOrganizationNumber === organizationInsertCounter) {
                 return {
                   data: null,
-                  error: { status: 504, code: '57014', message: 'upstream request timeout' },
+                  error: { message: 'Internal Server Error' },
+                  status: 504,
                 };
               }
               if (ambiguousCommitOrganizationNumber === organizationInsertCounter) {
                 provisionOrganization(id);
                 return {
                   data: null,
-                  error: { status: 504, code: '57014', message: 'upstream request timeout' },
+                  error: { message: 'Internal Server Error' },
+                  status: 504,
                 };
               }
               if (state.organizations.has(id)) {
-                return { data: null, error: { code: '23505', message: 'duplicate key' } };
+                return { data: null, error: { code: '23505', message: 'duplicate key' }, status: 409 };
               }
               provisionOrganization(id);
-              return { data: { id }, error: null };
+              return { data: { id }, error: null, status: 201 };
             }
             if (table === 'organization_members') {
               if (state.memberships.has(id)) {
-                return { data: null, error: { code: '23505', message: 'duplicate key' } };
+                return { data: null, error: { code: '23505', message: 'duplicate key' }, status: 409 };
               }
               state.memberships.add(id);
-              return { data: { id }, error: null };
+              return { data: { id }, error: null, status: 201 };
             }
-            return { data: null, error: { message: 'unexpected table' } };
+            return { data: null, error: { message: 'unexpected table' }, status: 400 };
           },
         }),
       }),
@@ -153,7 +158,7 @@ function fakeAdmin({
           if (table === 'organization_members') state.memberships.delete(id);
           return { error: null };
         },
-        in: async (column: string, ids: string[]) => deleteByOrganizationIds(table, ids),
+        in: async (_column: string, ids: string[]) => deleteByOrganizationIds(table, ids),
       }),
       select: (columns = '*') => ({
         in: async (column: string, ids: string[]) => {
@@ -169,10 +174,23 @@ function fakeAdmin({
           };
         },
         eq: (_column: string, id: string) => ({
-          maybeSingle: async () => ({
-            data: recordById(table, id),
-            error: null,
-          }),
+          maybeSingle: async () => {
+            if (table === 'organizations') {
+              organizationReadCounter += 1;
+              if (organizationReadCounter <= transientOrganizationReadbacks) {
+                return {
+                  data: null,
+                  error: { message: 'Internal Server Error' },
+                  status: 504,
+                };
+              }
+            }
+            return {
+              data: recordById(table, id),
+              error: null,
+              status: 200,
+            };
+          },
         }),
       }),
     }),
@@ -217,7 +235,7 @@ describe('ephemeral Supabase Auth fixture lifecycle', () => {
     expect(state.organizationEntitlements.size).toBe(0);
   });
 
-  it('reconciles a 504 when the organization insert committed before the response was lost', async () => {
+  it('reconciles a response-level 504 when the organization insert committed', async () => {
     const { admin, state } = fakeAdmin({ ambiguousCommitOrganizationNumber: 1 });
 
     const fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'ambiguous-commit-proof' });
@@ -231,10 +249,27 @@ describe('ephemeral Supabase Auth fixture lifecycle', () => {
     expect(state.organizations.size).toBe(0);
   });
 
-  it('retries the same stable organization id after a transient 504 that did not commit', async () => {
+  it('retries the same stable organization id after a response-level 504 that did not commit', async () => {
     const { admin, state } = fakeAdmin({ transientOrganizationNumber: 1 });
 
     const fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'transient-retry-proof' });
+
+    expect(fixtures.created.organizations).toHaveLength(2);
+    expect(new Set(fixtures.created.organizations).size).toBe(2);
+    expect(state.organizations.size).toBe(2);
+
+    const cleanup = await cleanupEphemeralAuthFixtures(admin, fixtures.created);
+    expect(cleanup).toEqual({ verified: true, failures: [] });
+    expect(state.organizations.size).toBe(0);
+  });
+
+  it('keeps bounded reconciliation alive through transient readbacks and a duplicate retry', async () => {
+    const { admin, state } = fakeAdmin({
+      ambiguousCommitOrganizationNumber: 1,
+      transientOrganizationReadbacks: 2,
+    });
+
+    const fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'multi-request-outage-proof' });
 
     expect(fixtures.created.organizations).toHaveLength(2);
     expect(new Set(fixtures.created.organizations).size).toBe(2);
