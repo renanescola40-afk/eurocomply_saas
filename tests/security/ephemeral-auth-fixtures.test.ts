@@ -5,7 +5,19 @@ import {
   createEphemeralAuthFixtures,
 } from '../../scripts/security/lib/ephemeral-auth-fixtures.mjs';
 
-function fakeAdmin({ failOrganizationNumber = 0 } = {}) {
+type FakeOptions = {
+  failOrganizationNumber?: number;
+  ambiguousCommitOrganizationNumber?: number;
+  transientOrganizationNumber?: number;
+  transientOrganizationReadbacks?: number;
+};
+
+function fakeAdmin({
+  failOrganizationNumber = 0,
+  ambiguousCommitOrganizationNumber = 0,
+  transientOrganizationNumber = 0,
+  transientOrganizationReadbacks = 0,
+}: FakeOptions = {}) {
   const state = {
     users: new Set<string>(),
     organizations: new Set<string>(),
@@ -14,8 +26,8 @@ function fakeAdmin({ failOrganizationNumber = 0 } = {}) {
     organizationEntitlements: new Map<string, string>(),
   };
   let userCounter = 0;
-  let organizationCounter = 0;
-  let membershipCounter = 0;
+  let organizationInsertCounter = 0;
+  let organizationReadCounter = 0;
   let contractCounter = 0;
   let entitlementCounter = 0;
 
@@ -37,6 +49,23 @@ function fakeAdmin({ failOrganizationNumber = 0 } = {}) {
         .map((organizationId) => ({ organization_id: organizationId }));
     }
     return [];
+  };
+
+  const recordById = (table: string, id: string) => {
+    if (table === 'organizations' && state.organizations.has(id)) return { id };
+    if (table === 'organization_members' && state.memberships.has(id)) return { id };
+    return null;
+  };
+
+  const provisionOrganization = (id: string) => {
+    if (state.organizations.has(id)) return;
+    state.organizations.add(id);
+
+    // Production provisions these records automatically for a new tenant.
+    const contractId = `contract-${++contractCounter}`;
+    const entitlementId = `entitlement-${++entitlementCounter}`;
+    state.enterpriseContracts.set(contractId, id);
+    state.organizationEntitlements.set(entitlementId, id);
   };
 
   const deleteByOrganizationIds = (table: string, ids: string[]) => {
@@ -76,31 +105,46 @@ function fakeAdmin({ failOrganizationNumber = 0 } = {}) {
       },
     },
     from: (table: string) => ({
-      insert: (_row: unknown) => ({
+      insert: (row: { id?: string }) => ({
         select: () => ({
           single: async () => {
+            const id = String(row.id || '');
+            if (!id) return { data: null, error: { message: 'stable id required' }, status: 400 };
+
             if (table === 'organizations') {
-              organizationCounter += 1;
-              if (failOrganizationNumber === organizationCounter) {
-                return { data: null, error: { message: 'synthetic failure' } };
+              organizationInsertCounter += 1;
+              if (failOrganizationNumber === organizationInsertCounter) {
+                return { data: null, error: { message: 'synthetic failure' }, status: 400 };
               }
-              const id = `org-${organizationCounter}`;
-              state.organizations.add(id);
-
-              // Production provisions these records automatically for a new tenant.
-              const contractId = `contract-${++contractCounter}`;
-              const entitlementId = `entitlement-${++entitlementCounter}`;
-              state.enterpriseContracts.set(contractId, id);
-              state.organizationEntitlements.set(entitlementId, id);
-
-              return { data: { id }, error: null };
+              if (transientOrganizationNumber === organizationInsertCounter) {
+                return {
+                  data: null,
+                  error: { message: 'Internal Server Error' },
+                  status: 504,
+                };
+              }
+              if (ambiguousCommitOrganizationNumber === organizationInsertCounter) {
+                provisionOrganization(id);
+                return {
+                  data: null,
+                  error: { message: 'Internal Server Error' },
+                  status: 504,
+                };
+              }
+              if (state.organizations.has(id)) {
+                return { data: null, error: { code: '23505', message: 'duplicate key' }, status: 409 };
+              }
+              provisionOrganization(id);
+              return { data: { id }, error: null, status: 201 };
             }
             if (table === 'organization_members') {
-              const id = `membership-${++membershipCounter}`;
+              if (state.memberships.has(id)) {
+                return { data: null, error: { code: '23505', message: 'duplicate key' }, status: 409 };
+              }
               state.memberships.add(id);
-              return { data: { id }, error: null };
+              return { data: { id }, error: null, status: 201 };
             }
-            return { data: null, error: { message: 'unexpected table' } };
+            return { data: null, error: { message: 'unexpected table' }, status: 400 };
           },
         }),
       }),
@@ -114,7 +158,7 @@ function fakeAdmin({ failOrganizationNumber = 0 } = {}) {
           if (table === 'organization_members') state.memberships.delete(id);
           return { error: null };
         },
-        in: async (column: string, ids: string[]) => deleteByOrganizationIds(table, ids),
+        in: async (_column: string, ids: string[]) => deleteByOrganizationIds(table, ids),
       }),
       select: (columns = '*') => ({
         in: async (column: string, ids: string[]) => {
@@ -129,6 +173,25 @@ function fakeAdmin({ failOrganizationNumber = 0 } = {}) {
             error: null,
           };
         },
+        eq: (_column: string, id: string) => ({
+          maybeSingle: async () => {
+            if (table === 'organizations') {
+              organizationReadCounter += 1;
+              if (organizationReadCounter <= transientOrganizationReadbacks) {
+                return {
+                  data: null,
+                  error: { message: 'Internal Server Error' },
+                  status: 504,
+                };
+              }
+            }
+            return {
+              data: recordById(table, id),
+              error: null,
+              status: 200,
+            };
+          },
+        }),
       }),
     }),
   };
@@ -170,5 +233,50 @@ describe('ephemeral Supabase Auth fixture lifecycle', () => {
     expect(state.memberships.size).toBe(0);
     expect(state.enterpriseContracts.size).toBe(0);
     expect(state.organizationEntitlements.size).toBe(0);
+  });
+
+  it('reconciles a response-level 504 when the organization insert committed', async () => {
+    const { admin, state } = fakeAdmin({ ambiguousCommitOrganizationNumber: 1 });
+
+    const fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'ambiguous-commit-proof' });
+
+    expect(fixtures.created.organizations).toHaveLength(2);
+    expect(new Set(fixtures.created.organizations).size).toBe(2);
+    expect(state.organizations.size).toBe(2);
+
+    const cleanup = await cleanupEphemeralAuthFixtures(admin, fixtures.created);
+    expect(cleanup).toEqual({ verified: true, failures: [] });
+    expect(state.organizations.size).toBe(0);
+  });
+
+  it('retries the same stable organization id after a response-level 504 that did not commit', async () => {
+    const { admin, state } = fakeAdmin({ transientOrganizationNumber: 1 });
+
+    const fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'transient-retry-proof' });
+
+    expect(fixtures.created.organizations).toHaveLength(2);
+    expect(new Set(fixtures.created.organizations).size).toBe(2);
+    expect(state.organizations.size).toBe(2);
+
+    const cleanup = await cleanupEphemeralAuthFixtures(admin, fixtures.created);
+    expect(cleanup).toEqual({ verified: true, failures: [] });
+    expect(state.organizations.size).toBe(0);
+  });
+
+  it('keeps bounded reconciliation alive through transient readbacks and a duplicate retry', async () => {
+    const { admin, state } = fakeAdmin({
+      ambiguousCommitOrganizationNumber: 1,
+      transientOrganizationReadbacks: 2,
+    });
+
+    const fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'multi-request-outage-proof' });
+
+    expect(fixtures.created.organizations).toHaveLength(2);
+    expect(new Set(fixtures.created.organizations).size).toBe(2);
+    expect(state.organizations.size).toBe(2);
+
+    const cleanup = await cleanupEphemeralAuthFixtures(admin, fixtures.created);
+    expect(cleanup).toEqual({ verified: true, failures: [] });
+    expect(state.organizations.size).toBe(0);
   });
 });
