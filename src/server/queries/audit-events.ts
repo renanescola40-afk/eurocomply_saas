@@ -53,8 +53,8 @@ const AUDIT_EVENT_COLUMNS = 'id,organization_id,actor_user_id,action,entity_type
 const LEGACY_AUDIT_EVENT_COLUMNS = 'id,organization_id,actor_user_id:actor_id,action,entity_type,entity_id,metadata,created_at';
 const CHAIN_APPEND_RPC = 'append_audit_event_chained';
 const MAX_CHAIN_APPEND_ATTEMPTS = 128;
-const CHAIN_APPEND_RETRY_BASE_MS = 3;
-const CHAIN_APPEND_RETRY_CAP_MS = 50;
+const CHAIN_APPEND_RETRY_BASE_MS = 10;
+const CHAIN_APPEND_RETRY_CAP_MS = 1000;
 const NON_TRANSACTIONAL_FALLBACK_ENV = 'AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK';
 const LEGACY_FALLBACK_ENV = 'AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK';
 const MAX_METADATA_DEPTH = 6;
@@ -245,9 +245,9 @@ async function getPreviousAuditHash(supabase: SupabaseAdminClient, organizationI
     .limit(1)
     .maybeSingle();
 
-  if (error) return null;
+  if (error) return { hash: null, error };
   const hash = (data as { event_hash?: unknown } | null)?.event_hash;
-  return typeof hash === 'string' ? hash : null;
+  return { hash: typeof hash === 'string' ? hash : null, error: null };
 }
 
 function buildChainedPayload(input: NormalizedAuditEventInput, previousHash: string | null) {
@@ -317,20 +317,26 @@ function buildAuditChainRpcParams(input: NormalizedAuditEventInput, chain: Retur
 }
 
 function waitForAuditChainRetry(attempt: number) {
-  const exponential = Math.min(
+  const ceiling = Math.min(
     CHAIN_APPEND_RETRY_CAP_MS,
-    CHAIN_APPEND_RETRY_BASE_MS * (2 ** Math.min(Math.max(attempt - 1, 0), 4)),
+    CHAIN_APPEND_RETRY_BASE_MS * (2 ** Math.min(Math.max(attempt, 1), 7)),
   );
-  const jitter = Math.floor(Math.random() * (CHAIN_APPEND_RETRY_BASE_MS + 1));
-  return new Promise<void>((resolve) => setTimeout(resolve, exponential + jitter));
+  const jitterSpan = Math.max(0, ceiling - CHAIN_APPEND_RETRY_BASE_MS);
+  const delay = CHAIN_APPEND_RETRY_BASE_MS + Math.floor(Math.random() * (jitterSpan + 1));
+  return new Promise<void>((resolve) => setTimeout(resolve, delay));
 }
 
 async function appendAuditEventWithRpc(supabase: SupabaseAdminClient, input: NormalizedAuditEventInput) {
   let lastError: SupabaseError | null = null;
 
   for (let attempt = 1; attempt <= MAX_CHAIN_APPEND_ATTEMPTS; attempt += 1) {
-    const previousHash = await getPreviousAuditHash(supabase, input.organizationId);
-    const { id, createdAt, chain } = buildChainedPayload(input, previousHash);
+    const previousHashRead = await getPreviousAuditHash(supabase, input.organizationId);
+    if (previousHashRead.error) {
+      lastError = previousHashRead.error;
+      break;
+    }
+
+    const { id, createdAt, chain } = buildChainedPayload(input, previousHashRead.hash);
 
     const { error } = await supabase.rpc(CHAIN_APPEND_RPC, buildAuditChainRpcParams(input, chain, id, createdAt));
 
@@ -352,8 +358,12 @@ async function appendAuditEventWithRpc(supabase: SupabaseAdminClient, input: Nor
 }
 
 async function appendAuditEventWithDirectInsert(supabase: SupabaseAdminClient, input: NormalizedAuditEventInput) {
-  const previousHash = await getPreviousAuditHash(supabase, input.organizationId);
-  const { chain, payload } = buildChainedPayload(input, previousHash);
+  const previousHashRead = await getPreviousAuditHash(supabase, input.organizationId);
+  if (previousHashRead.error) {
+    return { ok: false as const, error: previousHashRead.error };
+  }
+
+  const { chain, payload } = buildChainedPayload(input, previousHashRead.hash);
   const { error } = await supabase.from('audit_events').insert(payload);
 
   if (!error) {

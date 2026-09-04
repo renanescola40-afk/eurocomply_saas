@@ -24,6 +24,11 @@ const baseInput = {
   metadata: { source: 'test' },
 };
 
+type QueryReadResult = {
+  data: { event_hash: string } | null;
+  error: { code?: string; message?: string } | null;
+};
+
 function createQueryBuilder(previousHashes: Array<string | null>) {
   return {
     select: vi.fn().mockReturnThis(),
@@ -31,7 +36,7 @@ function createQueryBuilder(previousHashes: Array<string | null>) {
     not: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
-    maybeSingle: vi.fn(async () => {
+    maybeSingle: vi.fn(async (): Promise<QueryReadResult> => {
       const eventHash = previousHashes.shift() ?? null;
       return { data: eventHash ? { event_hash: eventHash } : null, error: null };
     }),
@@ -114,6 +119,28 @@ describe('audit event persistence', () => {
       'append_audit_event_chained',
       expect.objectContaining({ p_previous_hash: 'hash-b', p_event_hash: 'event-hash-after-hash-b' }),
     );
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when reading the current audit-chain head fails', async () => {
+    const queryBuilder = createQueryBuilder([]);
+    queryBuilder.maybeSingle.mockResolvedValueOnce({
+      data: null,
+      error: { code: '57014', message: 'statement timeout while reading audit chain head' },
+    });
+    const rpc = vi.fn(async () => ({ error: null }));
+    const supabase = {
+      from: vi.fn(() => queryBuilder),
+      rpc,
+    };
+
+    tryCreateAdminClient.mockReturnValue(supabase);
+
+    const { createAuditEvent } = await import('./audit-events');
+    const result = await createAuditEvent(baseInput);
+
+    expect(result).toEqual({ persisted: false, reason: 'transactional_append_unavailable' });
+    expect(rpc).not.toHaveBeenCalled();
     expect(queryBuilder.insert).not.toHaveBeenCalled();
   });
 
