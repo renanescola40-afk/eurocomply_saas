@@ -25,8 +25,9 @@ const rpcName = 'append_audit_event_chained';
 const syntheticAction = 'security.audit_chain_live_validation';
 const CONCURRENCY_LEVELS = Object.freeze([10, 25, 50, 100]);
 const LIVE_APPEND_MAX_ATTEMPTS = 128;
-const LIVE_RETRY_BASE_MS = 3;
-const LIVE_RETRY_CAP_MS = 50;
+const LIVE_RETRY_BASE_MS = 25;
+const LIVE_RETRY_CAP_MS = 2000;
+const LIVE_BATCH_SETTLE_MS = 250;
 const CLEANUP_CHUNK_SIZE = 50;
 
 const requiredFiles = [
@@ -262,12 +263,17 @@ function isPreviousHashMismatch(error) {
 }
 
 function waitForLiveRetry(attempt) {
-  const exponential = Math.min(
+  const ceiling = Math.min(
     LIVE_RETRY_CAP_MS,
-    LIVE_RETRY_BASE_MS * (2 ** Math.min(Math.max(attempt - 1, 0), 4)),
+    LIVE_RETRY_BASE_MS * (2 ** Math.min(Math.max(attempt, 1), 7)),
   );
-  const jitter = Math.floor(Math.random() * (LIVE_RETRY_BASE_MS + 1));
-  return new Promise((resolve) => setTimeout(resolve, exponential + jitter));
+  const jitterSpan = Math.max(0, ceiling - LIVE_RETRY_BASE_MS);
+  const delay = LIVE_RETRY_BASE_MS + Math.floor(Math.random() * (jitterSpan + 1));
+  return new Promise((resolve) => setTimeout(resolve, delay));
+}
+
+function waitForBatchSettle() {
+  return new Promise((resolve) => setTimeout(resolve, LIVE_BATCH_SETTLE_MS));
 }
 
 async function appendWithRetry(supabase, { organizationId, actorUserId, suffix }) {
@@ -456,6 +462,7 @@ async function runLiveValidation() {
         latencyMs: Date.now() - batchStartedAt,
         errorCodes: [...new Set(results.filter((result) => !result.ok).map((result) => result.errorCode))],
       });
+      await waitForBatchSettle();
     }
 
     const concurrencySafe = concurrencyBatches.every((batch) => batch.lost === 0 && batch.persisted === batch.requested);
@@ -515,7 +522,10 @@ async function runLiveValidation() {
         errorCount: concurrencyBatches.reduce((sum, batch) => sum + batch.lost, 0),
         retryStatus: concurrencySafe ? 'Complete' : 'Failed',
         maxAttempts: LIVE_APPEND_MAX_ATTEMPTS,
-        note: 'Each worker retries only previous-hash conflicts after rereading the current chain head; PASS requires zero lost events at 10, 25, 50 and 100 parallel writes.',
+        retryBaseMs: LIVE_RETRY_BASE_MS,
+        retryCapMs: LIVE_RETRY_CAP_MS,
+        batchSettleMs: LIVE_BATCH_SETTLE_MS,
+        note: 'Each worker retries only previous-hash conflicts after rereading the current chain head with dephased exponential jitter; PASS requires zero lost events at 10, 25, 50 and 100 parallel writes.',
       },
       tamperDetection: {
         status: tamperDetected ? 'Complete' : 'Failed',
