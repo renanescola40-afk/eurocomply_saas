@@ -120,9 +120,13 @@ set
   ]::text[]
 where id = 'compliance-evidence';
 
-if not found then
-  raise exception 'required compliance-evidence Storage bucket is missing';
-end if;
+do $bucket_exists$
+begin
+  if not exists (select 1 from storage.buckets where id = 'compliance-evidence') then
+    raise exception 'required compliance-evidence Storage bucket is missing';
+  end if;
+end
+$bucket_exists$;
 
 -- Mirror the Storage bound at the metadata contract so direct database/API
 -- writes cannot reserve an attachment larger than the bucket will accept.
