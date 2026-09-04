@@ -1,18 +1,10 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-03-enterprise-step-up-onboarding-runtime-reconciliation-v30",
+  "changeSet": "2026-09-04-final-public-release-payment-storage-hardening-v31",
   "migrations": [
     {
-      "filename": "20260903090000_verify_v28_provider_ledger_reconciliation.sql",
-      "purpose": "record a canonical forward verification identity strictly after current Production ledger head 20260902202558 while fail-closed verifying the already-live V25 deterministic commercial authority and V26 Enterprise SSO security postconditions without schema mutation or migration-history repair"
-    },
-    {
-      "filename": "20260903100000_reconcile_enterprise_step_up_runtime.sql",
-      "purpose": "add only the missing Enterprise Step-Up token and organization security-settings runtime stores, preserve the already-live challenge-store boundary, enforce RLS and FORCE RLS, and keep browser roles revoked without migration-history repair"
-    },
-    {
-      "filename": "20260903114500_reconcile_onboarding_atomic_text_arrays.sql",
-      "purpose": "repair the active onboarding atomic RPC at the server boundary so validated JSON string arrays are coerced through the actual ai_systems column types, preserving both the live text[] contract and clean-replay jsonb contract without schema-history repair or browser authority expansion"
+      "filename": "20260904113000_final_public_release_payment_storage_hardening.sql",
+      "purpose": "follow the live Production ledger head 20260904065952 with one forward-only hardening migration that adds restrictive commercial authority to post-V23 organization-scoped governance/history tables, closes the legacy compliance-documents Storage payment/RBAC gap, and bounds Evidence Vault file size and MIME types without migration-history repair"
     }
   ],
   "truthBoundary": {
