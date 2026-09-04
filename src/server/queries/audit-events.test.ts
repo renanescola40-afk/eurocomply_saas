@@ -24,6 +24,11 @@ const baseInput = {
   metadata: { source: 'test' },
 };
 
+type QueryReadResult = {
+  data: { event_hash: string } | null;
+  error: { code?: string; message?: string } | null;
+};
+
 function createQueryBuilder(previousHashes: Array<string | null>) {
   return {
     select: vi.fn().mockReturnThis(),
@@ -31,7 +36,7 @@ function createQueryBuilder(previousHashes: Array<string | null>) {
     not: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
-    maybeSingle: vi.fn(async () => {
+    maybeSingle: vi.fn(async (): Promise<QueryReadResult> => {
       const eventHash = previousHashes.shift() ?? null;
       return { data: eventHash ? { event_hash: eventHash } : null, error: null };
     }),
