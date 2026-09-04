@@ -5,7 +5,7 @@
   "ignoreCommand": "node scripts/vercel/ignore-build.mjs",
   "git": {
     "deploymentEnabled": {
-      "main": true,
+      "main": false,
       "agent/**": false,
       "*": false
     }

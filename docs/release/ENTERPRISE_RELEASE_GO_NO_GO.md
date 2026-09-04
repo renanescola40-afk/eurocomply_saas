@@ -32,7 +32,7 @@ This is **not a final production GO** until the automated gates below have fresh
 | Route quality | `npm run quality:routes` | Requires CI evidence | Full Security Suite and production deploy workflow include route quality gate. | Must pass before deploy. |
 | Production smoke | `npm run production:smoke` | Requires production evidence | Requires real production/preview URL and runtime envs. | Mark as blocked until envs and URL are configured and smoke artifact is produced. |
 | Vercel readiness | `npm run ops:vercel-readiness` | Requires production evidence | Vercel production workflow includes readiness gate. | Must pass with real Vercel project/env configuration. |
-| Vercel deploy | `vercel pull`, `vercel build --prod`, `vercel deploy --prebuilt --prod` | Requires Vercel evidence | Production workflow contains these deploy steps. | If Vercel is rate-limited, mark release NO-GO until retry succeeds. |
+| Vercel deploy | `vercel pull`, `vercel build --prod`, primary `vercel deploy --prebuilt --prod`; payload-limit fallback uses non-promoted `vercel deploy --prod --skip-domain`, exact-SHA verification, then `vercel promote` | Requires Vercel evidence | Production workflow contains the protected primary path and a narrowly scoped payload-limit fallback. | Any prebuilt failure other than `FUNCTION_PAYLOAD_TOO_LARGE` is NO-GO. For that exact provider limit only, the fallback candidate must be READY, `target=production`, and exact-SHA before promotion; otherwise remain NO-GO. |
 | Lockfile alignment | `npm run security:package-lock` | Requires CI evidence | Custom gate compares root dependencies/devDependencies in `package.json` and `package-lock.json`. | Must pass before any security gate can pass. |
 | Branch protection evidence | `npm run security:branch-protection-evidence` | Requires GitHub evidence | Enterprise readiness expects branch protection evidence. | Verify required checks match actual workflow job names. |
 | Supabase live RLS | `npm run security:rls` / live validation workflow | Requires production evidence | Needs real Supabase secrets and live tenant isolation evidence. | Required for enterprise release; not required to claim static RC readiness. |
@@ -52,12 +52,21 @@ A release is **NO-GO** if any of these are true:
 
 - Vercel deployment is rate-limited.
 - `vercel build --prod` fails.
-- `vercel deploy --prebuilt --prod` fails.
+- `vercel deploy --prebuilt --prod` fails for any reason other than the provider's exact `FUNCTION_PAYLOAD_TOO_LARGE` condition.
+- The `FUNCTION_PAYLOAD_TOO_LARGE` fallback cannot create a non-promoted Production-target candidate with the authorized exact Git SHA and `READY` state.
+- A fallback candidate is promoted before exact-SHA, target and readiness verification succeeds.
+- Production after promotion does not resolve to the authorized exact-SHA `READY` deployment.
 - Production smoke cannot reach `/api/health`, `/api/ready`, public landing/pricing/trust/login routes, or protected route redirects.
 - Required production environment variables are absent.
 - Any secret value appears in logs or artifacts.
 
+The only recoverable prebuilt-deploy failure is Vercel's `FUNCTION_PAYLOAD_TOO_LARGE`. In that case the protected workflow must keep the existing Production alias untouched, create a remote candidate with `--prod --skip-domain`, verify provider metadata proves the authorized SHA, `target=production`, and `READY`, revalidate that `main` has not moved, and only then call `vercel promote`. Any mismatch is NO-GO and the candidate must remain unpromoted.
+
 If Vercel is rate-limited, do not mark the release as passed. Record the blocked deployment URL/status and retry only after the platform limit clears.
+
+## 2026-09-04 production-authority amendment
+
+Automatic Vercel Git deployments from `main` are not an approved production authority. The protected `Vercel Production Deploy` workflow is the canonical production release authority and must retain explicit exact-SHA authorization, protected Production environment governance, provider-binding synchronization, release gates and post-promotion verification. `vercel.json` must keep automatic Git deployment disabled for `main` and other branches used by this repository.
 
 ## Commands to execute for final proof
 
