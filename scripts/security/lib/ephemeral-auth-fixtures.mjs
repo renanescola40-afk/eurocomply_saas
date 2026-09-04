@@ -23,10 +23,19 @@ function sleep(milliseconds) {
 function isAmbiguousTransportFailure(error, responseStatus = 0) {
   const status = Number(responseStatus || error?.status || error?.statusCode || 0);
   const code = String(error?.code || '').toUpperCase();
-  const message = String(error?.message || '');
+  const transportText = [
+    error?.message,
+    error?.details,
+    error?.hint,
+    error?.cause?.message,
+    error?.cause,
+  ]
+    .filter(Boolean)
+    .map((value) => String(value))
+    .join(' ');
   return status >= 500
     || ['57014', '57P01', '57P02', '57P03', '08000', '08001', '08003', '08004', '08006', '08007', '08P01'].includes(code)
-    || /timeout|timed out|gateway|upstream|connection|temporar|unavailable/i.test(message);
+    || /timeout|timed out|gateway|upstream|connection|temporar|unavailable|fetch failed|network|socket|dns|econnreset|econnrefused|econnaborted|enotfound|eai_again/i.test(transportText);
 }
 
 function isDuplicateKeyError(error) {
