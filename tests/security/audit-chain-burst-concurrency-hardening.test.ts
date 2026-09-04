@@ -9,9 +9,9 @@ describe('audit-chain burst concurrency hardening', () => {
   it('keeps database serialization and bounded application conflict retries together', () => {
     expect(rpcMigration).toContain('pg_advisory_xact_lock(hashtext(p_organization_id::text))');
     expect(rpcMigration).toContain("raise exception 'audit chain previous hash mismatch' using errcode = '40001'");
-    expect(writer).toContain('MAX_CHAIN_APPEND_ATTEMPTS = 32');
-    expect(writer).toContain('CHAIN_APPEND_RETRY_BASE_MS = 4');
-    expect(writer).toContain('CHAIN_APPEND_RETRY_CAP_MS = 80');
+    expect(writer).toContain('MAX_CHAIN_APPEND_ATTEMPTS = 128');
+    expect(writer).toContain('CHAIN_APPEND_RETRY_BASE_MS = 3');
+    expect(writer).toContain('CHAIN_APPEND_RETRY_CAP_MS = 50');
     expect(writer).toContain('waitForAuditChainRetry(attempt)');
     expect(writer).toContain('isPreviousHashMismatch(error) && attempt < MAX_CHAIN_APPEND_ATTEMPTS');
   });
@@ -27,7 +27,7 @@ describe('audit-chain burst concurrency hardening', () => {
 
   it('requires zero-loss live bursts at 10, 25, 50 and 100 parallel writes', () => {
     expect(liveProof).toContain('CONCURRENCY_LEVELS = Object.freeze([10, 25, 50, 100])');
-    expect(liveProof).toContain('LIVE_APPEND_MAX_ATTEMPTS = 32');
+    expect(liveProof).toContain('LIVE_APPEND_MAX_ATTEMPTS = 128');
     expect(liveProof).toContain('appendWithRetry');
     expect(liveProof).toContain('lost: level - successful.length');
     expect(liveProof).toContain('previousHashMismatches');
@@ -37,12 +37,13 @@ describe('audit-chain burst concurrency hardening', () => {
     expect(liveProof).toContain('PASS requires zero lost events at 10, 25, 50 and 100 parallel writes.');
   });
 
-  it('re-reads and verifies the complete synthetic chain after the burst', () => {
+  it('re-reads, verifies and cleans the complete synthetic chain after the burst', () => {
     expect(liveProof).toContain('expectedSyntheticEvents');
     expect(liveProof).toContain('records.length === expectedSyntheticEvents');
     expect(liveProof).toContain('verifyAuditChain(records, anchorPreviousHash)');
     expect(liveProof).toContain('tamperDetected');
     expect(liveProof).toContain('missingPreviousDetected');
+    expect(liveProof).toContain('CLEANUP_CHUNK_SIZE = 50');
     expect(liveProof).toContain('cleanupSyntheticAuditEvents');
   });
 });
