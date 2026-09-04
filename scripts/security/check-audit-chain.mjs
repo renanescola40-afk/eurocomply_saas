@@ -148,7 +148,8 @@ if (sources.helper && sources.helper.includes('Math.random')) failures.push(`${f
 if (sources.helper && sources.helper.includes('new Date()')) failures.push(`${files.helper} must not introduce current timestamps when building deterministic hashes`);
 if (sources.auditEvents && sources.auditEvents.includes('event_hash') && !sources.auditEvents.includes('previousHash')) failures.push(`${files.auditEvents} must return or track previousHash when writing chained audit events`);
 if (sources.auditEvents && !sources.auditEvents.includes('randomUUID')) failures.push(`${files.auditEvents} must assign the audit event id before hashing`);
-if (sources.auditEvents && !sources.auditEvents.includes('MAX_CHAIN_APPEND_ATTEMPTS = 4')) failures.push(`${files.auditEvents} must retry concurrent previous-hash conflicts more than once`);
+if (sources.auditEvents && !sources.auditEvents.includes('MAX_CHAIN_APPEND_ATTEMPTS = 128')) failures.push(`${files.auditEvents} must keep the reviewed 100-way burst retry ceiling`);
+if (sources.auditEvents && !sources.auditEvents.includes('waitForAuditChainRetry')) failures.push(`${files.auditEvents} must back off between previous-hash conflict retries`);
 
 const routeSilentlyClampsLimit = sources.verifyRoute.includes('Math.min(Math.max');
 if (sources.verifyRoute && routeSilentlyClampsLimit) failures.push(`${files.verifyRoute} must reject invalid verification limits instead of silently clamping them`);

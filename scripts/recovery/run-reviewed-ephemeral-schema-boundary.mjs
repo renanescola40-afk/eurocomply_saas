@@ -40,6 +40,21 @@ const syntaxCompatibilityRules = Object.freeze([
     replacement: '  "current_role" text,',
   }),
 ]);
+const productionLineageCompatibilityRules = Object.freeze([
+  Object.freeze({
+    name: '20260904065919_reconcile_ai_governance_runtime_schema_20260904.sql',
+    marker: '-- Reconcile audit_log writer contract used by the current server runtime.',
+    requiredSchemaMarker: 'alter table public.audit_logs add column if not exists actor_user_id uuid;',
+    invalid: `update public.audit_logs
+set actor_user_id = coalesce(actor_user_id, actor_id, user_id)
+where actor_user_id is null;`,
+    replacement: `-- Disposable schema-effect replay only: clean lineage created audit_logs with actor_user_id directly,
+-- so the Production-only legacy actor_id/user_id data backfill has no schema effect here.
+update public.audit_logs
+set actor_user_id = actor_user_id
+where false;`,
+  }),
+]);
 
 function fail(message) {
   throw new Error(message);
@@ -104,6 +119,24 @@ function stageSyntaxCompatibility(items, duplicateReview) {
   }
 }
 
+function stageProductionLineageCompatibility(items) {
+  for (const rule of productionLineageCompatibilityRules) {
+    const path = join(migrationsDir, rule.name);
+    const bytes = readFileSync(path);
+    const sql = bytes.toString('utf8');
+    if (!sql.includes(rule.marker) || !sql.includes(rule.requiredSchemaMarker)) {
+      fail(`Production-lineage compatibility markers drifted for ${rule.name}`);
+    }
+    const occurrences = sql.split(rule.invalid).length - 1;
+    if (occurrences !== 1) {
+      fail(`Expected one Production-only legacy audit backfill in ${rule.name}, found ${occurrences}`);
+    }
+
+    items.push({ path, bytes, name: rule.name });
+    writeFileSync(path, sql.replace(rule.invalid, rule.replacement), 'utf8');
+  }
+}
+
 function restoreHistoricalBytes(items, label) {
   const failures = [];
   for (const item of [...items].reverse()) {
@@ -134,17 +167,20 @@ function main() {
 
   const blockedDuplicateItems = [];
   const syntaxCompatibilityItems = [];
+  const productionLineageCompatibilityItems = [];
   let replayError = null;
   let restoreError = null;
   try {
     writeFileSync(legacyPath, legacySql.replace(invalidStatement, safeStatement), 'utf8');
     stageBlockedDuplicateSchemaEffects(blockedDuplicateItems, duplicateReview, batchNReview);
     stageSyntaxCompatibility(syntaxCompatibilityItems, duplicateReview);
+    stageProductionLineageCompatibility(productionLineageCompatibilityItems);
     execFileSync(process.execPath, [reviewedReplay], { stdio: 'inherit', env: process.env });
   } catch (error) {
     replayError = error;
   } finally {
     try {
+      restoreHistoricalBytes(productionLineageCompatibilityItems, 'production-lineage-compatible');
       restoreHistoricalBytes(syntaxCompatibilityItems, 'syntax-compatible');
       restoreHistoricalBytes(blockedDuplicateItems, 'blocked duplicate');
       writeFileSync(legacyPath, legacyBytes);
@@ -158,8 +194,9 @@ function main() {
 
   appendGithubEnv('RECOVERY_EPHEMERAL_PREREQUISITE_BLOCKED_DUPLICATE_FILE_COUNT', String(blockedDuplicateRules.length));
   appendGithubEnv('RECOVERY_EPHEMERAL_SYNTAX_COMPAT_FILE_COUNT', String(syntaxCompatibilityRules.length));
+  appendGithubEnv('RECOVERY_EPHEMERAL_PRODUCTION_LINEAGE_COMPAT_FILE_COUNT', String(productionLineageCompatibilityRules.length));
   process.stdout.write(
-    `Disposable billing lifecycle bridge completed; ${blockedDuplicateRules.length} qualified-review duplicate schema effects were suppressed by reviewed prerequisite boundaries, ${syntaxCompatibilityRules.length} split-history migration received disposable syntax compatibility, and canonical historical bytes were restored.\n`,
+    `Disposable billing lifecycle bridge completed; ${blockedDuplicateRules.length} qualified-review duplicate schema effects were suppressed by reviewed prerequisite boundaries, ${syntaxCompatibilityRules.length} split-history migration received disposable syntax compatibility, ${productionLineageCompatibilityRules.length} exact Production-lineage migration received disposable clean-schema compatibility, and canonical historical bytes were restored.\n`,
   );
 }
 

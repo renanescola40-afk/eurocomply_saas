@@ -42,7 +42,10 @@ describe('automatic ephemeral audit-chain runtime proof', () => {
 
   it('cleans synthetic audit events before deleting ephemeral auth fixtures and verifies both', () => {
     expect(producer).toContain('cleanupSyntheticAuditEvents');
-    expect(producer).toContain(".from('audit_events').delete().in('id', ids)");
+    expect(producer).toContain('const CLEANUP_CHUNK_SIZE = 50');
+    expect(producer).toContain('for (const chunk of chunkIds(ids))');
+    expect(producer).toContain(".from('audit_events').delete().in('id', chunk)");
+    expect(producer).toContain(".from('audit_events').select('id').in('id', chunk)");
     expect(producer).toContain('cleanupEphemeralAuthFixtures');
     expect(producer).toContain("status: cleanupVerified ? 'Complete' : 'Failed'");
     expect(producer).toContain('auditEventsRemoved: auditCleanup.verified');
