@@ -440,20 +440,20 @@ jobs:
             exit "$deploy_status"
           fi
 
-          echo '::warning title=Prebuilt function payload exceeded Vercel limit::Falling back to a remote production build from the already verified exact checkout.'
+          echo '::warning title=Prebuilt function payload exceeded Vercel limit::Creating a non-promoted remote production build for exact-SHA verification before promotion.'
           test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
           git fetch --no-tags origin main
           test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
 
-          remote_url="$(
-            npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --prod --token="$VERCEL_TOKEN" | tail -n 1 | tr -d '\r'
+          candidate_url="$(
+            npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --prod --skip-domain --token="$VERCEL_TOKEN" | tail -n 1 | tr -d '\r'
           )"
-          if [[ ! "$remote_url" =~ ^https://[^[:space:]]+$ ]]; then
-            echo "::error title=Remote Vercel deploy URL missing::Unexpected deployment output: ${remote_url:-missing}." >&2
+          if [[ ! "$candidate_url" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "::error title=Remote Vercel candidate URL missing::Unexpected deployment output: ${candidate_url:-missing}." >&2
             exit 1
           fi
 
-          deployment_host="${remote_url#https://}"
+          deployment_host="${candidate_url#https://}"
           deployment_host="${deployment_host%%/*}"
           deployment_json="$(
             curl --fail --silent --show-error \
@@ -466,16 +466,36 @@ jobs:
           deployed_state="$(jq -r '.readyState // .state // empty' <<<"$deployment_json")"
 
           if [ "${deployed_sha,,}" != "${RELEASE_SHA,,}" ]; then
-            echo "::error title=Remote Vercel deploy lost exact-SHA provenance::Expected ${RELEASE_SHA,,}; provider returned ${deployed_sha:-missing}." >&2
+            echo "::error title=Remote Vercel candidate lost exact-SHA provenance::Expected ${RELEASE_SHA,,}; provider returned ${deployed_sha:-missing}. Candidate was not promoted." >&2
             exit 1
           fi
           if [ "$deployed_target" != 'production' ]; then
-            echo "::error title=Remote Vercel deploy target mismatch::Expected production; provider returned ${deployed_target:-missing}." >&2
+            echo "::error title=Remote Vercel candidate target mismatch::Expected production; provider returned ${deployed_target:-missing}. Candidate was not promoted." >&2
             exit 1
           fi
           if [ "$deployed_state" != 'READY' ]; then
-            echo "::error title=Remote Vercel deploy is not READY::Provider returned ${deployed_state:-missing}." >&2
+            echo "::error title=Remote Vercel candidate is not READY::Provider returned ${deployed_state:-missing}. Candidate was not promoted." >&2
             exit 1
           fi
 
-          printf '%s\n' "$remote_url"
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
+
+          npx --yes "vercel@${VERCEL_CLI_VERSION}" promote "$candidate_url" --yes --token="$VERCEL_TOKEN"
+
+          production_json="$(
+            curl --fail --silent --show-error \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v13/deployments/www.risckcomply.com?teamId=$VERCEL_ORG_ID"
+          )"
+          production_sha="$(jq -r '.meta.githubCommitSha // empty' <<<"$production_json")"
+          production_state="$(jq -r '.readyState // .state // empty' <<<"$production_json")"
+          production_target="$(jq -r '.target // empty' <<<"$production_json")"
+
+          if [ "${production_sha,,}" != "${RELEASE_SHA,,}" ] || [ "$production_target" != 'production' ] || [ "$production_state" != 'READY' ]; then
+            echo '::error title=Production alias verification failed after promotion::Canonical production did not resolve to the authorized READY exact-SHA deployment.' >&2
+            exit 1
+          fi
+
+          printf '%s\n' "$candidate_url"
