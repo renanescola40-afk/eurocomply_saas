@@ -11,8 +11,11 @@ type FakeOptions = {
   transientOrganizationNumber?: number;
   transientOrganizationReadbacks?: number;
   fetchFailureOrganizationNumber?: number;
+  fetchFailureOrganizationAttempts?: number;
   fetchFailureOrganizationReadbacks?: number;
+  preflightOrganizationReadFailures?: number;
   transientEntitlementDeleteFailures?: number;
+  retainUsersOnDelete?: boolean;
 };
 
 function fakeAdmin({
@@ -21,8 +24,11 @@ function fakeAdmin({
   transientOrganizationNumber = 0,
   transientOrganizationReadbacks = 0,
   fetchFailureOrganizationNumber = 0,
+  fetchFailureOrganizationAttempts = 0,
   fetchFailureOrganizationReadbacks = 0,
+  preflightOrganizationReadFailures = 0,
   transientEntitlementDeleteFailures = 0,
+  retainUsersOnDelete = false,
 }: FakeOptions = {}) {
   const state = {
     users: new Set<string>(),
@@ -35,6 +41,7 @@ function fakeAdmin({
   let userCounter = 0;
   let organizationInsertCounter = 0;
   let organizationReadCounter = 0;
+  let preflightOrganizationReadCounter = 0;
   let contractCounter = 0;
   let entitlementCounter = 0;
   let entitlementDeleteCounter = 0;
@@ -71,15 +78,21 @@ function fakeAdmin({
   };
 
   const provisionOrganization = (id: string) => {
-    if (state.organizations.has(id)) return;
     state.organizations.add(id);
+  };
 
-    // Production compatibility provisioning creates these tenant-scoped records.
+  const provisionCompatibilityEnvelope = (organizationId: string) => {
+    if (!organizationId) return;
+    const alreadyProvisioned = [...state.enterpriseContracts.values()].includes(organizationId);
+    if (alreadyProvisioned) return;
+
+    // Production creates this compatibility envelope from the organization-membership
+    // trigger, not from the organization insert itself.
     const contractId = `contract-${++contractCounter}`;
     const entitlementId = `entitlement-${++entitlementCounter}`;
-    state.enterpriseContracts.set(contractId, id);
-    state.organizationEntitlements.set(entitlementId, id);
-    state.organizationUsage.add(id);
+    state.enterpriseContracts.set(contractId, organizationId);
+    state.organizationEntitlements.set(entitlementId, organizationId);
+    state.organizationUsage.add(organizationId);
   };
 
   const deleteByOrganizationIds = (table: string, ids: string[]) => {
@@ -118,7 +131,7 @@ function fakeAdmin({
           return { data: { user: { id } }, error: null };
         },
         deleteUser: async (id: string) => {
-          state.users.delete(id);
+          if (!retainUsersOnDelete) state.users.delete(id);
           return { error: null };
         },
         getUserById: async (id: string) => state.users.has(id)
@@ -127,7 +140,7 @@ function fakeAdmin({
       },
     },
     from: (table: string) => ({
-      insert: (row: { id?: string }) => ({
+      insert: (row: { id?: string; organization_id?: string }) => ({
         select: () => ({
           single: async () => {
             const id = String(row.id || '');
@@ -138,7 +151,10 @@ function fakeAdmin({
               if (failOrganizationNumber === organizationInsertCounter) {
                 return { data: null, error: { message: 'synthetic failure' }, status: 400 };
               }
-              if (fetchFailureOrganizationNumber === organizationInsertCounter) {
+              if (
+                organizationInsertCounter <= fetchFailureOrganizationAttempts
+                || fetchFailureOrganizationNumber === organizationInsertCounter
+              ) {
                 return {
                   data: null,
                   error: {
@@ -174,6 +190,7 @@ function fakeAdmin({
                 return { data: null, error: { code: '23505', message: 'duplicate key' }, status: 409 };
               }
               state.memberships.add(id);
+              provisionCompatibilityEnvelope(String(row.organization_id || ''));
               return { data: { id }, error: null, status: 201 };
             }
             return { data: null, error: { message: 'unexpected table' }, status: 400 };
@@ -202,6 +219,20 @@ function fakeAdmin({
         eq: (_column: string, id: string) => ({
           maybeSingle: async () => {
             if (table === 'organizations') {
+              // The production helper probes PostgREST before creating disposable users.
+              // Keep this probe separate from fixture readback accounting.
+              if (state.users.size === 0 && !state.organizations.has(id)) {
+                if (preflightOrganizationReadCounter < preflightOrganizationReadFailures) {
+                  preflightOrganizationReadCounter += 1;
+                  return {
+                    data: null,
+                    error: { message: 'Service Unavailable' },
+                    status: 503,
+                  };
+                }
+                return { data: null, error: null, status: 200 };
+              }
+
               organizationReadCounter += 1;
               if (organizationReadCounter <= fetchFailureOrganizationReadbacks) {
                 return {
@@ -243,6 +274,7 @@ describe('ephemeral Supabase Auth fixture lifecycle', () => {
     expect(fixtures.created.users).toHaveLength(3);
     expect(fixtures.created.organizations).toHaveLength(2);
     expect(fixtures.created.memberships).toHaveLength(3);
+    expect(fixtures.created.commercialEnvelopeOrganizations).toHaveLength(2);
     expect(state.users.size).toBe(3);
     expect(state.organizations.size).toBe(2);
     expect(state.memberships.size).toBe(3);
@@ -258,6 +290,21 @@ describe('ephemeral Supabase Auth fixture lifecycle', () => {
     expect(state.enterpriseContracts.size).toBe(0);
     expect(state.organizationEntitlements.size).toBe(0);
     expect(state.organizationUsage.size).toBe(0);
+  });
+
+  it('waits through a degraded PostgREST preflight before creating disposable identities', async () => {
+    const { admin, state } = fakeAdmin({ preflightOrganizationReadFailures: 3 });
+
+    const fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'preflight-recovery-proof' });
+
+    expect(fixtures.created.users).toHaveLength(3);
+    expect(fixtures.created.organizations).toHaveLength(2);
+    expect(state.organizations.size).toBe(2);
+
+    const cleanup = await cleanupEphemeralAuthFixtures(admin, fixtures.created);
+    expect(cleanup).toEqual({ verified: true, failures: [] });
+    expect(state.users.size).toBe(0);
+    expect(state.organizations.size).toBe(0);
   });
 
   it('cleans partial setup when the second organization creation fails', async () => {
@@ -336,6 +383,24 @@ describe('ephemeral Supabase Auth fixture lifecycle', () => {
     expect(state.organizations.size).toBe(0);
   });
 
+  it('survives three complete ambiguous write/readback cycles before PostgREST recovers', async () => {
+    const { admin, state } = fakeAdmin({
+      fetchFailureOrganizationAttempts: 3,
+      fetchFailureOrganizationReadbacks: 12,
+    });
+
+    const fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'sustained-outage-proof' });
+
+    expect(fixtures.created.organizations).toHaveLength(2);
+    expect(new Set(fixtures.created.organizations).size).toBe(2);
+    expect(state.organizations.size).toBe(2);
+
+    const cleanup = await cleanupEphemeralAuthFixtures(admin, fixtures.created);
+    expect(cleanup).toEqual({ verified: true, failures: [] });
+    expect(state.users.size).toBe(0);
+    expect(state.organizations.size).toBe(0);
+  }, 15_000);
+
   it('retries transient commercial cleanup failures and removes the compatibility envelope', async () => {
     const { admin, state } = fakeAdmin({ transientEntitlementDeleteFailures: 1 });
     const fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'cleanup-retry-proof' });
@@ -349,13 +414,28 @@ describe('ephemeral Supabase Auth fixture lifecycle', () => {
     expect(state.organizations.size).toBe(0);
   });
 
+  it('fails closed when commercial cleanup cannot be verified', async () => {
+    const { admin, state } = fakeAdmin({ transientEntitlementDeleteFailures: 99 });
+    const fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'cleanup-fail-closed-proof' });
+
+    const cleanup = await cleanupEphemeralAuthFixtures(admin, fixtures.created);
+
+    expect(cleanup.verified).toBe(false);
+    expect(cleanup.failures).toContain('organization_entitlement_cleanup_not_verified');
+    expect(cleanup.failures).toContain('enterprise_contract_cleanup_not_verified');
+    expect(cleanup.failures).toContain('organization_cleanup_not_verified');
+    expect(state.organizationEntitlements.size).toBeGreaterThan(0);
+    expect(state.enterpriseContracts.size).toBeGreaterThan(0);
+    expect(state.organizations.size).toBeGreaterThan(0);
+  }, 15_000);
+
   it('preserves the original setup failure when cleanup is also incomplete', async () => {
     const { admin } = fakeAdmin({
       failOrganizationNumber: 2,
-      transientEntitlementDeleteFailures: 99,
+      retainUsersOnDelete: true,
     });
 
     await expect(createEphemeralAuthFixtures(admin, { purpose: 'diagnostic-proof' }))
-      .rejects.toThrow(/ephemeral_fixture_setup_failed:ephemeral_organizations_create_failed;cleanup_incomplete:/);
+      .rejects.toThrow(/ephemeral_fixture_setup_failed:ephemeral_organizations_create_failed;cleanup_incomplete:user_cleanup_not_verified/);
   });
 });
