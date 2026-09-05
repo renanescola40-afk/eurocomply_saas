@@ -259,6 +259,14 @@ jobs:
       - name: Run build gate
         run: npm run build
 
+      - name: Hydrate exact-SHA audit-chain runtime evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ env.RELEASE_SHA }}
+          AUDIT_CHAIN_RUNTIME_EVIDENCE_REQUIRED: 'true'
+        run: node scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs
+
       - name: Run full security CI gate
         run: npm run security:ci
 
