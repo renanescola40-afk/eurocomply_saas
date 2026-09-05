@@ -9,8 +9,12 @@ import {
   isSyntheticOrganizationRow,
   validateRecoveryWindow,
 } from '../../scripts/security/recover-audit-chain-synthetic-residue.mjs';
+import {
+  assertAuditEventsBoundToSyntheticOrganizations,
+} from '../../scripts/security/preflight-audit-chain-synthetic-recovery-scope.mjs';
 
 const producer = readFileSync('scripts/security/recover-audit-chain-synthetic-residue.mjs', 'utf8');
+const preflight = readFileSync('scripts/security/preflight-audit-chain-synthetic-recovery-scope.mjs', 'utf8');
 const workflow = readFileSync('.github/workflows/audit-chain-synthetic-recovery.yml', 'utf8');
 
 describe('audit-chain synthetic recovery', () => {
@@ -47,7 +51,28 @@ describe('audit-chain synthetic recovery', () => {
     }, from, to)).toBe(false);
   });
 
-  it('locks the destructive scope to synthetic markers, caps and explicit confirmation', () => {
+  it('requires every candidate audit event to belong to a discovered synthetic organization', () => {
+    const organizations = [
+      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', slug: 'audit-chain-live-proof-a-123' },
+    ];
+    expect(assertAuditEventsBoundToSyntheticOrganizations(organizations, [
+      {
+        id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+        organization_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        action: SYNTHETIC_AUDIT_ACTION,
+      },
+    ])).toEqual({ organizationsMatched: 1, auditEventsMatched: 1 });
+
+    expect(() => assertAuditEventsBoundToSyntheticOrganizations(organizations, [
+      {
+        id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        organization_id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+        action: SYNTHETIC_AUDIT_ACTION,
+      },
+    ])).toThrow('audit_event_scope_not_bound_to_synthetic_organization');
+  });
+
+  it('locks the destructive scope to synthetic markers, caps, source lineage and explicit confirmation', () => {
     expect(SYNTHETIC_AUDIT_ACTION).toBe('security.audit_chain_live_validation');
     expect(producer).toContain("confirmation !== 'CLEANUP_AUDIT_CHAIN_SYNTHETIC'");
     expect(producer).toContain('MAX_SYNTHETIC_ORGANIZATIONS = 20');
@@ -55,9 +80,16 @@ describe('audit-chain synthetic recovery', () => {
     expect(producer).toContain('MAX_SYNTHETIC_AUDIT_EVENTS = 1_000');
     expect(producer).toContain('historicalFixtureCleanupAttempted: false');
     expect(producer).not.toContain('Promise.all([');
+    expect(preflight).toContain(".select('id,organization_id,action,created_at')");
+    expect(preflight).toContain('audit_event_scope_not_bound_to_synthetic_organization');
     expect(workflow).toContain('environment: Production');
     expect(workflow).toContain("test \"$RECOVERY_CONFIRMATION\" = 'CLEANUP_AUDIT_CHAIN_SYNTHETIC'");
     expect(workflow).toContain('test "$main_sha" = "${TARGET_SHA,,}"');
+    expect(workflow).toContain('/actions/runs/${RECOVERY_SOURCE_RUN_ID}');
+    expect(workflow).toContain("test \"$(jq -r '.path' <<<\"$source_run\")\" = '.github/workflows/audit-chain-runtime-proof.yml'");
+    expect(workflow).toContain("test \"$(jq -r '.conclusion' <<<\"$source_run\")\" = 'failure'");
+    expect(workflow).toContain('compare/${source_sha}...${TARGET_SHA,,}');
+    expect(workflow).toContain('Preflight synthetic audit-event organization binding');
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).not.toContain('push:');
   });
