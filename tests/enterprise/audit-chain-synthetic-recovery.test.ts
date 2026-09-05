@@ -16,6 +16,7 @@ import {
 const producer = readFileSync('scripts/security/recover-audit-chain-synthetic-residue.mjs', 'utf8');
 const preflight = readFileSync('scripts/security/preflight-audit-chain-synthetic-recovery-scope.mjs', 'utf8');
 const sqlRecovery = readFileSync('scripts/security/recover-audit-chain-synthetic-residue.sql', 'utf8');
+const evidenceHelper = readFileSync('scripts/security/audit-chain-synthetic-recovery-evidence.mjs', 'utf8');
 const workflow = readFileSync('.github/workflows/audit-chain-synthetic-recovery.yml', 'utf8');
 
 describe('audit-chain synthetic recovery', () => {
@@ -105,6 +106,13 @@ describe('audit-chain synthetic recovery', () => {
     expect(sqlRecovery).toContain("'protectedOrganizationIdsTouched', false");
     expect(sqlRecovery).toContain("'rawIdentifiersStored', false");
 
+    expect(evidenceHelper).toContain("case 'validate-preflight'");
+    expect(evidenceHelper).toContain("case 'validate-complete'");
+    expect(evidenceHelper).toContain("case 'write-failure'");
+    expect(evidenceHelper).toContain("evidence?.cleanup?.protectedOrganizationIdsTouched !== false");
+    expect(evidenceHelper).toContain("evidence?.evidenceIntegrity?.rawIdentifiersStored !== false");
+    expect(evidenceHelper).toContain("Number(scope.authUsersMatched) !== 0");
+
     expect(workflow).toContain('environment: production');
     expect(workflow).toContain('SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}');
     expect(workflow).toContain('SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}');
@@ -118,6 +126,10 @@ describe('audit-chain synthetic recovery', () => {
     expect(workflow).toContain('compare/${source_sha}...${TARGET_SHA,,}');
     expect(workflow).toContain('Preflight transactional synthetic scope through Session Pooler');
     expect(workflow).toContain('Execute bounded transactional synthetic-only recovery');
+    expect(workflow).toContain('audit-chain-synthetic-recovery-evidence.mjs validate-preflight');
+    expect(workflow).toContain('audit-chain-synthetic-recovery-evidence.mjs validate-complete');
+    expect(workflow).toContain('audit-chain-synthetic-recovery-evidence.mjs write-failure');
+    expect(workflow).not.toContain("<<'NODE'");
     expect(workflow).toContain('-v execute_cleanup=false');
     expect(workflow).toContain('-v execute_cleanup=true');
     expect(workflow).toContain('workflow_dispatch:');
