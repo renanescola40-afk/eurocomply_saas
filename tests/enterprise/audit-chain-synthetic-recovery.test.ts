@@ -15,6 +15,7 @@ import {
 
 const producer = readFileSync('scripts/security/recover-audit-chain-synthetic-residue.mjs', 'utf8');
 const preflight = readFileSync('scripts/security/preflight-audit-chain-synthetic-recovery-scope.mjs', 'utf8');
+const sqlRecovery = readFileSync('scripts/security/recover-audit-chain-synthetic-residue.sql', 'utf8');
 const workflow = readFileSync('.github/workflows/audit-chain-synthetic-recovery.yml', 'utf8');
 
 describe('audit-chain synthetic recovery', () => {
@@ -82,14 +83,43 @@ describe('audit-chain synthetic recovery', () => {
     expect(producer).not.toContain('Promise.all([');
     expect(preflight).toContain(".select('id,organization_id,action,created_at')");
     expect(preflight).toContain('audit_event_scope_not_bound_to_synthetic_organization');
-    expect(workflow).toContain('environment: Production');
+
+    expect(sqlRecovery).toContain('BEGIN;');
+    expect(sqlRecovery).toContain('COMMIT;');
+    expect(sqlRecovery).toContain("SET LOCAL statement_timeout = '30s'");
+    expect(sqlRecovery).toContain("SET LOCAL lock_timeout = '5s'");
+    expect(sqlRecovery).toContain("confirmation <> 'CLEANUP_AUDIT_CHAIN_SYNTHETIC'");
+    expect(sqlRecovery).toContain('organization_count > 20');
+    expect(sqlRecovery).toContain('audit_event_count > 1000');
+    expect(sqlRecovery).toContain('auth_user_count > 30');
+    expect(sqlRecovery).toContain('audit_event_scope_not_bound_to_synthetic_organization');
+    expect(sqlRecovery).toContain('auth_user_scope_requires_admin_api');
+    expect(sqlRecovery).toContain('0d5926df-1027-42da-8b14-579cc2630947');
+    expect(sqlRecovery).toContain('bf6115c2-4258-4fde-9d43-854cb98bb075');
+    expect(sqlRecovery).toContain('DELETE FROM public.audit_events');
+    expect(sqlRecovery).toContain('DELETE FROM public.organization_entitlements');
+    expect(sqlRecovery).toContain('DELETE FROM public.organization_usage');
+    expect(sqlRecovery).toContain('DELETE FROM public.enterprise_contracts');
+    expect(sqlRecovery).toContain('DELETE FROM public.organization_members');
+    expect(sqlRecovery).toContain('DELETE FROM public.organizations');
+    expect(sqlRecovery).toContain("'protectedOrganizationIdsTouched', false");
+    expect(sqlRecovery).toContain("'rawIdentifiersStored', false");
+
+    expect(workflow).toContain('environment: production');
+    expect(workflow).toContain('SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}');
+    expect(workflow).toContain('SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}');
+    expect(workflow).not.toContain('NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}');
+    expect(workflow).not.toContain('SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}');
     expect(workflow).toContain("test \"$RECOVERY_CONFIRMATION\" = 'CLEANUP_AUDIT_CHAIN_SYNTHETIC'");
     expect(workflow).toContain('test "$main_sha" = "${TARGET_SHA,,}"');
     expect(workflow).toContain('/actions/runs/${RECOVERY_SOURCE_RUN_ID}');
     expect(workflow).toContain("test \"$(jq -r '.path' <<<\"$source_run\")\" = '.github/workflows/audit-chain-runtime-proof.yml'");
     expect(workflow).toContain("test \"$(jq -r '.conclusion' <<<\"$source_run\")\" = 'failure'");
     expect(workflow).toContain('compare/${source_sha}...${TARGET_SHA,,}');
-    expect(workflow).toContain('Preflight synthetic audit-event organization binding');
+    expect(workflow).toContain('Preflight transactional synthetic scope through Session Pooler');
+    expect(workflow).toContain('Execute bounded transactional synthetic-only recovery');
+    expect(workflow).toContain('-v execute_cleanup=false');
+    expect(workflow).toContain('-v execute_cleanup=true');
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).not.toContain('push:');
   });
