@@ -7,7 +7,6 @@ import {
 
 type FakeOptions = {
   failOrganizationNumber?: number;
-  failMembershipNumber?: number;
   ambiguousCommitOrganizationNumber?: number;
   transientOrganizationNumber?: number;
   transientOrganizationReadbacks?: number;
@@ -16,11 +15,11 @@ type FakeOptions = {
   fetchFailureOrganizationReadbacks?: number;
   preflightOrganizationReadFailures?: number;
   transientEntitlementDeleteFailures?: number;
+  retainUsersOnDelete?: boolean;
 };
 
 function fakeAdmin({
   failOrganizationNumber = 0,
-  failMembershipNumber = 0,
   ambiguousCommitOrganizationNumber = 0,
   transientOrganizationNumber = 0,
   transientOrganizationReadbacks = 0,
@@ -29,6 +28,7 @@ function fakeAdmin({
   fetchFailureOrganizationReadbacks = 0,
   preflightOrganizationReadFailures = 0,
   transientEntitlementDeleteFailures = 0,
+  retainUsersOnDelete = false,
 }: FakeOptions = {}) {
   const state = {
     users: new Set<string>(),
@@ -40,7 +40,6 @@ function fakeAdmin({
   };
   let userCounter = 0;
   let organizationInsertCounter = 0;
-  let membershipInsertCounter = 0;
   let organizationReadCounter = 0;
   let preflightOrganizationReadCounter = 0;
   let contractCounter = 0;
@@ -132,7 +131,7 @@ function fakeAdmin({
           return { data: { user: { id } }, error: null };
         },
         deleteUser: async (id: string) => {
-          state.users.delete(id);
+          if (!retainUsersOnDelete) state.users.delete(id);
           return { error: null };
         },
         getUserById: async (id: string) => state.users.has(id)
@@ -187,10 +186,6 @@ function fakeAdmin({
               return { data: { id }, error: null, status: 201 };
             }
             if (table === 'organization_members') {
-              membershipInsertCounter += 1;
-              if (failMembershipNumber === membershipInsertCounter) {
-                return { data: null, error: { message: 'synthetic failure' }, status: 400 };
-              }
               if (state.memberships.has(id)) {
                 return { data: null, error: { code: '23505', message: 'duplicate key' }, status: 409 };
               }
@@ -419,13 +414,28 @@ describe('ephemeral Supabase Auth fixture lifecycle', () => {
     expect(state.organizations.size).toBe(0);
   });
 
+  it('fails closed when commercial cleanup cannot be verified', async () => {
+    const { admin, state } = fakeAdmin({ transientEntitlementDeleteFailures: 99 });
+    const fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'cleanup-fail-closed-proof' });
+
+    const cleanup = await cleanupEphemeralAuthFixtures(admin, fixtures.created);
+
+    expect(cleanup.verified).toBe(false);
+    expect(cleanup.failures).toContain('organization_entitlement_cleanup_not_verified');
+    expect(cleanup.failures).toContain('enterprise_contract_cleanup_not_verified');
+    expect(cleanup.failures).toContain('organization_cleanup_not_verified');
+    expect(state.organizationEntitlements.size).toBeGreaterThan(0);
+    expect(state.enterpriseContracts.size).toBeGreaterThan(0);
+    expect(state.organizations.size).toBeGreaterThan(0);
+  });
+
   it('preserves the original setup failure when cleanup is also incomplete', async () => {
     const { admin } = fakeAdmin({
-      failMembershipNumber: 2,
-      transientEntitlementDeleteFailures: 99,
+      failOrganizationNumber: 2,
+      retainUsersOnDelete: true,
     });
 
     await expect(createEphemeralAuthFixtures(admin, { purpose: 'diagnostic-proof' }))
-      .rejects.toThrow(/ephemeral_fixture_setup_failed:ephemeral_organization_members_create_failed;cleanup_incomplete:/);
+      .rejects.toThrow(/ephemeral_fixture_setup_failed:ephemeral_organizations_create_failed;cleanup_incomplete:user_cleanup_not_verified/);
   });
 });
