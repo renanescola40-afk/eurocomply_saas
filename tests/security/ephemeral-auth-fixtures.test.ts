@@ -7,6 +7,7 @@ import {
 
 type FakeOptions = {
   failOrganizationNumber?: number;
+  failMembershipNumber?: number;
   ambiguousCommitOrganizationNumber?: number;
   transientOrganizationNumber?: number;
   transientOrganizationReadbacks?: number;
@@ -19,6 +20,7 @@ type FakeOptions = {
 
 function fakeAdmin({
   failOrganizationNumber = 0,
+  failMembershipNumber = 0,
   ambiguousCommitOrganizationNumber = 0,
   transientOrganizationNumber = 0,
   transientOrganizationReadbacks = 0,
@@ -38,6 +40,7 @@ function fakeAdmin({
   };
   let userCounter = 0;
   let organizationInsertCounter = 0;
+  let membershipInsertCounter = 0;
   let organizationReadCounter = 0;
   let preflightOrganizationReadCounter = 0;
   let contractCounter = 0;
@@ -184,6 +187,10 @@ function fakeAdmin({
               return { data: { id }, error: null, status: 201 };
             }
             if (table === 'organization_members') {
+              membershipInsertCounter += 1;
+              if (failMembershipNumber === membershipInsertCounter) {
+                return { data: null, error: { message: 'synthetic failure' }, status: 400 };
+              }
               if (state.memberships.has(id)) {
                 return { data: null, error: { code: '23505', message: 'duplicate key' }, status: 409 };
               }
@@ -414,11 +421,11 @@ describe('ephemeral Supabase Auth fixture lifecycle', () => {
 
   it('preserves the original setup failure when cleanup is also incomplete', async () => {
     const { admin } = fakeAdmin({
-      failOrganizationNumber: 2,
+      failMembershipNumber: 2,
       transientEntitlementDeleteFailures: 99,
     });
 
     await expect(createEphemeralAuthFixtures(admin, { purpose: 'diagnostic-proof' }))
-      .rejects.toThrow(/ephemeral_fixture_setup_failed:ephemeral_organizations_create_failed;cleanup_incomplete:/);
+      .rejects.toThrow(/ephemeral_fixture_setup_failed:ephemeral_organization_members_create_failed;cleanup_incomplete:/);
   });
 });
