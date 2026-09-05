@@ -6,10 +6,9 @@ const producer = readFileSync('scripts/security/run-audit-chain-live-validation.
 const preflight = readFileSync('scripts/security/preflight-audit-chain-runtime-proof.mjs', 'utf8');
 const fetcher = readFileSync('scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs', 'utf8');
 
-describe('manual ephemeral audit-chain runtime proof', () => {
-  it('runs only by explicit dispatch on protected Production and remains exact-SHA bound', () => {
-    expect(workflow).toContain('workflow_dispatch:');
-    expect(workflow).not.toContain('push:\n    branches: [main]');
+describe('automatic ephemeral audit-chain runtime proof', () => {
+  it('runs automatically on protected main and remains exact-SHA bound', () => {
+    expect(workflow).toContain('push:\n    branches: [main]');
     expect(workflow).toContain('environment: Production');
     expect(workflow).toContain('needs: production-environment-governance');
     expect(workflow).toContain('/commits/main');
