@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/audit-chain-runtime-proof.yml', 'utf8');
 const producer = readFileSync('scripts/security/run-audit-chain-live-validation-v2.mjs', 'utf8');
+const fixtureHelper = readFileSync('scripts/security/lib/ephemeral-auth-fixtures.mjs', 'utf8');
 const migration = readFileSync('supabase/migrations/20260905075429_fail_fast_audit_chain_advisory_contention.sql', 'utf8');
 
 describe('bounded audit-chain runtime proof', () => {
@@ -14,6 +15,15 @@ describe('bounded audit-chain runtime proof', () => {
     expect(producer).toContain('AbortSignal.any([init.signal, timeoutSignal])');
     expect(producer).toContain('withDeadline(');
     expect(producer).toContain('Promise.allSettled');
+  });
+
+  it('hard-bounds the read-only PostgREST fixture availability probe', () => {
+    expect(fixtureHelper).toContain('const EPHEMERAL_AVAILABILITY_ATTEMPT_TIMEOUT_MS = 8_000');
+    expect(fixtureHelper).toContain('async function boundedAvailabilityProbe');
+    expect(fixtureHelper).toContain('AbortSignal.timeout(EPHEMERAL_AVAILABILITY_ATTEMPT_TIMEOUT_MS)');
+    expect(fixtureHelper).toContain('Promise.race([Promise.resolve(boundedBuilder), deadline])');
+    expect(fixtureHelper).toContain("message: 'ephemeral_postgrest_preflight_probe_timeout'");
+    expect(fixtureHelper).toContain("boundedAvailabilityProbe(admin, 'organizations', probeId)");
   });
 
   it('proves fail-fast stale-head contention and a fresh-head retry at every burst level', () => {
