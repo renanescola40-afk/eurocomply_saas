@@ -76,15 +76,21 @@ function fakeAdmin({
   };
 
   const provisionOrganization = (id: string) => {
-    if (state.organizations.has(id)) return;
     state.organizations.add(id);
+  };
 
-    // Production compatibility provisioning creates these tenant-scoped records.
+  const provisionCompatibilityEnvelope = (organizationId: string) => {
+    if (!organizationId) return;
+    const alreadyProvisioned = [...state.enterpriseContracts.values()].includes(organizationId);
+    if (alreadyProvisioned) return;
+
+    // Production creates this compatibility envelope from the organization-membership
+    // trigger, not from the organization insert itself.
     const contractId = `contract-${++contractCounter}`;
     const entitlementId = `entitlement-${++entitlementCounter}`;
-    state.enterpriseContracts.set(contractId, id);
-    state.organizationEntitlements.set(entitlementId, id);
-    state.organizationUsage.add(id);
+    state.enterpriseContracts.set(contractId, organizationId);
+    state.organizationEntitlements.set(entitlementId, organizationId);
+    state.organizationUsage.add(organizationId);
   };
 
   const deleteByOrganizationIds = (table: string, ids: string[]) => {
@@ -132,7 +138,7 @@ function fakeAdmin({
       },
     },
     from: (table: string) => ({
-      insert: (row: { id?: string }) => ({
+      insert: (row: { id?: string; organization_id?: string }) => ({
         select: () => ({
           single: async () => {
             const id = String(row.id || '');
@@ -182,6 +188,7 @@ function fakeAdmin({
                 return { data: null, error: { code: '23505', message: 'duplicate key' }, status: 409 };
               }
               state.memberships.add(id);
+              provisionCompatibilityEnvelope(String(row.organization_id || ''));
               return { data: { id }, error: null, status: 201 };
             }
             return { data: null, error: { message: 'unexpected table' }, status: 400 };
@@ -211,19 +218,17 @@ function fakeAdmin({
           maybeSingle: async () => {
             if (table === 'organizations') {
               // The production helper probes PostgREST before creating disposable users.
-              // Treat an unknown id while no users exist as that preflight probe so
-              // sustained insert/readback simulations remain independent.
-              if (
-                state.users.size === 0
-                && !state.organizations.has(id)
-                && preflightOrganizationReadCounter < preflightOrganizationReadFailures
-              ) {
-                preflightOrganizationReadCounter += 1;
-                return {
-                  data: null,
-                  error: { message: 'Service Unavailable' },
-                  status: 503,
-                };
+              // Keep this probe separate from fixture readback accounting.
+              if (state.users.size === 0 && !state.organizations.has(id)) {
+                if (preflightOrganizationReadCounter < preflightOrganizationReadFailures) {
+                  preflightOrganizationReadCounter += 1;
+                  return {
+                    data: null,
+                    error: { message: 'Service Unavailable' },
+                    status: 503,
+                  };
+                }
+                return { data: null, error: null, status: 200 };
               }
 
               organizationReadCounter += 1;
@@ -392,7 +397,7 @@ describe('ephemeral Supabase Auth fixture lifecycle', () => {
     expect(cleanup).toEqual({ verified: true, failures: [] });
     expect(state.users.size).toBe(0);
     expect(state.organizations.size).toBe(0);
-  });
+  }, 15_000);
 
   it('retries transient commercial cleanup failures and removes the compatibility envelope', async () => {
     const { admin, state } = fakeAdmin({ transientEntitlementDeleteFailures: 1 });
