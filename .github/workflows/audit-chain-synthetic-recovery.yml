@@ -61,6 +61,23 @@ jobs:
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
           test "$main_sha" = "${TARGET_SHA,,}"
+
+          source_run="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${RECOVERY_SOURCE_RUN_ID}")"
+          test "$(jq -r '.path' <<<"$source_run")" = '.github/workflows/audit-chain-runtime-proof.yml'
+          test "$(jq -r '.conclusion' <<<"$source_run")" = 'failure'
+          source_sha="$(jq -r '.head_sha' <<<"$source_run" | tr '[:upper:]' '[:lower:]')"
+          [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]
+          compare_status="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/compare/${source_sha}...${TARGET_SHA,,}" | jq -r '.status')"
+          [[ "$compare_status" = 'ahead' || "$compare_status" = 'identical' ]]
+
           node -e "const f=new Date(process.env.RECOVERY_FROM),t=new Date(process.env.RECOVERY_TO);if(Number.isNaN(f.getTime())||Number.isNaN(t.getTime())||f>=t||t-f>7200000)process.exit(1)"
 
   recover:
@@ -110,7 +127,11 @@ jobs:
       - name: Validate recovery safety contracts
         run: |
           node --check scripts/security/recover-audit-chain-synthetic-residue.mjs
+          node --check scripts/security/preflight-audit-chain-synthetic-recovery-scope.mjs
           npx vitest run tests/enterprise/audit-chain-synthetic-recovery.test.ts
+
+      - name: Preflight synthetic audit-event organization binding
+        run: node scripts/security/preflight-audit-chain-synthetic-recovery-scope.mjs
 
       - name: Execute bounded synthetic-only recovery
         run: node scripts/security/recover-audit-chain-synthetic-residue.mjs
