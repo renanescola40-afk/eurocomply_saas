@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 
 const EPHEMERAL_AVAILABILITY_MAX_ATTEMPTS = 6;
+const EPHEMERAL_AVAILABILITY_ATTEMPT_TIMEOUT_MS = 8_000;
 const EPHEMERAL_INSERT_MAX_ATTEMPTS = 5;
 const EPHEMERAL_INSERT_RETRY_BASE_MS = 250;
 const EPHEMERAL_INSERT_RETRY_CAP_MS = 2_000;
@@ -66,6 +67,50 @@ async function readOneById(admin, table, id) {
   };
 }
 
+async function boundedAvailabilityProbe(admin, table, id) {
+  const timeoutResult = {
+    data: null,
+    error: {
+      code: '57014',
+      message: 'ephemeral_postgrest_preflight_probe_timeout',
+    },
+    status: 504,
+  };
+  let timer;
+
+  try {
+    const builder = admin
+      .from(table)
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    const signal = AbortSignal.timeout(EPHEMERAL_AVAILABILITY_ATTEMPT_TIMEOUT_MS);
+    const boundedBuilder = typeof builder?.abortSignal === 'function'
+      ? builder.abortSignal(signal)
+      : builder;
+    const deadline = new Promise((resolve) => {
+      timer = setTimeout(
+        () => resolve(timeoutResult),
+        EPHEMERAL_AVAILABILITY_ATTEMPT_TIMEOUT_MS,
+      );
+    });
+    const response = await Promise.race([Promise.resolve(boundedBuilder), deadline]);
+    return {
+      data: response?.data ?? null,
+      error: response?.error ?? null,
+      status: Number(response?.status || 0),
+    };
+  } catch (error) {
+    return {
+      data: null,
+      error,
+      status: Number(error?.status || error?.statusCode || 504),
+    };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function readOneByIdWithRetry(admin, table, id) {
   let lastFailure = { data: null, error: null, status: 0 };
 
@@ -91,7 +136,7 @@ async function waitForPostgrestAvailability(admin) {
   let lastFailure = { error: null, status: 0 };
 
   for (let attempt = 1; attempt <= EPHEMERAL_AVAILABILITY_MAX_ATTEMPTS; attempt += 1) {
-    const probe = await readOneById(admin, 'organizations', probeId);
+    const probe = await boundedAvailabilityProbe(admin, 'organizations', probeId);
     if (!probe.error) return;
 
     lastFailure = { error: probe.error, status: probe.status };
