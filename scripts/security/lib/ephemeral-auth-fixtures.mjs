@@ -3,6 +3,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 const EPHEMERAL_INSERT_MAX_ATTEMPTS = 3;
 const EPHEMERAL_INSERT_RETRY_BASE_MS = 250;
 const EPHEMERAL_INSERT_RETRY_CAP_MS = 1_500;
+const EPHEMERAL_CLEANUP_MAX_ATTEMPTS = 3;
 
 function password() {
   return `Rc!${randomBytes(24).toString('base64url')}9a`;
@@ -112,40 +113,101 @@ function userAbsenceWasProven(data, error) {
   return status === 404 || /not found/i.test(message);
 }
 
-async function cleanupOrganizationCommercialDependencies(admin, organizationIds) {
-  if (organizationIds.length === 0) return;
-
-  // Delete results can also be transport-ambiguous. Final cleanup acceptance is
-  // based on explicit readback below rather than on the HTTP response alone.
-  await admin
-    .from('organization_entitlements')
-    .delete()
+async function readOrganizationScopedRows(admin, table, organizationIds, columns) {
+  const response = await admin
+    .from(table)
+    .select(columns)
     .in('organization_id', organizationIds);
-
-  await admin
-    .from('enterprise_contracts')
-    .delete()
-    .in('organization_id', organizationIds);
+  return {
+    data: response?.data ?? null,
+    error: response?.error ?? null,
+    status: Number(response?.status || 0),
+  };
 }
 
-async function verifyOrganizationCommercialDependenciesRemoved(admin, organizationIds, failures) {
+async function deleteOrganizationScopedRowsAndVerify(
+  admin,
+  table,
+  organizationIds,
+  columns,
+  failureCode,
+  failures,
+) {
   if (organizationIds.length === 0) return;
 
-  const { data: entitlements, error: entitlementError } = await admin
-    .from('organization_entitlements')
-    .select('organization_id')
-    .in('organization_id', organizationIds);
-  if (entitlementError || (Array.isArray(entitlements) && entitlements.length > 0)) {
-    failures.push('organization_entitlement_cleanup_not_verified');
+  for (let attempt = 1; attempt <= EPHEMERAL_CLEANUP_MAX_ATTEMPTS; attempt += 1) {
+    // DELETE responses can be transport-ambiguous. Never trust the response alone;
+    // accept cleanup only after a separate read proves the exact synthetic scope is empty.
+    await admin
+      .from(table)
+      .delete()
+      .in('organization_id', organizationIds);
+
+    const readback = await readOrganizationScopedRows(admin, table, organizationIds, columns);
+    if (!readback.error && Array.isArray(readback.data) && readback.data.length === 0) return;
+
+    if (attempt < EPHEMERAL_CLEANUP_MAX_ATTEMPTS) {
+      await sleep(retryDelay(attempt));
+    }
   }
 
-  const { data: contracts, error: contractError } = await admin
-    .from('enterprise_contracts')
-    .select('id')
-    .in('organization_id', organizationIds);
-  if (contractError || (Array.isArray(contracts) && contracts.length > 0)) {
-    failures.push('enterprise_contract_cleanup_not_verified');
+  failures.push(failureCode);
+}
+
+async function cleanupOrganizationCommercialDependencies(admin, organizationIds, failures) {
+  if (organizationIds.length === 0) return;
+
+  // The compatibility-envelope trigger currently creates these three tenant rows.
+  // organization_entitlements RESTRICTs enterprise_contract deletion, so it must be
+  // removed first. organization_usage is also synthetic and is removed explicitly
+  // rather than relying on the final organization cascade. Each delete is reconciled
+  // by readback and retried because provider transport failures are ambiguous.
+  await deleteOrganizationScopedRowsAndVerify(
+    admin,
+    'organization_entitlements',
+    organizationIds,
+    'organization_id',
+    'organization_entitlement_cleanup_not_verified',
+    failures,
+  );
+  await deleteOrganizationScopedRowsAndVerify(
+    admin,
+    'organization_usage',
+    organizationIds,
+    'organization_id',
+    'organization_usage_cleanup_not_verified',
+    failures,
+  );
+  await deleteOrganizationScopedRowsAndVerify(
+    admin,
+    'enterprise_contracts',
+    organizationIds,
+    'id',
+    'enterprise_contract_cleanup_not_verified',
+    failures,
+  );
+}
+
+async function deleteOrganizationsAndVerify(admin, organizationIds, failures) {
+  if (organizationIds.length === 0) return;
+
+  for (let attempt = 1; attempt <= EPHEMERAL_CLEANUP_MAX_ATTEMPTS; attempt += 1) {
+    for (const id of [...organizationIds].reverse()) {
+      await admin.from('organizations').delete().eq('id', id);
+    }
+
+    const { data, error } = await admin
+      .from('organizations')
+      .select('id')
+      .in('id', organizationIds);
+    if (!error && Array.isArray(data) && data.length === 0) return;
+
+    if (attempt < EPHEMERAL_CLEANUP_MAX_ATTEMPTS) {
+      await sleep(retryDelay(attempt));
+    }
   }
+
+  failures.push('organization_cleanup_not_verified');
 }
 
 export async function cleanupEphemeralAuthFixtures(admin, created) {
@@ -156,16 +218,13 @@ export async function cleanupEphemeralAuthFixtures(admin, created) {
     await admin.from('organization_members').delete().eq('id', id);
   }
 
-  // Production provisions an enterprise contract and organization entitlement when
-  // an organization is created. Both are intentional tenant records, but their
-  // foreign keys are RESTRICT to protect real commercial history. The protected
-  // runtime fixture must therefore remove only its own synthetic dependants before
-  // deleting the synthetic organization.
-  await cleanupOrganizationCommercialDependencies(admin, created.organizations);
+  // Production provisions a compatibility contract, organization entitlement and
+  // usage row when a synthetic membership is created. The contract FK is RESTRICT,
+  // so the fixture must remove only its own generated envelope in FK-safe order.
+  await cleanupOrganizationCommercialDependencies(admin, created.organizations, failures);
 
-  for (const id of [...created.organizations].reverse()) {
-    await admin.from('organizations').delete().eq('id', id);
-  }
+  await deleteOrganizationsAndVerify(admin, created.organizations, failures);
+
   for (const id of [...created.users].reverse()) {
     await admin.auth.admin.deleteUser(id);
   }
@@ -180,17 +239,6 @@ export async function cleanupEphemeralAuthFixtures(admin, created) {
     }
   }
 
-  await verifyOrganizationCommercialDependenciesRemoved(admin, created.organizations, failures);
-
-  if (created.organizations.length > 0) {
-    const { data, error } = await admin
-      .from('organizations')
-      .select('id')
-      .in('id', created.organizations);
-    if (error || (Array.isArray(data) && data.length > 0)) {
-      failures.push('organization_cleanup_not_verified');
-    }
-  }
   for (const id of created.users) {
     const { data, error } = await admin.auth.admin.getUserById(id);
     if (!userAbsenceWasProven(data, error)) failures.push('user_cleanup_not_verified');
@@ -286,7 +334,8 @@ export async function createEphemeralAuthFixtures(
   } catch (error) {
     const cleanup = await cleanupEphemeralAuthFixtures(admin, created);
     if (!cleanup.verified) {
-      throw new Error(`ephemeral_fixture_setup_failed_cleanup_incomplete:${cleanup.failures.join(',')}`);
+      const originalFailure = error instanceof Error ? error.message : 'unknown_fixture_setup_failure';
+      throw new Error(`ephemeral_fixture_setup_failed:${originalFailure};cleanup_incomplete:${cleanup.failures.join(',')}`);
     }
     throw error;
   }
