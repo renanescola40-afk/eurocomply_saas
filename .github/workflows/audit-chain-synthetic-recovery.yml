@@ -84,16 +84,17 @@ jobs:
     name: Remove and verify only failed-proof synthetic residue
     needs: governance
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    environment: Production
+    timeout-minutes: 15
+    environment: production
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
       RECOVERY_SOURCE_RUN_ID: ${{ inputs.source_run_id }}
       RECOVERY_FROM: ${{ inputs.recovery_from }}
       RECOVERY_TO: ${{ inputs.recovery_to }}
       AUDIT_CHAIN_SYNTHETIC_CLEANUP_CONFIRMATION: ${{ inputs.confirmation }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+      PGSSLMODE: require
     steps:
       - name: Revalidate exact current main before protected secrets are used
         shell: bash
@@ -128,13 +129,162 @@ jobs:
         run: |
           node --check scripts/security/recover-audit-chain-synthetic-residue.mjs
           node --check scripts/security/preflight-audit-chain-synthetic-recovery-scope.mjs
+          test -s scripts/security/recover-audit-chain-synthetic-residue.sql
           npx vitest run tests/enterprise/audit-chain-synthetic-recovery.test.ts
 
-      - name: Preflight synthetic audit-event organization binding
-        run: node scripts/security/preflight-audit-chain-synthetic-recovery-scope.mjs
+      - name: Validate protected production database configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_POOLER_URL:-}"
+          [[ "${SUPABASE_PROJECT_ID:-}" =~ ^[a-z0-9]{20}$ ]]
+          case "$SUPABASE_DB_POOLER_URL" in
+            postgresql://*|postgres://*) ;;
+            *) echo 'SUPABASE_DB_POOLER_URL must be a PostgreSQL connection string' >&2; exit 1 ;;
+          esac
+          case "$SUPABASE_DB_POOLER_URL" in
+            *pooler.supabase.com*) ;;
+            *) echo 'SUPABASE_DB_POOLER_URL must use the Supabase pooler endpoint' >&2; exit 1 ;;
+          esac
 
-      - name: Execute bounded synthetic-only recovery
-        run: node scripts/security/recover-audit-chain-synthetic-residue.mjs
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+
+      - name: Preflight transactional synthetic scope through Session Pooler
+        shell: bash
+        run: |
+          set -euo pipefail
+          preflight="$RUNNER_TEMP/audit-chain-synthetic-recovery-preflight.json"
+          errfile="$RUNNER_TEMP/audit-chain-synthetic-recovery-preflight.err"
+          set +e
+          psql "$SUPABASE_DB_POOLER_URL" \
+            -X -qAt \
+            -v ON_ERROR_STOP=1 \
+            -v target_sha="${TARGET_SHA,,}" \
+            -v source_run_id="$RECOVERY_SOURCE_RUN_ID" \
+            -v recovery_from="$RECOVERY_FROM" \
+            -v recovery_to="$RECOVERY_TO" \
+            -v confirmation="$AUDIT_CHAIN_SYNTHETIC_CLEANUP_CONFIRMATION" \
+            -v execute_cleanup=false \
+            --file scripts/security/recover-audit-chain-synthetic-residue.sql \
+            > "$preflight" 2> "$errfile"
+          status=$?
+          set -e
+          if test "$status" -ne 0; then
+            failure_code="$(sed -nE 's/^.*ERROR:[[:space:]]+([A-Za-z0-9_.-]+).*$/\1/p' "$errfile" | tail -1)"
+            failure_code="${failure_code:-pooler_preflight_failed}"
+            failure_code="$(printf '%s' "$failure_code" | tr -cd 'A-Za-z0-9_.-' | cut -c1-96)"
+            echo "RECOVERY_FAILURE_CODE=$failure_code" >> "$GITHUB_ENV"
+            echo "::error::$failure_code"
+            exit "$status"
+          fi
+          node - "$preflight" <<'NODE'
+          const fs = require('node:fs');
+          const path = process.argv[2];
+          const evidence = JSON.parse(fs.readFileSync(path, 'utf8'));
+          if (evidence.status !== 'PreflightPassed' || evidence.outcome !== 'passed') process.exit(1);
+          if (evidence.targetSha !== String(process.env.TARGET_SHA).toLowerCase()) process.exit(1);
+          if (evidence.sourceRunId !== process.env.RECOVERY_SOURCE_RUN_ID) process.exit(1);
+          if (evidence.syntheticScope?.organizationsMatched < 1) process.exit(1);
+          if (evidence.syntheticScope?.auditEventsMatched < 1) process.exit(1);
+          if (evidence.syntheticScope?.authUsersMatched !== 0) process.exit(1);
+          if (evidence.cleanup?.protectedOrganizationIdsTouched !== false) process.exit(1);
+          if (evidence.evidenceIntegrity?.rawIdentifiersStored !== false) process.exit(1);
+          NODE
+
+      - name: Execute bounded transactional synthetic-only recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="docs/security/evidence/runtime/audit-chain-synthetic-recovery.json"
+          errfile="$RUNNER_TEMP/audit-chain-synthetic-recovery.err"
+          mkdir -p "$(dirname "$evidence")"
+          rm -f "$evidence"
+          set +e
+          psql "$SUPABASE_DB_POOLER_URL" \
+            -X -qAt \
+            -v ON_ERROR_STOP=1 \
+            -v target_sha="${TARGET_SHA,,}" \
+            -v source_run_id="$RECOVERY_SOURCE_RUN_ID" \
+            -v recovery_from="$RECOVERY_FROM" \
+            -v recovery_to="$RECOVERY_TO" \
+            -v confirmation="$AUDIT_CHAIN_SYNTHETIC_CLEANUP_CONFIRMATION" \
+            -v execute_cleanup=true \
+            --file scripts/security/recover-audit-chain-synthetic-residue.sql \
+            > "$evidence" 2> "$errfile"
+          status=$?
+          set -e
+          if test "$status" -ne 0; then
+            rm -f "$evidence"
+            failure_code="$(sed -nE 's/^.*ERROR:[[:space:]]+([A-Za-z0-9_.-]+).*$/\1/p' "$errfile" | tail -1)"
+            failure_code="${failure_code:-pooler_recovery_failed}"
+            failure_code="$(printf '%s' "$failure_code" | tr -cd 'A-Za-z0-9_.-' | cut -c1-96)"
+            echo "RECOVERY_FAILURE_CODE=$failure_code" >> "$GITHUB_ENV"
+            echo "::error::$failure_code"
+            exit "$status"
+          fi
+
+          node - "$evidence" <<'NODE'
+          const fs = require('node:fs');
+          const path = process.argv[2];
+          const evidence = JSON.parse(fs.readFileSync(path, 'utf8'));
+          if (evidence.status !== 'Complete' || evidence.outcome !== 'passed') process.exit(1);
+          if (evidence.targetSha !== String(process.env.TARGET_SHA).toLowerCase()) process.exit(1);
+          if (evidence.sourceRunId !== process.env.RECOVERY_SOURCE_RUN_ID) process.exit(1);
+          if (evidence.cleanup?.verified !== true) process.exit(1);
+          if (evidence.cleanup?.transactional !== true) process.exit(1);
+          if (evidence.cleanup?.historicalFixtureCleanupAttempted !== false) process.exit(1);
+          if (evidence.cleanup?.protectedOrganizationIdsTouched !== false) process.exit(1);
+          if (evidence.evidenceIntegrity?.containsSensitiveValues !== false) process.exit(1);
+          if (evidence.evidenceIntegrity?.rawIdentifiersStored !== false) process.exit(1);
+          if (evidence.evidenceIntegrity?.credentialsStored !== false) process.exit(1);
+          NODE
+
+      - name: Write sanitized failure evidence when recovery did not complete
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="docs/security/evidence/runtime/audit-chain-synthetic-recovery.json"
+          if test ! -s "$evidence"; then
+            mkdir -p "$(dirname "$evidence")"
+            node - "$evidence" <<'NODE'
+            const fs = require('node:fs');
+            const path = process.argv[2];
+            const failureCode = String(process.env.RECOVERY_FAILURE_CODE || 'protected_recovery_failed')
+              .replace(/[^A-Za-z0-9_.-]+/g, '_').slice(0, 96);
+            const evidence = {
+              schema: 'risck-comply.audit-chain-synthetic-recovery.v1',
+              status: 'Failed',
+              outcome: 'failed',
+              generatedAt: new Date().toISOString(),
+              targetSha: String(process.env.TARGET_SHA || '').toLowerCase(),
+              sourceRunId: String(process.env.RECOVERY_SOURCE_RUN_ID || ''),
+              recoveryWindow: {
+                from: String(process.env.RECOVERY_FROM || ''),
+                to: String(process.env.RECOVERY_TO || ''),
+              },
+              failureCode,
+              cleanup: {
+                verified: false,
+                transactional: true,
+                historicalFixtureCleanupAttempted: false,
+                protectedOrganizationIdsTouched: false,
+              },
+              evidenceIntegrity: {
+                containsSensitiveValues: false,
+                rawIdentifiersStored: false,
+                credentialsStored: false,
+              },
+              connectionPath: 'supabase_session_pooler',
+            };
+            fs.writeFileSync(path, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
+            NODE
+          fi
 
       - name: Upload redacted recovery evidence
         if: always()
