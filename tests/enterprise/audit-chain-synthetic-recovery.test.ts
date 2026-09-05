@@ -118,6 +118,11 @@ describe('audit-chain synthetic recovery', () => {
     expect(workflow).toContain('SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}');
     expect(workflow).not.toContain('NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}');
     expect(workflow).not.toContain('SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}');
+    expect(workflow).toContain('scripts/supabase/prepare-production-db-connection.mjs');
+    expect(workflow).toContain('.transport == "session_pooler"');
+    expect(workflow).toContain('RECOVERY_DB_URL_FILE=$connection_file');
+    expect(workflow).toContain('psql "$(cat "$RECOVERY_DB_URL_FILE")"');
+    expect(workflow).not.toContain('psql "$SUPABASE_DB_POOLER_URL"');
     expect(workflow).toContain("test \"$RECOVERY_CONFIRMATION\" = 'CLEANUP_AUDIT_CHAIN_SYNTHETIC'");
     expect(workflow).toContain('test "$main_sha" = "${TARGET_SHA,,}"');
     expect(workflow).toContain('/actions/runs/${RECOVERY_SOURCE_RUN_ID}');
