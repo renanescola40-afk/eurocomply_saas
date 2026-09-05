@@ -129,6 +129,7 @@ jobs:
         run: |
           node --check scripts/security/recover-audit-chain-synthetic-residue.mjs
           node --check scripts/security/preflight-audit-chain-synthetic-recovery-scope.mjs
+          node --check scripts/security/audit-chain-synthetic-recovery-evidence.mjs
           test -s scripts/security/recover-audit-chain-synthetic-residue.sql
           npx vitest run tests/enterprise/audit-chain-synthetic-recovery.test.ts
 
@@ -182,19 +183,7 @@ jobs:
             echo "::error::$failure_code"
             exit "$status"
           fi
-          node - "$preflight" <<'NODE'
-          const fs = require('node:fs');
-          const path = process.argv[2];
-          const evidence = JSON.parse(fs.readFileSync(path, 'utf8'));
-          if (evidence.status !== 'PreflightPassed' || evidence.outcome !== 'passed') process.exit(1);
-          if (evidence.targetSha !== String(process.env.TARGET_SHA).toLowerCase()) process.exit(1);
-          if (evidence.sourceRunId !== process.env.RECOVERY_SOURCE_RUN_ID) process.exit(1);
-          if (evidence.syntheticScope?.organizationsMatched < 1) process.exit(1);
-          if (evidence.syntheticScope?.auditEventsMatched < 1) process.exit(1);
-          if (evidence.syntheticScope?.authUsersMatched !== 0) process.exit(1);
-          if (evidence.cleanup?.protectedOrganizationIdsTouched !== false) process.exit(1);
-          if (evidence.evidenceIntegrity?.rawIdentifiersStored !== false) process.exit(1);
-          NODE
+          node scripts/security/audit-chain-synthetic-recovery-evidence.mjs validate-preflight "$preflight"
 
       - name: Execute bounded transactional synthetic-only recovery
         shell: bash
@@ -227,22 +216,7 @@ jobs:
             echo "::error::$failure_code"
             exit "$status"
           fi
-
-          node - "$evidence" <<'NODE'
-          const fs = require('node:fs');
-          const path = process.argv[2];
-          const evidence = JSON.parse(fs.readFileSync(path, 'utf8'));
-          if (evidence.status !== 'Complete' || evidence.outcome !== 'passed') process.exit(1);
-          if (evidence.targetSha !== String(process.env.TARGET_SHA).toLowerCase()) process.exit(1);
-          if (evidence.sourceRunId !== process.env.RECOVERY_SOURCE_RUN_ID) process.exit(1);
-          if (evidence.cleanup?.verified !== true) process.exit(1);
-          if (evidence.cleanup?.transactional !== true) process.exit(1);
-          if (evidence.cleanup?.historicalFixtureCleanupAttempted !== false) process.exit(1);
-          if (evidence.cleanup?.protectedOrganizationIdsTouched !== false) process.exit(1);
-          if (evidence.evidenceIntegrity?.containsSensitiveValues !== false) process.exit(1);
-          if (evidence.evidenceIntegrity?.rawIdentifiersStored !== false) process.exit(1);
-          if (evidence.evidenceIntegrity?.credentialsStored !== false) process.exit(1);
-          NODE
+          node scripts/security/audit-chain-synthetic-recovery-evidence.mjs validate-complete "$evidence"
 
       - name: Write sanitized failure evidence when recovery did not complete
         if: failure()
@@ -251,39 +225,7 @@ jobs:
           set -euo pipefail
           evidence="docs/security/evidence/runtime/audit-chain-synthetic-recovery.json"
           if test ! -s "$evidence"; then
-            mkdir -p "$(dirname "$evidence")"
-            node - "$evidence" <<'NODE'
-            const fs = require('node:fs');
-            const path = process.argv[2];
-            const failureCode = String(process.env.RECOVERY_FAILURE_CODE || 'protected_recovery_failed')
-              .replace(/[^A-Za-z0-9_.-]+/g, '_').slice(0, 96);
-            const evidence = {
-              schema: 'risck-comply.audit-chain-synthetic-recovery.v1',
-              status: 'Failed',
-              outcome: 'failed',
-              generatedAt: new Date().toISOString(),
-              targetSha: String(process.env.TARGET_SHA || '').toLowerCase(),
-              sourceRunId: String(process.env.RECOVERY_SOURCE_RUN_ID || ''),
-              recoveryWindow: {
-                from: String(process.env.RECOVERY_FROM || ''),
-                to: String(process.env.RECOVERY_TO || ''),
-              },
-              failureCode,
-              cleanup: {
-                verified: false,
-                transactional: true,
-                historicalFixtureCleanupAttempted: false,
-                protectedOrganizationIdsTouched: false,
-              },
-              evidenceIntegrity: {
-                containsSensitiveValues: false,
-                rawIdentifiersStored: false,
-                credentialsStored: false,
-              },
-              connectionPath: 'supabase_session_pooler',
-            };
-            fs.writeFileSync(path, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
-            NODE
+            node scripts/security/audit-chain-synthetic-recovery-evidence.mjs write-failure "$evidence"
           fi
 
       - name: Upload redacted recovery evidence
