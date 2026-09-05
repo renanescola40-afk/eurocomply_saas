@@ -214,11 +214,9 @@ export async function runRecovery() {
 
   const startedAt = new Date().toISOString();
   try {
-    const [organizations, auditEvents, users] = await Promise.all([
-      querySyntheticOrganizations(admin, from, to),
-      querySyntheticAuditEvents(admin, from, to),
-      querySyntheticUsers(admin, from, to),
-    ]);
+    const organizations = await querySyntheticOrganizations(admin, from, to);
+    const auditEvents = await querySyntheticAuditEvents(admin, from, to);
+    const users = await querySyntheticUsers(admin, from, to);
     const organizationIds = organizations.map((row) => row.id);
     const auditEventIds = auditEvents.map((row) => row.id);
 
