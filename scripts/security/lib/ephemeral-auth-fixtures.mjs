@@ -1,9 +1,11 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 
-const EPHEMERAL_INSERT_MAX_ATTEMPTS = 3;
+const EPHEMERAL_AVAILABILITY_MAX_ATTEMPTS = 6;
+const EPHEMERAL_INSERT_MAX_ATTEMPTS = 5;
 const EPHEMERAL_INSERT_RETRY_BASE_MS = 250;
-const EPHEMERAL_INSERT_RETRY_CAP_MS = 1_500;
-const EPHEMERAL_CLEANUP_MAX_ATTEMPTS = 3;
+const EPHEMERAL_INSERT_RETRY_CAP_MS = 2_000;
+const EPHEMERAL_READBACK_MAX_ATTEMPTS = 4;
+const EPHEMERAL_CLEANUP_MAX_ATTEMPTS = 5;
 
 function password() {
   return `Rc!${randomBytes(24).toString('base64url')}9a`;
@@ -64,6 +66,50 @@ async function readOneById(admin, table, id) {
   };
 }
 
+async function readOneByIdWithRetry(admin, table, id) {
+  let lastFailure = { data: null, error: null, status: 0 };
+
+  for (let attempt = 1; attempt <= EPHEMERAL_READBACK_MAX_ATTEMPTS; attempt += 1) {
+    const readback = await readOneById(admin, table, id);
+    if (!readback.error) return { ...readback, transportExhausted: false };
+
+    lastFailure = readback;
+    if (!isAmbiguousTransportFailure(readback.error, readback.status)) {
+      return { ...readback, transportExhausted: false };
+    }
+
+    if (attempt < EPHEMERAL_READBACK_MAX_ATTEMPTS) {
+      await sleep(retryDelay(attempt));
+    }
+  }
+
+  return { ...lastFailure, transportExhausted: true };
+}
+
+async function waitForPostgrestAvailability(admin) {
+  const probeId = randomUUID();
+  let lastFailure = { error: null, status: 0 };
+
+  for (let attempt = 1; attempt <= EPHEMERAL_AVAILABILITY_MAX_ATTEMPTS; attempt += 1) {
+    const probe = await readOneById(admin, 'organizations', probeId);
+    if (!probe.error) return;
+
+    lastFailure = { error: probe.error, status: probe.status };
+    if (!isAmbiguousTransportFailure(probe.error, probe.status)) {
+      throw new Error('ephemeral_postgrest_preflight_failed');
+    }
+
+    if (attempt < EPHEMERAL_AVAILABILITY_MAX_ATTEMPTS) {
+      await sleep(retryDelay(attempt));
+    }
+  }
+
+  const suffix = isAmbiguousTransportFailure(lastFailure.error, lastFailure.status)
+    ? '_transport_exhausted'
+    : '';
+  throw new Error(`ephemeral_postgrest_preflight_failed${suffix}`);
+}
+
 async function insertOne(admin, table, row) {
   if (!row?.id) throw new Error(`ephemeral_${table}_stable_id_required`);
 
@@ -82,12 +128,13 @@ async function insertOne(admin, table, row) {
     lastFailure = { error, status };
 
     // A transport failure is ambiguous: PostgREST may have committed the row even
-    // though the client never received the response. Always reconcile by the exact
-    // pre-generated id before deciding whether another insert is safe.
-    const readback = await readOneById(admin, table, row.id);
+    // though the client never received the response. Reconcile the exact stable id
+    // through a bounded readback window before another write is attempted.
+    const readback = await readOneByIdWithRetry(admin, table, row.id);
     if (!readback.error && readback.data?.id === row.id) return readback.data;
 
-    const readbackAmbiguous = isAmbiguousTransportFailure(readback.error, readback.status);
+    const readbackAmbiguous = readback.transportExhausted
+      || isAmbiguousTransportFailure(readback.error, readback.status);
     const duplicateAfterAmbiguousWrite = sawAmbiguousWrite && isDuplicateKeyError(error);
     const canContinueReconciliation = insertAmbiguous
       || (sawAmbiguousWrite && readbackAmbiguous)
@@ -218,10 +265,19 @@ export async function cleanupEphemeralAuthFixtures(admin, created) {
     await admin.from('organization_members').delete().eq('id', id);
   }
 
-  // Production provisions a compatibility contract, organization entitlement and
-  // usage row when a synthetic membership is created. The contract FK is RESTRICT,
-  // so the fixture must remove only its own generated envelope in FK-safe order.
-  await cleanupOrganizationCommercialDependencies(admin, created.organizations, failures);
+  // Only a membership insert can fire the compatibility-envelope trigger. During
+  // an organization-create transport failure, querying commercial tables for every
+  // attempted organization adds unnecessary load and can create false cleanup noise.
+  // Older trackers do not carry this field, so retain the previous conservative
+  // fallback for backward compatibility.
+  const commercialEnvelopeOrganizations = Array.isArray(created.commercialEnvelopeOrganizations)
+    ? created.commercialEnvelopeOrganizations
+    : created.organizations;
+  await cleanupOrganizationCommercialDependencies(
+    admin,
+    [...new Set(commercialEnvelopeOrganizations)],
+    failures,
+  );
 
   await deleteOrganizationsAndVerify(admin, created.organizations, failures);
 
@@ -253,7 +309,12 @@ export async function createEphemeralAuthFixtures(
 ) {
   const normalizedPurpose = safePurpose(purpose);
   const suffix = `${Date.now()}-${randomUUID()}`;
-  const created = { users: [], organizations: [], memberships: [] };
+  const created = {
+    users: [],
+    organizations: [],
+    memberships: [],
+    commercialEnvelopeOrganizations: [],
+  };
 
   const createUser = async (label, rolePurpose) => {
     const credentials = {
@@ -271,6 +332,11 @@ export async function createEphemeralAuthFixtures(
   };
 
   try {
+    // The core proof requires both Auth and PostgREST. Prove the data plane is
+    // reachable before creating disposable identities so a provider outage fails
+    // closed without creating user churn or cleanup obligations.
+    await waitForPostgrestAvailability(admin);
+
     const owner = await createUser('owner', `${normalizedPurpose}-owner`);
     const member = await createUser('member', `${normalizedPurpose}-member`);
     const outsider = await createUser('outsider', `${normalizedPurpose}-outsider`);
@@ -295,6 +361,7 @@ export async function createEphemeralAuthFixtures(
 
     const ownerMembershipId = randomUUID();
     created.memberships.push(ownerMembershipId);
+    created.commercialEnvelopeOrganizations.push(organizationA.id);
     const ownerMembership = await insertOne(admin, 'organization_members', {
       id: ownerMembershipId,
       organization_id: organizationA.id,
@@ -304,6 +371,7 @@ export async function createEphemeralAuthFixtures(
 
     const memberMembershipId = randomUUID();
     created.memberships.push(memberMembershipId);
+    created.commercialEnvelopeOrganizations.push(organizationA.id);
     const memberMembership = await insertOne(admin, 'organization_members', {
       id: memberMembershipId,
       organization_id: organizationA.id,
@@ -313,12 +381,17 @@ export async function createEphemeralAuthFixtures(
 
     const outsiderMembershipId = randomUUID();
     created.memberships.push(outsiderMembershipId);
+    created.commercialEnvelopeOrganizations.push(organizationB.id);
     const outsiderMembership = await insertOne(admin, 'organization_members', {
       id: outsiderMembershipId,
       organization_id: organizationB.id,
       user_id: outsider.id,
       role: 'owner',
     });
+
+    created.commercialEnvelopeOrganizations = [
+      ...new Set(created.commercialEnvelopeOrganizations),
+    ];
 
     return {
       created,
