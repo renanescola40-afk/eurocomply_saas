@@ -1,6 +1,12 @@
 name: Final Legal Publication Gate
 
 on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact 40-character current main SHA to revalidate without changing legal acceptance state
+        required: true
+        type: string
   pull_request:
     paths:
       - 'src/server/legal/**'
@@ -11,6 +17,7 @@ on:
       - 'scripts/compliance/generate-legal-counsel-handoff-bundle.mjs'
       - 'tests/legal-publication-state.test.ts'
       - 'tests/compliance/final-legal-publication-gate.test.ts'
+      - 'tests/compliance/final-legal-publication-workflow-contract.test.ts'
       - '.github/workflows/final-legal-publication-gate.yml'
   push:
     branches: [main]
@@ -23,13 +30,14 @@ on:
       - 'scripts/compliance/generate-legal-counsel-handoff-bundle.mjs'
       - 'tests/legal-publication-state.test.ts'
       - 'tests/compliance/final-legal-publication-gate.test.ts'
+      - 'tests/compliance/final-legal-publication-workflow-contract.test.ts'
       - '.github/workflows/final-legal-publication-gate.yml'
 
 permissions:
   contents: read
 
 concurrency:
-  group: final-legal-publication-gate-${{ github.event.pull_request.number || github.ref }}
+  group: final-legal-publication-gate-${{ inputs.release_sha || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -37,12 +45,27 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      LEGAL_PUBLICATION_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      LEGAL_PUBLICATION_EXPECTED_SHA: ${{ inputs.release_sha || github.event.pull_request.head.sha || github.sha }}
+      GITHUB_HEAD_SHA: ${{ inputs.release_sha || github.event.pull_request.head.sha || github.sha }}
 
     steps:
-      - name: Checkout repository
+      - name: Checkout exact assessed repository SHA
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha || github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Bind manual replay to exact current main
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${LEGAL_PUBLICATION_EXPECTED_SHA,,}"
+          [[ "$expected" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$expected"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$expected"
 
       - name: Setup Node
         uses: actions/setup-node@v7
@@ -60,7 +83,7 @@ jobs:
         run: npm run typecheck
 
       - name: Test fail-closed legal publication state
-        run: npx vitest run tests/legal-publication-state.test.ts tests/compliance/final-legal-publication-gate.test.ts
+        run: npx vitest run tests/legal-publication-state.test.ts tests/compliance/final-legal-publication-gate.test.ts tests/compliance/final-legal-publication-workflow-contract.test.ts
 
       - name: Build application with review-draft state
         run: npm run build
