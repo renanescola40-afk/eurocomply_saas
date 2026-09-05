@@ -10,6 +10,8 @@ type FakeOptions = {
   ambiguousCommitOrganizationNumber?: number;
   transientOrganizationNumber?: number;
   transientOrganizationReadbacks?: number;
+  fetchFailureOrganizationNumber?: number;
+  fetchFailureOrganizationReadbacks?: number;
 };
 
 function fakeAdmin({
@@ -17,6 +19,8 @@ function fakeAdmin({
   ambiguousCommitOrganizationNumber = 0,
   transientOrganizationNumber = 0,
   transientOrganizationReadbacks = 0,
+  fetchFailureOrganizationNumber = 0,
+  fetchFailureOrganizationReadbacks = 0,
 }: FakeOptions = {}) {
   const state = {
     users: new Set<string>(),
@@ -116,6 +120,16 @@ function fakeAdmin({
               if (failOrganizationNumber === organizationInsertCounter) {
                 return { data: null, error: { message: 'synthetic failure' }, status: 400 };
               }
+              if (fetchFailureOrganizationNumber === organizationInsertCounter) {
+                return {
+                  data: null,
+                  error: {
+                    message: 'TypeError: fetch failed',
+                    details: 'getaddrinfo ENOTFOUND synthetic.supabase.co',
+                  },
+                  status: 0,
+                };
+              }
               if (transientOrganizationNumber === organizationInsertCounter) {
                 return {
                   data: null,
@@ -177,7 +191,17 @@ function fakeAdmin({
           maybeSingle: async () => {
             if (table === 'organizations') {
               organizationReadCounter += 1;
-              if (organizationReadCounter <= transientOrganizationReadbacks) {
+              if (organizationReadCounter <= fetchFailureOrganizationReadbacks) {
+                return {
+                  data: null,
+                  error: {
+                    message: 'TypeError: fetch failed',
+                    details: 'socket hang up ECONNRESET',
+                  },
+                  status: 0,
+                };
+              }
+              if (organizationReadCounter <= fetchFailureOrganizationReadbacks + transientOrganizationReadbacks) {
                 return {
                   data: null,
                   error: { message: 'Internal Server Error' },
@@ -270,6 +294,23 @@ describe('ephemeral Supabase Auth fixture lifecycle', () => {
     });
 
     const fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'multi-request-outage-proof' });
+
+    expect(fixtures.created.organizations).toHaveLength(2);
+    expect(new Set(fixtures.created.organizations).size).toBe(2);
+    expect(state.organizations.size).toBe(2);
+
+    const cleanup = await cleanupEphemeralAuthFixtures(admin, fixtures.created);
+    expect(cleanup).toEqual({ verified: true, failures: [] });
+    expect(state.organizations.size).toBe(0);
+  });
+
+  it('retries the same stable id through status-zero fetch and network failures', async () => {
+    const { admin, state } = fakeAdmin({
+      fetchFailureOrganizationNumber: 1,
+      fetchFailureOrganizationReadbacks: 1,
+    });
+
+    const fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'fetch-transport-proof' });
 
     expect(fixtures.created.organizations).toHaveLength(2);
     expect(new Set(fixtures.created.organizations).size).toBe(2);
