@@ -1,0 +1,146 @@
+name: Audit Chain Synthetic Recovery
+
+run-name: Audit-chain synthetic recovery for ${{ inputs.release_sha }} from run ${{ inputs.source_run_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full current main SHA containing the recovery tool
+        required: true
+        type: string
+      source_run_id:
+        description: Failed audit-chain workflow run that created the synthetic residue
+        required: true
+        type: string
+      recovery_from:
+        description: Inclusive ISO-8601 UTC lower bound for the failed proof fixtures
+        required: true
+        type: string
+      recovery_to:
+        description: Inclusive ISO-8601 UTC upper bound for the failed proof fixtures
+        required: true
+        type: string
+      confirmation:
+        description: Must equal CLEANUP_AUDIT_CHAIN_SYNTHETIC
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: audit-chain-synthetic-recovery-production
+  cancel-in-progress: false
+
+jobs:
+  governance:
+    name: Validate exact-main synthetic recovery scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      RECOVERY_SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+      RECOVERY_FROM: ${{ inputs.recovery_from }}
+      RECOVERY_TO: ${{ inputs.recovery_to }}
+      RECOVERY_CONFIRMATION: ${{ inputs.confirmation }}
+    steps:
+      - name: Validate exact main and explicit destructive-scope confirmation
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$RECOVERY_SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          test "$RECOVERY_CONFIRMATION" = 'CLEANUP_AUDIT_CHAIN_SYNTHETIC'
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "${TARGET_SHA,,}"
+
+          source_run="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${RECOVERY_SOURCE_RUN_ID}")"
+          test "$(jq -r '.path' <<<"$source_run")" = '.github/workflows/audit-chain-runtime-proof.yml'
+          test "$(jq -r '.conclusion' <<<"$source_run")" = 'failure'
+          source_sha="$(jq -r '.head_sha' <<<"$source_run" | tr '[:upper:]' '[:lower:]')"
+          [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]
+          compare_status="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/compare/${source_sha}...${TARGET_SHA,,}" | jq -r '.status')"
+          [[ "$compare_status" = 'ahead' || "$compare_status" = 'identical' ]]
+
+          node -e "const f=new Date(process.env.RECOVERY_FROM),t=new Date(process.env.RECOVERY_TO);if(Number.isNaN(f.getTime())||Number.isNaN(t.getTime())||f>=t||t-f>7200000)process.exit(1)"
+
+  recover:
+    name: Remove and verify only failed-proof synthetic residue
+    needs: governance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: Production
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      RECOVERY_SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+      RECOVERY_FROM: ${{ inputs.recovery_from }}
+      RECOVERY_TO: ${{ inputs.recovery_to }}
+      AUDIT_CHAIN_SYNTHETIC_CLEANUP_CONFIRMATION: ${{ inputs.confirmation }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - name: Revalidate exact current main before protected secrets are used
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          main_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "${TARGET_SHA,,}"
+
+      - name: Checkout exact recovery SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Validate recovery safety contracts
+        run: |
+          node --check scripts/security/recover-audit-chain-synthetic-residue.mjs
+          node --check scripts/security/preflight-audit-chain-synthetic-recovery-scope.mjs
+          npx vitest run tests/enterprise/audit-chain-synthetic-recovery.test.ts
+
+      - name: Preflight synthetic audit-event organization binding
+        run: node scripts/security/preflight-audit-chain-synthetic-recovery-scope.mjs
+
+      - name: Execute bounded synthetic-only recovery
+        run: node scripts/security/recover-audit-chain-synthetic-residue.mjs
+
+      - name: Upload redacted recovery evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: audit-chain-synthetic-recovery-${{ env.TARGET_SHA }}-${{ env.RECOVERY_SOURCE_RUN_ID }}
+          path: docs/security/evidence/runtime/audit-chain-synthetic-recovery.json
+          if-no-files-found: error
+          retention-days: 90
