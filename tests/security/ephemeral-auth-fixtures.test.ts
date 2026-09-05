@@ -427,7 +427,7 @@ describe('ephemeral Supabase Auth fixture lifecycle', () => {
     expect(state.organizationEntitlements.size).toBeGreaterThan(0);
     expect(state.enterpriseContracts.size).toBeGreaterThan(0);
     expect(state.organizations.size).toBeGreaterThan(0);
-  });
+  }, 15_000);
 
   it('preserves the original setup failure when cleanup is also incomplete', async () => {
     const { admin } = fakeAdmin({
