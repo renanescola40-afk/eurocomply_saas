@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/audit-chain-runtime-proof.yml', 'utf8');
-const producer = readFileSync('scripts/security/run-audit-chain-live-validation.mjs', 'utf8');
+const producer = readFileSync('scripts/security/run-audit-chain-live-validation-v2.mjs', 'utf8');
 const preflight = readFileSync('scripts/security/preflight-audit-chain-runtime-proof.mjs', 'utf8');
 const fetcher = readFileSync('scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs', 'utf8');
 
@@ -19,7 +19,7 @@ describe('automatic ephemeral audit-chain runtime proof', () => {
 
   it('preflights signing prerequisites before any live disposable runtime mutation', () => {
     const preflightIndex = workflow.indexOf('run: node scripts/security/preflight-audit-chain-runtime-proof.mjs');
-    const liveIndex = workflow.indexOf('run: node scripts/security/run-audit-chain-live-validation.mjs');
+    const liveIndex = workflow.indexOf('run: node scripts/security/run-audit-chain-live-validation-v2.mjs');
     expect(preflightIndex).toBeGreaterThan(-1);
     expect(liveIndex).toBeGreaterThan(preflightIndex);
     expect(workflow).toContain("if: steps.runtime_preflight.outputs.ready == 'true'");
@@ -64,7 +64,7 @@ describe('automatic ephemeral audit-chain runtime proof', () => {
 
   it('allows exact-SHA P0 promotion from automatic push and manual recovery runs', () => {
     expect(fetcher).toContain("new Set(['push', 'workflow_dispatch'])");
-    expect(fetcher).toContain("matching.length !== 1");
+    expect(fetcher).toContain('matching.length !== 1');
     expect(fetcher).toContain('ephemeral_fixture_cleanup_not_verified');
   });
 });
