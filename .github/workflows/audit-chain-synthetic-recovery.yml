@@ -130,23 +130,28 @@ jobs:
           node --check scripts/security/recover-audit-chain-synthetic-residue.mjs
           node --check scripts/security/preflight-audit-chain-synthetic-recovery-scope.mjs
           node --check scripts/security/audit-chain-synthetic-recovery-evidence.mjs
+          node --check scripts/supabase/prepare-production-db-connection.mjs
           test -s scripts/security/recover-audit-chain-synthetic-residue.sql
           npx vitest run tests/enterprise/audit-chain-synthetic-recovery.test.ts
 
-      - name: Validate protected production database configuration
+      - name: Validate and bind protected Production Session Pooler connection
         shell: bash
         run: |
           set -euo pipefail
           test -n "${SUPABASE_DB_POOLER_URL:-}"
           [[ "${SUPABASE_PROJECT_ID:-}" =~ ^[a-z0-9]{20}$ ]]
-          case "$SUPABASE_DB_POOLER_URL" in
-            postgresql://*|postgres://*) ;;
-            *) echo 'SUPABASE_DB_POOLER_URL must be a PostgreSQL connection string' >&2; exit 1 ;;
-          esac
-          case "$SUPABASE_DB_POOLER_URL" in
-            *pooler.supabase.com*) ;;
-            *) echo 'SUPABASE_DB_POOLER_URL must use the Supabase pooler endpoint' >&2; exit 1 ;;
-          esac
+
+          connection_file="$RUNNER_TEMP/audit-chain-synthetic-recovery-db-url"
+          diagnostics_file="$RUNNER_TEMP/audit-chain-synthetic-recovery-db-diagnostics.json"
+          SUPABASE_DB_URL="$SUPABASE_DB_POOLER_URL" \
+            node scripts/supabase/prepare-production-db-connection.mjs \
+              --write-file "$connection_file" \
+              > "$diagnostics_file"
+
+          jq -e '.status == "ready" and .transport == "session_pooler"' "$diagnostics_file" >/dev/null
+          test -s "$connection_file"
+          test "$(stat -c '%a' "$connection_file")" = '600'
+          echo "RECOVERY_DB_URL_FILE=$connection_file" >> "$GITHUB_ENV"
 
       - name: Install PostgreSQL client
         shell: bash
@@ -159,10 +164,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test -s "$RECOVERY_DB_URL_FILE"
           preflight="$RUNNER_TEMP/audit-chain-synthetic-recovery-preflight.json"
           errfile="$RUNNER_TEMP/audit-chain-synthetic-recovery-preflight.err"
           set +e
-          psql "$SUPABASE_DB_POOLER_URL" \
+          psql "$(cat "$RECOVERY_DB_URL_FILE")" \
             -X -qAt \
             -v ON_ERROR_STOP=1 \
             -v target_sha="${TARGET_SHA,,}" \
@@ -189,12 +195,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test -s "$RECOVERY_DB_URL_FILE"
           evidence="docs/security/evidence/runtime/audit-chain-synthetic-recovery.json"
           errfile="$RUNNER_TEMP/audit-chain-synthetic-recovery.err"
           mkdir -p "$(dirname "$evidence")"
           rm -f "$evidence"
           set +e
-          psql "$SUPABASE_DB_POOLER_URL" \
+          psql "$(cat "$RECOVERY_DB_URL_FILE")" \
             -X -qAt \
             -v ON_ERROR_STOP=1 \
             -v target_sha="${TARGET_SHA,,}" \
@@ -217,6 +224,12 @@ jobs:
             exit "$status"
           fi
           node scripts/security/audit-chain-synthetic-recovery-evidence.mjs validate-complete "$evidence"
+
+      - name: Remove temporary database connection material
+        if: always()
+        shell: bash
+        run: |
+          rm -f "${RECOVERY_DB_URL_FILE:-}"
 
       - name: Write sanitized failure evidence when recovery did not complete
         if: failure()
