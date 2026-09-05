@@ -115,12 +115,14 @@ jobs:
       - name: Validate audit-chain proof contracts
         run: |
           node --check scripts/security/run-audit-chain-live-validation.mjs
+          node --check scripts/security/run-audit-chain-live-validation-v2.mjs
           node --check scripts/security/validate-audit-chain-live-evidence.mjs
           node --check scripts/security/preflight-audit-chain-runtime-proof.mjs
           node --check scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs
           npx vitest run \
             tests/enterprise/audit-chain-runtime-evidence-fetch.test.ts \
             tests/enterprise/audit-chain-ephemeral-runtime-proof.test.ts \
+            tests/enterprise/audit-chain-runtime-bounded-proof.test.ts \
             tests/enterprise/audit-chain-runtime-preflight.test.ts
 
       - name: Preflight protected audit-chain runtime prerequisites
@@ -129,12 +131,12 @@ jobs:
 
       - name: Execute protected ephemeral live audit-chain proof
         if: steps.runtime_preflight.outputs.ready == 'true'
-        run: node scripts/security/run-audit-chain-live-validation.mjs
+        run: node scripts/security/run-audit-chain-live-validation-v2.mjs
 
       - name: Validate raw redacted audit-chain evidence
         if: steps.runtime_preflight.outputs.ready == 'true'
         run: |
-          node -e "import('./scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs').then(({validateRawAuditChainEvidence})=>{const fs=require('node:fs');const e=JSON.parse(fs.readFileSync('docs/security/evidence/runtime/audit-chain-live-validation.json','utf8'));const r=validateRawAuditChainEvidence(e);if(!r.passed){console.error(r.failures.join('\n'));process.exit(1)}})"
+          node -e "import('./scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs').then(({validateRawAuditChainEvidence})=>{const fs=require('node:fs');const e=JSON.parse(fs.readFileSync('docs/security/evidence/runtime/audit-chain-live-validation.json','utf8'));const r=validateRawAuditChainEvidence(e);if(!r.passed){console.error(r.failures.join('\\n'));process.exit(1)}})"
 
       - name: Fail closed when audit-chain prerequisites are blocked
         if: steps.runtime_preflight.outputs.ready != 'true'
