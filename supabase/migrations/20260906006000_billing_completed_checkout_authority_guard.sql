@@ -10,13 +10,15 @@ begin;
 -- row ages out by wall clock during that gap, a second tab/request can create a
 -- second subscription. Bound Checkout sessions must therefore remain durable
 -- until Stripe itself proves the session expired/missing, or until processed
--- LIVE subscription authority reaches our ledger.
+-- LIVE subscription authority reaches our ledger and resolves to current
+-- commercial authority for the organization.
 
 do $prerequisites$
 begin
   if to_regclass('public.billing_checkout_attempts') is null
      or to_regclass('public.stripe_events_processed') is null
-     or to_regprocedure('public.claim_initial_billing_checkout_atomic(uuid,text,uuid,timestamptz)') is null then
+     or to_regprocedure('public.claim_initial_billing_checkout_atomic(uuid,text,uuid,timestamptz)') is null
+     or to_regprocedure('app_private.has_commercial_authority(uuid)') is null then
     raise exception 'billing completed-checkout authority prerequisites are missing';
   end if;
 end
@@ -100,7 +102,9 @@ grant execute on function public.claim_initial_billing_checkout_atomic(uuid,text
 -- checkout.session.completed is deliberately NOT a release event. It can arrive
 -- before the subscription event that becomes our commercial authority. Delete the
 -- single-flight row only after a LIVE subscription created/updated event is marked
--- processed by the existing recovery/ledger pipeline.
+-- processed AND the canonical authority resolver confirms current paid authority.
+-- This prevents a delayed/replayed historical event from unlocking a newer
+-- initial Checkout attempt for the same organization.
 create or replace function public.clear_initial_checkout_after_live_subscription_processed()
 returns trigger
 language plpgsql
@@ -111,7 +115,8 @@ begin
   if new.status = 'processed'
      and new.livemode is true
      and new.organization_id is not null
-     and new.type in ('customer.subscription.created','customer.subscription.updated') then
+     and new.type in ('customer.subscription.created','customer.subscription.updated')
+     and app_private.has_commercial_authority(new.organization_id) then
     delete from public.billing_checkout_attempts attempt
     where attempt.organization_id = new.organization_id;
   end if;
@@ -128,22 +133,24 @@ after insert or update on public.stripe_events_processed
 for each row
 execute function public.clear_initial_checkout_after_live_subscription_processed();
 
--- Reconcile attempts that were created before this forward hotfix but whose
--- authoritative LIVE subscription event has already been successfully processed.
+-- Reconcile attempts that were created before this forward hotfix only when the
+-- existing processed LIVE event also resolves to current canonical commercial
+-- authority. Historical/replayed events alone are intentionally insufficient.
 delete from public.billing_checkout_attempts attempt
-where exists (
-  select 1
-  from public.stripe_events_processed event
-  where event.organization_id = attempt.organization_id
-    and event.status = 'processed'
-    and event.livemode is true
-    and event.type in ('customer.subscription.created','customer.subscription.updated')
-);
+where app_private.has_commercial_authority(attempt.organization_id)
+  and exists (
+    select 1
+    from public.stripe_events_processed event
+    where event.organization_id = attempt.organization_id
+      and event.status = 'processed'
+      and event.livemode is true
+      and event.type in ('customer.subscription.created','customer.subscription.updated')
+  );
 
 comment on function public.claim_initial_billing_checkout_atomic(uuid,text,uuid,timestamptz) is
-  'Claims one tenant initial Checkout lane; bound Stripe sessions remain durable until provider expiry/missing proof or processed LIVE subscription authority.';
+  'Claims one tenant initial Checkout lane; bound Stripe sessions remain durable until provider expiry/missing proof or processed LIVE subscription authority resolves to current commercial authority.';
 comment on function public.clear_initial_checkout_after_live_subscription_processed() is
-  'Releases initial Checkout single-flight only after processed LIVE customer.subscription.created/updated authority; checkout.session.completed alone is insufficient.';
+  'Releases initial Checkout single-flight only after processed LIVE customer.subscription.created/updated plus current canonical commercial authority; checkout.session.completed or historical event presence alone is insufficient.';
 
 do $verify$
 begin
