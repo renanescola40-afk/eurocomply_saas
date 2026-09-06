@@ -47,8 +47,12 @@ const RULES: Record<LicensedFeature, FeatureLicenseRule> = {
   vendor_register: { minimumPlan: 'professional', addOnSlugs: ['vendor-assurance'] },
   fria: { minimumPlan: 'professional', addOnSlugs: ['fria-workspace'] },
   annex_iv: { minimumPlan: 'professional', addOnSlugs: ['annex-iv-pro'] },
-  api: { minimumPlan: 'professional', addOnSlugs: ['api-pack'] },
-  webhooks: { minimumPlan: 'professional', addOnSlugs: ['api-pack'] },
+  // The implemented credential/webhook control plane is Enterprise-only: API
+  // keys are platform-provisioned against an active Enterprise contract and the
+  // outbound subscription tables live in that same authority plane. Keep lower
+  // plans closed until a separate self-service provisioning chain is proven.
+  api: { minimumPlan: 'enterprise' },
+  webhooks: { minimumPlan: 'enterprise' },
   branding: { minimumPlan: 'professional', addOnSlugs: ['white-label'] },
   ai_literacy: { minimumPlan: 'business', addOnSlugs: ['ai-literacy-hub'] },
   procurement: { minimumPlan: 'business', addOnSlugs: ['procurement-pack'] },
