@@ -31,6 +31,16 @@ describe('final server-only commercial Data API boundary', () => {
     expect(onboardingAction).toContain('supabase.rpc(ATOMIC_ONBOARDING_ACTIVATION_RPC');
   });
 
+  it('keeps AI assessments backend-only while preserving authenticated reads', () => {
+    expect(finalIsolation).toContain("'ai_assessments'");
+    expect(finalIsolation).toContain('`public.ai_assessments` already has a reviewed historical backend-only decision');
+    expect(finalIsolation).toContain('restrict_authenticated_ai_assessments_insert_backend_only');
+    expect(finalIsolation).toContain('restrict_authenticated_ai_assessments_update_backend_only');
+    expect(finalIsolation).toContain('restrict_authenticated_ai_assessments_delete_backend_only');
+    expect(finalIsolation).toContain('as restrictive\n  for insert\n  to authenticated\n  with check (false)');
+    expect(finalIsolation).toContain('AI assessment backend-only restrictive policy boundary is missing');
+  });
+
   it('keeps the unused legacy tasks table read-only to authenticated clients', () => {
     expect(finalIsolation).toContain("'tasks'");
     expect(finalIsolation).toContain('`public.tasks` is the preserved legacy task table');
