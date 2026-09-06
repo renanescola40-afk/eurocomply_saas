@@ -1,0 +1,66 @@
+name: Internet.nl Mail Assurance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/assurance/internetnl-mail-assurance.mjs'
+      - '.github/workflows/internetnl-mail-assurance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  internetnl-mail:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+
+      - name: Run official public Internet.nl mail test
+        env:
+          INTERNETNL_MAIL_DOMAIN: risckcomply.com
+          INTERNETNL_TIMEOUT_MS: '300000'
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/internetnl-mail
+          umask 077
+          node scripts/assurance/internetnl-mail-assurance.mjs > artifacts/internetnl-mail/result.json
+
+      - name: Publish result summary
+        if: always()
+        run: |
+          if [ -f artifacts/internetnl-mail/result.json ]; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require('fs');
+          const evidence = JSON.parse(fs.readFileSync('artifacts/internetnl-mail/result.json', 'utf8'));
+          console.log('## Internet.nl email standards');
+          console.log(`- Domain: **${evidence.domain}**`);
+          console.log(`- Score: **${evidence.score}%**`);
+          console.log(`- 100% Email claim: **${evidence.claims.internetNl100Email}**`);
+          console.log(`- Persistent report: ${evidence.reportUrl}`);
+          for (const [name, verdict] of Object.entries(evidence.categoryVerdicts || {})) {
+            console.log(`- ${name}: **${verdict}**`);
+          }
+          NODE
+          else
+            echo 'Internet.nl mail evidence file was not produced.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload bounded public evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: internetnl-mail-assurance
+          path: artifacts/internetnl-mail/result.json
+          if-no-files-found: warn
+          retention-days: 14
