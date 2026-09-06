@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-06-billing-checkout-singleflight-authority-v34",
+  "changeSet": "2026-09-06-billing-professional-plan-isolation-v35",
   "migrations": [
     {
       "filename": "20260906000000_reconcile_final_public_release_payment_storage_hardening.sql",
@@ -29,6 +29,10 @@
     {
       "filename": "20260906006000_billing_completed_checkout_authority_guard.sql",
       "purpose": "keep a bound completed Checkout attempt durable until processed LIVE subscription authority exists, preventing a second initial subscription during webhook activation delay"
+    },
+    {
+      "filename": "20260906006500_billing_professional_task_plan_isolation.sql",
+      "purpose": "enforce Professional-or-higher authority for organization Tasks, Risks, Vendors and vendor review history at restrictive RLS and server feature boundaries while preserving personal tasks and downgraded customer data for later re-upgrade"
     }
   ],
   "truthBoundary": {
