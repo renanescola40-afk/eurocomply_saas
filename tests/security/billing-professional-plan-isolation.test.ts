@@ -6,6 +6,7 @@ const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
 
 const migration = read('supabase/migrations/20260906006500_billing_professional_task_plan_isolation.sql');
 const businessMigration = read('supabase/migrations/20260906006600_billing_business_feature_plan_isolation.sql');
+const governanceMigration = read('supabase/migrations/20260906006700_billing_governance_workflow_plan_isolation.sql');
 const reconciliation = read('config/supabase-forward-reconciliation.json');
 const taskActions = read('src/server/actions/compliance-tasks.ts');
 const taskQuery = read('src/server/queries/compliance-tasks.ts');
@@ -27,14 +28,16 @@ const reportsGovernanceLayout = read('src/app/[locale]/dashboard/organizations/r
 const aiLiteracyLayout = read('src/app/[locale]/dashboard/ai-literacy/layout.tsx');
 const aiLiteracyRoute = read('src/app/api/ai-literacy/route.ts');
 const qmsRoute = read('src/app/api/ai-governance/qms/route.ts');
+const aiSystemsRoute = read('src/app/api/ai-systems/route.ts');
 const complianceAlerts = read('src/app/api/internal/compliance-alerts/route.ts');
 const entitlements = read('src/server/billing/entitlements.ts');
 
-describe('billing Professional/Business feature isolation', () => {
-  it('selects the Professional and Business isolation migrations in the bounded V36 package', () => {
-    expect(reconciliation).toContain('2026-09-06-billing-business-plan-isolation-v36');
+describe('billing Professional/Business/Enterprise feature isolation', () => {
+  it('selects all tier-isolation migrations in the bounded V37 package', () => {
+    expect(reconciliation).toContain('2026-09-06-billing-governance-plan-isolation-v37');
     expect(reconciliation).toContain('20260906006500_billing_professional_task_plan_isolation.sql');
     expect(reconciliation).toContain('20260906006600_billing_business_feature_plan_isolation.sql');
+    expect(reconciliation).toContain('20260906006700_billing_governance_workflow_plan_isolation.sql');
     expect(reconciliation).toContain('"productionWriteAuthorizedByConfig": false');
     expect(reconciliation).toContain('"migrationHistoryRepairAllowed": false');
     expect(reconciliation).toContain('"unrestrictedDbPushAllowed": false');
@@ -155,7 +158,7 @@ describe('billing Professional/Business feature isolation', () => {
     expect(reportsGovernanceLayout).toContain('upgrade=required&feature=reports-governance');
   });
 
-  it('keeps AI Literacy Business-only in UI, API and authenticated data plane', () => {
+  it('keeps AI Literacy and QMS Business-only in UI, API and authenticated data plane', () => {
     expect(aiLiteracyLayout).toContain("assertPlanAtLeast(organization.id, 'business')");
     expect(aiLiteracyLayout).toContain('upgrade=business&feature=ai-literacy');
     expect((aiLiteracyRoute.match(/minimumPlan: 'business'/g) ?? [])).toHaveLength(2);
@@ -180,5 +183,20 @@ describe('billing Professional/Business feature isolation', () => {
     expect(businessMigration).toContain('alter table public.%I force row level security');
     expect(businessMigration).not.toContain('disable row level security');
     expect(businessMigration).not.toContain('grant all on public.');
+  });
+
+  it('tiers AI-system governance workflows as Business procurement/review and Enterprise evidence', () => {
+    expect(aiSystemsRoute).toContain("if (workflow === 'evidence_pack') return 'enterprise' as const");
+    expect(aiSystemsRoute).toContain("if (workflow === 'vendor_due_diligence' || workflow === 'risk_review') return 'business' as const");
+    expect(aiSystemsRoute).toContain('minimumPlan: getWorkflowMinimumPlan(workflow)');
+
+    expect(governanceMigration).toContain('restrict_enterprise_vendor_due_diligence_business_plan');
+    expect(governanceMigration).toContain('restrict_enterprise_risk_reviews_business_plan');
+    expect(governanceMigration).toContain('restrict_enterprise_evidence_packs_enterprise_plan');
+    expect(governanceMigration).toContain('restrict_enterprise_evidence_pack_items_enterprise_plan');
+    expect(governanceMigration).toContain("app_private.has_minimum_commercial_plan(organization_id, 'business')");
+    expect(governanceMigration).toContain("app_private.has_minimum_commercial_plan(organization_id, 'enterprise')");
+    expect(governanceMigration).not.toContain('disable row level security');
+    expect(governanceMigration).not.toContain('grant all on public.');
   });
 });
