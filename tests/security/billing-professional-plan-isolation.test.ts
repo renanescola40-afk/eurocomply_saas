@@ -57,6 +57,11 @@ describe('billing Professional/Business feature isolation', () => {
     expect(migration).toContain('as restrictive');
     expect(migration).toContain("app_private.has_minimum_commercial_plan(organization_id, 'professional')");
     expect(migration).toContain('organization_id is null');
+    expect(migration).toMatch(
+      /create policy "restrict_risks_professional_plan"[\s\S]*?as restrictive[\s\S]*?for all[\s\S]*?using \(app_private\.has_minimum_commercial_plan\(organization_id, 'professional'\)\)[\s\S]*?with check \(app_private\.has_minimum_commercial_plan\(organization_id, 'professional'\)\)/,
+    );
+    expect(migration).toContain("cmd = 'ALL'");
+    expect(migration).toContain('Risks Professional policy must restrict authenticated reads and mutations');
     expect(migration).not.toContain('disable row level security');
     expect(migration).not.toContain('grant all on public.');
   });
