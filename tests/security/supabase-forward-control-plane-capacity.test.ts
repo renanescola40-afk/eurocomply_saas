@@ -15,6 +15,7 @@ const expectedForwardPackage = [
   '20260906005000_billing_initial_checkout_singleflight.sql',
   '20260906006000_billing_completed_checkout_authority_guard.sql',
   '20260906006500_billing_professional_task_plan_isolation.sql',
+  '20260906006600_billing_business_feature_plan_isolation.sql',
 ];
 
 describe('Supabase forward reconciliation control-plane capacity', () => {
@@ -32,9 +33,9 @@ describe('Supabase forward reconciliation control-plane capacity', () => {
 
     expect(manifest.targetSha).toBe(subjectSha);
     expect(manifest.migrations.map((migration) => migration.filename)).toEqual(expectedForwardPackage);
-    expect(manifest.migrations).toHaveLength(8);
+    expect(manifest.migrations).toHaveLength(9);
     expect(manifest.changeSet).toBe(
-      '2026-09-06-billing-professional-plan-isolation-v35',
+      '2026-09-06-billing-business-plan-isolation-v36',
     );
     expect(manifest.checks.productionWriteAuthorized).toBe(false);
     expect(manifest.checks.migrationHistoryRepairAuthorized).toBe(false);
