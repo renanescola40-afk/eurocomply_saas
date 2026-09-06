@@ -13,7 +13,9 @@ describe('enterprise billing lifecycle idempotency contract', () => {
 
     expect(checkout).toContain("scope: 'checkout'");
     expect(checkout).toContain("deriveStripeIdempotencyKey(idempotency, 'customer-create')");
-    expect(checkout).toContain("deriveStripeIdempotencyKey(idempotency.context, 'checkout-session')");
+    expect(checkout).toContain('const attemptToken = checkoutAttempt.attemptToken');
+    expect(checkout).toContain("deriveStripeIdempotencyKey(idempotency.context, `checkout-session:${attemptToken}`)");
+    expect(checkout).toContain('claimInitialCheckoutAttempt(organization.id, plan)');
     expect(portal).toContain("scope: 'portal'");
     expect(portal).toContain("deriveStripeIdempotencyKey(idempotency.context, 'portal-session')");
     expect(button).toContain('crypto.randomUUID()');
