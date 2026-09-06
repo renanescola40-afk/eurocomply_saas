@@ -72,7 +72,7 @@ describe('Supabase post-promotion production acceptance', () => {
     expect(workflow).toContain("--command 'rollback;'");
     expect(workflow).toContain('assert-live-tenant-isolation-read-only.sql');
     expect(workflow).toContain('verify-forward-production-acceptance.mjs');
-    expect(crossTenantPostconditions).toContain('begin transaction read only').not;
+    expect(crossTenantPostconditions).not.toContain('begin transaction read only;');
     expect(crossTenantPostconditions).toContain('app_private.enforce_same_tenant_reference_integrity()');
     expect(crossTenantPostconditions).toContain('cross-tenant reference integrity violation exists after promotion');
     expect(verifier).toContain('post-promotion migration drift detected');
