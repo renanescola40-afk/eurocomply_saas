@@ -129,6 +129,67 @@ $$;
 revoke all on function public.create_ai_system_atomic(uuid, uuid, jsonb) from public, anon, authenticated;
 grant execute on function public.create_ai_system_atomic(uuid, uuid, jsonb) to service_role;
 
+-- Quota authority also lives on the table boundary. This is intentionally
+-- redundant with create_ai_system_atomic: that RPC returns friendly outcomes,
+-- while the trigger closes privileged alternate writers such as onboarding and
+-- any future service-role code that inserts directly into public.ai_systems.
+create or replace function app_private.enforce_ai_system_commercial_quota()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_plan text;
+  v_limit integer;
+  v_count integer := 0;
+begin
+  if new.organization_id is null then
+    raise exception 'ai_system_organization_required' using errcode = '23514';
+  end if;
+
+  v_plan := app_private.resolve_commercial_plan(new.organization_id);
+  if v_plan is null then
+    raise exception 'ai_system_subscription_required' using errcode = 'P0001';
+  end if;
+
+  v_limit := case v_plan
+    when 'starter' then 25
+    when 'professional' then 250
+    when 'business' then 1500
+    when 'enterprise' then null
+    else 0
+  end;
+
+  if v_limit = 0 then
+    raise exception 'ai_system_subscription_required' using errcode = 'P0001';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtext(new.organization_id::text));
+
+  if v_limit is not null then
+    select count(*)::integer
+      into v_count
+    from public.ai_systems as ai_system
+    where ai_system.organization_id = new.organization_id;
+
+    if v_count >= v_limit then
+      raise exception 'ai_system_quota_exceeded' using errcode = 'P0001';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke all on function app_private.enforce_ai_system_commercial_quota() from public, anon, authenticated;
+
+drop trigger if exists enforce_ai_system_commercial_quota on public.ai_systems;
+create trigger enforce_ai_system_commercial_quota
+before insert on public.ai_systems
+for each row
+execute function app_private.enforce_ai_system_commercial_quota();
+
 -- AI-system mutation is intentionally backend-only. The reviewed application
 -- creates through create_ai_system_atomic and reassesses through
 -- reassess_ai_system_atomic using the service-role client. Leaving table DML on
@@ -140,15 +201,36 @@ grant select on table public.ai_systems to authenticated;
 do $verify_ai_system_mutation_boundary$
 declare
   create_oid oid := to_regprocedure('public.create_ai_system_atomic(uuid,uuid,jsonb)');
+  quota_trigger_oid oid := to_regprocedure('app_private.enforce_ai_system_commercial_quota()');
 begin
   if create_oid is null then
     raise exception 'AI-system atomic create function is missing';
+  end if;
+
+  if quota_trigger_oid is null then
+    raise exception 'AI-system table quota trigger function is missing';
   end if;
 
   if has_function_privilege('anon', create_oid, 'EXECUTE')
      or has_function_privilege('authenticated', create_oid, 'EXECUTE')
      or not has_function_privilege('service_role', create_oid, 'EXECUTE') then
     raise exception 'AI-system atomic create execution privileges are not canonical';
+  end if;
+
+  if has_function_privilege('anon', quota_trigger_oid, 'EXECUTE')
+     or has_function_privilege('authenticated', quota_trigger_oid, 'EXECUTE')
+     or has_function_privilege('public', quota_trigger_oid, 'EXECUTE') then
+    raise exception 'AI-system quota trigger function became directly executable';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_trigger
+    where tgrelid = 'public.ai_systems'::regclass
+      and tgname = 'enforce_ai_system_commercial_quota'
+      and not tgisinternal
+  ) then
+    raise exception 'AI-system commercial quota trigger is missing';
   end if;
 
   if has_table_privilege('anon', 'public.ai_systems', 'INSERT')
