@@ -31,13 +31,20 @@ describe('completed Checkout activation authority guard', () => {
     expect(release).toBeGreaterThan(expired);
   });
 
-  it('releases the durable attempt only after processed LIVE subscription authority exists', () => {
+  it('releases the durable attempt only after processed LIVE subscription authority is current', () => {
     expect(hotfix).toContain("new.status = 'processed'");
     expect(hotfix).toContain('new.livemode is true');
     expect(hotfix).toContain("new.type in ('customer.subscription.created','customer.subscription.updated')");
+    expect(hotfix).toContain('app_private.has_commercial_authority(new.organization_id)');
     expect(hotfix).toContain('delete from public.billing_checkout_attempts attempt');
     expect(hotfix).toContain('where attempt.organization_id = new.organization_id');
     expect(hotfix).not.toContain("new.type = 'checkout.session.completed'");
+  });
+
+  it('does not let historical processed event presence alone release a newer attempt', () => {
+    expect(hotfix).toContain("to_regprocedure('app_private.has_commercial_authority(uuid)')");
+    expect(hotfix).toContain('where app_private.has_commercial_authority(attempt.organization_id)');
+    expect(hotfix).toContain('Historical/replayed events alone are intentionally insufficient');
   });
 
   it('keeps the trigger function inaccessible to browser database roles', () => {
