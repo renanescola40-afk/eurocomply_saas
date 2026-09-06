@@ -34,6 +34,13 @@ async function sleep(ms) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function boundedTechnicalData(value) {
+  if (value === undefined || value === null) return null;
+  const serialized = JSON.stringify(value);
+  if (serialized.length <= 8_000) return value;
+  return { truncated: true, preview: serialized.slice(0, 8_000) };
+}
+
 function collectFindings(value, path = '$', findings = []) {
   if (!value || typeof value !== 'object') return findings;
   if (Array.isArray(value)) {
@@ -42,11 +49,13 @@ function collectFindings(value, path = '$', findings = []) {
   }
 
   if (Object.hasOwn(value, 'status') || Object.hasOwn(value, 'verdict')) {
+    const status = value.status ?? null;
     findings.push({
       path,
-      status: value.status ?? null,
+      status,
       verdict: typeof value.verdict === 'string' ? value.verdict : null,
       score: typeof value.score === 'number' ? value.score : null,
+      technicalData: status === 1 ? null : boundedTechnicalData(value.tech_data),
     });
   }
 
@@ -137,7 +146,7 @@ const evidence = {
   },
   redaction: {
     responseBodiesStored: false,
-    technicalDataStored: false,
+    technicalDataStored: 'bounded-public-nonpassing-findings-only',
     credentialsStored: false,
     customerDataStored: false,
   },
