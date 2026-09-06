@@ -48,6 +48,31 @@ describe('final server-only commercial Data API boundary', () => {
     );
   });
 
+  it('forces the remaining client-facing RLS tables and minimizes profile grants', () => {
+    for (const table of [
+      'email_notification_events',
+      'intelligence_calendar_suggestions',
+      'intelligence_items',
+      'profiles',
+      'vendor_review_history',
+    ]) {
+      expect(finalIsolation).toContain(`'${table}'`);
+    }
+    expect(finalIsolation).toContain(
+      "execute format('alter table public.%I force row level security', target_table)",
+    );
+    expect(finalIsolation).toContain(
+      'revoke insert, update, delete on table public.profiles from anon;',
+    );
+    expect(finalIsolation).toContain(
+      'revoke insert, delete on table public.profiles from authenticated;',
+    );
+    expect(finalIsolation).toContain(
+      'grant select, update on table public.profiles to authenticated;',
+    );
+    expect(finalIsolation).toContain('profiles client privileges are not least-privilege canonical');
+  });
+
   it('restores personal compliance-task access without weakening paid organization tasks', () => {
     expect(finalIsolation).toContain('drop policy if exists payment_first_commercial_authority on public.compliance_tasks');
     expect(finalIsolation).toContain('create policy payment_first_commercial_authority');
