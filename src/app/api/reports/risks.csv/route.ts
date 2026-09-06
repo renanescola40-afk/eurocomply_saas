@@ -27,6 +27,7 @@ export async function GET(request: Request) {
     userId: user.id,
     organizationId: organization.id,
     permission: 'export_data',
+    minimumPlan: 'professional',
   });
   if (!permission.ok) return permissionDeniedResponse(permission);
 
