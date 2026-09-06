@@ -31,6 +31,23 @@ describe('final server-only commercial Data API boundary', () => {
     expect(onboardingAction).toContain('supabase.rpc(ATOMIC_ONBOARDING_ACTIVATION_RPC');
   });
 
+  it('keeps the unused legacy tasks table read-only to authenticated clients', () => {
+    expect(finalIsolation).toContain("'tasks'");
+    expect(finalIsolation).toContain('`public.tasks` is the preserved legacy task table');
+    expect(finalIsolation).toContain(
+      "execute format('revoke insert, update, delete on table public.%I from anon, authenticated', target_table)",
+    );
+    expect(finalIsolation).toContain(
+      "execute format('grant select on table public.%I to authenticated', target_table)",
+    );
+    expect(finalIsolation).toContain(
+      "has_table_privilege('service_role', format('public.%I', target_table), 'INSERT')",
+    );
+    expect(finalIsolation).toContain(
+      "has_table_privilege('authenticated', format('public.%I', target_table), 'INSERT')",
+    );
+  });
+
   it('restores personal compliance-task access without weakening paid organization tasks', () => {
     expect(finalIsolation).toContain('drop policy if exists payment_first_commercial_authority on public.compliance_tasks');
     expect(finalIsolation).toContain('create policy payment_first_commercial_authority');
