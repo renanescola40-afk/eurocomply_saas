@@ -12,6 +12,7 @@ const output = 'docs/security/evidence/p1/backup-restore-tested.json';
 const criticalTables = ['organizations', 'organization_members', 'audit_logs'];
 const approvedValidators = new Set([
   'scripts/supabase/verify-forward-reconciliation-postconditions.sql',
+  'scripts/supabase/verify-cross-tenant-reference-integrity-postconditions.sql',
   'scripts/security/validate-enterprise-integrations-runtime.sql',
   'scripts/security/validate-enterprise-billing-runtime.sql',
   'scripts/security/validate-live-rls-inventory-helper-boundary.sql',
@@ -39,44 +40,8 @@ function required(name) {
   return value;
 }
 
-export function projectRefFromApiUrl(value) {
-  const url = new URL(String(value));
-  const match = url.hostname.match(/^([a-z0-9]{20})\.supabase\.co$/);
-  if (!match) throw new Error('source_supabase_url_not_canonical');
-  return match[1];
-}
-
-function safeIso(value, code) {
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp)) throw new Error(code);
-  return timestamp;
-}
-
-function validatorDiagnosticCode(value) {
-  return String(value ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/%.*$/, '')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 120);
-}
-
-export function validatorFailureDiagnostic(responseText, validatorSql) {
-  const response = String(responseText ?? '').toLowerCase();
-  if (!response) return null;
-
-  const messages = [...String(validatorSql ?? '').matchAll(/raise\s+exception\s+'((?:''|[^'])+)'/gi)];
-  for (const match of messages) {
-    const reviewedMessage = String(match[1] ?? '').replace(/''/g, "'");
-    const staticPrefix = reviewedMessage.split('%', 1)[0].trim();
-    if (staticPrefix.length < 8) continue;
-    if (!response.includes(staticPrefix.toLowerCase())) continue;
-    const code = validatorDiagnosticCode(staticPrefix);
-    return code ? `validator_${code}` : null;
-  }
-
-  return null;
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
 }
 
 async function request(path, { method = 'GET', body, readOnly = false, failureDiagnostic = null } = {}) {
@@ -418,10 +383,12 @@ export async function main(argv = process.argv.slice(2)) {
   throw new Error('usage: verify-supabase-provider-managed-restore.mjs [verify|apply-file <path>]');
 }
 
-const invokedDirectly = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (invokedDirectly) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main().catch((error) => {
-    console.error(JSON.stringify({ outcome: 'failed', failure: error instanceof Error ? error.message : 'unknown_failure' }));
+    console.error(JSON.stringify({
+      outcome: 'failed',
+      failure: error instanceof Error ? error.message : 'unknown_failure',
+    }));
     process.exit(1);
   });
 }
