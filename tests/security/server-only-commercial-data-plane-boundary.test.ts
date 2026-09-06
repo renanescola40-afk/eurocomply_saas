@@ -73,6 +73,18 @@ describe('final server-only commercial Data API boundary', () => {
     expect(finalIsolation).toContain('profiles client privileges are not least-privilege canonical');
   });
 
+  it('fails the release if a client table or anonymous definer escapes the global boundary', () => {
+    expect(finalIsolation).toContain('do $global_client_security_postconditions$');
+    expect(finalIsolation).toContain('client-granted public table escaped RLS/FORCE RLS');
+    expect(finalIsolation).toContain('client-granted public table has no RLS policy');
+    expect(finalIsolation).toContain(
+      "and has_function_privilege('anon', p.oid, 'EXECUTE')",
+    );
+    expect(finalIsolation).toContain(
+      'anonymous role can execute an application SECURITY DEFINER function',
+    );
+  });
+
   it('restores personal compliance-task access without weakening paid organization tasks', () => {
     expect(finalIsolation).toContain('drop policy if exists payment_first_commercial_authority on public.compliance_tasks');
     expect(finalIsolation).toContain('create policy payment_first_commercial_authority');
