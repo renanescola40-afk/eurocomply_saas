@@ -19,10 +19,17 @@ describe('daily maintenance authentication protection', () => {
 
     const rateLimitIndex = postBody?.indexOf('enforceInternalAuthenticationRateLimit(request') ?? -1;
     const authorizationIndex = postBody?.indexOf('isAuthorizedInternalCronRequest(request)') ?? -1;
-    const fanOutIndex = postBody?.indexOf('for (const path of MAINTENANCE_JOBS)') ?? -1;
+    const fanOutIndex = postBody?.indexOf('runMaintenanceJobSequence(baseUrl, credential)') ?? -1;
 
     expect(rateLimitIndex).toBeGreaterThanOrEqual(0);
     expect(authorizationIndex).toBeGreaterThan(rateLimitIndex);
     expect(fanOutIndex).toBeGreaterThan(authorizationIndex);
+
+    const sequencerStart = routeSource.indexOf('export async function runMaintenanceJobSequence');
+    const postStart = routeSource.indexOf('export async function POST');
+    const sequencerSource = routeSource.slice(sequencerStart, postStart);
+    expect(sequencerStart).toBeGreaterThanOrEqual(0);
+    expect(sequencerSource).toContain('MAINTENANCE_JOBS.length');
+    expect(sequencerSource).toContain('results.push(await runner(baseUrl, path, credential))');
   });
 });
