@@ -218,9 +218,21 @@ begin
   end if;
 
   if has_function_privilege('anon', quota_trigger_oid, 'EXECUTE')
-     or has_function_privilege('authenticated', quota_trigger_oid, 'EXECUTE')
-     or has_function_privilege('public', quota_trigger_oid, 'EXECUTE') then
+     or has_function_privilege('authenticated', quota_trigger_oid, 'EXECUTE') then
     raise exception 'AI-system quota trigger function became directly executable';
+  end if;
+
+  if exists (
+    select 1
+    from pg_proc function_record
+    cross join lateral aclexplode(
+      coalesce(function_record.proacl, acldefault('f', function_record.proowner))
+    ) privilege
+    where function_record.oid = quota_trigger_oid
+      and privilege.grantee = 0
+      and privilege.privilege_type = 'EXECUTE'
+  ) then
+    raise exception 'AI-system quota trigger function retained PUBLIC execute privilege';
   end if;
 
   if not exists (
