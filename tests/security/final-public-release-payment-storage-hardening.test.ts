@@ -23,7 +23,6 @@ const expectedForwardPackage = [
   '20260906005000_billing_initial_checkout_singleflight.sql',
   '20260906006000_billing_completed_checkout_authority_guard.sql',
   '20260906006400_reconcile_paid_governance_runtime_foundations.sql',
-  '20260906006410_harden_paid_governance_ai_system_tenant_scope.sql',
   '20260906006500_billing_professional_task_plan_isolation.sql',
   '20260906006600_billing_business_feature_plan_isolation.sql',
   '20260906006700_billing_governance_workflow_plan_isolation.sql',
@@ -63,7 +62,7 @@ describe('final public-release payment and Storage hardening V32', () => {
       .toBe('642f48be06c110bdaf2f6c8c47fee6bbedd3984e780a846c2da2722f6e486cdc');
   });
 
-  it('selects the exact V32 plus billing authority, paid-governance bridge/hardening and plan-isolation package above the verified live ledger', () => {
+  it('selects the exact V32 plus billing authority, paid-governance bridge and plan-isolation package above the verified live ledger', () => {
     expect(config.changeSet).toBe('2026-09-06-paid-governance-runtime-foundations-v38');
     expect(config.migrations.map(({ filename }) => filename)).toEqual(expectedForwardPackage);
     expect(config.migrations.some(({ filename }) => filename === '20260904113000_final_public_release_payment_storage_hardening.sql')).toBe(false);
