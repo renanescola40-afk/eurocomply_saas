@@ -4,7 +4,19 @@
   "migrations": [
     {
       "filename": "20260906000000_reconcile_final_public_release_payment_storage_hardening.sql",
-      "purpose": "follow the read-only verified Production ledger head 20260905075429 with one forward-only V32 reconciliation that materializes the missing payment-first RLS, compliance-documents payment/RBAC Storage boundary, and Evidence Vault size/MIME controls without selecting the older never-applied V31 migration or repairing migration history"
+      "purpose": "follow the read-only verified Production ledger head 20260905075429 with forward-only V32 reconciliation for payment-first RLS, compliance-documents payment/RBAC Storage boundaries, and Evidence Vault size/MIME controls without replaying stale V31 or repairing migration history"
+    },
+    {
+      "filename": "20260906003000_billing_ai_system_commercial_quota.sql",
+      "purpose": "reassert paid commercial authority inside service-role AI-system creation and serialize canonical plan quota enforcement in the same database transaction as creation"
+    },
+    {
+      "filename": "20260906003500_billing_self_serve_member_capacity.sql",
+      "purpose": "add fail-closed transactional self-service invitation creation and acceptance capacity for Starter, Professional and Business while preserving Enterprise contractual seat authority"
+    },
+    {
+      "filename": "20260906004000_billing_document_storage_quota.sql",
+      "purpose": "extend the existing paid document-count trigger with serialized persisted storage-byte capacity matching the canonical billing catalog limits"
     }
   ],
   "truthBoundary": {
