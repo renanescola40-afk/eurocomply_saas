@@ -20,6 +20,7 @@ const expectedForwardPackage = [
   '20260906003500_billing_self_serve_member_capacity.sql',
   '20260906004000_billing_document_storage_quota.sql',
   '20260906004500_billing_entitlement_catalog_truth.sql',
+  '20260906005000_billing_initial_checkout_singleflight.sql',
 ];
 
 const auxiliaryTables = [
