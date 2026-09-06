@@ -1,0 +1,62 @@
+name: Internet.nl Live Assurance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/assurance/internetnl-live-assurance.mjs'
+      - '.github/workflows/internetnl-live-assurance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: internetnl-live-assurance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  website-assurance:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'assurance/internetnl-live-assurance'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run public Internet.nl website test
+        env:
+          INTERNETNL_DOMAIN: www.risckcomply.com
+          INTERNETNL_TIMEOUT_MS: '300000'
+          INTERNETNL_POLL_MS: '5000'
+        run: node scripts/assurance/internetnl-live-assurance.mjs
+
+      - name: Publish compact job summary
+        if: always()
+        run: |
+          if [ -f artifacts/internetnl/website-report.json ]; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require('fs');
+          const e = JSON.parse(fs.readFileSync('artifacts/internetnl/website-report.json', 'utf8'));
+          console.log(`## Internet.nl Website Assurance`);
+          console.log(`- Domain: \`${e.domain}\``);
+          console.log(`- Score: **${e.score}%**`);
+          console.log(`- 100% claim: **${e.claims.internetNl100Website}**`);
+          console.log(`- Report: ${e.reportUrl}`);
+          for (const [name, verdict] of Object.entries(e.categoryVerdicts || {})) console.log(`- ${name}: ${verdict}`);
+          NODE
+          else
+            echo '## Internet.nl Website Assurance' >> "$GITHUB_STEP_SUMMARY"
+            echo '- Live evidence was not produced; inspect the probe step.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload redacted Internet.nl evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: internetnl-website-assurance
+          path: artifacts/internetnl/website-report.json
+          if-no-files-found: warn
+          retention-days: 14
