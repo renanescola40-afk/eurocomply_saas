@@ -40,7 +40,7 @@ describe('acceptInvitation', () => {
   it('passes server-derived identity to the atomic RPC and records the accepted membership', async () => {
     const result = await acceptInvitation({ token });
 
-    expect(mocks.rpc).toHaveBeenCalledWith('accept_organization_invitation_atomic', {
+    expect(mocks.rpc).toHaveBeenCalledWith('accept_billing_organization_invitation_atomic', {
       p_token: token,
       p_user_id: 'user-1',
       p_email: 'member@example.com',
