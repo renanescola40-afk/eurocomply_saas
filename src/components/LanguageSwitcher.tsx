@@ -61,7 +61,8 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
 
   const switchLocale = (newLocale: Locale) => {
     const targetPath = buildLocalizedPath(pathname, newLocale);
-    document.cookie = `${COOKIE_NAME}=${newLocale}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+    const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `${COOKIE_NAME}=${newLocale}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax${secure}`;
     localStorage.setItem(LOCALE_STORAGE_KEY, newLocale);
     localStorage.removeItem(LEGACY_LOCALE_STORAGE_KEY);
     setOpen(false);
