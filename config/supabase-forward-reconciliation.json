@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-06-billing-checkout-singleflight-authority-v34",
+  "changeSet": "2026-09-06-billing-governance-plan-isolation-v37",
   "migrations": [
     {
       "filename": "20260906000000_reconcile_final_public_release_payment_storage_hardening.sql",
@@ -29,6 +29,18 @@
     {
       "filename": "20260906006000_billing_completed_checkout_authority_guard.sql",
       "purpose": "keep a bound completed Checkout attempt durable until processed LIVE subscription authority exists, preventing a second initial subscription during webhook activation delay"
+    },
+    {
+      "filename": "20260906006500_billing_professional_task_plan_isolation.sql",
+      "purpose": "enforce Professional-or-higher authority for organization Tasks, Risks, Vendors and vendor review history at restrictive RLS and server feature boundaries while preserving personal tasks and downgraded customer data for later re-upgrade"
+    },
+    {
+      "filename": "20260906006600_billing_business_feature_plan_isolation.sql",
+      "purpose": "enforce Business-or-higher authenticated data-plane authority for AI Literacy and QMS tables while preserving downgraded customer records for later re-upgrade"
+    },
+    {
+      "filename": "20260906006700_billing_governance_workflow_plan_isolation.sql",
+      "purpose": "align AI-system governance workflow data planes with the commercial catalog by requiring Business for vendor diligence and governed risk review and Enterprise for evidence packs"
     }
   ],
   "truthBoundary": {

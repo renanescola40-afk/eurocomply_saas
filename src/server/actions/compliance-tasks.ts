@@ -3,11 +3,18 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createComplianceTaskSchema, updateComplianceTaskSchema, type CreateComplianceTaskInput, type UpdateComplianceTaskInput } from '@/lib/validation/compliance';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
+import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { requireCurrentUser } from '@/server/queries/auth';
 import { logAuditEvent } from './audit';
 
 function actionError(message: string) {
   return new Error(message);
+}
+
+async function requireProfessionalTaskPlan(organizationId: string) {
+  const entitlement = await assertPlanAtLeast(organizationId, 'professional');
+  if (!entitlement.ok) throw actionError('professional_plan_required');
+  return entitlement.entitlements;
 }
 
 async function enforceTaskActionRateLimit(input: {
@@ -37,8 +44,9 @@ export async function createComplianceTask(input: CreateComplianceTaskInput) {
   const payload = createComplianceTaskSchema.parse(input);
   const context = { area: 'compliance_task_create', organizationId: payload.organizationId, userId: user.id };
 
-  await enforceTaskActionRateLimit({ action: 'create', userId: user.id, organizationId: payload.organizationId });
   await assertCurrentUserCan(payload.organizationId, user.id, 'tasks:write');
+  await requireProfessionalTaskPlan(payload.organizationId);
+  await enforceTaskActionRateLimit({ action: 'create', userId: user.id, organizationId: payload.organizationId });
 
   try {
     const supabase = createAdminClient();
@@ -106,8 +114,9 @@ export async function updateComplianceTask(taskId: string, organizationId: strin
   const payload = updateComplianceTaskSchema.parse(input);
   const context = { area: 'compliance_task_update', organizationId, taskId, userId: user.id };
 
-  await enforceTaskActionRateLimit({ action: 'update', userId: user.id, organizationId });
   await assertCurrentUserCan(organizationId, user.id, 'tasks:write');
+  await requireProfessionalTaskPlan(organizationId);
+  await enforceTaskActionRateLimit({ action: 'update', userId: user.id, organizationId });
 
   try {
     const supabase = createAdminClient();
@@ -197,8 +206,9 @@ export async function deleteComplianceTask(taskId: string, organizationId: strin
   const user = await requireCurrentUser();
   const context = { area: 'compliance_task_delete', organizationId, taskId, userId: user.id };
 
-  await enforceTaskActionRateLimit({ action: 'delete', userId: user.id, organizationId });
   await assertCurrentUserCan(organizationId, user.id, 'tasks:delete');
+  await requireProfessionalTaskPlan(organizationId);
+  await enforceTaskActionRateLimit({ action: 'delete', userId: user.id, organizationId });
 
   try {
     const supabase = createAdminClient();

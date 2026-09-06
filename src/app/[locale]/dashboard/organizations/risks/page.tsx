@@ -7,6 +7,7 @@ import { CreateRiskForm, type CreateRiskFormInput } from '@/components/risks/cre
 import { StepUpCsvExportButton } from '@/components/reports/step-up-csv-export-button';
 import { DeleteRecordButton } from '@/components/shared/delete-record-button';
 import { createRisk, deleteRisk } from '@/server/actions/risks';
+import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
@@ -52,6 +53,11 @@ export default async function OrganizationRisksPage({ params }: { params: { loca
 
   if (!organization) {
     redirect(`/${params.locale}/onboarding`);
+  }
+
+  const planCheck = await assertPlanAtLeast(organization.id, 'professional');
+  if (!planCheck.ok) {
+    redirect(`/${params.locale}/dashboard/organizations/billing?upgrade=professional&feature=risks`);
   }
 
   const [risks, billing] = await Promise.all([

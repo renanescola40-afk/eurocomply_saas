@@ -5,6 +5,7 @@ import { DeleteRecordButton } from '@/components/shared/delete-record-button';
 import { StepUpCsvExportButton } from '@/components/reports/step-up-csv-export-button';
 import { CreateVendorForm, type CreateVendorFormInput } from '@/components/vendors/create-vendor-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
@@ -22,6 +23,11 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
 
   if (!current) {
     redirect(`/${params.locale}/onboarding`);
+  }
+
+  const planCheck = await assertPlanAtLeast(current.id, 'professional');
+  if (!planCheck.ok) {
+    redirect(`/${params.locale}/dashboard/organizations/billing?upgrade=professional&feature=vendors`);
   }
 
   const [vendors, billing] = await Promise.all([

@@ -1,5 +1,6 @@
 import { unstable_noStore as noStore } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { assertPlanAtLeast } from '@/server/billing/entitlements';
 
 export type DashboardSummary = Awaited<ReturnType<typeof getDashboardSummary>>;
 
@@ -41,6 +42,8 @@ type DashboardSnapshotRow = {
   missing_documents?: number | string | null;
 };
 
+const EMPTY_COUNT_RESULT: CountResult = { count: 0, error: null };
+
 function safeCount(result: CountResult, label: string) {
   if (result.error) {
     console.warn('[dashboard] count_failed', { label, code: result.error.code ?? 'unknown' });
@@ -57,6 +60,7 @@ function areDashboardSnapshotsEnabled() {
 export async function getDashboardSummary(organizationId: string) {
   noStore();
 
+  const professionalPlan = (await assertPlanAtLeast(organizationId, 'professional')).ok;
   const supabase = createAdminClient();
 
   const [
@@ -70,13 +74,27 @@ export async function getDashboardSummary(organizationId: string) {
     documentTotalResult,
     missingDocumentResult,
   ] = await Promise.all([
-    supabase.from('compliance_tasks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
-    supabase.from('compliance_tasks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).neq('status', 'done'),
-    supabase.from('vendors').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
-    supabase.from('vendors').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('risk_level', 'high'),
-    supabase.from('risks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
-    supabase.from('risks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).neq('status', 'closed'),
-    supabase.from('risks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).gte('risk_score', 16),
+    professionalPlan
+      ? supabase.from('compliance_tasks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId)
+      : Promise.resolve(EMPTY_COUNT_RESULT),
+    professionalPlan
+      ? supabase.from('compliance_tasks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).neq('status', 'done')
+      : Promise.resolve(EMPTY_COUNT_RESULT),
+    professionalPlan
+      ? supabase.from('vendors').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId)
+      : Promise.resolve(EMPTY_COUNT_RESULT),
+    professionalPlan
+      ? supabase.from('vendors').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('risk_level', 'high')
+      : Promise.resolve(EMPTY_COUNT_RESULT),
+    professionalPlan
+      ? supabase.from('risks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId)
+      : Promise.resolve(EMPTY_COUNT_RESULT),
+    professionalPlan
+      ? supabase.from('risks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).neq('status', 'closed')
+      : Promise.resolve(EMPTY_COUNT_RESULT),
+    professionalPlan
+      ? supabase.from('risks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).gte('risk_score', 16)
+      : Promise.resolve(EMPTY_COUNT_RESULT),
     supabase.from('documents').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
     supabase.from('documents').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).neq('status', 'approved'),
   ]);
@@ -139,6 +157,9 @@ export async function recordDashboardMetricSnapshot(organizationId: string, summ
 export async function getDashboardTrendHistory(organizationId: string, limit = 12): Promise<DashboardTrendSnapshot[]> {
   noStore();
   if (!areDashboardSnapshotsEnabled()) return [];
+
+  const professionalPlan = (await assertPlanAtLeast(organizationId, 'professional')).ok;
+  if (!professionalPlan) return [];
 
   const safeLimit = Math.max(1, Math.min(limit, 52));
   const supabase = createAdminClient();

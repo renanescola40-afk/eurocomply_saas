@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
@@ -74,6 +75,22 @@ async function requireGapOrganizationPermission(userId: string, permission: 'rea
   return { organization, authorization } as const;
 }
 
+async function requireProfessionalRemediationPlan(organizationId: string) {
+  const plan = await assertPlanAtLeast(organizationId, 'professional');
+  if (plan.ok) return null;
+
+  return noStoreJson(
+    {
+      error: plan.error,
+      message: plan.message,
+      plan: plan.entitlements.plan,
+      requiredPlan: 'professional',
+      upgradeUrl: '/pricing',
+    },
+    { status: plan.status },
+  );
+}
+
 async function loadLatestAssessment(organizationId: string, userId: string) {
   const { data, error } = await createAdminClient()
     .from('gap_assessments')
@@ -103,26 +120,32 @@ async function loadAssessmentHistory(organizationId: string, userId: string, lim
 
 async function loadOpenWork(organizationId: string, userId: string) {
   const supabase = createAdminClient();
-  const [{ data: findings, error: findingsError }, { data: tasks, error: tasksError }] = await Promise.all([
-    supabase
-      .from('compliance_findings')
-      .select('id,article,title,severity,status,due_date,created_at')
-      .eq('organization_id', organizationId)
-      .eq('user_id', userId)
-      .in('status', ['open', 'in_progress'])
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('compliance_tasks')
-      .select('id,finding_id,title,priority,status,due_date,created_at')
-      .eq('organization_id', organizationId)
-      .eq('user_id', userId)
-      .in('status', ['open', 'in_progress'])
-      .order('created_at', { ascending: false }),
-  ]);
+  const { data: findings, error: findingsError } = await supabase
+    .from('compliance_findings')
+    .select('id,article,title,severity,status,due_date,created_at')
+    .eq('organization_id', organizationId)
+    .eq('user_id', userId)
+    .in('status', ['open', 'in_progress'])
+    .order('created_at', { ascending: false });
 
   if (findingsError) throw findingsError;
+  const userFindings = findings ?? [];
+  const findingIds = userFindings.map((finding) => finding.id);
+
+  if (findingIds.length === 0) {
+    return { findings: userFindings, tasks: [] };
+  }
+
+  const { data: tasks, error: tasksError } = await supabase
+    .from('compliance_tasks')
+    .select('id,finding_id,title,priority,status,due_date,created_at')
+    .eq('organization_id', organizationId)
+    .in('finding_id', findingIds)
+    .in('status', ['open', 'in_progress'])
+    .order('created_at', { ascending: false });
+
   if (tasksError) throw tasksError;
-  return { findings: findings ?? [], tasks: tasks ?? [] };
+  return { findings: userFindings, tasks: tasks ?? [] };
 }
 
 async function saveAssessment(organizationId: string, userId: string, body: z.infer<typeof assessmentSchema>) {
@@ -229,7 +252,7 @@ async function createRemediation(organizationId: string, userId: string, body: z
         organization_id: organizationId,
         workspace_id: null,
         finding_id: finding.id,
-        user_id: userId,
+        user_id: null,
         title: buildTaskTitle(action),
         description: finding.recommendation || action.recommendation,
         category: 'gap_analysis',
@@ -304,6 +327,8 @@ export async function GET(request: Request) {
     }
 
     if (view === 'work') {
+      const upgrade = await requireProfessionalRemediationPlan(access.organization.id);
+      if (upgrade) return upgrade;
       return noStoreJson(await loadOpenWork(access.organization.id, user.id));
     }
 
@@ -350,6 +375,8 @@ export async function POST(request: Request) {
     }
 
     if (operation === 'remediation') {
+      const upgrade = await requireProfessionalRemediationPlan(access.organization.id);
+      if (upgrade) return upgrade;
       const body = await parseJsonBodyWithZod(request, { schema: remediationSchema, maxBytes: GAP_JSON_MAX_BYTES });
       const result = await createRemediation(access.organization.id, user.id, body);
       return noStoreJson(result, { status: 201 });

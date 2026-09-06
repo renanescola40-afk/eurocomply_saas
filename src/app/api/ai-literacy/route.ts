@@ -259,6 +259,7 @@ export async function GET(request: Request) {
       userId: user.id,
       organizationId: organization.id,
       permission: 'read_ai_governance',
+      minimumPlan: 'business',
     });
     if (!permission.ok) return permissionDeniedResponse(permission);
 
@@ -289,6 +290,7 @@ export async function POST(request: Request) {
       userId: user.id,
       organizationId: organization.id,
       permission: 'manage_ai_governance',
+      minimumPlan: 'business',
     });
     if (!permission.ok) return permissionDeniedResponse(permission);
 
