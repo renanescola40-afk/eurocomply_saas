@@ -26,6 +26,11 @@ begin
   if to_regclass('public.evidence_items') is null then
     raise exception 'required public.evidence_items table is missing';
   end if;
+  if to_regclass('public.gap_assessments') is null
+     or to_regclass('public.gap_answers') is null
+     or to_regclass('public.compliance_findings') is null then
+    raise exception 'required Gap Analysis tenant-boundary tables are missing';
+  end if;
   if not exists (
     select 1 from information_schema.columns
     where table_schema = 'public' and table_name = 'evidence_items' and column_name = 'file_size_bytes'
@@ -85,6 +90,135 @@ begin
   end loop;
 end
 $auxiliary_payment_first$;
+
+-- Gap Analysis is currently served only through the authenticated server API,
+-- but the underlying tables still expose authenticated DML. Payment-first alone
+-- proves that a target organization is licensed; it does not prove that the
+-- caller belongs to that organization. Bind the direct data plane to active
+-- membership as an independent RESTRICTIVE condition so a known paid tenant UUID
+-- cannot be used for cross-tenant record injection/BOLA.
+do $gap_tenant_preflight$
+begin
+  if exists (
+    select 1
+    from public.gap_assessments assessment
+    where assessment.organization_id is not null
+      and not exists (
+        select 1
+        from public.organization_members member
+        where member.organization_id = assessment.organization_id
+          and member.user_id = assessment.user_id
+          and lower(coalesce(member.status, '')) = 'active'
+      )
+  ) then
+    raise exception 'Existing gap assessment actor is outside active organization membership';
+  end if;
+
+  if exists (
+    select 1
+    from public.compliance_findings finding
+    where finding.organization_id is not null
+      and not exists (
+        select 1
+        from public.organization_members member
+        where member.organization_id = finding.organization_id
+          and member.user_id = finding.user_id
+          and lower(coalesce(member.status, '')) = 'active'
+      )
+  ) then
+    raise exception 'Existing compliance finding actor is outside active organization membership';
+  end if;
+
+  if exists (
+    select 1
+    from public.compliance_findings finding
+    join public.gap_assessments assessment on assessment.id = finding.assessment_id
+    where finding.assessment_id is not null
+      and finding.organization_id is distinct from assessment.organization_id
+  ) then
+    raise exception 'Existing compliance finding references a cross-organization assessment';
+  end if;
+end
+$gap_tenant_preflight$;
+
+alter table public.gap_assessments enable row level security;
+alter table public.gap_assessments force row level security;
+drop policy if exists restrict_gap_assessments_active_membership on public.gap_assessments;
+create policy restrict_gap_assessments_active_membership
+  on public.gap_assessments
+  as restrictive
+  for all
+  to authenticated
+  using (
+    organization_id is not null
+    and app_private.is_org_member(organization_id)
+  )
+  with check (
+    organization_id is not null
+    and app_private.is_org_member(organization_id)
+  );
+
+alter table public.gap_answers enable row level security;
+alter table public.gap_answers force row level security;
+drop policy if exists restrict_gap_answers_active_membership on public.gap_answers;
+create policy restrict_gap_answers_active_membership
+  on public.gap_answers
+  as restrictive
+  for all
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.gap_assessments assessment
+      where assessment.id = gap_answers.assessment_id
+        and assessment.organization_id is not null
+        and app_private.is_org_member(assessment.organization_id)
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.gap_assessments assessment
+      where assessment.id = gap_answers.assessment_id
+        and assessment.organization_id is not null
+        and app_private.is_org_member(assessment.organization_id)
+    )
+  );
+
+alter table public.compliance_findings enable row level security;
+alter table public.compliance_findings force row level security;
+drop policy if exists restrict_compliance_findings_active_membership on public.compliance_findings;
+create policy restrict_compliance_findings_active_membership
+  on public.compliance_findings
+  as restrictive
+  for all
+  to authenticated
+  using (
+    organization_id is not null
+    and app_private.is_org_member(organization_id)
+    and (
+      assessment_id is null
+      or exists (
+        select 1
+        from public.gap_assessments assessment
+        where assessment.id = compliance_findings.assessment_id
+          and assessment.organization_id = compliance_findings.organization_id
+      )
+    )
+  )
+  with check (
+    organization_id is not null
+    and app_private.is_org_member(organization_id)
+    and (
+      assessment_id is null
+      or exists (
+        select 1
+        from public.gap_assessments assessment
+        where assessment.id = compliance_findings.assessment_id
+          and assessment.organization_id = compliance_findings.organization_id
+      )
+    )
+  );
 
 -- The legacy compliance-documents bucket is exercised by protected technical
 -- proofs. Membership alone is insufficient: access must also be commercially
@@ -176,7 +310,7 @@ alter table public.evidence_items
   ) not valid;
 alter table public.evidence_items validate constraint evidence_items_file_mime_type_check;
 
--- Fail closed if any intended commercial/storage control did not materialize.
+-- Fail closed if any intended commercial/storage/tenant control did not materialize.
 do $postconditions$
 declare
   target_table text;
@@ -236,6 +370,47 @@ begin
       raise exception 'payment-first restrictive policy missing or malformed on public.%', target_table;
     end if;
   end loop;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public'
+      and tablename='gap_assessments'
+      and policyname='restrict_gap_assessments_active_membership'
+      and permissive='RESTRICTIVE'
+      and roles @> array['authenticated']::name[]
+      and coalesce(qual,'') like '%is_org_member%'
+      and coalesce(with_check,'') like '%is_org_member%'
+  ) then
+    raise exception 'Gap assessment active-membership boundary is missing';
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public'
+      and tablename='gap_answers'
+      and policyname='restrict_gap_answers_active_membership'
+      and permissive='RESTRICTIVE'
+      and roles @> array['authenticated']::name[]
+      and coalesce(qual,'') like '%is_org_member%'
+      and coalesce(with_check,'') like '%is_org_member%'
+  ) then
+    raise exception 'Gap answer active-membership boundary is missing';
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public'
+      and tablename='compliance_findings'
+      and policyname='restrict_compliance_findings_active_membership'
+      and permissive='RESTRICTIVE'
+      and roles @> array['authenticated']::name[]
+      and coalesce(qual,'') like '%is_org_member%'
+      and coalesce(qual,'') like '%organization_id%'
+      and coalesce(with_check,'') like '%is_org_member%'
+      and coalesce(with_check,'') like '%organization_id%'
+  ) then
+    raise exception 'Compliance finding active-membership/assessment tenant boundary is missing';
+  end if;
 
   if not exists (
     select 1
