@@ -17,7 +17,7 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-06-billing-business-plan-isolation-v36';
+const EXPECTED_CHANGE_SET = '2026-09-06-billing-governance-plan-isolation-v37';
 const V32_PUBLIC_RELEASE_MIGRATION =
   '20260906000000_reconcile_final_public_release_payment_storage_hardening.sql';
 const BILLING_AI_SYSTEM_QUOTA_MIGRATION =
@@ -36,6 +36,8 @@ const BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION =
   '20260906006500_billing_professional_task_plan_isolation.sql';
 const BILLING_BUSINESS_PLAN_ISOLATION_MIGRATION =
   '20260906006600_billing_business_feature_plan_isolation.sql';
+const BILLING_GOVERNANCE_PLAN_ISOLATION_MIGRATION =
+  '20260906006700_billing_governance_workflow_plan_isolation.sql';
 const EXPECTED_SELECTED = [
   V32_PUBLIC_RELEASE_MIGRATION,
   BILLING_AI_SYSTEM_QUOTA_MIGRATION,
@@ -46,6 +48,7 @@ const EXPECTED_SELECTED = [
   BILLING_COMPLETED_CHECKOUT_AUTHORITY_GUARD_MIGRATION,
   BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION,
   BILLING_BUSINESS_PLAN_ISOLATION_MIGRATION,
+  BILLING_GOVERNANCE_PLAN_ISOLATION_MIGRATION,
 ];
 const VERIFIED_PRODUCTION_LEDGER_HEAD = '20260905075429';
 
@@ -212,6 +215,33 @@ function validateBusinessPlanIsolation(source) {
   ], 'V36 Business plan-isolation guard');
 }
 
+function validateGovernanceWorkflowPlanIsolation(source) {
+  requireMarkers(source, [
+    'restrict_enterprise_vendor_due_diligence_business_plan',
+    'restrict_enterprise_risk_reviews_business_plan',
+    'restrict_enterprise_evidence_packs_enterprise_plan',
+    'restrict_enterprise_evidence_pack_items_enterprise_plan',
+    "app_private.has_minimum_commercial_plan(organization_id, 'business')",
+    "app_private.has_minimum_commercial_plan(organization_id, 'enterprise')",
+    'alter table public.enterprise_vendor_due_diligence force row level security',
+    'alter table public.enterprise_risk_reviews force row level security',
+    'alter table public.enterprise_evidence_packs force row level security',
+    'alter table public.enterprise_evidence_pack_items force row level security',
+    'as restrictive',
+    'for all',
+    "notify pgrst, 'reload schema'",
+  ], 'V37 tiered governance workflow isolation');
+
+  forbidMarkers(source, [
+    'disable row level security',
+    'grant all on public.',
+    'grant all on storage.',
+    'to anon',
+    'drop table ',
+    'truncate ',
+  ], 'V37 tiered governance workflow isolation');
+}
+
 async function main() {
   const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
   if (config.changeSet !== EXPECTED_CHANGE_SET) {
@@ -265,6 +295,12 @@ async function main() {
     'utf8',
   );
   validateBusinessPlanIsolation(businessIsolationSource);
+
+  const governanceIsolationSource = readFileSync(
+    join(ROOT, 'supabase', 'migrations', BILLING_GOVERNANCE_PLAN_ISOLATION_MIGRATION),
+    'utf8',
+  );
+  validateGovernanceWorkflowPlanIsolation(governanceIsolationSource);
 
   const records = manifest.migrations.map((migration, index) => ({
     position: index + 1,
