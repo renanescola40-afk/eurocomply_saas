@@ -31,6 +31,10 @@ const idempotencyMigration = fs.readFileSync(
   'supabase/migrations/20260721201000_seat_idempotency_hardening.sql',
   'utf8',
 );
+const billingMemberMigration = fs.readFileSync(
+  'supabase/migrations/20260906003500_billing_self_serve_member_capacity.sql',
+  'utf8',
+);
 const invitationAction = fs.readFileSync('src/server/actions/invitations.ts', 'utf8');
 const licensingService = fs.readFileSync('src/server/enterprise/licensing.ts', 'utf8');
 
@@ -109,12 +113,14 @@ describe('enterprise tenant licensing core', () => {
     expect(contractAllowsNewSeats('suspended')).toBe(false);
   });
 
-  it('keeps invitation and idempotency hardening contracts present', () => {
+  it('keeps invitation and idempotency hardening contracts present behind the commercial wrapper', () => {
     expect(invitationMigration).toContain('create_organization_invitation_with_seat_atomic');
     expect(invitationLockMigration).toContain('from public.organization_usage as usage');
     expect(invitationLockMigration).toContain('for update;');
     expect(idempotencyMigration).toContain('enterprise_seat_operations');
-    expect(invitationAction).toContain("const ATOMIC_INVITATION_ACCEPTANCE_RPC = 'accept_organization_invitation_atomic'");
+    expect(invitationAction).toContain("const ATOMIC_INVITATION_ACCEPTANCE_RPC = 'accept_billing_organization_invitation_atomic'");
+    expect(billingMemberMigration).toContain("if v_plan = 'enterprise' then");
+    expect(billingMemberMigration).toContain('public.accept_organization_invitation_atomic(p_token, p_user_id, p_email)');
     expect(licensingService).toContain('resolve_organization_entitlements_v2');
   });
 
