@@ -322,5 +322,71 @@ begin
 end
 $verify$;
 
+-- Global release invariants: no client-visible public table may escape RLS/FORCE
+-- RLS or lack a policy, and no SECURITY DEFINER function in the application
+-- schemas may be callable by the anonymous API role. These checks intentionally
+-- make future privilege regressions fail the migration instead of becoming drift.
+do $global_client_security_postconditions$
+begin
+  if exists (
+    select 1
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relkind = 'r'
+      and (
+        has_table_privilege('anon', format('public.%I', c.relname), 'SELECT')
+        or has_table_privilege('anon', format('public.%I', c.relname), 'INSERT')
+        or has_table_privilege('anon', format('public.%I', c.relname), 'UPDATE')
+        or has_table_privilege('anon', format('public.%I', c.relname), 'DELETE')
+        or has_table_privilege('authenticated', format('public.%I', c.relname), 'SELECT')
+        or has_table_privilege('authenticated', format('public.%I', c.relname), 'INSERT')
+        or has_table_privilege('authenticated', format('public.%I', c.relname), 'UPDATE')
+        or has_table_privilege('authenticated', format('public.%I', c.relname), 'DELETE')
+      )
+      and (not c.relrowsecurity or not c.relforcerowsecurity)
+  ) then
+    raise exception 'client-granted public table escaped RLS/FORCE RLS';
+  end if;
+
+  if exists (
+    select 1
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relkind = 'r'
+      and (
+        has_table_privilege('anon', format('public.%I', c.relname), 'SELECT')
+        or has_table_privilege('anon', format('public.%I', c.relname), 'INSERT')
+        or has_table_privilege('anon', format('public.%I', c.relname), 'UPDATE')
+        or has_table_privilege('anon', format('public.%I', c.relname), 'DELETE')
+        or has_table_privilege('authenticated', format('public.%I', c.relname), 'SELECT')
+        or has_table_privilege('authenticated', format('public.%I', c.relname), 'INSERT')
+        or has_table_privilege('authenticated', format('public.%I', c.relname), 'UPDATE')
+        or has_table_privilege('authenticated', format('public.%I', c.relname), 'DELETE')
+      )
+      and not exists (
+        select 1
+        from pg_policies policy
+        where policy.schemaname = 'public'
+          and policy.tablename = c.relname
+      )
+  ) then
+    raise exception 'client-granted public table has no RLS policy';
+  end if;
+
+  if exists (
+    select 1
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where p.prosecdef
+      and n.nspname in ('public', 'app_private')
+      and has_function_privilege('anon', p.oid, 'EXECUTE')
+  ) then
+    raise exception 'anonymous role can execute an application SECURITY DEFINER function';
+  end if;
+end
+$global_client_security_postconditions$;
+
 notify pgrst, 'reload schema';
 commit;
