@@ -21,6 +21,10 @@
     {
       "filename": "20260906004500_billing_entitlement_catalog_truth.sql",
       "purpose": "reconcile persisted subscription entitlement JSON and defaults to the implemented commercial authority, keeping API and webhook capacity closed below Enterprise and organization licensing aligned with the current organization-scoped billing model"
+    },
+    {
+      "filename": "20260906005000_billing_initial_checkout_singleflight.sql",
+      "purpose": "materialize the backend-only tenant-scoped single-flight lease required by the initial self-serve Checkout runtime so concurrent initial requests cannot create duplicate Stripe subscription Checkout sessions"
     }
   ],
   "truthBoundary": {
