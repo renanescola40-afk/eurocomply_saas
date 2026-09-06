@@ -59,15 +59,16 @@ begin
       message = 'document_commercial_plan_unavailable';
   end if;
 
-  -- Canonical limits from src/lib/billing/plans.ts. GB is treated as GiB here,
-  -- matching the binary byte units used by Supabase Storage/file metadata.
+  -- Canonical limits from src/lib/billing/plans.ts. Public copy says GB, so use
+  -- decimal gigabytes exactly (1 GB = 1,000,000,000 bytes) instead of silently
+  -- granting a larger GiB allowance.
   select limits.document_limit, limits.storage_limit_bytes
     into v_document_limit, v_storage_limit_bytes
   from (
     values
-      ('starter'::text,      100::bigint,   10737418240::bigint),
-      ('professional'::text, 1000::bigint, 107374182400::bigint),
-      ('business'::text,     10000::bigint, 536870912000::bigint),
+      ('starter'::text,      100::bigint,  10000000000::bigint),
+      ('professional'::text, 1000::bigint, 100000000000::bigint),
+      ('business'::text,     10000::bigint, 500000000000::bigint),
       ('enterprise'::text,   null::bigint, null::bigint)
   ) as limits(plan, document_limit, storage_limit_bytes)
   where limits.plan = v_plan;
