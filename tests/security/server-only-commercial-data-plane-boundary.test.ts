@@ -83,6 +83,29 @@ describe('final server-only commercial Data API boundary', () => {
     expect(finalIsolation).toContain('profiles client privileges are not least-privilege canonical');
   });
 
+  it('reconciles replay-only historical tables without materializing them in Production', () => {
+    expect(finalIsolation).toContain('do $historical_replay_rls_hardening$');
+    for (const table of [
+      'data_retention_policies',
+      'data_subject_requests',
+      'audit_integrity_checkpoints',
+      'email_delivery_logs',
+      'rate_limits',
+    ]) {
+      expect(finalIsolation).toContain(`'${table}'`);
+    }
+    expect(finalIsolation).toContain("if to_regclass(format('public.%I', target_table)) is not null then");
+    expect(finalIsolation).toContain(
+      "execute format('alter table public.%I force row level security', target_table)",
+    );
+    expect(finalIsolation).toContain(
+      "execute format('revoke all privileges on table public.%I from anon, authenticated', target_table)",
+    );
+    expect(finalIsolation).not.toContain('create table if not exists public.data_retention_policies');
+    expect(finalIsolation).not.toContain('create table if not exists public.email_delivery_logs');
+    expect(finalIsolation).not.toContain('create table if not exists public.rate_limits');
+  });
+
   it('fails the release if a client table or anonymous definer escapes the global boundary', () => {
     expect(finalIsolation).toContain('do $global_client_security_postconditions$');
     expect(finalIsolation).toContain('client-granted public table escaped RLS/FORCE RLS');
