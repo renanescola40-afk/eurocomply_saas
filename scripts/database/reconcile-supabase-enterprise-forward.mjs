@@ -17,7 +17,7 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-06-billing-governance-plan-isolation-v37';
+const EXPECTED_CHANGE_SET = '2026-09-06-paid-governance-runtime-foundations-v38';
 const V32_PUBLIC_RELEASE_MIGRATION =
   '20260906000000_reconcile_final_public_release_payment_storage_hardening.sql';
 const BILLING_AI_SYSTEM_QUOTA_MIGRATION =
@@ -32,6 +32,8 @@ const BILLING_INITIAL_CHECKOUT_SINGLEFLIGHT_MIGRATION =
   '20260906005000_billing_initial_checkout_singleflight.sql';
 const BILLING_COMPLETED_CHECKOUT_AUTHORITY_GUARD_MIGRATION =
   '20260906006000_billing_completed_checkout_authority_guard.sql';
+const PAID_GOVERNANCE_RUNTIME_FOUNDATIONS_MIGRATION =
+  '20260906006400_reconcile_paid_governance_runtime_foundations.sql';
 const BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION =
   '20260906006500_billing_professional_task_plan_isolation.sql';
 const BILLING_BUSINESS_PLAN_ISOLATION_MIGRATION =
@@ -46,6 +48,7 @@ const EXPECTED_SELECTED = [
   BILLING_ENTITLEMENT_CATALOG_TRUTH_MIGRATION,
   BILLING_INITIAL_CHECKOUT_SINGLEFLIGHT_MIGRATION,
   BILLING_COMPLETED_CHECKOUT_AUTHORITY_GUARD_MIGRATION,
+  PAID_GOVERNANCE_RUNTIME_FOUNDATIONS_MIGRATION,
   BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION,
   BILLING_BUSINESS_PLAN_ISOLATION_MIGRATION,
   BILLING_GOVERNANCE_PLAN_ISOLATION_MIGRATION,
@@ -154,6 +157,54 @@ function validateCompletedCheckoutAuthorityGuard(source) {
     'to anon',
     'truncate ',
   ], 'V34 completed Checkout subscription-authority guard');
+}
+
+function validatePaidGovernanceRuntimeFoundations(source) {
+  requireMarkers(source, [
+    'Forward-only reconciliation for paid governance runtime foundations',
+    "to_regclass('public.organizations')",
+    "to_regclass('public.organization_members')",
+    "to_regclass('public.ai_systems')",
+    'enterprise_evidence_packs',
+    'enterprise_evidence_pack_items',
+    'enterprise_vendor_due_diligence',
+    'enterprise_risk_reviews',
+    'enterprise_evidence_pack_items_pack_organization_fkey',
+    'foreign key (pack_id, organization_id)',
+    'create or replace function public.create_enterprise_evidence_pack_atomic',
+    'ai_qms_systems',
+    'ai_qms_controls',
+    'ai_qms_nonconformities',
+    'ai_qms_audits',
+    'ai_qms_management_reviews',
+    'ai_qms_decisions',
+    'create or replace function public.create_qms_system_atomic',
+    'create or replace function public.configure_qms_system_atomic',
+    'create or replace function public.complete_qms_control_atomic',
+    'create or replace function public.accept_qms_audit_atomic',
+    'create or replace function public.approve_qms_management_review_atomic',
+    'create or replace function public.close_qms_nonconformity_atomic',
+    'create or replace function public.approve_qms_system_atomic',
+    'create or replace function public.rollback_qms_approval_atomic',
+    'alter table public.%I force row level security',
+    "has_table_privilege('authenticated'",
+    "has_table_privilege('service_role'",
+    "has_function_privilege('authenticated'",
+    "has_function_privilege('service_role'",
+    'Backend-only paid governance RPC became client executable',
+    'Evidence-pack tenant composite foreign key is missing or unvalidated',
+    "notify pgrst, 'reload schema'",
+  ], 'V38 paid-governance runtime-foundation reconciliation');
+
+  forbidMarkers(source, [
+    'supabase_migrations.schema_migrations',
+    'db push --include-all',
+    'disable row level security',
+    'grant all on public.',
+    'grant all on storage.',
+    'drop table ',
+    'truncate ',
+  ], 'V38 paid-governance runtime-foundation reconciliation');
 }
 
 function validateProfessionalPlanIsolation(source) {
@@ -283,6 +334,12 @@ async function main() {
     'utf8',
   );
   validateCompletedCheckoutAuthorityGuard(checkoutAuthoritySource);
+
+  const paidGovernanceFoundationSource = readFileSync(
+    join(ROOT, 'supabase', 'migrations', PAID_GOVERNANCE_RUNTIME_FOUNDATIONS_MIGRATION),
+    'utf8',
+  );
+  validatePaidGovernanceRuntimeFoundations(paidGovernanceFoundationSource);
 
   const professionalIsolationSource = readFileSync(
     join(ROOT, 'supabase', 'migrations', BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION),
