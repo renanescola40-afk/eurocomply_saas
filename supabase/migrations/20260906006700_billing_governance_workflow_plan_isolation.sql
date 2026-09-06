@@ -30,6 +30,7 @@ begin
     'gap_answers',
     'compliance_findings',
     'compliance_tasks',
+    'tasks',
     'onboarding_activation_runs'
   ]
   loop
@@ -119,6 +120,11 @@ create policy payment_first_commercial_authority
 -- Onboarding activation is likewise materialized by the hardened server-side
 -- atomic activation RPC. Direct browser writes can bypass its idempotency and
 -- atomic organization/AI-system/task/invitation transition.
+--
+-- `public.tasks` is the preserved legacy task table. The current application
+-- uses `public.compliance_tasks`; no reviewed application path mutates
+-- `public.tasks`. Keep its four historical rows readable under the existing
+-- tenant/paid RLS contract, but remove unused direct browser mutation authority.
 do $server_only_browser_mutations$
 declare
   target_table text;
@@ -127,7 +133,8 @@ begin
     'gap_assessments',
     'gap_answers',
     'compliance_findings',
-    'onboarding_activation_runs'
+    'onboarding_activation_runs',
+    'tasks'
   ]
   loop
     execute format('alter table public.%I enable row level security', target_table);
@@ -228,7 +235,8 @@ begin
     'gap_assessments',
     'gap_answers',
     'compliance_findings',
-    'onboarding_activation_runs'
+    'onboarding_activation_runs',
+    'tasks'
   ]
   loop
     if has_table_privilege('anon', format('public.%I', target_table), 'INSERT')
