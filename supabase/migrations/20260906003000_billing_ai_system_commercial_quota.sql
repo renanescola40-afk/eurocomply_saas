@@ -129,6 +129,47 @@ $$;
 revoke all on function public.create_ai_system_atomic(uuid, uuid, jsonb) from public, anon, authenticated;
 grant execute on function public.create_ai_system_atomic(uuid, uuid, jsonb) to service_role;
 
+-- AI-system mutation is intentionally backend-only. The reviewed application
+-- creates through create_ai_system_atomic and reassesses through
+-- reassess_ai_system_atomic using the service-role client. Leaving table DML on
+-- authenticated would let a paid writer bypass the serialized plan quota and
+-- atomic history/audit boundary through PostgREST.
+revoke insert, update, delete on table public.ai_systems from anon, authenticated;
+grant select on table public.ai_systems to authenticated;
+
+do $verify_ai_system_mutation_boundary$
+declare
+  create_oid oid := to_regprocedure('public.create_ai_system_atomic(uuid,uuid,jsonb)');
+begin
+  if create_oid is null then
+    raise exception 'AI-system atomic create function is missing';
+  end if;
+
+  if has_function_privilege('anon', create_oid, 'EXECUTE')
+     or has_function_privilege('authenticated', create_oid, 'EXECUTE')
+     or not has_function_privilege('service_role', create_oid, 'EXECUTE') then
+    raise exception 'AI-system atomic create execution privileges are not canonical';
+  end if;
+
+  if has_table_privilege('anon', 'public.ai_systems', 'INSERT')
+     or has_table_privilege('anon', 'public.ai_systems', 'UPDATE')
+     or has_table_privilege('anon', 'public.ai_systems', 'DELETE')
+     or has_table_privilege('authenticated', 'public.ai_systems', 'INSERT')
+     or has_table_privilege('authenticated', 'public.ai_systems', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.ai_systems', 'DELETE') then
+    raise exception 'direct browser AI-system mutation privilege survived';
+  end if;
+
+  if not has_table_privilege('authenticated', 'public.ai_systems', 'SELECT')
+     or not has_table_privilege('service_role', 'public.ai_systems', 'SELECT')
+     or not has_table_privilege('service_role', 'public.ai_systems', 'INSERT')
+     or not has_table_privilege('service_role', 'public.ai_systems', 'UPDATE')
+     or not has_table_privilege('service_role', 'public.ai_systems', 'DELETE') then
+    raise exception 'AI-system table privileges are not canonical after hardening';
+  end if;
+end
+$verify_ai_system_mutation_boundary$;
+
 notify pgrst, 'reload schema';
 
 commit;
