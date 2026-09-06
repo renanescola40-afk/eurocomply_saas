@@ -17,7 +17,7 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-06-paid-governance-runtime-foundations-v38';
+const EXPECTED_CHANGE_SET = '2026-09-06-cross-tenant-reference-integrity-v39';
 const V32_PUBLIC_RELEASE_MIGRATION =
   '20260906000000_reconcile_final_public_release_payment_storage_hardening.sql';
 const BILLING_AI_SYSTEM_QUOTA_MIGRATION =
@@ -40,6 +40,8 @@ const BILLING_BUSINESS_PLAN_ISOLATION_MIGRATION =
   '20260906006600_billing_business_feature_plan_isolation.sql';
 const BILLING_GOVERNANCE_PLAN_ISOLATION_MIGRATION =
   '20260906006700_billing_governance_workflow_plan_isolation.sql';
+const CROSS_TENANT_REFERENCE_INTEGRITY_MIGRATION =
+  '20260906006800_harden_cross_tenant_reference_integrity.sql';
 const EXPECTED_SELECTED = [
   V32_PUBLIC_RELEASE_MIGRATION,
   BILLING_AI_SYSTEM_QUOTA_MIGRATION,
@@ -52,6 +54,7 @@ const EXPECTED_SELECTED = [
   BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION,
   BILLING_BUSINESS_PLAN_ISOLATION_MIGRATION,
   BILLING_GOVERNANCE_PLAN_ISOLATION_MIGRATION,
+  CROSS_TENANT_REFERENCE_INTEGRITY_MIGRATION,
 ];
 const VERIFIED_PRODUCTION_LEDGER_HEAD = '20260905075429';
 
@@ -307,6 +310,48 @@ function validateGovernanceWorkflowPlanIsolation(source) {
   ], 'V37 tiered governance workflow isolation');
 }
 
+function validateCrossTenantReferenceIntegrity(source) {
+  requireMarkers(source, [
+    'Final cross-tenant reference integrity hardening',
+    'create or replace function app_private.enforce_same_tenant_reference_integrity()',
+    'security definer',
+    "set search_path = ''",
+    'cross_tenant_reference: ai_assessments.ai_system_id',
+    'cross_tenant_reference: ai_incidents.ai_system_id',
+    'cross_tenant_reference: ai_system_history.ai_system_id',
+    'cross_tenant_reference: compliance_findings.assessment_id',
+    'cross_tenant_reference: compliance_tasks.finding_id',
+    'cross_tenant_reference: enterprise_access_export_download_events.export_job_id',
+    'cross_tenant_reference: enterprise_access_operation_events.operation_id',
+    'cross_tenant_reference: enterprise_access_operation_items.identity_id',
+    'cross_tenant_reference: enterprise_access_operation_items.membership_id',
+    'cross_tenant_reference: enterprise_access_operation_items.operation_id',
+    'cross_tenant_reference: enterprise_contract_billing_events.contract_id',
+    'cross_tenant_reference: enterprise_seat_contention_events.membership_id',
+    'cross_tenant_reference: enterprise_seat_events.reservation_id',
+    'cross_tenant_reference: enterprise_seat_operations.membership_id',
+    'cross_tenant_reference: evidence_item_audit_events.evidence_item_id',
+    'cross_tenant_reference: evidence_items.finding_id',
+    'cross_tenant_reference: evidence_items.task_id',
+    'cross_tenant_reference: organization_entitlements.contract_id',
+    'revoke all on function app_private.enforce_same_tenant_reference_integrity() from public, anon, authenticated',
+    'grant execute on function app_private.enforce_same_tenant_reference_integrity() to service_role',
+    'same-tenant reference integrity guard privileges are not canonical',
+    'same-tenant reference integrity trigger is missing or duplicated',
+    "notify pgrst, 'reload schema'",
+  ], 'V39 cross-tenant reference-integrity guard');
+
+  forbidMarkers(source, [
+    'supabase_migrations.schema_migrations',
+    'db push --include-all',
+    'disable row level security',
+    'grant all on public.',
+    'grant all on storage.',
+    'drop table ',
+    'truncate ',
+  ], 'V39 cross-tenant reference-integrity guard');
+}
+
 async function main() {
   const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
   if (config.changeSet !== EXPECTED_CHANGE_SET) {
@@ -372,6 +417,12 @@ async function main() {
     'utf8',
   );
   validateGovernanceWorkflowPlanIsolation(governanceIsolationSource);
+
+  const crossTenantIntegritySource = readFileSync(
+    join(ROOT, 'supabase', 'migrations', CROSS_TENANT_REFERENCE_INTEGRITY_MIGRATION),
+    'utf8',
+  );
+  validateCrossTenantReferenceIntegrity(crossTenantIntegritySource);
 
   const records = manifest.migrations.map((migration, index) => ({
     position: index + 1,

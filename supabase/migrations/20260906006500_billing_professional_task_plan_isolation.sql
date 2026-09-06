@@ -285,6 +285,29 @@ begin
     raise exception 'paid governance membership helpers are missing';
   end if;
 
+  if tenant_scope_oid is null then
+    raise exception 'Enterprise AI-system tenant-scope trigger function is missing';
+  end if;
+
+  if exists (
+    select 1
+    from pg_proc function_record
+    cross join lateral aclexplode(
+      coalesce(function_record.proacl, acldefault('f', function_record.proowner))
+    ) privilege
+    where function_record.oid = any(array[
+      helper_oid,
+      enterprise_read_oid,
+      enterprise_manage_oid,
+      qms_member_oid,
+      tenant_scope_oid
+    ]::oid[])
+      and privilege.grantee = 0
+      and privilege.privilege_type = 'EXECUTE'
+  ) then
+    raise exception 'Professional helper PUBLIC execute privilege survived';
+  end if;
+
   select pg_get_functiondef(enterprise_read_oid) into enterprise_read_definition;
   select pg_get_functiondef(enterprise_manage_oid) into enterprise_manage_definition;
   select pg_get_functiondef(qms_member_oid) into qms_member_definition;
@@ -307,12 +330,7 @@ begin
     raise exception 'Paid governance membership helper privileges are not canonical';
   end if;
 
-  if tenant_scope_oid is null then
-    raise exception 'Enterprise AI-system tenant-scope trigger function is missing';
-  end if;
-
-  if has_function_privilege('public', tenant_scope_oid, 'EXECUTE')
-     or has_function_privilege('anon', tenant_scope_oid, 'EXECUTE')
+  if has_function_privilege('anon', tenant_scope_oid, 'EXECUTE')
      or has_function_privilege('authenticated', tenant_scope_oid, 'EXECUTE') then
     raise exception 'Enterprise AI-system tenant-scope trigger function became directly executable';
   end if;
