@@ -19,7 +19,7 @@ describe('compliance alert authentication protection', () => {
 
     const rateLimitIndex = postBody?.indexOf('enforceInternalAuthenticationRateLimit(request') ?? -1;
     const authorizationIndex = postBody?.indexOf('isAuthorizedInternalCronRequest(request)') ?? -1;
-    const privilegedWorkIndex = postBody?.indexOf('sendDocumentExpiryAlerts()') ?? -1;
+    const privilegedWorkIndex = postBody?.indexOf('const isCommerciallyEligible = createCommercialEligibilityResolver();') ?? -1;
 
     expect(rateLimitIndex).toBeGreaterThanOrEqual(0);
     expect(authorizationIndex).toBeGreaterThan(rateLimitIndex);
