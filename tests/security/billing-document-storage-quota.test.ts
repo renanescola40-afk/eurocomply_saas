@@ -19,11 +19,12 @@ describe('billing document storage quota', () => {
     expect(migration).toContain('before insert on public.documents');
   });
 
-  it('mirrors the advertised 10/100/500 GB paid-plan storage capacities', () => {
-    expect(migration).toContain("('starter'::text,      100::bigint,   10737418240::bigint)");
-    expect(migration).toContain("('professional'::text, 1000::bigint, 107374182400::bigint)");
-    expect(migration).toContain("('business'::text,     10000::bigint, 536870912000::bigint)");
+  it('mirrors the advertised 10/100/500 decimal-GB paid-plan storage capacities', () => {
+    expect(migration).toContain("('starter'::text,      100::bigint,  10000000000::bigint)");
+    expect(migration).toContain("('professional'::text, 1000::bigint, 100000000000::bigint)");
+    expect(migration).toContain("('business'::text,     10000::bigint, 500000000000::bigint)");
     expect(migration).toContain("('enterprise'::text,   null::bigint, null::bigint)");
+    expect(migration).toContain('1 GB = 1,000,000,000 bytes');
   });
 
   it('keeps browser roles away from the privileged quota function', () => {
