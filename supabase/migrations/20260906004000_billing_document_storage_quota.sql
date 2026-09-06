@@ -5,6 +5,12 @@ begin;
 -- PostgreSQL INSERT boundary so concurrent uploads cannot oversubscribe either
 -- resource. Historical migrations remain immutable; this forward migration only
 -- replaces the current trigger function with the stricter contract.
+--
+-- Controlled document Storage is backend-only. Browser-side metadata mutation
+-- would let an authenticated writer delete or shrink quota-accounting rows while
+-- the corresponding private Storage object survives, bypassing persisted byte
+-- capacity and the reviewed storage/audit lifecycle. Keep authenticated reads
+-- RLS-bound, but make document metadata mutation backend-only as well.
 
 do $prerequisites$
 begin
@@ -128,6 +134,13 @@ $$;
 revoke all on function app_private.enforce_document_commercial_quota() from public, anon, authenticated;
 grant execute on function app_private.enforce_document_commercial_quota() to service_role;
 
+-- All current document mutations use reviewed server/admin paths. Preserve
+-- authenticated SELECT for tenant-scoped UI reads, but prevent direct metadata
+-- INSERT/UPDATE/DELETE from bypassing Storage cleanup, malware provenance,
+-- serialized commercial quota accounting, and mutation audit requirements.
+revoke insert, update, delete on table public.documents from anon, authenticated;
+grant select on table public.documents to authenticated;
+
 -- Recreate explicitly so this forward migration remains self-contained even if
 -- a partially-reconciled environment lost the trigger while retaining function
 -- definitions.
@@ -138,7 +151,7 @@ for each row
 execute function app_private.enforce_document_commercial_quota();
 
 comment on function app_private.enforce_document_commercial_quota() is
-  'Fail-closed serialized document INSERT authority: paid plan, document count and persisted storage-byte quota in one tenant lock.';
+  'Fail-closed serialized backend document INSERT authority: paid plan, document count and persisted storage-byte quota in one tenant lock.';
 
 do $verify$
 declare
@@ -152,6 +165,23 @@ begin
      or has_function_privilege('authenticated', quota_oid, 'EXECUTE')
      or not has_function_privilege('service_role', quota_oid, 'EXECUTE') then
     raise exception 'document commercial quota execution privileges are not canonical';
+  end if;
+
+  if has_table_privilege('authenticated', 'public.documents', 'INSERT')
+     or has_table_privilege('authenticated', 'public.documents', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.documents', 'DELETE')
+     or has_table_privilege('anon', 'public.documents', 'INSERT')
+     or has_table_privilege('anon', 'public.documents', 'UPDATE')
+     or has_table_privilege('anon', 'public.documents', 'DELETE') then
+    raise exception 'direct browser document metadata mutation privilege survived';
+  end if;
+
+  if not has_table_privilege('authenticated', 'public.documents', 'SELECT')
+     or not has_table_privilege('service_role', 'public.documents', 'SELECT')
+     or not has_table_privilege('service_role', 'public.documents', 'INSERT')
+     or not has_table_privilege('service_role', 'public.documents', 'UPDATE')
+     or not has_table_privilege('service_role', 'public.documents', 'DELETE') then
+    raise exception 'document metadata privileges are not canonical after hardening';
   end if;
 
   if not exists (
