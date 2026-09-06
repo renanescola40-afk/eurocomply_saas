@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
@@ -72,6 +73,22 @@ async function requireGapOrganizationPermission(userId: string, permission: 'rea
   }
 
   return { organization, authorization } as const;
+}
+
+async function requireProfessionalRemediationPlan(organizationId: string) {
+  const plan = await assertPlanAtLeast(organizationId, 'professional');
+  if (plan.ok) return null;
+
+  return noStoreJson(
+    {
+      error: plan.error,
+      message: plan.message,
+      plan: plan.entitlements.plan,
+      requiredPlan: 'professional',
+      upgradeUrl: '/pricing',
+    },
+    { status: plan.status },
+  );
 }
 
 async function loadLatestAssessment(organizationId: string, userId: string) {
@@ -304,6 +321,8 @@ export async function GET(request: Request) {
     }
 
     if (view === 'work') {
+      const upgrade = await requireProfessionalRemediationPlan(access.organization.id);
+      if (upgrade) return upgrade;
       return noStoreJson(await loadOpenWork(access.organization.id, user.id));
     }
 
@@ -350,6 +369,8 @@ export async function POST(request: Request) {
     }
 
     if (operation === 'remediation') {
+      const upgrade = await requireProfessionalRemediationPlan(access.organization.id);
+      if (upgrade) return upgrade;
       const body = await parseJsonBodyWithZod(request, { schema: remediationSchema, maxBytes: GAP_JSON_MAX_BYTES });
       const result = await createRemediation(access.organization.id, user.id, body);
       return noStoreJson(result, { status: 201 });
