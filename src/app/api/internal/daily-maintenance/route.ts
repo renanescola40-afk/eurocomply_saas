@@ -36,7 +36,7 @@ export type MaintenanceJobResult = {
   path: string;
   ok: boolean;
   status: number;
-  durationMs: number;
+  durationMs: number | null;
   body: Record<string, unknown> | null;
 };
 
@@ -263,7 +263,7 @@ export async function runMaintenanceJobSequence(
             path: skippedPath,
             ok: false,
             status: 0,
-            durationMs: 0,
+            durationMs: null,
             body: { error: 'skipped_after_timeout' },
           });
         }
