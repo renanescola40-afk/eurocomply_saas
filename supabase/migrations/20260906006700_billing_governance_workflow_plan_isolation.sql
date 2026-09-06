@@ -30,6 +30,7 @@ begin
     'gap_answers',
     'compliance_findings',
     'compliance_tasks',
+    'ai_assessments',
     'tasks',
     'onboarding_activation_runs',
     'email_notification_events',
@@ -153,6 +154,12 @@ $client_rls_hardening$;
 -- atomic activation RPC. Direct browser writes can bypass its idempotency and
 -- atomic organization/AI-system/task/invitation transition.
 --
+-- `public.ai_assessments` already has a reviewed historical backend-only decision,
+-- but that historical migration is outside the bounded Production-forward set.
+-- Reassert it here: reads remain tenant-scoped, while browser mutations are
+-- denied by both ACL and restrictive policies even if an old permissive writer
+-- policy survives in the historical schema.
+--
 -- `public.tasks` is the preserved legacy task table. The current application
 -- uses `public.compliance_tasks`; no reviewed application path mutates
 -- `public.tasks`. Keep its four historical rows readable under the existing
@@ -166,6 +173,7 @@ begin
     'gap_answers',
     'compliance_findings',
     'onboarding_activation_runs',
+    'ai_assessments',
     'tasks'
   ]
   loop
@@ -176,6 +184,34 @@ begin
   end loop;
 end
 $server_only_browser_mutations$;
+
+-- Defense in depth for the assessment workflow. Old permissive writer policies
+-- may remain in historical Production, so explicit RESTRICTIVE deny policies make
+-- a future accidental table grant insufficient to reopen direct PostgREST writes.
+drop policy if exists "restrict_authenticated_ai_assessments_insert_backend_only" on public.ai_assessments;
+create policy "restrict_authenticated_ai_assessments_insert_backend_only"
+  on public.ai_assessments
+  as restrictive
+  for insert
+  to authenticated
+  with check (false);
+
+drop policy if exists "restrict_authenticated_ai_assessments_update_backend_only" on public.ai_assessments;
+create policy "restrict_authenticated_ai_assessments_update_backend_only"
+  on public.ai_assessments
+  as restrictive
+  for update
+  to authenticated
+  using (false)
+  with check (false);
+
+drop policy if exists "restrict_authenticated_ai_assessments_delete_backend_only" on public.ai_assessments;
+create policy "restrict_authenticated_ai_assessments_delete_backend_only"
+  on public.ai_assessments
+  as restrictive
+  for delete
+  to authenticated
+  using (false);
 
 do $verify$
 declare
@@ -299,6 +335,7 @@ begin
     'gap_answers',
     'compliance_findings',
     'onboarding_activation_runs',
+    'ai_assessments',
     'tasks'
   ]
   loop
@@ -319,6 +356,38 @@ begin
       raise exception 'server-only table privileges are not canonical on public.%', target_table;
     end if;
   end loop;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public'
+      and tablename='ai_assessments'
+      and policyname='restrict_authenticated_ai_assessments_insert_backend_only'
+      and permissive='RESTRICTIVE'
+      and cmd='INSERT'
+      and roles=array['authenticated']::name[]
+      and coalesce(with_check,'')='false'
+  ) or not exists (
+    select 1 from pg_policies
+    where schemaname='public'
+      and tablename='ai_assessments'
+      and policyname='restrict_authenticated_ai_assessments_update_backend_only'
+      and permissive='RESTRICTIVE'
+      and cmd='UPDATE'
+      and roles=array['authenticated']::name[]
+      and coalesce(qual,'')='false'
+      and coalesce(with_check,'')='false'
+  ) or not exists (
+    select 1 from pg_policies
+    where schemaname='public'
+      and tablename='ai_assessments'
+      and policyname='restrict_authenticated_ai_assessments_delete_backend_only'
+      and permissive='RESTRICTIVE'
+      and cmd='DELETE'
+      and roles=array['authenticated']::name[]
+      and coalesce(qual,'')='false'
+  ) then
+    raise exception 'AI assessment backend-only restrictive policy boundary is missing';
+  end if;
 end
 $verify$;
 
