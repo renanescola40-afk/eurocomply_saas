@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  MaintenanceJobTimeoutError,
   getConfiguredMaintenanceBaseUrl,
   isSuccessfulMaintenanceJobResponse,
   readBoundedMaintenanceJobResponse,
   resolveMaintenanceBaseUrl,
+  runMaintenanceJobSequence,
 } from './route';
 
 function makeRequest(url = 'https://attacker.example/api/internal/daily-maintenance') {
@@ -154,5 +156,47 @@ describe('daily maintenance response boundaries', () => {
 
     expect(result).toEqual({ body: { error: 'internal_error' }, failure: null });
     expect(isSuccessfulMaintenanceJobResponse(response, result)).toBe(false);
+  });
+});
+
+describe('daily maintenance timeout sequencing', () => {
+  it('does not start later jobs after a child times out', async () => {
+    const runner = vi.fn(async (_baseUrl: string, path: string, _credential: string) => {
+      throw new MaintenanceJobTimeoutError(path);
+    });
+
+    const results = await runMaintenanceJobSequence('https://app.example', 'cron-secret', runner);
+
+    expect(runner).toHaveBeenCalledTimes(1);
+    expect(runner).toHaveBeenCalledWith(
+      'https://app.example',
+      '/api/internal/metric-snapshots',
+      'cron-secret',
+    );
+    expect(results).toHaveLength(4);
+    expect(results[0]).toMatchObject({
+      path: '/api/internal/metric-snapshots',
+      ok: false,
+      body: { error: 'job_timed_out' },
+    });
+    expect(results.slice(1)).toEqual([
+      expect.objectContaining({ path: '/api/internal/compliance-alerts', body: { error: 'skipped_after_timeout' } }),
+      expect.objectContaining({ path: '/api/internal/trial-reminders', body: { error: 'skipped_after_timeout' } }),
+      expect.objectContaining({ path: '/api/intelligence/refresh', body: { error: 'skipped_after_timeout' } }),
+    ]);
+  });
+
+  it('continues after an ordinary child failure because no server-side timeout overlap is implied', async () => {
+    const runner = vi.fn(async (_baseUrl: string, path: string, _credential: string) => {
+      if (path === '/api/internal/metric-snapshots') throw new Error('ordinary_failure');
+      return { path, ok: true, status: 200, durationMs: 1, body: { ok: true } };
+    });
+
+    const results = await runMaintenanceJobSequence('https://app.example', 'cron-secret', runner);
+
+    expect(runner).toHaveBeenCalledTimes(4);
+    expect(results).toHaveLength(4);
+    expect(results[0]).toMatchObject({ body: { error: 'job_failed' } });
+    expect(results.slice(1).every((result) => result.ok)).toBe(true);
   });
 });

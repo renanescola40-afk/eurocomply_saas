@@ -13,6 +13,7 @@ const DEFAULT_METRIC_SNAPSHOT_ORGANIZATION_LIMIT = 50;
 const MAX_METRIC_SNAPSHOT_ORGANIZATION_LIMIT = 200;
 const METRIC_SNAPSHOT_ORGANIZATION_TIMEOUT_MS = 5_000;
 const ONE_DAY_MS = 86_400_000;
+const ENABLE_DASHBOARD_METRIC_SNAPSHOTS_ENV = 'ENABLE_DASHBOARD_METRIC_SNAPSHOTS';
 
 class MetricSnapshotOrganizationTimeoutError extends Error {
   constructor() {
@@ -25,6 +26,10 @@ type OrganizationBatchRow = {
   id: string;
   name?: string | null;
 };
+
+export function areDashboardMetricSnapshotsEnabled() {
+  return process.env[ENABLE_DASHBOARD_METRIC_SNAPSHOTS_ENV]?.trim().toLowerCase() === 'true';
+}
 
 function getMetricSnapshotOrganizationLimit() {
   const configuredLimit = Number(process.env.METRIC_SNAPSHOT_ORGANIZATION_LIMIT);
@@ -110,6 +115,16 @@ export async function POST(request: Request) {
 
   if (!isAuthorizedInternalCronRequest(request)) {
     return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (!areDashboardMetricSnapshotsEnabled()) {
+    return noStoreJson({
+      status: 'disabled',
+      disabled: true,
+      processed: 0,
+      failed: 0,
+      reason: 'dashboard_metric_snapshots_disabled',
+    });
   }
 
   const supabase = createAdminClient();

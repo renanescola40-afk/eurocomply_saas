@@ -67,14 +67,14 @@ export type UploadSecurityValidationResult =
       ok: false;
       reason: Extract<UploadFileSecurityValidation, { ok: false }>['reason'] | 'signature_mismatch';
       message: string;
-      buffer: Buffer;
-      fileHash: string;
-      checksumSha256: string;
+      buffer: Buffer | null;
+      fileHash: string | null;
+      checksumSha256: string | null;
       fileSize: number;
       fileNameSanitized: string;
       claimedMimeType: string;
       mimeDetected: string | null;
-      declaredSignatureMatches: boolean;
+      declaredSignatureMatches: boolean | null;
       validation: Extract<UploadFileSecurityValidation, { ok: false }>;
     };
 
@@ -121,8 +121,38 @@ export function sanitizeUploadFileName(fileName: string | null | undefined) {
   return sanitizeDocumentDownloadFileName(fileName);
 }
 
+function rejectUploadByDeclaredSize(file: File, maxBytes: number): UploadSecurityValidationResult | null {
+  let validation: Extract<UploadFileSecurityValidation, { ok: false }> | null = null;
+
+  if (file.size <= 0) {
+    validation = { ok: false, reason: 'empty_file', message: 'File must not be empty.' };
+  } else if (file.size > maxBytes) {
+    validation = { ok: false, reason: 'file_too_large', message: 'File exceeds the maximum allowed size.' };
+  }
+
+  if (!validation) return null;
+
+  return {
+    ok: false,
+    reason: validation.reason,
+    message: validation.message,
+    buffer: null,
+    fileHash: null,
+    checksumSha256: null,
+    fileSize: file.size,
+    fileNameSanitized: sanitizeUploadFileName(file.name),
+    claimedMimeType: file.type,
+    mimeDetected: null,
+    declaredSignatureMatches: null,
+    validation,
+  };
+}
+
 export async function validateUploadSecurityFile(file: File, options: { maxBytes?: number } = {}): Promise<UploadSecurityValidationResult> {
   const maxBytes = options.maxBytes ?? MAX_UPLOAD_BYTES;
+  const sizeRejection = rejectUploadByDeclaredSize(file, maxBytes);
+  if (sizeRejection) return sizeRejection;
+
   const buffer = Buffer.from(await file.arrayBuffer());
   const fileHash = createHash('sha256').update(buffer).digest('hex');
   const declaredSignatureMatches = validateUploadFileSignature(file.type, buffer);
