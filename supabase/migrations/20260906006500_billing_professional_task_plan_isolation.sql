@@ -7,17 +7,106 @@ begin;
 -- database policies also need to fail closed after downgrade. Preserve existing
 -- rows without exposing or mutating them below the licensed tier. Personal
 -- compliance_tasks rows remain governed by their separate user-bound policies.
+--
+-- The immediately preceding paid-governance bridge materializes historical QMS
+-- and Enterprise helpers that are absent from the curated Production schema.
+-- Reassert the canonical active-membership authority here before any Business/
+-- Enterprise data-plane policy can consume those helpers. Suspended or
+-- deprovisioned organization_members rows must never regain tenant authority.
 do $prerequisites$
 begin
   if to_regclass('public.compliance_tasks') is null
      or to_regclass('public.risks') is null
      or to_regclass('public.vendors') is null
      or to_regclass('public.vendor_review_history') is null
-     or to_regprocedure('app_private.resolve_commercial_plan(uuid)') is null then
+     or to_regclass('public.organization_members') is null
+     or to_regprocedure('app_private.resolve_commercial_plan(uuid)') is null
+     or to_regprocedure('public.enterprise_member_can_read(uuid)') is null
+     or to_regprocedure('public.enterprise_member_can_manage(uuid)') is null
+     or to_regprocedure('public.ai_qms_actor_is_member(uuid,uuid)') is null then
     raise exception 'Professional commercial isolation prerequisites are missing';
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'organization_members'
+      and column_name = 'status'
+      and is_nullable = 'NO'
+  ) then
+    raise exception 'organization_members.status is missing or nullable';
   end if;
 end
 $prerequisites$;
+
+-- Preserve the active-membership tenant authority established by the canonical
+-- August hardening. These helpers are only being materialized now because the
+-- paid governance tables were missing from the curated Production history.
+create or replace function public.enterprise_member_can_read(p_organization_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = pg_catalog
+as $$
+  select p_organization_id is not null
+    and exists (
+      select 1
+      from public.organization_members om
+      where om.organization_id = p_organization_id
+        and lower(coalesce(om.status, '')) = 'active'
+        and om.user_id = auth.uid()
+    );
+$$;
+
+create or replace function public.enterprise_member_can_manage(p_organization_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = pg_catalog
+as $$
+  select p_organization_id is not null
+    and exists (
+      select 1
+      from public.organization_members om
+      where om.organization_id = p_organization_id
+        and lower(coalesce(om.status, '')) = 'active'
+        and om.user_id = auth.uid()
+        and lower(coalesce(om.role, 'viewer')) in ('owner', 'admin', 'editor', 'compliance_manager')
+    );
+$$;
+
+create or replace function public.ai_qms_actor_is_member(
+  target_organization_id uuid,
+  target_user_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = pg_catalog
+as $$
+  select target_user_id is null
+    or (
+      target_organization_id is not null
+      and exists (
+        select 1
+        from public.organization_members member
+        where member.organization_id = target_organization_id
+          and lower(coalesce(member.status, '')) = 'active'
+          and member.user_id = target_user_id
+      )
+    );
+$$;
+
+revoke all on function public.enterprise_member_can_read(uuid) from public, anon;
+revoke all on function public.enterprise_member_can_manage(uuid) from public, anon;
+revoke all on function public.ai_qms_actor_is_member(uuid,uuid) from public, anon, authenticated;
+grant execute on function public.enterprise_member_can_read(uuid) to authenticated, service_role;
+grant execute on function public.enterprise_member_can_manage(uuid) to authenticated, service_role;
+grant execute on function public.ai_qms_actor_is_member(uuid,uuid) to service_role;
 
 create or replace function app_private.has_minimum_commercial_plan(
   target_organization_id uuid,
@@ -122,6 +211,12 @@ create policy "restrict_vendor_review_history_professional_plan"
 do $verify$
 declare
   helper_oid oid := to_regprocedure('app_private.has_minimum_commercial_plan(uuid,text)');
+  enterprise_read_oid oid := to_regprocedure('public.enterprise_member_can_read(uuid)');
+  enterprise_manage_oid oid := to_regprocedure('public.enterprise_member_can_manage(uuid)');
+  qms_member_oid oid := to_regprocedure('public.ai_qms_actor_is_member(uuid,uuid)');
+  enterprise_read_definition text;
+  enterprise_manage_definition text;
+  qms_member_definition text;
   required_policy text;
   target_table text;
 begin
@@ -133,6 +228,32 @@ begin
      or not has_function_privilege('authenticated', helper_oid, 'EXECUTE')
      or not has_function_privilege('service_role', helper_oid, 'EXECUTE') then
     raise exception 'minimum commercial plan helper privileges are not canonical';
+  end if;
+
+  if enterprise_read_oid is null or enterprise_manage_oid is null or qms_member_oid is null then
+    raise exception 'paid governance membership helpers are missing';
+  end if;
+
+  select pg_get_functiondef(enterprise_read_oid) into enterprise_read_definition;
+  select pg_get_functiondef(enterprise_manage_oid) into enterprise_manage_definition;
+  select pg_get_functiondef(qms_member_oid) into qms_member_definition;
+
+  if coalesce(enterprise_read_definition, '') not ilike '%status%active%'
+     or coalesce(enterprise_manage_definition, '') not ilike '%status%active%'
+     or coalesce(qms_member_definition, '') not ilike '%status%active%' then
+    raise exception 'Paid governance membership helper is not active-membership aware';
+  end if;
+
+  if has_function_privilege('anon', enterprise_read_oid, 'EXECUTE')
+     or has_function_privilege('anon', enterprise_manage_oid, 'EXECUTE')
+     or not has_function_privilege('authenticated', enterprise_read_oid, 'EXECUTE')
+     or not has_function_privilege('authenticated', enterprise_manage_oid, 'EXECUTE')
+     or not has_function_privilege('service_role', enterprise_read_oid, 'EXECUTE')
+     or not has_function_privilege('service_role', enterprise_manage_oid, 'EXECUTE')
+     or has_function_privilege('anon', qms_member_oid, 'EXECUTE')
+     or has_function_privilege('authenticated', qms_member_oid, 'EXECUTE')
+     or not has_function_privilege('service_role', qms_member_oid, 'EXECUTE') then
+    raise exception 'Paid governance membership helper privileges are not canonical';
   end if;
 
   for target_table, required_policy in
