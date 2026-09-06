@@ -20,6 +20,14 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.head_ref == 'assurance/internetnl-live-assurance'
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - domain: www.risckcomply.com
+            slug: canonical-cloudflare-edge
+          - domain: eurocomply-saas.vercel.app
+            slug: direct-vercel-edge
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,18 +36,22 @@ jobs:
 
       - name: Run public Internet.nl website test
         env:
-          INTERNETNL_DOMAIN: www.risckcomply.com
+          INTERNETNL_DOMAIN: ${{ matrix.domain }}
+          INTERNETNL_EVIDENCE_PATH: artifacts/internetnl/${{ matrix.slug }}.json
           INTERNETNL_TIMEOUT_MS: '300000'
           INTERNETNL_POLL_MS: '5000'
         run: node scripts/assurance/internetnl-live-assurance.mjs
 
       - name: Publish compact job summary
         if: always()
+        env:
+          REPORT_PATH: artifacts/internetnl/${{ matrix.slug }}.json
         run: |
-          if [ -f artifacts/internetnl/website-report.json ]; then
+          if [ -f "$REPORT_PATH" ]; then
             node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
           const fs = require('fs');
-          const e = JSON.parse(fs.readFileSync('artifacts/internetnl/website-report.json', 'utf8'));
+          const p = process.env.REPORT_PATH;
+          const e = JSON.parse(fs.readFileSync(p, 'utf8'));
           console.log(`## Internet.nl Website Assurance`);
           console.log(`- Domain: \`${e.domain}\``);
           console.log(`- Score: **${e.score}%**`);
@@ -56,7 +68,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: internetnl-website-assurance
-          path: artifacts/internetnl/website-report.json
+          name: internetnl-website-assurance-${{ matrix.slug }}
+          path: artifacts/internetnl/${{ matrix.slug }}.json
           if-no-files-found: warn
           retention-days: 14
