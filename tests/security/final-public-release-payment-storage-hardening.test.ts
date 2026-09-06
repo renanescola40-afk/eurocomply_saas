@@ -21,6 +21,7 @@ const expectedForwardPackage = [
   '20260906004000_billing_document_storage_quota.sql',
   '20260906004500_billing_entitlement_catalog_truth.sql',
   '20260906005000_billing_initial_checkout_singleflight.sql',
+  '20260906006000_billing_completed_checkout_authority_guard.sql',
 ];
 
 const auxiliaryTables = [
@@ -57,8 +58,8 @@ describe('final public-release payment and Storage hardening V32', () => {
       .toBe('642f48be06c110bdaf2f6c8c47fee6bbedd3984e780a846c2da2722f6e486cdc');
   });
 
-  it('selects the exact V32 plus billing P0 package above the verified live ledger and never replays stale V31', () => {
-    expect(config.changeSet).toBe('2026-09-06-final-public-release-payment-storage-hardening-v32');
+  it('selects the exact V32 plus billing closure and checkout-authority package above the verified live ledger', () => {
+    expect(config.changeSet).toBe('2026-09-06-billing-checkout-singleflight-authority-v34');
     expect(config.migrations.map(({ filename }) => filename)).toEqual(expectedForwardPackage);
     expect(config.migrations.some(({ filename }) => filename === '20260904113000_final_public_release_payment_storage_hardening.sql')).toBe(false);
     expect(migration).toContain('20260905075429');

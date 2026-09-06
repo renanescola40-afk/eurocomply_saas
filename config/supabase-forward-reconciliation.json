@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-06-final-public-release-payment-storage-hardening-v32",
+  "changeSet": "2026-09-06-billing-checkout-singleflight-authority-v34",
   "migrations": [
     {
       "filename": "20260906000000_reconcile_final_public_release_payment_storage_hardening.sql",
@@ -25,6 +25,10 @@
     {
       "filename": "20260906005000_billing_initial_checkout_singleflight.sql",
       "purpose": "materialize the backend-only tenant-scoped single-flight lease required by the initial self-serve Checkout runtime so concurrent initial requests cannot create duplicate Stripe subscription Checkout sessions"
+    },
+    {
+      "filename": "20260906006000_billing_completed_checkout_authority_guard.sql",
+      "purpose": "keep a bound completed Checkout attempt durable until processed LIVE subscription authority exists, preventing a second initial subscription during webhook activation delay"
     }
   ],
   "truthBoundary": {
