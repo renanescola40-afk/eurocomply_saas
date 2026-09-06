@@ -73,6 +73,9 @@ describe('billing Professional/Business feature isolation', () => {
     expect(gapAnalysisRoute).toContain("if (view === 'work')");
     expect(gapAnalysisRoute).toContain("if (operation === 'remediation')");
     expect((gapAnalysisRoute.match(/requireProfessionalRemediationPlan\(access\.organization\.id\)/g) ?? [])).toHaveLength(2);
+    expect(gapAnalysisRoute).toContain('const findingIds = userFindings.map((finding) => finding.id)');
+    expect(gapAnalysisRoute).toContain(".in('finding_id', findingIds)");
+    expect(gapAnalysisRoute).toContain('user_id: null');
   });
 
   it('requires Professional for Vendors and Risks reads, pages, exports and canonical RBAC mutations', () => {
