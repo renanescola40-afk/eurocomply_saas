@@ -1,6 +1,10 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { assertPlanAtLeast } from '@/server/billing/entitlements';
 
 export async function listRisks(organizationId: string) {
+  const entitlement = await assertPlanAtLeast(organizationId, 'professional');
+  if (!entitlement.ok) throw new Error('professional_plan_required');
+
   const supabase = createAdminClient();
 
   const { data, error } = await supabase

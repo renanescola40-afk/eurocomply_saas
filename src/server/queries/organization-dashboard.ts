@@ -3,7 +3,7 @@ import { getBillingEntitlements as getCatalogBillingEntitlements } from '@/lib/b
 import { createAdminClient } from '@/lib/supabase/admin';
 import { normalizeOrganization } from '@/lib/dashboard/organization-adapter';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
-import { getOrganizationBillingAuthority } from '@/server/queries/subscription';
+import { getOrganizationBillingAuthority, isPlanAtLeast } from '@/server/queries/subscription';
 import { getCurrentOrganizationForUser } from './current-organization';
 import {
   getDashboardSummary,
@@ -305,6 +305,13 @@ export async function getOrganizationDashboardData(userId: string, organizationS
     return null;
   }
 
+  const entitlements = await withDashboardTimeout(
+    'entitlements',
+    getOrganizationEntitlements(organization.id),
+    2_500,
+  );
+  const professionalPlan = entitlements.licensed && isPlanAtLeast(entitlements.plan, 'professional');
+
   const [
     summary,
     tasks,
@@ -313,17 +320,21 @@ export async function getOrganizationDashboardData(userId: string, organizationS
     documentsExpiringSoon,
     aiSystemSummary,
     auditEvents,
-    entitlements,
     trendHistory,
   ] = await Promise.all([
     withDashboardTimeout('summary', getDashboardSummary(organization.id)),
-    withDashboardTimeout('tasks', listDashboardTasks(organization.id)),
-    withDashboardTimeout('risks', listDashboardTopRisks(organization.id)),
-    withDashboardTimeout('vendors', listDashboardVendorsRequiringReview(organization.id)),
+    professionalPlan
+      ? withDashboardTimeout('tasks', listDashboardTasks(organization.id))
+      : Promise.resolve([]),
+    professionalPlan
+      ? withDashboardTimeout('risks', listDashboardTopRisks(organization.id))
+      : Promise.resolve([]),
+    professionalPlan
+      ? withDashboardTimeout('vendors', listDashboardVendorsRequiringReview(organization.id))
+      : Promise.resolve([]),
     withDashboardTimeout('documents', listDashboardDocumentsExpiringSoon(organization.id)),
     withDashboardTimeout('ai_systems', getDashboardAiSystemSummary(organization.id)),
     withDashboardTimeout('audit_events', listDashboardAuditEvents(organization.id)),
-    withDashboardTimeout('entitlements', getOrganizationEntitlements(organization.id), 2_500),
     withDashboardTimeout('trend_history', getDashboardTrendHistory(organization.id), 2_500),
   ]);
 

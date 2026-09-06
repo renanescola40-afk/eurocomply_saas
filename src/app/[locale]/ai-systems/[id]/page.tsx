@@ -3,9 +3,11 @@ import { notFound, redirect } from 'next/navigation';
 
 import { Badge } from '@/components/ui/badge';
 import { roleHasPermission } from '@/lib/security/permissions';
+import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getAiSystem, listAiSystemHistory } from '@/server/queries/ai-systems';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser, listUserOrganizations } from '@/server/queries/organizations';
+import { isPlanAtLeast } from '@/server/queries/subscription';
 import { AiSystemEditForm } from './ai-system-edit-form';
 
 type AiSystemDetailPageProps = {
@@ -69,10 +71,11 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
     redirect(`/${locale}/onboarding`);
   }
 
-  const [system, history, memberships] = await Promise.all([
+  const [system, history, memberships, entitlements] = await Promise.all([
     getAiSystem(id, organization.id),
     listAiSystemHistory(id, organization.id),
     listUserOrganizations(user.id),
+    getOrganizationEntitlements(organization.id),
   ]);
 
   if (!system) {
@@ -84,6 +87,8 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
     return membershipOrganization?.id === organization.id;
   });
   const canManageAiGovernance = roleHasPermission(currentMembership?.role, 'manage_ai_governance');
+  const businessWorkflowsEnabled = entitlements.licensed && isPlanAtLeast(entitlements.plan, 'business');
+  const enterpriseEvidenceEnabled = entitlements.licensed && isPlanAtLeast(entitlements.plan, 'enterprise');
   const t = getEnterpriseReadinessCopy(locale);
   const hasVendor = Boolean(system.vendor_name);
   const requiresRiskWorkflow = system.risk_level === 'high_risk_review' || system.risk_level === 'prohibited_review';
@@ -174,7 +179,12 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
             </div>
 
             {canManageAiGovernance ? (
-              <AiSystemEditForm system={system} locale={locale} />
+              <AiSystemEditForm
+                system={system}
+                locale={locale}
+                businessWorkflowsEnabled={businessWorkflowsEnabled}
+                enterpriseEvidenceEnabled={enterpriseEvidenceEnabled}
+              />
             ) : (
               <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
                 <h2 className="text-xl font-semibold">Reassessment locked</h2>
