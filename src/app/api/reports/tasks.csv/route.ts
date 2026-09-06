@@ -4,7 +4,7 @@ import { writeAuditLog } from '@/lib/security/audit-log';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
-import { assertCsvExportsEnabled } from '@/server/billing/entitlements';
+import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
 import { noStoreJson } from '@/server/security/no-store';
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 
   if (!permission.ok) return permissionDeniedResponse(permission);
 
-  const entitlementCheck = await assertCsvExportsEnabled(organization.id);
+  const entitlementCheck = await assertPlanAtLeast(organization.id, 'professional');
   if (!entitlementCheck.ok) {
     return upgradeRequiredResponse({
       error: entitlementCheck.error,
