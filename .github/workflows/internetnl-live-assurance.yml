@@ -37,10 +37,19 @@ jobs:
       - name: Run public Internet.nl website test
         env:
           INTERNETNL_DOMAIN: ${{ matrix.domain }}
-          INTERNETNL_EVIDENCE_PATH: artifacts/internetnl/${{ matrix.slug }}.json
+          REPORT_PATH: artifacts/internetnl/${{ matrix.slug }}.json
           INTERNETNL_TIMEOUT_MS: '300000'
           INTERNETNL_POLL_MS: '5000'
-        run: node scripts/assurance/internetnl-live-assurance.mjs
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p artifacts/internetnl
+          tmp="${REPORT_PATH}.tmp"
+          trap 'rm -f "$tmp"' EXIT
+          node scripts/assurance/internetnl-live-assurance.mjs > "$tmp"
+          chmod 600 "$tmp"
+          mv "$tmp" "$REPORT_PATH"
+          trap - EXIT
 
       - name: Publish compact job summary
         if: always()
