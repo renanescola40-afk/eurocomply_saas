@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
 
+const foundationMigration = read('supabase/migrations/20260906006400_reconcile_paid_governance_runtime_foundations.sql');
 const migration = read('supabase/migrations/20260906006500_billing_professional_task_plan_isolation.sql');
 const businessMigration = read('supabase/migrations/20260906006600_billing_business_feature_plan_isolation.sql');
 const governanceMigration = read('supabase/migrations/20260906006700_billing_governance_workflow_plan_isolation.sql');
@@ -33,14 +34,54 @@ const complianceAlerts = read('src/app/api/internal/compliance-alerts/route.ts')
 const entitlements = read('src/server/billing/entitlements.ts');
 
 describe('billing Professional/Business/Enterprise feature isolation', () => {
-  it('selects all tier-isolation migrations in the bounded V37 package', () => {
-    expect(reconciliation).toContain('2026-09-06-billing-governance-plan-isolation-v37');
+  it('selects the paid-governance runtime bridge before all tier-isolation migrations in the bounded V38 package', () => {
+    expect(reconciliation).toContain('2026-09-06-paid-governance-runtime-foundations-v38');
+    expect(reconciliation).toContain('20260906006400_reconcile_paid_governance_runtime_foundations.sql');
     expect(reconciliation).toContain('20260906006500_billing_professional_task_plan_isolation.sql');
     expect(reconciliation).toContain('20260906006600_billing_business_feature_plan_isolation.sql');
     expect(reconciliation).toContain('20260906006700_billing_governance_workflow_plan_isolation.sql');
+    expect(reconciliation.indexOf('20260906006400_reconcile_paid_governance_runtime_foundations.sql'))
+      .toBeLessThan(reconciliation.indexOf('20260906006600_billing_business_feature_plan_isolation.sql'));
+    expect(reconciliation.indexOf('20260906006400_reconcile_paid_governance_runtime_foundations.sql'))
+      .toBeLessThan(reconciliation.indexOf('20260906006700_billing_governance_workflow_plan_isolation.sql'));
     expect(reconciliation).toContain('"productionWriteAuthorizedByConfig": false');
     expect(reconciliation).toContain('"migrationHistoryRepairAllowed": false');
     expect(reconciliation).toContain('"unrestrictedDbPushAllowed": false');
+  });
+
+  it('materializes the exact paid QMS and Enterprise runtime prerequisites without history repair', () => {
+    for (const table of [
+      'enterprise_evidence_packs',
+      'enterprise_evidence_pack_items',
+      'enterprise_vendor_due_diligence',
+      'enterprise_risk_reviews',
+      'ai_qms_systems',
+      'ai_qms_controls',
+      'ai_qms_nonconformities',
+      'ai_qms_audits',
+      'ai_qms_management_reviews',
+      'ai_qms_decisions',
+    ]) {
+      expect(foundationMigration).toContain(table);
+    }
+    for (const rpc of [
+      'create_enterprise_evidence_pack_atomic',
+      'create_qms_system_atomic',
+      'configure_qms_system_atomic',
+      'complete_qms_control_atomic',
+      'accept_qms_audit_atomic',
+      'approve_qms_management_review_atomic',
+      'close_qms_nonconformity_atomic',
+      'approve_qms_system_atomic',
+      'rollback_qms_approval_atomic',
+    ]) {
+      expect(foundationMigration).toContain(rpc);
+    }
+    expect(foundationMigration).toContain('enterprise_evidence_pack_items_pack_organization_fkey');
+    expect(foundationMigration).toContain('Authenticated direct mutation privilege survived');
+    expect(foundationMigration).not.toContain('supabase_migrations.schema_migrations');
+    expect(foundationMigration).not.toContain('db push --include-all');
+    expect(foundationMigration).not.toContain('disable row level security');
   });
 
   it('enforces Professional downgrade isolation inside authenticated RLS while preserving personal tasks', () => {
