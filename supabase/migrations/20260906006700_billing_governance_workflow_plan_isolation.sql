@@ -31,7 +31,12 @@ begin
     'compliance_findings',
     'compliance_tasks',
     'tasks',
-    'onboarding_activation_runs'
+    'onboarding_activation_runs',
+    'email_notification_events',
+    'intelligence_calendar_suggestions',
+    'intelligence_items',
+    'profiles',
+    'vendor_review_history'
   ]
   loop
     if to_regclass(format('public.%I', required_table)) is null then
@@ -110,6 +115,33 @@ create policy payment_first_commercial_authority
     organization_id is null
     or app_private.has_commercial_authority(organization_id)
   );
+
+-- Close the final client-facing FORCE RLS gaps observed in Production. These
+-- tables already have effective RLS policies; FORCE RLS strengthens owner-path
+-- behavior without changing the authenticated policy contract. `profiles` has
+-- self-only SELECT/UPDATE policies and no INSERT/DELETE policy, so remove the
+-- redundant table grants for operations that are already denied by RLS.
+do $client_rls_hardening$
+declare
+  target_table text;
+begin
+  foreach target_table in array array[
+    'email_notification_events',
+    'intelligence_calendar_suggestions',
+    'intelligence_items',
+    'profiles',
+    'vendor_review_history'
+  ]
+  loop
+    execute format('alter table public.%I enable row level security', target_table);
+    execute format('alter table public.%I force row level security', target_table);
+  end loop;
+
+  revoke insert, update, delete on table public.profiles from anon;
+  revoke insert, delete on table public.profiles from authenticated;
+  grant select, update on table public.profiles to authenticated;
+end
+$client_rls_hardening$;
 
 -- Gap Analysis writes are exclusively served by `/api/gap-analysis`, which adds
 -- trusted-origin, authenticated organization resolution, RBAC, Zod validation,
@@ -229,6 +261,37 @@ begin
       and coalesce(with_check,'') ilike '%user_id = auth.uid()%'
   ) then
     raise exception 'compliance_tasks personal browser insert boundary is missing';
+  end if;
+
+  foreach target_table in array array[
+    'email_notification_events',
+    'intelligence_calendar_suggestions',
+    'intelligence_items',
+    'profiles',
+    'vendor_review_history'
+  ]
+  loop
+    if not exists (
+      select 1
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public'
+        and c.relname = target_table
+        and c.relrowsecurity
+        and c.relforcerowsecurity
+    ) then
+      raise exception 'client-facing RLS/FORCE RLS missing on public.%', target_table;
+    end if;
+  end loop;
+
+  if has_table_privilege('anon', 'public.profiles', 'INSERT')
+     or has_table_privilege('anon', 'public.profiles', 'UPDATE')
+     or has_table_privilege('anon', 'public.profiles', 'DELETE')
+     or has_table_privilege('authenticated', 'public.profiles', 'INSERT')
+     or has_table_privilege('authenticated', 'public.profiles', 'DELETE')
+     or not has_table_privilege('authenticated', 'public.profiles', 'SELECT')
+     or not has_table_privilege('authenticated', 'public.profiles', 'UPDATE') then
+    raise exception 'profiles client privileges are not least-privilege canonical';
   end if;
 
   foreach target_table in array array[
