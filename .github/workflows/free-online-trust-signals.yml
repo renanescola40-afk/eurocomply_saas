@@ -14,7 +14,7 @@ permissions:
 jobs:
   public-trust-signals:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -36,10 +36,16 @@ jobs:
           node scripts/assurance/free-online-trust-signals.mjs > artifacts/trust-signals/results.json
 
       - name: Capture detailed MDN HTTP Observatory result
-        continue-on-error: true
         run: |
-          set -uo pipefail
+          set -euo pipefail
           npx --yes @mdn/mdn-http-observatory@1.6.2 www.risckcomply.com > artifacts/trust-signals/mdn-http-observatory-details.json
+
+      - name: Capture OpenSSF Scorecard preview
+        uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc
+        with:
+          results_file: artifacts/trust-signals/ossf-scorecard.json
+          results_format: json
+          publish_results: false
 
       - name: Publish compact summary
         if: always()
@@ -50,20 +56,33 @@ jobs:
           const e = JSON.parse(fs.readFileSync('artifacts/trust-signals/results.json', 'utf8'));
           console.log('## Free public trust signals');
           console.log(`- Green Web Foundation: **${e.greenWebFoundation.green === true ? 'VERIFIED GREEN' : e.greenWebFoundation.green === false ? 'NOT GREEN' : 'UNRESOLVED'}**`);
-          console.log(`- MDN HTTP Observatory: **${e.mdnHttpObservatory.grade ?? 'UNRESOLVED'}** (score ${e.mdnHttpObservatory.score ?? 'n/a'})`);
-          console.log(`- OpenSSF Scorecard published result: **${e.openSSFScorecard.publishedResultAvailable ? 'YES' : 'NO'}**${e.openSSFScorecard.score !== null ? ` (score ${e.openSSFScorecard.score}/10)` : ''}`);
+          console.log(`- MDN HTTP Observatory public API: **${e.mdnHttpObservatory.grade ?? 'UNRESOLVED'}** (score ${e.mdnHttpObservatory.score ?? 'n/a'})`);
+          console.log(`- OpenSSF Scorecard public API result: **${e.openSSFScorecard.publishedResultAvailable ? 'YES' : 'NO'}**${e.openSSFScorecard.score !== null ? ` (score ${e.openSSFScorecard.score}/10)` : ''}`);
+
           if (fs.existsSync('artifacts/trust-signals/mdn-http-observatory-details.json')) {
-            try {
-              const mdn = JSON.parse(fs.readFileSync('artifacts/trust-signals/mdn-http-observatory-details.json', 'utf8'));
-              const failures = Object.entries(mdn.tests || {}).filter(([, value]) => value && value.pass === false);
-              if (failures.length) {
-                console.log('- MDN failing tests:');
-                for (const [name, value] of failures) {
-                  console.log(`  - ${name}: ${value.result || 'failed'} (${value.scoreModifier ?? 0})`);
-                }
+            const mdn = JSON.parse(fs.readFileSync('artifacts/trust-signals/mdn-http-observatory-details.json', 'utf8'));
+            console.log(`- MDN detailed scanner: **${mdn.scan?.grade ?? 'UNRESOLVED'}** (score ${mdn.scan?.score ?? 'n/a'})`);
+            const failures = Object.entries(mdn.tests || {}).filter(([, value]) => value && value.pass === false);
+            if (failures.length) {
+              console.log('- MDN failing tests:');
+              for (const [name, value] of failures) {
+                console.log(`  - ${name}: ${value.result || 'failed'} (${value.scoreModifier ?? 0})`);
               }
-            } catch {
-              console.log('- Detailed MDN scan could not be parsed; public API result remains authoritative for the headline grade.');
+            }
+          }
+
+          if (fs.existsSync('artifacts/trust-signals/ossf-scorecard.json')) {
+            const scorecard = JSON.parse(fs.readFileSync('artifacts/trust-signals/ossf-scorecard.json', 'utf8'));
+            const score = typeof scorecard.score === 'number' ? scorecard.score : null;
+            console.log(`- OpenSSF Scorecard local preview: **${score === null ? 'UNRESOLVED' : `${score}/10`}**`);
+            const checks = Array.isArray(scorecard.checks) ? scorecard.checks : [];
+            const weakest = checks
+              .filter((check) => typeof check.score === 'number')
+              .sort((a, b) => a.score - b.score)
+              .slice(0, 8);
+            if (weakest.length) {
+              console.log('- Lowest OpenSSF checks:');
+              for (const check of weakest) console.log(`  - ${check.name}: ${check.score}/10`);
             }
           }
           NODE
