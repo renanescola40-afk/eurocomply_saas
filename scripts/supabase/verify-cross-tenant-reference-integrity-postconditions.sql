@@ -24,12 +24,24 @@ declare
   ];
   guarded_table text;
   trigger_count integer;
+  public_execute boolean;
 begin
   if guard_oid is null then
     raise exception 'same-tenant reference integrity guard is missing';
   end if;
 
-  if has_function_privilege('public', guard_oid, 'EXECUTE')
+  select exists (
+    select 1
+    from pg_proc function_record
+    cross join lateral aclexplode(
+      coalesce(function_record.proacl, acldefault('f', function_record.proowner))
+    ) privilege
+    where function_record.oid = guard_oid
+      and privilege.grantee = 0
+      and privilege.privilege_type = 'EXECUTE'
+  ) into public_execute;
+
+  if public_execute
      or has_function_privilege('anon', guard_oid, 'EXECUTE')
      or has_function_privilege('authenticated', guard_oid, 'EXECUTE')
      or not has_function_privilege('service_role', guard_oid, 'EXECUTE') then
