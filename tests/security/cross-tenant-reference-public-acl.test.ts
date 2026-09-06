@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
+const professionalIsolation = readFileSync(
+  'supabase/migrations/20260906006500_billing_professional_task_plan_isolation.sql',
+  'utf8',
+);
 const migration = readFileSync(
   'supabase/migrations/20260906006800_harden_cross_tenant_reference_integrity.sql',
   'utf8',
@@ -10,10 +14,11 @@ const postconditions = readFileSync(
   'utf8',
 );
 
-describe('V39 PUBLIC function ACL verification', () => {
+describe('bounded package PUBLIC function ACL verification', () => {
   for (const [label, source] of [
-    ['migration', migration],
-    ['postconditions', postconditions],
+    ['Professional isolation', professionalIsolation],
+    ['V39 migration', migration],
+    ['V39 postconditions', postconditions],
   ] as const) {
     it(`${label} inspects the PUBLIC ACL pseudo-role without treating it as a login role`, () => {
       expect(source).toContain('aclexplode(');
