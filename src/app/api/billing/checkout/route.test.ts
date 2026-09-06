@@ -13,6 +13,7 @@ describe('billing checkout route contract', () => {
     const originAndRate = source.indexOf('await requireTrustedMutation(request');
     const bodyValidation = source.indexOf('checkoutBodySchema.safeParse');
     const idempotency = source.indexOf('readBillingIdempotencyKey(request');
+    const singleflight = source.indexOf('await claimInitialCheckoutAttempt(organization.id, plan)');
     const stripeCheckout = source.indexOf('stripe.checkout.sessions.create');
 
     expect(auth).toBeGreaterThan(-1);
@@ -20,7 +21,8 @@ describe('billing checkout route contract', () => {
     expect(originAndRate).toBeGreaterThan(permission);
     expect(bodyValidation).toBeGreaterThan(originAndRate);
     expect(idempotency).toBeGreaterThan(bodyValidation);
-    expect(stripeCheckout).toBeGreaterThan(idempotency);
+    expect(singleflight).toBeGreaterThan(idempotency);
+    expect(stripeCheckout).toBeGreaterThan(singleflight);
   });
 
   it('blocks checkout without an authenticated user before tenant lookup or Stripe mutation', async () => {
@@ -98,10 +100,8 @@ describe('billing checkout route contract', () => {
     const source = await readFile(ROUTE_FILE, 'utf8');
     const stepUp = source.indexOf('const stepUp = hasLiveSubscription');
     const existingBranch = source.indexOf('if (hasLiveSubscription) {');
-    const existingFlow = source.slice(
-      existingBranch,
-      source.indexOf('const stripe = getStripeClient();'),
-    );
+    const singleflight = source.indexOf('let checkoutAttempt = await claimInitialCheckoutAttempt');
+    const existingFlow = source.slice(existingBranch, singleflight);
 
     expect(stepUp).toBeGreaterThan(-1);
     expect(existingBranch).toBeGreaterThan(stepUp);
@@ -110,6 +110,25 @@ describe('billing checkout route contract', () => {
     expect(existingFlow).toContain("? 'downgrade' : 'upgrade'");
     expect(existingFlow).toContain('billingOutcome');
     expect(existingFlow).not.toContain('stripe.checkout.sessions.create');
+  });
+
+  it('serializes first-time subscription checkout independently from browser idempotency keys', async () => {
+    const source = await readFile(ROUTE_FILE, 'utf8');
+
+    const singleflight = source.indexOf('let checkoutAttempt = await claimInitialCheckoutAttempt');
+    const customer = source.indexOf('const customer = await ensureOrganizationStripeCustomer');
+    const checkout = source.indexOf('stripe.checkout.sessions.create');
+
+    expect(singleflight).toBeGreaterThan(-1);
+    expect(customer).toBeGreaterThan(singleflight);
+    expect(checkout).toBeGreaterThan(customer);
+    expect(source).toContain("checkoutAttempt.outcome === 'busy'");
+    expect(source).toContain("checkoutAttempt.outcome === 'existing'");
+    expect(source).toContain("{ error: 'checkout_in_progress' }");
+    expect(source).toContain('stripe.checkout.sessions.retrieve(checkoutAttempt.stripeSessionId)');
+    expect(source).toContain('singleflightReused: true');
+    expect(source).toContain('await bindInitialCheckoutSession({');
+    expect(source).toContain('INITIAL_CHECKOUT_SESSION_TTL_SECONDS = 45 * 60');
   });
 
   it('persists one non-entitled live customer binding before redirecting a first-time payer', async () => {
@@ -149,12 +168,14 @@ describe('billing checkout route contract', () => {
 
     const audit = source.indexOf('const auditResult = await writeAuditLog');
     const failClosed = source.indexOf('if (!auditResult.persisted)');
-    const expire = source.indexOf('await stripe.checkout.sessions.expire(session.id)');
+    const compensate = source.indexOf("expireCheckoutSessionSafely(stripe, session.id, organization.id, 'billing_checkout_audit_compensation')");
+    const release = source.indexOf("releaseCheckoutAttemptSafely(organization.id, attemptToken, 'billing_checkout_audit_release')");
     const success = source.lastIndexOf('return noStoreJson({');
 
     expect(audit).toBeGreaterThan(-1);
     expect(failClosed).toBeGreaterThan(audit);
-    expect(expire).toBeGreaterThan(failClosed);
+    expect(compensate).toBeGreaterThan(failClosed);
+    expect(release).toBeGreaterThan(compensate);
     expect(success).toBeGreaterThan(failClosed);
     expect(source).toContain("{ error: 'checkout_audit_unavailable' }");
   });

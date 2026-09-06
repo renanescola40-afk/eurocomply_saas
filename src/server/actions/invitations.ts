@@ -9,7 +9,7 @@ const acceptInvitationSchema = z.object({
   token: z.string().min(24),
 });
 
-const ATOMIC_INVITATION_ACCEPTANCE_RPC = 'accept_organization_invitation_atomic';
+const ATOMIC_INVITATION_ACCEPTANCE_RPC = 'accept_billing_organization_invitation_atomic';
 
 type InvitationAcceptanceResult = {
   outcome: string;
@@ -73,10 +73,10 @@ export async function acceptInvitation(input: unknown) {
   if (acceptance.outcome === 'email_mismatch') throw actionError('This invitation belongs to another email address.');
   if (acceptance.outcome === 'expired') throw actionError('Invitation has expired.');
   if (acceptance.outcome === 'member_limit_reached' || acceptance.outcome === 'seat_limit_reached') {
-    throw actionError('This organization has reached its contracted user limit. Contact an administrator to upgrade or release a seat.');
+    throw actionError('This organization has reached its included user limit. Contact an administrator to upgrade or release a seat.');
   }
   if (acceptance.outcome === 'admin_limit_reached') {
-    throw actionError('This organization has reached its contracted administrator limit.');
+    throw actionError('This organization has reached its administrator limit.');
   }
   if (
     acceptance.outcome === 'contract_missing'

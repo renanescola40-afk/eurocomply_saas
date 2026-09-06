@@ -5,7 +5,10 @@ import { writeAuditLog } from '@/lib/security/audit-log';
 import { checkDistributedRateLimit, getClientIpFromRequest } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { getStripeClient } from '@/server/billing/stripe';
-import { validateStripeWebhookEventMode } from '@/server/billing/stripe-event-mode';
+import {
+  validateStripeSubscriptionPriceAuthority,
+  validateStripeWebhookEventMode,
+} from '@/server/billing/stripe-event-mode';
 import { handleStripeWebhookEventWithRecovery } from '@/server/billing/stripe-webhook-recovery';
 import { getStripeEventAuditContext } from '@/server/billing/stripe-webhooks';
 import { syncEnterpriseContractBillingEvent } from '@/server/enterprise/billing';
@@ -144,6 +147,20 @@ export async function POST(request: Request) {
         contractStatus: enterprise.appliedStatus,
         billingStatus: enterprise.billingStatus,
       });
+    }
+
+    const priceAuthority = validateStripeSubscriptionPriceAuthority(event);
+    if (!priceAuthority.ok) {
+      await recordBillingWebhookRouteAudit({ action: 'webhook_rejected', event, reason: priceAuthority.reason });
+      reportError(new Error('Live Stripe subscription price is not authorized'), {
+        area: 'billing_stripe_webhook_price_authority',
+        stripeEventId: event.id,
+        stripeEventType: event.type,
+        reason: priceAuthority.reason,
+        resolvedPlan: priceAuthority.plan ?? 'none',
+        metadataPlan: priceAuthority.metadataPlan ?? 'none',
+      });
+      return noStoreJson({ error: 'webhook_price_not_authorized' }, { status: 400 });
     }
 
     const result = await handleStripeWebhookEventWithRecovery(event);

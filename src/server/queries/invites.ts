@@ -51,7 +51,7 @@ const DATABASE_INVITE_ROLES: Record<InviteRole, 'admin' | 'editor' | 'viewer'> =
   Visualizador: 'viewer',
 };
 
-const ATOMIC_INVITATION_CREATE_RPC = 'create_organization_invitation_with_seat_atomic';
+const ATOMIC_INVITATION_CREATE_RPC = 'create_billing_organization_invitation_atomic';
 
 type InvitationRpcRow = {
   outcome?: unknown;

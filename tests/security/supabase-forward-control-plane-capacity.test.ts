@@ -6,15 +6,19 @@ import { compileForwardReconciliationManifest } from '../../scripts/supabase/for
 const rootDir = process.cwd();
 const subjectSha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
+const expectedForwardPackage = [
+  '20260906000000_reconcile_final_public_release_payment_storage_hardening.sql',
+  '20260906003000_billing_ai_system_commercial_quota.sql',
+  '20260906003500_billing_self_serve_member_capacity.sql',
+  '20260906004000_billing_document_storage_quota.sql',
+  '20260906004500_billing_entitlement_catalog_truth.sql',
+];
+
 describe('Supabase forward reconciliation control-plane capacity', () => {
-  it('compiles only the exact V32 final public-release reconciliation package', async () => {
+  it('compiles only the exact V32 plus billing P0 forward package', async () => {
     const config = JSON.parse(await readFile('config/supabase-forward-reconciliation.json', 'utf8'));
 
-    expect(config.migrations).toEqual([
-      expect.objectContaining({
-        filename: '20260906000000_reconcile_final_public_release_payment_storage_hardening.sql',
-      }),
-    ]);
+    expect(config.migrations.map((migration: { filename: string }) => migration.filename)).toEqual(expectedForwardPackage);
     expect(config.migrations).not.toEqual(expect.arrayContaining([
       expect.objectContaining({
         filename: '20260904113000_final_public_release_payment_storage_hardening.sql',
@@ -24,7 +28,8 @@ describe('Supabase forward reconciliation control-plane capacity', () => {
     const manifest = await compileForwardReconciliationManifest({ config, rootDir, subjectSha });
 
     expect(manifest.targetSha).toBe(subjectSha);
-    expect(manifest.migrations).toHaveLength(1);
+    expect(manifest.migrations.map((migration) => migration.filename)).toEqual(expectedForwardPackage);
+    expect(manifest.migrations).toHaveLength(5);
     expect(manifest.changeSet).toBe(
       '2026-09-06-final-public-release-payment-storage-hardening-v32',
     );

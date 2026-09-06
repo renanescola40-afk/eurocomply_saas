@@ -1,7 +1,9 @@
 import { unstable_noStore as noStore } from 'next/cache';
+import { getBillingEntitlements as getCatalogBillingEntitlements } from '@/lib/billing/plans';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { normalizeOrganization } from '@/lib/dashboard/organization-adapter';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
+import { getOrganizationBillingAuthority } from '@/server/queries/subscription';
 import { getCurrentOrganizationForUser } from './current-organization';
 import {
   getDashboardSummary,
@@ -14,6 +16,7 @@ import {
 const DASHBOARD_PREVIEW_PAGE_SIZE = 5;
 const DASHBOARD_PREVIEW_LAST_INDEX = DASHBOARD_PREVIEW_PAGE_SIZE - 1;
 const DASHBOARD_AI_SYSTEM_PREVIEW_SIZE = 25;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 type QueryError = {
   code?: string;
@@ -268,12 +271,20 @@ async function getDashboardAiSystemSummary(organizationId: string): Promise<Dash
 }
 
 async function listDashboardAuditEvents(organizationId: string): Promise<DashboardAuditEventPreview[]> {
+  const authority = await getOrganizationBillingAuthority(organizationId);
+  if (!authority.licensed) return [];
+
+  const retentionDays = getCatalogBillingEntitlements(authority.plan).auditLogsDays;
+  const cutoff = retentionDays === 'unlimited'
+    ? new Date(0).toISOString()
+    : new Date(Date.now() - retentionDays * DAY_MS).toISOString();
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('audit_logs')
     .select('id,action,entity_type,created_at')
     .eq('organization_id', organizationId)
+    .gte('created_at', cutoff)
     .order('created_at', { ascending: false })
     .range(0, DASHBOARD_PREVIEW_LAST_INDEX);
 

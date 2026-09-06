@@ -84,8 +84,12 @@ export const BILLING_PLANS: BillingPlanCatalog = [
     stripePriceEnvKeyAnnual: 'STRIPE_PRICE_PROFESSIONAL_ANNUAL',
     legacyStripePriceEnvKeysMonthly: ['STRIPE_PRICE_GROWTH_MONTHLY'],
     legacyStripePriceEnvKeysAnnual: ['STRIPE_PRICE_GROWTH_ANNUAL'],
-    limits: { users: 15, documents: 1000, vendors: 30, risks: 75, organizations: 1, aiSystems: 250, storageGb: 100, apiRequestsMonthly: 10000, webhooks: 10, exportsMonthly: 500, auditLogsDays: 180 },
-    features: ['Risk Register', 'Tasks', 'Reports', 'Regulatory Monitoring', 'Vendor Register', 'FRIA', 'Annex IV Assistant', 'API', 'Webhooks', 'Branding'],
+    // API credentials and outbound webhook subscriptions currently use the
+    // Enterprise integration authority (platform-provisioned credential + active
+    // Enterprise contract). Do not advertise self-service capacity before that
+    // provisioning chain exists for Professional customers.
+    limits: { users: 15, documents: 1000, vendors: 30, risks: 75, organizations: 1, aiSystems: 250, storageGb: 100, apiRequestsMonthly: 0, webhooks: 0, exportsMonthly: 500, auditLogsDays: 180 },
+    features: ['Risk Register', 'Tasks', 'Reports', 'Regulatory Monitoring', 'Vendor Register', 'FRIA', 'Annex IV Assistant', 'Branding'],
   },
   {
     id: 'business',
@@ -99,7 +103,10 @@ export const BILLING_PLANS: BillingPlanCatalog = [
     stripePriceEnvKeyAnnual: 'STRIPE_PRICE_BUSINESS_ANNUAL',
     legacyStripePriceEnvKeysMonthly: [],
     legacyStripePriceEnvKeysAnnual: [],
-    limits: { users: 75, documents: 10000, vendors: 150, risks: 300, organizations: 3, aiSystems: 1500, storageGb: 500, apiRequestsMonthly: 100000, webhooks: 100, exportsMonthly: 5000, auditLogsDays: 730 },
+    // Billing authority is organization-scoped today: one subscription/contract
+    // licenses one organization. A future multi-organization billing account must
+    // be explicit rather than inferred from creator identity or shared customer ID.
+    limits: { users: 75, documents: 10000, vendors: 150, risks: 300, organizations: 1, aiSystems: 1500, storageGb: 500, apiRequestsMonthly: 0, webhooks: 0, exportsMonthly: 5000, auditLogsDays: 730 },
     features: ['AI Literacy', 'Procurement', 'QMS', 'Approval Workflows', 'Advanced Reporting', 'Priority Support', 'Integrations', 'Departments', 'Environments'],
   },
   {
@@ -113,7 +120,7 @@ export const BILLING_PLANS: BillingPlanCatalog = [
     legacyStripePriceEnvKeysMonthly: ['STRIPE_PRICE_ENTERPRISE_MONTHLY', 'STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY'],
     legacyStripePriceEnvKeysAnnual: ['STRIPE_PRICE_ENTERPRISE_ANNUAL'],
     limits: { users: Number.MAX_SAFE_INTEGER, documents: Number.MAX_SAFE_INTEGER, vendors: Number.MAX_SAFE_INTEGER, risks: Number.MAX_SAFE_INTEGER, organizations: 'unlimited', aiSystems: 'unlimited', storageGb: 'unlimited', apiRequestsMonthly: 'unlimited', webhooks: 'unlimited', exportsMonthly: 'unlimited', auditLogsDays: 3650 },
-    features: ['SSO', 'SCIM', 'Azure AD', 'Okta', 'Google Workspace', 'Advanced RBAC', 'Custom roles', 'Custom workflows', 'Enterprise SLA', 'Dedicated onboarding', 'Customer success', 'Priority roadmap'],
+    features: ['API', 'Webhooks', 'SSO', 'SCIM', 'Azure AD', 'Okta', 'Google Workspace', 'Advanced RBAC', 'Custom roles', 'Custom workflows', 'Enterprise SLA', 'Dedicated onboarding', 'Customer success', 'Priority roadmap'],
   },
 ];
 

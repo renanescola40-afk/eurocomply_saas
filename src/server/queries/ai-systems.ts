@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { AiActRiskLevel, AiRiskDomain, AiSystemRole, AiSystemStatus } from '@/server/ai-governance/classifier';
+import { ApiSecurityError } from '@/server/security/api-guards';
 
 const AI_SYSTEM_COLUMNS = [
   'id',
@@ -106,8 +107,10 @@ export type UpdateAiSystemResult =
   | { status: 'updated'; system: AiSystemRecord }
   | { status: 'conflict' };
 
+type AtomicCreateOutcome = 'created' | 'invalid_input' | 'subscription_required' | 'quota_exceeded';
+
 type AtomicCreateRow = {
-  outcome: 'created' | 'invalid_input';
+  outcome: AtomicCreateOutcome;
   system: AiSystemRecord | null;
 };
 
@@ -128,7 +131,7 @@ function firstAtomicCreateRow(value: unknown): AtomicCreateRow | null {
   if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null;
 
   const row = candidate as Partial<AtomicCreateRow>;
-  if (!['created', 'invalid_input'].includes(String(row.outcome))) return null;
+  if (!['created', 'invalid_input', 'subscription_required', 'quota_exceeded'].includes(String(row.outcome))) return null;
   if (row.outcome === 'created' && !isAiSystemRecord(row.system)) return null;
 
   return row as AtomicCreateRow;
@@ -240,6 +243,22 @@ export async function createAiSystem(input: CreateAiSystemInput): Promise<AiSyst
   const transition = firstAtomicCreateRow(data);
   if (!transition) {
     throw new Error('AI system creation RPC returned an invalid result');
+  }
+
+  if (transition.outcome === 'subscription_required') {
+    throw new ApiSecurityError({
+      code: 'permission_denied',
+      message: 'An active paid subscription or signed contract is required to create AI systems.',
+      status: 403,
+    });
+  }
+
+  if (transition.outcome === 'quota_exceeded') {
+    throw new ApiSecurityError({
+      code: 'permission_denied',
+      message: 'The AI system limit for this organization plan has been reached.',
+      status: 403,
+    });
   }
 
   if (transition.outcome !== 'created' || !transition.system) {

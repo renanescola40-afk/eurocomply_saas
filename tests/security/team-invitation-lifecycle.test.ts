@@ -12,7 +12,7 @@ describe('team invitation lifecycle', () => {
     expect(createQuery).toContain(".from('invitations')");
     expect(cancelRoute).toContain(".from('invitations')");
     expect(pendingQuery).toContain(".from('invitations')");
-    expect(acceptanceAction).toContain("'accept_organization_invitation_atomic'");
+    expect(acceptanceAction).toContain("'accept_billing_organization_invitation_atomic'");
     expect(createQuery).not.toContain(".from('organization_invites')");
     expect(cancelRoute).not.toContain(".from('organization_invites')");
   });

@@ -15,7 +15,7 @@ describe('billing entitlements', () => {
     expect(entitlements.aiNews).toBe('basic');
     expect(entitlements.riskMatrix).toBe('simple');
     expect(entitlements.auditLog).toBe(false);
-    expect(entitlements.employeeInvites).toBe(false);
+    expect(entitlements.employeeInvites).toBe(true);
     expect(entitlements.approvalWorkflows).toBe(false);
     expect(entitlements.executiveReports).toBe(false);
     expect(entitlements.csvExports).toBe(false);
@@ -36,7 +36,7 @@ describe('billing entitlements', () => {
     expect(entitlements.auditLog).toBe(true);
     expect(entitlements.csvExports).toBe(true);
     expect(entitlements.gdprSelfService).toBe(true);
-    expect(entitlements.employeeInvites).toBe(false);
+    expect(entitlements.employeeInvites).toBe(true);
     expect(entitlements.approvalWorkflows).toBe(false);
   });
 

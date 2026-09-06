@@ -173,6 +173,7 @@ export function getPlanEntitlements(plan: SubscriptionPlan): PlanEntitlements {
     maxUsers: unlimited ? Number.POSITIVE_INFINITY : canonicalLimits.users,
     maxVendors: unlimited ? Number.POSITIVE_INFINITY : canonicalLimits.vendors,
     maxRisks: unlimited ? Number.POSITIVE_INFINITY : canonicalLimits.risks,
+    employeeInvites: unlimited || canonicalLimits.users > 1,
   };
 }
 

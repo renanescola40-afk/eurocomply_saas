@@ -8,6 +8,11 @@ import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
 import { deriveStripeIdempotencyKey, readBillingIdempotencyKey, type BillingIdempotencyContext } from '@/server/billing/idempotency';
+import {
+  bindInitialCheckoutSession,
+  claimInitialCheckoutAttempt,
+  releaseInitialCheckoutAttempt,
+} from '@/server/billing/initial-checkout-singleflight';
 import { getStripePriceId, isSelfServePlan, normalizeBillingPlanId } from '@/server/billing/plans';
 import { getStripeClient } from '@/server/billing/stripe';
 import {
@@ -32,6 +37,7 @@ import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/
 const CHECKOUT_JSON_MAX_BYTES = 2 * 1024;
 const CHECKOUT_LOCALES = ['en', 'pt', 'es', 'fr', 'it', 'de'] as const satisfies readonly Stripe.Checkout.SessionCreateParams.Locale[];
 const STRIPE_CHECKOUT_URL_HOST = 'checkout.stripe.com';
+const INITIAL_CHECKOUT_SESSION_TTL_SECONDS = 45 * 60;
 
 type CheckoutLocale = (typeof CHECKOUT_LOCALES)[number];
 
@@ -192,6 +198,27 @@ async function persistPendingLiveCustomerBinding({
   throw error;
 }
 
+async function releaseCheckoutAttemptSafely(organizationId: string, attemptToken: string, area: string) {
+  try {
+    await releaseInitialCheckoutAttempt(organizationId, attemptToken);
+  } catch (error) {
+    reportError(error, { area, organizationId });
+  }
+}
+
+async function expireCheckoutSessionSafely(stripe: Stripe, sessionId: string, organizationId: string, area: string) {
+  try {
+    await stripe.checkout.sessions.expire(sessionId);
+  } catch (error) {
+    const providerFailure = classifyProviderFailure('stripe', 'checkout_session_expire', error);
+    reportError(providerFailure, {
+      area,
+      organizationId,
+      ...providerFailureContext(providerFailure),
+    });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const user = await requireApiUser();
@@ -304,7 +331,64 @@ export async function POST(request: Request) {
       });
     }
 
+    // Client idempotency alone is insufficient for two tabs using different keys.
+    // Acquire one tenant-scoped DB lease before any customer/session mutation.
+    let checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
+    if (checkoutAttempt.outcome === 'busy') {
+      return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
+    }
+
     const stripe = getStripeClient();
+
+    if (checkoutAttempt.outcome === 'existing') {
+      if (!checkoutAttempt.stripeSessionId) {
+        return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
+      }
+
+      let existingSession: Stripe.Checkout.Session;
+      try {
+        existingSession = await stripe.checkout.sessions.retrieve(checkoutAttempt.stripeSessionId);
+      } catch (error) {
+        if (!isStripeResourceMissing(error)) {
+          throw classifyProviderFailure('stripe', 'checkout_session_retrieve', error);
+        }
+        await releaseCheckoutAttemptSafely(organization.id, checkoutAttempt.attemptToken, 'billing_checkout_stale_session_release');
+        checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
+        if (checkoutAttempt.outcome !== 'claimed') {
+          return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
+        }
+        existingSession = null as never;
+      }
+
+      if (existingSession) {
+        const existingPlan = normalizeBillingPlanId(existingSession.metadata?.plan);
+        const existingOrganizationId = existingSession.metadata?.organization_id ?? existingSession.metadata?.organizationId;
+        if (existingSession.mode !== 'subscription' || existingOrganizationId !== organization.id || existingPlan !== plan) {
+          throw new Error('billing_checkout_attempt_binding_mismatch');
+        }
+
+        if (existingSession.status === 'open' && isSafeStripeCheckoutUrl(existingSession.url)) {
+          return noStoreJson({
+            url: existingSession.url,
+            idempotencyProtected: true,
+            singleflightReused: true,
+            stepUpRequired: false,
+          });
+        }
+
+        await releaseCheckoutAttemptSafely(organization.id, checkoutAttempt.attemptToken, 'billing_checkout_closed_session_release');
+        checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
+        if (checkoutAttempt.outcome !== 'claimed') {
+          return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
+        }
+      }
+    }
+
+    if (checkoutAttempt.outcome !== 'claimed') {
+      return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
+    }
+
+    const attemptToken = checkoutAttempt.attemptToken;
     const priceId = getStripePriceId(plan);
     const organizationName = typeof organization.name === 'string' ? organization.name : null;
     const metadata = {
@@ -318,100 +402,116 @@ export async function POST(request: Request) {
       step_up_action: 'not_required_initial_checkout',
       step_up_verified_at: '',
     };
-    const customer = await ensureOrganizationStripeCustomer({
-      stripe,
-      organizationName,
-      userEmail: user.email,
-      metadata,
-      existingCustomerId: billingBinding?.stripe_customer_id,
-      idempotency: idempotency.context,
-    });
 
-    // Persist the live customer before redirecting to Stripe. This makes retries
-    // reuse one customer and replaces stale status-only/test-mode identifiers with
-    // a non-entitled pending state until a signed live webhook confirms payment.
-    await persistPendingLiveCustomerBinding({ stripe, organizationId: organization.id, customer });
-
-    let session: Stripe.Checkout.Session;
     try {
-      session = await stripe.checkout.sessions.create(
-        {
-          mode: 'subscription',
-          customer: customer.id,
-          line_items: [{ price: priceId, quantity: 1 }],
-          success_url: `${returnBaseUrl.appUrl}/${locale}/checkout/complete`,
-          cancel_url: `${returnBaseUrl.appUrl}/${locale}/checkout?plan=${plan}&checkout=cancelled`,
-          client_reference_id: organization.id,
-          locale,
-          metadata,
-          subscription_data: { metadata },
-          billing_address_collection: 'required',
-          customer_update: {
-            address: 'auto',
-            name: 'auto',
-          },
-          tax_id_collection: { enabled: true },
-          payment_method_collection: 'always',
-          allow_promotion_codes: true,
-        },
-        { idempotencyKey: deriveStripeIdempotencyKey(idempotency.context, 'checkout-session') },
-      );
-    } catch (error) {
-      throw classifyProviderFailure('stripe', 'checkout_session_create', error);
-    }
+      const customer = await ensureOrganizationStripeCustomer({
+        stripe,
+        organizationName,
+        userEmail: user.email,
+        metadata,
+        existingCustomerId: billingBinding?.stripe_customer_id,
+        idempotency: idempotency.context,
+      });
 
-    if (!isSafeStripeCheckoutUrl(session.url)) {
-      return noStoreJson({ error: 'checkout_session_unavailable' }, { status: 502 });
-    }
+      // Persist the live customer before redirecting to Stripe. This makes retries
+      // reuse one customer and replaces stale status-only/test-mode identifiers with
+      // a non-entitled pending state until a signed live webhook confirms payment.
+      await persistPendingLiveCustomerBinding({ stripe, organizationId: organization.id, customer });
 
-    const auditResult = await writeAuditLog({
-      action: 'checkout_created',
-      organizationId: organization.id,
-      userId: user.id,
-      entityType: 'stripe_checkout_session',
-      entityId: session.id,
-      metadata: {
-        plan,
-        priceId,
-        stripeCustomerId: customer.id,
-        actorRole: permission.role ?? 'unknown',
-        billingFlow: 'initial_subscription',
-        stepUpRequired: false,
-        trustedOriginRequired: true,
-        rbacPermission: 'manage_billing',
-        stripeCheckoutHost: STRIPE_CHECKOUT_URL_HOST,
-        idempotencyProtected: true,
-        liveSubscriptionAuthority: false,
-        pendingCustomerBindingPersisted: true,
-      },
-    });
-
-    if (!auditResult.persisted) {
+      const sessionExpiresAtSeconds = Math.floor(Date.now() / 1000) + INITIAL_CHECKOUT_SESSION_TTL_SECONDS;
+      let session: Stripe.Checkout.Session;
       try {
-        await stripe.checkout.sessions.expire(session.id);
-      } catch (expirationError) {
-        const providerFailure = classifyProviderFailure('stripe', 'checkout_session_expire', expirationError);
-        reportError(providerFailure, {
-          area: 'billing_checkout_audit_compensation',
-          organizationId: organization.id,
-          userId: user.id,
-          ...providerFailureContext(providerFailure),
-        });
+        session = await stripe.checkout.sessions.create(
+          {
+            mode: 'subscription',
+            customer: customer.id,
+            line_items: [{ price: priceId, quantity: 1 }],
+            success_url: `${returnBaseUrl.appUrl}/${locale}/checkout/complete`,
+            cancel_url: `${returnBaseUrl.appUrl}/${locale}/checkout?plan=${plan}&checkout=cancelled`,
+            client_reference_id: organization.id,
+            locale,
+            metadata,
+            subscription_data: { metadata },
+            billing_address_collection: 'required',
+            customer_update: {
+              address: 'auto',
+              name: 'auto',
+            },
+            tax_id_collection: { enabled: true },
+            payment_method_collection: 'always',
+            allow_promotion_codes: true,
+            expires_at: sessionExpiresAtSeconds,
+          },
+          { idempotencyKey: deriveStripeIdempotencyKey(idempotency.context, `checkout-session:${attemptToken}`) },
+        );
+      } catch (error) {
+        throw classifyProviderFailure('stripe', 'checkout_session_create', error);
       }
 
-      reportError(new Error('Billing checkout audit persistence failed'), {
-        area: 'billing_checkout_audit',
+      if (!isSafeStripeCheckoutUrl(session.url)) {
+        await expireCheckoutSessionSafely(stripe, session.id, organization.id, 'billing_checkout_unsafe_url_compensation');
+        await releaseCheckoutAttemptSafely(organization.id, attemptToken, 'billing_checkout_unsafe_url_release');
+        return noStoreJson({ error: 'checkout_session_unavailable' }, { status: 502 });
+      }
+
+      try {
+        await bindInitialCheckoutSession({
+          organizationId: organization.id,
+          attemptToken,
+          stripeSessionId: session.id,
+          sessionExpiresAt: new Date((session.expires_at ?? sessionExpiresAtSeconds) * 1000).toISOString(),
+        });
+      } catch (error) {
+        await expireCheckoutSessionSafely(stripe, session.id, organization.id, 'billing_checkout_singleflight_bind_compensation');
+        await releaseCheckoutAttemptSafely(organization.id, attemptToken, 'billing_checkout_singleflight_bind_release');
+        throw error;
+      }
+
+      const auditResult = await writeAuditLog({
+        action: 'checkout_created',
         organizationId: organization.id,
         userId: user.id,
+        entityType: 'stripe_checkout_session',
+        entityId: session.id,
+        metadata: {
+          plan,
+          priceId,
+          stripeCustomerId: customer.id,
+          actorRole: permission.role ?? 'unknown',
+          billingFlow: 'initial_subscription',
+          stepUpRequired: false,
+          trustedOriginRequired: true,
+          rbacPermission: 'manage_billing',
+          stripeCheckoutHost: STRIPE_CHECKOUT_URL_HOST,
+          idempotencyProtected: true,
+          initialCheckoutSingleflight: true,
+          liveSubscriptionAuthority: false,
+          pendingCustomerBindingPersisted: true,
+        },
       });
-      return noStoreJson({ error: 'checkout_audit_unavailable' }, { status: 503 });
-    }
 
-    return noStoreJson({
-      url: session.url,
-      idempotencyProtected: true,
-      stepUpRequired: false,
-    });
+      if (!auditResult.persisted) {
+        await expireCheckoutSessionSafely(stripe, session.id, organization.id, 'billing_checkout_audit_compensation');
+        await releaseCheckoutAttemptSafely(organization.id, attemptToken, 'billing_checkout_audit_release');
+
+        reportError(new Error('Billing checkout audit persistence failed'), {
+          area: 'billing_checkout_audit',
+          organizationId: organization.id,
+          userId: user.id,
+        });
+        return noStoreJson({ error: 'checkout_audit_unavailable' }, { status: 503 });
+      }
+
+      return noStoreJson({
+        url: session.url,
+        idempotencyProtected: true,
+        singleflightProtected: true,
+        stepUpRequired: false,
+      });
+    } catch (error) {
+      await releaseCheckoutAttemptSafely(organization.id, attemptToken, 'billing_checkout_failed_attempt_release');
+      throw error;
+    }
   } catch (error) {
     return secureApiError(error, request);
   }

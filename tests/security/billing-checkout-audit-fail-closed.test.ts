@@ -17,8 +17,9 @@ describe('billing checkout audit persistence', () => {
   });
 
   it('attempts to expire the unusable Stripe session before failing closed', () => {
-    expect(route).toContain('await stripe.checkout.sessions.expire(session.id)');
-    expect(route).toContain("area: 'billing_checkout_audit_compensation'");
+    expect(route).toContain('async function expireCheckoutSessionSafely');
+    expect(route).toContain('await stripe.checkout.sessions.expire(sessionId)');
+    expect(route).toContain("await expireCheckoutSessionSafely(stripe, session.id, organization.id, 'billing_checkout_audit_compensation')");
     expect(route).toContain("area: 'billing_checkout_audit'");
   });
 
