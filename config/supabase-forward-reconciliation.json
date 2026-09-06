@@ -24,11 +24,7 @@
     },
     {
       "filename": "20260906005000_billing_initial_checkout_singleflight.sql",
-      "purpose": "materialize the backend-only tenant checkout-attempt ledger and atomic claim/bind/release RPCs so multiple tabs or distinct client idempotency keys cannot create concurrent initial Stripe subscription Checkout sessions"
-    },
-    {
-      "filename": "20260906006000_billing_completed_checkout_authority_guard.sql",
-      "purpose": "keep bound Checkout attempts durable through checkout.session completion and release them only after Stripe proves expiry/missing or processed LIVE customer.subscription.created/updated commercial authority reaches the ledger"
+      "purpose": "materialize the backend-only tenant-scoped single-flight lease required by the initial self-serve Checkout runtime so concurrent initial requests cannot create duplicate Stripe subscription Checkout sessions"
     }
   ],
   "truthBoundary": {
