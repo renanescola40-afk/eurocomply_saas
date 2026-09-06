@@ -1,10 +1,10 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-06-paid-governance-runtime-foundations-v38",
+  "changeSet": "2026-09-06-cross-tenant-reference-integrity-v39",
   "migrations": [
     {
       "filename": "20260906000000_reconcile_final_public_release_payment_storage_hardening.sql",
-      "purpose": "follow the read-only verified Production ledger head 20260905075429 with forward-only V32 reconciliation for payment-first RLS, compliance-documents payment/RBAC Storage boundaries, and Evidence Vault size/MIME controls without replaying stale V31 or repairing migration history"
+      "purpose": "follow the read-only verified Production ledger head 20260905075429 with forward-only V32 reconciliation for payment-first RLS, compliance-documents payment/RBAC Storage boundaries, Evidence Vault size/MIME controls, and Gap Analysis active-tenant membership without replaying stale V31 or repairing migration history"
     },
     {
       "filename": "20260906003000_billing_ai_system_commercial_quota.sql",
@@ -16,7 +16,7 @@
     },
     {
       "filename": "20260906004000_billing_document_storage_quota.sql",
-      "purpose": "extend the existing paid document-count trigger with serialized persisted storage-byte capacity matching the canonical billing catalog limits"
+      "purpose": "extend the existing paid document-count trigger with serialized persisted storage-byte capacity and close direct authenticated document metadata mutations that could bypass private Storage lifecycle accounting"
     },
     {
       "filename": "20260906004500_billing_entitlement_catalog_truth.sql",
@@ -45,6 +45,10 @@
     {
       "filename": "20260906006700_billing_governance_workflow_plan_isolation.sql",
       "purpose": "align AI-system governance workflow data planes with the commercial catalog by requiring Business for vendor diligence and governed risk review and Enterprise for evidence packs"
+    },
+    {
+      "filename": "20260906006800_harden_cross_tenant_reference_integrity.sql",
+      "purpose": "enforce same-organization parent references across legacy and Enterprise multi-tenant foreign-key paths even for service-role writes while preserving existing delete semantics"
     }
   ],
   "truthBoundary": {
