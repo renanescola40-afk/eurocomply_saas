@@ -20,7 +20,18 @@ const DEFAULT_REPORT_PATH = join(
 const EXPECTED_CHANGE_SET = '2026-09-06-final-public-release-payment-storage-hardening-v32';
 const V32_PUBLIC_RELEASE_MIGRATION =
   '20260906000000_reconcile_final_public_release_payment_storage_hardening.sql';
-const EXPECTED_SELECTED = [V32_PUBLIC_RELEASE_MIGRATION];
+const BILLING_AI_SYSTEM_QUOTA_MIGRATION =
+  '20260906003000_billing_ai_system_commercial_quota.sql';
+const BILLING_MEMBER_CAPACITY_MIGRATION =
+  '20260906003500_billing_self_serve_member_capacity.sql';
+const BILLING_DOCUMENT_STORAGE_QUOTA_MIGRATION =
+  '20260906004000_billing_document_storage_quota.sql';
+const EXPECTED_SELECTED = [
+  V32_PUBLIC_RELEASE_MIGRATION,
+  BILLING_AI_SYSTEM_QUOTA_MIGRATION,
+  BILLING_MEMBER_CAPACITY_MIGRATION,
+  BILLING_DOCUMENT_STORAGE_QUOTA_MIGRATION,
+];
 const VERIFIED_PRODUCTION_LEDGER_HEAD = '20260905075429';
 
 function fail(message) {
