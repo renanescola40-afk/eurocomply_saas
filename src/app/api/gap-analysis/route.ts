@@ -120,26 +120,32 @@ async function loadAssessmentHistory(organizationId: string, userId: string, lim
 
 async function loadOpenWork(organizationId: string, userId: string) {
   const supabase = createAdminClient();
-  const [{ data: findings, error: findingsError }, { data: tasks, error: tasksError }] = await Promise.all([
-    supabase
-      .from('compliance_findings')
-      .select('id,article,title,severity,status,due_date,created_at')
-      .eq('organization_id', organizationId)
-      .eq('user_id', userId)
-      .in('status', ['open', 'in_progress'])
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('compliance_tasks')
-      .select('id,finding_id,title,priority,status,due_date,created_at')
-      .eq('organization_id', organizationId)
-      .eq('user_id', userId)
-      .in('status', ['open', 'in_progress'])
-      .order('created_at', { ascending: false }),
-  ]);
+  const { data: findings, error: findingsError } = await supabase
+    .from('compliance_findings')
+    .select('id,article,title,severity,status,due_date,created_at')
+    .eq('organization_id', organizationId)
+    .eq('user_id', userId)
+    .in('status', ['open', 'in_progress'])
+    .order('created_at', { ascending: false });
 
   if (findingsError) throw findingsError;
+  const userFindings = findings ?? [];
+  const findingIds = userFindings.map((finding) => finding.id);
+
+  if (findingIds.length === 0) {
+    return { findings: userFindings, tasks: [] };
+  }
+
+  const { data: tasks, error: tasksError } = await supabase
+    .from('compliance_tasks')
+    .select('id,finding_id,title,priority,status,due_date,created_at')
+    .eq('organization_id', organizationId)
+    .in('finding_id', findingIds)
+    .in('status', ['open', 'in_progress'])
+    .order('created_at', { ascending: false });
+
   if (tasksError) throw tasksError;
-  return { findings: findings ?? [], tasks: tasks ?? [] };
+  return { findings: userFindings, tasks: tasks ?? [] };
 }
 
 async function saveAssessment(organizationId: string, userId: string, body: z.infer<typeof assessmentSchema>) {
@@ -246,7 +252,7 @@ async function createRemediation(organizationId: string, userId: string, body: z
         organization_id: organizationId,
         workspace_id: null,
         finding_id: finding.id,
-        user_id: userId,
+        user_id: null,
         title: buildTaskTitle(action),
         description: finding.recommendation || action.recommendation,
         category: 'gap_analysis',
