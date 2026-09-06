@@ -1,0 +1,112 @@
+name: Public Accessibility Baseline
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-accessibility-baseline-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse-accessibility:
+    name: Lighthouse accessibility evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      TARGET_ORIGIN: https://www.risckcomply.com
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+
+      - name: Verify target is reachable
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --max-time 30 \
+            --output /dev/null "$TARGET_ORIGIN/en"
+
+      - name: Run pinned Lighthouse accessibility baselines
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/accessibility
+          for path in /en /en/pricing /en/trust /en/security; do
+            slug="$(printf '%s' "$path" | sed 's#^/##; s#/#-#g')"
+            test -n "$slug" || slug=root
+            npx --yes lighthouse@13.4.1 "$TARGET_ORIGIN$path" \
+              --preset=desktop \
+              --only-categories=accessibility \
+              --chrome-flags='--headless --no-sandbox' \
+              --output=json \
+              --output-path="artifacts/accessibility/${slug}.json" \
+              --quiet
+          done
+
+      - name: Build bounded accessibility summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const dir = 'artifacts/accessibility';
+          const reports = fs.readdirSync(dir).filter((name) => name.endsWith('.json')).sort();
+          const summary = {
+            schema: 'risck-comply.public-accessibility-baseline.v1',
+            generatedAt: new Date().toISOString(),
+            targetOrigin: process.env.TARGET_ORIGIN,
+            scanner: { name: 'Google Lighthouse', version: '13.4.1' },
+            claimBoundary: 'Automated accessibility testing is not WCAG certification or complete conformance proof.',
+            pages: [],
+          };
+          for (const reportName of reports) {
+            const report = JSON.parse(fs.readFileSync(path.join(dir, reportName), 'utf8'));
+            const audits = Object.values(report.audits || {})
+              .filter((audit) => audit && audit.score !== null && audit.score < 1 && audit.scoreDisplayMode !== 'notApplicable')
+              .map((audit) => ({ id: audit.id, title: audit.title, score: audit.score }))
+              .slice(0, 30);
+            summary.pages.push({
+              url: report.finalUrl || report.requestedUrl,
+              accessibilityScore: Math.round((report.categories?.accessibility?.score || 0) * 100),
+              failingAutomatedAudits: audits,
+            });
+          }
+          fs.writeFileSync(path.join(dir, 'summary.json'), JSON.stringify(summary, null, 2));
+          console.log('## Public accessibility baseline');
+          for (const page of summary.pages) {
+            console.log(`- ${page.url}: **${page.accessibilityScore}/100** (${page.failingAutomatedAudits.length} captured non-perfect automated audits)`);
+          }
+          console.log('- Claim boundary: automated Lighthouse results do not constitute WCAG certification or complete conformance proof.');
+          NODE
+
+      - name: Publish job summary
+        shell: bash
+        run: |
+          node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require('fs');
+          const s = JSON.parse(fs.readFileSync('artifacts/accessibility/summary.json', 'utf8'));
+          console.log('## Public accessibility baseline');
+          for (const p of s.pages) console.log(`- ${p.url}: **${p.accessibilityScore}/100**`);
+          console.log(`- ${s.claimBoundary}`);
+          NODE
+
+      - name: Upload accessibility evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: public-accessibility-baseline
+          path: artifacts/accessibility/
+          if-no-files-found: error
+          retention-days: 30
