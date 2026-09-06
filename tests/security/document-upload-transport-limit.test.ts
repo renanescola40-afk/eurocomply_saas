@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { MAX_UPLOAD_BYTES, validateUploadSecurityFile } from '@/server/security/upload-security';
 
@@ -34,5 +34,26 @@ describe('document upload transport boundary', () => {
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('Expected oversized document to be rejected');
     expect(result.reason).toBe('file_too_large');
+  });
+
+  it('rejects an oversized Server Action file before reading its body into memory', async () => {
+    const arrayBuffer = vi.fn(async () => {
+      throw new Error('oversized_file_must_not_be_buffered');
+    });
+    const file = {
+      name: 'oversized-policy.pdf',
+      type: 'application/pdf',
+      size: MAX_UPLOAD_BYTES + 1,
+      arrayBuffer,
+    } as unknown as File;
+
+    const result = await validateUploadSecurityFile(file, { maxBytes: MAX_UPLOAD_BYTES });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('Expected oversized document to be rejected');
+    expect(result.reason).toBe('file_too_large');
+    expect(result.fileHash).toBeNull();
+    expect(result.buffer).toBeNull();
+    expect(arrayBuffer).not.toHaveBeenCalled();
   });
 });
