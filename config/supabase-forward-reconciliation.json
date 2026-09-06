@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-06-billing-governance-plan-isolation-v37",
+  "changeSet": "2026-09-06-paid-governance-runtime-foundations-v38",
   "migrations": [
     {
       "filename": "20260906000000_reconcile_final_public_release_payment_storage_hardening.sql",
@@ -29,6 +29,10 @@
     {
       "filename": "20260906006000_billing_completed_checkout_authority_guard.sql",
       "purpose": "keep a bound completed Checkout attempt durable until processed LIVE subscription authority exists, preventing a second initial subscription during webhook activation delay"
+    },
+    {
+      "filename": "20260906006400_reconcile_paid_governance_runtime_foundations.sql",
+      "purpose": "forward-reconcile only the paid QMS and Enterprise evidence/procurement tables, tenant-integrity constraints and backend-only RPCs that the final runtime calls but the verified Production schema lacks, without replaying historical migration versions or repairing migration history"
     },
     {
       "filename": "20260906006500_billing_professional_task_plan_isolation.sql",
