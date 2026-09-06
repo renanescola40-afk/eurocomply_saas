@@ -87,6 +87,9 @@ describe('final server-only commercial Data API boundary', () => {
     expect(finalIsolation).toContain('do $global_client_security_postconditions$');
     expect(finalIsolation).toContain('client-granted public table escaped RLS/FORCE RLS');
     expect(finalIsolation).toContain('client-granted public table has no RLS policy');
+    expect(finalIsolation).toContain("has_table_privilege('anon', c.oid, 'SELECT')");
+    expect(finalIsolation).toContain("has_table_privilege('authenticated', c.oid, 'DELETE')");
+    expect(finalIsolation).not.toContain("has_table_privilege('anon', format('public.%I', c.relname), 'SELECT')");
     expect(finalIsolation).toContain(
       "and has_function_privilege('anon', p.oid, 'EXECUTE')",
     );
