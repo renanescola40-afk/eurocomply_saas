@@ -17,10 +17,11 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-04-final-public-release-payment-storage-hardening-v31';
-const V31_PUBLIC_RELEASE_MIGRATION =
-  '20260904113000_final_public_release_payment_storage_hardening.sql';
-const EXPECTED_SELECTED = [V31_PUBLIC_RELEASE_MIGRATION];
+const EXPECTED_CHANGE_SET = '2026-09-06-final-public-release-payment-storage-hardening-v32';
+const V32_PUBLIC_RELEASE_MIGRATION =
+  '20260906000000_reconcile_final_public_release_payment_storage_hardening.sql';
+const EXPECTED_SELECTED = [V32_PUBLIC_RELEASE_MIGRATION];
+const VERIFIED_PRODUCTION_LEDGER_HEAD = '20260905075429';
 
 function fail(message) {
   throw new Error(message);
@@ -51,13 +52,17 @@ function currentGitSha() {
   }
 }
 
-function validateV31PublicReleaseMigration(source) {
+function validateV32PublicReleaseMigration(source) {
   requireMarkers(source, [
-    'Production ledger head (20260904065952)',
+    'live ledger',
+    '20260905075429',
+    'does not',
+    'migration history',
     "to_regprocedure('app_private.has_commercial_authority(uuid)')",
     "to_regprocedure('app_private.is_org_member(uuid)')",
     "to_regprocedure('app_private.has_org_role(uuid,text[])')",
     "to_regprocedure('app_private.evidence_storage_organization_id(text)')",
+    "to_regclass('public.evidence_items')",
     "'ai_fria_assessments'",
     "'ai_fria_decisions'",
     "'ai_fria_evidence'",
@@ -72,18 +77,21 @@ function validateV31PublicReleaseMigration(source) {
     'as restrictive for all to authenticated',
     'using (app_private.has_commercial_authority(organization_id))',
     'with check (app_private.has_commercial_authority(organization_id))',
+    'alter table public.%I force row level security',
     'Members can read organization document objects',
     'Members can upload organization document objects',
     'app_private.evidence_storage_organization_id(name)',
+    'app_private.is_org_member',
     "array['owner','admin','editor','member']::text[]",
     'file_size_limit = 10485760',
     'allowed_mime_types = array[',
     'evidence_items_file_size_bytes_check',
     'evidence_items_file_mime_type_check',
-    "file_mime_type in (",
+    'c.convalidated',
     'unexpected direct UPDATE/DELETE policy survived for compliance-documents',
+    'compliance-evidence bucket unexpectedly public',
     "notify pgrst, 'reload schema'",
-  ], 'V31 final public-release payment/storage hardening');
+  ], 'V32 final public-release payment/storage reconciliation');
 
   forbidMarkers(source, [
     'supabase_migrations.schema_migrations',
@@ -94,7 +102,7 @@ function validateV31PublicReleaseMigration(source) {
     'to anon',
     'drop table ',
     'truncate ',
-  ], 'V31 final public-release payment/storage hardening');
+  ], 'V32 final public-release payment/storage reconciliation');
 }
 
 async function main() {
@@ -127,11 +135,11 @@ async function main() {
     subjectSha: expectedHeadSha || gitSha,
   });
 
-  const v31Source = readFileSync(
-    join(ROOT, 'supabase', 'migrations', V31_PUBLIC_RELEASE_MIGRATION),
+  const v32Source = readFileSync(
+    join(ROOT, 'supabase', 'migrations', V32_PUBLIC_RELEASE_MIGRATION),
     'utf8',
   );
-  validateV31PublicReleaseMigration(v31Source);
+  validateV32PublicReleaseMigration(v32Source);
 
   const records = manifest.migrations.map((migration, index) => ({
     position: index + 1,
@@ -155,7 +163,7 @@ async function main() {
     migrationHistoryRepairAuthorized: false,
     automaticClassificationPerformed: false,
     humanDecisionRequired: true,
-    productionLedgerHeadBeforeSelection: '20260904065952',
+    productionLedgerHeadBeforeSelection: VERIFIED_PRODUCTION_LEDGER_HEAD,
     records,
   };
 

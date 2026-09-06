@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 const read = (path: string) => readFileSync(path, 'utf8');
 const sha256 = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
 
-const migrationPath = 'supabase/migrations/20260904113000_final_public_release_payment_storage_hardening.sql';
+const migrationPath = 'supabase/migrations/20260906000000_reconcile_final_public_release_payment_storage_hardening.sql';
 const migration = read(migrationPath);
 const storage = read('src/lib/evidence/storage.ts');
 const config = JSON.parse(read('config/supabase-forward-reconciliation.json')) as {
@@ -40,25 +40,27 @@ const allowedMimeTypes = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ];
 
-describe('final public-release payment and Storage hardening', () => {
-  it('mirrors the two already-live 2026-09-04 reconciliation migrations byte-for-byte', () => {
+describe('final public-release payment and Storage hardening V32', () => {
+  it('preserves the two already-live 2026-09-04 reconciliation migrations byte-for-byte', () => {
     expect(sha256('supabase/migrations/20260904065919_reconcile_ai_governance_runtime_schema_20260904.sql'))
       .toBe('bceedb8d738c8bda3cb07e9f8849e85a670ea4439ffd669747fb630d980e042d');
     expect(sha256('supabase/migrations/20260904065952_reconcile_ai_system_atomic_rpcs_20260904.sql'))
       .toBe('642f48be06c110bdaf2f6c8c47fee6bbedd3984e780a846c2da2722f6e486cdc');
   });
 
-  it('selects only the not-yet-applied V31 migration and never authorizes Production writes by config', () => {
-    expect(config.changeSet).toBe('2026-09-04-final-public-release-payment-storage-hardening-v31');
+  it('selects only V32 above the verified live ledger and never replays the stale V31 package', () => {
+    expect(config.changeSet).toBe('2026-09-06-final-public-release-payment-storage-hardening-v32');
     expect(config.migrations).toEqual([
-      expect.objectContaining({ filename: '20260904113000_final_public_release_payment_storage_hardening.sql' }),
+      expect.objectContaining({ filename: '20260906000000_reconcile_final_public_release_payment_storage_hardening.sql' }),
     ]);
+    expect(config.migrations.some(({ filename }) => filename === '20260904113000_final_public_release_payment_storage_hardening.sql')).toBe(false);
+    expect(migration).toContain('20260905075429');
     expect(config.truthBoundary.productionWriteAuthorizedByConfig).toBe(false);
     expect(config.truthBoundary.migrationHistoryRepairAllowed).toBe(false);
     expect(config.truthBoundary.unrestrictedDbPushAllowed).toBe(false);
   });
 
-  it('adds one restrictive commercial authority boundary to every identified auxiliary tenant table', () => {
+  it('adds one restrictive commercial authority boundary and FORCE RLS to every identified auxiliary tenant table', () => {
     for (const table of auxiliaryTables) {
       expect(migration).toContain(`'${table}'`);
     }
@@ -66,6 +68,8 @@ describe('final public-release payment and Storage hardening', () => {
     expect(migration).toContain('using (app_private.has_commercial_authority(organization_id))');
     expect(migration).toContain('with check (app_private.has_commercial_authority(organization_id))');
     expect(migration).toContain('alter table public.%I force row level security');
+    expect(migration).toContain('c.relrowsecurity');
+    expect(migration).toContain('c.relforcerowsecurity');
   });
 
   it('closes the legacy compliance-documents Storage payment bypass and binds upload to document-capable roles', () => {
@@ -90,6 +94,8 @@ describe('final public-release payment and Storage hardening', () => {
     expect(uploadPolicy).toContain('app_private.has_commercial_authority');
     expect(uploadPolicy).not.toContain("'viewer'");
 
+    expect(migration).toContain('parser/member/payment-first bound');
+    expect(migration).toContain('parser/payment-first/RBAC-bound');
     expect(migration).toContain('unexpected direct UPDATE/DELETE policy survived for compliance-documents');
   });
 
@@ -98,6 +104,8 @@ describe('final public-release payment and Storage hardening', () => {
     expect(migration).toContain('evidence_items_file_size_bytes_check');
     expect(migration).toContain('file_size_bytes >= 0 and file_size_bytes <= 10485760');
     expect(migration).toContain('evidence_items_file_mime_type_check');
+    expect(migration).toContain('c.convalidated');
+    expect(migration).toContain('compliance-evidence bucket unexpectedly public');
 
     for (const mime of allowedMimeTypes) {
       expect(migration).toContain(`'${mime}'`);
