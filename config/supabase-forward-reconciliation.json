@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-06-billing-professional-plan-isolation-v35",
+  "changeSet": "2026-09-06-billing-business-plan-isolation-v36",
   "migrations": [
     {
       "filename": "20260906000000_reconcile_final_public_release_payment_storage_hardening.sql",
@@ -33,6 +33,10 @@
     {
       "filename": "20260906006500_billing_professional_task_plan_isolation.sql",
       "purpose": "enforce Professional-or-higher authority for organization Tasks, Risks, Vendors and vendor review history at restrictive RLS and server feature boundaries while preserving personal tasks and downgraded customer data for later re-upgrade"
+    },
+    {
+      "filename": "20260906006600_billing_business_feature_plan_isolation.sql",
+      "purpose": "enforce Business-or-higher authenticated data-plane authority for AI Literacy and QMS tables while preserving downgraded customer records for later re-upgrade"
     }
   ],
   "truthBoundary": {
