@@ -14,7 +14,7 @@ permissions:
 jobs:
   public-trust-signals:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -30,6 +30,12 @@ jobs:
           mkdir -p artifacts/trust-signals
           node scripts/assurance/free-online-trust-signals.mjs > artifacts/trust-signals/results.json
 
+      - name: Capture detailed MDN HTTP Observatory result
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          npx --yes @mdn/mdn-http-observatory@1.6.2 www.risckcomply.com > artifacts/trust-signals/mdn-http-observatory-details.json
+
       - name: Publish compact summary
         if: always()
         run: |
@@ -41,6 +47,20 @@ jobs:
           console.log(`- Green Web Foundation: **${e.greenWebFoundation.green === true ? 'VERIFIED GREEN' : e.greenWebFoundation.green === false ? 'NOT GREEN' : 'UNRESOLVED'}**`);
           console.log(`- MDN HTTP Observatory: **${e.mdnHttpObservatory.grade ?? 'UNRESOLVED'}** (score ${e.mdnHttpObservatory.score ?? 'n/a'})`);
           console.log(`- OpenSSF Scorecard published result: **${e.openSSFScorecard.publishedResultAvailable ? 'YES' : 'NO'}**${e.openSSFScorecard.score !== null ? ` (score ${e.openSSFScorecard.score}/10)` : ''}`);
+          if (fs.existsSync('artifacts/trust-signals/mdn-http-observatory-details.json')) {
+            try {
+              const mdn = JSON.parse(fs.readFileSync('artifacts/trust-signals/mdn-http-observatory-details.json', 'utf8'));
+              const failures = Object.entries(mdn.tests || {}).filter(([, value]) => value && value.pass === false);
+              if (failures.length) {
+                console.log('- MDN failing tests:');
+                for (const [name, value] of failures) {
+                  console.log(`  - ${name}: ${value.result || 'failed'} (${value.scoreModifier ?? 0})`);
+                }
+              }
+            } catch {
+              console.log('- Detailed MDN scan could not be parsed; public API result remains authoritative for the headline grade.');
+            }
+          }
           NODE
           else
             echo 'No trust-signal evidence file was produced.' >> "$GITHUB_STEP_SUMMARY"
@@ -51,6 +71,6 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: free-online-trust-signals
-          path: artifacts/trust-signals/results.json
+          path: artifacts/trust-signals/
           if-no-files-found: warn
           retention-days: 14
