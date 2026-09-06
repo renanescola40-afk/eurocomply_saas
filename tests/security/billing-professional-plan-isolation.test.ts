@@ -10,6 +10,7 @@ const taskActions = read('src/server/actions/compliance-tasks.ts');
 const taskQuery = read('src/server/queries/compliance-tasks.ts');
 const taskPage = read('src/app/[locale]/dashboard/organizations/tasks/page.tsx');
 const taskCsv = read('src/app/api/reports/tasks.csv/route.ts');
+const gapAnalysisRoute = read('src/app/api/gap-analysis/route.ts');
 const vendorQuery = read('src/server/queries/vendors.ts');
 const vendorPage = read('src/app/[locale]/dashboard/organizations/vendors/page.tsx');
 const vendorCsv = read('src/app/api/reports/vendors.csv/route.ts');
@@ -21,6 +22,7 @@ const dashboardSummary = read('src/server/queries/dashboard.ts');
 const organizationDashboard = read('src/server/queries/organization-dashboard.ts');
 const executiveLayout = read('src/app/[locale]/dashboard/organizations/reports/layout.tsx');
 const executiveCsv = read('src/app/api/reports/executive.csv/route.ts');
+const complianceAlerts = read('src/app/api/internal/compliance-alerts/route.ts');
 const entitlements = read('src/server/billing/entitlements.ts');
 
 describe('billing Professional/Business feature isolation', () => {
@@ -59,13 +61,18 @@ describe('billing Professional/Business feature isolation', () => {
     expect(migration).not.toContain('grant all on public.');
   });
 
-  it('requires Professional for every organization Tasks server boundary', () => {
+  it('requires Professional for every organization Tasks server boundary and Gap remediation side-door', () => {
     expect(taskActions).toContain("assertPlanAtLeast(organizationId, 'professional')");
     expect((taskActions.match(/await requireProfessionalTaskPlan\(/g) ?? [])).toHaveLength(3);
     expect(taskQuery).toContain("assertPlanAtLeast(organizationId, 'professional')");
     expect(taskPage).toContain("assertPlanAtLeast(organization.id, 'professional')");
     expect(taskPage).toContain('upgrade=professional&feature=tasks');
     expect(taskCsv).toContain("minimumPlan: 'professional'");
+
+    expect(gapAnalysisRoute).toContain("assertPlanAtLeast(organizationId, 'professional')");
+    expect(gapAnalysisRoute).toContain("if (view === 'work')");
+    expect(gapAnalysisRoute).toContain("if (operation === 'remediation')");
+    expect((gapAnalysisRoute.match(/requireProfessionalRemediationPlan\(access\.organization\.id\)/g) ?? [])).toHaveLength(2);
   });
 
   it('requires Professional for Vendors and Risks reads, pages, exports and canonical RBAC mutations', () => {
@@ -90,15 +97,23 @@ describe('billing Professional/Business feature isolation', () => {
 
   it('redacts Professional-only metrics, history and previews after downgrade even through service-role queries', () => {
     expect(dashboardSummary).toContain("assertPlanAtLeast(organizationId, 'professional')");
-    expect(dashboardSummary).toContain('professionalPlan\n      ? supabase.from(\'compliance_tasks\')');
-    expect(dashboardSummary).toContain('professionalPlan\n      ? supabase.from(\'vendors\')');
-    expect(dashboardSummary).toContain('professionalPlan\n      ? supabase.from(\'risks\')');
+    expect(dashboardSummary).toContain("professionalPlan\n      ? supabase.from('compliance_tasks')");
+    expect(dashboardSummary).toContain("professionalPlan\n      ? supabase.from('vendors')");
+    expect(dashboardSummary).toContain("professionalPlan\n      ? supabase.from('risks')");
     expect(dashboardSummary).toContain('if (!professionalPlan) return [];');
 
     expect(organizationDashboard).toContain("entitlements.licensed && isPlanAtLeast(entitlements.plan, 'professional')");
     expect(organizationDashboard).toContain("? withDashboardTimeout('tasks', listDashboardTasks(organization.id))");
     expect(organizationDashboard).toContain("? withDashboardTimeout('risks', listDashboardTopRisks(organization.id))");
     expect(organizationDashboard).toContain("? withDashboardTimeout('vendors', listDashboardVendorsRequiringReview(organization.id))");
+  });
+
+  it('suppresses customer alerts when commercial authority no longer covers the feature', () => {
+    expect(complianceAlerts).toContain('getOrganizationBillingAuthority');
+    expect(complianceAlerts).toContain('authority.licensed && isPlanAtLeast(authority.plan, minimumPlan)');
+    expect(complianceAlerts).toContain("isCommerciallyEligible(document.organization_id, 'starter')");
+    expect(complianceAlerts).toContain("isCommerciallyEligible(vendor.organization_id, 'professional')");
+    expect(complianceAlerts).toContain('createCommercialEligibilityResolver()');
   });
 
   it('keeps Executive Reports Business-only across visual and CSV boundaries', () => {
