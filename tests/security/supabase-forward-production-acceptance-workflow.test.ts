@@ -5,6 +5,10 @@ const workflow = readFileSync('.github/workflows/supabase-forward-production-acc
 const recoveryWorkflow = readFileSync('.github/workflows/recovery-resilience-proof.yml', 'utf8');
 const recoveryBinder = readFileSync('scripts/recovery/bind-backup-restore-migration-ledger.mjs', 'utf8');
 const tenantProof = readFileSync('scripts/supabase/assert-live-tenant-isolation-read-only.sql', 'utf8');
+const crossTenantPostconditions = readFileSync(
+  'scripts/supabase/verify-cross-tenant-reference-integrity-postconditions.sql',
+  'utf8',
+);
 const verifier = readFileSync('scripts/supabase/verify-forward-production-acceptance.mjs', 'utf8');
 const runbook = readFileSync('docs/runbooks/SUPABASE_FORWARD_PRODUCTION_ACCEPTANCE.md', 'utf8');
 
@@ -64,9 +68,13 @@ describe('Supabase post-promotion production acceptance', () => {
     expect(workflow).toContain('select version from supabase_migrations.schema_migrations order by version');
     expect(workflow).toContain("--command 'begin transaction read only;'");
     expect(workflow).toContain('verify-forward-reconciliation-postconditions.sql');
+    expect(workflow).toContain('verify-cross-tenant-reference-integrity-postconditions.sql');
     expect(workflow).toContain("--command 'rollback;'");
     expect(workflow).toContain('assert-live-tenant-isolation-read-only.sql');
     expect(workflow).toContain('verify-forward-production-acceptance.mjs');
+    expect(crossTenantPostconditions).not.toContain('begin transaction read only;');
+    expect(crossTenantPostconditions).toContain('app_private.enforce_same_tenant_reference_integrity()');
+    expect(crossTenantPostconditions).toContain('cross-tenant reference integrity violation exists after promotion');
     expect(verifier).toContain('post-promotion migration drift detected');
     expect(verifier).toContain('liveTenantIsolationPassed: true');
     expect(verifier).toContain('backupRestoreExactShaPassed: true');
@@ -83,6 +91,7 @@ describe('Supabase post-promotion production acceptance', () => {
     expect(recoveryBinder).toContain('migrationVersionsStored: false');
     expect(recoveryBinder).toContain('sourceMigrationLedgerDigestStored: true');
     expect(recoveryBinder).toContain('verify-forward-reconciliation-postconditions.sql');
+    expect(recoveryBinder).toContain('verify-cross-tenant-reference-integrity-postconditions.sql');
     expect(recoveryBinder).toContain('restoredPostconditionsExecuted');
     expect(recoveryBinder).toContain('restoredPostconditionsPassed');
     expect(recoveryBinder).toContain('restoredPostconditionOutputStored: false');

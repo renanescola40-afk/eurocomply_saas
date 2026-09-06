@@ -15,6 +15,7 @@ on:
       - 'scripts/supabase/verify-forward-production-acceptance.test.mjs'
       - 'scripts/supabase/assert-live-tenant-isolation-read-only.sql'
       - 'scripts/supabase/verify-forward-reconciliation-postconditions.sql'
+      - 'scripts/supabase/verify-cross-tenant-reference-integrity-postconditions.sql'
       - 'tests/security/supabase-forward-production-acceptance-workflow.test.ts'
       - 'docs/runbooks/SUPABASE_FORWARD_PRODUCTION_ACCEPTANCE.md'
   workflow_dispatch:
@@ -263,6 +264,7 @@ jobs:
             --no-psqlrc --set ON_ERROR_STOP=1 \
             --command 'begin transaction read only;' \
             --file scripts/supabase/verify-forward-reconciliation-postconditions.sql \
+            --file scripts/supabase/verify-cross-tenant-reference-integrity-postconditions.sql \
             --command 'rollback;' \
             >/dev/null
           jq -n \
@@ -276,7 +278,7 @@ jobs:
               targetSha:$sha,
               selectionDigest:$digest,
               readOnly:true,
-              postconditions:"forward_reconciliation_postconditions_passed",
+              postconditions:"forward_reconciliation_and_cross_tenant_reference_postconditions_passed",
               evidenceIntegrity:{containsSensitiveValues:false,databaseUrlsStored:false,rowDataStored:false}
             }' > "$LIVE_POSTCONDITIONS"
       - name: Prove two-tenant authenticated RLS behavior on live production read-only

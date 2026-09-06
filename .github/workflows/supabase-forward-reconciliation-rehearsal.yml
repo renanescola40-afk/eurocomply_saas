@@ -6,6 +6,7 @@ on:
       - 'config/supabase-forward-reconciliation.json'
       - 'scripts/supabase/forward-reconciliation-control-plane.mjs'
       - 'scripts/supabase/verify-forward-reconciliation-postconditions.sql'
+      - 'scripts/supabase/verify-cross-tenant-reference-integrity-postconditions.sql'
       - 'scripts/security/validate-enterprise-integrations-runtime.sql'
       - 'scripts/security/validate-enterprise-billing-runtime.sql'
       - 'scripts/security/validate-live-rls-inventory-helper-boundary.sql'
@@ -126,6 +127,7 @@ jobs:
               'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED',
               'RECOVERY_PROVIDER_DESTROY_CONFIRMATION',
               'validate-gap-remediation-runtime.sql',
+              'verify-cross-tenant-reference-integrity-postconditions.sql',
               'Destroy isolated Supabase restore project',
           ]:
               if token not in text:
@@ -230,6 +232,7 @@ jobs:
           set -euo pipefail
           for validator in \
             scripts/supabase/verify-forward-reconciliation-postconditions.sql \
+            scripts/supabase/verify-cross-tenant-reference-integrity-postconditions.sql \
             scripts/security/validate-enterprise-integrations-runtime.sql \
             scripts/security/validate-enterprise-billing-runtime.sql \
             scripts/security/validate-live-rls-inventory-helper-boundary.sql \

@@ -12,6 +12,7 @@ const output = 'docs/security/evidence/p1/backup-restore-tested.json';
 const criticalTables = ['organizations', 'organization_members', 'audit_logs'];
 const approvedValidators = new Set([
   'scripts/supabase/verify-forward-reconciliation-postconditions.sql',
+  'scripts/supabase/verify-cross-tenant-reference-integrity-postconditions.sql',
   'scripts/security/validate-enterprise-integrations-runtime.sql',
   'scripts/security/validate-enterprise-billing-runtime.sql',
   'scripts/security/validate-live-rls-inventory-helper-boundary.sql',
