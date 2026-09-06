@@ -8,6 +8,7 @@ import { StepUpCsvExportButton } from '@/components/reports/step-up-csv-export-b
 import { getCoreWorkflowCopy } from '@/lib/i18n/core-workflow-copy';
 import { roleHasPermission } from '@/lib/security/permissions';
 import { createComplianceTask, deleteComplianceTask, updateComplianceTask } from '@/server/actions/compliance-tasks';
+import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { getCurrentUser } from '@/server/queries/auth';
 import { listComplianceTasks } from '@/server/queries/compliance-tasks';
@@ -27,6 +28,11 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
 
   const organization = await getCurrentOrganizationForUser(user.id);
   if (!organization) redirect(`/${params.locale}/onboarding`);
+
+  const entitlement = await assertPlanAtLeast(organization.id, 'professional');
+  if (!entitlement.ok) {
+    redirect(`/${params.locale}/dashboard/organizations/billing?upgrade=professional&from=tasks`);
+  }
 
   const copy = getCoreWorkflowCopy(params.locale).tasks;
   const tasks = await listComplianceTasks(organization.id);
