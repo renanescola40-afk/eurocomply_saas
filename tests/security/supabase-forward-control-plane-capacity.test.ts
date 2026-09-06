@@ -15,13 +15,14 @@ const expectedForwardPackage = [
   '20260906005000_billing_initial_checkout_singleflight.sql',
   '20260906006000_billing_completed_checkout_authority_guard.sql',
   '20260906006400_reconcile_paid_governance_runtime_foundations.sql',
+  '20260906006410_harden_paid_governance_ai_system_tenant_scope.sql',
   '20260906006500_billing_professional_task_plan_isolation.sql',
   '20260906006600_billing_business_feature_plan_isolation.sql',
   '20260906006700_billing_governance_workflow_plan_isolation.sql',
 ];
 
 describe('Supabase forward reconciliation control-plane capacity', () => {
-  it('compiles only the exact V32 plus billing authority, paid-governance bridge and tier-isolation forward package', async () => {
+  it('compiles only the exact V32 plus billing authority, paid-governance bridge/hardening and tier-isolation forward package', async () => {
     const config = JSON.parse(await readFile('config/supabase-forward-reconciliation.json', 'utf8'));
 
     expect(config.migrations.map((migration: { filename: string }) => migration.filename)).toEqual(expectedForwardPackage);
@@ -35,7 +36,7 @@ describe('Supabase forward reconciliation control-plane capacity', () => {
 
     expect(manifest.targetSha).toBe(subjectSha);
     expect(manifest.migrations.map((migration) => migration.filename)).toEqual(expectedForwardPackage);
-    expect(manifest.migrations).toHaveLength(11);
+    expect(manifest.migrations).toHaveLength(12);
     expect(manifest.changeSet).toBe(
       '2026-09-06-paid-governance-runtime-foundations-v38',
     );
