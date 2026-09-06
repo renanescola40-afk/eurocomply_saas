@@ -226,10 +226,9 @@ create policy "restrict_compliance_tasks_organization_professional_plan"
     or app_private.has_minimum_commercial_plan(organization_id, 'professional')
   );
 
--- Risks have direct authenticated CRUD grants in the reviewed Production ACL.
--- A SELECT-only plan policy would therefore still allow a downgraded writer to
--- INSERT/UPDATE/DELETE via PostgREST. Restrict ALL commands and enforce the same
--- Professional-or-higher predicate in USING and WITH CHECK.
+-- Keep a restrictive Professional floor as defense in depth for reads and for
+-- any future authenticated mutation grant. Current risk mutations are reviewed
+-- server-side operations and must not be reachable directly through PostgREST.
 drop policy if exists "restrict_risks_professional_plan" on public.risks;
 create policy "restrict_risks_professional_plan"
   on public.risks
@@ -239,8 +238,15 @@ create policy "restrict_risks_professional_plan"
   using (app_private.has_minimum_commercial_plan(organization_id, 'professional'))
   with check (app_private.has_minimum_commercial_plan(organization_id, 'professional'));
 
+-- Create/delete use the serialized service-role quota/audit RPC and update uses
+-- the reviewed service-role action with optimistic concurrency + audit rollback.
+-- Browser DML would bypass those commercial/audit boundaries, so expose risks as
+-- authenticated read-only data and keep mutation authority backend-only.
+revoke insert, update, delete on table public.risks from anon, authenticated;
+grant select on table public.risks to authenticated;
+
 -- Vendors currently expose authenticated SELECT only, but the read gate remains
--- explicit and fail-closed below Professional. Backend/service_role writes are
+-- explicit and fail-closed below Professional. Backend/service-role writes are
 -- unaffected by this authenticated policy.
 drop policy if exists "restrict_vendors_professional_plan" on public.vendors;
 create policy "restrict_vendors_professional_plan"
@@ -397,6 +403,23 @@ begin
       and with_check ilike '%has_minimum_commercial_plan%professional%'
   ) then
     raise exception 'Risks Professional policy must restrict authenticated reads and mutations';
+  end if;
+
+  if has_table_privilege('anon', 'public.risks', 'INSERT')
+     or has_table_privilege('anon', 'public.risks', 'UPDATE')
+     or has_table_privilege('anon', 'public.risks', 'DELETE')
+     or has_table_privilege('authenticated', 'public.risks', 'INSERT')
+     or has_table_privilege('authenticated', 'public.risks', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.risks', 'DELETE') then
+    raise exception 'direct browser risk mutation privilege survived';
+  end if;
+
+  if not has_table_privilege('authenticated', 'public.risks', 'SELECT')
+     or not has_table_privilege('service_role', 'public.risks', 'SELECT')
+     or not has_table_privilege('service_role', 'public.risks', 'INSERT')
+     or not has_table_privilege('service_role', 'public.risks', 'UPDATE')
+     or not has_table_privilege('service_role', 'public.risks', 'DELETE') then
+    raise exception 'risk table privileges are not canonical after hardening';
   end if;
 end
 $verify$;
