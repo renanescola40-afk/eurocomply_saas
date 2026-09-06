@@ -397,64 +397,81 @@ $verify$;
 -- make future privilege regressions fail the migration instead of becoming drift.
 -- Use relation OIDs directly because replay/upgrade transactions can expose
 -- catalog entries whose names are not safely resolvable again by regclass text.
+-- Offender names are emitted as bounded exception DETAIL so protected replay
+-- evidence identifies the exact fail-closed object without exposing credentials.
 do $global_client_security_postconditions$
+declare
+  v_rls_gap text;
+  v_policy_gap text;
+  v_anon_definer_gap text;
 begin
-  if exists (
-    select 1
-    from pg_class c
-    join pg_namespace n on n.oid = c.relnamespace
-    where n.nspname = 'public'
-      and c.relkind = 'r'
-      and (
-        has_table_privilege('anon', c.oid, 'SELECT')
-        or has_table_privilege('anon', c.oid, 'INSERT')
-        or has_table_privilege('anon', c.oid, 'UPDATE')
-        or has_table_privilege('anon', c.oid, 'DELETE')
-        or has_table_privilege('authenticated', c.oid, 'SELECT')
-        or has_table_privilege('authenticated', c.oid, 'INSERT')
-        or has_table_privilege('authenticated', c.oid, 'UPDATE')
-        or has_table_privilege('authenticated', c.oid, 'DELETE')
-      )
-      and (not c.relrowsecurity or not c.relforcerowsecurity)
-  ) then
-    raise exception 'client-granted public table escaped RLS/FORCE RLS';
+  select string_agg(format('%I.%I', n.nspname, c.relname), ', ' order by c.relname)
+    into v_rls_gap
+  from pg_class c
+  join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname = 'public'
+    and c.relkind = 'r'
+    and (
+      has_table_privilege('anon', c.oid, 'SELECT')
+      or has_table_privilege('anon', c.oid, 'INSERT')
+      or has_table_privilege('anon', c.oid, 'UPDATE')
+      or has_table_privilege('anon', c.oid, 'DELETE')
+      or has_table_privilege('authenticated', c.oid, 'SELECT')
+      or has_table_privilege('authenticated', c.oid, 'INSERT')
+      or has_table_privilege('authenticated', c.oid, 'UPDATE')
+      or has_table_privilege('authenticated', c.oid, 'DELETE')
+    )
+    and (not c.relrowsecurity or not c.relforcerowsecurity);
+
+  if v_rls_gap is not null then
+    raise exception using
+      message = 'client-granted public table escaped RLS/FORCE RLS',
+      detail = 'relations=' || left(v_rls_gap, 4000);
   end if;
 
-  if exists (
-    select 1
-    from pg_class c
-    join pg_namespace n on n.oid = c.relnamespace
-    where n.nspname = 'public'
-      and c.relkind = 'r'
-      and (
-        has_table_privilege('anon', c.oid, 'SELECT')
-        or has_table_privilege('anon', c.oid, 'INSERT')
-        or has_table_privilege('anon', c.oid, 'UPDATE')
-        or has_table_privilege('anon', c.oid, 'DELETE')
-        or has_table_privilege('authenticated', c.oid, 'SELECT')
-        or has_table_privilege('authenticated', c.oid, 'INSERT')
-        or has_table_privilege('authenticated', c.oid, 'UPDATE')
-        or has_table_privilege('authenticated', c.oid, 'DELETE')
-      )
-      and not exists (
-        select 1
-        from pg_policies policy
-        where policy.schemaname = 'public'
-          and policy.tablename = c.relname
-      )
-  ) then
-    raise exception 'client-granted public table has no RLS policy';
+  select string_agg(format('%I.%I', n.nspname, c.relname), ', ' order by c.relname)
+    into v_policy_gap
+  from pg_class c
+  join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname = 'public'
+    and c.relkind = 'r'
+    and (
+      has_table_privilege('anon', c.oid, 'SELECT')
+      or has_table_privilege('anon', c.oid, 'INSERT')
+      or has_table_privilege('anon', c.oid, 'UPDATE')
+      or has_table_privilege('anon', c.oid, 'DELETE')
+      or has_table_privilege('authenticated', c.oid, 'SELECT')
+      or has_table_privilege('authenticated', c.oid, 'INSERT')
+      or has_table_privilege('authenticated', c.oid, 'UPDATE')
+      or has_table_privilege('authenticated', c.oid, 'DELETE')
+    )
+    and not exists (
+      select 1
+      from pg_policies policy
+      where policy.schemaname = 'public'
+        and policy.tablename = c.relname
+    );
+
+  if v_policy_gap is not null then
+    raise exception using
+      message = 'client-granted public table has no RLS policy',
+      detail = 'relations=' || left(v_policy_gap, 4000);
   end if;
 
-  if exists (
-    select 1
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where p.prosecdef
-      and n.nspname in ('public', 'app_private')
-      and has_function_privilege('anon', p.oid, 'EXECUTE')
-  ) then
-    raise exception 'anonymous role can execute an application SECURITY DEFINER function';
+  select string_agg(
+    format('%I.%I(%s)', n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)),
+    ', ' order by n.nspname, p.proname, p.oid
+  ) into v_anon_definer_gap
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  where p.prosecdef
+    and n.nspname in ('public', 'app_private')
+    and has_function_privilege('anon', p.oid, 'EXECUTE');
+
+  if v_anon_definer_gap is not null then
+    raise exception using
+      message = 'anonymous role can execute an application SECURITY DEFINER function',
+      detail = 'functions=' || left(v_anon_definer_gap, 4000);
   end if;
 end
 $global_client_security_postconditions$;
