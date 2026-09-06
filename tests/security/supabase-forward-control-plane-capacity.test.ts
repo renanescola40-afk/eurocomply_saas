@@ -12,6 +12,7 @@ const expectedForwardPackage = [
   '20260906003500_billing_self_serve_member_capacity.sql',
   '20260906004000_billing_document_storage_quota.sql',
   '20260906004500_billing_entitlement_catalog_truth.sql',
+  '20260906005000_billing_initial_checkout_singleflight.sql',
 ];
 
 describe('Supabase forward reconciliation control-plane capacity', () => {
@@ -29,7 +30,7 @@ describe('Supabase forward reconciliation control-plane capacity', () => {
 
     expect(manifest.targetSha).toBe(subjectSha);
     expect(manifest.migrations.map((migration) => migration.filename)).toEqual(expectedForwardPackage);
-    expect(manifest.migrations).toHaveLength(5);
+    expect(manifest.migrations).toHaveLength(6);
     expect(manifest.changeSet).toBe(
       '2026-09-06-final-public-release-payment-storage-hardening-v32',
     );
