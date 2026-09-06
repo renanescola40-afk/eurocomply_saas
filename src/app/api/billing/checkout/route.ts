@@ -129,10 +129,6 @@ async function ensureOrganizationStripeCustomer({
       );
       return { id: existingCustomerId, created: false };
     } catch (error) {
-      // A production database can contain a historical test-mode customer ID.
-      // A live Stripe client reports resource_missing for that precise case.
-      // Only that condition is recoverable; all other provider failures remain
-      // fail-closed.
       if (!isStripeResourceMissing(error)) {
         throw classifyProviderFailure('stripe', 'customer_update', error);
       }
@@ -294,9 +290,6 @@ export async function POST(request: Request) {
     const plan = normalizedPlan;
     const locale = normalizeCheckoutLocale(parsedBody.data.locale);
 
-    // Existing live subscribers must never create another Checkout subscription.
-    // Preserve one logical self-serve subscription per organization and route all
-    // allowed plan changes through the durable lifecycle mutation path instead.
     if (hasLiveSubscription) {
       const currentPlan = normalizeBillingPlanId(billingBinding?.plan);
       if (!currentPlan || !isSelfServePlan(currentPlan)) {
@@ -331,8 +324,6 @@ export async function POST(request: Request) {
       });
     }
 
-    // Client idempotency alone is insufficient for two tabs using different keys.
-    // Acquire one tenant-scoped DB lease before any customer/session mutation.
     let checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
     if (checkoutAttempt.outcome === 'busy') {
       return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
@@ -367,7 +358,10 @@ export async function POST(request: Request) {
           throw new Error('billing_checkout_attempt_binding_mismatch');
         }
 
-        if (existingSession.status === 'open' && isSafeStripeCheckoutUrl(existingSession.url)) {
+        if (existingSession.status === 'open') {
+          if (!isSafeStripeCheckoutUrl(existingSession.url)) {
+            throw new Error('billing_checkout_existing_session_url_invalid');
+          }
           return noStoreJson({
             url: existingSession.url,
             idempotencyProtected: true,
@@ -376,7 +370,22 @@ export async function POST(request: Request) {
           });
         }
 
-        await releaseCheckoutAttemptSafely(organization.id, checkoutAttempt.attemptToken, 'billing_checkout_closed_session_release');
+        if (existingSession.status === 'complete') {
+          return noStoreJson(
+            {
+              error: 'checkout_pending_activation',
+              idempotencyProtected: true,
+              singleflightProtected: true,
+            },
+            { status: 409 },
+          );
+        }
+
+        if (existingSession.status !== 'expired') {
+          throw new Error('billing_checkout_existing_session_status_invalid');
+        }
+
+        await releaseCheckoutAttemptSafely(organization.id, checkoutAttempt.attemptToken, 'billing_checkout_expired_session_release');
         checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
         if (checkoutAttempt.outcome !== 'claimed') {
           return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
@@ -413,9 +422,6 @@ export async function POST(request: Request) {
         idempotency: idempotency.context,
       });
 
-      // Persist the live customer before redirecting to Stripe. This makes retries
-      // reuse one customer and replaces stale status-only/test-mode identifiers with
-      // a non-entitled pending state until a signed live webhook confirms payment.
       await persistPendingLiveCustomerBinding({ stripe, organizationId: organization.id, customer });
 
       const sessionExpiresAtSeconds = Math.floor(Date.now() / 1000) + INITIAL_CHECKOUT_SESSION_TTL_SECONDS;

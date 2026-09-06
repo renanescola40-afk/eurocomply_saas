@@ -13,10 +13,11 @@ const expectedForwardPackage = [
   '20260906004000_billing_document_storage_quota.sql',
   '20260906004500_billing_entitlement_catalog_truth.sql',
   '20260906005000_billing_initial_checkout_singleflight.sql',
+  '20260906006000_billing_completed_checkout_authority_guard.sql',
 ];
 
 describe('Supabase forward reconciliation control-plane capacity', () => {
-  it('compiles only the exact V32 plus billing P0 forward package', async () => {
+  it('compiles only the exact V32 plus billing checkout-authority forward package', async () => {
     const config = JSON.parse(await readFile('config/supabase-forward-reconciliation.json', 'utf8'));
 
     expect(config.migrations.map((migration: { filename: string }) => migration.filename)).toEqual(expectedForwardPackage);
@@ -30,9 +31,9 @@ describe('Supabase forward reconciliation control-plane capacity', () => {
 
     expect(manifest.targetSha).toBe(subjectSha);
     expect(manifest.migrations.map((migration) => migration.filename)).toEqual(expectedForwardPackage);
-    expect(manifest.migrations).toHaveLength(6);
+    expect(manifest.migrations).toHaveLength(7);
     expect(manifest.changeSet).toBe(
-      '2026-09-06-final-public-release-payment-storage-hardening-v32',
+      '2026-09-06-billing-checkout-singleflight-authority-v34',
     );
     expect(manifest.checks.productionWriteAuthorized).toBe(false);
     expect(manifest.checks.migrationHistoryRepairAuthorized).toBe(false);

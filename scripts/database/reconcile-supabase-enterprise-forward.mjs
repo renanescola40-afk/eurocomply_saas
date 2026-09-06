@@ -17,7 +17,7 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-06-final-public-release-payment-storage-hardening-v32';
+const EXPECTED_CHANGE_SET = '2026-09-06-billing-checkout-singleflight-authority-v34';
 const V32_PUBLIC_RELEASE_MIGRATION =
   '20260906000000_reconcile_final_public_release_payment_storage_hardening.sql';
 const BILLING_AI_SYSTEM_QUOTA_MIGRATION =
@@ -30,6 +30,8 @@ const BILLING_ENTITLEMENT_CATALOG_TRUTH_MIGRATION =
   '20260906004500_billing_entitlement_catalog_truth.sql';
 const BILLING_INITIAL_CHECKOUT_SINGLEFLIGHT_MIGRATION =
   '20260906005000_billing_initial_checkout_singleflight.sql';
+const BILLING_COMPLETED_CHECKOUT_AUTHORITY_GUARD_MIGRATION =
+  '20260906006000_billing_completed_checkout_authority_guard.sql';
 const EXPECTED_SELECTED = [
   V32_PUBLIC_RELEASE_MIGRATION,
   BILLING_AI_SYSTEM_QUOTA_MIGRATION,
@@ -37,6 +39,7 @@ const EXPECTED_SELECTED = [
   BILLING_DOCUMENT_STORAGE_QUOTA_MIGRATION,
   BILLING_ENTITLEMENT_CATALOG_TRUTH_MIGRATION,
   BILLING_INITIAL_CHECKOUT_SINGLEFLIGHT_MIGRATION,
+  BILLING_COMPLETED_CHECKOUT_AUTHORITY_GUARD_MIGRATION,
 ];
 const VERIFIED_PRODUCTION_LEDGER_HEAD = '20260905075429';
 
@@ -122,6 +125,28 @@ function validateV32PublicReleaseMigration(source) {
   ], 'V32 final public-release payment/storage reconciliation');
 }
 
+function validateCompletedCheckoutAuthorityGuard(source) {
+  requireMarkers(source, [
+    "v_existing.status = 'open' or v_existing.lease_expires_at > now()",
+    "to_regprocedure('app_private.has_commercial_authority(uuid)')",
+    "new.status = 'processed'",
+    'new.livemode is true',
+    "new.type in ('customer.subscription.created','customer.subscription.updated')",
+    'app_private.has_commercial_authority(new.organization_id)',
+    'delete from public.billing_checkout_attempts attempt',
+    'where app_private.has_commercial_authority(attempt.organization_id)',
+    'clear_initial_checkout_after_live_subscription_processed on public.stripe_events_processed',
+  ], 'V34 completed Checkout subscription-authority guard');
+
+  forbidMarkers(source, [
+    "new.type = 'checkout.session.completed'",
+    'disable row level security',
+    'grant all on public.',
+    'to anon',
+    'truncate ',
+  ], 'V34 completed Checkout subscription-authority guard');
+}
+
 async function main() {
   const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
   if (config.changeSet !== EXPECTED_CHANGE_SET) {
@@ -157,6 +182,12 @@ async function main() {
     'utf8',
   );
   validateV32PublicReleaseMigration(v32Source);
+
+  const checkoutAuthoritySource = readFileSync(
+    join(ROOT, 'supabase', 'migrations', BILLING_COMPLETED_CHECKOUT_AUTHORITY_GUARD_MIGRATION),
+    'utf8',
+  );
+  validateCompletedCheckoutAuthorityGuard(checkoutAuthoritySource);
 
   const records = manifest.migrations.map((migration, index) => ({
     position: index + 1,
