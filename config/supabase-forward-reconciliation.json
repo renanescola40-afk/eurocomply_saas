@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-06-billing-business-plan-isolation-v36",
+  "changeSet": "2026-09-06-billing-governance-plan-isolation-v37",
   "migrations": [
     {
       "filename": "20260906000000_reconcile_final_public_release_payment_storage_hardening.sql",
@@ -37,6 +37,10 @@
     {
       "filename": "20260906006600_billing_business_feature_plan_isolation.sql",
       "purpose": "enforce Business-or-higher authenticated data-plane authority for AI Literacy and QMS tables while preserving downgraded customer records for later re-upgrade"
+    },
+    {
+      "filename": "20260906006700_billing_governance_workflow_plan_isolation.sql",
+      "purpose": "align AI-system governance workflow data planes with the commercial catalog by requiring Business for vendor diligence and governed risk review and Enterprise for evidence packs"
     }
   ],
   "truthBoundary": {
