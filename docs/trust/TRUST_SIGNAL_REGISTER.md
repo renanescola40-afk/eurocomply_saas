@@ -16,11 +16,12 @@ No item is described as a certification unless the issuing body actually certifi
 - Safe claim: `Green Web Foundation — green hosting verified for risckcomply.com.`
 - Future placement: Procurement = YES; buyer PDF = YES; Trust Center/site = YES.
 
-## Submitted / awaiting external publication
+## Submission received / owner confirmation pending
 
 ### CSA STAR for AI Level 1 — AI-CAIQ v1.1.0 self-assessment
-- Status: **SUBMITTED / AWAITING REGISTRY PUBLICATION**
+- Status: **SUBMISSION RECEIVED / EMAIL CONFIRMATION + ORGANIZATION/SERVICE COMPLETION PENDING**.
 - Assessment: 320/320 questions answered; 320/320 SSRM ownership assigned.
+- CSA confirmation email was received at `comercial@risckcomply.com` and requires the owner to select `Confirm Submission`, then select/create the organization and cloud service before the entry is fully completed.
 - Type: Level 1 self-assessment, not independent certification.
 - Safe public wording only after registry listing: `CSA STAR for AI Level 1 — AI-CAIQ Self-Assessment listed in the CSA STAR Registry.`
 - Forbidden wording: `CSA Certified`.
@@ -107,7 +108,7 @@ No item is described as a certification unless the issuing body actually certifi
 
 ## Current priority order
 
-1. CSA STAR for AI Level 1 — verify public registry listing.
+1. CSA STAR for AI Level 1 — owner completes email confirmation + organization/service selection, then verify public registry listing.
 2. CSA STAR Level 1 / CAIQ-Lite v4.1 — obtain exact official workbook, populate conservatively and submit when ready.
 3. Green Web Foundation — retain as confirmed public trust signal.
 4. Accessibility — close automated findings, then perform manual WCAG review and prepare Accessibility Statement.
