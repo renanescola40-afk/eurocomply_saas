@@ -1,0 +1,5 @@
+Contact: mailto:comercial@risckcomply.com
+Expires: 2027-08-31T23:59:59Z
+Preferred-Languages: en, pt
+Canonical: https://www.risckcomply.com/.well-known/security.txt
+Policy: https://www.risckcomply.com/en/vulnerability-disclosure
