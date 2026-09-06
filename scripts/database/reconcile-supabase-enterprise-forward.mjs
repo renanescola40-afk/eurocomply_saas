@@ -128,10 +128,13 @@ function validateV32PublicReleaseMigration(source) {
 function validateCompletedCheckoutAuthorityGuard(source) {
   requireMarkers(source, [
     "v_existing.status = 'open' or v_existing.lease_expires_at > now()",
+    "to_regprocedure('app_private.has_commercial_authority(uuid)')",
     "new.status = 'processed'",
     'new.livemode is true',
     "new.type in ('customer.subscription.created','customer.subscription.updated')",
+    'app_private.has_commercial_authority(new.organization_id)',
     'delete from public.billing_checkout_attempts attempt',
+    'where app_private.has_commercial_authority(attempt.organization_id)',
     'clear_initial_checkout_after_live_subscription_processed on public.stripe_events_processed',
   ], 'V34 completed Checkout subscription-authority guard');
 
