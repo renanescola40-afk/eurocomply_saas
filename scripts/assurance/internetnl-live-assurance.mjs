@@ -1,11 +1,7 @@
 #!/usr/bin/env node
 
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
-
 const domain = (process.env.INTERNETNL_DOMAIN || 'www.risckcomply.com').trim().toLowerCase();
 const base = new URL(process.env.INTERNETNL_BASE_URL || 'https://internet.nl');
-const outputPath = process.env.INTERNETNL_EVIDENCE_PATH || 'artifacts/internetnl/website-report.json';
 const timeoutMs = Number(process.env.INTERNETNL_TIMEOUT_MS || 240_000);
 const pollMs = Number(process.env.INTERNETNL_POLL_MS || 5_000);
 
@@ -157,13 +153,15 @@ const evidence = {
   ],
 };
 
-mkdirSync(dirname(outputPath), { recursive: true });
-writeFileSync(outputPath, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
+// Emit evidence only to stdout. The GitHub Actions workflow owns the fixed,
+// repository-controlled artifact path and persists this stream with mode 0600.
+// This keeps network-derived content out of direct Node.js filesystem sinks.
+process.stdout.write(`${JSON.stringify(evidence, null, 2)}\n`);
 
-console.log(`Internet.nl website score for ${domain}: ${score}%`);
-console.log(`Persistent report: ${reportUrl}`);
-for (const [name, verdict] of Object.entries(categories)) console.log(`${name}: ${verdict}`);
+console.error(`Internet.nl website score for ${domain}: ${score}%`);
+console.error(`Persistent report: ${reportUrl}`);
+for (const [name, verdict] of Object.entries(categories)) console.error(`${name}: ${verdict}`);
 for (const [probe, findings] of Object.entries(subtestFindings)) {
   const nonPassing = findings.filter((item) => item.status !== 1 && item.status !== 'passed');
-  console.log(`${probe}: ${findings.length} findings, ${nonPassing.length} non-passing/notice findings`);
+  console.error(`${probe}: ${findings.length} findings, ${nonPassing.length} non-passing/notice findings`);
 }
