@@ -91,6 +91,9 @@ describe('final server-only commercial Data API boundary', () => {
       'audit_integrity_checkpoints',
       'email_delivery_logs',
       'rate_limits',
+      'plans',
+      'plan_features',
+      'add_ons',
     ]) {
       expect(finalIsolation).toContain(`'${table}'`);
     }
@@ -101,9 +104,16 @@ describe('final server-only commercial Data API boundary', () => {
     expect(finalIsolation).toContain(
       "execute format('revoke all privileges on table public.%I from anon, authenticated', target_table)",
     );
-    expect(finalIsolation).not.toContain('create table if not exists public.data_retention_policies');
-    expect(finalIsolation).not.toContain('create table if not exists public.email_delivery_logs');
-    expect(finalIsolation).not.toContain('create table if not exists public.rate_limits');
+    for (const table of [
+      'data_retention_policies',
+      'email_delivery_logs',
+      'rate_limits',
+      'plans',
+      'plan_features',
+      'add_ons',
+    ]) {
+      expect(finalIsolation).not.toContain(`create table if not exists public.${table}`);
+    }
   });
 
   it('fails the release if a client table or anonymous definer escapes the global boundary', () => {
