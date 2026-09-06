@@ -144,6 +144,42 @@ begin
 end
 $client_rls_hardening$;
 
+-- Clean historical replay creates a small set of relations that do not exist in
+-- the current Production schema. Do not create them here. When they are present
+-- during a full-history reconstruction, reconcile them to the authority already
+-- documented by their original migrations: tenant/user-scoped governance tables
+-- keep their client policies under FORCE RLS; email delivery logs and rate-limit
+-- state remain backend-only and lose every client table privilege.
+do $historical_replay_rls_hardening$
+declare
+  target_table text;
+begin
+  foreach target_table in array array[
+    'data_retention_policies',
+    'data_subject_requests',
+    'audit_integrity_checkpoints'
+  ]
+  loop
+    if to_regclass(format('public.%I', target_table)) is not null then
+      execute format('alter table public.%I enable row level security', target_table);
+      execute format('alter table public.%I force row level security', target_table);
+    end if;
+  end loop;
+
+  foreach target_table in array array[
+    'email_delivery_logs',
+    'rate_limits'
+  ]
+  loop
+    if to_regclass(format('public.%I', target_table)) is not null then
+      execute format('alter table public.%I enable row level security', target_table);
+      execute format('alter table public.%I force row level security', target_table);
+      execute format('revoke all privileges on table public.%I from anon, authenticated', target_table);
+    end if;
+  end loop;
+end
+$historical_replay_rls_hardening$;
+
 -- Gap Analysis writes are exclusively served by `/api/gap-analysis`, which adds
 -- trusted-origin, authenticated organization resolution, RBAC, Zod validation,
 -- fail-closed rate limiting, paid-plan checks for remediation and durable audit
