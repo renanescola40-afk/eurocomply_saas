@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-06-final-public-release-payment-storage-hardening-v32",
+  "changeSet": "2026-09-06-billing-checkout-singleflight-authority-v34",
   "migrations": [
     {
       "filename": "20260906000000_reconcile_final_public_release_payment_storage_hardening.sql",
@@ -21,6 +21,14 @@
     {
       "filename": "20260906004500_billing_entitlement_catalog_truth.sql",
       "purpose": "reconcile persisted subscription entitlement JSON and defaults to the implemented commercial authority, keeping API and webhook capacity closed below Enterprise and organization licensing aligned with the current organization-scoped billing model"
+    },
+    {
+      "filename": "20260906005000_billing_initial_checkout_singleflight.sql",
+      "purpose": "materialize the backend-only tenant checkout-attempt ledger and atomic claim/bind/release RPCs so multiple tabs or distinct client idempotency keys cannot create concurrent initial Stripe subscription Checkout sessions"
+    },
+    {
+      "filename": "20260906006000_billing_completed_checkout_authority_guard.sql",
+      "purpose": "keep bound Checkout attempts durable through checkout.session completion and release them only after Stripe proves expiry/missing or processed LIVE customer.subscription.created/updated commercial authority reaches the ledger"
     }
   ],
   "truthBoundary": {
