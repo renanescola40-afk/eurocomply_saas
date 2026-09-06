@@ -3,7 +3,7 @@ import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
-import { assertCsvExportsEnabled } from '@/server/billing/entitlements';
+import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { getDashboardSummary } from '@/server/queries/dashboard';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
@@ -28,13 +28,13 @@ export async function GET(request: Request) {
   });
   if (!permission.ok) return permissionDeniedResponse(permission);
 
-  const entitlementCheck = await assertCsvExportsEnabled(organization.id);
+  const entitlementCheck = await assertPlanAtLeast(organization.id, 'business');
   if (!entitlementCheck.ok) {
     return upgradeRequiredResponse({
       error: entitlementCheck.error,
       message: entitlementCheck.message,
       plan: entitlementCheck.entitlements.plan,
-      requiredPlan: 'professional',
+      requiredPlan: 'business',
       entitlements: entitlementCheck.entitlements,
     }, entitlementCheck.status);
   }
