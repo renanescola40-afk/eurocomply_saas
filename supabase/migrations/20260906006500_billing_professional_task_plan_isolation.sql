@@ -3,13 +3,10 @@ begin;
 -- Commercial plan isolation for Professional-only organization resources.
 --
 -- Tasks, Risks and Vendors start at Professional in the application catalog.
--- Server-side mutation boundaries already enforce tenant RBAC/quota controls,
--- but authenticated SELECT policies remained membership-scoped. After a
--- downgrade to Essential/Starter, a browser Supabase client could therefore
--- continue reading previously-created Professional data. Preserve those rows
--- without exposing them below the licensed tier. Personal compliance_tasks
--- rows remain governed by their separate user-bound compatibility policies.
-
+-- Server-side boundaries enforce tenant RBAC/quota controls, but authenticated
+-- database policies also need to fail closed after downgrade. Preserve existing
+-- rows without exposing or mutating them below the licensed tier. Personal
+-- compliance_tasks rows remain governed by their separate user-bound policies.
 do $prerequisites$
 begin
   if to_regclass('public.compliance_tasks') is null
@@ -90,16 +87,22 @@ create policy "restrict_compliance_tasks_organization_professional_plan"
     or app_private.has_minimum_commercial_plan(organization_id, 'professional')
   );
 
--- Risks and Vendors have no personal scope. Membership alone must never expose
--- previously-created Professional rows after downgrade.
+-- Risks have direct authenticated CRUD grants in the reviewed Production ACL.
+-- A SELECT-only plan policy would therefore still allow a downgraded writer to
+-- INSERT/UPDATE/DELETE via PostgREST. Restrict ALL commands and enforce the same
+-- Professional-or-higher predicate in USING and WITH CHECK.
 drop policy if exists "restrict_risks_professional_plan" on public.risks;
 create policy "restrict_risks_professional_plan"
   on public.risks
   as restrictive
-  for select
+  for all
   to authenticated
-  using (app_private.has_minimum_commercial_plan(organization_id, 'professional'));
+  using (app_private.has_minimum_commercial_plan(organization_id, 'professional'))
+  with check (app_private.has_minimum_commercial_plan(organization_id, 'professional'));
 
+-- Vendors currently expose authenticated SELECT only, but the read gate remains
+-- explicit and fail-closed below Professional. Backend/service_role writes are
+-- unaffected by this authenticated policy.
 drop policy if exists "restrict_vendors_professional_plan" on public.vendors;
 create policy "restrict_vendors_professional_plan"
   on public.vendors
@@ -149,7 +152,7 @@ begin
         and roles = array['authenticated']::name[]
         and qual ilike '%has_minimum_commercial_plan%professional%'
     ) then
-      raise exception 'Professional restrictive SELECT policy missing for %.%', target_table, required_policy;
+      raise exception 'Professional restrictive plan policy missing for %.%', target_table, required_policy;
     end if;
 
     if not exists (
@@ -164,6 +167,21 @@ begin
       raise exception 'RLS/FORCE RLS missing for Professional resource %', target_table;
     end if;
   end loop;
+
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'risks'
+      and policyname = 'restrict_risks_professional_plan'
+      and cmd = 'ALL'
+      and permissive = 'RESTRICTIVE'
+      and roles = array['authenticated']::name[]
+      and qual ilike '%has_minimum_commercial_plan%professional%'
+      and with_check ilike '%has_minimum_commercial_plan%professional%'
+  ) then
+    raise exception 'Risks Professional policy must restrict authenticated reads and mutations';
+  end if;
 end
 $verify$;
 
