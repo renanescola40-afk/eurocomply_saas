@@ -148,8 +148,10 @@ $client_rls_hardening$;
 -- the current Production schema. Do not create them here. When they are present
 -- during a full-history reconstruction, reconcile them to the authority already
 -- documented by their original migrations: tenant/user-scoped governance tables
--- keep their client policies under FORCE RLS; email delivery logs and rate-limit
--- state remain backend-only and lose every client table privilege.
+-- keep their client policies under FORCE RLS. Email delivery logs, rate-limit
+-- state and the persistent billing catalog are backend-only and lose every client
+-- table privilege because current runtime has no direct Data API consumer for
+-- `plans`, `plan_features` or `add_ons`.
 do $historical_replay_rls_hardening$
 declare
   target_table text;
@@ -168,7 +170,10 @@ begin
 
   foreach target_table in array array[
     'email_delivery_logs',
-    'rate_limits'
+    'rate_limits',
+    'plans',
+    'plan_features',
+    'add_ons'
   ]
   loop
     if to_regclass(format('public.%I', target_table)) is not null then
