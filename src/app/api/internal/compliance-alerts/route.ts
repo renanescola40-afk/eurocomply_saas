@@ -4,6 +4,7 @@ import { reportError } from '@/lib/observability/report-error';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { buildNotificationIdempotencyKey } from '@/server/jobs/notification-idempotency';
+import { getOrganizationBillingAuthority, isPlanAtLeast, type SubscriptionPlan } from '@/server/queries/subscription';
 import { enforceInternalAuthenticationRateLimit } from '@/server/security/internal-auth-rate-limit';
 import { noStoreJson } from '@/server/security/no-store';
 import { isExpectedMissingSupabaseMaintenanceSchema } from '@/server/supabase/schema-compatibility';
@@ -31,6 +32,11 @@ type NotificationDedupe = {
   recipientEmail: string;
 };
 
+type CommercialEligibilityResolver = (
+  organizationId: string,
+  minimumPlan: SubscriptionPlan,
+) => Promise<boolean>;
+
 function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 }
@@ -44,6 +50,21 @@ function addDays(days: number) {
 function isReservedSyntheticRecipient(email: string) {
   const domain = email.trim().toLowerCase().split('@').at(-1);
   return Boolean(domain && RESERVED_SYNTHETIC_EMAIL_DOMAINS.has(domain));
+}
+
+function createCommercialEligibilityResolver(): CommercialEligibilityResolver {
+  const authorityByOrganization = new Map<string, ReturnType<typeof getOrganizationBillingAuthority>>();
+
+  return async (organizationId, minimumPlan) => {
+    let authorityPromise = authorityByOrganization.get(organizationId);
+    if (!authorityPromise) {
+      authorityPromise = getOrganizationBillingAuthority(organizationId);
+      authorityByOrganization.set(organizationId, authorityPromise);
+    }
+
+    const authority = await authorityPromise;
+    return authority.licensed && isPlanAtLeast(authority.plan, minimumPlan);
+  };
 }
 
 async function getOrganizationOwnerContact(userId: string) {
@@ -112,7 +133,7 @@ async function recordNotificationSent(input: NotificationDedupe & {
   }
 }
 
-async function sendDocumentExpiryAlerts() {
+async function sendDocumentExpiryAlerts(isCommerciallyEligible: CommercialEligibilityResolver) {
   const supabase = createAdminClient();
   const appUrl = getAppUrl();
   const today = new Date().toISOString().slice(0, 10);
@@ -140,6 +161,11 @@ async function sendDocumentExpiryAlerts() {
     const organization = Array.isArray(document.organizations) ? document.organizations[0] : document.organizations;
 
     if (!organization?.created_by || !document.expires_at) continue;
+
+    if (!(await isCommerciallyEligible(document.organization_id, 'starter'))) {
+      skipped += 1;
+      continue;
+    }
 
     const recipient = await getOrganizationOwnerContact(organization.created_by);
     if (!recipient.email || isReservedSyntheticRecipient(recipient.email)) {
@@ -207,7 +233,7 @@ async function sendDocumentExpiryAlerts() {
   return { sent, skipped, failed };
 }
 
-async function sendVendorReviewAlerts() {
+async function sendVendorReviewAlerts(isCommerciallyEligible: CommercialEligibilityResolver) {
   const supabase = createAdminClient();
   const appUrl = getAppUrl();
   const today = new Date().toISOString().slice(0, 10);
@@ -230,6 +256,11 @@ async function sendVendorReviewAlerts() {
   for (const vendor of vendors ?? []) {
     const organization = Array.isArray(vendor.organizations) ? vendor.organizations[0] : vendor.organizations;
     if (!organization?.created_by) continue;
+
+    if (!(await isCommerciallyEligible(vendor.organization_id, 'professional'))) {
+      skipped += 1;
+      continue;
+    }
 
     const recipient = await getOrganizationOwnerContact(organization.created_by);
     if (!recipient.email || isReservedSyntheticRecipient(recipient.email)) {
@@ -324,9 +355,10 @@ export async function POST(request: Request) {
       });
     }
 
+    const isCommerciallyEligible = createCommercialEligibilityResolver();
     const [documentAlerts, vendorAlerts] = await Promise.all([
-      sendDocumentExpiryAlerts(),
-      sendVendorReviewAlerts(),
+      sendDocumentExpiryAlerts(isCommerciallyEligible),
+      sendVendorReviewAlerts(isCommerciallyEligible),
     ]);
 
     if (documentAlerts.failed > 0 || vendorAlerts.failed > 0) {

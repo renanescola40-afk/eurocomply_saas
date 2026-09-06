@@ -31,6 +31,8 @@ const vendorRiskLevels = ['low', 'medium', 'high', 'critical'] as const;
 type AiSystemEditFormProps = {
   system: AiSystemRecord;
   locale?: string;
+  businessWorkflowsEnabled: boolean;
+  enterpriseEvidenceEnabled: boolean;
 };
 
 type FormState = {
@@ -73,7 +75,12 @@ function initialForm(system: AiSystemRecord): FormState {
   };
 }
 
-export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
+export function AiSystemEditForm({
+  system,
+  locale,
+  businessWorkflowsEnabled,
+  enterpriseEvidenceEnabled,
+}: AiSystemEditFormProps) {
   const router = useRouter();
   const t = getAiSystemEditCopy(locale);
   const [form, setForm] = useState<FormState>(() => initialForm(system));
@@ -86,6 +93,7 @@ export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
   const [vendorNotes, setVendorNotes] = useState('');
   const [riskDueAt, setRiskDueAt] = useState('');
   const [riskNotes, setRiskNotes] = useState('');
+  const hasGovernanceWorkflowAccess = businessWorkflowsEnabled || enterpriseEvidenceEnabled;
 
   const executiveSignals = useMemo(() => {
     return [
@@ -131,6 +139,15 @@ export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
 
   async function submitWorkflow(event: FormEvent<HTMLFormElement>, workflow: 'evidence_pack' | 'vendor_due_diligence' | 'risk_review', body: Record<string, unknown>) {
     event.preventDefault();
+
+    const workflowAllowed = workflow === 'evidence_pack'
+      ? enterpriseEvidenceEnabled
+      : businessWorkflowsEnabled;
+    if (!workflowAllowed) {
+      setWorkflowNotice({ type: 'error', message: t.error });
+      return;
+    }
+
     setIsWorkflowSaving(true);
     setWorkflowNotice(null);
 
@@ -213,34 +230,58 @@ export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
         </div>
 
         <div className="grid gap-4 xl:grid-cols-3">
-          <form onSubmit={(event) => submitWorkflow(event, 'evidence_pack', { title: packTitle, countryScope: [form.countryMarket || system.country_market || 'EU'] })} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-            <FileText className="h-5 w-5 text-emerald-100" />
-            <h3 className="mt-3 font-semibold">{t.evidenceTitle}</h3>
-            <p className="mt-2 text-sm leading-6 text-white/55">{t.evidenceBody}</p>
-            <input required minLength={3} value={packTitle} onChange={(event) => setPackTitle(event.target.value)} placeholder={t.packName} aria-label={t.packName} className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
-            <Button type="submit" disabled={isWorkflowSaving} className="mt-4 rounded-full">{isWorkflowSaving ? t.loading : t.buildPack}</Button>
-          </form>
+          {enterpriseEvidenceEnabled ? (
+            <form onSubmit={(event) => submitWorkflow(event, 'evidence_pack', { title: packTitle, countryScope: [form.countryMarket || system.country_market || 'EU'] })} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <FileText className="h-5 w-5 text-emerald-100" />
+              <h3 className="mt-3 font-semibold">{t.evidenceTitle}</h3>
+              <p className="mt-2 text-sm leading-6 text-white/55">{t.evidenceBody}</p>
+              <input required minLength={3} value={packTitle} onChange={(event) => setPackTitle(event.target.value)} placeholder={t.packName} aria-label={t.packName} className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+              <Button type="submit" disabled={isWorkflowSaving} className="mt-4 rounded-full">{isWorkflowSaving ? t.loading : t.buildPack}</Button>
+            </form>
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4" data-plan-lock="enterprise-evidence-pack">
+              <FileText className="h-5 w-5 text-white/40" />
+              <h3 className="mt-3 font-semibold">{t.evidenceTitle}</h3>
+              <p className="mt-2 text-sm leading-6 text-white/45">Enterprise plan required for evidence-pack creation.</p>
+            </div>
+          )}
 
-          <form onSubmit={(event) => submitWorkflow(event, 'vendor_due_diligence', { vendorName: form.vendorName, aiSystemId: system.id, riskLevel: vendorRiskLevel, notes: vendorNotes })} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-            <ClipboardCheck className="h-5 w-5 text-emerald-100" />
-            <h3 className="mt-3 font-semibold">{t.vendorTitle}</h3>
-            <p className="mt-2 text-sm leading-6 text-white/55">{form.vendorName ? t.vendorBody : t.emptyVendor}</p>
-            <input required minLength={2} value={form.vendorName} onChange={(event) => update('vendorName', event.target.value)} placeholder={t.vendorName} aria-label={t.vendorName} className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
-            <select value={vendorRiskLevel} onChange={(event) => setVendorRiskLevel(event.target.value as typeof vendorRiskLevel)} className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" aria-label={t.vendorRiskLevel}>
-              {vendorRiskLevels.map((option) => <option key={option} value={option}>{t.riskLevelLabels[option]}</option>)}
-            </select>
-            <textarea value={vendorNotes} onChange={(event) => setVendorNotes(event.target.value)} placeholder={t.vendorNotes} aria-label={t.vendorNotes} className="mt-3 min-h-20 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
-            <Button type="submit" disabled={isWorkflowSaving} className="mt-4 rounded-full">{isWorkflowSaving ? t.loading : t.startVendor}</Button>
-          </form>
+          {businessWorkflowsEnabled ? (
+            <form onSubmit={(event) => submitWorkflow(event, 'vendor_due_diligence', { vendorName: form.vendorName, aiSystemId: system.id, riskLevel: vendorRiskLevel, notes: vendorNotes })} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <ClipboardCheck className="h-5 w-5 text-emerald-100" />
+              <h3 className="mt-3 font-semibold">{t.vendorTitle}</h3>
+              <p className="mt-2 text-sm leading-6 text-white/55">{form.vendorName ? t.vendorBody : t.emptyVendor}</p>
+              <input required minLength={2} value={form.vendorName} onChange={(event) => update('vendorName', event.target.value)} placeholder={t.vendorName} aria-label={t.vendorName} className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+              <select value={vendorRiskLevel} onChange={(event) => setVendorRiskLevel(event.target.value as typeof vendorRiskLevel)} className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" aria-label={t.vendorRiskLevel}>
+                {vendorRiskLevels.map((option) => <option key={option} value={option}>{t.riskLevelLabels[option]}</option>)}
+              </select>
+              <textarea value={vendorNotes} onChange={(event) => setVendorNotes(event.target.value)} placeholder={t.vendorNotes} aria-label={t.vendorNotes} className="mt-3 min-h-20 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+              <Button type="submit" disabled={isWorkflowSaving} className="mt-4 rounded-full">{isWorkflowSaving ? t.loading : t.startVendor}</Button>
+            </form>
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4" data-plan-lock="business-vendor-diligence">
+              <ClipboardCheck className="h-5 w-5 text-white/40" />
+              <h3 className="mt-3 font-semibold">{t.vendorTitle}</h3>
+              <p className="mt-2 text-sm leading-6 text-white/45">Business plan or higher required for vendor due diligence.</p>
+            </div>
+          )}
 
-          <form onSubmit={(event) => submitWorkflow(event, 'risk_review', { aiSystemId: system.id, riskLevel: system.risk_level, dueAt: riskDueAt || null, notes: riskNotes })} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-            <ShieldCheck className="h-5 w-5 text-emerald-100" />
-            <h3 className="mt-3 font-semibold">{t.riskTitle}</h3>
-            <p className="mt-2 text-sm leading-6 text-white/55">{t.riskBody}</p>
-            <input type="date" value={riskDueAt} onChange={(event) => setRiskDueAt(event.target.value)} aria-label={t.dueDate} className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
-            <textarea value={riskNotes} onChange={(event) => setRiskNotes(event.target.value)} placeholder={t.riskNotes} aria-label={t.riskNotes} className="mt-3 min-h-24 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
-            <Button type="submit" disabled={isWorkflowSaving} className="mt-4 rounded-full">{isWorkflowSaving ? t.loading : t.startRisk}</Button>
-          </form>
+          {businessWorkflowsEnabled ? (
+            <form onSubmit={(event) => submitWorkflow(event, 'risk_review', { aiSystemId: system.id, riskLevel: system.risk_level, dueAt: riskDueAt || null, notes: riskNotes })} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <ShieldCheck className="h-5 w-5 text-emerald-100" />
+              <h3 className="mt-3 font-semibold">{t.riskTitle}</h3>
+              <p className="mt-2 text-sm leading-6 text-white/55">{t.riskBody}</p>
+              <input type="date" value={riskDueAt} onChange={(event) => setRiskDueAt(event.target.value)} aria-label={t.dueDate} className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+              <textarea value={riskNotes} onChange={(event) => setRiskNotes(event.target.value)} placeholder={t.riskNotes} aria-label={t.riskNotes} className="mt-3 min-h-24 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+              <Button type="submit" disabled={isWorkflowSaving} className="mt-4 rounded-full">{isWorkflowSaving ? t.loading : t.startRisk}</Button>
+            </form>
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4" data-plan-lock="business-risk-review">
+              <ShieldCheck className="h-5 w-5 text-white/40" />
+              <h3 className="mt-3 font-semibold">{t.riskTitle}</h3>
+              <p className="mt-2 text-sm leading-6 text-white/45">Business plan or higher required for governed risk review.</p>
+            </div>
+          )}
         </div>
 
         {workflowNotice ? (
@@ -250,18 +291,20 @@ export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
           </div>
         ) : null}
 
-        <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
-          <h3 className="font-semibold">{t.reportTitle}</h3>
-          <p className="mt-1 text-sm leading-6 text-white/55">{t.reportBody}</p>
-          <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {executiveSignals.map(([label, value]) => (
-              <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                <dt className="text-xs uppercase tracking-[0.18em] text-white/35">{label}</dt>
-                <dd className="mt-1 text-sm text-white/75">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
+        {hasGovernanceWorkflowAccess ? (
+          <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+            <h3 className="font-semibold">{t.reportTitle}</h3>
+            <p className="mt-1 text-sm leading-6 text-white/55">{t.reportBody}</p>
+            <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {executiveSignals.map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                  <dt className="text-xs uppercase tracking-[0.18em] text-white/35">{label}</dt>
+                  <dd className="mt-1 text-sm text-white/75">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ) : null}
       </section>
     </div>
   );

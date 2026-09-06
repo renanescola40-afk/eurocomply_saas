@@ -191,6 +191,12 @@ function getWorkflowPermission(workflow: string) {
   return 'manage_ai_governance';
 }
 
+function getWorkflowMinimumPlan(workflow: string) {
+  if (workflow === 'evidence_pack') return 'enterprise' as const;
+  if (workflow === 'vendor_due_diligence' || workflow === 'risk_review') return 'business' as const;
+  return undefined;
+}
+
 export async function GET() {
   try {
     const user = await requireApiUser();
@@ -238,6 +244,7 @@ export async function POST(request: Request) {
       userId: user.id,
       organizationId: organization.id,
       permission: getWorkflowPermission(workflow),
+      minimumPlan: getWorkflowMinimumPlan(workflow),
     });
 
     if (!permission.ok) {

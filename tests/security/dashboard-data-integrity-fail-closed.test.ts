@@ -73,7 +73,9 @@ describe('dashboard data integrity fails closed', () => {
     expect(organizationDashboardSource).not.toContain('getPlanEntitlements');
     expect(aggregateLoader).not.toContain('fallbackEntitlements');
     expect(aggregateLoader).not.toContain("withDashboardTimeout('summary', getDashboardSummary(organization.id),");
-    expect(aggregateLoader).toContain("withDashboardTimeout('entitlements', getOrganizationEntitlements(organization.id), 2_500)");
+    expect(aggregateLoader).toMatch(
+      /withDashboardTimeout\(\s*'entitlements',\s*getOrganizationEntitlements\(organization\.id\),\s*2_500,?\s*\)/,
+    );
   });
 
   it('keeps legitimate successful zero-row results while surfacing query failures', () => {
