@@ -17,7 +17,7 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-06-billing-professional-plan-isolation-v35';
+const EXPECTED_CHANGE_SET = '2026-09-06-billing-business-plan-isolation-v36';
 const V32_PUBLIC_RELEASE_MIGRATION =
   '20260906000000_reconcile_final_public_release_payment_storage_hardening.sql';
 const BILLING_AI_SYSTEM_QUOTA_MIGRATION =
@@ -34,6 +34,8 @@ const BILLING_COMPLETED_CHECKOUT_AUTHORITY_GUARD_MIGRATION =
   '20260906006000_billing_completed_checkout_authority_guard.sql';
 const BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION =
   '20260906006500_billing_professional_task_plan_isolation.sql';
+const BILLING_BUSINESS_PLAN_ISOLATION_MIGRATION =
+  '20260906006600_billing_business_feature_plan_isolation.sql';
 const EXPECTED_SELECTED = [
   V32_PUBLIC_RELEASE_MIGRATION,
   BILLING_AI_SYSTEM_QUOTA_MIGRATION,
@@ -43,6 +45,7 @@ const EXPECTED_SELECTED = [
   BILLING_INITIAL_CHECKOUT_SINGLEFLIGHT_MIGRATION,
   BILLING_COMPLETED_CHECKOUT_AUTHORITY_GUARD_MIGRATION,
   BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION,
+  BILLING_BUSINESS_PLAN_ISOLATION_MIGRATION,
 ];
 const VERIFIED_PRODUCTION_LEDGER_HEAD = '20260905075429';
 
@@ -180,6 +183,35 @@ function validateProfessionalPlanIsolation(source) {
   ], 'V35 Professional plan-isolation guard');
 }
 
+function validateBusinessPlanIsolation(source) {
+  requireMarkers(source, [
+    "to_regprocedure('app_private.has_minimum_commercial_plan(uuid,text)')",
+    "'ai_literacy_programs'",
+    "'ai_literacy_courses'",
+    "'ai_literacy_assignments'",
+    "'ai_literacy_evidence'",
+    "'ai_qms_systems'",
+    "'ai_qms_controls'",
+    "'ai_qms_nonconformities'",
+    "'ai_qms_audits'",
+    "'ai_qms_management_reviews'",
+    "'ai_qms_decisions'",
+    "as restrictive for all to authenticated",
+    "app_private.has_minimum_commercial_plan(organization_id, ''business'')",
+    'alter table public.%I force row level security',
+    "notify pgrst, 'reload schema'",
+  ], 'V36 Business plan-isolation guard');
+
+  forbidMarkers(source, [
+    'disable row level security',
+    'grant all on public.',
+    'grant all on storage.',
+    'to anon',
+    'drop table ',
+    'truncate ',
+  ], 'V36 Business plan-isolation guard');
+}
+
 async function main() {
   const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
   if (config.changeSet !== EXPECTED_CHANGE_SET) {
@@ -227,6 +259,12 @@ async function main() {
     'utf8',
   );
   validateProfessionalPlanIsolation(professionalIsolationSource);
+
+  const businessIsolationSource = readFileSync(
+    join(ROOT, 'supabase', 'migrations', BILLING_BUSINESS_PLAN_ISOLATION_MIGRATION),
+    'utf8',
+  );
+  validateBusinessPlanIsolation(businessIsolationSource);
 
   const records = manifest.migrations.map((migration, index) => ({
     position: index + 1,
