@@ -57,10 +57,14 @@ describe('atomic AI-system creation', () => {
     );
   });
 
-  it('fails closed when the RPC returns an invalid or rejected result', () => {
+  it('fails closed for invalid results and explicit commercial denials', () => {
     const querySource = readRepoFile(queryPath);
 
-    expect(querySource).toContain("outcome: 'created' | 'invalid_input'");
+    expect(querySource).toContain(
+      "type AtomicCreateOutcome = 'created' | 'invalid_input' | 'subscription_required' | 'quota_exceeded'",
+    );
+    expect(querySource).toContain("transition.outcome === 'subscription_required'");
+    expect(querySource).toContain("transition.outcome === 'quota_exceeded'");
     expect(querySource).toContain("throw new Error('AI system creation RPC returned an invalid result')");
     expect(querySource).toContain("throw new Error('AI system creation RPC rejected validated input')");
   });
