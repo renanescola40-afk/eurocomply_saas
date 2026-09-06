@@ -5,10 +5,16 @@ const hotfix = readFileSync(
   'supabase/migrations/20260906006000_billing_completed_checkout_authority_guard.sql',
   'utf8',
 );
+const originalSingleflight = readFileSync(
+  'supabase/migrations/20260906005000_billing_initial_checkout_singleflight.sql',
+  'utf8',
+);
 const route = readFileSync('src/app/api/billing/checkout/route.ts', 'utf8');
+const reconciliation = readFileSync('config/supabase-forward-reconciliation.json', 'utf8');
 
 describe('completed Checkout activation authority guard', () => {
   it('keeps a bound Checkout attempt durable after its original Stripe expiry timestamp', () => {
+    expect(originalSingleflight).toContain('billing_checkout_attempts');
     expect(hotfix).toContain("v_existing.status = 'open' or v_existing.lease_expires_at > now()");
     expect(hotfix).toContain('Never age a bound session out merely because its original expires_at passed');
   });
@@ -39,5 +45,10 @@ describe('completed Checkout activation authority guard', () => {
       'revoke all on function public.clear_initial_checkout_after_live_subscription_processed() from public, anon, authenticated',
     );
     expect(hotfix).toContain('clear_initial_checkout_after_live_subscription_processed on public.stripe_events_processed');
+  });
+
+  it('keeps both checkout migrations inside the only authorized forward-reconciliation set', () => {
+    expect(reconciliation).toContain('20260906005000_billing_initial_checkout_singleflight.sql');
+    expect(reconciliation).toContain('20260906006000_billing_completed_checkout_authority_guard.sql');
   });
 });
