@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { StepUpCsvExportButton } from '@/components/reports/step-up-csv-export-button';
 import { buildBoardCommentary, buildNextBestActions, buildRecommendations, buildScorecards, getComplianceMaturity } from '@/lib/reports/recommendations';
+import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getDashboardSummary } from '@/server/queries/dashboard';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
@@ -35,6 +36,11 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
 
   if (!organization) {
     redirect(`/${params.locale}/onboarding`);
+  }
+
+  const entitlement = await assertPlanAtLeast(organization.id, 'business');
+  if (!entitlement.ok) {
+    redirect(`/${params.locale}/dashboard/organizations/billing?upgrade=business&from=executive-reports`);
   }
 
   const summary = await getDashboardSummary(organization.id);
