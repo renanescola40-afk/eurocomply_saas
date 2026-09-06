@@ -226,6 +226,25 @@ function assertPlanTransition(action: BillingLifecycleAction, currentPlan: Canon
   }
 }
 
+function assertProviderLifecycleState(action: BillingLifecycleAction, subscription: Stripe.Subscription) {
+  if (action === 'cancel') return;
+
+  if (action === 'reactivate') {
+    if (subscription.status !== 'active' || !subscription.cancel_at_period_end) {
+      throw new BillingLifecycleRequestError('billing_subscription_not_reactivatable', 409);
+    }
+    return;
+  }
+
+  if (subscription.status !== 'active') {
+    throw new BillingLifecycleRequestError('billing_subscription_not_active', 409);
+  }
+
+  if (subscription.cancel_at_period_end) {
+    throw new BillingLifecycleRequestError('billing_subscription_cancel_pending', 409);
+  }
+}
+
 function stripeScheduleId(subscription: Stripe.Subscription) {
   if (!subscription.schedule) return null;
   return typeof subscription.schedule === 'string' ? subscription.schedule : subscription.schedule.id;
@@ -433,6 +452,7 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
   }
 
   assertSubscriptionAuthority(subscription, authority, input.organizationId);
+  assertProviderLifecycleState(input.action, subscription);
 
   const baseItem = getBaseSubscriptionItem(subscription);
   const currentPlan = normalizeBillingPlanId(authority.plan ?? subscription.metadata.plan) ?? 'starter';
@@ -527,7 +547,6 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
         updated = await stripe.subscriptions.update(
           subscription.id,
           {
-            cancel_at_period_end: false,
             proration_behavior: 'create_prorations',
             billing_cycle_anchor: 'unchanged',
             items: [
