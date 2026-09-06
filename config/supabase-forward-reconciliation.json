@@ -1,10 +1,10 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-04-final-public-release-payment-storage-hardening-v31",
+  "changeSet": "2026-09-06-final-public-release-payment-storage-hardening-v32",
   "migrations": [
     {
-      "filename": "20260904113000_final_public_release_payment_storage_hardening.sql",
-      "purpose": "follow the live Production ledger head 20260904065952 with one forward-only hardening migration that adds restrictive commercial authority to post-V23 organization-scoped governance/history tables, closes the legacy compliance-documents Storage payment/RBAC gap, and bounds Evidence Vault file size and MIME types without migration-history repair"
+      "filename": "20260906000000_reconcile_final_public_release_payment_storage_hardening.sql",
+      "purpose": "follow the read-only verified Production ledger head 20260905075429 with one forward-only V32 reconciliation that materializes the missing payment-first RLS, compliance-documents payment/RBAC Storage boundary, and Evidence Vault size/MIME controls without selecting the older never-applied V31 migration or repairing migration history"
     }
   ],
   "truthBoundary": {
