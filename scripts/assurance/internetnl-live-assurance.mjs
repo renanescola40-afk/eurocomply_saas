@@ -18,7 +18,7 @@ const userAgent = 'risck-comply-internetnl-assurance/1.0';
 const deadline = Date.now() + timeoutMs;
 
 async function request(pathname, init = {}) {
-  const response = await fetch(new URL(pathname, base), {
+  return fetch(new URL(pathname, base), {
     ...init,
     redirect: init.redirect || 'manual',
     signal: AbortSignal.timeout(20_000),
@@ -28,11 +28,33 @@ async function request(pathname, init = {}) {
       ...(init.headers || {}),
     },
   });
-  return response;
 }
 
 async function sleep(ms) {
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function collectFindings(value, path = '$', findings = []) {
+  if (!value || typeof value !== 'object') return findings;
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => collectFindings(item, `${path}[${index}]`, findings));
+    return findings;
+  }
+
+  if (Object.hasOwn(value, 'status') || Object.hasOwn(value, 'verdict')) {
+    findings.push({
+      path,
+      status: value.status ?? null,
+      verdict: typeof value.verdict === 'string' ? value.verdict : null,
+      score: typeof value.score === 'number' ? value.score : null,
+    });
+  }
+
+  for (const [key, child] of Object.entries(value)) {
+    if (key === 'tech_data') continue;
+    collectFindings(child, `${path}.${key}`, findings);
+  }
+  return findings;
 }
 
 // Internet.nl's public single-domain UI starts/reuses the probes when this
@@ -57,6 +79,14 @@ while (Date.now() < deadline) {
 
 if (statuses.length === 0 || !statuses.every((item) => item.done)) {
   throw new Error('Internet.nl probes did not finish before the timeout.');
+}
+
+const subtestFindings = {};
+for (const probe of ['ipv6', 'dnssec', 'tls', 'appsecpriv', 'rpki']) {
+  const detailResponse = await request(`/site/${probe}/${domain}/`, { redirect: 'follow' });
+  if (!detailResponse.ok) throw new Error(`Internet.nl ${probe} details failed with HTTP ${detailResponse.status}.`);
+  const detail = await detailResponse.json();
+  subtestFindings[probe] = collectFindings(detail);
 }
 
 const currentResult = await request(`/site/${domain}/results`, { redirect: 'manual' });
@@ -100,9 +130,16 @@ const evidence = {
   reportUrl: reportUrl.toString(),
   probeStatuses: statuses,
   categoryVerdicts: categories,
+  subtestFindings,
   claims: {
     internetNl100Website: score === 100 ? 'VERIFIED_FOR_THIS_REPORT' : 'NOT_VERIFIED',
     hallOfFame: 'NOT_VERIFIED',
+  },
+  redaction: {
+    responseBodiesStored: false,
+    technicalDataStored: false,
+    credentialsStored: false,
+    customerDataStored: false,
   },
   limitations: [
     'This evidence reflects one Internet.nl report and can become stale when DNS, routing, TLS or edge configuration changes.',
@@ -117,3 +154,7 @@ writeFileSync(outputPath, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o60
 console.log(`Internet.nl website score for ${domain}: ${score}%`);
 console.log(`Persistent report: ${reportUrl}`);
 for (const [name, verdict] of Object.entries(categories)) console.log(`${name}: ${verdict}`);
+for (const [probe, findings] of Object.entries(subtestFindings)) {
+  const nonPassing = findings.filter((item) => item.status !== 1 && item.status !== 'passed');
+  console.log(`${probe}: ${findings.length} findings, ${nonPassing.length} non-passing/notice findings`);
+}
