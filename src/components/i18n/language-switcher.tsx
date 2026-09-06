@@ -30,15 +30,20 @@ function withCurrentLocationState(path: string) {
   return `${path}${window.location.search}${window.location.hash}`;
 }
 
+function localeCookie(locale: Locale) {
+  const secure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? ';Secure' : '';
+  return `NEXT_LOCALE=${locale};path=/;max-age=31536000;samesite=lax${secure}`;
+}
+
 function persistLocale(locale: Locale) {
   try {
     localStorage.setItem(localeStorageKey, locale);
-    document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000;samesite=lax`;
+    document.cookie = localeCookie(locale);
   } catch {}
 }
 
 function persistLocaleScript(locale: Locale) {
-  return `try{localStorage.setItem('${localeStorageKey}','${locale}');document.cookie='NEXT_LOCALE=${locale};path=/;max-age=31536000;samesite=lax'}catch(e){}`;
+  return `try{localStorage.setItem('${localeStorageKey}','${locale}');document.cookie='NEXT_LOCALE=${locale};path=/;max-age=31536000;samesite=lax'+(location.protocol==='https:'?';Secure':'')}catch(e){}`;
 }
 
 type LanguageSwitcherProps = {
