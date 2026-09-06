@@ -12,7 +12,7 @@
     },
     {
       "filename": "20260906003500_billing_self_serve_member_capacity.sql",
-      "purpose": "add fail-closed transactional self-service invitation creation and acceptance capacity for Starter, Professional and Business while preserving Enterprise contractual seat authority"
+      "purpose": "add fail-closed transactional self-service invitation creation and acceptance capacity for Starter, Professional and Business while preserving Enterprise contractual seat/admin authority"
     },
     {
       "filename": "20260906004000_billing_document_storage_quota.sql",
@@ -33,6 +33,10 @@
     {
       "filename": "20260906006400_reconcile_paid_governance_runtime_foundations.sql",
       "purpose": "forward-reconcile only the paid QMS and Enterprise evidence/procurement tables, tenant-integrity constraints and backend-only RPCs that the final runtime calls but the verified Production schema lacks, without replaying historical migration versions or repairing migration history"
+    },
+    {
+      "filename": "20260906006410_harden_paid_governance_ai_system_tenant_scope.sql",
+      "purpose": "bind Enterprise vendor-diligence and risk-review AI-system references to the same organization with backend-only fail-closed trigger enforcement before tier-isolation policies are installed"
     },
     {
       "filename": "20260906006500_billing_professional_task_plan_isolation.sql",
