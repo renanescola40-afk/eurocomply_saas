@@ -1,0 +1,56 @@
+name: Free Online Trust Signals
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/assurance/free-online-trust-signals.mjs'
+      - '.github/workflows/free-online-trust-signals.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-trust-signals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run free public trust signal checks
+        env:
+          TRUST_SIGNAL_HOST: www.risckcomply.com
+          TRUST_SIGNAL_REPO: renanescola40-afk/eurocomply_saas
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/trust-signals
+          node scripts/assurance/free-online-trust-signals.mjs > artifacts/trust-signals/results.json
+
+      - name: Publish compact summary
+        if: always()
+        run: |
+          if [ -f artifacts/trust-signals/results.json ]; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require('fs');
+          const e = JSON.parse(fs.readFileSync('artifacts/trust-signals/results.json', 'utf8'));
+          console.log('## Free public trust signals');
+          console.log(`- Green Web Foundation: **${e.greenWebFoundation.green === true ? 'VERIFIED GREEN' : e.greenWebFoundation.green === false ? 'NOT GREEN' : 'UNRESOLVED'}**`);
+          console.log(`- MDN HTTP Observatory: **${e.mdnHttpObservatory.grade ?? 'UNRESOLVED'}** (score ${e.mdnHttpObservatory.score ?? 'n/a'})`);
+          console.log(`- OpenSSF Scorecard published result: **${e.openSSFScorecard.publishedResultAvailable ? 'YES' : 'NO'}**${e.openSSFScorecard.score !== null ? ` (score ${e.openSSFScorecard.score}/10)` : ''}`);
+          NODE
+          else
+            echo 'No trust-signal evidence file was produced.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: free-online-trust-signals
+          path: artifacts/trust-signals/results.json
+          if-no-files-found: warn
+          retention-days: 14
