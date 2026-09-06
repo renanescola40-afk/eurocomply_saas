@@ -83,7 +83,7 @@ describe('organization invitation persistence', () => {
     });
 
     expect(rpc).toHaveBeenCalledWith(
-      'create_organization_invitation_with_seat_atomic',
+      'create_billing_organization_invitation_atomic',
       expect.objectContaining({
         p_organization_id: 'org_a',
         p_invited_by: 'user_admin',
@@ -121,7 +121,7 @@ describe('organization invitation persistence', () => {
     });
 
     expect(rpc).toHaveBeenCalledWith(
-      'create_organization_invitation_with_seat_atomic',
+      'create_billing_organization_invitation_atomic',
       expect.objectContaining({ p_seat_type: 'viewer' }),
     );
   });
