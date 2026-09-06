@@ -25,6 +25,7 @@ export async function GET(request: Request) {
     userId: user.id,
     organizationId: organization.id,
     permission: 'export_data',
+    minimumPlan: 'business',
   });
   if (!permission.ok) return permissionDeniedResponse(permission);
 
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
       error: entitlementCheck.error,
       message: entitlementCheck.message,
       plan: entitlementCheck.entitlements.plan,
-      requiredPlan: 'professional',
+      requiredPlan: 'business',
       entitlements: entitlementCheck.entitlements,
     }, entitlementCheck.status);
   }
