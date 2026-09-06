@@ -35,6 +35,10 @@
       "purpose": "forward-reconcile only the paid QMS and Enterprise evidence/procurement tables, tenant-integrity constraints and backend-only RPCs that the final runtime calls but the verified Production schema lacks, without replaying historical migration versions or repairing migration history"
     },
     {
+      "filename": "20260906006410_harden_paid_governance_ai_system_tenant_scope.sql",
+      "purpose": "bind Enterprise vendor diligence and risk-review AI-system references to the same organization at the database trigger boundary so privileged or future writers cannot persist cross-tenant governance references"
+    },
+    {
       "filename": "20260906006500_billing_professional_task_plan_isolation.sql",
       "purpose": "enforce Professional-or-higher authority for organization Tasks, Risks, Vendors and vendor review history at restrictive RLS and server feature boundaries while preserving personal tasks and downgraded customer data for later re-upgrade"
     },
