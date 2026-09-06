@@ -1,0 +1,121 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+
+const migration = read('supabase/migrations/20260906006500_billing_professional_task_plan_isolation.sql');
+const reconciliation = read('config/supabase-forward-reconciliation.json');
+const taskActions = read('src/server/actions/compliance-tasks.ts');
+const taskQuery = read('src/server/queries/compliance-tasks.ts');
+const taskPage = read('src/app/[locale]/dashboard/organizations/tasks/page.tsx');
+const taskCsv = read('src/app/api/reports/tasks.csv/route.ts');
+const vendorQuery = read('src/server/queries/vendors.ts');
+const vendorPage = read('src/app/[locale]/dashboard/organizations/vendors/page.tsx');
+const vendorCsv = read('src/app/api/reports/vendors.csv/route.ts');
+const riskQuery = read('src/server/queries/risks.ts');
+const riskPage = read('src/app/[locale]/dashboard/organizations/risks/page.tsx');
+const riskCsv = read('src/app/api/reports/risks.csv/route.ts');
+const rbac = read('src/server/security/rbac.ts');
+const dashboardSummary = read('src/server/queries/dashboard.ts');
+const organizationDashboard = read('src/server/queries/organization-dashboard.ts');
+const executiveLayout = read('src/app/[locale]/dashboard/organizations/reports/layout.tsx');
+const executiveCsv = read('src/app/api/reports/executive.csv/route.ts');
+const entitlements = read('src/server/billing/entitlements.ts');
+
+describe('billing Professional/Business feature isolation', () => {
+  it('selects the Professional isolation migration in the bounded V35 package', () => {
+    expect(reconciliation).toContain('2026-09-06-billing-professional-plan-isolation-v35');
+    expect(reconciliation).toContain('20260906006500_billing_professional_task_plan_isolation.sql');
+    expect(reconciliation).toContain('"productionWriteAuthorizedByConfig": false');
+    expect(reconciliation).toContain('"migrationHistoryRepairAllowed": false');
+  });
+
+  it('enforces Professional downgrade isolation inside authenticated RLS while preserving personal tasks', () => {
+    expect(migration).toContain('create or replace function app_private.has_minimum_commercial_plan');
+    expect(migration).toContain("when 'essential' then 1");
+    expect(migration).toContain("when 'starter' then 1");
+    expect(migration).toContain("when 'growth' then 2");
+    expect(migration).toContain("when 'business' then 3");
+    expect(migration).toContain('revoke all on function app_private.has_minimum_commercial_plan(uuid,text) from public, anon');
+
+    for (const policy of [
+      'restrict_compliance_tasks_organization_professional_plan',
+      'restrict_risks_professional_plan',
+      'restrict_vendors_professional_plan',
+      'restrict_vendor_review_history_professional_plan',
+    ]) {
+      expect(migration).toContain(policy);
+    }
+
+    for (const table of ['compliance_tasks', 'risks', 'vendors', 'vendor_review_history']) {
+      expect(migration).toContain(`alter table public.${table} force row level security;`);
+    }
+
+    expect(migration).toContain('as restrictive');
+    expect(migration).toContain("app_private.has_minimum_commercial_plan(organization_id, 'professional')");
+    expect(migration).toContain('organization_id is null');
+    expect(migration).not.toContain('disable row level security');
+    expect(migration).not.toContain('grant all on public.');
+  });
+
+  it('requires Professional for every organization Tasks server boundary', () => {
+    expect(taskActions).toContain("assertPlanAtLeast(organizationId, 'professional')");
+    expect((taskActions.match(/await requireProfessionalTaskPlan\(/g) ?? [])).toHaveLength(3);
+    expect(taskQuery).toContain("assertPlanAtLeast(organizationId, 'professional')");
+    expect(taskPage).toContain("assertPlanAtLeast(organization.id, 'professional')");
+    expect(taskPage).toContain('upgrade=professional&feature=tasks');
+    expect(taskCsv).toContain("minimumPlan: 'professional'");
+  });
+
+  it('requires Professional for Vendors and Risks reads, pages, exports and canonical RBAC mutations', () => {
+    expect(vendorQuery).toContain("assertPlanAtLeast(organizationId, 'professional')");
+    expect(riskQuery).toContain("assertPlanAtLeast(organizationId, 'professional')");
+    expect(vendorPage).toContain("assertPlanAtLeast(current.id, 'professional')");
+    expect(vendorPage).toContain('upgrade=professional&feature=vendors');
+    expect(riskPage).toContain("assertPlanAtLeast(organization.id, 'professional')");
+    expect(riskPage).toContain('upgrade=professional&feature=risks');
+    expect(vendorCsv).toContain("minimumPlan: 'professional'");
+    expect(riskCsv).toContain("minimumPlan: 'professional'");
+
+    for (const marker of [
+      "manage_vendors: 'professional'",
+      "read_vendors: 'professional'",
+      "manage_risks: 'professional'",
+      "read_risks: 'professional'",
+    ]) {
+      expect(rbac).toContain(marker);
+    }
+  });
+
+  it('redacts Professional-only metrics, history and previews after downgrade even through service-role queries', () => {
+    expect(dashboardSummary).toContain("assertPlanAtLeast(organizationId, 'professional')");
+    expect(dashboardSummary).toContain('professionalPlan\n      ? supabase.from(\'compliance_tasks\')');
+    expect(dashboardSummary).toContain('professionalPlan\n      ? supabase.from(\'vendors\')');
+    expect(dashboardSummary).toContain('professionalPlan\n      ? supabase.from(\'risks\')');
+    expect(dashboardSummary).toContain('if (!professionalPlan) return [];');
+
+    expect(organizationDashboard).toContain("entitlements.licensed && isPlanAtLeast(entitlements.plan, 'professional')");
+    expect(organizationDashboard).toContain("? withDashboardTimeout('tasks', listDashboardTasks(organization.id))");
+    expect(organizationDashboard).toContain("? withDashboardTimeout('risks', listDashboardTopRisks(organization.id))");
+    expect(organizationDashboard).toContain("? withDashboardTimeout('vendors', listDashboardVendorsRequiringReview(organization.id))");
+  });
+
+  it('keeps Executive Reports Business-only across visual and CSV boundaries', () => {
+    const professionalBlock = entitlements.slice(
+      entitlements.indexOf('professional: {'),
+      entitlements.indexOf('growth: {'),
+    );
+    const businessBlock = entitlements.slice(
+      entitlements.indexOf('business: {'),
+      entitlements.indexOf('enterprise: {'),
+    );
+
+    expect(professionalBlock).toContain('executiveReports: false');
+    expect(businessBlock).toContain('executiveReports: true');
+    expect(executiveLayout).toContain("assertPlanAtLeast(organization.id, 'business')");
+    expect(executiveLayout).toContain('upgrade=business&feature=executive-reports');
+    expect(executiveCsv).toContain("minimumPlan: 'business'");
+    expect(executiveCsv).toContain("requiredPlan: 'business'");
+  });
+});
