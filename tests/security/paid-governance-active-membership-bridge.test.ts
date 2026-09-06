@@ -49,4 +49,18 @@ describe('paid governance forward bridge active-membership authority', () => {
     expect(professionalIsolation).not.toContain('grant all on public.');
     expect(professionalIsolation).not.toContain('disable row level security');
   });
+
+  it('binds Enterprise governance AI-system references to the same organization', () => {
+    expect(professionalIsolation).toContain('create or replace function public.enforce_enterprise_ai_system_tenant_scope()');
+    expect(professionalIsolation).toContain('scoped_system.id = new.ai_system_id');
+    expect(professionalIsolation).toContain('scoped_system.organization_id = new.organization_id');
+    expect(professionalIsolation).toContain('enterprise_ai_system_not_in_organization');
+    expect(professionalIsolation).toContain('enforce_enterprise_vendor_diligence_ai_system_scope');
+    expect(professionalIsolation).toContain('enforce_enterprise_risk_review_ai_system_scope');
+    expect(professionalIsolation).toContain(
+      'revoke all on function public.enforce_enterprise_ai_system_tenant_scope() from public, anon, authenticated;',
+    );
+    expect(professionalIsolation).toContain('Enterprise AI-system same-organization triggers are missing');
+    expect(reconciliation).not.toContain('20260906006410_harden_paid_governance_ai_system_tenant_scope.sql');
+  });
 });
