@@ -87,6 +87,18 @@ describe('enterprise pricing catalog', () => {
     expect(enterprise?.startingPriceMonthly).toBe(990);
     expect(enterprise?.stripePriceEnvKeyMonthly).toBeUndefined();
   });
+
+  it('does not promise multi-organization or machine API capacity before those authorities exist', () => {
+    expect(getPlanLimit('starter', 'organizations')).toBe(1);
+    expect(getPlanLimit('professional', 'organizations')).toBe(1);
+    expect(getPlanLimit('business', 'organizations')).toBe(1);
+    expect(getPlanLimit('professional', 'apiRequestsMonthly')).toBe(0);
+    expect(getPlanLimit('professional', 'webhooks')).toBe(0);
+    expect(getPlanLimit('business', 'apiRequestsMonthly')).toBe(0);
+    expect(getPlanLimit('business', 'webhooks')).toBe(0);
+    expect(getPlanLimit('enterprise', 'apiRequestsMonthly')).toBe('unlimited');
+    expect(getPlanLimit('enterprise', 'webhooks')).toBe('unlimited');
+  });
 });
 
 describe('add-on catalog', () => {
@@ -121,8 +133,16 @@ describe('central feature gates and limits', () => {
     expect(canAccessFeature('sso', { plan: 'enterprise' })).toBe(true);
   });
 
+  it('keeps machine API and webhook features on the proven Enterprise control plane', () => {
+    expect(canAccessFeature('api', { plan: 'professional' })).toBe(false);
+    expect(canAccessFeature('api', { plan: 'business' })).toBe(false);
+    expect(canAccessFeature('api', { plan: 'enterprise' })).toBe(true);
+    expect(canAccessFeature('webhooks', { plan: 'professional' })).toBe(false);
+    expect(canAccessFeature('webhooks', { plan: 'enterprise' })).toBe(true);
+  });
+
   it('fails closed when a feature flag disables a licensed feature', () => {
-    expect(canAccessFeature('api', { plan: 'professional', featureFlags: { api: false } })).toBe(false);
+    expect(canAccessFeature('api', { plan: 'enterprise', featureFlags: { api: false } })).toBe(false);
   });
 
   it('enforces capacity without special-case conditionals', () => {
