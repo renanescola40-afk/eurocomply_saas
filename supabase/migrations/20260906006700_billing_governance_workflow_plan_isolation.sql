@@ -395,6 +395,8 @@ $verify$;
 -- RLS or lack a policy, and no SECURITY DEFINER function in the application
 -- schemas may be callable by the anonymous API role. These checks intentionally
 -- make future privilege regressions fail the migration instead of becoming drift.
+-- Use relation OIDs directly because replay/upgrade transactions can expose
+-- catalog entries whose names are not safely resolvable again by regclass text.
 do $global_client_security_postconditions$
 begin
   if exists (
@@ -404,14 +406,14 @@ begin
     where n.nspname = 'public'
       and c.relkind = 'r'
       and (
-        has_table_privilege('anon', format('public.%I', c.relname), 'SELECT')
-        or has_table_privilege('anon', format('public.%I', c.relname), 'INSERT')
-        or has_table_privilege('anon', format('public.%I', c.relname), 'UPDATE')
-        or has_table_privilege('anon', format('public.%I', c.relname), 'DELETE')
-        or has_table_privilege('authenticated', format('public.%I', c.relname), 'SELECT')
-        or has_table_privilege('authenticated', format('public.%I', c.relname), 'INSERT')
-        or has_table_privilege('authenticated', format('public.%I', c.relname), 'UPDATE')
-        or has_table_privilege('authenticated', format('public.%I', c.relname), 'DELETE')
+        has_table_privilege('anon', c.oid, 'SELECT')
+        or has_table_privilege('anon', c.oid, 'INSERT')
+        or has_table_privilege('anon', c.oid, 'UPDATE')
+        or has_table_privilege('anon', c.oid, 'DELETE')
+        or has_table_privilege('authenticated', c.oid, 'SELECT')
+        or has_table_privilege('authenticated', c.oid, 'INSERT')
+        or has_table_privilege('authenticated', c.oid, 'UPDATE')
+        or has_table_privilege('authenticated', c.oid, 'DELETE')
       )
       and (not c.relrowsecurity or not c.relforcerowsecurity)
   ) then
@@ -425,14 +427,14 @@ begin
     where n.nspname = 'public'
       and c.relkind = 'r'
       and (
-        has_table_privilege('anon', format('public.%I', c.relname), 'SELECT')
-        or has_table_privilege('anon', format('public.%I', c.relname), 'INSERT')
-        or has_table_privilege('anon', format('public.%I', c.relname), 'UPDATE')
-        or has_table_privilege('anon', format('public.%I', c.relname), 'DELETE')
-        or has_table_privilege('authenticated', format('public.%I', c.relname), 'SELECT')
-        or has_table_privilege('authenticated', format('public.%I', c.relname), 'INSERT')
-        or has_table_privilege('authenticated', format('public.%I', c.relname), 'UPDATE')
-        or has_table_privilege('authenticated', format('public.%I', c.relname), 'DELETE')
+        has_table_privilege('anon', c.oid, 'SELECT')
+        or has_table_privilege('anon', c.oid, 'INSERT')
+        or has_table_privilege('anon', c.oid, 'UPDATE')
+        or has_table_privilege('anon', c.oid, 'DELETE')
+        or has_table_privilege('authenticated', c.oid, 'SELECT')
+        or has_table_privilege('authenticated', c.oid, 'INSERT')
+        or has_table_privilege('authenticated', c.oid, 'UPDATE')
+        or has_table_privilege('authenticated', c.oid, 'DELETE')
       )
       and not exists (
         select 1
