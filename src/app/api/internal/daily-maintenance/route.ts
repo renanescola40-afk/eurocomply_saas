@@ -32,6 +32,30 @@ export type MaintenanceJobResponseReadResult = {
   failure: MaintenanceJobResponseFailure | null;
 };
 
+export type MaintenanceJobResult = {
+  path: string;
+  ok: boolean;
+  status: number;
+  durationMs: number;
+  body: Record<string, unknown> | null;
+};
+
+type MaintenanceJobRunner = (
+  baseUrl: string,
+  path: string,
+  credential: string,
+) => Promise<MaintenanceJobResult>;
+
+export class MaintenanceJobTimeoutError extends Error {
+  readonly path: string;
+
+  constructor(path: string) {
+    super(`Maintenance job timed out: ${path}`);
+    this.name = 'MaintenanceJobTimeoutError';
+    this.path = path;
+  }
+}
+
 export function getConfiguredMaintenanceBaseUrl() {
   const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
 
@@ -170,10 +194,14 @@ export function isSuccessfulMaintenanceJobResponse(response: Response, parsedRes
   return response.ok && parsedResponse.failure === null;
 }
 
-async function runMaintenanceJob(baseUrl: string, path: string, credential: string) {
+export async function runMaintenanceJob(baseUrl: string, path: string, credential: string): Promise<MaintenanceJobResult> {
   const startedAt = Date.now();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), getMaintenanceJobTimeoutMs());
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, getMaintenanceJobTimeoutMs());
 
   try {
     const response = await fetch(`${baseUrl}${path}`, {
@@ -195,9 +223,56 @@ async function runMaintenanceJob(baseUrl: string, path: string, credential: stri
       durationMs: Date.now() - startedAt,
       body: parsedResponse.body,
     };
+  } catch (error) {
+    if (timedOut) {
+      throw new MaintenanceJobTimeoutError(path);
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function runMaintenanceJobSequence(
+  baseUrl: string,
+  credential: string,
+  runner: MaintenanceJobRunner = runMaintenanceJob,
+) {
+  const results: MaintenanceJobResult[] = [];
+
+  for (let index = 0; index < MAINTENANCE_JOBS.length; index += 1) {
+    const path = MAINTENANCE_JOBS[index];
+    const startedAt = Date.now();
+
+    try {
+      results.push(await runner(baseUrl, path, credential));
+    } catch (error) {
+      const timedOut = error instanceof MaintenanceJobTimeoutError;
+      reportError(error, { area: 'daily_maintenance_job', path, timedOut });
+      results.push({
+        path,
+        ok: false,
+        status: 0,
+        durationMs: Date.now() - startedAt,
+        body: { error: timedOut ? 'job_timed_out' : 'job_failed' },
+      });
+
+      if (timedOut) {
+        for (const skippedPath of MAINTENANCE_JOBS.slice(index + 1)) {
+          results.push({
+            path: skippedPath,
+            ok: false,
+            status: 0,
+            durationMs: 0,
+            body: { error: 'skipped_after_timeout' },
+          });
+        }
+        break;
+      }
+    }
+  }
+
+  return results;
 }
 
 export async function POST(request: Request) {
@@ -221,25 +296,7 @@ export async function POST(request: Request) {
     return noStoreJson({ error: 'internal_maintenance_base_url_unavailable' }, { status: 503 });
   }
 
-  const results = [];
-
-  for (const path of MAINTENANCE_JOBS) {
-    const startedAt = Date.now();
-
-    try {
-      results.push(await runMaintenanceJob(baseUrl, path, credential));
-    } catch (error) {
-      reportError(error, { area: 'daily_maintenance_job', path });
-      results.push({
-        path,
-        ok: false,
-        status: 0,
-        durationMs: Date.now() - startedAt,
-        body: { error: 'job_failed' },
-      });
-    }
-  }
-
+  const results = await runMaintenanceJobSequence(baseUrl, credential);
   const failed = results.filter((result) => !result.ok);
 
   return internalBatchResponse({
