@@ -128,6 +128,18 @@ after insert or update on public.stripe_events_processed
 for each row
 execute function public.clear_initial_checkout_after_live_subscription_processed();
 
+-- Reconcile attempts that were created before this forward hotfix but whose
+-- authoritative LIVE subscription event has already been successfully processed.
+delete from public.billing_checkout_attempts attempt
+where exists (
+  select 1
+  from public.stripe_events_processed event
+  where event.organization_id = attempt.organization_id
+    and event.status = 'processed'
+    and event.livemode is true
+    and event.type in ('customer.subscription.created','customer.subscription.updated')
+);
+
 comment on function public.claim_initial_billing_checkout_atomic(uuid,text,uuid,timestamptz) is
   'Claims one tenant initial Checkout lane; bound Stripe sessions remain durable until provider expiry/missing proof or processed LIVE subscription authority.';
 comment on function public.clear_initial_checkout_after_live_subscription_processed() is
