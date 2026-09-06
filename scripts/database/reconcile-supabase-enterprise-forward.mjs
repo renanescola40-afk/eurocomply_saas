@@ -34,6 +34,8 @@ const BILLING_COMPLETED_CHECKOUT_AUTHORITY_GUARD_MIGRATION =
   '20260906006000_billing_completed_checkout_authority_guard.sql';
 const PAID_GOVERNANCE_RUNTIME_FOUNDATIONS_MIGRATION =
   '20260906006400_reconcile_paid_governance_runtime_foundations.sql';
+const PAID_GOVERNANCE_AI_SYSTEM_TENANT_SCOPE_MIGRATION =
+  '20260906006410_harden_paid_governance_ai_system_tenant_scope.sql';
 const BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION =
   '20260906006500_billing_professional_task_plan_isolation.sql';
 const BILLING_BUSINESS_PLAN_ISOLATION_MIGRATION =
@@ -49,6 +51,7 @@ const EXPECTED_SELECTED = [
   BILLING_INITIAL_CHECKOUT_SINGLEFLIGHT_MIGRATION,
   BILLING_COMPLETED_CHECKOUT_AUTHORITY_GUARD_MIGRATION,
   PAID_GOVERNANCE_RUNTIME_FOUNDATIONS_MIGRATION,
+  PAID_GOVERNANCE_AI_SYSTEM_TENANT_SCOPE_MIGRATION,
   BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION,
   BILLING_BUSINESS_PLAN_ISOLATION_MIGRATION,
   BILLING_GOVERNANCE_PLAN_ISOLATION_MIGRATION,
@@ -207,6 +210,35 @@ function validatePaidGovernanceRuntimeFoundations(source) {
   ], 'V38 paid-governance runtime-foundation reconciliation');
 }
 
+function validatePaidGovernanceAiSystemTenantScope(source) {
+  requireMarkers(source, [
+    'Same-root-cause companion to the paid-governance runtime foundation bridge',
+    "to_regclass('public.ai_systems')",
+    "to_regclass('public.enterprise_vendor_due_diligence')",
+    "to_regclass('public.enterprise_risk_reviews')",
+    'create or replace function public.enforce_enterprise_ai_system_tenant_scope()',
+    "set search_path = ''",
+    'scoped_system.id = new.ai_system_id',
+    'scoped_system.organization_id = new.organization_id',
+    "raise exception 'enterprise_ai_system_not_in_organization'",
+    'before insert or update of organization_id, ai_system_id',
+    'enforce_enterprise_vendor_diligence_ai_system_scope',
+    'enforce_enterprise_risk_review_ai_system_scope',
+    "has_function_privilege('authenticated'",
+    'Enterprise AI-system tenant-scope trigger function became directly executable',
+    "notify pgrst, 'reload schema'",
+  ], 'V38 paid-governance AI-system tenant-scope hardening');
+
+  forbidMarkers(source, [
+    'supabase_migrations.schema_migrations',
+    'db push --include-all',
+    'disable row level security',
+    'grant all on public.',
+    'drop table ',
+    'truncate ',
+  ], 'V38 paid-governance AI-system tenant-scope hardening');
+}
+
 function validateProfessionalPlanIsolation(source) {
   requireMarkers(source, [
     'app_private.has_minimum_commercial_plan',
@@ -340,6 +372,12 @@ async function main() {
     'utf8',
   );
   validatePaidGovernanceRuntimeFoundations(paidGovernanceFoundationSource);
+
+  const paidGovernanceTenantScopeSource = readFileSync(
+    join(ROOT, 'supabase', 'migrations', PAID_GOVERNANCE_AI_SYSTEM_TENANT_SCOPE_MIGRATION),
+    'utf8',
+  );
+  validatePaidGovernanceAiSystemTenantScope(paidGovernanceTenantScopeSource);
 
   const professionalIsolationSource = readFileSync(
     join(ROOT, 'supabase', 'migrations', BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION),
