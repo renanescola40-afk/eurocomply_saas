@@ -17,7 +17,7 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-06-billing-checkout-singleflight-authority-v34';
+const EXPECTED_CHANGE_SET = '2026-09-06-billing-professional-plan-isolation-v35';
 const V32_PUBLIC_RELEASE_MIGRATION =
   '20260906000000_reconcile_final_public_release_payment_storage_hardening.sql';
 const BILLING_AI_SYSTEM_QUOTA_MIGRATION =
@@ -32,6 +32,8 @@ const BILLING_INITIAL_CHECKOUT_SINGLEFLIGHT_MIGRATION =
   '20260906005000_billing_initial_checkout_singleflight.sql';
 const BILLING_COMPLETED_CHECKOUT_AUTHORITY_GUARD_MIGRATION =
   '20260906006000_billing_completed_checkout_authority_guard.sql';
+const BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION =
+  '20260906006500_billing_professional_task_plan_isolation.sql';
 const EXPECTED_SELECTED = [
   V32_PUBLIC_RELEASE_MIGRATION,
   BILLING_AI_SYSTEM_QUOTA_MIGRATION,
@@ -40,6 +42,7 @@ const EXPECTED_SELECTED = [
   BILLING_ENTITLEMENT_CATALOG_TRUTH_MIGRATION,
   BILLING_INITIAL_CHECKOUT_SINGLEFLIGHT_MIGRATION,
   BILLING_COMPLETED_CHECKOUT_AUTHORITY_GUARD_MIGRATION,
+  BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION,
 ];
 const VERIFIED_PRODUCTION_LEDGER_HEAD = '20260905075429';
 
@@ -147,6 +150,36 @@ function validateCompletedCheckoutAuthorityGuard(source) {
   ], 'V34 completed Checkout subscription-authority guard');
 }
 
+function validateProfessionalPlanIsolation(source) {
+  requireMarkers(source, [
+    'app_private.has_minimum_commercial_plan',
+    "when 'essential' then 1",
+    "when 'growth' then 2",
+    "when 'business' then 3",
+    'alter table public.compliance_tasks force row level security',
+    'alter table public.risks force row level security',
+    'alter table public.vendors force row level security',
+    'alter table public.vendor_review_history force row level security',
+    'restrict_compliance_tasks_organization_professional_plan',
+    'restrict_risks_professional_plan',
+    'restrict_vendors_professional_plan',
+    'restrict_vendor_review_history_professional_plan',
+    'as restrictive',
+    "app_private.has_minimum_commercial_plan(organization_id, 'professional')",
+    'organization_id is null',
+    "notify pgrst, 'reload schema'",
+  ], 'V35 Professional plan-isolation guard');
+
+  forbidMarkers(source, [
+    'disable row level security',
+    'grant all on public.',
+    'grant all on storage.',
+    'to anon',
+    'drop table ',
+    'truncate ',
+  ], 'V35 Professional plan-isolation guard');
+}
+
 async function main() {
   const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
   if (config.changeSet !== EXPECTED_CHANGE_SET) {
@@ -188,6 +221,12 @@ async function main() {
     'utf8',
   );
   validateCompletedCheckoutAuthorityGuard(checkoutAuthoritySource);
+
+  const professionalIsolationSource = readFileSync(
+    join(ROOT, 'supabase', 'migrations', BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION),
+    'utf8',
+  );
+  validateProfessionalPlanIsolation(professionalIsolationSource);
 
   const records = manifest.migrations.map((migration, index) => ({
     position: index + 1,
