@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
 
 const migration = read('supabase/migrations/20260906006500_billing_professional_task_plan_isolation.sql');
+const businessMigration = read('supabase/migrations/20260906006600_billing_business_feature_plan_isolation.sql');
 const reconciliation = read('config/supabase-forward-reconciliation.json');
 const taskActions = read('src/server/actions/compliance-tasks.ts');
 const taskQuery = read('src/server/queries/compliance-tasks.ts');
@@ -22,15 +23,21 @@ const dashboardSummary = read('src/server/queries/dashboard.ts');
 const organizationDashboard = read('src/server/queries/organization-dashboard.ts');
 const executiveLayout = read('src/app/[locale]/dashboard/organizations/reports/layout.tsx');
 const executiveCsv = read('src/app/api/reports/executive.csv/route.ts');
+const reportsGovernanceLayout = read('src/app/[locale]/dashboard/organizations/reports-governance/layout.tsx');
+const aiLiteracyLayout = read('src/app/[locale]/dashboard/ai-literacy/layout.tsx');
+const aiLiteracyRoute = read('src/app/api/ai-literacy/route.ts');
+const qmsRoute = read('src/app/api/ai-governance/qms/route.ts');
 const complianceAlerts = read('src/app/api/internal/compliance-alerts/route.ts');
 const entitlements = read('src/server/billing/entitlements.ts');
 
 describe('billing Professional/Business feature isolation', () => {
-  it('selects the Professional isolation migration in the bounded V35 package', () => {
-    expect(reconciliation).toContain('2026-09-06-billing-professional-plan-isolation-v35');
+  it('selects the Professional and Business isolation migrations in the bounded V36 package', () => {
+    expect(reconciliation).toContain('2026-09-06-billing-business-plan-isolation-v36');
     expect(reconciliation).toContain('20260906006500_billing_professional_task_plan_isolation.sql');
+    expect(reconciliation).toContain('20260906006600_billing_business_feature_plan_isolation.sql');
     expect(reconciliation).toContain('"productionWriteAuthorizedByConfig": false');
     expect(reconciliation).toContain('"migrationHistoryRepairAllowed": false');
+    expect(reconciliation).toContain('"unrestrictedDbPushAllowed": false');
   });
 
   it('enforces Professional downgrade isolation inside authenticated RLS while preserving personal tasks', () => {
@@ -140,5 +147,38 @@ describe('billing Professional/Business feature isolation', () => {
     expect(executiveLayout).toContain('upgrade=business&feature=executive-reports');
     expect(executiveCsv).toContain("minimumPlan: 'business'");
     expect(executiveCsv).toContain("requiredPlan: 'business'");
+  });
+
+  it('requires durable paid authority before entering the Reports/Governance subtree', () => {
+    expect(reportsGovernanceLayout).toContain('getOrganizationEntitlements');
+    expect(reportsGovernanceLayout).toContain('if (!entitlements.licensed)');
+    expect(reportsGovernanceLayout).toContain('upgrade=required&feature=reports-governance');
+  });
+
+  it('keeps AI Literacy Business-only in UI, API and authenticated data plane', () => {
+    expect(aiLiteracyLayout).toContain("assertPlanAtLeast(organization.id, 'business')");
+    expect(aiLiteracyLayout).toContain('upgrade=business&feature=ai-literacy');
+    expect((aiLiteracyRoute.match(/minimumPlan: 'business'/g) ?? [])).toHaveLength(2);
+    expect((qmsRoute.match(/minimumPlan:'business'/g) ?? [])).toHaveLength(2);
+
+    for (const table of [
+      'ai_literacy_programs',
+      'ai_literacy_courses',
+      'ai_literacy_assignments',
+      'ai_literacy_evidence',
+      'ai_qms_systems',
+      'ai_qms_controls',
+      'ai_qms_nonconformities',
+      'ai_qms_audits',
+      'ai_qms_management_reviews',
+      'ai_qms_decisions',
+    ]) {
+      expect(businessMigration).toContain(`'${table}'`);
+    }
+    expect(businessMigration).toContain('as restrictive for all to authenticated');
+    expect(businessMigration).toContain("app_private.has_minimum_commercial_plan(organization_id, ''business'')");
+    expect(businessMigration).toContain('alter table public.%I force row level security');
+    expect(businessMigration).not.toContain('disable row level security');
+    expect(businessMigration).not.toContain('grant all on public.');
   });
 });
