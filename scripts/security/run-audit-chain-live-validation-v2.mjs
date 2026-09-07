@@ -221,9 +221,10 @@ async function appendViaRpc(supabase, payload) {
 }
 
 function isConcurrencyConflict(error) {
+  const message = error?.message ?? '';
   return error?.code === '40001'
-    || /audit chain append contention/i.test(error?.message ?? '')
-    || /previous hash mismatch/i.test(error?.message ?? '');
+    && (/audit chain append contention/i.test(message)
+      || /audit chain previous hash mismatch/i.test(message));
 }
 
 function mapRowToRecord(row) {
@@ -481,7 +482,7 @@ async function runLiveValidation() {
         strategy: 'single-stale-head-winner-plus-fresh-retry',
         levels: [...CONCURRENCY_LEVELS],
         batches: concurrencyBatches,
-        note: 'Each burst intentionally shares one stale previous_hash. PASS requires exactly one accepted append, all remaining writes rejected fail-fast with SQLSTATE 40001, and a fresh-head retry to succeed.',
+        note: 'Each burst intentionally shares one stale previous_hash. PASS requires exactly one accepted append, all remaining writes rejected fail-fast with SQLSTATE 40001 and a recognized audit-chain conflict message, and a fresh-head retry to succeed.',
       },
       tamperDetection: {
         status: tamperDetected ? 'Complete' : 'Failed',
