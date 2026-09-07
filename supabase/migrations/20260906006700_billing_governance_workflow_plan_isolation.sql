@@ -432,6 +432,83 @@ begin
 end
 $verify$;
 
+-- A full-history replay can recreate historical SECURITY DEFINER functions that
+-- are absent from the current Production schema. Supabase/Postgres can retain a
+-- direct `anon` EXECUTE grant even when an original migration revoked PUBLIC, so
+-- reconcile only the known replay-only function families before the global
+-- fail-closed postcondition. Explicit authenticated/service-role grants are left
+-- unchanged; no function is created, replaced, or granted new authority here.
+do $historical_replay_security_definer_acl_hardening$
+declare
+  target record;
+begin
+  for target in
+    select n.nspname as schema_name,
+           p.proname,
+           pg_get_function_identity_arguments(p.oid) as identity_args
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where p.prosecdef
+      and (
+        (
+          n.nspname = 'app_private'
+          and p.proname = any(array[
+            'guard_frozen_legal_review_package',
+            'guard_issued_legal_review_decision',
+            'guard_legal_review_package_item_mutation'
+          ]::text[])
+        )
+        or (
+          n.nspname = 'public'
+          and p.proname = any(array[
+            'ai_annex_iv_actor_is_member',
+            'ai_conformity_actor_is_member',
+            'ai_prohibited_actor_is_member',
+            'ai_provider_data_actor_is_member',
+            'enforce_ai_annex_iv_change_actor_scope',
+            'enforce_ai_annex_iv_decision_actor_scope',
+            'enforce_ai_annex_iv_evidence_actor_scope',
+            'enforce_ai_annex_iv_package_actor_scope',
+            'enforce_ai_annex_iv_section_actor_scope',
+            'enforce_ai_conformity_assessment_actor_scope',
+            'enforce_ai_conformity_decision_actor_scope',
+            'enforce_ai_conformity_evidence_actor_scope',
+            'enforce_ai_eu_declaration_actor_scope',
+            'enforce_ai_eu_registration_actor_scope',
+            'enforce_ai_prohibited_decision_actor_scope',
+            'enforce_ai_prohibited_evidence_actor_scope',
+            'enforce_ai_prohibited_exception_actor_scope',
+            'enforce_ai_prohibited_review_actor_scope',
+            'enforce_ai_prohibited_signal_actor_scope',
+            'enforce_ai_provider_data_decision_actor_scope',
+            'enforce_ai_provider_data_program_actor_scope',
+            'enforce_ai_provider_dataset_actor_scope',
+            'enforce_ai_provider_dataset_assessment_actor_scope',
+            'enforce_ai_provider_dataset_evidence_actor_scope',
+            'enforce_ai_provider_dataset_mitigation_actor_scope',
+            'enforce_ai_qms_control_actor_scope',
+            'enforce_ai_qms_decision_actor_scope',
+            'enforce_ai_qms_nonconformity_actor_scope',
+            'enforce_ai_qms_operational_actor_scope',
+            'enforce_ai_qms_system_actor_scope',
+            'guard_qms_child_mutation',
+            'is_enterprise_integration_admin',
+            'refresh_qms_system_counters',
+            'sync_qms_counters_after_nonconformity'
+          ]::text[])
+        )
+      )
+  loop
+    execute format(
+      'revoke execute on function %I.%I(%s) from public, anon',
+      target.schema_name,
+      target.proname,
+      target.identity_args
+    );
+  end loop;
+end
+$historical_replay_security_definer_acl_hardening$;
+
 -- Global release invariants: no client-visible public table may escape RLS/FORCE
 -- RLS or lack a policy, and no SECURITY DEFINER function in the application
 -- schemas may be callable by the anonymous API role. These checks intentionally
