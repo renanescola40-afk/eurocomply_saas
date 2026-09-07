@@ -47,7 +47,10 @@ export class BillingLifecycleRequestError extends Error {
       | 'billing_idempotency_conflict'
       | 'billing_provider_outcome_uncertain'
       | 'billing_invalid_plan_transition'
-      | 'billing_schedule_conflict',
+      | 'billing_schedule_conflict'
+      | 'billing_subscription_not_reactivatable'
+      | 'billing_subscription_not_active'
+      | 'billing_subscription_cancel_pending',
     public readonly status: 409,
   ) {
     super(code);
