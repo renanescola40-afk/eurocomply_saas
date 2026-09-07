@@ -25,15 +25,20 @@ describe('audit-chain burst concurrency hardening', () => {
     expect(writer).toContain('Math.random()');
   });
 
-  it('fails fast on advisory-lock contention instead of amplifying it into the mismatch retry loop', () => {
-    const contentionBranch = writer.indexOf('if (isAuditChainAppendContention(error)) {');
+  it('fails fast on advisory-lock contention with exactly one contention branch', () => {
+    const contentionBranchToken = 'if (isAuditChainAppendContention(error)) {';
+    const contentionBranch = writer.indexOf(contentionBranchToken);
     const mismatchRetryBranch = writer.indexOf('if (isPreviousHashMismatch(error) && attempt < MAX_CHAIN_APPEND_ATTEMPTS)');
+    const contentionBranchCount = writer.split(contentionBranchToken).length - 1;
 
     expect(contentionBranch).toBeGreaterThan(-1);
+    expect(contentionBranchCount).toBe(1);
     expect(mismatchRetryBranch).toBeGreaterThan(-1);
     expect(contentionBranch).toBeLessThan(mismatchRetryBranch);
     expect(writer.slice(contentionBranch, mismatchRetryBranch)).toContain('break;');
     expect(writer.slice(contentionBranch, mismatchRetryBranch)).not.toContain('waitForAuditChainRetry');
+    expect(writer).not.toContain('MAX_CHAIN_CONTENTION_ATTEMPTS');
+    expect(writer).not.toContain('contentionAttempts');
   });
 
   it('fails closed when the current chain head cannot be read', () => {
