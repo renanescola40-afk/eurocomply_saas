@@ -122,6 +122,48 @@ describe('audit event persistence', () => {
     expect(queryBuilder.insert).not.toHaveBeenCalled();
   });
 
+  it('fails fast after one RPC attempt when Supabase reports audit-chain append contention', async () => {
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({
+      error: { code: '40001', message: 'audit chain append contention' },
+    }));
+    const supabase = {
+      from: vi.fn(() => queryBuilder),
+      rpc,
+    };
+
+    tryCreateAdminClient.mockReturnValue(supabase);
+
+    const { createAuditEvent } = await import('./audit-events');
+    const result = await createAuditEvent(baseInput);
+
+    expect(result).toEqual({ persisted: false, reason: 'transactional_append_unavailable' });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.maybeSingle).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
+  it('fails closed after one RPC attempt for an unknown 40001 serialization error', async () => {
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({
+      error: { code: '40001', message: 'serialization failure' },
+    }));
+    const supabase = {
+      from: vi.fn(() => queryBuilder),
+      rpc,
+    };
+
+    tryCreateAdminClient.mockReturnValue(supabase);
+
+    const { createAuditEvent } = await import('./audit-events');
+    const result = await createAuditEvent(baseInput);
+
+    expect(result).toEqual({ persisted: false, reason: 'transactional_append_unavailable' });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.maybeSingle).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
   it('fails closed when reading the current audit-chain head fails', async () => {
     const queryBuilder = createQueryBuilder([]);
     queryBuilder.maybeSingle.mockResolvedValueOnce({
