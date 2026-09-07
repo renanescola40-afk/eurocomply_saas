@@ -44,6 +44,16 @@ describe('LinkedIn autonomous marketing queue', () => {
     expect(processRoute).toContain('noStoreJson');
   });
 
+  it('keeps recurring publication fail-closed until explicitly activated', () => {
+    expect(processRoute).toContain('LINKEDIN_RECURRING_PUBLISHING_ENABLED');
+    expect(processRoute).toContain("=== 'true'");
+    expect(processRoute).toContain('enabled: false');
+    expect(processRoute).toContain('claimed: 0');
+    expect(processRoute.indexOf('if (!isRecurringPublishingEnabled())')).toBeLessThan(
+      processRoute.indexOf('processLinkedInMarketingQueue(BATCH_SIZE)'),
+    );
+  });
+
   it('schedules the processor through the production cron configuration', () => {
     expect(vercel).toContain('/api/internal/marketing/linkedin/process');
     expect(vercel).toContain('*/15 * * * *');
