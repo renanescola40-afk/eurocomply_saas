@@ -36,11 +36,18 @@ test('forward rehearsal keeps Production row data inside Supabase provider bound
 });
 
 test('provider restore teardown is always-run, explicitly confirmed and source-protected', () => {
-  before(rehearsal, '- name: Upload redacted immutable rehearsal evidence', '- name: Destroy isolated Supabase restore project');
+  before(rehearsal, '- name: Upload redacted immutable rehearsal evidence', '- name: Checkout trusted cleanup source from protected main');
+  before(rehearsal, '- name: Checkout trusted cleanup source from protected main', '- name: Verify cleanup source is still current protected main');
+  before(rehearsal, '- name: Verify cleanup source is still current protected main', '- name: Destroy isolated Supabase restore project');
   assert.match(rehearsal, /destroy_confirmation:/);
   assert.match(rehearsal, /RECOVERY_PROVIDER_DESTROY_CONFIRMATION: \$\{\{ inputs\.destroy_confirmation \}\}/);
   assert.match(rehearsal, /DELETE \$\{RECOVERY_PROVIDER_RESTORE_PROJECT_REF\} AFTER REHEARSAL/);
-  assert.match(rehearsal, /- name: Destroy isolated Supabase restore project\n\s+if: always\(\)/);
+  assert.match(rehearsal, /- name: Checkout trusted cleanup source from protected main\n\s+id: cleanup_checkout\n\s+if: always\(\)\n\s+uses: actions\/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0/);
+  assert.match(rehearsal, /ref: main/);
+  assert.doesNotMatch(rehearsal, /ref: \$\{\{ github\.sha \}\}/);
+  assert.match(rehearsal, /api_main_sha=.*commits\/main/);
+  assert.match(rehearsal, /test "\$cleanup_sha" = "\$api_main_sha"/);
+  assert.match(rehearsal, /- name: Destroy isolated Supabase restore project\n\s+if: always\(\) && steps\.cleanup_trust\.outcome == 'success'/);
   assert.match(rehearsal, /node scripts\/recovery\/destroy-supabase-provider-managed-restore\.mjs/);
   assert.match(destroyRestore, /restoreRef === sourceRef/);
   assert.match(destroyRestore, /DELETE \$\{restoreRef\} AFTER REHEARSAL/);
