@@ -4,16 +4,25 @@ import { describe, expect, it } from 'vitest';
 const writer = readFileSync('src/server/queries/audit-events.ts', 'utf8');
 const liveProof = readFileSync('scripts/security/run-audit-chain-live-validation.mjs', 'utf8');
 const rpcMigration = readFileSync('supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql', 'utf8');
+const failFastRpcMigration = readFileSync('supabase/migrations/20260905075429_fail_fast_audit_chain_advisory_contention.sql', 'utf8');
 
 describe('audit-chain burst concurrency hardening', () => {
   it('keeps database serialization and bounded application conflict retries together', () => {
     expect(rpcMigration).toContain('pg_advisory_xact_lock(hashtext(p_organization_id::text))');
     expect(rpcMigration).toContain("raise exception 'audit chain previous hash mismatch' using errcode = '40001'");
+    expect(failFastRpcMigration).toContain('pg_try_advisory_xact_lock(hashtext(p_organization_id::text))');
+    expect(failFastRpcMigration).toContain("raise exception 'audit chain append contention' using errcode = '40001'");
+    expect(failFastRpcMigration).toContain("raise exception 'audit chain previous hash mismatch' using errcode = '40001'");
     expect(writer).toContain('MAX_CHAIN_APPEND_ATTEMPTS = 128');
+    expect(writer).toContain('MAX_CHAIN_CONTENTION_ATTEMPTS = 3');
     expect(writer).toContain('CHAIN_APPEND_RETRY_BASE_MS = 10');
     expect(writer).toContain('CHAIN_APPEND_RETRY_CAP_MS = 1000');
     expect(writer).toContain('waitForAuditChainRetry(attempt)');
+    expect(writer).toContain("error.code === '40001' && /audit chain previous hash mismatch/i");
+    expect(writer).toContain("error.code === '40001' && /audit chain append contention/i");
     expect(writer).toContain('isPreviousHashMismatch(error) && attempt < MAX_CHAIN_APPEND_ATTEMPTS');
+    expect(writer).toContain('contentionAttempts < MAX_CHAIN_CONTENTION_ATTEMPTS');
+    expect(writer).not.toContain("return error.code === '40001' ||");
     expect(writer).toContain('Math.random()');
   });
 
@@ -26,8 +35,8 @@ describe('audit-chain burst concurrency hardening', () => {
   it('does not weaken the transactional or fallback boundary while retrying contention', () => {
     expect(writer).toContain("const CHAIN_APPEND_RPC = 'append_audit_event_chained'");
     expect(writer).toContain("reason: 'transactional_append_unavailable'");
-    expect(writer).toContain("AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK");
-    expect(writer).toContain("AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK");
+    expect(writer).toContain('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK');
+    expect(writer).toContain('AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK');
     expect(writer).not.toContain('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK = true');
     expect(writer).not.toContain('AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK = true');
   });
