@@ -70,6 +70,23 @@ describe('enterprise billing lifecycle idempotency contract', () => {
     expect(lifecycle).toContain("baseItem.price.recurring?.interval === 'year' ? 'year' : 'month'");
   });
 
+  it('uses current Stripe state to block unsafe plan/add-on mutation and keeps reactivation explicit', () => {
+    const lifecycle = read('src/server/billing/subscription-lifecycle.ts');
+    const providerRetrieveIndex = lifecycle.indexOf('stripe.subscriptions.retrieve(');
+    const providerStateIndex = lifecycle.indexOf('assertProviderLifecycleState(input.action, subscription);');
+    const ledgerClaimIndex = lifecycle.indexOf('const claim = await claimBillingLifecycleRequest({');
+
+    expect(providerRetrieveIndex).toBeGreaterThan(-1);
+    expect(providerStateIndex).toBeGreaterThan(providerRetrieveIndex);
+    expect(ledgerClaimIndex).toBeGreaterThan(providerStateIndex);
+    expect(lifecycle).toContain("if (action === 'cancel') return;");
+    expect(lifecycle).toContain("subscription.status !== 'active' || !subscription.cancel_at_period_end");
+    expect(lifecycle).toContain("'billing_subscription_not_reactivatable'");
+    expect(lifecycle).toContain("'billing_subscription_not_active'");
+    expect(lifecycle).toContain("'billing_subscription_cancel_pending'");
+    expect(lifecycle.match(/cancel_at_period_end: false/g) ?? []).toHaveLength(1);
+  });
+
   it('persists provider result before audit and completes only after audit success', () => {
     const lifecycle = read('src/server/billing/subscription-lifecycle.ts');
     const ledger = read('src/server/billing/lifecycle-request-ledger.ts');
