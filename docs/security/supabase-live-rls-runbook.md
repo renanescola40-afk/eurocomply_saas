@@ -1,32 +1,56 @@
 # Supabase live RLS runbook
 
-Current P0 progress remains 50% Complete / 50% remaining until the live RLS validation evidence is generated, reviewed, and promoted.
+Use this runbook for the manual `Supabase Live RLS Validation` GitHub Actions workflow after the exact release SHA has already completed the governed Supabase forward-production promotion.
 
-Use this runbook when running the manual `Supabase Live RLS Validation` GitHub Actions workflow.
+The live RLS workflow is a **runtime proof, not a migration writer**.
 
-## Required secrets
+## Required authority before dispatch
 
-The workflow needs the live Supabase project secrets configured in GitHub Actions or the protected `supabase-live-rls-validation` environment:
+You need:
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `release_sha`: the exact current protected `main` SHA;
+- `promotion_run_id`: a successful `Supabase Forward Reconciliation Production Promotion` run for that exact SHA;
+- confirmation: `EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF`.
 
-If `apply_migrations=true`, it also needs:
+The proof refuses to proceed unless the promotion run:
 
-- `SUPABASE_DB_URL`
+- has the same exact SHA;
+- came from `.github/workflows/supabase-forward-reconciliation-production-promotion.yml`;
+- was manually dispatched;
+- completed successfully;
+- still corresponds to current `main` when the protected proof begins.
 
-## Common failure: `SUPABASE_DB_URL is required when apply_migrations=true`
+## Required protected runtime secrets
 
-This means the workflow was asked to apply migrations before running the live tenant-isolation validator, but the Postgres connection string was not available as a secret.
+The `supabase-live-rls-validation` environment supplies the runtime API credentials required by the tenant-isolation proof:
 
-Fix it using one of these paths:
+- `NEXT_PUBLIC_SUPABASE_URL`;
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`;
+- `SUPABASE_SERVICE_ROLE_KEY`.
 
-1. Add `SUPABASE_DB_URL` as a GitHub Actions secret or environment secret, then rerun with `apply_migrations=true`.
-2. Apply `supabase/migrations/20260623120000_live_rls_validation_inventory.sql` manually against the target Supabase project, then rerun with `apply_migrations=false`.
+A separate protected `Production` binding step uses `SUPABASE_DB_POOLER_URL` only to derive a redacted project digest. It does not execute migrations or SQL changes.
 
-## What success produces
+There is no `apply_migrations` input and no supported `SUPABASE_DB_URL` migration path in the current workflow.
 
-A passing run commits generated evidence to the requested evidence branch, uploads the `supabase-live-rls-validation-evidence` artifact, and opens or updates the evidence pull request.
+## If the live inventory helper is missing or invalid
 
-Do not mark the P0 register row Complete unless the strict live tenant-isolation validator passes against the configured Supabase project.
+Do **not** apply a helper migration manually from this proof lane.
+
+A missing helper, wrong privilege boundary, stale schema or failed live postcondition means the governed forward-promotion chain is incomplete for this release. Return to the canonical Supabase reconciliation/promotion path, update the selected forward package if necessary, rehearse it, complete the bounded dry-runs and Decision Gate, promote through the protected canonical writer, and then rerun this runtime proof.
+
+The live proof must never become an alternate Production writer.
+
+## What success proves
+
+A successful run proves, on the exact promoted Production project and SHA:
+
+- Production project binding matches the runtime Supabase API project;
+- promotion evidence and live postconditions are valid;
+- the live inventory helper retains the required privilege boundary;
+- tenant A cannot read or mutate tenant B data;
+- allowed same-tenant operations still work;
+- role separation remains enforced;
+- controlled fixtures are cleaned up;
+- canonical RLS evidence is stamped with GitHub Actions provenance and bound to the exact SHA.
+
+A repository test, preview, stale promotion run or local fixture cannot substitute for this runtime evidence.
