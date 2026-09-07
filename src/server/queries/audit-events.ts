@@ -53,6 +53,7 @@ const AUDIT_EVENT_COLUMNS = 'id,organization_id,actor_user_id,action,entity_type
 const LEGACY_AUDIT_EVENT_COLUMNS = 'id,organization_id,actor_user_id:actor_id,action,entity_type,entity_id,metadata,created_at';
 const CHAIN_APPEND_RPC = 'append_audit_event_chained';
 const MAX_CHAIN_APPEND_ATTEMPTS = 128;
+const MAX_CHAIN_CONTENTION_ATTEMPTS = 3;
 const CHAIN_APPEND_RETRY_BASE_MS = 10;
 const CHAIN_APPEND_RETRY_CAP_MS = 1000;
 const NON_TRANSACTIONAL_FALLBACK_ENV = 'AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK';
@@ -95,11 +96,11 @@ function isMissingAuditChainRpc(error: SupabaseError) {
 }
 
 function isAuditChainPreviousHashMismatch(error: SupabaseError) {
-  return /audit chain previous hash mismatch/i.test(error.message ?? '');
+  return error.code === '40001' && /audit chain previous hash mismatch/i.test(error.message ?? '');
 }
 
 function isAuditChainAppendContention(error: SupabaseError) {
-  return /audit chain append contention/i.test(error.message ?? '');
+  return error.code === '40001' && /audit chain append contention/i.test(error.message ?? '');
 }
 
 const isPreviousHashMismatch = isAuditChainPreviousHashMismatch;
@@ -332,6 +333,7 @@ function waitForAuditChainRetry(attempt: number) {
 
 async function appendAuditEventWithRpc(supabase: SupabaseAdminClient, input: NormalizedAuditEventInput) {
   let lastError: SupabaseError | null = null;
+  let contentionAttempts = 0;
 
   for (let attempt = 1; attempt <= MAX_CHAIN_APPEND_ATTEMPTS; attempt += 1) {
     const previousHashRead = await getPreviousAuditHash(supabase, input.organizationId);
@@ -357,6 +359,14 @@ async function appendAuditEventWithRpc(supabase: SupabaseAdminClient, input: Nor
     if (isPreviousHashMismatch(error) && attempt < MAX_CHAIN_APPEND_ATTEMPTS) {
       await waitForAuditChainRetry(attempt);
       continue;
+    }
+
+    if (isAuditChainAppendContention(error)) {
+      contentionAttempts += 1;
+      if (contentionAttempts < MAX_CHAIN_CONTENTION_ATTEMPTS && attempt < MAX_CHAIN_APPEND_ATTEMPTS) {
+        await waitForAuditChainRetry(contentionAttempts);
+        continue;
+      }
     }
 
     break;
