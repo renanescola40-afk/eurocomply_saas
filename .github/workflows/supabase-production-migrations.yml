@@ -1,6 +1,6 @@
-name: Supabase Production Migrations
+name: Supabase Production Migrations (Legacy Guard)
 
-run-name: Supabase production migrations for ${{ inputs.release_sha }}
+run-name: Legacy Supabase production migration guard for ${{ inputs.release_sha }}
 
 on:
   workflow_dispatch:
@@ -10,342 +10,86 @@ on:
         required: true
         type: string
       confirmation:
-        description: Type APPLY_SUPABASE_MIGRATIONS to authorize production migration deployment
+        description: Type USE_CANONICAL_FORWARD_PROMOTION to acknowledge that this legacy entry point never writes Production
         required: true
         type: string
 
 permissions:
   contents: read
 
-concurrency:
-  group: supabase-production-migrations
-  cancel-in-progress: false
+env:
+  TARGET_SHA: ${{ inputs.release_sha }}
+  CANONICAL_PROMOTION_WORKFLOW: .github/workflows/supabase-forward-reconciliation-production-promotion.yml
 
 jobs:
-  deploy:
-    name: Validate history, dry-run and apply pending migrations
+  guard:
+    name: Refuse legacy production writes
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
-    environment: production
-    env:
-      TARGET_SHA: ${{ inputs.release_sha }}
-      SUPABASE_CLI_VERSION: '2.101.0'
-      EVIDENCE_DIR: artifacts/supabase-production-migrations
+    timeout-minutes: 5
 
     steps:
-      - name: Validate authorization inputs
+      - name: Validate exact current main and acknowledgement
         shell: bash
         env:
+          GH_TOKEN: ${{ github.token }}
           INPUT_CONFIRMATION: ${{ inputs.confirmation }}
         run: |
           set -euo pipefail
-          if [[ ! "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
-            echo "release_sha must be a full 40-character Git SHA" >&2
+          if [[ ! "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "release_sha must be a full lowercase 40-character Git SHA" >&2
             exit 1
           fi
-          if [ "$INPUT_CONFIRMATION" != "APPLY_SUPABASE_MIGRATIONS" ]; then
-            echo "confirmation must exactly match APPLY_SUPABASE_MIGRATIONS" >&2
+          if [ "$INPUT_CONFIRMATION" != "USE_CANONICAL_FORWARD_PROMOTION" ]; then
+            echo "confirmation must exactly match USE_CANONICAL_FORWARD_PROMOTION" >&2
             exit 1
           fi
-          echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
-          echo "SUPABASE_DB_URL_FILE=$RUNNER_TEMP/supabase-production-db-url" >> "$GITHUB_ENV"
+          MAIN_SHA="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$MAIN_SHA" = "$TARGET_SHA"
 
-      - name: Check out exact release SHA
+      - name: Check out exact current main SHA without credentials
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ inputs.release_sha }}
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies deterministically without lifecycle scripts
-        run: npm ci --ignore-scripts
-
-      - name: Verify exact current main checkout
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          OBSERVED_SHA="$(git rev-parse HEAD)"
-          test "$OBSERVED_SHA" = "$TARGET_SHA"
-          MAIN_SHA="$(curl --fail --silent --show-error \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
-          test "$MAIN_SHA" = "$TARGET_SHA"
-
-      - name: Validate required production secrets
-        shell: bash
-        env:
-          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-        run: |
-          set -euo pipefail
-          for name in SUPABASE_DB_POOLER_URL SUPABASE_PROJECT_ID; do
-            if [ -z "${!name:-}" ]; then
-              echo "Missing required production secret: $name" >&2
-              exit 1
-            fi
-          done
-          if [[ ! "$SUPABASE_PROJECT_ID" =~ ^[a-z0-9]{20}$ ]]; then
-            echo "SUPABASE_PROJECT_ID does not look like a Supabase project reference" >&2
-            exit 1
-          fi
-
-      - name: Prepare explicit production database connection
-        shell: bash
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-        run: |
-          set -euo pipefail
-          mkdir -p "$EVIDENCE_DIR"
-          node scripts/supabase/prepare-production-db-connection.mjs \
-            --write-file "$SUPABASE_DB_URL_FILE" \
-            | tee "$EVIDENCE_DIR/connection-diagnostics.json"
-          test -s "$SUPABASE_DB_URL_FILE"
-          test "$(stat -c '%a' "$SUPABASE_DB_URL_FILE")" = '600'
-
-      - name: Validate local migration filenames and versions
+      - name: Verify canonical promotion governance is present
         shell: bash
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          files=(supabase/migrations/*.sql)
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "No Supabase migration files were found" >&2
-            exit 1
-          fi
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test -f "$CANONICAL_PROMOTION_WORKFLOW"
+          test -f config/supabase-forward-reconciliation.json
+          jq -e '
+            .truthBoundary.productionWriteAuthorizedByConfig == false and
+            .truthBoundary.migrationHistoryRepairAllowed == false and
+            .truthBoundary.unrestrictedDbPushAllowed == false and
+            .truthBoundary.onlyListedForwardMigrationsMayBeRehearsedOrRequested == true
+          ' config/supabase-forward-reconciliation.json >/dev/null
+          grep -Fq 'Verify rehearsal dry-run and human decision provenance' "$CANONICAL_PROMOTION_WORKFLOW"
+          grep -Fq 'Execute final filtered dry run immediately before promotion' "$CANONICAL_PROMOTION_WORKFLOW"
+          grep -Fq 'Revalidate current main, bounded S3 and human approval immediately before production write' "$CANONICAL_PROMOTION_WORKFLOW"
+          grep -Fq 'Apply only the filtered selected migration set' "$CANONICAL_PROMOTION_WORKFLOW"
 
-          invalid=0
-          declare -A seen=()
-          for file in "${files[@]}"; do
-            name="$(basename "$file")"
-            if [[ ! "$name" =~ ^([0-9]{14})_[A-Za-z0-9._-]+\.sql$ ]]; then
-              echo "Invalid migration filename: $name" >&2
-              invalid=1
-              continue
-            fi
-
-            version="${BASH_REMATCH[1]}"
-            timestamp="${version:0:8} ${version:8:2}:${version:10:2}:${version:12:2} UTC"
-            if ! date --date="$timestamp" '+%Y%m%d%H%M%S' | grep -Fxq "$version"; then
-              echo "Invalid migration timestamp: $name" >&2
-              invalid=1
-            fi
-
-            if [ -n "${seen[$version]:-}" ]; then
-              echo "Duplicate migration version $version: ${seen[$version]} and $name" >&2
-              invalid=1
-            else
-              seen[$version]="$name"
-            fi
-          done
-
-          test "$invalid" -eq 0
-
-      - name: Test connection resolver and production workflow contracts
-        run: >-
-          npx vitest run
-          scripts/supabase/prepare-production-db-connection.test.mjs
-          tests/security/supabase-production-migrations-workflow.test.ts
-
-      - name: Install pinned Supabase CLI
-        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
-        with:
-          version: ${{ env.SUPABASE_CLI_VERSION }}
-
-      - name: Verify pinned Supabase CLI version
+      - name: Block legacy production write path
         shell: bash
         run: |
           set -euo pipefail
-          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
-
-      - name: Capture and validate migration history before deployment
-        shell: bash
-        run: |
-          set -euo pipefail
-          DB_URL="$(cat "$SUPABASE_DB_URL_FILE")"
-          supabase migration list --db-url "$DB_URL" \
-            | tee migration-state-before.txt \
-            | tee "$EVIDENCE_DIR/migration-state-before.txt"
-
-          # Supabase renders the table separator as either a pipe or a box-drawing
-          # character depending on the CLI/output environment. Normalize both so
-          # history validation is deterministic.
-          sed 's/│/|/g' migration-state-before.txt > migration-state-before.normalized.txt
-
-          remote_head="$(awk -F'|' '
-            {
-              remote=$2;
-              gsub(/[[:space:]]/, "", remote);
-              if (remote ~ /^[0-9]{14}$/) print remote;
-            }
-          ' migration-state-before.normalized.txt | sort | tail -n 1)"
-
-          drift_lines="$(awk -F'|' -v remote_head="$remote_head" '
-            {
-              local=$1; remote=$2;
-              gsub(/[[:space:]]/, "", local);
-              gsub(/[[:space:]]/, "", remote);
-              local_version=(local ~ /^[0-9]{14}$/);
-              remote_version=(remote ~ /^[0-9]{14}$/);
-
-              if (local_version && remote_version && local != remote) {
-                print $0;
-              } else if (!local_version && remote_version) {
-                print $0;
-              } else if (local_version && !remote_version && remote_head != "" && local <= remote_head) {
-                print $0;
-              }
-            }
-          ' migration-state-before.normalized.txt)"
-
-          if [ -n "$drift_lines" ]; then
-            {
-              echo
-              echo "## Deployment blocked: historical migration drift"
-              echo
-              echo '```text'
-              printf '%s\n' "$drift_lines"
-              echo '```'
-              echo
-              echo "Forward-only pending migrations are allowed; historical or remote-only divergence is not."
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo "Production migration history has historical or remote-only drift; refusing db push" >&2
-            exit 1
-          fi
-
-          mapfile -t pending_versions < <(awk -F'|' -v remote_head="$remote_head" '
-            {
-              local=$1; remote=$2;
-              gsub(/[[:space:]]/, "", local);
-              gsub(/[[:space:]]/, "", remote);
-              if (local ~ /^[0-9]{14}$/ && remote !~ /^[0-9]{14}$/ && (remote_head == "" || local > remote_head)) print local;
-            }
-          ' migration-state-before.normalized.txt)
-
-          mapfile -t approved_migrations < <(node -e '
-            const fs = require("node:fs");
-            const config = JSON.parse(fs.readFileSync("config/supabase-forward-reconciliation.json", "utf8"));
-            if (config?.truthBoundary?.onlyListedForwardMigrationsMayBeRehearsedOrRequested !== true) process.exit(2);
-            for (const migration of config.migrations ?? []) console.log(migration.filename);
-          ')
-
-          declare -A approved=()
-          for filename in "${approved_migrations[@]}"; do
-            approved[$filename]=1
-          done
-
-          shopt -s nullglob
-          : > "$EVIDENCE_DIR/pending-approved-migrations.txt"
-          for version in "${pending_versions[@]}"; do
-            matches=(supabase/migrations/"${version}"_*.sql)
-            if [ "${#matches[@]}" -ne 1 ]; then
-              echo "Expected exactly one local migration for pending version $version" >&2
-              exit 1
-            fi
-            filename="$(basename "${matches[0]}")"
-            if [ -z "${approved[$filename]:-}" ]; then
-              echo "Pending migration is not in the approved forward reconciliation package: $filename" >&2
-              exit 1
-            fi
-            echo "$filename" | tee -a "$EVIDENCE_DIR/pending-approved-migrations.txt"
-          done
-
           {
-            echo "## Pre-deployment migration state"
+            echo '## Legacy Supabase production writer blocked by design'
             echo
-            echo "- Remote migration head: \`${remote_head:-none}\`"
-            echo "- Approved forward migrations pending: \`${#pending_versions[@]}\`"
+            echo "- Release SHA: $TARGET_SHA"
+            cat <<'EOF'
+          - Production write performed: `false`
+          - Database credentials released: `false`
+          EOF
+            echo "- Required writer: $CANONICAL_PROMOTION_WORKFLOW"
+            echo
+            echo 'Use the canonical promotion workflow only after exact-SHA rehearsal, bounded dry-run, Decision Gate and required human approval provenance are complete.'
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Preview pending production migrations
-        shell: bash
-        run: |
-          set -euo pipefail
-          DB_URL="$(cat "$SUPABASE_DB_URL_FILE")"
-          supabase db push --db-url "$DB_URL" --dry-run \
-            | tee migration-dry-run.txt \
-            | tee "$EVIDENCE_DIR/migration-dry-run.txt"
-
-      - name: Apply pending production migrations
-        shell: bash
-        run: |
-          set -euo pipefail
-          DB_URL="$(cat "$SUPABASE_DB_URL_FILE")"
-          supabase db push --db-url "$DB_URL" \
-            | tee "$EVIDENCE_DIR/migration-apply.txt"
-
-      - name: Verify production migration history after deployment
-        shell: bash
-        run: |
-          set -euo pipefail
-          DB_URL="$(cat "$SUPABASE_DB_URL_FILE")"
-          supabase migration list --db-url "$DB_URL" \
-            | tee migration-state-after.txt \
-            | tee "$EVIDENCE_DIR/migration-state-after.txt"
-
-          sed 's/│/|/g' migration-state-after.txt > migration-state-after.normalized.txt
-          mismatch_lines="$(awk -F'|' '
-            {
-              local=$1; remote=$2;
-              gsub(/[[:space:]]/, "", local);
-              gsub(/[[:space:]]/, "", remote);
-              local_version=(local ~ /^[0-9]{14}$/);
-              remote_version=(remote ~ /^[0-9]{14}$/);
-              if ((local_version || remote_version) && (!local_version || !remote_version || local != remote)) print $0;
-            }
-          ' migration-state-after.normalized.txt)"
-          if [ -n "$mismatch_lines" ]; then
-            echo "Migration history mismatch remains after deployment" >&2
-            printf '%s\n' "$mismatch_lines" >&2
-            exit 1
-          fi
-
-          {
-            echo "## Supabase production migration deployment"
-            echo
-            echo "- Release SHA: \`$TARGET_SHA\`"
-            echo "- Connection: canonical protected SUPABASE_DB_POOLER_URL"
-            echo "- Result: historical migration state valid before deployment; approved forward migrations applied; histories aligned afterwards"
-            echo
-            echo '```text'
-            cat migration-state-after.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Reverify main did not move during deployment
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          MAIN_SHA="$(curl --fail --silent --show-error \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
-          test "$MAIN_SHA" = "$TARGET_SHA"
-
-      - name: Remove temporary database connection material
-        if: always()
-        shell: bash
-        run: |
-          rm -f "$SUPABASE_DB_URL_FILE"
-
-      - name: Upload production migration evidence
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: supabase-production-migrations-${{ env.TARGET_SHA }}
-          path: ${{ env.EVIDENCE_DIR }}
-          if-no-files-found: error
-          retention-days: 90
+          echo "Legacy Supabase Production Migrations never writes Production; use $CANONICAL_PROMOTION_WORKFLOW" >&2
+          exit 1
