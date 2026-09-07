@@ -6,7 +6,7 @@ const liveProof = readFileSync('scripts/security/run-audit-chain-live-validation
 const rpcMigration = readFileSync('supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql', 'utf8');
 
 describe('audit-chain burst concurrency hardening', () => {
-  it('keeps database serialization and bounded application conflict retries together', () => {
+  it('keeps database serialization and bounded application hash-mismatch retries together', () => {
     expect(rpcMigration).toContain('pg_advisory_xact_lock(hashtext(p_organization_id::text))');
     expect(rpcMigration).toContain("raise exception 'audit chain previous hash mismatch' using errcode = '40001'");
     expect(writer).toContain('MAX_CHAIN_APPEND_ATTEMPTS = 128');
@@ -17,13 +17,28 @@ describe('audit-chain burst concurrency hardening', () => {
     expect(writer).toContain('Math.random()');
   });
 
+  it('fails fast on advisory-lock contention instead of amplifying a generic 40001 into 128 retries', () => {
+    expect(writer).toContain("return /audit chain previous hash mismatch/i.test(error.message ?? '');");
+    expect(writer).toContain("return /audit chain append contention/i.test(error.message ?? '');");
+    expect(writer).not.toContain("return error.code === '40001' || /previous hash mismatch/i.test(error.message ?? '');");
+
+    const contentionBranch = writer.indexOf('if (isAuditChainAppendContention(error)) {');
+    const mismatchRetryBranch = writer.indexOf('if (isPreviousHashMismatch(error) && attempt < MAX_CHAIN_APPEND_ATTEMPTS)');
+
+    expect(contentionBranch).toBeGreaterThan(-1);
+    expect(mismatchRetryBranch).toBeGreaterThan(-1);
+    expect(contentionBranch).toBeLessThan(mismatchRetryBranch);
+    expect(writer.slice(contentionBranch, mismatchRetryBranch)).toContain('break;');
+    expect(writer.slice(contentionBranch, mismatchRetryBranch)).not.toContain('waitForAuditChainRetry');
+  });
+
   it('fails closed when the current chain head cannot be read', () => {
     expect(writer).toContain('return { hash: null, error }');
     expect(writer).toContain('if (previousHashRead.error)');
     expect(writer).not.toContain('if (error) return null;');
   });
 
-  it('does not weaken the transactional or fallback boundary while retrying contention', () => {
+  it('does not weaken the transactional or fallback boundary while retrying hash mismatch', () => {
     expect(writer).toContain("const CHAIN_APPEND_RPC = 'append_audit_event_chained'");
     expect(writer).toContain("reason: 'transactional_append_unavailable'");
     expect(writer).toContain("AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK");
