@@ -1,6 +1,7 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
   "changeSet": "2026-09-08-post-audit-containment-forward-reconciliation-v40",
+  "sourceChangeSet": "2026-09-06-cross-tenant-reference-integrity-v39",
   "migrations": [
     {
       "filename": "20260908000000_reconcile_final_public_release_payment_storage_hardening.sql",
