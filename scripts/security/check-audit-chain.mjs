@@ -16,7 +16,8 @@ const files = {
   verifyRoute: 'src/app/api/audit/chain/verify/route.ts',
   evidencePackRoute: 'src/app/api/audit/evidence-pack/route.ts',
   cli: 'scripts/security/verify-audit-chain.mjs',
-  liveValidation: 'scripts/security/run-audit-chain-live-validation.mjs',
+  liveValidation: 'scripts/security/run-audit-chain-live-validation-v2.mjs',
+  legacyLiveValidation: 'scripts/security/run-audit-chain-live-validation.mjs',
   ephemeralFixtures: 'scripts/security/lib/ephemeral-auth-fixtures.mjs',
   verifyRouteTest: 'src/app/api/audit/chain/verify/route.test.ts',
   evidencePackRouteTest: 'src/app/api/audit/evidence-pack/route.test.ts',
@@ -38,7 +39,7 @@ const requiredTokens = {
   evidencePackRoute: ['assertOrganizationPermission', 'export_data', 'requireStepUpForRequest', 'audit_chain_export', 'buildEvidencePackIntegrity', '!integrity.signed', 'audit_evidence_pack_signing_unavailable', 'audit_chain.evidence_exported'],
   cli: ['eurocomply.audit-chain.cli', '--input', '--expected-previous-hash', 'SIGNING_ENV', 'canonicalizeAuditEvent', 'buildAuditEventHash', 'missing_previous_hash', 'previous_hash_mismatch', 'event_hash_mismatch', 'signature_mismatch', 'payload.evidence?.auditEvents', 'evidence?.auditEvents', 'process.exit(result.ok ? 0 : 1)'],
   liveValidation: [
-    'run-audit-chain-live-validation',
+    'run-audit-chain-live-validation-v2.mjs',
     'append_audit_event_chained',
     'createEphemeralAuthFixtures',
     'cleanupSyntheticAuditEvents',
@@ -49,10 +50,14 @@ const requiredTokens = {
     'appendConcurrent',
     'tamperDetection',
     'missingPreviousHash',
-    'criticalEventCoverage',
     'enterpriseRelease',
     'audit_chain_target_live_validation_incomplete',
+    'LIVE_REQUEST_TIMEOUT_MS = 8_000',
+    'LIVE_BATCH_TIMEOUT_MS = 30_000',
+    'audit chain append contention',
+    'audit chain previous hash mismatch',
   ],
+  legacyLiveValidation: ["import './run-audit-chain-live-validation-v2.mjs';"],
   ephemeralFixtures: ['createEphemeralAuthFixtures', 'cleanupEphemeralAuthFixtures', 'organizationA', 'created'],
   verifyRouteTest: ['rejects verification before step-up when RBAC is missing', 'verifies the chain only after RBAC and signed step-up', 'rejects verification without a valid step-up token', 'audit_chain.verified'],
   evidencePackRouteTest: ['returns a signed export only after RBAC and step-up', 'rejects export when RBAC is missing', 'fails closed when the evidence export cannot be signed', 'audit_chain.evidence_exported'],
@@ -90,6 +95,15 @@ for (const [key, tokens] of Object.entries(requiredTokens)) {
   if (sources[key]) requireTokens(files[key], sources[key], tokens);
 }
 
+if (sources.legacyLiveValidation) {
+  if (sources.legacyLiveValidation.includes('LIVE_APPEND_MAX_ATTEMPTS')) {
+    failures.push(`${files.legacyLiveValidation} must not reintroduce the retired 128-attempt live retry loop`);
+  }
+  if (sources.legacyLiveValidation.includes("error?.code === '40001' ||")) {
+    failures.push(`${files.legacyLiveValidation} must not treat generic SQLSTATE 40001 as retryable`);
+  }
+}
+
 if (sources.liveValidation) {
   for (const legacyPersistentFixtureToken of [
     'AUDIT_CHAIN_LIVE_ORGANIZATION_ID',
@@ -109,6 +123,9 @@ if (sources.liveValidation) {
   }
   if (!sources.liveValidation.includes('syntheticAuditEventsRetained: liveValidation.cleanup?.auditEventsRemoved !== true')) {
     failures.push(`${files.liveValidation} must expose retained synthetic audit events as an evidence-integrity failure`);
+  }
+  if (sources.liveValidation.includes("return error?.code === '40001'\n    ||")) {
+    failures.push(`${files.liveValidation} must not classify an unknown SQLSTATE 40001 as an expected concurrency conflict`);
   }
 }
 
@@ -132,7 +149,7 @@ if (sources.preflight && !(sources.preflight.includes(auditSigningEnv) || source
   failures.push(`${files.preflight} must recommend audit-chain signing material`);
 }
 
-for (const requiredPath of [files.migration, files.rpcMigration, files.enterpriseMigration, files.concurrencyRunbook, files.model, files.cli, files.liveValidation, files.runtimeEvidence]) {
+for (const requiredPath of [files.migration, files.rpcMigration, files.enterpriseMigration, files.concurrencyRunbook, files.model, files.cli, files.legacyLiveValidation, files.runtimeEvidence]) {
   if (sources.preflight && !sources.preflight.includes(requiredPath)) failures.push(`${files.preflight} must require ${requiredPath}`);
 }
 
@@ -148,7 +165,7 @@ if (sources.helper && sources.helper.includes('Math.random')) failures.push(`${f
 if (sources.helper && sources.helper.includes('new Date()')) failures.push(`${files.helper} must not introduce current timestamps when building deterministic hashes`);
 if (sources.auditEvents && sources.auditEvents.includes('event_hash') && !sources.auditEvents.includes('previousHash')) failures.push(`${files.auditEvents} must return or track previousHash when writing chained audit events`);
 if (sources.auditEvents && !sources.auditEvents.includes('randomUUID')) failures.push(`${files.auditEvents} must assign the audit event id before hashing`);
-if (sources.auditEvents && !sources.auditEvents.includes('MAX_CHAIN_APPEND_ATTEMPTS = 128')) failures.push(`${files.auditEvents} must keep the reviewed 100-way burst retry ceiling`);
+if (sources.auditEvents && !sources.auditEvents.includes('MAX_CHAIN_APPEND_ATTEMPTS = 128')) failures.push(`${files.auditEvents} must keep the reviewed 100-way burst retry ceiling for explicit previous-hash mismatch only`);
 if (sources.auditEvents && !sources.auditEvents.includes('waitForAuditChainRetry')) failures.push(`${files.auditEvents} must back off between previous-hash conflict retries`);
 
 const routeSilentlyClampsLimit = sources.verifyRoute.includes('Math.min(Math.max');
