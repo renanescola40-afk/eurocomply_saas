@@ -1,93 +1,73 @@
 # ADR — Targeted Supabase Live-RLS Proof Migrations
 
 - **Date:** 2026-07-30
-- **Status:** Accepted
+- **Status:** Superseded
 - **Decision owner:** Security Engineering / Release Engineering
 - **Related:** Issues #198 and #1415
+- **Superseded by:** governed forward-reconciliation Production promotion followed by promotion-bound live RLS runtime proof
 
-## Context
+## Historical context
 
-The live tenant-isolation proof requires a small set of idempotent database helpers and policy repairs. The target Supabase project currently has substantial migration-history drift:
+This ADR originally authorized a narrowly scoped, manually dispatched exception that could apply a small allowlisted set of proof-specific SQL before running the live tenant-isolation validator. At the time, Production migration history contained substantial unresolved drift, and unrestricted `supabase db push` was explicitly prohibited.
 
-- 17 remote migration versions;
-- 169 valid local-only versions;
-- 21 legacy invalid filenames/timestamps;
-- 16 duplicate local versions.
+The temporary exception required exact-main dispatch, deliberate `apply_migrations=true`, a protected database connection, focused contracts, bounded SQL execution and strict privilege validation. It did not authorize arbitrary product migrations, migration-history repair or a general Production push.
 
-An unrestricted production `supabase db push` is therefore not an acceptable way to unblock the proof. It would attempt a broad historical backlog whose relationship to the actual live schema has not yet been reconciled.
+That historical exception is now retired.
 
-The repository already has a manually dispatched `Supabase Live RLS Validation` workflow and a protected GitHub environment with an IPv4 pooler connection string. That workflow historically applied a bounded list of proof-specific SQL files through `psql` before running the strict validator.
+## Superseding decision
 
-## Decision
+The current repository has a governed forward-reconciliation Production-promotion workflow that owns Production migration writes:
 
-Keep a narrowly scoped, manually dispatched proof-migration path while the broader migration history is reconciled under issue #1415.
+`.github/workflows/supabase-forward-reconciliation-production-promotion.yml`
 
-The proof workflow may apply only the SQL files explicitly listed in `.github/workflows/supabase-live-rls-validation.yml` when all of the following are true:
+The current `Supabase Live RLS Validation` workflow is post-promotion runtime evidence only and must not execute migrations or direct proof-specific SQL.
 
-1. The workflow is manually dispatched from the exact current `main` SHA.
-2. `apply_migrations=true` is supplied deliberately.
-3. The protected `supabase-live-rls-validation` environment supplies `SUPABASE_DB_URL`.
-4. The URL uses the IPv4-capable pooler rather than the direct IPv6-only endpoint.
-5. Focused migration and evidence contracts pass before database access.
-6. Every file is executed with `ON_ERROR_STOP` and a single transaction.
-7. The repaired inventory helper is used instead of the older permissive helper migration.
-8. Effective live privileges are checked after application:
-   - no `PUBLIC` execute grant;
-   - no `anon` execute grant;
-   - no `authenticated` execute grant;
-   - `service_role` retains execute;
-   - the function remains `SECURITY INVOKER`;
-   - the function has a fixed `search_path`.
-9. The strict tenant-isolation validator runs immediately afterward.
-10. Evidence remains bound to the exact final SHA and GitHub Actions provenance.
+Therefore:
 
-## Security boundary
+1. `apply_migrations` is not a valid current live-RLS workflow input.
+2. The live proof must not receive a database credential for the purpose of applying helper SQL.
+3. Any required live-RLS helper or privilege repair must be included in the governed forward migration set.
+4. That selected set must pass exact-SHA rehearsal, forward dry-run, bounded Production dry-run and the human Decision Gate before Production promotion.
+5. The canonical promotion workflow must revalidate current `main`, bounded S3 evidence and accepted human approval immediately before the Production write.
+6. After successful promotion, the live RLS proof requires the exact successful promotion run ID and independently validates its provenance.
+7. The live proof binds the Production database project to the runtime API project using a redacted digest and then runs the strict tenant-isolation validator.
+8. A missing helper, incorrect privilege boundary or failed live postcondition blocks the proof and returns the release to the governed promotion chain; it never authorizes an inline repair.
 
-The inventory helper exposes schema-security metadata and is not an application feature. It must remain accessible only to the controlled service-role proof runner.
+## Current security boundary
 
-The repair migration therefore:
+`public.eurocomply_live_rls_inventory(text[])` remains a controlled schema-security helper, not an application feature. Its effective live boundary must prove:
 
-- recreates the exact required signature idempotently;
-- fixes `search_path` to `public, pg_catalog`;
-- explicitly revokes default/public execution;
-- revokes `anon` and `authenticated` execution;
-- grants only `service_role` execution;
-- reloads the PostgREST schema cache.
+- no `PUBLIC` execute grant;
+- no `anon` execute grant;
+- no `authenticated` execute grant;
+- controlled `service_role` execution remains available to the proof;
+- the function remains `SECURITY INVOKER`;
+- the function uses the fixed `search_path` required by the validator.
 
-## Migration-history boundary
+These properties are validated after the governed promotion, not established by the live-proof workflow itself.
 
-This targeted path executes SQL directly and does **not** claim to reconcile `supabase_migrations.schema_migrations`.
+## Production-write boundary
 
-It must not be used to:
+There must be one canonical forward-reconciliation Production writer. The following remain prohibited outside that governed writer:
 
-- deploy arbitrary product migrations;
-- mark historical migrations as applied;
-- justify a general production `db push`;
-- close issue #1415;
-- represent the production schema as fully aligned.
+- direct proof-specific Production SQL application;
+- unrestricted `supabase db push`;
+- `--include-all`;
+- migration-history repair or synthetic ledger insertion;
+- treating migration manifest membership as Production-write authorization;
+- writing for a stale SHA after `main` has moved.
 
-The migration-history backlog requires schema-level classification, dry-run, staged testing, independent approval, and post-execution drift evidence.
+The manifest truth boundary `productionWriteAuthorizedByConfig=false` remains intentional: configuration can describe the selected set but cannot itself grant Production-write authority.
 
-## Consequences
+## Historical decision record
 
-### Positive
+The original 2026-07-30 decision was a temporary exception created to unblock live RLS assurance while broad migration-history reconciliation was incomplete. It required manual exact-SHA execution and direct privilege checks and explicitly did not claim full migration-history reconciliation.
 
-- Issue #198 can be unblocked without attempting 169 unrelated local migrations.
-- The proof helper receives stronger privilege controls than the original migration.
-- The workflow validates the effective database state, not only repository text.
-- The existing protected environment and exact-SHA controls are reused.
+Its planned exit criteria were a reconciled, independently reviewed normal Production migration path and a live proof that no longer needed direct allowlisted SQL application. Those exit criteria have now been met at the workflow-design level by the canonical forward-promotion chain and the promotion-bound, non-migrating live RLS validation workflow.
 
-### Trade-offs
+## Consequences of supersession
 
-- The targeted SQL execution is an explicit temporary exception while migration history is unresolved.
-- The migration-history table remains incomplete until issue #1415 is resolved.
-- A human must still merge this change, dispatch the workflow, and review genuine runtime evidence.
-
-## Exit criteria
-
-This exception can be retired when:
-
-- issue #1415 is completed;
-- normal production migration deployment is reconciled and independently approved;
-- the live proof no longer needs direct allowlisted SQL application;
-- strict exact-SHA runtime evidence remains passing through the standard deployment path.
+- Live RLS assurance can no longer mutate Production.
+- Database helper changes must travel through the same reviewed migration path as other Production schema changes.
+- Runtime evidence remains exact-SHA and tied to a successful canonical promotion.
+- The historical exception remains documented for auditability, but must not be used as current operational instruction.
