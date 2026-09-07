@@ -107,13 +107,6 @@ export function resolveStripeSubscriptionPlan(subscription: Stripe.Subscription)
     return { plan: planFromPrice, stripePriceId, source: 'stripe_price_id' as const };
   }
 
-  const metadataPlan = getPlanIdFromMetadata(subscription.metadata);
-  const planFromMetadata = getBillingPlan(metadataPlan)?.id;
-
-  if (planFromMetadata) {
-    return { plan: planFromMetadata, stripePriceId, source: 'subscription_metadata_fallback' as const };
-  }
-
   return { plan: undefined, stripePriceId, source: 'unresolved' as const };
 }
 
@@ -367,7 +360,7 @@ export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscrip
   }
 
   if (!plan) {
-    throw new Error('Missing or invalid Stripe price or plan metadata on subscription');
+    throw new Error('Missing or unrecognized canonical Stripe price on subscription');
   }
 
   if (!customerId) {

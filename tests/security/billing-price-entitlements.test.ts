@@ -33,11 +33,13 @@ describe('billing Stripe price entitlements', () => {
     expect(getBillingPlanIdForStripePriceId('price_unknown')).toBeUndefined();
   });
 
-  it('syncs webhook entitlements from Stripe price IDs before metadata fallbacks', () => {
+  it('syncs webhook entitlements only from allowlisted Stripe price IDs', () => {
     expect(processor).toContain('resolveStripeSubscriptionPlan');
     expect(processor).toContain('getBillingPlanIdForStripePriceId(stripePriceId)');
     expect(processor).toContain("source: 'stripe_price_id'");
-    expect(processor).toContain("source: 'subscription_metadata_fallback'");
+    expect(processor).toContain("source: 'unresolved'");
+    expect(processor).not.toContain("source: 'subscription_metadata_fallback'");
+    expect(processor).toContain('Missing or unrecognized canonical Stripe price on subscription');
     expect(processor).toContain('planSource: planResolution.source');
     expect(processor).toContain('stripePriceId: planResolution.stripePriceId');
   });
