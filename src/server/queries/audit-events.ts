@@ -95,7 +95,11 @@ function isMissingAuditChainRpc(error: SupabaseError) {
 }
 
 function isAuditChainPreviousHashMismatch(error: SupabaseError) {
-  return error.code === '40001' || /previous hash mismatch/i.test(error.message ?? '');
+  return /audit chain previous hash mismatch/i.test(error.message ?? '');
+}
+
+function isAuditChainAppendContention(error: SupabaseError) {
+  return /audit chain append contention/i.test(error.message ?? '');
 }
 
 const isPreviousHashMismatch = isAuditChainPreviousHashMismatch;
@@ -345,6 +349,10 @@ async function appendAuditEventWithRpc(supabase: SupabaseAdminClient, input: Nor
     }
 
     lastError = error;
+
+    if (isAuditChainAppendContention(error)) {
+      break;
+    }
 
     if (isPreviousHashMismatch(error) && attempt < MAX_CHAIN_APPEND_ATTEMPTS) {
       await waitForAuditChainRetry(attempt);
