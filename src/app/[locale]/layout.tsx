@@ -111,6 +111,12 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <html lang={safeLocale} suppressHydrationWarning>
+      <head>
+        <meta
+          name="_bisamchjnirjhuim3bllnxun2zl0dfd8"
+          {...{ signature: '_e8flhq2qpr6fuvd036hr4l97yn8octew' }}
+        />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased`}>
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider
