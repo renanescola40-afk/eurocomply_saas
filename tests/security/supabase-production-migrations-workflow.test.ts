@@ -4,110 +4,58 @@ import { describe, expect, it } from 'vitest';
 const workflowPath = '.github/workflows/supabase-production-migrations.yml';
 const workflow = readFileSync(workflowPath, 'utf8');
 const normalized = workflow.toLowerCase();
-const jobHeader = workflow.slice(0, workflow.indexOf('\n    steps:'));
 
-describe('Supabase production migrations workflow', () => {
-  it('is manual-only and requires exact explicit production authorization', () => {
+describe('legacy Supabase production migrations guard', () => {
+  it('is manual-only and cannot be triggered by code changes', () => {
     expect(normalized).toContain('workflow_dispatch:');
     expect(normalized).not.toMatch(/\n\s+push:/);
     expect(normalized).not.toMatch(/\n\s+pull_request:/);
-    expect(workflow).toContain('INPUT_CONFIRMATION: ${{ inputs.confirmation }}');
-    expect(workflow).toContain(
-      '"APPLY_SUPABASE_MIGRATIONS"',
-    );
-    expect(normalized).toContain('release_sha must be a full 40-character git sha');
   });
 
-  it('checks out and reverifies the exact current main SHA', () => {
-    expect(normalized).toContain('check out exact release sha');
-    expect(normalized).toContain('verify exact current main checkout');
-    expect(workflow).toContain('test "$OBSERVED_SHA" = "$TARGET_SHA"');
+  it('requires the exact current main SHA and explicit legacy acknowledgement', () => {
+    expect(workflow).toContain('USE_CANONICAL_FORWARD_PROMOTION');
+    expect(normalized).toContain('release_sha must be a full lowercase 40-character git sha');
     expect(workflow).toContain('test "$MAIN_SHA" = "$TARGET_SHA"');
-    expect(normalized).toContain('reverify main did not move during deployment');
+    expect(workflow).toContain('test "$(git rev-parse HEAD)" = "$TARGET_SHA"');
   });
 
-  it('uses a protected environment and the canonical pooler secret', () => {
-    expect(jobHeader).toContain('environment: production');
-    expect(jobHeader).not.toContain('${{ secrets.');
-    expect(workflow).toContain(
-      'SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}',
-    );
-    expect(workflow).toContain(
-      'SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}',
-    );
-    expect(workflow).toContain(
-      'SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}',
-    );
-    expect(workflow.match(/secrets\.SUPABASE_DB_POOLER_URL/g)).toHaveLength(2);
-    expect(workflow).not.toContain('secrets.SUPABASE_DB_URL');
-    expect(workflow).not.toContain('SUPABASE_DB_PASSWORD');
-    expect(workflow).not.toContain('supabase link');
+  it('never receives database secrets or a protected database environment', () => {
+    expect(normalized).not.toContain('environment: production');
+    expect(normalized).not.toContain('supabase_db_pooler_url');
+    expect(normalized).not.toContain('supabase_project_id');
+    expect(normalized).not.toContain('secrets.');
   });
 
-  it('pins and verifies the Supabase CLI', () => {
-    expect(workflow).toContain("SUPABASE_CLI_VERSION: '2.101.0'");
-    expect(workflow).toContain('version: ${{ env.SUPABASE_CLI_VERSION }}');
-    expect(workflow).toContain(
-      'test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"',
-    );
-    expect(normalized).not.toContain('version: latest');
-  });
-
-  it('uses the validated explicit DB URL for every remote command', () => {
-    const migrationListLines = workflow
-      .split('\n')
-      .filter((line) => line.includes('supabase migration list'));
-    const dbPushLines = workflow
-      .split('\n')
-      .filter((line) => line.includes('supabase db push'));
-
-    expect(migrationListLines).toHaveLength(2);
-    expect(migrationListLines.every((line) => line.includes('--db-url "$DB_URL"'))).toBe(true);
-    expect(dbPushLines).toHaveLength(2);
-    expect(dbPushLines.every((line) => line.includes('--db-url "$DB_URL"'))).toBe(true);
-    expect(dbPushLines[0]).toContain('--dry-run');
-    expect(dbPushLines[1]).not.toContain('--dry-run');
-    expect(normalized).not.toContain('--linked');
-  });
-
-  it('allows approved forward-only pending migrations without accepting historical drift', () => {
-    expect(workflow).toContain("sed 's/│/|/g' migration-state-before.txt");
-    expect(workflow).toContain('local <= remote_head');
-    expect(workflow).toContain('local > remote_head');
-    expect(workflow).toContain('config/supabase-forward-reconciliation.json');
-    expect(workflow).toContain('onlyListedForwardMigrationsMayBeRehearsedOrRequested');
-    expect(workflow).toContain('Pending migration is not in the approved forward reconciliation package');
-    expect(workflow).toContain('pending-approved-migrations.txt');
-    expect(workflow).toContain('historical or remote-only drift');
-  });
-
-  it('previews before applying and requires complete history alignment afterwards', () => {
-    expect(normalized.indexOf('capture and validate migration history before deployment')).toBeLessThan(
-      normalized.indexOf('preview pending production migrations'),
-    );
-    expect(normalized.indexOf('preview pending production migrations')).toBeLessThan(
-      normalized.indexOf('apply pending production migrations'),
-    );
-    expect(normalized.indexOf('apply pending production migrations')).toBeLessThan(
-      normalized.indexOf('verify production migration history after deployment'),
-    );
-    expect(workflow).toContain("sed 's/│/|/g' migration-state-after.txt");
-    expect(workflow).toContain('Migration history mismatch remains after deployment');
-  });
-
-  it('never enables destructive or broad migration flags', () => {
+  it('contains no database write or migration execution command', () => {
+    expect(normalized).not.toContain('supabase db push');
+    expect(normalized).not.toContain('supabase migration repair');
     expect(normalized).not.toContain('db reset');
     expect(normalized).not.toContain('--include-all');
-    expect(normalized).not.toContain('migration repair');
-    expect(normalized).not.toContain('--yes');
+    expect(normalized).not.toContain('apply pending production migrations');
   });
 
-  it('keeps connection material temporary and uploads bounded evidence', () => {
-    expect(normalized).toContain('prepare-production-db-connection.mjs');
-    expect(normalized).toContain('connection-diagnostics.json');
-    expect(workflow).toContain('rm -f "$SUPABASE_DB_URL_FILE"');
-    expect(normalized).toContain('upload production migration evidence');
-    expect(normalized).toContain('retention-days: 90');
+  it('requires the canonical governed production-promotion workflow', () => {
+    expect(workflow).toContain(
+      '.github/workflows/supabase-forward-reconciliation-production-promotion.yml',
+    );
+    expect(workflow).toContain('productionWriteAuthorizedByConfig == false');
+    expect(workflow).toContain('migrationHistoryRepairAllowed == false');
+    expect(workflow).toContain('unrestrictedDbPushAllowed == false');
+    expect(workflow).toContain('onlyListedForwardMigrationsMayBeRehearsedOrRequested == true');
+    expect(workflow).toContain('Verify rehearsal dry-run and human decision provenance');
+    expect(workflow).toContain('Execute final filtered dry run immediately before promotion');
+    expect(workflow).toContain(
+      'Revalidate current main, bounded S3 and human approval immediately before production write',
+    );
+    expect(workflow).toContain('Apply only the filtered selected migration set');
+  });
+
+  it('fails closed so a green legacy run can never be mistaken for a production promotion', () => {
+    expect(normalized).toContain('block legacy production write path');
+    expect(workflow).toContain('Production write performed: `false`');
+    expect(workflow).toContain('Database credentials released: `false`');
+    expect(workflow).toMatch(/Legacy Supabase Production Migrations never writes Production/);
+    expect(workflow).toMatch(/\n\s+exit 1\n/);
   });
 
   it('keeps repository permissions read-only', () => {
