@@ -10,6 +10,8 @@ Connect RISCK COMPLY to LinkedIn using the official LinkedIn Community Managemen
 - No LinkedIn token or client secret may be committed to Git.
 - Controlled one-off test publishing goes through `/api/internal/marketing/linkedin/publish`.
 - Recurring publishing goes through the persistent `linkedin_marketing_posts` queue and `/api/internal/marketing/linkedin/process`.
+- Recurring publishing is fail-closed by default and requires the explicit server-side `LINKEDIN_RECURRING_PUBLISHING_ENABLED=true` activation gate.
+- The recurring-publishing activation flag must remain absent/false until `STANDARD_ACCESS_READY` and `PRODUCTION_ACCEPTANCE_PASS` are both proven.
 - Connection readiness is inspected through `/api/platform/marketing/linkedin/status`.
 - The connection status endpoint requires an authenticated platform actor with the `security` capability and a current AAL2 MFA session.
 - The connection status route is protected by distributed fail-closed rate limiting before LinkedIn provider calls.
@@ -79,6 +81,14 @@ LINKEDIN_ACCESS_TOKEN=
 LINKEDIN_API_VERSION=<LinkedIn-supported YYYYMM version>
 ```
 
+Recurring publication activation, deliberately disabled by default:
+
+```text
+LINKEDIN_RECURRING_PUBLISHING_ENABLED=true
+```
+
+Do not configure this activation value until `STANDARD_ACCESS_READY=true` and `PRODUCTION_ACCEPTANCE_PASS=true`. When it is absent or any value other than the exact string `true`, the authenticated cron returns a successful no-op response without claiming queue rows or contacting LinkedIn.
+
 Optional organization overrides:
 
 ```text
@@ -101,11 +111,11 @@ LINKEDIN_ORGANIZATION_VANITY_NAME=risck-comply
 9. Call `/api/platform/marketing/linkedin/status` from an AAL2 platform-security session and require `readyForControlledTest=true`.
 10. Execute one controlled organization post permitted by the granted Development-tier conditions.
 11. Record the returned LinkedIn post id and verify Page rendering.
-12. Confirm the queue worker can claim and publish one intentionally scheduled integration-test item without duplicate behavior.
+12. Confirm the queue worker can claim and publish one intentionally scheduled integration-test item without duplicate behavior in a controlled test path; do not enable recurring cron publication yet.
 13. Prepare the Community Management Standard Tier application/evidence required by LinkedIn, including a demonstration/screen recording if requested by the current access process.
 14. Obtain Standard Tier approval.
 15. Re-run connection verification and a bounded production acceptance test under the granted Standard access.
-16. Enable recurring editorial scheduling only after Standard access and the production acceptance gates pass.
+16. Only after `STANDARD_ACCESS_READY=true` and `PRODUCTION_ACCEPTANCE_PASS=true`, configure `LINKEDIN_RECURRING_PUBLISHING_ENABLED=true` and enable recurring editorial scheduling.
 
 ## Connection verifier
 
@@ -154,7 +164,7 @@ A valid request returns HTTP 201 with the LinkedIn post id when LinkedIn exposes
 - `linkedin_post_id`: provider identifier after successful publication;
 - `last_error_code`: sanitized operational failure classification.
 
-The Vercel production cron calls the protected processor every 15 minutes. The processor publishes only rows already in `scheduled` state whose `scheduled_for` time has arrived. It never invents or changes post copy during publication.
+The Vercel production cron calls the protected processor every 15 minutes. While `LINKEDIN_RECURRING_PUBLISHING_ENABLED` is not exactly `true`, the processor is a successful authenticated no-op and does not touch the queue. Once explicitly activated after the production gates, it publishes only rows already in `scheduled` state whose `scheduled_for` time has arrived. It never invents or changes post copy during publication.
 
 ## Current queue evidence — 2026-09-02
 
@@ -204,6 +214,6 @@ Email authorization remains a separate policy. LinkedIn publishing permission do
 - `DEVELOPMENT_TEST_PASS`: controlled integration post and queue test succeed under the granted Development conditions.
 - `STANDARD_ACCESS_READY`: Community Management Standard Tier is approved for the live production use case.
 - `PRODUCTION_ACCEPTANCE_PASS`: the Standard-tier connection and bounded production test are verified.
-- `MARKETING_OPERATOR_ACTIVE`: recurring editorial scheduling under the high-autonomy policy is enabled.
+- `MARKETING_OPERATOR_ACTIVE`: recurring editorial scheduling under the high-autonomy policy is enabled with `LINKEDIN_RECURRING_PUBLISHING_ENABLED=true`.
 
-Do not mark `MARKETING_OPERATOR_ACTIVE` without `STANDARD_ACCESS_READY` and `PRODUCTION_ACCEPTANCE_PASS`.
+Do not mark `MARKETING_OPERATOR_ACTIVE` or enable recurring publication without `STANDARD_ACCESS_READY` and `PRODUCTION_ACCEPTANCE_PASS`.
