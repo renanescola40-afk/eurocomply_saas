@@ -95,11 +95,15 @@ function isMissingAuditChainRpc(error: SupabaseError) {
 }
 
 function isAuditChainPreviousHashMismatch(error: SupabaseError) {
-  return error.code === '40001' && /audit chain previous hash mismatch/i.test(error.message ?? '');
+  const message = error.message ?? '';
+  return (error.code === '40001' && /audit chain previous hash mismatch/i.test(message))
+    || (error.code === 'P0001' && /audit chain write conflict: stale head/i.test(message));
 }
 
 function isAuditChainAppendContention(error: SupabaseError) {
-  return error.code === '40001' && /audit chain append contention/i.test(error.message ?? '');
+  const message = error.message ?? '';
+  return (error.code === '40001' && /audit chain append contention/i.test(message))
+    || (error.code === '55P03' && /audit chain write conflict: lock unavailable/i.test(message));
 }
 
 const isPreviousHashMismatch = isAuditChainPreviousHashMismatch;

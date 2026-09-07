@@ -34,6 +34,7 @@ const requiredFiles = [
   'scripts/security/run-audit-chain-live-validation.mjs',
   'scripts/security/run-audit-chain-live-validation-v2.mjs',
   'supabase/migrations/20260905075429_fail_fast_audit_chain_advisory_contention.sql',
+  'supabase/migrations/20260907142133_p0_audit_chain_fail_closed_nonretryable_conflicts_20260907.sql',
 ];
 
 const sourceTokens = {
@@ -41,6 +42,8 @@ const sourceTokens = {
     rpcName,
     'MAX_CHAIN_APPEND_ATTEMPTS = 128',
     'transactional_append_unavailable',
+    'audit chain write conflict: lock unavailable',
+    'audit chain write conflict: stale head',
   ],
   'supabase/migrations/20260905075429_fail_fast_audit_chain_advisory_contention.sql': [
     'pg_try_advisory_xact_lock',
@@ -48,6 +51,15 @@ const sourceTokens = {
     'audit chain previous hash mismatch',
     'security definer',
     'grant execute',
+  ],
+  'supabase/migrations/20260907142133_p0_audit_chain_fail_closed_nonretryable_conflicts_20260907.sql': [
+    'pg_try_advisory_xact_lock',
+    "errcode = '55P03'",
+    "errcode = 'P0001'",
+    'audit chain write conflict: lock unavailable',
+    'audit chain write conflict: stale head',
+    'security definer',
+    'service_role',
   ],
 };
 
@@ -221,10 +233,13 @@ async function appendViaRpc(supabase, payload) {
 }
 
 function isConcurrencyConflict(error) {
+  const code = error?.code ?? '';
   const message = error?.message ?? '';
-  return error?.code === '40001'
-    && (/audit chain append contention/i.test(message)
-      || /audit chain previous hash mismatch/i.test(message));
+  return (code === '40001'
+      && (/audit chain append contention/i.test(message)
+        || /audit chain previous hash mismatch/i.test(message)))
+    || (code === '55P03' && /audit chain write conflict: lock unavailable/i.test(message))
+    || (code === 'P0001' && /audit chain write conflict: stale head/i.test(message));
 }
 
 function mapRowToRecord(row) {
@@ -482,7 +497,7 @@ async function runLiveValidation() {
         strategy: 'single-stale-head-winner-plus-fresh-retry',
         levels: [...CONCURRENCY_LEVELS],
         batches: concurrencyBatches,
-        note: 'Each burst intentionally shares one stale previous_hash. PASS requires exactly one accepted append, all remaining writes rejected fail-fast with SQLSTATE 40001 and a recognized audit-chain conflict message, and a fresh-head retry to succeed.',
+        note: 'Each burst intentionally shares one stale previous_hash. PASS requires exactly one accepted append, all remaining writes rejected fail-fast with a recognized legacy or non-retryable audit-chain conflict signal, and a fresh-head retry to succeed.',
       },
       tamperDetection: {
         status: tamperDetected ? 'Complete' : 'Failed',

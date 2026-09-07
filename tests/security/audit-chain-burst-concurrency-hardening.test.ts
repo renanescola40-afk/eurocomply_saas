@@ -6,6 +6,7 @@ const legacyLiveProof = readFileSync('scripts/security/run-audit-chain-live-vali
 const boundedLiveProof = readFileSync('scripts/security/run-audit-chain-live-validation-v2.mjs', 'utf8');
 const rpcMigration = readFileSync('supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql', 'utf8');
 const failFastRpcMigration = readFileSync('supabase/migrations/20260905075429_fail_fast_audit_chain_advisory_contention.sql', 'utf8');
+const failClosedRpcMigration = readFileSync('supabase/migrations/20260907142133_p0_audit_chain_fail_closed_nonretryable_conflicts_20260907.sql', 'utf8');
 
 describe('audit-chain burst concurrency hardening', () => {
   it('keeps database serialization and bounded application hash-mismatch retries together', () => {
@@ -14,12 +15,17 @@ describe('audit-chain burst concurrency hardening', () => {
     expect(failFastRpcMigration).toContain('pg_try_advisory_xact_lock(hashtext(p_organization_id::text))');
     expect(failFastRpcMigration).toContain("raise exception 'audit chain append contention' using errcode = '40001'");
     expect(failFastRpcMigration).toContain("raise exception 'audit chain previous hash mismatch' using errcode = '40001'");
+    expect(failClosedRpcMigration).toContain('pg_try_advisory_xact_lock(hashtext(p_organization_id::text))');
+    expect(failClosedRpcMigration).toContain("raise exception 'audit chain write conflict: lock unavailable' using errcode = '55P03'");
+    expect(failClosedRpcMigration).toContain("raise exception 'audit chain write conflict: stale head' using errcode = 'P0001'");
     expect(writer).toContain('MAX_CHAIN_APPEND_ATTEMPTS = 128');
     expect(writer).toContain('CHAIN_APPEND_RETRY_BASE_MS = 10');
     expect(writer).toContain('CHAIN_APPEND_RETRY_CAP_MS = 1000');
     expect(writer).toContain('waitForAuditChainRetry(attempt)');
     expect(writer).toContain("error.code === '40001' && /audit chain previous hash mismatch/i");
     expect(writer).toContain("error.code === '40001' && /audit chain append contention/i");
+    expect(writer).toContain("error.code === 'P0001' && /audit chain write conflict: stale head/i");
+    expect(writer).toContain("error.code === '55P03' && /audit chain write conflict: lock unavailable/i");
     expect(writer).toContain('isPreviousHashMismatch(error) && attempt < MAX_CHAIN_APPEND_ATTEMPTS');
     expect(writer).not.toContain("return error.code === '40001' ||");
     expect(writer).toContain('Math.random()');
@@ -63,12 +69,17 @@ describe('audit-chain burst concurrency hardening', () => {
     expect(legacyLiveProof).not.toContain("error?.code === '40001' ||");
   });
 
-  it('accepts only recognized SQLSTATE 40001 audit-chain conflicts in the protected proof', () => {
+  it('accepts only explicitly recognized legacy or fail-closed audit-chain conflict pairs in the protected proof', () => {
+    expect(boundedLiveProof).toContain("const code = error?.code ?? ''");
     expect(boundedLiveProof).toContain("const message = error?.message ?? ''");
-    expect(boundedLiveProof).toContain("return error?.code === '40001'");
+    expect(boundedLiveProof).toContain("code === '40001'");
     expect(boundedLiveProof).toContain('/audit chain append contention/i.test(message)');
     expect(boundedLiveProof).toContain('/audit chain previous hash mismatch/i.test(message)');
-    expect(boundedLiveProof).not.toContain("return error?.code === '40001'\n    ||");
+    expect(boundedLiveProof).toContain("code === '55P03' && /audit chain write conflict: lock unavailable/i.test(message)");
+    expect(boundedLiveProof).toContain("code === 'P0001' && /audit chain write conflict: stale head/i.test(message)");
+    expect(boundedLiveProof).not.toContain("return code === '40001' ||");
+    expect(boundedLiveProof).not.toContain("code === '55P03' ||");
+    expect(boundedLiveProof).not.toContain("code === 'P0001' ||");
     expect(boundedLiveProof).toContain('Promise.allSettled');
     expect(boundedLiveProof).toContain("strategy: 'single-stale-head-winner-plus-fresh-retry'");
     expect(boundedLiveProof).toContain('const expectedConflictsObserved = conflicts === level - 1');
