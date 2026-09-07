@@ -47,11 +47,15 @@ describe('LinkedIn autonomous marketing queue', () => {
   it('keeps recurring publication fail-closed until explicitly activated', () => {
     expect(processRoute).toContain('LINKEDIN_RECURRING_PUBLISHING_ENABLED');
     expect(processRoute).toContain("=== 'true'");
+    expect(processRoute).toContain('LINKEDIN_CONTROLLED_WORKER_TEST_ENABLED');
     expect(processRoute).toContain('enabled: false');
     expect(processRoute).toContain('claimed: 0');
-    expect(processRoute.indexOf('if (!isRecurringPublishingEnabled())')).toBeLessThan(
-      processRoute.indexOf('processLinkedInMarketingQueue(BATCH_SIZE)'),
-    );
+
+    const disabledGateIndex = processRoute.indexOf('if (!recurringEnabled && !controlledTest)');
+    const workerIndex = processRoute.indexOf('processLinkedInMarketingQueue(BATCH_SIZE)');
+    expect(disabledGateIndex).toBeGreaterThanOrEqual(0);
+    expect(workerIndex).toBeGreaterThanOrEqual(0);
+    expect(disabledGateIndex).toBeLessThan(workerIndex);
   });
 
   it('schedules the processor through the production cron configuration', () => {
