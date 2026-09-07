@@ -70,7 +70,18 @@ describe('Supabase production migrations workflow', () => {
     expect(normalized).not.toContain('--linked');
   });
 
-  it('previews before applying and verifies history afterwards', () => {
+  it('allows approved forward-only pending migrations without accepting historical drift', () => {
+    expect(workflow).toContain("sed 's/│/|/g' migration-state-before.txt");
+    expect(workflow).toContain('local <= remote_head');
+    expect(workflow).toContain('local > remote_head');
+    expect(workflow).toContain('config/supabase-forward-reconciliation.json');
+    expect(workflow).toContain('onlyListedForwardMigrationsMayBeRehearsedOrRequested');
+    expect(workflow).toContain('Pending migration is not in the approved forward reconciliation package');
+    expect(workflow).toContain('pending-approved-migrations.txt');
+    expect(workflow).toContain('historical or remote-only drift');
+  });
+
+  it('previews before applying and requires complete history alignment afterwards', () => {
     expect(normalized.indexOf('capture and validate migration history before deployment')).toBeLessThan(
       normalized.indexOf('preview pending production migrations'),
     );
@@ -80,6 +91,8 @@ describe('Supabase production migrations workflow', () => {
     expect(normalized.indexOf('apply pending production migrations')).toBeLessThan(
       normalized.indexOf('verify production migration history after deployment'),
     );
+    expect(workflow).toContain("sed 's/│/|/g' migration-state-after.txt");
+    expect(workflow).toContain('Migration history mismatch remains after deployment');
   });
 
   it('never enables destructive or broad migration flags', () => {

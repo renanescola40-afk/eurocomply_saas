@@ -177,29 +177,95 @@ jobs:
             | tee migration-state-before.txt \
             | tee "$EVIDENCE_DIR/migration-state-before.txt"
 
-          drift_lines="$(awk -F'|' '
-            /^[[:space:]]*[0-9]+[[:space:]]*\|/ {
+          # Supabase renders the table separator as either a pipe or a box-drawing
+          # character depending on the CLI/output environment. Normalize both so
+          # history validation is deterministic.
+          sed 's/│/|/g' migration-state-before.txt > migration-state-before.normalized.txt
+
+          remote_head="$(awk -F'|' '
+            {
+              remote=$2;
+              gsub(/[[:space:]]/, "", remote);
+              if (remote ~ /^[0-9]{14}$/) print remote;
+            }
+          ' migration-state-before.normalized.txt | sort | tail -n 1)"
+
+          drift_lines="$(awk -F'|' -v remote_head="$remote_head" '
+            {
               local=$1; remote=$2;
               gsub(/[[:space:]]/, "", local);
               gsub(/[[:space:]]/, "", remote);
-              if ((local != "" && remote == "") || (local == "" && remote != "")) print $0;
+              local_version=(local ~ /^[0-9]{14}$/);
+              remote_version=(remote ~ /^[0-9]{14}$/);
+
+              if (local_version && remote_version && local != remote) {
+                print $0;
+              } else if (!local_version && remote_version) {
+                print $0;
+              } else if (local_version && !remote_version && remote_head != "" && local <= remote_head) {
+                print $0;
+              }
             }
-          ' migration-state-before.txt)"
+          ' migration-state-before.normalized.txt)"
 
           if [ -n "$drift_lines" ]; then
             {
               echo
-              echo "## Deployment blocked: migration history drift"
+              echo "## Deployment blocked: historical migration drift"
               echo
               echo '```text'
               printf '%s\n' "$drift_lines"
               echo '```'
               echo
-              echo "Run the Supabase Migration Drift Audit and reconcile history before deploying."
+              echo "Forward-only pending migrations are allowed; historical or remote-only divergence is not."
             } >> "$GITHUB_STEP_SUMMARY"
-            echo "Production migration history is not aligned; refusing db push" >&2
+            echo "Production migration history has historical or remote-only drift; refusing db push" >&2
             exit 1
           fi
+
+          mapfile -t pending_versions < <(awk -F'|' -v remote_head="$remote_head" '
+            {
+              local=$1; remote=$2;
+              gsub(/[[:space:]]/, "", local);
+              gsub(/[[:space:]]/, "", remote);
+              if (local ~ /^[0-9]{14}$/ && remote !~ /^[0-9]{14}$/ && (remote_head == "" || local > remote_head)) print local;
+            }
+          ' migration-state-before.normalized.txt)
+
+          mapfile -t approved_migrations < <(node -e '
+            const fs = require("node:fs");
+            const config = JSON.parse(fs.readFileSync("config/supabase-forward-reconciliation.json", "utf8"));
+            if (config?.truthBoundary?.onlyListedForwardMigrationsMayBeRehearsedOrRequested !== true) process.exit(2);
+            for (const migration of config.migrations ?? []) console.log(migration.filename);
+          ')
+
+          declare -A approved=()
+          for filename in "${approved_migrations[@]}"; do
+            approved[$filename]=1
+          done
+
+          shopt -s nullglob
+          : > "$EVIDENCE_DIR/pending-approved-migrations.txt"
+          for version in "${pending_versions[@]}"; do
+            matches=(supabase/migrations/"${version}"_*.sql)
+            if [ "${#matches[@]}" -ne 1 ]; then
+              echo "Expected exactly one local migration for pending version $version" >&2
+              exit 1
+            fi
+            filename="$(basename "${matches[0]}")"
+            if [ -z "${approved[$filename]:-}" ]; then
+              echo "Pending migration is not in the approved forward reconciliation package: $filename" >&2
+              exit 1
+            fi
+            echo "$filename" | tee -a "$EVIDENCE_DIR/pending-approved-migrations.txt"
+          done
+
+          {
+            echo "## Pre-deployment migration state"
+            echo
+            echo "- Remote migration head: \`${remote_head:-none}\`"
+            echo "- Approved forward migrations pending: \`${#pending_versions[@]}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Preview pending production migrations
         shell: bash
@@ -227,17 +293,20 @@ jobs:
             | tee migration-state-after.txt \
             | tee "$EVIDENCE_DIR/migration-state-after.txt"
 
-          drift_lines="$(awk -F'|' '
-            /^[[:space:]]*[0-9]+[[:space:]]*\|/ {
+          sed 's/│/|/g' migration-state-after.txt > migration-state-after.normalized.txt
+          mismatch_lines="$(awk -F'|' '
+            {
               local=$1; remote=$2;
               gsub(/[[:space:]]/, "", local);
               gsub(/[[:space:]]/, "", remote);
-              if ((local != "" && remote == "") || (local == "" && remote != "")) print $0;
+              local_version=(local ~ /^[0-9]{14}$/);
+              remote_version=(remote ~ /^[0-9]{14}$/);
+              if ((local_version || remote_version) && (!local_version || !remote_version || local != remote)) print $0;
             }
-          ' migration-state-after.txt)"
-          if [ -n "$drift_lines" ]; then
-            echo "Migration history drift remains after deployment" >&2
-            printf '%s\n' "$drift_lines" >&2
+          ' migration-state-after.normalized.txt)"
+          if [ -n "$mismatch_lines" ]; then
+            echo "Migration history mismatch remains after deployment" >&2
+            printf '%s\n' "$mismatch_lines" >&2
             exit 1
           fi
 
@@ -246,7 +315,7 @@ jobs:
             echo
             echo "- Release SHA: \`$TARGET_SHA\`"
             echo "- Connection: canonical protected SUPABASE_DB_POOLER_URL"
-            echo "- Result: migration history aligned before and after deployment"
+            echo "- Result: historical migration state valid before deployment; approved forward migrations applied; histories aligned afterwards"
             echo
             echo '```text'
             cat migration-state-after.txt
