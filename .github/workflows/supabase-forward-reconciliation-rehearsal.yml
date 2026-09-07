@@ -257,6 +257,13 @@ jobs:
             docs/security/evidence/p1/backup-restore-tested.json
           if-no-files-found: warn
           retention-days: 90
+      - name: Ensure cleanup source is available after preflight failure
+        if: always()
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
       - name: Destroy isolated Supabase restore project
         if: always()
         env:
