@@ -10,6 +10,10 @@ const ROUTE = '/api/internal/marketing/linkedin/process';
 const AUTH_ACTION = 'authenticate_linkedin_marketing_process';
 const BATCH_SIZE = 3;
 
+function isRecurringPublishingEnabled() {
+  return process.env.LINKEDIN_RECURRING_PUBLISHING_ENABLED === 'true';
+}
+
 export async function POST(request: Request) {
   const rateLimited = await enforceInternalAuthenticationRateLimit(request, {
     route: ROUTE,
@@ -21,10 +25,25 @@ export async function POST(request: Request) {
     return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Recurring publishing is a distinct Production activation gate. Keep the
+  // cron endpoint healthy but do not touch the queue or LinkedIn until the
+  // operator has passed the Standard-tier + Production acceptance gates.
+  if (!isRecurringPublishingEnabled()) {
+    return noStoreJson({
+      ok: true,
+      enabled: false,
+      claimed: 0,
+      published: 0,
+      failed: 0,
+      needsReview: 0,
+    });
+  }
+
   try {
     const result = await processLinkedInMarketingQueue(BATCH_SIZE);
     return noStoreJson({
       ok: true,
+      enabled: true,
       claimed: result.claimed,
       published: result.published,
       failed: result.failed,
