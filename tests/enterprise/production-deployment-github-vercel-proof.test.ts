@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildProductionDeploymentEvidence,
-  findExactShaVercelCommitStatus,
   findExactShaVercelProductionDeployment,
 } from '../../scripts/release/write-github-vercel-production-deployment-evidence.mjs';
 
@@ -12,7 +11,6 @@ const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const API = 'https://api.github.test';
 const DEPLOYMENT_URL = 'https://eurocomply-saas-gdhajd6uu-renanescola40-afks-projects.vercel.app';
 const CANONICAL_URL = 'https://www.risckcomply.com';
-const INSPECTOR_URL = 'https://vercel.com/renanescola40-afks-projects/eurocomply-saas/GNiVwyNHt5ocuy5BURnBkoP2SRUF';
 
 function jsonResponse(value: unknown, status = 200, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(value), {
@@ -26,46 +24,30 @@ function fixtureFetch(options: {
   deploymentSha?: string;
   deploymentRef?: string;
   environment?: string;
-  healthStatus?: number;
-  healthBodyStatus?: string;
-  healthNoStore?: boolean;
   deploymentHealthStatus?: number;
   deploymentHealthBodyStatus?: string;
   deploymentHealthNoStore?: boolean;
   canonicalHealthStatus?: number;
-  canonicalHealthBodyStatus?: string;
-  canonicalHealthNoStore?: boolean;
   mainShas?: string[];
-  useCommitStatus?: boolean;
-  commitStatusState?: string;
-  commitStatusContext?: string;
-  commitStatusTarget?: string;
-  commitStatusSha?: string;
+  noDeployments?: boolean;
+  exposeSuccessfulCommitStatus?: boolean;
 } = {}) {
   const {
     actor = 'vercel[bot]',
     deploymentSha = SHA,
     deploymentRef = 'main',
     environment = 'Production',
-    healthStatus = 200,
-    healthBodyStatus = 'ok',
-    healthNoStore = true,
-    deploymentHealthStatus = healthStatus,
-    deploymentHealthBodyStatus = healthBodyStatus,
-    deploymentHealthNoStore = healthNoStore,
-    canonicalHealthStatus = healthStatus,
-    canonicalHealthBodyStatus = healthBodyStatus,
-    canonicalHealthNoStore = healthNoStore,
+    deploymentHealthStatus = 200,
+    deploymentHealthBodyStatus = 'ok',
+    deploymentHealthNoStore = true,
+    canonicalHealthStatus = 200,
     mainShas = [SHA],
-    useCommitStatus = false,
-    commitStatusState = 'success',
-    commitStatusContext = 'Vercel',
-    commitStatusTarget = INSPECTOR_URL,
-    commitStatusSha = SHA,
+    noDeployments = false,
+    exposeSuccessfulCommitStatus = false,
   } = options;
   let mainReadCount = 0;
 
-  return async (input: RequestInfo | URL, init?: RequestInit) => {
+  return async (input: RequestInfo | URL) => {
     const url = String(input);
 
     if (url === `${API}/repos/${REPOSITORY}/commits/main`) {
@@ -76,7 +58,7 @@ function fixtureFetch(options: {
     }
 
     if (url.startsWith(`${API}/repos/${REPOSITORY}/deployments?sha=`)) {
-      if (useCommitStatus) return jsonResponse([]);
+      if (noDeployments) return jsonResponse([]);
       return jsonResponse([
         {
           id: 5870665773,
@@ -104,22 +86,6 @@ function fixtureFetch(options: {
       ]);
     }
 
-    if (url === `${API}/repos/${REPOSITORY}/commits/${SHA}/status`) {
-      return jsonResponse({
-        sha: commitStatusSha,
-        statuses: [
-          {
-            id: 52109600867,
-            state: commitStatusState,
-            context: commitStatusContext,
-            target_url: commitStatusTarget,
-            created_at: '2026-08-12T15:17:40Z',
-            updated_at: '2026-08-12T15:17:40Z',
-          },
-        ],
-      });
-    }
-
     if (url === `${DEPLOYMENT_URL}/api/health`) {
       return jsonResponse(
         { status: deploymentHealthBodyStatus },
@@ -130,19 +96,22 @@ function fixtureFetch(options: {
 
     if (url === `${CANONICAL_URL}/api/health`) {
       return jsonResponse(
-        { status: canonicalHealthBodyStatus },
+        { status: canonicalHealthStatus === 200 ? 'ok' : 'failed' },
         canonicalHealthStatus,
-        { 'cache-control': canonicalHealthNoStore ? 'no-store, private' : 'public, max-age=60' },
+        { 'cache-control': 'no-store, private' },
       );
     }
 
-    void init;
+    if (url === `${API}/repos/${REPOSITORY}/commits/${SHA}/status` && exposeSuccessfulCommitStatus) {
+      throw new Error('commit status endpoint must never be used as Production authority');
+    }
+
     return jsonResponse({ error: 'unexpected request', url }, 404);
   };
 }
 
 describe('exact-SHA Vercel production deployment proof', () => {
-  it('accepts a Vercel deployment status bound to current main and immutable no-store health', async () => {
+  it('accepts only an explicit Vercel Production deployment status bound to current main and immutable no-store health', async () => {
     const evidence = await buildProductionDeploymentEvidence({
       repository: REPOSITORY,
       targetSha: SHA,
@@ -176,52 +145,51 @@ describe('exact-SHA Vercel production deployment proof', () => {
       githubDeploymentBound: true,
       githubCommitStatusBound: false,
       liveHealthVerified: true,
-      tokenPersisted: false,
-      protectionBypassSecretPersisted: false,
     });
+    expect(evidence.truthBoundary).toContain('Preview deployments are never accepted');
     expect(JSON.stringify(evidence)).not.toContain('test-token');
     expect(JSON.stringify(evidence)).not.toContain('https://');
   });
 
-  it('accepts the exact-SHA Vercel commit status when GitHub Deployment objects are not published', async () => {
+  it('keeps Production OPEN when only a Vercel commit status exists, even if canonical Production health is green', async () => {
     const evidence = await buildProductionDeploymentEvidence({
       repository: REPOSITORY,
       targetSha: SHA,
       token: 'test-token',
-      fetchImpl: fixtureFetch({ useCommitStatus: true }),
+      fetchImpl: fixtureFetch({
+        noDeployments: true,
+        exposeSuccessfulCommitStatus: true,
+        canonicalHealthStatus: 200,
+      }),
       sleepImpl: async () => undefined,
       apiUrl: API,
       maxAttempts: 1,
       pollMs: 0,
     });
 
-    expect(evidence.status).toBe('PASS');
-    expect(evidence.deployment).toMatchObject({
-      proofSource: 'github_commit_status',
-      statusId: 52109600867,
-      providerDeploymentId: 'GNiVwyNHt5ocuy5BURnBkoP2SRUF',
-      targetHost: 'www.risckcomply.com',
-      actor: 'Vercel',
-    });
-    expect(evidence.health).toMatchObject({
-      targetClass: 'canonical_production_origin',
-      status: 200,
-      bodyStatus: 'ok',
-      noStore: true,
-    });
-    expect(evidence.evidenceIntegrity).toMatchObject({
-      exactShaBound: true,
-      githubDeploymentBound: false,
-      githubCommitStatusBound: true,
-      uniqueProviderDeploymentIdBound: true,
-      liveHealthVerified: true,
-    });
-    expect(evidence.truthBoundary).toContain('does not claim that the health probe itself was sent to the immutable deployment URL');
-    expect(JSON.stringify(evidence)).not.toContain(INSPECTOR_URL);
-    expect(JSON.stringify(evidence)).not.toContain(CANONICAL_URL);
+    expect(evidence.status).toBe('OPEN');
+    expect(evidence.blockers).toContain('exact_vercel_production_deployment_unproven');
+    expect(evidence.evidenceIntegrity?.githubDeploymentBound).toBe(false);
+    expect(evidence.evidenceIntegrity?.githubCommitStatusBound).toBe(false);
   });
 
-  it('falls back to exact-SHA Vercel commit status and canonical health when the immutable deployment is edge-protected', async () => {
+  it('rejects an exact-SHA Preview deployment even when its status is green', async () => {
+    const evidence = await buildProductionDeploymentEvidence({
+      repository: REPOSITORY,
+      targetSha: SHA,
+      token: 'test-token',
+      fetchImpl: fixtureFetch({ environment: 'Preview', canonicalHealthStatus: 200 }),
+      sleepImpl: async () => undefined,
+      apiUrl: API,
+      maxAttempts: 1,
+      pollMs: 0,
+    });
+
+    expect(evidence.status).toBe('OPEN');
+    expect(evidence.blockers).toContain('exact_vercel_production_deployment_unproven');
+  });
+
+  it('does not substitute canonical Production health when the immutable exact-SHA Production deployment is protected or unhealthy', async () => {
     const evidence = await buildProductionDeploymentEvidence({
       repository: REPOSITORY,
       targetSha: SHA,
@@ -230,43 +198,6 @@ describe('exact-SHA Vercel production deployment proof', () => {
         deploymentHealthStatus: 401,
         deploymentHealthBodyStatus: 'protected',
         deploymentHealthNoStore: true,
-        canonicalHealthStatus: 200,
-        canonicalHealthBodyStatus: 'ok',
-        canonicalHealthNoStore: true,
-      }),
-      sleepImpl: async () => undefined,
-      apiUrl: API,
-      maxAttempts: 1,
-      pollMs: 0,
-    });
-
-    expect(evidence.status).toBe('PASS');
-    expect(evidence.deployment).toMatchObject({
-      proofSource: 'github_commit_status',
-      providerDeploymentId: 'GNiVwyNHt5ocuy5BURnBkoP2SRUF',
-    });
-    expect(evidence.health).toMatchObject({
-      targetClass: 'canonical_production_origin',
-      status: 200,
-      bodyStatus: 'ok',
-      noStore: true,
-    });
-    expect(evidence.checks?.immutableDeploymentHealthOk).toBeNull();
-    expect(evidence.evidenceIntegrity).toMatchObject({
-      githubDeploymentBound: false,
-      githubCommitStatusBound: true,
-      uniqueProviderDeploymentIdBound: true,
-    });
-  });
-
-  it('does not treat canonical health as proof when the exact-SHA Vercel commit status is invalid', async () => {
-    const evidence = await buildProductionDeploymentEvidence({
-      repository: REPOSITORY,
-      targetSha: SHA,
-      token: 'test-token',
-      fetchImpl: fixtureFetch({
-        deploymentHealthStatus: 401,
-        commitStatusState: 'failure',
         canonicalHealthStatus: 200,
       }),
       sleepImpl: async () => undefined,
@@ -279,42 +210,6 @@ describe('exact-SHA Vercel production deployment proof', () => {
     expect(evidence.blockers).toContain('production_deployment_health_unproven');
     expect(evidence.evidenceIntegrity?.githubDeploymentBound).toBe(true);
     expect(evidence.evidenceIntegrity?.githubCommitStatusBound).toBe(false);
-  });
-
-  it('rejects spoofed or non-success Vercel commit statuses', async () => {
-    const wrongHost = await findExactShaVercelCommitStatus({
-      repository: REPOSITORY,
-      targetSha: SHA,
-      token: 'test-token',
-      fetchImpl: fixtureFetch({ useCommitStatus: true, commitStatusTarget: 'https://example.com/deploy/12345678' }),
-      apiUrl: API,
-    });
-    const wrongContext = await findExactShaVercelCommitStatus({
-      repository: REPOSITORY,
-      targetSha: SHA,
-      token: 'test-token',
-      fetchImpl: fixtureFetch({ useCommitStatus: true, commitStatusContext: 'vercel-preview' }),
-      apiUrl: API,
-    });
-    const failure = await findExactShaVercelCommitStatus({
-      repository: REPOSITORY,
-      targetSha: SHA,
-      token: 'test-token',
-      fetchImpl: fixtureFetch({ useCommitStatus: true, commitStatusState: 'failure' }),
-      apiUrl: API,
-    });
-    const wrongSha = await findExactShaVercelCommitStatus({
-      repository: REPOSITORY,
-      targetSha: SHA,
-      token: 'test-token',
-      fetchImpl: fixtureFetch({ useCommitStatus: true, commitStatusSha: NEWER_SHA }),
-      apiUrl: API,
-    });
-
-    expect(wrongHost).toBeNull();
-    expect(wrongContext).toBeNull();
-    expect(failure).toBeNull();
-    expect(wrongSha).toBeNull();
   });
 
   it('fails closed if main advances after polling before PASS', async () => {
@@ -366,12 +261,12 @@ describe('exact-SHA Vercel production deployment proof', () => {
     expect(wrongSha).toBeNull();
   });
 
-  it('keeps the control open when deployment health is not no-store', async () => {
+  it('keeps the control open when immutable deployment health is not no-store', async () => {
     const evidence = await buildProductionDeploymentEvidence({
       repository: REPOSITORY,
       targetSha: SHA,
       token: 'test-token',
-      fetchImpl: fixtureFetch({ useCommitStatus: true, healthNoStore: false }),
+      fetchImpl: fixtureFetch({ deploymentHealthNoStore: false }),
       sleepImpl: async () => undefined,
       apiUrl: API,
       maxAttempts: 1,

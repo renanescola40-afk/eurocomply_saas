@@ -31,7 +31,7 @@ test('fan-in delegates exact-SHA artifact collection to the fail-closed collecto
   assert.doesNotMatch(workflow, /gh api --paginate "repos\/\$\{GITHUB_REPOSITORY\}\/actions\/artifacts\?per_page=100"/);
 });
 
-test('closure generates exact-SHA Vercel deployment evidence directly before hydration', () => {
+test('closure generates exact-SHA Vercel Production deployment evidence directly before hydration', () => {
   assert.match(workflow, /Generate direct exact-SHA production deployment evidence/);
   assert.match(workflow, /write-github-vercel-production-deployment-evidence\.mjs/);
   assert.match(workflow, /direct-production-deployment\/release-validation\/production-deployment\.json/);
@@ -39,9 +39,13 @@ test('closure generates exact-SHA Vercel deployment evidence directly before hyd
   assert.match(workflow, /PRODUCTION_DEPLOYMENT_PROOF_POLL_MS: '5000'/);
   assert.match(workflow, /test -f "\$proof"/);
   assert.match(deploymentProof, /findExactShaVercelProductionDeployment/);
-  assert.match(deploymentProof, /findExactShaVercelCommitStatus/);
-  assert.match(deploymentProof, /EXPECTED_VERCEL_STATUS_CONTEXT = 'Vercel'/);
+  assert.doesNotMatch(deploymentProof, /findExactShaVercelCommitStatus/);
+  assert.match(deploymentProof, /EXPECTED_REF = 'main'/);
+  assert.match(deploymentProof, /EXPECTED_ENVIRONMENT = 'production'/);
+  assert.match(deploymentProof, /EXPECTED_VERCEL_ACTOR = 'vercel\[bot\]'/);
+  assert.doesNotMatch(deploymentProof, /CANONICAL_PRODUCTION_ORIGIN/);
   assert.match(deploymentProof, /target_sha_is_not_current_main/);
+  assert.match(deploymentProof, /githubDeploymentBound/);
   assert.match(deploymentProof, /githubCommitStatusBound/);
   assert.match(deploymentProof, /containsSensitiveValues: false/);
 });
