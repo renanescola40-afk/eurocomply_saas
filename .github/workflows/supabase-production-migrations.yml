@@ -83,8 +83,8 @@ jobs:
             echo '## Legacy Supabase production writer blocked by design'
             echo
             echo "- Release SHA: \`$TARGET_SHA\`"
-            echo '- Production write performed: `false`'
-            echo '- Database credentials released: `false`'
+            echo "- Production write performed: \`false\`"
+            echo "- Database credentials released: \`false\`"
             echo "- Required writer: \`$CANONICAL_PROMOTION_WORKFLOW\`"
             echo
             echo 'Use the canonical promotion workflow only after exact-SHA rehearsal, bounded dry-run, Decision Gate and required human approval provenance are complete.'
