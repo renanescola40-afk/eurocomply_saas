@@ -5,28 +5,30 @@ import { describe, expect, it } from 'vitest';
 const read = (path: string) => readFileSync(path, 'utf8');
 const sha256 = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
 
-const migrationPath = 'supabase/migrations/20260906000000_reconcile_final_public_release_payment_storage_hardening.sql';
+const sourceMigrationPath = 'supabase/migrations/20260906000000_reconcile_final_public_release_payment_storage_hardening.sql';
+const migrationPath = 'supabase/migrations/20260908000000_reconcile_final_public_release_payment_storage_hardening.sql';
 const migration = read(migrationPath);
 const storage = read('src/lib/evidence/storage.ts');
 const config = JSON.parse(read('config/supabase-forward-reconciliation.json')) as {
   changeSet: string;
+  sourceChangeSet?: string;
   migrations: Array<{ filename: string }>;
   truthBoundary: Record<string, boolean>;
 };
 
 const expectedForwardPackage = [
-  '20260906000000_reconcile_final_public_release_payment_storage_hardening.sql',
-  '20260906003000_billing_ai_system_commercial_quota.sql',
-  '20260906003500_billing_self_serve_member_capacity.sql',
-  '20260906004000_billing_document_storage_quota.sql',
-  '20260906004500_billing_entitlement_catalog_truth.sql',
-  '20260906005000_billing_initial_checkout_singleflight.sql',
-  '20260906006000_billing_completed_checkout_authority_guard.sql',
-  '20260906006400_reconcile_paid_governance_runtime_foundations.sql',
-  '20260906006500_billing_professional_task_plan_isolation.sql',
-  '20260906006600_billing_business_feature_plan_isolation.sql',
-  '20260906006700_billing_governance_workflow_plan_isolation.sql',
-  '20260906006800_harden_cross_tenant_reference_integrity.sql',
+  '20260908000000_reconcile_final_public_release_payment_storage_hardening.sql',
+  '20260908003000_billing_ai_system_commercial_quota.sql',
+  '20260908003500_billing_self_serve_member_capacity.sql',
+  '20260908004000_billing_document_storage_quota.sql',
+  '20260908004500_billing_entitlement_catalog_truth.sql',
+  '20260908005000_billing_initial_checkout_singleflight.sql',
+  '20260908006000_billing_completed_checkout_authority_guard.sql',
+  '20260908006400_reconcile_paid_governance_runtime_foundations.sql',
+  '20260908006500_billing_professional_task_plan_isolation.sql',
+  '20260908006600_billing_business_feature_plan_isolation.sql',
+  '20260908006700_billing_governance_workflow_plan_isolation.sql',
+  '20260908006800_harden_cross_tenant_reference_integrity.sql',
 ];
 
 const auxiliaryTables = [
@@ -55,7 +57,7 @@ const allowedMimeTypes = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ];
 
-describe('final public-release payment and Storage hardening V32', () => {
+describe('final public-release payment and Storage hardening V40 re-forward', () => {
   it('preserves the two already-live 2026-09-04 reconciliation migrations byte-for-byte', () => {
     expect(sha256('supabase/migrations/20260904065919_reconcile_ai_governance_runtime_schema_20260904.sql'))
       .toBe('bceedb8d738c8bda3cb07e9f8849e85a670ea4439ffd669747fb630d980e042d');
@@ -63,11 +65,15 @@ describe('final public-release payment and Storage hardening V32', () => {
       .toBe('642f48be06c110bdaf2f6c8c47fee6bbedd3984e780a846c2da2722f6e486cdc');
   });
 
-  it('selects the exact V32 through V39 bounded forward package above the verified live ledger', () => {
-    expect(config.changeSet).toBe('2026-09-06-cross-tenant-reference-integrity-v39');
+  it('selects the exact byte-identical V40 package above the emergency Production ledger head', () => {
+    expect(config.changeSet).toBe('2026-09-08-post-audit-containment-forward-reconciliation-v40');
+    expect(config.sourceChangeSet).toBe('2026-09-06-cross-tenant-reference-integrity-v39');
     expect(config.migrations.map(({ filename }) => filename)).toEqual(expectedForwardPackage);
     expect(config.migrations.some(({ filename }) => filename === '20260904113000_final_public_release_payment_storage_hardening.sql')).toBe(false);
+    expect(sha256(migrationPath)).toBe(sha256(sourceMigrationPath));
+    expect(expectedForwardPackage.every((filename) => filename.slice(0, 14) > '20260907142133')).toBe(true);
     expect(migration).toContain('20260905075429');
+    expect(migration).not.toContain('append_audit_event_chained');
     expect(config.truthBoundary.productionWriteAuthorizedByConfig).toBe(false);
     expect(config.truthBoundary.migrationHistoryRepairAllowed).toBe(false);
     expect(config.truthBoundary.unrestrictedDbPushAllowed).toBe(false);
