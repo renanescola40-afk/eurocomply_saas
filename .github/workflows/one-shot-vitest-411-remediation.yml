@@ -32,11 +32,17 @@ jobs:
           node-version: '22'
           cache: npm
 
+      - name: Align npm with repository package manager
+        shell: bash
+        run: npm install --global npm@10.8.2
+
       - name: Regenerate dependency lock safely
         shell: bash
         run: |
           set -euo pipefail
-          npm install --save-dev --save-exact vitest@4.1.11 --package-lock-only --ignore-scripts --no-audit --fund=false
+          npm ci --ignore-scripts
+          npm pkg set 'devDependencies.vitest=4.1.11'
+          npm install --package-lock-only --ignore-scripts --no-audit --fund=false
           npm ci --ignore-scripts
           npm audit --audit-level=moderate
           node --test scripts/security/npm-audit-policy.test.mjs tests/enterprise/dependency-vulnerability-evidence.test.mjs tests/enterprise/dependency-vulnerability-remediation-candidate.test.mjs tests/enterprise/dependency-vulnerability-scorecard-contract.test.mjs
