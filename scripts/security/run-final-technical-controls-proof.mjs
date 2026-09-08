@@ -10,6 +10,7 @@ import {
   cleanupEphemeralAuthFixtures,
   createEphemeralAuthFixtures,
 } from './lib/ephemeral-auth-fixtures.mjs';
+import { grantBoundedV20CommercialAuthority } from './supabase-v20-live-fixtures.mjs';
 
 const OUTPUT = 'docs/security/evidence/runtime/final-technical-controls-validation.json';
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
@@ -52,6 +53,30 @@ function sql(connection, statement) {
     timeout: 120_000,
     maxBuffer: 1024 * 1024,
   }).trim();
+}
+
+async function cleanupCommercialAuthority(admin, organizationId) {
+  const cleanupFailures = [];
+  for (const table of [
+    'enterprise_entitlement_reconciliation_events',
+    'enterprise_entitlement_snapshots',
+    'enterprise_entitlement_sources',
+  ]) {
+    const deletion = await admin.from(table).delete().eq('organization_id', organizationId);
+    const readback = await admin.from(table).select('id').eq('organization_id', organizationId);
+    if (
+      deletion.error
+      || readback.error
+      || !Array.isArray(readback.data)
+      || readback.data.length !== 0
+    ) {
+      cleanupFailures.push(`${table}_cleanup_not_verified`);
+    }
+  }
+  return {
+    verified: cleanupFailures.length === 0,
+    failures: cleanupFailures,
+  };
 }
 
 async function proveStorageIsolation({
@@ -165,6 +190,8 @@ async function main() {
     && env('FINAL_TECHNICAL_CONFIRMATION') === 'EXECUTE_FINAL_TECHNICAL_PROOF';
   checks.exactShaBound = FULL_SHA.test(targetSha) && observedSha === targetSha;
   checks.authFixturesCreated = false;
+  checks.commercialAuthorityGranted = false;
+  checks.commercialAuthorityRemoved = false;
   checks.authFixturesRemoved = false;
 
   const admin = url && serviceRoleKey ? client(url, serviceRoleKey) : null;
@@ -177,6 +204,12 @@ async function main() {
 
     fixtures = await createEphemeralAuthFixtures(admin, { purpose: 'final-technical-proof' });
     checks.authFixturesCreated = true;
+    await grantBoundedV20CommercialAuthority(
+      admin,
+      fixtures.organizationA.id,
+      'final-technical-proof',
+    );
+    checks.commercialAuthorityGranted = true;
     await proveStorageIsolation({
       url,
       anonKey,
@@ -194,6 +227,11 @@ async function main() {
   } catch (error) {
     failures.push(error instanceof Error ? error.message : 'unknown_final_technical_failure');
   } finally {
+    if (admin && fixtures?.organizationA?.id) {
+      const commercialCleanup = await cleanupCommercialAuthority(admin, fixtures.organizationA.id);
+      checks.commercialAuthorityRemoved = commercialCleanup.verified;
+      failures.push(...commercialCleanup.failures);
+    }
     if (admin && fixtures?.created) {
       const cleanup = await cleanupEphemeralAuthFixtures(admin, fixtures.created);
       checks.authFixturesRemoved = cleanup.verified;
@@ -205,6 +243,8 @@ async function main() {
     protectedMainExecution: checks.protectedMainExecution === true,
     exactShaBound: checks.exactShaBound === true,
     authFixturesCreated: checks.authFixturesCreated === true,
+    commercialAuthorityGranted: checks.commercialAuthorityGranted === true,
+    commercialAuthorityRemoved: checks.commercialAuthorityRemoved === true,
     ownerUploadAllowed: checks.ownerUploadAllowed === true,
     ownerReadAllowed: checks.ownerReadAllowed === true,
     outsiderReadDenied: checks.outsiderReadDenied === true,
@@ -240,11 +280,12 @@ async function main() {
       databaseUrlStored: false,
       securityEventContentStored: false,
       syntheticStorageRemoved: canonicalChecks.syntheticObjectsRemoved,
+      syntheticCommercialAuthorityRemoved: canonicalChecks.commercialAuthorityRemoved,
       syntheticAuthFixturesRemoved: canonicalChecks.authFixturesRemoved,
       syntheticDatabaseRowsRolledBack: canonicalChecks.transactionRolledBack,
       exactShaBound: canonicalChecks.exactShaBound,
     },
-    evidenceBoundary: 'Protected synthetic proof of storage tenant isolation and security-event persistence. Auth identities and tenants are created only for this run and removed afterwards; storage objects are deleted; recovery-database writes are rolled back; no paths, identities, credentials, payloads, database URLs or event content are retained.',
+    evidenceBoundary: 'Protected synthetic proof of payment-authorized storage tenant isolation and security-event persistence. Auth identities, bounded commercial authority and tenants are created only for this run and removed afterwards; storage objects are deleted; recovery-database writes are rolled back; no paths, identities, credentials, payloads, database URLs or event content are retained.',
   };
   mkdirSync(dirname(OUTPUT), { recursive: true });
   writeFileSync(OUTPUT, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
