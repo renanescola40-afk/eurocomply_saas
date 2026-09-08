@@ -56,4 +56,39 @@ describe('bounded audit-chain runtime proof', () => {
     expect(producer).toContain('containsSensitiveValues: false');
     expect(producer).toContain('rawIdentifiersStored: false');
   });
+
+  it('normalizes surrounding release-SHA whitespace before both exact-SHA gates', () => {
+    const leadingTrim = 'TARGET_SHA="${TARGET_SHA#"${TARGET_SHA%%[![:space:]]*}"}"';
+    const trailingTrim = 'TARGET_SHA="${TARGET_SHA%"${TARGET_SHA##*[![:space:]]}"}"';
+    const lowercase = 'TARGET_SHA="${TARGET_SHA,,}"';
+    const exactShaCheck = '[[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]';
+    const governanceStart = workflow.indexOf('- name: Bind proof to exact current main before governance lookup');
+    const governanceEnd = workflow.indexOf('- name: Check out exact trusted release SHA');
+    const validationStart = workflow.indexOf('- name: Validate exact current main SHA');
+    const validationEnd = workflow.indexOf('- name: Checkout exact release SHA');
+
+    expect(workflow.split(leadingTrim)).toHaveLength(3);
+    expect(workflow.split(trailingTrim)).toHaveLength(3);
+    expect(workflow.split(lowercase)).toHaveLength(3);
+    expect(governanceStart).toBeGreaterThanOrEqual(0);
+    expect(governanceEnd).toBeGreaterThan(governanceStart);
+    expect(validationStart).toBeGreaterThanOrEqual(0);
+    expect(validationEnd).toBeGreaterThan(validationStart);
+
+    const governance = workflow.slice(governanceStart, governanceEnd);
+    const validation = workflow.slice(validationStart, validationEnd);
+
+    expect(governance.indexOf(leadingTrim)).toBeGreaterThanOrEqual(0);
+    expect(governance.indexOf(trailingTrim)).toBeGreaterThan(governance.indexOf(leadingTrim));
+    expect(governance.indexOf(lowercase)).toBeGreaterThan(governance.indexOf(trailingTrim));
+    expect(governance.indexOf(exactShaCheck)).toBeGreaterThan(governance.indexOf(lowercase));
+    expect(governance).toContain('echo "TARGET_SHA=$TARGET_SHA" >> "$GITHUB_ENV"');
+    expect(governance).toContain('test "$main_sha" = "$TARGET_SHA"');
+
+    expect(validation.indexOf(leadingTrim)).toBeGreaterThanOrEqual(0);
+    expect(validation.indexOf(trailingTrim)).toBeGreaterThan(validation.indexOf(leadingTrim));
+    expect(validation.indexOf(lowercase)).toBeGreaterThan(validation.indexOf(trailingTrim));
+    expect(validation.indexOf('if [[ ! "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]; then')).toBeGreaterThan(validation.indexOf(lowercase));
+    expect(validation).toContain('test "$main_sha" = "$TARGET_SHA"');
+  });
 });
