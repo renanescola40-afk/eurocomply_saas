@@ -149,7 +149,9 @@ function proveSecurityEvents(connection) {
     begin;
     create temporary table final_proof_context (incident_id uuid not null, organization_id uuid not null) on commit drop;
     insert into final_proof_context (incident_id, organization_id)
-      select gen_random_uuid(), id from public.organizations order by id asc limit 1;
+      values (gen_random_uuid(), gen_random_uuid());
+    insert into public.organizations (id, name, slug)
+      select organization_id, '${marker}', '${marker}' from final_proof_context;
     insert into public.security_incidents (id, organization_id, title, severity, status, category)
       select incident_id, organization_id, '${marker}', 'sev4', 'detected', 'other' from final_proof_context;
     insert into public.incident_timeline_events (organization_id, incident_id, event_type, summary, occurred_at, evidence_digest_sha256)
