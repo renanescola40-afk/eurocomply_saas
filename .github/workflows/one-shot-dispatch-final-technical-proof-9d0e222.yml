@@ -1,0 +1,29 @@
+name: One-shot dispatch final technical controls proof 9d0e222
+
+on:
+  push:
+    branches:
+      - ops/dispatch-final-technical-proof-9d0e222
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch-final-technical-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Dispatch exact-main final technical proof
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: 9d0e222ee4683008c35eea8d2adbcbf5e7bce8fa
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${{ github.repository }}/actions/workflows/final-technical-controls-proof.yml/dispatches" \
+            -f ref=main \
+            -f "inputs[release_sha]=$TARGET_SHA" \
+            -f "inputs[confirmation]=EXECUTE_FINAL_TECHNICAL_PROOF"
