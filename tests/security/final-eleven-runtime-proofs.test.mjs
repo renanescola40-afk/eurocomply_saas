@@ -6,19 +6,27 @@ const technical = await readFile('scripts/security/run-final-technical-controls-
 const technicalWorkflow = await readFile('.github/workflows/final-technical-controls-proof.yml', 'utf8');
 const ephemeralRecovery = await readFile('scripts/recovery/manage-ephemeral-recovery-database.mjs', 'utf8');
 const fixtures = await readFile('scripts/security/lib/ephemeral-auth-fixtures.mjs', 'utf8');
+const commercialFixtures = await readFile('scripts/security/supabase-v20-live-fixtures.mjs', 'utf8');
 const assuranceWorkflow = await readFile('.github/workflows/enterprise-final-assurance-proof.yml', 'utf8');
 
-test('final technical proof exercises disposable auth, storage isolation, cleanup and rolled-back security events', () => {
+test('final technical proof exercises disposable auth, payment-authorized storage isolation, cleanup and rolled-back security events', () => {
   for (const token of [
     'createEphemeralAuthFixtures',
     'cleanupEphemeralAuthFixtures',
+    'grantBoundedV20CommercialAuthority',
     'authFixturesCreated',
     'authFixturesRemoved',
+    'commercialAuthorityGranted',
+    'commercialAuthorityRemoved',
+    'enterprise_entitlement_reconciliation_events',
+    'enterprise_entitlement_snapshots',
+    'enterprise_entitlement_sources',
     'ownerUploadAllowed',
     'ownerReadAllowed',
     'outsiderReadDenied',
     'outsiderUploadDenied',
     'syntheticObjectsRemoved',
+    'syntheticCommercialAuthorityRemoved',
     'sessionsRevoked',
     'securityEventInserted',
     'timelineEventInserted',
@@ -26,6 +34,26 @@ test('final technical proof exercises disposable auth, storage isolation, cleanu
     'begin;',
     'rollback;',
   ]) assert.match(technical, new RegExp(token));
+
+  const reconciliationCleanup = technical.indexOf("'enterprise_entitlement_reconciliation_events'");
+  const snapshotCleanup = technical.indexOf("'enterprise_entitlement_snapshots'");
+  const sourceCleanup = technical.indexOf("'enterprise_entitlement_sources'");
+  assert.ok(reconciliationCleanup >= 0 && snapshotCleanup >= 0 && sourceCleanup >= 0);
+  assert.ok(
+    reconciliationCleanup < snapshotCleanup && snapshotCleanup < sourceCleanup,
+    'commercial authority cleanup must preserve FK-safe reconciliation -> snapshot -> source order',
+  );
+  assert.ok(
+    technical.lastIndexOf('cleanupCommercialAuthority') < technical.lastIndexOf('cleanupEphemeralAuthFixtures'),
+    'canonical commercial authority must be removed before deleting the disposable auth tenant',
+  );
+
+  for (const token of [
+    "source_kind: 'signed_contract'",
+    "plan_code: 'starter'",
+    'effective_until: validUntil',
+    'syntheticStripeLifecycle: false',
+  ]) assert.match(commercialFixtures, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 
   for (const token of [
     'auth.admin.createUser',
