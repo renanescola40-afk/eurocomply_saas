@@ -36,8 +36,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm --version
-          node -e "const major=Number(process.env.npm_config_user_agent.match(/npm\/(\d+)/)?.[1]); if (major !== 10) process.exit(1)"
+          version="$(npm --version)"
+          echo "$version"
+          case "$version" in
+            10.*) ;;
+            *) echo "Unsupported npm version: $version" >&2; exit 1 ;;
+          esac
 
       - name: Regenerate dependency lock safely
         shell: bash
