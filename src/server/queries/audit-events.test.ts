@@ -122,6 +122,138 @@ describe('audit event persistence', () => {
     expect(queryBuilder.insert).not.toHaveBeenCalled();
   });
 
+  it('retries the canonical writer only for the reviewed P0001 stale-head signal', async () => {
+    const queryBuilder = createQueryBuilder(['hash-a', 'hash-b']);
+    const rpc = vi
+      .fn()
+      .mockResolvedValueOnce({ error: { code: 'P0001', message: 'audit chain write conflict: stale head' } })
+      .mockResolvedValueOnce({ error: null });
+    const supabase = {
+      from: vi.fn(() => queryBuilder),
+      rpc,
+    };
+
+    tryCreateAdminClient.mockReturnValue(supabase);
+
+    const { createAuditEvent } = await import('./audit-events');
+    const result = await createAuditEvent(baseInput);
+
+    expect(result).toMatchObject({
+      persisted: true,
+      previousHash: 'hash-b',
+      eventHash: 'event-hash-after-hash-b',
+      transactional: true,
+    });
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(queryBuilder.maybeSingle).toHaveBeenCalledTimes(2);
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
+  it('fails fast after one RPC attempt when Supabase reports audit-chain append contention', async () => {
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({
+      error: { code: '40001', message: 'audit chain append contention' },
+    }));
+    const supabase = {
+      from: vi.fn(() => queryBuilder),
+      rpc,
+    };
+
+    tryCreateAdminClient.mockReturnValue(supabase);
+
+    const { createAuditEvent } = await import('./audit-events');
+    const result = await createAuditEvent(baseInput);
+
+    expect(result).toEqual({ persisted: false, reason: 'transactional_append_unavailable' });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.maybeSingle).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
+  it('fails fast after one RPC attempt for the reviewed 55P03 lock-unavailable signal', async () => {
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({
+      error: { code: '55P03', message: 'audit chain write conflict: lock unavailable' },
+    }));
+    const supabase = {
+      from: vi.fn(() => queryBuilder),
+      rpc,
+    };
+
+    tryCreateAdminClient.mockReturnValue(supabase);
+
+    const { createAuditEvent } = await import('./audit-events');
+    const result = await createAuditEvent(baseInput);
+
+    expect(result).toEqual({ persisted: false, reason: 'transactional_append_unavailable' });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.maybeSingle).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
+  it('fails closed after one RPC attempt for an unknown 40001 serialization error', async () => {
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({
+      error: { code: '40001', message: 'serialization failure' },
+    }));
+    const supabase = {
+      from: vi.fn(() => queryBuilder),
+      rpc,
+    };
+
+    tryCreateAdminClient.mockReturnValue(supabase);
+
+    const { createAuditEvent } = await import('./audit-events');
+    const result = await createAuditEvent(baseInput);
+
+    expect(result).toEqual({ persisted: false, reason: 'transactional_append_unavailable' });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.maybeSingle).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
+  it('fails closed for P0001 unless the exact stale-head message is present', async () => {
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({
+      error: { code: 'P0001', message: 'unrelated application exception' },
+    }));
+    const supabase = {
+      from: vi.fn(() => queryBuilder),
+      rpc,
+    };
+
+    tryCreateAdminClient.mockReturnValue(supabase);
+
+    const { createAuditEvent } = await import('./audit-events');
+    const result = await createAuditEvent(baseInput);
+
+    expect(result).toEqual({ persisted: false, reason: 'transactional_append_unavailable' });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.maybeSingle).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
+  it('fails closed for 55P03 unless the exact lock-unavailable message is present', async () => {
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({
+      error: { code: '55P03', message: 'lock not available on unrelated resource' },
+    }));
+    const supabase = {
+      from: vi.fn(() => queryBuilder),
+      rpc,
+    };
+
+    tryCreateAdminClient.mockReturnValue(supabase);
+
+    const { createAuditEvent } = await import('./audit-events');
+    const result = await createAuditEvent(baseInput);
+
+    expect(result).toEqual({ persisted: false, reason: 'transactional_append_unavailable' });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.maybeSingle).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
   it('fails closed when reading the current audit-chain head fails', async () => {
     const queryBuilder = createQueryBuilder([]);
     queryBuilder.maybeSingle.mockResolvedValueOnce({

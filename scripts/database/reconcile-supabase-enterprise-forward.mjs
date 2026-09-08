@@ -17,62 +17,75 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-06-cross-tenant-reference-integrity-v39';
-const V32_PUBLIC_RELEASE_MIGRATION =
-  '20260906000000_reconcile_final_public_release_payment_storage_hardening.sql';
-const BILLING_AI_SYSTEM_QUOTA_MIGRATION =
-  '20260906003000_billing_ai_system_commercial_quota.sql';
-const BILLING_MEMBER_CAPACITY_MIGRATION =
-  '20260906003500_billing_self_serve_member_capacity.sql';
-const BILLING_DOCUMENT_STORAGE_QUOTA_MIGRATION =
-  '20260906004000_billing_document_storage_quota.sql';
-const BILLING_ENTITLEMENT_CATALOG_TRUTH_MIGRATION =
-  '20260906004500_billing_entitlement_catalog_truth.sql';
-const BILLING_INITIAL_CHECKOUT_SINGLEFLIGHT_MIGRATION =
-  '20260906005000_billing_initial_checkout_singleflight.sql';
-const BILLING_COMPLETED_CHECKOUT_AUTHORITY_GUARD_MIGRATION =
-  '20260906006000_billing_completed_checkout_authority_guard.sql';
-const PAID_GOVERNANCE_RUNTIME_FOUNDATIONS_MIGRATION =
-  '20260906006400_reconcile_paid_governance_runtime_foundations.sql';
-const BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION =
-  '20260906006500_billing_professional_task_plan_isolation.sql';
-const BILLING_BUSINESS_PLAN_ISOLATION_MIGRATION =
-  '20260906006600_billing_business_feature_plan_isolation.sql';
-const BILLING_GOVERNANCE_PLAN_ISOLATION_MIGRATION =
-  '20260906006700_billing_governance_workflow_plan_isolation.sql';
-const CROSS_TENANT_REFERENCE_INTEGRITY_MIGRATION =
-  '20260906006800_harden_cross_tenant_reference_integrity.sql';
-const EXPECTED_SELECTED = [
-  V32_PUBLIC_RELEASE_MIGRATION,
-  BILLING_AI_SYSTEM_QUOTA_MIGRATION,
-  BILLING_MEMBER_CAPACITY_MIGRATION,
-  BILLING_DOCUMENT_STORAGE_QUOTA_MIGRATION,
-  BILLING_ENTITLEMENT_CATALOG_TRUTH_MIGRATION,
-  BILLING_INITIAL_CHECKOUT_SINGLEFLIGHT_MIGRATION,
-  BILLING_COMPLETED_CHECKOUT_AUTHORITY_GUARD_MIGRATION,
-  PAID_GOVERNANCE_RUNTIME_FOUNDATIONS_MIGRATION,
-  BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION,
-  BILLING_BUSINESS_PLAN_ISOLATION_MIGRATION,
-  BILLING_GOVERNANCE_PLAN_ISOLATION_MIGRATION,
-  CROSS_TENANT_REFERENCE_INTEGRITY_MIGRATION,
+const EXPECTED_CHANGE_SET = '2026-09-08-post-audit-containment-forward-reconciliation-v40';
+const SOURCE_CHANGE_SET = '2026-09-06-cross-tenant-reference-integrity-v39';
+const VERIFIED_PRODUCTION_LEDGER_HEAD = '20260907142133';
+
+const REFORWARD_PAIRS = [
+  {
+    source: '20260906000000_reconcile_final_public_release_payment_storage_hardening.sql',
+    target: '20260908000000_reconcile_final_public_release_payment_storage_hardening.sql',
+    sourceBlob: '59776363b3b888149a7328c7c40d4c5a4478cd15',
+  },
+  {
+    source: '20260906003000_billing_ai_system_commercial_quota.sql',
+    target: '20260908003000_billing_ai_system_commercial_quota.sql',
+    sourceBlob: '043a92254d71756e83739e94cad532e63c555f6f',
+  },
+  {
+    source: '20260906003500_billing_self_serve_member_capacity.sql',
+    target: '20260908003500_billing_self_serve_member_capacity.sql',
+    sourceBlob: 'cb63c261c602ebbe052c3653b63a8efc177ffab7',
+  },
+  {
+    source: '20260906004000_billing_document_storage_quota.sql',
+    target: '20260908004000_billing_document_storage_quota.sql',
+    sourceBlob: 'd77639186774755cb07e7da331f175030b02417d',
+  },
+  {
+    source: '20260906004500_billing_entitlement_catalog_truth.sql',
+    target: '20260908004500_billing_entitlement_catalog_truth.sql',
+    sourceBlob: '10704bdc812aaf75c3e90c9a9d24173817f45827',
+  },
+  {
+    source: '20260906005000_billing_initial_checkout_singleflight.sql',
+    target: '20260908005000_billing_initial_checkout_singleflight.sql',
+    sourceBlob: '5cc0f4d2831fd94ac4ff1e639a6db6f4d669b996',
+  },
+  {
+    source: '20260906006000_billing_completed_checkout_authority_guard.sql',
+    target: '20260908006000_billing_completed_checkout_authority_guard.sql',
+    sourceBlob: '3a3ed99fa97117520b515fd85fec6acc01c399bd',
+  },
+  {
+    source: '20260906006400_reconcile_paid_governance_runtime_foundations.sql',
+    target: '20260908006400_reconcile_paid_governance_runtime_foundations.sql',
+    sourceBlob: '6efd43f0e6d1943bc5882f7ee3c5d749398dceae',
+  },
+  {
+    source: '20260906006500_billing_professional_task_plan_isolation.sql',
+    target: '20260908006500_billing_professional_task_plan_isolation.sql',
+    sourceBlob: '54d4c2d7944c68ece093988e7c6b863e444d88cc',
+  },
+  {
+    source: '20260906006600_billing_business_feature_plan_isolation.sql',
+    target: '20260908006600_billing_business_feature_plan_isolation.sql',
+    sourceBlob: '5e8eac31df71dadc962a0cb6d105fbeaab2b81c9',
+  },
+  {
+    source: '20260906006700_billing_governance_workflow_plan_isolation.sql',
+    target: '20260908006700_billing_governance_workflow_plan_isolation.sql',
+    sourceBlob: '9599cb78128856a711b7c7a08ca7f74eef60da72',
+  },
+  {
+    source: '20260906006800_harden_cross_tenant_reference_integrity.sql',
+    target: '20260908006800_harden_cross_tenant_reference_integrity.sql',
+    sourceBlob: '2df91b10927effde5bed1de68e7df3d94118aed5',
+  },
 ];
-const VERIFIED_PRODUCTION_LEDGER_HEAD = '20260905075429';
 
 function fail(message) {
   throw new Error(message);
-}
-
-function requireMarkers(source, markers, label) {
-  for (const marker of markers) {
-    if (!source.includes(marker)) fail(`${label} lost required marker: ${marker}`);
-  }
-}
-
-function forbidMarkers(source, markers, label) {
-  const normalized = source.toLowerCase();
-  for (const marker of markers) {
-    if (normalized.includes(marker.toLowerCase())) fail(`${label} reopened forbidden boundary: ${marker}`);
-  }
 }
 
 function currentGitSha() {
@@ -87,269 +100,63 @@ function currentGitSha() {
   }
 }
 
-function validateV32PublicReleaseMigration(source) {
-  requireMarkers(source, [
-    'live ledger',
-    '20260905075429',
-    'does not',
-    'migration history',
-    "to_regprocedure('app_private.has_commercial_authority(uuid)')",
-    "to_regprocedure('app_private.is_org_member(uuid)')",
-    "to_regprocedure('app_private.has_org_role(uuid,text[])')",
-    "to_regprocedure('app_private.evidence_storage_organization_id(text)')",
-    "to_regclass('public.evidence_items')",
-    "'ai_fria_assessments'",
-    "'ai_fria_decisions'",
-    "'ai_fria_evidence'",
-    "'ai_literacy_programs'",
-    "'ai_literacy_courses'",
-    "'ai_literacy_assignments'",
-    "'ai_literacy_evidence'",
-    "'ai_system_history'",
-    "'vendor_review_history'",
-    "'evidence_item_audit_events'",
-    "'email_notification_events'",
-    'as restrictive for all to authenticated',
-    'using (app_private.has_commercial_authority(organization_id))',
-    'with check (app_private.has_commercial_authority(organization_id))',
-    'alter table public.%I force row level security',
-    'Members can read organization document objects',
-    'Members can upload organization document objects',
-    'app_private.evidence_storage_organization_id(name)',
-    'app_private.is_org_member',
-    "array['owner','admin','editor','member']::text[]",
-    'file_size_limit = 10485760',
-    'allowed_mime_types = array[',
-    'evidence_items_file_size_bytes_check',
-    'evidence_items_file_mime_type_check',
-    'c.convalidated',
-    'unexpected direct UPDATE/DELETE policy survived for compliance-documents',
-    'compliance-evidence bucket unexpectedly public',
-    "notify pgrst, 'reload schema'",
-  ], 'V32 final public-release payment/storage reconciliation');
-
-  forbidMarkers(source, [
-    'supabase_migrations.schema_migrations',
-    'db push --include-all',
-    'disable row level security',
-    'grant all on public.',
-    'grant all on storage.',
-    'to anon',
-    'drop table ',
-    'truncate ',
-  ], 'V32 final public-release payment/storage reconciliation');
+function gitBlobSha(relativePath) {
+  try {
+    return execFileSync('git', ['hash-object', '--', relativePath], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+  } catch {
+    fail(`Unable to hash migration source: ${relativePath}`);
+  }
 }
 
-function validateCompletedCheckoutAuthorityGuard(source) {
-  requireMarkers(source, [
-    "v_existing.status = 'open' or v_existing.lease_expires_at > now()",
-    "to_regprocedure('app_private.has_commercial_authority(uuid)')",
-    "new.status = 'processed'",
-    'new.livemode is true',
-    "new.type in ('customer.subscription.created','customer.subscription.updated')",
-    'app_private.has_commercial_authority(new.organization_id)',
-    'delete from public.billing_checkout_attempts attempt',
-    'where app_private.has_commercial_authority(attempt.organization_id)',
-    'clear_initial_checkout_after_live_subscription_processed on public.stripe_events_processed',
-  ], 'V34 completed Checkout subscription-authority guard');
-
-  forbidMarkers(source, [
-    "new.type = 'checkout.session.completed'",
-    'disable row level security',
-    'grant all on public.',
-    'to anon',
-    'truncate ',
-  ], 'V34 completed Checkout subscription-authority guard');
+function migrationPath(filename) {
+  return join('supabase', 'migrations', filename);
 }
 
-function validatePaidGovernanceRuntimeFoundations(source) {
-  requireMarkers(source, [
-    'Forward-only reconciliation for paid governance runtime foundations',
-    "to_regclass('public.organizations')",
-    "to_regclass('public.organization_members')",
-    "to_regclass('public.ai_systems')",
-    'enterprise_evidence_packs',
-    'enterprise_evidence_pack_items',
-    'enterprise_vendor_due_diligence',
-    'enterprise_risk_reviews',
-    'enterprise_evidence_pack_items_pack_organization_fkey',
-    'foreign key (pack_id, organization_id)',
-    'create or replace function public.create_enterprise_evidence_pack_atomic',
-    'ai_qms_systems',
-    'ai_qms_controls',
-    'ai_qms_nonconformities',
-    'ai_qms_audits',
-    'ai_qms_management_reviews',
-    'ai_qms_decisions',
-    'create or replace function public.create_qms_system_atomic',
-    'create or replace function public.configure_qms_system_atomic',
-    'create or replace function public.complete_qms_control_atomic',
-    'create or replace function public.accept_qms_audit_atomic',
-    'create or replace function public.approve_qms_management_review_atomic',
-    'create or replace function public.close_qms_nonconformity_atomic',
-    'create or replace function public.approve_qms_system_atomic',
-    'create or replace function public.rollback_qms_approval_atomic',
-    'alter table public.%I force row level security',
-    "has_table_privilege('authenticated'",
-    "has_table_privilege('service_role'",
-    "has_function_privilege('authenticated'",
-    "has_function_privilege('service_role'",
-    'Backend-only paid governance RPC became client executable',
-    'Evidence-pack tenant composite foreign key is missing or unvalidated',
-    "notify pgrst, 'reload schema'",
-  ], 'V38 paid-governance runtime-foundation reconciliation');
-
-  forbidMarkers(source, [
-    'supabase_migrations.schema_migrations',
-    'db push --include-all',
-    'disable row level security',
-    'grant all on public.',
-    'grant all on storage.',
-    'drop table ',
-    'truncate ',
-  ], 'V38 paid-governance runtime-foundation reconciliation');
+function assertTruthBoundary(config) {
+  const truth = config?.truthBoundary ?? {};
+  if (truth.automaticClassification !== false) fail('automaticClassification must remain false');
+  if (truth.productionWriteAuthorizedByConfig !== false) fail('productionWriteAuthorizedByConfig must remain false');
+  if (truth.migrationHistoryRepairAllowed !== false) fail('migrationHistoryRepairAllowed must remain false');
+  if (truth.unrestrictedDbPushAllowed !== false) fail('unrestrictedDbPushAllowed must remain false');
+  if (truth.onlyListedForwardMigrationsMayBeRehearsedOrRequested !== true) {
+    fail('onlyListedForwardMigrationsMayBeRehearsedOrRequested must remain true');
+  }
 }
 
-function validateProfessionalPlanIsolation(source) {
-  requireMarkers(source, [
-    'app_private.has_minimum_commercial_plan',
-    "when 'essential' then 1",
-    "when 'growth' then 2",
-    "when 'business' then 3",
-    'alter table public.compliance_tasks force row level security',
-    'alter table public.risks force row level security',
-    'alter table public.vendors force row level security',
-    'alter table public.vendor_review_history force row level security',
-    'restrict_compliance_tasks_organization_professional_plan',
-    'restrict_risks_professional_plan',
-    'restrict_vendors_professional_plan',
-    'restrict_vendor_review_history_professional_plan',
-    'as restrictive',
-    "app_private.has_minimum_commercial_plan(organization_id, 'professional')",
-    'organization_id is null',
-    'create or replace function public.enterprise_member_can_read',
-    'create or replace function public.enterprise_member_can_manage',
-    'create or replace function public.ai_qms_actor_is_member',
-    "lower(coalesce(om.status, '')) = 'active'",
-    "lower(coalesce(member.status, '')) = 'active'",
-    'Paid governance membership helper is not active-membership aware',
-    'create or replace function public.enforce_enterprise_ai_system_tenant_scope()',
-    'scoped_system.id = new.ai_system_id',
-    'scoped_system.organization_id = new.organization_id',
-    "raise exception 'enterprise_ai_system_not_in_organization'",
-    'enforce_enterprise_vendor_diligence_ai_system_scope',
-    'enforce_enterprise_risk_review_ai_system_scope',
-    'Enterprise AI-system tenant-scope trigger function became directly executable',
-    'Enterprise AI-system same-organization triggers are missing',
-    "notify pgrst, 'reload schema'",
-  ], 'V35 Professional plan-isolation and paid-governance bridge hardening');
+function verifyByteIdenticalReforward() {
+  for (const pair of REFORWARD_PAIRS) {
+    const sourcePath = migrationPath(pair.source);
+    const targetPath = migrationPath(pair.target);
+    const observedSourceBlob = gitBlobSha(sourcePath);
+    const observedTargetBlob = gitBlobSha(targetPath);
 
-  forbidMarkers(source, [
-    'disable row level security',
-    'grant all on public.',
-    'grant all on storage.',
-    'to anon',
-    'drop table ',
-    'truncate ',
-  ], 'V35 Professional plan-isolation and paid-governance bridge hardening');
-}
+    if (observedSourceBlob !== pair.sourceBlob) {
+      fail(`Reviewed V39 source bytes drifted: ${pair.source}`);
+    }
+    if (observedTargetBlob !== observedSourceBlob) {
+      fail(`V40 re-forward is not byte-identical to V39 source: ${pair.target}`);
+    }
 
-function validateBusinessPlanIsolation(source) {
-  requireMarkers(source, [
-    "to_regprocedure('app_private.has_minimum_commercial_plan(uuid,text)')",
-    "'ai_literacy_programs'",
-    "'ai_literacy_courses'",
-    "'ai_literacy_assignments'",
-    "'ai_literacy_evidence'",
-    "'ai_qms_systems'",
-    "'ai_qms_controls'",
-    "'ai_qms_nonconformities'",
-    "'ai_qms_audits'",
-    "'ai_qms_management_reviews'",
-    "'ai_qms_decisions'",
-    "as restrictive for all to authenticated",
-    "app_private.has_minimum_commercial_plan(organization_id, ''business'')",
-    'alter table public.%I force row level security',
-    "notify pgrst, 'reload schema'",
-  ], 'V36 Business plan-isolation guard');
+    const sourceBytes = readFileSync(join(ROOT, sourcePath));
+    const targetBytes = readFileSync(join(ROOT, targetPath));
+    if (!sourceBytes.equals(targetBytes)) {
+      fail(`V40 byte comparison failed: ${pair.target}`);
+    }
 
-  forbidMarkers(source, [
-    'disable row level security',
-    'grant all on public.',
-    'grant all on storage.',
-    'to anon',
-    'drop table ',
-    'truncate ',
-  ], 'V36 Business plan-isolation guard');
-}
+    const targetSql = targetBytes.toString('utf8');
+    if (targetSql.includes('append_audit_event_chained')) {
+      fail(`V40 migration would touch emergency audit-chain containment: ${pair.target}`);
+    }
 
-function validateGovernanceWorkflowPlanIsolation(source) {
-  requireMarkers(source, [
-    'restrict_enterprise_vendor_due_diligence_business_plan',
-    'restrict_enterprise_risk_reviews_business_plan',
-    'restrict_enterprise_evidence_packs_enterprise_plan',
-    'restrict_enterprise_evidence_pack_items_enterprise_plan',
-    "app_private.has_minimum_commercial_plan(organization_id, 'business')",
-    "app_private.has_minimum_commercial_plan(organization_id, 'enterprise')",
-    'alter table public.enterprise_vendor_due_diligence force row level security',
-    'alter table public.enterprise_risk_reviews force row level security',
-    'alter table public.enterprise_evidence_packs force row level security',
-    'alter table public.enterprise_evidence_pack_items force row level security',
-    'as restrictive',
-    'for all',
-    "notify pgrst, 'reload schema'",
-  ], 'V37 tiered governance workflow isolation');
-
-  forbidMarkers(source, [
-    'disable row level security',
-    'grant all on public.',
-    'grant all on storage.',
-    'to anon',
-    'drop table ',
-    'truncate ',
-  ], 'V37 tiered governance workflow isolation');
-}
-
-function validateCrossTenantReferenceIntegrity(source) {
-  requireMarkers(source, [
-    'Final cross-tenant reference integrity hardening',
-    'create or replace function app_private.enforce_same_tenant_reference_integrity()',
-    'security definer',
-    "set search_path = ''",
-    'cross_tenant_reference: ai_assessments.ai_system_id',
-    'cross_tenant_reference: ai_incidents.ai_system_id',
-    'cross_tenant_reference: ai_system_history.ai_system_id',
-    'cross_tenant_reference: compliance_findings.assessment_id',
-    'cross_tenant_reference: compliance_tasks.finding_id',
-    'cross_tenant_reference: enterprise_access_export_download_events.export_job_id',
-    'cross_tenant_reference: enterprise_access_operation_events.operation_id',
-    'cross_tenant_reference: enterprise_access_operation_items.identity_id',
-    'cross_tenant_reference: enterprise_access_operation_items.membership_id',
-    'cross_tenant_reference: enterprise_access_operation_items.operation_id',
-    'cross_tenant_reference: enterprise_contract_billing_events.contract_id',
-    'cross_tenant_reference: enterprise_seat_contention_events.membership_id',
-    'cross_tenant_reference: enterprise_seat_events.reservation_id',
-    'cross_tenant_reference: enterprise_seat_operations.membership_id',
-    'cross_tenant_reference: evidence_item_audit_events.evidence_item_id',
-    'cross_tenant_reference: evidence_items.finding_id',
-    'cross_tenant_reference: evidence_items.task_id',
-    'cross_tenant_reference: organization_entitlements.contract_id',
-    'revoke all on function app_private.enforce_same_tenant_reference_integrity() from public, anon, authenticated',
-    'grant execute on function app_private.enforce_same_tenant_reference_integrity() to service_role',
-    'same-tenant reference integrity guard privileges are not canonical',
-    'same-tenant reference integrity trigger is missing or duplicated',
-    "notify pgrst, 'reload schema'",
-  ], 'V39 cross-tenant reference-integrity guard');
-
-  forbidMarkers(source, [
-    'supabase_migrations.schema_migrations',
-    'db push --include-all',
-    'disable row level security',
-    'grant all on public.',
-    'grant all on storage.',
-    'drop table ',
-    'truncate ',
-  ], 'V39 cross-tenant reference-integrity guard');
+    const targetVersion = pair.target.slice(0, 14);
+    if (targetVersion <= VERIFIED_PRODUCTION_LEDGER_HEAD) {
+      fail(`V40 migration is not strictly forward of Production head ${VERIFIED_PRODUCTION_LEDGER_HEAD}: ${pair.target}`);
+    }
+  }
 }
 
 async function main() {
@@ -357,10 +164,15 @@ async function main() {
   if (config.changeSet !== EXPECTED_CHANGE_SET) {
     fail(`Unexpected reconciliation changeSet: ${String(config.changeSet)}`);
   }
+  if (config.sourceChangeSet !== SOURCE_CHANGE_SET) {
+    fail(`Unexpected reconciliation sourceChangeSet: ${String(config.sourceChangeSet)}`);
+  }
+  assertTruthBoundary(config);
 
+  const expectedSelected = REFORWARD_PAIRS.map((pair) => pair.target);
   const selected = (config.migrations ?? []).map((record) => record?.filename);
-  if (JSON.stringify(selected) !== JSON.stringify(EXPECTED_SELECTED)) {
-    fail(`bounded selected migration set drifted: expected ${EXPECTED_SELECTED.join(', ')}`);
+  if (JSON.stringify(selected) !== JSON.stringify(expectedSelected)) {
+    fail(`bounded selected migration set drifted: expected ${expectedSelected.join(', ')}`);
   }
 
   const gitSha = currentGitSha();
@@ -376,53 +188,13 @@ async function main() {
     }
   }
 
+  verifyByteIdenticalReforward();
+
   const manifest = await compileForwardReconciliationManifest({
     config,
     rootDir: ROOT,
     subjectSha: expectedHeadSha || gitSha,
   });
-
-  const v32Source = readFileSync(
-    join(ROOT, 'supabase', 'migrations', V32_PUBLIC_RELEASE_MIGRATION),
-    'utf8',
-  );
-  validateV32PublicReleaseMigration(v32Source);
-
-  const checkoutAuthoritySource = readFileSync(
-    join(ROOT, 'supabase', 'migrations', BILLING_COMPLETED_CHECKOUT_AUTHORITY_GUARD_MIGRATION),
-    'utf8',
-  );
-  validateCompletedCheckoutAuthorityGuard(checkoutAuthoritySource);
-
-  const paidGovernanceFoundationSource = readFileSync(
-    join(ROOT, 'supabase', 'migrations', PAID_GOVERNANCE_RUNTIME_FOUNDATIONS_MIGRATION),
-    'utf8',
-  );
-  validatePaidGovernanceRuntimeFoundations(paidGovernanceFoundationSource);
-
-  const professionalIsolationSource = readFileSync(
-    join(ROOT, 'supabase', 'migrations', BILLING_PROFESSIONAL_PLAN_ISOLATION_MIGRATION),
-    'utf8',
-  );
-  validateProfessionalPlanIsolation(professionalIsolationSource);
-
-  const businessIsolationSource = readFileSync(
-    join(ROOT, 'supabase', 'migrations', BILLING_BUSINESS_PLAN_ISOLATION_MIGRATION),
-    'utf8',
-  );
-  validateBusinessPlanIsolation(businessIsolationSource);
-
-  const governanceIsolationSource = readFileSync(
-    join(ROOT, 'supabase', 'migrations', BILLING_GOVERNANCE_PLAN_ISOLATION_MIGRATION),
-    'utf8',
-  );
-  validateGovernanceWorkflowPlanIsolation(governanceIsolationSource);
-
-  const crossTenantIntegritySource = readFileSync(
-    join(ROOT, 'supabase', 'migrations', CROSS_TENANT_REFERENCE_INTEGRITY_MIGRATION),
-    'utf8',
-  );
-  validateCrossTenantReferenceIntegrity(crossTenantIntegritySource);
 
   const records = manifest.migrations.map((migration, index) => ({
     position: index + 1,
@@ -430,6 +202,8 @@ async function main() {
     timestamp: migration.version,
     bytes: migration.sizeBytes,
     sha256: migration.sha256,
+    sourceFilename: REFORWARD_PAIRS[index].source,
+    sourceGitBlob: REFORWARD_PAIRS[index].sourceBlob,
   }));
 
   const report = {
@@ -440,13 +214,17 @@ async function main() {
     expectedHeadSha: expectedHeadSha || null,
     exactShaVerified: Boolean(expectedHeadSha && gitSha === expectedHeadSha),
     changeSet: EXPECTED_CHANGE_SET,
+    sourceChangeSet: SOURCE_CHANGE_SET,
     selectedCount: records.length,
     selectedSetSha256: manifest.selectionDigest.replace(/^sha256:/, ''),
     productionWriteAuthorized: false,
     migrationHistoryRepairAuthorized: false,
+    unrestrictedDbPushAuthorized: false,
     automaticClassificationPerformed: false,
     humanDecisionRequired: true,
     productionLedgerHeadBeforeSelection: VERIFIED_PRODUCTION_LEDGER_HEAD,
+    byteIdenticalReforwardVerified: true,
+    emergencyAuditContainmentPreserved: true,
     records,
   };
 
@@ -466,6 +244,10 @@ async function main() {
   }
 
   process.stdout.write(`Bounded Supabase forward reconciliation verified: ${records.length} migrations\n`);
+  process.stdout.write(`Source change set: ${SOURCE_CHANGE_SET}\n`);
+  process.stdout.write(`Production ledger head before selection: ${VERIFIED_PRODUCTION_LEDGER_HEAD}\n`);
+  process.stdout.write('Byte-identical V40 re-forward: true\n');
+  process.stdout.write('Emergency audit-chain containment preserved: true\n');
   process.stdout.write(`Selected-set SHA-256: ${report.selectedSetSha256}\n`);
   process.stdout.write('Production write authorization: false\n');
 }

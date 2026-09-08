@@ -1,22 +1,54 @@
 # Supabase live RLS validation
 
-Runtime validation is executed through `scripts/security/run-supabase-live-tenant-isolation.mjs`.
+Runtime validation is executed through `scripts/security/run-supabase-live-tenant-isolation.mjs` and the manual `Supabase Live RLS Validation` GitHub Actions workflow.
 
-The public runner path is intentionally a small wrapper around `run-supabase-live-tenant-isolation-v2.mjs` so existing npm scripts and evidence commands keep using the original command while the implementation remains easier to review.
+The live proof is **post-promotion runtime evidence only**. It does not apply migrations, does not run `supabase db push`, and does not accept an `apply_migrations` input.
 
-The live runner must only mark evidence `Complete` after a real target Supabase run passes. It creates controlled tenant A/B fixtures, validates per-table RLS enablement through `eurocomply_live_rls_inventory`, checks cross-tenant read/write denial, checks same-tenant allowed reads, checks viewer/admin separation, and documents service-role setup/inventory/integrity/cleanup paths.
+## Production authority prerequisite
 
-Required runtime environment variables:
+Before the live proof is eligible to run, the exact current `main` SHA must already have a successful governed production promotion produced by:
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- Supabase service role key stored in the deployment/runtime environment
-- `GITHUB_SHA` or a local Git checkout that resolves to a 40-character SHA
+`.github/workflows/supabase-forward-reconciliation-production-promotion.yml`
 
-The manual GitHub Actions workflow can apply the committed live RLS inventory helper migration before running the live proof. Keep `apply_migrations=true` and configure the `SUPABASE_DB_URL` secret with the target Supabase Postgres connection string. The workflow applies only `supabase/migrations/20260623120000_live_rls_validation_inventory.sql`, which creates the required `public.eurocomply_live_rls_inventory(text[])` helper. It intentionally does not run a full `supabase db push` because historical application migrations may depend on tables outside the minimal live-RLS proof scope.
+The workflow requires the successful promotion run ID and verifies that:
 
-`SUPABASE_DB_URL` must use Supabase's IPv4 Transaction pooler URI, not the direct database URI. GitHub-hosted runners often cannot reach the direct `db.<project-ref>.supabase.co:5432` IPv6-only endpoint. Copy the Transaction pooler connection string from the Supabase dashboard under `Connect > Transaction pooler`; it typically uses port `6543`.
+- the promotion run is bound to the same exact SHA;
+- the source workflow is the canonical forward-reconciliation production promotion;
+- the source run was manually dispatched and completed successfully;
+- current protected `main` is still the exact release SHA;
+- Production project binding matches the runtime Supabase API project;
+- promotion evidence and live postconditions are present before the tenant proof starts.
 
-If the helper migration has already been applied outside the workflow, rerun the workflow with `apply_migrations=false`.
+Any database helper required by the live proof must therefore already exist through the governed forward-promotion package and its postconditions. The live-proof workflow must never repair or install that helper directly.
 
-Do not commit generated `Complete` evidence unless it was produced by a real live run against the target Supabase project.
+## Required runtime environment variables
+
+The protected runtime proof uses:
+
+- `NEXT_PUBLIC_SUPABASE_URL`;
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`;
+- `SUPABASE_SERVICE_ROLE_KEY`;
+- the exact release SHA supplied to the workflow;
+- the successful canonical promotion run ID.
+
+`SUPABASE_DB_POOLER_URL` is used only by the protected Production project-binding job to derive a redacted project digest. The live proof does not use it to execute SQL or migrations.
+
+## What the proof validates
+
+The live runner creates controlled tenant A/B fixtures and validates:
+
+- per-table RLS enablement through `eurocomply_live_rls_inventory`;
+- cross-tenant read/write denial;
+- same-tenant allowed reads;
+- viewer/admin separation;
+- service-role setup and bounded cleanup;
+- the live inventory helper privilege boundary;
+- exact-SHA GitHub Actions provenance.
+
+The helper must remain `SECURITY INVOKER`, use a fixed `search_path`, deny `PUBLIC`, `anon` and `authenticated` execution, and retain only the controlled `service_role` execution needed by the proof.
+
+## Evidence rule
+
+Do not mark evidence `Complete` unless a real live run against the intended Production Supabase project passes. Repository tests or local fixtures are not substitutes for live runtime evidence.
+
+The generated evidence remains bound to the exact promoted SHA and the successful canonical production-promotion provenance.

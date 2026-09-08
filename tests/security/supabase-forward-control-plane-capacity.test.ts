@@ -6,7 +6,7 @@ import { compileForwardReconciliationManifest } from '../../scripts/supabase/for
 const rootDir = process.cwd();
 const subjectSha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-const expectedForwardPackage = [
+const sourceForwardPackage = [
   '20260906000000_reconcile_final_public_release_payment_storage_hardening.sql',
   '20260906003000_billing_ai_system_commercial_quota.sql',
   '20260906003500_billing_self_serve_member_capacity.sql',
@@ -21,25 +21,44 @@ const expectedForwardPackage = [
   '20260906006800_harden_cross_tenant_reference_integrity.sql',
 ];
 
+const expectedForwardPackage = [
+  '20260908000000_reconcile_final_public_release_payment_storage_hardening.sql',
+  '20260908003000_billing_ai_system_commercial_quota.sql',
+  '20260908003500_billing_self_serve_member_capacity.sql',
+  '20260908004000_billing_document_storage_quota.sql',
+  '20260908004500_billing_entitlement_catalog_truth.sql',
+  '20260908005000_billing_initial_checkout_singleflight.sql',
+  '20260908006000_billing_completed_checkout_authority_guard.sql',
+  '20260908006400_reconcile_paid_governance_runtime_foundations.sql',
+  '20260908006500_billing_professional_task_plan_isolation.sql',
+  '20260908006600_billing_business_feature_plan_isolation.sql',
+  '20260908006700_billing_governance_workflow_plan_isolation.sql',
+  '20260908006800_harden_cross_tenant_reference_integrity.sql',
+];
+
 describe('Supabase forward reconciliation control-plane capacity', () => {
-  it('compiles only the exact V32 plus billing, paid-governance, tier-isolation and tenant-integrity forward package', async () => {
+  it('compiles only the exact byte-preserving V40 re-forward package above the emergency Production head', async () => {
     const config = JSON.parse(await readFile('config/supabase-forward-reconciliation.json', 'utf8'));
 
+    expect(config.changeSet).toBe('2026-09-08-post-audit-containment-forward-reconciliation-v40');
+    expect(config.sourceChangeSet).toBe('2026-09-06-cross-tenant-reference-integrity-v39');
     expect(config.migrations.map((migration: { filename: string }) => migration.filename)).toEqual(expectedForwardPackage);
-    expect(config.migrations).not.toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        filename: '20260904113000_final_public_release_payment_storage_hardening.sql',
-      }),
-    ]));
+    expect(config.migrations).toHaveLength(12);
+
+    for (let index = 0; index < expectedForwardPackage.length; index += 1) {
+      const source = await readFile(`supabase/migrations/${sourceForwardPackage[index]}`);
+      const target = await readFile(`supabase/migrations/${expectedForwardPackage[index]}`);
+      expect(target.equals(source)).toBe(true);
+      expect(expectedForwardPackage[index].slice(0, 14) > '20260907142133').toBe(true);
+      expect(target.toString('utf8')).not.toContain('append_audit_event_chained');
+    }
 
     const manifest = await compileForwardReconciliationManifest({ config, rootDir, subjectSha });
 
     expect(manifest.targetSha).toBe(subjectSha);
     expect(manifest.migrations.map((migration) => migration.filename)).toEqual(expectedForwardPackage);
     expect(manifest.migrations).toHaveLength(12);
-    expect(manifest.changeSet).toBe(
-      '2026-09-06-cross-tenant-reference-integrity-v39',
-    );
+    expect(manifest.changeSet).toBe('2026-09-08-post-audit-containment-forward-reconciliation-v40');
     expect(manifest.checks.productionWriteAuthorized).toBe(false);
     expect(manifest.checks.migrationHistoryRepairAuthorized).toBe(false);
     expect(manifest.checks.unrestrictedDbPushAuthorized).toBe(false);
