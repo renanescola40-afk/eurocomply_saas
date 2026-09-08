@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
@@ -142,13 +142,21 @@ function makeStripeEvent(type: string, object: Record<string, unknown>, id = `ev
   };
 }
 
-function makeSubscription(status: string, plan = 'business') {
+function makeSubscription(status: string, plan = 'business', priceId = 'price_business_current') {
   return {
     id: 'sub_123',
     object: 'subscription',
     customer: 'cus_123',
     status,
     current_period_end: 1_900_000_000,
+    items: {
+      data: [
+        {
+          current_period_end: 1_900_000_000,
+          price: { id: priceId },
+        },
+      ],
+    },
     metadata: {
       organization_id: 'org_a',
       user_id: 'user_admin',
@@ -169,6 +177,7 @@ function makeInvoicePaymentFailed() {
 describe('Stripe webhook billing hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.STRIPE_PRICE_BUSINESS_MONTHLY = 'price_business_current';
     state = {
       eventInsertError: null,
       eventUpdateError: null,
@@ -193,6 +202,10 @@ describe('Stripe webhook billing hardening', () => {
       template: 'invoice_failed',
     });
     mocks.sendEmail.mockResolvedValue({ sent: true, provider: 'resend', status: 'sent', attempts: 1 });
+  });
+
+  afterEach(() => {
+    delete process.env.STRIPE_PRICE_BUSINESS_MONTHLY;
   });
 
   it('ignores unsupported Stripe events without claiming idempotency', async () => {
@@ -276,9 +289,28 @@ describe('Stripe webhook billing hardening', () => {
         metadata: expect.objectContaining({
           plan: 'business',
           metadataPlan: 'business',
-          planSource: 'subscription_metadata_fallback',
+          planSource: 'stripe_price_id',
+          stripePriceId: 'price_business_current',
         }),
       }),
+    );
+  });
+
+  it('rejects metadata-only plan authority when the Stripe price is not allowlisted', async () => {
+    await expect(
+      handleStripeWebhookEvent(
+        makeStripeEvent('customer.subscription.updated', makeSubscription('active', 'business', 'price_unknown')),
+      ),
+    ).rejects.toThrow('Missing or unrecognized canonical Stripe price on subscription');
+
+    expect(state.upsert).not.toHaveBeenCalled();
+    expect(state.eventUpdates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ payload: expect.objectContaining({ status: 'failed' }) }),
+      ]),
+    );
+    expect(mocks.writeAuditLog).not.toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'billing.subscription_updated' }),
     );
   });
 

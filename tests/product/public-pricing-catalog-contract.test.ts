@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 const pricingPage = readFileSync(join(process.cwd(), 'src/app/[locale]/pricing/page.tsx'), 'utf8');
 const checkoutPage = readFileSync(join(process.cwd(), 'src/app/[locale]/checkout/page.tsx'), 'utf8');
 const commercialCopy = readFileSync(join(process.cwd(), 'src/lib/i18n/commercial-surface-copy.ts'), 'utf8');
+const pricingCommercialTruth = readFileSync(join(process.cwd(), 'src/lib/i18n/pricing-commercial-truth.ts'), 'utf8');
 const organizationDashboard = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/page.tsx'), 'utf8');
 const dashboardCopy = readFileSync(join(process.cwd(), 'src/lib/i18n/dashboard-copy.ts'), 'utf8');
 
@@ -47,10 +48,15 @@ describe('public pricing catalog contract', () => {
     expect(commercialCopy).toContain('Enterprise uses negotiated contract pricing');
   });
 
-  it('retains prudent claims and VAT/tax messaging on the purchase surface', () => {
+  it('keeps prudent legal claims and fails closed on public VAT/tax treatment', () => {
     expect(commercialCopy).toContain('does not guarantee regulatory compliance');
     expect(commercialCopy).toContain('does not replace legal counsel');
-    expect(commercialCopy).toContain('Taxes or VAT, where applicable');
+    expect(pricingPage).toContain('applyPricingCommercialTruth(locale, getCommercialSurfaceCopy(locale).pricing)');
+    expect(pricingCommercialTruth).toContain('taxNote: commercialTruth.taxNote');
+    expect(pricingCommercialTruth).toContain('depend on the customer and transaction facts');
+    expect(pricingCommercialTruth).not.toContain('confirmed during checkout');
+    expect(pricingCommercialTruth).not.toContain('se confirman en checkout');
+    expect(pricingCommercialTruth).not.toContain('são confirmados no checkout');
   });
 
   it('keeps checkout on the canonical Professional fallback and never exposes technical enterprise sentinel limits', () => {

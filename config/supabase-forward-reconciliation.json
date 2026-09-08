@@ -1,54 +1,55 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-06-cross-tenant-reference-integrity-v39",
+  "changeSet": "2026-09-08-post-audit-containment-forward-reconciliation-v40",
+  "sourceChangeSet": "2026-09-06-cross-tenant-reference-integrity-v39",
   "migrations": [
     {
-      "filename": "20260906000000_reconcile_final_public_release_payment_storage_hardening.sql",
-      "purpose": "follow the read-only verified Production ledger head 20260905075429 with forward-only V32 reconciliation for payment-first RLS, compliance-documents payment/RBAC Storage boundaries, Evidence Vault size/MIME controls, and Gap Analysis active-tenant membership without replaying stale V31 or repairing migration history"
+      "filename": "20260908000000_reconcile_final_public_release_payment_storage_hardening.sql",
+      "purpose": "byte-identical re-forward of 20260906000000_reconcile_final_public_release_payment_storage_hardening.sql above emergency Production ledger head 20260907142133, preserving the reviewed payment-first RLS, compliance-document Storage, Evidence Vault and active-tenant hardening without migration-history repair"
     },
     {
-      "filename": "20260906003000_billing_ai_system_commercial_quota.sql",
-      "purpose": "reassert paid commercial authority inside service-role AI-system creation and serialize canonical plan quota enforcement in the same database transaction as creation"
+      "filename": "20260908003000_billing_ai_system_commercial_quota.sql",
+      "purpose": "byte-identical re-forward of 20260906003000_billing_ai_system_commercial_quota.sql above emergency Production ledger head 20260907142133, preserving transactional AI-system commercial quota authority"
     },
     {
-      "filename": "20260906003500_billing_self_serve_member_capacity.sql",
-      "purpose": "add fail-closed transactional self-service invitation creation and acceptance capacity for Starter, Professional and Business while preserving Enterprise contractual seat authority"
+      "filename": "20260908003500_billing_self_serve_member_capacity.sql",
+      "purpose": "byte-identical re-forward of 20260906003500_billing_self_serve_member_capacity.sql above emergency Production ledger head 20260907142133, preserving fail-closed self-service member capacity"
     },
     {
-      "filename": "20260906004000_billing_document_storage_quota.sql",
-      "purpose": "extend the existing paid document-count trigger with serialized persisted storage-byte capacity and close direct authenticated document metadata mutations that could bypass private Storage lifecycle accounting"
+      "filename": "20260908004000_billing_document_storage_quota.sql",
+      "purpose": "byte-identical re-forward of 20260906004000_billing_document_storage_quota.sql above emergency Production ledger head 20260907142133, preserving persisted document Storage capacity and direct-mutation closure"
     },
     {
-      "filename": "20260906004500_billing_entitlement_catalog_truth.sql",
-      "purpose": "reconcile persisted subscription entitlement JSON and defaults to the implemented commercial authority, keeping API and webhook capacity closed below Enterprise and organization licensing aligned with the current organization-scoped billing model"
+      "filename": "20260908004500_billing_entitlement_catalog_truth.sql",
+      "purpose": "byte-identical re-forward of 20260906004500_billing_entitlement_catalog_truth.sql above emergency Production ledger head 20260907142133, preserving canonical subscription entitlement catalog truth"
     },
     {
-      "filename": "20260906005000_billing_initial_checkout_singleflight.sql",
-      "purpose": "materialize the backend-only tenant-scoped single-flight lease required by the initial self-serve Checkout runtime so concurrent initial requests cannot create duplicate Stripe subscription Checkout sessions"
+      "filename": "20260908005000_billing_initial_checkout_singleflight.sql",
+      "purpose": "byte-identical re-forward of 20260906005000_billing_initial_checkout_singleflight.sql above emergency Production ledger head 20260907142133, preserving tenant-scoped initial Checkout single-flight authority"
     },
     {
-      "filename": "20260906006000_billing_completed_checkout_authority_guard.sql",
-      "purpose": "keep a bound completed Checkout attempt durable until processed LIVE subscription authority exists, preventing a second initial subscription during webhook activation delay"
+      "filename": "20260908006000_billing_completed_checkout_authority_guard.sql",
+      "purpose": "byte-identical re-forward of 20260906006000_billing_completed_checkout_authority_guard.sql above emergency Production ledger head 20260907142133, preserving completed Checkout activation-delay authority"
     },
     {
-      "filename": "20260906006400_reconcile_paid_governance_runtime_foundations.sql",
-      "purpose": "forward-reconcile only the paid QMS and Enterprise evidence/procurement tables, tenant-integrity constraints and backend-only RPCs that the final runtime calls but the verified Production schema lacks, without replaying historical migration versions or repairing migration history"
+      "filename": "20260908006400_reconcile_paid_governance_runtime_foundations.sql",
+      "purpose": "byte-identical re-forward of 20260906006400_reconcile_paid_governance_runtime_foundations.sql above emergency Production ledger head 20260907142133, preserving paid QMS and Enterprise runtime foundations"
     },
     {
-      "filename": "20260906006500_billing_professional_task_plan_isolation.sql",
-      "purpose": "enforce Professional-or-higher authority for organization Tasks, Risks and Vendors, reassert active-membership authority for newly materialized paid-governance helpers, and bind Enterprise governance AI-system references to the same organization before higher-tier data-plane policies"
+      "filename": "20260908006500_billing_professional_task_plan_isolation.sql",
+      "purpose": "byte-identical re-forward of 20260906006500_billing_professional_task_plan_isolation.sql above emergency Production ledger head 20260907142133, preserving Professional plan isolation and active-membership hardening"
     },
     {
-      "filename": "20260906006600_billing_business_feature_plan_isolation.sql",
-      "purpose": "enforce Business-or-higher authenticated data-plane authority for AI Literacy and QMS tables while preserving downgraded customer records for later re-upgrade"
+      "filename": "20260908006600_billing_business_feature_plan_isolation.sql",
+      "purpose": "byte-identical re-forward of 20260906006600_billing_business_feature_plan_isolation.sql above emergency Production ledger head 20260907142133, preserving Business feature data-plane isolation"
     },
     {
-      "filename": "20260906006700_billing_governance_workflow_plan_isolation.sql",
-      "purpose": "align AI-system governance workflow data planes with the commercial catalog by requiring Business for vendor diligence and governed risk review and Enterprise for evidence packs"
+      "filename": "20260908006700_billing_governance_workflow_plan_isolation.sql",
+      "purpose": "byte-identical re-forward of 20260906006700_billing_governance_workflow_plan_isolation.sql above emergency Production ledger head 20260907142133, preserving Business and Enterprise governance workflow plan isolation"
     },
     {
-      "filename": "20260906006800_harden_cross_tenant_reference_integrity.sql",
-      "purpose": "enforce same-organization parent references across legacy and Enterprise multi-tenant foreign-key paths even for service-role writes while preserving existing delete semantics"
+      "filename": "20260908006800_harden_cross_tenant_reference_integrity.sql",
+      "purpose": "byte-identical re-forward of 20260906006800_harden_cross_tenant_reference_integrity.sql above emergency Production ledger head 20260907142133, preserving same-organization reference integrity for privileged writes"
     }
   ],
   "truthBoundary": {

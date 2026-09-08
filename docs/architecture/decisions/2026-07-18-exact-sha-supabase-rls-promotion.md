@@ -1,44 +1,60 @@
 # Exact-SHA Supabase RLS evidence promotion
 
 Date: 2026-07-18
-Status: Accepted
+Status: Superseded
+Superseded by: governed forward-reconciliation Production promotion plus promotion-bound live RLS runtime proof
 
-## Context
+## Historical context
 
-The repository already contains a strict live Supabase tenant-isolation validator. It creates synthetic users and organizations, inventories deployed RLS policies, executes authenticated same-tenant and cross-tenant operations, verifies denied writes did not mutate protected rows, and cleans up its fixtures.
+This ADR established exact-SHA live Supabase tenant-isolation evidence. It moved runtime evidence out of source-code commits and into retained GitHub Actions artifacts, required protected execution, exact-SHA provenance, synthetic fixture cleanup and scorecard-side validation.
 
-The previous workflow wrote the generated JSON to a dedicated Git branch and opened an evidence pull request. That model allowed runtime evidence to become stale, required write permissions, and did not give the Enterprise Readiness Scorecard a reliable exact-SHA artifact source. Consequently TEN-02 through TEN-06 remained `NOT_VERIFIED` even when the live validator existed.
+The historical design also permitted a manually dispatched `apply_migrations=true` exception for proof-specific database helpers. That mutation exception is no longer part of the current architecture.
 
-## Decision
+## Preserved decisions
 
-1. Run the Supabase live RLS proof on every `main` push and allow a manual exact-main-SHA dispatch.
-2. Keep the existing protected `supabase-live-rls-validation` environment and its secrets.
-3. Use read-only repository permissions and upload runtime evidence as a retained GitHub Actions artifact rather than committing it.
-4. Permit database migrations only during an explicit manual dispatch with `apply_migrations=true`; automatic push runs validate the deployed schema without mutating it.
-5. Require the checked-out SHA, triggering SHA, and current remote `main` SHA to match.
-6. Fetch only a successful, non-expired artifact from the canonical workflow, branch, repository, run ID, and exact SHA.
-7. Re-derive a canonical `supabase-rls-validation.json` inside the scorecard run.
-8. Promote only the five operations directly proven by the live test:
-   - organization membership isolation;
-   - cross-tenant reads denied;
-   - cross-tenant inserts denied;
-   - cross-tenant updates denied;
-   - cross-tenant deletes denied.
+The following principles from this ADR remain current:
 
-## Evidence boundary
+1. Live tenant-isolation evidence must come from a real target Supabase runtime proof.
+2. Repository permissions remain read-only for the proof/evidence path.
+3. Evidence is retained as GitHub Actions artifacts rather than committed runtime output.
+4. The checked-out release SHA and current protected `main` must remain exact.
+5. Canonical evidence is accepted only from the expected workflow/repository/run/SHA provenance.
+6. Evidence remains redacted and must not persist credentials, sessions, customer identifiers or raw database connection material.
+7. Cross-tenant read/write denial and same-tenant allowed behavior remain runtime assertions, not repository assumptions.
 
-This proof uses synthetic fixtures against the configured Supabase project. It does not prove organization onboarding, administrative-client boundaries, export isolation, audit-chain isolation, storage isolation, backup restoration, every future table, or a third-party penetration test. Those controls retain independent evidence requirements.
+## Superseding mutation boundary
 
-No credential, session token, user identifier, organization identifier, raw project reference, connection string, or provider response is persisted in the canonical artifact. The Supabase project reference remains hashed/redacted.
+Database migration execution is now completely outside `Supabase Live RLS Validation`.
+
+The sole governed forward Production writer is:
+
+`.github/workflows/supabase-forward-reconciliation-production-promotion.yml`
+
+Any helper or privilege repair needed by the live proof must first pass the canonical forward reconciliation chain, including exact selected bytes, rehearsal, forward dry-run, bounded Production dry-run, Decision Gate, protected Production governance and immediate pre-write `main` revalidation.
+
+Only after that promotion succeeds may `Supabase Live RLS Validation` run. The proof takes the successful exact-SHA promotion run ID as authority, validates its provenance and project binding, and performs no migration or direct SQL repair.
+
+`apply_migrations` is therefore a retired historical input and must not be reintroduced into the live proof.
+
+## Current evidence boundary
+
+The runtime proof uses controlled synthetic fixtures against the configured Production Supabase project. It proves the tenant-isolation operations explicitly exercised by the validator and the live inventory-helper privilege boundary.
+
+It does not independently prove every Enterprise control, including backup restoration, storage isolation, legal review, billing lifecycle, provider acceptance or third-party penetration testing. Those retain separate evidence authorities.
 
 ## Failure behavior
 
-Missing secrets, environment rejection, a stale SHA, schema drift, missing tables, failed RLS assertions, incomplete cleanup, invalid provenance, expired artifacts, or any evidence mismatch prevents promotion. The scorecard removes stale canonical evidence and leaves TEN-02 through TEN-06 `NOT_VERIFIED`.
+A missing successful canonical promotion, stale SHA, project-binding mismatch, missing/invalid helper, failed RLS assertion, incomplete cleanup, invalid provenance, expired artifact or conflicting evidence prevents acceptance.
+
+A schema/helper failure returns the release to the governed forward-promotion chain. The live proof must not repair Production inline.
 
 ## Consequences
 
-The protected workflow may reduce availability of evidence generation when Supabase or GitHub Actions is unavailable, but it does not affect application runtime. Runtime evidence is no longer reviewed through a normal source-code pull request; instead, its trust derives from the protected environment, immutable workflow run, exact-SHA artifact, redaction contract, and scorecard-side validation.
+- There is no longer a migration-capable live-RLS proof path.
+- Runtime proof and Production schema promotion have separate responsibilities and evidence.
+- Production database writes remain concentrated in one governed forward writer.
+- Historical exact-SHA evidence principles remain preserved and strengthened by explicit promotion provenance.
 
-## Rollback
+## Historical rollback note
 
-Revert the workflow, fetcher, canonical evidence writer, validators, tests, and this ADR together. After rollback, remove any canonical RLS evidence produced by the reverted pipeline and return the mapped controls to `NOT_VERIFIED` unless another accepted exact-SHA proof exists.
+The original ADR described reverting workflow/fetcher/evidence components together. That rollback instruction is historical. Any current change to the live-RLS proof or Production promotion boundary must preserve the single-writer, exact-SHA and fail-closed governance model rather than restoring the retired mutation exception.
