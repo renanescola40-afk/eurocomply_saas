@@ -8,12 +8,18 @@ const ephemeralRecovery = await readFile('scripts/recovery/manage-ephemeral-reco
 const fixtures = await readFile('scripts/security/lib/ephemeral-auth-fixtures.mjs', 'utf8');
 const assuranceWorkflow = await readFile('.github/workflows/enterprise-final-assurance-proof.yml', 'utf8');
 
-test('final technical proof exercises disposable auth, storage isolation, cleanup and rolled-back security events', () => {
+test('final technical proof exercises disposable auth, payment-authorized storage isolation, cleanup and rolled-back security events', () => {
   for (const token of [
     'createEphemeralAuthFixtures',
     'cleanupEphemeralAuthFixtures',
+    'grantBoundedV20CommercialAuthority',
     'authFixturesCreated',
     'authFixturesRemoved',
+    'commercialAuthorityGranted',
+    'commercialAuthorityRemoved',
+    'enterprise_entitlement_reconciliation_events',
+    'enterprise_entitlement_snapshots',
+    'enterprise_entitlement_sources',
     'ownerUploadAllowed',
     'ownerReadAllowed',
     'outsiderReadDenied',
