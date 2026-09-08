@@ -10,6 +10,7 @@ import { getUserEmailContextById } from '@/server/users/email';
 
 export const runtime = 'nodejs';
 
+const PUBLIC_TRIALS_ENABLED = false;
 const TRIAL_REMINDER_DAYS = 3;
 const TRIAL_REMINDER_ROUTE = '/api/internal/trial-reminders';
 const TRIAL_REMINDER_AUTH_ACTION = 'authenticate_trial_reminder_job';
@@ -181,6 +182,18 @@ export async function POST(request: Request) {
 
   if (!isAuthorizedInternalCronRequest(request)) {
     return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // RISCK COMPLY currently has no public trial authority. Keep this authenticated
+  // compatibility endpoint callable by daily maintenance, but fail closed before
+  // reading trial rows or sending customer email. Re-enabling reminders requires
+  // an explicit product decision plus a paid-access model that licenses trialing.
+  if (!PUBLIC_TRIALS_ENABLED) {
+    return noStoreJson({
+      ok: true,
+      disabled: 'public_trials_not_offered',
+      reminders: { sent: 0, skipped: 0, failed: 0 },
+    });
   }
 
   try {
