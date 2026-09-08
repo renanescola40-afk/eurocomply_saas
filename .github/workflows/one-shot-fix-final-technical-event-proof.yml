@@ -1,0 +1,41 @@
+name: One-shot fix final technical event rollback proof
+
+on:
+  push:
+    branches:
+      - fix/p1-final-technical-event-rollback-proof-20260908
+    paths:
+      - .github/workflows/one-shot-fix-final-technical-event-proof.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: fix/p1-final-technical-event-rollback-proof-20260908
+          persist-credentials: true
+      - name: Patch proof to create rollback-scoped synthetic organization
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/security/run-final-technical-controls-proof.mjs')
+          s = p.read_text()
+          old = """    insert into final_proof_context (incident_id, organization_id)\n      select gen_random_uuid(), id from public.organizations order by id asc limit 1;\n"""
+          new = """    insert into final_proof_context (incident_id, organization_id)\n      values (gen_random_uuid(), gen_random_uuid());\n    insert into public.organizations (id, name, slug)\n      select organization_id, '${marker}', '${marker}' from final_proof_context;\n"""
+          if old not in s:
+              raise SystemExit('expected final proof context block not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+          rm .github/workflows/one-shot-fix-final-technical-event-proof.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/security/run-final-technical-controls-proof.mjs .github/workflows/one-shot-fix-final-technical-event-proof.yml
+          git diff --cached --check
+          git commit -m "fix(security): make event proof self-contained and rollback-only"
+          git push origin HEAD:fix/p1-final-technical-event-rollback-proof-20260908
