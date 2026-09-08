@@ -43,6 +43,28 @@ jobs:
           npm pkg set 'overrides.sharp=0.35.4'
           npm pkg set 'overrides.js-yaml=4.3.2'
           npm install --package-lock-only --ignore-scripts --no-audit --fund=false
+          npm view '@swc/helpers@0.5.23' version dist license dependencies engines --json > /tmp/swc-helpers.json
+
+      - name: Bridge npm11 lock compatibility for npm10
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          const meta = JSON.parse(fs.readFileSync('/tmp/swc-helpers.json', 'utf8'));
+          const entry = {
+            version: meta.version,
+            resolved: meta.dist?.tarball,
+            integrity: meta.dist?.integrity,
+            license: meta.license,
+            dependencies: meta.dependencies,
+            engines: meta.engines,
+          };
+          for (const key of Object.keys(entry)) if (entry[key] == null) delete entry[key];
+          lock.packages['node_modules/@swc/helpers'] = entry;
+          fs.writeFileSync('package-lock.json', JSON.stringify(lock, null, 2) + '\n');
+          NODE
 
       - name: Validate with repository npm10 contract
         shell: bash
