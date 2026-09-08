@@ -32,9 +32,12 @@ jobs:
           node-version: '22'
           cache: npm
 
-      - name: Align npm with repository package manager
+      - name: Verify supported npm
         shell: bash
-        run: npm install --global npm@10.8.2
+        run: |
+          set -euo pipefail
+          npm --version
+          node -e "const major=Number(process.env.npm_config_user_agent.match(/npm\/(\d+)/)?.[1]); if (major !== 10) process.exit(1)"
 
       - name: Regenerate dependency lock safely
         shell: bash
@@ -44,6 +47,7 @@ jobs:
           npm install --save-dev --save-exact vitest@4.1.11 --package-lock-only --ignore-scripts --no-audit --fund=false
           npm ci --ignore-scripts
           npm audit --audit-level=moderate
+          npm run security:package-lock
           node --test scripts/security/npm-audit-policy.test.mjs tests/enterprise/dependency-vulnerability-evidence.test.mjs tests/enterprise/dependency-vulnerability-remediation-candidate.test.mjs tests/enterprise/dependency-vulnerability-scorecard-contract.test.mjs
 
       - name: Commit verified remediation and remove one-shot workflow
