@@ -1,4 +1,4 @@
-name: One-shot deterministic Vitest 4.1.11 remediation
+name: One-shot dependency advisory remediation
 
 on:
   push:
@@ -32,92 +32,71 @@ jobs:
           node-version: '22'
           cache: npm
 
-      - name: Patch only reviewed Vitest lock nodes
+      - name: Patch reviewed Vitest lock nodes
         shell: bash
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
-
           const packagePath = 'package.json';
           const lockPath = 'package-lock.json';
           const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
           const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
           const from = '4.1.10';
           const to = '4.1.11';
-
-          if (pkg.devDependencies?.vitest !== from) {
-            throw new Error(`unexpected_package_vitest:${pkg.devDependencies?.vitest}`);
-          }
-          if (lock.packages?.['']?.devDependencies?.vitest !== from) {
-            throw new Error(`unexpected_lock_root_vitest:${lock.packages?.['']?.devDependencies?.vitest}`);
-          }
-
+          if (pkg.devDependencies?.vitest !== from) throw new Error(`unexpected_package_vitest:${pkg.devDependencies?.vitest}`);
+          if (lock.packages?.['']?.devDependencies?.vitest !== from) throw new Error(`unexpected_lock_root_vitest:${lock.packages?.['']?.devDependencies?.vitest}`);
           pkg.devDependencies.vitest = to;
           lock.packages[''].devDependencies.vitest = to;
-
           const reviewed = {
-            'node_modules/@vitest/expect': {
-              resolved: 'https://registry.npmjs.org/@vitest/expect/-/expect-4.1.11.tgz',
-              integrity: 'sha512-VX2x5vNJXET47KAFzwERI+KRMtTTCSWTfSMKsW7JsUsXV4psq++e3DvZpuTDOpHcxytiDs6p2nhVb2tVDiiUYw==',
-            },
-            'node_modules/@vitest/mocker': {
-              resolved: 'https://registry.npmjs.org/@vitest/mocker/-/mocker-4.1.11.tgz',
-              integrity: 'sha512-2XJVD55d1o5AZous5CCGKS74g/riOj9odEt2bQpCVZeblHyHdnMeFl4jl0XjU21stf4mbjUkew2eXQZt65g5CQ==',
-            },
-            'node_modules/@vitest/pretty-format': {
-              resolved: 'https://registry.npmjs.org/@vitest/pretty-format/-/pretty-format-4.1.11.tgz',
-              integrity: 'sha512-yiZzPbGTS9Sr/JpFl8zHrcIkAofNbFV6k21vIgQN/cY/oxZeXhJv5sc/MBJ5jFKWmWs+oJHw0UXLZjmf931+Vw==',
-            },
-            'node_modules/@vitest/runner': {
-              resolved: 'https://registry.npmjs.org/@vitest/runner/-/runner-4.1.11.tgz',
-              integrity: 'sha512-LztvUgdwMNJMIkj3hQnnxiC2Xy1zNxq928W/xhjCLaNCzqTZOudjwbQf6v9IntZGPw132i2Lq2rgTRZHD3JHNw==',
-            },
-            'node_modules/@vitest/snapshot': {
-              resolved: 'https://registry.npmjs.org/@vitest/snapshot/-/snapshot-4.1.11.tgz',
-              integrity: 'sha512-pN7ikn1ON7h8ee4gIAp4AzyK+zBtJPzVbqOgu5LCEh4VaJVbPQcgYQYJIMGQPXVeJJq1fnfazis7a5pFNPahog==',
-            },
-            'node_modules/@vitest/spy': {
-              resolved: 'https://registry.npmjs.org/@vitest/spy/-/spy-4.1.11.tgz',
-              integrity: 'sha512-apNa/prQy2qCeywhnixOHPRCgGNhvg7T4Dapfl1GahLp/R+uhBm5cPyFoNVyqsNd2h1nJxL6BqqdIjiABL60YA==',
-            },
-            'node_modules/@vitest/utils': {
-              resolved: 'https://registry.npmjs.org/@vitest/utils/-/utils-4.1.11.tgz',
-              integrity: 'sha512-zTCVGpyFsGWBhllOyKlTw/vnr6D9qxsfSDyfbyZmTyjHw5N/VuvzHpHoQjm2ZJzn4RJgx5w4r7V0er69CmLgPQ==',
-            },
-            'node_modules/vitest': {
-              resolved: 'https://registry.npmjs.org/vitest/-/vitest-4.1.11.tgz',
-              integrity: 'sha512-fhACrNXUidIbGSBr5FlbuBkO7VWC1ZyLl0DO4CU2DrQoAPxX84Ysxs+HeGQpii5lZWV1Q4gBZTTu49mF+A6Edw==',
-            },
+            'node_modules/@vitest/expect': ['https://registry.npmjs.org/@vitest/expect/-/expect-4.1.11.tgz', 'sha512-VX2x5vNJXET47KAFzwERI+KRMtTTCSWTfSMKsW7JsUsXV4psq++e3DvZpuTDOpHcxytiDs6p2nhVb2tVDiiUYw=='],
+            'node_modules/@vitest/mocker': ['https://registry.npmjs.org/@vitest/mocker/-/mocker-4.1.11.tgz', 'sha512-2XJVD55d1o5AZous5CCGKS74g/riOj9odEt2bQpCVZeblHyHdnMeFl4jl0XjU21stf4mbjUkew2eXQZt65g5CQ=='],
+            'node_modules/@vitest/pretty-format': ['https://registry.npmjs.org/@vitest/pretty-format/-/pretty-format-4.1.11.tgz', 'sha512-yiZzPbGTS9Sr/JpFl8zHrcIkAofNbFV6k21vIgQN/cY/oxZeXhJv5sc/MBJ5jFKWmWs+oJHw0UXLZjmf931+Vw=='],
+            'node_modules/@vitest/runner': ['https://registry.npmjs.org/@vitest/runner/-/runner-4.1.11.tgz', 'sha512-LztvUgdwMNJMIkj3hQnnxiC2Xy1zNxq928W/xhjCLaNCzqTZOudjwbQf6v9IntZGPw132i2Lq2rgTRZHD3JHNw=='],
+            'node_modules/@vitest/snapshot': ['https://registry.npmjs.org/@vitest/snapshot/-/snapshot-4.1.11.tgz', 'sha512-pN7ikn1ON7h8ee4gIAp4AzyK+zBtJPzVbqOgu5LCEh4VaJVbPQcgYQYJIMGQPXVeJJq1fnfazis7a5pFNPahog=='],
+            'node_modules/@vitest/spy': ['https://registry.npmjs.org/@vitest/spy/-/spy-4.1.11.tgz', 'sha512-apNa/prQy2qCeywhnixOHPRCgGNhvg7T4Dapfl1GahLp/R+uhBm5cPyFoNVyqsNd2h1nJxL6BqqdIjiABL60YA=='],
+            'node_modules/@vitest/utils': ['https://registry.npmjs.org/@vitest/utils/-/utils-4.1.11.tgz', 'sha512-zTCVGpyFsGWBhllOyKlTw/vnr6D9qxsfSDyfbyZmTyjHw5N/VuvzHpHoQjm2ZJzn4RJgx5w4r7V0er69CmLgPQ=='],
+            'node_modules/vitest': ['https://registry.npmjs.org/vitest/-/vitest-4.1.11.tgz', 'sha512-fhACrNXUidIbGSBr5FlbuBkO7VWC1ZyLl0DO4CU2DrQoAPxX84Ysxs+HeGQpii5lZWV1Q4gBZTTu49mF+A6Edw=='],
           };
-
-          for (const [path, metadata] of Object.entries(reviewed)) {
+          for (const [path, [resolved, integrity]] of Object.entries(reviewed)) {
             const node = lock.packages?.[path];
-            if (!node || node.version !== from) {
-              throw new Error(`unexpected_lock_node:${path}:${node?.version}`);
-            }
+            if (!node || node.version !== from) throw new Error(`unexpected_lock_node:${path}:${node?.version}`);
             node.version = to;
-            node.resolved = metadata.resolved;
-            node.integrity = metadata.integrity;
+            node.resolved = resolved;
+            node.integrity = integrity;
             for (const field of ['dependencies', 'optionalDependencies']) {
-              if (!node[field]) continue;
-              for (const [name, version] of Object.entries(node[field])) {
+              for (const [name, version] of Object.entries(node[field] ?? {})) {
                 if (name.startsWith('@vitest/') && version === from) node[field][name] = to;
               }
             }
           }
-
           fs.writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
           fs.writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
           NODE
+          npm ci --ignore-scripts
+          npm ls vitest @vitest/mocker
+
+      - name: Pin fixed transitive versions and let npm reconcile the lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const path = 'package.json';
+          const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
+          pkg.overrides = { ...(pkg.overrides ?? {}), 'js-yaml': '4.3.2', sharp: '0.35.4' };
+          fs.writeFileSync(path, `${JSON.stringify(pkg, null, 2)}\n`);
+          NODE
+          npm install --package-lock-only --ignore-scripts --no-audit --fund=false
 
       - name: Prove deterministic install and vulnerability closure
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf node_modules
           npm ci --ignore-scripts
           npm run security:package-lock
-          npm ls vitest @vitest/expect @vitest/mocker @vitest/pretty-format @vitest/runner @vitest/snapshot @vitest/spy @vitest/utils
+          npm ls vitest @vitest/mocker js-yaml sharp
           npm audit --audit-level=moderate
           node --test scripts/security/npm-audit-policy.test.mjs tests/enterprise/dependency-vulnerability-evidence.test.mjs tests/enterprise/dependency-vulnerability-remediation-candidate.test.mjs tests/enterprise/dependency-vulnerability-scorecard-contract.test.mjs
 
@@ -131,5 +110,5 @@ jobs:
           git add package.json package-lock.json .github/workflows/one-shot-vitest-deterministic-lock.yml
           git diff --cached --check
           git diff --cached --quiet && { echo 'No remediation changes produced'; exit 1; }
-          git commit -m 'chore(security): bump vitest to 4.1.11'
+          git commit -m 'chore(security): remediate npm advisories'
           git push origin HEAD:fix/p1-final-technical-payment-first-proof-20260908
