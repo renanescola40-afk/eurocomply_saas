@@ -41,8 +41,7 @@ jobs:
         run: |
           set -euo pipefail
           npm ci --ignore-scripts
-          npm pkg set 'devDependencies.vitest=4.1.11'
-          npm install --package-lock-only --ignore-scripts --no-audit --fund=false
+          npm install --save-dev --save-exact vitest@4.1.11 --package-lock-only --ignore-scripts --no-audit --fund=false --legacy-peer-deps
           npm ci --ignore-scripts
           npm audit --audit-level=moderate
           node --test scripts/security/npm-audit-policy.test.mjs tests/enterprise/dependency-vulnerability-evidence.test.mjs tests/enterprise/dependency-vulnerability-remediation-candidate.test.mjs tests/enterprise/dependency-vulnerability-scorecard-contract.test.mjs
