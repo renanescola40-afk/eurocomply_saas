@@ -32,31 +32,24 @@ jobs:
           node-version: '22'
           cache: npm
 
-      - name: Verify supported npm
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="$(npm --version)"
-          echo "$version"
-          case "$version" in
-            10.*) ;;
-            *) echo "Unsupported npm version: $version" >&2; exit 1 ;;
-          esac
-
-      - name: Apply targeted patched versions and regenerate lock
+      - name: Apply exact security patches with fresh Arborist
         shell: bash
         run: |
           set -euo pipefail
           test ! -d node_modules
+          npm install --global npm@11
+          npm --version
           npm pkg set 'devDependencies.vitest=4.1.11'
           npm pkg set 'overrides.sharp=0.35.4'
           npm pkg set 'overrides.js-yaml=4.3.2'
-          npm install --package-lock-only --ignore-scripts --no-audit --fund=false --force
+          npm install --package-lock-only --ignore-scripts --no-audit --fund=false
 
-      - name: Validate normal deterministic install and vulnerability policy
+      - name: Validate with repository npm10 contract
         shell: bash
         run: |
           set -euo pipefail
+          npm install --global npm@10.8.2
+          test "$(npm --version)" = '10.8.2'
           npm ci --ignore-scripts
           npm audit --audit-level=moderate
           npm run security:package-lock
