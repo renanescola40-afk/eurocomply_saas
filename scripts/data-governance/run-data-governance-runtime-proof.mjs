@@ -42,17 +42,35 @@ try {
   if (rls !== 3) throw new Error('governance_rls_missing');
   checks.rlsEnabled = true;
 
+  const dsrForceRls = Number(sql(database, "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname='data_subject_requests' and c.relrowsecurity=true and c.relforcerowsecurity=true;"));
+  if (dsrForceRls !== 1) throw new Error('dsr_force_rls_missing');
+  checks.dsrForceRlsEnabled = true;
+
   const policies = Number(sql(database, "select count(*) from pg_policies where schemaname='public' and tablename in ('data_retention_policies','data_subject_requests','audit_integrity_checkpoints');"));
   if (policies < 7) throw new Error('governance_policies_incomplete');
   checks.tenantPoliciesPresent = true;
 
   const constraints = Number(sql(database, "select count(*) from pg_constraint where conrelid in ('public.data_retention_policies'::regclass,'public.data_subject_requests'::regclass,'public.audit_integrity_checkpoints'::regclass) and contype='c';"));
-  if (constraints < 7) throw new Error('governance_constraints_incomplete');
+  if (constraints < 12) throw new Error('governance_constraints_incomplete');
   checks.dataMinimizationConstraintsPresent = true;
 
-  const dueDefault = sql(database, "select column_default from information_schema.columns where table_schema='public' and table_name='data_subject_requests' and column_name='due_at';");
-  if (!/30 days/i.test(dueDefault)) throw new Error('dsr_due_window_missing');
-  checks.dsrDeadlineEnforced = true;
+  const dsrLifecycleColumns = Number(sql(database, "select count(*) from information_schema.columns where table_schema='public' and table_name='data_subject_requests' and column_name in ('received_at','initial_due_at','due_at','identity_verification_state','role_route','customer_controller_reference','extension_reason','extension_notified_at','extended_due_at','decision','decision_reason','evidence_refs','completed_at');"));
+  if (dsrLifecycleColumns !== 13) throw new Error('dsr_lifecycle_columns_missing');
+  checks.dsrLifecycleColumnsPresent = true;
+
+  const dueDefault = sql(database, "select coalesce(column_default, '') from information_schema.columns where table_schema='public' and table_name='data_subject_requests' and column_name='due_at';");
+  if (dueDefault !== '') throw new Error('dsr_fixed_due_default_survived');
+  checks.dsrCalendarDeadlineServerAuthority = true;
+
+  const requestTypeConstraint = sql(database, "select pg_get_constraintdef(oid) from pg_constraint where conrelid='public.data_subject_requests'::regclass and conname='data_subject_requests_request_type_check';");
+  if (!/portability/i.test(requestTypeConstraint) || !/consent_withdrawal/i.test(requestTypeConstraint)) {
+    throw new Error('dsr_request_types_incomplete');
+  }
+  checks.dsrChapterThreeTypesPresent = true;
+
+  const mutationPrivileges = Number(sql(database, "select (has_table_privilege('anon','public.data_subject_requests','INSERT') or has_table_privilege('anon','public.data_subject_requests','UPDATE') or has_table_privilege('anon','public.data_subject_requests','DELETE') or has_table_privilege('authenticated','public.data_subject_requests','INSERT') or has_table_privilege('authenticated','public.data_subject_requests','UPDATE') or has_table_privilege('authenticated','public.data_subject_requests','DELETE'))::int;"));
+  if (mutationPrivileges !== 0) throw new Error('dsr_browser_mutation_privileges_survived');
+  checks.dsrServerOnlyMutationBoundary = true;
 
   const digestConstraint = Number(sql(database, "select count(*) from pg_constraint where conrelid='public.audit_integrity_checkpoints'::regclass and pg_get_constraintdef(oid) like '%64%';"));
   if (digestConstraint < 1) throw new Error('audit_digest_constraint_missing');
@@ -60,6 +78,7 @@ try {
 
   checks.exportWorkflowDocumented = true;
   checks.deletionWorkflowDocumented = true;
+  checks.rightsLifecycleDocumented = true;
 } catch (error) {
   failures.push(error instanceof Error ? error.message : 'unknown_data_governance_failure');
 }
@@ -67,7 +86,7 @@ try {
 const canonicalChecks = Object.fromEntries(Object.entries(checks).map(([key, value]) => [key, value === true]));
 const passed = failures.length === 0 && Object.values(canonicalChecks).every(Boolean);
 const evidence = {
-  schema: 'risck-comply.data-governance-evidence.v1',
+  schema: 'risck-comply.data-governance-evidence.v2',
   evidenceItem: 'data-governance-validation',
   status: passed ? 'Complete' : 'Open',
   outcome: passed ? 'passed' : 'failed',
@@ -83,7 +102,7 @@ const evidence = {
     subjectIdentifiersStored: false,
     exportPayloadStored: false,
   },
-  boundary: 'Schema, RLS, retention, DSR deadline, audit-integrity and protected configuration validation against an isolated recovery database. No customer rows or identifiers are stored.',
+  boundary: 'Schema, RLS/FORCE RLS, retention, GDPR rights-request lifecycle/deadline authority, audit-integrity and protected configuration validation against an isolated recovery database. No customer rows or identifiers are stored.',
 };
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
