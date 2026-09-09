@@ -178,6 +178,25 @@ export async function deleteDataSubjectRequestRecordForCompensation(input: {
   return !error;
 }
 
+export async function getDataSubjectRequestForOrganization(input: {
+  requestId: string;
+  organizationId: string;
+}) {
+  const admin = tryCreateAdminClient();
+  if (!admin) return { ok: false as const, reason: 'admin_client_unavailable' as const };
+
+  const { data, error } = await admin
+    .from('data_subject_requests')
+    .select('*')
+    .eq('id', input.requestId)
+    .eq('organization_id', input.organizationId)
+    .maybeSingle();
+
+  if (error) return { ok: false as const, reason: 'request_query_failed' as const };
+  if (!data) return { ok: false as const, reason: 'request_not_found' as const };
+  return { ok: true as const, request: data as DataSubjectRequestRecord };
+}
+
 export async function listDataSubjectRequestsForOrganization(organizationId: string) {
   const admin = tryCreateAdminClient();
   if (!admin) return { ok: false as const, reason: 'admin_client_unavailable' as const };
@@ -212,7 +231,7 @@ export async function updateDataSubjectRequestRecord(input: {
 
   const { data: current, error: currentError } = await admin
     .from('data_subject_requests')
-    .select('*')
+    .select('id')
     .eq('id', input.requestId)
     .eq('organization_id', input.organizationId)
     .maybeSingle();
