@@ -177,19 +177,11 @@ export async function updateDataSubjectRequestRecord(input: {
   requestId: string;
   organizationId: string;
   patch: Record<string, unknown>;
+  expectedStatus?: DataSubjectRequestStatus;
+  expectedUpdatedAt?: string;
 }) {
   const admin = tryCreateAdminClient();
   if (!admin) return { ok: false as const, reason: 'admin_client_unavailable' as const };
-
-  const { data: current, error: currentError } = await admin
-    .from('data_subject_requests')
-    .select('id')
-    .eq('id', input.requestId)
-    .eq('organization_id', input.organizationId)
-    .maybeSingle();
-
-  if (currentError) return { ok: false as const, reason: 'request_query_failed' as const };
-  if (!current) return { ok: false as const, reason: 'request_not_found' as const };
 
   const allowedPatch: Record<string, unknown> = {};
   for (const key of [
@@ -213,14 +205,27 @@ export async function updateDataSubjectRequestRecord(input: {
     if (Object.prototype.hasOwnProperty.call(input.patch, key)) allowedPatch[key] = input.patch[key];
   }
 
-  const { data, error } = await admin
+  let updateQuery = admin
     .from('data_subject_requests')
     .update(allowedPatch)
     .eq('id', input.requestId)
-    .eq('organization_id', input.organizationId)
-    .select('*')
-    .single();
+    .eq('organization_id', input.organizationId);
 
-  if (error || !data) return { ok: false as const, reason: 'request_update_failed' as const };
+  if (input.expectedStatus) {
+    updateQuery = updateQuery.eq('status', input.expectedStatus);
+  }
+  if (input.expectedUpdatedAt) {
+    updateQuery = updateQuery.eq('updated_at', input.expectedUpdatedAt);
+  }
+
+  const { data, error } = await updateQuery
+    .select('*')
+    .maybeSingle();
+
+  if (error) return { ok: false as const, reason: 'request_update_failed' as const };
+  if (!data && (input.expectedStatus || input.expectedUpdatedAt)) {
+    return { ok: false as const, reason: 'request_state_conflict' as const };
+  }
+  if (!data) return { ok: false as const, reason: 'request_not_found' as const };
   return { ok: true as const, request: data as DataSubjectRequestRecord };
 }
