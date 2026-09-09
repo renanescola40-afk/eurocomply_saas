@@ -92,7 +92,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+      - run: bash scripts/quality/install-playwright-ci.sh
       - run: npm run test:e2e -- tests/e2e/enterprise-production-gate.spec.ts
 
   production-environment-governance:
