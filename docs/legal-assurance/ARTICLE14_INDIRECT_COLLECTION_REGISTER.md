@@ -19,7 +19,7 @@ Do not apply a provider-side Article 14 workflow to customer-controlled workspac
 
 | Scenario | Source of data | Likely role | Article 14 timing control | Current operational state | Remaining gap |
 |---|---|---|---|---|---|
-| Teammate invitation email entered by organisation admin | customer workspace administrator | controller for RISCK account/invitation administration, subject to final role review | privacy information should be delivered no later than the invitation/first communication | invitation data path exists; dedicated Article 14 notice evidence not yet proven | bind approved Privacy/indirect-collection notice to invitation delivery |
+| Teammate invitation email entered by organisation admin | customer workspace administrator | controller for RISCK account/invitation administration, subject to final role review | privacy information should be delivered no later than the invitation/first communication | **IMPLEMENTED_PRE_MERGE**: invitation email now states that the address was supplied by an administrator of the named organisation, explains the invitation purpose/non-acceptance consequence, and links to the locale Privacy surface; canonical email sender supports delivery evidence with status/provider/idempotency/sent timestamp | merge + CI/exact-SHA proof; linked Privacy page is still not a complete final Articles 13/14 notice, so full Article 14 content remains partial |
 | Account/identity attributes returned by Google OAuth | identity provider in a user-initiated authentication flow | controller for RISCK account/security processing; direct-vs-indirect classification requires legal review because collection occurs through an identity provider during user action | safest product posture is to make Privacy information available before/at authentication and not rely on Article 14 exception | public Privacy link/surface exists, but completeness is blocked | final Privacy notice + authentication-surface evidence |
 | Billing/customer attributes returned from Stripe after Checkout | Stripe/payment workflow following customer checkout | controller for billing/account administration for relevant provider-side metadata; Stripe separately controls its own payment processing | information should already be available before Checkout; if an attribute is first obtained indirectly and used to communicate, no later than first relevant communication | billing flow proven; complete notice not yet proven | reconcile approved Privacy notice with Checkout entry/confirmation surfaces |
 | Support request submitted by an admin about another user | customer/admin/support requester | mixed; may be controller-side support/security administration or processor-side customer-content handling | if controller-side and RISCK contacts the individual, by first communication; otherwise no later than one month unless a documented exception applies | corporate support mailbox operational | add case classification to support/privacy runbook |
@@ -27,6 +27,19 @@ Do not apply a provider-side Article 14 workflow to customer-controlled workspac
 | Customer workspace documents containing personal data of third parties | customer upload/import/integration | processor where processed solely on customer instructions | customer/controller transparency obligation; RISCK assists under DPA | processor role documented in DPA draft | close DPA/provider facts and DSAR routing; do not send independent notices from hosted content by default |
 | Imported/integrated directory or vendor contact data | customer integration/admin | processor for customer-controlled business data unless RISCK independently reuses it for its own purpose | customer/controller transparency obligation unless RISCK establishes an independent controller purpose | integration/provider facts incomplete | classify per integration before activation/public claim |
 | Public-source personal data | no current provider-side public-source enrichment proven | unknown | Article 14 source/public-source disclosure would be required if activated, subject to applicable exception | no active use proven in this lane | keep disabled/unclaimed until a factual flow exists and is reviewed |
+
+## Invitation runtime evidence design
+
+The implementation in `src/lib/email/localized-invitation.ts` now adds a narrow indirect-collection disclosure to the first invitation communication in every supported locale:
+
+- source: an administrator of the named organisation provided the email address;
+- purpose: sending/managing the invitation;
+- consequence: the invitee need not create an account if they do not accept;
+- privacy route: locale-specific `/[locale]/privacy` link derived from the trusted invite origin, with unsafe origins rejected/falling back to a relative route.
+
+`src/lib/email/server-sender.ts` supports attributable delivery evidence in `email_delivery_logs`, including delivery status, provider identifier, attempts, idempotency key and `sent_at`. The content itself does not need to be copied into the audit record.
+
+The V3 test `tests/privacy/article14-invitation-notice.test.ts` proves locale-aware privacy-link rendering and unsafe-origin rejection.
 
 ## Article 14(5) exception discipline
 
@@ -56,18 +69,6 @@ NOT_APPLICABLE_PROCESSOR_ONLY
 BLOCKED_ROLE_OR_FACTS
 ```
 
-## Product handoff
-
-The clearest immediate runtime gap is the teammate invitation path because the invitee email is explicitly optional data supplied by another user and the first invitation email is a natural Article 14(3)(b) delivery point.
-
-Required product evidence before marking that scenario PASS:
-
-1. invitation template contains or links to the approved Privacy/indirect-collection notice;
-2. notice version/date is attributable;
-3. first communication timestamp is auditable without logging unnecessary content;
-4. unsubscribe/decline or account-rights route is clear where applicable;
-5. cross-tenant isolation of invitation records remains intact.
-
 ## Terminal state
 
 ```text
@@ -75,8 +76,10 @@ ARTICLE14_SCENARIO_INVENTORY=PASS
 ARTICLE14_TIMING_RULE=PASS_DOCUMENTED
 ARTICLE14_PROCESSOR_CONTROLLER_ROUTING=PASS_PRE_REVIEW
 ARTICLE14_EXCEPTION_REGISTER=PASS_STRUCTURE_NO_EXCEPTIONS_ASSUMED
+ARTICLE14_INVITATION_FIRST_COMMUNICATION_PATH=PASS_IMPLEMENTED_PRE_MERGE
+ARTICLE14_INVITATION_DELIVERY_EVIDENCE_MODEL=PASS_IMPLEMENTED
 ARTICLE14_RUNTIME_DELIVERY=PARTIAL
 ARTICLE14=PARTIAL
 ```
 
-This register deliberately separates a documented timing rule from proof that the notice was actually delivered in Production.
+This register deliberately separates proof that a disclosure is present in the first communication from proof that the complete final Article 14 notice is legally and factually complete.
