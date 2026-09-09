@@ -26,9 +26,9 @@ function sql(connection, statement) {
 
 const database = requireValue('RECOVERY_ISOLATED_DATABASE_URL');
 const region = requireValue('DATA_RESIDENCY_REGION');
-const retentionDays = Number(requireValue('DATA_RETENTION_DEFAULT_DAYS'));
+const retentionPolicyMode = requireValue('DATA_RETENTION_POLICY_MODE');
 checks.residencyRegionDeclared = /^[a-z]{2,20}[-_][a-z0-9-]{2,40}$/i.test(region);
-checks.retentionWindowValid = Number.isInteger(retentionDays) && retentionDays >= 1 && retentionDays <= 3650;
+checks.retentionWindowValid = retentionPolicyMode === 'category_specific';
 checks.exportEncryptionRequired = env('DATA_EXPORT_ENCRYPTION_REQUIRED') === 'true';
 
 try {
@@ -37,6 +37,13 @@ try {
   const tables = Number(sql(database, "select count(*) from information_schema.tables where table_schema='public' and table_name in ('data_retention_policies','data_subject_requests','audit_integrity_checkpoints');"));
   if (tables !== 3) throw new Error('governance_tables_missing');
   checks.governanceTablesPresent = true;
+
+  const retentionColumn = Number(sql(database, "select count(*) from information_schema.columns where table_schema='public' and table_name='data_retention_policies' and column_name='retention_days' and data_type='integer' and is_nullable='NO';"));
+  const retentionConstraint = sql(database, "select coalesce(string_agg(pg_get_constraintdef(oid), ' '), '') from pg_constraint where conrelid='public.data_retention_policies'::regclass and contype='c';").replace(/\s+/g, ' ');
+  if (retentionColumn !== 1 || !/retention_days\s*>=\s*1/i.test(retentionConstraint) || !/retention_days\s*<=\s*3650/i.test(retentionConstraint)) {
+    throw new Error('category_retention_schema_invalid');
+  }
+  checks.retentionPolicySchemaValid = true;
 
   const rls = Number(sql(database, "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('data_retention_policies','data_subject_requests','audit_integrity_checkpoints') and c.relrowsecurity=true;"));
   if (rls !== 3) throw new Error('governance_rls_missing');
@@ -102,7 +109,7 @@ const evidence = {
     subjectIdentifiersStored: false,
     exportPayloadStored: false,
   },
-  boundary: 'Schema, RLS/FORCE RLS, retention, GDPR rights-request lifecycle/deadline authority, audit-integrity and protected configuration validation against an isolated recovery database. No customer rows or identifiers are stored.',
+  boundary: 'Schema, RLS/FORCE RLS, category-specific retention bounds, GDPR rights-request lifecycle/deadline authority, audit-integrity and protected configuration validation against an isolated recovery database. No customer rows or identifiers are stored.',
 };
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
