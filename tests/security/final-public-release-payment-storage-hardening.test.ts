@@ -16,7 +16,7 @@ const config = JSON.parse(read('config/supabase-forward-reconciliation.json')) a
   truthBoundary: Record<string, boolean>;
 };
 
-const expectedForwardPackage = [
+const expectedV40ForwardPackage = [
   '20260908000000_reconcile_final_public_release_payment_storage_hardening.sql',
   '20260908003000_billing_ai_system_commercial_quota.sql',
   '20260908003500_billing_self_serve_member_capacity.sql',
@@ -30,6 +30,7 @@ const expectedForwardPackage = [
   '20260908006700_billing_governance_workflow_plan_isolation.sql',
   '20260908006800_harden_cross_tenant_reference_integrity.sql',
 ];
+const expectedV41AdvisorMigration = '20260909006900_harden_security_advisor_rpc_surface.sql';
 
 const auxiliaryTables = [
   'ai_fria_assessments',
@@ -65,13 +66,16 @@ describe('final public-release payment and Storage hardening V40 re-forward', ()
       .toBe('642f48be06c110bdaf2f6c8c47fee6bbedd3984e780a846c2da2722f6e486cdc');
   });
 
-  it('selects the exact byte-identical V40 package above the emergency Production ledger head', () => {
-    expect(config.changeSet).toBe('2026-09-08-post-audit-containment-forward-reconciliation-v40');
-    expect(config.sourceChangeSet).toBe('2026-09-06-cross-tenant-reference-integrity-v39');
-    expect(config.migrations.map(({ filename }) => filename)).toEqual(expectedForwardPackage);
+  it('preserves the exact byte-identical V40 package as the reviewed prefix of V41', () => {
+    expect(config.changeSet).toBe('2026-09-09-supabase-advisor-rpc-hardening-v41');
+    expect(config.sourceChangeSet).toBe('2026-09-08-post-audit-containment-forward-reconciliation-v40');
+    expect(config.migrations.slice(0, expectedV40ForwardPackage.length).map(({ filename }) => filename))
+      .toEqual(expectedV40ForwardPackage);
+    expect(config.migrations).toHaveLength(13);
+    expect(config.migrations.at(-1)?.filename).toBe(expectedV41AdvisorMigration);
     expect(config.migrations.some(({ filename }) => filename === '20260904113000_final_public_release_payment_storage_hardening.sql')).toBe(false);
     expect(sha256(migrationPath)).toBe(sha256(sourceMigrationPath));
-    expect(expectedForwardPackage.every((filename) => filename.slice(0, 14) > '20260907142133')).toBe(true);
+    expect(expectedV40ForwardPackage.every((filename) => filename.slice(0, 14) > '20260907142133')).toBe(true);
     expect(migration).toContain('20260905075429');
     expect(migration).not.toContain('append_audit_event_chained');
     expect(config.truthBoundary.productionWriteAuthorizedByConfig).toBe(false);
