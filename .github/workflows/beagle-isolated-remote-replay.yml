@@ -60,6 +60,14 @@ jobs:
             echo "RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH=$RUNNER_TEMP/beagle-reviewed-replay-manifest.json"
           } >> "$GITHUB_ENV"
 
+      - name: Set up pinned Supabase CLI for local validation only
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.101.0
+
+      - name: Verify runner PostgreSQL client without network installation
+        run: node scripts/recovery/verify-postgresql-client.mjs
+
       - name: Generate exact-SHA reviewed schema-only bundle locally
         run: node scripts/security/generate-beagle-reviewed-replay-bundle.mjs
 
