@@ -29,21 +29,8 @@ CREATE POLICY role_permissions_authenticated_read
   USING (true);
 
 -- Webhook idempotency records are backend-only. Intentionally create no policy.
-
-CREATE SCHEMA IF NOT EXISTS supabase_migrations;
-CREATE TABLE IF NOT EXISTS supabase_migrations.schema_migrations (
-  version text primary key,
-  statements text[],
-  name text
-);
-
-INSERT INTO supabase_migrations.schema_migrations (version, statements, name)
-VALUES (
-  '20260726070000',
-  ARRAY['production RLS reconciliation for permissions catalogs and Stripe webhook events'],
-  'permissions_catalog_rls_hotfix'
-)
-ON CONFLICT (version) DO NOTHING;
+-- Migration bookkeeping is owned by the Supabase CLI. Do not write to
+-- supabase_migrations.schema_migrations from a canonical migration file.
 
 do $$
 declare
