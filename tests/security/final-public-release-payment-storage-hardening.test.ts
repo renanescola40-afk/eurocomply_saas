@@ -9,12 +9,17 @@ const sourceMigrationPath = 'supabase/migrations/20260906000000_reconcile_final_
 const migrationPath = 'supabase/migrations/20260908000000_reconcile_final_public_release_payment_storage_hardening.sql';
 const migration = read(migrationPath);
 const storage = read('src/lib/evidence/storage.ts');
-const config = JSON.parse(read('config/supabase-forward-reconciliation.json')) as {
-  changeSet: string;
-  sourceChangeSet?: string;
-  migrations: Array<{ filename: string }>;
-  truthBoundary: Record<string, boolean>;
+const currentConfig = JSON.parse(read('config/supabase-forward-reconciliation.json')) as {
+  historicalBaselines: {
+    v41: {
+      changeSet: string;
+      sourceChangeSet?: string;
+      migrations: Array<{ filename: string }>;
+      truthBoundary: Record<string, boolean>;
+    };
+  };
 };
+const config = currentConfig.historicalBaselines.v41;
 
 const expectedV40ForwardPackage = [
   '20260908000000_reconcile_final_public_release_payment_storage_hardening.sql',

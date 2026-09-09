@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/data-governance-runtime-proof.yml', 'utf8');
-const migration = readFileSync('supabase/migrations/20260720190000_data_governance_enterprise.sql', 'utf8');
+const baseMigration = readFileSync('supabase/migrations/20260720190000_data_governance_enterprise.sql', 'utf8');
+const lifecycleMigration = readFileSync('supabase/migrations/20260909143000_harden_data_subject_request_lifecycle.sql', 'utf8');
 const runtime = readFileSync('scripts/data-governance/run-data-governance-runtime-proof.mjs', 'utf8');
 const validator = readFileSync('scripts/data-governance/check-data-governance-evidence.mjs', 'utf8');
 
@@ -24,33 +25,37 @@ describe('data governance privacy audit megapack', () => {
     expect(workflow).not.toContain('contents: write');
   });
 
-  it('creates tenant-scoped retention, DSR and integrity controls', () => {
+  it('retains the historical governance primitives and evolves the canonical DSR table forward', () => {
     for (const token of [
       'data_retention_policies','data_subject_requests','audit_integrity_checkpoints',
       'enable row level security','request_type','retention_days','digest_sha256',
       'organization_members','owner','admin','interval \'30 days\'',
-    ]) expect(migration).toContain(token);
+    ]) expect(baseMigration).toContain(token);
+
+    expect(lifecycleMigration).not.toContain('create table if not exists public.data_subject_requests');
+    expect(lifecycleMigration).not.toContain("interval '30 days'");
+    expect(lifecycleMigration).toContain('alter column due_at drop default');
+    expect(lifecycleMigration).toContain('force row level security');
+    expect(lifecycleMigration).toContain("'portability'");
+    expect(lifecycleMigration).toContain("'consent_withdrawal'");
   });
 
-  it('provides complete CRUD policy coverage required by the RLS gate', () => {
-    for (const policy of [
-      'retention policies organization admins delete',
-      'data subject requesters cancel own pending requests',
-      'audit checkpoints admins update',
-      'audit checkpoints admins delete',
-    ]) expect(migration).toContain(policy);
-
-    expect(migration).toContain('for delete to authenticated');
-    expect(migration).toContain('for update to authenticated');
-    expect(migration).toContain("m.role in ('owner','admin')");
+  it('removes direct browser mutation authority from the canonical DSR table', () => {
+    expect(lifecycleMigration).toContain('drop policy if exists "data subjects create own requests"');
+    expect(lifecycleMigration).toContain('drop policy if exists "data subject admins process requests"');
+    expect(lifecycleMigration).toContain('drop policy if exists "data subject requesters cancel own pending requests"');
+    expect(lifecycleMigration).toContain('revoke insert, update, delete on table public.data_subject_requests from anon, authenticated');
+    expect(lifecycleMigration).toContain('grant select on table public.data_subject_requests to authenticated');
   });
 
-  it('validates governance controls without storing customer data', () => {
+  it('validates the hardened governance controls without storing customer data', () => {
     for (const token of [
-      'governanceTablesPresent','rlsEnabled','tenantPoliciesPresent','dsrDeadlineEnforced',
-      'auditIntegritySchemaPresent','personalDataStored: false','rowDataStored: false',
+      'governanceTablesPresent','rlsEnabled','dsrForceRlsEnabled','tenantPoliciesPresent',
+      'dsrLifecycleColumnsPresent','dsrCalendarDeadlineServerAuthority','dsrChapterThreeTypesPresent',
+      'dsrServerOnlyMutationBoundary','auditIntegritySchemaPresent','personalDataStored: false','rowDataStored: false',
     ]) expect(runtime).toContain(token);
     expect(runtime).not.toContain('select * from');
+    expect(runtime).not.toContain('dsrDeadlineEnforced');
   });
 
   it('fails closed on unsafe or incomplete evidence', () => {

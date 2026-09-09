@@ -95,8 +95,14 @@ const rules = [
   },
   {
     name: 'GDPR endpoint',
-    match: /src\/app\/api\/gdpr\/.*\/route\.ts$/,
+    match: /src\/app\/api\/gdpr\/(?!requests(?:\/|$)).*\/route\.ts$/,
     any: [guards.auth, guards.org, guards.plan, guards.audit, guards.noStore],
+    all: [],
+  },
+  {
+    name: 'canonical GDPR rights endpoint',
+    match: /src\/app\/api\/gdpr\/requests(?:\/\[id\])?\/route\.ts$/,
+    any: [guards.auth, guards.org, guards.rbac, guards.origin, guards.rateLimit, guards.audit, guards.noStore],
     all: [],
   },
   {
