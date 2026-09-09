@@ -57,8 +57,9 @@ These percentages intentionally remain at the V5 working boundary. V5 withheld a
 | Canonical GDPR rights-request register | PASS_SOURCE_MERGED | PR #2014 merged |
 | GDPR calendar-month deadline model | PASS_SOURCE_MERGED | Exact-SHA runtime proof pending |
 | GDPR controller/processor routing | PASS_SOURCE_MERGED | Case-specific legal allocation remains open |
-| GDPR terminal-state immutability | V6_FIX_PENDING_CI_MERGE | Reject mutation of completed/rejected/cancelled records |
-| GDPR lifecycle `updated_at` integrity | V6_FIX_PENDING_CI_MERGE | Refresh timestamp; compensation restores previous value |
+| GDPR terminal-state immutability | V6_FIX_PENDING_CI_MERGE | API pre-check plus atomic CAS predicate on expected status + `updated_at`; stale concurrent writers return 409 |
+| GDPR lifecycle `updated_at` integrity | V6_FIX_PENDING_CI_MERGE | Refresh timestamp; audit compensation is also CAS-bound to the just-written version |
+| Analytics consent source control | PASS_SOURCE_IMPLEMENTED | Consent-required fail-closed default, capture gating and withdrawal controls exist; exact Production config/legal basis remain open |
 | Data Governance Runtime V2 | OPEN | Must be Complete/passed for exact post-V6 main SHA |
 | Founder/entity final facts | OPEN_EXTERNAL_OWNER_FACT | Do not infer entity/NIF/address/signatory |
 | Provider DPA/SCC/account facts | PARTIAL_EXTERNAL | Account-specific/provider evidence + legal interpretation required |
@@ -102,17 +103,26 @@ For credit, retain at minimum:
 
 ## V6 GDPR integrity findings
 
-Post-merge review of V5 found two non-cosmetic defects:
+Post-merge review of V5 found two non-cosmetic defects, followed by a concurrency finding during V6 review.
 
-### P1 — terminal request reopening
+### P1 — terminal request reopening / stale-write race
 
-Canonical main allowed a terminal rights request to be moved back to an active lifecycle state. V6 makes terminal states immutable at the lifecycle API authority boundary and returns HTTP 409.
+Canonical main allowed a terminal rights request to be moved back to an active lifecycle state. The first V6 pass added an API pre-check, but review correctly identified that two concurrent PATCH requests could both read the same active version and race.
+
+V6 therefore uses optimistic concurrency at the database update itself:
+
+- the lifecycle PATCH still rejects records already observed as terminal;
+- the write additionally requires both the previously observed `status` and `updated_at` to match in the `UPDATE` predicate;
+- a stale writer that loses the race updates no row and returns `request_state_conflict` / HTTP 409;
+- this protects terminal immutability and also prevents two different nonterminal transitions from silently overwriting one another.
 
 ### P2 — stale `updated_at`
 
-Canonical main did not refresh `updated_at` on lifecycle PATCH operations. V6 records the mutation timestamp and includes it in audit compensation restoration.
+Canonical main did not refresh `updated_at` on lifecycle PATCH operations. V6 records the mutation timestamp and includes it in the optimistic concurrency token.
 
-Regression contracts are added so both invariants become protected CI expectations.
+If audit persistence fails, compensation is itself bound to the status + `updated_at` of the just-written record. A later concurrent legitimate write therefore cannot be overwritten by stale compensation.
+
+Regression contracts cover terminal rejection, status/version predicates, 409 conflicts, timestamp refresh and CAS-bound compensation.
 
 ## Exact-SHA runtime gate for GDPR rights
 
