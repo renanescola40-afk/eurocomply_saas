@@ -31,8 +31,12 @@ update public.data_subject_requests
 set received_at = coalesce(received_at, created_at, now())
 where received_at is null;
 
+-- Historical requests may already have exposed/operated on the old +30-day due
+-- date. Preserve that exact historical deadline as their initial baseline rather
+-- than silently rewriting history. New requests are created server-side with an
+-- explicit one-calendar-month target after this migration.
 update public.data_subject_requests
-set initial_due_at = coalesce(initial_due_at, received_at + interval '1 month')
+set initial_due_at = coalesce(initial_due_at, due_at, received_at + interval '1 month')
 where initial_due_at is null;
 
 alter table public.data_subject_requests
@@ -41,8 +45,6 @@ alter table public.data_subject_requests
   alter column initial_due_at set not null,
   alter column due_at drop default;
 
--- Preserve existing historical due_at values rather than rewriting history. New
--- requests are server-created with an explicit calendar-month target.
 alter table public.data_subject_requests
   drop constraint if exists data_subject_requests_request_type_check,
   drop constraint if exists data_subject_requests_status_check,
