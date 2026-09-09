@@ -97,7 +97,7 @@ jobs:
             || ! ls playwright.config.* >/dev/null 2>&1; then
             echo "No Playwright test:e2e configuration detected; skipping E2E gate."
           elif [ "${RUN_E2E:-}" = "true" ] || [ -n "${E2E_BASE_URL:-}" ]; then
-            npx playwright install --with-deps chromium
+            bash scripts/quality/install-playwright-ci.sh
             npm run test:e2e
           else
             echo "Playwright E2E tests are present, but no configured E2E runtime was provided."
