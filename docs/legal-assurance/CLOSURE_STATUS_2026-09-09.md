@@ -20,7 +20,7 @@ GPAI_REVIEW=PENDING_EXTERNAL_REVIEW
 PR_2008=MERGED
 CANONICAL_MAIN_SHA=0cda9253985170a5f56821023a77c81cdc54037a
 PR_2011=OPEN_V3_VALIDATION
-V3_HEAD_SHA=cb7364dd6df7fb7a1db68a1d0ed82f60cdff7084
+V3_EXACT_HEAD=SEE_PR_2011_CURRENT_HEAD
 CANONICAL_MAIN_INTERNAL_CLOSURE_PERCENT=75
 V3_WORKING_INTERNAL_CLOSURE_PERCENT=77
 V3_WORKING_INTERNAL_REMAINING_PERCENT=23
@@ -33,6 +33,8 @@ SUBPROCESSORS_FINAL=BLOCKED_PROVIDER_CONTRACT_AND_TRANSFER_FACTS
 LEGAL_FINAL=BLOCKED
 ENTERPRISE_100=NO
 ```
+
+`V3_EXACT_HEAD` is intentionally resolved from PR #2011 / GitHub at validation time instead of being hard-coded in this file. Hard-coding the branch head here is self-referential because updating this status file creates a new head commit.
 
 No software check, AI-generated opinion, CI result, internal self-review or synthetic signature can change a qualified external workstream to `PASS`.
 
