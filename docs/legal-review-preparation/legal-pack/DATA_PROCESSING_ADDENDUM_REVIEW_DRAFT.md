@@ -6,7 +6,7 @@ This DPA is prepared for Article 28 GDPR review. It does not apply until incorpo
 
 ## 1. Parties and scope
 
-Customer is controller or processor, as applicable, for customer personal data. **[FOUNDER FACT REQUIRED: provider legal entity]** acts as processor or subprocessor when processing customer personal data to provide the service.
+Customer is controller or processor, as applicable, for customer personal data. **SAMUEL CERQUEIRA, UNIPESSOAL LDA**, operating the **RISCK COMPLY** brand from **Avenida de Roma 112-A, 1700-353 Lisboa, Portugal**, acts as processor or subprocessor when processing customer personal data to provide the service. The provider tax/company registration identifier remains **[FOUNDER FACT REQUIRED: resolve conflicting NIF/NIPC evidence before signature]**.
 
 This DPA applies only to customer personal data processed on documented instructions through the contracted service.
 
