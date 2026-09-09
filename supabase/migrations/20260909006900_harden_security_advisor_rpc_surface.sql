@@ -29,6 +29,24 @@ revoke all on function app_private.enterprise_member_can_manage(uuid) from publi
 grant execute on function app_private.enterprise_member_can_read(uuid) to authenticated, service_role;
 grant execute on function app_private.enterprise_member_can_manage(uuid) to authenticated, service_role;
 
+-- The compatibility wrapper is intentionally SECURITY INVOKER. SQL-language
+-- function bodies keep schema-qualified calls as text, so ALTER ... SET SCHEMA
+-- cannot retarget this reference automatically. Recreate it in the same
+-- transaction so all existing policies/callers continue to resolve membership
+-- through the private SECURITY DEFINER implementation.
+create or replace function public.is_organization_member(p_organization_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select app_private.enterprise_member_can_read(p_organization_id);
+$$;
+
+revoke all on function public.is_organization_member(uuid) from public, anon;
+grant execute on function public.is_organization_member(uuid) to authenticated, service_role;
+
 -- Trigger helpers do not need a mutable caller-controlled search_path. This is
 -- deliberately fail-closed: the helper is part of the reviewed append-only QMS
 -- surface, so a missing function must abort the migration rather than silently
@@ -36,10 +54,13 @@ grant execute on function app_private.enterprise_member_can_manage(uuid) to auth
 alter function public.prevent_ai_qms_decision_mutation()
   set search_path = pg_catalog;
 
--- Fail closed if the exposed RPC surface or search_path hardening regresses.
+-- Fail closed if the exposed RPC surface, compatibility wrapper, or search_path
+-- hardening regresses.
 do $$
 declare
   decision_search_path text[];
+  compatibility_definition text;
+  compatibility_security_definer boolean;
 begin
   if to_regprocedure('public.enterprise_member_can_read(uuid)') is not null
      or to_regprocedure('public.enterprise_member_can_manage(uuid)') is not null then
@@ -59,6 +80,32 @@ begin
   if has_function_privilege('anon', 'app_private.enterprise_member_can_read(uuid)', 'EXECUTE')
      or has_function_privilege('anon', 'app_private.enterprise_member_can_manage(uuid)', 'EXECUTE') then
     raise exception 'Anonymous role can execute private Enterprise membership helpers';
+  end if;
+
+  if to_regprocedure('public.is_organization_member(uuid)') is null then
+    raise exception 'Membership compatibility wrapper is missing';
+  end if;
+
+  select pg_get_functiondef(p.oid), p.prosecdef
+    into compatibility_definition, compatibility_security_definer
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public'
+    and p.proname = 'is_organization_member'
+    and pg_get_function_identity_arguments(p.oid) = 'p_organization_id uuid';
+
+  if compatibility_definition is null
+     or position('app_private.enterprise_member_can_read' in compatibility_definition) = 0 then
+    raise exception 'Membership compatibility wrapper does not target app_private.enterprise_member_can_read';
+  end if;
+
+  if compatibility_security_definer is distinct from false then
+    raise exception 'Membership compatibility wrapper must remain SECURITY INVOKER';
+  end if;
+
+  if not has_function_privilege('authenticated', 'public.is_organization_member(uuid)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.is_organization_member(uuid)', 'EXECUTE') then
+    raise exception 'Membership compatibility wrapper grants are not fail-closed';
   end if;
 
   if exists (
