@@ -1,0 +1,17 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed read-only:
+--   version: 20260908006800
+--   local source: supabase/migrations/20260908006800_harden_cross_tenant_reference_integrity.sql
+--   local source SHA-256: 206c7330316098532135040d3ba141c488487e4d2956478a9817e67e3c30d59d
+--
+-- Provenance:
+--   bounded V40 Production promotion run: 34228140451
+--   sealed evidence artifact: 10056706545
+--
+-- This provider ledger identifier is 14 digits but is not a valid civil
+-- timestamp because its minute component is 68. The exact local source above
+-- was included in the bounded V40 promotion evidence. This record binds the
+-- known Production ledger identity without altering migration history.
+--
+-- No DDL. No migration-history repair. No database write authorization.
