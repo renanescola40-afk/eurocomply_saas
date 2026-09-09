@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Archive, CalendarClock, CheckCircle2, Clock3, Download, ShieldCheck } from 'lucide-react';
+import { Archive, CalendarClock, CheckCircle2, Clock3, Download, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { isSupportedLocale, type SupportedLocale } from '@/lib/i18n/locales';
@@ -8,93 +8,114 @@ import { getRetentionSummary, RETENTION_POLICIES } from '@/server/governance/ret
 const copy: Record<SupportedLocale, {
   title: string;
   subtitle: string;
+  notice: string;
   score: string;
   policies: string;
   shortest: string;
   longest: string;
   nextActions: string;
   months: string;
-  enterpriseReady: string;
+  proposed: string;
+  approved: string;
+  draft: string;
   exportLabel: string;
   exportDescription: string;
 }> = {
   en: {
     title: 'Retention Center',
-    subtitle: 'Operational view of how RISCK COMPLY preserves compliance evidence, governance records and audit history.',
-    score: 'Retention readiness',
-    policies: 'Covered categories',
-    shortest: 'Shortest retention',
-    longest: 'Longest retention',
-    nextActions: 'Next actions',
+    subtitle: 'Operational review of proposed retention targets for compliance evidence, governance records and audit history.',
+    notice: 'Draft policy only. These targets are not final contractual commitments and are not marked enterprise-ready until qualified approval and attributable enforcement evidence exist.',
+    score: 'Approved retention coverage',
+    policies: 'Approved + enforcement-proven categories',
+    shortest: 'Shortest draft target',
+    longest: 'Longest draft target',
+    nextActions: 'Required closure actions',
     months: 'months',
-    enterpriseReady: 'Ready for evidence review',
-    exportLabel: 'Export retention JSON',
-    exportDescription: 'Download a structured retention-policy JSON export for DPA, GDPR and procurement reviews.',
+    proposed: 'proposed',
+    approved: 'Approved and enforcement-proven',
+    draft: 'Draft — approval and enforcement proof required',
+    exportLabel: 'Export retention review JSON',
+    exportDescription: 'Download a structured draft-policy export for DPA, GDPR and procurement review. The export is evidence for review, not proof of legal approval or automatic enforcement.',
   },
   pt: {
     title: 'Centro de Retenção',
-    subtitle: 'Visão operacional de como a RISCK COMPLY conserva evidências de conformidade, registos de governação e histórico de auditoria.',
-    score: 'Preparação da retenção',
-    policies: 'Categorias abrangidas',
-    shortest: 'Retenção mais curta',
-    longest: 'Retenção mais longa',
-    nextActions: 'Próximas ações',
+    subtitle: 'Revisão operacional de metas propostas de retenção para evidências de conformidade, registos de governação e histórico de auditoria.',
+    notice: 'Apenas política em rascunho. Estas metas não são compromissos contratuais finais e não são marcadas como enterprise-ready até existir aprovação qualificada e evidência atribuível de enforcement.',
+    score: 'Cobertura de retenção aprovada',
+    policies: 'Categorias aprovadas + enforcement comprovado',
+    shortest: 'Meta de rascunho mais curta',
+    longest: 'Meta de rascunho mais longa',
+    nextActions: 'Ações obrigatórias para fecho',
     months: 'meses',
-    enterpriseReady: 'Preparado para revisão de evidências',
-    exportLabel: 'Exportar retenção em JSON',
-    exportDescription: 'Transfira um ficheiro JSON estruturado da política de retenção para revisões de DPA, RGPD e processos de aquisição.',
+    proposed: 'propostos',
+    approved: 'Aprovado e com enforcement comprovado',
+    draft: 'Rascunho — exige aprovação e prova de enforcement',
+    exportLabel: 'Exportar revisão de retenção em JSON',
+    exportDescription: 'Transfira um export estruturado da política em rascunho para revisões de DPA, RGPD e procurement. O export serve para revisão; não prova aprovação jurídica nem enforcement automático.',
   },
   es: {
     title: 'Centro de Retención',
-    subtitle: 'Vista operativa de cómo RISCK COMPLY conserva evidencias de cumplimiento, registros de gobernanza e historial de auditoría.',
-    score: 'Preparación de la retención',
-    policies: 'Categorías cubiertas',
-    shortest: 'Retención más corta',
-    longest: 'Retención más larga',
-    nextActions: 'Próximas acciones',
+    subtitle: 'Revisión operativa de objetivos propuestos de conservación para evidencias, gobernanza e historial de auditoría.',
+    notice: 'Política en borrador. Estos objetivos no son compromisos contractuales finales ni se consideran enterprise-ready hasta contar con aprobación cualificada y evidencia atribuible de aplicación.',
+    score: 'Cobertura de retención aprobada',
+    policies: 'Categorías aprobadas + aplicación demostrada',
+    shortest: 'Objetivo de borrador más corto',
+    longest: 'Objetivo de borrador más largo',
+    nextActions: 'Acciones obligatorias para cierre',
     months: 'meses',
-    enterpriseReady: 'Preparado para revisar evidencias',
-    exportLabel: 'Exportar retención en JSON',
-    exportDescription: 'Descarga una exportación JSON estructurada de la política de retención para revisiones de DPA, RGPD y compras.',
+    proposed: 'propuestos',
+    approved: 'Aprobado y con aplicación demostrada',
+    draft: 'Borrador — requiere aprobación y prueba de aplicación',
+    exportLabel: 'Exportar revisión de retención en JSON',
+    exportDescription: 'Descarga una exportación estructurada de la política en borrador para revisiones DPA, RGPD y compras. No demuestra aprobación legal ni aplicación automática.',
   },
   fr: {
     title: 'Centre de conservation',
-    subtitle: 'Vue opérationnelle de la manière dont RISCK COMPLY conserve les preuves de conformité, les registres de gouvernance et l’historique d’audit.',
-    score: 'Préparation de la conservation',
-    policies: 'Catégories couvertes',
-    shortest: 'Durée de conservation minimale',
-    longest: 'Durée de conservation maximale',
-    nextActions: 'Prochaines actions',
+    subtitle: 'Revue opérationnelle des objectifs de conservation proposés pour les preuves, la gouvernance et l’historique d’audit.',
+    notice: 'Politique à l’état de projet. Ces objectifs ne constituent pas des engagements contractuels finaux et ne sont pas enterprise-ready sans approbation qualifiée et preuve attribuable de mise en œuvre.',
+    score: 'Couverture de conservation approuvée',
+    policies: 'Catégories approuvées + mise en œuvre prouvée',
+    shortest: 'Objectif de projet le plus court',
+    longest: 'Objectif de projet le plus long',
+    nextActions: 'Actions requises pour la clôture',
     months: 'mois',
-    enterpriseReady: 'Prêt pour la revue des preuves',
-    exportLabel: 'Exporter la conservation en JSON',
-    exportDescription: 'Téléchargez un export JSON structuré de la politique de conservation pour les revues DPA, RGPD et achats.',
+    proposed: 'proposés',
+    approved: 'Approuvé et mise en œuvre prouvée',
+    draft: 'Projet — approbation et preuve de mise en œuvre requises',
+    exportLabel: 'Exporter la revue de conservation en JSON',
+    exportDescription: 'Téléchargez un export structuré de la politique projet pour les revues DPA, RGPD et achats. Il ne prouve ni approbation juridique ni application automatique.',
   },
   it: {
     title: 'Centro di conservazione',
-    subtitle: 'Vista operativa di come RISCK COMPLY conserva le evidenze di conformità, i registri di governance e la cronologia di audit.',
-    score: 'Preparazione della conservazione',
-    policies: 'Categorie coperte',
-    shortest: 'Periodo minimo di conservazione',
-    longest: 'Periodo massimo di conservazione',
-    nextActions: 'Prossime azioni',
+    subtitle: 'Revisione operativa degli obiettivi proposti di conservazione per evidenze, governance e cronologia di audit.',
+    notice: 'Politica in bozza. Questi obiettivi non sono impegni contrattuali finali e non sono enterprise-ready finché non esistono approvazione qualificata e prova attribuibile dell’applicazione.',
+    score: 'Copertura di conservazione approvata',
+    policies: 'Categorie approvate + applicazione provata',
+    shortest: 'Obiettivo di bozza più breve',
+    longest: 'Obiettivo di bozza più lungo',
+    nextActions: 'Azioni richieste per la chiusura',
     months: 'mesi',
-    enterpriseReady: 'Pronto per la revisione delle evidenze',
-    exportLabel: 'Esporta la conservazione in JSON',
-    exportDescription: 'Scarica un export JSON strutturato della politica di conservazione per le revisioni DPA, GDPR e acquisti.',
+    proposed: 'proposti',
+    approved: 'Approvato e applicazione provata',
+    draft: 'Bozza — richiede approvazione e prova di applicazione',
+    exportLabel: 'Esporta revisione conservazione JSON',
+    exportDescription: 'Scarica un export strutturato della politica in bozza per revisioni DPA, GDPR e procurement. Non prova approvazione legale né applicazione automatica.',
   },
   de: {
     title: 'Aufbewahrungsübersicht',
-    subtitle: 'Operative Übersicht darüber, wie RISCK COMPLY Compliance-Nachweise, Governance-Datensätze und den Prüfverlauf aufbewahrt.',
-    score: 'Aufbewahrungsreife',
-    policies: 'Abgedeckte Kategorien',
-    shortest: 'Kürzeste Aufbewahrung',
-    longest: 'Längste Aufbewahrung',
-    nextActions: 'Nächste Schritte',
+    subtitle: 'Operative Prüfung vorgeschlagener Aufbewahrungsziele für Nachweise, Governance-Datensätze und Prüfverläufe.',
+    notice: 'Nur Richtlinienentwurf. Diese Ziele sind keine endgültigen vertraglichen Zusagen und gelten erst nach qualifizierter Freigabe und nachweisbarer Durchsetzung als enterprise-ready.',
+    score: 'Genehmigte Aufbewahrungsabdeckung',
+    policies: 'Genehmigte + nachweislich durchgesetzte Kategorien',
+    shortest: 'Kürzestes Entwurfsziel',
+    longest: 'Längstes Entwurfsziel',
+    nextActions: 'Erforderliche Abschlussmaßnahmen',
     months: 'Monate',
-    enterpriseReady: 'Für die Evidenzprüfung vorbereitet',
-    exportLabel: 'Aufbewahrungsdaten als JSON exportieren',
-    exportDescription: 'Laden Sie einen strukturierten JSON-Export der Aufbewahrungsrichtlinie für DPA-, DSGVO- und Beschaffungsprüfungen herunter.',
+    proposed: 'vorgeschlagen',
+    approved: 'Genehmigt und Durchsetzung nachgewiesen',
+    draft: 'Entwurf — Genehmigung und Durchsetzungsnachweis erforderlich',
+    exportLabel: 'Aufbewahrungsprüfung als JSON exportieren',
+    exportDescription: 'Laden Sie einen strukturierten Entwurfsexport für DPA-, DSGVO- und Beschaffungsprüfungen herunter. Er belegt weder rechtliche Freigabe noch automatische Durchsetzung.',
   },
 };
 
@@ -117,6 +138,9 @@ export default async function RetentionCenterPage({ params }: { params: Promise<
               </div>
               <h1 className="mt-5 text-4xl font-semibold tracking-tight text-foreground">{t.title}</h1>
               <p className="mt-4 text-lg leading-8 text-muted-foreground">{t.subtitle}</p>
+              <p className="mt-4 rounded-2xl border bg-background p-4 text-sm leading-6 text-muted-foreground">
+                {t.notice}
+              </p>
               <Link href="/api/retention-center/export" className="mt-5 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-semibold text-background transition hover:-translate-y-0.5">
                 <Download className="h-4 w-4" />
                 {t.exportLabel}
@@ -139,12 +163,12 @@ export default async function RetentionCenterPage({ params }: { params: Promise<
           <div className="rounded-3xl border bg-card p-6">
             <Clock3 className="h-5 w-5 text-foreground" />
             <p className="mt-4 text-sm text-muted-foreground">{t.shortest}</p>
-            <p className="mt-2 text-3xl font-semibold">{summary.minimumMonths} {t.months}</p>
+            <p className="mt-2 text-3xl font-semibold">{summary.minimumMonths} {t.months} <span className="text-sm font-normal text-muted-foreground">{t.proposed}</span></p>
           </div>
           <div className="rounded-3xl border bg-card p-6">
             <CalendarClock className="h-5 w-5 text-foreground" />
             <p className="mt-4 text-sm text-muted-foreground">{t.longest}</p>
-            <p className="mt-2 text-3xl font-semibold">{summary.maximumMonths} {t.months}</p>
+            <p className="mt-2 text-3xl font-semibold">{summary.maximumMonths} {t.months} <span className="text-sm font-normal text-muted-foreground">{t.proposed}</span></p>
           </div>
         </section>
 
@@ -157,14 +181,18 @@ export default async function RetentionCenterPage({ params }: { params: Promise<
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">{policy.rationale}</p>
                 </div>
                 <span className="rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
-                  {policy.retentionMonths} {t.months}
+                  {policy.retentionMonths} {t.months} — {t.proposed}
                 </span>
               </div>
               {policy.enterpriseReady ? (
-                <p className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                  <ShieldCheck className="h-4 w-4" /> {t.enterpriseReady}
+                <p className="mt-5 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-medium text-foreground">
+                  <ShieldCheck className="h-4 w-4" /> {t.approved}
                 </p>
-              ) : null}
+              ) : (
+                <p className="mt-5 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-medium text-muted-foreground">
+                  <ShieldAlert className="h-4 w-4" /> {t.draft}
+                </p>
+              )}
             </article>
           ))}
         </section>

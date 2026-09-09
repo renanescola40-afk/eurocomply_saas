@@ -11,68 +11,88 @@ export type RetentionCategory =
 export type RetentionPolicy = {
   category: RetentionCategory;
   label: string;
+  /**
+   * Proposed operational target used for policy review and evidence planning.
+   * It is not a contractual promise and must not be treated as proof that
+   * automatic deletion/expiry is enforced by the runtime or underlying providers.
+   */
   retentionMonths: number;
   rationale: string;
-  enterpriseReady: boolean;
+  status: 'draft';
+  enforcementStatus: 'not_proven';
+  /**
+   * PASS only after the period is approved for the applicable legal/commercial
+   * posture and attributable runtime/provider evidence proves the intended handling.
+   */
+  enterpriseReady: false;
 };
 
+function draftPolicy(
+  category: RetentionCategory,
+  label: string,
+  retentionMonths: number,
+  rationale: string,
+): RetentionPolicy {
+  return {
+    category,
+    label,
+    retentionMonths,
+    rationale,
+    status: 'draft',
+    enforcementStatus: 'not_proven',
+    enterpriseReady: false,
+  };
+}
+
 export const RETENTION_POLICIES: RetentionPolicy[] = [
-  {
-    category: 'controlled_documents',
-    label: 'Controlled documents',
-    retentionMonths: 72,
-    rationale: 'Compliance evidence and internal control records should remain available for audit cycles and customer due diligence.',
-    enterpriseReady: true,
-  },
-  {
-    category: 'vendors',
-    label: 'Vendor records',
-    retentionMonths: 72,
-    rationale: 'Third-party assessments, risk decisions and review history support procurement and operational accountability.',
-    enterpriseReady: true,
-  },
-  {
-    category: 'risks',
-    label: 'Risk register',
-    retentionMonths: 72,
-    rationale: 'Risk decisions and mitigation history should be preserved for recurring compliance reviews.',
-    enterpriseReady: true,
-  },
-  {
-    category: 'ai_systems',
-    label: 'AI systems inventory',
-    retentionMonths: 72,
-    rationale: 'AI governance records should preserve role classification, risk domains and obligation history.',
-    enterpriseReady: true,
-  },
-  {
-    category: 'ai_incidents',
-    label: 'AI incident records',
-    retentionMonths: 96,
-    rationale: 'Incident records need longer preservation because they may support authority communications and post-incident reviews.',
-    enterpriseReady: true,
-  },
-  {
-    category: 'audit_events',
-    label: 'Audit events',
-    retentionMonths: 84,
-    rationale: 'Activity evidence supports investigations, audit reconstruction and internal control monitoring.',
-    enterpriseReady: true,
-  },
-  {
-    category: 'billing_records',
-    label: 'Billing records',
-    retentionMonths: 120,
-    rationale: 'Commercial records may need to be retained for tax, accounting and contract history.',
-    enterpriseReady: true,
-  },
-  {
-    category: 'gdpr_requests',
-    label: 'GDPR requests',
-    retentionMonths: 36,
-    rationale: 'Privacy requests should preserve handling evidence while avoiding unnecessary long-term retention.',
-    enterpriseReady: true,
-  },
+  draftPolicy(
+    'controlled_documents',
+    'Controlled documents',
+    72,
+    'Proposed policy target for compliance evidence and internal control records; counsel approval and enforcement evidence are required before contractual use.',
+  ),
+  draftPolicy(
+    'vendors',
+    'Vendor records',
+    72,
+    'Proposed policy target for third-party assessments, risk decisions and review history; counsel approval and enforcement evidence are required before contractual use.',
+  ),
+  draftPolicy(
+    'risks',
+    'Risk register',
+    72,
+    'Proposed policy target for risk decisions and mitigation history; counsel approval and enforcement evidence are required before contractual use.',
+  ),
+  draftPolicy(
+    'ai_systems',
+    'AI systems inventory',
+    72,
+    'Proposed policy target for AI governance records; applicability can vary with customer role, legal obligations and contract.',
+  ),
+  draftPolicy(
+    'ai_incidents',
+    'AI incident records',
+    96,
+    'Proposed policy target for incident evidence; authority, dispute, insurance and legal-hold requirements may require different treatment.',
+  ),
+  draftPolicy(
+    'audit_events',
+    'Audit events',
+    84,
+    'Proposed policy target for activity evidence; immutable-chain, investigation, customer and legal requirements must be reconciled before approval.',
+  ),
+  draftPolicy(
+    'billing_records',
+    'Billing records',
+    120,
+    'Proposed policy target only; accounting, tax and contractual retention must be confirmed for the provider entity and applicable jurisdictions.',
+  ),
+  draftPolicy(
+    'gdpr_requests',
+    'GDPR requests',
+    36,
+    'Proposed policy target for privacy-request handling evidence; limitation periods, disputes and minimisation requirements require qualified review.',
+  ),
 ];
 
 export type RetentionSummary = {
@@ -90,6 +110,11 @@ export function addMonths(date: Date, months: number) {
   return next;
 }
 
+/**
+ * Computes the date implied by the current draft target for review/planning only.
+ * This helper does not execute deletion, prove provider expiry, or establish a
+ * contractual retention commitment.
+ */
 export function getRetentionUntil(category: RetentionCategory, createdAt: string | Date) {
   const policy = RETENTION_POLICIES.find((item) => item.category === category);
   if (!policy) return null;
@@ -104,17 +129,18 @@ export function getRetentionSummary(policies: RetentionPolicy[] = RETENTION_POLI
 
   const nextActions: string[] = [];
   if (readinessScore < 100) {
-    nextActions.push('Review retention categories without enterprise-ready coverage.');
+    nextActions.push('Obtain qualified legal/commercial approval for the proposed retention targets before treating them as customer commitments.');
+    nextActions.push('Prove runtime/provider enforcement, backup ageing and deletion behavior with attributable evidence before marking a category enterprise-ready.');
   }
   if (!policies.some((policy) => policy.category === 'audit_events')) {
-    nextActions.push('Define retention for audit events.');
+    nextActions.push('Define a draft retention target for audit events.');
   }
   if (!policies.some((policy) => policy.category === 'ai_incidents')) {
-    nextActions.push('Define retention for AI incident records.');
+    nextActions.push('Define a draft retention target for AI incident records.');
   }
   if (nextActions.length === 0) {
-    nextActions.push('Review retention policy annually and after major regulatory changes.');
-    nextActions.push('Validate backup restore procedures against retained evidence categories.');
+    nextActions.push('Review retention policy annually and after major regulatory, provider, contract or data-model changes.');
+    nextActions.push('Validate backup restore procedures against approved retained evidence categories.');
   }
 
   return {

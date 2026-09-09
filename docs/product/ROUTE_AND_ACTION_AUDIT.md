@@ -50,7 +50,7 @@ This audit maps the critical product surface and backs it with deterministic Pla
 | `Join waitlist` / `Entrar na lista` | Landing | `POST /api/prelaunch` | Submits synthetic lead data and stays on landing. | Submit disabled while request is pending. | Inline status/alert; no raw stack trace. | Inline status confirms waitlist. | Form remains visible and tappable. | Public |
 | `Pricing` / `Preços` | Landing/header/footer | `/{locale}/pricing` | Navigates to pricing. | Link navigation. | 404/500 fails route-health. | Pricing page renders. | Visible or accessible via mobile header/footer. | Public |
 | `Start Essential` | Pricing card | `/{locale}/signup?plan=essential` | Opens signup with selected plan. | Link navigation. | Signup route must render controlled error if auth fails. | Signup page renders. | CTA remains tappable. | Public |
-| `Start Professional Trial` | Pricing hero/card | `/{locale}/signup?plan=professional` | Opens signup with selected plan. | Link navigation. | Signup route must render controlled error if auth fails. | Signup page renders. | CTA remains tappable. | Public |
+| `Start Professional` | Pricing hero/card | `/{locale}/signup?plan=professional` | Opens signup with selected plan. No free trial is promised or granted by this CTA. | Link navigation. | Signup route must render controlled error if auth fails. | Signup page renders. | CTA remains tappable. | Public |
 | `Book a Demo` | Pricing hero | `/{locale}/book-demo` | Opens demo form. | Link navigation. | Demo route must not 404/500. | Demo page renders. | CTA remains tappable. | Public |
 | `Book Business Demo` | Pricing business card | `/{locale}/book-demo?plan=business` | Opens demo form with sales context. | Link navigation. | Demo route must not 404/500. | Demo page renders. | CTA remains tappable. | Public |
 | `Talk to Sales` | Pricing enterprise card | `/{locale}/enterprise` | Opens enterprise/sales page. | Link navigation. | Enterprise route must not 404/500. | Enterprise page renders. | CTA remains tappable. | Public |
@@ -73,6 +73,7 @@ This audit maps the critical product surface and backs it with deterministic Pla
 - Kept i18n localized paths (`/{locale}/...`) in all new tests and docs.
 - Kept write-path E2E checks behind `E2E_AUTH_STORAGE_STATE` plus explicit synthetic write gates.
 - Preserved the existing `/undefined` route normalization coverage and strengthened public/private route-health expectations.
+- Reconciled the Professional CTA with the current no-free-trial commercial truth; the route remains the same, but the audit no longer promises a trial that runtime does not grant.
 
 ## Commands
 

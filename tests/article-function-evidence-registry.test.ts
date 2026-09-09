@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+import { AI_ACT_LEGAL_RULES_VERSION } from '../src/server/ai-governance/legal-rules';
 
 type MatrixEntry = {
   article: string;
@@ -23,7 +24,15 @@ type MatrixEntry = {
 
 const matrix = JSON.parse(
   readFileSync(resolve('docs/compliance/article-function-evidence-registry.v1.json'), 'utf8'),
-) as { schema: string; version: string; entries: MatrixEntry[] };
+) as { schema: string; version: string; lastVerifiedDate: string; entries: MatrixEntry[] };
+
+const counselMatrix = JSON.parse(
+  readFileSync(resolve('docs/legal-review-preparation/08_ARTICLE_FUNCTION_EVIDENCE_MATRIX.json'), 'utf8'),
+) as { schema: string; version: string; entries: Array<{ dateVerified: string }> };
+
+const sourceRegister = JSON.parse(
+  readFileSync(resolve('docs/legal-review-preparation/07_LEGAL_SOURCE_REGISTER.json'), 'utf8'),
+) as { schema: string; version: string; verifiedAt: string };
 
 describe('article to function and evidence registry', () => {
   it('is versioned and contains complete required fields', () => {
@@ -47,6 +56,16 @@ describe('article to function and evidence registry', () => {
       expect(entry.sourceVersion).toBeTruthy();
       expect(entry.lastVerifiedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     }
+  });
+
+  it('keeps the legal-rules runtime, source register and counsel matrices on one baseline', () => {
+    expect(sourceRegister.version).toBe(AI_ACT_LEGAL_RULES_VERSION);
+    expect(matrix.version).toBe(AI_ACT_LEGAL_RULES_VERSION);
+    expect(counselMatrix.version).toBe(AI_ACT_LEGAL_RULES_VERSION);
+
+    expect(matrix.lastVerifiedDate).toBe(sourceRegister.verifiedAt);
+    expect(matrix.entries.every((entry) => entry.lastVerifiedDate === sourceRegister.verifiedAt)).toBe(true);
+    expect(counselMatrix.entries.every((entry) => entry.dateVerified === sourceRegister.verifiedAt)).toBe(true);
   });
 
   it('requires an explicit justification for every NOT_APPLICABLE row', () => {

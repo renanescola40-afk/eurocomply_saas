@@ -5,7 +5,7 @@
 | Public plan | Internal compatibility ID | Monthly | Annual reference | Included seats | Organizations | Motion |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
 | Essential | `starter` | €49 | €490 | 3 | 1 | Self-serve |
-| Professional | `professional` | €149 | €1,490 | 15 | 1 | Self-serve trial |
+| Professional | `professional` | €149 | €1,490 | 15 | 1 | Self-serve checkout |
 | Business | `business` | €399 | €3,990 | 75 | 3 | Demo / assisted sales |
 | Enterprise | `enterprise` | From €990/month | Contract | Contract/unlimited | Contract/unlimited | Sales-led |
 
@@ -73,7 +73,7 @@ Add-on variables continue to use `STRIPE_ADDON_<SLUG>_MONTHLY` and `STRIPE_ADDON
 Current public motion:
 
 - Essential: self-serve Checkout allowed when a verified canonical/fallback Price ID is configured.
-- Professional: self-serve Checkout/trial allowed when a verified canonical/fallback Price ID is configured.
+- Professional: self-serve Checkout allowed when a verified canonical/fallback Price ID is configured. **No free trial is currently offered.**
 - Business: sales-assisted; direct generic self-serve Checkout remains disabled by `isSelfServePlan`.
 - Enterprise: sales-led; generic self-serve Checkout remains disabled.
 

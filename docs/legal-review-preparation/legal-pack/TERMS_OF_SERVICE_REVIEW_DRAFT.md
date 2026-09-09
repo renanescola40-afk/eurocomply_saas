@@ -6,7 +6,7 @@ These terms are prepared for counsel review and do not take effect until the con
 
 ## 1. Parties and order of precedence
 
-The service provider is **[FOUNDER FACT REQUIRED: registered legal entity, number, address and country]**. The customer is the entity identified in the applicable order form or account registration.
+The proposed service provider is **SAMUEL CERQUEIRA, UNIPESSOAL LDA**, operating the **RISCK COMPLY** brand and website **https://www.risckcomply.com**. The owner has supplied **Avenida de Roma 112-A, 1700-353 Lisboa, Portugal** as the current correspondence/operating address; **[FOUNDER FACT REQUIRED: confirm the current registered office/legal address from an authoritative Portuguese commercial-registry source before publication or signature]**. The provider tax/company registration identifier remains **[FOUNDER FACT REQUIRED: resolve conflicting NIF/NIPC evidence from an authoritative source before publication or signature]**. The current verified reachable corporate intake mailbox is **comercial@risckcomply.com**. The customer is the entity identified in the applicable order form or account registration.
 
 Order of precedence: signed order form; signed DPA; negotiated service schedule; these terms; public documentation. Public pages do not expand signed commitments.
 
@@ -45,7 +45,11 @@ Customer must not:
 
 ## 7. Subscriptions, billing and taxes
 
-Plans, fees, billing cycle, trial, renewal, cancellation, refunds and price changes are **[FOUNDER FACT REQUIRED]** and must match Stripe configuration, pricing pages and order forms. Fees exclude applicable taxes unless stated otherwise. Non-payment remedies and suspension require counsel-approved notice and cure periods.
+The current commercial catalog provides Essential at €49/month and Professional at €149/month as self-serve subscription motions, Business at €399/month as assisted sales, and Enterprise from €990/month with final pricing by contract. **No free trial is currently offered.**
+
+For the current self-serve subscription lifecycle, cancellation is scheduled for the end of the already-paid billing period (`cancel_at_period_end`) rather than immediately removing paid access. A pending cancellation can be reactivated before that period ends. Supported upgrades use provider proration; supported downgrades are scheduled for the next billing period. Annual self-serve billing remains unavailable until the required live provider Prices are verified.
+
+The exact Stripe Products/Prices, taxes/VAT treatment, refund policy, price-change rights and any contract-specific billing terms remain governed by the actual provider configuration and final approved commercial terms; they must not be inferred from marketing copy alone. Fees exclude applicable taxes unless stated otherwise. Non-payment remedies and suspension require counsel-approved notice and cure periods.
 
 ## 8. Confidentiality
 
@@ -71,7 +75,7 @@ The provider may suspend access where reasonably necessary for security, unlawfu
 
 ## 13. Term and termination
 
-Term, renewal and termination rights follow the order form and **[FOUNDER FACT REQUIRED: commercial policy]**. On termination, access ends and customer may request export during **[FOUNDER FACT REQUIRED: export window]**. Deletion remains subject to the DPA, retention schedule, legal holds, billing records and immutable audit requirements.
+Self-serve cancellation currently preserves paid access until the end of the active billing period. Reactivation before period end is supported. Contract-managed subscriptions remain subject to their order form. **[COUNSEL/COMMERCIAL DECISION REQUIRED]** Define any legally required notice, cooling-off/consumer exclusions if applicable, termination for breach, refund treatment and contract-specific renewal rules. On termination, access ends and customer may request export during **[FOUNDER FACT REQUIRED: export window]**. Deletion remains subject to the DPA, retention schedule, legal holds, billing records and immutable audit requirements.
 
 ## 14. Warranties and disclaimers
 
@@ -97,8 +101,8 @@ Material changes require reasonable notice. Changes should not retroactively red
 
 ## 19. Notices and contact
 
-Legal notices: **[FOUNDER FACT REQUIRED]**. Privacy, security, billing and support channels must match the completed founder facts and public pages.
+General corporate communications may currently be submitted to **comercial@risckcomply.com**, a verified reachable corporate mailbox. **[COUNSEL DECISION REQUIRED]** Define which notices have legal effect, required delivery methods, deemed-receipt rules and whether any separate postal or dedicated legal-notice channel is required.
 
 ## 20. Review conditions
 
-Counsel must confirm entity identity, commercial consistency, role allocation, acceptable-use scope, AI disclaimers, suspension, termination, warranties, indemnities, liability, governing law and enforceability before publication or signature.
+Counsel must confirm entity identity, registered office/legal address, commercial consistency, role allocation, acceptable-use scope, AI disclaimers, suspension, termination, warranties, indemnities, liability, governing law and enforceability before publication or signature.

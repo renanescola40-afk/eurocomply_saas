@@ -1,8 +1,8 @@
 {
   "schema": "risck-comply.article-function-evidence-matrix.v1",
-  "version": "2026-07-30.1",
+  "version": "2026-09-09.1",
   "repository": "renanescola40-afk/eurocomply_saas",
-  "sourceSha": "fbc61f3a5f069c23f9bc307789d12a53b5f87d34",
+  "sourceSha": "db185cd3c7ffdff3f9e26ab81a337adcfe0f1d28",
   "regulation": "Regulation (EU) 2024/1689 as amended by Regulation (EU) 2026/1744",
   "statusDefinitions": {
     "IMPLEMENTED": "Repository implementation path exists; this is not runtime or legal acceptance.",
@@ -36,7 +36,7 @@
       "status": ["IMPLEMENTED", "TESTED", "CUSTOMER_SPECIFIC_REVIEW_REQUIRED"],
       "confidence": "medium",
       "lawyerDecisionNeeded": true,
-      "dateVerified": "2026-07-30"
+      "dateVerified": "2026-09-09"
     },
     {
       "id": "AI-ACT-ART-5-BASE",
@@ -60,7 +60,7 @@
       "status": ["IMPLEMENTED", "TESTED", "HUMAN_REVIEW_REQUIRED", "CUSTOMER_SPECIFIC_REVIEW_REQUIRED"],
       "confidence": "medium",
       "lawyerDecisionNeeded": true,
-      "dateVerified": "2026-07-30"
+      "dateVerified": "2026-09-09"
     },
     {
       "id": "AI-ACT-ART-5-2026-ADDITIONS",
@@ -84,7 +84,7 @@
       "status": ["IMPLEMENTED", "TESTED", "HUMAN_REVIEW_REQUIRED"],
       "confidence": "medium",
       "lawyerDecisionNeeded": true,
-      "dateVerified": "2026-07-30"
+      "dateVerified": "2026-09-09"
     },
     {
       "id": "AI-ACT-ART-9-10",
@@ -108,7 +108,7 @@
       "status": ["IMPLEMENTED", "TESTED", "HUMAN_REVIEW_REQUIRED", "CUSTOMER_SPECIFIC_REVIEW_REQUIRED"],
       "confidence": "medium",
       "lawyerDecisionNeeded": true,
-      "dateVerified": "2026-07-30"
+      "dateVerified": "2026-09-09"
     },
     {
       "id": "AI-ACT-ART-11-ANNEX-IV",
@@ -132,7 +132,7 @@
       "status": ["IMPLEMENTED", "TESTED", "CUSTOMER_SPECIFIC_REVIEW_REQUIRED"],
       "confidence": "medium",
       "lawyerDecisionNeeded": true,
-      "dateVerified": "2026-07-30"
+      "dateVerified": "2026-09-09"
     },
     {
       "id": "AI-ACT-ART-17",
@@ -156,7 +156,7 @@
       "status": ["IMPLEMENTED", "TESTED", "CUSTOMER_SPECIFIC_REVIEW_REQUIRED"],
       "confidence": "medium",
       "lawyerDecisionNeeded": true,
-      "dateVerified": "2026-07-30"
+      "dateVerified": "2026-09-09"
     },
     {
       "id": "AI-ACT-ART-26",
@@ -180,7 +180,7 @@
       "status": ["IMPLEMENTED", "TESTED", "HUMAN_REVIEW_REQUIRED", "CUSTOMER_SPECIFIC_REVIEW_REQUIRED"],
       "confidence": "medium",
       "lawyerDecisionNeeded": true,
-      "dateVerified": "2026-07-30"
+      "dateVerified": "2026-09-09"
     },
     {
       "id": "AI-ACT-ART-27",
@@ -204,7 +204,7 @@
       "status": ["IMPLEMENTED", "TESTED", "HUMAN_REVIEW_REQUIRED", "CUSTOMER_SPECIFIC_REVIEW_REQUIRED"],
       "confidence": "medium",
       "lawyerDecisionNeeded": true,
-      "dateVerified": "2026-07-30"
+      "dateVerified": "2026-09-09"
     },
     {
       "id": "AI-ACT-ART-50",
@@ -228,7 +228,7 @@
       "status": ["IMPLEMENTED", "TESTED", "HUMAN_REVIEW_REQUIRED"],
       "confidence": "medium",
       "lawyerDecisionNeeded": true,
-      "dateVerified": "2026-07-30"
+      "dateVerified": "2026-09-09"
     },
     {
       "id": "AI-ACT-ART-111-4",
@@ -252,7 +252,7 @@
       "status": ["IMPLEMENTED", "TESTED", "HUMAN_REVIEW_REQUIRED"],
       "confidence": "high",
       "lawyerDecisionNeeded": true,
-      "dateVerified": "2026-07-30"
+      "dateVerified": "2026-09-09"
     },
     {
       "id": "AI-ACT-ART-113-HIGH-RISK-DATES",
@@ -276,7 +276,7 @@
       "status": ["IMPLEMENTED", "TESTED", "HUMAN_REVIEW_REQUIRED"],
       "confidence": "high",
       "lawyerDecisionNeeded": true,
-      "dateVerified": "2026-07-30"
+      "dateVerified": "2026-09-09"
     },
     {
       "id": "AI-ACT-GPAI-53-55",
@@ -300,7 +300,7 @@
       "status": ["IMPLEMENTED", "TESTED", "HUMAN_REVIEW_REQUIRED", "CUSTOMER_SPECIFIC_REVIEW_REQUIRED"],
       "confidence": "medium",
       "lawyerDecisionNeeded": true,
-      "dateVerified": "2026-07-30"
+      "dateVerified": "2026-09-09"
     },
     {
       "id": "AI-ACT-CONFORMITY",
@@ -324,7 +324,7 @@
       "status": ["IMPLEMENTED", "TESTED", "HUMAN_REVIEW_REQUIRED", "FORMAL_CONFORMITY_ASSESSMENT_REQUIRED"],
       "confidence": "medium",
       "lawyerDecisionNeeded": true,
-      "dateVerified": "2026-07-30"
+      "dateVerified": "2026-09-09"
     }
   ],
   "coverageLimitations": [

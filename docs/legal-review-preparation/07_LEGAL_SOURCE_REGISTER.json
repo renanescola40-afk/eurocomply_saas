@@ -1,9 +1,10 @@
 {
   "schema": "risck-comply.legal-source-register.v1",
-  "version": "2026-07-30.1",
-  "verifiedAt": "2026-07-30",
+  "version": "2026-09-09.1",
+  "verifiedAt": "2026-09-09",
   "status": "AI_PRE_REVIEW_COMPLETE_HUMAN_CONFIRMATION_REQUIRED",
   "digestPolicy": "referenceDigest hashes the canonical CELEX/ELI/publication tuple. A source-content capture digest remains required before final counsel handoff.",
+  "verificationScope": "AI Act and AI Office/Commission sources were refreshed on 2026-09-09. Non-AI-Act sources retain their per-source verification dates unless separately refreshed.",
   "sources": [
     {
       "id": "eu-ai-act-2024-1689",
@@ -15,11 +16,31 @@
       "officialUrl": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj?locale=en",
       "officialJournalDate": "2024-07-12",
       "legalStatus": "IN_FORCE_AS_AMENDED",
-      "verifiedAt": "2026-07-30",
+      "verifiedAt": "2026-09-09",
       "referenceDigestSha256": "c4fb917a1371c9f18f1f74fa9a88f34bd5367520c131c7024ffed916749a3785",
       "contentDigestSha256": null,
       "contentDigestStatus": "PENDING_AUTOMATED_SOURCE_CAPTURE",
-      "notes": "Read together with Regulation (EU) 2026/1744 and applicable corrigenda, delegated acts and implementing acts."
+      "notes": "Read together with Regulation (EU) 2026/1744, the consolidated text and applicable corrigenda, delegated acts and implementing acts."
+    },
+    {
+      "id": "eu-ai-act-consolidated-2026-07-27",
+      "title": "Consolidated Regulation (EU) 2024/1689 as at 27 July 2026",
+      "sourceType": "binding_law_consolidation",
+      "authority": "EUR-Lex",
+      "celex": "02024R1689-20260727",
+      "officialUrl": "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:02024R1689-20260727",
+      "consolidationDate": "2026-07-27",
+      "legalStatus": "CONSOLIDATED_INFORMATIONAL_VIEW_OF_IN_FORCE_LAW",
+      "verifiedAt": "2026-09-09",
+      "contentDigestSha256": null,
+      "contentDigestStatus": "PENDING_AUTOMATED_SOURCE_CAPTURE",
+      "knownProductImpact": [
+        "Article 50 transparency obligations apply from 2026-08-02 subject to statutory scope and transitions",
+        "Annex III high-risk rules under Article 6(2) apply from 2027-12-02",
+        "Annex I high-risk product rules under Article 6(1) apply from 2028-08-02",
+        "Article 5 additions introduced by Regulation (EU) 2026/1744 apply from 2026-12-02"
+      ],
+      "notes": "Consolidated text is used for current reading convenience; the Official Journal amending act remains the authoritative amendment source."
     },
     {
       "id": "eu-ai-omnibus-2026-1744",
@@ -32,7 +53,7 @@
       "officialJournalDate": "2026-07-24",
       "entryIntoForceDate": "2026-07-27",
       "legalStatus": "IN_FORCE",
-      "verifiedAt": "2026-07-30",
+      "verifiedAt": "2026-09-09",
       "referenceDigestSha256": "a0d760910d9ada69370181589c84f961e47ced4ddcd35ace4f03bbd9540173db",
       "contentDigestSha256": null,
       "contentDigestStatus": "PENDING_AUTOMATED_SOURCE_CAPTURE",
@@ -42,6 +63,82 @@
         "Annex III high-risk application from 2027-12-02",
         "Annex I high-risk application from 2028-08-02"
       ]
+    },
+    {
+      "id": "commission-article-50-transparency-guidelines-2026",
+      "title": "Guidelines on transparency obligations for providers and deployers of AI systems",
+      "sourceType": "official_guidance_non_binding",
+      "authority": "European Commission",
+      "officialUrl": "https://digital-strategy.ec.europa.eu/en/library/guidelines-transparency-obligations-providers-and-deployers-ai-systems",
+      "publicationDate": "2026-07-20",
+      "legalStatus": "NON_BINDING_COMMISSION_GUIDANCE",
+      "verifiedAt": "2026-09-09",
+      "contentDigestSha256": null,
+      "contentDigestStatus": "PENDING_AUTOMATED_SOURCE_CAPTURE",
+      "notes": "Use to interpret Article 50 scope and implementation. Do not treat as binding law or as a substitute for qualified legal review."
+    },
+    {
+      "id": "commission-ai-act-enforcement-framework-2026",
+      "title": "The enforcement framework of the AI Act",
+      "sourceType": "official_guidance_non_binding",
+      "authority": "European Commission",
+      "officialUrl": "https://digital-strategy.ec.europa.eu/en/policies/enforcement-ai-act",
+      "legalStatus": "OFFICIAL_ENFORCEMENT_INFORMATION",
+      "verifiedAt": "2026-09-09",
+      "contentDigestSha256": null,
+      "contentDigestStatus": "PENDING_AUTOMATED_SOURCE_CAPTURE",
+      "notes": "Operational enforcement information current as of verification date; not a substitute for the Regulation or competent-authority decisions."
+    },
+    {
+      "id": "commission-prohibited-ai-practices-guidelines-2025",
+      "title": "Guidelines on prohibited artificial intelligence practices",
+      "sourceType": "official_guidance_non_binding",
+      "authority": "European Commission",
+      "officialUrl": "https://digital-strategy.ec.europa.eu/en/library/commission-publishes-guidelines-prohibited-artificial-intelligence-ai-practices-defined-ai-act",
+      "publicationDate": "2025-02-04",
+      "legalStatus": "NON_BINDING_COMMISSION_GUIDANCE",
+      "verifiedAt": "2026-09-09",
+      "contentDigestSha256": null,
+      "contentDigestStatus": "PENDING_AUTOMATED_SOURCE_CAPTURE",
+      "notes": "Supports Article 5 interpretation and examples. Qualified review remains required for borderline facts and exceptions."
+    },
+    {
+      "id": "commission-gpai-provider-guidelines-2026",
+      "title": "Guidelines for providers of general-purpose AI models",
+      "sourceType": "official_guidance_non_binding",
+      "authority": "European Commission",
+      "officialUrl": "https://digital-strategy.ec.europa.eu/en/policies/guidelines-gpai-providers",
+      "legalStatus": "NON_BINDING_COMMISSION_GUIDANCE",
+      "verifiedAt": "2026-09-09",
+      "contentDigestSha256": null,
+      "contentDigestStatus": "PENDING_AUTOMATED_SOURCE_CAPTURE",
+      "notes": "Clarifies scope and expected compliance for GPAI providers; Commission enforcement powers apply from 2026-08-02 for in-scope new models."
+    },
+    {
+      "id": "commission-gpai-code-of-practice-2025",
+      "title": "General-Purpose AI Code of Practice",
+      "sourceType": "voluntary_code_of_practice",
+      "authority": "European Commission / AI Office",
+      "officialUrl": "https://digital-strategy.ec.europa.eu/en/policies/contents-code-gpai",
+      "publicationDate": "2025-07-10",
+      "legalStatus": "VOLUNTARY_ADEQUATE_COMPLIANCE_TOOL",
+      "verifiedAt": "2026-09-09",
+      "contentDigestSha256": null,
+      "contentDigestStatus": "PENDING_AUTOMATED_SOURCE_CAPTURE",
+      "notes": "The Commission and AI Board confirmed the Code as an adequate voluntary tool for GPAI model providers to demonstrate compliance with relevant AI Act obligations."
+    },
+    {
+      "id": "commission-transparency-code-ai-generated-content-2026",
+      "title": "Code of Practice on Transparency of AI-generated Content",
+      "sourceType": "voluntary_code_of_practice",
+      "authority": "European Commission / AI Office",
+      "officialUrl": "https://digital-strategy.ec.europa.eu/en/policies/code-practice-ai-generated-content",
+      "publicationDate": "2026-06-10",
+      "legalStatus": "VOLUNTARY_COMPLIANCE_SUPPORT",
+      "verifiedAt": "2026-09-09",
+      "contentDigestSha256": null,
+      "contentDigestStatus": "PENDING_AUTOMATED_SOURCE_CAPTURE",
+      "notes": "Supports Article 50 marking and labelling implementation. Non-signatories remain responsible for demonstrating compliance by other adequate means."
     },
     {
       "id": "gdpr-2016-679",

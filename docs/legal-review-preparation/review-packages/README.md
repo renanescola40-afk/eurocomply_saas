@@ -2,6 +2,19 @@
 
 This directory prepares the eight qualified human-review workstreams registered in `docs/compliance/evidence/qualified-review-execution-registry.json`.
 
+## Current preparation baseline
+
+```text
+LEGAL_RULES_BASELINE=2026-09-09.1
+LEGAL_SOURCE_VERIFIED_AT=2026-09-09
+PACKAGE_SET=8_WORKSTREAMS
+TOTAL_REVIEW_DEPENDENT_WEIGHT=51
+ACCEPTED_REVIEWS=0/8
+CANONICAL_REVIEW_SHA=NOT_YET_FROZEN
+```
+
+The legal-rules baseline identifies the source/mapping version used to prepare these packages. It is **not** a substitute for the exact reviewed product SHA. The exact SHA and evidence-package digest must be frozen after the protected legal PR is approved, merged and its canonical release is verified.
+
 ## Status boundary
 
 Every package in this directory is **preparation material only** and remains `HUMAN_REVIEW_REQUIRED` until a qualified professional completes the review, supplies verifiable identity and professional-registration details, declares jurisdiction, scope, independence and conflicts, binds the decision to the exact product SHA and evidence digest, and provides a signed decision artifact with a validity period.
