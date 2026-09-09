@@ -21,6 +21,11 @@ export const runtime = 'nodejs';
 
 const REQUEST_JSON_MAX_BYTES = 8 * 1024;
 const ROLE_ROUTES = new Set<DataSubjectRoleRoute>(['controller', 'processor', 'mixed', 'under_review']);
+const TERMINAL_REQUEST_STATUSES = new Set<DataSubjectRequestRecord['status']>([
+  'completed',
+  'rejected',
+  'cancelled',
+]);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function text(value: unknown, maxLength = 1000) {
@@ -101,6 +106,10 @@ export async function PATCH(
   }
 
   const current = currentResult.request;
+  if (TERMINAL_REQUEST_STATUSES.has(current.status)) {
+    return noStoreJson({ error: 'gdpr_rights_request_terminal' }, { status: 409 });
+  }
+
   const now = new Date().toISOString();
   const patch: Record<string, unknown> = {};
 
@@ -195,6 +204,8 @@ export async function PATCH(
     default:
       return noStoreJson({ error: 'unsupported_gdpr_rights_action' }, { status: 400 });
   }
+
+  patch.updated_at = now;
 
   const updated = await updateDataSubjectRequestRecord({
     requestId: id,
