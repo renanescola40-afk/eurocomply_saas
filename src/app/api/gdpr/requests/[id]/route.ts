@@ -6,11 +6,11 @@ import { readBoundedJsonRequest } from '@/lib/security/validate';
 import {
   buildExtendedDataSubjectRequestDeadline,
   getDataSubjectRequestForOrganization,
-  updateDataSubjectRequestRecord,
+  updateDataSubjectRequestWithAuditAtomic,
   type DataSubjectRequestRecord,
   type DataSubjectRoleRoute,
 } from '@/server/privacy/data-subject-requests';
-import { buildAuditRequestContextFromRequest, createAuditEvent } from '@/server/queries/audit-events';
+import { buildAuditRequestContextFromRequest } from '@/server/queries/audit-events';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreJson } from '@/server/security/no-store';
@@ -41,16 +41,6 @@ function evidenceRefs(value: unknown) {
     .map((item) => item.trim().slice(0, 500))
     .filter(Boolean)
     .slice(0, 20);
-}
-
-function previousValues(current: DataSubjectRequestRecord, patch: Record<string, unknown>) {
-  const previous: Record<string, unknown> = {};
-  for (const key of Object.keys(patch)) {
-    if (Object.prototype.hasOwnProperty.call(current, key)) {
-      previous[key] = current[key as keyof DataSubjectRequestRecord];
-    }
-  }
-  return previous;
 }
 
 function nextLifecycleTimestamp(currentUpdatedAt: string) {
@@ -215,73 +205,49 @@ export async function PATCH(
   }
 
   patch.updated_at = now;
+  const intended = { ...current, ...patch } as DataSubjectRequestRecord;
 
-  const updated = await updateDataSubjectRequestRecord({
+  const updated = await updateDataSubjectRequestWithAuditAtomic({
     requestId: id,
     organizationId: organization.id,
     patch,
     expectedStatus: current.status,
     expectedUpdatedAt: current.updated_at,
+    audit: {
+      actorUserId: user.id,
+      action: 'gdpr_rights_request_lifecycle_changed',
+      entityType: 'data_subject_request',
+      entityId: id,
+      metadata: {
+        lifecycleAction: action,
+        fromStatus: current.status,
+        toStatus: intended.status,
+        requestType: intended.request_type,
+        roleRoute: intended.role_route,
+        identityVerificationState: intended.identity_verification_state,
+        initialDueAt: intended.initial_due_at,
+        dueAt: intended.due_at,
+        extensionRecorded: Boolean(intended.extended_due_at),
+        decision: intended.decision,
+        evidenceReferenceCount: Array.isArray(intended.evidence_refs) ? intended.evidence_refs.length : 0,
+      },
+      requestContext: buildAuditRequestContextFromRequest(request),
+    },
   });
+
   if (!updated.ok) {
     if (updated.reason === 'request_state_conflict') {
       return noStoreJson({ error: 'gdpr_rights_request_state_conflict' }, { status: 409 });
     }
 
-    reportError(new Error('GDPR rights lifecycle update failed'), {
-      area: 'gdpr_rights_lifecycle_update',
+    reportError(new Error('GDPR rights lifecycle atomic audit transaction failed'), {
+      area: 'gdpr_rights_lifecycle_transaction',
       organizationId: organization.id,
       userId: user.id,
       requestId: id,
       reason: updated.reason,
     });
-    return noStoreJson({ error: 'gdpr_rights_update_unavailable' }, { status: 503 });
-  }
-
-  const audit = await createAuditEvent({
-    organizationId: organization.id,
-    actorUserId: user.id,
-    action: 'gdpr_rights_request_lifecycle_changed',
-    entityType: 'data_subject_request',
-    entityId: id,
-    metadata: {
-      lifecycleAction: action,
-      fromStatus: current.status,
-      toStatus: updated.request.status,
-      requestType: updated.request.request_type,
-      roleRoute: updated.request.role_route,
-      identityVerificationState: updated.request.identity_verification_state,
-      initialDueAt: updated.request.initial_due_at,
-      dueAt: updated.request.due_at,
-      extensionRecorded: Boolean(updated.request.extended_due_at),
-      decision: updated.request.decision,
-      evidenceReferenceCount: Array.isArray(updated.request.evidence_refs) ? updated.request.evidence_refs.length : 0,
-    },
-    requestContext: buildAuditRequestContextFromRequest(request),
-  });
-
-  if (!audit.persisted) {
-    const restored = await updateDataSubjectRequestRecord({
-      requestId: id,
-      organizationId: organization.id,
-      patch: previousValues(current, patch),
-      expectedStatus: updated.request.status,
-      expectedUpdatedAt: updated.request.updated_at,
-    });
-
-    reportError(new Error('GDPR rights lifecycle audit persistence failed'), {
-      area: 'gdpr_rights_lifecycle_audit',
-      organizationId: organization.id,
-      userId: user.id,
-      requestId: id,
-      compensationRestored: restored.ok,
-      reason: audit.reason,
-    });
-
-    return noStoreJson({
-      error: 'gdpr_rights_lifecycle_audit_unavailable',
-      compensationRestored: restored.ok,
-    }, { status: 503 });
+    return noStoreJson({ error: 'gdpr_rights_lifecycle_transaction_unavailable' }, { status: 503 });
   }
 
   return noStoreJson({ request: updated.request });
