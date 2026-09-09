@@ -1,4 +1,4 @@
-export const PROCUREMENT_PACK_VERSION = '2026-08-24';
+export const PROCUREMENT_PACK_VERSION = '2026-09-09';
 
 export type ProcurementControlStatus = 'implemented' | 'configured' | 'evidence-required' | 'not-claimed';
 
@@ -64,7 +64,7 @@ export const procurementControls: ProcurementControl[] = [
     id: 'certifications',
     title: 'Independent certifications',
     status: 'not-claimed',
-    summary: 'No SOC 2, ISO 27001 or independent penetration-test claim is made without dated evidence.',
+    summary: 'No SOC 2, ISO 27001 or completed independent penetration-test claim is made without dated, attributable evidence.',
     evidence: ['No unsupported certification badge', 'Evidence-bound public claims', 'Contract review before reliance'],
   },
 ];
@@ -74,61 +74,61 @@ export const procurementProviders: ProcurementProvider[] = [
     name: 'Vercel',
     purpose: 'Application hosting, deployment and edge delivery',
     status: 'core',
-    regionDisclosure: 'Current direct Production deployment binding is proven on the current release; protected provider producer acceptance and account/legal facts are maintained separately.',
+    regionDisclosure: 'The canonical public site is serving, but the observed Production deployment is on an older Git release than the current protected main. Exact-current-main Production binding and protected runtime acceptance remain evidence-required.',
   },
   {
     name: 'Supabase',
     purpose: 'Database, authentication, storage and Row Level Security',
     status: 'core',
-    regionDisclosure: 'The Production project is evidenced in eu-west-1 (Ireland); governed V21 Production promotion remains separate and currently unapplied.',
+    regionDisclosure: 'The Production project is evidenced in eu-west-1 (Ireland). Current V41 selected migrations are present live 13/13; governed V41 promotion provenance remains a separate open evidence item.',
   },
   {
     name: 'Stripe',
     purpose: 'Subscription billing, checkout and webhook processing',
     status: 'conditional',
-    regionDisclosure: 'The connected LIVE account is based in Portugal; this is not presented as a single processing or storage region, and a genuine customer lifecycle remains separate evidence.',
+    regionDisclosure: 'The canonical LIVE account is active in Portugal. New public self-serve paid Checkout remains release-gated, and no legitimate LIVE subscription authority is currently credited from platform-proof or seeded records.',
   },
   {
     name: 'Google OAuth / Google Identity',
     purpose: 'Optional user authentication and identity federation',
     status: 'optional',
-    regionDisclosure: 'Production usage is evidenced; final legal role, applicable contract or DPA, region, retention and transfer treatment remain under review.',
+    regionDisclosure: 'Runtime integration is implemented; final applicable contract or DPA, legal role, region, retention and transfer treatment remain under review.',
   },
   {
     name: 'Google Workspace',
     purpose: 'Corporate support, security, procurement and legal email communications',
     status: 'core',
-    regionDisclosure: 'Account-specific evidence proves Business Starter for risckcomply.com and Google Cloud EMEA Limited as billed EMEA entity. Exact account CDPA incorporation, data-region, retention and transfer treatment remain evidence-required.',
+    regionDisclosure: 'Corporate risckcomply.com mail is in operational use. Earlier account-specific plan/EMEA evidence is retained, while current agreement/CDPA, data-region, retention and transfer facts remain evidence-required before contractual reliance.',
   },
   {
     name: 'GitHub Actions',
     purpose: 'Source delivery, CI/CD and protected recovery/security workflows',
     status: 'conditional',
-    regionDisclosure: 'Protected recovery workflows can transiently process Production database data on GitHub-hosted runners; company-specific DPA applicability and final legal role remain under review.',
+    regionDisclosure: 'Protected release and recovery workflows are active and can transiently process Production database data on GitHub-hosted runners; only evidence-bound/redacted outputs are intended to be retained. Company-specific agreement/DPA applicability and final legal/transfer role remain under review.',
   },
   {
     name: 'Sentry',
     purpose: 'Monitoring and diagnostics',
     status: 'optional',
-    regionDisclosure: 'Fresh current public Production release binding is evidenced; protected release/source-map producer acceptance plus organization-specific region, retention and DPA facts remain evidence-required.',
+    regionDisclosure: 'Earlier direct Production release-binding evidence is historical. Current protected exact-release producer acceptance plus organization-specific region, retention and DPA facts remain evidence-required.',
   },
   {
     name: 'PostHog',
     purpose: 'Product analytics and usage insights',
     status: 'optional',
-    regionDisclosure: 'The Production client targets EU service endpoints; Production account recovery and account-linked DPA evidence remain open.',
+    regionDisclosure: 'Production source/configuration has historically targeted EU service endpoints; the connected assurance project was not the Production project, so Production account recovery and account-linked DPA evidence remain open.',
   },
   {
     name: 'Resend',
     purpose: 'Transactional email delivery when enabled',
     status: 'conditional',
-    regionDisclosure: 'Historical use is evidenced; current exact-release Production binding remains evidence-required.',
+    regionDisclosure: 'Historical delivery is evidenced; current exact-release Production binding and account facts remain evidence-required.',
   },
   {
     name: 'Upstash',
     purpose: 'Distributed Redis-backed rate limiting and security-control state',
     status: 'core',
-    regionDisclosure: 'Fresh current direct Production revalidation proves the fail-closed Redis-backed catalogue path; protected provider producer acceptance plus account plan, region, retention and contractual facts remain open.',
+    regionDisclosure: 'The distributed Redis-backed integration remains implemented. Earlier direct Production proof is historical; current protected provider/runtime acceptance plus account plan, region, retention and contractual facts remain open.',
   },
 ];
 

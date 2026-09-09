@@ -68,4 +68,33 @@ describe('security-critical provider disclosure consistency', () => {
     expect(evidenceRegister).toContain('ACCOUNT_FACTS_OPEN');
     expect(evidenceRegister).not.toMatch(/connected assurance project[^\n]{0,160}\bProduction project confirmed\b/i);
   });
+
+  it('does not republish superseded Upstash or Sentry release proof as current buyer truth', () => {
+    const buyerSurfaces = [
+      read('src/lib/trust/procurement-pack.ts'),
+      read('src/components/trust/provider-runtime-disclosure.tsx'),
+      read('src/app/[locale]/transfers/page.tsx'),
+      read('docs/trust/SUBPROCESSORS.md'),
+    ];
+
+    for (const source of buyerSurfaces) {
+      expect(source).not.toMatch(/fresh current[^\n]{0,120}\bUpstash\b/i);
+      expect(source).not.toMatch(/\bUpstash\b[^\n]{0,160}fresh current/i);
+      expect(source).not.toMatch(/current[^\n]{0,120}\bSentry\b[^\n]{0,120}(release binding|release-binding) (is )?(proven|evidenced)/i);
+    }
+
+    expect(buyerSurfaces.join('\n')).toMatch(/historical/i);
+  });
+
+  it('retains GitHub Actions transient Production-data processing disclosure', () => {
+    const publicPack = read('src/lib/trust/procurement-pack.ts');
+    const runtimeDisclosure = read('src/components/trust/provider-runtime-disclosure.tsx');
+    const transfers = read('src/app/[locale]/transfers/page.tsx');
+    const subprocessors = read('docs/trust/SUBPROCESSORS.md');
+
+    expect(publicPack).toMatch(/GitHub-hosted runners[^\n]{0,220}(DPA|legal|transfer)/i);
+    expect(runtimeDisclosure).toMatch(/GitHub-hosted runners[^\n]{0,220}(DPA|transfer|legal)/i);
+    expect(transfers).toMatch(/GitHub-hosted runners[^\n]{0,220}(DPA|transfer)/i);
+    expect(subprocessors).toMatch(/GitHub-hosted runners[^\n]{0,260}(DPA|transfer|legal)/i);
+  });
 });
