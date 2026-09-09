@@ -72,6 +72,14 @@ No test or evidence run may create a fake LIVE payment, customer, subscription, 
 - The gate does not weaken RLS, tenant isolation, webhook signature verification, idempotency, subscription authority, step-up or payment-first controls.
 - The default and malformed-configuration behavior is fail-closed.
 
+## Risks and trade-offs
+
+- **Availability trade-off:** legitimate prospects cannot start a new self-serve subscription while the paid-GA gate is closed. This is intentional; commercial conversion is sacrificed temporarily rather than allowing billing before tax, legal and exact-SHA release evidence is accepted.
+- **Configuration risk:** enabling `RISCK_COMPLY_PAID_BILLING_REQUIRED=true` too early could expose Checkout before every release gate is complete. The mitigation is exact raw-string parsing, protected server-side configuration, release preflight and post-deploy evidence on the same SHA.
+- **Validation-override risk:** the one-organization override creates a narrowly scoped exception to the public gate. It is mitigated by exact server-resolved organization matching, no browser exposure, no wildcard semantics and removal after the authorized validation transaction.
+- **Existing-customer trade-off:** blocking every billing route would strand legitimate subscribers. The decision therefore gates initial Checkout only and preserves existing authoritative subscription lifecycle management under the existing RBAC, step-up and audit controls.
+- **Residual external risk:** this control cannot determine the seller's VAT regime, create a lawful tax registration, prove a legitimate LIVE payment or substitute for qualified legal/accounting review. Those dependencies remain fail-closed external evidence gates.
+
 ## Rollout
 
 1. Keep `RISCK_COMPLY_PAID_BILLING_REQUIRED=false` or absent while paid GA is not accepted.
