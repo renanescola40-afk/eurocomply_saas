@@ -53,6 +53,15 @@ function previousValues(current: DataSubjectRequestRecord, patch: Record<string,
   return previous;
 }
 
+function nextLifecycleTimestamp(currentUpdatedAt: string) {
+  const wallClockMs = Date.now();
+  const observedUpdatedAtMs = Date.parse(currentUpdatedAt);
+  const nextMs = Number.isFinite(observedUpdatedAtMs)
+    ? Math.max(wallClockMs, observedUpdatedAtMs + 1)
+    : wallClockMs;
+  return new Date(nextMs).toISOString();
+}
+
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
@@ -110,7 +119,7 @@ export async function PATCH(
     return noStoreJson({ error: 'gdpr_rights_request_terminal' }, { status: 409 });
   }
 
-  const now = new Date().toISOString();
+  const now = nextLifecycleTimestamp(current.updated_at);
   const patch: Record<string, unknown> = {};
 
   switch (action) {
