@@ -24,7 +24,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: bash scripts/quality/install-playwright-ci.sh
 
       - name: Run E2E tests
         run: npm run test:e2e

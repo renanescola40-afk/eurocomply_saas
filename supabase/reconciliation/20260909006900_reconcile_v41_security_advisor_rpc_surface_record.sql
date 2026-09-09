@@ -1,0 +1,27 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed read-only:
+--   version: 20260909006900
+--   local source: supabase/migrations/20260909006900_harden_security_advisor_rpc_surface.sql
+--   local source SHA-256: 048980c96439d82cfe2df51a9a7cb70be6044fdb988b78412dd683bb72e903f2
+--
+-- Evidence:
+--   exact-SHA migration drift audit run: 34381266116
+--   sealed drift evidence artifact: 10116330707
+--   Production project: tganhbbhfxcpblmgqprg
+--   read-only ledger row name: harden_security_advisor_rpc_surface
+--   provider current-state overlay: docs/trust/evidence/2026-09-09-provider-current-overlay.md
+--
+-- This provider ledger identifier is 14 digits but is not a valid civil
+-- timestamp because its minute component is 69. The exact local source digest
+-- above is bound to the Production ledger identity by this repository-only
+-- record. Read-only Production verification also confirmed the intended live
+-- hardening surface: Enterprise membership SECURITY DEFINER helpers reside in
+-- app_private, the public compatibility wrapper remains SECURITY INVOKER, and
+-- prevent_ai_qms_decision_mutation has a fixed pg_catalog search_path.
+--
+-- This record does not assert missing V41 promotion provenance and does not
+-- manufacture it. It only reconciles the known provider ledger identifier to
+-- the exact reviewed local source for drift accounting.
+--
+-- No DDL. No migration-history repair. No database write authorization.
