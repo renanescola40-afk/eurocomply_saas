@@ -34,13 +34,15 @@ const complianceAlerts = read('src/app/api/internal/compliance-alerts/route.ts')
 const entitlements = read('src/server/billing/entitlements.ts');
 
 describe('billing Professional/Business/Enterprise feature isolation', () => {
-  it('keeps the paid-governance runtime bridge and tier-isolation migrations ordered before the V39 cross-tenant guard', () => {
-    expect(reconciliation).toContain('2026-09-06-cross-tenant-reference-integrity-v39');
+  it('keeps the paid-governance runtime bridge and tier-isolation migrations ordered before the V41 advisor hardening', () => {
+    expect(reconciliation).toContain('2026-09-09-supabase-advisor-rpc-hardening-v41');
+    expect(reconciliation).toContain('2026-09-08-post-audit-containment-forward-reconciliation-v40');
     expect(reconciliation).toContain('20260906006400_reconcile_paid_governance_runtime_foundations.sql');
     expect(reconciliation).toContain('20260906006500_billing_professional_task_plan_isolation.sql');
     expect(reconciliation).toContain('20260906006600_billing_business_feature_plan_isolation.sql');
     expect(reconciliation).toContain('20260906006700_billing_governance_workflow_plan_isolation.sql');
     expect(reconciliation).toContain('20260906006800_harden_cross_tenant_reference_integrity.sql');
+    expect(reconciliation).toContain('20260909006900_harden_security_advisor_rpc_surface.sql');
     expect(reconciliation.indexOf('20260906006400_reconcile_paid_governance_runtime_foundations.sql'))
       .toBeLessThan(reconciliation.indexOf('20260906006500_billing_professional_task_plan_isolation.sql'));
     expect(reconciliation.indexOf('20260906006400_reconcile_paid_governance_runtime_foundations.sql'))
@@ -49,6 +51,8 @@ describe('billing Professional/Business/Enterprise feature isolation', () => {
       .toBeLessThan(reconciliation.indexOf('20260906006700_billing_governance_workflow_plan_isolation.sql'));
     expect(reconciliation.indexOf('20260906006700_billing_governance_workflow_plan_isolation.sql'))
       .toBeLessThan(reconciliation.indexOf('20260906006800_harden_cross_tenant_reference_integrity.sql'));
+    expect(reconciliation.indexOf('20260906006800_harden_cross_tenant_reference_integrity.sql'))
+      .toBeLessThan(reconciliation.indexOf('20260909006900_harden_security_advisor_rpc_surface.sql'));
     expect(reconciliation).toContain('"productionWriteAuthorizedByConfig": false');
     expect(reconciliation).toContain('"migrationHistoryRepairAllowed": false');
     expect(reconciliation).toContain('"unrestrictedDbPushAllowed": false');
