@@ -15,14 +15,22 @@ Baseline: GDPR Chapter III. A written policy is not sufficient; each right is ma
 | Objection | Privacy draft identifies right subject to applicable law | NOT_TESTED | Create intake, legal-basis decision and suppression/restriction workflow for controller-side processing |
 | Consent withdrawal | control specification requires revocable non-essential analytics consent where required | BLOCKED_CONFIGURATION | Confirm analytics/cookie configuration and prove withdrawal behavior |
 | Automated-decision safeguards | provider states no intended solely automated website/account decisions with legal/similar effect | PASS_DOCUMENTED | Revalidate if account/product decisioning changes |
-| Deadline tracking | no complete DSAR statutory deadline tracker evidence identified in this lane | BLOCKED | Add request date, due date, extension reason, status and completion evidence |
-| Customer-controller routing | DPA draft states processor should assist and not substantively respond to customer-controlled data except on instruction/law | PASS_DOCUMENTED | Operational routing/SLA evidence required |
-| Exceptions/legal hold | retention policy recognises billing, tax, fraud, audit-chain and legal-hold constraints | PARTIAL | Add case-by-case decision record and minimisation/restriction controls |
+| Deadline tracking | no complete DSAR statutory deadline tracker evidence identified in this lane | BLOCKED_TECHNICAL_HANDOFF | GitHub issue #2009 defines the canonical request/deadline/decision lifecycle acceptance contract |
+| Customer-controller routing | DPA draft states processor should assist and not substantively respond to customer-controlled data except on instruction/law | PASS_DOCUMENTED | Operational routing/SLA evidence required; included in issue #2009 acceptance criteria |
+| Exceptions/legal hold | retention policy recognises billing, tax, fraud, audit-chain and legal-hold constraints | PARTIAL | Add case-by-case attributable decision record and minimisation/restriction controls |
 | Audit trail | export/delete actions are designed to record audit events without raw exported content | PASS_IMPLEMENTED | Release-bound runtime proof should be retained |
 
 ## Required operational record
 
-For every rights request, record at minimum: request ID, received date, requester, identity-verification state, controller/processor routing, right invoked, scope, due date, extension if lawful, data sources searched, decision/exceptions, downstream provider actions, response date and evidence reference.
+For every rights request, record at minimum: request ID, received date, requester reference, identity-verification state, controller/processor routing, right invoked, scope, due date, lawful extension and reason, data sources searched, decision/exceptions, downstream provider actions, response date and evidence reference.
+
+## Cross-lane technical handoff
+
+`GDPR-RIGHTS-01` is now bound to GitHub issue **#2009 — GDPR: canonical data-subject rights request register + deadline workflow**.
+
+The legal lane does not create a competing database path. Issue #2009 requires one canonical tenant-scoped lifecycle, RLS/service-role boundaries, BOLA tests, fail-closed durable recording for deletion requests, controller/processor routing and exact-SHA evidence.
+
+This handoff is `OPEN`; creating the issue does not count as implementation PASS.
 
 ## Terminal state
 
@@ -34,7 +42,7 @@ RESTRICTION=NOT_TESTED
 OBJECTION=NOT_TESTED
 PORTABILITY=PARTIAL
 CONSENT_WITHDRAWAL=BLOCKED_CONFIGURATION
-DEADLINE_TRACKING=BLOCKED
+DEADLINE_TRACKING=BLOCKED_TECHNICAL_HANDOFF_ISSUE_2009
 DATA_SUBJECT_RIGHTS=PARTIAL
 ```
 
