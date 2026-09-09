@@ -4,7 +4,7 @@
 
 ## 1. Controller identity
 
-The controller for website, account, commercial, billing, support and security processing is **SAMUEL CERQUEIRA, UNIPESSOAL LDA**, operating the **RISCK COMPLY** brand, with address **Avenida de Roma 112-A, 1700-353 Lisboa, Portugal** and website **https://www.risckcomply.com**. The provider tax/company registration identifier and privacy contact remain **[FOUNDER FACT REQUIRED: resolve conflicting NIF/NIPC evidence and confirm contact channel before publication]**. DPO or EU representative details, if applicable, are **[FOUNDER FACT REQUIRED]**.
+The proposed controller for website, account, commercial, billing, support and security processing is **SAMUEL CERQUEIRA, UNIPESSOAL LDA**, operating the **RISCK COMPLY** brand and website **https://www.risckcomply.com**. The owner has supplied **Avenida de Roma 112-A, 1700-353 Lisboa, Portugal** as the current correspondence/operating address; **[FOUNDER FACT REQUIRED: confirm the current registered office/legal address from an authoritative Portuguese commercial-registry source before publication]**. The provider tax/company registration identifier and privacy contact remain **[FOUNDER FACT REQUIRED: resolve conflicting NIF/NIPC evidence and confirm contact channel before publication]**. DPO or EU representative details, if applicable, are **[FOUNDER FACT REQUIRED]**.
 
 When customers upload personal data to their workspace, the customer generally acts as controller and the provider acts as processor under the DPA, subject to counsel-confirmed role allocation.
 
@@ -81,4 +81,4 @@ Material changes should be dated and communicated appropriately. The publication
 
 ## Review conditions
 
-Counsel must approve controller/processor roles, legal bases, transfers, retention, rights handling, cookies/analytics, authority details and the relationship with the DPA before this draft is published as a final policy.
+Counsel must approve controller identity, registered office/legal address, controller/processor roles, legal bases, transfers, retention, rights handling, cookies/analytics, authority details and the relationship with the DPA before this draft is published as a final policy.
