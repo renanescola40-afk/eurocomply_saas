@@ -324,6 +324,12 @@ export async function POST(request: Request) {
       });
     }
 
+    const publicPaidBillingEnabled = process.env.RISCK_COMPLY_PAID_BILLING_REQUIRED?.trim().toLowerCase() === 'true';
+    const validationOrganizationId = process.env.RISCK_COMPLY_BILLING_VALIDATION_ORGANIZATION_ID?.trim();
+    if (!publicPaidBillingEnabled && validationOrganizationId !== organization.id) {
+      return noStoreJson({ error: 'public_paid_ga_not_enabled' }, { status: 503 });
+    }
+
     let checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
     if (checkoutAttempt.outcome === 'busy') {
       return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
