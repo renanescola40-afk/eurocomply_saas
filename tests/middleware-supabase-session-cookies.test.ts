@@ -165,4 +165,14 @@ describe('Supabase middleware session cookie propagation', () => {
     expect(supabaseMock.createServerClient).not.toHaveBeenCalled();
     expect(response.cookies.get('NEXT_LOCALE')?.value).toBe('en');
   });
+
+  it('serves the exact Beagle verification pathname without locale or auth redirects', async () => {
+    const response = await middleware(
+      makeRequest('/_e8f1hq2qpr6fuvd036hr4l97yn8octew'),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
+    expect(supabaseMock.createServerClient).not.toHaveBeenCalled();
+  });
 });
