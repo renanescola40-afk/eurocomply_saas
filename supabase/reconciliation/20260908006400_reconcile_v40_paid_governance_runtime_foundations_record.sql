@@ -1,0 +1,17 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed read-only:
+--   version: 20260908006400
+--   local source: supabase/migrations/20260908006400_reconcile_paid_governance_runtime_foundations.sql
+--   local source SHA-256: 471febcc9507c5bb3b747986adbd1a9230b624e95cc1de32676a0b01a04b6da0
+--
+-- Provenance:
+--   bounded V40 Production promotion run: 34228140451
+--   sealed evidence artifact: 10056706545
+--
+-- This provider ledger identifier is 14 digits but is not a valid civil
+-- timestamp because its minute component is 64. The exact local source above
+-- was included in the bounded V40 promotion evidence. This record binds the
+-- known Production ledger identity without altering migration history.
+--
+-- No DDL. No migration-history repair. No database write authorization.
