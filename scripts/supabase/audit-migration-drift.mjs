@@ -71,16 +71,26 @@ async function readSqlDirectory(directory) {
     const parsed = (await readdir(directory)).sort().map(parseLocalFilename).filter(Boolean);
     return await Promise.all(parsed.map(async (entry) => {
       const contents = await readFile(path.join(directory, entry.filename));
+      const text = contents.toString('utf8');
       return {
         ...entry,
         sha256: createHash('sha256').update(contents).digest('hex'),
         byteLength: contents.byteLength,
+        recordOnly: text.includes('RECONCILIATION RECORD ONLY') && text.includes('DO NOT EXECUTE'),
       };
     }));
   } catch (error) {
     if (error?.code === 'ENOENT') return [];
     throw error;
   }
+}
+
+function isRecognizedReconciliationVersion(entry) {
+  if (!entry.validShape) return false;
+  // Normal reconciliation SQL still requires a valid civil timestamp.
+  // A non-calendar 14-digit provider ledger identifier is accepted only when
+  // the repository contains an explicit non-executable reconciliation record.
+  return entry.validTimestamp || entry.recordOnly;
 }
 
 function markdownList(items, formatter) {
@@ -115,7 +125,7 @@ const localValidVersions = new Set(
   local.filter((migration) => migration.validShape && migration.validTimestamp).map((migration) => migration.version),
 );
 const reconciliationVersions = new Set(
-  reconciliations.filter((entry) => entry.validShape && entry.validTimestamp).map((entry) => entry.version),
+  reconciliations.filter(isRecognizedReconciliationVersion).map((entry) => entry.version),
 );
 const repositoryKnownVersions = new Set([...localValidVersions, ...reconciliationVersions]);
 
@@ -151,7 +161,8 @@ const localInventory = local.map((entry) => ({
 }));
 const reconciliationInventory = reconciliations.map((entry) => ({
   ...entry,
-  remoteState: entry.validShape && entry.validTimestamp && remoteVersions.has(entry.version)
+  recognizedVersionIdentifier: isRecognizedReconciliationVersion(entry),
+  remoteState: isRecognizedReconciliationVersion(entry) && remoteVersions.has(entry.version)
     ? 'RECONCILES_REMOTE_VERSION'
     : 'UNUSED_RECONCILIATION_FILE',
 }));
@@ -200,6 +211,7 @@ const reconciliationManifest = {
     stagedExecutionEvidenceRequiredBeforeProduction: true,
     supersededRequiresReplacementDigest: true,
     invalidOrDuplicateRequiresExplicitResolution: true,
+    nonCalendarRemoteVersionRequiresRecordOnlyReconciliation: true,
   },
   counts: {
     localFiles: localInventory.length,
@@ -289,7 +301,7 @@ markdown += '## Summary\n\n';
 markdown += `- Local migration files: ${report.summary.localFiles}\n`;
 markdown += `- Valid unique local versions: ${report.summary.localValidVersions}\n`;
 markdown += `- Versioned reconciliation files: ${report.summary.reconciliationFiles}\n`;
-markdown += `- Valid reconciliation versions: ${report.summary.reconciliationVersions}\n`;
+markdown += `- Recognized reconciliation versions: ${report.summary.reconciliationVersions}\n`;
 markdown += `- Remote versions: ${report.summary.remoteVersions}\n`;
 markdown += `- Aligned normal migrations: ${report.summary.aligned}\n`;
 markdown += `- Aligned versioned reconciliations: ${report.summary.reconciledRemote}\n`;
@@ -304,6 +316,7 @@ markdown += '\n## Reconciliation inventory\n\n';
 markdown += '- `migration-reconciliation-inventory.json` contains every SQL file digest and an `UNCLASSIFIED` decision record for every file involved in a local-only, invalid-timestamp, or duplicate-version blocker.\n';
 markdown += '- The audit never infers that a migration is already applied, safe to deploy, superseded, or archival.\n';
 markdown += '- Classification requires schema evidence and explicit reviewer attribution.\n';
+markdown += '- A non-calendar 14-digit remote ledger identifier is recognized only by an explicit `RECONCILIATION RECORD ONLY` / `DO NOT EXECUTE` repository record.\n';
 markdown += '\n## Invalid local migrations (legacy advisory)\n\n';
 markdown += markdownList(invalidLocal, (item) => `\`${item.filename}\` — SHA-256 \`${item.sha256}\``);
 markdown += '\n## Duplicate versions (legacy advisory)\n\n';
@@ -318,6 +331,7 @@ markdown += '\n## Safety boundary\n\n';
 markdown += '- Read-only audit; no database objects or migration history were changed.\n';
 markdown += '- Unknown remote-only migrations remain a hard failure.\n';
 markdown += '- Controlled remote hotfixes must have a matching versioned file in `supabase/reconciliation`.\n';
+markdown += '- Non-calendar remote ledger identifiers require a record-only, non-executable reconciliation file.\n';
 markdown += '- Local-only migrations are expected for a PR and remain pending until controlled deployment.\n';
 markdown += '- `--require-deployable` also blocks invalid timestamps and duplicate versions.\n';
 markdown += '- Do not use `supabase db push --include-all` to bypass this report.\n';
