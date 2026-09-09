@@ -1,0 +1,112 @@
+name: Beagle Exact Target Open On Main
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/beagle-exact-target-open-on-main.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: beagle-exact-target-open-on-main
+  cancel-in-progress: false
+
+jobs:
+  open-exact-target:
+    name: Open exact Beagle preview alias only
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: production
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      TARGET_DEPLOYMENT_ID: dpl_e48et8JLtkv78GGRJ8a3AxG9roCX
+      TARGET_DEPLOYMENT_URL: eurocomply-saas-rcze48pkw-renanescola40-afks-projects.vercel.app
+      EXPECTED_TARGET_SHA: 9fe43ffe006ac1d8fc6d4ad0c98219c69de9d39f
+      EXPECTED_PROJECT_ID: prj_APpXAyQFy1Gie50xfbO45zjkyUSm
+      VERCEL_TEAM_ID: team_wu3LZI6ReFxO16xipv73GLwG
+      BEAGLE_VERIFY_FILE: _e8f1hq2qpr6fuvd036hr4l97yn8octew.txt
+      BEAGLE_VERIFY_BODY: _e8f1hq2qpr6fuvd036hr4l97yn8octew
+
+    steps:
+      - name: Fail closed if Vercel credential is unavailable
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN"
+
+      - name: Prove exact deployment identity and hostname before write
+        shell: bash
+        run: |
+          set -euo pipefail
+          meta="$(mktemp)"
+          trap 'rm -f "$meta"' EXIT
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v13/deployments/$TARGET_DEPLOYMENT_ID?teamId=$VERCEL_TEAM_ID" \
+            > "$meta"
+          test "$(jq -r '.id // empty' "$meta")" = "$TARGET_DEPLOYMENT_ID"
+          test "$(jq -r '.projectId // .project.id // empty' "$meta")" = "$EXPECTED_PROJECT_ID"
+          test "$(jq -r '.meta.githubCommitSha // empty' "$meta")" = "$EXPECTED_TARGET_SHA"
+          test "$(jq -r '.url // empty' "$meta")" = "$TARGET_DEPLOYMENT_URL"
+          test "$(jq -r '.readyState // .state // empty' "$meta")" = 'READY'
+
+      - name: Create protection override only for exact preview hostname
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(mktemp)"
+          trap 'rm -f "$response"' EXIT
+          status="$(curl --silent --show-error \
+            --output "$response" \
+            --write-out '%{http_code}' \
+            --request PATCH \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H 'Content-Type: application/json' \
+            "https://api.vercel.com/aliases/$TARGET_DEPLOYMENT_URL/protection-bypass?teamId=$VERCEL_TEAM_ID" \
+            --data '{"override":{"scope":"alias-protection-override","action":"create"}}')"
+          if [ "$status" != '200' ]; then
+            echo "Vercel alias protection override failed with HTTP $status" >&2
+            exit 1
+          fi
+
+      - name: Prove Beagle verification file is anonymous
+        shell: bash
+        run: |
+          set -euo pipefail
+          headers="$(mktemp)"
+          body="$(mktemp)"
+          trap 'rm -f "$headers" "$body"' EXIT
+          curl --fail --silent --show-error \
+            --max-redirs 0 \
+            --dump-header "$headers" \
+            --output "$body" \
+            "https://$TARGET_DEPLOYMENT_URL/$BEAGLE_VERIFY_FILE"
+          test "$(tr -d '\r\n' < "$body")" = "$BEAGLE_VERIFY_BODY"
+          ! grep -qi '^location: https://vercel.com/' "$headers"
+
+      - name: Prove exact target health is anonymous
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-redirs 0 "https://$TARGET_DEPLOYMENT_URL/api/health")"
+          case "$status" in
+            200|204|503) ;;
+            *) echo "Unexpected health status: $status" >&2; exit 1 ;;
+          esac
+
+      - name: Publish non-secret target summary
+        shell: bash
+        run: |
+          {
+            echo '## Beagle exact isolated target'
+            echo "- Deployment: $TARGET_DEPLOYMENT_ID"
+            echo "- Exact SHA: $EXPECTED_TARGET_SHA"
+            echo "- URL: https://$TARGET_DEPLOYMENT_URL"
+            echo '- Change scope: exact preview alias protection override only'
+            echo '- Project-wide authentication: unchanged'
+            echo '- Production deployment: unchanged'
+            echo '- Beagle verification file: anonymously reachable'
+          } >> "$GITHUB_STEP_SUMMARY"
