@@ -172,7 +172,7 @@ const contentMarkers = {
     'Expected without organization',
     'Expected with insufficient permission',
     'Join waitlist',
-    'Start Professional Trial',
+    'Start Professional',
     'Book Business Demo',
     'Talk to Sales',
     'Create account and continue',
