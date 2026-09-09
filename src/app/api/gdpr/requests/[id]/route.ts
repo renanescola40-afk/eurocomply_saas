@@ -211,8 +211,14 @@ export async function PATCH(
     requestId: id,
     organizationId: organization.id,
     patch,
+    expectedStatus: current.status,
+    expectedUpdatedAt: current.updated_at,
   });
   if (!updated.ok) {
+    if (updated.reason === 'request_state_conflict') {
+      return noStoreJson({ error: 'gdpr_rights_request_state_conflict' }, { status: 409 });
+    }
+
     reportError(new Error('GDPR rights lifecycle update failed'), {
       area: 'gdpr_rights_lifecycle_update',
       organizationId: organization.id,
@@ -250,6 +256,8 @@ export async function PATCH(
       requestId: id,
       organizationId: organization.id,
       patch: previousValues(current, patch),
+      expectedStatus: updated.request.status,
+      expectedUpdatedAt: updated.request.updated_at,
     });
 
     reportError(new Error('GDPR rights lifecycle audit persistence failed'), {
