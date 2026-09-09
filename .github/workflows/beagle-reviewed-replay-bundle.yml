@@ -1,0 +1,92 @@
+name: Beagle Reviewed Replay Bundle
+
+on:
+  push:
+    branches:
+      - pentest/beagle-replay-bundle-20260909
+    paths:
+      - '.github/workflows/beagle-reviewed-replay-bundle.yml'
+      - 'scripts/security/generate-beagle-reviewed-replay-bundle.mjs'
+      - 'scripts/recovery/**'
+      - 'supabase/migrations/**'
+      - 'docs/security/evidence/human-review/**'
+      - 'docs/security/decisions/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: beagle-reviewed-replay-bundle-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    name: Generate reviewed schema-only Beagle bundle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      EXPECTED_HEAD_SHA: ${{ github.sha }}
+      RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH: ${{ runner.temp }}/beagle-reviewed-replay-bundle.sql
+      RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH: ${{ runner.temp }}/beagle-reviewed-replay-manifest.json
+
+    steps:
+      - name: Checkout exact assessed SHA without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact assessed SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.101.0
+
+      - name: Verify runner PostgreSQL client without network installation
+        run: node scripts/recovery/verify-postgresql-client.mjs
+
+      - name: Generate bundle only after reviewed disposable replay succeeds
+        run: node scripts/security/generate-beagle-reviewed-replay-bundle.mjs
+
+      - name: Validate schema-only bundle and exact-SHA manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH"
+          test -s "$RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH"
+          grep -q '^-- RISCK COMPLY reviewed disposable schema replay bundle$' "$RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH"
+          SUBJECT_SHA="$(node -e "const m=require(process.env.RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH); process.stdout.write(m.subjectSha)")"
+          test "$SUBJECT_SHA" = "$EXPECTED_HEAD_SHA"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const manifest = JSON.parse(fs.readFileSync(process.env.RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH, 'utf8'));
+          const bytes = fs.readFileSync(process.env.RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH);
+          const digest = crypto.createHash('sha256').update(bytes).digest('hex');
+          if (manifest.bundleSha256 !== digest) throw new Error('Bundle digest mismatch');
+          if (manifest.containsSeedData !== false || manifest.containsProductionRows !== false) {
+            throw new Error('Bundle data boundary is not fail-closed');
+          }
+          if (manifest.productionWriteAuthorized !== false) throw new Error('Production write boundary drifted');
+          if (manifest.replayFileCount < 1) throw new Error('Replay bundle is empty');
+          NODE
+
+      - name: Upload reviewed Beagle replay bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: beagle-reviewed-replay-${{ env.EXPECTED_HEAD_SHA }}
+          path: |
+            ${{ env.RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH }}
+            ${{ env.RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH }}
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Stop disposable recovery runtime
+        if: always()
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
