@@ -24,4 +24,21 @@ describe('canonical Trust Center publication integrity', () => {
     expect(procurement).toContain('release-specific claim remains `OPEN`');
     expect(procurement).not.toMatch(/\b[a-f0-9]{40}\b/i);
   });
+
+  it('keeps the public procurement provider catalog on the current conservative evidence boundary', () => {
+    const publicPack = read('src/lib/trust/procurement-pack.ts');
+    const providerRegister = read('docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md');
+
+    expect(publicPack).toContain("PROCUREMENT_PACK_VERSION = '2026-09-09'");
+    expect(publicPack).toContain('Current V41 selected migrations are present live 13/13');
+    expect(publicPack).toContain('Exact-current-main Production binding and protected runtime acceptance remain evidence-required');
+    expect(publicPack).toContain('no legitimate LIVE subscription authority is currently credited');
+    expect(publicPack).not.toContain('governed V21 Production promotion remains separate and currently unapplied');
+    expect(publicPack).not.toContain('Current direct Production deployment binding is proven on the current release');
+
+    expect(providerRegister).toContain('CURRENT_OVERLAY_ACTIVE');
+    expect(providerRegister).toContain('2026-09-09-provider-current-overlay.md');
+    expect(providerRegister).toContain('SUPABASE_V41_LIVE: 13/13');
+    expect(providerRegister).toContain('LEGITIMATE_LIVE_SUBSCRIPTION_AUTHORITY: 0');
+  });
 });
