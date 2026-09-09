@@ -24,13 +24,30 @@ describe('Supabase Security Advisor RPC hardening', () => {
     );
   });
 
+  it('retargets the public SECURITY INVOKER compatibility wrapper to the private helper', () => {
+    expect(migration).toContain(
+      'create or replace function public.is_organization_member(p_organization_id uuid)',
+    );
+    expect(migration).toContain('security invoker');
+    expect(migration).toContain('select app_private.enterprise_member_can_read(p_organization_id);');
+    expect(migration).toContain(
+      'revoke all on function public.is_organization_member(uuid) from public, anon;',
+    );
+    expect(migration).toContain(
+      'grant execute on function public.is_organization_member(uuid) to authenticated, service_role;',
+    );
+    expect(migration).toContain(
+      'Membership compatibility wrapper does not target app_private.enterprise_member_can_read',
+    );
+    expect(migration).toContain('Membership compatibility wrapper must remain SECURITY INVOKER');
+  });
+
   it('fixes the mutable search_path finding with valid fail-closed PostgreSQL syntax', () => {
     expect(migration).toContain('alter function public.prevent_ai_qms_decision_mutation()');
     expect(migration).toContain('set search_path = pg_catalog;');
     expect(migration).not.toContain('alter function if exists');
     expect(migration).toContain('prevent_ai_qms_decision_mutation search_path is not fixed to pg_catalog');
     expect(migration).not.toContain('disable row level security');
-    expect(migration).not.toContain('security invoker');
   });
 
   it('keeps private helper grants fail-closed for anonymous callers', () => {
