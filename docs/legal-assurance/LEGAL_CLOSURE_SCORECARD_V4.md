@@ -3,26 +3,26 @@
 Date: 2026-09-09  
 Mode: `FINAL_LEGAL_REGULATORY_ASSURANCE_CLOSURE_V4`
 
-This scorecard reconciles the canonical state after merged PRs #2008 and #2011 and records the V4 Article 14 origin-hardening correction. Percentages are working closure estimates, not legal opinions, certifications or regulator determinations.
+This scorecard reconciles the canonical state after merged PRs #2008 and #2011 and records the V4 Article 14 origin-hardening correction plus the completed pre-review legitimate-interest assessment pack. Percentages are working closure estimates, not legal opinions, certifications or regulator determinations.
 
 ## Current percentages
 
 ```text
-LEGAL_IMPLEMENTATION_PERCENT=84
-GDPR_READINESS_PERCENT=66
+LEGAL_IMPLEMENTATION_PERCENT=86
+GDPR_READINESS_PERCENT=68
 AI_ACT_REGULATORY_READINESS_PERCENT=85
 QUALIFIED_REVIEW_PERCENT=0
 COMMERCIAL_LEGAL_PERCENT=45
 
 CANONICAL_MAIN_INTERNAL_CLOSURE_PERCENT=77
 CANONICAL_MAIN_INTERNAL_REMAINING_PERCENT=23
-V4_WORKING_INTERNAL_CONTROLLABLE_CLOSURE_PERCENT=77
-V4_WORKING_INTERNAL_CONTROLLABLE_REMAINING_PERCENT=23
-TOTAL_LEGAL_ASSURANCE_CLOSURE_PERCENT=49
-TOTAL_LEGAL_ASSURANCE_REMAINING_PERCENT=51
+V4_WORKING_INTERNAL_CONTROLLABLE_CLOSURE_PERCENT=79
+V4_WORKING_INTERNAL_CONTROLLABLE_REMAINING_PERCENT=21
+TOTAL_LEGAL_ASSURANCE_CLOSURE_PERCENT=50
+TOTAL_LEGAL_ASSURANCE_REMAINING_PERCENT=50
 ```
 
-No percentage is added merely for merging or for documentation volume. V4 corrects a trust-boundary defect in an already-credited Article 14 invitation control, so the working closure percentage remains 77 rather than being artificially increased.
+The V4 increase from 77 to 79 working internal closure is credited to a substantive gate change: the highest-value controller-side Article 6(1)(f) candidates now have explicit interest/necessity/balancing/safeguard assessments instead of a blanket `BLOCKED_LIA` state. The Article 14 origin hardening itself receives no percentage credit because it corrects an already-credited control.
 
 ## Canonical closures now credited
 
@@ -33,7 +33,16 @@ No percentage is added merely for merging or for documentation volume. V4 correc
 | ARTICLE13_2E_DATA_PROVISION | PASS_PRE_PUBLICATION_CANONICAL | PR #2011 merged; factual mandatory/optional/conditional data-provision and non-provision consequences mapped |
 | ARTICLE14_SCENARIO_TIMING | PASS_STRUCTURE_CANONICAL | PR #2011 merged; timing/role/exception discipline mapped |
 | ARTICLE14_INVITATION_FIRST_COMMUNICATION | PASS_MERGED_CANONICAL | first invitation communication now contains source/purpose/non-acceptance/privacy-link disclosure |
-| ARTICLE14_PRIVACY_LINK_ORIGIN_HARDENING | PASS_IMPLEMENTED_PRE_MERGE_V4 | V4 rejects untrusted HTTPS Privacy origins and adds regression coverage |
+
+## V4 working gates
+
+| Gate | Previous | V4 state | Boundary |
+|---|---|---|---|
+| ARTICLE14_PRIVACY_LINK_ORIGIN_HARDENING | unsafe origin model narrower than documentation claim | PASS_IMPLEMENTED_PRE_MERGE_V4 | absolute Privacy origin restricted to RISCK COMPLY HTTPS domains / localhost dev; regression coverage added |
+| SECURITY_ABUSE_LIA | BLOCKED | PASS_PRE_REVIEW | precise interest, necessity, balancing, safeguards and review triggers documented; final legal basis still external-review dependent |
+| INCIDENT_RESPONSE_LIA | BLOCKED | PASS_PRE_REVIEW_WITH_RETENTION_DEPENDENCY | LIA completed; statutory-obligation and retention decisions remain case-specific/open |
+| B2B_RELATIONSHIP_ADMIN_LIA | BLOCKED | PASS_PRE_REVIEW | narrow procurement/relationship administration assessed; direct marketing explicitly excluded from positive credit |
+| LEGITIMATE_INTEREST_ASSESSMENTS | BLOCKED | PASS_PRE_REVIEW_PARTIAL_SCOPE | analytics/direct marketing remain blocked by configuration/ePrivacy rather than being silently approved |
 
 ## Hard blockers unchanged
 
@@ -55,9 +64,9 @@ ENTERPRISE_100=NO
 ## Highest-value next internal closures
 
 1. close the canonical GDPR rights-request register/deadline workflow under issue #2009;
-2. complete controller-side legitimate-interest assessments for Art. 6(1)(f) candidates;
-3. reconcile provider-account DPA/transfer/retention facts;
-4. bind complete Privacy information to authentication, Checkout and remaining controller-side indirect collection surfaces;
+2. reconcile provider-account DPA/transfer/retention facts;
+3. bind complete Privacy information to authentication, Checkout and remaining controller-side indirect collection surfaces;
+4. map Portuguese/ePrivacy direct-marketing rules before any non-essential marketing basis is credited;
 5. choose defensible owner-controlled account/support/security retention criteria where this can be done factually without inventing legal conclusions;
 6. keep public claims fail-closed until the public Privacy notice and final legal texts are complete.
 
