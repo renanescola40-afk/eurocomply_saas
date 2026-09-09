@@ -1,0 +1,93 @@
+name: Beagle Publish Reviewed Bundle
+
+on:
+  push:
+    branches:
+      - pentest/beagle-remote-replay-20260909
+    paths:
+      - '.github/workflows/beagle-publish-reviewed-bundle.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: beagle-publish-reviewed-bundle
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish validated schema-only replay bundle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      SOURCE_ARTIFACT_ID: '10115314122'
+      SOURCE_SUBJECT_SHA: 'f40db9993ac7ff2a4301de552d75c12eb9d2fb1d'
+      EXPECTED_BUNDLE_SHA256: 'e9b75d01599342bf49d7a748f308e429f9a8f7a3f4afaa9aadb92780819e3454'
+
+    steps:
+      - name: Checkout disposable pentest branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Verify branch boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = 'pentest/beagle-remote-replay-20260909'
+          test "$SOURCE_ARTIFACT_ID" = '10115314122'
+          [[ "$SOURCE_SUBJECT_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$EXPECTED_BUNDLE_SHA256" =~ ^[a-f0-9]{64}$ ]]
+
+      - name: Download previously green reviewed artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/beagle-artifact"
+          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/$SOURCE_ARTIFACT_ID/zip" > "$RUNNER_TEMP/beagle-artifact.zip"
+          unzip -q "$RUNNER_TEMP/beagle-artifact.zip" -d "$RUNNER_TEMP/beagle-artifact"
+          test -s "$RUNNER_TEMP/beagle-artifact/beagle-reviewed-replay-bundle.sql"
+          test -s "$RUNNER_TEMP/beagle-artifact/beagle-reviewed-replay-manifest.json"
+
+      - name: Revalidate artifact digest and safety manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUNDLE="$RUNNER_TEMP/beagle-artifact/beagle-reviewed-replay-bundle.sql" \
+          MANIFEST="$RUNNER_TEMP/beagle-artifact/beagle-reviewed-replay-manifest.json" \
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const bundle = fs.readFileSync(process.env.BUNDLE);
+          const manifest = JSON.parse(fs.readFileSync(process.env.MANIFEST, 'utf8'));
+          const digest = crypto.createHash('sha256').update(bundle).digest('hex');
+          if (manifest.subjectSha !== process.env.SOURCE_SUBJECT_SHA) throw new Error('source exact SHA mismatch');
+          if (manifest.bundleSha256 !== digest) throw new Error('bundle digest mismatch');
+          if (digest !== process.env.EXPECTED_BUNDLE_SHA256) throw new Error('unexpected reviewed bundle digest');
+          if (manifest.replayFileCount !== 294) throw new Error(`unexpected replay file count ${manifest.replayFileCount}`);
+          if (manifest.containsSeedData !== false || manifest.containsProductionRows !== false) throw new Error('data boundary not closed');
+          if (manifest.productionWriteAuthorized !== false) throw new Error('production write boundary not closed');
+          if (manifest.intendedTarget !== 'isolated-beagle-pentest-supabase-only') throw new Error('target boundary invalid');
+          NODE
+
+      - name: Publish bundle only on disposable pentest branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          out='docs/security/pentest/generated'
+          mkdir -p "$out"
+          cp "$RUNNER_TEMP/beagle-artifact/beagle-reviewed-replay-bundle.sql" "$out/beagle-reviewed-replay-bundle.sql"
+          cp "$RUNNER_TEMP/beagle-artifact/beagle-reviewed-replay-manifest.json" "$out/beagle-reviewed-replay-manifest.json"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$out/beagle-reviewed-replay-bundle.sql" "$out/beagle-reviewed-replay-manifest.json"
+          if git diff --cached --quiet; then
+            echo 'Reviewed bundle already published at identical bytes.'
+            exit 0
+          fi
+          git commit -m 'test(pentest): publish reviewed Beagle replay artifact'
+          git push origin HEAD:pentest/beagle-remote-replay-20260909
