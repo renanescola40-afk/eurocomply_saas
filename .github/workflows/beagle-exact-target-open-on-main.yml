@@ -37,7 +37,7 @@ jobs:
           set -euo pipefail
           test -n "$VERCEL_TOKEN"
 
-      - name: Prove exact deployment identity before write
+      - name: Prove exact deployment identity and hostname before write
         shell: bash
         run: |
           set -euo pipefail
@@ -47,12 +47,13 @@ jobs:
             -H "Authorization: Bearer $VERCEL_TOKEN" \
             "https://api.vercel.com/v13/deployments/$TARGET_DEPLOYMENT_ID?teamId=$VERCEL_TEAM_ID" \
             > "$meta"
-          test "$(jq -r '.id' "$meta")" = "$TARGET_DEPLOYMENT_ID"
-          test "$(jq -r '.project.id' "$meta")" = "$EXPECTED_PROJECT_ID"
-          test "$(jq -r '.meta.githubCommitSha' "$meta")" = "$EXPECTED_TARGET_SHA"
-          test "$(jq -r '.readyState // .state' "$meta")" = 'READY'
+          test "$(jq -r '.id // empty' "$meta")" = "$TARGET_DEPLOYMENT_ID"
+          test "$(jq -r '.projectId // .project.id // empty' "$meta")" = "$EXPECTED_PROJECT_ID"
+          test "$(jq -r '.meta.githubCommitSha // empty' "$meta")" = "$EXPECTED_TARGET_SHA"
+          test "$(jq -r '.url // empty' "$meta")" = "$TARGET_DEPLOYMENT_URL"
+          test "$(jq -r '.readyState // .state // empty' "$meta")" = 'READY'
 
-      - name: Create protection override only for exact preview deployment
+      - name: Create protection override only for exact preview hostname
         shell: bash
         run: |
           set -euo pipefail
@@ -64,9 +65,12 @@ jobs:
             --request PATCH \
             -H "Authorization: Bearer $VERCEL_TOKEN" \
             -H 'Content-Type: application/json' \
-            "https://api.vercel.com/aliases/$TARGET_DEPLOYMENT_ID/protection-bypass?teamId=$VERCEL_TEAM_ID" \
+            "https://api.vercel.com/aliases/$TARGET_DEPLOYMENT_URL/protection-bypass?teamId=$VERCEL_TEAM_ID" \
             --data '{"override":{"scope":"alias-protection-override","action":"create"}}')"
-          test "$status" = '200'
+          if [ "$status" != '200' ]; then
+            echo "Vercel alias protection override failed with HTTP $status" >&2
+            exit 1
+          fi
 
       - name: Prove Beagle verification file is anonymous
         shell: bash
