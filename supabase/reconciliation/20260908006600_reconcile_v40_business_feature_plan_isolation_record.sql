@@ -1,0 +1,17 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed read-only:
+--   version: 20260908006600
+--   local source: supabase/migrations/20260908006600_billing_business_feature_plan_isolation.sql
+--   local source SHA-256: 5cfcf0766db5d4cd8765f06473422f77acc1c4586ea930b3d49ea9752112d813
+--
+-- Provenance:
+--   bounded V40 Production promotion run: 34228140451
+--   sealed evidence artifact: 10056706545
+--
+-- This provider ledger identifier is 14 digits but is not a valid civil
+-- timestamp because its minute component is 66. The exact local source above
+-- was included in the bounded V40 promotion evidence. This record binds the
+-- known Production ledger identity without altering migration history.
+--
+-- No DDL. No migration-history repair. No database write authorization.
