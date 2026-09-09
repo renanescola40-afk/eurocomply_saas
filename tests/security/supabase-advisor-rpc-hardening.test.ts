@@ -1,0 +1,69 @@
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+
+const read = (path: string) => readFileSync(path, 'utf8');
+const migrationPath = 'supabase/migrations/20260909006900_harden_security_advisor_rpc_surface.sql';
+const migration = read(migrationPath);
+const reconciliation = read('config/supabase-forward-reconciliation.json');
+
+describe('Supabase Security Advisor RPC hardening', () => {
+  it('moves Enterprise SECURITY DEFINER membership helpers out of the exposed public schema', () => {
+    expect(migration).toContain("alter function public.enterprise_member_can_read(uuid) set schema app_private");
+    expect(migration).toContain("alter function public.enterprise_member_can_manage(uuid) set schema app_private");
+    expect(migration).toContain(
+      'revoke all on function app_private.enterprise_member_can_read(uuid) from public, anon;',
+    );
+    expect(migration).toContain(
+      'revoke all on function app_private.enterprise_member_can_manage(uuid) from public, anon;',
+    );
+    expect(migration).toContain(
+      'grant execute on function app_private.enterprise_member_can_read(uuid) to authenticated, service_role;',
+    );
+    expect(migration).toContain(
+      'grant execute on function app_private.enterprise_member_can_manage(uuid) to authenticated, service_role;',
+    );
+  });
+
+  it('retargets the public SECURITY INVOKER compatibility wrapper to the private helper', () => {
+    expect(migration).toContain(
+      'create or replace function public.is_organization_member(p_organization_id uuid)',
+    );
+    expect(migration).toContain('security invoker');
+    expect(migration).toContain('select app_private.enterprise_member_can_read(p_organization_id);');
+    expect(migration).toContain(
+      'revoke all on function public.is_organization_member(uuid) from public, anon;',
+    );
+    expect(migration).toContain(
+      'grant execute on function public.is_organization_member(uuid) to authenticated, service_role;',
+    );
+    expect(migration).toContain(
+      'Membership compatibility wrapper does not target app_private.enterprise_member_can_read',
+    );
+    expect(migration).toContain('Membership compatibility wrapper must remain SECURITY INVOKER');
+  });
+
+  it('fixes the mutable search_path finding with valid fail-closed PostgreSQL syntax', () => {
+    expect(migration).toContain('alter function public.prevent_ai_qms_decision_mutation()');
+    expect(migration).toContain('set search_path = pg_catalog;');
+    expect(migration).not.toContain('alter function if exists');
+    expect(migration).toContain('prevent_ai_qms_decision_mutation search_path is not fixed to pg_catalog');
+    expect(migration).not.toContain('disable row level security');
+  });
+
+  it('keeps private helper grants fail-closed for anonymous callers', () => {
+    expect(migration).toContain("has_function_privilege('authenticated', 'app_private.enterprise_member_can_read(uuid)', 'EXECUTE')");
+    expect(migration).toContain("has_function_privilege('authenticated', 'app_private.enterprise_member_can_manage(uuid)', 'EXECUTE')");
+    expect(migration).toContain("has_function_privilege('anon', 'app_private.enterprise_member_can_read(uuid)', 'EXECUTE')");
+    expect(migration).toContain("has_function_privilege('anon', 'app_private.enterprise_member_can_manage(uuid)', 'EXECUTE')");
+    expect(migration).toContain('Anonymous role can execute private Enterprise membership helpers');
+  });
+
+  it('registers V41 after the proven V40 cross-tenant hardening head', () => {
+    expect(reconciliation).toContain('2026-09-09-supabase-advisor-rpc-hardening-v41');
+    expect(reconciliation).toContain('2026-09-08-post-audit-containment-forward-reconciliation-v40');
+    expect(reconciliation.indexOf('20260908006800_harden_cross_tenant_reference_integrity.sql'))
+      .toBeLessThan(reconciliation.indexOf('20260909006900_harden_security_advisor_rpc_surface.sql'));
+    expect(reconciliation).toContain('"productionWriteAuthorizedByConfig": false');
+    expect(reconciliation).toContain('"unrestrictedDbPushAllowed": false');
+  });
+});

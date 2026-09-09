@@ -1,7 +1,7 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-08-post-audit-containment-forward-reconciliation-v40",
-  "sourceChangeSet": "2026-09-06-cross-tenant-reference-integrity-v39",
+  "changeSet": "2026-09-09-supabase-advisor-rpc-hardening-v41",
+  "sourceChangeSet": "2026-09-08-post-audit-containment-forward-reconciliation-v40",
   "migrations": [
     {
       "filename": "20260908000000_reconcile_final_public_release_payment_storage_hardening.sql",
@@ -50,6 +50,10 @@
     {
       "filename": "20260908006800_harden_cross_tenant_reference_integrity.sql",
       "purpose": "byte-identical re-forward of 20260906006800_harden_cross_tenant_reference_integrity.sql above emergency Production ledger head 20260907142133, preserving same-organization reference integrity for privileged writes"
+    },
+    {
+      "filename": "20260909006900_harden_security_advisor_rpc_surface.sql",
+      "purpose": "move Enterprise membership SECURITY DEFINER helpers out of the exposed public API schema while preserving authenticated RLS evaluation, and fix the append-only QMS trigger search_path flagged by the Supabase Security Advisor"
     }
   ],
   "truthBoundary": {
