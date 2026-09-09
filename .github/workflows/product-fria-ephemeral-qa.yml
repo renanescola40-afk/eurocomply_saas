@@ -125,7 +125,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Install Chromium for focused Playwright acceptance
-        run: npx playwright install --with-deps chromium
+        run: bash scripts/quality/install-playwright-ci.sh
 
       - name: Set up pinned Supabase CLI
         uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
