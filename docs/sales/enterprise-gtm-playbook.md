@@ -1,6 +1,7 @@
 # RISCK COMPLY — Enterprise GTM Playbook
 
-Status: implementation-ready GTM source of truth for positioning, pricing, sales copy and enterprise buyer enablement.
+Status: implementation-ready GTM source of truth for positioning, pricing, sales copy and enterprise buyer enablement.  
+Commercial truth refreshed: **2026-09-09**.
 
 ## Guardrails
 
@@ -9,6 +10,8 @@ Status: implementation-ready GTM source of truth for positioning, pricing, sales
 - RISCK COMPLY supports operational readiness, evidence management, policy workflow, risk visibility and review preparation.
 - Do not claim guaranteed AI Act compliance, certification, SOC 2, ISO 27001, third-party pentest, 24/7 monitoring or legal approval unless current evidence and contracts support it.
 - Do not invent customers, logos, testimonials, certifications or regulatory endorsements.
+- Do not advertise a free trial unless the canonical billing/runtime configuration actually grants one. **No free trial is currently offered.**
+- Public pricing and tax/VAT language must match the canonical billing catalog and `src/lib/i18n/pricing-commercial-truth.ts`.
 
 ## 1. Main positioning
 
@@ -143,28 +146,24 @@ Do not promise:
 
 Pricing must feel serious enough for enterprise buyers, but accessible enough for small European SaaS teams.
 
-Recommended model:
+Canonical current model:
 
-| Plan | Monthly | Buyer motion | Positioning |
+| Plan | Public monthly reference | Current buyer motion | Positioning |
 | --- | ---: | --- | --- |
-| Essential | €49 | Self-serve | Controlled starter workspace |
-| Professional | €149 | Self-serve / light sales | Best default for SaaS, fintech and HR teams |
+| Essential | €49 | Self-serve monthly checkout | Controlled starter workspace |
+| Professional | €149 | Self-serve monthly checkout | Best default for SaaS, fintech and HR teams |
 | Business | €399 | Assisted sales | Multi-team governance and executive reporting |
-| Enterprise | Custom | Sales-led | Procurement, security review and rollout support |
+| Enterprise | From €990/month | Sales-led / contract | Procurement, security review and rollout support |
 
-Annual contracts:
+Commercial controls:
 
-- Essential: monthly allowed.
-- Professional: monthly and annual.
-- Business: annual encouraged, monthly optional during early launch.
-- Enterprise: annual only.
-
-Discount rules:
-
-- Do not discount Essential.
-- Professional annual: up to 15% annual discount.
-- Business annual: up to 20% annual discount if onboarding scope is controlled.
-- Enterprise: discount only in exchange for annual prepay, case study rights, narrow scope or faster signature.
+- **No free trial is currently offered.**
+- Essential and Professional use self-serve monthly checkout when canonical Stripe price bindings are verified.
+- Business is assisted-sales; direct generic self-serve checkout is disabled.
+- Enterprise is negotiated by contract; `From €990/month` is a positioning reference, not a fixed public Stripe price or guaranteed final price.
+- Annual references in the repository catalog use the ten-month-for-twelve-month convention, but must not be advertised as a live self-serve annual checkout until provider-side Stripe configuration is verified.
+- Do not invent ad-hoc percentage discounts that conflict with the canonical catalog or a signed order form.
+- Taxes or VAT depend on customer and transaction facts and must not be represented as conclusively calculated until the applicable fiscal/contractual treatment is actually established.
 
 ## 8. Plans
 
@@ -200,7 +199,7 @@ Includes:
 - leadership review exports
 - 180-day activity history
 
-CTA: **Start Professional Trial**
+CTA: **Start Professional**
 
 ### Business — €399/month
 
@@ -219,7 +218,7 @@ Includes:
 
 CTA: **Book Business Demo**
 
-### Enterprise — custom
+### Enterprise — from €990/month, final price by contract
 
 For regulated teams, larger B2B vendors and companies with procurement/security review requirements.
 
@@ -236,22 +235,24 @@ Includes:
 
 CTA: **Talk to Sales**
 
-## 9. Trial, waitlist and demo motion
+## 9. Checkout, waitlist and demo motion
 
-### Trial
+### Self-serve checkout
 
-Use for Essential and Professional.
+Use for Essential and Professional when the canonical Stripe price binding is provider-verified.
 
-Trial copy:
+Checkout copy:
 
-**Start with your first AI inventory. Build a working evidence pack before your next customer or leadership review.**
+**Start with your first AI inventory and build a working governance record before your next customer or leadership review.**
 
-Trial rules:
+Current checkout rules:
 
-- 14-day trial recommended.
-- Require work email for Professional.
-- Ask for company country and primary AI use case during onboarding.
-- Do not block value behind enterprise demo.
+- no free trial is offered;
+- Essential and Professional are monthly self-serve motions;
+- require the appropriate account/workspace and billing authority before starting paid checkout;
+- ask for company country and primary AI use case during onboarding where implemented;
+- do not imply that signup itself grants a trial or paid entitlement;
+- access and entitlements remain controlled by the actual billing/subscription state.
 
 ### Waitlist
 
@@ -296,13 +297,17 @@ Generate policies, evidence packs and buyer review summaries without claiming le
 
 ### CTA row
 
-Primary: **Start Professional Trial**  
+Primary: **Start Professional**  
 Secondary: **Book a Demo**  
 Trust CTA: **Review Trust Center**
 
 ### Pricing disclaimer
 
 RISCK COMPLY supports operational AI governance readiness. It is not legal advice, does not replace legal counsel and does not guarantee regulatory compliance.
+
+### Trial disclosure
+
+**No free trial is currently offered.** Essential and Professional use self-serve monthly checkout. Business and Enterprise start with assisted sales or a demo.
 
 ## 11. Objections and responses
 
@@ -365,10 +370,10 @@ No. It gives lawyers, DPOs and business teams a structured operating record.
 Essential for first workspace, Professional for serious readiness, Business for multiple departments, Enterprise for procurement-led buyers.
 
 **Do you offer a trial?**  
-Professional trial is the default self-serve motion. Business and Enterprise should use demo/discovery.
+No free trial is currently offered. Essential and Professional use self-serve monthly checkout; Business and Enterprise use assisted sales/demo flows.
 
 **Do you sign a DPA?**  
-For Business and Enterprise, DPA review can be part of procurement subject to approved legal terms.
+DPA availability and execution remain subject to the approved final legal terms and the applicable customer procurement process. Do not promise an approved/final DPA before counsel acceptance.
 
 ## 13. Enterprise sales page copy
 
@@ -450,14 +455,14 @@ Show readiness score, gaps, open actions and executive summary.
 Show Trust Center, security questionnaire and procurement packet checklist.
 
 **27-30 min — Close**  
-“Based on what we saw, the first workflow should be [inventory / evidence pack / policy rollout / procurement review]. The next step is [trial / Business pilot / Enterprise procurement review].”
+“Based on what we saw, the first workflow should be [inventory / evidence pack / policy rollout / procurement review]. The next step is [Essential or Professional paid checkout / Business pilot / Enterprise procurement review].”
 
 ### Demo close questions
 
 - “Which AI workflow would create the fastest internal value?”
 - “Who owns AI governance today?”
 - “What would block procurement approval?”
-- “Do you need self-serve trial, Business pilot or Enterprise review?”
+- “Do you need self-serve paid onboarding, a Business pilot or an Enterprise review?”
 
 ## 16. Outbound email
 

@@ -4,7 +4,7 @@
 
 ## 1. Controller identity
 
-The controller for website, account, commercial, billing, support and security processing is **[FOUNDER FACT REQUIRED: legal entity, address, registration and contact details]**. DPO or EU representative details, if applicable, are **[FOUNDER FACT REQUIRED]**.
+The proposed controller for website, account, commercial, billing, support and security processing is **SAMUEL CERQUEIRA, UNIPESSOAL LDA**, operating the **RISCK COMPLY** brand and website **https://www.risckcomply.com**. The owner has supplied **Avenida de Roma 112-A, 1700-353 Lisboa, Portugal** as the current correspondence/operating address; **[FOUNDER FACT REQUIRED: confirm the current registered office/legal address from an authoritative Portuguese commercial-registry source before publication]**. The provider tax/company registration identifier remains **[FOUNDER FACT REQUIRED: resolve conflicting NIF/NIPC evidence before publication]**. The current verified reachable corporate/privacy intake channel is **comercial@risckcomply.com**. DPO or EU representative details, if applicable, are **[FOUNDER FACT REQUIRED]**.
 
 When customers upload personal data to their workspace, the customer generally acts as controller and the provider acts as processor under the DPA, subject to counsel-confirmed role allocation.
 
@@ -57,7 +57,7 @@ The service uses authentication, organisation scoping, role checks, RLS posture,
 
 ## 10. Rights and requests
 
-Subject to applicable law, individuals may have rights of access, correction, deletion, restriction, objection, portability and withdrawal of consent. Customer workspace requests may need to be directed to the customer as controller. Contact channels, verification, response ownership and statutory periods require founder and counsel confirmation.
+Subject to applicable law, individuals may have rights of access, correction, deletion, restriction, objection, portability and withdrawal of consent. Customer workspace requests may need to be directed to the customer as controller. Requests to RISCK COMPLY may currently be submitted to **comercial@risckcomply.com**. Identity verification, customer/controller routing, response ownership and statutory periods remain subject to the applicable request and counsel-approved procedure.
 
 ## 11. Cookies and analytics
 
@@ -73,7 +73,7 @@ The business service is not directed to children. Age threshold, prohibited cust
 
 ## 14. Complaints
 
-Individuals may contact **[FOUNDER FACT REQUIRED: privacy contact]** and may complain to the competent supervisory authority. The lead authority and cross-border establishment position require counsel confirmation.
+Individuals may contact **comercial@risckcomply.com** and may complain to the competent supervisory authority. The lead authority and cross-border establishment position require counsel confirmation.
 
 ## 15. Changes
 
@@ -81,4 +81,4 @@ Material changes should be dated and communicated appropriately. The publication
 
 ## Review conditions
 
-Counsel must approve controller/processor roles, legal bases, transfers, retention, rights handling, cookies/analytics, authority details and the relationship with the DPA before this draft is published as a final policy.
+Counsel must approve controller identity, registered office/legal address, controller/processor roles, legal bases, transfers, retention, rights handling, cookies/analytics, authority details and the relationship with the DPA before this draft is published as a final policy.

@@ -1,8 +1,8 @@
 {
   "schema": "risck-comply.article-function-evidence-registry.v1",
-  "version": "2026-07-30.1",
+  "version": "2026-09-09.1",
   "regulation": "Regulation (EU) 2024/1689, as amended by Regulation (EU) 2026/1744",
-  "lastVerifiedDate": "2026-07-30",
+  "lastVerifiedDate": "2026-09-09",
   "statusDefinitions": {
     "IMPLEMENTED_RUNTIME_PENDING": "Implementation and tests are versioned, but exact-SHA deployed runtime evidence is not yet accepted.",
     "IMPLEMENTED_EVIDENCE_REVALIDATION_REQUIRED": "Implementation and registered evidence exist, but the evidence must be revalidated for the assessed SHA.",
@@ -24,8 +24,8 @@
       "humanReviewEvidence": [],
       "status": "IMPLEMENTED_EVIDENCE_REVALIDATION_REQUIRED",
       "limitation": "The platform records literacy operations and evidence; it does not determine whether a customer's measures are legally sufficient for every context.",
-      "sourceVersion": "Regulation (EU) 2024/1689; legal-rules version 2026-07-30.1",
-      "lastVerifiedDate": "2026-07-30"
+      "sourceVersion": "Regulation (EU) 2024/1689; legal-rules version 2026-09-09.1",
+      "lastVerifiedDate": "2026-09-09"
     },
     {
       "article": "Article 5",
@@ -41,8 +41,8 @@
       "humanReviewEvidence": ["docs/compliance/evidence/accepted/prohibited-practices-legal-review.json"],
       "status": "HUMAN_REVIEW_REQUIRED",
       "limitation": "A workflow decision is not a legal determination; exceptions and contested facts require qualified review.",
-      "sourceVersion": "Regulation (EU) 2024/1689; legal-rules version 2026-07-30.1",
-      "lastVerifiedDate": "2026-07-30"
+      "sourceVersion": "Regulation (EU) 2024/1689; legal-rules version 2026-09-09.1",
+      "lastVerifiedDate": "2026-09-09"
     },
     {
       "article": "Article 5",
@@ -58,8 +58,8 @@
       "humanReviewEvidence": ["docs/compliance/evidence/accepted/legal-rules-qualified-review.json"],
       "status": "IMPLEMENTED_RUNTIME_PENDING",
       "limitation": "The repository placeholder is deliberately non-creditable until an exact deployed SHA produces a PASS artifact; factual purpose, safeguards, consent and 'without right' analysis remain human-review boundaries.",
-      "sourceVersion": "Regulation (EU) 2026/1744, Article 1(7) and amended Article 113; legal-rules version 2026-07-30.1",
-      "lastVerifiedDate": "2026-07-30"
+      "sourceVersion": "Regulation (EU) 2026/1744, Article 1(7) and amended Article 113; legal-rules version 2026-09-09.1",
+      "lastVerifiedDate": "2026-09-09"
     },
     {
       "article": "Articles 9 and 10",
@@ -75,8 +75,8 @@
       "humanReviewEvidence": ["docs/compliance/evidence/accepted/high-risk-provider-methodology-review.json"],
       "status": "HUMAN_REVIEW_REQUIRED",
       "limitation": "The deterministic workspace is evidence-preparation support and does not establish legal high-risk classification or dataset adequacy by itself.",
-      "sourceVersion": "Regulation (EU) 2024/1689 as amended by Regulation (EU) 2026/1744",
-      "lastVerifiedDate": "2026-07-30"
+      "sourceVersion": "Regulation (EU) 2024/1689 as amended by Regulation (EU) 2026/1744; legal-rules version 2026-09-09.1",
+      "lastVerifiedDate": "2026-09-09"
     },
     {
       "article": "Article 11 and Annex IV",
@@ -92,8 +92,8 @@
       "humanReviewEvidence": [],
       "status": "IMPLEMENTED_EVIDENCE_REVALIDATION_REQUIRED",
       "limitation": "Generated structure must be completed and reviewed against the actual system, intended purpose, changes and applicable standards.",
-      "sourceVersion": "Regulation (EU) 2024/1689, Article 11 and Annex IV",
-      "lastVerifiedDate": "2026-07-30"
+      "sourceVersion": "Regulation (EU) 2024/1689, Article 11 and Annex IV; legal-rules version 2026-09-09.1",
+      "lastVerifiedDate": "2026-09-09"
     },
     {
       "article": "Articles 12 to 15",
@@ -109,8 +109,8 @@
       "humanReviewEvidence": ["docs/compliance/evidence/accepted/deployer-obligations-legal-review.json"],
       "status": "HUMAN_REVIEW_REQUIRED",
       "limitation": "Technical evidence does not prove that real-world model performance or human oversight is adequate for a customer's deployment.",
-      "sourceVersion": "Regulation (EU) 2024/1689 as amended by Regulation (EU) 2026/1744",
-      "lastVerifiedDate": "2026-07-30"
+      "sourceVersion": "Regulation (EU) 2024/1689 as amended by Regulation (EU) 2026/1744; legal-rules version 2026-09-09.1",
+      "lastVerifiedDate": "2026-09-09"
     },
     {
       "article": "Article 17",
@@ -126,8 +126,8 @@
       "humanReviewEvidence": [],
       "status": "IMPLEMENTED_EVIDENCE_REVALIDATION_REQUIRED",
       "limitation": "The product organises QMS evidence; operational adoption and effectiveness require organisational execution and review.",
-      "sourceVersion": "Regulation (EU) 2024/1689, Article 17",
-      "lastVerifiedDate": "2026-07-30"
+      "sourceVersion": "Regulation (EU) 2024/1689, Article 17; legal-rules version 2026-09-09.1",
+      "lastVerifiedDate": "2026-09-09"
     },
     {
       "article": "Article 26",
@@ -143,8 +143,8 @@
       "humanReviewEvidence": ["docs/compliance/evidence/accepted/deployer-obligations-legal-review.json"],
       "status": "HUMAN_REVIEW_REQUIRED",
       "limitation": "Applicability and sufficiency depend on actual deployment facts, instructions, local law and organisational execution.",
-      "sourceVersion": "Regulation (EU) 2024/1689, Article 26, as amended",
-      "lastVerifiedDate": "2026-07-30"
+      "sourceVersion": "Regulation (EU) 2024/1689, Article 26, as amended; legal-rules version 2026-09-09.1",
+      "lastVerifiedDate": "2026-09-09"
     },
     {
       "article": "Article 27",
@@ -160,8 +160,8 @@
       "humanReviewEvidence": ["docs/compliance/evidence/accepted/fria-methodology-review.json"],
       "status": "HUMAN_REVIEW_REQUIRED",
       "limitation": "Rights impact, affected groups, residual impact and legal applicability require qualified review and stakeholder-specific facts.",
-      "sourceVersion": "Regulation (EU) 2024/1689, Article 27",
-      "lastVerifiedDate": "2026-07-30"
+      "sourceVersion": "Regulation (EU) 2024/1689, Article 27; legal-rules version 2026-09-09.1",
+      "lastVerifiedDate": "2026-09-09"
     },
     {
       "article": "Article 50",
@@ -177,8 +177,8 @@
       "humanReviewEvidence": ["docs/compliance/evidence/accepted/article-50-copy-review.json"],
       "status": "HUMAN_REVIEW_REQUIRED",
       "limitation": "The correct disclosure depends on role, content type, exceptions, technical feasibility and the actual user experience.",
-      "sourceVersion": "Regulation (EU) 2024/1689, Article 50, as amended by Regulation (EU) 2026/1744",
-      "lastVerifiedDate": "2026-07-30"
+      "sourceVersion": "Regulation (EU) 2024/1689, Article 50, as amended by Regulation (EU) 2026/1744; legal-rules version 2026-09-09.1",
+      "lastVerifiedDate": "2026-09-09"
     },
     {
       "article": "Article 111",
@@ -194,8 +194,8 @@
       "humanReviewEvidence": ["docs/compliance/evidence/accepted/legal-rules-qualified-review.json"],
       "status": "IMPLEMENTED_RUNTIME_PENDING",
       "limitation": "Qualification as a pre-existing provider system requires factual and legal confirmation; the exact-SHA runtime artifact is still pending.",
-      "sourceVersion": "Regulation (EU) 2026/1744, Article 1(39)(b)",
-      "lastVerifiedDate": "2026-07-30"
+      "sourceVersion": "Regulation (EU) 2026/1744, Article 1(39)(b); legal-rules version 2026-09-09.1",
+      "lastVerifiedDate": "2026-09-09"
     },
     {
       "article": "Articles 53 to 55",
@@ -211,8 +211,8 @@
       "humanReviewEvidence": ["docs/compliance/evidence/accepted/gpai-legal-review.json"],
       "status": "HUMAN_REVIEW_REQUIRED",
       "limitation": "The platform cannot establish GPAI role, systemic-risk designation, copyright compliance or model-level technical sufficiency without qualified evidence.",
-      "sourceVersion": "Regulation (EU) 2024/1689, Articles 53 to 55",
-      "lastVerifiedDate": "2026-07-30"
+      "sourceVersion": "Regulation (EU) 2024/1689, Articles 53 to 55; legal-rules version 2026-09-09.1",
+      "lastVerifiedDate": "2026-09-09"
     },
     {
       "article": "Article 112",
@@ -228,8 +228,8 @@
       "humanReviewEvidence": ["docs/compliance/evidence/accepted/legal-rules-qualified-review.json"],
       "status": "IMPLEMENTED_RUNTIME_PENDING",
       "limitation": "This is an internal product governance mapping. It does not purport to perform the institutional review assigned to EU bodies.",
-      "sourceVersion": "Regulation (EU) 2024/1689 as amended; legal-rules version 2026-07-30.1",
-      "lastVerifiedDate": "2026-07-30"
+      "sourceVersion": "Regulation (EU) 2024/1689 as amended; legal-rules version 2026-09-09.1",
+      "lastVerifiedDate": "2026-09-09"
     },
     {
       "article": "NOT_APPLICABLE",
@@ -245,8 +245,8 @@
       "humanReviewEvidence": [],
       "status": "NOT_APPLICABLE",
       "limitation": "These controls may support security, accountability and evidence quality, but this registry does not invent a direct legal obligation mapping for them.",
-      "sourceVersion": "Engineering control boundary 2026-07-30.1",
-      "lastVerifiedDate": "2026-07-30"
+      "sourceVersion": "Engineering control boundary 2026-09-09.1",
+      "lastVerifiedDate": "2026-09-09"
     }
   ]
 }
