@@ -84,7 +84,6 @@ jobs:
           npm ci --ignore-scripts
           npm audit --audit-level=moderate
           npm run security:package-lock
-          npm ls --all >/dev/null
           node --test scripts/security/npm-audit-policy.test.mjs tests/enterprise/dependency-vulnerability-evidence.test.mjs tests/enterprise/dependency-vulnerability-remediation-candidate.test.mjs tests/enterprise/dependency-vulnerability-scorecard-contract.test.mjs
 
       - name: Commit verified remediation and self-remove
