@@ -1,0 +1,29 @@
+{
+  "schema": "risck-comply.billing-paid-ga-gates.v1",
+  "assessed_at": "2026-09-09",
+  "public_paid_ga": "FAIL_CLOSED",
+  "gates": {
+    "STRIPE_LIVE_CATALOG": "PASS",
+    "STRIPE_PRODUCTION_BINDING": "BLOCKED_EXACT_SHA_PRODUCTION_STALE",
+    "VAT_SELLER_PROFILE": "BLOCKED_OWNER_LEGAL_FACTS",
+    "VAT_TAX_CONFIGURATION": "BLOCKED_REGISTRATION_AND_TAX_CODE",
+    "CHECKOUT_TAX_BEHAVIOR": "IMPLEMENTED_MAIN_NOT_PRODUCTION",
+    "LIVE_CHECKOUT": "BLOCKED_NO_LEGITIMATE_LIVE_TRANSACTION",
+    "LIVE_SUBSCRIPTION": "BLOCKED_NO_LEGITIMATE_LIVE_TRANSACTION",
+    "LIVE_WEBHOOK": "CONTROL_PLANE_PASS_RUNTIME_BLOCKED",
+    "PAID_ENTITLEMENT_ACTIVATION": "IMPLEMENTATION_PASS_RUNTIME_BLOCKED",
+    "PLAN_ISOLATION": "IMPLEMENTATION_PASS_RUNTIME_BLOCKED",
+    "UPGRADE": "IMPLEMENTATION_PASS_RUNTIME_BLOCKED",
+    "DOWNGRADE": "IMPLEMENTATION_PASS_RUNTIME_BLOCKED",
+    "CANCELLATION": "IMPLEMENTATION_PASS_RUNTIME_BLOCKED",
+    "PAYMENT_FAILURE_FAIL_CLOSED": "IMPLEMENTATION_PASS_RUNTIME_BLOCKED",
+    "PUBLIC_PAID_GA": "FAIL_CLOSED"
+  },
+  "live_authoritative_active_subscriptions": 0,
+  "notes": [
+    "Do not count seeded or status-only subscription rows as paid authority.",
+    "Do not fabricate LIVE payments or tax registrations.",
+    "Business is sales-assisted; Enterprise is negotiated.",
+    "Public initial self-serve Checkout must remain fail-closed until release gates are explicitly closed."
+  ]
+}
