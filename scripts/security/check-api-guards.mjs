@@ -10,7 +10,7 @@ const guards = {
   rbac: ['assertOrganizationPermission', 'requirePermission', 'requireEnterpriseApiAccess'],
   plan: ['assertPlanAtLeast', 'assertGdprSelfServiceEnabled'],
   rateLimit: ['checkDistributedRateLimit', 'checkRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'requireRateLimit', 'requireEnterpriseRateLimit', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
-  audit: ['createAuditEvent', 'writeAuditLog'],
+  audit: ['createAuditEvent', 'writeAuditLog', 'updateDataSubjectRequestWithAuditAtomic'],
   integrity: ['buildEvidencePackIntegrity'],
   noStore: ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'Cache-Control', 'no-store', 'secureApiError', 'secureApiJson'],
   origin: ['assertTrustedOrigin', 'verifyTrustedOrigin', 'requireTrustedOriginForMutation', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
