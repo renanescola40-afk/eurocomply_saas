@@ -15,8 +15,8 @@ grant select on table public.permissions to authenticated;
 grant select on table public.role_permissions to authenticated;
 
 -- Keep one explicit authenticated-only catalog policy per table. The identity
--- predicate is fail-closed if the JWT/auth context is missing and avoids broad
--- USING (true) policies that are prohibited by the repository RLS gate.
+-- predicate is fail-closed if the JWT/auth context is missing and does not
+-- grant unconditional row access.
 DROP POLICY IF EXISTS permissions_authenticated_read ON public.permissions;
 DROP POLICY IF EXISTS permissions_select_authenticated ON public.permissions;
 CREATE POLICY permissions_authenticated_read
