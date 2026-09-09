@@ -59,8 +59,9 @@ describe('operational production proof environment governance', () => {
   it('fails closed before data-governance operational attestations are loaded', () => {
     expectOperationalProofBoundary(dataGovernance, 'data-governance-environment-governance', 'production-data-governance-proof', 'governance-proof', 'Execute governance proof');
     expect(dataGovernance).toContain('DATA_RESIDENCY_REGION: ${{ vars.DATA_RESIDENCY_REGION }}');
-    expect(dataGovernance).toContain('DATA_RETENTION_DEFAULT_DAYS: ${{ vars.DATA_RETENTION_DEFAULT_DAYS }}');
-    expect(dataGovernance).toContain('DATA_EXPORT_ENCRYPTION_REQUIRED: ${{ vars.DATA_EXPORT_ENCRYPTION_REQUIRED }}');
+    expect(dataGovernance).toContain('DATA_RETENTION_POLICY_MODE: category_specific');
+    expect(dataGovernance).toContain("DATA_EXPORT_ENCRYPTION_REQUIRED: 'true'");
+    expect(dataGovernance).not.toContain('DATA_RETENTION_DEFAULT_DAYS');
   });
 
   it('fails closed before incident-response operational attestations are loaded', () => {
