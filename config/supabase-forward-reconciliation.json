@@ -4,8 +4,12 @@
   "sourceChangeSet": "2026-09-09-supabase-advisor-rpc-hardening-v41",
   "migrations": [
     {
+      "filename": "20260909142500_reconcile_data_governance_enterprise_foundation.sql",
+      "purpose": "forward-only reconciliation of the three canonical data-governance relations omitted from the Production ledger by the historical 20260720190000 migration, created directly under FORCE RLS and server-only mutation authority without migration-history repair"
+    },
+    {
       "filename": "20260909143000_harden_data_subject_request_lifecycle.sql",
-      "purpose": "evolve the existing canonical data_subject_requests lifecycle above the verified V41 Production ledger head: replace fixed 30-day default authority with explicit calendar-month server tracking, add identity/role/extension/decision/evidence fields, extend Chapter III request types, force RLS, and remove direct browser mutation authority without creating a competing DSAR table"
+      "purpose": "evolve the reconciled canonical data_subject_requests lifecycle above the verified V41 Production ledger head: replace fixed 30-day default authority with explicit calendar-month server tracking, add identity/role/extension/decision/evidence fields, extend Chapter III request types, force RLS, and remove direct browser mutation authority without creating a competing DSAR table"
     }
   ],
   "historicalBaselines": {
