@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
   const requestContext = buildAuditRequestContextFromRequest(request);
   const rateLimit = await checkDistributedRateLimit({
-    policy: 'gdpr-rights-request',
+    policy: 'gdpr-delete',
     userId: user.id,
     organizationId: organization.id,
     ip: getClientIpFromRequest(request),
@@ -161,6 +161,7 @@ export async function GET(request: NextRequest) {
   if (!permission.ok) return permissionDeniedResponse(permission);
 
   const rateLimit = await checkDistributedRateLimit({
+    category: 'gdpr',
     key: `gdpr:rights:list:${organization.id}:${user.id}`,
     limit: 30,
     windowMs: 60_000,
