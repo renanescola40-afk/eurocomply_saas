@@ -26,9 +26,9 @@ function jsonDownloadResponse(payload: unknown, filename: string) {
 }
 
 function getRetentionExportStatus(readinessScore: number) {
-  if (readinessScore >= 90) return 'enterprise_ready';
-  if (readinessScore >= 70) return 'operational';
-  return 'foundation';
+  if (readinessScore >= 100) return 'approved_and_enforcement_proven';
+  if (readinessScore > 0) return 'partial_approval';
+  return 'draft_review_required';
 }
 
 export async function GET(request: Request) {
@@ -87,8 +87,10 @@ export async function GET(request: Request) {
     const summary = getRetentionSummary();
     const status = getRetentionExportStatus(summary.readinessScore);
     const payload = {
-      schemaVersion: '2026-06-10',
-      exportType: 'eurocomply.retention_policy',
+      schemaVersion: '2026-09-09',
+      exportType: 'risckcomply.retention_policy_review',
+      legalStatus: 'draft_review_required',
+      legalBoundary: 'Proposed retention targets are review inputs only. They are not final contractual commitments and do not prove automated deletion, provider expiry or qualified legal approval.',
       generatedAt: new Date().toISOString(),
       generatedBy: {
         userId: user.id,
@@ -109,8 +111,8 @@ export async function GET(request: Request) {
     };
     const integrity = buildEvidencePackIntegrity(payload);
     const exportPayload = {
-      schemaVersion: '2026-06-10',
-      exportType: 'eurocomply.retention_policy_export',
+      schemaVersion: '2026-09-09',
+      exportType: 'risckcomply.retention_policy_review_export',
       payload,
       integrity,
     };
@@ -141,7 +143,7 @@ export async function GET(request: Request) {
 
     const date = new Date().toISOString().slice(0, 10);
     const filename = sanitizeDocumentDownloadFileName(
-      `eurocomply-retention-policy-${organization.slug ?? organization.name ?? organization.id}-${date}.json`,
+      `risckcomply-retention-policy-review-${organization.slug ?? organization.name ?? organization.id}-${date}.json`,
     );
 
     return jsonDownloadResponse(exportPayload, filename);
