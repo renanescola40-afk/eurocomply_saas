@@ -1,7 +1,7 @@
 # RISCK COMPLY — Legal + GDPR + EU AI Act Regulatory Closure Status
 
 Date: 2026-09-09  
-Mode: `FINAL_LEGAL_REGULATORY_ASSURANCE_CLOSURE_V2`
+Mode: `FINAL_LEGAL_REGULATORY_ASSURANCE_CLOSURE_V3`
 
 ## Terminal truth
 
@@ -9,7 +9,6 @@ Mode: `FINAL_LEGAL_REGULATORY_ASSURANCE_CLOSURE_V2`
 AI_IMPLEMENTATION=100_PERCENT_ON_CANONICAL_MAIN
 AI_ACT_QUALIFIED_COMPLETION=0/8_ACCEPTED
 QUALIFIED_REVIEW_STAGE_REMAINING=100_PERCENT
-QUALIFIED_REVIEW_WEIGHT_REMAINING=51/100
 LEGAL_RULES_REVIEW=PENDING_EXTERNAL_REVIEW
 ARTICLE_5_REVIEW=PENDING_EXTERNAL_REVIEW
 ARTICLE_50_REVIEW=PENDING_EXTERNAL_REVIEW
@@ -18,52 +17,94 @@ DEPLOYER_OBLIGATIONS_REVIEW=PENDING_EXTERNAL_REVIEW
 HIGH_RISK_PROVIDER_REVIEW=PENDING_EXTERNAL_REVIEW
 CONFORMITY_REVIEW=PENDING_EXTERNAL_REVIEW
 GPAI_REVIEW=PENDING_EXTERNAL_REVIEW
+PR_2008=MERGED
+CANONICAL_MAIN_SHA=0cda9253985170a5f56821023a77c81cdc54037a
+PR_2011=OPEN_V3_VALIDATION
+V3_HEAD_SHA=cb7364dd6df7fb7a1db68a1d0ed82f60cdff7084
+CANONICAL_MAIN_INTERNAL_CLOSURE_PERCENT=75
+V3_WORKING_INTERNAL_CLOSURE_PERCENT=77
+V3_WORKING_INTERNAL_REMAINING_PERCENT=23
+TOTAL_LEGAL_ASSURANCE_CLOSURE_PERCENT=49
+TOTAL_LEGAL_ASSURANCE_REMAINING_PERCENT=51
 TERMS_FINAL=BLOCKED_COUNSEL_AND_FOUNDER_FACTS
-PRIVACY_FINAL=BLOCKED_FOUNDER_FACTS_AND_LEGAL_BASIS_DECISIONS
+PRIVACY_FINAL=BLOCKED_FOUNDER_PROVIDER_PUBLICATION_AND_LEGAL_BASIS_DECISIONS
 DPA_FINAL=BLOCKED_FOUNDER_PROVIDER_AND_CONTRACT_DECISIONS
 SUBPROCESSORS_FINAL=BLOCKED_PROVIDER_CONTRACT_AND_TRANSFER_FACTS
-PR_2005=MERGED
-CANONICAL_PRODUCT_SHA=a576db333aa2b1dacbbf0460dfa77f41391c570d
-ENTERPRISE_PRODUCTION_GATE_RUN=34346125823
-ENTERPRISE_PRODUCTION_GATE_RUN_NUMBER=7628
-EXACT_SHA_RUNTIME=WAITING_PRODUCTION_ENVIRONMENT_APPROVAL
-EXACT_SHA_RUNTIME_CREDIT=NOT_YET_AVAILABLE
-QUALIFIED_PACKAGE_FREEZE=PENDING_RUNTIME_AND_V2_DOCUMENT_RECONCILIATION
 LEGAL_FINAL=BLOCKED
 ENTERPRISE_100=NO
 ```
 
 No software check, AI-generated opinion, CI result, internal self-review or synthetic signature can change a qualified external workstream to `PASS`.
 
-## What changed in V2
+## Canonical state after V2
 
-PR #2005 is no longer an open gate. It was merged on 2026-09-09 and produced canonical `main` SHA:
+PR #2008 merged on 2026-09-09 at 12:41:11 UTC. Canonical `main` is:
 
-`a576db333aa2b1dacbbf0460dfa77f41391c570d`
+`0cda9253985170a5f56821023a77c81cdc54037a`
 
-The protected merge gate is therefore closed. The next technical gate is the existing exact-SHA Enterprise Production Gate run `#7628` / run id `34346125823`, whose head SHA is the canonical product SHA. At this reconciliation point the run is waiting at the protected `Production` environment before `Production runtime validation` can execute. Runtime credit remains fail-closed until that job actually succeeds and retained evidence is verified.
+This supersedes the older closure-status SHA and makes the V2 GDPR/AI Act matrices canonical repository evidence.
 
-## Product-coverage interpretation
+## V3 work in PR #2011
 
-The canonical coverage model keeps two different dimensions separate:
+V3 continues only repository/official-source work that can be truthfully closed without pretending external approval exists.
 
-- engineering/CI/runtime evidence that can be closed through implementation and operations;
-- genuine qualified external review that cannot be self-issued.
+### Portuguese fiscal/accounting retention
 
-The eight qualified AI Act review tracks have total weight **51/100** and remain **0/8 accepted**. Their packages may be prepared internally, but preparation is not human acceptance.
+The current Portuguese Tax Authority sources now close the period for the categories actually covered by the statutory archive:
 
-## Official-source baseline
+```text
+PORTUGUESE_FISCAL_ACCOUNTING_RETENTION=PASS_10_YEARS
+```
 
-The AI Act legal-source baseline remains `2026-09-09.1`. GDPR source mapping is now being expanded under V2 using the binding GDPR text first, including Articles 13/14 for transparency and Article 28 for controller/processor contracting.
+- CIVA Article 52: 10 subsequent civil years for covered VAT records/supporting documents, with its specific counting rules where applicable.
+- CIRC Article 123(4): 10 years for accounting books/records and supporting documents.
 
-For Article 28 drafting, Commission Implementing Decision (EU) 2021/915 is the official controller/processor SCC baseline where appropriate. It must not be confused with the separate international-transfer SCC framework.
+This does not create a blanket 10-year period for account profiles, customer workspace content, support tickets, analytics or operational/security logs.
+
+### Article 13(2)(e)
+
+Current auth, onboarding and Stripe Checkout implementation has been mapped field-by-field in `DATA_PROVISION_REQUIREMENT_MATRIX.md`.
+
+```text
+ARTICLE13_2E_FACT_INVENTORY=PASS
+MANDATORY_OPTIONAL_DISTINCTION=PASS
+CONSEQUENCE_OF_NON_PROVISION=PASS_FACTUAL_MAPPING
+PUBLIC_ART13_2E_DISCLOSURE=PENDING_PRIVACY_RECONCILIATION
+```
+
+Product-required, contractual/checkout-required, optional and conditional information remain explicitly distinct from statutory obligations.
+
+### Article 14 indirect collection
+
+`ARTICLE14_INDIRECT_COLLECTION_REGISTER.md` now maps known controller/processor/mixed scenarios and the Article 14(3) timing states:
+
+```text
+NOTICE_BEFORE_OR_AT_FIRST_COMMUNICATION
+NOTICE_WITHIN_ONE_MONTH
+NOTICE_BEFORE_FIRST_DISCLOSURE
+ARTICLE14_5_EXCEPTION_DOCUMENTED
+NOT_APPLICABLE_PROCESSOR_ONLY
+BLOCKED_ROLE_OR_FACTS
+```
+
+No blanket Article 14(5) exception is approved.
+
+The clearest runtime case — teammate invitation email provided by an organisation administrator — is implemented in V3 so the first invitation communication states the source, invitation purpose, consequence of non-acceptance and a locale Privacy link. The canonical email sender already supports delivery evidence with status/provider/idempotency/sent timestamp.
+
+```text
+ARTICLE14_INVITATION_FIRST_COMMUNICATION_PATH=PASS_IMPLEMENTED_PRE_MERGE
+ARTICLE14_INVITATION_DELIVERY_EVIDENCE_MODEL=PASS_IMPLEMENTED
+ARTICLE14_RUNTIME_DELIVERY=PARTIAL
+```
+
+Full Article 14 remains partial because the linked public Privacy content is not yet a complete final Articles 13/14 notice and other controller-side indirect flows still require binding evidence.
 
 ## Founder/company identity — fail closed
 
-Current usable review facts:
+Current usable review facts remain:
 
 - brand/product: `RISCK COMPLY`;
-- contracting entity name: `SAMUEL CERQUEIRA, UNIPESSOAL LDA` (owner-supplied, suitable for review drafts pending authoritative verification where legally material);
+- review-draft contracting entity: `SAMUEL CERQUEIRA, UNIPESSOAL LDA`;
 - website: `https://www.risckcomply.com`;
 - verified reachable corporate intake mailbox: `comercial@risckcomply.com`;
 - owner-supplied correspondence/operating address: `Avenida de Roma 112-A, 1700-353 Lisboa, Portugal`.
@@ -75,80 +116,70 @@ REGISTERED_OFFICE=BLOCKED_OFFICIAL_REGISTRY_CONFIRMATION
 NIF_NIPC=BLOCKED_AUTHORITATIVE_CONFIRMATION_DUE_TO_CONFLICT
 ```
 
-The owner-supplied Lisbon address must not be represented as the registered office until authoritative Portuguese registry evidence confirms it. No NIF/NIPC is selected by inference.
+No NIF/NIPC or registered office is selected by inference.
 
 ## Privacy truth boundary
 
-The public `/privacy` route currently exposes a concise Trust Center summary. It is not, by itself, a complete GDPR Articles 13/14 information notice.
+The public `/[locale]/privacy` route remains a concise Trust Center summary and is not, by itself, a complete GDPR Articles 13/14 information notice.
 
-The internal Privacy Policy review draft contains substantially more material, but final publication remains blocked by factual and decision gaps including legal bases, registered-office/NIF facts, transfer mechanisms/locations, retention periods, DPO position where applicable and authority/cross-border details.
+V3 materially improves the internal mapping, including:
 
-V2 therefore tracks a requirement-by-requirement `PRIVACY_ART13_14_MATRIX.md`. A missing fact remains `BLOCKED`; a matter requiring qualified legal interpretation remains `PENDING_EXTERNAL_REVIEW`; an implemented and evidenced requirement may be `PASS` without inventing counsel approval.
+- Article 13(2)(e) mandatory/optional/consequence facts;
+- Portuguese fiscal/accounting retention period where genuinely applicable;
+- Article 14 source/timing/exception workflow;
+- first-communication disclosure in teammate invitations.
 
-## DPA truth boundary
+The remaining Privacy blockers are primarily legal-entity facts, final legal-basis/LIA decisions, provider recipients/transfers, non-fiscal retention/provider cycles, DPO/DPIA facts where applicable, rights-workflow issue #2009 and final public notice reconciliation.
 
-The internal DPA review draft covers the principal Article 28 subject areas, including processing instructions, confidentiality, security, subprocessors, data-subject assistance, DPIA/prior-consultation assistance, breach handling, deletion/return, audit/information rights and annexes.
+## DPA/provider truth boundary
 
-It is not final. Open gates include authoritative entity facts, subprocessor authorisation model and notice/objection mechanics, actual transfer locations/mechanisms, customer-specific Annex 1 details, breach service levels, deletion/export windows, audit limits and liability allocation.
+The DPA remains a strong review draft but not final. Open gates include authoritative entity facts, subprocessor authorisation/notice mechanics, actual provider account terms, transfer mechanisms, customer-specific annex details, deletion/export windows and final contractual allocation.
 
-V2 tracks these independently in `DPA_ARTICLE_28_CONTROL_MATRIX.md` rather than treating the existence of the draft as `PASS`.
+Provider region or account existence is not treated as proof of a Chapter V mechanism.
 
-## Retention truth
+## Data-subject rights
 
-Current retention truth remains:
+Export and delete-request intake remain strong, but full Chapter III operations are still partial.
 
 ```text
-RETENTION_TARGETS=DRAFT
-RETENTION_ENFORCEMENT=NOT_PROVEN
-RETENTION_ENTERPRISE_READY=0/8_CATEGORIES
-RETENTION_READINESS=0_PERCENT
+DATA_SUBJECT_RIGHTS=PARTIAL
+CANONICAL_RIGHTS_REQUEST_REGISTER=OPEN_ISSUE_2009
+DEADLINE_TRACKING=BLOCKED_RUNTIME
+RESTRICTION=NOT_TESTED_RUNTIME
+OBJECTION=NOT_TESTED_RUNTIME
 ```
 
-Static target periods are not contractual commitments and cannot be promoted until attributable business/legal decisions and implementation/provider evidence exist.
-
-## Provider/subprocessor truth
-
-Public Trust Center provider entries currently include Vercel, Supabase, Stripe and optional/configuration-dependent Sentry/PostHog entries. Presence in code or a generic public list is not sufficient to prove active production processing, exact region, transfer mechanism or DPA/SCC status.
-
-The subprocessor register must be reconciled against actual Production configuration and provider contractual evidence before `SUBPROCESSORS=PASS` or `INTERNATIONAL_TRANSFERS=PASS` can be claimed.
+Issue #2009 remains the primary repository-controlled GDPR rights big rock.
 
 ## Qualified review model
 
-Eight canonical review-package tracks remain prepared for qualified review:
+Eight canonical AI Act review tracks remain prepared but not accepted:
 
-| Workstream | Weight | Package preparation | Human acceptance |
-|---|---:|---|---|
-| LEGAL_RULES | 4 | READY | PENDING_EXTERNAL_REVIEW |
-| ARTICLE_5 | 7 | READY | PENDING_EXTERNAL_REVIEW |
-| ARTICLE_50 | 8 | READY | PENDING_EXTERNAL_REVIEW |
-| FRIA | 6 | READY | PENDING_EXTERNAL_REVIEW |
-| DEPLOYER_OBLIGATIONS | 7 | READY | PENDING_EXTERNAL_REVIEW |
-| HIGH_RISK_PROVIDER | 9 | READY | PENDING_EXTERNAL_REVIEW |
-| CONFORMITY | 5 | READY | PENDING_EXTERNAL_REVIEW |
-| GPAI | 5 | READY | PENDING_EXTERNAL_REVIEW |
+| Workstream | Human acceptance |
+|---|---|
+| LEGAL_RULES | PENDING_EXTERNAL_REVIEW |
+| ARTICLE_5 | PENDING_EXTERNAL_REVIEW |
+| ARTICLE_50 | PENDING_EXTERNAL_REVIEW |
+| FRIA | PENDING_EXTERNAL_REVIEW |
+| DEPLOYER_OBLIGATIONS | PENDING_EXTERNAL_REVIEW |
+| HIGH_RISK_PROVIDER | PENDING_EXTERNAL_REVIEW |
+| CONFORMITY | PENDING_EXTERNAL_REVIEW |
+| GPAI | PENDING_EXTERNAL_REVIEW |
 
-A workstream closes only with attributable evidence of reviewer identity, qualification/expertise, scope, independence/conflict position, reviewed version/SHA where relevant, date, findings, severity/remediation, limitations and final disposition.
-
-## Counsel escalation boundary
-
-Counsel is not a blanket prerequisite for every GDPR or AI Act documentation control. V2 escalates to counsel where material legal interpretation, Portuguese commercial/corporate law, contractual liability, governing-law/forum choices, disputed interpretation, IP/chain-of-title, regulator/customer-required counsel signoff or unresolved material exposure actually requires legal judgment.
-
-Qualified privacy/DPO, AI governance, fundamental-rights, conformity or other domain specialists may independently review subject matter appropriate to their qualifications. Their review must not be misrepresented as a commercial-law opinion.
+A workstream closes only with attributable reviewer identity, qualification/expertise, scope, independence/conflict position, reviewed version/SHA where relevant, date, findings, limitations and disposition.
 
 ## Current critical path
 
-1. approve the protected `Production` environment for Enterprise Production Gate run #7628;
-2. execute and verify exact-SHA Production runtime validation for `a576db333aa2b1dacbbf0460dfa77f41391c570d`;
-3. verify retained runtime evidence and Vercel exact-SHA deployment proof;
-4. complete V2 GDPR control matrices and data-role mapping;
-5. confirm registered office/legal address and NIF/NIPC from an authoritative source;
-6. reconcile active production subprocessors, regions, DPAs and transfer mechanisms;
-7. make the minimum owner/commercial decisions for retention, cancellation/refund, notice, export/deletion and related contractual mechanics;
-8. freeze the final evidence-package digests after the relevant documentation and runtime state are canonical;
-9. appoint appropriately qualified independent reviewers for the genuinely external workstreams;
-10. remediate findings and obtain re-review where required;
-11. obtain counsel approval only for the matters that actually require counsel;
-12. only then promote `LEGAL_FINAL` / qualified Enterprise legal gates to `PASS`.
+1. finish CI for PR #2011 and correct any real failures;
+2. merge V3 only through the protected repository process when required checks/authorization conditions are satisfied;
+3. implement issue #2009 canonical rights-request/deadline workflow;
+4. reconcile active Production providers, account terms, DPAs, regions/access and transfer mechanisms;
+5. complete controller-side LIAs where Art. 6(1)(f) is retained as candidate basis;
+6. close remaining non-fiscal retention criteria and provider backup/log facts;
+7. obtain authoritative Portuguese registry evidence for registered office and NIF/NIPC;
+8. reconcile the final public Privacy notice only after factual/legal inputs are approved;
+9. complete the 8 genuinely external qualified review tracks;
+10. only then promote `LEGAL_FINAL` / `ENTERPRISE_100` to PASS.
 
 ## External communication boundary
 
@@ -156,4 +187,4 @@ Qualified privacy/DPO, AI governance, fundamental-rights, conformity or other do
 EMAIL_SEND_AUTHORIZED=false
 ```
 
-No Service Desk submission, reviewer outreach, DPO contact, specialist outreach, lawyer contact or meeting booking is sent without explicit owner authorization.
+No reviewer/lawyer/regulator outreach is sent by this lane without explicit owner authorization.
