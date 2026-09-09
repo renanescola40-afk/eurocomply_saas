@@ -6,7 +6,7 @@ This DPA is prepared for Article 28 GDPR review. It does not apply until incorpo
 
 ## 1. Parties and scope
 
-Customer is controller or processor, as applicable, for customer personal data. **SAMUEL CERQUEIRA, UNIPESSOAL LDA**, operating the **RISCK COMPLY** brand from **Avenida de Roma 112-A, 1700-353 Lisboa, Portugal**, acts as processor or subprocessor when processing customer personal data to provide the service. The provider tax/company registration identifier remains **[FOUNDER FACT REQUIRED: resolve conflicting NIF/NIPC evidence before signature]**.
+Customer is controller or processor, as applicable, for customer personal data. The proposed processor/subprocessor is **SAMUEL CERQUEIRA, UNIPESSOAL LDA**, operating the **RISCK COMPLY** brand. The owner has supplied **Avenida de Roma 112-A, 1700-353 Lisboa, Portugal** as the current correspondence/operating address; **[FOUNDER FACT REQUIRED: confirm the current registered office/legal address from an authoritative Portuguese commercial-registry source before signature]**. The provider tax/company registration identifier remains **[FOUNDER FACT REQUIRED: resolve conflicting NIF/NIPC evidence from an authoritative source before signature]**.
 
 This DPA applies only to customer personal data processed on documented instructions through the contracted service.
 
@@ -94,4 +94,4 @@ Incorporate the completed production subprocessor register, including legal enti
 
 ## Review conditions
 
-Counsel must approve role allocation, authorisation model, transfers, assistance, breach notification, deletion, audits, liability and SCC/UK terms. Founder facts and active provider contracts must be completed before signature.
+Counsel must approve legal-entity identity, registered office/legal address, role allocation, authorisation model, transfers, assistance, breach notification, deletion, audits, liability and SCC/UK terms. Founder facts and active provider contracts must be completed before signature.
