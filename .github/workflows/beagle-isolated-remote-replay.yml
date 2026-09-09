@@ -1,9 +1,9 @@
 name: Beagle Isolated Remote Replay
 
 on:
-  push:
+  pull_request:
     branches:
-      - pentest/beagle-remote-replay-20260909
+      - main
     paths:
       - '.github/workflows/beagle-isolated-remote-replay.yml'
       - 'scripts/security/apply-beagle-reviewed-replay.mjs'
@@ -12,19 +12,85 @@ on:
       - 'supabase/migrations/**'
       - 'docs/security/evidence/human-review/**'
       - 'docs/security/decisions/**'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: beagle-isolated-remote-replay
-  cancel-in-progress: false
+  group: beagle-isolated-remote-replay-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  validate:
+    name: Validate reviewed Beagle replay without provider credentials
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      BEAGLE_TARGET_PROJECT_REF: vfqxmiaaagqpbwrrroww
+      EXPECTED_BEAGLE_PROJECT_REF: vfqxmiaaagqpbwrrroww
+      PRODUCTION_PROJECT_REF: tganhbbhfxcpblmgqprg
+
+    steps:
+      - name: Checkout exact proposed SHA without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact SHA and isolated target boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+          test "$BEAGLE_TARGET_PROJECT_REF" = "$EXPECTED_BEAGLE_PROJECT_REF"
+          test "$BEAGLE_TARGET_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          test "$PRODUCTION_PROJECT_REF" = 'tganhbbhfxcpblmgqprg'
+          test "$BEAGLE_TARGET_PROJECT_REF" = 'vfqxmiaaagqpbwrrroww'
+
+      - name: Bind runner-local validation paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH=$RUNNER_TEMP/beagle-reviewed-replay-bundle.sql"
+            echo "RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH=$RUNNER_TEMP/beagle-reviewed-replay-manifest.json"
+          } >> "$GITHUB_ENV"
+
+      - name: Generate exact-SHA reviewed schema-only bundle locally
+        run: node scripts/security/generate-beagle-reviewed-replay-bundle.mjs
+
+      - name: Revalidate artifact digest and safety boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH"
+          test -s "$RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const m = JSON.parse(fs.readFileSync(process.env.RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH, 'utf8'));
+          const b = fs.readFileSync(process.env.RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH);
+          const d = crypto.createHash('sha256').update(b).digest('hex');
+          if (m.subjectSha !== process.env.EXPECTED_HEAD_SHA) throw new Error('exact SHA mismatch');
+          if (m.bundleSha256 !== d) throw new Error('bundle digest mismatch');
+          if (m.containsSeedData !== false || m.containsProductionRows !== false) throw new Error('data boundary not closed');
+          if (m.productionWriteAuthorized !== false) throw new Error('production write boundary not closed');
+          if (m.intendedTarget !== 'isolated-beagle-pentest-supabase-only') throw new Error('target boundary invalid');
+          if (m.canonicalMigrationHistory !== false) throw new Error('canonical history boundary invalid');
+          if (process.env.BEAGLE_TARGET_PROJECT_REF === process.env.PRODUCTION_PROJECT_REF) throw new Error('Production target forbidden');
+          NODE
+
   replay:
-    name: Replay reviewed schema into isolated Beagle target
+    name: Replay approved main SHA into isolated Beagle target
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.ref_protected
     runs-on: ubuntu-24.04
     timeout-minutes: 55
+    environment:
+      name: beagle-pentest
     env:
       EXPECTED_HEAD_SHA: ${{ github.sha }}
       BEAGLE_TARGET_PROJECT_REF: vfqxmiaaagqpbwrrroww
@@ -32,16 +98,17 @@ jobs:
       PRODUCTION_PROJECT_REF: tganhbbhfxcpblmgqprg
 
     steps:
-      - name: Checkout exact assessed SHA without credentials
+      - name: Checkout exact protected main SHA without credentials
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ env.EXPECTED_HEAD_SHA }}
           persist-credentials: false
 
-      - name: Verify exact assessed SHA and isolated target before secrets
+      - name: Verify protected reviewed ref before any provider credential
         shell: bash
         run: |
           set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
           [[ "$EXPECTED_HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
           test "$BEAGLE_TARGET_PROJECT_REF" = "$EXPECTED_BEAGLE_PROJECT_REF"
@@ -86,6 +153,8 @@ jobs:
           if (m.bundleSha256 !== d) throw new Error('bundle digest mismatch');
           if (m.containsSeedData !== false || m.containsProductionRows !== false) throw new Error('data boundary not closed');
           if (m.productionWriteAuthorized !== false) throw new Error('production write boundary not closed');
+          if (m.intendedTarget !== 'isolated-beagle-pentest-supabase-only') throw new Error('target boundary invalid');
+          if (m.canonicalMigrationHistory !== false) throw new Error('canonical history boundary invalid');
           if (process.env.BEAGLE_TARGET_PROJECT_REF !== 'vfqxmiaaagqpbwrrroww') throw new Error('unexpected Beagle target');
           if (process.env.PRODUCTION_PROJECT_REF !== 'tganhbbhfxcpblmgqprg') throw new Error('unexpected Production ref');
           if (process.env.BEAGLE_TARGET_PROJECT_REF === process.env.PRODUCTION_PROJECT_REF) throw new Error('Production target forbidden');
@@ -93,7 +162,7 @@ jobs:
 
       - name: Apply reviewed bundle only to isolated Beagle Supabase and prove postconditions
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.BEAGLE_SUPABASE_ACCESS_TOKEN }}
         run: node scripts/security/apply-beagle-reviewed-replay.mjs
 
       - name: Upload bounded remote replay evidence
