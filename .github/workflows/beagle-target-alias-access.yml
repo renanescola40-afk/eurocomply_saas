@@ -19,7 +19,7 @@ jobs:
     name: Create exact-target Vercel alias protection override
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    environment: preview
+    environment: production
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       TARGET_DEPLOYMENT_ID: dpl_e48et8JLtkv78GGRJ8a3AxG9roCX
