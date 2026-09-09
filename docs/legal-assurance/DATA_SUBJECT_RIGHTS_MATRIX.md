@@ -13,7 +13,7 @@ Baseline: GDPR Chapter III. A written policy is not sufficient; each right is ma
 | Erasure | Existing destructive delete-request intake is bound to the same canonical request record before success; lifecycle supports decision/evidence/completion | PASS_INTAKE_SOURCE_IMPLEMENTED | Full downstream deletion/anonymisation completion and provider propagation remain unproven end-to-end |
 | Restriction | Canonical lifecycle includes `restriction`, status, role routing, decision rationale and evidence references | PARTIAL_SOURCE_READY | Actual restriction effect across applicable stores/providers and legal exception judgment remain open |
 | Objection | Canonical lifecycle includes `objection`, attributable routing/decision/evidence | PARTIAL_SOURCE_READY | Legal-basis decision and actual suppression/restriction effect remain open |
-| Consent withdrawal | Canonical lifecycle includes `consent_withdrawal`; analytics consent controls exist separately | PARTIAL_SOURCE_READY | Prove withdrawal effect for every configured non-essential processing surface and reconcile ePrivacy/legal basis |
+| Consent withdrawal | Canonical lifecycle includes `consent_withdrawal`; optional analytics independently defaults to consent-required, blocks PostHog capture without grant, exposes Cookie Policy controls and invokes opt-out/recording stop on withdrawal | PASS_ANALYTICS_SOURCE_IMPLEMENTED / BROADER_RIGHT_PARTIAL | Exact Production analytics configuration/runtime evidence, ePrivacy/legal-basis acceptance and any other consent-based processing surfaces remain open |
 | Automated-decision safeguards | Product position remains that website/account operations are not intended to make solely automated decisions with legal/similar effect | PASS_DOCUMENTED | Revalidate on product/decisioning change and qualified review where needed |
 | Deadline tracking | Canonical source computes one-calendar-month initial deadlines and supports only bounded 1/2-month extensions with reason + notification evidence | PASS_SOURCE_IMPLEMENTED / RUNTIME_PENDING | Protected Data Governance Runtime Proof must validate exact current main SHA before runtime PASS credit |
 | Customer-controller routing | Canonical lifecycle records controller/processor/mixed/under-review role and customer-controller reference; admin API is tenant-scoped | PASS_SOURCE_IMPLEMENTED | Case-specific legal allocation, customer workflow/SLA and downstream evidence remain open |
@@ -55,6 +55,7 @@ PR_2014_SOURCE_IMPLEMENTATION=MERGED
 CANONICAL_RIGHTS_REQUEST_REGISTER=PASS_SOURCE_IMPLEMENTED_MERGED
 DEADLINE_TRACKING_SOURCE=PASS_IMPLEMENTED
 ROLE_ROUTING_SOURCE=PASS_IMPLEMENTED
+ANALYTICS_CONSENT_WITHDRAWAL_SOURCE=PASS_IMPLEMENTED
 V6_TERMINAL_IMMUTABILITY=FIX_PENDING_CI_MERGE
 V6_UPDATED_AT_INTEGRITY=FIX_PENDING_CI_MERGE
 DATA_GOVERNANCE_RUNTIME_V2=PENDING_EXACT_SHA_PROOF
@@ -74,6 +75,19 @@ Required order:
 3. run the Data Governance Runtime Proof for the resulting exact current main SHA;
 4. validate and retain the evidence artifact;
 5. only then convert runtime-dependent controls from `RUNTIME_PENDING` to runtime PASS.
+
+## Consent-withdrawal source boundary
+
+For optional analytics, source implementation is no longer an unknown configuration gap:
+
+- consent is required by default unless the public build variable explicitly disables the requirement;
+- PostHog does not initialize/capture while required consent is absent;
+- grant/decline controls exist in the initial banner;
+- Cookie Policy rendering exposes persistent analytics consent controls for later withdrawal;
+- withdrawal stores the denied state, stops session recording and calls PostHog opt-out;
+- fail-closed and public-control tests exist.
+
+This closes the **analytics source-control** portion only. It does not prove the exact Production build/configuration, settle ePrivacy/GDPR legal-basis review, or prove withdrawal for unrelated consent-based processing.
 
 ## Legal and downstream boundary
 
@@ -100,7 +114,8 @@ RECTIFICATION=PARTIAL_SOURCE_READY
 RESTRICTION=PARTIAL_SOURCE_READY_DOWNSTREAM_OPEN
 OBJECTION=PARTIAL_SOURCE_READY_LEGAL_EFFECT_OPEN
 PORTABILITY=PARTIAL_SOURCE_READY
-CONSENT_WITHDRAWAL=PARTIAL_SOURCE_READY_CONFIGURATION_EFFECT_OPEN
+CONSENT_WITHDRAWAL_ANALYTICS=PASS_SOURCE_IMPLEMENTED_RUNTIME_AND_LEGAL_REVIEW_OPEN
+CONSENT_WITHDRAWAL_OTHER_SURFACES=PARTIAL
 DEADLINE_TRACKING=PASS_SOURCE_IMPLEMENTED_RUNTIME_PENDING
 CUSTOMER_CONTROLLER_ROUTING=PASS_SOURCE_IMPLEMENTED_CASE_DECISION_OPEN
 TERMINAL_STATE_INTEGRITY=V6_FIX_PENDING_CI_MERGE
