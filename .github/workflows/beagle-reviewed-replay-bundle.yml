@@ -26,8 +26,6 @@ jobs:
     timeout-minutes: 40
     env:
       EXPECTED_HEAD_SHA: ${{ github.sha }}
-      RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH: ${{ runner.temp }}/beagle-reviewed-replay-bundle.sql
-      RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH: ${{ runner.temp }}/beagle-reviewed-replay-manifest.json
 
     steps:
       - name: Checkout exact assessed SHA without credentials
@@ -42,6 +40,13 @@ jobs:
           set -euo pipefail
           [[ "$EXPECTED_HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
+      - name: Bind runner-local bundle paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH=$RUNNER_TEMP/beagle-reviewed-replay-bundle.sql" >> "$GITHUB_ENV"
+          echo "RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH=$RUNNER_TEMP/beagle-reviewed-replay-manifest.json" >> "$GITHUB_ENV"
 
       - name: Set up pinned Supabase CLI
         uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
@@ -61,7 +66,7 @@ jobs:
           test -s "$RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH"
           test -s "$RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH"
           grep -q '^-- RISCK COMPLY reviewed disposable schema replay bundle$' "$RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH"
-          SUBJECT_SHA="$(node -e "const m=require(process.env.RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH); process.stdout.write(m.subjectSha)")"
+          SUBJECT_SHA="$(node -e "const fs=require('node:fs'); const m=JSON.parse(fs.readFileSync(process.env.RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH,'utf8')); process.stdout.write(m.subjectSha)")"
           test "$SUBJECT_SHA" = "$EXPECTED_HEAD_SHA"
           node - <<'NODE'
           const fs = require('node:fs');
