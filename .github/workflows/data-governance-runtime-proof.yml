@@ -156,8 +156,8 @@ jobs:
       - name: Execute governance proof
         env:
           DATA_RESIDENCY_REGION: ${{ vars.DATA_RESIDENCY_REGION }}
-          DATA_RETENTION_DEFAULT_DAYS: ${{ vars.DATA_RETENTION_DEFAULT_DAYS }}
-          DATA_EXPORT_ENCRYPTION_REQUIRED: ${{ vars.DATA_EXPORT_ENCRYPTION_REQUIRED }}
+          DATA_RETENTION_POLICY_MODE: category_specific
+          DATA_EXPORT_ENCRYPTION_REQUIRED: 'true'
         run: node scripts/data-governance/run-data-governance-runtime-proof.mjs
 
       - name: Validate evidence
