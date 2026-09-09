@@ -86,4 +86,18 @@ describe('canonical GDPR rights-request lifecycle contract', () => {
     expect(lifecycle).toContain('patch.updated_at = now');
     expect(service).toContain("'updated_at'");
   });
+
+  it('makes lifecycle transitions atomic against concurrent stale writers', () => {
+    expect(service).toContain('expectedStatus?: DataSubjectRequestStatus');
+    expect(service).toContain('expectedUpdatedAt?: string');
+    expect(service).toContain("updateQuery = updateQuery.eq('status', input.expectedStatus)");
+    expect(service).toContain("updateQuery = updateQuery.eq('updated_at', input.expectedUpdatedAt)");
+    expect(service).toContain("reason: 'request_state_conflict'");
+    expect(lifecycle).toContain('expectedStatus: current.status');
+    expect(lifecycle).toContain('expectedUpdatedAt: current.updated_at');
+    expect(lifecycle).toContain("updated.reason === 'request_state_conflict'");
+    expect(lifecycle).toContain("error: 'gdpr_rights_request_state_conflict'");
+    expect(lifecycle).toContain('expectedStatus: updated.request.status');
+    expect(lifecycle).toContain('expectedUpdatedAt: updated.request.updated_at');
+  });
 });
