@@ -11,12 +11,14 @@ catch { failures.push('data governance evidence is invalid JSON'); }
 const requiredChecks = [
   'protectedMainExecution','exactShaBound','explicitConfirmation','residencyRegionDeclared',
   'retentionWindowValid','exportEncryptionRequired','governanceTablesPresent','rlsEnabled',
-  'tenantPoliciesPresent','dataMinimizationConstraintsPresent','dsrDeadlineEnforced',
-  'auditIntegritySchemaPresent','exportWorkflowDocumented','deletionWorkflowDocumented',
+  'dsrForceRlsEnabled','tenantPoliciesPresent','dataMinimizationConstraintsPresent',
+  'dsrLifecycleColumnsPresent','dsrCalendarDeadlineServerAuthority','dsrChapterThreeTypesPresent',
+  'dsrServerOnlyMutationBoundary','auditIntegritySchemaPresent','exportWorkflowDocumented',
+  'deletionWorkflowDocumented','rightsLifecycleDocumented',
 ];
 
 if (evidence) {
-  if (evidence.schema !== 'risck-comply.data-governance-evidence.v1') failures.push('data governance schema is invalid');
+  if (evidence.schema !== 'risck-comply.data-governance-evidence.v2') failures.push('data governance schema is invalid');
   if (evidence.status !== 'Complete' || evidence.outcome !== 'passed') failures.push('data governance evidence must be Complete/passed');
   if (!/^[a-f0-9]{40}$/i.test(String(evidence.targetSha ?? ''))) failures.push('data governance evidence is not exact-SHA bound');
   for (const check of requiredChecks) if (evidence.checks?.[check] !== true) failures.push(`data governance check ${check} must pass`);

@@ -72,7 +72,6 @@ const publicAccountRecoveryRoutes = [
   /src\/app\/api\/auth\/recovery\/route\.ts$/,
 ];
 
-
 const platformAdminRoutes = [
   /src\/app\/api\/platform\/.*\/route\.ts$/,
 ];
@@ -96,6 +95,7 @@ const routeSpecificPermissions = [
   { match: /src\/app\/api\/ai-incidents\/route\.ts$/, tokens: ['manage_ai_incidents', 'read_ai_incidents'] },
   { match: /src\/app\/api\/ai-literacy\/route\.ts$/, tokens: ['manage_ai_governance', 'read_ai_governance'] },
   { match: /src\/app\/api\/audit\/(chain|evidence-pack).*\/route\.ts$/, tokens: ['read_audit', 'export_data'] },
+  { match: /src\/app\/api\/gdpr\/requests(?:\/\[id\])?\/route\.ts$/, tokens: ['submit_privacy_request', 'manage_settings'] },
   { match: /src\/app\/api\/gdpr\/.*\/route\.ts$/, tokens: ['export_data', 'gdpr_delete', 'assertGdprSelfServiceEnabled'] },
   { match: /src\/app\/api\/(vendor-assurance|enterprise-readiness|retention-center|continuity-center|security-questionnaire)\/export\/route\.ts$/, tokens: ['export_data'] },
 ];
@@ -248,7 +248,6 @@ function evaluatePublicAccountRecoveryContract(failures, source, path) {
   return true;
 }
 
-
 function evaluatePlatformAdminContract(failures, source, path) {
   if (!isAnyMatch(path, platformAdminRoutes)) return false;
 
@@ -339,7 +338,6 @@ function evaluateRoute(filePath) {
   if (evaluatePublicAccountRecoveryContract(failures, source, path)) {
     return failures;
   }
-
 
   if (evaluatePlatformAdminContract(failures, source, path)) {
     return failures;

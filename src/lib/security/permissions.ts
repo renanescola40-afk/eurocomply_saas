@@ -15,7 +15,8 @@ export type OrganizationPermission =
   | 'read_ai_incidents'
   | 'read_audit'
   | 'export_data'
-  | 'manage_settings';
+  | 'manage_settings'
+  | 'submit_privacy_request';
 
 export const ORGANIZATION_ROLES: OrganizationRole[] = ['owner', 'admin', 'editor', 'member', 'viewer'];
 
@@ -35,6 +36,7 @@ export const ORGANIZATION_PERMISSIONS: OrganizationPermission[] = [
   'read_audit',
   'export_data',
   'manage_settings',
+  'submit_privacy_request',
 ];
 
 const ROLE_PERMISSIONS: Record<OrganizationRole, OrganizationPermission[]> = {
@@ -52,6 +54,7 @@ const ROLE_PERMISSIONS: Record<OrganizationRole, OrganizationPermission[]> = {
     'manage_ai_incidents',
     'read_ai_incidents',
     'export_data',
+    'submit_privacy_request',
   ],
   member: [
     'manage_documents',
@@ -60,8 +63,16 @@ const ROLE_PERMISSIONS: Record<OrganizationRole, OrganizationPermission[]> = {
     'read_risks',
     'read_ai_governance',
     'read_ai_incidents',
+    'submit_privacy_request',
   ],
-  viewer: ['read_documents', 'read_vendors', 'read_risks', 'read_ai_governance', 'read_ai_incidents'],
+  viewer: [
+    'read_documents',
+    'read_vendors',
+    'read_risks',
+    'read_ai_governance',
+    'read_ai_incidents',
+    'submit_privacy_request',
+  ],
 };
 
 export function normalizeOrganizationRole(role: string | null | undefined): OrganizationRole {
