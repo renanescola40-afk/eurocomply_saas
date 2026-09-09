@@ -17,9 +17,11 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-08-post-audit-containment-forward-reconciliation-v40';
-const SOURCE_CHANGE_SET = '2026-09-06-cross-tenant-reference-integrity-v39';
+const EXPECTED_CHANGE_SET = '2026-09-09-supabase-advisor-rpc-hardening-v41';
+const SOURCE_CHANGE_SET = '2026-09-08-post-audit-containment-forward-reconciliation-v40';
+const V40_SOURCE_CHANGE_SET = '2026-09-06-cross-tenant-reference-integrity-v39';
 const VERIFIED_PRODUCTION_LEDGER_HEAD = '20260907142133';
+const V41_ADVISOR_MIGRATION = '20260909006900_harden_security_advisor_rpc_surface.sql';
 
 const REFORWARD_PAIRS = [
   {
@@ -169,7 +171,10 @@ async function main() {
   }
   assertTruthBoundary(config);
 
-  const expectedSelected = REFORWARD_PAIRS.map((pair) => pair.target);
+  const expectedSelected = [
+    ...REFORWARD_PAIRS.map((pair) => pair.target),
+    V41_ADVISOR_MIGRATION,
+  ];
   const selected = (config.migrations ?? []).map((record) => record?.filename);
   if (JSON.stringify(selected) !== JSON.stringify(expectedSelected)) {
     fail(`bounded selected migration set drifted: expected ${expectedSelected.join(', ')}`);
@@ -196,15 +201,19 @@ async function main() {
     subjectSha: expectedHeadSha || gitSha,
   });
 
-  const records = manifest.migrations.map((migration, index) => ({
-    position: index + 1,
-    filename: migration.filename,
-    timestamp: migration.version,
-    bytes: migration.sizeBytes,
-    sha256: migration.sha256,
-    sourceFilename: REFORWARD_PAIRS[index].source,
-    sourceGitBlob: REFORWARD_PAIRS[index].sourceBlob,
-  }));
+  const records = manifest.migrations.map((migration, index) => {
+    const reforwardPair = REFORWARD_PAIRS[index] ?? null;
+    return {
+      position: index + 1,
+      filename: migration.filename,
+      timestamp: migration.version,
+      bytes: migration.sizeBytes,
+      sha256: migration.sha256,
+      lineageKind: reforwardPair ? 'byte-identical-v40-reforward' : 'reviewed-v41-hardening',
+      sourceFilename: reforwardPair?.source ?? null,
+      sourceGitBlob: reforwardPair?.sourceBlob ?? null,
+    };
+  });
 
   const report = {
     schema: 'risck-comply.supabase-forward-reconciliation-evidence.v1',
@@ -215,6 +224,7 @@ async function main() {
     exactShaVerified: Boolean(expectedHeadSha && gitSha === expectedHeadSha),
     changeSet: EXPECTED_CHANGE_SET,
     sourceChangeSet: SOURCE_CHANGE_SET,
+    v40SourceChangeSet: V40_SOURCE_CHANGE_SET,
     selectedCount: records.length,
     selectedSetSha256: manifest.selectionDigest.replace(/^sha256:/, ''),
     productionWriteAuthorized: false,
@@ -224,6 +234,8 @@ async function main() {
     humanDecisionRequired: true,
     productionLedgerHeadBeforeSelection: VERIFIED_PRODUCTION_LEDGER_HEAD,
     byteIdenticalReforwardVerified: true,
+    byteIdenticalV40ReforwardCount: REFORWARD_PAIRS.length,
+    appendedV41HardeningCount: 1,
     emergencyAuditContainmentPreserved: true,
     records,
   };
@@ -245,8 +257,10 @@ async function main() {
 
   process.stdout.write(`Bounded Supabase forward reconciliation verified: ${records.length} migrations\n`);
   process.stdout.write(`Source change set: ${SOURCE_CHANGE_SET}\n`);
+  process.stdout.write(`V40 source change set: ${V40_SOURCE_CHANGE_SET}\n`);
   process.stdout.write(`Production ledger head before selection: ${VERIFIED_PRODUCTION_LEDGER_HEAD}\n`);
-  process.stdout.write('Byte-identical V40 re-forward: true\n');
+  process.stdout.write(`Byte-identical V40 re-forward count: ${REFORWARD_PAIRS.length}\n`);
+  process.stdout.write('Reviewed V41 advisor hardening count: 1\n');
   process.stdout.write('Emergency audit-chain containment preserved: true\n');
   process.stdout.write(`Selected-set SHA-256: ${report.selectedSetSha256}\n`);
   process.stdout.write('Production write authorization: false\n');
