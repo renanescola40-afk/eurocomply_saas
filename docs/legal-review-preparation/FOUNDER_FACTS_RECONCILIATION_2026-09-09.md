@@ -10,6 +10,9 @@ The following owner-supplied facts are sufficiently consistent for use in legal 
 - Brand/product: **RISCK COMPLY**
 - Contracting/legal entity name: **SAMUEL CERQUEIRA, UNIPESSOAL LDA**
 - Website: **https://www.risckcomply.com**
+- Current reachable corporate intake mailbox: **comercial@risckcomply.com**
+
+The corporate mailbox was revalidated on 2026-09-09 through live inbound and outbound account evidence. It is therefore usable as the current general corporate/privacy/security intake channel while any dedicated aliases and formal contractual notice mechanics remain subject to separate verification/counsel approval.
 
 ## Owner-supplied address — not yet accepted as registered office
 
@@ -44,7 +47,7 @@ This reconciliation does not resolve the remaining commercial and operational ch
 
 - current registered office / official legal address;
 - authoritative NIF/NIPC;
-- legal/privacy/security/support notice channels;
+- formal contractual legal-notice mechanics and any dedicated privacy/security aliases;
 - governing law and dispute forum choice;
 - subscription renewal, cancellation, refund and price-change policy;
 - export window after termination;
@@ -63,6 +66,7 @@ Many of these are not pure facts: they require Counsel or commercial decisions a
 ```text
 BRAND_AND_ENTITY_NAME=PARTIAL_PASS_OWNER_SUPPLIED
 WEBSITE=PARTIAL_PASS_OWNER_SUPPLIED
+CORPORATE_INTAKE_EMAIL=comercial@risckcomply.com_VERIFIED_REACHABLE
 LISBON_ADDRESS=OWNER_SUPPLIED_PENDING_OFFICIAL_CONFIRMATION
 REGISTERED_OFFICE=BLOCKED_OFFICIAL_REGISTRY_CONFIRMATION
 NIF_NIPC=BLOCKED_CONFLICT
