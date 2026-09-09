@@ -1,4 +1,13 @@
-import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const workflowPath = '.github/workflows/supabase-migration-drift-audit.yml';
@@ -93,5 +102,73 @@ describe('Supabase migration drift audit workflow', () => {
     expect(normalized).not.toContain('supabase db push');
     expect(normalized).not.toContain('supabase db reset');
     expect(normalized).not.toContain('migration repair');
+  });
+
+  it('accepts a non-calendar remote ledger id only through an explicit record-only reconciliation', () => {
+    const root = mkdtempSync(join(tmpdir(), 'risck-drift-contract-'));
+    const supabaseDir = join(root, 'supabase');
+    const migrationsDir = join(supabaseDir, 'migrations');
+    const reconciliationDir = join(supabaseDir, 'reconciliation');
+    const remotePath = join(root, 'remote.txt');
+    const firstOutput = join(root, 'first');
+    const secondOutput = join(root, 'second');
+    const scriptPath = join(process.cwd(), 'scripts/supabase/audit-migration-drift.mjs');
+
+    mkdirSync(migrationsDir, { recursive: true });
+    mkdirSync(reconciliationDir, { recursive: true });
+    writeFileSync(join(migrationsDir, '20260909010101_baseline.sql'), '-- baseline\n');
+    writeFileSync(
+      join(migrationsDir, '20260908006000_v40_provider_version.sql'),
+      '-- intentionally non-calendar legacy version identifier\n',
+    );
+    writeFileSync(
+      remotePath,
+      [
+        'Local | Remote | Time (UTC)',
+        '20260909010101 | 20260909010101 | 2026-09-09 01:01:01',
+        '                 | 20260908006000 | 2026-09-08',
+      ].join('\n'),
+    );
+
+    try {
+      writeFileSync(
+        join(reconciliationDir, '20260908006000_untrusted_executable.sql'),
+        'select 1;\n',
+      );
+      const withoutRecord = spawnSync(
+        process.execPath,
+        [scriptPath, migrationsDir, remotePath, firstOutput],
+        { encoding: 'utf8' },
+      );
+      expect(withoutRecord.status).toBe(2);
+      const firstReport = JSON.parse(readFileSync(join(firstOutput, 'migration-drift.json'), 'utf8'));
+      expect(firstReport.status).toBe('CRITICAL_DRIFT');
+      expect(firstReport.remoteOnly).toContain('20260908006000');
+
+      rmSync(reconciliationDir, { recursive: true, force: true });
+      mkdirSync(reconciliationDir, { recursive: true });
+      writeFileSync(
+        join(reconciliationDir, '20260908006000_v40_provider_record.sql'),
+        [
+          '-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.',
+          '-- version: 20260908006000',
+          '-- No DDL. No migration-history repair.',
+          '',
+        ].join('\n'),
+      );
+      const withRecord = spawnSync(
+        process.execPath,
+        [scriptPath, migrationsDir, remotePath, secondOutput],
+        { encoding: 'utf8' },
+      );
+      expect(withRecord.status).toBe(0);
+      const secondReport = JSON.parse(readFileSync(join(secondOutput, 'migration-drift.json'), 'utf8'));
+      expect(secondReport.remoteOnly).not.toContain('20260908006000');
+      expect(secondReport.reconciledRemote).toContain('20260908006000');
+      expect(secondReport.deployabilityBlockers).toContain('invalid_local_filenames_or_timestamps');
+      expect(secondReport.safety.generalDbPushAuthorized).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
