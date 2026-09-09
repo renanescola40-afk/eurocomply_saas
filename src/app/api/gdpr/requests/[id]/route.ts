@@ -72,6 +72,7 @@ export async function PATCH(
   if (!UUID_PATTERN.test(id)) return noStoreJson({ error: 'invalid_request_id' }, { status: 400 });
 
   const rateLimit = await checkDistributedRateLimit({
+    category: 'gdpr',
     key: `gdpr:rights:update:${organization.id}:${user.id}`,
     limit: 30,
     windowMs: 60_000,
