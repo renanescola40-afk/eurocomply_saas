@@ -45,7 +45,11 @@ Customer must not:
 
 ## 7. Subscriptions, billing and taxes
 
-The current commercial catalog provides Essential at €49/month and Professional at €149/month as self-serve subscription motions, Business at €399/month as assisted sales, and Enterprise from €990/month with final pricing by contract. **No free trial is currently offered.** The exact Stripe Products/Prices, taxes/VAT treatment, renewal mechanics, cancellation effect, refunds and price-change rights remain governed by the actual provider configuration and the final approved commercial terms; they must not be inferred from marketing copy alone. Fees exclude applicable taxes unless stated otherwise. Non-payment remedies and suspension require counsel-approved notice and cure periods.
+The current commercial catalog provides Essential at €49/month and Professional at €149/month as self-serve subscription motions, Business at €399/month as assisted sales, and Enterprise from €990/month with final pricing by contract. **No free trial is currently offered.**
+
+For the current self-serve subscription lifecycle, cancellation is scheduled for the end of the already-paid billing period (`cancel_at_period_end`) rather than immediately removing paid access. A pending cancellation can be reactivated before that period ends. Supported upgrades use provider proration; supported downgrades are scheduled for the next billing period. Annual self-serve billing remains unavailable until the required live provider Prices are verified.
+
+The exact Stripe Products/Prices, taxes/VAT treatment, refund policy, price-change rights and any contract-specific billing terms remain governed by the actual provider configuration and final approved commercial terms; they must not be inferred from marketing copy alone. Fees exclude applicable taxes unless stated otherwise. Non-payment remedies and suspension require counsel-approved notice and cure periods.
 
 ## 8. Confidentiality
 
@@ -71,7 +75,7 @@ The provider may suspend access where reasonably necessary for security, unlawfu
 
 ## 13. Term and termination
 
-Term, renewal and termination rights follow the order form and **[COUNSEL/COMMERCIAL DECISION REQUIRED: final renewal, cancellation and termination policy]**. On termination, access ends and customer may request export during **[FOUNDER FACT REQUIRED: export window]**. Deletion remains subject to the DPA, retention schedule, legal holds, billing records and immutable audit requirements.
+Self-serve cancellation currently preserves paid access until the end of the active billing period. Reactivation before period end is supported. Contract-managed subscriptions remain subject to their order form. **[COUNSEL/COMMERCIAL DECISION REQUIRED]** Define any legally required notice, cooling-off/consumer exclusions if applicable, termination for breach, refund treatment and contract-specific renewal rules. On termination, access ends and customer may request export during **[FOUNDER FACT REQUIRED: export window]**. Deletion remains subject to the DPA, retention schedule, legal holds, billing records and immutable audit requirements.
 
 ## 14. Warranties and disclaimers
 
