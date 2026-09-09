@@ -74,4 +74,16 @@ describe('canonical GDPR rights-request lifecycle contract', () => {
     expect(lifecycle).toContain('customerControllerReference');
     expect(lifecycle).toContain('compensationRestored');
   });
+
+  it('keeps terminal requests immutable and refreshes attributable modification time', () => {
+    expect(lifecycle).toContain('TERMINAL_REQUEST_STATUSES');
+    expect(lifecycle).toContain("'completed'");
+    expect(lifecycle).toContain("'rejected'");
+    expect(lifecycle).toContain("'cancelled'");
+    expect(lifecycle).toContain('TERMINAL_REQUEST_STATUSES.has(current.status)');
+    expect(lifecycle).toContain("error: 'gdpr_rights_request_terminal'");
+    expect(lifecycle).toContain('status: 409');
+    expect(lifecycle).toContain('patch.updated_at = now');
+    expect(service).toContain("'updated_at'");
+  });
 });
