@@ -120,7 +120,13 @@ jobs:
           if [ -z "${E2E_BASE_URL:-}" ]; then
             unset E2E_BASE_URL
           fi
-          bash scripts/quality/install-playwright-ci.sh
+          # GitHub-hosted Ubuntu images include an unrelated Google Chrome APT
+          # source. If that CDN index is transiently inconsistent, apt fails
+          # before Playwright can install its own Chromium dependencies. Remove
+          # only that optional runner source; Chromium + E2E remain fail-closed.
+          sudo rm -f /etc/apt/sources.list.d/google-chrome.list /etc/apt/sources.list.d/google-chrome.sources
+          sudo rm -f /var/lib/apt/lists/dl.google.com_linux_chrome_deb_dists_stable_*
+          npx playwright install --with-deps chromium
           if ! npm run test:e2e -- --reporter=line,json > playwright-e2e.log 2>&1; then
             echo "::error title=Playwright E2E failed::The production-like E2E suite failed. Merge and release remain blocked."
             tail -n 250 playwright-e2e.log
