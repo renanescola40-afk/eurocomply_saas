@@ -21,7 +21,7 @@ describe('Article 14 invitation privacy disclosure', () => {
     }
   });
 
-  it('does not reflect an unsafe invite origin into the privacy URL', () => {
+  it('does not reflect an unsafe scheme into the privacy URL', () => {
     const email = localizedInvitationEmail({
       organizationName: 'Acme Europe',
       role: 'viewer',
@@ -31,6 +31,30 @@ describe('Article 14 invitation privacy disclosure', () => {
 
     expect(email.text).toContain('/pt/privacy');
     expect(email.html).not.toContain('javascript:');
+  });
+
+  it('does not reflect an untrusted HTTPS origin into the privacy URL', () => {
+    const email = localizedInvitationEmail({
+      organizationName: 'Acme Europe',
+      role: 'viewer',
+      inviteUrl: 'https://attacker.example/pt/invite/token-123',
+      locale: 'pt',
+    });
+
+    expect(email.text).toContain('Informação de privacidade: /pt/privacy');
+    expect(email.html).toContain('href="/pt/privacy"');
+    expect(email.html).not.toContain('attacker.example/pt/privacy');
+  });
+
+  it('accepts trusted Risck Comply subdomains for the privacy origin', () => {
+    const email = localizedInvitationEmail({
+      organizationName: 'Acme Europe',
+      role: 'viewer',
+      inviteUrl: 'https://app.risckcomply.com/en/invite/token-123',
+      locale: 'en',
+    });
+
+    expect(email.text).toContain('https://app.risckcomply.com/en/privacy');
   });
 
   it('falls back to the English privacy route for an unsupported locale', () => {

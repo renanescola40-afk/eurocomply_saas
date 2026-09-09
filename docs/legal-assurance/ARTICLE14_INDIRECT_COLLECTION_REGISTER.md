@@ -19,7 +19,7 @@ Do not apply a provider-side Article 14 workflow to customer-controlled workspac
 
 | Scenario | Source of data | Likely role | Article 14 timing control | Current operational state | Remaining gap |
 |---|---|---|---|---|---|
-| Teammate invitation email entered by organisation admin | customer workspace administrator | controller for RISCK account/invitation administration, subject to final role review | privacy information should be delivered no later than the invitation/first communication | **IMPLEMENTED_PRE_MERGE**: invitation email now states that the address was supplied by an administrator of the named organisation, explains the invitation purpose/non-acceptance consequence, and links to the locale Privacy surface; canonical email sender supports delivery evidence with status/provider/idempotency/sent timestamp | merge + CI/exact-SHA proof; linked Privacy page is still not a complete final Articles 13/14 notice, so full Article 14 content remains partial |
+| Teammate invitation email entered by organisation admin | customer workspace administrator | controller for RISCK account/invitation administration, subject to final role review | privacy information should be delivered no later than the invitation/first communication | **MERGED_CANONICAL** via PR #2011: invitation email states that the address was supplied by an administrator of the named organisation, explains the invitation purpose/non-acceptance consequence, and links to the locale Privacy surface; canonical email sender supports delivery evidence with status/provider/idempotency/sent timestamp | V4 hardens Privacy-link origin allowlisting; linked Privacy page is still not a complete final Articles 13/14 notice, so full Article 14 content remains partial |
 | Account/identity attributes returned by Google OAuth | identity provider in a user-initiated authentication flow | controller for RISCK account/security processing; direct-vs-indirect classification requires legal review because collection occurs through an identity provider during user action | safest product posture is to make Privacy information available before/at authentication and not rely on Article 14 exception | public Privacy link/surface exists, but completeness is blocked | final Privacy notice + authentication-surface evidence |
 | Billing/customer attributes returned from Stripe after Checkout | Stripe/payment workflow following customer checkout | controller for billing/account administration for relevant provider-side metadata; Stripe separately controls its own payment processing | information should already be available before Checkout; if an attribute is first obtained indirectly and used to communicate, no later than first relevant communication | billing flow proven; complete notice not yet proven | reconcile approved Privacy notice with Checkout entry/confirmation surfaces |
 | Support request submitted by an admin about another user | customer/admin/support requester | mixed; may be controller-side support/security administration or processor-side customer-content handling | if controller-side and RISCK contacts the individual, by first communication; otherwise no later than one month unless a documented exception applies | corporate support mailbox operational | add case classification to support/privacy runbook |
@@ -30,16 +30,18 @@ Do not apply a provider-side Article 14 workflow to customer-controlled workspac
 
 ## Invitation runtime evidence design
 
-The implementation in `src/lib/email/localized-invitation.ts` now adds a narrow indirect-collection disclosure to the first invitation communication in every supported locale:
+The canonical implementation in `src/lib/email/localized-invitation.ts` adds a narrow indirect-collection disclosure to the first invitation communication in every supported locale:
 
 - source: an administrator of the named organisation provided the email address;
 - purpose: sending/managing the invitation;
 - consequence: the invitee need not create an account if they do not accept;
-- privacy route: locale-specific `/[locale]/privacy` link derived from the trusted invite origin, with unsafe origins rejected/falling back to a relative route.
+- privacy route: locale-specific `/[locale]/privacy` link.
+
+V4 tightens the Privacy-link origin rule: absolute Privacy URLs are emitted only for HTTPS `risckcomply.com` / `*.risckcomply.com` origins or development `http://localhost`; any other HTTPS origin, unsafe scheme or malformed input falls back to the relative locale Privacy path. This prevents an untrusted invite-origin value from being reflected as the privacy-notice origin.
 
 `src/lib/email/server-sender.ts` supports attributable delivery evidence in `email_delivery_logs`, including delivery status, provider identifier, attempts, idempotency key and `sent_at`. The content itself does not need to be copied into the audit record.
 
-The V3 test `tests/privacy/article14-invitation-notice.test.ts` proves locale-aware privacy-link rendering and unsafe-origin rejection.
+`tests/privacy/article14-invitation-notice.test.ts` proves locale-aware privacy-link rendering, unsafe-scheme fallback, untrusted-HTTPS-origin fallback, trusted RISCK COMPLY subdomain behavior and unsupported-locale fallback.
 
 ## Article 14(5) exception discipline
 
@@ -76,8 +78,9 @@ ARTICLE14_SCENARIO_INVENTORY=PASS
 ARTICLE14_TIMING_RULE=PASS_DOCUMENTED
 ARTICLE14_PROCESSOR_CONTROLLER_ROUTING=PASS_PRE_REVIEW
 ARTICLE14_EXCEPTION_REGISTER=PASS_STRUCTURE_NO_EXCEPTIONS_ASSUMED
-ARTICLE14_INVITATION_FIRST_COMMUNICATION_PATH=PASS_IMPLEMENTED_PRE_MERGE
+ARTICLE14_INVITATION_FIRST_COMMUNICATION_PATH=PASS_MERGED_CANONICAL
 ARTICLE14_INVITATION_DELIVERY_EVIDENCE_MODEL=PASS_IMPLEMENTED
+ARTICLE14_PRIVACY_LINK_ORIGIN_HARDENING=PASS_IMPLEMENTED_PRE_MERGE_V4
 ARTICLE14_RUNTIME_DELIVERY=PARTIAL
 ARTICLE14=PARTIAL
 ```
