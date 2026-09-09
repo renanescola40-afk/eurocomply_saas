@@ -2,8 +2,10 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const checkoutRoute = readFileSync('src/app/api/billing/checkout/route.ts', 'utf8');
+const billingActionButton = readFileSync('src/app/[locale]/dashboard/organizations/billing/billing-action-button.tsx', 'utf8');
 const preflight = readFileSync('scripts/preflight.mjs', 'utf8');
 const envExample = readFileSync('.env.example', 'utf8');
+const decisionRecord = readFileSync('docs/decisions/ADR-0099-public-paid-ga-checkout-gate.md', 'utf8');
 
 describe('public paid GA checkout gate', () => {
   it('blocks new self-serve checkout until paid billing is explicitly enabled', () => {
@@ -48,5 +50,22 @@ describe('public paid GA checkout gate', () => {
     expect(envExample).toContain('RISCK_COMPLY_BILLING_VALIDATION_ORGANIZATION_ID=');
     expect(envExample).not.toContain('NEXT_PUBLIC_RISCK_COMPLY_BILLING_VALIDATION_ORGANIZATION_ID');
     expect(checkoutRoute).not.toContain('NEXT_PUBLIC_RISCK_COMPLY_BILLING_VALIDATION_ORGANIZATION_ID');
+  });
+
+  it('surfaces the paid-GA denial as an accurate localized commercial availability state', () => {
+    expect(billingActionButton).toContain("const PUBLIC_PAID_GA_ERROR_CODE = 'public_paid_ga_not_enabled'");
+    expect(billingActionButton).toContain('setPaidGaUnavailable(getPublicPaidGaUnavailableCopy(locale))');
+    expect(billingActionButton).toContain('role="status"');
+    expect(billingActionButton).toContain('New self-serve subscriptions are not available yet. Contact our sales team to continue.');
+    expect(billingActionButton).toContain('As novas subscrições self-service ainda não estão disponíveis.');
+  });
+
+  it('keeps the release authority and rollback semantics in a durable decision record', () => {
+    expect(decisionRecord).toContain('# ADR-0099: Fail closed public paid checkout until paid GA acceptance');
+    expect(decisionRecord).toContain('RISCK_COMPLY_PAID_BILLING_REQUIRED');
+    expect(decisionRecord).toContain('RISCK_COMPLY_BILLING_VALIDATION_ORGANIZATION_ID');
+    expect(decisionRecord).toContain('## Enablement authority');
+    expect(decisionRecord).toContain('## Rollback');
+    expect(decisionRecord).toContain('must never be more permissive than release preflight');
   });
 });
