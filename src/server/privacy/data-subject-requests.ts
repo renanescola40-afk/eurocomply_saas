@@ -208,6 +208,7 @@ export async function updateDataSubjectRequestRecord(input: {
     'evidence_refs',
     'completed_at',
     'resolution_summary',
+    'updated_at',
   ]) {
     if (Object.prototype.hasOwnProperty.call(input.patch, key)) allowedPatch[key] = input.patch[key];
   }
