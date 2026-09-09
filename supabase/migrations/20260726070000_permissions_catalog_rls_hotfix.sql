@@ -14,19 +14,24 @@ revoke all on table public.stripe_webhook_events from PUBLIC, anon, authenticate
 grant select on table public.permissions to authenticated;
 grant select on table public.role_permissions to authenticated;
 
+-- Keep one explicit authenticated-only catalog policy per table. The identity
+-- predicate is fail-closed if the JWT/auth context is missing and avoids broad
+-- USING (true) policies that are prohibited by the repository RLS gate.
 DROP POLICY IF EXISTS permissions_authenticated_read ON public.permissions;
+DROP POLICY IF EXISTS permissions_select_authenticated ON public.permissions;
 CREATE POLICY permissions_authenticated_read
   ON public.permissions
   FOR SELECT
   TO authenticated
-  USING (true);
+  USING (auth.uid() IS NOT NULL);
 
 DROP POLICY IF EXISTS role_permissions_authenticated_read ON public.role_permissions;
+DROP POLICY IF EXISTS role_permissions_select_authenticated ON public.role_permissions;
 CREATE POLICY role_permissions_authenticated_read
   ON public.role_permissions
   FOR SELECT
   TO authenticated
-  USING (true);
+  USING (auth.uid() IS NOT NULL);
 
 -- Webhook idempotency records are backend-only. Intentionally create no policy.
 -- Migration bookkeeping is owned by the Supabase CLI. Do not write to
