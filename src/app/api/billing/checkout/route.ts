@@ -444,6 +444,7 @@ export async function POST(request: Request) {
               name: 'auto',
             },
             tax_id_collection: { enabled: true },
+            automatic_tax: { enabled: true },
             payment_method_collection: 'always',
             allow_promotion_codes: true,
             expires_at: sessionExpiresAtSeconds,
