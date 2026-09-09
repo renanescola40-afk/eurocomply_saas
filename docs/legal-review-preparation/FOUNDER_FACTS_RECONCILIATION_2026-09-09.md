@@ -1,20 +1,31 @@
 # RISCK COMPLY — Founder Facts Reconciliation
 
 Date: 2026-09-09  
-Status: `PARTIAL` · `OWNER_FACT_CONFLICT_PRESENT` · `NO_SYNTHETIC_COMPLETION`
+Status: `PARTIAL` · `IDENTITY_FACT_CONFLICT_PRESENT` · `OFFICIAL_REGISTRY_CONFIRMATION_REQUIRED` · `NO_SYNTHETIC_COMPLETION`
 
-## Confirmed non-conflicting facts
+## Confirmed non-conflicting owner facts
 
-The following owner-supplied facts are consistent across the available founder communications and may be used in review drafts:
+The following owner-supplied facts are sufficiently consistent for use in legal **review drafts**, subject to final counsel/registry verification where legally material:
 
 - Brand/product: **RISCK COMPLY**
 - Contracting/legal entity name: **SAMUEL CERQUEIRA, UNIPESSOAL LDA**
-- Address: **Avenida de Roma 112-A**
-- Postal code: **1700-353**
-- City/country: **Lisboa, Portugal**
 - Website: **https://www.risckcomply.com**
 
-These facts have been inserted only into legal **review drafts**. Their presence does not make the documents final or counsel-approved.
+## Owner-supplied address — not yet accepted as registered office
+
+The owner supplied:
+
+- **Avenida de Roma 112-A**
+- **1700-353 Lisboa, Portugal**
+
+This address may be used in review materials only as an **owner-supplied correspondence/operating address pending authoritative confirmation**. It must not be described as the company's registered office, sede social or official registry address until a current authoritative company-registry source confirms that status.
+
+A third-party public company-directory result located during the 2026-09-09 reconciliation still associates the legal entity name with an older/different Setúbal address and legacy business-activity description. That directory is not authoritative enough to overwrite the owner's current information, but the divergence is enough to keep the registered-office fact fail-closed.
+
+Required closure evidence:
+
+- current Portuguese commercial-registry / Certidão Permanente evidence or equivalent authoritative source;
+- confirmation that the address intended for Terms, Privacy, DPA and legal notices is the correct legal address for the contracting entity.
 
 ## Blocking conflict — tax/company identifier
 
@@ -31,6 +42,8 @@ Fail-closed rule:
 
 This reconciliation does not resolve the remaining commercial and operational choices required by the legal pack, including where applicable:
 
+- current registered office / official legal address;
+- authoritative NIF/NIPC;
 - legal/privacy/security/support notice channels;
 - governing law and dispute forum choice;
 - subscription renewal, cancellation, refund and price-change policy;
@@ -48,7 +61,10 @@ Many of these are not pure facts: they require Counsel or commercial decisions a
 ## Acceptance boundary
 
 ```text
-KNOWN_FOUNDER_IDENTITY_FACTS=PARTIAL_PASS
+BRAND_AND_ENTITY_NAME=PARTIAL_PASS_OWNER_SUPPLIED
+WEBSITE=PARTIAL_PASS_OWNER_SUPPLIED
+LISBON_ADDRESS=OWNER_SUPPLIED_PENDING_OFFICIAL_CONFIRMATION
+REGISTERED_OFFICE=BLOCKED_OFFICIAL_REGISTRY_CONFIRMATION
 NIF_NIPC=BLOCKED_CONFLICT
 COUNSEL_DECISIONS=PENDING
 LEGAL_DOCUMENTS_FINAL=NO
