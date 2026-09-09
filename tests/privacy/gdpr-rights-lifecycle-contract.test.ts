@@ -100,4 +100,11 @@ describe('canonical GDPR rights-request lifecycle contract', () => {
     expect(lifecycle).toContain('expectedStatus: updated.request.status');
     expect(lifecycle).toContain('expectedUpdatedAt: updated.request.updated_at');
   });
+
+  it('advances the optimistic concurrency timestamp monotonically', () => {
+    expect(lifecycle).toContain('function nextLifecycleTimestamp(currentUpdatedAt: string)');
+    expect(lifecycle).toContain('const observedUpdatedAtMs = Date.parse(currentUpdatedAt)');
+    expect(lifecycle).toContain('Math.max(wallClockMs, observedUpdatedAtMs + 1)');
+    expect(lifecycle).toContain('const now = nextLifecycleTimestamp(current.updated_at)');
+  });
 });
