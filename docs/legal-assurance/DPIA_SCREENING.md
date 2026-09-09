@@ -3,6 +3,8 @@
 Date: 2026-09-09  
 Scope: RISCK COMPLY's own processing and the platform processing model. Customer-specific use cases may independently require customer DPIAs.
 
+Official-source baseline: GDPR Articles 35–36, EDPB-endorsed WP248 rev.01 and current CNPD DPIA guidance / Regulation 798/2018 reference, recorded in `GDPR_OFFICIAL_SOURCE_REGISTER_2026-09-09.md`.
+
 ## Screening factors
 
 | Factor | Current evidence | Screening result |
@@ -17,6 +19,12 @@ Scope: RISCK COMPLY's own processing and the platform processing model. Customer
 | Data combination/matching | Account, workspace, billing/security metadata may be combined operationally; no high-risk combination purpose established | PARTIAL_FACTOR |
 | Denial of service/rights or inability to exercise rights | Billing/access decisions affect service access, but no provider-side processing with legal/similar effects on individuals has been established | NO_HIGH_RISK_TRIGGER_PROVEN |
 
+## Portuguese supervisory-authority verification
+
+CNPD's current DPIA guidance confirms that Article 35 DPIA is required when the processing is likely to create high risk, including relevant large-scale Article 9/10 data, large-scale systematic monitoring of publicly accessible areas and profiling followed by significant automated decisions. CNPD also points to Regulation 798/2018 as Portugal's Article 35(4) list.
+
+The same guidance preserves the Article 36 boundary: if a completed DPIA still shows high residual risk despite mitigations, prior consultation with CNPD is a separate gate and must not be self-closed.
+
 ## Separation from customer DPIA/FRIA
 
 RISCK COMPLY may support customer DPIA/FRIA evidence workflows. That does not mean RISCK COMPLY itself performs or satisfies every customer's DPIA/FRIA duty. FRIA under the EU AI Act remains a separate assessment from GDPR DPIA even where evidence can be cross-referenced.
@@ -24,6 +32,8 @@ RISCK COMPLY may support customer DPIA/FRIA evidence workflows. That does not me
 ## Current determination
 
 ```text
+CNPD_DPIA_GUIDANCE=VERIFIED_2026-09-09
+CNPD_REGULATION_798_2018=REFERENCE_VERIFIED
 DPIA_SCREENING=PASS
 DPIA_REQUIRED=UNCERTAIN
 PROVIDER_SIDE_HIGH_RISK_TRIGGER=NOT_PROVEN
