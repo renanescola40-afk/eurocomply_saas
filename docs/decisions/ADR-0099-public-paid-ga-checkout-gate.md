@@ -40,7 +40,7 @@ When initial Checkout is denied because public paid GA is not enabled, the API r
 
 `503 { "error": "public_paid_ga_not_enabled" }`
 
-The client must treat this as a commercial-availability state, not as an authentication, workspace or permission failure. It must present accurate localized unavailable/contact-sales guidance and route the prospect to the sales contact path. Other checkout failures retain the ordinary billing error path.
+The client must treat this as a commercial-availability state, not as an authentication, workspace or permission failure. It must present accurate localized unavailable/contact-sales guidance on the active billing surface; it may remain on that surface or route to a sales contact path, but it must not fall through to the generic authentication/workspace billing error. Other checkout failures retain the ordinary billing error path.
 
 ## Enablement authority
 
