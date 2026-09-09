@@ -23,7 +23,7 @@ jobs:
     env:
       SOURCE_ARTIFACT_ID: '10115314122'
       SOURCE_SUBJECT_SHA: 'f40db9993ac7ff2a4301de552d75c12eb9d2fb1d'
-      EXPECTED_BUNDLE_SHA256: 'e9b75d'
+      EXPECTED_BUNDLE_SHA256: 'e9b75d01599342bf49d7a748f308e429f9a8f7a3f4afaa9aadb92780819e3454'
 
     steps:
       - name: Checkout disposable pentest branch
@@ -39,6 +39,7 @@ jobs:
           test "$GITHUB_REF_NAME" = 'pentest/beagle-remote-replay-20260909'
           test "$SOURCE_ARTIFACT_ID" = '10115314122'
           [[ "$SOURCE_SUBJECT_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$EXPECTED_BUNDLE_SHA256" =~ ^[a-f0-9]{64}$ ]]
 
       - name: Download previously green reviewed artifact
         shell: bash
@@ -66,7 +67,7 @@ jobs:
           const digest = crypto.createHash('sha256').update(bundle).digest('hex');
           if (manifest.subjectSha !== process.env.SOURCE_SUBJECT_SHA) throw new Error('source exact SHA mismatch');
           if (manifest.bundleSha256 !== digest) throw new Error('bundle digest mismatch');
-          if (!digest.startsWith(process.env.EXPECTED_BUNDLE_SHA256)) throw new Error('unexpected reviewed bundle digest');
+          if (digest !== process.env.EXPECTED_BUNDLE_SHA256) throw new Error('unexpected reviewed bundle digest');
           if (manifest.replayFileCount !== 294) throw new Error(`unexpected replay file count ${manifest.replayFileCount}`);
           if (manifest.containsSeedData !== false || manifest.containsProductionRows !== false) throw new Error('data boundary not closed');
           if (manifest.productionWriteAuthorized !== false) throw new Error('production write boundary not closed');
