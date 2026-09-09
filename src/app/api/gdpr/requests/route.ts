@@ -39,6 +39,13 @@ export async function POST(request: NextRequest) {
   const organization = await getCurrentOrganizationForUser(user.id);
   if (!organization) return noStoreJson({ error: 'Organization not found' }, { status: 404 });
 
+  const intakePermission = await assertOrganizationPermission({
+    userId: user.id,
+    organizationId: organization.id,
+    permission: 'submit_privacy_request',
+  });
+  if (!intakePermission.ok) return permissionDeniedResponse(intakePermission);
+
   const requestContext = buildAuditRequestContextFromRequest(request);
   const rateLimit = await checkDistributedRateLimit({
     policy: 'gdpr-delete',
