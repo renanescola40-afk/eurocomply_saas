@@ -120,7 +120,7 @@ jobs:
           if [ -z "${E2E_BASE_URL:-}" ]; then
             unset E2E_BASE_URL
           fi
-          npx playwright install --with-deps chromium
+          bash scripts/quality/install-playwright-ci.sh
           if ! npm run test:e2e -- --reporter=line,json > playwright-e2e.log 2>&1; then
             echo "::error title=Playwright E2E failed::The production-like E2E suite failed. Merge and release remain blocked."
             tail -n 250 playwright-e2e.log
