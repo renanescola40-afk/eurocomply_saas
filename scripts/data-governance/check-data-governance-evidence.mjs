@@ -10,7 +10,7 @@ catch { failures.push('data governance evidence is invalid JSON'); }
 
 const requiredChecks = [
   'protectedMainExecution','exactShaBound','explicitConfirmation','residencyRegionDeclared',
-  'retentionWindowValid','exportEncryptionRequired','governanceTablesPresent','rlsEnabled',
+  'retentionWindowValid','retentionPolicySchemaValid','exportEncryptionRequired','governanceTablesPresent','rlsEnabled',
   'dsrForceRlsEnabled','tenantPoliciesPresent','dataMinimizationConstraintsPresent',
   'dsrLifecycleColumnsPresent','dsrCalendarDeadlineServerAuthority','dsrChapterThreeTypesPresent',
   'dsrServerOnlyMutationBoundary','auditIntegritySchemaPresent','exportWorkflowDocumented',
