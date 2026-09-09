@@ -6,7 +6,7 @@ These terms are prepared for counsel review and do not take effect until the con
 
 ## 1. Parties and order of precedence
 
-The service provider is **SAMUEL CERQUEIRA, UNIPESSOAL LDA**, operating the **RISCK COMPLY** brand, with address **Avenida de Roma 112-A, 1700-353 Lisboa, Portugal** and website **https://www.risckcomply.com**. The provider tax/company registration identifier remains **[FOUNDER FACT REQUIRED: resolve conflicting NIF/NIPC evidence before publication or signature]**. The customer is the entity identified in the applicable order form or account registration.
+The proposed service provider is **SAMUEL CERQUEIRA, UNIPESSOAL LDA**, operating the **RISCK COMPLY** brand and website **https://www.risckcomply.com**. The owner has supplied **Avenida de Roma 112-A, 1700-353 Lisboa, Portugal** as the current correspondence/operating address; **[FOUNDER FACT REQUIRED: confirm the current registered office/legal address from an authoritative Portuguese commercial-registry source before publication or signature]**. The provider tax/company registration identifier remains **[FOUNDER FACT REQUIRED: resolve conflicting NIF/NIPC evidence from an authoritative source before publication or signature]**. The customer is the entity identified in the applicable order form or account registration.
 
 Order of precedence: signed order form; signed DPA; negotiated service schedule; these terms; public documentation. Public pages do not expand signed commitments.
 
@@ -101,4 +101,4 @@ Legal notices: **[FOUNDER FACT REQUIRED]**. Privacy, security, billing and suppo
 
 ## 20. Review conditions
 
-Counsel must confirm entity identity, commercial consistency, role allocation, acceptable-use scope, AI disclaimers, suspension, termination, warranties, indemnities, liability, governing law and enforceability before publication or signature.
+Counsel must confirm entity identity, registered office/legal address, commercial consistency, role allocation, acceptable-use scope, AI disclaimers, suspension, termination, warranties, indemnities, liability, governing law and enforceability before publication or signature.
