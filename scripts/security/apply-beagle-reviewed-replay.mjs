@@ -285,7 +285,12 @@ async function main() {
     await request(targetRef, chunk, `replay_chunk_${index + 1}`);
   }
 
-  const postconditions = await request(targetRef, postconditionSql(), 'beagle_postconditions');
+  // The SQL block is fail-closed: any violated postcondition raises and the
+  // provider request fails. Do not persist the provider response itself; it is
+  // remote/untrusted data and is unnecessary for proving that the bounded
+  // postconditions completed successfully.
+  await request(targetRef, postconditionSql(), 'beagle_postconditions');
+
   const evidencePath = required('BEAGLE_REMOTE_REPLAY_EVIDENCE_PATH');
   const evidence = {
     schema: 'risck-comply.beagle-remote-reviewed-replay.v1',
@@ -301,7 +306,6 @@ async function main() {
     containsProductionRows: false,
     canonicalMigrationHistory: false,
     postconditionsPassed: true,
-    providerResponse: postconditions,
   };
   writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
   process.stdout.write('Beagle isolated remote replay and postconditions: PASS\n');
