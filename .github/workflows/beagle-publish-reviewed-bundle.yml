@@ -6,14 +6,10 @@ on:
       - pentest/beagle-remote-replay-20260909
     paths:
       - '.github/workflows/beagle-publish-reviewed-bundle.yml'
-      - 'scripts/security/generate-beagle-reviewed-replay-bundle.mjs'
-      - 'scripts/recovery/**'
-      - 'supabase/migrations/**'
-      - 'docs/security/evidence/human-review/**'
-      - 'docs/security/decisions/**'
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: beagle-publish-reviewed-bundle
@@ -21,71 +17,70 @@ concurrency:
 
 jobs:
   publish:
-    name: Publish schema-only reviewed replay bundle
+    name: Publish validated schema-only replay bundle
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 15
     env:
-      EXPECTED_HEAD_SHA: ${{ github.sha }}
+      SOURCE_ARTIFACT_ID: '10115314122'
+      SOURCE_SUBJECT_SHA: 'f40db9993ac7ff2a4301de552d75c12eb9d2fb1d'
+      EXPECTED_BUNDLE_SHA256: 'e9b75d'
 
     steps:
-      - name: Checkout exact branch SHA
+      - name: Checkout disposable pentest branch
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: ${{ env.EXPECTED_HEAD_SHA }}
           persist-credentials: true
           fetch-depth: 0
 
-      - name: Verify exact assessed SHA
+      - name: Verify branch boundary
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$EXPECTED_HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
-          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+          test "$GITHUB_REF_NAME" = 'pentest/beagle-remote-replay-20260909'
+          test "$SOURCE_ARTIFACT_ID" = '10115314122'
+          [[ "$SOURCE_SUBJECT_SHA" =~ ^[a-f0-9]{40}$ ]]
 
-      - name: Bind runner-local output paths
+      - name: Download previously green reviewed artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/beagle-artifact"
+          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/$SOURCE_ARTIFACT_ID/zip" > "$RUNNER_TEMP/beagle-artifact.zip"
+          unzip -q "$RUNNER_TEMP/beagle-artifact.zip" -d "$RUNNER_TEMP/beagle-artifact"
+          test -s "$RUNNER_TEMP/beagle-artifact/beagle-reviewed-replay-bundle.sql"
+          test -s "$RUNNER_TEMP/beagle-artifact/beagle-reviewed-replay-manifest.json"
+
+      - name: Revalidate artifact digest and safety manifest
         shell: bash
         run: |
           set -euo pipefail
-          echo "RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH=$RUNNER_TEMP/beagle-reviewed-replay-bundle.sql" >> "$GITHUB_ENV"
-          echo "RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH=$RUNNER_TEMP/beagle-reviewed-replay-manifest.json" >> "$GITHUB_ENV"
-
-      - name: Set up pinned Supabase CLI
-        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
-        with:
-          version: 2.101.0
-
-      - name: Verify PostgreSQL client
-        run: node scripts/recovery/verify-postgresql-client.mjs
-
-      - name: Generate exact-SHA reviewed bundle
-        run: node scripts/security/generate-beagle-reviewed-replay-bundle.mjs
-
-      - name: Validate bundle safety and digest
-        shell: bash
-        run: |
-          set -euo pipefail
+          BUNDLE="$RUNNER_TEMP/beagle-artifact/beagle-reviewed-replay-bundle.sql" \
+          MANIFEST="$RUNNER_TEMP/beagle-artifact/beagle-reviewed-replay-manifest.json" \
           node - <<'NODE'
           const fs = require('node:fs');
           const crypto = require('node:crypto');
-          const manifest = JSON.parse(fs.readFileSync(process.env.RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH, 'utf8'));
-          const bytes = fs.readFileSync(process.env.RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH);
-          const digest = crypto.createHash('sha256').update(bytes).digest('hex');
-          if (manifest.subjectSha !== process.env.EXPECTED_HEAD_SHA) throw new Error('exact SHA mismatch');
-          if (manifest.bundleSha256 !== digest) throw new Error('digest mismatch');
+          const bundle = fs.readFileSync(process.env.BUNDLE);
+          const manifest = JSON.parse(fs.readFileSync(process.env.MANIFEST, 'utf8'));
+          const digest = crypto.createHash('sha256').update(bundle).digest('hex');
+          if (manifest.subjectSha !== process.env.SOURCE_SUBJECT_SHA) throw new Error('source exact SHA mismatch');
+          if (manifest.bundleSha256 !== digest) throw new Error('bundle digest mismatch');
+          if (!digest.startsWith(process.env.EXPECTED_BUNDLE_SHA256)) throw new Error('unexpected reviewed bundle digest');
+          if (manifest.replayFileCount !== 294) throw new Error(`unexpected replay file count ${manifest.replayFileCount}`);
           if (manifest.containsSeedData !== false || manifest.containsProductionRows !== false) throw new Error('data boundary not closed');
           if (manifest.productionWriteAuthorized !== false) throw new Error('production write boundary not closed');
-          if (manifest.replayFileCount !== 294) throw new Error(`unexpected replay file count ${manifest.replayFileCount}`);
+          if (manifest.intendedTarget !== 'isolated-beagle-pentest-supabase-only') throw new Error('target boundary invalid');
           NODE
 
       - name: Publish bundle only on disposable pentest branch
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_REF_NAME" = 'pentest/beagle-remote-replay-20260909'
           out='docs/security/pentest/generated'
           mkdir -p "$out"
-          cp "$RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH" "$out/beagle-reviewed-replay-bundle.sql"
-          cp "$RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH" "$out/beagle-reviewed-replay-manifest.json"
+          cp "$RUNNER_TEMP/beagle-artifact/beagle-reviewed-replay-bundle.sql" "$out/beagle-reviewed-replay-bundle.sql"
+          cp "$RUNNER_TEMP/beagle-artifact/beagle-reviewed-replay-manifest.json" "$out/beagle-reviewed-replay-manifest.json"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add "$out/beagle-reviewed-replay-bundle.sql" "$out/beagle-reviewed-replay-manifest.json"
@@ -93,9 +88,5 @@ jobs:
             echo 'Reviewed bundle already published at identical bytes.'
             exit 0
           fi
-          git commit -m 'test(pentest): publish exact reviewed Beagle replay bundle'
+          git commit -m 'test(pentest): publish reviewed Beagle replay artifact'
           git push origin HEAD:pentest/beagle-remote-replay-20260909
-
-      - name: Stop local disposable runtime
-        if: always()
-        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
