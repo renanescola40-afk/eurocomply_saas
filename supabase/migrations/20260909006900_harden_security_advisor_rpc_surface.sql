@@ -29,8 +29,11 @@ revoke all on function app_private.enterprise_member_can_manage(uuid) from publi
 grant execute on function app_private.enterprise_member_can_read(uuid) to authenticated, service_role;
 grant execute on function app_private.enterprise_member_can_manage(uuid) to authenticated, service_role;
 
--- Trigger helpers do not need a mutable caller-controlled search_path.
-alter function if exists public.prevent_ai_qms_decision_mutation()
+-- Trigger helpers do not need a mutable caller-controlled search_path. This is
+-- deliberately fail-closed: the helper is part of the reviewed append-only QMS
+-- surface, so a missing function must abort the migration rather than silently
+-- skipping hardening.
+alter function public.prevent_ai_qms_decision_mutation()
   set search_path = pg_catalog;
 
 -- Fail closed if the exposed RPC surface or search_path hardening regresses.
