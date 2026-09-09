@@ -9,6 +9,7 @@ const STEP_UP_TOKEN_HEADER = 'x-eurocomply-step-up-token';
 const BILLING_IDEMPOTENCY_HEADER = 'Idempotency-Key';
 const DASHBOARD_BILLING_RETURN_PATH = '/dashboard/organizations/billing';
 const PUBLIC_BILLING_ERROR_CODE = 'action_failed';
+const PUBLIC_PAID_GA_ERROR_CODE = 'public_paid_ga_not_enabled';
 
 type BillingActionButtonProps = {
   action: 'checkout' | 'portal';
@@ -70,6 +71,23 @@ function getStepUpCopy(locale: string): StepUpCopy {
         chooseFactor: 'Choose an MFA method to continue billing:',
         enterCode: 'Enter your MFA code to continue billing.',
       };
+  }
+}
+
+function getPublicPaidGaUnavailableCopy(locale: string) {
+  switch (locale) {
+    case 'pt':
+      return 'As novas subscrições self-service ainda não estão disponíveis. Contacte a nossa equipa comercial para avançar.';
+    case 'es':
+      return 'Las nuevas suscripciones de autoservicio aún no están disponibles. Contacta con nuestro equipo comercial para continuar.';
+    case 'fr':
+      return 'Les nouveaux abonnements en libre-service ne sont pas encore disponibles. Contactez notre équipe commerciale pour continuer.';
+    case 'it':
+      return 'I nuovi abbonamenti self-service non sono ancora disponibili. Contatta il nostro team commerciale per continuare.';
+    case 'de':
+      return 'Neue Self-Service-Abonnements sind noch nicht verfügbar. Wenden Sie sich an unser Vertriebsteam, um fortzufahren.';
+    default:
+      return 'New self-serve subscriptions are not available yet. Contact our sales team to continue.';
   }
 }
 
@@ -197,12 +215,14 @@ async function requestBillingAction({
 
 export function BillingActionButton({ action, locale, planId, disabled, children, variant = 'default', className, errorReturnHref }: BillingActionButtonProps) {
   const [loading, setLoading] = useState(false);
+  const [paidGaUnavailable, setPaidGaUnavailable] = useState<string | null>(null);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (disabled || loading) return;
 
     setLoading(true);
+    setPaidGaUnavailable(null);
     const idempotencyKey = crypto.randomUUID();
 
     try {
@@ -211,6 +231,11 @@ export function BillingActionButton({ action, locale, planId, disabled, children
       if (response.status === 403 && json.error === 'step_up_required') {
         const stepUpToken = await getBillingStepUpToken(locale);
         ({ response, json } = await requestBillingAction({ action, locale, planId, idempotencyKey, stepUpToken }));
+      }
+
+      if (!response.ok && json.error === PUBLIC_PAID_GA_ERROR_CODE) {
+        setPaidGaUnavailable(getPublicPaidGaUnavailableCopy(locale));
+        return;
       }
 
       if (!response.ok || typeof json.url !== 'string') {
@@ -232,6 +257,11 @@ export function BillingActionButton({ action, locale, planId, disabled, children
         {children}
         {action === 'portal' && !loading ? <ArrowRight className="h-4 w-4" /> : null}
       </Button>
+      {paidGaUnavailable ? (
+        <p role="status" aria-live="polite" className="mt-3 text-sm leading-6 text-amber-200">
+          {paidGaUnavailable}
+        </p>
+      ) : null}
     </form>
   );
 }
