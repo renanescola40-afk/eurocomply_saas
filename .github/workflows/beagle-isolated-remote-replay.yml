@@ -53,9 +53,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH=$RUNNER_TEMP/beagle-reviewed-replay-bundle.sql" >> "$GITHUB_ENV"
-          echo "RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH=$RUNNER_TEMP/beagle-reviewed-replay-manifest.json" >> "$GITHUB_ENV"
-          echo "BEAGLE_REMOTE_REPLAY_EVIDENCE_PATH=$RUNNER_TEMP/beagle-remote-replay-evidence.json" >> "$GITHUB_ENV"
+          {
+            echo "RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH=$RUNNER_TEMP/beagle-reviewed-replay-bundle.sql"
+            echo "RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH=$RUNNER_TEMP/beagle-reviewed-replay-manifest.json"
+            echo "BEAGLE_REMOTE_REPLAY_EVIDENCE_PATH=$RUNNER_TEMP/beagle-remote-replay-evidence.json"
+          } >> "$GITHUB_ENV"
 
       - name: Set up pinned Supabase CLI
         uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
