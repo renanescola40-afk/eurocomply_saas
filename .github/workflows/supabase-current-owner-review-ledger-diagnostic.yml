@@ -1,0 +1,155 @@
+name: Supabase Current Owner Review Ledger Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/supabase-current-owner-review-ledger-diagnostic.yml'
+      - 'scripts/supabase/build-migration-owner-review-ledger.mjs'
+      - 'scripts/supabase/normalize-migration-owner-review-evidence.mjs'
+      - 'docs/security/evidence/human-review/**'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  reconcile:
+    name: Reconcile historical owner reviews with current exact-SHA inventory
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      SUBJECT_SHA: f4999573b3b7f1e1cf72b6ee96e7fc56ea7bdcac
+      INVENTORY_RUN_ID: '34389677670'
+      INVENTORY_ARTIFACT_NAME: supabase-migration-drift-f4999573b3b7f1e1cf72b6ee96e7fc56ea7bdcac
+      INVENTORY_ARTIFACT_ID: '10119546890'
+      INVENTORY_ARTIFACT_DIGEST: sha256:a856c85e9b220f44005dca947a6d449c84d7b38e6becd95af41abc95fd44d1d1
+      INVENTORY_SHA256: b74ca4c14ed543d628c88b88ba811a590c01697f742801cb7544c4fdc11afd49
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+
+      - name: Verify current immutable inventory provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RUN="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${INVENTORY_RUN_ID}")"
+          ARTIFACT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${INVENTORY_ARTIFACT_ID}")"
+
+          test "$(jq -r '.head_sha' <<<"$RUN")" = "$SUBJECT_SHA"
+          test "$(jq -r '.head_branch' <<<"$RUN")" = 'main'
+          test "$(jq -r '.status' <<<"$RUN")" = 'completed'
+          test "$(jq -r '.conclusion' <<<"$RUN")" = 'success'
+
+          test "$(jq -r '.id' <<<"$ARTIFACT")" = "$INVENTORY_ARTIFACT_ID"
+          test "$(jq -r '.name' <<<"$ARTIFACT")" = "$INVENTORY_ARTIFACT_NAME"
+          test "$(jq -r '.expired' <<<"$ARTIFACT")" = 'false'
+          test "$(jq -r '.digest' <<<"$ARTIFACT")" = "$INVENTORY_ARTIFACT_DIGEST"
+          test "$(jq -r '.workflow_run.id' <<<"$ARTIFACT")" = "$INVENTORY_RUN_ID"
+          test "$(jq -r '.workflow_run.head_sha' <<<"$ARTIFACT")" = "$SUBJECT_SHA"
+
+      - name: Download current exact-SHA migration drift artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: ${{ env.INVENTORY_ARTIFACT_NAME }}
+          path: current-inventory-artifact
+          github-token: ${{ github.token }}
+          run-id: ${{ env.INVENTORY_RUN_ID }}
+
+      - name: Verify inventory digest and shape
+        run: |
+          set -euo pipefail
+          INVENTORY="$(find current-inventory-artifact -type f -name 'migration-reconciliation-inventory.json' -print -quit)"
+          test -n "$INVENTORY"
+          test "$(sha256sum "$INVENTORY" | awk '{print $1}')" = "$INVENTORY_SHA256"
+          test "$(jq -r '.schema' "$INVENTORY")" = 'risck-comply.supabase-migration-reconciliation-inventory.v1'
+          test "$(jq -r '.counts.filesRequiringClassification' "$INVENTORY")" = '240'
+          echo "INVENTORY=$INVENTORY" >> "$GITHUB_ENV"
+
+      - name: Reapply retained F-N owner review evidence by exact fingerprint only
+        id: reconcile
+        run: |
+          set -uo pipefail
+          mkdir -p artifacts/supabase-current-owner-review-ledger
+
+          node scripts/supabase/normalize-migration-owner-review-evidence.mjs \
+            "$INVENTORY" \
+            artifacts/supabase-current-owner-review-ledger/owner-review-records.json \
+            > artifacts/supabase-current-owner-review-ledger/normalize.stdout.txt \
+            2> artifacts/supabase-current-owner-review-ledger/normalize.stderr.txt
+          normalize_exit=$?
+
+          ledger_exit=99
+          if [ "$normalize_exit" -eq 0 ]; then
+            node scripts/supabase/build-migration-owner-review-ledger.mjs \
+              "$INVENTORY" \
+              artifacts/supabase-current-owner-review-ledger/owner-review-records.json \
+              artifacts/supabase-current-owner-review-ledger/ledger.json \
+              --batch-size=15 \
+              > artifacts/supabase-current-owner-review-ledger/ledger.stdout.txt \
+              2> artifacts/supabase-current-owner-review-ledger/ledger.stderr.txt
+            ledger_exit=$?
+          fi
+
+          jq -n \
+            --arg subjectSha "$SUBJECT_SHA" \
+            --arg inventorySha256 "$INVENTORY_SHA256" \
+            --argjson normalizeExit "$normalize_exit" \
+            --argjson ledgerExit "$ledger_exit" \
+            '{
+              schema: "risck-comply.supabase-current-owner-review-ledger-diagnostic.v1",
+              subjectSha: $subjectSha,
+              inventorySha256: $inventorySha256,
+              normalizeExit: $normalizeExit,
+              ledgerExit: $ledgerExit,
+              automaticClassificationAllowed: false,
+              stagingExecutionAuthorized: false,
+              migrationExecutionAuthorized: false,
+              migrationHistoryMutationAuthorized: false,
+              productionWriteAuthorized: false
+            }' > artifacts/supabase-current-owner-review-ledger/diagnostic-status.json
+
+          # Diagnostic is intentionally non-authorizing. A mismatch must be visible
+          # in the retained artifact rather than silently converted to a decision.
+          exit 0
+
+      - name: Publish current reconciliation summary
+        if: always()
+        run: |
+          set -euo pipefail
+          {
+            echo '## Current migration owner-review reconciliation'
+            echo
+            echo "- Subject SHA: \`$SUBJECT_SHA\`"
+            echo "- Inventory SHA-256: \`$INVENTORY_SHA256\`"
+            echo "- Automatic classification: **disabled**"
+            echo "- Staging / migration / history repair / production writes: **not authorized**"
+            echo
+            if [ -f artifacts/supabase-current-owner-review-ledger/ledger.json ]; then
+              echo "- Ledger status: **$(jq -r '.status' artifacts/supabase-current-owner-review-ledger/ledger.json)**"
+              echo "- Inventory items: **$(jq -r '.counts.inventoryItems' artifacts/supabase-current-owner-review-ledger/ledger.json)**"
+              echo "- Exact owner-reviewed: **$(jq -r '.counts.uniqueExactReviewed' artifacts/supabase-current-owner-review-ledger/ledger.json)**"
+              echo "- Exact unmatched: **$(jq -r '.counts.exactUnmatchedItems' artifacts/supabase-current-owner-review-ledger/ledger.json)**"
+              echo "- Next bounded batch: **$(jq -r '.counts.nextBatchItems' artifacts/supabase-current-owner-review-ledger/ledger.json)**"
+            else
+              echo '- Ledger was not emitted; inspect retained normalization diagnostics.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload non-authorizing reconciliation diagnostic
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: supabase-current-owner-review-ledger-${{ github.event.pull_request.head.sha }}
+          path: artifacts/supabase-current-owner-review-ledger
+          retention-days: 30
+          if-no-files-found: error
