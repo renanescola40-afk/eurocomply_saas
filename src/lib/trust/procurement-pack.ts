@@ -104,7 +104,7 @@ export const procurementProviders: ProcurementProvider[] = [
     name: 'GitHub Actions',
     purpose: 'Source delivery, CI/CD and protected recovery/security workflows',
     status: 'conditional',
-    regionDisclosure: 'Protected release workflows are active; company-specific agreement/DPA applicability and final legal role remain under review.',
+    regionDisclosure: 'Protected release and recovery workflows are active and can transiently process Production database data on GitHub-hosted runners; only evidence-bound/redacted outputs are intended to be retained. Company-specific agreement/DPA applicability and final legal/transfer role remain under review.',
   },
   {
     name: 'Sentry',
