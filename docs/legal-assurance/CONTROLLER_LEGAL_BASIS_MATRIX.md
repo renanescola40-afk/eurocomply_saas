@@ -16,7 +16,7 @@ This matrix covers activities where RISCK COMPLY may determine its own purposes/
 | Support | respond to customer/user requests and operate service | Art. 6(1)(b) and/or 6(1)(f) depending on requester/context | PENDING_EXTERNAL_REVIEW | Split processor-side handling of customer content from provider-side support administration |
 | Procurement/sales enquiries | respond to business enquiries, prepare/perform B2B contracting | Art. 6(1)(b) pre-contract steps where requested; Art. 6(1)(f) for narrow B2B relationship administration where appropriate | PASS_LIA_PRE_REVIEW_RELATIONSHIP_ADMIN | LIA-B2B-01 covers narrow relationship/procurement administration; direct marketing/ePrivacy remains explicitly outside positive LIA credit |
 | Essential service communications | security, billing, service notices necessary to operate relationship | Art. 6(1)(b), 6(1)(f), or 6(1)(c) depending on notice | PENDING_EXTERNAL_REVIEW | Classify message types and suppress marketing from essential notices |
-| Optional product analytics | measure product use/improvement | Art. 6(1)(a) consent where required; 6(1)(f) only if applicable after ePrivacy/cookie analysis and balancing | BLOCKED_CONFIGURATION_AND_LEGAL_REVIEW | Confirm actual PostHog/analytics setup, identifiers, cookies/storage, consent mode and withdrawal path |
+| Optional product analytics | measure product use/improvement | Art. 6(1)(a) consent where required; 6(1)(f) only if applicable after ePrivacy/cookie analysis and balancing | PASS_SOURCE_CONSENT_FAIL_CLOSED_PRE_REVIEW | Source defaults consent requirement to enabled unless explicitly disabled, blocks PostHog loading/capture without stored grant, exposes allow/decline and later withdrawal controls, stops recording/opts out on withdrawal. Retain exact Production configuration/runtime evidence and obtain final ePrivacy/legal-basis review |
 | Non-essential marketing communications | promote service/offers | GDPR basis must be assessed together with the more specific Portuguese electronic-marketing rules; an Art. 6(1)(f) LIA alone does not authorize sending | PASS_RULE_MAPPING_IMPLEMENTATION_BLOCKED | `EPRIVACY_DIRECT_MARKETING_PORTUGAL.md` maps Lei 41/2004 Arts. 13-A/13-B: natural-person prior express-consent rule, legal-person objection/DGC-list route, qualifying existing-customer similar-service route, sender identity/termination contact; implement consent/suppression/DGC evidence and send-time enforcement before runtime credit |
 | Corporate/legal recordkeeping | establish, exercise or defend legal claims; compliance records | Art. 6(1)(f) and/or 6(1)(c) when a specific obligation applies | PENDING_EXTERNAL_REVIEW | Tie every retained class to an actual purpose, rule or claims rationale |
 
@@ -36,7 +36,35 @@ Any row relying on Art. 6(1)(f) must record:
 6. retention criteria;
 7. date/owner/version and material-change review trigger.
 
-The current LIA pack completes this structure for security/abuse prevention, incident response/security evidence and narrow B2B relationship/procurement administration. It deliberately does not approve optional analytics or non-essential direct marketing.
+The current LIA pack completes this structure for security/abuse prevention, incident response/security evidence and narrow B2B relationship/procurement administration. It deliberately does not approve optional analytics under legitimate interests or non-essential direct marketing.
+
+## Analytics consent source boundary
+
+The previous `BLOCKED_CONFIGURATION` label was too broad for the current source state.
+
+Canonical source now provides all of the following controls:
+
+- `isAnalyticsConsentRequired()` fails closed: consent is required unless `NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT` is explicitly `false`;
+- PostHog initialization returns without loading when consent is required and no stored grant exists;
+- event capture, identity, organization grouping and feature-flag access are gated by the same consent state;
+- the consent banner provides allow/decline choices and links to the Cookie Policy;
+- Cookie Policy rendering exposes persistent `AnalyticsConsentControls` allowing a later grant, decline or withdrawal;
+- withdrawal stores `denied`, stops session recording and invokes PostHog opt-out;
+- source configuration disables session recording by default and masks text/attributes;
+- tests cover fail-closed consent behavior and public consent controls.
+
+That is sufficient for **source-control PASS**, not for final legal basis or exact Production runtime acceptance.
+
+```text
+ANALYTICS_CONSENT_SOURCE_CONTROL=PASS
+ANALYTICS_CONSENT_FAIL_CLOSED_DEFAULT=PASS
+ANALYTICS_CONSENT_WITHDRAWAL_UI=PASS_SOURCE_IMPLEMENTED
+ANALYTICS_CAPTURE_GATING=PASS_SOURCE_IMPLEMENTED
+ANALYTICS_PRODUCTION_EXACT_CONFIG=OPEN_RUNTIME_EVIDENCE
+ANALYTICS_EPRIVACY_LEGAL_BASIS=PENDING_EXTERNAL_REVIEW
+```
+
+Production must still prove the exact deployed build/configuration and current provider/account facts. The source control must not be used to claim that the final ePrivacy/GDPR legal basis has been accepted.
 
 ## Direct-marketing rule separation
 
@@ -60,10 +88,13 @@ LEGITIMATE_INTEREST_ASSESSMENTS=PASS_PRE_REVIEW_PARTIAL_SCOPE
 SECURITY_ABUSE_LIA=PASS_PRE_REVIEW
 INCIDENT_RESPONSE_LIA=PASS_PRE_REVIEW_WITH_RETENTION_DEPENDENCY
 B2B_RELATIONSHIP_ADMIN_LIA=PASS_PRE_REVIEW
+ANALYTICS_CONSENT_SOURCE_CONTROL=PASS
+ANALYTICS_CONSENT_WITHDRAWAL_UI=PASS_SOURCE_IMPLEMENTED
+ANALYTICS_PRODUCTION_EXACT_CONFIG=OPEN_RUNTIME_EVIDENCE
+ANALYTICS_EPRIVACY_LEGAL_BASIS=PENDING_EXTERNAL_REVIEW
 EPRIVACY_DIRECT_MARKETING_ANALYSIS=PASS_RULE_MAPPING_IMPLEMENTATION_BLOCKED
 DIRECT_MARKETING_RUNTIME_READY=NO
-ANALYTICS_CONSENT_CONFIGURATION=BLOCKED
 CONTROLLER_LEGAL_BASIS_FINAL=PENDING_EXTERNAL_REVIEW
 ```
 
-The matrix closes the internal structural LIA and Portuguese electronic-marketing rule-mapping gaps while preserving the implementation, configuration and external-review blockers.
+The matrix closes the stale analytics source-configuration blocker while preserving exact Production evidence, ePrivacy/legal-basis review, direct-marketing implementation and external-review blockers.
