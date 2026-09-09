@@ -4,7 +4,7 @@
 
 ## 1. Controller identity
 
-The controller for website, account, commercial, billing, support and security processing is **[FOUNDER FACT REQUIRED: legal entity, address, registration and contact details]**. DPO or EU representative details, if applicable, are **[FOUNDER FACT REQUIRED]**.
+The controller for website, account, commercial, billing, support and security processing is **SAMUEL CERQUEIRA, UNIPESSOAL LDA**, operating the **RISCK COMPLY** brand, with address **Avenida de Roma 112-A, 1700-353 Lisboa, Portugal** and website **https://www.risckcomply.com**. The provider tax/company registration identifier and privacy contact remain **[FOUNDER FACT REQUIRED: resolve conflicting NIF/NIPC evidence and confirm contact channel before publication]**. DPO or EU representative details, if applicable, are **[FOUNDER FACT REQUIRED]**.
 
 When customers upload personal data to their workspace, the customer generally acts as controller and the provider acts as processor under the DPA, subject to counsel-confirmed role allocation.
 
