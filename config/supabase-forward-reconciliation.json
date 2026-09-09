@@ -8,6 +8,74 @@
       "purpose": "evolve the existing canonical data_subject_requests lifecycle above the verified V41 Production ledger head: replace fixed 30-day default authority with explicit calendar-month server tracking, add identity/role/extension/decision/evidence fields, extend Chapter III request types, force RLS, and remove direct browser mutation authority without creating a competing DSAR table"
     }
   ],
+  "historicalBaselines": {
+    "v41": {
+      "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
+      "changeSet": "2026-09-09-supabase-advisor-rpc-hardening-v41",
+      "sourceChangeSet": "2026-09-08-post-audit-containment-forward-reconciliation-v40",
+      "migrations": [
+        {
+          "filename": "20260908000000_reconcile_final_public_release_payment_storage_hardening.sql",
+          "purpose": "byte-identical re-forward of 20260906000000_reconcile_final_public_release_payment_storage_hardening.sql above emergency Production ledger head 20260907142133, preserving the reviewed payment-first RLS, compliance-document Storage, Evidence Vault and active-tenant hardening without migration-history repair"
+        },
+        {
+          "filename": "20260908003000_billing_ai_system_commercial_quota.sql",
+          "purpose": "byte-identical re-forward of 20260906003000_billing_ai_system_commercial_quota.sql above emergency Production ledger head 20260907142133, preserving transactional AI-system commercial quota authority"
+        },
+        {
+          "filename": "20260908003500_billing_self_serve_member_capacity.sql",
+          "purpose": "byte-identical re-forward of 20260906003500_billing_self_serve_member_capacity.sql above emergency Production ledger head 20260907142133, preserving fail-closed self-service member capacity"
+        },
+        {
+          "filename": "20260908004000_billing_document_storage_quota.sql",
+          "purpose": "byte-identical re-forward of 20260906004000_billing_document_storage_quota.sql above emergency Production ledger head 20260907142133, preserving persisted document Storage capacity and direct-mutation closure"
+        },
+        {
+          "filename": "20260908004500_billing_entitlement_catalog_truth.sql",
+          "purpose": "byte-identical re-forward of 20260906004500_billing_entitlement_catalog_truth.sql above emergency Production ledger head 20260907142133, preserving canonical subscription entitlement catalog truth"
+        },
+        {
+          "filename": "20260908005000_billing_initial_checkout_singleflight.sql",
+          "purpose": "byte-identical re-forward of 20260906005000_billing_initial_checkout_singleflight.sql above emergency Production ledger head 20260907142133, preserving tenant-scoped initial Checkout single-flight authority"
+        },
+        {
+          "filename": "20260908006000_billing_completed_checkout_authority_guard.sql",
+          "purpose": "byte-identical re-forward of 20260906006000_billing_completed_checkout_authority_guard.sql above emergency Production ledger head 20260907142133, preserving completed Checkout activation-delay authority"
+        },
+        {
+          "filename": "20260908006400_reconcile_paid_governance_runtime_foundations.sql",
+          "purpose": "byte-identical re-forward of 20260906006400_reconcile_paid_governance_runtime_foundations.sql above emergency Production ledger head 20260907142133, preserving paid QMS and Enterprise runtime foundations"
+        },
+        {
+          "filename": "20260908006500_billing_professional_task_plan_isolation.sql",
+          "purpose": "byte-identical re-forward of 20260906006500_billing_professional_task_plan_isolation.sql above emergency Production ledger head 20260907142133, preserving Professional plan isolation and active-membership hardening"
+        },
+        {
+          "filename": "20260908006600_billing_business_feature_plan_isolation.sql",
+          "purpose": "byte-identical re-forward of 20260906006600_billing_business_feature_plan_isolation.sql above emergency Production ledger head 20260907142133, preserving Business feature data-plane isolation"
+        },
+        {
+          "filename": "20260908006700_billing_governance_workflow_plan_isolation.sql",
+          "purpose": "byte-identical re-forward of 20260906006700_billing_governance_workflow_plan_isolation.sql above emergency Production ledger head 20260907142133, preserving Business and Enterprise governance workflow plan isolation"
+        },
+        {
+          "filename": "20260908006800_harden_cross_tenant_reference_integrity.sql",
+          "purpose": "byte-identical re-forward of 20260906006800_harden_cross_tenant_reference_integrity.sql above emergency Production ledger head 20260907142133, preserving same-organization reference integrity for privileged writes"
+        },
+        {
+          "filename": "20260909006900_harden_security_advisor_rpc_surface.sql",
+          "purpose": "move Enterprise membership SECURITY DEFINER helpers out of the exposed public API schema while preserving authenticated RLS evaluation, and fix the append-only QMS trigger search_path flagged by the Supabase Security Advisor"
+        }
+      ],
+      "truthBoundary": {
+        "automaticClassification": false,
+        "productionWriteAuthorizedByConfig": false,
+        "migrationHistoryRepairAllowed": false,
+        "unrestrictedDbPushAllowed": false,
+        "onlyListedForwardMigrationsMayBeRehearsedOrRequested": true
+      }
+    }
+  },
   "truthBoundary": {
     "automaticClassification": false,
     "productionWriteAuthorizedByConfig": false,
