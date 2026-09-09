@@ -9,6 +9,16 @@ on:
   pull_request:
     paths:
       - 'supabase/migrations/**'
+      - 'supabase/reconciliation/**'
+      - 'scripts/supabase/audit-migration-drift.mjs'
+      - 'scripts/supabase/prepare-production-db-connection.mjs'
+      - '.github/workflows/supabase-migration-drift-audit.yml'
+      - 'tests/security/supabase-migration-drift-audit-workflow.test.ts'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/reconciliation/**'
       - 'scripts/supabase/audit-migration-drift.mjs'
       - 'scripts/supabase/prepare-production-db-connection.mjs'
       - '.github/workflows/supabase-migration-drift-audit.yml'
@@ -56,7 +66,7 @@ jobs:
           {
             echo 'Pull requests validate resolver and workflow contracts without requesting the protected production environment.'
             echo 'No production database secret or connection is available to this job.'
-            echo 'The scheduled or manually dispatched audit remains responsible for fail-closed live migration drift evidence.'
+            echo 'A protected main push, scheduled run, or manual dispatch is responsible for fail-closed live migration drift evidence.'
           } >> "$GITHUB_STEP_SUMMARY"
 
   audit:

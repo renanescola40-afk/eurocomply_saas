@@ -16,6 +16,7 @@ const LOCALE_COOKIE = 'NEXT_LOCALE';
 const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations';
 const AUTH_SUCCESS_PATH = '/onboarding';
 const SENTRY_TUNNEL_PATH = '/monitoring';
+const BEAGLE_DOMAIN_VERIFICATION_PATH = '/_e8f1hq2qpr6fuvd036hr4l97yn8octew';
 const INTERNAL_PATHNAME_HEADER = 'x-risck-internal-pathname';
 const PREMIUM_NEWS_PATH = '/dashboard/organizations/reports-governance/news';
 const CHECKOUT_PLAN_IDS = new Set(['starter', 'growth', 'enterprise', 'essential', 'professional', 'business', 'basic', 'pro']);
@@ -307,6 +308,12 @@ async function hasSupabaseSession(req: NextRequest): Promise<SupabaseSessionChec
 
 export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
+
+  // Beagle must fetch this exact extensionless root asset with HTTP 200.
+  // Keep the bypass scoped to the verifier token so locale routing remains unchanged elsewhere.
+  if (pathname === BEAGLE_DOMAIN_VERIFICATION_PATH) {
+    return NextResponse.next();
+  }
 
   if (pathname === SENTRY_TUNNEL_PATH || pathname.startsWith(`${SENTRY_TUNNEL_PATH}/`)) {
     return NextResponse.next();

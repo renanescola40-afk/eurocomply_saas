@@ -143,7 +143,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+        run: bash scripts/quality/install-playwright-ci.sh
 
       - name: Validate public release runner syntax
         run: |
