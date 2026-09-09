@@ -23,13 +23,20 @@ function normalizeLocale(locale: string) {
   return SUPPORTED_LOCALES.has(normalized) ? normalized : 'en';
 }
 
+function isTrustedPrivacyOrigin(url: URL) {
+  const hostname = url.hostname.toLowerCase();
+  if (url.protocol === 'https:' && (hostname === 'risckcomply.com' || hostname.endsWith('.risckcomply.com'))) return true;
+  return url.protocol === 'http:' && hostname === 'localhost';
+}
+
 function privacyUrlForInvite(inviteUrl: string, locale: string) {
   const privacyPath = `/${normalizeLocale(locale)}/privacy`;
   const safeInviteUrl = safeUrl(inviteUrl);
 
   if (safeInviteUrl.startsWith('https://') || safeInviteUrl.startsWith('http://localhost')) {
     try {
-      return `${new URL(safeInviteUrl).origin}${privacyPath}`;
+      const parsed = new URL(safeInviteUrl);
+      return isTrustedPrivacyOrigin(parsed) ? `${parsed.origin}${privacyPath}` : privacyPath;
     } catch {
       return privacyPath;
     }
