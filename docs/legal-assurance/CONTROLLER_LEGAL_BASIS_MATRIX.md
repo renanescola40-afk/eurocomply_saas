@@ -17,7 +17,7 @@ This matrix covers activities where RISCK COMPLY may determine its own purposes/
 | Procurement/sales enquiries | respond to business enquiries, prepare/perform B2B contracting | Art. 6(1)(b) pre-contract steps where requested; Art. 6(1)(f) for narrow B2B relationship administration where appropriate | PASS_LIA_PRE_REVIEW_RELATIONSHIP_ADMIN | LIA-B2B-01 covers narrow relationship/procurement administration; direct marketing/ePrivacy remains explicitly outside positive LIA credit |
 | Essential service communications | security, billing, service notices necessary to operate relationship | Art. 6(1)(b), 6(1)(f), or 6(1)(c) depending on notice | PENDING_EXTERNAL_REVIEW | Classify message types and suppress marketing from essential notices |
 | Optional product analytics | measure product use/improvement | Art. 6(1)(a) consent where required; 6(1)(f) only if applicable after ePrivacy/cookie analysis and balancing | BLOCKED_CONFIGURATION_AND_LEGAL_REVIEW | Confirm actual PostHog/analytics setup, identifiers, cookies/storage, consent mode and withdrawal path |
-| Non-essential marketing communications | promote service/offers | consent and/or legitimate interests subject to ePrivacy/Portuguese direct-marketing rules | BLOCKED_LEGAL_RULE_MAPPING | Map Lei 41/2004/ePrivacy and recipient/context; implement opt-out/consent evidence as required |
+| Non-essential marketing communications | promote service/offers | GDPR basis must be assessed together with the more specific Portuguese electronic-marketing rules; an Art. 6(1)(f) LIA alone does not authorize sending | PASS_RULE_MAPPING_IMPLEMENTATION_BLOCKED | `EPRIVACY_DIRECT_MARKETING_PORTUGAL.md` maps Lei 41/2004 Arts. 13-A/13-B: natural-person prior express-consent rule, legal-person objection/DGC-list route, qualifying existing-customer similar-service route, sender identity/termination contact; implement consent/suppression/DGC evidence and send-time enforcement before runtime credit |
 | Corporate/legal recordkeeping | establish, exercise or defend legal claims; compliance records | Art. 6(1)(f) and/or 6(1)(c) when a specific obligation applies | PENDING_EXTERNAL_REVIEW | Tie every retained class to an actual purpose, rule or claims rationale |
 
 ## Article 9 / special-category boundary
@@ -38,6 +38,19 @@ Any row relying on Art. 6(1)(f) must record:
 
 The current LIA pack completes this structure for security/abuse prevention, incident response/security evidence and narrow B2B relationship/procurement administration. It deliberately does not approve optional analytics or non-essential direct marketing.
 
+## Direct-marketing rule separation
+
+`EPRIVACY_DIRECT_MARKETING_PORTUGAL.md` closes the prior rule-mapping gap for Portuguese unsolicited electronic marketing without granting runtime readiness. In particular:
+
+```text
+GDPR_LIA != EPRIVACY_PERMISSION_TO_SEND
+B2B_CONTACT != AUTOMATIC_LEGAL_PERSON_CLASSIFICATION
+EXISTING_CUSTOMER != AUTOMATIC_SOFT_OPT_IN
+OPT_OUT_LINK != SUBSTITUTE_FOR_REQUIRED_PRIOR_CONSENT
+```
+
+Consent provenance, suppression/objection enforcement, qualifying existing-customer evidence, DGC-list handling where applicable, sender identity and valid termination contact remain implementation/evidence gates.
+
 ## Current gate
 
 ```text
@@ -47,9 +60,10 @@ LEGITIMATE_INTEREST_ASSESSMENTS=PASS_PRE_REVIEW_PARTIAL_SCOPE
 SECURITY_ABUSE_LIA=PASS_PRE_REVIEW
 INCIDENT_RESPONSE_LIA=PASS_PRE_REVIEW_WITH_RETENTION_DEPENDENCY
 B2B_RELATIONSHIP_ADMIN_LIA=PASS_PRE_REVIEW
-EPRIVACY_DIRECT_MARKETING_ANALYSIS=BLOCKED
+EPRIVACY_DIRECT_MARKETING_ANALYSIS=PASS_RULE_MAPPING_IMPLEMENTATION_BLOCKED
+DIRECT_MARKETING_RUNTIME_READY=NO
 ANALYTICS_CONSENT_CONFIGURATION=BLOCKED
 CONTROLLER_LEGAL_BASIS_FINAL=PENDING_EXTERNAL_REVIEW
 ```
 
-The matrix closes the internal structural LIA gap for the highest-value current Art. 6(1)(f) candidates, while preserving external review and ePrivacy/configuration blockers.
+The matrix closes the internal structural LIA and Portuguese electronic-marketing rule-mapping gaps while preserving the implementation, configuration and external-review blockers.
