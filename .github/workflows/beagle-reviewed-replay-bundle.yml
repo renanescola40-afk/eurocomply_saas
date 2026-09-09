@@ -73,8 +73,29 @@ jobs:
           const crypto = require('node:crypto');
           const manifest = JSON.parse(fs.readFileSync(process.env.RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH, 'utf8'));
           const bytes = fs.readFileSync(process.env.RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH);
+          const text = bytes.toString('utf8');
           const digest = crypto.createHash('sha256').update(bytes).digest('hex');
           if (manifest.bundleSha256 !== digest) throw new Error('Bundle digest mismatch');
+          if (manifest.schema !== 'risck-comply.beagle-reviewed-replay-bundle.v2') {
+            throw new Error('Unexpected Beagle replay manifest schema');
+          }
+          if (manifest.seedDetectionMode !== 'derived-from-bundle-filenames-and-sql-content') {
+            throw new Error('Seed detection is not derived from captured bundle evidence');
+          }
+          if (!Array.isArray(manifest.seedReplayFiles) || manifest.seedReplayFiles.length !== 0) {
+            throw new Error('Seed replay files remain in schema-only bundle');
+          }
+          if (!Number.isSafeInteger(manifest.excludedSeedReplayFileCount) || manifest.excludedSeedReplayFileCount < 1) {
+            throw new Error('Reviewed seed migration exclusion was not proven');
+          }
+          if (/(?:^|_)seed(?:_|\.|$)/im.test(
+            [...text.matchAll(/^-- BEGIN REVIEWED REPLAY FILE: ([^\r\n]+)$/gm)].map((match) => match[1]).join('\n'),
+          )) {
+            throw new Error('Seed-named migration detected in uploaded bundle');
+          }
+          if (/\binsert\s+into\s+(?:public\.)?intelligence_items\b/i.test(text)) {
+            throw new Error('Intelligence seed DML detected in uploaded bundle');
+          }
           if (manifest.containsSeedData !== false || manifest.containsProductionRows !== false) {
             throw new Error('Bundle data boundary is not fail-closed');
           }
