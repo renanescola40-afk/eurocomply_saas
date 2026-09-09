@@ -5,6 +5,10 @@ import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
+import {
+  createDataSubjectRequestRecord,
+  deleteDataSubjectRequestRecordForCompensation,
+} from '@/server/privacy/data-subject-requests';
 import { buildGdprDeleteAuditMetadata, buildGdprDeletePlan, GDPR_DELETE_CONFIRMATION, normalizeDeleteReason, validateDeleteConfirmation } from '@/server/privacy/gdpr';
 import { buildAuditRequestContextFromRequest, createAuditEvent } from '@/server/queries/audit-events';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -135,27 +139,65 @@ export async function POST(request: NextRequest) {
   const reason = normalizeDeleteReason(body.reason);
   const deletePlan = buildGdprDeletePlan();
 
+  const canonicalRequest = await createDataSubjectRequestRecord({
+    organizationId: organization.id,
+    requesterUserId: user.id,
+    requestType: 'deletion',
+    roleRoute: 'under_review',
+    identityState: 'verified',
+  });
+
+  if (!canonicalRequest.ok) {
+    reportError(new Error('GDPR deletion request canonical persistence failed'), {
+      area: 'gdpr_delete_request_canonical_record',
+      organizationId: organization.id,
+      userId: user.id,
+      reason: canonicalRequest.reason,
+    });
+
+    return noStoreJson({
+      error: 'gdpr_delete_request_record_unavailable',
+      message: 'The deletion request could not be recorded safely. Please try again later.',
+    }, { status: 503 });
+  }
+
   const audit = await createAuditEvent({
     organizationId: organization.id,
     actorUserId: user.id,
     action: 'gdpr_delete_requested',
-    entityType: 'organization',
-    entityId: organization.id,
-    metadata: buildGdprDeleteAuditMetadata({
-      reason,
-      role: permission.role,
-      plan: entitlementCheck.entitlements.plan,
-      deletePlan,
-      stepUp: stepUp.assessment,
-    }),
+    entityType: 'data_subject_request',
+    entityId: canonicalRequest.request.id,
+    metadata: {
+      ...buildGdprDeleteAuditMetadata({
+        reason,
+        role: permission.role,
+        plan: entitlementCheck.entitlements.plan,
+        deletePlan,
+        stepUp: stepUp.assessment,
+      }),
+      requestType: canonicalRequest.request.request_type,
+      canonicalRequestId: canonicalRequest.request.id,
+      receivedAt: canonicalRequest.request.received_at,
+      initialDueAt: canonicalRequest.request.initial_due_at,
+      dueAt: canonicalRequest.request.due_at,
+      identityVerificationState: canonicalRequest.request.identity_verification_state,
+      roleRoute: canonicalRequest.request.role_route,
+    },
     requestContext,
   });
 
   if (!audit.persisted) {
+    const compensated = await deleteDataSubjectRequestRecordForCompensation({
+      requestId: canonicalRequest.request.id,
+      organizationId: organization.id,
+    });
+
     reportError(new Error('GDPR deletion request audit persistence failed'), {
       area: 'gdpr_delete_request_audit',
       organizationId: organization.id,
       userId: user.id,
+      requestId: canonicalRequest.request.id,
+      compensated,
       reason: audit.reason,
     });
 
@@ -174,6 +216,9 @@ export async function POST(request: NextRequest) {
 
   return noStoreJson({
     ...deletePlan,
+    requestId: canonicalRequest.request.id,
+    receivedAt: canonicalRequest.request.received_at,
+    dueAt: canonicalRequest.request.due_at,
     message: 'Request received. A compliance administrator must review retention, legal hold, billing and audit requirements before completion.',
     stepUp: publicStepUpSummary(stepUp.assessment),
   });
