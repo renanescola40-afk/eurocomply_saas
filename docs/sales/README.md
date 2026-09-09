@@ -2,9 +2,23 @@
 
 This folder is the source of truth for GTM positioning, sales demos, discovery calls, outbound messaging, buyer enablement and enterprise FAQ responses.
 
+## Commercial truth boundary
+
+As of **2026-09-09**, the canonical commercial motion is:
+
+- Essential: €49/month, self-serve monthly checkout;
+- Professional: €149/month, self-serve monthly checkout;
+- Business: €399/month, assisted sales;
+- Enterprise: from €990/month, final price by contract;
+- **no free trial is currently offered**;
+- taxes/VAT are not represented as conclusively determined until the applicable customer/transaction treatment is established;
+- no legal, certification, audit or regulatory approval claim may exceed current Trust Center and signed-contract evidence.
+
+`enterprise-gtm-playbook.md`, `config/billing-commercial-catalog.json`, `docs/enterprise/ENTERPRISE_PRICING_AND_BILLING_ARCHITECTURE.md` and `src/lib/i18n/pricing-commercial-truth.ts` must remain aligned with this boundary.
+
 ## Ready-to-use assets
 
-1. [`enterprise-gtm-playbook.md`](./enterprise-gtm-playbook.md) — full GTM source of truth covering positioning, ICP, sector personas, pricing, trial/demo motion, pricing copy, objections, FAQ, enterprise sales page, security questionnaire copy, demo script, outbound, LinkedIn, one-page deck, ROI calculator outline and procurement checklist.
+1. [`enterprise-gtm-playbook.md`](./enterprise-gtm-playbook.md) — full GTM source of truth covering positioning, ICP, sector personas, pricing, checkout/demo motion, pricing copy, objections, FAQ, enterprise sales page, security questionnaire copy, demo script, outbound, LinkedIn, one-page deck, ROI calculator outline and procurement checklist.
 2. [`demo-script-10-min.md`](./demo-script-10-min.md) — 10-minute live demo flow for CFO, Compliance Manager, DPO or founder-led calls.
 3. [`pitch-deck-short.md`](./pitch-deck-short.md) — short 8-slide pitch deck script.
 4. [`one-pager.md`](./one-pager.md) — copy-ready one-pager for PDF/export.
