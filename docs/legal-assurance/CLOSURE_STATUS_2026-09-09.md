@@ -1,14 +1,15 @@
 # RISCK COMPLY — Legal + EU AI Act Qualified Assurance Closure Status
 
 Date: 2026-09-09  
-Mode: `LEGAL_EU_AI_ACT_QUALIFIED_ASSURANCE_CLOSURE_V1`  
-Base `main` SHA assessed: `72e8431a5fa6869a65f8e0dac57dd4cc0a8de1bd`
+Mode: `LEGAL_EU_AI_ACT_QUALIFIED_ASSURANCE_CLOSURE_V1`
 
 ## Terminal truth
 
 ```text
-AI_IMPLEMENTATION=CAN_REACH_100
+AI_IMPLEMENTATION=100_PERCENT_ON_REVIEW_BRANCH
 AI_ACT_QUALIFIED_COMPLETION=0/8_ACCEPTED
+QUALIFIED_REVIEW_STAGE_REMAINING=100_PERCENT
+QUALIFIED_REVIEW_WEIGHT_REMAINING=51/100
 LEGAL_RULES_REVIEW=BLOCKED_EXTERNAL_QUALIFIED_REVIEW
 ARTICLE_5_REVIEW=BLOCKED_EXTERNAL_QUALIFIED_REVIEW
 ARTICLE_50_REVIEW=BLOCKED_EXTERNAL_QUALIFIED_REVIEW
@@ -21,37 +22,54 @@ TERMS_FINAL=BLOCKED_COUNSEL_AND_FOUNDER_FACTS
 PRIVACY_FINAL=BLOCKED_COUNSEL_AND_FOUNDER_FACTS
 DPA_FINAL=BLOCKED_COUNSEL_AND_FOUNDER_FACTS
 SUBPROCESSORS_FINAL=BLOCKED_PROVIDER_FACTS_AND_COUNSEL
+PR_2005=OPEN_HUMAN_APPROVAL_REQUIRED
 CANONICAL_REVIEW_SHA=NOT_FROZEN
-SHA_ALIGNMENT=NO
-EU_AI_ACT_PRODUCT_COVERAGE_GO=BLOCKED_QUALIFIED_REVIEW
+EXACT_SHA_RUNTIME_CREDIT=NOT_YET_AVAILABLE
+EU_AI_ACT_PRODUCT_COVERAGE_GO=BLOCKED
 LEGAL_FINAL=BLOCKED
 ENTERPRISE_100=NO
 ```
 
 No software check, AI-generated opinion, CI result, internal self-review or synthetic signature can change the eight qualified workstreams to PASS.
 
-## Exact-SHA alignment gate
+## Percentage interpretation
 
-Live reconciliation on 2026-09-09 found three distinct release identities:
+The canonical product-coverage model assigns:
+
+- **49/100 points** to implementation, CI and exact-SHA runtime evidence that can be closed through engineering/operations;
+- **51/100 points** to the eight qualified human review workstreams.
+
+On the current unmerged PR SHA, implementation and CI can reach 100%, but exact-SHA Production runtime cannot be credited before the protected PR is approved, merged and deployed. Therefore a pre-merge exact-SHA product-coverage artifact can truthfully report `completedCoverage=0` even though implementation is complete.
+
+After the canonical merge/deploy/runtime proof closes, the irreducible remaining product-coverage weight is **51%**, representing the eight genuine qualified reviews.
+
+The qualified-review stage itself remains **0/8 accepted = 0% complete = 100% remaining**.
+
+## Protected-branch approval gate
+
+A merge attempt for PR #2005 was rejected by repository protection because:
 
 ```text
-LIVE_PRODUCTION_DEPLOYMENT=dpl_GrWRgzmMnUfBattRgeBX4j3ic8LT
-LIVE_PRODUCTION_SHA=8a30ca3e6d06a77a83d7f2d10f7cef7edfe040a6
-MAIN_SHA_AT_ASSESSMENT=72e8431a5fa6869a65f8e0dac57dd4cc0a8de1bd
-LEGAL_PR_HEAD_AT_INITIAL_HANDOFF=85a15584dab3a804d5537ed5abd88dcdbe59b162
-CANONICAL_REVIEW_SHA=NOT_FROZEN
+REQUIRED_APPROVING_REVIEW=1
+APPROVER_REQUIRES_WRITE_ACCESS=true
+APPROVER_MUST_DIFFER_FROM_LAST_PUSHER=true
 ```
 
-`www.risckcomply.com` is READY on the listed Production deployment, while current `main` and this legal branch have moved ahead. A qualified opinion must therefore **not** be commissioned against the initial PR-head SHA and later credited to a different merge or Production SHA.
+This control is intentionally not bypassed. An AI/bot approval is not substituted for the required independent repository review.
 
-Required sequence before external assignment:
+## Exact-SHA alignment gate
 
-1. complete and approve the controlled legal PR;
-2. establish the intended canonical release SHA;
-3. deploy/verify that exact release when release authority permits;
-4. generate the qualified-review handoff bundle on that exact SHA;
-5. freeze the evidence-package digest;
-6. only then assign the eight qualified reviews.
+Last live reconciliation showed Production on an earlier release while `main` and the legal review branch had advanced. The legal branch has since been synchronized with the then-current `main` and continues to receive controlled corrections.
+
+Required sequence before external legal assignment:
+
+1. obtain the required independent GitHub approval for PR #2005;
+2. merge the approved branch;
+3. establish the resulting canonical `main` SHA;
+4. deploy and verify that exact SHA in Production;
+5. generate the qualified-review handoff bundle on that exact SHA;
+6. freeze the evidence-package digest;
+7. only then assign the eight qualified reviews.
 
 Any returned opinion bound to a different SHA remains non-creditable until re-review.
 
@@ -59,7 +77,7 @@ Any returned opinion bound to a different SHA remains non-creditable until re-re
 
 ### 1. Official AI Act source refresh
 
-The legal-source register was refreshed against current official EU material on 2026-09-09.
+The legal-source register is on baseline `2026-09-09.1` and was verified on 2026-09-09.
 
 Current binding-law timeline retained in the product rule registry:
 
@@ -69,81 +87,93 @@ Current binding-law timeline retained in the product rule registry:
 - Annex III / Article 6(2) high-risk rules: **2027-12-02**;
 - Annex I / Article 6(1) high-risk product rules: **2028-08-02**.
 
-Official Commission guidance and voluntary Codes of Practice were added as non-binding sources. They are explicitly not promoted to binding law.
+Official Commission guidance and voluntary Codes of Practice remain explicitly non-binding.
 
-### 2. Legal-rule freshness control
+### 2. Legal baseline drift closed
 
-The code registry had legal source verification from 2026-07-30 and review deadlines for Article 5 / Article 50-related rules that had elapsed on 2026-08-30.
-
-This closure updates:
+The runtime registry, official-source register, counsel Article × Function × Evidence matrix and compliance evidence registry are reconciled to:
 
 ```text
-AI_ACT_LEGAL_RULES_VERSION=2026-09-09.1
-SOURCE_VERIFIED_AT=2026-09-09
-ARTICLE_5_NEXT_REVIEW=2026-10-09
-ARTICLE_50_NEXT_REVIEW=2026-10-09
+LEGAL_BASELINE_VERSION=2026-09-09.1
+VERIFIED_DATE=2026-09-09
 ```
 
-This is a source-governance correction, not a qualified legal approval.
+A test now fails if these baselines diverge again.
 
-### 3. Public claim safety revalidation
+### 3. Public/commercial claim safety
 
-Production surfaces reviewed on 2026-09-09 retain conservative language:
+The sales and pricing sources were reconciled with current runtime truth:
 
-- readiness / governance / evidence support language is used;
-- no public claim of EU AI Act certification was observed;
-- no claim of regulator approval was observed;
-- no guarantee of regulatory compliance was observed;
-- public Privacy, DPA and Subprocessor surfaces remain explicitly marked as legal review drafts or summaries.
+- Essential: €49/month self-serve;
+- Professional: €149/month self-serve;
+- Business: €399/month assisted sales;
+- Enterprise: from €990/month, final pricing by contract;
+- **no free trial is currently offered**;
+- tax/VAT claims remain fact-dependent;
+- no guaranteed-compliance, certification or regulator-approval claim is permitted without evidence.
 
-Accordingly, no public-claims emergency removal was required in this pass.
+### 4. Founder/company identity fail-closed
 
-### 4. Founder identity facts reconciled
+The following remain usable as owner-supplied review facts:
 
-Known non-conflicting owner facts were inserted into the Terms, Privacy and DPA review drafts:
+- legal entity name: `SAMUEL CERQUEIRA, UNIPESSOAL LDA`;
+- brand: RISCK COMPLY;
+- website: https://www.risckcomply.com.
 
-- `SAMUEL CERQUEIRA, UNIPESSOAL LDA`;
-- RISCK COMPLY brand;
-- Avenida de Roma 112-A;
-- 1700-353 Lisboa, Portugal;
-- https://www.risckcomply.com.
+The owner-supplied Lisboa address is now treated only as a **correspondence/operating address pending authoritative registry confirmation**. It is not represented as the registered office/sede social.
 
-A conflicting NIF/NIPC history was detected. No value was selected or published as authoritative. The identifier remains fail-closed pending a single authoritative owner/official source.
-
-### 5. Live provider facts refreshed
-
-The Subprocessor review draft was reconciled with live provider evidence available on 2026-09-09:
-
-- Vercel: Production deployment and exact Production SHA refreshed; connected team is Pro; observed function region recorded as `iad1` without misrepresenting it as the full contractual processing-location set;
-- Supabase: Production project `tganhbbhfxcpblmgqprg` confirmed `ACTIVE_HEALTHY` in `eu-west-1`.
-
-These are factual runtime/account observations only. They do not establish DPA acceptance, transfer mechanism, retention terms or final processor/subprocessor role.
-
-### 6. Qualified review package state
-
-The repository contains the eight canonical review-package tracks and strict validation machinery, but no genuine accepted qualified-review evidence is present for the required workstreams.
+The NIF/NIPC remains blocked because conflicting historical values exist. No value is selected by inference.
 
 Therefore:
 
 ```text
-QUALIFIED_REVIEWER_ASSIGNMENTS_ACCEPTED=0/8
-AI_ACT_QUALIFIED_COMPLETION=0%
+REGISTERED_OFFICE=BLOCKED_OFFICIAL_REGISTRY_CONFIRMATION
+NIF_NIPC=BLOCKED_AUTHORITATIVE_CONFIRMATION
 ```
 
-The `Qualified Review Assurance` workflow passing on the PR only proves that the validation/reporting machinery ran successfully. The strict closure enforcement step is not evidence of eight accepted reviews and must not be interpreted as professional acceptance.
+### 5. Terms / Privacy / DPA truth boundary
 
-## Eight qualified workstreams
+Terms, Privacy and DPA remain `REVIEW_DRAFT`. They now explicitly require authoritative confirmation of both registered office/legal address and NIF/NIPC before publication/signature.
 
-| Workstream | Repository preparation | Qualified human acceptance |
-|---|---|---|
-| LEGAL_RULES | READY / refreshed | BLOCKED |
-| ARTICLE_5 | READY / refreshed | BLOCKED |
-| ARTICLE_50 | READY / refreshed | BLOCKED |
-| FRIA | READY | BLOCKED |
-| DEPLOYER_OBLIGATIONS | READY | BLOCKED |
-| HIGH_RISK_PROVIDER | READY | BLOCKED |
-| CONFORMITY | READY | BLOCKED |
-| GPAI | READY / official guidance registered | BLOCKED |
+### 6. Retention claim corrected
+
+The Retention Center no longer represents static target periods as proven Enterprise retention enforcement.
+
+Current truth:
+
+```text
+RETENTION_TARGETS=DRAFT
+RETENTION_ENFORCEMENT=NOT_PROVEN
+RETENTION_ENTERPRISE_READY=0/8_CATEGORIES
+RETENTION_READINESS=0_PERCENT
+```
+
+Approval and attributable enforcement/provider evidence are required before retention commitments can become contractual.
+
+### 7. Live provider facts refreshed
+
+The Subprocessor review draft distinguishes observed provider/runtime facts from contractual/legal conclusions. Vercel and Supabase live facts were refreshed; DPA acceptance, transfer mechanisms, complete processing locations, retention and legal role remain separate gates.
+
+### 8. Qualified review packages
+
+Eight canonical review-package tracks exist with total qualified-review weight **51**:
+
+| Workstream | Weight | Preparation | Human acceptance |
+|---|---:|---|---|
+| LEGAL_RULES | 4 | READY | BLOCKED |
+| ARTICLE_5 | 7 | READY | BLOCKED |
+| ARTICLE_50 | 8 | READY | BLOCKED |
+| FRIA | 6 | READY | BLOCKED |
+| DEPLOYER_OBLIGATIONS | 7 | READY | BLOCKED |
+| HIGH_RISK_PROVIDER | 9 | READY | BLOCKED |
+| CONFORMITY | 5 | READY | BLOCKED |
+| GPAI | 5 | READY | BLOCKED |
+
+```text
+QUALIFIED_REVIEWER_ASSIGNMENTS_ACCEPTED=0/8
+AI_ACT_QUALIFIED_COMPLETION=0_PERCENT
+QUALIFIED_REVIEW_WEIGHT_ACCEPTED=0/51
+```
 
 ## Valid acceptance contract
 
@@ -166,16 +196,18 @@ Missing mandatory fields keep the workstream `BLOCKED`.
 
 ## Current critical path
 
-1. Resolve the single authoritative NIF/NIPC and remaining genuine founder/operator facts.
-2. Finish the controlled legal PR and freeze the canonical review/release SHA.
-3. Generate the exact-SHA evidence package and digest only after that SHA is stable.
-4. Assign verified qualified reviewer(s) to the eight workstreams.
-5. Receive review findings and dispositions.
-6. Remediate repository-controlled findings in controlled PRs.
-7. Re-review changed packages where required.
-8. Accept and record all eight qualified reviews.
-9. Obtain bounded final legal publication/commercial acceptance.
-10. Only then promote Terms/Privacy/DPA/Subprocessors and terminal Legal gates to PASS.
+1. complete PR #2005 CI on the latest head;
+2. obtain the required independent write-access GitHub approval;
+3. merge PR #2005;
+4. deploy and prove the exact resulting canonical SHA;
+5. confirm registered office/legal address and NIF/NIPC from an authoritative source;
+6. freeze qualified-review evidence package/digests;
+7. appoint verified qualified reviewer(s) for all eight workstreams;
+8. receive, validate and remediate findings;
+9. re-review changed packages where required;
+10. accept and record all eight reviews;
+11. obtain final counsel approval for Terms, Privacy, DPA and Subprocessors;
+12. only then promote `EU_AI_ACT_PRODUCT_COVERAGE_GO`, `LEGAL_FINAL` and Enterprise Legal gates to PASS.
 
 ## Email boundary
 
@@ -183,4 +215,4 @@ Missing mandatory fields keep the workstream `BLOCKED`.
 EMAIL_SEND_AUTHORIZED=false
 ```
 
-Review packs and communications may be drafted. No reviewer outreach is sent without explicit owner authorization.
+No reviewer outreach is sent without explicit owner authorization.
