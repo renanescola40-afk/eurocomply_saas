@@ -14,7 +14,7 @@ type ProviderDisclosureCopy = {
 const en: ProviderDisclosureCopy = {
   eyebrow: 'Provider evidence boundary — 10 September 2026',
   title: 'Current provider facts and legal approval are tracked separately.',
-  body: 'The current connected-account reconciliation proves selected account/project facts without turning them into DPA, transfer or role approval. Vercel team/project/domain binding and the Supabase Production project region were revalidated today. The connected Stripe session exposes the LIVE RISCK COMPLY SAAS account, but its detail call failed, so detail fields are not promoted as current. Other providers retain their specific current, historical or unverified evidence state.',
+  body: 'The current connected-account reconciliation proves selected account/project facts without turning them into DPA, transfer or role approval. Vercel team/project/domain binding and the Supabase Production project region were revalidated today. The connected Stripe session exposes the LIVE RISCK COMPLY SAAS account, but its detail call failed, so detail fields are not promoted as current. PostHog connected access was also revalidated and the only accessible project is not attributable to Production.',
   evidence: [
     'Vercel: connected team is Pro; eurocomply-saas is linked to the correct GitHub repository and the risckcomply.com domains. Complete processing/support locations, account-applicable DPA, retention and transfer treatment remain open.',
     'Supabase: Production project tganhbbhfxcpblmgqprg is ACTIVE_HEALTHY in eu-west-1 (Ireland). Project region does not prove all support/onward-processing locations or Chapter V treatment.',
@@ -23,7 +23,7 @@ const en: ProviderDisclosureCopy = {
     'Google OAuth / Identity: runtime authentication integration exists through Supabase Auth; applicable terms, role, locations, retention and transfer treatment remain under review.',
     'Google Workspace: corporate mail is operational; prior plan/EMEA billing evidence does not establish a processing region or current CDPA/transfer position.',
     'Sentry: integration remains present; earlier direct exact-release runtime proof is historical until current protected provider acceptance and account facts are refreshed.',
-    'PostHog: Production source/configuration historically targeted EU endpoints, but the connected assurance project did not match the Production project; actual Production account/DPA facts remain open.',
+    'PostHog: current connected access returns one Default project with no ingested event and no configured application URLs, so it is not promoted as RISCK COMPLY Production. The actual Production project/account and account-linked DPA facts remain open.',
     'Upstash: distributed Redis-backed rate limiting remains implemented. Earlier direct Production proof is historical; current protected provider acceptance plus account plan/region/retention/DPA/transfer facts remain open.',
     'Resend and external malware/content scanning: historical or conditional implementation evidence does not establish current exact-release account/provider acceptance; current binding and legal facts must be verified before customer reliance.',
   ],
@@ -34,7 +34,7 @@ const en: ProviderDisclosureCopy = {
 const pt: ProviderDisclosureCopy = {
   eyebrow: 'Limite de evidência dos fornecedores — 10 de setembro de 2026',
   title: 'Factos atuais dos fornecedores e aprovação jurídica são acompanhados separadamente.',
-  body: 'A reconciliação atual de contas conectadas prova factos selecionados de conta/projeto sem os transformar em aprovação de DPA, transferências ou função jurídica. O binding de equipa/projeto/domínios da Vercel e a região do projeto Supabase Production foram revalidados hoje. A sessão Stripe conectada expõe a conta LIVE RISCK COMPLY SAAS, mas a chamada de detalhes falhou, pelo que esses campos não são promovidos como atuais. Os restantes fornecedores mantêm o seu estado específico de evidência atual, histórica ou não verificada.',
+  body: 'A reconciliação atual de contas conectadas prova factos selecionados de conta/projeto sem os transformar em aprovação de DPA, transferências ou função jurídica. O binding de equipa/projeto/domínios da Vercel e a região do projeto Supabase Production foram revalidados hoje. A sessão Stripe conectada expõe a conta LIVE RISCK COMPLY SAAS, mas a chamada de detalhes falhou. O acesso PostHog também foi revalidado e o único projeto acessível não é atribuível a Production.',
   evidence: [
     'Vercel: a equipa conectada é Pro; eurocomply-saas está ligado ao repositório GitHub correto e aos domínios risckcomply.com. Localizações completas de tratamento/suporte, DPA aplicável à conta, retenção e transferências continuam abertos.',
     'Supabase: o projeto Production tganhbbhfxcpblmgqprg está ACTIVE_HEALTHY em eu-west-1 (Irlanda). A região do projeto não prova todas as localizações de suporte/tratamento ulterior nem o tratamento do Capítulo V.',
@@ -43,7 +43,7 @@ const pt: ProviderDisclosureCopy = {
     'Google OAuth / Identity: integração de autenticação existe através do Supabase Auth; termos aplicáveis, função, localizações, retenção e transferências continuam em revisão.',
     'Google Workspace: correio corporativo está operacional; evidência anterior de plano/entidade EMEA não estabelece região de tratamento nem a posição atual de CDPA/transferências.',
     'Sentry: a integração permanece presente; prova direta exact-release anterior é histórica até nova aceitação protegida atual e revalidação dos factos da conta.',
-    'PostHog: source/configuração Production historicamente apontou para endpoints UE, mas o projeto assurance conectado não correspondeu ao Production; factos da conta/DPA Production permanecem abertos.',
+    'PostHog: o acesso conectado atual retorna um único Default project sem eventos ingeridos e sem application URLs configurados, por isso não é promovido como Production da RISCK COMPLY. O projeto/conta Production real e os factos de DPA da conta permanecem abertos.',
     'Upstash: o rate limiting distribuído Redis-backed permanece implementado. Prova direta anterior é histórica; aceitação protegida atual e plano/região/retenção/DPA/transferências da conta continuam abertos.',
     'Resend e scanning externo de malware/conteúdo: evidência histórica ou condicional não estabelece aceitação atual exact-release da conta/provider; binding e factos jurídicos devem ser verificados antes de reliance por clientes.',
   ],
