@@ -145,5 +145,58 @@ comment on function public.update_data_subject_request_with_audit_atomic(
   uuid,uuid,text,timestamptz,jsonb,uuid,uuid,text,text,text,jsonb,timestamptz,text,text,text,text
 ) is 'Service-role-only GDPR lifecycle CAS plus canonical audit-chain append in one PostgreSQL transaction. Audit failure aborts and rolls back the lifecycle mutation.';
 
+-- Onboarding recommendations are metadata records until a real object is uploaded.
+-- Historical runtime wrote controlled-documents paths without creating Storage
+-- objects, leaving download-visible pointers that can only fail at runtime. Keep
+-- the recommendation rows, preserve any invalid path in metadata for recovery,
+-- and make the canonical storage_path truthful instead of manufacturing objects.
+create or replace function public.enforce_onboarding_document_storage_integrity()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if coalesce(new.metadata ->> 'source', '') = 'onboarding_activation'
+     and new.storage_path is not null
+     and not exists (
+       select 1
+       from storage.objects object_record
+       where object_record.bucket_id = 'controlled-documents'
+         and object_record.name = new.storage_path
+     ) then
+    new.metadata := coalesce(new.metadata, '{}'::jsonb) || jsonb_build_object(
+      'storageIntegrity', 'metadata_only',
+      'orphanedStoragePath', new.storage_path
+    );
+    new.storage_path := null;
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.enforce_onboarding_document_storage_integrity() from public, anon, authenticated;
+
+drop trigger if exists enforce_onboarding_document_storage_integrity on public.documents;
+create trigger enforce_onboarding_document_storage_integrity
+before insert or update of storage_path, metadata
+on public.documents
+for each row execute function public.enforce_onboarding_document_storage_integrity();
+
+update public.documents document_record
+set metadata = coalesce(document_record.metadata, '{}'::jsonb) || jsonb_build_object(
+      'storageIntegrity', 'metadata_only',
+      'orphanedStoragePath', document_record.storage_path
+    ),
+    storage_path = null
+where coalesce(document_record.metadata ->> 'source', '') = 'onboarding_activation'
+  and document_record.storage_path is not null
+  and not exists (
+    select 1
+    from storage.objects object_record
+    where object_record.bucket_id = 'controlled-documents'
+      and object_record.name = document_record.storage_path
+  );
+
 notify pgrst, 'reload schema';
 commit;
