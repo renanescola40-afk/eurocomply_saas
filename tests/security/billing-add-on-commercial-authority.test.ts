@@ -68,13 +68,17 @@ describe('billing add-on commercial authority boundary', () => {
     expect(serverCatalog).toContain("addOn.status === 'active'");
   });
 
-  it('requires signed provider reconciliation before an active row can materialize', () => {
+  it('requires signed provider reconciliation with exact organization, subscription and customer binding', () => {
     const reconciliation = read('src/server/billing/add-on-reconciliation.ts');
     const webhook = read('src/server/billing/stripe-webhook-recovery.ts');
     const migration = read('supabase/migrations/20260813124224_reconcile_organization_add_ons.sql');
 
     expect(reconciliation).toContain(".from('subscriptions')");
-    expect(reconciliation).toContain('stripe_add_on_subscription_binding_mismatch');
+    expect(reconciliation).toContain(".eq('organization_id', organizationId)");
+    expect(reconciliation).toContain(".eq('stripe_subscription_id', subscription.id)");
+    expect(reconciliation).toContain('stripe_add_on_customer_binding_missing');
+    expect(reconciliation).toContain('stripe_add_on_customer_binding_mismatch');
+    expect(reconciliation).toContain('if (binding.stripe_customer_id !== customerId)');
     expect(reconciliation).toContain('getBillingAddOnSlugForStripePriceId');
     expect(reconciliation).toContain(".from('organization_add_ons').upsert");
     expect(reconciliation).toContain("status: 'cancelled'");
