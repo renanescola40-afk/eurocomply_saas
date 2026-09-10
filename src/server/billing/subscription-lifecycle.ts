@@ -48,6 +48,7 @@ type SubscriptionLifecycleInput = {
   plan?: CanonicalSubscriptionPlan;
   interval?: string | null;
   addOns?: Array<{ slug?: unknown; quantity?: unknown }>;
+  preserveExistingAddOns?: boolean;
   idempotency: BillingIdempotencyContext;
 };
 
@@ -89,6 +90,34 @@ export function getBaseSubscriptionItem(subscription: Stripe.Subscription) {
   return candidates[0];
 }
 
+export function getProviderAddOnSelections(subscription: Stripe.Subscription, baseItemId: string) {
+  return subscription.items.data
+    .filter((item) => item.id !== baseItemId)
+    .map((item): BillingAddOnSelection => {
+      const slug = getBillingAddOnSlugForStripePriceId(item.price.id);
+      if (!slug) throw new Error('stripe_subscription_add_on_item_not_allowlisted');
+
+      const quantity = item.quantity ?? 1;
+      if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10000) {
+        throw new Error('stripe_subscription_add_on_quantity_invalid');
+      }
+
+      return { slug, quantity };
+    });
+}
+
+export function mergeProviderAddOnSelections(
+  subscription: Stripe.Subscription,
+  baseItemId: string,
+  requested: SubscriptionLifecycleInput['addOns'],
+  plan: CanonicalSubscriptionPlan,
+) {
+  return normalizeAddOnSelections(
+    [...getProviderAddOnSelections(subscription, baseItemId), ...(requested ?? [])],
+    plan,
+  );
+}
+
 function getSubscriptionCustomerId(subscription: Stripe.Subscription) {
   if (typeof subscription.customer === 'string') return subscription.customer;
   return subscription.customer?.id ?? null;
@@ -128,13 +157,14 @@ function canonicalRequestAddOns(value: SubscriptionLifecycleInput['addOns']) {
 }
 
 export function billingLifecycleRequestFingerprint(
-  input: Pick<SubscriptionLifecycleInput, 'action' | 'plan' | 'interval' | 'addOns'>,
+  input: Pick<SubscriptionLifecycleInput, 'action' | 'plan' | 'interval' | 'addOns' | 'preserveExistingAddOns'>,
 ) {
   const payload = JSON.stringify({
     action: input.action,
     plan: input.plan ?? null,
     interval: input.interval ? normalizeBillingInterval(input.interval) : null,
     addOns: canonicalRequestAddOns(input.addOns),
+    preserveExistingAddOns: input.preserveExistingAddOns === true,
   });
   return createHash('sha256').update(payload).digest('hex');
 }
@@ -472,7 +502,9 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
   const interval = input.interval ? normalizeBillingInterval(input.interval) : getCurrentBillingInterval(baseItem);
   const targetPlan = input.plan ?? currentPlan;
   assertPlanTransition(input.action, currentPlan, targetPlan);
-  const addOns = normalizeAddOnSelections(input.addOns, targetPlan);
+  const addOns = input.action === 'replace_add_ons' && input.preserveExistingAddOns
+    ? mergeProviderAddOnSelections(subscription, baseItem.id, input.addOns, targetPlan)
+    : normalizeAddOnSelections(input.addOns, targetPlan);
   const claim = await claimBillingLifecycleRequest({
     organizationId: input.organizationId,
     requestedBy: input.userId,
@@ -618,6 +650,7 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
       providerStatus: providerSnapshot.status,
       lifecycleRequestId: requestId,
       idempotencyProtected: true,
+      preserveExistingAddOns: input.preserveExistingAddOns === true,
       providerMutationReplayed: providerWasAlreadyCompleted,
       legacyProviderSnapshotRecovered: isLegacyProviderRecovery,
       durableResultSnapshot: true,
