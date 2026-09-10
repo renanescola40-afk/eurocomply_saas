@@ -36,7 +36,10 @@ type SubscriptionWithPeriod = Stripe.Subscription & {
   items?: {
     data?: Array<{
       current_period_end?: number | null;
-      price?: { id?: string | null } | null;
+      price?: {
+        id?: string | null;
+        recurring?: { interval?: string | null } | null;
+      } | null;
     }>;
   };
 };
@@ -85,29 +88,48 @@ function getStripeObjectId(value: string | { id?: string | null } | null | undef
   return null;
 }
 
-function getSubscriptionCurrentPeriodEnd(subscription: Stripe.Subscription) {
-  const typedSubscription = subscription as SubscriptionWithPeriod;
-  const periodEnd = typedSubscription.current_period_end ?? typedSubscription.items?.data?.[0]?.current_period_end ?? null;
-
-  return typeof periodEnd === 'number' ? new Date(periodEnd * 1000).toISOString() : null;
-}
-
-function getSubscriptionStripePriceId(subscription: Stripe.Subscription) {
-  const typedSubscription = subscription as SubscriptionWithPeriod;
-  const priceId = typedSubscription.items?.data?.[0]?.price?.id;
-
-  return typeof priceId === 'string' && priceId.trim() ? priceId.trim() : null;
+function getSubscriptionItems(subscription: Stripe.Subscription) {
+  return (subscription as SubscriptionWithPeriod).items?.data ?? [];
 }
 
 export function resolveStripeSubscriptionPlan(subscription: Stripe.Subscription) {
-  const stripePriceId = getSubscriptionStripePriceId(subscription);
-  const planFromPrice = getBillingPlanIdForStripePriceId(stripePriceId);
+  const items = getSubscriptionItems(subscription);
+  const mappedBaseItems = items
+    .map((item) => {
+      const stripePriceId = typeof item.price?.id === 'string' && item.price.id.trim() ? item.price.id.trim() : null;
+      const plan = getBillingPlanIdForStripePriceId(stripePriceId);
+      return stripePriceId && plan ? { item, stripePriceId, plan } : null;
+    })
+    .filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate));
 
-  if (planFromPrice) {
-    return { plan: planFromPrice, stripePriceId, source: 'stripe_price_id' as const };
+  if (mappedBaseItems.length !== 1) {
+    const firstPriceId = items
+      .map((item) => item.price?.id)
+      .find((priceId): priceId is string => typeof priceId === 'string' && Boolean(priceId.trim()))?.trim() ?? null;
+
+    return {
+      plan: undefined,
+      stripePriceId: mappedBaseItems[0]?.stripePriceId ?? firstPriceId,
+      billingInterval: null,
+      currentPeriodEnd: null,
+      source: mappedBaseItems.length > 1 ? 'ambiguous' as const : 'unresolved' as const,
+    };
   }
 
-  return { plan: undefined, stripePriceId, source: 'unresolved' as const };
+  const base = mappedBaseItems[0];
+  const recurringInterval = base.item.price?.recurring?.interval;
+  const billingInterval = recurringInterval === 'year' ? 'year' as const : recurringInterval === 'month' ? 'month' as const : null;
+  const typedSubscription = subscription as SubscriptionWithPeriod;
+  const typedBaseItem = base.item as { current_period_end?: number | null };
+  const periodEnd = typedSubscription.current_period_end ?? typedBaseItem.current_period_end ?? null;
+
+  return {
+    plan: base.plan,
+    stripePriceId: base.stripePriceId,
+    billingInterval,
+    currentPeriodEnd: typeof periodEnd === 'number' ? new Date(periodEnd * 1000).toISOString() : null,
+    source: 'stripe_price_id' as const,
+  };
 }
 
 function getInvoiceSubscriptionId(invoice: Stripe.Invoice) {
@@ -383,7 +405,8 @@ export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscrip
       plan,
       tier: plan,
       status: subscription.status,
-      current_period_end: getSubscriptionCurrentPeriodEnd(subscription),
+      billing_interval: planResolution.billingInterval,
+      current_period_end: planResolution.currentPeriodEnd,
       entitlements,
       updated_at: new Date().toISOString(),
     },
@@ -408,6 +431,7 @@ export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscrip
         metadataPlan: rawPlan ?? null,
         planSource: planResolution.source,
         stripePriceId: planResolution.stripePriceId,
+        billingInterval: planResolution.billingInterval,
         status: subscription.status,
         stripeCustomerId: customerId,
         clerkOrgId: clerkOrgId ?? null,
@@ -425,6 +449,7 @@ export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscrip
         metadataPlan: rawPlan ?? null,
         planSource: planResolution.source,
         stripePriceId: planResolution.stripePriceId,
+        billingInterval: planResolution.billingInterval,
         status: subscription.status,
         stripeCustomerId: customerId,
         clerkOrgId: clerkOrgId ?? null,

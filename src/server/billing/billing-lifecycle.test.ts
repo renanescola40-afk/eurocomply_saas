@@ -62,11 +62,20 @@ describe('enterprise billing lifecycle catalog', () => {
     expect(normalizeBillingInterval('monthly')).toBe('month');
   });
 
-  it('keeps empty add-on replacement valid while the catalog is private preview', () => {
+  it('keeps empty add-on replacement valid', () => {
     expect(normalizeAddOnSelections([], 'starter')).toEqual([]);
   });
 
-  it('rejects private-preview add-ons before provider requests are built', () => {
+  it('allows commercially active add-ons only on their explicit lower-plan extension path', () => {
+    expect(normalizeAddOnSelections([{ slug: 'fria-workspace', quantity: 1 }], 'starter'))
+      .toEqual([{ slug: 'fria-workspace', quantity: 1 }]);
+    expect(normalizeAddOnSelections([{ slug: 'advanced-reporting', quantity: 1 }], 'professional'))
+      .toEqual([{ slug: 'advanced-reporting', quantity: 1 }]);
+    expect(() => normalizeAddOnSelections([{ slug: 'fria-workspace', quantity: 1 }], 'professional'))
+      .toThrow('invalid_billing_add_on_fria-workspace');
+  });
+
+  it('rejects preview add-ons before provider requests are built', () => {
     expect(() => normalizeAddOnSelections([{ slug: 'extra-user', quantity: 5 }], 'starter'))
       .toThrow('invalid_billing_add_on_extra-user');
     expect(() => normalizeAddOnSelections([{ slug: 'procurement-pack', quantity: 1 }], 'professional'))
