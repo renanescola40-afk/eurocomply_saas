@@ -36,11 +36,13 @@ describe('canonical Trust Center publication integrity', () => {
     expect(publicPack).not.toContain('governed V21 Production promotion remains separate and currently unapplied');
     expect(publicPack).not.toContain('Current direct Production deployment binding is proven on the current release');
 
-    expect(providerRegister).toContain('PROVIDER_FACTUAL_RECONCILIATION=CURRENT_CONNECTED_ACCOUNT_ADDENDUM_ACTIVE');
+    expect(providerRegister).toContain('PROVIDER_FACTUAL_RECONCILIATION=CURRENT_TERMINAL_ADDENDUM_ACTIVE');
     expect(providerRegister).toContain('2026-09-09-provider-current-overlay.md');
-    expect(providerRegister).toContain('SUPABASE_PROJECT_REGION=PASS_CURRENT_2026-09-10');
-    expect(providerRegister).toContain('STRIPE_LIVE_ACCOUNT_DISCOVERY=PASS_CURRENT_2026-09-10');
-    expect(providerRegister).toContain('PROTECTED_PROVIDER_RUNTIME_ACCEPTANCE=OPEN');
+    expect(providerRegister).toContain('SUPABASE_PROJECT_REGION=PASS_CURRENT_2026_09_10');
+    expect(providerRegister).toContain('STRIPE_LIVE_ACCOUNT_DISCOVERY=PASS_CURRENT_2026_09_10');
+    expect(providerRegister).toContain('CURRENT_PROTECTED_PROVIDER_ACCEPTANCE_OPEN');
     expect(providerRegister).toContain('generic LIVE account discovery remain non-crediting for a real customer lifecycle');
+    expect(providerRegister).toContain('LEGAL_8_OF_8=0/8_ACCEPTED');
+    expect(providerRegister).toContain('MASTER_LEGAL_OPINION=OPEN');
   });
 });
