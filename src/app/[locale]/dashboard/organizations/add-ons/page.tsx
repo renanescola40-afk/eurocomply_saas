@@ -3,13 +3,15 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowUpRight, CheckCircle2, Crown, LockKeyhole, ShieldCheck } from 'lucide-react';
 
+import { BillingActionButton } from '@/app/[locale]/dashboard/organizations/billing/billing-action-button';
 import { BILLING_ADD_ONS, isBillingAddOnCommerciallyActive, type BillingAddOn } from '@/lib/billing/add-ons';
 import { getPlanDisplayName } from '@/lib/billing/addons';
 import { getBillingPlan } from '@/lib/billing/plans';
 import { getAddOnsCopy } from '@/lib/i18n/add-ons-copy';
 import { roleHasPermission } from '@/lib/security/permissions';
 import { getOrganizationRoleForUser } from '@/server/auth/permissions';
-import { listActiveOrganizationAddOns } from '@/server/billing/addons';
+import { isAddOnCheckoutEnabled } from '@/server/billing/add-on-release';
+import { listActiveOrganizationAddOnSelections } from '@/server/billing/addons';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
@@ -20,15 +22,26 @@ export const fetchCache = 'force-no-store';
 
 type PageProps = {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ plan?: string; addon?: string }>;
+  searchParams?: Promise<{ plan?: string; addon?: string; billing_error?: string }>;
 };
 
 type UpgradeStatus = 'included' | 'active' | 'available' | 'blocked' | 'preview';
 
+const PLAN_RANK: Record<CanonicalSubscriptionPlan, number> = {
+  starter: 1,
+  professional: 2,
+  business: 3,
+  enterprise: 4,
+};
+
+function includedByPlan(plan: CanonicalSubscriptionPlan, addOn: BillingAddOn) {
+  return Boolean(addOn.includedFrom && PLAN_RANK[plan] >= PLAN_RANK[addOn.includedFrom]);
+}
+
 function getUpgradeStatus(plan: CanonicalSubscriptionPlan, addOn: BillingAddOn, activeAddOnIds: Set<string>): UpgradeStatus {
+  if (activeAddOnIds.has(addOn.slug) && isBillingAddOnCommerciallyActive(addOn)) return 'active';
+  if (isBillingAddOnCommerciallyActive(addOn) && includedByPlan(plan, addOn)) return 'included';
   if (!isBillingAddOnCommerciallyActive(addOn)) return 'preview';
-  if (plan === 'enterprise') return 'included';
-  if (activeAddOnIds.has(addOn.slug)) return 'active';
   return addOn.availableOn.includes(plan) ? 'available' : 'blocked';
 }
 
@@ -44,7 +57,77 @@ function getStatusIcon(status: UpgradeStatus) {
 }
 
 function planList(addOn: BillingAddOn) {
+  if (addOn.status === 'active') {
+    const purchasable = addOn.availableOn.map((plan) => getPlanDisplayName(plan));
+    const included = addOn.includedFrom ? `${getPlanDisplayName(addOn.includedFrom)}+` : null;
+    return [...purchasable, ...(included ? [`${included} included`] : [])].join(' · ');
+  }
   return addOn.availableOn.map((plan) => getPlanDisplayName(plan)).join(' · ');
+}
+
+function commerceCopy(locale: string) {
+  switch (locale) {
+    case 'pt':
+      return {
+        readyTitle: 'Compra de add-ons protegida pelo billing',
+        readyBody: 'Owners e Admins podem adicionar extensões elegíveis à subscrição existente. O acesso só é ativado depois de um evento Stripe assinado reconciliar o item no billing da organização.',
+        releaseLocked: 'Os preços e a elegibilidade estão prontos, mas a compra permanece bloqueada até o billing base, o exact-SHA de Produção e a autorização final do Owner serem aceitos.',
+        add: (name: string) => `Adicionar ${name}`,
+        included: 'Incluído no seu plano atual',
+        preview: 'Preço de catálogo. A compra permanece bloqueada até a capacidade prometida ter autoridade de entitlement própria.',
+        purchaseError: 'Não foi possível concluir a alteração de billing. Nenhum acesso foi concedido pelo navegador.',
+      };
+    case 'es':
+      return {
+        readyTitle: 'Compra de add-ons protegida por billing',
+        readyBody: 'Owners y Admins pueden añadir extensiones elegibles a la suscripción existente. El acceso se activa solo después de que un evento firmado de Stripe reconcilie el elemento.',
+        releaseLocked: 'Los precios y la elegibilidad están preparados, pero la compra permanece bloqueada hasta que el billing base, el exact-SHA de Producción y la autorización final del Owner hayan sido aceptados.',
+        add: (name: string) => `Añadir ${name}`,
+        included: 'Incluido en tu plan actual',
+        preview: 'Precio de catálogo. La compra permanece bloqueada hasta que la capacidad prometida tenga autoridad de entitlement propia.',
+        purchaseError: 'No se pudo completar el cambio de billing. El navegador no concedió ningún acceso.',
+      };
+    case 'fr':
+      return {
+        readyTitle: 'Achat d’add-ons protégé par la facturation',
+        readyBody: 'Les Owners et Admins peuvent ajouter des extensions éligibles à l’abonnement existant. L’accès n’est activé qu’après rapprochement d’un événement Stripe signé.',
+        releaseLocked: 'Les prix et l’éligibilité sont prêts, mais l’achat reste bloqué jusqu’à l’acceptation de la facturation de base, du SHA exact de Production et de l’autorisation finale de l’Owner.',
+        add: (name: string) => `Ajouter ${name}`,
+        included: 'Inclus dans votre plan actuel',
+        preview: 'Prix catalogue. L’achat reste bloqué tant que la capacité promise ne dispose pas de sa propre autorité d’entitlement.',
+        purchaseError: 'La modification de facturation n’a pas pu être terminée. Aucun accès n’a été accordé par le navigateur.',
+      };
+    case 'it':
+      return {
+        readyTitle: 'Acquisto add-on protetto dal billing',
+        readyBody: 'Owner e Admin possono aggiungere estensioni idonee all’abbonamento esistente. L’accesso viene attivato solo dopo la riconciliazione di un evento Stripe firmato.',
+        releaseLocked: 'Prezzi e idoneità sono pronti, ma l’acquisto resta bloccato finché billing base, exact-SHA di Produzione e autorizzazione finale dell’Owner non sono accettati.',
+        add: (name: string) => `Aggiungi ${name}`,
+        included: 'Incluso nel piano attuale',
+        preview: 'Prezzo di catalogo. L’acquisto resta bloccato finché la capacità promessa non dispone di una propria autorità di entitlement.',
+        purchaseError: 'La modifica di billing non è stata completata. Il browser non ha concesso alcun accesso.',
+      };
+    case 'de':
+      return {
+        readyTitle: 'Durch Billing geschützter Add-on-Kauf',
+        readyBody: 'Owner und Admins können berechtigte Erweiterungen zum bestehenden Abonnement hinzufügen. Zugriff wird erst nach Abgleich eines signierten Stripe-Ereignisses aktiviert.',
+        releaseLocked: 'Preise und Berechtigung sind vorbereitet, der Kauf bleibt jedoch gesperrt, bis Basis-Billing, der exakte Produktions-SHA und die endgültige Owner-Freigabe akzeptiert wurden.',
+        add: (name: string) => `${name} hinzufügen`,
+        included: 'In Ihrem aktuellen Plan enthalten',
+        preview: 'Katalogpreis. Der Kauf bleibt gesperrt, bis die versprochene Kapazität eine eigene Entitlement-Autorität hat.',
+        purchaseError: 'Die Billing-Änderung konnte nicht abgeschlossen werden. Der Browser hat keinen Zugriff vergeben.',
+      };
+    default:
+      return {
+        readyTitle: 'Billing-protected add-on purchase',
+        readyBody: 'Owners and Admins can add eligible extensions to the existing subscription. Access activates only after a signed Stripe event reconciles the item into organization billing.',
+        releaseLocked: 'Pricing and eligibility are prepared, but purchase remains locked until base billing, the exact Production SHA and final Owner authorization are accepted.',
+        add: (name: string) => `Add ${name}`,
+        included: 'Included in your current plan',
+        preview: 'Catalog price. Purchase remains blocked until the promised capability has its own authoritative entitlement effect.',
+        purchaseError: 'The billing change could not be completed. No browser state granted access.',
+      };
+  }
 }
 
 export default async function AddOnsAndCreditsPage({ params, searchParams }: PageProps) {
@@ -52,6 +135,7 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
   const { locale } = await params;
   const query = searchParams ? await searchParams : {};
   const copy = getAddOnsCopy(locale);
+  const commerce = commerceCopy(locale);
   const selectedPlan = query.plan ? getBillingPlan(query.plan) : undefined;
   const user = await getCurrentUser();
 
@@ -60,25 +144,32 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
   const organization = await getCurrentOrganizationForUser(user.id);
   if (!organization?.id) redirect(`/${locale}/risck-comply-home`);
 
-  const [entitlements, activeAddOnIds, role] = await Promise.all([
+  const [entitlements, activeAddOnSelections, role] = await Promise.all([
     getOrganizationEntitlements(organization.id),
-    listActiveOrganizationAddOns(organization.id),
+    listActiveOrganizationAddOnSelections(organization.id),
     getOrganizationRoleForUser(organization.id, user.id),
   ]);
 
   const canonicalPlan = normalizePlan(entitlements.plan);
   const currentPlanName = getPlanDisplayName(canonicalPlan);
-  const activeAddOns = new Set<string>(activeAddOnIds);
+  const activeAddOns = new Set<string>(activeAddOnSelections.map((selection) => selection.slug));
   const canManageBilling = roleHasPermission(role, 'manage_billing');
+  const addOnCheckoutEnabled = isAddOnCheckoutEnabled();
   const selectedPlanDiffers = Boolean(selectedPlan && normalizePlan(selectedPlan.id) !== canonicalPlan);
   const selectedPlanPrice = selectedPlan?.priceMonthly ?? selectedPlan?.startingPriceMonthly ?? null;
   const focusedAddOn = BILLING_ADD_ONS.find((addOn) => addOn.slug === query.addon);
   const includedCount = BILLING_ADD_ONS.filter((addOn) => getUpgradeStatus(canonicalPlan, addOn, activeAddOns) === 'included').length;
-  const activeCount = BILLING_ADD_ONS.filter((addOn) => getUpgradeStatus(canonicalPlan, addOn, activeAddOns) === 'active').length;
+  const activeCount = activeAddOnSelections.length;
 
   return (
     <main className="min-h-0 bg-transparent text-white">
       <div className="w-full space-y-6">
+        {query.billing_error ? (
+          <section className="rounded-xl border border-rose-300/20 bg-rose-300/[0.06] p-4 text-sm text-rose-50" role="alert">
+            {commerce.purchaseError}
+          </section>
+        ) : null}
+
         {query.plan && !selectedPlan ? (
           <section className="rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-sm text-amber-50" role="status">
             {copy.invalidPlan}
@@ -127,8 +218,8 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
           <article className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.045] p-4">
             <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-4 w-4 text-emerald-300" aria-hidden="true" /><div><h2 className="text-sm font-semibold text-white/82">{copy.billingAuthority}</h2><p className="mt-1.5 text-sm leading-6 text-white/45">{copy.billingAuthorityBody}</p></div></div>
           </article>
-          <article className="rounded-xl border border-amber-300/15 bg-amber-300/[0.045] p-4">
-            <div className="flex items-start gap-3"><LockKeyhole className="mt-0.5 h-4 w-4 text-amber-300" aria-hidden="true" /><div><h2 className="text-sm font-semibold text-white/82">{copy.noDirectPurchase}</h2><p className="mt-1.5 text-sm leading-6 text-white/45">{copy.noDirectPurchaseBody}</p></div></div>
+          <article className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.045] p-4">
+            <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-4 w-4 text-emerald-300" aria-hidden="true" /><div><h2 className="text-sm font-semibold text-white/82">{commerce.readyTitle}</h2><p className="mt-1.5 text-sm leading-6 text-white/45">{addOnCheckoutEnabled ? commerce.readyBody : commerce.releaseLocked}</p></div></div>
           </article>
         </section>
 
@@ -175,17 +266,28 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
                   </dl>
 
                   <div className="mt-auto pt-4">
-                    {status === 'preview' ? (
-                      <p className="text-sm leading-6 text-amber-100/65">{copy.noDirectPurchaseBody}</p>
-                    ) : status === 'included' ? (
-                      <p className="text-sm font-semibold text-emerald-200/80">{copy.includedWithEnterprise}</p>
-                    ) : (
-                      <div className="flex items-end justify-between gap-4">
-                        <div><p className="text-xl font-semibold text-white/86">€{addOn.priceMonthly}<span className="text-sm font-normal text-white/38">{copy.perMonth}</span></p><p className="mt-0.5 text-xs text-white/32">€{addOn.priceAnnual}{copy.perYear}</p></div>
-                        {status === 'available' && canManageBilling ? <Link href={`/${locale}/dashboard/organizations/billing`} className="inline-flex min-h-9 items-center justify-center rounded-lg bg-emerald-300 px-3 text-xs font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">{copy.reviewBilling}</Link> : null}
-                        {status === 'blocked' ? <Link href={`/${locale}/pricing`} className="inline-flex min-h-9 items-center justify-center rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-white/55 transition hover:bg-white/[0.04] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">{copy.viewPlans}</Link> : null}
+                    <div className="flex items-end justify-between gap-4">
+                      <div>
+                        <p className="text-xl font-semibold text-white/86">€{addOn.priceMonthly}<span className="text-sm font-normal text-white/38">{copy.perMonth}</span></p>
+                        <p className="mt-0.5 text-xs text-white/32">€{addOn.priceAnnual}{copy.perYear}</p>
                       </div>
-                    )}
+                      {status === 'available' && canManageBilling && addOnCheckoutEnabled ? (
+                        <BillingActionButton
+                          action="replace_add_ons"
+                          locale={locale}
+                          addOns={[{ slug: addOn.slug, quantity: 1 }]}
+                          className="min-h-9 rounded-lg px-3 text-xs"
+                          errorReturnHref={`/${locale}/dashboard/organizations/add-ons?billing_error=action_failed#addon-${addOn.slug}`}
+                        >
+                          {commerce.add(addOn.name)}
+                        </BillingActionButton>
+                      ) : null}
+                      {status === 'blocked' ? <Link href={`/${locale}/pricing`} className="inline-flex min-h-9 items-center justify-center rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-white/55 transition hover:bg-white/[0.04] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">{copy.viewPlans}</Link> : null}
+                    </div>
+                    {status === 'included' ? <p className="mt-3 text-sm font-semibold text-emerald-200/80">{commerce.included}</p> : null}
+                    {status === 'active' ? <p className="mt-3 text-sm font-semibold text-emerald-200/80">{copy.active}</p> : null}
+                    {status === 'preview' ? <p className="mt-3 text-xs leading-5 text-amber-100/65">{commerce.preview}</p> : null}
+                    {status === 'available' && canManageBilling && !addOnCheckoutEnabled ? <p className="mt-3 text-xs leading-5 text-amber-100/65">{commerce.releaseLocked}</p> : null}
                     {status === 'available' && !canManageBilling ? <p className="mt-2 text-xs leading-5 text-amber-100/65">{copy.contactBillingAdmin}</p> : null}
                     {status === 'blocked' ? <p className="mt-2 text-xs leading-5 text-white/38">{copy.requiresPlan(getPlanDisplayName(addOn.availableOn[0]))}</p> : null}
                   </div>

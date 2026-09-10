@@ -37,10 +37,24 @@ describe('billing Stripe price entitlements', () => {
     expect(processor).toContain('resolveStripeSubscriptionPlan');
     expect(processor).toContain('getBillingPlanIdForStripePriceId(stripePriceId)');
     expect(processor).toContain("source: 'stripe_price_id'");
-    expect(processor).toContain("source: 'unresolved'");
+    expect(processor).toContain("source: mappedBaseItems.length > 1 ? 'ambiguous' as const : 'unresolved' as const");
     expect(processor).not.toContain("source: 'subscription_metadata_fallback'");
     expect(processor).toContain('Missing or unrecognized canonical Stripe price on subscription');
     expect(processor).toContain('planSource: planResolution.source');
     expect(processor).toContain('stripePriceId: planResolution.stripePriceId');
+  });
+
+  it('does not assume the first Stripe subscription item is the base plan', () => {
+    expect(processor).toContain('const mappedBaseItems = items');
+    expect(processor).toContain('.map((item) => {');
+    expect(processor).toContain('mappedBaseItems.length !== 1');
+    expect(processor).not.toContain('items?.data?.[0]?.price?.id');
+  });
+
+  it('persists the billing interval from the resolved base plan item', () => {
+    expect(processor).toContain("recurringInterval === 'year'");
+    expect(processor).toContain("recurringInterval === 'month'");
+    expect(processor).toContain('billing_interval: planResolution.billingInterval');
+    expect(processor).toContain('billingInterval: planResolution.billingInterval');
   });
 });

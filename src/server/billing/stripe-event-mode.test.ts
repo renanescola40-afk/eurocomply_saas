@@ -13,11 +13,13 @@ function subscriptionEvent(input: {
   livemode?: boolean;
   type?: string;
   priceId?: string | null;
+  priceIds?: Array<string | null>;
   metadataPlan?: string | null;
 }) {
-  const price = input.priceId === null
-    ? undefined
-    : { id: input.priceId ?? 'price_essential_live' };
+  const ids = input.priceIds ?? [input.priceId === undefined ? 'price_essential_live' : input.priceId];
+  const items = ids.map((priceId) => ({
+    price: priceId === null ? undefined : { id: priceId },
+  }));
 
   return {
     livemode: input.livemode ?? true,
@@ -26,7 +28,7 @@ function subscriptionEvent(input: {
       object: {
         id: 'sub_123',
         metadata: input.metadataPlan === null ? {} : { plan: input.metadataPlan ?? 'starter' },
-        items: { data: [{ price }] },
+        items: { data: items },
       },
     },
   } as never;
@@ -81,7 +83,7 @@ describe('Stripe webhook event mode binding', () => {
     });
   });
 
-  it('accepts a Live subscription only when its Stripe Price is server allowlisted', () => {
+  it('accepts a Live subscription only when its base Stripe Price is server allowlisted', () => {
     expect(validateStripeSubscriptionPriceAuthority(subscriptionEvent({}))).toMatchObject({
       ok: true,
       reason: 'allowlisted_price',
@@ -95,6 +97,50 @@ describe('Stripe webhook event mode binding', () => {
       reason: 'subscription_price_not_allowlisted',
       priceId: 'price_attacker',
       plan: null,
+    });
+  });
+
+  it('accepts an active add-on item regardless of Stripe item ordering', () => {
+    const activeFriaPrice = 'price_1UE354Gt3cgjPOtqUMRXYSkx';
+
+    expect(validateStripeSubscriptionPriceAuthority(subscriptionEvent({
+      priceIds: [activeFriaPrice, 'price_essential_live'],
+    }))).toMatchObject({
+      ok: true,
+      reason: 'allowlisted_price',
+      priceId: 'price_essential_live',
+      plan: 'starter',
+    });
+  });
+
+  it('rejects preview or unknown add-on items even when the base plan is valid', () => {
+    const previewExtraUserPrice = 'price_1UE374Gt3cgjPOtq24EEXT30';
+
+    expect(validateStripeSubscriptionPriceAuthority(subscriptionEvent({
+      priceIds: ['price_essential_live', previewExtraUserPrice],
+    }))).toMatchObject({
+      ok: false,
+      reason: 'subscription_add_on_price_not_allowlisted',
+      priceId: previewExtraUserPrice,
+      plan: 'starter',
+    });
+
+    expect(validateStripeSubscriptionPriceAuthority(subscriptionEvent({
+      priceIds: ['price_essential_live', 'price_attacker_addon'],
+    }))).toMatchObject({
+      ok: false,
+      reason: 'subscription_add_on_price_not_allowlisted',
+      priceId: 'price_attacker_addon',
+      plan: 'starter',
+    });
+  });
+
+  it('rejects multiple base plan prices in one self-service subscription', () => {
+    expect(validateStripeSubscriptionPriceAuthority(subscriptionEvent({
+      priceIds: ['price_essential_live', 'price_professional_live'],
+    }))).toMatchObject({
+      ok: false,
+      reason: 'subscription_multiple_base_prices',
     });
   });
 

@@ -1,11 +1,18 @@
 import { createHash } from 'node:crypto';
 import type Stripe from 'stripe';
 
+import { getBillingAddOn, isAddOnAvailableForPlan } from '@/lib/billing/add-ons';
+import { getBillingPlanIdForStripePriceId } from '@/lib/billing/plans';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { classifyProviderFailure } from '@/server/providers/failure';
 import { isPlanAtLeast, type CanonicalSubscriptionPlan } from '@/server/queries/subscription';
-import { getStripeAddOnPriceId, normalizeAddOnSelections, type BillingAddOnSelection } from './add-ons';
+import {
+  getBillingAddOnSlugForStripePriceId,
+  getStripeAddOnPriceId,
+  normalizeAddOnSelections,
+  type BillingAddOnSelection,
+} from './add-ons';
 import { deriveStripeIdempotencyKey, type BillingIdempotencyContext } from './idempotency';
 import {
   BillingLifecycleRequestError,
@@ -42,6 +49,7 @@ type SubscriptionLifecycleInput = {
   plan?: CanonicalSubscriptionPlan;
   interval?: string | null;
   addOns?: Array<{ slug?: unknown; quantity?: unknown }>;
+  preserveExistingAddOns?: boolean;
   idempotency: BillingIdempotencyContext;
 };
 
@@ -67,10 +75,59 @@ async function getSubscriptionAuthority(organizationId: string): Promise<Subscri
   return data;
 }
 
-function getBaseSubscriptionItem(subscription: Stripe.Subscription) {
-  const item = subscription.items.data.find((candidate) => candidate.price.recurring?.usage_type !== 'metered');
-  if (!item) throw new Error('stripe_base_subscription_item_not_found');
-  return item;
+export function getBaseSubscriptionItem(subscription: Stripe.Subscription) {
+  const candidates = subscription.items.data.filter(
+    (candidate) => Boolean(getBillingPlanIdForStripePriceId(candidate.price.id)),
+  );
+
+  if (candidates.length === 0) {
+    throw new Error('stripe_base_subscription_item_not_found');
+  }
+
+  if (candidates.length !== 1) {
+    throw new Error('stripe_base_subscription_item_ambiguous');
+  }
+
+  return candidates[0];
+}
+
+export function getProviderAddOnSelections(subscription: Stripe.Subscription, baseItemId: string) {
+  return subscription.items.data
+    .filter((item) => item.id !== baseItemId)
+    .map((item): BillingAddOnSelection => {
+      const slug = getBillingAddOnSlugForStripePriceId(item.price.id);
+      if (!slug) throw new Error('stripe_subscription_add_on_item_not_allowlisted');
+
+      const quantity = item.quantity ?? 1;
+      if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10000) {
+        throw new Error('stripe_subscription_add_on_quantity_invalid');
+      }
+
+      return { slug, quantity };
+    });
+}
+
+export function mergeProviderAddOnSelections(
+  subscription: Stripe.Subscription,
+  baseItemId: string,
+  requested: SubscriptionLifecycleInput['addOns'],
+  plan: CanonicalSubscriptionPlan,
+) {
+  return normalizeAddOnSelections(
+    [...getProviderAddOnSelections(subscription, baseItemId), ...(requested ?? [])],
+    plan,
+  );
+}
+
+export function getEligibleProviderAddOnSelectionsForPlan(
+  subscription: Stripe.Subscription,
+  baseItemId: string,
+  plan: CanonicalSubscriptionPlan,
+) {
+  return getProviderAddOnSelections(subscription, baseItemId).filter((selection) => {
+    const addOn = getBillingAddOn(selection.slug);
+    return Boolean(addOn && isAddOnAvailableForPlan(addOn, plan));
+  });
 }
 
 function getSubscriptionCustomerId(subscription: Stripe.Subscription) {
@@ -112,13 +169,14 @@ function canonicalRequestAddOns(value: SubscriptionLifecycleInput['addOns']) {
 }
 
 export function billingLifecycleRequestFingerprint(
-  input: Pick<SubscriptionLifecycleInput, 'action' | 'plan' | 'interval' | 'addOns'>,
+  input: Pick<SubscriptionLifecycleInput, 'action' | 'plan' | 'interval' | 'addOns' | 'preserveExistingAddOns'>,
 ) {
   const payload = JSON.stringify({
     action: input.action,
     plan: input.plan ?? null,
     interval: input.interval ? normalizeBillingInterval(input.interval) : null,
     addOns: canonicalRequestAddOns(input.addOns),
+    preserveExistingAddOns: input.preserveExistingAddOns === true,
   });
   return createHash('sha256').update(payload).digest('hex');
 }
@@ -193,9 +251,6 @@ function assertLegacyRecoveredProviderState(input: {
     return;
   }
 
-  // Legacy downgrade requests predate durable schedule snapshots, so there is no
-  // safe way to infer whether a future provider phase was committed. Do not turn
-  // an ambiguous historical request into an immediate price mutation.
   if (input.action === 'downgrade') {
     throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
   }
@@ -351,12 +406,22 @@ function futureDowngradePhase(input: {
   userId: string;
   interval: BillingInterval;
 }): ScheduleUpdatePhase {
-  const items = input.currentPhase.items.map((item) => {
-    const params = phaseItemParams(item);
-    return scheduleItemPriceId(item) === input.currentBasePriceId
-      ? { ...params, price: input.targetPriceId, quantity: 1 }
-      : params;
-  });
+  const items = input.currentPhase.items
+    .filter((item) => {
+      const priceId = scheduleItemPriceId(item);
+      if (priceId === input.currentBasePriceId) return true;
+
+      const slug = getBillingAddOnSlugForStripePriceId(priceId);
+      if (!slug) throw new BillingLifecycleRequestError('billing_schedule_conflict', 409);
+      const addOn = getBillingAddOn(slug);
+      return Boolean(addOn && isAddOnAvailableForPlan(addOn, input.targetPlan));
+    })
+    .map((item) => {
+      const params = phaseItemParams(item);
+      return scheduleItemPriceId(item) === input.currentBasePriceId
+        ? { ...params, price: input.targetPriceId, quantity: 1 }
+        : params;
+    });
 
   return {
     items,
@@ -459,7 +524,11 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
   const interval = input.interval ? normalizeBillingInterval(input.interval) : getCurrentBillingInterval(baseItem);
   const targetPlan = input.plan ?? currentPlan;
   assertPlanTransition(input.action, currentPlan, targetPlan);
-  const addOns = normalizeAddOnSelections(input.addOns, targetPlan);
+  const addOns = input.action === 'replace_add_ons' && input.preserveExistingAddOns
+    ? mergeProviderAddOnSelections(subscription, baseItem.id, input.addOns, targetPlan)
+    : input.action === 'upgrade' || input.action === 'downgrade'
+      ? getEligibleProviderAddOnSelectionsForPlan(subscription, baseItem.id, targetPlan)
+      : normalizeAddOnSelections(input.addOns, targetPlan);
   const claim = await claimBillingLifecycleRequest({
     organizationId: input.organizationId,
     requestedBy: input.userId,
@@ -547,7 +616,7 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
         updated = await stripe.subscriptions.update(
           subscription.id,
           {
-            proration_behavior: 'create_prorations',
+            proration_behavior: input.action === 'replace_add_ons' ? 'always_invoice' : 'create_prorations',
             billing_cycle_anchor: 'unchanged',
             items: [
               { id: baseItem.id, price: getStripePriceId(targetPlan, interval), quantity: 1 },
@@ -605,6 +674,7 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
       providerStatus: providerSnapshot.status,
       lifecycleRequestId: requestId,
       idempotencyProtected: true,
+      preserveExistingAddOns: input.preserveExistingAddOns === true,
       providerMutationReplayed: providerWasAlreadyCompleted,
       legacyProviderSnapshotRecovered: isLegacyProviderRecovery,
       durableResultSnapshot: true,

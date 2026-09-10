@@ -156,7 +156,7 @@ describe('post-billing commercial customer journey closure', () => {
     expect(actionButton).toContain('function getStepUpCopy(locale: string)');
     expect(actionButton).toContain('Escolha um método de autenticação multifator');
     expect(actionButton).toContain('Elige un método de autenticación multifactor');
-    expect(actionButton).toContain('Choisissez une méthode d’authentification multifacteur');
+    expect(actionButton).toContain('Choisissez une méthode d’authentification multifactorielle');
     expect(actionButton).toContain('Scegli un metodo di autenticazione a più fattori');
     expect(actionButton).toContain('Wählen Sie eine Methode für die Mehrfaktor-Authentifizierung');
     expect(actionButton).toContain('getBillingStepUpToken(locale)');

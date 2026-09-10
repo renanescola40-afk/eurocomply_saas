@@ -12,6 +12,7 @@ export type BillingAddOn = {
   priceAnnual: number;
   category: AddOnCategory;
   availableOn: CanonicalSubscriptionPlan[];
+  includedFrom?: CanonicalSubscriptionPlan;
   dependencies: string[];
   status: AddOnStatus;
   stripePriceEnvKeyMonthly: string;
@@ -20,13 +21,9 @@ export type BillingAddOn = {
 
 const allPaidPlans: CanonicalSubscriptionPlan[] = ['starter', 'professional', 'business', 'enterprise'];
 const proAndUp: CanonicalSubscriptionPlan[] = ['professional', 'business', 'enterprise'];
-
-// Add-on lifecycle primitives already exist, but provider-backed add-on authority is
-// not yet materialized from signed Stripe subscription-item events into the canonical
-// organization entitlement plane. Keep every add-on in private preview until that
-// authority chain is proven end-to-end. This prevents a customer from being charged
-// for an item that a protected API would still deny or a quota calculator would ignore.
-const ADD_ON_COMMERCIAL_STATUS: AddOnStatus = 'private_preview';
+const starterOnly: CanonicalSubscriptionPlan[] = ['starter'];
+const starterAndProfessional: CanonicalSubscriptionPlan[] = ['starter', 'professional'];
+const belowEnterprise: CanonicalSubscriptionPlan[] = ['starter', 'professional', 'business'];
 
 function addOn<const TSlug extends string>(
   slug: TSlug,
@@ -35,7 +32,11 @@ function addOn<const TSlug extends string>(
   priceMonthly: number,
   category: AddOnCategory,
   availableOn: CanonicalSubscriptionPlan[],
-  dependencies: string[] = [],
+  options: {
+    status?: AddOnStatus;
+    includedFrom?: CanonicalSubscriptionPlan;
+    dependencies?: string[];
+  } = {},
 ) {
   const envSlug = slug.toUpperCase().replaceAll('-', '_');
   return {
@@ -47,23 +48,29 @@ function addOn<const TSlug extends string>(
     priceAnnual: priceMonthly * 10,
     category,
     availableOn,
-    dependencies,
-    status: ADD_ON_COMMERCIAL_STATUS,
+    includedFrom: options.includedFrom,
+    dependencies: options.dependencies ?? [],
+    status: options.status ?? 'private_preview',
     stripePriceEnvKeyMonthly: `STRIPE_ADDON_${envSlug}_MONTHLY`,
     stripePriceEnvKeyAnnual: `STRIPE_ADDON_${envSlug}_ANNUAL`,
   };
 }
 
+// Commercial activation is intentionally per add-on. A LIVE Stripe Product/Price is
+// necessary but not sufficient: an item is `active` only when the protected product
+// surface already consumes that add-on entitlement. Items whose promised effect still
+// needs a distinct capacity/provisioning authority remain private preview and cannot
+// be selected by the subscription mutation API.
 export const BILLING_ADD_ONS = [
-  addOn('regulatory-monitoring-pro', 'Regulatory Monitoring Pro', 'Expanded regulatory feeds, alerts and monitoring workflows.', 39, 'compliance', allPaidPlans),
-  addOn('ai-literacy-hub', 'AI Literacy Hub', 'Training assignments, attestations and literacy evidence.', 49, 'compliance', allPaidPlans),
-  addOn('fria-workspace', 'FRIA Workspace', 'Dedicated fundamental-rights impact assessment workspace.', 79, 'compliance', allPaidPlans),
-  addOn('annex-iv-pro', 'Annex IV Pro', 'Advanced Annex IV technical-documentation workflows.', 59, 'compliance', allPaidPlans),
-  addOn('vendor-assurance', 'Vendor Assurance', 'Expanded vendor due diligence and assurance workflows.', 79, 'compliance', allPaidPlans),
-  addOn('procurement-pack', 'Procurement Pack', 'Buyer questionnaires, procurement evidence and review packs.', 99, 'compliance', proAndUp, ['vendor-assurance']),
-  addOn('advanced-reporting', 'Advanced Reporting', 'Executive, board and custom reporting capabilities.', 49, 'platform', allPaidPlans),
+  addOn('regulatory-monitoring-pro', 'Regulatory Monitoring Pro', 'Expanded regulatory feeds, alerts and monitoring workflows.', 39, 'compliance', starterOnly, { status: 'active', includedFrom: 'professional' }),
+  addOn('ai-literacy-hub', 'AI Literacy Hub', 'Training assignments, attestations and literacy evidence.', 49, 'compliance', starterAndProfessional, { status: 'active', includedFrom: 'business' }),
+  addOn('fria-workspace', 'FRIA Workspace', 'Dedicated fundamental-rights impact assessment workspace.', 79, 'compliance', starterOnly, { status: 'active', includedFrom: 'professional' }),
+  addOn('annex-iv-pro', 'Annex IV Pro', 'Advanced Annex IV technical-documentation workflows.', 59, 'compliance', starterOnly, { status: 'active', includedFrom: 'professional' }),
+  addOn('vendor-assurance', 'Vendor Assurance', 'Expanded vendor due diligence and assurance workflows.', 79, 'compliance', starterOnly, { status: 'active', includedFrom: 'professional' }),
+  addOn('procurement-pack', 'Procurement Pack', 'Buyer questionnaires, procurement evidence and review packs.', 99, 'compliance', proAndUp, { includedFrom: 'business', dependencies: ['vendor-assurance'] }),
+  addOn('advanced-reporting', 'Advanced Reporting', 'Executive, board and custom reporting capabilities.', 49, 'platform', starterAndProfessional, { status: 'active', includedFrom: 'business' }),
   addOn('api-pack', 'API Pack', 'Expanded API quota, credentials and webhook capacity.', 99, 'platform', allPaidPlans),
-  addOn('evidence-vault', 'Evidence Vault', 'Long-term protected evidence storage and retention.', 149, 'platform', allPaidPlans),
+  addOn('evidence-vault', 'Evidence Vault', 'Long-term protected evidence storage and retention.', 149, 'platform', belowEnterprise, { status: 'active', includedFrom: 'enterprise' }),
   addOn('white-label', 'White Label', 'Custom product identity, domains and exported branding.', 299, 'branding', proAndUp),
   addOn('extra-organization', 'Extra Organization', 'One additional licensed organization.', 29, 'capacity', allPaidPlans),
   addOn('extra-user', 'Extra User', 'One additional licensed user seat.', 8, 'capacity', allPaidPlans),
