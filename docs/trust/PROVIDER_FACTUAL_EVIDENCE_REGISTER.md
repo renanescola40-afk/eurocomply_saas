@@ -1,49 +1,56 @@
 # Provider factual evidence register
 
-**Status:** `CURRENT_OVERLAY_ACTIVE / CONTRACTUAL_FACTS_IN_REVIEW`  
-**Current factual overlay:** `docs/trust/evidence/2026-09-09-provider-current-overlay.md`  
-**Current protected main at overlay capture:** `6f99280779930c60fca6c65350fda0636c664292`  
+**Status:** `CURRENT_CONNECTED_ACCOUNT_ADDENDUM_ACTIVE / CONTRACTUAL_FACTS_IN_REVIEW`  
+**Prior runtime overlay:** `docs/trust/evidence/2026-09-09-provider-current-overlay.md`  
+**Connected-account addendum captured:** `2026-09-10`  
+**Protected main at connected-account capture:** `6ca43bfea63567abcf352181b7c190730d647c17`  
 **Protected Provider Runtime acceptance:** `OPEN`  
 **Canonical tracker:** GitHub issue `#1727`
 
 This register separates attributable provider/configuration facts from legal interpretation. It is not a DPA, legal opinion, GDPR-compliance statement, certification, independent pentest, regulator approval, or proof that every public provider term is contractually applicable to the RISCK COMPLY account.
 
-## Current-release authority
+## Current authority model
 
-For release-specific buyer disclosures, use `docs/trust/evidence/2026-09-09-provider-current-overlay.md` together with the canonical Enterprise release trackers. The previous 2026-08-24 provider snapshot is retained in Git history and evidence files for provenance only; its Vercel deployment, Git SHA, Supabase migration counts, and exact-release provider bindings **must not be represented as current**.
+For release-specific runtime claims, retain the exact SHA/deployment/runtime artifact that proved the fact. For connected-account/project facts, the 2026-09-10 addendum below supersedes older account/project uncertainty only for the fields actually revalidated.
 
-Protected-main lineage, direct Production runtime facts and protected producer acceptance are separate authorities. A provider can be technically active while exact-SHA release acceptance or account/legal facts remain open.
+Protected-main lineage, direct Production runtime facts, provider account facts, provider public legal material and protected producer acceptance are separate authorities. A provider can be technically active while exact-SHA release acceptance or account/legal facts remain open.
 
-## Fresh attributable provider signals — 2026-09-09
+## Current attributable provider signals — 2026-09-10 addendum
 
 | Provider / service | Current attributable fact | Current evidence state | Still required before final contractual disclosure |
 | --- | --- | --- | --- |
-| Vercel | Canonical public site is serving; fresh `/api/health` returned HTTP 200 and anonymous `/api/ready` returned HTTP 401 fail-closed. Canonical deployment observed is `dpl_GrWRgzmMnUfBattRgeBX4j3ic8LT`, Git SHA `8a30ca3e6d06a77a83d7f2d10f7cef7edfe040a6`, which is stale relative to protected main at overlay capture. | `CURRENT_PUBLIC_RUNTIME_PROVEN / EXACT_MAIN_PRODUCTION_BINDING_OPEN / PROTECTED_PROVIDER_RUNTIME_OPEN` | Governed exact-SHA Production convergence and protected runtime/provider evidence; account-specific contractual/legal interpretation remains separate. |
-| Supabase | Production project `tganhbbhfxcpblmgqprg` is live. Fresh read-only inspection shows migration ledger count `90`, head `20260909006900`, and the current V41 selected inventory present `13/13`. `organization_members.status` and `app_private.has_commercial_authority(uuid)` are present. RLS + FORCE RLS are enabled on reviewed commercial tenant surfaces. | `V41_LIVE_SCHEMA_EFFECT_PASS / PAYMENT_FIRST_LIVE / GOVERNED_V41_PROVENANCE_OPEN` | Complete retained governed provenance/reconciliation evidence. Do not reapply, repair, roll back, or issue ad-hoc DDL merely to manufacture provenance. |
-| Stripe | Canonical LIVE account is `acct_1U6IuJGt3cgjPOtq` / RISCK COMPLY SAAS. Public initial self-serve paid Checkout is fail-closed until paid-GA acceptance. Three processed `livemode=true` events currently present in the database are platform-proof Checkout fixtures and do not satisfy exact subscription authority. | `LIVE_CONTROL_PLANE_PROVEN / PLATFORM_PROOF_EVENTS_NON_CREDITING / LEGITIMATE_LIVE_SUBSCRIPTION_AUTHORITY_0` | Attributable VAT/tax facts, exact-SHA Production acceptance, applicable account/legal agreement facts, and a genuine normal customer lifecycle satisfying the exact authority contract. |
-| Google Workspace | Corporate `risckcomply.com` mail is actively used for operational communications. Earlier account-specific evidence exists but was not fully revalidated in this release overlay. | `OPERATIONAL_USE_CURRENT / ACCOUNT_CONTRACT_FACTS_REQUIRE_REVALIDATION` | Current account agreement/CDPA incorporation, region/retention settings if material, and qualified legal role/transfer interpretation. |
-| GitHub / GitHub Actions | Repository and protected CI/release workflows are actively used. Production-sensitive jobs use protected environments and retained evidence boundaries. | `MATERIAL_OPERATIONAL_PROVIDER / PROTECTED_RELEASE_GOVERNANCE_ACTIVE` | Applicable company/account agreement/DPA and final legal/transfer interpretation where required. |
-| Upstash / Redis | Application source retains the distributed Redis-backed rate-limit integration. Earlier exact-release/provider evidence is historical until a current protected provider/runtime producer is accepted. | `RUNTIME_BINDING_PROVEN=HISTORICAL_PARTIAL / ACCOUNT_FACTS_OPEN` | Current exact-release provider proof plus account plan/owner/region/DPA facts. |
-| Sentry | Application/release infrastructure retains Sentry integration. Earlier direct exact-release evidence is historical until refreshed protected provider/runtime acceptance. | `RUNTIME_BINDING_PROVEN=HISTORICAL_PARTIAL / ACCOUNT_LEGAL_FACTS_OPEN` | Current exact-release producer, account region/plan/retention/DPA acceptance and final transfer/legal interpretation. |
-| PostHog | Production source/configuration has historically targeted EU endpoints, but the connected assurance project was not the Production project. | `CONNECTED_ASSURANCE_PROJECT_MISMATCH / ACCOUNT_FACTS_OPEN` | Recover/revalidate the actual Production account/project before account-specific contractual claims. |
-| Resend / transactional email | Historical real delivery and provider-framework evidence exist; current exact-release account/provider acceptance is not credited by this overlay. | `HISTORICAL_DELIVERY_PROVEN / CURRENT_EXACT_RELEASE_BINDING_OPEN` | Current Production binding, account/plan/region/retention and applicable agreement/DPA facts. |
-| Google OAuth / Google Identity | Application uses Google authentication through Supabase Auth; exact current account legal/processing facts are not established by this register. | `RUNTIME_INTEGRATION_PRESENT / ACCOUNT_LEGAL_FACTS_OPEN` | Applicable contracting terms, DPA/role/region/retention/transfer interpretation where required. |
-| Malware/content scanner | Enterprise upload policy requires provider-backed scanning when enabled; this overlay does not establish a current exact-release scanner provider/account. | `CONDITIONAL_UNVERIFIED` | Confirm active provider/scope, data categories, region, retention and legal terms before buyer reliance. |
-| OpenAI / ChatGPT — founder operational use outside SaaS runtime | Founder operational use exists outside direct SaaS runtime; no direct customer-runtime OpenAI integration is established by this register. | `FOUNDER_OPERATIONAL_USE_CAPTURED / DIRECT_RUNTIME_INTEGRATION_NOT_IDENTIFIED / ACCOUNT_LEGAL_FACTS_OPEN` | Final internal policy and applicable workspace/legal facts if this operational use becomes material to customer data handling. |
+| Vercel | Connected team `renanescola40-afks-projects` is Pro. Project `eurocomply-saas` is linked to GitHub repo `renanescola40-afk/eurocomply_saas`; configured domains include `www.risckcomply.com` and `risckcomply.com`. Current PR deployment metadata is attributable to the expected repo/branch lineage. | `CURRENT_TEAM_PROJECT_DOMAIN_BINDING_PASS / EXACT_MAIN_PRODUCTION_BINDING_OPEN / ACCOUNT_LEGAL_FACTS_OPEN` | Exact protected-main Production convergence where required; applicable account agreement/DPA, contracting entity, complete processing/support locations, retention and Chapter V treatment |
+| Supabase | Connected Production project `tganhbbhfxcpblmgqprg` is `ACTIVE_HEALTHY` in `eu-west-1`, revalidated 2026-09-10; database reports PostgreSQL 17 GA. | `CURRENT_PROJECT_REGION_PASS / ACCOUNT_LEGAL_FACTS_OPEN` | Applicable/superseding account agreement, backup/PITR retention, support/onward-processing locations, transfer/subprocessor treatment and qualified legal interpretation |
+| Stripe | Connected Stripe session exposes the LIVE `RISCK COMPLY SAAS` account. The current account-detail call failed at connector execution, so country, business type, contracting entity and transfer fields are not promoted as newly revalidated by this addendum. | `LIVE_ACCOUNT_DISCOVERY_PASS_CURRENT / ACCOUNT_DETAIL_TOOL_BLOCKED / ACCOUNT_LEGAL_FACTS_OPEN` | Successful current account detail/provider contract evidence, seller/operator alignment, applicable DPA/agreement, retention and transfer treatment; paying-customer/VAT closure remains owned by the billing lane |
+| Google Workspace | Corporate `risckcomply.com` mail remains a material operational provider based on prior attributable evidence; this addendum did not re-open or manufacture account-contract facts. | `OPERATIONAL_PROVIDER / ACCOUNT_CONTRACT_FACTS_REQUIRE_REVALIDATION` | Current applicable agreement/CDPA incorporation, region/retention settings if material, onward-transfer treatment and qualified legal role |
+| GitHub / GitHub Actions | Repository and protected CI/release workflows are actively used. Authorised protected jobs may transiently process Production database data on GitHub-hosted runners. | `MATERIAL_OPERATIONAL_PROVIDER / PROTECTED_RELEASE_GOVERNANCE_ACTIVE` | Applicable company/account DPA and final processing/transfer/legal-role interpretation where required |
+| Upstash / Redis | Application source retains distributed Redis-backed rate limiting/security-control integration. Prior exact-release/provider proof remains historical until a current protected provider/runtime producer is accepted. | `RUNTIME_INTEGRATION_PRESENT / CURRENT_PROTECTED_PROVIDER_ACCEPTANCE_OPEN / ACCOUNT_FACTS_OPEN` | Current account owner/plan/region/retention/DPA facts and protected provider/runtime acceptance |
+| Sentry | Application/release infrastructure retains Sentry integration. Prior direct release-binding evidence is historical until a current protected provider/runtime producer is accepted. | `RUNTIME_INTEGRATION_PRESENT / CURRENT_PROTECTED_PROVIDER_ACCEPTANCE_OPEN / ACCOUNT_LEGAL_FACTS_OPEN` | Current Production project/account, region, plan/retention, DPA acceptance/applicability, scrubbing/data categories and transfer treatment |
+| PostHog | Production source/configuration historically targeted EU endpoints, but the connected assurance project was not the Production project. | `CONNECTED_ASSURANCE_PROJECT_MISMATCH / ACCOUNT_FACTS_OPEN` | Recover/revalidate the actual Production account/project before account-specific contractual claims |
+| Resend / transactional email | Historical real delivery and provider-framework evidence exist; current exact-release account/provider acceptance is not credited by this addendum. | `HISTORICAL_DELIVERY_PROVEN / CURRENT_EXACT_RELEASE_BINDING_OPEN` | Current Production binding, account/entity/plan/region/retention and applicable agreement/DPA/transfer facts |
+| Google OAuth / Google Identity | Application uses Google authentication through Supabase Auth; exact current account legal/processing facts are not established by this register. | `RUNTIME_INTEGRATION_PRESENT / ACCOUNT_LEGAL_FACTS_OPEN` | Applicable contracting terms, role, processing/access locations, retention and transfer interpretation where required |
+| Malware/content scanner | Upload policy can require provider-backed scanning when enabled; this register does not establish a current external scanner provider/account. | `CONDITIONAL_UNVERIFIED` | If enabled, confirm active provider/scope, data categories, region, retention and legal/transfer terms before buyer reliance |
+| Direct SaaS model provider | No direct customer-runtime AI/model provider is established by this register. Founder-operated external AI use outside direct SaaS runtime is a separate operational fact. | `DIRECT_RUNTIME_INTEGRATION_NOT_IDENTIFIED` | If introduced, identify provider/workspace, role, region, retention/training policy, DPA/transfer terms and customer-content policy before disclosure |
+
+## Prior runtime overlay and historical evidence
+
+`docs/trust/evidence/2026-09-09-provider-current-overlay.md` remains the authority for the exact runtime observations it captured on 2026-09-09. Older 2026-08-24 provider snapshots and release proofs remain historical provenance.
+
+A newer connected-account check does **not** retroactively convert an older runtime artifact into current exact-release proof. Conversely, an older runtime artifact does not override a newer successfully revalidated account/project field.
 
 ## Billing/customer evidence boundary
 
-A persisted `subscriptions` row is not proof of a paying customer. Ordinary commercial authority requires the exact organization + Stripe customer + Stripe subscription to correlate with a processed `livemode=true` `customer.subscription.created` or `customer.subscription.updated` event under the source contract.
-
-Current read-only reconciliation found no event satisfying that authority contract. Platform-proof Checkout events and seeded/compatibility rows are non-crediting.
+Provider disclosure does not determine whether a subscription is a legitimate paying-customer authority event. Platform-proof fixtures, seeded/compatibility rows and generic LIVE account discovery remain non-crediting for a real customer lifecycle unless the billing evidence contract is satisfied. Billing/VAT/customer-lifecycle closure remains a separate commercial lane.
 
 ## Evidence rules
 
-- Runtime/configuration facts require attributable Production evidence.
+- Runtime/configuration facts require attributable Production evidence for the release being claimed.
 - Direct runtime evidence does not substitute for a protected exact-SHA producer where the control requires protected acceptance.
+- Connected project/account facts close only the fields successfully returned by the connected authority.
+- A failed provider-detail lookup does not license reuse of stale detail fields as if they were current.
 - Public provider documents establish general frameworks only; they do not prove account-specific acceptance, custom terms, final legal role or transfer treatment.
-- Historical provider evidence remains useful provenance but must not be relabelled as current-release evidence.
 - An assurance account is not Production evidence unless attributable to the Production integration.
+- Plan level, billing entity or EU project region is not by itself proof of complete processing locations or Chapter V treatment.
 - Do not retain API keys, tokens, passwords, connection strings, webhook secrets, private KYC records, private contracts or unnecessary user-level identity data.
 
 ## Legal interpretation boundary
@@ -52,47 +59,37 @@ The following remain `QUALIFIED_HUMAN_REQUIRED` where applicable:
 
 - controller/processor/subprocessor/independent-controller role allocation;
 - lawful-basis descriptions;
-- Article 28 DPA sufficiency;
+- final Article 28 DPA sufficiency;
 - international-transfer treatment;
 - provider/subprocessor authorisation, notice and objection model;
 - analytics/cookie/consent legal requirements;
 - retention/legal-hold decisions;
 - final Privacy Policy, Terms and DPA language.
 
-Public provider terms reduce factual uncertainty but are not a substitute for confirming the actual account agreement and obtaining qualified legal review.
+Public/provider account facts reduce uncertainty but are not a substitute for confirming the applicable agreement and obtaining qualified legal review where required.
 
 ## External assurance boundary
 
-- qualified EU AI Act/legal workstreams accepted: `0/8`;
-- independent pentest: application submitted / selection pending;
-- retest: not started;
-- Portuguese VAT treatment: attributable seller fact remains open;
-- legitimate LIVE paid-customer authority: `0` observed under the exact source contract.
+- qualified EU AI Act/legal workstreams accepted: `0/8` unless genuine accepted artifacts say otherwise;
+- independent pentest/retest state is owned by the external security-assurance lane and is not promoted here;
+- Portuguese VAT/seller treatment is owned by the billing/legal seller-facts lane;
+- genuine paid-customer lifecycle evidence is owned by the billing lane.
 
-These open items prohibit a claim of complete external assurance or final Enterprise procurement acceptance.
+These independent gates must not be silently promoted by provider-disclosure work.
 
 ## Closure state
 
-`PROVIDER_FACTUAL_RECONCILIATION: CURRENT_OVERLAY_ACTIVE`
-
-`RUNTIME_BINDING_PROVEN: PARTIAL_BY_PROVIDER / EXACT_MAIN_PRODUCTION_OPEN`
-
-`SUPABASE_V41_LIVE: 13/13`
-
-`SUPABASE_V41_GOVERNED_PROVENANCE: OPEN`
-
-`STRIPE_LIVE_CONTROL_PLANE: PROVEN`
-
-`LEGITIMATE_LIVE_SUBSCRIPTION_AUTHORITY: 0`
-
-`CONNECTED_ASSURANCE_PROJECT_MISMATCH: POSTHOG_CONFIRMED / NOT_PRODUCTION`
-
-`ACCOUNT_FACTS_OPEN: OPEN_BY_PROVIDER`
-
-`ACCOUNT_LEGAL_FACTS_OPEN: OPEN`
-
-`PRIVACY_GDPR_LEGAL_INTERPRETATION: WAITING_QUALIFIED_HUMAN`
-
-`PROTECTED_PROVIDER_RUNTIME_ACCEPTANCE: OPEN`
-
-`SUBPROCESSOR_DPA_REGISTER: NO_PASS_YET`
+```text
+PROVIDER_FACTUAL_RECONCILIATION=CURRENT_CONNECTED_ACCOUNT_ADDENDUM_ACTIVE
+VERCEL_TEAM_PROJECT_DOMAIN_BINDING=PASS_CURRENT_2026-09-10
+SUPABASE_PROJECT_REGION=PASS_CURRENT_2026-09-10
+STRIPE_LIVE_ACCOUNT_DISCOVERY=PASS_CURRENT_2026-09-10
+STRIPE_ACCOUNT_DETAIL_REVALIDATION=TOOL_BLOCKED
+RUNTIME_BINDING_PROVEN=PARTIAL_BY_PROVIDER
+EXACT_MAIN_PRODUCTION_BINDING=OPEN_WHERE_REQUIRED
+ACCOUNT_FACTS_OPEN=OPEN_BY_PROVIDER
+ACCOUNT_LEGAL_FACTS_OPEN=OPEN
+PRIVACY_GDPR_LEGAL_INTERPRETATION=WAITING_QUALIFIED_HUMAN
+PROTECTED_PROVIDER_RUNTIME_ACCEPTANCE=OPEN
+SUBPROCESSOR_DPA_REGISTER=STRUCTURE_RECONCILED_FINAL_ACCEPTANCE_OPEN
+```
