@@ -12,14 +12,14 @@ Current factual reconciliation: `docs/legal-assurance/evidence/2026-09-10-termin
 | No legal advice / no compliance guarantee | Explicitly stated in Terms and public compliance posture | PASS_DOCUMENTED | internal | Public Claims Guard must remain green |
 | Public Terms structure/versioning | Versioned `PublicLegalReviewPage`; `REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED`; EN/PT content merged through PR #2040 and directly observed in Production as version `0.2-review` | PASS_CANONICAL_MAIN_AND_LIVE_REVIEW_DRAFT | internal | Keep protected claims/security checks green; no further source work absent a real defect or accepted decision |
 | Contract formation / order precedence | Order Form > DPA > negotiated schedule > Terms > public docs proposed and explicitly non-final | PENDING_EXTERNAL_REVIEW | counsel | Confirm enforceability/incorporation mechanics for self-service and negotiated Enterprise sales |
-| Provider legal identity | Owner/operator correspondence designates `SAMUEL CERQUEIRA, UNIPESSOAL LDA` as the RISCK COMPLY operating/contracting entity for review preparation; authoritative registered office/identifiers/signatory evidence is not yet credited | PARTIAL_PASS_OWNER_DESIGNATED_BLOCKED_REGISTRY_FACTS | owner + authoritative registry evidence | Attach verified registered facts before final public/entity clause publication |
+| Operator / contracting identity | Attributable correspondence designates `SAMUEL CERQUEIRA, UNIPESSOAL LDA` as the RISCK COMPLY operator. It does not expressly designate the customer-contract counterparty. Authoritative registered office/identifiers/signatory evidence is also not yet credited. | OPERATOR_PARTIAL_PASS_CONTRACTING_ENTITY_OPEN | owner + authoritative registry evidence | Explicitly designate the customer contracting/seller entity, then attach verified registered facts before final contract/public entity clauses |
 | Plan/pricing catalogue | Terms defer exact price, interval, included capabilities and add-ons to active billing authority/order rather than hardcoding marketing prices | PASS_SAFE_BOUNDARY | internal/billing | Keep Terms synchronized with live billing authority; runtime billing evidence remains separate |
 | Renewal | Subscription lifecycle exists; final auto-renewal/contract-formation wording not approved | PENDING_OWNER_AND_EXTERNAL_REVIEW | owner + counsel | Approve renewal wording and notice obligations |
 | Cancellation | Supported self-service cancellation preserves access through the already-paid period; attributable owner correspondence selects end-of-paid-period cancellation as the intended self-service rule | PASS_BEHAVIOR_AND_OWNER_POSITION_PENDING_COUNSEL | internal/billing + counsel | Exact-SHA/live-customer billing evidence remains separate; counsel confirms final clause mechanics |
 | Upgrade/downgrade | Supported upgrades may use proration; supported downgrades may take effect next period | PASS_BEHAVIOR_DOCUMENTED | internal/billing | Ensure final contract language follows actual live behavior |
 | Add-ons | Provider-backed add-on authority exists; Terms state that URL/browser/docs never grant entitlement | PASS_DOCUMENTED | internal/billing | Controlled live-customer proof remains billing-lane gate |
 | Refund policy | Attributable owner correspondence selects no default refund, subject to mandatory law and any signed order-form exception; public review page has not yet been promoted to binding wording | OWNER_POSITION_SELECTED_PENDING_COUNSEL | owner + counsel | Counsel validates mandatory-law carve-outs, duplicate/provider-error handling and negotiated credits before final clause publication |
-| Taxes/VAT | Terms make no blanket tax claim; seller/tax facts remain provider/accountant/tax-authority dependent | BLOCKED_PROVIDER_AND_LEGAL | billing/tax lane + owner | LIVE tax setup, seller VAT facts, invoice treatment and final wording |
+| Taxes/VAT | Terms make no blanket tax claim; seller/tax facts remain provider/accountant/tax-authority dependent | BLOCKED_PROVIDER_AND_LEGAL | billing/tax lane + owner | Contracting/seller entity designation, LIVE tax setup, seller VAT facts, invoice treatment and final wording |
 | Non-payment/suspension | Operational concept and proportionality boundary documented without inventing cure periods | PENDING_OWNER_AND_EXTERNAL_REVIEW | owner + counsel + billing | Notice, cure, emergency exception and restoration rules |
 | Acceptable use | Security, unlawful use, prohibited AI practices, cross-tenant abuse and unsupported sensitive-data uses covered | PASS_DOCUMENTED | internal + specialist for edge cases | Keep aligned with Article 5 and product capabilities |
 | Customer content / instructions | Customer ownership + limited operational-processing licence structure documented | PENDING_EXTERNAL_REVIEW | privacy/counsel | Confirm controller/processor role wording, improvement-use boundary and third-party rights |
@@ -44,13 +44,14 @@ Current factual reconciliation: `docs/legal-assurance/evidence/2026-09-10-termin
 
 The canonical Terms route no longer exposes a short, unversioned production-draft summary. PR #2040 merged the fail-closed legal-review shell with versioning, non-effective status, no stale hard-coded plan prices, and explicit separation of genuine unresolved risk-allocation decisions. Direct Production validation on 2026-09-10 observed the `0.2-review` surface as `REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED`.
 
-The old operating-entity `UNDECIDED` state and several `OWNER_DECISION=OPEN` labels are now refined using later attributable evidence. This reconciliation does **not** promote them to qualified legal acceptance or binding customer terms.
+Later attributable evidence allows the operator to be recorded without guessing the customer contractual counterparty. Several `OWNER_DECISION=OPEN` labels are also refined using later attributable commercial-position evidence. This reconciliation does **not** promote any of those facts to qualified legal acceptance or binding customer terms.
 
 ## Remaining terminal blockers
 
-The remaining Terms blockers are concentrated in attributable registered/tax facts and genuine commercial/legal decisions:
+The remaining Terms blockers are concentrated in attributable entity/tax facts and genuine commercial/legal decisions:
 
-- authoritative registered office/company identifiers/signatory facts for the owner-designated operating/contracting entity;
+- explicit owner designation of the RISCK COMPLY customer contracting/seller entity;
+- authoritative registered office/company identifiers/signatory facts for the selected entity;
 - renewal/formation mechanics;
 - non-payment/suspension and termination/cure rules;
 - provider-backed deletion lifecycle and validation that the 30-day owner-selected export window can actually be honored;
@@ -64,6 +65,7 @@ The remaining Terms blockers are concentrated in attributable registered/tax fac
 TERMS_FACTUAL_PRODUCT_ALIGNMENT=STRONG_PARTIAL_PASS
 TERMS_PUBLIC_CLAIM_SAFETY=PASS_CANONICAL_MAIN
 TERMS_PUBLIC_STRUCTURE=PASS_CANONICAL_MAIN_AND_LIVE_REVIEW_DRAFT
+TERMS_CONTRACTING_ENTITY=OPEN_OWNER_CONFIRMATION
 TERMS_OWNER_DECISIONS=PARTIAL_SELECTED
 TERMS_EXTERNAL_LEGAL_REVIEW=PENDING_EXTERNAL_REVIEW
 TERMS_FINAL_PUBLICATION=BLOCKED
