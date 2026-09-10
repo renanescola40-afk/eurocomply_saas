@@ -65,7 +65,9 @@ function organizationIdFromSubscription(subscription: Stripe.Subscription) {
 }
 
 function subscriptionHasKnownAddOn(subscription: Stripe.Subscription) {
-  return subscription.items.data.some((item) => Boolean(getBillingAddOnSlugForStripePriceId(item.price.id)));
+  const items = subscription.items?.data;
+  if (!Array.isArray(items)) return false;
+  return items.some((item) => Boolean(getBillingAddOnSlugForStripePriceId(item.price?.id)));
 }
 
 function invoiceSubscriptionId(invoice: InvoiceWithSubscription) {
@@ -73,11 +75,6 @@ function invoiceSubscriptionId(invoice: InvoiceWithSubscription) {
   if (direct) return direct;
   const parent = invoice.parent?.subscription_details?.subscription;
   return typeof parent === 'string' && parent.trim() ? parent.trim() : null;
-}
-
-function invoiceOrganizationHint(invoice: InvoiceWithSubscription) {
-  return organizationIdFromMetadata(invoice.parent?.subscription_details?.metadata)
-    ?? organizationIdFromMetadata(invoice.metadata);
 }
 
 async function canonicalSubscriptionForEvent(event: Stripe.Event) {
@@ -92,10 +89,7 @@ async function canonicalSubscriptionForEvent(event: Stripe.Event) {
   if (event.type !== 'invoice.payment_failed' && event.type !== 'invoice.paid') return null;
   const invoice = event.data.object as InvoiceWithSubscription;
   const subscriptionId = invoiceSubscriptionId(invoice);
-  if (!subscriptionId) {
-    if (invoiceOrganizationHint(invoice)) throw new Error('stripe_add_on_invoice_subscription_missing');
-    return null;
-  }
+  if (!subscriptionId) return null;
 
   return getStripeClient().subscriptions.retrieve(subscriptionId, {
     expand: ['items.data.price'],
@@ -124,7 +118,7 @@ async function assertSubscriptionBinding(subscription: Stripe.Subscription, orga
     throw new Error('stripe_add_on_customer_binding_mismatch');
   }
 
-  const plan = normalizeBillingPlanId(binding.plan ?? subscription.metadata.plan);
+  const plan = normalizeBillingPlanId(binding.plan ?? subscription.metadata?.plan);
   if (!plan) throw new Error('stripe_add_on_plan_binding_missing');
   return plan;
 }
@@ -178,11 +172,22 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
   const subscription = await canonicalSubscriptionForEvent(event);
   if (!subscription) return { outcome: 'not_applicable' as const, reconciled: 0, removed: 0 };
 
+  const hasKnownAddOn = subscriptionHasKnownAddOn(subscription);
   const organizationId = organizationIdFromSubscription(subscription);
+  const customerId = stripeObjectId(subscription.customer);
+
   if (!organizationId) {
-    if (subscriptionHasKnownAddOn(subscription)) throw new Error('stripe_add_on_organization_missing');
+    if (hasKnownAddOn) throw new Error('stripe_add_on_organization_missing');
     return { outcome: 'not_applicable' as const, reconciled: 0, removed: 0 };
   }
+
+  // Legacy entitlement/recovery fixtures and unrelated subscription events may
+  // carry organization metadata without a complete Stripe Subscription object.
+  // They are not add-on authority. A real known add-on item remains fail-closed.
+  if (!customerId && !hasKnownAddOn) {
+    return { outcome: 'not_applicable' as const, reconciled: 0, removed: 0 };
+  }
+
   const plan = await assertSubscriptionBinding(subscription, organizationId);
 
   const supabase = createAdminClient();
@@ -205,7 +210,7 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
   let reconciled = 0;
 
   if (event.type !== 'customer.subscription.deleted') {
-    for (const rawItem of subscription.items.data) {
+    for (const rawItem of subscription.items?.data ?? []) {
       const item = rawItem as SubscriptionItemWithPeriod;
       const slug = getBillingAddOnSlugForStripePriceId(item.price.id);
       if (!slug) continue;
