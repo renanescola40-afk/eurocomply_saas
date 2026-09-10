@@ -1,49 +1,70 @@
 # RISCK COMPLY — Commercial Terms Control Matrix
 
-Date: 2026-09-09  
-Scope: reconcile the Terms review draft with actual B2B SaaS/product behavior and isolate the clauses that genuinely require owner/counsel judgment.
+Date: 2026-09-10  
+Scope: reconcile the Terms review draft and public Terms surface with actual B2B SaaS/product behavior, then isolate the provisions that genuinely require founder facts, owner risk decisions or qualified legal review.
 
 | Area | Current factual/document state | State | Who can close | Exact remaining decision/evidence |
 |---|---|---|---|---|
-| Service description | Multi-tenant AI governance/compliance operations SaaS; features plan/configuration dependent | PASS_DOCUMENTED | internal | Keep synced with product catalogue |
-| B2B positioning | Terms/customer language is business-customer oriented | PASS_DOCUMENTED | internal | Avoid B2C/consumer claims unless product motion changes |
+| Service description | Multi-tenant AI governance/compliance operations SaaS; features depend on plan, add-ons and deployed configuration | PASS_DOCUMENTED | internal | Keep synced with product catalogue |
+| B2B positioning | Terms/customer language is business-customer oriented and preserves mandatory-law boundary | PASS_DOCUMENTED | internal + counsel for final effect | Avoid unsupported consumer-waiver claims |
 | No legal advice / no compliance guarantee | Explicitly stated in Terms and public compliance posture | PASS_DOCUMENTED | internal | Public Claims Guard must remain green |
-| Contract formation / order precedence | Order Form > DPA > negotiated schedule > Terms > public docs proposed | PENDING_EXTERNAL_REVIEW | counsel | Confirm enforceability/incorporation mechanics for self-serve and negotiated enterprise sales |
-| Provider legal identity | Entity name owner-supplied; registered office/NIF unresolved | BLOCKED | owner/factual evidence | Authoritative Portuguese registry evidence |
-| Plan/pricing catalogue | Essential €49, Professional €149, Business €399, Enterprise from €990; no free trial recorded in review draft | PASS_DOCUMENTED_PENDING_BILLING_EXACTNESS | billing lane | Keep prices/availability aligned with LIVE provider configuration |
-| Renewal | Subscription lifecycle exists; exact auto-renewal disclosure/contract formation language not final | PENDING_EXTERNAL_REVIEW | owner + counsel | Approve renewal wording and notice obligations |
-| Cancellation | Self-serve cancellation at end of paid period and reactivation before period end are documented behavior | PASS_BEHAVIOR_DOCUMENTED | internal/billing | Exact-SHA billing evidence remains separate lane |
-| Upgrade/downgrade | Supported upgrades use proration; supported downgrades next period | PASS_BEHAVIOR_DOCUMENTED | internal/billing | Ensure public/contract language follows actual LIVE behavior |
-| Refund policy | Not approved | BLOCKED_OWNER_DECISION | owner + counsel | Define refund/no-refund rules, mandatory-law carve-outs and exceptional credits |
-| Taxes/VAT | Fact/provider dependent; no blanket tax claim | BLOCKED_PROVIDER_AND_LEGAL | billing/tax lane | LIVE tax setup, seller VAT facts, invoice treatment and final wording |
-| Non-payment/suspension | Suspension concept drafted | PENDING_EXTERNAL_REVIEW | counsel + billing | Notice/cure/emergency restoration rules |
+| Public Terms structure/versioning | Versioned `PublicLegalReviewPage`; `REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED`; EN/PT complete content with fail-closed EN fallback | PASS_SOURCE_PROPOSED | internal | Protected CI + merge required for canonical-main credit |
+| Contract formation / order precedence | Order Form > DPA > negotiated schedule > Terms > public docs proposed and explicitly non-final | PENDING_EXTERNAL_REVIEW | counsel | Confirm enforceability/incorporation mechanics for self-service and negotiated Enterprise sales |
+| Provider legal identity | Final contracting/operator entity, registered office and authoritative registered/tax identifiers unresolved | BLOCKED | owner/factual evidence | Authoritative final entity decision and registry evidence |
+| Plan/pricing catalogue | Terms defer exact price, interval, included capabilities and add-ons to active billing authority/order rather than hardcoding marketing prices | PASS_SAFE_BOUNDARY | internal/billing | Keep Terms synchronized with live billing authority; runtime billing evidence remains separate |
+| Renewal | Subscription lifecycle exists; final auto-renewal/contract-formation wording not approved | PENDING_OWNER_AND_EXTERNAL_REVIEW | owner + counsel | Approve renewal wording and notice obligations |
+| Cancellation | Supported self-service cancellation preserves access through the already-paid period; reactivation before period end documented | PASS_BEHAVIOR_DOCUMENTED | internal/billing | Exact-SHA/live-customer billing evidence remains separate lane |
+| Upgrade/downgrade | Supported upgrades may use proration; supported downgrades may take effect next period | PASS_BEHAVIOR_DOCUMENTED | internal/billing | Ensure final contract language follows actual live behavior |
+| Add-ons | Provider-backed add-on authority exists; Terms state that URL/browser/docs never grant entitlement | PASS_DOCUMENTED | internal/billing | Controlled live-customer proof remains billing-lane gate |
+| Refund policy | No blanket refund/no-refund rule published; final policy intentionally unresolved | BLOCKED_OWNER_DECISION | owner + counsel | Define refund rules, mandatory-law carve-outs and exceptional credits |
+| Taxes/VAT | Terms make no blanket tax claim; seller/tax facts remain entity/provider dependent | BLOCKED_PROVIDER_AND_LEGAL | billing/tax lane + owner | LIVE tax setup, seller VAT facts, invoice treatment and final wording |
+| Non-payment/suspension | Operational concept and proportionality boundary documented without inventing cure periods | PENDING_OWNER_AND_EXTERNAL_REVIEW | owner + counsel + billing | Notice, cure, emergency exception and restoration rules |
 | Acceptable use | Security, unlawful use, prohibited AI practices, cross-tenant abuse and unsupported sensitive-data uses covered | PASS_DOCUMENTED | internal + specialist for edge cases | Keep aligned with Article 5 and product capabilities |
-| Customer content / instructions | Customer control and provider processing rights drafted | PENDING_EXTERNAL_REVIEW | privacy/counsel | Confirm controller/processor role wording and improvement-use boundary |
-| Confidentiality | Mutual reasonable-care structure drafted | PENDING_EXTERNAL_REVIEW | counsel | Exceptions, compelled disclosure, duration and remedies |
-| Security commitments | Explicitly evidence-bound; no unsupported certification/pentest/uptime incorporation | PASS_DOCUMENTED | internal | Only signed evidence-backed commitments may expand this |
-| Subprocessors | Contract points to active register and DPA notice process | BLOCKED | privacy/provider evidence + counsel | Close provider register + authorisation/notice/objection mechanism |
-| IP / licence | Provider ownership and limited customer licence drafted | PENDING_EXTERNAL_REVIEW | counsel | Confirm template/content ownership, third-party rights and customer-data licence scope |
-| Feedback | Non-identifying feedback licence proposed | PENDING_EXTERNAL_REVIEW | counsel | Confirm commercial preference and confidentiality boundary |
-| Termination for breach | Placeholder | BLOCKED | counsel + owner | Cure periods, immediate termination grounds, effects |
-| Post-termination export | Placeholder | BLOCKED_OWNER_DECISION | owner + privacy | Set export window compatible with retention/provider capabilities |
-| Deletion after termination | DPA/retention/legal hold/audit boundary drafted | BLOCKED | privacy/provider evidence + counsel | Final retention schedule and backup/provider facts |
-| Warranties | Material performance + no compliance guarantee structure drafted | PENDING_EXTERNAL_REVIEW | counsel | Final standard/limitations/remedies |
-| Indemnities | Placeholder | BLOCKED_COUNSEL | counsel + owner risk decision | Customer unlawful-use and provider IP indemnity structure |
-| Liability | Placeholder | BLOCKED_COUNSEL | counsel + owner risk decision | Cap, excluded losses, carve-outs, fraud/wilful misconduct, data/IP/confidentiality treatment |
-| Governing law/forum | Placeholder | BLOCKED_OWNER_COUNSEL | owner + Portuguese counsel | Choose law/forum and mandatory-law boundaries |
-| Notices | `comercial@risckcomply.com` verified for general intake | PARTIAL | counsel + owner | Legal-effect delivery/deemed receipt/postal/dedicated notice mechanics |
-| Service levels | No unsupported uptime commitment; enterprise SLA contract-specific | PASS_SAFE_BOUNDARY | internal + commercial | Only add SLA metrics with operational evidence |
+| Customer content / instructions | Customer ownership + limited operational-processing licence structure documented | PENDING_EXTERNAL_REVIEW | privacy/counsel | Confirm controller/processor role wording, improvement-use boundary and third-party rights |
+| AI/compliance outputs | Human-review requirement and non-certification/non-legal-opinion boundary public | PASS_SAFE_BOUNDARY | internal + qualified reviewer for legal sufficiency | Keep public claims evidence-bound |
+| Confidentiality | Mutual reasonable-care structure and unresolved legal mechanics explicitly separated | STRUCTURE_IMPLEMENTED_PENDING_EXTERNAL_REVIEW | counsel | Exceptions, compelled disclosure, duration, remedies and residual knowledge |
+| Security commitments | Explicitly evidence-bound; no unsupported certification/pentest/uptime/RPO/RTO promise incorporated | PASS_DOCUMENTED | internal | Only signed evidence-backed commitments may expand this |
+| Subprocessors | Public/current provider disclosure and transfer surfaces implemented; provider presence does not equal contractual approval | STRONG_PARTIAL_PASS | privacy/provider + counsel | Final authorisation, advance notice, objection/remedy and account-specific contract facts |
+| International transfers | Current transfer evidence boundary publicly structured; no executed-SCC or universal-compliance claim | STRONG_PARTIAL_PASS | privacy/provider + counsel | Account-specific mechanisms, locations, TIA/supplementary measures and qualified legal decision |
+| IP / licence | Provider/licensor rights + limited customer service licence structure documented | PENDING_OWNER_AND_EXTERNAL_REVIEW | owner + counsel | Confirm template/output ownership, third-party rights and customer-data licence scope |
+| Feedback | Feedback-use concept is explicitly non-final | PENDING_OWNER_AND_EXTERNAL_REVIEW | owner + counsel | Confirm commercial preference and confidentiality boundary |
+| Termination for breach | Decision boundary now structured; no invented cure periods or immediate-termination grounds | BLOCKED_OWNER_COUNSEL | owner + counsel | Cure periods, immediate grounds, proportionality and effects |
+| Post-termination export | Explicitly unresolved; no unsupported export window published | BLOCKED_OWNER_DECISION | owner + privacy | Set export window compatible with product/provider capabilities |
+| Deletion after termination | DPA/category-retention/legal-hold/billing/audit/provider lifecycle boundary documented | BLOCKED_PROVIDER_AND_LEGAL | privacy/provider + counsel | Final category periods, provider deletion/backup facts and contract wording |
+| Warranties | Compliance guarantee denied; any positive performance warranty/remedy intentionally non-final | BLOCKED_OWNER_COUNSEL | owner + counsel | Final standard, exclusions and remedies |
+| Indemnities | Risk categories identified without presenting a binding indemnity | BLOCKED_OWNER_COUNSEL | owner + counsel | Customer unlawful-use and provider IP indemnity structure, defence and remedies |
+| Liability | Risk categories and carve-out topics identified without publishing a cap | BLOCKED_OWNER_COUNSEL | owner + counsel | Cap, excluded losses, carve-outs, insurance alignment, mandatory-law treatment |
+| Governing law/forum | Public page deliberately states unresolved; no jurisdiction invented | BLOCKED_OWNER_COUNSEL | owner + Portuguese counsel | Choose law/forum or arbitration and mandatory-law boundaries |
+| Notices | `comercial@risckcomply.com` verified for general intake only | PARTIAL | counsel + owner | Legal-effect delivery, deemed receipt, postal/dedicated notice mechanics |
+| Service levels | No unsupported uptime commitment; Enterprise SLA remains contract-specific | PASS_SAFE_BOUNDARY | internal + commercial | Add SLA metrics only with operational evidence and explicit contract acceptance |
 
-## Separation of work
+## Repository-controlled closure achieved in this Terms pass
 
-The matrix shows that many Terms sections are already factually and operationally grounded. The remaining blockers are concentrated in a smaller set of genuine legal/commercial choices: liability, indemnity, governing law/forum, refunds, suspension/termination mechanics, contract formation/renewal, legal notices and post-termination export/deletion.
+The public Terms route no longer exposes a short, unversioned production-draft summary. The proposed source now uses the same fail-closed legal-review shell as Privacy, DPA and Transfers, carries a version, identifies the document as non-effective, avoids the historical candidate entity, avoids stale hard-coded plan prices, and surfaces the genuine unresolved risk-allocation decisions instead of silently deciding them.
+
+The canonical review draft is also reconciled so the unresolved contracting entity is not promoted from a historical candidate into contractual truth.
+
+## Remaining terminal blockers
+
+The remaining Terms blockers are not additional writing tasks. They are concentrated in attributable facts and genuine commercial/legal decisions:
+
+- final contracting/operator entity and registered facts;
+- refund policy and renewal mechanics;
+- non-payment/suspension and termination/cure rules;
+- post-termination export window and provider deletion lifecycle;
+- positive warranty/remedy position;
+- indemnities and liability cap/carve-outs;
+- governing law/forum and legal notices;
+- tax/VAT seller facts and final billing wording;
+- qualified legal review of formation, enforceability and the final contract set.
 
 ```text
 TERMS_FACTUAL_PRODUCT_ALIGNMENT=STRONG_PARTIAL_PASS
-TERMS_PUBLIC_CLAIM_SAFETY=PASS
+TERMS_PUBLIC_CLAIM_SAFETY=PASS_SOURCE_PROPOSED
+TERMS_PUBLIC_STRUCTURE=IMPLEMENTED_PENDING_CI_AND_MERGE
 TERMS_OWNER_DECISIONS=BLOCKED
 TERMS_EXTERNAL_LEGAL_REVIEW=PENDING_EXTERNAL_REVIEW
-TERMS_DOCUMENTATION=PARTIAL
+TERMS_DOCUMENTATION=STRUCTURE_IMPLEMENTED_BLOCKED_FINAL_FACTS_AND_REVIEW
 ```
 
-AI/documentation work must not convert those judgment calls into final enforceable terms without the appropriate owner/counsel decision.
+`NO_DOCUMENTATION_LOOP=true`: do not generate another Terms dossier merely to restate these blockers. New Terms work should be driven by a resolved owner fact/decision, provider evidence, a qualified reviewer request, or a defect found by protected CI/runtime validation.
