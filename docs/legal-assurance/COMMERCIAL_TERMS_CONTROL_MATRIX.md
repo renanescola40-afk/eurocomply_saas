@@ -8,7 +8,7 @@ Scope: reconcile the Terms review draft and public Terms surface with actual B2B
 | Service description | Multi-tenant AI governance/compliance operations SaaS; features depend on plan, add-ons and deployed configuration | PASS_DOCUMENTED | internal | Keep synced with product catalogue |
 | B2B positioning | Terms/customer language is business-customer oriented and preserves mandatory-law boundary | PASS_DOCUMENTED | internal + counsel for final effect | Avoid unsupported consumer-waiver claims |
 | No legal advice / no compliance guarantee | Explicitly stated in Terms and public compliance posture | PASS_DOCUMENTED | internal | Public Claims Guard must remain green |
-| Public Terms structure/versioning | Versioned `PublicLegalReviewPage`; `REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED`; EN/PT complete content with fail-closed EN fallback | PASS_SOURCE_PROPOSED | internal | Protected CI + merge required for canonical-main credit |
+| Public Terms structure/versioning | Versioned `PublicLegalReviewPage`; `REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED`; EN/PT complete content with fail-closed EN fallback, merged to protected `main` through PR #2040 | PASS_CANONICAL_MAIN | internal | Keep protected claims/security checks green; no further source work absent a real defect or accepted decision |
 | Contract formation / order precedence | Order Form > DPA > negotiated schedule > Terms > public docs proposed and explicitly non-final | PENDING_EXTERNAL_REVIEW | counsel | Confirm enforceability/incorporation mechanics for self-service and negotiated Enterprise sales |
 | Provider legal identity | Final contracting/operator entity, registered office and authoritative registered/tax identifiers unresolved | BLOCKED | owner/factual evidence | Authoritative final entity decision and registry evidence |
 | Plan/pricing catalogue | Terms defer exact price, interval, included capabilities and add-ons to active billing authority/order rather than hardcoding marketing prices | PASS_SAFE_BOUNDARY | internal/billing | Keep Terms synchronized with live billing authority; runtime billing evidence remains separate |
@@ -40,7 +40,7 @@ Scope: reconcile the Terms review draft and public Terms surface with actual B2B
 
 ## Repository-controlled closure achieved in this Terms pass
 
-The public Terms route no longer exposes a short, unversioned production-draft summary. The proposed source now uses the same fail-closed legal-review shell as Privacy, DPA and Transfers, carries a version, identifies the document as non-effective, avoids the historical candidate entity, avoids stale hard-coded plan prices, and surfaces the genuine unresolved risk-allocation decisions instead of silently deciding them.
+The canonical `main` Terms route no longer exposes a short, unversioned production-draft summary. PR #2040 merged the fail-closed legal-review shell with versioning, non-effective status, no historical candidate entity, no stale hard-coded plan prices, and explicit separation of genuine unresolved risk-allocation decisions.
 
 The canonical review draft is also reconciled so the unresolved contracting entity is not promoted from a historical candidate into contractual truth.
 
@@ -60,8 +60,8 @@ The remaining Terms blockers are not additional writing tasks. They are concentr
 
 ```text
 TERMS_FACTUAL_PRODUCT_ALIGNMENT=STRONG_PARTIAL_PASS
-TERMS_PUBLIC_CLAIM_SAFETY=PASS_SOURCE_PROPOSED
-TERMS_PUBLIC_STRUCTURE=IMPLEMENTED_PENDING_CI_AND_MERGE
+TERMS_PUBLIC_CLAIM_SAFETY=PASS_CANONICAL_MAIN
+TERMS_PUBLIC_STRUCTURE=PASS_CANONICAL_MAIN
 TERMS_OWNER_DECISIONS=BLOCKED
 TERMS_EXTERNAL_LEGAL_REVIEW=PENDING_EXTERNAL_REVIEW
 TERMS_DOCUMENTATION=STRUCTURE_IMPLEMENTED_BLOCKED_FINAL_FACTS_AND_REVIEW
