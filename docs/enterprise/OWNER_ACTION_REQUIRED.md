@@ -1,48 +1,77 @@
 # Owner action required
 
-This handoff was synchronized from protected `main@41cc6656de9a9d9df06b549dc1309d481498758b` on 2026-08-24. Before any runtime or Production action, resolve the current 40-character `main` SHA again.
+Last reconciled: 2026-09-10
 
-## Immediate external action — Layer8 pentest scoping
+## Current state
 
-Attend the confirmed Layer8 scoping session on **2026-08-25, 10:00–11:00 Europe/Lisbon, Microsoft Teams** and close the external inputs that cannot be fabricated by repository work.
+There is **no immediate owner action required to continue repository-only pre-pentest preparation** under #2048.
 
-The owner should leave the session with, or with an explicit follow-up owner/date for:
+Current exact evidence at reconciliation:
 
-1. Layer8 contracting legal entity and engagement contact;
-2. applicable CREST Penetration Testing accreditation for the proposed service;
-3. named/qualified tester or technical lead model and independence/conflict handling;
-4. NDA/confidential-information process before detailed secrets or credentials are shared;
-5. Rules of Engagement process covering exact hostname/environment/SHA/deployment, dates, source IPs where applicable, emergency contacts and stop conditions;
-6. agreement on synthetic multi-tenant test accounts and private credential-sharing channel;
-7. methodology and severity model;
-8. report format with unique findings, affected surfaces, reproduction/evidence, recommendations and executive/procurement summary;
-9. Critical/High remediation retest terms and closure statement/retest report;
-10. price, expected duration and earliest available execution window.
+- protected `main`: `c00379cc6564bb4f76a17089295e6724e8dcae7c`;
+- latest observed Vercel Production: `dpl_BznNuFKG8UEh4yW8y9HQyzLXDiJ9` on `13b19410caa20045b19d98d58df406c43433af5a`;
+- Production is not exact-current-main;
+- fresh `/api/health`: HTTP 200;
+- #1983 remains open pending exact-SHA Production convergence and sustained runtime acceptance;
+- #1948 remains open pending corrected-release Production revalidation;
+- #1849 is closed;
+- independent pentest provider selection remains open;
+- 7ASecurity is `HOLD_NOT_SELECTED_BY_OWNER` and must not be advanced by this lane.
 
-The meeting itself does **not** authorize active testing, create a purchase, sign an NDA/ROE or freeze the current release permanently.
+The previously listed Layer8 meeting on 2026-08-25 has passed and is historical evidence only. It is not a current owner task.
 
-## Owner authorization barrier before active pentest
+## Next unavoidable owner decisions — not yet due
 
-Do not authorize active testing until all of the following exist in writing:
+The following actions become owner-required only when their prerequisites are actually ready.
 
-- accepted scope and exclusions;
-- agreed NDA/confidential handling where required;
-- accepted Rules of Engagement;
-- exact test target/release binding;
-- safe synthetic test-account plan and secret-sharing channel;
-- agreed testing window/timezone;
-- emergency/escalation contacts;
-- source-IP handling where applicable;
+### 1. Production release / data-plane authority
+
+Any Production deployment, Supabase Production write/promotion, rollback/restore, secret rotation or equivalent consequential Production change must use its own governed technical lane and explicit owner authority where required. This pentest-preparation document does not grant that authority.
+
+### 2. Final independent assessor selection
+
+Select the terminal independent assessor only after written evidence is sufficient to compare:
+
+- legal/delivery entity;
+- named or attributable testing/review responsibility;
+- independence/conflict handling;
+- relevant web/API penetration-testing competence;
+- all mandatory RISCK COMPLY terminal scope areas or an explicitly accepted gap strategy;
+- methodology/severity model;
+- confidential evidence/credential handling;
+- attributable executive + technical report;
+- remediation retest and written closure terms;
+- price, if any, and any commercial commitment.
+
+7ASecurity is not selected and is intentionally held. Candidate status must not be converted into terminal pentest credit.
+
+### 3. Final Rules of Engagement and test GO
+
+After the final release and dedicated test environment are frozen and a provider is selected, owner approval is required for the final written ROE. It must bind:
+
+- exact test hostname/environment;
+- exact 40-character Git SHA and deployment identifier;
+- testing window/timezone;
+- synthetic tenant/account matrix;
+- secure credential-transfer method;
+- source IPs/allowlisting where applicable;
 - evidence/data-retention terms;
-- explicit stop conditions;
-- explicit owner authorization to begin testing.
+- emergency/escalation contacts;
+- explicit exclusions and stop conditions;
+- report/retest deliverables.
 
-No DoS/DDoS, destructive database activity, attacks on real users, credential stuffing, uncontrolled extraction of customer data, provider-infrastructure attacks outside the RISCK COMPLY integration boundary or unauthorized real payment activity.
+Only after the ROE is accepted may the owner issue a separate explicit GO to begin active testing.
 
-## Separate Production authority
+## Standing authorization barrier
 
-The Supabase forward-production lane remains independently governed. #1819 binds live RLS proof to the current forward-promotion artifact but does not authorize or execute a Production database write. Any Production promotion still requires its own exact-current-main evidence, required independent approval and separate explicit owner Production-write authorization.
+Until those future decisions are reached, do **not**:
 
-## Final Enterprise barrier
+- authorize active pentest traffic;
+- release passwords, session material, service-role keys or other secrets;
+- use real customer data;
+- use Stripe live-mode payments for pentest activity;
+- sign or accept a provider contract or paid add-on without separate authority;
+- represent a proposal, scanner, CI result, DAST run, internal review or readiness checklist as an independent pentest;
+- mark `external-security-review-or-pentest.json` Complete without the real attributable external evidence.
 
-Repository preparation, CI, internal security testing and the Layer8 scoping meeting do not themselves produce `INDEPENDENT_PENTEST: PASS`, `ENTERPRISE_100: PASS` or `PRODUCTION_GO: PASS`. Those statuses require the real independent report/retest and all other protected runtime/legal authorities.
+The canonical default active-test model remains a dedicated non-production environment using synthetic data. Production testing requires the separate Production-testing exception defined by `docs/security/PENTEST_SCOPE.md` and its own explicit owner authorization.
