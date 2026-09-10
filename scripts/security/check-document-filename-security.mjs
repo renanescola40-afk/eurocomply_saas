@@ -1,5 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 
+import { securityCiCheckRunsBefore } from '../ci/security-ci-checks.mjs';
+
 const failures = [];
 
 function readRequired(path) {
@@ -13,15 +15,6 @@ function readRequired(path) {
 
 function has(source, tokens) {
   return tokens.every((token) => source.includes(token));
-}
-
-function hasFilenameGateBeforeResponses(packageSource) {
-  const scriptMatch = packageSource.match(/"security:ci"\s*:\s*"(?<command>[^"]+)"/);
-  const command = scriptMatch?.groups?.command ?? '';
-  const filenameIndex = command.indexOf('security:document-filenames');
-  const responsesIndex = command.indexOf('security:responses');
-
-  return filenameIndex >= 0 && responsesIndex > filenameIndex;
 }
 
 console.log('EuroComply file name guard check');
@@ -65,7 +58,7 @@ if (!packageSource.includes('"security:document-filenames"')) {
   failures.push(`${packagePath} must expose security:document-filenames`);
 }
 
-if (!hasFilenameGateBeforeResponses(packageSource)) {
+if (!securityCiCheckRunsBefore('security:document-filenames', 'security:responses')) {
   failures.push('security:ci must run security:document-filenames before response checks');
 }
 

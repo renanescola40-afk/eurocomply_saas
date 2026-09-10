@@ -47,9 +47,14 @@ describe('customer-facing claims guard', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8')) as {
       scripts: Record<string, string>;
     };
+    const securityCiRunner = fs.readFileSync(path.join(rootDir, 'scripts/ci/run-security-ci.mjs'), 'utf8');
+    const securityCiChecks = fs.readFileSync(path.join(rootDir, 'scripts/ci/security-ci-checks.mjs'), 'utf8');
 
     expect(packageJson.scripts['security:public-claims']).toBe('node scripts/security/check-public-claims.mjs');
-    expect(packageJson.scripts['security:ci']).toContain('npm run security:public-claims');
+    expect(packageJson.scripts['security:ci']).toBe('node scripts/ci/run-security-ci.mjs');
+    expect(securityCiRunner).toContain("from './security-ci-checks.mjs'");
+    expect(securityCiRunner).toContain('const checks = SECURITY_CI_CHECKS;');
+    expect(securityCiChecks).toContain("'security:public-claims'");
   });
 
   it('covers every locale catalog and the full localized route tree', () => {
