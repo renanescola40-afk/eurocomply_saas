@@ -120,7 +120,8 @@ export function resolveStripeSubscriptionPlan(subscription: Stripe.Subscription)
   const recurringInterval = base.item.price?.recurring?.interval;
   const billingInterval = recurringInterval === 'year' ? 'year' as const : recurringInterval === 'month' ? 'month' as const : null;
   const typedSubscription = subscription as SubscriptionWithPeriod;
-  const periodEnd = typedSubscription.current_period_end ?? base.item.current_period_end ?? null;
+  const typedBaseItem = base.item as { current_period_end?: number | null };
+  const periodEnd = typedSubscription.current_period_end ?? typedBaseItem.current_period_end ?? null;
 
   return {
     plan: base.plan,
