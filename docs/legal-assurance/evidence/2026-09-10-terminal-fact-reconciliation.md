@@ -60,14 +60,14 @@ Current classification:
 
 ```text
 SUPABASE_PROVIDER_DPA_FRAMEWORK_CONFIRMATION=PASS_PROVIDER_ATTRIBUTABLE
-SUPABASE_ACCOUNT_DPA_INCORPORATION_FACT=STRONG_PROVIDER_EVIDENCE
+SUPABASE_ACCOUNT_DPA_APPLICABILITY=OPEN_PENDING_ACCOUNT_AGREEMENT_OR_TERMS_AUTHORITY
 SUPABASE_SEPARATELY_NEGOTIATED_AGREEMENT=NOT_ESTABLISHED_BY_THIS_EMAIL
 SUPABASE_TRANSFER_CONCLUSION=OPEN
 SUPABASE_TIA_LEGAL_ACCEPTANCE=OPEN
 SUPABASE_ALL_PROCESSING_LOCATIONS=OPEN
 ```
 
-No Chapter V conclusion is inferred from DPA incorporation alone.
+This correspondence establishes the provider's stated general DPA framework. It does not by itself establish which agreement or Terms version governs the RISCK COMPLY Production account. No Chapter V conclusion is inferred from the provider framework alone.
 
 ## 4. PostHog DPA evidence
 
@@ -137,9 +137,9 @@ Provider teams, public authorities and clinic correspondence are valuable eviden
 Use this evidence only to:
 
 - replace stale `UNDECIDED` wording for the RISCK COMPLY **operator** with the attributable operator designation while keeping the customer contracting entity open until explicitly designated;
-- reduce provider-DPA uncertainty for Supabase and PostHog;
+- reduce provider-framework DPA uncertainty for Supabase and retain only account-specific facts actually established for PostHog;
 - avoid asking the owner to re-decide already selected commercial positions;
 - keep public legal surfaces fail-closed until final dependencies pass;
 - give a qualified reviewer a smaller and more accurate fact pack.
 
-Do not use it to claim final legal approval, customer-contract counterparty identity, GDPR compliance, AI Act certification, transfer-law acceptance, tax/VAT correctness or effective Terms.
+Do not use it to claim final legal approval, customer-contract counterparty identity, GDPR compliance, AI Act certification, account-specific Supabase DPA applicability, transfer-law acceptance, tax/VAT correctness or effective Terms.
