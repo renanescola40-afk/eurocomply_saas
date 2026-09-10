@@ -3,7 +3,11 @@
 -- Production migration identity observed read-only:
 --   version: 20260902193849
 --   name: reconcile_enterprise_sso_production_runtime
---   logical source: supabase/migrations/20260902083000_reconcile_enterprise_sso_production_runtime.sql
+--
+-- Canonical repository source representing the same forward reconciliation:
+--   canonical source version: 20260902083000
+--   local source: supabase/migrations/20260902083000_reconcile_enterprise_sso_production_runtime.sql
+--   local source SHA-256: 494631c9521dc224cef5609cc975c4ebb9731ce14bfcced71ee026fb3cf35adb
 --
 -- The bounded V26 SQL was applied through the Supabase management migration
 -- path and the provider recorded a later ledger timestamp than the repository
