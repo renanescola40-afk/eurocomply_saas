@@ -4,6 +4,7 @@ import { runWithEmailIdempotencyContext } from '@/lib/email/idempotency-context'
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { reconcileOrganizationAddOnsFromStripeEvent } from '@/server/billing/add-on-reconciliation';
 import { reconcileStripeEntitlementEvent } from '@/server/billing/stripe-entitlement-runtime';
 import {
   claimStripeEventForProcessing,
@@ -201,6 +202,11 @@ async function reconcileEntitlementWhenEligible(event: Stripe.Event) {
   return entitlement;
 }
 
+async function reconcileAddOnsWhenEligible(event: Stripe.Event) {
+  const addOns = await reconcileOrganizationAddOnsFromStripeEvent(event);
+  return addOns.outcome === 'unsupported' ? null : addOns;
+}
+
 function entitlementRepairMaterialized(entitlement: Awaited<ReturnType<typeof reconcileStripeEntitlementEvent>>) {
   if (!MATERIALIZED_ENTITLEMENT_OUTCOMES.has(entitlement.outcome)) return false;
   return typeof ('snapshotId' in entitlement ? entitlement.snapshotId : null) === 'string';
@@ -217,10 +223,6 @@ async function repairProcessedStripeEntitlement(event: Stripe.Event) {
   } catch (error) {
     if (!isBillingPeriodMissingError(error)) throw error;
 
-    // A late/manual replay can arrive after its billing period ends. If the exact
-    // Stripe idempotency key already has one retained snapshot, return that proof
-    // instead of turning an already-materialized event into a permanent 500 loop.
-    // Missing snapshots remain fail-closed and preserve the original freshness error.
     const existingReplay = await findExistingStripeEntitlementReplay(event.id);
     if (existingReplay) return existingReplay;
     throw error;
@@ -241,6 +243,22 @@ async function repairProcessedStripeEntitlement(event: Stripe.Event) {
   return entitlement;
 }
 
+async function repairedSideEffects(event: Stripe.Event) {
+  const [addOns, entitlement] = await Promise.all([
+    reconcileAddOnsWhenEligible(event),
+    repairProcessedStripeEntitlement(event),
+  ]);
+  return { addOns, entitlement };
+}
+
+function withSideEffects<T extends object>(result: T, sideEffects: { addOns: unknown | null; entitlement: unknown | null }) {
+  return {
+    ...result,
+    ...(sideEffects.addOns ? { addOns: sideEffects.addOns } : {}),
+    ...(sideEffects.entitlement ? { entitlement: sideEffects.entitlement } : {}),
+  };
+}
+
 async function runStripeWebhookHandler(event: Stripe.Event) {
   const result = await runCoreStripeWebhookHandler(event);
   const unsupported = 'unsupported' in result ? result.unsupported ?? false : false;
@@ -248,19 +266,17 @@ async function runStripeWebhookHandler(event: Stripe.Event) {
   if (unsupported || (result.skipped && !result.duplicate)) return result;
 
   if (result.duplicate) {
-    // Core Stripe processing is intentionally idempotent. A completed core event may
-    // still predate/fail the enterprise entitlement side effect, so a verified replay
-    // may repair only that idempotent snapshot. Never do this while another worker's
-    // processing claim is still active; abandoned claims use the lease recovery path.
     if (!(await isProcessedStripeEvent(event.id))) return result;
-    const entitlement = await repairProcessedStripeEntitlement(event);
-    return entitlement ? { ...result, entitlement } : result;
+    return withSideEffects(result, await repairedSideEffects(event));
   }
 
-  const entitlement = await reconcileEntitlementWhenEligible(event);
-  if (!entitlement) return result;
+  const [addOns, entitlement] = await Promise.all([
+    reconcileAddOnsWhenEligible(event),
+    reconcileEntitlementWhenEligible(event),
+  ]);
 
-  return { ...result, entitlement };
+  if (!addOns && !entitlement) return result;
+  return withSideEffects(result, { addOns, entitlement });
 }
 
 async function recordLeaseRecoveryAudit(event: Stripe.Event) {
@@ -335,27 +351,18 @@ export async function recoverAbandonedStripeEventClaim(event: Stripe.Event, nowM
 export async function handleStripeWebhookEventWithRecovery(event: Stripe.Event) {
   const result = await runStripeWebhookHandler(event);
 
-  if (!result.duplicate || 'entitlement' in result) {
+  if (!result.duplicate || 'entitlement' in result || 'addOns' in result) {
     return result;
   }
 
-  // If the first duplicate lookup observed an in-flight claim and the core worker
-  // finished immediately after it, repair the entitlement side effect here instead
-  // of waiting for another Stripe retry. The snapshot RPC is itself idempotent.
   if (await isProcessedStripeEvent(event.id)) {
-    const entitlement = await repairProcessedStripeEntitlement(event);
-    return entitlement ? { ...result, entitlement } : result;
+    return withSideEffects(result, await repairedSideEffects(event));
   }
 
   const recovered = await recoverAbandonedStripeEventClaim(event);
   if (!recovered) {
-    // The original worker can win the processing->processed transition while this
-    // request is attempting lease recovery. Recheck after losing that race before
-    // acknowledging the duplicate; otherwise a completed core event whose entitlement
-    // side effect died would remain permanently unrepaired.
     if (await isProcessedStripeEvent(event.id)) {
-      const entitlement = await repairProcessedStripeEntitlement(event);
-      return entitlement ? { ...result, entitlement } : result;
+      return withSideEffects(result, await repairedSideEffects(event));
     }
     return result;
   }
