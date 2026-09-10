@@ -3,28 +3,35 @@ import { describe, expect, it } from 'vitest';
 import { isActiveAddOnRow } from './addons';
 
 const now = new Date('2026-08-13T12:00:00.000Z');
-const canonicalAddOnId = 'regulatory-monitoring-pro';
+const activeAddOnId = 'regulatory-monitoring-pro';
+const previewAddOnId = 'procurement-pack';
 
 describe('organization add-on entitlement state', () => {
-  it('rejects an active database row while the canonical add-on is private preview', () => {
+  it('accepts an active provider row only when the canonical add-on is commercially active', () => {
     expect(
       isActiveAddOnRow(
-        { add_on_id: canonicalAddOnId, status: 'active', current_period_end: null },
+        { add_on_id: activeAddOnId, status: 'active', current_period_end: null },
+        now,
+      ),
+    ).toBe(true);
+    expect(
+      isActiveAddOnRow(
+        { add_on_id: previewAddOnId, status: 'active', current_period_end: null },
         now,
       ),
     ).toBe(false);
   });
 
-  it('rejects a trialing database row while the canonical add-on is private preview', () => {
+  it('rejects trialing rows because signed active provider state is required', () => {
     expect(
       isActiveAddOnRow(
-        { add_on_id: canonicalAddOnId, status: 'trialing', current_period_end: '2026-08-14T12:00:00.000Z' },
+        { add_on_id: activeAddOnId, status: 'trialing', current_period_end: '2026-08-14T12:00:00.000Z' },
         now,
       ),
     ).toBe(false);
     expect(
       isActiveAddOnRow(
-        { add_on_id: canonicalAddOnId, status: 'trialing', current_period_end: '2026-08-12T12:00:00.000Z' },
+        { add_on_id: activeAddOnId, status: 'trialing', current_period_end: '2026-08-12T12:00:00.000Z' },
         now,
       ),
     ).toBe(false);
@@ -33,7 +40,7 @@ describe('organization add-on entitlement state', () => {
   it('fails closed when the provider period end is malformed', () => {
     expect(
       isActiveAddOnRow(
-        { add_on_id: canonicalAddOnId, status: 'active', current_period_end: 'not-a-provider-timestamp' },
+        { add_on_id: activeAddOnId, status: 'active', current_period_end: 'not-a-provider-timestamp' },
         now,
       ),
     ).toBe(false);
@@ -42,6 +49,6 @@ describe('organization add-on entitlement state', () => {
   it('rejects unknown add-ons, legacy ids and non-entitled statuses', () => {
     expect(isActiveAddOnRow({ add_on_id: 'unknown', status: 'active', current_period_end: null }, now)).toBe(false);
     expect(isActiveAddOnRow({ add_on_id: 'premium_news', status: 'active', current_period_end: null }, now)).toBe(false);
-    expect(isActiveAddOnRow({ add_on_id: canonicalAddOnId, status: 'past_due', current_period_end: null }, now)).toBe(false);
+    expect(isActiveAddOnRow({ add_on_id: activeAddOnId, status: 'past_due', current_period_end: null }, now)).toBe(false);
   });
 });
