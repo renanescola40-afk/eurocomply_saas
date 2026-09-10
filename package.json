@@ -146,7 +146,7 @@
     "release:rollback:dry-run": "node scripts/release/run-rollback-dry-run.mjs",
     "release:public-go-no-go-evidence": "node scripts/release/write-public-production-go-no-go-evidence.mjs && node scripts/release/validate-public-production-go-no-go-evidence.mjs",
     "release:enterprise-runtime-evidence": "node scripts/release/check-enterprise-runtime-evidence.mjs",
-    "release:readiness": "npm run release:deployment-smoke && npm run release:observability-smoke && npm run release:rollback:dry-run && npm run security:release-candidate && npm run security:release-evidence && npm run security:release-approval && npm run security:release-go-no-go && npm run security:release-rollback && npm run security:release-incident-response && npm run security:release-post-incident && npm run security:release-support-readiness && npm run security:release-operations && npm run security:p0-runtime-gap",
+    "release:readiness": "node scripts/ci/run-release-readiness.mjs",
     "release:enterprise-readiness": "RELEASE_TARGET=enterprise RISCK_COMPLY_ENTERPRISE_RELEASE=true npm run release:production-final",
     "ops:vercel-readiness": "node scripts/ops/check-vercel-production-env.mjs",
     "release:production-readiness": "npm run lint && npm run typecheck && npm run test && npm run build && npm run security:ci && npm run quality:routes && npm run ops:vercel-readiness && npm run release:production-final",
