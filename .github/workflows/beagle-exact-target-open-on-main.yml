@@ -22,9 +22,9 @@ jobs:
     environment: production
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      TARGET_DEPLOYMENT_ID: dpl_e48et8JLtkv78GGRJ8a3AxG9roCX
-      TARGET_DEPLOYMENT_URL: eurocomply-saas-rcze48pkw-renanescola40-afks-projects.vercel.app
-      EXPECTED_TARGET_SHA: 9fe43ffe006ac1d8fc6d4ad0c98219c69de9d39f
+      TARGET_DEPLOYMENT_ID: dpl_BKTjozPcC1fCay4MVGvnvMEUhA9o
+      TARGET_DEPLOYMENT_URL: eurocomply-saas-je69kvz0z-renanescola40-afks-projects.vercel.app
+      EXPECTED_TARGET_SHA: 595464070b1cfd78ba6474adc604af7d2fb8df4a
       EXPECTED_PROJECT_ID: prj_APpXAyQFy1Gie50xfbO45zjkyUSm
       VERCEL_TEAM_ID: team_wu3LZI6ReFxO16xipv73GLwG
       BEAGLE_VERIFY_FILE: _e8f1hq2qpr6fuvd036hr4l97yn8octew.txt
