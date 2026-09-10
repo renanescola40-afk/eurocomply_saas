@@ -7,9 +7,10 @@ const rootDir = process.cwd();
 const subjectSha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const productionHead = '20260909232229';
 const friaMigration = '20260910113000_reconcile_fria_operational_runtime_v43.sql';
+const article5ReplayCompatMigration = '20260910113500_article5_policy_replay_compatibility_v43.sql';
 const article5Migration = '20260910114000_reconcile_prohibited_practices_runtime_v43.sql';
 const dsrMigration = '20260910115000_atomic_data_subject_request_lifecycle_audit_v43.sql';
-const expectedMigrations = [friaMigration, article5Migration, dsrMigration];
+const expectedMigrations = [friaMigration, article5ReplayCompatMigration, article5Migration, dsrMigration];
 
 describe('Supabase forward reconciliation control-plane capacity', () => {
   it('compiles the exact minimal V43 runtime package above the verified Production head', async () => {
@@ -18,7 +19,7 @@ describe('Supabase forward reconciliation control-plane capacity', () => {
     expect(config.changeSet).toBe('2026-09-10-production-runtime-contract-v43');
     expect(config.sourceChangeSet).toBe('2026-09-09-gdpr-rights-lifecycle-v42');
     expect(config.migrations.map((migration: { filename: string }) => migration.filename)).toEqual(expectedMigrations);
-    expect(config.migrations).toHaveLength(3);
+    expect(config.migrations).toHaveLength(4);
 
     let previous = productionHead;
     for (const filename of expectedMigrations) {
@@ -34,6 +35,18 @@ describe('Supabase forward reconciliation control-plane capacity', () => {
     expect(fria).toContain('enforce_fria_member_scope');
     expect(fria).toContain('force row level security');
     expect(fria).not.toMatch(/\b(drop\s+table|truncate\s+table)\b/i);
+
+    const replayCompat = await readFile(`supabase/migrations/${article5ReplayCompatMigration}`, 'utf8');
+    for (const policy of [
+      'ai_prohibited_reviews_member_select',
+      'ai_prohibited_signals_member_select',
+      'ai_prohibited_exceptions_member_select',
+      'ai_prohibited_evidence_member_select',
+      'ai_prohibited_decisions_member_select',
+    ]) {
+      expect(replayCompat).toContain(`drop policy if exists ${policy}`);
+    }
+    expect(replayCompat).not.toMatch(/\b(drop\s+table|truncate\s+table)\b/i);
 
     const article5 = await readFile(`supabase/migrations/${article5Migration}`, 'utf8');
     for (const table of [
@@ -56,12 +69,15 @@ describe('Supabase forward reconciliation control-plane capacity', () => {
     expect(dsr).toContain('append_audit_event_chained');
     expect(dsr).toContain('set search_path = pg_catalog');
     expect(dsr).toContain('to service_role');
+    expect(dsr).toContain('enforce_onboarding_document_storage_integrity');
+    expect(dsr).toContain("object_record.bucket_id = 'controlled-documents'");
+    expect(dsr).toContain("'orphanedStoragePath'");
     expect(dsr).not.toMatch(/\b(drop\s+table|truncate\s+table)\b/i);
 
     const manifest = await compileForwardReconciliationManifest({ config, rootDir, subjectSha });
     expect(manifest.targetSha).toBe(subjectSha);
     expect(manifest.migrations.map((migration) => migration.filename)).toEqual(expectedMigrations);
-    expect(manifest.migrations).toHaveLength(3);
+    expect(manifest.migrations).toHaveLength(4);
     expect(manifest.changeSet).toBe('2026-09-10-production-runtime-contract-v43');
     expect(manifest.checks.productionWriteAuthorized).toBe(false);
     expect(manifest.checks.migrationHistoryRepairAuthorized).toBe(false);

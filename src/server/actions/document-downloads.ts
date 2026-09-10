@@ -82,24 +82,25 @@ async function auditRejectedDownloadUrl(input: {
     membershipCount: input.membershipCount ?? null,
   };
 
-  await Promise.all([
-    logAuditEvent({
-      organizationId: input.organizationId ?? null,
-      actorUserId: input.userId,
-      action: UPLOAD_SECURITY_AUDIT_EVENTS.downloadDenied,
-      entityType: 'document',
-      entityId: input.documentId,
-      metadata,
-    }),
-    logAuditEvent({
-      organizationId: input.organizationId ?? null,
-      actorUserId: input.userId,
-      action: 'document.download_url_rejected',
-      entityType: 'document',
-      entityId: input.documentId,
-      metadata,
-    }),
-  ]);
+  // The audit chain owns a single organization head. Keep these appends ordered;
+  // concurrent Promise.all writers can legitimately race the same CAS head and
+  // turn an expected rejected-download path into a P0001 audit-chain failure.
+  await logAuditEvent({
+    organizationId: input.organizationId ?? null,
+    actorUserId: input.userId,
+    action: UPLOAD_SECURITY_AUDIT_EVENTS.downloadDenied,
+    entityType: 'document',
+    entityId: input.documentId,
+    metadata,
+  });
+  await logAuditEvent({
+    organizationId: input.organizationId ?? null,
+    actorUserId: input.userId,
+    action: 'document.download_url_rejected',
+    entityType: 'document',
+    entityId: input.documentId,
+    metadata,
+  });
 }
 
 async function enforceDocumentUrlRateLimit(input: {
