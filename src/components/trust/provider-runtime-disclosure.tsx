@@ -14,7 +14,7 @@ type ProviderDisclosureCopy = {
 const en: ProviderDisclosureCopy = {
   eyebrow: 'Provider evidence boundary — 10 September 2026',
   title: 'Current provider facts and legal approval are tracked separately.',
-  body: 'The current connected-account reconciliation proves selected account/project facts without turning them into DPA, transfer or role approval. Vercel team/project/domain binding and the Supabase Production project region were revalidated today. The connected Stripe session exposes the LIVE RISCK COMPLY SAAS account, but its detail call failed, so detail fields are not promoted as current. PostHog connected access was also revalidated and the only accessible project is not attributable to Production.',
+  body: 'The current connected-account reconciliation proves selected account/project facts without turning them into DPA, transfer or role approval. Vercel team/project/domain binding and the Supabase Production project region were revalidated on 10 September 2026. The connected Stripe session exposes the LIVE RISCK COMPLY SAAS account, but its detail call failed, so detail fields are not promoted as current. PostHog connected access was also revalidated on 10 September 2026 and the only accessible project is not attributable to Production.',
   evidence: [
     'Vercel: connected team is Pro; eurocomply-saas is linked to the correct GitHub repository and the risckcomply.com domains. Complete processing/support locations, account-applicable DPA, retention and transfer treatment remain open.',
     'Supabase: Production project tganhbbhfxcpblmgqprg is ACTIVE_HEALTHY in eu-west-1 (Ireland). Project region does not prove all support/onward-processing locations or Chapter V treatment.',
@@ -34,7 +34,7 @@ const en: ProviderDisclosureCopy = {
 const pt: ProviderDisclosureCopy = {
   eyebrow: 'Limite de evidência dos fornecedores — 10 de setembro de 2026',
   title: 'Factos atuais dos fornecedores e aprovação jurídica são acompanhados separadamente.',
-  body: 'A reconciliação atual de contas conectadas prova factos selecionados de conta/projeto sem os transformar em aprovação de DPA, transferências ou função jurídica. O binding de equipa/projeto/domínios da Vercel e a região do projeto Supabase Production foram revalidados hoje. A sessão Stripe conectada expõe a conta LIVE RISCK COMPLY SAAS, mas a chamada de detalhes falhou. O acesso PostHog também foi revalidado e o único projeto acessível não é atribuível a Production.',
+  body: 'A reconciliação atual de contas conectadas prova factos selecionados de conta/projeto sem os transformar em aprovação de DPA, transferências ou função jurídica. O binding de equipa/projeto/domínios da Vercel e a região do projeto Supabase Production foram revalidados em 10 de setembro de 2026. A sessão Stripe conectada expõe a conta LIVE RISCK COMPLY SAAS, mas a chamada de detalhes falhou. O acesso PostHog também foi revalidado em 10 de setembro de 2026 e o único projeto acessível não é atribuível a Production.',
   evidence: [
     'Vercel: a equipa conectada é Pro; eurocomply-saas está ligado ao repositório GitHub correto e aos domínios risckcomply.com. Localizações completas de tratamento/suporte, DPA aplicável à conta, retenção e transferências continuam abertos.',
     'Supabase: o projeto Production tganhbbhfxcpblmgqprg está ACTIVE_HEALTHY em eu-west-1 (Irlanda). A região do projeto não prova todas as localizações de suporte/tratamento ulterior nem o tratamento do Capítulo V.',
@@ -57,10 +57,11 @@ export function ProviderRuntimeDisclosure({ locale, slug }: { locale: Locale; sl
   if (slug !== 'subprocessors') return null;
   // Current provider evidence is legally sensitive. Until a current, equivalent
   // translation exists, fail closed to the complete English evidence boundary.
-  const text = copy[locale] ?? en;
+  const contentLocale: Locale = copy[locale] ? locale : 'en';
+  const text = copy[contentLocale] ?? en;
 
   return (
-    <section className="relative z-10 px-6 pb-16" aria-labelledby="provider-runtime-evidence-title">
+    <section className="relative z-10 px-6 pb-16" aria-labelledby="provider-runtime-evidence-title" lang={contentLocale}>
       <div className="mx-auto max-w-7xl rounded-xl border border-blue-400/15 bg-blue-500/[0.055] p-6 md:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300/70">{text.eyebrow}</p>
         <h2 id="provider-runtime-evidence-title" className="mt-3 max-w-4xl text-2xl font-semibold tracking-[-0.03em] text-white">{text.title}</h2>
