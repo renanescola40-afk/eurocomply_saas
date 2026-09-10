@@ -32,6 +32,7 @@ type InvoiceWithSubscription = Stripe.Invoice & {
   parent?: {
     subscription_details?: {
       subscription?: string | null;
+      metadata?: Stripe.Metadata | null;
     } | null;
   } | null;
 };
@@ -54,9 +55,17 @@ function stripeObjectId(value: string | { id?: string | null } | null | undefine
   return value && typeof value.id === 'string' && value.id.trim() ? value.id.trim() : null;
 }
 
-function organizationIdFromSubscription(subscription: Stripe.Subscription) {
-  const value = subscription.metadata.organization_id ?? subscription.metadata.organizationId;
+function organizationIdFromMetadata(metadata: Stripe.Metadata | null | undefined) {
+  const value = metadata?.organization_id ?? metadata?.organizationId;
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function organizationIdFromSubscription(subscription: Stripe.Subscription) {
+  return organizationIdFromMetadata(subscription.metadata);
+}
+
+function subscriptionHasKnownAddOn(subscription: Stripe.Subscription) {
+  return subscription.items.data.some((item) => Boolean(getBillingAddOnSlugForStripePriceId(item.price.id)));
 }
 
 function invoiceSubscriptionId(invoice: InvoiceWithSubscription) {
@@ -64,6 +73,11 @@ function invoiceSubscriptionId(invoice: InvoiceWithSubscription) {
   if (direct) return direct;
   const parent = invoice.parent?.subscription_details?.subscription;
   return typeof parent === 'string' && parent.trim() ? parent.trim() : null;
+}
+
+function invoiceOrganizationHint(invoice: InvoiceWithSubscription) {
+  return organizationIdFromMetadata(invoice.parent?.subscription_details?.metadata)
+    ?? organizationIdFromMetadata(invoice.metadata);
 }
 
 async function canonicalSubscriptionForEvent(event: Stripe.Event) {
@@ -78,7 +92,10 @@ async function canonicalSubscriptionForEvent(event: Stripe.Event) {
   if (event.type !== 'invoice.payment_failed' && event.type !== 'invoice.paid') return null;
   const invoice = event.data.object as InvoiceWithSubscription;
   const subscriptionId = invoiceSubscriptionId(invoice);
-  if (!subscriptionId) throw new Error('stripe_add_on_invoice_subscription_missing');
+  if (!subscriptionId) {
+    if (invoiceOrganizationHint(invoice)) throw new Error('stripe_add_on_invoice_subscription_missing');
+    return null;
+  }
 
   return getStripeClient().subscriptions.retrieve(subscriptionId, {
     expand: ['items.data.price'],
@@ -159,10 +176,13 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
   }
 
   const subscription = await canonicalSubscriptionForEvent(event);
-  if (!subscription) return { outcome: 'unsupported' as const, reconciled: 0, removed: 0 };
+  if (!subscription) return { outcome: 'not_applicable' as const, reconciled: 0, removed: 0 };
 
   const organizationId = organizationIdFromSubscription(subscription);
-  if (!organizationId) throw new Error('stripe_add_on_organization_missing');
+  if (!organizationId) {
+    if (subscriptionHasKnownAddOn(subscription)) throw new Error('stripe_add_on_organization_missing');
+    return { outcome: 'not_applicable' as const, reconciled: 0, removed: 0 };
+  }
   const plan = await assertSubscriptionBinding(subscription, organizationId);
 
   const supabase = createAdminClient();
