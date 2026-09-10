@@ -13,6 +13,7 @@ type LegalSection = {
 
 type PublicLegalReviewPageProps = {
   locale: string;
+  contentLanguage?: Locale;
   eyebrow: string;
   title: string;
   summary: string;
@@ -32,8 +33,9 @@ const copy: Record<Locale, { status: string; statusValue: string; version: strin
   de: { status: 'Veröffentlichungsstatus', statusValue: 'REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED', version: 'Version', updated: 'Zuletzt aktualisiert', effective: 'Gültig ab', effectiveValue: 'Ausstehende qualifizierte rechtliche Freigabe', notice: 'Dieser öffentliche Entwurf ist eine technische Offenlegungsfläche. Er ist weder eine unterzeichnete Vereinbarung noch eine qualifizierte Rechtsberatung.' },
 };
 
-export function PublicLegalReviewPage({ locale: rawLocale, eyebrow, title, summary, documentId, version, lastUpdated, sections, actions }: PublicLegalReviewPageProps) {
+export function PublicLegalReviewPage({ locale: rawLocale, contentLanguage, eyebrow, title, summary, documentId, version, lastUpdated, sections, actions }: PublicLegalReviewPageProps) {
   const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : 'en';
+  const contentLocale = contentLanguage ?? locale;
   const labels = copy[locale];
 
   return (
@@ -47,7 +49,7 @@ export function PublicLegalReviewPage({ locale: rawLocale, eyebrow, title, summa
           <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={178} height={32} priority />
         </Link>
 
-        <header className="mt-10 space-y-5">
+        <header className="mt-10 space-y-5" lang={contentLocale}>
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-300/75">{eyebrow}</p>
           <h1 className="max-w-4xl text-4xl font-semibold tracking-tight sm:text-6xl">{title}</h1>
           <p className="max-w-3xl text-lg leading-8 text-white/65">{summary}</p>
@@ -64,7 +66,7 @@ export function PublicLegalReviewPage({ locale: rawLocale, eyebrow, title, summa
 
         {documentId === 'cookie-policy' ? <AnalyticsConsentControls locale={locale} /> : actions}
 
-        <div className="mt-10 space-y-5">
+        <div className="mt-10 space-y-5" lang={contentLocale}>
           {sections.map((section) => (
             <section key={section.title} className="rounded-xl border border-white/10 bg-[#0d1522] p-7">
               <h2 className="text-2xl font-semibold">{section.title}</h2>

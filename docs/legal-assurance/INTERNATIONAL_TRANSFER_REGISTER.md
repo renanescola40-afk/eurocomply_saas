@@ -1,45 +1,48 @@
 # RISCK COMPLY — International Transfer Register
 
-Date: 2026-09-09  
-Baseline: GDPR Chapter V. This register separates runtime location facts from legal transfer mechanisms. Current revalidation details are recorded in `PROVIDER_FACTS_REVALIDATION_2026-09-09.md`.
+Date: 2026-09-10  
+Baseline: GDPR Chapter V. This register separates runtime/account location facts from legal transfer mechanisms. Current connected-account observations are recorded in `PROVIDER_FACTS_REVALIDATION_2026-09-09.md`, including its 2026-09-10 addendum.
 
-A provider being US-owned does not by itself prove an international transfer, and an EU runtime region does not by itself prove that no third-country access/transfer can occur.
+A provider being US-owned does not by itself prove an international transfer, and an EU runtime region does not by itself prove that no third-country access or onward transfer can occur.
 
-| Provider / service | Observed or documented location fact | Transfer mechanism evidence | Current state | Closure requirement |
+| Provider / service | Current attributable location/account fact | Transfer mechanism evidence | Current state | Closure requirement |
 |---|---|---|---|---|
-| Supabase | Connected Production project revalidated `ACTIVE_HEALTHY` in `eu-west-1` on 2026-09-09 | Project region does not prove support/access locations or Chapter V contract treatment; account-specific terms remain open | PARTIAL_LOCATION_PASS / LEGAL_BLOCKED | Confirm contractual entity, support/access locations, subprocessors, account-specific DPA/SCC/adequacy basis and backup/support access |
-| Vercel | Connected project/domains verified; current `vercel.json` does not pin a function region | Contractual transfer treatment and complete processing/support locations not frozen | PARTIAL_BINDING_PASS / LEGAL_BLOCKED | Confirm account agreement, relevant processing/support locations, applicable adequacy/SCC framework and supplementary measures if required |
-| Stripe | LIVE `RISCK COMPLY SAAS` account is discoverable; account-detail revalidation failed at connector execution in this cycle | Current account/operator/transfer details not revalidated | TOOL_BLOCKED / LEGAL_BLOCKED | Re-run successful account detail/provider contract evidence and confirm actual transfer basis for relevant data flows |
-| Google OAuth / Identity | Production authentication use proven | Contractual role and transfer framework not final | BLOCKED | Confirm OAuth-client contracting terms, provider role, processing/access locations and transfer basis |
-| Google Workspace | EMEA billed entity evidenced historically; corporate email operational | General provider CDPA/SCC framework exists; account-specific incorporation/settings not frozen | BLOCKED | Confirm account incorporation/acceptance, data-region/admin settings if relevant, onward transfers and legal role |
-| GitHub / Actions | Operational use; hosted runners may transiently process Production data in protected workflows | Current account/contract DPA treatment not final | BLOCKED | Confirm applicable agreement/entity, hosted-runner regions/access, transfer treatment and whether customer-facing disclosure is required |
-| Sentry | Production diagnostic binding has historical evidence | Organisation region and account-specific DPA/transfer facts open | BLOCKED | Confirm current project/account, region, retention, scrubbing, DPA and transfer basis |
-| PostHog | EU endpoint binding proven historically; connected assurance project mismatch with Production | Account-specific DPA and project ownership unresolved | BLOCKED | Recover actual Production project/account and confirm region, retention, DPA and onward transfer facts |
-| Upstash | Production rate-limit use evidenced on predecessor release | General provider framework exists | BLOCKED | Exact-current binding plus account region, retention, DPA and transfer treatment |
-| Resend / email provider | Historical delivery evidenced; exact-current binding open | General framework previously evidenced | BLOCKED | Confirm active provider/account/entity, region, retention, DPA and transfer basis |
+| Supabase | Connected Production project `tganhbbhfxcpblmgqprg` revalidated `ACTIVE_HEALTHY` in `eu-west-1` on 2026-09-10 | Project region does not prove support/access locations or Chapter V contract treatment; account-specific applicable terms remain separate | `CURRENT_PROJECT_REGION_PASS / LEGAL_BLOCKED` | Confirm contracting entity, support/access locations, subprocessors, account-applicable DPA/transfer terms and backup/support access |
+| Vercel | Connected team is Pro; project `eurocomply-saas`, GitHub repo binding and production domains were revalidated on 2026-09-10 | Project/team/domain binding does not establish the complete processing/support location set or an account-applicable Chapter V mechanism | `CURRENT_ACCOUNT_PROJECT_BINDING_PASS / LEGAL_BLOCKED` | Confirm applicable account agreement/DPA, contracting entity, processing/support locations, retention and any required adequacy/SCC/supplementary-measure treatment |
+| Stripe | Connected session exposes the LIVE `RISCK COMPLY SAAS` account on 2026-09-10; account-detail revalidation failed at connector execution | Current account contracting/entity/location/transfer details were not successfully revalidated by this lane | `LIVE_ACCOUNT_DISCOVERY_PASS / DETAIL_TOOL_BLOCKED / LEGAL_BLOCKED` | Obtain successful current account/provider contract evidence and determine actual transfer treatment for relevant billing flows |
+| Google OAuth / Identity | Production authentication integration exists through Supabase Auth | Contractual role and complete processing/access/transfer framework not final | `BLOCKED` | Confirm OAuth-client applicable terms, provider role, processing/access locations and transfer basis |
+| Google Workspace | Corporate mail operational; prior account-specific EMEA billing/plan evidence exists | Billing entity is not a processing/storage location and current account CDPA/incorporation settings are not frozen by this register | `BLOCKED` | Confirm account agreement/CDPA incorporation, relevant admin region/retention settings, onward transfers and legal role |
+| GitHub / Actions | Repository/CI use is active; protected workflows can transiently process Production data on GitHub-hosted runners | Current account/company DPA applicability and hosted-runner transfer treatment not final | `BLOCKED` | Confirm applicable agreement/entity, hosted-runner processing/access treatment and whether customer-facing disclosure is required |
+| Sentry | Integration remains in product/release infrastructure; prior exact-release runtime evidence is historical until refreshed | Organisation region, retention and account-applicable DPA/transfer position remain open | `BLOCKED` | Confirm current Production project/account, region, retention, scrubbing/data categories, DPA and transfer basis |
+| PostHog | Production source/configuration historically targeted EU endpoints; connected assurance project was not the Production project | Actual Production account/project and account-linked DPA remain unresolved | `BLOCKED` | Recover/revalidate actual Production project/account and confirm region, retention, DPA and onward-transfer facts |
+| Upstash | Distributed Redis-backed rate-limit integration remains implemented; prior direct runtime proof is historical | Account owner/plan/region/retention/DPA and exact-current protected provider acceptance remain open | `BLOCKED` | Obtain current account/provider and protected runtime evidence; determine transfer treatment for actual data flow |
+| Resend / email provider | Historical transactional delivery is evidenced; current exact-release account/provider binding is not established by this register | Account/entity/region/retention/DPA/transfer position remains open | `BLOCKED` | Confirm current active binding and applicable account/provider facts before customer reliance |
+| Malware/content scanner | Scanner requirement exists when relevant upload-scanning mode is enabled; current provider identity/binding is not established | No current account/provider transfer evidence | `CONDITIONAL_UNVERIFIED` | If enabled, identify active provider, locations, retention, DPA and transfer basis before customer disclosure |
 
 ## Chapter V decision rule
 
-For each active data flow, record one of:
+For each active data flow, retain one attributable state:
 
-- `NO_THIRD_COUNTRY_TRANSFER_EVIDENCED`;
-- `ADEQUACY_DECISION` with exact legal basis;
-- `SCC_2021_914` with module(s), executed/accepted agreement evidence and supplementary-measures/TIA assessment where required;
-- another lawful Chapter V mechanism with evidence;
-- `BLOCKED` where facts are insufficient.
+- `NO_THIRD_COUNTRY_TRANSFER_EVIDENCED`, only where the complete relevant processing/access chain supports that conclusion;
+- `ADEQUACY_DECISION`, with the exact applicable adequacy basis and data flow;
+- `SCC_2021_914`, with the applicable module(s), executed/accepted agreement evidence and supplementary-measures/TIA assessment where required;
+- another lawful Chapter V mechanism with attributable evidence;
+- `BLOCKED`, where the necessary facts or legal assessment are insufficient.
 
-Do **not** use Commission Decision (EU) 2021/915 controller-processor clauses as the international-transfer SCC mechanism. The 2021/915 clauses expressly do not themselves ensure Chapter V compliance.
+Do **not** use Commission Implementing Decision (EU) 2021/915 controller-processor clauses as the Chapter V international-transfer SCC mechanism. Article 28 contracting and Chapter V transfer lawfulness remain separate gates.
 
 ## Current terminal state
 
 ```text
 ACTIVE_PROVIDER_INVENTORY=PARTIAL
-SUPABASE_TECHNICAL_REGION=PASS_CURRENT
-VERCEL_ACCOUNT_PROJECT_BINDING=PASS_CURRENT
+SUPABASE_TECHNICAL_REGION=PASS_CURRENT_2026-09-10
+VERCEL_TEAM_PROJECT_DOMAIN_BINDING=PASS_CURRENT_2026-09-10
+STRIPE_LIVE_ACCOUNT_DISCOVERY=PASS_CURRENT_2026-09-10
+STRIPE_ACCOUNT_DETAIL_REVALIDATION=TOOL_BLOCKED
 TRANSFER_LOCATIONS=PARTIAL
 ACCOUNT_SPECIFIC_TRANSFER_MECHANISMS=BLOCKED
 TIA_SUPPLEMENTARY_MEASURES=NOT_TESTED_WHERE_REQUIRED
-INTERNATIONAL_TRANSFERS=BLOCKED
+INTERNATIONAL_TRANSFERS=BLOCKED_FINAL_FACTS_AND_QUALIFIED_REVIEW
 ```
 
-The next closure action is provider-account contractual evidence reconciliation, not generic legal drafting.
+The repository-controlled transfer register is structurally reconciled and current for the facts above. The remaining closure action is account-specific provider/contract evidence plus qualified transfer analysis where required, not additional generic transfer drafting.

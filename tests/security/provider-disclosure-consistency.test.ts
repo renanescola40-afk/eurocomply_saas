@@ -38,7 +38,7 @@ describe('security-critical provider disclosure consistency', () => {
     expect(route).not.toContain("@/components/marketing/trust-center-page");
   });
 
-  it('renders the runtime-evidence boundary on translated public subprocessors pages', () => {
+  it('renders the runtime-evidence boundary with explicit EN/PT copy and a fail-closed English fallback', () => {
     const trustPage = read('src/components/trust/trust-page.tsx');
     const disclosure = read('src/components/trust/provider-runtime-disclosure.tsx');
 
@@ -46,10 +46,12 @@ describe('security-critical provider disclosure consistency', () => {
     expect(disclosure).toContain("slug !== 'subprocessors'");
     expect(disclosure).toContain('Upstash');
     expect(disclosure).toContain('PostHog');
-
-    for (const locale of ['en', 'pt', 'es', 'fr', 'it', 'de']) {
-      expect(disclosure, `provider runtime disclosure must define ${locale}`).toMatch(new RegExp(`\\b${locale}: \\{`));
-    }
+    expect(disclosure).toContain('const en: ProviderDisclosureCopy = {');
+    expect(disclosure).toContain('const pt: ProviderDisclosureCopy = {');
+    expect(disclosure).toContain('const copy: Partial<Record<Locale, ProviderDisclosureCopy>> = { en, pt }');
+    expect(disclosure).toContain("const contentLocale: Locale = copy[locale] ? locale : 'en';");
+    expect(disclosure).toContain('const text = copy[contentLocale] ?? en');
+    expect(disclosure).toContain('lang={contentLocale}');
   });
 
   it('does not convert runtime presence into unsupported account-contract claims', () => {
@@ -58,15 +60,19 @@ describe('security-critical provider disclosure consistency', () => {
 
     expect(evidenceRegister).toContain('RUNTIME_BINDING_PROVEN');
     expect(evidenceRegister).toContain('ACCOUNT_LEGAL_FACTS_OPEN');
-    expect(legalDraft).toContain('contractual facts open');
+    expect(legalDraft).toContain('ACCOUNT_SPECIFIC_PROVIDER_CONTRACT_FACTS=PARTIAL_OPEN');
+    expect(legalDraft).toContain('not** by itself contractual authorisation');
+    expect(legalDraft).toContain('SUBPROCESSOR_REGISTER_FINAL=BLOCKED_FINAL_FACTS_AND_QUALIFIED_REVIEW');
   });
 
-  it('keeps the connected PostHog assurance project separated from Production proof', () => {
+  it('keeps the connected PostHog project separated from Production proof', () => {
     const evidenceRegister = read('docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md');
 
-    expect(evidenceRegister).toContain('CONNECTED_ASSURANCE_PROJECT_MISMATCH');
+    expect(evidenceRegister).toContain('POSTHOG_CONNECTED_PROJECT_REVALIDATION=PASS_NON_PRODUCTION');
+    expect(evidenceRegister).toContain('POSTHOG_CONNECTED_PROJECT_PROMOTED_AS_PRODUCTION=false');
+    expect(evidenceRegister).toContain('POSTHOG_PRODUCTION_ACCOUNT_RECOVERY=OPEN');
     expect(evidenceRegister).toContain('ACCOUNT_FACTS_OPEN');
-    expect(evidenceRegister).not.toMatch(/connected assurance project[^\n]{0,160}\bProduction project confirmed\b/i);
+    expect(evidenceRegister).not.toContain('POSTHOG_CONNECTED_PROJECT_PROMOTED_AS_PRODUCTION=true');
   });
 
   it('does not republish superseded Upstash or Sentry release proof as current buyer truth', () => {
