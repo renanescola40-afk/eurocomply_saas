@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type Stripe from 'stripe';
 
+import { getBillingPlanIdForStripePriceId } from '@/lib/billing/plans';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { classifyProviderFailure } from '@/server/providers/failure';
@@ -74,7 +75,7 @@ async function getSubscriptionAuthority(organizationId: string): Promise<Subscri
 
 export function getBaseSubscriptionItem(subscription: Stripe.Subscription) {
   const candidates = subscription.items.data.filter(
-    (candidate) => !getBillingAddOnSlugForStripePriceId(candidate.price.id),
+    (candidate) => Boolean(getBillingPlanIdForStripePriceId(candidate.price.id)),
   );
 
   if (candidates.length === 0) {
