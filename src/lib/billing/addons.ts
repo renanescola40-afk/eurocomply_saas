@@ -36,7 +36,7 @@ export const ADD_ON_CATALOG: AddOnCatalogItem[] = BILLING_ADD_ONS.map((addOn) =>
   name: addOn.name,
   priceMonthly: addOn.priceMonthly,
   description: addOn.description,
-  includedFromPlan: 'enterprise',
+  includedFromPlan: addOn.includedFrom,
   availableFromPlan: addOn.availableOn[0] ?? 'enterprise',
   category: addOn.category,
   status: addOn.status,
