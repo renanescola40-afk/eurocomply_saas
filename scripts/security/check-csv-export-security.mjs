@@ -1,6 +1,8 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { securityCiCheckRunsBefore } from '../ci/security-ci-checks.mjs';
+
 const failures = [];
 
 function readRequiredFile(path) {
@@ -146,8 +148,7 @@ if (!packageSource.includes('"security:csv-exports"') || !packageSource.includes
   failures.push(`${packagePath} must expose security:csv-exports`);
 }
 
-const securityCiOrder = /security:csv-exports[\s\S]*security:responses/;
-if (!securityCiOrder.test(packageSource)) {
+if (!securityCiCheckRunsBefore('security:csv-exports', 'security:responses')) {
   failures.push('security:ci must run security:csv-exports before response/log/API gates');
 }
 
