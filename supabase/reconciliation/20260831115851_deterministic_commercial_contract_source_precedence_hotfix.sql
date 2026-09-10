@@ -2,7 +2,12 @@
 --
 -- Production migration identity observed read-only:
 --   version: 20260831115851
---   logical purpose: deterministic commercial contract source precedence
+--   name: deterministic_commercial_contract_source_precedence_hotfix
+--
+-- Canonical repository source representing the same forward reconciliation:
+--   canonical source version: 20260831130000
+--   local source: supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql
+--   local source SHA-256: 894ca7297890ae01ab57986af20654e33b62e95fe732cad4b8336afeed6f0fac
 --
 -- This remote identity was created when the already-reviewed deterministic
 -- commercial-plan resolver change was applied through the Supabase management

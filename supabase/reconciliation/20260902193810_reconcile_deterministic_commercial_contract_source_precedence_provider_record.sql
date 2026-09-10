@@ -3,7 +3,11 @@
 -- Production migration identity observed read-only:
 --   version: 20260902193810
 --   name: reconcile_deterministic_commercial_contract_source_precedence
---   logical source: supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql
+--
+-- Canonical repository source representing the same forward reconciliation:
+--   canonical source version: 20260831130000
+--   local source: supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql
+--   local source SHA-256: 894ca7297890ae01ab57986af20654e33b62e95fe732cad4b8336afeed6f0fac
 --
 -- The bounded V25 SQL was applied through the Supabase management migration
 -- path and the provider recorded a later ledger timestamp than the repository
