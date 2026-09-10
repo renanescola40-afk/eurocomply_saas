@@ -39,13 +39,15 @@ Preview add-ons may display canonical prices but cannot be selected by the subsc
 4. `customer.subscription.updated` never activates a newly-added item by itself. A new item remains inactive pending payment evidence.
 5. `invoice.paid` activates eligible add-ons; `invoice.payment_failed` moves them to `past_due`; deletion/removal revokes authority.
 6. Signed Stripe events reconcile `organization_add_ons`; browser state, URL parameters and stale rows are not commercial authority.
-7. The subscription lifecycle identifies the base plan item by excluding canonical add-on Prices, not by Stripe item order or `usage_type`, so licensed recurring add-ons cannot be mistaken for the base plan.
+7. The subscription lifecycle identifies exactly one base plan item through the canonical server-side plan Price allowlist. Item order, `usage_type`, and merely being "not an add-on" are not accepted as base-plan authority.
 
 ## Safety invariants
 
 - Existing active add-ons are preserved when a new add-on is requested.
 - Unknown, preview or plan-ineligible add-on Prices fail closed.
-- Multiple/ambiguous base subscription items fail closed.
+- A subscription with zero or multiple allowlisted base-plan Prices fails closed.
+- A known add-on item without the required organization/customer/subscription binding fails closed.
+- Unrelated legacy entitlement events with no add-on Price authority are ignored by the add-on reconciliation lane.
 - A late `invoice.paid` cannot revive a cancelled subscription.
 - Audit persistence is required for successful reconciliation.
 - No production entitlement is granted by repository configuration alone.
