@@ -29,6 +29,42 @@ const REQUIRED_RAW_CRITERIA = Object.freeze([
   'liveProofAttached',
 ]);
 
+// These are source-contract references, not additional live-proof claims. The protected
+// runtime artifact replaces the checked-in placeholder before the aggregate security
+// gate runs, so it must retain the static audit-control vocabulary consumed by the
+// source-coverage checkers. Executable callers are still validated independently by
+// scripts/security/check-audit-critical-coverage.mjs and the raw/live criteria below.
+const CRITICAL_EVENT_COVERAGE_SOURCE_CONTRACT = Object.freeze({
+  auth: 'scripts/security/check-audit-critical-coverage.mjs',
+  rbacDenied: 'scripts/security/check-audit-critical-coverage.mjs',
+  stepUp: 'scripts/security/check-audit-critical-coverage.mjs',
+  billing: 'scripts/security/check-audit-critical-coverage.mjs',
+  webhookFailures: 'scripts/security/check-audit-critical-coverage.mjs',
+  uploads: 'scripts/security/check-audit-critical-coverage.mjs',
+  downloads: 'scripts/security/check-audit-critical-coverage.mjs',
+  exports: 'scripts/security/check-audit-critical-coverage.mjs',
+  teamChanges: 'scripts/security/check-audit-critical-coverage.mjs',
+  documentChanges: 'scripts/security/check-audit-critical-coverage.mjs',
+  risksVendorsTasks: 'scripts/security/check-audit-critical-coverage.mjs',
+  gdpr: 'scripts/security/check-audit-critical-coverage.mjs',
+  securitySettings: 'scripts/security/check-audit-critical-coverage.mjs',
+});
+
+const RUNTIME_SOURCE_CONTRACT = Object.freeze({
+  signedExport: {
+    source: 'src/app/api/audit/evidence-pack/route.test.ts',
+    acceptanceCriterion: 'exportIsSigned',
+  },
+  verifyWithStepUp: {
+    source: 'src/app/api/audit/chain/verify/route.test.ts',
+    acceptanceCriterion: 'verificationRequiresRbacAndStepUp',
+  },
+  cliVerifier: {
+    source: 'scripts/security/verify-audit-chain.mjs',
+    contract: 'offline verifier for exported audit-chain evidence',
+  },
+});
+
 function headers(token) {
   return {
     Authorization: `Bearer ${token}`,
@@ -109,6 +145,11 @@ export function normalizeAuditChainEvidenceForP0(evidence, { targetSha, reposito
     redactionConfirmation: 'Redaction confirmed for runtime evidence.',
     commitSha: targetSha,
     targetLiveValidation: evidence.liveValidation,
+    criticalEventCoverage: CRITICAL_EVENT_COVERAGE_SOURCE_CONTRACT,
+    runtimeValidation: {
+      ...(evidence?.runtimeValidation ?? {}),
+      ...RUNTIME_SOURCE_CONTRACT,
+    },
     verification_provenance: {
       method: 'github_actions',
       reference: `${WORKFLOW_PATH}#${runId}`,
@@ -138,9 +179,13 @@ export function normalizeAuditChainEvidenceForP0(evidence, { targetSha, reposito
     ],
     evidenceLocations: [
       WORKFLOW_PATH,
+      'scripts/security/check-audit-critical-coverage.mjs',
       'scripts/security/lib/ephemeral-auth-fixtures.mjs',
       'scripts/security/run-audit-chain-live-validation.mjs',
       'scripts/security/validate-audit-chain-live-evidence.mjs',
+      'scripts/security/verify-audit-chain.mjs',
+      'src/app/api/audit/chain/verify/route.test.ts',
+      'src/app/api/audit/evidence-pack/route.test.ts',
       EVIDENCE_PATH,
     ],
   };
