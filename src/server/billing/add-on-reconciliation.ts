@@ -16,6 +16,7 @@ const SUPPORTED_ADD_ON_EVENTS = new Set([
 ]);
 
 const PRESERVED_PENDING_PAYMENT_STATUSES = new Set(['active', 'trialing', 'past_due']);
+const MAX_INVOICE_LINE_ITEMS = 100;
 
 type SubscriptionItemWithPeriod = Stripe.SubscriptionItem & {
   current_period_start?: number | null;
@@ -35,6 +36,21 @@ type InvoiceWithSubscription = Stripe.Invoice & {
       metadata?: Stripe.Metadata | null;
     } | null;
   } | null;
+};
+
+type InvoiceLineWithSubscriptionItem = Stripe.InvoiceLineItem & {
+  subscription_item?: string | Stripe.SubscriptionItem | null;
+  parent?: {
+    subscription_item_details?: {
+      subscription_item?: string | Stripe.SubscriptionItem | null;
+    } | null;
+  } | null;
+};
+
+type ReconciliationProviderState = {
+  subscription: Stripe.Subscription;
+  paidSubscriptionItemIds: Set<string> | null;
+  invoiceId: string | null;
 };
 
 type SubscriptionBinding = {
@@ -79,13 +95,35 @@ function invoiceSubscriptionId(invoice: InvoiceWithSubscription) {
   return typeof parent === 'string' && parent.trim() ? parent.trim() : null;
 }
 
-async function canonicalSubscriptionForEvent(event: Stripe.Event) {
+function invoiceLineSubscriptionItemId(line: InvoiceLineWithSubscriptionItem) {
+  const legacy = stripeObjectId(line.subscription_item);
+  if (legacy) return legacy;
+  return stripeObjectId(line.parent?.subscription_item_details?.subscription_item);
+}
+
+async function paidInvoiceSubscriptionItemIds(invoiceId: string) {
+  const lines = await getStripeClient().invoices.listLineItems(invoiceId, { limit: MAX_INVOICE_LINE_ITEMS });
+  if (lines.has_more) throw new Error('stripe_add_on_invoice_lines_incomplete');
+
+  const ids = new Set<string>();
+  for (const line of lines.data as InvoiceLineWithSubscriptionItem[]) {
+    const subscriptionItemId = invoiceLineSubscriptionItemId(line);
+    if (subscriptionItemId) ids.add(subscriptionItemId);
+  }
+  return ids;
+}
+
+async function canonicalProviderStateForEvent(event: Stripe.Event): Promise<ReconciliationProviderState | null> {
   if (
     event.type === 'customer.subscription.created'
     || event.type === 'customer.subscription.updated'
     || event.type === 'customer.subscription.deleted'
   ) {
-    return event.data.object as Stripe.Subscription;
+    return {
+      subscription: event.data.object as Stripe.Subscription,
+      paidSubscriptionItemIds: null,
+      invoiceId: null,
+    };
   }
 
   if (event.type !== 'invoice.payment_failed' && event.type !== 'invoice.paid') return null;
@@ -93,9 +131,17 @@ async function canonicalSubscriptionForEvent(event: Stripe.Event) {
   const subscriptionId = invoiceSubscriptionId(invoice);
   if (!subscriptionId) return null;
 
-  return getStripeClient().subscriptions.retrieve(subscriptionId, {
+  const subscription = await getStripeClient().subscriptions.retrieve(subscriptionId, {
     expand: ['items.data.price'],
   });
+
+  return {
+    subscription,
+    paidSubscriptionItemIds: event.type === 'invoice.paid'
+      ? await paidInvoiceSubscriptionItemIds(invoice.id)
+      : null,
+    invoiceId: invoice.id,
+  };
 }
 
 async function assertSubscriptionBinding(subscription: Stripe.Subscription, organizationId: string): Promise<BillingPlan> {
@@ -132,6 +178,7 @@ export function resolveReconciledAddOnStatus(
   eventType: string,
   subscriptionStatus: string,
   existingStatus?: string | null,
+  paidByCurrentInvoice = true,
 ) {
   if (eventType === 'customer.subscription.deleted') return 'cancelled' as const;
   if (eventType === 'invoice.payment_failed') return 'past_due' as const;
@@ -139,6 +186,17 @@ export function resolveReconciledAddOnStatus(
   if (eventType === 'invoice.paid') {
     if (subscriptionStatus === 'canceled' || subscriptionStatus === 'incomplete_expired') return 'cancelled' as const;
     if (subscriptionStatus === 'unpaid') return 'past_due' as const;
+
+    // Never let an unrelated or delayed invoice activate a subscription item that
+    // did not contribute a line to that exact paid invoice. Preserve already-paid
+    // authority, but keep new/past-due items fail-closed until their own invoice pays.
+    if (!paidByCurrentInvoice) {
+      if (existingStatus === 'active') return 'active' as const;
+      if (existingStatus === 'past_due') return 'past_due' as const;
+      if (existingStatus === 'trialing') return 'trialing' as const;
+      return 'inactive' as const;
+    }
+
     return 'active' as const;
   }
 
@@ -174,9 +232,10 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
     return { outcome: 'unsupported' as const, reconciled: 0, removed: 0 };
   }
 
-  const subscription = await canonicalSubscriptionForEvent(event);
-  if (!subscription) return { outcome: 'not_applicable' as const, reconciled: 0, removed: 0 };
+  const providerState = await canonicalProviderStateForEvent(event);
+  if (!providerState) return { outcome: 'not_applicable' as const, reconciled: 0, removed: 0 };
 
+  const { subscription, paidSubscriptionItemIds, invoiceId } = providerState;
   const hasKnownAddOn = subscriptionHasKnownAddOn(subscription);
   const organizationId = organizationIdFromSubscription(subscription);
   const customerId = stripeObjectId(subscription.customer);
@@ -226,7 +285,14 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
       }
 
       const existing = existingBySlug.get(slug);
-      const status = resolveReconciledAddOnStatus(event.type, subscription.status, existing?.status);
+      const paidByCurrentInvoice = event.type !== 'invoice.paid'
+        || Boolean(paidSubscriptionItemIds?.has(item.id));
+      const status = resolveReconciledAddOnStatus(
+        event.type,
+        subscription.status,
+        existing?.status,
+        paidByCurrentInvoice,
+      );
       const period = itemPeriod(item, subscription as SubscriptionWithLegacyPeriod);
       matchedSlugs.add(slug);
 
@@ -244,9 +310,10 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
         metadata: {
           stripe_event_id: event.id,
           stripe_event_type: event.type,
+          stripe_invoice_id: invoiceId,
           livemode: event.livemode,
           source: 'stripe_subscription_items',
-          payment_confirmed: event.type === 'invoice.paid',
+          payment_confirmed: event.type === 'invoice.paid' && paidByCurrentInvoice,
         },
         updated_at: new Date().toISOString(),
       }, { onConflict: 'organization_id,add_on_id' });
@@ -271,6 +338,7 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
         metadata: {
           stripe_event_id: event.id,
           stripe_event_type: event.type,
+          stripe_invoice_id: invoiceId,
           livemode: event.livemode,
           source: 'stripe_subscription_items',
           removal_reconciled: true,
@@ -292,6 +360,7 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
     metadata: {
       stripeEventId: event.id,
       stripeEventType: event.type,
+      stripeInvoiceId: invoiceId,
       livemode: event.livemode,
       plan,
       reconciled,
