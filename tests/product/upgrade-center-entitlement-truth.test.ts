@@ -32,6 +32,7 @@ describe('upgrade center entitlement truth', () => {
     expect(page).toContain('action="replace_add_ons"');
     expect(billingButton).toContain("fetch('/api/billing/subscription'");
     expect(billingButton).toContain("action: 'replace_add_ons'");
+    expect(billingButton).toContain('preserveExistingAddOns: true');
     expect(billingButton).toContain('Idempotency-Key');
     expect(billingButton).toContain("json.error === 'step_up_required'");
   });
@@ -66,13 +67,25 @@ describe('upgrade center entitlement truth', () => {
     expect(organizationAddOns).toContain('isBillingAddOnCommerciallyActive(catalogAddOn)');
   });
 
-  it('preserves existing active add-ons when adding another item', () => {
+  it('uses Stripe provider items rather than database rows to preserve existing purchases', () => {
     const page = read('src/app/[locale]/dashboard/organizations/add-ons/page.tsx');
-    const organizationAddOns = read('src/server/billing/addons.ts');
+    const route = read('src/app/api/billing/subscription/route.ts');
+    const lifecycle = read('src/server/billing/subscription-lifecycle.ts');
 
-    expect(organizationAddOns).toContain('listActiveOrganizationAddOnSelections');
-    expect(organizationAddOns).toContain("select('add_on_id,status,current_period_end,quantity')");
-    expect(page).toContain("[...activeAddOnSelections, { slug: addOn.slug, quantity: 1 }]");
+    expect(page).toContain('addOns={[{ slug: addOn.slug, quantity: 1 }]}');
+    expect(page).not.toContain("[...activeAddOnSelections, { slug: addOn.slug, quantity: 1 }]");
+    expect(route).toContain('preserveExistingAddOns: z.boolean().optional()');
+    expect(lifecycle).toContain('getProviderAddOnSelections(subscription, baseItemId)');
+    expect(lifecycle).toContain('mergeProviderAddOnSelections(subscription, baseItem.id, input.addOns, targetPlan)');
+  });
+
+  it('keeps the purchase CTA interval-neutral while showing both catalog prices', () => {
+    const page = read('src/app/[locale]/dashboard/organizations/add-ons/page.tsx');
+
+    expect(page).toContain('€{addOn.priceMonthly}');
+    expect(page).toContain('€{addOn.priceAnnual}');
+    expect(page).toContain('{commerce.add(addOn.name)}');
+    expect(page).not.toContain('{commerce.add(addOn.name, addOn.priceMonthly)}');
   });
 
   it('localizes the Upgrade Center chrome across every configured product language', () => {
