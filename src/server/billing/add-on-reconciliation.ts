@@ -1,8 +1,10 @@
 import Stripe from 'stripe';
 
+import { getBillingAddOn, isAddOnAvailableForPlan, isBillingAddOnCommerciallyActive } from '@/lib/billing/add-ons';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getBillingAddOnSlugForStripePriceId } from '@/server/billing/add-ons';
+import { normalizeBillingPlanId, type BillingPlan } from '@/server/billing/plans';
 import { getStripeClient } from '@/server/billing/stripe';
 
 const SUPPORTED_ADD_ON_EVENTS = new Set([
@@ -12,6 +14,8 @@ const SUPPORTED_ADD_ON_EVENTS = new Set([
   'invoice.payment_failed',
   'invoice.paid',
 ]);
+
+const PRESERVED_PENDING_PAYMENT_STATUSES = new Set(['active', 'trialing', 'past_due']);
 
 type SubscriptionItemWithPeriod = Stripe.SubscriptionItem & {
   current_period_start?: number | null;
@@ -35,6 +39,14 @@ type InvoiceWithSubscription = Stripe.Invoice & {
 type SubscriptionBinding = {
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
+  plan: string | null;
+};
+
+type ExistingAddOnRow = {
+  add_on_id: string | null;
+  status: string | null;
+  stripe_subscription_item_id: string | null;
+  activated_at: string | null;
 };
 
 function stripeObjectId(value: string | { id?: string | null } | null | undefined) {
@@ -73,29 +85,58 @@ async function canonicalSubscriptionForEvent(event: Stripe.Event) {
   });
 }
 
-async function assertSubscriptionBinding(subscription: Stripe.Subscription, organizationId: string) {
+async function assertSubscriptionBinding(subscription: Stripe.Subscription, organizationId: string): Promise<BillingPlan> {
   const customerId = stripeObjectId(subscription.customer);
   if (!customerId) throw new Error('stripe_add_on_customer_missing');
 
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('subscriptions')
-    .select('stripe_customer_id,stripe_subscription_id')
+    .select('stripe_customer_id,stripe_subscription_id,plan')
     .eq('organization_id', organizationId)
-    .maybeSingle<SubscriptionBinding>();
+    .eq('stripe_subscription_id', subscription.id)
+    .limit(2);
 
   if (error) throw error;
-  if (!data?.stripe_subscription_id) throw new Error('stripe_add_on_subscription_binding_missing');
-  if (data.stripe_subscription_id !== subscription.id) throw new Error('stripe_add_on_subscription_binding_mismatch');
-  if (data.stripe_customer_id && data.stripe_customer_id !== customerId) throw new Error('stripe_add_on_customer_binding_mismatch');
+  const rows = (data ?? []) as SubscriptionBinding[];
+  if (rows.length === 0) throw new Error('stripe_add_on_subscription_binding_missing');
+  if (rows.length !== 1) throw new Error('stripe_add_on_subscription_binding_ambiguous');
+
+  const binding = rows[0];
+  if (binding.stripe_customer_id && binding.stripe_customer_id !== customerId) {
+    throw new Error('stripe_add_on_customer_binding_mismatch');
+  }
+
+  const plan = normalizeBillingPlanId(binding.plan ?? subscription.metadata.plan);
+  if (!plan) throw new Error('stripe_add_on_plan_binding_missing');
+  return plan;
 }
 
-function rowStatus(event: Stripe.Event, subscription: Stripe.Subscription) {
-  if (event.type === 'customer.subscription.deleted') return 'cancelled' as const;
-  if (event.type === 'invoice.payment_failed') return 'past_due' as const;
-  if (event.type === 'invoice.paid') return 'active' as const;
-  if (subscription.status === 'active') return 'active' as const;
-  if (subscription.status === 'past_due' || subscription.status === 'unpaid') return 'past_due' as const;
+export function resolveReconciledAddOnStatus(
+  eventType: string,
+  subscriptionStatus: string,
+  existingStatus?: string | null,
+) {
+  if (eventType === 'customer.subscription.deleted') return 'cancelled' as const;
+  if (eventType === 'invoice.payment_failed') return 'past_due' as const;
+
+  if (eventType === 'invoice.paid') {
+    if (subscriptionStatus === 'canceled' || subscriptionStatus === 'incomplete_expired') return 'cancelled' as const;
+    if (subscriptionStatus === 'unpaid') return 'past_due' as const;
+    return 'active' as const;
+  }
+
+  if (subscriptionStatus === 'past_due' || subscriptionStatus === 'unpaid') return 'past_due' as const;
+  if (subscriptionStatus === 'canceled' || subscriptionStatus === 'incomplete_expired') return 'cancelled' as const;
+  if (subscriptionStatus === 'trialing') return 'trialing' as const;
+
+  if (subscriptionStatus === 'active') {
+    if (existingStatus && PRESERVED_PENDING_PAYMENT_STATUSES.has(existingStatus)) {
+      return existingStatus as 'active' | 'trialing' | 'past_due';
+    }
+    return 'inactive' as const;
+  }
+
   return 'inactive' as const;
 }
 
@@ -122,12 +163,25 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
 
   const organizationId = organizationIdFromSubscription(subscription);
   if (!organizationId) throw new Error('stripe_add_on_organization_missing');
-  await assertSubscriptionBinding(subscription, organizationId);
+  const plan = await assertSubscriptionBinding(subscription, organizationId);
 
   const supabase = createAdminClient();
-  const status = rowStatus(event, subscription);
   const observedAt = new Date(event.created * 1000).toISOString();
   const matchedSlugs = new Set<string>();
+
+  const { data: existingRowsData, error: existingError } = await supabase
+    .from('organization_add_ons')
+    .select('add_on_id,status,stripe_subscription_item_id,activated_at')
+    .eq('organization_id', organizationId);
+  if (existingError) throw existingError;
+
+  const existingRows = (existingRowsData ?? []) as ExistingAddOnRow[];
+  const existingBySlug = new Map(
+    existingRows
+      .filter((row): row is ExistingAddOnRow & { add_on_id: string } => typeof row.add_on_id === 'string' && Boolean(row.add_on_id))
+      .map((row) => [row.add_on_id, row]),
+  );
+
   let reconciled = 0;
 
   if (event.type !== 'customer.subscription.deleted') {
@@ -136,6 +190,16 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
       const slug = getBillingAddOnSlugForStripePriceId(item.price.id);
       if (!slug) continue;
 
+      const addOn = getBillingAddOn(slug);
+      if (!addOn || !isBillingAddOnCommerciallyActive(addOn)) {
+        throw new Error('stripe_add_on_price_not_commercially_active');
+      }
+      if (!isAddOnAvailableForPlan(addOn, plan)) {
+        throw new Error('stripe_add_on_not_available_for_plan');
+      }
+
+      const existing = existingBySlug.get(slug);
+      const status = resolveReconciledAddOnStatus(event.type, subscription.status, existing?.status);
       const period = itemPeriod(item, subscription as SubscriptionWithLegacyPeriod);
       matchedSlugs.add(slug);
 
@@ -148,13 +212,14 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
         quantity: Math.max(1, item.quantity ?? 1),
         current_period_start: period.start,
         current_period_end: period.end,
-        activated_at: status === 'active' ? observedAt : null,
-        cancelled_at: null,
+        activated_at: status === 'active' ? existing?.activated_at ?? observedAt : existing?.activated_at ?? null,
+        cancelled_at: status === 'cancelled' ? observedAt : null,
         metadata: {
           stripe_event_id: event.id,
           stripe_event_type: event.type,
           livemode: event.livemode,
           source: 'stripe_subscription_items',
+          payment_confirmed: event.type === 'invoice.paid',
         },
         updated_at: new Date().toISOString(),
       }, { onConflict: 'organization_id,add_on_id' });
@@ -164,14 +229,8 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
     }
   }
 
-  const { data: existingRows, error: existingError } = await supabase
-    .from('organization_add_ons')
-    .select('add_on_id,status')
-    .eq('organization_id', organizationId);
-  if (existingError) throw existingError;
-
   let removed = 0;
-  for (const existing of existingRows ?? []) {
+  for (const existing of existingRows) {
     const addOnId = typeof existing.add_on_id === 'string' ? existing.add_on_id : null;
     if (!addOnId || matchedSlugs.has(addOnId)) continue;
     if (existing.status === 'cancelled') continue;
@@ -189,6 +248,7 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
           source: 'stripe_subscription_items',
           removal_reconciled: true,
         },
+        updated_at: new Date().toISOString(),
       })
       .eq('organization_id', organizationId)
       .eq('add_on_id', addOnId);
@@ -196,7 +256,7 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
     removed += 1;
   }
 
-  await writeAuditLog({
+  const audit = await writeAuditLog({
     action: 'billing.add_ons_reconciled',
     organizationId,
     userId: null,
@@ -206,17 +266,20 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
       stripeEventId: event.id,
       stripeEventType: event.type,
       livemode: event.livemode,
-      status,
+      plan,
       reconciled,
       removed,
+      paymentConfirmed: event.type === 'invoice.paid',
     },
   });
+
+  if (!audit.persisted) throw new Error('stripe_add_on_reconciliation_audit_unavailable');
 
   return {
     outcome: 'reconciled' as const,
     organizationId,
     subscriptionId: subscription.id,
-    status,
+    plan,
     reconciled,
     removed,
   };
