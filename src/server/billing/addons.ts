@@ -9,6 +9,12 @@ type OrganizationAddOnRow = {
   add_on_id?: string | null;
   status?: string | null;
   current_period_end?: string | null;
+  quantity?: number | null;
+};
+
+export type ActiveOrganizationAddOnSelection = {
+  slug: AddOnId;
+  quantity: number;
 };
 
 export function isActiveAddOnRow(row: OrganizationAddOnRow, now: Date) {
@@ -33,16 +39,11 @@ export function isActiveAddOnRow(row: OrganizationAddOnRow, now: Date) {
   return !Number.isNaN(currentPeriodEnd.getTime()) && currentPeriodEnd > now;
 }
 
-export async function listActiveOrganizationAddOns(organizationId: string): Promise<AddOnId[]> {
+export async function listActiveOrganizationAddOnSelections(organizationId: string): Promise<ActiveOrganizationAddOnSelection[]> {
   const supabase = createAdminClient();
-
-  if (!supabase) {
-    return [];
-  }
-
   const { data, error } = await supabase
     .from('organization_add_ons')
-    .select('add_on_id,status,current_period_end')
+    .select('add_on_id,status,current_period_end,quantity')
     .eq('organization_id', organizationId)
     .in('status', [...ACTIVE_ADD_ON_STATUSES]);
 
@@ -52,13 +53,17 @@ export async function listActiveOrganizationAddOns(organizationId: string): Prom
   }
 
   const now = new Date();
-  const activeIds = new Set<AddOnId>();
+  const selections = new Map<AddOnId, number>();
 
   for (const row of (data ?? []) as OrganizationAddOnRow[]) {
-    if (isActiveAddOnRow(row, now)) {
-      activeIds.add(row.add_on_id as AddOnId);
-    }
+    if (!isActiveAddOnRow(row, now)) continue;
+    const quantity = typeof row.quantity === 'number' && Number.isInteger(row.quantity) && row.quantity > 0 ? row.quantity : 1;
+    selections.set(row.add_on_id as AddOnId, quantity);
   }
 
-  return [...activeIds];
+  return [...selections].map(([slug, quantity]) => ({ slug, quantity }));
+}
+
+export async function listActiveOrganizationAddOns(organizationId: string): Promise<AddOnId[]> {
+  return (await listActiveOrganizationAddOnSelections(organizationId)).map((selection) => selection.slug);
 }
