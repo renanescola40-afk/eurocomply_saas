@@ -10,7 +10,7 @@ This matrix tests the review draft and public Privacy surface requirement-by-req
 
 | Requirement | GDPR | Current source/evidence | State | Gap / closure action |
 |---|---|---|---|---|
-| Controller identity | 13(1)(a), 14(1)(a) | Later attributable owner/operator correspondence designates `SAMUEL CERQUEIRA, UNIPESSOAL LDA` as the RISCK COMPLY operating/contracting entity for review preparation. The old `UNDECIDED` placeholder is superseded. Authoritative registry evidence for registered office/identifiers/signatory authority has not yet been credited, and the public review draft therefore remains fail-closed rather than publishing unverified registered facts. | PARTIAL_PASS_OWNER_DESIGNATED_BLOCKED_REGISTRY_FACTS_PUBLIC_FAIL_CLOSED | Obtain authoritative registry evidence and reconcile the exact registered identity/address/identifiers required for final publication |
+| Controller identity | 13(1)(a), 14(1)(a) | Later attributable owner/operator correspondence designates `SAMUEL CERQUEIRA, UNIPESSOAL LDA` as the RISCK COMPLY operator for review preparation. It does not by itself prove every controller-role allocation or designate the separate customer-contract counterparty. Authoritative registry evidence for registered office/identifiers/signatory authority has not yet been credited, and the public review draft therefore remains fail-closed rather than publishing unverified registered facts. | PARTIAL_PASS_OPERATOR_DESIGNATED_BLOCKED_CONTROLLER_REGISTRY_FACTS_PUBLIC_FAIL_CLOSED | Confirm final controller-role allocation and authoritative registered identity/address/identifiers before final publication; keep contractual counterparty as a separate Terms fact |
 | Controller contact | 13(1)(a), 14(1)(a) | `comercial@risckcomply.com` is the verified privacy intake channel and is present on the canonical public review surface | PASS_PUBLIC_REVIEW_DRAFT | Final entity-linked legal notice mechanics remain separate |
 | DPO contact, if applicable | 13(1)(b), 14(1)(b) | Article 37/CNPD screening result remains `DPO_REQUIRED=UNCERTAIN`; public draft explicitly makes no DPO appointment/requirement claim while facts are unresolved | BLOCKED_APPLICABILITY_FACTS_PUBLIC_FAIL_CLOSED | Resolve scale/sensitive-data/monitoring applicability facts; do not invent DPO/contact |
 | Purposes | 13(1)(c), 14(1)(c) | Privacy review draft, RoPA/controller matrix and the public review surface describe account, service delivery, security, billing, support/business enquiries, essential communications and optional analytics purposes | PASS_PUBLIC_REVIEW_DRAFT | Keep synchronized with actual product/provider configuration |
@@ -38,8 +38,8 @@ The current review surface:
 - publishes the verified privacy contact;
 - covers scope/roles, categories, purposes, legal-basis review boundary, recipients, transfers, retention criteria, rights, consent withdrawal, required/optional data, sources, automated decision-making, security, complaints and changes;
 - embeds persistent analytics consent controls;
-- does not invent a DPO, final transfer conclusion or compliance certification;
-- continues to fail closed on registered entity details until authoritative registry evidence is reconciled.
+- does not invent a DPO, final transfer conclusion, final controller registered facts or compliance certification;
+- continues to fail closed on registered entity/controller details until authoritative evidence and role allocation are reconciled.
 
 The rights lifecycle/runtime gate is also closed technically: Data Governance V2 passed on exact SHA and issue #2009 is closed. DPA and Subprocessors/Transfers review structures have subsequently merged without promoting unresolved contractual/legal facts.
 
@@ -51,7 +51,7 @@ PRIVACY_REVIEW_DRAFT=SUBSTANTIALLY_MAPPED
 PUBLIC_PRIVACY_ART13_14_STRUCTURE=PASS_CANONICAL_MAIN_REVIEW_DRAFT
 PUBLIC_PRIVACY_LIVE_SURFACE=PASS_VERSION_0_2_REVIEW
 OWNER_DESIGNATED_OPERATOR_ENTITY=PASS_FOR_REVIEW_PREPARATION
-PUBLIC_PRIVACY_CONTROLLER_REGISTRY_FACTS=BLOCKED_AUTHORITATIVE_EVIDENCE_FAIL_CLOSED
+PUBLIC_PRIVACY_CONTROLLER_ROLE_AND_REGISTRY_FACTS=BLOCKED_AUTHORITATIVE_EVIDENCE_AND_REVIEW_FAIL_CLOSED
 PUBLIC_PRIVACY_LEGAL_BASES=PENDING_QUALIFIED_REVIEW_FAIL_CLOSED
 PUBLIC_PRIVACY_PROVIDER_AND_TRANSFER_FACTS=PARTIAL_ADVANCED_OPEN
 PUBLIC_PRIVACY_DPO_APPLICABILITY=BLOCKED_FACTS_FAIL_CLOSED
@@ -69,18 +69,20 @@ ANALYTICS_CONSENT_PUBLIC_WITHDRAWAL=PASS_CANONICAL_MAIN
 TRANSFER_STRUCTURE=PASS_CANONICAL_MAIN_REVIEW_DRAFT
 RETENTION_STRUCTURE=PASS_PRE_REVIEW
 PUBLIC_PRIVACY_ART13_14_COMPLETENESS=STRUCTURE_IMPLEMENTED_BLOCKED_FINAL_FACTS_AND_QUALIFIED_REVIEW
-PRIVACY_ART13_14_MAPPING=BLOCKED_REGISTRY_PROVIDER_LEGAL_DECISIONS
+PRIVACY_ART13_14_MAPPING=BLOCKED_CONTROLLER_REGISTRY_PROVIDER_LEGAL_DECISIONS
 ```
 
 ## Remaining closure sequence
 
 The repository-controlled public Privacy and exact-SHA rights/runtime implementation steps are complete. Remaining closure is evidence/decision driven:
 
-1. obtain authoritative registry evidence for the already owner-designated RISCK COMPLY operator/contracting entity and populate only verified registered fields;
+1. confirm the final controller-role allocation and obtain authoritative registry evidence for any entity identified as controller/operator; populate only verified registered fields;
 2. qualified review validates final controller-side legal bases / legitimate-interest allocations and DPO applicability where required;
 3. close remaining active-provider recipients/transfers with account evidence and qualified transfer conclusions;
 4. approve remaining non-fiscal retention criteria/provider rotation;
 5. bind remaining Article 14 indirect flows to runtime notice evidence;
 6. only after those facts/decisions are accepted, promote the review draft to final/effective Privacy text.
+
+The customer contracting/seller entity remains a separate Terms/fiscal fact and must not be inferred from the Privacy controller/operator evidence.
 
 No internal source implementation, CI result, exact-SHA artifact, provider support statement or AI-generated conclusion substitutes for qualified external legal judgment.
