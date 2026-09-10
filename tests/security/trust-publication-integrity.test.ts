@@ -36,9 +36,11 @@ describe('canonical Trust Center publication integrity', () => {
     expect(publicPack).not.toContain('governed V21 Production promotion remains separate and currently unapplied');
     expect(publicPack).not.toContain('Current direct Production deployment binding is proven on the current release');
 
-    expect(providerRegister).toContain('CURRENT_OVERLAY_ACTIVE');
+    expect(providerRegister).toContain('PROVIDER_FACTUAL_RECONCILIATION=CURRENT_CONNECTED_ACCOUNT_ADDENDUM_ACTIVE');
     expect(providerRegister).toContain('2026-09-09-provider-current-overlay.md');
-    expect(providerRegister).toContain('SUPABASE_V41_LIVE: 13/13');
-    expect(providerRegister).toContain('LEGITIMATE_LIVE_SUBSCRIPTION_AUTHORITY: 0');
+    expect(providerRegister).toContain('SUPABASE_PROJECT_REGION=PASS_CURRENT_2026-09-10');
+    expect(providerRegister).toContain('STRIPE_LIVE_ACCOUNT_DISCOVERY=PASS_CURRENT_2026-09-10');
+    expect(providerRegister).toContain('PROTECTED_PROVIDER_RUNTIME_ACCEPTANCE=OPEN');
+    expect(providerRegister).toContain('generic LIVE account discovery remain non-crediting for a real customer lifecycle');
   });
 });
