@@ -1,0 +1,25 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed by the protected read-only drift audit:
+--   version: 20260909231011
+--   provider name: harden_data_subject_request_lifecycle
+--   source drift run: 34479350114
+--   source artifact: 10153540158
+--   source artifact SHA-256: 5a73c8065724d8f667ccee0a21ac918a62d8befeb27f56960585bd747c940f28
+--
+-- Canonical repository source representing the same lifecycle hardening:
+--   canonical source version: 20260909143000
+--   local source: supabase/migrations/20260909143000_harden_data_subject_request_lifecycle.sql
+--   local source SHA-256: be53260ccab9a4682e109b07112b0ee72c0db5dc51356c08d85d4de1cc9eec05
+--
+-- Read-only Production migration-history inspection confirmed that the provider
+-- ledger contains this remote identity while the repository source uses the
+-- earlier canonical timestamp above. The remote body applies the same DSR
+-- lifecycle fields, constraints, FORCE RLS/server-only mutation boundary,
+-- indexes, and fail-closed postconditions represented by the local source.
+--
+-- This file is provenance only. It is recognized only after strict comment-only,
+-- source-version and source-digest validation and does not claim that unrelated
+-- local-only migrations are deployed or authorize a general db push.
+--
+-- No DDL. No SQL execution. No migration-history repair. No database write.

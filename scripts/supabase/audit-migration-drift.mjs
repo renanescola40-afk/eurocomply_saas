@@ -59,6 +59,7 @@ function parseRecordOnlyMetadata(text) {
   const markerPresent = text.includes('RECONCILIATION RECORD ONLY') && text.includes('DO NOT EXECUTE');
   const commentOnly = nonEmptyLines.length > 0 && nonEmptyLines.every((line) => line.startsWith('--'));
   const declaredVersion = text.match(/^--\s+version:\s*(\d{14})\s*$/m)?.[1] ?? null;
+  const canonicalSourceVersion = text.match(/^--\s+canonical source version:\s*(\d{14})\s*$/m)?.[1] ?? null;
   const localSource = text.match(/^--\s+local source:\s*(supabase\/migrations\/[^\s]+\.sql)\s*$/m)?.[1] ?? null;
   const localSourceSha256 = text.match(/^--\s+local source SHA-256:\s*([a-f0-9]{64})\s*$/m)?.[1] ?? null;
 
@@ -66,6 +67,7 @@ function parseRecordOnlyMetadata(text) {
     markerPresent,
     commentOnly,
     declaredVersion,
+    canonicalSourceVersion,
     localSource,
     localSourceSha256,
   };
@@ -100,6 +102,7 @@ async function readSqlDirectory(directory) {
         recordOnly: recordMetadata.markerPresent,
         recordCommentOnly: recordMetadata.commentOnly,
         recordDeclaredVersion: recordMetadata.declaredVersion,
+        recordCanonicalSourceVersion: recordMetadata.canonicalSourceVersion,
         recordLocalSource: recordMetadata.localSource,
         recordLocalSourceSha256: recordMetadata.localSourceSha256,
       };
@@ -120,7 +123,20 @@ function validateRecordOnlyReconciliation(entry, localByFilename) {
   const sourceEntry = sourceFilename ? localByFilename.get(sourceFilename) : null;
   if (!entry.recordLocalSource) failures.push('missing_local_source');
   if (!sourceEntry) failures.push('local_source_not_found');
-  if (sourceEntry && sourceEntry.version !== entry.version) failures.push('local_source_version_mismatch');
+  if (sourceEntry) {
+    if (sourceEntry.version !== entry.version) {
+      if (!entry.recordCanonicalSourceVersion) {
+        failures.push('missing_canonical_source_version');
+      } else if (entry.recordCanonicalSourceVersion !== sourceEntry.version) {
+        failures.push('canonical_source_version_mismatch');
+      }
+    } else if (
+      entry.recordCanonicalSourceVersion
+      && entry.recordCanonicalSourceVersion !== sourceEntry.version
+    ) {
+      failures.push('canonical_source_version_mismatch');
+    }
+  }
   if (!entry.recordLocalSourceSha256) failures.push('missing_local_source_sha256');
   if (
     sourceEntry
@@ -134,6 +150,8 @@ function validateRecordOnlyReconciliation(entry, localByFilename) {
     valid: failures.length === 0,
     failures,
     sourceFilename,
+    sourceVersion: sourceEntry?.version ?? null,
+    canonicalSourceVersion: entry.recordCanonicalSourceVersion,
     sourceSha256Matches: Boolean(
       sourceEntry
       && entry.recordLocalSourceSha256
@@ -144,11 +162,12 @@ function validateRecordOnlyReconciliation(entry, localByFilename) {
 
 function isRecognizedReconciliationVersion(entry) {
   if (!entry.validShape) return false;
-  // Normal reconciliation SQL still requires a valid civil timestamp.
-  // A non-calendar 14-digit provider ledger identifier is accepted only when
-  // a strict, comment-only reconciliation record binds that exact version to
-  // an existing local migration whose SHA-256 matches the declared digest.
-  return entry.validTimestamp || entry.recordValidation.valid;
+  // Any file that declares itself a non-executable reconciliation record must
+  // satisfy the strict metadata/digest contract, even when its provider ledger
+  // identifier also happens to be a valid civil timestamp. Ordinary executable
+  // reconciliation SQL retains the historical valid-timestamp path.
+  if (entry.recordOnly) return entry.recordValidation.valid;
+  return entry.validTimestamp;
 }
 
 function markdownList(items, formatter) {
@@ -277,6 +296,7 @@ const reconciliationManifest = {
     nonCalendarRemoteVersionRequiresRecordOnlyReconciliation: true,
     recordOnlyReconciliationMustBeCommentOnly: true,
     recordOnlyReconciliationMustBindExactSourceDigest: true,
+    recordOnlyVersionMappingRequiresCanonicalSourceVersion: true,
   },
   counts: {
     localFiles: localInventory.length,
@@ -381,7 +401,7 @@ markdown += '\n## Reconciliation inventory\n\n';
 markdown += '- `migration-reconciliation-inventory.json` contains every SQL file digest and an `UNCLASSIFIED` decision record for every file involved in a local-only, invalid-timestamp, or duplicate-version blocker.\n';
 markdown += '- The audit never infers that a migration is already applied, safe to deploy, superseded, or archival.\n';
 markdown += '- Classification requires schema evidence and explicit reviewer attribution.\n';
-markdown += '- A non-calendar 14-digit remote ledger identifier is recognized only by a strict comment-only reconciliation record that declares the same version, an existing local migration source, and its exact SHA-256 digest.\n';
+markdown += '- Every comment-only reconciliation record must validate its declared provider version and exact local-source SHA-256. A remote provider version mapped to a differently versioned canonical source must also declare that canonical source version explicitly.\n';
 markdown += '\n## Invalid local migrations (legacy advisory)\n\n';
 markdown += markdownList(invalidLocal, (item) => `\`${item.filename}\` — SHA-256 \`${item.sha256}\``);
 markdown += '\n## Duplicate versions (legacy advisory)\n\n';
@@ -396,7 +416,7 @@ markdown += '\n## Safety boundary\n\n';
 markdown += '- Read-only audit; no database objects or migration history were changed.\n';
 markdown += '- Unknown remote-only migrations remain a hard failure.\n';
 markdown += '- Controlled remote hotfixes must have a matching versioned file in `supabase/reconciliation`.\n';
-markdown += '- Non-calendar remote ledger identifiers require a comment-only, digest-bound, non-executable reconciliation record.\n';
+markdown += '- Any `RECONCILIATION RECORD ONLY` file is recognized only after comment-only, digest-bound validation, even when its ledger identifier is a valid timestamp.\n';
 markdown += '- Local-only migrations are expected for a PR and remain pending until controlled deployment.\n';
 markdown += '- `--require-deployable` also blocks invalid timestamps and duplicate versions.\n';
 markdown += '- Do not use `supabase db push --include-all` to bypass this report.\n';
