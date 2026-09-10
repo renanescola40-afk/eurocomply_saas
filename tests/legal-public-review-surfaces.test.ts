@@ -111,6 +111,16 @@ describe('public legal review surfaces', () => {
     expect(source).not.toContain('99.9%');
   });
 
+  it('fails untranslated DPA locales closed to the complete English clause set', async () => {
+    const source = await readFile(DPA_PAGE, 'utf8');
+
+    expect(source).toContain('const copy: Partial<Record<Locale, DpaCopy>> = { en, pt }');
+    expect(source).toContain('const page = copy[locale] ?? en');
+    expect(source).toContain('Special-category or criminal-offence data is not accepted as an ordinary default use case');
+    expect(source).toContain('unless Union or Member-State law requires otherwise');
+    expect(source).toContain('If an instruction appears to infringe applicable data-protection law');
+  });
+
   it('links the consent surface to cookie policy and exposes consent withdrawal controls', async () => {
     const [banner, legalPage, privacyPage] = await Promise.all([
       readFile(CONSENT_BANNER, 'utf8'),
