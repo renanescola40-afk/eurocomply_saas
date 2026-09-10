@@ -31,16 +31,16 @@ Current attributable operating model for review preparation:
 ```text
 RISCK_COMPLY_TRADE_NAME=RISCK_COMPLY
 RISCK_COMPLY_OPERATOR_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
-RISCK_COMPLY_CONTRACTING_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
+RISCK_COMPLY_CONTRACTING_ENTITY=OPEN_OWNER_CONFIRMATION
 AUTHORITATIVE_REGISTRY_EVIDENCE=PENDING
 REGISTERED_OFFICE=PENDING_AUTHORITATIVE_EVIDENCE
 REGISTERED_IDENTIFIERS=PENDING_AUTHORITATIVE_EVIDENCE
 SIGNATORY_AUTHORITY=PENDING_WHERE_REQUIRED
 ```
 
-The old `UNDECIDED` / family-candidate model is superseded for reviewer preparation. Later owner/operator correspondence identifies **SAMUEL CERQUEIRA, UNIPESSOAL LDA** as the operator of RISCK COMPLY in Portugal.
+Later owner/operator correspondence identifies **SAMUEL CERQUEIRA, UNIPESSOAL LDA** as the operator of RISCK COMPLY in Portugal. That evidence does not expressly designate the same company as the customer-contract counterparty. Counsel must therefore treat the contracting entity as an open owner fact rather than infer it from operator status.
 
-This designation does not license the reviewer pack to invent the registered office, company/tax identifiers, corporate objects or signatory authority. Any final opinion or public legal text requiring those fields must use authoritative registry/owner evidence.
+The pack also does not license the reviewer to invent the registered office, company/tax identifiers, corporate objects or signatory authority. Any final opinion or public legal text requiring those fields must use authoritative registry/owner evidence.
 
 ## 3. Product in one paragraph
 
@@ -62,7 +62,7 @@ MASTER_LEGAL_OPINION=OPEN
 
 The public Privacy and Terms pages deliberately identify themselves as `REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED`; they are not represented as effective legal approval.
 
-Provider/account factual evidence has also advanced, including a direct Supabase Privacy Team statement about DPA incorporation and an attributable PostHog DPA completion notice. Those provider facts do not resolve Chapter V/transfer legal conclusions or every account-specific configuration fact.
+Provider/account factual evidence has also advanced, including a direct Supabase Privacy Team statement about DPA incorporation and an attributable PostHog DPA completion notice. Those provider facts do not resolve Chapter V/transfer legal conclusions, customer-contract counterparty identity or every account-specific configuration fact.
 
 ## 5. Review material already prepared
 
@@ -149,7 +149,7 @@ Existing owner positions for counsel review include end-of-paid-period self-serv
 After all eight workstreams have valid terminal decisions satisfying the acceptance contract, obtain a consolidated Master Legal Opinion / equivalent attributable qualified conclusion covering:
 
 - scope and product;
-- operator/contracting entity;
+- confirmed operator and separately confirmed contracting entity;
 - release/evidence subject;
 - all eight workstream outcomes;
 - assumptions and limitations;
@@ -167,7 +167,8 @@ Official European Commission / AI Office guidance is highly valuable and should 
 
 ```text
 FREE_COUNSEL_PACK=READY_FOR_BOUNDED_EXTERNAL_REVIEW
-RISCK_COMPLY_CONTRACTING_ENTITY=OWNER_DESIGNATED_REGISTRY_EVIDENCE_PENDING
+RISCK_COMPLY_OPERATOR_ENTITY=OWNER_DESIGNATED_REGISTRY_EVIDENCE_PENDING
+RISCK_COMPLY_CONTRACTING_ENTITY=OPEN_OWNER_CONFIRMATION
 LEGAL_8_OF_8=0/8_ACCEPTED
 QUALIFIED_REVIEWS_ACCEPTED=0
 MASTER_LEGAL_OPINION=OPEN
