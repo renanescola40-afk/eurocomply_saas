@@ -116,7 +116,10 @@ async function assertSubscriptionBinding(subscription: Stripe.Subscription, orga
   if (rows.length !== 1) throw new Error('stripe_add_on_subscription_binding_ambiguous');
 
   const binding = rows[0];
-  if (binding.stripe_customer_id && binding.stripe_customer_id !== customerId) {
+  if (!binding.stripe_customer_id) {
+    throw new Error('stripe_add_on_customer_binding_missing');
+  }
+  if (binding.stripe_customer_id !== customerId) {
     throw new Error('stripe_add_on_customer_binding_mismatch');
   }
 
