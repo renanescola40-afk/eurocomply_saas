@@ -6,12 +6,13 @@ const MIDDLEWARE = new URL('../src/middleware.ts', import.meta.url);
 const COMMERCIAL_POLICY = new URL('../src/lib/security/commercial-route-policy.ts', import.meta.url);
 const LEGAL_PAGE = new URL('../src/components/legal/public-legal-review-page.tsx', import.meta.url);
 const PRIVACY_PAGE = new URL('../src/app/[locale]/privacy/page.tsx', import.meta.url);
+const DPA_PAGE = new URL('../src/app/[locale]/dpa/page.tsx', import.meta.url);
 const COOKIE_PAGE = new URL('../src/app/[locale]/cookie-policy/page.tsx', import.meta.url);
 const ACCEPTABLE_USE_PAGE = new URL('../src/app/[locale]/acceptable-use/page.tsx', import.meta.url);
 const TRANSFERS_PAGE = new URL('../src/app/[locale]/transfers/page.tsx', import.meta.url);
 const CONSENT_BANNER = new URL('../src/components/analytics/AnalyticsConsentBanner.tsx', import.meta.url);
 
-const PUBLIC_LEGAL_ROUTES = ['/privacy', '/cookie-policy', '/acceptable-use', '/transfers'] as const;
+const PUBLIC_LEGAL_ROUTES = ['/privacy', '/dpa', '/cookie-policy', '/acceptable-use', '/transfers'] as const;
 
 describe('public legal review surfaces', () => {
   it('keeps the review routes public in both routing authorities', async () => {
@@ -35,15 +36,17 @@ describe('public legal review surfaces', () => {
   });
 
   it('version-tags each legal review document without company placeholders', async () => {
-    const [privacy, cookie, acceptableUse, transfers] = await Promise.all([
+    const [privacy, dpa, cookie, acceptableUse, transfers] = await Promise.all([
       readFile(PRIVACY_PAGE, 'utf8'),
+      readFile(DPA_PAGE, 'utf8'),
       readFile(COOKIE_PAGE, 'utf8'),
       readFile(ACCEPTABLE_USE_PAGE, 'utf8'),
       readFile(TRANSFERS_PAGE, 'utf8'),
     ]);
 
     expect(privacy).toContain('version="0.2-review"');
-    for (const source of [privacy, cookie, acceptableUse, transfers]) {
+    expect(dpa).toContain('version="0.2-review"');
+    for (const source of [privacy, dpa, cookie, acceptableUse, transfers]) {
       expect(source).toContain('lastUpdated={LAST_UPDATED}');
       expect(source).not.toMatch(/\[COMPANY|\[ADDRESS|\bTODO\b|\bTBD\b|example\.com/i);
     }
@@ -78,6 +81,34 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('legal entity and its registered identifiers are still pending authoritative founder/entity confirmation');
     expect(source).not.toContain('SAMUEL CERQUEIRA, UNIPESSOAL LDA');
     expect(source).not.toMatch(/\bNIF\b|\bNIPC\b/);
+  });
+
+  it('publishes the Article 28 DPA structure without fabricating an executed agreement', async () => {
+    const source = await readFile(DPA_PAGE, 'utf8');
+
+    expect(source).toContain('documentId="data-processing-addendum"');
+    expect(source).toContain('Parties, status and scope');
+    expect(source).toContain('Controller and processor roles');
+    expect(source).toContain('Processing details');
+    expect(source).toContain('Documented instructions');
+    expect(source).toContain('Confidentiality and access control');
+    expect(source).toContain('Security and technical measures');
+    expect(source).toContain('Subprocessors');
+    expect(source).toContain('International transfers');
+    expect(source).toContain('Data-subject request assistance');
+    expect(source).toContain('Security, DPIA and prior-consultation assistance');
+    expect(source).toContain('Personal-data breaches');
+    expect(source).toContain('Return, deletion and retention');
+    expect(source).toContain('Information and audit rights');
+    expect(source).toContain('Precedence, liability and final acceptance');
+    expect(source).toContain('eu-west-1 (Ireland)');
+    expect(source).toContain('Decision (EU) 2021/915');
+    expect(source).toContain('REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED');
+
+    expect(source).toContain('final RISCK COMPLY contracting/operator legal entity and its registered identifiers are still pending authoritative founder/entity confirmation');
+    expect(source).not.toContain('SAMUEL CERQUEIRA, UNIPESSOAL LDA');
+    expect(source).not.toMatch(/\bNIF\b|\bNIPC\b/);
+    expect(source).not.toContain('99.9%');
   });
 
   it('links the consent surface to cookie policy and exposes consent withdrawal controls', async () => {
