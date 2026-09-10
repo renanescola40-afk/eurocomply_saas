@@ -137,8 +137,10 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('GitHub-hosted runners');
     expect(source).toContain('Upstash');
     expect(source).toContain('BLOCKED is the correct state');
+    expect(source).toContain('does not represent any SCC as executed unless account-specific evidence supports it');
 
-    expect(source).not.toMatch(/\bSCC[^\n]{0,80}(executed|signed|accepted)\b/i);
+    expect(source).not.toContain('SCCs are executed');
+    expect(source).not.toContain('all international transfers are compliant');
   });
 
   it('fails untranslated transfer locales closed to the complete English review text', async () => {
