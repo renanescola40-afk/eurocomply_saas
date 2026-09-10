@@ -49,11 +49,12 @@ The 80/50 working scores remain conservative because the repository still has no
 | Public Privacy review structure | PASS_CANONICAL_MAIN_AND_LIVE_REVIEW_SURFACE | Entity/provider/legal-basis/DPO/qualified-review gates remain |
 | Public DPA review structure | PASS_CANONICAL_MAIN | Entity, provider/transfer facts and qualified Art. 28 review remain |
 | Subprocessors / Transfers review structure | PASS_CANONICAL_MAIN | Account-specific contracts, locations, mechanisms and qualified Chapter V decisions remain |
-| Public Terms review structure | PASS_CANONICAL_MAIN_AND_LIVE_REVIEW_SURFACE | Final risk allocation, tax facts, entity registry facts and qualified review remain |
+| Public Terms review structure | PASS_CANONICAL_MAIN_AND_LIVE_REVIEW_SURFACE | Final risk allocation, tax facts, entity/counterparty facts and qualified review remain |
 | Public claims guard posture | PASS_SAFE_BOUNDARY | Continue blocking unsupported certification/compliance guarantees |
-| Owner/operator entity selection | OWNER_DESIGNATED | Authoritative registry facts still required before final publication |
+| RISCK COMPLY operator entity | OWNER_DESIGNATED | `SAMUEL CERQUEIRA, UNIPESSOAL LDA` supported by attributable operator correspondence; registry facts still required |
+| RISCK COMPLY customer contracting entity | OPEN_OWNER_CONFIRMATION | Do not infer customer-contract counterparty from operator status alone |
 | Provider DPA factual evidence | PARTIAL_ADVANCED | Supabase and PostHog facts advanced; transfer/project/account details remain |
-| VAT/seller tax model | OPEN_EXTERNAL_FACT | Accountant/tax-authority/Stripe evidence required |
+| VAT/seller tax model | OPEN_EXTERNAL_FACT | Contracting/seller entity + accountant/tax-authority/Stripe evidence required |
 | Master Legal Opinion | OPEN_EXTERNAL | Only after valid 8/8 workstream outcomes |
 
 ## Accepted historical exact-SHA Data Governance proof
@@ -102,7 +103,7 @@ The pages are deliberately review drafts. Final/effective publication remains bl
 
 ```text
 RISCK_COMPLY_OPERATOR_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
-RISCK_COMPLY_CONTRACTING_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
+RISCK_COMPLY_CONTRACTING_ENTITY=OPEN_OWNER_CONFIRMATION
 RISCK_COMPLY_TRADE_NAME=RISCK_COMPLY
 AUTHORITATIVE_REGISTRY_EVIDENCE=PENDING
 ENTITY_REGISTERED_OFFICE=PENDING
@@ -111,7 +112,7 @@ ENTITY_SIGNATORY_AUTHORITY=PENDING_WHERE_REQUIRED
 ENTITY_FINAL_PUBLICATION=BLOCKED
 ```
 
-The owner designation supersedes `UNDECIDED` for reviewer preparation. The exact registered office, company/tax identifiers and signatory facts must still come from authoritative evidence before publication; no value is guessed here.
+Attributable correspondence supports the operator designation. It does not expressly designate the customer-contract counterparty, so that separate fact remains open. The exact registered office, company/tax identifiers and signatory facts must also come from authoritative evidence before publication; no value is guessed here.
 
 ## Owner commercial positions
 
@@ -134,7 +135,7 @@ VERCEL_PRODUCTION_DEPLOYMENT=READY_SHA_13b19410_AT_2026_09_10_OBSERVATION
 SUPABASE_PROJECT_REGION=PASS_CURRENT_EU_WEST_1
 SUPABASE_DPA_PROVIDER_CONFIRMATION=DPA_INCORPORATED_IN_TERMS_FOR_CUSTOMERS_FROM_2026_08_01
 SUPABASE_TRANSFER_TIA_CONCLUSION=OPEN
-POSTHOG_ACCOUNT_LINKED_DPA_COMPLETION_EVIDENCE=PRESENT_FOR_OWNER_DESIGNATED_ENTITY
+POSTHOG_ACCOUNT_LINKED_DPA_COMPLETION_EVIDENCE=PRESENT_FOR_OPERATOR_DESIGNATED_ENTITY
 POSTHOG_PRODUCTION_PROJECT_BINDING=OPEN
 POSTHOG_RETENTION_TRANSFER_LEGAL_INTERPRETATION=OPEN
 STRIPE_LIVE_ACCOUNT_DISCOVERY=PASS
@@ -142,13 +143,13 @@ STRIPE_ACCOUNT_LEGAL_DETAIL=OPEN
 PROVIDER_FACTUAL_CLOSURE=PARTIAL
 ```
 
-The Supabase fact is a direct provider Privacy Team statement. The PostHog fact is an attributable PandaDoc completion notice. Neither fact independently proves all applicable transfer mechanisms, locations, retention, or qualified legal sufficiency.
+The Supabase fact is a direct provider Privacy Team statement. The PostHog fact is an attributable PandaDoc completion notice. Neither fact independently proves customer-contract counterparty identity, all applicable transfer mechanisms, locations, retention, or qualified legal sufficiency.
 
 ## GDPR / Privacy boundary
 
 Repository-controlled structure and technical lifecycle controls are substantially implemented. Terminal legal closure still requires, where applicable:
 
-- authoritative controller/operator registered facts;
+- authoritative controller/operator registered facts and explicit contracting/seller-entity designation where relevant;
 - final legal-basis and legitimate-interest review;
 - DPO applicability decision from complete facts;
 - provider recipients/transfers and retention conclusions;
@@ -181,7 +182,7 @@ No repository commit, AI-generated conclusion, automated review, CI result, offi
 
 ## Genuine terminal blockers
 
-1. authoritative registered entity/seller evidence for the owner-designated company;
+1. explicit owner designation of the RISCK COMPLY customer contracting/seller entity plus authoritative registered evidence for the selected company;
 2. Portuguese VAT regime, registrations and supported B2B sales matrix through attributable tax/accounting authority;
 3. remaining account-specific provider DPA/processing/retention/transfer facts, especially actual PostHog Production attribution if enabled;
 4. remaining material Terms owner decisions and qualified enforceability/risk-allocation review;
@@ -193,7 +194,8 @@ No repository commit, AI-generated conclusion, automated review, CI result, offi
 ## Current shortest path
 
 ```text
-ENTITY_REGISTRY_FACTS
+CONTRACTING_ENTITY_OWNER_DESIGNATION
+→ ENTITY_REGISTRY_FACTS
 → FISCAL_VAT_FACTS
 → PROVIDER_ACCOUNT_TRANSFER_FACTS
 → REMAINING_OWNER_TERMS_DECISIONS
