@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isAddOnCheckoutEnabled } from '@/server/billing/add-on-release';
 import { readBillingIdempotencyKey } from '@/server/billing/idempotency';
 import { isSelfServePlan, normalizeBillingPlanId } from '@/server/billing/plans';
 import {
@@ -73,6 +74,10 @@ export async function POST(request: Request) {
 
     const parsed = schema.safeParse(await readBoundedJsonRequest(request, { maxBytes: BODY_MAX_BYTES }).catch(() => null));
     if (!parsed.success) return noStoreJson({ error: 'invalid_billing_lifecycle_request' }, { status: 400 });
+
+    if (parsed.data.action === 'replace_add_ons' && !isAddOnCheckoutEnabled()) {
+      return noStoreJson({ error: 'add_on_checkout_not_enabled' }, { status: 409 });
+    }
 
     // Explicit annual plan transitions remain closed until their full public plan
     // checkout contract is enabled. Add-on replacement may omit interval and inherit
