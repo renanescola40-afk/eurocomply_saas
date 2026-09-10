@@ -11,10 +11,13 @@ const DASHBOARD_BILLING_RETURN_PATH = '/dashboard/organizations/billing';
 const PUBLIC_BILLING_ERROR_CODE = 'action_failed';
 const PUBLIC_PAID_GA_ERROR_CODE = 'public_paid_ga_not_enabled';
 
+type AddOnSelection = { slug: string; quantity: number };
+
 type BillingActionButtonProps = {
-  action: 'checkout' | 'portal';
+  action: 'checkout' | 'portal' | 'replace_add_ons';
   locale: string;
   planId?: string;
+  addOns?: AddOnSelection[];
   disabled?: boolean;
   children: ReactNode;
   variant?: 'default' | 'outline';
@@ -53,13 +56,13 @@ function getStepUpCopy(locale: string): StepUpCopy {
       };
     case 'fr':
       return {
-        chooseFactor: 'Choisissez une méthode d’authentification multifacteur pour continuer la facturation :',
-        enterCode: 'Saisissez le code d’authentification multifacteur pour continuer la facturation.',
+        chooseFactor: 'Choisissez une méthode d’authentification multifactorielle pour continuer la facturation :',
+        enterCode: 'Saisissez le code d’authentification multifactorielle pour continuer la facturation.',
       };
     case 'it':
       return {
         chooseFactor: 'Scegli un metodo di autenticazione a più fattori per continuare con la fatturazione:',
-        enterCode: 'Inserisci il codice di autenticazione a più fattori per continuare con la fatturazione.',
+        enterCode: 'Inserisci il codice di autenticazione a più fattori per continuare la fatturazione.',
       };
     case 'de':
       return {
@@ -187,12 +190,14 @@ async function requestBillingAction({
   action,
   locale,
   planId,
+  addOns,
   idempotencyKey,
   stepUpToken,
 }: {
   action: BillingActionButtonProps['action'];
   locale: string;
   planId?: string;
+  addOns?: AddOnSelection[];
   idempotencyKey: string;
   stepUpToken?: string;
 }) {
@@ -201,6 +206,15 @@ async function requestBillingAction({
     [BILLING_IDEMPOTENCY_HEADER]: idempotencyKey,
   };
   if (stepUpToken) headers[STEP_UP_TOKEN_HEADER] = stepUpToken;
+
+  if (action === 'replace_add_ons') {
+    const response = await fetch('/api/billing/subscription', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ action: 'replace_add_ons', addOns: addOns ?? [] }),
+    });
+    return { response, json: await readJson(response) };
+  }
 
   const portalUrl = `/api/billing/portal?locale=${encodeURIComponent(locale)}&returnPath=${encodeURIComponent(DASHBOARD_BILLING_RETURN_PATH)}`;
   const response = await fetch(action === 'checkout' ? '/api/billing/checkout' : portalUrl, {
@@ -213,7 +227,7 @@ async function requestBillingAction({
   return { response, json };
 }
 
-export function BillingActionButton({ action, locale, planId, disabled, children, variant = 'default', className, errorReturnHref }: BillingActionButtonProps) {
+export function BillingActionButton({ action, locale, planId, addOns, disabled, children, variant = 'default', className, errorReturnHref }: BillingActionButtonProps) {
   const [loading, setLoading] = useState(false);
   const [paidGaUnavailable, setPaidGaUnavailable] = useState<string | null>(null);
 
@@ -226,15 +240,21 @@ export function BillingActionButton({ action, locale, planId, disabled, children
     const idempotencyKey = crypto.randomUUID();
 
     try {
-      let { response, json } = await requestBillingAction({ action, locale, planId, idempotencyKey });
+      let { response, json } = await requestBillingAction({ action, locale, planId, addOns, idempotencyKey });
 
       if (response.status === 403 && json.error === 'step_up_required') {
         const stepUpToken = await getBillingStepUpToken(locale);
-        ({ response, json } = await requestBillingAction({ action, locale, planId, idempotencyKey, stepUpToken }));
+        ({ response, json } = await requestBillingAction({ action, locale, planId, addOns, idempotencyKey, stepUpToken }));
       }
 
       if (!response.ok && json.error === PUBLIC_PAID_GA_ERROR_CODE) {
         setPaidGaUnavailable(getPublicPaidGaUnavailableCopy(locale));
+        return;
+      }
+
+      if (action === 'replace_add_ons') {
+        if (!response.ok) billingErrorRedirect(locale, errorReturnHref);
+        window.location.reload();
         return;
       }
 
