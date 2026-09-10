@@ -90,13 +90,15 @@ Use delta review where possible. A reviewer should not be asked to review the en
 
 ## 6. Requested eight decisions
 
-For each workstream within scope, return exactly one terminal decision compatible with the current acceptance contract:
+`docs/legal-review-preparation/counsel-efficiency/COUNSEL_DECISION_CATALOG.json` is the canonical decision vocabulary. `HUMAN_REVIEW_REQUIRED` is the pre-review/default state. When a reviewer reaches a disposition for an in-scope workstream, use one of the canonical review decisions:
 
 - `ACCEPTED`
+- `ACCEPTED_WITH_CHANGES`
 - `CHANGES_REQUIRED`
-- `NOT_APPLICABLE_WITH_RATIONALE`
+- `REJECTED`
+- `OUTSIDE_SCOPE`
 
-Silence, package completeness, source implementation, CI success or provider correspondence is not acceptance.
+Do not introduce a parallel decision value that cannot be represented in the canonical catalogue. If an applicability question is outside a reviewer's scope, record `OUTSIDE_SCOPE` plus the substantive rationale in the findings/comments rather than inventing a new enum. Silence, package completeness, source implementation, CI success or provider correspondence is not acceptance.
 
 | # | Canonical workstream | Core question | Package family |
 |---:|---|---|---|
@@ -121,13 +123,13 @@ For every workstream credited toward `LEGAL_8_OF_8`, retain:
 6. materials reviewed;
 7. product/release subject and exact applicable SHA or controlled evidence package;
 8. substantive findings;
-9. terminal decision;
+9. canonical review decision;
 10. conditions or required assumptions;
 11. material-change / re-review triggers;
 12. date;
 13. attributable authenticated/signed response or equivalent professional authentication.
 
-A reviewer may cover more than one workstream in one signed response if each workstream has a clear attributable decision and findings. Partial review is retained as partial evidence but receives credit only for workstreams satisfying the complete acceptance contract.
+A reviewer may cover more than one workstream in one signed response if each workstream has a clear attributable decision and findings. Partial review is retained as partial evidence but receives credit only for workstreams satisfying the repository's complete acceptance contract. `ACCEPTED_WITH_CHANGES` does not by itself prove that required changes were implemented or re-reviewed; downstream acceptance must follow the canonical evidence rules.
 
 ## 8. GDPR / commercial review questions that can be reviewed in parallel
 
