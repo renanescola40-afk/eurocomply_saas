@@ -102,14 +102,14 @@ Do not introduce a parallel decision value that cannot be represented in the can
 
 | # | Canonical workstream | Core question | Package family |
 |---:|---|---|---|
-| 1 | `LEGAL_RULES` | Are AI Act applicability, role classification, regulatory-rule versioning and product-role assumptions defensible for the intended product scope? | `legal-rules` |
-| 2 | `ARTICLE_5` | Does the product correctly identify/escalate prohibited-practice risk and exception boundaries without converting exceptions into automatic approval? | `prohibited-practices` |
-| 3 | `ARTICLE_50` | Are transparency triggers, notices, role allocation, timing and customer-facing wording adequate for current AI-enabled features? | `article-50-copy` |
-| 4 | `FRIA` | Is the FRIA workflow a defensible assistance methodology with correct applicability and responsibility boundaries? | `fria-methodology` |
-| 5 | `DEPLOYER` | Are deployer obligations correctly allocated between RISCK COMPLY and customers, with adequate escalation and limitations? | `deployer-obligations` |
-| 6 | `HIGH_RISK_PROVIDER` | Could a current feature make RISCK COMPLY a high-risk AI-system provider/downstream provider, and are intended-purpose/substantial-modification boundaries correct? | `high-risk-provider` |
-| 7 | `CONFORMITY` | Are conformity assessment, CE marking, registration and technical-documentation boundaries allocated correctly? | `conformity` |
-| 8 | `GPAI` | For any third-party GPAI/model workflow, what provider/deployer/customer obligations attach and are current boundaries defensible? | `gpai` |
+| 1 | `legal-rules` | Are AI Act applicability, role classification, regulatory-rule versioning and product-role assumptions defensible for the intended product scope? | `legal-rules` |
+| 2 | `prohibited-practices` | Does the product correctly identify/escalate prohibited-practice risk and exception boundaries without converting exceptions into automatic approval? | `prohibited-practices` |
+| 3 | `article-50-copy` | Are transparency triggers, notices, role allocation, timing and customer-facing wording adequate for current AI-enabled features? | `article-50-copy` |
+| 4 | `fria-methodology` | Is the FRIA workflow a defensible assistance methodology with correct applicability and responsibility boundaries? | `fria-methodology` |
+| 5 | `deployer-obligations` | Are deployer obligations correctly allocated between RISCK COMPLY and customers, with adequate escalation and limitations? | `deployer-obligations` |
+| 6 | `high-risk-provider` | Could a current feature make RISCK COMPLY a high-risk AI-system provider/downstream provider, and are intended-purpose/substantial-modification boundaries correct? | `high-risk-provider` |
+| 7 | `conformity` | Are conformity assessment, CE marking, registration and technical-documentation boundaries allocated correctly? | `conformity` |
+| 8 | `gpai` | For any third-party GPAI/model workflow, what provider/deployer/customer obligations attach and are current boundaries defensible? | `gpai` |
 
 ## 7. Minimum evidence required for an accepted decision
 
