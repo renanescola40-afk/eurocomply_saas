@@ -211,7 +211,11 @@ async function requestBillingAction({
     const response = await fetch('/api/billing/subscription', {
       method: 'POST',
       headers,
-      body: JSON.stringify({ action: 'replace_add_ons', addOns: addOns ?? [] }),
+      body: JSON.stringify({
+        action: 'replace_add_ons',
+        addOns: addOns ?? [],
+        preserveExistingAddOns: true,
+      }),
     });
     return { response, json: await readJson(response) };
   }
