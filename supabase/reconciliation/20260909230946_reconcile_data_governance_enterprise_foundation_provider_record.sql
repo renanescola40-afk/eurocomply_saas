@@ -1,0 +1,24 @@
+-- REMOTE HOTFIX PROVENANCE RECORD — COMMENT ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed by the protected read-only drift audit:
+--   version: 20260909230946
+--   provider name: reconcile_data_governance_enterprise_foundation
+--   source drift run: 34479350114
+--   source artifact: 10153540158
+--   source artifact SHA-256: 5a73c8065724d8f667ccee0a21ac918a62d8befeb27f56960585bd747c940f28
+--
+-- Canonical repository source representing the same forward reconciliation:
+--   local source: supabase/migrations/20260909142500_reconcile_data_governance_enterprise_foundation.sql
+--   local source SHA-256: 71badea18d2385cd710bc4932fb073be107b2b84eb85d4d004c5bd6ebd7632c4
+--
+-- Read-only Production migration-history inspection confirmed that the provider
+-- ledger contains this remote identity while the repository source uses the
+-- earlier canonical timestamp above. The remote body creates/reconciles the same
+-- data-governance relations, FORCE RLS/browser ACL boundary, policies, indexes,
+-- and fail-closed postconditions represented by the canonical local source.
+--
+-- This file exists only so the drift auditor can recognize the already-observed
+-- Production ledger identity as controlled provenance rather than an unknown
+-- remote hotfix. It grants no staging or Production deployment authority.
+--
+-- No DDL. No SQL execution. No migration-history repair. No database write.
