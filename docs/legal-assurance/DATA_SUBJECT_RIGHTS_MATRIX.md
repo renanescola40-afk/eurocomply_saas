@@ -50,7 +50,7 @@ The source model records, as applicable:
 
 The source implementation requested by that issue was merged through PR #2014. V6 lifecycle-integrity corrections subsequently merged through PR #2025, the canonical data-governance foundation reconciliation merged through PR #2026, and PR #2029 corrected the proof contract so it reflects RISCK COMPLY's category-specific retention model without inventing a universal retention period.
 
-The issue's exact-current-main runtime evidence gate is now satisfied by protected workflow run **34448768687** against current protected `main` SHA **`a921445a675bf3652568603535c148eb4e977914`**. The retained artifact is **`data-governance-runtime-proof-a921445a675bf3652568603535c148eb4e977914`** (artifact ID **10140768157**, digest **`sha256:361aa2f26da1cb1641b33fc2e4a638f576f12968aa0545cb80f7e1d0f765a299`**).
+The issue's exact-current-main runtime evidence gate was satisfied by protected workflow run **34448768687** against protected `main` SHA **`a921445a675bf3652568603535c148eb4e977914`**. The retained artifact is **`data-governance-runtime-proof-a921445a675bf3652568603535c148eb4e977914`** (artifact ID **10140768157**, digest **`sha256:361aa2f26da1cb1641b33fc2e4a638f576f12968aa0545cb80f7e1d0f765a299`**). Following canonical reconciliation, issue #2009 is now closed as completed.
 
 ```text
 PR_2014_SOURCE_IMPLEMENTATION=MERGED
@@ -66,14 +66,14 @@ V6_UPDATED_AT_INTEGRITY=PASS_SOURCE_MERGED
 DATA_GOVERNANCE_RUNTIME_V2=PASS_EXACT_SHA
 DATA_GOVERNANCE_RUNTIME_RUN=34448768687
 DATA_GOVERNANCE_RUNTIME_SHA=a921445a675bf3652568603535c148eb4e977914
-ISSUE_2009=READY_TO_CLOSE_AFTER_MATRIX_RECONCILIATION_MERGES
+ISSUE_2009=CLOSED_COMPLETED
 ```
 
 Downstream provider actions and legal judgments remain separate from the technical acceptance of #2009 and are not converted into Chapter III legal completion by this proof.
 
 ## Exact-SHA runtime gate — accepted
 
-The protected data-governance evidence path uses schema `risck-comply.data-governance-evidence.v2` and is now retained as `Complete/passed` for the exact current `main` SHA with all required checks true.
+The protected data-governance evidence path uses schema `risck-comply.data-governance-evidence.v2` and is retained as `Complete/passed` for the exact accepted release SHA with all required checks true.
 
 Accepted evidence:
 
@@ -142,6 +142,7 @@ CUSTOMER_CONTROLLER_ROUTING=PASS_SOURCE_IMPLEMENTED_CASE_DECISION_OPEN
 TERMINAL_STATE_INTEGRITY=PASS_SOURCE_MERGED_EXACT_SHA_ACCEPTED
 UPDATED_AT_INTEGRITY=PASS_SOURCE_MERGED_EXACT_SHA_ACCEPTED
 DATA_GOVERNANCE_RUNTIME_V2=PASS_EXACT_SHA
+ISSUE_2009=CLOSED_COMPLETED
 DATA_SUBJECT_RIGHTS=PARTIAL_DOWNSTREAM_AND_LEGAL
 ```
 
