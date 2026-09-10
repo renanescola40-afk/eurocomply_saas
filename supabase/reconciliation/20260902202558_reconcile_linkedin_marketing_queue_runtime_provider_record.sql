@@ -3,7 +3,11 @@
 -- Production migration identity observed read-only:
 --   version: 20260902202558
 --   name: reconcile_linkedin_marketing_queue_runtime
---   logical source: supabase/migrations/20260902162000_linkedin_marketing_queue.sql
+--
+-- Canonical repository source representing the same forward reconciliation:
+--   canonical source version: 20260902162000
+--   local source: supabase/migrations/20260902162000_linkedin_marketing_queue.sql
+--   local source SHA-256: 04577b0ab5e768f2fb0d4bd00fabb4a755b9526188bcfe83cb4545a4cdc48a28
 --
 -- The LinkedIn marketing queue SQL was applied through a provider-managed
 -- migration path and the provider recorded a later ledger timestamp than the
