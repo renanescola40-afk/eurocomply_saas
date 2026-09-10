@@ -58,8 +58,10 @@ describe('security-critical provider disclosure consistency', () => {
     const evidenceRegister = read('docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md');
     const legalDraft = read('docs/legal-review-preparation/legal-pack/SUBPROCESSOR_REGISTER_REVIEW_DRAFT.md');
 
-    expect(evidenceRegister).toContain('RUNTIME_BINDING_PROVEN');
-    expect(evidenceRegister).toContain('ACCOUNT_LEGAL_FACTS_OPEN');
+    expect(evidenceRegister).toContain('PROVIDER_FACTUAL_RECONCILIATION=CURRENT_TERMINAL_ADDENDUM_ACTIVE');
+    expect(evidenceRegister).toContain('RUNTIME_INTEGRATION_PRESENT / CURRENT_PROTECTED_PROVIDER_ACCEPTANCE_OPEN / ACCOUNT_FACTS_OPEN');
+    expect(evidenceRegister).toContain('ACCOUNT_LEGAL_FACTS_OPEN=OPEN');
+    expect(evidenceRegister).toContain('PRIVACY_GDPR_LEGAL_INTERPRETATION=WAITING_QUALIFIED_HUMAN');
     expect(legalDraft).toContain('ACCOUNT_SPECIFIC_PROVIDER_CONTRACT_FACTS=PARTIAL_OPEN');
     expect(legalDraft).toContain('not** by itself contractual authorisation');
     expect(legalDraft).toContain('SUBPROCESSOR_REGISTER_FINAL=BLOCKED_FINAL_FACTS_AND_QUALIFIED_REVIEW');
