@@ -108,11 +108,13 @@ export default async function TransfersPage({ params }: { params: Promise<{ loca
   const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : 'en';
   // Fail closed to the complete English review text until a clause-equivalent
   // reviewed translation exists for the requested locale.
-  const page = copy[locale] ?? en;
+  const contentLocale: Locale = copy[locale] ? locale : 'en';
+  const page = copy[contentLocale] ?? en;
 
   return (
     <PublicLegalReviewPage
       locale={locale}
+      contentLanguage={contentLocale}
       eyebrow={page.eyebrow}
       title={page.title}
       summary={page.summary}
