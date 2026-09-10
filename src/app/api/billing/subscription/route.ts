@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isAddOnCheckoutEnabled } from '@/server/billing/add-on-release';
 import { readBillingIdempotencyKey } from '@/server/billing/idempotency';
 import { isSelfServePlan, normalizeBillingPlanId } from '@/server/billing/plans';
 import {
@@ -20,6 +21,7 @@ const schema = z.object({
   plan: z.string().trim().max(64).optional(),
   interval: z.enum(['month', 'year', 'monthly', 'annual']).optional(),
   addOns: z.array(z.object({ slug: z.string().trim().min(1).max(80), quantity: z.number().int().min(1).max(10000).optional() })).max(25).optional(),
+  preserveExistingAddOns: z.boolean().optional(),
 });
 
 async function getLiveSubscriptionBinding(organizationId: string) {
@@ -73,10 +75,13 @@ export async function POST(request: Request) {
     const parsed = schema.safeParse(await readBoundedJsonRequest(request, { maxBytes: BODY_MAX_BYTES }).catch(() => null));
     if (!parsed.success) return noStoreJson({ error: 'invalid_billing_lifecycle_request' }, { status: 400 });
 
-    // Annual amounts exist only as repository commercial references until
-    // matching production Stripe Prices are provider-verified. Keep the public
-    // monthly self-serve contract fail-closed rather than allowing a hidden API
-    // caller to discover a missing Price through a 500/provider error.
+    if (parsed.data.action === 'replace_add_ons' && !isAddOnCheckoutEnabled()) {
+      return noStoreJson({ error: 'add_on_checkout_not_enabled' }, { status: 409 });
+    }
+
+    // Explicit annual plan transitions remain closed until their full public plan
+    // checkout contract is enabled. Add-on replacement may omit interval and inherit
+    // the already-paid subscription interval from the authoritative Stripe base item.
     if (parsed.data.interval === 'year' || parsed.data.interval === 'annual') {
       return noStoreJson({ error: 'annual_billing_not_available' }, { status: 409 });
     }
@@ -117,6 +122,7 @@ export async function POST(request: Request) {
       plan,
       interval: parsed.data.interval,
       addOns: parsed.data.addOns,
+      preserveExistingAddOns: parsed.data.action === 'replace_add_ons' && parsed.data.preserveExistingAddOns === true,
       idempotency: idempotency.context,
     });
 
