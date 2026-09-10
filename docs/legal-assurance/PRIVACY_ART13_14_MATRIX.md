@@ -4,24 +4,24 @@ Date: 2026-09-10
 Baseline: Regulation (EU) 2016/679, Articles 13 and 14  
 Status model: PASS / FAIL / BLOCKED / NOT_TESTED / NOT_APPLICABLE / PENDING_EXTERNAL_REVIEW
 
-This matrix tests the review draft and public Privacy surface requirement-by-requirement. A route existing is not evidence of legal completeness. Official-source verification is recorded in `GDPR_OFFICIAL_SOURCE_REGISTER_2026-09-09.md`.
+This matrix tests the review draft and public Privacy surface requirement-by-requirement. A route existing is not evidence of legal completeness. Official-source verification is recorded in `GDPR_OFFICIAL_SOURCE_REGISTER_2026-09-09.md`; current attributable fact reconciliation is in `evidence/2026-09-10-terminal-fact-reconciliation.md`.
 
 ## Matrix
 
 | Requirement | GDPR | Current source/evidence | State | Gap / closure action |
 |---|---|---|---|---|
-| Controller identity | 13(1)(a), 14(1)(a) | Current external-assurance authority keeps `RISCK_COMPLY_CONTRACTING_ENTITY=UNDECIDED` / `RISCK_COMPLY_OPERATOR_ENTITY=UNDECIDED`; the public review draft says the final legal entity/registered identifiers are pending rather than publishing an older proposed company identity as final | BLOCKED_ENTITY_FACTS_PUBLIC_FAIL_CLOSED | Owner must designate the operator/contracting entity and authoritative registry evidence must resolve registered identity/address/identifiers before final publication |
+| Controller identity | 13(1)(a), 14(1)(a) | Later attributable owner/operator correspondence designates `SAMUEL CERQUEIRA, UNIPESSOAL LDA` as the RISCK COMPLY operating/contracting entity for review preparation. The old `UNDECIDED` placeholder is superseded. Authoritative registry evidence for registered office/identifiers/signatory authority has not yet been credited, and the public review draft therefore remains fail-closed rather than publishing unverified registered facts. | PARTIAL_PASS_OWNER_DESIGNATED_BLOCKED_REGISTRY_FACTS_PUBLIC_FAIL_CLOSED | Obtain authoritative registry evidence and reconcile the exact registered identity/address/identifiers required for final publication |
 | Controller contact | 13(1)(a), 14(1)(a) | `comercial@risckcomply.com` is the verified privacy intake channel and is present on the canonical public review surface | PASS_PUBLIC_REVIEW_DRAFT | Final entity-linked legal notice mechanics remain separate |
 | DPO contact, if applicable | 13(1)(b), 14(1)(b) | Article 37/CNPD screening result remains `DPO_REQUIRED=UNCERTAIN`; public draft explicitly makes no DPO appointment/requirement claim while facts are unresolved | BLOCKED_APPLICABILITY_FACTS_PUBLIC_FAIL_CLOSED | Resolve scale/sensitive-data/monitoring applicability facts; do not invent DPO/contact |
 | Purposes | 13(1)(c), 14(1)(c) | Privacy review draft, RoPA/controller matrix and the public review surface describe account, service delivery, security, billing, support/business enquiries, essential communications and optional analytics purposes | PASS_PUBLIC_REVIEW_DRAFT | Keep synchronized with actual product/provider configuration |
 | Legal bases | 13(1)(c), 14(1)(c) | `CONTROLLER_LEGAL_BASIS_MATRIX.md` maps candidate bases; public review surface explains the candidate contract/pre-contract, specific legal obligation, legitimate-interest and consent boundary without presenting them as final acceptance | PENDING_EXTERNAL_REVIEW_PUBLIC_FAIL_CLOSED | Qualified review must approve the actual basis allocation before final legal publication |
 | Legitimate interests | 13(1)(d), 14(2)(b) | Pre-review LIAs cover security/abuse prevention, incident-response evidence and narrow B2B relationship administration; public review surface identifies that bounded scope and excludes automatic analytics/marketing credit | PARTIAL_PASS_PRE_REVIEW_PUBLIC_BOUNDARY | Final Art. 6(1)(f) allocations remain external-review dependent |
-| Recipients/categories | 13(1)(e), 14(1)(e) | Public review surface discloses provider categories and the merged Subprocessors/Transfers reconciliation now maintains the current factual boundary | PARTIAL_PASS_PUBLIC_CATEGORIES_PROVIDER_FACTS_OPEN | Account-specific provider contracts, final roles and final subprocessor authorisation remain open |
-| International transfers / safeguards | 13(1)(f), 14(1)(f) | Public review surface discloses Supabase Production `eu-west-1 (Ireland)`, warns that other providers may use additional/global locations and explicitly does not claim final adequacy/SCC/TIA acceptance; the merged transfer surface/register separates account facts from Chapter V conclusions | PARTIAL_PASS_PUBLIC_BOUNDARY_PROVIDER_EVIDENCE_OPEN | Attach remaining account-specific locations/DPA/adequacy/SCC/TIA evidence and obtain qualified transfer/legal-role conclusions where required |
+| Recipients/categories | 13(1)(e), 14(1)(e) | Public review surface discloses provider categories. Supabase DPA framework evidence and PostHog DPA completion evidence have now been captured, but several provider account/configuration facts remain open. | PARTIAL_PASS_PUBLIC_CATEGORIES_PROVIDER_FACTS_OPEN | Close remaining active-provider roles, account facts and final subprocessor authorisation before final publication |
+| International transfers / safeguards | 13(1)(f), 14(1)(f) | Public review surface discloses Supabase Production `eu-west-1 (Ireland)` and avoids an EU-only claim. Direct Supabase Privacy Team evidence confirms its general customer DPA incorporation; PostHog has attributable DPA completion evidence. Neither fact by itself establishes all locations, SCC/adequacy/TIA applicability or qualified Chapter V conclusions. | PARTIAL_PASS_PUBLIC_BOUNDARY_PROVIDER_EVIDENCE_ADVANCED | Attach remaining account-specific locations/mechanisms/TIA evidence and obtain qualified transfer/legal-role conclusions where required |
 | Retention period / criteria | 13(2)(a), 14(2)(a) | Public review surface states the category-specific retention model and its purpose/customer/statutory/security/provider/deletion criteria; exact-SHA Data Governance V2 validates the bounded category-specific schema | PARTIAL_PASS_PUBLIC_CRITERIA | Final category periods for account, support, audit/security, analytics and provider backup/log classes still need factual/legal acceptance; technical schema proof is not legal-duration approval |
 | Data-subject rights | 13(2)(b), 14(2)(c) | Public review surface lists access, rectification, erasure, restriction, objection, portability and consent withdrawal, provides `comercial@risckcomply.com`, explains customer-controller routing; exact-SHA Data Governance V2 run `34448768687` retained `Complete/passed` evidence and issue #2009 is closed | PASS_PUBLIC_REVIEW_DRAFT_EXACT_SHA_RUNTIME_GATE | Downstream provider effects and case-specific legal decisions remain separate |
 | Withdrawal of consent | 13(2)(c), 14(2)(d) | Public Privacy review surface embeds `AnalyticsConsentControls`; source defaults analytics to consent-required, gates PostHog and supports later withdrawal/opt-out | PASS_SOURCE_AND_PUBLIC_CONTROL_RUNTIME_CONFIG_OPEN | Retain exact Production analytics configuration/runtime evidence and obtain final ePrivacy/GDPR legal-basis review; other consent-based processing remains separate |
-| Complaint to supervisory authority | 13(2)(d), 14(2)(e) | Public review surface states the right to complain to the competent data-protection supervisory authority | PASS_PUBLIC_REVIEW_DRAFT | Lead-authority/cross-border establishment position remains tied to final operator/entity facts |
+| Complaint to supervisory authority | 13(2)(d), 14(2)(e) | Public review surface states the right to complain to the competent data-protection supervisory authority | PASS_PUBLIC_REVIEW_DRAFT | Lead-authority/cross-border establishment position remains tied to verified establishment/entity facts |
 | Statutory/contractual/product requirement and consequences | 13(2)(e) | Public review surface distinguishes account/auth requirements, paid-checkout requirements, optional analytics and the rule that product-required fields are not called statutory unless law requires them | PASS_PUBLIC_REVIEW_DRAFT | Keep exact fields/consequences synchronized with product flows and final legal basis |
 | Automated decision-making/profiling | 13(2)(f), 14(2)(g) | Public review surface states that website/account processing is not intended to make solely automated legal/similarly significant decisions and separates customer use of product outputs | PASS_PUBLIC_REVIEW_DRAFT | Revalidate on product/account decisioning change |
 | Categories of personal data for indirect collection | 14(1)(d) | Public review surface describes account/auth, workspace/content, billing, support/security/diagnostic and optional analytics categories; Article 14 register maintains per-flow structure | PASS_PUBLIC_REVIEW_DRAFT | Keep per-flow mapping synchronized with integrations and actual provider configuration |
@@ -31,17 +31,17 @@ This matrix tests the review draft and public Privacy surface requirement-by-req
 
 ## Public-page finding
 
-The historical `/[locale]/privacy` route only rendered a short Trust Center Privacy summary and was materially narrower than Articles 13/14.
+The historical `/[locale]/privacy` route was materially narrower than Articles 13/14. The canonical implementation merged through PR #2031 and is now directly observed in Production as version `0.2-review` with status `REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED`.
 
-The canonical protected `main` now contains the versioned `PublicLegalReviewPage` implementation merged through PR #2031. It:
+The current review surface:
 
-- remains visibly `REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED`;
-- publishes the verified privacy contact without inventing the unresolved operator entity;
+- publishes the verified privacy contact;
 - covers scope/roles, categories, purposes, legal-basis review boundary, recipients, transfers, retention criteria, rights, consent withdrawal, required/optional data, sources, automated decision-making, security, complaints and changes;
 - embeds persistent analytics consent controls;
-- preserves founder/provider/qualified-review blockers instead of converting them into legal claims.
+- does not invent a DPO, final transfer conclusion or compliance certification;
+- continues to fail closed on registered entity details until authoritative registry evidence is reconciled.
 
-The rights lifecycle/runtime gate is also closed technically: Data Governance V2 passed on exact SHA and issue #2009 is closed. Subprocessors/Transfers and DPA review structures have subsequently merged without promoting unresolved contractual/legal facts.
+The rights lifecycle/runtime gate is also closed technically: Data Governance V2 passed on exact SHA and issue #2009 is closed. DPA and Subprocessors/Transfers review structures have subsequently merged without promoting unresolved contractual/legal facts.
 
 Therefore:
 
@@ -49,9 +49,11 @@ Therefore:
 OFFICIAL_SOURCE_MAPPING=PASS
 PRIVACY_REVIEW_DRAFT=SUBSTANTIALLY_MAPPED
 PUBLIC_PRIVACY_ART13_14_STRUCTURE=PASS_CANONICAL_MAIN_REVIEW_DRAFT
-PUBLIC_PRIVACY_CONTROLLER_IDENTITY=BLOCKED_ENTITY_FACTS_FAIL_CLOSED
+PUBLIC_PRIVACY_LIVE_SURFACE=PASS_VERSION_0_2_REVIEW
+OWNER_DESIGNATED_OPERATOR_ENTITY=PASS_FOR_REVIEW_PREPARATION
+PUBLIC_PRIVACY_CONTROLLER_REGISTRY_FACTS=BLOCKED_AUTHORITATIVE_EVIDENCE_FAIL_CLOSED
 PUBLIC_PRIVACY_LEGAL_BASES=PENDING_QUALIFIED_REVIEW_FAIL_CLOSED
-PUBLIC_PRIVACY_PROVIDER_AND_TRANSFER_FACTS=PARTIAL_OPEN
+PUBLIC_PRIVACY_PROVIDER_AND_TRANSFER_FACTS=PARTIAL_ADVANCED_OPEN
 PUBLIC_PRIVACY_DPO_APPLICABILITY=BLOCKED_FACTS_FAIL_CLOSED
 CONTROLLER_PURPOSE_BASIS_STRUCTURE=PASS_PRE_REVIEW
 LEGITIMATE_INTEREST_ASSESSMENTS=PASS_PRE_REVIEW_PARTIAL_SCOPE
@@ -67,14 +69,14 @@ ANALYTICS_CONSENT_PUBLIC_WITHDRAWAL=PASS_CANONICAL_MAIN
 TRANSFER_STRUCTURE=PASS_CANONICAL_MAIN_REVIEW_DRAFT
 RETENTION_STRUCTURE=PASS_PRE_REVIEW
 PUBLIC_PRIVACY_ART13_14_COMPLETENESS=STRUCTURE_IMPLEMENTED_BLOCKED_FINAL_FACTS_AND_QUALIFIED_REVIEW
-PRIVACY_ART13_14_MAPPING=BLOCKED_FINAL_ENTITY_PROVIDER_LEGAL_DECISIONS
+PRIVACY_ART13_14_MAPPING=BLOCKED_REGISTRY_PROVIDER_LEGAL_DECISIONS
 ```
 
 ## Remaining closure sequence
 
 The repository-controlled public Privacy and exact-SHA rights/runtime implementation steps are complete. Remaining closure is evidence/decision driven:
 
-1. owner designates the actual RISCK COMPLY contracting/operator entity and authoritative registry evidence resolves identity facts;
+1. obtain authoritative registry evidence for the already owner-designated RISCK COMPLY operator/contracting entity and populate only verified registered fields;
 2. qualified review validates final controller-side legal bases / legitimate-interest allocations and DPO applicability where required;
 3. close remaining active-provider recipients/transfers with account evidence and qualified transfer conclusions;
 4. approve remaining non-fiscal retention criteria/provider rotation;
