@@ -63,7 +63,7 @@ Later attributable owner/operator correspondence supersedes the old `UNDECIDED` 
 
 ```text
 RISCK_COMPLY_OPERATOR_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
-RISCK_COMPLY_CONTRACTING_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
+RISCK_COMPLY_CONTRACTING_ENTITY=OPEN_OWNER_CONFIRMATION
 RISCK_COMPLY_TRADE_NAME=RISCK_COMPLY
 AUTHORITATIVE_REGISTRY_EVIDENCE=PENDING
 REGISTERED_OFFICE=PENDING_AUTHORITATIVE_EVIDENCE
@@ -72,7 +72,7 @@ SIGNATORY_AUTHORITY=PENDING_WHERE_REQUIRED
 ENTITY_FACTS_FINAL_PUBLICATION=BLOCKED
 ```
 
-The owner designation is sufficient to stop presenting the entity as undecided to reviewers. It is not sufficient to publish unverified registry fields. Final Privacy/Terms/DPA entity identity remains blocked until attributable registry evidence resolves the required registered facts.
+The attributable evidence is sufficient to stop presenting the RISCK COMPLY **operator** as undecided. It does not expressly establish the company that will act as customer-contract counterparty, so the contracting entity remains open pending explicit owner designation. Registered fields also remain blocked until authoritative registry evidence resolves the required facts.
 
 ## Owner commercial positions already attributable
 
@@ -103,7 +103,7 @@ STRIPE_ACCOUNT_LEGAL_DETAIL=OPEN
 PROVIDER_FACTUAL_RECONCILIATION=PARTIAL_ADVANCED
 ```
 
-Provider DPA evidence does not itself establish Production project attribution, SCC/TIA sufficiency, all processing locations, retention or qualified transfer conclusions.
+Provider DPA evidence does not itself establish Production project attribution, RISCK COMPLY customer-contract counterparty status, SCC/TIA sufficiency, all processing locations, retention or qualified transfer conclusions.
 
 ## Qualified EU AI Act review
 
@@ -143,7 +143,7 @@ The existing 80/50 working scores are retained rather than manufacturing a new p
 
 ## Shortest remaining critical path
 
-1. obtain authoritative registry evidence for the owner-designated operating/contracting entity and reconcile the required registered facts;
+1. obtain explicit owner designation of the RISCK COMPLY customer contracting entity and authoritative registry evidence for the designated company; reconcile only verified registered facts;
 2. close seller/VAT regime and supported B2B tax matrix through attributable owner/accountant/tax-authority evidence;
 3. finish account-specific provider facts and Chapter V/transfer conclusions, including the actual PostHog Production project if analytics is active;
 4. resolve the remaining material owner Terms risk-allocation decisions;
