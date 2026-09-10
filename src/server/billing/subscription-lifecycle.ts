@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type Stripe from 'stripe';
 
+import { getBillingAddOn, isAddOnAvailableForPlan } from '@/lib/billing/add-ons';
 import { getBillingPlanIdForStripePriceId } from '@/lib/billing/plans';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -116,6 +117,17 @@ export function mergeProviderAddOnSelections(
     [...getProviderAddOnSelections(subscription, baseItemId), ...(requested ?? [])],
     plan,
   );
+}
+
+export function getEligibleProviderAddOnSelectionsForPlan(
+  subscription: Stripe.Subscription,
+  baseItemId: string,
+  plan: CanonicalSubscriptionPlan,
+) {
+  return getProviderAddOnSelections(subscription, baseItemId).filter((selection) => {
+    const addOn = getBillingAddOn(selection.slug);
+    return Boolean(addOn && isAddOnAvailableForPlan(addOn, plan));
+  });
 }
 
 function getSubscriptionCustomerId(subscription: Stripe.Subscription) {
@@ -394,12 +406,22 @@ function futureDowngradePhase(input: {
   userId: string;
   interval: BillingInterval;
 }): ScheduleUpdatePhase {
-  const items = input.currentPhase.items.map((item) => {
-    const params = phaseItemParams(item);
-    return scheduleItemPriceId(item) === input.currentBasePriceId
-      ? { ...params, price: input.targetPriceId, quantity: 1 }
-      : params;
-  });
+  const items = input.currentPhase.items
+    .filter((item) => {
+      const priceId = scheduleItemPriceId(item);
+      if (priceId === input.currentBasePriceId) return true;
+
+      const slug = getBillingAddOnSlugForStripePriceId(priceId);
+      if (!slug) throw new BillingLifecycleRequestError('billing_schedule_conflict', 409);
+      const addOn = getBillingAddOn(slug);
+      return Boolean(addOn && isAddOnAvailableForPlan(addOn, input.targetPlan));
+    })
+    .map((item) => {
+      const params = phaseItemParams(item);
+      return scheduleItemPriceId(item) === input.currentBasePriceId
+        ? { ...params, price: input.targetPriceId, quantity: 1 }
+        : params;
+    });
 
   return {
     items,
@@ -504,7 +526,9 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
   assertPlanTransition(input.action, currentPlan, targetPlan);
   const addOns = input.action === 'replace_add_ons' && input.preserveExistingAddOns
     ? mergeProviderAddOnSelections(subscription, baseItem.id, input.addOns, targetPlan)
-    : normalizeAddOnSelections(input.addOns, targetPlan);
+    : input.action === 'upgrade' || input.action === 'downgrade'
+      ? getEligibleProviderAddOnSelectionsForPlan(subscription, baseItem.id, targetPlan)
+      : normalizeAddOnSelections(input.addOns, targetPlan);
   const claim = await claimBillingLifecycleRequest({
     organizationId: input.organizationId,
     requestedBy: input.userId,
@@ -592,7 +616,7 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
         updated = await stripe.subscriptions.update(
           subscription.id,
           {
-            proration_behavior: 'create_prorations',
+            proration_behavior: input.action === 'replace_add_ons' ? 'always_invoice' : 'create_prorations',
             billing_cycle_anchor: 'unchanged',
             items: [
               { id: baseItem.id, price: getStripePriceId(targetPlan, interval), quantity: 1 },
