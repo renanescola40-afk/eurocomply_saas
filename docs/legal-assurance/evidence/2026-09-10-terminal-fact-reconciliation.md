@@ -22,7 +22,7 @@ The direct Production fetch of `/pt/privacy` and `/pt/terms` returned HTTP 200 a
 
 Protected `main` subsequently advanced beyond the observed Production release. This file does not claim exact-current-main Production identity.
 
-## 2. Operator / contracting-entity designation evidence
+## 2. Operator designation / contracting-entity boundary
 
 Attributable owner/operator correspondence sent on 2026-09-06 to Cloud Security Alliance stated that RISCK COMPLY is operated by:
 
@@ -31,11 +31,13 @@ SAMUEL CERQUEIRA, UNIPESSOAL LDA
 Portugal
 ```
 
+That evidence establishes the operator designation for review preparation. It does **not** expressly establish that the same entity is the contractual counterparty for RISCK COMPLY customer agreements. Those roles are therefore kept separate.
+
 Current classification:
 
 ```text
 OWNER_DESIGNATED_OPERATOR_ENTITY=PASS_ATTRIBUTABLE_CORRESPONDENCE
-OWNER_DESIGNATED_CONTRACTING_ENTITY=PASS_FOR_REVIEW_PREPARATION
+RISCK_COMPLY_CONTRACTING_ENTITY=OPEN_OWNER_CONFIRMATION
 AUTHORITATIVE_COMPANY_REGISTRY_EVIDENCE=OPEN
 REGISTERED_OFFICE=OPEN
 REGISTERED_IDENTIFIERS=OPEN
@@ -43,7 +45,7 @@ SIGNATORY_AUTHORITY=OPEN_WHERE_REQUIRED
 FINAL_PUBLICATION_ENTITY_FACTS=BLOCKED
 ```
 
-Do not fill any unresolved registered field from memory, historical candidate documents or commercial directories.
+Do not infer contracting authority from operator status alone. Do not fill any unresolved registered field from memory, historical candidate documents or commercial directories.
 
 ## 3. Supabase DPA evidence
 
@@ -86,7 +88,7 @@ POSTHOG_PRODUCTION_PROCESSING_LOCATION_FACTS=OPEN
 POSTHOG_TRANSFER_TIA_LEGAL_CONCLUSION=OPEN
 ```
 
-The connected PostHog project previously revalidated as project `255188`, `Default project`, with no ingested event and no application URL, is not promoted as the RISCK COMPLY Production analytics project. The DPA completion notice does not repair that technical attribution gap.
+The connected PostHog project previously revalidated as project `255188`, `Default project`, with no ingested event and no application URL, is not promoted as the RISCK COMPLY Production analytics project. The DPA completion notice does not repair that technical attribution gap and does not by itself designate the company as RISCK COMPLY's customer-contract counterparty.
 
 ## 5. Owner-selected commercial positions already sent for legal review
 
@@ -134,10 +136,10 @@ Provider teams, public authorities and clinic correspondence are valuable eviden
 
 Use this evidence only to:
 
-- remove stale `UNDECIDED` operator wording from bounded reviewer preparation while keeping registry facts open;
+- replace stale `UNDECIDED` wording for the RISCK COMPLY **operator** with the attributable operator designation while keeping the customer contracting entity open until explicitly designated;
 - reduce provider-DPA uncertainty for Supabase and PostHog;
 - avoid asking the owner to re-decide already selected commercial positions;
 - keep public legal surfaces fail-closed until final dependencies pass;
 - give a qualified reviewer a smaller and more accurate fact pack.
 
-Do not use it to claim final legal approval, GDPR compliance, AI Act certification, transfer-law acceptance, tax/VAT correctness or effective Terms.
+Do not use it to claim final legal approval, customer-contract counterparty identity, GDPR compliance, AI Act certification, transfer-law acceptance, tax/VAT correctness or effective Terms.
