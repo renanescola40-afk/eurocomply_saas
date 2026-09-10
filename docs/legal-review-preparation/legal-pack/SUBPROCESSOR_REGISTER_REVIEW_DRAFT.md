@@ -15,7 +15,7 @@ Technical/runtime activity, account facts and contractual/legal approval are tra
 | Google Workspace | Corporate support, security, procurement and legal/business communications | Corporate/support contacts, message metadata, message content and attachments where used | Operational corporate-mail use is established; prior account-specific plan/EMEA billing evidence is retained as historical/account evidence, not as a processing-location conclusion | Current applicable agreement/CDPA incorporation, admin region/retention settings if material, onward-transfer treatment and final role/disclosure decision |
 | GitHub / GitHub Actions | Source delivery, CI/CD and protected release/recovery/security workflows | Repository/workflow metadata, security evidence and transient Production data in authorised recovery/security jobs | Material operational use is established; protected workflows can transiently process Production database data on GitHub-hosted runners | Applicable company/account agreement and DPA treatment, hosted-runner processing/transfer treatment and final customer-facing role/disclosure wording |
 | Sentry | Error monitoring and diagnostics | Error context and diagnostic/security metadata depending on configuration | Product/release integration exists; prior exact-release binding evidence is historical until refreshed protected provider/runtime acceptance | Current Production project/account binding, organisation region, plan/retention, DPA applicability/acceptance, scrubbing/data categories, transfer terms and final role |
-| PostHog | Optional product analytics | Consented analytics events and identifiers where configured | Production source/configuration historically targeted EU endpoints; the connected assurance project did not match the Production project | Recover/revalidate actual Production project/account, owner/plan, region, retention, account-linked DPA evidence, onward-transfer facts and final analytics/consent legal approval |
+| PostHog | Optional product analytics | Consented analytics events and identifiers where configured | Connected PostHog access revalidated 2026-09-10 returned one accessible `Default project` (id `255188`) with `ingested_event=false` and no configured application URLs. It is therefore **not** promoted as the attributed RISCK COMPLY Production analytics project. Source configuration continues to target EU ingestion endpoints, which establishes implementation configuration only. | Recover/connect actual Production project/account, then confirm owner/plan, region, retention, account-linked DPA evidence, onward-transfer facts and final analytics/consent legal approval. Do not reuse settings from the non-Production connected project as Production facts. |
 | Upstash / Redis | Distributed rate limiting and security-abuse/control state | Operational request/control metadata and identifiers depending on implementation | Distributed Redis-backed integration remains implemented; earlier direct Production proof is historical until current protected provider/runtime acceptance | Current account owner/plan, region(s), retention/deletion, account-specific DPA applicability, transfer treatment and current protected provider/runtime evidence |
 | Resend / transactional email | Transactional/support email when used | Email address, delivery/message metadata and message content | Historical real delivery is established; current exact-release account/provider binding is not established by this register | Current active binding; account/entity/plan, region, retention, applicable DPA/agreement, transfer treatment and current templates/data scope |
 | Support provider | Customer support if a dedicated external provider is introduced | Contacts, tickets and attachments | No dedicated current provider is asserted by this register | Identify provider and verify scope, region, access, retention, DPA and transfer treatment before disclosure/use |
@@ -27,7 +27,7 @@ Technical/runtime activity, account facts and contractual/legal approval are tra
 Current connected-account/provider facts are reconciled in:
 
 - `docs/legal-assurance/PROVIDER_FACTS_REVALIDATION_2026-09-09.md` including the 2026-09-10 addendum;
-- `docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md` for release/runtime provenance and non-crediting boundaries;
+- `docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md` for release/runtime provenance, current PostHog connected-project mismatch evidence and non-crediting boundaries;
 - `docs/legal-assurance/INTERNATIONAL_TRANSFER_REGISTER.md` for Chapter V decision state;
 - canonical External Assurance issue `#1727` for historical/account-provider coordination.
 
@@ -51,7 +51,7 @@ No provider is promoted to final legal status merely because its runtime/account
 Before this register becomes final or contractual:
 
 1. reconcile the actual Production/operational provider set with attributable runtime/account evidence;
-2. distinguish active, conditional and historical-only providers;
+2. distinguish active, conditional, non-Production connected and historical-only provider evidence;
 3. confirm each active provider's applicable legal entity, purpose, data categories, complete relevant processing/access locations and retention/deletion behavior;
 4. retain account-specific DPA/agreement and Chapter V evidence where applicable;
 5. approve the Article 28 subprocessor authorisation/notice/objection mechanics;
@@ -63,6 +63,8 @@ SUBPROCESSOR_REGISTER_STRUCTURE=PASS_REVIEW_DRAFT
 VERCEL_ACCOUNT_PROJECT_BINDING=PASS_CURRENT_2026-09-10
 SUPABASE_PROJECT_REGION=PASS_CURRENT_2026-09-10
 STRIPE_LIVE_ACCOUNT_DISCOVERY=PASS_CURRENT_2026-09-10
+POSTHOG_CONNECTED_PROJECT_REVALIDATION=PASS_NON_PRODUCTION
+POSTHOG_PRODUCTION_ACCOUNT_RECOVERY=OPEN
 ACTIVE_PROVIDER_INVENTORY=PARTIAL
 ACCOUNT_SPECIFIC_PROVIDER_CONTRACT_FACTS=PARTIAL_OPEN
 SUBPROCESSOR_ROLE_ALLOCATION=PENDING_QUALIFIED_REVIEW
