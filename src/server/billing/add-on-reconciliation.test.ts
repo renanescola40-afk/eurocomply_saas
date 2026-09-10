@@ -7,8 +7,17 @@ describe('Stripe add-on reconciliation payment authority', () => {
     expect(resolveReconciledAddOnStatus('customer.subscription.updated', 'active', null)).toBe('inactive');
   });
 
-  it('activates an eligible item only after invoice.paid', () => {
-    expect(resolveReconciledAddOnStatus('invoice.paid', 'active', 'inactive')).toBe('active');
+  it('activates an eligible item only when the paid invoice contains that subscription item', () => {
+    expect(resolveReconciledAddOnStatus('invoice.paid', 'active', 'inactive', true)).toBe('active');
+  });
+
+  it('does not let an old or unrelated paid invoice activate a newer add-on item', () => {
+    expect(resolveReconciledAddOnStatus('invoice.paid', 'active', 'inactive', false)).toBe('inactive');
+    expect(resolveReconciledAddOnStatus('invoice.paid', 'active', null, false)).toBe('inactive');
+  });
+
+  it('preserves already-paid access when an unrelated invoice is replayed', () => {
+    expect(resolveReconciledAddOnStatus('invoice.paid', 'active', 'active', false)).toBe('active');
   });
 
   it('suspends paid access on invoice.payment_failed and does not revive it from update ordering', () => {
@@ -21,7 +30,7 @@ describe('Stripe add-on reconciliation payment authority', () => {
   });
 
   it('never reactivates a cancelled subscription from a late paid invoice', () => {
-    expect(resolveReconciledAddOnStatus('invoice.paid', 'canceled', 'cancelled')).toBe('cancelled');
+    expect(resolveReconciledAddOnStatus('invoice.paid', 'canceled', 'cancelled', true)).toBe('cancelled');
   });
 
   it('cancels add-on authority with the subscription deletion event', () => {
