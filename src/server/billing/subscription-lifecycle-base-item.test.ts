@@ -1,18 +1,24 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { getBaseSubscriptionItem } from './subscription-lifecycle';
+import {
+  billingLifecycleRequestFingerprint,
+  getBaseSubscriptionItem,
+  mergeProviderAddOnSelections,
+} from './subscription-lifecycle';
 
 const REGULATORY_MONITORING_MONTH = 'price_1UE34UGt3cgjPOtqOFswahIY';
 const FRIA_WORKSPACE_MONTH = 'price_1UE354Gt3cgjPOtqUMRXYSkx';
+const ORIGINAL_ESSENTIAL_PRICE = process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY;
+const ORIGINAL_PROFESSIONAL_PRICE = process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY;
 
-function subscriptionWithPrices(priceIds: string[]) {
+function subscriptionWithItems(items: Array<{ priceId: string; quantity?: number }>) {
   return {
     items: {
-      data: priceIds.map((priceId, index) => ({
+      data: items.map((item, index) => ({
         id: `si_${index}`,
-        quantity: 1,
+        quantity: item.quantity ?? 1,
         price: {
-          id: priceId,
+          id: item.priceId,
           recurring: { interval: 'month', usage_type: 'licensed' },
         },
       })),
@@ -21,20 +27,33 @@ function subscriptionWithPrices(priceIds: string[]) {
 }
 
 describe('subscription lifecycle base item authority', () => {
-  it('identifies the base plan independently of Stripe item ordering', () => {
-    const subscription = subscriptionWithPrices([
-      REGULATORY_MONITORING_MONTH,
-      'price_plan_base',
-      FRIA_WORKSPACE_MONTH,
+  beforeEach(() => {
+    process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY = 'price_plan_base';
+    process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY = 'price_plan_professional';
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_ESSENTIAL_PRICE === undefined) delete process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY;
+    else process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY = ORIGINAL_ESSENTIAL_PRICE;
+
+    if (ORIGINAL_PROFESSIONAL_PRICE === undefined) delete process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY;
+    else process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY = ORIGINAL_PROFESSIONAL_PRICE;
+  });
+
+  it('identifies the allowlisted base plan independently of Stripe item ordering', () => {
+    const subscription = subscriptionWithItems([
+      { priceId: REGULATORY_MONITORING_MONTH },
+      { priceId: 'price_plan_base' },
+      { priceId: FRIA_WORKSPACE_MONTH },
     ]);
 
     expect(getBaseSubscriptionItem(subscription).price.id).toBe('price_plan_base');
   });
 
   it('does not mistake a licensed recurring add-on for the base plan', () => {
-    const subscription = subscriptionWithPrices([
-      FRIA_WORKSPACE_MONTH,
-      'price_plan_base',
+    const subscription = subscriptionWithItems([
+      { priceId: FRIA_WORKSPACE_MONTH },
+      { priceId: 'price_plan_base' },
     ]);
 
     const base = getBaseSubscriptionItem(subscription);
@@ -42,22 +61,65 @@ describe('subscription lifecycle base item authority', () => {
     expect(base.price.recurring?.usage_type).toBe('licensed');
   });
 
-  it('fails closed when no non-add-on base item exists', () => {
-    const subscription = subscriptionWithPrices([
-      REGULATORY_MONITORING_MONTH,
-      FRIA_WORKSPACE_MONTH,
+  it('fails closed when no allowlisted base item exists', () => {
+    const subscription = subscriptionWithItems([
+      { priceId: REGULATORY_MONITORING_MONTH },
+      { priceId: FRIA_WORKSPACE_MONTH },
     ]);
 
     expect(() => getBaseSubscriptionItem(subscription)).toThrow('stripe_base_subscription_item_not_found');
   });
 
-  it('fails closed when more than one unknown base candidate exists', () => {
-    const subscription = subscriptionWithPrices([
-      'price_unknown_a',
-      REGULATORY_MONITORING_MONTH,
-      'price_unknown_b',
+  it('fails closed when more than one allowlisted base plan item exists', () => {
+    const subscription = subscriptionWithItems([
+      { priceId: 'price_plan_base' },
+      { priceId: REGULATORY_MONITORING_MONTH },
+      { priceId: 'price_plan_professional' },
     ]);
 
     expect(() => getBaseSubscriptionItem(subscription)).toThrow('stripe_base_subscription_item_ambiguous');
+  });
+
+  it('preserves provider items, including pending ones, when appending a new add-on', () => {
+    const subscription = subscriptionWithItems([
+      { priceId: REGULATORY_MONITORING_MONTH, quantity: 2 },
+      { priceId: 'price_plan_base' },
+    ]);
+    const base = getBaseSubscriptionItem(subscription);
+
+    expect(mergeProviderAddOnSelections(
+      subscription,
+      base.id,
+      [{ slug: 'fria-workspace', quantity: 1 }],
+      'starter',
+    )).toEqual([
+      { slug: 'regulatory-monitoring-pro', quantity: 2 },
+      { slug: 'fria-workspace', quantity: 1 },
+    ]);
+  });
+
+  it('fails closed instead of silently dropping an unknown provider item during append', () => {
+    const subscription = subscriptionWithItems([
+      { priceId: 'price_plan_base' },
+      { priceId: 'price_unknown_extra' },
+    ]);
+    const base = getBaseSubscriptionItem(subscription);
+
+    expect(() => mergeProviderAddOnSelections(
+      subscription,
+      base.id,
+      [{ slug: 'fria-workspace', quantity: 1 }],
+      'starter',
+    )).toThrow('stripe_subscription_add_on_item_not_allowlisted');
+  });
+
+  it('binds append semantics into the durable request fingerprint', () => {
+    const base = {
+      action: 'replace_add_ons' as const,
+      addOns: [{ slug: 'fria-workspace', quantity: 1 }],
+    };
+
+    expect(billingLifecycleRequestFingerprint({ ...base, preserveExistingAddOns: false }))
+      .not.toBe(billingLifecycleRequestFingerprint({ ...base, preserveExistingAddOns: true }));
   });
 });
