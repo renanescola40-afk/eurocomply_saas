@@ -1,4 +1,4 @@
--- REMOTE HOTFIX PROVENANCE RECORD — COMMENT ONLY — DO NOT EXECUTE.
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
 --
 -- Production migration identity observed by the protected read-only drift audit:
 --   version: 20260909232229
@@ -8,6 +8,7 @@
 --   source artifact SHA-256: 5a73c8065724d8f667ccee0a21ac918a62d8befeb27f56960585bd747c940f28
 --
 -- Canonical repository source representing the same backend-only hardening:
+--   canonical source version: 20260909144000
 --   local source: supabase/migrations/20260909144000_finalize_backend_only_force_rls_and_trigger_acl.sql
 --   local source SHA-256: 89e3b677bcb981e761a94bef45dd744022eb25d65f0073212f36fe7c051cfbd8
 --
@@ -17,7 +18,8 @@
 -- and browser-ACL removal for backend-only relations plus the same trigger
 -- function EXECUTE boundary and fail-closed postconditions.
 --
--- This file is provenance only. It recognizes the already-observed Production
--- ledger identity without replaying the migration or mutating migration history.
+-- This file is provenance only. It is recognized only after strict comment-only,
+-- source-version and source-digest validation and does not replay the migration
+-- or mutate migration history.
 --
 -- No DDL. No SQL execution. No migration-history repair. No database write.
