@@ -8,7 +8,7 @@ describe('upgrade center entitlement truth', () => {
     const page = read('src/app/[locale]/dashboard/organizations/add-ons/page.tsx');
 
     expect(page).toContain('BILLING_ADD_ONS');
-    expect(page).toContain('listActiveOrganizationAddOns');
+    expect(page).toContain('listActiveOrganizationAddOnSelections');
     expect(page).toContain('getOrganizationEntitlements');
     expect(page).toContain("normalizePlan(entitlements.plan)");
     expect(page).toContain("roleHasPermission(role, 'manage_billing')");
@@ -24,14 +24,16 @@ describe('upgrade center entitlement truth', () => {
     expect(page).not.toContain('demo ===');
   });
 
-  it('never presents an unimplemented add-on checkout as a completed purchase path', () => {
+  it('uses the protected subscription lifecycle instead of a fake add-on checkout', () => {
     const page = read('src/app/[locale]/dashboard/organizations/add-ons/page.tsx');
-    const copy = read('src/lib/i18n/add-ons-copy.ts');
+    const billingButton = read('src/app/[locale]/dashboard/organizations/billing/billing-action-button.tsx');
 
     expect(page).not.toMatch(/api\/billing\/checkout[^'"`]*add-?on/i);
-    expect(page).toContain('copy.noDirectPurchase');
-    expect(copy).toContain('RISCK COMPLY will not show a fake purchase button');
-    expect(copy).toContain('A RISCK COMPLY não mostrará um botão de compra falso');
+    expect(page).toContain('action="replace_add_ons"');
+    expect(billingButton).toContain("fetch('/api/billing/subscription'");
+    expect(billingButton).toContain("action: 'replace_add_ons'");
+    expect(billingButton).toContain('Idempotency-Key');
+    expect(billingButton).toContain("json.error === 'step_up_required'");
   });
 
   it('routes locked capability UX through the organization Upgrade Center first', () => {
@@ -44,18 +46,18 @@ describe('upgrade center entitlement truth', () => {
     expect(card).toContain('Access changes only after billing confirms the entitlement.');
   });
 
-  it('renders private-preview add-ons as unavailable and without a billing purchase CTA', () => {
+  it('renders preview catalog prices without a purchase CTA', () => {
     const page = read('src/app/[locale]/dashboard/organizations/add-ons/page.tsx');
     const catalog = read('src/lib/billing/add-ons.ts');
 
-    expect(catalog).toContain("const ADD_ON_COMMERCIAL_STATUS: AddOnStatus = 'private_preview'");
-    expect(page).toContain("if (!isBillingAddOnCommerciallyActive(addOn)) return 'preview'");
+    expect(catalog).toContain("options.status ?? 'private_preview'");
     expect(page).toContain("status === 'preview'");
-    expect(page).toContain('copy.noDirectPurchaseBody');
-    expect(page).not.toMatch(/status === 'preview'[\s\S]{0,400}dashboard\/organizations\/billing/);
+    expect(page).toContain('€{addOn.priceMonthly}');
+    expect(page).toContain('status === \'available\' && canManageBilling');
+    expect(page).not.toMatch(/status === 'preview'[\s\S]{0,350}action="replace_add_ons"/);
   });
 
-  it('keeps feature add-on slugs fail-closed while the commercial catalog is private preview', () => {
+  it('keeps feature add-on slugs bounded by canonical commercial eligibility', () => {
     const featureGates = read('src/lib/billing/feature-gates.ts');
     const organizationAddOns = read('src/server/billing/addons.ts');
 
@@ -64,8 +66,18 @@ describe('upgrade center entitlement truth', () => {
     expect(organizationAddOns).toContain('isBillingAddOnCommerciallyActive(catalogAddOn)');
   });
 
+  it('preserves existing active add-ons when adding another item', () => {
+    const page = read('src/app/[locale]/dashboard/organizations/add-ons/page.tsx');
+    const organizationAddOns = read('src/server/billing/addons.ts');
+
+    expect(organizationAddOns).toContain('listActiveOrganizationAddOnSelections');
+    expect(organizationAddOns).toContain("select('add_on_id,status,current_period_end,quantity')");
+    expect(page).toContain("[...activeAddOnSelections, { slug: addOn.slug, quantity: 1 }]");
+  });
+
   it('localizes the Upgrade Center chrome across every configured product language', () => {
     const copy = read('src/lib/i18n/add-ons-copy.ts');
+    const page = read('src/app/[locale]/dashboard/organizations/add-ons/page.tsx');
 
     for (const locale of ['en', 'pt', 'es', 'fr', 'it', 'de']) {
       expect(copy).toContain(`${locale}: {`);
@@ -73,5 +85,6 @@ describe('upgrade center entitlement truth', () => {
     expect(copy).toContain('billingAuthorityBody');
     expect(copy).toContain('contactBillingAdmin');
     expect(copy).toContain('categories:');
+    expect(page).toContain('function commerceCopy(locale: string)');
   });
 });
