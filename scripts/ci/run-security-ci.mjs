@@ -1,42 +1,9 @@
 import { appendFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
-const checks = [
-  'security:package-lock',
-  'security:npm-audit:all',
-  'security:public-secrets',
-  'security:production-secrets',
-  'security:supply-chain',
-  'security:ci-cd',
-  'security:rls:advisory',
-  'security:step-up',
-  'security:client-boundaries',
-  'security:auth-tokens',
-  'security:authorization-bola',
-  'security:server-action-identity',
-  'security:protected-routes',
-  'security:headers',
-  'security:no-store',
-  'security:origin-guards',
-  'security:no-open-proxy',
-  'security:internal-maintenance',
-  'security:ops-readiness',
-  'security:public-verifiers',
-  'security:public-errors',
-  'security:csv-exports',
-  'security:document-filenames',
-  'security:upload',
-  'security:upload-content-scan',
-  'security:upload-scanner:ci',
-  'security:billing-webhook-body',
-  'security:responses',
-  'security:logs',
-  'security:api-endpoints',
-  'security:api-guards',
-  'security:enterprise-api',
-  'security:public-claims',
-];
+import { SECURITY_CI_CHECKS } from './security-ci-checks.mjs';
 
+const checks = SECURITY_CI_CHECKS;
 const startedAt = new Date();
 const summaryPath = process.env.GITHUB_STEP_SUMMARY;
 
@@ -78,6 +45,10 @@ for (const [index, check] of checks.entries()) {
     console.log(`SECURITY_CI_SIGNAL=${signal}`);
   }
   console.log('::endgroup::');
+
+  if (result.error) {
+    console.error(`::error title=SECURITY_CI_SUBCHECK_EXECUTION_ERROR::${check} could not execute: ${result.error.message}`);
+  }
 
   if (exitCode !== 0) {
     const signalSuffix = signal ? ` signal=${signal}` : '';
