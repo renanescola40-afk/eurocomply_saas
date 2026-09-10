@@ -10,6 +10,7 @@ import { getBillingPlan } from '@/lib/billing/plans';
 import { getAddOnsCopy } from '@/lib/i18n/add-ons-copy';
 import { roleHasPermission } from '@/lib/security/permissions';
 import { getOrganizationRoleForUser } from '@/server/auth/permissions';
+import { isAddOnCheckoutEnabled } from '@/server/billing/add-on-release';
 import { listActiveOrganizationAddOnSelections } from '@/server/billing/addons';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -70,6 +71,7 @@ function commerceCopy(locale: string) {
       return {
         readyTitle: 'Compra de add-ons protegida pelo billing',
         readyBody: 'Owners e Admins podem adicionar extensões elegíveis à subscrição existente. O acesso só é ativado depois de um evento Stripe assinado reconciliar o item no billing da organização.',
+        releaseLocked: 'Os preços e a elegibilidade estão prontos, mas a compra permanece bloqueada até o billing base, o exact-SHA de Produção e a autorização final do Owner serem aceitos.',
         add: (name: string) => `Adicionar ${name}`,
         included: 'Incluído no seu plano atual',
         preview: 'Preço de catálogo. A compra permanece bloqueada até a capacidade prometida ter autoridade de entitlement própria.',
@@ -79,6 +81,7 @@ function commerceCopy(locale: string) {
       return {
         readyTitle: 'Compra de add-ons protegida por billing',
         readyBody: 'Owners y Admins pueden añadir extensiones elegibles a la suscripción existente. El acceso se activa solo después de que un evento firmado de Stripe reconcilie el elemento.',
+        releaseLocked: 'Los precios y la elegibilidad están preparados, pero la compra permanece bloqueada hasta que el billing base, el exact-SHA de Producción y la autorización final del Owner hayan sido aceptados.',
         add: (name: string) => `Añadir ${name}`,
         included: 'Incluido en tu plan actual',
         preview: 'Precio de catálogo. La compra permanece bloqueada hasta que la capacidad prometida tenga autoridad de entitlement propia.',
@@ -88,6 +91,7 @@ function commerceCopy(locale: string) {
       return {
         readyTitle: 'Achat d’add-ons protégé par la facturation',
         readyBody: 'Les Owners et Admins peuvent ajouter des extensions éligibles à l’abonnement existant. L’accès n’est activé qu’après rapprochement d’un événement Stripe signé.',
+        releaseLocked: 'Les prix et l’éligibilité sont prêts, mais l’achat reste bloqué jusqu’à l’acceptation de la facturation de base, du SHA exact de Production et de l’autorisation finale de l’Owner.',
         add: (name: string) => `Ajouter ${name}`,
         included: 'Inclus dans votre plan actuel',
         preview: 'Prix catalogue. L’achat reste bloqué tant que la capacité promise ne dispose pas de sa propre autorité d’entitlement.',
@@ -97,6 +101,7 @@ function commerceCopy(locale: string) {
       return {
         readyTitle: 'Acquisto add-on protetto dal billing',
         readyBody: 'Owner e Admin possono aggiungere estensioni idonee all’abbonamento esistente. L’accesso viene attivato solo dopo la riconciliazione di un evento Stripe firmato.',
+        releaseLocked: 'Prezzi e idoneità sono pronti, ma l’acquisto resta bloccato finché billing base, exact-SHA di Produzione e autorizzazione finale dell’Owner non sono accettati.',
         add: (name: string) => `Aggiungi ${name}`,
         included: 'Incluso nel piano attuale',
         preview: 'Prezzo di catalogo. L’acquisto resta bloccato finché la capacità promessa non dispone di una propria autorità di entitlement.',
@@ -106,6 +111,7 @@ function commerceCopy(locale: string) {
       return {
         readyTitle: 'Durch Billing geschützter Add-on-Kauf',
         readyBody: 'Owner und Admins können berechtigte Erweiterungen zum bestehenden Abonnement hinzufügen. Zugriff wird erst nach Abgleich eines signierten Stripe-Ereignisses aktiviert.',
+        releaseLocked: 'Preise und Berechtigung sind vorbereitet, der Kauf bleibt jedoch gesperrt, bis Basis-Billing, der exakte Produktions-SHA und die endgültige Owner-Freigabe akzeptiert wurden.',
         add: (name: string) => `${name} hinzufügen`,
         included: 'In Ihrem aktuellen Plan enthalten',
         preview: 'Katalogpreis. Der Kauf bleibt gesperrt, bis die versprochene Kapazität eine eigene Entitlement-Autorität hat.',
@@ -115,6 +121,7 @@ function commerceCopy(locale: string) {
       return {
         readyTitle: 'Billing-protected add-on purchase',
         readyBody: 'Owners and Admins can add eligible extensions to the existing subscription. Access activates only after a signed Stripe event reconciles the item into organization billing.',
+        releaseLocked: 'Pricing and eligibility are prepared, but purchase remains locked until base billing, the exact Production SHA and final Owner authorization are accepted.',
         add: (name: string) => `Add ${name}`,
         included: 'Included in your current plan',
         preview: 'Catalog price. Purchase remains blocked until the promised capability has its own authoritative entitlement effect.',
@@ -147,6 +154,7 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
   const currentPlanName = getPlanDisplayName(canonicalPlan);
   const activeAddOns = new Set<string>(activeAddOnSelections.map((selection) => selection.slug));
   const canManageBilling = roleHasPermission(role, 'manage_billing');
+  const addOnCheckoutEnabled = isAddOnCheckoutEnabled();
   const selectedPlanDiffers = Boolean(selectedPlan && normalizePlan(selectedPlan.id) !== canonicalPlan);
   const selectedPlanPrice = selectedPlan?.priceMonthly ?? selectedPlan?.startingPriceMonthly ?? null;
   const focusedAddOn = BILLING_ADD_ONS.find((addOn) => addOn.slug === query.addon);
@@ -211,7 +219,7 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
             <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-4 w-4 text-emerald-300" aria-hidden="true" /><div><h2 className="text-sm font-semibold text-white/82">{copy.billingAuthority}</h2><p className="mt-1.5 text-sm leading-6 text-white/45">{copy.billingAuthorityBody}</p></div></div>
           </article>
           <article className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.045] p-4">
-            <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-4 w-4 text-emerald-300" aria-hidden="true" /><div><h2 className="text-sm font-semibold text-white/82">{commerce.readyTitle}</h2><p className="mt-1.5 text-sm leading-6 text-white/45">{commerce.readyBody}</p></div></div>
+            <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-4 w-4 text-emerald-300" aria-hidden="true" /><div><h2 className="text-sm font-semibold text-white/82">{commerce.readyTitle}</h2><p className="mt-1.5 text-sm leading-6 text-white/45">{addOnCheckoutEnabled ? commerce.readyBody : commerce.releaseLocked}</p></div></div>
           </article>
         </section>
 
@@ -263,7 +271,7 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
                         <p className="text-xl font-semibold text-white/86">€{addOn.priceMonthly}<span className="text-sm font-normal text-white/38">{copy.perMonth}</span></p>
                         <p className="mt-0.5 text-xs text-white/32">€{addOn.priceAnnual}{copy.perYear}</p>
                       </div>
-                      {status === 'available' && canManageBilling ? (
+                      {status === 'available' && canManageBilling && addOnCheckoutEnabled ? (
                         <BillingActionButton
                           action="replace_add_ons"
                           locale={locale}
@@ -279,6 +287,7 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
                     {status === 'included' ? <p className="mt-3 text-sm font-semibold text-emerald-200/80">{commerce.included}</p> : null}
                     {status === 'active' ? <p className="mt-3 text-sm font-semibold text-emerald-200/80">{copy.active}</p> : null}
                     {status === 'preview' ? <p className="mt-3 text-xs leading-5 text-amber-100/65">{commerce.preview}</p> : null}
+                    {status === 'available' && canManageBilling && !addOnCheckoutEnabled ? <p className="mt-3 text-xs leading-5 text-amber-100/65">{commerce.releaseLocked}</p> : null}
                     {status === 'available' && !canManageBilling ? <p className="mt-2 text-xs leading-5 text-amber-100/65">{copy.contactBillingAdmin}</p> : null}
                     {status === 'blocked' ? <p className="mt-2 text-xs leading-5 text-white/38">{copy.requiresPlan(getPlanDisplayName(addOn.availableOn[0]))}</p> : null}
                   </div>
