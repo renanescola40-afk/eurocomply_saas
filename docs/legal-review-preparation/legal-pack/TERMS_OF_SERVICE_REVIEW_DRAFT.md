@@ -1,108 +1,153 @@
 # Terms of Service — Review Draft
 
-**Status:** `REVIEW_DRAFT` · `FOUNDER_FACT_REQUIRED` · `COUNSEL_DECISION_REQUIRED`
+**Status:** `REVIEW_DRAFT` · `FOUNDER_FACT_REQUIRED` · `OWNER_COMMERCIAL_DECISIONS_REQUIRED` · `COUNSEL_DECISION_REQUIRED`
 
-These terms are prepared for counsel review and do not take effect until the contracting entity, commercial terms and legal choices are completed and approved.
+**Last reconciled:** 2026-09-10
 
-## 1. Parties and order of precedence
+These terms are prepared for review and do not take effect until the contracting entity, commercial risk decisions and qualified legal review are completed and a final version is deliberately published or incorporated into a customer agreement.
 
-The proposed service provider is **SAMUEL CERQUEIRA, UNIPESSOAL LDA**, operating the **RISCK COMPLY** brand and website **https://www.risckcomply.com**. The owner has supplied **Avenida de Roma 112-A, 1700-353 Lisboa, Portugal** as the current correspondence/operating address; **[FOUNDER FACT REQUIRED: confirm the current registered office/legal address from an authoritative Portuguese commercial-registry source before publication or signature]**. The provider tax/company registration identifier remains **[FOUNDER FACT REQUIRED: resolve conflicting NIF/NIPC evidence from an authoritative source before publication or signature]**. The current verified reachable corporate intake mailbox is **comercial@risckcomply.com**. The customer is the entity identified in the applicable order form or account registration.
+## 1. Parties, status and order of precedence
 
-Order of precedence: signed order form; signed DPA; negotiated service schedule; these terms; public documentation. Public pages do not expand signed commitments.
+The final legal entity that will contract for and operate **RISCK COMPLY**, together with its registered office and authoritative registered/tax identifiers, remains unresolved in the canonical founder/entity workstream. This draft therefore does **not** identify a final provider party and does not promote any historical candidate entity into contractual truth.
+
+The current verified general corporate intake mailbox is **comercial@risckcomply.com**. The customer is intended to be the business or other professional organisation identified in the applicable order, provider-backed checkout or account record.
+
+The proposed precedence model is: signed order form; signed DPA for covered processing; negotiated service schedule; final Terms; public documentation. **[COUNSEL DECISION REQUIRED]** Confirm incorporation and enforceability mechanics for self-service and negotiated Enterprise contracting. Public pages do not expand signed commitments.
 
 ## 2. Service
 
-Risck Comply provides a multi-tenant SaaS workspace for AI inventory, governance workflows, risk and obligation support, documents, tasks, vendors, evidence and audit operations. Features and entitlements depend on the purchased plan and deployed configuration.
+RISCK COMPLY provides a multi-tenant SaaS workspace for AI inventory, governance workflows, risk and obligation support, documents, tasks, vendors, evidence, audit operations and plan/add-on controlled functionality. Features and entitlements depend on the purchased plan, active add-ons and deployed configuration.
 
-The service supports compliance operations and evidence preparation. It does not provide legal advice, certification, a conformity assessment, CE marking, regulatory approval or a guarantee of compliance.
+The service supports compliance operations and evidence preparation. It does not provide legal, tax or regulatory advice, certification, conformity assessment, CE marking, regulator approval or a guarantee of compliance.
 
-## 3. Accounts and organisations
+## 3. Business-customer scope, accounts and organisations
 
-Customers must provide accurate account information, protect credentials, maintain authorised users and promptly remove access that is no longer required. Organisation administrators control membership, roles and customer content. Customer remains responsible for actions performed through its accounts except to the extent caused by the provider’s breach.
+The current commercial motion is B2B. This draft is written for business/professional customers and does not attempt to exclude mandatory rights that may apply by law.
+
+Customers must provide accurate account information, protect credentials, maintain authorised users and promptly remove access that is no longer required. Organisation administrators control membership, roles and customer content within service permissions. Customer responsibility for user actions remains subject to the final agreement and mandatory law.
 
 ## 4. Customer content and instructions
 
-Customer retains rights in customer content and grants the provider a limited right to process it to provide, secure, support and improve the service as permitted by the agreement and applicable law. Customer is responsible for lawful collection, instructions, accuracy, permissions and avoiding unnecessary sensitive data.
+Customer retains rights in customer content. The proposed agreement grants only the rights reasonably needed to host, process, secure, support, export and otherwise operate the contracted service in accordance with the agreement, the DPA where applicable and lawful customer instructions.
 
-The service must not be used to upload data or conduct activities prohibited by law, the acceptable-use restrictions or the customer’s own authority.
+Customer is responsible for having the lawful basis or other authority needed for content and instructions it submits, maintaining information sufficiently accurate for its intended use and avoiding unsupported or unnecessary sensitive data.
 
 ## 5. AI and compliance outputs
 
-Classifications, scores, generated documents, alerts and recommendations are operational aids based on supplied information and configured rules. Customer must review outputs, maintain human oversight and obtain qualified advice where legal, regulatory, technical or fundamental-rights reliance is material.
+Classifications, scores, generated documents, alerts, checklists and recommendations are operational aids based on supplied information, configured rules and product logic. Customer must review outputs, maintain human oversight and obtain qualified advice where material legal, regulatory, employment, fundamental-rights or other high-impact reliance is involved.
 
-Customer must not represent an output as certification, formal conformity, regulator approval or a legal opinion.
+Customer must not represent a RISCK COMPLY output as certification, formal conformity assessment, regulator approval or a qualified legal opinion unless a separate attributable authority has actually granted that status.
 
 ## 6. Acceptable use
 
 Customer must not:
 
-- access another tenant or bypass security controls;
-- introduce malware, probe the service without permission or interfere with availability;
-- use the service for prohibited AI practices or unlawful surveillance, discrimination or harmful content;
-- reverse engineer except where mandatory law permits;
+- access another tenant or resource without authorisation or bypass authentication, authorisation, rate limits or other security controls;
+- introduce malware, intentionally impair availability, probe or test systems without permission or use unlawfully obtained credentials;
+- use the service for unlawful activity, prohibited AI practices, unlawful surveillance or discriminatory conduct;
 - use generated material as a substitute for required professional or regulatory review;
-- upload secrets, payment instruments, special-category data or highly sensitive records unless expressly supported and contractually approved.
+- upload payment-card secrets, credentials, special-category personal data, criminal-offence data or other highly sensitive records as an ordinary use case unless the relevant feature, contract and safeguards expressly support that processing.
 
-## 7. Subscriptions, billing and taxes
+## 7. Orders, subscriptions, billing and add-ons
 
-The current commercial catalog provides Essential at €49/month and Professional at €149/month as self-serve subscription motions, Business at €399/month as assisted sales, and Enterprise from €990/month with final pricing by contract. **No free trial is currently offered.**
+Plan and add-on availability is governed by the active billing catalogue and the customer order or provider-backed checkout. Repository state, public URLs, browser state or documentation entries do not grant entitlements by themselves.
 
-For the current self-serve subscription lifecycle, cancellation is scheduled for the end of the already-paid billing period (`cancel_at_period_end`) rather than immediately removing paid access. A pending cancellation can be reactivated before that period ends. Supported upgrades use provider proration; supported downgrades are scheduled for the next billing period. Annual self-serve billing remains unavailable until the required live provider Prices are verified.
+For supported self-service subscriptions, cancellation is implemented for the end of the already-paid billing period (`cancel_at_period_end`) and reactivation is supported before that period ends. Supported upgrades may use provider proration and supported downgrades may take effect in the next billing period. Contract-managed Enterprise terms may differ where expressly agreed in an order form.
 
-The exact Stripe Products/Prices, taxes/VAT treatment, refund policy, price-change rights and any contract-specific billing terms remain governed by the actual provider configuration and final approved commercial terms; they must not be inferred from marketing copy alone. Fees exclude applicable taxes unless stated otherwise. Non-payment remedies and suspension require counsel-approved notice and cure periods.
+Exact prices, billing intervals, included capabilities and purchasable add-ons must match the current billing authority at purchase time. The Terms must not freeze stale marketing pricing or silently expand entitlements.
 
-## 8. Confidentiality
+## 8. Taxes, refunds, payment failure and suspension
 
-Each party must protect the other party’s confidential information using reasonable care and use it only to perform the agreement. Standard exclusions apply for information independently developed, lawfully received, public without breach or required to be disclosed by law. Disclosure requests should be notified where lawful.
+Seller VAT/tax registrations, checkout tax configuration and invoice treatment depend on the final contracting entity, live billing configuration and tax/legal analysis. No blanket tax exemption, tax inclusion or seller-registration claim is approved in this draft.
 
-## 9. Data protection and security
+**[OWNER + COUNSEL DECISION REQUIRED]** A final general refund policy remains unresolved. Do not publish a blanket no-refund rule or entitlement until mandatory-law carve-outs, provider errors, duplicate charges, negotiated credits and commercial preference are decided.
 
-The Privacy Policy governs the provider’s controller activities. The DPA applies where the provider processes personal data on the customer’s behalf. Security commitments are limited to the signed agreement and evidence-supported technical and organisational measures.
+The service can respond to failed or unpaid billing states. **[OWNER + COUNSEL DECISION REQUIRED]** Final notice, cure, suspension, emergency exception and restoration rules must be approved before they become binding terms.
 
-No certification, audit, penetration-test, backup, recovery or uptime commitment is incorporated unless expressly listed in a signed document.
+## 9. Confidentiality
 
-## 10. Third-party services
+The proposed structure requires each party to protect the other party's confidential information with reasonable care and use it only for the agreement. Standard exclusions may cover information independently developed, lawfully received, already public without breach or required to be disclosed by law.
 
-The service depends on configured cloud, authentication, database, payment, observability, analytics, email and other providers. The current subprocessor register must identify active providers and relevant processing. Third-party services may change under the DPA notice process.
+**[COUNSEL DECISION REQUIRED]** Confirm compelled-disclosure mechanics, duration, remedies, residual-knowledge treatment and any Enterprise confidentiality schedule.
 
-## 11. Intellectual property and feedback
+## 10. Data protection and security
 
-The provider and licensors retain rights in the service, software, templates and documentation. Customer receives a limited, non-exclusive, non-transferable right to use the service during the subscription. Customer grants a right to use feedback without identifying confidential customer information.
+The Privacy Policy review surface addresses provider-controlled processing. The DPA applies where the provider processes customer personal data on documented customer instructions. Final controller/processor allocation remains activity-specific and subject to the executed agreement.
 
-## 12. Suspension
+Security commitments are limited to implemented controls and attributable evidence. No certification, audit, penetration-test result, fixed uptime, fixed RPO/RTO, backup promise or encryption specification is incorporated merely because it appears in marketing, source code or an internal evidence pack.
 
-The provider may suspend access where reasonably necessary for security, unlawful use, material breach, non-payment or protection of the service, subject to **[COUNSEL DECISION REQUIRED: notice, proportionality, emergency and restoration rules]**.
+## 11. Service providers, subprocessors and international transfers
 
-## 13. Term and termination
+RISCK COMPLY depends on configured cloud, database, authentication, payment, observability, analytics, email and other providers. The current public Subprocessors and International Transfers review surfaces disclose the evidence boundary without converting provider presence into contractual or legal approval.
 
-Self-serve cancellation currently preserves paid access until the end of the active billing period. Reactivation before period end is supported. Contract-managed subscriptions remain subject to their order form. **[COUNSEL/COMMERCIAL DECISION REQUIRED]** Define any legally required notice, cooling-off/consumer exclusions if applicable, termination for breach, refund treatment and contract-specific renewal rules. On termination, access ends and customer may request export during **[FOUNDER FACT REQUIRED: export window]**. Deletion remains subject to the DPA, retention schedule, legal holds, billing records and immutable audit requirements.
+**[DPA/PROVIDER/COUNSEL GATE]** Final subprocessor authorisation, notice and objection mechanics; account-specific DPA/SCC applicability; complete processing locations; transfer mechanisms; transfer-impact conclusions and supplementary measures remain subject to provider evidence and qualified review where required.
 
-## 14. Warranties and disclaimers
+## 12. Intellectual property, licence and feedback
 
-Each party warrants authority to enter the agreement. The provider warrants the service will materially perform as described during the subscription, subject to documented limitations.
+The proposed structure preserves provider and licensor rights in the service, software, product design, templates and documentation while granting the customer a limited right to use the contracted service during its subscription. Customer-content ownership and the exact operational licence must remain consistent with the DPA, confidentiality terms and third-party rights.
 
-Except as expressly agreed and to the maximum extent permitted by law, the service is provided without implied warranties. No warranty is given that use of the service makes the customer compliant, eliminates legal risk or satisfies every customer-specific requirement.
+**[OWNER + COUNSEL DECISION REQUIRED]** Confirm feedback-use language, template/output ownership, third-party material treatment and any Enterprise-specific IP commitments.
 
-## 15. Indemnities
+## 13. Term, cancellation and termination
 
-**[COUNSEL DECISION REQUIRED]** Define customer indemnity for unlawful content/use and provider IP indemnity, including exclusions, control of defence, mitigation and remedies.
+Self-service cancellation currently preserves paid access until the end of the active paid period. Contract-managed subscriptions remain subject to their order form.
 
-## 16. Liability
+**[OWNER + COUNSEL DECISION REQUIRED]** Define renewal wording, legally required notices, termination for breach, cure periods, immediate termination grounds and effects. This draft does not create a final cooling-off/consumer exclusion position or other mandatory-law waiver.
 
-**[COUNSEL DECISION REQUIRED]** Define liability cap, excluded losses, carve-outs, mandatory-law treatment and separate treatment for confidentiality, data protection, IP, fraud and wilful misconduct. The position must match insurance and commercial risk tolerance.
+## 14. Post-termination export, deletion and retention
 
-## 17. Changes
+**[OWNER + PRIVACY DECISION REQUIRED]** A final post-termination customer export window has not been approved and must match actual product/provider capabilities before publication.
 
-Material changes require reasonable notice. Changes should not retroactively reduce signed enterprise commitments during an active term except where required by law or necessary for security, with appropriate customer remedies.
+Deletion remains subject to the DPA, category-specific retention, documented legal holds, billing/accounting records, immutable audit requirements and verified provider lifecycle constraints. The agreement must not promise an unsupported deletion or backup timetable.
 
-## 18. Governing law and disputes
+## 15. Warranties and compliance disclaimers
 
-**[FOUNDER FACT AND COUNSEL DECISION REQUIRED: governing law, courts or arbitration, consumer exclusion and mandatory-law rules].**
+**[OWNER + COUNSEL DECISION REQUIRED]** Define any service-performance warranty and remedies that RISCK COMPLY is prepared to assume. Until approved, this review draft does not create an additional warranty beyond mandatory law or a separately signed commitment.
 
-## 19. Notices and contact
+No warranty is proposed that use of RISCK COMPLY automatically makes a customer compliant, eliminates legal risk or satisfies every customer-specific regulatory requirement.
 
-General corporate communications may currently be submitted to **comercial@risckcomply.com**, a verified reachable corporate mailbox. **[COUNSEL DECISION REQUIRED]** Define which notices have legal effect, required delivery methods, deemed-receipt rules and whether any separate postal or dedicated legal-notice channel is required.
+## 16. Indemnities
 
-## 20. Review conditions
+**[OWNER + COUNSEL DECISION REQUIRED]** Define any customer unlawful-use/content indemnity and provider IP indemnity, including exclusions, control of defence, mitigation and remedies. No indemnity is represented as effective by this review draft.
 
-Counsel must confirm entity identity, registered office/legal address, commercial consistency, role allocation, acceptable-use scope, AI disclaimers, suspension, termination, warranties, indemnities, liability, governing law and enforceability before publication or signature.
+## 17. Liability
+
+**[OWNER + COUNSEL DECISION REQUIRED]** Define liability cap, excluded losses, carve-outs, mandatory-law treatment and separate treatment for confidentiality, data protection, intellectual property, fraud and wilful misconduct. The position must match the final entity, insurance position and commercial risk tolerance.
+
+No liability cap is represented as effective by this review draft.
+
+## 18. Changes and renewal
+
+Material-change and renewal mechanics must match the live checkout/order process and negotiated Enterprise terms. **[OWNER + COUNSEL DECISION REQUIRED]** Approve notice periods, renewal wording and customer remedies before those provisions become binding.
+
+Public documentation must not retroactively expand or reduce signed commitments unless the final agreement expressly and lawfully permits the relevant change.
+
+## 19. Governing law, disputes and notices
+
+**[FOUNDER + COUNSEL DECISION REQUIRED]** The governing law and court/forum or arbitration position has not been finally selected and approved. Do not infer a jurisdiction while the final contracting entity remains unresolved.
+
+General corporate communications may be submitted to **comercial@risckcomply.com**. **[COUNSEL DECISION REQUIRED]** Define which notices have contractual legal effect, required delivery methods, deemed-receipt rules and whether a postal or dedicated legal-notice channel is required.
+
+## 20. Final review conditions
+
+Before publication or signature, qualified review must confirm at minimum:
+
+- final provider/entity identity and registered facts;
+- contract formation, incorporation and order precedence;
+- billing, renewal, refund, tax and non-payment wording;
+- controller/processor and DPA relationship;
+- acceptable-use and AI-output limitations;
+- confidentiality and IP allocation;
+- suspension, termination, export, deletion and retention mechanics;
+- warranties, indemnities and liability allocation;
+- governing law, dispute mechanism and legal notices;
+- consistency with the current product, billing authority, Privacy, DPA, Subprocessors and International Transfers surfaces.
+
+Until those gates are complete, status remains:
+
+```text
+TERMS_STATUS=REVIEW_DRAFT
+TERMS_EFFECTIVE=NO
+TERMS_OWNER_DECISIONS=OPEN
+TERMS_EXTERNAL_LEGAL_REVIEW=PENDING_EXTERNAL_REVIEW
+```

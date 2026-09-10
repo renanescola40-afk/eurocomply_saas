@@ -7,13 +7,14 @@ const COMMERCIAL_POLICY = new URL('../src/lib/security/commercial-route-policy.t
 const LEGAL_PAGE = new URL('../src/components/legal/public-legal-review-page.tsx', import.meta.url);
 const PRIVACY_PAGE = new URL('../src/app/[locale]/privacy/page.tsx', import.meta.url);
 const DPA_PAGE = new URL('../src/app/[locale]/dpa/page.tsx', import.meta.url);
+const TERMS_PAGE = new URL('../src/app/[locale]/terms/page.tsx', import.meta.url);
 const COOKIE_PAGE = new URL('../src/app/[locale]/cookie-policy/page.tsx', import.meta.url);
 const ACCEPTABLE_USE_PAGE = new URL('../src/app/[locale]/acceptable-use/page.tsx', import.meta.url);
 const TRANSFERS_PAGE = new URL('../src/app/[locale]/transfers/page.tsx', import.meta.url);
 const PROVIDER_DISCLOSURE = new URL('../src/components/trust/provider-runtime-disclosure.tsx', import.meta.url);
 const CONSENT_BANNER = new URL('../src/components/analytics/AnalyticsConsentBanner.tsx', import.meta.url);
 
-const PUBLIC_LEGAL_ROUTES = ['/privacy', '/dpa', '/cookie-policy', '/acceptable-use', '/transfers'] as const;
+const PUBLIC_LEGAL_ROUTES = ['/privacy', '/dpa', '/terms', '/cookie-policy', '/acceptable-use', '/transfers'] as const;
 
 describe('public legal review surfaces', () => {
   it('keeps the review routes public in both routing authorities', async () => {
@@ -37,9 +38,10 @@ describe('public legal review surfaces', () => {
   });
 
   it('version-tags each legal review document without company placeholders', async () => {
-    const [privacy, dpa, cookie, acceptableUse, transfers] = await Promise.all([
+    const [privacy, dpa, terms, cookie, acceptableUse, transfers] = await Promise.all([
       readFile(PRIVACY_PAGE, 'utf8'),
       readFile(DPA_PAGE, 'utf8'),
+      readFile(TERMS_PAGE, 'utf8'),
       readFile(COOKIE_PAGE, 'utf8'),
       readFile(ACCEPTABLE_USE_PAGE, 'utf8'),
       readFile(TRANSFERS_PAGE, 'utf8'),
@@ -47,8 +49,9 @@ describe('public legal review surfaces', () => {
 
     expect(privacy).toContain('version="0.2-review"');
     expect(dpa).toContain('version="0.2-review"');
+    expect(terms).toContain('version="0.2-review"');
     expect(transfers).toContain('version="0.2-review"');
-    for (const source of [privacy, dpa, cookie, acceptableUse, transfers]) {
+    for (const source of [privacy, dpa, terms, cookie, acceptableUse, transfers]) {
       expect(source).toContain('lastUpdated={LAST_UPDATED}');
       expect(source).not.toMatch(/\[COMPANY|\[ADDRESS|\bTODO\b|\bTBD\b|example\.com/i);
     }
@@ -121,6 +124,52 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('Special-category or criminal-offence data is not accepted as an ordinary default use case');
     expect(source).toContain('unless Union or Member-State law requires otherwise');
     expect(source).toContain('If an instruction appears to infringe applicable data-protection law');
+  });
+
+  it('publishes the Terms contract structure without inventing entity, pricing or risk allocation', async () => {
+    const source = await readFile(TERMS_PAGE, 'utf8');
+
+    expect(source).toContain('documentId="terms-of-service"');
+    expect(source).toContain('version="0.2-review"');
+    expect(source).toContain('Parties, status and business scope');
+    expect(source).toContain('Service and product boundary');
+    expect(source).toContain('Accounts, organisations and authorised users');
+    expect(source).toContain('Customer content and instructions');
+    expect(source).toContain('AI and compliance outputs');
+    expect(source).toContain('Acceptable use');
+    expect(source).toContain('Orders, plans, subscriptions and add-ons');
+    expect(source).toContain('Taxes, refunds and payment failure — decision boundary');
+    expect(source).toContain('Confidentiality');
+    expect(source).toContain('Data protection and security');
+    expect(source).toContain('Service providers, subprocessors and international transfers');
+    expect(source).toContain('Intellectual property and licence');
+    expect(source).toContain('Suspension, termination and post-termination access');
+    expect(source).toContain('Warranties and compliance disclaimers');
+    expect(source).toContain('Indemnities and liability — counsel decision required');
+    expect(source).toContain('Renewal, changes and order precedence');
+    expect(source).toContain('Governing law, disputes and legal notices — unresolved final terms');
+    expect(source).toContain('Final acceptance boundary');
+    expect(source).toContain('comercial@risckcomply.com');
+    expect(source).toContain('REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED');
+    expect(source).toContain('final RISCK COMPLY contracting/operator legal entity, registered office and registered identifiers are still pending authoritative founder/entity confirmation');
+    expect(source).toContain('A final general refund policy has not yet been approved');
+    expect(source).toContain('The governing law, court/forum or arbitration position has not yet been finally selected and approved');
+
+    expect(source).not.toContain('SAMUEL CERQUEIRA, UNIPESSOAL LDA');
+    expect(source).not.toMatch(/\bNIF\b|\bNIPC\b/);
+    expect(source).not.toMatch(/€\s?(49|149|399|990)/);
+    expect(source).not.toContain('99.9%');
+    expect(source).not.toMatch(/no refunds?/i);
+  });
+
+  it('fails untranslated Terms locales closed to complete English text with an explicit language boundary', async () => {
+    const source = await readFile(TERMS_PAGE, 'utf8');
+
+    expect(source).toContain('const copy: Partial<Record<Locale, TermsCopy>> = { en, pt }');
+    expect(source).toContain("const contentLocale: Locale = copy[locale] ? locale : 'en';");
+    expect(source).toContain('const page = copy[contentLocale] ?? en');
+    expect(source).toContain('contentLanguage={contentLocale}');
+    expect(source).toContain('No liability cap or indemnity is represented as effective by this review draft');
   });
 
   it('publishes current transfer facts without converting them into Chapter V acceptance', async () => {
