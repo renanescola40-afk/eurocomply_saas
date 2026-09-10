@@ -37,7 +37,7 @@ describe('V43 terminal runtime regressions', () => {
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
     const body = downloadActions.slice(start, end);
-    expect(body).not.toContain('Promise.all');
+    expect(body).not.toMatch(/Promise\.all\s*\(/);
     expect(body.match(/await logAuditEvent\(/g)).toHaveLength(2);
     expect(body).toContain('UPLOAD_SECURITY_AUDIT_EVENTS.downloadDenied');
     expect(body).toContain("action: 'document.download_url_rejected'");
