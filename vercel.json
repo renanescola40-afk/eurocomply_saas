@@ -1,23 +1,26 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "npm ci --ignore-scripts",
-  "buildCommand": "npm run build",
+  "buildCommand": "bash scripts/security/build-beagle-isolated-target.sh",
   "ignoreCommand": "node scripts/vercel/ignore-build.mjs",
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://vfqxmiaaagqpbwrrroww.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_GucvNM1m1S875lhpoj48lA_SVi6IlYX",
+    "SUPABASE_URL": "https://vfqxmiaaagqpbwrrroww.supabase.co",
+    "SUPABASE_SERVICE_ROLE_KEY": "",
+    "DATABASE_SERVICE_ROLE_KEY": "",
+    "DATABASE_URL": "",
+    "STRIPE_SECRET_KEY": "",
+    "STRIPE_WEBHOOK_SECRET": "",
+    "BEAGLE_PENTEST_TARGET": "isolated-vfqxmiaaagqpbwrrroww"
+  },
   "git": {
     "deploymentEnabled": {
+      "pentest/beagle-isolated-target-20260910": true,
       "main": false,
       "agent/**": false,
       "*": false
     }
   },
-  "crons": [
-    {
-      "path": "/api/internal/daily-maintenance",
-      "schedule": "0 4 * * *"
-    },
-    {
-      "path": "/api/internal/marketing/linkedin/process",
-      "schedule": "*/15 * * * *"
-    }
-  ]
+  "crons": []
 }
