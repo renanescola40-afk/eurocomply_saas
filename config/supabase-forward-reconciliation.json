@@ -1,18 +1,44 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-09-gdpr-rights-lifecycle-v42",
-  "sourceChangeSet": "2026-09-09-supabase-advisor-rpc-hardening-v41",
+  "changeSet": "2026-09-10-production-runtime-contract-v43",
+  "sourceChangeSet": "2026-09-09-gdpr-rights-lifecycle-v42",
   "migrations": [
     {
-      "filename": "20260909142500_reconcile_data_governance_enterprise_foundation.sql",
-      "purpose": "forward-only reconciliation of the three canonical data-governance relations omitted from the Production ledger by the historical 20260720190000 migration, created directly under FORCE RLS and server-only mutation authority without migration-history repair"
+      "filename": "20260910113000_reconcile_fria_operational_runtime_v43.sql",
+      "purpose": "forward-only reconciliation of the FRIA operational RPC, trigger, same-organization FK and service-role ACL contract consumed by Production without replaying or weakening newer live RLS policies"
     },
     {
-      "filename": "20260909143000_harden_data_subject_request_lifecycle.sql",
-      "purpose": "evolve the reconciled canonical data_subject_requests lifecycle above the verified V41 Production ledger head: replace fixed 30-day default authority with explicit calendar-month server tracking, add identity/role/extension/decision/evidence fields, extend Chapter III request types, force RLS, and remove direct browser mutation authority without creating a competing DSAR table"
+      "filename": "20260910114000_reconcile_prohibited_practices_runtime_v43.sql",
+      "purpose": "forward-only materialization of the missing Article 5 prohibited-practices data plane, atomic workflows, active-membership boundaries, FORCE RLS and backend-only mutation authority"
+    },
+    {
+      "filename": "20260910115000_atomic_data_subject_request_lifecycle_audit_v43.sql",
+      "purpose": "re-forward the reviewed service-role-only atomic GDPR data-subject lifecycle plus audit-chain transaction above the current Production migration head without migration-history repair"
     }
   ],
   "historicalBaselines": {
+    "v42": {
+      "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
+      "changeSet": "2026-09-09-gdpr-rights-lifecycle-v42",
+      "sourceChangeSet": "2026-09-09-supabase-advisor-rpc-hardening-v41",
+      "migrations": [
+        {
+          "filename": "20260909142500_reconcile_data_governance_enterprise_foundation.sql",
+          "purpose": "forward-only reconciliation of the three canonical data-governance relations omitted from the Production ledger by the historical 20260720190000 migration, created directly under FORCE RLS and server-only mutation authority without migration-history repair"
+        },
+        {
+          "filename": "20260909143000_harden_data_subject_request_lifecycle.sql",
+          "purpose": "evolve the reconciled canonical data_subject_requests lifecycle above the verified V41 Production ledger head: replace fixed 30-day default authority with explicit calendar-month server tracking, add identity/role/extension/decision/evidence fields, extend Chapter III request types, force RLS, and remove direct browser mutation authority without creating a competing DSAR table"
+        }
+      ],
+      "truthBoundary": {
+        "automaticClassification": false,
+        "productionWriteAuthorizedByConfig": false,
+        "migrationHistoryRepairAllowed": false,
+        "unrestrictedDbPushAllowed": false,
+        "onlyListedForwardMigrationsMayBeRehearsedOrRequested": true
+      }
+    },
     "v41": {
       "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
       "changeSet": "2026-09-09-supabase-advisor-rpc-hardening-v41",

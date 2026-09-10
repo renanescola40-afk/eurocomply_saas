@@ -53,7 +53,7 @@ jobs:
           test "$(jq -r '.url // empty' "$meta")" = "$TARGET_DEPLOYMENT_URL"
           test "$(jq -r '.readyState // .state // empty' "$meta")" = 'READY'
 
-      - name: Create protection override only for exact preview hostname
+      - name: Ensure protection override only for exact preview hostname
         shell: bash
         run: |
           set -euo pipefail
@@ -67,10 +67,19 @@ jobs:
             -H 'Content-Type: application/json' \
             "https://api.vercel.com/aliases/$TARGET_DEPLOYMENT_URL/protection-bypass?teamId=$VERCEL_TEAM_ID" \
             --data '{"override":{"scope":"alias-protection-override","action":"create"}}')"
-          if [ "$status" != '200' ]; then
-            echo "Vercel alias protection override failed with HTTP $status" >&2
-            exit 1
-          fi
+          case "$status" in
+            200)
+              echo 'Vercel alias protection override created.'
+              ;;
+            400)
+              echo 'Vercel returned HTTP 400 while creating the override; continuing only to independent anonymous postcondition proofs.'
+              ;;
+            *)
+              echo "Vercel alias protection override failed with HTTP $status" >&2
+              cat "$response" >&2 || true
+              exit 1
+              ;;
+          esac
 
       - name: Prove Beagle verification file is anonymous
         shell: bash

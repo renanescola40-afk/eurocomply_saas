@@ -17,12 +17,13 @@ const DEFAULT_REPORT_PATH = join(
   'supabase-forward-reconciliation-evidence.json',
 );
 
-const EXPECTED_CHANGE_SET = '2026-09-09-gdpr-rights-lifecycle-v42';
-const SOURCE_CHANGE_SET = '2026-09-09-supabase-advisor-rpc-hardening-v41';
-const VERIFIED_PRODUCTION_LEDGER_HEAD = '20260909006900';
-const V42_FOUNDATION_MIGRATION = '20260909142500_reconcile_data_governance_enterprise_foundation.sql';
-const V42_DSR_MIGRATION = '20260909143000_harden_data_subject_request_lifecycle.sql';
-const EXPECTED_MIGRATIONS = [V42_FOUNDATION_MIGRATION, V42_DSR_MIGRATION];
+const EXPECTED_CHANGE_SET = '2026-09-10-production-runtime-contract-v43';
+const SOURCE_CHANGE_SET = '2026-09-09-gdpr-rights-lifecycle-v42';
+const VERIFIED_PRODUCTION_LEDGER_HEAD = '20260909232229';
+const FRIA_MIGRATION = '20260910113000_reconcile_fria_operational_runtime_v43.sql';
+const ARTICLE5_MIGRATION = '20260910114000_reconcile_prohibited_practices_runtime_v43.sql';
+const DSR_MIGRATION = '20260910115000_atomic_data_subject_request_lifecycle_audit_v43.sql';
+const EXPECTED_MIGRATIONS = [FRIA_MIGRATION, ARTICLE5_MIGRATION, DSR_MIGRATION];
 
 function fail(message) {
   throw new Error(message);
@@ -51,75 +52,83 @@ function assertTruthBoundary(config) {
   }
 }
 
-function verifyFoundationMigrationBoundary() {
-  const path = join(ROOT, 'supabase', 'migrations', V42_FOUNDATION_MIGRATION);
-  const sql = readFileSync(path, 'utf8');
-  const version = V42_FOUNDATION_MIGRATION.slice(0, 14);
-  const v42Version = V42_DSR_MIGRATION.slice(0, 14);
+function readSelectedMigration(filename) {
+  return readFileSync(join(ROOT, 'supabase', 'migrations', filename), 'utf8');
+}
 
-  if (version <= VERIFIED_PRODUCTION_LEDGER_HEAD) {
-    fail(`V42 foundation is not strictly forward of Production head ${VERIFIED_PRODUCTION_LEDGER_HEAD}`);
-  }
-  if (version >= v42Version) {
-    fail('V42 foundation must sort before the GDPR lifecycle migration');
-  }
-
-  for (const marker of [
-    'create table if not exists public.data_retention_policies',
-    'create table if not exists public.data_subject_requests',
-    'create table if not exists public.audit_integrity_checkpoints',
-    'force row level security',
-    'revoke all privileges on table public.data_subject_requests from anon, authenticated',
-    'grant select on table public.data_subject_requests to authenticated',
-    'grant all privileges on table public.data_subject_requests to service_role',
-    'migration history',
-  ]) {
-    if (!sql.toLowerCase().includes(marker.toLowerCase())) {
-      fail(`V42 foundation marker missing: ${marker}`);
+function assertForwardOrdering() {
+  let previous = VERIFIED_PRODUCTION_LEDGER_HEAD;
+  for (const filename of EXPECTED_MIGRATIONS) {
+    const version = filename.slice(0, 14);
+    if (version <= previous) {
+      fail(`${filename} must sort strictly after ${previous}`);
     }
-  }
-
-  if (/\b(drop\s+table|truncate\s+table)\b/i.test(sql)) {
-    fail('V42 foundation must not destructively replace data-governance relations');
+    previous = version;
   }
 }
 
-function verifyV42MigrationBoundary() {
-  const path = join(ROOT, 'supabase', 'migrations', V42_DSR_MIGRATION);
-  const sql = readFileSync(path, 'utf8');
-  const version = V42_DSR_MIGRATION.slice(0, 14);
+function assertNoDestructiveReplacement(filename, sql) {
+  if (/\b(drop\s+table|truncate\s+table)\b/i.test(sql)) {
+    fail(`${filename} must not destructively replace Production relations`);
+  }
+  if (/migration\s+repair|schema_migrations\s*\(/i.test(sql)) {
+    fail(`${filename} must not repair or synthesize migration history`);
+  }
+}
 
-  if (version <= VERIFIED_PRODUCTION_LEDGER_HEAD) {
-    fail(`V42 migration is not strictly forward of Production head ${VERIFIED_PRODUCTION_LEDGER_HEAD}`);
+function verifyV43RuntimeContracts() {
+  const fria = readSelectedMigration(FRIA_MIGRATION);
+  const article5 = readSelectedMigration(ARTICLE5_MIGRATION);
+  const dsr = readSelectedMigration(DSR_MIGRATION);
+
+  for (const [filename, sql] of [
+    [FRIA_MIGRATION, fria],
+    [ARTICLE5_MIGRATION, article5],
+    [DSR_MIGRATION, dsr],
+  ]) {
+    assertNoDestructiveReplacement(filename, sql);
   }
 
   for (const marker of [
-    "to_regclass('public.data_subject_requests')",
-    'alter column due_at drop default',
+    'create_fria_assessment_atomic',
+    'approve_fria_assessment_atomic',
+    'compensate_fria_approval_audit_failure',
+    'enforce_fria_member_scope',
     'force row level security',
-    'revoke insert, update, delete on table public.data_subject_requests from anon, authenticated',
-    "'portability'",
-    "'consent_withdrawal'",
-    'initial_due_at',
-    'identity_verification_state',
-    'role_route',
-    'extension_reason',
-    'decision_reason',
-    'evidence_refs',
+    'to service_role',
   ]) {
-    if (!sql.toLowerCase().includes(marker.toLowerCase())) {
-      fail(`V42 GDPR lifecycle marker missing: ${marker}`);
+    if (!fria.toLowerCase().includes(marker.toLowerCase())) {
+      fail(`V43 FRIA runtime marker missing: ${marker}`);
     }
   }
 
-  if (sql.includes("interval '30 days'")) {
-    fail('V42 must not restore a fixed 30-day DSR deadline default');
+  for (const marker of [
+    'create table if not exists public.ai_prohibited_practice_reviews',
+    'create table if not exists public.ai_prohibited_practice_signal_assessments',
+    'create table if not exists public.ai_prohibited_practice_exception_claims',
+    'create table if not exists public.ai_prohibited_practice_evidence',
+    'create table if not exists public.ai_prohibited_practice_decisions',
+    'create_prohibited_practices_review_atomic',
+    'approve_prohibited_practices_review_atomic',
+    'app_private.is_org_member(organization_id)',
+    'force row level security',
+    'from public, anon, authenticated',
+  ]) {
+    if (!article5.toLowerCase().includes(marker.toLowerCase())) {
+      fail(`V43 Article 5 runtime marker missing: ${marker}`);
+    }
   }
-  if (/create\s+table\s+(if\s+not\s+exists\s+)?public\.data_subject_requests/i.test(sql)) {
-    fail('V42 must evolve the canonical data_subject_requests table, not create a competitor');
-  }
-  if (/\b(drop\s+table|truncate\s+table)\s+public\.data_subject_requests\b/i.test(sql)) {
-    fail('V42 must not destructively replace the canonical DSR table');
+
+  for (const marker of [
+    'update_data_subject_request_with_audit_atomic',
+    'append_audit_event_chained',
+    'set search_path = pg_catalog',
+    'from public, anon, authenticated',
+    'to service_role',
+  ]) {
+    if (!dsr.toLowerCase().includes(marker.toLowerCase())) {
+      fail(`V43 GDPR atomic lifecycle marker missing: ${marker}`);
+    }
   }
 }
 
@@ -138,6 +147,9 @@ async function main() {
     fail(`bounded selected migration set drifted: expected ${EXPECTED_MIGRATIONS.join(', ')}`);
   }
 
+  assertForwardOrdering();
+  verifyV43RuntimeContracts();
+
   const gitSha = currentGitSha();
   if (!gitSha || !/^[a-f0-9]{40}$/.test(gitSha)) fail('Unable to resolve an exact git HEAD');
 
@@ -151,9 +163,6 @@ async function main() {
     }
   }
 
-  verifyFoundationMigrationBoundary();
-  verifyV42MigrationBoundary();
-
   const manifest = await compileForwardReconciliationManifest({
     config,
     rootDir: ROOT,
@@ -164,8 +173,14 @@ async function main() {
     manifest.migrations.length !== EXPECTED_MIGRATIONS.length
     || JSON.stringify(manifest.migrations.map((migration) => migration.filename)) !== JSON.stringify(EXPECTED_MIGRATIONS)
   ) {
-    fail('V42 manifest does not contain exactly the reviewed foundation + GDPR lifecycle migrations');
+    fail('V43 manifest does not contain exactly the reviewed runtime reconciliation set');
   }
+
+  const lineageKinds = [
+    'reviewed-v43-fria-runtime-reconciliation',
+    'reviewed-v43-article5-runtime-reconciliation',
+    'reviewed-v43-gdpr-atomic-lifecycle-reforward',
+  ];
 
   const report = {
     schema: 'risck-comply.supabase-forward-reconciliation-evidence.v2',
@@ -184,17 +199,13 @@ async function main() {
     automaticClassificationPerformed: false,
     humanDecisionRequired: true,
     productionLedgerHeadBeforeSelection: VERIFIED_PRODUCTION_LEDGER_HEAD,
-    v41AlreadyPresentInProduction: true,
     records: manifest.migrations.map((migration, index) => ({
       position: index + 1,
       filename: migration.filename,
       timestamp: migration.version,
       bytes: migration.sizeBytes,
       sha256: migration.sha256,
-      lineageKind: index === 0
-        ? 'reviewed-v42-forward-data-governance-foundation'
-        : 'reviewed-v42-gdpr-rights-lifecycle',
-      sourceFilename: index === 0 ? '20260720190000_data_governance_enterprise.sql' : null,
+      lineageKind: lineageKinds[index],
     })),
   };
 
@@ -213,11 +224,9 @@ async function main() {
     );
   }
 
-  process.stdout.write(`Bounded Supabase forward reconciliation verified: ${manifest.migrations.length} migrations\n`);
+  process.stdout.write(`Bounded Supabase V43 forward reconciliation verified: ${manifest.migrations.length} migrations\n`);
   process.stdout.write(`Source change set: ${SOURCE_CHANGE_SET}\n`);
   process.stdout.write(`Production ledger head before selection: ${VERIFIED_PRODUCTION_LEDGER_HEAD}\n`);
-  process.stdout.write(`Reviewed foundation migration: ${V42_FOUNDATION_MIGRATION}\n`);
-  process.stdout.write(`Reviewed V42 GDPR lifecycle migration: ${V42_DSR_MIGRATION}\n`);
   process.stdout.write(`Selected-set SHA-256: ${report.selectedSetSha256}\n`);
   process.stdout.write('Production write authorization: false\n');
 }
