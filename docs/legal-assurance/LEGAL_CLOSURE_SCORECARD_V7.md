@@ -1,21 +1,21 @@
 # RISCK COMPLY — Legal + GDPR + EU AI Act Closure Scorecard V7
 
-Date: 2026-09-09  
+Date: 2026-09-10  
 Mode: `FINAL_LEGAL_REGULATORY_ASSURANCE_CLOSURE_V7`
 
 ## Purpose
 
-Record the post-V6 Legal Assurance truth without converting source work, CI or AI analysis into qualified legal acceptance.
+Record the Legal Assurance truth without converting source work, CI, provider support statements or AI analysis into qualified legal acceptance.
 
 This document is not a legal opinion, certification, regulator approval or compliance guarantee.
 
 ## Canonical release boundary
 
 ```text
-CANONICAL_MAIN_SHA=0acf3de841b07b01bf9e132eaeb3a0e00a0d2a8f
+CANONICAL_MAIN_SHA=a921445a675bf3652568603535c148eb4e977914
 PR_2025_V6_GDPR_LIFECYCLE_INTEGRITY=MERGED
 PR_2026_DATA_GOVERNANCE_FOUNDATION_RECONCILIATION=MERGED
-PR_2029_V7_RUNTIME_TRUTH_AND_PROOF_FIX=OPEN
+PR_2029_V7_RUNTIME_TRUTH_AND_PROOF_FIX=MERGED
 PROTECTED_MAIN=true
 ```
 
@@ -33,7 +33,7 @@ MASTER_LEGAL_OPINION=OPEN
 LEGAL_FINAL=BLOCKED
 ```
 
-The next material internal credit event remains a valid exact-current-main Data Governance Runtime V2 proof and the evidence-backed legal matrix reconciliation that follows it.
+The 80/50 working percentages remain conservative because no canonical weighting model assigns a new percentage to this single runtime proof. The material gate itself has advanced from OPEN to PASS and is recorded below.
 
 ## Repository-controlled controls
 
@@ -42,77 +42,57 @@ The next material internal credit event remains a valid exact-current-main Data 
 | Eight AI Act technical review packages | PREPARED | Genuine qualified human acceptance remains separate |
 | Article 5 / Article 50 / FRIA / deployer / provider / conformity / GPAI internal packages | PREPARED | Qualified decisions required |
 | GDPR role, Articles 13/14, DPA, transfer, TOMs, RoPA, breach, DPO/DPIA material | PREPARED / FACTS_PARTIAL | Final entity/provider/legal facts remain bounded separately |
-| Retention policy model | CATEGORY_SPECIFIC | No fabricated universal day count; PR #2029 proves bounded per-category schema instead |
+| Retention policy model | CATEGORY_SPECIFIC_RUNTIME_PROVEN | Exact-SHA proof validates required integer category bounds `1..3650`; legal appropriateness of each category remains separate |
 | Canonical GDPR rights-request register | PASS_SOURCE_MERGED | PR #2014 + PR #2025 integrity controls |
-| GDPR terminal-state immutability | PASS_SOURCE_MERGED | Atomic CAS boundary merged in PR #2025 |
-| GDPR lifecycle version/timestamp integrity | PASS_SOURCE_MERGED | Monotonic lifecycle boundary merged in PR #2025 |
-| GDPR lifecycle mutation + audit atomicity | PASS_SOURCE_MERGED | Canonical server transaction path merged in PR #2025 |
+| GDPR terminal-state immutability | PASS_SOURCE_MERGED_EXACT_SHA_ACCEPTED | V6 source merged; exact-main release proof retained |
+| GDPR lifecycle version/timestamp integrity | PASS_SOURCE_MERGED_EXACT_SHA_ACCEPTED | V6 source merged; exact-main release proof retained |
+| GDPR lifecycle mutation + audit atomicity | PASS_SOURCE_MERGED | Canonical server transaction path merged; runtime proof validates the audit-integrity schema boundary |
 | Data-governance foundation | PASS_SOURCE_MERGED | PR #2026 forward reconciliation |
-| Data Governance Runtime V2 | OPEN | New exact-current-main protected proof required after PR #2029 merges and protected residency fact is configured |
-| Analytics consent source control | PASS_SOURCE_IMPLEMENTED | Production configuration/legal-basis acceptance remains separate |
+| Data Governance Runtime V2 | PASS_EXACT_SHA | Run `34448768687`, SHA `a921445...`, artifact `10140768157` |
+| Analytics consent source control | PASS_SOURCE_IMPLEMENTED | Exact Production configuration/legal-basis acceptance remains separate |
 | Founder/entity final facts | OPEN_EXTERNAL_OWNER_FACT | No entity/NIF/address/signatory inference |
 | Provider DPA/SCC/account facts | PARTIAL_EXTERNAL | Remaining account/legal facts are not inferred |
-| Final Privacy / Terms / DPA publication | OPEN | Depends on factual and qualified legal gates |
+| Final Privacy / Terms / DPA publication | OPEN | Runtime blocker removed; factual and qualified legal gates remain |
 
-## Data Governance Runtime V2 — prior run is non-crediting
+## Data Governance Runtime V2 — accepted
 
-Protected run `34413535220` targeted SHA:
+Protected run **34448768687** executed against exact protected `main` SHA:
 
 ```text
-3349c1bf51c696e5d77106e3753c4a26cea8c033
+a921445a675bf3652568603535c148eb4e977914
 ```
 
-It validated the protected execution envelope and reached the isolated Supabase proof stage, then failed because three proof inputs were empty. It is now additionally stale because PR #2026 advanced canonical `main` to `0acf3de841b07b01bf9e132eaeb3a0e00a0d2a8f`.
-
-Artifact `10128230912` remains diagnostic failed evidence only.
-
-## PR #2029 — remove false universal-retention dependency
-
-The failed proof exposed a modelling defect: the workflow required `DATA_RETENTION_DEFAULT_DAYS`, while the actual RISCK COMPLY policy is class/category-specific and does not truthfully define one universal retention period.
-
-PR #2029 corrects that proof contract rather than inventing a number:
+Accepted retained evidence:
 
 ```text
-DATA_RETENTION_POLICY_MODE=category_specific
-DATA_EXPORT_ENCRYPTION_REQUIRED=true
-DATA_RETENTION_DEFAULT_DAYS=REMOVED_FROM_PROOF_INPUT
-```
-
-The runtime proof now requires the canonical `data_retention_policies.retention_days` field to be non-null integer data and verifies the database check constraint bounds category-specific values to `1..3650` days. The strict evidence validator also requires `retentionPolicySchemaValid=true`.
-
-This change proves the configured retention **model/schema boundary**. It does not claim every category-specific period is legally approved or operationally enforced forever; those remain subject to applicable purpose, legal duty, customer agreement, provider lifecycle and material-change review.
-
-## Protected environment facts after PR #2029
-
-| Fact | Attributable truth | Proof input |
-|---|---|---|
-| Production Supabase residency | `eu-west-1` | `DATA_RESIDENCY_REGION=eu-west-1` must exist in protected environment |
-| Retention model | category-specific | source-controlled `DATA_RETENTION_POLICY_MODE=category_specific` |
-| Governed export encryption requirement | required | source-controlled `DATA_EXPORT_ENCRYPTION_REQUIRED=true` |
-
-After PR #2029 merges, the only remaining missing protected proof variable identified from the failed run is the provider-factual residency declaration. The GitHub connector available to this lane cannot mutate Environment variables, so no value is represented as configured until it actually exists there.
-
-## Exact-current-main acceptance contract
-
-A valid Data Governance Runtime V2 PASS requires a **new** protected run against the then-current protected `main`:
-
-```text
-TARGET_SHA=CURRENT_PROTECTED_MAIN_AT_EXECUTION
 EVIDENCE_SCHEMA=risck-comply.data-governance-evidence.v2
 EVIDENCE_STATUS=Complete
 EVIDENCE_OUTCOME=passed
-EVIDENCE_TARGET_SHA=TARGET_SHA
+EVIDENCE_TARGET_SHA=a921445a675bf3652568603535c148eb4e977914
+WORKFLOW_RUN_ID=34448768687
+ARTIFACT_ID=10140768157
+ARTIFACT_DIGEST=sha256:361aa2f26da1cb1641b33fc2e4a638f576f12968aa0545cb80f7e1d0f765a299
 ALL_REQUIRED_CHECKS=true
-FAILED_OR_SUPERSEDED_ARTIFACTS_RECEIVE_ZERO_CREDIT=true
+FAILURES=0
 ```
 
-Until that artifact exists:
+The proof validates the protected exact-main execution envelope, `DATA_RESIDENCY_REGION=eu-west-1`, category-specific retention schema bounds, governed export-encryption requirement, governance tables, RLS/FORCE RLS, tenant policies, data-minimisation constraints, GDPR lifecycle/deadline schema authority, Chapter III request types, server-only mutation privileges and audit-integrity schema against an isolated disposable database replay.
+
+The proof stores no customer rows, personal identifiers, database URL or export payload. Its boundary is technical schema/security/release acceptance; it does not establish downstream provider completion or make case-specific legal judgments.
+
+The previous failed run `34413535220` / artifact `10128230912` remains non-crediting diagnostic evidence.
+
+## GDPR rights technical gate
 
 ```text
-GDPR_RIGHTS_SOURCE=IMPLEMENTED
-GDPR_RIGHTS_RUNTIME=OPEN
-DATA_GOVERNANCE_RUNTIME_V2=OPEN
+GDPR_RIGHTS_SOURCE=PASS
+GDPR_RIGHTS_RUNTIME_GATE=PASS_EXACT_SHA
+DATA_GOVERNANCE_RUNTIME_V2=PASS_EXACT_SHA
+DOWNSTREAM_RIGHTS_EFFECTS=PARTIAL
+CASE_SPECIFIC_LEGAL_DECISIONS=OPEN
 ```
+
+Issue #2009 may close after the evidence-backed `DATA_SUBJECT_RIGHTS_MATRIX.md` reconciliation is merged into protected `main`. Closing that issue is technical acceptance of the canonical request register/deadline workflow, not a claim that every GDPR Chapter III request is automatically resolved end-to-end.
 
 ## Qualified human review — non-substitutable
 
@@ -137,24 +117,28 @@ No repository commit, AI-generated conclusion, automated review, CI result, prov
 
 ## Genuine remaining legal/factual blockers
 
+- public Privacy / GDPR Articles 13–14 completeness, constrained by final operator/entity and processing facts;
 - final RISCK COMPLY contracting/operator entity, registered facts and signatory authority;
 - remaining account-specific provider DPA/SCC/transfer facts and legal interpretation;
 - final controller/processor/transfer conclusions for the actual operating model;
-- final customer-facing Privacy, Terms and DPA acceptance;
+- final customer-facing DPA, subprocessors/transfers and Terms acceptance;
 - eight attributable qualified AI Act review decisions;
 - consolidated Master Legal Opinion or equivalent bounded qualified conclusion.
 
 ## Current shortest path
 
-1. get PR #2029 protected checks green and merge only with owner authorization;
-2. configure `DATA_RESIDENCY_REGION=eu-west-1` in the protected `production-data-governance-proof` Environment;
-3. execute a new Data Governance Runtime V2 proof against the exact then-current protected `main`;
-4. reconcile GDPR runtime matrices only to the level proven by that artifact;
-5. close founder/entity and remaining provider/account facts;
-6. reconcile final Privacy, Terms, DPA, subprocessors/transfers and publication language;
-7. obtain 8/8 genuine qualified review decisions;
-8. obtain the Master Legal Opinion/equivalent consolidated qualified conclusion;
-9. only then evaluate `LEGAL_FINAL=PASS`.
+1. merge the exact-SHA GDPR matrix/status reconciliation through protected `main`;
+2. close issue #2009 from the retained acceptance evidence;
+3. move directly to public Privacy / GDPR Articles 13–14 implementation gaps;
+4. close only the founder/entity and provider/account facts actually required for Privacy;
+5. reconcile DPA;
+6. reconcile subprocessors/transfers;
+7. reconcile Terms;
+8. obtain 8/8 genuine qualified review decisions;
+9. obtain the Master Legal Opinion/equivalent consolidated qualified conclusion;
+10. only then evaluate `LEGAL_FINAL=PASS`.
+
+`NO_DOCUMENTATION_LOOP=true`: no additional documents are to be created unless they satisfy an identified legal requirement or a qualified reviewer request.
 
 ## Authority boundary
 
@@ -164,4 +148,5 @@ PLMJ_ROUTE=PAUSED_BY_OWNER
 PRODUCTION_DB_WRITE_AUTHORIZED=false
 SYNTHETIC_LEGAL_ACCEPTANCE_FORBIDDEN=true
 NO_MERGE_INFERRED_FROM_CONTINUE=true
+NO_DOCUMENTATION_LOOP=true
 ```

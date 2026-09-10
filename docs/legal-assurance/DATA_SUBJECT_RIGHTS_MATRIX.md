@@ -1,26 +1,26 @@
 # RISCK COMPLY — Data Subject Rights Operational Matrix
 
-Date: 2026-09-09  
+Date: 2026-09-10  
 Baseline: GDPR Chapter III. A written policy is not sufficient; each right is mapped to an operational path. Source implementation, exact-SHA runtime proof and qualified legal judgment are deliberately separated.
 
 | Right / control | Current capability | State | Remaining gap |
 |---|---|---|---|
 | Intake | `comercial@risckcomply.com` remains the verified corporate intake channel; canonical `/api/gdpr/requests` creates a durable tenant-scoped request record before success | PASS_SOURCE_IMPLEMENTED_MERGED | Formal privacy ownership/SLA and final public notice reconciliation remain open |
-| Identity verification | Canonical lifecycle records identity-verification state, request timestamp and verified timestamp; sensitive in-product privacy operations retain authenticated/step-up controls where applicable | PASS_SOURCE_IMPLEMENTED | Manual/email identity procedure and exact-SHA runtime acceptance remain to be evidenced |
-| Access | Organisation-scoped GDPR export exists and canonical lifecycle supports access/export request types | PASS_SOURCE_IMPLEMENTED | Subject-vs-organisation scope and customer-controller routing require case-specific handling/runtime evidence |
+| Identity verification | Canonical lifecycle records identity-verification state, request timestamp and verified timestamp; sensitive in-product privacy operations retain authenticated/step-up controls where applicable | PASS_SOURCE_IMPLEMENTED | Manual/email identity procedure and case-execution evidence remain to be completed |
+| Access | Organisation-scoped GDPR export exists and canonical lifecycle supports access/export request types | PASS_SOURCE_IMPLEMENTED | Subject-vs-organisation scope and customer-controller routing require case-specific handling |
 | Portability | Canonical lifecycle includes `portability`; structured organisation export capability exists | PARTIAL_SOURCE_READY | Applicability, exact portable data set/format and customer-controller allocation remain case-specific/legal |
 | Rectification | Canonical lifecycle includes `rectification` and attributable decision/evidence fields | PARTIAL_SOURCE_READY | Downstream correction propagation and the concrete correction executor for each data source remain to be proven |
 | Erasure | Existing destructive delete-request intake is bound to the same canonical request record before success; lifecycle supports decision/evidence/completion | PASS_INTAKE_SOURCE_IMPLEMENTED | Full downstream deletion/anonymisation completion and provider propagation remain unproven end-to-end |
 | Restriction | Canonical lifecycle includes `restriction`, status, role routing, decision rationale and evidence references | PARTIAL_SOURCE_READY | Actual restriction effect across applicable stores/providers and legal exception judgment remain open |
 | Objection | Canonical lifecycle includes `objection`, attributable routing/decision/evidence | PARTIAL_SOURCE_READY | Legal-basis decision and actual suppression/restriction effect remain open |
-| Consent withdrawal | Canonical lifecycle includes `consent_withdrawal`; optional analytics independently defaults to consent-required, blocks PostHog capture without grant, exposes Cookie Policy controls and invokes opt-out/recording stop on withdrawal | PASS_ANALYTICS_SOURCE_IMPLEMENTED / BROADER_RIGHT_PARTIAL | Exact Production analytics configuration/runtime evidence, ePrivacy/legal-basis acceptance and any other consent-based processing surfaces remain open |
+| Consent withdrawal | Canonical lifecycle includes `consent_withdrawal`; optional analytics independently defaults to consent-required, blocks PostHog capture without grant, exposes Cookie Policy controls and invokes opt-out/recording stop on withdrawal | PASS_ANALYTICS_SOURCE_IMPLEMENTED / BROADER_RIGHT_PARTIAL | Exact Production analytics configuration, ePrivacy/legal-basis acceptance and any other consent-based processing surfaces remain open |
 | Automated-decision safeguards | Product position remains that website/account operations are not intended to make solely automated decisions with legal/similar effect | PASS_DOCUMENTED | Revalidate on product/decisioning change and qualified review where needed |
-| Deadline tracking | Canonical source computes one-calendar-month initial deadlines and supports only bounded 1/2-month extensions with reason + notification evidence | PASS_SOURCE_IMPLEMENTED / RUNTIME_PENDING | Protected Data Governance Runtime Proof must validate exact current main SHA before runtime PASS credit |
+| Deadline tracking | Canonical source computes one-calendar-month initial deadlines and supports only bounded 1/2-month extensions with reason + notification evidence; exact-current-main Data Governance V2 proof validates the lifecycle/deadline schema authority on an isolated replay | PASS_SOURCE_AND_EXACT_SHA_RUNTIME_SCHEMA | Case execution, customer SLA and legal handling remain separate |
 | Customer-controller routing | Canonical lifecycle records controller/processor/mixed/under-review role and customer-controller reference; admin API is tenant-scoped | PASS_SOURCE_IMPLEMENTED | Case-specific legal allocation, customer workflow/SLA and downstream evidence remain open |
 | Exceptions/legal hold | Canonical lifecycle records decision reason/evidence; retention materials recognise billing, tax, fraud/security, audit and legal-hold constraints | PARTIAL | Software must not decide a legal exception automatically; attributable case decision/qualified review required where legal judgment applies |
-| Terminal lifecycle integrity | Canonical V6 rejects mutation of `completed`, `rejected` and `cancelled` records at the lifecycle API boundary | PASS_SOURCE_MERGED | Exact-current-main protected runtime evidence remains required before runtime PASS credit |
-| Last-modified integrity | Canonical V6 refreshes `updated_at` on lifecycle mutation and restores the prior timestamp if audit compensation restores prior values | PASS_SOURCE_MERGED | Exact-current-main protected runtime evidence remains required before runtime PASS credit |
-| Audit trail | Create/update flows are auditable without raw request payload content; lifecycle update compensates if audit persistence fails | PASS_SOURCE_IMPLEMENTED | Exact-SHA runtime evidence must be retained |
+| Terminal lifecycle integrity | Canonical V6 rejects mutation of `completed`, `rejected` and `cancelled` records at the lifecycle API boundary; the accepted exact-SHA release replay contains the merged V6 lifecycle schema and server-only mutation boundary | PASS_SOURCE_MERGED_EXACT_SHA_ACCEPTED | The Data Governance proof is a schema/boundary proof, not a synthetic legal decision or customer-row mutation transcript |
+| Last-modified integrity | Canonical V6 refreshes `updated_at` on lifecycle mutation and restores the prior timestamp if audit compensation restores prior values; merged V6 is bound to the accepted exact-current-main release proof | PASS_SOURCE_MERGED_EXACT_SHA_ACCEPTED | Case-specific execution evidence remains separate from the release acceptance proof |
+| Audit trail | Create/update flows are auditable without raw request payload content; lifecycle update is bound to the canonical audit path and the exact-SHA replay validates audit-integrity schema presence | PASS_SOURCE_AND_EXACT_SHA_SCHEMA_RUNTIME | Customer-specific audit events are not stored in the redacted proof artifact |
 
 ## Canonical operational record
 
@@ -48,37 +48,54 @@ The source model records, as applicable:
 
 `GDPR-RIGHTS-01` remains bound to GitHub issue **#2009 — GDPR: canonical data-subject rights request register + deadline workflow**.
 
-The source implementation requested by that issue was merged through PR #2014. V6 lifecycle-integrity corrections subsequently merged through PR #2025, and the canonical data-governance foundation reconciliation merged through PR #2026. The issue remains legitimately open because its acceptance contract also requires exact-current-main runtime evidence and because downstream/provider/legal-effect completion remains separate from source implementation.
+The source implementation requested by that issue was merged through PR #2014. V6 lifecycle-integrity corrections subsequently merged through PR #2025, the canonical data-governance foundation reconciliation merged through PR #2026, and PR #2029 corrected the proof contract so it reflects RISCK COMPLY's category-specific retention model without inventing a universal retention period.
+
+The issue's exact-current-main runtime evidence gate is now satisfied by protected workflow run **34448768687** against current protected `main` SHA **`a921445a675bf3652568603535c148eb4e977914`**. The retained artifact is **`data-governance-runtime-proof-a921445a675bf3652568603535c148eb4e977914`** (artifact ID **10140768157**, digest **`sha256:361aa2f26da1cb1641b33fc2e4a638f576f12968aa0545cb80f7e1d0f765a299`**).
 
 ```text
 PR_2014_SOURCE_IMPLEMENTATION=MERGED
 PR_2025_V6_LIFECYCLE_INTEGRITY=MERGED
 PR_2026_DATA_GOVERNANCE_FOUNDATION=MERGED
+PR_2029_V7_PROOF_RECONCILIATION=MERGED
 CANONICAL_RIGHTS_REQUEST_REGISTER=PASS_SOURCE_IMPLEMENTED_MERGED
 DEADLINE_TRACKING_SOURCE=PASS_IMPLEMENTED
 ROLE_ROUTING_SOURCE=PASS_IMPLEMENTED
 ANALYTICS_CONSENT_WITHDRAWAL_SOURCE=PASS_IMPLEMENTED
 V6_TERMINAL_IMMUTABILITY=PASS_SOURCE_MERGED
 V6_UPDATED_AT_INTEGRITY=PASS_SOURCE_MERGED
-DATA_GOVERNANCE_RUNTIME_V2=PENDING_EXACT_CURRENT_MAIN_PROOF
-ISSUE_2009=OPEN_UNTIL_ACCEPTANCE_EVIDENCE
+DATA_GOVERNANCE_RUNTIME_V2=PASS_EXACT_SHA
+DATA_GOVERNANCE_RUNTIME_RUN=34448768687
+DATA_GOVERNANCE_RUNTIME_SHA=a921445a675bf3652568603535c148eb4e977914
+ISSUE_2009=READY_TO_CLOSE_AFTER_MATRIX_RECONCILIATION_MERGES
 ```
 
-Creating or merging source alone does not satisfy the issue's terminal acceptance contract.
+Downstream provider actions and legal judgments remain separate from the technical acceptance of #2009 and are not converted into Chapter III legal completion by this proof.
 
-## Exact-SHA runtime gate
+## Exact-SHA runtime gate — accepted
 
-The protected data-governance evidence path uses schema `risck-comply.data-governance-evidence.v2` and must be retained as `Complete/passed` for the exact current `main` SHA with all required checks true.
+The protected data-governance evidence path uses schema `risck-comply.data-governance-evidence.v2` and is now retained as `Complete/passed` for the exact current `main` SHA with all required checks true.
 
-Current required order:
+Accepted evidence:
 
-1. PR #2029 protected checks pass and the proof-contract reconciliation is merged only through the authorized protected-main path;
-2. protected GitHub Environment `production-data-governance-proof` contains the attributable Production residency declaration `DATA_RESIDENCY_REGION=eu-west-1`;
-3. run a **new** Data Governance Runtime Proof for the exact protected `main` SHA current at execution time;
-4. validate and retain the exact-SHA evidence artifact;
-5. only then convert runtime-dependent controls from `RUNTIME_PENDING` to runtime PASS.
+```text
+WORKFLOW=Data Governance Privacy Audit Proof
+RUN_ID=34448768687
+TARGET_SHA=a921445a675bf3652568603535c148eb4e977914
+ARTIFACT_ID=10140768157
+ARTIFACT_NAME=data-governance-runtime-proof-a921445a675bf3652568603535c148eb4e977914
+ARTIFACT_DIGEST=sha256:361aa2f26da1cb1641b33fc2e4a638f576f12968aa0545cb80f7e1d0f765a299
+EVIDENCE_SCHEMA=risck-comply.data-governance-evidence.v2
+EVIDENCE_STATUS=Complete
+EVIDENCE_OUTCOME=passed
+FAILURES=0
+ALL_REQUIRED_CHECKS=true
+```
 
-The failed run `34413535220` targeted superseded SHA `3349c1bf51c696e5d77106e3753c4a26cea8c033` and receives no exact-current-main acceptance credit.
+The proof validated the protected exact-main execution envelope, declared Production residency (`eu-west-1`), category-specific retention schema bounds, export-encryption operating requirement, governance tables, RLS/FORCE RLS, tenant policies, data-minimisation constraints, GDPR request lifecycle/deadline schema authority, Chapter III request types, server-only request mutation privileges and audit-integrity schema against an isolated disposable database replay. No customer rows, identifiers or export payloads were retained in the artifact.
+
+This is deliberately a **schema, security-boundary and release-acceptance proof**. It is not a legal opinion, a customer-row transaction transcript, evidence that every downstream provider completed a deletion, or evidence that every Chapter III legal judgment is resolved.
+
+The earlier failed run `34413535220` targeted superseded SHA `3349c1bf51c696e5d77106e3753c4a26cea8c033` and continues to receive zero acceptance credit.
 
 ## Consent-withdrawal source boundary
 
@@ -120,11 +137,12 @@ OBJECTION=PARTIAL_SOURCE_READY_LEGAL_EFFECT_OPEN
 PORTABILITY=PARTIAL_SOURCE_READY
 CONSENT_WITHDRAWAL_ANALYTICS=PASS_SOURCE_IMPLEMENTED_RUNTIME_AND_LEGAL_REVIEW_OPEN
 CONSENT_WITHDRAWAL_OTHER_SURFACES=PARTIAL
-DEADLINE_TRACKING=PASS_SOURCE_IMPLEMENTED_RUNTIME_PENDING
+DEADLINE_TRACKING=PASS_SOURCE_AND_EXACT_SHA_RUNTIME_SCHEMA
 CUSTOMER_CONTROLLER_ROUTING=PASS_SOURCE_IMPLEMENTED_CASE_DECISION_OPEN
-TERMINAL_STATE_INTEGRITY=PASS_SOURCE_MERGED_RUNTIME_PENDING
-UPDATED_AT_INTEGRITY=PASS_SOURCE_MERGED_RUNTIME_PENDING
-DATA_SUBJECT_RIGHTS=PARTIAL_RUNTIME_AND_DOWNSTREAM
+TERMINAL_STATE_INTEGRITY=PASS_SOURCE_MERGED_EXACT_SHA_ACCEPTED
+UPDATED_AT_INTEGRITY=PASS_SOURCE_MERGED_EXACT_SHA_ACCEPTED
+DATA_GOVERNANCE_RUNTIME_V2=PASS_EXACT_SHA
+DATA_SUBJECT_RIGHTS=PARTIAL_DOWNSTREAM_AND_LEGAL
 ```
 
-No all-Chapter-III PASS is claimed until protected runtime evidence and the remaining downstream/legal decision surfaces are genuinely closed.
+No all-Chapter-III PASS is claimed. The exact-SHA technical runtime gate is closed, while remaining downstream effects, case-specific allocations and qualified legal decisions stay open until genuinely evidenced.
