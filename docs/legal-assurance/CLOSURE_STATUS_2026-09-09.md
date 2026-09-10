@@ -11,7 +11,7 @@ This is an evidence/status register, not a legal opinion, certification, regulat
 OBSERVED_PROTECTED_MAIN_SHA=43bf6b1368ff7a3b8ead0aa434b83bed9457615e
 PRODUCTION_DEPLOYMENT_ID=dpl_BznNuFKG8UEh4yW8y9HQyzLXDiJ9
 PRODUCTION_RELEASE_SHA=13b19410caa20045b19d98d58df406c43433af5a
-PRODUCTION_READY=true
+VERCEL_DEPLOYMENT_STATE=READY
 PRODUCTION_MAIN_RELATION=CURRENT_MAIN_AHEAD_OF_OBSERVED_PRODUCTION_RELEASE
 PR_2031_PRIVACY_REVIEW_SURFACE=MERGED
 PR_2032_DPA_REVIEW_SURFACE=MERGED
@@ -21,7 +21,7 @@ PR_2041_CANONICAL_LEGAL_RECONCILIATION=MERGED
 GDPR_RIGHTS_ISSUE_2009=CLOSED
 ```
 
-Direct connected validation on 2026-09-10 confirms that `www.risckcomply.com` remains READY at Production SHA `13b19410...`. Protected `main` has since advanced to `43bf6b1...` through later merges, including unrelated pentest work. Exact-current-main Production equality is therefore not claimed.
+Direct connected validation on 2026-09-10 confirms that the observed Vercel deployment serving `www.risckcomply.com` is in Vercel state READY at Production SHA `13b19410...`. Protected `main` has since advanced to `43bf6b1...` through later merges, including unrelated pentest work. Exact-current-main Production equality and overall Production release readiness are therefore not claimed.
 
 ## Public legal surfaces
 
@@ -91,10 +91,11 @@ These are owner-selected commercial positions, not legally approved clauses. Lia
 
 ## Provider factual evidence advanced
 
-Attributable provider/account correspondence materially narrows two previously open DPA facts:
+Attributable provider correspondence materially narrows previously open provider-framework facts:
 
 ```text
 SUPABASE_DPA_PROVIDER_CONFIRMATION=PROVIDER_CONFIRMED_INCORPORATED_IN_TERMS_FOR_CUSTOMERS_FROM_2026_08_01
+SUPABASE_ACCOUNT_DPA_APPLICABILITY=OPEN_PENDING_ACCOUNT_AGREEMENT_OR_TERMS_AUTHORITY
 SUPABASE_TRANSFER_TIA_ACCOUNT_INTERPRETATION=OPEN
 POSTHOG_DPA_COMPLETION_EVIDENCE=COMPLETED_BY_ALL_PARTICIPANTS_FOR_SAMUEL_CERQUEIRA_UNIPESSOAL_LDA
 POSTHOG_PRODUCTION_PROJECT_BINDING=OPEN
@@ -103,7 +104,7 @@ STRIPE_ACCOUNT_LEGAL_DETAIL=OPEN
 PROVIDER_FACTUAL_RECONCILIATION=PARTIAL_ADVANCED
 ```
 
-Provider DPA evidence does not itself establish Production project attribution, RISCK COMPLY customer-contract counterparty status, SCC/TIA sufficiency, all processing locations, retention or qualified transfer conclusions.
+Provider DPA evidence does not itself establish which agreement governs the Supabase Production account, Production project attribution, RISCK COMPLY customer-contract counterparty status, SCC/TIA sufficiency, all processing locations, retention or qualified transfer conclusions.
 
 ## Qualified EU AI Act review
 
