@@ -204,7 +204,7 @@ async function reconcileEntitlementWhenEligible(event: Stripe.Event) {
 
 async function reconcileAddOnsWhenEligible(event: Stripe.Event) {
   const addOns = await reconcileOrganizationAddOnsFromStripeEvent(event);
-  return addOns.outcome === 'unsupported' ? null : addOns;
+  return addOns.outcome === 'unsupported' || addOns.outcome === 'not_applicable' ? null : addOns;
 }
 
 function entitlementRepairMaterialized(entitlement: Awaited<ReturnType<typeof reconcileStripeEntitlementEvent>>) {
