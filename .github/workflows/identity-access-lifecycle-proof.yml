@@ -55,11 +55,49 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
           git fetch --no-tags --depth=1 origin main
-          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-          test "$(git rev-parse origin/main)" = "$TARGET_SHA"
-          test "$GITHUB_SHA" = "$TARGET_SHA"
-          test "$GITHUB_REF_NAME" = "main"
+
+          HEAD_SHA="$(git rev-parse HEAD)"
+          REMOTE_MAIN_SHA="$(git rev-parse origin/main)"
+
+          {
+            echo "## Identity access lifecycle exact-main guard"
+            echo ""
+            echo "- TARGET_SHA: \`$TARGET_SHA\`"
+            echo "- HEAD_SHA: \`$HEAD_SHA\`"
+            echo "- REMOTE_MAIN_SHA: \`$REMOTE_MAIN_SHA\`"
+            echo "- GITHUB_SHA: \`$GITHUB_SHA\`"
+            echo "- GITHUB_REF_NAME: \`$GITHUB_REF_NAME\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$HEAD_SHA" != "$TARGET_SHA" ]; then
+            echo "::error title=STALE_SHA::TARGET_SHA must equal checked-out HEAD. target=$TARGET_SHA head=$HEAD_SHA"
+            echo "IDENTITY_PROOF_BLOCKER=STALE_SHA_TARGET_NOT_HEAD"
+            exit 1
+          fi
+
+          if [ "$REMOTE_MAIN_SHA" != "$TARGET_SHA" ]; then
+            echo "::error title=STALE_SHA::TARGET_SHA must equal current origin/main. target=$TARGET_SHA origin_main=$REMOTE_MAIN_SHA"
+            echo "IDENTITY_PROOF_BLOCKER=STALE_SHA_TARGET_NOT_CURRENT_MAIN"
+            exit 1
+          fi
+
+          if [ "$GITHUB_SHA" != "$TARGET_SHA" ]; then
+            echo "::error title=STALE_SHA::GITHUB_SHA must equal TARGET_SHA. target=$TARGET_SHA github_sha=$GITHUB_SHA"
+            echo "IDENTITY_PROOF_BLOCKER=STALE_SHA_GITHUB_SHA_MISMATCH"
+            exit 1
+          fi
+
+          if [ "$GITHUB_REF_NAME" != "main" ]; then
+            echo "::error title=INVALID_REF::Identity proof must run from main. ref=$GITHUB_REF_NAME"
+            echo "IDENTITY_PROOF_BLOCKER=INVALID_REF"
+            exit 1
+          fi
+
+          echo "IDENTITY_PROOF_EXACT_MAIN=PASS"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**IDENTITY_PROOF_EXACT_MAIN:** \`PASS\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Execute identity lifecycle proof
         run: node scripts/identity/run-identity-access-lifecycle-proof.mjs
@@ -67,8 +105,29 @@ jobs:
       - name: Validate redacted evidence
         run: node scripts/identity/check-identity-access-lifecycle-evidence.mjs
 
-      - name: Upload evidence
+      - name: Detect evidence artifact
         if: always()
+        id: identity_evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          evidence_path="docs/security/evidence/runtime/identity-access-lifecycle-validation.json"
+
+          if [ -f "$evidence_path" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "IDENTITY_PROOF_EVIDENCE_PRESENT=true"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "**IDENTITY_PROOF_EVIDENCE_PRESENT:** \`true\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "IDENTITY_PROOF_EVIDENCE_PRESENT=false"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "**IDENTITY_PROOF_EVIDENCE_PRESENT:** \`false\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload evidence
+        if: ${{ always() && steps.identity_evidence.outputs.present == 'true' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: identity-access-lifecycle-proof-${{ inputs.release_sha }}
