@@ -21,9 +21,10 @@ const EXPECTED_CHANGE_SET = '2026-09-10-production-runtime-contract-v43';
 const SOURCE_CHANGE_SET = '2026-09-09-gdpr-rights-lifecycle-v42';
 const VERIFIED_PRODUCTION_LEDGER_HEAD = '20260909232229';
 const FRIA_MIGRATION = '20260910113000_reconcile_fria_operational_runtime_v43.sql';
+const ARTICLE5_REPLAY_COMPAT_MIGRATION = '20260910113500_article5_policy_replay_compatibility_v43.sql';
 const ARTICLE5_MIGRATION = '20260910114000_reconcile_prohibited_practices_runtime_v43.sql';
 const DSR_MIGRATION = '20260910115000_atomic_data_subject_request_lifecycle_audit_v43.sql';
-const EXPECTED_MIGRATIONS = [FRIA_MIGRATION, ARTICLE5_MIGRATION, DSR_MIGRATION];
+const EXPECTED_MIGRATIONS = [FRIA_MIGRATION, ARTICLE5_REPLAY_COMPAT_MIGRATION, ARTICLE5_MIGRATION, DSR_MIGRATION];
 
 function fail(message) {
   throw new Error(message);
@@ -78,11 +79,13 @@ function assertNoDestructiveReplacement(filename, sql) {
 
 function verifyV43RuntimeContracts() {
   const fria = readSelectedMigration(FRIA_MIGRATION);
+  const article5ReplayCompat = readSelectedMigration(ARTICLE5_REPLAY_COMPAT_MIGRATION);
   const article5 = readSelectedMigration(ARTICLE5_MIGRATION);
   const dsr = readSelectedMigration(DSR_MIGRATION);
 
   for (const [filename, sql] of [
     [FRIA_MIGRATION, fria],
+    [ARTICLE5_REPLAY_COMPAT_MIGRATION, article5ReplayCompat],
     [ARTICLE5_MIGRATION, article5],
     [DSR_MIGRATION, dsr],
   ]) {
@@ -99,6 +102,18 @@ function verifyV43RuntimeContracts() {
   ]) {
     if (!fria.toLowerCase().includes(marker.toLowerCase())) {
       fail(`V43 FRIA runtime marker missing: ${marker}`);
+    }
+  }
+
+  for (const marker of [
+    'drop policy if exists ai_prohibited_reviews_member_select',
+    'drop policy if exists ai_prohibited_signals_member_select',
+    'drop policy if exists ai_prohibited_exceptions_member_select',
+    'drop policy if exists ai_prohibited_evidence_member_select',
+    'drop policy if exists ai_prohibited_decisions_member_select',
+  ]) {
+    if (!article5ReplayCompat.toLowerCase().includes(marker.toLowerCase())) {
+      fail(`V43 Article 5 replay compatibility marker missing: ${marker}`);
     }
   }
 
@@ -125,9 +140,12 @@ function verifyV43RuntimeContracts() {
     'set search_path = pg_catalog',
     'from public, anon, authenticated',
     'to service_role',
+    'enforce_onboarding_document_storage_integrity',
+    "object_record.bucket_id = 'controlled-documents'",
+    "'orphanedStoragePath'",
   ]) {
     if (!dsr.toLowerCase().includes(marker.toLowerCase())) {
-      fail(`V43 GDPR atomic lifecycle marker missing: ${marker}`);
+      fail(`V43 GDPR/document integrity marker missing: ${marker}`);
     }
   }
 }
@@ -178,8 +196,9 @@ async function main() {
 
   const lineageKinds = [
     'reviewed-v43-fria-runtime-reconciliation',
+    'reviewed-v43-article5-clean-replay-compatibility',
     'reviewed-v43-article5-runtime-reconciliation',
-    'reviewed-v43-gdpr-atomic-lifecycle-reforward',
+    'reviewed-v43-gdpr-document-integrity-reforward',
   ];
 
   const report = {
