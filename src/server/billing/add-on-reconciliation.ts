@@ -51,8 +51,10 @@ type ExistingAddOnRow = {
 };
 
 function stripeObjectId(value: string | { id?: string | null } | null | undefined) {
-  if (typeof value === 'string' && value.trim()) return value.trim();
-  return value && typeof value.id === 'string' && value.id.trim() ? value.id.trim() : null;
+  if (typeof value === 'string') return value.trim() || null;
+  if (!value || typeof value !== 'object') return null;
+  const id = value.id;
+  return typeof id === 'string' && id.trim() ? id.trim() : null;
 }
 
 function organizationIdFromMetadata(metadata: Stripe.Metadata | null | undefined) {
@@ -181,9 +183,6 @@ export async function reconcileOrganizationAddOnsFromStripeEvent(event: Stripe.E
     return { outcome: 'not_applicable' as const, reconciled: 0, removed: 0 };
   }
 
-  // Legacy entitlement/recovery fixtures and unrelated subscription events may
-  // carry organization metadata without a complete Stripe Subscription object.
-  // They are not add-on authority. A real known add-on item remains fail-closed.
   if (!customerId && !hasKnownAddOn) {
     return { outcome: 'not_applicable' as const, reconciled: 0, removed: 0 };
   }
