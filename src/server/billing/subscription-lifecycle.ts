@@ -5,7 +5,12 @@ import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { classifyProviderFailure } from '@/server/providers/failure';
 import { isPlanAtLeast, type CanonicalSubscriptionPlan } from '@/server/queries/subscription';
-import { getStripeAddOnPriceId, normalizeAddOnSelections, type BillingAddOnSelection } from './add-ons';
+import {
+  getBillingAddOnSlugForStripePriceId,
+  getStripeAddOnPriceId,
+  normalizeAddOnSelections,
+  type BillingAddOnSelection,
+} from './add-ons';
 import { deriveStripeIdempotencyKey, type BillingIdempotencyContext } from './idempotency';
 import {
   BillingLifecycleRequestError,
@@ -67,10 +72,20 @@ async function getSubscriptionAuthority(organizationId: string): Promise<Subscri
   return data;
 }
 
-function getBaseSubscriptionItem(subscription: Stripe.Subscription) {
-  const item = subscription.items.data.find((candidate) => candidate.price.recurring?.usage_type !== 'metered');
-  if (!item) throw new Error('stripe_base_subscription_item_not_found');
-  return item;
+export function getBaseSubscriptionItem(subscription: Stripe.Subscription) {
+  const candidates = subscription.items.data.filter(
+    (candidate) => !getBillingAddOnSlugForStripePriceId(candidate.price.id),
+  );
+
+  if (candidates.length === 0) {
+    throw new BillingLifecycleRequestError('stripe_base_subscription_item_not_found', 409);
+  }
+
+  if (candidates.length !== 1) {
+    throw new BillingLifecycleRequestError('stripe_base_subscription_item_ambiguous', 409);
+  }
+
+  return candidates[0];
 }
 
 function getSubscriptionCustomerId(subscription: Stripe.Subscription) {
