@@ -21,12 +21,10 @@ export type BillingAddOn = {
 const allPaidPlans: CanonicalSubscriptionPlan[] = ['starter', 'professional', 'business', 'enterprise'];
 const proAndUp: CanonicalSubscriptionPlan[] = ['professional', 'business', 'enterprise'];
 
-// Add-on lifecycle primitives already exist, but provider-backed add-on authority is
-// not yet materialized from signed Stripe subscription-item events into the canonical
-// organization entitlement plane. Keep every add-on in private preview until that
-// authority chain is proven end-to-end. This prevents a customer from being charged
-// for an item that a protected API would still deny or a quota calculator would ignore.
-const ADD_ON_COMMERCIAL_STATUS: AddOnStatus = 'private_preview';
+// The LIVE Stripe provider catalog for every versioned add-on is now materialized.
+// Commercial activation still remains server-authoritative: a catalog row can only
+// grant access after a signed Stripe event is reconciled into organization_add_ons.
+const ADD_ON_COMMERCIAL_STATUS: AddOnStatus = 'active';
 
 function addOn<const TSlug extends string>(
   slug: TSlug,
