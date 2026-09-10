@@ -67,19 +67,12 @@ jobs:
             -H 'Content-Type: application/json' \
             "https://api.vercel.com/aliases/$TARGET_DEPLOYMENT_URL/protection-bypass?teamId=$VERCEL_TEAM_ID" \
             --data '{"override":{"scope":"alias-protection-override","action":"create"}}')"
-          case "$status" in
-            200)
-              echo 'Vercel alias protection override created.'
-              ;;
-            400)
-              echo 'Vercel returned HTTP 400 while creating the override; continuing only to independent anonymous postcondition proofs.'
-              ;;
-            *)
-              echo "Vercel alias protection override failed with HTTP $status" >&2
-              cat "$response" >&2 || true
-              exit 1
-              ;;
-          esac
+          if [ "$status" != '200' ]; then
+            echo "Vercel alias protection override was not positively confirmed (HTTP $status). Failing closed rather than treating an arbitrary 400 as success." >&2
+            cat "$response" >&2 || true
+            exit 1
+          fi
+          echo 'Vercel alias protection override positively confirmed by API.'
 
       - name: Prove Beagle verification file is anonymous
         shell: bash
