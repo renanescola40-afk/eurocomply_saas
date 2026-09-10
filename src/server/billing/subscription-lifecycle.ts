@@ -78,11 +78,11 @@ export function getBaseSubscriptionItem(subscription: Stripe.Subscription) {
   );
 
   if (candidates.length === 0) {
-    throw new BillingLifecycleRequestError('stripe_base_subscription_item_not_found', 409);
+    throw new Error('stripe_base_subscription_item_not_found');
   }
 
   if (candidates.length !== 1) {
-    throw new BillingLifecycleRequestError('stripe_base_subscription_item_ambiguous', 409);
+    throw new Error('stripe_base_subscription_item_ambiguous');
   }
 
   return candidates[0];
@@ -208,9 +208,6 @@ function assertLegacyRecoveredProviderState(input: {
     return;
   }
 
-  // Legacy downgrade requests predate durable schedule snapshots, so there is no
-  // safe way to infer whether a future provider phase was committed. Do not turn
-  // an ambiguous historical request into an immediate price mutation.
   if (input.action === 'downgrade') {
     throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
   }
