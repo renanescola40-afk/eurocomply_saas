@@ -18,8 +18,8 @@ Baseline: GDPR Chapter III. A written policy is not sufficient; each right is ma
 | Deadline tracking | Canonical source computes one-calendar-month initial deadlines and supports only bounded 1/2-month extensions with reason + notification evidence | PASS_SOURCE_IMPLEMENTED / RUNTIME_PENDING | Protected Data Governance Runtime Proof must validate exact current main SHA before runtime PASS credit |
 | Customer-controller routing | Canonical lifecycle records controller/processor/mixed/under-review role and customer-controller reference; admin API is tenant-scoped | PASS_SOURCE_IMPLEMENTED | Case-specific legal allocation, customer workflow/SLA and downstream evidence remain open |
 | Exceptions/legal hold | Canonical lifecycle records decision reason/evidence; retention materials recognise billing, tax, fraud/security, audit and legal-hold constraints | PARTIAL | Software must not decide a legal exception automatically; attributable case decision/qualified review required where legal judgment applies |
-| Terminal lifecycle integrity | V6 rejects mutation of `completed`, `rejected` and `cancelled` records at the lifecycle API boundary | V6_FIX_PENDING_CI_MERGE | No canonical-main credit until protected CI/merge |
-| Last-modified integrity | V6 refreshes `updated_at` on lifecycle mutation and restores the prior timestamp if audit compensation restores prior values | V6_FIX_PENDING_CI_MERGE | No canonical-main credit until protected CI/merge |
+| Terminal lifecycle integrity | Canonical V6 rejects mutation of `completed`, `rejected` and `cancelled` records at the lifecycle API boundary | PASS_SOURCE_MERGED | Exact-current-main protected runtime evidence remains required before runtime PASS credit |
+| Last-modified integrity | Canonical V6 refreshes `updated_at` on lifecycle mutation and restores the prior timestamp if audit compensation restores prior values | PASS_SOURCE_MERGED | Exact-current-main protected runtime evidence remains required before runtime PASS credit |
 | Audit trail | Create/update flows are auditable without raw request payload content; lifecycle update compensates if audit persistence fails | PASS_SOURCE_IMPLEMENTED | Exact-SHA runtime evidence must be retained |
 
 ## Canonical operational record
@@ -48,17 +48,19 @@ The source model records, as applicable:
 
 `GDPR-RIGHTS-01` remains bound to GitHub issue **#2009 — GDPR: canonical data-subject rights request register + deadline workflow**.
 
-The source implementation requested by that issue was merged through PR #2014. The issue remains legitimately open because its acceptance contract also requires exact-SHA runtime evidence and because post-merge review found lifecycle-integrity defects now addressed by V6.
+The source implementation requested by that issue was merged through PR #2014. V6 lifecycle-integrity corrections subsequently merged through PR #2025, and the canonical data-governance foundation reconciliation merged through PR #2026. The issue remains legitimately open because its acceptance contract also requires exact-current-main runtime evidence and because downstream/provider/legal-effect completion remains separate from source implementation.
 
 ```text
 PR_2014_SOURCE_IMPLEMENTATION=MERGED
+PR_2025_V6_LIFECYCLE_INTEGRITY=MERGED
+PR_2026_DATA_GOVERNANCE_FOUNDATION=MERGED
 CANONICAL_RIGHTS_REQUEST_REGISTER=PASS_SOURCE_IMPLEMENTED_MERGED
 DEADLINE_TRACKING_SOURCE=PASS_IMPLEMENTED
 ROLE_ROUTING_SOURCE=PASS_IMPLEMENTED
 ANALYTICS_CONSENT_WITHDRAWAL_SOURCE=PASS_IMPLEMENTED
-V6_TERMINAL_IMMUTABILITY=FIX_PENDING_CI_MERGE
-V6_UPDATED_AT_INTEGRITY=FIX_PENDING_CI_MERGE
-DATA_GOVERNANCE_RUNTIME_V2=PENDING_EXACT_SHA_PROOF
+V6_TERMINAL_IMMUTABILITY=PASS_SOURCE_MERGED
+V6_UPDATED_AT_INTEGRITY=PASS_SOURCE_MERGED
+DATA_GOVERNANCE_RUNTIME_V2=PENDING_EXACT_CURRENT_MAIN_PROOF
 ISSUE_2009=OPEN_UNTIL_ACCEPTANCE_EVIDENCE
 ```
 
@@ -68,13 +70,15 @@ Creating or merging source alone does not satisfy the issue's terminal acceptanc
 
 The protected data-governance evidence path uses schema `risck-comply.data-governance-evidence.v2` and must be retained as `Complete/passed` for the exact current `main` SHA with all required checks true.
 
-Required order:
+Current required order:
 
-1. V6 protected CI passes;
-2. V6 merges through protected main;
-3. run the Data Governance Runtime Proof for the resulting exact current main SHA;
-4. validate and retain the evidence artifact;
+1. PR #2029 protected checks pass and the proof-contract reconciliation is merged only through the authorized protected-main path;
+2. protected GitHub Environment `production-data-governance-proof` contains the attributable Production residency declaration `DATA_RESIDENCY_REGION=eu-west-1`;
+3. run a **new** Data Governance Runtime Proof for the exact protected `main` SHA current at execution time;
+4. validate and retain the exact-SHA evidence artifact;
 5. only then convert runtime-dependent controls from `RUNTIME_PENDING` to runtime PASS.
+
+The failed run `34413535220` targeted superseded SHA `3349c1bf51c696e5d77106e3753c4a26cea8c033` and receives no exact-current-main acceptance credit.
 
 ## Consent-withdrawal source boundary
 
@@ -118,8 +122,8 @@ CONSENT_WITHDRAWAL_ANALYTICS=PASS_SOURCE_IMPLEMENTED_RUNTIME_AND_LEGAL_REVIEW_OP
 CONSENT_WITHDRAWAL_OTHER_SURFACES=PARTIAL
 DEADLINE_TRACKING=PASS_SOURCE_IMPLEMENTED_RUNTIME_PENDING
 CUSTOMER_CONTROLLER_ROUTING=PASS_SOURCE_IMPLEMENTED_CASE_DECISION_OPEN
-TERMINAL_STATE_INTEGRITY=V6_FIX_PENDING_CI_MERGE
-UPDATED_AT_INTEGRITY=V6_FIX_PENDING_CI_MERGE
+TERMINAL_STATE_INTEGRITY=PASS_SOURCE_MERGED_RUNTIME_PENDING
+UPDATED_AT_INTEGRITY=PASS_SOURCE_MERGED_RUNTIME_PENDING
 DATA_SUBJECT_RIGHTS=PARTIAL_RUNTIME_AND_DOWNSTREAM
 ```
 

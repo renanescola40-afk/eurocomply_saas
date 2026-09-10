@@ -1,12 +1,23 @@
-# EuroComply Data Retention Policy
+# RISCK COMPLY Data Retention Policy
 
 Status: production readiness control  
 Owner: Privacy Engineering / Security Engineering  
-Last reviewed: 2026-06-24
+Last reviewed: 2026-09-09
 
 ## Purpose
 
 This document records the enterprise privacy retention posture used by the GDPR self-service controls. It is an operational control and implementation reference; customer-specific legal retention commitments must still be confirmed against the customer agreement, DPA, tax obligations and legal holds.
+
+## Retention model
+
+RISCK COMPLY uses **class/category-specific retention**, not one universal retention period for every data category.
+
+```text
+UNIVERSAL_RETENTION_DEFAULT_DAYS=NOT_DEFINED
+RETENTION_AUTHORITY=DATA_CLASS_AND_APPLICABLE_PURPOSE_OR_LEGAL_DUTY
+```
+
+A single numeric default must not be represented as an approved production fact unless the operating policy is deliberately changed and the resulting legal, contractual and technical consequences are reviewed. Draft implementation targets, plan entitlements and provider-specific backup/log windows are not substitutes for a universal approved retention rule.
 
 ## Retention principles
 
