@@ -1,5 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 
+import { hasSecurityCiCheck } from '../ci/security-ci-checks.mjs';
+
 const helperPath = 'src/server/security/' + 'malware-scan.ts';
 const uploadSecurityPath = 'src/server/security/upload-security.ts';
 const uploadRoutePath = 'src/app/api/documents/upload/route.ts';
@@ -127,7 +129,9 @@ if (preflight) requireTokens(preflightPath, preflight, ['src/server/security/upl
 if (doc) requireTokens(docPath, doc, ['Upload Content Scan Security Standard', 'REQUIRE_MALWARE_SCAN_FOR_UPLOADS', 'MALWARE_SCANNER_PROVIDER', 'advisory', 'fail-closed', 'scanStatus', 'scanProvider', 'scanRequired', 'scanCheckedAt', 'document_upload_rejected', 'Enterprise Release Rule']);
 if (uploadSecurityDoc) requireTokens(uploadSecurityDocPath, uploadSecurityDoc, ['Enterprise Upload Security Standard', 'scanner unavailable', 'timeout', 'suspicious', 'clean', 'cross-tenant', 'download_denied']);
 
-if (packageJson && !/"security:ci"\s*:\s*"[^"]*security:upload[^"]*security:upload-content-scan/.test(packageJson) && !/"security:ci"\s*:\s*"[^"]*security:enterprise-api/.test(packageJson)) failures.push(`${packagePath} security:ci must include upload scanning gates directly or through security:enterprise-api so enterprise upload scanning cannot be bypassed`);
+if (packageJson && (!hasSecurityCiCheck('security:upload') || !hasSecurityCiCheck('security:upload-content-scan'))) {
+  failures.push(`${packagePath} security:ci must include upload and upload-content-scan gates so enterprise upload scanning cannot be bypassed`);
+}
 
 if (failures.length > 0) {
   console.error('Upload content scan failures:');

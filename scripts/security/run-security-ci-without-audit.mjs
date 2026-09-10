@@ -1,41 +1,29 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+
+import { SECURITY_CI_CHECKS } from '../ci/security-ci-checks.mjs';
 
 const root = process.cwd();
-const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-const command = packageJson?.scripts?.['security:ci'];
+const auditCheck = 'security:npm-audit:all';
 
-if (typeof command !== 'string' || !command.trim()) {
-  console.error('package.json must define security:ci');
+if (!SECURITY_CI_CHECKS.includes(auditCheck)) {
+  console.error(`Canonical security CI authority must contain ${auditCheck}`);
   process.exit(1);
 }
 
-const auditSegment = 'npm run security:npm-audit:all && ';
-if (!command.includes(auditSegment)) {
-  console.error('security:ci no longer contains the expected explicit npm audit segment');
+const applicationChecks = SECURITY_CI_CHECKS.filter((check) => check !== auditCheck);
+if (applicationChecks.some((check) => check.startsWith('security:npm-audit'))) {
+  console.error('Application security command still contains an npm audit invocation');
   process.exit(1);
 }
-
-const applicationSecurityCommand = command.replace(auditSegment, '');
-if (applicationSecurityCommand.includes('security:npm-audit')) {
-  console.error('application security command still contains an npm audit invocation');
-  process.exit(1);
-}
-
-const parsedCommands = applicationSecurityCommand
-  .split(/\s+&&\s+/)
-  .map((entry) => entry.trim())
-  .filter(Boolean);
 
 // Common pull-request CI must never run provider-backed RLS probes without the
 // protected Supabase environment. Keep the advisory gate fail-closed for the
 // repository controls, while live tenant isolation remains enforced by the
 // dedicated protected Supabase workflows.
-const commands = parsedCommands.flatMap((securityCommand) => {
-  if (securityCommand !== 'npm run security:rls:advisory') return [securityCommand];
+const commands = applicationChecks.flatMap((check) => {
+  if (check !== 'security:rls:advisory') return [`npm run ${check}`];
   return [
     'node scripts/security/check-rls.mjs',
     'node scripts/security/audit-supabase-tenant-isolation.mjs',
@@ -70,4 +58,4 @@ for (const [index, securityCommand] of commands.entries()) {
   }
 }
 
-console.log(`Application security CI passed all ${commands.length} gates.`);
+console.log(`Application security CI passed all ${commands.length} audit-free gates.`);
