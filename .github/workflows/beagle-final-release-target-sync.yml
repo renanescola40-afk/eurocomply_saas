@@ -1,0 +1,298 @@
+name: Beagle Final Release Target Sync
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: beagle-final-release-target-sync
+  cancel-in-progress: true
+
+jobs:
+  replay-isolated-data-plane:
+    name: Rebind isolated Beagle data plane to exact main SHA
+    if: github.ref == 'refs/heads/main' && github.ref_protected
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    environment:
+      name: beagle-pentest
+    env:
+      EXPECTED_HEAD_SHA: ${{ github.sha }}
+      BEAGLE_TARGET_PROJECT_REF: vfqxmiaaagqpbwrrroww
+      EXPECTED_BEAGLE_PROJECT_REF: vfqxmiaaagqpbwrrroww
+      PRODUCTION_PROJECT_REF: tganhbbhfxcpblmgqprg
+
+    steps:
+      - name: Checkout exact protected main SHA without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Fail closed if main moved or target boundary changed
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          [[ "$EXPECTED_HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+          test "$BEAGLE_TARGET_PROJECT_REF" = 'vfqxmiaaagqpbwrrroww'
+          test "$PRODUCTION_PROJECT_REF" = 'tganhbbhfxcpblmgqprg'
+          test "$BEAGLE_TARGET_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          latest_main="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/ref/heads/main" \
+            | jq -r '.object.sha')"
+          test "$latest_main" = "$EXPECTED_HEAD_SHA"
+
+      - name: Bind runner-local replay paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH=$RUNNER_TEMP/beagle-reviewed-replay-bundle.sql"
+            echo "RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH=$RUNNER_TEMP/beagle-reviewed-replay-manifest.json"
+            echo "BEAGLE_REMOTE_REPLAY_EVIDENCE_PATH=$RUNNER_TEMP/beagle-remote-replay-evidence.json"
+          } >> "$GITHUB_ENV"
+
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
+        with:
+          version: 2.101.0
+
+      - name: Verify runner PostgreSQL client without network installation
+        run: node scripts/recovery/verify-postgresql-client.mjs
+
+      - name: Generate exact-SHA reviewed schema-only bundle
+        run: node scripts/security/generate-beagle-reviewed-replay-bundle.mjs
+
+      - name: Revalidate bundle and target boundary before provider credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH"
+          test -s "$RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const m = JSON.parse(fs.readFileSync(process.env.RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH, 'utf8'));
+          const b = fs.readFileSync(process.env.RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH);
+          const d = crypto.createHash('sha256').update(b).digest('hex');
+          if (m.subjectSha !== process.env.EXPECTED_HEAD_SHA) throw new Error('exact SHA mismatch');
+          if (m.bundleSha256 !== d) throw new Error('bundle digest mismatch');
+          if (m.containsSeedData !== false || m.containsProductionRows !== false) throw new Error('production data boundary not closed');
+          if (m.productionWriteAuthorized !== false) throw new Error('production write boundary not closed');
+          if (m.intendedTarget !== 'isolated-beagle-pentest-supabase-only') throw new Error('target boundary invalid');
+          if (m.canonicalMigrationHistory !== false) throw new Error('canonical migration history boundary invalid');
+          if (process.env.BEAGLE_TARGET_PROJECT_REF !== 'vfqxmiaaagqpbwrrroww') throw new Error('unexpected Beagle target');
+          if (process.env.PRODUCTION_PROJECT_REF !== 'tganhbbhfxcpblmgqprg') throw new Error('unexpected Production ref');
+          if (process.env.BEAGLE_TARGET_PROJECT_REF === process.env.PRODUCTION_PROJECT_REF) throw new Error('Production target forbidden');
+          NODE
+
+      - name: Replay only into isolated Beagle Supabase and preserve synthetic credentials
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.BEAGLE_SUPABASE_ACCESS_TOKEN }}
+        run: node scripts/security/apply-beagle-reviewed-replay.mjs
+
+      - name: Upload bounded isolated replay evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: beagle-isolated-release-replay-${{ env.EXPECTED_HEAD_SHA }}
+          path: |
+            ${{ env.RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH }}
+            ${{ env.BEAGLE_REMOTE_REPLAY_EVIDENCE_PATH }}
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Stop runner-local disposable recovery runtime
+        if: always()
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
+
+  deploy-isolated-web-target:
+    name: Deploy exact main SHA against isolated Beagle data plane
+    needs: replay-isolated-data-plane
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment:
+      name: production
+    env:
+      EXPECTED_HEAD_SHA: ${{ github.sha }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: team_wu3LZI6ReFxO16xipv73GLwG
+      VERCEL_PROJECT_ID: prj_APpXAyQFy1Gie50xfbO45zjkyUSm
+      VERCEL_TEAM_ID: team_wu3LZI6ReFxO16xipv73GLwG
+      ISOLATED_SUPABASE_URL: https://vfqxmiaaagqpbwrrroww.supabase.co
+      ISOLATED_SUPABASE_PUBLISHABLE_KEY: sb_publishable_GucvNM1m1S875lhpoj48lA_SVi6IlYX
+      BEAGLE_VERIFY_FILE: _e8f1hq2qpr6fuvd036hr4l97yn8octew.txt
+      BEAGLE_VERIFY_BODY: _e8f1hq2qpr6fuvd036hr4l97yn8octew
+
+    steps:
+      - name: Checkout exact protected main SHA without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Fail closed if main moved before deployment
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          [[ "$EXPECTED_HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+          test -n "$VERCEL_TOKEN"
+          latest_main="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/ref/heads/main" \
+            | jq -r '.object.sha')"
+          test "$latest_main" = "$EXPECTED_HEAD_SHA"
+
+      - name: Deploy preview with isolated public Supabase binding and no privileged data-plane keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/vercel-deploy.out"
+          npx --yes vercel@latest deploy \
+            --yes \
+            --force \
+            --token "$VERCEL_TOKEN" \
+            --scope "$VERCEL_TEAM_ID" \
+            --build-env "NEXT_PUBLIC_SUPABASE_URL=$ISOLATED_SUPABASE_URL" \
+            --build-env "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ISOLATED_SUPABASE_PUBLISHABLE_KEY" \
+            --build-env "SUPABASE_URL=$ISOLATED_SUPABASE_URL" \
+            --build-env 'SUPABASE_SERVICE_ROLE_KEY=' \
+            --build-env 'DATABASE_SERVICE_ROLE_KEY=' \
+            --build-env 'DATABASE_URL=' \
+            --build-env 'STRIPE_SECRET_KEY=' \
+            --build-env 'STRIPE_WEBHOOK_SECRET=' \
+            --env "NEXT_PUBLIC_SUPABASE_URL=$ISOLATED_SUPABASE_URL" \
+            --env "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ISOLATED_SUPABASE_PUBLISHABLE_KEY" \
+            --env "SUPABASE_URL=$ISOLATED_SUPABASE_URL" \
+            --env 'SUPABASE_SERVICE_ROLE_KEY=' \
+            --env 'DATABASE_SERVICE_ROLE_KEY=' \
+            --env 'DATABASE_URL=' \
+            --env 'STRIPE_SECRET_KEY=' \
+            --env 'STRIPE_WEBHOOK_SECRET=' \
+            --meta "githubCommitSha=$EXPECTED_HEAD_SHA" \
+            --meta 'risckPentestTarget=isolated-vfqxmiaaagqpbwrrroww' \
+            2>&1 | tee "$out"
+          target_url="$(grep -Eo 'https://[A-Za-z0-9.-]+\.vercel\.app' "$out" | tail -n 1)"
+          test -n "$target_url"
+          target_host="${target_url#https://}"
+          {
+            echo "BEAGLE_TARGET_URL=$target_url"
+            echo "BEAGLE_TARGET_HOST=$target_host"
+          } >> "$GITHUB_ENV"
+
+      - name: Prove exact deployment identity and non-production target
+        shell: bash
+        run: |
+          set -euo pipefail
+          meta="$RUNNER_TEMP/vercel-deployment.json"
+          for attempt in $(seq 1 90); do
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v13/deployments/$BEAGLE_TARGET_HOST?teamId=$VERCEL_TEAM_ID" \
+              > "$meta"
+            state="$(jq -r '.readyState // .state // empty' "$meta")"
+            case "$state" in
+              READY) break ;;
+              ERROR|CANCELED) cat "$meta" >&2; exit 1 ;;
+            esac
+            sleep 5
+          done
+          test "$(jq -r '.readyState // .state // empty' "$meta")" = 'READY'
+          test "$(jq -r '.projectId // .project.id // empty' "$meta")" = "$VERCEL_PROJECT_ID"
+          test "$(jq -r '.meta.githubCommitSha // empty' "$meta")" = "$EXPECTED_HEAD_SHA"
+          test "$(jq -r '.target // empty' "$meta")" != 'production'
+          deployment_id="$(jq -r '.id // empty' "$meta")"
+          deployment_url="$(jq -r '.url // empty' "$meta")"
+          test -n "$deployment_id"
+          test "$deployment_url" = "$BEAGLE_TARGET_HOST"
+          echo "BEAGLE_TARGET_DEPLOYMENT_ID=$deployment_id" >> "$GITHUB_ENV"
+
+      - name: Open protection only for exact isolated preview hostname
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$RUNNER_TEMP/protection-bypass.json"
+          status="$(curl --silent --show-error \
+            --output "$response" \
+            --write-out '%{http_code}' \
+            --request PATCH \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H 'Content-Type: application/json' \
+            "https://api.vercel.com/aliases/$BEAGLE_TARGET_HOST/protection-bypass?teamId=$VERCEL_TEAM_ID" \
+            --data '{"override":{"scope":"alias-protection-override","action":"create"}}')"
+          if [ "$status" != '200' ]; then
+            echo "Exact alias protection override was not positively confirmed (HTTP $status)." >&2
+            cat "$response" >&2 || true
+            exit 1
+          fi
+
+      - name: Prove verification file and health are anonymously reachable
+        shell: bash
+        run: |
+          set -euo pipefail
+          headers="$RUNNER_TEMP/beagle-verify.headers"
+          body="$RUNNER_TEMP/beagle-verify.body"
+          curl --fail --silent --show-error \
+            --max-redirs 0 \
+            --dump-header "$headers" \
+            --output "$body" \
+            "$BEAGLE_TARGET_URL/$BEAGLE_VERIFY_FILE"
+          test "$(tr -d '\r\n' < "$body")" = "$BEAGLE_VERIFY_BODY"
+          ! grep -qi '^location: https://vercel.com/' "$headers"
+          health_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-redirs 0 "$BEAGLE_TARGET_URL/api/health")"
+          case "$health_status" in
+            200|204|503) ;;
+            *) echo "Unexpected health status: $health_status" >&2; exit 1 ;;
+          esac
+
+      - name: Emit non-secret exact-target handoff evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/beagle-final-target.json"
+          jq -n \
+            --arg sha "$EXPECTED_HEAD_SHA" \
+            --arg deploymentId "$BEAGLE_TARGET_DEPLOYMENT_ID" \
+            --arg url "$BEAGLE_TARGET_URL" \
+            --arg supabaseRef 'vfqxmiaaagqpbwrrroww' \
+            --arg productionRef 'tganhbbhfxcpblmgqprg' \
+            '{schema:"risck-comply.beagle-final-target.v1",subjectSha:$sha,deploymentId:$deploymentId,url:$url,supabaseProjectRef:$supabaseRef,productionProjectRef:$productionRef,productionWriteAuthorized:false,privilegedRuntimeKeysPresent:false,verificationFileAnonymous:true,healthAnonymous:true}' \
+            > "$evidence"
+          {
+            echo '## Beagle exact release target'
+            echo "- Release SHA: $EXPECTED_HEAD_SHA"
+            echo "- Deployment: $BEAGLE_TARGET_DEPLOYMENT_ID"
+            echo "- URL: $BEAGLE_TARGET_URL"
+            echo '- Supabase: isolated pentest project vfqxmiaaagqpbwrrroww'
+            echo '- Production data-plane write: forbidden'
+            echo '- Privileged Supabase/Stripe runtime keys: blanked'
+            echo '- Verification file: anonymous PASS'
+            echo '- Health endpoint: anonymous PASS'
+            echo '- Important: freeze main while the external scan is running; any later main SHA requires a new final test/retest.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload exact-target handoff evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: beagle-final-target-${{ env.EXPECTED_HEAD_SHA }}
+          path: ${{ runner.temp }}/beagle-final-target.json
+          if-no-files-found: error
+          retention-days: 14
