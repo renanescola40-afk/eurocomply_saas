@@ -7,6 +7,15 @@ const API = 'https://api.supabase.com/v1';
 const PROJECT_REF = /^[a-z0-9]{20}$/;
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const MAX_CHUNK_BYTES = 190_000;
+const SYNTHETIC_PURPOSE = 'external-pentest-synthetic';
+const SYNTHETIC_PERSONAS = Object.freeze([
+  'A_OWNER',
+  'A_ADMIN',
+  'A_MEMBER',
+  'B_OWNER',
+  'B_MEMBER',
+  'C_CANCELLED',
+]);
 
 function env(name) {
   return String(process.env[name] ?? '').trim();
@@ -132,6 +141,58 @@ async function request(targetRef, query, label) {
   }
 }
 
+function syntheticIdentityPreflightSql() {
+  const personas = SYNTHETIC_PERSONAS.map((persona) => `'${persona}'`).join(', ');
+  return `
+do $beagle_synthetic_identity_preflight$
+declare
+  total_users integer;
+  invalid_users integer;
+  invalid_personas integer;
+  duplicate_personas integer;
+begin
+  select count(*) into total_users from auth.users;
+  if total_users <> ${SYNTHETIC_PERSONAS.length} then
+    raise exception 'beagle target must contain exactly ${SYNTHETIC_PERSONAS.length} preserved synthetic auth users before replay; found %', total_users;
+  end if;
+
+  select count(*) into invalid_users
+  from auth.users
+  where coalesce(raw_user_meta_data ->> 'purpose', '') <> '${SYNTHETIC_PURPOSE}';
+  if invalid_users <> 0 then
+    raise exception 'beagle target contains non-synthetic auth users: %', invalid_users;
+  end if;
+
+  select count(*) into invalid_personas
+  from auth.users
+  where coalesce(raw_user_meta_data ->> 'persona', '') not in (${personas});
+  if invalid_personas <> 0 then
+    raise exception 'beagle target contains unexpected pentest personas: %', invalid_personas;
+  end if;
+
+  select count(*) into duplicate_personas
+  from (
+    select raw_user_meta_data ->> 'persona' as persona
+    from auth.users
+    group by raw_user_meta_data ->> 'persona'
+    having count(*) <> 1
+  ) duplicates;
+  if duplicate_personas <> 0 then
+    raise exception 'beagle target synthetic persona cardinality is invalid';
+  end if;
+
+  if (
+    select count(distinct raw_user_meta_data ->> 'persona')
+    from auth.users
+    where raw_user_meta_data ->> 'persona' in (${personas})
+  ) <> ${SYNTHETIC_PERSONAS.length} then
+    raise exception 'beagle target is missing one or more required pentest personas';
+  end if;
+end
+$beagle_synthetic_identity_preflight$;
+`;
+}
+
 function cleanupSql() {
   return `
 begin;
@@ -160,7 +221,100 @@ commit;
 `;
 }
 
-function postconditionSql() {
+function rebindSyntheticMatrixSql(expectedSha) {
+  if (!FULL_SHA.test(expectedSha)) fail('synthetic_rebind_expected_sha_invalid');
+  const shortSha = expectedSha.slice(0, 12);
+  const personas = SYNTHETIC_PERSONAS.map((persona) => `'${persona}'`).join(', ');
+
+  return `
+begin;
+
+update auth.users
+set raw_user_meta_data =
+  coalesce(raw_user_meta_data, '{}'::jsonb)
+  || jsonb_build_object('purpose', '${SYNTHETIC_PURPOSE}', 'release_sha', '${expectedSha}')
+where raw_user_meta_data ->> 'purpose' = '${SYNTHETIC_PURPOSE}'
+  and raw_user_meta_data ->> 'persona' in (${personas});
+
+insert into public.profiles (id, full_name, avatar_url)
+select
+  id,
+  'External pentest ' || lower(raw_user_meta_data ->> 'persona'),
+  null
+from auth.users
+where raw_user_meta_data ->> 'purpose' = '${SYNTHETIC_PURPOSE}'
+  and raw_user_meta_data ->> 'persona' in (${personas})
+on conflict (id) do update
+set
+  full_name = excluded.full_name,
+  avatar_url = excluded.avatar_url,
+  updated_at = now();
+
+insert into public.organizations (name, slug, owner_id, created_by, metadata)
+select
+  'Pentest ${shortSha} Tenant A',
+  'pentest-${shortSha}-tenant-a',
+  id,
+  id,
+  jsonb_build_object('purpose', '${SYNTHETIC_PURPOSE}', 'release_sha', '${expectedSha}', 'tenant', 'A')
+from auth.users
+where raw_user_meta_data ->> 'purpose' = '${SYNTHETIC_PURPOSE}'
+  and raw_user_meta_data ->> 'persona' = 'A_OWNER';
+
+insert into public.organizations (name, slug, owner_id, created_by, metadata)
+select
+  'Pentest ${shortSha} Tenant B',
+  'pentest-${shortSha}-tenant-b',
+  id,
+  id,
+  jsonb_build_object('purpose', '${SYNTHETIC_PURPOSE}', 'release_sha', '${expectedSha}', 'tenant', 'B')
+from auth.users
+where raw_user_meta_data ->> 'purpose' = '${SYNTHETIC_PURPOSE}'
+  and raw_user_meta_data ->> 'persona' = 'B_OWNER';
+
+insert into public.organizations (name, slug, owner_id, created_by, metadata)
+select
+  'Pentest ${shortSha} Tenant C Unlicensed',
+  'pentest-${shortSha}-tenant-c',
+  id,
+  id,
+  jsonb_build_object('purpose', '${SYNTHETIC_PURPOSE}', 'release_sha', '${expectedSha}', 'tenant', 'C', 'licensed', false)
+from auth.users
+where raw_user_meta_data ->> 'purpose' = '${SYNTHETIC_PURPOSE}'
+  and raw_user_meta_data ->> 'persona' = 'C_CANCELLED';
+
+with matrix(persona, tenant_slug, role, seat_type, status) as (
+  values
+    ('A_OWNER', 'pentest-${shortSha}-tenant-a', 'owner', 'full', 'active'),
+    ('A_ADMIN', 'pentest-${shortSha}-tenant-a', 'admin', 'full', 'active'),
+    ('A_MEMBER', 'pentest-${shortSha}-tenant-a', 'member', 'participant', 'active'),
+    ('B_OWNER', 'pentest-${shortSha}-tenant-b', 'owner', 'full', 'active'),
+    ('B_MEMBER', 'pentest-${shortSha}-tenant-b', 'member', 'participant', 'active'),
+    ('C_CANCELLED', 'pentest-${shortSha}-tenant-c', 'owner', 'full', 'active')
+)
+insert into public.organization_members (organization_id, user_id, role, seat_type, status)
+select
+  o.id,
+  u.id,
+  matrix.role,
+  matrix.seat_type,
+  matrix.status
+from matrix
+join auth.users u
+  on u.raw_user_meta_data ->> 'purpose' = '${SYNTHETIC_PURPOSE}'
+ and u.raw_user_meta_data ->> 'persona' = matrix.persona
+join public.organizations o
+  on o.slug = matrix.tenant_slug;
+
+commit;
+`;
+}
+
+function postconditionSql(expectedSha) {
+  if (!FULL_SHA.test(expectedSha)) fail('postcondition_expected_sha_invalid');
+  const shortSha = expectedSha.slice(0, 12);
+  const personas = SYNTHETIC_PERSONAS.map((persona) => `'${persona}'`).join(', ');
+
   return `
 do $beagle_remote_postconditions$
 declare
@@ -169,9 +323,28 @@ declare
   storage_policy_count integer;
   foreign_server_count integer;
   foreign_table_count integer;
+  synthetic_user_count integer;
+  current_sha_user_count integer;
+  synthetic_org_count integer;
+  synthetic_membership_count integer;
+  unlicensed_subscription_count integer;
 begin
-  if (select count(*) from auth.users) <> 0 then
-    raise exception 'beagle target unexpectedly contains auth users';
+  select count(*) into synthetic_user_count
+  from auth.users
+  where raw_user_meta_data ->> 'purpose' = '${SYNTHETIC_PURPOSE}'
+    and raw_user_meta_data ->> 'persona' in (${personas});
+  if synthetic_user_count <> ${SYNTHETIC_PERSONAS.length}
+     or (select count(*) from auth.users) <> ${SYNTHETIC_PERSONAS.length} then
+    raise exception 'beagle target synthetic auth identity boundary failed';
+  end if;
+
+  select count(*) into current_sha_user_count
+  from auth.users
+  where raw_user_meta_data ->> 'purpose' = '${SYNTHETIC_PURPOSE}'
+    and raw_user_meta_data ->> 'release_sha' = '${expectedSha}'
+    and raw_user_meta_data ->> 'persona' in (${personas});
+  if current_sha_user_count <> ${SYNTHETIC_PERSONAS.length} then
+    raise exception 'beagle target synthetic identities are not rebound to exact current SHA';
   end if;
 
   if (select count(*) from supabase_migrations.schema_migrations) <> 0 then
@@ -243,6 +416,37 @@ begin
     raise exception 'compliance-documents storage policies incomplete';
   end if;
 
+  select count(*) into synthetic_org_count
+  from public.organizations
+  where slug in (
+    'pentest-${shortSha}-tenant-a',
+    'pentest-${shortSha}-tenant-b',
+    'pentest-${shortSha}-tenant-c'
+  );
+  if synthetic_org_count <> 3 then
+    raise exception 'beagle synthetic tenant matrix is incomplete';
+  end if;
+
+  select count(*) into synthetic_membership_count
+  from public.organization_members m
+  join public.organizations o on o.id = m.organization_id
+  where o.slug in (
+    'pentest-${shortSha}-tenant-a',
+    'pentest-${shortSha}-tenant-b',
+    'pentest-${shortSha}-tenant-c'
+  );
+  if synthetic_membership_count <> ${SYNTHETIC_PERSONAS.length} then
+    raise exception 'beagle synthetic membership matrix is incomplete';
+  end if;
+
+  select count(*) into unlicensed_subscription_count
+  from public.subscriptions s
+  join public.organizations o on o.id = s.organization_id
+  where o.slug = 'pentest-${shortSha}-tenant-c';
+  if unlicensed_subscription_count <> 0 then
+    raise exception 'beagle unlicensed tenant unexpectedly has a subscription';
+  end if;
+
   select count(*) into foreign_server_count from pg_foreign_server;
   select count(*) into foreign_table_count from information_schema.foreign_tables;
   if foreign_server_count <> 0 or foreign_table_count <> 0 then
@@ -256,7 +460,9 @@ select json_build_object(
   'public_functions', (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public'),
   'public_policies', (select count(*)::int from pg_policies where schemaname = 'public'),
   'storage_policies', (select count(*)::int from pg_policies where schemaname = 'storage'),
-  'auth_users', (select count(*)::int from auth.users),
+  'synthetic_auth_users', (select count(*)::int from auth.users where raw_user_meta_data ->> 'purpose' = '${SYNTHETIC_PURPOSE}'),
+  'synthetic_release_users', (select count(*)::int from auth.users where raw_user_meta_data ->> 'purpose' = '${SYNTHETIC_PURPOSE}' and raw_user_meta_data ->> 'release_sha' = '${expectedSha}'),
+  'synthetic_tenants', (select count(*)::int from public.organizations where slug like 'pentest-${shortSha}-tenant-%'),
   'migration_rows', (select count(*)::int from supabase_migrations.schema_migrations),
   'private_membership_helpers', (select count(*)::int from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='app_private' and p.proname in ('enterprise_member_can_read','enterprise_member_can_manage'))
 ) as beagle_postconditions;
@@ -277,6 +483,10 @@ async function main() {
   process.stdout.write(`Production target forbidden: ${productionRef}\n`);
   process.stdout.write(`Reviewed replay files: ${bundle.files.length}; chunks: ${chunks.length}\n`);
 
+  // Preserve the already-provisioned private tester credentials, but only if the
+  // isolated target contains exactly the six known synthetic pentest identities.
+  await request(targetRef, syntheticIdentityPreflightSql(), 'synthetic_identity_preflight');
+
   await request(targetRef, cleanupSql(), 'isolated_cleanup');
 
   for (let index = 0; index < chunks.length; index += 1) {
@@ -285,15 +495,19 @@ async function main() {
     await request(targetRef, chunk, `replay_chunk_${index + 1}`);
   }
 
+  // Recreate only synthetic public tenant state after schema replay. Credentials
+  // stay in auth.users and are never read, printed, uploaded, or committed.
+  await request(targetRef, rebindSyntheticMatrixSql(bundle.expectedSha), 'synthetic_matrix_rebind');
+
   // The SQL block is fail-closed: any violated postcondition raises and the
   // provider request fails. Do not persist the provider response itself; it is
   // remote/untrusted data and is unnecessary for proving that the bounded
   // postconditions completed successfully.
-  await request(targetRef, postconditionSql(), 'beagle_postconditions');
+  await request(targetRef, postconditionSql(bundle.expectedSha), 'beagle_postconditions');
 
   const evidencePath = required('BEAGLE_REMOTE_REPLAY_EVIDENCE_PATH');
   const evidence = {
-    schema: 'risck-comply.beagle-remote-reviewed-replay.v1',
+    schema: 'risck-comply.beagle-remote-reviewed-replay.v2',
     generatedAt: new Date().toISOString(),
     subjectSha: bundle.expectedSha,
     targetProjectRef: targetRef,
@@ -302,13 +516,17 @@ async function main() {
     bundleSha256: bundle.digest,
     replayFileCount: bundle.files.length,
     chunkCount: chunks.length,
-    containsSeedData: false,
     containsProductionRows: false,
     canonicalMigrationHistory: false,
+    syntheticIdentityPurpose: SYNTHETIC_PURPOSE,
+    syntheticIdentityCount: SYNTHETIC_PERSONAS.length,
+    syntheticPersonas: SYNTHETIC_PERSONAS,
+    syntheticCredentialsPreservedWithoutDisclosure: true,
+    syntheticMatrixReboundToSubjectSha: true,
     postconditionsPassed: true,
   };
   writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
-  process.stdout.write('Beagle isolated remote replay and postconditions: PASS\n');
+  process.stdout.write('Beagle isolated remote replay, synthetic matrix rebind, and postconditions: PASS\n');
 }
 
 main().catch((error) => {
