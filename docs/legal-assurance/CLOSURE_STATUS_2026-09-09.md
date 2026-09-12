@@ -1,6 +1,6 @@
 # RISCK COMPLY — Legal + GDPR + EU AI Act Regulatory Closure Status
 
-Date: 2026-09-10  
+Date: 2026-09-12  
 Mode: `LEGAL_TERMINAL_CLOSURE`
 
 This is an evidence/status register, not a legal opinion, certification, regulator approval or compliance guarantee. Qualified human acceptance is never inferred from repository work, provider correspondence or CI. Canonical detail remains in `docs/legal-assurance/LEGAL_CLOSURE_SCORECARD_V7.md`.
@@ -8,7 +8,7 @@ This is an evidence/status register, not a legal opinion, certification, regulat
 ## Current release truth
 
 ```text
-OBSERVED_PROTECTED_MAIN_SHA=43bf6b1368ff7a3b8ead0aa434b83bed9457615e
+OBSERVED_PROTECTED_MAIN_SHA=2ba88fc0b3f6a75c4c70b1bfdfaa53d6b6a0985a
 PRODUCTION_DEPLOYMENT_ID=dpl_BznNuFKG8UEh4yW8y9HQyzLXDiJ9
 PRODUCTION_RELEASE_SHA=13b19410caa20045b19d98d58df406c43433af5a
 VERCEL_DEPLOYMENT_STATE=READY
@@ -18,14 +18,16 @@ PR_2032_DPA_REVIEW_SURFACE=MERGED
 PR_2035_SUBPROCESSORS_TRANSFERS_RECONCILIATION=MERGED
 PR_2040_TERMS_REVIEW_SURFACE=MERGED
 PR_2041_CANONICAL_LEGAL_RECONCILIATION=MERGED
+PR_2058_OWNER_TERMS_RECONCILIATION=MERGED
+PR_2059_PUBLIC_OPERATOR_BOUNDARY=MERGED
 GDPR_RIGHTS_ISSUE_2009=CLOSED
 ```
 
-Direct connected validation on 2026-09-10 confirms that the observed Vercel deployment serving `www.risckcomply.com` is in Vercel state READY at Production SHA `13b19410...`. Protected `main` has since advanced to `43bf6b1...` through later merges, including unrelated pentest work. Exact-current-main Production equality and overall Production release readiness are therefore not claimed.
+Direct connected validation on 2026-09-12 confirms that the observed Vercel deployment serving `www.risckcomply.com` remains READY at Production SHA `13b19410...`. Protected `main` is ahead of that observed Production release. Exact-current-main Production equality and overall Production release readiness are therefore not claimed.
 
 ## Public legal surfaces
 
-Direct Production validation on 2026-09-10 established:
+The current public legal surfaces remain deliberately non-effective review drafts:
 
 ```text
 PRIVACY_PUBLIC_REVIEW_SURFACE=LIVE
@@ -39,7 +41,7 @@ SUBPROCESSORS_TRANSFERS_REVIEW_SOURCE=MERGED
 FINAL_LEGAL_PUBLICATION=BLOCKED
 ```
 
-The public review surfaces deliberately remain non-effective and fail closed on unresolved factual/legal dependencies. Their existence does not satisfy qualified legal review.
+Their existence does not satisfy qualified legal review.
 
 ## Accepted technical GDPR evidence
 
@@ -57,13 +59,15 @@ GDPR_RIGHTS_RUNTIME_GATE=PASS_EXACT_SHA
 
 This proves the scoped technical schema/security/release controls only. It does not prove downstream provider deletion, case-specific GDPR outcomes or legal sufficiency.
 
-## Entity / operator truth
+## Entity / seller truth
 
-Later attributable owner/operator correspondence supersedes the old `UNDECIDED` operating-entity placeholder for review preparation:
+The owner has explicitly designated the same existing Portuguese company as operator, customer contracting entity and seller for RISCK COMPLY:
 
 ```text
 RISCK_COMPLY_OPERATOR_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
-RISCK_COMPLY_CONTRACTING_ENTITY=OPEN_OWNER_CONFIRMATION
+RISCK_COMPLY_CONTRACTING_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
+RISCK_COMPLY_SELLER_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
+CONTRACTING_SELLER_ENTITY_DECISION=CLOSED_OWNER_ATTRIBUTABLE
 RISCK_COMPLY_TRADE_NAME=RISCK_COMPLY
 AUTHORITATIVE_REGISTRY_EVIDENCE=PENDING
 REGISTERED_OFFICE=PENDING_AUTHORITATIVE_EVIDENCE
@@ -72,11 +76,23 @@ SIGNATORY_AUTHORITY=PENDING_WHERE_REQUIRED
 ENTITY_FACTS_FINAL_PUBLICATION=BLOCKED
 ```
 
-The attributable evidence is sufficient to stop presenting the RISCK COMPLY **operator** as undecided. It does not expressly establish the company that will act as customer-contract counterparty, so the contracting entity remains open pending explicit owner designation. Registered fields also remain blocked until authoritative registry evidence resolves the required facts.
+This closes the former owner-decision blocker about which company will contract with and invoice customers. It does not itself establish authoritative registered office/company identifiers, VAT status, signatory authority or final legal publication readiness.
+
+## CAE / activity-registration boundary
+
+The owner states that the SaaS CAE/activity association has not yet been completed and is intentionally deferred until the final administrative phase:
+
+```text
+SOFTWARE_SAAS_CAE_ASSOCIATED=false
+SOFTWARE_SAAS_CAE_ACTION=DEFERRED_BY_OWNER_UNTIL_FINAL_ADMINISTRATIVE_PHASE
+CAE_CHANGE_AUTHORIZED_NOW=false
+```
+
+Other lanes must not create, alter or infer a CAE merely to close legal, billing or procurement gates. Final CAE/activity reconciliation must use authoritative company/activity facts and the competent Portuguese administrative/tax route.
 
 ## Owner commercial positions already attributable
 
-Existing owner correspondence records the following positions for counsel review:
+Existing owner decisions/communications establish the following positions for counsel review:
 
 ```text
 SELF_SERVICE_CANCELLATION=END_OF_PAID_PERIOD
@@ -84,6 +100,7 @@ REFUND_DEFAULT=NO_DEFAULT_REFUND_SUBJECT_TO_MANDATORY_LAW_AND_SIGNED_ORDER_FORM
 POST_TERMINATION_EXPORT_WINDOW=30_DAYS_OWNER_POSITION
 DEFAULT_UPTIME_SLA=NONE_UNLESS_CONTRACTED
 GOVERNING_LAW_PREFERENCE=PORTUGAL_SUBJECT_TO_COUNSEL_REVIEW
+CONTRACTING_SELLER_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA
 OWNER_COMMERCIAL_POSITIONS=PARTIAL_SELECTED_PENDING_QUALIFIED_REVIEW
 ```
 
@@ -91,20 +108,23 @@ These are owner-selected commercial positions, not legally approved clauses. Lia
 
 ## Provider factual evidence advanced
 
-Attributable provider correspondence materially narrows previously open provider-framework facts:
+Attributable provider correspondence and connected read-only validation materially narrow previously open provider-framework facts:
 
 ```text
 SUPABASE_DPA_PROVIDER_CONFIRMATION=PROVIDER_CONFIRMED_INCORPORATED_IN_TERMS_FOR_CUSTOMERS_FROM_2026_08_01
-SUPABASE_ACCOUNT_DPA_APPLICABILITY=OPEN_PENDING_ACCOUNT_AGREEMENT_OR_TERMS_AUTHORITY
+SUPABASE_CURRENT_PLAN=PRO_CONNECTED_ACCOUNT
+SUPABASE_ACCOUNT_DPA_APPLICABILITY=GENERAL_FRAMEWORK_SUPPORTED_EXCEPTION_CHECK_OPEN
 SUPABASE_TRANSFER_TIA_ACCOUNT_INTERPRETATION=OPEN
 POSTHOG_DPA_COMPLETION_EVIDENCE=COMPLETED_BY_ALL_PARTICIPANTS_FOR_SAMUEL_CERQUEIRA_UNIPESSOAL_LDA
-POSTHOG_PRODUCTION_PROJECT_BINDING=OPEN
+POSTHOG_PRODUCTION_RUNTIME_CONFIG=PASS_ATTRIBUTABLE
+POSTHOG_PRODUCTION_PROJECT_BINDING=OPEN_EXTERNAL_ACCOUNT_ACCESS
 POSTHOG_TRANSFER_RETENTION_LEGAL_INTERPRETATION=OPEN
-STRIPE_ACCOUNT_LEGAL_DETAIL=OPEN
+STRIPE_LIVE_ACCOUNT_DISCOVERY=PASS
+STRIPE_ENTITY_TAX_RECONCILIATION=OPEN
 PROVIDER_FACTUAL_RECONCILIATION=PARTIAL_ADVANCED
 ```
 
-Provider DPA evidence does not itself establish which agreement governs the Supabase Production account, Production project attribution, RISCK COMPLY customer-contract counterparty status, SCC/TIA sufficiency, all processing locations, retention or qualified transfer conclusions.
+Provider DPA evidence does not itself establish all transfer mechanisms, all processing locations, retention or qualified transfer conclusions.
 
 ## Qualified EU AI Act review
 
@@ -140,23 +160,25 @@ MASTER_LEGAL_OPINION=OPEN
 LEGAL_FINAL=BLOCKED
 ```
 
-The existing 80/50 working scores are retained rather than manufacturing a new percentage. Repository-controlled state has materially advanced, but no canonical weighting rule converts those merges and factual improvements into a higher total legal-assurance percentage.
+The existing 80/50 working scores are retained rather than manufacturing a new percentage. The seller/contracting decision is now closed, but no canonical weighting rule converts that factual improvement into a new aggregate percentage.
 
 ## Shortest remaining critical path
 
-1. obtain explicit owner designation of the RISCK COMPLY customer contracting entity and authoritative registry evidence for the designated company; reconcile only verified registered facts;
-2. close seller/VAT regime and supported B2B tax matrix through attributable owner/accountant/tax-authority evidence;
-3. finish account-specific provider facts and Chapter V/transfer conclusions, including the actual PostHog Production project if analytics is active;
+1. authoritative registry evidence for `SAMUEL CERQUEIRA, UNIPESSOAL LDA`, including the registered facts required for final instruments;
+2. close seller/VAT regime and supported B2B tax matrix through attributable tax/accounting authority evidence;
+3. finish account-specific provider facts and Chapter V/transfer conclusions, including the actual PostHog Production project/account;
 4. resolve the remaining material owner Terms risk-allocation decisions;
 5. give qualified reviewers the bounded current review packs and collect attributable decisions for all eight AI Act workstreams;
 6. apply any required deltas and obtain the consolidated Master Legal Opinion/equivalent qualified conclusion;
-7. only then promote Privacy, Terms, DPA, subprocessors/transfers and publication status to final/effective.
+7. complete the owner-deferred SaaS CAE/activity administrative reconciliation in the final administrative phase;
+8. only then promote Privacy, Terms, DPA, subprocessors/transfers and publication status to final/effective.
 
 ## Authority boundary
 
 ```text
 EMAIL_SEND_AUTHORIZED=false
 PRODUCTION_DB_WRITE_AUTHORIZED=false
+CAE_CHANGE_AUTHORIZED_NOW=false
 SYNTHETIC_LEGAL_ACCEPTANCE_FORBIDDEN=true
 NO_DOCUMENTATION_LOOP=true
 ```

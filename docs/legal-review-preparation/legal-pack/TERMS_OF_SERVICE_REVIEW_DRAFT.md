@@ -4,11 +4,11 @@
 
 **Last reconciled:** 2026-09-12
 
-These terms are prepared for review and do not take effect until the contracting/seller entity, authoritative registered/tax facts, remaining commercial risk decisions and qualified legal review are completed and a final version is deliberately published or incorporated into a customer agreement.
+These terms are prepared for review and do not take effect until authoritative registered/tax facts, remaining commercial risk decisions and qualified legal review are completed and a final version is deliberately published or incorporated into a customer agreement.
 
 ## 1. Parties, status and order of precedence
 
-Current attributable evidence supports **SAMUEL CERQUEIRA, UNIPESSOAL LDA** as the owner-designated RISCK COMPLY operator. That operator designation does **not** by itself establish the final customer contracting/seller counterparty. The customer contracting/seller entity, authoritative registered office, registered identifiers and signatory authority therefore remain upstream acceptance gates.
+The owner has explicitly designated **SAMUEL CERQUEIRA, UNIPESSOAL LDA** as the RISCK COMPLY operator, customer contracting entity and seller. This owner designation is an attributable fact for review preparation; it does **not** by itself establish the entity's authoritative registered office, registered identifiers, VAT regime/registrations or signatory authority, and it is not qualified legal acceptance or final public-party publication.
 
 The current verified general corporate intake mailbox is **comercial@risckcomply.com**. The customer is intended to be the business or other professional organisation identified in the applicable order, provider-backed checkout or account record.
 
@@ -58,7 +58,7 @@ Exact prices, billing intervals, included capabilities and purchasable add-ons m
 
 ## 8. Taxes, refunds, payment failure and suspension
 
-Seller VAT/tax registrations and invoice treatment depend on the final contracting/seller entity and authoritative tax facts. Current source implements billing-address collection, tax-ID collection and Stripe Checkout automatic tax, but implementation does not establish the seller's actual Portuguese VAT regime or registrations.
+The seller is owner-designated as **SAMUEL CERQUEIRA, UNIPESSOAL LDA**. Seller VAT/tax registrations and invoice treatment remain dependent on authoritative registry/tax facts and Stripe/account reconciliation. Current source implements billing-address collection, tax-ID collection and Stripe Checkout automatic tax, but implementation does not establish the seller's actual Portuguese VAT regime or registrations.
 
 **[OWNER POSITION SELECTED · COUNSEL REVIEW PENDING]** The current attributable owner position is **no default general refund**, subject to mandatory law, provider/billing errors, duplicate charges, the applicable order form and any expressly negotiated credits or remedies. This is an input for final drafting; it is not yet a binding customer clause.
 
@@ -114,7 +114,7 @@ No warranty is proposed that use of RISCK COMPLY automatically makes a customer 
 
 ## 17. Liability
 
-**[OWNER + COUNSEL DECISION REQUIRED]** Define liability cap, excluded losses, carve-outs, mandatory-law treatment and separate treatment for confidentiality, data protection, intellectual property, fraud and wilful misconduct. The position must match the final contracting entity, insurance position and commercial risk tolerance.
+**[OWNER + COUNSEL DECISION REQUIRED]** Define liability cap, excluded losses, carve-outs, mandatory-law treatment and separate treatment for confidentiality, data protection, intellectual property, fraud and wilful misconduct. The position must match the owner-designated contracting entity, insurance position and commercial risk tolerance.
 
 No liability cap is represented as effective by this review draft.
 
@@ -126,7 +126,7 @@ Public documentation must not retroactively expand or reduce signed commitments 
 
 ## 19. Governing law, disputes and notices
 
-**[OWNER POSITION SELECTED · COUNSEL REVIEW PENDING]** The attributable owner preference is for **Portuguese governing law**. This is not represented as a final binding choice until the contracting entity, mandatory-law analysis and qualified review are complete.
+**[OWNER POSITION SELECTED · COUNSEL REVIEW PENDING]** The attributable owner preference is for **Portuguese governing law**. This is not represented as a final binding choice until authoritative entity facts, mandatory-law analysis and qualified review are complete.
 
 **[OWNER + COUNSEL DECISION REQUIRED]** Court/forum versus arbitration, venue, escalation mechanics and remedies remain unresolved. General corporate communications may be submitted to **comercial@risckcomply.com**. **[COUNSEL DECISION REQUIRED]** Define which notices have contractual legal effect, required delivery methods, deemed-receipt rules and whether a postal or dedicated legal-notice channel is required.
 
@@ -134,7 +134,7 @@ Public documentation must not retroactively expand or reduce signed commitments 
 
 Before publication or signature, qualified review must confirm at minimum:
 
-- final contracting/seller entity identity and authoritative registered facts;
+- authoritative registered, tax and signatory facts for the owner-designated contracting/seller entity, **SAMUEL CERQUEIRA, UNIPESSOAL LDA**;
 - contract formation, incorporation and order precedence;
 - billing, renewal, owner-selected refund position, tax and non-payment wording;
 - controller/processor and DPA relationship;
@@ -150,6 +150,7 @@ Until those gates are complete, status remains:
 ```text
 TERMS_STATUS=REVIEW_DRAFT
 TERMS_EFFECTIVE=NO
+TERMS_CONTRACTING_SELLER_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
 TERMS_OWNER_POSITIONS=PARTIAL_SELECTED_COUNSEL_PENDING
 TERMS_REMAINING_OWNER_COUNSEL_DECISIONS=LIABILITY_INDEMNITY_CURE_SUSPENSION_NOTICES_POSITIVE_WARRANTIES_FORUM
 TERMS_EXTERNAL_LEGAL_REVIEW=PENDING_EXTERNAL_REVIEW

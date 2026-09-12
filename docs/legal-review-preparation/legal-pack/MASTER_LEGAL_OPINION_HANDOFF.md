@@ -6,13 +6,16 @@ This document gives qualified counsel a bounded final-review brief. It is not an
 
 ## 1. Client and addressee
 
-- Instructing legal entity: **[FOUNDER FACT REQUIRED]**
+- Instructing legal entity for review preparation: **SAMUEL CERQUEIRA, UNIPESSOAL LDA — OWNER_DESIGNATED**
+- Authoritative registered office, registered identifiers, VAT facts and signatory authority: **[AUTHORITATIVE EVIDENCE REQUIRED]**
 - Intended addressee and permitted reliance: **[COUNSEL DECISION REQUIRED]**
 - Product: Risck Comply
 - Repository: `renanescola40-afk/eurocomply_saas`
 - Exact reviewed product SHA: **[TO BE FROZEN AT REVIEW]**
 - Evidence package digest: **[TO BE GENERATED]**
 - Review date and validity period: **[COUNSEL TO COMPLETE]**
+
+The owner designation identifies the intended operator/contracting/seller entity for counsel intake. It is not a registry certificate, VAT determination, signatory proof or qualified legal acceptance.
 
 ## 2. Requested scope
 
@@ -75,12 +78,14 @@ The opinion must identify the exact product SHA, evidence-package digest and sig
 
 ## 7. Known unresolved inputs
 
-- signed founder facts;
+- authoritative registry/registered-office/company-identifier evidence and signatory authority for the owner-designated instructing entity;
+- authoritative VAT/tax facts and final seller/account reconciliation;
 - active production providers and regions;
 - retention and transfer mechanisms;
 - final commercial, SLA and liability positions;
 - customer-specific data and use cases;
-- external specialist/conformity evidence where applicable.
+- external specialist/conformity evidence where applicable;
+- owner-deferred SaaS CAE/activity administrative reconciliation at the final administrative phase.
 
 ## 8. Decision outcomes
 

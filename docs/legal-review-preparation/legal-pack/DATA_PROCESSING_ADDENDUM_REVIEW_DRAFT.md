@@ -2,11 +2,11 @@
 
 **Status:** `REVIEW_DRAFT` · `FOUNDER_FACT_REQUIRED` · `COUNSEL_DECISION_REQUIRED`
 
-This DPA is prepared for GDPR Article 28 review. It is not an executed agreement and does not become binding until the final contracting parties are identified, the processing annexes are completed, qualified legal review is accepted where required, and the DPA is incorporated into a binding customer agreement.
+This DPA is prepared for GDPR Article 28 review. It is not an executed agreement and does not become binding until authoritative registered details for the owner-designated contracting party, the processing annexes, qualified legal review and incorporation into a binding customer agreement are completed.
 
 ## 1. Parties and scope
 
-The final RISCK COMPLY contracting/operator legal entity and its registered identifiers remain pending authoritative founder/entity confirmation. This review draft therefore does not represent a final processor-party identification.
+The owner has explicitly designated **SAMUEL CERQUEIRA, UNIPESSOAL LDA** as the RISCK COMPLY operator and customer contracting entity. For review preparation, that same entity is therefore the intended RISCK COMPLY processor-side contractual party where the DPA applies. This owner designation does **not** by itself establish authoritative registered office, registered identifiers, VAT facts, signatory authority or qualified Article 28 acceptance, so final processor-party publication/signature remains blocked on those separate gates.
 
 For customer personal data processed through the contracted service on documented customer instructions, the customer may act as controller or processor depending on its own processing role, and RISCK COMPLY is intended to act as processor or subprocessor for that instructed processing. Provider-controlled website, account, commercial, billing, support, security and similar processing is assessed separately under the Privacy notice and role matrix.
 
@@ -108,7 +108,7 @@ The final annex must identify the active production subprocessors applicable to 
 
 Before this DPA can be treated as final/signable, the following remain genuine acceptance gates:
 
-1. final contracting/processor-party identity and registered details;
+1. authoritative registered details, tax/identity facts where relevant and signatory authority for the owner-designated RISCK COMPLY contracting/processor-side entity, **SAMUEL CERQUEIRA, UNIPESSOAL LDA**;
 2. qualified review of the concrete controller/processor role allocation where material;
 3. final subprocessor authorisation, notice, objection and remedy model;
 4. account-specific provider and international-transfer evidence;

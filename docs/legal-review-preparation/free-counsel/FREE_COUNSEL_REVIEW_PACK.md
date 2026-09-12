@@ -4,7 +4,7 @@
 **Purpose:** reduce the time and cost burden for a qualified pro bono / clinic reviewer.  
 **Legal effect:** none until a qualified human reviewer returns an attributable decision.  
 **Repository:** `renanescola40-afk/eurocomply_saas`  
-**Current truth snapshot:** `43bf6b1368ff7a3b8ead0aa434b83bed9457615e` on 2026-09-10  
+**Current truth snapshot:** `2ba88fc0b3f6a75c4c70b1bfdfaa53d6b6a0985a` on 2026-09-12  
 **Review binding:** the reviewer must bind any final decision to the exact SHA/evidence digest actually reviewed, not automatically to this preparation snapshot.
 
 ## 1. Zero-cost boundary
@@ -24,23 +24,37 @@ This pack does **not** authorise:
 
 If a reviewer cannot continue within the authorised route, the correct outcome is `NO_AUTHORISED_ROUTE_AVAILABLE`, not legal acceptance.
 
-## 2. Operator / contracting-entity boundary
+## 2. Operator / contracting / seller entity boundary
 
-Current attributable operating model for review preparation:
+Current attributable model for review preparation:
 
 ```text
 RISCK_COMPLY_TRADE_NAME=RISCK_COMPLY
 RISCK_COMPLY_OPERATOR_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
-RISCK_COMPLY_CONTRACTING_ENTITY=OPEN_OWNER_CONFIRMATION
+RISCK_COMPLY_CONTRACTING_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
+RISCK_COMPLY_SELLER_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
+CONTRACTING_SELLER_ENTITY_DECISION=CLOSED_OWNER_ATTRIBUTABLE
 AUTHORITATIVE_REGISTRY_EVIDENCE=PENDING
 REGISTERED_OFFICE=PENDING_AUTHORITATIVE_EVIDENCE
 REGISTERED_IDENTIFIERS=PENDING_AUTHORITATIVE_EVIDENCE
 SIGNATORY_AUTHORITY=PENDING_WHERE_REQUIRED
 ```
 
-Later owner/operator correspondence identifies **SAMUEL CERQUEIRA, UNIPESSOAL LDA** as the operator of RISCK COMPLY in Portugal. That evidence does not expressly designate the same company as the customer-contract counterparty. Counsel must therefore treat the contracting entity as an open owner fact rather than infer it from operator status.
+The owner has explicitly designated **SAMUEL CERQUEIRA, UNIPESSOAL LDA** as the RISCK COMPLY operator, customer contracting entity and seller. Counsel should therefore no longer treat the customer-contract counterparty as an unresolved owner decision.
 
-The pack also does not license the reviewer to invent the registered office, company/tax identifiers, corporate objects or signatory authority. Any final opinion or public legal text requiring those fields must use authoritative registry/owner evidence.
+This owner designation does **not** authorise the reviewer to invent the registered office, company/tax identifiers, corporate-object/CAE facts, VAT status or signatory authority. Any final opinion or public legal text requiring those fields must use authoritative evidence.
+
+### CAE boundary
+
+The owner states that the SaaS CAE/activity association has not yet been completed and is deliberately deferred to the final administrative phase:
+
+```text
+SOFTWARE_SAAS_CAE_ASSOCIATED=false
+SOFTWARE_SAAS_CAE_ACTION=DEFERRED_BY_OWNER_UNTIL_FINAL_ADMINISTRATIVE_PHASE
+CAE_CHANGE_AUTHORIZED_NOW=false
+```
+
+Counsel may identify legal implications or information needs, but this review pack does not authorise any CAE change and no reviewer should infer a CAE from the product description.
 
 ## 3. Product in one paragraph
 
@@ -56,13 +70,14 @@ DPA_PUBLIC_REVIEW_SURFACE=MERGED
 SUBPROCESSORS_TRANSFERS_REVIEW_SURFACES=MERGED
 TERMS_PUBLIC_REVIEW_SURFACE=IMPLEMENTED_AND_LIVE_REVIEW_DRAFT
 GDPR_RIGHTS_SOURCE_AND_EXACT_SHA_TECHNICAL_GATE=PASS
+CONTRACTING_SELLER_ENTITY_DECISION=CLOSED_OWNER_ATTRIBUTABLE
 LEGAL_8_OF_8=0/8_ACCEPTED
 MASTER_LEGAL_OPINION=OPEN
 ```
 
 The public Privacy and Terms pages deliberately identify themselves as `REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED`; they are not represented as effective legal approval.
 
-Provider/account factual evidence has also advanced, including a direct Supabase Privacy Team statement about DPA incorporation and an attributable PostHog DPA completion notice. Those provider facts do not resolve Chapter V/transfer legal conclusions, customer-contract counterparty identity or every account-specific configuration fact.
+Provider/account factual evidence has advanced, including a direct Supabase Privacy Team statement about DPA incorporation and an attributable PostHog DPA completion notice. Those provider facts do not resolve Chapter V/transfer legal conclusions or every account-specific configuration fact.
 
 ## 5. Review material already prepared
 
@@ -142,16 +157,17 @@ Without delaying the eight AI Act workstreams, qualified counsel may also review
 - Terms formation/precedence, renewal and suspension mechanics;
 - refund position and post-termination export/deletion wording;
 - liability cap/carve-outs, indemnities, warranties/remedies, notices and governing-law/forum mechanics;
+- authoritative registry/VAT wording for the already-selected contracting/seller entity;
 - final legal publication criteria.
 
-Existing owner positions for counsel review include end-of-paid-period self-service cancellation, no default refund subject to mandatory law/order form, a 30-day export-window position, no default uptime SLA unless contracted, and a Portuguese-law preference. They are owner positions, not pre-approved legal conclusions.
+Existing owner positions for counsel review include end-of-paid-period self-service cancellation, no default refund subject to mandatory law/order form, a 30-day export-window position, no default uptime SLA unless contracted, a Portuguese-law preference, and `SAMUEL CERQUEIRA, UNIPESSOAL LDA` as contracting/seller entity. They are owner positions/facts for review, not pre-approved legal conclusions.
 
 ## 9. Master Legal Opinion
 
 After all eight workstreams have valid terminal decisions satisfying the acceptance contract, obtain a consolidated Master Legal Opinion / equivalent attributable qualified conclusion covering:
 
 - scope and product;
-- confirmed operator and separately confirmed contracting entity;
+- confirmed operator / contracting / seller entity and authoritative registered facts;
 - release/evidence subject;
 - all eight workstream outcomes;
 - assumptions and limitations;
@@ -169,8 +185,12 @@ Official European Commission / AI Office guidance is highly valuable and should 
 
 ```text
 FREE_COUNSEL_PACK=READY_FOR_BOUNDED_EXTERNAL_REVIEW
-RISCK_COMPLY_OPERATOR_ENTITY=OWNER_DESIGNATED_REGISTRY_EVIDENCE_PENDING
-RISCK_COMPLY_CONTRACTING_ENTITY=OPEN_OWNER_CONFIRMATION
+RISCK_COMPLY_OPERATOR_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
+RISCK_COMPLY_CONTRACTING_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
+RISCK_COMPLY_SELLER_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
+CONTRACTING_SELLER_ENTITY_DECISION=CLOSED_OWNER_ATTRIBUTABLE
+AUTHORITATIVE_REGISTRY_EVIDENCE=PENDING
+SOFTWARE_SAAS_CAE_ACTION=DEFERRED_BY_OWNER_UNTIL_FINAL_ADMINISTRATIVE_PHASE
 LEGAL_8_OF_8=0/8_ACCEPTED
 QUALIFIED_REVIEWS_ACCEPTED=0
 MASTER_LEGAL_OPINION=OPEN
