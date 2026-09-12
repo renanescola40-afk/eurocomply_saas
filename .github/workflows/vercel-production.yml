@@ -273,6 +273,21 @@ jobs:
       - name: Run route quality gate
         run: npm run quality:routes
 
+      - name: Run pre-deployment release authorization gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run security:release-candidate
+          npm run security:release-evidence
+          npm run security:release-approval
+          npm run security:release-go-no-go
+          npm run security:release-rollback
+          npm run security:release-incident-response
+          npm run security:release-post-incident
+          npm run security:release-support-readiness
+          npm run security:release-operations
+          npm run release:rollback:dry-run
+
       - name: Run Vercel production environment readiness gate
         run: npm run ops:vercel-readiness
 
