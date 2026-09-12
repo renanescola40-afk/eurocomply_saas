@@ -75,10 +75,24 @@ describe('regulatory intelligence product truth', () => {
     expect(detail).toContain('Regulatory Monitoring Pro');
   });
 
-  it('has an honest empty state instead of synthetic latest news', () => {
+  it('keeps the customer-facing intelligence page source-verifiable rather than source-verified', () => {
     const page = read('src/app/[locale]/dashboard/organizations/reports-governance/news/page.tsx');
 
-    expect(page).toContain('No source-verified regulatory updates are published right now.');
+    expect(page).toContain('Source-verifiable updates');
+    expect(page).toContain('No source-verifiable regulatory updates are published right now.');
+    expect(page).toContain('Atualizações com fontes verificáveis');
+    expect(page).toContain('Actualizaciones con fuentes verificables');
+    expect(page).toContain('Mises à jour avec sources vérifiables');
+    expect(page).toContain('Aggiornamenti con fonti verificabili');
+    expect(page).toContain('Updates mit überprüfbaren Quellen');
+
+    expect(page).not.toContain("articles: 'Verified updates'");
+    expect(page).not.toContain('No source-verified regulatory updates are published right now.');
+    expect(page).not.toContain("articles: 'Atualizações verificadas'");
+    expect(page).not.toContain("articles: 'Actualizaciones verificadas'");
+    expect(page).not.toContain("articles: 'Mises à jour vérifiées'");
+    expect(page).not.toContain("articles: 'Aggiornamenti verificati'");
+    expect(page).not.toContain("articles: 'Verifizierte Updates'");
     expect(page).toContain('A RISCK COMPLY não substitui um feed real por notícias sintéticas ou sem data.');
   });
 
