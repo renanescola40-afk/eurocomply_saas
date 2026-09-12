@@ -82,7 +82,7 @@ describe('regulatory intelligence product truth', () => {
     expect(page).toContain('A RISCK COMPLY não substitui um feed real por notícias sintéticas ou sem data.');
   });
 
-  it('does not claim AI-powered regulatory updates without runtime evidence', () => {
+  it('does not claim AI-powered or source-verified navigation copy without runtime evidence', () => {
     const dictionary = read('src/lib/i18n/app-dictionary.ts');
 
     expect(dictionary).not.toContain('AI-powered regulatory updates');
@@ -91,7 +91,17 @@ describe('regulatory intelligence product truth', () => {
     expect(dictionary).not.toContain('Mises à jour réglementaires avec IA');
     expect(dictionary).not.toContain('Aggiornamenti normativi con IA');
     expect(dictionary).not.toContain('KI-gestützte regulatorische Updates');
-    expect(dictionary).toContain('Source-verified regulatory updates');
-    expect(dictionary).toContain('Atualizações regulatórias com fontes verificadas');
+    expect(dictionary).not.toContain('Source-verified regulatory updates');
+    expect(dictionary).not.toContain('Atualizações regulatórias com fontes verificadas');
+    expect(dictionary).not.toContain('Actualizaciones regulatorias con fuentes verificadas');
+    expect(dictionary).not.toContain('Mises à jour réglementaires avec sources vérifiées');
+    expect(dictionary).not.toContain('Aggiornamenti normativi con fonti verificate');
+    expect(dictionary).not.toContain('Regulatorische Updates mit verifizierten Quellen');
+    expect(dictionary).toContain('Source-verifiable regulatory updates');
+    expect(dictionary).toContain('Atualizações regulatórias com fontes verificáveis');
+    expect(dictionary).toContain('Actualizaciones regulatorias con fuentes verificables');
+    expect(dictionary).toContain('Mises à jour réglementaires avec sources vérifiables');
+    expect(dictionary).toContain('Aggiornamenti normativi con fonti verificabili');
+    expect(dictionary).toContain('Regulatorische Updates mit überprüfbaren Quellen');
   });
 });
