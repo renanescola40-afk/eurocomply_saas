@@ -1,8 +1,10 @@
 # Data Processing Addendum — Review Draft
 
-**Status:** `REVIEW_DRAFT` · `FOUNDER_FACT_REQUIRED` · `COUNSEL_DECISION_REQUIRED`
+**Status:** `REVIEW_DRAFT` · `FOUNDER_FACT_REQUIRED` · `OWNER_DPA_POSITIONS_SELECTED` · `COUNSEL_DECISION_REQUIRED`
 
-This DPA is prepared for GDPR Article 28 review. It is not an executed agreement and does not become binding until authoritative registered details for the owner-designated contracting party, the processing annexes, qualified legal review and incorporation into a binding customer agreement are completed.
+This DPA is prepared for GDPR Article 28 review. It is not an executed agreement and does not become binding until authoritative registered details for the owner-designated contracting party, provider/account facts, the processing annexes, qualified legal review where required, and incorporation into a binding customer agreement are completed.
+
+The owner-approved drafting positions in `docs/legal-assurance/OWNER_LEGAL_DECISIONS_V1_2026-09-12.md` are incorporated below as owner-selected contract inputs. They close the owner-policy decisions for subprocessor mechanics, audit mechanics and breach-notification target without creating qualified legal acceptance.
 
 ## 1. Parties and scope
 
@@ -14,7 +16,7 @@ For customer personal data processed through the contracted service on documente
 
 GDPR terms have their statutory meaning. For personal-data processing covered by this DPA, the proposed contractual model is that this DPA prevails over inconsistent general terms, while an order form may specify customer-specific processing details without weakening mandatory data-protection protections.
 
-Liability caps, mandatory-law carve-outs and allocation between controller and processor remain subject to final contractual and qualified legal review.
+The proposed standard liability position is recorded in the owner Legal Package V1, but mandatory-law carve-outs and final allocation between controller and processor remain subject to qualified drafting and the final agreement.
 
 ## 3. Processing instructions
 
@@ -22,9 +24,11 @@ The proposed processor obligation is to process customer personal data only on d
 
 If an instruction appears to infringe applicable Union or Member-State data-protection law, the processor-side process must allow that concern to be raised promptly. Product output is not treated as an automatic customer-specific legal determination.
 
+Customer Content must not be used to train third-party or provider AI/ML models without a separate specific lawful basis/authorisation and an implemented, disclosed processing arrangement.
+
 ## 4. Confidentiality
 
-Persons authorised to process customer personal data must be subject to confidentiality obligations and access limited to their duties. Operational evidence for access control, role scoping and security controls must remain consistent with the current production environment.
+Persons authorised to process customer personal data must be subject to confidentiality obligations and access limited to their duties. Operational evidence for access control, role scoping and security controls must remain consistent with the current Production environment.
 
 ## 5. Security
 
@@ -45,7 +49,9 @@ The contract-grade TOM schedule must remain evidence-bound to the deployed envir
 
 The DPA requires prior written authorisation for subprocessors, an up-to-date provider register, applicable data-protection obligations to flow down to subprocessors, and processor responsibility as required by law.
 
-The final choice between general and specific authorisation, advance-notice period, objection mechanics and customer remedies remains a contractual/legal decision. Appearance of a provider in source code, the Trust Center or a draft register is not by itself contractual approval.
+**[OWNER POSITION SELECTED · COUNSEL/PROVIDER REVIEW PENDING]** The proposed model uses **general written authorisation** for subprocessors. RISCK COMPLY should provide **30 days' advance notice** of a new material subprocessor where practicable and contractually applicable. A customer may object on reasonable data-protection grounds. RISCK COMPLY should attempt a commercially reasonable solution; if no reasonable solution is available, the final DPA/order should permit termination of the affected service or processing scope according to its agreed mechanics.
+
+Appearance of a provider in source code, the Trust Center or a draft register is not by itself contractual approval. Provider/account facts and the final legally effective authorisation wording remain separate gates.
 
 ## 7. International transfers
 
@@ -53,11 +59,13 @@ The current Production Supabase project is configured in `eu-west-1` (Ireland). 
 
 Where Chapter V requires a transfer mechanism, the final agreement must identify the applicable adequacy decision, transfer SCCs or other lawful mechanism and any required supplementary measures or transfer assessment. Commission controller-processor clauses under Decision (EU) 2021/915 address Article 28 contracting and do not by themselves satisfy Chapter V transfer requirements.
 
+The owner Legal Package V1 does not close account-specific international-transfer acceptance.
+
 ## 8. Data-subject requests
 
 Taking into account the nature of processing, the proposed processor obligation is to assist the customer through appropriate technical and organisational measures where possible.
 
-RISCK COMPLY now has a canonical tenant-scoped rights-request lifecycle covering request type, received/due dates, verification state, controller/processor routing, extensions, attributable decisions, completion and evidence references. Protected exact-SHA runtime evidence has validated the technical register/deadline workflow.
+RISCK COMPLY has a canonical tenant-scoped rights-request lifecycle covering request type, received/due dates, verification state, controller/processor routing, extensions, attributable decisions, completion and evidence references. Protected exact-SHA runtime evidence has validated the technical register/deadline workflow.
 
 That technical workflow does not decide whether a restriction, objection, erasure exception or other legal limitation applies. Customer-controller routing and case-specific legal judgment remain attributable decisions.
 
@@ -69,13 +77,15 @@ Customer-specific legal conclusions, regulator engagement and any EU AI Act FRIA
 
 ## 10. Personal-data breaches
 
-The proposed DPA requires notification to the customer without undue delay after the processor becomes aware of a personal-data breach affecting customer personal data, together with reasonably available information needed for the customer's response.
+**[OWNER POSITION SELECTED · COUNSEL REVIEW PENDING]** The standard DPA commitment is notification to the customer **without undue delay** after the processor becomes aware of a personal-data breach affecting customer personal data, together with reasonably available information needed for the customer's response.
 
-Any stricter contractual target, communication channel or update cadence must match demonstrated operational capability before it becomes binding.
+No default 24-hour or 48-hour contractual promise is selected until operational evidence supports a stricter commitment. Any stricter Enterprise target must be evidence-backed and expressly contracted.
 
 ## 11. Deletion and return
 
 At the end of services or on a valid customer instruction, the proposed DPA requires customer personal data to be returned or deleted as applicable, subject to documented legal-retention requirements and verified provider backup/lifecycle constraints.
+
+The owner-selected post-termination customer export-window position is **30 days**, but that position remains subject to actual product capability, provider lifecycle constraints, privacy/retention duties, legal holds and final qualified wording before it becomes binding.
 
 The product uses a category-specific retention model rather than one universal retention period. The canonical technical retention-policy schema has exact-SHA runtime evidence, but the final legally appropriate period for every category and complete downstream provider deletion remain separate factual/legal gates. Any retained record must remain purpose-limited, access-restricted and deleted when the applicable basis expires.
 
@@ -83,12 +93,14 @@ The product uses a category-specific retention model rather than one universal r
 
 The proposed DPA makes information reasonably necessary to demonstrate compliance available through attributable evidence packs, security materials, questionnaires and related records and preserves audit/inspection rights required by applicable law.
 
-Practical rules for audit frequency, advance notice, confidentiality, cost, on-site access and protection of other customers, security-sensitive material or privileged information remain subject to the final agreement and qualified review. Contractual limits must not eliminate mandatory Article 28 rights.
+**[OWNER POSITION SELECTED · COUNSEL REVIEW PENDING]** Remote evidence, security materials and questionnaires should be the normal first-line audit mechanism. Routine customer audits should normally be limited to **once per 12 months**, with reasonable advance notice and confidentiality/security protections, unless a personal-data breach, regulator instruction, material control failure or other justified cause requires additional access.
+
+Audit mechanics must protect other customers' data, security-sensitive information, trade secrets and privileged material while preserving mandatory GDPR Article 28 audit/information rights. Final cost, on-site access and procedural mechanics remain subject to the signed agreement and qualified review.
 
 ## 13. Annex 1 — Processing details
 
 - **Subject matter:** operation, security, support and maintenance of the contracted RISCK COMPLY compliance service.
-- **Duration:** subscription plus the applicable return/deletion lifecycle. The final post-termination export/deletion window remains subject to the signed agreement and verified provider capabilities.
+- **Duration:** subscription plus the applicable return/deletion lifecycle. The owner-selected 30-day post-termination export position remains subject to the signed agreement and verified provider capabilities.
 - **Nature:** collection, storage, organisation, retrieval, use, authorised disclosure to service providers, export and deletion-support operations required to deliver the service.
 - **Purposes:** provide, secure, support and maintain customer compliance workflows and customer-requested service functionality.
 - **Baseline data subjects:** authorised users; customer employees and contractors; vendor or business contacts; and other individuals represented in customer-provided records. Customer instructions or an order form may narrow or extend these categories within the permitted service scope.
@@ -102,7 +114,9 @@ The contract-grade TOM annex must map each contractual security commitment to at
 
 ## 15. Annex 3 — Subprocessors
 
-The final annex must identify the active production subprocessors applicable to the covered processing, including legal entity, service/purpose, relevant data, processing locations, applicable transfer position and the agreed authorisation/notice state.
+The final annex must identify the active Production subprocessors applicable to the covered processing, including legal entity, service/purpose, relevant data, processing locations, applicable transfer position and the agreed authorisation/notice state.
+
+The drafting position for the authorisation model and 30-day material-subprocessor notice target is owner-selected; the provider-specific list and contract facts remain evidence gates.
 
 ## Review conditions
 
@@ -110,11 +124,27 @@ Before this DPA can be treated as final/signable, the following remain genuine a
 
 1. authoritative registered details, tax/identity facts where relevant and signatory authority for the owner-designated RISCK COMPLY contracting/processor-side entity, **SAMUEL CERQUEIRA, UNIPESSOAL LDA**;
 2. qualified review of the concrete controller/processor role allocation where material;
-3. final subprocessor authorisation, notice, objection and remedy model;
+3. qualified review and final contractual drafting of the owner-selected general-authorisation, 30-day notice, objection/remedy and audit mechanics;
 4. account-specific provider and international-transfer evidence;
 5. contract-grade TOM annex reconciled to current Production evidence;
-6. final deletion/return window and remaining retention/provider lifecycle facts;
-7. final audit mechanics, breach-notification commitments and liability allocation;
+6. provider-backed deletion/backup lifecycle facts and validation of the selected 30-day export position;
+7. final liability allocation and any stricter Enterprise breach-notification commitments;
 8. incorporation into a binding customer agreement.
 
 Internal implementation, CI, documentation and exact-SHA evidence may close technical/factual gates but do not substitute for qualified external legal acceptance where the decision requires it.
+
+```text
+DPA_STATUS=REVIEW_DRAFT
+DPA_EFFECTIVE=NO
+OWNER_LEGAL_PACKAGE_V1=APPROVED
+DPA_OWNER_POLICY_DECISIONS=SELECTED
+SUBPROCESSOR_AUTHORISATION_MODEL=GENERAL_WRITTEN_AUTHORISATION
+NEW_MATERIAL_SUBPROCESSOR_NOTICE_TARGET=30_DAYS
+DPA_AUDIT_FIRST_LINE=REMOTE_EVIDENCE_AND_QUESTIONNAIRE
+ROUTINE_AUDIT_FREQUENCY_TARGET=ONCE_PER_12_MONTHS
+STANDARD_CUSTOMER_BREACH_NOTICE=WITHOUT_UNDUE_DELAY
+DEFAULT_24H_OR_48H_PROMISE=NO
+AUTHORITATIVE_REGISTRY_EVIDENCE=OPEN
+INTERNATIONAL_TRANSFER_FINAL_ACCEPTANCE=OPEN
+FINAL_LEGAL_PUBLICATION=BLOCKED
+```

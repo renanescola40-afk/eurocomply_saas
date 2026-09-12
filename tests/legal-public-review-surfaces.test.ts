@@ -48,8 +48,8 @@ describe('public legal review surfaces', () => {
     ]);
 
     expect(privacy).toContain('version="0.2-review"');
-    expect(dpa).toContain('version="0.2-review"');
-    expect(terms).toContain('version="0.2-review"');
+    expect(dpa).toContain('version="0.3-review"');
+    expect(terms).toContain('version="0.3-review"');
     expect(transfers).toContain('version="0.2-review"');
     for (const source of [privacy, dpa, terms, cookie, acceptableUse, transfers]) {
       expect(source).toContain('lastUpdated={LAST_UPDATED}');
@@ -110,7 +110,12 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('Decision (EU) 2021/915');
     expect(source).toContain('REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED');
 
-    expect(source).toContain('final RISCK COMPLY contracting/operator legal entity and its registered identifiers are still pending authoritative founder/entity confirmation');
+    expect(source).toContain('does not publish final processor-party registry details until authoritative registered office');
+    expect(source).toContain('general written authorisation');
+    expect(source).toContain("30-day advance-notice target");
+    expect(source).toContain('without undue delay');
+    expect(source).toContain('No default 24-hour or 48-hour contractual promise is selected');
+    expect(source).toContain('once per 12 months');
     expect(source).not.toContain('SAMUEL CERQUEIRA, UNIPESSOAL LDA');
     expect(source).not.toMatch(/\bNIF\b|\bNIPC\b/);
     expect(source).not.toContain('99.9%');
@@ -123,14 +128,14 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('const page = copy[locale] ?? en');
     expect(source).toContain('Special-category or criminal-offence data is not accepted as an ordinary default use case');
     expect(source).toContain('unless Union or Member-State law requires otherwise');
-    expect(source).toContain('If an instruction appears to infringe applicable data-protection law');
+    expect(source).toContain('Customer Content is not authorised for training third-party or provider AI/ML models');
   });
 
   it('publishes the Terms contract structure while preserving the operator/contracting and counsel boundaries', async () => {
     const source = await readFile(TERMS_PAGE, 'utf8');
 
     expect(source).toContain('documentId="terms-of-service"');
-    expect(source).toContain('version="0.2-review"');
+    expect(source).toContain('version="0.3-review"');
     expect(source).toContain('Parties, status and business scope');
     expect(source).toContain('Service and product boundary');
     expect(source).toContain('Accounts, organisations and authorised users');
@@ -152,12 +157,15 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('comercial@risckcomply.com');
     expect(source).toContain('REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED');
 
-    expect(source).toContain('Current attributable evidence records an owner-designated RISCK COMPLY operator internally');
+    expect(source).toContain('owner-designated RISCK COMPLY operator, contracting entity and seller internally');
     expect(source).toContain('this public review draft does not publish a final customer-facing legal party identity');
-    expect(source).toContain('Operator designation alone does not establish those customer-facing legal roles');
     expect(source).toContain('The current attributable owner position is no default general refund');
+    expect(source).toContain('7-day cure opportunity after notice');
+    expect(source).toContain('30-day cure period after notice');
+    expect(source).toContain('fees paid or payable for the affected service during the 12 months preceding');
+    expect(source).toContain('courts of Lisbon, Portugal');
+    expect(source).toContain('no default arbitration');
     expect(source).toContain('The owner has selected a 30-day post-termination customer export-window position');
-    expect(source).toContain('The current attributable owner preference is Portuguese governing law');
     expect(source).toContain('No liability cap or indemnity is represented as effective by this review draft');
 
     expect(source).not.toMatch(/samuel\s+cerqueira,\s*unipessoal\s+lda\.?/i);
