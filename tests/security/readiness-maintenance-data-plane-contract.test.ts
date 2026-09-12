@@ -6,11 +6,18 @@ const readinessSource = readFileSync('src/app/api/ready/route.ts', 'utf8');
 const dailyMaintenanceSource = readFileSync('src/app/api/internal/daily-maintenance/route.ts', 'utf8');
 const intelligenceRefreshSource = readFileSync('src/app/api/intelligence/refresh/route.ts', 'utf8');
 const complianceAlertsSource = readFileSync('src/app/api/internal/compliance-alerts/route.ts', 'utf8');
+const vercelConfigSource = readFileSync('vercel.json', 'utf8');
 
 describe('production readiness maintenance data-plane contract', () => {
-  it('keeps readiness coupled to the scheduled maintenance jobs', () => {
-    expect(dailyMaintenanceSource).toContain("'/api/internal/compliance-alerts'");
+  it('keeps readiness coupled to every scheduled maintenance job', () => {
+    expect(dailyMaintenanceSource).not.toContain("'/api/internal/compliance-alerts'");
     expect(dailyMaintenanceSource).toContain("'/api/intelligence/refresh'");
+
+    const vercel = JSON.parse(vercelConfigSource) as { crons?: Array<{ path?: string; schedule?: string }> };
+    expect(vercel.crons).toContainEqual({
+      path: '/api/internal/compliance-alerts',
+      schedule: '5 4 * * *',
+    });
 
     expect(intelligenceRefreshSource).toContain(".from('intelligence_items')");
     expect(complianceAlertsSource).toContain(".from('email_notification_events')");

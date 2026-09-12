@@ -6,6 +6,7 @@ const complianceAlerts = readFileSync('src/app/api/internal/compliance-alerts/ro
 const intelligenceRefresh = readFileSync('src/app/api/intelligence/refresh/route.ts', 'utf8');
 const emailSender = readFileSync('src/lib/email/server-sender.ts', 'utf8');
 const dailyMaintenance = readFileSync('src/app/api/internal/daily-maintenance/route.ts', 'utf8');
+const vercelConfig = readFileSync('vercel.json', 'utf8');
 const manifest = readFileSync('config/supabase-forward-reconciliation-v23.json', 'utf8');
 
 describe('pre-V23 Production runtime compatibility', () => {
@@ -53,9 +54,15 @@ describe('pre-V23 Production runtime compatibility', () => {
     expect(auditErrorReportIndex).toBeGreaterThan(schemaFallbackIndex);
   });
 
-  it('keeps daily maintenance scheduled and expands the governed package through active-membership RLS closure', () => {
-    expect(dailyMaintenance).toContain("'/api/internal/compliance-alerts'");
+  it('keeps maintenance scheduled and expands the governed package through active-membership RLS closure', () => {
+    expect(dailyMaintenance).not.toContain("'/api/internal/compliance-alerts'");
     expect(dailyMaintenance).toContain("'/api/intelligence/refresh'");
+
+    const vercel = JSON.parse(vercelConfig) as { crons?: Array<{ path?: string; schedule?: string }> };
+    expect(vercel.crons).toContainEqual({
+      path: '/api/internal/compliance-alerts',
+      schedule: '5 4 * * *',
+    });
 
     const parsed = JSON.parse(manifest) as { changeSet?: string; migrations?: Array<{ filename?: string }> };
     expect(parsed.changeSet).toBe('2026-08-25-enterprise-data-plane-active-membership-rls-closure-v23');

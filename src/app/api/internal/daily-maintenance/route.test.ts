@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   MaintenanceJobTimeoutError,
@@ -159,6 +160,21 @@ describe('daily maintenance response boundaries', () => {
   });
 });
 
+describe('maintenance schedule isolation', () => {
+  it('runs compliance alerts as a dedicated cron instead of a timed child request', () => {
+    const route = readFileSync('src/app/api/internal/daily-maintenance/route.ts', 'utf8');
+    const vercel = JSON.parse(readFileSync('vercel.json', 'utf8')) as {
+      crons?: Array<{ path?: string; schedule?: string }>;
+    };
+
+    expect(route).not.toContain("'/api/internal/compliance-alerts'");
+    expect(vercel.crons).toContainEqual({
+      path: '/api/internal/compliance-alerts',
+      schedule: '5 4 * * *',
+    });
+  });
+});
+
 describe('daily maintenance timeout sequencing', () => {
   it('does not start later jobs after a child times out', async () => {
     const runner = vi.fn(async (_baseUrl: string, path: string, _credential: string) => {
@@ -173,14 +189,13 @@ describe('daily maintenance timeout sequencing', () => {
       '/api/internal/metric-snapshots',
       'cron-secret',
     );
-    expect(results).toHaveLength(4);
+    expect(results).toHaveLength(3);
     expect(results[0]).toMatchObject({
       path: '/api/internal/metric-snapshots',
       ok: false,
       body: { error: 'job_timed_out' },
     });
     expect(results.slice(1)).toEqual([
-      expect.objectContaining({ path: '/api/internal/compliance-alerts', body: { error: 'skipped_after_timeout' } }),
       expect.objectContaining({ path: '/api/internal/trial-reminders', body: { error: 'skipped_after_timeout' } }),
       expect.objectContaining({ path: '/api/intelligence/refresh', body: { error: 'skipped_after_timeout' } }),
     ]);
@@ -194,8 +209,8 @@ describe('daily maintenance timeout sequencing', () => {
 
     const results = await runMaintenanceJobSequence('https://app.example', 'cron-secret', runner);
 
-    expect(runner).toHaveBeenCalledTimes(4);
-    expect(results).toHaveLength(4);
+    expect(runner).toHaveBeenCalledTimes(3);
+    expect(results).toHaveLength(3);
     expect(results[0]).toMatchObject({ body: { error: 'job_failed' } });
     expect(results.slice(1).every((result) => result.ok)).toBe(true);
   });
