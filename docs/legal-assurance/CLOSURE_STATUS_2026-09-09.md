@@ -1,131 +1,164 @@
 # RISCK COMPLY — Legal + GDPR + EU AI Act Regulatory Closure Status
 
 Date: 2026-09-10  
-Mode: `FINAL_LEGAL_REGULATORY_ASSURANCE_CLOSURE_V7`
+Mode: `LEGAL_TERMINAL_CLOSURE`
 
-This is an evidence/status register, not a legal opinion or compliance guarantee. Canonical detail: `docs/legal-assurance/LEGAL_CLOSURE_SCORECARD_V7.md`.
+This is an evidence/status register, not a legal opinion, certification, regulator approval or compliance guarantee. Qualified human acceptance is never inferred from repository work, provider correspondence or CI. Canonical detail remains in `docs/legal-assurance/LEGAL_CLOSURE_SCORECARD_V7.md`.
 
-## Current truth
+## Current release truth
 
 ```text
-CANONICAL_MAIN_SHA=a921445a675bf3652568603535c148eb4e977914
-PR_2025_V6_GDPR_LIFECYCLE_INTEGRITY=MERGED
-PR_2026_DATA_GOVERNANCE_FOUNDATION_RECONCILIATION=MERGED
-PR_2029_V7_RUNTIME_TRUTH_AND_PROOF_FIX=MERGED
+OBSERVED_PROTECTED_MAIN_SHA=43bf6b1368ff7a3b8ead0aa434b83bed9457615e
+PRODUCTION_DEPLOYMENT_ID=dpl_BznNuFKG8UEh4yW8y9HQyzLXDiJ9
+PRODUCTION_RELEASE_SHA=13b19410caa20045b19d98d58df406c43433af5a
+VERCEL_DEPLOYMENT_STATE=READY
+PRODUCTION_MAIN_RELATION=CURRENT_MAIN_AHEAD_OF_OBSERVED_PRODUCTION_RELEASE
+PR_2031_PRIVACY_REVIEW_SURFACE=MERGED
+PR_2032_DPA_REVIEW_SURFACE=MERGED
+PR_2035_SUBPROCESSORS_TRANSFERS_RECONCILIATION=MERGED
+PR_2040_TERMS_REVIEW_SURFACE=MERGED
+PR_2041_CANONICAL_LEGAL_RECONCILIATION=MERGED
+GDPR_RIGHTS_ISSUE_2009=CLOSED
+```
 
-GDPR_RIGHTS_SOURCE_IMPLEMENTATION=PASS_CANONICAL_SOURCE
-GDPR_TERMINAL_STATE_IMMUTABILITY=PASS_CANONICAL_SOURCE
-GDPR_LIFECYCLE_VERSION_INTEGRITY=PASS_CANONICAL_SOURCE
-GDPR_LIFECYCLE_AUDIT_ATOMICITY=PASS_CANONICAL_SOURCE
-DATA_GOVERNANCE_FOUNDATION=PASS_CANONICAL_SOURCE
+Direct connected validation on 2026-09-10 confirms that the observed Vercel deployment serving `www.risckcomply.com` is in Vercel state READY at Production SHA `13b19410...`. Protected `main` has since advanced to `43bf6b1...` through later merges, including unrelated pentest work. Exact-current-main Production equality and overall Production release readiness are therefore not claimed.
+
+## Public legal surfaces
+
+Direct Production validation on 2026-09-10 established:
+
+```text
+PRIVACY_PUBLIC_REVIEW_SURFACE=LIVE
+PRIVACY_VERSION=0.2-review
+PRIVACY_PUBLICATION_STATE=REVIEW_DRAFT_HUMAN_REVIEW_REQUIRED
+TERMS_PUBLIC_REVIEW_SURFACE=LIVE
+TERMS_VERSION=0.2-review
+TERMS_PUBLICATION_STATE=REVIEW_DRAFT_HUMAN_REVIEW_REQUIRED
+DPA_REVIEW_SOURCE=MERGED
+SUBPROCESSORS_TRANSFERS_REVIEW_SOURCE=MERGED
+FINAL_LEGAL_PUBLICATION=BLOCKED
+```
+
+The public review surfaces deliberately remain non-effective and fail closed on unresolved factual/legal dependencies. Their existence does not satisfy qualified legal review.
+
+## Accepted technical GDPR evidence
+
+The previously accepted Data Governance Runtime V2 proof remains valid for the exact historical SHA it tested:
+
+```text
 DATA_GOVERNANCE_RUNTIME_V2=PASS_EXACT_SHA
+DATA_GOVERNANCE_RUNTIME_TARGET_SHA=a921445a675bf3652568603535c148eb4e977914
 DATA_GOVERNANCE_RUNTIME_RUN=34448768687
 DATA_GOVERNANCE_RUNTIME_ARTIFACT=10140768157
-
-INTERNAL_CONTROLLABLE_CLOSURE_PERCENT=80
-INTERNAL_CONTROLLABLE_REMAINING_PERCENT=20
-TOTAL_LEGAL_ASSURANCE_CLOSURE_PERCENT=50
-TOTAL_LEGAL_ASSURANCE_REMAINING_PERCENT=50
-AI_ACT_TECHNICAL_PREPARATION=100_PERCENT_PREPARED
-AI_ACT_QUALIFIED_COMPLETION=0/8_ACCEPTED
-QUALIFIED_REVIEW_WEIGHT_ACCEPTED=0/51
-MASTER_LEGAL_OPINION=OPEN
-LEGAL_FINAL=BLOCKED
+DATA_GOVERNANCE_RUNTIME_ARTIFACT_DIGEST=sha256:361aa2f26da1cb1641b33fc2e4a638f576f12968aa0545cb80f7e1d0f765a299
+GDPR_RIGHTS_SOURCE_IMPLEMENTATION=PASS
+GDPR_RIGHTS_RUNTIME_GATE=PASS_EXACT_SHA
 ```
 
-The existing 80/50 working percentages are retained conservatively because this register has no canonical point-weight rule that would justify inventing a new percentage from a single runtime gate. The underlying state has nevertheless materially advanced: the Data Governance exact-SHA runtime gate is now closed.
+This proves the scoped technical schema/security/release controls only. It does not prove downstream provider deletion, case-specific GDPR outcomes or legal sufficiency.
 
-## Data Governance Runtime V2 — accepted exact-SHA evidence
+## Entity / operator truth
 
-Protected workflow run **34448768687** completed successfully against protected `main` SHA:
+Later attributable owner/operator correspondence supersedes the old `UNDECIDED` operating-entity placeholder for review preparation:
 
 ```text
-a921445a675bf3652568603535c148eb4e977914
+RISCK_COMPLY_OPERATOR_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
+RISCK_COMPLY_CONTRACTING_ENTITY=OPEN_OWNER_CONFIRMATION
+RISCK_COMPLY_TRADE_NAME=RISCK_COMPLY
+AUTHORITATIVE_REGISTRY_EVIDENCE=PENDING
+REGISTERED_OFFICE=PENDING_AUTHORITATIVE_EVIDENCE
+REGISTERED_IDENTIFIERS=PENDING_AUTHORITATIVE_EVIDENCE
+SIGNATORY_AUTHORITY=PENDING_WHERE_REQUIRED
+ENTITY_FACTS_FINAL_PUBLICATION=BLOCKED
 ```
 
-Retained evidence:
+The attributable evidence is sufficient to stop presenting the RISCK COMPLY **operator** as undecided. It does not expressly establish the company that will act as customer-contract counterparty, so the contracting entity remains open pending explicit owner designation. Registered fields also remain blocked until authoritative registry evidence resolves the required facts.
+
+## Owner commercial positions already attributable
+
+Existing owner correspondence records the following positions for counsel review:
 
 ```text
-schema=risck-comply.data-governance-evidence.v2
-status=Complete
-outcome=passed
-targetSha=a921445a675bf3652568603535c148eb4e977914
-workflowRunId=34448768687
-artifactId=10140768157
-artifactDigest=sha256:361aa2f26da1cb1641b33fc2e4a638f576f12968aa0545cb80f7e1d0f765a299
-failures=0
-all required checks=true
+SELF_SERVICE_CANCELLATION=END_OF_PAID_PERIOD
+REFUND_DEFAULT=NO_DEFAULT_REFUND_SUBJECT_TO_MANDATORY_LAW_AND_SIGNED_ORDER_FORM
+POST_TERMINATION_EXPORT_WINDOW=30_DAYS_OWNER_POSITION
+DEFAULT_UPTIME_SLA=NONE_UNLESS_CONTRACTED
+GOVERNING_LAW_PREFERENCE=PORTUGAL_SUBJECT_TO_COUNSEL_REVIEW
+OWNER_COMMERCIAL_POSITIONS=PARTIAL_SELECTED_PENDING_QUALIFIED_REVIEW
 ```
 
-The protected proof validated the exact-main execution envelope, Production residency declaration `eu-west-1`, category-specific retention schema bounds, export-encryption operating requirement, governance tables, RLS/FORCE RLS, tenant policies, data-minimisation constraints, GDPR lifecycle/deadline schema authority, Chapter III request types, server-only request mutation privileges and audit-integrity schema against an isolated disposable database replay.
+These are owner-selected commercial positions, not legally approved clauses. Liability caps/carve-outs, indemnities, breach cure/suspension mechanics, notice mechanics and other material risk-allocation questions remain open until deliberately selected and reviewed.
 
-The proof artifact retains no customer rows, personal identifiers, database URL or export payload. It is a schema/security-boundary/release proof, not a legal opinion or evidence that every downstream provider action has occurred.
+## Provider factual evidence advanced
 
-The earlier failed run `34413535220` / artifact `10128230912` remains diagnostic only and receives zero acceptance credit.
-
-## GDPR rights acceptance boundary
+Attributable provider correspondence materially narrows previously open provider-framework facts:
 
 ```text
-GDPR_RIGHTS_SOURCE=PASS
-GDPR_RIGHTS_EXACT_SHA_RUNTIME_GATE=PASS
-DATA_GOVERNANCE_RUNTIME_V2=PASS_EXACT_SHA
-CHAPTER_III_DOWNSTREAM_EFFECTS=PARTIAL
-CASE_SPECIFIC_LEGAL_DECISIONS=OPEN
+SUPABASE_DPA_PROVIDER_CONFIRMATION=PROVIDER_CONFIRMED_INCORPORATED_IN_TERMS_FOR_CUSTOMERS_FROM_2026_08_01
+SUPABASE_ACCOUNT_DPA_APPLICABILITY=OPEN_PENDING_ACCOUNT_AGREEMENT_OR_TERMS_AUTHORITY
+SUPABASE_TRANSFER_TIA_ACCOUNT_INTERPRETATION=OPEN
+POSTHOG_DPA_COMPLETION_EVIDENCE=COMPLETED_BY_ALL_PARTICIPANTS_FOR_SAMUEL_CERQUEIRA_UNIPESSOAL_LDA
+POSTHOG_PRODUCTION_PROJECT_BINDING=OPEN
+POSTHOG_TRANSFER_RETENTION_LEGAL_INTERPRETATION=OPEN
+STRIPE_ACCOUNT_LEGAL_DETAIL=OPEN
+PROVIDER_FACTUAL_RECONCILIATION=PARTIAL_ADVANCED
 ```
 
-The exact-SHA technical gate required by issue #2009 is satisfied. The canonical `DATA_SUBJECT_RIGHTS_MATRIX.md` is being reconciled from this retained evidence before #2009 is closed.
-
-## Final legal surfaces
-
-```text
-PRIVACY_FINAL=BLOCKED_FOUNDER_PROVIDER_AND_LEGAL_DECISIONS
-DPA_FINAL=BLOCKED_FOUNDER_PROVIDER_AND_CONTRACT_DECISIONS
-SUBPROCESSORS_FINAL=BLOCKED_PROVIDER_CONTRACT_AND_TRANSFER_FACTS
-TERMS_FINAL=BLOCKED_COUNSEL_AND_FOUNDER_FACTS
-```
-
-The prior Privacy runtime blocker is removed. No contracting/operator entity, NIF/NIPC, registered office or signatory authority is inferred for final publication. Provider support/public materials may prove bounded provider facts but do not substitute for qualified legal acceptance.
+Provider DPA evidence does not itself establish which agreement governs the Supabase Production account, Production project attribution, RISCK COMPLY customer-contract counterparty status, SCC/TIA sufficiency, all processing locations, retention or qualified transfer conclusions.
 
 ## Qualified EU AI Act review
 
-| Workstream | Status |
+| Workstream | Current state |
 |---|---|
 | LEGAL_RULES | PENDING_EXTERNAL_REVIEW |
 | ARTICLE_5 | PENDING_EXTERNAL_REVIEW |
 | ARTICLE_50 | PENDING_EXTERNAL_REVIEW |
 | FRIA | PENDING_EXTERNAL_REVIEW |
-| DEPLOYER_OBLIGATIONS | PENDING_EXTERNAL_REVIEW |
+| DEPLOYER | PENDING_EXTERNAL_REVIEW |
 | HIGH_RISK_PROVIDER | PENDING_EXTERNAL_REVIEW |
 | CONFORMITY | PENDING_EXTERNAL_REVIEW |
 | GPAI | PENDING_EXTERNAL_REVIEW |
 
 ```text
 LEGAL_8_OF_8=0/8_ACCEPTED
+QUALIFIED_REVIEWS_ACCEPTED=0
 MASTER_LEGAL_OPINION=OPEN
 ```
 
-No AI-generated approval, self-review, CI result, provider-support response or synthetic signature can change these values.
+No internal artifact, AI conclusion, CI result, public guidance or provider-support response changes those values.
 
-## Critical path
+## Conservative closure score
 
-1. merge the evidence-backed GDPR matrix/status reconciliation through protected `main`;
-2. close issue #2009 once that acceptance reconciliation is canonical;
-3. move directly to the real public Privacy / GDPR Articles 13–14 gap analysis and implementation;
-4. close remaining founder/entity and provider/account facts that Privacy genuinely requires;
-5. reconcile DPA;
-6. reconcile subprocessors/transfers;
-7. reconcile Terms;
-8. obtain genuine qualified external reviews, including all 8 AI Act workstreams and the consolidated qualified conclusion.
+```text
+INTERNAL_CONTROLLABLE_CLOSURE_PERCENT=80
+INTERNAL_CONTROLLABLE_REMAINING_PERCENT=20
+TOTAL_LEGAL_ASSURANCE_CLOSURE_PERCENT=50
+TOTAL_LEGAL_ASSURANCE_REMAINING_PERCENT=50
+AI_ACT_TECHNICAL_PREPARATION=100_PERCENT_PREPARED
+AI_ACT_QUALIFIED_COMPLETION=0/8_ACCEPTED
+MASTER_LEGAL_OPINION=OPEN
+LEGAL_FINAL=BLOCKED
+```
 
-No additional documentation should be created unless it satisfies an identified legal requirement or a qualified reviewer request.
+The existing 80/50 working scores are retained rather than manufacturing a new percentage. Repository-controlled state has materially advanced, but no canonical weighting rule converts those merges and factual improvements into a higher total legal-assurance percentage.
+
+## Shortest remaining critical path
+
+1. obtain explicit owner designation of the RISCK COMPLY customer contracting entity and authoritative registry evidence for the designated company; reconcile only verified registered facts;
+2. close seller/VAT regime and supported B2B tax matrix through attributable owner/accountant/tax-authority evidence;
+3. finish account-specific provider facts and Chapter V/transfer conclusions, including the actual PostHog Production project if analytics is active;
+4. resolve the remaining material owner Terms risk-allocation decisions;
+5. give qualified reviewers the bounded current review packs and collect attributable decisions for all eight AI Act workstreams;
+6. apply any required deltas and obtain the consolidated Master Legal Opinion/equivalent qualified conclusion;
+7. only then promote Privacy, Terms, DPA, subprocessors/transfers and publication status to final/effective.
 
 ## Authority boundary
 
 ```text
 EMAIL_SEND_AUTHORIZED=false
-PLMJ_ROUTE=PAUSED_BY_OWNER
 PRODUCTION_DB_WRITE_AUTHORIZED=false
 SYNTHETIC_LEGAL_ACCEPTANCE_FORBIDDEN=true
-NO_MERGE_INFERRED_FROM_CONTINUE=true
 NO_DOCUMENTATION_LOOP=true
 ```
+
+No email is authorised for sending by this register. Drafting and preparation remain allowed.
