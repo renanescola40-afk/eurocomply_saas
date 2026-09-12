@@ -156,6 +156,7 @@ describe('Supabase middleware session cookie propagation', () => {
       'onboarding-session',
     );
     expect(response.cookies.get('NEXT_LOCALE')?.value).toBe('en');
+    expect(response.cookies.get('NEXT_LOCALE')?.secure).toBe(true);
   });
 
   it('does not initialize Supabase for public routes that do not need an auth decision', async () => {
@@ -164,6 +165,17 @@ describe('Supabase middleware session cookie propagation', () => {
     expect(response.status).toBe(200);
     expect(supabaseMock.createServerClient).not.toHaveBeenCalled();
     expect(response.cookies.get('NEXT_LOCALE')?.value).toBe('en');
+    expect(response.cookies.get('NEXT_LOCALE')?.secure).toBe(true);
+  });
+
+  it('marks the locale cookie Secure on the unprefixed locale redirect', async () => {
+    const response = await middleware(makeRequest('/pricing'));
+    const location = responseLocation(response);
+
+    expect(response.status).toBe(307);
+    expect(location?.pathname).toBe('/en/pricing');
+    expect(response.cookies.get('NEXT_LOCALE')?.value).toBe('en');
+    expect(response.cookies.get('NEXT_LOCALE')?.secure).toBe(true);
   });
 
   it('serves the exact Beagle verification pathname without locale or auth redirects', async () => {
