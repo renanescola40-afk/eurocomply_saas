@@ -59,6 +59,17 @@ export const routing = defineRouting({
   // Always use explicit locale prefixes for predictable SaaS routing and SEO:
   // /en, /pt, /es, /fr, /it, /de
   localePrefix: 'always',
+  // Keep next-intl's server-written locale preference aligned with the client
+  // writers and with the HTTPS-only Production contract. This is a preference
+  // cookie (not an auth cookie), but Secure prevents it from being emitted over
+  // plaintext transport and closes the external scanner finding.
+  localeCookie: {
+    name: 'NEXT_LOCALE',
+    maxAge: 60 * 60 * 24 * 365,
+    path: '/',
+    sameSite: 'lax',
+    secure: true,
+  },
   // Public metadata + sitemap are the single hreflang authority. Keeping the
   // next-intl response Link header enabled creates a competing x-default based
   // on the unprefixed request path, while HTML metadata intentionally points
