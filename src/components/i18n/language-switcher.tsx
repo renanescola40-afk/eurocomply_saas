@@ -15,6 +15,7 @@ const languageLabels: Record<Locale, string> = {
 };
 
 const localeStorageKey = 'risck-comply-locale';
+const localeCookieAttributes = 'path=/;max-age=31536000;samesite=lax;secure';
 
 function switchLocalePath(pathname: string, nextLocale: Locale) {
   const parts = pathname.split('/').filter(Boolean);
@@ -33,12 +34,12 @@ function withCurrentLocationState(path: string) {
 function persistLocale(locale: Locale) {
   try {
     localStorage.setItem(localeStorageKey, locale);
-    document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000;samesite=lax`;
+    document.cookie = `NEXT_LOCALE=${locale};${localeCookieAttributes}`;
   } catch {}
 }
 
 function persistLocaleScript(locale: Locale) {
-  return `try{localStorage.setItem('${localeStorageKey}','${locale}');document.cookie='NEXT_LOCALE=${locale};path=/;max-age=31536000;samesite=lax'}catch(e){}`;
+  return `try{localStorage.setItem('${localeStorageKey}','${locale}');document.cookie='NEXT_LOCALE=${locale};${localeCookieAttributes}'}catch(e){}`;
 }
 
 type LanguageSwitcherProps = {
