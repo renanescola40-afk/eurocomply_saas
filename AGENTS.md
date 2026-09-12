@@ -94,7 +94,8 @@ While that notice remains current:
 - branches, PRs, code changes, CI/workflows, logs, evidence preparation, billing/legal/security work, and read-only Production analysis remain allowed;
 - merge and deploy are not globally frozen solely because Beagle is running, but every later merge/deploy is a post-pentest version and must not inherit Beagle coverage by implication;
 - before a necessary post-scan merge/deploy, preserve available Beagle screenshots/status/logs and bind the evidence to the exact pre-change deployment/version;
-- do not cancel, pause or retarget Beagle, enable scheduler/authenticated Production testing, run destructive/brute-force/credential-stuffing/stress/DoS/load testing, delete pentest evidence, or alter Production DNS merely to facilitate the test;
+- do not cancel, pause or retarget Beagle for ordinary workflow/release convenience, enable scheduler/authenticated Production testing, run destructive/brute-force/credential-stuffing/stress/DoS/load testing, delete pentest evidence, or alter Production DNS merely to facilitate the test;
+- canonical emergency-stop conditions remain immediately enforceable: stop testing if real customer data or secrets become accessible, a verified Critical tenant/auth/authorization bypass is found after minimum proof, destructive mutation occurs outside approved fixtures, or Production/provider stability is materially degraded; preserve evidence and escalate as soon as practicable;
 - do not manually mutate Supabase Production without explicit owner authority, and do not alter Production OAuth/Auth or environment variables without a real operational requirement;
 - until attributable newer Beagle evidence changes the owner baseline, report both `ZERO_COST_PENTEST_CLOSURE_PERCENT=89` and `ZERO_COST_PENTEST_REMAINING_PERCENT=11` in zero-cost pentest closure updates.
 
