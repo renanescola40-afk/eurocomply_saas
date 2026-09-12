@@ -126,7 +126,7 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('If an instruction appears to infringe applicable data-protection law');
   });
 
-  it('publishes the Terms contract structure without inventing entity, pricing or risk allocation', async () => {
+  it('publishes the Terms contract structure while preserving the operator/contracting and counsel boundaries', async () => {
     const source = await readFile(TERMS_PAGE, 'utf8');
 
     expect(source).toContain('documentId="terms-of-service"');
@@ -138,7 +138,7 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('AI and compliance outputs');
     expect(source).toContain('Acceptable use');
     expect(source).toContain('Orders, plans, subscriptions and add-ons');
-    expect(source).toContain('Taxes, refunds and payment failure — decision boundary');
+    expect(source).toContain('Taxes, refunds and payment failure — review boundary');
     expect(source).toContain('Confidentiality');
     expect(source).toContain('Data protection and security');
     expect(source).toContain('Service providers, subprocessors and international transfers');
@@ -147,19 +147,21 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('Warranties and compliance disclaimers');
     expect(source).toContain('Indemnities and liability — counsel decision required');
     expect(source).toContain('Renewal, changes and order precedence');
-    expect(source).toContain('Governing law, disputes and legal notices — unresolved final terms');
+    expect(source).toContain('Governing law, disputes and legal notices — review boundary');
     expect(source).toContain('Final acceptance boundary');
     expect(source).toContain('comercial@risckcomply.com');
     expect(source).toContain('REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED');
-    expect(source).toContain('final RISCK COMPLY contracting/operator legal entity, registered office and registered identifiers are still pending authoritative founder/entity confirmation');
-    expect(source).toContain('A final general refund policy has not yet been approved');
-    expect(source).toContain('The governing law, court/forum or arbitration position has not yet been finally selected and approved');
 
-    expect(source).not.toContain('SAMUEL CERQUEIRA, UNIPESSOAL LDA');
+    expect(source).toContain('Samuel Cerqueira, Unipessoal Lda. as the owner-designated RISCK COMPLY operator');
+    expect(source).toContain('That operator designation does not by itself establish the final customer contracting/seller counterparty');
+    expect(source).toContain('The current attributable owner position is no default general refund');
+    expect(source).toContain('The owner has selected a 30-day post-termination customer export-window position');
+    expect(source).toContain('The current attributable owner preference is Portuguese governing law');
+    expect(source).toContain('No liability cap or indemnity is represented as effective by this review draft');
+
     expect(source).not.toMatch(/\bNIF\b|\bNIPC\b/);
     expect(source).not.toMatch(/€\s?(49|149|399|990)/);
     expect(source).not.toContain('99.9%');
-    expect(source).not.toMatch(/no refunds?/i);
   });
 
   it('fails untranslated Terms locales closed to complete English text with an explicit language boundary', async () => {
