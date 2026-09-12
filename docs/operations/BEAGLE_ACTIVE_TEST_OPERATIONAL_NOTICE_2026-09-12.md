@@ -17,12 +17,16 @@ BEAGLE_TEST_OFFICIALLY_FINISHED=false
 BEAGLE_REPORT_AVAILABLE=false
 BEAGLE_REPORT_UI="You need to complete the test before generating a report."
 EXTERNAL_AUTOMATED_UNAUTHENTICATED_VAPT=IN_PROGRESS
+BEAGLE_AUTOMATED_SCAN_OWNER_CONTINUATION_AUTHORIZED=true
+GENERAL_PRODUCTION_PENTEST_AUTHORIZED=false
 INDEPENDENT_HUMAN_PENTEST=NOT_PASS
 ZERO_COST_PENTEST_CLOSURE_PERCENT=89
 ZERO_COST_PENTEST_REMAINING_PERCENT=11
 ```
 
-The Beagle assessment is external automated unauthenticated VAPT evidence. It must not be promoted to independent human penetration-test credit.
+The Beagle assessment is external automated unauthenticated VAPT evidence. The owner has explicitly authorized the **currently running Beagle automated unauthenticated scan against the existing target to continue**. That scoped continuation authorization does not authorize a broader Production pentest, authenticated testing, a different target, destructive activity, a human-assessor engagement, or any new testing technique.
+
+The Beagle evidence must not be promoted to independent human penetration-test credit.
 
 ## Work that remains allowed
 
@@ -57,7 +61,7 @@ Before any such merge/deploy:
 
 Do not:
 
-- cancel or pause the current Beagle test;
+- cancel or pause the current Beagle test merely for workflow/release convenience;
 - alter the Beagle target `www.risckcomply.com`;
 - enable Beagle scheduler;
 - enable authenticated Production testing during this assessment;
@@ -69,6 +73,19 @@ Do not:
 - alter Production environment variables without a real operational requirement;
 - mark `INDEPENDENT_HUMAN_PENTEST=PASS`;
 - claim that a completed independent human pentest exists.
+
+### Emergency-stop override
+
+The prohibition on pausing/cancelling does **not** override canonical emergency stop conditions. Stop the active testing immediately and preserve evidence if any of the following occurs:
+
+- real customer data is observed or becomes accessible;
+- credentials, secrets, live payment data or Production tokens are exposed;
+- a verified cross-tenant path, Critical auth/RBAC/BOLA/IDOR bypass or equivalent severe security condition is found after minimum proof;
+- destructive behavior occurs outside approved synthetic fixtures;
+- material service degradation, instability or provider risk is observed;
+- continued testing could materially increase customer or provider risk.
+
+Emergency stop is a safety action, not a cancellation for convenience. Notify/escalate to the owner/security contact as soon as practicable after stopping.
 
 ## Truth rule when the Beagle report becomes available
 
@@ -93,7 +110,7 @@ unless a genuinely independent human penetration-test engagement separately sati
 
 ## Cross-lane instruction
 
-All lanes should continue normal work in branches, PRs, CI, billing, legal, security and evidence preparation. They must not directly disturb the active Beagle assessment or destroy its evidence.
+All lanes should continue normal work in branches, PRs, CI, billing, legal, security and evidence preparation. They must not directly disturb the active Beagle assessment or destroy its evidence, except that canonical emergency stop conditions remain immediately enforceable.
 
 Every status update concerning the zero-cost Beagle closure should report both completion and remaining percentages. Current baseline:
 
