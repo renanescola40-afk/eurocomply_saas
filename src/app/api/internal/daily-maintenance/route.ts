@@ -8,7 +8,6 @@ export const runtime = 'nodejs';
 
 const MAINTENANCE_JOBS = [
   '/api/internal/metric-snapshots',
-  '/api/internal/compliance-alerts',
   '/api/internal/trial-reminders',
   '/api/intelligence/refresh',
 ] as const;
