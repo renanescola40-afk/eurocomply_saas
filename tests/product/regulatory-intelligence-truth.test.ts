@@ -81,4 +81,17 @@ describe('regulatory intelligence product truth', () => {
     expect(page).toContain('No source-verified regulatory updates are published right now.');
     expect(page).toContain('A RISCK COMPLY não substitui um feed real por notícias sintéticas ou sem data.');
   });
+
+  it('does not claim AI-powered regulatory updates without runtime evidence', () => {
+    const dictionary = read('src/lib/i18n/app-dictionary.ts');
+
+    expect(dictionary).not.toContain('AI-powered regulatory updates');
+    expect(dictionary).not.toContain('Atualizações regulatórias com IA');
+    expect(dictionary).not.toContain('Actualizaciones regulatorias con IA');
+    expect(dictionary).not.toContain('Mises à jour réglementaires avec IA');
+    expect(dictionary).not.toContain('Aggiornamenti normativi con IA');
+    expect(dictionary).not.toContain('KI-gestützte regulatorische Updates');
+    expect(dictionary).toContain('Source-verified regulatory updates');
+    expect(dictionary).toContain('Atualizações regulatórias com fontes verificadas');
+  });
 });
