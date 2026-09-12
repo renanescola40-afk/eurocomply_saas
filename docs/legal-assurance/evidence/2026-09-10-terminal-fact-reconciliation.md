@@ -1,13 +1,13 @@
 # RISCK COMPLY — Terminal Legal Fact Reconciliation
 
-Date: 2026-09-10  
+Date: 2026-09-12  
 Purpose: retain bounded attributable facts discovered during terminal legal closure without converting them into legal conclusions.
 
 This file is evidence coordination only. It is not a legal opinion, registry certificate, DPA itself, transfer impact assessment, tax decision or qualified reviewer acceptance.
 
 ## 1. Release / Production observation
 
-Direct connected Vercel inspection on 2026-09-10 returned:
+Direct connected Vercel inspection most recently returned:
 
 ```text
 PROJECT=eurocomply-saas
@@ -15,29 +15,29 @@ PRODUCTION_DOMAIN=www.risckcomply.com
 DEPLOYMENT_ID=dpl_BznNuFKG8UEh4yW8y9HQyzLXDiJ9
 DEPLOYMENT_STATE=READY
 DEPLOYMENT_GITHUB_SHA=13b19410caa20045b19d98d58df406c43433af5a
-PROTECTED_MAIN_AT_TERMINAL_V2_BRANCH_CREATION=43bf6b1368ff7a3b8ead0aa434b83bed9457615e
+PROTECTED_MAIN_BEFORE_THIS_RECONCILIATION=2ba88fc0b3f6a75c4c70b1bfdfaa53d6b6a0985a
 ```
 
-The direct Production fetch of `/pt/privacy` and `/pt/terms` returned HTTP 200 and exposed the versioned `0.2-review` legal surfaces marked `REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED` during the legal-reconciliation observation.
+Protected `main` remains ahead of the observed Production release. Existing Beagle evidence therefore stays bound to Production SHA `13b19410...`; this file does not claim exact-current-main Production identity.
 
-Protected `main` subsequently advanced beyond the observed Production release. This file does not claim exact-current-main Production identity.
+## 2. Operator / contracting / seller entity — owner decision closed
 
-## 2. Operator designation / contracting-entity boundary
-
-Attributable owner/operator correspondence sent on 2026-09-06 to Cloud Security Alliance stated that RISCK COMPLY is operated by:
+Attributable owner/operator evidence previously established RISCK COMPLY's operator as:
 
 ```text
 SAMUEL CERQUEIRA, UNIPESSOAL LDA
 Portugal
 ```
 
-That evidence establishes the operator designation for review preparation. It does **not** expressly establish that the same entity is the contractual counterparty for RISCK COMPLY customer agreements. Those roles are therefore kept separate.
+On 2026-09-12 the owner explicitly designated the same existing Portuguese company as the RISCK COMPLY **customer contracting entity and seller**.
 
 Current classification:
 
 ```text
-OWNER_DESIGNATED_OPERATOR_ENTITY=PASS_ATTRIBUTABLE_CORRESPONDENCE
-RISCK_COMPLY_CONTRACTING_ENTITY=OPEN_OWNER_CONFIRMATION
+OWNER_DESIGNATED_OPERATOR_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA
+RISCK_COMPLY_CONTRACTING_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
+RISCK_COMPLY_SELLER_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA_OWNER_DESIGNATED
+CONTRACTING_SELLER_ENTITY_DECISION=CLOSED_OWNER_ATTRIBUTABLE
 AUTHORITATIVE_COMPANY_REGISTRY_EVIDENCE=OPEN
 REGISTERED_OFFICE=OPEN
 REGISTERED_IDENTIFIERS=OPEN
@@ -45,9 +45,23 @@ SIGNATORY_AUTHORITY=OPEN_WHERE_REQUIRED
 FINAL_PUBLICATION_ENTITY_FACTS=BLOCKED
 ```
 
-Do not infer contracting authority from operator status alone. Do not fill any unresolved registered field from memory, historical candidate documents or commercial directories.
+This owner designation closes **which company** will contract with and invoice RISCK COMPLY customers. It does not by itself prove the company's registered office, official identifiers, VAT regime/registrations, corporate-object/CAE facts or final legal sufficiency.
 
-## 3. Supabase DPA evidence
+Do not fill unresolved registered fields from memory, historical candidate documents or commercial directories.
+
+## 3. CAE / activity-registration boundary
+
+The owner explicitly states that the SaaS CAE/activity association has not yet been completed and is intentionally deferred until the final administrative phase.
+
+```text
+SOFTWARE_SAAS_CAE_ASSOCIATED=false
+SOFTWARE_SAAS_CAE_ACTION=DEFERRED_BY_OWNER_UNTIL_FINAL_ADMINISTRATIVE_PHASE
+CAE_CHANGE_AUTHORIZED_NOW=false
+```
+
+No lane may create, guess or change a CAE merely to make a legal, billing or procurement gate green. Final CAE/activity work must use authoritative company/activity facts and the competent Portuguese administrative/tax route at the owner-selected final phase.
+
+## 4. Supabase DPA evidence
 
 Direct email from the Supabase Privacy Team dated 2026-08-21 states, in substance:
 
@@ -60,16 +74,16 @@ Current classification:
 
 ```text
 SUPABASE_PROVIDER_DPA_FRAMEWORK_CONFIRMATION=PASS_PROVIDER_ATTRIBUTABLE
-SUPABASE_ACCOUNT_DPA_APPLICABILITY=OPEN_PENDING_ACCOUNT_AGREEMENT_OR_TERMS_AUTHORITY
-SUPABASE_SEPARATELY_NEGOTIATED_AGREEMENT=NOT_ESTABLISHED_BY_THIS_EMAIL
+SUPABASE_ACCOUNT_DPA_APPLICABILITY=GENERAL_FRAMEWORK_SUPPORTED_EXCEPTION_CHECK_OPEN
+SUPABASE_SEPARATELY_NEGOTIATED_AGREEMENT=NOT_EVIDENCED_BUT_NOT_PROVEN_ABSENT
 SUPABASE_TRANSFER_CONCLUSION=OPEN
 SUPABASE_TIA_LEGAL_ACCEPTANCE=OPEN
 SUPABASE_ALL_PROCESSING_LOCATIONS=OPEN
 ```
 
-This correspondence establishes the provider's stated general DPA framework. It does not by itself establish which agreement or Terms version governs the RISCK COMPLY Production account. No Chapter V conclusion is inferred from the provider framework alone.
+This correspondence establishes the provider's stated general DPA framework. No Chapter V conclusion is inferred from the provider framework alone.
 
-## 4. PostHog DPA evidence
+## 5. PostHog DPA / Production-account evidence
 
 PandaDoc completion email dated 2026-09-01 states that:
 
@@ -78,21 +92,24 @@ PostHog DPA — Samuel Cerqueira, Unipessoal, Lda
 DOCUMENT_STATUS=COMPLETED_BY_ALL_PARTICIPANTS
 ```
 
+Later Production-bundle inspection establishes PostHog is configured in the observed Production runtime with EU host and consent gating, but the public project key does not match the only project available through the currently connected PostHog organisation. Human PostHog correspondence states the Production instance is under a different personal account.
+
 Current classification:
 
 ```text
-POSTHOG_ACCOUNT_LINKED_DPA_COMPLETION_EVIDENCE=PASS_ATTRIBUTABLE_NOTICE
-POSTHOG_ACTUAL_PRODUCTION_PROJECT_BINDING=OPEN
-POSTHOG_PRODUCTION_RETENTION_SETTINGS=OPEN
-POSTHOG_PRODUCTION_PROCESSING_LOCATION_FACTS=OPEN
+POSTHOG_DPA_COMPLETION_EVIDENCE=PASS_ATTRIBUTABLE_NOTICE_FOR_OWNER_DESIGNATED_SELLER_ENTITY
+POSTHOG_PRODUCTION_RUNTIME_CONFIG=PASS_ATTRIBUTABLE
+POSTHOG_CONNECTED_PROJECT_MATCHES_PRODUCTION=false
+POSTHOG_PRODUCTION_ACCOUNT_ACCESS=OPEN_OWNER_ACCOUNT_RECOVERY
+POSTHOG_ACTUAL_PRODUCTION_PROJECT_BINDING=OPEN_EXTERNAL_ACCOUNT_ACCESS
 POSTHOG_TRANSFER_TIA_LEGAL_CONCLUSION=OPEN
 ```
 
-The connected PostHog project previously revalidated as project `255188`, `Default project`, with no ingested event and no application URL, is not promoted as the RISCK COMPLY Production analytics project. The DPA completion notice does not repair that technical attribution gap and does not by itself designate the company as RISCK COMPLY's customer-contract counterparty.
+The DPA completion notice does not by itself resolve account access, retention, all processing locations or transfer-law sufficiency.
 
-## 5. Owner-selected commercial positions already sent for legal review
+## 6. Owner-selected commercial positions already sent for legal review
 
-Existing attributable correspondence to the UAB legal-clinic route contains these owner positions:
+Existing attributable owner decisions/communications establish these commercial positions for qualified review:
 
 ```text
 SELF_SERVICE_CANCELLATION=END_OF_ALREADY_PAID_PERIOD
@@ -100,19 +117,21 @@ REFUND_DEFAULT=NO_DEFAULT_REFUND_SUBJECT_TO_MANDATORY_LAW_AND_SIGNED_ORDER_FORM
 POST_TERMINATION_EXPORT_WINDOW=30_DAYS_OWNER_POSITION
 DEFAULT_UPTIME_SLA=NONE_UNLESS_EXPRESSLY_CONTRACTED
 GOVERNING_LAW_PREFERENCE=PORTUGAL
+CONTRACTING_SELLER_ENTITY=SAMUEL_CERQUEIRA_UNIPESSOAL_LDA
 ```
 
 Classification:
 
 ```text
 OWNER_POSITION_SELECTED=PASS_FOR_COUNSEL_INPUT
+CONTRACTING_SELLER_ENTITY_DECISION=CLOSED_OWNER_ATTRIBUTABLE
 QUALIFIED_LEGAL_ACCEPTANCE=OPEN
 PUBLIC_BINDING_TERMS=NOT_AUTHORISED_BY_THIS_EVIDENCE
 ```
 
-These positions may replace `OWNER_DECISION=OPEN` with `OWNER_POSITION_SELECTED_PENDING_COUNSEL` in internal matrices, but must not be presented as enforceable final clauses until the required legal review/publication gate passes.
+These positions may replace stale owner-decision-open markers in internal matrices, but must not be presented as enforceable final clauses until required registry/tax facts and legal-review/publication gates pass.
 
-## 6. External qualified-review state
+## 7. External qualified-review state
 
 No evidence inspected in this reconciliation satisfies the terminal Legal 8/8 acceptance contract.
 
@@ -132,14 +151,16 @@ MASTER_LEGAL_OPINION=OPEN
 
 Provider teams, public authorities and clinic correspondence are valuable evidence/routes but are not reclassified as qualified reviewer acceptance unless they actually satisfy the required professional identity, scope, substantive decision, release binding and attributable authentication criteria.
 
-## 7. Immediate use of this reconciliation
+## 8. Immediate use of this reconciliation
 
 Use this evidence only to:
 
-- replace stale `UNDECIDED` wording for the RISCK COMPLY **operator** with the attributable operator designation while keeping the customer contracting entity open until explicitly designated;
-- reduce provider-framework DPA uncertainty for Supabase and retain only account-specific facts actually established for PostHog;
+- treat `SAMUEL CERQUEIRA, UNIPESSOAL LDA` as the owner-designated operator, customer contracting entity and seller;
+- keep authoritative registered office/identifiers, VAT and signer facts open until proven;
+- preserve `CAE_CHANGE_AUTHORIZED_NOW=false` and defer SaaS CAE/activity work to the final administrative phase;
+- reduce provider-framework DPA uncertainty without fabricating account-specific legal conclusions;
 - avoid asking the owner to re-decide already selected commercial positions;
 - keep public legal surfaces fail-closed until final dependencies pass;
 - give a qualified reviewer a smaller and more accurate fact pack.
 
-Do not use it to claim final legal approval, customer-contract counterparty identity, GDPR compliance, AI Act certification, account-specific Supabase DPA applicability, transfer-law acceptance, tax/VAT correctness or effective Terms.
+Do not use it to claim final legal approval, authoritative registry facts, VAT correctness, GDPR compliance, AI Act certification, transfer-law acceptance or effective Terms.
