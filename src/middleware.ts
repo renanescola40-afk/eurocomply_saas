@@ -388,6 +388,7 @@ export default async function middleware(req: NextRequest) {
       maxAge: 60 * 60 * 24 * 365,
       path: '/',
       sameSite: 'lax',
+      secure: true,
     });
 
     return withRequestId(applySupabaseSessionCookies(response, sessionCheck?.response), requestId);
@@ -406,6 +407,7 @@ export default async function middleware(req: NextRequest) {
     maxAge: 60 * 60 * 24 * 365,
     path: '/',
     sameSite: 'lax',
+    secure: true,
   });
 
   return withRequestId(response, requestId);
