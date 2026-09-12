@@ -3,7 +3,7 @@ import { type TrustPage } from './content';
 
 export const VERIFIED_SECURITY_EMAIL = 'comercial@risckcomply.com';
 export const VERIFIED_STATUS_PAGE_URL = 'https://risckcomplystatus1.statuspage.io/';
-export const VERIFIED_AUTHORITY_REVIEWED_AT = '2026-08-23';
+export const VERIFIED_AUTHORITY_REVIEWED_AT = '2026-09-12';
 
 const vulnerabilityContact: Record<Locale, string> = {
   en: `Send security reports privately to ${VERIFIED_SECURITY_EMAIL}. Until a dedicated security alias is re-verified, this reachable corporate mailbox is the canonical private security intake path.`,
@@ -32,14 +32,38 @@ const statusAuthority: Record<Locale, string> = {
   de: `Die maßgebliche öffentliche Stelle für Vorfallkommunikation ist ${VERIFIED_STATUS_PAGE_URL}. Dienstkomponenten und Vorfallupdates werden dort von autorisierten Betreibern veröffentlicht.`,
 };
 
-export function applyVerifiedTrustAuthority(page: TrustPage, locale: Locale): TrustPage {
-  if (page.slug === 'vulnerability-disclosure') {
+const externalAssessmentDisclosure: Record<Locale, string> = {
+  en: 'A third-party black-box security assessment completed on 12 September 2026. Remediation and clean retest evidence remain open; this is not represented as a clean security attestation.',
+  pt: 'Uma avaliação externa de segurança black-box foi concluída em 12 de setembro de 2026. A remediação e a evidência de reteste limpo permanecem abertas; isto não é apresentado como uma atestação de segurança limpa.',
+  es: 'Una evaluación externa de seguridad de caja negra finalizó el 12 de septiembre de 2026. La remediación y la evidencia de un retest limpio siguen abiertas; no se presenta como una atestación de seguridad limpia.',
+  fr: 'Une évaluation de sécurité externe en boîte noire a été achevée le 12 septembre 2026. La remédiation et la preuve d’un retest sans constat bloquant restent ouvertes; il ne s’agit pas d’une attestation de sécurité finale.',
+  it: 'Una valutazione di sicurezza esterna black-box è stata completata il 12 settembre 2026. La remediation e la prova di un retest pulito restano aperte; non viene presentata come attestazione di sicurezza finale.',
+  de: 'Eine externe Black-Box-Sicherheitsbewertung wurde am 12. September 2026 abgeschlossen. Behebung und ein sauberer Retest-Nachweis sind noch offen; dies wird nicht als abschließende Sicherheitsattestierung dargestellt.',
+};
+
+const securityAssessmentStatus: Record<Locale, string> = {
+  en: 'External black-box assessment completed; remediation, retest and terminal assurance remain open.',
+  pt: 'Avaliação externa black-box concluída; remediação, reteste e assurance terminal permanecem abertos.',
+  es: 'Evaluación externa de caja negra completada; remediación, retest y assurance final siguen abiertos.',
+  fr: 'Évaluation externe en boîte noire terminée; remédiation, retest et assurance finale restent ouverts.',
+  it: 'Valutazione esterna black-box completata; remediation, retest e assurance finale restano aperti.',
+  de: 'Externe Black-Box-Bewertung abgeschlossen; Behebung, Retest und abschließende Assurance sind noch offen.',
+};
+
+function applyExternalAssessmentTruth(page: TrustPage, locale: Locale): TrustPage {
+  if (page.slug === 'trust') {
     return {
       ...page,
       updated: VERIFIED_AUTHORITY_REVIEWED_AT,
-      sections: page.sections.map((section, index) =>
-        index === 0 ? { ...section, body: vulnerabilityContact[locale] } : section,
-      ),
+      sections: page.sections.map((section, sectionIndex) => {
+        if (sectionIndex !== 2 || !section.bullets) return section;
+        return {
+          ...section,
+          bullets: section.bullets.map((bullet, bulletIndex) =>
+            bulletIndex === 2 ? externalAssessmentDisclosure[locale] : bullet,
+          ),
+        };
+      }),
     };
   }
 
@@ -47,8 +71,23 @@ export function applyVerifiedTrustAuthority(page: TrustPage, locale: Locale): Tr
     return {
       ...page,
       updated: VERIFIED_AUTHORITY_REVIEWED_AT,
+      status: securityAssessmentStatus[locale],
       sections: page.sections.map((section, index) =>
         index === page.sections.length - 1 ? { ...section, body: securityIncidentContact[locale] } : section,
+      ),
+    };
+  }
+
+  return page;
+}
+
+export function applyVerifiedTrustAuthority(page: TrustPage, locale: Locale): TrustPage {
+  if (page.slug === 'vulnerability-disclosure') {
+    return {
+      ...page,
+      updated: VERIFIED_AUTHORITY_REVIEWED_AT,
+      sections: page.sections.map((section, index) =>
+        index === 0 ? { ...section, body: vulnerabilityContact[locale] } : section,
       ),
     };
   }
@@ -64,5 +103,5 @@ export function applyVerifiedTrustAuthority(page: TrustPage, locale: Locale): Tr
     };
   }
 
-  return page;
+  return applyExternalAssessmentTruth(page, locale);
 }
