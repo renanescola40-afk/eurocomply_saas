@@ -47,6 +47,7 @@ const en: DpaCopy = {
       title: 'Documented instructions',
       paragraphs: [
         'The proposed processor obligation is to process customer personal data only on documented instructions, including for transfers, unless Union or Member-State law requires otherwise. Where legally permitted, the customer should be informed of that legal requirement before processing.',
+        'If an instruction appears to infringe applicable Union or Member-State data-protection law, the processor-side process must allow that concern to be raised promptly rather than silently treating a product output as a legal determination.',
         'Customer Content is not authorised for training third-party or provider AI/ML models without a separate specific lawful basis or authorisation and an implemented, disclosed processing arrangement.',
       ],
     },
@@ -160,6 +161,7 @@ const pt: DpaCopy = {
       title: 'Instruções documentadas',
       paragraphs: [
         'A obrigação proposta é tratar dados pessoais apenas segundo instruções documentadas, incluindo transferências, salvo exigência do direito da União ou de Estado-Membro. Quando permitido, o cliente deve ser informado dessa exigência legal.',
+        'Se uma instrução aparentar infringir a legislação aplicável de proteção de dados da União ou de um Estado-Membro, o processo do subcontratante deve permitir que essa preocupação seja levantada prontamente, sem tratar silenciosamente um output do produto como determinação jurídica.',
         'Customer Content não fica autorizado para treino de modelos de IA/ML de terceiros ou do fornecedor sem base/autoridade específica separada e tratamento implementado e divulgado.',
       ],
     },
