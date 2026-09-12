@@ -9,7 +9,10 @@ const workflow = readFileSync(
 );
 
 describe('Vercel Production deployment sequencing', () => {
-  it('synchronizes provider bindings before proving them and runs runtime readiness only after deploy', () => {
+  it('keeps release authorization fail-closed before mutation and runtime readiness after deploy', () => {
+    const predeployAuthorization = workflow.indexOf(
+      '- name: Run pre-deployment release authorization gates',
+    );
     const syncBindings = workflow.indexOf(
       '- name: Synchronize provider-proof runtime bindings to Vercel production',
     );
@@ -25,7 +28,8 @@ describe('Vercel Production deployment sequencing', () => {
       '- name: Run enterprise readiness gate after Production deployment',
     );
 
-    expect(syncBindings).toBeGreaterThan(-1);
+    expect(predeployAuthorization).toBeGreaterThan(-1);
+    expect(syncBindings).toBeGreaterThan(predeployAuthorization);
     expect(proveBindings).toBeGreaterThan(syncBindings);
     expect(buildArtifact).toBeGreaterThan(proveBindings);
     expect(deployArtifact).toBeGreaterThan(buildArtifact);
@@ -33,6 +37,20 @@ describe('Vercel Production deployment sequencing', () => {
     expect(enterpriseReadiness).toBeGreaterThan(releaseReadiness);
 
     const preDeploy = workflow.slice(0, deployArtifact);
+    for (const command of [
+      'npm run security:release-candidate',
+      'npm run security:release-evidence',
+      'npm run security:release-approval',
+      'npm run security:release-go-no-go',
+      'npm run security:release-rollback',
+      'npm run security:release-incident-response',
+      'npm run security:release-post-incident',
+      'npm run security:release-support-readiness',
+      'npm run security:release-operations',
+      'npm run release:rollback:dry-run',
+    ]) {
+      expect(preDeploy).toContain(command);
+    }
     expect(preDeploy).not.toContain('- name: Run release readiness gate\n');
     expect(preDeploy).not.toContain('- name: Run enterprise readiness gate\n');
   });
