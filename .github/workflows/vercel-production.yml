@@ -276,13 +276,6 @@ jobs:
       - name: Run Vercel production environment readiness gate
         run: npm run ops:vercel-readiness
 
-      - name: Run release readiness gate
-        run: npm run release:readiness
-
-      - name: Run enterprise readiness gate
-        if: env.RELEASE_TARGET == 'enterprise'
-        run: npm run release:enterprise-readiness
-
       - name: Link and pull current Vercel production environment
         run: npx --yes "vercel@${VERCEL_CLI_VERSION}" pull --yes --environment=production --token="$VERCEL_TOKEN"
 
@@ -415,6 +408,14 @@ jobs:
       - name: Refresh Vercel production environment after provider synchronization
         run: npx --yes "vercel@${VERCEL_CLI_VERSION}" pull --yes --environment=production --token="$VERCEL_TOKEN"
 
+      - name: Prove synchronized Production provider bindings
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ env.RELEASE_SHA }}
+          PROVIDER_PROOF_ENVIRONMENT: production
+        run: node scripts/security/run-production-provider-runtime-proof.mjs
+
       - name: Build Vercel production artifact
         run: npx --yes "vercel@${VERCEL_CLI_VERSION}" build --prod --token="$VERCEL_TOKEN"
 
@@ -507,3 +508,10 @@ jobs:
           fi
 
           printf '%s\n' "$candidate_url"
+
+      - name: Run release readiness gate after Production deployment
+        run: npm run release:readiness
+
+      - name: Run enterprise readiness gate after Production deployment
+        if: env.RELEASE_TARGET == 'enterprise'
+        run: npm run release:enterprise-readiness
