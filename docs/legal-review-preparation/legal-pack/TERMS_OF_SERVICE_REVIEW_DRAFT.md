@@ -1,14 +1,14 @@
 # Terms of Service — Review Draft
 
-**Status:** `REVIEW_DRAFT` · `FOUNDER_FACT_REQUIRED` · `OWNER_COMMERCIAL_DECISIONS_REQUIRED` · `COUNSEL_DECISION_REQUIRED`
+**Status:** `REVIEW_DRAFT` · `FOUNDER_FACT_REQUIRED` · `OWNER_POSITIONS_PARTIAL_SELECTED` · `COUNSEL_DECISION_REQUIRED`
 
-**Last reconciled:** 2026-09-10
+**Last reconciled:** 2026-09-12
 
-These terms are prepared for review and do not take effect until the contracting entity, commercial risk decisions and qualified legal review are completed and a final version is deliberately published or incorporated into a customer agreement.
+These terms are prepared for review and do not take effect until the contracting/seller entity, authoritative registered/tax facts, remaining commercial risk decisions and qualified legal review are completed and a final version is deliberately published or incorporated into a customer agreement.
 
 ## 1. Parties, status and order of precedence
 
-The final legal entity that will contract for and operate **RISCK COMPLY**, together with its registered office and authoritative registered/tax identifiers, remains unresolved in the canonical founder/entity workstream. This draft therefore does **not** identify a final provider party and does not promote any historical candidate entity into contractual truth.
+Current attributable evidence supports **SAMUEL CERQUEIRA, UNIPESSOAL LDA** as the owner-designated RISCK COMPLY operator. That operator designation does **not** by itself establish the final customer contracting/seller counterparty. The customer contracting/seller entity, authoritative registered office, registered identifiers and signatory authority therefore remain upstream acceptance gates.
 
 The current verified general corporate intake mailbox is **comercial@risckcomply.com**. The customer is intended to be the business or other professional organisation identified in the applicable order, provider-backed checkout or account record.
 
@@ -58,9 +58,9 @@ Exact prices, billing intervals, included capabilities and purchasable add-ons m
 
 ## 8. Taxes, refunds, payment failure and suspension
 
-Seller VAT/tax registrations, checkout tax configuration and invoice treatment depend on the final contracting entity, live billing configuration and tax/legal analysis. No blanket tax exemption, tax inclusion or seller-registration claim is approved in this draft.
+Seller VAT/tax registrations and invoice treatment depend on the final contracting/seller entity and authoritative tax facts. Current source implements billing-address collection, tax-ID collection and Stripe Checkout automatic tax, but implementation does not establish the seller's actual Portuguese VAT regime or registrations.
 
-**[OWNER + COUNSEL DECISION REQUIRED]** A final general refund policy remains unresolved. Do not publish a blanket no-refund rule or entitlement until mandatory-law carve-outs, provider errors, duplicate charges, negotiated credits and commercial preference are decided.
+**[OWNER POSITION SELECTED · COUNSEL REVIEW PENDING]** The current attributable owner position is **no default general refund**, subject to mandatory law, provider/billing errors, duplicate charges, the applicable order form and any expressly negotiated credits or remedies. This is an input for final drafting; it is not yet a binding customer clause.
 
 The service can respond to failed or unpaid billing states. **[OWNER + COUNSEL DECISION REQUIRED]** Final notice, cure, suspension, emergency exception and restoration rules must be approved before they become binding terms.
 
@@ -74,7 +74,9 @@ The proposed structure requires each party to protect the other party's confiden
 
 The Privacy Policy review surface addresses provider-controlled processing. The DPA applies where the provider processes customer personal data on documented customer instructions. Final controller/processor allocation remains activity-specific and subject to the executed agreement.
 
-Security commitments are limited to implemented controls and attributable evidence. No certification, audit, penetration-test result, fixed uptime, fixed RPO/RTO, backup promise or encryption specification is incorporated merely because it appears in marketing, source code or an internal evidence pack.
+Security commitments are limited to implemented controls and attributable evidence. No certification, audit, penetration-test result, fixed RPO/RTO, backup promise or encryption specification is incorporated merely because it appears in marketing, source code or an internal evidence pack.
+
+**[OWNER POSITION SELECTED · COUNSEL REVIEW PENDING]** There is no default uptime SLA unless one is expressly contracted. Any positive uptime, service-credit or other performance warranty/remedy remains subject to final product facts, commercial approval and qualified review.
 
 ## 11. Service providers, subprocessors and international transfers
 
@@ -90,19 +92,19 @@ The proposed structure preserves provider and licensor rights in the service, so
 
 ## 13. Term, cancellation and termination
 
-Self-service cancellation currently preserves paid access until the end of the active paid period. Contract-managed subscriptions remain subject to their order form.
+**[OWNER POSITION SELECTED · COUNSEL REVIEW PENDING]** Self-service cancellation preserves paid access until the end of the active paid period. Contract-managed subscriptions remain subject to their order form.
 
 **[OWNER + COUNSEL DECISION REQUIRED]** Define renewal wording, legally required notices, termination for breach, cure periods, immediate termination grounds and effects. This draft does not create a final cooling-off/consumer exclusion position or other mandatory-law waiver.
 
 ## 14. Post-termination export, deletion and retention
 
-**[OWNER + PRIVACY DECISION REQUIRED]** A final post-termination customer export window has not been approved and must match actual product/provider capabilities before publication.
+**[OWNER POSITION SELECTED · PRODUCT + PRIVACY + COUNSEL REVIEW PENDING]** Attributable owner correspondence selects a **30-day post-termination customer export-window position**. The 30-day position must be reconciled with actual product capability, provider lifecycle constraints, privacy/retention duties, legal holds and final qualified wording before publication. It is not represented as an effective contractual promise by this review draft.
 
 Deletion remains subject to the DPA, category-specific retention, documented legal holds, billing/accounting records, immutable audit requirements and verified provider lifecycle constraints. The agreement must not promise an unsupported deletion or backup timetable.
 
 ## 15. Warranties and compliance disclaimers
 
-**[OWNER + COUNSEL DECISION REQUIRED]** Define any service-performance warranty and remedies that RISCK COMPLY is prepared to assume. Until approved, this review draft does not create an additional warranty beyond mandatory law or a separately signed commitment.
+**[OWNER POSITION SELECTED · COUNSEL REVIEW PENDING]** No default uptime SLA is offered unless expressly contracted. **[OWNER + COUNSEL DECISION REQUIRED]** Define any other positive service-performance warranty and remedies that RISCK COMPLY is prepared to assume. Until approved, this review draft does not create an additional warranty beyond mandatory law or a separately signed commitment.
 
 No warranty is proposed that use of RISCK COMPLY automatically makes a customer compliant, eliminates legal risk or satisfies every customer-specific regulatory requirement.
 
@@ -112,7 +114,7 @@ No warranty is proposed that use of RISCK COMPLY automatically makes a customer 
 
 ## 17. Liability
 
-**[OWNER + COUNSEL DECISION REQUIRED]** Define liability cap, excluded losses, carve-outs, mandatory-law treatment and separate treatment for confidentiality, data protection, intellectual property, fraud and wilful misconduct. The position must match the final entity, insurance position and commercial risk tolerance.
+**[OWNER + COUNSEL DECISION REQUIRED]** Define liability cap, excluded losses, carve-outs, mandatory-law treatment and separate treatment for confidentiality, data protection, intellectual property, fraud and wilful misconduct. The position must match the final contracting entity, insurance position and commercial risk tolerance.
 
 No liability cap is represented as effective by this review draft.
 
@@ -124,23 +126,23 @@ Public documentation must not retroactively expand or reduce signed commitments 
 
 ## 19. Governing law, disputes and notices
 
-**[FOUNDER + COUNSEL DECISION REQUIRED]** The governing law and court/forum or arbitration position has not been finally selected and approved. Do not infer a jurisdiction while the final contracting entity remains unresolved.
+**[OWNER POSITION SELECTED · COUNSEL REVIEW PENDING]** The attributable owner preference is for **Portuguese governing law**. This is not represented as a final binding choice until the contracting entity, mandatory-law analysis and qualified review are complete.
 
-General corporate communications may be submitted to **comercial@risckcomply.com**. **[COUNSEL DECISION REQUIRED]** Define which notices have contractual legal effect, required delivery methods, deemed-receipt rules and whether a postal or dedicated legal-notice channel is required.
+**[OWNER + COUNSEL DECISION REQUIRED]** Court/forum versus arbitration, venue, escalation mechanics and remedies remain unresolved. General corporate communications may be submitted to **comercial@risckcomply.com**. **[COUNSEL DECISION REQUIRED]** Define which notices have contractual legal effect, required delivery methods, deemed-receipt rules and whether a postal or dedicated legal-notice channel is required.
 
 ## 20. Final review conditions
 
 Before publication or signature, qualified review must confirm at minimum:
 
-- final provider/entity identity and registered facts;
+- final contracting/seller entity identity and authoritative registered facts;
 - contract formation, incorporation and order precedence;
-- billing, renewal, refund, tax and non-payment wording;
+- billing, renewal, owner-selected refund position, tax and non-payment wording;
 - controller/processor and DPA relationship;
 - acceptable-use and AI-output limitations;
 - confidentiality and IP allocation;
-- suspension, termination, export, deletion and retention mechanics;
+- suspension, termination, selected 30-day export position, deletion and retention mechanics;
 - warranties, indemnities and liability allocation;
-- governing law, dispute mechanism and legal notices;
+- owner-selected Portuguese-law preference, final dispute mechanism and legal notices;
 - consistency with the current product, billing authority, Privacy, DPA, Subprocessors and International Transfers surfaces.
 
 Until those gates are complete, status remains:
@@ -148,6 +150,7 @@ Until those gates are complete, status remains:
 ```text
 TERMS_STATUS=REVIEW_DRAFT
 TERMS_EFFECTIVE=NO
-TERMS_OWNER_DECISIONS=OPEN
+TERMS_OWNER_POSITIONS=PARTIAL_SELECTED_COUNSEL_PENDING
+TERMS_REMAINING_OWNER_COUNSEL_DECISIONS=LIABILITY_INDEMNITY_CURE_SUSPENSION_NOTICES_POSITIVE_WARRANTIES_FORUM
 TERMS_EXTERNAL_LEGAL_REVIEW=PENDING_EXTERNAL_REVIEW
 ```
