@@ -83,6 +83,24 @@ Never:
 
 Security-sensitive fail-open/fail-closed choices must be documented.
 
+## Active Beagle assessment operating rule — 2026-09-12
+
+The canonical cross-lane instruction while the current Beagle Security assessment remains unfinished is [`docs/operations/BEAGLE_ACTIVE_TEST_OPERATIONAL_NOTICE_2026-09-12.md`](docs/operations/BEAGLE_ACTIVE_TEST_OPERATIONAL_NOTICE_2026-09-12.md). Read and obey it before pentest-adjacent work, merge, deployment, Production mutation, or security-assurance claims.
+
+While that notice remains current:
+
+- treat the active Beagle evidence as `EXTERNAL_AUTOMATED_UNAUTHENTICATED_VAPT=IN_PROGRESS`;
+- never treat it as `INDEPENDENT_HUMAN_PENTEST=PASS`;
+- branches, PRs, code changes, CI/workflows, logs, evidence preparation, billing/legal/security work, and read-only Production analysis remain allowed;
+- merge and deploy are not globally frozen solely because Beagle is running, but every later merge/deploy is a post-pentest version and must not inherit Beagle coverage by implication;
+- before a necessary post-scan merge/deploy, preserve available Beagle screenshots/status/logs and bind the evidence to the exact pre-change deployment/version;
+- do not cancel, pause or retarget Beagle for ordinary workflow/release convenience, enable scheduler/authenticated Production testing, run destructive/brute-force/credential-stuffing/stress/DoS/load testing, delete pentest evidence, or alter Production DNS merely to facilitate the test;
+- canonical emergency-stop conditions remain immediately enforceable: stop testing if real customer data or secrets become accessible, a verified Critical tenant/auth/authorization bypass is found after minimum proof, destructive mutation occurs outside approved fixtures, or Production/provider stability is materially degraded; preserve evidence and escalate as soon as practicable;
+- do not manually mutate Supabase Production without explicit owner authority, and do not alter Production OAuth/Auth or environment variables without a real operational requirement;
+- until attributable newer Beagle evidence changes the owner baseline, report both `ZERO_COST_PENTEST_CLOSURE_PERCENT=89` and `ZERO_COST_PENTEST_REMAINING_PERCENT=11` in zero-cost pentest closure updates.
+
+When the Beagle test is completed, do not record `AUTOMATED_EXTERNAL_VAPT=PASS` unless the report is available, Critical=0, High=0, findings are triaged, and evidence is preserved. A completed automated Beagle result still does not prove a separate independent human penetration test.
+
 ## Vercel rate-limit PR delivery rule
 
 A Vercel-only quota or rate-limit signal is an external deployment blocker, not proof of a code defect and not a reason to hide completed repository work.
