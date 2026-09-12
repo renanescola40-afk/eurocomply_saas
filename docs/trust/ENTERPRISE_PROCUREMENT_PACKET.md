@@ -16,14 +16,11 @@ The owner has selected **SAMUEL CERQUEIRA, UNIPESSOAL LDA** as the RISCK COMPLY 
 
 ## Current release boundary
 
-Controller-start source and canonical Production are not the same release:
+Fresh controller evidence shows that protected source and canonical Production are not yet one accepted release lineage. The exact source SHA, Production SHA, deployment identifier and measured drift remain controlled release evidence in `docs/enterprise/ENTERPRISE_CLOSURE_CONTROLLER_V1_2026-09-12.md` and the canonical provider/evidence register; they are intentionally not hard-coded into this buyer-facing packet.
 
-- controller-start `main`: `7ad578b7ed4224a2b4348c448492332c2313ad12`;
-- canonical Vercel Production deployment observed: `dpl_BznNuFKG8UEh4yW8y9HQyzLXDiJ9`;
-- Production Git SHA observed: `13b19410caa20045b19d98d58df406c43433af5a`;
-- source was 118 commits ahead of Production at the fresh audit snapshot.
+Until exact-current-main acceptance is complete, any release-specific claim remains `OPEN`.
 
-A healthy public endpoint does not convert this drift into exact-SHA acceptance.
+A healthy public endpoint does not convert release drift into exact-SHA acceptance.
 
 ## Current evidence boundary
 
@@ -47,7 +44,7 @@ However:
 - the report is confidential and must not be published in this public repository;
 - remediation remains open;
 - clean retest evidence is not complete;
-- the assessed Production release is not the current `main`;
+- the assessed Production release is not the current accepted source lineage;
 - an unauthenticated black-box assessment does not by itself prove authenticated tenant isolation or satisfy every buyer-required manual security scope.
 
 Safe confidential-artifact reference:
