@@ -152,13 +152,15 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('comercial@risckcomply.com');
     expect(source).toContain('REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED');
 
-    expect(source).toContain('Samuel Cerqueira, Unipessoal Lda. as the owner-designated RISCK COMPLY operator');
-    expect(source).toContain('That operator designation does not by itself establish the final customer contracting/seller counterparty');
+    expect(source).toContain('Current attributable evidence records an owner-designated RISCK COMPLY operator internally');
+    expect(source).toContain('this public review draft does not publish a final customer-facing legal party identity');
+    expect(source).toContain('Operator designation alone does not establish those customer-facing legal roles');
     expect(source).toContain('The current attributable owner position is no default general refund');
     expect(source).toContain('The owner has selected a 30-day post-termination customer export-window position');
     expect(source).toContain('The current attributable owner preference is Portuguese governing law');
     expect(source).toContain('No liability cap or indemnity is represented as effective by this review draft');
 
+    expect(source).not.toMatch(/samuel\s+cerqueira,\s*unipessoal\s+lda\.?/i);
     expect(source).not.toMatch(/\bNIF\b|\bNIPC\b/);
     expect(source).not.toMatch(/€\s?(49|149|399|990)/);
     expect(source).not.toContain('99.9%');
