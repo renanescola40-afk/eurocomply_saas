@@ -4,7 +4,7 @@
 
 Proposed for governed Production convergence. The active Beagle assessment does **not** impose a global merge/deploy freeze. This ADR permits normal branch, PR, CI and governed release work when operationally necessary, while preserving the evidence boundary between the version Beagle assessed and any later post-scan release.
 
-This ADR does not authorize dangerous manual Production mutation, Beagle cancellation/pause/retargeting, authenticated Beagle testing, destructive testing, DNS changes, or manual Supabase Production changes.
+This ADR does not authorize dangerous manual Production mutation, Beagle cancellation/pause/retargeting for workflow convenience, authenticated Beagle testing, destructive testing, DNS changes, or manual Supabase Production changes. Canonical emergency-stop conditions remain immediately enforceable for safety.
 
 ## Context
 
@@ -74,7 +74,7 @@ The decision does not change authentication, RBAC, tenant predicates, RLS, secre
 
 No secret values or customer data are introduced into repository configuration.
 
-The change must not cancel, pause, retarget or otherwise directly manipulate the current Beagle assessment. `INDEPENDENT_HUMAN_PENTEST=PASS` must not be inferred from Beagle or from this regional change.
+The change must not cancel, pause, retarget or otherwise directly manipulate the current Beagle assessment merely for workflow/release convenience. If canonical emergency-stop conditions are met — including real customer data or secret exposure, a verified Critical tenant/auth bypass after minimum proof, destructive mutation outside approved fixtures, or material Production/provider instability — testing must stop immediately, evidence must be preserved, and escalation must follow. `INDEPENDENT_HUMAN_PENTEST=PASS` must not be inferred from Beagle or from this regional change.
 
 ## Deployment and acceptance
 
