@@ -77,7 +77,7 @@ const en: TermsCopy = {
       paragraphs: [
         'Seller VAT/tax registrations and invoice treatment must match the owner-designated contracting/seller entity and authoritative tax facts. Current source implements billing-address collection, tax-ID collection and Stripe Checkout automatic tax, but that implementation does not establish the seller’s actual Portuguese VAT regime or registrations.',
         'The current attributable owner position is no default general refund, subject to mandatory law, provider/billing errors, duplicate charges, the applicable order form and any expressly negotiated credits or remedies. This is an owner-selected position for counsel review, not yet a binding customer clause.',
-        'For ordinary failed or unpaid billing, the owner-selected drafting position provides a 7-day cure opportunity after notice before ordinary non-payment suspension. Faster suspension may apply where reasonably necessary for fraud, security abuse, unlawful activity or material service/tenant risk. Final enforceability remains subject to qualified review.',
+        'For ordinary failed or unpaid billing, the owner-selected drafting position provides a 7-day cure opportunity after notice before ordinary non-payment suspension. Faster suspension may apply where reasonably necessary for fraud, security abuse, unlawful activity or material service/tenant risk. Access should be restored after the relevant cure or risk condition is resolved, subject to operational validation and any lawful continuing restriction. Final enforceability remains subject to qualified review.',
       ],
     },
     {
@@ -211,6 +211,7 @@ const pt: TermsCopy = {
         'A disponibilidade de planos e add-ons é governada pelo catálogo ativo de faturação e pela encomenda ou checkout confirmado pelo provider. URL, estado do browser ou documentação não concedem entitlement por si só.',
         'Nas subscrições recorrentes suportadas, a posição de drafting selecionada é renovação automática pelo mesmo período até cancelamento, sujeita à encomenda/checkout e lei imperativa. Alterações materiais de preço destinadas a afetar uma renovação futura devem ser avisadas pelo menos 30 dias antes da renovação afetada, sujeito a redação jurídica final.',
         'Nas subscrições self-service suportadas, o cancelamento ocorre no fim do período já pago. Upgrades podem usar proration e downgrades podem produzir efeito no período seguinte. Termos Enterprise podem diferir por order form.',
+        'Os preços exatos, intervalos de faturação, capacidades incluídas e add-ons adquiríveis devem corresponder à autoridade de billing vigente no momento da compra. Esta página de Termos não congela preços de marketing nem amplia silenciosamente o entitlement adquirido.',
       ],
     },
     {
@@ -218,7 +219,7 @@ const pt: TermsCopy = {
       paragraphs: [
         'Registos fiscais/VAT e tratamento da fatura devem corresponder à entidade contratante/vendedora designada e a factos fiscais autoritativos. O código de billing não prova o regime ou registos de IVA efetivamente aplicáveis.',
         'A posição atribuível do owner é não existir reembolso geral por defeito, sujeito a lei imperativa, erros de billing/provider, cobranças duplicadas, order form aplicável e remédios expressamente negociados.',
-        'Para falha de pagamento ordinária, a posição selecionada prevê 7 dias de cura após aviso antes de suspensão por falta de pagamento. Suspensão mais rápida pode aplicar-se perante fraude, abuso de segurança, atividade ilícita ou risco material. A eficácia jurídica final continua sujeita a revisão qualificada.',
+        'Para falha de pagamento ordinária, a posição selecionada prevê 7 dias de cura após aviso antes de suspensão por falta de pagamento. Suspensão mais rápida pode aplicar-se perante fraude, abuso de segurança, atividade ilícita ou risco material. O acesso deve ser restaurado depois de resolvida a condição de cura ou risco aplicável, sujeito a validação operacional e a qualquer restrição legal que continue aplicável. A eficácia jurídica final continua sujeita a revisão qualificada.',
       ],
     },
     {
