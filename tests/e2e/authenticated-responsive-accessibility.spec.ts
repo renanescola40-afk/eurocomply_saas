@@ -90,13 +90,13 @@ test.describe('authenticated responsive and accessibility acceptance', () => {
     await expectNoHorizontalOverflow(page, 'Upgrade Center accessibility');
   });
 
-  test('Regulatory Intelligence exposes verified provenance or an honest empty state', async ({ page }) => {
+  test('Regulatory Intelligence exposes source-verifiable provenance or an honest empty state', async ({ page }) => {
     await page.goto('/en/dashboard/organizations/reports-governance/news', { waitUntil: 'domcontentloaded' });
     await expectNoRuntimeError(page, 'Regulatory Intelligence accessibility');
     await expect(page.getByRole('heading', { name: 'EU AI Act & Regulatory Intelligence' })).toBeVisible();
 
     const originalSource = page.getByRole('link', { name: /open original source/i }).first();
-    const honestEmptyState = page.getByText(/no source-verified regulatory updates are published right now/i);
+    const honestEmptyState = page.getByText(/no source-verifiable regulatory updates are published right now/i);
     await expect(originalSource.or(honestEmptyState)).toBeVisible();
     await expectNoHorizontalOverflow(page, 'Regulatory Intelligence accessibility');
   });
