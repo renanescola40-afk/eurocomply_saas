@@ -34,12 +34,12 @@ function withCurrentLocationState(path: string) {
 function persistLocale(locale: Locale) {
   try {
     localStorage.setItem(localeStorageKey, locale);
-    document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000;samesite=lax;secure`;
+    document.cookie = `NEXT_LOCALE=${locale};${localeCookieAttributes}`;
   } catch {}
 }
 
 function persistLocaleScript(locale: Locale) {
-  return `try{localStorage.setItem('${localeStorageKey}','${locale}');document.cookie='NEXT_LOCALE=${locale};path=/;max-age=31536000;samesite=lax;secure'}catch(e){}`;
+  return `try{localStorage.setItem('${localeStorageKey}','${locale}');document.cookie='NEXT_LOCALE=${locale};${localeCookieAttributes}'}catch(e){}`;
 }
 
 type LanguageSwitcherProps = {
