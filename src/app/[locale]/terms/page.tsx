@@ -21,7 +21,7 @@ const en: TermsCopy = {
     {
       title: 'Parties, status and business scope',
       paragraphs: [
-        'Current attributable evidence supports Samuel Cerqueira, Unipessoal Lda. as the owner-designated RISCK COMPLY operator. That operator designation does not by itself establish the final customer contracting/seller counterparty. Authoritative registered office, registered identifiers and signatory facts also remain acceptance gates before final publication.',
+        'Current attributable evidence records an owner-designated RISCK COMPLY operator internally, but this public review draft does not publish a final customer-facing legal party identity until the contracting/seller counterparty, authoritative registered office, registered identifiers and signatory facts are confirmed. Operator designation alone does not establish those customer-facing legal roles.',
         'The current commercial motion is business-to-business. The customer is intended to be the business or other professional organisation identified in the applicable order, checkout or account record. This draft does not attempt to waive mandatory rights that may apply by law.',
       ],
     },
@@ -162,7 +162,7 @@ const pt: TermsCopy = {
     {
       title: 'Partes, estado e âmbito empresarial',
       paragraphs: [
-        'A evidência atribuível atual suporta Samuel Cerqueira, Unipessoal Lda. como operador da RISCK COMPLY designado pelo owner. Essa designação de operador não estabelece, por si só, a contraparte contratante/vendedora final perante clientes. Sede, identificadores registados e autoridade de assinatura também continuam sujeitos a evidência autoritativa antes da publicação final.',
+        'A evidência atribuível atual regista internamente um operador da RISCK COMPLY designado pelo owner, mas este rascunho público não publica uma identidade jurídica final perante clientes enquanto a contraparte contratante/vendedora, sede registada, identificadores registados e autoridade de assinatura não estiverem confirmados. A designação de operador, por si só, não estabelece esses papéis jurídicos perante clientes.',
         'A operação comercial atual é business-to-business. O cliente destina-se a ser a empresa ou outra organização profissional identificada na encomenda, checkout ou registo de conta aplicável. Este rascunho não procura afastar direitos imperativos que possam aplicar-se por lei.',
       ],
     },
