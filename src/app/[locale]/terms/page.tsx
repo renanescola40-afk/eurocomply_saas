@@ -3,7 +3,7 @@ import { isSupportedLocale, type Locale } from '@/lib/i18n/locales';
 
 export const revalidate = 300;
 
-const LAST_UPDATED = '10 September 2026';
+const LAST_UPDATED = '12 September 2026';
 
 type TermsCopy = {
   eyebrow: string;
@@ -15,12 +15,13 @@ type TermsCopy = {
 const en: TermsCopy = {
   eyebrow: 'Terms of Service — review draft',
   title: 'Business service terms for RISCK COMPLY',
-  summary: 'This public review draft records the current product and commercial contract structure for RISCK COMPLY business customers. It is not yet an effective agreement: final party identity, several owner commercial decisions and qualified legal review remain explicit acceptance gates.',
+  summary:
+    'This public review draft records the current product and commercial contract structure for RISCK COMPLY business customers. It is not yet an effective agreement: the customer contracting/seller entity, authoritative registered/tax facts, remaining commercial-risk decisions and qualified legal review remain explicit acceptance gates.',
   sections: [
     {
       title: 'Parties, status and business scope',
       paragraphs: [
-        'The final RISCK COMPLY contracting/operator legal entity, registered office and registered identifiers are still pending authoritative founder/entity confirmation. This review draft therefore does not identify a final service-provider party and cannot be treated as an executed customer agreement.',
+        'Current attributable evidence supports Samuel Cerqueira, Unipessoal Lda. as the owner-designated RISCK COMPLY operator. That operator designation does not by itself establish the final customer contracting/seller counterparty. Authoritative registered office, registered identifiers and signatory facts also remain acceptance gates before final publication.',
         'The current commercial motion is business-to-business. The customer is intended to be the business or other professional organisation identified in the applicable order, checkout or account record. This draft does not attempt to waive mandatory rights that may apply by law.',
       ],
     },
@@ -67,15 +68,15 @@ const en: TermsCopy = {
       paragraphs: [
         'Plan and add-on availability is governed by the active billing catalogue and the customer order or provider-backed checkout. A public URL, browser state or documentation entry does not grant an entitlement by itself.',
         'For supported self-service subscriptions, cancellation is implemented for the end of the already-paid billing period and reactivation is supported before that period ends. Supported upgrades may use provider proration; supported downgrades may take effect in the next billing period. Contract-managed Enterprise terms may differ where expressly agreed in an order form.',
-        'Exact prices, billing intervals, included capabilities and purchasable add-ons must match the current billing authority at the time of purchase. This Terms page does not freeze a marketing price or silently expand the purchased entitlement.',
+        'Exact prices, billing intervals, included capabilities and purchasable add-ons must match the current billing authority at purchase time. This Terms page does not freeze a marketing price or silently expand the purchased entitlement.',
       ],
     },
     {
-      title: 'Taxes, refunds and payment failure — decision boundary',
+      title: 'Taxes, refunds and payment failure — review boundary',
       paragraphs: [
-        'Seller VAT/tax registrations, checkout tax configuration and invoice treatment are factual billing and tax matters that must match the final contracting entity and live provider configuration. This review draft makes no blanket tax-exemption or tax-inclusion claim beyond what the applicable checkout, invoice or signed order actually states.',
-        'A final general refund policy has not yet been approved. This draft therefore does not create a blanket no-refund promise or entitlement. Mandatory-law rights, provider errors, duplicate charges and any negotiated credits must be handled under the final approved commercial terms.',
-        'The service can respond to failed or unpaid billing states, but final notice, cure, suspension and restoration rules remain subject to owner decision and qualified legal review before they become binding contractual terms.',
+        'Seller VAT/tax registrations and invoice treatment must match the final contracting/seller entity and authoritative tax facts. Current source implements billing-address collection, tax-ID collection and Stripe Checkout automatic tax, but that implementation does not establish the seller’s actual Portuguese VAT regime or registrations.',
+        'The current attributable owner position is no default general refund, subject to mandatory law, provider/billing errors, duplicate charges, the applicable order form and any expressly negotiated credits or remedies. This is an owner-selected position for counsel review, not yet a binding customer clause.',
+        'The service can respond to failed or unpaid billing states, but final notice, cure, suspension, emergency-exception and restoration rules remain subject to owner decision and qualified legal review before they become binding contractual terms.',
       ],
     },
     {
@@ -89,7 +90,8 @@ const en: TermsCopy = {
       title: 'Data protection and security',
       paragraphs: [
         'Provider-controlled personal-data processing is addressed by the Privacy Policy review surface. Customer-controlled personal data processed on customer instructions is intended to be governed by the DPA where applicable. Final controller/processor allocation remains activity-specific and subject to the executed agreement.',
-        'Security commitments are limited to implemented controls and attributable evidence. No certification, penetration-test result, fixed uptime, fixed RPO/RTO, backup promise or encryption specification is incorporated into a customer contract merely because it appears in marketing, source code or an internal evidence pack.',
+        'Security commitments are limited to implemented controls and attributable evidence. No certification, penetration-test result, fixed RPO/RTO, backup promise or encryption specification is incorporated into a customer contract merely because it appears in marketing, source code or an internal evidence pack.',
+        'The current owner position is that there is no default uptime SLA unless one is expressly contracted. Any positive uptime, service-credit or performance warranty/remedy remains subject to final product facts, commercial approval and qualified review.',
       ],
     },
     {
@@ -110,14 +112,14 @@ const en: TermsCopy = {
       title: 'Suspension, termination and post-termination access',
       paragraphs: [
         'The proposed contract may permit proportionate suspension for material security risk, unlawful use, material breach or qualifying non-payment. Final notice, cure periods, emergency exceptions and restoration obligations have not yet been legally approved and are not made binding by this draft.',
-        'Self-service cancellation currently preserves paid access until the end of the active paid period. Contract-managed subscriptions remain subject to their order form. Final termination-for-breach rules and any post-termination export window remain owner/counsel decisions.',
+        'Self-service cancellation currently preserves paid access until the end of the active paid period. Contract-managed subscriptions remain subject to their order form. The owner has selected a 30-day post-termination customer export-window position, but product capability, privacy/retention duties, provider constraints and final counsel wording must still be reconciled before it becomes a binding promise.',
         'Deletion after termination remains subject to the DPA, category-specific retention, documented legal holds, billing/accounting records, immutable audit requirements and verified provider lifecycle constraints. This draft does not promise an unsupported deletion or backup timetable.',
       ],
     },
     {
       title: 'Warranties and compliance disclaimers',
       paragraphs: [
-        'The final agreement must define any service-performance warranty and remedies that RISCK COMPLY is prepared to make. Until that language is approved, this review page does not create an additional warranty beyond mandatory law or a separately signed commitment.',
+        'The owner position is no default uptime SLA unless expressly contracted. Any other positive service-performance warranty and remedies remain subject to product facts, commercial approval and qualified legal review. Until approved, this review page does not create an additional warranty beyond mandatory law or a separately signed commitment.',
         'No warranty is proposed that using RISCK COMPLY automatically makes a customer compliant, eliminates legal risk or satisfies every customer-specific regulatory requirement.',
       ],
     },
@@ -125,7 +127,7 @@ const en: TermsCopy = {
       title: 'Indemnities and liability — counsel decision required',
       paragraphs: [
         'Customer unlawful-use/content indemnity, provider IP indemnity, defence-control mechanics, liability caps, excluded loss categories and carve-outs for matters such as fraud, wilful misconduct, confidentiality, data protection and intellectual property are not yet final.',
-        'Those provisions materially allocate commercial risk and must be approved against the final entity, insurance position, product risk and Portuguese/EU mandatory-law constraints. No liability cap or indemnity is represented as effective by this review draft.',
+        'Those provisions materially allocate commercial risk and must be approved against the final contracting entity, insurance position, product risk and Portuguese/EU mandatory-law constraints. No liability cap or indemnity is represented as effective by this review draft.',
       ],
     },
     {
@@ -136,16 +138,16 @@ const en: TermsCopy = {
       ],
     },
     {
-      title: 'Governing law, disputes and legal notices — unresolved final terms',
+      title: 'Governing law, disputes and legal notices — review boundary',
       paragraphs: [
-        'The governing law, court/forum or arbitration position has not yet been finally selected and approved. This review draft intentionally does not invent a jurisdiction or dispute mechanism while the contracting entity remains unresolved.',
+        'The current attributable owner preference is Portuguese governing law. That preference is not represented as a final binding choice until the contracting entity, mandatory-law analysis and qualified legal review are complete. Court/forum versus arbitration, venue, escalation mechanics and remedies remain unresolved.',
         'General corporate communications may be sent to comercial@risckcomply.com. Which notices have contractual legal effect, permitted delivery methods, deemed-receipt rules and any required postal or dedicated legal-notice channel remain subject to final contract drafting and qualified review.',
       ],
     },
     {
       title: 'Final acceptance boundary',
       paragraphs: [
-        'This page remains REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED. It becomes effective Terms only after the contracting entity and registered facts are authoritative, owner commercial decisions are completed, billing/tax facts are aligned, privacy/DPA/provider dependencies are reconciled, liability/indemnity/governing-law/notices and termination terms are approved, qualified legal review is attributable, and the final version is deliberately published or incorporated into a customer agreement.',
+        'This page remains REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED. It becomes effective Terms only after the contracting/seller entity and authoritative registered facts are settled, remaining owner/counsel commercial decisions are completed, billing/tax facts are aligned, privacy/DPA/provider dependencies are reconciled, liability/indemnity/forum/notices and termination mechanics are approved, qualified legal review is attributable, and the final version is deliberately published or incorporated into a customer agreement.',
       ],
     },
   ],
@@ -154,12 +156,13 @@ const en: TermsCopy = {
 const pt: TermsCopy = {
   eyebrow: 'Termos de Serviço — rascunho para revisão',
   title: 'Termos empresariais do serviço RISCK COMPLY',
-  summary: 'Este rascunho público regista a estrutura contratual atual do produto e da operação comercial da RISCK COMPLY para clientes empresariais. Ainda não é um acordo em vigor: identidade final da parte, várias decisões comerciais do titular e revisão jurídica qualificada continuam como gates explícitos de aceitação.',
+  summary:
+    'Este rascunho público regista a estrutura contratual atual do produto e da operação comercial da RISCK COMPLY para clientes empresariais. Ainda não é um acordo em vigor: entidade contratante/vendedora, factos registais/fiscais autoritativos, decisões de risco comercial ainda abertas e revisão jurídica qualificada continuam como gates explícitos de aceitação.',
   sections: [
     {
       title: 'Partes, estado e âmbito empresarial',
       paragraphs: [
-        'A entidade jurídica final que contratará/operará a RISCK COMPLY, a sede registada e os identificadores registados continuam pendentes de confirmação autoritativa do fundador/entidade. Por isso, este rascunho não identifica ainda a parte prestadora final e não pode ser tratado como acordo executado com o cliente.',
+        'A evidência atribuível atual suporta Samuel Cerqueira, Unipessoal Lda. como operador da RISCK COMPLY designado pelo owner. Essa designação de operador não estabelece, por si só, a contraparte contratante/vendedora final perante clientes. Sede, identificadores registados e autoridade de assinatura também continuam sujeitos a evidência autoritativa antes da publicação final.',
         'A operação comercial atual é business-to-business. O cliente destina-se a ser a empresa ou outra organização profissional identificada na encomenda, checkout ou registo de conta aplicável. Este rascunho não procura afastar direitos imperativos que possam aplicar-se por lei.',
       ],
     },
@@ -210,11 +213,11 @@ const pt: TermsCopy = {
       ],
     },
     {
-      title: 'Impostos, reembolsos e falha de pagamento — limite de decisão',
+      title: 'Impostos, reembolsos e falha de pagamento — limite de revisão',
       paragraphs: [
-        'Registos fiscais/VAT do vendedor, configuração fiscal do checkout e tratamento da fatura são factos de billing e fiscalidade que devem corresponder à entidade contratante final e à configuração live do provider. Este rascunho não faz uma afirmação geral de isenção ou inclusão fiscal para além do que o checkout, fatura ou encomenda assinada aplicável efetivamente declarar.',
-        'Ainda não foi aprovada uma política geral final de reembolsos. Por isso, este rascunho não cria uma regra geral de não reembolso nem um direito geral a reembolso. Direitos imperativos, erros do provider, cobranças duplicadas e créditos negociados devem ser tratados nos termos comerciais finalmente aprovados.',
-        'O serviço pode reagir a estados de faturação falhada ou em dívida, mas regras finais de aviso, cura, suspensão e restabelecimento permanecem sujeitas a decisão do titular e revisão jurídica qualificada antes de se tornarem cláusulas vinculativas.',
+        'Registos fiscais/VAT do vendedor e tratamento da fatura devem corresponder à entidade contratante/vendedora final e a factos fiscais autoritativos. O código atual implementa recolha de morada de faturação, recolha de tax ID e Stripe Checkout automatic tax, mas essa implementação não prova o regime ou os registos de IVA portugueses efetivamente aplicáveis ao vendedor.',
+        'A posição atribuível atual do owner é não existir reembolso geral por defeito, sujeito a lei imperativa, erros de billing/provider, cobranças duplicadas, order form aplicável e créditos ou remédios expressamente negociados. É uma posição selecionada para revisão jurídica, não uma cláusula vinculativa já aprovada.',
+        'O serviço pode reagir a estados de faturação falhada ou em dívida, mas regras finais de aviso, cura, suspensão, exceções de emergência e restabelecimento permanecem sujeitas a decisão do owner e revisão jurídica qualificada antes de se tornarem cláusulas vinculativas.',
       ],
     },
     {
@@ -228,7 +231,8 @@ const pt: TermsCopy = {
       title: 'Proteção de dados e segurança',
       paragraphs: [
         'O tratamento de dados pessoais sob controlo próprio do prestador é tratado pela superfície de revisão da Política de Privacidade. Dados pessoais controlados pelo cliente e tratados sob as suas instruções destinam-se a ser regidos pelo DPA quando aplicável. A alocação final responsável/subcontratante continua específica de cada atividade e sujeita ao acordo executado.',
-        'Compromissos de segurança limitam-se a controlos implementados e evidência atribuível. Nenhuma certificação, resultado de pentest, uptime fixo, RPO/RTO fixo, promessa de backup ou especificação de cifragem é incorporada num contrato apenas por aparecer em marketing, código-fonte ou pack interno de evidências.',
+        'Compromissos de segurança limitam-se a controlos implementados e evidência atribuível. Nenhuma certificação, resultado de pentest, RPO/RTO fixo, promessa de backup ou especificação de cifragem é incorporada num contrato apenas por aparecer em marketing, código-fonte ou pack interno de evidências.',
+        'A posição atual do owner é não existir SLA de uptime por defeito salvo contratação expressa. Qualquer garantia positiva de uptime, service credits ou outro remédio de desempenho continua sujeita a factos finais do produto, decisão comercial e revisão qualificada.',
       ],
     },
     {
@@ -249,14 +253,14 @@ const pt: TermsCopy = {
       title: 'Suspensão, cessação e acesso pós-cessação',
       paragraphs: [
         'O contrato proposto pode permitir suspensão proporcional perante risco material de segurança, utilização ilícita, incumprimento material ou falta de pagamento qualificável. Avisos finais, períodos de cura, exceções de emergência e obrigações de restabelecimento ainda não foram juridicamente aprovados e não se tornam vinculativos através deste rascunho.',
-        'O cancelamento self-service preserva atualmente o acesso pago até ao fim do período pago ativo. Subscrições geridas por contrato continuam sujeitas à respetiva order form. Regras finais de cessação por incumprimento e qualquer janela de exportação pós-cessação continuam decisões do titular/advogado.',
+        'O cancelamento self-service preserva atualmente o acesso pago até ao fim do período pago ativo. Subscrições geridas por contrato continuam sujeitas à respetiva order form. O owner selecionou uma posição de janela de exportação do cliente de 30 dias após cessação, mas capacidade do produto, deveres de privacidade/conservação, limitações dos providers e redação jurídica final ainda devem ser reconciliados antes de se tornar promessa vinculativa.',
         'A eliminação pós-cessação continua sujeita ao DPA, conservação por categoria, legal holds documentados, registos contabilísticos/faturação, requisitos de auditoria imutável e limites verificados do lifecycle dos providers. Este rascunho não promete um prazo de eliminação ou backup que não esteja suportado.',
       ],
     },
     {
       title: 'Garantias e limites de compliance',
       paragraphs: [
-        'O acordo final deve definir qualquer garantia de desempenho do serviço e remédios que a RISCK COMPLY esteja preparada para assumir. Até essa linguagem ser aprovada, esta página de revisão não cria garantia adicional para além de lei imperativa ou compromisso assinado em separado.',
+        'A posição do owner é não existir SLA de uptime por defeito salvo contratação expressa. Qualquer outra garantia positiva de desempenho e respetivos remédios permanecem sujeitos aos factos do produto, aprovação comercial e revisão jurídica qualificada. Até essa aprovação, esta página não cria garantia adicional para além de lei imperativa ou compromisso assinado em separado.',
         'Não é proposta qualquer garantia de que a utilização da RISCK COMPLY torne automaticamente o cliente compliant, elimine risco jurídico ou satisfaça todos os requisitos regulatórios específicos do cliente.',
       ],
     },
@@ -264,27 +268,27 @@ const pt: TermsCopy = {
       title: 'Indemnizações e responsabilidade — decisão jurídica necessária',
       paragraphs: [
         'Indemnização do cliente por conteúdo/utilização ilícita, indemnização do prestador por IP, controlo da defesa, limites de responsabilidade, categorias de perdas excluídas e carve-outs para matérias como fraude, dolo, confidencialidade, proteção de dados e propriedade intelectual ainda não são finais.',
-        'Essas disposições distribuem risco comercial material e devem ser aprovadas face à entidade final, seguros, risco do produto e limites imperativos portugueses/europeus. Nenhum limite de responsabilidade ou indemnização é apresentado como eficaz por este rascunho.',
+        'Essas disposições distribuem risco comercial material e devem ser aprovadas face à entidade contratante final, seguros, risco do produto e limites imperativos portugueses/europeus. Nenhum limite de responsabilidade ou indemnização é apresentado como eficaz por este rascunho.',
       ],
     },
     {
       title: 'Renovação, alterações e precedência documental',
       paragraphs: [
-        'A redação final de formação do contrato e renovação deve corresponder ao checkout/order process live e a qualquer encomenda Enterprise negociada. Avisos de alteração material e mecânicas de renovação continuam sujeitos a aprovação do titular e advogado.',
+        'A redação final de formação do contrato e renovação deve corresponder ao checkout/order process live e a qualquer encomenda Enterprise negociada. Avisos de alteração material e mecânicas de renovação continuam sujeitos a aprovação do owner e counsel.',
         'O modelo de precedência proposto é: order form assinada, DPA assinado para o tratamento abrangido, schedule de serviço negociado, Termos finais e, por último, documentação pública. A aplicabilidade e incorporação finais requerem revisão qualificada; páginas públicas não ampliam compromissos assinados.',
       ],
     },
     {
-      title: 'Lei aplicável, litígios e notificações legais — termos finais por resolver',
+      title: 'Lei aplicável, litígios e notificações legais — limite de revisão',
       paragraphs: [
-        'A lei aplicável e a posição sobre tribunais/foro ou arbitragem ainda não foram definitivamente selecionadas e aprovadas. Este rascunho evita inventar jurisdição ou mecanismo de litígio enquanto a entidade contratante continuar por resolver.',
+        'A preferência atribuível atual do owner é lei portuguesa. Essa preferência não é apresentada como escolha vinculativa final enquanto a entidade contratante, a análise de lei imperativa e a revisão jurídica qualificada não estiverem concluídas. Tribunal/foro versus arbitragem, local, escalonamento e remédios continuam por resolver.',
         'Comunicações empresariais gerais podem ser enviadas para comercial@risckcomply.com. Quais notificações produzem efeito contratual, métodos de entrega permitidos, regras de receção presumida e eventual canal postal ou jurídico dedicado continuam sujeitos à redação contratual final e revisão qualificada.',
       ],
     },
     {
       title: 'Limite de aceitação final',
       paragraphs: [
-        'Esta página permanece REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED. Torna-se Termos eficazes apenas depois de a entidade contratante e os factos registados serem autoritativos, decisões comerciais do titular serem concluídas, factos de billing/fiscalidade estarem alinhados, dependências de Privacy/DPA/providers estarem reconciliadas, responsabilidade/indemnização/lei aplicável/notificações e cessação serem aprovadas, a revisão jurídica qualificada ser atribuível e a versão final ser deliberadamente publicada ou incorporada num acordo com o cliente.',
+        'Esta página permanece REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED. Torna-se Termos eficazes apenas depois de a entidade contratante/vendedora e os factos registais autoritativos estarem fechados, decisões comerciais ainda abertas serem concluídas, factos de billing/fiscalidade estarem alinhados, dependências de Privacy/DPA/providers estarem reconciliadas, responsabilidade/indemnização/foro/notificações e mecânicas de cessação serem aprovadas, a revisão jurídica qualificada ser atribuível e a versão final ser deliberadamente publicada ou incorporada num acordo com o cliente.',
       ],
     },
   ],
