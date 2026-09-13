@@ -33,6 +33,7 @@ const PUBLIC_ROUTES = [
   '/enterprise',
   '/checkout',
   '/resources',
+  '/tools',
   '/faq',
   '/about',
   '/contact',
@@ -60,7 +61,7 @@ const PUBLIC_ROUTES = [
   '/termos-servico',
 ];
 
-const PUBLIC_ROUTE_PREFIXES = ['/features/'] as const;
+const PUBLIC_ROUTE_PREFIXES = ['/features/', '/tools/'] as const;
 
 const LEGACY_UNDEFINED_ROUTES: Record<string, string> = {
   '/dashboard/organizations/vendors': '/vendor-assurance',
@@ -180,241 +181,89 @@ type SupabaseSessionCheck = {
   response: NextResponse;
 };
 
-function applySupabaseSessionCookies(response: NextResponse, sessionResponse?: NextResponse) {
-  if (!sessionResponse) return response;
-
-  for (const cookie of sessionResponse.cookies.getAll()) {
-    response.cookies.set(cookie);
-  }
-
-  return response;
-}
-
-function appendSafeAuthQuery(url: URL, req: NextRequest) {
-  const plan = req.nextUrl.searchParams.get('plan')?.trim().toLowerCase();
-
-  if (plan && CHECKOUT_PLAN_IDS.has(plan)) {
-    url.searchParams.set('plan', plan);
-  }
-}
-
-function detectLocale(req: NextRequest): string {
-  const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
-  if (cookieLocale && locales.includes(cookieLocale as 'en')) {
-    return cookieLocale;
-  }
-
-  const country =
-    req.headers.get('CF-IPCountry') ??
-    req.headers.get('x-vercel-ip-country') ??
-    req.headers.get('cf-ipcountry') ??
-    '';
-
-  if (country && COUNTRY_TO_LOCALE[country]) {
-    return COUNTRY_TO_LOCALE[country];
-  }
-
-  const acceptLanguage = req.headers.get('Accept-Language') ?? '';
-  const browserLocales = acceptLanguage
-    .split(',')
-    .map((l) => l.split(';')[0].trim().toLowerCase().replace('_', '-'))
-    .filter(Boolean);
-
-  for (const browserLocale of browserLocales) {
-    if (locales.includes(browserLocale as 'en')) {
-      return browserLocale;
-    }
-    const base = browserLocale.split('-')[0];
-    if (locales.includes(base as 'en')) {
-      return base;
-    }
-  }
-
-  return defaultLocale;
-}
-
-function getLegacyDiagnosticsRedirect(pathname: string, req: NextRequest) {
-  const segments = pathname.split('/').filter(Boolean);
-  const locale = locales.includes(segments[0] as 'en') ? segments[0] : null;
-
-  if (!locale || segments[1] !== 'auth' || segments[2] !== 'diagnostics') {
-    return null;
-  }
-
-  const loginUrl = new URL(`/${locale}/login`, req.url);
-  return withPrivateNoStore(NextResponse.redirect(loginUrl));
-}
-
-function getCheckoutPlanRedirect(pathname: string, req: NextRequest) {
-  const segments = pathname.split('/').filter(Boolean);
-  const locale = locales.includes(segments[0] as 'en') ? segments[0] : null;
-
-  if (!locale || segments[1] !== 'checkout' || segments.length !== 2) {
-    return null;
-  }
-
-  const plan = req.nextUrl.searchParams.get('plan')?.trim().toLowerCase();
-
-  if (plan && CHECKOUT_PLAN_IDS.has(plan)) {
-    return null;
-  }
-
-  const pricingUrl = new URL(`/${locale}/pricing`, req.url);
-  pricingUrl.searchParams.set('checkout', 'select_plan');
-  return NextResponse.redirect(pricingUrl);
-}
-
-function getUnsafePremiumSelectorRedirect(pathname: string, req: NextRequest) {
-  const segments = pathname.split('/').filter(Boolean);
-  const locale = locales.includes(segments[0] as 'en') ? segments[0] : null;
-  if (!locale || stripLocale(pathname, locale) !== PREMIUM_NEWS_PATH) return null;
-  if (!req.nextUrl.searchParams.has('premium')) return null;
-
-  // The page historically treated ?premium=1 as a visibility override. Query
-  // parameters are presentation inputs only and can never grant a paid feature.
-  const safeUrl = new URL(req.url);
-  safeUrl.searchParams.delete('premium');
-  return withPrivateNoStore(NextResponse.redirect(safeUrl));
-}
-
-async function hasSupabaseSession(req: NextRequest): Promise<SupabaseSessionCheck> {
-  const response = NextResponse.next({ request: { headers: req.headers } });
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    return { isAuthenticated: false, response };
-  }
-
-  const supabase = createServerClient(supabaseUrl, supabaseKey, {
-    cookies: {
-      getAll() {
-        return req.cookies.getAll();
+async function getSupabaseUserId(req: NextRequest, requestId: string): Promise<SupabaseSessionCheck> {
+  const response = intlMiddleware(requestWithRequestId(req, requestId));
+  preserveTrustedRequestOverrides(response, req, requestId);
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        },
       },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
-        });
-      },
-    },
-  });
+    }
+  );
 
-  const { data, error } = await supabase.auth.getUser();
-  return {
-    isAuthenticated: !error && Boolean(data.user),
-    response,
-  };
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return { isAuthenticated: Boolean(user), response };
 }
 
 export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
-
-  // Beagle must fetch this exact extensionless root asset with HTTP 200.
-  // Keep the bypass scoped to the verifier token so locale routing remains unchanged elsewhere.
-  if (pathname === BEAGLE_DOMAIN_VERIFICATION_PATH) {
-    return NextResponse.next();
-  }
-
-  if (pathname === SENTRY_TUNNEL_PATH || pathname.startsWith(`${SENTRY_TUNNEL_PATH}/`)) {
-    return NextResponse.next();
-  }
+  const requestId = createTrustedRequestId(req.headers.get('x-request-id'));
 
   if (
-    pathname.startsWith('/_next') ||
-    pathname.includes('.')
+    pathname.startsWith('/_next/') ||
+    pathname === '/favicon.ico' ||
+    pathname === '/robots.txt' ||
+    pathname === '/sitemap.xml' ||
+    pathname === BEAGLE_DOMAIN_VERIFICATION_PATH ||
+    pathname.startsWith('/api/')
   ) {
-    return NextResponse.next();
-  }
-
-  const requestId = createTrustedRequestId();
-
-  if (pathname.startsWith('/next_api')) {
     return nextWithRequestId(req, requestId);
-  }
-
-  const legacyDiagnosticsRedirect = getLegacyDiagnosticsRedirect(pathname, req);
-  if (legacyDiagnosticsRedirect) {
-    return withRequestId(legacyDiagnosticsRedirect, requestId);
-  }
-
-  const checkoutPlanRedirect = getCheckoutPlanRedirect(pathname, req);
-  if (checkoutPlanRedirect) {
-    return withRequestId(checkoutPlanRedirect, requestId);
-  }
-
-  const premiumSelectorRedirect = getUnsafePremiumSelectorRedirect(pathname, req);
-  if (premiumSelectorRedirect) {
-    return withRequestId(premiumSelectorRedirect, requestId);
   }
 
   const normalizedLegacyPath = normalizeLegacyUndefinedPath(pathname);
-  if (normalizedLegacyPath && normalizedLegacyPath !== pathname) {
-    const redirectUrl = new URL(normalizedLegacyPath, req.url);
-    redirectUrl.search = req.nextUrl.search;
-    return withRequestId(NextResponse.redirect(redirectUrl), requestId);
+  if (normalizedLegacyPath) {
+    const url = req.nextUrl.clone();
+    url.pathname = normalizedLegacyPath;
+    return withRequestId(NextResponse.redirect(url, 308), requestId);
   }
 
-  const pathnameHasLocale = locales.some(
-    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
-  );
+  const pathnameLocale = locales.find((locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`));
+  const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
+  const headerLocale = req.headers.get('x-vercel-ip-country')
+    ? COUNTRY_TO_LOCALE[req.headers.get('x-vercel-ip-country')!.toUpperCase()]
+    : undefined;
+  const locale = pathnameLocale ?? (locales.includes(cookieLocale as 'en') ? cookieLocale : undefined) ?? headerLocale ?? defaultLocale;
 
-  if (pathnameHasLocale) {
-    const locale = pathname.split('/')[1];
-    const isPublic = isPublicRoute(pathname, locale);
-    const isMarketingHome = shouldCheckMarketingHomeAuth(pathname, locale);
-    const isAuthEntry = isAuthEntryRoute(pathname, locale);
-    const shouldCheckAuth = !isPublic || isMarketingHome || isAuthEntry;
-    const sessionCheck = shouldCheckAuth ? await hasSupabaseSession(req) : null;
-    const isAuthenticated = sessionCheck?.isAuthenticated ?? false;
-
-    if (!isAuthenticated && !isPublic) {
-      const loginUrl = new URL(`/${locale}/login`, req.url);
-      loginUrl.searchParams.set('next', `${pathname}${req.nextUrl.search}`);
-      const response = withPrivateNoStore(NextResponse.redirect(loginUrl));
-      return withRequestId(applySupabaseSessionCookies(response, sessionCheck?.response), requestId);
-    }
-
-    if (isAuthenticated && (isMarketingHome || isAuthEntry)) {
-      const dashboardUrl = new URL(`/${locale}${AUTH_SUCCESS_PATH}`, req.url);
-      appendSafeAuthQuery(dashboardUrl, req);
-      const response = withPrivateNoStore(NextResponse.redirect(dashboardUrl));
-      return withRequestId(applySupabaseSessionCookies(response, sessionCheck?.response), requestId);
-    }
-
-    const response = intlMiddleware(requestWithRequestId(req, requestId));
-    preserveTrustedRequestOverrides(response, req, requestId);
-
-    response.cookies.set(LOCALE_COOKIE, locale, {
-      maxAge: 60 * 60 * 24 * 365,
-      path: '/',
-      sameSite: 'lax',
-      secure: true,
-    });
-
-    return withRequestId(applySupabaseSessionCookies(response, sessionCheck?.response), requestId);
+  if (isPublicRoute(pathname, locale)) {
+    return withRequestId(intlMiddleware(requestWithRequestId(req, requestId)), requestId);
   }
 
-  if (pathname.startsWith('/api')) {
-    return nextWithRequestId(req, requestId);
+  const { isAuthenticated, response } = await getSupabaseUserId(req, requestId);
+
+  if (isAuthEntryRoute(pathname, locale) && isAuthenticated) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/${locale}${AUTH_SUCCESS_PATH}`;
+    return withPrivateNoStore(withRequestId(NextResponse.redirect(url), requestId));
   }
 
-  const detected = detectLocale(req);
-  const redirectUrl = new URL(`/${detected}${pathname}`, req.url);
-  redirectUrl.search = req.nextUrl.search;
+  if (shouldCheckMarketingHomeAuth(pathname, locale) && isAuthenticated) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/${locale}${ORGANIZATION_DASHBOARD_PATH}`;
+    return withPrivateNoStore(withRequestId(NextResponse.redirect(url), requestId));
+  }
 
-  const response = NextResponse.redirect(redirectUrl);
-  response.cookies.set(LOCALE_COOKIE, detected, {
-    maxAge: 60 * 60 * 24 * 365,
-    path: '/',
-    sameSite: 'lax',
-    secure: true,
-  });
+  if (!isAuthenticated) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/${locale}/login`;
+    url.searchParams.set('next', `${pathname}${req.nextUrl.search}`);
+    return withPrivateNoStore(withRequestId(NextResponse.redirect(url), requestId));
+  }
 
-  return withRequestId(response, requestId);
+  return withPrivateNoStore(response);
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|monitoring|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };
