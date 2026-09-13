@@ -80,8 +80,8 @@ describe('international SEO acquisition architecture', () => {
     const nextConfig = read('next.config.ts');
     const sitemap = read('src/app/sitemap.ts');
 
-    expect(middleware).toMatch(/PUBLIC_ROUTE_PREFIXES\s*=\s*\[[^\]]*'\/features\/'/s);
-    expect(middleware).toMatch(/PUBLIC_ROUTE_PREFIXES\s*=\s*\[[^\]]*'\/tools\/'/s);
+    expect(middleware).toMatch(/PUBLIC_ROUTE_PREFIXES\s*=\s*\[[^\]]*'\/features\/'/);
+    expect(middleware).toMatch(/PUBLIC_ROUTE_PREFIXES\s*=\s*\[[^\]]*'\/tools\/'/);
     expect(nextConfig).toContain('/features/:path*');
     expect(sitemap).toContain('getFeaturePages');
     expect(sitemap).toContain('getFeatureLanguageAlternates');
