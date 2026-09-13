@@ -14,10 +14,7 @@ import {
   getAuthoritativeSignedContractPlan,
   hasProcessedLiveStripeSubscriptionAuthority,
 } from './subscription-authority';
-import {
-  getBillingAddOnSlugForStripePriceId,
-  getStripeAddOnPriceId,
-} from './add-ons';
+import { getStripeAddOnPriceId } from './add-ons';
 import { deriveStripeIdempotencyKey, type BillingIdempotencyContext } from './idempotency';
 import { getStripeClient } from './stripe';
 import { getBaseSubscriptionItem, getProviderAddOnSelections } from './subscription-lifecycle';
@@ -44,9 +41,13 @@ type ActiveAddOnRow = {
   status: string | null;
 };
 
-type InvoiceWithPaymentIntent = Stripe.Invoice & {
-  payment_intent?: string | Stripe.PaymentIntent | null;
-  confirmation_secret?: { client_secret?: string | null } | null;
+type InvoiceWithSubscription = Stripe.Invoice & {
+  subscription?: string | Stripe.Subscription | null;
+  parent?: {
+    subscription_details?: {
+      subscription?: string | null;
+    } | null;
+  } | null;
 };
 
 export class AddOnPurchaseError extends Error {
@@ -63,6 +64,13 @@ export function isAddOnPurchaseError(error: unknown): error is AddOnPurchaseErro
 function stripeObjectId(value: string | { id?: string | null } | null | undefined) {
   if (typeof value === 'string') return value.trim() || null;
   return value?.id?.trim() || null;
+}
+
+function invoiceSubscriptionId(invoice: InvoiceWithSubscription) {
+  const direct = stripeObjectId(invoice.subscription);
+  if (direct) return direct;
+  const parent = invoice.parent?.subscription_details?.subscription;
+  return typeof parent === 'string' && parent.trim() ? parent.trim() : null;
 }
 
 function planIncludesAddOn(plan: CanonicalSubscriptionPlan, addOn: BillingAddOn) {
@@ -262,15 +270,6 @@ export async function getAddOnPurchasePreview(input: {
   };
 }
 
-function invoicePaymentClientSecret(invoice: InvoiceWithPaymentIntent) {
-  const confirmationSecret = invoice.confirmation_secret?.client_secret;
-  if (confirmationSecret) return confirmationSecret;
-  if (typeof invoice.payment_intent === 'object' && invoice.payment_intent?.client_secret) {
-    return invoice.payment_intent.client_secret;
-  }
-  return null;
-}
-
 export async function beginAddOnPurchase(input: {
   organizationId: string;
   userId: string;
@@ -291,7 +290,6 @@ export async function beginAddOnPurchase(input: {
       subscriptionId: context.subscription.id,
       invoiceId: null,
       hostedInvoiceUrl: null,
-      paymentClientSecret: null,
     };
   }
   if (context.subscription.pending_update) {
@@ -320,11 +318,9 @@ export async function beginAddOnPurchase(input: {
   const invoiceId = stripeObjectId(updated.latest_invoice);
   if (!invoiceId) throw new AddOnPurchaseError('stripe_add_on_invoice_missing', 502);
 
-  let invoice: InvoiceWithPaymentIntent;
+  let invoice: Stripe.Invoice;
   try {
-    invoice = await context.stripe.invoices.retrieve(invoiceId, {
-      expand: ['payment_intent'],
-    }) as InvoiceWithPaymentIntent;
+    invoice = await context.stripe.invoices.retrieve(invoiceId);
   } catch (error) {
     throw classifyProviderFailure('stripe', 'add_on_purchase_invoice_retrieve', error);
   }
@@ -360,11 +356,21 @@ export async function beginAddOnPurchase(input: {
     subscriptionId: context.subscription.id,
     invoiceId: invoice.id,
     hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
-    paymentClientSecret: invoicePaymentClientSecret(invoice),
   };
 }
 
-export async function getOrganizationAddOnPurchaseStatus(organizationId: string, addOnSlug: string) {
+function providerPaymentState(invoice: Stripe.Invoice) {
+  if (invoice.status === 'paid' || invoice.amount_remaining === 0) return 'processing' as const;
+  if (invoice.status === 'void' || invoice.status === 'uncollectible') return 'failed' as const;
+  if (invoice.status === 'open') return 'payment_required' as const;
+  return 'processing' as const;
+}
+
+export async function getOrganizationAddOnPurchaseStatus(
+  organizationId: string,
+  addOnSlug: string,
+  invoiceId?: string | null,
+) {
   const addOn = getBillingAddOn(addOnSlug);
   if (!addOn) throw new AddOnPurchaseError('unknown_add_on', 400);
 
@@ -384,13 +390,51 @@ export async function getOrganizationAddOnPurchaseStatus(organizationId: string,
     }>();
   if (error) throw classifyProviderFailure('supabase', 'add_on_purchase_status', error);
 
+  if (data?.status === 'active') {
+    return {
+      slug: addOn.slug,
+      status: 'active',
+      active: true,
+      quantity: data.quantity ?? 0,
+      currentPeriodEnd: data.current_period_end ?? null,
+      updatedAt: data.updated_at ?? null,
+      providerBound: Boolean(data.stripe_subscription_item_id && data.stripe_price_id),
+      providerPaymentState: 'paid' as const,
+      hostedInvoiceUrl: null,
+    };
+  }
+
+  let paymentState: 'processing' | 'payment_required' | 'failed' | null = null;
+  let hostedInvoiceUrl: string | null = null;
+  if (invoiceId) {
+    const binding = await getAuthoritativeBinding(organizationId);
+    let invoice: InvoiceWithSubscription;
+    try {
+      invoice = await getStripeClient().invoices.retrieve(invoiceId) as InvoiceWithSubscription;
+    } catch (providerError) {
+      throw classifyProviderFailure('stripe', 'add_on_purchase_status_invoice_retrieve', providerError);
+    }
+
+    if (
+      invoiceSubscriptionId(invoice) !== binding.stripe_subscription_id
+      || stripeObjectId(invoice.customer) !== binding.stripe_customer_id
+    ) {
+      throw new AddOnPurchaseError('stripe_add_on_invoice_binding_mismatch', 403);
+    }
+
+    paymentState = providerPaymentState(invoice);
+    hostedInvoiceUrl = invoice.hosted_invoice_url ?? null;
+  }
+
   return {
     slug: addOn.slug,
-    status: data?.status ?? 'pending',
-    active: data?.status === 'active',
+    status: data?.status ?? (paymentState === 'failed' ? 'failed' : 'pending'),
+    active: false,
     quantity: data?.quantity ?? 0,
     currentPeriodEnd: data?.current_period_end ?? null,
     updatedAt: data?.updated_at ?? null,
     providerBound: Boolean(data?.stripe_subscription_item_id && data?.stripe_price_id),
+    providerPaymentState: paymentState,
+    hostedInvoiceUrl,
   };
 }
