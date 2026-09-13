@@ -1,7 +1,7 @@
 import { unstable_noStore as noStore } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-const DOCUMENT_COLUMNS = 'id,organization_id,name,category,status,expires_at,created_at,updated_at';
+const DOCUMENT_COLUMNS = 'id,organization_id,name,category,status,storage_path,size_bytes,expires_at,created_at,updated_at';
 const DEFAULT_DOCUMENTS_PAGE_SIZE = 50;
 const MAX_DOCUMENTS_PAGE_SIZE = 100;
 
@@ -11,20 +11,25 @@ type DocumentRow = {
   name?: string | null;
   category?: string | null;
   status?: string | null;
+  storage_path?: string | null;
+  size_bytes?: number | null;
   expires_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 };
 
-type NormalizedDocumentRow = Omit<Required<DocumentRow>, 'name' | 'category' | 'status' | 'expires_at' | 'created_at' | 'updated_at'> & {
+type NormalizedDocumentRow = Omit<Required<DocumentRow>, 'name' | 'category' | 'status' | 'storage_path' | 'size_bytes' | 'expires_at' | 'created_at' | 'updated_at'> & {
   name: string | null;
   category: string | null;
   status: string | null;
+  storage_path: string | null;
+  size_bytes: number | null;
   expires_at: string | null;
   created_at: string | null;
   updated_at: string | null;
   title: string;
   version: number;
+  download_available: boolean;
 };
 
 export type ListDocumentsOptions = {
@@ -34,6 +39,8 @@ export type ListDocumentsOptions = {
 
 function normalizeDocumentRow(document: DocumentRow): NormalizedDocumentRow {
   const name = document.name ?? null;
+  const storagePath = document.storage_path?.trim() || null;
+  const sizeBytes = typeof document.size_bytes === 'number' ? document.size_bytes : null;
 
   return {
     id: document.id,
@@ -41,11 +48,14 @@ function normalizeDocumentRow(document: DocumentRow): NormalizedDocumentRow {
     name,
     category: document.category ?? null,
     status: document.status ?? null,
+    storage_path: storagePath,
+    size_bytes: sizeBytes,
     expires_at: document.expires_at ?? null,
     created_at: document.created_at ?? null,
     updated_at: document.updated_at ?? null,
     title: name ?? 'Documento sem título',
     version: 1,
+    download_available: Boolean(storagePath) && (sizeBytes ?? 0) > 0,
   };
 }
 
