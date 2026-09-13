@@ -16,7 +16,7 @@ export type BillingEntitlements = {
 
 type BillingPlanDefinition = {
   name: string;
-  monthlyPriceCents: number;
+  monthlyPriceCents: number | null;
   annualPriceCents: number | null;
   startingMonthlyPriceCents?: number | null;
   monthlyEnvPriceKey?: string;
@@ -70,7 +70,9 @@ export const BILLING_PLANS: Record<BillingPlan, BillingPlanDefinition> = {
   },
   enterprise: {
     name: 'Enterprise',
-    monthlyPriceCents: 0,
+    // Enterprise has no fixed public charge. Keep null as first-class commercial
+    // truth instead of using a €0 sentinel that could leak into APIs or UI.
+    monthlyPriceCents: null,
     annualPriceCents: null,
     startingMonthlyPriceCents: 99000,
     legacyMonthlyEnvPriceKeys: ['STRIPE_PRICE_ENTERPRISE_MONTHLY', 'STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY'],
