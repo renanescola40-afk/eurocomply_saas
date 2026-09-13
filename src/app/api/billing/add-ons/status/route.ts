@@ -4,7 +4,7 @@ import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { getOrganizationAddOnPurchaseStatus, isAddOnPurchaseError } from '@/server/billing/add-on-purchase';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreJson } from '@/server/security/no-store';
-import { requireApiUser, secureApiError } from '@/server/security/api-guards';
+import { requireApiUser, requirePermission, secureApiError } from '@/server/security/api-guards';
 import {
   buildRateLimitSubjectFromRequest,
   checkDistributedRateLimit,
@@ -21,6 +21,12 @@ export async function GET(request: Request) {
     const user = await requireApiUser();
     const organization = await getCurrentOrganizationForUser(user.id);
     if (!organization?.id) return noStoreJson({ error: 'organization_required' }, { status: 403 });
+
+    await requirePermission({
+      userId: user.id,
+      organizationId: organization.id,
+      permission: 'manage_billing',
+    });
 
     const rateLimit = await checkDistributedRateLimit({
       ...buildRateLimitSubjectFromRequest(request, {
