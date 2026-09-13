@@ -87,18 +87,14 @@ describe('Vercel ignored build rule', () => {
     })).toBe(false);
   });
 
-  it('diffs from Vercel last successful deployment before commit-parent fallbacks', () => {
+  it('diffs only from Vercel last successful deployment and otherwise fails open', () => {
     const previous = 'a'.repeat(40);
     expect(vercelGitDiffCandidates(previous)).toEqual([
       ['diff', '--name-only', previous, 'HEAD'],
-      ['diff', '--name-only', 'HEAD^', 'HEAD'],
-      ['diff', '--name-only', 'HEAD~1', 'HEAD'],
     ]);
 
-    expect(vercelGitDiffCandidates('not-a-sha')).toEqual([
-      ['diff', '--name-only', 'HEAD^', 'HEAD'],
-      ['diff', '--name-only', 'HEAD~1', 'HEAD'],
-    ]);
+    expect(vercelGitDiffCandidates('not-a-sha')).toEqual([]);
+    expect(vercelGitDiffCandidates('')).toEqual([]);
   });
 
   it('disables automatic Git deployments so the protected release workflow is the only production authority', () => {

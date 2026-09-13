@@ -78,18 +78,13 @@ export function requiresExactShaVercelBuild({ gitRef = '', targetEnvironment = '
 
 export function vercelGitDiffCandidates(previousSuccessfulSha) {
   const previous = String(previousSuccessfulSha || '').trim().toLowerCase();
-  const refsToTry = [];
 
-  if (FULL_SHA.test(previous)) {
-    refsToTry.push(['diff', '--name-only', previous, 'HEAD']);
-  }
+  // A single-parent diff is unsafe for a branch's first preview: the last commit
+  // can be tests/docs even when earlier commits in the same PR changed runtime
+  // code. Without Vercel's previous successful SHA, fail open and build instead.
+  if (!FULL_SHA.test(previous)) return [];
 
-  refsToTry.push(
-    ['diff', '--name-only', 'HEAD^', 'HEAD'],
-    ['diff', '--name-only', 'HEAD~1', 'HEAD'],
-  );
-
-  return refsToTry;
+  return [['diff', '--name-only', previous, 'HEAD']];
 }
 
 function changedFilesFromGit() {
@@ -100,7 +95,8 @@ function changedFilesFromGit() {
       const output = execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
       return output.split('\n').map((line) => line.trim()).filter(Boolean);
     } catch {
-      // Try the next ref shape. Vercel checkouts can differ for merge commits.
+      // If Vercel's previous deployment SHA is unavailable in the checkout,
+      // return no files so the caller fails open and builds.
     }
   }
 
