@@ -137,7 +137,7 @@ function trustedRequestHeaders(req: NextRequest, requestId: string) {
 }
 
 function nextWithRequestId(req: NextRequest, requestId: string) {
-  const requestHeaders = trustedRequestHeaders(req.headers ? req : req, requestId);
+  const requestHeaders = trustedRequestHeaders(req, requestId);
   return withRequestId(NextResponse.next({ request: { headers: requestHeaders } }), requestId);
 }
 
