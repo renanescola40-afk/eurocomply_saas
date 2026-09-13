@@ -22,6 +22,8 @@ type StatusResponse = {
   status?: string;
   active?: boolean;
   quantity?: number;
+  providerPaymentState?: 'paid' | 'processing' | 'payment_required' | 'failed' | null;
+  hostedInvoiceUrl?: string | null;
   error?: string;
 };
 
@@ -36,6 +38,7 @@ function copy(locale: string) {
   switch (locale) {
     case 'pt':
       return {
+        before: 'Confirme para criar a cobrança do add-on na sua subscrição atual. Nenhum acesso é liberado antes do pagamento.',
         confirm: 'Confirmar e continuar para pagamento',
         opening: 'A preparar pagamento seguro…',
         payStripe: 'Pagar com Stripe',
@@ -43,48 +46,53 @@ function copy(locale: string) {
         confirmed: 'Pagamento confirmado. Add-on ativo.',
         back: 'Voltar para Integrações',
         retry: 'Tentar novamente',
-        failed: 'O pagamento ainda não foi confirmado. Nenhum acesso foi ativado.',
-        stripeWindow: 'O pagamento abre numa página segura do Stripe. Esta página acompanhará a ativação automaticamente.',
+        failed: 'O pagamento não foi concluído. Nenhum acesso foi ativado.',
+        stripeWindow: 'Conclua o pagamento na página segura do Stripe. Esta página acompanhará a ativação automaticamente.',
       };
     case 'es':
       return {
+        before: 'Confirma para crear el cargo del add-on en tu suscripción actual. No se activa ningún acceso antes del pago.',
         confirm: 'Confirmar y continuar al pago', opening: 'Preparando pago seguro…', payStripe: 'Pagar con Stripe',
         waiting: 'Pago en proceso. El acceso solo se activará tras la confirmación de Stripe.',
         confirmed: 'Pago confirmado. Add-on activo.', back: 'Volver a Integraciones', retry: 'Reintentar',
-        failed: 'El pago aún no se ha confirmado. No se ha activado ningún acceso.',
-        stripeWindow: 'El pago se abre en una página segura de Stripe. Esta página seguirá la activación automáticamente.',
+        failed: 'El pago no se completó. No se ha activado ningún acceso.',
+        stripeWindow: 'Completa el pago en la página segura de Stripe. Esta página seguirá la activación automáticamente.',
       };
     case 'fr':
       return {
+        before: 'Confirmez pour créer la facturation de l’add-on sur votre abonnement actuel. Aucun accès n’est activé avant paiement.',
         confirm: 'Confirmer et continuer vers le paiement', opening: 'Préparation du paiement sécurisé…', payStripe: 'Payer avec Stripe',
         waiting: 'Paiement en cours. L’accès ne sera activé qu’après confirmation par Stripe.',
         confirmed: 'Paiement confirmé. Add-on actif.', back: 'Retour aux Intégrations', retry: 'Réessayer',
-        failed: 'Le paiement n’est pas encore confirmé. Aucun accès n’a été activé.',
-        stripeWindow: 'Le paiement s’ouvre sur une page Stripe sécurisée. Cette page suivra automatiquement l’activation.',
+        failed: 'Le paiement n’a pas abouti. Aucun accès n’a été activé.',
+        stripeWindow: 'Terminez le paiement sur la page Stripe sécurisée. Cette page suivra automatiquement l’activation.',
       };
     case 'it':
       return {
+        before: 'Conferma per creare l’addebito dell’add-on sull’abbonamento attuale. Nessun accesso viene attivato prima del pagamento.',
         confirm: 'Conferma e continua al pagamento', opening: 'Preparazione del pagamento sicuro…', payStripe: 'Paga con Stripe',
         waiting: 'Pagamento in elaborazione. L’accesso sarà attivato solo dopo la conferma di Stripe.',
         confirmed: 'Pagamento confermato. Add-on attivo.', back: 'Torna a Integrazioni', retry: 'Riprova',
-        failed: 'Il pagamento non è ancora confermato. Nessun accesso è stato attivato.',
-        stripeWindow: 'Il pagamento si apre su una pagina Stripe sicura. Questa pagina monitorerà automaticamente l’attivazione.',
+        failed: 'Il pagamento non è stato completato. Nessun accesso è stato attivato.',
+        stripeWindow: 'Completa il pagamento sulla pagina Stripe sicura. Questa pagina monitorerà automaticamente l’attivazione.',
       };
     case 'de':
       return {
+        before: 'Bestätigen Sie, um die Add-on-Abrechnung für Ihr bestehendes Abonnement zu erstellen. Vor Zahlung wird kein Zugriff aktiviert.',
         confirm: 'Bestätigen und zur Zahlung fortfahren', opening: 'Sichere Zahlung wird vorbereitet…', payStripe: 'Mit Stripe bezahlen',
         waiting: 'Zahlung wird verarbeitet. Zugriff wird erst nach Stripe-Bestätigung aktiviert.',
         confirmed: 'Zahlung bestätigt. Add-on aktiv.', back: 'Zurück zu Integrationen', retry: 'Erneut versuchen',
-        failed: 'Die Zahlung ist noch nicht bestätigt. Es wurde kein Zugriff aktiviert.',
-        stripeWindow: 'Die Zahlung öffnet sich auf einer sicheren Stripe-Seite. Diese Seite verfolgt die Aktivierung automatisch.',
+        failed: 'Die Zahlung wurde nicht abgeschlossen. Es wurde kein Zugriff aktiviert.',
+        stripeWindow: 'Schließen Sie die Zahlung auf der sicheren Stripe-Seite ab. Diese Seite verfolgt die Aktivierung automatisch.',
       };
     default:
       return {
+        before: 'Confirm to create the add-on charge on your existing subscription. No access is activated before payment.',
         confirm: 'Confirm and continue to payment', opening: 'Preparing secure payment…', payStripe: 'Pay with Stripe',
         waiting: 'Payment is processing. Access activates only after Stripe confirms payment.',
         confirmed: 'Payment confirmed. Add-on active.', back: 'Back to Integrations', retry: 'Try again',
-        failed: 'Payment has not been confirmed. No access has been activated.',
-        stripeWindow: 'Payment opens on a secure Stripe page. This page will automatically track activation.',
+        failed: 'Payment was not completed. No access has been activated.',
+        stripeWindow: 'Complete payment on Stripe’s secure page. This page will automatically track activation.',
       };
   }
 }
@@ -98,12 +106,17 @@ export function AddOnPurchaseClient({ locale, addOnSlug, addOnName, quantity }: 
   const [starting, setStarting] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [active, setActive] = useState(false);
+  const [invoiceId, setInvoiceId] = useState<string | null>(null);
   const [hostedInvoiceUrl, setHostedInvoiceUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const idempotencyKey = useRef<string | null>(null);
 
-  const pollStatus = useCallback(async () => {
-    const response = await fetch(`/api/billing/add-ons/status?addon=${encodeURIComponent(addOnSlug)}`, {
+  const pollStatus = useCallback(async (invoiceOverride?: string | null) => {
+    const providerInvoiceId = invoiceOverride ?? invoiceId;
+    const query = new URLSearchParams({ addon: addOnSlug });
+    if (providerInvoiceId) query.set('invoice', providerInvoiceId);
+
+    const response = await fetch(`/api/billing/add-ons/status?${query.toString()}`, {
       method: 'GET',
       cache: 'no-store',
       headers: { Accept: 'application/json' },
@@ -117,11 +130,21 @@ export function AddOnPurchaseClient({ locale, addOnSlug, addOnName, quantity }: 
       setError(null);
       return;
     }
-    if (json.status === 'past_due' || json.status === 'cancelled' || json.status === 'failed') {
+
+    if (typeof json.hostedInvoiceUrl === 'string') setHostedInvoiceUrl(json.hostedInvoiceUrl);
+
+    if (json.providerPaymentState === 'failed' || json.status === 'failed' || json.status === 'cancelled') {
       setProcessing(false);
       setError(text.failed);
+      idempotencyKey.current = null;
+      return;
     }
-  }, [addOnSlug, text.failed]);
+
+    if (json.providerPaymentState === 'payment_required') {
+      setProcessing(true);
+      setError(null);
+    }
+  }, [addOnSlug, invoiceId, text.failed]);
 
   useEffect(() => {
     if (!processing || active) return;
@@ -163,9 +186,11 @@ export function AddOnPurchaseClient({ locale, addOnSlug, addOnName, quantity }: 
         return;
       }
 
+      const nextInvoiceId = typeof result.json.invoiceId === 'string' ? result.json.invoiceId : null;
+      setInvoiceId(nextInvoiceId);
       setHostedInvoiceUrl(typeof result.json.hostedInvoiceUrl === 'string' ? result.json.hostedInvoiceUrl : null);
       setProcessing(true);
-      await pollStatus();
+      await pollStatus(nextInvoiceId);
     } catch {
       setError(text.failed);
       idempotencyKey.current = null;
@@ -195,7 +220,7 @@ export function AddOnPurchaseClient({ locale, addOnSlug, addOnName, quantity }: 
     <section className="space-y-4 rounded-2xl border border-white/[0.08] bg-[#101715] p-5">
       <div className="flex items-start gap-3 text-sm text-white/55">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
-        <p>{hostedInvoiceUrl ? text.stripeWindow : text.waiting}</p>
+        <p>{processing ? (hostedInvoiceUrl ? text.stripeWindow : text.waiting) : text.before}</p>
       </div>
 
       {error ? (
