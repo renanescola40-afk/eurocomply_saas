@@ -1,6 +1,7 @@
 # Legal Safe Messaging
 
 Date: 2026-07-06
+Last updated: 2026-09-13
 Brand: RISCK COMPLY
 
 ## Principle
@@ -35,7 +36,14 @@ RISCK COMPLY supports organization, workflows and evidence preparation. It does 
 
 ## Plan names
 
-Customer-facing plan names should be Starter, Growth and Enterprise. Legacy aliases can remain in code for billing compatibility, but should not be visible to customers.
+Customer-facing plan names are Essential, Professional, Business and Enterprise. `starter` and `growth` may remain only as internal/legacy billing identifiers where compatibility requires them; they must not replace the current customer-facing names.
+
+Commercial positioning:
+
+- Essential — fixed self-serve plan;
+- Professional — fixed self-serve plan;
+- Business — fixed catalog price with sales-assisted purchase policy;
+- Enterprise — contract/sales-assisted with a starting commercial reference rather than a fixed public checkout price.
 
 ## Trust language
 
