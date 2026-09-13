@@ -2,7 +2,7 @@
 
 - Status: Proposed
 - Date: 2026-07-20
-- Last updated: 2026-09-06
+- Last updated: 2026-09-13
 - Priority: P1 security, tenant integrity, and AI-governance accountability
 
 ## Context
@@ -11,7 +11,9 @@
 
 Direct client writes bypass reviewed server-side controls that may be required for a material assessment workflow, including trusted-origin enforcement, bounded request validation, distributed throttling, lifecycle rules, durable audit behavior, and future separation-of-duties checks.
 
-A 2026-09-06 repository revalidation found one direct browser `ai_assessments` INSERT in `src/dashboard/page.tsx`. That file is legacy source outside the active Next.js App Router route tree. The canonical `src/app/[locale]/dashboard/page.tsx` does not import it and redirects to `/{locale}/dashboard/organizations`; repository search also found no `@/dashboard` import. The legacy file therefore does not establish a supported current App Router mutation contract, but its presence is recorded explicitly rather than represented as absent. Security/runtime test scripts also exercise client DML intentionally as validation code; they are not product writers.
+A 2026-09-06 repository revalidation found one direct browser `ai_assessments` INSERT in `src/dashboard/page.tsx`. That file was legacy source outside the active Next.js App Router route tree: the canonical `src/app/[locale]/dashboard/page.tsx` did not import it and redirected to `/{locale}/dashboard/organizations`, and repository search found no `@/dashboard` import.
+
+On 2026-09-13 the non-routed `src/dashboard/page.tsx` legacy surface was removed during commercial-surface cleanup. The removal eliminates that dormant direct-insert implementation from repository source; it does not by itself prove that Production database privileges or policies have changed. Security/runtime test scripts may still exercise client DML intentionally as validation code; they are not product writers.
 
 This is a repository and read-only Production review finding. It does not establish exploitation, customer impact, historical data quality, penetration-test results, regulatory non-compliance, or successful Production deployment of the proposed hardening.
 
@@ -31,14 +33,14 @@ The migration:
 
 ## Impact
 
-A signed-in browser can continue reading assessments permitted by RLS but can no longer create, change, or delete assessment rows directly through PostgREST. Trusted backend code using the service role remains capable of performing reviewed mutations.
+A signed-in browser can continue reading assessments permitted by RLS but can no longer create, change, or delete assessment rows directly through PostgREST after the proposed database hardening is promoted.
 
-The legacy `src/dashboard/page.tsx` assessment-create handler would fail if that non-routed legacy surface were reintroduced without a reviewed backend mutation path. That is intentional fail-closed behavior: reactivating legacy UI must not silently reactivate direct database authority.
+The legacy `src/dashboard/page.tsx` assessment-create handler no longer exists in repository source. Any future user-visible assessment-create surface must use a reviewed backend mutation path; reintroducing direct browser DML is explicitly outside this decision.
 
 ## Risks and trade-offs
 
-- Any external or undocumented client that directly mutates `ai_assessments` will fail after deployment.
-- The repository still contains a non-routed legacy direct-insert handler. It is retained for now because deleting/refactoring unrelated legacy UI is outside final-acceptance scope; its existence is not permission to keep Production client DML open.
+- Any external or undocumented client that directly mutates `ai_assessments` will fail after deployment of the database hardening.
+- Removing the dormant legacy dashboard eliminates one known repository-side direct-insert path but does not substitute for revoking direct database DML authority in Production.
 - This change establishes a database boundary; it does not create a new assessment mutation API.
 - Service-role writers must still implement authorization, validation, audit, tenant scope, and workflow rules correctly.
 - Static migration tests and repository route inspection do not prove that Supabase has applied the migration or that live PostgREST behavior matches the proposed contract.
@@ -52,7 +54,8 @@ Before promotion, the exact release head must verify:
 - service-role CRUD remains available;
 - RLS and FORCE RLS remain enabled;
 - the restrictive mutation-deny policies exist;
-- the canonical App Router dashboard remains independent of the legacy `src/dashboard/page.tsx` writer;
+- repository search confirms that the removed legacy `src/dashboard/page.tsx` writer has not been reintroduced;
+- the canonical App Router dashboard remains free of direct browser `ai_assessments` mutation authority;
 - repository-required checks are green on the exact head.
 
 No Production migration execution, runtime acceptance, audit, certification, or penetration-test result is claimed until its corresponding protected evidence gate succeeds.
@@ -61,4 +64,4 @@ No Production migration execution, runtime acceptance, audit, certification, or 
 
 Before deployment, revert the migration/test changes and this decision update together if the authority decision is rejected.
 
-After deployment, use a reviewed forward migration rather than rewriting migration history. Restoring authenticated DML or role-based write authority deliberately reopens the direct-write bypass and requires documented security acceptance plus verification that every client mutation path enforces equivalent backend controls. If the legacy dashboard is ever reactivated, route assessment mutation through a reviewed backend authority before restoring user-visible create behavior.
+After deployment, use a reviewed forward migration rather than rewriting migration history. Restoring authenticated DML or role-based write authority deliberately reopens the direct-write bypass and requires documented security acceptance plus verification that every client mutation path enforces equivalent backend controls. If a legacy dashboard or any new assessment-create UI is introduced, route assessment mutation through a reviewed backend authority before restoring user-visible create behavior.
