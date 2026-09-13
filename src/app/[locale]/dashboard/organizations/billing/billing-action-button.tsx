@@ -18,6 +18,7 @@ type BillingActionButtonProps = {
   locale: string;
   planId?: string;
   addOns?: AddOnSelection[];
+  preserveExistingAddOns?: boolean;
   disabled?: boolean;
   children: ReactNode;
   variant?: 'default' | 'outline';
@@ -159,7 +160,7 @@ async function verifyStepUpChallenge(body: Record<string, unknown>) {
   return json.token;
 }
 
-async function getBillingStepUpToken(locale: string) {
+export async function getBillingStepUpToken(locale: string) {
   const copy = getStepUpCopy(locale);
   const initialChallenge = await createStepUpChallenge({ action: 'manage_billing' });
 
@@ -191,6 +192,7 @@ async function requestBillingAction({
   locale,
   planId,
   addOns,
+  preserveExistingAddOns,
   idempotencyKey,
   stepUpToken,
 }: {
@@ -198,6 +200,7 @@ async function requestBillingAction({
   locale: string;
   planId?: string;
   addOns?: AddOnSelection[];
+  preserveExistingAddOns?: boolean;
   idempotencyKey: string;
   stepUpToken?: string;
 }) {
@@ -214,7 +217,7 @@ async function requestBillingAction({
       body: JSON.stringify({
         action: 'replace_add_ons',
         addOns: addOns ?? [],
-        preserveExistingAddOns: true,
+        preserveExistingAddOns: preserveExistingAddOns ?? true,
       }),
     });
     return { response, json: await readJson(response) };
@@ -231,7 +234,7 @@ async function requestBillingAction({
   return { response, json };
 }
 
-export function BillingActionButton({ action, locale, planId, addOns, disabled, children, variant = 'default', className, errorReturnHref }: BillingActionButtonProps) {
+export function BillingActionButton({ action, locale, planId, addOns, preserveExistingAddOns, disabled, children, variant = 'default', className, errorReturnHref }: BillingActionButtonProps) {
   const [loading, setLoading] = useState(false);
   const [paidGaUnavailable, setPaidGaUnavailable] = useState<string | null>(null);
 
@@ -239,16 +242,33 @@ export function BillingActionButton({ action, locale, planId, addOns, disabled, 
     event.preventDefault();
     if (disabled || loading) return;
 
+    const purchaseSelection = action === 'replace_add_ons'
+      && preserveExistingAddOns !== false
+      && addOns?.length === 1
+      ? addOns[0]
+      : null;
+
+    // Adding an add-on is a purchase intent, not a billing mutation. Route the
+    // buyer through the provider-priced review/payment flow first. Explicit
+    // replacement/removal keeps using the protected lifecycle directly.
+    if (purchaseSelection) {
+      const checkout = new URL(`/${locale}/dashboard/organizations/add-ons/checkout`, window.location.origin);
+      checkout.searchParams.set('addon', purchaseSelection.slug);
+      checkout.searchParams.set('quantity', String(purchaseSelection.quantity));
+      window.location.assign(`${checkout.pathname}${checkout.search}`);
+      return;
+    }
+
     setLoading(true);
     setPaidGaUnavailable(null);
     const idempotencyKey = crypto.randomUUID();
 
     try {
-      let { response, json } = await requestBillingAction({ action, locale, planId, addOns, idempotencyKey });
+      let { response, json } = await requestBillingAction({ action, locale, planId, addOns, preserveExistingAddOns, idempotencyKey });
 
       if (response.status === 403 && json.error === 'step_up_required') {
         const stepUpToken = await getBillingStepUpToken(locale);
-        ({ response, json } = await requestBillingAction({ action, locale, planId, addOns, idempotencyKey, stepUpToken }));
+        ({ response, json } = await requestBillingAction({ action, locale, planId, addOns, preserveExistingAddOns, idempotencyKey, stepUpToken }));
       }
 
       if (!response.ok && json.error === PUBLIC_PAID_GA_ERROR_CODE) {

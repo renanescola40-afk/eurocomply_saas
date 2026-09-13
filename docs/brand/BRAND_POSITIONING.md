@@ -1,6 +1,7 @@
 # RISCK COMPLY Brand Positioning
 
 Date: 2026-07-06
+Last updated: 2026-09-13
 
 ## Primary brand
 
@@ -62,7 +63,9 @@ Recommended: AI Act readiness support, governance evidence preparation and risk 
 
 ## Product naming
 
-Visible plan names: Starter, Growth and Enterprise.
+Visible plan names: Essential, Professional, Business and Enterprise.
+
+Internal compatibility identifiers such as `starter` and `growth` may remain where removing them would break existing subscriptions or migrations, but customer-facing copy must use the current plan names.
 
 Visible modules: AI Inventory, Risk Visibility, Evidence Preparation, Governance Workflows, Trust Center and Audit Trail.
 

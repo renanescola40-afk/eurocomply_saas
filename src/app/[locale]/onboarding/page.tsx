@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 
 import { OnboardingRuntimeBoundary as B2BOnboardingFlowRuntimeBoundary } from '@/components/onboarding/onboarding-runtime-boundary';
 import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
+import { getCommercialSurfaceCopy } from '@/lib/i18n/commercial-surface-copy';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { toOnboardingMutationFailure, type OnboardingMutationResult } from '@/lib/onboarding/action-failure';
 import { slugifyOrganization, type OnboardingActivationInput, type OnboardingDraftInput } from '@/lib/onboarding/activation';
@@ -172,6 +173,7 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
     searchParams ?? Promise.resolve(emptySearchParams),
   ]);
   const safeLocale = getSafeLocale(locale);
+  const pricingCopy = getCommercialSurfaceCopy(safeLocale).pricing;
   const planQuery = getPlanQuery(resolvedSearchParams.plan);
   const requestedPlan = getOnboardingPlanIntent(resolvedSearchParams.plan);
   const requestedBillingPlan = getBillingPlan(resolvedSearchParams.plan) ?? getBillingPlan('professional')!;
@@ -277,7 +279,11 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
                 >
                   {BILLING_PLANS.map((plan) => (
                     <option key={plan.id} value={plan.id}>
-                      {plan.name}{plan.priceMonthly !== null ? ` — €${plan.priceMonthly}/mo` : ''}
+                      {plan.name}{plan.priceMonthly !== null
+                        ? ` — €${plan.priceMonthly}${pricingCopy.month}`
+                        : plan.startingPriceMonthly != null
+                          ? ` — ${pricingCopy.from} €${plan.startingPriceMonthly}${pricingCopy.month}`
+                          : ''}
                     </option>
                   ))}
                 </select>

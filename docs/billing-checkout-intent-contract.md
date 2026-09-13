@@ -10,7 +10,7 @@ This document describes the non-sensitive checkout intent layer used before a re
 
 ```json
 {
-  "planId": "growth"
+  "planId": "professional"
 }
 ```
 
@@ -31,24 +31,21 @@ Required controls:
 
 ## Supported plan ids
 
-Canonical self-serve billing plan ids:
+Current canonical catalog ids:
 
-- `starter`
-- `growth`
-- `enterprise`
+- `starter` — Essential, self-serve;
+- `professional` — Professional, self-serve;
+- `business` — Business, sales-assisted;
+- `enterprise` — Enterprise, contract/sales-assisted.
 
-Legacy/commercial aliases may still be accepted for backwards compatibility, but public pricing and checkout links must use canonical ids only. This prevents a public pricing label from pointing at a different Stripe price than the one the buyer sees.
+Legacy/commercial aliases remain accepted for backwards compatibility where the shared catalog normalizer is used:
 
-Canonical plan mapping:
+- `essential` -> `starter`;
+- `growth` -> `professional`;
+- `pro` -> `professional`;
+- `basic` / `free` -> `starter`.
 
-- `starter` -> `starter`
-- `growth` -> `growth`
-- `enterprise` -> `enterprise`
-
-Legacy alias mapping:
-
-- `essential` -> `starter`
-- `professional` / `pro` / `business` -> `growth`
+Business is not an alias for Professional. Enterprise has no fixed public checkout price; it carries a starting commercial reference and remains sales-assisted. Public pricing and checkout links should use the current catalog ids rather than legacy Starter/Growth-era aliases.
 
 ## Response shape
 
@@ -57,10 +54,11 @@ Legacy alias mapping:
   "ok": true,
   "checkoutIntent": {
     "plan": {
-      "id": "growth",
-      "name": "Growth",
+      "id": "professional",
+      "name": "Professional",
       "priceMonthly": 149,
-      "targetEntitlementPlan": "professional"
+      "targetEntitlementPlan": "professional",
+      "salesLed": false
     },
     "organization": {
       "id": "org-id",
@@ -68,12 +66,16 @@ Legacy alias mapping:
       "slug": "organization-slug"
     },
     "currentPlan": "starter",
+    "licensed": true,
+    "authoritySource": "stripe",
     "alreadyOnPlan": false,
     "checkoutReady": true,
     "nextAction": "create_checkout_session"
   }
 }
 ```
+
+For Business or Enterprise, `checkoutReady` remains false and `nextAction` is `contact_sales`.
 
 ## Error responses
 
@@ -87,21 +89,19 @@ Legacy alias mapping:
 
 `scripts/security/check-billing-checkout-intent.mjs` verifies that this route keeps RBAC, rate limiting, Origin validation, bounded JSON parsing and no-store responses. It is delegated from `security:enterprise-api`, which runs inside `security:ci`.
 
-## Codex implementation notes
+## Implementation notes
 
-When wiring the real checkout session:
-
-1. Keep this route as the validation gate.
+1. Keep this route as the authorization/readiness gate.
 2. Do not return provider secrets or price identifiers to the client.
-3. If `checkoutReady` is false and `nextAction` is `configure_plan_price`, show a safe admin/support message rather than failing silently.
-4. Create the provider checkout session only after validating user, organization, canonical plan, target entitlement and `manage_billing` permission.
-5. Include metadata in the provider session/subscription so the webhook can persist:
+3. If `checkoutReady` is false, use `nextAction` to render the truthful sales-assisted or configuration state rather than failing silently.
+4. Create provider checkout sessions only after validating user, organization, canonical plan, target entitlement and `manage_billing` permission.
+5. Include metadata in provider session/subscription so signed webhook reconciliation can persist:
    - `organization_id`
    - `plan`
    - `user_id`
-6. The existing billing webhook should update the organization subscription state only after the provider confirms payment/subscription status.
-7. Add-on purchases should write to `organization_add_ons` through the webhook using item or price metadata such as `add_on_id`.
+6. The billing webhook updates organization subscription authority only after provider confirmation.
+7. Add-on purchases reconcile into `organization_add_ons` from signed provider subscription-item truth, not from browser state.
 
 ## Current status
 
-The route validates intent but does not create the real provider checkout session. It is intentionally kept as an authorization and readiness gate in front of the sensitive checkout creation API.
+The route validates intent and commercial readiness. Actual self-serve checkout creation is owned by the protected billing checkout endpoint and remains subject to the current paid-GA / release gates. Business and Enterprise remain sales-assisted by catalog policy.

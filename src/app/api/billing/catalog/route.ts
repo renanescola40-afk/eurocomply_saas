@@ -45,12 +45,12 @@ export async function GET(request: Request) {
       id,
       publicId: PUBLIC_PLAN_IDS[id as keyof typeof PUBLIC_PLAN_IDS],
       name: plan.name,
-      monthlyPriceCents: plan.monthlyPriceCents || null,
+      monthlyPriceCents: plan.monthlyPriceCents ?? null,
       // Annual values remain internal commercial references while the lifecycle
       // endpoint deliberately rejects annual self-service mutations. Publishing
       // them here would advertise a checkout option the runtime does not offer.
       annualPriceCents: null,
-      startingMonthlyPriceCents: plan.startingMonthlyPriceCents ?? (plan.monthlyPriceCents || null),
+      startingMonthlyPriceCents: plan.startingMonthlyPriceCents ?? plan.monthlyPriceCents ?? null,
       selfServe: plan.selfServe,
       salesLed: plan.salesLed,
       // Export count is intentionally not published until a durable monthly

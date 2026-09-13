@@ -54,13 +54,30 @@ describe('enterprise pricing catalog', () => {
       expect(plan?.salesLed).toBe(commercial.salesLed);
 
       expect(serverPlan.name).toBe(commercial.name);
-      expect(serverPlan.monthlyPriceCents || null).toBe(commercial.monthlyPriceCents);
+      expect(serverPlan.monthlyPriceCents ?? null).toBe(commercial.monthlyPriceCents);
       expect(serverPlan.annualPriceCents).toBe(commercial.annualPriceCents);
-      expect(serverPlan.startingMonthlyPriceCents ?? (serverPlan.monthlyPriceCents || null))
+      expect(serverPlan.startingMonthlyPriceCents ?? serverPlan.monthlyPriceCents ?? null)
         .toBe(commercial.startingMonthlyPriceCents ?? commercial.monthlyPriceCents);
       expect(serverPlan.selfServe).toBe(commercial.selfServe);
       expect(serverPlan.salesLed).toBe(commercial.salesLed);
     }
+  });
+
+  it('never uses zero as a sentinel for a paid commercial plan', () => {
+    for (const plan of BILLING_PLANS) {
+      if (plan.priceMonthly !== null) expect(plan.priceMonthly).toBeGreaterThan(0);
+      if (plan.priceAnnual !== null) expect(plan.priceAnnual).toBeGreaterThan(0);
+      if (plan.startingPriceMonthly != null) expect(plan.startingPriceMonthly).toBeGreaterThan(0);
+    }
+
+    for (const plan of Object.values(SERVER_BILLING_PLANS)) {
+      if (plan.monthlyPriceCents !== null) expect(plan.monthlyPriceCents).toBeGreaterThan(0);
+      if (plan.annualPriceCents !== null) expect(plan.annualPriceCents).toBeGreaterThan(0);
+      if (plan.startingMonthlyPriceCents != null) expect(plan.startingMonthlyPriceCents).toBeGreaterThan(0);
+    }
+
+    expect(SERVER_BILLING_PLANS.enterprise.monthlyPriceCents).toBeNull();
+    expect(SERVER_BILLING_PLANS.enterprise.startingMonthlyPriceCents).toBe(99000);
   });
 
   it('keeps legacy names compatible without collapsing Business into Professional', () => {
@@ -107,6 +124,7 @@ describe('add-on catalog', () => {
     expect(getBillingAddOn('extra-user')?.priceMonthly).toBe(8);
     expect(getBillingAddOn('white-label')?.priceMonthly).toBe(299);
     expect(getBillingAddOn('extra-storage-100gb')?.priceAnnual).toBe(190);
+    expect(BILLING_ADD_ONS.every((addOn) => addOn.priceMonthly > 0 && addOn.priceAnnual > 0)).toBe(true);
     expect(BILLING_ADD_ONS.filter((addOn) => addOn.status === 'active').map((addOn) => addOn.slug)).toEqual([
       'regulatory-monitoring-pro',
       'ai-literacy-hub',
