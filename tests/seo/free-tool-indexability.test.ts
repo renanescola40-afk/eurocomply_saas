@@ -38,6 +38,18 @@ describe('free-tool indexability authority', () => {
     expect(toolsPage).not.toContain('Planned');
   });
 
+  it('keeps explicit CTA attribution on every live free-tool card', () => {
+    for (const ctaId of [
+      'tool-ai-act-readiness-start',
+      'tool-article-50-transparency-open',
+      'tool-provider-vs-deployer-open',
+      'tool-ai-governance-maturity-open',
+    ]) {
+      expect(toolsPage).toContain(`ctaId: '${ctaId}'`);
+    }
+    expect(toolsPage).toContain('data-cta-id={tool.ctaId}');
+  });
+
   it('does not manufacture localized free-tool sitemap variants', () => {
     expect(sitemap).toContain('englishGrowthPaths');
     expect(sitemap).not.toContain("localizedUrl(appUrl, 'de', '/tools");
