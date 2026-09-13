@@ -75,12 +75,13 @@ describe('international SEO acquisition architecture', () => {
     expect(helpers).toContain('getFeaturePath');
   });
 
-  it('keeps feature pages public, cached and discoverable in the sitemap', () => {
+  it('keeps feature and tool pages public, cached and discoverable in the sitemap', () => {
     const middleware = read('src/middleware.ts');
     const nextConfig = read('next.config.ts');
     const sitemap = read('src/app/sitemap.ts');
 
-    expect(middleware).toContain("PUBLIC_ROUTE_PREFIXES = ['/features/']");
+    expect(middleware).toMatch(/PUBLIC_ROUTE_PREFIXES\s*=\s*\[[^\]]*'\/features\/'/s);
+    expect(middleware).toMatch(/PUBLIC_ROUTE_PREFIXES\s*=\s*\[[^\]]*'\/tools\/'/s);
     expect(nextConfig).toContain('/features/:path*');
     expect(sitemap).toContain('getFeaturePages');
     expect(sitemap).toContain('getFeatureLanguageAlternates');
