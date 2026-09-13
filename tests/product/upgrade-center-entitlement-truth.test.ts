@@ -32,9 +32,25 @@ describe('upgrade center entitlement truth', () => {
     expect(page).toContain('action="replace_add_ons"');
     expect(billingButton).toContain("fetch('/api/billing/subscription'");
     expect(billingButton).toContain("action: 'replace_add_ons'");
-    expect(billingButton).toContain('preserveExistingAddOns: true');
+    expect(billingButton).toContain('preserveExistingAddOns: preserveExistingAddOns ?? true');
     expect(billingButton).toContain('Idempotency-Key');
     expect(billingButton).toContain("json.error === 'step_up_required'");
+  });
+
+  it('removes one active add-on by replacing provider add-ons while preserving the base subscription', () => {
+    const page = read('src/app/[locale]/dashboard/organizations/add-ons/page.tsx');
+    const billingButton = read('src/app/[locale]/dashboard/organizations/billing/billing-action-button.tsx');
+    const lifecycle = read('src/server/billing/subscription-lifecycle.ts');
+
+    expect(page).toContain('activeAddOnSelections.filter((selection) => selection.slug !== addOn.slug)');
+    expect(page).toContain('addOns={remainingAddOns}');
+    expect(page).toContain('preserveExistingAddOns={false}');
+    expect(page).toContain('commerce.remove(addOn.name)');
+    expect(billingButton).toContain('preserveExistingAddOns?: boolean');
+    expect(lifecycle).toContain("{ id: baseItem.id, price: getStripePriceId(targetPlan, interval), quantity: 1 }");
+    expect(lifecycle).toContain(".filter((item) => item.id !== baseItem.id)");
+    expect(lifecycle).toContain("deleted: true as const");
+    expect(lifecycle).toContain('...buildAddOnItems(addOns, interval)');
   });
 
   it('routes locked capability UX through the organization Upgrade Center first', () => {
