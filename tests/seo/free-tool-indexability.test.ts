@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 const sitemap = readFileSync(join(process.cwd(), 'src/app/sitemap.ts'), 'utf8');
 const config = readFileSync(join(process.cwd(), 'next.config.ts'), 'utf8');
+const middleware = readFileSync(join(process.cwd(), 'src/middleware.ts'), 'utf8');
 const toolsPage = readFileSync(join(process.cwd(), 'src/app/[locale]/tools/page.tsx'), 'utf8');
 const assessmentPage = readFileSync(join(process.cwd(), 'src/app/[locale]/tools/ai-act-readiness/page.tsx'), 'utf8');
 const article50Page = readFileSync(join(process.cwd(), 'src/app/[locale]/tools/article-50-transparency/page.tsx'), 'utf8');
@@ -21,6 +22,11 @@ describe('free-tool indexability authority', () => {
     expect(sitemap).toContain("'/tools/provider-vs-deployer'");
     expect(sitemap).toContain("'/tools/ai-governance-maturity'");
     expect(sitemap).toContain("{ en: url, 'x-default': url }");
+  });
+
+  it('keeps the tools hub and nested free tools publicly reachable before auth gating', () => {
+    expect(middleware).toContain("'/tools',");
+    expect(middleware).toContain("PUBLIC_ROUTE_PREFIXES = ['/features/', '/tools/']");
   });
 
   it('surfaces every live free tool from the discovery hub instead of labeling it planned', () => {
