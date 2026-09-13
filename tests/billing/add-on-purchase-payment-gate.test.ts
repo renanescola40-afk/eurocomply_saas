@@ -35,7 +35,8 @@ describe('add-on purchase payment authority', () => {
     expect(purchase).toContain('context.stripe.subscriptions.update(');
     expect(purchase).toContain("payment_behavior: 'pending_if_incomplete'");
     expect(purchase).toContain("proration_behavior: 'always_invoice'");
-    expect(purchase).toContain("context.subscription.collection_method !== 'charge_automatically'");
+    expect(purchase).toContain("subscription.collection_method !== 'charge_automatically'");
+    expect(purchase).toContain("throw new AddOnPurchaseError('sales_assisted_collection_required')");
     expect(purchase).not.toContain('subscriptions.create(');
     expect(purchase).not.toContain('checkout.sessions.create(');
   });
@@ -87,6 +88,7 @@ describe('add-on purchase payment authority', () => {
     expect(client).toContain('target="_blank"');
     expect(client).toContain('window.setInterval');
     expect(status).toContain('getOrganizationAddOnPurchaseStatus');
+    expect(status).toContain("permission: 'manage_billing'");
     expect(status).toContain('parsedInvoice.data');
     expect(status).toContain('noStoreJson(result)');
   });
