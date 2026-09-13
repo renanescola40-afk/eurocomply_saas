@@ -76,9 +76,12 @@ export async function POST(request: Request) {
     });
 
     return noStoreJson({
-      ...result,
+      outcome: result.outcome,
+      paymentState: result.paymentState,
+      invoiceId: result.invoiceId,
+      hostedInvoiceUrl: result.hostedInvoiceUrl,
       // The browser receives payment navigation/processing state only. It never
-      // receives or writes an entitlement grant.
+      // receives or writes an entitlement grant or provider secret.
       entitlementGranted: false,
       stepUp: publicStepUpSummary(stepUp.assessment),
     });
