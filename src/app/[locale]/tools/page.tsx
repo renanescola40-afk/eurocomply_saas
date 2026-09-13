@@ -16,6 +16,7 @@ const tools = [
     description:
       'Score eight operational governance dimensions across inventory, accountability, provider/deployer role mapping, risk review, transparency, oversight, vendor governance and evidence.',
     cta: 'Run the readiness assessment',
+    ctaId: 'tool-ai-act-readiness-start',
   },
   {
     href: '/en/tools/article-50-transparency',
@@ -23,6 +24,7 @@ const tools = [
     description:
       'Map direct AI interaction, synthetic-content and deployer scenarios that may require a transparency review without turning an automated tool into legal advice.',
     cta: 'Open the Article 50 checker',
+    ctaId: 'tool-article-50-transparency-open',
   },
   {
     href: '/en/tools/provider-vs-deployer',
@@ -30,6 +32,7 @@ const tools = [
     description:
       'Structure provider and deployer role signals under Article 3 before routing ambiguous or mixed value-chain questions to qualified legal review.',
     cta: 'Map provider and deployer signals',
+    ctaId: 'tool-provider-vs-deployer-open',
   },
   {
     href: '/en/tools/ai-governance-maturity',
@@ -37,6 +40,7 @@ const tools = [
     description:
       'Assess governance model, inventory, risk decisions, evidence readiness, vendor governance and monitoring across six operating dimensions.',
     cta: 'Assess governance maturity',
+    ctaId: 'tool-ai-governance-maturity-open',
   },
 ] as const;
 
@@ -84,6 +88,7 @@ export default async function ToolsPage({ params }: ToolsPageProps) {
               <div className="mt-7">
                 <Link
                   href={tool.href}
+                  data-cta-id={tool.ctaId}
                   className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
                 >
                   {tool.cta}
