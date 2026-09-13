@@ -48,7 +48,7 @@ describe('add-on purchase payment authority', () => {
     expect(route).toContain('entitlementGranted: false');
     expect(purchase).toContain('browserEntitlementGranted: false');
     expect(purchase).not.toMatch(/organization_add_ons['"]\)\.upsert/);
-    expect(client).toContain('/api/billing/add-ons/status?addon=');
+    expect(client).toContain('/api/billing/add-ons/status?');
     expect(client).toContain('json.active === true');
   });
 
@@ -74,16 +74,20 @@ describe('add-on purchase payment authority', () => {
     expect(route).toContain("error: 'add_on_checkout_not_enabled'");
   });
 
-  it('uses the Stripe hosted invoice flow for customer payment and keeps polling canonical status', () => {
+  it('uses the Stripe hosted invoice flow and validates invoice status against tenant billing authority', () => {
     const purchase = read('src/server/billing/add-on-purchase.ts');
     const client = read('src/app/[locale]/dashboard/organizations/add-ons/checkout/add-on-purchase-client.tsx');
     const status = read('src/app/api/billing/add-ons/status/route.ts');
 
     expect(purchase).toContain('hosted_invoice_url');
+    expect(purchase).toContain('invoiceSubscriptionId(invoice) !== binding.stripe_subscription_id');
+    expect(purchase).toContain('stripeObjectId(invoice.customer) !== binding.stripe_customer_id');
     expect(client).toContain('hostedInvoiceUrl');
+    expect(client).toContain('query.set(\'invoice\', providerInvoiceId)');
     expect(client).toContain('target="_blank"');
     expect(client).toContain('window.setInterval');
     expect(status).toContain('getOrganizationAddOnPurchaseStatus');
+    expect(status).toContain('parsedInvoice.data');
     expect(status).toContain('noStoreJson(result)');
   });
 
