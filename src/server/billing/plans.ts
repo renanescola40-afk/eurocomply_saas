@@ -28,7 +28,7 @@ type BillingPlanDefinition = {
   entitlements: BillingEntitlements;
 };
 
-export const BILLING_PLANS: Record<BillingPlan, BillingPlanDefinition> = {
+export const BILLING_PLANS = {
   starter: {
     name: 'Essential',
     monthlyPriceCents: 4900,
@@ -75,13 +75,15 @@ export const BILLING_PLANS: Record<BillingPlan, BillingPlanDefinition> = {
     monthlyPriceCents: null,
     annualPriceCents: null,
     startingMonthlyPriceCents: 99000,
+    monthlyEnvPriceKey: undefined,
+    annualEnvPriceKey: undefined,
     legacyMonthlyEnvPriceKeys: ['STRIPE_PRICE_ENTERPRISE_MONTHLY', 'STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY'],
     legacyAnnualEnvPriceKeys: ['STRIPE_PRICE_ENTERPRISE_ANNUAL'],
     selfServe: false,
     salesLed: true,
     entitlements: { users: Number.MAX_SAFE_INTEGER, documents: Number.MAX_SAFE_INTEGER, exports: 'unlimited', auditLogsDays: 3650, aiComplianceFeatures: 'enterprise', vendorRisk: true, customPolicies: true, prioritySupport: true },
   },
-};
+} satisfies Record<BillingPlan, BillingPlanDefinition>;
 
 export function normalizeBillingPlanId(plan: string | null | undefined): BillingPlan | undefined {
   const normalized = plan?.trim().toLowerCase();
