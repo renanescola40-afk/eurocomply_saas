@@ -3,6 +3,7 @@ import type { MetadataRoute } from 'next';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { getFeatureLanguageAlternates, getFeaturePages, getFeaturePath } from '@/lib/seo/feature-pages';
 import { getLocaleAlternates, getSiteUrl, localeLanguageTags } from '@/lib/seo/public-metadata';
+import { getSolutionPages, getSolutionPath } from '@/lib/seo/solution-pages';
 
 const acquisitionPaths = ['', '/pricing'] as const;
 const englishAssurancePaths = ['/trust', '/security', '/compliance', '/data-processing', '/sla', '/privacy', '/terms', '/dpa', '/subprocessors'] as const;
@@ -13,13 +14,15 @@ const englishGrowthPaths = [
   '/tools/article-50-transparency',
   '/tools/provider-vs-deployer',
   '/tools/ai-governance-maturity',
+  '/solutions',
 ] as const;
 const stableLastModified = new Date('2026-08-01T00:00:00.000Z');
-const growthLastModified = new Date('2026-08-28T00:00:00.000Z');
+const growthLastModified = new Date('2026-09-13T00:00:00.000Z');
 
 function priorityFor(path: string) {
   if (path === '') return 1;
   if (path === '/pricing' || path === '/tools/ai-act-readiness') return 0.9;
+  if (path === '/solutions') return 0.91;
   if (path.startsWith('/tools/')) return 0.88;
   if (path === '/tools') return 0.86;
   if (path === '/trust' || path === '/resources') return 0.85;
@@ -71,6 +74,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     };
   });
 
+  const solutionEntries: MetadataRoute.Sitemap = getSolutionPages().map((page) => {
+    const url = `${appUrl}${getSolutionPath(page.key)}`;
+    return {
+      url,
+      lastModified: growthLastModified,
+      changeFrequency: 'weekly',
+      priority: 0.93,
+      alternates: { languages: { en: url, 'x-default': url } },
+    };
+  });
+
   const featureEntries: MetadataRoute.Sitemap = locales.flatMap((locale) =>
     getFeaturePages(locale).map((page) => ({
       url: `${appUrl}${getFeaturePath(locale, page.key)}`,
@@ -83,5 +97,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
   );
 
-  return [...coreEntries, ...growthEntries, ...featureEntries];
+  return [...coreEntries, ...growthEntries, ...solutionEntries, ...featureEntries];
 }
