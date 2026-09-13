@@ -160,7 +160,7 @@ async function verifyStepUpChallenge(body: Record<string, unknown>) {
   return json.token;
 }
 
-async function getBillingStepUpToken(locale: string) {
+export async function getBillingStepUpToken(locale: string) {
   const copy = getStepUpCopy(locale);
   const initialChallenge = await createStepUpChallenge({ action: 'manage_billing' });
 
