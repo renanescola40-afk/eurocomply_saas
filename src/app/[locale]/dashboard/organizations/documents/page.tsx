@@ -27,6 +27,15 @@ const readOnlyCopy: Record<string, string> = {
   de: 'Ihre Rolle kann Compliance-Dokumente einsehen und herunterladen, aber nicht hochladen oder löschen.',
 };
 
+const downloadUnavailableCopy: Record<string, string> = {
+  en: 'File not generated yet',
+  pt: 'Ficheiro ainda não gerado',
+  es: 'Archivo aún no generado',
+  fr: 'Fichier pas encore généré',
+  it: 'File non ancora generato',
+  de: 'Datei noch nicht erstellt',
+};
+
 function documentStatusKey(status: string | null | undefined) {
   const normalized = String(status ?? 'pending').toLowerCase();
   if (normalized.includes('approved') || normalized.includes('aprovado')) return 'approved' as const;
@@ -192,7 +201,13 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
                         <td className="px-4 py-4 font-mono text-[11px] tabular-nums text-slate-500">{formatDate(document.updated_at, params.locale)}</td>
                         <td className="px-5 py-4 sm:px-6">
                           <div className="flex flex-wrap justify-end gap-2">
-                            <DocumentDownloadButton locale={params.locale} documentId={document.id} onCreateSignedUrl={createDownloadUrlAction} />
+                            {document.download_available ? (
+                              <DocumentDownloadButton locale={params.locale} documentId={document.id} onCreateSignedUrl={createDownloadUrlAction} />
+                            ) : (
+                              <span className="inline-flex items-center rounded-md border border-slate-800 bg-[#080e18] px-3 py-2 text-xs font-medium text-slate-500" aria-disabled="true">
+                                {downloadUnavailableCopy[params.locale] ?? downloadUnavailableCopy.en}
+                              </span>
+                            )}
                             {canManageDocuments ? <DocumentDeleteButton locale={params.locale} documentId={document.id} documentName={title} onDelete={deleteDocumentAction} /> : null}
                           </div>
                         </td>

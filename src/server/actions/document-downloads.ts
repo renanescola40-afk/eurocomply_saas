@@ -169,7 +169,7 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
   const supabase = createAdminClient();
   const { data: document, error: documentError } = await supabase
     .from('documents')
-    .select('id,name,storage_path,organization_id')
+    .select('id,name,storage_path,size_bytes,status,organization_id')
     .eq('id', safeDocumentId)
     .in('organization_id', organizationIds)
     .maybeSingle();
@@ -185,6 +185,21 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
       accessPurpose,
     });
     throw actionError('Document not found');
+  }
+
+  const normalizedStatus = String(document.status ?? '').trim().toLowerCase();
+  const sizeBytes = typeof document.size_bytes === 'number' ? document.size_bytes : 0;
+  if (sizeBytes <= 0 || normalizedStatus === 'draft' || normalizedStatus === 'suggested') {
+    await auditRejectedDownloadUrl({
+      documentId: safeDocumentId,
+      userId: user.id,
+      reason: 'document_file_not_materialized',
+      organizationId: document.organization_id,
+      storagePath: document.storage_path,
+      membershipCount: organizationIds.length,
+      accessPurpose,
+    });
+    throw actionError('Document file is not available');
   }
 
   try {
