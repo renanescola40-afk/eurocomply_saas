@@ -12,11 +12,8 @@ const billingCatalogRoute = readFileSync('src/app/api/billing/catalog/route.ts',
 describe('commercial price completeness', () => {
   it('has positive fixed or starting prices for every canonical paid plan', () => {
     for (const plan of BILLING_PLANS) {
-      if (plan.priceMonthly !== null) {
-        expect(plan.priceMonthly).toBeGreaterThan(0);
-      } else {
-        expect(plan.startingPriceMonthly).toBeGreaterThan(0);
-      }
+      const effectiveMonthlyReference = plan.priceMonthly ?? plan.startingPriceMonthly ?? 0;
+      expect(effectiveMonthlyReference).toBeGreaterThan(0);
     }
 
     expect(SERVER_BILLING_PLANS.enterprise.monthlyPriceCents).toBeNull();
