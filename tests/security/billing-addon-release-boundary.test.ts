@@ -10,7 +10,8 @@ describe('add-on release boundary integration', () => {
     expect(page).toContain("import { isAddOnCheckoutEnabled } from '@/server/billing/add-on-release'");
     expect(page).toContain('const addOnCheckoutEnabled = isAddOnCheckoutEnabled()');
     expect(page).toContain("status === 'available' && canManageBilling && addOnCheckoutEnabled");
-    expect(page).toContain("status === 'available' && canManageBilling && !addOnCheckoutEnabled");
+    expect(page).toContain("status === 'active' && canManageBilling && addOnCheckoutEnabled");
+    expect(page).toContain("(status === 'available' || status === 'active') && canManageBilling && !addOnCheckoutEnabled");
   });
 
   it('blocks direct add-on subscription mutation before Stripe when release is closed', () => {
