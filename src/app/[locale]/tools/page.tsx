@@ -9,6 +9,41 @@ type ToolsPageProps = {
   params: Promise<{ locale: string }>;
 };
 
+const tools = [
+  {
+    href: '/en/tools/ai-act-readiness',
+    title: 'EU AI Act Readiness Assessment',
+    description:
+      'Score eight operational governance dimensions across inventory, accountability, provider/deployer role mapping, risk review, transparency, oversight, vendor governance and evidence.',
+    cta: 'Run the readiness assessment',
+    ctaId: 'tool-ai-act-readiness-start',
+  },
+  {
+    href: '/en/tools/article-50-transparency',
+    title: 'Article 50 Transparency Checker',
+    description:
+      'Map direct AI interaction, synthetic-content and deployer scenarios that may require a transparency review without turning an automated tool into legal advice.',
+    cta: 'Open the Article 50 checker',
+    ctaId: 'tool-article-50-transparency-open',
+  },
+  {
+    href: '/en/tools/provider-vs-deployer',
+    title: 'Provider vs Deployer Checker',
+    description:
+      'Structure provider and deployer role signals under Article 3 before routing ambiguous or mixed value-chain questions to qualified legal review.',
+    cta: 'Map provider and deployer signals',
+    ctaId: 'tool-provider-vs-deployer-open',
+  },
+  {
+    href: '/en/tools/ai-governance-maturity',
+    title: 'AI Governance Maturity Assessment',
+    description:
+      'Assess governance model, inventory, risk decisions, evidence readiness, vendor governance and monitoring across six operating dimensions.',
+    cta: 'Assess governance maturity',
+    ctaId: 'tool-ai-governance-maturity-open',
+  },
+] as const;
+
 export async function generateMetadata({ params }: ToolsPageProps): Promise<Metadata> {
   const { locale } = await params;
   if (locale !== 'en') return { robots: { index: false, follow: false } };
@@ -16,7 +51,8 @@ export async function generateMetadata({ params }: ToolsPageProps): Promise<Meta
   const url = `${getSiteUrl()}/en/tools`;
   return {
     title: 'Free AI Governance Tools | RISCK COMPLY',
-    description: 'Free operational AI governance tools for EU AI Act readiness, AI inventory, transparency, accountability and evidence workflows.',
+    description:
+      'Free operational AI governance tools for EU AI Act readiness, Article 50 transparency, provider/deployer role mapping and governance maturity.',
     alternates: { canonical: url, languages: { en: url, 'x-default': url } },
     openGraph: {
       title: 'Free AI Governance Tools | RISCK COMPLY',
@@ -43,42 +79,37 @@ export default async function ToolsPage({ params }: ToolsPageProps) {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 pb-20">
-        <article className="rounded-[2rem] border bg-card p-7 md:p-9">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Available now</p>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight">EU AI Act Readiness Assessment</h2>
-          <p className="mt-4 max-w-3xl text-base leading-7 text-muted-foreground">
-            Score eight operational governance dimensions across inventory, accountability, provider/deployer role mapping, risk review, transparency, oversight, vendor governance and evidence.
-          </p>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/en/tools/ai-act-readiness"
-              data-cta-id="tool-ai-act-readiness-start"
-              className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
-            >
-              Run the free assessment
-            </Link>
-            <Link
-              href="/en/resources"
-              data-cta-id="tool-resources"
-              className="inline-flex h-11 items-center justify-center rounded-full border px-5 text-sm font-semibold hover:bg-muted"
-            >
-              Browse resources
-            </Link>
-          </div>
-        </article>
-
-        <div className="mt-8 grid gap-5 md:grid-cols-3">
-          {[
-            ['Article 50 Transparency Checker', 'Map scenarios that may need a transparency review without turning an automated tool into legal advice.'],
-            ['Provider vs Deployer Checker', 'Structure role facts and counterparties before qualified legal interpretation.'],
-            ['AI Governance Maturity Assessment', 'Assess operating maturity across ownership, evidence, review cadence and monitoring.'],
-          ].map(([title, description]) => (
-            <article key={title} className="rounded-3xl border bg-card p-6">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Planned</p>
-              <h2 className="mt-3 text-xl font-semibold">{title}</h2>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">{description}</p>
+        <div className="grid gap-5 md:grid-cols-2">
+          {tools.map((tool) => (
+            <article key={tool.href} className="flex flex-col rounded-[2rem] border bg-card p-7 md:p-9">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Available now</p>
+              <h2 className="mt-3 text-2xl font-bold tracking-tight">{tool.title}</h2>
+              <p className="mt-4 flex-1 text-sm leading-7 text-muted-foreground">{tool.description}</p>
+              <div className="mt-7">
+                <Link
+                  href={tool.href}
+                  data-cta-id={tool.ctaId}
+                  className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+                >
+                  {tool.cta}
+                </Link>
+              </div>
             </article>
           ))}
+        </div>
+
+        <div className="mt-8 rounded-3xl border bg-muted/30 p-6">
+          <h2 className="text-xl font-semibold">Need the supporting guidance?</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+            Browse RISCK COMPLY resources for practical AI governance and EU AI Act readiness guidance, then move evidence and ownership into the platform when the work becomes operational.
+          </p>
+          <Link
+            href="/en/resources"
+            data-cta-id="tool-resources"
+            className="mt-5 inline-flex h-11 items-center justify-center rounded-full border px-5 text-sm font-semibold hover:bg-muted"
+          >
+            Browse resources
+          </Link>
         </div>
       </section>
 

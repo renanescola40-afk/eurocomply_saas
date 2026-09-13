@@ -33,6 +33,7 @@ const PUBLIC_ROUTES = [
   '/enterprise',
   '/checkout',
   '/resources',
+  '/tools',
   '/faq',
   '/about',
   '/contact',
@@ -60,7 +61,7 @@ const PUBLIC_ROUTES = [
   '/termos-servico',
 ];
 
-const PUBLIC_ROUTE_PREFIXES = ['/features/'] as const;
+const PUBLIC_ROUTE_PREFIXES = ['/features/', '/tools/'] as const;
 
 const LEGACY_UNDEFINED_ROUTES: Record<string, string> = {
   '/dashboard/organizations/vendors': '/vendor-assurance',
