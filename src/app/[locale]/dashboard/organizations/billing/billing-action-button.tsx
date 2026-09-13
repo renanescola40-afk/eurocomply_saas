@@ -242,6 +242,23 @@ export function BillingActionButton({ action, locale, planId, addOns, preserveEx
     event.preventDefault();
     if (disabled || loading) return;
 
+    const purchaseSelection = action === 'replace_add_ons'
+      && preserveExistingAddOns !== false
+      && addOns?.length === 1
+      ? addOns[0]
+      : null;
+
+    // Adding an add-on is a purchase intent, not a billing mutation. Route the
+    // buyer through the provider-priced review/payment flow first. Explicit
+    // replacement/removal keeps using the protected lifecycle directly.
+    if (purchaseSelection) {
+      const checkout = new URL(`/${locale}/dashboard/organizations/add-ons/checkout`, window.location.origin);
+      checkout.searchParams.set('addon', purchaseSelection.slug);
+      checkout.searchParams.set('quantity', String(purchaseSelection.quantity));
+      window.location.assign(`${checkout.pathname}${checkout.search}`);
+      return;
+    }
+
     setLoading(true);
     setPaidGaUnavailable(null);
     const idempotencyKey = crypto.randomUUID();
