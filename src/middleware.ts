@@ -34,6 +34,7 @@ const PUBLIC_ROUTES = [
   '/checkout',
   '/resources',
   '/tools',
+  '/solutions',
   '/faq',
   '/about',
   '/contact',
@@ -61,7 +62,7 @@ const PUBLIC_ROUTES = [
   '/termos-servico',
 ];
 
-const PUBLIC_ROUTE_PREFIXES = ['/features/', '/tools/'] as const;
+const PUBLIC_ROUTE_PREFIXES = ['/features/', '/tools/', '/solutions/'] as const;
 
 const LEGACY_UNDEFINED_ROUTES: Record<string, string> = {
   '/dashboard/organizations/vendors': '/vendor-assurance',
@@ -136,7 +137,7 @@ function trustedRequestHeaders(req: NextRequest, requestId: string) {
 }
 
 function nextWithRequestId(req: NextRequest, requestId: string) {
-  const requestHeaders = trustedRequestHeaders(req, requestId);
+  const requestHeaders = trustedRequestHeaders(req.headers ? req : req, requestId);
   return withRequestId(NextResponse.next({ request: { headers: requestHeaders } }), requestId);
 }
 
