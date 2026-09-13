@@ -75,6 +75,7 @@ function commerceCopy(locale: string) {
         add: (name: string) => `Adicionar ${name}`,
         remove: (name: string) => `Remover ${name}`,
         included: 'Incluído no seu plano atual',
+        comingSoon: 'Disponível em breve',
         preview: 'Preço de catálogo. A compra permanece bloqueada até a capacidade prometida ter autoridade de entitlement própria.',
         purchaseError: 'Não foi possível concluir a alteração de billing. Nenhum acesso foi concedido pelo navegador.',
       };
@@ -86,6 +87,7 @@ function commerceCopy(locale: string) {
         add: (name: string) => `Añadir ${name}`,
         remove: (name: string) => `Eliminar ${name}`,
         included: 'Incluido en tu plan actual',
+        comingSoon: 'Disponible próximamente',
         preview: 'Precio de catálogo. La compra permanece bloqueada hasta que la capacidad prometida tenga autoridad de entitlement propia.',
         purchaseError: 'No se pudo completar el cambio de billing. El navegador no concedió ningún acceso.',
       };
@@ -97,6 +99,7 @@ function commerceCopy(locale: string) {
         add: (name: string) => `Ajouter ${name}`,
         remove: (name: string) => `Retirer ${name}`,
         included: 'Inclus dans votre plan actuel',
+        comingSoon: 'Bientôt disponible',
         preview: 'Prix catalogue. L’achat reste bloqué tant que la capacité promise ne dispose pas de sa propre autorité d’entitlement.',
         purchaseError: 'La modification de facturation n’a pas pu être terminée. Aucun accès n’a été accordé par le navigateur.',
       };
@@ -108,6 +111,7 @@ function commerceCopy(locale: string) {
         add: (name: string) => `Aggiungi ${name}`,
         remove: (name: string) => `Rimuovi ${name}`,
         included: 'Incluso nel piano attuale',
+        comingSoon: 'Disponibile a breve',
         preview: 'Prezzo di catalogo. L’acquisto resta bloccato finché la capacità promessa non dispone di una propria autorità di entitlement.',
         purchaseError: 'La modifica di billing non è stata completata. Il browser non ha concesso alcun accesso.',
       };
@@ -119,6 +123,7 @@ function commerceCopy(locale: string) {
         add: (name: string) => `${name} hinzufügen`,
         remove: (name: string) => `${name} entfernen`,
         included: 'In Ihrem aktuellen Plan enthalten',
+        comingSoon: 'Bald verfügbar',
         preview: 'Katalogpreis. Der Kauf bleibt gesperrt, bis die versprochene Kapazität eine eigene Entitlement-Autorität hat.',
         purchaseError: 'Die Billing-Änderung konnte nicht abgeschlossen werden. Der Browser hat keinen Zugriff vergeben.',
       };
@@ -130,6 +135,7 @@ function commerceCopy(locale: string) {
         add: (name: string) => `Add ${name}`,
         remove: (name: string) => `Remove ${name}`,
         included: 'Included in your current plan',
+        comingSoon: 'Coming soon',
         preview: 'Catalog price. Purchase remains blocked until the promised capability has its own authoritative entitlement effect.',
         purchaseError: 'The billing change could not be completed. No browser state granted access.',
       };
@@ -250,7 +256,15 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
             {BILLING_ADD_ONS.map((addOn) => {
               const status = getUpgradeStatus(canonicalPlan, addOn, activeAddOns);
               const Icon = getStatusIcon(status);
-              const statusLabel = status === 'included' ? copy.included : status === 'active' ? copy.active : status === 'available' ? copy.available : copy.unavailable;
+              const statusLabel = status === 'included'
+                ? copy.included
+                : status === 'active'
+                  ? copy.active
+                  : status === 'available'
+                    ? copy.available
+                    : status === 'preview'
+                      ? commerce.comingSoon
+                      : copy.unavailable;
               const dependencies = addOn.dependencies.map((slug) => BILLING_ADD_ONS.find((candidate) => candidate.slug === slug)?.name ?? slug);
               const isFocused = focusedAddOn?.slug === addOn.slug;
               const remainingAddOns = activeAddOnSelections.filter((selection) => selection.slug !== addOn.slug);
