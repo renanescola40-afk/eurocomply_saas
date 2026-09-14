@@ -12,6 +12,8 @@ const COOKIE_PAGE = new URL('../src/app/[locale]/cookie-policy/page.tsx', import
 const ACCEPTABLE_USE_PAGE = new URL('../src/app/[locale]/acceptable-use/page.tsx', import.meta.url);
 const TRANSFERS_PAGE = new URL('../src/app/[locale]/transfers/page.tsx', import.meta.url);
 const PROVIDER_DISCLOSURE = new URL('../src/components/trust/provider-runtime-disclosure.tsx', import.meta.url);
+const TRUST_CENTER_CONTENT = new URL('../src/lib/trust-center/content.ts', import.meta.url);
+const TRUST_CENTER_LOCALIZED_CONTENT = new URL('../src/lib/trust-center/localized-content.ts', import.meta.url);
 const CONSENT_BANNER = new URL('../src/components/analytics/AnalyticsConsentBanner.tsx', import.meta.url);
 
 const PUBLIC_LEGAL_ROUTES = ['/privacy', '/dpa', '/terms', '/cookie-policy', '/acceptable-use', '/transfers'] as const;
@@ -217,6 +219,33 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('contentLanguage={contentLocale}');
     expect(legalPage).toContain('contentLanguage?: Locale;');
     expect(legalPage).toContain('lang={contentLocale}');
+  });
+
+  it('keeps Trust Center provider and DPA review claims conditional in every locale authority', async () => {
+    const [source, localizedSource] = await Promise.all([
+      readFile(TRUST_CENTER_CONTENT, 'utf8'),
+      readFile(TRUST_CENTER_LOCALIZED_CONTENT, 'utf8'),
+    ]);
+
+    expect(source).toContain('qualified review applies only where a specific law, contract or buyer requirement makes it necessary');
+    expect(source).not.toContain('Final agreement requires legal review/signature');
+    expect(source).not.toContain('remain open for account-specific verification and qualified legal review');
+
+    for (const stalePhrase of [
+      'Resumo do DPA. O acordo final exige revisão jurídica e assinatura.',
+      'Resumen del DPA. El acuerdo final requiere revisión jurídica y firma.',
+      'Résumé du DPA. L’accord final nécessite une revue juridique et une signature.',
+      'Sintesi del DPA. L’accordo finale richiede revisione legale e firma.',
+      'DPA-Zusammenfassung. Die endgültige Vereinbarung erfordert rechtliche Prüfung und Unterzeichnung.',
+    ]) {
+      expect(localizedSource).not.toContain(stalePhrase);
+    }
+
+    expect(localizedSource).toContain('uma lei, contrato ou requisito do comprador específico a exigir');
+    expect(localizedSource).toContain('una ley, contrato o requisito específico del comprador');
+    expect(localizedSource).toContain('une loi, un contrat ou une exigence spécifique de l’acheteur');
+    expect(localizedSource).toContain('una legge, un contratto o un requisito specifico dell’acquirente');
+    expect(localizedSource).toContain('ein Gesetz, Vertrag oder eine spezifische Käuferanforderung');
   });
 
   it('dates provider revalidation explicitly and marks untranslated provider evidence as English', async () => {

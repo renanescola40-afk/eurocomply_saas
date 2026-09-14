@@ -3,7 +3,11 @@
 **Status:** `CURRENT_CONNECTED_ACCOUNT_ADDENDUM_ACTIVE / ATTRIBUTABLE_DPA_EVIDENCE_ADVANCED / CONTRACTUAL_FACTS_IN_REVIEW`  
 **Prior runtime overlay:** `docs/trust/evidence/2026-09-09-provider-current-overlay.md`  
 **Terminal fact reconciliation:** `docs/legal-assurance/evidence/2026-09-10-terminal-fact-reconciliation.md`  
-**Connected-account addendum captured:** `2026-09-10`  
+**Connected-account addendum captured:** `2026-09-14`  
+**Previous connected-account addendum:** `2026-09-10`  
+**Current authority merge:** `a2266647c7fc486641cb318bbc51d22f9ea7676a`  
+**Current Supabase project observation:** `2026-09-14 / ACTIVE_HEALTHY / eu-west-1`  
+**Current Supabase backend-only RLS observation:** `29 tables / FORCE RLS=true / grants limited to postgres, service_role / zero explicit policies`  
 **Protected main at terminal-v2 branch creation:** `43bf6b1368ff7a3b8ead0aa434b83bed9457615e`  
 **Observed Production release during legal reconciliation:** `13b19410caa20045b19d98d58df406c43433af5a`  
 **Protected Provider Runtime acceptance:** `OPEN`  
@@ -33,6 +37,18 @@ Protected-main lineage, direct Production runtime facts, provider account facts,
 | Google OAuth / Google Identity | Application uses Google authentication through Supabase Auth; exact current account legal/processing facts are not established by this register. | `RUNTIME_INTEGRATION_PRESENT / ACCOUNT_LEGAL_FACTS_OPEN` | Applicable contracting terms, role, processing/access locations, retention and transfer interpretation where required |
 | Malware/content scanner | Upload policy can require provider-backed scanning when enabled; this register does not establish a current external scanner provider/account. | `CONDITIONAL_UNVERIFIED` | If enabled, confirm active provider/scope, data categories, region, retention and legal/transfer terms before buyer reliance |
 | Direct SaaS model provider | No direct customer-runtime AI/model provider is established by this register. Founder-operated external AI use outside direct SaaS runtime is a separate operational fact. | `DIRECT_RUNTIME_INTEGRATION_NOT_IDENTIFIED` | If introduced, identify provider/workspace, role, region, retention/training policy, DPA/transfer terms and customer-content policy before disclosure |
+
+## 2026-09-14 Supabase security-boundary revalidation
+
+A read-only connected Supabase metadata query revalidated the 29 advisor findings labelled `RLS Enabled No Policy`:
+
+- all 29 listed public tables have RLS enabled;
+- all 29 listed public tables have `FORCE RLS=true`;
+- the query returned zero explicit policies for each listed table;
+- grants returned for the listed tables were limited to `postgres` and `service_role`, with no `anon` or `authenticated` grant shown;
+- the project remains `ACTIVE_HEALTHY` in `eu-west-1`, database version `17.6.1.127`.
+
+This is technical security evidence for the listed backend-only tables. It does not prove that every table, RPC, provider, backup, support path, retention period or international transfer is legally closed. The Supabase advisor level was informational; no production DDL or policy change was made.
 
 ## Vercel Production binding — observed legal-reconciliation evidence
 
@@ -99,7 +115,7 @@ Provider disclosure does not determine whether a subscription is a legitimate pa
 
 ## Legal interpretation boundary
 
-The following remain `QUALIFIED_HUMAN_REQUIRED` where applicable:
+The following remain `REQUIRES_QUALIFIED_REVIEW_ONLY_WHERE_REQUIRED` where applicable:
 
 - controller/processor/subprocessor/independent-controller role allocation;
 - lawful-basis descriptions;
@@ -135,7 +151,7 @@ RUNTIME_BINDING_PROVEN=PARTIAL_BY_PROVIDER
 EXACT_MAIN_PRODUCTION_BINDING=OPEN_WHERE_REQUIRED
 ACCOUNT_FACTS_OPEN=OPEN_BY_PROVIDER
 ACCOUNT_LEGAL_FACTS_OPEN=OPEN
-PRIVACY_GDPR_LEGAL_INTERPRETATION=WAITING_QUALIFIED_HUMAN
+PRIVACY_GDPR_LEGAL_INTERPRETATION=OPEN_FACTUAL_OR_CONTRACTUAL_ISSUE;_QUALIFIED_REVIEW_ONLY_WHERE_REQUIRED
 PROTECTED_PROVIDER_RUNTIME_ACCEPTANCE=OPEN
 SUBPROCESSOR_DPA_REGISTER=STRUCTURE_RECONCILED_FINAL_ACCEPTANCE_OPEN
 ```
