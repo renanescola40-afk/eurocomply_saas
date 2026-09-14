@@ -242,4 +242,13 @@ describe('public legal review surfaces', () => {
     expect(legalPage).toContain('AnalyticsConsentControls');
     expect(privacyPage).toContain('actions={<AnalyticsConsentControls locale={locale} />}');
   });
+
+  it('does not make qualified counsel an automatic cookie-publication gate', async () => {
+    const source = await readFile(COOKIE_PAGE, 'utf8');
+
+    expect(source).toContain('documented legal basis');
+    expect(source).toContain('qualified review is escalated only where');
+    expect(source).not.toContain('qualified legal review before final publication');
+    expect(source).not.toContain('revisão jurídica qualificada antes da publicação final');
+  });
 });
