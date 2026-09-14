@@ -128,7 +128,7 @@ const copy: Record<Locale, PrivacyCopy> = {
         items: [
           'Individuals may lodge a complaint with the competent data-protection supervisory authority. The final lead-authority/cross-border establishment position remains tied to the final operator/entity facts.',
           'The B2B service is not directed to children; prohibited-use and inadvertent-child-data handling remain subject to the applicable customer terms and law.',
-          'Material privacy changes should be versioned, dated and communicated as appropriate. This page remains a review draft until the publication gate records the required founder facts and qualified legal decisions.',
+          'Material privacy changes should be versioned, dated and communicated as appropriate. This page remains a review draft until the publication gate records the required founder facts and documented privacy decisions; qualified review is escalated only where a specific law, contract or buyer requirement makes it necessary.',
         ],
       },
     ],
@@ -177,7 +177,7 @@ const copy: Record<Locale, PrivacyCopy> = {
         title: 'Fundamentos jurídicos — limite de revisão',
         paragraphs: [
           'A matriz atual mapeia contrato/medidas pré-contratuais pedidas, obrigações legais específicas, interesses legítimos e consentimento como fundamentos candidatos, consoante a atividade. Segurança/prevenção de abuso, evidência de resposta a incidentes e administração restrita de relações B2B possuem avaliações de interesse legítimo pré-revisão.',
-          'Essas alocações não são apresentadas como aprovação jurídica qualificada final. Analytics opcionais e marketing não essencial não recebem aprovação automática por interesse legítimo. O aviso final deve ser reconciliado com a decisão jurídica qualificada antes de ser tratado como texto legal efetivo.',
+          'Essas alocações não são apresentadas como aprovação jurídica final. Analytics opcionais e marketing não essencial não recebem aprovação automática por interesse legítimo. O aviso final deve ser reconciliado com uma decisão documentada sobre as bases jurídicas antes de ser tratado como texto legal efetivo; a revisão qualificada só é escalada quando exigida por lei, contrato ou procurement do cliente.',
         ],
       },
       {
@@ -191,7 +191,7 @@ const copy: Record<Locale, PrivacyCopy> = {
         title: 'Transferências internacionais',
         paragraphs: [
           'O projeto Supabase de Produção está configurado em eu-west-1 (Irlanda). Outros fornecedores configurados podem tratar dados noutros países ou através de infraestrutura global.',
-          'Este rascunho não afirma que todas as decisões específicas de adequação, SCC, medidas suplementares ou avaliação de transferências já foram aceites. A superfície de Transferências Internacionais mantém esses pontos abertos até existirem factos de conta/fornecedor e revisão jurídica qualificada.',
+          'Este rascunho não afirma que todas as decisões específicas de adequação, SCC, medidas suplementares ou avaliação de transferências já foram aceites. A superfície de Transferências Internacionais mantém esses pontos abertos até existirem factos de conta/fornecedor e análise documentada do Capítulo V; a revisão qualificada só é escalada quando exigida por lei, contrato ou procurement do cliente.',
         ],
       },
       {
