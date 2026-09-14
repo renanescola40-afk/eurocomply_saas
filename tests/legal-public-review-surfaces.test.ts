@@ -12,6 +12,8 @@ const COOKIE_PAGE = new URL('../src/app/[locale]/cookie-policy/page.tsx', import
 const ACCEPTABLE_USE_PAGE = new URL('../src/app/[locale]/acceptable-use/page.tsx', import.meta.url);
 const TRANSFERS_PAGE = new URL('../src/app/[locale]/transfers/page.tsx', import.meta.url);
 const PROVIDER_DISCLOSURE = new URL('../src/components/trust/provider-runtime-disclosure.tsx', import.meta.url);
+const TRUST_CENTER_CONTENT = new URL('../src/lib/trust-center/content.ts', import.meta.url);
+const TRUST_CENTER_LOCALIZED_CONTENT = new URL('../src/lib/trust-center/localized-content.ts', import.meta.url);
 const CONSENT_BANNER = new URL('../src/components/analytics/AnalyticsConsentBanner.tsx', import.meta.url);
 
 const PUBLIC_LEGAL_ROUTES = ['/privacy', '/dpa', '/terms', '/cookie-policy', '/acceptable-use', '/transfers'] as const;
@@ -29,11 +31,11 @@ describe('public legal review surfaces', () => {
     }
   });
 
-  it('fails legal publication claims closed while founder/counsel approval is pending', async () => {
+  it('fails legal publication claims closed while factual and contractual closure is pending', async () => {
     const source = await readFile(LEGAL_PAGE, 'utf8');
 
-    expect(source).toContain('REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED');
-    expect(source).toContain('Pending qualified legal approval');
+    expect(source).toContain('REVIEW_DRAFT · FACTUAL_CLOSURE_REQUIRED');
+    expect(source).toContain('Pending factual and contractual closure');
     expect(source).toContain('document_id:');
   });
 
@@ -108,7 +110,7 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('Precedence, liability and final acceptance');
     expect(source).toContain('eu-west-1 (Ireland)');
     expect(source).toContain('Decision (EU) 2021/915');
-    expect(source).toContain('REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED');
+    expect(source).toContain('REVIEW_DRAFT · FACTUAL_CLOSURE_REQUIRED');
 
     expect(source).toContain('does not publish final processor-party registry details until authoritative registered office');
     expect(source).toContain('general written authorisation');
@@ -155,7 +157,7 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('Governing law, disputes and legal notices — review boundary');
     expect(source).toContain('Final acceptance boundary');
     expect(source).toContain('comercial@risckcomply.com');
-    expect(source).toContain('REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED');
+    expect(source).toContain('REVIEW_DRAFT · FACTUAL_CLOSURE_REQUIRED');
 
     expect(source).toContain('owner-designated RISCK COMPLY operator, contracting entity and seller internally');
     expect(source).toContain('this public review draft does not publish a final customer-facing legal party identity');
@@ -219,6 +221,33 @@ describe('public legal review surfaces', () => {
     expect(legalPage).toContain('lang={contentLocale}');
   });
 
+  it('keeps Trust Center provider and DPA review claims conditional in every locale authority', async () => {
+    const [source, localizedSource] = await Promise.all([
+      readFile(TRUST_CENTER_CONTENT, 'utf8'),
+      readFile(TRUST_CENTER_LOCALIZED_CONTENT, 'utf8'),
+    ]);
+
+    expect(source).toContain('qualified review applies only where a specific law, contract or buyer requirement makes it necessary');
+    expect(source).not.toContain('Final agreement requires legal review/signature');
+    expect(source).not.toContain('remain open for account-specific verification and qualified legal review');
+
+    for (const stalePhrase of [
+      'Resumo do DPA. O acordo final exige revisão jurídica e assinatura.',
+      'Resumen del DPA. El acuerdo final requiere revisión jurídica y firma.',
+      'Résumé du DPA. L’accord final nécessite une revue juridique et une signature.',
+      'Sintesi del DPA. L’accordo finale richiede revisione legale e firma.',
+      'DPA-Zusammenfassung. Die endgültige Vereinbarung erfordert rechtliche Prüfung und Unterzeichnung.',
+    ]) {
+      expect(localizedSource).not.toContain(stalePhrase);
+    }
+
+    expect(localizedSource).toContain('uma lei, contrato ou requisito do comprador específico a exigir');
+    expect(localizedSource).toContain('una ley, contrato o requisito específico del comprador');
+    expect(localizedSource).toContain('une loi, un contrat ou une exigence spécifique de l’acheteur');
+    expect(localizedSource).toContain('una legge, un contratto o un requisito specifico dell’acquirente');
+    expect(localizedSource).toContain('ein Gesetz, Vertrag oder eine spezifische Käuferanforderung');
+  });
+
   it('dates provider revalidation explicitly and marks untranslated provider evidence as English', async () => {
     const source = await readFile(PROVIDER_DISCLOSURE, 'utf8');
 
@@ -241,5 +270,39 @@ describe('public legal review surfaces', () => {
     expect(legalPage).toContain("documentId === 'cookie-policy'");
     expect(legalPage).toContain('AnalyticsConsentControls');
     expect(privacyPage).toContain('actions={<AnalyticsConsentControls locale={locale} />}');
+  });
+
+  it('does not make qualified counsel an automatic acceptable-use publication gate', async () => {
+    const source = await readFile(ACCEPTABLE_USE_PAGE, 'utf8');
+
+    expect(source).toContain('factual and contractual closure');
+    expect(source).toContain('qualified review applies only where required');
+    expect(source).not.toContain('qualified legal approval');
+    expect(source).not.toContain('qualified legal review');
+    expect(source).not.toContain('aprovação jurídica qualificada');
+    expect(source).not.toContain('revisão jurídica qualificada');
+  });
+
+  it('keeps conditional review boundaries consistent across Privacy and Terms locales', async () => {
+    const [privacy, terms] = await Promise.all([
+      readFile(PRIVACY_PAGE, 'utf8'),
+      readFile(TERMS_PAGE, 'utf8'),
+    ]);
+
+    expect(privacy).toContain('qualified review is escalated only where');
+    expect(terms).toContain('qualified review applies only where required');
+    expect(privacy).not.toContain('qualified legal decisions');
+    expect(privacy).not.toContain('revisão jurídica qualificada');
+    expect(terms).not.toContain('revisão jurídica qualificada');
+    expect(terms).not.toContain('A incorporação final exige revisão qualificada.');
+  });
+
+  it('does not make qualified counsel an automatic cookie-publication gate', async () => {
+    const source = await readFile(COOKIE_PAGE, 'utf8');
+
+    expect(source).toContain('documented legal basis');
+    expect(source).toContain('qualified review is escalated only where');
+    expect(source).not.toContain('qualified legal review before final publication');
+    expect(source).not.toContain('revisão jurídica qualificada antes da publicação final');
   });
 });

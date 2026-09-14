@@ -123,7 +123,7 @@ const pt: Record<TrustCenterSlug, TrustPageTranslation> = {
     navLabel: 'DPA',
     title: 'Adenda de Tratamento de Dados (DPA)',
     subtitle: 'Resumo de apoio a compras sobre compromissos esperados de tratamento de dados.',
-    status: 'Resumo do DPA. O acordo final exige revisão jurídica e assinatura.',
+    status: 'Resumo do DPA. O acordo final exige encerramento factual e contratual e aceitação/assinatura autorizadas; a revisão qualificada só é necessária quando uma lei, contrato ou requisito do comprador específico a exigir.',
     sections: [
       { title: 'Funções', body: 'Para dados do espaço de trabalho do cliente, espera-se em geral que o cliente atue como responsável pelo tratamento e a RISCK COMPLY como subcontratante. As funções específicas podem variar conforme a funcionalidade e o contrato.' },
       { title: 'Instruções de tratamento', body: 'A RISCK COMPLY trata dados pessoais do cliente para fornecer, proteger, manter e suportar o SaaS de acordo com as instruções do cliente e os termos do acordo aplicável.' },
@@ -225,7 +225,7 @@ const es: Record<TrustCenterSlug, TrustPageTranslation> = {
     ],
   },
   dpa: {
-    navLabel: 'DPA', title: 'Anexo de Tratamiento de Datos (DPA)', subtitle: 'Resumen para compras sobre los compromisos previstos de tratamiento de datos.', status: 'Resumen del DPA. El acuerdo final requiere revisión jurídica y firma.',
+    navLabel: 'DPA', title: 'Anexo de Tratamiento de Datos (DPA)', subtitle: 'Resumen para compras sobre los compromisos previstos de tratamiento de datos.', status: 'Resumen del DPA. El acuerdo final requiere cierre fáctico y contractual y aceptación/firma autorizadas; la revisión cualificada solo es necesaria cuando la exija una ley, contrato o requisito específico del comprador.',
     sections: [
       { title: 'Roles', body: 'Para los datos del espacio de trabajo del cliente, generalmente se espera que el cliente actúe como responsable y RISCK COMPLY como encargado del tratamiento. Los roles concretos pueden variar según la función y el contrato.' },
       { title: 'Instrucciones de tratamiento', body: 'RISCK COMPLY trata datos personales del cliente para prestar, proteger, mantener y dar soporte al SaaS de acuerdo con las instrucciones del cliente y los términos del acuerdo aplicable.' },
@@ -312,7 +312,7 @@ const fr: Record<TrustCenterSlug, TrustPageTranslation> = {
     ],
   },
   dpa: {
-    navLabel: 'DPA', title: 'Avenant relatif au traitement des données (DPA)', subtitle: 'Résumé destiné aux achats des engagements attendus en matière de traitement des données.', status: 'Résumé du DPA. L’accord final nécessite une revue juridique et une signature.',
+    navLabel: 'DPA', title: 'Avenant relatif au traitement des données (DPA)', subtitle: 'Résumé destiné aux achats des engagements attendus en matière de traitement des données.', status: 'Résumé du DPA. L’accord final nécessite une clôture factuelle et contractuelle ainsi qu’une acceptation/signature autorisée ; une revue qualifiée n’est nécessaire que lorsqu’une loi, un contrat ou une exigence spécifique de l’acheteur l’impose.',
     sections: [
       { title: 'Rôles', body: 'Pour les données de l’espace de travail client, le client est généralement appelé à agir comme responsable du traitement et RISCK COMPLY comme sous-traitant. Les rôles précis peuvent varier selon la fonctionnalité et le contrat.' },
       { title: 'Instructions de traitement', body: 'RISCK COMPLY traite les données personnelles du client pour fournir, sécuriser, maintenir et prendre en charge le SaaS conformément aux instructions du client et à l’accord applicable.' },
@@ -399,7 +399,7 @@ const it: Record<TrustCenterSlug, TrustPageTranslation> = {
     ],
   },
   dpa: {
-    navLabel: 'DPA', title: 'Addendum sul trattamento dei dati (DPA)', subtitle: 'Sintesi per gli acquisti degli impegni previsti sul trattamento dei dati.', status: 'Sintesi del DPA. L’accordo finale richiede revisione legale e firma.',
+    navLabel: 'DPA', title: 'Addendum sul trattamento dei dati (DPA)', subtitle: 'Sintesi per gli acquisti degli impegni previsti sul trattamento dei dati.', status: 'Sintesi del DPA. L’accordo finale richiede la chiusura fattuale e contrattuale e l’accettazione/firma autorizzata; la revisione qualificata è necessaria solo quando lo impone una legge, un contratto o un requisito specifico dell’acquirente.',
     sections: [
       { title: 'Ruoli', body: 'Per i dati dello spazio di lavoro del cliente, in generale il cliente è previsto come titolare del trattamento e RISCK COMPLY come responsabile del trattamento. I ruoli specifici possono variare per funzionalità e contratto.' },
       { title: 'Istruzioni di trattamento', body: 'RISCK COMPLY tratta i dati personali del cliente per fornire, proteggere, mantenere e supportare il SaaS secondo le istruzioni del cliente e i termini dell’accordo applicabile.' },
@@ -486,7 +486,7 @@ const de: Record<TrustCenterSlug, TrustPageTranslation> = {
     ],
   },
   dpa: {
-    navLabel: 'DPA', title: 'Auftragsverarbeitungsvereinbarung (DPA)', subtitle: 'Beschaffungsorientierte Zusammenfassung der erwarteten Verpflichtungen zur Datenverarbeitung.', status: 'DPA-Zusammenfassung. Die endgültige Vereinbarung erfordert rechtliche Prüfung und Unterzeichnung.',
+    navLabel: 'DPA', title: 'Auftragsverarbeitungsvereinbarung (DPA)', subtitle: 'Beschaffungsorientierte Zusammenfassung der erwarteten Verpflichtungen zur Datenverarbeitung.', status: 'DPA-Zusammenfassung. Die endgültige Vereinbarung erfordert den faktischen und vertraglichen Abschluss sowie eine autorisierte Annahme/Unterzeichnung; eine qualifizierte Prüfung ist nur erforderlich, wenn ein Gesetz, Vertrag oder eine spezifische Käuferanforderung dies verlangt.',
     sections: [
       { title: 'Rollen', body: 'Für Daten im Kundenarbeitsbereich wird der Kunde im Allgemeinen als Verantwortlicher und RISCK COMPLY als Auftragsverarbeiter erwartet. Die konkreten Rollen können je nach Funktion und Vertrag variieren.' },
       { title: 'Verarbeitungsanweisungen', body: 'RISCK COMPLY verarbeitet personenbezogene Kundendaten zur Bereitstellung, Absicherung, Wartung und Unterstützung des SaaS gemäß Kundenanweisungen und den Bedingungen der anwendbaren Vereinbarung.' },

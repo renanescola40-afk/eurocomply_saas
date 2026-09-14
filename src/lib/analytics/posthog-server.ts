@@ -5,6 +5,8 @@ const DEFAULT_POSTHOG_HOST = 'https://eu.i.posthog.com';
 type ServerCaptureInput = {
   event: AnalyticsEventName;
   distinctId: string;
+  /** Server analytics is only permitted after an explicit user consent signal. */
+  analyticsConsent?: boolean;
   organizationId?: string | null;
   clerkOrgId?: string | null;
   properties?: AnalyticsProperties;
@@ -20,8 +22,11 @@ function getPostHogHost() {
 
 export async function captureServerAnalytics(input: ServerCaptureInput) {
   const apiKey = getPostHogKey();
+  const serverCaptureEnabled = process.env.POSTHOG_SERVER_CAPTURE_ENABLED === 'true';
 
-  if (!apiKey || !input.distinctId) return;
+  // Server-side analytics is opt-in twice: the deployment must enable it and
+  // the caller must prove that the data subject granted analytics consent.
+  if (!serverCaptureEnabled || input.analyticsConsent !== true || !apiKey || !input.distinctId) return;
 
   const groups = buildGroupProperties(input.organizationId, input.clerkOrgId);
   const properties = sanitizeAnalyticsProperties({
