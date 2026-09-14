@@ -1,13 +1,15 @@
-# RISCK COMPLY — Legal Applicability Matrix V2
+# RISCK COMPLY — Legal Applicability Matrix V2 (Historical Predecessor)
 
 Date: 2026-09-14
 Product: RISCK COMPLY
 Owner-selected operator/seller/contracting entity: SAMUEL CERQUEIRA, UNIPESSOAL LDA
 Source release: main ab8e413e68c15db43a1214098af8ae6d2a8a4a9e
 Production observed: dpl_BznNuFKG8UEh4yW8y9HQyzLXDiJ9 / 13b19410caa20045b19d98d58df406c43433af5a
-Status: CURRENT_CANONICAL_LEGAL_AUTHORITY
+Status: SUPERSEDED_BY_CURRENT_LEGAL_AUTHORITY_MATRIX
 
-This matrix separates statutory law, contractual requirements, GDPR/ePrivacy, company/tax facts, procurement requirements and optional assurance. It is evidence-bound operational governance, not a legal opinion.
+Canonical current register: docs/legal-assurance/CURRENT_LEGAL_AUTHORITY.md
+
+This historical predecessor separates statutory law, contractual requirements, GDPR/ePrivacy, company/tax facts, procurement requirements and optional assurance. It is retained for audit history and is not the current authority where its dispositions differ from CURRENT_LEGAL_AUTHORITY.md. It is not a legal opinion.
 
 ## Authority and current facts
 
