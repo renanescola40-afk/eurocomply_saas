@@ -254,6 +254,20 @@ describe('public legal review surfaces', () => {
     expect(source).not.toContain('revisão jurídica qualificada');
   });
 
+  it('keeps conditional review boundaries consistent across Privacy and Terms locales', async () => {
+    const [privacy, terms] = await Promise.all([
+      readFile(PRIVACY_PAGE, 'utf8'),
+      readFile(TERMS_PAGE, 'utf8'),
+    ]);
+
+    expect(privacy).toContain('qualified review is escalated only where');
+    expect(terms).toContain('qualified review applies only where required');
+    expect(privacy).not.toContain('qualified legal decisions');
+    expect(privacy).not.toContain('revisão jurídica qualificada');
+    expect(terms).not.toContain('revisão jurídica qualificada');
+    expect(terms).not.toContain('A incorporação final exige revisão qualificada.');
+  });
+
   it('does not make qualified counsel an automatic cookie-publication gate', async () => {
     const source = await readFile(COOKIE_PAGE, 'utf8');
 
