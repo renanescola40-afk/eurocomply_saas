@@ -120,7 +120,7 @@ const en: DpaCopy = {
       title: 'Precedence, liability and final acceptance',
       paragraphs: [
         'The proposed DPA is intended to prevail over inconsistent general terms for covered processing while customer/order-form details may refine scope without weakening mandatory protections. The owner-proposed liability position remains subject to mandatory-law carve-outs and qualified drafting.',
-        'This public page remains REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED. Owner Legal Package V1 closes the owner-policy choices for subprocessor, audit and breach-notice mechanics, but this page becomes a final contractual DPA only after authoritative party facts, processing annexes, active-provider/subprocessor facts, Chapter V transfer position, TOM commitments, deletion/retention facts, required factual and contractual closure, with qualified review only where a specific law, contract or buyer requires it, and binding incorporation are complete.',
+        'This public page remains REVIEW_DRAFT · FACTUAL_CLOSURE_REQUIRED. Owner Legal Package V1 closes the owner-policy choices for subprocessor, audit and breach-notice mechanics, but this page becomes a final contractual DPA only after authoritative party facts, processing annexes, active-provider/subprocessor facts, Chapter V transfer position, TOM commitments, deletion/retention facts, required factual and contractual closure, with qualified review only where a specific law, contract or buyer requires it, and binding incorporation are complete.',
       ],
     },
   ],
@@ -234,7 +234,7 @@ const pt: DpaCopy = {
       title: 'Prevalência, responsabilidade e aceitação final',
       paragraphs: [
         'O DPA proposto destina-se a prevalecer sobre termos gerais incompatíveis no tratamento abrangido. A posição de responsabilidade proposta pelo owner continua sujeita a carve-outs imperativos e drafting qualificado.',
-        'Esta página permanece REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED. O Legal Package V1 fecha as decisões do owner para subprocessadores, auditoria e breach notice, mas o DPA só se torna final após factos autoritativos das partes, anexos, providers/subprocessadores ativos, transferências do Capítulo V, TOMs, retenção/eliminação, fecho factual e contratual necessário, com revisão qualificada apenas quando uma lei, contrato ou comprador específico a exigir, e incorporação vinculativa.',
+        'Esta página permanece REVIEW_DRAFT · FACTUAL_CLOSURE_REQUIRED. O Legal Package V1 fecha as decisões do owner para subprocessadores, auditoria e breach notice, mas o DPA só se torna final após factos autoritativos das partes, anexos, providers/subprocessadores ativos, transferências do Capítulo V, TOMs, retenção/eliminação, fecho factual e contratual necessário, com revisão qualificada apenas quando uma lei, contrato ou comprador específico a exigir, e incorporação vinculativa.',
       ],
     },
   ],
