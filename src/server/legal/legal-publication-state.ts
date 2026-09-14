@@ -116,7 +116,7 @@ const MASTER_GLOBAL_DECISION_KEYS = Object.freeze([
 export type LegalPublicationStatus =
   | 'REVIEW_DRAFT'
   | 'FOUNDER_FACT_REQUIRED'
-  | 'HUMAN_REVIEW_REQUIRED'
+  | 'OPTIONAL_ASSURANCE_OPEN'
   | 'COUNSEL_ACCEPTED';
 
 export type LegalPublicationArtifact = {
@@ -467,14 +467,14 @@ export function evaluateLegalPublicationState({
     ? 'COUNSEL_ACCEPTED'
     : !founderAccepted
       ? 'FOUNDER_FACT_REQUIRED'
-      : 'HUMAN_REVIEW_REQUIRED';
+      : 'OPTIONAL_ASSURANCE_OPEN';
 
   return {
     status,
     label: accepted ? 'Counsel accepted' : 'Legal review draft',
     notice: accepted
       ? 'The published legal materials are bound to the current product SHA and a valid signed legal decision.'
-      : 'Public legal materials are informational review drafts until complete signed founder facts and qualified counsel decisions pass the exact-SHA publication gate.',
+      : 'Public legal materials are informational review drafts while required factual, contractual, provider and transfer evidence remains incomplete. Qualified reviews and a Master Legal Opinion are reported separately as optional enterprise assurance unless a specific law, contract or buyer requires them.',
     expectedSha: resolvedSha,
     founderFactsAccepted: founderAccepted,
     qualifiedReviewsAccepted: acceptedReviews,
