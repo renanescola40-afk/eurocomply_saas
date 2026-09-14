@@ -1,29 +1,29 @@
 import { PublicLegalReviewPage } from '@/components/legal/public-legal-review-page';
 import { isSupportedLocale, type Locale } from '@/lib/i18n/locales';
 
-const LAST_UPDATED = '21 August 2026';
+const LAST_UPDATED = '14 September 2026';
 
 const copy: Record<Locale, { eyebrow: string; title: string; summary: string; sections: Array<{ title: string; paragraphs?: string[]; items?: string[] }> }> = {
   en: {
     eyebrow: 'Acceptable Use Policy',
     title: 'Acceptable and prohibited use of RISCK COMPLY',
-    summary: 'This review draft defines the minimum technical and abuse-prevention rules for use of the service while final contractual wording remains subject to qualified legal approval.',
+    summary: 'This review draft defines the minimum technical and abuse-prevention rules for use of the service. Publication is based on the documented factual and contractual closure for this release; qualified review applies only where required by applicable law, contract or buyer procurement.',
     sections: [
       { title: 'Security and access', items: ['Do not access or attempt to access another tenant, account or resource without authorization.', 'Do not bypass authentication, authorization, rate limits or other security controls.', 'Do not probe, scan or test the service without written authorization and an agreed rules-of-engagement scope.', 'Do not use stolen, shared or improperly obtained credentials.'] },
       { title: 'Malware, interference and abuse', items: ['Do not introduce malware, destructive payloads or content intended to compromise the service or another user.', 'Do not deliberately degrade availability, overload infrastructure or interfere with service operation.', 'Do not scrape or automate access in a way that violates agreed limits, security controls or applicable law.'] },
       { title: 'Unlawful and prohibited AI use', items: ['Do not use the service to facilitate unlawful surveillance, discrimination, fraud, harassment or other unlawful activity.', 'Do not use generated compliance material as a false certification, regulator approval, conformity assessment or legal opinion.', 'Do not submit data or instructions that the customer is not authorized to process.'] },
-      { title: 'Enforcement', paragraphs: ['RISCK COMPLY may restrict or suspend activity when reasonably necessary to contain a security incident, unlawful use or material abuse. Final notice, cure, restoration and termination rules remain subject to the approved Terms and qualified legal review.'] },
+      { title: 'Enforcement', paragraphs: ['RISCK COMPLY may restrict or suspend activity when reasonably necessary to contain a security incident, unlawful use or material abuse. Notice, cure, restoration and termination are governed by the applicable Terms, order and law; qualified review is escalated only where a legal, contractual or buyer requirement makes it necessary.'] },
     ],
   },
   pt: {
     eyebrow: 'Política de Utilização Aceitável',
     title: 'Utilização aceitável e proibida da RISCK COMPLY',
-    summary: 'Este rascunho define regras técnicas mínimas de segurança e prevenção de abuso enquanto a redação contratual final permanece sujeita a aprovação jurídica qualificada.',
+    summary: 'Este rascunho define regras técnicas mínimas de segurança e prevenção de abuso. A publicação baseia-se no fecho factual e contratual documentado para esta versão; a revisão qualificada só é necessária quando exigida pela lei aplicável, pelo contrato ou pelo procurement do cliente.',
     sections: [
       { title: 'Segurança e acesso', items: ['Não aceder nem tentar aceder a outro tenant, conta ou recurso sem autorização.', 'Não contornar autenticação, autorização, rate limits ou outros controlos de segurança.', 'Não testar, fazer scan ou pentest sem autorização escrita e regras de engagement acordadas.', 'Não utilizar credenciais roubadas, partilhadas indevidamente ou obtidas de forma não autorizada.'] },
       { title: 'Malware, interferência e abuso', items: ['Não introduzir malware, payloads destrutivos ou conteúdo destinado a comprometer o serviço ou outro utilizador.', 'Não degradar deliberadamente a disponibilidade, sobrecarregar infraestrutura ou interferir com a operação.', 'Não fazer scraping ou automação que viole limites acordados, controlos de segurança ou a lei aplicável.'] },
       { title: 'Utilização ilegal e práticas de IA proibidas', items: ['Não usar o serviço para facilitar vigilância ilegal, discriminação, fraude, assédio ou outra atividade ilegal.', 'Não apresentar material gerado como certificação, aprovação regulatória, avaliação de conformidade ou opinião jurídica.', 'Não submeter dados ou instruções que o cliente não esteja autorizado a tratar.'] },
-      { title: 'Aplicação das regras', paragraphs: ['A RISCK COMPLY pode restringir ou suspender atividade quando razoavelmente necessário para conter incidente de segurança, utilização ilegal ou abuso material. Regras finais de aviso, cura, reposição e cessação dependem dos Terms aprovados e de revisão jurídica qualificada.'] },
+      { title: 'Aplicação das regras', paragraphs: ['A RISCK COMPLY pode restringir ou suspender atividade quando razoavelmente necessário para conter incidente de segurança, utilização ilegal ou abuso material. O aviso, a cura, a reposição e a cessação regem-se pelos Terms aplicáveis, pela encomenda e pela lei; a revisão qualificada só é escalada quando exigida por requisito legal, contratual ou de procurement.'] },
     ],
   },
   es: {
