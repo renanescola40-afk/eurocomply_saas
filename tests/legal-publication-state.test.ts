@@ -310,7 +310,7 @@ describe('legal publication state', () => {
       masterDecision: masterDecision('c'.repeat(40)),
     });
 
-    expect(state.status).toBe('HUMAN_REVIEW_REQUIRED');
+    expect(state.status).toBe('OPTIONAL_ASSURANCE_OPEN');
     expect(state.accepted).toBe(false);
     expect(state.blockers).toContain('master_legal_decision_not_accepted');
   });

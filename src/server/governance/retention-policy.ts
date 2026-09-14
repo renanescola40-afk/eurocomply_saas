@@ -49,19 +49,19 @@ export const RETENTION_POLICIES: RetentionPolicy[] = [
     'controlled_documents',
     'Controlled documents',
     72,
-    'Proposed policy target for compliance evidence and internal control records; counsel approval and enforcement evidence are required before contractual use.',
+    'Proposed policy target for compliance evidence and internal control records; applicable-law, owner and contractual approval plus enforcement evidence are required before contractual use.',
   ),
   draftPolicy(
     'vendors',
     'Vendor records',
     72,
-    'Proposed policy target for third-party assessments, risk decisions and review history; counsel approval and enforcement evidence are required before contractual use.',
+    'Proposed policy target for third-party assessments, risk decisions and review history; applicable-law, owner and contractual approval plus enforcement evidence are required before contractual use.',
   ),
   draftPolicy(
     'risks',
     'Risk register',
     72,
-    'Proposed policy target for risk decisions and mitigation history; counsel approval and enforcement evidence are required before contractual use.',
+    'Proposed policy target for risk decisions and mitigation history; applicable-law, owner and contractual approval plus enforcement evidence are required before contractual use.',
   ),
   draftPolicy(
     'ai_systems',
@@ -91,7 +91,7 @@ export const RETENTION_POLICIES: RetentionPolicy[] = [
     'gdpr_requests',
     'GDPR requests',
     36,
-    'Proposed policy target for privacy-request handling evidence; limitation periods, disputes and minimisation requirements require qualified review.',
+    'Proposed policy target for privacy-request handling evidence; limitation periods, disputes and minimisation requirements must be reconciled before approval, with qualified advice only where an applicable legal interpretation remains unclear.',
   ),
 ];
 
@@ -129,7 +129,7 @@ export function getRetentionSummary(policies: RetentionPolicy[] = RETENTION_POLI
 
   const nextActions: string[] = [];
   if (readinessScore < 100) {
-    nextActions.push('Obtain qualified legal/commercial approval for the proposed retention targets before treating them as customer commitments.');
+    nextActions.push('Obtain owner-approved legal bases and contractual retention commitments for each category before treating proposed targets as customer promises; escalate to qualified advice only where applicable law or a negotiated contract remains unclear.');
     nextActions.push('Prove runtime/provider enforcement, backup ageing and deletion behavior with attributable evidence before marking a category enterprise-ready.');
   }
   if (!policies.some((policy) => policy.category === 'audit_events')) {
