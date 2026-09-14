@@ -5,7 +5,7 @@
 **Terminal fact reconciliation:** `docs/legal-assurance/evidence/2026-09-10-terminal-fact-reconciliation.md`  
 **Connected-account addendum captured:** `2026-09-14`  
 **Previous connected-account addendum:** `2026-09-10`  
-**Current authority merge:** `a2266647c7fc486641cb318bbc51d22f9ea7676a`  
+**Current authority merge:** `c7bb972e45b84fbe665e233c1a5550f72080bf2e`  
 **Current Supabase project observation:** `2026-09-14 / ACTIVE_HEALTHY / eu-west-1`  
 **Current Supabase backend-only RLS observation:** `29 tables / FORCE RLS=true / grants limited to postgres, service_role / zero explicit policies`  
 **Protected main at terminal-v2 branch creation:** `43bf6b1368ff7a3b8ead0aa434b83bed9457615e`  
