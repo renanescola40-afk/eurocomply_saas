@@ -1,7 +1,7 @@
 import { PublicLegalReviewPage } from '@/components/legal/public-legal-review-page';
 import { isSupportedLocale, type Locale } from '@/lib/i18n/locales';
 
-const LAST_UPDATED = '21 August 2026';
+const LAST_UPDATED = '14 September 2026';
 
 const copy: Record<Locale, { eyebrow: string; title: string; summary: string; sections: Array<{ title: string; paragraphs?: string[]; items?: string[] }> }> = {
   en: {
