@@ -18,9 +18,9 @@ const scorecard = readFileSync(
 
 describe("current legal applicability authority", () => {
   it("records the accepted release as deterministic with no evidenced model runtime", () => {
-    expect(inventory).toContain("NO_MODEL_RUNTIME_EVIDENCED");
-    expect(inventory).toContain("NO_AI_SYSTEM_IDENTIFIED_FOR_CURRENT_ACCEPTED_RISCK_RUNTIME");
-    expect(inventory).toContain("Current Production and source inspection found no model invocation");
+    expect(inventory).toContain("found no Production import or invocation");
+    expect(inventory).toContain("no model-driven generation or conversational AI runtime");
+    expect(inventory).toContain("AI_MODEL_USED: no model invocation evidenced");
   });
 
   it("closes the historical eight workstreams by applicability, not by invented signatures", () => {
