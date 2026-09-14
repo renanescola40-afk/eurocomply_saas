@@ -346,7 +346,7 @@ export async function POST(request: NextRequest) {
 
   const record = buildRecord(body);
   if (!record) {
-    return noStoreJson({ error: 'Please provide company name, work email, role and consent to contact.' }, { status: 400 });
+    return noStoreJson({ error: 'Invalid request.' }, { status: 400 });
   }
 
   const saveResult = await saveWaitlistLead(request, record);
