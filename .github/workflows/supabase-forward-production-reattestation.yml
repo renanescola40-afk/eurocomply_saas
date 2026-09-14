@@ -24,7 +24,7 @@ on:
 
 permissions:
   contents: read
-  actions: read
+  actions: write
 
 concurrency:
   group: supabase-forward-production-reattestation-${{ inputs.release_sha }}
@@ -153,6 +153,33 @@ jobs:
             if (!Number.isFinite(promotion) || !Number.isFinite(recovery) || recovery <= promotion) process.exit(1);
           ' "$PROMOTION_FINISHED_AT" "$RECOVERY_STARTED_AT"
           echo "BASELINE_PROMOTION_SHA=$BASELINE_SHA" >> "$GITHUB_ENV"
+
+      - name: Reject every migration-tree delta since the baseline promotion
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BASELINE_TREE="$RUNNER_TEMP/baseline-migration-tree.json"
+          CURRENT_TREE="$RUNNER_TEMP/current-migration-tree.json"
+
+          gh api "repos/${GITHUB_REPOSITORY}/git/trees/${BASELINE_PROMOTION_SHA}?recursive=1" > "$RUNNER_TEMP/baseline-tree.json"
+          gh api "repos/${GITHUB_REPOSITORY}/git/trees/${TARGET_SHA}?recursive=1" > "$RUNNER_TEMP/current-tree.json"
+          test "$(jq -r '.truncated' "$RUNNER_TEMP/baseline-tree.json")" = 'false'
+          test "$(jq -r '.truncated' "$RUNNER_TEMP/current-tree.json")" = 'false'
+
+          jq -c '[.tree[] | select(.type == "blob" and (.path | startswith("supabase/migrations/"))) | {path, sha}] | sort_by(.path)' \
+            "$RUNNER_TEMP/baseline-tree.json" > "$BASELINE_TREE"
+          jq -c '[.tree[] | select(.type == "blob" and (.path | startswith("supabase/migrations/"))) | {path, sha}] | sort_by(.path)' \
+            "$RUNNER_TEMP/current-tree.json" > "$CURRENT_TREE"
+
+          test "$(jq 'length' "$BASELINE_TREE")" -gt 0
+          test "$(jq 'length' "$CURRENT_TREE")" -gt 0
+          cmp -s "$BASELINE_TREE" "$CURRENT_TREE" || {
+            echo 'Production reattestation refused: supabase/migrations changed since the baseline promotion.' >&2
+            diff -u "$BASELINE_TREE" "$CURRENT_TREE" >&2 || true
+            exit 1
+          }
 
       - name: Download immutable baseline promotion and exact-SHA recovery evidence
         shell: bash
@@ -295,6 +322,14 @@ jobs:
           set -euo pipefail
           ! grep -RIE 'postgres(ql)?://|service[_-]?role|whsec_|(sk|rk|pk)_(live|test)_|\bsub_[A-Za-z0-9]+\b|\bevt_[A-Za-z0-9]+\b' "$EVIDENCE_DIR"
 
+      - name: Revalidate exact current main immediately before publication
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+
       - name: Upload exact-SHA production acceptance evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
@@ -302,3 +337,13 @@ jobs:
           path: artifacts/supabase-forward-production-reattestation/production-acceptance.json
           if-no-files-found: error
           retention-days: 365
+
+      - name: Trigger dependent Enterprise closure authorities
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+          gh workflow run enterprise-100-closure.yml --repo "$GITHUB_REPOSITORY" --ref main
+          gh workflow run enterprise-100-final-authority.yml --repo "$GITHUB_REPOSITORY" --ref main
