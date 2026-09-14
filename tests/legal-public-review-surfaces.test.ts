@@ -12,6 +12,7 @@ const COOKIE_PAGE = new URL('../src/app/[locale]/cookie-policy/page.tsx', import
 const ACCEPTABLE_USE_PAGE = new URL('../src/app/[locale]/acceptable-use/page.tsx', import.meta.url);
 const TRANSFERS_PAGE = new URL('../src/app/[locale]/transfers/page.tsx', import.meta.url);
 const PROVIDER_DISCLOSURE = new URL('../src/components/trust/provider-runtime-disclosure.tsx', import.meta.url);
+const TRUST_CENTER_CONTENT = new URL('../src/lib/trust-center/content.ts', import.meta.url);
 const CONSENT_BANNER = new URL('../src/components/analytics/AnalyticsConsentBanner.tsx', import.meta.url);
 
 const PUBLIC_LEGAL_ROUTES = ['/privacy', '/dpa', '/terms', '/cookie-policy', '/acceptable-use', '/transfers'] as const;
@@ -217,6 +218,14 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('contentLanguage={contentLocale}');
     expect(legalPage).toContain('contentLanguage?: Locale;');
     expect(legalPage).toContain('lang={contentLocale}');
+  });
+
+  it('keeps Trust Center provider and DPA review claims conditional', async () => {
+    const source = await readFile(TRUST_CENTER_CONTENT, 'utf8');
+
+    expect(source).toContain('qualified review applies only where a specific law, contract or buyer requirement makes it necessary');
+    expect(source).not.toContain('Final agreement requires legal review/signature');
+    expect(source).not.toContain('remain open for account-specific verification and qualified legal review');
   });
 
   it('dates provider revalidation explicitly and marks untranslated provider evidence as English', async () => {
