@@ -44,7 +44,22 @@ test('final authority producers require the five direct domain proofs and no raw
     assert.ok(producer.artifact(SHA).includes(SHA));
     assert.ok(producer.allowedEvents.length > 0);
     assert.equal(typeof producer.evidenceContract?.schema, 'string');
+    for (const source of producer.alternativeSources || []) {
+      assert.ok(source.workflowPath.startsWith('.github/workflows/'));
+      assert.ok(source.allowedEvents.length > 0);
+    }
   }
+
+  const supabase = FINAL_AUTHORITY_PRODUCERS.find((producer) => producer.id === 'supabase-production-acceptance');
+  assert.deepEqual(
+    supabase?.alternativeSources?.map((source) => source.workflow),
+    ['supabase-forward-production-reattestation.yml'],
+  );
+  assert.deepEqual(
+    supabase?.alternativeSources?.map((source) => source.workflowPath),
+    ['.github/workflows/supabase-forward-production-reattestation.yml'],
+  );
+  assert.deepEqual(supabase?.alternativeSources?.[0]?.allowedEvents, ['workflow_dispatch']);
 
   const external = FINAL_AUTHORITY_PRODUCERS.find((producer) => producer.id === 'external-security-assurance');
   assert.equal(external?.artifact(SHA), `external-security-assurance-accepted-${SHA}`);
