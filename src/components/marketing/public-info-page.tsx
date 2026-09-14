@@ -135,7 +135,7 @@ const pageContent = {
   dpa: {
     eyebrow: 'Data Processing Addendum',
     title: 'Data processing terms for European teams.',
-    summary: 'DPA information is part of the trust surface and requires legal review before customer signature.',
+    summary: 'DPA information is part of the trust surface and requires factual and contractual closure before customer signature; qualified review applies only where a specific law, contract or buyer requires it.',
     primaryCta: 'Privacy',
     secondaryCta: 'Subprocessors',
     sections: [commonSections.operations, commonSections.security, commonSections.evidence],
