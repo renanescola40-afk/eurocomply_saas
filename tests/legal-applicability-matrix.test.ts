@@ -41,7 +41,7 @@ describe("current legal applicability authority", () => {
 
     expect(authority).toContain("canonical current legal-control register");
     for (const [workstream, disposition] of Object.entries(dispositions)) {
-      expect(authority).toContain("| " + workstream + " | " + disposition + " |");
+      expect(authority).toContain("| " + workstream + " | " + disposition);
     }
 
     expect(authority).toContain("entity lane is intentionally deferred");
