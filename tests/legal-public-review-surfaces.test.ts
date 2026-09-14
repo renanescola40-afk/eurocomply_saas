@@ -29,11 +29,11 @@ describe('public legal review surfaces', () => {
     }
   });
 
-  it('fails legal publication claims closed while founder/counsel approval is pending', async () => {
+  it('fails legal publication claims closed while factual and contractual closure is pending', async () => {
     const source = await readFile(LEGAL_PAGE, 'utf8');
 
-    expect(source).toContain('REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED');
-    expect(source).toContain('Pending qualified legal approval');
+    expect(source).toContain('REVIEW_DRAFT · FACTUAL_CLOSURE_REQUIRED');
+    expect(source).toContain('Pending factual and contractual closure');
     expect(source).toContain('document_id:');
   });
 
@@ -108,7 +108,7 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('Precedence, liability and final acceptance');
     expect(source).toContain('eu-west-1 (Ireland)');
     expect(source).toContain('Decision (EU) 2021/915');
-    expect(source).toContain('REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED');
+    expect(source).toContain('REVIEW_DRAFT · FACTUAL_CLOSURE_REQUIRED');
 
     expect(source).toContain('does not publish final processor-party registry details until authoritative registered office');
     expect(source).toContain('general written authorisation');
@@ -155,7 +155,7 @@ describe('public legal review surfaces', () => {
     expect(source).toContain('Governing law, disputes and legal notices — review boundary');
     expect(source).toContain('Final acceptance boundary');
     expect(source).toContain('comercial@risckcomply.com');
-    expect(source).toContain('REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED');
+    expect(source).toContain('REVIEW_DRAFT · FACTUAL_CLOSURE_REQUIRED');
 
     expect(source).toContain('owner-designated RISCK COMPLY operator, contracting entity and seller internally');
     expect(source).toContain('this public review draft does not publish a final customer-facing legal party identity');
