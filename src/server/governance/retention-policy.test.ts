@@ -14,6 +14,14 @@ describe('retention policy', () => {
     expect(summary.maximumMonths).toBeGreaterThan(summary.minimumMonths);
   });
 
+  it('does not imply that qualified counsel is automatically required', () => {
+    const summary = getRetentionSummary();
+
+    expect(summary.nextActions[0]).toContain('owner-approved legal bases');
+    expect(summary.nextActions[0]).toContain('escalate to qualified advice only where');
+    expect(summary.nextActions[0]).not.toContain('Obtain qualified legal/commercial approval');
+  });
+
   it('calculates only the date implied by a draft target for review planning', () => {
     const retainedUntil = getRetentionUntil('audit_events', '2026-01-01T00:00:00.000Z');
 
