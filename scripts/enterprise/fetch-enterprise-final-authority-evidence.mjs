@@ -16,6 +16,10 @@ function contract(spec) {
   return Object.freeze(spec);
 }
 
+function alternativeSource(spec) {
+  return Object.freeze(spec);
+}
+
 export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
   Object.freeze({
     id: 'product-commercial-qa',
@@ -49,6 +53,13 @@ export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
     id: 'supabase-production-acceptance',
     workflow: 'supabase-forward-production-acceptance.yml',
     workflowPath: '.github/workflows/supabase-forward-production-acceptance.yml',
+    alternativeSources: Object.freeze([
+      alternativeSource({
+        workflow: 'supabase-forward-production-reattestation.yml',
+        workflowPath: '.github/workflows/supabase-forward-production-reattestation.yml',
+        allowedEvents: Object.freeze(['workflow_dispatch']),
+      }),
+    ]),
     artifact: (sha) => `supabase-forward-production-acceptance-${sha}`,
     evidenceBasename: 'production-acceptance.json',
     allowedEvents: Object.freeze(['workflow_dispatch']),
@@ -115,13 +126,24 @@ async function walk(directory) {
   return files;
 }
 
-function validateRun(run, spec, targetSha) {
+function producerSources(spec) {
+  return [
+    {
+      workflow: spec.workflow,
+      workflowPath: spec.workflowPath,
+      allowedEvents: spec.allowedEvents,
+    },
+    ...(spec.alternativeSources || []),
+  ];
+}
+
+function validateRun(run, source, targetSha) {
   return run?.head_sha === targetSha
     && run?.head_branch === 'main'
     && run?.conclusion === 'success'
     && run?.status === 'completed'
-    && run?.path === spec.workflowPath
-    && spec.allowedEvents.includes(run?.event);
+    && run?.path === source.workflowPath
+    && source.allowedEvents.includes(run?.event);
 }
 
 export function validateAuthoritativeEvidenceDocument(spec, document) {
@@ -167,67 +189,73 @@ async function downloadValidatedArtifact({ repository, runId, artifactName, dest
 }
 
 async function collectProducer({ spec, repository, targetSha, token, root }) {
-  const workflowId = encodeURIComponent(spec.workflow);
-  const runs = await requestJson(`${API_URL}/repos/${repository}/actions/workflows/${workflowId}/runs?status=completed&head_sha=${targetSha}&per_page=100`, token);
-  const candidates = (runs.workflow_runs || []).filter((run) => validateRun(run, spec, targetSha));
   const artifactName = spec.artifact(targetSha);
+  let successfulExactShaRunsInspected = 0;
 
-  for (const run of candidates) {
-    const inventory = await requestJson(`${API_URL}/repos/${repository}/actions/runs/${run.id}/artifacts?per_page=100`, token);
-    if (Number(inventory.total_count || 0) > 100) throw new Error(`${spec.id}:artifact_inventory_truncated`);
-    const matches = (inventory.artifacts || []).filter((artifact) => artifact?.expired !== true && artifact?.name === artifactName && Number.isInteger(artifact?.id));
-    if (matches.length > 1) throw new Error(`${spec.id}:duplicate_authoritative_artifact`);
-    if (matches.length === 0) continue;
+  for (const source of producerSources(spec)) {
+    const workflowId = encodeURIComponent(source.workflow);
+    const runs = await requestJson(`${API_URL}/repos/${repository}/actions/workflows/${workflowId}/runs?status=completed&head_sha=${targetSha}&per_page=100`, token);
+    const candidates = (runs.workflow_runs || []).filter((run) => validateRun(run, source, targetSha));
+    successfulExactShaRunsInspected += candidates.length;
 
-    const destination = path.join(root, spec.id);
-    await rm(destination, { recursive: true, force: true });
-    await mkdir(destination, { recursive: true });
-    await downloadValidatedArtifact({
-      repository,
-      runId: run.id,
-      artifactName,
-      destination,
-      token,
-    });
+    for (const run of candidates) {
+      const inventory = await requestJson(`${API_URL}/repos/${repository}/actions/runs/${run.id}/artifacts?per_page=100`, token);
+      if (Number(inventory.total_count || 0) > 100) throw new Error(`${spec.id}:artifact_inventory_truncated`);
+      const matches = (inventory.artifacts || []).filter((artifact) => artifact?.expired !== true && artifact?.name === artifactName && Number.isInteger(artifact?.id));
+      if (matches.length > 1) throw new Error(`${spec.id}:duplicate_authoritative_artifact`);
+      if (matches.length === 0) continue;
 
-    const files = await walk(destination);
-    const evidenceMatches = files.filter((file) => path.basename(file) === spec.evidenceBasename);
-    if (evidenceMatches.length !== 1) throw new Error(`${spec.id}:authoritative_evidence_file_count_${evidenceMatches.length}`);
-    const document = JSON.parse(await readFile(evidenceMatches[0], 'utf8'));
-    const binding = resolveEvidenceShaBinding(document);
-    if (binding.conflict || binding.sha !== targetSha) throw new Error(`${spec.id}:evidence_sha_mismatch`);
+      const destination = path.join(root, spec.id);
+      await rm(destination, { recursive: true, force: true });
+      await mkdir(destination, { recursive: true });
+      await downloadValidatedArtifact({
+        repository,
+        runId: run.id,
+        artifactName,
+        destination,
+        token,
+      });
 
-    const contractValidation = validateAuthoritativeEvidenceDocument(spec, document);
-    if (!contractValidation.valid) {
-      throw new Error(`${spec.id}:evidence_contract_invalid:${contractValidation.failures.join(',')}`);
+      const files = await walk(destination);
+      const evidenceMatches = files.filter((file) => path.basename(file) === spec.evidenceBasename);
+      if (evidenceMatches.length !== 1) throw new Error(`${spec.id}:authoritative_evidence_file_count_${evidenceMatches.length}`);
+      const document = JSON.parse(await readFile(evidenceMatches[0], 'utf8'));
+      const binding = resolveEvidenceShaBinding(document);
+      if (binding.conflict || binding.sha !== targetSha) throw new Error(`${spec.id}:evidence_sha_mismatch`);
+
+      const contractValidation = validateAuthoritativeEvidenceDocument(spec, document);
+      if (!contractValidation.valid) {
+        throw new Error(`${spec.id}:evidence_contract_invalid:${contractValidation.failures.join(',')}`);
+      }
+
+      const serialized = JSON.stringify(document);
+      if (/(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|postgres(?:ql)?:\/\//i.test(serialized)) {
+        throw new Error(`${spec.id}:sensitive_value_detected`);
+      }
+
+      return {
+        id: spec.id,
+        status: 'COLLECTED',
+        workflow: source.workflowPath,
+        runId: run.id,
+        event: run.event,
+        artifactId: matches[0].id,
+        artifactName,
+        evidenceFile: path.relative(root, evidenceMatches[0]).split(path.sep).join('/'),
+        shaSource: binding.source,
+        evidenceContractValidated: true,
+      };
     }
-
-    const serialized = JSON.stringify(document);
-    if (/(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|postgres(?:ql)?:\/\//i.test(serialized)) {
-      throw new Error(`${spec.id}:sensitive_value_detected`);
-    }
-
-    return {
-      id: spec.id,
-      status: 'COLLECTED',
-      workflow: spec.workflowPath,
-      runId: run.id,
-      event: run.event,
-      artifactId: matches[0].id,
-      artifactName,
-      evidenceFile: path.relative(root, evidenceMatches[0]).split(path.sep).join('/'),
-      shaSource: binding.source,
-      evidenceContractValidated: true,
-    };
   }
 
   return {
     id: spec.id,
     status: 'MISSING',
     workflow: spec.workflowPath,
+    alternativeWorkflows: (spec.alternativeSources || []).map((source) => source.workflowPath),
     artifactName,
     evidenceFile: null,
-    exactShaCompletedSuccessfulRunsInspected: candidates.length,
+    exactShaCompletedSuccessfulRunsInspected: successfulExactShaRunsInspected,
   };
 }
 
