@@ -21,7 +21,9 @@ describe('canonical Trust Center publication integrity', () => {
     const procurement = read('docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md');
 
     expect(procurement).toContain('PROVIDER_FACTUAL_EVIDENCE_REGISTER.md');
-    expect(procurement).toContain('release-specific claim remains `OPEN`');
+    expect(procurement).toContain('intentionally not hard-coded into this buyer-facing packet');
+    expect(procurement).toContain('any release-specific claim remains bounded to the release actually evidenced');
+    expect(procurement).toContain('`EXACT_SHA_PRODUCTION=NO_PASS`');
     expect(procurement).not.toMatch(/\b[a-f0-9]{40}\b/i);
   });
 
