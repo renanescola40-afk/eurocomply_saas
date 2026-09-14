@@ -1,0 +1,304 @@
+name: Supabase Forward Production Reattestation
+
+run-name: Reattest live Supabase state for ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA whose application release is being accepted without a database write
+        required: true
+        type: string
+      baseline_promotion_run_id:
+        description: Successful historical Supabase Forward Reconciliation Production Promotion run that originally promoted the unchanged selected migration bytes
+        required: true
+        type: string
+      recovery_run_id:
+        description: Successful exact-current-SHA Recovery Resilience Proof run bound to the current Production migration ledger
+        required: true
+        type: string
+      confirmation:
+        description: Type REATTEST <release_sha> FROM PROMOTION <baseline_promotion_run_id> WITH RECOVERY <recovery_run_id>
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: supabase-forward-production-reattestation-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    name: Validate reattestation contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+      - name: Validate verifier and read-only workflow contract
+        run: |
+          node --check scripts/supabase/verify-forward-production-reattestation.mjs
+          npx vitest run tests/security/supabase-forward-production-reattestation-workflow.test.ts
+
+  governance:
+    name: Verify Production governance before protected database secret
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      BASELINE_PROMOTION_RUN_ID: ${{ inputs.baseline_promotion_run_id }}
+      RECOVERY_RUN_ID: ${{ inputs.recovery_run_id }}
+      INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+      GITHUB_ENVIRONMENT_NAME: Production
+      REQUIRE_PROTECTED_BRANCHES: 'true'
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout exact current main SHA without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Validate exact-SHA inputs and confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$BASELINE_PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$RECOVERY_RUN_ID" =~ ^[0-9]+$ ]]
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git ls-remote origin refs/heads/main | grep -q "^${TARGET_SHA}"
+          EXPECTED="REATTEST ${TARGET_SHA} FROM PROMOTION ${BASELINE_PROMOTION_RUN_ID} WITH RECOVERY ${RECOVERY_RUN_ID}"
+          test "$INPUT_CONFIRMATION" = "$EXPECTED"
+      - name: Verify Production environment governance before secrets
+        run: node scripts/security/check-github-environment-governance.mjs
+
+  reattest:
+    name: Prove unchanged promoted schema and current recovery read-only
+    needs: [contract, governance]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: Production
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      BASELINE_PROMOTION_RUN_ID: ${{ inputs.baseline_promotion_run_id }}
+      RECOVERY_RUN_ID: ${{ inputs.recovery_run_id }}
+      EVIDENCE_DIR: artifacts/supabase-forward-production-reattestation
+      CURRENT_MANIFEST: artifacts/supabase-forward-production-reattestation/current-manifest.json
+      LIVE_REMOTE: artifacts/supabase-forward-production-reattestation/live-remote-versions.json
+      LIVE_POSTCONDITIONS: artifacts/supabase-forward-production-reattestation/live-postconditions.json
+      LIVE_TENANT_PROOF: artifacts/supabase-forward-production-reattestation/live-tenant-isolation.json
+      ACCEPTANCE_EVIDENCE: artifacts/supabase-forward-production-reattestation/production-acceptance.json
+      PGSSLMODE: require
+    steps:
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+      - name: Verify hosted PostgreSQL client without network installation
+        run: node scripts/recovery/verify-postgresql-client.mjs
+      - name: Verify exact current main and source workflow provenance
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+
+          PROMOTION_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${BASELINE_PROMOTION_RUN_ID}")"
+          BASELINE_SHA="$(jq -r '.head_sha' <<<"$PROMOTION_JSON")"
+          [[ "$BASELINE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(jq -r '.path' <<<"$PROMOTION_JSON")" = '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
+          test "$(jq -r '.event' <<<"$PROMOTION_JSON")" = 'workflow_dispatch'
+          test "$(jq -r '.status' <<<"$PROMOTION_JSON")" = 'completed'
+          test "$(jq -r '.conclusion' <<<"$PROMOTION_JSON")" = 'success'
+
+          RECOVERY_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RECOVERY_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$RECOVERY_JSON")" = "$TARGET_SHA"
+          test "$(jq -r '.path' <<<"$RECOVERY_JSON")" = '.github/workflows/recovery-resilience-proof.yml'
+          test "$(jq -r '.event' <<<"$RECOVERY_JSON")" = 'workflow_dispatch'
+          test "$(jq -r '.status' <<<"$RECOVERY_JSON")" = 'completed'
+          test "$(jq -r '.conclusion' <<<"$RECOVERY_JSON")" = 'success'
+
+          PROMOTION_FINISHED_AT="$(jq -r '.updated_at // empty' <<<"$PROMOTION_JSON")"
+          RECOVERY_STARTED_AT="$(jq -r '.run_started_at // empty' <<<"$RECOVERY_JSON")"
+          node -e '
+            const promotion = Date.parse(process.argv[1]);
+            const recovery = Date.parse(process.argv[2]);
+            if (!Number.isFinite(promotion) || !Number.isFinite(recovery) || recovery <= promotion) process.exit(1);
+          ' "$PROMOTION_FINISHED_AT" "$RECOVERY_STARTED_AT"
+          echo "BASELINE_PROMOTION_SHA=$BASELINE_SHA" >> "$GITHUB_ENV"
+
+      - name: Download immutable baseline promotion and exact-SHA recovery evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p source-promotion source-recovery "$EVIDENCE_DIR"
+          gh run download "$BASELINE_PROMOTION_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "supabase-forward-production-promotion-${BASELINE_PROMOTION_SHA}" \
+            --dir source-promotion
+          gh run download "$RECOVERY_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "recovery-resilience-proof-${TARGET_SHA}" \
+            --dir source-recovery
+
+      - name: Compile current selected bytes and resolve immutable source evidence
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/supabase/forward-reconciliation-control-plane.mjs compile \
+            config/supabase-forward-reconciliation.json \
+            "$CURRENT_MANIFEST" \
+            --expected-sha="$TARGET_SHA"
+
+          mapfile -t BASELINE_MANIFESTS < <(find source-promotion -type f -name 'current-manifest.json' -print)
+          mapfile -t HUMAN_PROOFS < <(find source-promotion -type f -name 'human-approval-proof.json' -print)
+          mapfile -t PROMOTION_PROOFS < <(find source-promotion -type f -name 'promotion-transition.json' -print)
+          mapfile -t BASELINE_REMOTE < <(find source-promotion -type f -name 'remote-after.json' -print)
+          mapfile -t BACKUP_RESTORE < <(find source-recovery -type f -name 'backup-restore-tested.json' -print)
+          test "${#BASELINE_MANIFESTS[@]}" -eq 1
+          test "${#HUMAN_PROOFS[@]}" -eq 1
+          test "${#PROMOTION_PROOFS[@]}" -eq 1
+          test "${#BASELINE_REMOTE[@]}" -eq 1
+          test "${#BACKUP_RESTORE[@]}" -eq 1
+          {
+            echo "baseline_manifest=${BASELINE_MANIFESTS[0]}"
+            echo "human_proof=${HUMAN_PROOFS[0]}"
+            echo "promotion_proof=${PROMOTION_PROOFS[0]}"
+            echo "baseline_remote=${BASELINE_REMOTE[0]}"
+            echo "backup_restore=${BACKUP_RESTORE[0]}"
+            echo "selection_digest=$(jq -r '.selectionDigest' "$CURRENT_MANIFEST")"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Capture fresh live migration ledger read-only
+        shell: bash
+        env:
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_POOLER_URL:-}"
+          case "$SUPABASE_DB_POOLER_URL" in
+            postgresql://*|postgres://*) ;;
+            *) echo 'SUPABASE_DB_POOLER_URL must be a PostgreSQL connection string' >&2; exit 1 ;;
+          esac
+          case "$SUPABASE_DB_POOLER_URL" in
+            *pooler.supabase.com*) ;;
+            *) echo 'SUPABASE_DB_POOLER_URL must use the Supabase pooler endpoint' >&2; exit 1 ;;
+          esac
+          psql "$SUPABASE_DB_POOLER_URL" \
+            --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1 \
+            --command 'begin transaction read only; select version from supabase_migrations.schema_migrations order by version; rollback;' \
+            | sed '/^[[:space:]]*$/d' \
+            | jq -R -s 'split("\n") | map(select(test("^[0-9]{14}$")))' > "$LIVE_REMOTE"
+          test -s "$LIVE_REMOTE"
+
+      - name: Re-run canonical live schema and cross-tenant postconditions read-only
+        shell: bash
+        env:
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+          CURRENT_DIGEST: ${{ steps.source.outputs.selection_digest }}
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_POOLER_URL" \
+            --no-psqlrc --set ON_ERROR_STOP=1 \
+            --command 'begin transaction read only;' \
+            --file scripts/supabase/verify-forward-reconciliation-postconditions.sql \
+            --file scripts/supabase/verify-cross-tenant-reference-integrity-postconditions.sql \
+            --command 'rollback;' >/dev/null
+          jq -n --arg sha "$TARGET_SHA" --arg digest "$CURRENT_DIGEST" '{
+            schema:"risck-comply.supabase-forward-live-postconditions.v1",
+            evidenceItem:"supabase-forward-live-postconditions",
+            status:"Complete", outcome:"passed", targetSha:$sha, selectionDigest:$digest,
+            readOnly:true,
+            postconditions:"forward_reconciliation_and_cross_tenant_reference_postconditions_passed",
+            evidenceIntegrity:{containsSensitiveValues:false,databaseUrlsStored:false,rowDataStored:false}
+          }' > "$LIVE_POSTCONDITIONS"
+
+      - name: Prove live two-tenant authenticated isolation read-only
+        shell: bash
+        env:
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+          CURRENT_DIGEST: ${{ steps.source.outputs.selection_digest }}
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_POOLER_URL" \
+            --no-psqlrc --set ON_ERROR_STOP=1 \
+            --file scripts/supabase/assert-live-tenant-isolation-read-only.sql >/dev/null
+          jq -n --arg sha "$TARGET_SHA" --arg digest "$CURRENT_DIGEST" '{
+            schema:"risck-comply.supabase-live-tenant-isolation.v1",
+            evidenceItem:"supabase-live-tenant-isolation",
+            status:"Complete", outcome:"passed", targetSha:$sha, selectionDigest:$digest, readOnly:true,
+            checks:{
+              transactionReadOnly:true, isolatedExistingActorPairFound:true,
+              canonicalOrganizationRlsForceRls:true, evidenceVaultRlsForceRls:true,
+              evidenceStoragePoliciesCanonical:true,
+              actorAOwnOrganizationVisible:true, actorAForeignOrganizationHidden:true,
+              actorAOwnMembershipVisible:true, actorAForeignMembershipHidden:true,
+              actorBOwnOrganizationVisible:true, actorBForeignOrganizationHidden:true,
+              actorBOwnMembershipVisible:true, actorBForeignMembershipHidden:true,
+              noProductionMutation:true
+            },
+            evidenceIntegrity:{containsSensitiveValues:false,userIdsStored:false,organizationIdsStored:false,rowDataStored:false,databaseUrlsStored:false}
+          }' > "$LIVE_TENANT_PROOF"
+
+      - name: Verify baseline bytes current live state and exact-SHA recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/supabase/verify-forward-production-reattestation.mjs \
+            "$CURRENT_MANIFEST" \
+            "${{ steps.source.outputs.baseline_manifest }}" \
+            "${{ steps.source.outputs.human_proof }}" \
+            "${{ steps.source.outputs.promotion_proof }}" \
+            "$LIVE_POSTCONDITIONS" \
+            "$LIVE_TENANT_PROOF" \
+            "${{ steps.source.outputs.backup_restore }}" \
+            "$LIVE_REMOTE" \
+            "${{ steps.source.outputs.baseline_remote }}" \
+            "$ACCEPTANCE_EVIDENCE" \
+            "$TARGET_SHA" \
+            "$BASELINE_PROMOTION_RUN_ID" \
+            "$RECOVERY_RUN_ID"
+
+      - name: Reject sensitive retained evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -RIE 'postgres(ql)?://|service[_-]?role|whsec_|(sk|rk|pk)_(live|test)_|\bsub_[A-Za-z0-9]+\b|\bevt_[A-Za-z0-9]+\b' "$EVIDENCE_DIR"
+
+      - name: Upload exact-SHA production acceptance evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: supabase-forward-production-acceptance-${{ inputs.release_sha }}
+          path: artifacts/supabase-forward-production-reattestation/production-acceptance.json
+          if-no-files-found: error
+          retention-days: 365
