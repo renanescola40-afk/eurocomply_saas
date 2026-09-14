@@ -3,7 +3,11 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const repoRoot = resolve(__dirname, "..");
-const matrix = readFileSync(
+const authority = readFileSync(
+  resolve(repoRoot, "docs/legal-assurance/CURRENT_LEGAL_AUTHORITY.md"),
+  "utf8",
+);
+const predecessor = readFileSync(
   resolve(repoRoot, "docs/legal-assurance/LEGAL_APPLICABILITY_MATRIX_V2_2026-09-14.md"),
   "utf8",
 );
@@ -23,24 +27,25 @@ describe("current legal applicability authority", () => {
     expect(inventory).toContain("AI_MODEL_USED: no model invocation evidenced");
   });
 
-  it("closes the historical eight workstreams by applicability, not by invented signatures", () => {
-    const workstreams = [
-      "LEGAL_RULES",
-      "ARTICLE_5",
-      "ARTICLE_50",
-      "FRIA",
-      "DEPLOYER",
-      "HIGH_RISK_PROVIDER",
-      "CONFORMITY",
-      "GPAI",
-    ];
+  it("uses the current authority register for historical-workstream migration", () => {
+    const dispositions = {
+      LEGAL_RULES: "APPLICABLE_STATUTORY_REQUIREMENT",
+      ARTICLE_5: "NOT_APPLICABLE_CURRENT_RELEASE",
+      ARTICLE_50: "NOT_APPLICABLE_CURRENT_RELEASE",
+      FRIA: "NOT_APPLICABLE_CURRENT_RELEASE",
+      DEPLOYER: "FUTURE_TRIGGER_ONLY",
+      HIGH_RISK_PROVIDER: "NOT_APPLICABLE_CURRENT_RELEASE",
+      CONFORMITY: "FUTURE_TRIGGER_ONLY",
+      GPAI: "NOT_APPLICABLE_CURRENT_RELEASE",
+    };
 
-    for (const workstream of workstreams) {
-      expect(matrix).toContain("| " + workstream + " | NOT_APPLICABLE_CURRENT_RELEASE |");
+    expect(authority).toContain("canonical current legal-control register");
+    for (const [workstream, disposition] of Object.entries(dispositions)) {
+      expect(authority).toContain("| " + workstream + " | " + disposition + " |");
     }
 
-    expect(matrix).toContain("LEGAL_REQUIREMENTS_8_OF_8_OR_NA=8/8");
-    expect(matrix).toContain("LEGAL_8_OF_8_HUMAN_REVIEWS=0/8");
+    expect(authority).toContain("entity lane is intentionally deferred");
+    expect(predecessor).toContain("SUPERSEDED_BY_CURRENT_LEGAL_AUTHORITY_MATRIX");
   });
 
   it("keeps factual legal blockers separate from optional assurance", () => {
