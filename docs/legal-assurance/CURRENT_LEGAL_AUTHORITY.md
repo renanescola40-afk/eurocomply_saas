@@ -2,7 +2,7 @@
 
 **Effective evidence date:** 14 September 2026  
 **Product:** RISCK COMPLY  
-**Repository release reference:** `main@3a96c7d5d6123cbb871f360987419a25e697c837`  
+**Repository release reference:** `main@c7bb972e45b84fbe665e233c1a5550f72080bf2e`  
 **Status:** canonical current legal-control register; not legal advice, certification, regulator approval or executed contract
 
 ## Authority and scope
