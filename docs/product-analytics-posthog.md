@@ -11,6 +11,7 @@ NEXT_PUBLIC_POSTHOG_KEY=phc_xxx
 NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
 POSTHOG_KEY=phc_xxx
 POSTHOG_HOST=https://eu.i.posthog.com
+POSTHOG_SERVER_CAPTURE_ENABLED=false
 NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT=true
 NEXT_PUBLIC_POSTHOG_SESSION_REPLAY=false
 ```
@@ -56,6 +57,7 @@ Implemented controls:
 - `mask_all_element_attributes: true`.
 - `respect_dnt: true`.
 - optional consent banner via `NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT=true`.
+- server-side capture is disabled unless `POSTHOG_SERVER_CAPTURE_ENABLED=true` and the caller passes explicit `analyticsConsent: true`.
 - sensitive route detection for documents, risks, vendors, uploads, settings and billing.
 
 ## Feature flags
