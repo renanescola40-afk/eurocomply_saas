@@ -158,7 +158,7 @@ const pt: TermsCopy = {
   eyebrow: 'Termos de Serviço — rascunho para revisão',
   title: 'Termos empresariais do serviço RISCK COMPLY',
   summary:
-    'Este rascunho público regista a estrutura contratual atual para clientes empresariais. As posições comerciais do owner estão agora selecionadas através do Legal Package V1, mas este ainda não é um acordo em vigor: factos registais/fiscais autoritativos, factos dependentes de fornecedores, revisão jurídica qualificada e publicação final deliberada continuam como gates de aceitação.',
+    'Este rascunho público regista a estrutura contratual atual para clientes empresariais. As posições comerciais do owner estão agora selecionadas através do Legal Package V1, mas este ainda não é um acordo em vigor: factos registais/fiscais autoritativos, factos dependentes de fornecedores, reconciliação factual e contratual e publicação final deliberada continuam como gates de aceitação; a revisão qualificada só é escalada quando exigida por lei, contrato ou procurement do cliente.',
   sections: [
     {
       title: 'Partes, estado e âmbito empresarial',
@@ -219,13 +219,13 @@ const pt: TermsCopy = {
       paragraphs: [
         'Registos fiscais/VAT e tratamento da fatura devem corresponder à entidade contratante/vendedora designada e a factos fiscais autoritativos. O código de billing não prova o regime ou registos de IVA efetivamente aplicáveis.',
         'A posição atribuível do owner é não existir reembolso geral por defeito, sujeito a lei imperativa, erros de billing/provider, cobranças duplicadas, order form aplicável e remédios expressamente negociados.',
-        'Para falha de pagamento ordinária, a posição selecionada prevê 7 dias de cura após aviso antes de suspensão por falta de pagamento. Suspensão mais rápida pode aplicar-se perante fraude, abuso de segurança, atividade ilícita ou risco material. O acesso deve ser restaurado depois de resolvida a condição de cura ou risco aplicável, sujeito a validação operacional e a qualquer restrição legal que continue aplicável. A eficácia jurídica final continua sujeita a revisão qualificada.',
+        'Para falha de pagamento ordinária, a posição selecionada prevê 7 dias de cura após aviso antes de suspensão por falta de pagamento. Suspensão mais rápida pode aplicar-se perante fraude, abuso de segurança, atividade ilícita ou risco material. O acesso deve ser restaurado depois de resolvida a condição de cura ou risco aplicável, sujeito a validação operacional e a qualquer restrição legal que continue aplicável. A eficácia jurídica final continua sujeita à lei aplicável e à redação contratual final; a revisão qualificada só é escalada quando um requisito legal, contratual ou de procurement a tornar necessária.',
       ],
     },
     {
       title: 'Confidencialidade',
       paragraphs: [
-        'A estrutura proposta exige que cada parte proteja a informação confidencial da outra com cuidado razoável e a utilize apenas para o acordo. Exclusões padrão continuam sujeitas à redação final qualificada.',
+        'A estrutura proposta exige que cada parte proteja a informação confidencial da outra com cuidado razoável e a utilize apenas para o acordo. Exclusões padrão continuam sujeitas à lei aplicável e à redação contratual final; a revisão qualificada só é escalada quando necessária.',
         'Divulgação compulsória, duração, remédios e conhecimento residual são matérias de drafting jurídico; não representam uma decisão comercial do owner ainda em falta.',
       ],
     },
@@ -254,7 +254,7 @@ const pt: TermsCopy = {
     {
       title: 'Suspensão, cessação e acesso pós-cessação',
       paragraphs: [
-        'A posição selecionada prevê 30 dias de cura após aviso para incumprimento material sanável. Cessação imediata pode ser reservada para abuso grave de segurança, atividade ilícita, fraude, comprometimento deliberado cross-tenant, abuso material não sanável ou proibição legal/provider. A redação final permanece sujeita a revisão qualificada.',
+        'A posição selecionada prevê 30 dias de cura após aviso para incumprimento material sanável. Cessação imediata pode ser reservada para abuso grave de segurança, atividade ilícita, fraude, comprometimento deliberado cross-tenant, abuso material não sanável ou proibição legal/provider. A redação final permanece sujeita à lei aplicável e à reconciliação contratual; a revisão qualificada só é escalada quando necessária.',
         'O cancelamento self-service preserva o acesso pago até ao fim do período ativo. O owner selecionou uma janela de exportação de 30 dias após cessação, ainda dependente de capacidade do produto, conservação, provider lifecycle e redação final.',
         'A eliminação continua sujeita ao DPA, retenção por categoria, legal holds, registos contabilísticos/auditoria e limites verificados de providers.',
       ],
@@ -269,15 +269,15 @@ const pt: TermsCopy = {
     {
       title: 'Indemnizações e responsabilidade — decisão jurídica necessária',
       paragraphs: [
-        'A posição selecionada é não existir indemnização ampla e aberta nos Termos self-service padrão. O cliente continua responsável por utilização/conteúdo ilícito; indemnizações Enterprise podem ser negociadas e ficam sujeitas a revisão qualificada.',
-        'O cap agregado padrão proposto pelo owner corresponde aos fees pagos ou a pagar pelo serviço afetado nos 12 meses anteriores ao evento. Perdas indiretas/consequenciais e lucros cessantes devem ser excluídos na medida legal; fraude, dolo e responsabilidade legalmente não limitável ficam fora do cap. O tratamento de confidencialidade, dados e IP continua sujeito a counsel. Nenhum cap ou indemnização é apresentado como eficaz por este rascunho.',
+        'A posição selecionada é não existir indemnização ampla e aberta nos Termos self-service padrão. O cliente continua responsável por utilização/conteúdo ilícito; indemnizações Enterprise podem ser negociadas e ficam sujeitas à lei aplicável e à redação contratual final; a revisão qualificada só é escalada quando necessária.',
+        'O cap agregado padrão proposto pelo owner corresponde aos fees pagos ou a pagar pelo serviço afetado nos 12 meses anteriores ao evento. Perdas indiretas/consequenciais e lucros cessantes devem ser excluídos na medida legal; fraude, dolo e responsabilidade legalmente não limitável ficam fora do cap. O tratamento de confidencialidade, dados e IP continua sujeito à lei aplicável e à redação contratual final; a revisão qualificada só é escalada quando necessária. Nenhum cap ou indemnização é apresentado como eficaz por este rascunho.',
       ],
     },
     {
       title: 'Renovação, alterações e precedência documental',
       paragraphs: [
-        'A posição selecionada é renovação automática das subscrições recorrentes suportadas até cancelamento e alvo de 30 dias para aviso de alteração material de preço que afete futura renovação, sujeito ao checkout/order process, lei imperativa e revisão qualificada.',
-        'O modelo de precedência proposto é order form assinada, DPA assinado, schedule negociado, Termos finais e documentação pública. A incorporação final exige revisão qualificada.',
+        'A posição selecionada é renovação automática das subscrições recorrentes suportadas até cancelamento e alvo de 30 dias para aviso de alteração material de preço que afete futura renovação, sujeito ao checkout/order process, lei imperativa e redação contratual final; a revisão qualificada só é escalada quando necessária.',
+        'O modelo de precedência proposto é order form assinada, DPA assinado, schedule negociado, Termos finais e documentação pública. A incorporação final exige reconciliação factual e contratual com a lei aplicável; a revisão qualificada só é escalada quando necessária.',
       ],
     },
     {
