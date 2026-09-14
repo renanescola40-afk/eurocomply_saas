@@ -37,7 +37,7 @@ export const TRUST_PROHIBITED_CLAIMS = [
   'Automatic EU AI Act compliance or replacement for lawyers, DPOs or compliance officers.',
 ] as const;
 
-const updated = '2026-08-22';
+const updated = '2026-09-14';
 const contact = 'security@risckcomply.com';
 const statusPage = 'https://risckcomplystatus1.statuspage.io/';
 const disclosureSlug = TRUST_CENTER_ROUTES[9];
