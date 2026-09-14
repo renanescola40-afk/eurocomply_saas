@@ -3,7 +3,7 @@
 Date: 2026-09-14
 Product: RISCK COMPLY
 Repository: renanescola40-afk/eurocomply_saas
-Current main after legal applicability merge: 9fb761501a7d1cb5d7ea8230f7fc73ddda2b86e9
+Current main after public legal-boundary merge: 3a96c7d5d6123cbb871f360987419a25e697c837
 Current canonical Production: dpl_BznNuFKG8UEh4yW8y9HQyzLXDiJ9 / 13b19410caa20045b19d98d58df406c43433af5a
 
 ## Authority rule
@@ -16,7 +16,7 @@ For current legal decisions use this order:
 4. current protected main;
 5. current Production release;
 6. attributable company/provider/account evidence;
-7. this index and the current applicability/feature artifacts;
+7. this index and the current authority register, applicability/feature artifacts;
 8. attributable evidence comments;
 9. old issue bodies;
 10. historical chat assumptions.
@@ -27,10 +27,11 @@ An older issue or document cannot reopen a current closed or N/A determination w
 
 | Artifact | Status | Authority use |
 |---|---|---|
-| docs/legal-assurance/LEGAL_APPLICABILITY_MATRIX_V2_2026-09-14.md | CURRENT | Canonical legal applicability, AI Act workstream classification and GDPR/ePrivacy/provider/company gap matrix |
+| docs/legal-assurance/CURRENT_LEGAL_AUTHORITY.md | CURRENT_CANONICAL | Canonical current legal-control dispositions, release boundary, historical-workstream migration and open evidence gates |
+| docs/legal-assurance/LEGAL_APPLICABILITY_MATRIX_V2_2026-09-14.md | SUPERSEDED_FOR_CURRENT_APPLICABILITY | Historical predecessor retained for audit context; do not use it to override the current authority register |
 | docs/legal-assurance/RISCK_COMPLY_REGULATORY_FEATURE_INVENTORY_V1_2026-09-14.md | CURRENT | Canonical accepted-release feature and runtime boundary |
 | docs/legal-assurance/LEGAL_LAUNCH_SCORECARD_V1_2026-09-14.md | CURRENT | Current scorecard, blockers, owner actions and terminal states |
-| tests/legal-applicability-matrix.test.ts | CURRENT | Regression guard for the above authority |
+| tests/legal-applicability-matrix.test.ts | CURRENT | Regression guard for the current authority register and release-boundary artifacts |
 
 ## Superseded or historical material
 
