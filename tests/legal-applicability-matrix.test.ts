@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const repoRoot = resolve(import.meta.dirname, "..");
+const repoRoot = resolve(__dirname, "..");
 const matrix = readFileSync(
   resolve(repoRoot, "docs/legal-assurance/LEGAL_APPLICABILITY_MATRIX_V2_2026-09-14.md"),
   "utf8",
@@ -36,7 +36,7 @@ describe("current legal applicability authority", () => {
     ];
 
     for (const workstream of workstreams) {
-      expect(matrix).toContain(\`| \${workstream} | NOT_APPLICABLE_CURRENT_RELEASE |\`);
+      expect(matrix).toContain("| " + workstream + " | NOT_APPLICABLE_CURRENT_RELEASE |");
     }
 
     expect(matrix).toContain("LEGAL_REQUIREMENTS_8_OF_8_OR_NA=8/8");
