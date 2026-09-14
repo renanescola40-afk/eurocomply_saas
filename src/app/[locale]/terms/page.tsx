@@ -16,7 +16,7 @@ const en: TermsCopy = {
   eyebrow: 'Terms of Service — review draft',
   title: 'Business service terms for RISCK COMPLY',
   summary:
-    'This public review draft records the current product and commercial contract structure for RISCK COMPLY business customers. Owner commercial-risk positions are now selected through Legal Package V1, but this is not yet an effective agreement: authoritative registered/tax facts, provider-dependent facts, qualified legal review and deliberate final publication remain explicit acceptance gates.',
+    'This public review draft records the current product and commercial contract structure for RISCK COMPLY business customers. Owner commercial-risk positions are now selected through Legal Package V1, but this is not yet an effective agreement: authoritative registered/tax facts, provider-dependent facts, factual and contractual reconciliation and deliberate final publication remain explicit acceptance gates; qualified review applies only where a specific law, contract or buyer requires it.',
   sections: [
     {
       title: 'Parties, status and business scope',
@@ -67,7 +67,7 @@ const en: TermsCopy = {
       title: 'Orders, plans, subscriptions and add-ons',
       paragraphs: [
         'Plan and add-on availability is governed by the active billing catalogue and the customer order or provider-backed checkout. A public URL, browser state or documentation entry does not grant an entitlement by itself.',
-        'For supported recurring subscriptions, the owner-selected drafting position is automatic renewal for the same billing period until cancelled, subject to the applicable order or checkout and mandatory law. Material price changes intended to affect a future renewal should be notified at least 30 days before the affected renewal, subject to final qualified drafting.',
+        'For supported recurring subscriptions, the owner-selected drafting position is automatic renewal for the same billing period until cancelled, subject to the applicable order or checkout and mandatory law. Material price changes intended to affect a future renewal should be notified at least 30 days before the affected renewal, subject to final contract wording.',
         'For supported self-service subscriptions, cancellation is implemented for the end of the already-paid billing period and reactivation is supported before that period ends. Supported upgrades may use provider proration; supported downgrades may take effect in the next billing period. Contract-managed Enterprise terms may differ where expressly agreed in an order form.',
         'Exact prices, billing intervals, included capabilities and purchasable add-ons must match the current billing authority at purchase time. This Terms page does not freeze a marketing price or silently expand the purchased entitlement.',
       ],
@@ -77,13 +77,13 @@ const en: TermsCopy = {
       paragraphs: [
         'Seller VAT/tax registrations and invoice treatment must match the owner-designated contracting/seller entity and authoritative tax facts. Current source implements billing-address collection, tax-ID collection and Stripe Checkout automatic tax, but that implementation does not establish the seller’s actual Portuguese VAT regime or registrations.',
         'The current attributable owner position is no default general refund, subject to mandatory law, provider/billing errors, duplicate charges, the applicable order form and any expressly negotiated credits or remedies. This is an owner-selected position for counsel review, not yet a binding customer clause.',
-        'For ordinary failed or unpaid billing, the owner-selected drafting position provides a 7-day cure opportunity after notice before ordinary non-payment suspension. Faster suspension may apply where reasonably necessary for fraud, security abuse, unlawful activity or material service/tenant risk. Access should be restored after the relevant cure or risk condition is resolved, subject to operational validation and any lawful continuing restriction. Final enforceability remains subject to qualified review.',
+        'For ordinary failed or unpaid billing, the owner-selected drafting position provides a 7-day cure opportunity after notice before ordinary non-payment suspension. Faster suspension may apply where reasonably necessary for fraud, security abuse, unlawful activity or material service/tenant risk. Access should be restored after the relevant cure or risk condition is resolved, subject to operational validation and any lawful continuing restriction. Final enforceability remains subject to applicable law and final contract wording; qualified review applies only where required.',
       ],
     },
     {
       title: 'Confidentiality',
       paragraphs: [
-        'The proposed contract structure requires each party to protect the other party’s confidential information with reasonable care and to use it only for the agreement. Standard exclusions for independently developed, lawfully received, already-public or legally compelled information remain subject to final drafting and qualified review.',
+        'The proposed contract structure requires each party to protect the other party’s confidential information with reasonable care and to use it only for the agreement. Standard exclusions for independently developed, lawfully received, already-public or legally compelled information remain subject to final drafting; qualified review applies only where required.',
         'Compelled-disclosure, duration, remedies and residual-knowledge mechanics remain counsel-drafting items; no missing owner commercial preference is implied.',
       ],
     },
@@ -99,20 +99,20 @@ const en: TermsCopy = {
       title: 'Service providers, subprocessors and international transfers',
       paragraphs: [
         'RISCK COMPLY depends on configured cloud, database, authentication, payment, observability, analytics, email and other providers. The public Subprocessors and International Transfers review surfaces disclose the current evidence boundary without treating a provider as contractually or legally approved solely because it is listed.',
-        'The owner-selected DPA model uses general written subprocessor authorisation with a 30-day advance-notice target for a new material subprocessor where practicable and contractually applicable, plus reasonable data-protection objection mechanics. Provider/account facts, Chapter V mechanisms and final qualified drafting remain open.',
+        'The owner-selected DPA model uses general written subprocessor authorisation with a 30-day advance-notice target for a new material subprocessor where practicable and contractually applicable, plus reasonable data-protection objection mechanics. Provider/account facts, Chapter V mechanisms and final contract wording remain open; qualified review applies only where required.',
       ],
     },
     {
       title: 'Intellectual property and licence',
       paragraphs: [
         'Customers retain ownership and control of Customer Content and may use customer-facing documents and outputs generated for their business, subject to third-party rights, applicable law and the final agreement. RISCK COMPLY retains rights in the service, source/software, platform architecture, product design, reusable templates/frameworks, brand and know-how.',
-        'Non-confidential feedback may be used to improve the product. Customer Content is not authorised for model training without separate specific authority. Third-party materials and Enterprise-specific IP commitments remain subject to final qualified drafting.',
+        'Non-confidential feedback may be used to improve the product. Customer Content is not authorised for model training without separate specific authority. Third-party materials and Enterprise-specific IP commitments remain subject to final contract wording; qualified review applies only where required.',
       ],
     },
     {
       title: 'Suspension, termination and post-termination access',
       paragraphs: [
-        'The owner-selected drafting position provides a 30-day cure period after notice for a curable material contractual breach. Immediate termination may be reserved for severe security abuse, unlawful activity, fraud, deliberate cross-tenant compromise, material non-curable misuse, or where continued service would violate law or binding provider/regulatory requirements. These positions remain subject to final qualified drafting.',
+        'The owner-selected drafting position provides a 30-day cure period after notice for a curable material contractual breach. Immediate termination may be reserved for severe security abuse, unlawful activity, fraud, deliberate cross-tenant compromise, material non-curable misuse, or where continued service would violate law or binding provider/regulatory requirements. These positions remain subject to final contract wording; qualified review applies only where required.',
         'Self-service cancellation preserves paid access until the end of the active paid period. The owner has selected a 30-day post-termination customer export-window position, but product capability, privacy/retention duties, provider constraints and final counsel wording must still be reconciled before it becomes a binding promise.',
         'Deletion after termination remains subject to the DPA, category-specific retention, documented legal holds, billing/accounting records, immutable audit requirements and verified provider lifecycle constraints. This draft does not promise an unsupported deletion or backup timetable.',
       ],
@@ -127,22 +127,22 @@ const en: TermsCopy = {
     {
       title: 'Indemnities and liability — counsel decision required',
       paragraphs: [
-        'The owner-selected position is no broad open-ended indemnity in standard self-service Terms. Customers remain responsible for unlawful use and unlawful customer content/instructions; provider IP or other indemnity commitments may be negotiated for Enterprise agreements and remain subject to qualified drafting.',
-        'The owner-proposed standard aggregate liability cap is fees paid or payable for the affected service during the 12 months preceding the event giving rise to liability. Indirect/consequential loss, lost profits and similar remote losses should be excluded to the lawful extent; fraud, wilful misconduct and legally non-limitable liability remain outside contractual limitation. Confidentiality, data-protection and IP carve-out treatment remains subject to qualified review. No liability cap or indemnity is represented as effective by this review draft.',
+        'The owner-selected position is no broad open-ended indemnity in standard self-service Terms. Customers remain responsible for unlawful use and unlawful customer content/instructions; provider IP or other indemnity commitments may be negotiated for Enterprise agreements and remain subject to final contract wording; qualified review applies only where required.',
+        'The owner-proposed standard aggregate liability cap is fees paid or payable for the affected service during the 12 months preceding the event giving rise to liability. Indirect/consequential loss, lost profits and similar remote losses should be excluded to the lawful extent; fraud, wilful misconduct and legally non-limitable liability remain outside contractual limitation. Confidentiality, data-protection and IP carve-out treatment remains subject to applicable law and final contract wording; qualified review applies only where required. No liability cap or indemnity is represented as effective by this review draft.',
       ],
     },
     {
       title: 'Renewal, changes and order precedence',
       paragraphs: [
-        'The owner-selected drafting position is automatic renewal for supported recurring subscriptions until cancelled and a 30-day notice target for material price changes affecting a future renewal, subject to the live checkout/order process, mandatory law and qualified review.',
-        'The proposed precedence model is: signed order form, signed DPA for covered processing, negotiated service schedule, final Terms, then public documentation. The final enforceability and incorporation mechanics require qualified review; public pages do not expand signed commitments.',
+        'The owner-selected drafting position is automatic renewal for supported recurring subscriptions until cancelled and a 30-day notice target for material price changes affecting a future renewal, subject to the live checkout/order process and mandatory law; qualified review applies only where required.',
+        'The proposed precedence model is: signed order form, signed DPA for covered processing, negotiated service schedule, final Terms, then public documentation. The final enforceability and incorporation mechanics require factual and contractual closure; public pages do not expand signed commitments, and qualified review applies only where required.',
       ],
     },
     {
       title: 'Governing law, disputes and legal notices — review boundary',
       paragraphs: [
-        'The owner-selected position is Portuguese governing law, courts of Lisbon, Portugal as the proposed standard forum, and no default arbitration. Mandatory jurisdiction rules, enforceability and negotiated Enterprise exceptions remain subject to qualified review.',
-        'The owner-selected electronic contractual notice intake is comercial@risckcomply.com where electronic notice is legally and contractually sufficient. Formal postal notice awaits authoritative registered-office evidence, and deemed-receipt mechanics remain subject to final qualified drafting.',
+        'The owner-selected position is Portuguese governing law, courts of Lisbon, Portugal as the proposed standard forum, and no default arbitration. Mandatory jurisdiction rules, enforceability and negotiated Enterprise exceptions remain subject to applicable law and final contract wording; qualified review applies only where required.',
+        'The owner-selected electronic contractual notice intake is comercial@risckcomply.com where electronic notice is legally and contractually sufficient. Formal postal notice awaits authoritative registered-office evidence, and deemed-receipt mechanics remain subject to final contract wording.',
       ],
     },
     {
