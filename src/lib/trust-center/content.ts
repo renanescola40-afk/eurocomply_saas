@@ -94,7 +94,7 @@ const pageCopy: Record<string, Omit<TrustPage, 'slug' | 'updated'>> = {
     navLabel: 'DPA',
     title: 'Data Processing Addendum',
     subtitle: 'Procurement-support summary of expected data processing commitments.',
-    status: 'DPA summary. Final agreement requires legal review/signature.',
+    status: 'DPA summary. Final agreement requires factual and contractual closure plus authorised acceptance/signature; qualified review applies only where a specific law, contract or buyer requirement makes it necessary.',
     sections: [
       { title: 'Roles', body: 'For customer workspace data, the customer is generally expected to act as controller and RISCK COMPLY as processor. Specific roles may vary by feature and contract.' },
       { title: 'Processing instructions', body: 'RISCK COMPLY processes customer personal data to provide, secure, maintain and support the SaaS according to customer instructions and applicable agreement terms.' },
@@ -108,7 +108,7 @@ const pageCopy: Record<string, Omit<TrustPage, 'slug' | 'updated'>> = {
     status: 'Public review register. Runtime facts are separated from final contractual/legal approval.',
     sections: [
       { title: 'Core categories', body: 'RISCK COMPLY may use managed providers for hosting, database, authentication, storage, payments, email, analytics, monitoring, distributed rate limiting/security controls, customer support and error reporting.' },
-      { title: 'Current provider and evidence boundary', body: 'Current attributable evidence covers Vercel hosting, Supabase data/auth/storage, Stripe billing account infrastructure, Sentry diagnostics, a Production PostHog analytics binding and Upstash Redis for distributed rate limiting/security-control state. The connected PostHog assurance project does not match the Production project, while Resend/email and malware-scanner current account bindings remain under verification. Technical runtime presence does not prove a provider DPA, contracting entity, processing region, retention period or transfer mechanism; Upstash account facts and the actual PostHog Production account remain open for account-specific verification and qualified legal review.' },
+      { title: 'Current provider and evidence boundary', body: 'Current attributable evidence covers Vercel hosting, Supabase data/auth/storage, Stripe billing account infrastructure, Sentry diagnostics, a Production PostHog analytics binding and Upstash Redis for distributed rate limiting/security-control state. The connected PostHog assurance project does not match the Production project, while Resend/email and malware-scanner current account bindings remain under verification. Technical runtime presence does not prove a provider DPA, contracting entity, processing region, retention period or transfer mechanism; Upstash account facts and the actual PostHog Production account remain open for account-specific verification. Qualified review is escalated only where a specific law, contract or buyer requirement makes it necessary.' },
       { title: 'Customer review', body: 'Enterprise customers may request the evidence-backed provider register before signature. Final subprocessor role allocation, notice periods, objection rights and transfer wording must follow the applicable approved DPA or enterprise agreement.' },
     ],
   },
