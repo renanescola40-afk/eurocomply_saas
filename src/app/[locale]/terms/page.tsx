@@ -148,7 +148,7 @@ const en: TermsCopy = {
     {
       title: 'Final acceptance boundary',
       paragraphs: [
-        'This page remains REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED. Owner Legal Package V1 closes the remaining owner-policy choices, but the page becomes effective Terms only after authoritative registered and tax facts are settled, billing/provider/privacy dependencies are reconciled, the owner-selected clauses receive the qualified review required for enforceability and mandatory-law treatment, and the final version is deliberately published or incorporated into a customer agreement.',
+        'This page remains REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED. Owner Legal Package V1 closes the remaining owner-policy choices, but the page becomes effective Terms only after authoritative registered and tax facts are settled, billing/provider/privacy dependencies are reconciled, the owner-selected clauses receive the required factual and contractual checks for enforceability and mandatory-law treatment, and the final version is deliberately published or incorporated into a customer agreement.',
       ],
     },
   ],
@@ -290,7 +290,7 @@ const pt: TermsCopy = {
     {
       title: 'Limite de aceitação final',
       paragraphs: [
-        'Esta página permanece REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED. O Legal Package V1 fecha as decisões de política do owner, mas os Termos só se tornam eficazes depois de factos registais/fiscais autoritativos, dependências de billing/provider/privacy, revisão qualificada das cláusulas selecionadas e publicação/incorporação final deliberada.',
+        'Esta página permanece REVIEW_DRAFT · HUMAN_REVIEW_REQUIRED. O Legal Package V1 fecha as decisões de política do owner, mas os Termos só se tornam eficazes depois de factos registais/fiscais autoritativos, dependências de billing/provider/privacy, verificação factual e contratual das cláusulas selecionadas e publicação/incorporação final deliberada.',
       ],
     },
   ],
