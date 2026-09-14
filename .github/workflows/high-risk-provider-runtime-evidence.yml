@@ -55,7 +55,7 @@ jobs:
           TARGET_BRANCH: ${{ github.ref_name }}
           EU_AI_ACT_RUNTIME_EVIDENCE_ROOTS: artifacts/high-risk-provider-runtime
         run: node scripts/compliance/generate-eu-ai-act-product-coverage.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: high-risk-provider-runtime-evidence-${{ github.sha }}
           path: |
