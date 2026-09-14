@@ -56,7 +56,7 @@ jobs:
           TARGET_BRANCH: ${{ github.ref_name }}
           EU_AI_ACT_RUNTIME_EVIDENCE_ROOTS: artifacts/article-50-runtime
         run: node scripts/compliance/generate-eu-ai-act-product-coverage.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: article-50-runtime-evidence-${{ github.sha }}
           path: |
