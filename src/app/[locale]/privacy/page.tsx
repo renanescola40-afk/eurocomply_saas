@@ -58,7 +58,7 @@ const copy: Record<Locale, PrivacyCopy> = {
         title: 'Legal bases — review boundary',
         paragraphs: [
           'The current legal-basis matrix maps contract/steps requested before contract, specific legal obligations, legitimate interests and consent as candidate bases depending on the processing activity. Security/abuse prevention, incident-response evidence and narrow B2B relationship administration have documented pre-review legitimate-interest assessments.',
-          'Those allocations are not represented as final qualified legal approval. Optional analytics and non-essential marketing do not receive automatic legitimate-interest approval from this draft. The final public notice must be reconciled to the qualified legal-basis decision before it is treated as effective legal text.',
+          'Those allocations are not represented as final legal approval. Optional analytics and non-essential marketing do not receive automatic legitimate-interest approval from this draft. The final public notice must be reconciled to a documented legal-basis decision before it is treated as effective legal text; qualified review is escalated only where a specific law, contract or buyer requirement makes it necessary.',
         ],
       },
       {
@@ -72,7 +72,7 @@ const copy: Record<Locale, PrivacyCopy> = {
         title: 'International transfers',
         paragraphs: [
           'The Production Supabase project is configured in eu-west-1 (Ireland). Other configured providers may process data in additional countries or use global infrastructure.',
-          'This draft does not claim that every account-specific adequacy, SCC, supplementary-measure or transfer-impact decision has been finally accepted. The International Transfers review surface records the current transfer evidence boundary pending provider/account facts and qualified legal review.',
+          'This draft does not claim that every account-specific adequacy, SCC, supplementary-measure or transfer-impact decision has been finally accepted. The International Transfers review surface records the current transfer evidence boundary pending provider/account facts and documented Chapter V analysis; qualified review is escalated only where a specific law, contract or buyer requirement makes it necessary.',
         ],
       },
       {
@@ -93,7 +93,7 @@ const copy: Record<Locale, PrivacyCopy> = {
         title: 'Consent and optional analytics',
         paragraphs: [
           'The application source is designed to require analytics consent by default unless the public build configuration explicitly disables that requirement, to block PostHog initialisation/capture without the required stored grant, and to provide later withdrawal controls.',
-          'Declining optional analytics must not block the core service. The exact Production configuration and final GDPR/ePrivacy legal basis remain subject to runtime verification and qualified review.',
+          'Declining optional analytics must not block the core service. The exact Production configuration and final GDPR/ePrivacy legal basis remain subject to runtime verification and a documented legal-basis decision; qualified review is escalated only where a specific law, contract or buyer requirement makes it necessary.',
         ],
       },
       {
@@ -127,8 +127,8 @@ const copy: Record<Locale, PrivacyCopy> = {
         title: 'Complaints, children and changes',
         items: [
           'Individuals may lodge a complaint with the competent data-protection supervisory authority. The final lead-authority/cross-border establishment position remains tied to the final operator/entity facts.',
-          'The B2B service is not directed to children; prohibited-use and inadvertent-child-data handling remain subject to the applicable customer terms and legal review.',
-          'Material privacy changes should be versioned, dated and communicated as appropriate. This page remains a review draft until the publication gate records the required founder facts and qualified legal decisions.',
+          'The B2B service is not directed to children; prohibited-use and inadvertent-child-data handling remain subject to the applicable customer terms and law.',
+          'Material privacy changes should be versioned, dated and communicated as appropriate. This page remains a review draft until the publication gate records the required founder facts and documented privacy decisions; qualified review is escalated only where a specific law, contract or buyer requirement makes it necessary.',
         ],
       },
     ],
@@ -177,7 +177,7 @@ const copy: Record<Locale, PrivacyCopy> = {
         title: 'Fundamentos jurídicos — limite de revisão',
         paragraphs: [
           'A matriz atual mapeia contrato/medidas pré-contratuais pedidas, obrigações legais específicas, interesses legítimos e consentimento como fundamentos candidatos, consoante a atividade. Segurança/prevenção de abuso, evidência de resposta a incidentes e administração restrita de relações B2B possuem avaliações de interesse legítimo pré-revisão.',
-          'Essas alocações não são apresentadas como aprovação jurídica qualificada final. Analytics opcionais e marketing não essencial não recebem aprovação automática por interesse legítimo. O aviso final deve ser reconciliado com a decisão jurídica qualificada antes de ser tratado como texto legal efetivo.',
+          'Essas alocações não são apresentadas como aprovação jurídica final. Analytics opcionais e marketing não essencial não recebem aprovação automática por interesse legítimo. O aviso final deve ser reconciliado com uma decisão documentada sobre as bases jurídicas antes de ser tratado como texto legal efetivo; a revisão qualificada só é escalada quando exigida por lei, contrato ou procurement do cliente.',
         ],
       },
       {
@@ -191,7 +191,7 @@ const copy: Record<Locale, PrivacyCopy> = {
         title: 'Transferências internacionais',
         paragraphs: [
           'O projeto Supabase de Produção está configurado em eu-west-1 (Irlanda). Outros fornecedores configurados podem tratar dados noutros países ou através de infraestrutura global.',
-          'Este rascunho não afirma que todas as decisões específicas de adequação, SCC, medidas suplementares ou avaliação de transferências já foram aceites. A superfície de Transferências Internacionais mantém esses pontos abertos até existirem factos de conta/fornecedor e revisão jurídica qualificada.',
+          'Este rascunho não afirma que todas as decisões específicas de adequação, SCC, medidas suplementares ou avaliação de transferências já foram aceites. A superfície de Transferências Internacionais mantém esses pontos abertos até existirem factos de conta/fornecedor e análise documentada do Capítulo V; a revisão qualificada só é escalada quando exigida por lei, contrato ou procurement do cliente.',
         ],
       },
       {
@@ -246,7 +246,7 @@ const copy: Record<Locale, PrivacyCopy> = {
         title: 'Reclamações, menores e alterações',
         items: [
           'A pessoa pode apresentar reclamação à autoridade de proteção de dados competente. A autoridade principal/posição de estabelecimento transfronteiriço depende dos factos finais da entidade operadora.',
-          'O serviço B2B não se destina a crianças; usos proibidos e tratamento de dados de menores enviados inadvertidamente dependem dos termos aplicáveis e revisão jurídica.',
+          'O serviço B2B não se destina a crianças; usos proibidos e tratamento de dados de menores enviados inadvertidamente dependem dos termos aplicáveis e da lei.',
           'Alterações materiais de privacidade devem ser versionadas, datadas e comunicadas quando adequado. Esta página permanece rascunho até o gate de publicação registar os factos de founder/entidade e as decisões jurídicas qualificadas necessárias.',
         ],
       },
