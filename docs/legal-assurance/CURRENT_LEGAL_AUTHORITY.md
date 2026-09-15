@@ -2,7 +2,7 @@
 
 **Effective evidence date:** 14 September 2026  
 **Product:** RISCK COMPLY  
-**Repository release reference:** `main@3a96c7d5d6123cbb871f360987419a25e697c837`  
+**Repository evidence baseline:** `main@59f7a46d5a76c84f6c75e03453e156e684193940` — protected-main snapshot observed for this reconciliation; later protected-main commits do not invalidate this matrix unless they materially change the product/legal facts assessed here.  
 **Status:** canonical current legal-control register; not legal advice, certification, regulator approval or executed contract
 
 ## Authority and scope
@@ -105,4 +105,3 @@ Before changing a disposition, record:
 - the evidence reference;
 - whether the change is statutory, contractual, GDPR, AI Act, commercial, buyer-specific or optional assurance;
 - the owner/external action required, if any.
-
