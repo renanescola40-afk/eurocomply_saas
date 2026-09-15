@@ -10,8 +10,14 @@ on:
         required: true
         type: string
       supabase_promotion_run_id:
-        description: Successful exact-SHA governed Supabase Production promotion run ID required by TEN-RLS
-        required: true
+        description: Successful exact-SHA governed Supabase Production promotion run ID (mutually exclusive with reattestation)
+        required: false
+        default: ''
+        type: string
+      supabase_reattestation_run_id:
+        description: Successful exact-SHA Supabase Forward Production Reattestation run ID (mutually exclusive with promotion)
+        required: false
+        default: ''
         type: string
 
 permissions:
@@ -31,6 +37,7 @@ jobs:
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
       SUPABASE_PROMOTION_RUN_ID: ${{ inputs.supabase_promotion_run_id }}
+      SUPABASE_REATTESTATION_RUN_ID: ${{ inputs.supabase_reattestation_run_id }}
 
     steps:
       - name: Checkout exact release SHA
@@ -39,12 +46,16 @@ jobs:
           ref: ${{ inputs.release_sha }}
           persist-credentials: false
 
-      - name: Verify exact checkout and promotion-run input shape
+      - name: Verify exact checkout and Supabase authority input shape
         shell: bash
         run: |
           set -euo pipefail
           [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
-          [[ "$SUPABASE_PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]
+          promotion_set=0
+          reattestation_set=0
+          if [[ -n "$SUPABASE_PROMOTION_RUN_ID" ]]; then [[ "$SUPABASE_PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]; promotion_set=1; fi
+          if [[ -n "$SUPABASE_REATTESTATION_RUN_ID" ]]; then [[ "$SUPABASE_REATTESTATION_RUN_ID" =~ ^[0-9]+$ ]]; reattestation_set=1; fi
+          test $((promotion_set + reattestation_set)) -eq 1
           TARGET_SHA="${TARGET_SHA,,}"
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           echo "TARGET_SHA=$TARGET_SHA" >> "$GITHUB_ENV"
@@ -73,5 +84,5 @@ jobs:
       - name: Record truthful campaign boundary
         run: |
           echo 'Runtime proofs were dispatched for the exact current main SHA.'
-          echo 'TEN-RLS is promotion-bound and this workflow cannot apply migrations.'
-          echo 'This workflow does not promote controls by itself; the canonical scorecard remains authoritative.'
+          echo 'TEN-RLS is bound to exactly one canonical Supabase Production promotion or read-only reattestation authority.'
+          echo 'This workflow cannot apply migrations and does not promote controls by itself; the canonical scorecard remains authoritative.'

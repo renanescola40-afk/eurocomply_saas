@@ -18,8 +18,14 @@ on:
         required: true
         type: string
       supabase_promotion_run_id:
-        description: Successful exact-SHA governed Supabase Production promotion run ID required by TEN-RLS
-        required: true
+        description: Successful exact-SHA governed Supabase Production promotion run ID (mutually exclusive with reattestation)
+        required: false
+        default: ''
+        type: string
+      supabase_reattestation_run_id:
+        description: Successful exact-SHA Supabase Forward Production Reattestation run ID (mutually exclusive with promotion)
+        required: false
+        default: ''
         type: string
 
 permissions:
@@ -42,6 +48,7 @@ jobs:
       TARGET_SHA: ${{ inputs.release_sha }}
       RECOVERY_ROLLBACK_CONFIRMATION: ${{ inputs.recovery_rollback_confirmation }}
       SUPABASE_PROMOTION_RUN_ID: ${{ inputs.supabase_promotion_run_id }}
+      SUPABASE_REATTESTATION_RUN_ID: ${{ inputs.supabase_reattestation_run_id }}
       GITHUB_TOKEN: ${{ github.token }}
       GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
       ENTERPRISE_EXPECTED_SHA: ${{ inputs.release_sha }}
@@ -49,7 +56,7 @@ jobs:
       ENTERPRISE_SCORECARD_MARKDOWN: artifacts/enterprise-readiness/canonical-scorecard.md
 
     steps:
-      - name: Validate operator confirmations and SHA
+      - name: Validate operator confirmations SHA and Supabase authority
         shell: bash
         env:
           CONFIRMATION: ${{ inputs.confirmation }}
@@ -58,7 +65,11 @@ jobs:
           test "$CONFIRMATION" = "RUN_ENTERPRISE_RUNTIME_CLOSEOUT"
           test "$RECOVERY_ROLLBACK_CONFIRMATION" = "EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK"
           [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
-          [[ "$SUPABASE_PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]
+          promotion_set=0
+          reattestation_set=0
+          if [[ -n "$SUPABASE_PROMOTION_RUN_ID" ]]; then [[ "$SUPABASE_PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]; promotion_set=1; fi
+          if [[ -n "$SUPABASE_REATTESTATION_RUN_ID" ]]; then [[ "$SUPABASE_REATTESTATION_RUN_ID" =~ ^[0-9]+$ ]]; reattestation_set=1; fi
+          test $((promotion_set + reattestation_set)) -eq 1
 
       - name: Check out exact release SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -83,7 +94,7 @@ jobs:
       - name: Install deterministic dependencies
         run: npm ci --ignore-scripts
 
-      - name: Validate campaign and promotion contracts
+      - name: Validate campaign and Supabase authority contracts
         run: |
           node --test tests/security/enterprise-runtime-campaign-contract.test.mjs
           node --test tests/security/final-eleven-runtime-proofs.test.mjs
@@ -93,6 +104,7 @@ jobs:
           node --test tests/enterprise/enterprise-promotion-closeout.test.mjs
           node --test tests/enterprise/final-assurance-proof.test.mjs
           node --test tests/enterprise/final-eleven-closeout.test.mjs
+          node --test tests/security/supabase-live-rls-reattestation-authority.test.mjs
           npx vitest run tests/security/recovery-resilience-proof.test.ts
 
       - name: Execute enterprise runtime campaign

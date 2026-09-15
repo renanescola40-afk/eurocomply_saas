@@ -1,20 +1,26 @@
 name: Supabase Live RLS Validation
 
-run-name: Supabase promotion-bound live RLS proof for ${{ inputs.release_sha }}
+run-name: Supabase governed live RLS proof for ${{ inputs.release_sha }}
 
 on:
   workflow_dispatch:
     inputs:
       release_sha:
-        description: Exact current main SHA successfully promoted by the governed forward chain
+        description: Exact current main SHA authorized by a governed Production promotion or read-only reattestation
         required: true
         type: string
       promotion_run_id:
-        description: Successful Supabase Forward Reconciliation Production Promotion run ID for this exact SHA
-        required: true
+        description: Successful exact-SHA Supabase Forward Reconciliation Production Promotion run ID (mutually exclusive with reattestation_run_id)
+        required: false
+        default: ''
+        type: string
+      reattestation_run_id:
+        description: Successful exact-SHA Supabase Forward Production Reattestation run ID (mutually exclusive with promotion_run_id)
+        required: false
+        default: ''
         type: string
       confirmation:
-        description: Type EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF
+        description: Type EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF or EXECUTE_POST_REATTESTATION_RUNTIME_PROOF
         required: true
         type: string
 
@@ -28,12 +34,16 @@ concurrency:
 
 jobs:
   governance:
-    name: Verify exact promotion authority before protected secrets
+    name: Verify exact Supabase authority before protected secrets
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    outputs:
+      authority_mode: ${{ steps.authority.outputs.authority_mode }}
+      authority_run_id: ${{ steps.authority.outputs.authority_run_id }}
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
       PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
+      REATTESTATION_RUN_ID: ${{ inputs.reattestation_run_id }}
       INPUT_CONFIRMATION: ${{ inputs.confirmation }}
       GITHUB_ENVIRONMENT_NAME: supabase-live-rls-validation
       REQUIRE_PROTECTED_BRANCHES: 'true'
@@ -52,22 +62,44 @@ jobs:
         with:
           node-version: 22
 
-      - name: Validate exact-SHA promotion authority
+      - name: Validate exact-SHA Supabase authority
+        id: authority
         shell: bash
         run: |
           set -euo pipefail
           [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
-          [[ "$PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]
-          test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF'
           test "$GITHUB_REF_NAME" = 'main'
           test "$GITHUB_SHA" = "$TARGET_SHA"
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
-          promotion_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PROMOTION_RUN_ID}")"
-          test "$(jq -r '.head_sha' <<<"$promotion_json")" = "$TARGET_SHA"
-          test "$(jq -r '.path' <<<"$promotion_json")" = '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
-          test "$(jq -r '.event' <<<"$promotion_json")" = 'workflow_dispatch'
-          test "$(jq -r '.conclusion' <<<"$promotion_json")" = 'success'
+
+          promotion_set=0
+          reattestation_set=0
+          if [[ -n "$PROMOTION_RUN_ID" ]]; then [[ "$PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]; promotion_set=1; fi
+          if [[ -n "$REATTESTATION_RUN_ID" ]]; then [[ "$REATTESTATION_RUN_ID" =~ ^[0-9]+$ ]]; reattestation_set=1; fi
+          test $((promotion_set + reattestation_set)) -eq 1
+
+          if [[ "$promotion_set" -eq 1 ]]; then
+            test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF'
+            authority_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PROMOTION_RUN_ID}")"
+            test "$(jq -r '.head_sha' <<<"$authority_json")" = "$TARGET_SHA"
+            test "$(jq -r '.path' <<<"$authority_json")" = '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
+            test "$(jq -r '.event' <<<"$authority_json")" = 'workflow_dispatch'
+            test "$(jq -r '.status' <<<"$authority_json")" = 'completed'
+            test "$(jq -r '.conclusion' <<<"$authority_json")" = 'success'
+            echo 'authority_mode=promotion' >> "$GITHUB_OUTPUT"
+            echo "authority_run_id=$PROMOTION_RUN_ID" >> "$GITHUB_OUTPUT"
+          else
+            test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_REATTESTATION_RUNTIME_PROOF'
+            authority_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${REATTESTATION_RUN_ID}")"
+            test "$(jq -r '.head_sha' <<<"$authority_json")" = "$TARGET_SHA"
+            test "$(jq -r '.path' <<<"$authority_json")" = '.github/workflows/supabase-forward-production-reattestation.yml'
+            test "$(jq -r '.event' <<<"$authority_json")" = 'workflow_dispatch'
+            test "$(jq -r '.status' <<<"$authority_json")" = 'completed'
+            test "$(jq -r '.conclusion' <<<"$authority_json")" = 'success'
+            echo 'authority_mode=reattestation' >> "$GITHUB_OUTPUT"
+            echo "authority_run_id=$REATTESTATION_RUN_ID" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Verify protected environment governance before secrets
         run: node scripts/security/check-github-environment-governance.mjs
@@ -87,7 +119,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GITHUB_TOKEN: ${{ github.token }}
     steps:
-      - name: Check out exact promoted release SHA
+      - name: Check out exact authorized release SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ inputs.release_sha }}
@@ -114,14 +146,15 @@ jobs:
         run: node scripts/security/supabase-project-binding.mjs emit-pooler-digest
 
   live-proof:
-    name: Run exact governed promotion-bound tenant proof
+    name: Run exact governed authority-bound tenant proof
     needs: [governance, production-project-binding]
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     environment: supabase-live-rls-validation
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
-      PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
+      AUTHORITY_MODE: ${{ needs.governance.outputs.authority_mode }}
+      AUTHORITY_RUN_ID: ${{ needs.governance.outputs.authority_run_id }}
       INPUT_CONFIRMATION: ${{ inputs.confirmation }}
       EXPECTED_SUPABASE_PROJECT_DIGEST: ${{ needs.production-project-binding.outputs.project_digest }}
       GH_TOKEN: ${{ github.token }}
@@ -129,29 +162,39 @@ jobs:
       GITHUB_ENVIRONMENT_NAME: supabase-live-rls-validation
       REQUIRE_PROTECTED_BRANCHES: 'true'
     steps:
-      - name: Check out exact promoted release SHA
+      - name: Check out exact authorized release SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Revalidate exact current main and promotion after approval
+      - name: Revalidate exact current main and authority after approval
         shell: bash
         run: |
           set -euo pipefail
-          test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF'
           test "$GITHUB_REF_NAME" = 'main'
           test "$GITHUB_SHA" = "$TARGET_SHA"
           git fetch --no-tags --depth=1 origin main
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           test "$(git rev-parse origin/main)" = "$TARGET_SHA"
           test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
-          promotion_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PROMOTION_RUN_ID}")"
-          test "$(jq -r '.head_sha' <<<"$promotion_json")" = "$TARGET_SHA"
-          test "$(jq -r '.path' <<<"$promotion_json")" = '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
-          test "$(jq -r '.event' <<<"$promotion_json")" = 'workflow_dispatch'
-          test "$(jq -r '.conclusion' <<<"$promotion_json")" = 'success'
+          [[ "$AUTHORITY_RUN_ID" =~ ^[0-9]+$ ]]
+          authority_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${AUTHORITY_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$authority_json")" = "$TARGET_SHA"
+          test "$(jq -r '.event' <<<"$authority_json")" = 'workflow_dispatch'
+          test "$(jq -r '.status' <<<"$authority_json")" = 'completed'
+          test "$(jq -r '.conclusion' <<<"$authority_json")" = 'success'
+          if [[ "$AUTHORITY_MODE" = 'promotion' ]]; then
+            test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF'
+            test "$(jq -r '.path' <<<"$authority_json")" = '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
+          elif [[ "$AUTHORITY_MODE" = 'reattestation' ]]; then
+            test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_REATTESTATION_RUNTIME_PROOF'
+            test "$(jq -r '.path' <<<"$authority_json")" = '.github/workflows/supabase-forward-production-reattestation.yml'
+          else
+            echo "Unsupported authority mode: $AUTHORITY_MODE" >&2
+            exit 1
+          fi
           [[ "$EXPECTED_SUPABASE_PROJECT_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]
 
       - name: Revalidate protected environment governance after admission
@@ -172,6 +215,7 @@ jobs:
           set -euo pipefail
           node --check scripts/security/supabase-forward-manifest-contract.mjs
           node --check scripts/security/validate-supabase-live-promotion-source.mjs
+          node --check scripts/security/validate-supabase-live-reattestation-source.mjs
           node --check scripts/security/supabase-project-binding.mjs
           node --check scripts/security/supabase-v20-live-fixtures.mjs
           node --check scripts/security/run-supabase-live-tenant-isolation-v4.mjs
@@ -179,6 +223,7 @@ jobs:
           node --check scripts/security/supabase-live-rls-evidence.mjs
           node --check scripts/release/validate-supabase-rls-runtime-evidence.mjs
           node --test tests/security/supabase-project-binding.test.mjs
+          node --test tests/security/supabase-live-rls-reattestation-authority.test.mjs
 
       - name: Verify live inventory helper privilege boundary contract
         shell: bash
@@ -194,28 +239,41 @@ jobs:
           grep -F "live RLS inventory helper must remain SECURITY INVOKER" "$validator" >/dev/null
           grep -F "setting = 'search_path=public, pg_catalog'" "$validator" >/dev/null
 
-      - name: Download exact governed Production promotion evidence
+      - name: Download and validate exact governed Supabase authority evidence
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf source-promotion
-          mkdir -p source-promotion
-          gh run download "$PROMOTION_RUN_ID" \
-            --repo "$GITHUB_REPOSITORY" \
-            --name "supabase-forward-production-promotion-${TARGET_SHA}" \
-            --dir source-promotion
-          promotion_transition="$(find source-promotion -type f -name 'promotion-transition.json' -print -quit)"
-          live_postconditions="$(find source-promotion -type f -name 'live-postconditions.json' -print -quit)"
-          current_manifest="$(find source-promotion -type f -name 'current-manifest.json' -print -quit)"
-          test -n "$promotion_transition"
-          test -n "$live_postconditions"
-          test -n "$current_manifest"
-          PROMOTION_TRANSITION_PATH="$promotion_transition" \
-          LIVE_POSTCONDITIONS_PATH="$live_postconditions" \
-          PROMOTION_MANIFEST_PATH="$current_manifest" \
-            node scripts/security/validate-supabase-live-promotion-source.mjs
+          rm -rf source-promotion source-reattestation
+          if [[ "$AUTHORITY_MODE" = 'promotion' ]]; then
+            mkdir -p source-promotion
+            gh run download "$AUTHORITY_RUN_ID" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name "supabase-forward-production-promotion-${TARGET_SHA}" \
+              --dir source-promotion
+            promotion_transition="$(find source-promotion -type f -name 'promotion-transition.json' -print -quit)"
+            live_postconditions="$(find source-promotion -type f -name 'live-postconditions.json' -print -quit)"
+            current_manifest="$(find source-promotion -type f -name 'current-manifest.json' -print -quit)"
+            test -n "$promotion_transition"
+            test -n "$live_postconditions"
+            test -n "$current_manifest"
+            PROMOTION_TRANSITION_PATH="$promotion_transition" \
+            LIVE_POSTCONDITIONS_PATH="$live_postconditions" \
+            PROMOTION_MANIFEST_PATH="$current_manifest" \
+              node scripts/security/validate-supabase-live-promotion-source.mjs
+          elif [[ "$AUTHORITY_MODE" = 'reattestation' ]]; then
+            mkdir -p source-reattestation
+            gh run download "$AUTHORITY_RUN_ID" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name "supabase-forward-production-acceptance-${TARGET_SHA}" \
+              --dir source-reattestation
+            acceptance="$(find source-reattestation -type f -name 'production-acceptance.json' -print -quit)"
+            test -n "$acceptance"
+            node scripts/security/validate-supabase-live-reattestation-source.mjs "$acceptance" "$TARGET_SHA" "$AUTHORITY_RUN_ID"
+          else
+            exit 1
+          fi
 
-      - name: Verify live API project matches the Production promotion project
+      - name: Verify live API project matches the Production project
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
         run: node scripts/security/supabase-project-binding.mjs verify-api-digest
@@ -260,7 +318,7 @@ jobs:
           cp docs/security/evidence/runtime/supabase-live-rls-validation.json artifacts/supabase-live-rls-runtime-proof/
           cp docs/security/evidence/runtime/supabase-rls-validation.json artifacts/supabase-live-rls-runtime-proof/
 
-      - name: Upload canonical promotion-bound runtime and scorecard evidence
+      - name: Upload canonical authority-bound runtime and scorecard evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: supabase-live-rls-runtime-proof-${{ env.TARGET_SHA }}
