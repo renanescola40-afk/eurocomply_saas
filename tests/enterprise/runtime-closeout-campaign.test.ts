@@ -5,11 +5,18 @@ const dispatcher = readFileSync('scripts/enterprise/dispatch-runtime-closeout-ca
 const workflow = readFileSync('.github/workflows/enterprise-runtime-closeout-campaign.yml', 'utf8');
 
 describe('enterprise runtime closeout campaign', () => {
-  it('binds TEN-RLS to an exact successful governed promotion', () => {
+  it('binds TEN-RLS to exactly one canonical Supabase authority', () => {
     expect(workflow).toContain('supabase_promotion_run_id:');
+    expect(workflow).toContain('supabase_reattestation_run_id:');
     expect(workflow).toContain('SUPABASE_PROMOTION_RUN_ID: ${{ inputs.supabase_promotion_run_id }}');
-    expect(dispatcher).toContain('promotion_run_id: supabasePromotionRunId');
-    expect(dispatcher).toContain("confirmation: 'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF'");
+    expect(workflow).toContain('SUPABASE_REATTESTATION_RUN_ID: ${{ inputs.supabase_reattestation_run_id }}');
+    expect(workflow).toContain('test $((promotion_set + reattestation_set)) -eq 1');
+    expect(dispatcher).toContain("'.github/workflows/supabase-forward-reconciliation-production-promotion.yml'");
+    expect(dispatcher).toContain("'.github/workflows/supabase-forward-production-reattestation.yml'");
+    expect(dispatcher).toContain("promotion_run_id: promotionSet ? supabasePromotionRunId : ''");
+    expect(dispatcher).toContain("reattestation_run_id: reattestationSet ? supabaseReattestationRunId : ''");
+    expect(dispatcher).toContain("'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF'");
+    expect(dispatcher).toContain("'EXECUTE_POST_REATTESTATION_RUNTIME_PROOF'");
   });
 
   it('removes every live-RLS migration application switch', () => {
@@ -23,6 +30,9 @@ describe('enterprise runtime closeout campaign', () => {
     expect(dispatcher).toContain('/^[a-f0-9]{40}$/');
     expect(dispatcher).toContain("github('/commits/main')");
     expect(dispatcher).toContain('main.sha !== targetSha');
+    expect(dispatcher).toContain('authorityRun.head_sha !== targetSha');
+    expect(dispatcher).toContain("authorityRun.event !== 'workflow_dispatch'");
+    expect(dispatcher).toContain("authorityRun.conclusion !== 'success'");
     expect(workflow).toContain('environment: enterprise-release-approval');
     expect(workflow).toContain('contents: read');
     expect(workflow).not.toContain('contents: write');
