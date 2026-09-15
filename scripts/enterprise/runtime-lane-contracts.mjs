@@ -1,13 +1,15 @@
 const RELEASE_SHA_PLACEHOLDER = '${RELEASE_SHA}';
 const RECOVERY_CONFIRMATION_PLACEHOLDER = '${RECOVERY_ROLLBACK_CONFIRMATION}';
 const SUPABASE_PROMOTION_RUN_ID_PLACEHOLDER = '${SUPABASE_PROMOTION_RUN_ID}';
+const SUPABASE_REATTESTATION_RUN_ID_PLACEHOLDER = '${SUPABASE_REATTESTATION_RUN_ID}';
+const SUPABASE_RLS_CONFIRMATION_PLACEHOLDER = '${SUPABASE_RLS_CONFIRMATION}';
 
 export const RUNTIME_LANE_CONTRACTS = Object.freeze({
   'IAM-RBAC': Object.freeze({ workflow: 'auth-rbac-runtime-proof.yml', artifactPrefix: 'auth-rbac-runtime-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER }), requiredEvidenceFiles: Object.freeze(['auth-rbac-validation.json']), controlsVerified: Object.freeze(['IAM-01','IAM-02','IAM-03','IAM-04','IAM-05','IAM-06','TEN-01']) }),
   'IAM-LIFECYCLE': Object.freeze({ workflow: 'identity-access-lifecycle-proof.yml', artifactPrefix: 'identity-access-lifecycle-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER, confirmation: 'EXECUTE_IDENTITY_LIFECYCLE_PROOF' }), requiredEvidenceFiles: Object.freeze(['identity-access-lifecycle-validation.json']), controlsVerified: Object.freeze(['IAM-07','IAM-09','IAM-10']) }),
   'IAM-SCIM': Object.freeze({ workflow: 'scim-runtime-proof.yml', artifactPrefix: 'scim-runtime-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER, confirmation: 'EXECUTE_SCIM_RUNTIME_PROOF' }), requiredEvidenceFiles: Object.freeze(['scim-runtime-validation.json']), controlsVerified: Object.freeze(['IAM-09']) }),
   'IAM-SAML': Object.freeze({ workflow: 'saml-sso-runtime-proof.yml', artifactPrefix: 'saml-sso-runtime-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER, confirmation: 'EXECUTE_SAML_SSO_RUNTIME_PROOF' }), requiredEvidenceFiles: Object.freeze(['saml-sso-runtime-validation.json']), controlsVerified: Object.freeze(['IAM-09']) }),
-  'TEN-RLS': Object.freeze({ workflow: 'supabase-live-rls-validation.yml', artifactPrefix: 'supabase-live-rls-runtime-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER, promotion_run_id: SUPABASE_PROMOTION_RUN_ID_PLACEHOLDER, confirmation: 'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF' }), requiredEvidenceFiles: Object.freeze(['supabase-live-rls-validation.json','supabase-rls-validation.json']), controlsVerified: Object.freeze(['TEN-02','TEN-03','TEN-04','TEN-05','TEN-06']) }),
+  'TEN-RLS': Object.freeze({ workflow: 'supabase-live-rls-validation.yml', artifactPrefix: 'supabase-live-rls-runtime-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER, promotion_run_id: SUPABASE_PROMOTION_RUN_ID_PLACEHOLDER, reattestation_run_id: SUPABASE_REATTESTATION_RUN_ID_PLACEHOLDER, confirmation: SUPABASE_RLS_CONFIRMATION_PLACEHOLDER }), requiredEvidenceFiles: Object.freeze(['supabase-live-rls-validation.json','supabase-rls-validation.json']), controlsVerified: Object.freeze(['TEN-02','TEN-03','TEN-04','TEN-05','TEN-06']) }),
   'FINAL-TECHNICAL': Object.freeze({ workflow: 'final-technical-controls-proof.yml', artifactPrefix: 'final-technical-controls-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER, confirmation: 'EXECUTE_FINAL_TECHNICAL_PROOF' }), requiredEvidenceFiles: Object.freeze(['final-technical-controls-validation.json']), controlsVerified: Object.freeze(['TEN-10','OPS-03']) }),
   PLATFORM: Object.freeze({ workflow: 'platform-providers-runtime-proof.yml', artifactPrefix: 'platform-providers-runtime-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER }), requiredEvidenceFiles: Object.freeze(['platform-providers-validation.json']), controlsVerified: Object.freeze(['PLT-02','PLT-03','PLT-04','PLT-05','PLT-06','PLT-07','PLT-08','PLT-09','PLT-10','OPS-06']) }),
   DATA: Object.freeze({ workflow: 'data-governance-runtime-proof.yml', artifactPrefix: 'data-governance-runtime-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER, confirmation: 'EXECUTE_DATA_GOVERNANCE_PROOF' }), requiredEvidenceFiles: Object.freeze(['data-governance-validation.json']), controlsVerified: Object.freeze(['TEN-09']) }),
@@ -24,17 +26,36 @@ export const EXPECTED_RUNTIME_LANES = Object.freeze(Object.keys(RUNTIME_LANE_CON
 export const ALLOWED_RUNTIME_WORKFLOWS = Object.freeze(new Set(Object.values(RUNTIME_LANE_CONTRACTS).map((contract) => contract.workflow)));
 function fail(message) { throw new Error(message); }
 
-export function resolveLaneInputs(inputs, { releaseSha, recoveryRollbackConfirmation, supabasePromotionRunId = '' }) {
+export function resolveLaneInputs(inputs, {
+  releaseSha,
+  recoveryRollbackConfirmation,
+  supabasePromotionRunId = '',
+  supabaseReattestationRunId = '',
+} = {}) {
   const resolved = {};
   const promotionRunId = String(supabasePromotionRunId || process.env.SUPABASE_PROMOTION_RUN_ID || '').trim();
+  const reattestationRunId = String(supabaseReattestationRunId || process.env.SUPABASE_REATTESTATION_RUN_ID || '').trim();
+  const promotionSet = /^\d+$/.test(promotionRunId);
+  const reattestationSet = /^\d+$/.test(reattestationRunId);
+  const usesSupabaseAuthority = Object.values(inputs ?? {}).some((value) => [
+    SUPABASE_PROMOTION_RUN_ID_PLACEHOLDER,
+    SUPABASE_REATTESTATION_RUN_ID_PLACEHOLDER,
+    SUPABASE_RLS_CONFIRMATION_PLACEHOLDER,
+  ].includes(value));
+  if (usesSupabaseAuthority && promotionSet === reattestationSet) {
+    fail('Exactly one of SUPABASE_PROMOTION_RUN_ID or SUPABASE_REATTESTATION_RUN_ID must be a numeric canonical Supabase authority run ID');
+  }
+
   for (const [key, value] of Object.entries(inputs ?? {})) {
     if (!/^[a-z][a-z0-9_]{0,63}$/.test(key)) fail(`invalid workflow input key: ${key}`);
     if (value === RELEASE_SHA_PLACEHOLDER) resolved[key] = releaseSha;
     else if (value === RECOVERY_CONFIRMATION_PLACEHOLDER) resolved[key] = recoveryRollbackConfirmation;
-    else if (value === SUPABASE_PROMOTION_RUN_ID_PLACEHOLDER) {
-      if (!/^\d+$/.test(promotionRunId)) fail('SUPABASE_PROMOTION_RUN_ID must be a numeric successful governed Production promotion run ID');
-      resolved[key] = promotionRunId;
-    } else if (typeof value === 'string' || typeof value === 'boolean') resolved[key] = value;
+    else if (value === SUPABASE_PROMOTION_RUN_ID_PLACEHOLDER) resolved[key] = promotionSet ? promotionRunId : '';
+    else if (value === SUPABASE_REATTESTATION_RUN_ID_PLACEHOLDER) resolved[key] = reattestationSet ? reattestationRunId : '';
+    else if (value === SUPABASE_RLS_CONFIRMATION_PLACEHOLDER) resolved[key] = promotionSet
+      ? 'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF'
+      : 'EXECUTE_POST_REATTESTATION_RUNTIME_PROOF';
+    else if (typeof value === 'string' || typeof value === 'boolean') resolved[key] = value;
     else fail(`unsupported workflow input value for ${key}`);
   }
   return resolved;
