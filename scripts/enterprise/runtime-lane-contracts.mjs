@@ -27,8 +27,8 @@ export const ALLOWED_RUNTIME_WORKFLOWS = Object.freeze(new Set(Object.values(RUN
 function fail(message) { throw new Error(message); }
 
 export function resolveLaneInputs(inputs, {
-  releaseSha,
-  recoveryRollbackConfirmation,
+  releaseSha = '',
+  recoveryRollbackConfirmation = '',
   supabasePromotionRunId = '',
   supabaseReattestationRunId = '',
 } = {}) {
