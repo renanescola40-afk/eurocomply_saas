@@ -3,7 +3,7 @@
 Date: 2026-09-14
 Product: RISCK COMPLY
 Repository: renanescola40-afk/eurocomply_saas
-Current main after public legal-boundary merge: 3a96c7d5d6123cbb871f360987419a25e697c837
+Current main after latest legal authority reconciliation: 59f7a46d5a76c84f6c75e03453e156e684193940
 Current canonical Production: dpl_BznNuFKG8UEh4yW8y9HQyzLXDiJ9 / 13b19410caa20045b19d98d58df406c43433af5a
 
 ## Authority rule

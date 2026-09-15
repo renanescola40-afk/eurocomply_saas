@@ -1,9 +1,27 @@
 # CSA STAR for AI Level 1 — Submission Metadata
 
-Status: **SUBMISSION CANDIDATE READY / AUTHORIZED-HUMAN SUBMISSION PENDING**  
+Status: **TECHNICAL_PREPARATION_COMPLETE / SUBMISSION_REJECTED_TIMEOUT / RESUBMISSION_REQUIRED**  
 Target: CSA STAR for AI Level 1  
 Framework: AICM v1.1 / AI-CAIQ v1.1.0  
 Assessment role: Application Provider (AP)
+
+## Observed submission outcome — 2026-09-14
+
+An attributable Cloud Security Alliance notification dated `2026-09-14` states that the submitted file `RISCK_COMPLY_AI_CAIQ_v1.1.0_PRELIMINARY_COMPLETED.xlsx` was rejected because the submission was **not completed within the required 48-hour time frame**.
+
+Current factual classification:
+
+```text
+CSA_STAR_SUBMISSION_ATTEMPT=YES
+CSA_STAR_SUBMISSION_OUTCOME=REJECTED
+CSA_STAR_REJECTION_REASON=48_HOUR_COMPLETION_WINDOW_MISSED
+CSA_STAR_SECURITY_OR_COMPLIANCE_REJECTION=false
+CSA_STAR_REGISTRY_ACCEPTANCE=false
+CSA_STAR_RESUBMISSION_REQUIRED=true
+PUBLIC_STAR_FOR_AI_LEVEL_1_CLAIM=NOT_ALLOWED
+```
+
+This is an administrative timeout rejection, not an adverse security, technical-compliance or certification finding. CSA states that assistance with resubmission is available through STAR Support. A future resubmission must still satisfy the human authority, contact, terms/publication and confirmation requirements below. No registry acceptance or badge may be claimed until an official live entry exists.
 
 ## Service name
 
@@ -203,10 +221,10 @@ No email is to be sent by this workstream without explicit owner authorization.
 - [x] Final structural/spreadsheet QA completed.
 - [x] Private submission-candidate XLSX exported.
 - [ ] Eligible Backup PoC established or CSA-approved sole-operator alternative obtained.
-- [ ] Authorized STAR Platform human fields/authentication completed.
-- [ ] Legal authority / terms / publication declarations personally accepted by authorized submitter.
-- [ ] Assessment submitted.
-- [ ] CSA confirmation email completed within 48 hours.
+- [ ] Authorized STAR Platform human fields/authentication completed for a successful resubmission.
+- [ ] Legal authority / terms / publication declarations personally accepted by authorized submitter for a successful resubmission.
+- [x] Assessment submission attempt made.
+- [ ] CSA confirmation process completed within 48 hours.
 - [ ] Public STAR Registry entry verified.
 
 ## Current status
@@ -214,5 +232,6 @@ No email is to be sent by this workstream without explicit owner authorization.
 **TECHNICAL_PREPARATION = COMPLETE**  
 **QUESTIONNAIRE = 320/320 COMPLETE**  
 **SUBMISSION_ARTIFACT = READY**  
-**EXTERNAL_SUBMISSION = HUMAN-AUTHORIZATION BLOCKED**  
+**EXTERNAL_SUBMISSION = REJECTED_TIMEOUT / RESUBMISSION_REQUIRED**  
+**SECURITY_OR_COMPLIANCE_ADVERSE_FINDING = NO**  
 **PUBLIC STAR FOR AI LEVEL 1 CLAIM = NOT YET ALLOWED**
