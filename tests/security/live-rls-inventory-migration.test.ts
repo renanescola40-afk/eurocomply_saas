@@ -71,13 +71,15 @@ describe('live RLS inventory repair migration', () => {
     expect(workflow).not.toContain('psql ');
   });
 
-  it('requires exact successful promotion evidence before the tenant proof executes', () => {
-    expect(workflow).toContain('download exact governed production promotion evidence');
+  it('requires exactly one exact-SHA governed Supabase authority before the tenant proof executes', () => {
+    expect(workflow).toContain('test $((promotion_set + reattestation_set)) -eq 1');
+    expect(workflow).toContain('download and validate exact governed supabase authority evidence');
     expect(workflow).toContain('validate-supabase-live-promotion-source.mjs');
+    expect(workflow).toContain('validate-supabase-live-reattestation-source.mjs');
     expect(workflow).toContain('execute canonical live tenant-isolation proof');
-    expect(workflow.indexOf('download exact governed production promotion evidence')).toBeLessThan(
-      workflow.indexOf('execute canonical live tenant-isolation proof'),
-    );
+    expect(
+      workflow.indexOf('download and validate exact governed supabase authority evidence'),
+    ).toBeLessThan(workflow.indexOf('execute canonical live tenant-isolation proof'));
   });
 
   it('preserves the helper privilege boundary in the forward reconciliation identity and proves authenticated denial at runtime', () => {
