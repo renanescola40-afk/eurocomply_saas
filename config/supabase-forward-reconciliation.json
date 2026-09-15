@@ -5,7 +5,7 @@
   "migrations": [
     {
       "filename": "20260910113000_reconcile_fria_operational_runtime_v43.sql",
-      "purpose": "forward-only reconciliation of the FRIA operational RPC, trigger, same-organization FK and service-role ACL contract consumed by Production without replaying or weakening newer live RLS policies"
+      "purpose": "forward-only reconciliation of the FRIA operational RPC, trigger, same-organization FK and service role ACL contract consumed by Production without replaying or weakening newer live RLS policies"
     },
     {
       "filename": "20260910113500_article5_policy_replay_compatibility_v43.sql",
@@ -17,7 +17,7 @@
     },
     {
       "filename": "20260910115000_atomic_data_subject_request_lifecycle_audit_v43.sql",
-      "purpose": "re-forward the reviewed service-role-only atomic GDPR data-subject lifecycle plus audit-chain transaction above the current Production migration head, including terminal onboarding-document pointer integrity reconciliation, without migration-history repair"
+      "purpose": "re-forward the reviewed service role only atomic GDPR data-subject lifecycle plus audit-chain transaction above the current Production migration head, including terminal onboarding-document pointer integrity reconciliation, without migration-history repair"
     }
   ],
   "historicalBaselines": {
