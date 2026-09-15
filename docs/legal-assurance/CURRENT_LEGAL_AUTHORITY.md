@@ -2,7 +2,7 @@
 
 **Effective evidence date:** 14 September 2026  
 **Product:** RISCK COMPLY  
-**Repository evidence baseline:** `main@c7bb972e45b84fbe665e233c1a5550f72080bf2e` — protected-main snapshot observed for this reconciliation; later protected-main commits do not invalidate this matrix unless they materially change the product/legal facts assessed here.  
+**Repository evidence baseline:** `main@59f7a46d5a76c84f6c75e03453e156e684193940` — protected-main snapshot observed for this reconciliation; later protected-main commits do not invalidate this matrix unless they materially change the product/legal facts assessed here.  
 **Status:** canonical current legal-control register; not legal advice, certification, regulator approval or executed contract
 
 ## Authority and scope
