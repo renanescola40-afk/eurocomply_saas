@@ -157,6 +157,22 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Hydrate exact-SHA audit-chain runtime evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ env.RELEASE_SHA }}
+          AUDIT_CHAIN_RUNTIME_EVIDENCE_REQUIRED: 'true'
+        run: node scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs
+
+      - name: Hydrate exact-SHA Supabase RLS runtime evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ env.RELEASE_SHA }}
+          SUPABASE_RLS_RUNTIME_EVIDENCE_REQUIRED: 'true'
+        run: node scripts/enterprise/fetch-supabase-rls-evidence.mjs
+
       - name: Install dependencies deterministically
         run: npm ci
 
@@ -259,22 +275,6 @@ jobs:
       - name: Run build gate
         run: npm run build
 
-      - name: Hydrate exact-SHA audit-chain runtime evidence
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          TARGET_SHA: ${{ env.RELEASE_SHA }}
-          AUDIT_CHAIN_RUNTIME_EVIDENCE_REQUIRED: 'true'
-        run: node scripts/enterprise/fetch-audit-chain-runtime-evidence.mjs
-
-      - name: Hydrate exact-SHA Supabase RLS runtime evidence
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          TARGET_SHA: ${{ env.RELEASE_SHA }}
-          SUPABASE_RLS_RUNTIME_EVIDENCE_REQUIRED: 'true'
-        run: node scripts/enterprise/fetch-supabase-rls-evidence.mjs
-
       - name: Run full security CI gate
         run: npm run security:ci
 
@@ -298,6 +298,16 @@ jobs:
 
       - name: Run Vercel production environment readiness gate
         run: npm run ops:vercel-readiness
+
+      - name: Verify Vercel authentication before production access
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! npx --yes "vercel@${VERCEL_CLI_VERSION}" whoami --token="$VERCEL_TOKEN" >/dev/null 2>&1; then
+            echo '::error title=Vercel authentication failed::VERCEL_TOKEN is missing, expired, revoked, belongs to the wrong account or team, or lacks access to the configured Vercel scope.'
+            exit 1
+          fi
+          echo 'Vercel authentication preflight passed; credential material was not printed.'
 
       - name: Link and pull current Vercel production environment
         run: npx --yes "vercel@${VERCEL_CLI_VERSION}" pull --yes --environment=production --token="$VERCEL_TOKEN"
