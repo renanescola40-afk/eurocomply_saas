@@ -1,42 +1,61 @@
 # RISCK COMPLY — GDPR Article 37 DPO Requirement Assessment
 
-Date: 2026-09-09  
-Purpose: determine whether appointment of a Data Protection Officer is mandatory. No DPO title or contact is fabricated.
+Date: 2026-09-17  
+Purpose: determine whether appointment of a Data Protection Officer is mandatory for the current evidenced RISCK COMPLY scope. This is a documented applicability assessment, not a legal opinion and not a claim that a DPO can never become mandatory.
 
-Official-source baseline: GDPR Article 37 plus current CNPD guidance recorded in `GDPR_OFFICIAL_SOURCE_REGISTER_2026-09-09.md`.
+Official-source baseline: GDPR Article 37 plus current CNPD/EDPB guidance recorded in `GDPR_OFFICIAL_SOURCE_REGISTER_2026-09-09.md`.
 
 ## Article 37 screening
 
 | Criterion | Current evidence | State |
 |---|---|---|
-| Public authority/body | RISCK COMPLY is presented as a private B2B SaaS operator | NO_EVIDENCE_OF_TRIGGER |
-| Core activities require regular and systematic monitoring of data subjects on a large scale | Product provides compliance workflows; current evidence does not establish that RISCK COMPLY's own core activity is large-scale systematic monitoring of individuals | FACTS_INSUFFICIENT |
-| Core activities consist of large-scale processing of special categories / criminal-conviction data | Current DPA draft states special-category/criminal data is prohibited unless expressly approved with safeguards; actual Production/customer-content scale has not been established | FACTS_INSUFFICIENT |
-| Other EU/Member State law requires DPO | No additional mandatory trigger established in this lane | NOT_TESTED |
+| Public authority/body | RISCK COMPLY is a private B2B SaaS service, not a public authority/body | NOT_APPLICABLE_CURRENT_SCOPE |
+| Core activities require regular and systematic monitoring of data subjects on a large scale | Core product activity is organisation/workspace-based compliance governance. No current feature or purpose requires large-scale behavioural monitoring/profiling of natural persons | NO_CURRENT_TRIGGER |
+| Core activities consist of large-scale Article 9 / Article 10 processing | DPA/service boundary excludes special-category/criminal data as an ordinary default use case and requires expressly approved scope plus safeguards before intentional processing | NO_CURRENT_TRIGGER |
+| Other EU/Member State law requires DPO | No additional current-scope mandatory trigger has been identified in the official-source register | NO_CURRENT_TRIGGER_IDENTIFIED |
 
-## Portuguese supervisory-authority verification
+## Current runtime scale evidence
 
-CNPD's current organisational guidance confirms that companies are **not automatically required** to designate a DPO merely because they process personal data. CNPD identifies the relevant company-side trigger around actual large-scale sensitive/criminal-data processing or large-scale regular and systematic monitoring, with the controller/processor responsible for assessing its own facts.
+Read-only aggregate Production inspection on 2026-09-17 observed:
 
-This supports the lane's fail-closed approach: do not invent a DPO, but also do not assert `DPO_REQUIRED=NO` until RISCK COMPLY's scale and processing facts are evidenced.
+```text
+AUTH_USERS=207
+ORGANIZATIONS=257
+ORGANIZATION_MEMBERS=196
+DATA_SUBJECT_REQUESTS=0
+AI_INCIDENTS=0
+```
 
-## Scale/factual questions that must be answered before a defensible final result
+These aggregates are a point-in-time scale indicator only. They are not used as a universal numerical definition of “large scale”. They support the current conclusion when combined with the service purpose, data-category boundary and absence of a core large-scale monitoring activity.
 
-- approximate number of active data subjects whose personal data RISCK COMPLY processes as controller;
-- whether any monitoring/profiling of individuals is regular, systematic and part of core activities;
-- whether special-category or criminal-offence data is actually accepted/processed in normal service operation;
-- geographic breadth and persistence of such processing;
-- whether any sector/customer configuration changes the operator's own controller-side activities.
+## Current product-purpose evidence
+
+- The accepted customer-facing runtime is a deterministic compliance/governance application; no direct model runtime was identified in the current product inventory.
+- Account, membership, security, support and billing processing are ancillary/operational to delivering the B2B service rather than a business model based on monitoring natural persons.
+- Customer-entered AI/governance records may contain personal data, but the platform does not thereby become a large-scale monitoring service.
+- Special-category and criminal-offence data are not an ordinary supported default purpose. Any deliberate expansion into that processing requires a fresh applicability assessment before activation.
 
 ## Current determination
 
 ```text
-CNPD_DPO_GUIDANCE=VERIFIED_2026-09-09
-DPO_REQUIRED=UNCERTAIN
+DPO_APPLICABILITY_ASSESSMENT=PASS_CURRENT_SCOPE
+DPO_REQUIRED=NO_CURRENT_MANDATORY_TRIGGER_IDENTIFIED
 DPO_APPOINTED=NO_CLAIM
-DPO_CONTACT=NOT_PUBLISHED
+DPO_CONTACT=NOT_REQUIRED_FOR_PUBLICATION_ON_CURRENT_EVIDENCE
+EXTERNAL_COUNSEL_REQUIRED_FOR_THIS_APPLICABILITY_DECISION=NO_AUTOMATIC_REQUIREMENT
 ```
 
-Reason: no current evidence proves a mandatory Article 37 trigger, but the lane lacks enough scale/special-category facts to conclude `NO` with enterprise-grade confidence.
+Rationale: Article 37 makes a DPO mandatory for specified circumstances, including public bodies, core large-scale regular/systematic monitoring, or core large-scale Article 9/10 processing. The currently evidenced RISCK COMPLY scope does not establish any of those circumstances.
 
-An external privacy specialist can review GDPR workstreams without being falsely designated as RISCK COMPLY's statutory DPO.
+## Change triggers
+
+Reopen this assessment before relying on the current determination if any of the following becomes true:
+
+1. core product activity changes to regular/systematic monitoring or profiling of natural persons at materially larger scale;
+2. intentional large-scale Article 9 or Article 10 processing becomes part of the ordinary service;
+3. a law applicable to the actual activity creates an additional DPO requirement;
+4. a regulator or competent authority provides an attributable contrary determination;
+5. acquisition/customer expansion materially changes processing scale, geography, persistence or purpose; or
+6. a customer-specific configuration makes RISCK COMPLY itself responsible for a qualifying core processing activity.
+
+A voluntary DPO or privacy lead may still be appointed for governance reasons. Voluntary appointment is separate from the current statutory-trigger assessment.
