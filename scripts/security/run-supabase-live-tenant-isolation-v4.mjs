@@ -147,6 +147,18 @@ async function deleteDenied(admin, supabase, table, id) {
   const after = await admin.from(table).select('id').eq('id', id).maybeSingle();
   return { passed: Boolean(after.data?.id) && (denied(error) || (!error && noRows(data))), returnedRows: Array.isArray(data) ? data.length : 0, rowStillExists: Boolean(after.data?.id), error: safeError(error) };
 }
+async function revokeSyntheticCommercialAuthority(admin, authority, label) {
+  assert(authority?.sourceId, `${label}_commercial_source_required`);
+  const { data, error } = await admin
+    .from('enterprise_entitlement_sources')
+    .update({ active: false })
+    .eq('id', authority.sourceId)
+    .select('id, active')
+    .single();
+  if (error || data?.id !== authority.sourceId || data?.active !== false) {
+    throw new Error(`${label}_commercial_revoke_failed:${error?.message ?? 'source_still_active'}`);
+  }
+}
 
 async function setup(admin, created) {
   const suffix = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
@@ -192,7 +204,15 @@ async function setup(admin, created) {
   const assessmentA = await seed(admin, 'ai_assessments', { organization_id: org.A.id, created_by: user.ownerA.id, title: `Assessment A ${suffix}`, status: 'completed', risk_score: 30, risk_level: 'limited', recommendations: [] }, created);
   const assessmentB = await seed(admin, 'ai_assessments', { organization_id: org.B.id, created_by: user.ownerB.id, title: `Assessment B ${suffix}`, status: 'completed', risk_score: 42, risk_level: 'limited', recommendations: [] }, created);
   const notificationB = await seed(admin, 'notifications', { organization_id: org.B.id, user_id: user.ownerB.id, title: `Notification ${suffix}`, message: 'Synthetic proof', type: 'info' }, created);
+
+  // Prove the real post-license state without bypassing payment-first protection:
+  // create the row while a bounded synthetic contract is valid, then revoke that
+  // exact source before any authenticated checks. The tenant is therefore truly
+  // unlicensed when same-tenant read/insert denial is exercised below.
+  const unlicensedAuthority = await grantBoundedV20CommercialAuthority(admin, org.U.id, `U-${suffix}`);
   const unlicensedAi = await seed(admin, 'ai_systems', { organization_id: org.U.id, name: `Unlicensed AI ${suffix}`, use_case: 'negative proof', created_by: user.unlicensed.id }, created);
+  await revokeSyntheticCommercialAuthority(admin, unlicensedAuthority, `U-${suffix}`);
+
   return { suffix, password, created, user, org, member, seeds, regulatory, assessmentA, assessmentB, notificationB, unlicensedAi };
 }
 
