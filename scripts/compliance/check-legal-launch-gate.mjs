@@ -14,9 +14,23 @@ import { validateContractCounselPack } from './validate-contract-counsel-pack.mj
 import { validateQualifiedReviewPackages } from './validate-qualified-review-packages.mjs';
 
 const FOUNDER_FACTS_PATH = 'docs/compliance/evidence/accepted/founder-facts.json';
+const LEGAL_LAUNCH_READINESS_PATH = 'docs/compliance/evidence/accepted/legal-launch-readiness.json';
 const MASTER_DECISION_PATH = 'docs/compliance/evidence/accepted/master-legal-decision.json';
 const OUTPUT_PATH = 'artifacts/legal-review/legal-launch-gate.json';
 const FULL_SHA = /^[a-f0-9]{40}$/i;
+const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+
+const MANDATORY_LAUNCH_CONTROLS = Object.freeze([
+  'ai-act-applicability',
+  'controller-processor-roles',
+  'privacy-notice-lawful-bases',
+  'article-28-dpa',
+  'subprocessors-international-transfers',
+  'retention-dsr-breach',
+  'dpo-dpia-applicability',
+  'cookies-eprivacy-analytics-marketing',
+  'commercial-terms-publication',
+]);
 
 const QUALIFIED_REVIEW_REQUIREMENTS = Object.freeze([
   { id: 'legal-rules', path: 'docs/compliance/evidence/accepted/legal-rules-qualified-review.json' },
@@ -54,11 +68,85 @@ function resolveSha(root) {
 }
 
 /**
+ * @param {unknown} document
+ * @param {string} expectedSha
+ */
+export function validateLegalLaunchReadinessDocument(document, expectedSha) {
+  /** @type {string[]} */
+  const failures = [];
+  if (!document || typeof document !== 'object' || Array.isArray(document)) {
+    return {
+      accepted: false,
+      failures: ['legal_launch_readiness_invalid_document'],
+      externalReviewRequired: false,
+      controls: [],
+    };
+  }
+
+  const value = /** @type {Record<string, any>} */ (document);
+  if (value.schema !== 'risck-comply.legal-launch-readiness.v1') failures.push('legal_launch_readiness_schema_invalid');
+  if (!expectedSha || !FULL_SHA.test(expectedSha) || String(value.productSha || '').toLowerCase() !== expectedSha.toLowerCase()) {
+    failures.push('legal_launch_readiness_sha_mismatch');
+  }
+  if (value.status !== 'LEGAL_LAUNCH_READY') failures.push('legal_launch_readiness_status_not_ready');
+  if (value.publicLegalSurfaceEffective !== true) failures.push('public_legal_surface_not_effective');
+  if (!ISO_TIME.test(String(value.acceptedAt || ''))) failures.push('legal_launch_readiness_accepted_at_invalid');
+  if (!Array.isArray(value.evidenceRefs) || value.evidenceRefs.length === 0 || value.evidenceRefs.some((item) => typeof item !== 'string' || !item.trim())) {
+    failures.push('legal_launch_readiness_evidence_refs_missing');
+  }
+
+  const controls = Array.isArray(value.mandatoryControls) ? value.mandatoryControls : [];
+  if (!Array.isArray(value.mandatoryControls)) failures.push('mandatory_controls_missing');
+
+  for (const id of MANDATORY_LAUNCH_CONTROLS) {
+    const matches = controls.filter((control) => control && control.id === id);
+    if (matches.length !== 1) {
+      failures.push(`mandatory_control_${id}_missing_or_duplicate`);
+      continue;
+    }
+    const control = matches[0];
+    if (!['PASS', 'NOT_APPLICABLE'].includes(control.status)) {
+      failures.push(`mandatory_control_${id}_status_not_accepted`);
+      continue;
+    }
+    if (!Array.isArray(control.evidenceRefs) || control.evidenceRefs.length === 0 || control.evidenceRefs.some((item) => typeof item !== 'string' || !item.trim())) {
+      failures.push(`mandatory_control_${id}_evidence_missing`);
+    }
+    if (control.status === 'NOT_APPLICABLE') {
+      if (typeof control.rationale !== 'string' || !control.rationale.trim()) failures.push(`mandatory_control_${id}_na_rationale_missing`);
+      if (typeof control.changeTrigger !== 'string' || !control.changeTrigger.trim()) failures.push(`mandatory_control_${id}_na_change_trigger_missing`);
+    }
+  }
+
+  const externalReview = value.qualifiedExternalReview;
+  if (!externalReview || typeof externalReview !== 'object' || Array.isArray(externalReview) || typeof externalReview.required !== 'boolean') {
+    failures.push('qualified_external_review_applicability_missing');
+  } else {
+    if (typeof externalReview.rationale !== 'string' || !externalReview.rationale.trim()) {
+      failures.push('qualified_external_review_rationale_missing');
+    }
+    if (typeof externalReview.changeTrigger !== 'string' || !externalReview.changeTrigger.trim()) {
+      failures.push('qualified_external_review_change_trigger_missing');
+    }
+  }
+
+  return {
+    accepted: failures.length === 0,
+    failures: [...new Set(failures)].sort(),
+    externalReviewRequired: Boolean(externalReview?.required),
+    controls,
+  };
+}
+
+/**
  * @param {{
  *   expectedSha?: string | null,
  *   founderFactsAccepted?: boolean,
  *   founderFactsUnresolvedFields?: string[],
+ *   launchReadinessAccepted?: boolean,
+ *   launchReadinessFailures?: string[],
  *   repositoryPreparationFailures?: string[],
+ *   qualifiedExternalReviewRequired?: boolean,
  *   qualifiedReviewAcceptedCount?: number,
  *   qualifiedReviewRequiredCount?: number,
  *   masterDecisionAccepted?: boolean
@@ -68,22 +156,32 @@ export function evaluateLegalLaunchDecision({
   expectedSha,
   founderFactsAccepted,
   founderFactsUnresolvedFields = [],
+  launchReadinessAccepted = false,
+  launchReadinessFailures = [],
   repositoryPreparationFailures = [],
+  qualifiedExternalReviewRequired = false,
   qualifiedReviewAcceptedCount = 0,
   qualifiedReviewRequiredCount = QUALIFIED_REVIEW_REQUIREMENTS.length,
   masterDecisionAccepted = false,
 } = {}) {
+  /** @type {string[]} */
   const blockers = [];
   if (!expectedSha || !FULL_SHA.test(expectedSha)) blockers.push('exact_product_sha_unavailable');
   if (!founderFactsAccepted) blockers.push('founder_facts_not_accepted');
+  if (!launchReadinessAccepted) blockers.push('mandatory_legal_launch_controls_not_accepted');
+  blockers.push(...launchReadinessFailures.map((item) => `launch_readiness:${item}`));
   if (repositoryPreparationFailures.length > 0) blockers.push('repository_preparation_failed');
 
-  const accepted = blockers.length === 0;
   const legalMaxAssuranceAccepted =
     qualifiedReviewAcceptedCount === qualifiedReviewRequiredCount && masterDecisionAccepted;
+  if (qualifiedExternalReviewRequired && !legalMaxAssuranceAccepted) {
+    blockers.push('triggered_qualified_external_review_not_accepted');
+  }
+
+  const accepted = blockers.length === 0;
 
   return {
-    schema: 'risck-comply.legal-launch-gate.v1',
+    schema: 'risck-comply.legal-launch-gate.v2',
     expectedSha: expectedSha || null,
     publicationStatus: accepted
       ? 'LEGAL_LAUNCH_ACCEPTED'
@@ -99,21 +197,24 @@ export function evaluateLegalLaunchDecision({
       status: accepted ? 'PASS' : 'NO_PASS',
       founderFactsAccepted: Boolean(founderFactsAccepted),
       founderFactsUnresolvedFields,
+      launchReadinessAccepted: Boolean(launchReadinessAccepted),
+      launchReadinessFailures,
       repositoryPreparationFailures,
-      blockers,
+      blockers: [...new Set(blockers)].sort(),
     },
     optionalMaxAssurance: {
       status: legalMaxAssuranceAccepted ? 'COUNSEL_ACCEPTED' : 'OPTIONAL_ASSURANCE_OPEN',
       qualifiedReviewAcceptedCount,
       qualifiedReviewRequiredCount,
       masterDecisionAccepted: Boolean(masterDecisionAccepted),
-      blocksLegalLaunch: false,
+      requiredForCurrentLaunch: Boolean(qualifiedExternalReviewRequired),
+      blocksLegalLaunch: Boolean(qualifiedExternalReviewRequired && !legalMaxAssuranceAccepted),
       changeTrigger:
         'Qualified external legal review becomes mandatory only where an applicable law, regulator, conformity route, contract or actual buyer requirement makes it mandatory for the relevant scope.',
     },
     notice: accepted
-      ? 'Mandatory factual and repository-controlled legal launch prerequisites are complete for the exact product SHA. This status is not a legal opinion, regulator approval, certification or buyer acceptance; optional external legal assurance is reported separately.'
-      : 'Final factual legal publication remains blocked until the listed mandatory launch prerequisites are complete. Optional qualified legal assurance is tracked separately and does not become a launch blocker merely because it is absent.',
+      ? 'All mandatory legal-launch controls and factual publication prerequisites are accepted for the exact product SHA. This status is not a legal opinion, regulator approval, certification or buyer acceptance; optional external legal assurance remains separately reported unless specifically triggered.'
+      : 'Final factual legal publication remains blocked until every listed mandatory launch prerequisite is complete. Optional qualified legal assurance becomes a blocker only when a documented current-scope trigger makes it mandatory.',
   };
 }
 
@@ -132,9 +233,16 @@ export function evaluateLegalLaunchGate({
   const founderArtifact = readJson(root, FOUNDER_FACTS_PATH);
   const founderValidation = founderArtifact.document && !founderArtifact.error && expectedSha
     ? validateFounderFactsDocument(founderArtifact.document, expectedSha, now)
+    : { accepted: false, unresolvedFields: [] };
+
+  const launchReadinessArtifact = readJson(root, LEGAL_LAUNCH_READINESS_PATH);
+  const launchReadinessValidation = launchReadinessArtifact.document && !launchReadinessArtifact.error && expectedSha
+    ? validateLegalLaunchReadinessDocument(launchReadinessArtifact.document, expectedSha)
     : {
         accepted: false,
-        unresolvedFields: [],
+        failures: [`legal_launch_readiness_${launchReadinessArtifact.error ?? 'unavailable'}`],
+        externalReviewRequired: false,
+        controls: [],
       };
 
   const qualifiedReviews = QUALIFIED_REVIEW_REQUIREMENTS.map((requirement) => {
@@ -162,7 +270,10 @@ export function evaluateLegalLaunchGate({
       expectedSha,
       founderFactsAccepted: founderValidation.accepted,
       founderFactsUnresolvedFields: founderValidation.unresolvedFields ?? [],
+      launchReadinessAccepted: launchReadinessValidation.accepted,
+      launchReadinessFailures: launchReadinessValidation.failures ?? [],
       repositoryPreparationFailures: [...new Set(repositoryPreparationFailures)].sort(),
+      qualifiedExternalReviewRequired: launchReadinessValidation.externalReviewRequired,
       qualifiedReviewAcceptedCount,
       qualifiedReviewRequiredCount: QUALIFIED_REVIEW_REQUIREMENTS.length,
       masterDecisionAccepted: masterValidation.accepted,
@@ -176,6 +287,9 @@ export function evaluateLegalLaunchGate({
     evidence: {
       founderFactsPath: FOUNDER_FACTS_PATH,
       founderFactsSourceState: founderArtifact.error ?? 'present',
+      legalLaunchReadinessPath: LEGAL_LAUNCH_READINESS_PATH,
+      legalLaunchReadinessSourceState: launchReadinessArtifact.error ?? 'present',
+      mandatoryLaunchControls: launchReadinessValidation.controls ?? [],
       qualifiedReviews,
       masterDecisionPath: MASTER_DECISION_PATH,
       masterDecisionSourceState: masterArtifact.error ?? 'present',
