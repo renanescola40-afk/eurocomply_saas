@@ -55,11 +55,24 @@ export async function grantBoundedV20CommercialAuthority(admin, organizationId, 
     applied_policy_version: 1,
   }, `${label}_commercial_snapshot`);
 
+  // The live RLS fixture is itself a payment-first proof. Do not continue until
+  // the same resolver used by quota triggers can observe the bounded authority
+  // we just created. This turns a later quota failure into an immediate,
+  // attributable fixture-authority failure without weakening Production rules.
+  const { data: resolvedPlan, error: resolveError } = await admin
+    .schema('app_private')
+    .rpc('resolve_commercial_plan', { target_organization_id: organizationId });
+  if (resolveError) {
+    throw new Error(`${label}_commercial_authority_resolve_failed:${resolveError.message}`);
+  }
+  assert(resolvedPlan === 'starter', `${label}_commercial_authority_not_resolved`);
+
   return {
     sourceId: source.id,
     snapshotId: snapshot.id,
     validUntil,
     sourceKind: 'signed_contract',
+    resolvedPlan,
     syntheticStripeLifecycle: false,
   };
 }
