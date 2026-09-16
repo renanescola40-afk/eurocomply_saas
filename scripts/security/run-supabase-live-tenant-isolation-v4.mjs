@@ -171,6 +171,7 @@ async function setup(admin, created) {
 
   await grantBoundedV20CommercialAuthority(admin, org.A.id, `A-${suffix}`);
   await grantBoundedV20CommercialAuthority(admin, org.B.id, `B-${suffix}`);
+  const unlicensedAuthority = await grantBoundedV20CommercialAuthority(admin, org.U.id, `U-${suffix}`);
   const profileB = await seedProfile(admin, user.ownerB, created);
   const future = new Date(Date.now() + 7 * 86400000).toISOString();
   const seeds = {
@@ -193,6 +194,19 @@ async function setup(admin, created) {
   const assessmentB = await seed(admin, 'ai_assessments', { organization_id: org.B.id, created_by: user.ownerB.id, title: `Assessment B ${suffix}`, status: 'completed', risk_score: 42, risk_level: 'limited', recommendations: [] }, created);
   const notificationB = await seed(admin, 'notifications', { organization_id: org.B.id, user_id: user.ownerB.id, title: `Notification ${suffix}`, message: 'Synthetic proof', type: 'info' }, created);
   const unlicensedAi = await seed(admin, 'ai_systems', { organization_id: org.U.id, name: `Unlicensed AI ${suffix}`, use_case: 'negative proof', created_by: user.unlicensed.id }, created);
+
+  const { error: unlicensedSnapshotRevokeError } = await admin
+    .from('enterprise_entitlement_snapshots')
+    .delete()
+    .eq('id', unlicensedAuthority.snapshotId);
+  if (unlicensedSnapshotRevokeError) throw new Error(`unlicensed_snapshot_revoke_failed:${unlicensedSnapshotRevokeError.message}`);
+
+  const { error: unlicensedSourceRevokeError } = await admin
+    .from('enterprise_entitlement_sources')
+    .delete()
+    .eq('id', unlicensedAuthority.sourceId);
+  if (unlicensedSourceRevokeError) throw new Error(`unlicensed_source_revoke_failed:${unlicensedSourceRevokeError.message}`);
+
   return { suffix, password, created, user, org, member, seeds, regulatory, assessmentA, assessmentB, notificationB, unlicensedAi };
 }
 
