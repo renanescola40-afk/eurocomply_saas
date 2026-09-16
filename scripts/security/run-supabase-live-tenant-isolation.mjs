@@ -67,13 +67,31 @@ export function resolveAuthorityBinding(env = process.env) {
       valid: true,
       mode,
       runId: authorityRunId,
-      // v4 still consumes PROMOTION_RUN_ID as a numeric compatibility guard only.
-      // Provenance is validated fail-closed by AUTHORITY_MODE/AUTHORITY_RUN_ID in the governed workflow.
+      // The governed workflow validates the reattestation run itself here. The v4
+      // runner still consumes PROMOTION_RUN_ID as a numeric compatibility guard,
+      // but canonical evidence must retain the historical baseline promotion run.
       compatibilityPromotionRunId: authorityRunId,
     };
   }
 
   return { valid: false, reason: `unsupported authority mode: ${mode}` };
+}
+
+export function resolveCompatibilityPromotionRunId(authorityBinding, env = process.env) {
+  if (!authorityBinding?.valid) {
+    return { valid: false, reason: authorityBinding?.reason || 'governed authority run is not bound' };
+  }
+
+  if (authorityBinding.mode !== 'reattestation') {
+    return { valid: true, runId: authorityBinding.compatibilityPromotionRunId };
+  }
+
+  const baselinePromotionRunId = String(env.PROMOTION_LINEAGE_RUN_ID ?? '').trim();
+  if (!/^\d+$/.test(baselinePromotionRunId)) {
+    return { valid: false, reason: 'validated baseline promotion lineage is not bound' };
+  }
+
+  return { valid: true, runId: baselinePromotionRunId };
 }
 
 if (isCli) {
@@ -95,7 +113,13 @@ if (isCli) {
     process.exit(1);
   }
 
-  process.env.PROMOTION_RUN_ID = authorityBinding.compatibilityPromotionRunId;
+  const compatibilityBinding = resolveCompatibilityPromotionRunId(authorityBinding);
+  if (!compatibilityBinding.valid) {
+    console.error(compatibilityBinding.reason);
+    process.exit(1);
+  }
+
+  process.env.PROMOTION_RUN_ID = compatibilityBinding.runId;
 
   main()
     .then(() => assertProfileProof({ advisory }))
