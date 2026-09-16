@@ -17,20 +17,109 @@ function hasLiveRuntimeConfiguration() {
   return hasUrl && hasPrivilegedKey;
 }
 
-function hasPromotionRunBinding() {
-  return /^\d+$/.test(String(process.env.PROMOTION_RUN_ID ?? '').trim());
+export function resolveAuthorityBinding(env = process.env) {
+  const mode = String(env.AUTHORITY_MODE ?? '').trim();
+  const authorityRunId = String(env.AUTHORITY_RUN_ID ?? '').trim();
+  const promotionRunId = String(env.PROMOTION_RUN_ID ?? '').trim();
+  const confirmation = String(env.INPUT_CONFIRMATION ?? '').trim();
+
+  if (!mode) {
+    if (/^\d+$/.test(promotionRunId)) {
+      return {
+        valid: true,
+        mode: 'legacy-promotion',
+        runId: promotionRunId,
+        compatibilityPromotionRunId: promotionRunId,
+      };
+    }
+    return { valid: false, reason: 'governed authority run is not bound' };
+  }
+
+  if (mode === 'promotion') {
+    if (!/^\d+$/.test(authorityRunId)) {
+      return { valid: false, reason: 'AUTHORITY_RUN_ID is not bound to the promotion authority' };
+    }
+    if (confirmation !== 'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF') {
+      return { valid: false, reason: 'promotion authority confirmation is invalid' };
+    }
+    if (promotionRunId && promotionRunId !== authorityRunId) {
+      return { valid: false, reason: 'promotion authority run IDs do not match' };
+    }
+    return {
+      valid: true,
+      mode,
+      runId: authorityRunId,
+      compatibilityPromotionRunId: authorityRunId,
+    };
+  }
+
+  if (mode === 'reattestation') {
+    if (!/^\d+$/.test(authorityRunId)) {
+      return { valid: false, reason: 'AUTHORITY_RUN_ID is not bound to the reattestation authority' };
+    }
+    if (confirmation !== 'EXECUTE_POST_REATTESTATION_RUNTIME_PROOF') {
+      return { valid: false, reason: 'reattestation authority confirmation is invalid' };
+    }
+    if (promotionRunId && promotionRunId !== authorityRunId) {
+      return { valid: false, reason: 'legacy promotion binding conflicts with reattestation authority' };
+    }
+    return {
+      valid: true,
+      mode,
+      runId: authorityRunId,
+      // The governed workflow validates the reattestation run itself here. The v4
+      // runner still consumes PROMOTION_RUN_ID as a numeric compatibility guard,
+      // but canonical evidence must retain the historical baseline promotion run.
+      compatibilityPromotionRunId: authorityRunId,
+    };
+  }
+
+  return { valid: false, reason: `unsupported authority mode: ${mode}` };
+}
+
+export function resolveCompatibilityPromotionRunId(authorityBinding, env = process.env) {
+  if (!authorityBinding?.valid) {
+    return { valid: false, reason: authorityBinding?.reason || 'governed authority run is not bound' };
+  }
+
+  if (authorityBinding.mode !== 'reattestation') {
+    return { valid: true, runId: authorityBinding.compatibilityPromotionRunId };
+  }
+
+  const baselinePromotionRunId = String(env.PROMOTION_LINEAGE_RUN_ID ?? '').trim();
+  if (!/^\d+$/.test(baselinePromotionRunId)) {
+    return { valid: false, reason: 'validated baseline promotion lineage is not bound' };
+  }
+
+  return { valid: true, runId: baselinePromotionRunId };
 }
 
 if (isCli) {
   const advisory = process.argv.includes('--advisory');
-  if (advisory && (!hasLiveRuntimeConfiguration() || !hasPromotionRunBinding())) {
-    const reason = hasLiveRuntimeConfiguration()
-      ? 'PROMOTION_RUN_ID is not bound to this advisory run'
-      : 'protected runtime credentials are unavailable';
+  const authorityBinding = resolveAuthorityBinding();
+  const hasRuntime = hasLiveRuntimeConfiguration();
+
+  if (advisory && (!hasRuntime || !authorityBinding.valid)) {
+    const reason = !hasRuntime
+      ? 'protected runtime credentials are unavailable'
+      : authorityBinding.reason;
     console.log(`Supabase live tenant-isolation validation skipped in advisory CI: ${reason}.`);
-    console.log('No runtime completion is claimed; the protected promotion-bound workflow is authoritative.');
+    console.log('No runtime completion is claimed; the protected authority-bound workflow is authoritative.');
     process.exit(0);
   }
+
+  if (!authorityBinding.valid) {
+    console.error(authorityBinding.reason);
+    process.exit(1);
+  }
+
+  const compatibilityBinding = resolveCompatibilityPromotionRunId(authorityBinding);
+  if (!compatibilityBinding.valid) {
+    console.error(compatibilityBinding.reason);
+    process.exit(1);
+  }
+
+  process.env.PROMOTION_RUN_ID = compatibilityBinding.runId;
 
   main()
     .then(() => assertProfileProof({ advisory }))

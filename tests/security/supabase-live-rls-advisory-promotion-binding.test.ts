@@ -27,11 +27,11 @@ function runAdvisory(script: string) {
   });
 }
 
-describe('promotion-bound advisory live RLS runners', () => {
+describe('authority-bound advisory live RLS runners', () => {
   it('does not enter the live tenant-isolation runner merely because protected credentials exist', () => {
     const output = runAdvisory(tenantRunner);
 
-    expect(output).toContain('PROMOTION_RUN_ID is not bound to this advisory run');
+    expect(output).toContain('governed authority run is not bound');
     expect(output).toContain('No runtime completion is claimed');
   });
 
