@@ -83,8 +83,8 @@
     {
       "id": "legal-publication",
       "owner": "legal",
-      "evidence": "artifacts/legal-review/final-legal-publication-gate.json",
-      "acceptedStatuses": ["COUNSEL_ACCEPTED"]
+      "evidence": "artifacts/legal-review/legal-launch-gate.json",
+      "acceptedStatuses": ["LEGAL_LAUNCH_ACCEPTED"]
     },
     {
       "id": "external-security-assurance",
