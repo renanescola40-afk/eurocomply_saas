@@ -244,7 +244,20 @@ async function run() {
 if (process.argv[1] && fileURLToPath(new URL(`file://${process.argv[1]}`)) === fileURLToPath(import.meta.url)) {
   run().catch((error) => {
     const reason = error instanceof Error ? error.message.split(':')[0] : 'unknown_error';
-    console.error(`Supabase RLS evidence retrieval failed: ${reason}`);
+    const targetSha = String(process.env.TARGET_SHA || process.env.GITHUB_SHA || '').trim().toLowerCase();
+    const expectedArtifact = `supabase-live-rls-runtime-proof-${targetSha || '<RELEASE_SHA>'}`;
+
+    if (reason === 'exact_sha_runtime_run_missing') {
+      console.error(
+        `::error title=Exact-SHA Supabase RLS evidence missing::No successful Supabase Live RLS Validation exists for ${targetSha || 'RELEASE_SHA'}. Complete Production Reattestation or Supabase Forward Promotion for this exact SHA, wait for ${expectedArtifact} to be published, then rerun Vercel Production Deploy.`,
+      );
+    } else if (reason === 'exact_sha_runtime_artifact_missing') {
+      console.error(
+        `::error title=Exact-SHA Supabase RLS artifact missing::The successful Supabase Live RLS Validation did not publish ${expectedArtifact}. Do not reuse evidence from another SHA; repair or rerun the exact-SHA validation producer, then rerun Vercel Production Deploy.`,
+      );
+    } else {
+      console.error(`Supabase RLS evidence retrieval failed: ${reason}`);
+    }
     process.exit(1);
   });
 }
