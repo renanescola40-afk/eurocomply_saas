@@ -53,6 +53,17 @@ function resolveSha(root) {
   }
 }
 
+/**
+ * @param {{
+ *   expectedSha?: string | null,
+ *   founderFactsAccepted?: boolean,
+ *   founderFactsUnresolvedFields?: string[],
+ *   repositoryPreparationFailures?: string[],
+ *   qualifiedReviewAcceptedCount?: number,
+ *   qualifiedReviewRequiredCount?: number,
+ *   masterDecisionAccepted?: boolean
+ * }} [input]
+ */
 export function evaluateLegalLaunchDecision({
   expectedSha,
   founderFactsAccepted,
