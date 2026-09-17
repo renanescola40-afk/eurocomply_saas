@@ -14,6 +14,19 @@ async function insertOne(admin, table, row, label) {
   return data;
 }
 
+async function readAuthorityRow(admin, table, id, organizationId, label) {
+  const { data, error } = await admin
+    .from(table)
+    .select('*')
+    .eq('id', id)
+    .eq('organization_id', organizationId)
+    .single();
+  if (error || !data?.id) {
+    throw new Error(`${label}_readback_failed:${error?.message ?? 'missing_id'}`);
+  }
+  return data;
+}
+
 export async function grantBoundedV20CommercialAuthority(admin, organizationId, label = 'live-proof') {
   assert(organizationId, 'organization_id_required_for_v20_commercial_authority');
   const observedAt = new Date();
@@ -55,24 +68,43 @@ export async function grantBoundedV20CommercialAuthority(admin, organizationId, 
     applied_policy_version: 1,
   }, `${label}_commercial_snapshot`);
 
-  // The live RLS fixture is itself a payment-first proof. Do not continue until
-  // the same resolver used by quota triggers can observe the bounded authority
-  // we just created. This turns a later quota failure into an immediate,
-  // attributable fixture-authority failure without weakening Production rules.
-  const { data: resolvedPlan, error: resolveError } = await admin
-    .schema('app_private')
-    .rpc('resolve_commercial_plan', { target_organization_id: organizationId });
-  if (resolveError) {
-    throw new Error(`${label}_commercial_authority_resolve_failed:${resolveError.message}`);
-  }
-  assert(resolvedPlan === 'starter', `${label}_commercial_authority_not_resolved`);
+  // app_private is intentionally not exposed through PostgREST. Calling
+  // admin.schema('app_private').rpc(...) would therefore test API schema
+  // exposure rather than the commercial resolver itself. Keep that boundary
+  // closed, prove the exact synthetic authority rows were persisted, and let
+  // the downstream quota-protected fixture writes exercise
+  // app_private.resolve_commercial_plan() through the real database triggers.
+  const persistedSource = await readAuthorityRow(
+    admin,
+    'enterprise_entitlement_sources',
+    source.id,
+    organizationId,
+    `${label}_commercial_source`,
+  );
+  const persistedSnapshot = await readAuthorityRow(
+    admin,
+    'enterprise_entitlement_snapshots',
+    snapshot.id,
+    organizationId,
+    `${label}_commercial_snapshot`,
+  );
+
+  assert(
+    persistedSource.active === true && persistedSource.source_kind === 'signed_contract',
+    `${label}_commercial_source_not_active`,
+  );
+  assert(
+    persistedSnapshot.status === 'applied' && persistedSnapshot.plan_code === 'starter',
+    `${label}_commercial_snapshot_not_applied`,
+  );
 
   return {
     sourceId: source.id,
     snapshotId: snapshot.id,
     validUntil,
     sourceKind: 'signed_contract',
-    resolvedPlan,
+    expectedPlan: 'starter',
+    verificationMode: 'persisted_authority_then_quota_trigger',
     syntheticStripeLifecycle: false,
   };
 }
