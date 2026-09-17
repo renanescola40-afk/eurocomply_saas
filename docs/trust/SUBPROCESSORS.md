@@ -1,79 +1,114 @@
-# Subprocessors register
+# RISCK COMPLY — Provider / Subprocessor Processing Register
 
-Status: enterprise review draft. This file must be verified before being incorporated into a final DPA or represented as counsel-approved contractual language.
+Date: 2026-09-17  
+Status: `ACTIVE_PROVIDER_SET_RECONCILED / FINAL_ROLE_AND_TRANSFER_FACTS_PARTIAL`  
+Scope: providers currently evidenced as active in the RISCK COMPLY customer service or material operations that can process customer, user, support, security, billing or operational personal data.
 
-Detailed factual reconciliation is tracked in `docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md`, the current overlay `docs/trust/evidence/2026-09-09-provider-current-overlay.md`, and canonical External Assurance issue `#1727`.
+This register separates four questions that must not be conflated:
 
-## Purpose
+1. whether a provider is actually used;
+2. what data/purpose the integration can involve;
+3. what account-specific contractual/DPA facts are attributable; and
+4. the final GDPR legal role / Chapter V conclusion for the actual data flow.
 
-This register lists providers and operational services that may process customer data, authentication data or operational metadata for RISCK COMPLY. Technical activity is separate from legal classification: runtime presence does not itself prove that a provider is legally a subprocessor, that an applicable DPA has been accepted, or that final region, retention or transfer treatment has been approved.
+A provider is not labelled a final contractual “subprocessor” merely because an SDK, account or infrastructure dependency exists. Role allocation must follow the actual processing purpose and applicable agreement. Qualified external legal review is required only where a current law, regulator, conformity route, contract, buyer requirement or material unresolved legal ambiguity genuinely requires it.
 
-## Current draft list
+## Active provider set
 
-| Provider | Service category | Data category | Current attributable evidence | Current status |
-| --- | --- | --- | --- | --- |
-| Vercel | Application hosting, deployment and edge/runtime delivery | Application traffic, deployment metadata, logs | Canonical public site is serving and fresh health validation succeeded, but the observed Production deployment is on an older Git release than the protected-main release captured by the current overlay. | Current public runtime proven / exact-current-main Production binding and protected provider runtime open |
-| Supabase | Database, authentication, storage and RLS | Customer data, organization data, documents, auth metadata | Production project is live in `eu-west-1`; current read-only evidence shows selected V41 inventory `13/13` present live with reviewed RLS/FORCE RLS and payment-first surfaces. | V41 live schema effect proven / governed V41 promotion provenance and legal residuals open |
-| Stripe | Billing and subscription management | Billing metadata; payment details handled by Stripe | Canonical LIVE account is attributable in Portugal. Platform-proof `livemode=true` Checkout events are non-crediting under the exact commercial-authority contract; legitimate LIVE subscription authority observed is `0`. | LIVE control plane proven / legitimate paying-customer lifecycle, VAT/tax and account/legal facts open |
-| Google OAuth / Google Identity | Optional user authentication / identity federation | Authentication identifiers and provider-returned profile metadata | Runtime integration through Supabase Auth is implemented; exact current account legal/processing facts are not established by the current provider register. | Runtime integration present / final legal role, DPA, region, retention and transfer treatment open |
-| Google Workspace | Corporate email and business communications | Corporate/support contacts, message metadata, message content and attachments where used | Corporate `risckcomply.com` mail is operational. Earlier account-specific Business Starter/EMEA evidence is retained but was not fully revalidated in the current release overlay. | Operational use current / agreement-CDPA, region, retention, transfer and legal-role facts require revalidation |
-| GitHub / GitHub Actions | Source delivery, CI/CD and protected recovery/security workflows | Source/workflow metadata, security artifacts and transient Production data during protected recovery | Repository/CI use is active; protected recovery/release jobs can transiently process Production database data on GitHub-hosted runners while evidence boundaries are designed to retain only required redacted outputs. | Material operational provider / company-account DPA applicability, transfer treatment and final legal role open |
-| Sentry | Error monitoring and diagnostics | Error context and diagnostic metadata | Earlier direct Production release-binding evidence is retained as historical evidence; it is not current exact-release acceptance. | Historical partial runtime binding / current protected producer plus organization region, retention and DPA facts open |
-| PostHog | Product analytics | Analytics events and identifiers when consent/configuration allows capture | Production source/configuration has historically targeted EU endpoints, but the connected assurance project was not the Production project. | Connected assurance project mismatch / Production account recovery and account-linked DPA facts open |
-| Resend / email provider | Transactional and support email | Email address, message metadata and content | Historical real delivery is independently evidenced; current exact-release account/provider acceptance is not credited by the current overlay. | Historical delivery proven / current exact-release binding and account acceptance open |
-| Upstash | Distributed Redis rate limiting and security-control state | Operational request/control metadata and identifiers | The distributed Redis-backed integration remains implemented. Earlier direct Production catalogue-path proof is historical and is not current protected provider/runtime acceptance. | Historical partial runtime binding / current protected provider proof plus account plan, region, retention and account-specific acceptance open |
-| Malware/content scanner | Enterprise upload scanning if enabled | Uploaded content and scan metadata | Runtime policy supports/requires provider-backed scanning when the feature is enabled; exact-current provider identity/binding is not established. | Conditional / current provider binding unverified |
-| OpenAI / ChatGPT — founder operational use outside SaaS runtime | Founder-operated external AI assistance | Founder-submitted prompts and outputs | Operational use exists outside direct SaaS runtime; no direct SaaS model-provider integration is established by current evidence. | Founder operational fact captured / customer-content use and legal role open |
+| Provider / service | Current use | Data / purpose | Region / account fact | DPA / contractual evidence | Retention / subprocessors / transfer evidence | Current role state | Open gap |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Vercel | Application hosting, deployment, server/edge delivery | Application traffic, server execution, deployment metadata and logs | Connected team is Pro; canonical Production project and domains are attributable. Exact-current-main Production convergence is separately open | Account-specific DPA/applicability evidence has not been attributed by this lane | Complete support/access locations, retention and Chapter V treatment remain open | `PROCESSOR/SUBPROCESSOR_ROLE_EXPECTED_FOR_HOSTING_BUT_FINAL_ACCOUNT_MAPPING_OPEN` | Current applicable DPA/agreement and complete processing/access/transfer facts |
+| Supabase | Production Postgres, Auth, Storage and platform services | Customer workspace data, documents, account/auth metadata and operational database content | Production project `tganhbbhfxcpblmgqprg` is active in `eu-west-1` | Supabase Privacy Team confirmed that from 2026-08-01 the general customer DPA is incorporated into the Terms and applies without separate signature; a separately negotiated agreement, if any, would continue to govern | Subprocessor updates are available from Supabase; complete support/onward-access, backup and transfer facts remain flow-specific | `PROCESSOR_FRAMEWORK_ATTRIBUTABLE / FINAL_FLOW_MAPPING_PARTIAL` | Confirm whether any separately negotiated agreement applies and close support/access/backup/Chapter V facts for the actual account |
+| Stripe | Billing, subscription, invoicing/payment-related service | Billing/contact/tax/subscription metadata; payment details handled within Stripe service | LIVE RISCK COMPLY account is attributable; fiscal/account details are owned by Prompt 3 | Final account-specific agreement/DPA/role treatment is not closed in this lane | Retention, subprocessors and transfer treatment remain tied to Prompt 3/account evidence | `MIXED_OR_CONTRACT_DEFINED_ROLE / PROMPT_3_OWNS_FISCAL_ACCOUNT_FACTS` | Prompt 3 account/VAT/provider reconciliation plus final privacy-role mapping for disclosed billing flows |
+| Google OAuth / Google Identity | User authentication through Supabase Auth | Provider-returned authentication identifiers and profile metadata | Runtime integration is implemented; exact OAuth account/legal facts are not frozen here | Applicable Google identity terms/account treatment not yet attributed | Complete processing/access/retention/transfer position remains open | `ROLE_TO_BE_MAPPED_FROM_ACTUAL_OAUTH_FLOW_AND_TERMS` | Current account terms and factual processing/transfer mapping |
+| Google Workspace | Corporate support, legal, security and procurement communications | Business contact details, message content/attachments where sent to corporate mailboxes | Corporate `risckcomply.com` mail is operational | Current applicable Workspace agreement/CDPA incorporation has not been revalidated in this lane | Current retention/admin region and onward-transfer settings remain open | `OPERATIONAL_COMMUNICATIONS_PROVIDER / ROLE_FLOW_SPECIFIC` | Current CDPA/account settings, retention and transfer facts where customer/support data is processed |
+| GitHub / GitHub Actions | Source control and CI/CD; protected workflows | Source/workflow metadata, security artifacts and transient Production data in authorised protected jobs where applicable | Repository and protected Actions workflows are active | Applicable account/company DPA treatment is not yet attributed | GitHub-hosted runner processing/access and transfer treatment remain to be mapped for any Production-data workflow | `MATERIAL_OPERATIONAL_PROCESSOR_CANDIDATE / FINAL_ROLE_OPEN` | Account agreement/DPA applicability and protected-runner data/transfer boundary |
+| Cloudflare | Authoritative DNS, DNSSEC and proxied public edge/security boundary | Public request/network metadata, TLS/edge/security processing | Canonical public hostname is evidenced behind Cloudflare proxy; DNSSEC and edge TLS configuration are operational facts | Current account-specific DPA/account terms are not captured in this register | Edge log/retention, subprocessors and transfer/access treatment are not yet attributed | `EDGE_PROCESSING_PROVIDER / FINAL_ROLE_OPEN` | Account DPA, enabled products/logging, retention and transfer/access facts |
+| Sentry | Error monitoring / diagnostics integration | Error context, diagnostic metadata and potentially user/request identifiers subject to scrubbing/configuration | Runtime integration exists; current organization region and exact Production project acceptance are not frozen | Provider support states standard DPA is available to all plans and includes EU SCC safeguards; later human support stated self-service support cannot confirm account-specific DPA acceptance or region | Exact account acceptance, region, retention, scrubbing/data categories and subprocessor facts remain open | `PROCESSOR_FRAMEWORK_AVAILABLE / ACCOUNT_ACCEPTANCE_UNPROVEN` | Inspect current organization Legal & Compliance settings and Production project configuration before final disclosure |
+| PostHog | Consent-gated product analytics when enabled | Product analytics events and identifiers after applicable consent/configuration | Human PostHog response confirmed EU Cloud hosting in Frankfurt for the discussed organization. The currently connected `Default project` is not attributable as the RISCK COMPLY Production project | Human PostHog response stated a countersigned DPA is required; PandaDoc subsequently confirmed `PostHog DPA — Samuel Cerqueira, Unipessoal, Lda` completed by all participants on 2026-09-01 | DPA identifies transfer/subprocessor mechanisms; actual Production project ownership, retention and active data flow still require recovery/revalidation | `DPA_EXECUTED / PRODUCTION_PROJECT_ATTRIBUTION_OPEN` | Recover actual Production project/account if analytics is active and verify retention/current project configuration |
+| Upstash / Redis | Distributed rate limiting/security-control state | Operational request/control metadata and identifiers; Redis keys used for security/rate-limiting functions | Integration is present. Current account plan and configured deployment region must be read from the actual database console | Human Upstash support confirmed standard DPA is automatically incorporated into Terms on account creation/use; self-service counterparty is Upstash, Inc. | Support states SCC Module 2 + EU-US DPF in DPA; Redis lifecycle uses TTL/explicit deletion; automated backups expire after 1 day or up to 3 days with Prod Pack | `PROCESSOR_FRAMEWORK_ATTRIBUTABLE / ACCOUNT_REGION_PLAN_OPEN` | Verify actual current database plan, primary/read regions and whether Prod Pack changes backup period |
+| Resend | Transactional email delivery | Recipient email addresses, message metadata and transactional message content | Production code and policy require transactional email provider configuration; historical real delivery exists | Current account-specific DPA/agreement evidence has not been attributed in this lane | Account region/retention/subprocessors/transfer facts remain open | `TRANSACTIONAL_EMAIL_PROCESSOR_CANDIDATE / ACCOUNT_FACTS_OPEN` | Current Production account/binding plus DPA, retention and transfer facts |
 
-## Current and predecessor evidence
+## Providers not included as active subprocessors
 
-- current factual overlay: `docs/trust/evidence/2026-09-09-provider-current-overlay.md`
-- historical direct provider runtime revalidation: `docs/trust/evidence/2026-08-24-current-runtime-provider-revalidation-41cc6656.md`
-- predecessor Upstash proof: `docs/trust/evidence/2026-08-24-upstash-exact-current-runtime-reproof.md`
-- predecessor Sentry proof: `docs/trust/evidence/2026-08-24-sentry-exact-current-runtime-reproof.md`
+- **Direct SaaS model provider:** no direct customer-facing model provider/runtime is currently identified. Founder-operated ChatGPT/AI use outside the SaaS runtime is not silently added to the customer subprocessor list.
+- **External malware/content scanner:** the Enterprise runtime policy may require scanning, but no currently active external scanner provider/account has been attributed by this register. If one is enabled, add it before customer disclosure.
+- Any future vendor must be added only after actual use is established.
 
-The 2026-08-24 files retain their original exact-SHA provenance and are historical. They must not be relabelled as current exact-release or protected provider acceptance when the 2026-09-09 overlay supersedes their release-specific facts.
+## Account-specific evidence credited in this revision
 
-## Superseded factual statements
+### Supabase
 
-Do not report these historical states as current:
+Attributable provider correspondence dated 2026-08-21 states:
 
-- Vercel deployment `dpl_FEUD...` / `main@41cc6656...` as the current Production release — superseded by the 2026-09-09 overlay, which records a different observed Production deployment that is itself stale relative to protected main.
-- Supabase V21 `0/31` as the current migration state — superseded by read-only V41 selected inventory `13/13` live; governed V41 provenance remains open.
-- Sentry `41cc6656...` release binding as current exact-release evidence — retained only as historical partial runtime proof pending current protected acceptance.
-- Upstash `41cc6656...` catalogue-path revalidation as current exact-release evidence — retained only as historical partial runtime proof pending current protected acceptance.
-- PostHog EU endpoint configuration as proof of the current Production account — the connected assurance project mismatch remains unresolved.
-- Stripe platform-proof events or seeded subscription rows as paying-customer proof — legitimate LIVE subscription authority observed under the exact contract is `0`.
-- Google Workspace earlier plan/EMEA evidence as proof of the current applicable agreement/CDPA, processing region or transfer treatment — those account facts require revalidation.
+```text
+SUPABASE_GENERAL_DPA_INCORPORATED_IN_TERMS_FROM_2026_08_01=YES_PROVIDER_CONFIRMED
+SUPABASE_SEPARATE_SIGNATURE_REQUIRED_FOR_GENERAL_ROUTE=NO_PROVIDER_CONFIRMED
+SUPABASE_SUBPROCESSOR_UPDATE_CHANNEL=AVAILABLE_PROVIDER_CONFIRMED
+SUPABASE_PROJECT_REGION=eu-west-1_CURRENT_CONNECTED_PROJECT
+```
 
-## Factual provider-material boundary
+This does not prove every support/access location, backup cycle or Chapter V conclusion.
 
-Provider-public legal/security materials reduce factual uncertainty but do not automatically prove the exact account agreement, DPA acceptance actor/timestamp, retention setting, transfer treatment or final legal role. Account-specific evidence and qualified legal conclusions remain separate requirements.
+### PostHog
 
-Google OAuth is intentionally described as an identity provider rather than automatically labelled a subprocessor. Google Workspace is intentionally listed as a separate operational communications provider because real corporate mailboxes process support/security/procurement/legal communications. GitHub Actions is intentionally described as a material operational provider because protected recovery/release workflows can process Production database data transiently on hosted runners. Counsel must determine final role allocation.
+Attributable human provider correspondence and PandaDoc completion evidence support:
 
-The PostHog row remains explicit: source/configuration evidence and a non-Production connected assurance project do not establish the actual Production account.
+```text
+POSTHOG_CONTRACTING_ENTITY_FOR_DISCLOSED_EU_CLOUD_ORG=PostHog_Inc_PROVIDER_CONFIRMED
+POSTHOG_DISCLOSED_HOSTING_REGION=EU_FRANKFURT_PROVIDER_CONFIRMED
+POSTHOG_STANDARD_DPA_REQUIRES_ACCOUNT_GENERATION_COUNTERSIGNATURE=YES_PROVIDER_CONFIRMED
+POSTHOG_DPA_SAMUEL_CERQUEIRA_UNIPESSOAL_LDA=COMPLETED_ALL_PARTICIPANTS_2026_09_01
+POSTHOG_CURRENT_CONNECTED_PROJECT_IS_PRODUCTION=NO_EVIDENCE
+```
 
-For Resend and the malware scanner, current exact-release/account evidence must not be inferred from repository configuration or historical evidence alone.
+The executed DPA does not convert the currently accessible non-Production project into the Production analytics authority.
 
-## Customer notice draft
+### Upstash
 
-Customers should receive notice before adding a material provider/subprocessor that processes customer personal data when required by the final approved DPA/agreement. Final notice period, authorisation model, objection grounds and remedies require qualified legal approval.
+Attributable human support correspondence dated 2026-08-27 supports:
 
-## Guardrail
+```text
+UPSTASH_STANDARD_DPA_AUTOMATICALLY_INCORPORATED=YES_PROVIDER_CONFIRMED
+UPSTASH_SELF_SERVICE_CONTRACTING_ENTITY=Upstash_Inc_PROVIDER_CONFIRMED
+UPSTASH_DPA_TRANSFER_SAFEGUARDS=SCC_MODULE_2_PLUS_EU_US_DPF_PROVIDER_CONFIRMED
+UPSTASH_BACKUP_RETENTION=1_DAY_OR_UP_TO_3_DAYS_WITH_PROD_PACK_PROVIDER_CONFIRMED
+UPSTASH_CURRENT_ACCOUNT_PLAN_AND_REGION=NOT_YET_REVALIDATED
+```
 
-1. Confirm active providers before each enterprise disclosure.
-2. Separate direct/historical runtime proof from protected exact-release producer acceptance and account/legal approval.
-3. Confirm provider legal entity, purpose, data categories, region/location and retention/deletion behavior where applicable.
-4. Confirm account-specific DPA/SCC/transfer and provider-notice status where applicable.
-5. Obtain qualified legal role allocation before labelling ambiguous providers as controller, processor or subprocessor.
-6. Revalidate runtime evidence after material provider, region, data-flow or service-scope changes.
-7. Archive the version disclosed to each customer with the related agreement/DPA version.
+## Customer notice / authorisation boundary
 
-## Customer-safe answer
+The owner-selected DPA position is general written authorisation for subprocessors with a target of 30 days' advance notice for new material subprocessors where practicable and contractually applicable, plus reasonable data-protection objection mechanics. That is an owner-selected contractual position, not proof that every upstream provider guarantees the same notice period.
 
-"RISCK COMPLY maintains an evidence-backed provider review register. Current Production facts, historical release evidence, protected producer acceptance and legal interpretation are tracked separately. Final contractual commitments depend on the services actually enabled, current account-specific provider agreements/DPAs where applicable, approved transfer and retention treatment, qualified legal review and the signed customer agreement."
+Final customer-facing provider disclosure must state only the providers and processing actually used for the customer's service. A provider that is only operational/internal must not automatically be labelled a customer-data subprocessor if the actual flow does not support that role.
 
-## Final boundary
+## Change control
 
-Do not claim a complete counsel-approved subprocessor program, GDPR compliance, approved international-transfer posture, completed independent pentest, final DPA, tested Production RPO/RTO, legitimate paying-customer lifecycle, exact-current-main Production acceptance, or provider account-contract coverage until the corresponding attributable evidence and qualified review are complete.
+Revalidate this register before release or customer disclosure when:
+
+1. a provider is added/removed;
+2. a provider region, plan, retention or processing purpose changes;
+3. analytics, model inference, scanning or a new communication provider is enabled;
+4. a provider DPA/subprocessor list materially changes;
+5. an actual customer agreement imposes a stricter notice/role/transfer requirement; or
+6. attributable runtime/account evidence contradicts this register.
+
+## Current terminal state
+
+```text
+ACTIVE_PROVIDER_SET=RECONCILED_CURRENT_EVIDENCE
+SUPABASE_DPA_FRAMEWORK=PASS_ATTRIBUTABLE
+POSTHOG_DPA=PASS_COMPLETED_ALL_PARTICIPANTS
+UPSTASH_DPA_FRAMEWORK=PASS_ATTRIBUTABLE
+SENTRY_DPA_FRAMEWORK=AVAILABLE_PROVIDER_CONFIRMED_ACCOUNT_ACCEPTANCE_OPEN
+VERCEL_DPA_ACCOUNT_FACT=OPEN
+CLOUDFLARE_DPA_ACCOUNT_FACT=OPEN
+GOOGLE_IDENTITY_WORKSPACE_ACCOUNT_FACTS=OPEN
+GITHUB_ACCOUNT_DPA_TRANSFER_FACTS=OPEN
+RESEND_ACCOUNT_DPA_TRANSFER_FACTS=OPEN
+STRIPE_PRIVACY_FISCAL_ACCOUNT_FACTS=ROUTED_PROMPT_3
+FINAL_SUBPROCESSOR_CUSTOMER_SCHEDULE=PARTIAL_NOT_FINAL
+QUALIFIED_EXTERNAL_REVIEW=ONLY_IF_CURRENT_SCOPE_TRIGGER_REQUIRES
+```
+
+This register is evidence-bound and is not itself a certification, regulator approval, legal opinion or customer acceptance.
