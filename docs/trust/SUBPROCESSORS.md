@@ -11,7 +11,7 @@ This register separates four questions that must not be conflated:
 3. what account-specific contractual/DPA facts are attributable; and
 4. the final GDPR legal role / Chapter V conclusion for the actual data flow.
 
-A provider is not labelled a final contractual “subprocessor” merely porque an SDK, account or infrastructure dependency exists. Role allocation must follow the actual processing purpose and applicable agreement. Qualified external legal review is required only where a current law, regulator, conformity route, contract, buyer requirement or material unresolved legal ambiguity genuinely requires it.
+A provider is not labelled a final contractual “subprocessor” merely because an SDK, account or infrastructure dependency exists. Role allocation must follow the actual processing purpose and applicable agreement. Qualified external legal review is required only where a current law, regulator, conformity route, contract, buyer requirement or material unresolved legal ambiguity genuinely requires it.
 
 ## Active provider set
 
