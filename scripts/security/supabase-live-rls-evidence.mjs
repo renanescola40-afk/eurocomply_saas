@@ -23,8 +23,12 @@ export const requiredViewerAdminDenyOperations = [
   'viewer_same_tenant_admin_update_denied',
   'viewer_same_tenant_admin_delete_denied',
 ];
-export const backendOwnedTables = ['subscriptions', 'audit_logs', 'invitations', 'compliance_tasks'];
-export const sameTenantWritableTables = ['ai_systems', 'documents', 'risks', 'vendors', 'onboarding_activation_runs', 'monitoring_preferences'];
+export const backendOwnedTables = [
+  'subscriptions', 'audit_logs', 'invitations', 'compliance_tasks',
+  'ai_systems', 'documents', 'risks', 'vendors', 'onboarding_activation_runs',
+  'ai_assessments',
+];
+export const sameTenantWritableTables = ['monitoring_preferences'];
 export const requiredGlobalReferenceOperations = [
   'rls_enabled', 'authenticated_read_denied', 'authenticated_insert_denied',
   'authenticated_update_denied', 'authenticated_delete_denied', 'service_role_read_allowed',
@@ -177,7 +181,7 @@ export function buildEvidencePayload({
     controlsVerified: passing ? [
       'RLS enabled on canonical customer tenant tables', 'Tenant A cannot read or mutate Tenant B rows',
       'Licensed same-tenant product access is preserved', 'Unlicensed and anonymous paid-product access is denied',
-      'Organization compliance task mutations remain backend-owned', 'Regulatory updates are backend-only',
+      'Server-owned commercial mutations remain unavailable to browser clients', 'Regulatory updates are backend-only',
       'Live inventory helper remains service-role-only', 'Evidence Vault browser and Storage bypass boundaries are fail-closed',
       'Evidence is bound to the exact current governed Production promotion manifest',
     ] : [],

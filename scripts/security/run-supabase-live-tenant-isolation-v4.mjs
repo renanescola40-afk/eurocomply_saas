@@ -223,7 +223,7 @@ function spec(table, c) {
     organizations: { seed: c.seeds.organizations, insert: { name: `Cross ${s}`, slug: `cross-${s}`, created_by: u.ownerA.id }, update: { name: `Mutated ${s}` } },
     organization_members: { seed: c.seeds.organization_members, insert: { organization_id: id, user_id: u.ownerA.id, role: 'viewer' }, update: { role: 'admin' } },
     profiles: { seed: c.seeds.profiles, insert: { id: u.viewerA.id, full_name: `Cross profile ${s}` }, update: { full_name: `Mutated ${s}` } },
-    ai_systems: { seed: c.seeds.ai_systems, insert: { organization_id: id, name: `Cross AI ${s}`, use_case: 'proof', created_by: u.ownerA.id }, same: { organization_id: id, name: `Same AI ${s}`, use_case: 'proof', created_by: u.ownerB.id }, update: { name: `Mutated ${s}` } },
+    ai_systems: { seed: c.seeds.ai_systems, insert: { organization_id: id, name: `Cross AI ${s}`, use_case: 'RLS proof case', created_by: u.ownerA.id }, same: { organization_id: id, name: `Same AI ${s}`, use_case: 'RLS proof case', created_by: u.ownerB.id }, update: { name: `Mutated ${s}` } },
     compliance_tasks: { seed: c.seeds.compliance_tasks, insert: { organization_id: id, created_by: u.ownerA.id, title: `Cross task ${s}`, category: 'general' }, sameDenied: { organization_id: id, created_by: u.ownerB.id, title: `Direct org task ${s}`, category: 'general' }, update: { title: `Mutated ${s}` } },
     documents: { seed: c.seeds.documents, insert: { organization_id: id, uploaded_by: u.ownerA.id, name: `Cross doc ${s}`, category: 'general', storage_path: `${id}/cross-${s}` }, same: { organization_id: id, uploaded_by: u.ownerB.id, name: `Same doc ${s}`, category: 'general', storage_path: `${id}/same-${s}` }, update: { name: `Mutated ${s}` } },
     risks: { seed: c.seeds.risks, insert: { organization_id: id, created_by: u.ownerA.id, title: `Cross risk ${s}`, category: 'general' }, same: { organization_id: id, created_by: u.ownerB.id, owner_user_id: u.ownerB.id, title: `Same risk ${s}`, category: 'general' }, update: { title: `Mutated ${s}` } },
@@ -267,26 +267,29 @@ async function assessments(admin, clients, c, rows, tests) {
   tests.push({ table: 'ai_assessments', operation: 'cross_tenant_update', ...(await updateDenied(admin, clients.ownerA, 'ai_assessments', c.assessmentB.id, { title: `Mutated ${c.suffix}` })) });
   tests.push({ table: 'ai_assessments', operation: 'cross_tenant_delete', ...(await deleteDenied(admin, clients.ownerA, 'ai_assessments', c.assessmentB.id)) });
   tests.push({ table: 'ai_assessments', operation: 'same_tenant_read', ...(await readAllowed(clients.ownerB, 'ai_assessments', c.assessmentB.id)) });
-  for (const [who, identity, op, pass] of [
-    ['ownerB', c.user.ownerB, 'same_tenant_insert', true], ['adminB', c.user.adminB, 'admin_same_tenant_insert', true],
-    ['memberB', c.user.memberB, 'member_same_tenant_insert_denied', false], ['viewerA', c.user.viewerA, 'viewer_same_tenant_insert_denied', false],
-  ]) {
-    const targetOrg = who === 'viewerA' ? c.org.A.id : c.org.B.id;
-    const result = pass ? await insertAllowed(clients[who], 'ai_assessments', { organization_id: targetOrg, created_by: identity.id, title: `${op} ${c.suffix}`, status: 'draft' }) : await insertDenied(clients[who], 'ai_assessments', { organization_id: targetOrg, created_by: identity.id, title: `${op} ${c.suffix}`, status: 'draft' });
-    tests.push({ table: 'ai_assessments', operation: op, ...result });
-    if (result.insertedId) c.created.rows.push(['ai_assessments', result.insertedId]);
-  }
+
+  tests.push({ table: 'ai_assessments', operation: 'same_tenant_insert_denied', ...(await insertDenied(clients.ownerB, 'ai_assessments', { organization_id: c.org.B.id, created_by: c.user.ownerB.id, title: `owner direct insert ${c.suffix}`, status: 'draft' })) });
+  tests.push({ table: 'ai_assessments', operation: 'same_tenant_update_denied', ...(await updateDenied(admin, clients.ownerB, 'ai_assessments', c.assessmentB.id, { title: 'owner direct mutation' })) });
+  tests.push({ table: 'ai_assessments', operation: 'same_tenant_delete_denied', ...(await deleteDenied(admin, clients.ownerB, 'ai_assessments', c.assessmentB.id)) });
+
+  tests.push({ table: 'ai_assessments', operation: 'admin_same_tenant_insert_denied', ...(await insertDenied(clients.adminB, 'ai_assessments', { organization_id: c.org.B.id, created_by: c.user.adminB.id, title: `admin direct insert ${c.suffix}`, status: 'draft' })) });
+  tests.push({ table: 'ai_assessments', operation: 'admin_same_tenant_update_denied', ...(await updateDenied(admin, clients.adminB, 'ai_assessments', c.assessmentB.id, { title: 'admin direct mutation' })) });
+  tests.push({ table: 'ai_assessments', operation: 'admin_same_tenant_delete_denied', ...(await deleteDenied(admin, clients.adminB, 'ai_assessments', c.assessmentB.id)) });
+
   tests.push({ table: 'ai_assessments', operation: 'member_same_tenant_read', ...(await readAllowed(clients.memberB, 'ai_assessments', c.assessmentB.id)) });
+  tests.push({ table: 'ai_assessments', operation: 'member_same_tenant_insert_denied', ...(await insertDenied(clients.memberB, 'ai_assessments', { organization_id: c.org.B.id, created_by: c.user.memberB.id, title: `member direct insert ${c.suffix}`, status: 'draft' })) });
   tests.push({ table: 'ai_assessments', operation: 'member_same_tenant_update_denied', ...(await updateDenied(admin, clients.memberB, 'ai_assessments', c.assessmentB.id, { title: 'member mutation' })) });
   tests.push({ table: 'ai_assessments', operation: 'member_same_tenant_delete_denied', ...(await deleteDenied(admin, clients.memberB, 'ai_assessments', c.assessmentB.id)) });
+
   tests.push({ table: 'ai_assessments', operation: 'viewer_same_tenant_read', ...(await readAllowed(clients.viewerA, 'ai_assessments', c.assessmentA.id)) });
+  tests.push({ table: 'ai_assessments', operation: 'viewer_same_tenant_insert_denied', ...(await insertDenied(clients.viewerA, 'ai_assessments', { organization_id: c.org.A.id, created_by: c.user.viewerA.id, title: `viewer direct insert ${c.suffix}`, status: 'draft' })) });
   tests.push({ table: 'ai_assessments', operation: 'viewer_same_tenant_update_denied', ...(await updateDenied(admin, clients.viewerA, 'ai_assessments', c.assessmentA.id, { title: 'viewer mutation' })) });
   tests.push({ table: 'ai_assessments', operation: 'viewer_same_tenant_delete_denied', ...(await deleteDenied(admin, clients.viewerA, 'ai_assessments', c.assessmentA.id)) });
 }
 
 async function postV20(admin, anon, clients, c, tests) {
   tests.push({ table: 'ai_systems', operation: 'unlicensed_same_tenant_read_denied', ...(await readDenied(clients.unlicensed, 'ai_systems', c.unlicensedAi.id)) });
-  tests.push({ table: 'ai_systems', operation: 'unlicensed_same_tenant_insert_denied', ...(await insertDenied(clients.unlicensed, 'ai_systems', { organization_id: c.org.U.id, name: `Forbidden ${c.suffix}`, use_case: 'proof', created_by: c.user.unlicensed.id })) });
+  tests.push({ table: 'ai_systems', operation: 'unlicensed_same_tenant_insert_denied', ...(await insertDenied(clients.unlicensed, 'ai_systems', { organization_id: c.org.U.id, name: `Forbidden ${c.suffix}`, use_case: 'RLS proof case', created_by: c.user.unlicensed.id })) });
   tests.push({ table: 'ai_systems', operation: 'anonymous_paid_table_read_denied', ...(await readDenied(anon, 'ai_systems', c.seeds.ai_systems.id)) });
   tests.push({ table: 'regulatory_updates', operation: 'authenticated_read_denied', ...(await readDenied(clients.ownerB, 'regulatory_updates', c.regulatory.id)) });
   tests.push({ table: 'regulatory_updates', operation: 'authenticated_insert_denied', ...(await insertDenied(clients.ownerB, 'regulatory_updates', { title: `Forbidden ${c.suffix}`, summary: 'proof', severity: 'low', source_url: `https://example.com/forbidden-${c.suffix}`, published_at: now() })) });
@@ -333,7 +336,7 @@ export async function main() {
         if (result.insertedId) created.rows.push([table, result.insertedId]);
       }
       if (backendOwnedTables.includes(table)) {
-        const direct = s.sameDenied ?? s.insert;
+        const direct = s.sameDenied ?? s.same ?? s.insert;
         tests.push({ table, operation: 'same_tenant_insert_denied', ...(await insertDenied(clients.ownerB, table, direct)) });
         tests.push({ table, operation: 'same_tenant_update_denied', ...(await updateDenied(admin, clients.ownerB, table, s.seed.id, s.update)) });
         tests.push({ table, operation: 'same_tenant_delete_denied', ...(await deleteDenied(admin, clients.ownerB, table, s.seed.id)) });
@@ -358,7 +361,7 @@ export async function main() {
       horizontalIsolation: { status: 'passed', sameTenantDistinctUsers: true, checkedAt: now(), testedTables: ['monitoring_preferences', 'notifications', 'onboarding_activation_runs'] },
       paymentFirstV20: { licensedTenantsProved: true, unlicensedSameTenantDenied: true, regulatoryUpdatesBackendOnly: true, providerEventsCreated: false, stripeLifecycleSynthesized: false },
       evidenceVaultV20: { unlicensedMetadataInsertDenied: true, privateBucketProved: true, orphanStorageInsertDenied: true, disposablePositiveDataPlaneProofRequiredSeparately: true },
-      aiAssessmentsLiveValidation: { status: 'Complete', outcome: 'passed', roleCoverage: ['owner', 'admin', 'member', 'viewer'], crossTenantAccessDenied: true },
+      aiAssessmentsLiveValidation: { status: 'Complete', outcome: 'passed', roleCoverage: ['owner', 'admin', 'member', 'viewer'], crossTenantAccessDenied: true, browserMutationsBackendOnly: true },
     } });
     const canonical = validatePassingEvidence(evidence); if (!canonical.valid) throw new Error(`canonical_evidence_invalid:${canonical.errors.join(';')}`);
     const horizontalResult = validateHorizontalIsolationEvidence(evidence); if (!horizontalResult.valid) throw new Error(`horizontal_evidence_invalid:${horizontalResult.errors.join(';')}`);

@@ -50,12 +50,15 @@ export async function grantBoundedV20CommercialAuthority(admin, organizationId, 
     .update(`${organizationId}:${source.id}:${externalReference}`)
     .digest('hex');
 
+  // The canonical proof spans Professional-gated risk/vendor/task reads, so the
+  // bounded fixture must carry the minimum plan that legitimately exposes every
+  // customer table in this proof. This does not create provider/Stripe state.
   const snapshot = await insertOne(admin, 'enterprise_entitlement_snapshots', {
     organization_id: organizationId,
     source_id: source.id,
     idempotency_key: `v20-live-proof-${crypto.randomUUID()}`,
     source_version: 1,
-    plan_code: 'starter',
+    plan_code: 'professional',
     full_seat_limit: 10,
     participant_seat_limit: 10,
     viewer_seat_limit: 10,
@@ -94,7 +97,7 @@ export async function grantBoundedV20CommercialAuthority(admin, organizationId, 
     `${label}_commercial_source_not_active`,
   );
   assert(
-    persistedSnapshot.status === 'applied' && persistedSnapshot.plan_code === 'starter',
+    persistedSnapshot.status === 'applied' && persistedSnapshot.plan_code === 'professional',
     `${label}_commercial_snapshot_not_applied`,
   );
 
@@ -103,7 +106,7 @@ export async function grantBoundedV20CommercialAuthority(admin, organizationId, 
     snapshotId: snapshot.id,
     validUntil,
     sourceKind: 'signed_contract',
-    expectedPlan: 'starter',
+    expectedPlan: 'professional',
     verificationMode: 'persisted_authority_then_quota_trigger',
     syntheticStripeLifecycle: false,
   };

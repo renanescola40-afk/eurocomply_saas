@@ -14,8 +14,12 @@ const aiAssessmentsOperations = [
   'cross_tenant_update',
   'cross_tenant_delete',
   'same_tenant_read',
-  'same_tenant_insert',
-  'admin_same_tenant_insert',
+  'same_tenant_insert_denied',
+  'same_tenant_update_denied',
+  'same_tenant_delete_denied',
+  'admin_same_tenant_insert_denied',
+  'admin_same_tenant_update_denied',
+  'admin_same_tenant_delete_denied',
   'member_same_tenant_read',
   'member_same_tenant_insert_denied',
   'member_same_tenant_update_denied',
@@ -66,8 +70,10 @@ for (const operation of aiAssessmentsOperations) {
   }
 }
 
-if (parsed.evidence?.aiAssessmentsLiveValidation?.status !== 'Complete' || parsed.evidence?.aiAssessmentsLiveValidation?.outcome !== 'passed') {
-  fail('aiAssessmentsLiveValidation must be Complete/passed');
+if (parsed.evidence?.aiAssessmentsLiveValidation?.status !== 'Complete'
+  || parsed.evidence?.aiAssessmentsLiveValidation?.outcome !== 'passed'
+  || parsed.evidence?.aiAssessmentsLiveValidation?.browserMutationsBackendOnly !== true) {
+  fail('aiAssessmentsLiveValidation must be Complete/passed with browser mutations proven backend-only');
 }
 
-console.log('P0 Supabase live RLS evidence is Complete/passed and machine-validated, including profiles and ai_assessments tenant isolation.');
+console.log('P0 Supabase live RLS evidence is Complete/passed and machine-validated, including profiles and server-only ai_assessments mutations.');
