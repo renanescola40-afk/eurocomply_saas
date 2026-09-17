@@ -65,11 +65,17 @@ export async function main() {
     return;
   }
 
-  if (!fs.existsSync(evidencePath)) {
-    fail(`${evidencePath} is missing. Run scripts/security/run-supabase-live-tenant-isolation.mjs first.`);
+  let source;
+  try {
+    source = fs.readFileSync(evidencePath, 'utf8');
+  } catch (error) {
+    if (error && typeof error === 'object' && error.code === 'ENOENT') {
+      fail(`${evidencePath} is missing. Run scripts/security/run-supabase-live-tenant-isolation.mjs first.`);
+    }
+    throw error;
   }
 
-  const parsed = parseEvidenceJson(fs.readFileSync(evidencePath, 'utf8'));
+  const parsed = parseEvidenceJson(source);
   if (parsed.errors.length > 0) fail(parsed.errors.join('; '));
 
   const evidence = parsed.evidence;
