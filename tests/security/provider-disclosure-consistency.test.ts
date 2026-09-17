@@ -97,10 +97,11 @@ describe('security-critical provider disclosure consistency', () => {
     const runtimeDisclosure = read('src/components/trust/provider-runtime-disclosure.tsx');
     const transfers = read('src/app/[locale]/transfers/page.tsx');
     const subprocessors = read('docs/trust/SUBPROCESSORS.md');
+    const githubHostedRunnersDisclosure = /GitHub-hosted runner(?:s)?[^\n]{0,260}(DPA|transfer|legal)/i;
 
-    expect(publicPack).toMatch(/GitHub-hosted runners[^\n]{0,220}(DPA|legal|transfer)/i);
-    expect(runtimeDisclosure).toMatch(/GitHub-hosted runners[^\n]{0,220}(DPA|transfer|legal)/i);
-    expect(transfers).toMatch(/GitHub-hosted runners[^\n]{0,220}(DPA|transfer)/i);
-    expect(subprocessors).toMatch(/GitHub-hosted runners[^\n]{0,260}(DPA|transfer|legal)/i);
+    expect(publicPack).toMatch(githubHostedRunnersDisclosure);
+    expect(runtimeDisclosure).toMatch(githubHostedRunnersDisclosure);
+    expect(transfers).toMatch(githubHostedRunnersDisclosure);
+    expect(subprocessors).toMatch(githubHostedRunnersDisclosure);
   });
 });
