@@ -33,7 +33,7 @@ Current product/source evidence is substantial. Buyer material must remain relea
 - public Privacy/DPA review surfaces
 - provider factual register and current overlay
 
-Terminal qualified GDPR acceptance remains open where legal judgment is required.
+Actually applicable GDPR/ePrivacy obligations remain mandatory. Qualified external legal assurance is reported separately and becomes a blocker only where an applicable law, regulator, conformity route, contract or actual buyer requirement makes it mandatory for the relevant scope.
 
 ## 4. IAM, RBAC, multi-tenancy and RLS
 
@@ -77,7 +77,7 @@ Formal RTO/RPO or contractual recovery guarantees must be disclosed only where a
 
 ## 8. EU AI Act and legal assurance
 
-Qualified review package workstreams:
+Prepared qualified-review package workstreams:
 
 1. `LEGAL_RULES`
 2. `ARTICLE_5`
@@ -94,7 +94,9 @@ Current accepted qualified outcomes: `0/8`.
 - master opinion handoff: `docs/legal-review-preparation/legal-pack/MASTER_LEGAL_OPINION_HANDOFF.md`
 - owner decisions: `docs/legal-assurance/OWNER_LEGAL_DECISIONS_V1_2026-09-12.md`
 
-`MASTER_LEGAL_OPINION=OPEN`.
+`MASTER_LEGAL_OPINION=OPEN_OPTIONAL_ASSURANCE_UNLESS_SPECIFIC_REQUIREMENT_APPLIES`.
+
+The 8-workstream review package is retained as maximum external legal assurance. It is not treated as an automatic statutory prerequisite to launch. Mandatory launch readiness is evaluated separately from optional maximum assurance.
 
 ## 9. Terms, Privacy, DPA, subprocessors and transfers
 
@@ -102,7 +104,7 @@ Current accepted qualified outcomes: `0/8`.
 - public legal surfaces under `src/app/[locale]/`
 - provider evidence register under `docs/trust/`
 
-Owner commercial choices may be closed while qualified legal acceptance remains open. Do not conflate them.
+Owner commercial choices may be closed while qualified external legal assurance remains open. Do not conflate them. Final public legal publication still requires complete attributable factual inputs and all actually applicable legal/privacy controls.
 
 ## 10. Billing, VAT and commercial evidence
 
@@ -146,13 +148,14 @@ Before final buyer sharing, freeze one accepted release and record:
 - final Vercel deployment;
 - Production database/migration head;
 - successful exact-SHA runtime/tenant tests;
-- security retest closure;
-- legal 8/8 accepted decisions;
-- master legal conclusion;
-- final registry/VAT facts;
+- security retest closure where required by the selected assurance target or buyer;
+- mandatory legal-launch gate accepted with attributable founder/entity/privacy/provider facts;
+- VAT/tax facts required for the commercial scope;
 - data-room index digest/version.
 
-Until those fields converge, the data room remains `PROCUREMENT_READY_FOR_DILIGENCE` but not `ENTERPRISE_100_ACCEPTED`.
+Where a buyer, contract, regulator, conformity route or applicable law specifically requires qualified external legal review, include the relevant accepted review/opinion evidence for that scope. Otherwise `LEGAL_8_OF_8` and `MASTER_LEGAL_OPINION` remain separately reported maximum-assurance items and do not automatically block internal launch readiness.
+
+Until mandatory selected-target fields converge, the data room remains `PROCUREMENT_READY_FOR_DILIGENCE` but not `ENTERPRISE_100_ACCEPTED`.
 
 ## 14. Current hard boundary
 

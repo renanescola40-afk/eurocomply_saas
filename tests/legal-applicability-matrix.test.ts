@@ -44,7 +44,8 @@ describe("current legal applicability authority", () => {
       expect(authority).toContain("| " + workstream + " | " + disposition);
     }
 
-    expect(authority).toContain("entity lane is intentionally deferred");
+    expect(authority).toContain("| Entity disclosure | MANDATORY_OPEN |");
+    expect(authority).toContain("owner-designated contracting/selling entity remains `SAMUEL CERQUEIRA, UNIPESSOAL LDA`");
     expect(predecessor).toContain("SUPERSEDED_BY_CURRENT_LEGAL_AUTHORITY_MATRIX");
   });
 

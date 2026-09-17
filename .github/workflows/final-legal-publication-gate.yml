@@ -13,9 +13,11 @@ on:
       - 'src/components/marketing/trust-center-page.tsx'
       - 'docs/legal-review-preparation/**'
       - 'docs/compliance/evidence/accepted/**'
+      - 'scripts/compliance/check-legal-launch-gate.mjs'
       - 'scripts/compliance/check-final-legal-publication-gate.mjs'
       - 'scripts/compliance/generate-legal-counsel-handoff-bundle.mjs'
       - 'tests/legal-publication-state.test.ts'
+      - 'tests/compliance/legal-launch-gate.test.ts'
       - 'tests/compliance/final-legal-publication-gate.test.ts'
       - 'tests/compliance/final-legal-publication-workflow-contract.test.ts'
       - '.github/workflows/final-legal-publication-gate.yml'
@@ -26,9 +28,11 @@ on:
       - 'src/components/marketing/trust-center-page.tsx'
       - 'docs/legal-review-preparation/**'
       - 'docs/compliance/evidence/accepted/**'
+      - 'scripts/compliance/check-legal-launch-gate.mjs'
       - 'scripts/compliance/check-final-legal-publication-gate.mjs'
       - 'scripts/compliance/generate-legal-counsel-handoff-bundle.mjs'
       - 'tests/legal-publication-state.test.ts'
+      - 'tests/compliance/legal-launch-gate.test.ts'
       - 'tests/compliance/final-legal-publication-gate.test.ts'
       - 'tests/compliance/final-legal-publication-workflow-contract.test.ts'
       - '.github/workflows/final-legal-publication-gate.yml'
@@ -45,6 +49,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
+      LEGAL_LAUNCH_EXPECTED_SHA: ${{ inputs.release_sha || github.event.pull_request.head.sha || github.sha }}
       LEGAL_PUBLICATION_EXPECTED_SHA: ${{ inputs.release_sha || github.event.pull_request.head.sha || github.sha }}
       GITHUB_HEAD_SHA: ${{ inputs.release_sha || github.event.pull_request.head.sha || github.sha }}
 
@@ -61,7 +66,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          expected="${LEGAL_PUBLICATION_EXPECTED_SHA,,}"
+          expected="${LEGAL_LAUNCH_EXPECTED_SHA,,}"
           [[ "$expected" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$expected"
           git fetch --no-tags origin main
@@ -82,13 +87,16 @@ jobs:
       - name: Typecheck legal publication changes
         run: npm run typecheck
 
-      - name: Test fail-closed legal publication state
-        run: npx vitest run tests/legal-publication-state.test.ts tests/compliance/final-legal-publication-gate.test.ts tests/compliance/final-legal-publication-workflow-contract.test.ts
+      - name: Test fail-closed legal publication states
+        run: npx vitest run tests/legal-publication-state.test.ts tests/compliance/legal-launch-gate.test.ts tests/compliance/final-legal-publication-gate.test.ts tests/compliance/final-legal-publication-workflow-contract.test.ts
 
       - name: Build application with review-draft state
         run: npm run build
 
-      - name: Validate truthful publication status
+      - name: Validate truthful mandatory legal launch status
+        run: node scripts/compliance/check-legal-launch-gate.mjs --strict --write
+
+      - name: Validate optional maximum legal assurance status
         run: node scripts/compliance/check-final-legal-publication-gate.mjs --strict --write
 
       - name: Generate exact-SHA counsel handoff bundle
@@ -97,8 +105,9 @@ jobs:
       - name: Upload legal publication artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: final-legal-publication-gate-${{ env.LEGAL_PUBLICATION_EXPECTED_SHA }}
+          name: final-legal-publication-gate-${{ env.LEGAL_LAUNCH_EXPECTED_SHA }}
           path: |
+            artifacts/legal-review/legal-launch-gate.json
             artifacts/legal-review/final-legal-publication-gate.json
             artifacts/legal-review/counsel-handoff-bundle.json
             artifacts/legal-review/counsel-handoff-bundle.md
