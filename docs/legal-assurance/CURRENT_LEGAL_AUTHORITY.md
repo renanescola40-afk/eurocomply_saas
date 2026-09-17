@@ -2,7 +2,7 @@
 
 **Effective evidence date:** 17 September 2026  
 **Product:** RISCK COMPLY  
-**Repository evidence baseline:** protected `main@595bc6f0bf1fce18cc6d9acbabb2e70fa05c7b59` plus current connected-account/runtime observations; Prompt 4 V4 reconciliation is proposed in PR #2104 and must not be represented as merged until GitHub accepts it.  
+**Repository evidence baseline:** protected `main@67efbee2c22a17a42e87dba603324e645fe45b87`, the protected merge of Prompt 4 V4 PR #2104, plus current connected-account/runtime observations. Later release-line changes must be rebound separately and do not retroactively change this evidence baseline.  
 **Status:** canonical current legal-control register; not legal advice, certification, regulator approval or executed contract
 
 ## Authority and scope
@@ -104,7 +104,7 @@ The following are **not automatic launch requirements** for the current determin
 - buyer acceptance;
 - a legal opinion merely because an internal historical workflow requested one.
 
-If applicable law, a regulator/conformity route, a signed contract or an actual buyer specifically requires qualified external review for the relevant scope, that requirement becomes mandatory and cannot be self-closed. PR #2104 introduces a separate mandatory launch-readiness artifact so the absence of optional counsel cannot close or open unrelated statutory controls.
+If applicable law, a regulator/conformity route, a signed contract or an actual buyer specifically requires qualified external review for the relevant scope, that requirement becomes mandatory and cannot be self-closed. Merged PR #2104 introduced the separate mandatory launch-readiness artifact so the absence of optional counsel cannot close or open unrelated statutory controls.
 
 ## Legal launch truth boundary
 
