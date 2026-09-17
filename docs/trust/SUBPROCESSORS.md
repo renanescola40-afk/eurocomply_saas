@@ -11,13 +11,13 @@ This register separates four questions that must not be conflated:
 3. what account-specific contractual/DPA facts are attributable; and
 4. the final GDPR legal role / Chapter V conclusion for the actual data flow.
 
-A provider is not labelled a final contractual “subprocessor” merely because an SDK, account or infrastructure dependency exists. Role allocation must follow the actual processing purpose and applicable agreement. Qualified external legal review is required only where a current law, regulator, conformity route, contract, buyer requirement or material unresolved legal ambiguity genuinely requires it.
+A provider is not labelled a final contractual “subprocessor” merely porque an SDK, account or infrastructure dependency exists. Role allocation must follow the actual processing purpose and applicable agreement. Qualified external legal review is required only where a current law, regulator, conformity route, contract, buyer requirement or material unresolved legal ambiguity genuinely requires it.
 
 ## Active provider set
 
 | Provider / service | Current use | Data / purpose | Region / account fact | DPA / contractual evidence | Retention / subprocessors / transfer evidence | Current role state | Open gap |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Vercel | Application hosting, deployment, server/edge delivery | Application traffic, server execution, deployment metadata and logs | Connected team is Pro; canonical Production project and domains are attributable. Exact-current-main Production convergence is separately open | Account-specific DPA/applicability evidence has not been attributed by this lane | Complete support/access locations, retention and Chapter V treatment remain open | `PROCESSOR/SUBPROCESSOR_ROLE_EXPECTED_FOR_HOSTING_BUT_FINAL_ACCOUNT_MAPPING_OPEN` | Current applicable DPA/agreement and complete processing/access/transfer facts |
+| Vercel | Application hosting, deployment, server/edge delivery | Application traffic, server execution, deployment metadata and logs | Connected team is Pro; canonical Production project and domains are attributable. Exact-current-main Production convergence is separately open | Vercel's current DPA expressly applies to Pro and Enterprise plans and states that it becomes legally binding when the customer enters the applicable Agreement. The connected team is Pro, so the public DPA framework is applicable to the connected plan. The exact contracting-customer/entity mapping is not independently retained in this register | The DPA includes cross-border transfer mechanisms/SCC treatment where required. Complete support/access locations, retention and actual flow-level Chapter V mapping remain open | `PROCESSOR_FRAMEWORK_APPLIES_TO_CONNECTED_PRO_PLAN / FINAL_ACCOUNT_AND_FLOW_MAPPING_PARTIAL` | Confirm contracting-customer/entity mapping and complete processing/access/retention/transfer facts for the actual service configuration |
 | Supabase | Production Postgres, Auth, Storage and platform services | Customer workspace data, documents, account/auth metadata and operational database content | Production project `tganhbbhfxcpblmgqprg` is active in `eu-west-1` | Supabase Privacy Team confirmed that from 2026-08-01 the general customer DPA is incorporated into the Terms and applies without separate signature; a separately negotiated agreement, if any, would continue to govern | Subprocessor updates are available from Supabase; complete support/onward-access, backup and transfer facts remain flow-specific | `PROCESSOR_FRAMEWORK_ATTRIBUTABLE / FINAL_FLOW_MAPPING_PARTIAL` | Confirm whether any separately negotiated agreement applies and close support/access/backup/Chapter V facts for the actual account |
 | Stripe | Billing, subscription, invoicing/payment-related service | Billing/contact/tax/subscription metadata; payment details handled within Stripe service | LIVE RISCK COMPLY account is attributable; fiscal/account details are owned by Prompt 3 | Final account-specific agreement/DPA/role treatment is not closed in this lane | Retention, subprocessors and transfer treatment remain tied to Prompt 3/account evidence | `MIXED_OR_CONTRACT_DEFINED_ROLE / PROMPT_3_OWNS_FISCAL_ACCOUNT_FACTS` | Prompt 3 account/VAT/provider reconciliation plus final privacy-role mapping for disclosed billing flows |
 | Google OAuth / Google Identity | User authentication through Supabase Auth | Provider-returned authentication identifiers and profile metadata | Runtime integration is implemented; exact OAuth account/legal facts are not frozen here | Applicable Google identity terms/account treatment not yet attributed | Complete processing/access/retention/transfer position remains open | `ROLE_TO_BE_MAPPED_FROM_ACTUAL_OAUTH_FLOW_AND_TERMS` | Current account terms and factual processing/transfer mapping |
@@ -27,7 +27,7 @@ A provider is not labelled a final contractual “subprocessor” merely because
 | Sentry | Error monitoring / diagnostics integration | Error context, diagnostic metadata and potentially user/request identifiers subject to scrubbing/configuration | Runtime integration exists; current organization region and exact Production project acceptance are not frozen | Provider support states standard DPA is available to all plans and includes EU SCC safeguards; later human support stated self-service support cannot confirm account-specific DPA acceptance or region | Exact account acceptance, region, retention, scrubbing/data categories and subprocessor facts remain open | `PROCESSOR_FRAMEWORK_AVAILABLE / ACCOUNT_ACCEPTANCE_UNPROVEN` | Inspect current organization Legal & Compliance settings and Production project configuration before final disclosure |
 | PostHog | Consent-gated product analytics when enabled | Product analytics events and identifiers after applicable consent/configuration | Human PostHog response confirmed EU Cloud hosting in Frankfurt for the discussed organization. The currently connected `Default project` is not attributable as the RISCK COMPLY Production project | Human PostHog response stated a countersigned DPA is required; PandaDoc subsequently confirmed `PostHog DPA — Samuel Cerqueira, Unipessoal, Lda` completed by all participants on 2026-09-01 | DPA identifies transfer/subprocessor mechanisms; actual Production project ownership, retention and active data flow still require recovery/revalidation | `DPA_EXECUTED / PRODUCTION_PROJECT_ATTRIBUTION_OPEN` | Recover actual Production project/account if analytics is active and verify retention/current project configuration |
 | Upstash / Redis | Distributed rate limiting/security-control state | Operational request/control metadata and identifiers; Redis keys used for security/rate-limiting functions | Integration is present. Current account plan and configured deployment region must be read from the actual database console | Human Upstash support confirmed standard DPA is automatically incorporated into Terms on account creation/use; self-service counterparty is Upstash, Inc. | Support states SCC Module 2 + EU-US DPF in DPA; Redis lifecycle uses TTL/explicit deletion; automated backups expire after 1 day or up to 3 days with Prod Pack | `PROCESSOR_FRAMEWORK_ATTRIBUTABLE / ACCOUNT_REGION_PLAN_OPEN` | Verify actual current database plan, primary/read regions and whether Prod Pack changes backup period |
-| Resend | Transactional email delivery | Recipient email addresses, message metadata and transactional message content | Production code and policy require transactional email provider configuration; historical real delivery exists | Current account-specific DPA/agreement evidence has not been attributed in this lane | Account region/retention/subprocessors/transfer facts remain open | `TRANSACTIONAL_EMAIL_PROCESSOR_CANDIDATE / ACCOUNT_FACTS_OPEN` | Current Production account/binding plus DPA, retention and transfer facts |
+| Resend | Transactional email delivery | Recipient email addresses, message metadata and transactional message content | Production code and policy require transactional email provider configuration; historical real delivery exists | Resend's current Terms expressly incorporate its DPA into the Agreement and state that signup/purchase/click acceptance binds the Agreement; the DPA states it becomes binding on acceptance of the Agreement. This establishes the public contractual framework, but this register does not independently retain the exact account acceptance event or contracting-customer/entity provenance | The current DPA incorporates EU SCCs for relevant ex-EEA transfers, identifies Resend as processor for covered customer processing and states deletion of customer/user data within 90 days after account termination. Actual account configuration and enabled-feature retention still require account-level mapping | `PROCESSOR_FRAMEWORK_INCORPORATED_BY_TERMS / ACCOUNT_ENTITY_AND_CONFIGURATION_MAPPING_OPEN` | Confirm current Production account/entity provenance and enabled-feature configuration/retention before final customer disclosure |
 
 ## Providers not included as active subprocessors
 
@@ -36,6 +36,21 @@ A provider is not labelled a final contractual “subprocessor” merely because
 - Any future vendor must be added only after actual use is established.
 
 ## Account-specific evidence credited in this revision
+
+### Vercel
+
+Current official Vercel DPA (last updated 2026-03-17; effective 2026-03-31) states that it applies to Vercel processing of Customer Data as a processor for customers on Pro and Enterprise plans, becomes legally binding when the customer enters the applicable Agreement or executes the DPA, and includes cross-border transfer mechanisms for covered transfers. The connected RISCK COMPLY Vercel team is currently Pro.
+
+```text
+VERCEL_CONNECTED_TEAM_PLAN=PRO_CONNECTED_PROVIDER_FACT
+VERCEL_CURRENT_DPA_APPLIES_TO_PRO_PLAN=YES_PUBLIC_PROVIDER_FACT
+VERCEL_DPA_BINDING_MECHANISM=ENTRY_INTO_APPLICABLE_AGREEMENT_OR_EXECUTION_PUBLIC_PROVIDER_FACT
+VERCEL_DPA_CROSS_BORDER_MECHANISM=INCLUDED_WHERE_REQUIRED_PUBLIC_PROVIDER_FACT
+VERCEL_EXACT_CONTRACTING_ENTITY_MAPPING=OPEN
+VERCEL_ACTUAL_FLOW_RETENTION_ACCESS_MAPPING=OPEN
+```
+
+This closes the generic “is there an applicable DPA framework for this plan?” question. It does not, by itself, prove every account-level customer-identity, product-option, data-location, retention or support-access fact.
 
 ### Supabase
 
@@ -76,6 +91,22 @@ UPSTASH_BACKUP_RETENTION=1_DAY_OR_UP_TO_3_DAYS_WITH_PROD_PACK_PROVIDER_CONFIRMED
 UPSTASH_CURRENT_ACCOUNT_PLAN_AND_REGION=NOT_YET_REVALIDATED
 ```
 
+### Resend
+
+Current official Resend Terms and DPA (last updated 2026-08-27) state that the DPA is incorporated into the Agreement and becomes legally binding on acceptance of the Agreement. The DPA identifies Resend as processor for covered processing, incorporates EU SCCs for relevant ex-EEA transfers, and states that customer/user data is deleted within 90 days after account termination.
+
+```text
+RESEND_DPA_INCORPORATED_IN_CURRENT_TERMS=YES_PUBLIC_PROVIDER_FACT
+RESEND_DPA_BINDING_MECHANISM=ACCEPTANCE_OF_AGREEMENT_OR_EXECUTION_PUBLIC_PROVIDER_FACT
+RESEND_PROCESSOR_ROLE_FOR_COVERED_CUSTOMER_PROCESSING=YES_PUBLIC_PROVIDER_FACT
+RESEND_EU_SCC_MECHANISM=INCLUDED_FOR_RELEVANT_TRANSFERS_PUBLIC_PROVIDER_FACT
+RESEND_POST_TERMINATION_DELETION_TARGET=WITHIN_90_DAYS_PUBLIC_PROVIDER_FACT
+RESEND_EXACT_ACCOUNT_ACCEPTANCE_EVENT=NOT_RETAINED_IN_THIS_REGISTER
+RESEND_EXACT_CONTRACTING_ENTITY_MAPPING=OPEN
+```
+
+This closes the generic public-framework question without claiming an account-specific acceptance timestamp or customer-entity mapping that is not independently retained.
+
 ## Customer notice / authorisation boundary
 
 The owner-selected DPA position is general written authorisation for subprocessors with a target of 30 days' advance notice for new material subprocessors where practicable and contractually applicable, plus reasonable data-protection objection mechanics. That is an owner-selected contractual position, not proof that every upstream provider guarantees the same notice period.
@@ -97,15 +128,17 @@ Revalidate this register before release or customer disclosure when:
 
 ```text
 ACTIVE_PROVIDER_SET=RECONCILED_CURRENT_EVIDENCE
+VERCEL_DPA_FRAMEWORK=PASS_CONNECTED_PRO_PLAN_PUBLIC_PROVIDER_EVIDENCE
+VERCEL_ACCOUNT_ENTITY_FLOW_MAPPING=OPEN
 SUPABASE_DPA_FRAMEWORK=PASS_ATTRIBUTABLE
 POSTHOG_DPA=PASS_COMPLETED_ALL_PARTICIPANTS
 UPSTASH_DPA_FRAMEWORK=PASS_ATTRIBUTABLE
 SENTRY_DPA_FRAMEWORK=AVAILABLE_PROVIDER_CONFIRMED_ACCOUNT_ACCEPTANCE_OPEN
-VERCEL_DPA_ACCOUNT_FACT=OPEN
 CLOUDFLARE_DPA_ACCOUNT_FACT=OPEN
 GOOGLE_IDENTITY_WORKSPACE_ACCOUNT_FACTS=OPEN
 GITHUB_ACCOUNT_DPA_TRANSFER_FACTS=OPEN
-RESEND_ACCOUNT_DPA_TRANSFER_FACTS=OPEN
+RESEND_DPA_FRAMEWORK=PASS_PUBLIC_TERMS_INCORPORATION
+RESEND_ACCOUNT_ENTITY_CONFIGURATION_MAPPING=OPEN
 STRIPE_PRIVACY_FISCAL_ACCOUNT_FACTS=ROUTED_PROMPT_3
 FINAL_SUBPROCESSOR_CUSTOMER_SCHEDULE=PARTIAL_NOT_FINAL
 QUALIFIED_EXTERNAL_REVIEW=ONLY_IF_CURRENT_SCOPE_TRIGGER_REQUIRES
