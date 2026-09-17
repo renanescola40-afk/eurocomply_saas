@@ -25,8 +25,12 @@ const requiredAiAssessmentOperations = [
   'rls_enabled',
   ...requiredCoverageOperations,
   'same_tenant_read',
-  'same_tenant_insert',
-  'admin_same_tenant_insert',
+  'same_tenant_insert_denied',
+  'same_tenant_update_denied',
+  'same_tenant_delete_denied',
+  'admin_same_tenant_insert_denied',
+  'admin_same_tenant_update_denied',
+  'admin_same_tenant_delete_denied',
   'member_same_tenant_read',
   'member_same_tenant_insert_denied',
   'member_same_tenant_update_denied',
@@ -148,8 +152,9 @@ function validateScope(evidence) {
 
   if (evidence.aiAssessmentsLiveValidation?.status !== 'Complete'
     || evidence.aiAssessmentsLiveValidation?.outcome !== 'passed'
-    || evidence.aiAssessmentsLiveValidation?.crossTenantAccessDenied !== true) {
-    fail(`${evidencePath} aiAssessmentsLiveValidation must be Complete/passed with cross-tenant access denied`);
+    || evidence.aiAssessmentsLiveValidation?.crossTenantAccessDenied !== true
+    || evidence.aiAssessmentsLiveValidation?.browserMutationsBackendOnly !== true) {
+    fail(`${evidencePath} aiAssessmentsLiveValidation must be Complete/passed with cross-tenant access denied and browser mutations backend-only`);
   }
 }
 
@@ -174,4 +179,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('Supabase live RLS production gate passed for the expanded P0 tenant isolation proof scope, including ai_assessments.');
+console.log('Supabase live RLS production gate passed for the expanded P0 tenant isolation proof scope, including server-only ai_assessments mutations.');

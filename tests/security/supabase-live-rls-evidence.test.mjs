@@ -19,16 +19,17 @@ describe('Supabase live RLS forward-promotion evidence contract', () => {
     expect(LIVE_RLS_EVIDENCE_SCHEMA).toBe('risck-comply.supabase-live-rls-validation.forward-promotion.v1');
   });
 
-  it('treats browser-read product tables with server-authoritative writes as backend-owned', () => {
-    expect(backendOwnedTables).toEqual(expect.arrayContaining([
+  it('treats current reviewed commercial mutation surfaces as backend-owned', () => {
+    for (const table of [
       'compliance_tasks',
       'ai_systems',
       'documents',
       'risks',
       'vendors',
       'onboarding_activation_runs',
-    ]));
-    for (const table of backendOwnedTables) {
+      'ai_assessments',
+    ]) {
+      expect(backendOwnedTables).toContain(table);
       expect(sameTenantWritableTables).not.toContain(table);
     }
     expect(sameTenantWritableTables).toEqual(['monitoring_preferences']);

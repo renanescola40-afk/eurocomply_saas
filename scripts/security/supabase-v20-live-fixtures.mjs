@@ -50,6 +50,9 @@ export async function grantBoundedV20CommercialAuthority(admin, organizationId, 
     .update(`${organizationId}:${source.id}:${externalReference}`)
     .digest('hex');
 
+  // The canonical proof spans Professional-gated risk/vendor/task reads, so the
+  // bounded fixture must carry the minimum plan that legitimately exposes every
+  // customer table in this proof. This does not create provider/Stripe state.
   const snapshot = await insertOne(admin, 'enterprise_entitlement_snapshots', {
     organization_id: organizationId,
     source_id: source.id,

@@ -26,6 +26,7 @@ export const requiredViewerAdminDenyOperations = [
 export const backendOwnedTables = [
   'subscriptions', 'audit_logs', 'invitations', 'compliance_tasks',
   'ai_systems', 'documents', 'risks', 'vendors', 'onboarding_activation_runs',
+  'ai_assessments',
 ];
 export const sameTenantWritableTables = ['monitoring_preferences'];
 export const requiredGlobalReferenceOperations = [
@@ -180,7 +181,7 @@ export function buildEvidencePayload({
     controlsVerified: passing ? [
       'RLS enabled on canonical customer tenant tables', 'Tenant A cannot read or mutate Tenant B rows',
       'Licensed same-tenant product access is preserved', 'Unlicensed and anonymous paid-product access is denied',
-      'Browser writes to backend-owned product tables remain denied', 'Regulatory updates are backend-only',
+      'Server-owned commercial mutations remain unavailable to browser clients', 'Regulatory updates are backend-only',
       'Live inventory helper remains service-role-only', 'Evidence Vault browser and Storage bypass boundaries are fail-closed',
       'Evidence is bound to the exact current governed Production promotion manifest',
     ] : [],
