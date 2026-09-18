@@ -46,7 +46,9 @@ export const TERMINAL_EVALUATION_CONCLUSIONS = new Set(['success', 'failure']);
 
 const API_VERSION = '2022-11-28';
 const PER_PAGE = 100;
-const MAX_RUN_PAGES = 20;
+const MAX_RUN_PAGES_PER_PARTITION = 10;
+const MAX_RUN_RESULTS_PER_PARTITION = PER_PAGE * MAX_RUN_PAGES_PER_PARTITION;
+const MAX_RUN_PARTITIONS = 128;
 const MAX_SETTLE_ATTEMPTS = 10;
 const MAX_GATE_SETTLE_ATTEMPTS = 80;
 const SETTLE_INTERVAL_MS = 30_000;
@@ -217,28 +219,94 @@ async function githubApi(path, { method = 'GET', body } = {}) {
   throw new Error(`GitHub API ${method} ${path} exhausted retry loop unexpectedly`);
 }
 
+function workflowRunCreatedRange(startSecond, endSecond) {
+  const start = new Date(startSecond * 1_000).toISOString().replace('.000Z', 'Z');
+  const end = new Date(endSecond * 1_000).toISOString().replace('.000Z', 'Z');
+  return `${start}..${end}`;
+}
+
+async function targetCommitSecond(repository, targetSha) {
+  const encodedSha = encodeURIComponent(targetSha);
+  const result = await githubApi(`/repos/${repository}/commits/${encodedSha}`);
+  const value = result?.commit?.committer?.date ?? result?.commit?.author?.date;
+  const parsed = Date.parse(value ?? '');
+  if (!Number.isFinite(parsed)) {
+    throw new Error('Unable to establish target commit time for exact-SHA run partitioning');
+  }
+  return Math.floor(parsed / 1_000);
+}
+
 async function listExactShaRuns(repository, targetSha) {
   const encodedSha = encodeURIComponent(targetSha);
-  const allRuns = [];
-  let totalCount = 0;
+  const startSecond = (await targetCommitSecond(repository, targetSha)) - 60;
+  const endSecond = Math.floor(Date.now() / 1_000) + 60;
+  const pendingRanges = [{ startSecond, endSecond }];
+  const uniqueRuns = new Map();
+  let partitionsInspected = 0;
 
-  for (let page = 1; page <= MAX_RUN_PAGES; page += 1) {
-    const result = await githubApi(
-      `/repos/${repository}/actions/runs?head_sha=${encodedSha}&per_page=${PER_PAGE}&page=${page}`,
+  while (pendingRanges.length > 0) {
+    if (partitionsInspected >= MAX_RUN_PARTITIONS) {
+      throw new Error(
+        `Exact-SHA run inventory requires more than ${MAX_RUN_PARTITIONS} bounded time partitions; refusing to dispatch`,
+      );
+    }
+    partitionsInspected += 1;
+
+    const range = pendingRanges.pop();
+    const createdRange = workflowRunCreatedRange(range.startSecond, range.endSecond);
+    const encodedCreated = encodeURIComponent(createdRange);
+    const firstResult = await githubApi(
+      `/repos/${repository}/actions/runs?head_sha=${encodedSha}&created=${encodedCreated}&per_page=${PER_PAGE}&page=1`,
     );
-    const pageRuns = Array.isArray(result?.workflow_runs) ? result.workflow_runs : [];
-    totalCount = Number(result?.total_count ?? pageRuns.length);
-    allRuns.push(...pageRuns);
-    if (allRuns.length >= totalCount || pageRuns.length < PER_PAGE) break;
+    const firstPageRuns = Array.isArray(firstResult?.workflow_runs)
+      ? firstResult.workflow_runs
+      : [];
+    const totalCount = Number(firstResult?.total_count ?? firstPageRuns.length);
+
+    // GitHub caps workflow-run searches that use head_sha/created filters at 1,000
+    // results. Treat a count at the cap as ambiguous and split the time range.
+    if (totalCount >= MAX_RUN_RESULTS_PER_PARTITION) {
+      if (range.startSecond >= range.endSecond) {
+        throw new Error(
+          `Exact-SHA run inventory hits GitHub's 1,000-result search cap within one second (${createdRange}); refusing to dispatch`,
+        );
+      }
+      const midpoint = Math.floor((range.startSecond + range.endSecond) / 2);
+      pendingRanges.push({ startSecond: midpoint + 1, endSecond: range.endSecond });
+      pendingRanges.push({ startSecond: range.startSecond, endSecond: midpoint });
+      continue;
+    }
+
+    const rangeRuns = [...firstPageRuns];
+    const pagesNeeded = Math.ceil(totalCount / PER_PAGE);
+    for (let page = 2; page <= pagesNeeded; page += 1) {
+      if (page > MAX_RUN_PAGES_PER_PARTITION) {
+        throw new Error(
+          `Exact-SHA run partition exceeds bounded pagination (${createdRange}); refusing to dispatch`,
+        );
+      }
+      const result = await githubApi(
+        `/repos/${repository}/actions/runs?head_sha=${encodedSha}&created=${encodedCreated}&per_page=${PER_PAGE}&page=${page}`,
+      );
+      const pageRuns = Array.isArray(result?.workflow_runs) ? result.workflow_runs : [];
+      rangeRuns.push(...pageRuns);
+    }
+
+    if (rangeRuns.length < totalCount) {
+      throw new Error(
+        `Exact-SHA run partition is incomplete (${rangeRuns.length}/${totalCount}, ${createdRange}); refusing to dispatch`,
+      );
+    }
+
+    for (const run of rangeRuns) {
+      if (!Number.isSafeInteger(run?.id)) {
+        throw new Error('Exact-SHA run inventory returned a workflow run without a stable numeric id');
+      }
+      uniqueRuns.set(run.id, run);
+    }
   }
 
-  if (allRuns.length < totalCount) {
-    throw new Error(
-      `Exact-SHA run inventory exceeds bounded pagination (${allRuns.length}/${totalCount}); refusing to dispatch`,
-    );
-  }
-
-  return allRuns;
+  return [...uniqueRuns.values()];
 }
 
 async function currentMainSha(repository) {
