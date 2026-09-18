@@ -14,13 +14,15 @@ Protected values:
 
 - `PRODUCTION_URL`: canonical HTTPS production origin.
 - `HEALTHCHECK_TOKEN`: bearer token for `/api/ready/release`.
+- `NEXT_PUBLIC_SUPABASE_URL`: canonical HTTPS Supabase project origin, stored as an environment secret so the runtime proof uses the same protected source as the canonical Production proof lanes.
 - `SUPABASE_SERVICE_ROLE_KEY`: production service credential, environment-secret only.
 - `SAML_PROOF_CONNECTION_ID`: UUID of the dedicated test connection, environment-secret only.
 
 Environment variable:
 
-- `NEXT_PUBLIC_SUPABASE_URL`: canonical HTTPS Supabase project origin.
 - `SAML_PROOF_TIMEOUT_MS`: optional wait window from 60,000 to 1,200,000 ms; default 900,000 ms.
+
+When provisioning or repairing `production-identity-proof`, create or rotate `NEXT_PUBLIC_SUPABASE_URL` as an environment **secret**, not an Actions variable. Remove any stale variable copy after the secret-backed workflow has been verified so operators do not mistake it for the runtime authority.
 
 ## Execute
 
