@@ -79,7 +79,9 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
   });
 
   it('fails closed on inventory ambiguity while tolerating transient GitHub API pressure', () => {
-    expect(script).toContain('const MAX_RUN_PAGES = 20;');
+    expect(script).toContain('const MAX_RUN_PAGES_PER_PARTITION = 10;');
+    expect(script).toContain('const MAX_RUN_RESULTS_PER_PARTITION = PER_PAGE * MAX_RUN_PAGES_PER_PARTITION;');
+    expect(script).toContain('const MAX_RUN_PARTITIONS = 128;');
     expect(script).toContain('const MAX_SETTLE_ATTEMPTS = 10;');
     expect(script).toContain('const MAX_GATE_SETTLE_ATTEMPTS = 80;');
     expect(script).toContain('const QUIET_WINDOW_MS = 75_000;');
@@ -88,8 +90,11 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(script).toContain('status === 403 || status === 429 || status >= 500');
     expect(script).toContain("response.headers.get('retry-after')");
     expect(script).toContain("response.headers.get('x-ratelimit-reset')");
-    expect(script).toContain('actions/runs?head_sha=${encodedSha}&per_page=${PER_PAGE}&page=${page}');
-    expect(script).toContain('Exact-SHA run inventory exceeds bounded pagination');
+    expect(script).toContain('actions/runs?head_sha=${encodedSha}&created=${encodedCreated}&per_page=${PER_PAGE}&page=1');
+    expect(script).toContain('if (totalCount >= MAX_RUN_RESULTS_PER_PARTITION)');
+    expect(script).toContain("GitHub's 1,000-result search cap within one second");
+    expect(script).toContain('Exact-SHA run partition exceeds bounded pagination');
+    expect(script).toContain('Exact-SHA run partition is incomplete');
     expect(script).toContain('Material evidence producers did not reach a bounded quiet terminal state');
     expect(script).toContain('A material evidence producer became active after the quiet-state check; refusing to dispatch');
     expect(script).toContain('A material evidence producer became active while the production gate was settling; refusing to dispatch');
