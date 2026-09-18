@@ -79,7 +79,7 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
   });
 
   it('fails closed on inventory ambiguity while tolerating transient GitHub API pressure', () => {
-    expect(script).toContain('const MAX_RUN_PAGES = 5;');
+    expect(script).toContain('const MAX_RUN_PAGES = 20;');
     expect(script).toContain('const MAX_SETTLE_ATTEMPTS = 10;');
     expect(script).toContain('const MAX_GATE_SETTLE_ATTEMPTS = 80;');
     expect(script).toContain('const QUIET_WINDOW_MS = 75_000;');
