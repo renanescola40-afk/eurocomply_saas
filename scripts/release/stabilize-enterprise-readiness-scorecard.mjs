@@ -46,7 +46,7 @@ export const TERMINAL_EVALUATION_CONCLUSIONS = new Set(['success', 'failure']);
 
 const API_VERSION = '2022-11-28';
 const PER_PAGE = 100;
-const MAX_RUN_PAGES = 5;
+const MAX_RUN_PAGES = 20;
 const MAX_SETTLE_ATTEMPTS = 10;
 const MAX_GATE_SETTLE_ATTEMPTS = 80;
 const SETTLE_INTERVAL_MS = 30_000;
