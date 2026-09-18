@@ -18,6 +18,8 @@ describe('SAML SSO runtime proof megapack', () => {
     expect(workflow).not.toContain('pull_request_target');
     expect(workflow).not.toContain('contents: write');
     expect(workflow).not.toContain('\nrun-name:');
+    expect(workflow).toContain('NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}');
+    expect(workflow).not.toContain('NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}');
   });
 
   it('requires a new audit event rather than accepting historical login state', () => {
