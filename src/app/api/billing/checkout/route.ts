@@ -2,6 +2,12 @@ import Stripe from 'stripe';
 import { z } from 'zod';
 
 import { getBillingEntitlements } from '@/lib/billing/plans';
+import {
+  isPublicSelfServeContractEffective,
+  PUBLIC_CONTRACT_ACCEPTANCE_METHOD,
+  PUBLIC_PRIVACY_VERSION,
+  PUBLIC_TERMS_VERSION,
+} from '@/lib/legal/public-contract';
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
@@ -56,6 +62,12 @@ type StripeCustomerBinding = {
 const checkoutBodySchema = z.object({
   plan: z.string().trim().min(1).max(64),
   locale: z.string().trim().max(16).optional().default('en'),
+  legalAcceptance: z.object({
+    accepted: z.literal(true),
+    termsVersion: z.string().trim().min(1).max(64),
+    privacyVersion: z.string().trim().min(1).max(64),
+    method: z.literal(PUBLIC_CONTRACT_ACCEPTANCE_METHOD),
+  }).optional(),
 });
 
 function normalizeCheckoutLocale(locale: string): CheckoutLocale {
@@ -326,9 +338,29 @@ export async function POST(request: Request) {
 
     const publicPaidBillingEnabled = process.env.RISCK_COMPLY_PAID_BILLING_REQUIRED === 'true';
     const validationOrganizationId = process.env.RISCK_COMPLY_BILLING_VALIDATION_ORGANIZATION_ID?.trim();
-    if (!publicPaidBillingEnabled && validationOrganizationId !== organization.id) {
+    const validationOnlyCheckout = !publicPaidBillingEnabled && validationOrganizationId === organization.id;
+    if (!publicPaidBillingEnabled && !validationOnlyCheckout) {
       return noStoreJson({ error: 'public_paid_ga_not_enabled' }, { status: 503 });
     }
+
+    if (!validationOnlyCheckout && !isPublicSelfServeContractEffective()) {
+      return noStoreJson({ error: 'legal_publication_not_effective' }, { status: 503 });
+    }
+
+    const legalAcceptance = parsedBody.data.legalAcceptance;
+    if (
+      !validationOnlyCheckout
+      && (
+        !legalAcceptance
+        || legalAcceptance.termsVersion !== PUBLIC_TERMS_VERSION
+        || legalAcceptance.privacyVersion !== PUBLIC_PRIVACY_VERSION
+        || legalAcceptance.method !== PUBLIC_CONTRACT_ACCEPTANCE_METHOD
+      )
+    ) {
+      return noStoreJson({ error: 'terms_acceptance_required' }, { status: 400 });
+    }
+
+    const legalAcceptanceAt = validationOnlyCheckout ? '' : new Date().toISOString();
 
     let checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
     if (checkoutAttempt.outcome === 'busy') {
@@ -365,18 +397,37 @@ export async function POST(request: Request) {
         }
 
         if (existingSession.status === 'open') {
-          if (!isSafeStripeCheckoutUrl(existingSession.url)) {
-            throw new Error('billing_checkout_existing_session_url_invalid');
+          const existingLegalMatches = validationOnlyCheckout
+            ? existingSession.metadata?.legal_validation_only === 'true'
+            : (
+                existingSession.metadata?.terms_version === PUBLIC_TERMS_VERSION
+                && existingSession.metadata?.privacy_version === PUBLIC_PRIVACY_VERSION
+                && existingSession.metadata?.legal_acceptance_method === PUBLIC_CONTRACT_ACCEPTANCE_METHOD
+                && existingSession.metadata?.legal_validation_only !== 'true'
+              );
+
+          if (!existingLegalMatches) {
+            await expireCheckoutSessionSafely(stripe, existingSession.id, organization.id, 'billing_checkout_stale_legal_session_expire');
+            await releaseCheckoutAttemptSafely(organization.id, checkoutAttempt.attemptToken, 'billing_checkout_stale_legal_session_release');
+            checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
+            if (checkoutAttempt.outcome !== 'claimed') {
+              return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
+            }
+            existingSession = null as never;
+          } else {
+            if (!isSafeStripeCheckoutUrl(existingSession.url)) {
+              throw new Error('billing_checkout_existing_session_url_invalid');
+            }
+            return noStoreJson({
+              url: existingSession.url,
+              idempotencyProtected: true,
+              singleflightReused: true,
+              stepUpRequired: false,
+            });
           }
-          return noStoreJson({
-            url: existingSession.url,
-            idempotencyProtected: true,
-            singleflightReused: true,
-            stepUpRequired: false,
-          });
         }
 
-        if (existingSession.status === 'complete') {
+        if (existingSession?.status === 'complete') {
           return noStoreJson(
             {
               error: 'checkout_pending_activation',
@@ -387,14 +438,16 @@ export async function POST(request: Request) {
           );
         }
 
-        if (existingSession.status !== 'expired') {
+        if (existingSession && existingSession.status !== 'expired') {
           throw new Error('billing_checkout_existing_session_status_invalid');
         }
 
-        await releaseCheckoutAttemptSafely(organization.id, checkoutAttempt.attemptToken, 'billing_checkout_expired_session_release');
-        checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
-        if (checkoutAttempt.outcome !== 'claimed') {
-          return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
+        if (existingSession) {
+          await releaseCheckoutAttemptSafely(organization.id, checkoutAttempt.attemptToken, 'billing_checkout_expired_session_release');
+          checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
+          if (checkoutAttempt.outcome !== 'claimed') {
+            return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
+          }
         }
       }
     }
@@ -416,6 +469,11 @@ export async function POST(request: Request) {
       billing_flow: 'initial_subscription',
       step_up_action: 'not_required_initial_checkout',
       step_up_verified_at: '',
+      terms_version: PUBLIC_TERMS_VERSION,
+      privacy_version: PUBLIC_PRIVACY_VERSION,
+      legal_acceptance_method: validationOnlyCheckout ? 'validation_only_no_contract_acceptance' : PUBLIC_CONTRACT_ACCEPTANCE_METHOD,
+      legal_acceptance_at: legalAcceptanceAt,
+      legal_validation_only: validationOnlyCheckout ? 'true' : 'false',
     };
 
     try {
@@ -500,6 +558,11 @@ export async function POST(request: Request) {
           initialCheckoutSingleflight: true,
           liveSubscriptionAuthority: false,
           pendingCustomerBindingPersisted: true,
+          termsVersion: PUBLIC_TERMS_VERSION,
+          privacyVersion: PUBLIC_PRIVACY_VERSION,
+          legalAcceptanceMethod: validationOnlyCheckout ? 'validation_only_no_contract_acceptance' : PUBLIC_CONTRACT_ACCEPTANCE_METHOD,
+          legalAcceptanceAt,
+          legalValidationOnly: validationOnlyCheckout,
         },
       });
 

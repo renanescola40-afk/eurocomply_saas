@@ -49,9 +49,9 @@ describe('public legal review surfaces', () => {
       readFile(TRANSFERS_PAGE, 'utf8'),
     ]);
 
-    expect(privacy).toContain('version="0.2-review"');
+    expect(privacy).toContain('version={PUBLIC_PRIVACY_PUBLICATION.version}');
     expect(dpa).toContain('version="0.3-review"');
-    expect(terms).toContain('version="0.3-review"');
+    expect(terms).toContain('version={PUBLIC_TERMS_PUBLICATION.version}');
     expect(transfers).toContain('version="0.2-review"');
     for (const source of [privacy, dpa, terms, cookie, acceptableUse, transfers]) {
       expect(source).toContain('lastUpdated={LAST_UPDATED}');
@@ -137,7 +137,7 @@ describe('public legal review surfaces', () => {
     const source = await readFile(TERMS_PAGE, 'utf8');
 
     expect(source).toContain('documentId="terms-of-service"');
-    expect(source).toContain('version="0.3-review"');
+    expect(source).toContain('version={PUBLIC_TERMS_PUBLICATION.version}');
     expect(source).toContain('Parties, status and business scope');
     expect(source).toContain('Service and product boundary');
     expect(source).toContain('Accounts, organisations and authorised users');

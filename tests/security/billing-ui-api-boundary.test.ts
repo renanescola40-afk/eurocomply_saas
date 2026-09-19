@@ -31,7 +31,12 @@ describe('billing UI API boundary', () => {
     expect(billingActionButton).toContain('/api/billing/portal?locale=');
     expect(billingActionButton).toContain('returnPath=');
     expect(billingActionButton).toContain("method: 'POST'");
-    expect(billingActionButton).toContain("action === 'checkout' ? JSON.stringify({ plan: planId, locale }) : undefined");
+    expect(billingActionButton).toContain("legalAcceptance: legalAccepted");
+    expect(billingActionButton).toContain('requireLegalAcceptance?: boolean');
+    expect(publicCheckoutPage).toContain('requireLegalAcceptance');
+    expect(billingActionButton).toContain('termsVersion: PUBLIC_TERMS_VERSION');
+    expect(billingActionButton).toContain('privacyVersion: PUBLIC_PRIVACY_VERSION');
+    expect(billingActionButton).toContain('method: PUBLIC_CONTRACT_ACCEPTANCE_METHOD');
   });
 
   it('keeps public pricing buttons aligned with the canonical checkout page', () => {
@@ -57,6 +62,13 @@ describe('billing UI API boundary', () => {
     expect(billingCheckoutRoute).toContain('tax_id_collection');
     expect(billingCheckoutRoute).toContain("payment_method_collection: 'always'");
     expect(billingCheckoutRoute).toContain('allow_promotion_codes: true');
+    expect(billingCheckoutRoute).toContain("error: 'legal_publication_not_effective'");
+    expect(billingCheckoutRoute).toContain("error: 'terms_acceptance_required'");
+    expect(billingCheckoutRoute).toContain('terms_version: PUBLIC_TERMS_VERSION');
+    expect(billingCheckoutRoute).toContain('privacy_version: PUBLIC_PRIVACY_VERSION');
+    expect(billingCheckoutRoute).toContain('legal_acceptance_at: legalAcceptanceAt');
+    expect(billingCheckoutRoute).toContain('validationOnlyCheckout');
+    expect(billingCheckoutRoute).toContain('existingLegalMatches');
   });
 
   it('keeps Stripe portal returns scoped to the billing dashboard route', () => {

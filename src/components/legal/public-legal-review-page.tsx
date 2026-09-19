@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { AnalyticsConsentControls } from '@/components/analytics/AnalyticsConsentControls';
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { isSupportedLocale, type Locale } from '@/lib/i18n/locales';
+import type { PublicLegalPublicationState } from '@/lib/legal/public-contract';
 
 type LegalSection = {
   title: string;
@@ -22,6 +23,8 @@ type PublicLegalReviewPageProps = {
   lastUpdated: string;
   sections: LegalSection[];
   actions?: React.ReactNode;
+  publicationState?: PublicLegalPublicationState;
+  effectiveDate?: string | null;
 };
 
 const copy: Record<Locale, { status: string; statusValue: string; version: string; updated: string; effective: string; effectiveValue: string; notice: string }> = {
@@ -33,10 +36,14 @@ const copy: Record<Locale, { status: string; statusValue: string; version: strin
   de: { status: 'Veröffentlichungsstatus', statusValue: 'REVIEW_DRAFT · FACTUAL_CLOSURE_REQUIRED', version: 'Version', updated: 'Zuletzt aktualisiert', effective: 'Gültig ab', effectiveValue: 'Ausstehender faktischer und vertraglicher Abschluss', notice: 'Dieser öffentliche Entwurf ist eine technische Offenlegungsfläche, keine wirksame Vereinbarung. Die faktische, vertragliche, anbieter- und transferbezogene Klärung steht noch aus.' },
 };
 
-export function PublicLegalReviewPage({ locale: rawLocale, contentLanguage, eyebrow, title, summary, documentId, version, lastUpdated, sections, actions }: PublicLegalReviewPageProps) {
+export function PublicLegalReviewPage({ locale: rawLocale, contentLanguage, eyebrow, title, summary, documentId, version, lastUpdated, sections, actions, publicationState = 'review', effectiveDate = null }: PublicLegalReviewPageProps) {
   const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : 'en';
   const contentLocale = contentLanguage ?? locale;
   const labels = copy[locale];
+  const isEffective = publicationState === 'effective' && Boolean(effectiveDate);
+  const statusValue = isEffective ? 'EFFECTIVE' : labels.statusValue;
+  const effectiveValue = isEffective ? effectiveDate : labels.effectiveValue;
+  const notice = isEffective ? null : labels.notice;
 
   return (
     <main className="min-h-screen bg-[#050913] text-white">
@@ -59,9 +66,9 @@ export function PublicLegalReviewPage({ locale: rawLocale, contentLanguage, eyeb
           <p><span className="font-semibold text-white">document_id:</span> {documentId}</p>
           <p><span className="font-semibold text-white">{labels.version}:</span> {version}</p>
           <p><span className="font-semibold text-white">{labels.updated}:</span> {lastUpdated}</p>
-          <p><span className="font-semibold text-white">{labels.effective}:</span> {labels.effectiveValue}</p>
-          <p className="sm:col-span-2"><span className="font-semibold text-white">{labels.status}:</span> {labels.statusValue}</p>
-          <p className="sm:col-span-2 leading-6 text-amber-100/75">{labels.notice}</p>
+          <p><span className="font-semibold text-white">{labels.effective}:</span> {effectiveValue}</p>
+          <p className="sm:col-span-2"><span className="font-semibold text-white">{labels.status}:</span> {statusValue}</p>
+          {notice ? <p className="sm:col-span-2 leading-6 text-amber-100/75">{notice}</p> : null}
         </section>
 
         {documentId === 'cookie-policy' ? <AnalyticsConsentControls locale={locale} /> : actions}

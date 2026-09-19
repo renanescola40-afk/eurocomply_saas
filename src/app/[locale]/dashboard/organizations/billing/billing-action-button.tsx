@@ -4,12 +4,18 @@ import { useState, type ReactNode, type FormEvent } from 'react';
 import { ArrowRight, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import {
+  PUBLIC_CONTRACT_ACCEPTANCE_METHOD,
+  PUBLIC_PRIVACY_VERSION,
+  PUBLIC_TERMS_VERSION,
+} from '@/lib/legal/public-contract';
 
 const STEP_UP_TOKEN_HEADER = 'x-eurocomply-step-up-token';
 const BILLING_IDEMPOTENCY_HEADER = 'Idempotency-Key';
 const DASHBOARD_BILLING_RETURN_PATH = '/dashboard/organizations/billing';
 const PUBLIC_BILLING_ERROR_CODE = 'action_failed';
 const PUBLIC_PAID_GA_ERROR_CODE = 'public_paid_ga_not_enabled';
+const LEGAL_PUBLICATION_NOT_EFFECTIVE_ERROR_CODE = 'legal_publication_not_effective';
 
 type AddOnSelection = { slug: string; quantity: number };
 
@@ -24,6 +30,7 @@ type BillingActionButtonProps = {
   variant?: 'default' | 'outline';
   className?: string;
   errorReturnHref?: string;
+  requireLegalAcceptance?: boolean;
 };
 
 type ApiJson = Record<string, unknown>;
@@ -92,6 +99,41 @@ function getPublicPaidGaUnavailableCopy(locale: string) {
       return 'Neue Self-Service-Abonnements sind noch nicht verfügbar. Wenden Sie sich an unser Vertriebsteam, um fortzufahren.';
     default:
       return 'New self-serve subscriptions are not available yet. Contact our sales team to continue.';
+  }
+}
+
+function getLegalAcceptanceCopy(locale: string) {
+  switch (locale) {
+    case 'pt':
+      return {
+        label: 'Concordo com os Termos de Serviço e reconheço a Política de Privacidade aplicáveis a esta subscrição paga.',
+        unavailable: 'O checkout pago permanece indisponível até os Termos e a Política de Privacidade públicos terem uma versão efetiva.',
+      };
+    case 'es':
+      return {
+        label: 'Acepto los Términos del Servicio y reconozco la Política de Privacidad aplicables a esta suscripción de pago.',
+        unavailable: 'El checkout de pago permanece no disponible hasta que los Términos y la Política de Privacidad públicos tengan una versión efectiva.',
+      };
+    case 'fr':
+      return {
+        label: 'J’accepte les Conditions d’utilisation et reconnais la Politique de confidentialité applicables à cet abonnement payant.',
+        unavailable: 'Le paiement reste indisponible jusqu’à ce que les Conditions et la Politique de confidentialité publiques aient une version effective.',
+      };
+    case 'it':
+      return {
+        label: 'Accetto i Termini di servizio e riconosco l’Informativa sulla privacy applicabili a questo abbonamento a pagamento.',
+        unavailable: 'Il checkout a pagamento resta non disponibile finché i Termini e l’Informativa sulla privacy pubblici non hanno una versione effettiva.',
+      };
+    case 'de':
+      return {
+        label: 'Ich akzeptiere die Nutzungsbedingungen und bestätige die Datenschutzerklärung für dieses kostenpflichtige Abonnement.',
+        unavailable: 'Der kostenpflichtige Checkout bleibt gesperrt, bis Nutzungsbedingungen und Datenschutzerklärung als wirksame Version veröffentlicht sind.',
+      };
+    default:
+      return {
+        label: 'I agree to the Terms of Service and acknowledge the Privacy Policy that apply to this paid subscription.',
+        unavailable: 'Paid checkout remains unavailable until the public Terms and Privacy Policy have an effective version.',
+      };
   }
 }
 
@@ -195,6 +237,7 @@ async function requestBillingAction({
   preserveExistingAddOns,
   idempotencyKey,
   stepUpToken,
+  legalAccepted,
 }: {
   action: BillingActionButtonProps['action'];
   locale: string;
@@ -203,6 +246,7 @@ async function requestBillingAction({
   preserveExistingAddOns?: boolean;
   idempotencyKey: string;
   stepUpToken?: string;
+  legalAccepted?: boolean;
 }) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -227,16 +271,31 @@ async function requestBillingAction({
   const response = await fetch(action === 'checkout' ? '/api/billing/checkout' : portalUrl, {
     method: 'POST',
     headers,
-    body: action === 'checkout' ? JSON.stringify({ plan: planId, locale }) : undefined,
+    body: action === 'checkout'
+      ? JSON.stringify({
+          plan: planId,
+          locale,
+          legalAcceptance: legalAccepted
+            ? {
+                accepted: true,
+                termsVersion: PUBLIC_TERMS_VERSION,
+                privacyVersion: PUBLIC_PRIVACY_VERSION,
+                method: PUBLIC_CONTRACT_ACCEPTANCE_METHOD,
+              }
+            : undefined,
+        })
+      : undefined,
   });
   const json = await readJson(response);
 
   return { response, json };
 }
 
-export function BillingActionButton({ action, locale, planId, addOns, preserveExistingAddOns, disabled, children, variant = 'default', className, errorReturnHref }: BillingActionButtonProps) {
+export function BillingActionButton({ action, locale, planId, addOns, preserveExistingAddOns, disabled, children, variant = 'default', className, errorReturnHref, requireLegalAcceptance = false }: BillingActionButtonProps) {
   const [loading, setLoading] = useState(false);
   const [paidGaUnavailable, setPaidGaUnavailable] = useState<string | null>(null);
+  const [legalAccepted, setLegalAccepted] = useState(false);
+  const legalCopy = getLegalAcceptanceCopy(locale);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -264,15 +323,20 @@ export function BillingActionButton({ action, locale, planId, addOns, preserveEx
     const idempotencyKey = crypto.randomUUID();
 
     try {
-      let { response, json } = await requestBillingAction({ action, locale, planId, addOns, preserveExistingAddOns, idempotencyKey });
+      let { response, json } = await requestBillingAction({ action, locale, planId, addOns, preserveExistingAddOns, idempotencyKey, legalAccepted });
 
       if (response.status === 403 && json.error === 'step_up_required') {
         const stepUpToken = await getBillingStepUpToken(locale);
-        ({ response, json } = await requestBillingAction({ action, locale, planId, addOns, preserveExistingAddOns, idempotencyKey, stepUpToken }));
+        ({ response, json } = await requestBillingAction({ action, locale, planId, addOns, preserveExistingAddOns, idempotencyKey, stepUpToken, legalAccepted }));
       }
 
       if (!response.ok && json.error === PUBLIC_PAID_GA_ERROR_CODE) {
         setPaidGaUnavailable(getPublicPaidGaUnavailableCopy(locale));
+        return;
+      }
+
+      if (!response.ok && json.error === LEGAL_PUBLICATION_NOT_EFFECTIVE_ERROR_CODE) {
+        setPaidGaUnavailable(legalCopy.unavailable);
         return;
       }
 
@@ -296,7 +360,24 @@ export function BillingActionButton({ action, locale, planId, addOns, preserveEx
 
   return (
     <form onSubmit={onSubmit} className={action === 'portal' ? 'flex flex-col gap-3 sm:flex-row' : 'mt-auto'}>
-      <Button type="submit" className={className} variant={variant} disabled={disabled || loading}>
+      {action === 'checkout' && requireLegalAcceptance ? (
+        <label className="mb-3 flex items-start gap-3 text-xs leading-5 text-slate-400">
+          <input
+            type="checkbox"
+            checked={legalAccepted}
+            onChange={(event) => setLegalAccepted(event.target.checked)}
+            className="mt-1 h-4 w-4 shrink-0 rounded border-slate-600 bg-slate-950"
+          />
+          <span>
+            {legalCopy.label}{' '}
+            <a href={`/${locale}/terms`} target="_blank" rel="noreferrer" className="underline underline-offset-2">Terms</a>
+            {' · '}
+            <a href={`/${locale}/privacy`} target="_blank" rel="noreferrer" className="underline underline-offset-2">Privacy</a>
+            <span className="sr-only">{` ${PUBLIC_TERMS_VERSION} ${PUBLIC_PRIVACY_VERSION}`}</span>
+          </span>
+        </label>
+      ) : null}
+      <Button type="submit" className={className} variant={variant} disabled={disabled || loading || (action === 'checkout' && requireLegalAcceptance && !legalAccepted)}>
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
         {children}
         {action === 'portal' && !loading ? <ArrowRight className="h-4 w-4" /> : null}

@@ -1,5 +1,6 @@
 import { PublicLegalReviewPage } from '@/components/legal/public-legal-review-page';
 import { isSupportedLocale, type Locale } from '@/lib/i18n/locales';
+import { PUBLIC_TERMS_PUBLICATION } from '@/lib/legal/public-contract';
 
 export const revalidate = 300;
 
@@ -312,7 +313,9 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
       title={page.title}
       summary={page.summary}
       documentId="terms-of-service"
-      version="0.3-review"
+      version={PUBLIC_TERMS_PUBLICATION.version}
+      publicationState={PUBLIC_TERMS_PUBLICATION.state}
+      effectiveDate={PUBLIC_TERMS_PUBLICATION.effectiveDate}
       lastUpdated={LAST_UPDATED}
       sections={page.sections}
     />

@@ -35,6 +35,24 @@ function getSafeSignupContinuation(locale: string, nextPath: string | null, plan
   return normalizedNext;
 }
 
+
+function getSignupPrivacyNotice(locale: Locale) {
+  switch (locale) {
+    case 'pt':
+      return { prefix: 'Ao criar uma conta, os seus dados são tratados conforme a', link: 'Política de Privacidade' };
+    case 'es':
+      return { prefix: 'Al crear una cuenta, tus datos se tratan según la', link: 'Política de Privacidad' };
+    case 'fr':
+      return { prefix: 'En créant un compte, vos données sont traitées conformément à la', link: 'Politique de confidentialité' };
+    case 'it':
+      return { prefix: 'Creando un account, i tuoi dati vengono trattati secondo la', link: 'Informativa sulla privacy' };
+    case 'de':
+      return { prefix: 'Wenn Sie ein Konto erstellen, werden Ihre Daten gemäß der', link: 'Datenschutzerklärung' };
+    default:
+      return { prefix: 'When you create an account, your data is handled as described in the', link: 'Privacy Policy' };
+  }
+}
+
 function getPlanContinuationHref(nextPath: string, planId: string) {
   const encodedPlan = encodeURIComponent(planId);
 
@@ -174,6 +192,7 @@ function SignupAuthForm({ activeLocale, selectedPlan, continuationHref, signInUr
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const text = getCommercialSurfaceCopy(activeLocale).signup;
+  const privacyNotice = getSignupPrivacyNotice(activeLocale);
 
   async function handleProvider() {
     if (loading) {
@@ -234,6 +253,12 @@ function SignupAuthForm({ activeLocale, selectedPlan, continuationHref, signInUr
             <label className="block text-sm font-medium text-white/70">{text.password}<input type="password" value={secret} onChange={(event) => setSecret(event.target.value)} required minLength={8} autoComplete="new-password" className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-blue-300/60 focus-visible:ring-2 focus-visible:ring-blue-200/40" /></label>
             <button type="submit" disabled={isSubmitting} className="w-full rounded-2xl bg-blue-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? text.loading : text.submit}</button>
           </form>
+          <p className="mt-4 text-center text-xs leading-5 text-white/42">
+            {privacyNotice.prefix}{' '}
+            <Link href={`/${activeLocale}/privacy`} target="_blank" rel="noreferrer" className="font-medium text-blue-300 hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">
+              {privacyNotice.link}
+            </Link>.
+          </p>
         </>
       )}
     </SignupChrome>

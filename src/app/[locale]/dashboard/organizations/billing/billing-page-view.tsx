@@ -225,7 +225,7 @@ export function BillingPageView({ locale, billing, canManageBilling, checkout, b
                     ) : isSalesLed && !isCurrent ? (
                       <Link href={`/${locale}/contact?intent=sales&plan=${plan.id}`} className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-emerald-300 px-4 text-sm font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">{copy.talkToSales}</Link>
                     ) : (
-                      <BillingActionButton action="checkout" locale={locale} planId={plan.id} className={`w-full rounded-xl ${isCurrent ? '' : 'bg-emerald-300 text-[#06100d] hover:bg-emerald-200'}`} variant={isCurrent ? 'outline' : 'default'} disabled={isCurrent}>{isCurrent ? copy.currentPlan : copy.upgradePlan}</BillingActionButton>
+                      <BillingActionButton action="checkout" locale={locale} planId={plan.id} requireLegalAcceptance={!hasSubscriptionRecord} className={`w-full rounded-xl ${isCurrent ? '' : 'bg-emerald-300 text-[#06100d] hover:bg-emerald-200'}`} variant={isCurrent ? 'outline' : 'default'} disabled={isCurrent}>{isCurrent ? copy.currentPlan : copy.upgradePlan}</BillingActionButton>
                     )}
                   </div>
                 </article>

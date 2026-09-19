@@ -1,6 +1,7 @@
 import { AnalyticsConsentControls } from '@/components/analytics/AnalyticsConsentControls';
 import { PublicLegalReviewPage } from '@/components/legal/public-legal-review-page';
 import { isSupportedLocale, type Locale } from '@/lib/i18n/locales';
+import { PUBLIC_PRIVACY_PUBLICATION } from '@/lib/legal/public-contract';
 
 export const revalidate = 300;
 
@@ -326,7 +327,9 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
       title={page.title}
       summary={page.summary}
       documentId="privacy-policy"
-      version="0.2-review"
+      version={PUBLIC_PRIVACY_PUBLICATION.version}
+      publicationState={PUBLIC_PRIVACY_PUBLICATION.state}
+      effectiveDate={PUBLIC_PRIVACY_PUBLICATION.effectiveDate}
       lastUpdated={LAST_UPDATED}
       sections={page.sections}
       actions={<AnalyticsConsentControls locale={locale} />}

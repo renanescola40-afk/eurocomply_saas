@@ -20,9 +20,9 @@ describe('completed Checkout activation authority guard', () => {
   });
 
   it('does not release a completed Checkout session while the subscription webhook is pending', () => {
-    const completed = route.indexOf("existingSession.status === 'complete'");
+    const completed = route.indexOf("existingSession?.status === 'complete'");
     const pending = route.indexOf("error: 'checkout_pending_activation'");
-    const expired = route.indexOf("existingSession.status !== 'expired'");
+    const expired = route.indexOf("existingSession && existingSession.status !== 'expired'");
     const release = route.indexOf("'billing_checkout_expired_session_release'");
 
     expect(completed).toBeGreaterThan(-1);

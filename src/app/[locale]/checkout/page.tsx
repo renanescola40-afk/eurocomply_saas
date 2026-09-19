@@ -229,7 +229,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
               </div>
             ) : organization ? (
               <div className="mt-6">
-                <BillingActionButton action="checkout" locale={locale} planId={selectedPlan.id} disabled={selectedPlanIsCurrent} className="flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/40">{selectedPlanIsCurrent ? copy.currentPlan : copy.continueSecureCheckout}</BillingActionButton>
+                <BillingActionButton action="checkout" locale={locale} planId={selectedPlan.id} requireLegalAcceptance disabled={selectedPlanIsCurrent} className="flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/40">{selectedPlanIsCurrent ? copy.currentPlan : copy.continueSecureCheckout}</BillingActionButton>
                 <p className="mt-3 text-center text-xs text-slate-500">{copy.workspace}: {organization.name}</p>
               </div>
             ) : user ? (
