@@ -58,7 +58,7 @@ describe('Vercel exact-SHA production orchestration regression', () => {
     expect(authBoundary).toContain('https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID');
     expect(authBoundary).toContain('Authorization: Bearer $VERCEL_TOKEN');
     expect(authBoundary).toContain('>/dev/null');
-    expect(authBoundary).toContain('Vercel authentication failed');
+    expect(authBoundary).toContain('Vercel project authentication failed');
     expect(authBoundary).not.toContain('echo "$VERCEL_TOKEN"');
     expect(authBoundary).not.toContain('printf \'%s\' "$VERCEL_TOKEN"');
   });
