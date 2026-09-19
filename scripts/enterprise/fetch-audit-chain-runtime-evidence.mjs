@@ -289,7 +289,7 @@ function extractEvidence(zipPath) {
   return JSON.parse(execFileSync('unzip', ['-p', zipPath, matches[0]], { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 }));
 }
 
-export async function fetchAuditChainRuntimeEvidence({ root, repository, token, targetSha, sourceRunId = '', required = false }) {
+export async function fetchAuditChainRuntimeEvidence({ root, repository, token, targetSha, sourceRunId = '', required = false, sourceContract: providedSourceContract }) {
   if (repository !== CANONICAL_REPOSITORY) throw new Error('repository_not_canonical');
   if (!token) throw new Error('github_token_missing');
   if (!FULL_SHA.test(targetSha)) throw new Error('target_sha_invalid');
@@ -328,11 +328,13 @@ export async function fetchAuditChainRuntimeEvidence({ root, repository, token, 
     if (!rawValidation.passed) throw new Error(`audit_chain_raw_evidence_invalid:${rawValidation.failures.join(',')}`);
 
     const verifiedAt = new Date(run.updated_at || run.created_at || Date.now()).toISOString();
-    let sourceContract;
-    try {
-      sourceContract = JSON.parse(readFileSync(join(root, EVIDENCE_PATH), 'utf8'));
-    } catch {
-      throw new Error('audit_chain_source_contract_invalid');
+    let sourceContract = providedSourceContract;
+    if (!sourceContract || typeof sourceContract !== 'object' || Array.isArray(sourceContract)) {
+      try {
+        sourceContract = JSON.parse(readFileSync(join(root, EVIDENCE_PATH), 'utf8'));
+      } catch {
+        throw new Error('audit_chain_source_contract_invalid');
+      }
     }
     const canonical = normalizeAuditChainEvidenceForP0(raw, {
       targetSha,
