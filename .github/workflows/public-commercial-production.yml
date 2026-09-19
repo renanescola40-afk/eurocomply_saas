@@ -117,6 +117,7 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TEAM_SLUG: ${{ vars.VERCEL_TEAM_SLUG || 'renanescola40-afks-projects' }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
     steps:
@@ -207,12 +208,10 @@ jobs:
             echo '::error title=Vercel project authentication failed::The configured token cannot read the bound production project/team.'
             exit 1
           fi
-          vercel_team_slug="$(curl --fail --silent --show-error             --header "Authorization: Bearer $VERCEL_TOKEN"             "https://api.vercel.com/v2/teams/$VERCEL_ORG_ID" | jq -r '.slug // empty')"
-          if [ -z "$vercel_team_slug" ]; then
-            echo '::error title=Vercel team slug resolution failed::Could not resolve the governed Vercel team slug from VERCEL_ORG_ID.'
+          if [ -z "${VERCEL_TEAM_SLUG:-}" ]; then
+            echo '::error title=Missing Vercel team slug::VERCEL_TEAM_SLUG must be configured for Vercel CLI scope.'
             exit 1
           fi
-          echo "VERCEL_TEAM_SLUG=$vercel_team_slug" >> "$GITHUB_ENV"
 
       - name: Link and pull Vercel production environment
         shell: bash
