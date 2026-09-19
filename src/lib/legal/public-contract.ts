@@ -43,10 +43,22 @@ export function isEffectivePublicLegalVersion(version: string) {
   return normalized.length > 0 && NON_EFFECTIVE_MARKERS.every((marker) => !normalized.includes(marker));
 }
 
-function isEffectivePublication(publication: PublicLegalPublication) {
-  return publication.publicationState === 'effective'
+export function isEffectivePublicLegalPublication(publication: {
+  version: string;
+  state: PublicLegalPublicationState;
+  effectiveDate: string | null;
+}) {
+  return publication.state === 'effective'
     && Boolean(publication.effectiveDate)
     && isEffectivePublicLegalVersion(publication.version);
+}
+
+function isEffectivePublication(publication: PublicLegalPublication) {
+  return isEffectivePublicLegalPublication({
+    version: publication.version,
+    state: publication.publicationState,
+    effectiveDate: publication.effectiveDate,
+  });
 }
 
 export function isPublicSelfServeContractEffective() {
