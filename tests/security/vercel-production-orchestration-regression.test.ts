@@ -48,15 +48,16 @@ describe('Vercel exact-SHA production orchestration regression', () => {
   });
 
   it('preflights Vercel authentication before pull and never prints the token', () => {
-    const auth = workflow.indexOf('Verify Vercel authentication before production access');
+    const auth = workflow.indexOf('Verify Vercel project-scoped authentication before production access');
     const pull = workflow.indexOf('Link and pull current Vercel production environment');
 
     expect(auth).toBeGreaterThan(-1);
     expect(pull).toBeGreaterThan(auth);
 
     const authBoundary = workflow.slice(auth, pull);
-    expect(authBoundary).toContain('whoami --token="$VERCEL_TOKEN"');
-    expect(authBoundary).toContain('>/dev/null 2>&1');
+    expect(authBoundary).toContain('https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID');
+    expect(authBoundary).toContain('Authorization: Bearer $VERCEL_TOKEN');
+    expect(authBoundary).toContain('>/dev/null');
     expect(authBoundary).toContain('Vercel authentication failed');
     expect(authBoundary).not.toContain('echo "$VERCEL_TOKEN"');
     expect(authBoundary).not.toContain('printf \'%s\' "$VERCEL_TOKEN"');
