@@ -43,24 +43,24 @@ describe('Public Commercial GA Vercel production lane', () => {
     }
   });
 
-  it('uses explicit Vercel project/team binding and a prebuilt production deploy', () => {
-    expect(workflow).toContain('rm -rf .vercel');
-    expect(workflow).not.toContain('.vercel/project.json');
-    expect(workflow).not.toContain('--project="$VERCEL_PROJECT_ID"');
-    expect(workflow).toContain("VERCEL_TEAM_SLUG: ${{ vars.VERCEL_TEAM_SLUG || 'renanescola40-afks-projects' }}");
-    expect(workflow).not.toContain('--scope="$VERCEL_TEAM_SLUG"');
-    expect(workflow).not.toContain('--scope="$VERCEL_ORG_ID"');
-    expect(workflow).not.toContain('https://api.vercel.com/v2/teams/$VERCEL_ORG_ID');
+  it('uses explicit Vercel project/team binding and observes the native exact-SHA production deployment', () => {
     expect(workflow).toContain('VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}');
     expect(workflow).toContain('VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}');
-    expect(workflow).toContain('--token="$VERCEL_TOKEN"');
-    expect(workflow).toContain('vercel@${VERCEL_CLI_VERSION}" pull');
-    expect(workflow).toContain('vercel@${VERCEL_CLI_VERSION}" build --prod');
-    expect(workflow).toContain('--prebuilt');
-    expect(workflow).toContain('--prod');
+    expect(workflow).toContain('https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID');
+    expect(workflow).toContain('https://api.vercel.com/v7/deployments?projectId=$VERCEL_PROJECT_ID&teamId=$VERCEL_ORG_ID&target=production&sha=');
+    expect(workflow).toContain('Wait for exact-SHA Vercel production deployment');
+    expect(workflow).toContain('Verify exact deployment identity');
+    expect(workflow).toContain('https://api.vercel.com/v13/deployments/$VERCEL_DEPLOYMENT_ID?teamId=$VERCEL_ORG_ID');
+    expect(workflow).toContain('test "$observed_target" = "production"');
+    expect(workflow).toContain('test "$state" = "READY"');
+    expect(workflow).not.toContain('vercel@${VERCEL_CLI_VERSION}');
+    expect(workflow).not.toContain('vercel pull');
+    expect(workflow).not.toContain('vercel deploy');
+    expect(workflow).not.toContain('--scope=');
+    expect(workflow).not.toContain('--project=');
   });
 
-  it('binds deployment to exact current main before build, deploy and after promotion', () => {
+  it('binds deployment verification to exact current main before observation and after promotion', () => {
     expect(workflow.match(/git rev-parse origin\/main/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
     expect(workflow).toContain('verify-runtime-release-sha.mjs');
     expect(workflow).toContain('RELEASE_COMMIT_SHA: ${{ inputs.release_sha }}');
