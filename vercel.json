@@ -5,7 +5,7 @@
   "ignoreCommand": "node scripts/vercel/ignore-build.mjs",
   "regions": ["dub1"],
   "git": {
-    "deploymentEnabled": false
+    "deploymentEnabled": true
   },
   "crons": [
     {
