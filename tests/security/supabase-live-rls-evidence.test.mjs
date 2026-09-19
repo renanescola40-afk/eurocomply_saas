@@ -1,6 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   backendOwnedTables,
+  buildEvidencePayload,
+  customerTenantTables,
+  optionalTables,
   requiredGlobalReferenceOperations,
   sameTenantWritableTables,
 } from '../../scripts/security/supabase-live-rls-evidence.mjs';
@@ -33,6 +37,30 @@ describe('Supabase live RLS forward-promotion evidence contract', () => {
       expect(sameTenantWritableTables).not.toContain(table);
     }
     expect(sameTenantWritableTables).toEqual(['monitoring_preferences']);
+  });
+
+
+  it('keeps audit_events in the protected tenant and backend-owned proof scope', () => {
+    expect(customerTenantTables).toContain('audit_events');
+    expect(backendOwnedTables).toContain('audit_events');
+    expect(optionalTables).not.toContain('audit_events');
+
+    const runner = readFileSync('scripts/security/run-supabase-live-tenant-isolation-v4.mjs', 'utf8');
+    expect(runner).toContain("audit_events: await seed(admin, 'audit_events'");
+    expect(runner).toContain("audit_events: { seed: c.seeds.audit_events");
+  });
+
+  it('emits an explicit production gate statement for passing evidence', () => {
+    const evidence = buildEvidencePayload({
+      status: 'Complete',
+      outcome: 'passed',
+      supabaseUrl: 'https://abcdefghijklmnopqrst.supabase.co',
+      commitSha: 'a'.repeat(40),
+      testCases: [],
+      serviceRolePaths: [{}, {}, {}, {}],
+    });
+
+    expect(evidence.productionGate.toLowerCase()).toContain('production');
   });
 
   it('treats regulatory updates as backend-only product data', () => {
