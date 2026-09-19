@@ -264,7 +264,7 @@ jobs:
           {
             echo '## RISCK COMPLY Public Commercial GA'
             echo
-            echo "- Release SHA: `$RELEASE_SHA`"
+            printf '%s\n' "- Release SHA: $RELEASE_SHA"
             echo "- Vercel project binding: checked"
             echo "- Vercel production build: completed if prior step passed"
             echo "- Exact runtime SHA: verified if prior verification step passed"
