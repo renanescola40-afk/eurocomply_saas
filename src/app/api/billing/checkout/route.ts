@@ -413,6 +413,7 @@ export async function POST(request: Request) {
             if (checkoutAttempt.outcome !== 'claimed') {
               return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
             }
+            existingSession = null as never;
           } else {
             if (!isSafeStripeCheckoutUrl(existingSession.url)) {
               throw new Error('billing_checkout_existing_session_url_invalid');
@@ -426,7 +427,7 @@ export async function POST(request: Request) {
           }
         }
 
-        if (existingSession.status === 'complete') {
+        if (existingSession?.status === 'complete') {
           return noStoreJson(
             {
               error: 'checkout_pending_activation',
@@ -437,14 +438,16 @@ export async function POST(request: Request) {
           );
         }
 
-        if (existingSession.status !== 'expired') {
+        if (existingSession && existingSession.status !== 'expired') {
           throw new Error('billing_checkout_existing_session_status_invalid');
         }
 
-        await releaseCheckoutAttemptSafely(organization.id, checkoutAttempt.attemptToken, 'billing_checkout_expired_session_release');
-        checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
-        if (checkoutAttempt.outcome !== 'claimed') {
-          return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
+        if (existingSession) {
+          await releaseCheckoutAttemptSafely(organization.id, checkoutAttempt.attemptToken, 'billing_checkout_expired_session_release');
+          checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
+          if (checkoutAttempt.outcome !== 'claimed') {
+            return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
+          }
         }
       }
     }
