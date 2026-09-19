@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateAuditChainLiveEvidence } from '../security/validate-audit-chain-live-evidence.mjs';
@@ -52,18 +52,51 @@ const CRITICAL_EVENT_COVERAGE_SOURCE_CONTRACT = Object.freeze({
 
 const RUNTIME_SOURCE_CONTRACT = Object.freeze({
   signedExport: {
+    status: 'covered_by_test',
     source: 'src/app/api/audit/evidence-pack/route.test.ts',
     acceptanceCriterion: 'exportIsSigned',
   },
   verifyWithStepUp: {
+    status: 'covered_by_test',
     source: 'src/app/api/audit/chain/verify/route.test.ts',
     acceptanceCriterion: 'verificationRequiresRbacAndStepUp',
   },
   cliVerifier: {
+    status: 'implemented',
     source: 'scripts/security/verify-audit-chain.mjs',
     contract: 'offline verifier for exported audit-chain evidence',
   },
 });
+
+const REQUIRED_CANONICAL_RUNTIME_VALIDATION = Object.freeze([
+  'appendNormal',
+  'appendConcurrent',
+  'tamperDetection',
+  'missingPreviousHash',
+  'signedExport',
+  'exportWithoutPermission',
+  'verifyWithoutPermission',
+  'verifyWithoutStepUp',
+  'verifyWithStepUp',
+  'requestContextSanitization',
+  'postgresTimestampReadback',
+  'cliVerifier',
+  'releaseGate',
+]);
+
+const REQUIRED_CANONICAL_ACCEPTANCE_CRITERIA = Object.freeze([
+  'auditChainDetectsTampering',
+  'appendIsTransactionalByDefault',
+  'concurrencySafeAppend',
+  'criticalEventsAudited',
+  'verificationRequiresRbacAndStepUp',
+  'exportRequiresRbacAndStepUp',
+  'exportIsSigned',
+  'metadataIsSanitized',
+  'requestContextSanitized',
+  'serverTimestampUsed',
+  'releaseGateLinked',
+]);
 
 function headers(token) {
   return {
@@ -133,7 +166,7 @@ export function validateRawAuditChainEvidence(evidence) {
   return { passed: failures.length === 0, failures };
 }
 
-export function normalizeAuditChainEvidenceForP0(evidence, { targetSha, repository, runId, verifiedAt }) {
+export function normalizeAuditChainEvidenceForP0(evidence, { targetSha, repository, runId, verifiedAt, sourceContract = {} }) {
   const canonical = {
     ...evidence,
     status: 'Complete',
@@ -145,10 +178,18 @@ export function normalizeAuditChainEvidenceForP0(evidence, { targetSha, reposito
     redactionConfirmation: 'Redaction confirmed for runtime evidence.',
     commitSha: targetSha,
     targetLiveValidation: evidence.liveValidation,
-    criticalEventCoverage: CRITICAL_EVENT_COVERAGE_SOURCE_CONTRACT,
+    criticalEventCoverage: {
+      ...CRITICAL_EVENT_COVERAGE_SOURCE_CONTRACT,
+      ...(sourceContract?.criticalEventCoverage ?? {}),
+    },
     runtimeValidation: {
-      ...(evidence?.runtimeValidation ?? {}),
       ...RUNTIME_SOURCE_CONTRACT,
+      ...(sourceContract?.runtimeValidation ?? {}),
+      ...(evidence?.runtimeValidation ?? {}),
+    },
+    acceptanceCriteria: {
+      ...(sourceContract?.acceptanceCriteria ?? {}),
+      ...(evidence?.acceptanceCriteria ?? {}),
     },
     verification_provenance: {
       method: 'github_actions',
@@ -200,6 +241,24 @@ export function validateCanonicalAuditChainEvidence(evidence, { targetSha, repos
     expectedBranch: 'main',
     expectedCommitSha: targetSha,
   });
+
+  if (!Array.isArray(evidence?.controlsVerified) || evidence.controlsVerified.length === 0) {
+    failures.push('controlsVerified must be present');
+  }
+  if (!evidence?.criticalEventCoverage || typeof evidence.criticalEventCoverage !== 'object' || Array.isArray(evidence.criticalEventCoverage)) {
+    failures.push('criticalEventCoverage must be present');
+  }
+
+  const runtime = evidence?.runtimeValidation ?? {};
+  for (const key of REQUIRED_CANONICAL_RUNTIME_VALIDATION) {
+    if (!runtime[key]?.status) failures.push(`runtimeValidation.${key}.status must be present`);
+  }
+
+  const acceptance = evidence?.acceptanceCriteria ?? {};
+  for (const key of REQUIRED_CANONICAL_ACCEPTANCE_CRITERIA) {
+    if (acceptance[key] !== true) failures.push(`acceptanceCriteria.${key} must be true`);
+  }
+
   return { passed: failures.length === 0, failures };
 }
 
@@ -230,7 +289,7 @@ function extractEvidence(zipPath) {
   return JSON.parse(execFileSync('unzip', ['-p', zipPath, matches[0]], { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 }));
 }
 
-export async function fetchAuditChainRuntimeEvidence({ root, repository, token, targetSha, sourceRunId = '', required = false }) {
+export async function fetchAuditChainRuntimeEvidence({ root, repository, token, targetSha, sourceRunId = '', required = false, sourceContract: providedSourceContract }) {
   if (repository !== CANONICAL_REPOSITORY) throw new Error('repository_not_canonical');
   if (!token) throw new Error('github_token_missing');
   if (!FULL_SHA.test(targetSha)) throw new Error('target_sha_invalid');
@@ -269,7 +328,21 @@ export async function fetchAuditChainRuntimeEvidence({ root, repository, token, 
     if (!rawValidation.passed) throw new Error(`audit_chain_raw_evidence_invalid:${rawValidation.failures.join(',')}`);
 
     const verifiedAt = new Date(run.updated_at || run.created_at || Date.now()).toISOString();
-    const canonical = normalizeAuditChainEvidenceForP0(raw, { targetSha, repository, runId, verifiedAt });
+    let sourceContract = providedSourceContract;
+    if (!sourceContract || typeof sourceContract !== 'object' || Array.isArray(sourceContract)) {
+      try {
+        sourceContract = JSON.parse(readFileSync(join(root, EVIDENCE_PATH), 'utf8'));
+      } catch {
+        throw new Error('audit_chain_source_contract_invalid');
+      }
+    }
+    const canonical = normalizeAuditChainEvidenceForP0(raw, {
+      targetSha,
+      repository,
+      runId,
+      verifiedAt,
+      sourceContract,
+    });
     const validation = validateCanonicalAuditChainEvidence(canonical, { targetSha, repository });
     if (!validation.passed) throw new Error(`audit_chain_evidence_invalid:${validation.failures.join(',')}`);
 

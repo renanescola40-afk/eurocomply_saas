@@ -47,10 +47,12 @@ describe('hydrated audit-chain evidence contract compatibility', () => {
     }
 
     expect(canonical.runtimeValidation.signedExport).toEqual({
+      status: 'covered_by_test',
       source: 'src/app/api/audit/evidence-pack/route.test.ts',
       acceptanceCriterion: 'exportIsSigned',
     });
     expect(canonical.runtimeValidation.verifyWithStepUp).toEqual({
+      status: 'covered_by_test',
       source: 'src/app/api/audit/chain/verify/route.test.ts',
       acceptanceCriterion: 'verificationRequiresRbacAndStepUp',
     });
