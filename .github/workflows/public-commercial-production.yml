@@ -244,13 +244,13 @@ jobs:
           if grep -Eq 'OBSERVED_PRODUCTION_GITHUB_SHA=[a-f0-9]{40}' "$binding"; then
             tested_sha="$(grep -Eo 'OBSERVED_PRODUCTION_GITHUB_SHA=[a-f0-9]{40}' "$binding" | head -n 1 | cut -d= -f2)"
           else
-            tested_sha="$(grep -Eo 'Production Git SHA: `[a-f0-9]{40}`' "$external" | head -n 1 | grep -Eo '[a-f0-9]{40}')"
+            tested_sha="$(grep -F 'Production Git SHA:' "$external" | head -n 1 | grep -Eo '[a-f0-9]{40}')"
           fi
 
           if grep -Eq 'OBSERVED_PRODUCTION_DEPLOYMENT_ID=dpl_[A-Za-z0-9]+' "$binding"; then
             tested_deployment_id="$(grep -Eo 'OBSERVED_PRODUCTION_DEPLOYMENT_ID=dpl_[A-Za-z0-9]+' "$binding" | head -n 1 | cut -d= -f2)"
           else
-            tested_deployment_id="$(grep -Eo 'Production deployment: `dpl_[A-Za-z0-9]+`' "$external" | head -n 1 | grep -Eo 'dpl_[A-Za-z0-9]+')"
+            tested_deployment_id="$(grep -F 'Production deployment:' "$external" | head -n 1 | grep -Eo 'dpl_[A-Za-z0-9]+')"
           fi
 
           [[ "$tested_sha" =~ ^[a-f0-9]{40}$ ]]
