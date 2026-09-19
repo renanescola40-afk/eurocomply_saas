@@ -22,8 +22,18 @@ export const PUBLIC_LEGAL_PUBLICATIONS = {
   },
 } as const satisfies Record<'terms' | 'privacy', PublicLegalPublication>;
 
-export const PUBLIC_TERMS_VERSION = PUBLIC_LEGAL_PUBLICATIONS.terms.version;
-export const PUBLIC_PRIVACY_VERSION = PUBLIC_LEGAL_PUBLICATIONS.privacy.version;
+export const PUBLIC_TERMS_PUBLICATION = {
+  ...PUBLIC_LEGAL_PUBLICATIONS.terms,
+  state: PUBLIC_LEGAL_PUBLICATIONS.terms.publicationState,
+} as const;
+
+export const PUBLIC_PRIVACY_PUBLICATION = {
+  ...PUBLIC_LEGAL_PUBLICATIONS.privacy,
+  state: PUBLIC_LEGAL_PUBLICATIONS.privacy.publicationState,
+} as const;
+
+export const PUBLIC_TERMS_VERSION = PUBLIC_TERMS_PUBLICATION.version;
+export const PUBLIC_PRIVACY_VERSION = PUBLIC_PRIVACY_PUBLICATION.version;
 export const PUBLIC_CONTRACT_ACCEPTANCE_METHOD = 'checkout_clickwrap_v1';
 
 const NON_EFFECTIVE_MARKERS = ['review', 'draft', 'pending'] as const;
