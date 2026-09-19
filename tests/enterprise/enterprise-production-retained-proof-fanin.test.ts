@@ -27,12 +27,14 @@ function fakeFetcher(key: string, calls: Array<Record<string, unknown>>) {
       targetSha?: unknown;
       sourceRunId?: unknown;
       required?: unknown;
+      sourceContract?: unknown;
     };
     calls.push({
       key,
       targetSha: observed.targetSha,
       sourceRunId: observed.sourceRunId,
       required: observed.required,
+      sourceContract: observed.sourceContract,
     });
     return key === 'auditChain'
       ? { found: true, runId: '4242', artifactId: '5252', targetSha: sha }
@@ -106,6 +108,35 @@ describe('enterprise production retained-proof fan-in', () => {
     const retained = JSON.parse(readFileSync(join(root, 'release-validation/retained-runtime-evidence-hydration.json'), 'utf8'));
     expect(retained.targetSha).toBe(sha);
     expect(retained.status).toBe('Complete');
+  });
+
+  it('captures the audit-chain source contract before repository snapshots are cleared', async () => {
+    const root = tempRoot();
+    const auditPath = 'docs/security/evidence/runtime/audit-chain-live-validation.json';
+    const absolute = join(root, auditPath);
+    mkdirSync(dirname(absolute), { recursive: true });
+    const sourceContract = {
+      runtimeValidation: {
+        signedExport: { status: 'covered_by_test' },
+      },
+      acceptanceCriteria: {
+        exportIsSigned: true,
+      },
+    };
+    writeFileSync(absolute, `${JSON.stringify(sourceContract)}\n`);
+
+    const calls: Array<Record<string, unknown>> = [];
+    await hydrateEnterpriseRetainedRuntimeEvidence({
+      root,
+      repository,
+      token: 'test-token',
+      targetSha: sha,
+      fetchers: fakeFetchers(calls),
+    });
+
+    const audit = calls.find((call) => call.key === 'auditChain');
+    expect(audit?.sourceContract).toEqual(sourceContract);
+    expect(existsSync(absolute)).toBe(false);
   });
 
   it('requires the exact triggering workflow run by stable path even when run-name is dynamic', async () => {
