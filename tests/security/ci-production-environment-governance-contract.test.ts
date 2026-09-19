@@ -52,16 +52,16 @@ describe('production environment governance boundaries', () => {
 
     const protectedBoundary = vercelProductionWorkflow.slice(protectedJob);
     expect(protectedBoundary).toContain(
-      'RELEASE_ROLLBACK_TARGET_URL: ${{ vars.RELEASE_ROLLBACK_TARGET_URL }}',
+      "RELEASE_ROLLBACK_TARGET_URL: ${{ vars.RELEASE_ROLLBACK_TARGET_URL || secrets['RELEASE_ROLLBACK_TARGET_URL'] || vars.LAST_KNOWN_GOOD_DEPLOYMENT_URL || secrets['LAST_KNOWN_GOOD_DEPLOYMENT_URL'] }}",
     );
     expect(protectedBoundary).toContain(
-      'RELEASE_ROLLBACK_TARGET: ${{ vars.RELEASE_ROLLBACK_TARGET_URL }}',
+      "RELEASE_ROLLBACK_TARGET: ${{ vars.RELEASE_ROLLBACK_TARGET || secrets['RELEASE_ROLLBACK_TARGET'] || vars.RELEASE_ROLLBACK_TARGET_URL || secrets['RELEASE_ROLLBACK_TARGET_URL'] || vars.LAST_KNOWN_GOOD_DEPLOYMENT_URL || secrets['LAST_KNOWN_GOOD_DEPLOYMENT_URL'] }}",
     );
     expect(protectedBoundary).toContain(
-      'RELEASE_ROLLBACK_TARGET_SHA: ${{ vars.RELEASE_ROLLBACK_TARGET_SHA }}',
+      "RELEASE_ROLLBACK_TARGET_SHA: ${{ vars.RELEASE_ROLLBACK_TARGET_SHA || secrets['RELEASE_ROLLBACK_TARGET_SHA'] || vars.LAST_KNOWN_GOOD_COMMIT_SHA || secrets['LAST_KNOWN_GOOD_COMMIT_SHA'] || vars.LAST_KNOWN_GOOD_SHA || secrets['LAST_KNOWN_GOOD_SHA'] }}",
     );
     expect(protectedBoundary).toContain(
-      'RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ vars.RELEASE_ROLLBACK_TARGET_VALIDATED }}',
+      "RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ vars.RELEASE_ROLLBACK_TARGET_VALIDATED || secrets['RELEASE_ROLLBACK_TARGET_VALIDATED'] }}",
     );
 
     expect(protectedBoundary).not.toMatch(/RELEASE_ROLLBACK_TARGET_URL:\s*https?:\/\//);

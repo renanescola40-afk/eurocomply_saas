@@ -62,6 +62,23 @@ describe('Vercel exact-SHA production orchestration regression', () => {
     expect(authBoundary).not.toContain('printf \'%s\' "$VERCEL_TOKEN"');
   });
 
+  it('wires protected immutable rollback inputs without weakening the rollback gate', () => {
+    expect(workflow).toContain(
+      "RELEASE_ROLLBACK_TARGET_URL: ${{ vars.RELEASE_ROLLBACK_TARGET_URL || secrets['RELEASE_ROLLBACK_TARGET_URL'] || vars.LAST_KNOWN_GOOD_DEPLOYMENT_URL || secrets['LAST_KNOWN_GOOD_DEPLOYMENT_URL'] }}",
+    );
+    expect(workflow).toContain(
+      "RELEASE_ROLLBACK_TARGET_SHA: ${{ vars.RELEASE_ROLLBACK_TARGET_SHA || secrets['RELEASE_ROLLBACK_TARGET_SHA'] || vars.LAST_KNOWN_GOOD_COMMIT_SHA || secrets['LAST_KNOWN_GOOD_COMMIT_SHA'] || vars.LAST_KNOWN_GOOD_SHA || secrets['LAST_KNOWN_GOOD_SHA'] }}",
+    );
+    expect(workflow).toContain(
+      "RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ vars.RELEASE_ROLLBACK_TARGET_VALIDATED || secrets['RELEASE_ROLLBACK_TARGET_VALIDATED'] }}",
+    );
+    expect(workflow).toContain(
+      "VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets['VERCEL_AUTOMATION_BYPASS_SECRET'] }}",
+    );
+    expect(workflow).toContain('npm run release:rollback:dry-run');
+    expect(workflow).not.toContain('continue-on-error: true');
+  });
+
   it('keeps exact current-main revalidation immediately before Vercel mutation and deploy', () => {
     const pull = workflow.indexOf('Link and pull current Vercel production environment');
     const mutationReverify = workflow.indexOf('Reverify current main immediately before production environment mutation');
