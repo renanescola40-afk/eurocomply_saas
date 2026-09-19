@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -19,6 +19,7 @@ const FULL_SHA = /^[a-f0-9]{40}$/;
 const NUMERIC_ID = /^\d+$/;
 const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const MANIFEST_PATH = 'release-validation/retained-runtime-evidence-hydration.json';
+const AUDIT_CHAIN_SOURCE_CONTRACT_PATH = 'docs/security/evidence/runtime/audit-chain-live-validation.json';
 
 export const RETAINED_RUNTIME_PRODUCERS = Object.freeze([
   Object.freeze({
@@ -177,6 +178,15 @@ export async function hydrateEnterpriseRetainedRuntimeEvidence({
   if (triggeredProducer && !NUMERIC_ID.test(normalizedSourceRunId)) throw new Error('source_run_id_invalid');
   if (!triggeredProducer && normalizedSourceRunId) throw new Error('source_run_without_workflow');
 
+  let auditChainSourceContract;
+  try {
+    auditChainSourceContract = JSON.parse(
+      await readFile(join(root, AUDIT_CHAIN_SOURCE_CONTRACT_PATH), 'utf8'),
+    );
+  } catch {
+    auditChainSourceContract = undefined;
+  }
+
   const clearedPaths = await clearRepositorySnapshots(root);
   const results = [];
 
@@ -194,6 +204,7 @@ export async function hydrateEnterpriseRetainedRuntimeEvidence({
         targetSha: normalizedTargetSha,
         sourceRunId: isTriggerSource ? normalizedSourceRunId : '',
         required: isTriggerSource,
+        sourceContract: producer.key === 'auditChain' ? auditChainSourceContract : undefined,
       });
     } catch (error) {
       await clearEvidencePaths(root, producer.evidencePaths);
