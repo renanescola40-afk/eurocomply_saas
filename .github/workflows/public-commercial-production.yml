@@ -229,7 +229,70 @@ jobs:
         run: npx --yes "vercel@${VERCEL_CLI_VERSION}" build --prod --project="$VERCEL_PROJECT_ID" --scope="$VERCEL_ORG_ID" --token="$VERCEL_TOKEN"
 
       - name: Preserve Beagle pre-change release boundary
-        run: node scripts/release/preserve-beagle-prechange-boundary.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          binding='docs/security/pentest/BEAGLE_ACTIVE_TEST_VERSION_BINDING_2026-09-12.md'
+          notice='docs/operations/BEAGLE_ACTIVE_TEST_OPERATIONAL_NOTICE_2026-09-12.md'
+          external='docs/security/evidence/external/beagle-vapt-2026-09-12.md'
+          amendment='docs/security/pentest/production-testing-amendment.md'
+
+          for source in "$binding" "$notice" "$external" "$amendment"; do
+            test -f "$source"
+          done
+
+          tested_sha="$(sed -n 's/^OBSERVED_PRODUCTION_GITHUB_SHA=\([a-f0-9]\{40\}\)$/\1/p' "$binding" | head -n 1)"
+          if [ -z "$tested_sha" ]; then
+            tested_sha="$(sed -n 's/^- Production Git SHA: `\([a-f0-9]\{40\}\)`$/\1/p' "$external" | head -n 1)"
+          fi
+          tested_deployment_id="$(sed -n 's/^OBSERVED_PRODUCTION_DEPLOYMENT_ID=\(dpl_[A-Za-z0-9]*\)$/\1/p' "$binding" | head -n 1)"
+          if [ -z "$tested_deployment_id" ]; then
+            tested_deployment_id="$(sed -n 's/^- Production deployment: `\(dpl_[A-Za-z0-9]*\)`$/\1/p' "$external" | head -n 1)"
+          fi
+
+          [[ "$tested_sha" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$tested_deployment_id" =~ ^dpl_[A-Za-z0-9]+$ ]]
+          grep -q 'www.risckcomply.com' "$binding"
+          grep -q 'EVIDENCE_PRESERVED=true' "$external"
+
+          mkdir -p artifacts/release
+          binding_sha256="$(sha256sum "$binding" | awk '{print $1}')"
+          notice_sha256="$(sha256sum "$notice" | awk '{print $1}')"
+          external_sha256="$(sha256sum "$external" | awk '{print $1}')"
+          amendment_sha256="$(sha256sum "$amendment" | awk '{print $1}')"
+
+          post_pentest=true
+          if [ "$tested_sha" = "$RELEASE_SHA" ]; then
+            post_pentest=false
+          fi
+
+          jq -n \
+            --arg capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg testedDeploymentId "$tested_deployment_id" \
+            --arg testedSha "$tested_sha" \
+            --arg proposedReleaseSha "$RELEASE_SHA" \
+            --arg bindingSha256 "$binding_sha256" \
+            --arg noticeSha256 "$notice_sha256" \
+            --arg externalSha256 "$external_sha256" \
+            --arg amendmentSha256 "$amendment_sha256" \
+            --argjson proposedReleaseIsPostPentestVersion "$post_pentest" \
+            '{
+              schema: "risck-comply.beagle-prechange-preservation.v1",
+              capturedAt: $capturedAt,
+              canonicalTarget: "https://www.risckcomply.com",
+              testedDeploymentId: $testedDeploymentId,
+              testedSha: $testedSha,
+              proposedReleaseSha: $proposedReleaseSha,
+              proposedReleaseIsPostPentestVersion: $proposedReleaseIsPostPentestVersion,
+              coverageInheritance: false,
+              statement: "Existing Beagle evidence remains attributed only to the tested pre-change Production version; this release does not inherit Beagle coverage without separate revalidation.",
+              sourceDigests: {
+                versionBindingSha256: $bindingSha256,
+                operationalNoticeSha256: $noticeSha256,
+                externalEvidenceSha256: $externalSha256,
+                productionTestingAmendmentSha256: $amendmentSha256
+              }
+            }' > artifacts/release/beagle-prechange-preservation.json
 
       - name: Upload Beagle pre-change preservation artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
