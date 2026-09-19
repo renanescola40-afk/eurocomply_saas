@@ -61,6 +61,8 @@ describe('Public Commercial GA Vercel production lane', () => {
     expect(workflow).toContain('RELEASE_COMMIT_SHA: ${{ inputs.release_sha }}');
     expect(workflow).toContain('RELEASE_BUILD_SHA: ${{ inputs.release_sha }}');
     expect(workflow).toContain('https://www.risckcomply.com');
+    expect(workflow).toContain('RELEASE_SMOKE_URLS: https://www.risckcomply.com');
+    expect(workflow).not.toContain('RELEASE_SMOKE_URLS: ${{ steps.deploy.outputs.url }}');
   });
 
   it('preserves the existing strict Enterprise deployment workflow independently', () => {
