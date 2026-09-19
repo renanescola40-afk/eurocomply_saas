@@ -1,0 +1,272 @@
+name: Public Commercial GA Production
+
+run-name: Public GA deploy for ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact 40-character SHA currently at the tip of main
+        required: true
+        type: string
+      confirmation:
+        description: Type DEPLOY_PUBLIC_GA to authorize the protected public production deployment
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+concurrency:
+  group: public-commercial-production
+  cancel-in-progress: false
+
+jobs:
+  authorize:
+    name: Authorize exact current-main Public GA SHA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Validate explicit Public GA authorization
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]] || {
+            echo 'release_sha must be a full 40-character Git SHA' >&2
+            exit 1
+          }
+          test "$CONFIRMATION" = 'DEPLOY_PUBLIC_GA'
+          test "$GITHUB_REF" = 'refs/heads/main'
+
+      - name: Verify release SHA is the current main tip
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          main_sha="$(curl --fail --silent --show-error             -H "Authorization: Bearer $GH_TOKEN"             -H 'Accept: application/vnd.github+json'             -H 'X-GitHub-Api-Version: 2022-11-28'             "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "${RELEASE_SHA,,}"
+
+  deploy-public-ga:
+    name: Public Commercial GA — build, deploy and verify exact SHA
+    needs: authorize
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: production
+    env:
+      RELEASE_TARGET: public-production
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      RELEASE_COMMIT_SHA: ${{ inputs.release_sha }}
+      RELEASE_BUILD_SHA: ${{ inputs.release_sha }}
+      NEXT_PUBLIC_BUILD_SHA: ${{ inputs.release_sha }}
+      NEXT_TELEMETRY_DISABLED: '1'
+      VERCEL_CLI_VERSION: '56.3.2'
+
+      RELEASE_PRODUCTION_URL: https://www.risckcomply.com
+      NEXT_PUBLIC_APP_URL: https://www.risckcomply.com
+      NEXT_PUBLIC_SITE_URL: https://www.risckcomply.com
+      TRUSTED_ORIGINS: https://www.risckcomply.com
+
+      RELEASE_ROLLBACK_TARGET_URL: ${{ vars.RELEASE_ROLLBACK_TARGET_URL || secrets['RELEASE_ROLLBACK_TARGET_URL'] || vars.LAST_KNOWN_GOOD_DEPLOYMENT_URL || secrets['LAST_KNOWN_GOOD_DEPLOYMENT_URL'] }}
+      RELEASE_ROLLBACK_TARGET: ${{ vars.RELEASE_ROLLBACK_TARGET || secrets['RELEASE_ROLLBACK_TARGET'] || vars.RELEASE_ROLLBACK_TARGET_URL || secrets['RELEASE_ROLLBACK_TARGET_URL'] || vars.LAST_KNOWN_GOOD_DEPLOYMENT_URL || secrets['LAST_KNOWN_GOOD_DEPLOYMENT_URL'] }}
+      LAST_KNOWN_GOOD_DEPLOYMENT_URL: ${{ vars.LAST_KNOWN_GOOD_DEPLOYMENT_URL || secrets['LAST_KNOWN_GOOD_DEPLOYMENT_URL'] || vars.RELEASE_ROLLBACK_TARGET_URL || secrets['RELEASE_ROLLBACK_TARGET_URL'] }}
+      RELEASE_ROLLBACK_TARGET_SHA: ${{ vars.RELEASE_ROLLBACK_TARGET_SHA || secrets['RELEASE_ROLLBACK_TARGET_SHA'] || vars.LAST_KNOWN_GOOD_COMMIT_SHA || secrets['LAST_KNOWN_GOOD_COMMIT_SHA'] || vars.LAST_KNOWN_GOOD_SHA || secrets['LAST_KNOWN_GOOD_SHA'] }}
+      LAST_KNOWN_GOOD_COMMIT_SHA: ${{ vars.LAST_KNOWN_GOOD_COMMIT_SHA || secrets['LAST_KNOWN_GOOD_COMMIT_SHA'] || vars.RELEASE_ROLLBACK_TARGET_SHA || secrets['RELEASE_ROLLBACK_TARGET_SHA'] || vars.LAST_KNOWN_GOOD_SHA || secrets['LAST_KNOWN_GOOD_SHA'] }}
+      RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ vars.RELEASE_ROLLBACK_TARGET_VALIDATED || secrets['RELEASE_ROLLBACK_TARGET_VALIDATED'] }}
+
+      HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ vars.STRIPE_PRICE_ESSENTIAL_MONTHLY || secrets['STRIPE_PRICE_ESSENTIAL_MONTHLY'] }}
+      STRIPE_PRICE_ESSENTIAL_ANNUAL: ${{ vars.STRIPE_PRICE_ESSENTIAL_ANNUAL || secrets['STRIPE_PRICE_ESSENTIAL_ANNUAL'] }}
+      STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ vars.STRIPE_PRICE_PROFESSIONAL_MONTHLY || secrets['STRIPE_PRICE_PROFESSIONAL_MONTHLY'] }}
+      STRIPE_PRICE_PROFESSIONAL_ANNUAL: ${{ vars.STRIPE_PRICE_PROFESSIONAL_ANNUAL || secrets['STRIPE_PRICE_PROFESSIONAL_ANNUAL'] }}
+
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+      REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY: 'true'
+      ENABLE_DASHBOARD_METRIC_SNAPSHOTS: 'false'
+
+      NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN || secrets['NEXT_PUBLIC_SENTRY_DSN'] }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      REQUIRE_MALWARE_SCAN_FOR_UPLOADS: ${{ vars.REQUIRE_MALWARE_SCAN_FOR_UPLOADS || 'false' }}
+      MALWARE_SCANNER_PROVIDER: ${{ vars.MALWARE_SCANNER_PROVIDER }}
+      MALWARE_SCANNER_ENDPOINT: ${{ secrets.MALWARE_SCANNER_ENDPOINT }}
+      MALWARE_SCANNER_URL: ${{ secrets.MALWARE_SCANNER_URL }}
+      MALWARE_SCANNER_API_KEY: ${{ secrets.MALWARE_SCANNER_API_KEY }}
+      CLOUDMERSIVE_API_KEY: ${{ secrets.CLOUDMERSIVE_API_KEY }}
+      MALWARE_SCANNER_ALLOWED_HOSTS: ${{ vars.MALWARE_SCANNER_ALLOWED_HOSTS }}
+      MALWARE_SCANNER_CLAMAV_HOST: ${{ secrets.MALWARE_SCANNER_CLAMAV_HOST }}
+      MALWARE_SCANNER_CLAMAV_PORT: ${{ vars.MALWARE_SCANNER_CLAMAV_PORT }}
+      MALWARE_SCANNER_TIMEOUT_MS: ${{ vars.MALWARE_SCANNER_TIMEOUT_MS }}
+
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+
+    steps:
+      - name: Check out exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Verify exact checkout and current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci
+
+      - name: Public production environment preflight
+        run: node scripts/release/check-public-production-release-env.mjs
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        env:
+          CI: 'true'
+          NODE_ENV: test
+        run: npm run test
+
+      - name: Build application
+        run: npm run build
+
+      - name: Public GA critical security gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run security:api-guards
+          npm run security:auth-tokens
+          npm run security:authorization-bola
+          npm run security:server-action-identity
+          npm run security:protected-routes
+          npm run security:origin-guards
+          npm run security:billing-webhook-body
+          npm run security:public-secrets
+          npm run security:public-errors
+          npm run security:headers
+          npm run security:no-store
+          npm run security:storage
+          npm run quality:routes
+
+      - name: Vercel production environment readiness
+        run: npm run ops:vercel-readiness
+
+      - name: Verify Vercel production binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ] || [ -z "${VERCEL_ORG_ID:-}" ]; then
+            echo '::error title=Missing Vercel production binding::VERCEL_TOKEN, VERCEL_PROJECT_ID and VERCEL_ORG_ID are required.'
+            exit 1
+          fi
+          if ! curl --fail --silent --show-error             --header "Authorization: Bearer $VERCEL_TOKEN"             "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID"             >/dev/null; then
+            echo '::error title=Vercel project authentication failed::The configured token cannot read the bound production project/team.'
+            exit 1
+          fi
+
+      - name: Link and pull Vercel production environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .vercel
+          mkdir -p .vercel
+          jq -n             --arg orgId "$VERCEL_ORG_ID"             --arg projectId "$VERCEL_PROJECT_ID"             '{orgId: $orgId, projectId: $projectId}' > .vercel/project.json
+          npx --yes "vercel@${VERCEL_CLI_VERSION}" pull             --yes             --environment=production             --project="$VERCEL_PROJECT_ID"             --scope="$VERCEL_ORG_ID"             --token="$VERCEL_TOKEN"
+
+      - name: Reverify main before Vercel build
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
+          test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
+
+      - name: Build Vercel production artifact
+        run: npx --yes "vercel@${VERCEL_CLI_VERSION}" build --prod --project="$VERCEL_PROJECT_ID" --scope="$VERCEL_ORG_ID" --token="$VERCEL_TOKEN"
+
+      - name: Reverify main before Vercel production deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
+          test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
+
+      - name: Deploy exact prebuilt artifact to Vercel production
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$(npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy             --prebuilt             --prod             --project="$VERCEL_PROJECT_ID"             --scope="$VERCEL_ORG_ID"             --token="$VERCEL_TOKEN")"
+          printf '%s\n' "$output"
+          deployment_url="$(printf '%s\n' "$output" | grep -Eo 'https://[^[:space:]]+\.vercel\.app' | tail -n 1)"
+          if [ -z "$deployment_url" ]; then
+            echo '::error title=Vercel deployment URL missing::Production deployment completed without a parseable deployment URL.'
+            exit 1
+          fi
+          echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
+
+      - name: Production smoke on deployed artifact and canonical hostname
+        env:
+          RELEASE_DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+          RELEASE_SMOKE_URLS: ${{ steps.deploy.outputs.url }},https://www.risckcomply.com
+        run: npm run release:deployment-smoke
+
+      - name: Verify exact deployed runtime SHA
+        env:
+          RELEASE_DEPLOYMENT_URL: https://www.risckcomply.com
+          RELEASE_PRODUCTION_URL: https://www.risckcomply.com
+        run: node scripts/release/verify-runtime-release-sha.mjs
+
+      - name: Reverify main after production promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
+
+      - name: Public GA deployment summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## RISCK COMPLY Public Commercial GA'
+            echo
+            echo "- Release SHA: `$RELEASE_SHA`"
+            echo "- Vercel project binding: checked"
+            echo "- Vercel production build: completed if prior step passed"
+            echo "- Exact runtime SHA: verified if prior verification step passed"
+            echo "- Enterprise 100 evidence: intentionally independent from this Public GA deployment lane"
+          } >> "$GITHUB_STEP_SUMMARY"
