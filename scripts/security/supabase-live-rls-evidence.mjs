@@ -9,12 +9,12 @@ export const FORWARD_EVIDENCE_SCHEMA = LIVE_RLS_EVIDENCE_SCHEMA;
 
 export const customerTenantTables = [
   'organizations', 'organization_members', 'ai_systems', 'compliance_tasks',
-  'documents', 'risks', 'vendors', 'subscriptions', 'audit_logs', 'invitations',
+  'documents', 'risks', 'vendors', 'subscriptions', 'audit_logs', 'audit_events', 'invitations',
   'onboarding_activation_runs', 'monitoring_preferences', 'profiles',
 ];
 export const globalReferenceTables = ['regulatory_updates'];
 export const criticalTables = [...customerTenantTables, ...globalReferenceTables];
-export const optionalTables = ['tasks', 'audit_events', 'notifications', 'ai_incidents', 'organization_invites'];
+export const optionalTables = ['tasks', 'notifications', 'ai_incidents', 'organization_invites'];
 export const requiredCoverageOperations = ['cross_tenant_read', 'cross_tenant_insert', 'cross_tenant_update', 'cross_tenant_delete'];
 export const requiredSameTenantReadOperations = ['same_tenant_read', 'same_tenant_read_backend_only'];
 export const requiredBackendWriteDenyOperations = ['same_tenant_insert_denied', 'same_tenant_update_denied', 'same_tenant_delete_denied'];
@@ -24,7 +24,7 @@ export const requiredViewerAdminDenyOperations = [
   'viewer_same_tenant_admin_delete_denied',
 ];
 export const backendOwnedTables = [
-  'subscriptions', 'audit_logs', 'invitations', 'compliance_tasks',
+  'subscriptions', 'audit_logs', 'audit_events', 'invitations', 'compliance_tasks',
   'ai_systems', 'documents', 'risks', 'vendors', 'onboarding_activation_runs',
   'ai_assessments',
 ];
@@ -177,7 +177,7 @@ export function buildEvidencePayload({
     summary: passing ? `Live Supabase RLS proof passed and is bound to governed forward promotion ${contract.changeSet} (${contract.count} migrations).` : 'Live Supabase RLS validation did not pass.',
     redactionConfirmation: 'Supabase project reference, credentials, tokens, secrets, connection strings and access-granting values are redacted.',
     evidenceLocations: ['docs/security/evidence/runtime/supabase-live-rls-validation.json'],
-    productionGate: passing ? 'eligible only if every other P0 runtime gate passes' : 'blocked',
+    productionGate: passing ? 'production eligible only if every other P0 runtime gate passes' : 'blocked',
     controlsVerified: passing ? [
       'RLS enabled on canonical customer tenant tables', 'Tenant A cannot read or mutate Tenant B rows',
       'Licensed same-tenant product access is preserved', 'Unlicensed and anonymous paid-product access is denied',
