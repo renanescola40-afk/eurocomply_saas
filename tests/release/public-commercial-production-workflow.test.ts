@@ -48,9 +48,10 @@ describe('Public Commercial GA Vercel production lane', () => {
     expect(workflow).toContain('.vercel/project.json');
     expect(workflow).toContain('--project="$VERCEL_PROJECT_ID"');
     expect(workflow).toContain("VERCEL_TEAM_SLUG: ${{ vars.VERCEL_TEAM_SLUG || 'renanescola40-afks-projects' }}");
-    expect(workflow).toContain('--scope="$VERCEL_TEAM_SLUG"');
+    expect(workflow).not.toContain('--scope="$VERCEL_TEAM_SLUG"');
     expect(workflow).not.toContain('--scope="$VERCEL_ORG_ID"');
     expect(workflow).not.toContain('https://api.vercel.com/v2/teams/$VERCEL_ORG_ID');
+    expect(workflow).toContain("'{orgId: $orgId, projectId: $projectId}' > .vercel/project.json");
     expect(workflow).toContain('--token="$VERCEL_TOKEN"');
     expect(workflow).toContain('vercel@${VERCEL_CLI_VERSION}" pull');
     expect(workflow).toContain('vercel@${VERCEL_CLI_VERSION}" build --prod');
