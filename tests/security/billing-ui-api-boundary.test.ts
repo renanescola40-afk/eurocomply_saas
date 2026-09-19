@@ -32,6 +32,8 @@ describe('billing UI API boundary', () => {
     expect(billingActionButton).toContain('returnPath=');
     expect(billingActionButton).toContain("method: 'POST'");
     expect(billingActionButton).toContain("legalAcceptance: legalAccepted");
+    expect(billingActionButton).toContain('requireLegalAcceptance?: boolean');
+    expect(publicCheckoutPage).toContain('requireLegalAcceptance');
     expect(billingActionButton).toContain('termsVersion: PUBLIC_TERMS_VERSION');
     expect(billingActionButton).toContain('privacyVersion: PUBLIC_PRIVACY_VERSION');
     expect(billingActionButton).toContain('method: PUBLIC_CONTRACT_ACCEPTANCE_METHOD');
@@ -65,6 +67,8 @@ describe('billing UI API boundary', () => {
     expect(billingCheckoutRoute).toContain('terms_version: PUBLIC_TERMS_VERSION');
     expect(billingCheckoutRoute).toContain('privacy_version: PUBLIC_PRIVACY_VERSION');
     expect(billingCheckoutRoute).toContain('legal_acceptance_at: legalAcceptanceAt');
+    expect(billingCheckoutRoute).toContain('validationOnlyCheckout');
+    expect(billingCheckoutRoute).toContain('existingLegalMatches');
   });
 
   it('keeps Stripe portal returns scoped to the billing dashboard route', () => {
