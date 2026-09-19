@@ -154,7 +154,7 @@ export function buildEvidencePayload({
   tablesReviewed = tableCoverageFrom(testCases), registerUpdated = false,
   reviewer = process.env.RLS_LIVE_REVIEWER || process.env.GITHUB_ACTOR || 'security-automation',
   command = commandUsed(), commitSha = 'unknown',
-  timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'), serviceRolePaths = [], extra = {},
+  timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'), serviceRolePaths = /** @type {Array<Record<string, unknown>>} */ ([]), extra = {},
 }) {
   const githubActions = githubActionsProvenanceFromEnv();
   const contract = loadForwardManifestContract();
