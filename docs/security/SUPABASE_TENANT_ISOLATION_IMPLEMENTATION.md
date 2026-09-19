@@ -18,7 +18,7 @@ This document records the repository-side implementation for EuroComply's multi-
 - `scripts/security/check-p0-runtime-evidence-register.mjs` prevents the P0 register from marking Supabase live RLS validation as `Complete` unless the runtime evidence JSON is also `Complete` with `outcome: passed`, timestamp, redacted Supabase project reference, tests run, zero failures, reviewer, command used, commit SHA, and required table coverage.
 - `tests/security/tenant-query-isolation.test.mjs` blocks organization-scoped query chains that filter only by `user_id` without an organization-aware guard.
 - `tests/security/supabase-rls-migration-coverage.test.mjs` verifies critical tables have migration-backed RLS/policy coverage, backend-owned tables have client write denial, stale backend write policies are cleaned up, legacy permissive policies are dropped, write policies require organization roles, broad `using true`/`with check true` policies are absent, and security definer helpers use explicit `search_path`.
-- `tests/security/supabase-live-rls-evidence.test.mjs` validates the live evidence parser/generator without touching Supabase.
+- `tests/security/supabase-live-rls-evidence.test.ts` validates the live evidence parser/generator without touching Supabase.
 - `docs/security/SUPABASE_RLS_TENANT_ISOLATION.md` is the operator runbook for the live tenant-isolation proof.
 - `docs/security/ENTERPRISE_TENANT_RLS_MODEL.md` describes the enterprise table protection model and the expected policy shape by table class.
 
