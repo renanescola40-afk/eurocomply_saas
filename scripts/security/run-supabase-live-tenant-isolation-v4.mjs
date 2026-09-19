@@ -25,7 +25,7 @@ const runner = 'scripts/security/run-supabase-live-tenant-isolation.mjs';
 const authOptions = { auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false } };
 const expectedDenial = /(row-level security|permission denied|not authorized|unauthorized|forbidden|new row violates|schema cache|could not find the table|function .* does not exist)/i;
 const forceRlsTables = new Set([
-  'ai_systems', 'compliance_tasks', 'documents', 'risks', 'vendors', 'audit_logs',
+  'ai_systems', 'compliance_tasks', 'documents', 'risks', 'vendors', 'audit_logs', 'audit_events',
   'invitations', 'onboarding_activation_runs', 'monitoring_preferences', 'ai_assessments', 'evidence_items',
 ]);
 const now = () => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
@@ -196,6 +196,7 @@ async function setup(admin, created) {
     vendors: await seed(admin, 'vendors', { organization_id: org.B.id, created_by: user.ownerB.id, name: `Vendor ${suffix}`, category: 'general' }, created),
     subscriptions: await seed(admin, 'subscriptions', { organization_id: org.B.id, plan: 'business', status: 'active' }, created),
     audit_logs: await seed(admin, 'audit_logs', { organization_id: org.B.id, actor_user_id: user.ownerB.id, action: 'seeded_log', entity_type: 'rls_validation', entity_id: suffix }, created),
+    audit_events: await seed(admin, 'audit_events', { organization_id: org.B.id, actor_user_id: user.ownerB.id, action: 'seeded_event', entity_type: 'rls_validation', entity_id: suffix, metadata: { synthetic: true } }, created),
     invitations: await seed(admin, 'invitations', { organization_id: org.B.id, email: `invite-${suffix}@example.com`, role: 'member', token: `seed-${suffix}`, invited_by: user.ownerB.id, expires_at: future }, created),
     onboarding_activation_runs: await seed(admin, 'onboarding_activation_runs', { organization_id: org.B.id, created_by: user.ownerB.id, country: 'PT', company_type: 'startup', sector: 'technology', ai_usage_level: 'active', initial_risk_level: 'limited', readiness_score: 42, status: 'completed' }, created),
     monitoring_preferences: await seed(admin, 'monitoring_preferences', { organization_id: org.B.id, user_id: user.ownerB.id, email: user.ownerB.email, regulatory_change_alerts: true, monthly_review_reminders: true, low_score_alerts: true }, created),
@@ -230,6 +231,7 @@ function spec(table, c) {
     vendors: { seed: c.seeds.vendors, insert: { organization_id: id, created_by: u.ownerA.id, name: `Cross vendor ${s}`, category: 'general' }, same: { organization_id: id, created_by: u.ownerB.id, name: `Same vendor ${s}`, category: 'general' }, update: { name: `Mutated ${s}` } },
     subscriptions: { seed: c.seeds.subscriptions, insert: { organization_id: c.org.target.id, plan: 'enterprise', status: 'active' }, sameDenied: { organization_id: id, plan: 'enterprise', status: 'active' }, update: { plan: 'free' } },
     audit_logs: { seed: c.seeds.audit_logs, insert: { organization_id: id, actor_user_id: u.ownerA.id, action: 'cross', entity_type: 'proof', entity_id: s }, sameDenied: { organization_id: id, actor_user_id: u.ownerB.id, action: 'same', entity_type: 'proof', entity_id: s }, update: { action: 'mutated' } },
+    audit_events: { seed: c.seeds.audit_events, insert: { organization_id: id, actor_user_id: u.ownerA.id, action: 'cross', entity_type: 'proof', entity_id: s, metadata: { synthetic: true } }, sameDenied: { organization_id: id, actor_user_id: u.ownerB.id, action: 'same', entity_type: 'proof', entity_id: s, metadata: { synthetic: true } }, update: { action: 'mutated' } },
     invitations: { seed: c.seeds.invitations, insert: { organization_id: id, email: `cross-${s}@example.com`, role: 'member', token: `cross-${s}`, invited_by: u.ownerA.id, expires_at: future }, sameDenied: { organization_id: id, email: `same-${s}@example.com`, role: 'member', token: `same-${s}`, invited_by: u.ownerB.id, expires_at: future }, update: { role: 'admin' } },
     onboarding_activation_runs: { seed: c.seeds.onboarding_activation_runs, insert: { organization_id: id, created_by: u.ownerA.id, country: 'PT', company_type: 'startup', sector: 'technology', ai_usage_level: 'active', initial_risk_level: 'limited', readiness_score: 38, status: 'completed' }, same: { organization_id: id, created_by: u.ownerB.id, country: 'PT', company_type: 'startup', sector: 'technology', ai_usage_level: 'active', initial_risk_level: 'limited', readiness_score: 75, status: 'completed' }, update: { readiness_score: 44 } },
     monitoring_preferences: { seed: c.seeds.monitoring_preferences, insert: { organization_id: id, user_id: u.ownerA.id, email: u.ownerA.email, regulatory_change_alerts: true, monthly_review_reminders: false, low_score_alerts: true }, same: { organization_id: id, user_id: u.adminB.id, email: u.adminB.email, regulatory_change_alerts: true, monthly_review_reminders: true, low_score_alerts: false }, update: { low_score_alerts: false } },
