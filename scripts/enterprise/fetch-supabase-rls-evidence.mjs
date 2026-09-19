@@ -176,13 +176,17 @@ export async function fetchSupabaseRlsEvidence({
   targetSha,
   sourceRunId = '',
   required = false,
+  sourceContract: providedSourceContract,
 }) {
   const sourcePath = join(root, SOURCE_EVIDENCE_PATH);
-  let sourceContract = {};
-  try {
-    sourceContract = JSON.parse(readFileSync(sourcePath, 'utf8'));
-  } catch {
-    if (required) throw new Error('source_contract_missing');
+  let sourceContract = providedSourceContract;
+  if (!sourceContract || typeof sourceContract !== 'object' || Array.isArray(sourceContract)) {
+    try {
+      sourceContract = JSON.parse(readFileSync(sourcePath, 'utf8'));
+    } catch {
+      if (required) throw new Error('source_contract_missing');
+      sourceContract = {};
+    }
   }
   removeStaleEvidence(root);
   if (repository !== CANONICAL_REPOSITORY) throw new Error('repository_not_canonical');
