@@ -30,6 +30,7 @@ type BillingActionButtonProps = {
   variant?: 'default' | 'outline';
   className?: string;
   errorReturnHref?: string;
+  requireLegalAcceptance?: boolean;
 };
 
 type ApiJson = Record<string, unknown>;
@@ -290,7 +291,7 @@ async function requestBillingAction({
   return { response, json };
 }
 
-export function BillingActionButton({ action, locale, planId, addOns, preserveExistingAddOns, disabled, children, variant = 'default', className, errorReturnHref }: BillingActionButtonProps) {
+export function BillingActionButton({ action, locale, planId, addOns, preserveExistingAddOns, disabled, children, variant = 'default', className, errorReturnHref, requireLegalAcceptance = false }: BillingActionButtonProps) {
   const [loading, setLoading] = useState(false);
   const [paidGaUnavailable, setPaidGaUnavailable] = useState<string | null>(null);
   const [legalAccepted, setLegalAccepted] = useState(false);
@@ -359,7 +360,7 @@ export function BillingActionButton({ action, locale, planId, addOns, preserveEx
 
   return (
     <form onSubmit={onSubmit} className={action === 'portal' ? 'flex flex-col gap-3 sm:flex-row' : 'mt-auto'}>
-      {action === 'checkout' ? (
+      {action === 'checkout' && requireLegalAcceptance ? (
         <label className="mb-3 flex items-start gap-3 text-xs leading-5 text-slate-400">
           <input
             type="checkbox"
@@ -376,7 +377,7 @@ export function BillingActionButton({ action, locale, planId, addOns, preserveEx
           </span>
         </label>
       ) : null}
-      <Button type="submit" className={className} variant={variant} disabled={disabled || loading || (action === 'checkout' && !legalAccepted)}>
+      <Button type="submit" className={className} variant={variant} disabled={disabled || loading || (action === 'checkout' && requireLegalAcceptance && !legalAccepted)}>
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
         {children}
         {action === 'portal' && !loading ? <ArrowRight className="h-4 w-4" /> : null}
