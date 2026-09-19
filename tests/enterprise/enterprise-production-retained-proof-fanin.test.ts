@@ -139,6 +139,30 @@ describe('enterprise production retained-proof fan-in', () => {
     expect(existsSync(absolute)).toBe(false);
   });
 
+  it('captures the Supabase RLS source contract before repository snapshots are cleared', async () => {
+    const root = tempRoot();
+    const supabasePath = 'docs/security/evidence/runtime/supabase-live-rls-validation.json';
+    const absolute = join(root, supabasePath);
+    mkdirSync(dirname(absolute), { recursive: true });
+    const sourceContract = {
+      productionGate: 'P0 production release may proceed only if all other P0 runtime evidence is satisfied.',
+    };
+    writeFileSync(absolute, `${JSON.stringify(sourceContract)}\n`);
+
+    const calls: Array<Record<string, unknown>> = [];
+    await hydrateEnterpriseRetainedRuntimeEvidence({
+      root,
+      repository,
+      token: 'test-token',
+      targetSha: sha,
+      fetchers: fakeFetchers(calls),
+    });
+
+    const supabase = calls.find((call) => call.key === 'supabaseRls');
+    expect(supabase?.sourceContract).toEqual(sourceContract);
+    expect(existsSync(absolute)).toBe(false);
+  });
+
   it('requires the exact triggering workflow run by stable path even when run-name is dynamic', async () => {
     const root = tempRoot();
     const calls: Array<Record<string, unknown>> = [];

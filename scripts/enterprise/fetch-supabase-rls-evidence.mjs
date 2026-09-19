@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -56,9 +56,16 @@ export function validateDownloadedEvidence(evidence, { targetSha, repository, ru
   });
 }
 
+export function resolveProductionGateStatement(sourceEvidence, runtimeEvidence) {
+  const candidates = [runtimeEvidence?.productionGate, sourceEvidence?.productionGate];
+  const statement = candidates.find((value) => typeof value === 'string' && value.toLowerCase().includes('production'));
+  if (!statement) throw new Error('production_gate_statement_missing');
+  return statement;
+}
+
 export function normalizeSupabaseRlsEvidenceForRelease(
   evidence,
-  { targetSha, repository, runId, now = new Date() },
+  { targetSha, repository, runId, now = new Date(), sourceContract = {} },
 ) {
   const normalizedSha = String(targetSha || '').trim().toLowerCase();
   const normalizedRunId = String(runId || '').trim();
@@ -74,6 +81,7 @@ export function normalizeSupabaseRlsEvidenceForRelease(
   const provenance = evidence.githubActions;
   const normalized = {
     ...evidence,
+    productionGate: resolveProductionGateStatement(sourceContract, evidence),
     runtimeContext: {
       generatedByGithubActions: true,
       repository,
@@ -168,7 +176,18 @@ export async function fetchSupabaseRlsEvidence({
   targetSha,
   sourceRunId = '',
   required = false,
+  sourceContract: providedSourceContract,
 }) {
+  const sourcePath = join(root, SOURCE_EVIDENCE_PATH);
+  let sourceContract = providedSourceContract;
+  if (!sourceContract || typeof sourceContract !== 'object' || Array.isArray(sourceContract)) {
+    try {
+      sourceContract = JSON.parse(readFileSync(sourcePath, 'utf8'));
+    } catch {
+      if (required) throw new Error('source_contract_missing');
+      sourceContract = {};
+    }
+  }
   removeStaleEvidence(root);
   if (repository !== CANONICAL_REPOSITORY) throw new Error('repository_not_canonical');
   if (!token) throw new Error('github_token_missing');
@@ -217,6 +236,7 @@ export async function fetchSupabaseRlsEvidence({
       targetSha,
       repository,
       runId: normalizedRunId,
+      sourceContract,
     });
 
     const output = join(root, SOURCE_EVIDENCE_PATH);

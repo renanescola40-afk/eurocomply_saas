@@ -20,6 +20,7 @@ const NUMERIC_ID = /^\d+$/;
 const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const MANIFEST_PATH = 'release-validation/retained-runtime-evidence-hydration.json';
 const AUDIT_CHAIN_SOURCE_CONTRACT_PATH = 'docs/security/evidence/runtime/audit-chain-live-validation.json';
+const SUPABASE_RLS_SOURCE_CONTRACT_PATH = 'docs/security/evidence/runtime/supabase-live-rls-validation.json';
 
 export const RETAINED_RUNTIME_PRODUCERS = Object.freeze([
   Object.freeze({
@@ -187,6 +188,15 @@ export async function hydrateEnterpriseRetainedRuntimeEvidence({
     auditChainSourceContract = undefined;
   }
 
+  let supabaseRlsSourceContract;
+  try {
+    supabaseRlsSourceContract = JSON.parse(
+      await readFile(join(root, SUPABASE_RLS_SOURCE_CONTRACT_PATH), 'utf8'),
+    );
+  } catch {
+    supabaseRlsSourceContract = undefined;
+  }
+
   const clearedPaths = await clearRepositorySnapshots(root);
   const results = [];
 
@@ -204,7 +214,11 @@ export async function hydrateEnterpriseRetainedRuntimeEvidence({
         targetSha: normalizedTargetSha,
         sourceRunId: isTriggerSource ? normalizedSourceRunId : '',
         required: isTriggerSource,
-        sourceContract: producer.key === 'auditChain' ? auditChainSourceContract : undefined,
+        sourceContract: producer.key === 'auditChain'
+          ? auditChainSourceContract
+          : producer.key === 'supabaseRls'
+            ? supabaseRlsSourceContract
+            : undefined,
       });
     } catch (error) {
       await clearEvidencePaths(root, producer.evidencePaths);
