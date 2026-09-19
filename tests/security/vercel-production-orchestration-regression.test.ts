@@ -74,7 +74,8 @@ describe('Vercel exact-SHA production orchestration regression', () => {
     expect(linkBoundary).toContain('--project="$VERCEL_PROJECT_ID"');
     expect(linkBoundary).toContain('--scope="$VERCEL_ORG_ID"');
 
-    const vercelCliLines = workflow
+    const normalizedWorkflow = workflow.replace(/\\\s*\n\s*/g, ' ');
+    const vercelCliLines = normalizedWorkflow
       .split('\n')
       .filter((line) => line.includes('npx --yes "vercel@${VERCEL_CLI_VERSION}"'));
 
