@@ -20,6 +20,7 @@ const billingAction = readFileSync(
 const checkoutPage = readFileSync(join(process.cwd(), 'src/app/[locale]/checkout/page.tsx'), 'utf8');
 const termsPage = readFileSync(join(process.cwd(), 'src/app/[locale]/terms/page.tsx'), 'utf8');
 const privacyPage = readFileSync(join(process.cwd(), 'src/app/[locale]/privacy/page.tsx'), 'utf8');
+const signupPage = readFileSync(join(process.cwd(), 'src/app/[locale]/signup/page.tsx'), 'utf8');
 
 describe('public paid launch legal contract gate', () => {
   it('keeps review publications fail-closed from the canonical publication records', () => {
@@ -64,6 +65,12 @@ describe('public paid launch legal contract gate', () => {
     expect(billingAction).toContain("action === 'checkout' && requireLegalAcceptance");
     expect(billingAction).toContain("action === 'checkout' && requireLegalAcceptance && !legalAccepted");
     expect(checkoutPage).toContain('requireLegalAcceptance');
+  });
+
+  it('shows a privacy notice at account creation without treating signup as Terms acceptance', () => {
+    expect(signupPage).toContain('getSignupPrivacyNotice');
+    expect(signupPage).toContain(`href={\`/\${activeLocale}/privacy\`}`);
+    expect(signupPage).not.toContain('PUBLIC_CONTRACT_ACCEPTANCE_METHOD');
   });
 
   it('expires a cached open Stripe session when its legal publication binding is stale', () => {
