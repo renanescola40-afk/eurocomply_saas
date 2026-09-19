@@ -9,6 +9,38 @@ import {
 const sha = 'a'.repeat(40);
 const repository = 'renanescola40-afk/eurocomply_saas';
 
+function sourceContract() {
+  return {
+    criticalEventCoverage: {
+      loginLogout: ['auth.login_success'],
+    },
+    runtimeValidation: {
+      appendNormal: { status: 'covered_by_test_and_live_script' },
+      appendConcurrent: { status: 'covered_by_test_and_live_script' },
+      tamperDetection: { status: 'covered_by_test_cli_and_live_script' },
+      missingPreviousHash: { status: 'covered_by_cli_and_live_script' },
+      signedExport: { status: 'covered_by_test' },
+      exportWithoutPermission: { status: 'covered_by_test' },
+      verifyWithoutPermission: { status: 'covered_by_test' },
+      verifyWithoutStepUp: { status: 'covered_by_test' },
+      verifyWithStepUp: { status: 'covered_by_test' },
+      requestContextSanitization: { status: 'covered_by_test' },
+      postgresTimestampReadback: { status: 'covered_by_test_and_live_script' },
+      cliVerifier: { status: 'implemented' },
+      releaseGate: { status: 'linked' },
+    },
+    acceptanceCriteria: {
+      appendIsTransactionalByDefault: true,
+      concurrencySafeAppend: true,
+      criticalEventsAudited: true,
+      metadataIsSanitized: true,
+      requestContextSanitized: true,
+      serverTimestampUsed: true,
+      releaseGateLinked: true,
+    },
+  };
+}
+
 function rawEvidence(now: string) {
   return {
     evidenceItem: 'audit-chain-live-validation',
@@ -121,6 +153,7 @@ describe('audit-chain exact-SHA evidence promotion', () => {
       repository,
       runId: '12345',
       verifiedAt: now.toISOString(),
+      sourceContract: sourceContract(),
     });
 
     expect(canonical.targetLiveValidation).toBe(raw.liveValidation);
@@ -140,6 +173,39 @@ describe('audit-chain exact-SHA evidence promotion', () => {
       ephemeralFixtureCleanupVerified: true,
     }));
 
+    for (const key of [
+      'appendNormal',
+      'appendConcurrent',
+      'tamperDetection',
+      'missingPreviousHash',
+      'signedExport',
+      'exportWithoutPermission',
+      'verifyWithoutPermission',
+      'verifyWithoutStepUp',
+      'verifyWithStepUp',
+      'requestContextSanitization',
+      'postgresTimestampReadback',
+      'cliVerifier',
+      'releaseGate',
+    ]) {
+      expect(canonical.runtimeValidation[key]?.status).toBeTruthy();
+    }
+    for (const key of [
+      'auditChainDetectsTampering',
+      'appendIsTransactionalByDefault',
+      'concurrencySafeAppend',
+      'criticalEventsAudited',
+      'verificationRequiresRbacAndStepUp',
+      'exportRequiresRbacAndStepUp',
+      'exportIsSigned',
+      'metadataIsSanitized',
+      'requestContextSanitized',
+      'serverTimestampUsed',
+      'releaseGateLinked',
+    ]) {
+      expect(canonical.acceptanceCriteria[key]).toBe(true);
+    }
+
     expect(validateCanonicalAuditChainEvidence(canonical, { targetSha: sha, repository, now }).failures).toEqual([]);
   });
 
@@ -150,10 +216,28 @@ describe('audit-chain exact-SHA evidence promotion', () => {
       repository,
       runId: '12345',
       verifiedAt: now.toISOString(),
+      sourceContract: sourceContract(),
     });
     canonical.targetLiveValidation.cleanup.authFixturesRemoved = false;
 
     expect(validateCanonicalAuditChainEvidence(canonical, { targetSha: sha, repository, now }).failures)
       .toContain('targetLiveValidation.cleanup.authFixturesRemoved must be true');
   });
+  it('fails closed when canonical release-consumer fields are dropped', () => {
+    const now = new Date();
+    const canonical = normalizeAuditChainEvidenceForP0(rawEvidence(now.toISOString()), {
+      targetSha: sha,
+      repository,
+      runId: '12345',
+      verifiedAt: now.toISOString(),
+      sourceContract: sourceContract(),
+    });
+    delete canonical.runtimeValidation.exportWithoutPermission.status;
+    canonical.acceptanceCriteria.requestContextSanitized = false;
+
+    const failures = validateCanonicalAuditChainEvidence(canonical, { targetSha: sha, repository, now }).failures;
+    expect(failures).toContain('runtimeValidation.exportWithoutPermission.status must be present');
+    expect(failures).toContain('acceptanceCriteria.requestContextSanitized must be true');
+  });
+
 });
