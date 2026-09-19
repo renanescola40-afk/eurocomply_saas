@@ -17,7 +17,7 @@ describe('Supabase live RLS forward-promotion evidence contract', () => {
     expect(contract.count).toBeGreaterThan(0);
     expect(contract.filenames).toHaveLength(contract.count);
     expect(new Set(contract.filenames).size).toBe(contract.count);
-    expect(contract.changeSet).toMatch(/enterprise-data-plane/);
+    expect(contract.changeSet).toBe('2026-09-10-production-runtime-contract-v43');
     expect(LIVE_RLS_EVIDENCE_SCHEMA).toBe('risck-comply.supabase-live-rls-validation.forward-promotion.v1');
   });
 
