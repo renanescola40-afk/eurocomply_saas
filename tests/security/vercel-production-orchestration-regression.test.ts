@@ -63,6 +63,29 @@ describe('Vercel exact-SHA production orchestration regression', () => {
     expect(authBoundary).not.toContain('printf \'%s\' "$VERCEL_TOKEN"');
   });
 
+  it('binds every Vercel CLI operation explicitly to the governed project and team scope', () => {
+    const link = workflow.indexOf('Link and pull current Vercel production environment');
+    const mutation = workflow.indexOf('Reverify current main immediately before production environment mutation');
+    const linkBoundary = workflow.slice(link, mutation);
+
+    expect(linkBoundary).toContain('rm -rf .vercel');
+    expect(linkBoundary).toContain('mkdir -p .vercel');
+    expect(linkBoundary).toContain("'{orgId: $orgId, projectId: $projectId}' > .vercel/project.json");
+    expect(linkBoundary).toContain('--project="$VERCEL_PROJECT_ID"');
+    expect(linkBoundary).toContain('--scope="$VERCEL_ORG_ID"');
+
+    const vercelCliLines = workflow
+      .split('\n')
+      .filter((line) => line.includes('npx --yes "vercel@${VERCEL_CLI_VERSION}"'));
+
+    for (const line of vercelCliLines) {
+      if (line.includes('pull') || line.includes('env add') || line.includes('build') || line.includes('deploy') || line.includes('promote')) {
+        expect(line).toContain('--project="$VERCEL_PROJECT_ID"');
+        expect(line).toContain('--scope="$VERCEL_ORG_ID"');
+      }
+    }
+  });
+
   it('wires protected immutable rollback inputs without weakening the rollback gate', () => {
     expect(workflow).toContain(
       "RELEASE_ROLLBACK_TARGET_URL: ${{ vars.RELEASE_ROLLBACK_TARGET_URL || secrets['RELEASE_ROLLBACK_TARGET_URL'] || vars.LAST_KNOWN_GOOD_DEPLOYMENT_URL || secrets['LAST_KNOWN_GOOD_DEPLOYMENT_URL'] }}",
