@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   backendOwnedTables,
+  buildEvidencePayload,
+  customerTenantTables,
   requiredGlobalReferenceOperations,
   sameTenantWritableTables,
 } from '../../scripts/security/supabase-live-rls-evidence.mjs';
@@ -28,11 +30,23 @@ describe('Supabase live RLS forward-promotion evidence contract', () => {
       'vendors',
       'onboarding_activation_runs',
       'ai_assessments',
+      'audit_events',
     ]) {
       expect(backendOwnedTables).toContain(table);
       expect(sameTenantWritableTables).not.toContain(table);
     }
     expect(sameTenantWritableTables).toEqual(['monitoring_preferences']);
+    expect(customerTenantTables).toContain('audit_events');
+  });
+
+  it('emits an explicit production gate statement for passing live RLS evidence', () => {
+    const evidence = buildEvidencePayload({
+      status: 'Complete',
+      outcome: 'passed',
+      supabaseUrl: 'https://example.supabase.co',
+      commitSha: 'a'.repeat(40),
+    });
+    expect(String(evidence.productionGate).toLowerCase()).toContain('production');
   });
 
   it('treats regulatory updates as backend-only product data', () => {
