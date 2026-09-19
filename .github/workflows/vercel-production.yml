@@ -341,15 +341,23 @@ jobs:
       - name: Run Vercel production environment readiness gate
         run: npm run ops:vercel-readiness
 
-      - name: Verify Vercel authentication before production access
+      - name: Verify Vercel project-scoped authentication before production access
         shell: bash
         run: |
           set -euo pipefail
-          if ! npx --yes "vercel@${VERCEL_CLI_VERSION}" whoami --token="$VERCEL_TOKEN" >/dev/null 2>&1; then
-            echo '::error title=Vercel authentication failed::VERCEL_TOKEN is missing, expired, revoked, belongs to the wrong account or team, or lacks access to the configured Vercel scope.'
+          if [ -z "${VERCEL_TOKEN:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ] || [ -z "${VERCEL_ORG_ID:-}" ]; then
+            echo '::error title=Missing Vercel production binding::VERCEL_TOKEN, VERCEL_PROJECT_ID, and VERCEL_ORG_ID are required.'
             exit 1
           fi
-          echo 'Vercel authentication preflight passed; credential material was not printed.'
+
+          if ! curl --fail --silent --show-error \
+            --header "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID" \
+            >/dev/null; then
+            echo '::error title=Vercel project authentication failed::The configured VERCEL_TOKEN cannot read the bound Production project. Refresh the token or its project/team scope.'
+            exit 1
+          fi
+          echo 'Vercel project authentication preflight passed; credential material was not printed.'
 
       - name: Link and pull current Vercel production environment
         run: npx --yes "vercel@${VERCEL_CLI_VERSION}" pull --yes --environment=production --token="$VERCEL_TOKEN"
