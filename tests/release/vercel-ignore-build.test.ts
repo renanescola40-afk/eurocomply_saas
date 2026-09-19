@@ -10,7 +10,7 @@ import {
 
 const vercelConfig = JSON.parse(readFileSync('vercel.json', 'utf8')) as {
   ignoreCommand?: string;
-  git?: { deploymentEnabled?: Record<string, boolean> };
+  git?: { deploymentEnabled?: boolean | Record<string, boolean> };
 };
 
 describe('Vercel ignored build rule', () => {
@@ -99,10 +99,6 @@ describe('Vercel ignored build rule', () => {
 
   it('disables automatic Git deployments so the protected release workflow is the only production authority', () => {
     expect(vercelConfig.ignoreCommand).toBe('node scripts/vercel/ignore-build.mjs');
-    expect(vercelConfig.git?.deploymentEnabled).toMatchObject({
-      main: false,
-      'agent/**': false,
-      '*': false,
-    });
+    expect(vercelConfig.git?.deploymentEnabled).toBe(false);
   });
 });
