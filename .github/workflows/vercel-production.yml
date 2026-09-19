@@ -17,6 +17,7 @@ on:
 permissions:
   contents: read
   actions: read
+  id-token: write
 
 concurrency:
   group: vercel-production-${{ inputs.release_sha }}
@@ -283,6 +284,44 @@ jobs:
 
       - name: Run route quality gate
         run: npm run quality:routes
+
+      - name: Mint short-lived GitHub OIDC token for Vercel Trusted Sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
+            echo '::error title=GitHub OIDC unavailable::The production job requires id-token: write so Vercel Trusted Sources can authenticate rollback health checks.'
+            exit 1
+          fi
+
+          trusted_oidc_token="$(
+            node <<'NODE'
+          const requestUrl = process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
+          const requestToken = process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+
+          const response = await fetch(requestUrl, {
+            headers: {
+              Authorization: `Bearer ${requestToken}`,
+              Accept: 'application/json',
+            },
+          });
+          if (!response.ok) {
+            console.error(`GitHub OIDC token request failed with HTTP ${response.status}`);
+            process.exit(1);
+          }
+
+          const payload = await response.json();
+          if (!payload?.value || typeof payload.value !== 'string') {
+            console.error('GitHub OIDC token response did not include a token');
+            process.exit(1);
+          }
+
+          process.stdout.write(payload.value);
+          NODE
+          )"
+
+          echo "::add-mask::$trusted_oidc_token"
+          printf 'VERCEL_TRUSTED_OIDC_TOKEN=%s\n' "$trusted_oidc_token" >> "$GITHUB_ENV"
 
       - name: Run pre-deployment release authorization gates
         shell: bash

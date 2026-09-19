@@ -156,9 +156,17 @@ const targetDiffersFromCurrentRelease = currentShaConfigured && targetShaConfigu
 const rollbackRunbookPresent = existsSync('docs/operations/ROLLBACK_RUNBOOK.md');
 const targetValidationProof = process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true';
 const vercelProtectionBypassSecret = (process.env.VERCEL_AUTOMATION_BYPASS_SECRET || '').trim();
+const vercelTrustedOidcToken = (process.env.VERCEL_TRUSTED_OIDC_TOKEN || '').trim();
 const vercelProtectionHeaders = vercelProtectionBypassSecret
   ? { 'x-vercel-protection-bypass': vercelProtectionBypassSecret }
-  : {};
+  : vercelTrustedOidcToken
+    ? { 'x-vercel-trusted-oidc-idp-token': vercelTrustedOidcToken }
+    : {};
+const vercelProtectionAuthMode = vercelProtectionBypassSecret
+  ? 'automation-bypass-secret'
+  : vercelTrustedOidcToken
+    ? 'github-oidc-trusted-source'
+    : 'none';
 
 const checks = [
   createCheck('rollbackTargetUrlConfigured', Boolean(targetUrlConfig?.value), { source: targetUrlConfig?.name ?? null }),
@@ -273,6 +281,8 @@ const evidence = {
     shaPrefix: targetSha ? `${targetSha.slice(0, 12)}…` : null,
     shaFullRecordedPrivately: targetShaConfigured,
     protectionBypassUsed: Boolean(vercelProtectionBypassSecret),
+    trustedOidcUsed: Boolean(vercelTrustedOidcToken),
+    protectionAuthMode: vercelProtectionAuthMode,
     health: rollbackHealth ? safeResponseSummary(rollbackHealth) : null,
     readinessChecked: Boolean(rollbackReady),
     readiness: rollbackReady ? safeResponseSummary(rollbackReady) : null,
@@ -294,6 +304,8 @@ const evidence = {
     readyOk,
     readyNoStore,
     protectionBypassUsed: Boolean(vercelProtectionBypassSecret),
+    trustedOidcUsed: Boolean(vercelTrustedOidcToken),
+    protectionAuthMode: vercelProtectionAuthMode,
     requiredEnv: 'RELEASE_ROLLBACK_TARGET_VALIDATED=true',
     note: 'This flag must only be set after manual functional validation of the previous known-good deployment.',
   },
@@ -315,6 +327,7 @@ const evidence = {
     valuesRedacted: true,
     authorizationHeaderStored: false,
     protectionBypassSecretStored: false,
+    trustedOidcTokenStored: false,
     cookiesStored: false,
     rollbackTargetStored: false,
     exactShaBound: runtimeContext.generatedByGithubActions && currentShaConfigured,
