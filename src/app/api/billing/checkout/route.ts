@@ -2,6 +2,12 @@ import Stripe from 'stripe';
 import { z } from 'zod';
 
 import { getBillingEntitlements } from '@/lib/billing/plans';
+import {
+  isPublicSelfServeContractEffective,
+  PUBLIC_CONTRACT_ACCEPTANCE_METHOD,
+  PUBLIC_PRIVACY_VERSION,
+  PUBLIC_TERMS_VERSION,
+} from '@/lib/legal/public-contract';
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
@@ -56,6 +62,12 @@ type StripeCustomerBinding = {
 const checkoutBodySchema = z.object({
   plan: z.string().trim().min(1).max(64),
   locale: z.string().trim().max(16).optional().default('en'),
+  legalAcceptance: z.object({
+    accepted: z.literal(true),
+    termsVersion: z.string().trim().min(1).max(64),
+    privacyVersion: z.string().trim().min(1).max(64),
+    method: z.literal(PUBLIC_CONTRACT_ACCEPTANCE_METHOD),
+  }).optional(),
 });
 
 function normalizeCheckoutLocale(locale: string): CheckoutLocale {
@@ -330,6 +342,22 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'public_paid_ga_not_enabled' }, { status: 503 });
     }
 
+    if (!isPublicSelfServeContractEffective()) {
+      return noStoreJson({ error: 'legal_publication_not_effective' }, { status: 503 });
+    }
+
+    const legalAcceptance = parsedBody.data.legalAcceptance;
+    if (
+      !legalAcceptance
+      || legalAcceptance.termsVersion !== PUBLIC_TERMS_VERSION
+      || legalAcceptance.privacyVersion !== PUBLIC_PRIVACY_VERSION
+      || legalAcceptance.method !== PUBLIC_CONTRACT_ACCEPTANCE_METHOD
+    ) {
+      return noStoreJson({ error: 'terms_acceptance_required' }, { status: 400 });
+    }
+
+    const legalAcceptanceAt = new Date().toISOString();
+
     let checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
     if (checkoutAttempt.outcome === 'busy') {
       return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
@@ -416,6 +444,10 @@ export async function POST(request: Request) {
       billing_flow: 'initial_subscription',
       step_up_action: 'not_required_initial_checkout',
       step_up_verified_at: '',
+      terms_version: PUBLIC_TERMS_VERSION,
+      privacy_version: PUBLIC_PRIVACY_VERSION,
+      legal_acceptance_method: PUBLIC_CONTRACT_ACCEPTANCE_METHOD,
+      legal_acceptance_at: legalAcceptanceAt,
     };
 
     try {
@@ -500,6 +532,10 @@ export async function POST(request: Request) {
           initialCheckoutSingleflight: true,
           liveSubscriptionAuthority: false,
           pendingCustomerBindingPersisted: true,
+          termsVersion: PUBLIC_TERMS_VERSION,
+          privacyVersion: PUBLIC_PRIVACY_VERSION,
+          legalAcceptanceMethod: PUBLIC_CONTRACT_ACCEPTANCE_METHOD,
+          legalAcceptanceAt,
         },
       });
 
