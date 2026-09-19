@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const vercelConfig = JSON.parse(readFileSync('vercel.json', 'utf8')) as {
   regions?: string[];
-  git?: { deploymentEnabled?: Record<string, boolean> };
+  git?: { deploymentEnabled?: boolean | Record<string, boolean> };
 };
 
 describe('Vercel production region affinity', () => {
@@ -12,7 +12,6 @@ describe('Vercel production region affinity', () => {
   });
 
   it('does not re-enable automatic Git deployments while the governed release path is in use', () => {
-    expect(vercelConfig.git?.deploymentEnabled?.main).toBe(false);
-    expect(vercelConfig.git?.deploymentEnabled?.['*']).toBe(false);
+    expect(vercelConfig.git?.deploymentEnabled).toBe(false);
   });
 });
