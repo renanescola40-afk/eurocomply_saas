@@ -135,6 +135,13 @@ jobs:
           git fetch --no-tags --depth=1 origin main
           test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
 
+      - name: Revalidate Production environment governance after admission
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: production
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
@@ -153,11 +160,16 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Test
-        env:
-          CI: 'true'
-          NODE_ENV: test
-        run: npm run test
+      - name: Test with production credentials isolated
+        shell: bash
+        run: |
+          set -euo pipefail
+          env -i \
+            HOME="$HOME" \
+            PATH="$PATH" \
+            CI=true \
+            NODE_ENV=test \
+            npm run test
 
       - name: Build application
         run: npm run build
@@ -216,6 +228,22 @@ jobs:
       - name: Build Vercel production artifact
         run: npx --yes "vercel@${VERCEL_CLI_VERSION}" build --prod --project="$VERCEL_PROJECT_ID" --scope="$VERCEL_ORG_ID" --token="$VERCEL_TOKEN"
 
+      - name: Preserve Beagle pre-change release boundary
+        run: node scripts/release/preserve-beagle-prechange-boundary.mjs
+
+      - name: Upload Beagle pre-change preservation artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: beagle-prechange-preservation-${{ inputs.release_sha }}
+          path: |
+            artifacts/release/beagle-prechange-preservation.json
+            docs/security/pentest/BEAGLE_ACTIVE_TEST_VERSION_BINDING_2026-09-12.md
+            docs/operations/BEAGLE_ACTIVE_TEST_OPERATIONAL_NOTICE_2026-09-12.md
+            docs/security/evidence/external/beagle-vapt-2026-09-12.md
+            docs/security/pentest/production-testing-amendment.md
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Reverify main before Vercel production deploy
         shell: bash
         run: |
@@ -238,10 +266,10 @@ jobs:
           fi
           echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
 
-      - name: Production smoke on deployed artifact and canonical hostname
+      - name: Production smoke on canonical hostname
         env:
-          RELEASE_DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
-          RELEASE_SMOKE_URLS: ${{ steps.deploy.outputs.url }},https://www.risckcomply.com
+          RELEASE_DEPLOYMENT_URL: https://www.risckcomply.com
+          RELEASE_SMOKE_URLS: https://www.risckcomply.com
         run: npm run release:deployment-smoke
 
       - name: Verify exact deployed runtime SHA
