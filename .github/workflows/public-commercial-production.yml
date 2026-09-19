@@ -66,7 +66,6 @@ jobs:
       RELEASE_BUILD_SHA: ${{ inputs.release_sha }}
       NEXT_PUBLIC_BUILD_SHA: ${{ inputs.release_sha }}
       NEXT_TELEMETRY_DISABLED: '1'
-      VERCEL_CLI_VERSION: '56.3.2'
 
       RELEASE_PRODUCTION_URL: https://www.risckcomply.com
       NEXT_PUBLIC_APP_URL: https://www.risckcomply.com
@@ -117,7 +116,6 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      VERCEL_TEAM_SLUG: ${{ vars.VERCEL_TEAM_SLUG || 'renanescola40-afks-projects' }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
     steps:
@@ -208,19 +206,7 @@ jobs:
             echo '::error title=Vercel project authentication failed::The configured token cannot read the bound production project/team.'
             exit 1
           fi
-          if [ -z "${VERCEL_TEAM_SLUG:-}" ]; then
-            echo '::error title=Missing Vercel team slug::VERCEL_TEAM_SLUG must be configured for Vercel CLI scope.'
-            exit 1
-          fi
-
-      - name: Pull Vercel production environment
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf .vercel
-          npx --yes "vercel@${VERCEL_CLI_VERSION}" pull             --yes             --environment=production             --token="$VERCEL_TOKEN"
-
-      - name: Reverify main before Vercel build
+      - name: Reverify main before observing Vercel production
         shell: bash
         run: |
           set -euo pipefail
@@ -228,8 +214,59 @@ jobs:
           test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
           test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
 
-      - name: Build Vercel production artifact
-        run: npx --yes "vercel@${VERCEL_CLI_VERSION}" build --prod --token="$VERCEL_TOKEN"
+      - name: Wait for exact-SHA Vercel production deployment
+        id: vercel_deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.vercel.com/v7/deployments?projectId=$VERCEL_PROJECT_ID&teamId=$VERCEL_ORG_ID&target=production&sha=${RELEASE_SHA,,}&limit=10"
+          deployment_json=''
+          for attempt in $(seq 1 40); do
+            response="$(curl --fail --silent --show-error               --header "Authorization: Bearer $VERCEL_TOKEN"               "$api")"
+            deployment_json="$(printf '%s' "$response" | jq -c '.deployments[0] // empty')"
+            if [ -n "$deployment_json" ]; then
+              state="$(printf '%s' "$deployment_json" | jq -r '.state // .readyState // empty')"
+              deployment_id="$(printf '%s' "$deployment_json" | jq -r '.uid // .id // empty')"
+              deployment_url="$(printf '%s' "$deployment_json" | jq -r '.url // empty')"
+              observed_sha="$(printf '%s' "$deployment_json" | jq -r '.meta.githubCommitSha // empty')"
+              observed_target="$(printf '%s' "$deployment_json" | jq -r '.target // empty')"
+
+              test "$observed_sha" = "${RELEASE_SHA,,}"
+              test "$observed_target" = "production"
+              [[ "$deployment_id" =~ ^dpl_[A-Za-z0-9]+$ ]]
+              [ -n "$deployment_url" ]
+
+              case "$state" in
+                READY)
+                  echo "id=$deployment_id" >> "$GITHUB_OUTPUT"
+                  echo "url=https://$deployment_url" >> "$GITHUB_OUTPUT"
+                  break
+                  ;;
+                ERROR|CANCELED|BLOCKED)
+                  echo "::error title=Exact-SHA Vercel deployment failed::Deployment $deployment_id reached terminal state $state."
+                  exit 1
+                  ;;
+              esac
+            fi
+
+            if [ "$attempt" -eq 40 ]; then
+              echo "::error title=Exact-SHA Vercel production deployment missing::No READY production deployment for ${RELEASE_SHA,,} was observed within 10 minutes."
+              exit 1
+            fi
+            sleep 15
+          done
+
+      - name: Verify exact deployment identity
+        shell: bash
+        env:
+          VERCEL_DEPLOYMENT_ID: ${{ steps.vercel_deployment.outputs.id }}
+        run: |
+          set -euo pipefail
+          deployment="$(curl --fail --silent --show-error             --header "Authorization: Bearer $VERCEL_TOKEN"             "https://api.vercel.com/v13/deployments/$VERCEL_DEPLOYMENT_ID?teamId=$VERCEL_ORG_ID")"
+          test "$(printf '%s' "$deployment" | jq -r '.projectId // empty')" = "$VERCEL_PROJECT_ID"
+          test "$(printf '%s' "$deployment" | jq -r '.meta.githubCommitSha // empty')" = "${RELEASE_SHA,,}"
+          state="$(printf '%s' "$deployment" | jq -r '.readyState // .state // empty')"
+          test "$state" = "READY"
 
       - name: Preserve Beagle pre-change release boundary
         shell: bash
@@ -313,27 +350,13 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-      - name: Reverify main before Vercel production deploy
+      - name: Reverify main before canonical production verification
         shell: bash
         run: |
           set -euo pipefail
           git fetch --no-tags --depth=1 origin main
           test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
           test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
-
-      - name: Deploy exact prebuilt artifact to Vercel production
-        id: deploy
-        shell: bash
-        run: |
-          set -euo pipefail
-          output="$(npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy             --prebuilt             --prod             --token="$VERCEL_TOKEN")"
-          printf '%s\n' "$output"
-          deployment_url="$(printf '%s\n' "$output" | grep -Eo 'https://[^[:space:]]+\.vercel\.app' | tail -n 1)"
-          if [ -z "$deployment_url" ]; then
-            echo '::error title=Vercel deployment URL missing::Production deployment completed without a parseable deployment URL.'
-            exit 1
-          fi
-          echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
 
       - name: Production smoke on canonical hostname
         env:
@@ -363,7 +386,7 @@ jobs:
             echo
             printf '%s\n' "- Release SHA: $RELEASE_SHA"
             echo "- Vercel project binding: checked"
-            echo "- Vercel production build: completed if prior step passed"
+            echo "- Exact-SHA Vercel production deployment: observed READY if prior step passed"
             echo "- Exact runtime SHA: verified if prior verification step passed"
             echo "- Enterprise 100 evidence: intentionally independent from this Public GA deployment lane"
           } >> "$GITHUB_STEP_SUMMARY"
