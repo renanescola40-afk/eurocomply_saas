@@ -116,6 +116,7 @@ export function BillingPlanIntentBanner({ locale, selectedPlan, canManageBilling
               action="checkout"
               locale={locale}
               planId={selectedPlan.id}
+              requireLegalAcceptance
               className="h-10 max-w-full rounded-xl bg-emerald-300 px-4 text-[#06100d] hover:bg-emerald-200"
             >
               {copy.continuePlan(selectedPlan.name)}
