@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 const evidencePath = 'artifacts/release/public-ga-rollback-resolution.json';
@@ -44,9 +44,11 @@ function deploymentTarget(item) {
 function deploymentUrl(item) {
   const raw = String(item?.url || '').trim();
   if (!raw) return null;
+
   try {
     const parsed = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
     if (parsed.protocol !== 'https:') return null;
+    if (!parsed.hostname.endsWith('.vercel.app')) return null;
     parsed.pathname = '';
     parsed.search = '';
     parsed.hash = '';
@@ -59,7 +61,7 @@ function deploymentUrl(item) {
 function responseHeaders() {
   const headers = {
     Accept: 'application/json',
-    'User-Agent': 'risck-comply-public-ga-rollback-resolver/1.0',
+    'User-Agent': 'risck-comply-public-ga-rollback-resolver/1.1',
   };
 
   const bypass = String(process.env.VERCEL_AUTOMATION_BYPASS_SECRET || '').trim();
@@ -94,7 +96,6 @@ async function healthIsReady(baseUrl) {
     });
 
     if (response.status !== 200) return false;
-
     const body = await response.json();
     return body?.status === 'ok';
   } catch {
@@ -102,17 +103,44 @@ async function healthIsReady(baseUrl) {
   }
 }
 
-function writeGithubEnv(values) {
-  const githubEnv = String(process.env.GITHUB_ENV || '').trim();
-  if (!githubEnv) throw new Error('missing_github_env');
+function writeEvidence(outcome) {
+  const evidence = outcome === 'passed'
+    ? {
+        schema: 'risck-comply.public-ga-rollback-resolution.v1',
+        status: 'Complete',
+        outcome: 'passed',
+        generatedAt: now(),
+        resolutionMode: 'automatic',
+        priorProductionDeploymentFound: true,
+        deploymentStateRequired: 'READY',
+        deploymentTargetRequired: 'production',
+        currentReleaseExcluded: true,
+        healthEndpointValidated: true,
+        protectionBypassSupported: true,
+        selectedRollbackIdentifiersStored: false,
+        containsSensitiveValues: false,
+      }
+    : {
+        schema: 'risck-comply.public-ga-rollback-resolution.v1',
+        status: 'Open',
+        outcome: 'failed',
+        generatedAt: now(),
+        resolutionMode: 'automatic',
+        priorProductionDeploymentFound: false,
+        deploymentStateRequired: 'READY',
+        deploymentTargetRequired: 'production',
+        currentReleaseExcluded: true,
+        healthEndpointValidated: false,
+        protectionBypassSupported: true,
+        selectedRollbackIdentifiersStored: false,
+        failure: 'no_previous_ready_production_deployment_with_healthy_api_health',
+        containsSensitiveValues: false,
+      };
 
-  for (const [name, value] of Object.entries(values)) {
-    if (/\r|\n/.test(value)) throw new Error(`unsafe_env_value_${name.toLowerCase()}`);
-    appendFileSync(githubEnv, `${name}=${value}\n`);
-  }
+  mkdirSync(dirname(evidencePath), { recursive: true });
+  writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
 }
 
-const generatedAt = now();
 const token = required('VERCEL_TOKEN');
 const orgId = required('VERCEL_ORG_ID');
 const projectId = required('VERCEL_PROJECT_ID');
@@ -134,12 +162,12 @@ const payload = await fetchJson(api, {
   headers: {
     Authorization: `Bearer ${token}`,
     Accept: 'application/json',
-    'User-Agent': 'risck-comply-public-ga-rollback-resolver/1.0',
+    'User-Agent': 'risck-comply-public-ga-rollback-resolver/1.1',
   },
 });
 
 const candidates = Array.isArray(payload?.deployments) ? payload.deployments : [];
-let selected = null;
+let foundHealthyRollback = false;
 
 for (const item of candidates) {
   const id = deploymentId(item);
@@ -155,58 +183,16 @@ for (const item of candidates) {
   if (state !== 'READY') continue;
 
   if (await healthIsReady(url)) {
-    selected = { id, sha, url };
+    foundHealthyRollback = true;
     break;
   }
 }
 
-if (!selected) {
-  const evidence = {
-    schema: 'risck-comply.public-ga-rollback-resolution.v1',
-    status: 'Open',
-    outcome: 'failed',
-    generatedAt,
-    currentReleaseSha: releaseSha,
-    currentDeploymentId: currentDeploymentId || null,
-    candidatesExamined: candidates.length,
-    selectedRollback: null,
-    failure: 'no_previous_ready_production_deployment_with_healthy_api_health',
-    containsSensitiveValues: false,
-  };
-  mkdirSync(dirname(evidencePath), { recursive: true });
-  writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+if (!foundHealthyRollback) {
+  writeEvidence('failed');
   throw new Error('healthy_rollback_target_missing');
 }
 
-writeGithubEnv({
-  RELEASE_ROLLBACK_TARGET_URL: selected.url,
-  RELEASE_ROLLBACK_TARGET: selected.url,
-  LAST_KNOWN_GOOD_DEPLOYMENT_URL: selected.url,
-  RELEASE_ROLLBACK_TARGET_SHA: selected.sha,
-  LAST_KNOWN_GOOD_COMMIT_SHA: selected.sha,
-  RELEASE_ROLLBACK_TARGET_VALIDATED: 'true',
-});
-
-const evidence = {
-  schema: 'risck-comply.public-ga-rollback-resolution.v1',
-  status: 'Complete',
-  outcome: 'passed',
-  generatedAt,
-  currentReleaseSha: releaseSha,
-  currentDeploymentId: currentDeploymentId || null,
-  candidatesExamined: candidates.length,
-  selectedRollback: {
-    deploymentId: selected.id,
-    commitSha: selected.sha,
-    host: new URL(selected.url).host,
-    healthEndpointValidated: true,
-  },
-  containsSensitiveValues: false,
-};
-
-mkdirSync(dirname(evidencePath), { recursive: true });
-writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
-
-console.log(`Resolved healthy rollback deployment: ${selected.id}`);
-console.log(`Resolved healthy rollback SHA: ${selected.sha}`);
+writeEvidence('passed');
+console.log('Resolved and health-validated a previous READY production deployment for rollback.');
 console.log(`Wrote ${evidencePath}`);
