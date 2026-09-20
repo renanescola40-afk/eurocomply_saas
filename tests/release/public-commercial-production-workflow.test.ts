@@ -57,6 +57,10 @@ describe('Public Commercial GA Vercel production lane', () => {
     expect(rollbackResolver).toContain("if (state !== 'READY') continue");
     expect(rollbackResolver).toContain("if (sha === releaseSha) continue");
     expect(rollbackResolver).toContain("/api/health");
+    expect(rollbackResolver).toContain("const VERCEL_CLI_VERSION = '56.3.2'");
+    expect(rollbackResolver).toContain("'curl'");
+    expect(rollbackResolver).toContain("'--token'");
+    expect(rollbackResolver).toContain('healthIsReadyViaVercelCurl');
     expect(rollbackResolver).toContain("selectedRollbackIdentifiersStored: false");
     expect(rollbackResolver).not.toContain('GITHUB_ENV');
     expect(rollbackResolver).not.toContain('RELEASE_ROLLBACK_TARGET_URL: selected');
@@ -113,5 +117,9 @@ describe('Public Commercial GA Vercel production lane', () => {
     expect(workflow).not.toContain('|| true');
     expect(workflow).not.toContain('exit 0 #');
     expect(rollbackResolver).not.toContain('|| true');
+    expect(rollbackResolver).not.toContain('shell: true');
+    expect(rollbackResolver).not.toContain("'deploy'");
+    expect(rollbackResolver).not.toContain("'pull'");
+    expect(rollbackResolver).not.toContain("'promote'");
   });
 });
