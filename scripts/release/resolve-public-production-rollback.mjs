@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
+import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 const evidencePath = 'artifacts/release/public-ga-rollback-resolution.json';
+const VERCEL_CLI_VERSION = '56.3.2';
 const timeoutMs = Number.parseInt(process.env.RELEASE_ROLLBACK_HEALTH_TIMEOUT_MS || '10000', 10);
 const maxCandidates = Number.parseInt(process.env.RELEASE_ROLLBACK_MAX_CANDIDATES || '20', 10);
 
@@ -86,7 +88,39 @@ async function fetchJson(url, options = {}) {
   return response.json();
 }
 
-async function healthIsReady(baseUrl) {
+function healthIsReadyViaVercelCurl(baseUrl, token) {
+  const result = spawnSync(
+    'npx',
+    [
+      '--yes',
+      `vercel@${VERCEL_CLI_VERSION}`,
+      'curl',
+      `${baseUrl}/api/health`,
+      '--token',
+      token,
+      '--silent',
+      '--show-error',
+    ],
+    {
+      encoding: 'utf8',
+      env: { ...process.env, VERCEL_TOKEN: token },
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: timeoutMs + 5_000,
+      maxBuffer: 256 * 1024,
+    },
+  );
+
+  if (result.error || result.status !== 0) return false;
+
+  try {
+    const body = JSON.parse(String(result.stdout || '').trim());
+    return body?.status === 'ok';
+  } catch {
+    return false;
+  }
+}
+
+async function healthIsReady(baseUrl, token) {
   try {
     const response = await fetch(`${baseUrl}/api/health`, {
       method: 'GET',
@@ -95,12 +129,15 @@ async function healthIsReady(baseUrl) {
       signal: AbortSignal.timeout(timeoutMs),
     });
 
-    if (response.status !== 200) return false;
-    const body = await response.json();
-    return body?.status === 'ok';
+    if (response.status === 200) {
+      const body = await response.json();
+      if (body?.status === 'ok') return true;
+    }
   } catch {
-    return false;
+    // Fall through to the authenticated Vercel transport below.
   }
+
+  return healthIsReadyViaVercelCurl(baseUrl, token);
 }
 
 function writeEvidence(outcome) {
@@ -182,7 +219,7 @@ for (const item of candidates) {
   if (target !== 'production') continue;
   if (state !== 'READY') continue;
 
-  if (await healthIsReady(url)) {
+  if (await healthIsReady(url, token)) {
     foundHealthyRollback = true;
     break;
   }
