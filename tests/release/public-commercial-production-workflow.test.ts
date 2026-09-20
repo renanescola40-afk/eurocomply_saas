@@ -44,30 +44,36 @@ describe('Public Commercial GA Vercel production lane', () => {
     }
   });
 
-  it('resolves rollback automatically from a previous healthy production deployment', () => {
+  it('resolves and proves exactly one previous production rollback candidate', () => {
     expect(workflow).toContain('RELEASE_ROLLBACK_RESOLUTION_MODE: automatic');
+    expect(workflow).toContain("RELEASE_ROLLBACK_CLI_TIMEOUT_MS: '90000'");
     expect(workflow).toContain('Resolve and validate previous healthy production rollback');
+    expect(workflow).toContain('id: rollback_resolver');
     expect(workflow).toContain('node scripts/release/resolve-public-production-rollback.mjs');
     expect(workflow).toContain('public-ga-rollback-resolution.json');
     expect(workflow).not.toContain('vars.RELEASE_ROLLBACK_TARGET_URL');
     expect(workflow).not.toContain("secrets['RELEASE_ROLLBACK_TARGET_URL']");
     expect(workflow).not.toContain('vars.LAST_KNOWN_GOOD_DEPLOYMENT_URL');
 
-    expect(rollbackResolver).toContain("api.searchParams.set('target', 'production')");
-    expect(rollbackResolver).toContain("if (state !== 'READY') continue");
-    expect(rollbackResolver).toContain("if (sha === releaseSha) continue");
-    expect(rollbackResolver).toContain("/api/health");
+    expect(rollbackResolver).toContain("listEndpoint.searchParams.set('target', 'production')");
+    expect(rollbackResolver).toContain("state !== 'READY'");
+    expect(rollbackResolver).toContain("target !== 'production'");
+    expect(rollbackResolver).toContain("createdAt >= currentCreatedAt");
+    expect(rollbackResolver).toContain("ref && ref !== 'main'");
     expect(rollbackResolver).toContain("const VERCEL_CLI_VERSION = '56.3.2'");
     expect(rollbackResolver).toContain("'curl'");
-    expect(rollbackResolver).toContain("'--token'");
-    expect(rollbackResolver).toContain('healthIsReadyViaVercelCurl');
+    expect(rollbackResolver).toContain("'/api/health'");
+    expect(rollbackResolver).toContain("'--deployment'");
+    expect(rollbackResolver).not.toContain("'--token'");
+    expect(rollbackResolver).toContain("VERCEL_TOKEN: token");
     expect(rollbackResolver).toContain("selectedRollbackIdentifiersStored: false");
     expect(rollbackResolver).not.toContain('GITHUB_ENV');
     expect(rollbackResolver).not.toContain('RELEASE_ROLLBACK_TARGET_URL: selected');
-    expect(rollbackResolver).toContain("throw new Error('healthy_rollback_target_missing')");
+    expect(rollbackResolver).toContain("githubOutput('validated', 'true')");
+    expect(rollbackResolver).toContain("githubOutput('validated', 'false')");
   });
 
-  it('preserves Beagle evidence before the fallible rollback gate and uploads rollback evidence on failure', () => {
+  it('preserves Beagle before rollback and binds smoke to resolver proof instead of a hard-coded pass', () => {
     const preserveIndex = workflow.indexOf('Preserve Beagle pre-change release boundary');
     const resolverIndex = workflow.indexOf('Resolve and validate previous healthy production rollback');
     const smokeIndex = workflow.indexOf('Production smoke on canonical hostname');
@@ -76,7 +82,10 @@ describe('Public Commercial GA Vercel production lane', () => {
     expect(resolverIndex).toBeGreaterThan(preserveIndex);
     expect(smokeIndex).toBeGreaterThan(resolverIndex);
     expect(workflow).toMatch(/Upload Public GA rollback resolution evidence\n\s+if: always\(\)/);
-    expect(workflow).toContain("RELEASE_ROLLBACK_TARGET_VALIDATED: 'true'");
+    expect(workflow).toContain('RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ steps.rollback_resolver.outputs.validated }}');
+    expect(workflow).not.toContain("RELEASE_ROLLBACK_TARGET_VALIDATED: 'true'");
+    expect(workflow).toContain('Upload Public GA smoke evidence');
+    expect(workflow).toContain('Upload runtime SHA evidence');
   });
 
   it('uses explicit Vercel project/team binding and observes the native exact-SHA production deployment', () => {
