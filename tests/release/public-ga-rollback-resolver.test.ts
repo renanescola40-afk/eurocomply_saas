@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   getGitHubActionsOidcToken,
+  runResolver,
   normalizeDeploymentUrl,
   protectedHealthProbe,
   selectRollbackCandidate,
@@ -13,6 +14,13 @@ afterEach(() => {
   vi.restoreAllMocks();
   delete process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
   delete process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+  delete process.env.VERCEL_TOKEN;
+  delete process.env.VERCEL_ORG_ID;
+  delete process.env.VERCEL_PROJECT_ID;
+  delete process.env.RELEASE_SHA;
+  delete process.env.CURRENT_VERCEL_DEPLOYMENT_ID;
+  delete process.env.GITHUB_REPOSITORY;
+  delete process.env.GITHUB_OUTPUT;
 });
 
 describe('Public GA rollback resolver contract', () => {
@@ -164,6 +172,65 @@ describe('Public GA rollback resolver contract', () => {
     expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({
       'x-vercel-trusted-oidc-idp-token': 'header.payload.signature',
     });
+  });
+
+
+  it('restores the full resolver execution path and validates a direct healthy rollback candidate', async () => {
+    process.env.VERCEL_TOKEN = 'test-token';
+    process.env.VERCEL_ORG_ID = 'team_test';
+    process.env.VERCEL_PROJECT_ID = 'prj_test';
+    process.env.RELEASE_SHA = releaseSha;
+    process.env.CURRENT_VERCEL_DEPLOYMENT_ID = 'dpl_current123';
+    process.env.GITHUB_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
+    delete process.env.GITHUB_OUTPUT;
+
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          uid: 'dpl_current123',
+          projectId: 'prj_test',
+          created: 300,
+          state: 'READY',
+          target: 'production',
+          meta: { githubCommitSha: releaseSha },
+        }), { status: 200, headers: { 'content-type': 'application/json' } }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          deployments: [{
+            uid: 'dpl_previous123',
+            url: 'previous.example.vercel.app',
+            created: 200,
+            state: 'READY',
+            target: 'production',
+            meta: {
+              githubCommitSha: priorSha,
+              githubCommitRef: 'main',
+              githubRepo: 'eurocomply_saas',
+              githubOrg: 'renanescola40-afk',
+            },
+          }],
+        }), { status: 200, headers: { 'content-type': 'application/json' } }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          uid: 'dpl_previous123',
+          projectId: 'prj_test',
+          created: 200,
+          state: 'READY',
+          target: 'production',
+          meta: { githubCommitSha: priorSha },
+        }), { status: 200, headers: { 'content-type': 'application/json' } }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: 'ok' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+
+    await expect(runResolver()).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it('accepts only HTTPS Vercel deployment origins', () => {
