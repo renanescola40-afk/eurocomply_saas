@@ -31,9 +31,10 @@ describe('Sentry production build contract', () => {
     expect(productionWorkflow).toContain("SENTRY_RELEASE: ${{ inputs.release_sha }}");
     expect(productionWorkflow).toContain("NEXT_PUBLIC_SENTRY_RELEASE: ${{ inputs.release_sha }}");
     expect(productionWorkflow).toContain('normalized_sha="${RELEASE_SHA,,}"');
-    expect(productionWorkflow).toContain("printf 'RELEASE_SHA=%s\\n' \"$normalized_sha\" >> \"$GITHUB_ENV\"");
-    expect(productionWorkflow).toContain("printf 'SENTRY_RELEASE=%s\\n' \"$normalized_sha\" >> \"$GITHUB_ENV\"");
-    expect(productionWorkflow).toContain("printf 'NEXT_PUBLIC_SENTRY_RELEASE=%s\\n' \"$normalized_sha\" >> \"$GITHUB_ENV\"");
+    expect(productionWorkflow).toContain("printf 'RELEASE_SHA=%s\\n' \"$normalized_sha\"");
+    expect(productionWorkflow).toContain("printf 'SENTRY_RELEASE=%s\\n' \"$normalized_sha\"");
+    expect(productionWorkflow).toContain("printf 'NEXT_PUBLIC_SENTRY_RELEASE=%s\\n' \"$normalized_sha\"");
+    expect(productionWorkflow).toContain('} >> "$GITHUB_ENV"');
     expect(productionWorkflow).toContain('--build-env "SENTRY_RELEASE=$SENTRY_RELEASE"');
     expect(productionWorkflow).toContain('--build-env "NEXT_PUBLIC_SENTRY_RELEASE=$NEXT_PUBLIC_SENTRY_RELEASE"');
   });
