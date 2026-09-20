@@ -72,12 +72,7 @@ jobs:
       NEXT_PUBLIC_SITE_URL: https://www.risckcomply.com
       TRUSTED_ORIGINS: https://www.risckcomply.com
 
-      RELEASE_ROLLBACK_TARGET_URL: ${{ vars.RELEASE_ROLLBACK_TARGET_URL || secrets['RELEASE_ROLLBACK_TARGET_URL'] || vars.LAST_KNOWN_GOOD_DEPLOYMENT_URL || secrets['LAST_KNOWN_GOOD_DEPLOYMENT_URL'] }}
-      RELEASE_ROLLBACK_TARGET: ${{ vars.RELEASE_ROLLBACK_TARGET || secrets['RELEASE_ROLLBACK_TARGET'] || vars.RELEASE_ROLLBACK_TARGET_URL || secrets['RELEASE_ROLLBACK_TARGET_URL'] || vars.LAST_KNOWN_GOOD_DEPLOYMENT_URL || secrets['LAST_KNOWN_GOOD_DEPLOYMENT_URL'] }}
-      LAST_KNOWN_GOOD_DEPLOYMENT_URL: ${{ vars.LAST_KNOWN_GOOD_DEPLOYMENT_URL || secrets['LAST_KNOWN_GOOD_DEPLOYMENT_URL'] || vars.RELEASE_ROLLBACK_TARGET_URL || secrets['RELEASE_ROLLBACK_TARGET_URL'] }}
-      RELEASE_ROLLBACK_TARGET_SHA: ${{ vars.RELEASE_ROLLBACK_TARGET_SHA || secrets['RELEASE_ROLLBACK_TARGET_SHA'] || vars.LAST_KNOWN_GOOD_COMMIT_SHA || secrets['LAST_KNOWN_GOOD_COMMIT_SHA'] || vars.LAST_KNOWN_GOOD_SHA || secrets['LAST_KNOWN_GOOD_SHA'] }}
-      LAST_KNOWN_GOOD_COMMIT_SHA: ${{ vars.LAST_KNOWN_GOOD_COMMIT_SHA || secrets['LAST_KNOWN_GOOD_COMMIT_SHA'] || vars.RELEASE_ROLLBACK_TARGET_SHA || secrets['RELEASE_ROLLBACK_TARGET_SHA'] || vars.LAST_KNOWN_GOOD_SHA || secrets['LAST_KNOWN_GOOD_SHA'] }}
-      RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ vars.RELEASE_ROLLBACK_TARGET_VALIDATED || secrets['RELEASE_ROLLBACK_TARGET_VALIDATED'] }}
+      RELEASE_ROLLBACK_RESOLUTION_MODE: automatic
 
       HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -149,6 +144,15 @@ jobs:
 
       - name: Install dependencies deterministically
         run: npm ci
+
+      - name: Validate Public GA release helper syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/release/check-public-production-release-env.mjs
+          node --check scripts/release/resolve-public-production-rollback.mjs
+          node --check scripts/release/run-deployment-smoke-v2.mjs
+          node --check scripts/release/verify-runtime-release-sha.mjs
 
       - name: Public production environment preflight
         run: node scripts/release/check-public-production-release-env.mjs
@@ -350,6 +354,21 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      - name: Resolve and validate previous healthy production rollback
+        shell: bash
+        env:
+          CURRENT_VERCEL_DEPLOYMENT_ID: ${{ steps.vercel_deployment.outputs.id }}
+        run: node scripts/release/resolve-public-production-rollback.mjs
+
+      - name: Upload Public GA rollback resolution evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: public-ga-rollback-resolution-${{ inputs.release_sha }}
+          path: artifacts/release/public-ga-rollback-resolution.json
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Reverify main before canonical production verification
         shell: bash
         run: |
@@ -362,6 +381,7 @@ jobs:
         env:
           RELEASE_DEPLOYMENT_URL: https://www.risckcomply.com
           RELEASE_SMOKE_URLS: https://www.risckcomply.com
+          RELEASE_ROLLBACK_TARGET_VALIDATED: 'true'
         run: npm run release:deployment-smoke
 
       - name: Verify exact deployed runtime SHA
@@ -387,6 +407,7 @@ jobs:
             printf '%s\n' "- Release SHA: $RELEASE_SHA"
             echo "- Vercel project binding: checked"
             echo "- Exact-SHA Vercel production deployment: observed READY if prior step passed"
+            echo "- Healthy rollback target: auto-resolved and health-checked if prior step passed"
             echo "- Exact runtime SHA: verified if prior verification step passed"
             echo "- Enterprise 100 evidence: intentionally independent from this Public GA deployment lane"
           } >> "$GITHUB_STEP_SUMMARY"
