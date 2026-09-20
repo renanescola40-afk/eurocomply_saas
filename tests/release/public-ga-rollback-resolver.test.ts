@@ -1,8 +1,10 @@
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   getGitHubActionsOidcToken,
   normalizeDeploymentUrl,
   protectedHealthProbe,
+  runResolver,
   selectRollbackCandidate,
 } from '../../scripts/release/resolve-public-production-rollback.mjs';
 
@@ -13,6 +15,15 @@ afterEach(() => {
   vi.restoreAllMocks();
   delete process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
   delete process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+  delete process.env.VERCEL_TOKEN;
+  delete process.env.VERCEL_ORG_ID;
+  delete process.env.VERCEL_PROJECT_ID;
+  delete process.env.RELEASE_SHA;
+  delete process.env.CURRENT_VERCEL_DEPLOYMENT_ID;
+  delete process.env.GITHUB_REPOSITORY;
+  delete process.env.GITHUB_OUTPUT;
+  delete process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  rmSync('artifacts/release/public-ga-rollback-resolution.json', { force: true });
 });
 
 describe('Public GA rollback resolver contract', () => {
@@ -172,4 +183,97 @@ describe('Public GA rollback resolver contract', () => {
     expect(normalizeDeploymentUrl('http://previous.example.vercel.app')).toBeNull();
     expect(normalizeDeploymentUrl('https://example.com')).toBeNull();
   });
+  it('executes the full resolver path through Vercel REST identity and GitHub OIDC health', async () => {
+    process.env.VERCEL_TOKEN = 'vercel-rest-token';
+    process.env.VERCEL_ORG_ID = 'team_test123';
+    process.env.VERCEL_PROJECT_ID = 'prj_test123';
+    process.env.RELEASE_SHA = releaseSha;
+    process.env.CURRENT_VERCEL_DEPLOYMENT_ID = 'dpl_current123';
+    process.env.GITHUB_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
+    process.env.ACTIONS_ID_TOKEN_REQUEST_URL = 'https://oidc.actions.githubusercontent.com/token';
+    process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN = 'runner-request-token';
+
+    const currentDeployment = {
+      uid: 'dpl_current123',
+      id: 'dpl_current123',
+      projectId: 'prj_test123',
+      createdAt: 300,
+      readyState: 'READY',
+      target: 'production',
+      meta: { githubCommitSha: releaseSha },
+    };
+    const list = {
+      deployments: [{
+        uid: 'dpl_previous123',
+        id: 'dpl_previous123',
+        projectId: 'prj_test123',
+        created: 200,
+        state: 'READY',
+        target: 'production',
+        url: 'previous.example.vercel.app',
+        meta: {
+          githubCommitSha: priorSha,
+          githubCommitRef: 'main',
+          githubRepo: 'eurocomply_saas',
+          githubOrg: 'renanescola40-afk',
+        },
+      }],
+    };
+    const previousDeployment = {
+      uid: 'dpl_previous123',
+      id: 'dpl_previous123',
+      projectId: 'prj_test123',
+      createdAt: 200,
+      readyState: 'READY',
+      target: 'production',
+      meta: { githubCommitSha: priorSha },
+    };
+
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url.includes('/v13/deployments/dpl_current123')) {
+        return new Response(JSON.stringify(currentDeployment), { status: 200 });
+      }
+      if (url.includes('/v7/deployments')) {
+        return new Response(JSON.stringify(list), { status: 200 });
+      }
+      if (url.includes('/v13/deployments/dpl_previous123')) {
+        return new Response(JSON.stringify(previousDeployment), { status: 200 });
+      }
+      if (url === 'https://previous.example.vercel.app/api/health') {
+        const headers = init?.headers || {};
+        const oidc = typeof headers === 'object' && !Array.isArray(headers)
+          ? headers['x-vercel-trusted-oidc-idp-token']
+          : undefined;
+        if (oidc) {
+          return new Response(JSON.stringify({ status: 'ok' }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+        return new Response('', { status: 302 });
+      }
+      if (url === 'https://oidc.actions.githubusercontent.com/token') {
+        return new Response(JSON.stringify({ value: 'header.payload.signature' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+
+      throw new Error(`unexpected_fetch:${url}`);
+    });
+
+    await expect(runResolver()).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalled();
+    expect(existsSync('artifacts/release/public-ga-rollback-resolution.json')).toBe(true);
+
+    const evidence = JSON.parse(
+      readFileSync('artifacts/release/public-ga-rollback-resolution.json', 'utf8'),
+    );
+    expect(evidence.outcome).toBe('passed');
+    expect(evidence.checks.rollbackCandidateValidated).toBe(true);
+    expect(evidence.evidenceIntegrity.networkDerivedFieldsStored).toBe(false);
+  });
+
 });
