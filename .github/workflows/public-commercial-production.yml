@@ -145,6 +145,15 @@ jobs:
       - name: Install dependencies deterministically
         run: npm ci
 
+      - name: Validate Public GA release helper syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/release/check-public-production-release-env.mjs
+          node --check scripts/release/resolve-public-production-rollback.mjs
+          node --check scripts/release/run-deployment-smoke-v2.mjs
+          node --check scripts/release/verify-runtime-release-sha.mjs
+
       - name: Public production environment preflight
         run: node scripts/release/check-public-production-release-env.mjs
 
