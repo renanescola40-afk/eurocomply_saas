@@ -57,8 +57,22 @@ describe('Public Commercial GA Vercel production lane', () => {
     expect(rollbackResolver).toContain("if (state !== 'READY') continue");
     expect(rollbackResolver).toContain("if (sha === releaseSha) continue");
     expect(rollbackResolver).toContain("/api/health");
-    expect(rollbackResolver).toContain("RELEASE_ROLLBACK_TARGET_VALIDATED: 'true'");
+    expect(rollbackResolver).toContain("selectedRollbackIdentifiersStored: false");
+    expect(rollbackResolver).not.toContain('GITHUB_ENV');
+    expect(rollbackResolver).not.toContain('RELEASE_ROLLBACK_TARGET_URL: selected');
     expect(rollbackResolver).toContain("throw new Error('healthy_rollback_target_missing')");
+  });
+
+  it('preserves Beagle evidence before the fallible rollback gate and uploads rollback evidence on failure', () => {
+    const preserveIndex = workflow.indexOf('Preserve Beagle pre-change release boundary');
+    const resolverIndex = workflow.indexOf('Resolve and validate previous healthy production rollback');
+    const smokeIndex = workflow.indexOf('Production smoke on canonical hostname');
+
+    expect(preserveIndex).toBeGreaterThan(-1);
+    expect(resolverIndex).toBeGreaterThan(preserveIndex);
+    expect(smokeIndex).toBeGreaterThan(resolverIndex);
+    expect(workflow).toMatch(/Upload Public GA rollback resolution evidence\n\s+if: always\(\)/);
+    expect(workflow).toContain("RELEASE_ROLLBACK_TARGET_VALIDATED: 'true'");
   });
 
   it('uses explicit Vercel project/team binding and observes the native exact-SHA production deployment', () => {
