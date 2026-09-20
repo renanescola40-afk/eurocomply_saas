@@ -62,8 +62,20 @@ jobs:
         run: |
           set -euo pipefail
           response_file="$(mktemp)"
+          payload="$(
+            jq -cn \
+              --arg deploymentId "${{ steps.deployment.outputs.id }}" \
+              '{deploymentId: $deploymentId, target: "production"}'
+          )"
           status="$(
-            curl --silent --show-error               --output "$response_file"               --write-out '%{http_code}'               --request POST               --url "https://api.vercel.com/v13/deployments?teamId=$VERCEL_TEAM_ID&forceNew=1"               --header "Authorization: Bearer $VERCEL_TOKEN"               --header "Content-Type: application/json"               --data "{"deploymentId":"${{ steps.deployment.outputs.id }}","target":"production"}"
+            curl --silent --show-error \
+              --output "$response_file" \
+              --write-out '%{http_code}' \
+              --request POST \
+              --url "https://api.vercel.com/v13/deployments?teamId=$VERCEL_TEAM_ID&forceNew=1" \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              --header "Content-Type: application/json" \
+              --data "$payload"
           )"
           if [[ "$status" != "200" && "$status" != "201" ]]; then
             echo "Vercel redeploy request failed with HTTP $status."
