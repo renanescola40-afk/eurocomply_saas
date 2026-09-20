@@ -106,7 +106,31 @@ async function smoke(baseUrl) {
   return { baseUrl, passed: checks.filter((item) => item.critical).every((item) => item.passed), detailedChecks: checks, checks: Object.fromEntries(checks.map((item) => [item.name, item.passed])) };
 }
 
-async function rollbackCheck(data) { const value = data.rollback?.value; const url = norm(value); if (!value) return check('rollbackTargetConfigured', false, { configured: false }); if (!url) return check('rollbackTargetConfigured', false, { source: data.rollback.name, networkVerified: false }); const res = await request(route(url, '/api/health'), { accept: 'application/json' }); return check('rollbackTargetConfigured', res.status === 200 && res.body?.status === 'ok', { source: data.rollback.name, networkVerified: true, targetStatus: res.status, targetBodyStatus: res.body?.status || null }); }
+async function rollbackCheck(data) {
+  const resolutionMode = String(process.env.RELEASE_ROLLBACK_RESOLUTION_MODE || 'manual').trim().toLowerCase();
+
+  if (resolutionMode === 'automatic') {
+    const validated = process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true';
+    return check('rollbackTargetConfigured', validated, {
+      resolutionMode: 'automatic',
+      validatedByPriorGate: validated,
+      duplicateNetworkProbeSkipped: true,
+    });
+  }
+
+  const value = data.rollback?.value;
+  const url = norm(value);
+  if (!value) return check('rollbackTargetConfigured', false, { configured: false, resolutionMode: 'manual' });
+  if (!url) return check('rollbackTargetConfigured', false, { source: data.rollback.name, networkVerified: false, resolutionMode: 'manual' });
+  const res = await request(route(url, '/api/health'), { accept: 'application/json' });
+  return check('rollbackTargetConfigured', res.status === 200 && res.body?.status === 'ok', {
+    source: data.rollback.name,
+    networkVerified: true,
+    resolutionMode: 'manual',
+    targetStatus: res.status,
+    targetBodyStatus: res.body?.status || null,
+  });
+}
 
 const generatedAt = now();
 const data = meta();
