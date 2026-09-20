@@ -21,7 +21,7 @@ jobs:
         run: |
           set -euo pipefail
           node <<'NODE'
-          const crypto = require('node:crypto');
+          const { randomBytes } = await import('node:crypto');
 
           const token = process.env.VERCEL_TOKEN;
           const project = process.env.VERCEL_PROJECT_ID;
@@ -36,7 +36,7 @@ jobs:
             { key: 'STEP_UP_PROVIDER_MODE', value: 'supabase_mfa', type: 'plain', target: ['production'] },
             {
               key: 'STEP_UP_SIGNING_SECRET',
-              value: crypto.randomBytes(64).toString('base64url'),
+              value: randomBytes(64).toString('base64url'),
               type: 'sensitive',
               target: ['production'],
             },
