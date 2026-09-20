@@ -194,7 +194,7 @@ describe('exact-SHA Vercel production deployment proof', () => {
     expect(evidence.blockers).toContain('exact_vercel_production_deployment_unproven');
   });
 
-  it('uses canonical Production health only when the exact-SHA immutable deployment is explicitly protected by Vercel SSO', async () => {
+  it('keeps exact-SHA health OPEN when the immutable deployment is protected by Vercel SSO without a bypass', async () => {
     const evidence = await buildProductionDeploymentEvidence({
       repository: REPOSITORY,
       targetSha: SHA,
@@ -212,18 +212,15 @@ describe('exact-SHA Vercel production deployment proof', () => {
       pollMs: 0,
     });
 
-    expect(evidence.status).toBe('PASS');
+    expect(evidence.status).toBe('OPEN');
+    expect(evidence.blockers).toContain('immutable_deployment_health_blocked_by_vercel_protection');
     expect(evidence.checks).toMatchObject({
-      immutableDeploymentHealthOk: false,
-      immutableDeploymentProtectionObserved: true,
-      canonicalProductionHealthFallbackUsed: true,
-      productionHealthOk: true,
+      exactShaProductionDeploymentFound: true,
+      productionHealthOk: false,
     });
     expect(evidence.health).toMatchObject({
-      status: 200,
-      bodyStatus: 'ok',
-      noStore: true,
-      targetClass: 'canonical_production_after_vercel_sso_protection',
+      status: 302,
+      blockedByVercelProtection: true,
     });
   });
 
