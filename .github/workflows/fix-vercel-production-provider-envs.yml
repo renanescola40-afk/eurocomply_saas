@@ -1,0 +1,76 @@
+name: Fix Vercel Production Provider Envs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  configure:
+    runs-on: ubuntu-24.04
+    environment: Production
+    timeout-minutes: 10
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_PROJECT_ID: prj_APpXAyQFy1Gie50xfbO45zjkyUSm
+      VERCEL_TEAM_ID: team_wu3LZI6ReFxO16xipv73GLwG
+    steps:
+      - name: Configure missing Production env keys without logging values
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const crypto = require('node:crypto');
+
+          const token = process.env.VERCEL_TOKEN;
+          const project = process.env.VERCEL_PROJECT_ID;
+          const team = process.env.VERCEL_TEAM_ID;
+          if (!token || !project || !team) throw new Error('missing_vercel_authority');
+
+          const endpoint = `https://api.vercel.com/v10/projects/${encodeURIComponent(project)}/env?teamId=${encodeURIComponent(team)}`;
+
+          const entries = [
+            { key: 'SENTRY_ORG', value: 'risck-comply', type: 'plain', target: ['production'] },
+            { key: 'SENTRY_PROJECT', value: 'javascript-nextjs', type: 'plain', target: ['production'] },
+            { key: 'STEP_UP_PROVIDER_MODE', value: 'supabase_mfa', type: 'plain', target: ['production'] },
+            {
+              key: 'STEP_UP_SIGNING_SECRET',
+              value: crypto.randomBytes(64).toString('base64url'),
+              type: 'sensitive',
+              target: ['production'],
+            },
+          ];
+
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(entries),
+          });
+
+          const text = await res.text();
+          let body = {};
+          try { body = JSON.parse(text); } catch {}
+
+          if (!res.ok) {
+            const safe = {
+              status: res.status,
+              failedKeys: Array.isArray(body?.failed) ? body.failed.map((x) => x?.key).filter(Boolean) : [],
+            };
+            console.error(JSON.stringify(safe));
+            process.exit(1);
+          }
+
+          const created = Array.isArray(body?.created) ? body.created : body?.created ? [body.created] : [];
+          const failed = Array.isArray(body?.failed) ? body.failed : [];
+          console.log(JSON.stringify({
+            status: 'configured',
+            createdKeys: created.map((x) => x?.key).filter(Boolean),
+            failedKeys: failed.map((x) => x?.key).filter(Boolean),
+          }));
+
+          if (failed.length) process.exit(1);
+          NODE
