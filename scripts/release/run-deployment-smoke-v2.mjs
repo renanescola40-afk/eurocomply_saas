@@ -13,7 +13,7 @@ const headerChecks = [
   ['content-security-policy', (v) => v.includes("default-src 'self'") && v.includes("object-src 'none'") && v.includes("frame-ancestors 'none'")],
   ['x-frame-options', (v) => v.toLowerCase() === 'deny'],
   ['x-content-type-options', (v) => v.toLowerCase() === 'nosniff'],
-  ['strict-transport-security', (v) => v.toLowerCase().includes('max-age=') && v.toLowerCase().includes('includesubdomains')],
+  ['strict-transport-security', (v) => v.toLowerCase().includes('max-age=63072000') && v.toLowerCase().includes('includesubdomains')],
   ['referrer-policy', (v) => v.toLowerCase() === 'strict-origin-when-cross-origin'],
   ['permissions-policy', (v) => v.length > 0],
 ];
