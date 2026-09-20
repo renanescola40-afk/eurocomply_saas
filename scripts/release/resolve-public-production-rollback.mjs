@@ -435,9 +435,6 @@ export async function runResolver() {
   if (!isSha(releaseSha)) throw new ResolverError('invalid_release_sha');
   if (!isDeploymentId(currentDeploymentId)) throw new ResolverError('invalid_current_deployment_id');
 
-  let candidateSelected = false;
-  let providerIdentityVerified = false;
-  let cliTimedOut = false;
   let transport = null;
 
   try {
@@ -472,13 +469,10 @@ export async function runResolver() {
       throw new ResolverError('previous_ready_production_candidate_missing');
     }
 
-    candidateSelected = true;
     let validatedCandidate = false;
 
     for (const candidate of candidates) {
-      providerIdentityVerified = false;
       transport = null;
-      cliTimedOut = false;
 
       try {
         const candidateEndpoint = new URL(
@@ -492,7 +486,6 @@ export async function runResolver() {
           timeoutMs: httpTimeoutMs,
         });
         validateRollbackDeployment(candidateDetail, candidate, projectId);
-        providerIdentityVerified = true;
 
         const direct = await directHealthProbe(candidate.url, httpTimeoutMs);
         if (direct.passed) {
@@ -502,7 +495,6 @@ export async function runResolver() {
         }
 
         const cli = vercelCliHealthProbe(candidate.url, token, cliTimeoutMs);
-        cliTimedOut = cli.timedOut;
         if (cli.passed) {
           transport = 'vercel-cli';
           validatedCandidate = true;
