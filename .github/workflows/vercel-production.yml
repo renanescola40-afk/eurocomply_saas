@@ -157,6 +157,17 @@ jobs:
           git fetch --no-tags origin main
           test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
 
+      - name: Normalize exact release SHA for build and runtime identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          normalized_sha="${RELEASE_SHA,,}"
+          {
+            printf 'RELEASE_SHA=%s\n' "$normalized_sha"
+            printf 'SENTRY_RELEASE=%s\n' "$normalized_sha"
+            printf 'NEXT_PUBLIC_SENTRY_RELEASE=%s\n' "$normalized_sha"
+          } >> "$GITHUB_ENV"
+
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -555,8 +566,8 @@ jobs:
 
           candidate_url="$(
             npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --prod --skip-domain \
-              --build-env "SENTRY_RELEASE=${RELEASE_SHA,,}" \
-              --build-env "NEXT_PUBLIC_SENTRY_RELEASE=${RELEASE_SHA,,}" \
+              --build-env "SENTRY_RELEASE=$SENTRY_RELEASE" \
+              --build-env "NEXT_PUBLIC_SENTRY_RELEASE=$NEXT_PUBLIC_SENTRY_RELEASE" \
               --project="$VERCEL_PROJECT_ID" --scope="$VERCEL_ORG_ID" --token="$VERCEL_TOKEN" | tail -n 1 | tr -d '\r'
           )"
           if [[ ! "$candidate_url" =~ ^https://[^[:space:]]+$ ]]; then

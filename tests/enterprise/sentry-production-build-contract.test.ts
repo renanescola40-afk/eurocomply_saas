@@ -30,8 +30,13 @@ describe('Sentry production build contract', () => {
   it('binds Sentry build and runtime release identity to the authorized exact SHA', () => {
     expect(productionWorkflow).toContain("SENTRY_RELEASE: ${{ inputs.release_sha }}");
     expect(productionWorkflow).toContain("NEXT_PUBLIC_SENTRY_RELEASE: ${{ inputs.release_sha }}");
-    expect(productionWorkflow).toContain('--build-env "SENTRY_RELEASE=${RELEASE_SHA,,}"');
-    expect(productionWorkflow).toContain('--build-env "NEXT_PUBLIC_SENTRY_RELEASE=${RELEASE_SHA,,}"');
+    expect(productionWorkflow).toContain('normalized_sha="${RELEASE_SHA,,}"');
+    expect(productionWorkflow).toContain("printf 'RELEASE_SHA=%s\\n' \"$normalized_sha\"");
+    expect(productionWorkflow).toContain("printf 'SENTRY_RELEASE=%s\\n' \"$normalized_sha\"");
+    expect(productionWorkflow).toContain("printf 'NEXT_PUBLIC_SENTRY_RELEASE=%s\\n' \"$normalized_sha\"");
+    expect(productionWorkflow).toContain('} >> "$GITHUB_ENV"');
+    expect(productionWorkflow).toContain('--build-env "SENTRY_RELEASE=$SENTRY_RELEASE"');
+    expect(productionWorkflow).toContain('--build-env "NEXT_PUBLIC_SENTRY_RELEASE=$NEXT_PUBLIC_SENTRY_RELEASE"');
   });
 
   it('requires the Sentry build token in the Vercel production environment inventory', () => {
