@@ -46,7 +46,7 @@ describe('Public Commercial GA Vercel production lane', () => {
 
   it('resolves and proves exactly one previous production rollback candidate', () => {
     expect(workflow).toContain('RELEASE_ROLLBACK_RESOLUTION_MODE: automatic');
-    expect(workflow).toContain("RELEASE_ROLLBACK_CLI_TIMEOUT_MS: '90000'");
+    expect(workflow).toContain("RELEASE_ROLLBACK_OIDC_TIMEOUT_MS: '15000'");
     expect(workflow).toContain('Resolve and validate previous healthy production rollback');
     expect(workflow).toContain('id: rollback_resolver');
     expect(workflow).toContain('node scripts/release/resolve-public-production-rollback.mjs');
@@ -60,12 +60,11 @@ describe('Public Commercial GA Vercel production lane', () => {
     expect(rollbackResolver).toContain("target !== 'production'");
     expect(rollbackResolver).toContain("createdAt >= currentCreatedAt");
     expect(rollbackResolver).toContain("ref && ref !== 'main'");
-    expect(rollbackResolver).toContain("const VERCEL_CLI_VERSION = '56.3.2'");
-    expect(rollbackResolver).toContain("'curl'");
-    expect(rollbackResolver).toContain("'/api/health'");
-    expect(rollbackResolver).toContain("'--deployment'");
-    expect(rollbackResolver).not.toContain("'--token'");
-    expect(rollbackResolver).toContain("VERCEL_TOKEN: token");
+    expect(rollbackResolver).toContain('ACTIONS_ID_TOKEN_REQUEST_URL');
+    expect(rollbackResolver).toContain('ACTIONS_ID_TOKEN_REQUEST_TOKEN');
+    expect(rollbackResolver).toContain("'x-vercel-trusted-oidc-idp-token'");
+    expect(rollbackResolver).not.toContain('vercelCliHealthProbe');
+    expect(rollbackResolver).not.toContain('buildVercelCurlArgs');
     expect(rollbackResolver).toContain("selectedRollbackIdentifiersStored: false");
     expect(rollbackResolver).not.toContain('GITHUB_ENV');
     expect(rollbackResolver).not.toContain('RELEASE_ROLLBACK_TARGET_URL: selected');

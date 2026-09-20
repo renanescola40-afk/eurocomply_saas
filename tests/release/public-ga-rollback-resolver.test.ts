@@ -1,14 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  VERCEL_CLI_VERSION,
-  buildVercelCurlArgs,
+  getGitHubActionsOidcToken,
   normalizeDeploymentUrl,
-  parseHealthBody,
+  protectedHealthProbe,
   selectRollbackCandidate,
 } from '../../scripts/release/resolve-public-production-rollback.mjs';
 
 const releaseSha = 'b'.repeat(40);
 const priorSha = 'a'.repeat(40);
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  delete process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
+  delete process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+});
 
 describe('Public GA rollback resolver contract', () => {
   it('selects only an older READY production deployment from main in the same repository', () => {
@@ -118,23 +123,47 @@ describe('Public GA rollback resolver contract', () => {
     expect(selected).toBeNull();
   });
 
-  it('uses the documented protected-deployment Vercel curl syntax without a token argument', () => {
-    expect(VERCEL_CLI_VERSION).toBe('56.3.2');
-    expect(buildVercelCurlArgs('https://previous.example.vercel.app')).toEqual([
-      '--yes',
-      'vercel@56.3.2',
-      'curl',
-      '/api/health',
-      '--deployment',
-      'https://previous.example.vercel.app',
-    ]);
-    expect(buildVercelCurlArgs('https://previous.example.vercel.app')).not.toContain('--token');
+  it('retrieves a GitHub Actions OIDC token only from the runner OIDC endpoint', async () => {
+    process.env.ACTIONS_ID_TOKEN_REQUEST_URL = 'https://oidc.actions.githubusercontent.com/token';
+    process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN = 'runner-request-token';
+    const jwt = 'header.payload.signature';
+
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ value: jwt }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    await expect(getGitHubActionsOidcToken(5000)).resolves.toBe(jwt);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0].toString()).toBe(
+      'https://oidc.actions.githubusercontent.com/token',
+    );
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({
+      Authorization: 'Bearer runner-request-token',
+    });
   });
 
-  it('parses a health response while tolerating harmless CLI prefix output', () => {
-    expect(parseHealthBody('{"status":"ok"}')).toEqual({ status: 'ok' });
-    expect(parseHealthBody('Vercel CLI 56.3.2\n{"status":"ok"}\n')).toEqual({ status: 'ok' });
-    expect(parseHealthBody('not-json')).toBeNull();
+  it('uses the trusted OIDC header for protected Vercel health checks', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ status: 'ok' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    await expect(
+      protectedHealthProbe(
+        'https://previous.example.vercel.app',
+        'header.payload.signature',
+        5000,
+      ),
+    ).resolves.toEqual({ passed: true });
+
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({
+      'x-vercel-trusted-oidc-idp-token': 'header.payload.signature',
+    });
   });
 
   it('accepts only HTTPS Vercel deployment origins', () => {

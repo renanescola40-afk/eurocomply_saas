@@ -3,15 +3,13 @@
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
 
-export const VERCEL_CLI_VERSION = '56.3.2';
 export const EVIDENCE_PATH = 'artifacts/release/public-ga-rollback-resolution.json';
 
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const DEPLOYMENT_ID = /^dpl_[A-Za-z0-9]+$/;
 const DEFAULT_HTTP_TIMEOUT_MS = 10_000;
-const DEFAULT_CLI_TIMEOUT_MS = 90_000;
+const DEFAULT_OIDC_TIMEOUT_MS = 15_000;
 const DEFAULT_MAX_CANDIDATES = 20;
 
 class ResolverError extends Error {
@@ -121,148 +119,91 @@ export function selectRollbackCandidate(items, options) {
   return selectRollbackCandidates(items, options)[0] ?? null;
 }
 
-export function buildVercelCurlArgs(baseUrl) {
-  return [
-    '--yes',
-    `vercel@${VERCEL_CLI_VERSION}`,
-    'curl',
-    '/api/health',
-    '--deployment',
-    baseUrl,
-  ];
-}
+export async function getGitHubActionsOidcToken(timeoutMs) {
+  const requestUrl = String(process.env.ACTIONS_ID_TOKEN_REQUEST_URL || '').trim();
+  const requestToken = String(process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN || '').trim();
 
-function stripAnsi(value) {
-  return String(value || '').replace(/\u001B\[[0-?]*[ -/]*[@-~]/g, '');
-}
-
-export function parseHealthBody(output) {
-  const clean = stripAnsi(output).trim();
-  if (!clean) return null;
-
-  const attempts = [
-    clean,
-    ...clean.split(/\r?\n/).reverse(),
-  ];
-
-  for (const candidate of attempts) {
-    const trimmed = candidate.trim();
-    if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) continue;
-    try {
-      return JSON.parse(trimmed);
-    } catch {
-      // Try the next safe candidate.
-    }
+  if (!requestUrl || !requestToken) {
+    throw new ResolverError('github_oidc_unavailable');
   }
 
-  const start = clean.lastIndexOf('{');
-  const end = clean.lastIndexOf('}');
-  if (start >= 0 && end > start) {
-    try {
-      return JSON.parse(clean.slice(start, end + 1));
-    } catch {
-      return null;
-    }
+  let endpoint;
+  try {
+    endpoint = new URL(requestUrl);
+    if (endpoint.protocol !== 'https:') throw new Error('invalid_protocol');
+  } catch {
+    throw new ResolverError('github_oidc_request_url_invalid');
   }
 
-  return null;
-}
-
-async function fetchJson(url, { token, timeoutMs }) {
   let response;
   try {
-    response = await fetch(url, {
+    response = await fetch(endpoint, {
+      method: 'GET',
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${requestToken}`,
         Accept: 'application/json',
-        'User-Agent': 'risck-comply-public-ga-rollback-resolver/2.0',
+        'User-Agent': 'risck-comply-public-ga-rollback-resolver/3.0',
       },
       cache: 'no-store',
       redirect: 'error',
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch {
-    throw new ResolverError('provider_request_failed');
+    throw new ResolverError('github_oidc_request_failed');
   }
 
   if (!response.ok) {
-    throw new ResolverError('provider_request_rejected');
+    throw new ResolverError('github_oidc_request_rejected');
   }
 
+  let body;
   try {
-    return await response.json();
+    body = await response.json();
   } catch {
-    throw new ResolverError('provider_response_invalid_json');
+    throw new ResolverError('github_oidc_response_invalid_json');
   }
+
+  const token = String(body?.value || '').trim();
+  if (!token || token.split('.').length !== 3) {
+    throw new ResolverError('github_oidc_token_invalid');
+  }
+
+  return token;
 }
 
-async function directHealthProbe(baseUrl, timeoutMs) {
-  const headers = {
-    Accept: 'application/json',
-    'User-Agent': 'risck-comply-public-ga-rollback-resolver/2.0',
-  };
-
-  const bypass = String(process.env.VERCEL_AUTOMATION_BYPASS_SECRET || '').trim();
-  if (bypass) {
-    headers['x-vercel-protection-bypass'] = bypass;
-    headers['x-vercel-set-bypass-cookie'] = 'true';
-  }
-
+export async function protectedHealthProbe(baseUrl, oidcToken, timeoutMs) {
   try {
     const response = await fetch(`${baseUrl}/api/health`, {
       method: 'GET',
-      headers,
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'risck-comply-public-ga-rollback-resolver/3.0',
+        'x-vercel-trusted-oidc-idp-token': oidcToken,
+      },
       cache: 'no-store',
-      redirect: 'manual',
+      redirect: 'error',
       signal: AbortSignal.timeout(timeoutMs),
     });
 
+    if (response.status !== 200) {
+      return { passed: false };
+    }
+
     let body = null;
-    if (response.status === 200) {
-      try {
-        body = await response.json();
-      } catch {
-        body = null;
-      }
+    try {
+      body = await response.json();
+    } catch {
+      body = null;
     }
 
     return {
-      passed: response.status === 200 && body?.status === 'ok',
-      status: response.status,
-      protectionBlocked: [302, 401, 403].includes(response.status),
+      passed: body?.status === 'ok',
     };
   } catch {
     return {
       passed: false,
-      status: 0,
-      protectionBlocked: false,
     };
   }
-}
-
-function vercelCliHealthProbe(baseUrl, token, timeoutMs) {
-  const result = spawnSync(
-    'npx',
-    buildVercelCurlArgs(baseUrl),
-    {
-      encoding: 'utf8',
-      env: { ...process.env, VERCEL_TOKEN: token },
-      stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: timeoutMs,
-      maxBuffer: 256 * 1024,
-    },
-  );
-
-  const timedOut = Boolean(result.error && result.error.code === 'ETIMEDOUT');
-  const body = result.status === 0 && !result.error
-    ? parseHealthBody(result.stdout)
-    : null;
-
-  return {
-    passed: !result.error && result.status === 0 && body?.status === 'ok',
-    exitCode: Number.isInteger(result.status) ? result.status : null,
-    timedOut,
-  };
 }
 
 function validateCurrentDeployment(detail, {
@@ -332,6 +273,12 @@ const SAFE_FAILURE_CODES = new Set([
   'rollback_deployment_not_production',
   'protected_health_probe_timeout',
   'protected_health_probe_failed',
+  'github_oidc_unavailable',
+  'github_oidc_request_url_invalid',
+  'github_oidc_request_failed',
+  'github_oidc_request_rejected',
+  'github_oidc_response_invalid_json',
+  'github_oidc_token_invalid',
 ]);
 
 function safeFailureCode(error) {
@@ -422,7 +369,7 @@ function writeFailureEvidence() {
 
 export async function runResolver() {
   const httpTimeoutMs = intEnv('RELEASE_ROLLBACK_HEALTH_TIMEOUT_MS', DEFAULT_HTTP_TIMEOUT_MS, 2_000, 60_000);
-  const cliTimeoutMs = intEnv('RELEASE_ROLLBACK_CLI_TIMEOUT_MS', DEFAULT_CLI_TIMEOUT_MS, 15_000, 180_000);
+  const oidcTimeoutMs = intEnv('RELEASE_ROLLBACK_OIDC_TIMEOUT_MS', DEFAULT_OIDC_TIMEOUT_MS, 5_000, 60_000);
   const maxCandidates = intEnv('RELEASE_ROLLBACK_MAX_CANDIDATES', DEFAULT_MAX_CANDIDATES, 2, 100);
 
   const token = required('VERCEL_TOKEN');
@@ -436,6 +383,7 @@ export async function runResolver() {
   if (!isDeploymentId(currentDeploymentId)) throw new ResolverError('invalid_current_deployment_id');
 
   let transport = null;
+  let oidcToken = null;
 
   try {
     const currentEndpoint = new URL(
@@ -494,9 +442,17 @@ export async function runResolver() {
           break;
         }
 
-        const cli = vercelCliHealthProbe(candidate.url, token, cliTimeoutMs);
-        if (cli.passed) {
-          transport = 'vercel-cli';
+        if (!oidcToken) {
+          oidcToken = await getGitHubActionsOidcToken(oidcTimeoutMs);
+        }
+
+        const protectedProbe = await protectedHealthProbe(
+          candidate.url,
+          oidcToken,
+          httpTimeoutMs,
+        );
+        if (protectedProbe.passed) {
+          transport = 'github-oidc';
           validatedCandidate = true;
           break;
         }
