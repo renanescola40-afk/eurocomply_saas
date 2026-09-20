@@ -57,6 +57,15 @@ describe('production release profiles', () => {
     expect(publicPreflight).toContain('legacyAliasesAcceptedForReadiness: false');
   });
 
+  it('supports automatic rollback resolution without trusting stale manual rollback pointers', () => {
+    const publicPreflight = read('scripts/release/check-public-production-release-env.mjs');
+
+    expect(publicPreflight).toContain("RELEASE_ROLLBACK_RESOLUTION_MODE");
+    expect(publicPreflight).toContain("rollbackResolutionMode === 'automatic'");
+    expect(publicPreflight).toContain("hasAll(['VERCEL_TOKEN', 'VERCEL_ORG_ID', 'VERCEL_PROJECT_ID'])");
+    expect(publicPreflight).toContain('deferredToRuntimeResolver: automaticRollback');
+  });
+
   it('does not require enterprise-only provider credentials in the public preflight', () => {
     const publicPreflight = read('scripts/release/check-public-production-release-env.mjs');
 
