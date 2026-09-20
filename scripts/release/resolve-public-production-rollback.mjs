@@ -82,7 +82,7 @@ export function normalizeDeploymentUrl(value) {
   }
 }
 
-export function selectRollbackCandidate(items, {
+export function selectRollbackCandidates(items, {
   releaseSha,
   currentDeploymentId,
   currentCreatedAt,
@@ -90,6 +90,7 @@ export function selectRollbackCandidate(items, {
 }) {
   const [repoOwner, repoName] = String(repository || '').split('/');
   const candidates = Array.isArray(items) ? items : [];
+  const selected = [];
 
   for (const item of candidates) {
     const id = deploymentIdOf(item);
@@ -110,10 +111,14 @@ export function selectRollbackCandidate(items, {
     if (repoName && candidateRepo && candidateRepo !== repoName) continue;
     if (repoOwner && candidateOwner && candidateOwner !== repoOwner) continue;
 
-    return { id, sha, url, createdAt };
+    selected.push({ id, sha, url, createdAt });
   }
 
-  return null;
+  return selected.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export function selectRollbackCandidate(items, options) {
+  return selectRollbackCandidates(items, options)[0] ?? null;
 }
 
 export function buildVercelCurlArgs(baseUrl) {
@@ -319,6 +324,7 @@ const SAFE_FAILURE_CODES = new Set([
   'current_deployment_not_production',
   'current_deployment_created_at_missing',
   'previous_ready_production_candidate_missing',
+  'previous_ready_production_candidate_unhealthy',
   'rollback_deployment_identity_mismatch',
   'rollback_deployment_project_mismatch',
   'rollback_deployment_sha_mismatch',
@@ -407,8 +413,6 @@ export async function runResolver() {
 
   let candidateSelected = false;
   let providerIdentityVerified = false;
-  let directStatus = null;
-  let cliExitCode = null;
   let cliTimedOut = false;
   let transport = null;
 
@@ -433,42 +437,61 @@ export async function runResolver() {
     listEndpoint.searchParams.set('limit', String(maxCandidates));
 
     const payload = await fetchJson(listEndpoint, { token, timeoutMs: httpTimeoutMs });
-    const candidate = selectRollbackCandidate(payload?.deployments, {
+    const candidates = selectRollbackCandidates(payload?.deployments, {
       releaseSha,
       currentDeploymentId,
       currentCreatedAt,
       repository,
     });
 
-    if (!candidate) throw new ResolverError('previous_ready_production_candidate_missing');
+    if (candidates.length === 0) {
+      throw new ResolverError('previous_ready_production_candidate_missing');
+    }
+
     candidateSelected = true;
+    let validatedCandidate = false;
 
-    const candidateEndpoint = new URL(
-      `/v13/deployments/${encodeURIComponent(candidate.id)}`,
-      'https://api.vercel.com',
-    );
-    candidateEndpoint.searchParams.set('teamId', orgId);
-    const candidateDetail = await fetchJson(candidateEndpoint, { token, timeoutMs: httpTimeoutMs });
-    validateRollbackDeployment(candidateDetail, candidate, projectId);
-    providerIdentityVerified = true;
+    for (const candidate of candidates) {
+      providerIdentityVerified = false;
+      transport = null;
+      cliTimedOut = false;
 
-    const direct = await directHealthProbe(candidate.url, httpTimeoutMs);
-    directStatus = direct.status;
-
-    if (direct.passed) {
-      transport = 'direct';
-    } else {
-      const cli = vercelCliHealthProbe(candidate.url, token, cliTimeoutMs);
-      cliExitCode = cli.exitCode;
-      cliTimedOut = cli.timedOut;
-      if (!cli.passed) {
-        throw new ResolverError(
-          cliTimedOut
-            ? 'protected_health_probe_timeout'
-            : 'protected_health_probe_failed',
+      try {
+        const candidateEndpoint = new URL(
+          `/v13/deployments/${encodeURIComponent(candidate.id)}`,
+          'https://api.vercel.com',
         );
+        candidateEndpoint.searchParams.set('teamId', orgId);
+
+        const candidateDetail = await fetchJson(candidateEndpoint, {
+          token,
+          timeoutMs: httpTimeoutMs,
+        });
+        validateRollbackDeployment(candidateDetail, candidate, projectId);
+        providerIdentityVerified = true;
+
+        const direct = await directHealthProbe(candidate.url, httpTimeoutMs);
+        if (direct.passed) {
+          transport = 'direct';
+          validatedCandidate = true;
+          break;
+        }
+
+        const cli = vercelCliHealthProbe(candidate.url, token, cliTimeoutMs);
+        cliTimedOut = cli.timedOut;
+        if (cli.passed) {
+          transport = 'vercel-cli';
+          validatedCandidate = true;
+          break;
+        }
+      } catch {
+        // Continue through the bounded candidate list. The release only fails
+        // after every eligible previous production deployment is rejected.
       }
-      transport = 'vercel-cli';
+    }
+
+    if (!validatedCandidate) {
+      throw new ResolverError('previous_ready_production_candidate_unhealthy');
     }
 
     writeEvidence({
