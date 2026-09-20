@@ -340,25 +340,11 @@ function safeFailureCode(error) {
   return SAFE_FAILURE_CODES.has(code) ? code : 'unexpected_resolver_failure';
 }
 
-function writeEvidence({
-  passed,
-  failure,
-  transport,
-  candidateSelected,
-  providerIdentityVerified,
-}) {
-  const safePassed = passed === true;
-  const safeTransport = transport === 'direct'
-    ? 'direct'
-    : transport === 'vercel-cli'
-      ? 'vercel-cli'
-      : null;
-  const safeFailure = safePassed ? null : safeFailureCode(new ResolverError(failure));
-
+function writeSuccessEvidence() {
   const evidence = {
-    schema: 'risck-comply.public-ga-rollback-resolution.v2',
-    status: safePassed ? 'Complete' : 'Open',
-    outcome: safePassed ? 'passed' : 'failed',
+    schema: 'risck-comply.public-ga-rollback-resolution.v3',
+    status: 'Complete',
+    outcome: 'passed',
     generatedAt: new Date().toISOString(),
     resolutionMode: 'automatic',
     policy: {
@@ -371,14 +357,11 @@ function writeEvidence({
       protectedDeploymentProbeSupported: true,
     },
     checks: {
-      candidateSelected: candidateSelected === true,
-      providerIdentityVerified: providerIdentityVerified === true,
-      healthEndpointValidated: safePassed,
+      rollbackCandidateValidated: true,
+      providerIdentityValidated: true,
+      healthEndpointValidated: true,
     },
-    healthProbe: {
-      transport: safeTransport,
-    },
-    failure: safeFailure,
+    failure: null,
     evidenceIntegrity: {
       containsSensitiveValues: false,
       selectedRollbackIdentifiersStored: false,
@@ -389,6 +372,47 @@ function writeEvidence({
       rawNetworkStatusStored: false,
       rawProcessExitCodeStored: false,
       tokenStored: false,
+      networkDerivedFieldsStored: false,
+    },
+  };
+
+  mkdirSync(dirname(EVIDENCE_PATH), { recursive: true });
+  writeFileSync(EVIDENCE_PATH, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
+}
+
+function writeFailureEvidence() {
+  const evidence = {
+    schema: 'risck-comply.public-ga-rollback-resolution.v3',
+    status: 'Open',
+    outcome: 'failed',
+    generatedAt: new Date().toISOString(),
+    resolutionMode: 'automatic',
+    policy: {
+      exactProjectRequired: true,
+      exactCurrentReleaseExcluded: true,
+      previousDeploymentRequired: true,
+      deploymentStateRequired: 'READY',
+      deploymentTargetRequired: 'production',
+      mainGitDeploymentPreferred: true,
+      protectedDeploymentProbeSupported: true,
+    },
+    checks: {
+      rollbackCandidateValidated: false,
+      providerIdentityValidated: false,
+      healthEndpointValidated: false,
+    },
+    failure: 'rollback_validation_failed',
+    evidenceIntegrity: {
+      containsSensitiveValues: false,
+      selectedRollbackIdentifiersStored: false,
+      rawDeploymentUrlStored: false,
+      rawProviderPayloadStored: false,
+      rawHealthPayloadStored: false,
+      rawCliOutputStored: false,
+      rawNetworkStatusStored: false,
+      rawProcessExitCodeStored: false,
+      tokenStored: false,
+      networkDerivedFieldsStored: false,
     },
   };
 
@@ -494,13 +518,7 @@ export async function runResolver() {
       throw new ResolverError('previous_ready_production_candidate_unhealthy');
     }
 
-    writeEvidence({
-      passed: true,
-      failure: null,
-      transport,
-      candidateSelected,
-      providerIdentityVerified,
-    });
+    writeSuccessEvidence();
     githubOutput('validated', 'true');
     githubOutput('transport', transport);
     console.log('Previous production rollback candidate passed provider identity and health validation.');
@@ -508,13 +526,7 @@ export async function runResolver() {
     return;
   } catch (error) {
     const failure = safeFailureCode(error);
-    writeEvidence({
-      passed: false,
-      failure,
-      transport,
-      candidateSelected,
-      providerIdentityVerified,
-    });
+    writeFailureEvidence();
     githubOutput('validated', 'false');
     console.error(`Public GA rollback resolution failed closed: ${failure}`);
     console.log(`Wrote ${EVIDENCE_PATH}`);
