@@ -4,13 +4,12 @@ import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const VERCEL_CLI_VERSION = '56.3.2';
 export const EVIDENCE_PATH = 'artifacts/release/public-ga-rollback-resolution.json';
 
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const DEPLOYMENT_ID = /^dpl_[A-Za-z0-9]+$/;
 const DEFAULT_HTTP_TIMEOUT_MS = 10_000;
-const DEFAULT_CLI_TIMEOUT_MS = 90_000;
+const DEFAULT_OIDC_TIMEOUT_MS = 15_000;
 const DEFAULT_MAX_CANDIDATES = 20;
 
 class ResolverError extends Error {
@@ -370,7 +369,7 @@ function writeFailureEvidence() {
 
 export async function runResolver() {
   const httpTimeoutMs = intEnv('RELEASE_ROLLBACK_HEALTH_TIMEOUT_MS', DEFAULT_HTTP_TIMEOUT_MS, 2_000, 60_000);
-  const cliTimeoutMs = intEnv('RELEASE_ROLLBACK_CLI_TIMEOUT_MS', DEFAULT_CLI_TIMEOUT_MS, 15_000, 180_000);
+  const oidcTimeoutMs = intEnv('RELEASE_ROLLBACK_OIDC_TIMEOUT_MS', DEFAULT_OIDC_TIMEOUT_MS, 5_000, 60_000);
   const maxCandidates = intEnv('RELEASE_ROLLBACK_MAX_CANDIDATES', DEFAULT_MAX_CANDIDATES, 2, 100);
 
   const token = required('VERCEL_TOKEN');
@@ -444,7 +443,7 @@ export async function runResolver() {
         }
 
         if (!oidcToken) {
-          oidcToken = await getGitHubActionsOidcToken(cliTimeoutMs);
+          oidcToken = await getGitHubActionsOidcToken(oidcTimeoutMs);
         }
 
         const protectedProbe = await protectedHealthProbe(
