@@ -162,9 +162,11 @@ jobs:
         run: |
           set -euo pipefail
           normalized_sha="${RELEASE_SHA,,}"
-          printf 'RELEASE_SHA=%s\n' "$normalized_sha" >> "$GITHUB_ENV"
-          printf 'SENTRY_RELEASE=%s\n' "$normalized_sha" >> "$GITHUB_ENV"
-          printf 'NEXT_PUBLIC_SENTRY_RELEASE=%s\n' "$normalized_sha" >> "$GITHUB_ENV"
+          {
+            printf 'RELEASE_SHA=%s\n' "$normalized_sha"
+            printf 'SENTRY_RELEASE=%s\n' "$normalized_sha"
+            printf 'NEXT_PUBLIC_SENTRY_RELEASE=%s\n' "$normalized_sha"
+          } >> "$GITHUB_ENV"
 
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
