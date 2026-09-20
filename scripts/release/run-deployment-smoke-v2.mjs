@@ -10,11 +10,11 @@ const maxRedirects = Number(process.env.RELEASE_SMOKE_MAX_REDIRECTS || 5);
 const locale = (process.env.RELEASE_SMOKE_LOCALE || 'pt').replace(/[^a-z-]/gi, '') || 'pt';
 const token = first(['HEALTHCHECK_TOKEN', 'RELEASE_HEALTHCHECK_TOKEN', 'INTERNAL_HEALTHCHECK_TOKEN', 'INTERNAL_CRON_SECRET', 'CRON_SECRET'])?.value || '';
 const headerChecks = [
-  ['content-security-policy', (v) => v.includes("default-src 'self'")],
+  ['content-security-policy', (v) => v.includes("default-src 'self'") && v.includes("object-src 'none'") && v.includes("frame-ancestors 'none'")],
   ['x-frame-options', (v) => v.toLowerCase() === 'deny'],
   ['x-content-type-options', (v) => v.toLowerCase() === 'nosniff'],
-  ['strict-transport-security', (v) => v.toLowerCase().includes('max-age=')],
-  ['referrer-policy', (v) => v.length > 0],
+  ['strict-transport-security', (v) => v.toLowerCase().includes('max-age=63072000') && v.toLowerCase().includes('includesubdomains')],
+  ['referrer-policy', (v) => v.toLowerCase() === 'strict-origin-when-cross-origin'],
   ['permissions-policy', (v) => v.length > 0],
 ];
 const markers = [token, process.env.SUPABASE_SERVICE_ROLE_KEY, process.env.STRIPE_SECRET_KEY, process.env.STRIPE_WEBHOOK_SECRET, process.env.UPSTASH_REDIS_REST_TOKEN, process.env.SENTRY_AUTH_TOKEN, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY].filter(Boolean);

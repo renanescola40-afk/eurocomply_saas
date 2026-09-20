@@ -31,11 +31,11 @@ const expectedSha = String(process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_
 const buildSha = String(process.env.RELEASE_BUILD_SHA || process.env.GITHUB_SHA || '').trim().toLowerCase();
 
 const requiredHeaders = [
-  ['content-security-policy', (value) => value.includes("default-src 'self'")],
+  ['content-security-policy', (value) => value.includes("default-src 'self'") && value.includes("object-src 'none'") && value.includes("frame-ancestors 'none'")],
   ['x-frame-options', (value) => value.toLowerCase() === 'deny'],
   ['x-content-type-options', (value) => value.toLowerCase() === 'nosniff'],
-  ['strict-transport-security', (value) => value.toLowerCase().includes('max-age=')],
-  ['referrer-policy', (value) => value.length > 0],
+  ['strict-transport-security', (value) => value.toLowerCase().includes('max-age=63072000') && value.toLowerCase().includes('includesubdomains')],
+  ['referrer-policy', (value) => value.toLowerCase() === 'strict-origin-when-cross-origin'],
   ['permissions-policy', (value) => value.length > 0],
 ];
 
