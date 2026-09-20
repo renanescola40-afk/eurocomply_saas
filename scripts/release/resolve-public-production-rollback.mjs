@@ -206,6 +206,79 @@ export async function protectedHealthProbe(baseUrl, oidcToken, timeoutMs) {
   }
 }
 
+
+async function fetchJson(url, { token, timeoutMs }) {
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+        'User-Agent': 'risck-comply-public-ga-rollback-resolver/3.0',
+      },
+      cache: 'no-store',
+      redirect: 'error',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch {
+    throw new ResolverError('provider_request_failed');
+  }
+
+  if (!response.ok) {
+    throw new ResolverError('provider_request_rejected');
+  }
+
+  try {
+    return await response.json();
+  } catch {
+    throw new ResolverError('provider_response_invalid_json');
+  }
+}
+
+async function directHealthProbe(baseUrl, timeoutMs) {
+  const headers = {
+    Accept: 'application/json',
+    'User-Agent': 'risck-comply-public-ga-rollback-resolver/3.0',
+  };
+
+  const bypass = String(process.env.VERCEL_AUTOMATION_BYPASS_SECRET || '').trim();
+  if (bypass) {
+    headers['x-vercel-protection-bypass'] = bypass;
+    headers['x-vercel-set-bypass-cookie'] = 'true';
+  }
+
+  try {
+    const response = await fetch(`${baseUrl}/api/health`, {
+      method: 'GET',
+      headers,
+      cache: 'no-store',
+      redirect: 'manual',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    let body = null;
+    if (response.status === 200) {
+      try {
+        body = await response.json();
+      } catch {
+        body = null;
+      }
+    }
+
+    return {
+      passed: response.status === 200 && body?.status === 'ok',
+      status: response.status,
+      protectionBlocked: [302, 401, 403].includes(response.status),
+    };
+  } catch {
+    return {
+      passed: false,
+      status: 0,
+      protectionBlocked: false,
+    };
+  }
+}
+
 function validateCurrentDeployment(detail, {
   projectId,
   releaseSha,
