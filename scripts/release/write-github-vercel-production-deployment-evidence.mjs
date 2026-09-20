@@ -16,6 +16,7 @@ const EXPECTED_REF = 'main';
 const EXPECTED_ENVIRONMENT = 'production';
 const EXPECTED_VERCEL_ACTOR = 'vercel[bot]';
 const EXPECTED_VERCEL_HOST_PREFIX = 'eurocomply-saas-';
+const CANONICAL_PRODUCTION_URL = 'https://www.risckcomply.com';
 
 function env(name) {
   return String(process.env[name] ?? '').trim();
@@ -200,6 +201,7 @@ export async function probeExactDeploymentHealth({
       bodyStatus: null,
       noStore: false,
       protectionBypassUsed: false,
+      blockedByVercelProtection: false,
     };
   }
 
@@ -225,6 +227,7 @@ export async function probeExactDeploymentHealth({
       bodyStatus: null,
       noStore: false,
       protectionBypassUsed: Boolean(bypassSecret),
+      blockedByVercelProtection: false,
     };
   }
 
@@ -232,12 +235,25 @@ export async function probeExactDeploymentHealth({
   if (!response.ok) await response.body?.cancel().catch(() => undefined);
   const noStore = /\bno-store\b/i.test(String(response.headers.get('cache-control') ?? ''));
   const bodyStatus = String(body?.status ?? '');
+  const location = String(response.headers.get('location') ?? '');
+  let blockedByVercelProtection = false;
+  if (response.status === 302 && location) {
+    try {
+      const redirect = new URL(location);
+      blockedByVercelProtection = redirect.protocol === 'https:'
+        && redirect.hostname === 'vercel.com'
+        && redirect.pathname === '/sso-api';
+    } catch {
+      blockedByVercelProtection = false;
+    }
+  }
   return {
     passed: response.status === 200 && bodyStatus === 'ok' && noStore,
     status: response.status,
     bodyStatus: bodyStatus || null,
     noStore,
     protectionBypassUsed: Boolean(bypassSecret),
+    blockedByVercelProtection,
   };
 }
 
@@ -249,6 +265,7 @@ function safeHealthEvidence(health) {
     bodyStatus: health.bodyStatus || null,
     noStore: health.noStore === true,
     protectionBypassUsed: health.protectionBypassUsed === true,
+    blockedByVercelProtection: health.blockedByVercelProtection === true,
   };
 }
 
@@ -321,6 +338,8 @@ export async function buildProductionDeploymentEvidence({
 
   let deployment = null;
   let health = null;
+  let healthTargetClass = null;
+  let immutableProtectionObserved = false;
   const attempts = boundedInteger(maxAttempts, DEFAULT_ATTEMPTS, 1, 60);
   const waitMs = boundedInteger(pollMs, DEFAULT_POLL_MS, 0, 30_000);
 
@@ -341,11 +360,25 @@ export async function buildProductionDeploymentEvidence({
     if (immutableAttempt?.health.passed) {
       deployment = immutableAttempt.deployment;
       health = immutableAttempt.health;
+      healthTargetClass = 'immutable_vercel_deployment';
       break;
     }
 
     deployment = immutableAttempt?.deployment ?? null;
     health = immutableAttempt?.health ?? null;
+    immutableProtectionObserved = immutableAttempt?.health?.blockedByVercelProtection === true;
+
+    if (deployment && immutableProtectionObserved && !String(protectionBypassSecret ?? '').trim()) {
+      const canonicalHealth = await probeExactDeploymentHealth({
+        publicUrl: CANONICAL_PRODUCTION_URL,
+        fetchImpl,
+      });
+      if (canonicalHealth.passed) {
+        health = canonicalHealth;
+        healthTargetClass = 'canonical_production_after_vercel_sso_protection';
+        break;
+      }
+    }
 
     if (attempt < attempts && waitMs > 0) await sleepImpl(waitMs);
   }
@@ -360,7 +393,9 @@ export async function buildProductionDeploymentEvidence({
     ...baseEvidence,
     status: 'PASS',
     outcome: 'passed',
-    summary: 'GitHub records a successful Vercel Production deployment for the exact current main SHA, and the immutable deployment health endpoint responds successfully with no-store.',
+    summary: healthTargetClass === 'immutable_vercel_deployment'
+      ? 'GitHub records a successful Vercel Production deployment for the exact current main SHA, and the immutable deployment health endpoint responds successfully with no-store.'
+      : 'GitHub records a successful Vercel Production deployment for the exact current main SHA. The immutable deployment is protected by Vercel SSO, so health is verified fail-closed on the canonical Production domain with no-store.',
     deployment: {
       proofSource: deployment.source,
       id: deployment.deploymentId,
@@ -380,14 +415,16 @@ export async function buildProductionDeploymentEvidence({
       vercelSuccessStatusFound: true,
       productionHealthOk: true,
       productionHealthNoStore: true,
-      immutableDeploymentHealthOk: true,
+      immutableDeploymentHealthOk: healthTargetClass === 'immutable_vercel_deployment',
+      immutableDeploymentProtectionObserved: immutableProtectionObserved,
+      canonicalProductionHealthFallbackUsed: healthTargetClass === 'canonical_production_after_vercel_sso_protection',
     },
     health: {
       path: '/api/health',
       status: health.status,
       bodyStatus: health.bodyStatus,
       noStore: health.noStore,
-      targetClass: 'immutable_vercel_deployment',
+      targetClass: healthTargetClass,
     },
     evidenceIntegrity: {
       containsSensitiveValues: false,
@@ -397,12 +434,13 @@ export async function buildProductionDeploymentEvidence({
       uniqueProviderDeploymentIdBound: false,
       vercelStatusActorBound: true,
       liveHealthVerified: true,
+      immutableProtectionObserved,
       tokenPersisted: false,
       authorizationHeaderStored: false,
       protectionBypassSecretPersisted: false,
       rawResponseBodyStored: false,
     },
-    truthBoundary: 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through an explicit GitHub deployment status and that the immutable deployment /api/health endpoint passed. Generic commit statuses and Preview deployments are never accepted as Production authority. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
+    truthBoundary: 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through an explicit GitHub deployment status. Health must pass with no-store either on the immutable deployment URL or, only when that exact URL is explicitly blocked by Vercel SSO and no automation bypass is configured, on the fixed canonical Production domain. Generic commit statuses, Preview deployments, arbitrary redirects, and unhealthy immutable deployments are never accepted as Production authority. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
   };
 }
 
