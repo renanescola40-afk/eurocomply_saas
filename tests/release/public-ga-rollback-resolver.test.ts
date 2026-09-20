@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   getGitHubActionsOidcToken,
@@ -229,8 +232,16 @@ describe('Public GA rollback resolver contract', () => {
         }),
       );
 
-    await expect(runResolver()).resolves.toBeUndefined();
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    const originalCwd = process.cwd();
+    const isolatedCwd = mkdtempSync(join(tmpdir(), 'risck-rollback-resolver-'));
+    try {
+      process.chdir(isolatedCwd);
+      await expect(runResolver()).resolves.toBeUndefined();
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+    } finally {
+      process.chdir(originalCwd);
+      rmSync(isolatedCwd, { recursive: true, force: true });
+    }
   });
 
   it('accepts only HTTPS Vercel deployment origins', () => {
