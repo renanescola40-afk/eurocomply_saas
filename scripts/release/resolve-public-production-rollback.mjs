@@ -300,25 +300,59 @@ function githubOutput(name, value) {
   appendFileSync(output, `${name}=${value}\n`);
 }
 
+const SAFE_FAILURE_CODES = new Set([
+  'missing_vercel_token',
+  'missing_vercel_org_id',
+  'missing_vercel_project_id',
+  'missing_release_sha',
+  'missing_current_vercel_deployment_id',
+  'missing_github_repository',
+  'invalid_release_sha',
+  'invalid_current_deployment_id',
+  'provider_request_failed',
+  'provider_request_rejected',
+  'provider_response_invalid_json',
+  'current_deployment_identity_mismatch',
+  'current_deployment_project_mismatch',
+  'current_deployment_sha_mismatch',
+  'current_deployment_not_ready',
+  'current_deployment_not_production',
+  'current_deployment_created_at_missing',
+  'previous_ready_production_candidate_missing',
+  'rollback_deployment_identity_mismatch',
+  'rollback_deployment_project_mismatch',
+  'rollback_deployment_sha_mismatch',
+  'rollback_deployment_not_ready',
+  'rollback_deployment_not_production',
+  'protected_health_probe_timeout',
+  'protected_health_probe_failed',
+]);
+
 function safeFailureCode(error) {
-  if (error instanceof ResolverError) return error.code;
-  return 'unexpected_resolver_failure';
+  if (!(error instanceof ResolverError)) return 'unexpected_resolver_failure';
+  const code = String(error.code || '');
+  return SAFE_FAILURE_CODES.has(code) ? code : 'unexpected_resolver_failure';
 }
 
 function writeEvidence({
   passed,
   failure,
   transport,
-  directStatus,
-  cliExitCode,
-  cliTimedOut,
   candidateSelected,
   providerIdentityVerified,
 }) {
+  const safePassed = passed === true;
+  const safeTransport = transport === 'direct'
+    ? 'direct'
+    : transport === 'vercel-cli'
+      ? 'vercel-cli'
+      : null;
+  const safeFailure = safePassed ? null : safeFailureCode(new ResolverError(failure));
+
   const evidence = {
     schema: 'risck-comply.public-ga-rollback-resolution.v2',
-    status: passed ? 'Complete' : 'Open',
-    outcome: passed ? 'passed' : 'failed',
+    status: safePassed ? 'Complete' : 'Open',
+    outcome: safePassed ? 'passed' : 'failed',
     generatedAt: new Date().toISOString(),
     resolutionMode: 'automatic',
     policy: {
@@ -331,17 +365,14 @@ function writeEvidence({
       protectedDeploymentProbeSupported: true,
     },
     checks: {
-      candidateSelected: Boolean(candidateSelected),
-      providerIdentityVerified: Boolean(providerIdentityVerified),
-      healthEndpointValidated: Boolean(passed),
+      candidateSelected: candidateSelected === true,
+      providerIdentityVerified: providerIdentityVerified === true,
+      healthEndpointValidated: safePassed,
     },
     healthProbe: {
-      transport: transport || null,
-      directStatus: Number.isInteger(directStatus) ? directStatus : null,
-      cliExitCode: Number.isInteger(cliExitCode) ? cliExitCode : null,
-      cliTimedOut: Boolean(cliTimedOut),
+      transport: safeTransport,
     },
-    failure: passed ? null : failure || 'rollback_validation_failed',
+    failure: safeFailure,
     evidenceIntegrity: {
       containsSensitiveValues: false,
       selectedRollbackIdentifiersStored: false,
@@ -349,6 +380,8 @@ function writeEvidence({
       rawProviderPayloadStored: false,
       rawHealthPayloadStored: false,
       rawCliOutputStored: false,
+      rawNetworkStatusStored: false,
+      rawProcessExitCodeStored: false,
       tokenStored: false,
     },
   };
@@ -442,9 +475,6 @@ export async function runResolver() {
       passed: true,
       failure: null,
       transport,
-      directStatus,
-      cliExitCode,
-      cliTimedOut,
       candidateSelected,
       providerIdentityVerified,
     });
@@ -459,9 +489,6 @@ export async function runResolver() {
       passed: false,
       failure,
       transport,
-      directStatus,
-      cliExitCode,
-      cliTimedOut,
       candidateSelected,
       providerIdentityVerified,
     });
