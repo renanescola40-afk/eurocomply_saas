@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const nextConfig = readFileSync('next.config.ts', 'utf8');
 const providerProof = readFileSync('scripts/security/run-production-provider-runtime-proof.mjs', 'utf8');
+const productionWorkflow = readFileSync('.github/workflows/vercel-production.yml', 'utf8');
 
 describe('Sentry production build contract', () => {
   it('normalizes protected Sentry build configuration before passing it to the SDK', () => {
@@ -24,6 +25,11 @@ describe('Sentry production build contract', () => {
     expect(nextConfig).toContain('export default withSentryConfig(nextIntlConfig');
     expect(nextConfig).toContain("tunnelRoute: '/monitoring'");
     expect(nextConfig).toContain(': {};');
+  });
+
+  it('binds Sentry build and runtime release identity to the authorized exact SHA', () => {
+    expect(productionWorkflow).toContain("SENTRY_RELEASE: ${{ inputs.release_sha }}");
+    expect(productionWorkflow).toContain("NEXT_PUBLIC_SENTRY_RELEASE: ${{ inputs.release_sha }}");
   });
 
   it('requires the Sentry build token in the Vercel production environment inventory', () => {
