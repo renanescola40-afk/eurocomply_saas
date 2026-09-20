@@ -2,7 +2,7 @@
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { validateDeploymentRuntimeEvidence } from '../release/validate-deployment-runtime-evidence.mjs';
@@ -197,13 +197,30 @@ function download(repository, token, artifactId, path) {
   if (result.error || result.status !== 0) throw new Error('artifact_download_failed');
 }
 
+export function resolveBundleEntry(entries, path) {
+  const candidates = Array.isArray(entries) ? entries : [];
+  const exactMatches = candidates.filter(
+    (candidate) => candidate === path || candidate.endsWith(`/${path}`),
+  );
+  if (exactMatches.length === 1) return exactMatches[0];
+  if (exactMatches.length > 1) throw new Error(`bundle_evidence_ambiguous:${path}`);
+
+  // actions/upload-artifact strips the least common ancestor from multi-path
+  // uploads, so the runtime proof files are stored at the ZIP root.
+  const rootName = basename(path);
+  const rootMatches = candidates.filter((candidate) => candidate === rootName);
+  if (rootMatches.length === 1) return rootMatches[0];
+  if (rootMatches.length > 1) throw new Error(`bundle_evidence_ambiguous:${path}`);
+  return null;
+}
+
 function extractBundle(zipPath) {
   const entries = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8' })
     .split('\n')
     .map((value) => value.trim())
     .filter(Boolean);
   return Object.fromEntries(BUNDLE_PATHS.map((path) => {
-    const entry = entries.find((candidate) => candidate.endsWith(path));
+    const entry = resolveBundleEntry(entries, path);
     if (!entry) throw new Error(`bundle_evidence_missing:${path}`);
     return [path, JSON.parse(execFileSync('unzip', ['-p', zipPath, entry], {
       encoding: 'utf8',

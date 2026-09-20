@@ -8,6 +8,7 @@ import {
   isOptionalWorkflowUnavailable,
   normalizeDeploymentSmokeEvidence,
   removeStaleProductionRuntimeEvidence,
+  resolveBundleEntry,
   selectExactShaRun,
   validateDownloadedEvidence,
 } from '../../scripts/enterprise/fetch-production-runtime-evidence.mjs';
@@ -146,6 +147,23 @@ describe('production runtime scorecard evidence', () => {
       ...smoke,
       targets: [{ ...smoke.targets[0], detailedChecks: smoke.targets[0].detailedChecks.map((check) => check.name === 'readyEndpointOkWithToken' ? { ...check, passed: false } : check) }],
     }, { targetSha: SHA, repository: REPOSITORY, runId: RUN_ID })).toThrow('deployment_smoke_normalization_failed');
+  });
+
+  it('resolves GitHub upload-artifact root layout without accepting arbitrary nested basename collisions', () => {
+    const path = 'docs/security/evidence/runtime/production-runtime-validation.json';
+
+    expect(resolveBundleEntry([
+      'production-runtime-validation.json',
+      'deployment-smoke-validation.json',
+    ], path)).toBe('production-runtime-validation.json');
+
+    expect(resolveBundleEntry([
+      'docs/security/evidence/runtime/production-runtime-validation.json',
+    ], path)).toBe('docs/security/evidence/runtime/production-runtime-validation.json');
+
+    expect(resolveBundleEntry([
+      'unexpected/production-runtime-validation.json',
+    ], path)).toBeNull();
   });
 
   it('selects only successful exact-main-SHA runs from the production workflow path', () => {
