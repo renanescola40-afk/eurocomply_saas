@@ -131,6 +131,8 @@ jobs:
       SENTRY_ORG: ${{ vars.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
       SENTRY_AUTH_TOKEN: ${{ secrets['SENTRY_AUTH_TOKEN'] }}
+      SENTRY_RELEASE: ${{ inputs.release_sha }}
+      NEXT_PUBLIC_SENTRY_RELEASE: ${{ inputs.release_sha }}
       NEXT_PUBLIC_POSTHOG_KEY: ${{ vars.NEXT_PUBLIC_POSTHOG_KEY }}
       NEXT_PUBLIC_POSTHOG_HOST: https://eu.i.posthog.com
       NEXT_PUBLIC_POSTHOG_ASSET_HOST: https://eu-assets.i.posthog.com
