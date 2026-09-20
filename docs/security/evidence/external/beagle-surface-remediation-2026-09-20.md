@@ -8,15 +8,15 @@ This artifact does not claim a comprehensive penetration test or full independen
 
 ## Verified production anchor
 
-At the time of verification, the canonical production surface was bound to:
+The canonical production surface was re-verified after `main` advanced and is bound to:
 
-- Git SHA: `9346a694f98b69314661886c0513f908ee5b5ae7`
-- Vercel production deployment: `dpl_4BCMDjTtaz6GFX34ZovhbyzrjkAe`
+- Git SHA: `52f4b7e6f3c7f2c8902617252337f859df36dbe9`
+- Vercel production deployment: `dpl_EyEGfxLbe7dSqEx9GXF99B62aRCc`
 - Deployment state: `READY`
 - Target: `production`
 - Canonical URL: `https://www.risckcomply.com`
 
-The repository `main` subsequently advanced to `52f4b7e6f3c7f2c8902617252337f859df36dbe9` for Enterprise 100 concurrency stabilization. Exact-SHA production verification for that newer main release must be re-run before treating this artifact as bound to the newer release.
+The canonical homepage returned HTTP 200 and contained both the immutable deployment identifier and the same 40-character release SHA. `/api/health` independently returned HTTP 200 with the expected security-header baseline.
 
 ## Surface controls verified on 2026-09-20
 
