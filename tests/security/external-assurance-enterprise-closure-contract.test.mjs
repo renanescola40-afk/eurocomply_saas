@@ -70,5 +70,5 @@ test('protected acceptance workflow separates release SHA from immutable evidenc
 test('external assurance completion retriggers same-SHA Enterprise 100 closure', () => {
   assert.match(closureWorkflow, /- 'External Security Assurance Acceptance'/);
   assert.match(closureWorkflow, /github\.event\.workflow_run\.head_sha/);
-  assert.match(closureWorkflow, /cancel-in-progress: true/);
+  assert.match(closureWorkflow, /cancel-in-progress: false/);
 });
