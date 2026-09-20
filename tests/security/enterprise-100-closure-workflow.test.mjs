@@ -137,10 +137,10 @@ test('production and Supabase RLS producer completions retrigger exact-SHA closu
   assert.match(workflow, /push:\n    branches: \[main\]/);
 });
 
-test('same-SHA producer completions collapse to the newest exact-SHA closure snapshot', () => {
+test('same-SHA producer completions preserve one running terminal snapshot while later events coalesce', () => {
   assert.match(workflow, /group: enterprise-100-closure-/);
-  assert.match(workflow, /cancel-in-progress: true/);
-  assert.doesNotMatch(workflow, /cancel-in-progress: false/);
+  assert.match(workflow, /cancel-in-progress: false/);
+  assert.doesNotMatch(workflow, /cancel-in-progress: true/);
 });
 
 test('closure execution requires the exact current main SHA rather than merely an ancestor of main', () => {
