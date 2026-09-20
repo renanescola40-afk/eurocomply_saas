@@ -159,7 +159,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "production:smoke": "node scripts/release/run-deployment-smoke.mjs"
+    "production:smoke": "node scripts/release/public-production-smoke-wrapper.mjs"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "1.4.0",
