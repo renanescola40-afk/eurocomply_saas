@@ -97,8 +97,12 @@ describe('Vercel ignored build rule', () => {
     expect(vercelGitDiffCandidates('')).toEqual([]);
   });
 
-  it('disables automatic Git deployments so the protected release workflow is the only production authority', () => {
+  it('enables native Git deployments while preserving exact-SHA production build enforcement', () => {
     expect(vercelConfig.ignoreCommand).toBe('node scripts/vercel/ignore-build.mjs');
-    expect(vercelConfig.git?.deploymentEnabled).toBe(false);
+    expect(vercelConfig.git?.deploymentEnabled).toBe(true);
+    expect(requiresExactShaVercelBuild({
+      gitRef: 'main',
+      targetEnvironment: 'production',
+    })).toBe(true);
   });
 });
