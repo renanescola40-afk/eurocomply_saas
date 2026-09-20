@@ -74,9 +74,9 @@ async function smoke(baseUrl) {
     ['signupPublicLoads', `/${locale}/signup`],
   ];
   const pages = [];
-  for (const [name, path] of publicPages) { const res = await request(route(baseUrl, path)); const passed = res.status === 200 && h(res.headers, 'content-type').includes('text/html'); pages.push({ name, path, passed, status: res.status }); checks.push(check(name, passed, { path, ...brief(res) })); }
+  for (const [name, path] of publicPages) { const res = await request(route(baseUrl, path), { followRedirects: 'canonical' }); const passed = res.status === 200 && h(res.headers, 'content-type').includes('text/html'); pages.push({ name, path, passed, status: res.status }); checks.push(check(name, passed, { path, ...brief(res) })); }
   checks.push(check('publicLaunchPagesLoad', pages.every((p) => p.passed), { pages }));
-  const landing = await request(route(baseUrl, `/${locale}`));
+  const landing = await request(route(baseUrl, `/${locale}`), { followRedirects: 'canonical' });
   checks.push(check('securityHeadersPresent', headerChecks.every(([name, validate]) => { const value = h(landing.headers, name); return Boolean(value) && validate(value); }), { headers: Object.fromEntries(headerChecks.map(([name]) => [name, h(landing.headers, name) ? 'present' : 'missing'])), landing: brief(landing) }));
   const health = await request(route(baseUrl, '/api/health'), { accept: 'application/json' });
   checks.push(check('healthEndpointOk', health.status === 200 && health.body?.status === 'ok', brief(health)));
@@ -84,7 +84,7 @@ async function smoke(baseUrl) {
   const readyAnonymous = await request(route(baseUrl, '/api/ready'), { accept: 'application/json' });
   checks.push(check('readyEndpointRejectsAnonymous', readyAnonymous.status === 401 && readyAnonymous.body?.status === 'unauthorized', brief(readyAnonymous)));
   checks.push(check('readyEndpointAnonymousNoStore', noStore(readyAnonymous.headers), brief(readyAnonymous)));
-  const ready = token ? await request(route(baseUrl, '/api/ready'), { accept: 'application/json', headers: { Authorization: `Bearer ${token}` } }) : { status: 0, headers: {}, body: null, error: 'missing_protected_readiness_token', redirects: [] };
+  const ready = token ? await request(route(baseUrl, '/api/ready'), { accept: 'application/json', headers: { Authorization: `Bearer ${token}` }, followRedirects: false }) : { status: 0, headers: {}, body: null, error: 'missing_protected_readiness_token', redirects: [] };
   checks.push(check('readyEndpointOkWithToken', ready.status === 200 && ready.body?.status === 'ready', brief(ready)));
   checks.push(check('readyEndpointTokenNoStore', noStore(ready.headers), brief(ready)));
   checks.push(check('readyEndpointDoesNotExposeSecrets', redacted(ready.body), { valuesRedacted: true }));
@@ -102,7 +102,7 @@ async function smoke(baseUrl) {
   checks.push(check('observabilitySmokeRejectsAnonymous', obs.status === 401 && obs.body?.status === 'unauthorized', brief(obs)));
   checks.push(check('observabilitySmokeNoStore', noStore(obs.headers), brief(obs)));
   checks.push(check('sensitiveApisHaveNoStore', [health, readyAnonymous, ready, obs].every((res) => noStore(res.headers)), { apis: [health, readyAnonymous, ready, obs].map((res) => ({ status: res.status, noStore: noStore(res.headers) })) }));
-  if (process.env.RELEASE_RUN_OBSERVABILITY_SMOKE === 'true' && token) { const sent = await request(route(baseUrl, '/api/observability/smoke'), { method: 'POST', accept: 'application/json', headers: { Authorization: `Bearer ${token}`, Origin: baseUrl } }); checks.push(check('observabilitySmokeSent', sent.status === 200 && sent.body?.status === 'sent', brief(sent))); } else checks.push(check('observabilitySmokeSent', process.env.RELEASE_RUN_OBSERVABILITY_SMOKE !== 'true', { skipped: process.env.RELEASE_RUN_OBSERVABILITY_SMOKE !== 'true' }, false));
+  if (process.env.RELEASE_RUN_OBSERVABILITY_SMOKE === 'true' && token) { const sent = await request(route(baseUrl, '/api/observability/smoke'), { method: 'POST', accept: 'application/json', headers: { Authorization: `Bearer ${token}`, Origin: baseUrl }, followRedirects: false }); checks.push(check('observabilitySmokeSent', sent.status === 200 && sent.body?.status === 'sent', brief(sent))); } else checks.push(check('observabilitySmokeSent', process.env.RELEASE_RUN_OBSERVABILITY_SMOKE !== 'true', { skipped: process.env.RELEASE_RUN_OBSERVABILITY_SMOKE !== 'true' }, false));
   return { baseUrl, passed: checks.filter((item) => item.critical).every((item) => item.passed), detailedChecks: checks, checks: Object.fromEntries(checks.map((item) => [item.name, item.passed])) };
 }
 
