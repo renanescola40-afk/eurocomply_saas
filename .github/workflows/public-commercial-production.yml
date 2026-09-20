@@ -272,20 +272,6 @@ jobs:
           state="$(printf '%s' "$deployment" | jq -r '.readyState // .state // empty')"
           test "$state" = "READY"
 
-      - name: Resolve and validate previous healthy production rollback
-        shell: bash
-        env:
-          CURRENT_VERCEL_DEPLOYMENT_ID: ${{ steps.vercel_deployment.outputs.id }}
-        run: node scripts/release/resolve-public-production-rollback.mjs
-
-      - name: Upload Public GA rollback resolution evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: public-ga-rollback-resolution-${{ inputs.release_sha }}
-          path: artifacts/release/public-ga-rollback-resolution.json
-          if-no-files-found: error
-          retention-days: 90
-
       - name: Preserve Beagle pre-change release boundary
         shell: bash
         run: |
@@ -368,6 +354,21 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      - name: Resolve and validate previous healthy production rollback
+        shell: bash
+        env:
+          CURRENT_VERCEL_DEPLOYMENT_ID: ${{ steps.vercel_deployment.outputs.id }}
+        run: node scripts/release/resolve-public-production-rollback.mjs
+
+      - name: Upload Public GA rollback resolution evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: public-ga-rollback-resolution-${{ inputs.release_sha }}
+          path: artifacts/release/public-ga-rollback-resolution.json
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Reverify main before canonical production verification
         shell: bash
         run: |
@@ -380,6 +381,7 @@ jobs:
         env:
           RELEASE_DEPLOYMENT_URL: https://www.risckcomply.com
           RELEASE_SMOKE_URLS: https://www.risckcomply.com
+          RELEASE_ROLLBACK_TARGET_VALIDATED: 'true'
         run: npm run release:deployment-smoke
 
       - name: Verify exact deployed runtime SHA
