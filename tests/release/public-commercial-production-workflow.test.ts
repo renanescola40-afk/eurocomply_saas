@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/public-commercial-production.yml', 'utf8');
 const enterpriseWorkflow = readFileSync('.github/workflows/vercel-production.yml', 'utf8');
+const rollbackResolver = readFileSync('scripts/release/resolve-public-production-rollback.mjs', 'utf8');
 
 describe('Public Commercial GA Vercel production lane', () => {
   it('keeps Public GA independent from Enterprise exact-SHA evidence producers', () => {
@@ -43,6 +44,23 @@ describe('Public Commercial GA Vercel production lane', () => {
     }
   });
 
+  it('resolves rollback automatically from a previous healthy production deployment', () => {
+    expect(workflow).toContain('RELEASE_ROLLBACK_RESOLUTION_MODE: automatic');
+    expect(workflow).toContain('Resolve and validate previous healthy production rollback');
+    expect(workflow).toContain('node scripts/release/resolve-public-production-rollback.mjs');
+    expect(workflow).toContain('public-ga-rollback-resolution.json');
+    expect(workflow).not.toContain('vars.RELEASE_ROLLBACK_TARGET_URL');
+    expect(workflow).not.toContain("secrets['RELEASE_ROLLBACK_TARGET_URL']");
+    expect(workflow).not.toContain('vars.LAST_KNOWN_GOOD_DEPLOYMENT_URL');
+
+    expect(rollbackResolver).toContain("api.searchParams.set('target', 'production')");
+    expect(rollbackResolver).toContain("if (state !== 'READY') continue");
+    expect(rollbackResolver).toContain("if (sha === releaseSha) continue");
+    expect(rollbackResolver).toContain("/api/health");
+    expect(rollbackResolver).toContain("RELEASE_ROLLBACK_TARGET_VALIDATED: 'true'");
+    expect(rollbackResolver).toContain("throw new Error('healthy_rollback_target_missing')");
+  });
+
   it('uses explicit Vercel project/team binding and observes the native exact-SHA production deployment', () => {
     expect(workflow).toContain('VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}');
     expect(workflow).toContain('VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}');
@@ -80,5 +98,6 @@ describe('Public Commercial GA Vercel production lane', () => {
     expect(workflow).not.toMatch(/continue-on-error:\s*true/);
     expect(workflow).not.toContain('|| true');
     expect(workflow).not.toContain('exit 0 #');
+    expect(rollbackResolver).not.toContain('|| true');
   });
 });
