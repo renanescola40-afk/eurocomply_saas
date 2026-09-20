@@ -59,6 +59,8 @@ describe('Public Commercial GA Vercel production lane', () => {
     expect(rollbackResolver).toContain("/api/health");
     expect(rollbackResolver).toContain("const VERCEL_CLI_VERSION = '56.3.2'");
     expect(rollbackResolver).toContain("'curl'");
+    expect(rollbackResolver).toContain("'/api/health'");
+    expect(rollbackResolver).toContain("'--deployment'");
     expect(rollbackResolver).toContain("'--token'");
     expect(rollbackResolver).toContain('healthIsReadyViaVercelCurl');
     expect(rollbackResolver).toContain("selectedRollbackIdentifiersStored: false");
