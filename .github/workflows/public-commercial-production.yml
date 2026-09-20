@@ -73,6 +73,9 @@ jobs:
       TRUSTED_ORIGINS: https://www.risckcomply.com
 
       RELEASE_ROLLBACK_RESOLUTION_MODE: automatic
+      RELEASE_ROLLBACK_HEALTH_TIMEOUT_MS: '10000'
+      RELEASE_ROLLBACK_CLI_TIMEOUT_MS: '90000'
+      RELEASE_ROLLBACK_MAX_CANDIDATES: '20'
 
       HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -355,6 +358,7 @@ jobs:
           retention-days: 90
 
       - name: Resolve and validate previous healthy production rollback
+        id: rollback_resolver
         shell: bash
         env:
           CURRENT_VERCEL_DEPLOYMENT_ID: ${{ steps.vercel_deployment.outputs.id }}
@@ -378,17 +382,37 @@ jobs:
           test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
 
       - name: Production smoke on canonical hostname
+        id: production_smoke
         env:
           RELEASE_DEPLOYMENT_URL: https://www.risckcomply.com
           RELEASE_SMOKE_URLS: https://www.risckcomply.com
-          RELEASE_ROLLBACK_TARGET_VALIDATED: 'true'
+          RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ steps.rollback_resolver.outputs.validated }}
         run: npm run release:deployment-smoke
 
+      - name: Upload Public GA smoke evidence
+        if: always() && steps.rollback_resolver.outputs.validated == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: public-ga-smoke-${{ inputs.release_sha }}
+          path: docs/security/evidence/runtime/deployment-smoke-validation.json
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Verify exact deployed runtime SHA
+        id: runtime_sha
         env:
           RELEASE_DEPLOYMENT_URL: https://www.risckcomply.com
           RELEASE_PRODUCTION_URL: https://www.risckcomply.com
         run: node scripts/release/verify-runtime-release-sha.mjs
+
+      - name: Upload runtime SHA evidence
+        if: always() && steps.production_smoke.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: public-ga-runtime-sha-${{ inputs.release_sha }}
+          path: docs/security/evidence/runtime/runtime-release-sha-validation.json
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Reverify main after production promotion
         shell: bash
