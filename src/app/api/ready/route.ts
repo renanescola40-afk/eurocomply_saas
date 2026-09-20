@@ -248,6 +248,11 @@ export async function withReadinessDependencyTimeout<T>(operation: PromiseLike<T
 export function isEnterpriseReadinessRequired() {
   return process.env.RELEASE_TARGET === 'enterprise'
     || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true'
+    || process.env.EUROCOMPLY_ENTERPRISE_RELEASE === 'true';
+}
+
+export function isStorageScannerReadinessRequired() {
+  return isEnterpriseReadinessRequired()
     || process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV] === 'true';
 }
 
@@ -341,7 +346,7 @@ export function enterpriseStepUpReadinessCheck(): EnterpriseStepUpReadinessCheck
 }
 
 export function enterpriseStorageScannerCheck(): EnterpriseStorageScannerCheck {
-  const required = isEnterpriseReadinessRequired();
+  const required = isStorageScannerReadinessRequired();
   const provider = String(process.env[MALWARE_SCANNER_PROVIDER_ENV] ?? '').trim().toLowerCase();
   const malwareScanningRequired = process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV] === 'true';
   const realScannerProviderConfigured = REAL_MALWARE_SCANNER_PROVIDERS.has(provider);
