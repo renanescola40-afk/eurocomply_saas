@@ -158,7 +158,17 @@ jobs:
           node --check scripts/release/verify-runtime-release-sha.mjs
 
       - name: Public production environment preflight
+        id: public_preflight
         run: node scripts/release/check-public-production-release-env.mjs
+
+      - name: Upload Public GA preflight evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: public-ga-preflight-${{ inputs.release_sha }}
+          path: docs/security/evidence/runtime/public-production-release-env-readiness.json
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Lint
         run: npm run lint
