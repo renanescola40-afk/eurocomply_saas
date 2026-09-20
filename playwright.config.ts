@@ -41,3 +41,5 @@ export default defineConfig({
         },
       }),
 });
+
+// CHECKUP_TRIGGER: execute disposable Product FRIA runtime E2E for Public GA audit.
