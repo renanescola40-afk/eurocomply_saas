@@ -27,6 +27,7 @@ function fixtureFetch(options: {
   deploymentHealthStatus?: number;
   deploymentHealthBodyStatus?: string;
   deploymentHealthNoStore?: boolean;
+  deploymentHealthLocation?: string;
   canonicalHealthStatus?: number;
   mainShas?: string[];
   noDeployments?: boolean;
@@ -40,6 +41,7 @@ function fixtureFetch(options: {
     deploymentHealthStatus = 200,
     deploymentHealthBodyStatus = 'ok',
     deploymentHealthNoStore = true,
+    deploymentHealthLocation,
     canonicalHealthStatus = 200,
     mainShas = [SHA],
     noDeployments = false,
@@ -90,7 +92,10 @@ function fixtureFetch(options: {
       return jsonResponse(
         { status: deploymentHealthBodyStatus },
         deploymentHealthStatus,
-        { 'cache-control': deploymentHealthNoStore ? 'no-store, private' : 'public, max-age=60' },
+        {
+          'cache-control': deploymentHealthNoStore ? 'no-store, private' : 'public, max-age=60',
+          ...(deploymentHealthLocation ? { location: deploymentHealthLocation } : {}),
+        },
       );
     }
 
@@ -189,14 +194,44 @@ describe('exact-SHA Vercel production deployment proof', () => {
     expect(evidence.blockers).toContain('exact_vercel_production_deployment_unproven');
   });
 
-  it('does not substitute canonical Production health when the immutable exact-SHA Production deployment is protected or unhealthy', async () => {
+  it('keeps exact-SHA health OPEN when the immutable deployment is protected by Vercel SSO without a bypass', async () => {
     const evidence = await buildProductionDeploymentEvidence({
       repository: REPOSITORY,
       targetSha: SHA,
       token: 'test-token',
       fetchImpl: fixtureFetch({
-        deploymentHealthStatus: 401,
+        deploymentHealthStatus: 302,
         deploymentHealthBodyStatus: 'protected',
+        deploymentHealthNoStore: true,
+        deploymentHealthLocation: 'https://vercel.com/sso-api?url=https%3A%2F%2Fexample.vercel.app%2Fapi%2Fhealth',
+        canonicalHealthStatus: 200,
+      }),
+      sleepImpl: async () => undefined,
+      apiUrl: API,
+      maxAttempts: 1,
+      pollMs: 0,
+    });
+
+    expect(evidence.status).toBe('OPEN');
+    expect(evidence.blockers).toContain('immutable_deployment_health_blocked_by_vercel_protection');
+    expect(evidence.checks).toMatchObject({
+      exactShaProductionDeploymentFound: true,
+      productionHealthOk: false,
+    });
+    expect(evidence.health).toMatchObject({
+      status: 302,
+      blockedByVercelProtection: true,
+    });
+  });
+
+  it('does not substitute canonical Production health for an unhealthy immutable deployment', async () => {
+    const evidence = await buildProductionDeploymentEvidence({
+      repository: REPOSITORY,
+      targetSha: SHA,
+      token: 'test-token',
+      fetchImpl: fixtureFetch({
+        deploymentHealthStatus: 500,
+        deploymentHealthBodyStatus: 'failed',
         deploymentHealthNoStore: true,
         canonicalHealthStatus: 200,
       }),

@@ -200,6 +200,7 @@ export async function probeExactDeploymentHealth({
       bodyStatus: null,
       noStore: false,
       protectionBypassUsed: false,
+      blockedByVercelProtection: false,
     };
   }
 
@@ -225,6 +226,7 @@ export async function probeExactDeploymentHealth({
       bodyStatus: null,
       noStore: false,
       protectionBypassUsed: Boolean(bypassSecret),
+      blockedByVercelProtection: false,
     };
   }
 
@@ -232,12 +234,25 @@ export async function probeExactDeploymentHealth({
   if (!response.ok) await response.body?.cancel().catch(() => undefined);
   const noStore = /\bno-store\b/i.test(String(response.headers.get('cache-control') ?? ''));
   const bodyStatus = String(body?.status ?? '');
+  const location = String(response.headers.get('location') ?? '');
+  let blockedByVercelProtection = false;
+  if (response.status === 302 && location) {
+    try {
+      const redirect = new URL(location);
+      blockedByVercelProtection = redirect.protocol === 'https:'
+        && redirect.hostname === 'vercel.com'
+        && redirect.pathname === '/sso-api';
+    } catch {
+      blockedByVercelProtection = false;
+    }
+  }
   return {
     passed: response.status === 200 && bodyStatus === 'ok' && noStore,
     status: response.status,
     bodyStatus: bodyStatus || null,
     noStore,
     protectionBypassUsed: Boolean(bypassSecret),
+    blockedByVercelProtection,
   };
 }
 
@@ -249,6 +264,7 @@ function safeHealthEvidence(health) {
     bodyStatus: health.bodyStatus || null,
     noStore: health.noStore === true,
     protectionBypassUsed: health.protectionBypassUsed === true,
+    blockedByVercelProtection: health.blockedByVercelProtection === true,
   };
 }
 
@@ -321,6 +337,7 @@ export async function buildProductionDeploymentEvidence({
 
   let deployment = null;
   let health = null;
+  let immutableProtectionObserved = false;
   const attempts = boundedInteger(maxAttempts, DEFAULT_ATTEMPTS, 1, 60);
   const waitMs = boundedInteger(pollMs, DEFAULT_POLL_MS, 0, 30_000);
 
@@ -346,12 +363,18 @@ export async function buildProductionDeploymentEvidence({
 
     deployment = immutableAttempt?.deployment ?? null;
     health = immutableAttempt?.health ?? null;
+    immutableProtectionObserved = immutableAttempt?.health?.blockedByVercelProtection === true;
 
     if (attempt < attempts && waitMs > 0) await sleepImpl(waitMs);
   }
 
   if (!deployment) return failureEvidence(baseEvidence, 'exact_vercel_production_deployment_unproven');
-  if (!health?.passed) return failureEvidence(baseEvidence, 'production_deployment_health_unproven', deployment, health);
+  if (!health?.passed) {
+    const blocker = immutableProtectionObserved && !String(protectionBypassSecret ?? '').trim()
+      ? 'immutable_deployment_health_blocked_by_vercel_protection'
+      : 'production_deployment_health_unproven';
+    return failureEvidence(baseEvidence, blocker, deployment, health);
+  }
 
   const finalMainMatches = await currentMainMatches({ repository, targetSha, token, fetchImpl, apiUrl });
   if (!finalMainMatches) return failureEvidence(baseEvidence, 'target_sha_is_not_current_main', deployment, health);
@@ -381,6 +404,8 @@ export async function buildProductionDeploymentEvidence({
       productionHealthOk: true,
       productionHealthNoStore: true,
       immutableDeploymentHealthOk: true,
+      immutableDeploymentProtectionObserved: immutableProtectionObserved,
+      canonicalProductionHealthFallbackUsed: false,
     },
     health: {
       path: '/api/health',
@@ -397,12 +422,13 @@ export async function buildProductionDeploymentEvidence({
       uniqueProviderDeploymentIdBound: false,
       vercelStatusActorBound: true,
       liveHealthVerified: true,
+      immutableProtectionObserved,
       tokenPersisted: false,
       authorizationHeaderStored: false,
       protectionBypassSecretPersisted: false,
       rawResponseBodyStored: false,
     },
-    truthBoundary: 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through an explicit GitHub deployment status and that the immutable deployment /api/health endpoint passed. Generic commit statuses and Preview deployments are never accepted as Production authority. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
+    truthBoundary: 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through an explicit GitHub deployment status and that the immutable deployment /api/health endpoint passed with no-store. Preview deployments are never accepted as Production authority. Generic commit statuses, canonical-domain substitution, arbitrary redirects, protected immutable deployments without an authorized bypass, and unhealthy immutable deployments are never accepted as exact-SHA Production health proof. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
   };
 }
 
