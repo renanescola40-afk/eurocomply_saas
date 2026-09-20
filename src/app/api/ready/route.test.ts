@@ -16,6 +16,8 @@ import {
   GET,
   enterpriseStepUpReadinessCheck,
   enterpriseStorageScannerCheck,
+  isEnterpriseReadinessRequired,
+  isStorageScannerReadinessRequired,
   readyEnvironmentCheck,
   sentryReleaseUploadCheck,
 } from './route';
@@ -328,6 +330,35 @@ describe('ready endpoint hardening', () => {
       detail: 'not_configured',
     });
     expect(body.checks.stripeApiReachable).toBe(false);
+  });
+
+  it('does not promote Public GA to Enterprise readiness merely because malware scanning is required', () => {
+    stubReadyEnvironment();
+    vi.stubEnv('RELEASE_TARGET', 'public-production');
+    vi.stubEnv('RISCK_COMPLY_ENTERPRISE_RELEASE', '');
+    vi.stubEnv('EUROCOMPLY_ENTERPRISE_RELEASE', '');
+    vi.stubEnv('REQUIRE_MALWARE_SCAN_FOR_UPLOADS', 'true');
+    vi.stubEnv('MALWARE_SCANNER_PROVIDER', 'http');
+    vi.stubEnv('MALWARE_SCANNER_ENDPOINT', 'https://scanner.example/scan');
+    vi.stubEnv('MALWARE_SCANNER_ALLOWED_HOSTS', 'scanner.example');
+    vi.stubEnv('STEP_UP_PROVIDER_MODE', '');
+    vi.stubEnv('STEP_UP_SIGNING_SECRET', '');
+
+    expect(isEnterpriseReadinessRequired()).toBe(false);
+    expect(isStorageScannerReadinessRequired()).toBe(true);
+    expect(enterpriseStepUpReadinessCheck()).toEqual({
+      required: false,
+      configured: true,
+      dedicatedSigningSecretConfigured: false,
+      runtimeConfigurationConfigured: false,
+    });
+    expect(enterpriseStorageScannerCheck()).toMatchObject({
+      required: true,
+      configured: true,
+      malwareScanningRequired: true,
+      realScannerProviderConfigured: true,
+      scannerTransportConfigured: true,
+    });
   });
 
   it('requires a dedicated step-up signing secret for enterprise readiness', async () => {
