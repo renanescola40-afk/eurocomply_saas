@@ -9,6 +9,8 @@ const releaseTarget = String(process.env.RELEASE_TARGET || 'public-production').
 const commitSha = process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null;
 const buildSha = process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_SHA || process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || null;
 const allowedReleaseTargets = new Set(['production', 'public-production']);
+const rollbackResolutionMode = String(process.env.RELEASE_ROLLBACK_RESOLUTION_MODE || 'manual').trim().toLowerCase();
+const automaticRollback = rollbackResolutionMode === 'automatic';
 
 function hasAny(names) {
   return names.some((name) => Boolean(String(process.env[name] || '').trim()));
@@ -49,15 +51,33 @@ const checks = [
   }, 'Set the Stripe secret key, webhook secret, and all four canonical Essential/Professional monthly+annual production Price bindings. Legacy Starter/Growth aliases do not authorize release readiness.'),
   group('redisConfigured', hasAll(['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN']), { requiredCount: 2 }, 'Set the distributed rate-limit Redis URL and token.'),
   group('sentryConfigured', hasAny(['NEXT_PUBLIC_SENTRY_DSN', 'SENTRY_DSN']), { requiresDsn: true }, 'Set a Sentry DSN for production error reporting. Enterprise source-map upload credentials are not required by this public profile.'),
-  group('rollbackTargetConfigured', hasAny(['RELEASE_ROLLBACK_TARGET', 'RELEASE_ROLLBACK_TARGET_URL', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL']), {
-    acceptedSources: ['RELEASE_ROLLBACK_TARGET', 'RELEASE_ROLLBACK_TARGET_URL', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL'],
-  }, 'Set a last-known-good deployment URL or rollback target.'),
-  group('rollbackCommitConfigured', hasAny(['RELEASE_ROLLBACK_TARGET_SHA', 'RELEASE_ROLLBACK_TARGET_COMMIT_SHA', 'LAST_KNOWN_GOOD_COMMIT_SHA', 'LAST_KNOWN_GOOD_SHA']), {
-    acceptedSources: ['RELEASE_ROLLBACK_TARGET_SHA', 'RELEASE_ROLLBACK_TARGET_COMMIT_SHA', 'LAST_KNOWN_GOOD_COMMIT_SHA', 'LAST_KNOWN_GOOD_SHA'],
-  }, 'Set the commit SHA associated with the rollback target.'),
-  group('rollbackFunctionalValidationFlagConfigured', process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true', {
-    requiredValue: 'RELEASE_ROLLBACK_TARGET_VALIDATED=true',
-  }, 'Set RELEASE_ROLLBACK_TARGET_VALIDATED=true only after the rollback target has been smoke-tested.'),
+  group('rollbackResolutionConfigured', automaticRollback
+    ? hasAll(['VERCEL_TOKEN', 'VERCEL_ORG_ID', 'VERCEL_PROJECT_ID'])
+    : hasAny(['RELEASE_ROLLBACK_TARGET', 'RELEASE_ROLLBACK_TARGET_URL', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL']), {
+    resolutionMode: rollbackResolutionMode,
+    automaticResolverInputsRequired: automaticRollback ? ['VERCEL_TOKEN', 'VERCEL_ORG_ID', 'VERCEL_PROJECT_ID'] : [],
+    acceptedManualSources: automaticRollback ? [] : ['RELEASE_ROLLBACK_TARGET', 'RELEASE_ROLLBACK_TARGET_URL', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL'],
+  }, automaticRollback
+    ? 'Configure VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID so the release workflow can resolve and health-check the previous production deployment.'
+    : 'Set a last-known-good deployment URL or use RELEASE_ROLLBACK_RESOLUTION_MODE=automatic.'),
+  group('rollbackCommitConfigured', automaticRollback
+    ? true
+    : hasAny(['RELEASE_ROLLBACK_TARGET_SHA', 'RELEASE_ROLLBACK_TARGET_COMMIT_SHA', 'LAST_KNOWN_GOOD_COMMIT_SHA', 'LAST_KNOWN_GOOD_SHA']), {
+    resolutionMode: rollbackResolutionMode,
+    deferredToRuntimeResolver: automaticRollback,
+    acceptedSources: automaticRollback ? [] : ['RELEASE_ROLLBACK_TARGET_SHA', 'RELEASE_ROLLBACK_TARGET_COMMIT_SHA', 'LAST_KNOWN_GOOD_COMMIT_SHA', 'LAST_KNOWN_GOOD_SHA'],
+  }, automaticRollback
+    ? 'The rollback commit SHA will be bound to the selected Vercel production deployment at runtime.'
+    : 'Set the commit SHA associated with the rollback target.'),
+  group('rollbackFunctionalValidationConfigured', automaticRollback
+    ? true
+    : process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true', {
+    resolutionMode: rollbackResolutionMode,
+    deferredToRuntimeResolver: automaticRollback,
+    requiredManualValue: automaticRollback ? null : 'RELEASE_ROLLBACK_TARGET_VALIDATED=true',
+  }, automaticRollback
+    ? 'The automatic resolver must prove production+READY and /api/health=ok before smoke.'
+    : 'Set RELEASE_ROLLBACK_TARGET_VALIDATED=true only after the rollback target has been smoke-tested.'),
 ];
 
 const failedChecks = checks.filter((check) => !check.passed);
@@ -73,7 +93,7 @@ const evidence = {
   runner: 'RISCK COMPLY public production release automation',
   releaseTarget,
   summary: outcome === 'passed'
-    ? 'Public production environment preflight verified the required provider and rollback configuration groups without writing secret values.'
+    ? 'Public production environment preflight verified required provider configuration and the selected rollback resolution mode without writing secret values.'
     : 'Public production environment preflight failed closed because one or more required configuration groups were missing.',
   commitSha,
   buildSha,
