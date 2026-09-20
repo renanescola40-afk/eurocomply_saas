@@ -38,7 +38,11 @@ jobs:
           )"
           if [[ "$status" != "200" && "$status" != "201" ]]; then
             echo "Vercel environment update failed with HTTP $status."
-            jq -r '{error: (.error.code // "unknown"), message: (.error.message // "request_failed")}' "$response_file" 2>/dev/null || true
+            if jq -e . "$response_file" >/dev/null 2>&1; then
+              jq -r '{error: (.error.code // "unknown"), message: (.error.message // "request_failed")}' "$response_file"
+            else
+              echo "Vercel API returned a non-JSON error response."
+            fi
             exit 1
           fi
           key="$(jq -r '.created.key // .key // empty' "$response_file")"
@@ -52,8 +56,8 @@ jobs:
           set -euo pipefail
           response_file="$(mktemp)"
           curl --silent --show-error --fail             --url "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&teamId=$VERCEL_TEAM_ID&target=production&limit=20"             --header "Authorization: Bearer $VERCEL_TOKEN" > "$response_file"
-          deployment_id="$(jq -r '[.deployments[] | select((.state // .readyState) == "READY" and .target == "production")][0].uid // empty' "$response_file")"
-          test -n "$deployment_id"
+          deployment_id="$(jq -r '[.deployments[] | select((.state // .readyState) == "READY" and .target == "production")][0].uid // .deployments[0].id // empty' "$response_file")"
+          [[ "$deployment_id" =~ ^dpl_[A-Za-z0-9]+$ ]]
           echo "id=$deployment_id" >> "$GITHUB_OUTPUT"
           echo "Resolved current READY production deployment."
 
@@ -83,7 +87,7 @@ jobs:
             exit 1
           fi
           new_deployment_id="$(jq -r '.id // empty' "$response_file")"
-          test -n "$new_deployment_id"
+          [[ "$new_deployment_id" =~ ^dpl_[A-Za-z0-9]+$ ]]
           echo "Redeploy requested through Vercel REST API."
 
       - name: Summary
