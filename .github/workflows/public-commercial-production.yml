@@ -268,6 +268,194 @@ jobs:
           state="$(printf '%s' "$deployment" | jq -r '.readyState // .state // empty')"
           test "$state" = "READY"
 
+      - name: Resolve healthy automatic rollback target
+        shell: bash
+        env:
+          CURRENT_VERCEL_DEPLOYMENT_ID: ${{ steps.vercel_deployment.outputs.id }}
+        run: |
+          set -euo pipefail
+
+          api="https://api.vercel.com/v7/deployments?projectId=$VERCEL_PROJECT_ID&teamId=$VERCEL_ORG_ID&target=production&limit=20"
+          response="$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $VERCEL_TOKEN" \
+            "$api")"
+
+          rollback_url=''
+          rollback_sha=''
+          rollback_id=''
+
+          while IFS=        shell: bash
+        run: |
+          set -euo pipefail
+          binding='docs/security/pentest/BEAGLE_ACTIVE_TEST_VERSION_BINDING_2026-09-12.md'
+          notice='docs/operations/BEAGLE_ACTIVE_TEST_OPERATIONAL_NOTICE_2026-09-12.md'
+          external='docs/security/evidence/external/beagle-vapt-2026-09-12.md'
+          amendment='docs/security/pentest/production-testing-amendment.md'
+
+          for source in "$binding" "$notice" "$external" "$amendment"; do
+            test -f "$source"
+          done
+
+          if grep -Eq 'OBSERVED_PRODUCTION_GITHUB_SHA=[a-f0-9]{40}' "$binding"; then
+            tested_sha="$(grep -Eo 'OBSERVED_PRODUCTION_GITHUB_SHA=[a-f0-9]{40}' "$binding" | head -n 1 | cut -d= -f2)"
+          else
+            tested_sha="$(grep -F 'Production Git SHA:' "$external" | head -n 1 | grep -Eo '[a-f0-9]{40}')"
+          fi
+
+          if grep -Eq 'OBSERVED_PRODUCTION_DEPLOYMENT_ID=dpl_[A-Za-z0-9]+' "$binding"; then
+            tested_deployment_id="$(grep -Eo 'OBSERVED_PRODUCTION_DEPLOYMENT_ID=dpl_[A-Za-z0-9]+' "$binding" | head -n 1 | cut -d= -f2)"
+          else
+            tested_deployment_id="$(grep -F 'Production deployment:' "$external" | head -n 1 | grep -Eo 'dpl_[A-Za-z0-9]+')"
+          fi
+
+          [[ "$tested_sha" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$tested_deployment_id" =~ ^dpl_[A-Za-z0-9]+$ ]]
+          grep -q 'www.risckcomply.com' "$binding"
+          grep -q 'EVIDENCE_PRESERVED=true' "$external"
+
+          mkdir -p artifacts/release
+          binding_sha256="$(sha256sum "$binding" | awk '{print $1}')"
+          notice_sha256="$(sha256sum "$notice" | awk '{print $1}')"
+          external_sha256="$(sha256sum "$external" | awk '{print $1}')"
+          amendment_sha256="$(sha256sum "$amendment" | awk '{print $1}')"
+
+          post_pentest=true
+          if [ "$tested_sha" = "$RELEASE_SHA" ]; then
+            post_pentest=false
+          fi
+
+          jq -n \
+            --arg capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg testedDeploymentId "$tested_deployment_id" \
+            --arg testedSha "$tested_sha" \
+            --arg proposedReleaseSha "$RELEASE_SHA" \
+            --arg bindingSha256 "$binding_sha256" \
+            --arg noticeSha256 "$notice_sha256" \
+            --arg externalSha256 "$external_sha256" \
+            --arg amendmentSha256 "$amendment_sha256" \
+            --argjson proposedReleaseIsPostPentestVersion "$post_pentest" \
+            '{
+              schema: "risck-comply.beagle-prechange-preservation.v1",
+              capturedAt: $capturedAt,
+              canonicalTarget: "https://www.risckcomply.com",
+              testedDeploymentId: $testedDeploymentId,
+              testedSha: $testedSha,
+              proposedReleaseSha: $proposedReleaseSha,
+              proposedReleaseIsPostPentestVersion: $proposedReleaseIsPostPentestVersion,
+              coverageInheritance: false,
+              statement: "Existing Beagle evidence remains attributed only to the tested pre-change Production version; this release does not inherit Beagle coverage without separate revalidation.",
+              sourceDigests: {
+                versionBindingSha256: $bindingSha256,
+                operationalNoticeSha256: $noticeSha256,
+                externalEvidenceSha256: $externalSha256,
+                productionTestingAmendmentSha256: $amendmentSha256
+              }
+            }' > artifacts/release/beagle-prechange-preservation.json
+
+      - name: Upload Beagle pre-change preservation artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: beagle-prechange-preservation-${{ inputs.release_sha }}
+          path: |
+            artifacts/release/beagle-prechange-preservation.json
+            docs/security/pentest/BEAGLE_ACTIVE_TEST_VERSION_BINDING_2026-09-12.md
+            docs/operations/BEAGLE_ACTIVE_TEST_OPERATIONAL_NOTICE_2026-09-12.md
+            docs/security/evidence/external/beagle-vapt-2026-09-12.md
+            docs/security/pentest/production-testing-amendment.md
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Reverify main before canonical production verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
+          test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
+
+      - name: Production smoke on canonical hostname
+        env:
+          RELEASE_DEPLOYMENT_URL: https://www.risckcomply.com
+          RELEASE_SMOKE_URLS: https://www.risckcomply.com
+        run: npm run release:deployment-smoke
+
+      - name: Verify exact deployed runtime SHA
+        env:
+          RELEASE_DEPLOYMENT_URL: https://www.risckcomply.com
+          RELEASE_PRODUCTION_URL: https://www.risckcomply.com
+        run: node scripts/release/verify-runtime-release-sha.mjs
+
+      - name: Reverify main after production promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"
+
+      - name: Public GA deployment summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## RISCK COMPLY Public Commercial GA'
+            echo
+            printf '%s\n' "- Release SHA: $RELEASE_SHA"
+            echo "- Vercel project binding: checked"
+            echo "- Exact-SHA Vercel production deployment: observed READY if prior step passed"
+            echo "- Exact runtime SHA: verified if prior verification step passed"
+            echo "- Enterprise 100 evidence: intentionally independent from this Public GA deployment lane"
+          } >> "$GITHUB_STEP_SUMMARY"
+\t' read -r candidate_id candidate_url candidate_sha candidate_state candidate_target; do
+            [ -n "$candidate_id" ] || continue
+            [ -n "$candidate_url" ] || continue
+            [ -n "$candidate_sha" ] || continue
+            [ "$candidate_id" != "$CURRENT_VERCEL_DEPLOYMENT_ID" ] || continue
+            [ "$candidate_sha" != "${RELEASE_SHA,,}" ] || continue
+            [ "$candidate_state" = "READY" ] || continue
+            [ "$candidate_target" = "production" ] || continue
+
+            candidate_base="https://$candidate_url"
+            health="$(curl --fail --silent --show-error --max-time 10 "$candidate_base/api/health" 2>/dev/null || true)"
+            if [ "$(printf '%s' "$health" | jq -r '.status // empty' 2>/dev/null)" = "ok" ]; then
+              rollback_url="$candidate_base"
+              rollback_sha="$candidate_sha"
+              rollback_id="$candidate_id"
+              break
+            fi
+          done < <(
+            printf '%s' "$response" | jq -r '
+              .deployments[]
+              | [
+                  (.uid // .id // ""),
+                  (.url // ""),
+                  (.meta.githubCommitSha // ""),
+                  (.state // .readyState // ""),
+                  (.target // "")
+                ]
+              | @tsv
+            '
+          )
+
+          if [ -z "$rollback_url" ] || [ -z "$rollback_sha" ] || [ -z "$rollback_id" ]; then
+            echo '::error title=Healthy rollback target missing::No previous READY production deployment with a healthy /api/health endpoint was found.'
+            exit 1
+          fi
+
+          [[ "$rollback_id" =~ ^dpl_[A-Za-z0-9]+$ ]]
+          [[ "$rollback_sha" =~ ^[a-f0-9]{40}$ ]]
+
+          {
+            echo "RELEASE_ROLLBACK_TARGET_URL=$rollback_url"
+            echo "RELEASE_ROLLBACK_TARGET=$rollback_url"
+            echo "LAST_KNOWN_GOOD_DEPLOYMENT_URL=$rollback_url"
+            echo "RELEASE_ROLLBACK_TARGET_SHA=$rollback_sha"
+            echo "LAST_KNOWN_GOOD_COMMIT_SHA=$rollback_sha"
+            echo "RELEASE_ROLLBACK_TARGET_VALIDATED=true"
+          } >> "$GITHUB_ENV"
+
+          echo "Resolved rollback deployment: $rollback_id"
+          echo "Resolved rollback SHA: $rollback_sha"
+
       - name: Preserve Beagle pre-change release boundary
         shell: bash
         run: |
