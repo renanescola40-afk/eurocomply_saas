@@ -243,6 +243,7 @@ async function vercelProof() {
   let productionEnvironmentEnumerated = false;
   let requiredEnvironmentKeysPresent = false;
   let requiredEnvironmentKeyCount = 0;
+  let missingRequiredEnvironmentKeys = [];
   let transactionalEmailBindingsPresent = false;
   let transactionalEmailGuardEnabled = false;
   let malwareScanningGuardEnabled = false;
@@ -289,7 +290,8 @@ async function vercelProof() {
 
       productionEnvironmentEnumerated = true;
       requiredEnvironmentKeyCount = REQUIRED_VERCEL_KEYS.filter((key) => productionKeys.has(key)).length;
-      requiredEnvironmentKeysPresent = requiredEnvironmentKeyCount === REQUIRED_VERCEL_KEYS.length;
+      missingRequiredEnvironmentKeys = REQUIRED_VERCEL_KEYS.filter((key) => !productionKeys.has(key));
+      requiredEnvironmentKeysPresent = missingRequiredEnvironmentKeys.length === 0;
       transactionalEmailBindingsPresent = [
         'RESEND_API_KEY',
         'EMAIL_FROM',
@@ -350,6 +352,7 @@ async function vercelProof() {
     metrics: {
       requiredEnvironmentKeys: REQUIRED_VERCEL_KEYS.length,
       requiredEnvironmentKeysPresent: requiredEnvironmentKeyCount,
+      missingRequiredEnvironmentKeys,
       scannerTransportBindingModesPresent,
       selectedNonSecretControlsChecked: NON_SECRET_VERCEL_CONTROLS.length,
     },
