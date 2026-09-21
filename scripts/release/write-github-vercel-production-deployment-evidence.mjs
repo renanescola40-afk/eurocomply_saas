@@ -391,6 +391,7 @@ export async function buildProductionDeploymentEvidence({
   targetSha,
   token,
   protectionBypassSecret = '',
+  healthcheckToken = '',
   fetchImpl = globalThis.fetch,
   sleepImpl = (ms) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms)),
   apiUrl = DEFAULT_API_URL,
@@ -523,7 +524,7 @@ export async function buildProductionDeploymentEvidence({
       protectionBypassSecretPersisted: false,
       rawResponseBodyStored: false,
     },
-    truthBoundary: 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through an explicit GitHub deployment status and that Production health passed with no-store. Canonical fallback is accepted only through the authenticated /api/ready/release endpoint when it reports the same exact target SHA and only after the immutable Vercel URL is blocked specifically by Vercel protection; generic public /api/health is never sufficient for exact-SHA substitution. Preview deployments, generic commit statuses, arbitrary redirects, SHA-mismatched canonical responses, and unhealthy immutable deployments are never accepted. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
+    truthBoundary: 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through an explicit GitHub deployment status and that Production health passed with no-store. Canonical fallback is accepted only through the authenticated /api/ready/release endpoint when it reports the same exact target SHA and only after the immutable Vercel URL is blocked specifically by Vercel protection; generic public /api/health is never sufficient for exact-SHA substitution. Preview deployments are never accepted as Production authority. Generic commit statuses, arbitrary redirects, SHA-mismatched canonical responses, and unhealthy immutable deployments are never accepted as exact-SHA Production proof. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
   };
 }
 
