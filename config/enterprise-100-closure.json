@@ -134,7 +134,7 @@
       "acceptedStatuses": [
         "LEGAL_LAUNCH_ACCEPTED"
       ],
-      "scope": "internal"
+      "scope": "external"
     },
     {
       "id": "external-security-assurance",
@@ -153,7 +153,7 @@
         "GO",
         "APPROVED"
       ],
-      "scope": "internal"
+      "scope": "external"
     }
   ]
 }
