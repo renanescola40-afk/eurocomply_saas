@@ -29,6 +29,8 @@ function fixtureFetch(options: {
   deploymentHealthNoStore?: boolean;
   deploymentHealthLocation?: string;
   canonicalHealthStatus?: number;
+  canonicalReleaseSha?: string;
+  canonicalReleaseStatus?: number;
   mainShas?: string[];
   noDeployments?: boolean;
   exposeSuccessfulCommitStatus?: boolean;
@@ -43,6 +45,8 @@ function fixtureFetch(options: {
     deploymentHealthNoStore = true,
     deploymentHealthLocation,
     canonicalHealthStatus = 200,
+    canonicalReleaseSha = SHA,
+    canonicalReleaseStatus = 200,
     mainShas = [SHA],
     noDeployments = false,
     exposeSuccessfulCommitStatus = false,
@@ -96,6 +100,21 @@ function fixtureFetch(options: {
           'cache-control': deploymentHealthNoStore ? 'no-store, private' : 'public, max-age=60',
           ...(deploymentHealthLocation ? { location: deploymentHealthLocation } : {}),
         },
+      );
+    }
+
+    if (url === `${CANONICAL_URL}/api/ready/release`) {
+      return jsonResponse(
+        {
+          status: canonicalReleaseStatus === 200 ? 'ok' : 'not_ready',
+          release: {
+            available: canonicalReleaseStatus === 200,
+            commitSha: canonicalReleaseSha,
+            provenance: 'vercel',
+          },
+        },
+        canonicalReleaseStatus,
+        { 'cache-control': 'no-store, private' },
       );
     }
 
@@ -161,6 +180,7 @@ describe('exact-SHA Vercel production deployment proof', () => {
       repository: REPOSITORY,
       targetSha: SHA,
       token: 'test-token',
+      healthcheckToken: 'health-token',
       fetchImpl: fixtureFetch({
         noDeployments: true,
         exposeSuccessfulCommitStatus: true,
@@ -194,11 +214,12 @@ describe('exact-SHA Vercel production deployment proof', () => {
     expect(evidence.blockers).toContain('exact_vercel_production_deployment_unproven');
   });
 
-  it('keeps exact-SHA health OPEN when the immutable deployment is protected by Vercel SSO without a bypass', async () => {
+  it('uses canonical health only when the exact-SHA immutable deployment is blocked by Vercel protection', async () => {
     const evidence = await buildProductionDeploymentEvidence({
       repository: REPOSITORY,
       targetSha: SHA,
       token: 'test-token',
+      healthcheckToken: 'health-token',
       fetchImpl: fixtureFetch({
         deploymentHealthStatus: 302,
         deploymentHealthBodyStatus: 'protected',
@@ -212,16 +233,45 @@ describe('exact-SHA Vercel production deployment proof', () => {
       pollMs: 0,
     });
 
-    expect(evidence.status).toBe('OPEN');
-    expect(evidence.blockers).toContain('immutable_deployment_health_blocked_by_vercel_protection');
+    expect(evidence.status).toBe('PASS');
+    expect(evidence.outcome).toBe('passed');
     expect(evidence.checks).toMatchObject({
       exactShaProductionDeploymentFound: true,
-      productionHealthOk: false,
+      productionHealthOk: true,
+      immutableDeploymentHealthOk: false,
+      immutableDeploymentProtectionObserved: true,
+      canonicalProductionHealthFallbackUsed: true,
     });
     expect(evidence.health).toMatchObject({
-      status: 302,
-      blockedByVercelProtection: true,
+      status: 200,
+      bodyStatus: 'ok',
+      noStore: true,
+      targetClass: 'canonical_public_production',
+      path: '/api/ready/release',
     });
+  });
+
+  it('keeps exact-SHA health OPEN when canonical release metadata reports a different SHA', async () => {
+    const evidence = await buildProductionDeploymentEvidence({
+      repository: REPOSITORY,
+      targetSha: SHA,
+      token: 'test-token',
+      healthcheckToken: 'health-token',
+      fetchImpl: fixtureFetch({
+        deploymentHealthStatus: 302,
+        deploymentHealthBodyStatus: 'protected',
+        deploymentHealthNoStore: true,
+        deploymentHealthLocation: 'https://vercel.com/sso-api?url=https%3A%2F%2Fexample.vercel.app%2Fapi%2Fhealth',
+        canonicalReleaseSha: NEWER_SHA,
+      }),
+      sleepImpl: async () => undefined,
+      apiUrl: API,
+      maxAttempts: 1,
+      pollMs: 0,
+    });
+
+    expect(evidence.status).toBe('OPEN');
+    expect(evidence.blockers).toContain('immutable_deployment_health_blocked_by_vercel_protection');
   });
 
   it('does not substitute canonical Production health for an unhealthy immutable deployment', async () => {
