@@ -477,7 +477,9 @@ export async function buildProductionDeploymentEvidence({
     ...baseEvidence,
     status: 'PASS',
     outcome: 'passed',
-    summary: 'GitHub records a successful Vercel Production deployment for the exact current main SHA, and the immutable deployment health endpoint responds successfully with no-store.',
+    summary: health?.canonicalFallbackUsed === true
+      ? 'GitHub records a successful Vercel Production deployment for the exact current main SHA, and the authenticated canonical release endpoint confirms the same exact SHA with no-store.'
+      : 'GitHub records a successful Vercel Production deployment for the exact current main SHA, and the immutable deployment health endpoint responds successfully with no-store.',
     deployment: {
       proofSource: deployment.source,
       id: deployment.deploymentId,
