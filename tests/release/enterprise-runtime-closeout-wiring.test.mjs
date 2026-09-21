@@ -163,7 +163,7 @@ test('runtime closeout maps protected aliases into canonical release inputs', ()
   assert.match(workflow, /^\s{10}HEALTHCHECK_TOKEN: \$\{\{ secrets\.READINESS_TOKEN \}\}/m);
   assert.match(workflow, /^\s{10}NEXT_PUBLIC_SUPABASE_URL: \$\{\{ secrets\.SUPABASE_URL \}\}/m);
   assert.match(workflow, /^\s{10}NEXT_PUBLIC_SUPABASE_ANON_KEY: \$\{\{ secrets\.SUPABASE_ANON_KEY \}\}/m);
-  assert.match(workflow, /^\s{6}RELEASE_PRODUCTION_URL: \$\{\{ vars\.PRODUCTION_URL \}\}/m);
+  assert.match(workflow, /^\s{6}RELEASE_PRODUCTION_URL: \$\{\{ vars\.PRODUCTION_URL \|\| 'https:\/\/www\.risckcomply\.com' \}\}/m);
   assert.match(workflow, /^\s{6}RELEASE_RUN_OBSERVABILITY_SMOKE: 'true'/m);
 });
 

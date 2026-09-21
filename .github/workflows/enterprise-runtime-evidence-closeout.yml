@@ -92,11 +92,11 @@ jobs:
       # Safe production coordinates may be admitted at job scope. Protected
       # secret values are deliberately scoped to the consuming steps below,
       # after the post-approval exact-main revalidation has succeeded.
-      PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
-      RELEASE_PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
-      RELEASE_DEPLOYMENT_URL: ${{ vars.PRODUCTION_URL }}
-      NEXT_PUBLIC_APP_URL: ${{ vars.PRODUCTION_URL }}
-      NEXT_PUBLIC_SITE_URL: ${{ vars.PRODUCTION_URL }}
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL || 'https://www.risckcomply.com' }}
+      RELEASE_PRODUCTION_URL: ${{ vars.PRODUCTION_URL || 'https://www.risckcomply.com' }}
+      RELEASE_DEPLOYMENT_URL: ${{ vars.PRODUCTION_URL || 'https://www.risckcomply.com' }}
+      NEXT_PUBLIC_APP_URL: ${{ vars.PRODUCTION_URL || 'https://www.risckcomply.com' }}
+      NEXT_PUBLIC_SITE_URL: ${{ vars.PRODUCTION_URL || 'https://www.risckcomply.com' }}
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
 
       STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ vars.STRIPE_PRICE_ESSENTIAL_MONTHLY }}
