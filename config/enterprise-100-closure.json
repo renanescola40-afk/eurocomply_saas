@@ -6,97 +6,154 @@
       "id": "repository-quality",
       "owner": "engineering",
       "evidence": "release-validation/repository-quality.json",
-      "acceptedStatuses": ["PASS", "SUCCESS"]
+      "acceptedStatuses": [
+        "PASS",
+        "SUCCESS"
+      ],
+      "scope": "internal"
     },
     {
       "id": "production-deployment",
       "owner": "platform",
       "evidence": "release-validation/production-deployment.json",
-      "acceptedStatuses": ["PASS", "SUCCESS"]
+      "acceptedStatuses": [
+        "PASS",
+        "SUCCESS"
+      ],
+      "scope": "internal"
     },
     {
       "id": "production-smoke",
       "owner": "sre",
       "evidence": "release-validation/production-smoke.json",
-      "acceptedStatuses": ["PASS", "SUCCESS"]
+      "acceptedStatuses": [
+        "PASS",
+        "SUCCESS"
+      ],
+      "scope": "internal"
     },
     {
       "id": "enterprise-runtime-closeout",
       "owner": "release",
       "evidence": "enterprise-runtime-closeout.json",
-      "acceptedStatuses": ["ENTERPRISE_RUNTIME_EVIDENCE_ACCEPTED"]
+      "acceptedStatuses": [
+        "ENTERPRISE_RUNTIME_EVIDENCE_ACCEPTED"
+      ],
+      "scope": "internal"
     },
     {
       "id": "production-provider-runtime",
       "owner": "platform",
       "evidence": "production-secrets-provider-stores.json",
-      "acceptedStatuses": ["PASS"]
+      "acceptedStatuses": [
+        "PASS"
+      ],
+      "scope": "internal"
     },
     {
       "id": "supabase-rls-reconciliation",
       "owner": "security",
       "evidence": "release-validation/supabase-rls-reconciliation.json",
-      "acceptedStatuses": ["PASS", "SUCCESS"]
+      "acceptedStatuses": [
+        "PASS",
+        "SUCCESS"
+      ],
+      "scope": "internal"
     },
     {
       "id": "tenant-isolation-live",
       "owner": "security",
       "evidence": "release-validation/tenant-isolation-live.json",
-      "acceptedStatuses": ["PASS", "SUCCESS"]
+      "acceptedStatuses": [
+        "PASS",
+        "SUCCESS"
+      ],
+      "scope": "internal"
     },
     {
       "id": "supabase-production-acceptance",
       "owner": "database",
       "evidence": "production-acceptance.json",
-      "acceptedStatuses": ["PASS"]
+      "acceptedStatuses": [
+        "PASS"
+      ],
+      "scope": "internal"
     },
     {
       "id": "backup-restore",
       "owner": "sre",
       "evidence": "release-validation/backup-restore.json",
-      "acceptedStatuses": ["PASS", "SUCCESS"]
+      "acceptedStatuses": [
+        "PASS",
+        "SUCCESS"
+      ],
+      "scope": "internal"
     },
     {
       "id": "rollback-rehearsal",
       "owner": "release",
       "evidence": "release-validation/rollback-rehearsal.json",
-      "acceptedStatuses": ["PASS", "SUCCESS"]
+      "acceptedStatuses": [
+        "PASS",
+        "SUCCESS"
+      ],
+      "scope": "internal"
     },
     {
       "id": "observability-runtime",
       "owner": "sre",
       "evidence": "release-validation/observability-runtime.json",
-      "acceptedStatuses": ["PASS", "SUCCESS"]
+      "acceptedStatuses": [
+        "PASS",
+        "SUCCESS"
+      ],
+      "scope": "internal"
     },
     {
       "id": "billing-product-live-closure",
       "owner": "billing",
       "evidence": "final-billing-product-live-closeout.json",
-      "acceptedStatuses": ["BILLING_PRODUCT_EU_AI_ACT:_PASS"]
+      "acceptedStatuses": [
+        "BILLING_PRODUCT_EU_AI_ACT:_PASS"
+      ],
+      "scope": "internal"
     },
     {
       "id": "product-commercial-qa",
       "owner": "product",
       "evidence": "fria-runtime-evidence.json",
-      "acceptedStatuses": ["PASSED"]
+      "acceptedStatuses": [
+        "PASSED"
+      ],
+      "scope": "internal"
     },
     {
       "id": "legal-publication",
       "owner": "legal",
       "evidence": "artifacts/legal-review/legal-launch-gate.json",
-      "acceptedStatuses": ["LEGAL_LAUNCH_ACCEPTED"]
+      "acceptedStatuses": [
+        "LEGAL_LAUNCH_ACCEPTED"
+      ],
+      "scope": "external"
     },
     {
       "id": "external-security-assurance",
       "owner": "external-assurance",
       "evidence": "external-security-assurance-decision.json",
-      "acceptedStatuses": ["ACCEPTED_FOR_ENTERPRISE_PROMOTION"]
+      "acceptedStatuses": [
+        "ACCEPTED_FOR_ENTERPRISE_PROMOTION"
+      ],
+      "scope": "external"
     },
     {
       "id": "final-go-no-go",
       "owner": "release",
       "evidence": "release-validation/final-go-no-go.json",
-      "acceptedStatuses": ["GO", "APPROVED"]
+      "acceptedStatuses": [
+        "GO",
+        "APPROVED"
+      ],
+      "scope": "external"
     }
   ]
 }

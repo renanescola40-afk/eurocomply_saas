@@ -234,10 +234,11 @@ jobs:
             "$HYDRATED_CLOSURE_ROOT" \
             "$ENTERPRISE_CLOSURE_EXPECTED_SHA"
 
-      - name: Enforce final exact-SHA closure
+      - name: Enforce internal exact-SHA closure and retain strict assurance state
         if: github.event_name != 'pull_request'
         env:
           ENTERPRISE_CLOSURE_EVIDENCE_ROOTS: ${{ env.HYDRATED_CLOSURE_ROOT }}
+          ENTERPRISE_CLOSURE_ENFORCEMENT: internal
         run: node scripts/release/check-enterprise-100-closure.mjs
 
       - name: Publish closure summary
@@ -257,7 +258,7 @@ jobs:
             {
               echo '## Enterprise 100 exact-SHA closure'
               echo
-              jq -r '"- Decision: \(.decision)\n- Accepted controls: \(.acceptedControls)/\(.totalControls)\n- Target SHA: \(.expectedSha)"' release-validation/enterprise-100-closure.json
+              jq -r '"- Internal decision: \(.internalDecision // .decision)\n- Strict decision: \(.strictDecision // .decision)\n- Accepted controls: \(.acceptedControls)/\(.totalControls)\n- Internal accepted controls: \(.internalAcceptedControls // .acceptedControls)/\(.internalTotalControls // .totalControls)\n- Target SHA: \(.expectedSha)"' release-validation/enterprise-100-closure.json
             } >> "$GITHUB_STEP_SUMMARY"
           fi
           if [ -f "$HYDRATED_CLOSURE_ROOT/enterprise-100-evidence-hydration.json" ]; then

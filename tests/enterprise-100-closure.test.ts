@@ -268,4 +268,44 @@ describe('enterprise 100 closure contract', () => {
     expect(result.passed).toBe(false);
     expect(result.controls[0]?.reason).toBe('ambiguous_exact_sha_evidence');
   });
+  it('passes internal readiness while preserving strict WAITING_EXTERNAL for missing independent assurance', async () => {
+    const { evaluateEnterpriseClosure } = await import('../scripts/release/check-enterprise-100-closure.mjs');
+    const internalPath = 'release-validation/internal.json';
+    const externalPath = 'release-validation/external.json';
+    const root = evidenceRootAt(internalPath, {
+      status: 'PASS',
+      releaseSha: TARGET_SHA,
+      evidenceIntegrity: { containsSensitiveValues: false },
+    });
+    const config = {
+      requiredDecision: 'GO',
+      controls: [
+        {
+          id: 'production-smoke',
+          owner: 'sre',
+          scope: 'internal',
+          evidence: internalPath,
+          acceptedStatuses: ['PASS'],
+        },
+        {
+          id: 'external-security-assurance',
+          owner: 'external-assurance',
+          scope: 'external',
+          evidence: externalPath,
+          acceptedStatuses: ['ACCEPTED_FOR_ENTERPRISE_PROMOTION'],
+        },
+      ],
+    };
+
+    const result = evaluateEnterpriseClosure({ expectedSha: TARGET_SHA, config, evidenceRoots: [root] });
+
+    expect(result.internalPassed).toBe(true);
+    expect(result.internalDecision).toBe('GO');
+    expect(result.strictPassed).toBe(false);
+    expect(result.strictDecision).toBe('WAITING_EXTERNAL');
+    expect(result.passed).toBe(false);
+    expect(result.externalBlockers).toContain('external-security-assurance:evidence_missing');
+    expect(result.internalBlockers).toEqual([]);
+  });
+
 });
